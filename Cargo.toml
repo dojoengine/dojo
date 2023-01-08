@@ -1,0 +1,19 @@
+[workspace]
+
+members = [
+    "crates/cairo-lang-dojo"
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+repository = "https://github.com/dojo-on-chain/dojo/"
+license = "Apache-2.0"
+license-file = "LICENSE"
+
+[workspace.dependencies]
+env_logger = "0.9.3"
+indoc = "1.0.7"
+serde = { version = "1.0.130", features = ["derive"] }
+serde_json = "1.0"
+test-log = "0.2.11"
