@@ -4,4 +4,5 @@
 //! contracts on a permissionless Layer 2 network, secured by Ethereum using validity proofs.
 //!
 //! Learn more at [starkware.io](http://starknet.io/).
+pub mod db;
 pub mod plugin;

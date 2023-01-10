@@ -3,8 +3,7 @@ use std::sync::Arc;
 use std::vec;
 
 use cairo_lang_defs::plugin::{
-    DynGeneratedFileAuxData, GeneratedFileAuxData, MacroPlugin, PluginDiagnostic,
-    PluginGeneratedFile, PluginResult,
+    DynGeneratedFileAuxData, GeneratedFileAuxData, MacroPlugin, PluginGeneratedFile, PluginResult,
 };
 use cairo_lang_diagnostics::DiagnosticEntry;
 use cairo_lang_semantic::db::SemanticGroup;
@@ -14,24 +13,11 @@ use cairo_lang_semantic::plugin::{
     PluginMappedDiagnostic, SemanticPlugin,
 };
 use cairo_lang_semantic::SemanticDiagnostic;
-use cairo_lang_syntax::node::ast::{
-    ItemFreeFunction, MaybeModuleBody, MaybeTraitBody, Modifier, OptionReturnTypeClause, Param,
-};
 use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_syntax::node::helpers::{GetIdentifier, QueryAttrs};
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
-use cairo_lang_utils::try_extract_matches;
 use indoc::formatdoc;
 
-use cairo_lang_starknet::contract::starknet_keccak;
-
-const ABI_ATTR: &str = "abi";
-const COMPONENT_ATTR: &str = "component";
-const EXTERNAL_ATTR: &str = "external";
-const VIEW_ATTR: &str = "view";
-pub const GENERATED_CONTRACT_ATTR: &str = "generated_contract";
-pub const ABI_TRAIT: &str = "__abi";
-pub const EXTERNAL_MODULE: &str = "__external";
+const COMPONENT_TRAIT: &str = "Component";
 
 /// The diagnostics remapper of the plugin.
 #[derive(Debug, PartialEq, Eq)]
@@ -74,14 +60,20 @@ pub struct DojoPlugin {}
 
 impl MacroPlugin for DojoPlugin {
     fn generate_code(&self, db: &dyn SyntaxGroup, item_ast: ast::Item) -> PluginResult {
+        println!("{}\n---", item_ast.as_syntax_node().get_text(db));
         match item_ast {
-            ast::Item::Module(module_ast) => handle_mod(db, module_ast),
-            ast::Item::Trait(trait_ast) => handle_trait(db, trait_ast),
+            ast::Item::Struct(struct_ast) => handle_struct(db, struct_ast),
+            // ast::Item::Module(module_ast) => handle_mod(db, module_ast),
+            // ast::Item::Trait(trait_ast) => handle_trait(db, trait_ast),
             // Nothing to do for other items.
-            _ => PluginResult::default(),
+            _ => PluginResult {
+                remove_original_item: false,
+                ..PluginResult::default()
+            }
         }
     }
 }
+
 impl AsDynMacroPlugin for DojoPlugin {
     fn as_dyn_macro_plugin<'a>(self: Arc<Self>) -> Arc<dyn MacroPlugin + 'a>
     where
@@ -92,144 +84,88 @@ impl AsDynMacroPlugin for DojoPlugin {
 }
 impl SemanticPlugin for DojoPlugin {}
 
-/// If the trait is annotated with ABI_ATTR, generate the relevant dispatcher logic.
-fn handle_trait(db: &dyn SyntaxGroup, trait_ast: ast::ItemTrait) -> PluginResult {
-    let attrs = trait_ast.attributes(db).elements(db);
-    if !attrs.iter().any(|attr| attr.attr(db).text(db) == ABI_ATTR) {
-        return PluginResult::default();
-    }
-    let body = match trait_ast.body(db) {
-        MaybeTraitBody::Some(body) => body,
-        MaybeTraitBody::None(empty_body) => {
-            return PluginResult {
-                code: None,
-                diagnostics: vec![PluginDiagnostic {
-                    message: "ABIs without body are not supported.".to_string(),
-                    stable_ptr: empty_body.stable_ptr().untyped(),
-                }],
-                remove_original_item: false,
-            };
-        }
-    };
+/// If the trait is annotated with COMPONENT_TRAIT, generate the relevant dispatcher logic.
+fn handle_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> PluginResult {
+    let attrs = struct_ast.attributes(db).elements(db);
 
-    let mut diagnostics = vec![];
-    let mut functions = vec![];
-    for item_ast in body.items(db).elements(db) {
-        match item_ast {
-            ast::TraitItem::Function(func) => {
-                let declaration = func.declaration(db);
+    for attr in attrs {
+        if attr.attr(db).text(db) == "derive" {
+            if let ast::OptionAttributeArgs::AttributeArgs(args) = attr.args(db) {
+                for arg in args.arg_list(db).elements(db) {
+                    if let ast::Expr::Path(expr) = arg {
+                        if let [ast::PathSegment::Simple(segment)] = &expr.elements(db)[..] {
+                            if segment.ident(db).text(db).as_str() != COMPONENT_TRAIT {
+                                return PluginResult::default();
+                            }
 
-                let mut skip_generation = false;
-                let mut serialization_code = vec![];
-                let signature = declaration.signature(db);
-                for param in signature.parameters(db).elements(db) {
-                    if is_ref_param(db, &param) {
-                        skip_generation = true;
-
-                        diagnostics.push(PluginDiagnostic {
-                            message: "`ref` parameters are not supported in the ABI of a contract."
-                                .to_string(),
-                            stable_ptr: param.modifiers(db).stable_ptr().untyped(),
-                        })
-                    }
-
-                    let param_type = param.type_clause(db).ty(db);
-                    let type_name = &param_type.as_syntax_node().get_text(db);
-                    if let Some((ser_func, _)) = get_type_serde_funcs(type_name) {
-                        serialization_code.push(RewriteNode::interpolate_patched(
-                            &formatdoc!("        {ser_func}(calldata, $arg_name$);\n"),
-                            HashMap::from([(
-                                "arg_name".to_string(),
-                                RewriteNode::Trimmed(param.name(db).as_syntax_node()),
-                            )]),
-                        ));
-                    } else {
-                        diagnostics.push(PluginDiagnostic {
-                            stable_ptr: param_type.stable_ptr().untyped(),
-                            message: format!("Could not find serialization for type `{type_name}`"),
-                        });
-                        skip_generation = true;
+                            return handle_component(db, struct_ast);
+                        }
                     }
                 }
-
-                if skip_generation {
-                    // TODO(ilya): Consider generating an empty wrapper to avoid:
-                    // Unknown function error.
-                    continue;
-                }
-
-                let ret_decode = match signature.ret_ty(db) {
-                    OptionReturnTypeClause::Empty(_) => "".to_string(),
-                    OptionReturnTypeClause::ReturnTypeClause(ty) => {
-                        let ret_type_ast = ty.ty(db);
-                        let type_name = ret_type_ast.as_syntax_node().get_text(db);
-                        let Some((_, deser_func)) = get_type_serde_funcs(&type_name) else {
-                            diagnostics.push(PluginDiagnostic {
-                                stable_ptr: ret_type_ast.stable_ptr().untyped(),
-                                message: format!(
-                                    "Could not find deserialization for type `{type_name}`"),
-                            });
-                            continue;
-                        };
-
-                        format!("        {deser_func}(ret_data)")
-                    }
-                };
-
-                let mut func_declaration = RewriteNode::from_ast(&declaration);
-                func_declaration
-                    .modify_child(db, ast::FunctionDeclaration::INDEX_SIGNATURE)
-                    .modify_child(db, ast::FunctionSignature::INDEX_PARAMETERS)
-                    .modify(db)
-                    .children
-                    .splice(
-                        0..0,
-                        [
-                            RewriteNode::Text("contract_address: ContractAddress".to_string()),
-                            RewriteNode::Text(", ".to_string()),
-                        ],
-                    );
-
-                functions.push(RewriteNode::interpolate_patched(
-                    "$func_decl$ {
-        let calldata = array_new::<felt>();
-$serialization_code$
-        let ret_data = match starknet::call_contract_syscall(
-            contract_address,
-            calldata,
-        ) {
-            Result::Ok(ret_data) => ret_data,
-            Result::Err((reason, _ret_data)) => {
-                let mut err_data = array_new::<felt>();
-                array_append::<felt>(err_data, 'call_contract_syscall failed');
-                array_append::<felt>(err_data, reason);
-                // TODO(ilya): Handle ret_data.
-                panic(err_data)
-            },
-        };
-$deserialization_code$
-    }
-",
-                    HashMap::from([
-                        ("func_decl".to_string(), func_declaration),
-                        (
-                            "serialization_code".to_string(),
-                            RewriteNode::Modified(ModifiedNode { children: serialization_code }),
-                        ),
-                        ("deserialization_code".to_string(), RewriteNode::Text(ret_decode)),
-                    ]),
-                ));
             }
         }
     }
 
+    PluginResult::default()
+}
+
+fn handle_component(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> PluginResult {
+    let mut functions = vec![];
+    functions.push(RewriteNode::interpolate_patched(
+        format!(
+            "struct Storage {{
+        world_address: felt,
+        $storage_var_name$s: Map::<felt, $type_name$>,
+     }}
+
+     // Initialize $type_name$Component.
+     #[external]
+     fn initialize(world_addr: felt) {{
+         let res = world_address::read();
+         match res {{
+             Option::Some(_) => {{
+                 let mut err_data = array_new::<felt>();
+                 array_append::<felt>(err_data, '$type_name$Component: Already initialized.');
+                 panic(err_data);
+             }},
+             Option::None(_) => {{
+                world_address::write(world_addr);
+             }},
+         }}
+     }}
+
+     // Set the $storage_var_name$ of an entity.
+     #[external]
+     fn set(entity_id: felt, value: $type_name$) {{
+         let res = $storage_var_name$s::read();
+         $storage_var_name$s::write(entity_id, value);
+     }}
+
+     // Get the $storage_var_name$ of an entity.
+     #[view]
+     fn get(entity_id: felt) -> $type_name$ {{
+         return $storage_var_name$s::read(entity_id);
+     }}"
+        )
+        .as_str(),
+        HashMap::from([
+            ("type_name".to_string(), RewriteNode::Trimmed(struct_ast.name(db).as_syntax_node())),
+            (
+                "storage_var_name".to_string(),
+                RewriteNode::Text(struct_ast.name(db).text(db).to_lowercase()),
+            ),
+        ]),
+    ));
+
+    let diagnostics = vec![];
     let mut builder = PatchBuilder::new(db);
-    let dispatcher_name = format!("{}Dispatcher", trait_ast.name(db).text(db));
+    let component_name = format!("{}Component", struct_ast.name(db).text(db));
     builder.add_modified(RewriteNode::interpolate_patched(
         &formatdoc!(
-            "mod {dispatcher_name} {{
-                $body$
-            }}",
+            "#[contract]
+             mod {component_name} {{
+                 $body$
+             }}",
         ),
         HashMap::from([(
             "body".to_string(),
@@ -238,7 +174,7 @@ $deserialization_code$
     ));
     PluginResult {
         code: Some(PluginGeneratedFile {
-            name: dispatcher_name.into(),
+            name: component_name.into(),
             content: builder.code,
             aux_data: DynGeneratedFileAuxData::new(DynDiagnosticMapper::new(DiagnosticRemapper {
                 patches: builder.patches,
@@ -247,448 +183,4 @@ $deserialization_code$
         diagnostics,
         remove_original_item: false,
     }
-}
-
-/// If the module is annotated with CONTRACT_ATTR, generate the relevant contract logic.
-fn handle_mod(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult {
-    if !module_ast.has_attr(db, COMPONENT_ATTR) {
-        // TODO(ilya): diagnostic
-        return PluginResult::default();
-    }
-
-    let body = match module_ast.body(db) {
-        MaybeModuleBody::Some(body) => body,
-        MaybeModuleBody::None(empty_body) => {
-            return PluginResult {
-                code: None,
-                diagnostics: vec![PluginDiagnostic {
-                    message: "Contracts without body are not supported.".to_string(),
-                    stable_ptr: empty_body.stable_ptr().untyped(),
-                }],
-                remove_original_item: false,
-            };
-        }
-    };
-    let mut diagnostics = vec![];
-
-    let mut generated_external_functions = Vec::new();
-
-    let mut storage_code = RewriteNode::Text("".to_string());
-    let mut original_items = Vec::new();
-    let mut abi_functions = Vec::new();
-    for item in body.items(db).elements(db) {
-        match &item {
-            ast::Item::FreeFunction(item_function)
-                if item_function.has_attr(db, EXTERNAL_ATTR)
-                    || item_function.has_attr(db, VIEW_ATTR) =>
-            {
-                // TODO(yuval): keep track of whether the function is external/view.
-                abi_functions.push(RewriteNode::Modified(ModifiedNode {
-                    children: vec![
-                        RewriteNode::Trimmed(item_function.declaration(db).as_syntax_node()),
-                        RewriteNode::Text(";\n        ".to_string()),
-                    ],
-                }));
-
-                match generate_entry_point_wrapper(db, item_function) {
-                    Ok(generated_function) => {
-                        generated_external_functions.push(generated_function);
-                        generated_external_functions
-                            .push(RewriteNode::Text("\n        ".to_string()));
-                    }
-                    Err(entry_point_diagnostics) => {
-                        diagnostics.extend(entry_point_diagnostics);
-                    }
-                }
-            }
-            ast::Item::Struct(item_struct) if item_struct.name(db).text(db) == "Storage" => {
-                let (storage_code_rewrite, storage_diagnostics) =
-                    handle_storage_struct(db, item_struct.clone());
-                storage_code = storage_code_rewrite;
-                diagnostics.extend(storage_diagnostics);
-                // Don't recreate the struct - as it might not be valid due to mappings.
-                continue;
-            }
-            _ => {}
-        };
-        original_items.push(RewriteNode::Copied(item.as_syntax_node()));
-    }
-
-    let generated_contract_mod = RewriteNode::interpolate_patched(
-        formatdoc!(
-            "
-            #[{GENERATED_CONTRACT_ATTR}]
-            mod $contract_name$ {{
-            $original_items$
-                $storage_code$
-                trait {ABI_TRAIT} {{
-                    $abi_functions$
-                }}
-
-                mod {EXTERNAL_MODULE} {{
-                    $generated_external_functions$
-                }}
-            }}
-        "
-        )
-        .as_str(),
-        HashMap::from([
-            (
-                "contract_name".to_string(),
-                RewriteNode::Trimmed(module_ast.name(db).as_syntax_node()),
-            ),
-            (
-                "original_items".to_string(),
-                RewriteNode::Modified(ModifiedNode { children: original_items }),
-            ),
-            ("storage_code".to_string(), storage_code),
-            (
-                "abi_functions".to_string(),
-                RewriteNode::Modified(ModifiedNode { children: abi_functions }),
-            ),
-            (
-                "generated_external_functions".to_string(),
-                RewriteNode::Modified(ModifiedNode { children: generated_external_functions }),
-            ),
-        ]),
-    );
-
-    let mut builder = PatchBuilder::new(db);
-    builder.add_modified(generated_contract_mod);
-
-    PluginResult {
-        code: Some(PluginGeneratedFile {
-            name: "contract".into(),
-            content: builder.code,
-            aux_data: DynGeneratedFileAuxData::new(DynDiagnosticMapper::new(DiagnosticRemapper {
-                patches: builder.patches,
-            })),
-        }),
-        diagnostics,
-        remove_original_item: true,
-    }
-}
-
-/// Generate getters and setters for the variables in the storage struct.
-fn handle_storage_struct(
-    db: &dyn SyntaxGroup,
-    struct_ast: ast::ItemStruct,
-) -> (RewriteNode, Vec<PluginDiagnostic>) {
-    let mut members_code = Vec::new();
-    let mut diagnostics = vec![];
-
-    for member in struct_ast.members(db).elements(db) {
-        let name = member.name(db).text(db);
-        let address = format!("0x{:x}", starknet_keccak(name.as_bytes()));
-        let type_ast = member.type_clause(db).ty(db);
-        if let Some((key_type_ast, value_type_ast)) = try_extract_mapping_types(db, &type_ast) {
-            match handle_mapping_storage_var(
-                key_type_ast.as_syntax_node().get_text(db).trim(),
-                value_type_ast.as_syntax_node().get_text(db).trim(),
-                &address,
-            ) {
-                Some(code) => members_code.push(RewriteNode::interpolate_patched(
-                    code.as_str(),
-                    HashMap::from([
-                        (
-                            "storage_var_name".to_string(),
-                            RewriteNode::Trimmed(member.name(db).as_syntax_node()),
-                        ),
-                        (
-                            "key_type".to_string(),
-                            RewriteNode::Trimmed(key_type_ast.as_syntax_node()),
-                        ),
-                        (
-                            "value_type".to_string(),
-                            RewriteNode::Trimmed(value_type_ast.as_syntax_node()),
-                        ),
-                    ]),
-                )),
-                None => diagnostics.push(PluginDiagnostic {
-                    stable_ptr: type_ast.stable_ptr().untyped(),
-                    message: "Unsupported type for storage var.".to_string(),
-                }),
-            }
-        } else {
-            match handle_simple_storage_var(type_ast.as_syntax_node().get_text(db).trim(), &address)
-            {
-                Some(code) => members_code.push(RewriteNode::interpolate_patched(
-                    code.as_str(),
-                    HashMap::from([
-                        (
-                            "storage_var_name".to_string(),
-                            RewriteNode::Trimmed(member.name(db).as_syntax_node()),
-                        ),
-                        ("type_name".to_string(), RewriteNode::Trimmed(type_ast.as_syntax_node())),
-                    ]),
-                )),
-                None => diagnostics.push(PluginDiagnostic {
-                    stable_ptr: type_ast.stable_ptr().untyped(),
-                    message: "Unsupported type for storage var.".to_string(),
-                }),
-            }
-        }
-    }
-    (RewriteNode::Modified(ModifiedNode { children: members_code }), diagnostics)
-}
-
-/// Given a type, if it is of form `Map::<K, V>`, returns `K` and `V`. Otherwise, returns None.
-fn try_extract_mapping_types(
-    db: &dyn SyntaxGroup,
-    type_ast: &ast::Expr,
-) -> Option<(ast::Expr, ast::Expr)> {
-    let as_path = try_extract_matches!(type_ast, ast::Expr::Path)?;
-    let [ast::PathSegment::WithGenericArgs(segment)] = &as_path.elements(db)[..] else {
-        return None;
-    };
-    let ty = segment.ident(db).text(db);
-    if ty == "Map" {
-        let [key_ty, value_ty] =
-            <[ast::Expr; 2]>::try_from(segment.generic_args(db).generic_args(db).elements(db))
-                .ok()?;
-        Some((key_ty, value_ty))
-    } else {
-        None
-    }
-}
-
-/// Returns the conversion string to and from felt for the type.
-fn get_conversions(type_name: &str) -> Option<(&str, &str)> {
-    Some(match type_name {
-        "felt" => ("value", "value"),
-        "bool" => ("if value == 0 { false } else { true }", "if value { 1 } else { 0 }"),
-        "u128" => ("u128_from_felt(value)", "u128_to_felt(value)"),
-        _ => return None,
-    })
-}
-
-/// Generate getters and setters skeleton for a non-mapping member in the storage struct.
-fn handle_simple_storage_var(type_name: &str, address: &str) -> Option<String> {
-    let (convert_to, convert_from) = get_conversions(type_name)?;
-    Some(format!(
-        "
-    mod $storage_var_name$ {{
-        fn address() -> starknet::StorageAddress {{
-            starknet::storage_address_const::<{address}>()
-        }}
-        fn read() -> $type_name$ {{
-            // Only address_domain 0 is currently supported.
-            let address_domain = 0;
-            match starknet::storage_read_syscall(address_domain, address()) {{
-                Result::Ok(value) => {convert_to},
-                Result::Err(revert_reason) => {{
-                    let mut err_data = array_new::<felt>();
-                    array_append::<felt>(err_data, revert_reason);
-                    panic(err_data)
-                }},
-            }}
-        }}
-        fn write(value: $type_name$) {{
-            // Only address_domain 0 is currently supported.
-            let address_domain = 0;
-            match starknet::storage_write_syscall(address_domain, address(), {convert_from}) {{
-                Result::Ok(()) => {{}},
-                Result::Err(revert_reason) => {{
-                    let mut err_data = array_new::<felt>();
-                    array_append::<felt>(err_data, revert_reason);
-                    panic(err_data)
-                }},
-            }}
-        }}
-    }}"
-    ))
-}
-
-/// Generate getters and setters skeleton for a non-mapping member in the storage struct.
-fn handle_mapping_storage_var(
-    key_type_name: &str,
-    value_type_name: &str,
-    address: &str,
-) -> Option<String> {
-    let key_convert_to = match key_type_name {
-        "felt" => "key",
-        "bool" => "if key { 1 } else { 0 }",
-        "u128" => "u128_to_felt(key)",
-        _ => return None,
-    };
-    let (value_convert_to, value_convert_from) = get_conversions(value_type_name)?;
-    Some(format!(
-        "
-    mod $storage_var_name$ {{
-        fn address(key: $key_type$) -> starknet::StorageAddress {{
-            starknet::storage_addr_from_felt(pedersen({address}, {key_convert_to}))
-        }}
-        fn read(key: $key_type$) -> $value_type$ {{
-            // Only address_domain 0 is currently supported.
-            let address_domain = 0;
-            match starknet::storage_read_syscall(address_domain, address(key)) {{
-                Result::Ok(value) => {value_convert_to},
-                Result::Err(revert_reason) => {{
-                    let mut err_data = array_new::<felt>();
-                    array_append::<felt>(err_data, revert_reason);
-                    panic(err_data)
-                }},
-            }}
-        }}
-        fn write(key: $key_type$, value: $value_type$) {{
-            // Only address_domain 0 is currently supported.
-            let address_domain = 0;
-            match starknet::storage_write_syscall(
-                address_domain,
-                address(key),
-                {value_convert_from},
-            ) {{
-                Result::Ok(()) => {{}},
-                Result::Err(revert_reason) => {{
-                    let mut err_data = array_new::<felt>();
-                    array_append::<felt>(err_data, revert_reason);
-                    panic(err_data)
-                }},
-            }}
-        }}
-    }}"
-    ))
-}
-
-/// Returns the serde functions for a type.
-// TODO(orizi): Use type ids when semantic information is available.
-// TODO(orizi): Use traits for serialization when supported.
-fn get_type_serde_funcs(name: &str) -> Option<(&str, &str)> {
-    match name.trim() {
-        "felt" => Some(("serde::serialize_felt", "serde::deserialize_felt")),
-        "bool" => Some(("serde::serialize_bool", "serde::deserialize_bool")),
-        "u128" => Some(("serde::serialize_u128", "serde::deserialize_u128")),
-        "u256" => Some(("serde::serialize_u256", "serde::deserialize_u256")),
-        "Array::<felt>" => Some(("serde::serialize_array_felt", "serde::deserialize_array_felt")),
-        _ => None,
-    }
-}
-
-/// Generates Cairo code for an entry point wrapper.
-fn generate_entry_point_wrapper(
-    db: &dyn SyntaxGroup,
-    function: &ItemFreeFunction,
-) -> Result<RewriteNode, Vec<PluginDiagnostic>> {
-    let declaration = function.declaration(db);
-    let sig = declaration.signature(db);
-    let params = sig.parameters(db).elements(db);
-    let mut diagnostics = vec![];
-    let mut arg_names = Vec::new();
-    let mut arg_definitions = Vec::new();
-    let mut ref_appends = Vec::new();
-    let input_data_short_err = "'Input too short for arguments'";
-    for param in params {
-        let arg_name = format!("__arg_{}", param.name(db).identifier(db));
-        let arg_type_ast = param.type_clause(db).ty(db);
-        let type_name = arg_type_ast.as_syntax_node().get_text(db);
-        let Some((ser_func, deser_func)) = get_type_serde_funcs(&type_name) else {
-            diagnostics.push(PluginDiagnostic {
-                stable_ptr: arg_type_ast.stable_ptr().0,
-                message: format!("Could not find serialization for type `{type_name}`"),
-            });
-            continue;
-        };
-
-        let is_ref = is_ref_param(db, &param);
-        arg_names.push(arg_name.clone());
-        let mut_modifier = if is_ref { "mut " } else { "" };
-        // TODO(yuval): use panicable version of deserializations when supported.
-        let arg_definition = format!(
-            "
-            let {mut_modifier}{arg_name} = match {deser_func}(data) {{
-                Option::Some(x) => x,
-                Option::None(()) => {{
-                    let mut err_data = array_new::<felt>();
-                    array_append::<felt>(err_data, {input_data_short_err});
-                    panic(err_data)
-                }},
-            }};"
-        );
-        arg_definitions.push(arg_definition);
-
-        if is_ref {
-            ref_appends
-                .push(RewriteNode::Text(format!("\n            {ser_func}(arr, {arg_name});")));
-        }
-    }
-    let arg_names_str = arg_names.join(", ");
-
-    let function_name = RewriteNode::Trimmed(declaration.name(db).as_syntax_node());
-    let wrapped_name = RewriteNode::interpolate_patched(
-        "super::$function_name$",
-        HashMap::from([("function_name".to_string(), function_name.clone())]),
-    );
-    let (let_res, append_res) = match sig.ret_ty(db) {
-        OptionReturnTypeClause::Empty(_) => ("", "".to_string()),
-        OptionReturnTypeClause::ReturnTypeClause(ty) => {
-            let ret_type_ast = ty.ty(db);
-            let ret_type_name = ret_type_ast.as_syntax_node().get_text(db);
-            // TODO(orizi): Handle tuple types.
-            if let Some((ser_func, _)) = get_type_serde_funcs(&ret_type_name) {
-                ("\n            let res = ", format!("\n            {ser_func}(arr, res)"))
-            } else {
-                diagnostics.push(PluginDiagnostic {
-                    stable_ptr: ret_type_ast.stable_ptr().0,
-                    message: format!("Could not find serialization for type `{ret_type_name}`"),
-                });
-                ("", "".to_string())
-            }
-        }
-    };
-    if !diagnostics.is_empty() {
-        return Err(diagnostics);
-    }
-
-    let oog_err = "'Out of gas'";
-    let input_data_long_err = "'Input too long for arguments'";
-
-    // TODO(yuval): use panicable version of `get_gas` once inlining is supported.
-    let arg_definitions = arg_definitions.join("\n");
-    Ok(RewriteNode::interpolate_patched(
-        format!(
-            "fn $function_name$(mut data: Array::<felt>) -> Array::<felt> {{
-            match get_gas() {{
-                Option::Some(_) => {{
-                }},
-                Option::None(_) => {{
-                    let mut err_data = array_new::<felt>();
-                    array_append::<felt>(err_data, {oog_err});
-                    panic(err_data);
-                }},
-            }}
-            {arg_definitions}
-            if array_len::<felt>(data) != 0_u128 {{
-                // Force the inclusion of `System` in the list of implicits.
-                starknet::use_system_implicit();
-
-                let mut err_data = array_new::<felt>();
-                array_append::<felt>(err_data, {input_data_long_err});
-                panic(err_data);
-            }}
-            {let_res}$wrapped_name$({arg_names_str});
-            let mut arr = array_new::<felt>();
-            // References.$ref_appends$
-            // Result.{append_res}
-            arr
-        }}"
-        )
-        .as_str(),
-        HashMap::from([
-            ("function_name".to_string(), function_name),
-            ("wrapped_name".to_string(), wrapped_name),
-            (
-                "ref_appends".to_string(),
-                RewriteNode::Modified(ModifiedNode { children: ref_appends }),
-            ),
-            ("nothing".to_string(), RewriteNode::Text("".to_string())),
-        ]),
-    ))
-}
-
-/// Checks if the parameter is defined as a ref parameter.
-fn is_ref_param(db: &dyn SyntaxGroup, param: &Param) -> bool {
-    let param_modifiers = param.modifiers(db).elements(db);
-    // TODO(yuval): This works only if "ref" is the only modifier. If the expansion was at the
-    // semantic level, we could just ask if it's a reference.
-    param_modifiers.len() == 1 && matches!(param_modifiers[0], Modifier::Ref(_))
 }

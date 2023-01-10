@@ -1,0 +1,67 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'cairo-lang-dojo'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=cairo-lang-dojo"
+                ],
+                "filter": {
+                    "name": "cairo-lang-dojo",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "env": {
+                "CARGO_MANIFEST_DIR": "${workspaceFolder}/crates/cairo-lang-dojo"
+            },
+            "cwd": "${workspaceFolder}/crates/cairo-lang-dojo"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'dojo-compile'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=dojo-compile",
+                    "--package=cairo-lang-dojo"
+                ],
+                "filter": {
+                    "name": "dojo-compile",
+                    "kind": "bin"
+                }
+            },
+            "args": ["/Users/tarrence/code/dojo/crates/cairo-lang-dojo/src/cairo_level_tests/component.cairo"],
+            "cwd": "${workspaceFolder}/crates/cairo-lang-dojo"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'dojo-compile'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=dojo-compile",
+                    "--package=cairo-lang-dojo"
+                ],
+                "filter": {
+                    "name": "dojo-compile",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}/crates/cairo-lang-dojo"
+        }
+    ]
+}

@@ -52,7 +52,7 @@ cairo_lang_test_utils::test_file_test!(
     expand_contract,
     "src/plugin_test_data",
     {
-        hello_starknet: "hello_starknet",
+        component: "component",
     },
     test_expand_contract
 );

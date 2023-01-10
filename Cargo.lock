@@ -325,10 +325,14 @@ name = "cairo-lang-dojo"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "cairo-lang-compiler",
  "cairo-lang-defs",
  "cairo-lang-diagnostics",
+ "cairo-lang-lowering",
  "cairo-lang-parser",
+ "cairo-lang-plugins",
  "cairo-lang-semantic",
+ "cairo-lang-sierra-generator",
  "cairo-lang-starknet",
  "cairo-lang-syntax",
  "cairo-lang-test-utils",
@@ -336,6 +340,7 @@ dependencies = [
  "clap 4.0.29",
  "env_logger",
  "indoc",
+ "itertools",
  "serde",
  "serde_json",
  "test-case",
