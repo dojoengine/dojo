@@ -32,13 +32,15 @@ pub fn test_expand_contract(
             format_diagnostics(db, &diag.message, location)
         }));
 
+        if !remove_original_item {
+            generated_items.push(item.as_syntax_node().get_text(db));
+        }
+
         let content = match code {
             Some(PluginGeneratedFile { content, .. }) => content,
             None => continue,
         };
-        if !remove_original_item {
-            generated_items.push(item.as_syntax_node().get_text(db));
-        }
+
         generated_items.push(content);
     }
 

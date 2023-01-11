@@ -1,19 +1,14 @@
-//! > Test expansion of the hello_starknet contract.
+//! > Test expansion of the component contract.
 
 //! > test_function_name
 test_expand_contract
 
 //! > cairo_code
-#[abi]
-trait IPosition {
-    fn is_zero(entity_id: felt) -> bool;
-}
-
 #[derive(Component)]
 struct Position { x: felt, y: felt }
 
 impl IPosition of Position {
-    #[external]
+    #[view]
     fn is_zero(entity_id: felt) -> bool {
         return bool::True(());
     }

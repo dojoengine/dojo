@@ -60,16 +60,12 @@ pub struct DojoPlugin {}
 
 impl MacroPlugin for DojoPlugin {
     fn generate_code(&self, db: &dyn SyntaxGroup, item_ast: ast::Item) -> PluginResult {
-        println!("{}\n---", item_ast.as_syntax_node().get_text(db));
         match item_ast {
             ast::Item::Struct(struct_ast) => handle_struct(db, struct_ast),
-            // ast::Item::Module(module_ast) => handle_mod(db, module_ast),
+            ast::Item::Impl(impl_ast) => handle_impl(db, impl_ast),
             // ast::Item::Trait(trait_ast) => handle_trait(db, trait_ast),
             // Nothing to do for other items.
-            _ => PluginResult {
-                remove_original_item: false,
-                ..PluginResult::default()
-            }
+            _ => PluginResult::default(),
         }
     }
 }
@@ -183,4 +179,8 @@ fn handle_component(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> Plugin
         diagnostics,
         remove_original_item: false,
     }
+}
+
+fn handle_impl(_db: &dyn SyntaxGroup, _impl_ast: ast::ItemImpl) -> PluginResult {
+    PluginResult { remove_original_item: true, ..PluginResult::default() }
 }
