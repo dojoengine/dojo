@@ -1,0 +1,68 @@
+//! > Test expansion of the component contract.
+
+//! > test_function_name
+test_expand_contract
+
+//! > cairo_code
+trait Query<T> {
+    fn iter() -> Map::<felt, T>;
+}
+
+#[derive(System)]
+fn Move(world: felt, query: Query::<Position>) {
+    return ();
+}
+
+//! > generated_cairo_code
+trait Query<T> {
+    fn iter() -> Map::<felt, T>;
+}
+
+
+#[derive(System)]
+fn Move(world: felt, query: Query::<Position>) {
+    return ();
+}
+#[contract]
+mod MoveSystem {
+    struct Storage {
+        world_address: felt,
+    }
+
+    #[external]
+    fn initialize(world_addr: felt) {
+        let res = world_address::read();
+        match res {
+            Option::Some(_) => {
+                let mut err_data = array_new::<felt>();
+                array_append::<felt>(err_data, 'MoveSystem: Already initialized.');
+                panic(err_data);
+            },
+            Option::None(_) => {
+                world_address::write(world_addr);
+            },
+        }
+    }
+    
+    impl PositionQuery of Query::<Position> {
+        fn iter() -> Map::<felt, Position> {
+            // TODO: World contract dispatcher and get component and entities.
+        }
+    }
+
+    #[external]
+    fn execute(query: PositionQuery) {
+        let world = world_address::read();
+        match world {
+            Option::None(_) => {
+                let mut err_data = array_new::<felt>();
+                array_append::<felt>(err_data, 'MoveSystem: Not initialized.');
+                panic(err_data);
+            },
+        }
+        
+        return ();
+    }
+}
+
+//! > expected_diagnostics

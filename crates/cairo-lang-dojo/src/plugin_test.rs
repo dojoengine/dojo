@@ -55,6 +55,7 @@ cairo_lang_test_utils::test_file_test!(
     "src/plugin_test_data",
     {
         component: "component",
+        system: "system",
     },
     test_expand_contract
 );
