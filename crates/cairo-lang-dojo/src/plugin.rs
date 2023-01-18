@@ -151,7 +151,7 @@ fn handle_system(db: &dyn SyntaxGroup, function_ast: ast::ItemFreeFunction) -> P
         })
         .unwrap();
 
-    let generic_type;
+    let generic_types;
     match query_param.type_clause(db).ty(db) {
         ast::Expr::Path(path) => {
             let generic = path
@@ -169,7 +169,7 @@ fn handle_system(db: &dyn SyntaxGroup, function_ast: ast::ItemFreeFunction) -> P
                 })
                 .unwrap();
 
-            generic_type = generic.generic_args(db).elements(db)[0].clone();
+            generic_types = generic.generic_args(db).elements(db);
         }
         _ => return PluginResult::default(),
     }
@@ -208,19 +208,19 @@ fn handle_system(db: &dyn SyntaxGroup, function_ast: ast::ItemFreeFunction) -> P
     //     },
     // }
 
-    let generic_name = generic_type.as_syntax_node().get_text(db);
-
+    let generic_types_len = generic_types.len();
     let mut functions = vec![];
     functions.push(RewriteNode::interpolate_patched(
         format!(
             "struct Storage {{
         world_address: felt,
+        component_ids: Array::<felt>,
     }}
 
     #[external]
-    fn initialize(world_addr: felt) {{
-        let res = world_address::read();
-        match res {{
+    fn initialize(world_addr: felt, component_ids: Array::<felt>) {{
+        let world = world_address::read();
+        match world {{
             Option::Some(_) => {{
                 let mut err_data = array_new::<felt>();
                 array_append::<felt>(err_data, '{system_name}: Already initialized.');
@@ -230,16 +230,24 @@ fn handle_system(db: &dyn SyntaxGroup, function_ast: ast::ItemFreeFunction) -> P
                 world_address::write(world_addr);
             }},
         }}
-    }}
-    
-    impl {generic_name}Query of Query::<$generic_type$> {{
-        fn iter() -> Map::<felt, $generic_type$> {{
-            // TODO: World contract dispatcher and get component and entities.
+        
+        let stored_component_ids = component_ids::read();
+        match stored_component_ids {{
+            Option::Some(_) => {{
+                let mut err_data = array_new::<felt>();
+                array_append::<felt>(err_data, '{system_name}: Already initialized.');
+                panic(err_data);
+            }},
+            Option::None(_) => {{
+                let len = array_len::<felt>(component_ids);
+                assert(len == {generic_types_len}, 'Invalid component ids length.');
+                component_ids::write(component_ids);
+            }},
         }}
     }}
 
     #[external]
-    fn execute(query: {generic_name}Query) {{
+    fn execute() {{
         let world = world_address::read();
         match world {{
             Option::None(_) => {{
@@ -258,7 +266,6 @@ fn handle_system(db: &dyn SyntaxGroup, function_ast: ast::ItemFreeFunction) -> P
                 "type_name".to_string(),
                 RewriteNode::Trimmed(function_ast.declaration(db).name(db).as_syntax_node()),
             ),
-            ("generic_type".to_string(), RewriteNode::Trimmed(generic_type.as_syntax_node())),
             ("body".to_string(), RewriteNode::Trimmed(function_ast.body(db).statements(db).as_syntax_node())),
             ("query_param".to_string(), RewriteNode::Trimmed(query_param.as_syntax_node())),
             // ("parameters".to_string(), RewriteNode::Trimmed(function_ast.declaration(db).signature(db).parameters(db).as_syntax_node())),
@@ -288,7 +295,7 @@ fn handle_system(db: &dyn SyntaxGroup, function_ast: ast::ItemFreeFunction) -> P
             })),
         }),
         diagnostics,
-        remove_original_item: false,
+        remove_original_item: true,
     }
 }
 

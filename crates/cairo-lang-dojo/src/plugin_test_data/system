@@ -18,21 +18,17 @@ trait Query<T> {
     fn iter() -> Map::<felt, T>;
 }
 
-
-#[derive(System)]
-fn Move(world: felt, query: Query::<Position>) {
-    return ();
-}
 #[contract]
 mod MoveSystem {
     struct Storage {
         world_address: felt,
+        component_ids: Array::<felt>,
     }
 
     #[external]
-    fn initialize(world_addr: felt) {
-        let res = world_address::read();
-        match res {
+    fn initialize(world_addr: felt, component_ids: Array::<felt>) {
+        let world = world_address::read();
+        match world {
             Option::Some(_) => {
                 let mut err_data = array_new::<felt>();
                 array_append::<felt>(err_data, 'MoveSystem: Already initialized.');
@@ -42,16 +38,24 @@ mod MoveSystem {
                 world_address::write(world_addr);
             },
         }
-    }
-    
-    impl PositionQuery of Query::<Position> {
-        fn iter() -> Map::<felt, Position> {
-            // TODO: World contract dispatcher and get component and entities.
+        
+        let stored_component_ids = component_ids::read();
+        match stored_component_ids {
+            Option::Some(_) => {
+                let mut err_data = array_new::<felt>();
+                array_append::<felt>(err_data, 'MoveSystem: Already initialized.');
+                panic(err_data);
+            },
+            Option::None(_) => {
+                let len = array_len::<felt>(component_ids);
+                assert(len == 1, 'Invalid component ids length.');
+                component_ids::write(component_ids);
+            },
         }
     }
 
     #[external]
-    fn execute(query: PositionQuery) {
+    fn execute() {
         let world = world_address::read();
         match world {
             Option::None(_) => {
