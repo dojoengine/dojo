@@ -14,10 +14,13 @@ use cairo_lang_semantic::plugin::{
 };
 use cairo_lang_semantic::SemanticDiagnostic;
 use cairo_lang_sierra_generator::pre_sierra::Function;
+use cairo_lang_starknet::contract::starknet_keccak;
+use cairo_lang_starknet::db::get_starknet_database;
 use cairo_lang_syntax::node::ast::{OptionWrappedGenericParamListEmpty, WrappedGenericParamList};
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use indoc::formatdoc;
+use itertools::Itertools;
 
 const COMPONENT_TRAIT: &str = "Component";
 const SYSTEM_TRAIT: &str = "System";
@@ -174,6 +177,12 @@ fn handle_system(db: &dyn SyntaxGroup, function_ast: ast::ItemFreeFunction) -> P
         _ => return PluginResult::default(),
     }
 
+    let generic_fields = generic_types.iter().map(|f| {
+        format!("{}: Array::<felt>",f.as_syntax_node().get_text(db).to_ascii_lowercase() + "s")
+    }).join("\n");
+    let generic_filled_fields = generic_types.iter().map(|f| {
+        format!("{}: IWorldDispatcher.get_entities_for_component({:#x})", f.as_syntax_node().get_text(db).to_ascii_lowercase() + "s", starknet_keccak(f.as_syntax_node().get_text(db).as_bytes()))
+    }).join("\n");
 
     // function generics
     // let generic;
@@ -194,7 +203,10 @@ fn handle_system(db: &dyn SyntaxGroup, function_ast: ast::ItemFreeFunction) -> P
         format!(
             "struct Storage {{
         world_address: felt,
-        component_ids: Array::<felt>,
+    }}
+
+    struct {system_name}Query {{
+        {generic_fields}
     }}
 
     #[external]
@@ -235,6 +247,10 @@ fn handle_system(db: &dyn SyntaxGroup, function_ast: ast::ItemFreeFunction) -> P
                 array_append::<felt>(err_data, '{system_name}: Not initialized.');
                 panic(err_data);
             }},
+        }}
+
+        let query = {system_name}Query{{
+            {generic_filled_fields}
         }}
         
         $body$

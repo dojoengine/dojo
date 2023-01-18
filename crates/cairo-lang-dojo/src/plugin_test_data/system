@@ -4,9 +4,7 @@
 test_expand_contract
 
 //! > cairo_code
-trait Query<T> {
-    fn iter() -> Map::<felt, T>;
-}
+struct Query<T> {}
 
 #[derive(System)]
 fn Move(world: felt, query: Query::<Position>) {
@@ -14,15 +12,16 @@ fn Move(world: felt, query: Query::<Position>) {
 }
 
 //! > generated_cairo_code
-trait Query<T> {
-    fn iter() -> Map::<felt, T>;
-}
+struct Query<T> {}
 
 #[contract]
 mod MoveSystem {
     struct Storage {
         world_address: felt,
-        component_ids: Array::<felt>,
+    }
+
+    struct MoveSystemQuery {
+        positions: Array::<felt>
     }
 
     #[external]
@@ -63,6 +62,10 @@ mod MoveSystem {
                 array_append::<felt>(err_data, 'MoveSystem: Not initialized.');
                 panic(err_data);
             },
+        }
+
+        let query = MoveSystemQuery{
+            positions: IWorldDispatcher.get_entities_for_component(0x28b9aeb6b19af1454b16ce28c1ee6909e3946e4552ed09886a06ebe1e158fc)
         }
         
         return ();
