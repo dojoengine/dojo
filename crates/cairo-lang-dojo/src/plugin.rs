@@ -174,28 +174,8 @@ fn handle_system(db: &dyn SyntaxGroup, function_ast: ast::ItemFreeFunction) -> P
         _ => return PluginResult::default(),
     }
 
-    // let generic_type;
-    // match query_param.type_clause(db).ty(db) {
-    //     ast::Expr::Path(path) => {
-    //         let generic = path.elements(db).iter().find_map(|segment| {
-    //             match segment {
-    //                 ast::PathSegment::WithGenericArgs(segment) => {
-    //                     if segment.ident(db).text(db).as_str() == "Query" {
-    //                         Some(segment.generic_args(db))
-    //                     } else {
-    //                         None
-    //                     }
-    //                 },
-    //                 _ => None,
-    //             }
-    //         }).unwrap();
 
-    //         generic_type = generic.generic_args(db).elements(db)[0];
-
-    //     },
-    //     _ => return PluginResult::default(),
-    // }
-
+    // function generics
     // let generic;
     // match function_ast.declaration(db).generic_params(db) {
     //     ast::OptionWrappedGenericParamList::Empty(_) => {
