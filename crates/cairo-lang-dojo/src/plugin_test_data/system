@@ -4,10 +4,14 @@
 test_expand_contract
 
 //! > cairo_code
-struct Query<T> {}
+struct Query<Array::<T>> {}
 
-#[derive(System)]
-fn Move(world: felt, query: Query::<Position>) {
+fn move_inner(query: Query::<Position>) {
+
+}
+
+fn move(world: felt, query: Query::<Position>) {
+    // let query
     return ();
 }
 
@@ -20,8 +24,8 @@ mod MoveSystem {
         world_address: felt,
     }
 
-    struct MoveSystemQuery {
-        positions: Array::<felt>
+    struct MoveSystemQueryResult {
+        position: Position,
     }
 
     #[external]
