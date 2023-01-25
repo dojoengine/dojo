@@ -4,11 +4,7 @@
 test_expand_contract
 
 //! > cairo_code
-struct Query<Array::<T>> {}
-
-fn move_inner(query: Query::<Position>) {
-
-}
+struct Query<T> {}
 
 fn move(world: felt, query: Query::<Position>) {
     // let query
@@ -24,54 +20,20 @@ mod MoveSystem {
         world_address: felt,
     }
 
-    struct MoveSystemQueryResult {
-        position: Position,
-    }
-
     #[external]
     fn initialize(world_addr: felt, component_ids: Array::<felt>) {
         let world = world_address::read();
-        match world {
-            Option::Some(_) => {
-                let mut err_data = array_new::<felt>();
-                array_append::<felt>(err_data, 'MoveSystem: Already initialized.');
-                panic(err_data);
-            },
-            Option::None(_) => {
-                world_address::write(world_addr);
-            },
-        }
-        
-        let stored_component_ids = component_ids::read();
-        match stored_component_ids {
-            Option::Some(_) => {
-                let mut err_data = array_new::<felt>();
-                array_append::<felt>(err_data, 'MoveSystem: Already initialized.');
-                panic(err_data);
-            },
-            Option::None(_) => {
-                let len = array_len::<felt>(component_ids);
-                assert(len == 1, 'Invalid component ids length.');
-                component_ids::write(component_ids);
-            },
-        }
+        assert(world == 0, 'MoveSystem: Already initialized.');
+        world_address::write(world_addr);
     }
 
     #[external]
     fn execute() {
         let world = world_address::read();
-        match world {
-            Option::None(_) => {
-                let mut err_data = array_new::<felt>();
-                array_append::<felt>(err_data, 'MoveSystem: Not initialized.');
-                panic(err_data);
-            },
-        }
+        assert(world != 0, 'MoveSystem: Not initialized.');
 
-        let query = MoveSystemQuery{
-            positions: IWorldDispatcher.get_entities_for_component(0x28b9aeb6b19af1454b16ce28c1ee6909e3946e4552ed09886a06ebe1e158fc)
-        }
-        
+        let position_ids = IWorld.lookup(world, 0x28b9aeb6b19af1454b16ce28c1ee6909e3946e4552ed09886a06ebe1e158fc)
+
         return ();
     }
 }

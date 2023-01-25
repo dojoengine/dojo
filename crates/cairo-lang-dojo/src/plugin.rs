@@ -13,17 +13,13 @@ use cairo_lang_semantic::plugin::{
     PluginMappedDiagnostic, SemanticPlugin,
 };
 use cairo_lang_semantic::SemanticDiagnostic;
-use cairo_lang_sierra_generator::pre_sierra::Function;
 use cairo_lang_starknet::contract::starknet_keccak;
-use cairo_lang_starknet::db::get_starknet_database;
-use cairo_lang_syntax::node::ast::{OptionWrappedGenericParamListEmpty, WrappedGenericParamList};
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use indoc::formatdoc;
 use itertools::Itertools;
 
 const COMPONENT_TRAIT: &str = "Component";
-const SYSTEM_TRAIT: &str = "System";
 
 /// The diagnostics remapper of the plugin.
 #[derive(Debug, PartialEq, Eq)]
@@ -91,31 +87,6 @@ impl AsDynMacroPlugin for DojoPlugin {
 }
 impl SemanticPlugin for DojoPlugin {}
 
-/// If the trait is annotated with SYSTEM_TRAIT, generate the relevant dispatcher logic.
-fn handle_function(db: &dyn SyntaxGroup, function_ast: ast::ItemFreeFunction) -> PluginResult {
-    let attrs = function_ast.attributes(db).elements(db);
-
-    for attr in attrs {
-        if attr.attr(db).text(db) == "derive" {
-            if let ast::OptionAttributeArgs::AttributeArgs(args) = attr.args(db) {
-                for arg in args.arg_list(db).elements(db) {
-                    if let ast::Expr::Path(expr) = arg {
-                        if let [ast::PathSegment::Simple(segment)] = &expr.elements(db)[..] {
-                            if segment.ident(db).text(db).as_str() != SYSTEM_TRAIT {
-                                return PluginResult::default();
-                            }
-
-                            return handle_system(db, function_ast);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    PluginResult::default()
-}
-
 /// If the trait is annotated with COMPONENT_TRAIT, generate the relevant dispatcher logic.
 fn handle_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> PluginResult {
     let attrs = struct_ast.attributes(db).elements(db);
@@ -141,16 +112,16 @@ fn handle_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> PluginRes
     PluginResult::default()
 }
 
-fn handle_system(db: &dyn SyntaxGroup, function_ast: ast::ItemFreeFunction) -> PluginResult {
-    let system_name = format!("{}System", function_ast.declaration(db).name(db).text(db));
+fn handle_function(db: &dyn SyntaxGroup, function_ast: ast::FunctionWithBody) -> PluginResult {
+    let name = function_ast.declaration(db).name(db).text(db);
+    let system_name = format!("{}System", name[0..1].to_uppercase() + &name[1..]);
     let signature = function_ast.declaration(db).signature(db);
     let parameters = signature.parameters(db).elements(db);
 
     let query_param = parameters
         .iter()
         .find(|attr| match attr.name(db) {
-            ast::ParamName::Underscore(_) => false,
-            ast::ParamName::Name(name) => name.text(db).as_str() == "query",
+            name => name.text(db).as_str() == "query",
         })
         .unwrap();
 
@@ -177,27 +148,10 @@ fn handle_system(db: &dyn SyntaxGroup, function_ast: ast::ItemFreeFunction) -> P
         _ => return PluginResult::default(),
     }
 
-    let generic_fields = generic_types.iter().map(|f| {
-        format!("{}: Array::<felt>",f.as_syntax_node().get_text(db).to_ascii_lowercase() + "s")
-    }).join("\n");
-    let generic_filled_fields = generic_types.iter().map(|f| {
-        format!("{}: IWorldDispatcher.get_entities_for_component({:#x})", f.as_syntax_node().get_text(db).to_ascii_lowercase() + "s", starknet_keccak(f.as_syntax_node().get_text(db).as_bytes()))
+    let query_lookup = generic_types.iter().map(|f| {
+        format!("let {} = IWorld.lookup(world, {:#x})", f.as_syntax_node().get_text(db).to_ascii_lowercase() + "_ids", starknet_keccak(f.as_syntax_node().get_text(db).as_bytes()))
     }).join("\n");
 
-    // function generics
-    // let generic;
-    // match function_ast.declaration(db).generic_params(db) {
-    //     ast::OptionWrappedGenericParamList::Empty(_) => {
-    //         println!("No generic params");
-    //         return PluginResult::default();
-    //     },
-    //     ast::OptionWrappedGenericParamList::WrappedGenericParamList(params) => {
-    //         let generics = params.generic_params(db).elements(db);
-    //         generic = generics[0].clone();
-    //     },
-    // }
-
-    let generic_types_len = generic_types.len();
     let mut functions = vec![];
     functions.push(RewriteNode::interpolate_patched(
         format!(
@@ -205,54 +159,20 @@ fn handle_system(db: &dyn SyntaxGroup, function_ast: ast::ItemFreeFunction) -> P
         world_address: felt,
     }}
 
-    struct {system_name}Query {{
-        {generic_fields}
-    }}
-
     #[external]
     fn initialize(world_addr: felt, component_ids: Array::<felt>) {{
         let world = world_address::read();
-        match world {{
-            Option::Some(_) => {{
-                let mut err_data = array_new::<felt>();
-                array_append::<felt>(err_data, '{system_name}: Already initialized.');
-                panic(err_data);
-            }},
-            Option::None(_) => {{
-                world_address::write(world_addr);
-            }},
-        }}
-        
-        let stored_component_ids = component_ids::read();
-        match stored_component_ids {{
-            Option::Some(_) => {{
-                let mut err_data = array_new::<felt>();
-                array_append::<felt>(err_data, '{system_name}: Already initialized.');
-                panic(err_data);
-            }},
-            Option::None(_) => {{
-                let len = array_len::<felt>(component_ids);
-                assert(len == {generic_types_len}, 'Invalid component ids length.');
-                component_ids::write(component_ids);
-            }},
-        }}
+        assert(world == 0, 'MoveSystem: Already initialized.');
+        world_address::write(world_addr);
     }}
 
     #[external]
     fn execute() {{
         let world = world_address::read();
-        match world {{
-            Option::None(_) => {{
-                let mut err_data = array_new::<felt>();
-                array_append::<felt>(err_data, '{system_name}: Not initialized.');
-                panic(err_data);
-            }},
-        }}
+        assert(world != 0, '{system_name}: Not initialized.');
 
-        let query = {system_name}Query{{
-            {generic_filled_fields}
-        }}
-        
+        {query_lookup}
+
         $body$
     }}"
         )
@@ -308,16 +228,8 @@ fn handle_component(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> Plugin
      #[external]
      fn initialize(world_addr: felt) {{
          let res = world_address::read();
-         match res {{
-             Option::Some(_) => {{
-                 let mut err_data = array_new::<felt>();
-                 array_append::<felt>(err_data, '$type_name$Component: Already initialized.');
-                 panic(err_data);
-             }},
-             Option::None(_) => {{
-                world_address::write(world_addr);
-             }},
-         }}
+         assert(world == 0, '$type_name$Component: Already initialized.');
+         world_address::write(world_addr);
      }}
 
      // Set the $storage_var_name$ of an entity.

@@ -1,9 +1,5 @@
-struct Query<T> {}
+extern type Query<T>;
 
-fn move_inner(query: Query::<Array::<Position, Health>>) {
-    
-}
-
-fn move(world: felt, query: Query::<Position, Health>) {
+fn move(query: Query::<Position, Health>) {
     return ();
 }
