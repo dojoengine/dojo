@@ -148,9 +148,16 @@ fn handle_function(db: &dyn SyntaxGroup, function_ast: ast::FunctionWithBody) ->
         _ => return PluginResult::default(),
     }
 
-    let query_lookup = generic_types.iter().map(|f| {
-        format!("let {} = IWorld.lookup(world, {:#x})", f.as_syntax_node().get_text(db).to_ascii_lowercase() + "_ids", starknet_keccak(f.as_syntax_node().get_text(db).as_bytes()))
-    }).join("\n");
+    let query_lookup = generic_types
+        .iter()
+        .map(|f| {
+            format!(
+                "let {} = IWorld.lookup(world, {:#x})",
+                f.as_syntax_node().get_text(db).to_ascii_lowercase() + "_ids",
+                starknet_keccak(f.as_syntax_node().get_text(db).as_bytes())
+            )
+        })
+        .join("\n");
 
     let mut functions = vec![];
     functions.push(RewriteNode::interpolate_patched(
@@ -182,7 +189,10 @@ fn handle_function(db: &dyn SyntaxGroup, function_ast: ast::FunctionWithBody) ->
                 "type_name".to_string(),
                 RewriteNode::Trimmed(function_ast.declaration(db).name(db).as_syntax_node()),
             ),
-            ("body".to_string(), RewriteNode::Trimmed(function_ast.body(db).statements(db).as_syntax_node())),
+            (
+                "body".to_string(),
+                RewriteNode::Trimmed(function_ast.body(db).statements(db).as_syntax_node()),
+            ),
             ("query_param".to_string(), RewriteNode::Trimmed(query_param.as_syntax_node())),
             // ("parameters".to_string(), RewriteNode::Trimmed(function_ast.declaration(db).signature(db).parameters(db).as_syntax_node())),
         ]),
@@ -221,38 +231,34 @@ fn handle_component(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> Plugin
         format!(
             "struct Storage {{
         world_address: felt,
-        $storage_var_name$s: Map::<felt, $type_name$>,
+        state: Map::<felt, $type_name$>,
      }}
 
      // Initialize $type_name$Component.
      #[external]
      fn initialize(world_addr: felt) {{
-         let res = world_address::read();
+         let world = world_address::read();
          assert(world == 0, '$type_name$Component: Already initialized.');
          world_address::write(world_addr);
      }}
 
-     // Set the $storage_var_name$ of an entity.
+     // Set the state of an entity.
      #[external]
      fn set(entity_id: felt, value: $type_name$) {{
-         let res = $storage_var_name$s::read();
-         $storage_var_name$s::write(entity_id, value);
+         state::write(entity_id, value);
      }}
 
-     // Get the $storage_var_name$ of an entity.
+     // Get the state of an entity.
      #[view]
      fn get(entity_id: felt) -> $type_name$ {{
-         return $storage_var_name$s::read(entity_id);
+         return state::read(entity_id);
      }}"
         )
         .as_str(),
-        HashMap::from([
-            ("type_name".to_string(), RewriteNode::Trimmed(struct_ast.name(db).as_syntax_node())),
-            (
-                "storage_var_name".to_string(),
-                RewriteNode::Text(struct_ast.name(db).text(db).to_lowercase()),
-            ),
-        ]),
+        HashMap::from([(
+            "type_name".to_string(),
+            RewriteNode::Trimmed(struct_ast.name(db).as_syntax_node()),
+        )]),
     ));
 
     let diagnostics = vec![];
