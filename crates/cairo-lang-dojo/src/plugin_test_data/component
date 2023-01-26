@@ -7,52 +7,55 @@ test_expand_contract
 #[derive(Component)]
 struct Position { x: felt, y: felt }
 
-impl IPosition of Position {
+impl Position {
     #[view]
-    fn is_zero(entity_id: felt) -> bool {
-        return bool::True(());
+    fn is_zero(self: Position) -> bool {
+        match self.x - self.y {
+            0 => bool::True(()),
+            _ => bool::False(()),
+        }
     }
 }
 
 //! > generated_cairo_code
-#[derive(Component)]
-struct Position { x: felt, y: felt }
-
 #[contract]
 mod PositionComponent {
+    struct Position { x: felt, y: felt }
+
     struct Storage {
         world_address: felt,
         positions: Map::<felt, Position>,
-     }
+    }
 
-     // Initialize PositionComponent.
-     #[external]
-     fn initialize(world_addr: felt) {
-         let res = world_address::read();
-         match res {
-             Option::Some(_) => {
-                 let mut err_data = array_new::<felt>();
-                 array_append::<felt>(err_data, 'PositionComponent: Already initialized.');
-                 panic(err_data);
-             },
-             Option::None(_) => {
-                world_address::write(world_addr);
-             },
-         }
-     }
+    // Initialize PositionComponent.
+    #[external]
+    fn initialize(world_addr: felt) {
+        let res = world_address::read();
+        assert(world == 0, 'PositionComponent: Already initialized.');
+        world_address::write(world_addr);
+    }
 
-     // Set the position of an entity.
-     #[external]
-     fn set(entity_id: felt, value: Position) {
-         let res = positions::read();
-         positions::write(entity_id, value);
-     }
+    // Set the position of an entity.
+    #[external]
+    fn set(entity_id: felt, value: Position) {
+        let res = positions::read();
+        positions::write(entity_id, value);
+    }
 
-     // Get the position of an entity.
-     #[view]
-     fn get(entity_id: felt) -> Position {
-         return positions::read(entity_id);
-     }
+    // Get the position of an entity.
+    #[view]
+    fn get(entity_id: felt) -> Position {
+        return positions::read(entity_id);
+    }
+
+    #[view]
+    fn is_zero(entity_id: felt) -> boolean {
+        let pos = positions::read(entity_id);
+        match pos.x - pos.y {
+            0 => bool::True(()),
+            _ => bool::False(()),
+        }
+    }
 }
 
 //! > expected_diagnostics
