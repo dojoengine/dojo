@@ -119,7 +119,7 @@ mod PositionComponent {
 
 In the expanded form, entrypoints take `entity_id` as the first parameter.
 
-## Systems
+#### Systems
 
 A system is a free function that takes as input a set of entities to operate on. Systems define a `Query` which describes a set of Components to query a worlds entities by. At compile time, the `Query` is compiled, leveraging [deterministic addresssing](#Addressing) to inline efficient entity lookups.
 
@@ -173,12 +173,12 @@ mod MoveSystem {
 }
 ```
 
-### Entities
+#### Entities
 
 An entity is addressed by a `felt`. An entity represents a collection of component state. A component can set state for an arbitrary entity, registering itself with the world as a side effect.
 
 
-### Addressing
+#### Addressing
 
 Everything inside a Dojo World is deterministically addressed relative to the world. This is accomplished by enforcing module name uniqueness, i.e. `PositionComponent` and `MoveSystem`, and wrapping all components and systems using the proxy pattern. This property allows for statically planning deployment and migration strategies for updates to the world.
 
@@ -205,6 +205,10 @@ impl World {
     }
 }
 ```
+
+#### Events
+
+Events are emitted anytime a components state is updated a `ComponentValueSet` event is emitted from the world, enabling clients to easily track changes to world state.
 
 ### Migrate
 
