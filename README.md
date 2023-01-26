@@ -81,7 +81,7 @@ mod PositionComponent {
 
     struct Storage {
         world_address: felt,
-        positions: Map::<felt, Position>,
+        state: Map::<felt, Position>,
     }
 
     // Initialize PositionComponent.
@@ -96,19 +96,18 @@ mod PositionComponent {
     // @TODO: Authorization.
     #[external]
     fn set(entity_id: felt, value: Position) {
-        let res = positions::read();
-        positions::write(entity_id, value);
+        state::write(entity_id, value);
     }
 
     // Get the position of an entity.
     #[view]
     fn get(entity_id: felt) -> Position {
-        return positions::read(entity_id);
+        return state::read(entity_id);
     }
 
     #[view]
     fn is_zero(entity_id: felt) -> boolean {
-        let pos = positions::read(entity_id);
+        let pos = state::read(entity_id);
         match pos.x - pos.y {
             0 => bool::True(()),
             _ => bool::False(()),
@@ -180,7 +179,13 @@ An entity is addressed by a `felt`. An entity represents a collection of compone
 
 #### Addressing
 
-Everything inside a Dojo World is deterministically addressed relative to the world. This is accomplished by enforcing module name uniqueness, i.e. `PositionComponent` and `MoveSystem`, and wrapping all components and systems using the proxy pattern. This property allows for statically planning deployment and migration strategies for updates to the world.
+Everything inside a Dojo World is deterministically addressed relative to the world, from the address of a system to the storage slot of an entities component value. This is accomplished by enforcing module name uniqueness, i.e. `PositionComponent` and `MoveSystem`, wrapping all components and systems using the proxy pattern, and standardizing the storage layout of component modules.
+
+This property allows for:
+1) Statically planning deployment and migration strategies for updates to the world
+2) Trustlessly recreating world state on clients using a [light client with storage proofs](https://github.com/keep-starknet-strange/beerus)
+3) Optimistically updating client state using [client computed state transitions](https://github.com/starkware-libs/blockifier)
+4) Efficiently querying a subset of the world state without replaying event history
 
 ```rust
 use starknet::{deploy, pedersen};
