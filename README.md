@@ -47,6 +47,9 @@ trait World {
     // entity, the entity:component mapping is registered.
     // Additionally, a `ComponentValueSet` event is emitted.
     fn on_component_set(entity_id: felt, data: Array::<felt>);
+
+    // Lookup entities that have a component by id.
+    fn lookup(id: felt) -> Array::<felt>;
 }
 ```
 
@@ -116,14 +119,15 @@ mod PositionComponent {
 
 In the expanded form, entrypoints take `entity_id` as the first parameter.
 
-### Systems
+## Systems
 
 A system is a free function that takes as input a set of entities to operate on. Systems define a `Query` which describes a set of Components to query a worlds entities by. At compile time, the `Query` is compiled, leveraging [deterministic addresssing](#Addressing) to inline efficient entity lookups.
 
 ```rust
 fn move(query: Query<(Position, Health)>) {
+    // @NOTE: Loops are not available in Cairo 1.0 yet.
     for (position, health) in query {
-        position.is_zero()
+        let is_zero = position.is_zero();
     }
     return ();
 }
@@ -149,6 +153,22 @@ mod MoveSystem {
     fn execute() {
         let world = world_address::read();
         assert(world != 0, 'MoveSystem: Not initialized.');
+
+        let position_id = pedersen("PositionComponent");
+        // We can compute the component addresses statically
+        // during compilation.
+        let position_address = compute_address(position_id);
+        let position_entities = IWorld.lookup(world, position_id);
+
+        let health_id = pedersen("HealthComponent");
+        let health_address = compute_address(health_id);
+        let health_entities = IWorld.lookup(world, health_id);
+
+        let entities = intersect(position_entities, health_entities);
+
+        for entity_id in entities {
+            let is_zero = IPosition.is_zero(position_address, entity_id);
+        }
     }
 }
 ```
