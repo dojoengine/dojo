@@ -70,10 +70,7 @@ impl MacroPlugin for DojoPlugin {
     fn generate_code(&self, db: &dyn SyntaxGroup, item_ast: ast::Item) -> PluginResult {
         match item_ast {
             ast::Item::Module(module_ast) => handle_mod(db, module_ast),
-            // ast::Item::Struct(struct_ast) => handle_struct(db, struct_ast),
-            // ast::Item::Impl(impl_ast) => handle_impl(db, impl_ast),
-            // ast::Item::FreeFunction(function_ast) => handle_function(db, function_ast),
-            // ast::Item::Trait(trait_ast) => handle_trait(db, trait_ast),
+            ast::Item::FreeFunction(function_ast) => handle_function(db, function_ast),
             // Remove other items.
             _ => PluginResult { remove_original_item: true, ..PluginResult::default() },
         }
@@ -135,18 +132,17 @@ fn handle_mod(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult
         }
     }
 
-    // print components length
-    // print!("{:#?}", components.len());
-
     let mut builder = PatchBuilder::new(db);
 
     for (component, nodes) in components {
         builder.add_modified(RewriteNode::interpolate_patched(
             &formatdoc!(
-                "#[contract]
-                 mod {component}Component {{
-                     $body$
-                 }}",
+                "
+                #[contract]
+                mod {component} {{
+                    $body$
+                }}
+                ",
             ),
             HashMap::from([(
                 "body".to_string(),
@@ -245,26 +241,26 @@ fn handle_function(db: &dyn SyntaxGroup, function_ast: ast::FunctionWithBody) ->
     let mut functions = vec![];
     functions.push(RewriteNode::interpolate_patched(
         "
-            struct Storage {{
+            struct Storage {
                 world_address: felt,
-            }}
+            }
 
             #[external]
-            fn initialize(world_addr: felt, component_ids: Array::<felt>) {{
+            fn initialize(world_addr: felt, component_ids: Array::<felt>) {
                 let world = world_address::read();
                 assert(world == 0, 'MoveSystem: Already initialized.');
                 world_address::write(world_addr);
-            }}
+            }
 
             #[external]
-            fn execute() {{
+            fn execute() {
                 let world = world_address::read();
                 assert(world != 0, '{system_name}: Not initialized.');
 
                 {query_lookup}
 
                 $body$
-            }}
+            }
             ",
         HashMap::from([
             (
@@ -285,9 +281,9 @@ fn handle_function(db: &dyn SyntaxGroup, function_ast: ast::FunctionWithBody) ->
     builder.add_modified(RewriteNode::interpolate_patched(
         "
             #[contract]
-            mod {system_name} {{
+            mod {system_name} {
             $body$
-            }}
+            }
             ",
         HashMap::from([(
             "body".to_string(),
@@ -317,30 +313,31 @@ fn handle_component(
             RewriteNode::Copied(struct_ast.as_syntax_node()),
             RewriteNode::interpolate_patched(
                 "
-    struct Storage {{
-        world_address: felt,
-        state: Map::<felt, $type_name$>,
-    }}
+                struct Storage {
+                    world_address: felt,
+                    state: Map::<felt, $type_name$>,
+                }
 
-    // Initialize $type_name$Component.
-    #[external]
-    fn initialize(world_addr: felt) {{
-        let world = world_address::read();
-        assert(world == 0, '$type_name$Component: Already initialized.');
-        world_address::write(world_addr);
-    }}
+                // Initialize $type_name$Component.
+                #[external]
+                fn initialize(world_addr: felt) {
+                    let world = world_address::read();
+                    assert(world == 0, '$type_name$Component: Already initialized.');
+                    world_address::write(world_addr);
+                }
 
-    // Set the state of an entity.
-    #[external]
-    fn set(entity_id: felt, value: $type_name$) {{
-        state::write(entity_id, value);
-    }}
+                // Set the state of an entity.
+                #[external]
+                fn set(entity_id: felt, value: $type_name$) {
+                    state::write(entity_id, value);
+                }
 
-    // Get the state of an entity.
-    #[view]
-    fn get(entity_id: felt) -> $type_name$ {{
-        return state::read(entity_id);
-    }}",
+                // Get the state of an entity.
+                #[view]
+                fn get(entity_id: felt) -> $type_name$ {
+                    return state::read(entity_id);
+                }
+                ",
                 HashMap::from([(
                     "type_name".to_string(),
                     RewriteNode::Trimmed(struct_ast.name(db).as_syntax_node()),
@@ -403,16 +400,13 @@ fn handle_impl(
                     .splice(0..1, replacement);
 
                 functions.push(RewriteNode::interpolate_patched(
-                    &formatdoc!(
-                        "
-
-    #[view]
-$func_decl$ {{
-        let self = state::read(entity_id);
-        $body$
-    }}
-                        "
-                    ),
+                    "
+                        #[view]
+                        $func_decl$ {
+                            let self = state::read(entity_id);
+                            $body$
+                        }
+                        ",
                     HashMap::from([
                         ("func_decl".to_string(), func_declaration),
                         (
