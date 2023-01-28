@@ -231,7 +231,7 @@ fn handle_function(db: &dyn SyntaxGroup, function_ast: ast::FunctionWithBody) ->
         .iter()
         .map(|f| {
             format!(
-                "let {} = IWorld.lookup(world, {:#x})",
+                "let {} = IWorld.lookup(world, {:#x});",
                 f.as_syntax_node().get_text(db).to_ascii_lowercase() + "_ids",
                 starknet_keccak(f.as_syntax_node().get_text(db).as_bytes())
             )
@@ -240,28 +240,30 @@ fn handle_function(db: &dyn SyntaxGroup, function_ast: ast::FunctionWithBody) ->
 
     let mut functions = vec![];
     functions.push(RewriteNode::interpolate_patched(
-        "
-            struct Storage {
+        &formatdoc!(
+            "
+            struct Storage {{
                 world_address: felt,
-            }
+            }}
 
             #[external]
-            fn initialize(world_addr: felt, component_ids: Array::<felt>) {
+            fn initialize(world_addr: felt, component_ids: Array::<felt>) {{
                 let world = world_address::read();
-                assert(world == 0, 'MoveSystem: Already initialized.');
+                assert(world == 0, '{system_name}: Already initialized.');
                 world_address::write(world_addr);
-            }
+            }}
 
             #[external]
-            fn execute() {
+            fn execute() {{
                 let world = world_address::read();
                 assert(world != 0, '{system_name}: Not initialized.');
 
                 {query_lookup}
 
                 $body$
-            }
-            ",
+            }}
+            "
+        ),
         HashMap::from([
             (
                 "type_name".to_string(),
@@ -279,12 +281,14 @@ fn handle_function(db: &dyn SyntaxGroup, function_ast: ast::FunctionWithBody) ->
     let diagnostics = vec![];
     let mut builder = PatchBuilder::new(db);
     builder.add_modified(RewriteNode::interpolate_patched(
-        "
+        &formatdoc!(
+            "
             #[contract]
-            mod {system_name} {
-            $body$
-            }
-            ",
+            mod {system_name} {{
+                $body$
+            }}
+            "
+        ),
         HashMap::from([(
             "body".to_string(),
             RewriteNode::Modified(ModifiedNode { children: functions }),

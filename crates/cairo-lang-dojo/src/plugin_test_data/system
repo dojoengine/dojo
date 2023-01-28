@@ -13,29 +13,29 @@ fn move(world: felt, query: Query::<Position>) {
 
 //! > generated_cairo_code
 #[contract]
-            mod {system_name} {{
-            
-            struct Storage {{
-                world_address: felt,
-            }}
+mod MoveSystem {
+    struct Storage {
+        world_address: felt, 
+    }
 
-            #[external]
-            fn initialize(world_addr: felt, component_ids: Array::<felt>) {{
-                let world = world_address::read();
-                assert(world == 0, 'MoveSystem: Already initialized.');
-                world_address::write(world_addr);
-            }}
+    #[external]
+    fn initialize(world_addr: felt, component_ids: Array::<felt>) {
+        let world = world_address::read();
+        assert(world == 0, 'MoveSystem: Already initialized.');
+        world_address::write(world_addr);
+    }
 
-            #[external]
-            fn execute() {{
-                let world = world_address::read();
-                assert(world != 0, '{system_name}: Not initialized.');
+    #[external]
+    fn execute() {
+        let world = world_address::read();
+        assert(world != 0, 'MoveSystem: Not initialized.');
 
-                {query_lookup}
+        let position_ids = IWorld.lookup(
+            world, 0x28b9aeb6b19af1454b16ce28c1ee6909e3946e4552ed09886a06ebe1e158fc
+        );
 
-                return ();
-            }}
-            
-            }}
+        return ();
+    }
+}
 
 //! > expected_diagnostics
