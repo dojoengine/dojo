@@ -12,12 +12,10 @@ fn move(world: felt, query: Query::<Position>) {
 }
 
 //! > generated_cairo_code
-struct Query<T> {}
-
 #[contract]
 mod MoveSystem {
     struct Storage {
-        world_address: felt,
+        world_address: felt, 
     }
 
     #[external]
@@ -32,7 +30,9 @@ mod MoveSystem {
         let world = world_address::read();
         assert(world != 0, 'MoveSystem: Not initialized.');
 
-        let position_ids = IWorld.lookup(world, 0x28b9aeb6b19af1454b16ce28c1ee6909e3946e4552ed09886a06ebe1e158fc)
+        let position_ids = IWorld.lookup(
+            world, 0x28b9aeb6b19af1454b16ce28c1ee6909e3946e4552ed09886a06ebe1e158fc
+        );
 
         return ();
     }

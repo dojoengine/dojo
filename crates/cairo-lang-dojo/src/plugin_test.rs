@@ -4,6 +4,7 @@ use cairo_lang_parser::test_utils::create_virtual_file;
 use cairo_lang_parser::utils::{get_syntax_file_and_diagnostics, SimpleParserDatabase};
 use cairo_lang_syntax::node::TypedSyntaxNode;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
+use cairo_lang_formatter::format_string;
 
 use crate::plugin::DojoPlugin;
 
@@ -33,7 +34,7 @@ pub fn test_expand_contract(
         }));
 
         if !remove_original_item {
-            generated_items.push(item.as_syntax_node().get_text(db));
+            generated_items.push(format_string(db, item.as_syntax_node().get_text(db)));
         }
 
         let content = match code {
@@ -41,7 +42,7 @@ pub fn test_expand_contract(
             None => continue,
         };
 
-        generated_items.push(content);
+        generated_items.push(format_string(db, content));
     }
 
     OrderedHashMap::from([
