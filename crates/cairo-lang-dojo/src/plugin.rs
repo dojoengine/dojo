@@ -135,11 +135,12 @@ fn handle_mod(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult
     let mut builder = PatchBuilder::new(db);
 
     for (component, nodes) in components {
+        let name = component.to_lowercase();
         builder.add_modified(RewriteNode::interpolate_patched(
             &formatdoc!(
                 "
                 #[contract]
-                mod {component} {{
+                mod {name} {{
                     $body$
                 }}
                 ",

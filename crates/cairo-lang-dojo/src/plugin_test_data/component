@@ -31,7 +31,7 @@ mod position {
 
 //! > generated_cairo_code
 #[contract]
-mod Position {
+mod position {
     #[derive(Component)]
     struct Position {
         x: felt,
