@@ -21,6 +21,11 @@ mod position {
                 _ => bool::False(()),
             }
         }
+
+        #[view]
+        fn is_equal(self: Position, b: Position) -> bool {
+            self.x == b.x & self.y == b.y
+        }
     }
 }
 
@@ -66,6 +71,12 @@ mod Position {
             0 => bool::True(()),
             _ => bool::False(()),
         }
+    }
+
+    #[view]
+    fn is_equal(entity_id: felt, b: Position) -> bool {
+        let self = state::read(entity_id);
+        self.x == b.x & self.y == b.y
     }
 }
 
