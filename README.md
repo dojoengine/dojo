@@ -58,15 +58,27 @@ trait World {
 Components in `dojo-ecs` are plain structs, for example, the following implements a `Position` component which exposes a `is_zero` method.
 
 ```rust
-#[derive(Component)]
-struct Position { x: felt, y: felt }
+mod position {
+    #[derive(Component)]
+    struct Position { x: felt, y: felt }
 
-impl Position {
-    #[view]
-    fn is_zero(self: Position) -> bool {
-        match self.x - self.y {
-            0 => bool::True(()),
-            _ => bool::False(()),
+    trait IPosition {
+        fn is_zero(self: Position) -> bool;
+    }
+
+    // @NOTE: Seems plain impl isn't supported yet, we need to have a trait
+    impl Position of IPosition {
+        #[view]
+        fn is_zero(self: Position) -> bool {
+            match self.x - self.y {
+                0 => bool::True(()),
+                _ => bool::False(()),
+            }
+        }
+
+        #[view]
+        fn is_equal(self: Position, b: Position) -> bool {
+            self.x == b.x & self.y == b.y
         }
     }
 }
@@ -76,8 +88,12 @@ Components are then expanded to Starknet contract:
 
 ```rust
 #[contract]
-mod PositionComponent {
-    struct Position { x: felt, y: felt }
+mod Position {
+    #[derive(Component)]
+    struct Position {
+        x: felt,
+        y: felt
+    }
 
     struct Storage {
         world_address: felt,
@@ -87,31 +103,37 @@ mod PositionComponent {
     // Initialize PositionComponent.
     #[external]
     fn initialize(world_addr: felt) {
-        let res = world_address::read();
+        let world = world_address::read();
         assert(world == 0, 'PositionComponent: Already initialized.');
         world_address::write(world_addr);
     }
 
-    // Set the position of an entity.
-    // @TODO: Authorization.
+    // Set the state of an entity.
     #[external]
     fn set(entity_id: felt, value: Position) {
         state::write(entity_id, value);
     }
 
-    // Get the position of an entity.
+    // Get the state of an entity.
     #[view]
     fn get(entity_id: felt) -> Position {
         return state::read(entity_id);
     }
 
+
     #[view]
-    fn is_zero(entity_id: felt) -> boolean {
-        let pos = state::read(entity_id);
-        match pos.x - pos.y {
+    fn is_zero(entity_id: felt) -> bool {
+        let self = state::read(entity_id);
+        match self.x - self.y {
             0 => bool::True(()),
             _ => bool::False(()),
         }
+    }
+
+    #[view]
+    fn is_equal(entity_id: felt, b: Position) -> bool {
+        let self = state::read(entity_id);
+        self.x == b.x & self.y == b.y
     }
 }
 ```
