@@ -356,7 +356,6 @@ fn handle_impl(
     db: &dyn SyntaxGroup,
     impl_ast: ast::ItemImpl,
 ) -> (Option<(String, Vec<RewriteNode>)>, Vec<PluginDiagnostic>) {
-    let mut diagnostics = vec![];
     let body = match impl_ast.body(db) {
         MaybeImplBody::Some(body) => body,
         MaybeImplBody::None(empty_body) => {
@@ -375,25 +374,6 @@ fn handle_impl(
         match item_ast {
             ast::Item::FreeFunction(func) => {
                 let declaration = func.declaration(db);
-                let params = declaration.signature(db).parameters(db);
-
-                let replacement = match params.as_syntax_node().children(db).len() {
-                    0 => {
-                        return (
-                            None,
-                            vec![PluginDiagnostic {
-                                message: "Implementations without body are not supported."
-                                    .to_string(),
-                                stable_ptr: params.stable_ptr().untyped(),
-                            }],
-                        )
-                    }
-                    1 => vec![RewriteNode::Text("entity_id: felt".to_string())],
-                    _ => vec![
-                        RewriteNode::Text("entity_id: felt".to_string()),
-                        RewriteNode::Text(", ".to_string()),
-                    ],
-                };
 
                 let mut func_declaration = RewriteNode::from_ast(&declaration);
                 func_declaration
@@ -401,7 +381,7 @@ fn handle_impl(
                     .modify_child(db, ast::FunctionSignature::INDEX_PARAMETERS)
                     .modify(db)
                     .children
-                    .splice(0..1, replacement);
+                    .splice(0..1, vec![RewriteNode::Text("entity_id: felt".to_string())]);
 
                 functions.push(RewriteNode::interpolate_patched(
                     "
@@ -424,5 +404,5 @@ fn handle_impl(
         }
     }
 
-    return (Some((impl_ast.name(db).text(db).to_string(), functions)), diagnostics);
+    return (Some((impl_ast.name(db).text(db).to_string(), functions)), vec![]);
 }
