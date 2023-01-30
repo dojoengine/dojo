@@ -88,7 +88,7 @@ Components are then expanded to Starknet contract:
 
 ```rust
 #[contract]
-mod Position {
+mod position {
     #[derive(Component)]
     struct Position {
         x: felt,
