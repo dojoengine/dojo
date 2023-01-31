@@ -1,8 +1,9 @@
-//! Starknet capabilities and utilities on top of Cairo.
+//! Dojo capabilities and utilities on top of Starknet.
 //!
-//! StarkNet is a smart contract platform that enables developers to build and deploy smart
-//! contracts on a permissionless Layer 2 network, secured by Ethereum using validity proofs.
+//! Dojo is a full stack toolchain for developing onchain games in Cairo.
 //!
-//! Learn more at [starkware.io](http://starknet.io/).
+//! Learn more at [dojoengine.gg](http://dojoengine.gg).
 pub mod db;
 pub mod plugin;
+mod component;
+mod system;

@@ -27,6 +27,7 @@ indoc.workspace = true
 itertools.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+smol_str.workspace = true
 
 [dev-dependencies]
 env_logger.workspace = true

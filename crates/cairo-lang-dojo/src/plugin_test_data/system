@@ -4,11 +4,14 @@
 test_expand_contract
 
 //! > cairo_code
-struct Query<T> {}
+extern type Query<T>;
 
-fn move(world: felt, query: Query::<Position>) {
-    // let query
-    return ();
+#[system]
+mod MoveSystem {
+    fn execute(world: felt, query: Query::<Position>) {
+        // let query
+        return ();
+    }
 }
 
 //! > generated_cairo_code
@@ -19,7 +22,7 @@ mod MoveSystem {
     }
 
     #[external]
-    fn initialize(world_addr: felt, component_ids: Array::<felt>) {
+    fn initialize(world_addr: felt) {
         let world = world_address::read();
         assert(world == 0, 'MoveSystem: Already initialized.');
         world_address::write(world_addr);
