@@ -55,31 +55,27 @@ trait World {
 
 #### Components
 
-Components in `dojo-ecs` are plain structs, for example, the following implements a `Position` component which exposes a `is_zero` method.
+Components in `dojo-ecs` are modules with a single Struct describing its state, for example, the following implements a `Position` component which exposes a `is_zero` method.
 
 ```rust
-mod position {
-    #[derive(Component)]
-    struct Position { x: felt, y: felt }
-
-    trait IPosition {
-        fn is_zero(self: Position) -> bool;
+#[component]
+mod PositionComponent {
+    struct Position {
+        x: felt,
+        y: felt
     }
 
-    // @NOTE: Seems plain impl isn't supported yet, we need to have a trait
-    impl Position of IPosition {
-        #[view]
-        fn is_zero(self: Position) -> bool {
-            match self.x - self.y {
-                0 => bool::True(()),
-                _ => bool::False(()),
-            }
+    #[view]
+    fn is_zero(self: Position) -> bool {
+        match self.x - self.y {
+            0 => bool::True(()),
+            _ => bool::False(()),
         }
+    }
 
-        #[view]
-        fn is_equal(self: Position, b: Position) -> bool {
-            self.x == b.x & self.y == b.y
-        }
+    #[view]
+    fn is_equal(self: Position, b: Position) -> bool {
+        self.x == b.x & self.y == b.y
     }
 }
 ```
@@ -88,8 +84,7 @@ Components are then expanded to Starknet contract:
 
 ```rust
 #[contract]
-mod position {
-    #[derive(Component)]
+mod PositionComponent {
     struct Position {
         x: felt,
         y: felt
@@ -119,7 +114,6 @@ mod position {
     fn get(entity_id: felt) -> Position {
         return state::read(entity_id);
     }
-
 
     #[view]
     fn is_zero(entity_id: felt) -> bool {
