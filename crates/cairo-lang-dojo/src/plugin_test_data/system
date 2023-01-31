@@ -24,14 +24,14 @@ mod MoveSystem {
     #[external]
     fn initialize(world_addr: felt) {
         let world = world_address::read();
-        assert(world == 0, 'ExecuteSystem: Already initialized.');
+        assert(world == 0, 'MoveSystem: Already initialized.');
         world_address::write(world_addr);
     }
 
     #[external]
     fn execute() {
         let world = world_address::read();
-        assert(world != 0, 'ExecuteSystem: Not initialized.');
+        assert(world != 0, 'MoveSystem: Not initialized.');
 
         let position_ids = IWorld.lookup(
             world, 0x28b9aeb6b19af1454b16ce28c1ee6909e3946e4552ed09886a06ebe1e158fc

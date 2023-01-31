@@ -1,23 +1,30 @@
 use std::collections::HashMap;
 
-use cairo_lang_defs::plugin::PluginDiagnostic;
-use cairo_lang_semantic::patcher::RewriteNode;
+use cairo_lang_defs::plugin::{
+    DynGeneratedFileAuxData, PluginDiagnostic, PluginGeneratedFile, PluginResult,
+};
+use cairo_lang_semantic::patcher::{ModifiedNode, PatchBuilder, RewriteNode};
+use cairo_lang_semantic::plugin::DynDiagnosticMapper;
 use cairo_lang_starknet::contract::starknet_keccak;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use indoc::formatdoc;
 use itertools::Itertools;
+use smol_str::SmolStr;
+
+use crate::plugin::DiagnosticRemapper;
 
 pub struct System {
+    pub name: SmolStr,
     pub rewrite_nodes: Vec<RewriteNode>,
     pub diagnostics: Vec<PluginDiagnostic>,
 }
 
 impl System {
-    pub fn from_module_body(db: &dyn SyntaxGroup, body: ast::ModuleBody) -> Self {
+    pub fn from_module_body(db: &dyn SyntaxGroup, name: SmolStr, body: ast::ModuleBody) -> Self {
         let diagnostics = vec![];
         let rewrite_nodes: Vec<RewriteNode> = vec![];
-        let mut system = System { rewrite_nodes, diagnostics };
+        let mut system = System { rewrite_nodes, name, diagnostics };
 
         let mut matched_execute = false;
         for item in body.items(db).elements(db) {
@@ -45,13 +52,42 @@ impl System {
         system
     }
 
+    pub fn result(self, db: &dyn SyntaxGroup) -> PluginResult {
+        let name = self.name;
+        let mut builder = PatchBuilder::new(db);
+        builder.add_modified(RewriteNode::interpolate_patched(
+            &formatdoc!(
+                "
+                #[contract]
+                mod {name} {{
+                    $body$
+                }}
+                ",
+            ),
+            HashMap::from([(
+                "body".to_string(),
+                RewriteNode::Modified(ModifiedNode { children: self.rewrite_nodes }),
+            )]),
+        ));
+
+        PluginResult {
+            code: Some(PluginGeneratedFile {
+                name,
+                content: builder.code,
+                aux_data: DynGeneratedFileAuxData::new(DynDiagnosticMapper::new(
+                    DiagnosticRemapper { patches: builder.patches },
+                )),
+            }),
+            diagnostics: self.diagnostics,
+            remove_original_item: true,
+        }
+    }
+
     fn handle_system_function(
         &mut self,
         db: &dyn SyntaxGroup,
         function_ast: ast::FunctionWithBody,
     ) {
-        let name = function_ast.declaration(db).name(db).text(db);
-        let system_name = format!("{}System", name[0..1].to_uppercase() + &name[1..]);
         let signature = function_ast.declaration(db).signature(db);
         let parameters = signature.parameters(db).elements(db);
 
@@ -96,6 +132,7 @@ impl System {
             })
             .join("\n");
 
+        let name = self.name.clone();
         self.rewrite_nodes.push(RewriteNode::interpolate_patched(
             &formatdoc!(
                 "
@@ -106,14 +143,14 @@ impl System {
                 #[external]
                 fn initialize(world_addr: felt) {{
                     let world = world_address::read();
-                    assert(world == 0, '{system_name}: Already initialized.');
+                    assert(world == 0, '{name}: Already initialized.');
                     world_address::write(world_addr);
                 }}
     
                 #[external]
                 fn execute() {{
                     let world = world_address::read();
-                    assert(world != 0, '{system_name}: Not initialized.');
+                    assert(world != 0, '{name}: Not initialized.');
     
                     {query_lookup}
     

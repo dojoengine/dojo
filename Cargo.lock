@@ -187,6 +187,7 @@ dependencies = [
  "itertools",
  "serde",
  "serde_json",
+ "smol_str",
  "test-case",
  "test-case-macros",
  "test-log",

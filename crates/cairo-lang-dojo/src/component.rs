@@ -1,20 +1,28 @@
 use std::collections::HashMap;
 
-use cairo_lang_defs::plugin::PluginDiagnostic;
-use cairo_lang_semantic::patcher::RewriteNode;
+use cairo_lang_defs::plugin::{
+    DynGeneratedFileAuxData, PluginDiagnostic, PluginGeneratedFile, PluginResult,
+};
+use cairo_lang_semantic::patcher::{ModifiedNode, PatchBuilder, RewriteNode};
+use cairo_lang_semantic::plugin::DynDiagnosticMapper;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
+use indoc::formatdoc;
+use smol_str::SmolStr;
+
+use crate::plugin::DiagnosticRemapper;
 
 pub struct Component {
+    pub name: SmolStr,
     pub rewrite_nodes: Vec<RewriteNode>,
     pub diagnostics: Vec<PluginDiagnostic>,
 }
 
 impl Component {
-    pub fn from_module_body(db: &dyn SyntaxGroup, body: ast::ModuleBody) -> Self {
+    pub fn from_module_body(db: &dyn SyntaxGroup, name: SmolStr, body: ast::ModuleBody) -> Self {
         let diagnostics = vec![];
         let rewrite_nodes: Vec<RewriteNode> = vec![];
-        let mut component = Component { rewrite_nodes, diagnostics };
+        let mut component = Component { rewrite_nodes, name, diagnostics };
 
         let mut matched_struct = false;
         for item in body.items(db).elements(db) {
@@ -39,6 +47,37 @@ impl Component {
         }
 
         component
+    }
+
+    pub fn result(self, db: &dyn SyntaxGroup) -> PluginResult {
+        let name = self.name;
+        let mut builder = PatchBuilder::new(db);
+        builder.add_modified(RewriteNode::interpolate_patched(
+            &formatdoc!(
+                "
+                #[contract]
+                mod {name} {{
+                    $body$
+                }}
+                ",
+            ),
+            HashMap::from([(
+                "body".to_string(),
+                RewriteNode::Modified(ModifiedNode { children: self.rewrite_nodes }),
+            )]),
+        ));
+
+        PluginResult {
+            code: Some(PluginGeneratedFile {
+                name,
+                content: builder.code,
+                aux_data: DynGeneratedFileAuxData::new(DynDiagnosticMapper::new(
+                    DiagnosticRemapper { patches: builder.patches },
+                )),
+            }),
+            diagnostics: self.diagnostics,
+            remove_original_item: true,
+        }
     }
 
     fn handle_component_struct(&mut self, db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) {

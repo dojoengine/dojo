@@ -1,24 +1,19 @@
-use std::collections::HashMap;
 use std::sync::Arc;
 use std::vec;
 
-use cairo_lang_defs::plugin::{
-    DynGeneratedFileAuxData, GeneratedFileAuxData, MacroPlugin, PluginDiagnostic,
-    PluginGeneratedFile, PluginResult,
-};
+use cairo_lang_defs::plugin::{GeneratedFileAuxData, MacroPlugin, PluginDiagnostic, PluginResult};
 use cairo_lang_diagnostics::DiagnosticEntry;
 use cairo_lang_semantic::db::SemanticGroup;
-use cairo_lang_semantic::patcher::{ModifiedNode, PatchBuilder, Patches, RewriteNode};
+use cairo_lang_semantic::patcher::Patches;
 use cairo_lang_semantic::plugin::{
-    AsDynGeneratedFileAuxData, AsDynMacroPlugin, DiagnosticMapper, DynDiagnosticMapper,
-    PluginMappedDiagnostic, SemanticPlugin,
+    AsDynGeneratedFileAuxData, AsDynMacroPlugin, DiagnosticMapper, PluginMappedDiagnostic,
+    SemanticPlugin,
 };
 use cairo_lang_semantic::SemanticDiagnostic;
 use cairo_lang_syntax::node::ast::MaybeModuleBody;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
-use indoc::formatdoc;
 
 use crate::component::Component;
 use crate::system::System;
@@ -29,7 +24,7 @@ const SYSTEM_ATTR: &str = "system";
 /// The diagnostics remapper of the plugin.
 #[derive(Debug, PartialEq, Eq)]
 pub struct DiagnosticRemapper {
-    patches: Patches,
+    pub patches: Patches,
 }
 impl GeneratedFileAuxData for DiagnosticRemapper {
     fn as_any(&self) -> &dyn std::any::Any {
@@ -89,41 +84,6 @@ impl AsDynMacroPlugin for DojoPlugin {
 }
 impl SemanticPlugin for DojoPlugin {}
 
-fn build_result(
-    db: &dyn SyntaxGroup,
-    name: String,
-    rewrite_nodes: Vec<RewriteNode>,
-    diagnostics: Vec<PluginDiagnostic>,
-) -> PluginResult {
-    let mut builder = PatchBuilder::new(db);
-    builder.add_modified(RewriteNode::interpolate_patched(
-        &formatdoc!(
-            "
-                #[contract]
-                mod {name} {{
-                    $body$
-                }}
-                ",
-        ),
-        HashMap::from([(
-            "body".to_string(),
-            RewriteNode::Modified(ModifiedNode { children: rewrite_nodes }),
-        )]),
-    ));
-
-    PluginResult {
-        code: Some(PluginGeneratedFile {
-            name: "contract".into(),
-            content: builder.code,
-            aux_data: DynGeneratedFileAuxData::new(DynDiagnosticMapper::new(DiagnosticRemapper {
-                patches: builder.patches,
-            })),
-        }),
-        diagnostics,
-        remove_original_item: true,
-    }
-}
-
 fn handle_mod(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult {
     let name = module_ast.name(db).text(db);
     let body = match module_ast.body(db) {
@@ -141,13 +101,11 @@ fn handle_mod(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult
     };
 
     if module_ast.has_attr(db, COMPONENT_ATTR) {
-        let component = Component::from_module_body(db, body);
-        return build_result(db, name.to_string(), component.rewrite_nodes, component.diagnostics);
+        return Component::from_module_body(db, name, body).result(db);
     }
 
     if module_ast.has_attr(db, SYSTEM_ATTR) {
-        let system = System::from_module_body(db, body);
-        return build_result(db, name.to_string(), system.rewrite_nodes, system.diagnostics);
+        return System::from_module_body(db, name, body).result(db);
     }
 
     PluginResult {
