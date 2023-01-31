@@ -5,14 +5,14 @@ use cairo_lang_defs::plugin::{
 };
 use cairo_lang_semantic::patcher::{ModifiedNode, PatchBuilder, RewriteNode};
 use cairo_lang_semantic::plugin::DynDiagnosticMapper;
-use cairo_lang_starknet::contract::starknet_keccak;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
+use cairo_lang_utils::try_extract_matches;
 use indoc::formatdoc;
-use itertools::Itertools;
 use smol_str::SmolStr;
 
 use crate::plugin::DiagnosticRemapper;
+use crate::query::Query;
 
 pub struct System {
     pub name: SmolStr,
@@ -41,7 +41,7 @@ impl System {
                     }
 
                     if name == "execute" {
-                        system.handle_system_function(db, item_function.clone());
+                        system.handle_function(db, item_function.clone());
                         matched_execute = true;
                     }
                 }
@@ -83,54 +83,22 @@ impl System {
         }
     }
 
-    fn handle_system_function(
-        &mut self,
-        db: &dyn SyntaxGroup,
-        function_ast: ast::FunctionWithBody,
-    ) {
+    fn handle_function(&mut self, db: &dyn SyntaxGroup, function_ast: ast::FunctionWithBody) {
         let signature = function_ast.declaration(db).signature(db);
         let parameters = signature.parameters(db).elements(db);
+        let mut preprocess_rewrite_nodes = vec![];
 
-        let query_param = parameters
-            .iter()
-            .find(|attr| match attr.name(db) {
-                name => name.text(db).as_str() == "query",
-            })
-            .unwrap();
+        for param in parameters.iter() {
+            let type_ast = param.type_clause(db).ty(db);
 
-        let generic_types;
-        match query_param.type_clause(db).ty(db) {
-            ast::Expr::Path(path) => {
-                let generic = path
-                    .elements(db)
-                    .iter()
-                    .find_map(|segment| match segment {
-                        ast::PathSegment::WithGenericArgs(segment) => {
-                            if segment.ident(db).text(db).as_str() == "Query" {
-                                Some(segment.generic_args(db))
-                            } else {
-                                None
-                            }
-                        }
-                        _ => None,
-                    })
-                    .unwrap();
-
-                generic_types = generic.generic_args(db).elements(db);
+            match try_extract_types(db, &type_ast) {
+                Some(SystemArgType::Query) => {
+                    let query = Query::from_expr(db, type_ast.clone());
+                    preprocess_rewrite_nodes.extend(query.rewrite_nodes);
+                }
+                None => (),
             }
-            _ => return,
         }
-
-        let query_lookup = generic_types
-            .iter()
-            .map(|f| {
-                format!(
-                    "let {} = IWorld.lookup(world, {:#x});",
-                    f.as_syntax_node().get_text(db).to_ascii_lowercase() + "_ids",
-                    starknet_keccak(f.as_syntax_node().get_text(db).as_bytes())
-                )
-            })
-            .join("\n");
 
         let name = self.name.clone();
         self.rewrite_nodes.push(RewriteNode::interpolate_patched(
@@ -152,7 +120,7 @@ impl System {
                     let world = world_address::read();
                     assert(world != 0, '{name}: Not initialized.');
     
-                    {query_lookup}
+                    $preprocessing$
     
                     $body$
                 }}
@@ -160,16 +128,31 @@ impl System {
             ),
             HashMap::from([
                 (
-                    "type_name".to_string(),
-                    RewriteNode::Trimmed(function_ast.declaration(db).name(db).as_syntax_node()),
-                ),
-                (
                     "body".to_string(),
                     RewriteNode::Trimmed(function_ast.body(db).statements(db).as_syntax_node()),
                 ),
-                ("query_param".to_string(), RewriteNode::Trimmed(query_param.as_syntax_node())),
-                // ("parameters".to_string(), RewriteNode::Trimmed(function_ast.declaration(db).signature(db).parameters(db).as_syntax_node())),
+                (
+                    "preprocessing".to_string(),
+                    RewriteNode::Modified(ModifiedNode { children: preprocess_rewrite_nodes }),
+                ),
             ]),
         ));
+    }
+}
+
+enum SystemArgType {
+    Query,
+}
+
+fn try_extract_types(db: &dyn SyntaxGroup, type_ast: &ast::Expr) -> Option<SystemArgType> {
+    let as_path = try_extract_matches!(type_ast, ast::Expr::Path)?;
+    let [ast::PathSegment::WithGenericArgs(segment)] = &as_path.elements(db)[..] else {
+        return None;
+    };
+    let ty = segment.ident(db).text(db);
+    if ty == "Query" {
+        Some(SystemArgType::Query)
+    } else {
+        None
     }
 }

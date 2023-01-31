@@ -8,8 +8,13 @@ extern type Query<T>;
 
 #[system]
 mod MoveSystem {
-    fn execute(world: felt, query: Query::<Position>) {
-        // let query
+    fn execute_inner(query: Query::<(PositionComponent::Position, HealthComponent::Health)>) {
+        return ();
+    }
+
+    fn execute(
+        world: felt, query: Query::<(PositionComponent::Position, HealthComponent::Health)>
+    ) {
         return ();
     }
 }
@@ -34,7 +39,10 @@ mod MoveSystem {
         assert(world != 0, 'MoveSystem: Not initialized.');
 
         let position_ids = IWorld.lookup(
-            world, 0x28b9aeb6b19af1454b16ce28c1ee6909e3946e4552ed09886a06ebe1e158fc
+            world, 0x1a42f66f387f576f66678aa85131976ee602be23c3d1bc7597fdeb1e40b9687
+        );
+        let health_ids = IWorld.lookup(
+            world, 0x737c494e6fbf007e7b84f73bc84f202746ae6a51bc789d374fe8290ce2a8ab
         );
 
         return ();
