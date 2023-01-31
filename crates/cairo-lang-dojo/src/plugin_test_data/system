@@ -4,11 +4,14 @@
 test_expand_contract
 
 //! > cairo_code
-struct Query<T> {}
+extern type Query<T>;
 
-fn move(world: felt, query: Query::<Position>) {
-    // let query
-    return ();
+#[system]
+mod MoveSystem {
+    fn execute(world: felt, query: Query::<Position>) {
+        // let query
+        return ();
+    }
 }
 
 //! > generated_cairo_code
@@ -19,16 +22,16 @@ mod MoveSystem {
     }
 
     #[external]
-    fn initialize(world_addr: felt, component_ids: Array::<felt>) {
+    fn initialize(world_addr: felt) {
         let world = world_address::read();
-        assert(world == 0, 'MoveSystem: Already initialized.');
+        assert(world == 0, 'ExecuteSystem: Already initialized.');
         world_address::write(world_addr);
     }
 
     #[external]
     fn execute() {
         let world = world_address::read();
-        assert(world != 0, 'MoveSystem: Not initialized.');
+        assert(world != 0, 'ExecuteSystem: Not initialized.');
 
         let position_ids = IWorld.lookup(
             world, 0x28b9aeb6b19af1454b16ce28c1ee6909e3946e4552ed09886a06ebe1e158fc
