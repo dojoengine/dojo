@@ -17,11 +17,12 @@ use cairo_lang_semantic::SemanticDiagnostic;
 use cairo_lang_starknet::contract::starknet_keccak;
 use cairo_lang_syntax::node::ast::{MaybeImplBody, MaybeModuleBody};
 use cairo_lang_syntax::node::db::SyntaxGroup;
+use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use indoc::formatdoc;
 use itertools::Itertools;
 
-const COMPONENT_TRAIT: &str = "Component";
+const COMPONENT_ATTR: &str = "component";
 
 /// The diagnostics remapper of the plugin.
 #[derive(Debug, PartialEq, Eq)]
@@ -88,6 +89,13 @@ impl AsDynMacroPlugin for DojoPlugin {
 impl SemanticPlugin for DojoPlugin {}
 
 fn handle_mod(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult {
+    if !module_ast.has_attr(db, COMPONENT_ATTR) {
+        // TODO: diagnostic
+        return PluginResult::default();
+    }
+
+    let name = module_ast.name(db).text(db);
+
     let body = match module_ast.body(db) {
         MaybeModuleBody::Some(body) => body,
         MaybeModuleBody::None(empty_body) => {
@@ -102,55 +110,39 @@ fn handle_mod(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult
         }
     };
     let mut diagnostics = vec![];
-    let mut components: HashMap<String, Vec<RewriteNode>> = HashMap::new();
+    let mut rewrite_nodes: Vec<RewriteNode> = vec![];
 
     for item in body.items(db).elements(db) {
         match &item {
-            ast::Item::Struct(struct_ast) => match handle_struct(db, struct_ast.clone()) {
-                Some(res) => {
-                    components.entry(res.0).or_insert(Vec::new()).extend(res.1);
-                }
-                None => {
-                    diagnostics.push(PluginDiagnostic {
-                        message: "Structs without COMPONENT_TRAIT are not supported.".to_string(),
-                        stable_ptr: item.stable_ptr().untyped(),
-                    });
-                }
-            },
-            ast::Item::Impl(impl_ast) => {
-                let (fns, diagnostic) = handle_impl(db, impl_ast.clone());
-                diagnostics.extend(diagnostic);
-
-                match fns {
-                    Some(res) => {
-                        components.entry(res.0).or_insert(Vec::new()).extend(res.1);
-                    }
-                    None => {}
-                }
+            ast::Item::Struct(item_struct) => {
+                // TODO: verify only one struct per module.
+                let rewrite_node = handle_component(db, item_struct.clone());
+                rewrite_nodes.push(RewriteNode::Copied(item_struct.as_syntax_node()));
+                rewrite_nodes.push(rewrite_node);
+            }
+            ast::Item::FreeFunction(item_function) => {
+                let rewrite_node = handle_component_functions(db, item_function.clone());
+                rewrite_nodes.push(rewrite_node);
             }
             _ => (),
         }
     }
 
     let mut builder = PatchBuilder::new(db);
-
-    for (component, nodes) in components {
-        let name = component.to_lowercase();
-        builder.add_modified(RewriteNode::interpolate_patched(
-            &formatdoc!(
-                "
+    builder.add_modified(RewriteNode::interpolate_patched(
+        &formatdoc!(
+            "
                 #[contract]
                 mod {name} {{
                     $body$
                 }}
                 ",
-            ),
-            HashMap::from([(
-                "body".to_string(),
-                RewriteNode::Modified(ModifiedNode { children: nodes }),
-            )]),
-        ));
-    }
+        ),
+        HashMap::from([(
+            "body".to_string(),
+            RewriteNode::Modified(ModifiedNode { children: rewrite_nodes }),
+        )]),
+    ));
 
     PluginResult {
         code: Some(PluginGeneratedFile {
@@ -163,33 +155,6 @@ fn handle_mod(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult
         diagnostics,
         remove_original_item: true,
     }
-}
-
-fn handle_struct(
-    db: &dyn SyntaxGroup,
-    struct_ast: ast::ItemStruct,
-) -> Option<(String, Vec<RewriteNode>)> {
-    let attrs = struct_ast.attributes(db).elements(db);
-
-    for attr in attrs {
-        if attr.attr(db).text(db) == "derive" {
-            if let ast::OptionAttributeArgs::AttributeArgs(args) = attr.args(db) {
-                for arg in args.arg_list(db).elements(db) {
-                    if let ast::Expr::Path(expr) = arg {
-                        if let [ast::PathSegment::Simple(segment)] = &expr.elements(db)[..] {
-                            if segment.ident(db).text(db).as_str() != COMPONENT_TRAIT {
-                                return None;
-                            }
-
-                            return Some(handle_component(db, struct_ast));
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    None
 }
 
 fn handle_function(db: &dyn SyntaxGroup, function_ast: ast::FunctionWithBody) -> PluginResult {
@@ -308,16 +273,9 @@ fn handle_function(db: &dyn SyntaxGroup, function_ast: ast::FunctionWithBody) ->
     }
 }
 
-fn handle_component(
-    db: &dyn SyntaxGroup,
-    struct_ast: ast::ItemStruct,
-) -> (String, Vec<RewriteNode>) {
-    (
-        struct_ast.name(db).text(db).to_string(),
-        vec![
-            RewriteNode::Copied(struct_ast.as_syntax_node()),
-            RewriteNode::interpolate_patched(
-                "
+fn handle_component(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> RewriteNode {
+    RewriteNode::interpolate_patched(
+        "
                 struct Storage {
                     world_address: felt,
                     state: Map::<felt, $type_name$>,
@@ -343,67 +301,38 @@ fn handle_component(
                     return state::read(entity_id);
                 }
                 ",
-                HashMap::from([(
-                    "type_name".to_string(),
-                    RewriteNode::Trimmed(struct_ast.name(db).as_syntax_node()),
-                )]),
-            ),
-            RewriteNode::Text("\n".to_string()),
-        ],
+        HashMap::from([(
+            "type_name".to_string(),
+            RewriteNode::Trimmed(struct_ast.name(db).as_syntax_node()),
+        )]),
     )
 }
 
-fn handle_impl(
-    db: &dyn SyntaxGroup,
-    impl_ast: ast::ItemImpl,
-) -> (Option<(String, Vec<RewriteNode>)>, Vec<PluginDiagnostic>) {
-    let body = match impl_ast.body(db) {
-        MaybeImplBody::Some(body) => body,
-        MaybeImplBody::None(empty_body) => {
-            return (
-                None,
-                vec![PluginDiagnostic {
-                    message: "Implementations without body are not supported.".to_string(),
-                    stable_ptr: empty_body.stable_ptr().untyped(),
-                }],
-            )
-        }
-    };
+fn handle_component_functions(db: &dyn SyntaxGroup, func: ast::FunctionWithBody) -> RewriteNode {
+    let declaration = func.declaration(db);
 
-    let mut functions = vec![];
-    for item_ast in body.items(db).elements(db) {
-        match item_ast {
-            ast::Item::FreeFunction(func) => {
-                let declaration = func.declaration(db);
+    let mut func_declaration = RewriteNode::from_ast(&declaration);
+    func_declaration
+        .modify_child(db, ast::FunctionDeclaration::INDEX_SIGNATURE)
+        .modify_child(db, ast::FunctionSignature::INDEX_PARAMETERS)
+        .modify(db)
+        .children
+        .splice(0..1, vec![RewriteNode::Text("entity_id: felt".to_string())]);
 
-                let mut func_declaration = RewriteNode::from_ast(&declaration);
-                func_declaration
-                    .modify_child(db, ast::FunctionDeclaration::INDEX_SIGNATURE)
-                    .modify_child(db, ast::FunctionSignature::INDEX_PARAMETERS)
-                    .modify(db)
-                    .children
-                    .splice(0..1, vec![RewriteNode::Text("entity_id: felt".to_string())]);
-
-                functions.push(RewriteNode::interpolate_patched(
-                    "
+    RewriteNode::interpolate_patched(
+        "
                         #[view]
                         $func_decl$ {
                             let self = state::read(entity_id);
                             $body$
                         }
                         ",
-                    HashMap::from([
-                        ("func_decl".to_string(), func_declaration),
-                        (
-                            "body".to_string(),
-                            RewriteNode::Trimmed(func.body(db).statements(db).as_syntax_node()),
-                        ),
-                    ]),
-                ));
-            }
-            _ => {}
-        }
-    }
-
-    return (Some((impl_ast.name(db).text(db).to_string(), functions)), vec![]);
+        HashMap::from([
+            ("func_decl".to_string(), func_declaration),
+            (
+                "body".to_string(),
+                RewriteNode::Trimmed(func.body(db).statements(db).as_syntax_node()),
+            ),
+        ]),
+    )
 }
