@@ -16,70 +16,52 @@ impl Query {
         let diagnostics = vec![];
         let rewrite_nodes: Vec<RewriteNode> = vec![];
         let mut query = Query { diagnostics, rewrite_nodes };
-
-        match expr {
-            ast::Expr::Path(path) => match &path.elements(db)[0] {
-                ast::PathSegment::WithGenericArgs(segment) => {
-                    let generic = segment.generic_args(db);
-                    let parameters = generic.generic_args(db).elements(db);
-                    for parameter in parameters {
-                        query.handle_parameter(db, parameter);
-                    }
-                }
-                _ => {
-                    query.diagnostics.push(PluginDiagnostic {
-                        message: "Invalid query type".to_string(),
-                        stable_ptr: path.stable_ptr().untyped(),
-                    });
-                }
-            },
-            _ => {
-                query.diagnostics.push(PluginDiagnostic {
-                    message: "Invalid query type".to_string(),
-                    stable_ptr: expr.stable_ptr().untyped(),
-                });
-            }
-        }
+        query.handle_expression(db, expr);
         query
     }
 
-    fn handle_parameter(&mut self, db: &dyn SyntaxGroup, parameter: ast::Expr) {
-        match parameter {
+    fn handle_expression(&mut self, db: &dyn SyntaxGroup, expression: ast::Expr) {
+        match expression {
             ast::Expr::Tuple(tuple) => {
                 for element in tuple.expressions(db).elements(db) {
-                    self.handle_parameter(db, element);
+                    self.handle_expression(db, element);
                 }
             }
 
             ast::Expr::Path(path) => {
-                let var_prefix = match path.elements(db).last() {
-                    Some(segment) => segment.as_syntax_node().get_text(db).to_ascii_lowercase(),
-                    None => {
-                        return self.diagnostics.push(PluginDiagnostic {
-                            message: "Resolving query name.".to_string(),
-                            stable_ptr: path.stable_ptr().untyped(),
-                        });
+                let binding = path.elements(db);
+                let last = binding.last().unwrap();
+                match last {
+                    ast::PathSegment::WithGenericArgs(segment) => {
+                        let generic = segment.generic_args(db);
+                        let parameters = generic.generic_args(db).elements(db);
+                        for parameter in parameters {
+                            self.handle_expression(db, parameter);
+                        }
                     }
-                };
+                    ast::PathSegment::Simple(segment) => {
+                        let var_prefix = segment.as_syntax_node().get_text(db).to_ascii_lowercase();
 
-                // TODO: Properly compute component id
-                let component_id = format!(
-                    "{:#x}",
-                    starknet_keccak(path.as_syntax_node().get_text(db).as_bytes())
-                );
+                        // TODO: Properly compute component id
+                        let component_id = format!(
+                            "{:#x}",
+                            starknet_keccak(path.as_syntax_node().get_text(db).as_bytes())
+                        );
 
-                self.rewrite_nodes.push(RewriteNode::interpolate_patched(
-                    "let $var_prefix$_ids = IWorld.lookup(world, $component_address$);",
-                    HashMap::from([
-                        ("var_prefix".to_string(), RewriteNode::Text(var_prefix)),
-                        ("component_address".to_string(), RewriteNode::Text(component_id)),
-                    ]),
-                ))
+                        self.rewrite_nodes.push(RewriteNode::interpolate_patched(
+                            "let $var_prefix$_ids = IWorld.lookup(world, $component_address$);",
+                            HashMap::from([
+                                ("var_prefix".to_string(), RewriteNode::Text(var_prefix)),
+                                ("component_address".to_string(), RewriteNode::Text(component_id)),
+                            ]),
+                        ))
+                    }
+                }
             }
             _ => {
                 return self.diagnostics.push(PluginDiagnostic {
                     message: "Unsupported query type. Must be tuple or single struct.".to_string(),
-                    stable_ptr: parameter.stable_ptr().untyped(),
+                    stable_ptr: expression.stable_ptr().untyped(),
                 });
             }
         }

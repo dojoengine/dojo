@@ -43,9 +43,12 @@ impl System {
                     if name == "execute" {
                         system.handle_function(db, item_function.clone());
                         matched_execute = true;
+                        continue
                     }
+
+                    system.rewrite_nodes.push(RewriteNode::Copied(item_function.as_syntax_node()))
                 }
-                _ => (),
+                item => system.rewrite_nodes.push(RewriteNode::Copied(item.as_syntax_node()))
             }
         }
 
@@ -91,7 +94,7 @@ impl System {
         for param in parameters.iter() {
             let type_ast = param.type_clause(db).ty(db);
 
-            match try_extract_types(db, &type_ast) {
+            match try_extract_execute_paramters(db, &type_ast) {
                 Some(SystemArgType::Query) => {
                     let query = Query::from_expr(db, type_ast.clone());
                     preprocess_rewrite_nodes.extend(query.rewrite_nodes);
@@ -144,12 +147,19 @@ enum SystemArgType {
     Query,
 }
 
-fn try_extract_types(db: &dyn SyntaxGroup, type_ast: &ast::Expr) -> Option<SystemArgType> {
+fn try_extract_execute_paramters(db: &dyn SyntaxGroup, type_ast: &ast::Expr) -> Option<SystemArgType> {
     let as_path = try_extract_matches!(type_ast, ast::Expr::Path)?;
-    let [ast::PathSegment::WithGenericArgs(segment)] = &as_path.elements(db)[..] else {
-        return None;
+    let binding = as_path.elements(db);
+    let last = binding.last()?;
+    let segment = match last {
+        ast::PathSegment::WithGenericArgs(segment) => segment,
+        ast::PathSegment::Simple(_segment) => {
+            // TODO: Match `world` var name.
+            return None
+        },
     };
     let ty = segment.ident(db).text(db);
+
     if ty == "Query" {
         Some(SystemArgType::Query)
     } else {
