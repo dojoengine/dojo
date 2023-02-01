@@ -43,9 +43,12 @@ impl System {
                     if name == "execute" {
                         system.handle_function(db, item_function.clone());
                         matched_execute = true;
+                        continue
                     }
+
+                    system.rewrite_nodes.push(RewriteNode::Copied(item_function.as_syntax_node()))
                 }
-                _ => (),
+                item => system.rewrite_nodes.push(RewriteNode::Copied(item.as_syntax_node()))
             }
         }
 

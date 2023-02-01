@@ -1,7 +1,7 @@
 use array::ArrayTrait;
 
 #[derive(Copy, Drop)]
-struct ID {}
+struct Entity {}
 
 struct Or<T> {}
 

@@ -6,22 +6,109 @@ test_expand_contract
 //! > cairo_code
 extern type Query<T>;
 
+#[component]
+mod PositionComponent {
+    struct Position {
+        x: felt,
+        y: felt,
+    }
+}
+
+#[component]
+mod HealthComponent {
+    struct Health {
+        hp: felt,
+    }
+}
+
 #[system]
 mod MoveSystem {
-    fn execute_inner(query: Query::<(PositionComponent::Position, HealthComponent::Health)>) {
+    use PositionComponent::Position;
+    use HealthComponent::Health;
+
+    fn execute_inner(query: Query::<(Position, Health)>) {
         return ();
     }
 
-    fn execute(
-        world: felt, query: Query::<(PositionComponent::Position, HealthComponent::Health)>
-    ) {
+    fn execute(world: felt, query: Query::<(Position, Health)>) {
         return ();
     }
 }
 
 //! > generated_cairo_code
 #[contract]
+mod PositionComponent {
+    struct Position {
+        x: felt,
+        y: felt,
+    }
+
+    struct Storage {
+        world_address: felt,
+        state: Map::<felt, Position>,
+    }
+
+    // Initialize PositionComponent.
+    #[external]
+    fn initialize(world_addr: felt) {
+        let world = world_address::read();
+        assert(world == 0, 'PositionComponent: Already initialized.');
+        world_address::write(world_addr);
+    }
+
+    // Set the state of an entity.
+    #[external]
+    fn set(entity_id: felt, value: Position) {
+        state::write(entity_id, value);
+    }
+
+    // Get the state of an entity.
+    #[view]
+    fn get(entity_id: felt) -> Position {
+        return state::read(entity_id);
+    }
+}
+
+#[contract]
+mod HealthComponent {
+    struct Health {
+        hp: felt, 
+    }
+
+    struct Storage {
+        world_address: felt,
+        state: Map::<felt, Health>,
+    }
+
+    // Initialize HealthComponent.
+    #[external]
+    fn initialize(world_addr: felt) {
+        let world = world_address::read();
+        assert(world == 0, 'HealthComponent: Already initialized.');
+        world_address::write(world_addr);
+    }
+
+    // Set the state of an entity.
+    #[external]
+    fn set(entity_id: felt, value: Health) {
+        state::write(entity_id, value);
+    }
+
+    // Get the state of an entity.
+    #[view]
+    fn get(entity_id: felt) -> Health {
+        return state::read(entity_id);
+    }
+}
+
+#[contract]
 mod MoveSystem {
+    use PositionComponent::Position;
+    use HealthComponent::Health;
+
+    fn execute_inner(query: Query::<(Position, Health)>) {
+        return ();
+    }
     struct Storage {
         world_address: felt, 
     }
@@ -39,10 +126,10 @@ mod MoveSystem {
         assert(world != 0, 'MoveSystem: Not initialized.');
 
         let position_ids = IWorld.lookup(
-            world, 0x1a42f66f387f576f66678aa85131976ee602be23c3d1bc7597fdeb1e40b9687
+            world, 0x28b9aeb6b19af1454b16ce28c1ee6909e3946e4552ed09886a06ebe1e158fc
         );
         let health_ids = IWorld.lookup(
-            world, 0x737c494e6fbf007e7b84f73bc84f202746ae6a51bc789d374fe8290ce2a8ab
+            world, 0x18aab326bea0fdf2117dc4f32e8cf0ee59a1177415f6c7bc5e1ac210048bf63
         );
 
         return ();

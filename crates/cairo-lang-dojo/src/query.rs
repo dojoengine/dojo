@@ -6,6 +6,10 @@ use cairo_lang_starknet::contract::starknet_keccak;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 
+const QUERY_PARAMETER_OR: &str = "Or";
+const QUERY_PARAMETER_OPTION: &str = "Option";
+const QUERY_PARAMETER_ENTITY: &str = "Entity";
+
 pub struct Query {
     pub rewrite_nodes: Vec<RewriteNode>,
     pub diagnostics: Vec<PluginDiagnostic>,
