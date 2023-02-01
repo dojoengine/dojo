@@ -42,7 +42,7 @@ impl Query {
                     ast::PathSegment::Simple(segment) => {
                         let var_prefix = segment.as_syntax_node().get_text(db).to_ascii_lowercase();
 
-                        // TODO: Properly compute component id
+                        // TODO(https://github.com/dojoengine/dojo/issues/27): Properly compute component id
                         let component_id = format!(
                             "{:#x}",
                             starknet_keccak(path.as_syntax_node().get_text(db).as_bytes())
