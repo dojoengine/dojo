@@ -26,11 +26,11 @@ mod MoveSystem {
     use PositionComponent::Position;
     use HealthComponent::Health;
 
-    fn execute_inner(query: Query::<(Position, Health)>) {
+    fn execute_inner(query: Query::<(Position, Option::<Health>)>) {
         return ();
     }
 
-    fn execute(world: felt, query: Query::<(Position, Health)>) {
+    fn execute(world: felt, query: Query::<(Position, Option::<Health>)>) {
         return ();
     }
 }
@@ -106,7 +106,7 @@ mod MoveSystem {
     use PositionComponent::Position;
     use HealthComponent::Health;
 
-    fn execute_inner(query: Query::<(Position, Health)>) {
+    fn execute_inner(query: Query::<(Position, Option::<Health>)>) {
         return ();
     }
     struct Storage {
