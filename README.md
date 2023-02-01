@@ -139,12 +139,15 @@ In the expanded form, entrypoints take `entity_id` as the first parameter.
 A system is a free function that takes as input a set of entities to operate on. Systems define a `Query` which describes a set of Components to query a worlds entities by. At compile time, the `Query` is compiled, leveraging [deterministic addresssing](#Addressing) to inline efficient entity lookups.
 
 ```rust
-fn move(query: Query<(Position, Health)>) {
-    // @NOTE: Loops are not available in Cairo 1.0 yet.
-    for (position, health) in query {
-        let is_zero = position.is_zero();
+#[system]
+mod MoveSystem {
+    fn execute(query: Query<(Position, Health)>) {
+        // @NOTE: Loops are not available in Cairo 1.0 yet.
+        for (position, health) in query {
+            let is_zero = position.is_zero();
+        }
+        return ();
     }
-    return ();
 }
 ```
 

@@ -21,9 +21,9 @@ impl Query {
             ast::Expr::Path(path) => match &path.elements(db)[0] {
                 ast::PathSegment::WithGenericArgs(segment) => {
                     let generic = segment.generic_args(db);
-                    let generic_types = generic.generic_args(db).elements(db);
-                    for generic_type in generic_types {
-                        query.handle_generic(db, generic_type);
+                    let parameters = generic.generic_args(db).elements(db);
+                    for parameter in parameters {
+                        query.handle_parameter(db, parameter);
                     }
                 }
                 _ => {
@@ -43,11 +43,11 @@ impl Query {
         query
     }
 
-    fn handle_generic(&mut self, db: &dyn SyntaxGroup, generic: ast::Expr) {
-        match generic {
+    fn handle_parameter(&mut self, db: &dyn SyntaxGroup, parameter: ast::Expr) {
+        match parameter {
             ast::Expr::Tuple(tuple) => {
                 for element in tuple.expressions(db).elements(db) {
-                    self.handle_generic(db, element);
+                    self.handle_parameter(db, element);
                 }
             }
 
@@ -79,7 +79,7 @@ impl Query {
             _ => {
                 return self.diagnostics.push(PluginDiagnostic {
                     message: "Unsupported query type. Must be tuple or single struct.".to_string(),
-                    stable_ptr: generic.stable_ptr().untyped(),
+                    stable_ptr: parameter.stable_ptr().untyped(),
                 });
             }
         }
