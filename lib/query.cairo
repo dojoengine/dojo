@@ -28,7 +28,7 @@ impl QueryImpl<T> of QueryTrait::<T> {
     fn insert(ref self: Query::<T>, key: felt, value: T) {
         let mut data = self.data;
         data.insert(key, value);
-        self = Query {data};
+        self = Query { data };
     }
 
     fn get(ref self: Query::<T>, index: felt) -> T {
