@@ -1,0 +1,76 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  cairo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v3
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly-2022-11-03
+      - name: Set up cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: cairo-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: install
+        run: ./scripts/cairo_install.sh
+      - name: cairo format
+        run: ./scripts/cairo_fmt.sh
+      # - name: starknet test
+      #   run: ./scripts/starknet_test.sh
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          components: clippy
+          toolchain: stable
+      - uses: Swatinem/rust-cache@v2
+      - run: >
+          scripts/clippy.sh
+
+  rustfmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          components: rustfmt
+          toolchain: nightly-2022-11-03
+      - uses: Swatinem/rust-cache@v2
+      - run: scripts/rust_fmt.sh --check
+
+  # Check for unnecessary dependencies.
+  udeps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        name: "Rust Toolchain Setup"
+        with:
+          profile: minimal
+          toolchain: nightly-2022-11-03
+      - uses: Swatinem/rust-cache@v2
+      - name: "Download and run cargo-udeps"
+        run: |
+          wget -O - -c https://github.com/est31/cargo-udeps/releases/download/v0.1.35/cargo-udeps-v0.1.35-x86_64-unknown-linux-gnu.tar.gz | tar -xz
+          cargo-udeps-*/cargo-udeps udeps
+        env:
+          RUSTUP_TOOLCHAIN: nightly-2022-11-03
