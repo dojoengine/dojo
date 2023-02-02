@@ -10,43 +10,49 @@ trait IProxy {
 mod World {
     use hash::pedersen;
     use starknet::get_caller_address;
-    use syscalls::deploy;
-    use syscalls::get_contract_address;
+    use dojo::syscalls::deploy;
+    use dojo::syscalls::get_contract_address;
 
     struct Storage {
-        entity_registry: LegacyMap::<felt, Array::<felt>>,
+        entity_registry_len: LegacyMap::<felt, felt>,
+        entity_registry: LegacyMap::<(felt, felt), felt>,
         module_registry: LegacyMap::<felt, felt>,
     }
 
-    #[event]
-    fn ComponentValueSet(component_id: felt, entity_id: felt, data: Array::<felt>) {}
+    // TODO: Uncommenting this gives:
+    // error: Variable was previously moved.
+    // --> contract:131:9
+    //         serde::Serde::<felt>::serialize(ref data, entity_id);
+    // #[event]
+    // fn ComponentValueSet(component_id: felt, entity_id: felt, data: Array::<felt>) {}
 
     #[external]
     fn register(class_hash: felt, module_id: felt) {
         let module_id = pedersen(0, module_id);
-        let address = deploy(
-            class_hash = proxy_class_hash,
-            contract_address_salt = module_id,
-            constructor_calldata = Array::<felt>::new(),
-            deploy_from_zero = bool::False(()),
-        );
+        let proxy_class_hash = 420;
+        let address = deploy(proxy_class_hash, module_id, ArrayTrait::new(), bool::False(()));
 
-        let world_address = get_contract_address();
-        super::IProxyDispatcher::set_implementation(address, class_hash);
-        super::IProxyDispatcher::initialize(address, world_address);
+        match starknet::contract_address_try_from_felt(address) {
+            Option::Some(ca) => {
+                let world_address = get_contract_address();
+                super::IProxyDispatcher::set_implementation(ca, class_hash);
+                super::IProxyDispatcher::initialize(ca, world_address);
 
-        module_registry::write(module_id, address);
-        module_registry::write(address, module_id);
+                module_registry::write(module_id, address);
+                module_registry::write(address, module_id);
+            },
+            Option::None(_) => {},
+        };
     }
 
     #[external]
     fn on_component_set(entity_id: felt, data: Array::<felt>) {
         let caller_address = get_caller_address();
         assert(caller_address != 0, 'World: caller is not a registered');
-        ComponentValueSet(caller_address, entity_id, data);
-        let mut entities = entity_registry::read(caller_address);
-        array_append(ref entities, entity_id);
-        entity_registry::write(caller_address, entities);
+        // ComponentValueSet(caller_address, entity_id, data);
+        let entities_len = entity_registry_len::read(caller_address);
+        entity_registry::write((caller_address, entities_len), entity_id);
+        entity_registry_len::write(caller_address, entities_len + 1);
     }
 
     #[view]
