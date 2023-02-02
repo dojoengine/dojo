@@ -1,4 +1,4 @@
-use array::ArrayTrait;
+use dict::DictFeltToTrait;
 
 #[derive(Copy, Drop)]
 struct Entity {}
@@ -7,49 +7,41 @@ struct Or<T> {}
 
 struct Option<T> {}
 
+struct Component<T> {}
+
 struct Query<T> {
-    data: Array::<T>, 
+    data: DictFeltTo::<T>, 
 }
 
 trait QueryTrait<T> {
     fn new() -> Query::<T>;
-    fn append(ref self: Query::<T>, value: T);
-    fn get(ref self: Query::<T>, index: usize) -> Option::<T>;
-    fn at(ref self: Query::<T>, index: usize) -> T;
-    fn len(ref self: Query::<T>) -> usize;
+    fn insert(ref self: Query::<T>, key: felt, value: T);
+    fn get(ref self: Query::<T>, index: felt) -> T;
 }
 
 impl QueryImpl<T> of QueryTrait::<T> {
     #[inline(always)]
     fn new() -> Query::<T> {
-        Query { data: ArrayTrait::new(),  }
+        Query { data: DictFeltToTrait::new(),  }
     }
 
-    fn append(ref self: Query::<T>, value: T) {
+    fn insert(ref self: Query::<T>, key: felt, value: T) {
         let mut data = self.data;
-        array_append(ref data, value)
+        data.insert(key, value);
+        self = Query {data};
     }
 
-    fn get(ref self: Query::<T>, index: usize) -> Option::<T> {
+    fn get(ref self: Query::<T>, index: felt) -> T {
         let mut data = self.data;
-        array_get(ref data, index)
-    }
-
-    fn at(ref self: Query::<T>, index: usize) -> T {
-        let mut data = self.data;
-        array_at(ref data, index)
-    }
-
-    fn len(ref self: Query::<T>) -> usize {
-        let mut data = self.data;
-        array_len(ref data)
+        data.get(index)
     }
 }
 
 impl QueryDrop of Drop::<Query::<felt>>;
+impl DictFeltToDrop of Drop::<DictFeltTo::<felt>>;
 
 #[test]
 fn test_query() {
     let mut query = QueryTrait::<felt>::new();
-    query.append(1);
+    query.insert(1, 1);
 }
