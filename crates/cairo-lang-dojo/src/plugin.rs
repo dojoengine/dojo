@@ -31,11 +31,7 @@ impl GeneratedFileAuxData for DiagnosticRemapper {
         self
     }
     fn eq(&self, other: &dyn GeneratedFileAuxData) -> bool {
-        if let Some(other) = other.as_any().downcast_ref::<Self>() {
-            self == other
-        } else {
-            false
-        }
+        if let Some(other) = other.as_any().downcast_ref::<Self>() { self == other } else { false }
     }
 }
 impl AsDynGeneratedFileAuxData for DiagnosticRemapper {
@@ -109,11 +105,13 @@ fn handle_mod(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult
     }
 
     PluginResult {
-            code: None,
-            diagnostics: vec![PluginDiagnostic {
-                message: "Unsupported module type. Only modules annotated with `component` or `system` supported.".to_string(),
-                stable_ptr: module_ast.stable_ptr().untyped(),
-            }],
-            remove_original_item: true,
-        }
+        code: None,
+        diagnostics: vec![PluginDiagnostic {
+            message: "Unsupported module type. Only modules annotated with `component` or \
+                      `system` supported."
+                .to_string(),
+            stable_ptr: module_ast.stable_ptr().untyped(),
+        }],
+        remove_original_item: true,
+    }
 }
