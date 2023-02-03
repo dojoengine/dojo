@@ -1,7 +1,8 @@
 [workspace]
 
 members = [
-    "crates/cairo-lang-dojo"
+    "crates/cairo-lang-dojo",
+    "crates/dojo-cli"
 ]
 
 [workspace.package]
