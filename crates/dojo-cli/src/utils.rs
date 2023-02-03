@@ -16,3 +16,13 @@ pub fn get_cairo_files_in_path(dir: &PathBuf) -> Vec<PathBuf> {
     }
     cairo_files
 }
+
+#[test]
+fn test_get_cairo_files_in_path() {
+	let mut test_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    test_path.pop();
+	test_path.push("lib");
+
+	let files = get_cairo_files_in_path(&test_path);
+assert!(files.len() > 0);
+}
