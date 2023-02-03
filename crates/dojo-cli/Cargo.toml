@@ -8,6 +8,9 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.66"
 clap = { version = "4.0", features = ["derive"] }
+# @TODO Add revision when stable
+cairo-lang-dojo = { git = "https://github.com/shramee/cairo.git", branch = "feat/dojo-plugin-lib" }
+pathdiff = "0.2.1"
 
 [[bin]]
 name = "dojo-cli"
