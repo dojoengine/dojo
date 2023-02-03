@@ -2,9 +2,11 @@ use std::collections::HashMap;
 
 use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_semantic::patcher::RewriteNode;
-use cairo_lang_starknet::contract::starknet_keccak;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
+use starknet::core::crypto::pedersen_hash;
+use starknet::core::types::FieldElement;
+use starknet::core::utils::get_contract_address;
 
 pub struct Query {
     pub rewrite_nodes: Vec<RewriteNode>,
@@ -42,11 +44,27 @@ impl Query {
                     ast::PathSegment::Simple(segment) => {
                         let var_prefix = segment.as_syntax_node().get_text(db).to_ascii_lowercase();
 
-                        // TODO(https://github.com/dojoengine/dojo/issues/27): Properly compute component id
-                        let component_id = format!(
-                            "{:#x}",
-                            starknet_keccak(path.as_syntax_node().get_text(db).as_bytes())
+                        let class_hash = "0x00000000000000000000000000000000";
+                        let world_address = "0x00000000000000000000000000000000";
+
+                        // Component name to felt
+                        let component_name = "hello".as_bytes();
+                        let mut component_name_32_u8: [u8; 32] = [0; 32];
+                        component_name_32_u8[32 - component_name.len()..]
+                            .copy_from_slice(&component_name);
+
+                        // Component name pedersen salt
+                        let salt = pedersen_hash(
+                            &FieldElement::from_bytes_be(&component_name_32_u8).unwrap(),
+                            &FieldElement::ZERO, // @TODO Should the second arg be 0?
                         );
+                        let component_id = get_contract_address(
+                            salt,
+                            FieldElement::from_hex_be(class_hash).unwrap(),
+                            &vec![],
+                            FieldElement::from_hex_be(world_address).unwrap(),
+                        )
+                        .to_string();
 
                         self.rewrite_nodes.push(RewriteNode::interpolate_patched(
                             "let $var_prefix$_ids = IWorld.lookup(world, $component_address$);",
