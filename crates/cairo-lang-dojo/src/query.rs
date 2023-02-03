@@ -48,15 +48,15 @@ impl Query {
                         let world_address = "0x00000000000000000000000000000000";
 
                         // Component name to felt
-                        let component_name = "hello".as_bytes();
+                        let component_name = path.as_syntax_node().get_text(db);
                         let mut component_name_32_u8: [u8; 32] = [0; 32];
                         component_name_32_u8[32 - component_name.len()..]
-                            .copy_from_slice(&component_name);
+                            .copy_from_slice(&component_name.as_bytes());
 
                         // Component name pedersen salt
                         let salt = pedersen_hash(
+                            &FieldElement::ZERO,
                             &FieldElement::from_bytes_be(&component_name_32_u8).unwrap(),
-                            &FieldElement::ZERO, // @TODO Should the second arg be 0?
                         );
                         let component_id = get_contract_address(
                             salt,
