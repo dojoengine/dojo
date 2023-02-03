@@ -45,10 +45,14 @@ impl Query {
                         let var_prefix = segment.as_syntax_node().get_text(db).to_ascii_lowercase();
 
                         let class_hash = "0x00000000000000000000000000000000";
-                        let world_address = "0x00000000000000000000000000000000";
+                        // TODO(https://github.com/dojoengine/dojo/issues/38): Move to cairo_project.toml
+						let world_address = "0x00000000000000000000000000000000";
 
                         // Component name to felt
-                        let component_name = path.as_syntax_node().get_text(db);
+						let component_name_raw = path.as_syntax_node().get_text(db);
+						let mut component_name_parts: Vec<&str> = component_name_raw.split("::").collect();
+                        let component_name = component_name_parts.pop().unwrap();
+						
                         let mut component_name_32_u8: [u8; 32] = [0; 32];
                         component_name_32_u8[32 - component_name.len()..]
                             .copy_from_slice(&component_name.as_bytes());
