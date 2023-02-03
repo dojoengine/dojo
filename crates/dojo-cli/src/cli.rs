@@ -1,4 +1,5 @@
 mod build;
+mod utils;
 
 use anyhow::Context;
 use clap::{Args, Parser, Subcommand};
