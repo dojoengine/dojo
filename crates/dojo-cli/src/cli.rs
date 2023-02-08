@@ -1,7 +1,8 @@
 mod build;
+mod utils;
 
 use clap::{Args, Parser, Subcommand};
-
+use build::BuildArgs;
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 #[command(propagate_version = true)]
@@ -12,7 +13,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    #[command(about = "Build the project's ECS, outputting smart contracts for deployment")]
+    #[command(about = "Build the project's ECS, outputting sierra smart contracts for deployment")]
     Build(BuildArgs),
     #[command(about = "Run a migration, declaring and deploying contracts as necessary to \
                        update the world")]
@@ -22,9 +23,6 @@ enum Commands {
     #[command(about = "Retrieve an entity's state by entity ID")]
     Inspect(InspectArgs),
 }
-
-#[derive(Args)]
-struct BuildArgs {}
 
 #[derive(Args)]
 struct MigrateArgs {
@@ -49,7 +47,7 @@ fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Build(..) => print!("Build"),
+        Commands::Build(args) => build::run(args),
         Commands::Migrate(..) => print!("Migrate"),
         Commands::Bind(..) => print!("Bind"),
         Commands::Inspect(..) => print!("Inspect"),

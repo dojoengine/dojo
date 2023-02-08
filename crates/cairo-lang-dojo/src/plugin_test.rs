@@ -1,10 +1,10 @@
 use cairo_lang_defs::plugin::{MacroPlugin, PluginGeneratedFile, PluginResult};
 use cairo_lang_diagnostics::{format_diagnostics, DiagnosticLocation};
-use cairo_lang_formatter::format_string;
 use cairo_lang_parser::test_utils::create_virtual_file;
 use cairo_lang_parser::utils::{get_syntax_file_and_diagnostics, SimpleParserDatabase};
 use cairo_lang_syntax::node::TypedSyntaxNode;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
+use cairo_lang_formatter::format_string;
 
 use crate::plugin::DojoPlugin;
 

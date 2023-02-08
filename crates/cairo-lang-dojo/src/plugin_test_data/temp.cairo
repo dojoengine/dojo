@@ -1,25 +1,3 @@
-//! > Test expansion of the component contract.
-
-//! > test_function_name
-test_expand_contract
-
-//! > cairo_code
-extern type Query<T>;
-
-#[system]
-mod MoveSystem {
-    fn execute_inner(query: Query::<(PositionComponent::Position, HealthComponent::Health)>) {
-        return ();
-    }
-
-    fn execute(
-        world: felt, query: Query::<(PositionComponent::Position, HealthComponent::Health)>
-    ) {
-        return ();
-    }
-}
-
-//! > generated_cairo_code
 extern type Query<T>;
 
 #[abi]
@@ -69,5 +47,3 @@ mod MoveSystem {
         return ();
     }
 }
-
-//! > expected_diagnostics

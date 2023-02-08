@@ -4,14 +4,14 @@ use cairo_lang_defs::plugin::{
     DynGeneratedFileAuxData, PluginDiagnostic, PluginGeneratedFile, PluginResult,
 };
 use cairo_lang_semantic::patcher::{ModifiedNode, PatchBuilder, RewriteNode};
-use cairo_lang_semantic::plugin::DynDiagnosticMapper;
+use cairo_lang_semantic::plugin::DynPluginAuxData;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use cairo_lang_utils::try_extract_matches;
 use indoc::formatdoc;
 use smol_str::SmolStr;
 
-use crate::plugin::DiagnosticRemapper;
+use crate::plugin::{DojoAuxData};
 use crate::query::Query;
 
 pub struct System {
@@ -43,12 +43,9 @@ impl System {
                     if name == "execute" {
                         system.handle_function(db, item_function.clone());
                         matched_execute = true;
-                        continue;
                     }
-
-                    system.rewrite_nodes.push(RewriteNode::Copied(item_function.as_syntax_node()))
                 }
-                item => system.rewrite_nodes.push(RewriteNode::Copied(item.as_syntax_node())),
+                _ => (),
             }
         }
 
@@ -61,6 +58,11 @@ impl System {
         builder.add_modified(RewriteNode::interpolate_patched(
             &formatdoc!(
                 "
+                #[abi]
+                    trait IWorld {{
+                        fn lookup(from: felt) -> felt;
+                }}
+
                 #[contract]
                 mod {name} {{
                     $body$
@@ -77,8 +79,8 @@ impl System {
             code: Some(PluginGeneratedFile {
                 name,
                 content: builder.code,
-                aux_data: DynGeneratedFileAuxData::new(DynDiagnosticMapper::new(
-                    DiagnosticRemapper { patches: builder.patches },
+                aux_data: DynGeneratedFileAuxData::new(DynPluginAuxData::new(
+                    DojoAuxData { patches: builder.patches },
                 )),
             }),
             diagnostics: self.diagnostics,
@@ -94,9 +96,12 @@ impl System {
         for param in parameters.iter() {
             let type_ast = param.type_clause(db).ty(db);
 
-            if let Some(SystemArgType::Query) = try_extract_execute_paramters(db, &type_ast) {
-                let query = Query::from_expr(db, type_ast.clone());
-                preprocess_rewrite_nodes.extend(query.rewrite_nodes);
+            match try_extract_types(db, &type_ast) {
+                Some(SystemArgType::Query) => {
+                    let query = Query::from_expr(db, type_ast.clone());
+                    preprocess_rewrite_nodes.extend(query.rewrite_nodes);
+                }
+                None => (),
             }
         }
 
@@ -104,10 +109,16 @@ impl System {
         self.rewrite_nodes.push(RewriteNode::interpolate_patched(
             &formatdoc!(
                 "
+                use starknet::call_contract_syscall;
+                use starknet::contract_address_try_from_felt;
+                use array::ArrayTrait;
+                use option::OptionTrait;
+                use option::OptionTraitImpl;
+
                 struct Storage {{
                     world_address: felt,
                 }}
-    
+
                 #[external]
                 fn initialize(world_addr: felt) {{
                     let world = world_address::read();
@@ -144,21 +155,15 @@ enum SystemArgType {
     Query,
 }
 
-fn try_extract_execute_paramters(
-    db: &dyn SyntaxGroup,
-    type_ast: &ast::Expr,
-) -> Option<SystemArgType> {
+fn try_extract_types(db: &dyn SyntaxGroup, type_ast: &ast::Expr) -> Option<SystemArgType> {
     let as_path = try_extract_matches!(type_ast, ast::Expr::Path)?;
-    let binding = as_path.elements(db);
-    let last = binding.last()?;
-    let segment = match last {
-        ast::PathSegment::WithGenericArgs(segment) => segment,
-        ast::PathSegment::Simple(_segment) => {
-            // TODO: Match `world` var name.
-            return None;
-        }
+    let [ast::PathSegment::WithGenericArgs(segment)] = &as_path.elements(db)[..] else {
+        return None;
     };
     let ty = segment.ident(db).text(db);
-
-    if ty == "Query" { Some(SystemArgType::Query) } else { None }
+    if ty == "Query" {
+        Some(SystemArgType::Query)
+    } else {
+        None
+    }
 }
