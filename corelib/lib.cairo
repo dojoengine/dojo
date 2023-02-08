@@ -342,4 +342,5 @@ mod test;
 
 //Dojo
 mod dojo;
+
 use dojo::Position;

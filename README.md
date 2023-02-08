@@ -19,6 +19,18 @@ The toolchain includes the following:
 ```
 rustup override set stable && rustup update && cargo test
 ```
+- Install the dependencies
+```
+make install
+```
+- Setup the Language server:
+```
+
+```
+- Run the Dojo build:
+```
+make build dir={path/to/contracts}
+```
 
 ## Overview
 

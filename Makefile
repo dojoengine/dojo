@@ -4,7 +4,6 @@
 .PHONY: test 
 
 INSTALLATION_FOLDER=./cairo
-SOURCE_FOLDER=./contracts
 
 install: 
 	if [ -d $(INSTALLATION_FOLDER) ]; then \
@@ -23,16 +22,7 @@ update-cairo:
 	git -C $(INSTALLATION_FOLDER) pull
 
 build:
-	cargo build
+	cargo run --bin dojo-cli -- build ${dir}
 
-test: 
-	cargo run --bin cairo-test -- --starknet --path $(SOURCE_FOLDER)
-
-format:
-	cargo run --bin cairo-format -- --recursive $(SOURCE_FOLDER) --print-parsing-errors
-
-check-format:
-	cargo run --bin cairo-format -- --check --recursive $(SOURCE_FOLDER)
-
-dojo:
-	cargo run --bin dojo-cli -- ./contracts
+language-server:
+	cargo build --bin dojo-language-server --release
