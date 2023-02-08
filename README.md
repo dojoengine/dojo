@@ -1,6 +1,6 @@
 # Dōjō
 
-Dojo is a full stack toolchain for developing onchain games in Cairo. Dojo leverages the afforadances provided by the Cairo language to offer an best-in-class developer experience for easily integration blockchain properties into their games.
+Dojo is a full stack toolchain for developing onchain games in Cairo. Dojo leverages the affordances provided by Cairo language plugins to offer an best-in-class developer experience for easily integrating blockchain properties into games.
 
 - Simple composition through the Entity Component System pattern
 - Concise implementations leveraging language plugins and macros
@@ -8,7 +8,7 @@ Dojo is a full stack toolchain for developing onchain games in Cairo. Dojo lever
 - Typed interface generation for client libraries
 
 The toolchain includes the following:
-- `dojo-ecs`: An concise and efficient implementation of the Entity Component System pattern.
+- `dojo-ecs`: A concise and efficient implementation of the Entity Component System pattern.
 - `dojo-migrate`: Deploy, migrate, and manage the entities, components, and systems in the world.
 - `dojo-bind`: Generate bindings for various languages / frameworks (typescript, phaser / rust, bevy).
 
@@ -55,7 +55,7 @@ trait World {
 
 #### Components
 
-Components in `dojo-ecs` are modules with a single Struct describing its state, for example, the following implements a `Position` component which exposes a `is_zero` method.
+Components in `dojo-ecs` are modules with a single struct describing its state, for example, the following implements a `Position` component which exposes a `is_zero` and `is_equal` method.
 
 ```rust
 #[component]
@@ -80,63 +80,9 @@ mod PositionComponent {
 }
 ```
 
-Components are then expanded to Starknet contract:
-
-```rust
-#[contract]
-mod PositionComponent {
-    struct Position {
-        x: felt,
-        y: felt
-    }
-
-    struct Storage {
-        world_address: felt,
-        state: Map::<felt, Position>,
-    }
-
-    // Initialize PositionComponent.
-    #[external]
-    fn initialize(world_addr: felt) {
-        let world = world_address::read();
-        assert(world == 0, 'PositionComponent: Already initialized.');
-        world_address::write(world_addr);
-    }
-
-    // Set the state of an entity.
-    #[external]
-    fn set(entity_id: felt, value: Position) {
-        state::write(entity_id, value);
-    }
-
-    // Get the state of an entity.
-    #[view]
-    fn get(entity_id: felt) -> Position {
-        return state::read(entity_id);
-    }
-
-    #[view]
-    fn is_zero(entity_id: felt) -> bool {
-        let self = state::read(entity_id);
-        match self.x - self.y {
-            0 => bool::True(()),
-            _ => bool::False(()),
-        }
-    }
-
-    #[view]
-    fn is_equal(entity_id: felt, b: Position) -> bool {
-        let self = state::read(entity_id);
-        self.x == b.x & self.y == b.y
-    }
-}
-```
-
-In the expanded form, entrypoints take `entity_id` as the first parameter.
-
 #### Systems
 
-A system is a free function that takes as input a set of entities to operate on. Systems define a `Query` which describes a set of Components to query a worlds entities by. At compile time, the `Query` is compiled, leveraging [deterministic addresssing](#Addressing) to inline efficient entity lookups.
+A system is a pure function that takes as input a set of entities to operate on. Systems define a `Query` which describes a set of criteria to query entities with.
 
 ```rust
 #[system]
@@ -147,46 +93,6 @@ mod MoveSystem {
             let is_zero = position.is_zero();
         }
         return ();
-    }
-}
-```
-
-Expansion:
-
-```rust
-#[contract]
-mod MoveSystem {
-    struct Storage {
-        world_address: felt,
-    }
-
-    #[external]
-    fn initialize(world_addr: felt) {
-        let world = world_address::read();
-        assert(world == 0, 'MoveSystem: Already initialized.');
-        world_address::write(world_addr);
-    }
-
-    #[external]
-    fn execute() {
-        let world = world_address::read();
-        assert(world != 0, 'MoveSystem: Not initialized.');
-
-        let position_id = pedersen("PositionComponent");
-        // We can compute the component addresses statically
-        // during compilation.
-        let position_address = compute_address(position_id);
-        let position_entities = IWorld.lookup(world, position_id);
-
-        let health_id = pedersen("HealthComponent");
-        let health_address = compute_address(health_id);
-        let health_entities = IWorld.lookup(world, health_id);
-
-        let entities = intersect(position_entities, health_entities);
-
-        for entity_id in entities {
-            let is_zero = IPosition.is_zero(position_address, entity_id);
-        }
     }
 }
 ```
