@@ -56,20 +56,22 @@ impl Query {
 
                         let mut component_name_32_u8: [u8; 32] = [0; 32];
                         component_name_32_u8[32 - component_name.len()..]
-                            .copy_from_slice(&component_name.as_bytes());
+                            .copy_from_slice(component_name.as_bytes());
 
                         // Component name pedersen salt
                         let salt = pedersen_hash(
                             &FieldElement::ZERO,
                             &FieldElement::from_bytes_be(&component_name_32_u8).unwrap(),
                         );
-                        let component_id = get_contract_address(
-                            salt,
-                            FieldElement::from_hex_be(class_hash).unwrap(),
-                            &vec![],
-                            FieldElement::from_hex_be(world_address).unwrap(),
-                        )
-                        .to_string();
+                        let component_id = format!(
+                            "{:#x}",
+                            get_contract_address(
+                                salt,
+                                FieldElement::from_hex_be(class_hash).unwrap(),
+                                &[],
+                                FieldElement::from_hex_be(world_address).unwrap(),
+                            )
+                        );
 
                         self.rewrite_nodes.push(RewriteNode::interpolate_patched(
                             "let $var_prefix$_ids = IWorld.lookup(world, $component_address$);",

@@ -126,10 +126,10 @@ mod MoveSystem {
         assert(world != 0, 'MoveSystem: Not initialized.');
 
         let position_ids = IWorld.lookup(
-            world, 0x28b9aeb6b19af1454b16ce28c1ee6909e3946e4552ed09886a06ebe1e158fc
+            world, 0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897
         );
         let health_ids = IWorld.lookup(
-            world, 0x18aab326bea0fdf2117dc4f32e8cf0ee59a1177415f6c7bc5e1ac210048bf63
+            world, 0x1690bb282da6a011c52715e2188378c769966964ca2332dccad8d7542983bc2
         );
 
         return ();
