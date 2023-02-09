@@ -5,8 +5,7 @@ use hex_literal::hex;
 use client::ApibaraClient;
 use futures::StreamExt;
 
-
-
+// Won't compile until apibara merges the fix for their version of anyhow
 
 /// Command line args parser.
 /// Exits with 0/1 if the input is formatted correctly/incorrectly.
@@ -65,21 +64,7 @@ async fn start(mut stream: ApibaraClient, world: [u8; 32]) -> Result<(), Box<dyn
                         let tx_hash = &event.transaction.as_ref().unwrap().meta.as_ref().unwrap().hash.as_ref().unwrap().to_biguint();
                         match &event.event {
                             Some(ev_data) => {
-                                let address = ev_data.from_address.as_ref().unwrap().to_hex_string();
-                                let data: Vec<BigUint> = ev_data.data.iter().map(|item| item.to_biguint()).collect();
-                                let from = data[0].to_str_radix(16);
-                                let to = data[1].to_str_radix(16);
-                                let token_id = (&data[2] + &data[3] * 2.to_biguint().unwrap().pow(128)).to_str_radix(16);
-                                info!("Received event from 0x{} to 0x{} token 0x{} in TX 0x{}", from, to, token_id, tx_hash.to_str_radix(16));
-                                let mut statement = connection.prepare(query).unwrap();
-                                statement.bind::<&[(_, Value)]>(&[
-                                    (1, from.into()),
-                                    (2, to.into()),
-                                    (3, token_id.into()),
-                                    (4, block.header.as_ref().unwrap().block_number.to_i64().unwrap_or(0).into()),
-                                    (5, sqlite::Value::Null)
-                                ])?;
-                                statement.next();
+                                // handle event
                             },
                             None => {
                                 warn!("Received event without key");
