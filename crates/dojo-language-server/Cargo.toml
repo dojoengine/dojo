@@ -9,8 +9,8 @@ license-file.workspace = true
 
 [dependencies]
 cairo-lang-dojo = { path = "../cairo-lang-dojo" }
-cairo-lang-compiler = { git = "https://github.com/starkware-libs/cairo.git", rev = "v1.0.0-alpha.2" }
-cairo-lang-language-server = { git = "https://github.com/starkware-libs/cairo.git", rev = "v1.0.0-alpha.2" }
+cairo-lang-compiler = { git = "https://github.com/starkware-libs/cairo.git", rev = "255bde8b3d798bcef7832edab6edc21b76e216fb" }
+cairo-lang-language-server = { git = "https://github.com/starkware-libs/cairo.git", rev = "255bde8b3d798bcef7832edab6edc21b76e216fb" }
 tokio.workspace = true
 tower-lsp.workspace = true
 lsp.workspace = true

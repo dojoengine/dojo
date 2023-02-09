@@ -1,7 +1,7 @@
-use cairo_lang_language_server::{Backend, State};
-use tower_lsp::{LspService, Server};
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_dojo::db::DojoRootDatabaseBuilderEx;
+use cairo_lang_language_server::{Backend, State};
+use tower_lsp::{LspService, Server};
 
 #[tokio::main]
 async fn main() {
@@ -10,7 +10,7 @@ async fn main() {
 
     let (stdin, stdout) = (tokio::io::stdin(), tokio::io::stdout());
     #[cfg(feature = "runtime-agnostic")]
-        let (stdin, stdout) = (stdin.compat(), stdout.compat_write());
+    let (stdin, stdout) = (stdin.compat(), stdout.compat_write());
 
     let db = RootDatabase::builder()
         .detect_corelib()
@@ -18,13 +18,12 @@ async fn main() {
         .build()
         .expect("Failed to initialize Cairo compiler database.");
 
-
     let (service, socket) = LspService::build(|client| Backend {
         client,
         db_mutex: db.into(),
         state_mutex: State::default().into(),
     })
-        .custom_method("vfs/provide", Backend::vfs_provide)
-        .finish();
+    .custom_method("vfs/provide", Backend::vfs_provide)
+    .finish();
     Server::new(stdin, stdout, socket).serve(service).await;
 }

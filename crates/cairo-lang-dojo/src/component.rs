@@ -17,8 +17,7 @@ use smol_str::SmolStr;
 
 use cairo_lang_filesystem::detect::detect_corelib;
 
-
-use crate::plugin::{DojoAuxData};
+use crate::plugin::DojoAuxData;
 
 pub struct Component {
     pub name: SmolStr,
@@ -84,7 +83,11 @@ impl Component {
                     let corelib_path = detect_corelib().unwrap();
                     modify_starknet_lib(&corelib_path, component_impl.storage_impl);
                     modify_serde_lib(&corelib_path, component_impl.serde_impl);
-                    export_dojo_struct(&corelib_path, component_impl.name, component_impl.component_struct);
+                    export_dojo_struct(
+                        &corelib_path,
+                        component_impl.name,
+                        component_impl.component_struct,
+                    );
 
                     matched_struct = true;
                 }
@@ -115,16 +118,20 @@ impl Component {
             code: Some(PluginGeneratedFile {
                 name,
                 content: builder.code,
-                aux_data: DynGeneratedFileAuxData::new(DynPluginAuxData::new(
-                    DojoAuxData { patches: builder.patches },
-                )),
+                aux_data: DynGeneratedFileAuxData::new(DynPluginAuxData::new(DojoAuxData {
+                    patches: builder.patches,
+                })),
             }),
             diagnostics: self.diagnostics,
             remove_original_item: true,
         }
     }
 
-    fn handle_component_struct(&mut self, db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> ComponentImplementation {
+    fn handle_component_struct(
+        &mut self,
+        db: &dyn SyntaxGroup,
+        struct_ast: ast::ItemStruct,
+    ) -> ComponentImplementation {
         // We remove the struct definition from the contract file as it will be defined in corelib/dojo.cairo
 
         // Generate Serde / StorageAccess implementations
@@ -135,26 +142,27 @@ impl Component {
         struct_ast.members(db).elements(db).iter().enumerate().for_each(|(i, member)| {
             let key = member.name(db).as_syntax_node().get_text_without_trivia(db);
             let offset = i;
-            serialize.push(
-                format!("Serde::<felt>::serialize(ref serialized, input.{key});"),
-            );
+            serialize.push(format!("Serde::<felt>::serialize(ref serialized, input.{key});"));
 
-            deserialize.push(
-                format!("{key}: Serde::<felt>::deserialize(ref serialized)?,"),
-            );
+            deserialize.push(format!("{key}: Serde::<felt>::deserialize(ref serialized)?,"));
 
-            read.push(
-                format!("{key}: storage_read_syscall(
+            read.push(format!(
+                "{key}: storage_read_syscall(
                     address_domain, storage_address_from_base_and_offset(base, {offset}_u8)
-                )?,"));
+                )?,"
+            ));
 
-            let final_token = if i != struct_ast.members(db).elements(db).len() - 1 { ";" } else { "" };
+            let final_token =
+                if i != struct_ast.members(db).elements(db).len() - 1 { ";" } else { "" };
             match offset {
-                0 => write.push(format!("StorageAccess::<felt>::write(address_domain, base, value.{key})?;")),
-                _ => write.push(
-                    format!("storage_write_syscall(
+                0 => write.push(format!(
+                    "StorageAccess::<felt>::write(address_domain, base, value.{key})?;"
+                )),
+                _ => write.push(format!(
+                    "storage_write_syscall(
                     address_domain, storage_address_from_base_and_offset(base, {offset}_u8), \
-                 value.{key}){final_token}"))
+                 value.{key}){final_token}"
+                )),
             }
         });
 
@@ -179,10 +187,11 @@ impl {type_name}Serde of Serde::<{type_name}> {{
             )
         }}
     }}
-            ");
+            "
+        );
 
-        let storage_impl =
-            format!("\n
+        let storage_impl = format!(
+            "\n
     impl StorageAccess{type_name} of StorageAccess::<{type_name}> {{
         fn read(address_domain: felt, base: StorageBaseAddress) -> SyscallResult::<{type_name}> {{
             Result::Ok(
@@ -197,7 +206,8 @@ impl {type_name}Serde of Serde::<{type_name}> {{
             {write_string}
         }}
     }}
-            ");
+            "
+        );
 
         // Generate the component struct as a string
         let struct_definition = struct_ast.as_syntax_node().get_text_without_trivia(db);
@@ -273,7 +283,6 @@ impl {type_name}Serde of Serde::<{type_name}> {{
         ))
     }
 }
-
 
 fn modify_starknet_lib(path: &PathBuf, implementation: String) {
     let path_starknet = path.join("starknet.cairo");
