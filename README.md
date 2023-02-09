@@ -1,6 +1,6 @@
 # Dōjō
 
-Dojo is a full stack toolchain for developing onchain games in Cairo. Dojo leverages the affordances provided by Cairo language plugins to offer an best-in-class developer experience for easily integrating blockchain properties into games.
+Dojo is a full stack toolchain for developing onchain games in Cairo. Dojo leverages the affordances provided by Cairo language plugins to offer a best-in-class developer experience for easily integrating blockchain properties into games.
 
 - Simple composition through the Entity Component System pattern
 - Concise implementations leveraging language plugins and macros
@@ -37,7 +37,7 @@ trait World {
     // Register a component or system. The returned
     // hash is used to uniquely identify the component or
     // system in the world. All components and systems
-    // within a world are deteriministically addressed
+    // within a world are deterministically addressed
     // relative to the world.
     // @TODO: Figure out how to propagate calldata with Cairo 1.0.
     fn register(id: felt, class_hash: felt) -> felt;
@@ -104,7 +104,7 @@ An entity is addressed by a `felt`. An entity represents a collection of compone
 
 #### Addressing
 
-Everything inside a Dojo World is deterministically addressed relative to the world, from the address of a system to the storage slot of an entities component value. This is accomplished by enforcing module name uniqueness, i.e. `PositionComponent` and `MoveSystem`, wrapping all components and systems using the proxy pattern, and standardizing the storage layout of component modules.
+Everything inside a Dojo World is deterministically addressed relative to the world, from the address of a system to the storage slot of an entity's component value. This is accomplished by enforcing module name uniqueness, i.e. `PositionComponent` and `MoveSystem`, wrapping all components and systems using the proxy pattern, and standardizing the storage layout of component modules.
 
 This property allows for:
 1) Statically planning deployment and migration strategies for updates to the world
