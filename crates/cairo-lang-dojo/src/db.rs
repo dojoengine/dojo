@@ -16,7 +16,6 @@ pub trait DojoRootDatabaseBuilderEx {
 
 impl DojoRootDatabaseBuilderEx for RootDatabaseBuilder {
     fn with_dojo(&mut self) -> &mut Self {
-
         let mut plugins = get_default_plugins();
         plugins.push(Arc::new(DojoPlugin {}));
 
@@ -24,7 +23,6 @@ impl DojoRootDatabaseBuilderEx for RootDatabaseBuilder {
     }
 
     fn with_dojo_and_starknet(&mut self) -> &mut Self {
-
         let precedence = ["Pedersen", "RangeCheck", "Bitwise", "EcOp", "GasBuiltin", "System"];
 
         let mut plugins = get_default_plugins();

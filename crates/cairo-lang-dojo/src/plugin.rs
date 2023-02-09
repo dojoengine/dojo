@@ -5,7 +5,10 @@ use cairo_lang_defs::plugin::{GeneratedFileAuxData, MacroPlugin, PluginResult};
 use cairo_lang_diagnostics::DiagnosticEntry;
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::patcher::Patches;
-use cairo_lang_semantic::plugin::{AsDynGeneratedFileAuxData, AsDynMacroPlugin, PluginAuxData, PluginMappedDiagnostic, SemanticPlugin};
+use cairo_lang_semantic::plugin::{
+    AsDynGeneratedFileAuxData, AsDynMacroPlugin, PluginAuxData, PluginMappedDiagnostic,
+    SemanticPlugin,
+};
 use cairo_lang_semantic::SemanticDiagnostic;
 use cairo_lang_syntax::node::ast::MaybeModuleBody;
 use cairo_lang_syntax::node::db::SyntaxGroup;
@@ -29,11 +32,7 @@ impl GeneratedFileAuxData for DojoAuxData {
         self
     }
     fn eq(&self, other: &dyn GeneratedFileAuxData) -> bool {
-        if let Some(other) = other.as_any().downcast_ref::<Self>() {
-            self == other
-        } else {
-            false
-        }
+        if let Some(other) = other.as_any().downcast_ref::<Self>() { self == other } else { false }
     }
 }
 impl AsDynGeneratedFileAuxData for DojoAuxData {
@@ -66,9 +65,9 @@ impl MacroPlugin for DojoPlugin {
     fn generate_code(&self, db: &dyn SyntaxGroup, item_ast: ast::Item) -> PluginResult {
         match item_ast {
             ast::Item::Module(module_ast) => handle_mod(db, module_ast),
-            //FIXME: Remove other items clashes with the corelib
+            // FIXME: Remove other items clashes with the corelib
             // _ => PluginResult { remove_original_item: true, ..PluginResult::default() },
-            _ => PluginResult::default() ,
+            _ => PluginResult::default(),
         }
     }
 }
@@ -97,11 +96,7 @@ fn handle_mod(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult
     let body = match module_ast.body(db) {
         MaybeModuleBody::Some(body) => body,
         MaybeModuleBody::None(_empty_body) => {
-            return PluginResult {
-                code: None,
-                diagnostics: vec![],
-                remove_original_item: false,
-            };
+            return PluginResult { code: None, diagnostics: vec![], remove_original_item: false };
         }
     };
     if module_ast.has_attr(db, COMPONENT_ATTR) {
@@ -112,11 +107,7 @@ fn handle_mod(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult
         return System::from_module_body(db, name, body).result(db);
     }
 
-    PluginResult {
-            code: None,
-            diagnostics: vec![],
-            remove_original_item: false,
-        }
+    PluginResult { code: None, diagnostics: vec![], remove_original_item: false }
 }
 
 fn handle_mod_corelib(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) {
@@ -124,14 +115,14 @@ fn handle_mod_corelib(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) {
     let body = match module_ast.body(db) {
         MaybeModuleBody::Some(body) => body,
         MaybeModuleBody::None(_empty_body) => {
-           return;
+            return;
         }
     };
     if module_ast.has_attr(db, COMPONENT_ATTR) {
-        return Component::extend_corelib(db,name, body);
+        return Component::extend_corelib(db, name, body);
     }
 
-    //TODO(eni) Extend corelib for systems if required
+    // TODO(eni) Extend corelib for systems if required
     // if module_ast.has_attr(db, SYSTEM_ATTR) {
     //     return System::from_module_body(db, name, body).result(db);
     // }

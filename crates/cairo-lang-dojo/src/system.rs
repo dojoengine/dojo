@@ -11,7 +11,7 @@ use cairo_lang_utils::try_extract_matches;
 use indoc::formatdoc;
 use smol_str::SmolStr;
 
-use crate::plugin::{DojoAuxData};
+use crate::plugin::DojoAuxData;
 use crate::query::Query;
 
 pub struct System {
@@ -79,9 +79,9 @@ impl System {
             code: Some(PluginGeneratedFile {
                 name,
                 content: builder.code,
-                aux_data: DynGeneratedFileAuxData::new(DynPluginAuxData::new(
-                    DojoAuxData { patches: builder.patches },
-                )),
+                aux_data: DynGeneratedFileAuxData::new(DynPluginAuxData::new(DojoAuxData {
+                    patches: builder.patches,
+                })),
             }),
             diagnostics: self.diagnostics,
             remove_original_item: true,
@@ -161,9 +161,5 @@ fn try_extract_types(db: &dyn SyntaxGroup, type_ast: &ast::Expr) -> Option<Syste
         return None;
     };
     let ty = segment.ident(db).text(db);
-    if ty == "Query" {
-        Some(SystemArgType::Query)
-    } else {
-        None
-    }
+    if ty == "Query" { Some(SystemArgType::Query) } else { None }
 }

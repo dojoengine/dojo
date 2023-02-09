@@ -93,12 +93,13 @@ impl Query {
                 );
 
                 self.rewrite_nodes.push(RewriteNode::interpolate_patched(
-                            "let $var_prefix$_ids = super::IWorldDispatcher::lookup(world, $component_address$);",
-                            HashMap::from([
-                                ("var_prefix".to_string(), RewriteNode::Text(var_prefix)),
-                                ("component_address".to_string(), RewriteNode::Text(component_id)),
-                            ]),
-                        ))
+                    "let $var_prefix$_ids = super::IWorldDispatcher::lookup(world, \
+                     $component_address$);",
+                    HashMap::from([
+                        ("var_prefix".to_string(), RewriteNode::Text(var_prefix)),
+                        ("component_address".to_string(), RewriteNode::Text(component_id)),
+                    ]),
+                ))
             }
             _ => {
                 return self.diagnostics.push(PluginDiagnostic {

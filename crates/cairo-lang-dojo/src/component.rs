@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-
 use std::fs::File;
 use std::io::{Read, Write};
 use std::ops::Add;
@@ -8,14 +7,13 @@ use std::path::PathBuf;
 use cairo_lang_defs::plugin::{
     DynGeneratedFileAuxData, PluginDiagnostic, PluginGeneratedFile, PluginResult,
 };
+use cairo_lang_filesystem::detect::detect_corelib;
 use cairo_lang_semantic::patcher::{ModifiedNode, PatchBuilder, RewriteNode};
 use cairo_lang_semantic::plugin::DynPluginAuxData;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 use indoc::formatdoc;
 use smol_str::SmolStr;
-
-use cairo_lang_filesystem::detect::detect_corelib;
 
 use crate::plugin::DojoAuxData;
 
@@ -132,7 +130,8 @@ impl Component {
         db: &dyn SyntaxGroup,
         struct_ast: ast::ItemStruct,
     ) -> ComponentImplementation {
-        // We remove the struct definition from the contract file as it will be defined in corelib/dojo.cairo
+        // We remove the struct definition from the contract file as it will be defined in
+        // corelib/dojo.cairo
 
         // Generate Serde / StorageAccess implementations
         let mut serialize = vec![];
@@ -161,7 +160,7 @@ impl Component {
                 _ => write.push(format!(
                     "storage_write_syscall(
                     address_domain, storage_address_from_base_and_offset(base, {offset}_u8), \
-                 value.{key}){final_token}"
+                     value.{key}){final_token}"
                 )),
             }
         });

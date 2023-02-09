@@ -3,12 +3,13 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use cairo_lang_compiler::db::RootDatabase;
-use cairo_lang_compiler::project::setup_project;
-use cairo_lang_sierra::program::Program;
-use clap::Parser;
 use cairo_lang_compiler::diagnostics::DiagnosticsReporter;
-use cairo_lang_sierra_generator::db::SierraGenGroup;
+use cairo_lang_compiler::project::setup_project;
 use cairo_lang_diagnostics::ToOption;
+use cairo_lang_sierra::program::Program;
+use cairo_lang_sierra_generator::db::SierraGenGroup;
+use clap::Parser;
+
 use crate::db::DojoRootDatabaseBuilderEx;
 
 /// Command line args parser.
@@ -33,7 +34,7 @@ pub fn compile_dojo_project_at_path(path: &PathBuf) -> anyhow::Result<Arc<Progra
         b.build()
     };
 
-    let db= &mut db_val.unwrap();
+    let db = &mut db_val.unwrap();
     let main_crate_ids = setup_project(db, Path::new(&path))?;
 
     if DiagnosticsReporter::stderr().check(db) {
@@ -51,10 +52,10 @@ pub fn compile_dojo_project_at_path(path: &PathBuf) -> anyhow::Result<Arc<Progra
 
 #[test]
 fn test_compile() {
-	let mut test_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let mut test_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     test_path.push("src/cairo_level_tests");
 
-	let program = compile_dojo_project_at_path(&test_path);
-	println!( "COMPILE TEST: {program:#?}" );
-	todo!("Add asserts for comile tests.");
+    let program = compile_dojo_project_at_path(&test_path);
+    println!("COMPILE TEST: {program:#?}");
+    todo!("Add asserts for comile tests.");
 }

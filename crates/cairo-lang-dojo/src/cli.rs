@@ -2,9 +2,9 @@ use std::fs;
 use std::path::PathBuf;
 
 use anyhow::Context;
+use cairo_lang_dojo::build::{build_corelib, reset_corelib};
 use cairo_lang_dojo::compiler::compile_dojo_project_at_path;
 use clap::Parser;
-use cairo_lang_dojo::build::{build_corelib, reset_corelib};
 
 /// Command line args parser.
 /// Exits with 0/1 if the input is formatted correctly/incorrectly.
@@ -37,4 +37,3 @@ fn main() -> anyhow::Result<()> {
 
     Ok(())
 }
-
