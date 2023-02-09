@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::ops::Add;
-use std::path::PathBuf;
+use std::path::Path;
 
 use cairo_lang_defs::plugin::{
     DynGeneratedFileAuxData, PluginDiagnostic, PluginGeneratedFile, PluginResult,
@@ -67,29 +67,25 @@ impl Component {
 
         let mut matched_struct = false;
         for item in body.items(db).elements(db) {
-            match &item {
-                ast::Item::Struct(item_struct) => {
-                    if matched_struct {
-                        component.diagnostics.push(PluginDiagnostic {
-                            message: "Only one struct per module is supported.".to_string(),
-                            stable_ptr: item_struct.stable_ptr().untyped(),
-                        });
-                        continue;
-                    }
-
-                    let component_impl = component.handle_component_struct(db, item_struct.clone());
-                    let corelib_path = detect_corelib().unwrap();
-                    modify_starknet_lib(&corelib_path, component_impl.storage_impl);
-                    modify_serde_lib(&corelib_path, component_impl.serde_impl);
-                    export_dojo_struct(
-                        &corelib_path,
-                        component_impl.name,
-                        component_impl.component_struct,
-                    );
-
-                    matched_struct = true;
+            if let ast::Item::Struct(item_struct) = &item {
+                if matched_struct {
+                    component.diagnostics.push(PluginDiagnostic {
+                        message: "Only one struct per module is supported.".to_string(),
+                        stable_ptr: item_struct.stable_ptr().untyped(),
+                    });
+                    continue;
                 }
-                _ => (),
+
+                let component_impl = component.handle_component_struct(db, item_struct.clone());
+                let corelib_path = detect_corelib().unwrap();
+                modify_starknet_lib(&corelib_path, component_impl.storage_impl);
+                modify_serde_lib(&corelib_path, component_impl.serde_impl);
+                export_dojo_struct(
+                    &corelib_path,
+                    component_impl.name,
+                    component_impl.component_struct,
+                );
+                matched_struct = true;
             }
         }
     }
@@ -283,7 +279,7 @@ impl {type_name}Serde of Serde::<{type_name}> {{
     }
 }
 
-fn modify_starknet_lib(path: &PathBuf, implementation: String) {
+fn modify_starknet_lib(path: &Path, implementation: String) {
     let path_starknet = path.join("starknet.cairo");
     let mut file = File::open(path_starknet.clone()).unwrap();
     let mut contents = String::new();
@@ -294,7 +290,7 @@ fn modify_starknet_lib(path: &PathBuf, implementation: String) {
     file.write_all(contents.as_bytes()).unwrap();
 }
 
-fn modify_serde_lib(path: &PathBuf, implementation: String) {
+fn modify_serde_lib(path: &Path, implementation: String) {
     // open file
     // path_starknet as path+/starknet.cairo
     let path_serde = path.join("serde.cairo");
@@ -308,7 +304,7 @@ fn modify_serde_lib(path: &PathBuf, implementation: String) {
     file.write_all(contents.as_bytes()).unwrap();
 }
 
-fn export_dojo_struct(path: &PathBuf, component_name: String, component_struct: String) {
+fn export_dojo_struct(path: &Path, component_name: String, component_struct: String) {
     let path_dojo = path.join("dojo.cairo");
     let mut file = File::open(path_dojo.clone()).unwrap();
     // update file contents by appending node

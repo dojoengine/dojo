@@ -48,7 +48,7 @@ mod World {
     #[external]
     fn on_component_set(entity_id: felt, data: Array::<felt>) {
         let caller_address = get_caller_address();
-        assert(caller_address != 0, 'World: caller is not a registered');
+        assert(caller_address != 0, 'World: not registered');
         // ComponentValueSet(caller_address, entity_id, data);
         let entities_len = entity_registry_len::read(caller_address);
         entity_registry::write((caller_address, entities_len), entity_id);

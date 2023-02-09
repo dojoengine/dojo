@@ -1,6 +1,6 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-pub fn get_cairo_files_in_path(dir: &PathBuf) -> Vec<PathBuf> {
+pub fn get_cairo_files_in_path(dir: &Path) -> Vec<PathBuf> {
     let mut cairo_files: Vec<PathBuf> = vec![];
     let dir_iter = dir.read_dir().unwrap();
     for dir_entry in dir_iter {
@@ -24,5 +24,5 @@ fn test_get_cairo_files_in_path() {
     test_path.push("lib");
 
     let files = get_cairo_files_in_path(&test_path);
-    assert!(files.len() > 0);
+    assert!(!files.is_empty());
 }

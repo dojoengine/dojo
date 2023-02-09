@@ -74,9 +74,8 @@ impl MacroPlugin for DojoPlugin {
 
 impl DojoPlugin {
     pub(crate) fn generate_corelib(&self, db: &dyn SyntaxGroup, item_ast: ast::Item) {
-        match item_ast {
-            ast::Item::Module(module_ast) => handle_mod_corelib(db, module_ast),
-            _ => (),
+        if let ast::Item::Module(module_ast) = item_ast {
+            handle_mod_corelib(db, module_ast);
         }
     }
 }
@@ -119,7 +118,7 @@ fn handle_mod_corelib(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) {
         }
     };
     if module_ast.has_attr(db, COMPONENT_ATTR) {
-        return Component::extend_corelib(db, name, body);
+        Component::extend_corelib(db, name, body);
     }
 
     // TODO(eni) Extend corelib for systems if required

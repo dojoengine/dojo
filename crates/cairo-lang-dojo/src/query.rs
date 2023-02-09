@@ -102,7 +102,7 @@ impl Query {
                 ))
             }
             _ => {
-                return self.diagnostics.push(PluginDiagnostic {
+                self.diagnostics.push(PluginDiagnostic {
                     message: "Unsupported query type. Must be tuple or single struct.".to_string(),
                     stable_ptr: parameter.stable_ptr().untyped(),
                 });

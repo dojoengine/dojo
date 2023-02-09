@@ -77,14 +77,14 @@ pub fn run(args: BuildArgs) {
             }
             Err(err) => {
                 files_added.push(path_relative.to_str().unwrap().into());
-                files_added.push(format!("{err:#?}").into());
+                files_added.push(format!("{err:#?}"));
             }
         }
     }
 
     for (i, status) in files_added.iter().enumerate() {
         if i % 2 == 0 {
-            println!(""); // New line
+            println!(); // New line
         }
         println!("{status}");
     }

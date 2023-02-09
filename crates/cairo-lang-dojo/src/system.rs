@@ -28,24 +28,20 @@ impl System {
 
         let mut matched_execute = false;
         for item in body.items(db).elements(db) {
-            match &item {
-                ast::Item::FreeFunction(item_function) => {
-                    let name = item_function.declaration(db).name(db).text(db);
-                    if name == "execute" && matched_execute {
-                        system.diagnostics.push(PluginDiagnostic {
-                            message: "Only one execute function per module is supported."
-                                .to_string(),
-                            stable_ptr: item_function.stable_ptr().untyped(),
-                        });
-                        continue;
-                    }
-
-                    if name == "execute" {
-                        system.handle_function(db, item_function.clone());
-                        matched_execute = true;
-                    }
+            if let ast::Item::FreeFunction(item_function) = &item {
+                let name = item_function.declaration(db).name(db).text(db);
+                if name == "execute" && matched_execute {
+                    system.diagnostics.push(PluginDiagnostic {
+                        message: "Only one execute function per module is supported.".to_string(),
+                        stable_ptr: item_function.stable_ptr().untyped(),
+                    });
+                    continue;
                 }
-                _ => (),
+
+                if name == "execute" {
+                    system.handle_function(db, item_function.clone());
+                    matched_execute = true;
+                }
             }
         }
 
@@ -96,12 +92,9 @@ impl System {
         for param in parameters.iter() {
             let type_ast = param.type_clause(db).ty(db);
 
-            match try_extract_types(db, &type_ast) {
-                Some(SystemArgType::Query) => {
-                    let query = Query::from_expr(db, type_ast.clone());
-                    preprocess_rewrite_nodes.extend(query.rewrite_nodes);
-                }
-                None => (),
+            if let Some(SystemArgType::Query) = try_extract_types(db, &type_ast) {
+                let query = Query::from_expr(db, type_ast.clone());
+                preprocess_rewrite_nodes.extend(query.rewrite_nodes);
             }
         }
 

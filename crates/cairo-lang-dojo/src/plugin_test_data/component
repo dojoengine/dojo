@@ -30,7 +30,7 @@ mod PositionComponent {
 mod PositionComponent {
     struct Storage {
         world_address: felt,
-        state: Map::<felt, Position>,
+        state: LegacyMap::<felt, Position>,
     }
 
     // Initialize PositionComponent.

@@ -120,17 +120,17 @@ fn deserialize_array_felt_helper(
 
 
 impl PositionSerde of Serde::<Position> {
-        fn serialize(ref serialized: Array::<felt>, input: Position) {
-            Serde::<felt>::serialize(ref serialized, input.x);
-Serde::<felt>::serialize(ref serialized, input.y);
-        }
-        fn deserialize(ref serialized: Array::<felt>) -> Option::<Position> {
-            Option::Some(
-                Position {
-                    x: Serde::<felt>::deserialize(ref serialized)?,
-y: Serde::<felt>::deserialize(ref serialized)?,
-                }
-            )
-        }
+    fn serialize(ref serialized: Array::<felt>, input: Position) {
+        Serde::<felt>::serialize(ref serialized, input.x);
+        Serde::<felt>::serialize(ref serialized, input.y);
     }
-            
+    fn deserialize(ref serialized: Array::<felt>) -> Option::<Position> {
+        Option::Some(
+            Position {
+                x: Serde::<felt>::deserialize(ref serialized)?,
+                y: Serde::<felt>::deserialize(ref serialized)?,
+            }
+        )
+    }
+}
+
