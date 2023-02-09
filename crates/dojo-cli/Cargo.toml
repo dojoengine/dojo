@@ -10,7 +10,10 @@ anyhow = "1.0.66"
 clap = { version = "4.0", features = ["derive"] }
 # @TODO Add revision when stable
 cairo-lang-dojo = { path = "../cairo-lang-dojo" }
+cairo-lang-filesystem = { git = "https://github.com/starkware-libs/cairo.git", rev = "255bde8b3d798bcef7832edab6edc21b76e216fb" }
+cairo-lang-project = { git = "https://github.com/starkware-libs/cairo.git", rev = "255bde8b3d798bcef7832edab6edc21b76e216fb" }
 pathdiff = "0.2.1"
+toml.workspace = true
 
 [[bin]]
 name = "dojo-cli"

@@ -1,5 +1,5 @@
 [workspace]
-   
+
 members = [
     "crates/cairo-lang-dojo",
     "crates/dojo-cli",
@@ -24,4 +24,5 @@ serde_json = "1.0"
 smol_str = "0.1.23"
 test-log = "0.2.11"
 tokio = { version = "1.18.2", features = ["full", "sync"] }
+toml = "0.4.2"
 tower-lsp = "0.17.0"

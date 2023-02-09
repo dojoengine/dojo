@@ -1,13 +1,15 @@
 use std::env::current_dir;
-use std::fs;
 use std::path::PathBuf;
 
 use cairo_lang_dojo::build::{build_corelib, reset_corelib};
 use cairo_lang_dojo::compiler::compile_dojo_project_at_path;
+use cairo_lang_filesystem::ids::Directory;
+use cairo_lang_project::ProjectConfig;
 use clap::Args;
-use pathdiff::diff_paths;
 
 use crate::utils::get_cairo_files_in_path;
+
+const PROJECT_FILE_NAME: &str = "world.toml";
 
 #[derive(Args, Debug)]
 pub struct BuildArgs {
@@ -48,44 +50,51 @@ pub fn run(args: BuildArgs) {
         }
     };
 
-    let cairo_files = get_cairo_files_in_path(&source_dir);
+    // let cairo_files = get_cairo_files_in_path(&source_dir);
 
-    let mut files_added: Vec<String> = vec![];
+    // let mut files_added: Vec<String> = vec![];
 
     println!("\n\nWriting files to dir: {target_dir:#?}");
-    reset_corelib();
-    for cairo_file in cairo_files.iter() {
-        build_corelib(cairo_file.clone());
-        let program_result = compile_dojo_project_at_path(cairo_file);
-        let path_relative = diff_paths(cairo_file, &source_dir).unwrap();
-        files_added.push(path_relative.to_str().unwrap().into());
-        match program_result {
-            Ok(program) => {
-                let mut path_absolute = target_dir.clone();
+    // reset_corelib();
+    // build_corelib("/Users/tarrence/code/dojo/examples/position.cairo".into());
+    // let conf_file = source_dir.join(PROJECT_FILE_NAME);
+    // let content = toml::from_str(&std::fs::read_to_string(conf_file).unwrap()).unwrap();
+    let program_result = compile_dojo_project_at_path(&source_dir);
 
-                let filename = cairo_file.iter().last().unwrap();
-                path_absolute.push(filename);
-                path_absolute.set_extension("sierra");
-                println!("Writing file: {path_absolute:#?}");
+    println!("COMPILE TEST: {:#?}", program_result);
 
-                let mut dir = path_absolute.clone();
-                let _r = dir.pop();
-                let _r = fs::create_dir_all(dir);
-                let _r = fs::write(path_absolute, format!("{}", program));
+    // program_result.unwrap().iter().for_each(|class| {
+    //     println!("COMPILE TEST: {:#?}", class);
+    // });
 
-                files_added.push("Successfully added".into());
-            }
-            Err(err) => {
-                files_added.push(path_relative.to_str().unwrap().into());
-                files_added.push(format!("{err:#?}"));
-            }
-        }
-    }
+    // let path_relative = diff_paths(cairo_file, &source_dir).unwrap();
+    // files_added.push(path_relative.to_str().unwrap().into());
+    // match program_result {
+    //     Ok(program) => {
+    //         let mut path_absolute = target_dir.clone();
 
-    for (i, status) in files_added.iter().enumerate() {
-        if i % 2 == 0 {
-            println!(); // New line
-        }
-        println!("{status}");
-    }
+    //         let filename = cairo_file.iter().last().unwrap();
+    //         path_absolute.push(filename);
+    //         path_absolute.set_extension("sierra");
+    //         println!("Writing file: {path_absolute:#?}");
+
+    //         let mut dir = path_absolute.clone();
+    //         let _r = dir.pop();
+    //         let _r = fs::create_dir_all(dir);
+    //         let _r = fs::write(path_absolute, format!("{}", program));
+
+    //         files_added.push("Successfully added".into());
+    //     }
+    //     Err(err) => {
+    //         files_added.push(path_relative.to_str().unwrap().into());
+    //         files_added.push(format!("{err:#?}"));
+    //     }
+    // }
+
+    // for (i, status) in files_added.iter().enumerate() {
+    //     if i % 2 == 0 {
+    //         println!(); // New line
+    //     }
+    //     println!("{status}");
+    // }
 }

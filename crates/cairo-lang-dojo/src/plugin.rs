@@ -26,13 +26,21 @@ const SYSTEM_ATTR: &str = "system";
 pub struct DojoAuxData {
     /// Patches of code that need translation in case they have diagnostics.
     pub patches: Patches,
+
+    /// A list of components that were processed by the plugin.
+    pub components: Vec<smol_str::SmolStr>,
 }
+
 impl GeneratedFileAuxData for DojoAuxData {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
     fn eq(&self, other: &dyn GeneratedFileAuxData) -> bool {
-        if let Some(other) = other.as_any().downcast_ref::<Self>() { self == other } else { false }
+        if let Some(other) = other.as_any().downcast_ref::<Self>() {
+            self == other
+        } else {
+            false
+        }
     }
 }
 impl AsDynGeneratedFileAuxData for DojoAuxData {

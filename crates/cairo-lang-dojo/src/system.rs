@@ -77,6 +77,7 @@ impl System {
                 content: builder.code,
                 aux_data: DynGeneratedFileAuxData::new(DynPluginAuxData::new(DojoAuxData {
                     patches: builder.patches,
+                    components: vec![],
                 })),
             }),
             diagnostics: self.diagnostics,
@@ -154,5 +155,9 @@ fn try_extract_types(db: &dyn SyntaxGroup, type_ast: &ast::Expr) -> Option<Syste
         return None;
     };
     let ty = segment.ident(db).text(db);
-    if ty == "Query" { Some(SystemArgType::Query) } else { None }
+    if ty == "Query" {
+        Some(SystemArgType::Query)
+    } else {
+        None
+    }
 }

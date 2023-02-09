@@ -1,13 +1,19 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::Context;
-use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_compiler::diagnostics::DiagnosticsReporter;
 use cairo_lang_compiler::project::setup_project;
+use cairo_lang_compiler::CompilerConfig;
+use cairo_lang_compiler::{db::RootDatabase, project::ProjectError};
 use cairo_lang_diagnostics::ToOption;
+use cairo_lang_filesystem::{db::FilesGroup, ids::CrateLongId};
+use cairo_lang_project::ProjectConfig;
 use cairo_lang_sierra::program::Program;
 use cairo_lang_sierra_generator::db::SierraGenGroup;
+use cairo_lang_starknet::casm_contract_class::CasmContractClass;
+use cairo_lang_starknet::contract::find_contracts;
+use cairo_lang_starknet::contract_class::{compile_prepared_db, ContractClass};
 use clap::Parser;
 
 use crate::db::DojoRootDatabaseBuilderEx;
@@ -26,36 +32,43 @@ struct Args {
     replace_ids: bool,
 }
 
-pub fn compile_dojo_project_at_path(path: &PathBuf) -> anyhow::Result<Arc<Program>> {
-    let db_val = {
-        let mut b = RootDatabase::builder();
-        b.detect_corelib();
-        b.with_dojo_and_starknet();
-        b.build()
-    };
+pub fn compile_dojo_project_at_path(path: &Path) -> anyhow::Result<Vec<ContractClass>> {
+    let db = &mut RootDatabase::builder().detect_corelib().with_dojo_and_starknet().build()?;
 
-    let db = &mut db_val.unwrap();
-    let main_crate_ids = setup_project(db, Path::new(&path))?;
+    // let path = config.base_path;
 
-    if DiagnosticsReporter::stderr().check(db) {
-        anyhow::bail!("failed to compile: {:?}", path);
-    }
+    let project = setup_project(db, path)?;
+    // let crate_name = file_dir.to_str().ok_or_else(bad_path_err)?;
+    // let main_crate_ids = vec![db.intern_crate(CrateLongId(crate_name.into()))];
 
-    let sierra_program = db
-        .get_sierra_program(main_crate_ids)
-        .to_option()
-        .context("Compilation failed without any diagnostics")
-        .unwrap();
+    // // if DiagnosticsReporter::stderr().check(db) {
+    // //     anyhow::bail!("failed to compile: {:?}", path);
+    // // }
 
-    Ok(sierra_program)
+    println!("COMPILE TEST: {:?}", project);
+
+    // let contracts = find_contracts(db, &main_crate_ids);
+    // let contracts = contracts.iter().collect::<Vec<_>>();
+
+    // let classes = compile_prepared_db(db, &contracts, CompilerConfig::default());
+
+    // let sierra_program = db
+    //     .get_sierra_program(main_crate_ids)
+    //     .to_option()
+    //     .context("Compilation failed without any diagnostics")
+    //     .unwrap();
+
+    Ok(vec![])
 }
 
-#[test]
-fn test_compile() {
-    let mut test_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    test_path.push("src/cairo_level_tests");
+// #[test]
+// fn test_compile() {
+//     use std::path::PathBuf;
 
-    let program = compile_dojo_project_at_path(&test_path);
-    println!("COMPILE TEST: {program:#?}");
-    todo!("Add asserts for comile tests.");
-}
+//     let mut test_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+//     test_path.push("src/cairo_level_tests");
+
+//     let program = compile_dojo_project_at_path(&test_path);
+//     println!("COMPILE TEST: {program:#?}");
+//     todo!("Add asserts for comile tests.");
+// }

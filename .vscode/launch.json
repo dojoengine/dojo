@@ -29,20 +29,20 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'dojo-compile'",
+            "name": "Debug executable 'dojo-cli'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=dojo-compile",
-                    "--package=cairo-lang-dojo"
+                    "--bin=dojo-cli",
+                    "--package=dojo-cli"
                 ],
                 "filter": {
-                    "name": "dojo-compile",
+                    "name": "dojo-cli",
                     "kind": "bin"
                 }
             },
-            "args": ["/Users/tarrence/code/dojo/crates/cairo-lang-dojo/src/cairo_level_tests/component.cairo"],
-            "cwd": "${workspaceFolder}/crates/cairo-lang-dojo"
+            "args": ["build", "${workspaceFolder}/examples"],
+            "cwd": "${workspaceFolder}/crates/dojo-cli"
         },
         {
             "type": "lldb",

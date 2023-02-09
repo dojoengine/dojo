@@ -346,6 +346,7 @@ dependencies = [
  "cairo-lang-lowering",
  "cairo-lang-parser",
  "cairo-lang-plugins",
+ "cairo-lang-project",
  "cairo-lang-semantic",
  "cairo-lang-sierra",
  "cairo-lang-sierra-generator",
@@ -1060,8 +1061,11 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "cairo-lang-dojo",
+ "cairo-lang-filesystem",
+ "cairo-lang-project",
  "clap",
  "pathdiff",
+ "toml",
 ]
 
 [[package]]
