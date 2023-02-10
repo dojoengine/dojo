@@ -1,9 +1,12 @@
 use std::error::Error;
-use anyhow::{Context, Ok};
+use anyhow::{Context};
 use clap::Parser;
 use hex_literal::hex;
-use client::ApibaraClient;
 use futures::StreamExt;
+mod client;
+use tokio::sync::mpsc;
+use log::{info, debug, warn};
+
 
 // Won't compile until apibara merges the fix for their version of anyhow
 
@@ -18,29 +21,30 @@ struct Args {
     rpc: String,
 }
 
-fn main() -> anyhow::Result<()> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    let world: [u8; 32] = hex!(args.world);
+    let mut world = [0u8; 32];
+    assert_eq!(hex::decode_to_slice(args.world, &mut world), Ok(()));
+
     let rpc = &args.rpc;
 
     let stream = client::ApibaraClient::new(rpc).await;
     match stream {
-        Ok(s) => {
+        std::result::Result::Ok(s) => {
             println!("Connected");
             start(s, world).await;
         },
-        Err(e) => println!("Error: {:?}", e),
+        std::result::Result::Err(e) => println!("Error: {:?}", e),
     }
 
 
     Ok(())
 }
 
-async fn start(mut stream: ApibaraClient, world: [u8; 32]) -> Result<(), Box<dyn Error>> {
-    let connection = sqlite::open(":memory:").unwrap();
-
-    let mut data_stream = stream.request_data(client::Filter { world }.into()).await?;
+async fn start(mut stream: client::ApibaraClient, world: [u8; 32]) -> Result<(), Box<dyn Error>> {
+    let mut data_stream = stream.request_data(client::Filter { contract: world }.into()).await?;
     futures::pin_mut!(data_stream);
 
     while let Some(mess) = data_stream.next().await {
