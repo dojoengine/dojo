@@ -160,5 +160,9 @@ fn try_extract_execute_paramters(
     };
     let ty = segment.ident(db).text(db);
 
-    if ty == "Query" { Some(SystemArgType::Query) } else { None }
+    if ty == "Query" {
+        Some(SystemArgType::Query)
+    } else {
+        None
+    }
 }

@@ -2,6 +2,8 @@ mod build;
 
 use clap::{Args, Parser, Subcommand};
 
+use build::BuildArgs;
+
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 #[command(propagate_version = true)]
@@ -22,9 +24,6 @@ enum Commands {
     #[command(about = "Retrieve an entity's state by entity ID")]
     Inspect(InspectArgs),
 }
-
-#[derive(Args)]
-struct BuildArgs {}
 
 #[derive(Args)]
 struct MigrateArgs {
@@ -49,7 +48,7 @@ fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Build(..) => print!("Build"),
+        Commands::Build(args) => build::run(args),
         Commands::Migrate(..) => print!("Migrate"),
         Commands::Bind(..) => print!("Bind"),
         Commands::Inspect(..) => print!("Inspect"),
