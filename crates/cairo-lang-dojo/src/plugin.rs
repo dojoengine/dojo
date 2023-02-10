@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use std::vec;
 
 use cairo_lang_defs::plugin::{GeneratedFileAuxData, MacroPlugin, PluginResult};
 use cairo_lang_diagnostics::DiagnosticEntry;
@@ -65,8 +64,6 @@ impl MacroPlugin for DojoPlugin {
     fn generate_code(&self, db: &dyn SyntaxGroup, item_ast: ast::Item) -> PluginResult {
         match item_ast {
             ast::Item::Module(module_ast) => handle_mod(db, module_ast),
-            // FIXME: Remove other items clashes with the corelib
-            // _ => PluginResult { remove_original_item: true, ..PluginResult::default() },
             _ => PluginResult::default(),
         }
     }
@@ -95,7 +92,7 @@ fn handle_mod(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult
     let body = match module_ast.body(db) {
         MaybeModuleBody::Some(body) => body,
         MaybeModuleBody::None(_empty_body) => {
-            return PluginResult { code: None, diagnostics: vec![], remove_original_item: false };
+            return PluginResult::default();
         }
     };
     if module_ast.has_attr(db, COMPONENT_ATTR) {
@@ -106,7 +103,7 @@ fn handle_mod(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult
         return System::from_module_body(db, name, body).result(db);
     }
 
-    PluginResult { code: None, diagnostics: vec![], remove_original_item: false }
+    PluginResult::default()
 }
 
 fn handle_mod_corelib(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) {
