@@ -1,18 +1,22 @@
-
 use std::str::FromStr;
 
-use apibara_client_protos::pb::{stream::v1alpha2::{stream_client::StreamClient, Cursor, StreamDataRequest, StreamDataResponse, Data, stream_data_response::Message}, starknet::v1alpha2::{Filter, EventFilter, HeaderFilter, FieldElement}};
+use apibara_client_protos::pb::{
+    starknet::v1alpha2::{EventFilter, FieldElement, Filter, HeaderFilter},
+    stream::v1alpha2::{
+        stream_client::StreamClient, stream_data_response::Message, Cursor, Data,
+        StreamDataRequest, StreamDataResponse,
+    },
+};
 use futures_util::Stream;
 use log::debug;
 use tokio::sync::mpsc;
-use tonic::{transport::{Channel, Endpoint}};
+use tonic::transport::{Channel, Endpoint};
 
 pub enum Chain {
     AlphaMainnet,
     AlphaGoerli,
     AlphaGoerli2,
 }
-
 
 impl From<Chain> for &'static str {
     fn from(chain: Chain) -> Self {
@@ -41,7 +45,10 @@ impl ApibaraClient {
         Ok(Self { stream, stream_id: 0, response_stream: None, sender: None })
     }
 
-    pub async fn request_data<'x>(&'x mut self, filter: Filter) -> Result<impl Stream<Item = Result<Option<Data>, tonic::Status>> + 'x, tonic::Status> {
+    pub async fn request_data<'x>(
+        &'x mut self,
+        filter: Filter,
+    ) -> Result<impl Stream<Item = Result<Option<Data>, tonic::Status>> + 'x, tonic::Status> {
         self.stream_id += 1;
         let request = StreamDataRequest {
             stream_id: Some(self.stream_id),
@@ -50,7 +57,7 @@ impl ApibaraClient {
             finality: None,
             filter: Some(filter.into()),
         };
-    
+
         let (sender, receiver) = mpsc::channel::<StreamDataRequest>(1);
         let str = tokio_stream::wrappers::ReceiverStream::new(receiver);
         sender.send(request).await;
@@ -62,7 +69,7 @@ impl ApibaraClient {
             match message {
                 Ok(Some(mess)) => {
                     if mess.stream_id != s.stream_id {
-                        return Some((Ok(None), s))
+                        return Some((Ok(None), s));
                     }
                     match mess.message {
                         Some(Message::Data(a)) => Some((Ok(Some(a)), s)),

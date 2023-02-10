@@ -1,13 +1,16 @@
-use std::{error::Error, vec, str::FromStr, cmp::Ordering};
-use anyhow::{Context};
+use anyhow::Context;
 use clap::Parser;
-use hex_literal::hex;
 use futures::StreamExt;
+use hex_literal::hex;
+use std::{cmp::Ordering, error::Error, str::FromStr, vec};
 mod stream;
-use prisma_client_rust::bigdecimal::{num_bigint::{BigUint, ToBigUint}, Num};
-use tokio::sync::mpsc;
-use log::{info, debug, warn};
 use apibara_client_protos::pb::starknet::v1alpha2::{Filter, HeaderFilter};
+use log::{debug, info, warn};
+use prisma_client_rust::bigdecimal::{
+    num_bigint::{BigUint, ToBigUint},
+    Num,
+};
+use tokio::sync::mpsc;
 mod prisma;
 
 /// Command line args parser.
@@ -36,16 +39,29 @@ async fn main() -> anyhow::Result<()> {
         std::result::Result::Ok(s) => {
             println!("Connected");
             start(s, client.unwrap(), world).await;
-        },
+        }
         std::result::Result::Err(e) => println!("Error: {:?}", e),
     }
-
 
     Ok(())
 }
 
-async fn start(mut stream: stream::ApibaraClient, client: prisma::PrismaClient, world: BigUint) -> Result<(), Box<dyn Error>> {
-    let mut data_stream = stream.request_data({Filter { header: Some(HeaderFilter{weak:true}), transactions: vec![], events: vec![], messages: vec![], state_update: None }}).await?;
+async fn start(
+    mut stream: stream::ApibaraClient,
+    client: prisma::PrismaClient,
+    world: BigUint,
+) -> Result<(), Box<dyn Error>> {
+    let mut data_stream = stream
+        .request_data({
+            Filter {
+                header: Some(HeaderFilter { weak: true }),
+                transactions: vec![],
+                events: vec![],
+                messages: vec![],
+                state_update: None,
+            }
+        })
+        .await?;
     futures::pin_mut!(data_stream);
 
     let mut world_deployed = false;
@@ -62,28 +78,32 @@ async fn start(mut stream: stream::ApibaraClient, client: prisma::PrismaClient, 
                     match &block.header {
                         Some(header) => {
                             info!("Received block {}", header.block_number);
-                        },
+                        }
                         None => {
                             warn!("Received block without header");
                         }
                     }
-                    
+
                     // wait for our world contract to be deployed
                     if !world_deployed {
                         match &block.state_update {
-                            Some(state_update) => {
-                                match &state_update.state_diff {
-                                    Some(state_diff) => {
-                                        
-                                        for contract in &state_diff.deployed_contracts {
-                                            if Ordering::is_eq(contract.contract_address.as_ref().unwrap().to_biguint().cmp(&world)) {
-                                                world_deployed = true;
-                                                break;
-                                            }
+                            Some(state_update) => match &state_update.state_diff {
+                                Some(state_diff) => {
+                                    for contract in &state_diff.deployed_contracts {
+                                        if Ordering::is_eq(
+                                            contract
+                                                .contract_address
+                                                .as_ref()
+                                                .unwrap()
+                                                .to_biguint()
+                                                .cmp(&world),
+                                        ) {
+                                            world_deployed = true;
+                                            break;
                                         }
-                                    },
-                                    None => (),
+                                    }
                                 }
+                                None => (),
                             },
                             None => (),
                         }
@@ -92,21 +112,30 @@ async fn start(mut stream: stream::ApibaraClient, client: prisma::PrismaClient, 
                             continue;
                         }
                     }
-                    
 
                     for event in &block.events {
-                        let tx_hash = &event.transaction.as_ref().unwrap().meta.as_ref().unwrap().hash.as_ref().unwrap().to_biguint();
+                        let tx_hash = &event
+                            .transaction
+                            .as_ref()
+                            .unwrap()
+                            .meta
+                            .as_ref()
+                            .unwrap()
+                            .hash
+                            .as_ref()
+                            .unwrap()
+                            .to_biguint();
                         match &event.event {
                             Some(ev_data) => {
                                 // handle event
-                            },
+                            }
                             None => {
                                 warn!("Received event without key");
                             }
                         }
                     }
                 }
-            },
+            }
             Ok(None) => {
                 continue;
             }
@@ -115,7 +144,6 @@ async fn start(mut stream: stream::ApibaraClient, client: prisma::PrismaClient, 
             }
         }
     }
-
 
     Ok(())
 }
