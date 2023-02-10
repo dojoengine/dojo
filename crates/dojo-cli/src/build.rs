@@ -5,6 +5,7 @@ use std::sync::Arc;
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_compiler::project::get_main_crate_ids_from_project;
 use cairo_lang_compiler::CompilerConfig;
+use cairo_lang_dojo::build::{build_corelib, reset_corelib};
 use cairo_lang_dojo::plugin::DojoPlugin;
 use cairo_lang_filesystem::ids::Directory;
 use cairo_lang_plugins::get_default_plugins;
@@ -13,9 +14,8 @@ use cairo_lang_starknet::contract::find_contracts;
 use cairo_lang_starknet::contract_class::compile_prepared_db;
 use cairo_lang_starknet::plugin::StarkNetPlugin;
 use clap::Args;
-use cairo_lang_dojo::build::{build_corelib, reset_corelib};
-use crate::utils::get_cairo_files_in_path;
 
+use crate::utils::get_cairo_files_in_path;
 
 #[derive(Args, Debug)]
 pub struct BuildArgs {
@@ -69,7 +69,6 @@ pub fn run(args: BuildArgs) {
     let corelib_path = PathBuf::from("corelib");
     config.corelib = Some(Directory(corelib_path.clone().into()));
 
-
     let db = &mut RootDatabase::builder()
         .with_project_config(config.clone())
         .with_plugins(plugins)
@@ -78,7 +77,6 @@ pub fn run(args: BuildArgs) {
             panic!("Problem creating language database: {:?}", error);
         });
     let main_crate_ids = get_main_crate_ids_from_project(db, &config);
-    println!("MAIN CRATES: {:#?}", main_crate_ids);
 
     // corelib-hack to make it compatible with custom types as storage var
     reset_corelib(corelib_path);

@@ -24,6 +24,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: recursive
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -38,14 +40,14 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: cairo-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - name: install
-        run: scripts/cairo_install.sh
       - run: scripts/cairo_fmt.sh --check
 
   cairotest:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: recursive
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -60,8 +62,6 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: cairo-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - name: install
-        run: scripts/cairo_install.sh
       - run: scripts/cairo_test.sh
 
   clippy:

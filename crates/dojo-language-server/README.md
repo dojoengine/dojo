@@ -1,2 +1,0 @@
-# cairo-language-server
-
