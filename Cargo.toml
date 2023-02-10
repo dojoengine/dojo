@@ -7,7 +7,6 @@ members = [
     "crates/dojo-cli",
     "crates/dojo-language-server"
     "crates/indexer",
-    "crates/prisma-cli",
 ]
 
 [workspace.package]

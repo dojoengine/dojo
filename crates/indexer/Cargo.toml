@@ -18,6 +18,7 @@ tonic = "0.8.3"
 log = "0.4.17"
 futures-util = "0.3.26"
 tokio-stream = "0.1.11"
+prisma-client-rust-cli = { git = "https://github.com/Brendonovich/prisma-client-rust", tag = "0.6.4" }
 prisma-client-rust = { git = "https://github.com/Brendonovich/prisma-client-rust", tag = "0.6.4" }
 serde.workspace = true
 
