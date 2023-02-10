@@ -36,6 +36,8 @@ mod MoveSystem {
 }
 
 //! > generated_cairo_code
+extern type Query<T>;
+
 #[contract]
 mod PositionComponent {
     struct Position {
