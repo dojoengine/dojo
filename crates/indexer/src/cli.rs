@@ -1,4 +1,4 @@
-use std::{error::Error, vec, str::FromStr};
+use std::{error::Error, vec, str::FromStr, cmp::Ordering};
 use anyhow::{Context};
 use clap::Parser;
 use hex_literal::hex;
@@ -48,6 +48,8 @@ async fn start(mut stream: stream::ApibaraClient, client: prisma::PrismaClient, 
     let mut data_stream = stream.request_data({Filter { header: Some(HeaderFilter{weak:true}), transactions: vec![], events: vec![], messages: vec![], state_update: None }}).await?;
     futures::pin_mut!(data_stream);
 
+    let mut world_deployed = false;
+
     while let Some(mess) = data_stream.next().await {
         match mess {
             Ok(Some(mess)) => {
@@ -67,21 +69,30 @@ async fn start(mut stream: stream::ApibaraClient, client: prisma::PrismaClient, 
                     }
                     
                     // wait for our world contract to be deployed
-                    match &block.state_update {
-                        Some(state_update) => {
-                            match &state_update.state_diff {
-                                Some(state_diff) => {
-                                    for contract in &state_diff.deployed_contracts {
-                                        // contract.contract_address.as_ref().unwrap().to_biguint().cmp(other)
-                                    }
-                                },
-                                None => todo!(),
-                            }
-                        },
-                        None => {
+                    if !world_deployed {
+                        match &block.state_update {
+                            Some(state_update) => {
+                                match &state_update.state_diff {
+                                    Some(state_diff) => {
+                                        
+                                        for contract in &state_diff.deployed_contracts {
+                                            if Ordering::is_eq(contract.contract_address.as_ref().unwrap().to_biguint().cmp(&world)) {
+                                                world_deployed = true;
+                                                break;
+                                            }
+                                        }
+                                    },
+                                    None => (),
+                                }
+                            },
+                            None => (),
+                        }
+
+                        if !world_deployed {
                             continue;
                         }
                     }
+                    
 
                     for event in &block.events {
                         let tx_hash = &event.transaction.as_ref().unwrap().meta.as_ref().unwrap().hash.as_ref().unwrap().to_biguint();
