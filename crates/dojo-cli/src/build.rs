@@ -3,13 +3,15 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use cairo_lang_compiler::db::RootDatabase;
-use cairo_lang_compiler::project::setup_project;
+use cairo_lang_compiler::project::get_main_crate_ids_from_project;
+use cairo_lang_compiler::CompilerConfig;
 use cairo_lang_dojo::plugin::DojoPlugin;
 use cairo_lang_filesystem::ids::Directory;
 use cairo_lang_plugins::get_default_plugins;
 use cairo_lang_project::ProjectConfig;
+use cairo_lang_starknet::contract::find_contracts;
+use cairo_lang_starknet::contract_class::compile_prepared_db;
 use cairo_lang_starknet::plugin::StarkNetPlugin;
-
 use clap::Args;
 
 #[derive(Args, Debug)]
@@ -61,16 +63,21 @@ pub fn run(args: BuildArgs) {
         panic!("Problem creating project config: {:?}", error);
     });
 
-    config.corelib = Some(Directory("/Users/tarrence/code/dojo/cairo/corelib".into()));
+    config.corelib = Some(Directory("cairo/corelib".into()));
 
     let db = &mut RootDatabase::builder()
-        .with_project_config(config)
+        .with_project_config(config.clone())
         .with_plugins(plugins)
         .build()
         .unwrap_or_else(|error| {
             panic!("Problem creating language database: {:?}", error);
         });
-    let project = setup_project(db, &source_dir).unwrap();
+    let main_crate_ids = get_main_crate_ids_from_project(db, &config);
 
-    println!("COMPILE TEST: {:#?}", project);
+    // TODO: Error handling
+    let contracts = find_contracts(db, &main_crate_ids);
+    let contracts = contracts.iter().collect::<Vec<_>>();
+    let classes = compile_prepared_db(db, &contracts, CompilerConfig::default());
+
+    println!("COMPILE TEST: {:#?}", classes);
 }
