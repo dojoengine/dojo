@@ -1,5 +1,6 @@
+
 #[derive(Copy, Drop)]
 struct Position {
-    x: felt,
-    y: felt
-}
+        x: felt,
+        y: felt
+    }

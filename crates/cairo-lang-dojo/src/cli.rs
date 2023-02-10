@@ -23,7 +23,8 @@ struct Args {
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     let path = &PathBuf::from(args.path);
-    reset_corelib();
+    let corelib_path = PathBuf::from("corelib");
+    reset_corelib(corelib_path);
     build_corelib(path.clone());
 
     let sierra_program = compile_dojo_project_at_path(path)?;
