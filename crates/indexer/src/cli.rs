@@ -1,15 +1,14 @@
-use std::{error::Error, vec};
+use std::{error::Error, vec, str::FromStr};
 use anyhow::{Context};
 use clap::Parser;
 use hex_literal::hex;
 use futures::StreamExt;
-mod client;
+mod stream;
+use prisma_client_rust::bigdecimal::{num_bigint::{BigUint, ToBigUint}, Num};
 use tokio::sync::mpsc;
 use log::{info, debug, warn};
-use apibara_client_protos::pb::starknet::v1alpha2::{Filter, HeaderFilter, StateUpdateFilter};
-
-
-// Won't compile until apibara merges the fix for their version of anyhow
+use apibara_client_protos::pb::starknet::v1alpha2::{Filter, HeaderFilter};
+mod prisma;
 
 /// Command line args parser.
 /// Exits with 0/1 if the input is formatted correctly/incorrectly.
@@ -26,16 +25,17 @@ struct Args {
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    let mut world = [0u8; 32];
-    assert_eq!(hex::decode_to_slice(args.world, &mut world), Ok(()));
-
+    let world = BigUint::from_str_radix(&args.world[2..], 16).unwrap();
     let rpc = &args.rpc;
 
-    let stream = client::ApibaraClient::new(rpc).await;
+    let client = prisma::PrismaClient::_builder().build().await;
+    assert_eq!(client.is_ok(), true);
+
+    let stream = stream::ApibaraClient::new(rpc).await;
     match stream {
         std::result::Result::Ok(s) => {
             println!("Connected");
-            start(s, world).await;
+            start(s, client.unwrap(), world).await;
         },
         std::result::Result::Err(e) => println!("Error: {:?}", e),
     }
@@ -44,7 +44,7 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn start(mut stream: client::ApibaraClient, world: [u8; 32]) -> Result<(), Box<dyn Error>> {
+async fn start(mut stream: stream::ApibaraClient, client: prisma::PrismaClient, world: BigUint) -> Result<(), Box<dyn Error>> {
     let mut data_stream = stream.request_data({Filter { header: Some(HeaderFilter{weak:true}), transactions: vec![], events: vec![], messages: vec![], state_update: None }}).await?;
     futures::pin_mut!(data_stream);
 
@@ -65,6 +65,24 @@ async fn start(mut stream: client::ApibaraClient, world: [u8; 32]) -> Result<(),
                             warn!("Received block without header");
                         }
                     }
+                    
+                    // wait for our world contract to be deployed
+                    match &block.state_update {
+                        Some(state_update) => {
+                            match &state_update.state_diff {
+                                Some(state_diff) => {
+                                    for contract in &state_diff.deployed_contracts {
+                                        // contract.contract_address.as_ref().unwrap().to_biguint().cmp(other)
+                                    }
+                                },
+                                None => todo!(),
+                            }
+                        },
+                        None => {
+                            continue;
+                        }
+                    }
+
                     for event in &block.events {
                         let tx_hash = &event.transaction.as_ref().unwrap().meta.as_ref().unwrap().hash.as_ref().unwrap().to_biguint();
                         match &event.event {

@@ -15,15 +15,15 @@ model Component {
     name String
     systems System[]
     states EntityState[]
-    stateUpdates EntityStateUpdate[]
-    transactionHash String
+    state_updates EntityStateUpdate[]
+    transaction_hash String
 }
 
 model Entity {
     id String @id
     states EntityState[]
     stateUpdates EntityStateUpdate[]
-    transactionHash String
+    transaction_hash String
 }
 
 model System {
@@ -31,7 +31,7 @@ model System {
     name String
     calls SystemCall[]
     queryComponents Component[]
-    transactionHash String
+    transaction_hash String
 }
 
 model Resource {
@@ -61,6 +61,6 @@ model SystemCall {
     id Int @id @default(autoincrement())
     systemId String
     system System @relation(fields: [systemId], references: [id])
-    transactionHash String
+    transaction_hash String
     data String
 }

@@ -1634,6 +1634,7 @@ dependencies = [
  "hex-literal",
  "log",
  "prisma-client-rust",
+ "serde",
  "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs)",
  "tokio",
  "tokio-stream",
