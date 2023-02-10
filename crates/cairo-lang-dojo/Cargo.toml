@@ -10,7 +10,6 @@ description = "Dojo capabilities and utilities on top of Starknet."
 
 [dependencies]
 anyhow = "1.0.66"
-clap = { version = "4.0", features = ["derive"] }
 cairo-lang-compiler = { git = "https://github.com/starkware-libs/cairo.git", rev = "255bde8b3d798bcef7832edab6edc21b76e216fb" }
 cairo-lang-defs = { git = "https://github.com/starkware-libs/cairo.git", rev = "255bde8b3d798bcef7832edab6edc21b76e216fb" }
 cairo-lang-diagnostics = { git = "https://github.com/starkware-libs/cairo.git", rev = "255bde8b3d798bcef7832edab6edc21b76e216fb" }
@@ -39,6 +38,3 @@ test-case = "2.2.2"
 test-case-macros = "2.2.2"
 test-log.workspace = true
 
-[[bin]]
-name = "dojo-compile"
-path = "src/cli.rs"
