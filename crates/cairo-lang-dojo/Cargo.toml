@@ -37,4 +37,3 @@ cairo-lang-test-utils = { git = "https://github.com/starkware-libs/cairo.git", r
 test-case = "2.2.2"
 test-case-macros = "2.2.2"
 test-log.workspace = true
-

@@ -1,5 +1,6 @@
 mod build;
 
+use build::BuildArgs;
 use clap::{Args, Parser, Subcommand};
 
 #[derive(Parser)]
@@ -24,9 +25,6 @@ enum Commands {
 }
 
 #[derive(Args)]
-struct BuildArgs {}
-
-#[derive(Args)]
 struct MigrateArgs {
     #[clap(short, long, help = "Perform a dry run and outputs the plan to be executed")]
     plan: bool,
@@ -49,7 +47,7 @@ fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Build(..) => print!("Build"),
+        Commands::Build(args) => build::run(args),
         Commands::Migrate(..) => print!("Migrate"),
         Commands::Bind(..) => print!("Bind"),
         Commands::Inspect(..) => print!("Inspect"),
