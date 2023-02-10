@@ -8,7 +8,7 @@ members = [
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-repository = "https://github.com/dojo-on-chain/dojo/"
+repository = "https://github.com/dojoengine/dojo/"
 license = "Apache-2.0"
 license-file = "LICENSE"
 

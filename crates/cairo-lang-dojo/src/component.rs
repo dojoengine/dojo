@@ -4,13 +4,13 @@ use cairo_lang_defs::plugin::{
     DynGeneratedFileAuxData, PluginDiagnostic, PluginGeneratedFile, PluginResult,
 };
 use cairo_lang_semantic::patcher::{ModifiedNode, PatchBuilder, RewriteNode};
-use cairo_lang_semantic::plugin::DynDiagnosticMapper;
+use cairo_lang_semantic::plugin::DynPluginAuxData;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 use indoc::formatdoc;
 use smol_str::SmolStr;
 
-use crate::plugin::DiagnosticRemapper;
+use crate::plugin::DojoAuxData;
 
 pub struct Component {
     pub name: SmolStr,
@@ -71,9 +71,9 @@ impl Component {
             code: Some(PluginGeneratedFile {
                 name,
                 content: builder.code,
-                aux_data: DynGeneratedFileAuxData::new(DynDiagnosticMapper::new(
-                    DiagnosticRemapper { patches: builder.patches },
-                )),
+                aux_data: DynGeneratedFileAuxData::new(DynPluginAuxData::new(DojoAuxData {
+                    patches: builder.patches,
+                })),
             }),
             diagnostics: self.diagnostics,
             remove_original_item: true,

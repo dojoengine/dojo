@@ -2,7 +2,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::Context;
-use cairo_lang_compiler::diagnostics::check_and_eprint_diagnostics;
 use cairo_lang_compiler::project::setup_project;
 use cairo_lang_diagnostics::ToOption;
 use cairo_lang_dojo::db::get_dojo_database;
@@ -31,10 +30,6 @@ fn main() -> anyhow::Result<()> {
     let db = &mut db_val;
 
     let main_crate_ids = setup_project(db, Path::new(&path))?;
-
-    if check_and_eprint_diagnostics(db) {
-        anyhow::bail!("Failed to compile: {}", path.display());
-    }
 
     let sierra_program = db
         .get_sierra_program(main_crate_ids)

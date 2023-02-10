@@ -4,14 +4,14 @@ use cairo_lang_defs::plugin::{
     DynGeneratedFileAuxData, PluginDiagnostic, PluginGeneratedFile, PluginResult,
 };
 use cairo_lang_semantic::patcher::{ModifiedNode, PatchBuilder, RewriteNode};
-use cairo_lang_semantic::plugin::DynDiagnosticMapper;
+use cairo_lang_semantic::plugin::DynPluginAuxData;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use cairo_lang_utils::try_extract_matches;
 use indoc::formatdoc;
 use smol_str::SmolStr;
 
-use crate::plugin::DiagnosticRemapper;
+use crate::plugin::DojoAuxData;
 use crate::query::Query;
 
 pub struct System {
@@ -77,9 +77,9 @@ impl System {
             code: Some(PluginGeneratedFile {
                 name,
                 content: builder.code,
-                aux_data: DynGeneratedFileAuxData::new(DynDiagnosticMapper::new(
-                    DiagnosticRemapper { patches: builder.patches },
-                )),
+                aux_data: DynGeneratedFileAuxData::new(DynPluginAuxData::new(DojoAuxData {
+                    patches: builder.patches,
+                })),
             }),
             diagnostics: self.diagnostics,
             remove_original_item: true,
