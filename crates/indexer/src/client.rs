@@ -1,7 +1,7 @@
 
 use std::str::FromStr;
 
-use apibara_client_protos::pb::{stream::v1alpha2::{stream_client::StreamClient, Cursor, StreamDataRequest, StreamDataResponse, Data, stream_data_response::Message}, starknet::v1alpha2::{Filter as pb_Filter, EventFilter, HeaderFilter, FieldElement}};
+use apibara_client_protos::pb::{stream::v1alpha2::{stream_client::StreamClient, Cursor, StreamDataRequest, StreamDataResponse, Data, stream_data_response::Message}, starknet::v1alpha2::{Filter, EventFilter, HeaderFilter, FieldElement}};
 use futures_util::Stream;
 use log::debug;
 use tokio::sync::mpsc;
@@ -20,26 +20,6 @@ impl From<Chain> for &'static str {
             Chain::AlphaMainnet => "https://mainnet.starknet.a5a.ch:443",
             Chain::AlphaGoerli => "https://goerli.starknet.a5a.ch:443",
             Chain::AlphaGoerli2 => "https://goerli2.starknet.a5a.ch:443",
-        }
-    }
-}
-
-pub struct Filter {
-    pub contract: [u8; 32],
-}
-
-impl From<Filter> for pb_Filter {
-    fn from(value: Filter) -> Self {
-        pb_Filter {
-            header: Some(HeaderFilter { weak: true }),
-            transactions: vec![],
-            state_update: None,
-            events: vec![EventFilter {
-                from_address: Some(FieldElement::from_bytes(&value.contract)),
-                keys: vec![FieldElement::from_bytes(&hex_literal::hex!("0099cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9"))],
-                data: vec![]
-            }],
-            messages: vec![]
         }
     }
 }

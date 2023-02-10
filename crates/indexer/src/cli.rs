@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{error::Error, vec};
 use anyhow::{Context};
 use clap::Parser;
 use hex_literal::hex;
@@ -6,6 +6,7 @@ use futures::StreamExt;
 mod client;
 use tokio::sync::mpsc;
 use log::{info, debug, warn};
+use apibara_client_protos::pb::starknet::v1alpha2::{Filter, HeaderFilter, StateUpdateFilter};
 
 
 // Won't compile until apibara merges the fix for their version of anyhow
@@ -44,7 +45,7 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn start(mut stream: client::ApibaraClient, world: [u8; 32]) -> Result<(), Box<dyn Error>> {
-    let mut data_stream = stream.request_data(client::Filter { contract: world }.into()).await?;
+    let mut data_stream = stream.request_data({Filter { header: Some(HeaderFilter{weak:true}), transactions: vec![], events: vec![], messages: vec![], state_update: None }}).await?;
     futures::pin_mut!(data_stream);
 
     while let Some(mess) = data_stream.next().await {

@@ -10,7 +10,57 @@ generator client {
     output        = "../src/prisma.rs"
 }
 
-model User {
-    id          String  @id
-    displayName String
+model Component {
+    id String @id
+    name String
+    systems System[]
+    states EntityState[]
+    stateUpdates EntityStateUpdate[]
+    transactionHash String
+}
+
+model Entity {
+    id String @id
+    states EntityState[]
+    stateUpdates EntityStateUpdate[]
+    transactionHash String
+}
+
+model System {
+    id String @id
+    name String
+    calls SystemCall[]
+    queryComponents Component[]
+    transactionHash String
+}
+
+model Resource {
+    id String @id
+}
+
+model EntityState {
+    entityId String
+    entity Entity @relation(fields: [entityId], references: [id])
+    componentId String
+    component Component @relation(fields: [componentId], references: [id])
+    data String
+    @@unique([entityId, componentId])
+}
+
+model EntityStateUpdate {
+    id Int @id @default(autoincrement())
+    entityId String
+    entity Entity @relation(fields: [entityId], references: [id])
+    transactionHash String
+    componentId String
+    component Component @relation(fields: [componentId], references: [id])
+    data String
+}
+
+model SystemCall {
+    id Int @id @default(autoincrement())
+    systemId String
+    system System @relation(fields: [systemId], references: [id])
+    transactionHash String
+    data String
 }
