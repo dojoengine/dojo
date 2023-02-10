@@ -14,15 +14,14 @@ use crate::plugin::DojoAuxData;
 
 pub struct Component {
     pub name: SmolStr,
-    pub root: Vec<RewriteNode>,
-    pub contract_body: Vec<RewriteNode>,
+    pub rewrite_nodes: Vec<RewriteNode>,
     pub diagnostics: Vec<PluginDiagnostic>,
 }
 
 impl Component {
     pub fn from_module_body(db: &dyn SyntaxGroup, name: SmolStr, body: ast::ModuleBody) -> Self {
         let mut component =
-            Component { root: vec![], contract_body: vec![], name, diagnostics: vec![] };
+            Component { rewrite_nodes: vec![], name, diagnostics: vec![] };
 
         let mut matched_struct = false;
         for item in body.items(db).elements(db) {
@@ -55,7 +54,6 @@ impl Component {
         builder.add_modified(RewriteNode::interpolate_patched(
             &formatdoc!(
                 "
-                $root$
                 #[contract]
                 mod {name} {{
                     $body$
@@ -63,10 +61,9 @@ impl Component {
                 ",
             ),
             HashMap::from([
-                ("root".to_string(), RewriteNode::Modified(ModifiedNode { children: self.root })),
                 (
                     "body".to_string(),
-                    RewriteNode::Modified(ModifiedNode { children: self.contract_body }),
+                    RewriteNode::Modified(ModifiedNode { children: self.rewrite_nodes }),
                 ),
             ]),
         ));
@@ -85,13 +82,13 @@ impl Component {
     }
 
     fn handle_component_struct(&mut self, db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) {
-        self.root.push(RewriteNode::Copied(struct_ast.as_syntax_node()));
+        self.rewrite_nodes.push(RewriteNode::Copied(struct_ast.as_syntax_node()));
 
-        self.contract_body.push(RewriteNode::interpolate_patched(
+        self.rewrite_nodes.push(RewriteNode::interpolate_patched(
             "
                     struct Storage {
                         world_address: felt,
-                        state: Map::<felt, $type_name$>,
+                        state: LegacyMap::<felt, $type_name$>,
                     }
     
                     // Initialize $type_name$Component.
@@ -126,7 +123,7 @@ impl Component {
         let mut write = vec![];
         struct_ast.members(db).elements(db).iter().enumerate().for_each(|(i, member)| {
             serialize.push(RewriteNode::interpolate_patched(
-                "Serde::<felt>::serialize(ref serialized, input.$key$);",
+                "serde::Serde::<felt>::serialize(ref serialized, input.$key$);",
                 HashMap::from([(
                     "key".to_string(),
                     RewriteNode::Trimmed(member.name(db).as_syntax_node()),
@@ -134,7 +131,7 @@ impl Component {
             ));
 
             deserialize.push(RewriteNode::interpolate_patched(
-                "$key$: Serde::<felt>::deserialize(ref serialized)?,",
+                "$key$: serde::Serde::<felt>::deserialize(ref serialized)?,",
                 HashMap::from([(
                     "key".to_string(),
                     RewriteNode::Trimmed(member.name(db).as_syntax_node()),
@@ -142,8 +139,8 @@ impl Component {
             ));
 
             read.push(RewriteNode::interpolate_patched(
-                "$key$: storage_read_syscall(
-                    address_domain, storage_address_from_base_and_offset(base, $offset$_u8)
+                "$key$: starknet::storage_read_syscall(
+                    address_domain, starknet::storage_address_from_base_and_offset(base, $offset$_u8)
                 )?,",
                 HashMap::from([
                     ("key".to_string(), RewriteNode::Trimmed(member.name(db).as_syntax_node())),
@@ -152,12 +149,12 @@ impl Component {
             ));
 
             let final_token =
-                if i != struct_ast.members(db).elements(db).len() - 1 { ";" } else { "" };
+                if i != struct_ast.members(db).elements(db).len() - 1 { "?;" } else { "" };
             write.push(RewriteNode::interpolate_patched(
                 format!(
                     "
-                    storage_write_syscall(
-                        address_domain, storage_address_from_base_and_offset(base, $offset$_u8), \
+                    starknet::storage_write_syscall(
+                        address_domain, starknet::storage_address_from_base_and_offset(base, $offset$_u8), \
                      value.$key$){final_token}"
                 )
                 .as_str(),
@@ -168,9 +165,9 @@ impl Component {
             ));
         });
 
-        self.root.push(RewriteNode::interpolate_patched(
+        self.rewrite_nodes.push(RewriteNode::interpolate_patched(
             "
-                impl $type_name$Serde of Serde::<$type_name$> {
+                impl $type_name$Serde of serde::Serde::<$type_name$> {
                     fn serialize(ref serialized: Array::<felt>, input: $type_name$) {
                         $serialize$
                     }
@@ -199,11 +196,11 @@ impl Component {
             ]),
         ));
 
-        self.root.push(RewriteNode::interpolate_patched(
+        self.rewrite_nodes.push(RewriteNode::interpolate_patched(
             "
-                impl StorageAccess$type_name$ of StorageAccess::<$type_name$> {
-                    fn read(address_domain: felt, base: StorageBaseAddress) -> \
-             SyscallResult::<$type_name$> {
+                impl StorageAccess$type_name$ of starknet::StorageAccess::<$type_name$> {
+                    fn read(address_domain: felt, base: starknet::StorageBaseAddress) -> \
+                    starknet::SyscallResult::<$type_name$> {
                         Result::Ok(
                             $type_name$ {
                                 $read$
@@ -211,8 +208,8 @@ impl Component {
                         )
                     }
                     fn write(
-                        address_domain: felt, base: StorageBaseAddress, value: $type_name$
-                    ) -> SyscallResult::<()> {
+                        address_domain: felt, base: starknet::StorageBaseAddress, value: $type_name$
+                    ) -> starknet::SyscallResult::<()> {
                         $write$
                     }
                 }
@@ -239,7 +236,7 @@ impl Component {
             .children
             .splice(0..1, vec![RewriteNode::Text("entity_id: felt".to_string())]);
 
-        self.contract_body.push(RewriteNode::interpolate_patched(
+        self.rewrite_nodes.push(RewriteNode::interpolate_patched(
             "
                             #[view]
                             $func_decl$ {

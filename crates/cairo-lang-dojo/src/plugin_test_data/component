@@ -26,56 +26,16 @@ mod PositionComponent {
 }
 
 //! > generated_cairo_code
-struct Position {
-    x: felt,
-    y: felt
-}
-
-impl PositionSerde of Serde::<Position> {
-    fn serialize(ref serialized: Array::<felt>, input: Position) {
-        Serde::<felt>::serialize(ref serialized, input.x);
-        Serde::<felt>::serialize(ref serialized, input.y);
-    }
-    fn deserialize(ref serialized: Array::<felt>) -> Option::<Position> {
-        Option::Some(
-            Position {
-                x: Serde::<felt>::deserialize(ref serialized)?,
-                y: Serde::<felt>::deserialize(ref serialized)?,
-            }
-        )
-    }
-}
-
-impl StorageAccessPosition of StorageAccess::<Position> {
-    fn read(address_domain: felt, base: StorageBaseAddress) -> SyscallResult::<Position> {
-        Result::Ok(
-            Position {
-                x: storage_read_syscall(
-                    address_domain, storage_address_from_base_and_offset(base, 0_u8)
-                )?,
-                y: storage_read_syscall(
-                    address_domain, storage_address_from_base_and_offset(base, 1_u8)
-                )?,
-            }
-        )
-    }
-    fn write(
-        address_domain: felt, base: StorageBaseAddress, value: Position
-    ) -> SyscallResult::<()> {
-        storage_write_syscall(
-            address_domain, storage_address_from_base_and_offset(base, 0_u8), value.x
-        );
-        storage_write_syscall(
-            address_domain, storage_address_from_base_and_offset(base, 1_u8), value.y
-        )
-    }
-}
-
 #[contract]
 mod PositionComponent {
+    struct Position {
+        x: felt,
+        y: felt
+    }
+
     struct Storage {
         world_address: felt,
-        state: Map::<felt, Position>,
+        state: LegacyMap::<felt, Position>,
     }
 
     // Initialize PositionComponent.
@@ -96,6 +56,48 @@ mod PositionComponent {
     #[view]
     fn get(entity_id: felt) -> Position {
         return state::read(entity_id);
+    }
+
+    impl PositionSerde of serde::Serde::<Position> {
+        fn serialize(ref serialized: Array::<felt>, input: Position) {
+            serde::Serde::<felt>::serialize(ref serialized, input.x);
+            serde::Serde::<felt>::serialize(ref serialized, input.y);
+        }
+        fn deserialize(ref serialized: Array::<felt>) -> Option::<Position> {
+            Option::Some(
+                Position {
+                    x: serde::Serde::<felt>::deserialize(ref serialized)?,
+                    y: serde::Serde::<felt>::deserialize(ref serialized)?,
+                }
+            )
+        }
+    }
+
+    impl StorageAccessPosition of starknet::StorageAccess::<Position> {
+        fn read(
+            address_domain: felt, base: starknet::StorageBaseAddress
+        ) -> starknet::SyscallResult::<Position> {
+            Result::Ok(
+                Position {
+                    x: starknet::storage_read_syscall(
+                        address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8)
+                    )?,
+                    y: starknet::storage_read_syscall(
+                        address_domain, starknet::storage_address_from_base_and_offset(base, 1_u8)
+                    )?,
+                }
+            )
+        }
+        fn write(
+            address_domain: felt, base: starknet::StorageBaseAddress, value: Position
+        ) -> starknet::SyscallResult::<()> {
+            starknet::storage_write_syscall(
+                address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8), value.x
+            )?;
+            starknet::storage_write_syscall(
+                address_domain, starknet::storage_address_from_base_and_offset(base, 1_u8), value.y
+            )
+        }
     }
 
     #[view]
