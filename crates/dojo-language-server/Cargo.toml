@@ -1,0 +1,22 @@
+[package]
+name = "dojo-languge-server"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[bin]]
+name = "dojo-language-server"
+path = "src/bin/language_server.rs"
+
+[dependencies]
+cairo-lang-dojo = {path = "../../crates/cairo-lang-dojo"}
+cairo-lang-compiler = { git = "https://github.com/starkware-libs/cairo.git", rev = "255bde8b3d798bcef7832edab6edc21b76e216fb" }
+cairo-lang-language-server = { git = "https://github.com/starkware-libs/cairo.git", rev = "255bde8b3d798bcef7832edab6edc21b76e216fb" }
+cairo-lang-starknet = { git = "https://github.com/starkware-libs/cairo.git", rev = "255bde8b3d798bcef7832edab6edc21b76e216fb" }
+cairo-lang-semantic= { git = "https://github.com/starkware-libs/cairo.git", rev = "255bde8b3d798bcef7832edab6edc21b76e216fb" }
+cairo-lang-plugins = { git = "https://github.com/starkware-libs/cairo.git", rev = "255bde8b3d798bcef7832edab6edc21b76e216fb" }
+cairo-lang-filesystem= { git = "https://github.com/starkware-libs/cairo.git", rev = "255bde8b3d798bcef7832edab6edc21b76e216fb" }
+tokio = { version = "1.18.2", features = ["full", "sync"] }
+tower-lsp = "0.17.0"
+salsa = "0.16.1"
+anyhow = "1.0.66"
