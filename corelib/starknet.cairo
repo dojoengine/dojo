@@ -145,27 +145,3 @@ impl SyscallResultTraitImpl<T> of SyscallResultTrait::<T> {
         }
     }
 }
-
-
-    impl StorageAccessPosition of StorageAccess::<Position> {
-        fn read(address_domain: felt, base: StorageBaseAddress) -> SyscallResult::<Position> {
-            Result::Ok(
-                Position {
-                    x: storage_read_syscall(
-                    address_domain, storage_address_from_base_and_offset(base, 0_u8)
-                )?,
-y: storage_read_syscall(
-                    address_domain, storage_address_from_base_and_offset(base, 1_u8)
-                )?,
-                }
-            )
-        }
-        fn write(
-            address_domain: felt, base: StorageBaseAddress, value: Position
-        ) -> SyscallResult::<()> {
-            StorageAccess::<felt>::write(address_domain, base, value.x)?;
-storage_write_syscall(
-                    address_domain, storage_address_from_base_and_offset(base, 1_u8), value.y)
-        }
-    }
-            

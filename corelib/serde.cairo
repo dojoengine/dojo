@@ -126,20 +126,3 @@ fn deserialize_array_felt_helper(
     curr_output.append(Serde::<felt>::deserialize(ref serialized)?);
     deserialize_array_felt_helper(ref serialized, curr_output, remaining - 1)
 }
-
-
-impl PositionSerde of Serde::<Position> {
-        fn serialize(ref serialized: Array::<felt>, input: Position) {
-            Serde::<felt>::serialize(ref serialized, input.x);
-Serde::<felt>::serialize(ref serialized, input.y);
-        }
-        fn deserialize(ref serialized: Array::<felt>) -> Option::<Position> {
-            Option::Some(
-                Position {
-                    x: Serde::<felt>::deserialize(ref serialized)?,
-y: Serde::<felt>::deserialize(ref serialized)?,
-                }
-            )
-        }
-    }
-            

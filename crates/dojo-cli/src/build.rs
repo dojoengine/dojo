@@ -78,14 +78,15 @@ pub fn run(args: BuildArgs) {
         });
     let main_crate_ids = get_main_crate_ids_from_project(db, &config);
 
-    // corelib-hack to make it compatible with custom types as storage var
-    reset_corelib(corelib_path);
+    reset_corelib(corelib_path.clone());
     let cairo_files = get_cairo_files_in_path(&source_dir);
+    // corelib-hack to make it compatible with custom types as storage var
     build_corelib(cairo_files);
 
     // TODO: Error handling
     let contracts = find_contracts(db, &main_crate_ids);
     let contracts = contracts.iter().collect::<Vec<_>>();
     let classes = compile_prepared_db(db, &contracts, CompilerConfig::default());
+    reset_corelib(corelib_path);
     println!("CLASSES: {classes:#?}")
 }
