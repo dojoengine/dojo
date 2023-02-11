@@ -6,7 +6,7 @@ members = [
 ]
 
 [workspace.package]
-version = "1.0.0"
+version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/dojoengine/dojo/"
 license = "Apache-2.0"
