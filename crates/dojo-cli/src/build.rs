@@ -63,18 +63,18 @@ pub fn run(args: BuildArgs) {
     plugins.push(Arc::new(StarkNetPlugin {}));
 
     let mut config = ProjectConfig::from_directory(&source_dir).unwrap_or_else(|error| {
-        panic!("Problem creating project config: {:?}", error);
+        panic!("Problem creating project config: {error:?}");
     });
 
     let corelib_path = PathBuf::from("corelib");
-    config.corelib = Some(Directory(corelib_path.clone().into()));
+    config.corelib = Some(Directory(corelib_path.clone()));
 
     let db = &mut RootDatabase::builder()
         .with_project_config(config.clone())
         .with_plugins(plugins)
         .build()
         .unwrap_or_else(|error| {
-            panic!("Problem creating language database: {:?}", error);
+            panic!("Problem creating language database: {error:?}");
         });
     let main_crate_ids = get_main_crate_ids_from_project(db, &config);
 
@@ -87,5 +87,5 @@ pub fn run(args: BuildArgs) {
     let contracts = find_contracts(db, &main_crate_ids);
     let contracts = contracts.iter().collect::<Vec<_>>();
     let classes = compile_prepared_db(db, &contracts, CompilerConfig::default());
-    println!("CLASSES: {:#?}", classes);
+    println!("CLASSES: {classes:#?}")
 }
