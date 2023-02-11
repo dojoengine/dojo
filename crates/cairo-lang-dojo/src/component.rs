@@ -20,8 +20,7 @@ pub struct Component {
 
 impl Component {
     pub fn from_module_body(db: &dyn SyntaxGroup, name: SmolStr, body: ast::ModuleBody) -> Self {
-        let mut component =
-            Component { rewrite_nodes: vec![], name, diagnostics: vec![] };
+        let mut component = Component { rewrite_nodes: vec![], name, diagnostics: vec![] };
 
         let mut matched_struct = false;
         for item in body.items(db).elements(db) {
@@ -60,12 +59,10 @@ impl Component {
                 }}
                 ",
             ),
-            HashMap::from([
-                (
-                    "body".to_string(),
-                    RewriteNode::Modified(ModifiedNode { children: self.rewrite_nodes }),
-                ),
-            ]),
+            HashMap::from([(
+                "body".to_string(),
+                RewriteNode::Modified(ModifiedNode { children: self.rewrite_nodes }),
+            )]),
         ));
 
         PluginResult {
@@ -140,7 +137,8 @@ impl Component {
 
             read.push(RewriteNode::interpolate_patched(
                 "$key$: starknet::storage_read_syscall(
-                    address_domain, starknet::storage_address_from_base_and_offset(base, $offset$_u8)
+                    address_domain, starknet::storage_address_from_base_and_offset(base, \
+                 $offset$_u8)
                 )?,",
                 HashMap::from([
                     ("key".to_string(), RewriteNode::Trimmed(member.name(db).as_syntax_node())),
@@ -154,8 +152,8 @@ impl Component {
                 format!(
                     "
                     starknet::storage_write_syscall(
-                        address_domain, starknet::storage_address_from_base_and_offset(base, $offset$_u8), \
-                     value.$key$){final_token}"
+                        address_domain, starknet::storage_address_from_base_and_offset(base, \
+                     $offset$_u8), value.$key$){final_token}"
                 )
                 .as_str(),
                 HashMap::from([
@@ -200,7 +198,7 @@ impl Component {
             "
                 impl StorageAccess$type_name$ of starknet::StorageAccess::<$type_name$> {
                     fn read(address_domain: felt, base: starknet::StorageBaseAddress) -> \
-                    starknet::SyscallResult::<$type_name$> {
+             starknet::SyscallResult::<$type_name$> {
                         Result::Ok(
                             $type_name$ {
                                 $read$
@@ -208,7 +206,8 @@ impl Component {
                         )
                     }
                     fn write(
-                        address_domain: felt, base: starknet::StorageBaseAddress, value: $type_name$
+                        address_domain: felt, base: starknet::StorageBaseAddress, value: \
+             $type_name$
                     ) -> starknet::SyscallResult::<()> {
                         $write$
                     }
