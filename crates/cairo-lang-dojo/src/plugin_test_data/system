@@ -47,7 +47,7 @@ mod PositionComponent {
 
     struct Storage {
         world_address: felt,
-        state: Map::<felt, Position>,
+        state: LegacyMap::<felt, Position>,
     }
 
     // Initialize PositionComponent.
@@ -69,6 +69,48 @@ mod PositionComponent {
     fn get(entity_id: felt) -> Position {
         return state::read(entity_id);
     }
+
+    impl PositionSerde of serde::Serde::<Position> {
+        fn serialize(ref serialized: Array::<felt>, input: Position) {
+            serde::Serde::<felt>::serialize(ref serialized, input.x);
+            serde::Serde::<felt>::serialize(ref serialized, input.y);
+        }
+        fn deserialize(ref serialized: Array::<felt>) -> Option::<Position> {
+            Option::Some(
+                Position {
+                    x: serde::Serde::<felt>::deserialize(ref serialized)?,
+                    y: serde::Serde::<felt>::deserialize(ref serialized)?,
+                }
+            )
+        }
+    }
+
+    impl StorageAccessPosition of starknet::StorageAccess::<Position> {
+        fn read(
+            address_domain: felt, base: starknet::StorageBaseAddress
+        ) -> starknet::SyscallResult::<Position> {
+            Result::Ok(
+                Position {
+                    x: starknet::storage_read_syscall(
+                        address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8)
+                    )?,
+                    y: starknet::storage_read_syscall(
+                        address_domain, starknet::storage_address_from_base_and_offset(base, 1_u8)
+                    )?,
+                }
+            )
+        }
+        fn write(
+            address_domain: felt, base: starknet::StorageBaseAddress, value: Position
+        ) -> starknet::SyscallResult::<()> {
+            starknet::storage_write_syscall(
+                address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8), value.x
+            )?;
+            starknet::storage_write_syscall(
+                address_domain, starknet::storage_address_from_base_and_offset(base, 1_u8), value.y
+            )
+        }
+    }
 }
 
 #[contract]
@@ -79,7 +121,7 @@ mod HealthComponent {
 
     struct Storage {
         world_address: felt,
-        state: Map::<felt, Health>,
+        state: LegacyMap::<felt, Health>,
     }
 
     // Initialize HealthComponent.
@@ -100,6 +142,36 @@ mod HealthComponent {
     #[view]
     fn get(entity_id: felt) -> Health {
         return state::read(entity_id);
+    }
+
+    impl HealthSerde of serde::Serde::<Health> {
+        fn serialize(ref serialized: Array::<felt>, input: Health) {
+            serde::Serde::<felt>::serialize(ref serialized, input.hp);
+        }
+        fn deserialize(ref serialized: Array::<felt>) -> Option::<Health> {
+            Option::Some(Health { hp: serde::Serde::<felt>::deserialize(ref serialized)?,  })
+        }
+    }
+
+    impl StorageAccessHealth of starknet::StorageAccess::<Health> {
+        fn read(
+            address_domain: felt, base: starknet::StorageBaseAddress
+        ) -> starknet::SyscallResult::<Health> {
+            Result::Ok(
+                Health {
+                    hp: starknet::storage_read_syscall(
+                        address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8)
+                    )?,
+                }
+            )
+        }
+        fn write(
+            address_domain: felt, base: starknet::StorageBaseAddress, value: Health
+        ) -> starknet::SyscallResult::<()> {
+            starknet::storage_write_syscall(
+                address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8), value.hp
+            )
+        }
     }
 }
 
