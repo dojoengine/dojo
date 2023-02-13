@@ -9,11 +9,11 @@ edition = "2021"
 anyhow = "1.0.66"
 clap = { version = "4.0", features = ["derive"] }
 cairo-lang-dojo = { path = "../cairo-lang-dojo" }
-cairo-lang-compiler = { git = "https://github.com/starkware-libs/cairo.git", rev = "255bde8b3d798bcef7832edab6edc21b76e216fb" }
-cairo-lang-filesystem = { git = "https://github.com/starkware-libs/cairo.git", rev = "255bde8b3d798bcef7832edab6edc21b76e216fb" }
-cairo-lang-plugins = { git = "https://github.com/starkware-libs/cairo.git", rev = "255bde8b3d798bcef7832edab6edc21b76e216fb" }
-cairo-lang-project = { git = "https://github.com/starkware-libs/cairo.git", rev = "255bde8b3d798bcef7832edab6edc21b76e216fb" }
-cairo-lang-starknet = { git = "https://github.com/starkware-libs/cairo.git", rev = "255bde8b3d798bcef7832edab6edc21b76e216fb" }
+cairo-lang-compiler = { git = "https://github.com/starkware-libs/cairo.git", rev = "b51c511ab39dae631362d4157853db46c2c49d64" }
+cairo-lang-filesystem = { git = "https://github.com/starkware-libs/cairo.git", rev = "b51c511ab39dae631362d4157853db46c2c49d64" }
+cairo-lang-plugins = { git = "https://github.com/starkware-libs/cairo.git", rev = "b51c511ab39dae631362d4157853db46c2c49d64" }
+cairo-lang-project = { git = "https://github.com/starkware-libs/cairo.git", rev = "b51c511ab39dae631362d4157853db46c2c49d64" }
+cairo-lang-starknet = { git = "https://github.com/starkware-libs/cairo.git", rev = "b51c511ab39dae631362d4157853db46c2c49d64" }
 toml.workspace = true
 
 [[bin]]
