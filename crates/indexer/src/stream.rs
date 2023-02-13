@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use apibara_client_protos::pb::{
-    starknet::v1alpha2::{Filter},
+    starknet::v1alpha2::Filter,
     stream::v1alpha2::{
         stream_client::StreamClient, stream_data_response::Message, Cursor, Data,
         StreamDataRequest, StreamDataResponse,
