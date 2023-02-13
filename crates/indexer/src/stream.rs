@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use apibara_client_protos::pb::{
-    starknet::v1alpha2::{EventFilter, FieldElement, Filter, HeaderFilter},
+    starknet::v1alpha2::{Filter},
     stream::v1alpha2::{
         stream_client::StreamClient, stream_data_response::Message, Cursor, Data,
         StreamDataRequest, StreamDataResponse,
@@ -45,6 +45,7 @@ impl ApibaraClient {
         Ok(Self { stream, stream_id: 0, response_stream: None, sender: None })
     }
 
+    #[allow(clippy::needless_lifetimes)]
     pub async fn request_data<'x>(
         &'x mut self,
         filter: Filter,
@@ -55,12 +56,14 @@ impl ApibaraClient {
             batch_size: Some(1),
             starting_cursor: Some(Cursor { order_key: 1, unique_key: vec![] }),
             finality: None,
-            filter: Some(filter.into()),
+            filter: Some(filter),
         };
 
         let (sender, receiver) = mpsc::channel::<StreamDataRequest>(1);
         let str = tokio_stream::wrappers::ReceiverStream::new(receiver);
-        sender.send(request).await;
+        sender.send(request).await.unwrap_or_else(|error| {
+            panic!("Failed sending request: {error:?}");
+        });
         self.sender = Some(sender);
         self.response_stream = Some(self.stream.stream_data(str).await?.into_inner());
 

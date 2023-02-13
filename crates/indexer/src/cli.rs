@@ -1,16 +1,13 @@
-use anyhow::Context;
 use clap::Parser;
 use futures::StreamExt;
-use hex_literal::hex;
-use std::{cmp::Ordering, error::Error, str::FromStr, vec};
+use std::{cmp::Ordering, error::Error, vec};
 mod stream;
 use apibara_client_protos::pb::starknet::v1alpha2::{Filter, HeaderFilter};
 use log::{debug, info, warn};
 use prisma_client_rust::bigdecimal::{
-    num_bigint::{BigUint, ToBigUint},
+    num_bigint::{BigUint},
     Num,
 };
-use tokio::sync::mpsc;
 mod prisma;
 
 /// Command line args parser.
@@ -34,13 +31,15 @@ async fn main() -> anyhow::Result<()> {
     let rpc = &args.rpc;
 
     let client = prisma::PrismaClient::_builder().build().await;
-    assert_eq!(client.is_ok(), true);
+    assert!(client.is_ok());
 
     let stream = stream::ApibaraClient::new(rpc).await;
     match stream {
         std::result::Result::Ok(s) => {
             println!("Connected");
-            start(s, client.unwrap(), world).await;
+            start(s, client.unwrap(), world).await.unwrap_or_else(|error| {
+                panic!("Failed starting: {error:?}");
+            });
         }
         std::result::Result::Err(e) => panic!("Error: {:?}", e),
     }
@@ -50,10 +49,10 @@ async fn main() -> anyhow::Result<()> {
 
 async fn start(
     mut stream: stream::ApibaraClient,
-    client: prisma::PrismaClient,
+    _client: prisma::PrismaClient,
     world: BigUint,
 ) -> Result<(), Box<dyn Error>> {
-    let mut data_stream = stream
+    let data_stream = stream
         .request_data({
             Filter {
                 header: Some(HeaderFilter { weak: true }),
@@ -116,7 +115,7 @@ async fn start(
                     }
 
                     for event in &block.events {
-                        let tx_hash = &event
+                        let _tx_hash = &event
                             .transaction
                             .as_ref()
                             .unwrap()
@@ -128,7 +127,7 @@ async fn start(
                             .unwrap()
                             .to_biguint();
                         match &event.event {
-                            Some(ev_data) => {
+                            Some(_ev_data) => {
                                 // handle event
                             }
                             None => {
