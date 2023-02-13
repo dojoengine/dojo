@@ -4,10 +4,7 @@ use std::{cmp::Ordering, error::Error, vec};
 mod stream;
 use apibara_client_protos::pb::starknet::v1alpha2::{Filter, HeaderFilter};
 use log::{debug, info, warn};
-use prisma_client_rust::bigdecimal::{
-    num_bigint::{BigUint},
-    Num,
-};
+use prisma_client_rust::bigdecimal::{num_bigint::BigUint, Num};
 
 #[allow(warnings, unused, elided_lifetimes_in_paths)]
 mod prisma;
