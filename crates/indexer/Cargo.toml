@@ -23,7 +23,7 @@ prisma-client-rust = { git = "https://github.com/Brendonovich/prisma-client-rust
 serde.workspace = true
 
 [[bin]]
-name = "dojo-index"
+name = "dojo-indexer"
 path = "src/cli.rs"
 
 [[bin]]

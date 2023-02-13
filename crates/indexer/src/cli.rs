@@ -9,7 +9,7 @@ use prisma_client_rust::bigdecimal::{
     Num,
 };
 
-#[allow(clippy::all)]
+#[allow(warnings, unused, elided_lifetimes_in_paths)]
 mod prisma;
 
 /// Command line args parser.
