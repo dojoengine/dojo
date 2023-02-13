@@ -8,6 +8,8 @@ use prisma_client_rust::bigdecimal::{
     num_bigint::{BigUint},
     Num,
 };
+
+#[allow(clippy::all)]
 mod prisma;
 
 /// Command line args parser.
