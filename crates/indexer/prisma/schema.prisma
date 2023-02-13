@@ -22,7 +22,7 @@ model Component {
 model Entity {
     id String @id
     states EntityState[]
-    stateUpdates EntityStateUpdate[]
+    state_updates EntityStateUpdate[]
     transaction_hash String
 }
 
@@ -30,7 +30,7 @@ model System {
     id String @id
     name String
     calls SystemCall[]
-    queryComponents Component[]
+    query_components Component[]
     transaction_hash String
 }
 
@@ -39,28 +39,28 @@ model Resource {
 }
 
 model EntityState {
-    entityId String
-    entity Entity @relation(fields: [entityId], references: [id])
-    componentId String
-    component Component @relation(fields: [componentId], references: [id])
+    entity_id String
+    entity Entity @relation(fields: [entity_id], references: [id])
+    component_id String
+    component Component @relation(fields: [component_id], references: [id])
     data String
-    @@unique([entityId, componentId])
+    @@unique([entity_id, component_id])
 }
 
 model EntityStateUpdate {
     id Int @id @default(autoincrement())
-    entityId String
-    entity Entity @relation(fields: [entityId], references: [id])
-    transactionHash String
-    componentId String
-    component Component @relation(fields: [componentId], references: [id])
+    entity_id String
+    entity Entity @relation(fields: [entity_id], references: [id])
+    transaction_hash String
+    component_id String
+    component Component @relation(fields: [component_id], references: [id])
     data String
 }
 
 model SystemCall {
     id Int @id @default(autoincrement())
-    systemId String
-    system System @relation(fields: [systemId], references: [id])
+    system_id String
+    system System @relation(fields: [system_id], references: [id])
     transaction_hash String
     data String
 }

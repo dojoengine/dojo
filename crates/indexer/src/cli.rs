@@ -28,7 +28,9 @@ struct Args {
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    let world = BigUint::from_str_radix(&args.world[2..], 16).unwrap();
+    let world = BigUint::from_str_radix(&args.world[2..], 16).unwrap_or_else(|error| {
+        panic!("Failed parsing world address: {error:?}");
+    });
     let rpc = &args.rpc;
 
     let client = prisma::PrismaClient::_builder().build().await;
@@ -40,7 +42,7 @@ async fn main() -> anyhow::Result<()> {
             println!("Connected");
             start(s, client.unwrap(), world).await;
         }
-        std::result::Result::Err(e) => println!("Error: {:?}", e),
+        std::result::Result::Err(e) => panic!("Error: {:?}", e),
     }
 
     Ok(())
