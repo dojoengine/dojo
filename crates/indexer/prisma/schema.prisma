@@ -4,8 +4,7 @@ datasource db {
 }
 
 generator client {
-    // Corresponds to the cargo alias created earlier
-    provider      = "cargo prisma"
+    provider      = "cargo prisma-cli"
     // The location to generate the client. Is relative to the position of the schema
     output        = "../src/prisma.rs"
 }
