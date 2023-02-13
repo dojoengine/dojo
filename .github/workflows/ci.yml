@@ -73,6 +73,7 @@ jobs:
           components: clippy
           toolchain: stable
       - uses: Swatinem/rust-cache@v2
+      - uses: arduino/setup-protoc@v1
       - run: >
           scripts/clippy.sh
 
@@ -86,6 +87,7 @@ jobs:
           components: rustfmt
           toolchain: nightly-2022-11-03
       - uses: Swatinem/rust-cache@v2
+      - uses: arduino/setup-protoc@v1
       - run: scripts/rust_fmt.sh --check
 
   # Check for unnecessary dependencies.
@@ -99,6 +101,7 @@ jobs:
           profile: minimal
           toolchain: nightly-2022-11-03
       - uses: Swatinem/rust-cache@v2
+      - uses: arduino/setup-protoc@v1
       - name: "Download and run cargo-udeps"
         run: |
           wget -O - -c https://github.com/est31/cargo-udeps/releases/download/v0.1.35/cargo-udeps-v0.1.35-x86_64-unknown-linux-gnu.tar.gz | tar -xz
@@ -114,5 +117,6 @@ jobs:
         with:
           toolchain: stable
       - uses: Swatinem/rust-cache@v2
+      - uses: arduino/setup-protoc@v1
       - run: >
           scripts/docs.sh
