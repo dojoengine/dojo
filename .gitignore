@@ -3,3 +3,4 @@ workspace
 .idea/
 dojo.iml
 *.db
+prisma.rs

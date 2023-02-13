@@ -76,6 +76,7 @@ jobs:
       - uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: scripts/prisma.sh generate
       - run: >
           scripts/clippy.sh
 
