@@ -93,6 +93,7 @@ jobs:
       - uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: scripts/prisma.sh generate
       - run: scripts/rust_fmt.sh --check
 
   # Check for unnecessary dependencies.
@@ -109,6 +110,7 @@ jobs:
       - uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: scripts/prisma.sh generate
       - name: "Download and run cargo-udeps"
         run: |
           wget -O - -c https://github.com/est31/cargo-udeps/releases/download/v0.1.35/cargo-udeps-v0.1.35-x86_64-unknown-linux-gnu.tar.gz | tar -xz
@@ -127,5 +129,6 @@ jobs:
       - uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: scripts/prisma.sh generate
       - run: >
           scripts/docs.sh
