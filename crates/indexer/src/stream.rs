@@ -1,11 +1,10 @@
 use std::str::FromStr;
 
-use apibara_client_protos::pb::{
-    starknet::v1alpha2::Filter,
-    stream::v1alpha2::{
-        stream_client::StreamClient, stream_data_response::Message, Cursor, Data,
-        StreamDataRequest, StreamDataResponse,
-    },
+use apibara_client_protos::pb::starknet::v1alpha2::Filter;
+use apibara_client_protos::pb::stream::v1alpha2::stream_client::StreamClient;
+use apibara_client_protos::pb::stream::v1alpha2::stream_data_response::Message;
+use apibara_client_protos::pb::stream::v1alpha2::{
+    Cursor, Data, StreamDataRequest, StreamDataResponse,
 };
 use futures_util::Stream;
 use log::debug;

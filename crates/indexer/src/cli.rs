@@ -1,10 +1,14 @@
+use std::cmp::Ordering;
+use std::error::Error;
+use std::vec;
+
 use clap::Parser;
 use futures::StreamExt;
-use std::{cmp::Ordering, error::Error, vec};
 mod stream;
 use apibara_client_protos::pb::starknet::v1alpha2::{Filter, HeaderFilter};
 use log::{debug, info, warn};
-use prisma_client_rust::bigdecimal::{num_bigint::BigUint, Num};
+use prisma_client_rust::bigdecimal::num_bigint::BigUint;
+use prisma_client_rust::bigdecimal::Num;
 
 #[allow(warnings, unused, elided_lifetimes_in_paths)]
 mod prisma;
@@ -72,8 +76,8 @@ async fn start(
                 debug!("Received message");
                 let data = &mess.data;
                 // TODO: pending data
-                //let end_cursor = &data.end_cursor;
-                //let cursor = &data.cursor;
+                // let end_cursor = &data.end_cursor;
+                // let cursor = &data.cursor;
                 for block in data {
                     match &block.header {
                         Some(header) => {

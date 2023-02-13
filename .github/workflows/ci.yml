@@ -17,6 +17,10 @@ jobs:
           toolchain: nightly-2022-11-03
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+      - uses: arduino/setup-protoc@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: scripts/prisma.sh generate --schema=crates/indexer/prisma/schema.prisma
       - run: |
           cargo test
 
