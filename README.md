@@ -20,6 +20,23 @@ The toolchain includes the following:
 rustup override set stable && rustup update && cargo test
 ```
 
+### Using the language server
+
+Install the cairo vscode extension: https://github.com/starkware-libs/cairo/tree/main/vscode-cairo
+
+Build the Dojo language server:
+```
+cargo build --bin dojo-language-server --release
+```
+
+Configure the Cairo extension language server to point to the dojo language server in `settings.json`:
+
+```
+...
+    cairo.languageServerPath: "$REPO_ROOT$/target/release/dojo-language-server",
+...
+```
+
 ## Overview
 
 ### Entity Component System
