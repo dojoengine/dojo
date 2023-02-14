@@ -1,9 +1,12 @@
 [workspace]
 
+resolver = "2"
+
 members = [
     "crates/cairo-lang-dojo",
     "crates/dojo-cli",
-    "crates/dojo-language-server"
+    "crates/dojo-indexer",
+    "crates/dojo-language-server",
 ]
 
 [workspace.package]

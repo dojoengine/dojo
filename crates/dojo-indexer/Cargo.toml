@@ -1,0 +1,29 @@
+[package]
+name = "dojo-indexer"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.66"
+apibara-client-protos = { git = "https://github.com/wraitii/apibara-rust-sdk" }
+clap = { version = "4.0", features = ["derive"] }
+hex = "0.4.3"
+futures = "0.3.26"
+tokio = { version = "1.20.1", features = ["full"] }
+tonic = "0.8.3"
+log = "0.4.17"
+futures-util = "0.3.26"
+tokio-stream = "0.1.11"
+prisma-client-rust-cli = { git = "https://github.com/Brendonovich/prisma-client-rust", tag = "0.6.4" }
+prisma-client-rust = { git = "https://github.com/Brendonovich/prisma-client-rust", tag = "0.6.4" }
+serde.workspace = true
+
+[[bin]]
+name = "dojo-indexer"
+path = "src/cli.rs"
+
+[[bin]]
+name = "prisma-cli"
+path = "src/bin/prisma-cli.rs"
