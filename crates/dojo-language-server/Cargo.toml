@@ -9,7 +9,7 @@ name = "dojo-language-server"
 path = "src/bin/language_server.rs"
 
 [dependencies]
-cairo-lang-dojo = {path = "../../crates/cairo-lang-dojo"}
+dojo-lang = {path = "../../crates/dojo-lang"}
 cairo-lang-compiler = { git = "https://github.com/starkware-libs/cairo.git", rev = "03468599c4d290762795fecf838f1037331e6e47" }
 cairo-lang-language-server = { git = "https://github.com/starkware-libs/cairo.git", rev = "03468599c4d290762795fecf838f1037331e6e47" }
 cairo-lang-starknet = { git = "https://github.com/starkware-libs/cairo.git", rev = "03468599c4d290762795fecf838f1037331e6e47" }

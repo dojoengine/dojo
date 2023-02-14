@@ -1,5 +1,5 @@
 [package]
-name = "cairo-lang-dojo"
+name = "dojo-lang"
 version.workspace = true
 edition.workspace = true
 repository.workspace = true
