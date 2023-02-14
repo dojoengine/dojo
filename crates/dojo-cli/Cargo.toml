@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.66"
 clap = { version = "4.0", features = ["derive"] }
-cairo-lang-dojo = { path = "../cairo-lang-dojo" }
+dojo-lang = { path = "../dojo-lang" }
 cairo-lang-compiler = { git = "https://github.com/starkware-libs/cairo.git", rev = "03468599c4d290762795fecf838f1037331e6e47" }
 cairo-lang-filesystem = { git = "https://github.com/starkware-libs/cairo.git", rev = "03468599c4d290762795fecf838f1037331e6e47" }
 cairo-lang-plugins = { git = "https://github.com/starkware-libs/cairo.git", rev = "03468599c4d290762795fecf838f1037331e6e47" }

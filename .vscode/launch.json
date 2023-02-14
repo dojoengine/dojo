@@ -7,24 +7,24 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in library 'cairo-lang-dojo'",
+            "name": "Debug unit tests in library 'dojo-lang'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
                     "--lib",
-                    "--package=cairo-lang-dojo"
+                    "--package=dojo-lang"
                 ],
                 "filter": {
-                    "name": "cairo-lang-dojo",
+                    "name": "dojo-lang",
                     "kind": "lib"
                 }
             },
             "args": [],
             "env": {
-                "CARGO_MANIFEST_DIR": "${workspaceFolder}/crates/cairo-lang-dojo"
+                "CARGO_MANIFEST_DIR": "${workspaceFolder}/crates/dojo-lang"
             },
-            "cwd": "${workspaceFolder}/crates/cairo-lang-dojo"
+            "cwd": "${workspaceFolder}/crates/dojo-lang"
         },
         {
             "type": "lldb",
@@ -34,15 +34,15 @@
                 "args": [
                     "build",
                     "--bin=dojo-compile",
-                    "--package=cairo-lang-dojo"
+                    "--package=dojo-lang"
                 ],
                 "filter": {
                     "name": "dojo-compile",
                     "kind": "bin"
                 }
             },
-            "args": ["/Users/tarrence/code/dojo/crates/cairo-lang-dojo/src/cairo_level_tests/component.cairo"],
-            "cwd": "${workspaceFolder}/crates/cairo-lang-dojo"
+            "args": ["/Users/tarrence/code/dojo/crates/dojo-lang/src/cairo_level_tests/component.cairo"],
+            "cwd": "${workspaceFolder}/crates/dojo-lang"
         },
         {
             "type": "lldb",
@@ -53,7 +53,7 @@
                     "test",
                     "--no-run",
                     "--bin=dojo-compile",
-                    "--package=cairo-lang-dojo"
+                    "--package=dojo-lang"
                 ],
                 "filter": {
                     "name": "dojo-compile",
@@ -61,7 +61,7 @@
                 }
             },
             "args": [],
-            "cwd": "${workspaceFolder}/crates/cairo-lang-dojo"
+            "cwd": "${workspaceFolder}/crates/dojo-lang"
         }
     ]
 }

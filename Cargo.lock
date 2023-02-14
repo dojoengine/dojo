@@ -675,35 +675,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cairo-lang-dojo"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "cairo-lang-compiler",
- "cairo-lang-defs",
- "cairo-lang-diagnostics",
- "cairo-lang-formatter",
- "cairo-lang-lowering",
- "cairo-lang-parser",
- "cairo-lang-plugins",
- "cairo-lang-semantic",
- "cairo-lang-sierra-generator",
- "cairo-lang-syntax",
- "cairo-lang-test-utils",
- "cairo-lang-utils",
- "env_logger",
- "indoc",
- "itertools",
- "serde",
- "serde_json",
- "smol_str",
- "starknet",
- "test-case",
- "test-case-macros",
- "test-log",
-]
-
-[[package]]
 name = "cairo-lang-eq-solver"
 version = "1.0.0-alpha.2"
 source = "git+https://github.com/starkware-libs/cairo.git?rev=03468599c4d290762795fecf838f1037331e6e47#03468599c4d290762795fecf838f1037331e6e47"
@@ -1639,12 +1610,12 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "cairo-lang-compiler",
- "cairo-lang-dojo",
  "cairo-lang-filesystem",
  "cairo-lang-plugins",
  "cairo-lang-project",
  "cairo-lang-starknet",
  "clap",
+ "dojo-lang",
  "toml 0.4.10",
 ]
 
@@ -1668,17 +1639,46 @@ dependencies = [
 ]
 
 [[package]]
+name = "dojo-lang"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cairo-lang-compiler",
+ "cairo-lang-defs",
+ "cairo-lang-diagnostics",
+ "cairo-lang-formatter",
+ "cairo-lang-lowering",
+ "cairo-lang-parser",
+ "cairo-lang-plugins",
+ "cairo-lang-semantic",
+ "cairo-lang-sierra-generator",
+ "cairo-lang-syntax",
+ "cairo-lang-test-utils",
+ "cairo-lang-utils",
+ "env_logger",
+ "indoc",
+ "itertools",
+ "serde",
+ "serde_json",
+ "smol_str",
+ "starknet",
+ "test-case",
+ "test-case-macros",
+ "test-log",
+]
+
+[[package]]
 name = "dojo-languge-server"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "cairo-lang-compiler",
- "cairo-lang-dojo",
  "cairo-lang-filesystem",
  "cairo-lang-language-server",
  "cairo-lang-plugins",
  "cairo-lang-semantic",
  "cairo-lang-starknet",
+ "dojo-lang",
  "salsa",
  "tokio",
  "tower-lsp",

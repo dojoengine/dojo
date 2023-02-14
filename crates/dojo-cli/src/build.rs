@@ -5,7 +5,6 @@ use std::sync::Arc;
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_compiler::project::get_main_crate_ids_from_project;
 use cairo_lang_compiler::CompilerConfig;
-use cairo_lang_dojo::plugin::DojoPlugin;
 use cairo_lang_filesystem::ids::Directory;
 use cairo_lang_plugins::get_default_plugins;
 use cairo_lang_project::ProjectConfig;
@@ -13,6 +12,7 @@ use cairo_lang_starknet::contract::find_contracts;
 use cairo_lang_starknet::contract_class::compile_prepared_db;
 use cairo_lang_starknet::plugin::StarkNetPlugin;
 use clap::Args;
+use dojo_lang::plugin::DojoPlugin;
 
 #[derive(Args, Debug)]
 pub struct BuildArgs {
