@@ -5,7 +5,7 @@ resolver = "2"
 members = [
     "crates/cairo-lang-dojo",
     "crates/dojo-cli",
-    "crates/indexer",
+    "crates/dojo-indexer",
     "crates/dojo-language-server",
 ]
 

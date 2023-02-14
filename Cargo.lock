@@ -687,7 +687,7 @@ dependencies = [
  "serde",
  "serde_json",
  "smol_str",
- "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911)",
+ "starknet",
  "test-case",
  "test-case-macros",
  "test-log",
@@ -1327,18 +1327,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "crypto-bigint"
-version = "0.4.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef2b4b23cddf68b89b8f8069890e8c270d54e2d5fe1b143820234805e4cb17ef"
-dependencies = [
- "generic-array",
- "rand_core 0.6.4",
- "subtle",
- "zeroize",
-]
-
-[[package]]
 name = "crypto-common"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1445,18 +1433,8 @@ version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a01d95850c592940db9b8194bc39f4bc0e89dee5c4265e4b1807c34a9aba453c"
 dependencies = [
- "darling_core 0.13.4",
- "darling_macro 0.13.4",
-]
-
-[[package]]
-name = "darling"
-version = "0.14.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c0808e1bd8671fb44a113a14e13497557533369847788fa2ae912b6ebfce9fa8"
-dependencies = [
- "darling_core 0.14.3",
- "darling_macro 0.14.3",
+ "darling_core",
+ "darling_macro",
 ]
 
 [[package]]
@@ -1474,37 +1452,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "darling_core"
-version = "0.14.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "001d80444f28e193f30c2f293455da62dcf9a6b29918a4253152ae2b1de592cb"
-dependencies = [
- "fnv",
- "ident_case",
- "proc-macro2",
- "quote",
- "strsim",
- "syn",
-]
-
-[[package]]
 name = "darling_macro"
 version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9c972679f83bdf9c42bd905396b6c3588a843a17f0f16dfcfa3e2c5d57441835"
 dependencies = [
- "darling_core 0.13.4",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "darling_macro"
-version = "0.14.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b36230598a2d5de7ec1c6f51f72d8a99a9208daff41de2084d06e3fd3ea56685"
-dependencies = [
- "darling_core 0.14.3",
+ "darling_core",
  "quote",
  "syn",
 ]
@@ -1694,12 +1647,10 @@ dependencies = [
  "futures",
  "futures-util",
  "hex",
- "hex-literal",
  "log",
  "prisma-client-rust",
  "prisma-client-rust-cli",
  "serde",
- "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs)",
  "tokio",
  "tokio-stream",
  "tonic",
@@ -2375,12 +2326,6 @@ name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
-
-[[package]]
-name = "hex-literal"
-version = "0.3.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ebdb29d2ea9ed0083cd8cece49bbd968021bd99b0849edb4a9a7ee0fdf6a4e0"
 
 [[package]]
 name = "hmac"
@@ -3281,7 +3226,7 @@ dependencies = [
  "rustls-pemfile 0.3.0",
  "serde",
  "serde_bytes",
- "serde_with 1.14.0",
+ "serde_with",
  "sha-1",
  "sha2 0.10.6",
  "socket2",
@@ -4876,19 +4821,8 @@ version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96ef608575f6392792f9ecf7890c00086591d29a83910939d430753f7c050525"
 dependencies = [
- "crypto-bigint 0.3.2",
+ "crypto-bigint",
  "hmac 0.11.0",
- "zeroize",
-]
-
-[[package]]
-name = "rfc6979"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7743f17af12fa0b03b803ba12cd6a8d9483a587e89c69445e3909655c0b9fabb"
-dependencies = [
- "crypto-bigint 0.4.9",
- "hmac 0.12.1",
  "zeroize",
 ]
 
@@ -5341,23 +5275,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "678b5a069e50bf00ecd22d0cd8ddf7c236f68581b03db652061ed5eb13a312ff"
 dependencies = [
  "serde",
- "serde_with_macros 1.5.2",
-]
-
-[[package]]
-name = "serde_with"
-version = "2.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30d904179146de381af4c93d3af6ca4984b3152db687dacb9c3c35e86f39809c"
-dependencies = [
- "base64 0.13.1",
- "chrono",
- "hex",
- "indexmap",
- "serde",
- "serde_json",
- "serde_with_macros 2.2.0",
- "time 0.3.17",
+ "serde_with_macros",
 ]
 
 [[package]]
@@ -5366,19 +5284,7 @@ version = "1.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e182d6ec6f05393cc0e5ed1bf81ad6db3a8feedf8ee515ecdd369809bcce8082"
 dependencies = [
- "darling 0.13.4",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "serde_with_macros"
-version = "2.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1966009f3c05f095697c537312f5415d1e3ed31ce0a56942bac4c771c5c335e"
-dependencies = [
- "darling 0.14.3",
+ "darling",
  "proc-macro2",
  "quote",
  "syn",
@@ -5650,25 +5556,12 @@ name = "starknet"
 version = "0.2.0"
 source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911#447182a90839a3e4f096a01afe75ef474186d911"
 dependencies = [
- "starknet-accounts 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911)",
- "starknet-contract 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911)",
- "starknet-core 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911)",
- "starknet-macros 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911)",
- "starknet-providers 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911)",
- "starknet-signers 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911)",
-]
-
-[[package]]
-name = "starknet"
-version = "0.2.0"
-source = "git+https://github.com/xJonathanLEI/starknet-rs#2f2928ba1fad8560a62e8e5663ec5f644d21be90"
-dependencies = [
- "starknet-accounts 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs)",
- "starknet-contract 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs)",
- "starknet-core 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs)",
- "starknet-macros 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs)",
- "starknet-providers 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs)",
- "starknet-signers 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs)",
+ "starknet-accounts",
+ "starknet-contract",
+ "starknet-core",
+ "starknet-macros",
+ "starknet-providers",
+ "starknet-signers",
 ]
 
 [[package]]
@@ -5677,21 +5570,9 @@ version = "0.1.0"
 source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911#447182a90839a3e4f096a01afe75ef474186d911"
 dependencies = [
  "async-trait",
- "starknet-core 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911)",
- "starknet-providers 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911)",
- "starknet-signers 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911)",
- "thiserror",
-]
-
-[[package]]
-name = "starknet-accounts"
-version = "0.1.0"
-source = "git+https://github.com/xJonathanLEI/starknet-rs#2f2928ba1fad8560a62e8e5663ec5f644d21be90"
-dependencies = [
- "async-trait",
- "starknet-core 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs)",
- "starknet-providers 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs)",
- "starknet-signers 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs)",
+ "starknet-core",
+ "starknet-providers",
+ "starknet-signers",
  "thiserror",
 ]
 
@@ -5702,24 +5583,10 @@ source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f0
 dependencies = [
  "serde",
  "serde_json",
- "serde_with 1.14.0",
- "starknet-accounts 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911)",
- "starknet-core 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911)",
- "starknet-providers 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911)",
- "thiserror",
-]
-
-[[package]]
-name = "starknet-contract"
-version = "0.1.0"
-source = "git+https://github.com/xJonathanLEI/starknet-rs#2f2928ba1fad8560a62e8e5663ec5f644d21be90"
-dependencies = [
- "serde",
- "serde_json",
- "serde_with 2.2.0",
- "starknet-accounts 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs)",
- "starknet-core 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs)",
- "starknet-providers 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs)",
+ "serde_with",
+ "starknet-accounts",
+ "starknet-core",
+ "starknet-providers",
  "thiserror",
 ]
 
@@ -5734,28 +5601,10 @@ dependencies = [
  "hex",
  "serde",
  "serde_json",
- "serde_with 1.14.0",
+ "serde_with",
  "sha3",
- "starknet-crypto 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911)",
- "starknet-ff 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911)",
- "thiserror",
-]
-
-[[package]]
-name = "starknet-core"
-version = "0.2.0"
-source = "git+https://github.com/xJonathanLEI/starknet-rs#2f2928ba1fad8560a62e8e5663ec5f644d21be90"
-dependencies = [
- "base64 0.13.1",
- "ethereum-types",
- "flate2",
- "hex",
- "serde",
- "serde_json",
- "serde_with 2.2.0",
- "sha3",
- "starknet-crypto 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs)",
- "starknet-ff 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs)",
+ "starknet-crypto",
+ "starknet-ff",
  "thiserror",
 ]
 
@@ -5764,37 +5613,17 @@ name = "starknet-crypto"
 version = "0.2.0"
 source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911#447182a90839a3e4f096a01afe75ef474186d911"
 dependencies = [
- "crypto-bigint 0.3.2",
+ "crypto-bigint",
  "hex",
  "hmac 0.11.0",
  "num-bigint",
  "num-integer",
  "num-traits 0.2.15",
- "rfc6979 0.1.0",
+ "rfc6979",
  "sha2 0.9.9",
- "starknet-crypto-codegen 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911)",
- "starknet-curve 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911)",
- "starknet-ff 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911)",
- "thiserror",
- "zeroize",
-]
-
-[[package]]
-name = "starknet-crypto"
-version = "0.2.0"
-source = "git+https://github.com/xJonathanLEI/starknet-rs#2f2928ba1fad8560a62e8e5663ec5f644d21be90"
-dependencies = [
- "crypto-bigint 0.4.9",
- "hex",
- "hmac 0.12.1",
- "num-bigint",
- "num-integer",
- "num-traits 0.2.15",
- "rfc6979 0.3.1",
- "sha2 0.10.6",
- "starknet-crypto-codegen 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs)",
- "starknet-curve 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs)",
- "starknet-ff 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs)",
+ "starknet-crypto-codegen",
+ "starknet-curve",
+ "starknet-ff",
  "thiserror",
  "zeroize",
 ]
@@ -5804,18 +5633,8 @@ name = "starknet-crypto-codegen"
 version = "0.1.0"
 source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911#447182a90839a3e4f096a01afe75ef474186d911"
 dependencies = [
- "starknet-curve 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911)",
- "starknet-ff 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911)",
- "syn",
-]
-
-[[package]]
-name = "starknet-crypto-codegen"
-version = "0.1.0"
-source = "git+https://github.com/xJonathanLEI/starknet-rs#2f2928ba1fad8560a62e8e5663ec5f644d21be90"
-dependencies = [
- "starknet-curve 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs)",
- "starknet-ff 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs)",
+ "starknet-curve",
+ "starknet-ff",
  "syn",
 ]
 
@@ -5824,15 +5643,7 @@ name = "starknet-curve"
 version = "0.1.0"
 source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911#447182a90839a3e4f096a01afe75ef474186d911"
 dependencies = [
- "starknet-ff 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911)",
-]
-
-[[package]]
-name = "starknet-curve"
-version = "0.1.0"
-source = "git+https://github.com/xJonathanLEI/starknet-rs#2f2928ba1fad8560a62e8e5663ec5f644d21be90"
-dependencies = [
- "starknet-ff 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs)",
+ "starknet-ff",
 ]
 
 [[package]]
@@ -5842,22 +5653,7 @@ source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f0
 dependencies = [
  "ark-ff",
  "bigdecimal",
- "crypto-bigint 0.3.2",
- "getrandom 0.2.8",
- "hex",
- "num-bigint",
- "serde",
- "thiserror",
-]
-
-[[package]]
-name = "starknet-ff"
-version = "0.2.0"
-source = "git+https://github.com/xJonathanLEI/starknet-rs#2f2928ba1fad8560a62e8e5663ec5f644d21be90"
-dependencies = [
- "ark-ff",
- "bigdecimal",
- "crypto-bigint 0.4.9",
+ "crypto-bigint",
  "getrandom 0.2.8",
  "hex",
  "num-bigint",
@@ -5870,16 +5666,7 @@ name = "starknet-macros"
 version = "0.1.0"
 source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911#447182a90839a3e4f096a01afe75ef474186d911"
 dependencies = [
- "starknet-core 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911)",
- "syn",
-]
-
-[[package]]
-name = "starknet-macros"
-version = "0.1.0"
-source = "git+https://github.com/xJonathanLEI/starknet-rs#2f2928ba1fad8560a62e8e5663ec5f644d21be90"
-dependencies = [
- "starknet-core 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs)",
+ "starknet-core",
  "syn",
 ]
 
@@ -5893,24 +5680,8 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "serde_with 1.14.0",
- "starknet-core 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911)",
- "thiserror",
- "url",
-]
-
-[[package]]
-name = "starknet-providers"
-version = "0.2.0"
-source = "git+https://github.com/xJonathanLEI/starknet-rs#2f2928ba1fad8560a62e8e5663ec5f644d21be90"
-dependencies = [
- "async-trait",
- "auto_impl",
- "reqwest",
- "serde",
- "serde_json",
- "serde_with 2.2.0",
- "starknet-core 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs)",
+ "serde_with",
+ "starknet-core",
  "thiserror",
  "url",
 ]
@@ -5921,19 +5692,8 @@ version = "0.1.0"
 source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911#447182a90839a3e4f096a01afe75ef474186d911"
 dependencies = [
  "async-trait",
- "starknet-core 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911)",
- "starknet-crypto 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911)",
- "thiserror",
-]
-
-[[package]]
-name = "starknet-signers"
-version = "0.1.0"
-source = "git+https://github.com/xJonathanLEI/starknet-rs#2f2928ba1fad8560a62e8e5663ec5f644d21be90"
-dependencies = [
- "async-trait",
- "starknet-core 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs)",
- "starknet-crypto 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs)",
+ "starknet-core",
+ "starknet-crypto",
  "thiserror",
 ]
 

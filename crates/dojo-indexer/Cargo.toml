@@ -10,9 +10,7 @@ anyhow = "1.0.66"
 apibara-client-protos = { git = "https://github.com/wraitii/apibara-rust-sdk" }
 clap = { version = "4.0", features = ["derive"] }
 hex = "0.4.3"
-hex-literal = "0.3.4"
 futures = "0.3.26"
-starknet = { git = "https://github.com/xJonathanLEI/starknet-rs" }
 tokio = { version = "1.20.1", features = ["full"] }
 tonic = "0.8.3"
 log = "0.4.17"
