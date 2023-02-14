@@ -12,7 +12,7 @@ trait IUpgradable {
 #[contract]
 mod ConstantIntializer {
     use dojo::syscalls::replace_class;
-    use dojo::syscalls::get_contract_address;
+    use starknet::get_contract_address;
 
     #[external]
     fn initialize(class_hash: felt, init_calldata: Array::<felt>) {

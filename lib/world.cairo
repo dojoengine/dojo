@@ -3,16 +3,16 @@ use array::ArrayTrait;
 #[abi]
 trait IProxy {
     fn set_implementation(class_hash: felt);
-    fn initialize(world_address: starknet::ContractAddress);
+// fn initialize(world_address: starknet::ContractAddress);
 }
 
 #[contract]
 mod World {
     use hash::pedersen;
     use starknet::get_caller_address;
+    use starknet::get_contract_address;
     use starknet::contract_address_to_felt;
     use dojo::syscalls::deploy;
-    use dojo::syscalls::get_contract_address;
 
     struct Storage {
         entity_registry_len: LegacyMap::<felt, felt>,
@@ -27,10 +27,13 @@ mod World {
     fn register(class_hash: felt, module_id: felt) {
         let module_id = pedersen(0, module_id);
         let proxy_class_hash = 420;
-        let module_address = deploy(proxy_class_hash, module_id, ArrayTrait::new(), bool::False(()));
+        let module_address = deploy(
+            proxy_class_hash, module_id, ArrayTrait::new(), bool::False(())
+        );
         let world_address = get_contract_address();
         super::IProxyDispatcher::set_implementation(module_address, class_hash);
-        super::IProxyDispatcher::initialize(module_address, world_address);
+        // TODO: Uncomment once https://github.com/starkware-libs/cairo/issues/2114 is addressed.
+        // super::IProxyDispatcher::initialize(module_address, world_address);
 
         let module_address_felt = contract_address_to_felt(module_address);
         module_registry::write(module_id, module_address_felt);
