@@ -12,11 +12,11 @@ trait IUpgradable {
 #[contract]
 mod ConstantIntializer {
     use dojo::syscalls::replace_class;
+    use starknet::get_contract_address;
 
     #[external]
     fn initialize(class_hash: felt, init_calldata: Array::<felt>) {
-        // TODO: Replace with starknet::get_contract_address once it is ready.
-        let self_address = starknet::contract_address_const::<17>();
+        let self_address = get_contract_address();
         replace_class(class_hash);
         super::IUpgradableDispatcher::initialize(self_address, init_calldata);
     }
