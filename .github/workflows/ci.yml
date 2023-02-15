@@ -43,7 +43,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: cairo-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: dojo-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - run: scripts/cairo_fmt.sh --check
 
   cairotest:
@@ -65,7 +65,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: cairo-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: dojo-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - run: scripts/cairo_test.sh
 
   clippy:

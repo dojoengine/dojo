@@ -1,39 +1,14 @@
-use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::Result;
-use cairo_lang_compiler::db::{RootDatabase, RootDatabaseBuilder};
-use cairo_lang_filesystem::db::init_dev_corelib;
+use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_language_server::{Backend, State};
 use cairo_lang_plugins::get_default_plugins;
-use cairo_lang_semantic::db::SemanticGroup;
-use cairo_lang_semantic::plugin::SemanticPlugin;
 use cairo_lang_starknet::plugin::StarkNetPlugin;
+use dojo_lang::db::RootDatabaseBuilderDojo;
 use dojo_lang::plugin::DojoPlugin;
 use tower_lsp::{LspService, Server};
 
 const CORELIB_DIR_NAME: &str = "cairo/corelib";
-
-trait RootDatabaseBuilderDojo {
-    fn build_language_server(
-        &mut self,
-        path: PathBuf,
-        plugins: Vec<Arc<dyn SemanticPlugin>>,
-    ) -> Result<RootDatabase>;
-}
-
-impl RootDatabaseBuilderDojo for RootDatabaseBuilder {
-    fn build_language_server(
-        &mut self,
-        path: PathBuf,
-        plugins: Vec<Arc<dyn SemanticPlugin>>,
-    ) -> Result<RootDatabase> {
-        let mut db = RootDatabase::default();
-        init_dev_corelib(&mut db, path);
-        db.set_semantic_plugins(plugins);
-        Ok(db)
-    }
-}
 
 #[tokio::main]
 async fn main() {

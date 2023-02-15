@@ -28,9 +28,12 @@ use cairo_lang_syntax::node::ast::Expr;
 use cairo_lang_syntax::node::Token;
 use clap::Parser;
 use colored::Colorize;
+use dojo_lang::db::RootDatabaseBuilderDojo;
 use dojo_lang::plugin::DojoPlugin;
 use itertools::Itertools;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
+
+const CORELIB_DIR_NAME: &str = "cairo/corelib";
 
 /// Command line args parser.
 /// Exits with 0/1 if the input is formatted correctly/incorrectly.
@@ -61,6 +64,13 @@ enum TestStatus {
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
+    let mut dir = std::env::current_exe()
+        .unwrap_or_else(|e| panic!("Problem getting the executable path: {e:?}"));
+    dir.pop();
+    dir.pop();
+    dir.pop();
+    dir.push(CORELIB_DIR_NAME);
+
     let plugins: Vec<Arc<dyn SemanticPlugin>> = vec![
         Arc::new(DerivePlugin {}),
         Arc::new(PanicablePlugin {}),
@@ -68,7 +78,10 @@ fn main() -> anyhow::Result<()> {
         Arc::new(DojoPlugin {}),
         Arc::new(StarkNetPlugin {}),
     ];
-    let db = &mut RootDatabase::builder().with_plugins(plugins).detect_corelib().build()?;
+    let db =
+        &mut RootDatabase::builder().build_language_server(dir, plugins).unwrap_or_else(|error| {
+            panic!("Problem creating language database: {error:?}");
+        });
 
     let main_crate_ids = setup_project(db, Path::new(&args.path))?;
 
