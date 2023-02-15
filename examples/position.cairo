@@ -19,3 +19,4 @@ mod PositionComponent {
         self.x == b.x & self.y == b.y
     }
 }
+
