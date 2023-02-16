@@ -1,8 +1,5 @@
 use cairo_lang_compiler::db::RootDatabase;
-use cairo_lang_defs::db::DefsGroup;
-use cairo_lang_defs::ids::LanguageElementId;
 use cairo_lang_filesystem::db::FilesGroup;
-use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::test_utils::setup_test_crate;
 use dojo_project::ProjectConfig;
 use indoc::indoc;

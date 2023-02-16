@@ -8,6 +8,7 @@ use cairo_lang_filesystem::ids::Directory;
 use cairo_lang_plugins::get_default_plugins;
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::plugin::SemanticPlugin;
+use cairo_lang_starknet::plugin::StarkNetPlugin;
 use dojo_project::{ProjectConfig, WorldConfig};
 
 use crate::plugin::DojoPlugin;
@@ -43,6 +44,7 @@ impl DojoRootDatabaseBuilderEx for RootDatabaseBuilder {
 
         let mut plugins = get_default_plugins();
         plugins.push(Arc::new(DojoPlugin { world_config: config }));
+        plugins.push(Arc::new(StarkNetPlugin {}));
 
         self.with_implicit_precedence(&precedence).with_plugins(plugins)
     }
