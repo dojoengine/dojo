@@ -91,7 +91,7 @@ fn main() -> anyhow::Result<()> {
         Arc::new(DerivePlugin {}),
         Arc::new(PanicablePlugin {}),
         Arc::new(ConfigPlugin { configs: HashSet::from(["test".to_string()]) }),
-        Arc::new(DojoPlugin { world_address: config.content.world.address }),
+        Arc::new(DojoPlugin { world_config: config.content.world }),
         Arc::new(StarkNetPlugin {}),
     ];
     let db =

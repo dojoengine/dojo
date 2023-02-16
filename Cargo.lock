@@ -1853,6 +1853,7 @@ dependencies = [
  "cairo-lang-semantic",
  "cairo-lang-starknet",
  "dojo-lang",
+ "dojo-project",
  "salsa",
  "tokio",
  "tower-lsp",

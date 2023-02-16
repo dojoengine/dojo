@@ -14,7 +14,6 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal};
 use dojo_project::WorldConfig;
-use starknet::core::types::FieldElement;
 
 use crate::component::Component;
 use crate::system::System;

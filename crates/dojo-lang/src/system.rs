@@ -17,6 +17,7 @@ use crate::query::Query;
 
 pub struct System {
     pub name: SmolStr,
+    pub world_config: WorldConfig,
     pub rewrite_nodes: Vec<RewriteNode>,
     pub diagnostics: Vec<PluginDiagnostic>,
 }
@@ -30,7 +31,7 @@ impl System {
     ) -> Self {
         let diagnostics = vec![];
         let rewrite_nodes: Vec<RewriteNode> = vec![];
-        let mut system = System { rewrite_nodes, name, diagnostics };
+        let mut system = System { name, world_config, rewrite_nodes, diagnostics };
 
         let mut matched_execute = false;
         for item in body.items(db).elements(db) {
@@ -101,7 +102,7 @@ impl System {
             let type_ast = param.type_clause(db).ty(db);
 
             if let Some(SystemArgType::Query) = try_extract_execute_paramters(db, &type_ast) {
-                let query = Query::from_expr(db, type_ast.clone());
+                let query = Query::from_expr(db, self.world_config, type_ast.clone());
                 preprocess_rewrite_nodes.extend(query.rewrite_nodes);
             }
         }

@@ -4,20 +4,22 @@ use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_semantic::patcher::RewriteNode;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
+use dojo_project::WorldConfig;
 use starknet::core::crypto::pedersen_hash;
 use starknet::core::types::FieldElement;
 use starknet::core::utils::get_contract_address;
 
 pub struct Query {
+    pub world_config: WorldConfig,
     pub rewrite_nodes: Vec<RewriteNode>,
     pub diagnostics: Vec<PluginDiagnostic>,
 }
 
 impl Query {
-    pub fn from_expr(db: &dyn SyntaxGroup, expr: ast::Expr) -> Self {
+    pub fn from_expr(db: &dyn SyntaxGroup, world_config: WorldConfig, expr: ast::Expr) -> Self {
         let diagnostics = vec![];
         let rewrite_nodes: Vec<RewriteNode> = vec![];
-        let mut query = Query { diagnostics, rewrite_nodes };
+        let mut query = Query { world_config, diagnostics, rewrite_nodes };
         query.handle_expression(db, expr);
         query
     }
@@ -45,8 +47,6 @@ impl Query {
                         let var_prefix = segment.as_syntax_node().get_text(db).to_ascii_lowercase();
 
                         let class_hash = "0x00000000000000000000000000000000";
-                        // TODO(https://github.com/dojoengine/dojo/issues/38): Move to cairo_project.toml
-                        let world_address = "0x00000000000000000000000000000000";
 
                         // Component name to felt
                         let component_name_raw = path.as_syntax_node().get_text(db);
@@ -69,7 +69,7 @@ impl Query {
                                 salt,
                                 FieldElement::from_hex_be(class_hash).unwrap(),
                                 &[],
-                                FieldElement::from_hex_be(world_address).unwrap(),
+                                self.world_config.address.unwrap_or_default(),
                             )
                         );
 

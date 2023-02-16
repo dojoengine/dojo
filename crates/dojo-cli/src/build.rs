@@ -60,7 +60,7 @@ pub fn run(args: BuildArgs) {
     });
 
     let mut plugins = get_default_plugins();
-    plugins.push(Arc::new(DojoPlugin { world_address: config.content.world.address }));
+    plugins.push(Arc::new(DojoPlugin { world_config: config.content.world }));
     plugins.push(Arc::new(StarkNetPlugin {}));
 
     let mut cairo_config: cairo_lang_project::ProjectConfig = config.into();
