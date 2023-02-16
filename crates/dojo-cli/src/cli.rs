@@ -1,5 +1,4 @@
 mod build;
-mod config;
 
 use build::BuildArgs;
 use clap::{Args, Parser, Subcommand};

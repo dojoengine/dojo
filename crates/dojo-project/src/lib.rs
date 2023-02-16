@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod test;
+
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
@@ -17,7 +20,7 @@ pub enum DeserializationError {
 }
 const PROJECT_FILE_NAME: &str = "world.toml";
 
-/// Cairo project config, including its file content and metadata about the file.
+/// Dojo project config, including its file content and metadata about the file.
 /// This file is expected to be at a root of a crate and specify the crate name and location and
 /// of its dependency crates.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -51,5 +54,17 @@ impl ProjectConfig {
             .into();
         let content = toml::from_str(&std::fs::read_to_string(filename)?)?;
         Ok(ProjectConfig { base_path, content })
+    }
+}
+
+impl From<ProjectConfig> for cairo_lang_project::ProjectConfig {
+    fn from(val: ProjectConfig) -> Self {
+        cairo_lang_project::ProjectConfig {
+            content: cairo_lang_project::ProjectConfigContent {
+                crate_roots: val.content.crate_roots,
+            },
+            base_path: val.base_path,
+            corelib: None,
+        }
     }
 }

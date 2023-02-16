@@ -12,8 +12,7 @@ use cairo_lang_starknet::contract_class::compile_prepared_db;
 use cairo_lang_starknet::plugin::StarkNetPlugin;
 use clap::Args;
 use dojo_lang::plugin::DojoPlugin;
-
-use crate::config::ProjectConfig;
+use dojo_project::ProjectConfig;
 
 #[derive(Args, Debug)]
 pub struct BuildArgs {
@@ -64,13 +63,8 @@ pub fn run(args: BuildArgs) {
         panic!("Problem creating project config: {:?}", error);
     });
 
-    let cairo_config = cairo_lang_project::ProjectConfig {
-        base_path: source_dir,
-        corelib: Some(Directory("cairo/corelib".into())),
-        content: cairo_lang_project::ProjectConfigContent {
-            crate_roots: config.content.crate_roots,
-        },
-    };
+    let mut cairo_config: cairo_lang_project::ProjectConfig = config.into();
+    cairo_config.corelib = Some(Directory("cairo/corelib".into()));
 
     let db = &mut RootDatabase::builder()
         .with_project_config(cairo_config.clone())
