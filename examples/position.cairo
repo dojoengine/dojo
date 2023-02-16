@@ -20,3 +20,10 @@ mod PositionComponent {
     }
 }
 
+#[test]
+#[available_gas(20000)]
+fn test_position_is_zero() {
+    let mut retdata = PositionComponent::__external::get_plus_2(single_element_arr(1));
+    pop_and_compare(ref retdata, 3, 'Wrong result');
+    assert_empty(retdata);
+}

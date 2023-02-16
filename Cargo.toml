@@ -7,6 +7,7 @@ members = [
     "crates/dojo-cli",
     "crates/dojo-indexer",
     "crates/dojo-language-server",
+    "crates/dojo-project",
     "crates/dojo-test-runner",
 ]
 
@@ -20,6 +21,22 @@ license-file = "LICENSE"
 [workspace.dependencies]
 anyhow = "1.0.66"
 cairo-felt = "0.1.1"
+cairo-lang-casm = { git = "https://github.com/starkware-libs/cairo.git", rev = "03468599c4d290762795fecf838f1037331e6e47" }
+cairo-lang-compiler = { git = "https://github.com/starkware-libs/cairo.git", rev = "03468599c4d290762795fecf838f1037331e6e47" }
+cairo-lang-debug = { git = "https://github.com/starkware-libs/cairo.git", rev = "03468599c4d290762795fecf838f1037331e6e47" }
+cairo-lang-defs = { git = "https://github.com/starkware-libs/cairo.git", rev = "03468599c4d290762795fecf838f1037331e6e47" }
+cairo-lang-diagnostics = { git = "https://github.com/starkware-libs/cairo.git", rev = "03468599c4d290762795fecf838f1037331e6e47" }
+cairo-lang-filesystem = { git = "https://github.com/starkware-libs/cairo.git", rev = "03468599c4d290762795fecf838f1037331e6e47" }
+cairo-lang-language-server = { git = "https://github.com/starkware-libs/cairo.git", rev = "03468599c4d290762795fecf838f1037331e6e47" }
+cairo-lang-lowering = { git = "https://github.com/starkware-libs/cairo.git", rev = "03468599c4d290762795fecf838f1037331e6e47" }
+cairo-lang-parser = { git = "https://github.com/starkware-libs/cairo.git", rev = "03468599c4d290762795fecf838f1037331e6e47" }
+cairo-lang-plugins = { git = "https://github.com/starkware-libs/cairo.git", rev = "03468599c4d290762795fecf838f1037331e6e47" }
+cairo-lang-project = { git = "https://github.com/starkware-libs/cairo.git", rev = "03468599c4d290762795fecf838f1037331e6e47" }
+cairo-lang-semantic = { git = "https://github.com/starkware-libs/cairo.git", rev = "03468599c4d290762795fecf838f1037331e6e47" }
+cairo-lang-sierra-generator = { git = "https://github.com/starkware-libs/cairo.git", rev = "03468599c4d290762795fecf838f1037331e6e47" }
+cairo-lang-starknet = { git = "https://github.com/starkware-libs/cairo.git", rev = "03468599c4d290762795fecf838f1037331e6e47" }
+cairo-lang-syntax = { git = "https://github.com/starkware-libs/cairo.git", rev = "03468599c4d290762795fecf838f1037331e6e47" }
+cairo-lang-utils = { git = "https://github.com/starkware-libs/cairo.git", rev = "03468599c4d290762795fecf838f1037331e6e47" }
 cairo-vm = "0.1.2"
 clap = { version = "4.0", features = ["derive"] }
 colored = "2"
@@ -32,6 +49,7 @@ salsa = "0.16.1"
 serde = { version = "1.0.130", features = ["derive"] }
 serde_json = "1.0"
 smol_str = "0.1.23"
+starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "447182a90839a3e4f096a01afe75ef474186d911" }
 thiserror = "1.0.32"
 toml = "0.4.2"
 test-log = "0.2.11"

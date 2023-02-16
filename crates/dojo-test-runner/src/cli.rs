@@ -1,4 +1,4 @@
-//! Compiles and runs a Cairo program.
+//! Compiles and runs a Dojo project.
 
 use std::collections::HashSet;
 use std::path::Path;
@@ -7,7 +7,9 @@ use std::sync::{Arc, Mutex};
 use anyhow::{bail, Context};
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_compiler::diagnostics::DiagnosticsReporter;
-use cairo_lang_compiler::project::setup_project;
+use cairo_lang_compiler::project::{
+    get_main_crate_ids_from_project, update_crate_roots_from_project_config, ProjectError,
+};
 use cairo_lang_debug::DebugWithDb;
 use cairo_lang_defs::ids::{FreeFunctionId, FunctionWithBodyId, ModuleItemId};
 use cairo_lang_diagnostics::ToOption;
@@ -30,6 +32,7 @@ use clap::Parser;
 use colored::Colorize;
 use dojo_lang::db::RootDatabaseBuilderDojo;
 use dojo_lang::plugin::DojoPlugin;
+use dojo_project::ProjectConfig;
 use itertools::Itertools;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
@@ -59,6 +62,25 @@ enum TestStatus {
     Success,
     Fail(RunResultValue),
     Ignore,
+}
+
+pub fn setup_project(
+    db: &mut dyn SemanticGroup,
+    path: &Path,
+) -> Result<Vec<CrateId>, ProjectError> {
+    if path.is_dir() {
+        match ProjectConfig::from_directory(path) {
+            Ok(config) => {
+                let cairo_config: cairo_lang_project::ProjectConfig = config.into();
+                let main_crate_ids = get_main_crate_ids_from_project(db, &cairo_config);
+                update_crate_roots_from_project_config(db, cairo_config);
+                Ok(main_crate_ids)
+            }
+            _ => Err(ProjectError::LoadProjectError),
+        }
+    } else {
+        Err(ProjectError::LoadProjectError)
+    }
 }
 
 fn main() -> anyhow::Result<()> {
