@@ -5,6 +5,8 @@ use tonic::async_trait;
 use crate::prisma;
 
 pub mod component_state_update;
+pub mod component_register;
+mod system_register;
 
 #[async_trait]
 pub trait IProcessor<T> {
