@@ -5,13 +5,17 @@ use std::vec;
 use clap::Parser;
 use futures::StreamExt;
 mod stream;
-use apibara_client_protos::pb::starknet::v1alpha2::{Filter, HeaderFilter};
+use apibara_client_protos::pb::starknet::v1alpha2::{Event, Filter, HeaderFilter};
 use log::{debug, info, warn};
 use prisma_client_rust::bigdecimal::num_bigint::BigUint;
 use prisma_client_rust::bigdecimal::Num;
+use processors::{IProcessor, component_state_update};
+mod processors;
 
 #[allow(warnings, unused, elided_lifetimes_in_paths)]
 mod prisma;
+
+mod hash;
 
 /// Command line args parser.
 /// Exits with 0/1 if the input is formatted correctly/incorrectly.
@@ -37,10 +41,15 @@ async fn main() -> anyhow::Result<()> {
     assert!(client.is_ok());
 
     let stream = stream::ApibaraClient::new(rpc).await;
+
+    let processors: Vec<Box<dyn IProcessor<dyn std::any::Any>>> = vec![
+        Box::new(component_state_update::ComponentStateUpdateProcessor::new()),
+    ];
+
     match stream {
         std::result::Result::Ok(s) => {
             println!("Connected");
-            start(s, client.unwrap(), world).await.unwrap_or_else(|error| {
+            start(s, client.unwrap(), processors, world).await.unwrap_or_else(|error| {
                 panic!("Failed starting: {error:?}");
             });
         }
@@ -52,7 +61,8 @@ async fn main() -> anyhow::Result<()> {
 
 async fn start(
     mut stream: stream::ApibaraClient,
-    _client: prisma::PrismaClient,
+    client: prisma::PrismaClient,
+    processors: Vec<Box<dyn std::any::Any>>,
     world: BigUint,
 ) -> Result<(), Box<dyn Error>> {
     let data_stream = stream
@@ -131,7 +141,7 @@ async fn start(
                             .to_biguint();
                         match &event.event {
                             Some(_ev_data) => {
-                                // handle event
+                                // TODO: only execute event processors
                             }
                             None => {
                                 warn!("Received event without key");

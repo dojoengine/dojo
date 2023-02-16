@@ -1843,6 +1843,7 @@ dependencies = [
  "prisma-client-rust",
  "prisma-client-rust-cli",
  "serde",
+ "sha3",
  "tokio",
  "tokio-stream",
  "tonic",
