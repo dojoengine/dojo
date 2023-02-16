@@ -13,6 +13,8 @@ use cairo_lang_syntax::node::ast::MaybeModuleBody;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal};
+use dojo_project::WorldConfig;
+use starknet::core::types::FieldElement;
 
 use crate::component::Component;
 use crate::system::System;
@@ -57,12 +59,14 @@ impl PluginAuxData for DojoAuxData {
 mod test;
 
 #[derive(Debug)]
-pub struct DojoPlugin {}
+pub struct DojoPlugin {
+    pub world_config: WorldConfig,
+}
 
 impl MacroPlugin for DojoPlugin {
     fn generate_code(&self, db: &dyn SyntaxGroup, item_ast: ast::Item) -> PluginResult {
         match item_ast {
-            ast::Item::Module(module_ast) => handle_mod(db, module_ast),
+            ast::Item::Module(module_ast) => handle_mod(db, self.world_config, module_ast),
             _ => PluginResult::default(),
         }
     }
@@ -78,7 +82,11 @@ impl AsDynMacroPlugin for DojoPlugin {
 }
 impl SemanticPlugin for DojoPlugin {}
 
-fn handle_mod(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult {
+fn handle_mod(
+    db: &dyn SyntaxGroup,
+    world_config: WorldConfig,
+    module_ast: ast::ItemModule,
+) -> PluginResult {
     let name = module_ast.name(db).text(db);
     let body = match module_ast.body(db) {
         MaybeModuleBody::Some(body) => body,
@@ -92,7 +100,7 @@ fn handle_mod(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult
     }
 
     if module_ast.has_attr(db, SYSTEM_ATTR) {
-        return System::from_module_body(db, name, body).result(db);
+        return System::from_module_body(db, world_config, name, body).result(db);
     }
 
     PluginResult::default()

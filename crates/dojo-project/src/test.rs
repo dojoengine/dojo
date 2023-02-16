@@ -9,10 +9,7 @@ use crate::ProjectConfigContent;
 fn test_serde() {
     let config = ProjectConfigContent {
         crate_roots: [("crate".into(), "dir".into())].into_iter().collect(),
-        world: crate::WorldConfig {
-            name: "dojo".into(),
-            address: FieldElement::from_str("0xdead").unwrap(),
-        },
+        world: crate::WorldConfig { address: Some(FieldElement::from_str("0xdead").unwrap()) },
     };
     let serialized = toml::to_string(&config).unwrap();
     // NOTE: FieldElement encodes back to bigint string
@@ -23,7 +20,6 @@ fn test_serde() {
             crate = "dir"
 
             [world]
-            name = "dojo"
             address = "57005"
         "# }
     );

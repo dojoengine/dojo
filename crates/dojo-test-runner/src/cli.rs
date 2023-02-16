@@ -64,27 +64,21 @@ enum TestStatus {
     Ignore,
 }
 
-pub fn setup_project(
+pub fn get_crate_ids(
     db: &mut dyn SemanticGroup,
-    path: &Path,
+    config: ProjectConfig,
 ) -> Result<Vec<CrateId>, ProjectError> {
-    if path.is_dir() {
-        match ProjectConfig::from_directory(path) {
-            Ok(config) => {
-                let cairo_config: cairo_lang_project::ProjectConfig = config.into();
-                let main_crate_ids = get_main_crate_ids_from_project(db, &cairo_config);
-                update_crate_roots_from_project_config(db, cairo_config);
-                Ok(main_crate_ids)
-            }
-            _ => Err(ProjectError::LoadProjectError),
-        }
-    } else {
-        Err(ProjectError::LoadProjectError)
-    }
+    let cairo_config: cairo_lang_project::ProjectConfig = config.into();
+    let main_crate_ids = get_main_crate_ids_from_project(db, &cairo_config);
+    update_crate_roots_from_project_config(db, cairo_config);
+    Ok(main_crate_ids)
 }
 
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
+
+    let config = ProjectConfig::from_directory(Path::new(&args.path))
+        .unwrap_or_else(|e| panic!("Problem getting the executable path: {e:?}"));
 
     let mut dir = std::env::current_exe()
         .unwrap_or_else(|e| panic!("Problem getting the executable path: {e:?}"));
@@ -97,7 +91,7 @@ fn main() -> anyhow::Result<()> {
         Arc::new(DerivePlugin {}),
         Arc::new(PanicablePlugin {}),
         Arc::new(ConfigPlugin { configs: HashSet::from(["test".to_string()]) }),
-        Arc::new(DojoPlugin {}),
+        Arc::new(DojoPlugin { world_address: config.content.world.address }),
         Arc::new(StarkNetPlugin {}),
     ];
     let db =
@@ -105,7 +99,7 @@ fn main() -> anyhow::Result<()> {
             panic!("Problem creating language database: {error:?}");
         });
 
-    let main_crate_ids = setup_project(db, Path::new(&args.path))?;
+    let main_crate_ids = get_crate_ids(db, config)?;
 
     if DiagnosticsReporter::stderr().check(db) {
         bail!("failed to compile: {}", args.path);

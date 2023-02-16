@@ -8,6 +8,7 @@ use cairo_lang_semantic::plugin::DynPluginAuxData;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use cairo_lang_utils::try_extract_matches;
+use dojo_project::WorldConfig;
 use indoc::formatdoc;
 use smol_str::SmolStr;
 
@@ -21,7 +22,12 @@ pub struct System {
 }
 
 impl System {
-    pub fn from_module_body(db: &dyn SyntaxGroup, name: SmolStr, body: ast::ModuleBody) -> Self {
+    pub fn from_module_body(
+        db: &dyn SyntaxGroup,
+        world_config: WorldConfig,
+        name: SmolStr,
+        body: ast::ModuleBody,
+    ) -> Self {
         let diagnostics = vec![];
         let rewrite_nodes: Vec<RewriteNode> = vec![];
         let mut system = System { rewrite_nodes, name, diagnostics };

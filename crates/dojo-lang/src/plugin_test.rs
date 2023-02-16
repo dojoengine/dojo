@@ -5,6 +5,7 @@ use cairo_lang_parser::test_utils::create_virtual_file;
 use cairo_lang_parser::utils::{get_syntax_file_and_diagnostics, SimpleParserDatabase};
 use cairo_lang_syntax::node::TypedSyntaxNode;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
+use dojo_project::WorldConfig;
 
 use crate::plugin::DojoPlugin;
 
@@ -18,7 +19,7 @@ pub fn test_expand_contract(
     let (syntax_file, diagnostics) = get_syntax_file_and_diagnostics(db, file_id, cairo_code);
     assert_eq!(diagnostics.format(db), "");
     let file_syntax_node = syntax_file.as_syntax_node();
-    let plugin = DojoPlugin {};
+    let plugin = DojoPlugin { world_config: WorldConfig::default() };
     let mut generated_items: Vec<String> = Vec::new();
     let mut diagnostic_items: Vec<String> = Vec::new();
     for item in syntax_file.items(db).elements(db).into_iter() {

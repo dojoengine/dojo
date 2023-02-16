@@ -20,7 +20,7 @@ async fn main() {
     let (stdin, stdout) = (stdin.compat(), stdout.compat_write());
 
     let mut plugins = get_default_plugins();
-    plugins.push(Arc::new(DojoPlugin {}));
+    plugins.push(Arc::new(DojoPlugin { world_address: None }));
     plugins.push(Arc::new(StarkNetPlugin {}));
 
     let mut dir = std::env::current_exe()
