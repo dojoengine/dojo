@@ -32,6 +32,7 @@ salsa = "0.16.1"
 serde = { version = "1.0.130", features = ["derive"] }
 serde_json = "1.0"
 smol_str = "0.1.23"
+starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "447182a90839a3e4f096a01afe75ef474186d911" }
 thiserror = "1.0.32"
 toml = "0.4.2"
 test-log = "0.2.11"

@@ -1784,6 +1784,10 @@ dependencies = [
  "cairo-lang-starknet",
  "clap 4.1.4",
  "dojo-lang",
+ "serde",
+ "smol_str",
+ "starknet",
+ "thiserror",
  "toml 0.4.10",
 ]
 

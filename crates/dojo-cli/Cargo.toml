@@ -14,6 +14,10 @@ cairo-lang-filesystem = { git = "https://github.com/starkware-libs/cairo.git", r
 cairo-lang-plugins = { git = "https://github.com/starkware-libs/cairo.git", rev = "03468599c4d290762795fecf838f1037331e6e47" }
 cairo-lang-project = { git = "https://github.com/starkware-libs/cairo.git", rev = "03468599c4d290762795fecf838f1037331e6e47" }
 cairo-lang-starknet = { git = "https://github.com/starkware-libs/cairo.git", rev = "03468599c4d290762795fecf838f1037331e6e47" }
+serde.workspace = true
+smol_str.workspace = true
+starknet.workspace = true
+thiserror.workspace = true
 toml.workspace = true
 
 [[bin]]

@@ -21,7 +21,7 @@ cairo-lang-semantic = { git = "https://github.com/starkware-libs/cairo.git", rev
 cairo-lang-sierra-generator = { git = "https://github.com/starkware-libs/cairo.git", rev = "03468599c4d290762795fecf838f1037331e6e47" }
 cairo-lang-syntax = { git = "https://github.com/starkware-libs/cairo.git", rev = "03468599c4d290762795fecf838f1037331e6e47" }
 cairo-lang-utils = { git = "https://github.com/starkware-libs/cairo.git", rev = "03468599c4d290762795fecf838f1037331e6e47" }
-starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "447182a90839a3e4f096a01afe75ef474186d911" }
+starknet.workspace = true
 indoc.workspace = true
 itertools.workspace = true
 serde.workspace = true

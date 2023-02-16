@@ -1,0 +1,6 @@
+[crate_roots]
+dojo = "."
+
+[world]
+name = "dojo"
+address = "0xdead"
