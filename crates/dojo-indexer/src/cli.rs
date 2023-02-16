@@ -42,7 +42,7 @@ async fn main() -> anyhow::Result<()> {
 
     let stream = stream::ApibaraClient::new(rpc).await;
 
-    let processors: Vec<Box<dyn IProcessor<dyn std::any::Any>>> = vec![
+    let processors: Vec<Box<dyn std::any::Any>>  = vec![
         Box::new(component_state_update::ComponentStateUpdateProcessor::new()),
     ];
 

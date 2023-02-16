@@ -4,7 +4,7 @@ use sha3::{Keccak256, Digest};
 pub fn starknet_hash(data: &[u8]) -> BigUint {
     let mut hasher = Keccak256::new();
     hasher.update(data);
-    let hash = hasher.finalize();
+    let mut hash = hasher.finalize();
     // Truncate result to 250 bits.
     *hash.first_mut().unwrap() &= 3;
     BigUint::from_bytes_be(&hash)
