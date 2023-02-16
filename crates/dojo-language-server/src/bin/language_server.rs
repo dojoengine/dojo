@@ -6,6 +6,7 @@ use cairo_lang_plugins::get_default_plugins;
 use cairo_lang_starknet::plugin::StarkNetPlugin;
 use dojo_lang::db::RootDatabaseBuilderDojo;
 use dojo_lang::plugin::DojoPlugin;
+use dojo_project::WorldConfig;
 use tower_lsp::{LspService, Server};
 
 const CORELIB_DIR_NAME: &str = "cairo/corelib";
@@ -20,7 +21,7 @@ async fn main() {
     let (stdin, stdout) = (stdin.compat(), stdout.compat_write());
 
     let mut plugins = get_default_plugins();
-    plugins.push(Arc::new(DojoPlugin {}));
+    plugins.push(Arc::new(DojoPlugin { world_config: WorldConfig::default() }));
     plugins.push(Arc::new(StarkNetPlugin {}));
 
     let mut dir = std::env::current_exe()

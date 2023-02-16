@@ -21,6 +21,7 @@ cairo-lang-semantic = { git = "https://github.com/starkware-libs/cairo.git", rev
 cairo-lang-sierra-generator.workspace = true
 cairo-lang-syntax.workspace = true
 cairo-lang-utils.workspace = true
+dojo-project = { path = "../dojo-project" }
 starknet.workspace = true
 indoc.workspace = true
 itertools.workspace = true

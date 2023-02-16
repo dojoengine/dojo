@@ -29,10 +29,9 @@ pub struct ProjectConfig {
     pub content: ProjectConfigContent,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorldConfig {
-    pub name: SmolStr,
-    pub address: FieldElement,
+    pub address: Option<FieldElement>,
 }
 
 /// Contents of a Dojo project config file.

@@ -55,13 +55,13 @@ pub fn run(args: BuildArgs) {
 
     println!("\n\nWriting files to dir: {target_dir:#?}");
 
-    let mut plugins = get_default_plugins();
-    plugins.push(Arc::new(DojoPlugin {}));
-    plugins.push(Arc::new(StarkNetPlugin {}));
-
     let config = ProjectConfig::from_directory(&source_dir).unwrap_or_else(|error| {
         panic!("Problem creating project config: {:?}", error);
     });
+
+    let mut plugins = get_default_plugins();
+    plugins.push(Arc::new(DojoPlugin { world_config: config.content.world }));
+    plugins.push(Arc::new(StarkNetPlugin {}));
 
     let mut cairo_config: cairo_lang_project::ProjectConfig = config.into();
     cairo_config.corelib = Some(Directory("cairo/corelib".into()));
