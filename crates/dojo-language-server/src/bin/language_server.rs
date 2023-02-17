@@ -9,8 +9,6 @@ use dojo_lang::plugin::DojoPlugin;
 use dojo_project::WorldConfig;
 use tower_lsp::{LspService, Server};
 
-const CORELIB_DIR_NAME: &str = "cairo/corelib";
-
 #[tokio::main]
 async fn main() {
     #[cfg(feature = "runtime-agnostic")]
@@ -24,16 +22,14 @@ async fn main() {
     plugins.push(Arc::new(DojoPlugin { world_config: WorldConfig::default() }));
     plugins.push(Arc::new(StarkNetPlugin {}));
 
-    let mut dir = std::env::current_exe()
-        .unwrap_or_else(|e| panic!("Problem getting the executable path: {e:?}"));
-    dir.pop();
-    dir.pop();
-    dir.pop();
-    dir.push(CORELIB_DIR_NAME);
+    let dir = std::env::var("CAIRO_CORELIB_DIR")
+        .unwrap_or_else(|e| panic!("Problem getting the corelib path: {e:?}"));
 
-    let db = RootDatabase::builder().build_language_server(dir, plugins).unwrap_or_else(|error| {
-        panic!("Problem creating language database: {error:?}");
-    });
+    let db = RootDatabase::builder().build_language_server(dir.into(), plugins).unwrap_or_else(
+        |error| {
+            panic!("Problem creating language database: {error:?}");
+        },
+    );
 
     let (service, socket) = LspService::build(|client| Backend {
         client,
