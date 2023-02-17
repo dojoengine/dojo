@@ -30,7 +30,7 @@ use cairo_lang_syntax::node::ast::Expr;
 use cairo_lang_syntax::node::Token;
 use clap::Parser;
 use colored::Colorize;
-use dojo_lang::db::RootDatabaseBuilderDojo;
+use dojo_lang::db::DojoRootDatabaseBuilderEx;
 use dojo_lang::plugin::DojoPlugin;
 use dojo_project::ProjectConfig;
 use itertools::Itertools;

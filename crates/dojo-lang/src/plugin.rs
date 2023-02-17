@@ -24,7 +24,13 @@ const SYSTEM_ATTR: &str = "system";
 /// Dojo related auxiliary data of the Dojo plugin.
 #[derive(Debug, PartialEq, Eq)]
 pub struct DojoAuxData {
+    /// Patches of code that need translation in case they have diagnostics.
     pub patches: Patches,
+
+    /// A list of components that were processed by the plugin.
+    pub components: Vec<smol_str::SmolStr>,
+    /// A list of systems that were processed by the plugin.
+    pub systems: Vec<smol_str::SmolStr>,
 }
 impl GeneratedFileAuxData for DojoAuxData {
     fn as_any(&self) -> &dyn std::any::Any {
