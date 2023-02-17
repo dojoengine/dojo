@@ -52,7 +52,7 @@ pub fn run(args: BuildArgs) {
     println!("\n\nWriting files to dir: {target_dir:#?}");
 
     let config = ProjectConfig::from_directory(&source_dir).unwrap_or_else(|error| {
-        panic!("Problem creating project config: {:?}", error);
+        panic!("Problem parsing project config: {:?}", error);
     });
 
     let db = &mut RootDatabase::builder().with_dojo_config(config.clone()).build().unwrap_or_else(

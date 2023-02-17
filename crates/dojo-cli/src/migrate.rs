@@ -8,6 +8,7 @@ use dojo_lang::component::find_components;
 use dojo_lang::db::DojoRootDatabaseBuilderEx;
 use dojo_lang::system::find_systems;
 use dojo_project::ProjectConfig;
+use smol_str::SmolStr;
 
 #[derive(Args)]
 pub struct MigrateArgs {
@@ -38,6 +39,9 @@ pub fn run(args: MigrateArgs) {
     let components = find_components(db, &main_crate_ids);
     let systems = find_systems(db, &main_crate_ids);
 
-    println!("components: {:#?}", components[0].name);
-    println!("systems: {:#?}", systems[0].name);
+    println!(
+        "components: {:#?}",
+        components.iter().map(|p| p.name.clone()).collect::<Vec<SmolStr>>()
+    );
+    println!("systems: {:#?}", systems.iter().map(|p| p.name.clone()).collect::<Vec<SmolStr>>());
 }
