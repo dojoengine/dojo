@@ -1,7 +1,9 @@
 mod build;
+mod migrate;
 
 use build::BuildArgs;
 use clap::{Args, Parser, Subcommand};
+use migrate::MigrateArgs;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -13,7 +15,9 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    #[command(about = "Build the project's ECS, outputting smart contracts for deployment")]
+    #[command(
+        about = "Build the project's ECS, outputting smart contracts artifacts for deployment"
+    )]
     Build(BuildArgs),
     #[command(about = "Run a migration, declaring and deploying contracts as necessary to \
                        update the world")]
@@ -22,14 +26,6 @@ enum Commands {
     Bind(BindArgs),
     #[command(about = "Retrieve an entity's state by entity ID")]
     Inspect(InspectArgs),
-}
-
-#[derive(Args)]
-struct MigrateArgs {
-    #[clap(short, long, help = "Perform a dry run and outputs the plan to be executed")]
-    plan: bool,
-    #[clap(short, long, help = "World address to run migration on")]
-    world_address: String,
 }
 
 #[derive(Args)]
@@ -48,7 +44,7 @@ fn main() -> anyhow::Result<()> {
 
     match cli.command {
         Commands::Build(args) => build::run(args),
-        Commands::Migrate(..) => print!("Migrate"),
+        Commands::Migrate(args) => migrate::run(args),
         Commands::Bind(..) => print!("Bind"),
         Commands::Inspect(..) => print!("Inspect"),
     }
