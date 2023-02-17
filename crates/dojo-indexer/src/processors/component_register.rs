@@ -19,7 +19,7 @@ impl ComponentRegistrationProcessor {
 }
 #[async_trait]
 impl IProcessor<EventWithTransaction> for ComponentRegistrationProcessor {
-    async fn process(&self, client: prisma::PrismaClient, data: EventWithTransaction) -> Result<(), Error> {
+    async fn process(&self, client: &prisma::PrismaClient, data: EventWithTransaction) -> Result<(), Error> {
         let event = &data.event.unwrap();
         let event_key = &event.keys[0].to_biguint();
         if (event_key.cmp(&starknet_hash(b"ComponentRegistered")) != Ordering::Equal) {

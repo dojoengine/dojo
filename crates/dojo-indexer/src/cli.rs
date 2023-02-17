@@ -1,11 +1,11 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, any::Any};
 use std::error::Error;
 use std::vec;
 
 use clap::Parser;
 use futures::StreamExt;
 mod stream;
-use apibara_client_protos::pb::starknet::v1alpha2::{Event, Filter, HeaderFilter};
+use apibara_client_protos::pb::starknet::v1alpha2::{Event, Filter, HeaderFilter, EventWithTransaction};
 use log::{debug, info, warn};
 use prisma_client_rust::bigdecimal::num_bigint::BigUint;
 use prisma_client_rust::bigdecimal::Num;
@@ -42,7 +42,7 @@ async fn main() -> anyhow::Result<()> {
 
     let stream = stream::ApibaraClient::new(rpc).await;
 
-    let processors: Vec<Box<dyn std::any::Any>>  = vec![
+    let processors: Vec<Box<dyn Any>>  = vec![
         Box::new(component_state_update::ComponentStateUpdateProcessor::new()),
     ];
 
@@ -62,7 +62,7 @@ async fn main() -> anyhow::Result<()> {
 async fn start(
     mut stream: stream::ApibaraClient,
     client: prisma::PrismaClient,
-    processors: Vec<Box<dyn std::any::Any>>,
+    processors: Vec<Box<dyn Any>>,
     world: BigUint,
 ) -> Result<(), Box<dyn Error>> {
     let data_stream = stream
@@ -142,6 +142,11 @@ async fn start(
                         match &event.event {
                             Some(_ev_data) => {
                                 // TODO: only execute event processors
+                                for processor in &processors {
+                                    if let Some(p) = processor.downcast_ref::<Box<dyn IProcessor<EventWithTransaction>>>() {
+                                        p.process(&client, event.clone());
+                                    }
+                                }
                             }
                             None => {
                                 warn!("Received event without key");

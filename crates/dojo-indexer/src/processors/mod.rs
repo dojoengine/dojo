@@ -10,7 +10,7 @@ mod system_register;
 
 #[async_trait]
 pub trait IProcessor<T> {
-    async fn process(&self, client: prisma::PrismaClient, data: T) -> Result<(), Error>;
+    async fn process(&self, client: &prisma::PrismaClient, data: T) -> Result<(), Error>;
 }
 
 pub struct EventProcessor;
@@ -21,7 +21,7 @@ impl EventProcessor {
 }
 #[async_trait]
 impl IProcessor<Event> for EventProcessor {
-    async fn process(&self, client: prisma::PrismaClient, data: Event) -> Result<(), Error> {
+    async fn process(&self, client: &prisma::PrismaClient, data: Event) -> Result<(), Error> {
         Ok(())
     }
 }
@@ -34,7 +34,7 @@ impl BlockProcessor {
 }
 #[async_trait]
 impl IProcessor<Block> for BlockProcessor {
-    async fn process(&self, client: prisma::PrismaClient, data: Block) -> Result<(), Error> {
+    async fn process(&self, client: &prisma::PrismaClient, data: Block) -> Result<(), Error> {
         Ok(())
     }
 }
@@ -47,7 +47,7 @@ impl TransactionProcessor {
 }
 #[async_trait]
 impl IProcessor<Transaction> for TransactionProcessor {
-    async fn process(&self, client: prisma::PrismaClient, data: Transaction) -> Result<(), Error> {
+    async fn process(&self, client: &prisma::PrismaClient, data: Transaction) -> Result<(), Error> {
         Ok(())
     }
 }
