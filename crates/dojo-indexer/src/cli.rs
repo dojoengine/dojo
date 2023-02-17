@@ -5,7 +5,7 @@ use std::vec;
 use clap::Parser;
 use futures::StreamExt;
 mod stream;
-use apibara_client_protos::pb::starknet::v1alpha2::{Event, Filter, HeaderFilter, EventWithTransaction};
+use apibara_client_protos::pb::starknet::v1alpha2::{Event, Filter, HeaderFilter, EventWithTransaction, TransactionReceipt, BlockHeader};
 use log::{debug, info, warn};
 use prisma_client_rust::bigdecimal::num_bigint::BigUint;
 use prisma_client_rust::bigdecimal::Num;
@@ -92,6 +92,12 @@ async fn start(
                     match &block.header {
                         Some(header) => {
                             info!("Received block {}", header.block_number);
+
+                            for processor in &processors {
+                                if let Some(p) = processor.downcast_ref::<Box<dyn IProcessor<BlockHeader>>>() {
+                                    p.process(&client, header.clone());
+                                }
+                            }
                         }
                         None => {
                             warn!("Received block without header");
@@ -124,6 +130,20 @@ async fn start(
 
                         if !world_deployed {
                             continue;
+                        }
+                    }
+
+                    for transaction in&block.transactions {
+                        match &transaction.receipt {
+                            Some(tx) => {
+                                for processor in &processors {
+                                    if let Some(p) = processor.downcast_ref::<Box<dyn IProcessor<TransactionReceipt>>>() {
+                                        p.process(&client, tx.clone());
+                                    }
+                                }
+                            }
+                            None => {
+                            }
                         }
                     }
 
