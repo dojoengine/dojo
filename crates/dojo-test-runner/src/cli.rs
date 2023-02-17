@@ -36,8 +36,6 @@ use dojo_project::ProjectConfig;
 use itertools::Itertools;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
-const CORELIB_DIR_NAME: &str = "cairo/corelib";
-
 /// Command line args parser.
 /// Exits with 0/1 if the input is formatted correctly/incorrectly.
 #[derive(Parser, Debug)]
@@ -78,14 +76,10 @@ fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     let config = ProjectConfig::from_directory(Path::new(&args.path))
-        .unwrap_or_else(|e| panic!("Problem getting the executable path: {e:?}"));
+        .unwrap_or_else(|e| panic!("Problem loading the config: {e:?}"));
 
-    let mut dir = std::env::current_exe()
-        .unwrap_or_else(|e| panic!("Problem getting the executable path: {e:?}"));
-    dir.pop();
-    dir.pop();
-    dir.pop();
-    dir.push(CORELIB_DIR_NAME);
+    let dir = std::env::var("CAIRO_CORELIB_DIR")
+        .unwrap_or_else(|e| panic!("Problem getting the corelib path: {e:?}"));
 
     let plugins: Vec<Arc<dyn SemanticPlugin>> = vec![
         Arc::new(DerivePlugin {}),
@@ -94,8 +88,9 @@ fn main() -> anyhow::Result<()> {
         Arc::new(DojoPlugin { world_config: config.content.world }),
         Arc::new(StarkNetPlugin {}),
     ];
-    let db =
-        &mut RootDatabase::builder().build_language_server(dir, plugins).unwrap_or_else(|error| {
+    let db = &mut RootDatabase::builder()
+        .build_language_server(dir.into(), plugins)
+        .unwrap_or_else(|error| {
             panic!("Problem creating language database: {error:?}");
         });
 
