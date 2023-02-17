@@ -106,26 +106,22 @@ async fn start(
 
                     // wait for our world contract to be deployed
                     if !world_deployed {
-                        match &block.state_update {
-                            Some(state_update) => match &state_update.state_diff {
-                                Some(state_diff) => {
-                                    for contract in &state_diff.deployed_contracts {
-                                        if Ordering::is_eq(
-                                            contract
-                                                .contract_address
-                                                .as_ref()
-                                                .unwrap()
-                                                .to_biguint()
-                                                .cmp(&world),
-                                        ) {
-                                            world_deployed = true;
-                                            break;
-                                        }
-                                    }
+                        let state = block.state_update.as_ref();
+                        if state.is_some() && state.unwrap().state_diff.is_some() {
+                            let state_diff = state.unwrap().state_diff.as_ref().unwrap();
+                            for contract in state_diff.deployed_contracts.iter() {
+                                if Ordering::is_eq(
+                                    contract
+                                        .contract_address
+                                        .as_ref()
+                                        .unwrap()
+                                        .to_biguint()
+                                        .cmp(&world),
+                                ) {
+                                    world_deployed = true;
+                                    break;
                                 }
-                                None => (),
-                            },
-                            None => (),
+                            }
                         }
 
                         if !world_deployed {
