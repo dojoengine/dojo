@@ -23,7 +23,7 @@ const PROJECT_FILE_NAME: &str = "world.toml";
 /// Dojo project config, including its file content and metadata about the file.
 /// This file is expected to be at a root of a crate and specify the crate name and location and
 /// of its dependency crates.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Default, Debug, PartialEq, Eq)]
 pub struct ProjectConfig {
     pub base_path: PathBuf,
     pub content: ProjectConfigContent,
@@ -35,7 +35,7 @@ pub struct WorldConfig {
 }
 
 /// Contents of a Dojo project config file.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ProjectConfigContent {
     pub crate_roots: HashMap<SmolStr, PathBuf>,
     pub world: WorldConfig,

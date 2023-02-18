@@ -1,17 +1,13 @@
 use std::env::current_dir;
 use std::path::PathBuf;
-use std::sync::Arc;
 
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_compiler::project::get_main_crate_ids_from_project;
 use cairo_lang_compiler::CompilerConfig;
-use cairo_lang_filesystem::ids::Directory;
-use cairo_lang_plugins::get_default_plugins;
 use cairo_lang_starknet::contract::find_contracts;
 use cairo_lang_starknet::contract_class::compile_prepared_db;
-use cairo_lang_starknet::plugin::StarkNetPlugin;
 use clap::Args;
-use dojo_lang::plugin::DojoPlugin;
+use dojo_lang::db::DojoRootDatabaseBuilderEx;
 use dojo_project::ProjectConfig;
 
 #[derive(Args, Debug)]
@@ -56,24 +52,15 @@ pub fn run(args: BuildArgs) {
     println!("\n\nWriting files to dir: {target_dir:#?}");
 
     let config = ProjectConfig::from_directory(&source_dir).unwrap_or_else(|error| {
-        panic!("Problem creating project config: {:?}", error);
+        panic!("Problem parsing project config: {:?}", error);
     });
 
-    let mut plugins = get_default_plugins();
-    plugins.push(Arc::new(DojoPlugin { world_config: config.content.world }));
-    plugins.push(Arc::new(StarkNetPlugin {}));
-
-    let mut cairo_config: cairo_lang_project::ProjectConfig = config.into();
-    cairo_config.corelib = Some(Directory("cairo/corelib".into()));
-
-    let db = &mut RootDatabase::builder()
-        .with_project_config(cairo_config.clone())
-        .with_plugins(plugins)
-        .build()
-        .unwrap_or_else(|error| {
+    let db = &mut RootDatabase::builder().with_dojo_config(config.clone()).build().unwrap_or_else(
+        |error| {
             panic!("Problem creating language database: {:?}", error);
-        });
-    let main_crate_ids = get_main_crate_ids_from_project(db, &cairo_config);
+        },
+    );
+    let main_crate_ids = get_main_crate_ids_from_project(db, &config.into());
 
     // TODO: Error handling
     let contracts = find_contracts(db, &main_crate_ids);
