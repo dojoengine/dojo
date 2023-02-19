@@ -19,6 +19,8 @@ enum Commands {
         about = "Build the project's ECS, outputting smart contracts artifacts for deployment"
     )]
     Build(BuildArgs),
+    #[command(about = "Initialize a new project")]
+    Init(InitArgs),
     #[command(about = "Run a migration, declaring and deploying contracts as necessary to \
                        update the world")]
     Migrate(MigrateArgs),
@@ -27,6 +29,9 @@ enum Commands {
     #[command(about = "Retrieve an entity's state by entity ID")]
     Inspect(InspectArgs),
 }
+
+#[derive(Args)]
+struct InitArgs {}
 
 #[derive(Args)]
 struct BindArgs {}
@@ -44,6 +49,7 @@ fn main() -> anyhow::Result<()> {
 
     match cli.command {
         Commands::Build(args) => build::run(args),
+        Commands::Init(args) => todo!(),
         Commands::Migrate(args) => migrate::run(args),
         Commands::Bind(..) => print!("Bind"),
         Commands::Inspect(..) => print!("Inspect"),
