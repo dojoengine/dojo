@@ -5,9 +5,8 @@ use cairo_lang_semantic::patcher::RewriteNode;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 use dojo_project::WorldConfig;
-use starknet::core::crypto::pedersen_hash;
-use starknet::core::types::FieldElement;
-use starknet::core::utils::get_contract_address;
+
+use crate::plugin::get_contract_address;
 
 pub struct Query {
     pub world_config: WorldConfig,
@@ -46,29 +45,17 @@ impl Query {
                     ast::PathSegment::Simple(segment) => {
                         let var_prefix = segment.as_syntax_node().get_text(db).to_ascii_lowercase();
 
-                        let class_hash = "0x00000000000000000000000000000000";
-
                         // Component name to felt
                         let component_name_raw = path.as_syntax_node().get_text(db);
                         let mut component_name_parts: Vec<&str> =
                             component_name_raw.split("::").collect();
                         let component_name = component_name_parts.pop().unwrap();
 
-                        let mut component_name_32_u8: [u8; 32] = [0; 32];
-                        component_name_32_u8[32 - component_name.len()..]
-                            .copy_from_slice(component_name.as_bytes());
-
-                        // Component name pedersen salt
-                        let salt = pedersen_hash(
-                            &FieldElement::ZERO,
-                            &FieldElement::from_bytes_be(&component_name_32_u8).unwrap(),
-                        );
                         let component_id = format!(
                             "{:#x}",
                             get_contract_address(
-                                salt,
-                                FieldElement::from_hex_be(class_hash).unwrap(),
-                                &[],
+                                component_name,
+                                self.world_config.initializer_class_hash.unwrap_or_default(),
                                 self.world_config.address.unwrap_or_default(),
                             )
                         );

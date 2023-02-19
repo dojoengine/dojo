@@ -32,6 +32,7 @@ pub struct ProjectConfig {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorldConfig {
     pub address: Option<FieldElement>,
+    pub initializer_class_hash: Option<FieldElement>,
 }
 
 /// Contents of a Dojo project config file.

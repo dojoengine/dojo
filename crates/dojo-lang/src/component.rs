@@ -26,6 +26,7 @@ pub struct Component {
 }
 
 /// Represents a declaration of a component.
+#[derive(Debug, Clone)]
 pub struct ComponentDeclaration {
     /// The id of the module that defines the component.
     pub submodule_id: SubmoduleId,
