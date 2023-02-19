@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_compiler::project::get_main_crate_ids_from_project;
 use clap::Args;
+use comfy_table::Table;
 use dojo_lang::component::find_components;
 use dojo_lang::db::DojoRootDatabaseBuilderEx;
 use dojo_lang::plugin::get_contract_address;
@@ -39,13 +40,21 @@ pub fn run(args: MigrateArgs) {
     let components = find_components(db, &main_crate_ids);
     let systems = find_systems(db, &main_crate_ids);
 
+    let mut table = Table::new();
+    table.set_header(vec!["Name", "Type", "Address", "Deployed"]);
+
     for component in components {
         let address = get_contract_address(
             component.name.as_str(),
             config.clone().content.world.initializer_class_hash.unwrap_or_default(),
             config.content.world.address.unwrap_or_default(),
         );
-        println!("component: {} {:#x}", component.name, address);
+        table.add_row(vec![
+            component.name,
+            "Component".into(),
+            format!("{:#x}", address).into(),
+            "false".into(),
+        ]);
     }
 
     for system in systems {
@@ -54,6 +63,13 @@ pub fn run(args: MigrateArgs) {
             config.clone().content.world.initializer_class_hash.unwrap_or_default(),
             config.content.world.address.unwrap_or_default(),
         );
-        println!("system: {} {:#x}", system.name, address);
+        table.add_row(vec![
+            system.name,
+            "System".into(),
+            format!("{:#x}", address).into(),
+            "false".into(),
+        ]);
     }
+
+    println!("{table}");
 }

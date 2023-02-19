@@ -24,6 +24,7 @@ fn test_serde() {
 
             [world]
             address = "57005"
+            initializer_class_hash = "48879"
         "# }
     );
     assert_eq!(config, toml::from_str(&serialized).unwrap());
