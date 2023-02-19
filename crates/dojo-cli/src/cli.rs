@@ -49,7 +49,7 @@ fn main() -> anyhow::Result<()> {
 
     match cli.command {
         Commands::Build(args) => build::run(args),
-        Commands::Init(args) => todo!(),
+        Commands::Init(..) => todo!(),
         Commands::Migrate(args) => migrate::run(args),
         Commands::Bind(..) => print!("Bind"),
         Commands::Inspect(..) => print!("Inspect"),
