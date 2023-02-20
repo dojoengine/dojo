@@ -35,11 +35,27 @@ pub struct WorldConfig {
     pub initializer_class_hash: Option<FieldElement>,
 }
 
+pub struct DeploymentConfig {
+    pub rpc: Option<String>,
+}
+
 /// Contents of a Dojo project config file.
 #[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ProjectConfigContent {
     pub crate_roots: HashMap<SmolStr, PathBuf>,
     pub world: WorldConfig,
+    pub deployments: Option<Deployments>,
+}
+
+#[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Deployments {
+    pub testnet: Option<Deployment>,
+    pub mainnet: Option<Deployment>,
+}
+
+#[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Deployment {
+    pub rpc: Option<String>,
 }
 
 impl ProjectConfig {
