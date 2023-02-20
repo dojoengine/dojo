@@ -591,7 +591,7 @@ dependencies = [
  "serde",
  "serde_bytes",
  "serde_json",
- "time 0.3.18",
+ "time 0.3.17",
  "uuid 1.3.0",
 ]
 
@@ -708,7 +708,7 @@ dependencies = [
  "cairo-lang-sierra-generator",
  "cairo-lang-syntax",
  "cairo-lang-utils",
- "clap 4.1.6",
+ "clap 4.1.4",
  "log",
  "salsa",
  "thiserror",
@@ -781,7 +781,7 @@ dependencies = [
  "cairo-lang-parser",
  "cairo-lang-syntax",
  "cairo-lang-utils",
- "clap 4.1.6",
+ "clap 4.1.4",
  "colored",
  "diffy",
  "ignore",
@@ -918,7 +918,7 @@ dependencies = [
  "cairo-lang-sierra-to-casm",
  "cairo-lang-utils",
  "cairo-vm",
- "clap 4.1.6",
+ "clap 4.1.4",
  "itertools",
  "num-bigint",
  "num-traits 0.2.15",
@@ -1032,7 +1032,7 @@ dependencies = [
  "cairo-lang-sierra-ap-change",
  "cairo-lang-sierra-gas",
  "cairo-lang-utils",
- "clap 4.1.6",
+ "clap 4.1.4",
  "itertools",
  "log",
  "num-bigint",
@@ -1061,7 +1061,7 @@ dependencies = [
  "cairo-lang-sierra-to-casm",
  "cairo-lang-syntax",
  "cairo-lang-utils",
- "clap 4.1.6",
+ "clap 4.1.4",
  "convert_case 0.6.0",
  "genco",
  "indoc",
@@ -1220,9 +1220,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.1.6"
+version = "4.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec0b0588d44d4d63a87dbd75c136c166bbfd9a86a31cb89e09906521c7d3f5e3"
+checksum = "f13b9c79b5d1dd500d20ef541215a6423c75829ef43117e1b4d17fd8af0b5d76"
 dependencies = [
  "bitflags",
  "clap_derive 4.1.0",
@@ -1572,9 +1572,9 @@ dependencies = [
 
 [[package]]
 name = "cxx"
-version = "1.0.91"
+version = "1.0.90"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "86d3488e7665a7a483b57e25bdd90d0aeb2bc7608c8d0346acf2ad3f1caf1d62"
+checksum = "90d59d9acd2a682b4e40605a242f6670eaa58c5957471cbf85e8aa6a0b97a5e8"
 dependencies = [
  "cc",
  "cxxbridge-flags",
@@ -1584,9 +1584,9 @@ dependencies = [
 
 [[package]]
 name = "cxx-build"
-version = "1.0.91"
+version = "1.0.90"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "48fcaf066a053a41a81dfb14d57d99738b767febb8b735c3016e469fac5da690"
+checksum = "ebfa40bda659dd5c864e65f4c9a2b0aff19bea56b017b9b77c73d3766a453a38"
 dependencies = [
  "cc",
  "codespan-reporting",
@@ -1599,15 +1599,15 @@ dependencies = [
 
 [[package]]
 name = "cxxbridge-flags"
-version = "1.0.91"
+version = "1.0.90"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2ef98b8b717a829ca5603af80e1f9e2e48013ab227b68ef37872ef84ee479bf"
+checksum = "457ce6757c5c70dc6ecdbda6925b958aae7f959bda7d8fb9bde889e34a09dc03"
 
 [[package]]
 name = "cxxbridge-macro"
-version = "1.0.91"
+version = "1.0.90"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "086c685979a698443656e5cf7856c95c642295a38599f12fb1ff76fb28d19892"
+checksum = "ebf883b7aacd7b2aeb2a7b338648ee19f57c140d4ee8e52c68979c6b2f7f2263"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1819,7 +1819,7 @@ dependencies = [
  "cairo-lang-plugins",
  "cairo-lang-project",
  "cairo-lang-starknet",
- "clap 4.1.6",
+ "clap 4.1.4",
  "comfy-table",
  "dojo-lang",
  "dojo-project",
@@ -1836,7 +1836,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "apibara-client-protos",
- "clap 4.1.6",
+ "clap 4.1.4",
  "futures",
  "futures-util",
  "log",
@@ -1938,7 +1938,7 @@ dependencies = [
  "cairo-lang-syntax",
  "cairo-lang-utils",
  "cairo-vm",
- "clap 4.1.6",
+ "clap 4.1.4",
  "colored",
  "dojo-lang",
  "dojo-project",
@@ -2473,9 +2473,9 @@ dependencies = [
 
 [[package]]
 name = "gimli"
-version = "0.27.2"
+version = "0.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad0a93d233ebf96623465aad4046a8d3aa4da22d4f4beba5388838c8a434bbb4"
+checksum = "221996f774192f0f718773def8201c4ae31f02616a54ccfc2d358bb0e5cefdec"
 
 [[package]]
 name = "glob"
@@ -3743,7 +3743,7 @@ dependencies = [
  "smallvec",
  "subprocess",
  "thiserror",
- "time 0.3.18",
+ "time 0.3.17",
  "uuid 1.3.0",
 ]
 
@@ -6426,9 +6426,9 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.3.18"
+version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af0097eaf301d576d0b2aead7a59facab6d53cc636340f0291fab8446a2e8613"
+checksum = "a561bf4617eebd33bca6434b988f39ed798e527f51a1e797d0ee4f61c0a38376"
 dependencies = [
  "itoa",
  "serde",
