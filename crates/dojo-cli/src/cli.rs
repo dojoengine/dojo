@@ -1,7 +1,9 @@
 mod build;
 mod migrate;
+mod init;
 
 use build::BuildArgs;
+use init::InitArgs;
 use clap::{Args, Parser, Subcommand};
 use migrate::MigrateArgs;
 
@@ -31,9 +33,6 @@ enum Commands {
 }
 
 #[derive(Args)]
-struct InitArgs {}
-
-#[derive(Args)]
 struct BindArgs {}
 
 #[derive(Args)]
@@ -49,7 +48,7 @@ fn main() -> anyhow::Result<()> {
 
     match cli.command {
         Commands::Build(args) => build::run(args),
-        Commands::Init(..) => todo!(),
+        Commands::Init(args) => init::run(args),
         Commands::Migrate(args) => migrate::run(args),
         Commands::Bind(..) => print!("Bind"),
         Commands::Inspect(..) => print!("Inspect"),
