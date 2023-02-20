@@ -1,9 +1,8 @@
 use std::env::current_dir;
-use std::path::{PathBuf, Path};
-use std::{io, fs};
+use std::path::{Path, PathBuf};
+use std::{fs, io};
 
 use clap::Args;
-use dojo_project::ProjectConfig;
 
 #[derive(Args, Debug)]
 pub struct InitArgs {

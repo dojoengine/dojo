@@ -1,10 +1,10 @@
 mod build;
-mod migrate;
 mod init;
+mod migrate;
 
 use build::BuildArgs;
-use init::InitArgs;
 use clap::{Args, Parser, Subcommand};
+use init::InitArgs;
 use migrate::MigrateArgs;
 
 #[derive(Parser)]
