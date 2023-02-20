@@ -4,3 +4,9 @@ dojo = "."
 [world]
 name = "dojo"
 address = "0xdead"
+
+[deployments.testnet]
+rpc = "https://starknet-goerli.cartridge.gg/rpc/v0.2"
+
+[deployments.mainnet]
+rpc = "https://starknet.cartridge.gg/rpc/v0.2"
