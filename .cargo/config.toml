@@ -1,2 +1,2 @@
 [env]
-CAIRO_CORELIB_DIR = { value = "cairo/corelib", relative = true }
+CAIRO_CORELIB_DIR = { value = "cairo/corelib/src", relative = true }

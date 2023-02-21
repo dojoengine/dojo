@@ -1,13 +1,14 @@
 //! > Test expansion of the component contract.
 
-//! > test_function_name
-test_expand_contract
+//! > test_runner_name
+ExpandContractTestRunner
 
 //! > cairo_code
 extern type Query<T>;
 
 #[component]
 mod PositionComponent {
+    #[derive(Copy)]
     struct Position {
         x: felt,
         y: felt,
@@ -16,6 +17,7 @@ mod PositionComponent {
 
 #[component]
 mod HealthComponent {
+    #[derive(Copy)]
     struct Health {
         hp: felt,
     }
@@ -36,10 +38,9 @@ mod MoveSystem {
 }
 
 //! > generated_cairo_code
-extern type Query<T>;
-
 #[contract]
 mod PositionComponent {
+    #[derive(Copy)]
     struct Position {
         x: felt,
         y: felt,
@@ -54,7 +55,7 @@ mod PositionComponent {
     #[external]
     fn initialize(world_addr: felt) {
         let world = world_address::read();
-        assert(world == 0, 'PositionComponent: Already initialized.');
+        assert(world == 0, 'already initialized.');
         world_address::write(world_addr);
     }
 
@@ -115,6 +116,7 @@ mod PositionComponent {
 
 #[contract]
 mod HealthComponent {
+    #[derive(Copy)]
     struct Health {
         hp: felt, 
     }
@@ -128,7 +130,7 @@ mod HealthComponent {
     #[external]
     fn initialize(world_addr: felt) {
         let world = world_address::read();
-        assert(world == 0, 'HealthComponent: Already initialized.');
+        assert(world == 0, 'already initialized.');
         world_address::write(world_addr);
     }
 
@@ -190,14 +192,14 @@ mod MoveSystem {
     #[external]
     fn initialize(world_addr: felt) {
         let world = world_address::read();
-        assert(world == 0, 'MoveSystem: Already initialized.');
+        assert(world == 0, 'already initialized.');
         world_address::write(world_addr);
     }
 
     #[external]
     fn execute() {
         let world = world_address::read();
-        assert(world != 0, 'MoveSystem: Not initialized.');
+        assert(world != 0, 'not initialized.');
 
         let position_ids = IWorld.lookup(
             world, 0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897
@@ -211,3 +213,37 @@ mod MoveSystem {
 }
 
 //! > expected_diagnostics
+error: Plugin diagnostic: Identifier not found.
+ --> MoveSystem:3:13
+        use PositionComponent::Position;
+            ^***************^
+
+error: Plugin diagnostic: Identifier not found.
+ --> MoveSystem:4:9
+    use HealthComponent::Health;
+        ^*************^
+
+error: Plugin diagnostic: Type not found.
+ --> MoveSystem:6:29
+    fn execute_inner(query: Query::<(Position, Option::<Health>)>) {
+                            ^***^
+
+error: Plugin diagnostic: Identifier not found.
+ --> MoveSystem:25:24
+    let position_ids = IWorld.lookup(world, 0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897);let health_ids = IWorld.lookup(world, 0x1690bb282da6a011c52715e2188378c769966964ca2332dccad8d7542983bc2);
+                       ^****^
+
+error: Plugin diagnostic: Unknown function.
+ --> MoveSystem:25:31
+    let position_ids = IWorld.lookup(world, 0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897);let health_ids = IWorld.lookup(world, 0x1690bb282da6a011c52715e2188378c769966964ca2332dccad8d7542983bc2);
+                              ^****^
+
+error: Plugin diagnostic: Identifier not found.
+ --> MoveSystem:25:129
+    let position_ids = IWorld.lookup(world, 0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897);let health_ids = IWorld.lookup(world, 0x1690bb282da6a011c52715e2188378c769966964ca2332dccad8d7542983bc2);
+                                                                                                                                ^****^
+
+error: Plugin diagnostic: Unknown function.
+ --> MoveSystem:25:136
+    let position_ids = IWorld.lookup(world, 0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897);let health_ids = IWorld.lookup(world, 0x1690bb282da6a011c52715e2188378c769966964ca2332dccad8d7542983bc2);
+                                                                                                                                       ^****^

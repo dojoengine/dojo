@@ -1,11 +1,12 @@
 //! > Test expansion of the component contract.
 
-//! > test_function_name
-test_expand_contract
+//! > test_runner_name
+ExpandContractTestRunner
 
 //! > cairo_code
 #[component]
 mod PositionComponent {
+    #[derive(Copy)]
     struct Position {
         x: felt,
         y: felt
@@ -28,6 +29,7 @@ mod PositionComponent {
 //! > generated_cairo_code
 #[contract]
 mod PositionComponent {
+    #[derive(Copy)]
     struct Position {
         x: felt,
         y: felt
@@ -42,7 +44,7 @@ mod PositionComponent {
     #[external]
     fn initialize(world_addr: felt) {
         let world = world_address::read();
-        assert(world == 0, 'PositionComponent: Already initialized.');
+        assert(world == 0, 'already initialized.');
         world_address::write(world_addr);
     }
 
