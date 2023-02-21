@@ -5,11 +5,14 @@ use std::vec;
 use clap::Parser;
 use futures::StreamExt;
 mod stream;
-use apibara_client_protos::pb::starknet::v1alpha2::{Event, Filter, HeaderFilter, EventWithTransaction, TransactionReceipt, BlockHeader};
+use apibara_client_protos::pb::starknet::v1alpha2::{Event, Filter, HeaderFilter, EventWithTransaction, TransactionReceipt, BlockHeader, EventFilter, FieldElement};
 use log::{debug, info, warn};
 use prisma_client_rust::bigdecimal::num_bigint::BigUint;
 use prisma_client_rust::bigdecimal::Num;
 use processors::{IProcessor, component_state_update};
+
+use crate::hash::starknet_hash;
+use crate::processors::EventProcessor;
 mod processors;
 
 #[allow(warnings, unused, elided_lifetimes_in_paths)]
@@ -65,10 +68,29 @@ async fn start(
     processors: Vec<Box<dyn Any>>,
     world: BigUint,
 ) -> Result<(), Box<dyn Error>> {
+    let mut filter = Filter {
+        header: Some(HeaderFilter { weak: true }),
+        transactions: vec![],
+        events: vec![],
+        messages: vec![],
+        state_update: None,
+    };
+
+    for processor in &processors {
+        if let Some(p) = processor.downcast_ref::<Box<dyn EventProcessor>>() {
+            let bytes: [u8; 32] = starknet_hash(p.get_event_key().as_bytes()).to_bytes_be().try_into().unwrap();
+            
+            filter.events.push(EventFilter{
+                keys: vec![FieldElement::from_bytes(&bytes)],
+                ..Default::default()
+            })
+        }
+    }
+
     let data_stream = stream
         .request_data({
             Filter {
-                header: Some(HeaderFilter { weak: true }),
+                header: Some(HeaderFilter { weak: false }),
                 transactions: vec![],
                 events: vec![],
                 messages: vec![],
@@ -85,6 +107,7 @@ async fn start(
             Ok(Some(mess)) => {
                 debug!("Received message");
                 let data = &mess.data;
+                println!("{:?}", data);
                 // TODO: pending data
                 // let end_cursor = &data.end_cursor;
                 // let cursor = &data.cursor;

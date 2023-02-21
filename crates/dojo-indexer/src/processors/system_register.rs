@@ -10,13 +10,20 @@ use tonic::async_trait;
 use crate::prisma;
 use crate::hash::starknet_hash;
 
-use super::{IProcessor};
+use super::{IProcessor, EventProcessor};
 pub struct ComponentRegistrationProcessor;
 impl ComponentRegistrationProcessor {
     pub fn new() -> Self {
         Self {}
     }
 }
+
+impl EventProcessor for ComponentRegistrationProcessor {
+    fn get_event_key(&self) -> String {
+        "SystemRegistered".to_string()
+    }   
+}
+
 #[async_trait]
 impl IProcessor<EventWithTransaction> for ComponentRegistrationProcessor {
     async fn process(&self, client: &prisma::PrismaClient, data: EventWithTransaction) -> Result<(), Error> {

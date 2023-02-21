@@ -1,8 +1,8 @@
 use std::{io::Read, cmp::Ordering};
 
 use anyhow::{Result, Error, Ok};
-use apibara_client_protos::pb::starknet::v1alpha2::EventWithTransaction;
-use prisma_client_rust::bigdecimal::num_bigint::BigUint;
+use apibara_client_protos::pb::starknet::v1alpha2::{EventWithTransaction, FieldElement};
+use prisma_client_rust::bigdecimal::{num_bigint::BigUint, ToPrimitive};
 use sha3::{Keccak256, Digest};
 use tonic::async_trait;
 
@@ -10,13 +10,20 @@ use tonic::async_trait;
 use crate::prisma;
 use crate::hash::starknet_hash;
 
-use super::{IProcessor};
+use super::{IProcessor, EventProcessor};
 pub struct ComponentRegistrationProcessor;
 impl ComponentRegistrationProcessor {
     pub fn new() -> Self {
         Self {}
     }
 }
+
+impl EventProcessor for ComponentRegistrationProcessor {
+    fn get_event_key(&self) -> String {
+        "ComponentRegistered".to_string()
+    }   
+}
+
 #[async_trait]
 impl IProcessor<EventWithTransaction> for ComponentRegistrationProcessor {
     async fn process(&self, client: &prisma::PrismaClient, data: EventWithTransaction) -> Result<(), Error> {
