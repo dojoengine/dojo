@@ -1,7 +1,7 @@
 //! > Test expansion of the component contract.
 
-//! > test_function_name
-test_expand_contract
+//! > test_runner_name
+ExpandContractTestRunner
 
 //! > cairo_code
 extern type Query<T>;

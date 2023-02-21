@@ -1,63 +1,68 @@
+use cairo_lang_compiler::db::RootDatabase;
+use cairo_lang_compiler::diagnostics::get_diagnostics_as_string;
+use cairo_lang_defs::db::DefsGroup;
 use cairo_lang_defs::plugin::{MacroPlugin, PluginGeneratedFile, PluginResult};
-use cairo_lang_diagnostics::{format_diagnostics, DiagnosticLocation};
 use cairo_lang_formatter::format_string;
-use cairo_lang_parser::test_utils::create_virtual_file;
-use cairo_lang_parser::utils::{get_syntax_file_and_diagnostics, SimpleParserDatabase};
+use cairo_lang_parser::db::ParserGroup;
+use cairo_lang_semantic::test_utils::setup_test_module;
 use cairo_lang_syntax::node::TypedSyntaxNode;
+use cairo_lang_test_utils::parse_test_file::TestFileRunner;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
-use dojo_project::WorldConfig;
+use dojo_project::{WorldConfig, ProjectConfig};
 
+use crate::db::DojoRootDatabaseBuilderEx;
 use crate::plugin::DojoPlugin;
 
-pub fn test_expand_contract(
-    inputs: &OrderedHashMap<String, String>,
-) -> OrderedHashMap<String, String> {
-    let db = &mut SimpleParserDatabase::default();
-    let cairo_code = &inputs["cairo_code"];
-    let file_id = create_virtual_file(db, "dummy_file.cairo", cairo_code);
-
-    let (syntax_file, diagnostics) = get_syntax_file_and_diagnostics(db, file_id, cairo_code);
-    assert_eq!(diagnostics.format(db), "");
-    let file_syntax_node = syntax_file.as_syntax_node();
-    let plugin = DojoPlugin { world_config: WorldConfig::default() };
-    let mut generated_items: Vec<String> = Vec::new();
-    let mut diagnostic_items: Vec<String> = Vec::new();
-    for item in syntax_file.items(db).elements(db).into_iter() {
-        let PluginResult { code, diagnostics, remove_original_item } =
-            plugin.generate_code(db, item.clone());
-
-        diagnostic_items.extend(diagnostics.iter().map(|diag| {
-            let syntax_node = file_syntax_node.lookup_ptr(db, diag.stable_ptr);
-
-            let location =
-                DiagnosticLocation { file_id, span: syntax_node.span_without_trivia(db) };
-            format_diagnostics(db, &diag.message, location)
-        }));
-
-        if !remove_original_item {
-            generated_items.push(format_string(db, item.as_syntax_node().get_text(db)));
-        }
-
-        let content = match code {
-            Some(PluginGeneratedFile { content, .. }) => content,
-            None => continue,
-        };
-
-        generated_items.push(format_string(db, content));
-    }
-
-    OrderedHashMap::from([
-        ("generated_cairo_code".into(), generated_items.join("\n")),
-        ("expected_diagnostics".into(), diagnostic_items.join("\n")),
-    ])
+struct ExpandContractTestRunner {
+    db: RootDatabase,
 }
 
-cairo_lang_test_utils::test_file_test!(
+impl Default for ExpandContractTestRunner {
+    fn default() -> Self {
+        Self {
+            db: RootDatabase::builder().with_dojo_config(ProjectConfig::default()).build().unwrap(),
+        }
+    }
+}
+impl TestFileRunner for ExpandContractTestRunner {
+    fn run(&mut self, inputs: &OrderedHashMap<String, String>) -> OrderedHashMap<String, String> {
+        let (test_module, _semantic_diagnostics) =
+            setup_test_module(&mut self.db, inputs["cairo_code"].as_str()).split();
+
+        let file_id = self.db.module_main_file(test_module.module_id).unwrap();
+        let syntax_file = self.db.file_syntax(file_id).unwrap();
+
+        let plugin = DojoPlugin { world_config: WorldConfig::default() };
+        let mut generated_items: Vec<String> = Vec::new();
+
+        for item in syntax_file.items(&self.db).elements(&self.db).into_iter() {
+            let PluginResult { code, diagnostics: _, remove_original_item } =
+                plugin.generate_code(&self.db, item.clone());
+
+            let content = match code {
+                Some(PluginGeneratedFile { content, .. }) => content,
+                None => continue,
+            };
+            if !remove_original_item {
+                generated_items
+                    .push(format_string(&self.db, item.as_syntax_node().get_text(&self.db)));
+            }
+            generated_items.push(format_string(&self.db, content));
+        }
+
+        OrderedHashMap::from([
+            ("generated_cairo_code".into(), generated_items.join("\n")),
+            ("expected_diagnostics".into(), get_diagnostics_as_string(&mut self.db)),
+        ])
+    }
+}
+
+cairo_lang_test_utils::test_file_test_with_runner!(
     expand_contract,
     "src/plugin_test_data",
     {
         component: "component",
         system: "system",
     },
-    test_expand_contract
+    ExpandContractTestRunner
 );
