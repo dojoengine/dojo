@@ -20,21 +20,44 @@ The toolchain includes the following:
 rustup override set stable && rustup update && cargo test
 ```
 
-### Using the language server
+### Submodules
 
-Install the cairo vscode extension: https://github.com/starkware-libs/cairo/tree/main/vscode-cairo
-
-Build the Dojo language server:
 ```
+git submodule update --init --recursive
+```
+
+### The dev container
+
+It is recommended to use the dev container when building on DoJo as it contains everything needed to begin developing.
+
+Make sure you update your Docker to the latest stable version, sometimes the Dev containers do not play nicely with old Docker versions.
+
+
+Open command pallete:
+
+`ctrl + shift + p`
+
+Then select:
+
+`Remote-Containers: Rebuild Container Without Cache`
+
+
+### Setup the language server
+
+TODO: Script this
+
+```
+
+cd cairo/vscode-cairo
+
+npm install --global @vscode/vsce
+npm install
+vsce package
+code --install-extension cairo1*.vsix
+
+cd .. & cd ..
+
 cargo build --bin dojo-language-server --release
-```
-
-Configure the Cairo extension language server to point to the dojo language server in `settings.json`:
-
-```
-...
-    cairo.languageServerPath: "$REPO_ROOT$/target/release/dojo-language-server",
-...
 ```
 
 ## Overview
