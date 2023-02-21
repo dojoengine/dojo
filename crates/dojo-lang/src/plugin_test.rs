@@ -8,7 +8,7 @@ use cairo_lang_semantic::test_utils::setup_test_module;
 use cairo_lang_syntax::node::TypedSyntaxNode;
 use cairo_lang_test_utils::parse_test_file::TestFileRunner;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
-use dojo_project::{WorldConfig, ProjectConfig};
+use dojo_project::{ProjectConfig, WorldConfig};
 
 use crate::db::DojoRootDatabaseBuilderEx;
 use crate::plugin::DojoPlugin;

@@ -109,7 +109,7 @@ impl Component {
                     #[external]
                     fn initialize(world_addr: felt) {
                         let world = world_address::read();
-                        assert(world == 0, '$type_name$Component: Already initialized.');
+                        assert(world == 0, 'already initialized.');
                         world_address::write(world_addr);
                     }
     

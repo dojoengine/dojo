@@ -123,7 +123,6 @@ impl System {
             }
         }
 
-        let name = self.name.clone();
         self.rewrite_nodes.push(RewriteNode::interpolate_patched(
             &formatdoc!(
                 "
@@ -134,14 +133,14 @@ impl System {
                 #[external]
                 fn initialize(world_addr: felt) {{
                     let world = world_address::read();
-                    assert(world == 0, '{name}: Already initialized.');
+                    assert(world == 0, 'already initialized.');
                     world_address::write(world_addr);
                 }}
     
                 #[external]
                 fn execute() {{
                     let world = world_address::read();
-                    assert(world != 0, '{name}: Not initialized.');
+                    assert(world != 0, 'not initialized.');
     
                     $preprocessing$
     
