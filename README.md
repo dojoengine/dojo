@@ -13,41 +13,26 @@ The toolchain includes the following:
 - `dojo-bind`: Generate bindings for various languages / frameworks (typescript, phaser / rust, bevy).
 
 ## Development
-### Prerequisites
-- Install [Rust](https://www.rust-lang.org/tools/install)
-- Setup Rust:
-```
-rustup override set stable && rustup update && cargo test
-```
 
-### Submodules
+### Setup Submodules
 
 ```
 git submodule update --init --recursive
 ```
 
-### The dev container
+## Development container
 
 It is recommended to use the dev container when building on DoJo as it contains everything needed to begin developing.
 
 Make sure you update your Docker to the latest stable version, sometimes the Dev containers do not play nicely with old Docker versions.
 
+Command pallete: `ctrl + shift + p`
 
-Open command pallete:
+Then: `Remote-Containers: Rebuild Container Without Cache`
 
-`ctrl + shift + p`
-
-Then select:
-
-`Remote-Containers: Rebuild Container Without Cache`
-
-
-### Setup the language server
-
-TODO: Script this
+### Setup the language server 
 
 ```
-
 cd cairo/vscode-cairo
 
 npm install --global @vscode/vsce
@@ -55,10 +40,21 @@ npm install
 vsce package
 code --install-extension cairo1*.vsix
 
-cd .. & cd ..
+cd /workspaces/dojo
 
 cargo build --bin dojo-language-server --release
 ```
+
+### Development without container
+
+- Install [Rust](https://www.rust-lang.org/tools/install)
+- Setup Rust:
+```
+rustup override set stable && rustup update && cargo test
+```
+Then install the language like described above.
+
+---
 
 ## Overview
 
