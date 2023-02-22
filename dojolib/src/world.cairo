@@ -7,6 +7,11 @@ trait IProxy {
     fn initialize(world_address: ContractAddress);
 }
 
+#[abi]
+trait IWorld {
+    fn lookup(from: felt) -> felt;
+}
+
 #[contract]
 mod World {
     use hash::pedersen;

@@ -46,17 +46,12 @@ mod PositionComponent {
     }
 
     struct Storage {
-        world_address: felt,
-        state: LegacyMap::<felt, Position>,
+        state: LegacyMap::<felt, Position>, 
     }
 
     // Initialize PositionComponent.
     #[external]
-    fn initialize(world_addr: felt) {
-        let world = world_address::read();
-        assert(world == 0, 'already initialized.');
-        world_address::write(world_addr);
-    }
+    fn initialize() {}
 
     // Set the state of an entity.
     #[external]
@@ -121,17 +116,12 @@ mod HealthComponent {
     }
 
     struct Storage {
-        world_address: felt,
-        state: LegacyMap::<felt, Health>,
+        state: LegacyMap::<felt, Health>, 
     }
 
     // Initialize HealthComponent.
     #[external]
-    fn initialize(world_addr: felt) {
-        let world = world_address::read();
-        assert(world == 0, 'already initialized.');
-        world_address::write(world_addr);
-    }
+    fn initialize() {}
 
     // Set the state of an entity.
     #[external]
@@ -183,27 +173,15 @@ mod MoveSystem {
     fn execute_inner(query: Query::<(Position, Option::<Health>)>) {
         return ();
     }
-    struct Storage {
-        world_address: felt, 
-    }
-
-    #[external]
-    fn initialize(world_addr: felt) {
-        let world = world_address::read();
-        assert(world == 0, 'already initialized.');
-        world_address::write(world_addr);
-    }
+    struct Storage {}
 
     #[external]
     fn execute() {
-        let world = world_address::read();
-        assert(world != 0, 'not initialized.');
-
-        let position_ids = IWorld.lookup(
-            world, 0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897
+        let position_ids = world::IWorldDispatcher::lookup(
+            0x0, 0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897
         );
-        let health_ids = IWorld.lookup(
-            world, 0x1690bb282da6a011c52715e2188378c769966964ca2332dccad8d7542983bc2
+        let health_ids = world::IWorldDispatcher::lookup(
+            0x0, 0x1690bb282da6a011c52715e2188378c769966964ca2332dccad8d7542983bc2
         );
 
         return ();
@@ -217,21 +195,11 @@ error: Plugin diagnostic: Type not found.
                             ^***^
 
 error: Plugin diagnostic: Identifier not found.
- --> MoveSystem:24:24
-    let position_ids = IWorld.lookup(world, 0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897);let health_ids = IWorld.lookup(world, 0x1690bb282da6a011c52715e2188378c769966964ca2332dccad8d7542983bc2);
-                       ^****^
-
-error: Plugin diagnostic: Unknown function.
- --> MoveSystem:24:31
-    let position_ids = IWorld.lookup(world, 0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897);let health_ids = IWorld.lookup(world, 0x1690bb282da6a011c52715e2188378c769966964ca2332dccad8d7542983bc2);
-                              ^****^
+ --> MoveSystem:13:24
+    let position_ids = world::IWorldDispatcher::lookup(0x0, 0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897);
+                       ^***^
 
 error: Plugin diagnostic: Identifier not found.
- --> MoveSystem:24:129
-    let position_ids = IWorld.lookup(world, 0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897);let health_ids = IWorld.lookup(world, 0x1690bb282da6a011c52715e2188378c769966964ca2332dccad8d7542983bc2);
-                                                                                                                                ^****^
-
-error: Plugin diagnostic: Unknown function.
- --> MoveSystem:24:136
-    let position_ids = IWorld.lookup(world, 0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897);let health_ids = IWorld.lookup(world, 0x1690bb282da6a011c52715e2188378c769966964ca2332dccad8d7542983bc2);
-                                                                                                                                       ^****^
+ --> MoveSystem:14:18
+let health_ids = world::IWorldDispatcher::lookup(0x0, 0x1690bb282da6a011c52715e2188378c769966964ca2332dccad8d7542983bc2);
+                 ^***^
