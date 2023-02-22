@@ -1,6 +1,6 @@
-use anyhow::{Error, Ok, Result};
+use anyhow::{Error, Result};
 use apibara_client_protos::pb::starknet::v1alpha2::{
-    Block, Event, EventWithTransaction, FieldElement, Transaction, TransactionWithReceipt,
+    Block, EventWithTransaction, TransactionWithReceipt,
 };
 use tonic::async_trait;
 

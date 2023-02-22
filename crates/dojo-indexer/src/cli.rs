@@ -1,20 +1,18 @@
-use std::borrow::Borrow;
+use std::cmp::Ordering;
 use std::error::Error;
 use std::vec;
-use std::{any::Any, cmp::Ordering};
 
 use clap::Parser;
 use futures::StreamExt;
 mod stream;
 use apibara_client_protos::pb::starknet::v1alpha2::{
-    BlockHeader, DeployedContractFilter, Event, EventFilter, EventWithTransaction, FieldElement,
-    Filter, HeaderFilter, StateUpdate, StateUpdateFilter, TransactionReceipt,
+    DeployedContractFilter, EventFilter, FieldElement, Filter, HeaderFilter, StateUpdateFilter,
 };
-use futures::future::join_all;
+
 use log::{debug, info, warn};
 use prisma_client_rust::bigdecimal::num_bigint::BigUint;
 use prisma_client_rust::bigdecimal::Num;
-use processors::{component_state_update, BlockProcessor, IProcessor, TransactionProcessor};
+use processors::{component_state_update, BlockProcessor, TransactionProcessor};
 
 use crate::hash::starknet_hash;
 use crate::processors::EventProcessor;
@@ -142,7 +140,11 @@ async fn start(
                             info!("Received block {}", header.block_number);
 
                             for processor in &processors.block_processors {
-                                processor.process(&client, block.clone()).await;
+                                processor.process(&client, block.clone()).await.unwrap_or_else(
+                                    |op| {
+                                        panic!("Failed processing block: {op:?}");
+                                    },
+                                )
                             }
                         }
                         None => {
@@ -177,9 +179,14 @@ async fn start(
 
                     for transaction in &block.transactions {
                         match &transaction.receipt {
-                            Some(tx) => {
+                            Some(_tx) => {
                                 for processor in &processors.transaction_processors {
-                                    processor.process(&client, transaction.clone()).await;
+                                    processor
+                                        .process(&client, transaction.clone())
+                                        .await
+                                        .unwrap_or_else(|op| {
+                                            panic!("Failed processing transaction: {op:?}");
+                                        })
                                 }
                             }
                             None => {}
@@ -190,7 +197,11 @@ async fn start(
                         match &event.event {
                             Some(_ev_data) => {
                                 for processor in &processors.event_processors {
-                                    processor.process(&client, event.clone()).await;
+                                    processor.process(&client, event.clone()).await.unwrap_or_else(
+                                        |op| {
+                                            panic!("Failed processing event: {op:?}");
+                                        },
+                                    );
                                 }
                             }
                             None => {

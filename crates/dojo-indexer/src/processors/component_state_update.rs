@@ -1,9 +1,8 @@
-use std::{cmp::Ordering, io::Read};
+use std::cmp::Ordering;
 
 use anyhow::{Error, Ok, Result};
 use apibara_client_protos::pb::starknet::v1alpha2::EventWithTransaction;
-use prisma_client_rust::bigdecimal::num_bigint::BigUint;
-use sha3::{Digest, Keccak256};
+
 use tonic::async_trait;
 
 use crate::hash::starknet_hash;
@@ -32,7 +31,7 @@ impl IProcessor<EventWithTransaction> for ComponentStateUpdateProcessor {
     ) -> Result<(), Error> {
         let event = &data.event.unwrap();
         let event_key = &event.keys[0].to_biguint();
-        if (event_key.cmp(&starknet_hash(self.get_event_key().as_bytes())) != Ordering::Equal) {
+        if event_key.cmp(&starknet_hash(self.get_event_key().as_bytes())) != Ordering::Equal {
             return Ok(());
         }
 
@@ -42,7 +41,7 @@ impl IProcessor<EventWithTransaction> for ComponentStateUpdateProcessor {
         let data = &event.data[2].to_biguint();
 
         // register a new state update
-        let state_update = client
+        let _state_update = client
             .entity_state_update()
             .create(
                 prisma::entity::id::equals(entity.to_string()),
@@ -56,7 +55,7 @@ impl IProcessor<EventWithTransaction> for ComponentStateUpdateProcessor {
             .exec()
             .await;
 
-        let state = client
+        let _state = client
             .entity_state()
             .create(
                 prisma::entity::id::equals(entity.to_string()),

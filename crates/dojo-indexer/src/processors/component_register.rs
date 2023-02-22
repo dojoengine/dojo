@@ -1,9 +1,8 @@
-use std::{cmp::Ordering, io::Read};
+use std::cmp::Ordering;
 
 use anyhow::{Error, Ok, Result};
-use apibara_client_protos::pb::starknet::v1alpha2::{EventWithTransaction, FieldElement};
-use prisma_client_rust::bigdecimal::{num_bigint::BigUint, ToPrimitive};
-use sha3::{Digest, Keccak256};
+use apibara_client_protos::pb::starknet::v1alpha2::EventWithTransaction;
+
 use tonic::async_trait;
 
 use crate::hash::starknet_hash;
@@ -32,7 +31,7 @@ impl IProcessor<EventWithTransaction> for ComponentRegistrationProcessor {
     ) -> Result<(), Error> {
         let event = &data.event.unwrap();
         let event_key = &event.keys[0].to_biguint();
-        if (event_key.cmp(&starknet_hash(self.get_event_key().as_bytes())) != Ordering::Equal) {
+        if event_key.cmp(&starknet_hash(self.get_event_key().as_bytes())) != Ordering::Equal {
             return Ok(());
         }
 
@@ -40,7 +39,7 @@ impl IProcessor<EventWithTransaction> for ComponentRegistrationProcessor {
         let component = &event.data[0].to_biguint();
 
         // create a new component
-        let component = client
+        let _component = client
             .component()
             .create(
                 "0x".to_owned() + component.to_str_radix(16).as_str(),
