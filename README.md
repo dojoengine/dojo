@@ -26,6 +26,31 @@ It is recommended to use the dev container when building on DoJo as it contains 
 
 Make sure you update your Docker to the latest stable version, sometimes the Dev containers do not play nicely with old Docker versions.
 
+Due to ARM and x86 issues with Docker you need to set the Variant for the container in your bashprofile.
+
+
+### Before building
+Before building the container you need to add in the `VARIANT` so the correct image is built according to your machine.
+```
+sudo nano ~./bash_profile
+```
+
+The beneath the other statements add :
+
+```bash
+# for M1/M2 Apple chips
+export VARIANT="bullseye"
+
+# for all others
+export VARIANT="buster"
+
+# Do not add both!
+
+# Restart VSCode for this to take effect
+```
+
+### Open and build container
+
 Command pallete: `ctrl + shift + p`
 
 Then: `Remote-Containers: Rebuild Container Without Cache`

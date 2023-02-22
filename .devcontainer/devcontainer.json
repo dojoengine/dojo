@@ -7,7 +7,7 @@
 		"args": {
 			// Use the VARIANT arg to pick a Debian OS version: buster, bullseye
 			// Use bullseye when on local on arm64/Apple Silicon.
-			"VARIANT": "buster"
+			"VARIANT": "${localEnv:VARIANT}"
 		}
 	},
 	"runArgs": [
@@ -15,7 +15,6 @@
 		"--security-opt",
 		"seccomp=unconfined"
 	],
-
 	// Configure tool-specific properties.
 	"customizations": {
 		// Configure properties specific to VS Code.
@@ -46,7 +45,7 @@
 
 	// Use 'postCreateCommand' to run commands after the container is created.
 	// "postCreateCommand": "rustc --version",
-	"postCreateCommand": ". scripts/startup.sh",
+	// "postCreateCommand": ". scripts/startup.sh",
 
 	// Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
 	// "remoteUser": "vscode",

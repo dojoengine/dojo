@@ -66,7 +66,7 @@ checksum = "224afbd727c3d6e4b90103ece64b8d1b67fbb1973b1046c2281eed3f3803f800"
 [[package]]
 name = "apibara-client-protos"
 version = "0.1.0"
-source = "git+https://github.com/wraitii/apibara-rust-sdk#cda5b72f04a8695a067f87e96e4335df4033ee1a"
+source = "git+https://github.com/ponderingdemocritus/apibara-rust-sdk#a9217145e25a3a20fe79e8fe3b571e4e6caa4ee3"
 dependencies = [
  "hex",
  "num-bigint",
