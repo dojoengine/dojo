@@ -29,7 +29,7 @@ impl IProcessor<EventWithTransaction> for ComponentRegistrationProcessor {
     async fn process(&self, client: &prisma::PrismaClient, data: EventWithTransaction) -> Result<(), Error> {
         let event = &data.event.unwrap();
         let event_key = &event.keys[0].to_biguint();
-        if (event_key.cmp(&starknet_hash(b"SystemRegistered")) != Ordering::Equal) {
+        if (event_key.cmp(&starknet_hash(self.get_event_key().as_bytes())) != Ordering::Equal) {
             return Ok(());
         }
 

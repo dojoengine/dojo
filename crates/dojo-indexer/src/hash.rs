@@ -6,6 +6,6 @@ pub fn starknet_hash(data: &[u8]) -> BigUint {
     hasher.update(data);
     let mut hash = hasher.finalize();
     // Truncate result to 250 bits.
-    *hash.first_mut().unwrap() &= 3;
+    // *hash.first_mut().unwrap() &= 3;
     BigUint::from_bytes_be(&hash)
 }

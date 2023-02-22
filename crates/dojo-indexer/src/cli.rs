@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::{cmp::Ordering, any::Any};
 use std::error::Error;
 use std::vec;
@@ -5,11 +6,12 @@ use std::vec;
 use clap::Parser;
 use futures::StreamExt;
 mod stream;
-use apibara_client_protos::pb::starknet::v1alpha2::{Event, Filter, HeaderFilter, EventWithTransaction, TransactionReceipt, BlockHeader, EventFilter, FieldElement};
+use apibara_client_protos::pb::starknet::v1alpha2::{Event, Filter, HeaderFilter, EventWithTransaction, TransactionReceipt, BlockHeader, EventFilter, FieldElement, StateUpdate, StateUpdateFilter, DeployedContractFilter};
+use futures::future::join_all;
 use log::{debug, info, warn};
 use prisma_client_rust::bigdecimal::num_bigint::BigUint;
 use prisma_client_rust::bigdecimal::Num;
-use processors::{IProcessor, component_state_update};
+use processors::{IProcessor, component_state_update, BlockProcessor, TransactionProcessor};
 
 use crate::hash::starknet_hash;
 use crate::processors::EventProcessor;
@@ -31,6 +33,12 @@ struct Args {
     rpc: String,
 }
 
+struct Processors {
+    event_processors: Vec<Box<dyn EventProcessor>>,
+    block_processors: Vec<Box<dyn BlockProcessor>>,
+    transaction_processors: Vec<Box<dyn TransactionProcessor>>,
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
@@ -45,14 +53,19 @@ async fn main() -> anyhow::Result<()> {
 
     let stream = stream::ApibaraClient::new(rpc).await;
 
-    let processors: Vec<Box<dyn Any>>  = vec![
-        Box::new(component_state_update::ComponentStateUpdateProcessor::new()),
-    ];
+    let processors = Processors{
+        event_processors: vec![
+            Box::new(component_state_update::ComponentStateUpdateProcessor::new()),
+        ],
+        block_processors: vec![],
+        transaction_processors: vec![],
+    };
+
 
     match stream {
         std::result::Result::Ok(s) => {
             println!("Connected");
-            start(s, client.unwrap(), processors, world).await.unwrap_or_else(|error| {
+            start(s, client.unwrap(), &processors, world).await.unwrap_or_else(|error| {
                 panic!("Failed starting: {error:?}");
             });
         }
@@ -62,10 +75,21 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
+fn filter_by_processors(filter: &mut Filter, processors: &Processors) {
+    for processor in &processors.event_processors {
+        let bytes: [u8; 32] = starknet_hash(processor.get_event_key().as_bytes()).to_bytes_be().try_into().unwrap();
+        
+        filter.events.push(EventFilter{
+            keys: vec![FieldElement::from_bytes(&bytes)],
+            ..Default::default()
+        })
+    }
+}
+
 async fn start(
     mut stream: stream::ApibaraClient,
     client: prisma::PrismaClient,
-    processors: Vec<Box<dyn Any>>,
+    processors: &Processors,
     world: BigUint,
 ) -> Result<(), Box<dyn Error>> {
     let mut filter = Filter {
@@ -73,19 +97,18 @@ async fn start(
         transactions: vec![],
         events: vec![],
         messages: vec![],
-        state_update: None,
+        state_update: Some(StateUpdateFilter{
+            deployed_contracts: vec![DeployedContractFilter{
+                // we just want to know when our world contract is deployed
+                contract_address: Some(FieldElement::from_bytes(&world.to_bytes_be().try_into().unwrap())),
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
     };
 
-    for processor in &processors {
-        if let Some(p) = processor.downcast_ref::<Box<dyn EventProcessor>>() {
-            let bytes: [u8; 32] = starknet_hash(p.get_event_key().as_bytes()).to_bytes_be().try_into().unwrap();
-            
-            filter.events.push(EventFilter{
-                keys: vec![FieldElement::from_bytes(&bytes)],
-                ..Default::default()
-            })
-        }
-    }
+    // filter requested data by the events we process
+    filter_by_processors(&mut filter, processors);
 
     let data_stream = stream
         .request_data({
@@ -100,26 +123,21 @@ async fn start(
         .await?;
     futures::pin_mut!(data_stream);
 
+    // dont process anything until our world is deployed
     let mut world_deployed = false;
-
     while let Some(mess) = data_stream.next().await {
         match mess {
             Ok(Some(mess)) => {
                 debug!("Received message");
                 let data = &mess.data;
-                println!("{:?}", data);
-                // TODO: pending data
-                // let end_cursor = &data.end_cursor;
-                // let cursor = &data.cursor;
+
                 for block in data {
                     match &block.header {
                         Some(header) => {
                             info!("Received block {}", header.block_number);
 
-                            for processor in &processors {
-                                if let Some(p) = processor.downcast_ref::<Box<dyn IProcessor<BlockHeader>>>() {
-                                    p.process(&client, header.clone());
-                                }
+                            for processor in &processors.block_processors {
+                                processor.process(&client, block.clone()).await;
                             }
                         }
                         None => {
@@ -155,10 +173,8 @@ async fn start(
                     for transaction in&block.transactions {
                         match &transaction.receipt {
                             Some(tx) => {
-                                for processor in &processors {
-                                    if let Some(p) = processor.downcast_ref::<Box<dyn IProcessor<TransactionReceipt>>>() {
-                                        p.process(&client, tx.clone());
-                                    }
+                                for processor in &processors.transaction_processors {
+                                    processor.process(&client, transaction.clone()).await;
                                 }
                             }
                             None => {
@@ -167,24 +183,10 @@ async fn start(
                     }
 
                     for event in &block.events {
-                        let _tx_hash = &event
-                            .transaction
-                            .as_ref()
-                            .unwrap()
-                            .meta
-                            .as_ref()
-                            .unwrap()
-                            .hash
-                            .as_ref()
-                            .unwrap()
-                            .to_biguint();
                         match &event.event {
                             Some(_ev_data) => {
-                                // TODO: only execute event processors
-                                for processor in &processors {
-                                    if let Some(p) = processor.downcast_ref::<Box<dyn IProcessor<EventWithTransaction>>>() {
-                                        p.process(&client, event.clone());
-                                    }
+                                for processor in &processors.event_processors {
+                                    processor.process(&client, event.clone()).await;
                                 }
                             }
                             None => {
