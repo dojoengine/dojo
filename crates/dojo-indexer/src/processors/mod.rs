@@ -8,7 +8,7 @@ use crate::prisma;
 
 pub mod component_register;
 pub mod component_state_update;
-mod system_register;
+pub mod system_register;
 
 #[async_trait]
 pub trait IProcessor<T> {

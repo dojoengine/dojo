@@ -8,13 +8,15 @@ mod stream;
 use apibara_client_protos::pb::starknet::v1alpha2::{
     DeployedContractFilter, EventFilter, FieldElement, Filter, HeaderFilter, StateUpdateFilter,
 };
-
 use log::{debug, info, warn};
 use prisma_client_rust::bigdecimal::num_bigint::BigUint;
 use prisma_client_rust::bigdecimal::Num;
-use processors::{component_state_update, BlockProcessor, TransactionProcessor};
+use processors::{BlockProcessor, TransactionProcessor};
 
 use crate::hash::starknet_hash;
+use crate::processors::component_register::ComponentRegistrationProcessor;
+use crate::processors::component_state_update::ComponentStateUpdateProcessor;
+use crate::processors::system_register::SystemRegistrationProcessor;
 use crate::processors::EventProcessor;
 mod processors;
 
@@ -55,9 +57,11 @@ async fn main() -> anyhow::Result<()> {
     let stream = stream::ApibaraClient::new(rpc).await;
 
     let processors = Processors {
-        event_processors: vec![Box::new(
-            component_state_update::ComponentStateUpdateProcessor::new(),
-        )],
+        event_processors: vec![
+            Box::new(ComponentStateUpdateProcessor::new()),
+            Box::new(ComponentRegistrationProcessor::new()),
+            Box::new(SystemRegistrationProcessor::new()),
+        ],
         block_processors: vec![],
         transaction_processors: vec![],
     };

@@ -2,13 +2,11 @@ use std::cmp::Ordering;
 
 use anyhow::{Error, Ok, Result};
 use apibara_client_protos::pb::starknet::v1alpha2::EventWithTransaction;
-
 use tonic::async_trait;
 
+use super::{EventProcessor, IProcessor};
 use crate::hash::starknet_hash;
 use crate::prisma;
-
-use super::{EventProcessor, IProcessor};
 pub struct ComponentStateUpdateProcessor;
 impl ComponentStateUpdateProcessor {
     pub fn new() -> Self {

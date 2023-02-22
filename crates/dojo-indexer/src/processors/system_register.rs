@@ -2,28 +2,26 @@ use std::cmp::Ordering;
 
 use anyhow::{Error, Ok, Result};
 use apibara_client_protos::pb::starknet::v1alpha2::EventWithTransaction;
-
 use tonic::async_trait;
 
+use super::{EventProcessor, IProcessor};
 use crate::hash::starknet_hash;
 use crate::prisma;
-
-use super::{EventProcessor, IProcessor};
-pub struct ComponentRegistrationProcessor;
-impl ComponentRegistrationProcessor {
+pub struct SystemRegistrationProcessor;
+impl SystemRegistrationProcessor {
     pub fn new() -> Self {
         Self {}
     }
 }
 
-impl EventProcessor for ComponentRegistrationProcessor {
+impl EventProcessor for SystemRegistrationProcessor {
     fn get_event_key(&self) -> String {
         "SystemRegistered".to_string()
     }
 }
 
 #[async_trait]
-impl IProcessor<EventWithTransaction> for ComponentRegistrationProcessor {
+impl IProcessor<EventWithTransaction> for SystemRegistrationProcessor {
     async fn process(
         &self,
         client: &prisma::PrismaClient,
