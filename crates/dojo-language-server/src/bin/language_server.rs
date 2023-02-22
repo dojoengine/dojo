@@ -4,7 +4,6 @@ use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_language_server::{Backend, State};
 use cairo_lang_plugins::get_default_plugins;
 use cairo_lang_starknet::plugin::StarkNetPlugin;
-use dojo_lang::db::DojoRootDatabaseBuilderEx;
 use dojo_lang::plugin::DojoPlugin;
 use dojo_project::WorldConfig;
 use tower_lsp::{LspService, Server};
@@ -22,10 +21,7 @@ async fn main() {
     plugins.push(Arc::new(DojoPlugin { world_config: WorldConfig::default() }));
     plugins.push(Arc::new(StarkNetPlugin {}));
 
-    let dir = std::env::var("CAIRO_CORELIB_DIR")
-        .unwrap_or_else(|e| panic!("Problem getting the corelib path: {e:?}"));
-
-    let db = RootDatabase::builder().build_language_server(dir.into(), plugins).unwrap_or_else(
+    let db = RootDatabase::builder().detect_corelib().with_plugins(plugins).build().unwrap_or_else(
         |error| {
             panic!("Problem creating language database: {error:?}");
         },
