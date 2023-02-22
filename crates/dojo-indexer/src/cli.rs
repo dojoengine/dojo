@@ -1,17 +1,20 @@
 use std::borrow::Borrow;
-use std::{cmp::Ordering, any::Any};
 use std::error::Error;
 use std::vec;
+use std::{any::Any, cmp::Ordering};
 
 use clap::Parser;
 use futures::StreamExt;
 mod stream;
-use apibara_client_protos::pb::starknet::v1alpha2::{Event, Filter, HeaderFilter, EventWithTransaction, TransactionReceipt, BlockHeader, EventFilter, FieldElement, StateUpdate, StateUpdateFilter, DeployedContractFilter};
+use apibara_client_protos::pb::starknet::v1alpha2::{
+    BlockHeader, DeployedContractFilter, Event, EventFilter, EventWithTransaction, FieldElement,
+    Filter, HeaderFilter, StateUpdate, StateUpdateFilter, TransactionReceipt,
+};
 use futures::future::join_all;
 use log::{debug, info, warn};
 use prisma_client_rust::bigdecimal::num_bigint::BigUint;
 use prisma_client_rust::bigdecimal::Num;
-use processors::{IProcessor, component_state_update, BlockProcessor, TransactionProcessor};
+use processors::{component_state_update, BlockProcessor, IProcessor, TransactionProcessor};
 
 use crate::hash::starknet_hash;
 use crate::processors::EventProcessor;
@@ -53,14 +56,13 @@ async fn main() -> anyhow::Result<()> {
 
     let stream = stream::ApibaraClient::new(rpc).await;
 
-    let processors = Processors{
-        event_processors: vec![
-            Box::new(component_state_update::ComponentStateUpdateProcessor::new()),
-        ],
+    let processors = Processors {
+        event_processors: vec![Box::new(
+            component_state_update::ComponentStateUpdateProcessor::new(),
+        )],
         block_processors: vec![],
         transaction_processors: vec![],
     };
-
 
     match stream {
         std::result::Result::Ok(s) => {
@@ -77,9 +79,10 @@ async fn main() -> anyhow::Result<()> {
 
 fn filter_by_processors(filter: &mut Filter, processors: &Processors) {
     for processor in &processors.event_processors {
-        let bytes: [u8; 32] = starknet_hash(processor.get_event_key().as_bytes()).to_bytes_be().try_into().unwrap();
-        
-        filter.events.push(EventFilter{
+        let bytes: [u8; 32] =
+            starknet_hash(processor.get_event_key().as_bytes()).to_bytes_be().try_into().unwrap();
+
+        filter.events.push(EventFilter {
             keys: vec![FieldElement::from_bytes(&bytes)],
             ..Default::default()
         })
@@ -97,10 +100,12 @@ async fn start(
         transactions: vec![],
         events: vec![],
         messages: vec![],
-        state_update: Some(StateUpdateFilter{
-            deployed_contracts: vec![DeployedContractFilter{
+        state_update: Some(StateUpdateFilter {
+            deployed_contracts: vec![DeployedContractFilter {
                 // we just want to know when our world contract is deployed
-                contract_address: Some(FieldElement::from_bytes(&world.to_bytes_be().try_into().unwrap())),
+                contract_address: Some(FieldElement::from_bytes(
+                    &world.to_bytes_be().try_into().unwrap(),
+                )),
                 ..Default::default()
             }],
             ..Default::default()
@@ -170,15 +175,14 @@ async fn start(
                         }
                     }
 
-                    for transaction in&block.transactions {
+                    for transaction in &block.transactions {
                         match &transaction.receipt {
                             Some(tx) => {
                                 for processor in &processors.transaction_processors {
                                     processor.process(&client, transaction.clone()).await;
                                 }
                             }
-                            None => {
-                            }
+                            None => {}
                         }
                     }
 

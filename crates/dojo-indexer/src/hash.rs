@@ -1,5 +1,5 @@
 use prisma_client_rust::bigdecimal::num_bigint::BigUint;
-use sha3::{Keccak256, Digest};
+use sha3::{Digest, Keccak256};
 
 pub fn starknet_hash(data: &[u8]) -> BigUint {
     let mut hasher = Keccak256::new();

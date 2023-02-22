@@ -1,16 +1,15 @@
-use std::{io::Read, cmp::Ordering};
+use std::{cmp::Ordering, io::Read};
 
-use anyhow::{Result, Error, Ok};
+use anyhow::{Error, Ok, Result};
 use apibara_client_protos::pb::starknet::v1alpha2::EventWithTransaction;
 use prisma_client_rust::bigdecimal::num_bigint::BigUint;
-use sha3::{Keccak256, Digest};
+use sha3::{Digest, Keccak256};
 use tonic::async_trait;
 
-
-use crate::prisma;
 use crate::hash::starknet_hash;
+use crate::prisma;
 
-use super::{IProcessor, EventProcessor};
+use super::{EventProcessor, IProcessor};
 pub struct ComponentRegistrationProcessor;
 impl ComponentRegistrationProcessor {
     pub fn new() -> Self {
@@ -21,12 +20,16 @@ impl ComponentRegistrationProcessor {
 impl EventProcessor for ComponentRegistrationProcessor {
     fn get_event_key(&self) -> String {
         "SystemRegistered".to_string()
-    }   
+    }
 }
 
 #[async_trait]
 impl IProcessor<EventWithTransaction> for ComponentRegistrationProcessor {
-    async fn process(&self, client: &prisma::PrismaClient, data: EventWithTransaction) -> Result<(), Error> {
+    async fn process(
+        &self,
+        client: &prisma::PrismaClient,
+        data: EventWithTransaction,
+    ) -> Result<(), Error> {
         let event = &data.event.unwrap();
         let event_key = &event.keys[0].to_biguint();
         if (event_key.cmp(&starknet_hash(self.get_event_key().as_bytes())) != Ordering::Equal) {
@@ -37,12 +40,16 @@ impl IProcessor<EventWithTransaction> for ComponentRegistrationProcessor {
         let system = &event.data[0].to_biguint();
 
         // create a new component
-        let system = client.system().create(
-            "0x".to_owned()+system.to_str_radix(16).as_str(), 
-            "System".to_string(),
-            "0x".to_owned()+transaction_hash.to_str_radix(16).as_str(),
-            vec![]
-        ).exec().await;
+        let system = client
+            .system()
+            .create(
+                "0x".to_owned() + system.to_str_radix(16).as_str(),
+                "System".to_string(),
+                "0x".to_owned() + transaction_hash.to_str_radix(16).as_str(),
+                vec![],
+            )
+            .exec()
+            .await;
 
         Ok(())
     }

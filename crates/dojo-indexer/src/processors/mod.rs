@@ -1,11 +1,13 @@
-use anyhow::{Result, Error, Ok};
-use apibara_client_protos::pb::starknet::v1alpha2::{Event, Block, Transaction, EventWithTransaction, FieldElement, TransactionWithReceipt};
+use anyhow::{Error, Ok, Result};
+use apibara_client_protos::pb::starknet::v1alpha2::{
+    Block, Event, EventWithTransaction, FieldElement, Transaction, TransactionWithReceipt,
+};
 use tonic::async_trait;
 
 use crate::prisma;
 
-pub mod component_state_update;
 pub mod component_register;
+pub mod component_state_update;
 mod system_register;
 
 #[async_trait]
