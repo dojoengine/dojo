@@ -208,7 +208,7 @@ pub fn find_systems(db: &dyn SemanticGroup, crate_ids: &[CrateId]) -> Vec<System
                     {
                         systems.push(SystemDeclaration { name: name.clone(), submodule_id });
                     } else {
-                        panic!("Component `{name}` was not found.");
+                        panic!("System `{name}` was not found.");
                     }
                 }
             }
