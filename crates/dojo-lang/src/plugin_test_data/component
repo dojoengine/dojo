@@ -36,17 +36,12 @@ mod PositionComponent {
     }
 
     struct Storage {
-        world_address: felt,
-        state: LegacyMap::<felt, Position>,
+        state: LegacyMap::<felt, Position>, 
     }
 
     // Initialize PositionComponent.
     #[external]
-    fn initialize(world_addr: felt) {
-        let world = world_address::read();
-        assert(world == 0, 'already initialized.');
-        world_address::write(world_addr);
-    }
+    fn initialize() {}
 
     // Set the state of an entity.
     #[external]

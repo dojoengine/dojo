@@ -127,23 +127,11 @@ impl System {
             &formatdoc!(
                 "
                 struct Storage {{
-                    world_address: felt,
-                }}
-    
-                #[external]
-                fn initialize(world_addr: felt) {{
-                    let world = world_address::read();
-                    assert(world == 0, 'already initialized.');
-                    world_address::write(world_addr);
                 }}
     
                 #[external]
                 fn execute() {{
-                    let world = world_address::read();
-                    assert(world != 0, 'not initialized.');
-    
                     $preprocessing$
-    
                     $body$
                 }}
                 "
