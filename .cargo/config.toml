@@ -1,3 +1,3 @@
 [env]
 CAIRO_CORELIB_DIR = { value = "cairo/corelib/src", relative = true }
-CAIRO_DOJOLIB_DIR = { value = "dojolib/src", relative = true }
+CAIRO_DOJOLIB_DIR = { value = "lib/src", relative = true }
