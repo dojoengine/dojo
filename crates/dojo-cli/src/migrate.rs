@@ -10,6 +10,8 @@ use dojo_lang::db::DojoRootDatabaseBuilderEx;
 use dojo_lang::plugin::get_contract_address;
 use dojo_lang::system::find_systems;
 use dojo_project::ProjectConfig;
+use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
+use url::Url;
 
 #[derive(Args)]
 pub struct MigrateArgs {
@@ -29,6 +31,10 @@ pub fn run(args: MigrateArgs) {
     let config = ProjectConfig::from_directory(&source_dir).unwrap_or_else(|error| {
         panic!("Problem creating project config: {:?}", error);
     });
+
+    let rpc_client = JsonRpcClient::new(HttpTransport::new(
+        Url::parse("https://starknet-goerli.cartridge.gg/").unwrap(),
+    ));
 
     let db = &mut RootDatabase::builder().with_dojo_config(config.clone()).build().unwrap_or_else(
         |error| {
