@@ -8,5 +8,5 @@ FROM mcr.microsoft.com/vscode/devcontainers/rust:0-${VARIANT}
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends protobuf-compiler libprotobuf-dev
 
-RUN rustup toolchain install nightly \
-    && rustup default nightly
+RUN rustup toolchain install nightly-2022-11-03 \
+    && rustup default nightly-2022-11-03
