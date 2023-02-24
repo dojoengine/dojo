@@ -13,29 +13,75 @@ The toolchain includes the following:
 - `dojo-bind`: Generate bindings for various languages / frameworks (typescript, phaser / rust, bevy).
 
 ## Development
-### Prerequisites
+
+### Setup Submodules
+
+```
+git submodule update --init --recursive
+```
+
+## Development container
+
+It is recommended to use the dev container when building on DoJo as it contains everything needed to begin developing.
+
+Make sure you update your Docker to the latest stable version, sometimes the Dev containers do not play nicely with old Docker versions.
+
+Due to ARM and x86 issues with Docker you need to set the Variant for the container in your bashprofile.
+
+
+### Before building
+Before building the container you need to add in the `VARIANT` so the correct image is built according to your machine.
+```
+sudo nano ~./bash_profile
+```
+
+Then beneath the other statements either add:
+
+```bash
+# for M1/M2 Apple chips
+export VARIANT="bullseye"
+
+# or
+
+# for all others
+export VARIANT="buster"
+
+# Do not add both!
+
+# Restart VSCode for this to take effect
+```
+
+### Open and build container
+
+Command pallete: `ctrl + shift + p`
+
+Then: `Remote-Containers: Rebuild Container Without Cache`
+
+### Setup the language server 
+
+```
+cd cairo/vscode-cairo
+
+npm install --global @vscode/vsce
+npm install
+vsce package
+code --install-extension cairo1*.vsix
+
+cd /workspaces/dojo
+
+cargo build --bin dojo-language-server --release
+```
+
+### Development without container
+
 - Install [Rust](https://www.rust-lang.org/tools/install)
 - Setup Rust:
 ```
 rustup override set stable && rustup update && cargo test
 ```
+Then install the language like described above.
 
-### Using the language server
-
-Install the cairo vscode extension: https://github.com/starkware-libs/cairo/tree/main/vscode-cairo
-
-Build the Dojo language server:
-```
-cargo build --bin dojo-language-server --release
-```
-
-Configure the Cairo extension language server to point to the dojo language server in `settings.json`:
-
-```
-...
-    cairo.languageServerPath: "$REPO_ROOT$/target/release/dojo-language-server",
-...
-```
+---
 
 ## Overview
 

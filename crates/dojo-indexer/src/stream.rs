@@ -51,10 +51,10 @@ impl ApibaraClient {
     ) -> Result<impl Stream<Item = Result<Option<Data>, tonic::Status>> + 'x, tonic::Status> {
         self.stream_id += 1;
         let request = StreamDataRequest {
-            stream_id: Some(self.stream_id),
-            batch_size: Some(1),
+            stream_id: Some(self.stream_id).unwrap_or(0),
+            batch_size: Some(1).unwrap_or(0),
             starting_cursor: Some(Cursor { order_key: 1, unique_key: vec![] }),
-            finality: None,
+            finality: None.unwrap_or(0),
             filter: Some(filter),
         };
 

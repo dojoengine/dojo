@@ -55,7 +55,7 @@ checksum = "224afbd727c3d6e4b90103ece64b8d1b67fbb1973b1046c2281eed3f3803f800"
 [[package]]
 name = "apibara-client-protos"
 version = "0.1.0"
-source = "git+https://github.com/wraitii/apibara-rust-sdk#cda5b72f04a8695a067f87e96e4335df4033ee1a"
+source = "git+https://github.com/ponderingdemocritus/apibara-rust-sdk#a9217145e25a3a20fe79e8fe3b571e4e6caa4ee3"
 dependencies = [
  "hex",
  "num-bigint",
@@ -4364,7 +4364,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0167bac7a9f490495f3c33013e7722b53cb087ecbe082fb0c6387c96f634ea50"
 dependencies = [
  "openssl-probe",
- "rustls-pemfile 1.0.2",
+ "rustls-pemfile",
  "schannel",
  "security-framework",
 ]
@@ -5481,7 +5481,7 @@ dependencies = [
  "prost",
  "prost-derive",
  "rustls-native-certs",
- "rustls-pemfile 1.0.2",
+ "rustls-pemfile",
  "tokio",
  "tokio-rustls",
  "tokio-stream",
