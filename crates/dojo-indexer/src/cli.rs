@@ -24,6 +24,7 @@ mod processors;
 mod prisma;
 
 mod hash;
+mod server;
 
 /// Command line args parser.
 /// Exits with 0/1 if the input is formatted correctly/incorrectly.
