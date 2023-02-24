@@ -7,4 +7,3 @@ FROM mcr.microsoft.com/vscode/devcontainers/rust:0-${VARIANT}
 # Install additional packages
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends protobuf-compiler libprotobuf-dev
-

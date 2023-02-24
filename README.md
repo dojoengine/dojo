@@ -35,11 +35,13 @@ Before building the container you need to add in the `VARIANT` so the correct im
 sudo nano ~./bash_profile
 ```
 
-The beneath the other statements add :
+Then beneath the other statements either add:
 
 ```bash
 # for M1/M2 Apple chips
 export VARIANT="bullseye"
+
+# or
 
 # for all others
 export VARIANT="buster"
