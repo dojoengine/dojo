@@ -123,28 +123,15 @@ impl System {
             }
         }
 
-        let name = self.name.clone();
         self.rewrite_nodes.push(RewriteNode::interpolate_patched(
             &formatdoc!(
                 "
                 struct Storage {{
-                    world_address: felt,
-                }}
-    
-                #[external]
-                fn initialize(world_addr: felt) {{
-                    let world = world_address::read();
-                    assert(world == 0, '{name}: Already initialized.');
-                    world_address::write(world_addr);
                 }}
     
                 #[external]
                 fn execute() {{
-                    let world = world_address::read();
-                    assert(world != 0, '{name}: Not initialized.');
-    
                     $preprocessing$
-    
                     $body$
                 }}
                 "
@@ -209,7 +196,7 @@ pub fn find_systems(db: &dyn SemanticGroup, crate_ids: &[CrateId]) -> Vec<System
                     {
                         systems.push(SystemDeclaration { name: name.clone(), submodule_id });
                     } else {
-                        panic!("Component `{name}` was not found.");
+                        panic!("System `{name}` was not found.");
                     }
                 }
             }

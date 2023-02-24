@@ -1,9 +1,15 @@
 use array::ArrayTrait;
+use starknet_serde::ContractAddressSerde;
 
 #[abi]
 trait IProxy {
     fn set_implementation(class_hash: felt);
-// fn initialize(world_address: starknet::ContractAddress);
+    fn initialize(world_address: ContractAddress);
+}
+
+#[abi]
+trait IWorld {
+    fn lookup(from: felt) -> felt;
 }
 
 #[contract]
@@ -32,8 +38,7 @@ mod World {
         );
         let world_address = get_contract_address();
         super::IProxyDispatcher::set_implementation(module_address, class_hash);
-        // TODO: Uncomment once https://github.com/starkware-libs/cairo/issues/2114 is addressed.
-        // super::IProxyDispatcher::initialize(module_address, world_address);
+        super::IProxyDispatcher::initialize(module_address, world_address);
 
         let module_address_felt = contract_address_to_felt(module_address);
         module_registry::write(module_id, module_address_felt);

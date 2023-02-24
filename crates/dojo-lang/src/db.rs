@@ -13,6 +13,8 @@ use dojo_project::{ProjectConfig, WorldConfig};
 
 use crate::plugin::DojoPlugin;
 
+pub const DOJOLIB_CRATE_NAME: &str = "dojo";
+
 pub trait DojoRootDatabaseBuilderEx {
     fn build_language_server(
         &mut self,
@@ -51,6 +53,11 @@ impl DojoRootDatabaseBuilderEx for RootDatabaseBuilder {
 
     fn with_dojo_config(&mut self, config: ProjectConfig) -> &mut Self {
         let mut project_config: cairo_lang_project::ProjectConfig = config.clone().into();
+
+        let dir = std::env::var("CAIRO_DOJOLIB_DIR")
+            .unwrap_or_else(|e| panic!("Problem getting the dojolib path: {e:?}"));
+        project_config.content.crate_roots.insert(DOJOLIB_CRATE_NAME.into(), dir.into());
+
         let dir = std::env::var("CAIRO_CORELIB_DIR")
             .unwrap_or_else(|e| panic!("Problem getting the corelib path: {e:?}"));
         project_config.corelib = Some(Directory(dir.into()));

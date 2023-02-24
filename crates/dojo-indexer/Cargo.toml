@@ -11,13 +11,18 @@ apibara-client-protos = { git = "https://github.com/ponderingdemocritus/apibara-
 clap.workspace = true
 futures = "0.3.26"
 tokio = { version = "1.20.1", features = ["full"] }
-tonic = "0.8.3"
+tonic = { version = "0.8.3", features = ["tls", "tls-roots"] }
 log = "0.4.17"
 futures-util = "0.3.26"
 tokio-stream = "0.1.11"
-prisma-client-rust-cli = { git = "https://github.com/Brendonovich/prisma-client-rust", tag = "0.6.4" }
-prisma-client-rust = { git = "https://github.com/Brendonovich/prisma-client-rust", tag = "0.6.4" }
+prisma-client-rust-cli = { git = "https://github.com/Brendonovich/prisma-client-rust", rev = "0.6.4", default-features = false, features = [
+    "sqlite",
+] }
+prisma-client-rust = { git = "https://github.com/Brendonovich/prisma-client-rust", rev = "0.6.4", default-features = false, features = [
+    "sqlite",
+] }
 serde.workspace = true
+sha3 = "0.10.6"
 
 [[bin]]
 name = "dojo-indexer"

@@ -1,3 +1,5 @@
+use array::ArrayTrait;
+
 #[component]
 mod PositionComponent {
     #[derive(Copy, Drop)]
@@ -20,10 +22,26 @@ mod PositionComponent {
     }
 }
 
+fn single_element_arr(value: felt) -> Array::<felt> {
+    let mut arr = ArrayTrait::new();
+    arr.append(value);
+    arr
+}
+
+fn pop_and_compare(ref arr: Array::<felt>, value: felt, err: felt) {
+    match arr.pop_front() {
+        Option::Some(x) => {
+            assert(x == value, err);
+        },
+        Option::None(_) => {
+            panic(single_element_arr('Got empty result data'))
+        },
+    };
+}
+
 #[test]
-#[available_gas(20000)]
+#[available_gas(100000)]
 fn test_position_is_zero() {
-    let mut retdata = PositionComponent::__external::get_plus_2(single_element_arr(1));
-    pop_and_compare(ref retdata, 3, 'Wrong result');
-    assert_empty(retdata);
+    let mut is_zero = PositionComponent::__external::is_zero(single_element_arr(1));
+    pop_and_compare(ref is_zero, 1, 'not zero');
 }

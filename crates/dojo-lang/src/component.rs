@@ -101,16 +101,12 @@ impl Component {
         self.rewrite_nodes.push(RewriteNode::interpolate_patched(
             "
                     struct Storage {
-                        world_address: felt,
                         state: LegacyMap::<felt, $type_name$>,
                     }
     
                     // Initialize $type_name$Component.
                     #[external]
-                    fn initialize(world_addr: felt) {
-                        let world = world_address::read();
-                        assert(world == 0, '$type_name$Component: Already initialized.');
-                        world_address::write(world_addr);
+                    fn initialize() {
                     }
     
                     // Set the state of an entity.
