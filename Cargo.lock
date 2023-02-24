@@ -1625,6 +1625,7 @@ dependencies = [
  "smol_str",
  "starknet",
  "thiserror",
+ "tokio",
  "toml 0.4.10",
  "url",
 ]
