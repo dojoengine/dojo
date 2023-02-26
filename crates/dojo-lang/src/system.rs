@@ -131,6 +131,7 @@ impl System {
     
                 #[external]
                 fn execute() {{
+                    let world_address = starknet::contract_address_const::<$world_address$>();
                     $preprocessing$
                     $body$
                 }}
@@ -144,6 +145,13 @@ impl System {
                 (
                     "preprocessing".to_string(),
                     RewriteNode::Modified(ModifiedNode { children: preprocess_rewrite_nodes }),
+                ),
+                (
+                    "world_address".to_string(),
+                    RewriteNode::Text(format!(
+                        "{:#x}",
+                        self.world_config.address.unwrap_or_default()
+                    )),
                 ),
             ]),
         ));
@@ -170,7 +178,11 @@ fn try_extract_execute_paramters(
     };
     let ty = segment.ident(db).text(db);
 
-    if ty == "Query" { Some(SystemArgType::Query) } else { None }
+    if ty == "Query" {
+        Some(SystemArgType::Query)
+    } else {
+        None
+    }
 }
 
 /// Finds the inline modules annotated as systems in the given crate_ids and

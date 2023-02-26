@@ -31,7 +31,7 @@ mod MoveSystem {
         return ();
     }
 
-    fn execute(world: felt, query: Query::<(Position, Option::<Health>)>) {
+    fn execute(query: Query::<(Position, Option::<Health>)>) {
         return ();
     }
 }
@@ -177,11 +177,12 @@ mod MoveSystem {
 
     #[external]
     fn execute() {
+        let world_address = starknet::contract_address_const::<0x0>();
         let position_ids = world::IWorldDispatcher::lookup(
-            0x0, 0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897
+            world_address, 0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897
         );
         let health_ids = world::IWorldDispatcher::lookup(
-            0x0, 0x1690bb282da6a011c52715e2188378c769966964ca2332dccad8d7542983bc2
+            world_address, 0x1690bb282da6a011c52715e2188378c769966964ca2332dccad8d7542983bc2
         );
 
         return ();
@@ -195,11 +196,11 @@ error: Plugin diagnostic: Type not found.
                             ^***^
 
 error: Plugin diagnostic: Identifier not found.
- --> MoveSystem:13:24
-    let position_ids = world::IWorldDispatcher::lookup(0x0, 0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897);
+ --> MoveSystem:14:24
+    let position_ids = world::IWorldDispatcher::lookup(world_address, 0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897);
                        ^***^
 
 error: Plugin diagnostic: Identifier not found.
- --> MoveSystem:14:18
-let health_ids = world::IWorldDispatcher::lookup(0x0, 0x1690bb282da6a011c52715e2188378c769966964ca2332dccad8d7542983bc2);
+ --> MoveSystem:15:18
+let health_ids = world::IWorldDispatcher::lookup(world_address, 0x1690bb282da6a011c52715e2188378c769966964ca2332dccad8d7542983bc2);
                  ^***^
