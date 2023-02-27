@@ -1,48 +1,47 @@
 use juniper::{graphql_object, GraphQLObject};
-use juniper_relay_connection::RelayConnectionNode;
+use juniper_relay_connection::{RelayConnectionNode, RelayConnection};
 use prisma_client_rust::QueryError;
 
-use crate::prisma::{PrismaClient, component};
+use crate::prisma::{PrismaClient, component, system};
 
 use super::Query;
 
 #[derive(GraphQLObject)]
-pub struct Component {
+pub struct System {
     pub id: String,
     pub name: String,
     pub transaction_hash: String,
 }
 
-impl RelayConnectionNode for Component {
+impl RelayConnectionNode for System {
     type Cursor = String;
     fn cursor(&self) -> Self::Cursor {
         self.id.clone()
     }
 
     fn connection_type_name() -> &'static str {
-        "Component"
+        "System"
     }
 
     fn edge_type_name() -> &'static str {
-        "ComponentEdge"
+        "SystemEdge"
     }
 }
 
-#[graphql_object(context = PrismaClient)]
 impl Query {
-    async fn component(
+    async fn system(
         context: &PrismaClient,
         id: String,
-    ) -> Option<Component> {
-        let component = context
-            .component()
-            .find_first(vec![component::id::equals(id)])
+    ) -> Option<System> {
+        let system = context
+            .system()
+            .find_first(vec![system::id::equals(id)])
             .exec()
             .await
             .unwrap();
 
-        match component {
-            Some(component) => Some(Component { id: component.id, name: component.name, transaction_hash: component.transaction_hash }),
+        match system {
+            Some(system) => Some(System { id: system.id, name: system.name, transaction_hash: system.transaction_hash }),
             None => None,
         }
     }
