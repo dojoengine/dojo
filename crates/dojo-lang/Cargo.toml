@@ -18,7 +18,7 @@ cairo-lang-filesystem.workspace = true
 cairo-lang-parser.workspace = true
 cairo-lang-plugins.workspace = true
 cairo-lang-project.workspace = true
-cairo-lang-semantic = { git = "https://github.com/starkware-libs/cairo.git", rev = "6ecdfa8775223397274540e08cfcd73bd4e130ad" }
+cairo-lang-semantic = { git = "https://github.com/starkware-libs/cairo.git", rev = "37e3487902acb58c04c6e4e7e9dffc24afcf3680" }
 cairo-lang-sierra-generator.workspace = true
 cairo-lang-syntax.workspace = true
 cairo-lang-starknet.workspace = true
@@ -33,11 +33,11 @@ smol_str.workspace = true
 
 [dev-dependencies]
 env_logger.workspace = true
-cairo-lang-formatter = { git = "https://github.com/starkware-libs/cairo.git", rev = "6ecdfa8775223397274540e08cfcd73bd4e130ad" }
-cairo-lang-semantic = { git = "https://github.com/starkware-libs/cairo.git", rev = "6ecdfa8775223397274540e08cfcd73bd4e130ad", features = [
+cairo-lang-formatter = { git = "https://github.com/starkware-libs/cairo.git", rev = "37e3487902acb58c04c6e4e7e9dffc24afcf3680" }
+cairo-lang-semantic = { git = "https://github.com/starkware-libs/cairo.git", rev = "37e3487902acb58c04c6e4e7e9dffc24afcf3680", features = [
     "testing",
 ] }
-cairo-lang-test-utils = { git = "https://github.com/starkware-libs/cairo.git", rev = "6ecdfa8775223397274540e08cfcd73bd4e130ad" }
+cairo-lang-test-utils = { git = "https://github.com/starkware-libs/cairo.git", rev = "37e3487902acb58c04c6e4e7e9dffc24afcf3680" }
 pretty_assertions.workspace = true
 test-case = "2.2.2"
 test-case-macros = "2.2.2"
