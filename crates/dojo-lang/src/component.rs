@@ -6,7 +6,7 @@ use cairo_lang_defs::plugin::{
 };
 use cairo_lang_filesystem::ids::CrateId;
 use cairo_lang_semantic::db::SemanticGroup;
-use cairo_lang_semantic::patcher::{ModifiedNode, PatchBuilder, RewriteNode};
+use cairo_lang_semantic::patcher::{PatchBuilder, RewriteNode};
 use cairo_lang_semantic::plugin::DynPluginAuxData;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
@@ -74,10 +74,7 @@ impl Component {
                 }}
                 ",
             ),
-            HashMap::from([(
-                "body".to_string(),
-                RewriteNode::Modified(ModifiedNode { children: self.rewrite_nodes }),
-            )]),
+            HashMap::from([("body".to_string(), RewriteNode::new_modified(self.rewrite_nodes))]),
         ));
 
         PluginResult {
@@ -123,7 +120,7 @@ impl Component {
                     ",
             HashMap::from([(
                 "type_name".to_string(),
-                RewriteNode::Trimmed(struct_ast.name(db).as_syntax_node()),
+                RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
             )]),
         ));
 
@@ -136,7 +133,7 @@ impl Component {
                 "serde::Serde::<felt>::serialize(ref serialized, input.$key$);",
                 HashMap::from([(
                     "key".to_string(),
-                    RewriteNode::Trimmed(member.name(db).as_syntax_node()),
+                    RewriteNode::new_trimmed(member.name(db).as_syntax_node()),
                 )]),
             ));
 
@@ -144,7 +141,7 @@ impl Component {
                 "$key$: serde::Serde::<felt>::deserialize(ref serialized)?,",
                 HashMap::from([(
                     "key".to_string(),
-                    RewriteNode::Trimmed(member.name(db).as_syntax_node()),
+                    RewriteNode::new_trimmed(member.name(db).as_syntax_node()),
                 )]),
             ));
 
@@ -154,7 +151,7 @@ impl Component {
                  $offset$_u8)
                 )?,",
                 HashMap::from([
-                    ("key".to_string(), RewriteNode::Trimmed(member.name(db).as_syntax_node())),
+                    ("key".to_string(), RewriteNode::new_trimmed(member.name(db).as_syntax_node())),
                     ("offset".to_string(), RewriteNode::Text(i.to_string())),
                 ]),
             ));
@@ -170,7 +167,7 @@ impl Component {
                 )
                 .as_str(),
                 HashMap::from([
-                    ("key".to_string(), RewriteNode::Trimmed(member.name(db).as_syntax_node())),
+                    ("key".to_string(), RewriteNode::new_trimmed(member.name(db).as_syntax_node())),
                     ("offset".to_string(), RewriteNode::Text(i.to_string())),
                 ]),
             ));
@@ -194,16 +191,10 @@ impl Component {
             HashMap::from([
                 (
                     "type_name".to_string(),
-                    RewriteNode::Trimmed(struct_ast.name(db).as_syntax_node()),
+                    RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
                 ),
-                (
-                    "serialize".to_string(),
-                    RewriteNode::Modified(ModifiedNode { children: serialize }),
-                ),
-                (
-                    "deserialize".to_string(),
-                    RewriteNode::Modified(ModifiedNode { children: deserialize }),
-                ),
+                ("serialize".to_string(), RewriteNode::new_modified(serialize)),
+                ("deserialize".to_string(), RewriteNode::new_modified(deserialize)),
             ]),
         ));
 
@@ -229,10 +220,10 @@ impl Component {
             HashMap::from([
                 (
                     "type_name".to_string(),
-                    RewriteNode::Trimmed(struct_ast.name(db).as_syntax_node()),
+                    RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
                 ),
-                ("read".to_string(), RewriteNode::Modified(ModifiedNode { children: read })),
-                ("write".to_string(), RewriteNode::Modified(ModifiedNode { children: write })),
+                ("read".to_string(), RewriteNode::new_modified(read)),
+                ("write".to_string(), RewriteNode::new_modified(write)),
             ]),
         ));
     }
@@ -246,6 +237,8 @@ impl Component {
             .modify_child(db, ast::FunctionSignature::INDEX_PARAMETERS)
             .modify(db)
             .children
+            .as_mut()
+            .unwrap()
             .splice(0..1, vec![RewriteNode::Text("entity_id: felt".to_string())]);
 
         self.rewrite_nodes.push(RewriteNode::interpolate_patched(
@@ -260,7 +253,7 @@ impl Component {
                 ("func_decl".to_string(), func_declaration),
                 (
                     "body".to_string(),
-                    RewriteNode::Trimmed(func.body(db).statements(db).as_syntax_node()),
+                    RewriteNode::new_trimmed(func.body(db).statements(db).as_syntax_node()),
                 ),
             ]),
         ))

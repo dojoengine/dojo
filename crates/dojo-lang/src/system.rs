@@ -6,7 +6,7 @@ use cairo_lang_defs::plugin::{
 };
 use cairo_lang_filesystem::ids::CrateId;
 use cairo_lang_semantic::db::SemanticGroup;
-use cairo_lang_semantic::patcher::{ModifiedNode, PatchBuilder, RewriteNode};
+use cairo_lang_semantic::patcher::{PatchBuilder, RewriteNode};
 use cairo_lang_semantic::plugin::DynPluginAuxData;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
@@ -88,10 +88,7 @@ impl System {
                 }}
                 ",
             ),
-            HashMap::from([(
-                "body".to_string(),
-                RewriteNode::Modified(ModifiedNode { children: self.rewrite_nodes }),
-            )]),
+            HashMap::from([("body".to_string(), RewriteNode::new_modified(self.rewrite_nodes))]),
         ));
 
         PluginResult {
@@ -140,12 +137,9 @@ impl System {
             HashMap::from([
                 (
                     "body".to_string(),
-                    RewriteNode::Trimmed(function_ast.body(db).statements(db).as_syntax_node()),
+                    RewriteNode::new_trimmed(function_ast.body(db).statements(db).as_syntax_node()),
                 ),
-                (
-                    "preprocessing".to_string(),
-                    RewriteNode::Modified(ModifiedNode { children: preprocess_rewrite_nodes }),
-                ),
+                ("preprocessing".to_string(), RewriteNode::new_modified(preprocess_rewrite_nodes)),
                 (
                     "world_address".to_string(),
                     RewriteNode::Text(format!(
@@ -178,11 +172,7 @@ fn try_extract_execute_paramters(
     };
     let ty = segment.ident(db).text(db);
 
-    if ty == "Query" {
-        Some(SystemArgType::Query)
-    } else {
-        None
-    }
+    if ty == "Query" { Some(SystemArgType::Query) } else { None }
 }
 
 /// Finds the inline modules annotated as systems in the given crate_ids and

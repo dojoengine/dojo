@@ -1,5 +1,5 @@
 use array::ArrayTrait;
-use starknet_serde::ContractAddressSerde;
+use starknet::contract_address::ContractAddressSerde;
 
 #[abi]
 trait IProxy {
