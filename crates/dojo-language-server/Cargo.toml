@@ -21,5 +21,4 @@ cairo-lang-filesystem = { git = "https://github.com/starkware-libs/cairo.git", r
 tokio = { version = "1.18.2", features = ["full", "sync"] }
 tower-lsp = "0.17.0"
 salsa = "0.16.1"
-scarb = { git = "https://github.com/software-mansion/scarb.git", rev = "7f5ee8cb13213f7d75c12949eacf35bb28b8c234" }
 smol_str.workspace = true

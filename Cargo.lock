@@ -2301,6 +2301,7 @@ dependencies = [
  "comfy-table",
  "dojo-lang",
  "dojo-project",
+ "scarb",
  "serde",
  "smol_str",
  "starknet",
@@ -2354,6 +2355,7 @@ dependencies = [
  "indoc 1.0.9",
  "itertools",
  "pretty_assertions",
+ "scarb",
  "serde",
  "serde_json",
  "smol_str",
@@ -2361,6 +2363,7 @@ dependencies = [
  "test-case",
  "test-case-macros",
  "test-log",
+ "tracing",
 ]
 
 [[package]]
@@ -2377,7 +2380,6 @@ dependencies = [
  "dojo-lang",
  "dojo-project",
  "salsa",
- "scarb",
  "smol_str",
  "tokio",
  "tower-lsp",
@@ -2387,9 +2389,12 @@ dependencies = [
 name = "dojo-project"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "cairo-lang-filesystem 1.0.0-alpha.3 (git+https://github.com/starkware-libs/cairo.git?rev=37e3487902acb58c04c6e4e7e9dffc24afcf3680)",
  "cairo-lang-project 1.0.0-alpha.3 (git+https://github.com/starkware-libs/cairo.git?rev=37e3487902acb58c04c6e4e7e9dffc24afcf3680)",
+ "camino",
  "indoc 1.0.9",
+ "scarb",
  "serde",
  "smol_str",
  "starknet",
@@ -5162,12 +5167,11 @@ dependencies = [
 
 [[package]]
 name = "prodash"
-version = "23.0.0"
+version = "23.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d8c414345b4a98cbcd0e8d8829c8f54b47a7ed4fb771c45b7c5c6c0ae23dc4c"
+checksum = "88ee4651b19ce9933cb6077977767f44d332f14603f00d455ce9284e709493d0"
 dependencies = [
  "bytesize",
- "dashmap",
  "human_format",
  "parking_lot 0.11.2",
 ]
