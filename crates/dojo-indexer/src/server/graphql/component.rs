@@ -1,6 +1,6 @@
 use juniper::{graphql_object, GraphQLObject};
 use juniper_relay_connection::RelayConnectionNode;
-use prisma_client_rust::QueryError;
+
 
 use super::entity::Entity;
 use super::entity_state::EntityState;

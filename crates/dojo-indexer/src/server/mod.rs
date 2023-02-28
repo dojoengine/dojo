@@ -7,8 +7,8 @@ use actix_web::{middleware, App, Error, HttpResponse, HttpServer};
 use juniper::{EmptyMutation, EmptySubscription, RootNode};
 use juniper_actix::{graphiql_handler, graphql_handler, playground_handler};
 
-use self::graphql::{Mutation, Query};
-use crate::prisma::{self, PrismaClient};
+use self::graphql::{Query};
+use crate::prisma::{PrismaClient};
 
 mod graphql;
 
