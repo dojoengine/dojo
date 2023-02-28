@@ -1,25 +1,22 @@
 use std::env;
 
 use actix_cors::Cors;
-use actix_web::{
-    http::header,
-    middleware,
-    web::{self, Data},
-    App, Error, HttpResponse, HttpServer,
-};
-use juniper::{RootNode, EmptyMutation, EmptySubscription};
-use juniper_actix::{graphql_handler, playground_handler, graphiql_handler};
+use actix_web::http::header;
+use actix_web::web::{self, Data};
+use actix_web::{middleware, App, Error, HttpResponse, HttpServer};
+use juniper::{EmptyMutation, EmptySubscription, RootNode};
+use juniper_actix::{graphiql_handler, graphql_handler, playground_handler};
 
-use crate::prisma::{PrismaClient, self};
-
-use self::graphql::{Query, Mutation};
+use self::graphql::{Mutation, Query};
+use crate::prisma::{self, PrismaClient};
 
 mod graphql;
 
 // To make our Database usable by Juniper, we have to implement a marker trait.
 impl juniper::Context for PrismaClient {}
 
-type Schema = RootNode<'static, Query, EmptyMutation<PrismaClient>, EmptySubscription<PrismaClient>>;
+type Schema =
+    RootNode<'static, Query, EmptyMutation<PrismaClient>, EmptySubscription<PrismaClient>>;
 
 fn schema() -> Schema {
     Schema::new(
@@ -43,7 +40,7 @@ async fn graphql_route(
     let context = PrismaClient::_builder().build().await.unwrap_or_else(|e| {
         panic!("Failed to connect to database: {}", e);
     });
-    
+
     graphql_handler(&schema, &context, req, payload).await
 }
 

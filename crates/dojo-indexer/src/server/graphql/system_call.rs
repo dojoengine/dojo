@@ -2,9 +2,9 @@ use juniper::{graphql_object, GraphQLObject};
 use juniper_relay_connection::{RelayConnection, RelayConnectionNode};
 use prisma_client_rust::QueryError;
 
+use super::system::System;
+use super::Query;
 use crate::prisma::{component, system, system_call, PrismaClient};
-
-use super::{system::System, Query};
 
 #[derive(GraphQLObject)]
 pub struct SystemCall {

@@ -2,9 +2,11 @@ use juniper::{graphql_object, GraphQLObject};
 use juniper_relay_connection::{RelayConnection, RelayConnectionNode};
 use prisma_client_rust::QueryError;
 
+use super::component::Component;
+use super::entity_state::EntityState;
+use super::entity_state_update::EntityStateUpdate;
+use super::Query;
 use crate::prisma::{component, entity, system, PrismaClient};
-
-use super::{entity_state::EntityState, entity_state_update::EntityStateUpdate, Query, component::Component};
 
 #[derive(GraphQLObject)]
 pub struct Entity {
@@ -35,11 +37,14 @@ impl Query {
             context.entity().find_first(vec![entity::id::equals(id)]).exec().await.unwrap();
 
         match entity {
-            Some(entity) => {
-                Some(Entity { 
-                    id: entity.id, 
-                    transaction_hash: entity.transaction_hash,
-                    states: entity.states.unwrap().into_iter().map(|state| EntityState {
+            Some(entity) => Some(Entity {
+                id: entity.id,
+                transaction_hash: entity.transaction_hash,
+                states: entity
+                    .states
+                    .unwrap()
+                    .into_iter()
+                    .map(|state| EntityState {
                         data: state.data,
                         entity: Entity {
                             id: state.entity.clone().unwrap().id,
@@ -55,8 +60,13 @@ impl Query {
                             states: vec![],
                             state_updates: vec![],
                         },
-                    }).collect(), 
-                    state_updates: entity.state_updates.unwrap().into_iter().map(|state_update| EntityStateUpdate {
+                    })
+                    .collect(),
+                state_updates: entity
+                    .state_updates
+                    .unwrap()
+                    .into_iter()
+                    .map(|state_update| EntityStateUpdate {
                         id: state_update.id,
                         data: state_update.data,
                         entity: Entity {
@@ -68,15 +78,19 @@ impl Query {
                         component: Component {
                             id: state_update.component.clone().unwrap().id,
                             name: state_update.component.clone().unwrap().name,
-                            transaction_hash: state_update.component.clone().unwrap().transaction_hash,
+                            transaction_hash: state_update
+                                .component
+                                .clone()
+                                .unwrap()
+                                .transaction_hash,
                             systems: vec![],
                             states: vec![],
                             state_updates: vec![],
                         },
                         transaction_hash: state_update.transaction_hash,
-                    }).collect(),
-                })
-            }
+                    })
+                    .collect(),
+            }),
             None => None,
         }
     }
