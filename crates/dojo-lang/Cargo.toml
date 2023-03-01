@@ -27,9 +27,11 @@ dojo-project = { path = "../dojo-project" }
 starknet.workspace = true
 indoc.workspace = true
 itertools.workspace = true
+scarb.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 smol_str.workspace = true
+tracing = "0.1.37"
 
 [dev-dependencies]
 env_logger.workspace = true

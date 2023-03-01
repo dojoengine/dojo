@@ -21,3 +21,4 @@ cairo-lang-filesystem = { git = "https://github.com/starkware-libs/cairo.git", r
 tokio = { version = "1.18.2", features = ["full", "sync"] }
 tower-lsp = "0.17.0"
 salsa = "0.16.1"
+smol_str.workspace = true

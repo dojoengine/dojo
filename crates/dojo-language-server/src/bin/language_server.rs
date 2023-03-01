@@ -4,8 +4,9 @@ use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_language_server::{Backend, State};
 use cairo_lang_plugins::get_default_plugins;
 use cairo_lang_starknet::plugin::StarkNetPlugin;
+use dojo_lang::db::update_crate_roots_from_metadata;
 use dojo_lang::plugin::DojoPlugin;
-use dojo_project::WorldConfig;
+use dojo_project::{read_metadata, WorldConfig};
 use tower_lsp::{LspService, Server};
 
 #[tokio::main]
@@ -17,15 +18,22 @@ async fn main() {
     #[cfg(feature = "runtime-agnostic")]
     let (stdin, stdout) = (stdin.compat(), stdout.compat_write());
 
+    let metadata = read_metadata(None).unwrap_or_else(|error| {
+        panic!("Problem reading metadata: {error:?}");
+    });
+
     let mut plugins = get_default_plugins();
     plugins.push(Arc::new(DojoPlugin { world_config: WorldConfig::default() }));
     plugins.push(Arc::new(StarkNetPlugin {}));
 
-    let db = RootDatabase::builder().detect_corelib().with_plugins(plugins).build().unwrap_or_else(
-        |error| {
-            panic!("Problem creating language database: {error:?}");
-        },
-    );
+    let mut db =
+        RootDatabase::builder().detect_corelib().with_plugins(plugins).build().unwrap_or_else(
+            |error| {
+                panic!("Problem creating language database: {error:?}");
+            },
+        );
+
+    update_crate_roots_from_metadata(&mut db, metadata);
 
     let (service, socket) = LspService::build(|client| Backend {
         client,

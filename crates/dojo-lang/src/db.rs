@@ -1,15 +1,19 @@
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
 use cairo_lang_compiler::db::{RootDatabase, RootDatabaseBuilder};
-use cairo_lang_filesystem::db::init_dev_corelib;
-use cairo_lang_filesystem::ids::Directory;
+use cairo_lang_filesystem::db::{init_dev_corelib, FilesGroupEx};
+use cairo_lang_filesystem::ids::{CrateLongId, Directory};
 use cairo_lang_plugins::get_default_plugins;
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::plugin::SemanticPlugin;
 use cairo_lang_starknet::plugin::StarkNetPlugin;
 use dojo_project::{ProjectConfig, WorldConfig};
+use scarb::core::PackageId;
+use scarb::metadata::{PackageMetadata, ProjectMetadata};
+use smol_str::SmolStr;
 
 use crate::plugin::DojoPlugin;
 
@@ -63,5 +67,26 @@ impl DojoRootDatabaseBuilderEx for RootDatabaseBuilder {
         project_config.corelib = Some(Directory(dir.into()));
         self.with_project_config(project_config);
         self.with_dojo(config.content.world)
+    }
+}
+
+pub fn update_crate_roots_from_metadata(
+    db: &mut dyn SemanticGroup,
+    project_metadata: ProjectMetadata,
+) {
+    let packages: BTreeMap<PackageId, PackageMetadata> =
+        project_metadata.packages.into_iter().map(|package| (package.id, package)).collect();
+
+    for unit in project_metadata.compilation_units {
+        for package_id in unit.components {
+            let package_metadata = packages.get(&package_id).unwrap();
+            let package_id = SmolStr::from(package_metadata.name.clone());
+            let src_path = package_metadata.root.clone().join("src");
+            if src_path.exists() {
+                let crate_id = db.intern_crate(CrateLongId(package_id));
+                let root = Directory(src_path.into());
+                db.set_crate_root(crate_id, Some(root));
+            };
+        }
     }
 }
