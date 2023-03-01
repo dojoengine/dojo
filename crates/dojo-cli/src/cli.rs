@@ -49,10 +49,10 @@ async fn main() -> anyhow::Result<()> {
 
     match cli.command {
         Commands::Build(args) => build::run(args),
-        Commands::Init(args) => init::run(args),
-        Commands::Migrate(args) => migrate::run(args).await,
-        Commands::Bind(..) => print!("Bind"),
-        Commands::Inspect(..) => print!("Inspect"),
-    }
+        Commands::Init(args) => Ok(init::run(args)),
+        Commands::Migrate(args) => Ok(migrate::run(args).await),
+        Commands::Bind(..) => Ok(print!("Bind")),
+        Commands::Inspect(..) => Ok(print!("Inspect")),
+    }?;
     Ok(())
 }
