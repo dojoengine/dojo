@@ -47,5 +47,8 @@
 	// "remoteUser": "vscode",
 	"features": {
 		"node": "18"
+	},
+	"remoteEnv": {
+		"PATH": "${containerEnv:PATH}:/workspace/dojo/target/release"
 	}
 }
