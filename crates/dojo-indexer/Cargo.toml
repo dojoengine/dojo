@@ -30,6 +30,8 @@ juniper_actix = "0.4.0"
 actix-web = "4.3.0"
 actix-cors = "0.6.4"
 env_logger.workspace = true
+starknet.workspace = true
+url = "2.2.2"
 
 
 

@@ -12,12 +12,17 @@ use log::{debug, info, warn};
 use prisma_client_rust::bigdecimal::num_bigint::BigUint;
 use prisma_client_rust::bigdecimal::Num;
 use processors::{BlockProcessor, TransactionProcessor};
+use starknet::providers::jsonrpc::{JsonRpcClient, HttpTransport};
+use starknet::providers::{SequencerGatewayProvider};
 
 use crate::hash::starknet_hash;
 use crate::processors::component_register::ComponentRegistrationProcessor;
 use crate::processors::component_state_update::ComponentStateUpdateProcessor;
 use crate::processors::system_register::SystemRegistrationProcessor;
 use crate::processors::EventProcessor;
+use url::Url;
+
+
 mod processors;
 
 #[allow(warnings, unused, elided_lifetimes_in_paths)]
@@ -33,7 +38,9 @@ mod server;
 struct Args {
     /// The world to index
     world: String,
-    /// The RPC endpoint to use
+    /// The Apibara node to use
+    node: String,
+    /// The rpc endpoint to use
     rpc: String,
 }
 
@@ -50,12 +57,16 @@ async fn main() -> anyhow::Result<()> {
     let world = BigUint::from_str_radix(&args.world[2..], 16).unwrap_or_else(|error| {
         panic!("Failed parsing world address: {error:?}");
     });
-    let rpc = &args.rpc;
+    let node = &args.node;
 
     let client = prisma::PrismaClient::_builder().build().await;
     assert!(client.is_ok());
 
-    let stream = stream::ApibaraClient::new(rpc).await;
+    let stream = stream::ApibaraClient::new(node).await;
+
+    let provider = JsonRpcClient::new(HttpTransport::new(
+        Url::parse(&args.rpc).unwrap(),
+    ));
 
     let processors = Processors {
         event_processors: vec![
@@ -70,7 +81,7 @@ async fn main() -> anyhow::Result<()> {
     match stream {
         std::result::Result::Ok(s) => {
             println!("Connected");
-            start(s, client.unwrap(), &processors, world).await.unwrap_or_else(|error| {
+            start(s, &client.unwrap(), &provider, &processors, world).await.unwrap_or_else(|error| {
                 panic!("Failed starting: {error:?}");
             });
         }
@@ -94,7 +105,8 @@ fn filter_by_processors(filter: &mut Filter, processors: &Processors) {
 
 async fn start(
     mut stream: stream::ApibaraClient,
-    client: prisma::PrismaClient,
+    client: &prisma::PrismaClient,
+    provider: &JsonRpcClient<HttpTransport>,
     processors: &Processors,
     world: BigUint,
 ) -> Result<(), Box<dyn Error>> {
@@ -145,7 +157,7 @@ async fn start(
                             info!("Received block {}", header.block_number);
 
                             for processor in &processors.block_processors {
-                                processor.process(&client, block.clone()).await.unwrap_or_else(
+                                processor.process(&client, provider, block.clone()).await.unwrap_or_else(
                                     |op| {
                                         panic!("Failed processing block: {op:?}");
                                     },
@@ -187,7 +199,7 @@ async fn start(
                             Some(_tx) => {
                                 for processor in &processors.transaction_processors {
                                     processor
-                                        .process(&client, transaction.clone())
+                                        .process(client, provider, transaction.clone())
                                         .await
                                         .unwrap_or_else(|op| {
                                             panic!("Failed processing transaction: {op:?}");
@@ -202,7 +214,7 @@ async fn start(
                         match &event.event {
                             Some(_ev_data) => {
                                 for processor in &processors.event_processors {
-                                    processor.process(&client, event.clone()).await.unwrap_or_else(
+                                    processor.process(client, provider, event.clone()).await.unwrap_or_else(
                                         |op| {
                                             panic!("Failed processing event: {op:?}");
                                         },

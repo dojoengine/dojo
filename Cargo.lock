@@ -2291,9 +2291,11 @@ dependencies = [
  "prisma-client-rust-cli",
  "serde",
  "sha3",
+ "starknet",
  "tokio",
  "tokio-stream",
  "tonic",
+ "url",
 ]
 
 [[package]]
