@@ -1,7 +1,6 @@
 use juniper::{graphql_object, GraphQLObject};
 use juniper_relay_connection::RelayConnectionNode;
 
-
 use super::entity::Entity;
 use super::entity_state::EntityState;
 use super::entity_state_update::EntityStateUpdate;

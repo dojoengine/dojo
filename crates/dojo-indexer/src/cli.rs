@@ -12,8 +12,7 @@ use log::{debug, info, warn};
 use prisma_client_rust::bigdecimal::num_bigint::BigUint;
 use prisma_client_rust::bigdecimal::Num;
 use processors::{BlockProcessor, TransactionProcessor};
-use starknet::providers::jsonrpc::{JsonRpcClient, HttpTransport};
-use starknet::providers::{SequencerGatewayProvider};
+use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 
 use crate::hash::starknet_hash;
 use crate::processors::component_register::ComponentRegistrationProcessor;
@@ -21,7 +20,6 @@ use crate::processors::component_state_update::ComponentStateUpdateProcessor;
 use crate::processors::system_register::SystemRegistrationProcessor;
 use crate::processors::EventProcessor;
 use url::Url;
-
 
 mod processors;
 
@@ -64,9 +62,7 @@ async fn main() -> anyhow::Result<()> {
 
     let stream = stream::ApibaraClient::new(node).await;
 
-    let provider = JsonRpcClient::new(HttpTransport::new(
-        Url::parse(&args.rpc).unwrap(),
-    ));
+    let provider = JsonRpcClient::new(HttpTransport::new(Url::parse(&args.rpc).unwrap()));
 
     let processors = Processors {
         event_processors: vec![
@@ -81,9 +77,11 @@ async fn main() -> anyhow::Result<()> {
     match stream {
         std::result::Result::Ok(s) => {
             println!("Connected");
-            start(s, &client.unwrap(), &provider, &processors, world).await.unwrap_or_else(|error| {
-                panic!("Failed starting: {error:?}");
-            });
+            start(s, &client.unwrap(), &provider, &processors, world).await.unwrap_or_else(
+                |error| {
+                    panic!("Failed starting: {error:?}");
+                },
+            );
         }
         std::result::Result::Err(e) => panic!("Error: {:?}", e),
     }
@@ -157,11 +155,12 @@ async fn start(
                             info!("Received block {}", header.block_number);
 
                             for processor in &processors.block_processors {
-                                processor.process(&client, provider, block.clone()).await.unwrap_or_else(
-                                    |op| {
+                                processor
+                                    .process(&client, provider, block.clone())
+                                    .await
+                                    .unwrap_or_else(|op| {
                                         panic!("Failed processing block: {op:?}");
-                                    },
-                                )
+                                    })
                             }
                         }
                         None => {
@@ -214,11 +213,12 @@ async fn start(
                         match &event.event {
                             Some(_ev_data) => {
                                 for processor in &processors.event_processors {
-                                    processor.process(client, provider, event.clone()).await.unwrap_or_else(
-                                        |op| {
+                                    processor
+                                        .process(client, provider, event.clone())
+                                        .await
+                                        .unwrap_or_else(|op| {
                                             panic!("Failed processing event: {op:?}");
-                                        },
-                                    );
+                                        });
                                 }
                             }
                             None => {

@@ -1,6 +1,5 @@
-use juniper::{GraphQLObject};
-use juniper_relay_connection::{RelayConnectionNode};
-
+use juniper::GraphQLObject;
+use juniper_relay_connection::RelayConnectionNode;
 
 use super::system::System;
 use super::Query;

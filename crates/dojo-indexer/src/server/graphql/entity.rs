@@ -1,6 +1,5 @@
-use juniper::{GraphQLObject};
-use juniper_relay_connection::{RelayConnectionNode};
-
+use juniper::GraphQLObject;
+use juniper_relay_connection::RelayConnectionNode;
 
 use super::component::Component;
 use super::entity_state::EntityState;

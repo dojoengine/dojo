@@ -1,11 +1,7 @@
-use juniper::{GraphQLObject};
-
-
+use juniper::GraphQLObject;
 
 use super::component::Component;
 use super::entity::Entity;
-
-
 
 #[derive(GraphQLObject)]
 pub struct EntityStateUpdate {
