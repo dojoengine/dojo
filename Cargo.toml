@@ -82,6 +82,7 @@ cairo-lang-starknet = { git = "https://github.com/starkware-libs/cairo.git?rev=3
 cairo-lang-syntax-codegen = { git = "https://github.com/starkware-libs/cairo.git?rev=37e3487902acb58c04c6e4e7e9dffc24afcf3680" }
 cairo-lang-syntax = { git = "https://github.com/starkware-libs/cairo.git?rev=37e3487902acb58c04c6e4e7e9dffc24afcf3680" }
 cairo-lang-utils = { git = "https://github.com/starkware-libs/cairo.git?rev=37e3487902acb58c04c6e4e7e9dffc24afcf3680" }
+scarb = { git = "https://github.com/tarrencev/scarb.git", branch = "usercore" }
 
 [patch.'https://github.com/starkware-libs/cairo.git']
 cairo-lang-casm = { git = "https://github.com/starkware-libs/cairo.git?rev=37e3487902acb58c04c6e4e7e9dffc24afcf3680" }
@@ -107,3 +108,6 @@ cairo-lang-starknet = { git = "https://github.com/starkware-libs/cairo.git?rev=3
 cairo-lang-syntax-codegen = { git = "https://github.com/starkware-libs/cairo.git?rev=37e3487902acb58c04c6e4e7e9dffc24afcf3680" }
 cairo-lang-syntax = { git = "https://github.com/starkware-libs/cairo.git?rev=37e3487902acb58c04c6e4e7e9dffc24afcf3680" }
 cairo-lang-utils = { git = "https://github.com/starkware-libs/cairo.git?rev=37e3487902acb58c04c6e4e7e9dffc24afcf3680" }
+
+[patch.'https://github.com/software-mansion/scarb.git']
+scarb = { git = "https://github.com/tarrencev/scarb.git", branch = "usercore" }

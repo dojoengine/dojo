@@ -25,5 +25,5 @@ mod PositionComponent {
 #[test]
 #[available_gas(100000)]
 fn test_position_is_zero() {
-    assert(PositionComponent::is_zero(PositionComponent::Position { x: 1, y: 0 }), 'not zero');
+    assert(PositionComponent::is_zero(0), 'not zero');
 }

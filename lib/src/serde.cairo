@@ -1,4 +1,5 @@
 use array::ArrayTrait;
+use array::SpanTrait;
 use serde::Serde;
 
 impl ArrayU32Serde of Serde::<Array::<u32>> {
@@ -6,7 +7,7 @@ impl ArrayU32Serde of Serde::<Array::<u32>> {
         Serde::<usize>::serialize(ref serialized, input.len());
         serialize_array_u32_helper(ref serialized, ref input);
     }
-    fn deserialize(ref serialized: Array::<felt>) -> Option::<Array::<u32>> {
+    fn deserialize(ref serialized: Span::<felt>) -> Option::<Array::<u32>> {
         let length = Serde::<felt>::deserialize(ref serialized)?;
         let mut arr = ArrayTrait::new();
         deserialize_array_u32_helper(ref serialized, arr, length)
