@@ -36,6 +36,7 @@ impl RelayConnectionNode for System {
 }
 
 impl Query {
+    #[allow(dead_code)]
     async fn system(context: &PrismaClient, id: String) -> Option<System> {
         let system =
             context.system().find_first(vec![system::id::equals(id)]).exec().await.unwrap();
@@ -90,7 +91,6 @@ impl Query {
                                     id: state.entity.clone().unwrap().id,
                                     transaction_hash: state
                                         .entity
-                                        .clone()
                                         .unwrap()
                                         .transaction_hash,
                                     state_updates: vec![],
@@ -120,7 +120,6 @@ impl Query {
                                     state_updates: vec![],
                                     transaction_hash: state_update
                                         .entity
-                                        .clone()
                                         .unwrap()
                                         .transaction_hash,
                                 },

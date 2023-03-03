@@ -66,7 +66,7 @@ impl Query {
                         data: state.data,
                         entity: Entity {
                             id: state.entity.clone().unwrap().id,
-                            transaction_hash: state.entity.clone().unwrap().transaction_hash,
+                            transaction_hash: state.entity.unwrap().transaction_hash,
                             states: vec![],
                             state_updates: vec![],
                         },
@@ -91,14 +91,14 @@ impl Query {
                         transaction_hash: state_update.transaction_hash,
                         entity: Entity {
                             id: state_update.entity.clone().unwrap().id,
-                            transaction_hash: state_update.entity.clone().unwrap().transaction_hash,
+                            transaction_hash: state_update.entity.unwrap().transaction_hash,
                             states: vec![],
                             state_updates: vec![],
                         },
                         component: Component {
-                            id: component.clone().id,
-                            name: component.clone().name,
-                            transaction_hash: component.clone().transaction_hash,
+                            id: component.id.clone(),
+                            name: component.name.clone(),
+                            transaction_hash: component.transaction_hash.clone(),
                             systems: vec![],
                             states: vec![],
                             state_updates: vec![],

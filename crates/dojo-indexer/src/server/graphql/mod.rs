@@ -1,4 +1,5 @@
 pub struct Query;
+#[allow(dead_code)]
 pub struct Mutation;
 
 mod component;

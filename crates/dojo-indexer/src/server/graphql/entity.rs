@@ -31,6 +31,7 @@ impl RelayConnectionNode for Entity {
 }
 
 impl Query {
+    #[allow(dead_code)]
     async fn entity(context: &PrismaClient, id: String) -> Option<Entity> {
         let entity =
             context.entity().find_first(vec![entity::id::equals(id)]).exec().await.unwrap();
@@ -47,14 +48,14 @@ impl Query {
                         data: state.data,
                         entity: Entity {
                             id: state.entity.clone().unwrap().id,
-                            transaction_hash: state.entity.clone().unwrap().transaction_hash,
+                            transaction_hash: state.entity.unwrap().transaction_hash,
                             states: vec![],
                             state_updates: vec![],
                         },
                         component: Component {
                             id: state.component.clone().unwrap().id,
                             name: state.component.clone().unwrap().name,
-                            transaction_hash: state.component.clone().unwrap().transaction_hash,
+                            transaction_hash: state.component.unwrap().transaction_hash,
                             systems: vec![],
                             states: vec![],
                             state_updates: vec![],
@@ -70,7 +71,7 @@ impl Query {
                         data: state_update.data,
                         entity: Entity {
                             id: state_update.entity.clone().unwrap().id,
-                            transaction_hash: state_update.entity.clone().unwrap().transaction_hash,
+                            transaction_hash: state_update.entity.unwrap().transaction_hash,
                             states: vec![],
                             state_updates: vec![],
                         },
@@ -79,7 +80,6 @@ impl Query {
                             name: state_update.component.clone().unwrap().name,
                             transaction_hash: state_update
                                 .component
-                                .clone()
                                 .unwrap()
                                 .transaction_hash,
                             systems: vec![],

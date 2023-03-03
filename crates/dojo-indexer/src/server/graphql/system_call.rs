@@ -29,6 +29,7 @@ impl RelayConnectionNode for SystemCall {
 }
 
 impl Query {
+    #[allow(dead_code)]
     async fn system_call(context: &PrismaClient, id: i32) -> Option<SystemCall> {
         let call = context
             .system_call()
@@ -45,7 +46,7 @@ impl Query {
                 system: System {
                     id: call.system.clone().unwrap().id,
                     name: call.system.clone().unwrap().name,
-                    transaction_hash: call.system.clone().unwrap().transaction_hash,
+                    transaction_hash: call.system.unwrap().transaction_hash,
                     calls: vec![],
                     query_components: vec![],
                 },
