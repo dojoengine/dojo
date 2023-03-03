@@ -60,7 +60,7 @@ mod PositionComponent {
             serde::Serde::<felt>::serialize(ref serialized, input.x);
             serde::Serde::<felt>::serialize(ref serialized, input.y);
         }
-        fn deserialize(ref serialized: Array::<felt>) -> Option::<Position> {
+        fn deserialize(ref serialized: Span::<felt>) -> Option::<Position> {
             Option::Some(
                 Position {
                     x: serde::Serde::<felt>::deserialize(ref serialized)?,
