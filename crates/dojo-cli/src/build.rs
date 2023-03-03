@@ -1,25 +1,25 @@
-use std::env::current_dir;
+use std::env::{self, current_dir};
 use std::path::PathBuf;
 
-use cairo_lang_compiler::db::RootDatabase;
-use cairo_lang_compiler::project::get_main_crate_ids_from_project;
-use cairo_lang_compiler::CompilerConfig;
-use cairo_lang_starknet::contract::find_contracts;
-use cairo_lang_starknet::contract_class::compile_prepared_db;
+use anyhow::Result;
+use camino::Utf8PathBuf;
 use clap::Args;
-use dojo_lang::db::DojoRootDatabaseBuilderEx;
-use dojo_project::ProjectConfig;
+use dojo_lang::compiler::DojoCompiler;
+use scarb::compiler::CompilerRepository;
+use scarb::core::Config;
+use scarb::ops;
+use scarb::ui::Verbosity;
 
 #[derive(Args, Debug)]
 pub struct BuildArgs {
     #[clap(help = "Source directory")]
-    path: Option<PathBuf>,
+    path: Option<Utf8PathBuf>,
     /// The output file name (default: stdout).
     #[clap(help = "Output directory")]
     out_dir: Option<PathBuf>,
 }
 
-pub fn run(args: BuildArgs) {
+pub fn run(args: BuildArgs) -> Result<()> {
     let source_dir = match args.path {
         Some(path) => {
             if path.is_absolute() {
@@ -27,10 +27,10 @@ pub fn run(args: BuildArgs) {
             } else {
                 let mut current_path = current_dir().unwrap();
                 current_path.push(path);
-                current_path
+                Utf8PathBuf::from_path_buf(current_path).unwrap()
             }
         }
-        None => current_dir().unwrap(),
+        None => Utf8PathBuf::from_path_buf(current_dir().unwrap()).unwrap(),
     };
     let target_dir = match args.out_dir {
         Some(path) => {
@@ -51,21 +51,19 @@ pub fn run(args: BuildArgs) {
 
     println!("\n\nWriting files to dir: {target_dir:#?}");
 
-    let config = ProjectConfig::from_directory(&source_dir).unwrap_or_else(|error| {
-        panic!("Problem parsing project config: {:?}", error);
+    let mut compilers = CompilerRepository::empty();
+    compilers.add(Box::new(DojoCompiler)).unwrap();
+
+    let config = Config::builder(source_dir)
+        .ui_verbosity(Verbosity::Verbose)
+        .log_filter_directive(env::var_os("SCARB_LOG"))
+        .compilers(compilers)
+        .build()
+        .unwrap();
+
+    let ws = ops::read_workspace(config.manifest_path(), &config).unwrap_or_else(|err| {
+        eprintln!("error: {}", err);
+        std::process::exit(1);
     });
-
-    let db = &mut RootDatabase::builder().with_dojo_config(config.clone()).build().unwrap_or_else(
-        |error| {
-            panic!("Problem creating language database: {:?}", error);
-        },
-    );
-    let main_crate_ids = get_main_crate_ids_from_project(db, &config.into());
-
-    // TODO: Error handling
-    let contracts = find_contracts(db, &main_crate_ids);
-    let contracts = contracts.iter().collect::<Vec<_>>();
-    let classes = compile_prepared_db(db, &contracts, CompilerConfig::default());
-
-    println!("COMPILE TEST: {:#?}", classes);
+    ops::compile(&ws)
 }

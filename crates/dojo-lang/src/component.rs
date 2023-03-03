@@ -179,7 +179,7 @@ impl Component {
                     fn serialize(ref serialized: Array::<felt>, input: $type_name$) {
                         $serialize$
                     }
-                    fn deserialize(ref serialized: Array::<felt>) -> Option::<$type_name$> {
+                    fn deserialize(ref serialized: Span::<felt>) -> Option::<$type_name$> {
                         Option::Some(
                             $type_name$ {
                                 $deserialize$

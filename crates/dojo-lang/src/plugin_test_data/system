@@ -70,7 +70,7 @@ mod PositionComponent {
             serde::Serde::<felt>::serialize(ref serialized, input.x);
             serde::Serde::<felt>::serialize(ref serialized, input.y);
         }
-        fn deserialize(ref serialized: Array::<felt>) -> Option::<Position> {
+        fn deserialize(ref serialized: Span::<felt>) -> Option::<Position> {
             Option::Some(
                 Position {
                     x: serde::Serde::<felt>::deserialize(ref serialized)?,
@@ -139,7 +139,7 @@ mod HealthComponent {
         fn serialize(ref serialized: Array::<felt>, input: Health) {
             serde::Serde::<felt>::serialize(ref serialized, input.hp);
         }
-        fn deserialize(ref serialized: Array::<felt>) -> Option::<Health> {
+        fn deserialize(ref serialized: Span::<felt>) -> Option::<Health> {
             Option::Some(Health { hp: serde::Serde::<felt>::deserialize(ref serialized)?,  })
         }
     }
