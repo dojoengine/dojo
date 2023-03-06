@@ -84,6 +84,7 @@ impl System {
                 "
                 #[contract]
                 mod {name} {{
+                    use dojo::world;
                     $body$
                 }}
                 ",

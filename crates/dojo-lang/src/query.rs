@@ -61,9 +61,8 @@ impl Query {
                         );
 
                         self.rewrite_nodes.push(RewriteNode::interpolate_patched(
-                            "let $var_prefix$_ids = \
-                             world::IWorldDispatcher::lookup(world_address, \
-                             $component_address$);\n",
+                            "let $var_prefix$_ids = world::IWorldDispatcher { contract_address: \
+                             world_address }.entities($component_address$);\n",
                             HashMap::from([
                                 ("var_prefix".to_string(), RewriteNode::Text(var_prefix)),
                                 ("component_address".to_string(), RewriteNode::Text(component_id)),

@@ -83,6 +83,7 @@ pub fn update_crate_roots_from_metadata(
             let package_id = SmolStr::from(package_metadata.name.clone());
             let src_path = package_metadata.root.clone().join("src");
             if src_path.exists() {
+                println!("Adding crate root: {} {}", package_id, src_path);
                 let crate_id = db.intern_crate(CrateLongId(package_id));
                 let root = Directory(src_path.into());
                 db.set_crate_root(crate_id, Some(root));

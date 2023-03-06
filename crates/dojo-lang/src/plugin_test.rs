@@ -1,7 +1,11 @@
+use std::env::current_dir;
+
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_compiler::diagnostics::get_diagnostics_as_string;
 use cairo_lang_defs::db::DefsGroup;
 use cairo_lang_defs::plugin::{MacroPlugin, PluginGeneratedFile, PluginResult};
+use cairo_lang_filesystem::db::{FilesGroup, FilesGroupEx};
+use cairo_lang_filesystem::ids::{CrateLongId, Directory};
 use cairo_lang_formatter::format_string;
 use cairo_lang_parser::db::ParserGroup;
 use cairo_lang_semantic::test_utils::setup_test_module;
@@ -31,6 +35,13 @@ impl TestFileRunner for ExpandContractTestRunner {
 
         let file_id = self.db.module_main_file(test_module.module_id).unwrap();
         let syntax_file = self.db.file_syntax(file_id).unwrap();
+
+        let mut current_path = current_dir().unwrap();
+        current_path.push("../../lib/src");
+
+        let crate_id = self.db.intern_crate(CrateLongId("dojo".into()));
+        let root = Directory(current_path);
+        self.db.set_crate_root(crate_id, Some(root));
 
         let plugin = DojoPlugin { world_config: WorldConfig::default() };
         let mut generated_items: Vec<String> = Vec::new();

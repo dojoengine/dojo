@@ -9,7 +9,7 @@ trait IProxy {
 
 #[abi]
 trait IWorld {
-    fn entities(component: starknet::ContractAddress) -> felt;
+    fn entities(component: starknet::ContractAddress) -> Array<felt>;
 }
 
 #[contract]
