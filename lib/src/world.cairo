@@ -12,6 +12,16 @@ trait IWorld {
     fn entities(component: starknet::ContractAddress) -> Array<felt>;
 }
 
+trait IComponent<T> {
+    fn initialize();
+    fn set(entity_id: felt, value: T);
+    fn get(entity_id: felt) -> T;
+}
+
+trait ISystem<T> {
+    fn execute(calldata: T);
+}
+
 #[contract]
 mod World {
     use array::ArrayTrait;
