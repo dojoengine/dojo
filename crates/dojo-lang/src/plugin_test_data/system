@@ -25,11 +25,11 @@ mod HealthComponent {
 
 #[system]
 mod MoveSystem {
-    fn execute_inner(query: Query::<(Position, Option::<Health>)>) {
+    fn execute_inner(query: Query<(Position, Option::<Health>)>) {
         return ();
     }
 
-    fn execute(query: Query::<(Position, Option::<Health>)>) {
+    fn execute(query: Query<(Position, Option::<Health>)>) {
         return ();
     }
 }
@@ -170,7 +170,7 @@ mod MoveSystem {
     use dojo::world::IWorldDispatcher;
     use dojo::world::IWorldDispatcherTrait;
 
-    fn execute_inner(query: Query::<(Position, Option::<Health>)>) {
+    fn execute_inner(query: Query<(Position, Option::<Health>)>) {
         return ();
     }
     struct Storage {}
@@ -196,5 +196,5 @@ mod MoveSystem {
 //! > expected_diagnostics
 error: Plugin diagnostic: Type not found.
  --> MoveSystem:7:33
-        fn execute_inner(query: Query::<(Position, Option::<Health>)>) {
+        fn execute_inner(query: Query<(Position, Option::<Health>)>) {
                                 ^***^
