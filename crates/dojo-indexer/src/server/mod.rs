@@ -17,7 +17,7 @@ impl juniper::Context for PrismaClient {}
 
 type Schema =
     RootNode<'static, Query, EmptyMutation<PrismaClient>, EmptySubscription<PrismaClient>>;
-    
+
 #[allow(dead_code)]
 fn schema() -> Schema {
     Schema::new(

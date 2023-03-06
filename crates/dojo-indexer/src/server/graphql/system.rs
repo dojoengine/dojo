@@ -89,10 +89,7 @@ impl Query {
                                 },
                                 entity: Entity {
                                     id: state.entity.clone().unwrap().id,
-                                    transaction_hash: state
-                                        .entity
-                                        .unwrap()
-                                        .transaction_hash,
+                                    transaction_hash: state.entity.unwrap().transaction_hash,
                                     state_updates: vec![],
                                     states: vec![],
                                 },
@@ -118,10 +115,7 @@ impl Query {
                                     id: state_update.entity.clone().unwrap().id,
                                     states: vec![],
                                     state_updates: vec![],
-                                    transaction_hash: state_update
-                                        .entity
-                                        .unwrap()
-                                        .transaction_hash,
+                                    transaction_hash: state_update.entity.unwrap().transaction_hash,
                                 },
                             })
                             .collect(),

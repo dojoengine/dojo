@@ -36,77 +36,78 @@ impl RelayConnectionNode for Component {
 #[graphql_object(context = PrismaClient)]
 impl Query {
     async fn component(context: &PrismaClient, id: String) -> Option<Component> {
-        let component =
-            context.component().find_first(vec![component::id::equals(id)]).exec().await.unwrap();
+        let component = context
+            .component()
+            .find_first(vec![component::id::equals(id)])
+            .exec()
+            .await
+            .unwrap()?;
 
-        match component {
-            Some(component) => Some(Component {
-                id: component.clone().id,
-                name: component.clone().name,
-                transaction_hash: component.clone().transaction_hash,
-                systems: component
-                    .clone()
-                    .systems
-                    .unwrap()
-                    .into_iter()
-                    .map(|system| System {
-                        id: system.id,
-                        name: system.name,
-                        transaction_hash: system.transaction_hash,
-                        query_components: vec![],
-                        calls: vec![],
-                    })
-                    .collect(),
-                states: component
-                    .clone()
-                    .states
-                    .unwrap()
-                    .into_iter()
-                    .map(|state| EntityState {
-                        data: state.data,
-                        entity: Entity {
-                            id: state.entity.clone().unwrap().id,
-                            transaction_hash: state.entity.unwrap().transaction_hash,
-                            states: vec![],
-                            state_updates: vec![],
-                        },
-                        component: Component {
-                            id: component.clone().id,
-                            name: component.clone().name,
-                            transaction_hash: component.clone().transaction_hash,
-                            systems: vec![],
-                            states: vec![],
-                            state_updates: vec![],
-                        },
-                    })
-                    .collect(),
-                state_updates: component
-                    .clone()
-                    .state_updates
-                    .unwrap()
-                    .into_iter()
-                    .map(|state_update| EntityStateUpdate {
-                        id: state_update.id,
-                        data: state_update.data,
-                        transaction_hash: state_update.transaction_hash,
-                        entity: Entity {
-                            id: state_update.entity.clone().unwrap().id,
-                            transaction_hash: state_update.entity.unwrap().transaction_hash,
-                            states: vec![],
-                            state_updates: vec![],
-                        },
-                        component: Component {
-                            id: component.id.clone(),
-                            name: component.name.clone(),
-                            transaction_hash: component.transaction_hash.clone(),
-                            systems: vec![],
-                            states: vec![],
-                            state_updates: vec![],
-                        },
-                    })
-                    .collect(),
-            }),
-            None => None,
-        }
+        Some(Component {
+            id: component.clone().id,
+            name: component.clone().name,
+            transaction_hash: component.clone().transaction_hash,
+            systems: component
+                .clone()
+                .systems
+                .unwrap()
+                .into_iter()
+                .map(|system| System {
+                    id: system.id,
+                    name: system.name,
+                    transaction_hash: system.transaction_hash,
+                    query_components: vec![],
+                    calls: vec![],
+                })
+                .collect(),
+            states: component
+                .clone()
+                .states
+                .unwrap()
+                .into_iter()
+                .map(|state| EntityState {
+                    data: state.data,
+                    entity: Entity {
+                        id: state.entity.clone().unwrap().id,
+                        transaction_hash: state.entity.unwrap().transaction_hash,
+                        states: vec![],
+                        state_updates: vec![],
+                    },
+                    component: Component {
+                        id: component.clone().id,
+                        name: component.clone().name,
+                        transaction_hash: component.clone().transaction_hash,
+                        systems: vec![],
+                        states: vec![],
+                        state_updates: vec![],
+                    },
+                })
+                .collect(),
+            state_updates: component
+                .clone()
+                .state_updates
+                .unwrap()
+                .into_iter()
+                .map(|state_update| EntityStateUpdate {
+                    id: state_update.id,
+                    data: state_update.data,
+                    transaction_hash: state_update.transaction_hash,
+                    entity: Entity {
+                        id: state_update.entity.clone().unwrap().id,
+                        transaction_hash: state_update.entity.unwrap().transaction_hash,
+                        states: vec![],
+                        state_updates: vec![],
+                    },
+                    component: Component {
+                        id: component.id.clone(),
+                        name: component.name.clone(),
+                        transaction_hash: component.transaction_hash.clone(),
+                        systems: vec![],
+                        states: vec![],
+                        state_updates: vec![],
+                    },
+                })
+                .collect(),
+        })
     }
 }

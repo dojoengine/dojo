@@ -78,10 +78,7 @@ impl Query {
                         component: Component {
                             id: state_update.component.clone().unwrap().id,
                             name: state_update.component.clone().unwrap().name,
-                            transaction_hash: state_update
-                                .component
-                                .unwrap()
-                                .transaction_hash,
+                            transaction_hash: state_update.component.unwrap().transaction_hash,
                             systems: vec![],
                             states: vec![],
                             state_updates: vec![],
