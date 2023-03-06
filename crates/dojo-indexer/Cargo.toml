@@ -41,3 +41,7 @@ path = "src/cli.rs"
 [[bin]]
 name = "prisma-cli"
 path = "src/bin/prisma-cli.rs"
+
+[[bin]]
+name = "dojo-server"
+path = "src/server.rs"

@@ -7,10 +7,13 @@ use actix_web::{middleware, App, Error, HttpResponse, HttpServer};
 use juniper::{EmptyMutation, EmptySubscription, RootNode};
 use juniper_actix::{graphql_handler, playground_handler};
 
-use self::graphql::Query;
-use crate::prisma::PrismaClient;
+#[allow(warnings, unused, elided_lifetimes_in_paths, import)]
+mod prisma;
 
 mod graphql;
+
+use prisma::PrismaClient;
+use graphql::Query;
 
 // To make our Database usable by Juniper, we have to implement a marker trait.
 impl juniper::Context for PrismaClient {}
