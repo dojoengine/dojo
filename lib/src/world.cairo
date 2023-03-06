@@ -22,7 +22,6 @@ mod World {
     use starknet::ContractAddressZeroable;
     use dojo::hash::LegacyHashContractAddressUsizePair;
     use dojo::serde::ArrayU32Serde;
-    use dojo::syscalls::deploy;
     use super::IProxyDispatcher;
     use super::IProxyDispatcherTrait;
 
@@ -45,10 +44,10 @@ mod World {
     #[external]
     fn register(class_hash: felt, module_id: felt) {
         let module_id = pedersen(0, module_id);
-        let proxy_class_hash = 420;
-        let module_address = deploy(
-            proxy_class_hash, module_id, ArrayTrait::new(), bool::False(())
-        );
+        let proxy_class_hash = starknet::class_hash_const::<0x420>();
+        let module_address = starknet::syscalls::deploy_syscall(
+            proxy_class_hash, module_id, ArrayTrait::new()
+        ).unwrap_syscall();
         let world_address = get_contract_address();
         IProxyDispatcher { contract_address: module_address }.set_implementation(class_hash);
         IProxyDispatcher { contract_address: module_address }.initialize(world_address);
