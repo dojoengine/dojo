@@ -16,7 +16,7 @@ impl ArrayU32Serde of Serde::<Array::<u32>> {
 
 fn serialize_array_u32_helper(ref serialized: Array::<felt>, ref input: Array::<u32>) {
     // TODO(orizi): Replace with simple call once inlining is supported.
-    match try_fetch_gas() {
+    match gas::get_gas() {
         Option::Some(_) => {},
         Option::None(_) => {
             let mut data = ArrayTrait::new();
@@ -37,7 +37,7 @@ fn deserialize_array_u32_helper(
     ref serialized: Span::<felt>, mut curr_output: Array::<u32>, remaining: felt
 ) -> Option::<Array::<u32>> {
     // TODO(orizi): Replace with simple call once inlining is supported.
-    match try_fetch_gas() {
+    match gas::get_gas() {
         Option::Some(_) => {},
         Option::None(_) => {
             let mut data = ArrayTrait::new();

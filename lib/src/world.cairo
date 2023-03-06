@@ -23,6 +23,8 @@ mod World {
     use dojo::hash::LegacyHashContractAddressUsizePair;
     use dojo::serde::ArrayU32Serde;
     use dojo::syscalls::deploy;
+    use super::IProxyDispatcher;
+    use super::IProxyDispatcherTrait;
 
     struct Storage {
         entity_registry_len: LegacyMap::<starknet::ContractAddress, usize>,
@@ -48,8 +50,8 @@ mod World {
             proxy_class_hash, module_id, ArrayTrait::new(), bool::False(())
         );
         let world_address = get_contract_address();
-        super::IProxyDispatcher::set_implementation(module_address, class_hash);
-        super::IProxyDispatcher::initialize(module_address, world_address);
+        IProxyDispatcher { contract_address: module_address }.set_implementation(class_hash);
+        IProxyDispatcher { contract_address: module_address }.initialize(world_address);
         module_registry::write(module_address, bool::True(()));
         ModuleRegistered(module_address, module_id, class_hash);
     }
@@ -69,7 +71,7 @@ mod World {
         entities_len: usize,
         ref entities: Array::<usize>
     ) {
-        match try_fetch_gas() {
+        match gas::get_gas() {
             Option::Some(_) => {},
             Option::None(_) => {
                 let mut data = ArrayTrait::new();
