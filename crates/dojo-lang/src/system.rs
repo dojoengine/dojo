@@ -85,6 +85,9 @@ impl System {
                 #[contract]
                 mod {name} {{
                     use dojo::world;
+                    use dojo::world::IWorldDispatcher;
+                    use dojo::world::IWorldDispatcherTrait;
+
                     $body$
                 }}
                 ",
