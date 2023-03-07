@@ -1,7 +1,9 @@
 [package]
 name = "dojo-indexer"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+license-file.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -42,6 +44,3 @@ path = "src/cli.rs"
 name = "prisma-cli"
 path = "src/bin/prisma-cli.rs"
 
-[[bin]]
-name = "dojo-server"
-path = "src/server.rs"

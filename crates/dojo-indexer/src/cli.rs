@@ -25,7 +25,7 @@ mod processors;
 
 #[allow(warnings, unused, elided_lifetimes_in_paths)]
 mod prisma;
-
+mod graphql;
 mod hash;
 mod server;
 
