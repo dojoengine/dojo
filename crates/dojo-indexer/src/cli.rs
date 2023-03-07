@@ -1,34 +1,28 @@
-use std::cmp::Ordering;
-use std::error::Error;
 use std::vec;
 
 use clap::Parser;
-use futures::{join, StreamExt};
-mod stream;
-use apibara_client_protos::pb::starknet::v1alpha2::{
-    DeployedContractFilter, EventFilter, FieldElement, Filter, HeaderFilter, StateUpdateFilter,
-};
-use log::{debug, info, warn};
+use futures::join;
 use prisma_client_rust::bigdecimal::num_bigint::BigUint;
 use prisma_client_rust::bigdecimal::Num;
-use processors::{BlockProcessor, TransactionProcessor};
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 use url::Url;
 
-use crate::hash::starknet_hash;
+use crate::indexer::{start_indexer, Processors};
 use crate::processors::component_register::ComponentRegistrationProcessor;
 use crate::processors::component_state_update::ComponentStateUpdateProcessor;
 use crate::processors::system_register::SystemRegistrationProcessor;
-use crate::processors::EventProcessor;
 use crate::server::start_server;
 
 mod processors;
 
 mod graphql;
 mod hash;
+mod indexer;
 #[allow(warnings, unused, elided_lifetimes_in_paths)]
 mod prisma;
 mod server;
+
+mod stream;
 
 /// Command line args parser.
 /// Exits with 0/1 if the input is formatted correctly/incorrectly.
@@ -41,12 +35,6 @@ struct Args {
     node: String,
     /// The rpc endpoint to use
     rpc: String,
-}
-
-struct Processors {
-    event_processors: Vec<Box<dyn EventProcessor>>,
-    block_processors: Vec<Box<dyn BlockProcessor>>,
-    transaction_processors: Vec<Box<dyn TransactionProcessor>>,
 }
 
 #[tokio::main]
@@ -78,161 +66,10 @@ async fn main() -> anyhow::Result<()> {
         std::result::Result::Ok(s) => {
             println!("Connected");
             let graphql = start_server();
-            let indexer = start(s, &client, &provider, &processors, world);
+            let indexer = start_indexer(s, &client, &provider, &processors, world);
             let _res = join!(graphql, indexer);
         }
         std::result::Result::Err(e) => panic!("Error: {:?}", e),
-    }
-
-    Ok(())
-}
-
-fn filter_by_processors(filter: &mut Filter, processors: &Processors) {
-    for processor in &processors.event_processors {
-        let bytes: [u8; 32] =
-            starknet_hash(processor.get_event_key().as_bytes()).to_bytes_be().try_into().unwrap();
-
-        filter.events.push(EventFilter {
-            keys: vec![FieldElement::from_bytes(&bytes)],
-            ..Default::default()
-        })
-    }
-}
-
-async fn start(
-    mut stream: stream::ApibaraClient,
-    client: &prisma::PrismaClient,
-    provider: &JsonRpcClient<HttpTransport>,
-    processors: &Processors,
-    world: BigUint,
-) -> Result<(), Box<dyn Error>> {
-    let mut filter = Filter {
-        header: Some(HeaderFilter { weak: true }),
-        transactions: vec![],
-        events: vec![],
-        messages: vec![],
-        state_update: Some(StateUpdateFilter {
-            deployed_contracts: vec![DeployedContractFilter {
-                // we just want to know when our world contract is deployed
-                contract_address: Some(FieldElement::from_bytes(
-                    &world.to_bytes_be().try_into().unwrap(),
-                )),
-                ..Default::default()
-            }],
-            ..Default::default()
-        }),
-    };
-
-    // filter requested data by the events we process
-    filter_by_processors(&mut filter, processors);
-
-    let data_stream = stream
-        .request_data({
-            Filter {
-                header: Some(HeaderFilter { weak: false }),
-                transactions: vec![],
-                events: vec![],
-                messages: vec![],
-                state_update: None,
-            }
-        })
-        .await?;
-    futures::pin_mut!(data_stream);
-
-    // dont process anything until our world is deployed
-    let mut world_deployed = false;
-    while let Some(mess) = data_stream.next().await {
-        match mess {
-            Ok(Some(mess)) => {
-                debug!("Received message");
-                let data = &mess.data;
-
-                for block in data {
-                    match &block.header {
-                        Some(header) => {
-                            info!("Received block {}", header.block_number);
-
-                            for processor in &processors.block_processors {
-                                processor
-                                    .process(client, provider, block.clone())
-                                    .await
-                                    .unwrap_or_else(|op| {
-                                        panic!("Failed processing block: {op:?}");
-                                    })
-                            }
-                        }
-                        None => {
-                            warn!("Received block without header");
-                        }
-                    }
-
-                    // wait for our world contract to be deployed
-                    if !world_deployed {
-                        let state = block.state_update.as_ref();
-                        if state.is_some() && state.unwrap().state_diff.is_some() {
-                            let state_diff = state.unwrap().state_diff.as_ref().unwrap();
-                            for contract in state_diff.deployed_contracts.iter() {
-                                if Ordering::is_eq(
-                                    contract
-                                        .contract_address
-                                        .as_ref()
-                                        .unwrap()
-                                        .to_biguint()
-                                        .cmp(&world),
-                                ) {
-                                    world_deployed = true;
-                                    break;
-                                }
-                            }
-                        }
-
-                        if !world_deployed {
-                            continue;
-                        }
-                    }
-
-                    for transaction in &block.transactions {
-                        match &transaction.receipt {
-                            Some(_tx) => {
-                                for processor in &processors.transaction_processors {
-                                    processor
-                                        .process(client, provider, transaction.clone())
-                                        .await
-                                        .unwrap_or_else(|op| {
-                                            panic!("Failed processing transaction: {op:?}");
-                                        })
-                                }
-                            }
-                            None => {}
-                        }
-                    }
-
-                    for event in &block.events {
-                        match &event.event {
-                            Some(_ev_data) => {
-                                for processor in &processors.event_processors {
-                                    processor
-                                        .process(client, provider, event.clone())
-                                        .await
-                                        .unwrap_or_else(|op| {
-                                            panic!("Failed processing event: {op:?}");
-                                        });
-                                }
-                            }
-                            None => {
-                                warn!("Received event without key");
-                            }
-                        }
-                    }
-                }
-            }
-            Ok(None) => {
-                continue;
-            }
-            Err(e) => {
-                warn!("Error: {:?}", e);
-            }
-        }
     }
 
     Ok(())
