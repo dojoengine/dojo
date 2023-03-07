@@ -79,7 +79,7 @@ async fn main() -> anyhow::Result<()> {
             println!("Connected");
             let graphql = start_server();
             let indexer = start(s, &client, &provider, &processors, world);
-            join!(graphql, indexer);
+            let _res = join!(graphql, indexer);
         }
         std::result::Result::Err(e) => panic!("Error: {:?}", e),
     }
