@@ -12,13 +12,13 @@ trait IWorld {
     fn entities(component: starknet::ContractAddress) -> Array<felt>;
 }
 
-trait IComponent<T> {
+trait ComponentTrait<T> {
     fn initialize();
     fn set(entity_id: felt, value: T);
     fn get(entity_id: felt) -> T;
 }
 
-trait ISystem<T> {
+trait SystemTrait<T> {
     fn execute(calldata: T);
 }
 

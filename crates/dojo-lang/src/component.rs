@@ -8,9 +8,9 @@ use cairo_lang_filesystem::ids::CrateId;
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::patcher::{PatchBuilder, RewriteNode};
 use cairo_lang_semantic::plugin::DynPluginAuxData;
+use cairo_lang_syntax::node::ast::MaybeModuleBody;
 use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
-use indoc::formatdoc;
+use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use smol_str::SmolStr;
 
 use crate::plugin::DojoAuxData;
@@ -18,12 +18,6 @@ use crate::plugin::DojoAuxData;
 #[cfg(test)]
 #[path = "component_test.rs"]
 mod test;
-
-pub struct Component {
-    pub name: SmolStr,
-    pub rewrite_nodes: Vec<RewriteNode>,
-    pub diagnostics: Vec<PluginDiagnostic>,
-}
 
 /// Represents a declaration of a component.
 #[derive(Debug, Clone)]
@@ -33,51 +27,40 @@ pub struct ComponentDeclaration {
     pub name: SmolStr,
 }
 
-impl Component {
-    pub fn from_module_body(db: &dyn SyntaxGroup, name: SmolStr, body: ast::ModuleBody) -> Self {
-        let mut component = Component { rewrite_nodes: vec![], name, diagnostics: vec![] };
+pub fn handle_generated_component(
+    db: &dyn SyntaxGroup,
+    module_ast: ast::ItemModule,
+    impls: Vec<RewriteNode>,
+) -> PluginResult {
+    let name = module_ast.name(db).text(db);
 
-        let mut matched_struct = false;
-        for item in body.items(db).elements(db) {
-            match &item {
-                ast::Item::Struct(item_struct) => {
-                    if matched_struct {
-                        component.diagnostics.push(PluginDiagnostic {
-                            message: "Only one struct per module is supported.".to_string(),
-                            stable_ptr: item_struct.stable_ptr().untyped(),
-                        });
-                        continue;
-                    }
-
-                    component.handle_component_struct(db, item_struct.clone());
-                    matched_struct = true;
-                }
-                ast::Item::FreeFunction(item_function) => {
-                    component.handle_component_functions(db, item_function.clone());
-                }
-                _ => (),
-            }
-        }
-
-        component
-    }
-
-    pub fn result(self, db: &dyn SyntaxGroup) -> PluginResult {
-        let name = self.name;
+    if let MaybeModuleBody::Some(body) = module_ast.body(db) {
         let mut builder = PatchBuilder::new(db);
         builder.add_modified(RewriteNode::interpolate_patched(
-            &formatdoc!(
-                "
+            "
                 #[contract]
-                mod {name} {{
+                mod $name$Component {
                     $body$
-                }}
-                ",
-            ),
-            HashMap::from([("body".to_string(), RewriteNode::new_modified(self.rewrite_nodes))]),
+                    $members$
+                }
+            ",
+            HashMap::from([
+                ("name".to_string(), RewriteNode::Text(name.clone().into())),
+                ("members".to_string(), RewriteNode::new_modified(impls)),
+                (
+                    "body".to_string(),
+                    RewriteNode::new_modified(
+                        body.items(db)
+                            .elements(db)
+                            .iter()
+                            .map(|item| RewriteNode::Copied(item.as_syntax_node()))
+                            .collect::<Vec<_>>(),
+                    ),
+                ),
+            ]),
         ));
 
-        PluginResult {
+        return PluginResult {
             code: Some(PluginGeneratedFile {
                 name: name.clone(),
                 content: builder.code,
@@ -87,176 +70,234 @@ impl Component {
                     systems: vec![],
                 })),
             }),
-            diagnostics: self.diagnostics,
+            diagnostics: vec![],
             remove_original_item: true,
+        };
+    }
+
+    PluginResult {
+        diagnostics: vec![PluginDiagnostic {
+            message: "Component must have a body".to_string(),
+            stable_ptr: module_ast.as_syntax_node().stable_ptr(),
+        }],
+        ..PluginResult::default()
+    }
+}
+
+pub fn handle_component_impl(db: &dyn SyntaxGroup, body: ast::ImplBody) -> Vec<RewriteNode> {
+    let mut rewrite_nodes = vec![];
+    for item in body.items(db).elements(db) {
+        if let ast::Item::FreeFunction(item_function) = &item {
+            let declaration = item_function.declaration(db);
+
+            let mut func_declaration = RewriteNode::from_ast(&declaration);
+            func_declaration
+                .modify_child(db, ast::FunctionDeclaration::INDEX_SIGNATURE)
+                .modify_child(db, ast::FunctionSignature::INDEX_PARAMETERS)
+                .modify(db)
+                .children
+                .as_mut()
+                .unwrap()
+                .splice(0..1, vec![RewriteNode::Text("entity_id: felt".to_string())]);
+
+            rewrite_nodes.push(RewriteNode::interpolate_patched(
+                "
+                                    #[view]
+                                    $func_decl$ {
+                                        let self = state::read(entity_id);
+                                        $body$
+                                    }
+                                    ",
+                HashMap::from([
+                    ("func_decl".to_string(), func_declaration),
+                    (
+                        "body".to_string(),
+                        RewriteNode::new_trimmed(
+                            item_function.body(db).statements(db).as_syntax_node(),
+                        ),
+                    ),
+                ]),
+            ));
         }
     }
 
-    fn handle_component_struct(&mut self, db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) {
-        self.rewrite_nodes.push(RewriteNode::Copied(struct_ast.as_syntax_node()));
+    rewrite_nodes
+}
 
-        self.rewrite_nodes.push(RewriteNode::interpolate_patched(
-            "
-                    struct Storage {
-                        state: LegacyMap::<felt, $type_name$>,
-                    }
-    
-                    // Initialize $type_name$Component.
-                    #[external]
-                    fn initialize() {
-                    }
-    
-                    // Set the state of an entity.
-                    #[external]
-                    fn set(entity_id: felt, value: $type_name$) {
-                        state::write(entity_id, value);
-                    }
-    
-                    // Get the state of an entity.
-                    #[view]
-                    fn get(entity_id: felt) -> $type_name$ {
-                        return state::read(entity_id);
-                    }
-                    ",
-            HashMap::from([(
+pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> PluginResult {
+    let mut rewrite_nodes = vec![];
+    let mut trait_nodes = vec![];
+
+    rewrite_nodes.push(RewriteNode::interpolate_patched(
+        "
+            struct Storage {
+                state: LegacyMap::<felt, $type_name$>,
+            }
+
+            // Initialize $type_name$.
+            #[external]
+            fn initialize() {
+            }
+
+            // Set the state of an entity.
+            #[external]
+            fn set(entity_id: felt, value: $type_name$) {
+                state::write(entity_id, value);
+            }
+
+            // Get the state of an entity.
+            #[view]
+            fn get(entity_id: felt) -> $type_name$ {
+                return state::read(entity_id);
+            }
+        ",
+        HashMap::from([
+            (
                 "type_name".to_string(),
                 RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
+            ),
+            ("members".to_string(), RewriteNode::Copied(struct_ast.members(db).as_syntax_node())),
+        ]),
+    ));
+
+    let mut serialize = vec![];
+    let mut deserialize = vec![];
+    let mut read = vec![];
+    let mut write = vec![];
+    struct_ast.members(db).elements(db).iter().enumerate().for_each(|(i, member)| {
+        serialize.push(RewriteNode::interpolate_patched(
+            "serde::Serde::<felt>::serialize(ref serialized, input.$key$);",
+            HashMap::from([(
+                "key".to_string(),
+                RewriteNode::new_trimmed(member.name(db).as_syntax_node()),
             )]),
         ));
 
-        let mut serialize = vec![];
-        let mut deserialize = vec![];
-        let mut read = vec![];
-        let mut write = vec![];
-        struct_ast.members(db).elements(db).iter().enumerate().for_each(|(i, member)| {
-            serialize.push(RewriteNode::interpolate_patched(
-                "serde::Serde::<felt>::serialize(ref serialized, input.$key$);",
-                HashMap::from([(
-                    "key".to_string(),
-                    RewriteNode::new_trimmed(member.name(db).as_syntax_node()),
-                )]),
-            ));
+        deserialize.push(RewriteNode::interpolate_patched(
+            "$key$: serde::Serde::<felt>::deserialize(ref serialized)?,",
+            HashMap::from([(
+                "key".to_string(),
+                RewriteNode::new_trimmed(member.name(db).as_syntax_node()),
+            )]),
+        ));
 
-            deserialize.push(RewriteNode::interpolate_patched(
-                "$key$: serde::Serde::<felt>::deserialize(ref serialized)?,",
-                HashMap::from([(
-                    "key".to_string(),
-                    RewriteNode::new_trimmed(member.name(db).as_syntax_node()),
-                )]),
-            ));
+        read.push(RewriteNode::interpolate_patched(
+            "$key$: starknet::storage_read_syscall(
+                address_domain, starknet::storage_address_from_base_and_offset(base, $offset$_u8)
+            )?,",
+            HashMap::from([
+                ("key".to_string(), RewriteNode::new_trimmed(member.name(db).as_syntax_node())),
+                ("offset".to_string(), RewriteNode::Text(i.to_string())),
+            ]),
+        ));
 
-            read.push(RewriteNode::interpolate_patched(
-                "$key$: starknet::storage_read_syscall(
+        let final_token =
+            if i != struct_ast.members(db).elements(db).len() - 1 { "?;" } else { "" };
+        write.push(RewriteNode::interpolate_patched(
+            format!(
+                "
+                starknet::storage_write_syscall(
                     address_domain, starknet::storage_address_from_base_and_offset(base, \
-                 $offset$_u8)
-                )?,",
-                HashMap::from([
-                    ("key".to_string(), RewriteNode::new_trimmed(member.name(db).as_syntax_node())),
-                    ("offset".to_string(), RewriteNode::Text(i.to_string())),
-                ]),
-            ));
-
-            let final_token =
-                if i != struct_ast.members(db).elements(db).len() - 1 { "?;" } else { "" };
-            write.push(RewriteNode::interpolate_patched(
-                format!(
-                    "
-                    starknet::storage_write_syscall(
-                        address_domain, starknet::storage_address_from_base_and_offset(base, \
-                     $offset$_u8), value.$key$){final_token}"
-                )
-                .as_str(),
-                HashMap::from([
-                    ("key".to_string(), RewriteNode::new_trimmed(member.name(db).as_syntax_node())),
-                    ("offset".to_string(), RewriteNode::Text(i.to_string())),
-                ]),
-            ));
-        });
-
-        self.rewrite_nodes.push(RewriteNode::interpolate_patched(
-            "
-                impl $type_name$Serde of serde::Serde::<$type_name$> {
-                    fn serialize(ref serialized: Array::<felt>, input: $type_name$) {
-                        $serialize$
-                    }
-                    fn deserialize(ref serialized: Span::<felt>) -> Option::<$type_name$> {
-                        Option::Some(
-                            $type_name$ {
-                                $deserialize$
-                            }
-                        )
-                    }
-                }
-            ",
+                 $offset$_u8), value.$key$){final_token}"
+            )
+            .as_str(),
             HashMap::from([
-                (
-                    "type_name".to_string(),
-                    RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
-                ),
-                ("serialize".to_string(), RewriteNode::new_modified(serialize)),
-                ("deserialize".to_string(), RewriteNode::new_modified(deserialize)),
+                ("key".to_string(), RewriteNode::new_trimmed(member.name(db).as_syntax_node())),
+                ("offset".to_string(), RewriteNode::Text(i.to_string())),
             ]),
         ));
+    });
 
-        self.rewrite_nodes.push(RewriteNode::interpolate_patched(
-            "
-                impl StorageAccess$type_name$ of starknet::StorageAccess::<$type_name$> {
-                    fn read(address_domain: felt, base: starknet::StorageBaseAddress) -> \
-             starknet::SyscallResult::<$type_name$> {
-                        Result::Ok(
-                            $type_name$ {
-                                $read$
-                            }
-                        )
-                    }
-                    fn write(
-                        address_domain: felt, base: starknet::StorageBaseAddress, value: \
-             $type_name$
-                    ) -> starknet::SyscallResult::<()> {
-                        $write$
-                    }
+    trait_nodes.push(RewriteNode::interpolate_patched(
+        "
+            impl $type_name$Serde of serde::Serde::<$type_name$> {
+                fn serialize(ref serialized: Array::<felt>, input: $type_name$) {
+                    $serialize$
                 }
-            ",
-            HashMap::from([
-                (
-                    "type_name".to_string(),
-                    RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
-                ),
-                ("read".to_string(), RewriteNode::new_modified(read)),
-                ("write".to_string(), RewriteNode::new_modified(write)),
-            ]),
-        ));
-    }
+                fn deserialize(ref serialized: Span::<felt>) -> Option::<$type_name$> {
+                    Option::Some(
+                        $type_name$ {
+                            $deserialize$
+                        }
+                    )
+                }
+            }
+        ",
+        HashMap::from([
+            (
+                "type_name".to_string(),
+                RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
+            ),
+            ("serialize".to_string(), RewriteNode::new_modified(serialize)),
+            ("deserialize".to_string(), RewriteNode::new_modified(deserialize)),
+        ]),
+    ));
 
-    fn handle_component_functions(&mut self, db: &dyn SyntaxGroup, func: ast::FunctionWithBody) {
-        let declaration = func.declaration(db);
+    trait_nodes.push(RewriteNode::interpolate_patched(
+        "
+            impl StorageAccess$type_name$ of starknet::StorageAccess::<$type_name$> {
+                fn read(address_domain: felt, base: starknet::StorageBaseAddress) -> \
+         starknet::SyscallResult::<$type_name$> {
+                    Result::Ok(
+                        $type_name$ {
+                            $read$
+                        }
+                    )
+                }
+                fn write(
+                    address_domain: felt, base: starknet::StorageBaseAddress, value: $type_name$
+                ) -> starknet::SyscallResult::<()> {
+                    $write$
+                }
+            }
+        ",
+        HashMap::from([
+            (
+                "type_name".to_string(),
+                RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
+            ),
+            ("read".to_string(), RewriteNode::new_modified(read)),
+            ("write".to_string(), RewriteNode::new_modified(write)),
+        ]),
+    ));
 
-        let mut func_declaration = RewriteNode::from_ast(&declaration);
-        func_declaration
-            .modify_child(db, ast::FunctionDeclaration::INDEX_SIGNATURE)
-            .modify_child(db, ast::FunctionSignature::INDEX_PARAMETERS)
-            .modify(db)
-            .children
-            .as_mut()
-            .unwrap()
-            .splice(0..1, vec![RewriteNode::Text("entity_id: felt".to_string())]);
+    let name = struct_ast.name(db).text(db);
+    let mut builder = PatchBuilder::new(db);
+    builder.add_modified(RewriteNode::interpolate_patched(
+        "
+            #[generated_component]
+            mod $type_name$ {
+                #[derive(Copy, Drop)]
+                struct $type_name$ {
+                    $members$
+                }
+                $traits$
+                $body$
+            }
+        ",
+        HashMap::from([
+            (
+                "type_name".to_string(),
+                RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
+            ),
+            ("members".to_string(), RewriteNode::Copied(struct_ast.members(db).as_syntax_node())),
+            ("traits".to_string(), RewriteNode::new_modified(trait_nodes)),
+            ("body".to_string(), RewriteNode::new_modified(rewrite_nodes)),
+        ]),
+    ));
 
-        self.rewrite_nodes.push(RewriteNode::interpolate_patched(
-            "
-                            #[view]
-                            $func_decl$ {
-                                let self = state::read(entity_id);
-                                $body$
-                            }
-                            ",
-            HashMap::from([
-                ("func_decl".to_string(), func_declaration),
-                (
-                    "body".to_string(),
-                    RewriteNode::new_trimmed(func.body(db).statements(db).as_syntax_node()),
-                ),
-            ]),
-        ))
+    PluginResult {
+        code: Some(PluginGeneratedFile {
+            name: name.clone(),
+            content: builder.code,
+            aux_data: DynGeneratedFileAuxData::new(DynPluginAuxData::new(DojoAuxData {
+                patches: builder.patches,
+                components: vec![name],
+                systems: vec![],
+            })),
+        }),
+        diagnostics: vec![],
+        remove_original_item: true,
     }
 }
 
