@@ -62,7 +62,9 @@ impl Query {
 
                         self.rewrite_nodes.push(RewriteNode::interpolate_patched(
                             "let $var_prefix$_ids = IWorldDispatcher { contract_address: \
-                             world_address }.entities(starknet::contract_address_const::<$component_address$>());\n",
+                             world_address \
+                             }.entities(starknet::contract_address_const::<$component_address$>());\
+                             \n",
                             HashMap::from([
                                 ("var_prefix".to_string(), RewriteNode::Text(var_prefix)),
                                 ("component_address".to_string(), RewriteNode::Text(component_id)),
