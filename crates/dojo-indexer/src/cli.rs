@@ -3,7 +3,7 @@ use std::error::Error;
 use std::vec;
 
 use clap::Parser;
-use futures::StreamExt;
+use futures::{join, StreamExt};
 mod stream;
 use apibara_client_protos::pb::starknet::v1alpha2::{
     DeployedContractFilter, EventFilter, FieldElement, Filter, HeaderFilter, StateUpdateFilter,
@@ -20,13 +20,14 @@ use crate::processors::component_register::ComponentRegistrationProcessor;
 use crate::processors::component_state_update::ComponentStateUpdateProcessor;
 use crate::processors::system_register::SystemRegistrationProcessor;
 use crate::processors::EventProcessor;
+use crate::server::start_server;
 
 mod processors;
 
-#[allow(warnings, unused, elided_lifetimes_in_paths)]
-mod prisma;
 mod graphql;
 mod hash;
+#[allow(warnings, unused, elided_lifetimes_in_paths)]
+mod prisma;
 mod server;
 
 /// Command line args parser.
@@ -57,8 +58,7 @@ async fn main() -> anyhow::Result<()> {
     });
     let node = &args.node;
 
-    let client = prisma::PrismaClient::_builder().build().await;
-    assert!(client.is_ok());
+    let client = prisma::PrismaClient::_builder().build().await.unwrap();
 
     let stream = stream::ApibaraClient::new(node).await;
 
@@ -77,11 +77,9 @@ async fn main() -> anyhow::Result<()> {
     match stream {
         std::result::Result::Ok(s) => {
             println!("Connected");
-            start(s, &client.unwrap(), &provider, &processors, world).await.unwrap_or_else(
-                |error| {
-                    panic!("Failed starting: {error:?}");
-                },
-            );
+            let graphql = start_server();
+            let indexer = start(s, &client, &provider, &processors, world);
+            join!(graphql, indexer);
         }
         std::result::Result::Err(e) => panic!("Error: {:?}", e),
     }

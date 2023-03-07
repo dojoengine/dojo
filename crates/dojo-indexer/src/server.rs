@@ -7,8 +7,8 @@ use actix_web::{middleware, App, Error, HttpResponse, HttpServer};
 use juniper::{EmptyMutation, EmptySubscription, RootNode};
 use juniper_actix::{graphql_handler, playground_handler};
 
-use crate::prisma::PrismaClient;
 use crate::graphql::Query;
+use crate::prisma::PrismaClient;
 
 // To make our Database usable by Juniper, we have to implement a marker trait.
 impl juniper::Context for PrismaClient {}
@@ -42,8 +42,7 @@ async fn graphql_route(
     graphql_handler(&schema, &context, req, payload).await
 }
 
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
+pub async fn start_server() -> std::io::Result<()> {
     env::set_var("RUST_LOG", "info");
     env_logger::init();
 
@@ -69,4 +68,9 @@ async fn main() -> std::io::Result<()> {
             .service(web::resource("/playground").route(web::get().to(playground_route)))
     });
     server.bind("127.0.0.1:8080").unwrap().run().await
+}
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    start_server().await
 }
