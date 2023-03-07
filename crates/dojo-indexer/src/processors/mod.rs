@@ -2,6 +2,7 @@ use anyhow::{Error, Result};
 use apibara_client_protos::pb::starknet::v1alpha2::{
     Block, EventWithTransaction, TransactionWithReceipt,
 };
+use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 use tonic::async_trait;
 
 use crate::prisma;
@@ -12,7 +13,12 @@ pub mod system_register;
 
 #[async_trait]
 pub trait IProcessor<T> {
-    async fn process(&self, client: &prisma::PrismaClient, data: T) -> Result<(), Error>;
+    async fn process(
+        &self,
+        client: &prisma::PrismaClient,
+        provider: &JsonRpcClient<HttpTransport>,
+        data: T,
+    ) -> Result<(), Error>;
 }
 
 pub trait EventProcessor: IProcessor<EventWithTransaction> {

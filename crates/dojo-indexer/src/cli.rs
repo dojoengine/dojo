@@ -3,7 +3,7 @@ use std::error::Error;
 use std::vec;
 
 use clap::Parser;
-use futures::StreamExt;
+use futures::{join, StreamExt};
 mod stream;
 use apibara_client_protos::pb::starknet::v1alpha2::{
     DeployedContractFilter, EventFilter, FieldElement, Filter, HeaderFilter, StateUpdateFilter,
@@ -12,18 +12,23 @@ use log::{debug, info, warn};
 use prisma_client_rust::bigdecimal::num_bigint::BigUint;
 use prisma_client_rust::bigdecimal::Num;
 use processors::{BlockProcessor, TransactionProcessor};
+use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
+use url::Url;
 
 use crate::hash::starknet_hash;
 use crate::processors::component_register::ComponentRegistrationProcessor;
 use crate::processors::component_state_update::ComponentStateUpdateProcessor;
 use crate::processors::system_register::SystemRegistrationProcessor;
 use crate::processors::EventProcessor;
+use crate::server::start_server;
+
 mod processors;
 
+mod graphql;
+mod hash;
 #[allow(warnings, unused, elided_lifetimes_in_paths)]
 mod prisma;
-
-mod hash;
+mod server;
 
 /// Command line args parser.
 /// Exits with 0/1 if the input is formatted correctly/incorrectly.
@@ -32,7 +37,9 @@ mod hash;
 struct Args {
     /// The world to index
     world: String,
-    /// The RPC endpoint to use
+    /// The Apibara node to use
+    node: String,
+    /// The rpc endpoint to use
     rpc: String,
 }
 
@@ -49,12 +56,13 @@ async fn main() -> anyhow::Result<()> {
     let world = BigUint::from_str_radix(&args.world[2..], 16).unwrap_or_else(|error| {
         panic!("Failed parsing world address: {error:?}");
     });
-    let rpc = &args.rpc;
+    let node = &args.node;
 
-    let client = prisma::PrismaClient::_builder().build().await;
-    assert!(client.is_ok());
+    let client = prisma::PrismaClient::_builder().build().await.unwrap();
 
-    let stream = stream::ApibaraClient::new(rpc).await;
+    let stream = stream::ApibaraClient::new(node).await;
+
+    let provider = JsonRpcClient::new(HttpTransport::new(Url::parse(&args.rpc).unwrap()));
 
     let processors = Processors {
         event_processors: vec![
@@ -69,9 +77,9 @@ async fn main() -> anyhow::Result<()> {
     match stream {
         std::result::Result::Ok(s) => {
             println!("Connected");
-            start(s, client.unwrap(), &processors, world).await.unwrap_or_else(|error| {
-                panic!("Failed starting: {error:?}");
-            });
+            let graphql = start_server();
+            let indexer = start(s, &client, &provider, &processors, world);
+            let _res = join!(graphql, indexer);
         }
         std::result::Result::Err(e) => panic!("Error: {:?}", e),
     }
@@ -93,7 +101,8 @@ fn filter_by_processors(filter: &mut Filter, processors: &Processors) {
 
 async fn start(
     mut stream: stream::ApibaraClient,
-    client: prisma::PrismaClient,
+    client: &prisma::PrismaClient,
+    provider: &JsonRpcClient<HttpTransport>,
     processors: &Processors,
     world: BigUint,
 ) -> Result<(), Box<dyn Error>> {
@@ -144,11 +153,12 @@ async fn start(
                             info!("Received block {}", header.block_number);
 
                             for processor in &processors.block_processors {
-                                processor.process(&client, block.clone()).await.unwrap_or_else(
-                                    |op| {
+                                processor
+                                    .process(client, provider, block.clone())
+                                    .await
+                                    .unwrap_or_else(|op| {
                                         panic!("Failed processing block: {op:?}");
-                                    },
-                                )
+                                    })
                             }
                         }
                         None => {
@@ -186,7 +196,7 @@ async fn start(
                             Some(_tx) => {
                                 for processor in &processors.transaction_processors {
                                     processor
-                                        .process(&client, transaction.clone())
+                                        .process(client, provider, transaction.clone())
                                         .await
                                         .unwrap_or_else(|op| {
                                             panic!("Failed processing transaction: {op:?}");
@@ -201,11 +211,12 @@ async fn start(
                         match &event.event {
                             Some(_ev_data) => {
                                 for processor in &processors.event_processors {
-                                    processor.process(&client, event.clone()).await.unwrap_or_else(
-                                        |op| {
+                                    processor
+                                        .process(client, provider, event.clone())
+                                        .await
+                                        .unwrap_or_else(|op| {
                                             panic!("Failed processing event: {op:?}");
-                                        },
-                                    );
+                                        });
                                 }
                             }
                             None => {

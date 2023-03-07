@@ -15,6 +15,9 @@ model Component {
     systems System[]
     states EntityState[]
     state_updates EntityStateUpdate[]
+    properties String // json
+    address String
+    class_hash String
     transaction_hash String
 }
 
@@ -30,6 +33,8 @@ model System {
     name String
     calls SystemCall[]
     query_components Component[]
+    address String
+    class_hash String
     transaction_hash String
 }
 

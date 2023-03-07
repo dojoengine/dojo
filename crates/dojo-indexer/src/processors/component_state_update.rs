@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 
 use anyhow::{Error, Ok, Result};
 use apibara_client_protos::pb::starknet::v1alpha2::EventWithTransaction;
+use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 use tonic::async_trait;
 
 use super::{EventProcessor, IProcessor};
@@ -25,6 +26,7 @@ impl IProcessor<EventWithTransaction> for ComponentStateUpdateProcessor {
     async fn process(
         &self,
         client: &prisma::PrismaClient,
+        _provider: &JsonRpcClient<HttpTransport>,
         data: EventWithTransaction,
     ) -> Result<(), Error> {
         let event = &data.event.unwrap();

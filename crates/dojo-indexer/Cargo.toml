@@ -23,6 +23,16 @@ prisma-client-rust = { git = "https://github.com/Brendonovich/prisma-client-rust
 ] }
 serde.workspace = true
 sha3 = "0.10.6"
+juniper = "0.15.11"
+juniper_relay_connection = "0.1.1"
+juniper_actix = "0.4.0"
+actix-web = "4.3.0"
+actix-cors = "0.6.4"
+env_logger.workspace = true
+starknet.workspace = true
+url = "2.2.2"
+
+
 
 [[bin]]
 name = "dojo-indexer"
