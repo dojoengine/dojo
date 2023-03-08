@@ -6,21 +6,15 @@ ExpandContractTestRunner
 //! > cairo_code
 extern type Query<T>;
 
-#[component]
-mod PositionComponent {
-    #[derive(Copy)]
-    struct Position {
-        x: felt,
-        y: felt,
-    }
+#[derive(Component)]
+struct Position {
+    x: felt,
+    y: felt,
 }
 
-#[component]
-mod HealthComponent {
-    #[derive(Copy)]
-    struct Health {
-        hp: felt,
-    }
+#[derive(Component)]
+struct Health {
+    hp: felt, 
 }
 
 #[system]
@@ -35,32 +29,43 @@ mod MoveSystem {
 }
 
 //! > generated_cairo_code
+extern type Query<T>;
+
+#[contract]
+mod MoveSystem {
+    use dojo::world;
+    use dojo::world::IWorldDispatcher;
+    use dojo::world::IWorldDispatcherTrait;
+
+    fn execute_inner(query: Query<(Position, Option::<Health>)>) {
+        return ();
+    }
+    struct Storage {}
+
+    #[external]
+    fn execute() {
+        let world_address = starknet::contract_address_const::<0x0>();
+        let position_ids = IWorldDispatcher {
+            contract_address: world_address
+        }.entities(
+            starknet::contract_address_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>()
+        );
+        let health_ids = IWorldDispatcher {
+            contract_address: world_address
+        }.entities(
+            starknet::contract_address_const::<0x1690bb282da6a011c52715e2188378c769966964ca2332dccad8d7542983bc2>()
+        );
+
+        return ();
+    }
+}
+
 #[contract]
 mod PositionComponent {
-    #[derive(Copy)]
+    #[derive(Copy, Drop)]
     struct Position {
         x: felt,
         y: felt,
-    }
-
-    struct Storage {
-        state: LegacyMap::<felt, Position>, 
-    }
-
-    // Initialize PositionComponent.
-    #[external]
-    fn initialize() {}
-
-    // Set the state of an entity.
-    #[external]
-    fn set(entity_id: felt, value: Position) {
-        state::write(entity_id, value);
-    }
-
-    // Get the state of an entity.
-    #[view]
-    fn get(entity_id: felt) -> Position {
-        return state::read(entity_id);
     }
 
     impl PositionSerde of serde::Serde::<Position> {
@@ -104,33 +109,34 @@ mod PositionComponent {
             )
         }
     }
-}
 
-#[contract]
-mod HealthComponent {
-    #[derive(Copy)]
-    struct Health {
-        hp: felt, 
-    }
 
     struct Storage {
-        state: LegacyMap::<felt, Health>, 
+        state: LegacyMap::<felt, Position>, 
     }
 
-    // Initialize HealthComponent.
+    // Initialize Position.
     #[external]
     fn initialize() {}
 
     // Set the state of an entity.
     #[external]
-    fn set(entity_id: felt, value: Health) {
+    fn set(entity_id: felt, value: Position) {
         state::write(entity_id, value);
     }
 
     // Get the state of an entity.
     #[view]
-    fn get(entity_id: felt) -> Health {
+    fn get(entity_id: felt) -> Position {
         return state::read(entity_id);
+    }
+}
+
+#[contract]
+mod HealthComponent {
+    #[derive(Copy, Drop)]
+    struct Health {
+        hp: felt, 
     }
 
     impl HealthSerde of serde::Serde::<Health> {
@@ -162,34 +168,26 @@ mod HealthComponent {
             )
         }
     }
-}
 
-#[contract]
-mod MoveSystem {
-    use dojo::world;
-    use dojo::world::IWorldDispatcher;
-    use dojo::world::IWorldDispatcherTrait;
 
-    fn execute_inner(query: Query<(Position, Option::<Health>)>) {
-        return ();
+    struct Storage {
+        state: LegacyMap::<felt, Health>, 
     }
-    struct Storage {}
 
+    // Initialize Health.
     #[external]
-    fn execute() {
-        let world_address = starknet::contract_address_const::<0x0>();
-        let position_ids = IWorldDispatcher {
-            contract_address: world_address
-        }.entities(
-            starknet::contract_address_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>()
-        );
-        let health_ids = IWorldDispatcher {
-            contract_address: world_address
-        }.entities(
-            starknet::contract_address_const::<0x1690bb282da6a011c52715e2188378c769966964ca2332dccad8d7542983bc2>()
-        );
+    fn initialize() {}
 
-        return ();
+    // Set the state of an entity.
+    #[external]
+    fn set(entity_id: felt, value: Health) {
+        state::write(entity_id, value);
+    }
+
+    // Get the state of an entity.
+    #[view]
+    fn get(entity_id: felt) -> Health {
+        return state::read(entity_id);
     }
 }
 

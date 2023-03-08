@@ -25,12 +25,12 @@ num-bigint.workspace = true
 cairo-lang-plugins.workspace = true
 cairo-lang-project.workspace = true
 rayon.workspace = true
-cairo-lang-runner = { git = "https://github.com/starkware-libs/cairo.git", rev = "v1.0.0-alpha.4" }
+cairo-lang-runner = { git = "https://github.com/starkware-libs/cairo.git", rev = "903337885fa19e28f59988a4952d670f72b44b34" }
 salsa.workspace = true
 cairo-lang-semantic.workspace = true
-cairo-lang-sierra = { git = "https://github.com/starkware-libs/cairo.git", rev = "v1.0.0-alpha.4" }
+cairo-lang-sierra = { git = "https://github.com/starkware-libs/cairo.git", rev = "903337885fa19e28f59988a4952d670f72b44b34" }
 cairo-lang-sierra-generator.workspace = true
-cairo-lang-sierra-to-casm = { git = "https://github.com/starkware-libs/cairo.git", rev = "v1.0.0-alpha.4" }
+cairo-lang-sierra-to-casm = { git = "https://github.com/starkware-libs/cairo.git", rev = "903337885fa19e28f59988a4952d670f72b44b34" }
 cairo-lang-starknet.workspace = true
 cairo-lang-syntax.workspace = true
 thiserror.workspace = true

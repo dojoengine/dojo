@@ -6,7 +6,7 @@ use cairo_lang_plugins::get_default_plugins;
 use cairo_lang_starknet::plugin::StarkNetPlugin;
 use dojo_lang::db::update_crate_roots_from_metadata;
 use dojo_lang::plugin::DojoPlugin;
-use dojo_project::{read_metadata, WorldConfig};
+use dojo_project::read_metadata;
 use tower_lsp::{LspService, Server};
 
 #[tokio::main]
@@ -23,7 +23,7 @@ async fn main() {
     });
 
     let mut plugins = get_default_plugins();
-    plugins.push(Arc::new(DojoPlugin { world_config: WorldConfig::default() }));
+    plugins.push(Arc::new(DojoPlugin::default()));
     plugins.push(Arc::new(StarkNetPlugin {}));
 
     let mut db =
