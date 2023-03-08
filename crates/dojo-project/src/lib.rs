@@ -2,15 +2,9 @@
 mod test;
 
 use std::collections::HashMap;
-use std::env;
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
-use camino::Utf8Path;
-use scarb::core::Config;
-use scarb::metadata::{MetadataOptions, MetadataVersion, ProjectMetadata};
-use scarb::ops;
-use scarb::ui::Verbosity;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
 use starknet::core::types::FieldElement;
@@ -90,20 +84,4 @@ impl From<ProjectConfig> for cairo_lang_project::ProjectConfig {
             corelib: None,
         }
     }
-}
-
-pub fn read_metadata(path: Option<&Utf8Path>) -> Result<ProjectMetadata> {
-    let manifest_path = ops::find_manifest_path(path).unwrap();
-
-    let config = Config::builder(manifest_path)
-        .ui_verbosity(Verbosity::Verbose)
-        .log_filter_directive(env::var_os("SCARB_LOG"))
-        .build()
-        .unwrap();
-
-    let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
-
-    let opts = MetadataOptions { version: MetadataVersion::V1, no_deps: false };
-
-    ProjectMetadata::collect(&ws, &opts)
 }

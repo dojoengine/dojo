@@ -48,7 +48,7 @@ num-bigint = "0.4"
 pretty_assertions = "1.2.1"
 rayon = "0.9.0"
 salsa = "0.16.1"
-scarb = { git = "https://github.com/software-mansion/scarb.git", rev = "7f5ee8cb13213f7d75c12949eacf35bb28b8c234" }
+scarb = { git = "https://github.com/software-mansion/scarb.git", rev = "ec30b22e05f9572e0673f5a189bb835e89ee16f2" }
 serde = { version = "1.0.130", features = ["derive"] }
 serde_json = "1.0"
 smol_str = "0.1.23"
