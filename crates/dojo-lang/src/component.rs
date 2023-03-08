@@ -288,7 +288,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
 
     PluginResult {
         code: Some(PluginGeneratedFile {
-            name: name.clone(),
+            name,
             content: builder.code,
             aux_data: DynGeneratedFileAuxData::new(DynPluginAuxData::new(DojoAuxData {
                 patches: builder.patches,
