@@ -26,7 +26,7 @@ fn move(query: Query<(Position, Option::<Health>)>) {
 extern type Query<T>;
 
 #[contract]
-mod move {
+mod MoveSystem {
     use dojo::world;
     use dojo::world::IWorldDispatcher;
     use dojo::world::IWorldDispatcherTrait;

@@ -76,7 +76,7 @@ pub fn handle_system(
     builder.add_modified(RewriteNode::interpolate_patched(
         "
             #[contract]
-            mod $name$ {
+            mod $name$System {
                 use dojo::world;
                 use dojo::world::IWorldDispatcher;
                 use dojo::world::IWorldDispatcherTrait;
@@ -85,7 +85,7 @@ pub fn handle_system(
             }
         ",
         HashMap::from([
-            ("name".to_string(), RewriteNode::Text(name.to_string())),
+            ("name".to_string(), RewriteNode::Text(capitalize_first(name.to_string()))),
             ("body".to_string(), RewriteNode::new_modified(rewrite_nodes)),
         ]),
     ));
@@ -103,6 +103,13 @@ pub fn handle_system(
         diagnostics: vec![],
         remove_original_item: true,
     }
+}
+
+fn capitalize_first(s: String) -> String {
+    let mut chars = s.chars();
+    let mut capitalized = chars.next().unwrap().to_uppercase().to_string();
+    capitalized.extend(chars);
+    capitalized
 }
 
 enum SystemArgType {
