@@ -6,7 +6,7 @@ struct Position {
     y: felt
 }
 
-impl PositionImpl of ComponentTrait::<Position> {
+impl Position of Component {
     #[view]
     fn is_zero(self: Position) -> bool {
         match self.x - self.y {

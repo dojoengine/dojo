@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use cairo_lang_defs::plugin::{GeneratedFileAuxData, MacroPlugin, PluginDiagnostic, PluginResult};
+use cairo_lang_defs::plugin::{GeneratedFileAuxData, MacroPlugin, PluginResult};
 use cairo_lang_diagnostics::DiagnosticEntry;
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::patcher::{Patches, RewriteNode};
@@ -13,7 +13,7 @@ use cairo_lang_semantic::SemanticDiagnostic;
 use cairo_lang_syntax::node::ast::MaybeModuleBody;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
-use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
+use cairo_lang_syntax::node::{ast, Terminal};
 use dojo_project::WorldConfig;
 use smol_str::SmolStr;
 use starknet::core::crypto::pedersen_hash;
@@ -123,6 +123,10 @@ impl MacroPlugin for DojoPlugin {
                                     {
                                         let derived = segment.ident(db).text(db);
                                         if matches!(derived.as_str(), "Component") {
+                                            let mut guard = self.impls.lock().unwrap();
+                                            guard
+                                                .entry(struct_ast.name(db).text(db))
+                                                .or_insert(vec![]);
                                             return handle_component_struct(db, struct_ast);
                                         }
                                     }
@@ -135,41 +139,20 @@ impl MacroPlugin for DojoPlugin {
                 PluginResult::default()
             }
             ast::Item::Impl(impl_ast) => {
-                if let ast::PathSegment::WithGenericArgs(element) =
-                    &impl_ast.trait_path(db).elements(db)[0]
-                {
-                    if element.ident(db).text(db) != "ComponentTrait" {
-                        return PluginResult::default();
-                    }
+                let name = impl_ast.name(db).text(db);
+                let mut guard = self.impls.lock().unwrap();
 
-                    let generics = element.generic_args(db).generic_args(db).elements(db);
-                    if generics.len() != 1 {
+                if guard.get_mut(&name).is_some() {
+                    if let ast::MaybeImplBody::Some(body) = impl_ast.body(db) {
+                        let rewrite_nodes = handle_component_impl(db, body);
+                        guard
+                            .entry(name)
+                            .and_modify(|vec| vec.extend(rewrite_nodes.to_vec()))
+                            .or_insert(vec![]);
                         return PluginResult {
-                            diagnostics: vec![PluginDiagnostic {
-                                message: "Must have a single generic parameter.".to_string(),
-                                stable_ptr: impl_ast.as_syntax_node().stable_ptr(),
-                            }],
-                            ..Default::default()
+                            remove_original_item: true,
+                            ..PluginResult::default()
                         };
-                    }
-
-                    if let ast::Expr::Path(path) = &generics[0] {
-                        if let [ast::PathSegment::Simple(segment)] = &path.elements(db)[..] {
-                            let name = segment.ident(db).text(db);
-                            if let ast::MaybeImplBody::Some(body) = impl_ast.body(db) {
-                                let mut guard = self.impls.lock().unwrap();
-                                let rewrite_nodes = handle_component_impl(db, body);
-                                guard.entry(name.clone()).or_insert(vec![]);
-                                guard
-                                    .entry(name)
-                                    .and_modify(|vec| vec.extend(rewrite_nodes.to_vec()));
-                            }
-
-                            return PluginResult {
-                                remove_original_item: true,
-                                ..PluginResult::default()
-                            };
-                        }
                     }
                 }
 
