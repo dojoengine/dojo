@@ -1,13 +1,12 @@
 use array::ArrayTrait;
 
-#[component]
-mod PositionComponent {
-    #[derive(Copy, Drop)]
-    struct Position {
-        x: felt,
-        y: felt
-    }
+#[derive(Component)]
+struct Position {
+    x: felt,
+    y: felt
+}
 
+impl Position of Component {
     #[view]
     fn is_zero(self: Position) -> bool {
         match self.x - self.y {

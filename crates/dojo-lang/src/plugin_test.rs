@@ -1,11 +1,13 @@
+use std::collections::VecDeque;
 use std::env::current_dir;
+use std::sync::Arc;
 
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_compiler::diagnostics::get_diagnostics_as_string;
 use cairo_lang_defs::db::DefsGroup;
-use cairo_lang_defs::plugin::{MacroPlugin, PluginGeneratedFile, PluginResult};
+use cairo_lang_defs::plugin::MacroPlugin;
 use cairo_lang_filesystem::db::{FilesGroup, FilesGroupEx};
-use cairo_lang_filesystem::ids::{CrateLongId, Directory};
+use cairo_lang_filesystem::ids::{CrateLongId, Directory, FileLongId, VirtualFile};
 use cairo_lang_formatter::format_string;
 use cairo_lang_parser::db::ParserGroup;
 use cairo_lang_semantic::test_utils::setup_test_module;
@@ -43,22 +45,30 @@ impl TestFileRunner for ExpandContractTestRunner {
         let root = Directory(current_path);
         self.db.set_crate_root(crate_id, Some(root));
 
-        let plugin = DojoPlugin { world_config: WorldConfig::default() };
+        let plugin = DojoPlugin::new(WorldConfig::default());
         let mut generated_items: Vec<String> = Vec::new();
 
-        for item in syntax_file.items(&self.db).elements(&self.db).into_iter() {
-            let PluginResult { code, diagnostics: _, remove_original_item } =
-                plugin.generate_code(&self.db, item.clone());
+        let mut item_queue = VecDeque::from(syntax_file.items(&self.db).elements(&self.db));
 
-            let content = match code {
-                Some(PluginGeneratedFile { content, .. }) => content,
-                None => continue,
-            };
-            if !remove_original_item {
+        while let Some(item) = item_queue.pop_front() {
+            let res = plugin.generate_code(&self.db, item.clone());
+
+            if let Some(generated) = res.code {
+                let new_file = self.db.intern_file(FileLongId::Virtual(VirtualFile {
+                    parent: Some(file_id),
+                    name: generated.name,
+                    content: Arc::new(generated.content.clone()),
+                }));
+
+                item_queue.extend(
+                    self.db.file_syntax(new_file).unwrap().items(&self.db).elements(&self.db),
+                );
+            }
+
+            if !res.remove_original_item {
                 generated_items
                     .push(format_string(&self.db, item.as_syntax_node().get_text(&self.db)));
             }
-            generated_items.push(format_string(&self.db, content));
         }
 
         OrderedHashMap::from([

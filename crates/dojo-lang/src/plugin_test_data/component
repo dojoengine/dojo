@@ -4,14 +4,15 @@
 ExpandContractTestRunner
 
 //! > cairo_code
-#[component]
-mod PositionComponent {
-    #[derive(Copy)]
-    struct Position {
-        x: felt,
-        y: felt
-    }
+use dojo::world::ComponentTrait;
 
+#[derive(Component)]
+struct Position {
+    x: felt,
+    y: felt
+}
+
+impl Position of Component {
     #[view]
     fn is_zero(self: Position) -> bool {
         match self.x - self.y {
@@ -27,32 +28,14 @@ mod PositionComponent {
 }
 
 //! > generated_cairo_code
+use dojo::world::ComponentTrait;
+
 #[contract]
 mod PositionComponent {
-    #[derive(Copy)]
+    #[derive(Copy, Drop)]
     struct Position {
         x: felt,
         y: felt
-    }
-
-    struct Storage {
-        state: LegacyMap::<felt, Position>, 
-    }
-
-    // Initialize PositionComponent.
-    #[external]
-    fn initialize() {}
-
-    // Set the state of an entity.
-    #[external]
-    fn set(entity_id: felt, value: Position) {
-        state::write(entity_id, value);
-    }
-
-    // Get the state of an entity.
-    #[view]
-    fn get(entity_id: felt) -> Position {
-        return state::read(entity_id);
     }
 
     impl PositionSerde of serde::Serde::<Position> {
@@ -96,6 +79,28 @@ mod PositionComponent {
             )
         }
     }
+
+
+    struct Storage {
+        state: LegacyMap::<felt, Position>, 
+    }
+
+    // Initialize Position.
+    #[external]
+    fn initialize() {}
+
+    // Set the state of an entity.
+    #[external]
+    fn set(entity_id: felt, value: Position) {
+        state::write(entity_id, value);
+    }
+
+    // Get the state of an entity.
+    #[view]
+    fn get(entity_id: felt) -> Position {
+        return state::read(entity_id);
+    }
+
 
     #[view]
     fn is_zero(entity_id: felt) -> bool {

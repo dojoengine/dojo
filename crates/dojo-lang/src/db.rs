@@ -49,7 +49,7 @@ impl DojoRootDatabaseBuilderEx for RootDatabaseBuilder {
         let precedence = ["Pedersen", "RangeCheck", "Bitwise", "EcOp", "GasBuiltin", "System"];
 
         let mut plugins = get_default_plugins();
-        plugins.push(Arc::new(DojoPlugin { world_config: config }));
+        plugins.push(Arc::new(DojoPlugin::new(config)));
         plugins.push(Arc::new(StarkNetPlugin {}));
 
         self.with_implicit_precedence(&precedence).with_plugins(plugins)
