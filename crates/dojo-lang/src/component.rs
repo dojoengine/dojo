@@ -66,7 +66,7 @@ pub fn handle_generated_component(
                 content: builder.code,
                 aux_data: DynGeneratedFileAuxData::new(DynPluginAuxData::new(DojoAuxData {
                     patches: builder.patches,
-                    components: vec![name],
+                    components: vec![format!("{}Component", name).into()],
                     systems: vec![],
                 })),
             }),
@@ -292,7 +292,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
             content: builder.code,
             aux_data: DynGeneratedFileAuxData::new(DynPluginAuxData::new(DojoAuxData {
                 patches: builder.patches,
-                components: vec![name],
+                components: vec![],
                 systems: vec![],
             })),
         }),

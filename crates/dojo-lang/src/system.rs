@@ -97,7 +97,7 @@ pub fn handle_system(
             aux_data: DynGeneratedFileAuxData::new(DynPluginAuxData::new(DojoAuxData {
                 patches: builder.patches,
                 components: vec![],
-                systems: vec![name],
+                systems: vec![format!("{}System", capitalize_first(name.to_string())).into()],
             })),
         }),
         diagnostics: vec![],
@@ -132,7 +132,11 @@ fn try_extract_execute_paramters(
     };
     let ty = segment.ident(db).text(db);
 
-    if ty == "Query" { Some(SystemArgType::Query) } else { None }
+    if ty == "Query" {
+        Some(SystemArgType::Query)
+    } else {
+        None
+    }
 }
 
 /// Finds the inline modules annotated as systems in the given crate_ids and
