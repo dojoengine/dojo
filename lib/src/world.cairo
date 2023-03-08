@@ -118,7 +118,6 @@ mod World {
         return entities;
     }
 }
-
 // #[test]
 // #[available_gas(2000000)]
 // fn on_component_set() {
