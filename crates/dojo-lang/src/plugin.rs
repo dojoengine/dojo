@@ -10,7 +10,6 @@ use cairo_lang_semantic::plugin::{
     SemanticPlugin,
 };
 use cairo_lang_semantic::SemanticDiagnostic;
-use cairo_lang_syntax::node::ast::MaybeModuleBody;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal};
@@ -22,7 +21,7 @@ use starknet::core::types::FieldElement;
 use crate::component::{
     handle_component_impl, handle_component_struct, handle_generated_component,
 };
-use crate::system::System;
+use crate::system::handle_system;
 
 const COMPONENT_ATTR: &str = "generated_component";
 const SYSTEM_ATTR: &str = "system";
@@ -80,28 +79,12 @@ impl DojoPlugin {
         Self { world_config, impls: Arc::new(Mutex::new(HashMap::new())) }
     }
 
-    fn handle_mod(
-        &self,
-        db: &dyn SyntaxGroup,
-        world_config: WorldConfig,
-        module_ast: ast::ItemModule,
-    ) -> PluginResult {
-        let name = module_ast.name(db).text(db);
-        let body = match module_ast.body(db) {
-            MaybeModuleBody::Some(body) => body,
-            MaybeModuleBody::None(_empty_body) => {
-                return PluginResult::default();
-            }
-        };
-
+    fn handle_mod(&self, db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult {
         if module_ast.has_attr(db, COMPONENT_ATTR) {
+            let name = module_ast.name(db).text(db);
             let guard = self.impls.lock().unwrap();
             let impls = guard.get(&name).map_or_else(Vec::new, |vec| vec.clone());
             return handle_generated_component(db, module_ast, impls);
-        }
-
-        if module_ast.has_attr(db, SYSTEM_ATTR) {
-            return System::from_module_body(db, world_config, name, body).result(db);
         }
 
         PluginResult::default()
@@ -111,7 +94,7 @@ impl DojoPlugin {
 impl MacroPlugin for DojoPlugin {
     fn generate_code(&self, db: &dyn SyntaxGroup, item_ast: ast::Item) -> PluginResult {
         match item_ast {
-            ast::Item::Module(module_ast) => self.handle_mod(db, self.world_config, module_ast),
+            ast::Item::Module(module_ast) => self.handle_mod(db, module_ast),
             ast::Item::Struct(struct_ast) => {
                 for attr in struct_ast.attributes(db).elements(db) {
                     if attr.attr(db).text(db) == "derive" {
@@ -154,6 +137,13 @@ impl MacroPlugin for DojoPlugin {
                             ..PluginResult::default()
                         };
                     }
+                }
+
+                PluginResult::default()
+            }
+            ast::Item::FreeFunction(function_ast) => {
+                if function_ast.has_attr(db, SYSTEM_ATTR) {
+                    return handle_system(db, self.world_config, function_ast);
                 }
 
                 PluginResult::default()

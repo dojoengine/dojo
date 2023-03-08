@@ -18,28 +18,20 @@ struct Health {
 }
 
 #[system]
-mod MoveSystem {
-    fn execute_inner(query: Query<(Position, Option::<Health>)>) {
-        return ();
-    }
-
-    fn execute(query: Query<(Position, Option::<Health>)>) {
-        return ();
-    }
+fn move(query: Query<(Position, Option::<Health>)>) {
+    return ();
 }
 
 //! > generated_cairo_code
 extern type Query<T>;
 
 #[contract]
-mod MoveSystem {
+mod move {
     use dojo::world;
     use dojo::world::IWorldDispatcher;
     use dojo::world::IWorldDispatcherTrait;
 
-    fn execute_inner(query: Query<(Position, Option::<Health>)>) {
-        return ();
-    }
+
     struct Storage {}
 
     #[external]
@@ -192,7 +184,3 @@ mod HealthComponent {
 }
 
 //! > expected_diagnostics
-error: Plugin diagnostic: Type not found.
- --> MoveSystem:7:33
-        fn execute_inner(query: Query<(Position, Option::<Health>)>) {
-                                ^***^
