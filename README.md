@@ -98,13 +98,13 @@ trait World {
 Components in `dojo-ecs` are modules with a single struct describing its state, for example, the following implements a `Position` component which exposes a `is_zero` and `is_equal` method.
 
 ```rust
-#[component]
-mod PositionComponent {
-    struct Position {
-        x: felt,
-        y: felt
-    }
+#[derive(Component)]
+struct Position {
+    x: felt,
+    y: felt
+}
 
+impl Position of Component {
     #[view]
     fn is_zero(self: Position) -> bool {
         match self.x - self.y {
