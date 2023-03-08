@@ -74,22 +74,36 @@ The worlds interface is as follows:
 
 ```rust
 trait World {
+    // Emitted anytime an entities component state is updated.
+    #[event]
+    fn ComponentValueSet(
+        component_address: starknet::ContractAddress, entity_id: usize, data: Array::<felt>
+    ) {}
+
+    // Emitted when a component or system is registered.
+    #[event]
+    fn ModuleRegistered(
+        module_address: starknet::ContractAddress, module_id: felt, class_hash: felt
+    ) {}
+
     // Register a component or system. The returned
     // hash is used to uniquely identify the component or
     // system in the world. All components and systems
     // within a world are deterministically addressed
     // relative to the world.
-    // @TODO: Figure out how to propagate calldata with Cairo 1.0.
-    fn register(id: felt, class_hash: felt) -> felt;
+    #[external]
+    fn register(class_hash: felt, module_id: felt) -> felt;
 
     // Called when a component in the world updates the value
     // for an entity. When called for the first time for an 
     // entity, the entity:component mapping is registered.
     // Additionally, a `ComponentValueSet` event is emitted.
-    fn on_component_set(entity_id: felt, data: Array::<felt>);
+    #[external]
+    fn on_component_set(entity_id: usize, data: Array::<felt>);
 
-    // Lookup entities that have a component by id.
-    fn lookup(id: felt) -> Array::<felt>;
+    // Returns entities that contain the component state.
+    #[view]
+    fn entities(component: starknet::ContractAddress) -> Array::<usize>;
 }
 ```
 
