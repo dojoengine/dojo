@@ -33,6 +33,7 @@ pub fn handle_system(
 ) -> PluginResult {
     let name = function_ast.declaration(db).name(db).text(db);
     let mut rewrite_nodes = vec![];
+    let mut import_nodes = vec![];
 
     let signature = function_ast.declaration(db).signature(db);
     let parameters = signature.parameters(db).elements(db);
@@ -43,15 +44,32 @@ pub fn handle_system(
 
         if let Some(SystemArgType::Query) = try_extract_execute_paramters(db, &type_ast) {
             let query = Query::from_expr(db, world_config, type_ast.clone());
+            import_nodes.extend(query.imports());
             preprocess_rewrite_nodes.extend(query.rewrite_nodes);
         }
     }
 
+    let body_nodes = function_ast
+        .body(db)
+        .statements(db)
+        .elements(db)
+        .iter()
+        .map(|statement| {
+            println!("statement: {}", statement.as_syntax_node().get_text(db));
+            RewriteNode::interpolate_patched(
+                "
+                super::$statement$
+            ",
+                HashMap::from([(
+                    "statement".to_string(),
+                    RewriteNode::new_trimmed(statement.as_syntax_node()),
+                )]),
+            )
+        })
+        .collect();
+
     rewrite_nodes.push(RewriteNode::interpolate_patched(
         "
-            struct Storage {
-            }
-
             #[external]
             fn execute() {
                 let world_address = starknet::contract_address_const::<$world_address$>();
@@ -60,10 +78,7 @@ pub fn handle_system(
             }
         ",
         HashMap::from([
-            (
-                "body".to_string(),
-                RewriteNode::new_trimmed(function_ast.body(db).statements(db).as_syntax_node()),
-            ),
+            ("body".to_string(), RewriteNode::new_modified(body_nodes)),
             ("preprocessing".to_string(), RewriteNode::new_modified(preprocess_rewrite_nodes)),
             (
                 "world_address".to_string(),
@@ -80,12 +95,15 @@ pub fn handle_system(
                 use dojo::world;
                 use dojo::world::IWorldDispatcher;
                 use dojo::world::IWorldDispatcherTrait;
-
+                use dojo::query::Query;
+                use dojo::query::QueryTrait;
+                $imports$
                 $body$
             }
         ",
         HashMap::from([
             ("name".to_string(), RewriteNode::Text(capitalize_first(name.to_string()))),
+            ("imports".to_string(), RewriteNode::new_modified(import_nodes)),
             ("body".to_string(), RewriteNode::new_modified(rewrite_nodes)),
         ]),
     ));
@@ -132,7 +150,11 @@ fn try_extract_execute_paramters(
     };
     let ty = segment.ident(db).text(db);
 
-    if ty == "Query" { Some(SystemArgType::Query) } else { None }
+    if ty == "Query" {
+        Some(SystemArgType::Query)
+    } else {
+        None
+    }
 }
 
 /// Finds the inline modules annotated as systems in the given crate_ids and

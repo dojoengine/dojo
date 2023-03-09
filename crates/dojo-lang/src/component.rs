@@ -265,13 +265,16 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
     let mut builder = PatchBuilder::new(db);
     builder.add_modified(RewriteNode::interpolate_patched(
         "
+            #[derive(Copy, Drop)]
+            struct $type_name$ {
+                $members$
+            }
+            $traits$
             #[generated_component]
             mod $type_name$ {
-                #[derive(Copy, Drop)]
-                struct $type_name$ {
-                    $members$
-                }
-                $traits$
+                use super::$type_name$;
+                use super::$type_name$Serde;
+                use super::StorageAccess$type_name$;
                 $body$
             }
         ",
