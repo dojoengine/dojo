@@ -4,6 +4,7 @@ use std::error::Error;
 use apibara_client_protos::pb::starknet::v1alpha2::{
     DeployedContractFilter, EventFilter, FieldElement, Filter, HeaderFilter, StateUpdateFilter,
 };
+use diesel::Connection;
 use futures::StreamExt;
 use log::{debug, info, warn};
 use prisma_client_rust::bigdecimal::num_bigint::BigUint;
@@ -34,7 +35,7 @@ fn filter_by_processors(filter: &mut Filter, processors: &Processors) {
 
 pub async fn start_indexer(
     mut stream: ApibaraClient,
-    client: &PrismaClient,
+    conn: &Connection,
     provider: &JsonRpcClient<HttpTransport>,
     processors: &Processors,
     world: BigUint,

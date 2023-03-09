@@ -1,6 +1,7 @@
 use std::vec;
 
 use clap::Parser;
+use diesel::{SqliteConnection, Connection};
 use futures::join;
 use prisma_client_rust::bigdecimal::num_bigint::BigUint;
 use prisma_client_rust::bigdecimal::Num;
@@ -15,14 +16,13 @@ use crate::server::start_server;
 
 mod processors;
 
-mod graphql;
 mod hash;
 mod indexer;
-#[allow(warnings, unused, elided_lifetimes_in_paths)]
-mod prisma;
 mod server;
 
 mod stream;
+mod schema;
+mod model;
 
 /// Command line args parser.
 /// Exits with 0/1 if the input is formatted correctly/incorrectly.
@@ -35,6 +35,8 @@ struct Args {
     node: String,
     /// The rpc endpoint to use
     rpc: String,
+    /// Database url
+    database_url: String,
 }
 
 #[tokio::main]
@@ -46,7 +48,10 @@ async fn main() -> anyhow::Result<()> {
     });
     let node = &args.node;
 
-    let client = prisma::PrismaClient::_builder().build().await.unwrap();
+    #[cfg(feature = "sqlite")]
+    let conn = SqliteConnection::establish(database_url.as_str())?;
+    #[cfg(feature = "postgres")]
+    let conn = PgConnection::establish(database_url.as_str())?;
 
     let stream = stream::ApibaraClient::new(node).await;
 

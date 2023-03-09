@@ -31,8 +31,12 @@ actix-cors = "0.6.4"
 env_logger.workspace = true
 starknet.workspace = true
 url = "2.2.2"
+diesel = { version = "2.0.3", features = ["r2d2"] }
 
-
+[features]
+default = ["sqlite"]
+sqlite = ["diesel/sqlite"]
+postgres = ["diesel/postgres"]
 
 [[bin]]
 name = "dojo-indexer"
