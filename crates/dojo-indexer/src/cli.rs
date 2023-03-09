@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use std::error::Error;
+use std::ptr::null;
 use std::vec;
 
 use clap::Parser;
@@ -12,6 +13,7 @@ use log::{debug, info, warn};
 use prisma_client_rust::bigdecimal::num_bigint::BigUint;
 use prisma_client_rust::bigdecimal::Num;
 use processors::{BlockProcessor, TransactionProcessor};
+use schema::DBConnection;
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 use url::Url;
 
@@ -22,13 +24,20 @@ use crate::processors::system_register::SystemRegistrationProcessor;
 use crate::processors::EventProcessor;
 use crate::server::start_server;
 
+use diesel::r2d2::{ConnectionManager, Pool};
+use diesel::{SqliteConnection};
+
 mod processors;
 
-mod graphql;
 mod hash;
 #[allow(warnings, unused, elided_lifetimes_in_paths)]
-mod prisma;
 mod server;
+mod schema;
+
+#[macro_use]
+extern crate diesel;
+#[macro_use]
+extern crate juniper;
 
 /// Command line args parser.
 /// Exits with 0/1 if the input is formatted correctly/incorrectly.
@@ -58,7 +67,8 @@ async fn main() -> anyhow::Result<()> {
     });
     let node = &args.node;
 
-    let client = prisma::PrismaClient::_builder().build().await.unwrap();
+    let manager = ConnectionManager::<SqliteConnection>::new("indexer.db");
+    let pool = Pool::builder().build(manager).expect("Failed to create pool.");
 
     let stream = stream::ApibaraClient::new(node).await;
 
@@ -78,8 +88,8 @@ async fn main() -> anyhow::Result<()> {
         std::result::Result::Ok(s) => {
             println!("Connected");
             let graphql = start_server();
-            let indexer = start(s, &client, &provider, &processors, world);
-            let _res = join!(graphql, indexer);
+            // let indexer = start(s, null(), &provider, &processors, world);
+            let _res = join!(graphql);
         }
         std::result::Result::Err(e) => panic!("Error: {:?}", e),
     }
@@ -101,7 +111,7 @@ fn filter_by_processors(filter: &mut Filter, processors: &Processors) {
 
 async fn start(
     mut stream: stream::ApibaraClient,
-    client: &prisma::PrismaClient,
+    client: &Pool<ConnectionManager<DBConnection>>,
     provider: &JsonRpcClient<HttpTransport>,
     processors: &Processors,
     world: BigUint,
