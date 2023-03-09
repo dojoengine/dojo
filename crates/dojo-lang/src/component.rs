@@ -11,9 +11,10 @@ use cairo_lang_semantic::plugin::DynPluginAuxData;
 use cairo_lang_syntax::node::ast::MaybeModuleBody;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
+use dojo_project::WorldConfig;
 use smol_str::SmolStr;
 
-use crate::plugin::DojoAuxData;
+use crate::plugin::{get_contract_address, DojoAuxData};
 
 #[cfg(test)]
 #[path = "component_test.rs"]
@@ -334,4 +335,24 @@ pub fn find_components(db: &dyn SemanticGroup, crate_ids: &[CrateId]) -> Vec<Com
         }
     }
     components
+}
+
+pub fn compute_component_id(
+    db: &dyn SyntaxGroup,
+    path: ast::ExprPath,
+    world_config: WorldConfig,
+) -> String {
+    // Component name to felt
+    let component_name_raw = path.as_syntax_node().get_text(db);
+    let mut component_name_parts: Vec<&str> = component_name_raw.split("::").collect();
+    let component_name = component_name_parts.pop().unwrap();
+
+    format!(
+        "{:#x}",
+        get_contract_address(
+            component_name,
+            world_config.initializer_class_hash.unwrap_or_default(),
+            world_config.address.unwrap_or_default(),
+        )
+    )
 }

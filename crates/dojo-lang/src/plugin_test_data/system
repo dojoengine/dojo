@@ -4,6 +4,7 @@
 ExpandContractTestRunner
 
 //! > cairo_code
+use array::ArrayTrait;
 use dojo::query::Query;
 
 #[derive(Component)]
@@ -23,11 +24,29 @@ fn move_inner(query: Query<(Position, Option::<Health>)>, index: u32, count: u32
 
 #[system]
 fn move(query: Query<(Position, Option::<Health>)>) {
-    move_inner(query, 0_u32, query.len());
+    let mut bar = 123;
+    let mut foo = ArrayTrait::<felt>::new();
+    // TODO: https://github.com/starkware-libs/cairo/issues/2438
+    // foo.append(bar);
+
+    if bar == 123 {
+        return ();
+    } else if bar == 0 {
+        return ();
+    } else {
+        return ();
+    }
+
+    // TODO: Replace with query.len().
+    // https://github.com/starkware-libs/cairo/issues/2438
+    move_inner(query, 0_u32, 1_u32);
+
     return ();
 }
 
 //! > generated_cairo_code
+use array::ArrayTrait;
+
 use dojo::query::Query;
 
 fn move_inner(query: Query<(Position, Option::<Health>)>, index: u32, count: u32) {
@@ -143,9 +162,21 @@ mod MoveSystem {
 
         let query = QueryTrait::<(Position, Option::<Health>)>::new();
 
-        super::move_inner(query, 0_u32, query.len());
+        let mut bar = 123;
 
-        super::return ();
+        let mut foo = super::ArrayTrait::<felt>::new();
+
+        if bar == 123 {
+            return ();
+        } else {
+            if bar == 0 {
+                return ();
+            } else {
+                return ();
+            }
+        }
+        super::move_inner(query, 0_u32, 1_u32);
+        return ();
     }
 }
 
@@ -204,42 +235,12 @@ mod HealthComponent {
 }
 
 //! > expected_diagnostics
-error: 'return' is a reserved identifier.
- --> move:22:24
-                super::return ();
-                       ^****^
+error: Variable not dropped.
+ --> contract:18:25
+                    let query = QueryTrait::<(Position, Option::<Health>)>::new();
+                        ^***^
 
-error: 'return' is a reserved identifier.
- --> contract:23:24
-                super::return ();
-                       ^****^
-
-error: 'return' is a reserved identifier.
- --> contract:23:24
-                super::return ();
-                       ^****^
-
-error: Plugin diagnostic: Unknown function.
- --> move:20:55
-                super::move_inner(query, 0_u32, query.len());
-                                                      ^*^
-
-error: Plugin diagnostic: Function not found.
- --> move:22:24
-                super::return ();
-                       ^
-
-error: 'return' is a reserved identifier.
- --> contract:23:24
-                super::return ();
-                       ^****^
-
-error: 'return' is a reserved identifier.
- --> contract:23:24
-                super::return ();
-                       ^****^
-
-error: 'return' is a reserved identifier.
- --> contract:23:24
-                super::return ();
-                       ^****^
+error: Unreachable code
+ --> contract:37:9
+        super::move_inner(query, 0_u32, 1_u32);
+        ^*************************************^

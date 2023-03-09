@@ -7,14 +7,13 @@ struct Or<T> {}
 
 struct Component<T> {}
 
-struct Query<T> {
-}
+struct Query<T> {}
 
 trait QueryTrait<T> {
     fn new() -> Query::<T>;
     fn len() -> u32;
-    // fn insert(ref self: Query::<T>, key: felt, value: T);
-    // fn get(ref self: Query::<T>, index: felt) -> T;
+// fn insert(ref self: Query::<T>, key: felt, value: T);
+// fn get(ref self: Query::<T>, index: felt) -> T;
 }
 
 impl QueryImpl<T> of QueryTrait::<T> {
@@ -26,7 +25,6 @@ impl QueryImpl<T> of QueryTrait::<T> {
     fn len() -> u32 {
         0_u32
     }
-
 //     fn insert(ref self: Query::<T>, key: felt, value: T) {
 //     }
 
@@ -34,7 +32,6 @@ impl QueryImpl<T> of QueryTrait::<T> {
 //         ()
 //     }
 }
-
 // struct Query<T> {
 //     data: DictFeltTo::<T>, 
 // }
@@ -68,3 +65,4 @@ impl QueryImpl<T> of QueryTrait::<T> {
 //     let mut query = QueryTrait::<felt>::new();
 //     query.insert(1, 1);
 // }
+
