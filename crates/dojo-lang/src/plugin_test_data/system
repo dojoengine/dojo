@@ -5,7 +5,10 @@ ExpandContractTestRunner
 
 //! > cairo_code
 use array::ArrayTrait;
+use dojo::query::Caller;
 use dojo::query::Query;
+use dojo::query::EntityID;
+use dojo::query::With;
 
 #[derive(Component)]
 struct Position {
@@ -45,7 +48,13 @@ fn move(positions_query: Query<(Position, Option::<Player>)>, player_query: Quer
 //! > generated_cairo_code
 use array::ArrayTrait;
 
+use dojo::query::Caller;
+
 use dojo::query::Query;
+
+use dojo::query::EntityID;
+
+use dojo::query::With;
 
 fn move_inner(query: Query<(Position, Option::<Player>)>, index: u32, count: u32) {
     return move_inner(query, index + 1_u32, count - 1_u32);
@@ -139,27 +148,18 @@ mod MoveSystem {
     use dojo::world;
     use dojo::world::IWorldDispatcher;
     use dojo::world::IWorldDispatcherTrait;
-    use dojo::query::Caller;
-    use dojo::query::EntityID;
-    use dojo::query::Query;
     use dojo::query::QueryTrait;
-    use dojo::query::With;
+    use super::With;
     use super::Position;
+    use super::Query;
     use super::Player;
+    use super::EntityID;
+    use super::Caller;
+
 
     #[external]
     fn execute() {
         let world_address = starknet::contract_address_const::<0x0>();
-        let position_ids = IWorldDispatcher {
-            contract_address: world_address
-        }.entities(
-            starknet::contract_address_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>()
-        );
-        let player_ids = IWorldDispatcher {
-            contract_address: world_address
-        }.entities(
-            starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
-        );
 
         let positions_query = QueryTrait::<(Position, Option::<Player>)>::new();
         let player_query = QueryTrait::<(With::<Player, EntityID<Caller>>)>::new();
@@ -236,6 +236,6 @@ mod PlayerComponent {
 
 //! > expected_diagnostics
 error: Variable not dropped.
- --> contract:22:25
-                    let player_query = QueryTrait::<(With::<Player, EntityID<Caller>>)>::new();
-                        ^**********^
+ --> contract:22:33
+                            let player_query = QueryTrait::<(With::<Player, EntityID<Caller>>)>::new();
+                                ^**********^

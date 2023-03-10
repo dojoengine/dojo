@@ -21,7 +21,7 @@ use starknet::core::types::FieldElement;
 use crate::component::{
     handle_component_impl, handle_component_struct, handle_generated_component,
 };
-use crate::system::handle_system;
+use crate::system::System;
 
 const COMPONENT_ATTR: &str = "generated_component";
 const SYSTEM_ATTR: &str = "system";
@@ -42,7 +42,11 @@ impl GeneratedFileAuxData for DojoAuxData {
         self
     }
     fn eq(&self, other: &dyn GeneratedFileAuxData) -> bool {
-        if let Some(other) = other.as_any().downcast_ref::<Self>() { self == other } else { false }
+        if let Some(other) = other.as_any().downcast_ref::<Self>() {
+            self == other
+        } else {
+            false
+        }
     }
 }
 impl AsDynGeneratedFileAuxData for DojoAuxData {
@@ -143,7 +147,7 @@ impl MacroPlugin for DojoPlugin {
             }
             ast::Item::FreeFunction(function_ast) => {
                 if function_ast.has_attr(db, SYSTEM_ATTR) {
-                    return handle_system(db, self.world_config, function_ast);
+                    return System::from_function(db, self.world_config, function_ast);
                 }
 
                 PluginResult::default()
