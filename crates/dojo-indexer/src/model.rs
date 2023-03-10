@@ -1,12 +1,10 @@
 use diesel::prelude::*;
 
-use crate::schema::*;
-
 #[derive(Clone, Debug, Identifiable, Queryable, Selectable, PartialEq)]
 #[diesel(primary_key(component_id, entity_id))]
-#[diesel(belongs_to = Component)]
-#[diesel(belongs_to = Entity)]
-#[diesel(table_name = entities)]
+#[diesel(belongs_to(Component))]
+#[diesel(belongs_to(Entity))]
+#[diesel(table_name = entity_states)]
 pub struct EntityState {
     pub component_id: String,
     pub entity_id: String,
@@ -15,8 +13,8 @@ pub struct EntityState {
 
 #[derive(Clone, Debug, Identifiable, Queryable, Selectable, PartialEq)]
 #[diesel(primary_key(id))]
-#[diesel(belongs_to = Component)]
-#[diesel(belongs_to = Entity)]
+#[diesel(belongs_to(Component))]
+#[diesel(belongs_to(Entity))]
 #[diesel(table_name = entity_state_updates)]
 pub struct EntityStateUpdate {
     pub id: i32,
@@ -51,7 +49,7 @@ pub struct System {
 
 #[derive(Clone, Debug, Identifiable, Queryable, Selectable, PartialEq)]
 #[diesel(primary_key(id))]
-#[diesel(belongs_to = System)]
+#[diesel(belongs_to(System))]
 #[diesel(table_name = system_calls)]
 pub struct SystemCall {
     pub id: i32,

@@ -1,10 +1,11 @@
 use std::vec;
 
 use clap::Parser;
-use diesel::{SqliteConnection, Connection};
 use futures::join;
-use prisma_client_rust::bigdecimal::num_bigint::BigUint;
-use prisma_client_rust::bigdecimal::Num;
+use num::{BigUint, Num};
+use sqlx::sqlite::{SqlitePoolOptions};
+// #[cfg(feature = "postgres")]
+// use sqlx::postgres::{PgPoolOptions};
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 use url::Url;
 
@@ -12,17 +13,17 @@ use crate::indexer::{start_indexer, Processors};
 use crate::processors::component_register::ComponentRegistrationProcessor;
 use crate::processors::component_state_update::ComponentStateUpdateProcessor;
 use crate::processors::system_register::SystemRegistrationProcessor;
-use crate::server::start_server;
+// use crate::server::start_server;
 
 mod processors;
 
 mod hash;
 mod indexer;
-mod server;
+// mod server;
 
 mod stream;
-mod schema;
-mod model;
+// mod schema;
+// mod model;
 
 /// Command line args parser.
 /// Exits with 0/1 if the input is formatted correctly/incorrectly.
@@ -48,10 +49,11 @@ async fn main() -> anyhow::Result<()> {
     });
     let node = &args.node;
 
+    let database_url = &args.database_url;
     #[cfg(feature = "sqlite")]
-    let conn = SqliteConnection::establish(database_url.as_str())?;
-    #[cfg(feature = "postgres")]
-    let conn = PgConnection::establish(database_url.as_str())?;
+    let pool = SqlitePoolOptions::new().max_connections(5).connect(database_url).await?;
+    // #[cfg(feature = "postgres")]
+    // let pool = PgPoolOptions::new().max_connections(5).connect(database_url).await?;
 
     let stream = stream::ApibaraClient::new(node).await;
 
@@ -70,9 +72,9 @@ async fn main() -> anyhow::Result<()> {
     match stream {
         std::result::Result::Ok(s) => {
             println!("Connected");
-            let graphql = start_server();
-            let indexer = start_indexer(s, &client, &provider, &processors, world);
-            let _res = join!(graphql, indexer);
+            // let graphql = start_server();
+            let indexer = start_indexer(s, &pool, &provider, &processors, world);
+            let _res = join!(indexer);
         }
         std::result::Result::Err(e) => panic!("Error: {:?}", e),
     }
