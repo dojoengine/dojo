@@ -25,7 +25,6 @@ jobs:
       - uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: scripts/prisma.sh generate --schema=crates/dojo-indexer/prisma/schema.prisma
       - run: |
           cargo test
 
