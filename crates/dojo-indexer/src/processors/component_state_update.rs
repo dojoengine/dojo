@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 
 use anyhow::{Error, Ok, Result};
 use apibara_client_protos::pb::starknet::v1alpha2::EventWithTransaction;
-use sqlx::{Pool, Sqlite, Executor};
+use sqlx::{Executor, Pool, Sqlite};
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 use tonic::async_trait;
 
@@ -55,7 +55,8 @@ impl IProcessor<EventWithTransaction> for ComponentStateUpdateProcessor {
             component_address,
             txn_hash,
             parsed_data,
-        )).await?;
+        ))
+        .await?;
 
         // insert or update entity state
         tx.execute(sqlx::query!(
@@ -67,7 +68,8 @@ impl IProcessor<EventWithTransaction> for ComponentStateUpdateProcessor {
             entity_id,
             component_address,
             parsed_data,
-        )).await?;
+        ))
+        .await?;
 
         tx.commit().await?;
 

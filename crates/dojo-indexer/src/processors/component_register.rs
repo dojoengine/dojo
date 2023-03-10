@@ -2,12 +2,12 @@ use std::cmp::Ordering;
 
 use anyhow::{Error, Ok, Result};
 use apibara_client_protos::pb::starknet::v1alpha2::EventWithTransaction;
-use sqlx::{Pool, Executor, Sqlite};
+use num::BigUint;
+use sqlx::{Executor, Pool, Sqlite};
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::models::{BlockId, BlockTag};
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 use tonic::async_trait;
-use num::BigUint;
 
 use super::{EventProcessor, IProcessor};
 use crate::hash::starknet_hash;
@@ -55,9 +55,9 @@ impl IProcessor<EventWithTransaction> for ComponentRegistrationProcessor {
         let address = "0x".to_owned() + component.to_str_radix(16).as_str();
         let txn_hash = "0x".to_owned() + transaction_hash.to_str_radix(16).as_str();
         let class_hash = "0x".to_owned()
-        + BigUint::from_bytes_be(class_hash.unwrap().to_bytes_be().as_slice())
-            .to_str_radix(16)
-            .as_str();
+            + BigUint::from_bytes_be(class_hash.unwrap().to_bytes_be().as_slice())
+                .to_str_radix(16)
+                .as_str();
 
         let mut tx = pool.begin().await?;
         tx.execute(sqlx::query!(
@@ -71,7 +71,8 @@ impl IProcessor<EventWithTransaction> for ComponentRegistrationProcessor {
             address,
             class_hash,
             txn_hash,
-        )).await?;
+        ))
+        .await?;
 
         tx.commit().await?;
 

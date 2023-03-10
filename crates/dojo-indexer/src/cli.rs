@@ -3,7 +3,7 @@ use std::vec;
 use clap::Parser;
 use futures::join;
 use num::{BigUint, Num};
-use sqlx::sqlite::{SqlitePoolOptions};
+use sqlx::sqlite::SqlitePoolOptions;
 // #[cfg(feature = "postgres")]
 // use sqlx::postgres::{PgPoolOptions};
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
