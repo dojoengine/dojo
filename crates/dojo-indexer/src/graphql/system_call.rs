@@ -1,8 +1,7 @@
-use juniper::{graphql_object, GraphQLObject, FieldResult};
-use sqlx::Executor;
-use crate::server::Context;
+use juniper::{graphql_object, FieldResult};
 
 use super::system;
+use crate::server::Context;
 
 pub struct SystemCall {
     pub id: i64,
@@ -34,16 +33,22 @@ impl SystemCall {
     }
 }
 
-pub async fn system_calls_by_system(context: &Context, system_id: String) -> FieldResult<Vec<SystemCall>> {
+pub async fn system_calls_by_system(
+    context: &Context,
+    system_id: String,
+) -> FieldResult<Vec<SystemCall>> {
     let mut conn = context.pool.acquire().await.unwrap();
-    
+
     let system_calls = sqlx::query_as!(
         SystemCall,
         r#"
             SELECT * FROM system_calls WHERE system_id = $1
         "#,
         system_id
-    ).fetch_all(&mut conn).await.unwrap();
+    )
+    .fetch_all(&mut conn)
+    .await
+    .unwrap();
 
     Ok(system_calls)
 }

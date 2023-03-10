@@ -18,10 +18,10 @@ use crate::server::start_server;
 
 mod processors;
 
+mod graphql;
 mod hash;
 mod indexer;
 mod server;
-mod graphql;
 
 mod stream;
 // mod schema;

@@ -2,14 +2,11 @@
 //
 // Copy the content of entity
 
-use juniper::{FieldResult, graphql_object};
-
-use crate::server::Context;
-
-use super::component;
-use super::entity;
-
 use entity::Entity;
+use juniper::{graphql_object, FieldResult};
+
+use super::{component, entity};
+use crate::server::Context;
 
 pub struct EntityState {
     pub entity_id: String,
@@ -40,43 +37,55 @@ impl EntityState {
     }
 }
 
-pub async fn entity_states(context: &Context) -> FieldResult<Vec<EntityState>> {
-    let mut conn = context.pool.acquire().await.unwrap();
-    
-    let entity_states = sqlx::query_as!(
-        EntityState,
-        r#"
-            SELECT * FROM entity_states
-        "#
-    ).fetch_all(&mut conn).await.unwrap();
+// pub async fn entity_states(context: &Context) -> FieldResult<Vec<EntityState>> {
+//     let mut conn = context.pool.acquire().await.unwrap();
 
-    Ok(entity_states)
-}
+//     let entity_states = sqlx::query_as!(
+//         EntityState,
+//         r#"
+//             SELECT * FROM entity_states
+//         "#
+//     ).fetch_all(&mut conn).await.unwrap();
 
-pub async fn entity_states_by_entity(context: &Context, entity_id: String) -> FieldResult<Vec<EntityState>> {
+//     Ok(entity_states)
+// }
+
+pub async fn entity_states_by_entity(
+    context: &Context,
+    entity_id: String,
+) -> FieldResult<Vec<EntityState>> {
     let mut conn = context.pool.acquire().await.unwrap();
-    
+
     let entity_states = sqlx::query_as!(
         EntityState,
         r#"
             SELECT * FROM entity_states WHERE entity_id = $1
         "#,
         entity_id
-    ).fetch_all(&mut conn).await.unwrap();
+    )
+    .fetch_all(&mut conn)
+    .await
+    .unwrap();
 
     Ok(entity_states)
 }
 
-pub async fn entity_states_by_component(context: &Context, component_id: String) -> FieldResult<Vec<EntityState>> {
+pub async fn entity_states_by_component(
+    context: &Context,
+    component_id: String,
+) -> FieldResult<Vec<EntityState>> {
     let mut conn = context.pool.acquire().await.unwrap();
-    
+
     let entity_states = sqlx::query_as!(
         EntityState,
         r#"
             SELECT * FROM entity_states WHERE component_id = $1
         "#,
         component_id
-    ).fetch_all(&mut conn).await.unwrap();
+    )
+    .fetch_all(&mut conn)
+    .await
+    .unwrap();
 
     Ok(entity_states)
 }

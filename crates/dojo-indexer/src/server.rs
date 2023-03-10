@@ -8,10 +8,8 @@ use actix_web::{middleware, App, Error, HttpResponse, HttpServer};
 use juniper::{EmptyMutation, EmptySubscription, RootNode};
 use juniper_actix::{graphql_handler, playground_handler};
 use sqlx::SqlitePool;
-use starknet::providers::jsonrpc::{JsonRpcClient, HttpTransport};
 
 use crate::graphql::Query;
-use crate::stream::ApibaraClient;
 
 type Schema = RootNode<'static, Query, EmptyMutation<Context>, EmptySubscription<Context>>;
 
@@ -43,9 +41,7 @@ async fn graphql_route(
     graphql_handler(schema, &context, req, payload).await
 }
 
-pub async fn start_server(
-    pool: &SqlitePool,
-) -> std::io::Result<()> {
+pub async fn start_server(pool: &SqlitePool) -> std::io::Result<()> {
     env::set_var("RUST_LOG", "info");
     env_logger::init();
 

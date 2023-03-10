@@ -1,12 +1,8 @@
-use juniper::{FieldResult, graphql_object};
-
-use crate::server::Context;
-
-use super::component;
-use super::entity;
-
 use entity::Entity;
+use juniper::{graphql_object, FieldResult};
 
+use super::{component, entity};
+use crate::server::Context;
 
 pub struct EntityStateUpdate {
     pub id: i64,
@@ -47,60 +43,71 @@ impl EntityStateUpdate {
     }
 }
 
-pub async fn entity_state_update(context: &Context, id: i64) -> FieldResult<EntityStateUpdate> {
+// pub async fn entity_state_update(context: &Context, id: i64) -> FieldResult<EntityStateUpdate> {
+//     let mut conn = context.pool.acquire().await.unwrap();
+
+//     let entity_state_update = sqlx::query_as!(
+//         EntityStateUpdate,
+//         r#"
+//             SELECT * FROM entity_state_updates WHERE id = $1
+//         "#,
+//         id
+//     ).fetch_one(&mut conn).await.unwrap();
+
+//     Ok(entity_state_update)
+// }
+
+// pub async fn entity_state_updates(context: &Context) -> FieldResult<Vec<EntityStateUpdate>> {
+//     let mut conn = context.pool.acquire().await.unwrap();
+
+//     let entity_state_updates = sqlx::query_as!(
+//         EntityStateUpdate,
+//         r#"
+//             SELECT * FROM entity_state_updates
+//         "#
+//     ).fetch_all(&mut conn).await.unwrap();
+
+//     Ok(entity_state_updates)
+// }
+
+pub async fn entity_state_updates_by_component(
+    context: &Context,
+    component_id: String,
+) -> FieldResult<Vec<EntityStateUpdate>> {
     let mut conn = context.pool.acquire().await.unwrap();
-    
-    let entity_state_update = sqlx::query_as!(
-        EntityStateUpdate,
-        r#"
-            SELECT * FROM entity_state_updates WHERE id = $1
-        "#,
-        id
-    ).fetch_one(&mut conn).await.unwrap();
 
-    Ok(entity_state_update)
-}
-
-pub async fn entity_state_updates(context: &Context) -> FieldResult<Vec<EntityStateUpdate>> {
-    let mut conn = context.pool.acquire().await.unwrap();
-    
-    let entity_state_updates = sqlx::query_as!(
-        EntityStateUpdate,
-        r#"
-            SELECT * FROM entity_state_updates
-        "#
-    ).fetch_all(&mut conn).await.unwrap();
-
-    Ok(entity_state_updates)
-}
-
-pub async fn entity_state_updates_by_component(context: &Context, component_id: String) -> FieldResult<Vec<EntityStateUpdate>> {
-    let mut conn = context.pool.acquire().await.unwrap();
-    
     let entity_state_updates = sqlx::query_as!(
         EntityStateUpdate,
         r#"
             SELECT * FROM entity_state_updates WHERE component_id = $1
         "#,
         component_id
-    ).fetch_all(&mut conn).await.unwrap();
+    )
+    .fetch_all(&mut conn)
+    .await
+    .unwrap();
 
     Ok(entity_state_updates)
 }
 
-pub async fn entity_state_updates_by_entity(context: &Context, entity_id: String) -> FieldResult<Vec<EntityStateUpdate>> {
+pub async fn entity_state_updates_by_entity(
+    context: &Context,
+    entity_id: String,
+) -> FieldResult<Vec<EntityStateUpdate>> {
     let mut conn = context.pool.acquire().await.unwrap();
-    
+
     let entity_state_updates = sqlx::query_as!(
         EntityStateUpdate,
         r#"
             SELECT * FROM entity_state_updates WHERE entity_id = $1
         "#,
         entity_id
-    ).fetch_all(&mut conn).await.unwrap();
+    )
+    .fetch_all(&mut conn)
+    .await
+    .unwrap();
 
     Ok(entity_state_updates)
 }
 
 // Copy the content of entity
-

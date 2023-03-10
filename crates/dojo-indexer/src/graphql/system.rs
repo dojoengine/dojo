@@ -1,5 +1,5 @@
-use juniper::{graphql_object, GraphQLObject, FieldResult};
-use sqlx::Executor;
+use juniper::{graphql_object, FieldResult};
+
 use crate::server::Context;
 
 pub struct System {
@@ -32,38 +32,48 @@ impl System {
         &self.transaction_hash
     }
 
-    // pub async fn entity_state_updates(&self, context: &Context) -> FieldResult<Vec<super::entity_state_update::EntityStateUpdate>> {
-    //     super::entity_state_update::entity_state_updates_by_system(context, self.id.clone()).await
-    // }
+    // pub async fn entity_state_updates(&self, context: &Context) ->
+    // FieldResult<Vec<super::entity_state_update::EntityStateUpdate>> {
+    //     super::entity_state_update::entity_state_updates_by_system(context,
+    // self.id.clone()).await }
 
-    pub async fn system_calls(&self, context: &Context) -> FieldResult<Vec<super::system_call::SystemCall>> {
+    pub async fn system_calls(
+        &self,
+        context: &Context,
+    ) -> FieldResult<Vec<super::system_call::SystemCall>> {
         super::system_call::system_calls_by_system(context, self.id.clone()).await
     }
 }
 
 pub async fn system(context: &Context, id: String) -> FieldResult<System> {
     let mut conn = context.pool.acquire().await.unwrap();
-    
+
     let system = sqlx::query_as!(
         System,
         r#"
             SELECT * FROM systems WHERE id = $1
         "#,
         id
-    ).fetch_one(&mut conn).await.unwrap();
+    )
+    .fetch_one(&mut conn)
+    .await
+    .unwrap();
 
     Ok(system)
 }
 
 pub async fn systems(context: &Context) -> FieldResult<Vec<System>> {
     let mut conn = context.pool.acquire().await.unwrap();
-    
+
     let systems = sqlx::query_as!(
         System,
         r#"
             SELECT * FROM systems
         "#
-    ).fetch_all(&mut conn).await.unwrap();
+    )
+    .fetch_all(&mut conn)
+    .await
+    .unwrap();
 
     Ok(systems)
 }

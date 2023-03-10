@@ -1,5 +1,5 @@
-use juniper::{graphql_object, GraphQLObject, FieldResult};
-use sqlx::Executor;
+use juniper::{graphql_object, FieldResult};
+
 use crate::server::Context;
 
 pub struct Component {
@@ -37,38 +37,51 @@ impl Component {
         &self.transaction_hash
     }
 
-    pub async fn entity_state_updates(&self, context: &Context) -> FieldResult<Vec<super::entity_state_update::EntityStateUpdate>> {
-        super::entity_state_update::entity_state_updates_by_component(context, self.id.clone()).await
+    pub async fn entity_state_updates(
+        &self,
+        context: &Context,
+    ) -> FieldResult<Vec<super::entity_state_update::EntityStateUpdate>> {
+        super::entity_state_update::entity_state_updates_by_component(context, self.id.clone())
+            .await
     }
 
-    pub async fn entity_states(&self, context: &Context) -> FieldResult<Vec<super::entity_state::EntityState>> {
+    pub async fn entity_states(
+        &self,
+        context: &Context,
+    ) -> FieldResult<Vec<super::entity_state::EntityState>> {
         super::entity_state::entity_states_by_component(context, self.id.clone()).await
     }
 }
 
 pub async fn component(context: &Context, id: String) -> FieldResult<Component> {
     let mut conn = context.pool.acquire().await.unwrap();
-    
+
     let component = sqlx::query_as!(
         Component,
         r#"
             SELECT * FROM components WHERE id = $1
         "#,
         id
-    ).fetch_one(&mut conn).await.unwrap();
+    )
+    .fetch_one(&mut conn)
+    .await
+    .unwrap();
 
     Ok(component)
 }
 
 pub async fn components(context: &Context) -> FieldResult<Vec<Component>> {
     let mut conn = context.pool.acquire().await.unwrap();
-    
+
     let components = sqlx::query_as!(
         Component,
         r#"
             SELECT * FROM components
         "#
-    ).fetch_all(&mut conn).await.unwrap();
+    )
+    .fetch_all(&mut conn)
+    .await
+    .unwrap();
 
     Ok(components)
 }

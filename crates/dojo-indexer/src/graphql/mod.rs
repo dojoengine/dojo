@@ -1,14 +1,14 @@
 pub mod component;
-pub mod system;
-pub mod system_call;
-pub mod entity_state_update;
 pub mod entity;
 pub mod entity_state;
-
-use juniper::{graphql_object, FieldResult};
-use super::server::Context;
+pub mod entity_state_update;
+pub mod system;
+pub mod system_call;
 
 use component::Component;
+use juniper::{graphql_object, FieldResult};
+
+use super::server::Context;
 
 pub struct Query;
 
@@ -30,11 +30,13 @@ impl Query {
         system::systems(context).await
     }
 
-    // async fn entity_state_update(context: &Context, id: i64) -> FieldResult<entity_state_update::EntityStateUpdate> {
+    // async fn entity_state_update(context: &Context, id: i64) ->
+    // FieldResult<entity_state_update::EntityStateUpdate> {
     //     entity_state_update::entity_state_update(context, id).await
     // }
 
-    // async fn entity_state_updates(context: &Context) -> FieldResult<Vec<entity_state_update::EntityStateUpdate>> {
+    // async fn entity_state_updates(context: &Context) ->
+    // FieldResult<Vec<entity_state_update::EntityStateUpdate>> {
     //     entity_state_update::entity_state_updates(context).await
     // }
 
