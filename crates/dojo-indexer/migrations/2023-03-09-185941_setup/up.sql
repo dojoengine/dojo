@@ -40,12 +40,13 @@ CREATE TABLE entity_state_updates (
     FOREIGN KEY (entity_id) REFERENCES entities(id),
     FOREIGN KEY (component_id) REFERENCES components(id)
 );
-
+    
 CREATE TABLE entity_states (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     entity_id TEXT NOT NULL,
     component_id TEXT NOT NULL,
     data TEXT,
     FOREIGN KEY (entity_id) REFERENCES entities(id),
-    FOREIGN KEY (component_id) REFERENCES components(id)
+    FOREIGN KEY (component_id) REFERENCES components(id),
+    UNIQUE (entity_id, component_id)
 );
