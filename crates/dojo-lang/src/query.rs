@@ -13,7 +13,7 @@ pub struct Query {
     pub world_config: WorldConfig,
     pub rewrite_nodes: Vec<RewriteNode>,
     pub diagnostics: Vec<PluginDiagnostic>,
-    pub imports: Vec<SmolStr>,
+    imports: Vec<SmolStr>,
 }
 
 impl Query {
@@ -25,34 +25,12 @@ impl Query {
         query
     }
 
-    pub fn imports(&self) -> Vec<RewriteNode> {
-        self.imports
-            .iter()
-            .map(|import| {
-                RewriteNode::interpolate_patched(
-                    "use super::$import$;",
-                    HashMap::from([("import".to_string(), RewriteNode::Text(import.to_string()))]),
-                )
-            })
-            .collect()
-    }
-
     fn handle_expression(&mut self, db: &dyn SyntaxGroup, expression: ast::Expr) {
         match expression {
             ast::Expr::Tuple(tuple) => {
                 for element in tuple.expressions(db).elements(db) {
                     self.handle_expression(db, element);
                 }
-
-                self.rewrite_nodes.push(RewriteNode::interpolate_patched(
-                    "
-                    let query = QueryTrait::<$typename$>::new();
-                ",
-                    HashMap::from([(
-                        "typename".to_string(),
-                        RewriteNode::new_trimmed(tuple.as_syntax_node()),
-                    )]),
-                ));
             }
 
             ast::Expr::Path(path) => {
@@ -90,5 +68,17 @@ impl Query {
                 });
             }
         }
+    }
+
+    pub fn imports(&self) -> Vec<RewriteNode> {
+        self.imports
+            .iter()
+            .map(|import| {
+                RewriteNode::interpolate_patched(
+                    "use super::$import$;",
+                    HashMap::from([("import".to_string(), RewriteNode::Text(import.to_string()))]),
+                )
+            })
+            .collect()
     }
 }

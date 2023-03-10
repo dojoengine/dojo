@@ -2,11 +2,18 @@ use dict::DictFeltToTrait;
 
 #[derive(Copy, Drop)]
 struct Entity {}
-
-struct Or<T> {}
-
-struct Component<T> {}
-
+struct Or<S, T> {}
+#[derive(Copy, Drop)]
+struct With<S, T> {}
+#[derive(Copy, Drop)]
+struct Without<S, T> {}
+#[derive(Copy, Drop)]
+struct Caller {}
+#[derive(Copy, Drop)]
+struct Input {}
+#[derive(Copy, Drop)]
+struct EntityID<T> {}
+#[derive(Copy, Drop)]
 struct Query<T> {}
 
 trait QueryTrait<T> {

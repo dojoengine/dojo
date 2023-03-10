@@ -38,32 +38,28 @@ pub fn handle_system(
 
     let signature = function_ast.declaration(db).signature(db);
     let parameters = signature.parameters(db).elements(db);
-    let mut preprocess_rewrite_nodes = vec![];
+    let mut query_nodes = vec![];
 
     for param in parameters.iter() {
-        let type_ast = param.type_clause(db).ty(db);
-
-        if let Some(SystemArgType::Query) = try_extract_execute_paramters(db, &type_ast) {
-            let query = Query::from_expr(db, world_config, type_ast.clone());
-            import_nodes.extend(query.imports());
-            preprocess_rewrite_nodes.extend(query.rewrite_nodes);
+        if let Some(res) = handle_param(db, param, world_config) {
+            import_nodes.extend(res.0);
+            query_nodes.extend(res.1);
         }
     }
 
     let body_nodes = resolve_function_body_members(db, function_ast);
-
     rewrite_nodes.push(RewriteNode::interpolate_patched(
         "
             #[external]
             fn execute() {
                 let world_address = starknet::contract_address_const::<$world_address$>();
-                $preprocessing$
+                $query$
                 $body$
             }
         ",
         HashMap::from([
             ("body".to_string(), RewriteNode::new_modified(body_nodes)),
-            ("preprocessing".to_string(), RewriteNode::new_modified(preprocess_rewrite_nodes)),
+            ("query".to_string(), RewriteNode::new_modified(query_nodes)),
             (
                 "world_address".to_string(),
                 RewriteNode::Text(format!("{:#x}", world_config.address.unwrap_or_default())),
@@ -79,8 +75,11 @@ pub fn handle_system(
                 use dojo::world;
                 use dojo::world::IWorldDispatcher;
                 use dojo::world::IWorldDispatcherTrait;
+                use dojo::query::Caller;
+                use dojo::query::EntityID;
                 use dojo::query::Query;
                 use dojo::query::QueryTrait;
+                use dojo::query::With;
                 $imports$
                 $body$
             }
@@ -252,27 +251,48 @@ fn capitalize_first(s: String) -> String {
     capitalized
 }
 
-enum SystemArgType {
-    Query,
-}
-
-fn try_extract_execute_paramters(
+fn handle_param(
     db: &dyn SyntaxGroup,
-    type_ast: &ast::Expr,
-) -> Option<SystemArgType> {
-    let as_path = try_extract_matches!(type_ast, ast::Expr::Path)?;
+    param_ast: &ast::Param,
+    world_config: WorldConfig,
+) -> Option<(Vec<RewriteNode>, Vec<RewriteNode>)> {
+    let type_ast = param_ast.type_clause(db).ty(db);
+    let mut import_nodes = vec![];
+    let mut query_nodes = vec![];
+
+    let as_path = try_extract_matches!(type_ast.clone(), ast::Expr::Path)?;
     let binding = as_path.elements(db);
     let last = binding.last()?;
-    let segment = match last {
-        ast::PathSegment::WithGenericArgs(segment) => segment,
+    match last {
+        ast::PathSegment::WithGenericArgs(segment) => {
+            let ty = segment.ident(db).text(db);
+            if ty == "Query" {
+                let query = Query::from_expr(db, world_config, type_ast.clone());
+                import_nodes.extend(query.imports());
+                query_nodes.extend(query.rewrite_nodes);
+                query_nodes.push(RewriteNode::interpolate_patched(
+                    "
+                    let $name$ = QueryTrait::$typename$::new();",
+                    HashMap::from([
+                        (
+                            "name".to_string(),
+                            RewriteNode::new_trimmed(param_ast.name(db).as_syntax_node()),
+                        ),
+                        (
+                            "typename".to_string(),
+                            RewriteNode::new_trimmed(segment.generic_args(db).as_syntax_node()),
+                        ),
+                    ]),
+                ));
+            }
+        }
         ast::PathSegment::Simple(_segment) => {
             // TODO: Match `world` var name.
             return None;
         }
     };
-    let ty = segment.ident(db).text(db);
 
-    if ty == "Query" { Some(SystemArgType::Query) } else { None }
+    Some((import_nodes, query_nodes))
 }
 
 /// Finds the inline modules annotated as systems in the given crate_ids and

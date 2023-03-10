@@ -14,20 +14,24 @@ struct Position {
 }
 
 #[derive(Component)]
-struct Health {
-    hp: felt, 
+struct Player {
+    name: felt, 
 }
 
-fn move_inner(query: Query<(Position, Option::<Health>)>, index: u32, count: u32) {
+fn move_inner(query: Query<(Position, Option::<Player>)>, index: u32, count: u32) {
     return move_inner(query, index + 1_u32, count - 1_u32);
 }
 
 #[system]
-fn move(query: Query<(Position, Option::<Health>)>) {
+fn move(positions_query: Query<(Position, Option::<Player>)>, player_query: Query<(With::<Player, EntityID<Caller>>)>) {
     let mut bar = 123;
     let mut foo = ArrayTrait::<felt>::new();
     // TODO: https://github.com/starkware-libs/cairo/issues/2438
     // foo.append(bar);
+
+    // TODO: Replace with query.len().
+    // https://github.com/starkware-libs/cairo/issues/2438
+    move_inner(positions_query, 0_u32, 1_u32);
 
     if bar == 123 {
         return ();
@@ -36,12 +40,6 @@ fn move(query: Query<(Position, Option::<Health>)>) {
     } else {
         return ();
     }
-
-    // TODO: Replace with query.len().
-    // https://github.com/starkware-libs/cairo/issues/2438
-    move_inner(query, 0_u32, 1_u32);
-
-    return ();
 }
 
 //! > generated_cairo_code
@@ -49,7 +47,7 @@ use array::ArrayTrait;
 
 use dojo::query::Query;
 
-fn move_inner(query: Query<(Position, Option::<Health>)>, index: u32, count: u32) {
+fn move_inner(query: Query<(Position, Option::<Player>)>, index: u32, count: u32) {
     return move_inner(query, index + 1_u32, count - 1_u32);
 }
 
@@ -102,36 +100,36 @@ impl StorageAccessPosition of starknet::StorageAccess::<Position> {
 }
 
 #[derive(Copy, Drop)]
-struct Health {
-    hp: felt, 
+struct Player {
+    name: felt, 
 }
 
-impl HealthSerde of serde::Serde::<Health> {
-    fn serialize(ref serialized: Array::<felt>, input: Health) {
-        serde::Serde::<felt>::serialize(ref serialized, input.hp);
+impl PlayerSerde of serde::Serde::<Player> {
+    fn serialize(ref serialized: Array::<felt>, input: Player) {
+        serde::Serde::<felt>::serialize(ref serialized, input.name);
     }
-    fn deserialize(ref serialized: Span::<felt>) -> Option::<Health> {
-        Option::Some(Health { hp: serde::Serde::<felt>::deserialize(ref serialized)?,  })
+    fn deserialize(ref serialized: Span::<felt>) -> Option::<Player> {
+        Option::Some(Player { name: serde::Serde::<felt>::deserialize(ref serialized)?,  })
     }
 }
 
-impl StorageAccessHealth of starknet::StorageAccess::<Health> {
+impl StorageAccessPlayer of starknet::StorageAccess::<Player> {
     fn read(
         address_domain: felt, base: starknet::StorageBaseAddress
-    ) -> starknet::SyscallResult::<Health> {
+    ) -> starknet::SyscallResult::<Player> {
         Result::Ok(
-            Health {
-                hp: starknet::storage_read_syscall(
+            Player {
+                name: starknet::storage_read_syscall(
                     address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8)
                 )?,
             }
         )
     }
     fn write(
-        address_domain: felt, base: starknet::StorageBaseAddress, value: Health
+        address_domain: felt, base: starknet::StorageBaseAddress, value: Player
     ) -> starknet::SyscallResult::<()> {
         starknet::storage_write_syscall(
-            address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8), value.hp
+            address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8), value.name
         )
     }
 }
@@ -141,10 +139,13 @@ mod MoveSystem {
     use dojo::world;
     use dojo::world::IWorldDispatcher;
     use dojo::world::IWorldDispatcherTrait;
+    use dojo::query::Caller;
+    use dojo::query::EntityID;
     use dojo::query::Query;
     use dojo::query::QueryTrait;
+    use dojo::query::With;
     use super::Position;
-    use super::Health;
+    use super::Player;
 
     #[external]
     fn execute() {
@@ -154,18 +155,19 @@ mod MoveSystem {
         }.entities(
             starknet::contract_address_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>()
         );
-        let health_ids = IWorldDispatcher {
+        let player_ids = IWorldDispatcher {
             contract_address: world_address
         }.entities(
-            starknet::contract_address_const::<0x1690bb282da6a011c52715e2188378c769966964ca2332dccad8d7542983bc2>()
+            starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
         );
 
-        let query = QueryTrait::<(Position, Option::<Health>)>::new();
-
+        let positions_query = QueryTrait::<(Position, Option::<Player>)>::new();
+        let player_query = QueryTrait::<(With::<Player, EntityID<Caller>>)>::new();
         let mut bar = 123;
 
         let mut foo = super::ArrayTrait::<felt>::new();
 
+        super::move_inner(positions_query, 0_u32, 1_u32);
         if bar == 123 {
             return ();
         } else {
@@ -175,8 +177,6 @@ mod MoveSystem {
                 return ();
             }
         }
-        super::move_inner(query, 0_u32, 1_u32);
-        return ();
     }
 }
 
@@ -208,39 +208,34 @@ mod PositionComponent {
 }
 
 #[contract]
-mod HealthComponent {
-    use super::Health;
-    use super::HealthSerde;
-    use super::StorageAccessHealth;
+mod PlayerComponent {
+    use super::Player;
+    use super::PlayerSerde;
+    use super::StorageAccessPlayer;
 
     struct Storage {
-        state: LegacyMap::<felt, Health>, 
+        state: LegacyMap::<felt, Player>, 
     }
 
-    // Initialize Health.
+    // Initialize Player.
     #[external]
     fn initialize() {}
 
     // Set the state of an entity.
     #[external]
-    fn set(entity_id: felt, value: Health) {
+    fn set(entity_id: felt, value: Player) {
         state::write(entity_id, value);
     }
 
     // Get the state of an entity.
     #[view]
-    fn get(entity_id: felt) -> Health {
+    fn get(entity_id: felt) -> Player {
         return state::read(entity_id);
     }
 }
 
 //! > expected_diagnostics
 error: Variable not dropped.
- --> contract:18:25
-                    let query = QueryTrait::<(Position, Option::<Health>)>::new();
-                        ^***^
-
-error: Unreachable code
- --> contract:37:9
-        super::move_inner(query, 0_u32, 1_u32);
-        ^*************************************^
+ --> contract:22:25
+                    let player_query = QueryTrait::<(With::<Player, EntityID<Caller>>)>::new();
+                        ^**********^
