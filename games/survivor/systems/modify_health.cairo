@@ -4,5 +4,5 @@ fn adjust_health(query: Query<(Health)>, value: felt) {
     Health.set(current_value + value);
 
     // if current_value + value < 0 
-    // kill
+    // set value to 0.
 }

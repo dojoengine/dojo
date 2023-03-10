@@ -1,13 +1,13 @@
 use array::ArrayTrait;
 
 #[derive(Component)]
-struct Name {
+struct Health {
     value: felt,
 }
 
-impl Name of Component {
+impl Health of Component {
     #[view]
-    fn is_zero(self: Name) -> bool {
+    fn is_zero(self: Health) -> bool {
         match self.value {
             0 => bool::True(()),
             _ => bool::False(()),
@@ -15,11 +15,11 @@ impl Name of Component {
     }
 }
 
-// #[test]
-// #[available_gas(100000)]
-// fn test_health_is_zero() {
-//     assert(HealthComponent::is_zero(0), 'not zero');
-// }
+#[test]
+#[available_gas(100000)]
+fn test_health_is_zero() {
+    assert(HealthComponent::is_zero(0), 'not zero');
+}
 
 // #[test]
 // #[available_gas(100000)]
