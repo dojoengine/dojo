@@ -1,0 +1,41 @@
+---
+name: Release
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  release:
+    name: Release for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: dojo-linux-x86_64.tar.gz
+            asset_name: dojo-linux-x86_64.tar.gz
+          - os: macos-latest
+            artifact_name: dojo-darwin-x86_64.tar.gz
+            asset_name: dojo-darwin-x86_64.tar.gz
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Prisma Generate
+      run: |
+        scripts/prisma.sh generate --schema=crates/dojo-indexer/prisma/schema.prisma
+    - name: Build
+      run: |
+        cargo build --release --locked
+    - name: Create Tarball
+      run: >
+        tar -C target/release -czvf ${{ matrix.artifact_name }} 
+        dojo dojo-indexer dojo-language-server dojo-test prisma-cli
+    - name: Upload Binaries
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: ${{ matrix.artifact_name }}
+        asset_name: ${{ matrix.asset_name }}
+        tag: ${{ github.ref }}
