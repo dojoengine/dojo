@@ -1,7 +1,7 @@
 -- Your SQL goes here
 
 CREATE TABLE components (
-    id VARCHAR PRIMARY KEY,
+    id TEXT NOT NULL PRIMARY KEY,
     name TEXT,
     properties TEXT,
     address TEXT NOT NULL,
@@ -18,7 +18,7 @@ CREATE TABLE system_calls (
 );
 
 CREATE TABLE systems (
-    id VARCHAR PRIMARY KEY,
+    id TEXT NOT NULL PRIMARY KEY,
     name TEXT,
     address TEXT NOT NULL,
     class_hash TEXT NOT NULL,
@@ -26,7 +26,7 @@ CREATE TABLE systems (
 );
 
 CREATE TABLE entities (
-    id VARCHAR PRIMARY KEY,
+    id TEXT NOT NULL PRIMARY KEY,
     name TEXT,
     transaction_hash TEXT NOT NULL
 );
@@ -42,7 +42,6 @@ CREATE TABLE entity_state_updates (
 );
     
 CREATE TABLE entity_states (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
     entity_id TEXT NOT NULL,
     component_id TEXT NOT NULL,
     data TEXT,

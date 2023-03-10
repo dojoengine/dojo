@@ -13,13 +13,15 @@ use crate::indexer::{start_indexer, Processors};
 use crate::processors::component_register::ComponentRegistrationProcessor;
 use crate::processors::component_state_update::ComponentStateUpdateProcessor;
 use crate::processors::system_register::SystemRegistrationProcessor;
+use crate::server::start_server;
 // use crate::server::start_server;
 
 mod processors;
 
 mod hash;
 mod indexer;
-// mod server;
+mod server;
+mod graphql;
 
 mod stream;
 // mod schema;
@@ -72,9 +74,9 @@ async fn main() -> anyhow::Result<()> {
     match stream {
         std::result::Result::Ok(s) => {
             println!("Connected");
-            // let graphql = start_server();
+            let graphql = start_server(&pool);
             let indexer = start_indexer(s, &pool, &provider, &processors, world);
-            let _res = join!(indexer);
+            let _res = join!(graphql, indexer);
         }
         std::result::Result::Err(e) => panic!("Error: {:?}", e),
     }
