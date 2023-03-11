@@ -4,7 +4,8 @@
 ExpandContractTestRunner
 
 //! > cairo_code
-extern type Query<T>;
+use array::ArrayTrait;
+use dojo::query::Query;
 
 #[derive(Component)]
 struct Position {
@@ -17,22 +18,133 @@ struct Health {
     hp: felt, 
 }
 
+fn move_inner(query: Query<(Position, Option::<Health>)>, index: u32, count: u32) {
+    return move_inner(query, index + 1_u32, count - 1_u32);
+}
+
 #[system]
 fn move(query: Query<(Position, Option::<Health>)>) {
+    let mut bar = 123;
+    let mut foo = ArrayTrait::<felt>::new();
+    // TODO: https://github.com/starkware-libs/cairo/issues/2438
+    // foo.append(bar);
+
+    if bar == 123 {
+        return ();
+    } else if bar == 0 {
+        return ();
+    } else {
+        return ();
+    }
+
+    // TODO: Replace with query.len().
+    // https://github.com/starkware-libs/cairo/issues/2438
+    move_inner(query, 0_u32, 1_u32);
+
     return ();
 }
 
 //! > generated_cairo_code
-extern type Query<T>;
+use array::ArrayTrait;
+
+use dojo::query::Query;
+
+fn move_inner(query: Query<(Position, Option::<Health>)>, index: u32, count: u32) {
+    return move_inner(query, index + 1_u32, count - 1_u32);
+}
+
+#[derive(Copy, Drop)]
+struct Position {
+    x: felt,
+    y: felt,
+}
+
+impl PositionSerde of serde::Serde::<Position> {
+    fn serialize(ref serialized: Array::<felt>, input: Position) {
+        serde::Serde::<felt>::serialize(ref serialized, input.x);
+        serde::Serde::<felt>::serialize(ref serialized, input.y);
+    }
+    fn deserialize(ref serialized: Span::<felt>) -> Option::<Position> {
+        Option::Some(
+            Position {
+                x: serde::Serde::<felt>::deserialize(ref serialized)?,
+                y: serde::Serde::<felt>::deserialize(ref serialized)?,
+            }
+        )
+    }
+}
+
+impl StorageAccessPosition of starknet::StorageAccess::<Position> {
+    fn read(
+        address_domain: felt, base: starknet::StorageBaseAddress
+    ) -> starknet::SyscallResult::<Position> {
+        Result::Ok(
+            Position {
+                x: starknet::storage_read_syscall(
+                    address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8)
+                )?,
+                y: starknet::storage_read_syscall(
+                    address_domain, starknet::storage_address_from_base_and_offset(base, 1_u8)
+                )?,
+            }
+        )
+    }
+    fn write(
+        address_domain: felt, base: starknet::StorageBaseAddress, value: Position
+    ) -> starknet::SyscallResult::<()> {
+        starknet::storage_write_syscall(
+            address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8), value.x
+        )?;
+        starknet::storage_write_syscall(
+            address_domain, starknet::storage_address_from_base_and_offset(base, 1_u8), value.y
+        )
+    }
+}
+
+#[derive(Copy, Drop)]
+struct Health {
+    hp: felt, 
+}
+
+impl HealthSerde of serde::Serde::<Health> {
+    fn serialize(ref serialized: Array::<felt>, input: Health) {
+        serde::Serde::<felt>::serialize(ref serialized, input.hp);
+    }
+    fn deserialize(ref serialized: Span::<felt>) -> Option::<Health> {
+        Option::Some(Health { hp: serde::Serde::<felt>::deserialize(ref serialized)?,  })
+    }
+}
+
+impl StorageAccessHealth of starknet::StorageAccess::<Health> {
+    fn read(
+        address_domain: felt, base: starknet::StorageBaseAddress
+    ) -> starknet::SyscallResult::<Health> {
+        Result::Ok(
+            Health {
+                hp: starknet::storage_read_syscall(
+                    address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8)
+                )?,
+            }
+        )
+    }
+    fn write(
+        address_domain: felt, base: starknet::StorageBaseAddress, value: Health
+    ) -> starknet::SyscallResult::<()> {
+        starknet::storage_write_syscall(
+            address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8), value.hp
+        )
+    }
+}
 
 #[contract]
 mod MoveSystem {
     use dojo::world;
     use dojo::world::IWorldDispatcher;
     use dojo::world::IWorldDispatcherTrait;
-
-
-    struct Storage {}
+    use dojo::query::Query;
+    use dojo::query::QueryTrait;
+    use super::Position;
+    use super::Health;
 
     #[external]
     fn execute() {
@@ -48,60 +160,31 @@ mod MoveSystem {
             starknet::contract_address_const::<0x1690bb282da6a011c52715e2188378c769966964ca2332dccad8d7542983bc2>()
         );
 
+        let query = QueryTrait::<(Position, Option::<Health>)>::new();
+
+        let mut bar = 123;
+
+        let mut foo = super::ArrayTrait::<felt>::new();
+
+        if bar == 123 {
+            return ();
+        } else {
+            if bar == 0 {
+                return ();
+            } else {
+                return ();
+            }
+        }
+        super::move_inner(query, 0_u32, 1_u32);
         return ();
     }
 }
 
 #[contract]
 mod PositionComponent {
-    #[derive(Copy, Drop)]
-    struct Position {
-        x: felt,
-        y: felt,
-    }
-
-    impl PositionSerde of serde::Serde::<Position> {
-        fn serialize(ref serialized: Array::<felt>, input: Position) {
-            serde::Serde::<felt>::serialize(ref serialized, input.x);
-            serde::Serde::<felt>::serialize(ref serialized, input.y);
-        }
-        fn deserialize(ref serialized: Span::<felt>) -> Option::<Position> {
-            Option::Some(
-                Position {
-                    x: serde::Serde::<felt>::deserialize(ref serialized)?,
-                    y: serde::Serde::<felt>::deserialize(ref serialized)?,
-                }
-            )
-        }
-    }
-
-    impl StorageAccessPosition of starknet::StorageAccess::<Position> {
-        fn read(
-            address_domain: felt, base: starknet::StorageBaseAddress
-        ) -> starknet::SyscallResult::<Position> {
-            Result::Ok(
-                Position {
-                    x: starknet::storage_read_syscall(
-                        address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8)
-                    )?,
-                    y: starknet::storage_read_syscall(
-                        address_domain, starknet::storage_address_from_base_and_offset(base, 1_u8)
-                    )?,
-                }
-            )
-        }
-        fn write(
-            address_domain: felt, base: starknet::StorageBaseAddress, value: Position
-        ) -> starknet::SyscallResult::<()> {
-            starknet::storage_write_syscall(
-                address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8), value.x
-            )?;
-            starknet::storage_write_syscall(
-                address_domain, starknet::storage_address_from_base_and_offset(base, 1_u8), value.y
-            )
-        }
-    }
-
+    use super::Position;
+    use super::PositionSerde;
+    use super::StorageAccessPosition;
 
     struct Storage {
         state: LegacyMap::<felt, Position>, 
@@ -126,41 +209,9 @@ mod PositionComponent {
 
 #[contract]
 mod HealthComponent {
-    #[derive(Copy, Drop)]
-    struct Health {
-        hp: felt, 
-    }
-
-    impl HealthSerde of serde::Serde::<Health> {
-        fn serialize(ref serialized: Array::<felt>, input: Health) {
-            serde::Serde::<felt>::serialize(ref serialized, input.hp);
-        }
-        fn deserialize(ref serialized: Span::<felt>) -> Option::<Health> {
-            Option::Some(Health { hp: serde::Serde::<felt>::deserialize(ref serialized)?,  })
-        }
-    }
-
-    impl StorageAccessHealth of starknet::StorageAccess::<Health> {
-        fn read(
-            address_domain: felt, base: starknet::StorageBaseAddress
-        ) -> starknet::SyscallResult::<Health> {
-            Result::Ok(
-                Health {
-                    hp: starknet::storage_read_syscall(
-                        address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8)
-                    )?,
-                }
-            )
-        }
-        fn write(
-            address_domain: felt, base: starknet::StorageBaseAddress, value: Health
-        ) -> starknet::SyscallResult::<()> {
-            starknet::storage_write_syscall(
-                address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8), value.hp
-            )
-        }
-    }
-
+    use super::Health;
+    use super::HealthSerde;
+    use super::StorageAccessHealth;
 
     struct Storage {
         state: LegacyMap::<felt, Health>, 
@@ -184,3 +235,12 @@ mod HealthComponent {
 }
 
 //! > expected_diagnostics
+error: Variable not dropped.
+ --> contract:18:25
+                    let query = QueryTrait::<(Position, Option::<Health>)>::new();
+                        ^***^
+
+error: Unreachable code
+ --> contract:37:9
+        super::move_inner(query, 0_u32, 1_u32);
+        ^*************************************^

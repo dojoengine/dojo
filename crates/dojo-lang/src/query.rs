@@ -3,24 +3,38 @@ use std::collections::HashMap;
 use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_semantic::patcher::RewriteNode;
 use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
+use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use dojo_project::WorldConfig;
+use smol_str::SmolStr;
 
-use crate::plugin::get_contract_address;
+use crate::component::compute_component_id;
 
 pub struct Query {
     pub world_config: WorldConfig,
     pub rewrite_nodes: Vec<RewriteNode>,
     pub diagnostics: Vec<PluginDiagnostic>,
+    pub imports: Vec<SmolStr>,
 }
 
 impl Query {
     pub fn from_expr(db: &dyn SyntaxGroup, world_config: WorldConfig, expr: ast::Expr) -> Self {
         let diagnostics = vec![];
         let rewrite_nodes: Vec<RewriteNode> = vec![];
-        let mut query = Query { world_config, diagnostics, rewrite_nodes };
+        let mut query = Query { world_config, diagnostics, rewrite_nodes, imports: vec![] };
         query.handle_expression(db, expr);
         query
+    }
+
+    pub fn imports(&self) -> Vec<RewriteNode> {
+        self.imports
+            .iter()
+            .map(|import| {
+                RewriteNode::interpolate_patched(
+                    "use super::$import$;",
+                    HashMap::from([("import".to_string(), RewriteNode::Text(import.to_string()))]),
+                )
+            })
+            .collect()
     }
 
     fn handle_expression(&mut self, db: &dyn SyntaxGroup, expression: ast::Expr) {
@@ -29,6 +43,16 @@ impl Query {
                 for element in tuple.expressions(db).elements(db) {
                     self.handle_expression(db, element);
                 }
+
+                self.rewrite_nodes.push(RewriteNode::interpolate_patched(
+                    "
+                    let query = QueryTrait::<$typename$>::new();
+                ",
+                    HashMap::from([(
+                        "typename".to_string(),
+                        RewriteNode::new_trimmed(tuple.as_syntax_node()),
+                    )]),
+                ));
             }
 
             ast::Expr::Path(path) => {
@@ -44,22 +68,8 @@ impl Query {
                     }
                     ast::PathSegment::Simple(segment) => {
                         let var_prefix = segment.as_syntax_node().get_text(db).to_ascii_lowercase();
-
-                        // Component name to felt
-                        let component_name_raw = path.as_syntax_node().get_text(db);
-                        let mut component_name_parts: Vec<&str> =
-                            component_name_raw.split("::").collect();
-                        let component_name = component_name_parts.pop().unwrap();
-
-                        let component_id = format!(
-                            "{:#x}",
-                            get_contract_address(
-                                component_name,
-                                self.world_config.initializer_class_hash.unwrap_or_default(),
-                                self.world_config.address.unwrap_or_default(),
-                            )
-                        );
-
+                        let component_id = compute_component_id(db, path, self.world_config);
+                        self.imports.push(segment.ident(db).text(db));
                         self.rewrite_nodes.push(RewriteNode::interpolate_patched(
                             "let $var_prefix$_ids = IWorldDispatcher { contract_address: \
                              world_address \
