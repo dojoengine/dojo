@@ -66,3 +66,4 @@ impl QueryImpl<T> of QueryTrait::<T> {
 //     query.insert(1, 1);
 // }
 
+

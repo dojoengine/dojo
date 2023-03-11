@@ -19,9 +19,6 @@ jobs:
           toolchain: nightly-2022-11-03
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-        with:
-          cache-directories: |
-            /home/runner/.cache/prisma
       - uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -39,9 +36,6 @@ jobs:
           profile: minimal
           toolchain: nightly-2022-11-03
       - uses: Swatinem/rust-cache@v2
-        with:
-          cache-directories: |
-            /home/runner/.cache/prisma
       - run: scripts/cairo_fmt.sh --check
 
   cairotest:
@@ -55,9 +49,6 @@ jobs:
           profile: minimal
           toolchain: nightly-2022-11-03
       - uses: Swatinem/rust-cache@v2
-        with:
-          cache-directories: |
-            /home/runner/.cache/prisma
       - run: scripts/cairo_test.sh
 
   clippy:
@@ -69,9 +60,6 @@ jobs:
           components: clippy
           toolchain: nightly-2022-11-03
       - uses: Swatinem/rust-cache@v2
-        with:
-          cache-directories: |
-            /home/runner/.cache/prisma
       - uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -88,9 +76,6 @@ jobs:
           components: rustfmt
           toolchain: nightly-2022-11-03
       - uses: Swatinem/rust-cache@v2
-        with:
-          cache-directories: |
-            /home/runner/.cache/prisma
       - uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -107,9 +92,6 @@ jobs:
           profile: minimal
           toolchain: nightly-2022-11-03
       - uses: Swatinem/rust-cache@v2
-        with:
-          cache-directories: |
-            /home/runner/.cache/prisma
       - uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -128,9 +110,6 @@ jobs:
         with:
           toolchain: nightly-2022-11-03
       - uses: Swatinem/rust-cache@v2
-        with:
-          cache-directories: |
-            /home/runner/.cache/prisma
       - uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
