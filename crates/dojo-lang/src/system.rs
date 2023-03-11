@@ -10,6 +10,7 @@ use cairo_lang_syntax::node::ast::FunctionWithBody;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use dojo_project::WorldConfig;
+use itertools::Itertools;
 use smol_str::SmolStr;
 
 use crate::plugin::DojoAuxData;
@@ -27,28 +28,19 @@ pub struct SystemDeclaration {
 }
 
 pub struct System {
-    queries: Vec<Query>,
+    dependencies: HashSet<SmolStr>,
+    world_config: WorldConfig,
 }
 
 impl System {
-    // self.imports
-    //             .iter()
-    //             .map(|import| {
-    //                 RewriteNode::interpolate_patched(
-    //                     "use super::$import$;",
-    //                     HashMap::from([("import".to_string(), RewriteNode::Text(import.to_string()))]),
-    //                 )
-    //             })
-    //             .collect()
     pub fn from_function(
         db: &dyn SyntaxGroup,
         world_config: WorldConfig,
         function_ast: ast::FunctionWithBody,
     ) -> PluginResult {
-        let mut system = System { queries: vec![] };
+        let mut system = System { dependencies: HashSet::new(), world_config };
         let name = function_ast.declaration(db).name(db).text(db);
         let mut rewrite_nodes = vec![];
-        let mut query_nodes = vec![];
 
         let signature = function_ast.declaration(db).signature(db);
         let parameters = signature.parameters(db).elements(db);
@@ -60,49 +52,38 @@ impl System {
                 let binding = path.elements(db);
                 let last = binding.last().unwrap();
                 match last {
-                    ast::PathSegment::WithGenericArgs(segment) => {
-                        let ty = segment.ident(db).text(db);
-                        if ty == "Query" {
-                            let query = Query::from_expr(db, type_ast.clone());
-                            system.queries.push(query);
-                            // import_nodes.extend(query.imports());
-                            // query_nodes.extend(query.rewrite_nodes);
-                            query_nodes.push(RewriteNode::interpolate_patched(
-                                "
-                            let $name$ = QueryTrait::$typename$::new();",
-                                HashMap::from([
-                                    (
-                                        "name".to_string(),
-                                        RewriteNode::new_trimmed(
-                                            param_ast.name(db).as_syntax_node(),
-                                        ),
-                                    ),
-                                    (
-                                        "typename".to_string(),
-                                        RewriteNode::new_trimmed(
-                                            segment.generic_args(db).as_syntax_node(),
-                                        ),
-                                    ),
-                                ]),
-                            ));
-                        }
+                    ast::PathSegment::WithGenericArgs(_segment) => {
+                        // TODO: ...
                     }
                     ast::PathSegment::Simple(_segment) => {
                         // TODO: ...
                     }
                 };
             }
-            // if let Some(res) = handle_param(db, param, world_config) {
-            //     import_nodes.extend(res.0);
-            //     query_nodes.extend(res.1);
-            // }
         }
 
-        let flat_deps: HashSet<SmolStr> = HashSet::from_iter(
-            system.queries.iter().map(|query| query.dependencies.clone()).flatten(),
-        );
-        let import_nodes = flat_deps
+        let body_nodes = system.lift_function_body_members(db, function_ast);
+        rewrite_nodes.push(RewriteNode::interpolate_patched(
+            "
+                #[external]
+                fn execute() {
+                    let world_address = starknet::contract_address_const::<$world_address$>();
+                    $body$
+                }
+            ",
+            HashMap::from([
+                (
+                    "world_address".to_string(),
+                    RewriteNode::Text(format!("{:#x}", world_config.address.unwrap_or_default())),
+                ),
+                ("body".to_string(), RewriteNode::new_modified(body_nodes)),
+            ]),
+        ));
+
+        let import_nodes = system
+            .dependencies
             .iter()
+            .sorted()
             .map(|dep| {
                 RewriteNode::interpolate_patched(
                     "use super::$dep$;\n",
@@ -110,37 +91,6 @@ impl System {
                 )
             })
             .collect();
-
-        // self.rewrite_nodes.push(RewriteNode::interpolate_patched(
-        //     "let $var_prefix$_ids = IWorldDispatcher { contract_address: \
-        //      world_address \
-        //      }.entities(starknet::contract_address_const::<$component_address$>());\
-        //      \n",
-        //     HashMap::from([
-        //         ("var_prefix".to_string(), RewriteNode::Text(var_prefix)),
-        //         ("component_address".to_string(), RewriteNode::Text(component_id)),
-        //     ]),
-        // ))
-
-        let body_nodes = resolve_function_body_members(db, function_ast);
-        rewrite_nodes.push(RewriteNode::interpolate_patched(
-            "
-                #[external]
-                fn execute() {
-                    let world_address = starknet::contract_address_const::<$world_address$>();
-                    $query$
-                    $body$
-                }
-            ",
-            HashMap::from([
-                ("body".to_string(), RewriteNode::new_modified(body_nodes)),
-                ("query".to_string(), RewriteNode::new_modified(query_nodes)),
-                (
-                    "world_address".to_string(),
-                    RewriteNode::Text(format!("{:#x}", world_config.address.unwrap_or_default())),
-                ),
-            ]),
-        ));
 
         let mut builder = PatchBuilder::new(db);
         builder.add_modified(RewriteNode::interpolate_patched(
@@ -150,7 +100,6 @@ impl System {
                     use dojo::world;
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;
-                    use dojo::query::QueryTrait;
                     $imports$
                     $body$
                 }
@@ -176,144 +125,160 @@ impl System {
             remove_original_item: true,
         }
     }
-}
 
-fn resolve_function_body_members(
-    db: &dyn SyntaxGroup,
-    function_ast: FunctionWithBody,
-) -> Vec<RewriteNode> {
-    function_ast
-        .body(db)
-        .statements(db)
-        .elements(db)
-        .iter()
-        .map(|statement| resolve_statement(db, statement.clone()))
-        .into_iter()
-        .flatten()
-        .collect()
-}
-
-fn resolve_statement(db: &dyn SyntaxGroup, statement_ast: ast::Statement) -> Vec<RewriteNode> {
-    match statement_ast {
-        ast::Statement::Let(statement_let) => {
-            let expr = statement_let.rhs(db);
-            let expr_nodes = resolve_expr(db, expr);
-            vec![RewriteNode::interpolate_patched(
-                "let $pattern$ = $expr$
-                ",
-                HashMap::from([
-                    (
-                        "pattern".to_string(),
-                        RewriteNode::Copied(statement_let.pattern(db).as_syntax_node()),
-                    ),
-                    ("expr".to_string(), RewriteNode::new_modified(expr_nodes)),
-                ]),
-            )]
-        }
-        ast::Statement::Expr(statement_expr) => resolve_expr(db, statement_expr.expr(db)),
-        ast::Statement::Return(statement_return) => {
-            let expr = statement_return.expr(db);
-            let expr_nodes = resolve_expr(db, expr);
-            vec![RewriteNode::interpolate_patched(
-                "return ($expr$);
-                ",
-                HashMap::from([("expr".to_string(), RewriteNode::new_modified(expr_nodes))]),
-            )]
-        }
-        ast::Statement::Missing(statement_missing) => {
-            vec![RewriteNode::new_trimmed(statement_missing.as_syntax_node())]
-        }
-    }
-}
-
-fn resolve_expr(db: &dyn SyntaxGroup, expr_ast: ast::Expr) -> Vec<RewriteNode> {
-    match expr_ast {
-        ast::Expr::Path(_path) => {
-            unimplemented!("path expressions are not supported yet")
-        }
-        ast::Expr::Parenthesized(expr_paren) => resolve_expr(db, expr_paren.expr(db)),
-        ast::Expr::Tuple(expr_tuple) => expr_tuple
-            .expressions(db)
+    fn lift_function_body_members(
+        &mut self,
+        db: &dyn SyntaxGroup,
+        function_ast: FunctionWithBody,
+    ) -> Vec<RewriteNode> {
+        function_ast
+            .body(db)
+            .statements(db)
             .elements(db)
             .iter()
-            .map(|expr| resolve_expr(db, expr.clone()))
+            .map(|statement| self.lift_statement(db, statement.clone()))
             .into_iter()
             .flatten()
-            .collect(),
-        ast::Expr::FunctionCall(expr_fn) => {
-            vec![RewriteNode::interpolate_patched(
-                "super::$pattern$($args$);
-                ",
-                HashMap::from([
-                    (
-                        "pattern".to_string(),
-                        RewriteNode::new_trimmed(expr_fn.path(db).as_syntax_node()),
-                    ),
-                    (
-                        "args".to_string(),
-                        RewriteNode::Copied(expr_fn.arguments(db).args(db).as_syntax_node()),
-                    ),
-                ]),
-            )]
-        }
-        ast::Expr::StructCtorCall(_expr_struct) => {
-            unimplemented!("match struct constructor are not yet supported")
-        }
-        ast::Expr::Block(_expr_block) => {
-            unimplemented!("match block are not yet supported")
-        }
-        ast::Expr::Match(_expr_match) => {
-            unimplemented!("match expressions are not yet supported")
-        }
-        ast::Expr::If(expr_if) => resolve_if(db, expr_if),
-        _ => vec![RewriteNode::interpolate_patched(
-            "$pattern$;
-            ",
-            HashMap::from([(
-                "pattern".to_string(),
-                RewriteNode::Copied(expr_ast.as_syntax_node()),
-            )]),
-        )],
+            .collect()
     }
-}
 
-fn resolve_if(db: &dyn SyntaxGroup, expr_if: ast::ExprIf) -> Vec<RewriteNode> {
-    let body_nodes = expr_if
-        .if_block(db)
-        .statements(db)
-        .elements(db)
-        .iter()
-        .map(|statement| resolve_statement(db, statement.clone()))
-        .into_iter()
-        .flatten()
-        .collect();
-    let else_nodes = match expr_if.else_clause(db) {
-        ast::OptionElseClause::ElseClause(else_clause) => match else_clause.else_block_or_if(db) {
-            ast::BlockOrIf::If(else_if) => resolve_if(db, else_if),
-            ast::BlockOrIf::Block(else_block) => else_block
-                .statements(db)
+    fn lift_statement(
+        &mut self,
+        db: &dyn SyntaxGroup,
+        statement_ast: ast::Statement,
+    ) -> Vec<RewriteNode> {
+        match statement_ast {
+            ast::Statement::Let(statement_let) => {
+                let expr = statement_let.rhs(db);
+                let expr_nodes = self.lift_expr(db, expr);
+
+                let mut result = vec![RewriteNode::interpolate_patched(
+                    "let $pattern$ = $expr$
+                    ",
+                    HashMap::from([
+                        (
+                            "pattern".to_string(),
+                            RewriteNode::Copied(statement_let.pattern(db).as_syntax_node()),
+                        ),
+                        ("expr".to_string(), RewriteNode::new_modified(expr_nodes)),
+                    ]),
+                )];
+
+                let query = Query::from_expr(db, statement_let);
+                self.dependencies.extend(query.dependencies.clone());
+                result.extend(query.nodes(self.world_config));
+                result
+            }
+            ast::Statement::Expr(statement_expr) => self.lift_expr(db, statement_expr.expr(db)),
+            ast::Statement::Return(statement_return) => {
+                let expr = statement_return.expr(db);
+                let expr_nodes = self.lift_expr(db, expr);
+                vec![RewriteNode::interpolate_patched(
+                    "return ($expr$);
+                    ",
+                    HashMap::from([("expr".to_string(), RewriteNode::new_modified(expr_nodes))]),
+                )]
+            }
+            ast::Statement::Missing(statement_missing) => {
+                vec![RewriteNode::new_trimmed(statement_missing.as_syntax_node())]
+            }
+        }
+    }
+
+    fn lift_expr(&mut self, db: &dyn SyntaxGroup, expr_ast: ast::Expr) -> Vec<RewriteNode> {
+        match expr_ast.clone() {
+            ast::Expr::Path(_path) => {
+                unimplemented!("path expressions are not supported yet")
+            }
+            ast::Expr::Parenthesized(expr_paren) => self.lift_expr(db, expr_paren.expr(db)),
+            ast::Expr::Tuple(expr_tuple) => expr_tuple
+                .expressions(db)
                 .elements(db)
                 .iter()
-                .map(|statement| resolve_statement(db, statement.clone()))
+                .map(|expr| self.lift_expr(db, expr.clone()))
                 .into_iter()
                 .flatten()
                 .collect(),
-        },
-        ast::OptionElseClause::Empty(_) => vec![],
-    };
-    vec![RewriteNode::interpolate_patched(
-        "if $condition$ {
-            $body$
-        } else {
-            $else$
+            ast::Expr::FunctionCall(expr_fn) => {
+                vec![RewriteNode::interpolate_patched(
+                    "super::$pattern$($args$);
+                    ",
+                    HashMap::from([
+                        (
+                            "pattern".to_string(),
+                            RewriteNode::new_trimmed(expr_fn.path(db).as_syntax_node()),
+                        ),
+                        (
+                            "args".to_string(),
+                            RewriteNode::Copied(expr_fn.arguments(db).args(db).as_syntax_node()),
+                        ),
+                    ]),
+                )]
+            }
+            ast::Expr::StructCtorCall(_expr_struct) => {
+                unimplemented!("match struct constructor are not yet supported")
+            }
+            ast::Expr::Block(_expr_block) => {
+                unimplemented!("match block are not yet supported")
+            }
+            ast::Expr::Match(_expr_match) => {
+                unimplemented!("match expressions are not yet supported")
+            }
+            ast::Expr::If(expr_if) => self.lift_if(db, expr_if),
+            _ => vec![RewriteNode::interpolate_patched(
+                "$pattern$;
+                ",
+                HashMap::from([(
+                    "pattern".to_string(),
+                    RewriteNode::Copied(expr_ast.as_syntax_node()),
+                )]),
+            )],
         }
-        ",
-        HashMap::from([
-            ("condition".to_string(), RewriteNode::Copied(expr_if.condition(db).as_syntax_node())),
-            ("body".to_string(), RewriteNode::new_modified(body_nodes)),
-            ("else".to_string(), RewriteNode::new_modified(else_nodes)),
-        ]),
-    )]
+    }
+
+    fn lift_if(&mut self, db: &dyn SyntaxGroup, expr_if: ast::ExprIf) -> Vec<RewriteNode> {
+        let body_nodes = expr_if
+            .if_block(db)
+            .statements(db)
+            .elements(db)
+            .iter()
+            .map(|statement| self.lift_statement(db, statement.clone()))
+            .into_iter()
+            .flatten()
+            .collect();
+        let else_nodes = match expr_if.else_clause(db) {
+            ast::OptionElseClause::ElseClause(else_clause) => {
+                match else_clause.else_block_or_if(db) {
+                    ast::BlockOrIf::If(else_if) => self.lift_if(db, else_if),
+                    ast::BlockOrIf::Block(else_block) => else_block
+                        .statements(db)
+                        .elements(db)
+                        .iter()
+                        .map(|statement| self.lift_statement(db, statement.clone()))
+                        .into_iter()
+                        .flatten()
+                        .collect(),
+                }
+            }
+            ast::OptionElseClause::Empty(_) => vec![],
+        };
+        vec![RewriteNode::interpolate_patched(
+            "if $condition$ {
+                $body$
+            } else {
+                $else$
+            }
+            ",
+            HashMap::from([
+                (
+                    "condition".to_string(),
+                    RewriteNode::Copied(expr_if.condition(db).as_syntax_node()),
+                ),
+                ("body".to_string(), RewriteNode::new_modified(body_nodes)),
+                ("else".to_string(), RewriteNode::new_modified(else_nodes)),
+            ]),
+        )]
+    }
 }
 
 fn capitalize_first(s: String) -> String {
