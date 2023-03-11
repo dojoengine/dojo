@@ -1,6 +1,7 @@
 #[system]
-fn create_survivor(query: Query<(Health, Name)>, name: felt) {
-    // creates survivor and sets health to 100
-    // calls modify health
-    // calls name and sets name
+fn create_survivor(name: felt) {
+    let survivor = world.spawn((
+        Name::new(name),
+        Health::new(100),
+    ));
 }
