@@ -4,14 +4,23 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use smol_str::SmolStr;
 
+pub enum Constraint {
+    Has,
+}
+
+pub struct Fragment {
+    pub component: SmolStr,
+    pub constraint: Constraint,
+}
+
 pub struct Query {
     pub dependencies: HashSet<SmolStr>,
-    pub components: HashSet<SmolStr>,
+    pub fragments: Vec<Fragment>,
 }
 
 impl Query {
     pub fn from_expr(db: &dyn SyntaxGroup, expr: ast::Expr) -> Self {
-        let mut query = Query { dependencies: HashSet::new(), components: HashSet::new() };
+        let mut query = Query { dependencies: HashSet::new(), fragments: vec![] };
         query.handle_expression(db, expr);
         query
     }
@@ -26,32 +35,26 @@ impl Query {
             ast::Expr::Parenthesized(parenthesized) => {
                 self.handle_expression(db, parenthesized.expr(db));
             }
-            ast::Expr::Path(path) => {
-                let binding = path.elements(db);
-                let last = binding.last().unwrap();
+            ast::Expr::Path(path) => match path.elements(db).last().unwrap() {
+                ast::PathSegment::WithGenericArgs(segment) => {
+                    let generic = segment.generic_args(db);
 
-                match last {
-                    ast::PathSegment::WithGenericArgs(segment) => {
-                        let generic = segment.generic_args(db);
-                        let parameters = generic.generic_args(db).elements(db);
-                        for parameter in parameters {
-                            self.handle_expression(db, parameter);
+                    for param in generic.generic_args(db).elements(db) {
+                        if let ast::GenericArg::Expr(expr) = param {
+                            self.handle_expression(db, expr.value(db));
                         }
-
-                        let typ = segment.ident(db).text(db);
-                        if typ == "Option" {
-                            return;
-                        }
-
-                        self.dependencies.insert(segment.ident(db).text(db));
                     }
-                    ast::PathSegment::Simple(segment) => {
-                        // let var_prefix = segment.as_syntax_node().get_text(db).to_ascii_lowercase();
-                        self.dependencies.insert(segment.ident(db).text(db));
-                        self.components.insert(segment.ident(db).text(db));
-                    }
+
+                    self.dependencies.insert(segment.ident(db).text(db));
                 }
-            }
+                ast::PathSegment::Simple(segment) => {
+                    self.dependencies.insert(segment.ident(db).text(db));
+                    self.fragments.push(Fragment {
+                        component: segment.ident(db).text(db),
+                        constraint: Constraint::Has,
+                    });
+                }
+            },
             _ => {
                 unimplemented!(
                     "Unsupported expression type: {}",

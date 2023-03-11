@@ -10,9 +10,10 @@ use cairo_lang_syntax::node::ast::FunctionWithBody;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use dojo_project::WorldConfig;
+use itertools::Itertools;
 use smol_str::SmolStr;
 
-use crate::plugin::DojoAuxData;
+use crate::plugin::{get_contract_address, DojoAuxData};
 use crate::query::Query;
 
 #[cfg(test)]
@@ -31,15 +32,6 @@ pub struct System {
 }
 
 impl System {
-    // self.imports
-    //             .iter()
-    //             .map(|import| {
-    //                 RewriteNode::interpolate_patched(
-    //                     "use super::$import$;",
-    //                     HashMap::from([("import".to_string(), RewriteNode::Text(import.to_string()))]),
-    //                 )
-    //             })
-    //             .collect()
     pub fn from_function(
         db: &dyn SyntaxGroup,
         world_config: WorldConfig,
@@ -65,11 +57,10 @@ impl System {
                         if ty == "Query" {
                             let query = Query::from_expr(db, type_ast.clone());
                             system.queries.push(query);
-                            // import_nodes.extend(query.imports());
-                            // query_nodes.extend(query.rewrite_nodes);
                             query_nodes.push(RewriteNode::interpolate_patched(
                                 "
-                            let $name$ = QueryTrait::$typename$::new();",
+                                let $name$ = QueryTrait::$typename$::new();
+                                ",
                                 HashMap::from([
                                     (
                                         "name".to_string(),
@@ -92,17 +83,13 @@ impl System {
                     }
                 };
             }
-            // if let Some(res) = handle_param(db, param, world_config) {
-            //     import_nodes.extend(res.0);
-            //     query_nodes.extend(res.1);
-            // }
         }
 
-        let flat_deps: HashSet<SmolStr> = HashSet::from_iter(
-            system.queries.iter().map(|query| query.dependencies.clone()).flatten(),
-        );
+        let flat_deps: HashSet<SmolStr> =
+            HashSet::from_iter(system.queries.iter().flat_map(|query| query.dependencies.clone()));
         let import_nodes = flat_deps
             .iter()
+            .sorted()
             .map(|dep| {
                 RewriteNode::interpolate_patched(
                     "use super::$dep$;\n",
@@ -111,16 +98,46 @@ impl System {
             })
             .collect();
 
-        // self.rewrite_nodes.push(RewriteNode::interpolate_patched(
-        //     "let $var_prefix$_ids = IWorldDispatcher { contract_address: \
-        //      world_address \
-        //      }.entities(starknet::contract_address_const::<$component_address$>());\
-        //      \n",
-        //     HashMap::from([
-        //         ("var_prefix".to_string(), RewriteNode::Text(var_prefix)),
-        //         ("component_address".to_string(), RewriteNode::Text(component_id)),
-        //     ]),
-        // ))
+        query_nodes.extend(
+            system
+                .queries
+                .iter()
+                .flat_map(|query| {
+                    query
+                        .fragments
+                        .iter()
+                        .map(|fragment| {
+                            let component_address = format!(
+                                "{:#x}",
+                                get_contract_address(
+                                    fragment.component.as_str(),
+                                    world_config.initializer_class_hash.unwrap_or_default(),
+                                    world_config.address.unwrap_or_default(),
+                                )
+                            );
+                            RewriteNode::interpolate_patched(
+                                "let $var_prefix$_ids = IWorldDispatcher { contract_address: \
+                             world_address \
+                             }.entities(starknet::contract_address_const::<$component_address$>());\
+                             \n",
+                                HashMap::from([
+                                    (
+                                        "var_prefix".to_string(),
+                                        RewriteNode::Text(
+                                            fragment.component.to_string().to_ascii_lowercase(),
+                                        ),
+                                    ),
+                                    (
+                                        "component_address".to_string(),
+                                        RewriteNode::Text(component_address),
+                                    ),
+                                ]),
+                            )
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .collect::<Vec<_>>(),
+        );
 
         let body_nodes = resolve_function_body_members(db, function_ast);
         rewrite_nodes.push(RewriteNode::interpolate_patched(

@@ -21,12 +21,12 @@ struct Player {
     name: felt, 
 }
 
-fn move_inner(query: Query<(Position, Option::<Player>)>, index: u32, count: u32) {
+fn move_inner(query: Query<(Position, Player)>, index: u32, count: u32) {
     return move_inner(query, index + 1_u32, count - 1_u32);
 }
 
 #[system]
-fn move(positions_query: Query<(Position, Option::<Player>)>, player_query: Query<(With::<Player, EntityID<Caller>>)>) {
+fn move(positions_query: Query<(Position, Player)>, player_query: Query<(With::<Player, EntityID<Caller>>)>) {
     let mut bar = 123;
     let mut foo = ArrayTrait::<felt>::new();
     // TODO: https://github.com/starkware-libs/cairo/issues/2438
@@ -56,7 +56,7 @@ use dojo::query::EntityID;
 
 use dojo::query::With;
 
-fn move_inner(query: Query<(Position, Option::<Player>)>, index: u32, count: u32) {
+fn move_inner(query: Query<(Position, Player)>, index: u32, count: u32) {
     return move_inner(query, index + 1_u32, count - 1_u32);
 }
 
@@ -149,20 +149,42 @@ mod MoveSystem {
     use dojo::world::IWorldDispatcher;
     use dojo::world::IWorldDispatcherTrait;
     use dojo::query::QueryTrait;
-    use super::With;
+    use super::Caller;
+    use super::EntityID;
+    use super::Player;
     use super::Position;
     use super::Query;
-    use super::Player;
-    use super::EntityID;
-    use super::Caller;
+    use super::With;
 
 
     #[external]
     fn execute() {
         let world_address = starknet::contract_address_const::<0x0>();
 
-        let positions_query = QueryTrait::<(Position, Option::<Player>)>::new();
+        let positions_query = QueryTrait::<(Position, Player)>::new();
+
         let player_query = QueryTrait::<(With::<Player, EntityID<Caller>>)>::new();
+        let position_ids = IWorldDispatcher {
+            contract_address: world_address
+        }.entities(
+            starknet::contract_address_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>()
+        );
+        let player_ids = IWorldDispatcher {
+            contract_address: world_address
+        }.entities(
+            starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
+        );
+        let player_ids = IWorldDispatcher {
+            contract_address: world_address
+        }.entities(
+            starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
+        );
+        let caller_ids = IWorldDispatcher {
+            contract_address: world_address
+        }.entities(
+            starknet::contract_address_const::<0x4d095d7e7bb3fb624f79b0000a24e1d2fa93847f5428221c36b3996346600fb>()
+        );
+
         let mut bar = 123;
 
         let mut foo = super::ArrayTrait::<felt>::new();
@@ -235,7 +257,3 @@ mod PlayerComponent {
 }
 
 //! > expected_diagnostics
-error: Variable not dropped.
- --> contract:22:33
-                            let player_query = QueryTrait::<(With::<Player, EntityID<Caller>>)>::new();
-                                ^**********^
