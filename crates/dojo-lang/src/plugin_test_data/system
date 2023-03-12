@@ -236,21 +236,6 @@ mod HealthComponent {
 
 //! > expected_diagnostics
 error: Variable not dropped.
- --> lib.cairo:155:35
-            IsZeroResult::NonZero(_) => false,
-                                  ^
-
-error: Variable not dropped.
- --> result.cairo:24:25
-            Result::Err(_) => {
-                        ^
-
-error: Variable not dropped.
- --> result.cairo:36:24
-            Result::Ok(_) => {
-                       ^
-
-error: Variable not dropped.
  --> contract:18:25
                     let query = QueryTrait::<(Position, Option::<Health>)>::new();
                         ^***^
