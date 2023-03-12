@@ -7,7 +7,8 @@ edition = "2021"
 
 [dependencies]
 anyhow.workspace = true
-apibara-client-protos = { git = "https://github.com/ponderingdemocritus/apibara-rust-sdk" }
+apibara-core = { git = "https://github.com/apibara/apibara", rev = "8490dcbb651c4fc1c33f6dfb7db48c078e907321" }
+apibara-sdk = { git = "https://github.com/apibara/apibara", rev = "8490dcbb651c4fc1c33f6dfb7db48c078e907321" }
 clap.workspace = true
 futures = "0.3.26"
 tokio = { version = "1.20.1", features = ["full"] }
@@ -32,6 +33,7 @@ sqlx = { version = "0.6.2", features = [
     "offline"
 ] }
 num = "0.4.0"
+hex = "0.4.3"
 
 [features]
 default = ["sqlite"]
