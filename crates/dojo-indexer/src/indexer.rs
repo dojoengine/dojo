@@ -6,11 +6,11 @@ use apibara_client_protos::pb::starknet::v1alpha2::{
 };
 use futures::StreamExt;
 use log::{debug, info, warn};
-use prisma_client_rust::bigdecimal::num_bigint::BigUint;
+use num::BigUint;
+use sqlx::{Pool, Sqlite};
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 
 use crate::hash::starknet_hash;
-use crate::prisma::PrismaClient;
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
 use crate::stream::ApibaraClient;
 
@@ -34,7 +34,7 @@ fn filter_by_processors(filter: &mut Filter, processors: &Processors) {
 
 pub async fn start_indexer(
     mut stream: ApibaraClient,
-    client: &PrismaClient,
+    pool: &Pool<Sqlite>,
     provider: &JsonRpcClient<HttpTransport>,
     processors: &Processors,
     world: BigUint,
@@ -87,7 +87,7 @@ pub async fn start_indexer(
 
                             for processor in &processors.block_processors {
                                 processor
-                                    .process(client, provider, block.clone())
+                                    .process(pool, provider, block.clone())
                                     .await
                                     .unwrap_or_else(|op| {
                                         panic!("Failed processing block: {op:?}");
@@ -129,7 +129,7 @@ pub async fn start_indexer(
                             Some(_tx) => {
                                 for processor in &processors.transaction_processors {
                                     processor
-                                        .process(client, provider, transaction.clone())
+                                        .process(pool, provider, transaction.clone())
                                         .await
                                         .unwrap_or_else(|op| {
                                             panic!("Failed processing transaction: {op:?}");
@@ -145,7 +145,7 @@ pub async fn start_indexer(
                             Some(_ev_data) => {
                                 for processor in &processors.event_processors {
                                     processor
-                                        .process(client, provider, event.clone())
+                                        .process(pool, provider, event.clone())
                                         .await
                                         .unwrap_or_else(|op| {
                                             panic!("Failed processing event: {op:?}");

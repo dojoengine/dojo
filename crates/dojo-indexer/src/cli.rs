@@ -2,8 +2,10 @@ use std::vec;
 
 use clap::Parser;
 use futures::join;
-use prisma_client_rust::bigdecimal::num_bigint::BigUint;
-use prisma_client_rust::bigdecimal::Num;
+use num::{BigUint, Num};
+use sqlx::sqlite::SqlitePoolOptions;
+// #[cfg(feature = "postgres")]
+// use sqlx::postgres::{PgPoolOptions};
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 use url::Url;
 
@@ -12,17 +14,18 @@ use crate::processors::component_register::ComponentRegistrationProcessor;
 use crate::processors::component_state_update::ComponentStateUpdateProcessor;
 use crate::processors::system_register::SystemRegistrationProcessor;
 use crate::server::start_server;
+// use crate::server::start_server;
 
 mod processors;
 
 mod graphql;
 mod hash;
 mod indexer;
-#[allow(warnings, unused, elided_lifetimes_in_paths)]
-mod prisma;
 mod server;
 
 mod stream;
+// mod schema;
+// mod model;
 
 /// Command line args parser.
 /// Exits with 0/1 if the input is formatted correctly/incorrectly.
@@ -35,6 +38,8 @@ struct Args {
     node: String,
     /// The rpc endpoint to use
     rpc: String,
+    /// Database url
+    database_url: String,
 }
 
 #[tokio::main]
@@ -46,7 +51,11 @@ async fn main() -> anyhow::Result<()> {
     });
     let node = &args.node;
 
-    let client = prisma::PrismaClient::_builder().build().await.unwrap();
+    let database_url = &args.database_url;
+    #[cfg(feature = "sqlite")]
+    let pool = SqlitePoolOptions::new().max_connections(5).connect(database_url).await?;
+    // #[cfg(feature = "postgres")]
+    // let pool = PgPoolOptions::new().max_connections(5).connect(database_url).await?;
 
     let stream = stream::ApibaraClient::new(node).await;
 
@@ -65,8 +74,8 @@ async fn main() -> anyhow::Result<()> {
     match stream {
         std::result::Result::Ok(s) => {
             println!("Connected");
-            let graphql = start_server();
-            let indexer = start_indexer(s, &client, &provider, &processors, world);
+            let graphql = start_server(&pool);
+            let indexer = start_indexer(s, &pool, &provider, &processors, world);
             let _res = join!(graphql, indexer);
         }
         std::result::Result::Err(e) => panic!("Error: {:?}", e),

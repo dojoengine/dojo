@@ -2,12 +2,12 @@ use std::cmp::Ordering;
 
 use anyhow::{Error, Ok, Result};
 use apibara_client_protos::pb::starknet::v1alpha2::EventWithTransaction;
+use sqlx::{Executor, Pool, Sqlite};
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 use tonic::async_trait;
 
 use super::{EventProcessor, IProcessor};
 use crate::hash::starknet_hash;
-use crate::prisma;
 pub struct ComponentStateUpdateProcessor;
 impl ComponentStateUpdateProcessor {
     pub fn new() -> Self {
@@ -25,7 +25,7 @@ impl EventProcessor for ComponentStateUpdateProcessor {
 impl IProcessor<EventWithTransaction> for ComponentStateUpdateProcessor {
     async fn process(
         &self,
-        client: &prisma::PrismaClient,
+        pool: &Pool<Sqlite>,
         _provider: &JsonRpcClient<HttpTransport>,
         data: EventWithTransaction,
     ) -> Result<(), Error> {
@@ -40,33 +40,38 @@ impl IProcessor<EventWithTransaction> for ComponentStateUpdateProcessor {
         let component = &event.data[1].to_biguint();
         let data = &event.data[2].to_biguint();
 
-        // register a new state update
-        let _state_update = client
-            .entity_state_update()
-            .create(
-                prisma::entity::id::equals(entity.to_string()),
-                "0x".to_owned() + transaction_hash.to_str_radix(16).as_str(),
-                prisma::component::id::equals(
-                    "0x".to_owned() + component.to_str_radix(16).as_str(),
-                ),
-                data.to_string(),
-                vec![],
-            )
-            .exec()
-            .await;
+        let entity_id = entity.to_string();
+        let component_address = "0x".to_owned() + component.to_str_radix(16).as_str();
+        let txn_hash = "0x".to_owned() + transaction_hash.to_str_radix(16).as_str();
+        let parsed_data = data.to_string();
 
-        let _state = client
-            .entity_state()
-            .create(
-                prisma::entity::id::equals(entity.to_string()),
-                prisma::component::id::equals(
-                    "0x".to_owned() + component.to_str_radix(16).as_str(),
-                ),
-                data.to_string(),
-                vec![],
-            )
-            .exec()
-            .await;
+        let mut tx = pool.begin().await?;
+        tx.execute(sqlx::query!(
+            "
+            INSERT INTO entity_state_updates (entity_id, component_id, transaction_hash, data)
+            VALUES ($1, $2, $3, $4)
+            ",
+            entity_id,
+            component_address,
+            txn_hash,
+            parsed_data,
+        ))
+        .await?;
+
+        // insert or update entity state
+        tx.execute(sqlx::query!(
+            "
+            INSERT INTO entity_states (entity_id, component_id, data)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (entity_id, component_id) DO UPDATE SET data = $3
+            ",
+            entity_id,
+            component_address,
+            parsed_data,
+        ))
+        .await?;
+
+        tx.commit().await?;
 
         Ok(())
     }

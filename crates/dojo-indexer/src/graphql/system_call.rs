@@ -1,57 +1,54 @@
-use juniper::GraphQLObject;
-use juniper_relay_connection::RelayConnectionNode;
+use juniper::{graphql_object, FieldResult};
 
-use super::system::System;
-use super::Query;
-use crate::prisma::{system_call, PrismaClient};
+use super::system;
+use crate::server::Context;
 
-#[derive(GraphQLObject)]
 pub struct SystemCall {
-    pub id: i32,
-    pub system: System,
-    pub data: String,
+    pub id: i64,
+    pub system_id: String,
     pub transaction_hash: String,
+    pub data: Option<String>,
 }
 
-impl RelayConnectionNode for SystemCall {
-    type Cursor = i32;
-    fn cursor(&self) -> Self::Cursor {
-        self.id
+#[graphql_object(context = Context)]
+impl SystemCall {
+    pub fn id(&self) -> i32 {
+        i32::try_from(self.id).unwrap()
     }
 
-    fn connection_type_name() -> &'static str {
-        "SystemCall"
+    pub fn system_id(&self) -> &str {
+        &self.system_id
     }
 
-    fn edge_type_name() -> &'static str {
-        "SystemCallEdge"
+    pub fn transaction_hash(&self) -> &str {
+        &self.transaction_hash
+    }
+
+    pub fn data(&self) -> &Option<String> {
+        &self.data
+    }
+
+    async fn system(&self, context: &Context) -> FieldResult<system::System> {
+        system::system(context, self.system_id.clone()).await
     }
 }
 
-impl Query {
-    #[allow(dead_code)]
-    async fn system_call(context: &PrismaClient, id: i32) -> Option<SystemCall> {
-        let call = context
-            .system_call()
-            .find_first(vec![system_call::id::equals(id)])
-            .exec()
-            .await
-            .unwrap();
+pub async fn system_calls_by_system(
+    context: &Context,
+    system_id: String,
+) -> FieldResult<Vec<SystemCall>> {
+    let mut conn = context.pool.acquire().await.unwrap();
 
-        match call {
-            Some(call) => Some(SystemCall {
-                id: call.id,
-                data: call.data,
-                transaction_hash: call.transaction_hash,
-                system: System {
-                    id: call.system.clone().unwrap().id,
-                    name: call.system.clone().unwrap().name,
-                    transaction_hash: call.system.unwrap().transaction_hash,
-                    calls: vec![],
-                    query_components: vec![],
-                },
-            }),
-            None => None,
-        }
-    }
+    let system_calls = sqlx::query_as!(
+        SystemCall,
+        r#"
+            SELECT * FROM system_calls WHERE system_id = $1
+        "#,
+        system_id
+    )
+    .fetch_all(&mut conn)
+    .await
+    .unwrap();
+
+    Ok(system_calls)
 }

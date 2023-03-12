@@ -1,4 +1,5 @@
 use std::env;
+use std::sync::Arc;
 
 use actix_cors::Cors;
 use actix_web::http::header;
@@ -6,23 +7,23 @@ use actix_web::web::{self, Data};
 use actix_web::{middleware, App, Error, HttpResponse, HttpServer};
 use juniper::{EmptyMutation, EmptySubscription, RootNode};
 use juniper_actix::{graphql_handler, playground_handler};
+use sqlx::SqlitePool;
 
 use crate::graphql::Query;
-use crate::prisma::PrismaClient;
 
-// To make our Database usable by Juniper, we have to implement a marker trait.
-impl juniper::Context for PrismaClient {}
+type Schema = RootNode<'static, Query, EmptyMutation<Context>, EmptySubscription<Context>>;
 
-type Schema =
-    RootNode<'static, Query, EmptyMutation<PrismaClient>, EmptySubscription<PrismaClient>>;
+// To make our context usable by Juniper, we have to implement a marker trait.
+impl juniper::Context for Context {}
+
+pub struct Context {
+    pub schema: Arc<Schema>,
+    pub pool: Arc<sqlx::SqlitePool>,
+}
 
 #[allow(dead_code)]
 fn schema() -> Schema {
-    Schema::new(
-        Query,
-        EmptyMutation::<PrismaClient>::new(),
-        EmptySubscription::<PrismaClient>::new(),
-    )
+    Schema::new(Query, EmptyMutation::<Context>::new(), EmptySubscription::<Context>::new())
 }
 
 #[allow(dead_code)]
@@ -33,22 +34,22 @@ async fn playground_route() -> Result<HttpResponse, Error> {
 async fn graphql_route(
     req: actix_web::HttpRequest,
     payload: actix_web::web::Payload,
-    schema: web::Data<Schema>,
+    context: web::Data<Context>,
 ) -> Result<HttpResponse, Error> {
-    let context = PrismaClient::_builder().build().await.unwrap_or_else(|e| {
-        panic!("Failed to connect to database: {}", e);
-    });
+    let schema = context.schema.as_ref();
 
-    graphql_handler(&schema, &context, req, payload).await
+    graphql_handler(schema, &context, req, payload).await
 }
 
-pub async fn start_server() -> std::io::Result<()> {
+pub async fn start_server(pool: &SqlitePool) -> std::io::Result<()> {
     env::set_var("RUST_LOG", "info");
     env_logger::init();
 
+    let pool = Arc::new(pool.clone());
+
     let server = HttpServer::new(move || {
         App::new()
-            .app_data(Data::new(schema()))
+            .app_data(Data::new(Context { schema: Arc::new(schema()), pool: pool.clone() }))
             .wrap(
                 Cors::default()
                     .allow_any_origin()
@@ -72,5 +73,7 @@ pub async fn start_server() -> std::io::Result<()> {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    start_server().await
+    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+
+    start_server(&pool).await
 }

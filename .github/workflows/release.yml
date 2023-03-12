@@ -29,13 +29,9 @@ jobs:
         toolchain: nightly-2022-11-03
 
     - uses: Swatinem/rust-cache@v2
-      with:
-        cache-directories: |
-          /home/runner/.cache/prisma
     - uses: arduino/setup-protoc@v1
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
-    - run: scripts/prisma.sh generate --schema=crates/dojo-indexer/prisma/schema.prisma
     
     - uses: actions/cache@v3
       with:
@@ -54,7 +50,7 @@ jobs:
     - name: Create Tarball
       run: >
         tar -C target/release -czvf ${{ matrix.artifact_name }} 
-        dojo dojo-indexer dojo-language-server dojo-test prisma-cli
+        dojo dojo-indexer dojo-language-server dojo-test
 
     - name: Upload Binaries
       uses: svenstaro/upload-release-action@v2

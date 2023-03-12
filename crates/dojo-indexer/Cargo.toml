@@ -15,29 +15,28 @@ tonic = { version = "0.8.3", features = ["tls", "tls-roots"] }
 log = "0.4.17"
 futures-util = "0.3.26"
 tokio-stream = "0.1.11"
-prisma-client-rust-cli = { git = "https://github.com/Brendonovich/prisma-client-rust", rev = "0.6.4", default-features = false, features = [
-    "sqlite",
-] }
-prisma-client-rust = { git = "https://github.com/Brendonovich/prisma-client-rust", rev = "0.6.4", default-features = false, features = [
-    "sqlite",
-] }
 serde.workspace = true
 sha3 = "0.10.6"
 juniper = "0.15.11"
-juniper_relay_connection = "0.1.1"
 juniper_actix = "0.4.0"
 actix-web = "4.3.0"
 actix-cors = "0.6.4"
 env_logger.workspace = true
 starknet.workspace = true
 url = "2.2.2"
+sqlx = { version = "0.6.2", features = [
+    "runtime-actix-native-tls",
+    "uuid",
+    "chrono",
+    "macros",
+    "offline"
+] }
+num = "0.4.0"
 
-
+[features]
+default = ["sqlite"]
+sqlite = ["sqlx/sqlite"]
 
 [[bin]]
 name = "dojo-indexer"
 path = "src/cli.rs"
-
-[[bin]]
-name = "prisma-cli"
-path = "src/bin/prisma-cli.rs"

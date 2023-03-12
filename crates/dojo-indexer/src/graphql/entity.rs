@@ -1,93 +1,68 @@
-use juniper::GraphQLObject;
-use juniper_relay_connection::RelayConnectionNode;
+use juniper::{graphql_object, FieldResult};
 
-use super::component::Component;
 use super::entity_state::EntityState;
 use super::entity_state_update::EntityStateUpdate;
-use super::Query;
-use crate::prisma::{entity, PrismaClient};
+use super::{entity_state, entity_state_update};
+use crate::server::Context;
 
-#[derive(GraphQLObject)]
 pub struct Entity {
     pub id: String,
-    pub states: Vec<EntityState>,
-    pub state_updates: Vec<EntityStateUpdate>,
+    pub name: Option<String>,
     pub transaction_hash: String,
 }
 
-impl RelayConnectionNode for Entity {
-    type Cursor = String;
-    fn cursor(&self) -> Self::Cursor {
-        self.id.clone()
+#[graphql_object(context = Context)]
+impl Entity {
+    pub fn id(&self) -> &str {
+        &self.id
     }
 
-    fn connection_type_name() -> &'static str {
-        "Entity"
+    pub fn name(&self) -> &Option<String> {
+        &self.name
     }
 
-    fn edge_type_name() -> &'static str {
-        "EntityEdge"
+    pub fn transaction_hash(&self) -> &str {
+        &self.transaction_hash
+    }
+
+    pub async fn state_updates(&self, context: &Context) -> FieldResult<Vec<EntityStateUpdate>> {
+        entity_state_update::entity_state_updates_by_entity(context, self.id.clone()).await
+    }
+
+    pub async fn states(&self, context: &Context) -> FieldResult<Vec<EntityState>> {
+        entity_state::entity_states_by_entity(context, self.id.clone()).await
     }
 }
 
-impl Query {
-    #[allow(dead_code)]
-    async fn entity(context: &PrismaClient, id: String) -> Option<Entity> {
-        let entity =
-            context.entity().find_first(vec![entity::id::equals(id)]).exec().await.unwrap();
+pub async fn entity(context: &Context, id: String) -> FieldResult<Entity> {
+    let mut conn = context.pool.acquire().await.unwrap();
 
-        match entity {
-            Some(entity) => Some(Entity {
-                id: entity.id,
-                transaction_hash: entity.transaction_hash,
-                states: entity
-                    .states
-                    .unwrap()
-                    .into_iter()
-                    .map(|state| EntityState {
-                        data: state.data,
-                        entity: Entity {
-                            id: state.entity.clone().unwrap().id,
-                            transaction_hash: state.entity.unwrap().transaction_hash,
-                            states: vec![],
-                            state_updates: vec![],
-                        },
-                        component: Component {
-                            id: state.component.clone().unwrap().id,
-                            name: state.component.clone().unwrap().name,
-                            transaction_hash: state.component.unwrap().transaction_hash,
-                            systems: vec![],
-                            states: vec![],
-                            state_updates: vec![],
-                        },
-                    })
-                    .collect(),
-                state_updates: entity
-                    .state_updates
-                    .unwrap()
-                    .into_iter()
-                    .map(|state_update| EntityStateUpdate {
-                        id: state_update.id,
-                        data: state_update.data,
-                        entity: Entity {
-                            id: state_update.entity.clone().unwrap().id,
-                            transaction_hash: state_update.entity.unwrap().transaction_hash,
-                            states: vec![],
-                            state_updates: vec![],
-                        },
-                        component: Component {
-                            id: state_update.component.clone().unwrap().id,
-                            name: state_update.component.clone().unwrap().name,
-                            transaction_hash: state_update.component.unwrap().transaction_hash,
-                            systems: vec![],
-                            states: vec![],
-                            state_updates: vec![],
-                        },
-                        transaction_hash: state_update.transaction_hash,
-                    })
-                    .collect(),
-            }),
-            None => None,
-        }
-    }
+    let entity = sqlx::query_as!(
+        Entity,
+        r#"
+            SELECT * FROM entities WHERE id = $1
+        "#,
+        id
+    )
+    .fetch_one(&mut conn)
+    .await
+    .unwrap();
+
+    Ok(entity)
+}
+
+pub async fn entities(context: &Context) -> FieldResult<Vec<Entity>> {
+    let mut conn = context.pool.acquire().await.unwrap();
+
+    let entities = sqlx::query_as!(
+        Entity,
+        r#"
+            SELECT * FROM entities
+        "#
+    )
+    .fetch_all(&mut conn)
+    .await
+    .unwrap();
+
+    Ok(entities)
 }
