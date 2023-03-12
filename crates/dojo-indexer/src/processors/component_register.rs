@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use anyhow::{Error, Ok, Result};
-use apibara_client_protos::pb::starknet::v1alpha2::EventWithTransaction;
+use apibara_core::starknet::v1alpha2::EventWithTransaction;
 use num::BigUint;
 use sqlx::{Executor, Pool, Sqlite};
 use starknet::core::types::FieldElement;
@@ -11,6 +11,8 @@ use tonic::async_trait;
 
 use super::{EventProcessor, IProcessor};
 use crate::hash::starknet_hash;
+use crate::stream::FieldElementExt;
+
 pub struct ComponentRegistrationProcessor;
 impl ComponentRegistrationProcessor {
     pub fn new() -> Self {

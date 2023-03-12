@@ -1,7 +1,5 @@
 use anyhow::{Error, Result};
-use apibara_client_protos::pb::starknet::v1alpha2::{
-    Block, EventWithTransaction, TransactionWithReceipt,
-};
+use apibara_core::starknet::v1alpha2::{Block, EventWithTransaction, TransactionWithReceipt};
 use sqlx::{Pool, Sqlite};
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 use tonic::async_trait;

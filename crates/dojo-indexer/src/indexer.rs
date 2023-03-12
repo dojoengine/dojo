@@ -1,10 +1,12 @@
 use std::cmp::Ordering;
 use std::error::Error;
 
-use apibara_client_protos::pb::starknet::v1alpha2::{
+use apibara_core::node::v1alpha2::DataFinality;
+use apibara_core::starknet::v1alpha2::{
     DeployedContractFilter, EventFilter, FieldElement, Filter, HeaderFilter, StateUpdateFilter,
 };
-use futures::StreamExt;
+use apibara_sdk::{Configuration, DataMessage};
+use futures::TryStreamExt;
 use log::{debug, info, warn};
 use num::BigUint;
 use sqlx::{Pool, Sqlite};
@@ -12,7 +14,7 @@ use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 
 use crate::hash::starknet_hash;
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
-use crate::stream::ApibaraClient;
+use crate::stream::{FieldElementExt, StarknetDataStream, StarknetDataStreamClient};
 
 pub struct Processors {
     pub event_processors: Vec<Box<dyn EventProcessor>>,
@@ -33,7 +35,8 @@ fn filter_by_processors(filter: &mut Filter, processors: &Processors) {
 }
 
 pub async fn start_indexer(
-    mut stream: ApibaraClient,
+    mut data_stream: StarknetDataStream,
+    stream_client: StarknetDataStreamClient,
     pool: &Pool<Sqlite>,
     provider: &JsonRpcClient<HttpTransport>,
     processors: &Processors,
@@ -59,28 +62,22 @@ pub async fn start_indexer(
     // filter requested data by the events we process
     filter_by_processors(&mut filter, processors);
 
-    let data_stream = stream
-        .request_data({
-            Filter {
-                header: Some(HeaderFilter { weak: false }),
-                transactions: vec![],
-                events: vec![],
-                messages: vec![],
-                state_update: None,
-            }
-        })
-        .await?;
-    futures::pin_mut!(data_stream);
+    // TODO: should set starting block.
+    let starting_configuration = Configuration::<Filter>::default()
+        .with_finality(DataFinality::DataStatusAccepted)
+        .with_filter(|filter| filter.with_header(HeaderFilter { weak: false }));
+    stream_client.send(starting_configuration).await?;
 
     // dont process anything until our world is deployed
     let mut world_deployed = false;
-    while let Some(mess) = data_stream.next().await {
-        match mess {
-            Ok(Some(mess)) => {
-                debug!("Received message");
-                let data = &mess.data;
-
-                for block in data {
+    while let Some(message) = data_stream.try_next().await? {
+        debug!("Received message");
+        match message {
+            DataMessage::Invalidate { cursor } => {
+                panic!("chain reorganization: {cursor:?}");
+            }
+            DataMessage::Data { batch, .. } => {
+                for block in batch {
                     match &block.header {
                         Some(header) => {
                             info!("Received block {}", header.block_number);
@@ -158,12 +155,6 @@ pub async fn start_indexer(
                         }
                     }
                 }
-            }
-            Ok(None) => {
-                continue;
-            }
-            Err(e) => {
-                warn!("Error: {:?}", e);
             }
         }
     }
