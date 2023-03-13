@@ -9,6 +9,8 @@ trait IProxy {
 
 #[abi]
 trait IWorld {
+    fn issue_entity(owner: starknet::ContractAddress) -> usize;
+    fn owner_of(entity_id: usize) -> starknet::ContractAddress;
     fn entities(component: starknet::ContractAddress) -> Array<felt>;
 }
 
@@ -36,6 +38,8 @@ mod World {
     use super::IProxyDispatcherTrait;
 
     struct Storage {
+        num_entities: usize,
+        entity_owners: LegacyMap::<usize, starknet::ContractAddress>,
         entity_registry_len: LegacyMap::<starknet::ContractAddress, usize>,
         entity_registry: LegacyMap::<(starknet::ContractAddress, usize), usize>,
         module_registry: LegacyMap::<starknet::ContractAddress, bool>,
@@ -107,6 +111,15 @@ mod World {
         let entity_id = entity_registry::read((component_address, (entities_len - 1_usize)));
         entities.append(entity_id);
         return get_entities_inner(component_address, entities_len - 1_usize, ref entities);
+    }
+
+    // Issue an autoincremented id to the caller.
+    #[external]
+    fn issue_entity(owner: starknet::ContractAddress) -> usize {
+        let num_entities = num_entities::read();
+        num_entities::write(num_entities + 1_usize);
+        entity_owners::write(num_entities, owner);
+        return num_entities;
     }
 
     // Returns entities that contain the component state.

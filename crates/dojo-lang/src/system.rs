@@ -15,6 +15,7 @@ use smol_str::SmolStr;
 
 use crate::plugin::DojoAuxData;
 use crate::query::Query;
+use crate::spawn::handle_spawn;
 
 #[cfg(test)]
 #[path = "system_test.rs"]
@@ -66,12 +67,16 @@ impl System {
         rewrite_nodes.push(RewriteNode::interpolate_patched(
             "
                 #[external]
-                fn execute() {
+                fn execute($parameters$) {
                     let world_address = starknet::contract_address_const::<$world_address$>();
                     $body$
                 }
             ",
             HashMap::from([
+                (
+                    "parameters".to_string(),
+                    RewriteNode::new_trimmed(signature.parameters(db).as_syntax_node()),
+                ),
                 (
                     "world_address".to_string(),
                     RewriteNode::Text(format!("{:#x}", world_config.address.unwrap_or_default())),
@@ -164,9 +169,32 @@ impl System {
                     ]),
                 )];
 
-                let query = Query::from_expr(db, statement_let);
-                self.dependencies.extend(query.dependencies.clone());
-                result.extend(query.nodes(self.world_config));
+                if let ast::Expr::FunctionCall(expr_fn) = statement_let.rhs(db) {
+                    if let Some(ast::PathSegment::WithGenericArgs(segment_genric)) =
+                        expr_fn.path(db).elements(db).first()
+                    {
+                        match segment_genric.ident(db).text(db).as_str() {
+                            "QueryTrait" => {
+                                let query = Query::from_expr(db, segment_genric.clone());
+                                result.extend(query.nodes(self.world_config));
+                            }
+                            "Spawn" => {
+                                let (dependencies, body_nodes) =
+                                    handle_spawn(db, expr_fn.clone(), self.world_config);
+                                self.dependencies.extend(dependencies);
+                                return body_nodes;
+                            }
+                            _ => {}
+                        }
+
+                        for arg in segment_genric.generic_args(db).generic_args(db).elements(db) {
+                            if let ast::GenericArg::Expr(expr) = arg {
+                                self.find_dependencies(db, expr.value(db));
+                            }
+                        }
+                    }
+                }
+
                 result
             }
             ast::Statement::Expr(statement_expr) => self.lift_expr(db, statement_expr.expr(db)),
@@ -278,6 +306,41 @@ impl System {
                 ("else".to_string(), RewriteNode::new_modified(else_nodes)),
             ]),
         )]
+    }
+
+    fn find_dependencies(&mut self, db: &dyn SyntaxGroup, expression: ast::Expr) {
+        match expression {
+            ast::Expr::Tuple(tuple) => {
+                for element in tuple.expressions(db).elements(db) {
+                    self.find_dependencies(db, element);
+                }
+            }
+            ast::Expr::Parenthesized(parenthesized) => {
+                self.find_dependencies(db, parenthesized.expr(db))
+            }
+            ast::Expr::Path(path) => match path.elements(db).last().unwrap() {
+                ast::PathSegment::WithGenericArgs(segment) => {
+                    let generic = segment.generic_args(db);
+
+                    for param in generic.generic_args(db).elements(db) {
+                        if let ast::GenericArg::Expr(expr) = param {
+                            self.find_dependencies(db, expr.value(db));
+                        }
+                    }
+
+                    self.dependencies.insert(segment.ident(db).text(db));
+                }
+                ast::PathSegment::Simple(segment) => {
+                    self.dependencies.insert(segment.ident(db).text(db));
+                }
+            },
+            _ => {
+                unimplemented!(
+                    "Unsupported expression type: {}",
+                    expression.as_syntax_node().get_text(db)
+                );
+            }
+        }
     }
 }
 

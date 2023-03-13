@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use cairo_lang_semantic::patcher::RewriteNode;
 use cairo_lang_syntax::node::db::SyntaxGroup;
@@ -18,25 +18,15 @@ pub struct Fragment {
 }
 
 pub struct Query {
-    pub dependencies: HashSet<SmolStr>,
-    pub fragments: Vec<Fragment>,
+    fragments: Vec<Fragment>,
 }
 
 impl Query {
-    pub fn from_expr(db: &dyn SyntaxGroup, query_ast: ast::StatementLet) -> Self {
-        let mut query = Query { dependencies: HashSet::new(), fragments: vec![] };
-
-        if let ast::Expr::FunctionCall(expr_fn) = query_ast.rhs(db) {
-            if let Some(ast::PathSegment::WithGenericArgs(segment_genric)) =
-                expr_fn.path(db).elements(db).first()
-            {
-                if segment_genric.ident(db).text(db) == "QueryTrait" {
-                    for arg in segment_genric.generic_args(db).generic_args(db).elements(db) {
-                        if let ast::GenericArg::Expr(expr) = arg {
-                            query.handle_expression(db, expr.value(db));
-                        }
-                    }
-                }
+    pub fn from_expr(db: &dyn SyntaxGroup, query_ast: ast::PathSegmentWithGenericArgs) -> Self {
+        let mut query = Query { fragments: vec![] };
+        for arg in query_ast.generic_args(db).generic_args(db).elements(db) {
+            if let ast::GenericArg::Expr(expr) = arg {
+                query.handle_expression(db, expr.value(db));
             }
         }
 
@@ -78,7 +68,7 @@ impl Query {
                 }
             }
             ast::Expr::Parenthesized(parenthesized) => {
-                self.handle_expression(db, parenthesized.expr(db));
+                self.handle_expression(db, parenthesized.expr(db))
             }
             ast::Expr::Path(path) => match path.elements(db).last().unwrap() {
                 ast::PathSegment::WithGenericArgs(segment) => {
@@ -89,11 +79,8 @@ impl Query {
                             self.handle_expression(db, expr.value(db));
                         }
                     }
-
-                    self.dependencies.insert(segment.ident(db).text(db));
                 }
                 ast::PathSegment::Simple(segment) => {
-                    self.dependencies.insert(segment.ident(db).text(db));
                     self.fragments.push(Fragment {
                         component: segment.ident(db).text(db),
                         constraint: Constraint::Has,
