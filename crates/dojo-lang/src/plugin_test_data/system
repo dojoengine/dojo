@@ -114,6 +114,12 @@ impl StorageAccessPosition of starknet::StorageAccess::<Position> {
     }
 }
 
+#[abi]
+trait IPosition {
+    fn set(entity_id: felt, value: Position);
+    fn get(entity_id: felt) -> Position;
+}
+
 #[derive(Copy, Drop)]
 struct Player {
     name: felt, 
@@ -147,6 +153,12 @@ impl StorageAccessPlayer of starknet::StorageAccess::<Player> {
             address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8), value.name
         )
     }
+}
+
+#[abi]
+trait IPlayer {
+    fn set(entity_id: felt, value: Player);
+    fn get(entity_id: felt) -> Player;
 }
 
 #[contract]

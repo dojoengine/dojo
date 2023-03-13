@@ -126,10 +126,10 @@ pub fn handle_component_impl(db: &dyn SyntaxGroup, body: ast::ImplBody) -> Vec<R
 }
 
 pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> PluginResult {
-    let mut rewrite_nodes = vec![];
+    let mut body_nodes = vec![];
     let mut trait_nodes = vec![];
 
-    rewrite_nodes.push(RewriteNode::interpolate_patched(
+    body_nodes.push(RewriteNode::interpolate_patched(
         "
             struct Storage {
                 state: LegacyMap::<felt, $type_name$>,
@@ -271,6 +271,11 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
                 $members$
             }
             $traits$
+            #[abi]
+            trait I$type_name$ {
+                fn set(entity_id: felt, value: $type_name$);
+                fn get(entity_id: felt) -> $type_name$;
+            }
             #[generated_component]
             mod $type_name$ {
                 use super::$type_name$;
@@ -286,7 +291,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
             ),
             ("members".to_string(), RewriteNode::Copied(struct_ast.members(db).as_syntax_node())),
             ("traits".to_string(), RewriteNode::new_modified(trait_nodes)),
-            ("body".to_string(), RewriteNode::new_modified(rewrite_nodes)),
+            ("body".to_string(), RewriteNode::new_modified(body_nodes)),
         ]),
     ));
 

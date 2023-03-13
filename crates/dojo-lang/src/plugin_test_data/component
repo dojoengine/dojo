@@ -78,6 +78,12 @@ impl StorageAccessPosition of starknet::StorageAccess::<Position> {
     }
 }
 
+#[abi]
+trait IPosition {
+    fn set(entity_id: felt, value: Position);
+    fn get(entity_id: felt) -> Position;
+}
+
 #[contract]
 mod PositionComponent {
     use super::Position;
