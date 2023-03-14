@@ -166,44 +166,68 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
     let mut read = vec![];
     let mut write = vec![];
     struct_ast.members(db).elements(db).iter().enumerate().for_each(|(i, member)| {
+        let member_type_string = member.type_clause(db).ty(db).as_syntax_node().get_text(db);
+        let is_felt = member_type_string.as_str().trim().eq("felt");
+
         serialize.push(RewriteNode::interpolate_patched(
-            "serde::Serde::<felt>::serialize(ref serialized, input.$key$);",
-            HashMap::from([(
-                "key".to_string(),
-                RewriteNode::new_trimmed(member.name(db).as_syntax_node()),
-            )]),
-        ));
-
-        deserialize.push(RewriteNode::interpolate_patched(
-            "$key$: serde::Serde::<felt>::deserialize(ref serialized)?,",
-            HashMap::from([(
-                "key".to_string(),
-                RewriteNode::new_trimmed(member.name(db).as_syntax_node()),
-            )]),
-        ));
-
-        read.push(RewriteNode::interpolate_patched(
-            "$key$: starknet::storage_read_syscall(
-                address_domain, starknet::storage_address_from_base_and_offset(base, $offset$_u8)
-            )?,",
+            "serde::Serde::<$type_clause$>::serialize(ref serialized, input.$key$);",
             HashMap::from([
                 ("key".to_string(), RewriteNode::new_trimmed(member.name(db).as_syntax_node())),
-                ("offset".to_string(), RewriteNode::Text(i.to_string())),
+                (
+                    "type_clause".to_string(),
+                    RewriteNode::new_trimmed(member.type_clause(db).ty(db).as_syntax_node()),
+                ),
             ]),
         ));
 
-        let final_token =
-            if i != struct_ast.members(db).elements(db).len() - 1 { "?;" } else { "" };
-        write.push(RewriteNode::interpolate_patched(
+        deserialize.push(RewriteNode::interpolate_patched(
+            "$key$: serde::Serde::<$type_clause$>::deserialize(ref serialized)?,",
+            HashMap::from([
+                ("key".to_string(), RewriteNode::new_trimmed(member.name(db).as_syntax_node())),
+                (
+                    "type_clause".to_string(),
+                    RewriteNode::new_trimmed(member.type_clause(db).ty(db).as_syntax_node()),
+                ),
+            ]),
+        ));
+
+        let try_into_unwrap_token = if is_felt { "?," } else { "?.try_into().unwrap()," };
+        read.push(RewriteNode::interpolate_patched(
             format!(
-                "
-                starknet::storage_write_syscall(
-                    address_domain, starknet::storage_address_from_base_and_offset(base, \
-                 $offset$_u8), value.$key$){final_token}"
+                "$key$: starknet::storage_read_syscall(
+                    address_domain,
+                    starknet::storage_address_from_base_and_offset(base, $offset$_u8)
+                ){try_into_unwrap_token}"
             )
             .as_str(),
             HashMap::from([
                 ("key".to_string(), RewriteNode::new_trimmed(member.name(db).as_syntax_node())),
+                (
+                    "type_clause".to_string(),
+                    RewriteNode::new_trimmed(member.type_clause(db).ty(db).as_syntax_node()),
+                ),
+                ("offset".to_string(), RewriteNode::Text(i.to_string())),
+            ]),
+        ));
+
+        let into_token = if is_felt { "" } else { ".into()" };
+        let final_token =
+            if i != struct_ast.members(db).elements(db).len() - 1 { "?;" } else { "" };
+        write.push(RewriteNode::interpolate_patched(
+            format!(
+                "starknet::storage_write_syscall(
+                    address_domain,
+                    starknet::storage_address_from_base_and_offset(base, $offset$_u8),
+                    value.$key${into_token}
+                ){final_token}"
+            )
+            .as_str(),
+            HashMap::from([
+                ("key".to_string(), RewriteNode::new_trimmed(member.name(db).as_syntax_node())),
+                (
+                    "type_clause".to_string(),
+                    RewriteNode::new_trimmed(member.type_clause(db).ty(db).as_syntax_node()),
+                ),
                 ("offset".to_string(), RewriteNode::Text(i.to_string())),
             ]),
         ));
@@ -266,6 +290,11 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
     let mut builder = PatchBuilder::new(db);
     builder.add_modified(RewriteNode::interpolate_patched(
         "
+            use option::OptionTrait;
+            use starknet::SyscallResult;
+            use traits::Into;
+            use traits::TryInto;
+        
             #[derive(Copy, Drop)]
             struct $type_name$ {
                 $members$

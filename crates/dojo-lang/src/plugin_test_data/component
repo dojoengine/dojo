@@ -30,6 +30,14 @@ impl Position of Component {
 //! > generated_cairo_code
 use dojo::world::ComponentTrait;
 
+use option::OptionTrait;
+
+use starknet::SyscallResult;
+
+use traits::Into;
+
+use traits::TryInto;
+
 #[derive(Copy, Drop)]
 struct Position {
     x: felt,
