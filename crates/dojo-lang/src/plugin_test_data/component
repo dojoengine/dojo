@@ -51,60 +51,10 @@ impl PositionImpl of PositionTrait {
     }
 }
 
-use option::OptionTrait;
-
-use starknet::SyscallResult;
-
-use traits::Into;
-
-use traits::TryInto;
-
 #[derive(Copy, Drop)]
 struct Position {
     x: felt252,
     y: felt252
-}
-
-impl PositionSerde of serde::Serde::<Position> {
-    fn serialize(ref serialized: Array::<felt252>, input: Position) {
-        serde::Serde::<felt252>::serialize(ref serialized, input.x);
-        serde::Serde::<felt252>::serialize(ref serialized, input.y);
-    }
-    fn deserialize(ref serialized: Span::<felt252>) -> Option::<Position> {
-        Option::Some(
-            Position {
-                x: serde::Serde::<felt252>::deserialize(ref serialized)?,
-                y: serde::Serde::<felt252>::deserialize(ref serialized)?,
-            }
-        )
-    }
-}
-
-impl StorageAccessPosition of starknet::StorageAccess::<Position> {
-    fn read(
-        address_domain: felt252, base: starknet::StorageBaseAddress
-    ) -> starknet::SyscallResult::<Position> {
-        Result::Ok(
-            Position {
-                x: starknet::storage_read_syscall(
-                    address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8)
-                )?,
-                y: starknet::storage_read_syscall(
-                    address_domain, starknet::storage_address_from_base_and_offset(base, 1_u8)
-                )?,
-            }
-        )
-    }
-    fn write(
-        address_domain: felt252, base: starknet::StorageBaseAddress, value: Position
-    ) -> starknet::SyscallResult::<()> {
-        starknet::storage_write_syscall(
-            address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8), value.x
-        )?;
-        starknet::storage_write_syscall(
-            address_domain, starknet::storage_address_from_base_and_offset(base, 1_u8), value.y
-        )
-    }
 }
 
 #[abi]
@@ -115,9 +65,54 @@ trait IPosition {
 
 #[contract]
 mod PositionComponent {
+    use option::OptionTrait;
+    use starknet::SyscallResult;
+    use traits::Into;
+    use traits::TryInto;
     use super::Position;
-    use super::PositionSerde;
-    use super::StorageAccessPosition;
+
+    impl PositionSerde of serde::Serde::<Position> {
+        fn serialize(ref serialized: Array::<felt252>, input: Position) {
+            serde::Serde::<felt252>::serialize(ref serialized, input.x);
+            serde::Serde::<felt252>::serialize(ref serialized, input.y);
+        }
+        fn deserialize(ref serialized: Span::<felt252>) -> Option::<Position> {
+            Option::Some(
+                Position {
+                    x: serde::Serde::<felt252>::deserialize(ref serialized)?,
+                    y: serde::Serde::<felt252>::deserialize(ref serialized)?,
+                }
+            )
+        }
+    }
+
+    impl StorageAccessPosition of starknet::StorageAccess::<Position> {
+        fn read(
+            address_domain: felt252, base: starknet::StorageBaseAddress
+        ) -> starknet::SyscallResult::<Position> {
+            Result::Ok(
+                Position {
+                    x: starknet::storage_read_syscall(
+                        address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8)
+                    )?,
+                    y: starknet::storage_read_syscall(
+                        address_domain, starknet::storage_address_from_base_and_offset(base, 1_u8)
+                    )?,
+                }
+            )
+        }
+        fn write(
+            address_domain: felt252, base: starknet::StorageBaseAddress, value: Position
+        ) -> starknet::SyscallResult::<()> {
+            starknet::storage_write_syscall(
+                address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8), value.x
+            )?;
+            starknet::storage_write_syscall(
+                address_domain, starknet::storage_address_from_base_and_offset(base, 1_u8), value.y
+            )
+        }
+    }
+
 
     struct Storage {
         state: LegacyMap::<usize, Position>, 

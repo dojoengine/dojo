@@ -190,26 +190,25 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
     let mut builder = PatchBuilder::new(db);
     builder.add_modified(RewriteNode::interpolate_patched(
         "
-            use option::OptionTrait;
-            use starknet::SyscallResult;
-            use traits::Into;
-            use traits::TryInto;
-        
             #[derive(Copy, Drop)]
             struct $type_name$ {
                 $members$
             }
-            $traits$
+
             #[abi]
             trait I$type_name$ {
                 fn set(entity_id: usize, value: $type_name$);
                 fn get(entity_id: usize) -> $type_name$;
             }
+
             #[contract]
             mod $type_name$Component {
+                use option::OptionTrait;
+                use starknet::SyscallResult;
+                use traits::Into;
+                use traits::TryInto;
                 use super::$type_name$;
-                use super::$type_name$Serde;
-                use super::StorageAccess$type_name$;
+                $traits$
                 $body$
             }
         ",

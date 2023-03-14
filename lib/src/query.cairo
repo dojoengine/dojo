@@ -19,29 +19,12 @@ struct Query<T> {}
 
 trait QueryTrait<T> {
     fn ids() -> Array::<usize>;
-    fn id() -> usize;
+    fn entity(id: usize) -> T;
     fn len() -> u32;
 // fn insert(ref self: Query::<T>, key: felt252, value: T);
 // fn get(ref self: Query::<T>, index: felt252) -> T;
 }
 
-impl QueryImpl<T> of QueryTrait::<T> {
-    #[inline(always)]
-    fn ids() -> Array::<usize> {
-        let mut arr = ArrayTrait::<usize>::new();
-        arr.append(0_u32);
-        arr
-    }
-
-    #[inline(always)]
-    fn id() -> usize {
-        0_u32
-    }
-
-    fn len() -> u32 {
-        0_u32
-    }
-}
 // #[test]
 // fn test_query() {
 //     let mut query = QueryTrait::<felt252>::new();

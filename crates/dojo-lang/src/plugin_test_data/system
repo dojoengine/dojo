@@ -27,8 +27,7 @@ mod SpawnSystem {
     use super::Position;
     use super::Player;
 
-    #[execute]
-    fn spawn(name: felt252) {
+    fn execute(name: felt252) {
         let player_id = Spawn::<(Player, Position)>::bundle((
             Player { name: name },
             Position { x: 0, y: 0 },
@@ -48,8 +47,7 @@ mod MoveSystem {
         return move_inner(positions, index + 1_u32, count - 1_u32);
     }
 
-    #[execute]
-    fn move() {
+    fn execute() {
         let positions_query = QueryTrait::<(Position, Player)>::ids();
         // let player_query: Query<(With::<Player, EntityID<Caller>>)>
 
@@ -80,60 +78,10 @@ use dojo::query::EntityID;
 
 use dojo::query::With;
 
-use option::OptionTrait;
-
-use starknet::SyscallResult;
-
-use traits::Into;
-
-use traits::TryInto;
-
 #[derive(Copy, Drop)]
 struct Position {
     x: felt252,
     y: felt252,
-}
-
-impl PositionSerde of serde::Serde::<Position> {
-    fn serialize(ref serialized: Array::<felt252>, input: Position) {
-        serde::Serde::<felt252>::serialize(ref serialized, input.x);
-        serde::Serde::<felt252>::serialize(ref serialized, input.y);
-    }
-    fn deserialize(ref serialized: Span::<felt252>) -> Option::<Position> {
-        Option::Some(
-            Position {
-                x: serde::Serde::<felt252>::deserialize(ref serialized)?,
-                y: serde::Serde::<felt252>::deserialize(ref serialized)?,
-            }
-        )
-    }
-}
-
-impl StorageAccessPosition of starknet::StorageAccess::<Position> {
-    fn read(
-        address_domain: felt252, base: starknet::StorageBaseAddress
-    ) -> starknet::SyscallResult::<Position> {
-        Result::Ok(
-            Position {
-                x: starknet::storage_read_syscall(
-                    address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8)
-                )?,
-                y: starknet::storage_read_syscall(
-                    address_domain, starknet::storage_address_from_base_and_offset(base, 1_u8)
-                )?,
-            }
-        )
-    }
-    fn write(
-        address_domain: felt252, base: starknet::StorageBaseAddress, value: Position
-    ) -> starknet::SyscallResult::<()> {
-        starknet::storage_write_syscall(
-            address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8), value.x
-        )?;
-        starknet::storage_write_syscall(
-            address_domain, starknet::storage_address_from_base_and_offset(base, 1_u8), value.y
-        )
-    }
 }
 
 #[abi]
@@ -144,9 +92,54 @@ trait IPosition {
 
 #[contract]
 mod PositionComponent {
+    use option::OptionTrait;
+    use starknet::SyscallResult;
+    use traits::Into;
+    use traits::TryInto;
     use super::Position;
-    use super::PositionSerde;
-    use super::StorageAccessPosition;
+
+    impl PositionSerde of serde::Serde::<Position> {
+        fn serialize(ref serialized: Array::<felt252>, input: Position) {
+            serde::Serde::<felt252>::serialize(ref serialized, input.x);
+            serde::Serde::<felt252>::serialize(ref serialized, input.y);
+        }
+        fn deserialize(ref serialized: Span::<felt252>) -> Option::<Position> {
+            Option::Some(
+                Position {
+                    x: serde::Serde::<felt252>::deserialize(ref serialized)?,
+                    y: serde::Serde::<felt252>::deserialize(ref serialized)?,
+                }
+            )
+        }
+    }
+
+    impl StorageAccessPosition of starknet::StorageAccess::<Position> {
+        fn read(
+            address_domain: felt252, base: starknet::StorageBaseAddress
+        ) -> starknet::SyscallResult::<Position> {
+            Result::Ok(
+                Position {
+                    x: starknet::storage_read_syscall(
+                        address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8)
+                    )?,
+                    y: starknet::storage_read_syscall(
+                        address_domain, starknet::storage_address_from_base_and_offset(base, 1_u8)
+                    )?,
+                }
+            )
+        }
+        fn write(
+            address_domain: felt252, base: starknet::StorageBaseAddress, value: Position
+        ) -> starknet::SyscallResult::<()> {
+            starknet::storage_write_syscall(
+                address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8), value.x
+            )?;
+            starknet::storage_write_syscall(
+                address_domain, starknet::storage_address_from_base_and_offset(base, 1_u8), value.y
+            )
+        }
+    }
+
 
     struct Storage {
         state: LegacyMap::<usize, Position>, 
@@ -169,47 +162,9 @@ mod PositionComponent {
     }
 }
 
-use option::OptionTrait;
-
-use starknet::SyscallResult;
-
-use traits::Into;
-
-use traits::TryInto;
-
 #[derive(Copy, Drop)]
 struct Player {
     name: felt252, 
-}
-
-impl PlayerSerde of serde::Serde::<Player> {
-    fn serialize(ref serialized: Array::<felt252>, input: Player) {
-        serde::Serde::<felt252>::serialize(ref serialized, input.name);
-    }
-    fn deserialize(ref serialized: Span::<felt252>) -> Option::<Player> {
-        Option::Some(Player { name: serde::Serde::<felt252>::deserialize(ref serialized)?,  })
-    }
-}
-
-impl StorageAccessPlayer of starknet::StorageAccess::<Player> {
-    fn read(
-        address_domain: felt252, base: starknet::StorageBaseAddress
-    ) -> starknet::SyscallResult::<Player> {
-        Result::Ok(
-            Player {
-                name: starknet::storage_read_syscall(
-                    address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8)
-                )?,
-            }
-        )
-    }
-    fn write(
-        address_domain: felt252, base: starknet::StorageBaseAddress, value: Player
-    ) -> starknet::SyscallResult::<()> {
-        starknet::storage_write_syscall(
-            address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8), value.name
-        )
-    }
 }
 
 #[abi]
@@ -220,9 +175,44 @@ trait IPlayer {
 
 #[contract]
 mod PlayerComponent {
+    use option::OptionTrait;
+    use starknet::SyscallResult;
+    use traits::Into;
+    use traits::TryInto;
     use super::Player;
-    use super::PlayerSerde;
-    use super::StorageAccessPlayer;
+
+    impl PlayerSerde of serde::Serde::<Player> {
+        fn serialize(ref serialized: Array::<felt252>, input: Player) {
+            serde::Serde::<felt252>::serialize(ref serialized, input.name);
+        }
+        fn deserialize(ref serialized: Span::<felt252>) -> Option::<Player> {
+            Option::Some(Player { name: serde::Serde::<felt252>::deserialize(ref serialized)?,  })
+        }
+    }
+
+    impl StorageAccessPlayer of starknet::StorageAccess::<Player> {
+        fn read(
+            address_domain: felt252, base: starknet::StorageBaseAddress
+        ) -> starknet::SyscallResult::<Player> {
+            Result::Ok(
+                Player {
+                    name: starknet::storage_read_syscall(
+                        address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8)
+                    )?,
+                }
+            )
+        }
+        fn write(
+            address_domain: felt252, base: starknet::StorageBaseAddress, value: Player
+        ) -> starknet::SyscallResult::<()> {
+            starknet::storage_write_syscall(
+                address_domain,
+                starknet::storage_address_from_base_and_offset(base, 0_u8),
+                value.name
+            )
+        }
+    }
+
 
     struct Storage {
         state: LegacyMap::<usize, Player>, 
@@ -295,6 +285,7 @@ mod MoveSystem {
         }.entities(
             starknet::contract_address_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>()
         );
+
         let player_ids = IWorldDispatcher {
             contract_address: world_address
         }.entities(
@@ -315,36 +306,6 @@ mod MoveSystem {
 }
 
 //! > expected_diagnostics
-error: The name `OptionTrait` is defined multiple times.
- --> Player:2:25
-            use option::OptionTrait;
-                        ^*********^
-
-error: The name `SyscallResult` is defined multiple times.
- --> Player:3:27
-            use starknet::SyscallResult;
-                          ^***********^
-
-error: The name `Into` is defined multiple times.
- --> Player:4:25
-            use traits::Into;
-                        ^**^
-
-error: The name `TryInto` is defined multiple times.
- --> Player:5:25
-            use traits::TryInto;
-                        ^*****^
-
-error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<core::integer::u32>>
- --> contract:17:113
-let mut bar = 123;let mut foo = ArrayTrait::<felt252>::new();foo.append(bar);move_inner(positions_query, 0_u32, positions_query.len());if bar == 123 {
-                                                                                                                ^*******************^
-
-error: Variable was previously moved. Trait has no implementation in context: core::traits::Copy::<core::array::Array::<core::integer::u32>>
- --> contract:15:25
-                    let positions_query = QueryTrait::<(Position, Player)>::ids();let position_ids = IWorldDispatcher { contract_address: world_address }.entities(starknet::contract_address_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>());
-                        ^*************^
-
 error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<core::integer::u32>>
  --> serde.cairo:8:9
         serialize_array_u32_helper(ref serialized, ref input);
@@ -369,3 +330,8 @@ error: Variable not dropped. Trait has no implementation in context: core::trait
  --> contract:52:13
         ref entities: Array::<usize>
             ^******^
+
+error: Plugin diagnostic: Trait has no implementation in context: dojo::query::QueryTrait::<(test::Position, test::Player)>
+ --> MoveSystem:14:77
+                    let positions_query = QueryTrait::<(Position, Player)>::ids();
+                                                                            ^*^

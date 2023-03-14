@@ -8,7 +8,6 @@ use cairo_lang_semantic::patcher::{PatchBuilder, RewriteNode};
 use cairo_lang_semantic::plugin::DynPluginAuxData;
 use cairo_lang_syntax::node::ast::MaybeModuleBody;
 use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use dojo_project::WorldConfig;
 use itertools::Itertools;
@@ -49,8 +48,8 @@ impl System {
                 .elements(db)
                 .iter()
                 .flat_map(|el| {
-                    if el.has_attr(db, "execute") {
-                        if let ast::Item::FreeFunction(fn_ast) = el {
+                    if let ast::Item::FreeFunction(fn_ast) = el {
+                        if fn_ast.declaration(db).name(db).text(db).to_string() == "execute" {
                             return system.from_function(db, fn_ast.clone());
                         }
                     }
@@ -82,7 +81,7 @@ impl System {
                     $imports$
                     $body$
                 }
-            ",
+                ",
                 HashMap::from([
                     ("name".to_string(), RewriteNode::Text(name.to_string())),
                     ("imports".to_string(), RewriteNode::new_modified(import_nodes)),
