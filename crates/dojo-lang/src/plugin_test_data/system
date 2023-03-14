@@ -127,8 +127,8 @@ impl StorageAccessPosition of starknet::StorageAccess::<Position> {
 
 #[abi]
 trait IPosition {
-    fn set(entity_id: felt, value: Position);
-    fn get(entity_id: felt) -> Position;
+    fn set(entity_id: usize, value: Position);
+    fn get(entity_id: usize) -> Position;
 }
 
 #[derive(Copy, Drop)]
@@ -168,8 +168,8 @@ impl StorageAccessPlayer of starknet::StorageAccess::<Player> {
 
 #[abi]
 trait IPlayer {
-    fn set(entity_id: felt, value: Player);
-    fn get(entity_id: felt) -> Player;
+    fn set(entity_id: usize, value: Player);
+    fn get(entity_id: usize) -> Player;
 }
 
 #[contract]
@@ -244,7 +244,7 @@ mod PositionComponent {
     use super::StorageAccessPosition;
 
     struct Storage {
-        state: LegacyMap::<felt, Position>, 
+        state: LegacyMap::<usize, Position>, 
     }
 
     // Initialize Position.
@@ -253,13 +253,13 @@ mod PositionComponent {
 
     // Set the state of an entity.
     #[external]
-    fn set(entity_id: felt, value: Position) {
+    fn set(entity_id: usize, value: Position) {
         state::write(entity_id, value);
     }
 
     // Get the state of an entity.
     #[view]
-    fn get(entity_id: felt) -> Position {
+    fn get(entity_id: usize) -> Position {
         return state::read(entity_id);
     }
 }
@@ -271,7 +271,7 @@ mod PlayerComponent {
     use super::StorageAccessPlayer;
 
     struct Storage {
-        state: LegacyMap::<felt, Player>, 
+        state: LegacyMap::<usize, Player>, 
     }
 
     // Initialize Player.
@@ -280,22 +280,42 @@ mod PlayerComponent {
 
     // Set the state of an entity.
     #[external]
-    fn set(entity_id: felt, value: Player) {
+    fn set(entity_id: usize, value: Player) {
         state::write(entity_id, value);
     }
 
     // Get the state of an entity.
     #[view]
-    fn get(entity_id: felt) -> Player {
+    fn get(entity_id: usize) -> Player {
         return state::read(entity_id);
     }
 }
 
 //! > expected_diagnostics
-error: Plugin diagnostic: Unexpected argument type. Expected: "core::felt", found: "core::integer::u32".
- --> spawn:17:181
-                                IPlayerDispatcher { contract_address: starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>() }.set(id, Player { name: name });
-                                                                                                                                                                                    ^^
+error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<core::integer::u32>>
+ --> serde.cairo:8:9
+        serialize_array_u32_helper(ref serialized, ref input);
+        ^***************************************************^
+
+error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<core::integer::u32>>
+ --> serde.cairo:17:66
+fn serialize_array_u32_helper(ref serialized: Array::<felt>, ref input: Array::<u32>) {
+                                                                 ^***^
+
+error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<core::integer::u32>>
+ --> serde.cairo:37:39
+    ref serialized: Span::<felt>, mut curr_output: Array::<u32>, remaining: felt
+                                      ^*********^
+
+error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<core::integer::u32>>
+ --> serde.cairo:37:39
+    ref serialized: Span::<felt>, mut curr_output: Array::<u32>, remaining: felt
+                                      ^*********^
+
+error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<core::integer::u32>>
+ --> contract:52:13
+        ref entities: Array::<usize>
+            ^******^
 
 error: Plugin diagnostic: Identifier not found.
  --> move:9:12
@@ -311,3 +331,53 @@ error: Type annotations needed. Failed to infer ?8
  --> contract:91:27
             let mut arr = array_new();
                           ^*******^
+
+error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::NonZero::<GenericParamType(core::IsZeroResultIntoBool::T)>>
+ --> lib.cairo:152:35
+            IsZeroResult::NonZero(_) => false,
+                                  ^
+
+error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Span::<GenericParamType(core::array::clone_loop::T)>>
+ --> array.cairo:120:11
+    match span.pop_front() {
+          ^**************^
+
+error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<GenericParamType(core::array::clone_loop::T)>>
+ --> array.cairo:111:66
+fn clone_loop<T, impl TClone: Clone::<T>>(mut span: Span<T>, ref response: Array<T>) {
+                                                                 ^******^
+
+error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Span::<GenericParamType(core::array::clone_loop::T)>>
+ --> array.cairo:111:47
+fn clone_loop<T, impl TClone: Clone::<T>>(mut span: Span<T>, ref response: Array<T>) {
+                                              ^**^
+
+error: Invalid copy trait implementation, Trait has no implementation in context: core::traits::Copy::<core::NonZero::<core::ec::EcPoint>>
+ --> ecdsa.cairo:2:1
+impl OptionEcPointCopy of Copy::<Option::<NonZeroEcPoint>>;
+^*********************************************************^
+
+error: Invalid copy trait implementation, Trait `core::traits::Copy::<core::box::Box::<core::starknet::info::TxInfo>>` has multiple implementations, in: "core::starknet::info::TxInfoBoxCopy", "core::box::BoxTCopy"
+ --> impls:1:1
+impl ExecutionInfoCopy of Copy::<ExecutionInfo>;
+^**********************************************^
+
+error: Invalid drop trait implementation, Trait `core::traits::Drop::<core::box::Box::<core::starknet::info::TxInfo>>` has multiple implementations, in: "core::starknet::info::TxInfoBoxDrop", "core::box::BoxTDrop"
+ --> impls:2:1
+impl ExecutionInfoDrop of Drop::<ExecutionInfo>;
+^**********************************************^
+
+error: Variable not dropped. Trait `core::traits::Drop::<core::box::Box::<core::starknet::info::TxInfo>>` has multiple implementations, in: "core::starknet::info::TxInfoBoxDrop", "core::box::BoxTDrop"
+ --> info.cairo:50:5
+    unbox(get_execution_info()).caller_address
+    ^****************************************^
+
+error: Variable not dropped. Trait `core::traits::Drop::<core::box::Box::<core::starknet::info::TxInfo>>` has multiple implementations, in: "core::starknet::info::TxInfoBoxDrop", "core::box::BoxTDrop"
+ --> info.cairo:54:5
+    unbox(get_execution_info()).contract_address
+    ^******************************************^
+
+error: Variable not dropped. Trait `core::traits::Drop::<core::box::Box::<core::starknet::info::TxInfo>>` has multiple implementations, in: "core::starknet::info::TxInfoBoxDrop", "core::box::BoxTDrop"
+ --> info.cairo:58:5
+    unbox(get_execution_info()).block_info
+    ^************************************^

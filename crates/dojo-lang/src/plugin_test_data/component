@@ -80,8 +80,8 @@ impl StorageAccessPosition of starknet::StorageAccess::<Position> {
 
 #[abi]
 trait IPosition {
-    fn set(entity_id: felt, value: Position);
-    fn get(entity_id: felt) -> Position;
+    fn set(entity_id: usize, value: Position);
+    fn get(entity_id: usize) -> Position;
 }
 
 #[contract]
@@ -91,7 +91,7 @@ mod PositionComponent {
     use super::StorageAccessPosition;
 
     struct Storage {
-        state: LegacyMap::<felt, Position>, 
+        state: LegacyMap::<usize, Position>, 
     }
 
     // Initialize Position.
@@ -100,19 +100,19 @@ mod PositionComponent {
 
     // Set the state of an entity.
     #[external]
-    fn set(entity_id: felt, value: Position) {
+    fn set(entity_id: usize, value: Position) {
         state::write(entity_id, value);
     }
 
     // Get the state of an entity.
     #[view]
-    fn get(entity_id: felt) -> Position {
+    fn get(entity_id: usize) -> Position {
         return state::read(entity_id);
     }
 
 
     #[view]
-    fn is_zero(entity_id: felt) -> bool {
+    fn is_zero(entity_id: usize) -> bool {
         let self = state::read(entity_id);
         match self.x - self.y {
             0 => bool::True(()),
@@ -121,7 +121,7 @@ mod PositionComponent {
     }
 
     #[view]
-    fn is_equal(entity_id: felt, b: Position) -> bool {
+    fn is_equal(entity_id: usize, b: Position) -> bool {
         let self = state::read(entity_id);
         self.x == b.x & self.y == b.y
     }
