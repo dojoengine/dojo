@@ -97,9 +97,7 @@ impl System {
                     aux_data: DynGeneratedFileAuxData::new(DynPluginAuxData::new(DojoAuxData {
                         patches: builder.patches,
                         components: vec![],
-                        systems: vec![
-                            format!("{}System", capitalize_first(name.to_string())).into(),
-                        ],
+                        systems: vec![name],
                     })),
                 }),
                 diagnostics: vec![],
@@ -203,13 +201,6 @@ impl System {
 
         vec![RewriteNode::new_trimmed(statement_ast.as_syntax_node())]
     }
-}
-
-fn capitalize_first(s: String) -> String {
-    let mut chars = s.chars();
-    let mut capitalized = chars.next().unwrap().to_uppercase().to_string();
-    capitalized.extend(chars);
-    capitalized
 }
 
 /// Finds the inline modules annotated as systems in the given crate_ids and

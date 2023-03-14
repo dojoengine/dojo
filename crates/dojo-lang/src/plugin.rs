@@ -18,12 +18,9 @@ use smol_str::SmolStr;
 use starknet::core::crypto::pedersen_hash;
 use starknet::core::types::FieldElement;
 
-use crate::component::{
-    handle_component_impl, handle_component_struct, handle_generated_component,
-};
+use crate::component::handle_component_struct;
 use crate::system::System;
 
-const COMPONENT_ATTR: &str = "generated_component";
 const SYSTEM_ATTR: &str = "system";
 
 /// Dojo related auxiliary data of the Dojo plugin.
@@ -80,13 +77,6 @@ impl DojoPlugin {
     }
 
     fn handle_mod(&self, db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult {
-        if module_ast.has_attr(db, COMPONENT_ATTR) {
-            let name = module_ast.name(db).text(db);
-            let guard = self.impls.lock().unwrap();
-            let impls = guard.get(&name).map_or_else(Vec::new, |vec| vec.clone());
-            return handle_generated_component(db, module_ast, impls);
-        }
-
         if module_ast.has_attr(db, SYSTEM_ATTR) {
             return System::from_module(db, self.world_config, module_ast);
         }
@@ -120,26 +110,6 @@ impl MacroPlugin for DojoPlugin {
                                 }
                             }
                         }
-                    }
-                }
-
-                PluginResult::default()
-            }
-            ast::Item::Impl(impl_ast) => {
-                let name = impl_ast.name(db).text(db);
-                let mut guard = self.impls.lock().unwrap();
-
-                if guard.get_mut(&name).is_some() {
-                    if let ast::MaybeImplBody::Some(body) = impl_ast.body(db) {
-                        let rewrite_nodes = handle_component_impl(db, body);
-                        guard
-                            .entry(name)
-                            .and_modify(|vec| vec.extend(rewrite_nodes.to_vec()))
-                            .or_insert(vec![]);
-                        return PluginResult {
-                            remove_original_item: true,
-                            ..PluginResult::default()
-                        };
                     }
                 }
 

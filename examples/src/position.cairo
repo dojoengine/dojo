@@ -2,8 +2,8 @@ use array::ArrayTrait;
 
 #[derive(Component)]
 struct Position {
-    x: felt,
-    y: felt
+    x: felt252,
+    y: felt252
 }
 
 impl Position of Component {

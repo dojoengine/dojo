@@ -17,7 +17,10 @@ fn test_system_resolving() {
             mod NotAsystem {}
 
             #[system]
-            fn move() {}
+            mod MoveSystem {
+                #[execute]
+                fn move() {}
+            }
         ",
     );
 
