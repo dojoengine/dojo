@@ -1,0 +1,4 @@
+[crate_roots]
+examples = "."
+
+[world]
