@@ -1,5 +1,3 @@
-use array::ArrayTrait;
-
 #[derive(Component)]
 struct Name {
     value: felt,
