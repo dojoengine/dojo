@@ -116,10 +116,10 @@ mod World {
     // Issue an autoincremented id to the caller.
     #[external]
     fn issue_entity(owner: starknet::ContractAddress) -> usize {
-        let num_entities = num_entities::read();
-        num_entities::write(num_entities + 1_usize);
-        entity_owners::write(num_entities, owner);
-        return num_entities;
+        let cur_num_entities = num_entities::read();
+        num_entities::write(cur_num_entities + 1_usize);
+        entity_owners::write(cur_num_entities, owner);
+        return cur_num_entities;
     }
 
     // Returns entities that contain the component state.

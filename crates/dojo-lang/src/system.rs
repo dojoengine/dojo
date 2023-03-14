@@ -15,7 +15,7 @@ use smol_str::SmolStr;
 
 use crate::plugin::DojoAuxData;
 use crate::query::Query;
-use crate::spawn::handle_spawn;
+use crate::spawn::Spawn;
 
 #[cfg(test)]
 #[path = "system_test.rs"]
@@ -180,10 +180,9 @@ impl System {
                                 result.extend(query.nodes(self.world_config));
                             }
                             "Spawn" => {
-                                let (dependencies, body_nodes) =
-                                    handle_spawn(db, expr_fn, self.world_config);
-                                self.dependencies.extend(dependencies);
-                                return body_nodes;
+                                let spawn = Spawn::handle_spawn(db, expr_fn, self.world_config);
+                                self.dependencies.extend(spawn.dependencies);
+                                return spawn.body_nodes;
                             }
                             _ => {}
                         }
