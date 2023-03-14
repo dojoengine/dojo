@@ -42,7 +42,6 @@ impl QueryImpl<T> of QueryTrait::<T> {
         0_u32
     }
 }
-
 // #[test]
 // fn test_query() {
 //     let mut query = QueryTrait::<felt>::new();

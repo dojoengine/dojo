@@ -99,16 +99,16 @@ pub fn handle_component_impl(db: &dyn SyntaxGroup, body: ast::ImplBody) -> Vec<R
                 .children
                 .as_mut()
                 .unwrap()
-                .splice(0..1, vec![RewriteNode::Text("entity_id: felt".to_string())]);
+                .splice(0..1, vec![RewriteNode::Text("entity_id: usize".to_string())]);
 
             rewrite_nodes.push(RewriteNode::interpolate_patched(
                 "
-                                    #[view]
-                                    $func_decl$ {
-                                        let self = state::read(entity_id);
-                                        $body$
-                                    }
-                                    ",
+                #[view]
+                $func_decl$ {
+                    let self = state::read(entity_id);
+                    $body$
+                }
+                ",
                 HashMap::from([
                     ("func_decl".to_string(), func_declaration),
                     (
@@ -132,7 +132,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
     body_nodes.push(RewriteNode::interpolate_patched(
         "
             struct Storage {
-                state: LegacyMap::<felt, $type_name$>,
+                state: LegacyMap::<usize, $type_name$>,
             }
 
             // Initialize $type_name$.
@@ -142,13 +142,13 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
 
             // Set the state of an entity.
             #[external]
-            fn set(entity_id: felt, value: $type_name$) {
+            fn set(entity_id: usize, value: $type_name$) {
                 state::write(entity_id, value);
             }
 
             // Get the state of an entity.
             #[view]
-            fn get(entity_id: felt) -> $type_name$ {
+            fn get(entity_id: usize) -> $type_name$ {
                 return state::read(entity_id);
             }
         ",
@@ -273,8 +273,8 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
             $traits$
             #[abi]
             trait I$type_name$ {
-                fn set(entity_id: felt, value: $type_name$);
-                fn get(entity_id: felt) -> $type_name$;
+                fn set(entity_id: usize, value: $type_name$);
+                fn get(entity_id: usize) -> $type_name$;
             }
             #[generated_component]
             mod $type_name$ {

@@ -10,6 +10,7 @@ use dojo::query::Query;
 use dojo::query::EntityID;
 use dojo::query::With;
 use dojo::query::QueryTrait;
+use dojo::commands::Spawn;
 
 #[derive(Component)]
 struct Position {
@@ -27,12 +28,21 @@ fn move_inner(positions: Array<usize>, index: u32, count: u32) {
 }
 
 #[system]
+fn spawn(name: felt) {
+    let player_id = Spawn::<(Player, Position)>::bundle((
+        Player { name: name },
+        Position { x: 0, y: 0 },
+    ));
+    return ();
+}
+
+#[system]
 fn move() {
     let positions_query = QueryTrait::<(Position, Player)>::ids();
     // let player_query: Query<(With::<Player, EntityID<Caller>>)>
 
     let mut bar = 123;
-    let mut foo = ArrayTrait::<felt>::new();
+    // let mut foo = ArrayTrait::<felt>::new();
     // TODO: https://github.com/starkware-libs/cairo/issues/2438
     // foo.append(bar);
 
@@ -61,6 +71,8 @@ use dojo::query::EntityID;
 use dojo::query::With;
 
 use dojo::query::QueryTrait;
+
+use dojo::commands::Spawn;
 
 fn move_inner(positions: Array<usize>, index: u32, count: u32) {
     return move_inner(positions, index + 1_u32, count - 1_u32);
@@ -116,8 +128,8 @@ impl StorageAccessPosition of starknet::StorageAccess::<Position> {
 
 #[abi]
 trait IPosition {
-    fn set(entity_id: felt, value: Position);
-    fn get(entity_id: felt) -> Position;
+    fn set(entity_id: usize, value: Position);
+    fn get(entity_id: usize) -> Position;
 }
 
 #[derive(Copy, Drop)]
@@ -157,8 +169,37 @@ impl StorageAccessPlayer of starknet::StorageAccess::<Player> {
 
 #[abi]
 trait IPlayer {
-    fn set(entity_id: felt, value: Player);
-    fn get(entity_id: felt) -> Player;
+    fn set(entity_id: usize, value: Player);
+    fn get(entity_id: usize) -> Player;
+}
+
+#[contract]
+mod SpawnSystem {
+    use dojo::world;
+    use dojo::world::IWorldDispatcher;
+    use dojo::world::IWorldDispatcherTrait;
+    use array::ArrayTrait;
+    use super::IPlayerDispatcher;
+    use super::IPlayerDispatcherTrait;
+    use super::IPositionDispatcher;
+    use super::IPositionDispatcherTrait;
+    use super::Player;
+    use super::Position;
+
+
+    #[external]
+    fn execute(name: felt) {
+        let world_address = starknet::contract_address_const::<0x0>();
+        let owner = starknet::get_caller_address();
+        let entity_id = IWorldDispatcher { contract_address: world_address }.issue_entity(owner);
+        IPlayerDispatcher {
+            contract_address: starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
+        }.set(entity_id, Player { name: name });
+        IPositionDispatcher {
+            contract_address: starknet::contract_address_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>()
+        }.set(entity_id, Position { x: 0, y: 0 });
+        return ();
+    }
 }
 
 #[contract]
@@ -166,6 +207,7 @@ mod MoveSystem {
     use dojo::world;
     use dojo::world::IWorldDispatcher;
     use dojo::world::IWorldDispatcherTrait;
+    use array::ArrayTrait;
     use super::Player;
     use super::Position;
 
@@ -187,8 +229,6 @@ mod MoveSystem {
         );
         let mut bar = 123;
 
-        let mut foo = super::ArrayTrait::<felt>::new();
-
         super::move_inner(positions_query, 0_u32, 1_u32);
         if bar == 123 {
             return ();
@@ -209,7 +249,7 @@ mod PositionComponent {
     use super::StorageAccessPosition;
 
     struct Storage {
-        state: LegacyMap::<felt, Position>, 
+        state: LegacyMap::<usize, Position>, 
     }
 
     // Initialize Position.
@@ -218,13 +258,13 @@ mod PositionComponent {
 
     // Set the state of an entity.
     #[external]
-    fn set(entity_id: felt, value: Position) {
+    fn set(entity_id: usize, value: Position) {
         state::write(entity_id, value);
     }
 
     // Get the state of an entity.
     #[view]
-    fn get(entity_id: felt) -> Position {
+    fn get(entity_id: usize) -> Position {
         return state::read(entity_id);
     }
 }
@@ -236,7 +276,7 @@ mod PlayerComponent {
     use super::StorageAccessPlayer;
 
     struct Storage {
-        state: LegacyMap::<felt, Player>, 
+        state: LegacyMap::<usize, Player>, 
     }
 
     // Initialize Player.
@@ -245,15 +285,39 @@ mod PlayerComponent {
 
     // Set the state of an entity.
     #[external]
-    fn set(entity_id: felt, value: Player) {
+    fn set(entity_id: usize, value: Player) {
         state::write(entity_id, value);
     }
 
     // Get the state of an entity.
     #[view]
-    fn get(entity_id: felt) -> Player {
+    fn get(entity_id: usize) -> Player {
         return state::read(entity_id);
     }
 }
 
 //! > expected_diagnostics
+error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<core::integer::u32>>
+ --> serde.cairo:8:9
+        serialize_array_u32_helper(ref serialized, ref input);
+        ^***************************************************^
+
+error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<core::integer::u32>>
+ --> serde.cairo:17:66
+fn serialize_array_u32_helper(ref serialized: Array::<felt>, ref input: Array::<u32>) {
+                                                                 ^***^
+
+error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<core::integer::u32>>
+ --> serde.cairo:37:39
+    ref serialized: Span::<felt>, mut curr_output: Array::<u32>, remaining: felt
+                                      ^*********^
+
+error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<core::integer::u32>>
+ --> serde.cairo:37:39
+    ref serialized: Span::<felt>, mut curr_output: Array::<u32>, remaining: felt
+                                      ^*********^
+
+error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<core::integer::u32>>
+ --> contract:52:13
+        ref entities: Array::<usize>
+            ^******^
