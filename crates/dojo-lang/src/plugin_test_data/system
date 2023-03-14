@@ -9,8 +9,6 @@ use dojo::query::Caller;
 use dojo::query::Query;
 use dojo::query::EntityID;
 use dojo::query::With;
-use dojo::query::QueryTrait;
-use dojo::commands::Spawn;
 
 #[derive(Component)]
 struct Position {
@@ -23,39 +21,51 @@ struct Player {
     name: felt, 
 }
 
-fn move_inner(positions: Array<usize>, index: u32, count: u32) {
-    return move_inner(positions, index + 1_u32, count - 1_u32);
+#[system]
+mod spawn_system {
+    use dojo::commands::Spawn;
+    use super::Position;
+    use super::Player;
+
+    #[execute]
+    fn spawn(name: felt) {
+        let player_id = Spawn::<(Player, Position)>::bundle((
+            Player { name: name },
+            Position { x: 0, y: 0 },
+        ));
+        return ();
+    }
 }
 
 #[system]
-fn spawn(name: felt) {
-    let player_id = Spawn::<(Player, Position)>::bundle((
-        Player { name: name },
-        Position { x: 0, y: 0 },
-    ));
-    return ();
-}
+mod move_system {
+    use array::ArrayTrait;
+    use dojo::query::QueryTrait;
+    use super::Position;
+    use super::Player;
 
-#[system]
-fn move() {
-    let positions_query = QueryTrait::<(Position, Player)>::ids();
-    // let player_query: Query<(With::<Player, EntityID<Caller>>)>
+    fn move_inner(positions: Array<usize>, index: u32, count: u32) {
+        return move_inner(positions, index + 1_u32, count - 1_u32);
+    }
 
-    let mut bar = 123;
-    // let mut foo = ArrayTrait::<felt>::new();
-    // TODO: https://github.com/starkware-libs/cairo/issues/2438
-    // foo.append(bar);
+    #[execute]
+    fn move() {
+        let positions_query = QueryTrait::<(Position, Player)>::ids();
+        // let player_query: Query<(With::<Player, EntityID<Caller>>)>
 
-    // TODO: Replace with query.len().
-    // https://github.com/starkware-libs/cairo/issues/2438
-    move_inner(positions_query, 0_u32, 1_u32);
+        let mut bar = 123;
+        let mut foo = ArrayTrait::<felt>::new();
+        foo.append(bar);
 
-    if bar == 123 {
-        return ();
-    } else if bar == 0 {
-        return ();
-    } else {
-        return ();
+        move_inner(positions_query, 0_u32, positions_query.len());
+
+        if bar == 123 {
+            return ();
+        } else if bar == 0 {
+            return ();
+        } else {
+            return ();
+        }
     }
 }
 
@@ -69,14 +79,6 @@ use dojo::query::Query;
 use dojo::query::EntityID;
 
 use dojo::query::With;
-
-use dojo::query::QueryTrait;
-
-use dojo::commands::Spawn;
-
-fn move_inner(positions: Array<usize>, index: u32, count: u32) {
-    return move_inner(positions, index + 1_u32, count - 1_u32);
-}
 
 #[derive(Copy, Drop)]
 struct Position {
@@ -174,19 +176,18 @@ trait IPlayer {
 }
 
 #[contract]
-mod SpawnSystem {
+mod spawn_system {
     use dojo::world;
     use dojo::world::IWorldDispatcher;
     use dojo::world::IWorldDispatcherTrait;
-    use array::ArrayTrait;
     use super::IPlayerDispatcher;
     use super::IPlayerDispatcherTrait;
     use super::IPositionDispatcher;
     use super::IPositionDispatcherTrait;
-    use super::Player;
+
+    use dojo::commands::Spawn;
     use super::Position;
-
-
+    use super::Player;
     #[external]
     fn execute(name: felt) {
         let world_address = starknet::contract_address_const::<0x0>();
@@ -203,20 +204,22 @@ mod SpawnSystem {
 }
 
 #[contract]
-mod MoveSystem {
+mod move_system {
     use dojo::world;
     use dojo::world::IWorldDispatcher;
     use dojo::world::IWorldDispatcherTrait;
+
     use array::ArrayTrait;
-    use super::Player;
+    use dojo::query::QueryTrait;
     use super::Position;
-
-
+    use super::Player;
+    fn move_inner(positions: Array<usize>, index: u32, count: u32) {
+        return move_inner(positions, index + 1_u32, count - 1_u32);
+    }
     #[external]
     fn execute() {
         let world_address = starknet::contract_address_const::<0x0>();
-        let positions_query = super::QueryTrait::<(Position, Player)>::ids();
-
+        let positions_query = QueryTrait::<(Position, Player)>::ids();
         let position_ids = IWorldDispatcher {
             contract_address: world_address
         }.entities(
@@ -228,16 +231,15 @@ mod MoveSystem {
             starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
         );
         let mut bar = 123;
-
-        super::move_inner(positions_query, 0_u32, 1_u32);
+        let mut foo = ArrayTrait::<felt>::new();
+        foo.append(bar);
+        move_inner(positions_query, 0_u32, positions_query.len());
         if bar == 123 {
             return ();
+        } else if bar == 0 {
+            return ();
         } else {
-            if bar == 0 {
-                return ();
-            } else {
-                return ();
-            }
+            return ();
         }
     }
 }
@@ -321,3 +323,13 @@ error: Variable not dropped. Trait has no implementation in context: core::trait
  --> contract:52:13
         ref entities: Array::<usize>
             ^******^
+
+error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<core::integer::u32>>
+ --> contract:17:110
+let mut bar = 123;let mut foo = ArrayTrait::<felt>::new();foo.append(bar);move_inner(positions_query, 0_u32, positions_query.len());if bar == 123 {
+                                                                                                             ^*******************^
+
+error: Variable was previously moved. Trait has no implementation in context: core::traits::Copy::<core::array::Array::<core::integer::u32>>
+ --> contract:15:25
+                    let positions_query = QueryTrait::<(Position, Player)>::ids();let position_ids = IWorldDispatcher { contract_address: world_address }.entities(starknet::contract_address_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>());
+                        ^*************^

@@ -87,6 +87,10 @@ impl DojoPlugin {
             return handle_generated_component(db, module_ast, impls);
         }
 
+        if module_ast.has_attr(db, SYSTEM_ATTR) {
+            return System::from_module(db, self.world_config, module_ast);
+        }
+
         PluginResult::default()
     }
 }
@@ -137,13 +141,6 @@ impl MacroPlugin for DojoPlugin {
                             ..PluginResult::default()
                         };
                     }
-                }
-
-                PluginResult::default()
-            }
-            ast::Item::FreeFunction(function_ast) => {
-                if function_ast.has_attr(db, SYSTEM_ATTR) {
-                    return System::from_function(db, self.world_config, function_ast);
                 }
 
                 PluginResult::default()
