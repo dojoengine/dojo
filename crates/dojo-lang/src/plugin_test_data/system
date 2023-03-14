@@ -80,6 +80,14 @@ use dojo::query::EntityID;
 
 use dojo::query::With;
 
+use option::OptionTrait;
+
+use starknet::SyscallResult;
+
+use traits::Into;
+
+use traits::TryInto;
+
 #[derive(Copy, Drop)]
 struct Position {
     x: felt,
@@ -133,6 +141,14 @@ trait IPosition {
     fn set(entity_id: usize, value: Position);
     fn get(entity_id: usize) -> Position;
 }
+
+use option::OptionTrait;
+
+use starknet::SyscallResult;
+
+use traits::Into;
+
+use traits::TryInto;
 
 #[derive(Copy, Drop)]
 struct Player {
@@ -323,6 +339,26 @@ error: Variable not dropped. Trait has no implementation in context: core::trait
  --> contract:52:13
         ref entities: Array::<usize>
             ^******^
+
+error: The name `OptionTrait` is defined multiple times.
+ --> Player:2:25
+            use option::OptionTrait;
+                        ^*********^
+
+error: The name `SyscallResult` is defined multiple times.
+ --> Player:3:27
+            use starknet::SyscallResult;
+                          ^***********^
+
+error: The name `Into` is defined multiple times.
+ --> Player:4:25
+            use traits::Into;
+                        ^**^
+
+error: The name `TryInto` is defined multiple times.
+ --> Player:5:25
+            use traits::TryInto;
+                        ^*****^
 
 error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<core::integer::u32>>
  --> contract:17:110
