@@ -60,7 +60,7 @@ impl IProcessor<EventWithTransaction> for ComponentStateUpdateProcessor {
             txn_hash,
         ));
 
-        // insert entity state update 
+        // insert entity state update
         tx.execute(sqlx::query!(
             "
             INSERT INTO entity_state_updates (entity_id, component_id, transaction_hash, data)
