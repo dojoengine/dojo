@@ -36,9 +36,10 @@ pub fn handle_spawn(
                         body_nodes.push(RewriteNode::interpolate_patched(
                             "let owner = starknet::get_caller_address();
                                 let id = IWorldDispatcher { contract_address: world_address \
-                            }.issue_entity(owner);
-                                I$component$Dispatcher { contract_address: starknet::contract_address_const::<$component_address$>() \
-                            }.set(id, $ctor$);\n
+                             }.issue_entity(owner);
+                                I$component$Dispatcher { contract_address: \
+                             starknet::contract_address_const::<$component_address$>() }.set(id, \
+                             $ctor$);\n
                             ",
                             HashMap::from([
                                 ("component".to_string(), RewriteNode::Text(component.to_string())),

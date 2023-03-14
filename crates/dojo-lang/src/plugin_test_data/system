@@ -41,7 +41,7 @@ fn move() {
     // let player_query: Query<(With::<Player, EntityID<Caller>>)>
 
     let mut bar = 123;
-    let mut foo = ArrayTrait::<felt>::new();
+    // let mut foo = ArrayTrait::<felt>::new();
     // TODO: https://github.com/starkware-libs/cairo/issues/2438
     // foo.append(bar);
 
@@ -177,6 +177,7 @@ mod SpawnSystem {
     use dojo::world;
     use dojo::world::IWorldDispatcher;
     use dojo::world::IWorldDispatcherTrait;
+    use array::ArrayTrait;
     use super::IPlayerDispatcher;
     use super::IPlayerDispatcherTrait;
     use super::Player;
@@ -200,9 +201,9 @@ mod MoveSystem {
     use dojo::world;
     use dojo::world::IWorldDispatcher;
     use dojo::world::IWorldDispatcherTrait;
+    use array::ArrayTrait;
     use super::Player;
     use super::Position;
-    use super::felt;
 
 
     #[external]
@@ -221,8 +222,6 @@ mod MoveSystem {
             starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
         );
         let mut bar = 123;
-
-        let mut foo = super::ArrayTrait::<felt>::new();
 
         super::move_inner(positions_query, 0_u32, 1_u32);
         if bar == 123 {
@@ -292,38 +291,23 @@ mod PlayerComponent {
 }
 
 //! > expected_diagnostics
-error: Plugin diagnostic: Identifier not found.
- --> move:9:12
-use super::felt;
-           ^**^
-
-error: Plugin diagnostic: Type annotations needed. Failed to infer ?3
- --> move:21:63
-                    let mut foo  = super::ArrayTrait::<felt>::new();
-                                                              ^*^
-
-error: Type annotations needed. Failed to infer ?8
- --> contract:91:27
-            let mut arr = array_new();
-                          ^*******^
-
 error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<core::integer::u32>>
  --> serde.cairo:8:9
         serialize_array_u32_helper(ref serialized, ref input);
         ^***************************************************^
 
 error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<core::integer::u32>>
- --> serde.cairo:17:66
+ --> serde.cairo:19:66
 fn serialize_array_u32_helper(ref serialized: Array::<felt>, ref input: Array::<u32>) {
                                                                  ^***^
 
 error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<core::integer::u32>>
- --> serde.cairo:37:39
+ --> serde.cairo:39:39
     ref serialized: Span::<felt>, mut curr_output: Array::<u32>, remaining: felt
                                       ^*********^
 
 error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<core::integer::u32>>
- --> serde.cairo:37:39
+ --> serde.cairo:39:39
     ref serialized: Span::<felt>, mut curr_output: Array::<u32>, remaining: felt
                                       ^*********^
 

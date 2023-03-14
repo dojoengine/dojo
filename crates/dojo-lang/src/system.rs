@@ -105,6 +105,7 @@ impl System {
                     use dojo::world;
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;
+                    use array::ArrayTrait;
                     $imports$
                     $body$
                 }
@@ -180,7 +181,7 @@ impl System {
                             }
                             "Spawn" => {
                                 let (dependencies, body_nodes) =
-                                    handle_spawn(db, expr_fn.clone(), self.world_config);
+                                    handle_spawn(db, expr_fn, self.world_config);
                                 self.dependencies.extend(dependencies);
                                 return body_nodes;
                             }
