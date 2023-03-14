@@ -140,9 +140,21 @@ A system is a pure function that takes as input a set of entities to operate on.
 
 ```rust
 #[system]
-fn move(query: Query<(Position, Health)>) {
+fn spawn(commands: Commands, name: String) {
+    let player_id = commands.spawn((
+        Health::new(100_u8),
+        Name::new(name)
+    )).id();
+    return ();
+}
+
+#[system]
+fn move(player_id: usize) {
+    let player = QueryTrait<(Health, Name)>::id(player_id);
+    let positions = QueryTrait<(Position, Health)>::ids();
+
     // @NOTE: Loops are not available in Cairo 1.0 yet.
-    for (position, health) in query {
+    for (position, health) in positions {
         let is_zero = position.is_zero();
     }
     return ();

@@ -1,4 +1,4 @@
-use prisma_client_rust::bigdecimal::num_bigint::BigUint;
+use num::BigUint;
 use sha3::{Digest, Keccak256};
 
 pub fn starknet_hash(data: &[u8]) -> BigUint {

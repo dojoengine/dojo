@@ -1,16 +1,25 @@
 use dict::DictFeltToTrait;
+use array::ArrayTrait;
 
 #[derive(Copy, Drop)]
 struct Entity {}
-
-struct Or<T> {}
-
-struct Component<T> {}
-
+struct Or<S, T> {}
+#[derive(Copy, Drop)]
+struct With<S, T> {}
+#[derive(Copy, Drop)]
+struct Without<S, T> {}
+#[derive(Copy, Drop)]
+struct Caller {}
+#[derive(Copy, Drop)]
+struct Input {}
+#[derive(Copy, Drop)]
+struct EntityID<T> {}
+#[derive(Copy, Drop)]
 struct Query<T> {}
 
 trait QueryTrait<T> {
-    fn new() -> Query::<T>;
+    fn ids() -> Array::<usize>;
+    fn id() -> usize;
     fn len() -> u32;
 // fn insert(ref self: Query::<T>, key: felt, value: T);
 // fn get(ref self: Query::<T>, index: felt) -> T;
@@ -18,51 +27,26 @@ trait QueryTrait<T> {
 
 impl QueryImpl<T> of QueryTrait::<T> {
     #[inline(always)]
-    fn new() -> Query::<T> {
-        Query {}
+    fn ids() -> Array::<usize> {
+        let mut arr = ArrayTrait::<usize>::new();
+        arr.append(0_u32);
+        arr
+    }
+
+    #[inline(always)]
+    fn id() -> usize {
+        0_u32
     }
 
     fn len() -> u32 {
         0_u32
     }
-//     fn insert(ref self: Query::<T>, key: felt, value: T) {
-//     }
-
-//     fn get(ref self: Query::<T>, index: felt) -> T {
-//         ()
-//     }
 }
-// struct Query<T> {
-//     data: DictFeltTo::<T>, 
-// }
-
-// trait QueryTrait<T> {
-//     fn new() -> Query::<T>;
-//     fn insert(ref self: Query::<T>, key: felt, value: T);
-//     fn get(ref self: Query::<T>, index: felt) -> T;
-// }
-
-// impl QueryImpl<T> of QueryTrait::<T> {
-//     #[inline(always)]
-//     fn new() -> Query::<T> {
-//         Query { data: DictFeltToTrait::new(),  }
-//     }
-
-//     fn insert(ref self: Query::<T>, key: felt, value: T) {
-//         let mut data = self.data;
-//         data.insert(key, value);
-//         self = Query { data };
-//     }
-
-//     fn get(ref self: Query::<T>, index: felt) -> T {
-//         let mut data = self.data;
-//         data.get(index)
-//     }
-// }
 
 // #[test]
 // fn test_query() {
 //     let mut query = QueryTrait::<felt>::new();
 //     query.insert(1, 1);
 // }
+
 

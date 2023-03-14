@@ -1,11 +1,8 @@
 use anyhow::{Error, Result};
-use apibara_client_protos::pb::starknet::v1alpha2::{
-    Block, EventWithTransaction, TransactionWithReceipt,
-};
+use apibara_core::starknet::v1alpha2::{Block, EventWithTransaction, TransactionWithReceipt};
+use sqlx::{Pool, Sqlite};
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 use tonic::async_trait;
-
-use crate::prisma;
 
 pub mod component_register;
 pub mod component_state_update;
@@ -15,7 +12,7 @@ pub mod system_register;
 pub trait IProcessor<T> {
     async fn process(
         &self,
-        client: &prisma::PrismaClient,
+        pool: &Pool<Sqlite>,
         provider: &JsonRpcClient<HttpTransport>,
         data: T,
     ) -> Result<(), Error>;

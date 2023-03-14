@@ -1,113 +1,87 @@
-use juniper::{graphql_object, GraphQLObject};
-use juniper_relay_connection::RelayConnectionNode;
+use juniper::{graphql_object, FieldResult};
 
-use super::entity::Entity;
-use super::entity_state::EntityState;
-use super::entity_state_update::EntityStateUpdate;
-use super::system::System;
-use super::Query;
-use crate::prisma::{component, PrismaClient};
+use crate::server::Context;
 
-#[derive(GraphQLObject)]
 pub struct Component {
     pub id: String,
-    pub name: String,
-    pub systems: Vec<System>,
-    pub states: Vec<EntityState>,
-    pub state_updates: Vec<EntityStateUpdate>,
+    pub name: Option<String>,
+    pub properties: Option<String>,
+    pub address: String,
+    pub class_hash: String,
     pub transaction_hash: String,
 }
 
-impl RelayConnectionNode for Component {
-    type Cursor = String;
-    fn cursor(&self) -> Self::Cursor {
-        self.id.clone()
+#[graphql_object(context = Context)]
+impl Component {
+    pub fn id(&self) -> &str {
+        &self.id
     }
 
-    fn connection_type_name() -> &'static str {
-        "Component"
+    pub fn name(&self) -> &Option<String> {
+        &self.name
     }
 
-    fn edge_type_name() -> &'static str {
-        "ComponentEdge"
+    pub fn properties(&self) -> &Option<String> {
+        &self.properties
+    }
+
+    pub fn address(&self) -> &str {
+        &self.address
+    }
+
+    pub fn class_hash(&self) -> &str {
+        &self.class_hash
+    }
+
+    pub fn transaction_hash(&self) -> &str {
+        &self.transaction_hash
+    }
+
+    pub async fn entity_state_updates(
+        &self,
+        context: &Context,
+    ) -> FieldResult<Vec<super::entity_state_update::EntityStateUpdate>> {
+        super::entity_state_update::entity_state_updates_by_component(context, self.id.clone())
+            .await
+    }
+
+    pub async fn entity_states(
+        &self,
+        context: &Context,
+    ) -> FieldResult<Vec<super::entity_state::EntityState>> {
+        super::entity_state::entity_states_by_component(context, self.id.clone()).await
     }
 }
 
-#[graphql_object(context = PrismaClient)]
-impl Query {
-    async fn component(context: &PrismaClient, id: String) -> Option<Component> {
-        let component = context
-            .component()
-            .find_first(vec![component::id::equals(id)])
-            .exec()
-            .await
-            .unwrap()?;
+pub async fn component(context: &Context, id: String) -> FieldResult<Component> {
+    let mut conn = context.pool.acquire().await.unwrap();
 
-        Some(Component {
-            id: component.clone().id,
-            name: component.clone().name,
-            transaction_hash: component.clone().transaction_hash,
-            systems: component
-                .clone()
-                .systems
-                .unwrap()
-                .into_iter()
-                .map(|system| System {
-                    id: system.id,
-                    name: system.name,
-                    transaction_hash: system.transaction_hash,
-                    query_components: vec![],
-                    calls: vec![],
-                })
-                .collect(),
-            states: component
-                .clone()
-                .states
-                .unwrap()
-                .into_iter()
-                .map(|state| EntityState {
-                    data: state.data,
-                    entity: Entity {
-                        id: state.entity.clone().unwrap().id,
-                        transaction_hash: state.entity.unwrap().transaction_hash,
-                        states: vec![],
-                        state_updates: vec![],
-                    },
-                    component: Component {
-                        id: component.clone().id,
-                        name: component.clone().name,
-                        transaction_hash: component.clone().transaction_hash,
-                        systems: vec![],
-                        states: vec![],
-                        state_updates: vec![],
-                    },
-                })
-                .collect(),
-            state_updates: component
-                .clone()
-                .state_updates
-                .unwrap()
-                .into_iter()
-                .map(|state_update| EntityStateUpdate {
-                    id: state_update.id,
-                    data: state_update.data,
-                    transaction_hash: state_update.transaction_hash,
-                    entity: Entity {
-                        id: state_update.entity.clone().unwrap().id,
-                        transaction_hash: state_update.entity.unwrap().transaction_hash,
-                        states: vec![],
-                        state_updates: vec![],
-                    },
-                    component: Component {
-                        id: component.id.clone(),
-                        name: component.name.clone(),
-                        transaction_hash: component.transaction_hash.clone(),
-                        systems: vec![],
-                        states: vec![],
-                        state_updates: vec![],
-                    },
-                })
-                .collect(),
-        })
-    }
+    let component = sqlx::query_as!(
+        Component,
+        r#"
+            SELECT * FROM components WHERE id = $1
+        "#,
+        id
+    )
+    .fetch_one(&mut conn)
+    .await
+    .unwrap();
+
+    Ok(component)
+}
+
+pub async fn components(context: &Context) -> FieldResult<Vec<Component>> {
+    let mut conn = context.pool.acquire().await.unwrap();
+
+    let components = sqlx::query_as!(
+        Component,
+        r#"
+            SELECT * FROM components
+        "#
+    )
+    .fetch_all(&mut conn)
+    .await
+    .unwrap();
+
+    Ok(components)
 }
