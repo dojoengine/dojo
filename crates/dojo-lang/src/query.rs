@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use cairo_lang_semantic::patcher::RewriteNode;
 use cairo_lang_syntax::node::db::SyntaxGroup;
@@ -18,12 +18,13 @@ pub struct Fragment {
 }
 
 pub struct Query {
+    pub dependencies: HashSet<SmolStr>,
     fragments: Vec<Fragment>,
 }
 
 impl Query {
     pub fn from_expr(db: &dyn SyntaxGroup, query_ast: ast::PathSegmentWithGenericArgs) -> Self {
-        let mut query = Query { fragments: vec![] };
+        let mut query = Query { dependencies: HashSet::new(), fragments: vec![] };
         for arg in query_ast.generic_args(db).generic_args(db).elements(db) {
             if let ast::GenericArg::Expr(expr) = arg {
                 query.handle_expression(db, expr.value(db));
@@ -81,6 +82,7 @@ impl Query {
                     }
                 }
                 ast::PathSegment::Simple(segment) => {
+                    self.dependencies.insert(segment.ident(db).text(db));
                     self.fragments.push(Fragment {
                         component: segment.ident(db).text(db),
                         constraint: Constraint::Has,

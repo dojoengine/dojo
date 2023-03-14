@@ -88,7 +88,6 @@ impl Spawn {
                 ));
 
                 self.dependencies.extend([
-                    component.clone(),
                     SmolStr::from(format!("I{}Dispatcher", component)),
                     SmolStr::from(format!("I{}DispatcherTrait", component)),
                 ]);
