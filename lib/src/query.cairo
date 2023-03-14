@@ -1,4 +1,4 @@
-use dict::DictFeltToTrait;
+use dict::DictFelt252ToTrait;
 use array::ArrayTrait;
 
 #[derive(Copy, Drop)]
@@ -21,8 +21,8 @@ trait QueryTrait<T> {
     fn ids() -> Array::<usize>;
     fn id() -> usize;
     fn len() -> u32;
-// fn insert(ref self: Query::<T>, key: felt, value: T);
-// fn get(ref self: Query::<T>, index: felt) -> T;
+// fn insert(ref self: Query::<T>, key: felt252, value: T);
+// fn get(ref self: Query::<T>, index: felt252) -> T;
 }
 
 impl QueryImpl<T> of QueryTrait::<T> {
@@ -44,7 +44,7 @@ impl QueryImpl<T> of QueryTrait::<T> {
 }
 // #[test]
 // fn test_query() {
-//     let mut query = QueryTrait::<felt>::new();
+//     let mut query = QueryTrait::<felt252>::new();
 //     query.insert(1, 1);
 // }
 

@@ -3,7 +3,7 @@ use starknet::contract_address::ContractAddressSerde;
 
 #[abi]
 trait IProxy {
-    fn set_implementation(class_hash: felt);
+    fn set_implementation(class_hash: felt252);
     fn initialize(world_address: ContractAddress);
 }
 
@@ -11,13 +11,13 @@ trait IProxy {
 trait IWorld {
     fn issue_entity(owner: starknet::ContractAddress) -> usize;
     fn owner_of(entity_id: usize) -> starknet::ContractAddress;
-    fn entities(component: starknet::ContractAddress) -> Array<felt>;
+    fn entities(component: starknet::ContractAddress) -> Array<felt252>;
 }
 
 trait ComponentTrait<T> {
     fn initialize();
-    fn set(entity_id: felt, value: T);
-    fn get(entity_id: felt) -> T;
+    fn set(entity_id: felt252, value: T);
+    fn get(entity_id: felt252) -> T;
 }
 
 trait SystemTrait<T> {
@@ -30,7 +30,7 @@ mod World {
     use hash::pedersen;
     use starknet::get_caller_address;
     use starknet::get_contract_address;
-    use starknet::contract_address_to_felt;
+    use starknet::contract_address_to_felt252;
     use starknet::ContractAddressZeroable;
     use dojo::hash::LegacyHashContractAddressUsizePair;
     use dojo::serde::ArrayU32Serde;
@@ -48,13 +48,13 @@ mod World {
     // Emitted anytime an entities component state is updated.
     #[event]
     fn ComponentValueSet(
-        component_address: starknet::ContractAddress, entity_id: usize, data: Array::<felt>
+        component_address: starknet::ContractAddress, entity_id: usize, data: Array::<felt252>
     ) {}
 
     // Emitted when a component or system is registered.
     #[event]
     fn ModuleRegistered(
-        module_address: starknet::ContractAddress, module_id: felt, class_hash: felt
+        module_address: starknet::ContractAddress, module_id: felt252, class_hash: felt252
     ) {}
 
     // Register a component or system. The returned
@@ -63,7 +63,7 @@ mod World {
     // within a world are deterministically addressed
     // relative to the world.
     #[external]
-    fn register(class_hash: felt, module_id: felt) {
+    fn register(class_hash: felt252, module_id: felt252) {
         let module_id = pedersen(0, module_id);
         let proxy_class_hash = starknet::class_hash_const::<0x420>();
         let module_address = starknet::syscalls::deploy_syscall(
@@ -81,7 +81,7 @@ mod World {
     // entity, the entity:component mapping is registered.
     // Additionally, a `ComponentValueSet` event is emitted.
     #[external]
-    fn on_component_set(entity_id: usize, data: Array::<felt>) {
+    fn on_component_set(entity_id: usize, data: Array::<felt252>) {
         let caller_address = get_caller_address();
         assert(module_registry::read(caller_address), 'component not a registered');
         let entities_len = entity_registry_len::read(caller_address);

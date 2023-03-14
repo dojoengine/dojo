@@ -1,9 +1,9 @@
 #[abi]
 trait IUpgradable {
     #[external]
-    fn initialize(init_calldata: Array<felt>);
+    fn initialize(init_calldata: Array<felt252>);
     #[external]
-    fn upgrade(class_hash: felt);
+    fn upgrade(class_hash: felt252);
 }
 
 // ConstantIntializer patterns allows us to decouple
@@ -17,7 +17,7 @@ mod ConstantIntializer {
     use super::IUpgradableDispatcherTrait;
 
     #[external]
-    fn initialize(class_hash: felt, init_calldata: Array<felt>) {
+    fn initialize(class_hash: felt252, init_calldata: Array<felt252>) {
         let self_address = get_contract_address();
         replace_class(class_hash);
         IUpgradableDispatcher { contract_address: self_address }.initialize(init_calldata);

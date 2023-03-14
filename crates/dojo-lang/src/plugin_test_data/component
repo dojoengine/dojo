@@ -8,8 +8,8 @@ use dojo::world::ComponentTrait;
 
 #[derive(Component)]
 struct Position {
-    x: felt,
-    y: felt
+    x: felt252,
+    y: felt252
 }
 
 impl Position of Component {
@@ -40,20 +40,20 @@ use traits::TryInto;
 
 #[derive(Copy, Drop)]
 struct Position {
-    x: felt,
-    y: felt
+    x: felt252,
+    y: felt252
 }
 
 impl PositionSerde of serde::Serde::<Position> {
-    fn serialize(ref serialized: Array::<felt>, input: Position) {
-        serde::Serde::<felt>::serialize(ref serialized, input.x);
-        serde::Serde::<felt>::serialize(ref serialized, input.y);
+    fn serialize(ref serialized: Array::<felt252>, input: Position) {
+        serde::Serde::<felt252>::serialize(ref serialized, input.x);
+        serde::Serde::<felt252>::serialize(ref serialized, input.y);
     }
-    fn deserialize(ref serialized: Span::<felt>) -> Option::<Position> {
+    fn deserialize(ref serialized: Span::<felt252>) -> Option::<Position> {
         Option::Some(
             Position {
-                x: serde::Serde::<felt>::deserialize(ref serialized)?,
-                y: serde::Serde::<felt>::deserialize(ref serialized)?,
+                x: serde::Serde::<felt252>::deserialize(ref serialized)?,
+                y: serde::Serde::<felt252>::deserialize(ref serialized)?,
             }
         )
     }
@@ -61,7 +61,7 @@ impl PositionSerde of serde::Serde::<Position> {
 
 impl StorageAccessPosition of starknet::StorageAccess::<Position> {
     fn read(
-        address_domain: felt, base: starknet::StorageBaseAddress
+        address_domain: felt252, base: starknet::StorageBaseAddress
     ) -> starknet::SyscallResult::<Position> {
         Result::Ok(
             Position {
@@ -75,7 +75,7 @@ impl StorageAccessPosition of starknet::StorageAccess::<Position> {
         )
     }
     fn write(
-        address_domain: felt, base: starknet::StorageBaseAddress, value: Position
+        address_domain: felt252, base: starknet::StorageBaseAddress, value: Position
     ) -> starknet::SyscallResult::<()> {
         starknet::storage_write_syscall(
             address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8), value.x
@@ -142,19 +142,19 @@ error: Variable not dropped. Trait has no implementation in context: core::trait
         ^***************************************************^
 
 error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<core::integer::u32>>
- --> serde.cairo:17:66
-fn serialize_array_u32_helper(ref serialized: Array::<felt>, ref input: Array::<u32>) {
-                                                                 ^***^
+ --> serde.cairo:17:69
+fn serialize_array_u32_helper(ref serialized: Array::<felt252>, ref input: Array::<u32>) {
+                                                                    ^***^
 
 error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<core::integer::u32>>
- --> serde.cairo:37:39
-    ref serialized: Span::<felt>, mut curr_output: Array::<u32>, remaining: felt
-                                      ^*********^
+ --> serde.cairo:37:42
+    ref serialized: Span::<felt252>, mut curr_output: Array::<u32>, remaining: felt252
+                                         ^*********^
 
 error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<core::integer::u32>>
- --> serde.cairo:37:39
-    ref serialized: Span::<felt>, mut curr_output: Array::<u32>, remaining: felt
-                                      ^*********^
+ --> serde.cairo:37:42
+    ref serialized: Span::<felt252>, mut curr_output: Array::<u32>, remaining: felt252
+                                         ^*********^
 
 error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<core::integer::u32>>
  --> contract:52:13

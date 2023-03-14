@@ -167,7 +167,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
     let mut write = vec![];
     struct_ast.members(db).elements(db).iter().enumerate().for_each(|(i, member)| {
         let member_type_string = member.type_clause(db).ty(db).as_syntax_node().get_text(db);
-        let is_felt = member_type_string.as_str().trim().eq("felt");
+        let is_felt = member_type_string.as_str().trim().eq("felt252");
 
         serialize.push(RewriteNode::interpolate_patched(
             "serde::Serde::<$type_clause$>::serialize(ref serialized, input.$key$);",
@@ -236,10 +236,10 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
     trait_nodes.push(RewriteNode::interpolate_patched(
         "
             impl $type_name$Serde of serde::Serde::<$type_name$> {
-                fn serialize(ref serialized: Array::<felt>, input: $type_name$) {
+                fn serialize(ref serialized: Array::<felt252>, input: $type_name$) {
                     $serialize$
                 }
-                fn deserialize(ref serialized: Span::<felt>) -> Option::<$type_name$> {
+                fn deserialize(ref serialized: Span::<felt252>) -> Option::<$type_name$> {
                     Option::Some(
                         $type_name$ {
                             $deserialize$
@@ -261,7 +261,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
     trait_nodes.push(RewriteNode::interpolate_patched(
         "
             impl StorageAccess$type_name$ of starknet::StorageAccess::<$type_name$> {
-                fn read(address_domain: felt, base: starknet::StorageBaseAddress) -> \
+                fn read(address_domain: felt252, base: starknet::StorageBaseAddress) -> \
          starknet::SyscallResult::<$type_name$> {
                     Result::Ok(
                         $type_name$ {
@@ -270,7 +270,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
                     )
                 }
                 fn write(
-                    address_domain: felt, base: starknet::StorageBaseAddress, value: $type_name$
+                    address_domain: felt252, base: starknet::StorageBaseAddress, value: $type_name$
                 ) -> starknet::SyscallResult::<()> {
                     $write$
                 }
