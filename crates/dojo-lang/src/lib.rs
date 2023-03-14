@@ -8,4 +8,5 @@ pub mod component;
 pub mod db;
 pub mod plugin;
 mod query;
+mod spawn;
 pub mod system;
