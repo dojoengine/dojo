@@ -292,6 +292,21 @@ mod PlayerComponent {
 }
 
 //! > expected_diagnostics
+error: Plugin diagnostic: Identifier not found.
+ --> move:9:12
+use super::felt;
+           ^**^
+
+error: Plugin diagnostic: Type annotations needed. Failed to infer ?3
+ --> move:21:63
+                    let mut foo  = super::ArrayTrait::<felt>::new();
+                                                              ^*^
+
+error: Type annotations needed. Failed to infer ?8
+ --> contract:91:27
+            let mut arr = array_new();
+                          ^*******^
+
 error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<core::integer::u32>>
  --> serde.cairo:8:9
         serialize_array_u32_helper(ref serialized, ref input);
@@ -316,68 +331,3 @@ error: Variable not dropped. Trait has no implementation in context: core::trait
  --> contract:52:13
         ref entities: Array::<usize>
             ^******^
-
-error: Plugin diagnostic: Identifier not found.
- --> move:9:12
-use super::felt;
-           ^**^
-
-error: Plugin diagnostic: Type annotations needed. Failed to infer ?3
- --> move:21:63
-                    let mut foo  = super::ArrayTrait::<felt>::new();
-                                                              ^*^
-
-error: Type annotations needed. Failed to infer ?8
- --> contract:91:27
-            let mut arr = array_new();
-                          ^*******^
-
-error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::NonZero::<GenericParamType(core::IsZeroResultIntoBool::T)>>
- --> lib.cairo:152:35
-            IsZeroResult::NonZero(_) => false,
-                                  ^
-
-error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Span::<GenericParamType(core::array::clone_loop::T)>>
- --> array.cairo:120:11
-    match span.pop_front() {
-          ^**************^
-
-error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<GenericParamType(core::array::clone_loop::T)>>
- --> array.cairo:111:66
-fn clone_loop<T, impl TClone: Clone::<T>>(mut span: Span<T>, ref response: Array<T>) {
-                                                                 ^******^
-
-error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Span::<GenericParamType(core::array::clone_loop::T)>>
- --> array.cairo:111:47
-fn clone_loop<T, impl TClone: Clone::<T>>(mut span: Span<T>, ref response: Array<T>) {
-                                              ^**^
-
-error: Invalid copy trait implementation, Trait has no implementation in context: core::traits::Copy::<core::NonZero::<core::ec::EcPoint>>
- --> ecdsa.cairo:2:1
-impl OptionEcPointCopy of Copy::<Option::<NonZeroEcPoint>>;
-^*********************************************************^
-
-error: Invalid copy trait implementation, Trait `core::traits::Copy::<core::box::Box::<core::starknet::info::TxInfo>>` has multiple implementations, in: "core::starknet::info::TxInfoBoxCopy", "core::box::BoxTCopy"
- --> impls:1:1
-impl ExecutionInfoCopy of Copy::<ExecutionInfo>;
-^**********************************************^
-
-error: Invalid drop trait implementation, Trait `core::traits::Drop::<core::box::Box::<core::starknet::info::TxInfo>>` has multiple implementations, in: "core::starknet::info::TxInfoBoxDrop", "core::box::BoxTDrop"
- --> impls:2:1
-impl ExecutionInfoDrop of Drop::<ExecutionInfo>;
-^**********************************************^
-
-error: Variable not dropped. Trait `core::traits::Drop::<core::box::Box::<core::starknet::info::TxInfo>>` has multiple implementations, in: "core::starknet::info::TxInfoBoxDrop", "core::box::BoxTDrop"
- --> info.cairo:50:5
-    unbox(get_execution_info()).caller_address
-    ^****************************************^
-
-error: Variable not dropped. Trait `core::traits::Drop::<core::box::Box::<core::starknet::info::TxInfo>>` has multiple implementations, in: "core::starknet::info::TxInfoBoxDrop", "core::box::BoxTDrop"
- --> info.cairo:54:5
-    unbox(get_execution_info()).contract_address
-    ^******************************************^
-
-error: Variable not dropped. Trait `core::traits::Drop::<core::box::Box::<core::starknet::info::TxInfo>>` has multiple implementations, in: "core::starknet::info::TxInfoBoxDrop", "core::box::BoxTDrop"
- --> info.cairo:58:5
-    unbox(get_execution_info()).block_info
-    ^************************************^
