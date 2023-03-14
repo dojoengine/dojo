@@ -22,7 +22,7 @@ struct Player {
 }
 
 #[system]
-mod spawn_system {
+mod SpawnSystem {
     use dojo::commands::Spawn;
     use super::Position;
     use super::Player;
@@ -38,7 +38,7 @@ mod spawn_system {
 }
 
 #[system]
-mod move_system {
+mod MoveSystem {
     use array::ArrayTrait;
     use dojo::query::QueryTrait;
     use super::Position;
@@ -142,6 +142,33 @@ trait IPosition {
     fn get(entity_id: usize) -> Position;
 }
 
+#[contract]
+mod PositionComponent {
+    use super::Position;
+    use super::PositionSerde;
+    use super::StorageAccessPosition;
+
+    struct Storage {
+        state: LegacyMap::<usize, Position>, 
+    }
+
+    // Initialize Position.
+    #[external]
+    fn initialize() {}
+
+    // Set the state of an entity.
+    #[external]
+    fn set(entity_id: usize, value: Position) {
+        state::write(entity_id, value);
+    }
+
+    // Get the state of an entity.
+    #[view]
+    fn get(entity_id: usize) -> Position {
+        return state::read(entity_id);
+    }
+}
+
 use option::OptionTrait;
 
 use starknet::SyscallResult;
@@ -192,7 +219,34 @@ trait IPlayer {
 }
 
 #[contract]
-mod spawn_system {
+mod PlayerComponent {
+    use super::Player;
+    use super::PlayerSerde;
+    use super::StorageAccessPlayer;
+
+    struct Storage {
+        state: LegacyMap::<usize, Player>, 
+    }
+
+    // Initialize Player.
+    #[external]
+    fn initialize() {}
+
+    // Set the state of an entity.
+    #[external]
+    fn set(entity_id: usize, value: Player) {
+        state::write(entity_id, value);
+    }
+
+    // Get the state of an entity.
+    #[view]
+    fn get(entity_id: usize) -> Player {
+        return state::read(entity_id);
+    }
+}
+
+#[contract]
+mod SpawnSystem {
     use dojo::world;
     use dojo::world::IWorldDispatcher;
     use dojo::world::IWorldDispatcherTrait;
@@ -220,7 +274,7 @@ mod spawn_system {
 }
 
 #[contract]
-mod move_system {
+mod MoveSystem {
     use dojo::world;
     use dojo::world::IWorldDispatcher;
     use dojo::world::IWorldDispatcherTrait;
@@ -257,60 +311,6 @@ mod move_system {
         } else {
             return ();
         }
-    }
-}
-
-#[contract]
-mod PositionComponent {
-    use super::Position;
-    use super::PositionSerde;
-    use super::StorageAccessPosition;
-
-    struct Storage {
-        state: LegacyMap::<usize, Position>, 
-    }
-
-    // Initialize Position.
-    #[external]
-    fn initialize() {}
-
-    // Set the state of an entity.
-    #[external]
-    fn set(entity_id: usize, value: Position) {
-        state::write(entity_id, value);
-    }
-
-    // Get the state of an entity.
-    #[view]
-    fn get(entity_id: usize) -> Position {
-        return state::read(entity_id);
-    }
-}
-
-#[contract]
-mod PlayerComponent {
-    use super::Player;
-    use super::PlayerSerde;
-    use super::StorageAccessPlayer;
-
-    struct Storage {
-        state: LegacyMap::<usize, Player>, 
-    }
-
-    // Initialize Player.
-    #[external]
-    fn initialize() {}
-
-    // Set the state of an entity.
-    #[external]
-    fn set(entity_id: usize, value: Player) {
-        state::write(entity_id, value);
-    }
-
-    // Get the state of an entity.
-    #[view]
-    fn get(entity_id: usize) -> Player {
-        return state::read(entity_id);
     }
 }
 

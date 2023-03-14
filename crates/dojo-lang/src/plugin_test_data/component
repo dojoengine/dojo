@@ -12,8 +12,12 @@ struct Position {
     y: felt252
 }
 
-impl Position of Component {
-    #[view]
+trait PositionTrait {
+    fn is_zero(self: Position) -> bool;
+    fn is_equal(self: Position, b: Position) -> bool;
+}
+
+impl PositionImpl of PositionTrait {
     fn is_zero(self: Position) -> bool {
         match self.x - self.y {
             0 => bool::True(()),
@@ -21,7 +25,6 @@ impl Position of Component {
         }
     }
 
-    #[view]
     fn is_equal(self: Position, b: Position) -> bool {
         self.x == b.x & self.y == b.y
     }
@@ -29,6 +32,24 @@ impl Position of Component {
 
 //! > generated_cairo_code
 use dojo::world::ComponentTrait;
+
+trait PositionTrait {
+    fn is_zero(self: Position) -> bool;
+    fn is_equal(self: Position, b: Position) -> bool;
+}
+
+impl PositionImpl of PositionTrait {
+    fn is_zero(self: Position) -> bool {
+        match self.x - self.y {
+            0 => bool::True(()),
+            _ => bool::False(()),
+        }
+    }
+
+    fn is_equal(self: Position, b: Position) -> bool {
+        self.x == b.x & self.y == b.y
+    }
+}
 
 use option::OptionTrait;
 
@@ -116,22 +137,6 @@ mod PositionComponent {
     #[view]
     fn get(entity_id: usize) -> Position {
         return state::read(entity_id);
-    }
-
-
-    #[view]
-    fn is_zero(entity_id: usize) -> bool {
-        let self = state::read(entity_id);
-        match self.x - self.y {
-            0 => bool::True(()),
-            _ => bool::False(()),
-        }
-    }
-
-    #[view]
-    fn is_equal(entity_id: usize, b: Position) -> bool {
-        let self = state::read(entity_id);
-        self.x == b.x & self.y == b.y
     }
 }
 

@@ -17,7 +17,7 @@ fn test_system_resolving() {
             mod NotAsystem {}
 
             #[system]
-            mod move_system {
+            mod MoveSystem {
                 #[execute]
                 fn move() {}
             }
@@ -26,5 +26,5 @@ fn test_system_resolving() {
 
     let systems = find_systems(db, &db.crates());
     assert_eq!(systems.len(), 1);
-    assert_eq!(systems[0].name, "move_system");
+    assert_eq!(systems[0].name, "MoveSystem");
 }
