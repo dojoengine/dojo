@@ -43,5 +43,6 @@ pub fn run(args: BuildArgs) -> Result<()> {
         eprintln!("error: {}", err);
         std::process::exit(1);
     });
+
     ops::compile(&ws)
 }

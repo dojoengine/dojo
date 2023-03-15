@@ -24,7 +24,6 @@ trait QueryTrait<T> {
 // fn insert(ref self: Query::<T>, key: felt252, value: T);
 // fn get(ref self: Query::<T>, index: felt252) -> T;
 }
-
 // #[test]
 // fn test_query() {
 //     let mut query = QueryTrait::<felt252>::new();

@@ -2296,12 +2296,13 @@ dependencies = [
  "cairo-lang-filesystem",
  "cairo-lang-project",
  "indoc 1.0.9",
+ "scarb",
  "serde",
  "smol_str",
  "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=447182a90839a3e4f096a01afe75ef474186d911)",
  "test-log",
  "thiserror",
- "toml 0.4.10",
+ "toml 0.7.3",
 ]
 
 [[package]]
