@@ -65,11 +65,10 @@ impl IProcessor<EventWithTransaction> for SystemRegistrationProcessor {
         let mut tx = pool.begin().await?;
         tx.execute(sqlx::query!(
             "
-            INSERT INTO systems (id, name, address, class_hash, transaction_hash)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO systems (id, address, class_hash, transaction_hash)
+            VALUES ($1, $2, $3, $4)
             ",
             address,
-            "System",
             address,
             class_hash,
             txn_hash,
