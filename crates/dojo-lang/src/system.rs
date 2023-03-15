@@ -176,11 +176,9 @@ impl System {
     ) -> Vec<RewriteNode> {
         if let ast::Statement::Let(statement_let) = statement_ast.clone() {
             if let ast::Expr::FunctionCall(expr_fn) = statement_let.rhs(db) {
-                if let Some(ast::PathSegment::WithGenericArgs(segment_genric)) =
-                    expr_fn.path(db).elements(db).first()
-                {
-                    match segment_genric.ident(db).text(db).as_str() {
-                        "Query" => {
+                match expr_fn.path(db).elements(db).first().unwrap() {
+                    ast::PathSegment::WithGenericArgs(segment_genric) => {
+                        if segment_genric.ident(db).text(db).as_str() == "Query" {
                             let query = Query::from_ast(
                                 db,
                                 self.world_config,
@@ -191,7 +189,9 @@ impl System {
                             self.dependencies.extend(query.dependencies);
                             return query.body_nodes;
                         }
-                        "Spawn" => {
+                    }
+                    ast::PathSegment::Simple(segment_simple) => {
+                        if segment_simple.ident(db).text(db).as_str() == "Spawn" {
                             let spawn = Spawn::from_ast(
                                 db,
                                 statement_let.pattern(db),
@@ -201,7 +201,6 @@ impl System {
                             self.dependencies.extend(spawn.dependencies);
                             return spawn.body_nodes;
                         }
-                        _ => {}
                     }
                 }
             }

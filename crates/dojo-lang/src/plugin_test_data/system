@@ -28,7 +28,7 @@ mod SpawnSystem {
     use super::Player;
 
     fn execute(name: felt252) {
-        let player_id = Spawn::<(Player, Position)>::bundle((
+        let player_id = Spawn::bundle((
             Player { name: name },
             Position { x: 0, y: 0 },
         ));

@@ -141,9 +141,11 @@ A system is a pure function that takes as input a set of entities to operate on.
 ```rust
 #[system]
 mod spawn_system {
+    use dojo::commands::Spawn;
+
     #[execute]
-    fn spawn(commands: Commands, name: String) {
-        let player_id = commands.spawn((
+    fn spawn(name: String) {
+        let player_id = Spawn::bundle((
             Health::new(100_u8),
             Name::new(name)
         ));

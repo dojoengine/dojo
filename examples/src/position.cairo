@@ -1,6 +1,11 @@
 use array::ArrayTrait;
 
 #[derive(Component)]
+struct Health {
+    name: felt252,
+}
+
+#[derive(Component)]
 struct Position {
     x: felt252,
     y: felt252
