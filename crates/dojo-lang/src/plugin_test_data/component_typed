@@ -140,6 +140,11 @@ mod FighterComponent {
 }
 
 //! > expected_diagnostics
+error: Trait has no implementation in context: core::serde::Serde::<core::starknet::class_hash::ClassHash>
+ --> contract:48:60
+                match serde::Serde::<starknet::ClassHash>::deserialize(ref data) {
+                                                           ^*********^
+
 error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<core::integer::u32>>
  --> serde.cairo:8:9
         serialize_array_u32_helper(ref serialized, ref input);

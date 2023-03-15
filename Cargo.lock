@@ -1767,7 +1767,7 @@ dependencies = [
 [[package]]
 name = "create-output-dir"
 version = "1.0.0"
-source = "git+https://github.com/tarrencev/scarb.git?branch=usercore#c1fb41fdff562ad910d97fe046fa7b1b9baee3e3"
+source = "git+https://github.com/tarrencev/scarb.git?branch=usercore#59d0b5712aba51d9959f22dd3e889449f2b9ecf7"
 dependencies = [
  "anyhow",
  "core-foundation",
@@ -5136,8 +5136,8 @@ dependencies = [
 
 [[package]]
 name = "scarb"
-version = "0.1.0-rc.0"
-source = "git+https://github.com/tarrencev/scarb.git?branch=usercore#c1fb41fdff562ad910d97fe046fa7b1b9baee3e3"
+version = "0.1.0-rc.1"
+source = "git+https://github.com/tarrencev/scarb.git?branch=usercore#59d0b5712aba51d9959f22dd3e889449f2b9ecf7"
 dependencies = [
  "anyhow",
  "async-trait",
