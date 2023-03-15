@@ -183,10 +183,13 @@ impl System {
                         "Query" => {
                             let query = Query::from_ast(
                                 db,
+                                self.world_config,
                                 statement_let.pattern(db),
+                                expr_fn,
                                 segment_genric.clone(),
                             );
-                            return query.nodes(self.world_config);
+                            self.dependencies.extend(query.dependencies);
+                            return query.body_nodes;
                         }
                         "Spawn" => {
                             let spawn = Spawn::from_ast(

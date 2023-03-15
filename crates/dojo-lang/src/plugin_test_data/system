@@ -47,9 +47,10 @@ mod MoveSystem {
         return move_inner(positions, index + 1_u32, count - 1_u32);
     }
 
-    fn execute() {
+    fn execute(player_id: usize) {
         let positions_query = Query::<(Position, Player)>::ids();
-        // let player_query: Query<(With::<Player, EntityID<Caller>>)>
+        let players_query = Query::<(Player)>::ids();
+        let player = Query::<(Player)>::entity(player_id);
 
         let mut bar = 123;
         let mut foo = ArrayTrait::<felt252>::new();
@@ -269,6 +270,8 @@ mod MoveSystem {
     use dojo::world;
     use dojo::world::IWorldDispatcher;
     use dojo::world::IWorldDispatcherTrait;
+    use super::IPlayerDispatcher;
+    use super::IPlayerDispatcherTrait;
 
     use array::ArrayTrait;
     use dojo::query::Query;
@@ -278,9 +281,9 @@ mod MoveSystem {
         return move_inner(positions, index + 1_u32, count - 1_u32);
     }
     #[external]
-    fn execute() {
+    fn execute(player_id: usize) {
         let world_address = starknet::contract_address_const::<0x0>();
-        let positions_query = array_new();
+        let positions_query = array_new::<usize>();
         let positions_query_position_ids = IWorldDispatcher {
             contract_address: world_address
         }.entities(
@@ -292,6 +295,17 @@ mod MoveSystem {
         }.entities(
             starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
         );
+        let players_query = array_new::<usize>();
+        let players_query_player_ids = IWorldDispatcher {
+            contract_address: world_address
+        }.entities(
+            starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
+        );
+
+        let player_player = IPlayerDispatcher {
+            contract_address: starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
+        }.get(player_id);
+        let player = (player_player);
         let mut bar = 123;
         let mut foo = ArrayTrait::<felt252>::new();
         foo.append(bar);
@@ -308,6 +322,6 @@ mod MoveSystem {
 
 //! > expected_diagnostics
 error: Variable was previously moved. Trait has no implementation in context: core::traits::Copy::<core::array::Array::<core::integer::u32>>
- --> contract:15:25
-                    let positions_query = array_new();
+ --> contract:17:25
+                    let positions_query = array_new::<usize>();
                         ^*************^

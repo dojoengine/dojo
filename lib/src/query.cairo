@@ -15,7 +15,6 @@ struct Input {}
 #[derive(Copy, Drop)]
 struct EntityID<T> {}
 #[derive(Copy, Drop)]
-
 trait Query<T> {
     fn ids() -> Array::<usize>;
     fn entity(id: usize) -> T;
@@ -23,7 +22,6 @@ trait Query<T> {
 // fn insert(ref self: Query::<T>, key: felt252, value: T);
 // fn get(ref self: Query::<T>, index: felt252) -> T;
 }
-
 // #[test]
 // fn test_query() {
 //     let mut query = QueryTrait::<felt252>::new();
