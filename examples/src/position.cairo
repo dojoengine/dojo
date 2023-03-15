@@ -2,7 +2,7 @@ use array::ArrayTrait;
 
 #[derive(Component)]
 struct Health {
-    name: felt252,
+    name: felt252, 
 }
 
 #[derive(Component)]

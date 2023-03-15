@@ -85,7 +85,8 @@ impl Query {
                         "
                     let $query_id$_$query_subtype$_ids = IWorldDispatcher { contract_address: \
                          world_address \
-                         }.entities(starknet::contract_address_const::<$component_address$>());\n",
+                         }.entities(starknet::contract_address_const::<$component_address$>());
+                        ",
                         HashMap::from([
                             (
                                 "query_subtype".to_string(),
@@ -125,7 +126,8 @@ impl Query {
             self.body_nodes.push(RewriteNode::interpolate_patched(
                 "
                 let $query_id$_$query_subtype$ = I$component$Dispatcher { contract_address: \
-                 starknet::contract_address_const::<$component_address$>() }.get($entity_id$);\n",
+                 starknet::contract_address_const::<$component_address$>() }.get($entity_id$);
+                ",
                 HashMap::from([
                     ("component".to_string(), RewriteNode::Text(component.to_string())),
                     (
@@ -144,13 +146,25 @@ impl Query {
             ]);
         }
 
-        self.body_nodes.push(RewriteNode::interpolate_patched(
-            "let $query_pattern$ = ($part_names$);",
-            HashMap::from([
-                ("query_pattern".to_string(), RewriteNode::Text(self.query_pattern.clone())),
-                ("part_names".to_string(), RewriteNode::Text(part_names)),
-            ]),
-        ));
+        if self.components.len() > 1 {
+            self.body_nodes.push(RewriteNode::interpolate_patched(
+                "let $query_pattern$ = ($part_names$);
+                ",
+                HashMap::from([
+                    ("query_pattern".to_string(), RewriteNode::Text(self.query_pattern.clone())),
+                    ("part_names".to_string(), RewriteNode::Text(part_names)),
+                ]),
+            ));
+        } else {
+            self.body_nodes.push(RewriteNode::interpolate_patched(
+                "let $query_pattern$ = $part_names$;
+                ",
+                HashMap::from([
+                    ("query_pattern".to_string(), RewriteNode::Text(self.query_pattern.clone())),
+                    ("part_names".to_string(), RewriteNode::Text(part_names)),
+                ]),
+            ));
+        }
     }
 
     fn find_components(&mut self, db: &dyn SyntaxGroup, expression: ast::Expr) {
