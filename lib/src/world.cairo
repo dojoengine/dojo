@@ -4,7 +4,7 @@ use starknet::contract_address::ContractAddressSerde;
 #[abi]
 trait IProxy {
     fn set_implementation(class_hash: felt252);
-    fn initialize(world_address: ContractAddress);
+    fn initialize(world_address: starknet::ContractAddress);
 }
 
 #[abi]
@@ -32,8 +32,6 @@ mod World {
     use starknet::get_contract_address;
     use starknet::contract_address_to_felt252;
     use starknet::ContractAddressZeroable;
-    use dojo::hash::LegacyHashContractAddressUsizePair;
-    use dojo::serde::ArrayU32Serde;
     use super::IProxyDispatcher;
     use super::IProxyDispatcherTrait;
 

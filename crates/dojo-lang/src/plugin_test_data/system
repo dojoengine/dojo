@@ -306,31 +306,6 @@ mod MoveSystem {
 }
 
 //! > expected_diagnostics
-error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<core::integer::u32>>
- --> serde.cairo:8:9
-        serialize_array_u32_helper(ref serialized, ref input);
-        ^***************************************************^
-
-error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<core::integer::u32>>
- --> serde.cairo:17:69
-fn serialize_array_u32_helper(ref serialized: Array::<felt252>, ref input: Array::<u32>) {
-                                                                    ^***^
-
-error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<core::integer::u32>>
- --> serde.cairo:37:42
-    ref serialized: Span::<felt252>, mut curr_output: Array::<u32>, remaining: felt252
-                                         ^*********^
-
-error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<core::integer::u32>>
- --> serde.cairo:37:42
-    ref serialized: Span::<felt252>, mut curr_output: Array::<u32>, remaining: felt252
-                                         ^*********^
-
-error: Variable not dropped. Trait has no implementation in context: core::traits::Drop::<core::array::Array::<core::integer::u32>>
- --> contract:52:13
-        ref entities: Array::<usize>
-            ^******^
-
 error: Plugin diagnostic: Trait has no implementation in context: dojo::query::QueryTrait::<(test::Position, test::Player)>
  --> MoveSystem:14:77
                     let positions_query = QueryTrait::<(Position, Player)>::ids();
