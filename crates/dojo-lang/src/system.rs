@@ -180,15 +180,24 @@ impl System {
                     expr_fn.path(db).elements(db).first()
                 {
                     match segment_genric.ident(db).text(db).as_str() {
-                        "QueryTrait" => {
-                            let query = Query::from_expr(db, segment_genric.clone());
-                            let mut res =
-                                vec![RewriteNode::new_trimmed(statement_let.as_syntax_node())];
-                            res.extend(query.nodes(self.world_config));
-                            return res;
+                        "Query" => {
+                            let query = Query::from_ast(
+                                db,
+                                self.world_config,
+                                statement_let.pattern(db),
+                                expr_fn,
+                                segment_genric.clone(),
+                            );
+                            self.dependencies.extend(query.dependencies);
+                            return query.body_nodes;
                         }
                         "Spawn" => {
-                            let spawn = Spawn::handle_spawn(db, expr_fn, self.world_config);
+                            let spawn = Spawn::from_ast(
+                                db,
+                                statement_let.pattern(db),
+                                expr_fn,
+                                self.world_config,
+                            );
                             self.dependencies.extend(spawn.dependencies);
                             return spawn.body_nodes;
                         }

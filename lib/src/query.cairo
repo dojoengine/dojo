@@ -15,9 +15,7 @@ struct Input {}
 #[derive(Copy, Drop)]
 struct EntityID<T> {}
 #[derive(Copy, Drop)]
-struct Query<T> {}
-
-trait QueryTrait<T> {
+trait Query<T> {
     fn ids() -> Array::<usize>;
     fn entity(id: usize) -> T;
     fn len() -> u32;
