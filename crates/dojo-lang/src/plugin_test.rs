@@ -14,7 +14,7 @@ use cairo_lang_semantic::test_utils::setup_test_module;
 use cairo_lang_syntax::node::TypedSyntaxNode;
 use cairo_lang_test_utils::parse_test_file::TestFileRunner;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
-use dojo_project::{ProjectConfig, WorldConfig};
+use dojo_project::WorldConfig;
 
 use crate::db::DojoRootDatabaseBuilderEx;
 use crate::plugin::DojoPlugin;
@@ -25,9 +25,7 @@ struct ExpandContractTestRunner {
 
 impl Default for ExpandContractTestRunner {
     fn default() -> Self {
-        Self {
-            db: RootDatabase::builder().with_dojo_config(ProjectConfig::default()).build().unwrap(),
-        }
+        Self { db: RootDatabase::builder().with_dojo_default().build().unwrap() }
     }
 }
 impl TestFileRunner for ExpandContractTestRunner {

@@ -7,3 +7,10 @@ core = { git = "https://github.com/starkware-libs/cairo.git", version = "1.0.0-a
 dojo = { path = "../lib" }
 
 [[target.dojo]]
+
+[tool.dojo]
+world_address = "0xdead"
+initializer_class_hash = "0xbeef"
+
+[tool.dojo.testnet]
+rpc = "https://rpc.testnet.starkware.co"

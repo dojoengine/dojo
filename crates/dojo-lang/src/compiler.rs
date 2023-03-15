@@ -33,9 +33,12 @@ impl Compiler for DojoCompiler {
 
         let target_dir = unit.profile.target_dir(ws.config());
 
+        let world_config =
+            WorldConfig::from_workspace(ws).unwrap_or_else(|_| WorldConfig::default());
+
         let mut db = RootDatabase::builder()
             .with_project_config(build_project_config(&unit)?)
-            .with_dojo(WorldConfig::default())
+            .with_dojo(world_config)
             .build()?;
 
         let compiler_config = build_compiler_config(ws);

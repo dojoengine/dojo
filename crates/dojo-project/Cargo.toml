@@ -12,8 +12,9 @@ cairo-lang-project.workspace = true
 serde.workspace = true
 smol_str.workspace = true
 thiserror.workspace = true
-toml.workspace = true
+toml = "0.7.1"
 cairo-lang-filesystem.workspace = true
+scarb.workspace = true
 starknet.workspace = true
 
 [dev-dependencies]

@@ -1,7 +1,6 @@
 //! Compiles and runs a Dojo project.
 
-use std::collections::HashSet;
-use std::path::Path;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
 use anyhow::{bail, Context};
@@ -13,10 +12,11 @@ use cairo_lang_compiler::project::{
 use cairo_lang_debug::DebugWithDb;
 use cairo_lang_defs::ids::{FreeFunctionId, FunctionWithBodyId, ModuleItemId};
 use cairo_lang_diagnostics::ToOption;
-use cairo_lang_filesystem::ids::CrateId;
+use cairo_lang_filesystem::ids::{CrateId, Directory};
 use cairo_lang_plugins::config::ConfigPlugin;
 use cairo_lang_plugins::derive::DerivePlugin;
 use cairo_lang_plugins::panicable::PanicablePlugin;
+use cairo_lang_project::{ProjectConfig, ProjectConfigContent};
 use cairo_lang_runner::short_string::as_cairo_short_string;
 use cairo_lang_runner::{RunResultValue, SierraCasmRunner};
 use cairo_lang_semantic::db::SemanticGroup;
@@ -32,7 +32,7 @@ use clap::Parser;
 use colored::Colorize;
 use dojo_lang::db::DojoRootDatabaseBuilderEx;
 use dojo_lang::plugin::DojoPlugin;
-use dojo_project::ProjectConfig;
+use dojo_project::WorldConfig;
 use itertools::Itertools;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
@@ -66,30 +66,32 @@ pub fn get_crate_ids(
     db: &mut dyn SemanticGroup,
     config: ProjectConfig,
 ) -> Result<Vec<CrateId>, ProjectError> {
-    let cairo_config: cairo_lang_project::ProjectConfig = config.into();
-    let main_crate_ids = get_main_crate_ids_from_project(db, &cairo_config);
-    update_crate_roots_from_project_config(db, cairo_config);
+    let main_crate_ids = get_main_crate_ids_from_project(db, &config);
+    update_crate_roots_from_project_config(db, config);
     Ok(main_crate_ids)
 }
 
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    let config = ProjectConfig::from_directory(Path::new(&args.path))
-        .unwrap_or_else(|e| panic!("Problem loading the config: {e:?}"));
-
-    let dir = std::env::var("CAIRO_CORELIB_DIR")
+    let core_dir = std::env::var("CAIRO_CORELIB_DIR")
         .unwrap_or_else(|e| panic!("Problem getting the corelib path: {e:?}"));
+
+    let config = ProjectConfig {
+        content: ProjectConfigContent { crate_roots: HashMap::from([]) },
+        corelib: Some(Directory(core_dir.clone().into())),
+        base_path: args.path.clone().into(),
+    };
 
     let plugins: Vec<Arc<dyn SemanticPlugin>> = vec![
         Arc::new(DerivePlugin {}),
         Arc::new(PanicablePlugin {}),
         Arc::new(ConfigPlugin { configs: HashSet::from(["test".to_string()]) }),
-        Arc::new(DojoPlugin::new(config.content.world)),
+        Arc::new(DojoPlugin::new(WorldConfig::default())),
         Arc::new(StarkNetPlugin {}),
     ];
     let db = &mut RootDatabase::builder()
-        .build_language_server(dir.into(), plugins)
+        .build_language_server(core_dir.into(), plugins)
         .unwrap_or_else(|error| {
             panic!("Problem creating language database: {error:?}");
         });
