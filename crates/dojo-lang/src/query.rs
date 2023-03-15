@@ -19,12 +19,21 @@ pub struct Fragment {
 
 pub struct Query {
     pub dependencies: HashSet<SmolStr>,
+    query_id: RewriteNode,
     fragments: Vec<Fragment>,
 }
 
 impl Query {
-    pub fn from_expr(db: &dyn SyntaxGroup, query_ast: ast::PathSegmentWithGenericArgs) -> Self {
-        let mut query = Query { dependencies: HashSet::new(), fragments: vec![] };
+    pub fn from_ast(
+        db: &dyn SyntaxGroup,
+        let_pattern: ast::Pattern,
+        query_ast: ast::PathSegmentWithGenericArgs,
+    ) -> Self {
+        let mut query = Query {
+            dependencies: HashSet::new(),
+            query_id: RewriteNode::new_trimmed(let_pattern.as_syntax_node()),
+            fragments: vec![],
+        };
         for arg in query_ast.generic_args(db).generic_args(db).elements(db) {
             if let ast::GenericArg::Expr(expr) = arg {
                 query.handle_expression(db, expr.value(db));
@@ -35,31 +44,42 @@ impl Query {
     }
 
     pub fn nodes(self, world_config: WorldConfig) -> Vec<RewriteNode> {
-        self.fragments
-            .iter()
-            .map(|fragment| {
-                let component_address = format!(
-                    "{:#x}",
-                    get_contract_address(
-                        fragment.component.as_str(),
-                        world_config.initializer_class_hash.unwrap_or_default(),
-                        world_config.address.unwrap_or_default(),
+        let mut nodes = vec![RewriteNode::interpolate_patched(
+            "let $query_id$ = array_new();",
+            HashMap::from([("query_id".to_string(), self.query_id.clone())]),
+        )];
+        nodes.extend(
+            self.fragments
+                .iter()
+                .map(|fragment| {
+                    let component_address = format!(
+                        "{:#x}",
+                        get_contract_address(
+                            fragment.component.as_str(),
+                            world_config.initializer_class_hash.unwrap_or_default(),
+                            world_config.address.unwrap_or_default(),
+                        )
+                    );
+                    RewriteNode::interpolate_patched(
+                        "
+                    let $query_id$_$var_prefix$_ids = IWorldDispatcher { contract_address: \
+                         world_address \
+                         }.entities(starknet::contract_address_const::<$component_address$>());\n",
+                        HashMap::from([
+                            (
+                                "var_prefix".to_string(),
+                                RewriteNode::Text(
+                                    fragment.component.to_string().to_ascii_lowercase(),
+                                ),
+                            ),
+                            ("query_id".to_string(), self.query_id.clone()),
+                            ("component_address".to_string(), RewriteNode::Text(component_address)),
+                        ]),
                     )
-                );
-                RewriteNode::interpolate_patched(
-                    "
-                    let $var_prefix$_ids = IWorldDispatcher { contract_address: world_address \
-                     }.entities(starknet::contract_address_const::<$component_address$>());\n",
-                    HashMap::from([
-                        (
-                            "var_prefix".to_string(),
-                            RewriteNode::Text(fragment.component.to_string().to_ascii_lowercase()),
-                        ),
-                        ("component_address".to_string(), RewriteNode::Text(component_address)),
-                    ]),
-                )
-            })
-            .collect::<Vec<_>>()
+                })
+                .collect::<Vec<_>>(),
+        );
+        nodes
     }
 
     fn handle_expression(&mut self, db: &dyn SyntaxGroup, expression: ast::Expr) {

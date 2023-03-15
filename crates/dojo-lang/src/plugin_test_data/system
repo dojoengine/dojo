@@ -39,7 +39,7 @@ mod SpawnSystem {
 #[system]
 mod MoveSystem {
     use array::ArrayTrait;
-    use dojo::query::QueryTrait;
+    use dojo::query::Query;
     use super::Position;
     use super::Player;
 
@@ -48,7 +48,7 @@ mod MoveSystem {
     }
 
     fn execute() {
-        let positions_query = QueryTrait::<(Position, Player)>::ids();
+        let positions_query = Query::<(Position, Player)>::ids();
         // let player_query: Query<(With::<Player, EntityID<Caller>>)>
 
         let mut bar = 123;
@@ -251,14 +251,15 @@ mod SpawnSystem {
     #[external]
     fn execute(name: felt252) {
         let world_address = starknet::contract_address_const::<0x0>();
-        let owner = starknet::get_caller_address();
-        let entity_id = IWorldDispatcher { contract_address: world_address }.issue_entity(owner);
+        let player_id = IWorldDispatcher {
+            contract_address: world_address
+        }.issue_entity(starknet::get_caller_address());
         IPlayerDispatcher {
             contract_address: starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
-        }.set(entity_id, Player { name: name });
+        }.set(player_id, Player { name: name });
         IPositionDispatcher {
             contract_address: starknet::contract_address_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>()
-        }.set(entity_id, Position { x: 0, y: 0 });
+        }.set(player_id, Position { x: 0, y: 0 });
         return ();
     }
 }
@@ -270,7 +271,7 @@ mod MoveSystem {
     use dojo::world::IWorldDispatcherTrait;
 
     use array::ArrayTrait;
-    use dojo::query::QueryTrait;
+    use dojo::query::Query;
     use super::Position;
     use super::Player;
     fn move_inner(positions: Array<usize>, index: u32, count: u32) {
@@ -279,14 +280,14 @@ mod MoveSystem {
     #[external]
     fn execute() {
         let world_address = starknet::contract_address_const::<0x0>();
-        let positions_query = QueryTrait::<(Position, Player)>::ids();
-        let position_ids = IWorldDispatcher {
+        let positions_query = array_new();
+        let positions_query_position_ids = IWorldDispatcher {
             contract_address: world_address
         }.entities(
             starknet::contract_address_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>()
         );
 
-        let player_ids = IWorldDispatcher {
+        let positions_query_player_ids = IWorldDispatcher {
             contract_address: world_address
         }.entities(
             starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
@@ -306,7 +307,7 @@ mod MoveSystem {
 }
 
 //! > expected_diagnostics
-error: Plugin diagnostic: Trait has no implementation in context: dojo::query::QueryTrait::<(test::Position, test::Player)>
- --> MoveSystem:14:77
-                    let positions_query = QueryTrait::<(Position, Player)>::ids();
-                                                                            ^*^
+error: Variable was previously moved. Trait has no implementation in context: core::traits::Copy::<core::array::Array::<core::integer::u32>>
+ --> contract:15:25
+                    let positions_query = array_new();
+                        ^*************^

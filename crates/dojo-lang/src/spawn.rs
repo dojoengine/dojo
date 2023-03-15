@@ -10,33 +10,29 @@ use crate::plugin::get_contract_address;
 
 pub struct Spawn {
     world_config: WorldConfig,
-    entity_id_name: SmolStr,
+    entity_id: RewriteNode,
     pub dependencies: HashSet<SmolStr>,
     pub body_nodes: Vec<RewriteNode>,
 }
 
 impl Spawn {
-    pub fn handle_spawn(
+    pub fn from_ast(
         db: &dyn SyntaxGroup,
+        let_pattern: ast::Pattern,
         spawn_ast: ast::ExprFunctionCall,
         world_config: WorldConfig,
     ) -> Self {
         let mut spawn = Spawn {
             world_config,
-            // TODO: Make entity id var unique
-            entity_id_name: SmolStr::new("entity_id"),
+            entity_id: RewriteNode::new_trimmed(let_pattern.as_syntax_node()),
             dependencies: HashSet::new(),
             body_nodes: vec![],
         };
 
         spawn.body_nodes.push(RewriteNode::interpolate_patched(
-            "let owner = starknet::get_caller_address();
-                let $entity_id$ = IWorldDispatcher { contract_address: world_address \
-             }.issue_entity(owner);",
-            HashMap::from([(
-                "entity_id".to_string(),
-                RewriteNode::Text(spawn.entity_id_name.to_string()),
-            )]),
+            "let $entity_id$ = IWorldDispatcher { contract_address: world_address \
+             }.issue_entity(starknet::get_caller_address());",
+            HashMap::from([("entity_id".to_string(), spawn.entity_id.clone())]),
         ));
 
         if let Some(arg) = spawn_ast.arguments(db).args(db).elements(db).first() {
@@ -80,10 +76,7 @@ impl Spawn {
                         ("component".to_string(), RewriteNode::Text(component.to_string())),
                         ("component_address".to_string(), RewriteNode::Text(component_address)),
                         ("ctor".to_string(), RewriteNode::new_trimmed(ctor.as_syntax_node())),
-                        (
-                            "entity_id".to_string(),
-                            RewriteNode::Text(self.entity_id_name.to_string()),
-                        ),
+                        ("entity_id".to_string(), self.entity_id.clone()),
                     ]),
                 ));
 
