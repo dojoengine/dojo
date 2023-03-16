@@ -1,5 +1,3 @@
--- Your SQL goes here
-
 CREATE TABLE components (
     id TEXT NOT NULL PRIMARY KEY,
     name TEXT,

@@ -64,11 +64,10 @@ impl IProcessor<EventWithTransaction> for ComponentRegistrationProcessor {
         let mut tx = pool.begin().await?;
         tx.execute(sqlx::query!(
             "
-            INSERT INTO components (id, name, properties, address, class_hash, transaction_hash)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO components (id, properties, address, class_hash, transaction_hash)
+            VALUES ($1, $2, $3, $4, $5)
             ",
             address,
-            "Component",
             "",
             address,
             class_hash,

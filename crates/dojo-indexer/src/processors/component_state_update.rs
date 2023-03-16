@@ -48,6 +48,19 @@ impl IProcessor<EventWithTransaction> for ComponentStateUpdateProcessor {
         let parsed_data = data.to_string();
 
         let mut tx = pool.begin().await?;
+
+        // create entity if doesn't exist
+        tx.execute(sqlx::query!(
+            "
+            INSERT INTO entities (id, transaction_hash)
+            VALUES ($1, $2)
+            ON CONFLICT DO NOTHING
+            ",
+            entity_id,
+            txn_hash,
+        ));
+
+        // insert entity state update
         tx.execute(sqlx::query!(
             "
             INSERT INTO entity_state_updates (entity_id, component_id, transaction_hash, data)
