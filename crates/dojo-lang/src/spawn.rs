@@ -29,13 +29,39 @@ impl Spawn {
             body_nodes: vec![],
         };
 
+        let mut entity_path: Vec<String> = vec!["0".to_string(); 3];
+        if spawn_ast.arguments(db).args(db).elements(db).len() == 2 {
+            if let ast::ArgClause::Unnamed(path) =
+                spawn_ast.arguments(db).args(db).elements(db).first().unwrap().arg_clause(db)
+            {
+                match path.value(db) {
+                    ast::Expr::Parenthesized(bundle) => {
+                        entity_path[2] = bundle.expr(db).as_syntax_node().get_text(db);
+                    }
+                    ast::Expr::Tuple(tuple) => {
+                        let mut elements = tuple.expressions(db).elements(db);
+                        elements.reverse();
+                        let mut i = elements.len() - 1;
+                        for expr in elements {
+                            entity_path[i] = expr.as_syntax_node().get_text(db);
+                            i -= 1;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+
         spawn.body_nodes.push(RewriteNode::interpolate_patched(
             "let $entity_id$ = IWorldDispatcher { contract_address: world_address \
-             }.issue_entity(starknet::get_caller_address());",
-            HashMap::from([("entity_id".to_string(), spawn.entity_id.clone())]),
+             }.next_entity_id(($entity_path$));",
+            HashMap::from([
+                ("entity_id".to_string(), spawn.entity_id.clone()),
+                ("entity_path".to_string(), RewriteNode::Text(entity_path.join(", "))),
+            ]),
         ));
 
-        if let Some(arg) = spawn_ast.arguments(db).args(db).elements(db).first() {
+        if let Some(arg) = spawn_ast.arguments(db).args(db).elements(db).last() {
             if let ast::ArgClause::Unnamed(clause) = arg.arg_clause(db) {
                 match clause.value(db) {
                     ast::Expr::Parenthesized(bundle) => {

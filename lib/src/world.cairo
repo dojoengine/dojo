@@ -10,7 +10,7 @@ trait IProxy {
 
 #[abi]
 trait IWorld {
-    fn issue_entity(path: (felt252, felt252, felt252)) -> (felt252, felt252, felt252, felt252);
+    fn next_entity_id(path: (felt252, felt252, felt252)) -> (felt252, felt252, felt252, felt252);
     fn owner_of(entity_id: (felt252, felt252, felt252, felt252)) -> starknet::ContractAddress;
     fn entities(component: starknet::ContractAddress) -> Array<(felt252, felt252, felt252, felt252)>;
 }
@@ -24,11 +24,8 @@ trait ComponentTrait<T> {
 impl LegacyHashEntityRegsiteryTuple of LegacyHash::<(starknet::ContractAddress, felt252, felt252, felt252, felt252)> {
     fn hash(state: felt252, tuple: (starknet::ContractAddress, felt252, felt252, felt252, felt252)) -> felt252 {
         let (first, second, third, fourth, fifth) = tuple;
-        let mut state = LegacyHash::hash(state, first);
-        state = LegacyHash::hash(state, second);
-        state = LegacyHash::hash(state, third);
-        state = LegacyHash::hash(state, fourth);
-        LegacyHash::hash(state, fifth)
+        let state = LegacyHash::hash(state, first);
+        LegacyHash::hash(state, (second, third, fourth, fifth))
     }
 }
 
@@ -101,10 +98,10 @@ mod World {
 
     // Issue an autoincremented id to the caller.
     #[external]
-    fn issue_entity(path: (felt252, felt252, felt252)) -> felt252 {
-        let next_entity_id = num_entities::read(path);
-        num_entities::write(path, next_entity_id + 1);
-        return next_entity_id;
+    fn next_entity_id(path: (felt252, felt252, felt252)) -> felt252 {
+        let next = num_entities::read(path);
+        num_entities::write(path, next + 1);
+        return next;
     }
 
     // Returns entities that contain the component state.
