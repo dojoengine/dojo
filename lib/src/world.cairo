@@ -94,7 +94,7 @@ mod World {
         entities_len: usize,
         ref entities: Array::<usize>
     ) {
-        match gas::get_gas() {
+        match gas::withdraw_gas() {
             Option::Some(_) => {},
             Option::None(_) => {
                 let mut data = ArrayTrait::new();

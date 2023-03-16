@@ -3,7 +3,6 @@ name = "dojo_examples"
 version = "0.1.0"
 
 [dependencies]
-core = { git = "https://github.com/starkware-libs/cairo.git", version = "v1.0.0-alpha.5", rev = "2b4ca3f8966b170b3239e810126031bb38c9d68a" }
 dojo = { path = "../lib" }
 
 [[target.dojo]]
