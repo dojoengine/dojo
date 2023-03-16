@@ -12,12 +12,12 @@ path = "src/bin/language_server.rs"
 anyhow.workspace = true
 dojo-lang = { path = "../dojo-lang" }
 dojo-project = { path = "../dojo-project" }
-cairo-lang-compiler = { git = "https://github.com/starkware-libs/cairo.git", rev = "57782f2532ee6d589432ebc3d39cf3daae863e7f" }
-cairo-lang-language-server = { git = "https://github.com/starkware-libs/cairo.git", rev = "57782f2532ee6d589432ebc3d39cf3daae863e7f" }
-cairo-lang-starknet = { git = "https://github.com/starkware-libs/cairo.git", rev = "57782f2532ee6d589432ebc3d39cf3daae863e7f" }
-cairo-lang-semantic = { git = "https://github.com/starkware-libs/cairo.git", rev = "57782f2532ee6d589432ebc3d39cf3daae863e7f" }
-cairo-lang-plugins = { git = "https://github.com/starkware-libs/cairo.git", rev = "57782f2532ee6d589432ebc3d39cf3daae863e7f" }
-cairo-lang-filesystem = { git = "https://github.com/starkware-libs/cairo.git", rev = "57782f2532ee6d589432ebc3d39cf3daae863e7f" }
+cairo-lang-compiler = { git = "https://github.com/starkware-libs/cairo.git", rev = "0666cc0b6409fbfac1b1e8a8a70bef026c9eb5c9" }
+cairo-lang-language-server = { git = "https://github.com/starkware-libs/cairo.git", rev = "0666cc0b6409fbfac1b1e8a8a70bef026c9eb5c9" }
+cairo-lang-starknet = { git = "https://github.com/starkware-libs/cairo.git", rev = "0666cc0b6409fbfac1b1e8a8a70bef026c9eb5c9" }
+cairo-lang-semantic = { git = "https://github.com/starkware-libs/cairo.git", rev = "0666cc0b6409fbfac1b1e8a8a70bef026c9eb5c9" }
+cairo-lang-plugins = { git = "https://github.com/starkware-libs/cairo.git", rev = "0666cc0b6409fbfac1b1e8a8a70bef026c9eb5c9" }
+cairo-lang-filesystem = { git = "https://github.com/starkware-libs/cairo.git", rev = "0666cc0b6409fbfac1b1e8a8a70bef026c9eb5c9" }
 tokio = { version = "1.18.2", features = ["full", "sync"] }
 tower-lsp = "0.17.0"
 salsa = "0.16.1"

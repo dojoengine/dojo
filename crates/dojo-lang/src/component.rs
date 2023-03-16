@@ -161,7 +161,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
     trait_nodes.push(RewriteNode::interpolate_patched(
         "
             impl StorageAccess$type_name$ of starknet::StorageAccess::<$type_name$> {
-                fn read(address_domain: felt252, base: starknet::StorageBaseAddress) -> \
+                fn read(address_domain: u32, base: starknet::StorageBaseAddress) -> \
          starknet::SyscallResult::<$type_name$> {
                     Result::Ok(
                         $type_name$ {
@@ -170,7 +170,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
                     )
                 }
                 fn write(
-                    address_domain: felt252, base: starknet::StorageBaseAddress, value: $type_name$
+                    address_domain: u32, base: starknet::StorageBaseAddress, value: $type_name$
                 ) -> starknet::SyscallResult::<()> {
                     $write$
                 }

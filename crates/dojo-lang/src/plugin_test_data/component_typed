@@ -64,7 +64,7 @@ mod FighterComponent {
 
     impl StorageAccessFighter of starknet::StorageAccess::<Fighter> {
         fn read(
-            address_domain: felt252, base: starknet::StorageBaseAddress
+            address_domain: u32, base: starknet::StorageBaseAddress
         ) -> starknet::SyscallResult::<Fighter> {
             Result::Ok(
                 Fighter {
@@ -87,7 +87,7 @@ mod FighterComponent {
             )
         }
         fn write(
-            address_domain: felt252, base: starknet::StorageBaseAddress, value: Fighter
+            address_domain: u32, base: starknet::StorageBaseAddress, value: Fighter
         ) -> starknet::SyscallResult::<()> {
             starknet::storage_write_syscall(
                 address_domain,

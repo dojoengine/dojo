@@ -64,8 +64,9 @@ mod World {
     fn register(class_hash: felt252, module_id: felt252) {
         let module_id = pedersen(0, module_id);
         let proxy_class_hash = starknet::class_hash_const::<0x420>();
-        let module_address = starknet::syscalls::deploy_syscall(
-            proxy_class_hash, module_id, ArrayTrait::new()
+        let calldata = ArrayTrait::<felt252>::new();
+        let (module_address, _) = starknet::syscalls::deploy_syscall(
+            proxy_class_hash, module_id, calldata.span(), bool::False(())
         ).unwrap_syscall();
         let world_address = get_contract_address();
         IProxyDispatcher { contract_address: module_address }.set_implementation(class_hash);
@@ -124,7 +125,7 @@ mod World {
     #[view]
     fn get_entities(component_address: starknet::ContractAddress) -> Array::<usize> {
         let entities_len = entity_registry_len::read(component_address);
-        let mut entities = array_new::<u32>();
+        let mut entities = ArrayTrait::<usize>::new();
         get_entities_inner(component_address, entities_len, ref entities);
         return entities;
     }
