@@ -63,7 +63,7 @@ impl Query {
 
     pub fn rewrite_ids_query(&mut self) {
         self.body_nodes.push(RewriteNode::interpolate_patched(
-            "let $query_pattern$ = array_new::<usize>();",
+            "let $query_pattern$ = ArrayTrait::<usize>::new();",
             HashMap::from([(
                 "query_pattern".to_string(),
                 RewriteNode::Text(self.query_id.clone()),

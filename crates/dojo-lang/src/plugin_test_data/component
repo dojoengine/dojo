@@ -88,7 +88,7 @@ mod PositionComponent {
 
     impl StorageAccessPosition of starknet::StorageAccess::<Position> {
         fn read(
-            address_domain: felt252, base: starknet::StorageBaseAddress
+            address_domain: u32, base: starknet::StorageBaseAddress
         ) -> starknet::SyscallResult::<Position> {
             Result::Ok(
                 Position {
@@ -102,7 +102,7 @@ mod PositionComponent {
             )
         }
         fn write(
-            address_domain: felt252, base: starknet::StorageBaseAddress, value: Position
+            address_domain: u32, base: starknet::StorageBaseAddress, value: Position
         ) -> starknet::SyscallResult::<()> {
             starknet::storage_write_syscall(
                 address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8), value.x
