@@ -41,7 +41,7 @@ impl Compiler for DojoCompiler {
             .with_dojo(world_config)
             .build()?;
 
-        let compiler_config = build_compiler_config(ws);
+        let compiler_config = build_compiler_config(&unit, ws);
 
         let main_crate_ids = collect_main_crate_ids(&unit, &db);
 

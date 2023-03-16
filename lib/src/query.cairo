@@ -1,4 +1,3 @@
-use dict::DictFelt252ToTrait;
 use array::ArrayTrait;
 
 #[derive(Copy, Drop)]
@@ -19,8 +18,6 @@ trait Query<T> {
     fn ids() -> Array::<usize>;
     fn entity(id: usize) -> T;
     fn len() -> u32;
-// fn insert(ref self: Query::<T>, key: felt252, value: T);
-// fn get(ref self: Query::<T>, index: felt252) -> T;
 }
 // #[test]
 // fn test_query() {
