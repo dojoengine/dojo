@@ -59,8 +59,8 @@ struct Position {
 
 #[abi]
 trait IPosition {
-    fn set(entity_id: usize, value: Position);
-    fn get(entity_id: usize) -> Position;
+    fn set(entity_id: (felt252, felt252, felt252, felt252), value: Position);
+    fn get(entity_id: (felt252, felt252, felt252, felt252)) -> Position;
 }
 
 #[contract]
@@ -115,7 +115,7 @@ mod PositionComponent {
 
 
     struct Storage {
-        state: LegacyMap::<usize, Position>, 
+        state: LegacyMap::<(felt252, felt252, felt252, felt252), Position>, 
     }
 
     // Initialize Position.
@@ -124,13 +124,13 @@ mod PositionComponent {
 
     // Set the state of an entity.
     #[external]
-    fn set(entity_id: usize, value: Position) {
+    fn set(entity_id: (felt252, felt252, felt252, felt252), value: Position) {
         state::write(entity_id, value);
     }
 
     // Get the state of an entity.
     #[view]
-    fn get(entity_id: usize) -> Position {
+    fn get(entity_id: (felt252, felt252, felt252, felt252)) -> Position {
         return state::read(entity_id);
     }
 }

@@ -29,8 +29,8 @@ struct Fighter {
 
 #[abi]
 trait IFighter {
-    fn set(entity_id: usize, value: Fighter);
-    fn get(entity_id: usize) -> Fighter;
+    fn set(entity_id: (felt252, felt252, felt252, felt252), value: Fighter);
+    fn get(entity_id: (felt252, felt252, felt252, felt252)) -> Fighter;
 }
 
 #[contract]
@@ -119,7 +119,7 @@ mod FighterComponent {
 
 
     struct Storage {
-        state: LegacyMap::<usize, Fighter>, 
+        state: LegacyMap::<(felt252, felt252, felt252, felt252), Fighter>, 
     }
 
     // Initialize Fighter.
@@ -128,13 +128,13 @@ mod FighterComponent {
 
     // Set the state of an entity.
     #[external]
-    fn set(entity_id: usize, value: Fighter) {
+    fn set(entity_id: (felt252, felt252, felt252, felt252), value: Fighter) {
         state::write(entity_id, value);
     }
 
     // Get the state of an entity.
     #[view]
-    fn get(entity_id: usize) -> Fighter {
+    fn get(entity_id: (felt252, felt252, felt252, felt252)) -> Fighter {
         return state::read(entity_id);
     }
 }

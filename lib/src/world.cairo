@@ -1,4 +1,5 @@
 use array::ArrayTrait;
+use hash::LegacyHash;
 use starknet::contract_address::ContractAddressSerde;
 
 #[abi]
@@ -9,24 +10,32 @@ trait IProxy {
 
 #[abi]
 trait IWorld {
-    fn issue_entity(owner: starknet::ContractAddress) -> usize;
-    fn owner_of(entity_id: usize) -> starknet::ContractAddress;
-    fn entities(component: starknet::ContractAddress) -> Array<felt252>;
+    fn issue_entity(path: (felt252, felt252, felt252)) -> (felt252, felt252, felt252, felt252);
+    fn owner_of(entity_id: (felt252, felt252, felt252, felt252)) -> starknet::ContractAddress;
+    fn entities(component: starknet::ContractAddress) -> Array<(felt252, felt252, felt252, felt252)>;
 }
 
 trait ComponentTrait<T> {
     fn initialize();
-    fn set(entity_id: felt252, value: T);
-    fn get(entity_id: felt252) -> T;
+    fn set(entity_id: (felt252, felt252, felt252, felt252), value: T);
+    fn get(entity_id: (felt252, felt252, felt252, felt252)) -> T;
 }
 
-trait SystemTrait<T> {
-    fn execute(calldata: T);
+impl LegacyHashEntityRegsiteryTuple of LegacyHash::<(starknet::ContractAddress, felt252, felt252, felt252, felt252)> {
+    fn hash(state: felt252, tuple: (starknet::ContractAddress, felt252, felt252, felt252, felt252)) -> felt252 {
+        let (first, second, third, fourth, fifth) = tuple;
+        let mut state = LegacyHash::hash(state, first);
+        state = LegacyHash::hash(state, second);
+        state = LegacyHash::hash(state, third);
+        state = LegacyHash::hash(state, fourth);
+        LegacyHash::hash(state, fifth)
+    }
 }
 
 #[contract]
 mod World {
     use array::ArrayTrait;
+    use traits::Into;
     use hash::pedersen;
     use starknet::get_caller_address;
     use starknet::get_contract_address;
@@ -34,19 +43,19 @@ mod World {
     use starknet::ContractAddressZeroable;
     use super::IProxyDispatcher;
     use super::IProxyDispatcherTrait;
+    use super::LegacyHashEntityRegsiteryTuple;
 
     struct Storage {
-        num_entities: usize,
-        entity_owners: LegacyMap::<usize, starknet::ContractAddress>,
-        entity_registry_len: LegacyMap::<starknet::ContractAddress, usize>,
-        entity_registry: LegacyMap::<(starknet::ContractAddress, usize), usize>,
+        num_entities: LegacyMap::<(felt252, felt252, felt252), felt252>,
+        entity_registry_len: LegacyMap::<(starknet::ContractAddress, felt252, felt252, felt252), usize>,
+        entity_registry: LegacyMap::<(starknet::ContractAddress, felt252, felt252, felt252, felt252), felt252>,
         module_registry: LegacyMap::<starknet::ContractAddress, bool>,
     }
 
     // Emitted anytime an entities component state is updated.
     #[event]
     fn ComponentValueSet(
-        component_address: starknet::ContractAddress, entity_id: usize, data: Array::<felt252>
+        component_address: starknet::ContractAddress, entity_id: (felt252, felt252, felt252, felt252), data: Array::<felt252>
     ) {}
 
     // Emitted when a component or system is registered.
@@ -80,19 +89,39 @@ mod World {
     // entity, the entity:component mapping is registered.
     // Additionally, a `ComponentValueSet` event is emitted.
     #[external]
-    fn on_component_set(entity_id: usize, data: Array::<felt252>) {
+    fn on_component_set(entity_id: (felt252, felt252, felt252, felt252), data: Array::<felt252>) {
         let caller_address = get_caller_address();
+        let (first, second, third, fourth) = entity_id;
         assert(module_registry::read(caller_address), 'component not a registered');
-        let entities_len = entity_registry_len::read(caller_address);
-        entity_registry::write((caller_address, entities_len), entity_id);
-        entity_registry_len::write(caller_address, entities_len + 1_usize);
+        let entities_len = entity_registry_len::read((caller_address, first, second, third));
+        entity_registry::write((caller_address, first, second, third, entities_len.into()), fourth);
+        entity_registry_len::write((caller_address, first, second, third), entities_len + 1_usize);
         ComponentValueSet(caller_address, entity_id, data);
+    }
+
+    // Issue an autoincremented id to the caller.
+    #[external]
+    fn issue_entity(path: (felt252, felt252, felt252)) -> felt252 {
+        let next_entity_id = num_entities::read(path);
+        num_entities::write(path, next_entity_id + 1);
+        return next_entity_id;
+    }
+
+    // Returns entities that contain the component state.
+    #[view]
+    fn get_entities(component_address: starknet::ContractAddress, path: (felt252, felt252, felt252)) -> Array::<felt252> {
+        let (first, second, third) = path;
+        let entities_len = entity_registry_len::read((component_address, first, second, third));
+        let mut entities = ArrayTrait::<felt252>::new();
+        get_entities_inner(component_address, path, entities_len, ref entities);
+        return entities;
     }
 
     fn get_entities_inner(
         component_address: starknet::ContractAddress,
+        path: (felt252, felt252, felt252),
         entities_len: usize,
-        ref entities: Array::<usize>
+        ref entities: Array::<felt252>
     ) {
         match gas::withdraw_gas() {
             Option::Some(_) => {},
@@ -107,28 +136,12 @@ mod World {
             return ();
         }
 
-        let entity_id = entity_registry::read((component_address, (entities_len - 1_usize)));
+        let (first, second, third) = path;
+        let entity_id = entity_registry::read((component_address, first, second, third, (entities_len - 1_usize).into()));
         entities.append(entity_id);
-        return get_entities_inner(component_address, entities_len - 1_usize, ref entities);
+        return get_entities_inner(component_address, path, entities_len - 1_usize, ref entities);
     }
 
-    // Issue an autoincremented id to the caller.
-    #[external]
-    fn issue_entity(owner: starknet::ContractAddress) -> usize {
-        let cur_num_entities = num_entities::read();
-        num_entities::write(cur_num_entities + 1_usize);
-        entity_owners::write(cur_num_entities, owner);
-        return cur_num_entities;
-    }
-
-    // Returns entities that contain the component state.
-    #[view]
-    fn get_entities(component_address: starknet::ContractAddress) -> Array::<usize> {
-        let entities_len = entity_registry_len::read(component_address);
-        let mut entities = ArrayTrait::<usize>::new();
-        get_entities_inner(component_address, entities_len, ref entities);
-        return entities;
-    }
 }
 
 #[test]

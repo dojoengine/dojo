@@ -5,10 +5,6 @@ ExpandContractTestRunner
 
 //! > cairo_code
 use array::ArrayTrait;
-use dojo::query::Caller;
-use dojo::query::Query;
-use dojo::query::EntityID;
-use dojo::query::With;
 
 #[derive(Component)]
 struct Position {
@@ -71,14 +67,6 @@ mod MoveSystem {
 //! > generated_cairo_code
 use array::ArrayTrait;
 
-use dojo::query::Caller;
-
-use dojo::query::Query;
-
-use dojo::query::EntityID;
-
-use dojo::query::With;
-
 #[derive(Copy, Drop)]
 struct Position {
     x: felt252,
@@ -87,8 +75,8 @@ struct Position {
 
 #[abi]
 trait IPosition {
-    fn set(entity_id: usize, value: Position);
-    fn get(entity_id: usize) -> Position;
+    fn set(entity_id: (felt252, felt252, felt252, felt252), value: Position);
+    fn get(entity_id: (felt252, felt252, felt252, felt252)) -> Position;
 }
 
 #[contract]
@@ -143,7 +131,7 @@ mod PositionComponent {
 
 
     struct Storage {
-        state: LegacyMap::<usize, Position>, 
+        state: LegacyMap::<(felt252, felt252, felt252, felt252), Position>, 
     }
 
     // Initialize Position.
@@ -152,13 +140,13 @@ mod PositionComponent {
 
     // Set the state of an entity.
     #[external]
-    fn set(entity_id: usize, value: Position) {
+    fn set(entity_id: (felt252, felt252, felt252, felt252), value: Position) {
         state::write(entity_id, value);
     }
 
     // Get the state of an entity.
     #[view]
-    fn get(entity_id: usize) -> Position {
+    fn get(entity_id: (felt252, felt252, felt252, felt252)) -> Position {
         return state::read(entity_id);
     }
 }
@@ -170,8 +158,8 @@ struct Player {
 
 #[abi]
 trait IPlayer {
-    fn set(entity_id: usize, value: Player);
-    fn get(entity_id: usize) -> Player;
+    fn set(entity_id: (felt252, felt252, felt252, felt252), value: Player);
+    fn get(entity_id: (felt252, felt252, felt252, felt252)) -> Player;
 }
 
 #[contract]
@@ -216,7 +204,7 @@ mod PlayerComponent {
 
 
     struct Storage {
-        state: LegacyMap::<usize, Player>, 
+        state: LegacyMap::<(felt252, felt252, felt252, felt252), Player>, 
     }
 
     // Initialize Player.
@@ -225,13 +213,13 @@ mod PlayerComponent {
 
     // Set the state of an entity.
     #[external]
-    fn set(entity_id: usize, value: Player) {
+    fn set(entity_id: (felt252, felt252, felt252, felt252), value: Player) {
         state::write(entity_id, value);
     }
 
     // Get the state of an entity.
     #[view]
-    fn get(entity_id: usize) -> Player {
+    fn get(entity_id: (felt252, felt252, felt252, felt252)) -> Player {
         return state::read(entity_id);
     }
 }
@@ -321,3 +309,12 @@ mod MoveSystem {
 }
 
 //! > expected_diagnostics
+error: Plugin diagnostic: Unexpected argument type. Expected: "(core::felt252, core::felt252, core::felt252)", found: "core::starknet::contract_address::ContractAddress".
+ --> SpawnSystem:16:103
+                    let player_id = IWorldDispatcher { contract_address: world_address }.issue_entity(starknet::get_caller_address());IPlayerDispatcher { contract_address: starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>() }.set(player_id, Player { name: name });
+                                                                                                      ^****************************^
+
+error: Plugin diagnostic: Unexpected argument type. Expected: "(core::felt252, core::felt252, core::felt252, core::felt252)", found: "core::integer::u32".
+ --> MoveSystem:23:185
+                let player_player = IPlayerDispatcher { contract_address: starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>() }.get(player_id);
+                                                                                                                                                                                        ^*******^

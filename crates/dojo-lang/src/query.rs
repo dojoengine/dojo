@@ -83,7 +83,7 @@ impl Query {
                     );
                     RewriteNode::interpolate_patched(
                         "
-                    let $query_id$_$query_subtype$_ids = IWorldDispatcher { contract_address: \
+                        let $query_id$_$query_subtype$_ids = IWorldDispatcher { contract_address: \
                          world_address \
                          }.entities(starknet::contract_address_const::<$component_address$>());
                         ",

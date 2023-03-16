@@ -32,7 +32,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
     body_nodes.push(RewriteNode::interpolate_patched(
         "
             struct Storage {
-                state: LegacyMap::<usize, $type_name$>,
+                state: LegacyMap::<(felt252, felt252, felt252, felt252), $type_name$>,
             }
 
             // Initialize $type_name$.
@@ -42,13 +42,13 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
 
             // Set the state of an entity.
             #[external]
-            fn set(entity_id: usize, value: $type_name$) {
+            fn set(entity_id: (felt252, felt252, felt252, felt252), value: $type_name$) {
                 state::write(entity_id, value);
             }
 
             // Get the state of an entity.
             #[view]
-            fn get(entity_id: usize) -> $type_name$ {
+            fn get(entity_id: (felt252, felt252, felt252, felt252)) -> $type_name$ {
                 return state::read(entity_id);
             }
         ",
@@ -197,8 +197,8 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
 
             #[abi]
             trait I$type_name$ {
-                fn set(entity_id: usize, value: $type_name$);
-                fn get(entity_id: usize) -> $type_name$;
+                fn set(entity_id: (felt252, felt252, felt252, felt252), value: $type_name$);
+                fn get(entity_id: (felt252, felt252, felt252, felt252)) -> $type_name$;
             }
 
             #[contract]
