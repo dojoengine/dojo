@@ -32,7 +32,8 @@ pub fn run(args: BuildArgs) -> Result<()> {
     let mut compilers = CompilerRepository::empty();
     compilers.add(Box::new(DojoCompiler)).unwrap();
 
-    let config = Config::builder(source_dir)
+    let manifest_path = source_dir.join("Scarb.toml");
+    let config = Config::builder(manifest_path)
         .ui_verbosity(Verbosity::Verbose)
         .log_filter_directive(env::var_os("SCARB_LOG"))
         .compilers(compilers)
