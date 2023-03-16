@@ -10,9 +10,13 @@ trait IProxy {
 
 #[abi]
 trait IWorld {
-    fn next_entity_id(path: (felt252, felt252, felt252)) -> (felt252, felt252, felt252, felt252);
+    fn next_entity_id(
+        entity_id: (felt252, felt252, felt252)
+    ) -> (felt252, felt252, felt252, felt252);
     fn owner_of(entity_id: (felt252, felt252, felt252, felt252)) -> starknet::ContractAddress;
-    fn entities(component: starknet::ContractAddress) -> Array<(felt252, felt252, felt252, felt252)>;
+    fn get_entities(
+        component: starknet::ContractAddress, entity_id: (felt252, felt252, felt252)
+    ) -> Array<(felt252, felt252, felt252, felt252)>;
 }
 
 trait ComponentTrait<T> {
@@ -21,8 +25,12 @@ trait ComponentTrait<T> {
     fn get(entity_id: (felt252, felt252, felt252, felt252)) -> T;
 }
 
-impl LegacyHashEntityRegsiteryTuple of LegacyHash::<(starknet::ContractAddress, felt252, felt252, felt252, felt252)> {
-    fn hash(state: felt252, tuple: (starknet::ContractAddress, felt252, felt252, felt252, felt252)) -> felt252 {
+impl LegacyHashEntityRegsiteryTuple of LegacyHash::<(
+    starknet::ContractAddress, felt252, felt252, felt252, felt252
+)> {
+    fn hash(
+        state: felt252, tuple: (starknet::ContractAddress, felt252, felt252, felt252, felt252)
+    ) -> felt252 {
         let (first, second, third, fourth, fifth) = tuple;
         let state = LegacyHash::hash(state, first);
         LegacyHash::hash(state, (second, third, fourth, fifth))
@@ -44,15 +52,21 @@ mod World {
 
     struct Storage {
         num_entities: LegacyMap::<(felt252, felt252, felt252), felt252>,
-        entity_registry_len: LegacyMap::<(starknet::ContractAddress, felt252, felt252, felt252), usize>,
-        entity_registry: LegacyMap::<(starknet::ContractAddress, felt252, felt252, felt252, felt252), felt252>,
+        entity_registry_len: LegacyMap::<(starknet::ContractAddress, felt252, felt252, felt252),
+        usize>,
+        entity_registry: LegacyMap::<(
+            starknet::ContractAddress, felt252, felt252, felt252, felt252
+        ),
+        felt252>,
         module_registry: LegacyMap::<starknet::ContractAddress, bool>,
     }
 
     // Emitted anytime an entities component state is updated.
     #[event]
     fn ComponentValueSet(
-        component_address: starknet::ContractAddress, entity_id: (felt252, felt252, felt252, felt252), data: Array::<felt252>
+        component_address: starknet::ContractAddress,
+        entity_id: (felt252, felt252, felt252, felt252),
+        data: Array::<felt252>
     ) {}
 
     // Emitted when a component or system is registered.
@@ -106,7 +120,9 @@ mod World {
 
     // Returns entities that contain the component state.
     #[view]
-    fn get_entities(component_address: starknet::ContractAddress, path: (felt252, felt252, felt252)) -> Array::<felt252> {
+    fn get_entities(
+        component_address: starknet::ContractAddress, path: (felt252, felt252, felt252)
+    ) -> Array::<felt252> {
         let (first, second, third) = path;
         let entities_len = entity_registry_len::read((component_address, first, second, third));
         let mut entities = ArrayTrait::<felt252>::new();
@@ -134,11 +150,12 @@ mod World {
         }
 
         let (first, second, third) = path;
-        let entity_id = entity_registry::read((component_address, first, second, third, (entities_len - 1_usize).into()));
+        let entity_id = entity_registry::read(
+            (component_address, first, second, third, (entities_len - 1_usize).into())
+        );
         entities.append(entity_id);
         return get_entities_inner(component_address, path, entities_len - 1_usize, ref entities);
     }
-
 }
 
 #[test]

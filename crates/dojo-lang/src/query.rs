@@ -47,12 +47,10 @@ impl Query {
         if let ast::PathSegment::Simple(el) = query_ast.path(db).elements(db).last().unwrap() {
             match el.ident(db).text(db).as_str() {
                 "ids" => {
-                    query.rewrite_ids_query();
+                    query.rewrite_ids_query(db, query_ast);
                 }
                 "entity" => {
-                    let elements = query_ast.arguments(db).args(db).elements(db);
-                    let entity_id = elements.first().unwrap();
-                    query.rewrite_entity_query(entity_id.clone());
+                    query.rewrite_entity_query(db, query_ast);
                 }
                 _ => todo!(),
             }
@@ -61,7 +59,31 @@ impl Query {
         query
     }
 
-    pub fn rewrite_ids_query(&mut self) {
+    pub fn rewrite_ids_query(&mut self, db: &dyn SyntaxGroup, query_ast: ast::ExprFunctionCall) {
+        let elements = query_ast.arguments(db).args(db).elements(db);
+
+        let mut entity_path: Vec<String> = vec!["0".to_string(); 3];
+        if !elements.is_empty() {
+            let entity_id = elements.first().unwrap();
+            if let ast::ArgClause::Unnamed(path) = entity_id.arg_clause(db) {
+                match path.value(db) {
+                    ast::Expr::Parenthesized(bundle) => {
+                        entity_path[2] = bundle.expr(db).as_syntax_node().get_text(db);
+                    }
+                    ast::Expr::Tuple(tuple) => {
+                        let mut elements = tuple.expressions(db).elements(db);
+                        elements.reverse();
+                        let mut i = elements.len() - 1;
+                        for expr in elements {
+                            entity_path[i] = expr.as_syntax_node().get_text(db);
+                            i -= 1;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+
         self.body_nodes.push(RewriteNode::interpolate_patched(
             "let $query_pattern$ = ArrayTrait::<usize>::new();",
             HashMap::from([(
@@ -85,7 +107,8 @@ impl Query {
                         "
                         let $query_id$_$query_subtype$_ids = IWorldDispatcher { contract_address: \
                          world_address \
-                         }.entities(starknet::contract_address_const::<$component_address$>());
+                         }.get_entities(starknet::contract_address_const::<$component_address$>(), \
+                         ($entity_path$));
                         ",
                         HashMap::from([
                             (
@@ -93,6 +116,7 @@ impl Query {
                                 RewriteNode::Text(component.to_string().to_ascii_lowercase()),
                             ),
                             ("query_id".to_string(), RewriteNode::Text(self.query_id.clone())),
+                            ("entity_path".to_string(), RewriteNode::Text(entity_path.join(", "))),
                             ("component_address".to_string(), RewriteNode::Text(component_address)),
                         ]),
                     )
@@ -101,7 +125,29 @@ impl Query {
         );
     }
 
-    pub fn rewrite_entity_query(&mut self, entity_id: ast::Arg) {
+    pub fn rewrite_entity_query(&mut self, db: &dyn SyntaxGroup, query_ast: ast::ExprFunctionCall) {
+        let elements = query_ast.arguments(db).args(db).elements(db);
+        let entity_id = elements.first().unwrap();
+
+        let mut entity_path: Vec<String> = vec!["0".to_string(); 4];
+        if let ast::ArgClause::Unnamed(path) = entity_id.arg_clause(db) {
+            match path.value(db) {
+                ast::Expr::Parenthesized(bundle) => {
+                    entity_path[3] = bundle.expr(db).as_syntax_node().get_text(db);
+                }
+                ast::Expr::Tuple(tuple) => {
+                    let mut elements = tuple.expressions(db).elements(db);
+                    elements.reverse();
+                    let mut i = elements.len() - 1;
+                    for expr in elements {
+                        entity_path[i] = expr.as_syntax_node().get_text(db);
+                        i -= 1;
+                    }
+                }
+                _ => {}
+            }
+        }
+
         let part_names = self
             .components
             .iter()
@@ -126,7 +172,7 @@ impl Query {
             self.body_nodes.push(RewriteNode::interpolate_patched(
                 "
                 let $query_id$_$query_subtype$ = I$component$Dispatcher { contract_address: \
-                 starknet::contract_address_const::<$component_address$>() }.get($entity_id$);
+                 starknet::contract_address_const::<$component_address$>() }.get(($entity_path$));
                 ",
                 HashMap::from([
                     ("component".to_string(), RewriteNode::Text(component.to_string())),
@@ -135,7 +181,7 @@ impl Query {
                         RewriteNode::Text(component.to_string().to_ascii_lowercase()),
                     ),
                     ("query_id".to_string(), RewriteNode::Text(self.query_id.clone())),
-                    ("entity_id".to_string(), RewriteNode::new_trimmed(entity_id.as_syntax_node())),
+                    ("entity_path".to_string(), RewriteNode::Text(entity_path.join(", "))),
                     ("component_address".to_string(), RewriteNode::Text(component_address)),
                 ]),
             ));
