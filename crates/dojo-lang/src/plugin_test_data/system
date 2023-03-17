@@ -47,6 +47,16 @@ mod SpawnSystem {
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
+
+        let invalid_args = Spawn::bundle((
+            Player { name: name },
+            Position { x: 0, y: 0 },
+        ));
+
+        let invalid_path = Spawn::bundle((0, 0, 0, 0, 0), (
+            Player { name: name },
+            Position { x: 0, y: 0 },
+        ));
         return ();
     }
 }
@@ -362,3 +372,12 @@ mod MoveSystem {
 }
 
 //! > expected_diagnostics
+error: Plugin diagnostic: Invalid arguements. Expected "(entity_path, components)"
+ --> lib.cairo:45:41
+        let invalid_args = Spawn::bundle((
+                                        ^^
+
+error: Plugin diagnostic: Entity path too long
+ --> lib.cairo:50:42
+        let invalid_path = Spawn::bundle((0, 0, 0, 0, 0), (
+                                         ^*************^

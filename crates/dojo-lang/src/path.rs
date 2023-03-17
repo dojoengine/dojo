@@ -1,6 +1,7 @@
 use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_semantic::patcher::RewriteNode;
-use cairo_lang_syntax::node::{ast, db::SyntaxGroup, Terminal, TypedSyntaxNode};
+use cairo_lang_syntax::node::db::SyntaxGroup;
+use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 
 pub fn expand_path(
     db: &dyn SyntaxGroup,
@@ -16,6 +17,14 @@ pub fn expand_path(
             }
             ast::Expr::Tuple(tuple) => {
                 let mut elements = tuple.expressions(db).elements(db);
+
+                if elements.len() > 4 {
+                    return Err(PluginDiagnostic {
+                        message: "Entity path too long".to_string(),
+                        stable_ptr: arg.as_syntax_node().stable_ptr(),
+                    });
+                }
+
                 elements.reverse();
                 for (count, expr) in elements.into_iter().enumerate() {
                     let index = length - 1 - count;

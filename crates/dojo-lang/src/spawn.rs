@@ -35,6 +35,16 @@ impl Spawn {
             match method.ident(db).text(db).as_str() {
                 "bundle" => {
                     let elements = spawn_ast.arguments(db).args(db).elements(db);
+
+                    if elements.len() != 2 {
+                        spawn.diagnostics.push(PluginDiagnostic {
+                            message: "Invalid arguements. Expected \"(entity_path, components)\""
+                                .to_string(),
+                            stable_ptr: spawn_ast.arguments(db).as_syntax_node().stable_ptr(),
+                        });
+                        return spawn;
+                    }
+
                     match expand_path(db, elements.first().unwrap().clone(), 4) {
                         Ok(entity_path) => {
                             let bundle = elements.last().unwrap();
@@ -62,15 +72,13 @@ impl Spawn {
                     }
                 }
                 "entity" => {
-                    match expand_path(
-                        db,
-                        spawn_ast.arguments(db).args(db).elements(db).first().unwrap().clone(),
-                        3,
-                    ) {
+                    let elements = spawn_ast.arguments(db).args(db).elements(db);
+
+                    match expand_path(db, elements.first().unwrap().clone(), 3) {
                         Ok(entity_path) => {
                             spawn.rewrite_nodes.push(RewriteNode::interpolate_patched(
-                                "let $entity_id$ = IWorldDispatcher { contract_address: world_address \
-                                }.next_entity_id(($entity_path$));
+                                "let $entity_id$ = IWorldDispatcher { contract_address: \
+                                 world_address }.next_entity_id(($entity_path$));
                                 ",
                                 HashMap::from([
                                     (
@@ -108,16 +116,14 @@ impl Spawn {
 
                 self.rewrite_nodes.push(RewriteNode::interpolate_patched(
                     "I$component$Dispatcher { contract_address: \
-                     starknet::contract_address_const::<$component_address$>() }.set($entity_id$, $ctor$);
+                     starknet::contract_address_const::<$component_address$>() }.set($entity_id$, \
+                     $ctor$);
                     ",
                     HashMap::from([
                         ("component".to_string(), RewriteNode::Text(component.to_string())),
                         ("component_address".to_string(), RewriteNode::Text(component_address)),
                         ("ctor".to_string(), RewriteNode::new_trimmed(ctor.as_syntax_node())),
-                        (
-                            "entity_id".to_string(),
-                            entity_id,
-                        ),
+                        ("entity_id".to_string(), entity_id),
                     ]),
                 ));
 

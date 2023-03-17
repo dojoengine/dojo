@@ -1,7 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
 use cairo_lang_defs::ids::{ModuleItemId, SubmoduleId};
-use cairo_lang_defs::plugin::{DynGeneratedFileAuxData, PluginGeneratedFile, PluginResult};
+use cairo_lang_defs::plugin::{
+    DynGeneratedFileAuxData, PluginDiagnostic, PluginGeneratedFile, PluginResult,
+};
 use cairo_lang_filesystem::ids::CrateId;
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::patcher::{PatchBuilder, RewriteNode};
@@ -31,6 +33,7 @@ pub struct SystemDeclaration {
 pub struct System {
     world_config: WorldConfig,
     dependencies: HashSet<SmolStr>,
+    diagnostics: Vec<PluginDiagnostic>,
 }
 
 impl System {
@@ -40,7 +43,7 @@ impl System {
         module_ast: ast::ItemModule,
     ) -> PluginResult {
         let name = module_ast.name(db).text(db);
-        let mut system = System { world_config, dependencies: HashSet::new() };
+        let mut system = System { world_config, dependencies: HashSet::new(), diagnostics: vec![] };
 
         if let MaybeModuleBody::Some(body) = module_ast.body(db) {
             let body_nodes = body
@@ -102,7 +105,7 @@ impl System {
                         systems: vec![name],
                     })),
                 }),
-                diagnostics: vec![],
+                diagnostics: system.diagnostics,
                 remove_original_item: true,
             };
         }
@@ -190,7 +193,8 @@ impl System {
                                 segment_genric.clone(),
                             );
                             self.dependencies.extend(query.dependencies);
-                            return query.body_nodes;
+                            self.diagnostics.extend(query.diagnostics);
+                            return query.rewrite_nodes;
                         }
                     }
                     ast::PathSegment::Simple(segment_simple) => {
@@ -202,6 +206,7 @@ impl System {
                                 self.world_config,
                             );
                             self.dependencies.extend(spawn.dependencies);
+                            self.diagnostics.extend(spawn.diagnostics);
                             return spawn.rewrite_nodes;
                         }
                     }

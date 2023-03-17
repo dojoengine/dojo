@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
+use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_semantic::patcher::RewriteNode;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
@@ -16,7 +17,8 @@ pub struct Query {
     world_config: WorldConfig,
     components: Vec<SmolStr>,
     pub dependencies: HashSet<SmolStr>,
-    pub body_nodes: Vec<RewriteNode>,
+    pub diagnostics: Vec<PluginDiagnostic>,
+    pub rewrite_nodes: Vec<RewriteNode>,
 }
 
 impl Query {
@@ -35,7 +37,8 @@ impl Query {
             query_pattern: let_pattern.as_syntax_node().get_text(db),
             components: vec![],
             dependencies: HashSet::new(),
-            body_nodes: vec![],
+            diagnostics: vec![],
+            rewrite_nodes: vec![],
         };
 
         for arg in generics_segment.generic_args(db).generic_args(db).elements(db) {
@@ -84,14 +87,14 @@ impl Query {
             }
         }
 
-        self.body_nodes.push(RewriteNode::interpolate_patched(
+        self.rewrite_nodes.push(RewriteNode::interpolate_patched(
             "let $query_pattern$ = ArrayTrait::<usize>::new();",
             HashMap::from([(
                 "query_pattern".to_string(),
                 RewriteNode::Text(self.query_id.clone()),
             )]),
         ));
-        self.body_nodes.extend(
+        self.rewrite_nodes.extend(
             self.components
                 .iter()
                 .map(|component| {
@@ -169,7 +172,7 @@ impl Query {
                     self.world_config.address.unwrap_or_default(),
                 )
             );
-            self.body_nodes.push(RewriteNode::interpolate_patched(
+            self.rewrite_nodes.push(RewriteNode::interpolate_patched(
                 "
                 let $query_id$_$query_subtype$ = I$component$Dispatcher { contract_address: \
                  starknet::contract_address_const::<$component_address$>() }.get(($entity_path$));
@@ -194,7 +197,7 @@ impl Query {
         }
 
         if self.components.len() > 1 {
-            self.body_nodes.push(RewriteNode::interpolate_patched(
+            self.rewrite_nodes.push(RewriteNode::interpolate_patched(
                 "let $query_pattern$ = ($part_names$);
                 ",
                 HashMap::from([
@@ -203,7 +206,7 @@ impl Query {
                 ]),
             ));
         } else {
-            self.body_nodes.push(RewriteNode::interpolate_patched(
+            self.rewrite_nodes.push(RewriteNode::interpolate_patched(
                 "let $query_pattern$ = $part_names$;
                 ",
                 HashMap::from([
