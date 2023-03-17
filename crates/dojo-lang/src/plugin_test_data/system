@@ -19,6 +19,9 @@ struct Player {
 
 #[system]
 mod SpawnSystem {
+    use traits::Into;   
+    use starknet::contract_address::ContractAddressIntoFelt252;
+
     use dojo::commands::Spawn;
     use super::Position;
     use super::IPositionDispatcher;
@@ -28,7 +31,19 @@ mod SpawnSystem {
     use super::IPlayerDispatcherTrait;
 
     fn execute(name: felt252) {
-        let player_id = Spawn::bundle((420), (
+        let entity_id = Spawn::entity((420));
+        let player = Spawn::bundle(entity_id, (
+            Player { name: name },
+            Position { x: 0, y: 0 },
+        ));
+
+        let literal = Spawn::bundle(420, (
+            Player { name: name },
+            Position { x: 0, y: 0 },
+        ));
+
+        let player_id = starknet::get_caller_address();
+        let player = Spawn::bundle((420, player_id.into()), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
@@ -239,6 +254,9 @@ mod SpawnSystem {
     use dojo::world::IWorldDispatcherTrait;
 
 
+    use traits::Into;
+    use starknet::contract_address::ContractAddressIntoFelt252;
+
     use dojo::commands::Spawn;
     use super::Position;
     use super::IPositionDispatcher;
@@ -250,17 +268,29 @@ mod SpawnSystem {
     #[external]
     fn execute(name: felt252) {
         let world_address = starknet::contract_address_const::<0x0>();
-        let player_id = IWorldDispatcher {
+        let entity_id = IWorldDispatcher {
             contract_address: world_address
-        }.next_entity_id((0, 0, 420));
+        }.next_entity_id(((0, 0, 420)));
         IPlayerDispatcher {
             contract_address: starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
-        }.set(player_id, Player { name: name });
-
+        }.set(entity_id, Player { name: name });
         IPositionDispatcher {
             contract_address: starknet::contract_address_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>()
-        }.set(player_id, Position { x: 0, y: 0 });
+        }.set(entity_id, Position { x: 0, y: 0 });
+        IPlayerDispatcher {
+            contract_address: starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
+        }.set((0, 0, 0, 420), Player { name: name });
+        IPositionDispatcher {
+            contract_address: starknet::contract_address_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>()
+        }.set((0, 0, 0, 420), Position { x: 0, y: 0 });
 
+        let player_id = starknet::get_caller_address();
+        IPlayerDispatcher {
+            contract_address: starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
+        }.set((0, 0, 420, player_id.into()), Player { name: name });
+        IPositionDispatcher {
+            contract_address: starknet::contract_address_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>()
+        }.set((0, 0, 420, player_id.into()), Position { x: 0, y: 0 });
         return ();
     }
 }

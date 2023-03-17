@@ -6,6 +6,7 @@
 pub mod compiler;
 pub mod component;
 pub mod db;
+mod path;
 pub mod plugin;
 mod query;
 mod spawn;

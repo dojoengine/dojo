@@ -1,10 +1,9 @@
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use cairo_lang_defs::plugin::{GeneratedFileAuxData, MacroPlugin, PluginResult};
 use cairo_lang_diagnostics::DiagnosticEntry;
 use cairo_lang_semantic::db::SemanticGroup;
-use cairo_lang_semantic::patcher::{Patches, RewriteNode};
+use cairo_lang_semantic::patcher::Patches;
 use cairo_lang_semantic::plugin::{
     AsDynGeneratedFileAuxData, AsDynMacroPlugin, PluginAuxData, PluginMappedDiagnostic,
     SemanticPlugin,
@@ -14,7 +13,6 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal};
 use dojo_project::WorldConfig;
-use smol_str::SmolStr;
 use starknet::core::crypto::pedersen_hash;
 use starknet::core::types::FieldElement;
 

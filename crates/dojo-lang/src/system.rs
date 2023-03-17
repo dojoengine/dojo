@@ -202,7 +202,7 @@ impl System {
                                 self.world_config,
                             );
                             self.dependencies.extend(spawn.dependencies);
-                            return spawn.body_nodes;
+                            return spawn.rewrite_nodes;
                         }
                     }
                 }
