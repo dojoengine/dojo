@@ -138,10 +138,10 @@ impl Query {
                 ast::Expr::Tuple(tuple) => {
                     let mut elements = tuple.expressions(db).elements(db);
                     elements.reverse();
-                    let mut i = elements.len() - 1;
-                    for expr in elements {
-                        entity_path[i] = expr.as_syntax_node().get_text(db);
-                        i -= 1;
+                    let elements_len = elements.len();
+                    for (count, expr) in elements.into_iter().enumerate() {
+                        let index = elements_len - 1 - count;
+                        entity_path[index] = expr.as_syntax_node().get_text(db);
                     }
                 }
                 _ => {}
@@ -186,10 +186,10 @@ impl Query {
                 ]),
             ));
 
-            self.dependencies.extend([
-                SmolStr::from(format!("I{}Dispatcher", component)),
-                SmolStr::from(format!("I{}DispatcherTrait", component)),
-            ]);
+            // self.dependencies.extend([
+            //     SmolStr::from(format!("I{}Dispatcher", component)),
+            //     SmolStr::from(format!("I{}DispatcherTrait", component)),
+            // ]);
         }
 
         if self.components.len() > 1 {

@@ -41,10 +41,10 @@ impl Spawn {
                     ast::Expr::Tuple(tuple) => {
                         let mut elements = tuple.expressions(db).elements(db);
                         elements.reverse();
-                        let mut i = elements.len() - 1;
-                        for expr in elements {
-                            entity_path[i] = expr.as_syntax_node().get_text(db);
-                            i -= 1;
+                        let elements_len = elements.len();
+                        for (count, expr) in elements.into_iter().enumerate() {
+                            let index = elements_len - 1 - count;
+                            entity_path[index] = expr.as_syntax_node().get_text(db);
                         }
                     }
                     _ => {}
@@ -53,8 +53,8 @@ impl Spawn {
         }
 
         spawn.body_nodes.push(RewriteNode::interpolate_patched(
-            "let $entity_id$ = IWorldDispatcher { contract_address: world_address \
-             }.next_entity_id(($entity_path$));",
+            "let $entity_id$ = IWorldDispatcher { contract_address: world_address }.next_entity_id(($entity_path$));
+            ",
             HashMap::from([
                 ("entity_id".to_string(), spawn.entity_id.clone()),
                 ("entity_path".to_string(), RewriteNode::Text(entity_path.join(", "))),
@@ -97,6 +97,7 @@ impl Spawn {
                     "I$component$Dispatcher { contract_address: \
                      starknet::contract_address_const::<$component_address$>() }.set($entity_id$, \
                      $ctor$);
+                     
                     ",
                     HashMap::from([
                         ("component".to_string(), RewriteNode::Text(component.to_string())),
@@ -106,10 +107,10 @@ impl Spawn {
                     ]),
                 ));
 
-                self.dependencies.extend([
-                    SmolStr::from(format!("I{}Dispatcher", component)),
-                    SmolStr::from(format!("I{}DispatcherTrait", component)),
-                ]);
+                // self.dependencies.extend([
+                //     SmolStr::from(format!("I{}Dispatcher", component)),
+                //     SmolStr::from(format!("I{}DispatcherTrait", component)),
+                // ]);
             }
         }
     }

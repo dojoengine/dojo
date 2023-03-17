@@ -54,7 +54,7 @@ impl System {
                         }
                     }
 
-                    vec![RewriteNode::new_trimmed(el.as_syntax_node())]
+                    vec![RewriteNode::Copied(el.as_syntax_node())]
                 })
                 .collect();
 
@@ -64,7 +64,8 @@ impl System {
                 .sorted()
                 .map(|dep| {
                     RewriteNode::interpolate_patched(
-                        "use super::$dep$;\n",
+                        "use super::$dep$;
+                        ",
                         HashMap::from([("dep".to_string(), RewriteNode::Text(dep.to_string()))]),
                     )
                 })
@@ -73,12 +74,14 @@ impl System {
             let mut builder = PatchBuilder::new(db);
             builder.add_modified(RewriteNode::interpolate_patched(
                 "
+
                 #[contract]
                 mod $name$ {
                     use dojo::world;
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;
                     $imports$
+
                     $body$
                 }
                 ",
@@ -206,7 +209,7 @@ impl System {
             }
         }
 
-        vec![RewriteNode::new_trimmed(statement_ast.as_syntax_node())]
+        vec![RewriteNode::Copied(statement_ast.as_syntax_node())]
     }
 }
 
