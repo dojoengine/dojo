@@ -53,7 +53,8 @@ impl Spawn {
         }
 
         spawn.body_nodes.push(RewriteNode::interpolate_patched(
-            "let $entity_id$ = IWorldDispatcher { contract_address: world_address }.next_entity_id(($entity_path$));
+            "let $entity_id$ = IWorldDispatcher { contract_address: world_address \
+             }.next_entity_id(($entity_path$));
             ",
             HashMap::from([
                 ("entity_id".to_string(), spawn.entity_id.clone()),

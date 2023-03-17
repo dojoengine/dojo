@@ -39,7 +39,11 @@ impl GeneratedFileAuxData for DojoAuxData {
         self
     }
     fn eq(&self, other: &dyn GeneratedFileAuxData) -> bool {
-        if let Some(other) = other.as_any().downcast_ref::<Self>() { self == other } else { false }
+        if let Some(other) = other.as_any().downcast_ref::<Self>() {
+            self == other
+        } else {
+            false
+        }
     }
 }
 impl AsDynGeneratedFileAuxData for DojoAuxData {
@@ -68,12 +72,11 @@ mod test;
 #[derive(Debug, Default)]
 pub struct DojoPlugin {
     pub world_config: WorldConfig,
-    pub impls: Arc<Mutex<HashMap<SmolStr, Vec<RewriteNode>>>>,
 }
 
 impl DojoPlugin {
     pub fn new(world_config: WorldConfig) -> Self {
-        Self { world_config, impls: Arc::new(Mutex::new(HashMap::new())) }
+        Self { world_config }
     }
 
     fn handle_mod(&self, db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult {
@@ -100,10 +103,6 @@ impl MacroPlugin for DojoPlugin {
                                     {
                                         let derived = segment.ident(db).text(db);
                                         if matches!(derived.as_str(), "Component") {
-                                            let mut guard = self.impls.lock().unwrap();
-                                            guard
-                                                .entry(struct_ast.name(db).text(db))
-                                                .or_insert(vec![]);
                                             return handle_component_struct(db, struct_ast);
                                         }
                                     }

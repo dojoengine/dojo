@@ -57,6 +57,12 @@ struct Position {
     y: felt252
 }
 
+#[abi]
+trait IPosition {
+    fn set(entity_id: (felt252, felt252, felt252, felt252), value: Position);
+    fn get(entity_id: (felt252, felt252, felt252, felt252)) -> Position;
+}
+
 #[contract]
 mod PositionComponent {
     use option::OptionTrait;
