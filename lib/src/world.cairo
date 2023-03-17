@@ -130,13 +130,12 @@ mod World {
         return entities;
     }
 }
-// #[test]
-// #[available_gas(2000000)]
-// fn on_component_set() {
-//     World::register(420, 69);
-//     starknet_testing::set_caller_address(starknet::contract_address_const::<0x420>());
-//     let data = ArrayTrait::new();
-//     World::on_component_set(69_usize, data);
-// }
 
+#[test]
+#[available_gas(2000000)]
+fn test_on_component_set() { // World::register(420, 69);
+// starknet_testing::set_caller_address(starknet::contract_address_const::<0x420>());
+// let data = ArrayTrait::new();
+// World::on_component_set(69_usize, data);
+}
 

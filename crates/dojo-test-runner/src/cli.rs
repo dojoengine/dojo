@@ -1,40 +1,37 @@
 //! Compiles and runs a Dojo project.
 
-use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, Mutex};
+use std::env::{self, current_dir};
+use std::sync::Mutex;
 
 use anyhow::{bail, Context};
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_compiler::diagnostics::DiagnosticsReporter;
-use cairo_lang_compiler::project::{
-    get_main_crate_ids_from_project, update_crate_roots_from_project_config, ProjectError,
-};
 use cairo_lang_debug::DebugWithDb;
 use cairo_lang_defs::ids::{FreeFunctionId, FunctionWithBodyId, ModuleItemId};
 use cairo_lang_diagnostics::ToOption;
-use cairo_lang_filesystem::ids::{CrateId, Directory};
-use cairo_lang_plugins::config::ConfigPlugin;
-use cairo_lang_plugins::derive::DerivePlugin;
-use cairo_lang_plugins::panicable::PanicablePlugin;
-use cairo_lang_project::{ProjectConfig, ProjectConfigContent};
+use cairo_lang_filesystem::ids::CrateId;
 use cairo_lang_runner::short_string::as_cairo_short_string;
 use cairo_lang_runner::{RunResultValue, SierraCasmRunner};
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::items::functions::GenericFunctionId;
-use cairo_lang_semantic::plugin::SemanticPlugin;
 use cairo_lang_semantic::{ConcreteFunction, ConcreteFunctionWithBodyId, FunctionLongId};
 use cairo_lang_sierra_generator::db::SierraGenGroup;
 use cairo_lang_sierra_generator::replace_ids::replace_sierra_ids_in_program;
-use cairo_lang_starknet::plugin::StarkNetPlugin;
 use cairo_lang_syntax::node::ast::Expr;
 use cairo_lang_syntax::node::Token;
+use camino::Utf8PathBuf;
 use clap::Parser;
 use colored::Colorize;
+use dojo_lang::compiler::DojoCompiler;
 use dojo_lang::db::DojoRootDatabaseBuilderEx;
-use dojo_lang::plugin::DojoPlugin;
 use dojo_project::WorldConfig;
 use itertools::Itertools;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
+use scarb::compiler::helpers::{build_project_config, collect_main_crate_ids};
+use scarb::compiler::CompilerRepository;
+use scarb::core::Config;
+use scarb::ops;
+use scarb::ui::Verbosity;
 
 /// Command line args parser.
 /// Exits with 0/1 if the input is formatted correctly/incorrectly.
@@ -43,7 +40,7 @@ use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 struct Args {
     /// The path to compile and run its tests.
     #[arg(short, long)]
-    path: String,
+    path: Utf8PathBuf,
     /// The filter for the tests, running only tests containing the filter string.
     #[arg(short, long, default_value_t = String::default())]
     filter: String,
@@ -62,56 +59,59 @@ enum TestStatus {
     Ignore,
 }
 
-pub fn get_crate_ids(
-    db: &mut dyn SemanticGroup,
-    config: ProjectConfig,
-) -> Result<Vec<CrateId>, ProjectError> {
-    let main_crate_ids = get_main_crate_ids_from_project(db, &config);
-    update_crate_roots_from_project_config(db, config);
-    Ok(main_crate_ids)
-}
-
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
-
-    let core_dir = std::env::var("CAIRO_CORELIB_DIR")
-        .unwrap_or_else(|e| panic!("Problem getting the corelib path: {e:?}"));
-
-    let config = ProjectConfig {
-        content: ProjectConfigContent { crate_roots: HashMap::from([]) },
-        corelib: Some(Directory(core_dir.clone().into())),
-        base_path: args.path.clone().into(),
+    let source_dir = if args.path.is_absolute() {
+        args.path
+    } else {
+        let mut current_path = current_dir().unwrap();
+        current_path.push(args.path);
+        Utf8PathBuf::from_path_buf(current_path).unwrap()
     };
 
-    let plugins: Vec<Arc<dyn SemanticPlugin>> = vec![
-        Arc::new(DerivePlugin {}),
-        Arc::new(PanicablePlugin {}),
-        Arc::new(ConfigPlugin { configs: HashSet::from(["test".to_string()]) }),
-        Arc::new(DojoPlugin::new(WorldConfig::default())),
-        Arc::new(StarkNetPlugin {}),
-    ];
-    let db = &mut RootDatabase::builder()
-        .build_language_server(core_dir.into(), plugins)
-        .unwrap_or_else(|error| {
-            panic!("Problem creating language database: {error:?}");
-        });
+    let mut compilers = CompilerRepository::empty();
+    compilers.add(Box::new(DojoCompiler)).unwrap();
 
-    let main_crate_ids = get_crate_ids(db, config)?;
+    let manifest_path = source_dir.join("Scarb.toml");
+    let config = Config::builder(manifest_path)
+        .ui_verbosity(Verbosity::Verbose)
+        .log_filter_directive(env::var_os("SCARB_LOG"))
+        .compilers(compilers)
+        .build()
+        .unwrap();
 
-    if DiagnosticsReporter::stderr().check(db) {
-        bail!("failed to compile: {}", args.path);
+    let ws = ops::read_workspace(config.manifest_path(), &config).unwrap_or_else(|err| {
+        eprintln!("error: {}", err);
+        std::process::exit(1);
+    });
+
+    let world_config = WorldConfig::from_workspace(&ws).unwrap_or_else(|_| WorldConfig::default());
+    let resolve = ops::resolve_workspace(&ws)?;
+    let compilation_units = ops::generate_compilation_units(&resolve, &ws)?;
+
+    let unit = compilation_units[0].clone();
+
+    let mut db = RootDatabase::builder()
+        .with_project_config(build_project_config(&unit)?)
+        .with_dojo(world_config)
+        .build()?;
+
+    let main_crate_ids = collect_main_crate_ids(&unit, &db);
+
+    let all_tests = find_all_tests(&db, main_crate_ids);
+    if DiagnosticsReporter::stderr().check(&mut db) {
+        bail!("failed to compile: {}", source_dir);
     }
-    let all_tests = find_all_tests(db, main_crate_ids);
     let sierra_program = db
         .get_sierra_program_for_functions(
             all_tests
                 .iter()
-                .flat_map(|t| ConcreteFunctionWithBodyId::from_no_generics_free(db, t.func_id))
+                .flat_map(|t| ConcreteFunctionWithBodyId::from_no_generics_free(&db, t.func_id))
                 .collect(),
         )
         .to_option()
         .with_context(|| "Compilation failed without any diagnostics.")?;
-    let sierra_program = replace_sierra_ids_in_program(db, &sierra_program);
+    let sierra_program = replace_sierra_ids_in_program(&db, &sierra_program);
     let total_tests_count = all_tests.len();
     let named_tests = all_tests
         .into_iter()
@@ -129,7 +129,7 @@ fn main() -> anyhow::Result<()> {
                             generic_args: vec![]
                         }
                     }
-                    .debug(db)
+                    .debug(&db)
                 ),
                 test,
             )
