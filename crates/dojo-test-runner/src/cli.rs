@@ -61,15 +61,13 @@ enum TestStatus {
 
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
-    let source_dir;
-
-    if args.path.is_absolute() {
-        source_dir = args.path
+    let source_dir = if args.path.is_absolute() {
+        args.path
     } else {
         let mut current_path = current_dir().unwrap();
         current_path.push(args.path);
-        source_dir = Utf8PathBuf::from_path_buf(current_path).unwrap()
-    }
+        Utf8PathBuf::from_path_buf(current_path).unwrap()
+    };
 
     let mut compilers = CompilerRepository::empty();
     compilers.add(Box::new(DojoCompiler)).unwrap();
