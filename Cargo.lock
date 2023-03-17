@@ -2369,6 +2369,7 @@ dependencies = [
  "cairo-lang-syntax",
  "cairo-lang-utils",
  "cairo-vm",
+ "camino",
  "clap 4.1.8",
  "colored",
  "dojo-lang",
@@ -2377,6 +2378,7 @@ dependencies = [
  "num-bigint",
  "rayon 0.9.0",
  "salsa",
+ "scarb",
  "thiserror",
 ]
 

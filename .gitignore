@@ -4,3 +4,4 @@ workspace
 dojo.iml
 *.db
 *.db-wal
+.DS_Store
