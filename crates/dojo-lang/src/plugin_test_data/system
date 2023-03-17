@@ -21,7 +21,11 @@ struct Player {
 mod SpawnSystem {
     use dojo::commands::Spawn;
     use super::Position;
+    use super::IPositionDispatcher;
+    use super::IPositionDispatcherTrait;
     use super::Player;
+    use super::IPlayerDispatcher;
+    use super::IPlayerDispatcherTrait;
 
     fn execute(name: felt252) {
         let player_id = Spawn::bundle((420), (
@@ -37,7 +41,11 @@ mod MoveSystem {
     use array::ArrayTrait;
     use dojo::query::Query;
     use super::Position;
+    use super::IPositionDispatcher;
+    use super::IPositionDispatcherTrait;
     use super::Player;
+    use super::IPlayerDispatcher;
+    use super::IPlayerDispatcherTrait;
 
     fn move_inner(positions: @Array<usize>, index: u32, count: u32) {
         return move_inner(positions, index + 1_u32, count - 1_u32);
@@ -71,6 +79,12 @@ use array::ArrayTrait;
 struct Position {
     x: felt252,
     y: felt252,
+}
+
+#[abi]
+trait IPosition {
+    fn set(entity_id: (felt252, felt252, felt252, felt252), value: Position);
+    fn get(entity_id: (felt252, felt252, felt252, felt252)) -> Position;
 }
 
 #[contract]
@@ -150,6 +164,12 @@ struct Player {
     name: felt252, 
 }
 
+#[abi]
+trait IPlayer {
+    fn set(entity_id: (felt252, felt252, felt252, felt252), value: Player);
+    fn get(entity_id: (felt252, felt252, felt252, felt252)) -> Player;
+}
+
 #[contract]
 mod PlayerComponent {
     use option::OptionTrait;
@@ -217,21 +237,16 @@ mod SpawnSystem {
     use dojo::world;
     use dojo::world::IWorldDispatcher;
     use dojo::world::IWorldDispatcherTrait;
-    use super::IPlayerDispatcher;
-    use super::IPlayerDispatcherTrait;
-    use super::IPositionDispatcher;
-    use super::IPositionDispatcherTrait;
 
-
-    #[abi]
-    trait IGame {
-        fn set(entity_id: (felt252, felt252, felt252, felt252), value: Game);
-        fn get(entity_id: (felt252, felt252, felt252, felt252)) -> Game;
-    }
 
     use dojo::commands::Spawn;
     use super::Position;
+    use super::IPositionDispatcher;
+    use super::IPositionDispatcherTrait;
     use super::Player;
+    use super::IPlayerDispatcher;
+    use super::IPlayerDispatcherTrait;
+
     #[external]
     fn execute(name: felt252) {
         let world_address = starknet::contract_address_const::<0x0>();
@@ -255,16 +270,21 @@ mod MoveSystem {
     use dojo::world;
     use dojo::world::IWorldDispatcher;
     use dojo::world::IWorldDispatcherTrait;
-    use super::IPlayerDispatcher;
-    use super::IPlayerDispatcherTrait;
+
 
     use array::ArrayTrait;
     use dojo::query::Query;
     use super::Position;
+    use super::IPositionDispatcher;
+    use super::IPositionDispatcherTrait;
     use super::Player;
+    use super::IPlayerDispatcher;
+    use super::IPlayerDispatcherTrait;
+
     fn move_inner(positions: @Array<usize>, index: u32, count: u32) {
         return move_inner(positions, index + 1_u32, count - 1_u32);
     }
+
     #[external]
     fn execute(player_id: felt252) {
         let world_address = starknet::contract_address_const::<0x0>();
@@ -294,10 +314,13 @@ mod MoveSystem {
             contract_address: starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
         }.get((0, 0, 0, player_id));
         let player = player_player;
+
         let mut bar = 123;
         let mut foo = ArrayTrait::<felt252>::new();
         foo.append(bar);
+
         move_inner(@positions_query, 0_u32, positions_query.len());
+
         if bar == 123 {
             return ();
         } else if bar == 0 {
@@ -309,202 +332,3 @@ mod MoveSystem {
 }
 
 //! > expected_diagnostics
-error: Plugin diagnostic: Identifier not found.
- --> SpawnSystem:8:32
-                    use super::IPlayerDispatcher;
-                               ^***************^
-
-error: Plugin diagnostic: Identifier not found.
- --> SpawnSystem:9:36
-                        use super::IPlayerDispatcherTrait;
-                                   ^********************^
-
-error: Plugin diagnostic: Identifier not found.
- --> SpawnSystem:10:36
-                        use super::IPositionDispatcher;
-                                   ^*****************^
-
-error: Plugin diagnostic: Identifier not found.
- --> SpawnSystem:11:36
-                        use super::IPositionDispatcherTrait;
-                                   ^**********************^
-
-error: Plugin diagnostic: Type not found.
- --> SpawnSystem:16:88
-                        fn set(entity_id: (felt252, felt252, felt252, felt252), value: Game);
-                                                                                       ^**^
-
-error: Plugin diagnostic: Type not found.
- --> SpawnSystem:17:84
-                        fn get(entity_id: (felt252, felt252, felt252, felt252)) -> Game;
-                                                                                   ^**^
-
-error: Plugin diagnostic: Trait `test::SpawnSystem::IGameDispatcherTrait::<<missing>>` has multiple implementations, in: "test::SpawnSystem::IGameDispatcherImpl", "test::SpawnSystem::IGameLibraryDispatcherImpl"
- --> SpawnSystem:24:262
-                    let player_id = IWorldDispatcher { contract_address: world_address }.next_entity_id((0, 0, 420));IPlayerDispatcher { contract_address: starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>() }.set(player_id, Player { name: name });
-                                                                                                                                                                                                                                                                     ^*^
-
-error: Plugin diagnostic: Type not found.
- --> contract:16:88
-                        fn set(entity_id: (felt252, felt252, felt252, felt252), value: Game);
-                                                                                       ^**^
-
-error: Plugin diagnostic: Type not found.
- --> contract:17:84
-                        fn get(entity_id: (felt252, felt252, felt252, felt252)) -> Game;
-                                                                                   ^**^
-
-error: Plugin diagnostic: Type not found.
- --> contract:16:88
-                        fn set(entity_id: (felt252, felt252, felt252, felt252), value: Game);
-                                                                                       ^**^
-
-error: Type not found.
- --> IGameDispatcherTrait:14:24
-        serde::Serde::<Game>::serialize(ref calldata, value);
-                       ^**^
-
-error: Trait `core::serde::Serde::<<missing>>` has multiple implementations, in: "core::serde::Felt252Serde", "core::serde::BoolSerde", "core::serde::U8Serde", "core::serde::U16Serde", "core::serde::U32Serde", "core::serde::U64Serde", "core::serde::U128Serde", "core::serde::U256Serde", "core::serde::ArraySerde", "core::serde::TupleSize0Serde", "core::serde::TupleSize1Serde", "core::serde::TupleSize2Serde", "core::serde::TupleSize3Serde", "core::serde::TupleSize4Serde", "core::starknet::class_hash::ClassHashSerde", "core::starknet::contract_address::ContractAddressSerde", "core::starknet::storage_access::StorageAddressSerde"
- --> IGameDispatcherTrait:14:31
-        serde::Serde::<Game>::serialize(ref calldata, value);
-                              ^*******^
-
-error: Plugin diagnostic: Type not found.
- --> contract:17:84
-                        fn get(entity_id: (felt252, felt252, felt252, felt252)) -> Game;
-                                                                                   ^**^
-
-error: Type not found.
- --> IGameDispatcherTrait:38:28
-            serde::Serde::<Game>::deserialize(ref ret_data),
-                           ^**^
-
-error: Type annotations needed. Failed to infer ?11
- --> IGameDispatcherTrait:37:30
-        option::OptionTrait::expect(
-                             ^****^
-
-error: Plugin diagnostic: Type not found.
- --> contract:16:88
-                        fn set(entity_id: (felt252, felt252, felt252, felt252), value: Game);
-                                                                                       ^**^
-
-error: Type not found.
- --> IGameDispatcherTrait:54:24
-        serde::Serde::<Game>::serialize(ref calldata, value);
-                       ^**^
-
-error: Trait `core::serde::Serde::<<missing>>` has multiple implementations, in: "core::serde::Felt252Serde", "core::serde::BoolSerde", "core::serde::U8Serde", "core::serde::U16Serde", "core::serde::U32Serde", "core::serde::U64Serde", "core::serde::U128Serde", "core::serde::U256Serde", "core::serde::ArraySerde", "core::serde::TupleSize0Serde", "core::serde::TupleSize1Serde", "core::serde::TupleSize2Serde", "core::serde::TupleSize3Serde", "core::serde::TupleSize4Serde", "core::starknet::class_hash::ClassHashSerde", "core::starknet::contract_address::ContractAddressSerde", "core::starknet::storage_access::StorageAddressSerde"
- --> IGameDispatcherTrait:54:31
-        serde::Serde::<Game>::serialize(ref calldata, value);
-                              ^*******^
-
-error: Plugin diagnostic: Type not found.
- --> contract:17:84
-                        fn get(entity_id: (felt252, felt252, felt252, felt252)) -> Game;
-                                                                                   ^**^
-
-error: Type not found.
- --> IGameDispatcherTrait:78:28
-            serde::Serde::<Game>::deserialize(ref ret_data),
-                           ^**^
-
-error: Type annotations needed. Failed to infer ?11
- --> IGameDispatcherTrait:77:30
-        option::OptionTrait::expect(
-                             ^****^
-
-error: Plugin diagnostic: Identifier not found.
- --> MoveSystem:8:32
-                    use super::IPlayerDispatcher;
-                               ^***************^
-
-error: Plugin diagnostic: Identifier not found.
- --> MoveSystem:9:36
-                        use super::IPlayerDispatcherTrait;
-                                   ^********************^
-
-error: Plugin diagnostic: Type not found.
- --> MoveSystem:14:88
-                        fn set(entity_id: (felt252, felt252, felt252, felt252), value: Game);
-                                                                                       ^**^
-
-error: Plugin diagnostic: Type not found.
- --> MoveSystem:15:84
-                        fn get(entity_id: (felt252, felt252, felt252, felt252)) -> Game;
-                                                                                   ^**^
-
-error: Plugin diagnostic: Ambiguous method call. More than one applicable trait function with a suitable self type was found: IGameDispatcherTrait::get and ArrayTrait::get. Consider adding type annotations or explicitly refer to the impl function.
- --> MoveSystem:31:37
-                let player_player = IPlayerDispatcher { contract_address: starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>() }.get((0, 0, 0, player_id));
-                                    ^***********************************************************************************************************************************************************************^
-
-error: Plugin diagnostic: Type not found.
- --> contract:14:88
-                        fn set(entity_id: (felt252, felt252, felt252, felt252), value: Game);
-                                                                                       ^**^
-
-error: Plugin diagnostic: Type not found.
- --> contract:15:84
-                        fn get(entity_id: (felt252, felt252, felt252, felt252)) -> Game;
-                                                                                   ^**^
-
-error: Plugin diagnostic: Type not found.
- --> contract:14:88
-                        fn set(entity_id: (felt252, felt252, felt252, felt252), value: Game);
-                                                                                       ^**^
-
-error: Type not found.
- --> IGameDispatcherTrait:14:24
-        serde::Serde::<Game>::serialize(ref calldata, value);
-                       ^**^
-
-error: Trait `core::serde::Serde::<<missing>>` has multiple implementations, in: "core::serde::Felt252Serde", "core::serde::BoolSerde", "core::serde::U8Serde", "core::serde::U16Serde", "core::serde::U32Serde", "core::serde::U64Serde", "core::serde::U128Serde", "core::serde::U256Serde", "core::serde::ArraySerde", "core::serde::TupleSize0Serde", "core::serde::TupleSize1Serde", "core::serde::TupleSize2Serde", "core::serde::TupleSize3Serde", "core::serde::TupleSize4Serde", "core::starknet::class_hash::ClassHashSerde", "core::starknet::contract_address::ContractAddressSerde", "core::starknet::storage_access::StorageAddressSerde"
- --> IGameDispatcherTrait:14:31
-        serde::Serde::<Game>::serialize(ref calldata, value);
-                              ^*******^
-
-error: Plugin diagnostic: Type not found.
- --> contract:15:84
-                        fn get(entity_id: (felt252, felt252, felt252, felt252)) -> Game;
-                                                                                   ^**^
-
-error: Type not found.
- --> IGameDispatcherTrait:38:28
-            serde::Serde::<Game>::deserialize(ref ret_data),
-                           ^**^
-
-error: Type annotations needed. Failed to infer ?11
- --> IGameDispatcherTrait:37:30
-        option::OptionTrait::expect(
-                             ^****^
-
-error: Plugin diagnostic: Type not found.
- --> contract:14:88
-                        fn set(entity_id: (felt252, felt252, felt252, felt252), value: Game);
-                                                                                       ^**^
-
-error: Type not found.
- --> IGameDispatcherTrait:54:24
-        serde::Serde::<Game>::serialize(ref calldata, value);
-                       ^**^
-
-error: Trait `core::serde::Serde::<<missing>>` has multiple implementations, in: "core::serde::Felt252Serde", "core::serde::BoolSerde", "core::serde::U8Serde", "core::serde::U16Serde", "core::serde::U32Serde", "core::serde::U64Serde", "core::serde::U128Serde", "core::serde::U256Serde", "core::serde::ArraySerde", "core::serde::TupleSize0Serde", "core::serde::TupleSize1Serde", "core::serde::TupleSize2Serde", "core::serde::TupleSize3Serde", "core::serde::TupleSize4Serde", "core::starknet::class_hash::ClassHashSerde", "core::starknet::contract_address::ContractAddressSerde", "core::starknet::storage_access::StorageAddressSerde"
- --> IGameDispatcherTrait:54:31
-        serde::Serde::<Game>::serialize(ref calldata, value);
-                              ^*******^
-
-error: Plugin diagnostic: Type not found.
- --> contract:15:84
-                        fn get(entity_id: (felt252, felt252, felt252, felt252)) -> Game;
-                                                                                   ^**^
-
-error: Type not found.
- --> IGameDispatcherTrait:78:28
-            serde::Serde::<Game>::deserialize(ref ret_data),
-                           ^**^
-
-error: Type annotations needed. Failed to infer ?11
- --> IGameDispatcherTrait:77:30
-        option::OptionTrait::expect(
-                             ^****^

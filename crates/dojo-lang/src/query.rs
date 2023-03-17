@@ -186,6 +186,7 @@ impl Query {
                 ]),
             ));
 
+            // TODO: Figure out how to automatically resolve dispatcher dependencies.
             // self.dependencies.extend([
             //     SmolStr::from(format!("I{}Dispatcher", component)),
             //     SmolStr::from(format!("I{}DispatcherTrait", component)),
