@@ -51,11 +51,7 @@ impl Spawn {
                             if let ast::ArgClause::Unnamed(clause) = bundle.arg_clause(db) {
                                 match clause.value(db) {
                                     ast::Expr::Parenthesized(bundle) => {
-                                        spawn.handle_struct(
-                                            db,
-                                            entity_path.clone(),
-                                            bundle.expr(db),
-                                        );
+                                        spawn.handle_struct(db, entity_path, bundle.expr(db));
                                     }
                                     ast::Expr::Tuple(tuple) => {
                                         for expr in tuple.expressions(db).elements(db) {
