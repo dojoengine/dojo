@@ -1,7 +1,8 @@
 use array::ArrayTrait;
+use dojo::storage::PartitionKey;
+use dojo::storage::StorageKey;
 
 trait Query<T> {
-    fn ids() -> Array::<usize>;
-    fn entity(path: T) -> T;
-    fn len() -> u32;
+    fn ids(partition: PartitionKey) -> Array::<felt252>;
+    fn entity(key: StorageKey) -> T;
 }

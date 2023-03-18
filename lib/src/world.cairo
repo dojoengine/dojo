@@ -2,6 +2,8 @@ use array::ArrayTrait;
 use hash::LegacyHash;
 use starknet::contract_address::ContractAddressSerde;
 use dojo::storage::StorageKey;
+use dojo::storage::StorageKeyTrait;
+use dojo::storage::PartitionKeyTrait;
 
 #[abi]
 trait IProxy {
@@ -11,9 +13,9 @@ trait IProxy {
 
 #[abi]
 trait IWorld {
-    fn get_uuid() -> felt252;
+    fn uuid() -> felt252;
     fn owner_of(entity_id: StorageKey) -> starknet::ContractAddress;
-    fn get_entities(
+    fn entities(
         component: starknet::ContractAddress, entity_id: (felt252, felt252, felt252)
     ) -> Array<StorageKey>;
 }
@@ -48,27 +50,24 @@ mod World {
     use starknet::ContractAddressZeroable;
     use starknet::ContractAddressIntoFelt252;
 
+    use dojo::storage::PartitionKey;
     use dojo::storage::StorageKey;
     use dojo::storage::LegacyHashStorageKey;
 
     use super::IProxyDispatcher;
     use super::IProxyDispatcherTrait;
 
-    use debug::PrintTrait;
-
     struct Storage {
         nonce: felt252,
-        entity_registry_len: LegacyMap::<felt252, usize>,
-        entity_registry: LegacyMap::<(felt252, felt252), felt252>,
+        partition_len: LegacyMap::<PartitionKey, usize>,
+        partition: LegacyMap::<(PartitionKey, felt252), felt252>,
         module_registry: LegacyMap::<starknet::ContractAddress, bool>,
     }
 
     // Emitted anytime an entities component state is updated.
     #[event]
     fn ComponentValueSet(
-        component_address: starknet::ContractAddress,
-        entity_id: StorageKey,
-        data: Array::<felt252>
+        component_address: starknet::ContractAddress, entity_id: StorageKey, data: Array::<felt252>
     ) {}
 
     // Emitted when a component or system is registered.
@@ -107,62 +106,49 @@ mod World {
     fn on_component_set(entity_id: StorageKey, data: Array::<felt252>) {
         let caller_address = get_caller_address();
         assert(module_registry::read(caller_address), 'component not a registered');
-        // let entities_len = entity_registry_len::read((caller_address, first, second, third));
-        // entity_registry::write((caller_address, first, second, third, entities_len.into()), fourth);
-        // entity_registry_len::write((caller_address, first, second, third), entities_len + 1_usize);
+        // let entities_len = partition_len::read((caller_address, first, second, third));
+        // partition::write((caller_address, first, second, third, entities_len.into()), fourth);
+        // partition_len::write((caller_address, first, second, third), entities_len + 1_usize);
         ComponentValueSet(caller_address, entity_id, data);
     }
 
     // Issue an autoincremented id to the caller.
     #[external]
-    fn get_uuid() -> felt252 {
+    fn uuid() -> felt252 {
         let next = nonce::read();
         nonce::write(next + 1);
-        return pedersen(next, starknet::info::get_tx_info().unbox().transaction_hash);
+        return pedersen(next, 0);
     }
 
     // Returns entities that contain the component state.
-    // #[view]
-    // fn get_entities(
-    //     key: StorageKey,
-    // ) -> Array::<felt252> {
-    //     let entities_len = entity_registry_len::read(key.partition);
-    //     let mut entities = ArrayTrait::<felt252>::new();
-    //     get_entities_inner(component_address, path, entities_len, ref entities);
-    //     return entities;
-    // }
+    #[view]
+    fn entities(partition: PartitionKey, ) -> Array::<felt252> {
+        let entities_len = partition_len::read(partition);
+        let mut entities = ArrayTrait::<felt252>::new();
+        entities_inner(partition, entities_len, ref entities);
+        return entities;
+    }
 
-    // fn get_entities_inner(
-    //     key: StorageKey,
-    //     entities_len: usize,
-    //     ref entities: Array::<felt252>
-    // ) {
-    //     match gas::withdraw_gas() {
-    //         Option::Some(_) => {},
-    //         Option::None(_) => {
-    //             let mut data = ArrayTrait::new();
-    //             data.append('OOG');
-    //             panic(data);
-    //         }
-    //     }
+    fn entities_inner(
+        partition: PartitionKey, entities_len: usize, ref entities: Array::<felt252>
+    ) {
+        match gas::withdraw_gas() {
+            Option::Some(_) => {},
+            Option::None(_) => {
+                let mut data = ArrayTrait::new();
+                data.append('OOG');
+                panic(data);
+            }
+        }
 
-    //     if (entities_len == 0_usize) {
-    //         return ();
-    //     }
+        if (entities_len == 0_usize) {
+            return ();
+        }
 
-    //     let (first, second, third) = path;
-    //     let mut keys = ArrayTrait::<felt252>::new();
-    //     keys.append(component_address.into());
-    //     keys.append(first);
-    //     keys.append(second);
-    //     keys.append(third);
-    //     keys.append((entities_len - 1_usize).into());
-    //     let entity_id = entity_registry::read(
-    //         StorageKey { keys }
-    //     );
-    //     entities.append(entity_id);
-    //     return get_entities_inner(component_address, path, entities_len - 1_usize, ref entities);
-    // }
+        let entity_id = partition::read((partition, entities_len.into()));
+        entities.append(entity_id);
+        return entities_inner(partition, entities_len - 1_usize, ref entities);
+    }
 }
 
 #[test]
@@ -170,8 +156,9 @@ mod World {
 fn test_on_component_set() {
     World::register(420, 69);
     starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
-    // let data = ArrayTrait::new();
-    // World::on_component_set((0, 0, 0, 1), data);
-
-    let id = World::get_uuid();
+    let data = ArrayTrait::new();
+    let id = World::uuid();
+    let mut key = ArrayTrait::new();
+    key.append(id);
+    World::on_component_set(StorageKeyTrait::new(PartitionKeyTrait::new(0, 0), key), data);
 }
