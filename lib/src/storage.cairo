@@ -2,6 +2,7 @@ use array::ArrayTrait;
 use array::SpanTrait;
 use hash::LegacyHash;
 use serde::Serde;
+use debug::PrintTrait;
 
 #[derive(Drop)]
 struct StorageKey {
@@ -27,7 +28,7 @@ impl StorageKeyImpl of StorageKeyTrait {
 
     fn id(self: @StorageKey) -> felt252 {
         if self.keys.len() == 1_usize {
-            return *self.keys.at(1_usize);
+            return *self.keys.at(0_usize);
         }
 
         inner_id(0, self.keys, self.keys.len())
@@ -99,5 +100,5 @@ fn test_hash_key() {
     let mut keys = ArrayTrait::new();
     keys.append(420);
     let key = StorageKeyTrait::new(0, 0, keys);
-    assert(key.id() == 3326814640123998444291159895510695150223197938419765470484001946161999594643, 'Incorrect hash');
+    assert(key.id() == 420, 'Incorrect hash');
 }
