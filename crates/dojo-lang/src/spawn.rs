@@ -58,7 +58,13 @@ impl Spawn {
                                             spawn.handle_struct(db, entity_path.clone(), expr);
                                         }
                                     }
-                                    _ => {}
+                                    _ => {
+                                        spawn.diagnostics.push(PluginDiagnostic {
+                                            message: "Invalid entity id. Expected \"(...)\""
+                                                .to_string(),
+                                            stable_ptr: clause.as_syntax_node().stable_ptr(),
+                                        });
+                                    }
                                 }
                             }
                         }
