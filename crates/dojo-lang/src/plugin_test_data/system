@@ -82,6 +82,7 @@ mod MoveSystem {
         let positions_query = Query::<(Position, Player)>::ids();
         let players_query = Query::<Player>::ids();
         let player = Query::<Player>::entity(player_id.into());
+        let player_position = Query::<(Position, Player)>::entity(player_id.into());
 
         let mut bar = 123;
         let mut foo = ArrayTrait::<felt252>::new();
@@ -388,6 +389,16 @@ mod MoveSystem {
             contract_address: starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
         }.get(__player_sk_id);
         let player = __player_player;
+        let __player_position_sk: dojo::storage::StorageKey = player_id.into();
+        let __player_position_sk_id = __player_position_sk.id();
+        let __player_position_position = IPositionDispatcher {
+            contract_address: starknet::contract_address_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>()
+        }.get(__player_position_sk_id);
+
+        let __player_position_player = IPlayerDispatcher {
+            contract_address: starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
+        }.get(__player_position_sk_id);
+        let player_position = (__player_position_position, __player_position_player);
 
         let mut bar = 123;
         let mut foo = ArrayTrait::<felt252>::new();

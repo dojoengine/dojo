@@ -129,7 +129,7 @@ impl Query {
             .iter()
             .map(|component| {
                 format!(
-                    "{query_id}_{query_subtype}",
+                    "__{query_id}_{query_subtype}",
                     query_id = self.query_id,
                     query_subtype = component.to_string().to_ascii_lowercase()
                 )
@@ -171,7 +171,7 @@ impl Query {
 
         if self.components.len() > 1 {
             self.rewrite_nodes.push(RewriteNode::interpolate_patched(
-                "let $query_pattern$ = (__$part_names$);
+                "let $query_pattern$ = ($part_names$);
                 ",
                 HashMap::from([
                     ("query_pattern".to_string(), RewriteNode::Text(self.query_pattern.clone())),
@@ -180,7 +180,7 @@ impl Query {
             ));
         } else {
             self.rewrite_nodes.push(RewriteNode::interpolate_patched(
-                "let $query_pattern$ = __$part_names$;
+                "let $query_pattern$ = $part_names$;
                 ",
                 HashMap::from([
                     ("query_pattern".to_string(), RewriteNode::Text(self.query_pattern.clone())),
