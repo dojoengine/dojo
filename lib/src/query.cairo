@@ -1,28 +1,7 @@
 use array::ArrayTrait;
+use dojo::storage::StorageKey;
 
-#[derive(Copy, Drop)]
-struct Entity {}
-struct Or<S, T> {}
-#[derive(Copy, Drop)]
-struct With<S, T> {}
-#[derive(Copy, Drop)]
-struct Without<S, T> {}
-#[derive(Copy, Drop)]
-struct Caller {}
-#[derive(Copy, Drop)]
-struct Input {}
-#[derive(Copy, Drop)]
-struct EntityID<T> {}
-#[derive(Copy, Drop)]
 trait Query<T> {
-    fn ids() -> Array::<usize>;
-    fn entity(id: usize) -> T;
-    fn len() -> u32;
+    fn ids(partition: felt252) -> Array::<felt252>;
+    fn entity(key: StorageKey) -> T;
 }
-// #[test]
-// fn test_query() {
-//     let mut query = QueryTrait::<felt252>::new();
-//     query.insert(1, 1);
-// }
-
-

@@ -4,8 +4,6 @@
 ExpandContractTestRunner
 
 //! > cairo_code
-use dojo::world::ComponentTrait;
-
 #[derive(Component)]
 struct Position {
     x: felt252,
@@ -31,8 +29,6 @@ impl PositionImpl of PositionTrait {
 }
 
 //! > generated_cairo_code
-use dojo::world::ComponentTrait;
-
 trait PositionTrait {
     fn is_zero(self: Position) -> bool;
     fn is_equal(self: Position, b: Position) -> bool;
@@ -59,8 +55,8 @@ struct Position {
 
 #[abi]
 trait IPosition {
-    fn set(entity_id: usize, value: Position);
-    fn get(entity_id: usize) -> Position;
+    fn set(key: felt252, value: Position);
+    fn get(key: felt252) -> Position;
 }
 
 #[contract]
@@ -69,6 +65,7 @@ mod PositionComponent {
     use starknet::SyscallResult;
     use traits::Into;
     use traits::TryInto;
+
     use super::Position;
 
     impl PositionSerde of serde::Serde::<Position> {
@@ -115,7 +112,7 @@ mod PositionComponent {
 
 
     struct Storage {
-        state: LegacyMap::<usize, Position>, 
+        state: LegacyMap::<felt252, Position>, 
     }
 
     // Initialize Position.
@@ -124,14 +121,14 @@ mod PositionComponent {
 
     // Set the state of an entity.
     #[external]
-    fn set(entity_id: usize, value: Position) {
-        state::write(entity_id, value);
+    fn set(key: felt252, value: Position) {
+        state::write(key, value);
     }
 
     // Get the state of an entity.
     #[view]
-    fn get(entity_id: usize) -> Position {
-        return state::read(entity_id);
+    fn get(key: felt252) -> Position {
+        return state::read(key);
     }
 }
 

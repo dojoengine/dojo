@@ -1,7 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
 use cairo_lang_defs::ids::{ModuleItemId, SubmoduleId};
-use cairo_lang_defs::plugin::{DynGeneratedFileAuxData, PluginGeneratedFile, PluginResult};
+use cairo_lang_defs::plugin::{
+    DynGeneratedFileAuxData, PluginDiagnostic, PluginGeneratedFile, PluginResult,
+};
 use cairo_lang_filesystem::ids::CrateId;
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::patcher::{PatchBuilder, RewriteNode};
@@ -13,9 +15,9 @@ use dojo_project::WorldConfig;
 use itertools::Itertools;
 use smol_str::SmolStr;
 
+use crate::commands::Command;
 use crate::plugin::DojoAuxData;
 use crate::query::Query;
-use crate::spawn::Spawn;
 
 #[cfg(test)]
 #[path = "system_test.rs"]
@@ -31,6 +33,7 @@ pub struct SystemDeclaration {
 pub struct System {
     world_config: WorldConfig,
     dependencies: HashSet<SmolStr>,
+    diagnostics: Vec<PluginDiagnostic>,
 }
 
 impl System {
@@ -40,7 +43,7 @@ impl System {
         module_ast: ast::ItemModule,
     ) -> PluginResult {
         let name = module_ast.name(db).text(db);
-        let mut system = System { world_config, dependencies: HashSet::new() };
+        let mut system = System { world_config, dependencies: HashSet::new(), diagnostics: vec![] };
 
         if let MaybeModuleBody::Some(body) = module_ast.body(db) {
             let body_nodes = body
@@ -54,7 +57,7 @@ impl System {
                         }
                     }
 
-                    vec![RewriteNode::new_trimmed(el.as_syntax_node())]
+                    vec![RewriteNode::Copied(el.as_syntax_node())]
                 })
                 .collect();
 
@@ -64,7 +67,8 @@ impl System {
                 .sorted()
                 .map(|dep| {
                     RewriteNode::interpolate_patched(
-                        "use super::$dep$;\n",
+                        "use super::$dep$;
+                        ",
                         HashMap::from([("dep".to_string(), RewriteNode::Text(dep.to_string()))]),
                     )
                 })
@@ -73,12 +77,23 @@ impl System {
             let mut builder = PatchBuilder::new(db);
             builder.add_modified(RewriteNode::interpolate_patched(
                 "
+
                 #[contract]
                 mod $name$ {
                     use dojo::world;
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;
+                    use dojo::storage::StorageKey;
+                    use dojo::storage::StorageKeyTrait;
+                    use dojo::storage::Felt252IntoStorageKey;
+                    use dojo::storage::TupleSize1IntoStorageKey;
+                    use dojo::storage::TupleSize2IntoStorageKey;
+                    use dojo::storage::TupleSize3IntoStorageKey;
+                    use dojo::storage::TupleSize1IntoPartitionedStorageKey;
+                    use dojo::storage::TupleSize2IntoPartitionedStorageKey;
+                    use dojo::storage::ContractAddressIntoStorageKey;
                     $imports$
+
                     $body$
                 }
                 ",
@@ -99,7 +114,7 @@ impl System {
                         systems: vec![name],
                     })),
                 }),
-                diagnostics: vec![],
+                diagnostics: system.diagnostics,
                 remove_original_item: true,
             };
         }
@@ -187,26 +202,28 @@ impl System {
                                 segment_genric.clone(),
                             );
                             self.dependencies.extend(query.dependencies);
-                            return query.body_nodes;
+                            self.diagnostics.extend(query.diagnostics);
+                            return query.rewrite_nodes;
                         }
                     }
                     ast::PathSegment::Simple(segment_simple) => {
-                        if segment_simple.ident(db).text(db).as_str() == "Spawn" {
-                            let spawn = Spawn::from_ast(
+                        if segment_simple.ident(db).text(db).as_str() == "commands" {
+                            let spawn = Command::from_ast(
                                 db,
                                 statement_let.pattern(db),
                                 expr_fn,
                                 self.world_config,
                             );
                             self.dependencies.extend(spawn.dependencies);
-                            return spawn.body_nodes;
+                            self.diagnostics.extend(spawn.diagnostics);
+                            return spawn.rewrite_nodes;
                         }
                     }
                 }
             }
         }
 
-        vec![RewriteNode::new_trimmed(statement_ast.as_syntax_node())]
+        vec![RewriteNode::Copied(statement_ast.as_syntax_node())]
     }
 }
 

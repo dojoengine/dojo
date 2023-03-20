@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
+use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_semantic::patcher::RewriteNode;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
@@ -16,7 +17,8 @@ pub struct Query {
     world_config: WorldConfig,
     components: Vec<SmolStr>,
     pub dependencies: HashSet<SmolStr>,
-    pub body_nodes: Vec<RewriteNode>,
+    pub diagnostics: Vec<PluginDiagnostic>,
+    pub rewrite_nodes: Vec<RewriteNode>,
 }
 
 impl Query {
@@ -35,7 +37,8 @@ impl Query {
             query_pattern: let_pattern.as_syntax_node().get_text(db),
             components: vec![],
             dependencies: HashSet::new(),
-            body_nodes: vec![],
+            diagnostics: vec![],
+            rewrite_nodes: vec![],
         };
 
         for arg in generics_segment.generic_args(db).generic_args(db).elements(db) {
@@ -47,12 +50,10 @@ impl Query {
         if let ast::PathSegment::Simple(el) = query_ast.path(db).elements(db).last().unwrap() {
             match el.ident(db).text(db).as_str() {
                 "ids" => {
-                    query.rewrite_ids_query();
+                    query.rewrite_ids_query(db, query_ast);
                 }
                 "entity" => {
-                    let elements = query_ast.arguments(db).args(db).elements(db);
-                    let entity_id = elements.first().unwrap();
-                    query.rewrite_entity_query(entity_id.clone());
+                    query.rewrite_entity_query(db, query_ast);
                 }
                 _ => todo!(),
             }
@@ -61,15 +62,22 @@ impl Query {
         query
     }
 
-    pub fn rewrite_ids_query(&mut self) {
-        self.body_nodes.push(RewriteNode::interpolate_patched(
+    pub fn rewrite_ids_query(&mut self, db: &dyn SyntaxGroup, query_ast: ast::ExprFunctionCall) {
+        let partition =
+            if let Some(partition) = query_ast.arguments(db).args(db).elements(db).first() {
+                RewriteNode::new_trimmed(partition.as_syntax_node())
+            } else {
+                RewriteNode::Text("0".to_string())
+            };
+
+        self.rewrite_nodes.push(RewriteNode::interpolate_patched(
             "let $query_pattern$ = ArrayTrait::<usize>::new();",
             HashMap::from([(
                 "query_pattern".to_string(),
                 RewriteNode::Text(self.query_id.clone()),
             )]),
         ));
-        self.body_nodes.extend(
+        self.rewrite_nodes.extend(
             self.components
                 .iter()
                 .map(|component| {
@@ -83,9 +91,10 @@ impl Query {
                     );
                     RewriteNode::interpolate_patched(
                         "
-                    let $query_id$_$query_subtype$_ids = IWorldDispatcher { contract_address: \
-                         world_address \
-                         }.entities(starknet::contract_address_const::<$component_address$>());
+                        let __$query_id$_$query_subtype$_ids = IWorldDispatcher { \
+                         contract_address: world_address \
+                         }.entities(starknet::contract_address_const::<$component_address$>(), \
+                         $partition$);
                         ",
                         HashMap::from([
                             (
@@ -93,6 +102,7 @@ impl Query {
                                 RewriteNode::Text(component.to_string().to_ascii_lowercase()),
                             ),
                             ("query_id".to_string(), RewriteNode::Text(self.query_id.clone())),
+                            ("partition".to_string(), partition.clone()),
                             ("component_address".to_string(), RewriteNode::Text(component_address)),
                         ]),
                     )
@@ -101,7 +111,19 @@ impl Query {
         );
     }
 
-    pub fn rewrite_entity_query(&mut self, entity_id: ast::Arg) {
+    pub fn rewrite_entity_query(&mut self, db: &dyn SyntaxGroup, query_ast: ast::ExprFunctionCall) {
+        let elements = query_ast.arguments(db).args(db).elements(db);
+        let storage_key = elements.first().unwrap();
+
+        self.rewrite_nodes.push(RewriteNode::interpolate_patched(
+            "let __$query_id$_sk: dojo::storage::StorageKey = $storage_key$;
+            let __$query_id$_sk_id = __$query_id$_sk.id();",
+            HashMap::from([
+                ("query_id".to_string(), RewriteNode::Text(self.query_id.clone())),
+                ("storage_key".to_string(), RewriteNode::new_trimmed(storage_key.as_syntax_node())),
+            ]),
+        ));
+
         let part_names = self
             .components
             .iter()
@@ -123,10 +145,11 @@ impl Query {
                     self.world_config.address.unwrap_or_default(),
                 )
             );
-            self.body_nodes.push(RewriteNode::interpolate_patched(
+            self.rewrite_nodes.push(RewriteNode::interpolate_patched(
                 "
-                let $query_id$_$query_subtype$ = I$component$Dispatcher { contract_address: \
-                 starknet::contract_address_const::<$component_address$>() }.get($entity_id$);
+                let __$query_id$_$query_subtype$ = I$component$Dispatcher { contract_address: \
+                 starknet::contract_address_const::<$component_address$>() \
+                 }.get(__$query_id$_sk_id);
                 ",
                 HashMap::from([
                     ("component".to_string(), RewriteNode::Text(component.to_string())),
@@ -135,20 +158,20 @@ impl Query {
                         RewriteNode::Text(component.to_string().to_ascii_lowercase()),
                     ),
                     ("query_id".to_string(), RewriteNode::Text(self.query_id.clone())),
-                    ("entity_id".to_string(), RewriteNode::new_trimmed(entity_id.as_syntax_node())),
                     ("component_address".to_string(), RewriteNode::Text(component_address)),
                 ]),
             ));
 
-            self.dependencies.extend([
-                SmolStr::from(format!("I{}Dispatcher", component)),
-                SmolStr::from(format!("I{}DispatcherTrait", component)),
-            ]);
+            // TODO: Figure out how to automatically resolve dispatcher dependencies.
+            // self.dependencies.extend([
+            //     SmolStr::from(format!("I{}Dispatcher", component)),
+            //     SmolStr::from(format!("I{}DispatcherTrait", component)),
+            // ]);
         }
 
         if self.components.len() > 1 {
-            self.body_nodes.push(RewriteNode::interpolate_patched(
-                "let $query_pattern$ = ($part_names$);
+            self.rewrite_nodes.push(RewriteNode::interpolate_patched(
+                "let $query_pattern$ = (__$part_names$);
                 ",
                 HashMap::from([
                     ("query_pattern".to_string(), RewriteNode::Text(self.query_pattern.clone())),
@@ -156,8 +179,8 @@ impl Query {
                 ]),
             ));
         } else {
-            self.body_nodes.push(RewriteNode::interpolate_patched(
-                "let $query_pattern$ = $part_names$;
+            self.rewrite_nodes.push(RewriteNode::interpolate_patched(
+                "let $query_pattern$ = __$part_names$;
                 ",
                 HashMap::from([
                     ("query_pattern".to_string(), RewriteNode::Text(self.query_pattern.clone())),
