@@ -36,11 +36,9 @@ sanitizer = "0.1.6"
 
 [dev-dependencies]
 env_logger.workspace = true
-cairo-lang-formatter = { git = "https://github.com/starkware-libs/cairo.git", version = "1.0.0-alpha.6", rev = "439da05a031c2eda263c4ce12d0b71d20f38205f" }
-cairo-lang-semantic = { git = "https://github.com/starkware-libs/cairo.git", version = "1.0.0-alpha.6", rev = "439da05a031c2eda263c4ce12d0b71d20f38205f", features = [
-    "testing",
-] }
-cairo-lang-test-utils = { git = "https://github.com/starkware-libs/cairo.git", version = "1.0.0-alpha.6", rev = "439da05a031c2eda263c4ce12d0b71d20f38205f" }
+cairo-lang-formatter = "1.0.0-alpha.6"
+cairo-lang-semantic = { version = "1.0.0-alpha.6", features = ["testing"] }
+cairo-lang-test-utils = "1.0.0-alpha.6"
 pretty_assertions.workspace = true
 test-case = "2.2.2"
 test-case-macros = "2.2.2"
