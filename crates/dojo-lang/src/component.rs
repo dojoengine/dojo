@@ -32,7 +32,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
     body_nodes.push(RewriteNode::interpolate_patched(
         "
             struct Storage {
-                state: LegacyMap::<(felt252, felt252, felt252, felt252), $type_name$>,
+                state: LegacyMap::<felt252, $type_name$>,
             }
 
             // Initialize $type_name$.
@@ -42,14 +42,14 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
 
             // Set the state of an entity.
             #[external]
-            fn set(entity_id: (felt252, felt252, felt252, felt252), value: $type_name$) {
-                state::write(entity_id, value);
+            fn set(key: felt252, value: $type_name$) {
+                state::write(key, value);
             }
 
             // Get the state of an entity.
             #[view]
-            fn get(entity_id: (felt252, felt252, felt252, felt252)) -> $type_name$ {
-                return state::read(entity_id);
+            fn get(key: felt252) -> $type_name$ {
+                return state::read(key);
             }
         ",
         HashMap::from([
@@ -197,8 +197,8 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
 
             #[abi]
             trait I$type_name$ {
-                fn set(entity_id: (felt252, felt252, felt252, felt252), value: $type_name$);
-                fn get(entity_id: (felt252, felt252, felt252, felt252)) -> $type_name$;
+                fn set(key: felt252, value: $type_name$);
+                fn get(key: felt252) -> $type_name$;
             }
 
             #[contract]
@@ -207,6 +207,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
                 use starknet::SyscallResult;
                 use traits::Into;
                 use traits::TryInto;
+
                 use super::$type_name$;
                 $traits$
                 $body$

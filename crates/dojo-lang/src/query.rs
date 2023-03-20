@@ -63,29 +63,12 @@ impl Query {
     }
 
     pub fn rewrite_ids_query(&mut self, db: &dyn SyntaxGroup, query_ast: ast::ExprFunctionCall) {
-        let elements = query_ast.arguments(db).args(db).elements(db);
-
-        let mut entity_path: Vec<String> = vec!["0".to_string(); 3];
-        if !elements.is_empty() {
-            let entity_id = elements.first().unwrap();
-            if let ast::ArgClause::Unnamed(path) = entity_id.arg_clause(db) {
-                match path.value(db) {
-                    ast::Expr::Parenthesized(bundle) => {
-                        entity_path[2] = bundle.expr(db).as_syntax_node().get_text(db);
-                    }
-                    ast::Expr::Tuple(tuple) => {
-                        let mut elements = tuple.expressions(db).elements(db);
-                        elements.reverse();
-                        let mut i = elements.len() - 1;
-                        for expr in elements {
-                            entity_path[i] = expr.as_syntax_node().get_text(db);
-                            i -= 1;
-                        }
-                    }
-                    _ => {}
-                }
-            }
-        }
+        let partition =
+            if let Some(partition) = query_ast.arguments(db).args(db).elements(db).first() {
+                RewriteNode::new_trimmed(partition.as_syntax_node())
+            } else {
+                RewriteNode::Text("0".to_string())
+            };
 
         self.rewrite_nodes.push(RewriteNode::interpolate_patched(
             "let $query_pattern$ = ArrayTrait::<usize>::new();",
@@ -108,10 +91,10 @@ impl Query {
                     );
                     RewriteNode::interpolate_patched(
                         "
-                        let $query_id$_$query_subtype$_ids = IWorldDispatcher { contract_address: \
-                         world_address \
-                         }.get_entities(starknet::contract_address_const::<$component_address$>(), \
-                         ($entity_path$));
+                        let __$query_id$_$query_subtype$_ids = IWorldDispatcher { \
+                         contract_address: world_address \
+                         }.entities(starknet::contract_address_const::<$component_address$>(), \
+                         $partition$);
                         ",
                         HashMap::from([
                             (
@@ -119,7 +102,7 @@ impl Query {
                                 RewriteNode::Text(component.to_string().to_ascii_lowercase()),
                             ),
                             ("query_id".to_string(), RewriteNode::Text(self.query_id.clone())),
-                            ("entity_path".to_string(), RewriteNode::Text(entity_path.join(", "))),
+                            ("partition".to_string(), partition.clone()),
                             ("component_address".to_string(), RewriteNode::Text(component_address)),
                         ]),
                     )
@@ -130,26 +113,16 @@ impl Query {
 
     pub fn rewrite_entity_query(&mut self, db: &dyn SyntaxGroup, query_ast: ast::ExprFunctionCall) {
         let elements = query_ast.arguments(db).args(db).elements(db);
-        let entity_id = elements.first().unwrap();
+        let storage_key = elements.first().unwrap();
 
-        let mut entity_path: Vec<String> = vec!["0".to_string(); 4];
-        if let ast::ArgClause::Unnamed(path) = entity_id.arg_clause(db) {
-            match path.value(db) {
-                ast::Expr::Parenthesized(bundle) => {
-                    entity_path[3] = bundle.expr(db).as_syntax_node().get_text(db);
-                }
-                ast::Expr::Tuple(tuple) => {
-                    let mut elements = tuple.expressions(db).elements(db);
-                    elements.reverse();
-                    let elements_len = elements.len();
-                    for (count, expr) in elements.into_iter().enumerate() {
-                        let index = elements_len - 1 - count;
-                        entity_path[index] = expr.as_syntax_node().get_text(db);
-                    }
-                }
-                _ => {}
-            }
-        }
+        self.rewrite_nodes.push(RewriteNode::interpolate_patched(
+            "let __$query_id$_sk: dojo::storage::StorageKey = $storage_key$;
+            let __$query_id$_sk_id = __$query_id$_sk.id();",
+            HashMap::from([
+                ("query_id".to_string(), RewriteNode::Text(self.query_id.clone())),
+                ("storage_key".to_string(), RewriteNode::new_trimmed(storage_key.as_syntax_node())),
+            ]),
+        ));
 
         let part_names = self
             .components
@@ -174,8 +147,9 @@ impl Query {
             );
             self.rewrite_nodes.push(RewriteNode::interpolate_patched(
                 "
-                let $query_id$_$query_subtype$ = I$component$Dispatcher { contract_address: \
-                 starknet::contract_address_const::<$component_address$>() }.get(($entity_path$));
+                let __$query_id$_$query_subtype$ = I$component$Dispatcher { contract_address: \
+                 starknet::contract_address_const::<$component_address$>() \
+                 }.get(__$query_id$_sk_id);
                 ",
                 HashMap::from([
                     ("component".to_string(), RewriteNode::Text(component.to_string())),
@@ -184,7 +158,6 @@ impl Query {
                         RewriteNode::Text(component.to_string().to_ascii_lowercase()),
                     ),
                     ("query_id".to_string(), RewriteNode::Text(self.query_id.clone())),
-                    ("entity_path".to_string(), RewriteNode::Text(entity_path.join(", "))),
                     ("component_address".to_string(), RewriteNode::Text(component_address)),
                 ]),
             ));
@@ -198,7 +171,7 @@ impl Query {
 
         if self.components.len() > 1 {
             self.rewrite_nodes.push(RewriteNode::interpolate_patched(
-                "let $query_pattern$ = ($part_names$);
+                "let $query_pattern$ = (__$part_names$);
                 ",
                 HashMap::from([
                     ("query_pattern".to_string(), RewriteNode::Text(self.query_pattern.clone())),
@@ -207,7 +180,7 @@ impl Query {
             ));
         } else {
             self.rewrite_nodes.push(RewriteNode::interpolate_patched(
-                "let $query_pattern$ = $part_names$;
+                "let $query_pattern$ = __$part_names$;
                 ",
                 HashMap::from([
                     ("query_pattern".to_string(), RewriteNode::Text(self.query_pattern.clone())),

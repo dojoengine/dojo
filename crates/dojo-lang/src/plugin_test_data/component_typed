@@ -29,8 +29,8 @@ struct Fighter {
 
 #[abi]
 trait IFighter {
-    fn set(entity_id: (felt252, felt252, felt252, felt252), value: Fighter);
-    fn get(entity_id: (felt252, felt252, felt252, felt252)) -> Fighter;
+    fn set(key: dojo::storage::StorageKey, value: Fighter);
+    fn get(key: dojo::storage::StorageKey) -> Fighter;
 }
 
 #[contract]
@@ -39,6 +39,7 @@ mod FighterComponent {
     use starknet::SyscallResult;
     use traits::Into;
     use traits::TryInto;
+
     use super::Fighter;
 
     impl FighterSerde of serde::Serde::<Fighter> {
@@ -119,7 +120,7 @@ mod FighterComponent {
 
 
     struct Storage {
-        state: LegacyMap::<(felt252, felt252, felt252, felt252), Fighter>, 
+        state: LegacyMap::<dojo::storage::StorageKey, Fighter>, 
     }
 
     // Initialize Fighter.
@@ -128,14 +129,14 @@ mod FighterComponent {
 
     // Set the state of an entity.
     #[external]
-    fn set(entity_id: (felt252, felt252, felt252, felt252), value: Fighter) {
-        state::write(entity_id, value);
+    fn set(key: dojo::storage::StorageKey, value: Fighter) {
+        state::write(key, value);
     }
 
     // Get the state of an entity.
     #[view]
-    fn get(entity_id: (felt252, felt252, felt252, felt252)) -> Fighter {
-        return state::read(entity_id);
+    fn get(key: dojo::storage::StorageKey) -> Fighter {
+        return state::read(key);
     }
 }
 

@@ -2,46 +2,21 @@ use array::ArrayTrait;
 use array::SpanTrait;
 use hash::LegacyHash;
 use serde::Serde;
-use debug::PrintTrait;
+use traits::Into;
 
 #[derive(Drop)]
 struct StorageKey {
     keys: Array<felt252>,
-    partition: PartitionKey,
-}
-
-#[derive(Drop, Copy)]
-struct PartitionKey {
-    component: felt252,
     partition: felt252,
 }
 
-trait PartitionKeyTrait {
-    fn new(component: felt252, partition: felt252) -> PartitionKey;
-    fn key(self: @PartitionKey) -> felt252;
-}
-
-impl PartitionKeyImpl of PartitionKeyTrait {
-    fn new(component: felt252, partition: felt252) -> PartitionKey {
-        PartitionKey { component: component, partition: partition,  }
-    }
-
-    fn key(self: @PartitionKey) -> felt252 {
-        if *self.partition == 0 {
-            return *self.component;
-        }
-
-        pedersen(*self.partition, *self.component)
-    }
-}
-
 trait StorageKeyTrait {
-    fn new(partition: PartitionKey, keys: Array<felt252>) -> StorageKey;
+    fn new(partition: felt252, keys: Array<felt252>) -> StorageKey;
     fn id(self: @StorageKey) -> felt252;
 }
 
 impl StorageKeyImpl of StorageKeyTrait {
-    fn new(partition: PartitionKey, keys: Array<felt252>) -> StorageKey {
+    fn new(partition: felt252, keys: Array<felt252>) -> StorageKey {
         StorageKey { keys: keys, partition: partition,  }
     }
 
@@ -80,11 +55,11 @@ impl LegacyHashStorageKey of LegacyHash::<StorageKey> {
 
 impl StorageKeySerde of serde::Serde::<StorageKey> {
     fn serialize(ref serialized: Array::<felt252>, input: StorageKey) {
-        Serde::<PartitionKey>::serialize(ref serialized, input.partition);
+        Serde::<felt252>::serialize(ref serialized, input.partition);
         Serde::<Array<felt252>>::serialize(ref serialized, input.keys);
     }
     fn deserialize(ref serialized: Span::<felt252>) -> Option::<StorageKey> {
-        let partition = Serde::<PartitionKey>::deserialize(ref serialized)?;
+        let partition = Serde::<felt252>::deserialize(ref serialized)?;
         let mut arr = ArrayTrait::<felt252>::new();
         match Serde::<Array<felt252>>::deserialize(ref serialized) {
             Option::Some(keys) => {
@@ -97,29 +72,104 @@ impl StorageKeySerde of serde::Serde::<StorageKey> {
     }
 }
 
-impl LegacyHashPartitionKey of LegacyHash::<PartitionKey> {
-    fn hash(state: felt252, partition: PartitionKey) -> felt252 {
-        LegacyHash::hash(state, partition.key())
+impl ContractAddressIntoStorageKey of Into::<starknet::ContractAddress, StorageKey> {
+    fn into(self: starknet::ContractAddress) -> StorageKey {
+        let mut keys = ArrayTrait::<felt252>::new();
+        keys.append(self.into());
+        StorageKey { keys: keys, partition: 0 }
     }
 }
 
-impl PartitionKeySerde of serde::Serde::<PartitionKey> {
-    fn serialize(ref serialized: Array::<felt252>, input: PartitionKey) {
-        Serde::<felt252>::serialize(ref serialized, input.component);
-        Serde::<felt252>::serialize(ref serialized, input.partition);
+impl Felt252IntoStorageKey of Into::<felt252, StorageKey> {
+    fn into(self: felt252) -> StorageKey {
+        let mut keys = ArrayTrait::new();
+        keys.append(self);
+        StorageKey { keys: keys, partition: 0 }
     }
-    fn deserialize(ref serialized: Span::<felt252>) -> Option::<PartitionKey> {
-        let component = *serialized.pop_front()?;
-        let partition = *serialized.pop_front()?;
-        Option::Some(PartitionKey { component: component, partition: partition,  })
+}
+
+impl TupleSize1IntoStorageKey of Into::<(felt252,), StorageKey> {
+    fn into(self: (felt252,)) -> StorageKey {
+        let (first) = self;
+        let mut keys = ArrayTrait::new();
+        keys.append(first);
+        StorageKey { keys: keys, partition: 0 }
+    }
+}
+
+impl TupleSize2IntoStorageKey of Into::<(felt252, felt252), StorageKey> {
+    fn into(self: (felt252, felt252)) -> StorageKey {
+        let (first, second) = self;
+        let mut keys = ArrayTrait::new();
+        keys.append(first);
+        keys.append(second);
+        StorageKey { keys: keys, partition: 0 }
+    }
+}
+
+impl TupleSize3IntoStorageKey of Into::<(felt252, felt252, felt252), StorageKey> {
+    fn into(self: (felt252, felt252, felt252)) -> StorageKey {
+        let (first, second, third) = self;
+        let mut keys = ArrayTrait::new();
+        keys.append(first);
+        keys.append(second);
+        keys.append(third);
+        StorageKey { keys: keys, partition: 0 }
+    }
+}
+
+impl TupleSize1IntoPartitionedStorageKey of Into::<(felt252, (felt252,)), StorageKey> {
+    fn into(self: (felt252, (felt252,))) -> StorageKey {
+        let (partition, keys) = self;
+        let mut storage_key: StorageKey = keys.into();
+        storage_key.partition = partition;
+        storage_key
+    }
+}
+
+impl TupleSize2IntoPartitionedStorageKey of Into::<(felt252, (felt252, felt252)), StorageKey> {
+    fn into(self: (felt252, (felt252, felt252))) -> StorageKey {
+        let (partition, keys) = self;
+        let mut storage_key: StorageKey = keys.into();
+        storage_key.partition = partition;
+        storage_key
     }
 }
 
 #[test]
 #[available_gas(2000000)]
-fn test_hash_key() {
+fn test_storagekey_id() {
     let mut keys = ArrayTrait::new();
     keys.append(420);
-    let key = StorageKeyTrait::new(PartitionKeyTrait::new(0, 0), keys);
+    let key = StorageKeyTrait::new(0, keys);
     assert(key.id() == 420, 'Incorrect hash');
+}
+
+#[test]
+#[available_gas(2000000)]
+fn test_storagekey_into() {
+    let key: StorageKey = 420.into();
+    assert(*key.keys.at(0_usize) == 420, 'Incorrect key');
+    let key1: StorageKey = (69).into();
+    assert(*key1.keys.at(0_usize) == 69, 'Incorrect key');
+    let key2: StorageKey = (69, 420).into();
+    // TODO: Figure out how to avoid the array copy error.
+    // assert(*key2.keys.at(0_usize) == 69, 'Incorrect key');
+    assert(*key2.keys.at(1_usize) == 420, 'Incorrect key');
+    let key3: StorageKey = (69, 420, 777).into();
+    // assert(*key3.keys.at(0_usize) == 69, 'Incorrect key');
+    // assert(*key3.keys.at(1_usize) == 420, 'Incorrect key');
+    assert(*key3.keys.at(2_usize) == 777, 'Incorrect key');
+}
+
+#[test]
+#[available_gas(2000000)]
+fn test_partitioned_storagekey_into() {
+    let key: StorageKey = (69, (420,)).into();
+    assert(key.partition == 69, 'Incorrect partition');
+    assert(*key.keys.at(0_usize) == 420, 'Incorrect key');
+
+    let key2: StorageKey = (69, (420, 777)).into();
+    assert(key2.partition == 69, 'Incorrect partition');
+    assert(*key2.keys.at(1_usize) == 777, 'Incorrect key');
 }

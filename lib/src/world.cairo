@@ -3,7 +3,6 @@ use hash::LegacyHash;
 use starknet::contract_address::ContractAddressSerde;
 use dojo::storage::StorageKey;
 use dojo::storage::StorageKeyTrait;
-use dojo::storage::PartitionKeyTrait;
 
 #[abi]
 trait IProxy {
@@ -16,7 +15,7 @@ trait IWorld {
     fn uuid() -> felt252;
     fn owner_of(entity_id: StorageKey) -> starknet::ContractAddress;
     fn entities(
-        component: starknet::ContractAddress, entity_id: (felt252, felt252, felt252)
+        component: starknet::ContractAddress, partition: felt252
     ) -> Array<StorageKey>;
 }
 
@@ -50,7 +49,6 @@ mod World {
     use starknet::ContractAddressZeroable;
     use starknet::ContractAddressIntoFelt252;
 
-    use dojo::storage::PartitionKey;
     use dojo::storage::StorageKey;
     use dojo::storage::LegacyHashStorageKey;
 
@@ -59,8 +57,8 @@ mod World {
 
     struct Storage {
         nonce: felt252,
-        partition_len: LegacyMap::<PartitionKey, usize>,
-        partition: LegacyMap::<(PartitionKey, felt252), felt252>,
+        partition_len: LegacyMap::<(felt252, felt252), usize>,
+        partition: LegacyMap::<(felt252, felt252, felt252), felt252>,
         module_registry: LegacyMap::<starknet::ContractAddress, bool>,
     }
 
@@ -122,15 +120,15 @@ mod World {
 
     // Returns entities that contain the component state.
     #[view]
-    fn entities(partition: PartitionKey, ) -> Array::<felt252> {
-        let entities_len = partition_len::read(partition);
+    fn entities(component: felt252, partition: felt252) -> Array::<felt252> {
+        let entities_len = partition_len::read((component, partition));
         let mut entities = ArrayTrait::<felt252>::new();
-        entities_inner(partition, entities_len, ref entities);
+        entities_inner(component, partition, entities_len, ref entities);
         return entities;
     }
 
     fn entities_inner(
-        partition: PartitionKey, entities_len: usize, ref entities: Array::<felt252>
+        component: felt252, partition: felt252, entities_len: usize, ref entities: Array::<felt252>
     ) {
         match gas::withdraw_gas() {
             Option::Some(_) => {},
@@ -145,9 +143,9 @@ mod World {
             return ();
         }
 
-        let entity_id = partition::read((partition, entities_len.into()));
+        let entity_id = partition::read((component, partition, entities_len.into()));
         entities.append(entity_id);
-        return entities_inner(partition, entities_len - 1_usize, ref entities);
+        return entities_inner(component, partition, entities_len - 1_usize, ref entities);
     }
 }
 
@@ -160,5 +158,5 @@ fn test_on_component_set() {
     let id = World::uuid();
     let mut key = ArrayTrait::new();
     key.append(id);
-    World::on_component_set(StorageKeyTrait::new(PartitionKeyTrait::new(0, 0), key), data);
+    World::on_component_set(StorageKeyTrait::new(0, key), data);
 }

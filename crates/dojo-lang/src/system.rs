@@ -15,9 +15,9 @@ use dojo_project::WorldConfig;
 use itertools::Itertools;
 use smol_str::SmolStr;
 
+use crate::commands::Command;
 use crate::plugin::DojoAuxData;
 use crate::query::Query;
-use crate::spawn::Spawn;
 
 #[cfg(test)]
 #[path = "system_test.rs"]
@@ -83,6 +83,15 @@ impl System {
                     use dojo::world;
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;
+                    use dojo::storage::StorageKey;
+                    use dojo::storage::StorageKeyTrait;
+                    use dojo::storage::Felt252IntoStorageKey;
+                    use dojo::storage::TupleSize1IntoStorageKey;
+                    use dojo::storage::TupleSize2IntoStorageKey;
+                    use dojo::storage::TupleSize3IntoStorageKey;
+                    use dojo::storage::TupleSize1IntoPartitionedStorageKey;
+                    use dojo::storage::TupleSize2IntoPartitionedStorageKey;
+                    use dojo::storage::ContractAddressIntoStorageKey;
                     $imports$
 
                     $body$
@@ -198,8 +207,8 @@ impl System {
                         }
                     }
                     ast::PathSegment::Simple(segment_simple) => {
-                        if segment_simple.ident(db).text(db).as_str() == "Spawn" {
-                            let spawn = Spawn::from_ast(
+                        if segment_simple.ident(db).text(db).as_str() == "commands" {
+                            let spawn = Command::from_ast(
                                 db,
                                 statement_let.pattern(db),
                                 expr_fn,
