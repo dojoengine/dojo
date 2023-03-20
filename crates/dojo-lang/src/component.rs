@@ -32,7 +32,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
     body_nodes.push(RewriteNode::interpolate_patched(
         "
             struct Storage {
-                state: LegacyMap::<usize, $type_name$>,
+                state: LegacyMap::<felt252, $type_name$>,
                 authorized_writers: LegacyMap::<ContractAddress, bool>,
             }
 
@@ -54,17 +54,17 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
 
             // Set the state of an entity.
             #[external]
-            fn set(entity_id: usize, value: $type_name$) {
+            fn set(key: felt252, value: $type_name$) {
                 let caller_address = starknet::get_caller_address();
                 let is_authorized = authorized_writers::read(caller_address);
                 assert(is_authorized, \'Unauthorized writer.\');
-                state::write(entity_id, value);
+                state::write(key, value);
             }
 
             // Get the state of an entity.
             #[view]
-            fn get(entity_id: usize) -> $type_name$ {
-                return state::read(entity_id);
+            fn get(key: felt252) -> $type_name$ {
+                return state::read(key);
             }
 
             // True if the writer is authorized to modify entities state.
@@ -218,8 +218,8 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
 
             #[abi]
             trait I$type_name$ {
-                fn set(entity_id: usize, value: $type_name$);
-                fn get(entity_id: usize) -> $type_name$;
+                fn set(key: felt252, value: $type_name$);
+                fn get(key: felt252) -> $type_name$;
                 fn get_is_writer_authorized(writer: starknet::ContractAddress) -> bool;
             }
 
@@ -232,6 +232,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
                 use starknet::ContractAddress;
                 use traits::Into;
                 use traits::TryInto;
+
                 use super::$type_name$;
                 $traits$
                 $body$

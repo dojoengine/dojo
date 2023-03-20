@@ -5,10 +5,6 @@ ExpandContractTestRunner
 
 //! > cairo_code
 use array::ArrayTrait;
-use dojo::query::Caller;
-use dojo::query::Query;
-use dojo::query::EntityID;
-use dojo::query::With;
 
 #[derive(Component)]
 struct Position {
@@ -23,34 +19,70 @@ struct Player {
 
 #[system]
 mod SpawnSystem {
+    use traits::Into;   
+    use starknet::contract_address::ContractAddressIntoFelt252;
+
     use dojo::commands::Spawn;
+
     use super::Position;
+    use super::IPositionDispatcher;
+    use super::IPositionDispatcherTrait;
     use super::Player;
+    use super::IPlayerDispatcher;
+    use super::IPlayerDispatcherTrait;
 
     fn execute(name: felt252) {
-        let player_id = Spawn::bundle((
+        let uuid = commands::uuid();
+        let player = commands::spawn((420, (69, uuid)).into(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
+
+        let literal = commands::spawn(420.into(), (
+            Player { name: name },
+            Position { x: 0, y: 0 },
+        ));
+
+        let player_id = starknet::get_caller_address();
+        let player = commands::spawn(player_id.into(), (
+            Player { name: name },
+            Position { x: 0, y: 0 },
+        ));
+
+        let invalid_args = commands::spawn((
+            Player { name: name },
+            Position { x: 0, y: 0 },
+        ));
+
+        // let invalid_path = Spawn::spawn((0, 0, 0, 0, 0), (
+        //     Player { name: name },
+        //     Position { x: 0, y: 0 },
+        // ));
         return ();
     }
 }
 
 #[system]
 mod MoveSystem {
+    use traits::Into;
     use array::ArrayTrait;
     use dojo::query::Query;
     use super::Position;
+    use super::IPositionDispatcher;
+    use super::IPositionDispatcherTrait;
     use super::Player;
+    use super::IPlayerDispatcher;
+    use super::IPlayerDispatcherTrait;
 
     fn move_inner(positions: @Array<usize>, index: u32, count: u32) {
         return move_inner(positions, index + 1_u32, count - 1_u32);
     }
 
-    fn execute(player_id: usize) {
+    fn execute(player_id: felt252) {
         let positions_query = Query::<(Position, Player)>::ids();
         let players_query = Query::<Player>::ids();
-        let player = Query::<Player>::entity(player_id);
+        let player = Query::<Player>::entity(player_id.into());
+        let player_position = Query::<(Position, Player)>::entity(player_id.into());
 
         let mut bar = 123;
         let mut foo = ArrayTrait::<felt252>::new();
@@ -71,14 +103,6 @@ mod MoveSystem {
 //! > generated_cairo_code
 use array::ArrayTrait;
 
-use dojo::query::Caller;
-
-use dojo::query::Query;
-
-use dojo::query::EntityID;
-
-use dojo::query::With;
-
 #[derive(Copy, Drop)]
 struct Position {
     x: felt252,
@@ -87,8 +111,8 @@ struct Position {
 
 #[abi]
 trait IPosition {
-    fn set(entity_id: usize, value: Position);
-    fn get(entity_id: usize) -> Position;
+    fn set(key: felt252, value: Position);
+    fn get(key: felt252) -> Position;
     fn get_is_writer_authorized(writer: starknet::ContractAddress) -> bool;
 }
 
@@ -101,6 +125,7 @@ mod PositionComponent {
     use starknet::ContractAddress;
     use traits::Into;
     use traits::TryInto;
+
     use super::Position;
 
     impl PositionSerde of serde::Serde::<Position> {
@@ -147,7 +172,7 @@ mod PositionComponent {
 
 
     struct Storage {
-        state: LegacyMap::<usize, Position>,
+        state: LegacyMap::<felt252, Position>, 
         authorized_writers: LegacyMap::<ContractAddress, bool>,
     }
 
@@ -169,17 +194,17 @@ mod PositionComponent {
 
     // Set the state of an entity.
     #[external]
-    fn set(entity_id: usize, value: Position) {
+    fn set(key: felt252, value: Position) {
         let caller_address = starknet::get_caller_address();
         let is_authorized = authorized_writers::read(caller_address);
         assert(is_authorized, 'Unauthorized writer.');
-        state::write(entity_id, value);
+        state::write(key, value);
     }
 
     // Get the state of an entity.
     #[view]
-    fn get(entity_id: usize) -> Position {
-        return state::read(entity_id);
+    fn get(key: felt252) -> Position {
+        return state::read(key);
     }
 
     // True if the writer is authorized to modify entities state.
@@ -196,8 +221,8 @@ struct Player {
 
 #[abi]
 trait IPlayer {
-    fn set(entity_id: usize, value: Player);
-    fn get(entity_id: usize) -> Player;
+    fn set(key: felt252, value: Player);
+    fn get(key: felt252) -> Player;
     fn get_is_writer_authorized(writer: starknet::ContractAddress) -> bool;
 }
 
@@ -210,6 +235,7 @@ mod PlayerComponent {
     use starknet::ContractAddress;
     use traits::Into;
     use traits::TryInto;
+
     use super::Player;
 
     impl PlayerSerde of serde::Serde::<Player> {
@@ -246,7 +272,7 @@ mod PlayerComponent {
 
 
     struct Storage {
-        state: LegacyMap::<usize, Player>,
+        state: LegacyMap::<felt252, Player>, 
         authorized_writers: LegacyMap::<ContractAddress, bool>,
     }
 
@@ -268,17 +294,17 @@ mod PlayerComponent {
 
     // Set the state of an entity.
     #[external]
-    fn set(entity_id: usize, value: Player) {
+    fn set(key: felt252, value: Player) {
         let caller_address = starknet::get_caller_address();
         let is_authorized = authorized_writers::read(caller_address);
         assert(is_authorized, 'Unauthorized writer.');
-        state::write(entity_id, value);
+        state::write(key, value);
     }
 
     // Get the state of an entity.
     #[view]
-    fn get(entity_id: usize) -> Player {
-        return state::read(entity_id);
+    fn get(key: felt252) -> Player {
+        return state::read(key);
     }
 
     // True if the writer is authorized to modify entities state.
@@ -293,26 +319,64 @@ mod SpawnSystem {
     use dojo::world;
     use dojo::world::IWorldDispatcher;
     use dojo::world::IWorldDispatcherTrait;
-    use super::IPlayerDispatcher;
-    use super::IPlayerDispatcherTrait;
-    use super::IPositionDispatcher;
-    use super::IPositionDispatcherTrait;
+    use dojo::storage::StorageKey;
+    use dojo::storage::StorageKeyTrait;
+    use dojo::storage::Felt252IntoStorageKey;
+    use dojo::storage::TupleSize1IntoStorageKey;
+    use dojo::storage::TupleSize2IntoStorageKey;
+    use dojo::storage::TupleSize3IntoStorageKey;
+    use dojo::storage::TupleSize1IntoPartitionedStorageKey;
+    use dojo::storage::TupleSize2IntoPartitionedStorageKey;
+    use dojo::storage::ContractAddressIntoStorageKey;
+
+
+    use traits::Into;
+    use starknet::contract_address::ContractAddressIntoFelt252;
 
     use dojo::commands::Spawn;
+
     use super::Position;
+    use super::IPositionDispatcher;
+    use super::IPositionDispatcherTrait;
     use super::Player;
+    use super::IPlayerDispatcher;
+    use super::IPlayerDispatcherTrait;
+
     #[external]
     fn execute(name: felt252) {
         let world_address = starknet::contract_address_const::<0x0>();
-        let player_id = IWorldDispatcher {
-            contract_address: world_address
-        }.issue_entity(starknet::get_caller_address());
+        let uuid = IWorldDispatcher { contract_address: world_address }.uuid();
+        let __player_sk: dojo::storage::StorageKey = (420, (69, uuid)).into();
+        let __player_sk_id = __player_sk.id();
         IPlayerDispatcher {
             contract_address: starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
-        }.set(player_id, Player { name: name });
+        }.set(__player_sk_id, Player { name: name });
         IPositionDispatcher {
             contract_address: starknet::contract_address_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>()
-        }.set(player_id, Position { x: 0, y: 0 });
+        }.set(__player_sk_id, Position { x: 0, y: 0 });
+        let __literal_sk: dojo::storage::StorageKey = 420.into();
+        let __literal_sk_id = __literal_sk.id();
+        IPlayerDispatcher {
+            contract_address: starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
+        }.set(__literal_sk_id, Player { name: name });
+        IPositionDispatcher {
+            contract_address: starknet::contract_address_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>()
+        }.set(__literal_sk_id, Position { x: 0, y: 0 });
+
+        let player_id = starknet::get_caller_address();
+        let __player_sk: dojo::storage::StorageKey = player_id.into();
+        let __player_sk_id = __player_sk.id();
+        IPlayerDispatcher {
+            contract_address: starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
+        }.set(__player_sk_id, Player { name: name });
+        IPositionDispatcher {
+            contract_address: starknet::contract_address_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>()
+        }.set(__player_sk_id, Position { x: 0, y: 0 });
+
+        // let invalid_path = Spawn::spawn((0, 0, 0, 0, 0), (
+        //     Player { name: name },
+        //     Position { x: 0, y: 0 },
+        // ));
         return ();
     }
 }
@@ -322,46 +386,78 @@ mod MoveSystem {
     use dojo::world;
     use dojo::world::IWorldDispatcher;
     use dojo::world::IWorldDispatcherTrait;
-    use super::IPlayerDispatcher;
-    use super::IPlayerDispatcherTrait;
+    use dojo::storage::StorageKey;
+    use dojo::storage::StorageKeyTrait;
+    use dojo::storage::Felt252IntoStorageKey;
+    use dojo::storage::TupleSize1IntoStorageKey;
+    use dojo::storage::TupleSize2IntoStorageKey;
+    use dojo::storage::TupleSize3IntoStorageKey;
+    use dojo::storage::TupleSize1IntoPartitionedStorageKey;
+    use dojo::storage::TupleSize2IntoPartitionedStorageKey;
+    use dojo::storage::ContractAddressIntoStorageKey;
 
+
+    use traits::Into;
     use array::ArrayTrait;
     use dojo::query::Query;
     use super::Position;
+    use super::IPositionDispatcher;
+    use super::IPositionDispatcherTrait;
     use super::Player;
+    use super::IPlayerDispatcher;
+    use super::IPlayerDispatcherTrait;
+
     fn move_inner(positions: @Array<usize>, index: u32, count: u32) {
         return move_inner(positions, index + 1_u32, count - 1_u32);
     }
+
     #[external]
-    fn execute(player_id: usize) {
+    fn execute(player_id: felt252) {
         let world_address = starknet::contract_address_const::<0x0>();
         let positions_query = ArrayTrait::<usize>::new();
-        let positions_query_position_ids = IWorldDispatcher {
+        let __positions_query_position_ids = IWorldDispatcher {
             contract_address: world_address
         }.entities(
-            starknet::contract_address_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>()
+            starknet::contract_address_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>(),
+            0
         );
 
-        let positions_query_player_ids = IWorldDispatcher {
+        let __positions_query_player_ids = IWorldDispatcher {
             contract_address: world_address
         }.entities(
-            starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
+            starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>(),
+            0
         );
         let players_query = ArrayTrait::<usize>::new();
-        let players_query_player_ids = IWorldDispatcher {
+        let __players_query_player_ids = IWorldDispatcher {
             contract_address: world_address
         }.entities(
-            starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
+            starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>(),
+            0
         );
-
-        let player_player = IPlayerDispatcher {
+        let __player_sk: dojo::storage::StorageKey = player_id.into();
+        let __player_sk_id = __player_sk.id();
+        let __player_player = IPlayerDispatcher {
             contract_address: starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
-        }.get(player_id);
-        let player = player_player;
+        }.get(__player_sk_id);
+        let player = __player_player;
+        let __player_position_sk: dojo::storage::StorageKey = player_id.into();
+        let __player_position_sk_id = __player_position_sk.id();
+        let __player_position_position = IPositionDispatcher {
+            contract_address: starknet::contract_address_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>()
+        }.get(__player_position_sk_id);
+
+        let __player_position_player = IPlayerDispatcher {
+            contract_address: starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
+        }.get(__player_position_sk_id);
+        let player_position = (__player_position_position, __player_position_player);
+
         let mut bar = 123;
         let mut foo = ArrayTrait::<felt252>::new();
         foo.append(bar);
+
         move_inner(@positions_query, 0_u32, positions_query.len());
+
         if bar == 123 {
             return ();
         } else if bar == 0 {
@@ -373,3 +469,7 @@ mod MoveSystem {
 }
 
 //! > expected_diagnostics
+error: Plugin diagnostic: Invalid arguements. Expected "(storage_key, (components,))"
+ --> lib.cairo:46:43
+        let invalid_args = commands::spawn((
+                                          ^^

@@ -19,8 +19,8 @@ cairo-lang-debug.workspace = true
 cairo-lang-defs.workspace = true
 cairo-lang-diagnostics.workspace = true
 cairo-lang-filesystem.workspace = true
-cairo-lang-runner = { git = "https://github.com/starkware-libs/cairo.git", rev = "f3d940ace1a336f8714fcbf855874061a29ad009" }
-cairo-lang-sierra = { git = "https://github.com/starkware-libs/cairo.git", rev = "f3d940ace1a336f8714fcbf855874061a29ad009" }
+cairo-lang-runner = "1.0.0-alpha.6"
+cairo-lang-sierra = "1.0.0-alpha.6"
 cairo-lang-semantic.workspace = true
 cairo-lang-sierra-generator.workspace = true
 cairo-lang-syntax.workspace = true

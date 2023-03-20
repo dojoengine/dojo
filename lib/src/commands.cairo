@@ -1,3 +1,5 @@
+use dojo::storage::StorageKey;
+
 trait Spawn<T> {
-    fn bundle(bundle: T) -> usize;
+    fn bundle(key: StorageKey, bundle: T) -> usize;
 }

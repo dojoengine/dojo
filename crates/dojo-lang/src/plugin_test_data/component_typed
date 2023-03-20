@@ -29,8 +29,8 @@ struct Fighter {
 
 #[abi]
 trait IFighter {
-    fn set(entity_id: usize, value: Fighter);
-    fn get(entity_id: usize) -> Fighter;
+    fn set(key: felt252, value: Fighter);
+    fn get(key: felt252) -> Fighter;
     fn get_is_writer_authorized(writer: starknet::ContractAddress) -> bool;
 }
 
@@ -43,6 +43,7 @@ mod FighterComponent {
     use starknet::ContractAddress;
     use traits::Into;
     use traits::TryInto;
+
     use super::Fighter;
 
     impl FighterSerde of serde::Serde::<Fighter> {
@@ -123,7 +124,7 @@ mod FighterComponent {
 
 
     struct Storage {
-        state: LegacyMap::<usize, Fighter>,
+        state: LegacyMap::<felt252, Fighter>, 
         authorized_writers: LegacyMap::<ContractAddress, bool>,
     }
 
@@ -145,17 +146,17 @@ mod FighterComponent {
 
     // Set the state of an entity.
     #[external]
-    fn set(entity_id: usize, value: Fighter) {
+    fn set(key: felt252, value: Fighter) {
         let caller_address = starknet::get_caller_address();
         let is_authorized = authorized_writers::read(caller_address);
         assert(is_authorized, 'Unauthorized writer.');
-        state::write(entity_id, value);
+        state::write(key, value);
     }
 
     // Get the state of an entity.
     #[view]
-    fn get(entity_id: usize) -> Fighter {
-        return state::read(entity_id);
+    fn get(key: felt252) -> Fighter {
+        return state::read(key);
     }
 
     // True if the writer is authorized to modify entities state.
