@@ -6,8 +6,8 @@ use traits::Into;
 
 #[derive(Drop)]
 struct StorageKey {
-    keys: Array<felt252>,
     partition: felt252,
+    keys: Array<felt252>,
 }
 
 trait StorageKeyTrait {
@@ -88,8 +88,8 @@ impl Felt252IntoStorageKey of Into::<felt252, StorageKey> {
     }
 }
 
-impl TupleSize1IntoStorageKey of Into::<(felt252,), StorageKey> {
-    fn into(self: (felt252,)) -> StorageKey {
+impl TupleSize1IntoStorageKey of Into::<(felt252, ), StorageKey> {
+    fn into(self: (felt252, )) -> StorageKey {
         let (first) = self;
         let mut keys = ArrayTrait::new();
         keys.append(first);
@@ -118,8 +118,8 @@ impl TupleSize3IntoStorageKey of Into::<(felt252, felt252, felt252), StorageKey>
     }
 }
 
-impl TupleSize1IntoPartitionedStorageKey of Into::<(felt252, (felt252,)), StorageKey> {
-    fn into(self: (felt252, (felt252,))) -> StorageKey {
+impl TupleSize1IntoPartitionedStorageKey of Into::<(felt252, (felt252, )), StorageKey> {
+    fn into(self: (felt252, (felt252, ))) -> StorageKey {
         let (partition, keys) = self;
         let mut storage_key: StorageKey = keys.into();
         storage_key.partition = partition;
@@ -165,7 +165,7 @@ fn test_storagekey_into() {
 #[test]
 #[available_gas(2000000)]
 fn test_partitioned_storagekey_into() {
-    let key: StorageKey = (69, (420,)).into();
+    let key: StorageKey = (69, (420, )).into();
     assert(key.partition == 69, 'Incorrect partition');
     assert(*key.keys.at(0_usize) == 420, 'Incorrect key');
 

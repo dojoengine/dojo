@@ -29,8 +29,8 @@ struct Fighter {
 
 #[abi]
 trait IFighter {
-    fn set(key: dojo::storage::StorageKey, value: Fighter);
-    fn get(key: dojo::storage::StorageKey) -> Fighter;
+    fn set(key: felt252, value: Fighter);
+    fn get(key: felt252) -> Fighter;
 }
 
 #[contract]
@@ -120,7 +120,7 @@ mod FighterComponent {
 
 
     struct Storage {
-        state: LegacyMap::<dojo::storage::StorageKey, Fighter>, 
+        state: LegacyMap::<felt252, Fighter>, 
     }
 
     // Initialize Fighter.
@@ -129,13 +129,13 @@ mod FighterComponent {
 
     // Set the state of an entity.
     #[external]
-    fn set(key: dojo::storage::StorageKey, value: Fighter) {
+    fn set(key: felt252, value: Fighter) {
         state::write(key, value);
     }
 
     // Get the state of an entity.
     #[view]
-    fn get(key: dojo::storage::StorageKey) -> Fighter {
+    fn get(key: felt252) -> Fighter {
         return state::read(key);
     }
 }

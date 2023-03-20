@@ -55,8 +55,8 @@ struct Position {
 
 #[abi]
 trait IPosition {
-    fn set(key: dojo::storage::StorageKey, value: Position);
-    fn get(key: dojo::storage::StorageKey) -> Position;
+    fn set(key: felt252, value: Position);
+    fn get(key: felt252) -> Position;
 }
 
 #[contract]
@@ -112,7 +112,7 @@ mod PositionComponent {
 
 
     struct Storage {
-        state: LegacyMap::<dojo::storage::StorageKey, Position>, 
+        state: LegacyMap::<felt252, Position>, 
     }
 
     // Initialize Position.
@@ -121,13 +121,13 @@ mod PositionComponent {
 
     // Set the state of an entity.
     #[external]
-    fn set(key: dojo::storage::StorageKey, value: Position) {
+    fn set(key: felt252, value: Position) {
         state::write(key, value);
     }
 
     // Get the state of an entity.
     #[view]
-    fn get(key: dojo::storage::StorageKey) -> Position {
+    fn get(key: felt252) -> Position {
         return state::read(key);
     }
 }

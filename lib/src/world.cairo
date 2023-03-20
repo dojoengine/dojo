@@ -14,9 +14,7 @@ trait IProxy {
 trait IWorld {
     fn uuid() -> felt252;
     fn owner_of(entity_id: StorageKey) -> starknet::ContractAddress;
-    fn entities(
-        component: starknet::ContractAddress, partition: felt252
-    ) -> Array<StorageKey>;
+    fn entities(component: starknet::ContractAddress, partition: felt252) -> Array<StorageKey>;
 }
 
 trait ComponentTrait<T> {
