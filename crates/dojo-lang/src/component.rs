@@ -33,31 +33,16 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
         "
             struct Storage {
                 state: LegacyMap::<felt252, $type_name$>,
-                authorized_writers: LegacyMap::<ContractAddress, bool>,
             }
 
             // Initialize $type_name$.
             #[external]
-            fn initialize(writers: Array<ContractAddress>) {
-                initialize_inner(@writers, 0_usize);
-            }
-
-            fn initialize_inner(writers: @Array<ContractAddress>, i: usize) {
-                match writers.get(i) {
-                    Option::Some(w) => {
-                        authorized_writers::write(*w.unbox(), true); 
-                        initialize_inner(writers, i + 1_usize);
-                    },
-                    Option::None(()) => (),
-                }
+            fn initialize() {
             }
 
             // Set the state of an entity.
             #[external]
             fn set(key: felt252, value: $type_name$) {
-                let caller_address = starknet::get_caller_address();
-                let is_authorized = authorized_writers::read(caller_address);
-                assert(is_authorized, \'Unauthorized writer.\');
                 state::write(key, value);
             }
 
@@ -65,12 +50,6 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
             #[view]
             fn get(key: felt252) -> $type_name$ {
                 return state::read(key);
-            }
-
-            // True if the writer is authorized to modify entities state.
-            #[view]
-            fn get_is_writer_authorized(writer: ContractAddress) -> bool {
-                return authorized_writers::read(writer);
             }
         ",
         HashMap::from([
@@ -220,16 +199,12 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
             trait I$type_name$ {
                 fn set(key: felt252, value: $type_name$);
                 fn get(key: felt252) -> $type_name$;
-                fn get_is_writer_authorized(writer: starknet::ContractAddress) -> bool;
             }
 
             #[contract]
             mod $type_name$Component {
                 use option::OptionTrait;
-                use array::ArrayTrait;
-                use box::BoxTrait;
                 use starknet::SyscallResult;
-                use starknet::ContractAddress;
                 use traits::Into;
                 use traits::TryInto;
 
