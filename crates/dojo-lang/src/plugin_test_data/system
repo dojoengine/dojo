@@ -108,7 +108,7 @@ struct Position {
 #[abi]
 trait IPosition {
     fn name() -> felt252;
-    fn size() -> u8;
+    fn len() -> u8;
     fn serialize(raw: Span<felt252>) -> Position;
     fn deserialize(value: Position) -> Span<felt252>;
 }
@@ -141,8 +141,8 @@ mod PositionComponent {
     }
 
     #[view]
-    fn size() -> u8 {
-        2_u8
+    fn len() -> usize {
+        2_usize
     }
 
     // Serialize an entity.
@@ -169,7 +169,7 @@ struct Player {
 #[abi]
 trait IPlayer {
     fn name() -> felt252;
-    fn size() -> u8;
+    fn len() -> u8;
     fn serialize(raw: Span<felt252>) -> Player;
     fn deserialize(value: Player) -> Span<felt252>;
 }
@@ -196,8 +196,8 @@ mod PlayerComponent {
     }
 
     #[view]
-    fn size() -> u8 {
-        1_u8
+    fn len() -> usize {
+        1_usize
     }
 
     // Serialize an entity.
@@ -249,41 +249,25 @@ mod SpawnSystem {
         serde::Serde::<Player>::serialize(ref __player_calldata, Player { name: name });
         IWorldDispatcher {
             contract_address: world_address
-        }.write(
-            starknet::class_hash_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>(),
-            (420, (69, uuid)).into(),
-            __player_calldata.span()
-        );
+        }.write('Player', (420, (69, uuid)).into(), 0_u8, __player_calldata.span());
 
         let mut __player_calldata = ArrayTrait::new();
         serde::Serde::<Position>::serialize(ref __player_calldata, Position { x: 0, y: 0 });
         IWorldDispatcher {
             contract_address: world_address
-        }.write(
-            starknet::class_hash_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>(),
-            (420, (69, uuid)).into(),
-            __player_calldata.span()
-        );
+        }.write('Position', (420, (69, uuid)).into(), 0_u8, __player_calldata.span());
 
         let mut __literal_calldata = ArrayTrait::new();
         serde::Serde::<Player>::serialize(ref __literal_calldata, Player { name: name });
         IWorldDispatcher {
             contract_address: world_address
-        }.write(
-            starknet::class_hash_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>(),
-            420.into(),
-            __literal_calldata.span()
-        );
+        }.write('Player', 420.into(), 0_u8, __literal_calldata.span());
 
         let mut __literal_calldata = ArrayTrait::new();
         serde::Serde::<Position>::serialize(ref __literal_calldata, Position { x: 0, y: 0 });
         IWorldDispatcher {
             contract_address: world_address
-        }.write(
-            starknet::class_hash_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>(),
-            420.into(),
-            __literal_calldata.span()
-        );
+        }.write('Position', 420.into(), 0_u8, __literal_calldata.span());
 
         let player_id = starknet::get_caller_address();
 
@@ -291,21 +275,13 @@ mod SpawnSystem {
         serde::Serde::<Player>::serialize(ref __player_calldata, Player { name: name });
         IWorldDispatcher {
             contract_address: world_address
-        }.write(
-            starknet::class_hash_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>(),
-            player_id.into(),
-            __player_calldata.span()
-        );
+        }.write('Player', player_id.into(), 0_u8, __player_calldata.span());
 
         let mut __player_calldata = ArrayTrait::new();
         serde::Serde::<Position>::serialize(ref __player_calldata, Position { x: 0, y: 0 });
         IWorldDispatcher {
             contract_address: world_address
-        }.write(
-            starknet::class_hash_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>(),
-            player_id.into(),
-            __player_calldata.span()
-        );
+        }.write('Position', player_id.into(), 0_u8, __player_calldata.span());
 
         let invalid_path = Spawn::spawn(
             (0, 0, 0, 0, 0), (Player { name: name }, Position { x: 0, y: 0 }, )
@@ -345,43 +321,34 @@ mod MoveSystem {
         let positions_query = ArrayTrait::<usize>::new();
         let __positions_query_position_ids = IWorldDispatcher {
             contract_address: world_address
-        }.entities(
-            starknet::contract_address_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>(),
-            0
-        );
+        }.entities('Position', 0);
 
         let __positions_query_player_ids = IWorldDispatcher {
             contract_address: world_address
-        }.entities(
-            starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>(),
-            0
-        );
+        }.entities('Player', 0);
         let players_query = ArrayTrait::<usize>::new();
         let __players_query_player_ids = IWorldDispatcher {
             contract_address: world_address
-        }.entities(
-            starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>(),
-            0
-        );
-        let mut __player_raw = IWorldDispatcher {
+        }.entities('Player', 0);
+
+        let mut __player_player_raw = IWorldDispatcher {
             contract_address: world_address
-        }.read(
-            starknet::class_hash_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>(),
-            player_id.into()
-        );
-        let __player_player = serde::Serde::<Position>::deserialize(ref __player_raw);
+        }.read('Player', player_id.into(), 0_u8, 0_usize);
+        let __player_player = serde::Serde::<Player>::deserialize(ref __player_player_raw);
         let player = __player_player;
-        let mut __player_position_raw = IWorldDispatcher {
+
+        let mut __player_position_position_raw = IWorldDispatcher {
             contract_address: world_address
-        }.read(
-            starknet::class_hash_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>(),
-            player_id.into()
-        );
+        }.read('Position', player_id.into(), 0_u8, 0_usize);
         let __player_position_position = serde::Serde::<Position>::deserialize(
-            ref __player_position_raw
+            ref __player_position_position_raw
         );
-        let __player_position_player = serde::Serde::<Position>::deserialize(
-            ref __player_position_raw
+
+        let mut __player_position_player_raw = IWorldDispatcher {
+            contract_address: world_address
+        }.read('Player', player_id.into(), 0_u8, 0_usize);
+        let __player_position_player = serde::Serde::<Player>::deserialize(
+            ref __player_position_player_raw
         );
         let player_position = (__player_position_position, __player_position_player);
 

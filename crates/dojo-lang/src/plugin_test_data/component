@@ -60,7 +60,7 @@ struct Position {
 #[abi]
 trait IPosition {
     fn name() -> felt252;
-    fn size() -> u8;
+    fn len() -> u8;
     fn serialize(raw: Span<felt252>) -> Position;
     fn deserialize(value: Position) -> Span<felt252>;
 }
@@ -93,8 +93,8 @@ mod PositionComponent {
     }
 
     #[view]
-    fn size() -> u8 {
-        2_u8
+    fn len() -> usize {
+        2_usize
     }
 
     // Serialize an entity.

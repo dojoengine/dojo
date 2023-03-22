@@ -194,7 +194,6 @@ impl System {
                         if segment_genric.ident(db).text(db).as_str() == "Query" {
                             let query = Query::from_ast(
                                 db,
-                                self.world_config,
                                 statement_let.pattern(db),
                                 expr_fn,
                                 segment_genric.clone(),

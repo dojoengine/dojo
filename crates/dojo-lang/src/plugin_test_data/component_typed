@@ -4,8 +4,6 @@
 ExpandContractTestRunner
 
 //! > cairo_code
-use dojo::world::ComponentTrait;
-
 #[derive(Component)]
 struct Fighter {
     attack: u16,
@@ -16,8 +14,6 @@ struct Fighter {
 }
 
 //! > generated_cairo_code
-use dojo::world::ComponentTrait;
-
 #[derive(Copy, Drop)]
 struct Fighter {
     attack: u16,
@@ -30,7 +26,7 @@ struct Fighter {
 #[abi]
 trait IFighter {
     fn name() -> felt252;
-    fn size() -> u8;
+    fn len() -> u8;
     fn serialize(raw: Span<felt252>) -> Fighter;
     fn deserialize(value: Fighter) -> Span<felt252>;
 }
@@ -69,8 +65,8 @@ mod FighterComponent {
     }
 
     #[view]
-    fn size() -> u8 {
-        5_u8
+    fn len() -> usize {
+        5_usize
     }
 
     // Serialize an entity.

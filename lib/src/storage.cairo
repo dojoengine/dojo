@@ -13,11 +13,17 @@ struct StorageKey {
 
 trait StorageKeyTrait {
     fn new(partition: felt252, keys: Array<felt252>) -> StorageKey;
+    fn new_from_id(id: felt252) -> StorageKey;
 }
 
 impl StorageKeyImpl of StorageKeyTrait {
     fn new(partition: felt252, keys: Array<felt252>) -> StorageKey {
-        StorageKey { keys: keys, partition: partition,  }
+        StorageKey { keys: keys, partition: partition }
+    }
+    fn new_from_id(id: felt252) -> StorageKey {
+        let mut keys = ArrayTrait::new();
+        keys.append(id);
+        StorageKey { keys: keys, partition: 0 }
     }
 }
 

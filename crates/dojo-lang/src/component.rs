@@ -37,8 +37,8 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
             }
 
             #[view]
-            fn size() -> u8 {
-                $size$_u8
+            fn len() -> usize {
+                $len$_usize
             }
 
             // Serialize an entity.
@@ -63,7 +63,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
             ),
             ("members".to_string(), RewriteNode::Copied(struct_ast.members(db).as_syntax_node())),
             (
-                "size".to_string(),
+                "len".to_string(),
                 RewriteNode::Text(struct_ast.members(db).elements(db).len().to_string()),
             ),
         ]),
@@ -132,7 +132,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
             #[abi]
             trait I$type_name$ {
                 fn name() -> felt252;
-                fn size() -> u8;
+                fn len() -> u8;
                 fn serialize(raw: Span<felt252>) -> $type_name$;
                 fn deserialize(value: $type_name$) -> Span<felt252>;
             }

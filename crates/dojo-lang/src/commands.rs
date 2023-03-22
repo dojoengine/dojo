@@ -46,21 +46,6 @@ impl Command {
                         return command;
                     }
                     let storage_key = elements.first().unwrap().clone();
-                    // command.rewrite_nodes.push(RewriteNode::interpolate_patched(
-                    //     "
-                    //     let mut __$var_name$_calldata = ArrayTrait::new();",
-                    //     HashMap::from([
-                    //         (
-                    //             "var_name".to_string(),
-                    //             RewriteNode::new_trimmed(let_pattern.as_syntax_node()),
-                    //         ),
-                    //         // (
-                    //         //     "storage_key".to_string(),
-                    //         //     RewriteNode::new_trimmed(storage_key.as_syntax_node()),
-                    //         // ),
-                    //     ]),
-                    // ));
-
                     let bundle = elements.last().unwrap();
                     if let ast::ArgClause::Unnamed(clause) = bundle.arg_clause(db) {
                         match clause.value(db) {
@@ -68,7 +53,7 @@ impl Command {
                                 command.handle_struct(
                                     db,
                                     let_pattern,
-                                    storage_key.clone(),
+                                    storage_key,
                                     bundle.expr(db),
                                 );
                             }
@@ -132,7 +117,8 @@ impl Command {
                     "
                     let mut __$var_name$_calldata = ArrayTrait::new();
                     serde::Serde::<$component$>::serialize(ref __$var_name$_calldata, $ctor$);
-                    IWorldDispatcher { contract_address: world_address }.write(starknet::class_hash_const::<$component_address$>(), $storage_key$, __$var_name$_calldata.span());
+                    IWorldDispatcher { contract_address: world_address }.write('$component$', \
+                     $storage_key$, 0_u8, __$var_name$_calldata.span());
                     ",
                     HashMap::from([
                         ("component".to_string(), RewriteNode::Text(component.to_string())),
