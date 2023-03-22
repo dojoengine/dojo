@@ -2,15 +2,19 @@
 
 Dojo Indexer is a command line tool that allows you to index data from a given Dōjō world using Apibara and an RPC endpoint while storing indexed data such as the world's components, entity states and systems, in a specified database.
 
-
 ## Prerequisites
 - Before running the indexer you will need the `sqlx-cli`:
+
     ```
     cargo install sqlx-cli
     ```
 - Create an SQLite database using `sqlx`:
 
   1. Set the database URL that will be used by `sqlx`:
+
+     ```
+     cd crates/dojo-indexer
+     ```  
 
      ```
      export DATABASE_URL=sqlite://indexer.db
@@ -30,13 +34,21 @@ Dojo Indexer is a command line tool that allows you to index data from a given D
 
 ## Usage
 
-To run the `dojo-indexer` command, open your terminal or command prompt, navigate to the directory containing the Dojo Indexer source code, and execute the following command:
+To run the `dojo-indexer` command, open your terminal or command prompt, make sure you are in the `dojo-indexer` directory.
+
+Export your parameters
 
 ```
-cargo run --bin dojo-indexer <world> <node> <rpc> <database_url>
+export DOJO_WORLD=
+export APIBARA_NODE=
+export RPC_NODE=
 ```
 
-- `<world>`: The address of the world you want to index.
-- `<node>`: The Apibara node you want to use for indexing.
-- `<rpc>`: The RPC endpoint of your starknet node.
-- `<database_url>`: The URL of the database where you want to store the indexed data.
+```
+cargo run --bin dojo-indexer DOJO_WORLD APIBARA_NODE RPC_NODE DATABASE_URL
+```
+
+- DOJO_WORLD `<world>`: The address of the world you want to index.
+- APIBARA_NODE `<node>`: The Apibara node you want to use for indexing.
+- RPC_NODE `<rpc>`: The RPC endpoint of your starknet node.
+- DATABASE_URL `<database_url>`: The URL of the database where you want to store the indexed data.
