@@ -16,7 +16,9 @@ trait IProxy {
 trait IWorld {
     fn uuid() -> felt252;
     fn owner_of(entity_id: StorageKey) -> starknet::ContractAddress;
-    fn read(component: starknet::ClassHash, key: StorageKey, offset: u8, length: u8) -> Span<felt252>;
+    fn read(
+        component: starknet::ClassHash, key: StorageKey, offset: u8, length: u8
+    ) -> Span<felt252>;
     fn write(component: starknet::ClassHash, key: StorageKey, offset: u8, value: Span<felt252>);
     fn entities(component: starknet::ContractAddress, partition: felt252) -> Array<StorageKey>;
     fn has_role(role: felt252, account: starknet::ContractAddress) -> bool;
@@ -44,12 +46,17 @@ impl SpanSerde of Serde::<Span<felt252>> {
 mod Executor {
     use super::SpanSerde;
 
-    const EXECUTE_ENTRYPOINT: felt252 = 0x240060cdb34fcc260f41eac7474ee1d7c80b7e3607daff9ac67c7ea2ebb1c44;
+    const EXECUTE_ENTRYPOINT: felt252 =
+        0x240060cdb34fcc260f41eac7474ee1d7c80b7e3607daff9ac67c7ea2ebb1c44;
 
     #[external]
     #[raw_output]
-    fn execute(world: starknet::ContractAddress, class_hash: starknet::ClassHash, calldata: Span<felt252>) -> Span<felt252> {
-        let res = starknet::syscalls::library_call_syscall(class_hash, EXECUTE_ENTRYPOINT, calldata).unwrap_syscall();
+    fn execute(
+        world: starknet::ContractAddress, class_hash: starknet::ClassHash, calldata: Span<felt252>
+    ) -> Span<felt252> {
+        let res = starknet::syscalls::library_call_syscall(
+            class_hash, EXECUTE_ENTRYPOINT, calldata
+        ).unwrap_syscall();
         res
     }
 }
@@ -76,7 +83,8 @@ mod World {
     use super::IProxyDispatcher;
     use super::IProxyDispatcherTrait;
 
-    const EXECUTE_ENTRYPOINT: felt252 = 0x240060cdb34fcc260f41eac7474ee1d7c80b7e3607daff9ac67c7ea2ebb1c44;
+    const EXECUTE_ENTRYPOINT: felt252 =
+        0x240060cdb34fcc260f41eac7474ee1d7c80b7e3607daff9ac67c7ea2ebb1c44;
 
     struct Storage {
         executor: starknet::ClassHash,
@@ -96,14 +104,10 @@ mod World {
     ) {}
 
     #[event]
-    fn ComponentRegistered(
-        name: felt252, class_hash: ClassHash
-    ) {}
+    fn ComponentRegistered(name: felt252, class_hash: ClassHash) {}
 
     #[event]
-    fn SystemRegistered(
-        name: felt252, class_hash: ClassHash
-    ) {}
+    fn SystemRegistered(name: felt252, class_hash: ClassHash) {}
 
     // Give deployer the default admin role.
     #[constructor]
@@ -133,7 +137,9 @@ mod World {
     fn execute(name: felt252, calldata: Span<felt252>) -> Span<felt252> {
         let class_hash = system_registry::read(name);
         executor::write(class_hash);
-        let ret = starknet::syscalls::call_contract_syscall(starknet::contract_address_const::<0x420>(), EXECUTE_ENTRYPOINT, calldata).unwrap_syscall();
+        let ret = starknet::syscalls::call_contract_syscall(
+            starknet::contract_address_const::<0x420>(), EXECUTE_ENTRYPOINT, calldata
+        ).unwrap_syscall();
         executor::write(starknet::class_hash_const::<0x0>());
         ret
     }
@@ -148,7 +154,8 @@ mod World {
 
     fn address(component: felt252, key: StorageKey) -> starknet::StorageBaseAddress {
         starknet::storage_base_address_from_felt252(
-            hash::LegacyHash::<(felt252, StorageKey)>::hash(0x420, (component, key)))
+            hash::LegacyHash::<(felt252, StorageKey)>::hash(0x420, (component, key))
+        )
     }
 
     #[view]
@@ -160,7 +167,13 @@ mod World {
         value.span()
     }
 
-    fn read_loop(address_domain: u32, base: starknet::StorageBaseAddress, ref value: Array<felt252>, offset: u8, length: u8) {
+    fn read_loop(
+        address_domain: u32,
+        base: starknet::StorageBaseAddress,
+        ref value: Array<felt252>,
+        offset: u8,
+        length: u8
+    ) {
         match gas::withdraw_gas() {
             Option::Some(_) => {},
             Option::None(_) => {
@@ -174,9 +187,11 @@ mod World {
             return ();
         }
 
-        value.append(starknet::storage_read_syscall(
-            address_domain, starknet::storage_address_from_base_and_offset(base, offset)
-        ).unwrap_syscall());
+        value.append(
+            starknet::storage_read_syscall(
+                address_domain, starknet::storage_address_from_base_and_offset(base, offset)
+            ).unwrap_syscall()
+        );
 
         return read_loop(address_domain, base, ref value, offset + 1_u8, length);
     }
@@ -191,7 +206,12 @@ mod World {
         write_loop(address_domain, base, value, offset: offset);
     }
 
-    fn write_loop(address_domain: u32, base: starknet::StorageBaseAddress, mut value: Span<felt252>, offset: u8) {
+    fn write_loop(
+        address_domain: u32,
+        base: starknet::StorageBaseAddress,
+        mut value: Span<felt252>,
+        offset: u8
+    ) {
         match gas::withdraw_gas() {
             Option::Some(_) => {},
             Option::None(_) => {
@@ -291,12 +311,12 @@ mod World {
 #[available_gas(2000000)]
 fn test_on_component_set() {
     World::register_component('Position', starknet::class_hash_const::<0x420>());
-    // starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
-    // let data = ArrayTrait::new();
-    // let id = World::uuinto();
-    // let mut key = ArrayTrait::new();
-    // key.append(id);
-    // World::on_component_set(StorageKeyTrait::new(0, key), data);
+// starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
+// let data = ArrayTrait::new();
+// let id = World::uuinto();
+// let mut key = ArrayTrait::new();
+// key.append(id);
+// World::on_component_set(StorageKeyTrait::new(0, key), data);
 }
 
 #[test]
