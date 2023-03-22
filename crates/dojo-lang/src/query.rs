@@ -4,17 +4,13 @@ use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_semantic::patcher::RewriteNode;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
-use dojo_project::WorldConfig;
 use itertools::Itertools;
 use sanitizer::StringSanitizer;
 use smol_str::SmolStr;
 
-use crate::plugin::get_contract_address;
-
 pub struct Query {
     query_id: String,
     query_pattern: String,
-    world_config: WorldConfig,
     components: Vec<SmolStr>,
     pub dependencies: HashSet<SmolStr>,
     pub diagnostics: Vec<PluginDiagnostic>,
@@ -24,7 +20,6 @@ pub struct Query {
 impl Query {
     pub fn from_ast(
         db: &dyn SyntaxGroup,
-        world_config: WorldConfig,
         let_pattern: ast::Pattern,
         query_ast: ast::ExprFunctionCall,
         generics_segment: ast::PathSegmentWithGenericArgs,
@@ -32,7 +27,6 @@ impl Query {
         let mut query_id = StringSanitizer::from(let_pattern.as_syntax_node().get_text(db));
         query_id.to_snake_case();
         let mut query = Query {
-            world_config,
             query_id: query_id.get(),
             query_pattern: let_pattern.as_syntax_node().get_text(db),
             components: vec![],
@@ -81,20 +75,10 @@ impl Query {
             self.components
                 .iter()
                 .map(|component| {
-                    let component_address = format!(
-                        "{:#x}",
-                        get_contract_address(
-                            component.as_str(),
-                            self.world_config.initializer_class_hash.unwrap_or_default(),
-                            self.world_config.address.unwrap_or_default(),
-                        )
-                    );
                     RewriteNode::interpolate_patched(
                         "
                         let __$query_id$_$query_subtype$_ids = IWorldDispatcher { \
-                         contract_address: world_address \
-                         }.entities(starknet::contract_address_const::<$component_address$>(), \
-                         $partition$);
+                         contract_address: world_address }.entities('$component$', $partition$);
                         ",
                         HashMap::from([
                             (
@@ -103,7 +87,7 @@ impl Query {
                             ),
                             ("query_id".to_string(), RewriteNode::Text(self.query_id.clone())),
                             ("partition".to_string(), partition.clone()),
-                            ("component_address".to_string(), RewriteNode::Text(component_address)),
+                            ("component".to_string(), RewriteNode::Text(component.to_string())),
                         ]),
                     )
                 })
@@ -114,15 +98,6 @@ impl Query {
     pub fn rewrite_entity_query(&mut self, db: &dyn SyntaxGroup, query_ast: ast::ExprFunctionCall) {
         let elements = query_ast.arguments(db).args(db).elements(db);
         let storage_key = elements.first().unwrap();
-
-        self.rewrite_nodes.push(RewriteNode::interpolate_patched(
-            "let __$query_id$_sk: dojo::storage::StorageKey = $storage_key$;
-            let __$query_id$_sk_id = __$query_id$_sk.id();",
-            HashMap::from([
-                ("query_id".to_string(), RewriteNode::Text(self.query_id.clone())),
-                ("storage_key".to_string(), RewriteNode::new_trimmed(storage_key.as_syntax_node())),
-            ]),
-        ));
 
         let part_names = self
             .components
@@ -137,19 +112,14 @@ impl Query {
             .join(", ");
 
         for component in self.components.iter() {
-            let component_address = format!(
-                "{:#x}",
-                get_contract_address(
-                    component.as_str(),
-                    self.world_config.initializer_class_hash.unwrap_or_default(),
-                    self.world_config.address.unwrap_or_default(),
-                )
-            );
             self.rewrite_nodes.push(RewriteNode::interpolate_patched(
                 "
-                let __$query_id$_$query_subtype$ = I$component$Dispatcher { contract_address: \
-                 starknet::contract_address_const::<$component_address$>() \
-                 }.get(__$query_id$_sk_id);
+                let mut __$query_id$_$query_subtype$_raw = IWorldDispatcher {
+                    contract_address: world_address
+                }.read('$component$', $storage_key$, 0_u8, 0_usize);
+                let __$query_id$_$query_subtype$ = serde::Serde::<$component$>::deserialize(
+                    ref __$query_id$_$query_subtype$_raw
+                );
                 ",
                 HashMap::from([
                     ("component".to_string(), RewriteNode::Text(component.to_string())),
@@ -158,15 +128,12 @@ impl Query {
                         RewriteNode::Text(component.to_string().to_ascii_lowercase()),
                     ),
                     ("query_id".to_string(), RewriteNode::Text(self.query_id.clone())),
-                    ("component_address".to_string(), RewriteNode::Text(component_address)),
+                    (
+                        "storage_key".to_string(),
+                        RewriteNode::new_trimmed(storage_key.as_syntax_node()),
+                    ),
                 ]),
             ));
-
-            // TODO: Figure out how to automatically resolve dispatcher dependencies.
-            // self.dependencies.extend([
-            //     SmolStr::from(format!("I{}Dispatcher", component)),
-            //     SmolStr::from(format!("I{}DispatcherTrait", component)),
-            // ]);
         }
 
         if self.components.len() > 1 {

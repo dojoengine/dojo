@@ -77,7 +77,6 @@ impl System {
             let mut builder = PatchBuilder::new(db);
             builder.add_modified(RewriteNode::interpolate_patched(
                 "
-
                 #[contract]
                 mod $name$ {
                     use dojo::world;
@@ -160,8 +159,7 @@ impl System {
         rewrite_nodes.push(RewriteNode::interpolate_patched(
             "
                 #[external]
-                fn execute($parameters$) {
-                    let world_address = starknet::contract_address_const::<$world_address$>();
+                fn execute(world_address: starknet::ContractAddress, $parameters$) {
                     $body$
                 }
             ",
@@ -196,7 +194,6 @@ impl System {
                         if segment_genric.ident(db).text(db).as_str() == "Query" {
                             let query = Query::from_ast(
                                 db,
-                                self.world_config,
                                 statement_let.pattern(db),
                                 expr_fn,
                                 segment_genric.clone(),

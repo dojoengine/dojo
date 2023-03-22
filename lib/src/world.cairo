@@ -1,47 +1,35 @@
 use array::ArrayTrait;
 use hash::LegacyHash;
+use serde::Serde;
+
 use starknet::contract_address::ContractAddressSerde;
 use dojo::storage::StorageKey;
 use dojo::storage::StorageKeyTrait;
-
-#[abi]
-trait IProxy {
-    fn set_implementation(class_hash: felt252);
-    fn initialize(world_address: starknet::ContractAddress);
-}
+use dojo::serde::SpanSerde;
 
 #[abi]
 trait IWorld {
     fn uuid() -> felt252;
     fn owner_of(entity_id: StorageKey) -> starknet::ContractAddress;
-    fn entities(component: starknet::ContractAddress, partition: felt252) -> Array<StorageKey>;
+    fn read(component: felt252, key: StorageKey, offset: u8, length: usize) -> Span<felt252>;
+    fn write(component: felt252, key: StorageKey, offset: u8, value: Span<felt252>);
+    fn entities(component: felt252, partition: felt252) -> Array<StorageKey>;
     fn has_role(role: felt252, account: starknet::ContractAddress) -> bool;
     fn grant_role(role: felt252, account: starknet::ContractAddress);
     fn revoke_role(role: felt252, account: starknet::ContractAddress);
     fn renounce_role(role: felt252, account: starknet::ContractAddress);
 }
 
-trait ComponentTrait<T> {
-    fn initialize();
-    fn set(entity_id: StorageKey, value: T);
-    fn get(entity_id: StorageKey) -> T;
-}
-
-impl LegacyHashEntityRegsiteryTuple of LegacyHash::<(
-    starknet::ContractAddress, felt252, felt252, felt252, felt252
-)> {
-    fn hash(
-        state: felt252, tuple: (starknet::ContractAddress, felt252, felt252, felt252, felt252)
-    ) -> felt252 {
-        let (first, second, third, fourth, fifth) = tuple;
-        let state = LegacyHash::hash(state, first);
-        LegacyHash::hash(state, (second, third, fourth, fifth))
-    }
+#[abi]
+trait IComponent {
+    fn name() -> felt252;
+    fn len() -> usize;
 }
 
 #[contract]
 mod World {
     use array::ArrayTrait;
+    use array::SpanTrait;
     use box::BoxTrait;
     use traits::Into;
     use hash::pedersen;
@@ -50,20 +38,28 @@ mod World {
     use starknet::contract_address_to_felt252;
     use starknet::ContractAddressZeroable;
     use starknet::ContractAddressIntoFelt252;
+    use starknet::class_hash::ClassHash;
 
+    use dojo::executor::IExecutorDispatcher;
+    use dojo::executor::IExecutorDispatcherTrait;
+    use dojo::serde::SpanSerde;
     use dojo::storage::StorageKey;
-    use dojo::storage::LegacyHashStorageKey;
+    use dojo::storage::LegacyHashClassHashStorageKey;
+    use dojo::storage::StorageKeyIntoFelt252;
 
-    use super::IProxyDispatcher;
-    use super::IProxyDispatcherTrait;
+    use super::IComponentLibraryDispatcher;
+    use super::IComponentDispatcherTrait;
 
     struct Storage {
-        nonce: felt252,
+        caller: starknet::ClassHash,
+        executor: starknet::ContractAddress,
         partition_len: LegacyMap::<(felt252, felt252), usize>,
         partition: LegacyMap::<(felt252, felt252, felt252), felt252>,
-        module_registry: LegacyMap::<starknet::ContractAddress, bool>,
         role_admin: LegacyMap::<felt252, felt252>,
         role_member: LegacyMap::<(felt252, starknet::ContractAddress), bool>,
+        component_registry: LegacyMap::<felt252, ClassHash>,
+        system_registry: LegacyMap::<felt252, ClassHash>,
+        nonce: felt252,
     }
 
     // Emitted anytime an entities component state is updated.
@@ -72,53 +68,47 @@ mod World {
         component_address: starknet::ContractAddress, entity_id: StorageKey, data: Array::<felt252>
     ) {}
 
-    // Emitted when a component or system is registered.
     #[event]
-    fn ModuleRegistered(
-        module_address: starknet::ContractAddress, module_id: felt252, class_hash: felt252
-    ) {}
+    fn ComponentRegistered(name: felt252, class_hash: ClassHash) {}
+
+    #[event]
+    fn SystemRegistered(name: felt252, class_hash: ClassHash) {}
 
     // Give deployer the default admin role.
     #[constructor]
-    fn constructor() {
+    fn constructor(_executor: starknet::ContractAddress) {
+        executor::write(_executor);
         let caller = get_caller_address();
         _grant_role(0, caller);
     }
 
-    // Register a component or system. The returned
-    // hash is used to uniquely identify the component or
-    // system in the world. All components and systems
-    // within a world are deterministically addressed
-    // relative to the world.
+    // Register a component in the world. If the component is already registered,
+    // the implementation will be updated.
     #[external]
-    fn register(class_hash: felt252, module_id: felt252) {
-        let module_id = pedersen(0, module_id);
-        let proxy_class_hash = starknet::class_hash_const::<0x420>();
-        let calldata = ArrayTrait::<felt252>::new();
-        // let (module_address, _) = starknet::syscalls::deploy_syscall(
-        //     proxy_class_hash, module_id, calldata.span(), bool::False(())
-        // ).unwrap_syscall();
-
-        let module_address = starknet::contract_address_const::<0x420>();
-        let world_address = get_contract_address();
-        // IProxyDispatcher { contract_address: module_address }.set_implementation(class_hash);
-        // IProxyDispatcher { contract_address: module_address }.initialize(world_address);
-        module_registry::write(module_address, bool::True(()));
-        ModuleRegistered(module_address, module_id, class_hash);
+    fn register_component(name: felt252, class_hash: ClassHash) {
+        // TODO: If component is already registered, vaildate permission to update.
+        component_registry::write(name, class_hash);
+        ComponentRegistered(name, class_hash);
     }
 
-    // Called when a component in the world updates the value
-    // for an entity. When called for the first time for an 
-    // entity, the entity:component mapping is registered.
-    // Additionally, a `ComponentValueSet` event is emitted.
+    // Register a system in the world. If the system is already registered,
+    // the implementation will be updated.
     #[external]
-    fn on_component_set(entity_id: StorageKey, data: Array::<felt252>) {
-        let caller_address = get_caller_address();
-        assert(module_registry::read(caller_address), 'component not a registered');
-        // let entities_len = partition_len::read((caller_address, first, second, third));
-        // partition::write((caller_address, first, second, third, entities_len.into()), fourth);
-        // partition_len::write((caller_address, first, second, third), entities_len + 1_usize);
-        ComponentValueSet(caller_address, entity_id, data);
+    fn register_system(name: felt252, class_hash: ClassHash) {
+        // TODO: If system is already registered, vaildate permission to update.
+        system_registry::write(name, class_hash);
+        SystemRegistered(name, class_hash);
+    }
+
+    #[external]
+    fn execute(name: felt252, calldata: Span<felt252>) -> Span<felt252> {
+        let class_hash = system_registry::read(name);
+        caller::write(class_hash);
+        let res = IExecutorDispatcher {
+            contract_address: executor::read()
+        }.execute(starknet::get_contract_address(), class_hash, calldata);
+        caller::write(starknet::class_hash_const::<0x0>());
+        res
     }
 
     // Issue an autoincremented id to the caller.
@@ -127,6 +117,95 @@ mod World {
         let next = nonce::read();
         nonce::write(next + 1);
         return pedersen(next, 0);
+    }
+
+    fn address(component: felt252, key: StorageKey) -> starknet::StorageBaseAddress {
+        starknet::storage_base_address_from_felt252(
+            hash::LegacyHash::<(felt252, StorageKey)>::hash(0x420, (component, key))
+        )
+    }
+
+    #[view]
+    fn read(component: felt252, key: StorageKey, offset: u8, mut length: usize) -> Span<felt252> {
+        let address_domain = 0_u32;
+        let base = address(component, key);
+        let mut value = ArrayTrait::<felt252>::new();
+
+        if length == 0_usize {
+            length = IComponentLibraryDispatcher {
+                class_hash: component_registry::read(component)
+            }.len()
+        }
+
+        read_loop(address_domain, base, ref value, offset, length);
+        value.span()
+    }
+
+    fn read_loop(
+        address_domain: u32,
+        base: starknet::StorageBaseAddress,
+        ref value: Array<felt252>,
+        offset: u8,
+        length: usize
+    ) {
+        match gas::withdraw_gas() {
+            Option::Some(_) => {},
+            Option::None(_) => {
+                let mut data = ArrayTrait::new();
+                data.append('Out of gas');
+                panic(data);
+            },
+        }
+
+        if length.into() == offset.into() {
+            return ();
+        }
+
+        value.append(
+            starknet::storage_read_syscall(
+                address_domain, starknet::storage_address_from_base_and_offset(base, offset)
+            ).unwrap_syscall()
+        );
+
+        return read_loop(address_domain, base, ref value, offset + 1_u8, length);
+    }
+
+    #[external]
+    fn write(component: felt252, key: StorageKey, offset: u8, value: Span<felt252>) {
+        let _caller = caller::read();
+
+        // TODO: verify executor has permission to write
+        // TODO: Enable bounds check once we can use library calls in tests.
+        // let length = IComponentLibraryDispatcher { class_hash: component_registry::read(component) }.len();
+        // assert(value.len() <= length, 'Value too long');
+        let address_domain = 0_u32;
+        let base = address(component, key);
+        write_loop(address_domain, base, value, offset: offset);
+    }
+
+    fn write_loop(
+        address_domain: u32,
+        base: starknet::StorageBaseAddress,
+        mut value: Span<felt252>,
+        offset: u8
+    ) {
+        match gas::withdraw_gas() {
+            Option::Some(_) => {},
+            Option::None(_) => {
+                let mut data = ArrayTrait::new();
+                data.append('Out of gas');
+                panic(data);
+            },
+        }
+        match value.pop_front() {
+            Option::Some(v) => {
+                starknet::storage_write_syscall(
+                    address_domain, starknet::storage_address_from_base_and_offset(base, offset), *v
+                );
+                write_loop(address_domain, base, value, offset + 1_u8);
+            },
+            Option::None(_) => {},
+        }
     }
 
     // Returns entities that contain the component state.
@@ -207,21 +286,35 @@ mod World {
 
 #[test]
 #[available_gas(2000000)]
-fn test_on_component_set() {
-    World::register(420, 69);
-    starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
-    let data = ArrayTrait::new();
+fn test_component() {
+    let name = 'Position';
+    World::register_component(name, starknet::class_hash_const::<0x420>());
+    let mut data = ArrayTrait::<felt252>::new();
+    data.append(1337);
     let id = World::uuid();
-    let mut key = ArrayTrait::new();
-    key.append(id);
-    World::on_component_set(StorageKeyTrait::new(0, key), data);
+    World::write(name, StorageKeyTrait::new_from_id(id), 0_u8, data.span());
+    let stored = World::read(name, StorageKeyTrait::new_from_id(id), 0_u8, 1_usize);
+    assert(*stored.snapshot.at(0_usize) == 1337, 'data not stored');
+}
+
+#[test]
+#[available_gas(2000000)]
+fn test_system() {
+    let name = 'Position';
+    World::register_system(name, starknet::class_hash_const::<0x420>());
+    let mut data = ArrayTrait::<felt252>::new();
+    data.append(1337);
+    let id = World::uuid();
+    World::write(name, StorageKeyTrait::new_from_id(id), 0_u8, data.span());
+    let stored = World::read(name, StorageKeyTrait::new_from_id(id), 0_u8, 1_usize);
+    assert(*stored.snapshot.at(0_usize) == 1337, 'data not stored');
 }
 
 #[test]
 #[available_gas(2000000)]
 fn test_constructor() {
     starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
-    World::constructor();
+    World::constructor(starknet::contract_address_const::<0x1337>());
     assert(World::has_role(0, starknet::contract_address_const::<0x420>()), 'role not granted');
 }
 
@@ -229,7 +322,7 @@ fn test_constructor() {
 #[available_gas(2000000)]
 fn test_grant_revoke_role() {
     starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
-    World::constructor();
+    World::constructor(starknet::contract_address_const::<0x1337>());
     World::grant_role(1, starknet::contract_address_const::<0x421>());
     assert(World::has_role(1, starknet::contract_address_const::<0x421>()), 'role not granted');
     World::revoke_role(1, starknet::contract_address_const::<0x421>());
@@ -240,7 +333,7 @@ fn test_grant_revoke_role() {
 #[available_gas(2000000)]
 fn test_renonce_role() {
     starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
-    World::constructor();
+    World::constructor(starknet::contract_address_const::<0x1337>());
     World::renounce_role(0);
     assert(!World::has_role(0, starknet::contract_address_const::<0x420>()), 'role not renonced');
 }

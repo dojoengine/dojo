@@ -4,8 +4,6 @@
 ExpandContractTestRunner
 
 //! > cairo_code
-use dojo::world::ComponentTrait;
-
 #[derive(Component)]
 struct Fighter {
     attack: u16,
@@ -16,8 +14,6 @@ struct Fighter {
 }
 
 //! > generated_cairo_code
-use dojo::world::ComponentTrait;
-
 #[derive(Copy, Drop)]
 struct Fighter {
     attack: u16,
@@ -29,114 +25,63 @@ struct Fighter {
 
 #[abi]
 trait IFighter {
-    fn set(key: felt252, value: Fighter);
-    fn get(key: felt252) -> Fighter;
+    fn name() -> felt252;
+    fn len() -> u8;
+    fn serialize(raw: Span<felt252>) -> Fighter;
+    fn deserialize(value: Fighter) -> Span<felt252>;
+}
+
+impl FighterSerde of serde::Serde::<Fighter> {
+    fn serialize(ref serialized: Array::<felt252>, input: Fighter) {
+        serde::Serde::<u16>::serialize(ref serialized, input.attack);
+        serde::Serde::<u16>::serialize(ref serialized, input.defense);
+        serde::Serde::<u32>::serialize(ref serialized, input.speed);
+        serde::Serde::<u8>::serialize(ref serialized, input.luck);
+        serde::Serde::<felt252>::serialize(ref serialized, input.name);
+    }
+    fn deserialize(ref serialized: Span::<felt252>) -> Option::<Fighter> {
+        Option::Some(
+            Fighter {
+                attack: serde::Serde::<u16>::deserialize(ref serialized)?,
+                defense: serde::Serde::<u16>::deserialize(ref serialized)?,
+                speed: serde::Serde::<u32>::deserialize(ref serialized)?,
+                luck: serde::Serde::<u8>::deserialize(ref serialized)?,
+                name: serde::Serde::<felt252>::deserialize(ref serialized)?,
+            }
+        )
+    }
 }
 
 #[contract]
 mod FighterComponent {
+    use array::ArrayTrait;
     use option::OptionTrait;
-    use starknet::SyscallResult;
-    use traits::Into;
-    use traits::TryInto;
-
+    use dojo::serde::SpanSerde;
     use super::Fighter;
 
-    impl FighterSerde of serde::Serde::<Fighter> {
-        fn serialize(ref serialized: Array::<felt252>, input: Fighter) {
-            serde::Serde::<u16>::serialize(ref serialized, input.attack);
-            serde::Serde::<u16>::serialize(ref serialized, input.defense);
-            serde::Serde::<u32>::serialize(ref serialized, input.speed);
-            serde::Serde::<u8>::serialize(ref serialized, input.luck);
-            serde::Serde::<felt252>::serialize(ref serialized, input.name);
-        }
-        fn deserialize(ref serialized: Span::<felt252>) -> Option::<Fighter> {
-            Option::Some(
-                Fighter {
-                    attack: serde::Serde::<u16>::deserialize(ref serialized)?,
-                    defense: serde::Serde::<u16>::deserialize(ref serialized)?,
-                    speed: serde::Serde::<u32>::deserialize(ref serialized)?,
-                    luck: serde::Serde::<u8>::deserialize(ref serialized)?,
-                    name: serde::Serde::<felt252>::deserialize(ref serialized)?,
-                }
-            )
-        }
+    #[view]
+    fn name() -> felt252 {
+        'Fighter'
     }
 
-    impl StorageAccessFighter of starknet::StorageAccess::<Fighter> {
-        fn read(
-            address_domain: u32, base: starknet::StorageBaseAddress
-        ) -> starknet::SyscallResult::<Fighter> {
-            Result::Ok(
-                Fighter {
-                    attack: starknet::storage_read_syscall(
-                        address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8)
-                    )?.try_into().unwrap(),
-                    defense: starknet::storage_read_syscall(
-                        address_domain, starknet::storage_address_from_base_and_offset(base, 1_u8)
-                    )?.try_into().unwrap(),
-                    speed: starknet::storage_read_syscall(
-                        address_domain, starknet::storage_address_from_base_and_offset(base, 2_u8)
-                    )?.try_into().unwrap(),
-                    luck: starknet::storage_read_syscall(
-                        address_domain, starknet::storage_address_from_base_and_offset(base, 3_u8)
-                    )?.try_into().unwrap(),
-                    name: starknet::storage_read_syscall(
-                        address_domain, starknet::storage_address_from_base_and_offset(base, 4_u8)
-                    )?,
-                }
-            )
-        }
-        fn write(
-            address_domain: u32, base: starknet::StorageBaseAddress, value: Fighter
-        ) -> starknet::SyscallResult::<()> {
-            starknet::storage_write_syscall(
-                address_domain,
-                starknet::storage_address_from_base_and_offset(base, 0_u8),
-                value.attack.into()
-            )?;
-            starknet::storage_write_syscall(
-                address_domain,
-                starknet::storage_address_from_base_and_offset(base, 1_u8),
-                value.defense.into()
-            )?;
-            starknet::storage_write_syscall(
-                address_domain,
-                starknet::storage_address_from_base_and_offset(base, 2_u8),
-                value.speed.into()
-            )?;
-            starknet::storage_write_syscall(
-                address_domain,
-                starknet::storage_address_from_base_and_offset(base, 3_u8),
-                value.luck.into()
-            )?;
-            starknet::storage_write_syscall(
-                address_domain,
-                starknet::storage_address_from_base_and_offset(base, 4_u8),
-                value.name
-            )
-        }
+    #[view]
+    fn len() -> usize {
+        5_usize
     }
 
-
-    struct Storage {
-        state: LegacyMap::<felt252, Fighter>, 
-    }
-
-    // Initialize Fighter.
-    #[external]
-    fn initialize() {}
-
-    // Set the state of an entity.
-    #[external]
-    fn set(key: felt252, value: Fighter) {
-        state::write(key, value);
+    // Serialize an entity.
+    #[view]
+    fn serialize(mut raw: Span<felt252>) -> Fighter {
+        serde::Serde::<Fighter>::deserialize(ref raw).unwrap()
     }
 
     // Get the state of an entity.
     #[view]
-    fn get(key: felt252) -> Fighter {
-        return state::read(key);
+    #[raw_output]
+    fn deserialize(value: Fighter) -> Span<felt252> {
+        let mut arr = ArrayTrait::new();
+        serde::Serde::<Fighter>::serialize(ref arr, value);
+        arr.span()
     }
 }
 

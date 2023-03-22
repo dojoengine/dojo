@@ -3,6 +3,7 @@ use array::SpanTrait;
 use hash::LegacyHash;
 use serde::Serde;
 use traits::Into;
+use starknet::ClassHashIntoFelt252;
 
 #[derive(Drop)]
 struct StorageKey {
@@ -12,24 +13,32 @@ struct StorageKey {
 
 trait StorageKeyTrait {
     fn new(partition: felt252, keys: Array<felt252>) -> StorageKey;
-    fn id(self: @StorageKey) -> felt252;
+    fn new_from_id(id: felt252) -> StorageKey;
 }
 
 impl StorageKeyImpl of StorageKeyTrait {
     fn new(partition: felt252, keys: Array<felt252>) -> StorageKey {
-        StorageKey { keys: keys, partition: partition,  }
+        StorageKey { keys: keys, partition: partition }
     }
-
-    fn id(self: @StorageKey) -> felt252 {
-        if self.keys.len() == 1_usize {
-            return *self.keys.at(0_usize);
-        }
-
-        inner_id(0, self.keys, self.keys.len())
+    fn new_from_id(id: felt252) -> StorageKey {
+        let mut keys = ArrayTrait::new();
+        keys.append(id);
+        StorageKey { keys: keys, partition: 0 }
     }
 }
 
-fn inner_id(state: felt252, keys: @Array<felt252>, remain: usize) -> felt252 {
+impl StorageKeyIntoFelt252 of Into::<StorageKey, felt252> {
+    fn into(self: StorageKey) -> felt252 {
+        let span = self.keys.span();
+        if span.len() == 1_usize {
+            return *span.at(0_usize);
+        }
+
+        inner_id(0, span, span.len())
+    }
+}
+
+fn inner_id(state: felt252, keys: Span<felt252>, remain: usize) -> felt252 {
     match gas::withdraw_gas_all(get_builtin_costs()) {
         Option::Some(_) => {},
         Option::None(_) => {
@@ -49,7 +58,16 @@ fn inner_id(state: felt252, keys: @Array<felt252>, remain: usize) -> felt252 {
 
 impl LegacyHashStorageKey of LegacyHash::<StorageKey> {
     fn hash(state: felt252, key: StorageKey) -> felt252 {
-        LegacyHash::hash(state, key.id())
+        LegacyHash::hash(state, key.into())
+    }
+}
+
+impl LegacyHashClassHashStorageKey of LegacyHash::<(starknet::ClassHash, StorageKey)> {
+    fn hash(state: felt252, key: (starknet::ClassHash, StorageKey)) -> felt252 {
+        let (class_hash, storage_key) = key;
+        let class_hash_felt: felt252 = class_hash.into();
+        let storage_key_felt: felt252 = storage_key.into();
+        LegacyHash::hash(state, (class_hash_felt, storage_key_felt))
     }
 }
 
@@ -142,7 +160,7 @@ fn test_storagekey_id() {
     let mut keys = ArrayTrait::new();
     keys.append(420);
     let key = StorageKeyTrait::new(0, keys);
-    assert(key.id() == 420, 'Incorrect hash');
+    assert(key.into() == 420, 'Incorrect hash');
 }
 
 #[test]
