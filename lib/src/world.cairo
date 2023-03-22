@@ -15,6 +15,10 @@ trait IWorld {
     fn uuid() -> felt252;
     fn owner_of(entity_id: StorageKey) -> starknet::ContractAddress;
     fn entities(component: starknet::ContractAddress, partition: felt252) -> Array<StorageKey>;
+    fn has_role(role: felt252, account: starknet::ContractAddress) -> bool;
+    fn grant_role(role: felt252, account: starknet::ContractAddress);
+    fn revoke_role(role: felt252, account: starknet::ContractAddress);
+    fn renounce_role(role: felt252, account: starknet::ContractAddress);
 }
 
 trait ComponentTrait<T> {
@@ -58,6 +62,8 @@ mod World {
         partition_len: LegacyMap::<(felt252, felt252), usize>,
         partition: LegacyMap::<(felt252, felt252, felt252), felt252>,
         module_registry: LegacyMap::<starknet::ContractAddress, bool>,
+        role_admin: LegacyMap::<felt252, felt252>,
+        role_member: LegacyMap::<(felt252, starknet::ContractAddress), bool>,
     }
 
     // Emitted anytime an entities component state is updated.
@@ -71,6 +77,13 @@ mod World {
     fn ModuleRegistered(
         module_address: starknet::ContractAddress, module_id: felt252, class_hash: felt252
     ) {}
+
+    // Give deployer the default admin role.
+    #[constructor]
+    fn constructor() {
+        let caller = get_caller_address();
+        _grant_role(0, caller);
+    }
 
     // Register a component or system. The returned
     // hash is used to uniquely identify the component or
@@ -145,6 +158,51 @@ mod World {
         entities.append(entity_id);
         return entities_inner(component, partition, entities_len - 1_usize, ref entities);
     }
+
+    #[view]
+    fn has_role(role: felt252, account: starknet::ContractAddress) -> bool {
+        return role_member::read((role, account));
+    }
+
+    #[external]
+    fn grant_role(role: felt252, account: starknet::ContractAddress) {
+        let admin = role_admin::read(role);
+        assert_only_role(admin);
+        _grant_role(role, account);
+    }
+
+    fn _grant_role(role: felt252, account: starknet::ContractAddress) {
+        let has_role = role_member::read((role, account));
+        if (!has_role) {
+            role_member::write((role, account), bool::True(()));
+        }
+    }
+
+    #[external]
+    fn revoke_role(role: felt252, account: starknet::ContractAddress) {
+        let admin = role_admin::read(role);
+        assert_only_role(admin);
+        _revoke_role(role, account);
+    }
+
+    fn _revoke_role(role: felt252, account: starknet::ContractAddress) {
+        let has_role = role_member::read((role, account));
+        if (has_role) {
+            role_member::write((role, account), bool::False(()));
+        }
+    }
+
+    #[external]
+    fn renounce_role(role: felt252) {
+        let caller_address = get_caller_address();
+        _revoke_role(role, caller_address);
+    }
+
+    fn assert_only_role(role: felt252) {
+        let caller_address = get_caller_address();
+        let has_role = has_role(role, caller_address);
+        assert(has_role, 'caller is missing role');
+    }
 }
 
 #[test]
@@ -157,4 +215,32 @@ fn test_on_component_set() {
     let mut key = ArrayTrait::new();
     key.append(id);
     World::on_component_set(StorageKeyTrait::new(0, key), data);
+}
+
+#[test]
+#[available_gas(2000000)]
+fn test_constructor() {
+    starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
+    World::constructor();
+    assert(World::has_role(0, starknet::contract_address_const::<0x420>()), 'role not granted');
+}
+
+#[test]
+#[available_gas(2000000)]
+fn test_grant_revoke_role() {
+    starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
+    World::constructor();
+    World::grant_role(1, starknet::contract_address_const::<0x421>());
+    assert(World::has_role(1, starknet::contract_address_const::<0x421>()), 'role not granted');
+    World::revoke_role(1, starknet::contract_address_const::<0x421>());
+    assert(!World::has_role(1, starknet::contract_address_const::<0x421>()), 'role not revoked');
+}
+
+#[test]
+#[available_gas(2000000)]
+fn test_renonce_role() {
+    starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
+    World::constructor();
+    World::renounce_role(0);
+    assert(!World::has_role(0, starknet::contract_address_const::<0x420>()), 'role not renonced');
 }
