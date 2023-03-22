@@ -5,6 +5,7 @@ ExpandContractTestRunner
 
 //! > cairo_code
 use array::ArrayTrait;
+use serde::Serde;
 
 #[derive(Component)]
 struct Position {
@@ -19,17 +20,14 @@ struct Player {
 
 #[system]
 mod SpawnSystem {
+    use array::ArrayTrait;
     use traits::Into;   
     use starknet::contract_address::ContractAddressIntoFelt252;
 
     use dojo::commands::Spawn;
 
     use super::Position;
-    use super::IPositionDispatcher;
-    use super::IPositionDispatcherTrait;
     use super::Player;
-    use super::IPlayerDispatcher;
-    use super::IPlayerDispatcherTrait;
 
     fn execute(name: felt252) {
         let uuid = commands::uuid();
@@ -54,10 +52,10 @@ mod SpawnSystem {
             Position { x: 0, y: 0 },
         ));
 
-        // let invalid_path = Spawn::spawn((0, 0, 0, 0, 0), (
-        //     Player { name: name },
-        //     Position { x: 0, y: 0 },
-        // ));
+        let invalid_path = Spawn::spawn((0, 0, 0, 0, 0), (
+            Player { name: name },
+            Position { x: 0, y: 0 },
+        ));
         return ();
     }
 }
@@ -68,11 +66,7 @@ mod MoveSystem {
     use array::ArrayTrait;
     use dojo::query::Query;
     use super::Position;
-    use super::IPositionDispatcher;
-    use super::IPositionDispatcherTrait;
     use super::Player;
-    use super::IPlayerDispatcher;
-    use super::IPlayerDispatcherTrait;
 
     fn move_inner(positions: @Array<usize>, index: u32, count: u32) {
         return move_inner(positions, index + 1_u32, count - 1_u32);
@@ -103,6 +97,8 @@ mod MoveSystem {
 //! > generated_cairo_code
 use array::ArrayTrait;
 
+use serde::Serde;
+
 #[derive(Copy, Drop)]
 struct Position {
     x: felt252,
@@ -111,80 +107,57 @@ struct Position {
 
 #[abi]
 trait IPosition {
-    fn set(key: felt252, value: Position);
-    fn get(key: felt252) -> Position;
+    fn name() -> felt252;
+    fn size() -> u8;
+    fn serialize(raw: Span<felt252>) -> Position;
+    fn deserialize(value: Position) -> Span<felt252>;
+}
+
+impl PositionSerde of serde::Serde::<Position> {
+    fn serialize(ref serialized: Array::<felt252>, input: Position) {
+        serde::Serde::<felt252>::serialize(ref serialized, input.x);
+        serde::Serde::<felt252>::serialize(ref serialized, input.y);
+    }
+    fn deserialize(ref serialized: Span::<felt252>) -> Option::<Position> {
+        Option::Some(
+            Position {
+                x: serde::Serde::<felt252>::deserialize(ref serialized)?,
+                y: serde::Serde::<felt252>::deserialize(ref serialized)?,
+            }
+        )
+    }
 }
 
 #[contract]
 mod PositionComponent {
+    use array::ArrayTrait;
     use option::OptionTrait;
-    use starknet::SyscallResult;
-    use traits::Into;
-    use traits::TryInto;
-
+    use dojo::serde::SpanSerde;
     use super::Position;
 
-    impl PositionSerde of serde::Serde::<Position> {
-        fn serialize(ref serialized: Array::<felt252>, input: Position) {
-            serde::Serde::<felt252>::serialize(ref serialized, input.x);
-            serde::Serde::<felt252>::serialize(ref serialized, input.y);
-        }
-        fn deserialize(ref serialized: Span::<felt252>) -> Option::<Position> {
-            Option::Some(
-                Position {
-                    x: serde::Serde::<felt252>::deserialize(ref serialized)?,
-                    y: serde::Serde::<felt252>::deserialize(ref serialized)?,
-                }
-            )
-        }
+    #[view]
+    fn name() -> felt252 {
+        'Position'
     }
 
-    impl StorageAccessPosition of starknet::StorageAccess::<Position> {
-        fn read(
-            address_domain: u32, base: starknet::StorageBaseAddress
-        ) -> starknet::SyscallResult::<Position> {
-            Result::Ok(
-                Position {
-                    x: starknet::storage_read_syscall(
-                        address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8)
-                    )?,
-                    y: starknet::storage_read_syscall(
-                        address_domain, starknet::storage_address_from_base_and_offset(base, 1_u8)
-                    )?,
-                }
-            )
-        }
-        fn write(
-            address_domain: u32, base: starknet::StorageBaseAddress, value: Position
-        ) -> starknet::SyscallResult::<()> {
-            starknet::storage_write_syscall(
-                address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8), value.x
-            )?;
-            starknet::storage_write_syscall(
-                address_domain, starknet::storage_address_from_base_and_offset(base, 1_u8), value.y
-            )
-        }
+    #[view]
+    fn size() -> u8 {
+        2_u8
     }
 
-
-    struct Storage {
-        state: LegacyMap::<felt252, Position>, 
-    }
-
-    // Initialize Position.
-    #[external]
-    fn initialize() {}
-
-    // Set the state of an entity.
-    #[external]
-    fn set(key: felt252, value: Position) {
-        state::write(key, value);
+    // Serialize an entity.
+    #[view]
+    fn serialize(mut raw: Span<felt252>) -> Position {
+        serde::Serde::<Position>::deserialize(ref raw).unwrap()
     }
 
     // Get the state of an entity.
     #[view]
-    fn get(key: felt252) -> Position {
-        return state::read(key);
+    #[raw_output]
+    fn deserialize(value: Position) -> Span<felt252> {
+        let mut arr = ArrayTrait::new();
+        serde::Serde::<Position>::serialize(ref arr, value);
+        arr.span()
     }
 }
 
@@ -195,70 +168,51 @@ struct Player {
 
 #[abi]
 trait IPlayer {
-    fn set(key: felt252, value: Player);
-    fn get(key: felt252) -> Player;
+    fn name() -> felt252;
+    fn size() -> u8;
+    fn serialize(raw: Span<felt252>) -> Player;
+    fn deserialize(value: Player) -> Span<felt252>;
+}
+
+impl PlayerSerde of serde::Serde::<Player> {
+    fn serialize(ref serialized: Array::<felt252>, input: Player) {
+        serde::Serde::<felt252>::serialize(ref serialized, input.name);
+    }
+    fn deserialize(ref serialized: Span::<felt252>) -> Option::<Player> {
+        Option::Some(Player { name: serde::Serde::<felt252>::deserialize(ref serialized)?,  })
+    }
 }
 
 #[contract]
 mod PlayerComponent {
+    use array::ArrayTrait;
     use option::OptionTrait;
-    use starknet::SyscallResult;
-    use traits::Into;
-    use traits::TryInto;
-
+    use dojo::serde::SpanSerde;
     use super::Player;
 
-    impl PlayerSerde of serde::Serde::<Player> {
-        fn serialize(ref serialized: Array::<felt252>, input: Player) {
-            serde::Serde::<felt252>::serialize(ref serialized, input.name);
-        }
-        fn deserialize(ref serialized: Span::<felt252>) -> Option::<Player> {
-            Option::Some(Player { name: serde::Serde::<felt252>::deserialize(ref serialized)?,  })
-        }
+    #[view]
+    fn name() -> felt252 {
+        'Player'
     }
 
-    impl StorageAccessPlayer of starknet::StorageAccess::<Player> {
-        fn read(
-            address_domain: u32, base: starknet::StorageBaseAddress
-        ) -> starknet::SyscallResult::<Player> {
-            Result::Ok(
-                Player {
-                    name: starknet::storage_read_syscall(
-                        address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8)
-                    )?,
-                }
-            )
-        }
-        fn write(
-            address_domain: u32, base: starknet::StorageBaseAddress, value: Player
-        ) -> starknet::SyscallResult::<()> {
-            starknet::storage_write_syscall(
-                address_domain,
-                starknet::storage_address_from_base_and_offset(base, 0_u8),
-                value.name
-            )
-        }
+    #[view]
+    fn size() -> u8 {
+        1_u8
     }
 
-
-    struct Storage {
-        state: LegacyMap::<felt252, Player>, 
-    }
-
-    // Initialize Player.
-    #[external]
-    fn initialize() {}
-
-    // Set the state of an entity.
-    #[external]
-    fn set(key: felt252, value: Player) {
-        state::write(key, value);
+    // Serialize an entity.
+    #[view]
+    fn serialize(mut raw: Span<felt252>) -> Player {
+        serde::Serde::<Player>::deserialize(ref raw).unwrap()
     }
 
     // Get the state of an entity.
     #[view]
-    fn get(key: felt252) -> Player {
-        return state::read(key);
+    #[raw_output]
+    fn deserialize(value: Player) -> Span<felt252> {
+        let mut arr = ArrayTrait::new();
+        serde::Serde::<Player>::serialize(ref arr, value);
+        arr.span()
     }
 }
 
@@ -278,53 +232,84 @@ mod SpawnSystem {
     use dojo::storage::ContractAddressIntoStorageKey;
 
 
+    use array::ArrayTrait;
     use traits::Into;
     use starknet::contract_address::ContractAddressIntoFelt252;
 
     use dojo::commands::Spawn;
 
     use super::Position;
-    use super::IPositionDispatcher;
-    use super::IPositionDispatcherTrait;
     use super::Player;
-    use super::IPlayerDispatcher;
-    use super::IPlayerDispatcherTrait;
 
     #[external]
-    fn execute(name: felt252) {
-        let world_address = starknet::contract_address_const::<0x0>();
+    fn execute(world_address: starknet::ContractAddress, name: felt252) {
         let uuid = IWorldDispatcher { contract_address: world_address }.uuid();
-        let __player_sk: dojo::storage::StorageKey = (420, (69, uuid)).into();
-        let __player_sk_id = __player_sk.id();
-        IPlayerDispatcher {
-            contract_address: starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
-        }.set(__player_sk_id, Player { name: name });
-        IPositionDispatcher {
-            contract_address: starknet::contract_address_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>()
-        }.set(__player_sk_id, Position { x: 0, y: 0 });
-        let __literal_sk: dojo::storage::StorageKey = 420.into();
-        let __literal_sk_id = __literal_sk.id();
-        IPlayerDispatcher {
-            contract_address: starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
-        }.set(__literal_sk_id, Player { name: name });
-        IPositionDispatcher {
-            contract_address: starknet::contract_address_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>()
-        }.set(__literal_sk_id, Position { x: 0, y: 0 });
+
+        let mut __player_calldata = ArrayTrait::new();
+        serde::Serde::<Player>::serialize(ref __player_calldata, Player { name: name });
+        IWorldDispatcher {
+            contract_address: world_address
+        }.write(
+            starknet::class_hash_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>(),
+            (420, (69, uuid)).into(),
+            __player_calldata.span()
+        );
+
+        let mut __player_calldata = ArrayTrait::new();
+        serde::Serde::<Position>::serialize(ref __player_calldata, Position { x: 0, y: 0 });
+        IWorldDispatcher {
+            contract_address: world_address
+        }.write(
+            starknet::class_hash_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>(),
+            (420, (69, uuid)).into(),
+            __player_calldata.span()
+        );
+
+        let mut __literal_calldata = ArrayTrait::new();
+        serde::Serde::<Player>::serialize(ref __literal_calldata, Player { name: name });
+        IWorldDispatcher {
+            contract_address: world_address
+        }.write(
+            starknet::class_hash_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>(),
+            420.into(),
+            __literal_calldata.span()
+        );
+
+        let mut __literal_calldata = ArrayTrait::new();
+        serde::Serde::<Position>::serialize(ref __literal_calldata, Position { x: 0, y: 0 });
+        IWorldDispatcher {
+            contract_address: world_address
+        }.write(
+            starknet::class_hash_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>(),
+            420.into(),
+            __literal_calldata.span()
+        );
 
         let player_id = starknet::get_caller_address();
-        let __player_sk: dojo::storage::StorageKey = player_id.into();
-        let __player_sk_id = __player_sk.id();
-        IPlayerDispatcher {
-            contract_address: starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
-        }.set(__player_sk_id, Player { name: name });
-        IPositionDispatcher {
-            contract_address: starknet::contract_address_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>()
-        }.set(__player_sk_id, Position { x: 0, y: 0 });
 
-        // let invalid_path = Spawn::spawn((0, 0, 0, 0, 0), (
-        //     Player { name: name },
-        //     Position { x: 0, y: 0 },
-        // ));
+        let mut __player_calldata = ArrayTrait::new();
+        serde::Serde::<Player>::serialize(ref __player_calldata, Player { name: name });
+        IWorldDispatcher {
+            contract_address: world_address
+        }.write(
+            starknet::class_hash_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>(),
+            player_id.into(),
+            __player_calldata.span()
+        );
+
+        let mut __player_calldata = ArrayTrait::new();
+        serde::Serde::<Position>::serialize(ref __player_calldata, Position { x: 0, y: 0 });
+        IWorldDispatcher {
+            contract_address: world_address
+        }.write(
+            starknet::class_hash_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>(),
+            player_id.into(),
+            __player_calldata.span()
+        );
+
+        let invalid_path = Spawn::spawn(
+            (0, 0, 0, 0, 0), (Player { name: name }, Position { x: 0, y: 0 }, )
+        );
         return ();
     }
 }
@@ -349,19 +334,14 @@ mod MoveSystem {
     use array::ArrayTrait;
     use dojo::query::Query;
     use super::Position;
-    use super::IPositionDispatcher;
-    use super::IPositionDispatcherTrait;
     use super::Player;
-    use super::IPlayerDispatcher;
-    use super::IPlayerDispatcherTrait;
 
     fn move_inner(positions: @Array<usize>, index: u32, count: u32) {
         return move_inner(positions, index + 1_u32, count - 1_u32);
     }
 
     #[external]
-    fn execute(player_id: felt252) {
-        let world_address = starknet::contract_address_const::<0x0>();
+    fn execute(world_address: starknet::ContractAddress, player_id: felt252) {
         let positions_query = ArrayTrait::<usize>::new();
         let __positions_query_position_ids = IWorldDispatcher {
             contract_address: world_address
@@ -383,21 +363,26 @@ mod MoveSystem {
             starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>(),
             0
         );
-        let __player_sk: dojo::storage::StorageKey = player_id.into();
-        let __player_sk_id = __player_sk.id();
-        let __player_player = IPlayerDispatcher {
-            contract_address: starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
-        }.get(__player_sk_id);
+        let mut __player_raw = IWorldDispatcher {
+            contract_address: world_address
+        }.read(
+            starknet::class_hash_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>(),
+            player_id.into()
+        );
+        let __player_player = serde::Serde::<Position>::deserialize(ref __player_raw);
         let player = __player_player;
-        let __player_position_sk: dojo::storage::StorageKey = player_id.into();
-        let __player_position_sk_id = __player_position_sk.id();
-        let __player_position_position = IPositionDispatcher {
-            contract_address: starknet::contract_address_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>()
-        }.get(__player_position_sk_id);
-
-        let __player_position_player = IPlayerDispatcher {
-            contract_address: starknet::contract_address_const::<0x45ae1fe01b0daa1b91e29c079ddcc83a8aae082c898bc23dfb766ab12b0403a>()
-        }.get(__player_position_sk_id);
+        let mut __player_position_raw = IWorldDispatcher {
+            contract_address: world_address
+        }.read(
+            starknet::class_hash_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>(),
+            player_id.into()
+        );
+        let __player_position_position = serde::Serde::<Position>::deserialize(
+            ref __player_position_raw
+        );
+        let __player_position_player = serde::Serde::<Position>::deserialize(
+            ref __player_position_raw
+        );
         let player_position = (__player_position_position, __player_position_player);
 
         let mut bar = 123;
@@ -418,6 +403,16 @@ mod MoveSystem {
 
 //! > expected_diagnostics
 error: Plugin diagnostic: Invalid arguements. Expected "(storage_key, (components,))"
- --> lib.cairo:46:43
+ --> lib.cairo:44:43
         let invalid_args = commands::spawn((
                                           ^^
+
+error: Plugin diagnostic: Invalid path.
+ --> SpawnSystem:57:35
+        let invalid_path = Spawn::spawn((0, 0, 0, 0, 0), (
+                                  ^***^
+
+error: Plugin diagnostic: Type annotations needed. Failed to infer ?37
+ --> SpawnSystem:57:28
+        let invalid_path = Spawn::spawn((0, 0, 0, 0, 0), (
+                           ^***^

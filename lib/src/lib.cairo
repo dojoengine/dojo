@@ -2,6 +2,6 @@ mod initializer;
 mod commands;
 mod constants;
 mod query;
-mod module;
+mod serde;
 mod storage;
 mod world;

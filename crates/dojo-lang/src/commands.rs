@@ -45,32 +45,41 @@ impl Command {
                         });
                         return command;
                     }
-                    let storage_key = elements.first().unwrap();
-                    command.rewrite_nodes.push(RewriteNode::interpolate_patched(
-                        "let __$var_name$_sk: dojo::storage::StorageKey = $storage_key$;
-                        let __$var_name$_sk_id = __$var_name$_sk.id();
-                        ",
-                        HashMap::from([
-                            (
-                                "var_name".to_string(),
-                                RewriteNode::new_trimmed(let_pattern.as_syntax_node()),
-                            ),
-                            (
-                                "storage_key".to_string(),
-                                RewriteNode::new_trimmed(storage_key.as_syntax_node()),
-                            ),
-                        ]),
-                    ));
+                    let storage_key = elements.first().unwrap().clone();
+                    // command.rewrite_nodes.push(RewriteNode::interpolate_patched(
+                    //     "
+                    //     let mut __$var_name$_calldata = ArrayTrait::new();",
+                    //     HashMap::from([
+                    //         (
+                    //             "var_name".to_string(),
+                    //             RewriteNode::new_trimmed(let_pattern.as_syntax_node()),
+                    //         ),
+                    //         // (
+                    //         //     "storage_key".to_string(),
+                    //         //     RewriteNode::new_trimmed(storage_key.as_syntax_node()),
+                    //         // ),
+                    //     ]),
+                    // ));
 
                     let bundle = elements.last().unwrap();
                     if let ast::ArgClause::Unnamed(clause) = bundle.arg_clause(db) {
                         match clause.value(db) {
                             ast::Expr::Parenthesized(bundle) => {
-                                command.handle_struct(db, let_pattern, bundle.expr(db));
+                                command.handle_struct(
+                                    db,
+                                    let_pattern,
+                                    storage_key.clone(),
+                                    bundle.expr(db),
+                                );
                             }
                             ast::Expr::Tuple(tuple) => {
                                 for expr in tuple.expressions(db).elements(db) {
-                                    command.handle_struct(db, let_pattern.clone(), expr);
+                                    command.handle_struct(
+                                        db,
+                                        let_pattern.clone(),
+                                        storage_key.clone(),
+                                        expr,
+                                    );
                                 }
                             }
                             _ => {
@@ -100,7 +109,13 @@ impl Command {
         command
     }
 
-    fn handle_struct(&mut self, db: &dyn SyntaxGroup, var_name: ast::Pattern, expr: ast::Expr) {
+    fn handle_struct(
+        &mut self,
+        db: &dyn SyntaxGroup,
+        var_name: ast::Pattern,
+        storage_key: ast::Arg,
+        expr: ast::Expr,
+    ) {
         if let ast::Expr::StructCtorCall(ctor) = expr {
             if let Some(ast::PathSegment::Simple(segment)) = ctor.path(db).elements(db).last() {
                 let component = segment.ident(db).text(db);
@@ -114,9 +129,10 @@ impl Command {
                 );
 
                 self.rewrite_nodes.push(RewriteNode::interpolate_patched(
-                    "I$component$Dispatcher { contract_address: \
-                     starknet::contract_address_const::<$component_address$>() \
-                     }.set(__$var_name$_sk_id, $ctor$);
+                    "
+                    let mut __$var_name$_calldata = ArrayTrait::new();
+                    serde::Serde::<$component$>::serialize(ref __$var_name$_calldata, $ctor$);
+                    IWorldDispatcher { contract_address: world_address }.write(starknet::class_hash_const::<$component_address$>(), $storage_key$, __$var_name$_calldata.span());
                     ",
                     HashMap::from([
                         ("component".to_string(), RewriteNode::Text(component.to_string())),
@@ -125,6 +141,10 @@ impl Command {
                         (
                             "var_name".to_string(),
                             RewriteNode::new_trimmed(var_name.as_syntax_node()),
+                        ),
+                        (
+                            "storage_key".to_string(),
+                            RewriteNode::new_trimmed(storage_key.as_syntax_node()),
                         ),
                     ]),
                 ));

@@ -116,8 +116,13 @@ impl Query {
         let storage_key = elements.first().unwrap();
 
         self.rewrite_nodes.push(RewriteNode::interpolate_patched(
-            "let __$query_id$_sk: dojo::storage::StorageKey = $storage_key$;
-            let __$query_id$_sk_id = __$query_id$_sk.id();",
+            "let mut __$query_id$_raw = IWorldDispatcher {
+                contract_address: world_address
+            }.read(
+                starknet::class_hash_const::<0x3718a0ff90de39b4acf137c1a27b0427c2c3f60c23c4f7c20b85c578d2c5897>(),
+                $storage_key$
+            );
+            ",
             HashMap::from([
                 ("query_id".to_string(), RewriteNode::Text(self.query_id.clone())),
                 ("storage_key".to_string(), RewriteNode::new_trimmed(storage_key.as_syntax_node())),
@@ -146,10 +151,7 @@ impl Query {
                 )
             );
             self.rewrite_nodes.push(RewriteNode::interpolate_patched(
-                "
-                let __$query_id$_$query_subtype$ = I$component$Dispatcher { contract_address: \
-                 starknet::contract_address_const::<$component_address$>() \
-                 }.get(__$query_id$_sk_id);
+                "let __$query_id$_$query_subtype$ = serde::Serde::<Position>::deserialize(ref __$query_id$_raw);
                 ",
                 HashMap::from([
                     ("component".to_string(), RewriteNode::Text(component.to_string())),
@@ -158,15 +160,9 @@ impl Query {
                         RewriteNode::Text(component.to_string().to_ascii_lowercase()),
                     ),
                     ("query_id".to_string(), RewriteNode::Text(self.query_id.clone())),
-                    ("component_address".to_string(), RewriteNode::Text(component_address)),
+                    ("class_hash".to_string(), RewriteNode::Text(component_address)),
                 ]),
             ));
-
-            // TODO: Figure out how to automatically resolve dispatcher dependencies.
-            // self.dependencies.extend([
-            //     SmolStr::from(format!("I{}Dispatcher", component)),
-            //     SmolStr::from(format!("I{}DispatcherTrait", component)),
-            // ]);
         }
 
         if self.components.len() > 1 {
