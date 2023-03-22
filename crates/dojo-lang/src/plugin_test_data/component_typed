@@ -31,16 +31,12 @@ struct Fighter {
 trait IFighter {
     fn set(key: felt252, value: Fighter);
     fn get(key: felt252) -> Fighter;
-    fn get_is_writer_authorized(writer: starknet::ContractAddress) -> bool;
 }
 
 #[contract]
 mod FighterComponent {
     use option::OptionTrait;
-    use array::ArrayTrait;
-    use box::BoxTrait;
     use starknet::SyscallResult;
-    use starknet::ContractAddress;
     use traits::Into;
     use traits::TryInto;
 
@@ -125,31 +121,15 @@ mod FighterComponent {
 
     struct Storage {
         state: LegacyMap::<felt252, Fighter>, 
-        authorized_writers: LegacyMap::<ContractAddress, bool>,
     }
 
     // Initialize Fighter.
     #[external]
-    fn initialize(writers: Array<ContractAddress>) {
-        initialize_inner(@writers, 0_usize);
-    }
-
-    fn initialize_inner(writers: @Array<ContractAddress>, i: usize) {
-        match writers.get(i) {
-            Option::Some(w) => {
-                authorized_writers::write(*w.unbox(), true);
-                initialize_inner(writers, i + 1_usize);
-            },
-            Option::None(()) => (),
-        }
-    }
+    fn initialize() {}
 
     // Set the state of an entity.
     #[external]
     fn set(key: felt252, value: Fighter) {
-        let caller_address = starknet::get_caller_address();
-        let is_authorized = authorized_writers::read(caller_address);
-        assert(is_authorized, 'Unauthorized writer.');
         state::write(key, value);
     }
 
@@ -157,12 +137,6 @@ mod FighterComponent {
     #[view]
     fn get(key: felt252) -> Fighter {
         return state::read(key);
-    }
-
-    // True if the writer is authorized to modify entities state.
-    #[view]
-    fn get_is_writer_authorized(writer: ContractAddress) -> bool {
-        return authorized_writers::read(writer);
     }
 }
 
