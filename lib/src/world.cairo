@@ -19,7 +19,6 @@ trait IWorld {
     fn grant_role(role: felt252, account: starknet::ContractAddress);
     fn revoke_role(role: felt252, account: starknet::ContractAddress);
     fn renounce_role(role: felt252, account: starknet::ContractAddress);
-    fn has_writer_role(account: starknet::ContractAddress) -> bool;
 }
 
 trait ComponentTrait<T> {
@@ -54,7 +53,6 @@ mod World {
 
     use dojo::storage::StorageKey;
     use dojo::storage::LegacyHashStorageKey;
-    use dojo::constants::WRITER_ROLE;
 
     use super::IProxyDispatcher;
     use super::IProxyDispatcherTrait;
@@ -205,11 +203,6 @@ mod World {
         let has_role = has_role(role, caller_address);
         assert(has_role, 'caller is missing role');
     }
-
-    #[view]
-    fn has_writer_role(account: starknet::ContractAddress) -> bool {
-        return has_role(WRITER_ROLE, account);
-    }
 }
 
 #[test]
@@ -250,16 +243,4 @@ fn test_renonce_role() {
     World::constructor();
     World::renounce_role(0);
     assert(!World::has_role(0, starknet::contract_address_const::<0x420>()), 'role not renonced');
-}
-
-#[test]
-#[available_gas(2000000)]
-fn test_is_writer() {
-    starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
-    World::constructor();
-    World::grant_role(dojo::constants::WRITER_ROLE, starknet::contract_address_const::<0x420>());
-    assert(
-        World::has_writer_role(starknet::contract_address_const::<0x420>()),
-        'caller missing writer role'
-    );
 }
