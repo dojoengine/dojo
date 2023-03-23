@@ -15,7 +15,7 @@ pub struct UUIDCommand {
 impl CommandTrait for UUIDCommand {
     fn from_ast(
         _db: &dyn SyntaxGroup,
-        let_pattern: ast::Pattern,
+        let_pattern: Option<ast::Pattern>,
         _command_ast: ast::ExprFunctionCall,
     ) -> Self {
         let mut command = UUIDCommand { data: CommandData::new() };
@@ -25,7 +25,7 @@ impl CommandTrait for UUIDCommand {
                     ",
             HashMap::from([(
                 "var_name".to_string(),
-                RewriteNode::new_trimmed(let_pattern.as_syntax_node()),
+                RewriteNode::new_trimmed(let_pattern.unwrap().as_syntax_node()),
             )]),
         ));
 

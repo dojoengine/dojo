@@ -17,10 +17,11 @@ pub struct AllCommand {
 impl CommandTrait for AllCommand {
     fn from_ast(
         db: &dyn SyntaxGroup,
-        let_pattern: ast::Pattern,
+        let_pattern: Option<ast::Pattern>,
         command_ast: ast::ExprFunctionCall,
     ) -> Self {
-        let mut query_id = StringSanitizer::from(let_pattern.as_syntax_node().get_text(db));
+        let mut query_id =
+            StringSanitizer::from(let_pattern.unwrap().as_syntax_node().get_text(db));
         query_id.to_snake_case();
         let mut command = AllCommand { query_id: query_id.get(), data: CommandData::new() };
 

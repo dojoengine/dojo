@@ -12,6 +12,7 @@ trait IWorld {
     fn register_component(class_hash: starknet::ClassHash);
     fn register_system(class_hash: starknet::ClassHash);
     fn uuid() -> felt252;
+    fn execute(name: felt252, execute_calldata: Span<felt252>) -> Span<felt252>;
     fn get(
         component: felt252, key: dojo::storage::StorageKey, offset: u8, length: usize
     ) -> Span<felt252>;
@@ -108,13 +109,13 @@ mod World {
     }
 
     #[external]
-    fn execute(name: felt252, calldata: Span<felt252>) -> Span<felt252> {
+    fn execute(name: felt252, execute_calldata: Span<felt252>) -> Span<felt252> {
         let class_hash = system_registry::read(name);
         caller::write(class_hash);
 
         let res = IExecutorDispatcher {
             contract_address: executor::read()
-        }.execute(class_hash, starknet::get_contract_address(), calldata);
+        }.execute(class_hash, starknet::get_contract_address(), execute_calldata);
 
         caller::write(starknet::class_hash_const::<0x0>());
         res

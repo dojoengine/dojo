@@ -52,9 +52,10 @@ impl CreateCommand {
 impl CommandTrait for CreateCommand {
     fn from_ast(
         db: &dyn SyntaxGroup,
-        let_pattern: ast::Pattern,
+        let_pattern: Option<ast::Pattern>,
         command_ast: ast::ExprFunctionCall,
     ) -> Self {
+        let var_name = let_pattern.unwrap();
         let mut command = CreateCommand { data: CommandData::new() };
 
         let elements = command_ast.arguments(db).args(db).elements(db);
@@ -66,16 +67,17 @@ impl CommandTrait for CreateCommand {
             });
             return command;
         }
+
         let storage_key = elements.first().unwrap().clone();
         let bundle = elements.last().unwrap();
         if let ast::ArgClause::Unnamed(clause) = bundle.arg_clause(db) {
             match clause.value(db) {
                 ast::Expr::Parenthesized(bundle) => {
-                    command.handle_struct(db, let_pattern, storage_key, bundle.expr(db));
+                    command.handle_struct(db, var_name, storage_key, bundle.expr(db));
                 }
                 ast::Expr::Tuple(tuple) => {
                     for expr in tuple.expressions(db).elements(db) {
-                        command.handle_struct(db, let_pattern.clone(), storage_key.clone(), expr);
+                        command.handle_struct(db, var_name.clone(), storage_key.clone(), expr);
                     }
                 }
                 _ => {
