@@ -92,6 +92,11 @@ impl System {
                     use dojo::storage::ContractAddressIntoStorageKey;
                     $imports$
 
+                    #[view]
+                    fn name() -> felt252 {
+                        '$name$'
+                    }
+
                     $body$
                 }
                 ",

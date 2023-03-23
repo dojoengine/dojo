@@ -9,8 +9,8 @@ use dojo::serde::SpanSerde;
 
 #[abi]
 trait IWorld {
-    fn register_component(name: felt252, class_hash: starknet::ClassHash);
-    fn register_system(name: felt252, class_hash: starknet::ClassHash);
+    fn register_component(class_hash: starknet::ClassHash);
+    fn register_system(class_hash: starknet::ClassHash);
     fn uuid() -> felt252;
     fn get(
         component: felt252, key: dojo::storage::StorageKey, offset: u8, length: usize
@@ -27,6 +27,11 @@ trait IWorld {
 trait IComponent {
     fn name() -> felt252;
     fn len() -> usize;
+}
+
+#[abi]
+trait ISystem {
+    fn name() -> felt252;
 }
 
 #[contract]
@@ -85,7 +90,8 @@ mod World {
     // Register a component in the world. If the component is already registered,
     // the implementation will be updated.
     #[external]
-    fn register_component(name: felt252, class_hash: ClassHash) {
+    fn register_component(class_hash: ClassHash) {
+        let name = IComponentLibraryDispatcher { class_hash: class_hash }.name();
         // TODO: If component is already registered, vaildate permission to update.
         component_registry::write(name, class_hash);
         ComponentRegistered(name, class_hash);
@@ -94,7 +100,8 @@ mod World {
     // Register a system in the world. If the system is already registered,
     // the implementation will be updated.
     #[external]
-    fn register_system(name: felt252, class_hash: ClassHash) {
+    fn register_system(class_hash: ClassHash) {
+        let name = IComponentLibraryDispatcher { class_hash: class_hash }.name();
         // TODO: If system is already registered, vaildate permission to update.
         system_registry::write(name, class_hash);
         SystemRegistered(name, class_hash);
@@ -285,31 +292,33 @@ mod World {
     }
 }
 
-#[test]
-#[available_gas(2000000)]
-fn test_component() {
-    let name = 'Position';
-    World::register_component(name, starknet::class_hash_const::<0x420>());
-    let mut data = ArrayTrait::<felt252>::new();
-    data.append(1337);
-    let id = World::uuid();
-    World::set(name, StorageKeyTrait::new_from_id(id), 0_u8, data.span());
-    let stored = World::get(name, StorageKeyTrait::new_from_id(id), 0_u8, 1_usize);
-    assert(*stored.snapshot.at(0_usize) == 1337, 'data not stored');
-}
+// TODO: Uncomment once library call is supported in tests.
+// #[test]
+// #[available_gas(2000000)]
+// fn test_component() {
+//     let name = 'Position';
+//     World::register_component(starknet::class_hash_const::<0x420>());
+//     let mut data = ArrayTrait::<felt252>::new();
+//     data.append(1337);
+//     let id = World::uuid();
+//     World::set(name, StorageKeyTrait::new_from_id(id), 0_u8, data.span());
+//     let stored = World::get(name, StorageKeyTrait::new_from_id(id), 0_u8, 1_usize);
+//     assert(*stored.snapshot.at(0_usize) == 1337, 'data not stored');
+// }
 
-#[test]
-#[available_gas(2000000)]
-fn test_system() {
-    let name = 'Position';
-    World::register_system(name, starknet::class_hash_const::<0x420>());
-    let mut data = ArrayTrait::<felt252>::new();
-    data.append(1337);
-    let id = World::uuid();
-    World::set(name, StorageKeyTrait::new_from_id(id), 0_u8, data.span());
-    let stored = World::get(name, StorageKeyTrait::new_from_id(id), 0_u8, 1_usize);
-    assert(*stored.snapshot.at(0_usize) == 1337, 'data not stored');
-}
+// TODO: Uncomment once library call is supported in tests.
+// #[test]
+// #[available_gas(2000000)]
+// fn test_system() {
+//     let name = 'Position';
+//     World::register_system(starknet::class_hash_const::<0x420>());
+//     let mut data = ArrayTrait::<felt252>::new();
+//     data.append(1337);
+//     let id = World::uuid();
+//     World::set(name, StorageKeyTrait::new_from_id(id), 0_u8, data.span());
+//     let stored = World::get(name, StorageKeyTrait::new_from_id(id), 0_u8, 1_usize);
+//     assert(*stored.snapshot.at(0_usize) == 1337, 'data not stored');
+// }
 
 #[test]
 #[available_gas(2000000)]
