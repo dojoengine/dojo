@@ -111,9 +111,11 @@ mod World {
     fn execute(name: felt252, calldata: Span<felt252>) -> Span<felt252> {
         let class_hash = system_registry::read(name);
         caller::write(class_hash);
+
         let res = IExecutorDispatcher {
             contract_address: executor::read()
-        }.execute(starknet::get_contract_address(), class_hash, calldata);
+        }.execute(class_hash, starknet::get_contract_address(), calldata);
+
         caller::write(starknet::class_hash_const::<0x0>());
         res
     }
