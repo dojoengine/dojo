@@ -20,7 +20,7 @@ pub struct Query {
 impl Query {
     pub fn from_ast(
         db: &dyn SyntaxGroup,
-        let_pattern: ast::Pattern,
+        let_pattern: Option<ast::Pattern>,
         query_ast: ast::ExprFunctionCall,
     ) -> Self {
         let mut query_id = StringSanitizer::from(let_pattern.as_syntax_node().get_text(db));

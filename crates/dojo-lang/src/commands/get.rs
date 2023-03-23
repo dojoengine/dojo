@@ -19,14 +19,15 @@ pub struct GetCommand {
 impl CommandTrait for GetCommand {
     fn from_ast(
         db: &dyn SyntaxGroup,
-        let_pattern: ast::Pattern,
+        let_pattern: Option<ast::Pattern>,
         command_ast: ast::ExprFunctionCall,
     ) -> Self {
-        let mut query_id = StringSanitizer::from(let_pattern.as_syntax_node().get_text(db));
+        let var_name = let_pattern.unwrap();
+        let mut query_id = StringSanitizer::from(var_name.as_syntax_node().get_text(db));
         query_id.to_snake_case();
         let mut command = GetCommand {
             query_id: query_id.get(),
-            query_pattern: let_pattern.as_syntax_node().get_text(db),
+            query_pattern: var_name.as_syntax_node().get_text(db),
             data: CommandData::new(),
         };
 

@@ -13,7 +13,7 @@ pub mod uuid;
 pub trait CommandTrait {
     fn from_ast(
         db: &dyn SyntaxGroup,
-        let_pattern: ast::Pattern,
+        let_pattern: Option<ast::Pattern>,
         command_ast: ast::ExprFunctionCall,
     ) -> Self;
 
@@ -40,7 +40,7 @@ pub struct Command {
 impl Command {
     pub fn from_ast(
         db: &dyn SyntaxGroup,
-        let_pattern: ast::Pattern,
+        let_pattern: Option<ast::Pattern>,
         command_ast: ast::ExprFunctionCall,
     ) -> Self {
         let mut command = Command { rewrite_nodes: vec![], diagnostics: vec![] };
@@ -67,7 +67,9 @@ impl Command {
                 command.diagnostics.extend(sc.diagnostics());
             }
             "execute" => {
-                unimplemented!();
+                let sc = execute::ExecuteCommand::from_ast(db, let_pattern, command_ast);
+                command.rewrite_nodes.extend(sc.rewrite_nodes());
+                command.diagnostics.extend(sc.diagnostics());
             }
             _ => {}
         }
