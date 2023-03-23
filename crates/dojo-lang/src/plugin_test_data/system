@@ -24,35 +24,33 @@ mod SpawnSystem {
     use traits::Into;   
     use starknet::contract_address::ContractAddressIntoFelt252;
 
-    use dojo::commands::Spawn;
-
     use super::Position;
     use super::Player;
 
     fn execute(name: felt252) {
         let uuid = commands::uuid();
-        let player = commands::spawn((420, (69, uuid)).into(), (
+        let player = commands::create((420, (69, uuid)).into(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
-        let literal = commands::spawn(420.into(), (
+        let literal = commands::create(420.into(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
         let player_id = starknet::get_caller_address();
-        let player = commands::spawn(player_id.into(), (
+        let player = commands::create(player_id.into(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
-        let invalid_args = commands::spawn((
+        let invalid_args = commands::create((
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
-        let invalid_path = Spawn::spawn((0, 0, 0, 0, 0), (
+        let invalid_path = commands::create((0, 0, 0, 0, 0), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
@@ -73,10 +71,10 @@ mod MoveSystem {
     }
 
     fn execute(player_id: felt252) {
-        let positions_query = Query::<(Position, Player)>::ids();
-        let players_query = Query::<Player>::ids();
-        let player = Query::<Player>::entity(player_id.into());
-        let player_position = Query::<(Position, Player)>::entity(player_id.into());
+        let positions_query = commands::<(Position, Player)>::all();
+        let players_query = commands::<Player>::all();
+        let player = commands::<Player>::get(player_id.into());
+        let player_position = commands::<(Position, Player)>::get(player_id.into());
 
         let mut bar = 123;
         let mut foo = ArrayTrait::<felt252>::new();
@@ -236,8 +234,6 @@ mod SpawnSystem {
     use traits::Into;
     use starknet::contract_address::ContractAddressIntoFelt252;
 
-    use dojo::commands::Spawn;
-
     use super::Position;
     use super::Player;
 
@@ -283,9 +279,17 @@ mod SpawnSystem {
             contract_address: world_address
         }.write('Position', player_id.into(), 0_u8, __player_calldata.span());
 
-        let invalid_path = Spawn::spawn(
-            (0, 0, 0, 0, 0), (Player { name: name }, Position { x: 0, y: 0 }, )
-        );
+        let mut __invalid_path_calldata = ArrayTrait::new();
+        serde::Serde::<Player>::serialize(ref __invalid_path_calldata, Player { name: name });
+        IWorldDispatcher {
+            contract_address: world_address
+        }.write('Player', (0, 0, 0, 0, 0), 0_u8, __invalid_path_calldata.span());
+
+        let mut __invalid_path_calldata = ArrayTrait::new();
+        serde::Serde::<Position>::serialize(ref __invalid_path_calldata, Position { x: 0, y: 0 });
+        IWorldDispatcher {
+            contract_address: world_address
+        }.write('Position', (0, 0, 0, 0, 0), 0_u8, __invalid_path_calldata.span());
         return ();
     }
 }
@@ -369,17 +373,17 @@ mod MoveSystem {
 }
 
 //! > expected_diagnostics
-error: Plugin diagnostic: Invalid arguements. Expected "(storage_key, (components,))"
- --> lib.cairo:44:43
-        let invalid_args = commands::spawn((
-                                          ^^
+error: Plugin diagnostic: Invalid arguments. Expected "(storage_key, (components,))"
+ --> lib.cairo:42:44
+        let invalid_args = commands::create((
+                                           ^^
 
-error: Plugin diagnostic: Invalid path.
- --> SpawnSystem:57:35
-        let invalid_path = Spawn::spawn((0, 0, 0, 0, 0), (
-                                  ^***^
+error: Plugin diagnostic: Unexpected argument type. Expected: "dojo::storage::StorageKey", found: "(core::felt252, core::felt252, core::felt252, core::felt252, core::felt252)".
+ --> SpawnSystem:57:90
+                    IWorldDispatcher { contract_address: world_address }.write('Player', (0, 0, 0, 0, 0), 0_u8, __invalid_path_calldata.span());
+                                                                                         ^*************^
 
-error: Plugin diagnostic: Type annotations needed. Failed to infer ?37
- --> SpawnSystem:57:28
-        let invalid_path = Spawn::spawn((0, 0, 0, 0, 0), (
-                           ^***^
+error: Plugin diagnostic: Unexpected argument type. Expected: "dojo::storage::StorageKey", found: "(core::felt252, core::felt252, core::felt252, core::felt252, core::felt252)".
+ --> SpawnSystem:61:92
+                    IWorldDispatcher { contract_address: world_address }.write('Position', (0, 0, 0, 0, 0), 0_u8, __invalid_path_calldata.span());
+                                                                                           ^*************^

@@ -22,7 +22,6 @@ impl Query {
         db: &dyn SyntaxGroup,
         let_pattern: ast::Pattern,
         query_ast: ast::ExprFunctionCall,
-        generics_segment: ast::PathSegmentWithGenericArgs,
     ) -> Self {
         let mut query_id = StringSanitizer::from(let_pattern.as_syntax_node().get_text(db));
         query_id.to_snake_case();
@@ -54,45 +53,6 @@ impl Query {
         }
 
         query
-    }
-
-    pub fn rewrite_ids_query(&mut self, db: &dyn SyntaxGroup, query_ast: ast::ExprFunctionCall) {
-        let partition =
-            if let Some(partition) = query_ast.arguments(db).args(db).elements(db).first() {
-                RewriteNode::new_trimmed(partition.as_syntax_node())
-            } else {
-                RewriteNode::Text("0".to_string())
-            };
-
-        self.rewrite_nodes.push(RewriteNode::interpolate_patched(
-            "let $query_pattern$ = ArrayTrait::<usize>::new();",
-            HashMap::from([(
-                "query_pattern".to_string(),
-                RewriteNode::Text(self.query_id.clone()),
-            )]),
-        ));
-        self.rewrite_nodes.extend(
-            self.components
-                .iter()
-                .map(|component| {
-                    RewriteNode::interpolate_patched(
-                        "
-                        let __$query_id$_$query_subtype$_ids = IWorldDispatcher { \
-                         contract_address: world_address }.entities('$component$', $partition$);
-                        ",
-                        HashMap::from([
-                            (
-                                "query_subtype".to_string(),
-                                RewriteNode::Text(component.to_string().to_ascii_lowercase()),
-                            ),
-                            ("query_id".to_string(), RewriteNode::Text(self.query_id.clone())),
-                            ("partition".to_string(), partition.clone()),
-                            ("component".to_string(), RewriteNode::Text(component.to_string())),
-                        ]),
-                    )
-                })
-                .collect::<Vec<_>>(),
-        );
     }
 
     pub fn rewrite_entity_query(&mut self, db: &dyn SyntaxGroup, query_ast: ast::ExprFunctionCall) {
@@ -155,38 +115,5 @@ impl Query {
                 ]),
             ));
         }
-    }
-
-    fn find_components(&mut self, db: &dyn SyntaxGroup, expression: ast::Expr) {
-        match expression {
-            ast::Expr::Tuple(tuple) => {
-                for element in tuple.expressions(db).elements(db) {
-                    self.find_components(db, element);
-                }
-            }
-            ast::Expr::Parenthesized(parenthesized) => {
-                self.find_components(db, parenthesized.expr(db))
-            }
-            ast::Expr::Path(path) => match path.elements(db).last().unwrap() {
-                ast::PathSegment::WithGenericArgs(segment) => {
-                    let generic = segment.generic_args(db);
-
-                    for param in generic.generic_args(db).elements(db) {
-                        if let ast::GenericArg::Expr(expr) = param {
-                            self.find_components(db, expr.value(db));
-                        }
-                    }
-                }
-                ast::PathSegment::Simple(segment) => {
-                    self.components.push(segment.ident(db).text(db));
-                }
-            },
-            _ => {
-                unimplemented!(
-                    "Unsupported expression type: {}",
-                    expression.as_syntax_node().get_text(db)
-                );
-            }
-        }
-    }
+    }  
 }
