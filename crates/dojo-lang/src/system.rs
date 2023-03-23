@@ -17,7 +17,6 @@ use smol_str::SmolStr;
 
 use crate::commands::Command;
 use crate::plugin::DojoAuxData;
-use crate::query::Query;
 
 #[cfg(test)]
 #[path = "system_test.rs"]
@@ -129,24 +128,6 @@ impl System {
         let mut rewrite_nodes = vec![];
 
         let signature = function_ast.declaration(db).signature(db);
-        let parameters = signature.parameters(db).elements(db);
-
-        for param_ast in parameters.iter() {
-            let type_ast = param_ast.type_clause(db).ty(db);
-
-            if let ast::Expr::Path(path) = type_ast.clone() {
-                let binding = path.elements(db);
-                let last = binding.last().unwrap();
-                match last {
-                    ast::PathSegment::WithGenericArgs(_segment) => {
-                        // TODO: ...
-                    }
-                    ast::PathSegment::Simple(_segment) => {
-                        // TODO: ...
-                    }
-                };
-            }
-        }
 
         let body_nodes: Vec<RewriteNode> = function_ast
             .body(db)
@@ -189,31 +170,21 @@ impl System {
     ) -> Vec<RewriteNode> {
         if let ast::Statement::Let(statement_let) = statement_ast.clone() {
             if let ast::Expr::FunctionCall(expr_fn) = statement_let.rhs(db) {
-                match expr_fn.path(db).elements(db).first().unwrap() {
+                let elements = expr_fn.path(db).elements(db);
+                let segment = elements.first().unwrap();
+                match segment {
                     ast::PathSegment::WithGenericArgs(segment_genric) => {
-                        if segment_genric.ident(db).text(db).as_str() == "Query" {
-                            let query = Query::from_ast(
-                                db,
-                                statement_let.pattern(db),
-                                expr_fn,
-                                segment_genric.clone(),
-                            );
-                            self.dependencies.extend(query.dependencies);
-                            self.diagnostics.extend(query.diagnostics);
-                            return query.rewrite_nodes;
+                        if segment_genric.ident(db).text(db).as_str() == "commands" {
+                            let command = Command::from_ast(db, statement_let.pattern(db), expr_fn);
+                            self.diagnostics.extend(command.diagnostics);
+                            return command.rewrite_nodes;
                         }
                     }
                     ast::PathSegment::Simple(segment_simple) => {
                         if segment_simple.ident(db).text(db).as_str() == "commands" {
-                            let spawn = Command::from_ast(
-                                db,
-                                statement_let.pattern(db),
-                                expr_fn,
-                                self.world_config,
-                            );
-                            self.dependencies.extend(spawn.dependencies);
-                            self.diagnostics.extend(spawn.diagnostics);
-                            return spawn.rewrite_nodes;
+                            let command = Command::from_ast(db, statement_let.pattern(db), expr_fn);
+                            self.diagnostics.extend(command.diagnostics);
+                            return command.rewrite_nodes;
                         }
                     }
                 }
