@@ -45,7 +45,7 @@ impl CommandTrait for AllCommand {
                     RewriteNode::interpolate_patched(
                         "
                         let __$query_id$_$query_subtype$_ids = IWorldDispatcher { \
-                         contract_address: world_address }.entities('$component$', $partition$);
+                         contract_address: world_address }.all('$component$', $partition$);
                         ",
                         HashMap::from([
                             (

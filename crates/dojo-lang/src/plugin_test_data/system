@@ -245,25 +245,25 @@ mod SpawnSystem {
         serde::Serde::<Player>::serialize(ref __player_calldata, Player { name: name });
         IWorldDispatcher {
             contract_address: world_address
-        }.write('Player', (420, (69, uuid)).into(), 0_u8, __player_calldata.span());
+        }.set('Player', (420, (69, uuid)).into(), 0_u8, __player_calldata.span());
 
         let mut __player_calldata = ArrayTrait::new();
         serde::Serde::<Position>::serialize(ref __player_calldata, Position { x: 0, y: 0 });
         IWorldDispatcher {
             contract_address: world_address
-        }.write('Position', (420, (69, uuid)).into(), 0_u8, __player_calldata.span());
+        }.set('Position', (420, (69, uuid)).into(), 0_u8, __player_calldata.span());
 
         let mut __literal_calldata = ArrayTrait::new();
         serde::Serde::<Player>::serialize(ref __literal_calldata, Player { name: name });
         IWorldDispatcher {
             contract_address: world_address
-        }.write('Player', 420.into(), 0_u8, __literal_calldata.span());
+        }.set('Player', 420.into(), 0_u8, __literal_calldata.span());
 
         let mut __literal_calldata = ArrayTrait::new();
         serde::Serde::<Position>::serialize(ref __literal_calldata, Position { x: 0, y: 0 });
         IWorldDispatcher {
             contract_address: world_address
-        }.write('Position', 420.into(), 0_u8, __literal_calldata.span());
+        }.set('Position', 420.into(), 0_u8, __literal_calldata.span());
 
         let player_id = starknet::get_caller_address();
 
@@ -271,25 +271,25 @@ mod SpawnSystem {
         serde::Serde::<Player>::serialize(ref __player_calldata, Player { name: name });
         IWorldDispatcher {
             contract_address: world_address
-        }.write('Player', player_id.into(), 0_u8, __player_calldata.span());
+        }.set('Player', player_id.into(), 0_u8, __player_calldata.span());
 
         let mut __player_calldata = ArrayTrait::new();
         serde::Serde::<Position>::serialize(ref __player_calldata, Position { x: 0, y: 0 });
         IWorldDispatcher {
             contract_address: world_address
-        }.write('Position', player_id.into(), 0_u8, __player_calldata.span());
+        }.set('Position', player_id.into(), 0_u8, __player_calldata.span());
 
         let mut __invalid_path_calldata = ArrayTrait::new();
         serde::Serde::<Player>::serialize(ref __invalid_path_calldata, Player { name: name });
         IWorldDispatcher {
             contract_address: world_address
-        }.write('Player', (0, 0, 0, 0, 0), 0_u8, __invalid_path_calldata.span());
+        }.set('Player', (0, 0, 0, 0, 0), 0_u8, __invalid_path_calldata.span());
 
         let mut __invalid_path_calldata = ArrayTrait::new();
         serde::Serde::<Position>::serialize(ref __invalid_path_calldata, Position { x: 0, y: 0 });
         IWorldDispatcher {
             contract_address: world_address
-        }.write('Position', (0, 0, 0, 0, 0), 0_u8, __invalid_path_calldata.span());
+        }.set('Position', (0, 0, 0, 0, 0), 0_u8, __invalid_path_calldata.span());
         return ();
     }
 }
@@ -325,32 +325,32 @@ mod MoveSystem {
         let positions_query = ArrayTrait::<usize>::new();
         let __positions_query_position_ids = IWorldDispatcher {
             contract_address: world_address
-        }.entities('Position', 0);
+        }.all('Position', 0);
 
         let __positions_query_player_ids = IWorldDispatcher {
             contract_address: world_address
-        }.entities('Player', 0);
+        }.all('Player', 0);
         let players_query = ArrayTrait::<usize>::new();
         let __players_query_player_ids = IWorldDispatcher {
             contract_address: world_address
-        }.entities('Player', 0);
+        }.all('Player', 0);
 
         let mut __player_player_raw = IWorldDispatcher {
             contract_address: world_address
-        }.read('Player', player_id.into(), 0_u8, 0_usize);
+        }.get('Player', player_id.into(), 0_u8, 0_usize);
         let __player_player = serde::Serde::<Player>::deserialize(ref __player_player_raw);
         let player = __player_player;
 
         let mut __player_position_position_raw = IWorldDispatcher {
             contract_address: world_address
-        }.read('Position', player_id.into(), 0_u8, 0_usize);
+        }.get('Position', player_id.into(), 0_u8, 0_usize);
         let __player_position_position = serde::Serde::<Position>::deserialize(
             ref __player_position_position_raw
         );
 
         let mut __player_position_player_raw = IWorldDispatcher {
             contract_address: world_address
-        }.read('Player', player_id.into(), 0_u8, 0_usize);
+        }.get('Player', player_id.into(), 0_u8, 0_usize);
         let __player_position_player = serde::Serde::<Player>::deserialize(
             ref __player_position_player_raw
         );
@@ -379,11 +379,11 @@ error: Plugin diagnostic: Invalid arguments. Expected "(storage_key, (components
                                            ^^
 
 error: Plugin diagnostic: Unexpected argument type. Expected: "dojo::storage::StorageKey", found: "(core::felt252, core::felt252, core::felt252, core::felt252, core::felt252)".
- --> SpawnSystem:57:90
-                    IWorldDispatcher { contract_address: world_address }.write('Player', (0, 0, 0, 0, 0), 0_u8, __invalid_path_calldata.span());
-                                                                                         ^*************^
+ --> SpawnSystem:57:88
+                    IWorldDispatcher { contract_address: world_address }.set('Player', (0, 0, 0, 0, 0), 0_u8, __invalid_path_calldata.span());
+                                                                                       ^*************^
 
 error: Plugin diagnostic: Unexpected argument type. Expected: "dojo::storage::StorageKey", found: "(core::felt252, core::felt252, core::felt252, core::felt252, core::felt252)".
- --> SpawnSystem:61:92
-                    IWorldDispatcher { contract_address: world_address }.write('Position', (0, 0, 0, 0, 0), 0_u8, __invalid_path_calldata.span());
-                                                                                           ^*************^
+ --> SpawnSystem:61:90
+                    IWorldDispatcher { contract_address: world_address }.set('Position', (0, 0, 0, 0, 0), 0_u8, __invalid_path_calldata.span());
+                                                                                         ^*************^

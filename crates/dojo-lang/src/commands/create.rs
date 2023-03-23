@@ -28,7 +28,7 @@ impl CreateCommand {
                     "
                     let mut __$var_name$_calldata = ArrayTrait::new();
                     serde::Serde::<$component$>::serialize(ref __$var_name$_calldata, $ctor$);
-                    IWorldDispatcher { contract_address: world_address }.write('$component$', \
+                    IWorldDispatcher { contract_address: world_address }.set('$component$', \
                      $storage_key$, 0_u8, __$var_name$_calldata.span());
                     ",
                     HashMap::from([

@@ -9,11 +9,12 @@ use dojo::serde::SpanSerde;
 
 #[abi]
 trait IWorld {
+    fn register_component(name: felt252, class_hash: starknet::ClassHash);
+    fn register_system(name: felt252, class_hash: starknet::ClassHash);
     fn uuid() -> felt252;
-    fn owner_of(entity_id: StorageKey) -> starknet::ContractAddress;
-    fn read(component: felt252, key: StorageKey, offset: u8, length: usize) -> Span<felt252>;
-    fn write(component: felt252, key: StorageKey, offset: u8, value: Span<felt252>);
-    fn entities(component: felt252, partition: felt252) -> Array<StorageKey>;
+    fn get(component: felt252, key: dojo::storage::StorageKey, offset: u8, length: usize) -> Span<felt252>;
+    fn set(component: felt252, key: dojo::storage::StorageKey, offset: u8, value: Span<felt252>);
+    fn all(component: felt252, partition: felt252) -> Array<dojo::storage::StorageKey>;
     fn has_role(role: felt252, account: starknet::ContractAddress) -> bool;
     fn grant_role(role: felt252, account: starknet::ContractAddress);
     fn revoke_role(role: felt252, account: starknet::ContractAddress);
@@ -62,11 +63,8 @@ mod World {
         nonce: felt252,
     }
 
-    // Emitted anytime an entities component state is updated.
     #[event]
-    fn ComponentValueSet(
-        component_address: starknet::ContractAddress, entity_id: StorageKey, data: Array::<felt252>
-    ) {}
+    fn ValueSet(component: felt252, key: StorageKey, offset: u8, value: Span<felt252>) {}
 
     #[event]
     fn ComponentRegistered(name: felt252, class_hash: ClassHash) {}
@@ -126,7 +124,7 @@ mod World {
     }
 
     #[view]
-    fn read(component: felt252, key: StorageKey, offset: u8, mut length: usize) -> Span<felt252> {
+    fn get(component: felt252, key: StorageKey, offset: u8, mut length: usize) -> Span<felt252> {
         let address_domain = 0_u32;
         let base = address(component, key);
         let mut value = ArrayTrait::<felt252>::new();
@@ -137,11 +135,11 @@ mod World {
             }.len()
         }
 
-        read_loop(address_domain, base, ref value, offset, length);
+        get_loop(address_domain, base, ref value, offset, length);
         value.span()
     }
 
-    fn read_loop(
+    fn get_loop(
         address_domain: u32,
         base: starknet::StorageBaseAddress,
         ref value: Array<felt252>,
@@ -167,11 +165,11 @@ mod World {
             ).unwrap_syscall()
         );
 
-        return read_loop(address_domain, base, ref value, offset + 1_u8, length);
+        return get_loop(address_domain, base, ref value, offset + 1_u8, length);
     }
 
     #[external]
-    fn write(component: felt252, key: StorageKey, offset: u8, value: Span<felt252>) {
+    fn set(component: felt252, key: StorageKey, offset: u8, value: Span<felt252>) {
         let _caller = caller::read();
 
         // TODO: verify executor has permission to write
@@ -180,10 +178,11 @@ mod World {
         // assert(value.len() <= length, 'Value too long');
         let address_domain = 0_u32;
         let base = address(component, key);
-        write_loop(address_domain, base, value, offset: offset);
+        set_loop(address_domain, base, value, offset: offset);
+        // ValueSet(component, key, offset, value);
     }
 
-    fn write_loop(
+    fn set_loop(
         address_domain: u32,
         base: starknet::StorageBaseAddress,
         mut value: Span<felt252>,
@@ -202,7 +201,7 @@ mod World {
                 starknet::storage_write_syscall(
                     address_domain, starknet::storage_address_from_base_and_offset(base, offset), *v
                 );
-                write_loop(address_domain, base, value, offset + 1_u8);
+                set_loop(address_domain, base, value, offset + 1_u8);
             },
             Option::None(_) => {},
         }
@@ -210,14 +209,14 @@ mod World {
 
     // Returns entities that contain the component state.
     #[view]
-    fn entities(component: felt252, partition: felt252) -> Array::<felt252> {
+    fn all(component: felt252, partition: felt252) -> Array::<felt252> {
         let entities_len = partition_len::read((component, partition));
         let mut entities = ArrayTrait::<felt252>::new();
-        entities_inner(component, partition, entities_len, ref entities);
+        all_inner(component, partition, entities_len, ref entities);
         return entities;
     }
 
-    fn entities_inner(
+    fn all_inner(
         component: felt252, partition: felt252, entities_len: usize, ref entities: Array::<felt252>
     ) {
         match gas::withdraw_gas() {
@@ -235,7 +234,7 @@ mod World {
 
         let entity_id = partition::read((component, partition, entities_len.into()));
         entities.append(entity_id);
-        return entities_inner(component, partition, entities_len - 1_usize, ref entities);
+        return all_inner(component, partition, entities_len - 1_usize, ref entities);
     }
 
     #[view]
@@ -292,8 +291,8 @@ fn test_component() {
     let mut data = ArrayTrait::<felt252>::new();
     data.append(1337);
     let id = World::uuid();
-    World::write(name, StorageKeyTrait::new_from_id(id), 0_u8, data.span());
-    let stored = World::read(name, StorageKeyTrait::new_from_id(id), 0_u8, 1_usize);
+    World::set(name, StorageKeyTrait::new_from_id(id), 0_u8, data.span());
+    let stored = World::get(name, StorageKeyTrait::new_from_id(id), 0_u8, 1_usize);
     assert(*stored.snapshot.at(0_usize) == 1337, 'data not stored');
 }
 
@@ -305,8 +304,8 @@ fn test_system() {
     let mut data = ArrayTrait::<felt252>::new();
     data.append(1337);
     let id = World::uuid();
-    World::write(name, StorageKeyTrait::new_from_id(id), 0_u8, data.span());
-    let stored = World::read(name, StorageKeyTrait::new_from_id(id), 0_u8, 1_usize);
+    World::set(name, StorageKeyTrait::new_from_id(id), 0_u8, data.span());
+    let stored = World::get(name, StorageKeyTrait::new_from_id(id), 0_u8, 1_usize);
     assert(*stored.snapshot.at(0_usize) == 1337, 'data not stored');
 }
 
