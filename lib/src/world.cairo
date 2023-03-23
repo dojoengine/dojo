@@ -12,7 +12,9 @@ trait IWorld {
     fn register_component(name: felt252, class_hash: starknet::ClassHash);
     fn register_system(name: felt252, class_hash: starknet::ClassHash);
     fn uuid() -> felt252;
-    fn get(component: felt252, key: dojo::storage::StorageKey, offset: u8, length: usize) -> Span<felt252>;
+    fn get(
+        component: felt252, key: dojo::storage::StorageKey, offset: u8, length: usize
+    ) -> Span<felt252>;
     fn set(component: felt252, key: dojo::storage::StorageKey, offset: u8, value: Span<felt252>);
     fn all(component: felt252, partition: felt252) -> Array<dojo::storage::StorageKey>;
     fn has_role(role: felt252, account: starknet::ContractAddress) -> bool;
@@ -179,7 +181,7 @@ mod World {
         let address_domain = 0_u32;
         let base = address(component, key);
         set_loop(address_domain, base, value, offset: offset);
-        // ValueSet(component, key, offset, value);
+    // ValueSet(component, key, offset, value);
     }
 
     fn set_loop(
