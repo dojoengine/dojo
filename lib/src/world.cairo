@@ -1,65 +1,24 @@
-use array::ArrayTrait;
-use hash::LegacyHash;
-use serde::Serde;
-
-use starknet::contract_address::ContractAddressSerde;
-use dojo::storage::StorageKey;
-use dojo::storage::StorageKeyTrait;
-use dojo::serde::SpanSerde;
-
-#[abi]
-trait IWorld {
-    fn register_component(class_hash: starknet::ClassHash);
-    fn register_system(class_hash: starknet::ClassHash);
-    fn uuid() -> felt252;
-    fn execute(name: felt252, execute_calldata: Span<felt252>) -> Span<felt252>;
-    fn get(
-        component: felt252, key: dojo::storage::StorageKey, offset: u8, length: usize
-    ) -> Span<felt252>;
-    fn set(component: felt252, key: dojo::storage::StorageKey, offset: u8, value: Span<felt252>);
-    fn all(component: felt252, partition: felt252) -> Array<dojo::storage::StorageKey>;
-    fn has_role(role: felt252, account: starknet::ContractAddress) -> bool;
-    fn grant_role(role: felt252, account: starknet::ContractAddress);
-    fn revoke_role(role: felt252, account: starknet::ContractAddress);
-    fn renounce_role(role: felt252, account: starknet::ContractAddress);
-}
-
-#[abi]
-trait IComponent {
-    fn name() -> felt252;
-    fn len() -> usize;
-}
-
-#[abi]
-trait ISystem {
-    fn name() -> felt252;
-}
-
 #[contract]
 mod World {
     use array::ArrayTrait;
     use array::SpanTrait;
-    use box::BoxTrait;
     use traits::Into;
-    use hash::pedersen;
     use starknet::get_caller_address;
     use starknet::get_contract_address;
-    use starknet::contract_address_to_felt252;
-    use starknet::ContractAddressZeroable;
-    use starknet::ContractAddressIntoFelt252;
     use starknet::class_hash::ClassHash;
 
-    use dojo::executor::IExecutorDispatcher;
-    use dojo::executor::IExecutorDispatcherTrait;
     use dojo::serde::SpanSerde;
-    use dojo::storage::StorageKey;
-    use dojo::storage::LegacyHashClassHashStorageKey;
-    use dojo::storage::StorageKeyIntoFelt252;
+    use dojo::storage::key::StorageKey;
 
-    use super::IComponentLibraryDispatcher;
-    use super::IComponentDispatcherTrait;
+    use dojo::interfaces::IComponentLibraryDispatcher;
+    use dojo::interfaces::IComponentDispatcherTrait;
+    use dojo::interfaces::IExecutorDispatcher;
+    use dojo::interfaces::IExecutorDispatcherTrait;
+    use dojo::interfaces::IStoreLibraryDispatcher;
+    use dojo::interfaces::IStoreDispatcherTrait;
 
     struct Storage {
+        store: starknet::ClassHash,
         caller: starknet::ClassHash,
         executor: starknet::ContractAddress,
         partition_len: LegacyMap::<(felt252, felt252), usize>,
@@ -70,9 +29,6 @@ mod World {
         system_registry: LegacyMap::<felt252, ClassHash>,
         nonce: felt252,
     }
-
-    #[event]
-    fn ValueSet(component: felt252, key: StorageKey, offset: u8, value: Span<felt252>) {}
 
     #[event]
     fn ComponentRegistered(name: felt252, class_hash: ClassHash) {}
@@ -129,94 +85,27 @@ mod World {
         return pedersen(next, 0);
     }
 
-    fn address(component: felt252, key: StorageKey) -> starknet::StorageBaseAddress {
-        starknet::storage_base_address_from_felt252(
-            hash::LegacyHash::<(felt252, StorageKey)>::hash(0x420, (component, key))
-        )
-    }
-
     #[view]
     fn get(component: felt252, key: StorageKey, offset: u8, mut length: usize) -> Span<felt252> {
-        let address_domain = 0_u32;
-        let base = address(component, key);
-        let mut value = ArrayTrait::<felt252>::new();
+        let class_hash = component_registry::read(component);
 
-        if length == 0_usize {
-            length = IComponentLibraryDispatcher {
-                class_hash: component_registry::read(component)
-            }.len()
-        }
+        let res = IStoreLibraryDispatcher {
+            class_hash: store::read()
+        }.get(component, class_hash, key, offset, length);
 
-        get_loop(address_domain, base, ref value, offset, length);
-        value.span()
-    }
-
-    fn get_loop(
-        address_domain: u32,
-        base: starknet::StorageBaseAddress,
-        ref value: Array<felt252>,
-        offset: u8,
-        length: usize
-    ) {
-        match gas::withdraw_gas() {
-            Option::Some(_) => {},
-            Option::None(_) => {
-                let mut data = ArrayTrait::new();
-                data.append('Out of gas');
-                panic(data);
-            },
-        }
-
-        if length.into() == offset.into() {
-            return ();
-        }
-
-        value.append(
-            starknet::storage_read_syscall(
-                address_domain, starknet::storage_address_from_base_and_offset(base, offset)
-            ).unwrap_syscall()
-        );
-
-        return get_loop(address_domain, base, ref value, offset + 1_u8, length);
+        res
     }
 
     #[external]
     fn set(component: felt252, key: StorageKey, offset: u8, value: Span<felt252>) {
-        let _caller = caller::read();
+        let system_class_hash = caller::read();
 
         // TODO: verify executor has permission to write
-        // TODO: Enable bounds check once we can use library calls in tests.
-        // let length = IComponentLibraryDispatcher { class_hash: component_registry::read(component) }.len();
-        // assert(value.len() <= length, 'Value too long');
-        let address_domain = 0_u32;
-        let base = address(component, key);
-        set_loop(address_domain, base, value, offset: offset);
-    // ValueSet(component, key, offset, value);
-    }
 
-    fn set_loop(
-        address_domain: u32,
-        base: starknet::StorageBaseAddress,
-        mut value: Span<felt252>,
-        offset: u8
-    ) {
-        match gas::withdraw_gas() {
-            Option::Some(_) => {},
-            Option::None(_) => {
-                let mut data = ArrayTrait::new();
-                data.append('Out of gas');
-                panic(data);
-            },
-        }
-        match value.pop_front() {
-            Option::Some(v) => {
-                starknet::storage_write_syscall(
-                    address_domain, starknet::storage_address_from_base_and_offset(base, offset), *v
-                );
-                set_loop(address_domain, base, value, offset + 1_u8);
-            },
-            Option::None(_) => {},
-        }
+        let class_hash = component_registry::read(component);
+        let res = IStoreLibraryDispatcher {
+            class_hash: store::read()
+        }.set(component, class_hash, key, offset, value);
     }
 
     // Returns entities that contain the component state.

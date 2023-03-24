@@ -1,12 +1,3 @@
-#[abi]
-trait IExecutor {
-    fn execute(
-        class_hash: starknet::ClassHash,
-        world_address: starknet::ContractAddress,
-        data: Span<felt252>
-    ) -> Span<felt252>;
-}
-
 #[contract]
 mod Executor {
     use dojo::serde::SpanSerde;

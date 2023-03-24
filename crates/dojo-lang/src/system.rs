@@ -64,17 +64,17 @@ impl System {
                 #[contract]
                 mod $name$ {
                     use dojo::world;
-                    use dojo::world::IWorldDispatcher;
-                    use dojo::world::IWorldDispatcherTrait;
-                    use dojo::storage::StorageKey;
-                    use dojo::storage::StorageKeyTrait;
-                    use dojo::storage::Felt252IntoStorageKey;
-                    use dojo::storage::TupleSize1IntoStorageKey;
-                    use dojo::storage::TupleSize2IntoStorageKey;
-                    use dojo::storage::TupleSize3IntoStorageKey;
-                    use dojo::storage::TupleSize1IntoPartitionedStorageKey;
-                    use dojo::storage::TupleSize2IntoPartitionedStorageKey;
-                    use dojo::storage::ContractAddressIntoStorageKey;
+                    use dojo::interfaces::IWorldDispatcher;
+                    use dojo::interfaces::IWorldDispatcherTrait;
+                    use dojo::storage::key::StorageKey;
+                    use dojo::storage::key::StorageKeyTrait;
+                    use dojo::storage::key::Felt252IntoStorageKey;
+                    use dojo::storage::key::TupleSize1IntoStorageKey;
+                    use dojo::storage::key::TupleSize2IntoStorageKey;
+                    use dojo::storage::key::TupleSize3IntoStorageKey;
+                    use dojo::storage::key::TupleSize1IntoPartitionedStorageKey;
+                    use dojo::storage::key::TupleSize2IntoPartitionedStorageKey;
+                    use dojo::storage::key::ContractAddressIntoStorageKey;
 
                     #[view]
                     fn name() -> felt252 {

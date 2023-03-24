@@ -1,8 +1,7 @@
 mod initializer;
-mod commands;
 mod constants;
 mod executor;
-mod query;
+mod interfaces;
 mod serde;
 mod storage;
 mod world;
