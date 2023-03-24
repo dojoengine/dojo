@@ -4,32 +4,34 @@ use hash::LegacyHash;
 use serde::Serde;
 use traits::Into;
 use starknet::ClassHashIntoFelt252;
+use dojo::serde::SpanSerde;
 
-#[derive(Drop)]
+#[derive(Copy, Drop)]
 struct StorageKey {
+    address_domain: u32,
     partition: felt252,
-    keys: Array<felt252>,
+    keys: Span<felt252>,
 }
 
 trait StorageKeyTrait {
-    fn new(partition: felt252, keys: Array<felt252>) -> StorageKey;
+    fn new(address_domain: u32, partition: felt252, keys: Span<felt252>) -> StorageKey;
     fn new_from_id(id: felt252) -> StorageKey;
 }
 
 impl StorageKeyImpl of StorageKeyTrait {
-    fn new(partition: felt252, keys: Array<felt252>) -> StorageKey {
-        StorageKey { keys: keys, partition: partition }
+    fn new(address_domain: u32, partition: felt252, keys: Span<felt252>) -> StorageKey {
+        StorageKey { address_domain: address_domain, keys: keys, partition: partition }
     }
     fn new_from_id(id: felt252) -> StorageKey {
         let mut keys = ArrayTrait::new();
         keys.append(id);
-        StorageKey { keys: keys, partition: 0 }
+        StorageKey { address_domain: 0_u32, keys: keys.span(), partition: 0 }
     }
 }
 
 impl StorageKeyIntoFelt252 of Into::<StorageKey, felt252> {
     fn into(self: StorageKey) -> felt252 {
-        let span = self.keys.span();
+        let span = self.keys;
         if span.len() == 1_usize {
             return *span.at(0_usize);
         }
@@ -73,15 +75,17 @@ impl LegacyHashClassHashStorageKey of LegacyHash::<(starknet::ClassHash, Storage
 
 impl StorageKeySerde of serde::Serde::<StorageKey> {
     fn serialize(ref serialized: Array::<felt252>, input: StorageKey) {
+        Serde::<u32>::serialize(ref serialized, input.address_domain);
         Serde::<felt252>::serialize(ref serialized, input.partition);
-        Serde::<Array<felt252>>::serialize(ref serialized, input.keys);
+        Serde::<Span<felt252>>::serialize(ref serialized, input.keys);
     }
     fn deserialize(ref serialized: Span::<felt252>) -> Option::<StorageKey> {
+        let address_domain = Serde::<u32>::deserialize(ref serialized)?;
         let partition = Serde::<felt252>::deserialize(ref serialized)?;
         let mut arr = ArrayTrait::<felt252>::new();
-        match Serde::<Array<felt252>>::deserialize(ref serialized) {
+        match Serde::<Span<felt252>>::deserialize(ref serialized) {
             Option::Some(keys) => {
-                Option::Some(StorageKey { partition: partition, keys: keys,  })
+                Option::Some(StorageKeyTrait::new(address_domain, partition, keys))
             },
             Option::None(_) => {
                 Option::None(())
@@ -94,7 +98,7 @@ impl ContractAddressIntoStorageKey of Into::<starknet::ContractAddress, StorageK
     fn into(self: starknet::ContractAddress) -> StorageKey {
         let mut keys = ArrayTrait::<felt252>::new();
         keys.append(self.into());
-        StorageKey { keys: keys, partition: 0 }
+        StorageKeyTrait::new(0_u32, 0, keys.span())
     }
 }
 
@@ -102,7 +106,7 @@ impl Felt252IntoStorageKey of Into::<felt252, StorageKey> {
     fn into(self: felt252) -> StorageKey {
         let mut keys = ArrayTrait::new();
         keys.append(self);
-        StorageKey { keys: keys, partition: 0 }
+        StorageKeyTrait::new(0_u32, 0, keys.span())
     }
 }
 
@@ -111,7 +115,7 @@ impl TupleSize1IntoStorageKey of Into::<(felt252, ), StorageKey> {
         let (first) = self;
         let mut keys = ArrayTrait::new();
         keys.append(first);
-        StorageKey { keys: keys, partition: 0 }
+        StorageKeyTrait::new(0_u32, 0, keys.span())
     }
 }
 
@@ -121,7 +125,7 @@ impl TupleSize2IntoStorageKey of Into::<(felt252, felt252), StorageKey> {
         let mut keys = ArrayTrait::new();
         keys.append(first);
         keys.append(second);
-        StorageKey { keys: keys, partition: 0 }
+        StorageKeyTrait::new(0_u32, 0, keys.span())
     }
 }
 
@@ -132,7 +136,7 @@ impl TupleSize3IntoStorageKey of Into::<(felt252, felt252, felt252), StorageKey>
         keys.append(first);
         keys.append(second);
         keys.append(third);
-        StorageKey { keys: keys, partition: 0 }
+        StorageKeyTrait::new(0_u32, 0, keys.span())
     }
 }
 
@@ -159,7 +163,7 @@ impl TupleSize2IntoPartitionedStorageKey of Into::<(felt252, (felt252, felt252))
 fn test_storagekey_id() {
     let mut keys = ArrayTrait::new();
     keys.append(420);
-    let key = StorageKeyTrait::new(0, keys);
+    let key = StorageKeyTrait::new(0_u32, 0, keys.span());
     assert(key.into() == 420, 'Incorrect hash');
 }
 

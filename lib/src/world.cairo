@@ -72,7 +72,7 @@ mod World {
     }
 
     #[event]
-    fn ValueSet(component: felt252, key: StorageKey, offset: u8, value: Span<felt252>) {}
+    fn SetComponent(component: felt252, key: StorageKey, offset: u8, value: Span<felt252>) {}
 
     #[event]
     fn ComponentRegistered(name: felt252, class_hash: ClassHash) {}
@@ -129,16 +129,16 @@ mod World {
         return pedersen(next, 0);
     }
 
-    fn address(component: felt252, key: StorageKey) -> starknet::StorageBaseAddress {
+    fn address(component: felt252, key: felt252) -> starknet::StorageBaseAddress {
         starknet::storage_base_address_from_felt252(
-            hash::LegacyHash::<(felt252, StorageKey)>::hash(0x420, (component, key))
+            hash::LegacyHash::<(felt252, felt252)>::hash(0x420, (component, key))
         )
     }
 
     #[view]
     fn get(component: felt252, key: StorageKey, offset: u8, mut length: usize) -> Span<felt252> {
-        let address_domain = 0_u32;
-        let base = address(component, key);
+        let address_domain = key.address_domain;
+        let base = address(component, key.into());
         let mut value = ArrayTrait::<felt252>::new();
 
         if length == 0_usize {
@@ -182,16 +182,17 @@ mod World {
 
     #[external]
     fn set(component: felt252, key: StorageKey, offset: u8, value: Span<felt252>) {
+        let address_domain = key.address_domain;
+        let base = address(component, key.into());
         let _caller = caller::read();
 
         // TODO: verify executor has permission to write
         // TODO: Enable bounds check once we can use library calls in tests.
         // let length = IComponentLibraryDispatcher { class_hash: component_registry::read(component) }.len();
         // assert(value.len() <= length, 'Value too long');
-        let address_domain = 0_u32;
-        let base = address(component, key);
+
         set_loop(address_domain, base, value, offset: offset);
-    // ValueSet(component, key, offset, value);
+        SetComponent(component, key, offset, value);
     }
 
     fn set_loop(
