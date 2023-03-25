@@ -1,16 +1,162 @@
-# Dōjō
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/mark-dark.svg">
+  <img alt="Dojo logo" align="right" width="120" src=".github/mark-light.svg">
+</picture>
 
-Dojo is a full stack toolchain for developing onchain games in Cairo. Dojo leverages the affordances provided by Cairo language plugins to offer a best-in-class developer experience for easily integrating blockchain properties into games.
+## Dojo
 
-- Simple composition through the Entity Component System pattern
-- Concise implementations leveraging language plugins and macros
+![Github Actions][gha-badge] [![Telegram Chat][tg-badge]][tg-url]
+
+[gha-badge]: https://img.shields.io/github/actions/workflow/status/dojoengine/dojo/ci.yml?branch=main
+[tg-badge]: https://img.shields.io/endpoint?color=neon&logo=telegram&label=chat&style=flat-square&url=https%3A%2F%2Ftg.sumanjay.workers.dev%2Fdojoengine
+[tg-url]: https://t.me/dojoengine
+
+**Dojo is a toolchain for building Autonomous Worlds in Cairo.**
+
+Dojo provides:
+
+- Composition through the Entity Component System pattern
+- Concise apis using language plugins and macros
 - Expressive query system with efficiently compiled strategies
-- Typed interface generation for client libraries
+- Typed interface generation for client libraries (Coming soon)
 
-The toolchain includes the following:
-- `dojo-ecs`: A concise and efficient implementation of the Entity Component System pattern.
-- `dojo-migrate`: Deploy, migrate, and manage the entities, components, and systems in the world.
-- `dojo-bind`: Generate bindings for various languages / frameworks (typescript, phaser / rust, bevy).
+## Overview
+
+### Entity Component System
+
+Dojo implements the ECS pattern to enable modular and extensible autonomous worlds. Worlds can be permissionlessly expanded over time through the incorporation of components and systems.
+
+#### World
+
+The `world` is the top-level concept in an onchain game, serving as a centralized registry, namespace, and event bus for all entities, components, systems, and resources.
+
+The worlds interface is as follows:
+
+```rust
+trait World {
+    #[event]
+    fn ValueSet(component: felt252, key: StorageKey, offset: u8, value: Span<felt252>) {}
+
+    #[event]
+    fn ComponentRegistered(name: felt252, class_hash: ClassHash) {}
+
+    #[event]
+    fn SystemRegistered(name: felt252, class_hash: ClassHash) {}
+
+    // Returns a globally unique identifier.
+    #[view]
+    fn uuid() -> felt252;
+
+    // Returns a globally unique identifier.
+    #[view]
+    fn get(component: felt252, key: StorageKey, offset: u8, length: usize) -> Span<felt252>;
+
+    // Returns all entities that contain the component.
+    #[view]
+    fn all(component: felt252, partition: felt252) -> Array<StorageKey>;
+
+    // Sets a components value.
+    #[external]
+    fn set(component: felt252, key: StorageKey, offset: u8, value: Span<felt252>);
+
+    // Returns all entities that contain the component.
+    #[external]
+    fn register_component(name: felt252, class_hash: ClassHash);
+
+    // Returns all entities that contain the component.
+    #[external]
+    fn register_system(name: felt252, class_hash: ClassHash);
+}
+```
+
+#### Components
+
+Components form the schema of the world, holding state for systems to operate on. Components struct, for example, the following implements a `Position` component which exposes a `is_zero` and `is_equal` method. The Dojo toolchain compiles components to contracts which can be declared and installed into a world.
+
+##### Example
+
+```rust
+#[derive(Component)]
+struct Position {
+    x: u32,
+    y: u32
+}
+
+trait PositionTrait {
+    fn is_zero(self: Position) -> bool;
+    fn is_equal(self: Position, b: Position) -> bool;
+}
+
+impl PositionImpl of PositionTrait {
+    fn is_zero(self: Position) -> bool {
+        match self.x - self.y {
+            0 => bool::True(()),
+            _ => bool::False(()),
+        }
+    }
+
+    fn is_equal(self: Position, b: Position) -> bool {
+        self.x == b.x & self.y == b.y
+    }
+}
+```
+
+#### Systems
+
+Systems are functions operating on the world state. They receive some input from the user, retreive state from the world, compute a state transition and apply it. A system has a single entrypoint, the `execute` function. Systems can leverage `commands` to easily interace with the world.
+
+
+##### Commands
+
+```rust
+// Retrieve a unique id from the world, useful for create a new entity.
+fn commands::uuid() -> felt252;
+
+// Create a new entity with the provided components.
+fn commands::create(storage_key: StorageKey, components: T);
+
+// Update an existing entity with the provided components.
+fn commands::set(storage_key: StorageKey, components: T);
+
+// Retreive a components for an entity.
+fn commands::<T>::get(storage_key: StorageKey) -> T;
+
+// Retreive all entity ids that match the component selector criteria.
+fn commands::<T>::all() -> Array<felt252>;
+```
+
+##### Example
+
+```rust
+#[system]
+mod SpawnSystem {
+    fn execute(name: String) {
+        let player_id = commands::create((
+            Health::new(100_u8),
+            Name::new(name)
+        ));
+        return ();
+    }
+}
+
+#[system]
+mod MoveSystem {
+    fn execute(player_id: usize) {
+        let player = commands<(Health, Name)>::get(player_id);
+        let positions = commands<(Position, Health)>::all();
+
+        // @NOTE: Loops are not available in Cairo 1.0 yet.
+        for (position, health) in positions {
+            let is_zero = position.is_zero();
+        }
+        return ();
+    }
+}
+```
+
+#### Entities
+
+An entity is addressed by a `felt252`. An entity represents a collection of component state.
 
 ## Development
 
@@ -59,163 +205,3 @@ rustup override set stable && rustup update && cargo test
 Then install the language like described above.
 
 ---
-
-## Overview
-
-### Entity Component System
-
-Dojo implements the ECS pattern which is subsequently compiled to Starknet contracts for deployment. The syntax and semantics are heavily inspired by [Bevy](https://bevyengine.org/).
-
-#### Worlds
-
-A `world` is the top-level concept in an onchain game, serving as a centralized registry, namespace, and event bus for all entities, components, systems, and resources.
-
-The worlds interface is as follows:
-
-```rust
-trait World {
-    // Emitted anytime an entities component state is updated.
-    #[event]
-    fn ComponentValueSet(
-        component_address: starknet::ContractAddress, entity_id: usize, data: Array::<felt>
-    ) {}
-
-    // Emitted when a component or system is registered.
-    #[event]
-    fn ModuleRegistered(
-        module_address: starknet::ContractAddress, module_id: felt, class_hash: felt
-    ) {}
-
-    // Register a component or system. The returned
-    // hash is used to uniquely identify the component or
-    // system in the world. All components and systems
-    // within a world are deterministically addressed
-    // relative to the world.
-    #[external]
-    fn register(class_hash: felt, module_id: felt) -> felt;
-
-    // Called when a component in the world updates the value
-    // for an entity. When called for the first time for an 
-    // entity, the entity:component mapping is registered.
-    // Additionally, a `ComponentValueSet` event is emitted.
-    #[external]
-    fn on_component_set(entity_id: usize, data: Array::<felt>);
-
-    // Returns entities that contain the component state.
-    #[view]
-    fn entities(component: starknet::ContractAddress) -> Array::<usize>;
-}
-```
-
-#### Components
-
-Components in `dojo-ecs` are modules with a single struct describing its state, for example, the following implements a `Position` component which exposes a `is_zero` and `is_equal` method.
-
-```rust
-#[derive(Component)]
-struct Position {
-    x: felt,
-    y: felt
-}
-
-impl Position of Component {
-    #[view]
-    fn is_zero(self: Position) -> bool {
-        match self.x - self.y {
-            0 => bool::True(()),
-            _ => bool::False(()),
-        }
-    }
-
-    #[view]
-    fn is_equal(self: Position, b: Position) -> bool {
-        self.x == b.x & self.y == b.y
-    }
-}
-```
-
-#### Systems
-
-A system is a pure function that takes as input a set of entities to operate on. Systems define a `Query` which describes a set of criteria to query entities with.
-
-```rust
-#[system]
-mod spawn_system {
-    use dojo::commands::Spawn;
-
-    #[execute]
-    fn spawn(name: String) {
-        let player_id = Spawn::bundle((
-            Health::new(100_u8),
-            Name::new(name)
-        ));
-        return ();
-    }
-}
-
-#[system]
-mod move_system {
-    #[execute]
-    fn move(player_id: usize) {
-        let player = QueryTrait<(Health, Name)>::entity(player_id);
-        let positions = QueryTrait<(Position, Health)>::ids();
-
-        // @NOTE: Loops are not available in Cairo 1.0 yet.
-        for (position, health) in positions {
-            let is_zero = position.is_zero();
-        }
-        return ();
-    }
-}
-```
-
-#### Entities
-
-An entity is addressed by a `felt`. An entity represents a collection of component state. A component can set state for an arbitrary entity, registering itself with the world as a side effect.
-
-
-#### Addressing
-
-Everything inside a Dojo World is deterministically addressed relative to the world, from the address of a system to the storage slot of an entity's component value. This is accomplished by enforcing module name uniqueness, i.e. `PositionComponent` and `MoveSystem`, wrapping all components and systems using the proxy pattern, and standardizing the storage layout of component modules.
-
-This property allows for:
-1) Statically planning deployment and migration strategies for updates to the world
-2) Trustlessly recreating world state on clients using a [light client with storage proofs](https://github.com/keep-starknet-strange/beerus)
-3) Optimistically updating client state using [client computed state transitions](https://github.com/starkware-libs/blockifier)
-4) Efficiently querying a subset of the world state without replaying event history
-
-```rust
-use starknet::{deploy, pedersen};
-
-impl World {
-    struct Storage {
-        registry: Map::<felt, felt>,
-    }
-
-    fn register(class_hash: felt) -> felt {
-        let module_id = pedersen("PositionComponent");
-        let address = deploy(
-            class_hash=proxy_class_hash,
-            contract_address_salt=module_id,
-            constructor_calldata_size=0,
-            constructor_calldata=[],
-            deploy_from_zero=FALSE,
-        );
-        IProxy.set_implementation(class_hash);
-        IPositionComponent.initialize(address, ...);
-        registry.write(module_id, address);
-    }
-}
-```
-
-#### Events
-
-Events are emitted anytime a components state is updated a `ComponentValueSet` event is emitted from the world, enabling clients to easily track changes to world state.
-
-### Migrate
-
-Given addresses of every component / system in the world is deterministically addressable, the `dojo-migrate` cli takes a world address as entrypoint and diffs the onchain state with the compiled state, generating a deploying + migration plan for declaring and registering new components and / or updating existing components.
-
-### Bind
-
-Bind is a cli for generating typed interfaces for integration with various client libraries / languages.

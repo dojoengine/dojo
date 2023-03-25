@@ -8,5 +8,4 @@ pub mod compiler;
 pub mod component;
 pub mod db;
 pub mod plugin;
-mod query;
 pub mod system;

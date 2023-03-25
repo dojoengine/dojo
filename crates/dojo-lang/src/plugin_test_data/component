@@ -4,6 +4,8 @@
 ExpandContractTestRunner
 
 //! > cairo_code
+use serde::Serde;
+
 #[derive(Component)]
 struct Position {
     x: felt252,
@@ -29,6 +31,8 @@ impl PositionImpl of PositionTrait {
 }
 
 //! > generated_cairo_code
+use serde::Serde;
+
 trait PositionTrait {
     fn is_zero(self: Position) -> bool;
     fn is_equal(self: Position, b: Position) -> bool;
@@ -55,80 +59,57 @@ struct Position {
 
 #[abi]
 trait IPosition {
-    fn set(key: felt252, value: Position);
-    fn get(key: felt252) -> Position;
+    fn name() -> felt252;
+    fn len() -> u8;
+    fn serialize(raw: Span<felt252>) -> Position;
+    fn deserialize(value: Position) -> Span<felt252>;
+}
+
+impl PositionSerde of serde::Serde::<Position> {
+    fn serialize(ref serialized: Array::<felt252>, input: Position) {
+        serde::Serde::<felt252>::serialize(ref serialized, input.x);
+        serde::Serde::<felt252>::serialize(ref serialized, input.y);
+    }
+    fn deserialize(ref serialized: Span::<felt252>) -> Option::<Position> {
+        Option::Some(
+            Position {
+                x: serde::Serde::<felt252>::deserialize(ref serialized)?,
+                y: serde::Serde::<felt252>::deserialize(ref serialized)?,
+            }
+        )
+    }
 }
 
 #[contract]
 mod PositionComponent {
+    use array::ArrayTrait;
     use option::OptionTrait;
-    use starknet::SyscallResult;
-    use traits::Into;
-    use traits::TryInto;
-
+    use dojo::serde::SpanSerde;
     use super::Position;
 
-    impl PositionSerde of serde::Serde::<Position> {
-        fn serialize(ref serialized: Array::<felt252>, input: Position) {
-            serde::Serde::<felt252>::serialize(ref serialized, input.x);
-            serde::Serde::<felt252>::serialize(ref serialized, input.y);
-        }
-        fn deserialize(ref serialized: Span::<felt252>) -> Option::<Position> {
-            Option::Some(
-                Position {
-                    x: serde::Serde::<felt252>::deserialize(ref serialized)?,
-                    y: serde::Serde::<felt252>::deserialize(ref serialized)?,
-                }
-            )
-        }
+    #[view]
+    fn name() -> felt252 {
+        'Position'
     }
 
-    impl StorageAccessPosition of starknet::StorageAccess::<Position> {
-        fn read(
-            address_domain: u32, base: starknet::StorageBaseAddress
-        ) -> starknet::SyscallResult::<Position> {
-            Result::Ok(
-                Position {
-                    x: starknet::storage_read_syscall(
-                        address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8)
-                    )?,
-                    y: starknet::storage_read_syscall(
-                        address_domain, starknet::storage_address_from_base_and_offset(base, 1_u8)
-                    )?,
-                }
-            )
-        }
-        fn write(
-            address_domain: u32, base: starknet::StorageBaseAddress, value: Position
-        ) -> starknet::SyscallResult::<()> {
-            starknet::storage_write_syscall(
-                address_domain, starknet::storage_address_from_base_and_offset(base, 0_u8), value.x
-            )?;
-            starknet::storage_write_syscall(
-                address_domain, starknet::storage_address_from_base_and_offset(base, 1_u8), value.y
-            )
-        }
+    #[view]
+    fn len() -> usize {
+        2_usize
     }
 
-
-    struct Storage {
-        state: LegacyMap::<felt252, Position>, 
-    }
-
-    // Initialize Position.
-    #[external]
-    fn initialize() {}
-
-    // Set the state of an entity.
-    #[external]
-    fn set(key: felt252, value: Position) {
-        state::write(key, value);
+    // Serialize an entity.
+    #[view]
+    fn serialize(mut raw: Span<felt252>) -> Position {
+        serde::Serde::<Position>::deserialize(ref raw).unwrap()
     }
 
     // Get the state of an entity.
     #[view]
-    fn get(key: felt252) -> Position {
-        return state::read(key);
+    #[raw_output]
+    fn deserialize(value: Position) -> Span<felt252> {
+        let mut arr = ArrayTrait::new();
+        serde::Serde::<Position>::serialize(ref arr, value);
+        arr.span()
     }
 }
 
