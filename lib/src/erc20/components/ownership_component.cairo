@@ -1,5 +1,5 @@
 
 #[derive(Component)]
 struct Ownership {
-    balances: felt252,
+    balance: felt252,
 }

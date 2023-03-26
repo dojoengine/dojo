@@ -72,8 +72,8 @@ mod ERC20BaseSubsystem {
 
     #[external]
     fn transfer(recipient: ContractAddress, amount: u256) {
-        let sender = get_caller_address();
-        transfer_helper(sender, recipient, amount);
+        // let sender = get_caller_address();
+        // transfer_helper(sender, recipient, amount);
     }
 
     #[external]
@@ -86,20 +86,20 @@ mod ERC20BaseSubsystem {
     //approval system
     #[external]
     fn approve(spender: ContractAddress, amount: u256) {
-        let caller = get_caller_address();
-        approve_helper(caller, spender, amount);
+        // let caller = get_caller_address();
+        // approve_helper(caller, spender, amount);
     }
     //approval system
     #[external]
     fn increase_allowance(spender: ContractAddress, added_value: u256) {
-        let caller = get_caller_address();
-        approve_helper(caller, spender, allowances::read((caller, spender)) + added_value);
+        // let caller = get_caller_address();
+        // approve_helper(caller, spender, allowances::read((caller, spender)) + added_value);
     }
     //approval system
     #[external]
     fn decrease_allowance(spender: ContractAddress, subtracted_value: u256) {
-        let caller = get_caller_address();
-        approve_helper(caller, spender, allowances::read((caller, spender)) - subtracted_value);
+        // let caller = get_caller_address();
+        // approve_helper(caller, spender, allowances::read((caller, spender)) - subtracted_value);
     }
 
     //ownership system
@@ -122,10 +122,10 @@ mod ERC20BaseSubsystem {
         }
     }
 
-    //approval system
-    fn approve_helper(owner: ContractAddress, spender: ContractAddress, amount: u256) {
-        assert(!spender.is_zero(), 'ERC20: approve from 0');
-        allowances::write((owner, spender), amount);
-        Approval(owner, spender, amount);
-    }
+    // //approval system
+    // fn approve_helper(owner: ContractAddress, spender: ContractAddress, amount: u256) {
+    //     assert(!spender.is_zero(), 'ERC20: approve from 0');
+    //     allowances::write((owner, spender), amount);
+    //     Approval(owner, spender, amount);
+    // }
 }
