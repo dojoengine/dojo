@@ -1,5 +1,5 @@
 
 #[derive(Component)]
-struct OwnershipComponent {
-    balances: LegacyMap::<ContractAddress, u256>,
+struct Ownership {
+    balances: felt252,
 }
