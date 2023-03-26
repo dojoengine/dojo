@@ -71,45 +71,19 @@ mod ERC20BaseSubsystem {
     }
 
     #[external]
-    fn transfer(recipient: ContractAddress, amount: u256) {
-        // let sender = get_caller_address();
-        // transfer_helper(sender, recipient, amount);
-    }
-
-    #[external]
-    fn transfer_from(sender: ContractAddress, recipient: ContractAddress, amount: u256) {
-        let caller = get_caller_address();
-        spend_allowance(sender, caller, amount);
-        transfer_helper(sender, recipient, amount);
+    fn transfer(spender: ContractAddress, recipient: ContractAddress, amount: u256) {
+        ERC20_Transfer.execute(symbol,spender, recipient, amount);
+        Transfer(sender, recipient, amount);
+       //todo spend_allowance
     }
 
     //approval system
     #[external]
     fn approve(spender: ContractAddress, amount: u256) {
-        // let caller = get_caller_address();
-        // approve_helper(caller, spender, amount);
+       ERC20_Approve.execute(symbol, spender, amount);
+       Approval(get_caller_address(),spender,amount);
     }
-    //approval system
-    #[external]
-    fn increase_allowance(spender: ContractAddress, added_value: u256) {
-        // let caller = get_caller_address();
-        // approve_helper(caller, spender, allowances::read((caller, spender)) + added_value);
-    }
-    //approval system
-    #[external]
-    fn decrease_allowance(spender: ContractAddress, subtracted_value: u256) {
-        // let caller = get_caller_address();
-        // approve_helper(caller, spender, allowances::read((caller, spender)) - subtracted_value);
-    }
-
-    //ownership system
-    fn transfer_helper(sender: ContractAddress, recipient: ContractAddress, amount: u256) {
-        assert(!sender.is_zero(), 'ERC20: transfer from 0');
-        assert(!recipient.is_zero(), 'ERC20: transfer to 0');
-        balances::write(sender, balances::read(sender) - amount);
-        balances::write(recipient, balances::read(recipient) + amount);
-        Transfer(sender, recipient, amount);
-    }
+   
 
     //approval system
     fn spend_allowance(owner: ContractAddress, spender: ContractAddress, amount: u256) {
@@ -121,11 +95,4 @@ mod ERC20BaseSubsystem {
             approve_helper(owner, spender, current_allowance - amount);
         }
     }
-
-    // //approval system
-    // fn approve_helper(owner: ContractAddress, spender: ContractAddress, amount: u256) {
-    //     assert(!spender.is_zero(), 'ERC20: approve from 0');
-    //     allowances::write((owner, spender), amount);
-    //     Approval(owner, spender, amount);
-    // }
 }
