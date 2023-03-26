@@ -1,5 +1,5 @@
 
 #[derive(Component)]
-struct ApprovalComponent {
-    approvals: LegacyMap::<(ContractAddress, ContractAddress), u256>,
+struct Approval {
+    amount: felt252,
 }
