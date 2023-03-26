@@ -53,7 +53,7 @@ trait World {
 
     // Returns all entities that contain the component.
     #[view]
-    fn all(component: felt252, partition: felt252) -> Array<StorageKey>;
+    fn entities(component: felt252, partition: felt252) -> Array<StorageKey>;
 
     // Sets a components value.
     #[external]
@@ -122,7 +122,7 @@ fn commands::set(storage_key: StorageKey, components: T);
 fn commands::<T>::get(storage_key: StorageKey) -> T;
 
 // Retreive all entity ids that match the component selector criteria.
-fn commands::<T>::all() -> Array<felt252>;
+fn commands::<T>::entities() -> Array<felt252>;
 ```
 
 ##### Example
@@ -143,7 +143,7 @@ mod SpawnSystem {
 mod MoveSystem {
     fn execute(player_id: usize) {
         let player = commands<(Health, Name)>::get(player_id);
-        let positions = commands<(Position, Health)>::all();
+        let positions = commands<(Position, Health)>::entities();
 
         // @NOTE: Loops are not available in Cairo 1.0 yet.
         for (position, health) in positions {

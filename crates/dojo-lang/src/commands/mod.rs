@@ -4,8 +4,8 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal};
 use smol_str::SmolStr;
 
-pub mod all;
 pub mod create;
+pub mod entities;
 pub mod execute;
 pub mod get;
 pub mod uuid;
@@ -62,7 +62,7 @@ impl Command {
                 command.diagnostics.extend(sc.diagnostics());
             }
             "all" => {
-                let sc = all::AllCommand::from_ast(db, let_pattern, command_ast);
+                let sc = entities::AllCommand::from_ast(db, let_pattern, command_ast);
                 command.rewrite_nodes.extend(sc.rewrite_nodes());
                 command.diagnostics.extend(sc.diagnostics());
             }
