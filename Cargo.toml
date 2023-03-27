@@ -9,6 +9,7 @@ members = [
     "crates/dojo-language-server",
     "crates/dojo-project",
     "crates/dojo-test-runner",
+    "crates/bevy-dojo",
 ]
 
 [workspace.package]

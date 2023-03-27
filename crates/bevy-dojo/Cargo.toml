@@ -1,0 +1,8 @@
+[package]
+name = "bevy_dojo"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+bevy_app = "0.10"
+bevy_ecs = "0.10"
