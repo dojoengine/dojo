@@ -15,9 +15,9 @@
 
 Dojo provides:
 
-- Composition through the Entity Component System pattern
-- Concise apis using language plugins and macros
-- Expressive query system with efficiently compiled strategies
+- Scalable composition through the Entity Component System pattern.
+- Permissionless expansion of autonomous worlds through the introduction of components and systems.
+- Concise macros for interacting with world state and functions.
 - Typed interface generation for client libraries (Coming soon)
 
 ## Overview
@@ -29,45 +29,6 @@ Dojo implements the ECS pattern to enable modular and extensible autonomous worl
 #### World
 
 The `world` is the top-level concept in an onchain game, serving as a centralized registry, namespace, and event bus for all entities, components, systems, and resources.
-
-The worlds interface is as follows:
-
-```rust
-trait World {
-    #[event]
-    fn ValueSet(component: felt252, key: StorageKey, offset: u8, value: Span<felt252>) {}
-
-    #[event]
-    fn ComponentRegistered(name: felt252, class_hash: ClassHash) {}
-
-    #[event]
-    fn SystemRegistered(name: felt252, class_hash: ClassHash) {}
-
-    // Returns a globally unique identifier.
-    #[view]
-    fn uuid() -> felt252;
-
-    // Returns a globally unique identifier.
-    #[view]
-    fn get(component: felt252, key: StorageKey, offset: u8, length: usize) -> Span<felt252>;
-
-    // Returns all entities that contain the component.
-    #[view]
-    fn entities(component: felt252, partition: felt252) -> Array<StorageKey>;
-
-    // Sets a components value.
-    #[external]
-    fn set(component: felt252, key: StorageKey, offset: u8, value: Span<felt252>);
-
-    // Returns all entities that contain the component.
-    #[external]
-    fn register_component(name: felt252, class_hash: ClassHash);
-
-    // Returns all entities that contain the component.
-    #[external]
-    fn register_system(name: felt252, class_hash: ClassHash);
-}
-```
 
 #### Components
 
@@ -83,18 +44,10 @@ struct Position {
 }
 
 trait PositionTrait {
-    fn is_zero(self: Position) -> bool;
     fn is_equal(self: Position, b: Position) -> bool;
 }
 
 impl PositionImpl of PositionTrait {
-    fn is_zero(self: Position) -> bool {
-        match self.x - self.y {
-            0 => bool::True(()),
-            _ => bool::False(()),
-        }
-    }
-
     fn is_equal(self: Position, b: Position) -> bool {
         self.x == b.x & self.y == b.y
     }
@@ -103,7 +56,7 @@ impl PositionImpl of PositionTrait {
 
 #### Systems
 
-Systems are functions operating on the world state. They receive some input from the user, retreive state from the world, compute a state transition and apply it. A system has a single entrypoint, the `execute` function. Systems can leverage `commands` to easily interace with the world.
+Systems are functions operating on the world state. They receive some input from the user, retreive state from the world, compute a state transition and apply it. A system has a single entrypoint, the `execute` function. Systems can leverage `commands` to easily interact with the world.
 
 
 ##### Commands
