@@ -13,5 +13,8 @@ mod HarvestLaborSystem {
         // 2. Check resource on Realm
         // 3. Harvest labor units
         // 4. Add resource balance to Realms
+
+        // check for tick
+        // call tick if needed
     }
 }

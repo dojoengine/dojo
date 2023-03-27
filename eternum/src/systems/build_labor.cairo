@@ -12,5 +12,9 @@ mod BuildLaborSystem {
         // 1. Check owner of s_realm
         // 2. Check resource on Realm
         // 3. Build labor and save to Realm
+
+
+        // check for tick
+        // call tick if needed
     }
 }

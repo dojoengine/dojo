@@ -1,4 +1,4 @@
-use constants::TICK_TIME;
+use eternum::constants::TICK_TIME;
 use starknet;
 
 #[derive(Component)]
