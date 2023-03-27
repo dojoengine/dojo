@@ -2,15 +2,19 @@
 
 Dojo Indexer is a command line tool that allows you to index data from a given Dōjō world using Apibara and an RPC endpoint while storing indexed data such as the world's components, entity states and systems, in a specified database.
 
-
 ## Prerequisites
 - Before running the indexer you will need the `sqlx-cli`:
+
     ```
     cargo install sqlx-cli
     ```
 - Create an SQLite database using `sqlx`:
 
   1. Set the database URL that will be used by `sqlx`:
+
+     ```
+     cd crates/dojo-indexer
+     ```  
 
      ```
      export DATABASE_URL=sqlite://indexer.db
@@ -30,7 +34,8 @@ Dojo Indexer is a command line tool that allows you to index data from a given D
 
 ## Usage
 
-To run the `dojo-indexer` command, open your terminal or command prompt, navigate to the directory containing the Dojo Indexer source code, and execute the following command:
+To run the `dojo-indexer` command, open your terminal or command prompt, make sure you are in the `dojo-indexer` directory.
+
 
 ```
 cargo run --bin dojo-indexer <world> <node> <rpc> <database_url>
