@@ -16,6 +16,7 @@ trait StorageKeyTrait {
     fn new_from_id(id: felt252) -> StorageKey;
     fn id(self: @StorageKey) -> felt252;
     fn table(self: @StorageKey, component: felt252) -> felt252;
+    fn keys(self: @StorageKey) -> Span<felt252>;
 }
 
 impl StorageKeyImpl of StorageKeyTrait {
@@ -41,6 +42,9 @@ impl StorageKeyImpl of StorageKeyTrait {
         }
 
         pedersen(component, *self.partition)
+    }
+    fn keys(self: @StorageKey) -> Span<felt252> {
+        self.keys.span()
     }
 }
 

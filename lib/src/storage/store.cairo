@@ -6,12 +6,16 @@ mod Store {
 
     use dojo::serde::SpanSerde;
     use dojo::storage::key::StorageKey;
+    use dojo::storage::key::StorageKeyTrait;
 
     use dojo::interfaces::IComponentLibraryDispatcher;
     use dojo::interfaces::IComponentDispatcherTrait;
 
     #[event]
-    fn ValueSet(table: felt252, key: StorageKey, offset: u8, value: Span<felt252>) {}
+    fn StoreSetRecord(table_id: felt252, key: Span<felt252>, value: Span<felt252>) {}
+
+    #[event]
+    fn StoreSetField(table_id: felt252, key: Span<felt252>, offset: u8, value: Span<felt252>) {}
 
     fn address(table: felt252, key: StorageKey) -> starknet::StorageBaseAddress {
         starknet::storage_base_address_from_felt252(
@@ -72,17 +76,20 @@ mod Store {
     fn set(
         table: felt252,
         class_hash: starknet::ClassHash,
-        key: StorageKey,
+        storage_key: StorageKey,
         offset: u8,
         value: Span<felt252>
     ) {
+        let keys = storage_key.keys();
         let length = IComponentLibraryDispatcher { class_hash: class_hash }.len();
         assert(value.len() <= length, 'Value too long');
 
         let address_domain = 0_u32;
-        let base = address(table, key);
+        let base = address(table, storage_key);
         _set(address_domain, base, value, offset: offset);
-    // ValueSet(component, key, offset, value);
+
+        StoreSetRecord(table, keys, value);
+        StoreSetField(table, keys, offset, value);
     }
 
     fn _set(
