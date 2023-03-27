@@ -9,15 +9,8 @@ mod SettleSystem {
 
     fn execute(realm_id: felt252) {
 
-        // mint s_realm
-        // stake realm
+        // checks ownership of RealmERC721
+        // settles realm
 
-        // set time staked in Realm component
-        
-        let owner: felt252 = starknet::get_caller_address().into();
-
-        // let player_game_id = commands::create((game_id, (player_id)).into(), (
-        //     Realm { name: name }
-        // ));
     }
 }
