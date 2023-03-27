@@ -157,27 +157,21 @@ An entity is addressed by a `felt252`. An entity represents a collection of comp
 
 ## Development
 
-### Setup Submodules
+### Dev Container
 
-```
-git submodule update --init --recursive
-```
-
-## Development container
-
-It is recommended to use the dev container when building on DoJo as it contains everything needed to begin developing.
+It is recommended to use the dev container when building on Dojo as it contains everything needed to begin developing.
 
 Make sure you update your Docker to the latest stable version, sometimes the Dev containers do not play nicely with old Docker versions.
 
-# Restart VSCode for this to take effect
+#### Restart VSCode for this to take effect
 
-### Open and build container
+##### Open and build container
 
 Command pallete: `ctrl + shift + p`
 
 Then: `Remote-Containers: Rebuild Container Without Cache`
 
-### Setup the language server 
+##### Setup the language server 
 
 ```
 cd cairo/vscode-cairo
