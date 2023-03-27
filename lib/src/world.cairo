@@ -9,20 +9,23 @@ mod World {
 
     use dojo::serde::SpanSerde;
     use dojo::storage::key::StorageKey;
+    use dojo::storage::key::StorageKeyTrait;
+    use dojo::storage::key::StorageKeyIntoFelt252;
 
     use dojo::interfaces::IComponentLibraryDispatcher;
     use dojo::interfaces::IComponentDispatcherTrait;
     use dojo::interfaces::IExecutorDispatcher;
     use dojo::interfaces::IExecutorDispatcherTrait;
+    use dojo::interfaces::IIndexerLibraryDispatcher;
+    use dojo::interfaces::IIndexerDispatcherTrait;
     use dojo::interfaces::IStoreLibraryDispatcher;
     use dojo::interfaces::IStoreDispatcherTrait;
 
     struct Storage {
+        indexer: starknet::ClassHash,
         store: starknet::ClassHash,
         caller: starknet::ClassHash,
         executor: starknet::ContractAddress,
-        partition_len: LegacyMap::<(felt252, felt252), usize>,
-        partition: LegacyMap::<(felt252, felt252, felt252), felt252>,
         role_admin: LegacyMap::<felt252, felt252>,
         role_member: LegacyMap::<(felt252, starknet::ContractAddress), bool>,
         component_registry: LegacyMap::<felt252, ClassHash>,
@@ -99,43 +102,23 @@ mod World {
     #[external]
     fn set(component: felt252, key: StorageKey, offset: u8, value: Span<felt252>) {
         let system_class_hash = caller::read();
+        let table = key.table(component);
+        let id = key.id();
 
         // TODO: verify executor has permission to write
 
         let class_hash = component_registry::read(component);
         let res = IStoreLibraryDispatcher {
             class_hash: store::read()
-        }.set(component, class_hash, key, offset, value);
+        }.set(table, class_hash, key, offset, value);
+
+        IIndexerLibraryDispatcher { class_hash: indexer::read() }.index(table, id);
     }
 
     // Returns entities that contain the component state.
     #[view]
-    fn all(component: felt252, partition: felt252) -> Array::<felt252> {
-        let entities_len = partition_len::read((component, partition));
-        let mut entities = ArrayTrait::<felt252>::new();
-        all_inner(component, partition, entities_len, ref entities);
-        return entities;
-    }
-
-    fn all_inner(
-        component: felt252, partition: felt252, entities_len: usize, ref entities: Array::<felt252>
-    ) {
-        match gas::withdraw_gas() {
-            Option::Some(_) => {},
-            Option::None(_) => {
-                let mut data = ArrayTrait::new();
-                data.append('OOG');
-                panic(data);
-            }
-        }
-
-        if (entities_len == 0_usize) {
-            return ();
-        }
-
-        let entity_id = partition::read((component, partition, entities_len.into()));
-        entities.append(entity_id);
-        return all_inner(component, partition, entities_len - 1_usize, ref entities);
+    fn entities(component: felt252, partition: felt252) -> Array::<felt252> {
+        IIndexerLibraryDispatcher { class_hash: indexer::read() }.entities(component, partition)
     }
 
     #[view]
