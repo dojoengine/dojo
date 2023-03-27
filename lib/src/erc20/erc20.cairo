@@ -93,13 +93,12 @@ mod ERC20 {
         calldata.append(amount.try_into());
 
         IWorldDispatcher { contract_address: world_address::read() }.execute('ERC20_TransferFrom', calldata.span());
-        IWorldDispatcher { contract_address: world_address::read() }.execute('ERC20_Spend_Allowance', calldata.span());
 
         let approval_sk: StorageKey = (token_id, (caller.into(), spender)).into();
         let approval = commands::<Approval>::get(approval_sk);
 
         Transfer(spender, recipient, amount);
-        Approval(get_caller_address(),spender,approval.amount-amount);
+        Approval(get_caller_address(),spender,approval.amount);
     }
 
     #[external]

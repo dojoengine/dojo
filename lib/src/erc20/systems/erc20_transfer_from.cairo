@@ -21,5 +21,13 @@ mod ERC20_TransferFrom {
         commands::set(recipient_ownership_sk, (
             Ownership { balance : ownership.balance + amount}
         ));
+
+        //update allowance
+        let approval_sk: StorageKey = (token_address, (caller.into(), spender)).into();
+        let approval = commands::<Approval>::get(approval_sk);
+        
+        commands::set(approval_sk, (
+            Approval { amount: approval.amount - amount }
+        ))
     }
 }
