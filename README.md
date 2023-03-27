@@ -112,9 +112,6 @@ Systems are functions operating on the world state. They receive some input from
 // Retrieve a unique id from the world, useful for create a new entity.
 fn commands::uuid() -> felt252;
 
-// Create a new entity with the provided components.
-fn commands::create(storage_key: StorageKey, components: T);
-
 // Update an existing entity with the provided components.
 fn commands::set(storage_key: StorageKey, components: T);
 
