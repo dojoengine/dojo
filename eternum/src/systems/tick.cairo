@@ -5,7 +5,7 @@ mod SettleSystem {
     use array::ArrayTrait;
     use traits::Into;  
 
-    use eternum::components::realms::Realm;
+    use eternum::components::realm::Realm;
 
     fn execute(realm_id: felt252) {
 

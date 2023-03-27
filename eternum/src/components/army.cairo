@@ -1,3 +1,5 @@
+use eternum::components::buildings::Buildings;
+
 //
 // ----------- Army
 // Armies can be attacked to any Entity if it has a Spawn function. Realms can spawn them and have ownership over them, however they can exist
@@ -5,8 +7,7 @@
 
 #[derive(Component)]
 struct Army {
-    entity_id: u32, // Armies are Entities. We assign an Army to a Realm for example, to give ownership to the Realm.
-    position: Point, // location of Army
+    owner_entity_id: u32, // Armies are Entities. We assign an Army to a Realm for example, to give ownership to the Realm.
     light_cavalry_qty: u32,
     light_cavalry_health: u32,
     heavy_cavalry_qty: u32,
@@ -26,6 +27,7 @@ struct Army {
 }
 
 // Holds statistics for Army used in calculations
+#[derive(Copy, Drop)]
 struct ArmyStatistics {
     cavalry_attack: u32,
     archery_attack: u32,
@@ -39,17 +41,19 @@ struct ArmyStatistics {
 
 trait ArmyTrait {
     // population
-    fn population(self: Army, buildings: Buildings) -> u32;
+    fn population(self: Army) -> felt252;
 
     // calculates statistics of Army
-    fn statistics(self: Army) -> ArmyStatistics;
+    fn statistics(self: Army) -> felt252;
 }
 
 impl ArmyImpl of ArmyTrait {
-    fn population(self: Army) -> u32 {
+    fn population(self: Army) -> felt252 {
         // recurse through Armies of Realm
+        0
     }
-    fn statistics(self: Army) -> ArmyStatistics {
+    fn statistics(self: Army) -> felt252 {
         // calcs statistics
+        0
     }
 }
