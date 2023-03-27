@@ -29,28 +29,28 @@ mod SpawnSystem {
 
     fn execute(name: felt252) {
         let uuid = commands::uuid();
-        let player = commands::create((420, (69, uuid)).into(), (
+        let player = commands::set((420, (69, uuid)).into(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
-        let literal = commands::create(420.into(), (
+        let literal = commands::set(420.into(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
         let player_id = starknet::get_caller_address();
-        let player = commands::create(player_id.into(), (
+        let player = commands::set(player_id.into(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
-        let invalid_args = commands::create((
+        let invalid_args = commands::set((
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
-        let invalid_path = commands::create((0, 0, 0, 0, 0), (
+        let invalid_path = commands::set((0, 0, 0, 0, 0), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
@@ -332,6 +332,19 @@ mod MoveSystem {
 
     #[external]
     fn execute(player_id: felt252, world_address: starknet::ContractAddress) {
+        let positions_query = ArrayTrait::<usize>::new();
+        let __positions_query_position_ids = IWorldDispatcher {
+            contract_address: world_address
+        }.entities('Position', 0);
+
+        let __positions_query_player_ids = IWorldDispatcher {
+            contract_address: world_address
+        }.entities('Player', 0);
+        let players_query = ArrayTrait::<usize>::new();
+        let __players_query_player_ids = IWorldDispatcher {
+            contract_address: world_address
+        }.entities('Player', 0);
+
         let mut __player_player_raw = IWorldDispatcher {
             contract_address: world_address
         }.get('Player', player_id.into(), 0_u8, 0_usize);
@@ -377,9 +390,9 @@ mod MoveSystem {
 
 //! > expected_diagnostics
 error: Plugin diagnostic: Invalid arguments. Expected "(storage_key, (components,))"
- --> lib.cairo:42:44
-        let invalid_args = commands::create((
-                                           ^^
+ --> lib.cairo:42:41
+        let invalid_args = commands::set((
+                                        ^^
 
 error: Plugin diagnostic: Unexpected argument type. Expected: "dojo::storage::key::StorageKey", found: "(core::felt252, core::felt252, core::felt252, core::felt252, core::felt252)".
  --> SpawnSystem:61:88
@@ -390,18 +403,3 @@ error: Plugin diagnostic: Unexpected argument type. Expected: "dojo::storage::ke
  --> SpawnSystem:65:90
                     IWorldDispatcher { contract_address: world_address }.set('Position', (0, 0, 0, 0, 0), 0_u8, __invalid_path_calldata.span());
                                                                                          ^*************^
-
-error: Plugin diagnostic: Identifier not found.
- --> MoveSystem:65:21
-        move_inner(@positions_query, 0_u32, positions_query.len());
-                    ^*************^
-
-error: Plugin diagnostic: Identifier not found.
- --> MoveSystem:65:45
-        move_inner(@positions_query, 0_u32, positions_query.len());
-                                            ^*************^
-
-error: Plugin diagnostic: Type annotations needed. Failed to infer ?17
- --> MoveSystem:65:45
-        move_inner(@positions_query, 0_u32, positions_query.len());
-                                            ^*******************^
