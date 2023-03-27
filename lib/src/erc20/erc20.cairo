@@ -12,6 +12,7 @@ impl U256TryIntoFelt252 of TryInto::<u256, felt252> {
 #[contract]
 mod ERC20 {
     use dojo::world;
+    use dojo::storage::key::StorageKey;
     use zeroable::Zeroable;
     use starknet::get_caller_address;
     use starknet::contract_address_const;
@@ -30,7 +31,7 @@ mod ERC20 {
     fn Transfer(from: ContractAddress, to: ContractAddress, value: u256) {}
 
     #[event]
-    fn Approval(owner: ContractAddress, spender: ContractAddress, value: u256) {}
+    fn Approval(from: ContractAddress, to: ContractAddress, value: u256) {}
 
     #[constructor]
     fn constructor(
@@ -47,8 +48,6 @@ mod ERC20 {
         decimals::write(decimals_);
         assert(!recipient.is_zero(), 'ERC20: mint to the 0 address');
         total_supply::write(initial_supply);
-
-        // balances::write(recipient, initial_supply);
 
         Transfer(contract_address_const::<0>(), recipient, initial_supply);
     }
@@ -94,27 +93,23 @@ mod ERC20 {
         calldata.append(amount.try_into());
 
         IWorldDispatcher { contract_address: world_address::read() }.execute('ERC20_TransferFrom', calldata.span());
-       // TODO: update spend allowance
+        IWorldDispatcher { contract_address: world_address::read() }.execute('ERC20_Spend_Allowance', calldata.span());
 
-        Transfer(sender, recipient, amount);
+        let approval_sk: StorageKey = (token_id, (caller.into(), spender)).into();
+        let approval = commands::<Approval>::get(approval_sk);
+
+        Transfer(spender, recipient, amount);
+        Approval(get_caller_address(),spender,approval.amount-amount);
     }
 
-    //approval system
     #[external]
     fn approve(spender: ContractAddress, amount: u256) {
-       ERC20_Approve.execute(symbol, spender, amount);
-       Approval(get_caller_address(),spender,amount);
-    }
-   
+        let calldata = ArrayTrait::<felt252>::new();
+        calldata.append(starknet::get_contract_address().into());
+        calldata.append(spender.into());
+        calldata.append(amount.try_into());
 
-    //approval system
-    fn spend_allowance(owner: ContractAddress, spender: ContractAddress, amount: u256) {
-        let current_allowance = allowances::read((owner, spender));
-        let ONES_MASK = 0xffffffffffffffffffffffffffffffff_u128;
-        let is_unlimited_allowance =
-            current_allowance.low == ONES_MASK & current_allowance.high == ONES_MASK;
-        if !is_unlimited_allowance {
-            approve_helper(owner, spender, current_allowance - amount);
-        }
+        IWorldDispatcher { contract_address: world_address::read() }.execute('ERC20_Approve', calldata.span());
+        Approval(get_caller_address(),spender,amount);
     }
 }

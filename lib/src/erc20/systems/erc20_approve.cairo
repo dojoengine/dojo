@@ -3,7 +3,6 @@
 mod ERC20_Approve {
     use traits::Into;
     use starknet::ContractAddress;
-
     use dojo::storage::key::StorageKey;
 
     execute(token_id: felt252, spender: ContractAddress, amount: felt252) {
