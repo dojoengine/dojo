@@ -21,10 +21,7 @@ trait IWorld {
 
 #[abi]
 trait IExecutor {
-    fn execute(
-        class_hash: starknet::ClassHash,
-        data: Span<felt252>
-    ) -> Span<felt252>;
+    fn execute(class_hash: starknet::ClassHash, data: Span<felt252>) -> Span<felt252>;
 }
 
 #[abi]

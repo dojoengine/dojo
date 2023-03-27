@@ -245,7 +245,7 @@ mod SpawnSystem {
     use super::Player;
 
     #[external]
-    fn execute(world_address: starknet::ContractAddress, name: felt252) {
+    fn execute(name: felt252, world_address: starknet::ContractAddress) {
         let uuid = IWorldDispatcher { contract_address: world_address }.uuid();
 
         let mut __player_calldata = ArrayTrait::new();
@@ -331,7 +331,7 @@ mod MoveSystem {
     }
 
     #[external]
-    fn execute(world_address: starknet::ContractAddress, player_id: felt252) {
+    fn execute(player_id: felt252, world_address: starknet::ContractAddress) {
         let mut __player_player_raw = IWorldDispatcher {
             contract_address: world_address
         }.get('Player', player_id.into(), 0_u8, 0_usize);

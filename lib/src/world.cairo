@@ -122,7 +122,9 @@ mod World {
             return IIndexerLibraryDispatcher { class_hash: indexer::read() }.records(component);
         }
 
-        IIndexerLibraryDispatcher { class_hash: indexer::read() }.records(pedersen(component, partition))
+        IIndexerLibraryDispatcher {
+            class_hash: indexer::read()
+        }.records(pedersen(component, partition))
     }
 
     #[view]
