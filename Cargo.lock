@@ -2487,6 +2487,7 @@ dependencies = [
  "cairo-lang-syntax",
  "cairo-lang-test-utils",
  "cairo-lang-utils",
+ "camino",
  "dojo-project",
  "env_logger",
  "indoc 1.0.9",

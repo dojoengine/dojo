@@ -10,6 +10,7 @@ description = "Dojo capabilities and utilities on top of Starknet."
 
 [dependencies]
 anyhow.workspace = true
+camino.workspace = true
 cairo-lang-compiler.workspace = true
 cairo-lang-defs.workspace = true
 cairo-lang-diagnostics.workspace = true

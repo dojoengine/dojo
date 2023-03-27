@@ -91,6 +91,8 @@ fn main() -> anyhow::Result<()> {
 
     let unit = compilation_units[0].clone();
 
+    println!("{:?}", unit);
+
     let mut db = RootDatabase::builder()
         .with_project_config(build_project_config(&unit)?)
         .with_dojo(world_config)
