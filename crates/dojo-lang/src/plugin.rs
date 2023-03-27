@@ -1,10 +1,9 @@
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use cairo_lang_defs::plugin::{GeneratedFileAuxData, MacroPlugin, PluginResult};
 use cairo_lang_diagnostics::DiagnosticEntry;
 use cairo_lang_semantic::db::SemanticGroup;
-use cairo_lang_semantic::patcher::{Patches, RewriteNode};
+use cairo_lang_semantic::patcher::Patches;
 use cairo_lang_semantic::plugin::{
     AsDynGeneratedFileAuxData, AsDynMacroPlugin, PluginAuxData, PluginMappedDiagnostic,
     SemanticPlugin,
@@ -14,7 +13,6 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal};
 use dojo_project::WorldConfig;
-use smol_str::SmolStr;
 use starknet::core::crypto::pedersen_hash;
 use starknet::core::types::FieldElement;
 
@@ -68,12 +66,11 @@ mod test;
 #[derive(Debug, Default)]
 pub struct DojoPlugin {
     pub world_config: WorldConfig,
-    pub impls: Arc<Mutex<HashMap<SmolStr, Vec<RewriteNode>>>>,
 }
 
 impl DojoPlugin {
     pub fn new(world_config: WorldConfig) -> Self {
-        Self { world_config, impls: Arc::new(Mutex::new(HashMap::new())) }
+        Self { world_config }
     }
 
     fn handle_mod(&self, db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult {
@@ -100,10 +97,6 @@ impl MacroPlugin for DojoPlugin {
                                     {
                                         let derived = segment.ident(db).text(db);
                                         if matches!(derived.as_str(), "Component") {
-                                            let mut guard = self.impls.lock().unwrap();
-                                            guard
-                                                .entry(struct_ast.name(db).text(db))
-                                                .or_insert(vec![]);
                                             return handle_component_struct(db, struct_ast);
                                         }
                                     }

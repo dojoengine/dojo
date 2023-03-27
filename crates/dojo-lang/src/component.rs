@@ -31,25 +31,29 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
 
     body_nodes.push(RewriteNode::interpolate_patched(
         "
-            struct Storage {
-                state: LegacyMap::<usize, $type_name$>,
+            #[view]
+            fn name() -> felt252 {
+                '$type_name$'
             }
 
-            // Initialize $type_name$.
-            #[external]
-            fn initialize() {
+            #[view]
+            fn len() -> usize {
+                $len$_usize
             }
 
-            // Set the state of an entity.
-            #[external]
-            fn set(entity_id: usize, value: $type_name$) {
-                state::write(entity_id, value);
+            // Serialize an entity.
+            #[view]
+            fn serialize(mut raw: Span<felt252>) -> $type_name$ {
+                serde::Serde::<$type_name$>::deserialize(ref raw).unwrap()
             }
 
             // Get the state of an entity.
             #[view]
-            fn get(entity_id: usize) -> $type_name$ {
-                return state::read(entity_id);
+            #[raw_output]
+            fn deserialize(value: $type_name$) -> Span<felt252> {
+                let mut arr = ArrayTrait::new();
+                serde::Serde::<$type_name$>::serialize(ref arr, value);
+                arr.span()
             }
         ",
         HashMap::from([
@@ -58,17 +62,16 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
                 RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
             ),
             ("members".to_string(), RewriteNode::Copied(struct_ast.members(db).as_syntax_node())),
+            (
+                "len".to_string(),
+                RewriteNode::Text(struct_ast.members(db).elements(db).len().to_string()),
+            ),
         ]),
     ));
 
     let mut serialize = vec![];
     let mut deserialize = vec![];
-    let mut read = vec![];
-    let mut write = vec![];
-    struct_ast.members(db).elements(db).iter().enumerate().for_each(|(i, member)| {
-        let member_type_string = member.type_clause(db).ty(db).as_syntax_node().get_text(db);
-        let is_felt = member_type_string.as_str().trim().eq("felt252");
-
+    struct_ast.members(db).elements(db).iter().for_each(|member| {
         serialize.push(RewriteNode::interpolate_patched(
             "serde::Serde::<$type_clause$>::serialize(ref serialized, input.$key$);",
             HashMap::from([
@@ -88,47 +91,6 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
                     "type_clause".to_string(),
                     RewriteNode::new_trimmed(member.type_clause(db).ty(db).as_syntax_node()),
                 ),
-            ]),
-        ));
-
-        let try_into_unwrap_token = if is_felt { "?," } else { "?.try_into().unwrap()," };
-        read.push(RewriteNode::interpolate_patched(
-            format!(
-                "$key$: starknet::storage_read_syscall(
-                    address_domain,
-                    starknet::storage_address_from_base_and_offset(base, $offset$_u8)
-                ){try_into_unwrap_token}"
-            )
-            .as_str(),
-            HashMap::from([
-                ("key".to_string(), RewriteNode::new_trimmed(member.name(db).as_syntax_node())),
-                (
-                    "type_clause".to_string(),
-                    RewriteNode::new_trimmed(member.type_clause(db).ty(db).as_syntax_node()),
-                ),
-                ("offset".to_string(), RewriteNode::Text(i.to_string())),
-            ]),
-        ));
-
-        let into_token = if is_felt { "" } else { ".into()" };
-        let final_token =
-            if i != struct_ast.members(db).elements(db).len() - 1 { "?;" } else { "" };
-        write.push(RewriteNode::interpolate_patched(
-            format!(
-                "starknet::storage_write_syscall(
-                    address_domain,
-                    starknet::storage_address_from_base_and_offset(base, $offset$_u8),
-                    value.$key${into_token}
-                ){final_token}"
-            )
-            .as_str(),
-            HashMap::from([
-                ("key".to_string(), RewriteNode::new_trimmed(member.name(db).as_syntax_node())),
-                (
-                    "type_clause".to_string(),
-                    RewriteNode::new_trimmed(member.type_clause(db).ty(db).as_syntax_node()),
-                ),
-                ("offset".to_string(), RewriteNode::Text(i.to_string())),
             ]),
         ));
     });
@@ -158,34 +120,6 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
         ]),
     ));
 
-    trait_nodes.push(RewriteNode::interpolate_patched(
-        "
-            impl StorageAccess$type_name$ of starknet::StorageAccess::<$type_name$> {
-                fn read(address_domain: felt252, base: starknet::StorageBaseAddress) -> \
-         starknet::SyscallResult::<$type_name$> {
-                    Result::Ok(
-                        $type_name$ {
-                            $read$
-                        }
-                    )
-                }
-                fn write(
-                    address_domain: felt252, base: starknet::StorageBaseAddress, value: $type_name$
-                ) -> starknet::SyscallResult::<()> {
-                    $write$
-                }
-            }
-        ",
-        HashMap::from([
-            (
-                "type_name".to_string(),
-                RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
-            ),
-            ("read".to_string(), RewriteNode::new_modified(read)),
-            ("write".to_string(), RewriteNode::new_modified(write)),
-        ]),
-    ));
-
     let name = struct_ast.name(db).text(db);
     let mut builder = PatchBuilder::new(db);
     builder.add_modified(RewriteNode::interpolate_patched(
@@ -197,18 +131,20 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
 
             #[abi]
             trait I$type_name$ {
-                fn set(entity_id: usize, value: $type_name$);
-                fn get(entity_id: usize) -> $type_name$;
+                fn name() -> felt252;
+                fn len() -> u8;
+                fn serialize(raw: Span<felt252>) -> $type_name$;
+                fn deserialize(value: $type_name$) -> Span<felt252>;
             }
+
+            $traits$
 
             #[contract]
             mod $type_name$Component {
+                use array::ArrayTrait;
                 use option::OptionTrait;
-                use starknet::SyscallResult;
-                use traits::Into;
-                use traits::TryInto;
+                use dojo::serde::SpanSerde;
                 use super::$type_name$;
-                $traits$
                 $body$
             }
         ",

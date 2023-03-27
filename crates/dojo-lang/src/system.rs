@@ -1,7 +1,9 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use cairo_lang_defs::ids::{ModuleItemId, SubmoduleId};
-use cairo_lang_defs::plugin::{DynGeneratedFileAuxData, PluginGeneratedFile, PluginResult};
+use cairo_lang_defs::plugin::{
+    DynGeneratedFileAuxData, PluginDiagnostic, PluginGeneratedFile, PluginResult,
+};
 use cairo_lang_filesystem::ids::CrateId;
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::patcher::{PatchBuilder, RewriteNode};
@@ -10,12 +12,10 @@ use cairo_lang_syntax::node::ast::MaybeModuleBody;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use dojo_project::WorldConfig;
-use itertools::Itertools;
 use smol_str::SmolStr;
 
+use crate::commands::Command;
 use crate::plugin::DojoAuxData;
-use crate::query::Query;
-use crate::spawn::Spawn;
 
 #[cfg(test)]
 #[path = "system_test.rs"]
@@ -30,7 +30,7 @@ pub struct SystemDeclaration {
 
 pub struct System {
     world_config: WorldConfig,
-    dependencies: HashSet<SmolStr>,
+    diagnostics: Vec<PluginDiagnostic>,
 }
 
 impl System {
@@ -40,7 +40,7 @@ impl System {
         module_ast: ast::ItemModule,
     ) -> PluginResult {
         let name = module_ast.name(db).text(db);
-        let mut system = System { world_config, dependencies: HashSet::new() };
+        let mut system = System { world_config, diagnostics: vec![] };
 
         if let MaybeModuleBody::Some(body) = module_ast.body(db) {
             let body_nodes = body
@@ -54,19 +54,7 @@ impl System {
                         }
                     }
 
-                    vec![RewriteNode::new_trimmed(el.as_syntax_node())]
-                })
-                .collect();
-
-            let import_nodes = system
-                .dependencies
-                .iter()
-                .sorted()
-                .map(|dep| {
-                    RewriteNode::interpolate_patched(
-                        "use super::$dep$;\n",
-                        HashMap::from([("dep".to_string(), RewriteNode::Text(dep.to_string()))]),
-                    )
+                    vec![RewriteNode::Copied(el.as_syntax_node())]
                 })
                 .collect();
 
@@ -76,15 +64,28 @@ impl System {
                 #[contract]
                 mod $name$ {
                     use dojo::world;
-                    use dojo::world::IWorldDispatcher;
-                    use dojo::world::IWorldDispatcherTrait;
-                    $imports$
+                    use dojo::interfaces::IWorldDispatcher;
+                    use dojo::interfaces::IWorldDispatcherTrait;
+                    use dojo::storage::key::StorageKey;
+                    use dojo::storage::key::StorageKeyTrait;
+                    use dojo::storage::key::Felt252IntoStorageKey;
+                    use dojo::storage::key::TupleSize1IntoStorageKey;
+                    use dojo::storage::key::TupleSize2IntoStorageKey;
+                    use dojo::storage::key::TupleSize3IntoStorageKey;
+                    use dojo::storage::key::TupleSize1IntoPartitionedStorageKey;
+                    use dojo::storage::key::TupleSize2IntoPartitionedStorageKey;
+                    use dojo::storage::key::ContractAddressIntoStorageKey;
+
+                    #[view]
+                    fn name() -> felt252 {
+                        '$name$'
+                    }
+
                     $body$
                 }
                 ",
                 HashMap::from([
                     ("name".to_string(), RewriteNode::Text(name.to_string())),
-                    ("imports".to_string(), RewriteNode::new_modified(import_nodes)),
                     ("body".to_string(), RewriteNode::new_modified(body_nodes)),
                 ]),
             ));
@@ -99,7 +100,7 @@ impl System {
                         systems: vec![name],
                     })),
                 }),
-                diagnostics: vec![],
+                diagnostics: system.diagnostics,
                 remove_original_item: true,
             };
         }
@@ -115,24 +116,6 @@ impl System {
         let mut rewrite_nodes = vec![];
 
         let signature = function_ast.declaration(db).signature(db);
-        let parameters = signature.parameters(db).elements(db);
-
-        for param_ast in parameters.iter() {
-            let type_ast = param_ast.type_clause(db).ty(db);
-
-            if let ast::Expr::Path(path) = type_ast.clone() {
-                let binding = path.elements(db);
-                let last = binding.last().unwrap();
-                match last {
-                    ast::PathSegment::WithGenericArgs(_segment) => {
-                        // TODO: ...
-                    }
-                    ast::PathSegment::Simple(_segment) => {
-                        // TODO: ...
-                    }
-                };
-            }
-        }
 
         let body_nodes: Vec<RewriteNode> = function_ast
             .body(db)
@@ -145,8 +128,7 @@ impl System {
         rewrite_nodes.push(RewriteNode::interpolate_patched(
             "
                 #[external]
-                fn execute($parameters$) {
-                    let world_address = starknet::contract_address_const::<$world_address$>();
+                fn execute(world_address: starknet::ContractAddress, $parameters$) {
                     $body$
                 }
             ",
@@ -174,39 +156,55 @@ impl System {
         db: &dyn SyntaxGroup,
         statement_ast: ast::Statement,
     ) -> Vec<RewriteNode> {
-        if let ast::Statement::Let(statement_let) = statement_ast.clone() {
-            if let ast::Expr::FunctionCall(expr_fn) = statement_let.rhs(db) {
-                match expr_fn.path(db).elements(db).first().unwrap() {
-                    ast::PathSegment::WithGenericArgs(segment_genric) => {
-                        if segment_genric.ident(db).text(db).as_str() == "Query" {
-                            let query = Query::from_ast(
-                                db,
-                                self.world_config,
-                                statement_let.pattern(db),
-                                expr_fn,
-                                segment_genric.clone(),
-                            );
-                            self.dependencies.extend(query.dependencies);
-                            return query.body_nodes;
-                        }
+        match statement_ast.clone() {
+            ast::Statement::Let(statement_let) => {
+                if let ast::Expr::FunctionCall(expr_fn) = statement_let.rhs(db) {
+                    if let Some(rewrite_nodes) =
+                        self.handle_expr(db, Some(statement_let.pattern(db)), expr_fn)
+                    {
+                        return rewrite_nodes;
                     }
-                    ast::PathSegment::Simple(segment_simple) => {
-                        if segment_simple.ident(db).text(db).as_str() == "Spawn" {
-                            let spawn = Spawn::from_ast(
-                                db,
-                                statement_let.pattern(db),
-                                expr_fn,
-                                self.world_config,
-                            );
-                            self.dependencies.extend(spawn.dependencies);
-                            return spawn.body_nodes;
-                        }
+                }
+            }
+            ast::Statement::Expr(expr) => {
+                if let ast::Expr::FunctionCall(expr_fn) = expr.expr(db) {
+                    if let Some(rewrite_nodes) = self.handle_expr(db, None, expr_fn) {
+                        return rewrite_nodes;
                     }
+                }
+            }
+            _ => {}
+        }
+
+        vec![RewriteNode::Copied(statement_ast.as_syntax_node())]
+    }
+
+    fn handle_expr(
+        &mut self,
+        db: &dyn SyntaxGroup,
+        var_name: Option<ast::Pattern>,
+        expr_fn: ast::ExprFunctionCall,
+    ) -> Option<Vec<RewriteNode>> {
+        let elements = expr_fn.path(db).elements(db);
+        let segment = elements.first().unwrap();
+        match segment {
+            ast::PathSegment::WithGenericArgs(segment_genric) => {
+                if segment_genric.ident(db).text(db).as_str() == "commands" {
+                    let command = Command::from_ast(db, var_name, expr_fn);
+                    self.diagnostics.extend(command.diagnostics);
+                    return Some(command.rewrite_nodes);
+                }
+            }
+            ast::PathSegment::Simple(segment_simple) => {
+                if segment_simple.ident(db).text(db).as_str() == "commands" {
+                    let command = Command::from_ast(db, var_name, expr_fn);
+                    self.diagnostics.extend(command.diagnostics);
+                    return Some(command.rewrite_nodes);
                 }
             }
         }
 
-        vec![RewriteNode::new_trimmed(statement_ast.as_syntax_node())]
+        None
     }
 }
 

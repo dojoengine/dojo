@@ -3,3 +3,6 @@ workspace
 .idea/
 dojo.iml
 *.db
+*.db-wal
+*.db-shm
+.DS_Store

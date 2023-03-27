@@ -9,4 +9,4 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends protobuf-compiler libprotobuf-dev
 
 RUN rustup toolchain install nightly-2022-11-03 \
-    && rustup default nightly-2022-11-03
+    && rustup default nightly-2022-11-03 && rustup component add clippy
