@@ -6,7 +6,7 @@ use eternum::components::buildings::Buildings;
 // outside of a Realm. They might spawn randomly on the Map.
 
 #[derive(Component)]
-struct Army {
+struct ArmyUnits {
     owner_entity_id: u32, // Armies are Entities. We assign an Army to a Realm for example, to give ownership to the Realm.
     light_cavalry_qty: u32,
     light_cavalry_health: u32,

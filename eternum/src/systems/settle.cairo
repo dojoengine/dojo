@@ -9,8 +9,8 @@ mod SettleSystem {
 
     fn execute(realm_id: felt252) {
 
-        // checks ownership of RealmERC721
+        // checks ownership of Realm ERC721
         // settles realm
-
+        // sets RealmComponent Data
     }
 }
