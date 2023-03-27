@@ -162,6 +162,8 @@ An entity is addressed by a `felt252`. An entity represents a collection of comp
 
 ### Setup Submodules
 
+Make sure to keep this up to date
+
 ```
 git submodule update --init --recursive
 ```
