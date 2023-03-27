@@ -125,18 +125,18 @@ impl System {
             .flat_map(|statement| self.handle_statement(db, statement.clone()))
             .collect();
 
+        let parameters = signature.parameters(db);
+        let separator = if parameters.elements(db).is_empty() { "" } else { ", " };
         rewrite_nodes.push(RewriteNode::interpolate_patched(
             "
                 #[external]
-                fn execute(world_address: starknet::ContractAddress, $parameters$) {
+                fn execute($parameters$$separator$world_address: starknet::ContractAddress) {
                     $body$
                 }
             ",
             HashMap::from([
-                (
-                    "parameters".to_string(),
-                    RewriteNode::new_trimmed(signature.parameters(db).as_syntax_node()),
-                ),
+                ("parameters".to_string(), RewriteNode::new_trimmed(parameters.as_syntax_node())),
+                ("separator".to_string(), RewriteNode::Text(separator.to_string())),
                 (
                     "world_address".to_string(),
                     RewriteNode::Text(format!(
