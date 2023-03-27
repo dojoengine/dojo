@@ -47,21 +47,4 @@ impl DojoRootDatabaseBuilderEx for RootDatabaseBuilder {
 
         self.with_implicit_precedence(&precedence).with_plugins(plugins)
     }
-
-    // fn with_dojo_default(&mut self) -> &mut Self {
-    //     let core_dir = std::env::var("CAIRO_CORELIB_DIR")
-    //         .unwrap_or_else(|e| panic!("Problem getting the corelib path: {e:?}"));
-    //     let dojo_dir = std::env::var("DOJOLIB_DIR")
-    //         .unwrap_or_else(|e| panic!("Problem getting the dojolib path: {e:?}"));
-    //     let config = ProjectConfig {
-    //         base_path: "".into(),
-    //         content: ProjectConfigContent {
-    //             crate_roots: HashMap::from([(DOJOLIB_CRATE_NAME.into(), dojo_dir.into())]),
-    //         },
-    //         corelib: Some(Directory(core_dir.into())),
-    //     };
-
-    //     self.with_project_config(config);
-    //     self.with_dojo(WorldConfig::default())
-    // }
 }
