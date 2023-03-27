@@ -9,11 +9,11 @@ mod Executor {
     #[raw_output]
     fn execute(
         class_hash: starknet::ClassHash,
-        world_address: starknet::ContractAddress,
-        data: Span<felt252>,
+        mut data: Span<felt252>,
     ) -> Span<felt252> {
-        // TODO: Pass world_address to system. Do we need to clone the calldata array or is there a better
-        // approach?
+        let world_address = starknet::get_caller_address();
+        // TODO: use span pop_back once it is released.
+        // data.append(world_address);
         let res = starknet::syscalls::library_call_syscall(
             class_hash, EXECUTE_ENTRYPOINT, data
         ).unwrap_syscall();

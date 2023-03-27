@@ -23,15 +23,14 @@ trait IWorld {
 trait IExecutor {
     fn execute(
         class_hash: starknet::ClassHash,
-        world_address: starknet::ContractAddress,
         data: Span<felt252>
     ) -> Span<felt252>;
 }
 
 #[abi]
 trait IIndexer {
-    fn index(component: felt252, key: felt252);
-    fn entities(component: felt252, partition: felt252) -> Array::<felt252>;
+    fn index(table: felt252, id: felt252);
+    fn records(table: felt252) -> Array::<felt252>;
 }
 
 #[abi]

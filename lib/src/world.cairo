@@ -74,7 +74,7 @@ mod World {
 
         let res = IExecutorDispatcher {
             contract_address: executor::read()
-        }.execute(class_hash, starknet::get_contract_address(), execute_calldata);
+        }.execute(class_hash, execute_calldata);
 
         caller::write(starknet::class_hash_const::<0x0>());
         res
@@ -118,7 +118,11 @@ mod World {
     // Returns entities that contain the component state.
     #[view]
     fn entities(component: felt252, partition: felt252) -> Array::<felt252> {
-        IIndexerLibraryDispatcher { class_hash: indexer::read() }.entities(component, partition)
+        if partition == 0 {
+            return IIndexerLibraryDispatcher { class_hash: indexer::read() }.records(component);
+        }
+
+        IIndexerLibraryDispatcher { class_hash: indexer::read() }.records(pedersen(component, partition))
     }
 
     #[view]
