@@ -1,6 +1,16 @@
-#[contract]
-mod ERC20BaseSubsystem {
+use traits::TryInto;
 
+impl U256TryIntoFelt252 of TryInto::<u256, felt252> {
+    fn try_into(self: u256) -> Option<felt252> {
+        let low: felt252 = self.low.try_into();
+        let high: felt252 = self.low.try_into();
+        // TODO: bounds checking
+        low + high
+    }
+}
+
+#[contract]
+mod ERC20 {
     use dojo::world;
     use zeroable::Zeroable;
     use starknet::get_caller_address;
@@ -9,12 +19,11 @@ mod ERC20BaseSubsystem {
     use starknet::ContractAddressZeroable;
 
     struct Storage {
+        world_address: ContractAddress,
         name: felt252,
         symbol: felt252,
         decimals: u8,
         total_supply: u256,
-        balances: OwnershipComponent,
-        allowances: ApprovalComponent,
     }
 
     #[event]
@@ -25,18 +34,22 @@ mod ERC20BaseSubsystem {
 
     #[constructor]
     fn constructor(
+        world_address_: ContractAddress,
         name_: felt252,
         symbol_: felt252,
         decimals_: u8,
         initial_supply: u256,
         recipient: ContractAddress
     ) {
+        world_address::write(world_address_);
         name::write(name_);
         symbol::write(symbol_);
         decimals::write(decimals_);
         assert(!recipient.is_zero(), 'ERC20: mint to the 0 address');
         total_supply::write(initial_supply);
-        balances::write(recipient, initial_supply);
+
+        // balances::write(recipient, initial_supply);
+
         Transfer(contract_address_const::<0>(), recipient, initial_supply);
     }
 
@@ -73,8 +86,17 @@ mod ERC20BaseSubsystem {
     #[external]
     fn transfer(spender: ContractAddress, recipient: ContractAddress, amount: u256) {
         ERC20_Transfer.execute(symbol,spender, recipient, amount);
+
+        let calldata = ArrayTrait::<felt252>::new();
+        calldata.append(starknet::get_contract_address().into());
+        calldata.append(spender.into());
+        calldata.append(recipient.into());
+        calldata.append(amount.try_into());
+
+        IWorldDispatcher { contract_address: world_address::read() }.execute('ERC20_TransferFrom', calldata.span());
+       // TODO: update spend allowance
+
         Transfer(sender, recipient, amount);
-       //todo spend_allowance
     }
 
     //approval system
