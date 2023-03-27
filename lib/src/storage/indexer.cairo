@@ -1,12 +1,10 @@
 use array::ArrayTrait;
-use debug::PrintTrait;
 
 #[contract]
 mod Indexer {
     use array::ArrayTrait;
     use array::SpanTrait;
     use traits::Into;
-    use debug::PrintTrait;
 
     struct Storage {
         ids: LegacyMap::<(felt252, felt252), bool>,
