@@ -19,6 +19,7 @@ cairo-lang-project.workspace = true
 cairo-lang-starknet.workspace = true
 scarb.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 smol_str.workspace = true
 starknet.workspace = true
 thiserror.workspace = true

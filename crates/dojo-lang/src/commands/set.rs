@@ -56,9 +56,9 @@ impl CommandTrait for CreateCommand {
         command_ast: ast::ExprFunctionCall,
     ) -> Self {
         let mut command = CreateCommand { data: CommandData::new() };
-        
+
         let elements = command_ast.arguments(db).args(db).elements(db);
-        
+
         if elements.len() != 2 {
             command.data.diagnostics.push(PluginDiagnostic {
                 message: "Invalid arguments. Expected \"(storage_key, (components,))\"".to_string(),
@@ -69,7 +69,9 @@ impl CommandTrait for CreateCommand {
 
         if let_pattern.is_none() {
             command.data.diagnostics.push(PluginDiagnostic {
-                message: "commands::set(...) requries assignment to a variable. i.e. let foo = commands::set(...)".to_string(),
+                message: "commands::set(...) requries assignment to a variable. i.e. let foo = \
+                          commands::set(...)"
+                    .to_string(),
                 stable_ptr: command_ast.arguments(db).as_syntax_node().stable_ptr(),
             });
             return command;

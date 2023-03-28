@@ -62,7 +62,7 @@ impl System {
             builder.add_modified(RewriteNode::interpolate_patched(
                 "
                 #[contract]
-                mod $name$ {
+                mod $name$System {
                     use dojo::world;
                     use dojo::interfaces::IWorldDispatcher;
                     use dojo::interfaces::IWorldDispatcherTrait;
@@ -97,7 +97,7 @@ impl System {
                     aux_data: DynGeneratedFileAuxData::new(DynPluginAuxData::new(DojoAuxData {
                         patches: builder.patches,
                         components: vec![],
-                        systems: vec![name],
+                        systems: vec![format!("{}System", name).into()],
                     })),
                 }),
                 diagnostics: system.diagnostics,
