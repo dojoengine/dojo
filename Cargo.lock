@@ -345,6 +345,26 @@ checksum = "7de8ce5e0f9f8d88245311066a578d72b7af3e7088f32783804676302df237e4"
 [[package]]
 name = "apibara-core"
 version = "0.1.0"
+source = "git+https://github.com/apibara/dna?rev=2c452070372e80e5d1a5302c1b8ae5defef7e9a4#2c452070372e80e5d1a5302c1b8ae5defef7e9a4"
+dependencies = [
+ "anyhow",
+ "hex",
+ "pbjson",
+ "pbjson-build",
+ "pbjson-types",
+ "prost",
+ "serde",
+ "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=ca077d3104e11a59d873f79e6090f0ec8cb3fc58)",
+ "thiserror",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tracing",
+]
+
+[[package]]
+name = "apibara-core"
+version = "0.1.0"
 source = "git+https://github.com/apibara/apibara?rev=8490dcbb651c4fc1c33f6dfb7db48c078e907321#8490dcbb651c4fc1c33f6dfb7db48c078e907321"
 dependencies = [
  "anyhow",
@@ -362,10 +382,33 @@ dependencies = [
 [[package]]
 name = "apibara-sdk"
 version = "0.1.0"
+source = "git+https://github.com/apibara/dna?rev=2c452070372e80e5d1a5302c1b8ae5defef7e9a4#2c452070372e80e5d1a5302c1b8ae5defef7e9a4"
+dependencies = [
+ "anyhow",
+ "apibara-core 0.1.0 (git+https://github.com/apibara/dna?rev=2c452070372e80e5d1a5302c1b8ae5defef7e9a4)",
+ "async-stream",
+ "async-trait",
+ "futures",
+ "futures-util",
+ "hex",
+ "hyper",
+ "pin-project",
+ "prost",
+ "thiserror",
+ "tokio",
+ "tokio-stream",
+ "tokio-util 0.7.7",
+ "tonic",
+ "tracing",
+]
+
+[[package]]
+name = "apibara-sdk"
+version = "0.1.0"
 source = "git+https://github.com/apibara/apibara?rev=8490dcbb651c4fc1c33f6dfb7db48c078e907321#8490dcbb651c4fc1c33f6dfb7db48c078e907321"
 dependencies = [
  "anyhow",
- "apibara-core",
+ "apibara-core 0.1.0 (git+https://github.com/apibara/apibara?rev=8490dcbb651c4fc1c33f6dfb7db48c078e907321)",
  "async-stream",
  "async-trait",
  "futures",
@@ -792,6 +835,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a4a4ddaa51a5bc52a6948f74c06d20aaaddb71924eab79b8c97a8c556e942d6a"
 
 [[package]]
+name = "bevy-tokio-tasks"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4682faf3d34b3a48ab7253f33955e0e25f2f30b60fbf56ecfb42c504f0df7f33"
+dependencies = [
+ "bevy_app",
+ "bevy_ecs",
+ "tokio",
+]
+
+[[package]]
 name = "bevy_app"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -804,6 +858,21 @@ dependencies = [
  "downcast-rs",
  "wasm-bindgen",
  "web-sys",
+]
+
+[[package]]
+name = "bevy_core"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ed29797fa386c6969fa1e4ef9e194a27f89ddb2fa78751fe46838495d374f90f"
+dependencies = [
+ "bevy_app",
+ "bevy_ecs",
+ "bevy_math",
+ "bevy_reflect",
+ "bevy_tasks",
+ "bevy_utils",
+ "bytemuck",
 ]
 
 [[package]]
@@ -821,8 +890,15 @@ dependencies = [
 name = "bevy_dojo"
 version = "0.0.0"
 dependencies = [
+ "apibara-core 0.1.0 (git+https://github.com/apibara/dna?rev=2c452070372e80e5d1a5302c1b8ae5defef7e9a4)",
+ "apibara-sdk 0.1.0 (git+https://github.com/apibara/dna?rev=2c452070372e80e5d1a5302c1b8ae5defef7e9a4)",
+ "bevy-tokio-tasks",
  "bevy_app",
+ "bevy_core",
  "bevy_ecs",
+ "chrono",
+ "tokio",
+ "tokio-stream",
 ]
 
 [[package]]
@@ -869,6 +945,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_math"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5e45e46c2ac0a92db3ae622f2ed690928fe2612e7c9470a46d0ed4c2c77e2e95"
+dependencies = [
+ "glam",
+ "serde",
+]
+
+[[package]]
 name = "bevy_ptr"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -880,14 +966,17 @@ version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ab880e0eed9df5c99ce1a2f89edc11cdef1bc78413719b29e9ad7e3bc27f4c20"
 dependencies = [
+ "bevy_math",
  "bevy_ptr",
  "bevy_reflect_derive",
  "bevy_utils",
  "downcast-rs",
  "erased-serde",
+ "glam",
  "once_cell",
  "parking_lot 0.12.1",
  "serde",
+ "smallvec",
  "thiserror",
 ]
 
@@ -1110,6 +1199,12 @@ name = "byte-slice-cast"
 version = "1.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3ac9f8b63eca6fd385229b3675f6cc0dc5c8a5c8a54a59d4f52ffd670d87b0c"
+
+[[package]]
+name = "bytemuck"
+version = "1.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "17febce684fd15d89027105661fec94afb475cb995fbc59d2865198446ba2eea"
 
 [[package]]
 name = "byteorder"
@@ -2377,8 +2472,8 @@ dependencies = [
  "actix-cors",
  "actix-web",
  "anyhow",
- "apibara-core",
- "apibara-sdk",
+ "apibara-core 0.1.0 (git+https://github.com/apibara/apibara?rev=8490dcbb651c4fc1c33f6dfb7db48c078e907321)",
+ "apibara-sdk 0.1.0 (git+https://github.com/apibara/apibara?rev=8490dcbb651c4fc1c33f6dfb7db48c078e907321)",
  "clap 4.1.11",
  "env_logger",
  "futures",
@@ -3442,6 +3537,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "glam"
+version = "0.23.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8e4afd9ad95555081e109fe1d21f2a30c691b5f0919c67dfa690a2e1eb6bd51c"
+dependencies = [
+ "bytemuck",
+ "serde",
+]
+
+[[package]]
 name = "globset"
 version = "0.4.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3565,6 +3670,9 @@ name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "hmac"
@@ -4721,6 +4829,43 @@ dependencies = [
 ]
 
 [[package]]
+name = "pbjson"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "048f9ac93c1eab514f9470c4bc8d97ca2a0a236b84f45cc19d69a59fc11467f6"
+dependencies = [
+ "base64 0.13.1",
+ "serde",
+]
+
+[[package]]
+name = "pbjson-build"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bdbb7b706f2afc610f3853550cdbbf6372fd324824a087806bd4480ea4996e24"
+dependencies = [
+ "heck 0.4.1",
+ "itertools 0.10.5",
+ "prost",
+ "prost-types",
+]
+
+[[package]]
+name = "pbjson-types"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a88c8d87f99a4ac14325e7a4c24af190fca261956e3b82dd7ed67e77e6c7043"
+dependencies = [
+ "bytes",
+ "chrono",
+ "pbjson",
+ "pbjson-build",
+ "prost",
+ "prost-build",
+ "serde",
+]
+
+[[package]]
 name = "percent-encoding"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5811,6 +5956,9 @@ name = "smallvec"
 version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a507befe795404456341dfab10cef66ead4c041f62b8b11bbb92bffe5d0953e0"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "smartstring"
