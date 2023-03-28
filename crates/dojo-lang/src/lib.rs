@@ -9,3 +9,6 @@ pub mod component;
 pub mod db;
 pub mod plugin;
 pub mod system;
+
+#[cfg(test)]
+mod testing;

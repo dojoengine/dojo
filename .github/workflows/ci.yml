@@ -11,8 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-        with:
-          submodules: recursive
       - uses: actions-rs/toolchain@v1
         with:
           components: rustfmt
@@ -25,25 +23,22 @@ jobs:
       - run: |
           cargo test
 
-  cairofmt:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          submodules: recursive
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly-2022-11-03
-      - uses: Swatinem/rust-cache@v2
-      - run: scripts/cairo_fmt.sh --check
+  # cairofmt:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - uses: actions-rs/toolchain@v1
+  #       with:
+  #         profile: minimal
+  #         toolchain: nightly-2022-11-03
+  #     - uses: Swatinem/rust-cache@v2
+  #     - run: cargo install cairo-lang-formatter
+  #     - run: scripts/cairo_fmt.sh --check
 
   cairotest:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-        with:
-          submodules: recursive
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal

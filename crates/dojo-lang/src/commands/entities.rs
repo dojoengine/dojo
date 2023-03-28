@@ -9,12 +9,12 @@ use smol_str::SmolStr;
 
 use super::{CommandData, CommandTrait};
 
-pub struct AllCommand {
+pub struct EntitiesCommand {
     query_id: String,
     data: CommandData,
 }
 
-impl CommandTrait for AllCommand {
+impl CommandTrait for EntitiesCommand {
     fn from_ast(
         db: &dyn SyntaxGroup,
         let_pattern: Option<ast::Pattern>,
@@ -23,7 +23,7 @@ impl CommandTrait for AllCommand {
         let mut query_id =
             StringSanitizer::from(let_pattern.unwrap().as_syntax_node().get_text(db));
         query_id.to_snake_case();
-        let mut command = AllCommand { query_id: query_id.get(), data: CommandData::new() };
+        let mut command = EntitiesCommand { query_id: query_id.get(), data: CommandData::new() };
 
         let partition =
             if let Some(partition) = command_ast.arguments(db).args(db).elements(db).first() {
@@ -46,7 +46,7 @@ impl CommandTrait for AllCommand {
                     RewriteNode::interpolate_patched(
                         "
                         let __$query_id$_$query_subtype$_ids = IWorldDispatcher { \
-                         contract_address: world_address }.all('$component$', $partition$);
+                         contract_address: world_address }.entities('$component$', $partition$);
                         ",
                         HashMap::from([
                             (

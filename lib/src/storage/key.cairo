@@ -14,6 +14,9 @@ struct StorageKey {
 trait StorageKeyTrait {
     fn new(partition: felt252, keys: Array<felt252>) -> StorageKey;
     fn new_from_id(id: felt252) -> StorageKey;
+    fn id(self: @StorageKey) -> felt252;
+    fn table(self: @StorageKey, component: felt252) -> felt252;
+    fn keys(self: @StorageKey) -> Span<felt252>;
 }
 
 impl StorageKeyImpl of StorageKeyTrait {
@@ -24,6 +27,24 @@ impl StorageKeyImpl of StorageKeyTrait {
         let mut keys = ArrayTrait::new();
         keys.append(id);
         StorageKey { keys: keys, partition: 0 }
+    }
+    fn id(self: @StorageKey) -> felt252 {
+        let span = self.keys.span();
+        if span.len() == 1_usize {
+            return *span.at(0_usize);
+        }
+
+        inner_id(0, span, span.len())
+    }
+    fn table(self: @StorageKey, component: felt252) -> felt252 {
+        if *self.partition == 0 {
+            return component;
+        }
+
+        pedersen(component, *self.partition)
+    }
+    fn keys(self: @StorageKey) -> Span<felt252> {
+        self.keys.span()
     }
 }
 
