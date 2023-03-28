@@ -28,3 +28,7 @@ Realms NFTs are the source of truth for the metadata in this world.
 `Realm` : Realm specific data for the Realm entity
 
 `Army` : Army specific data for the Army entity
+
+`Buildings` : Buildings that can exist on an Entity
+
+`Position` : Position of entity
