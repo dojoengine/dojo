@@ -4,10 +4,10 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal};
 use smol_str::SmolStr;
 
-pub mod all;
-pub mod create;
+pub mod entities;
 pub mod execute;
 pub mod get;
+pub mod set;
 pub mod uuid;
 
 pub trait CommandTrait {
@@ -46,11 +46,6 @@ impl Command {
         let mut command = Command { rewrite_nodes: vec![], diagnostics: vec![] };
 
         match command_name(db, command_ast.clone()).as_str() {
-            "create" => {
-                let sc = create::CreateCommand::from_ast(db, let_pattern, command_ast);
-                command.rewrite_nodes.extend(sc.rewrite_nodes());
-                command.diagnostics.extend(sc.diagnostics());
-            }
             "uuid" => {
                 let sc = uuid::UUIDCommand::from_ast(db, let_pattern, command_ast);
                 command.rewrite_nodes.extend(sc.rewrite_nodes());
@@ -61,8 +56,13 @@ impl Command {
                 command.rewrite_nodes.extend(sc.rewrite_nodes());
                 command.diagnostics.extend(sc.diagnostics());
             }
-            "all" => {
-                let sc = all::AllCommand::from_ast(db, let_pattern, command_ast);
+            "set" => {
+                let sc = set::CreateCommand::from_ast(db, let_pattern, command_ast);
+                command.rewrite_nodes.extend(sc.rewrite_nodes());
+                command.diagnostics.extend(sc.diagnostics());
+            }
+            "entities" => {
+                let sc = entities::EntitiesCommand::from_ast(db, let_pattern, command_ast);
                 command.rewrite_nodes.extend(sc.rewrite_nodes());
                 command.diagnostics.extend(sc.diagnostics());
             }

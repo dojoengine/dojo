@@ -7,7 +7,7 @@ use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 use itertools::Itertools;
 use sanitizer::StringSanitizer;
 
-use super::all::find_components;
+use super::entities::find_components;
 use super::{CommandData, CommandTrait};
 
 pub struct GetCommand {

@@ -1,13 +1,10 @@
-use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
 use cairo_lang_compiler::db::{RootDatabase, RootDatabaseBuilder};
 use cairo_lang_filesystem::db::init_dev_corelib;
-use cairo_lang_filesystem::ids::Directory;
 use cairo_lang_plugins::get_default_plugins;
-use cairo_lang_project::{ProjectConfig, ProjectConfigContent};
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::plugin::SemanticPlugin;
 use cairo_lang_starknet::plugin::StarkNetPlugin;
@@ -26,8 +23,6 @@ pub trait DojoRootDatabaseBuilderEx {
 
     /// Tunes a compiler database to Dojo (e.g. Dojo plugin).
     fn with_dojo(&mut self, config: WorldConfig) -> &mut Self;
-
-    fn with_dojo_default(&mut self) -> &mut Self;
 }
 
 impl DojoRootDatabaseBuilderEx for RootDatabaseBuilder {
@@ -51,22 +46,5 @@ impl DojoRootDatabaseBuilderEx for RootDatabaseBuilder {
         plugins.push(Arc::new(StarkNetPlugin {}));
 
         self.with_implicit_precedence(&precedence).with_plugins(plugins)
-    }
-
-    fn with_dojo_default(&mut self) -> &mut Self {
-        let core_dir = std::env::var("CAIRO_CORELIB_DIR")
-            .unwrap_or_else(|e| panic!("Problem getting the corelib path: {e:?}"));
-        let dojo_dir = std::env::var("CAIRO_DOJOLIB_DIR")
-            .unwrap_or_else(|e| panic!("Problem getting the dojolib path: {e:?}"));
-        let config = ProjectConfig {
-            base_path: "".into(),
-            content: ProjectConfigContent {
-                crate_roots: HashMap::from([(DOJOLIB_CRATE_NAME.into(), dojo_dir.into())]),
-            },
-            corelib: Some(Directory(core_dir.into())),
-        };
-
-        self.with_project_config(config);
-        self.with_dojo(WorldConfig::default())
     }
 }

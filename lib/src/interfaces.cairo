@@ -12,7 +12,7 @@ trait IWorld {
     fn set(
         component: felt252, key: dojo::storage::key::StorageKey, offset: u8, value: Span<felt252>
     );
-    fn all(component: felt252, partition: felt252) -> Array<dojo::storage::key::StorageKey>;
+    fn entities(component: felt252, partition: felt252) -> Array<dojo::storage::key::StorageKey>;
     fn has_role(role: felt252, account: starknet::ContractAddress) -> bool;
     fn grant_role(role: felt252, account: starknet::ContractAddress);
     fn revoke_role(role: felt252, account: starknet::ContractAddress);
@@ -21,11 +21,13 @@ trait IWorld {
 
 #[abi]
 trait IExecutor {
-    fn execute(
-        class_hash: starknet::ClassHash,
-        world_address: starknet::ContractAddress,
-        data: Span<felt252>
-    ) -> Span<felt252>;
+    fn execute(class_hash: starknet::ClassHash, data: Span<felt252>) -> Span<felt252>;
+}
+
+#[abi]
+trait IIndexer {
+    fn index(table: felt252, id: felt252);
+    fn records(table: felt252) -> Array::<felt252>;
 }
 
 #[abi]
