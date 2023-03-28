@@ -54,6 +54,11 @@ mod SpawnSystem {
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
+
+        commands::set(1337.into(), (
+            Player { name: name },
+            Position { x: 0, y: 0 },
+        ));
         return ();
     }
 }
@@ -393,6 +398,11 @@ error: Plugin diagnostic: Invalid arguments. Expected "(storage_key, (components
  --> lib.cairo:42:41
         let invalid_args = commands::set((
                                         ^^
+
+error: Plugin diagnostic: commands::set(...) requries assignment to a variable. i.e. let foo = commands::set(...)
+ --> lib.cairo:52:22
+        commands::set(1337.into(), (
+                     ^*************^
 
 error: Plugin diagnostic: Unexpected argument type. Expected: "dojo::storage::key::StorageKey", found: "(core::felt252, core::felt252, core::felt252, core::felt252, core::felt252)".
  --> SpawnSystem:61:88

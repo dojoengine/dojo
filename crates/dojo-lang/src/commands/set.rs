@@ -55,11 +55,10 @@ impl CommandTrait for CreateCommand {
         let_pattern: Option<ast::Pattern>,
         command_ast: ast::ExprFunctionCall,
     ) -> Self {
-        let var_name = let_pattern.unwrap();
         let mut command = CreateCommand { data: CommandData::new() };
-
+        
         let elements = command_ast.arguments(db).args(db).elements(db);
-
+        
         if elements.len() != 2 {
             command.data.diagnostics.push(PluginDiagnostic {
                 message: "Invalid arguments. Expected \"(storage_key, (components,))\"".to_string(),
@@ -68,6 +67,15 @@ impl CommandTrait for CreateCommand {
             return command;
         }
 
+        if let_pattern.is_none() {
+            command.data.diagnostics.push(PluginDiagnostic {
+                message: "commands::set(...) requries assignment to a variable. i.e. let foo = commands::set(...)".to_string(),
+                stable_ptr: command_ast.arguments(db).as_syntax_node().stable_ptr(),
+            });
+            return command;
+        }
+
+        let var_name = let_pattern.unwrap();
         let storage_key = elements.first().unwrap().clone();
         let bundle = elements.last().unwrap();
         if let ast::ArgClause::Unnamed(clause) = bundle.arg_clause(db) {
