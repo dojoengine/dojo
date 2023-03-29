@@ -1,8 +1,10 @@
 mod build;
 mod init;
 mod migrate;
+mod bind;
 
 use build::BuildArgs;
+use bind::BindArgs;
 use clap::{Args, Parser, Subcommand};
 use init::InitArgs;
 use migrate::MigrateArgs;
@@ -32,8 +34,7 @@ enum Commands {
     Inspect(InspectArgs),
 }
 
-#[derive(Args)]
-struct BindArgs {}
+
 
 #[derive(Args)]
 struct InspectArgs {
@@ -54,7 +55,7 @@ async fn main() -> anyhow::Result<()> {
             Ok(())
         }
         Commands::Migrate(args) => migrate::run(args).await,
-        Commands::Bind(..) => Ok(print!("Bind")),
+        Commands::Bind(args) => bind::run(args),
         Commands::Inspect(..) => Ok(print!("Inspect")),
     }?;
     Ok(())
