@@ -14,7 +14,7 @@ fn test_system_resolving() {
             mod NotAsystem {}
 
             #[system]
-            mod MoveSystem {
+            mod Move {
                 #[execute]
                 fn move() {}
             }

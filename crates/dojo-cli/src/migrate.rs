@@ -1,96 +1,166 @@
-// use std::env::current_dir;
-use std::path::PathBuf;
+use std::env::{self, current_dir};
+use std::fmt::Display;
+use std::fs;
 
-// use cairo_lang_compiler::db::RootDatabase;
-// use cairo_lang_compiler::project::get_main_crate_ids_from_project;
+use anyhow::Context;
+use cairo_lang_starknet::casm_contract_class::CasmContractClass;
+use camino::Utf8PathBuf;
 use clap::Args;
 use comfy_table::Table;
-// use dojo_lang::component::find_components;
-// use dojo_lang::db::DojoRootDatabaseBuilderEx;
-// use dojo_lang::plugin::get_contract_address;
-// use dojo_lang::system::find_systems;
-// use smol_str::SmolStr;
-// use starknet::core::types::FieldElement;
-// use starknet::providers::jsonrpc::models::{BlockId, BlockTag, ErrorCode};
-// use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient, JsonRpcClientError, RpcError};
-// use url::Url;
+use dojo_project::WorldConfig;
+use scarb::core::Config;
+use scarb::ops;
+use scarb::ui::Verbosity;
+use starknet::core::types::contract::CompiledClass;
+use starknet::core::types::FieldElement;
 
 #[derive(Args)]
 pub struct MigrateArgs {
     #[clap(help = "Source directory")]
-    path: Option<PathBuf>,
+    path: Option<Utf8PathBuf>,
 
     #[clap(short, long, help = "Perform a dry run and outputs the plan to be executed")]
     plan: bool,
 }
 
-pub async fn run(_args: MigrateArgs) {
-    // let source_dir = match args.path {
-    //     Some(path) => path,
-    //     None => current_dir().unwrap(),
-    // };
+pub async fn run(args: MigrateArgs) -> anyhow::Result<()> {
+    let source_dir = match args.path {
+        Some(path) => {
+            if path.is_absolute() {
+                path
+            } else {
+                let mut current_path = current_dir().unwrap();
+                current_path.push(path);
+                Utf8PathBuf::from_path_buf(current_path).unwrap()
+            }
+        }
+        None => Utf8PathBuf::from_path_buf(current_dir().unwrap()).unwrap(),
+    };
 
-    // let config = ProjectConfig::from_directory(&source_dir).unwrap_or_else(|error| {
-    //     panic!("Problem creating project config: {:?}", error);
-    // });
+    let world = World::from_path(source_dir.clone())?;
 
-    // let rpc_client = JsonRpcClient::new(HttpTransport::new(
-    //     Url::parse("https://starknet-goerli.cartridge.gg/").unwrap(),
-    // ));
+    println!("{world}");
 
-    // let db = &mut
-    // RootDatabase::builder().with_dojo_config(config.clone()).build().unwrap_or_else(
-    //     |error| {
-    //         panic!("Migration initialization error: {:?}", error);
-    //     },
-    // );
-    // let main_crate_ids = get_main_crate_ids_from_project(db, &config.clone().into());
+    Ok(())
+}
 
-    // let components = find_components(db, &main_crate_ids);
-    // let systems = find_systems(db, &main_crate_ids);
+struct World {
+    address: Option<FieldElement>,
+    modules: Modules,
+}
 
-    let mut table = Table::new();
-    table.set_header(vec!["Name", "Type", "Address", "Deployed"]);
+impl World {
+    fn from_path(source_dir: Utf8PathBuf) -> anyhow::Result<World> {
+        let manifest_path = source_dir.join("Scarb.toml");
+        let config = Config::builder(manifest_path)
+            .ui_verbosity(Verbosity::Verbose)
+            .log_filter_directive(env::var_os("SCARB_LOG"))
+            .build()
+            .unwrap();
+        let ws = ops::read_workspace(config.manifest_path(), &config).unwrap_or_else(|err| {
+            eprintln!("error: {}", err);
+            std::process::exit(1);
+        });
+        let world_config =
+            WorldConfig::from_workspace(&ws).unwrap_or_else(|_| WorldConfig::default());
 
-    // async fn get_row(
-    //     rpc_client: &JsonRpcClient<HttpTransport>,
-    //     typ: SmolStr,
-    //     name: SmolStr,
-    //     config: ProjectConfig,
-    // ) -> Vec<SmolStr> {
-    //     let contract_address = get_contract_address(
-    //         name.as_str(),
-    //         config.clone().content.world.initializer_class_hash.unwrap_or_default(),
-    //         config.content.world.address.unwrap_or_default(),
-    //     );
+        let modules = Modules::from_path(source_dir.clone())?;
 
-    //     let existing_class_hash = rpc_client
-    //         .get_class_hash_at(&BlockId::Tag(BlockTag::Latest), contract_address)
-    //         .await
-    //         .unwrap_or_else(|err| match err {
-    //             JsonRpcClientError::RpcError(RpcError::Code(ErrorCode::ContractNotFound)) => {
-    //                 FieldElement::ZERO
-    //             }
-    //             _ => panic!("Failed getting contract hash: {err:?}"),
-    //         });
+        Ok(World { address: world_config.address, modules })
+    }
+}
 
-    //     vec![
-    //         name,
-    //         typ,
-    //         format!("{:#x}", contract_address).into(),
-    //         if existing_class_hash == FieldElement::ZERO { "false".into() } else { "true".into()
-    // },     ]
-    // }
+impl Display for World {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "World Address: 0x{:x}", self.address.unwrap())?;
+        writeln!(f, "{}", self.modules)
+    }
+}
 
-    // for component in components {
-    //     table.add_row(
-    //         get_row(&rpc_client, "Component".into(), component.name, config.clone()).await,
-    //     );
-    // }
+struct Module {
+    name: String,
+    hash: FieldElement,
+}
 
-    // for system in systems {
-    //     table.add_row(get_row(&rpc_client, "System".into(), system.name, config.clone()).await);
-    // }
+struct Modules {
+    contracts: Vec<Module>,
+    components: Vec<Module>,
+    systems: Vec<Module>,
+}
 
-    println!("{table}");
+impl Modules {
+    fn from_path(source_dir: Utf8PathBuf) -> anyhow::Result<Modules> {
+        let mut modules = Modules { contracts: vec![], components: vec![], systems: vec![] };
+
+        // Read the directory
+        let entries = fs::read_dir(source_dir.join("target/release")).unwrap_or_else(|error| {
+            panic!("Problem reading source directory: {:?}", error);
+        });
+
+        for entry in entries.flatten() {
+            let file_name = entry.file_name();
+            let file_name_str = file_name.to_string_lossy();
+            if !file_name_str.ends_with(".json") {
+                continue;
+            }
+
+            let name = file_name_str.split('_').last().unwrap().to_string();
+            let contract_class = serde_json::from_reader(fs::File::open(entry.path()).unwrap())
+                .unwrap_or_else(|error| {
+                    panic!("Problem parsing {} artifact: {:?}", file_name_str, error);
+                });
+
+            let casm_contract = CasmContractClass::from_contract_class(contract_class, true)
+                .with_context(|| "Compilation failed.")?;
+            let res = serde_json::to_string_pretty(&casm_contract)
+                .with_context(|| "Casm contract Serialization failed.")?;
+
+            let compiled_class: CompiledClass =
+                serde_json::from_str(res.as_str()).unwrap_or_else(|error| {
+                    panic!("Problem parsing {} artifact: {:?}", file_name_str, error);
+                });
+
+            let hash = compiled_class
+                .class_hash()
+                .with_context(|| "Casm contract Serialization failed.")?;
+
+            if name.ends_with("Component.json") {
+                modules.components.push(Module {
+                    name: name.strip_suffix("Component.json").unwrap().to_string(),
+                    hash,
+                });
+            } else if name.ends_with("System.json") {
+                modules.systems.push(Module {
+                    name: name.strip_suffix("System.json").unwrap().to_string(),
+                    hash,
+                });
+            } else {
+                modules
+                    .contracts
+                    .push(Module { name: name.strip_suffix(".json").unwrap().to_string(), hash });
+            };
+        }
+        Ok(modules)
+    }
+}
+
+impl Display for Modules {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut components_table = Table::new();
+        components_table.set_header(vec!["Component", "Class Hash"]);
+        for component in &self.components {
+            components_table
+                .add_row(vec![component.name.clone(), format!("0x{:x} ", component.hash)]);
+        }
+        writeln!(f, "{}", components_table)?;
+
+        let mut systems_table = Table::new();
+        systems_table.set_header(vec!["System", "Class Hash"]);
+        for system in &self.systems {
+            systems_table.add_row(vec![system.name.clone(), format!("0x{:x} ", system.hash)]);
+        }
+        writeln!(f, "{}", systems_table)?;
+
+        Ok(())
+    }
 }

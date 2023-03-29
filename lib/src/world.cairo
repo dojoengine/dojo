@@ -5,7 +5,8 @@ mod World {
     use traits::Into;
     use starknet::get_caller_address;
     use starknet::get_contract_address;
-    use starknet::class_hash::ClassHash;
+    use starknet::ClassHash;
+    use starknet::ContractAddress;
 
     use dojo::serde::SpanSerde;
     use dojo::storage::key::StorageKey;
@@ -22,12 +23,12 @@ mod World {
     use dojo::interfaces::IStoreDispatcherTrait;
 
     struct Storage {
-        indexer: starknet::ClassHash,
-        store: starknet::ClassHash,
-        caller: starknet::ClassHash,
-        executor: starknet::ContractAddress,
+        indexer: ClassHash,
+        store: ClassHash,
+        caller: ClassHash,
+        executor: ContractAddress,
         role_admin: LegacyMap::<felt252, felt252>,
-        role_member: LegacyMap::<(felt252, starknet::ContractAddress), bool>,
+        role_member: LegacyMap::<(felt252, ContractAddress), bool>,
         component_registry: LegacyMap::<felt252, ClassHash>,
         system_registry: LegacyMap::<felt252, ClassHash>,
         nonce: felt252,
@@ -41,10 +42,13 @@ mod World {
 
     // Give deployer the default admin role.
     #[constructor]
-    fn constructor(_executor: starknet::ContractAddress) {
-        executor::write(_executor);
+    fn constructor(executor_: ContractAddress, store_: ClassHash, indexer_: ClassHash) {
         let caller = get_caller_address();
         _grant_role(0, caller);
+
+        executor::write(executor_);
+        store::write(store_);
+        indexer::write(indexer_);
     }
 
     // Register a component in the world. If the component is already registered,
@@ -57,6 +61,11 @@ mod World {
         ComponentRegistered(name, class_hash);
     }
 
+    #[view]
+    fn component(name: felt252) -> ClassHash {
+        component_registry::read(name)
+    }
+
     // Register a system in the world. If the system is already registered,
     // the implementation will be updated.
     #[external]
@@ -65,6 +74,11 @@ mod World {
         // TODO: If system is already registered, vaildate permission to update.
         system_registry::write(name, class_hash);
         SystemRegistered(name, class_hash);
+    }
+
+    #[view]
+    fn system(name: felt252) -> ClassHash {
+        system_registry::read(name)
     }
 
     #[external]
@@ -88,17 +102,6 @@ mod World {
         return pedersen(next, 0);
     }
 
-    #[view]
-    fn get(component: felt252, key: StorageKey, offset: u8, mut length: usize) -> Span<felt252> {
-        let class_hash = component_registry::read(component);
-
-        let res = IStoreLibraryDispatcher {
-            class_hash: store::read()
-        }.get(component, class_hash, key, offset, length);
-
-        res
-    }
-
     #[external]
     fn set(component: felt252, key: StorageKey, offset: u8, value: Span<felt252>) {
         let system_class_hash = caller::read();
@@ -115,6 +118,17 @@ mod World {
         IIndexerLibraryDispatcher { class_hash: indexer::read() }.index(table, id);
     }
 
+    #[view]
+    fn get(component: felt252, key: StorageKey, offset: u8, mut length: usize) -> Span<felt252> {
+        let class_hash = component_registry::read(component);
+
+        let res = IStoreLibraryDispatcher {
+            class_hash: store::read()
+        }.get(component, class_hash, key, offset, length);
+
+        res
+    }
+
     // Returns entities that contain the component state.
     #[view]
     fn entities(component: felt252, partition: felt252) -> Array::<felt252> {
@@ -127,19 +141,34 @@ mod World {
         }.records(pedersen(component, partition))
     }
 
+    #[external]
+    fn set_executor(contract_address: ContractAddress) {
+        executor::write(contract_address);
+    }
+
+    #[external]
+    fn set_indexer(class_hash: ClassHash) {
+        indexer::write(class_hash);
+    }
+
+    #[external]
+    fn set_store(class_hash: ClassHash) {
+        store::write(class_hash);
+    }
+
     #[view]
-    fn has_role(role: felt252, account: starknet::ContractAddress) -> bool {
+    fn has_role(role: felt252, account: ContractAddress) -> bool {
         return role_member::read((role, account));
     }
 
     #[external]
-    fn grant_role(role: felt252, account: starknet::ContractAddress) {
+    fn grant_role(role: felt252, account: ContractAddress) {
         let admin = role_admin::read(role);
         assert_only_role(admin);
         _grant_role(role, account);
     }
 
-    fn _grant_role(role: felt252, account: starknet::ContractAddress) {
+    fn _grant_role(role: felt252, account: ContractAddress) {
         let has_role = role_member::read((role, account));
         if (!has_role) {
             role_member::write((role, account), bool::True(()));
@@ -147,13 +176,13 @@ mod World {
     }
 
     #[external]
-    fn revoke_role(role: felt252, account: starknet::ContractAddress) {
+    fn revoke_role(role: felt252, account: ContractAddress) {
         let admin = role_admin::read(role);
         assert_only_role(admin);
         _revoke_role(role, account);
     }
 
-    fn _revoke_role(role: felt252, account: starknet::ContractAddress) {
+    fn _revoke_role(role: felt252, account: ContractAddress) {
         let has_role = role_member::read((role, account));
         if (has_role) {
             role_member::write((role, account), bool::False(()));
@@ -205,7 +234,7 @@ mod World {
 #[available_gas(2000000)]
 fn test_constructor() {
     starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
-    World::constructor(starknet::contract_address_const::<0x1337>());
+    World::constructor(starknet::contract_address_const::<0x1337>(), starknet::class_hash_const::<0x1337>(), starknet::class_hash_const::<0x1337>());
     assert(World::has_role(0, starknet::contract_address_const::<0x420>()), 'role not granted');
 }
 
@@ -213,7 +242,7 @@ fn test_constructor() {
 #[available_gas(2000000)]
 fn test_grant_revoke_role() {
     starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
-    World::constructor(starknet::contract_address_const::<0x1337>());
+    World::constructor(starknet::contract_address_const::<0x1337>(), starknet::class_hash_const::<0x1337>(), starknet::class_hash_const::<0x1337>());
     World::grant_role(1, starknet::contract_address_const::<0x421>());
     assert(World::has_role(1, starknet::contract_address_const::<0x421>()), 'role not granted');
     World::revoke_role(1, starknet::contract_address_const::<0x421>());
@@ -224,7 +253,7 @@ fn test_grant_revoke_role() {
 #[available_gas(2000000)]
 fn test_renonce_role() {
     starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
-    World::constructor(starknet::contract_address_const::<0x1337>());
+    World::constructor(starknet::contract_address_const::<0x1337>(), starknet::class_hash_const::<0x1337>(), starknet::class_hash_const::<0x1337>());
     World::renounce_role(0);
     assert(!World::has_role(0, starknet::contract_address_const::<0x420>()), 'role not renonced');
 }

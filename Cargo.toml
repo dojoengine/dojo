@@ -35,6 +35,8 @@ cairo-lang-plugins = "1.0.0-alpha.6"
 cairo-lang-project = "1.0.0-alpha.6"
 cairo-lang-semantic = "1.0.0-alpha.6"
 cairo-lang-sierra-generator = "1.0.0-alpha.6"
+cairo-lang-sierra = "1.0.0-alpha.6"
+cairo-lang-sierra-to-casm = "1.0.0-alpha.6"
 cairo-lang-starknet = "1.0.0-alpha.6"
 cairo-lang-syntax = "1.0.0-alpha.6"
 cairo-lang-utils = "1.0.0-alpha.6"
@@ -53,7 +55,10 @@ scarb = "0.1.0-rc.2"
 serde = { version = "1.0.130", features = ["derive"] }
 serde_json = "1.0"
 smol_str = "0.1.23"
-starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "447182a90839a3e4f096a01afe75ef474186d911" }
+starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "a46d3dd8e0a99ddd73377e730eec1760bec09aac" }
 thiserror = "1.0.32"
 toml = "0.4.2"
 test-log = "0.2.11"
+
+[patch."https://github.com/xJonathanLEI/starknet-rs"]
+starknet = { git = "https://github.com/tarrencev/starknet-rs", branch = "patchcasm" }
