@@ -1,4 +1,5 @@
 use std::env::{self, current_dir};
+use std::fmt::Display;
 use std::fs;
 
 use anyhow::Context;
@@ -36,37 +37,44 @@ pub async fn run(args: MigrateArgs) -> anyhow::Result<()> {
         None => Utf8PathBuf::from_path_buf(current_dir().unwrap()).unwrap(),
     };
 
-    let modules = Modules::from_path(source_dir.clone())?;
+    let world = World::from_path(source_dir.clone())?;
 
-    let manifest_path = source_dir.join("Scarb.toml");
-    let config = Config::builder(manifest_path)
-        .ui_verbosity(Verbosity::Verbose)
-        .log_filter_directive(env::var_os("SCARB_LOG"))
-        .build()
-        .unwrap();
-    let ws = ops::read_workspace(config.manifest_path(), &config).unwrap_or_else(|err| {
-        eprintln!("error: {}", err);
-        std::process::exit(1);
-    });
-    let world_config = WorldConfig::from_workspace(&ws).unwrap_or_else(|_| WorldConfig::default());
-
-    println!("World Address: 0x{:x}", world_config.address.unwrap());
-
-    let mut components_table = Table::new();
-    components_table.set_header(vec!["Component", "Class Hash"]);
-    for component in modules.components {
-        components_table.add_row(vec![component.name, format!("0x{:x} ", component.hash)]);
-    }
-    println!("{components_table}\n");
-
-    let mut systems_table = Table::new();
-    systems_table.set_header(vec!["System", "Class Hash"]);
-    for system in modules.systems {
-        systems_table.add_row(vec![system.name, format!("0x{:x} ", system.hash)]);
-    }
-    println!("{systems_table}");
+    println!("{world}");
 
     Ok(())
+}
+
+struct World {
+    address: Option<FieldElement>,
+    modules: Modules,
+}
+
+impl World {
+    fn from_path(source_dir: Utf8PathBuf) -> anyhow::Result<World> {
+        let manifest_path = source_dir.join("Scarb.toml");
+        let config = Config::builder(manifest_path)
+            .ui_verbosity(Verbosity::Verbose)
+            .log_filter_directive(env::var_os("SCARB_LOG"))
+            .build()
+            .unwrap();
+        let ws = ops::read_workspace(config.manifest_path(), &config).unwrap_or_else(|err| {
+            eprintln!("error: {}", err);
+            std::process::exit(1);
+        });
+        let world_config =
+            WorldConfig::from_workspace(&ws).unwrap_or_else(|_| WorldConfig::default());
+
+        let modules = Modules::from_path(source_dir.clone())?;
+
+        Ok(World { address: world_config.address, modules })
+    }
+}
+
+impl Display for World {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "World Address: 0x{:x}", self.address.unwrap())?;
+        writeln!(f, "{}", self.modules)
+    }
 }
 
 struct Module {
@@ -133,5 +141,26 @@ impl Modules {
             };
         }
         Ok(modules)
+    }
+}
+
+impl Display for Modules {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut components_table = Table::new();
+        components_table.set_header(vec!["Component", "Class Hash"]);
+        for component in &self.components {
+            components_table
+                .add_row(vec![component.name.clone(), format!("0x{:x} ", component.hash)]);
+        }
+        writeln!(f, "{}", components_table)?;
+
+        let mut systems_table = Table::new();
+        systems_table.set_header(vec!["System", "Class Hash"]);
+        for system in &self.systems {
+            systems_table.add_row(vec![system.name.clone(), format!("0x{:x} ", system.hash)]);
+        }
+        writeln!(f, "{}", systems_table)?;
+
+        Ok(())
     }
 }
