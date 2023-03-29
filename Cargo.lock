@@ -2388,6 +2388,8 @@ dependencies = [
  "cairo-lang-filesystem",
  "cairo-lang-plugins",
  "cairo-lang-project",
+ "cairo-lang-sierra",
+ "cairo-lang-sierra-to-casm",
  "cairo-lang-starknet",
  "camino",
  "clap 4.1.11",
@@ -6035,7 +6037,7 @@ dependencies = [
 [[package]]
 name = "starknet"
 version = "0.2.0"
-source = "git+https://github.com/tarrencev/starknet-rs?branch=fixart#4b54c4ab9190004d2645ba316fb9256050fe5646"
+source = "git+https://github.com/tarrencev/starknet-rs?branch=patchcasm#0140b62902e2aff1500c1622d6545a3fb6835259"
 dependencies = [
  "starknet-accounts",
  "starknet-contract",
@@ -6048,7 +6050,7 @@ dependencies = [
 [[package]]
 name = "starknet-accounts"
 version = "0.1.0"
-source = "git+https://github.com/tarrencev/starknet-rs?branch=fixart#4b54c4ab9190004d2645ba316fb9256050fe5646"
+source = "git+https://github.com/tarrencev/starknet-rs?branch=patchcasm#0140b62902e2aff1500c1622d6545a3fb6835259"
 dependencies = [
  "async-trait",
  "starknet-core",
@@ -6060,7 +6062,7 @@ dependencies = [
 [[package]]
 name = "starknet-contract"
 version = "0.1.0"
-source = "git+https://github.com/tarrencev/starknet-rs?branch=fixart#4b54c4ab9190004d2645ba316fb9256050fe5646"
+source = "git+https://github.com/tarrencev/starknet-rs?branch=patchcasm#0140b62902e2aff1500c1622d6545a3fb6835259"
 dependencies = [
  "serde",
  "serde_json",
@@ -6074,7 +6076,7 @@ dependencies = [
 [[package]]
 name = "starknet-core"
 version = "0.2.0"
-source = "git+https://github.com/tarrencev/starknet-rs?branch=fixart#4b54c4ab9190004d2645ba316fb9256050fe5646"
+source = "git+https://github.com/tarrencev/starknet-rs?branch=patchcasm#0140b62902e2aff1500c1622d6545a3fb6835259"
 dependencies = [
  "base64 0.13.1",
  "ethereum-types",
@@ -6113,7 +6115,7 @@ dependencies = [
 [[package]]
 name = "starknet-crypto"
 version = "0.4.2"
-source = "git+https://github.com/tarrencev/starknet-rs?branch=fixart#4b54c4ab9190004d2645ba316fb9256050fe5646"
+source = "git+https://github.com/tarrencev/starknet-rs?branch=patchcasm#0140b62902e2aff1500c1622d6545a3fb6835259"
 dependencies = [
  "crypto-bigint 0.4.9",
  "hex",
@@ -6143,7 +6145,7 @@ dependencies = [
 [[package]]
 name = "starknet-crypto-codegen"
 version = "0.3.0"
-source = "git+https://github.com/tarrencev/starknet-rs?branch=fixart#4b54c4ab9190004d2645ba316fb9256050fe5646"
+source = "git+https://github.com/tarrencev/starknet-rs?branch=patchcasm#0140b62902e2aff1500c1622d6545a3fb6835259"
 dependencies = [
  "starknet-curve 0.2.1",
  "starknet-ff 0.3.1",
@@ -6162,7 +6164,7 @@ dependencies = [
 [[package]]
 name = "starknet-curve"
 version = "0.2.1"
-source = "git+https://github.com/tarrencev/starknet-rs?branch=fixart#4b54c4ab9190004d2645ba316fb9256050fe5646"
+source = "git+https://github.com/tarrencev/starknet-rs?branch=patchcasm#0140b62902e2aff1500c1622d6545a3fb6835259"
 dependencies = [
  "starknet-ff 0.3.1",
 ]
@@ -6186,7 +6188,7 @@ dependencies = [
 [[package]]
 name = "starknet-ff"
 version = "0.3.1"
-source = "git+https://github.com/tarrencev/starknet-rs?branch=fixart#4b54c4ab9190004d2645ba316fb9256050fe5646"
+source = "git+https://github.com/tarrencev/starknet-rs?branch=patchcasm#0140b62902e2aff1500c1622d6545a3fb6835259"
 dependencies = [
  "ark-ff 0.3.0",
  "bigdecimal",
@@ -6200,7 +6202,7 @@ dependencies = [
 [[package]]
 name = "starknet-macros"
 version = "0.1.0"
-source = "git+https://github.com/tarrencev/starknet-rs?branch=fixart#4b54c4ab9190004d2645ba316fb9256050fe5646"
+source = "git+https://github.com/tarrencev/starknet-rs?branch=patchcasm#0140b62902e2aff1500c1622d6545a3fb6835259"
 dependencies = [
  "starknet-core",
  "syn 1.0.109",
@@ -6209,7 +6211,7 @@ dependencies = [
 [[package]]
 name = "starknet-providers"
 version = "0.2.0"
-source = "git+https://github.com/tarrencev/starknet-rs?branch=fixart#4b54c4ab9190004d2645ba316fb9256050fe5646"
+source = "git+https://github.com/tarrencev/starknet-rs?branch=patchcasm#0140b62902e2aff1500c1622d6545a3fb6835259"
 dependencies = [
  "async-trait",
  "auto_impl",
@@ -6225,7 +6227,7 @@ dependencies = [
 [[package]]
 name = "starknet-signers"
 version = "0.1.0"
-source = "git+https://github.com/tarrencev/starknet-rs?branch=fixart#4b54c4ab9190004d2645ba316fb9256050fe5646"
+source = "git+https://github.com/tarrencev/starknet-rs?branch=patchcasm#0140b62902e2aff1500c1622d6545a3fb6835259"
 dependencies = [
  "async-trait",
  "starknet-core",

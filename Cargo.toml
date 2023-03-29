@@ -35,6 +35,8 @@ cairo-lang-plugins = "1.0.0-alpha.6"
 cairo-lang-project = "1.0.0-alpha.6"
 cairo-lang-semantic = "1.0.0-alpha.6"
 cairo-lang-sierra-generator = "1.0.0-alpha.6"
+cairo-lang-sierra = "1.0.0-alpha.6"
+cairo-lang-sierra-to-casm = "1.0.0-alpha.6"
 cairo-lang-starknet = "1.0.0-alpha.6"
 cairo-lang-syntax = "1.0.0-alpha.6"
 cairo-lang-utils = "1.0.0-alpha.6"
@@ -59,4 +61,4 @@ toml = "0.4.2"
 test-log = "0.2.11"
 
 [patch."https://github.com/xJonathanLEI/starknet-rs"]
-starknet = { git = "https://github.com/tarrencev/starknet-rs", branch = "fixart" }
+starknet = { git = "https://github.com/tarrencev/starknet-rs", branch = "patchcasm" }
