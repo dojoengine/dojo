@@ -53,10 +53,7 @@ async fn main() -> anyhow::Result<()> {
             init::run(args);
             Ok(())
         }
-        Commands::Migrate(args) => {
-            migrate::run(args).await;
-            Ok(())
-        }
+        Commands::Migrate(args) => migrate::run(args).await,
         Commands::Bind(..) => Ok(print!("Bind")),
         Commands::Inspect(..) => Ok(print!("Inspect")),
     }?;

@@ -2,6 +2,9 @@
 name = "dojo_examples"
 version = "0.1.0"
 
+[cairo]
+sierra-replace-ids = true
+
 [dependencies]
 dojo = { path = "../lib" }
 
