@@ -79,7 +79,9 @@ mod ERC20 {
 
     #[view]
     fn allowance(owner: ContractAddress, spender: ContractAddress) -> u256 {
-        allowances::read((owner, spender))
+        let token_id = starknet::get_contract_address();
+        let key: StorageKey : (token_id.into(), (owner.into(), spender.into())).into();
+        IWorldDispatcher { contract_address: world_address::read() }.get('Allowance', key.into(), 0_u8, 0_usize);
     }
 
     #[external]
