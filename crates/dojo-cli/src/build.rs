@@ -1,6 +1,5 @@
 use std::env::{self, current_dir};
 
-use anyhow::Result;
 use camino::Utf8PathBuf;
 use clap::Args;
 use dojo_lang::compiler::DojoCompiler;
@@ -15,7 +14,7 @@ pub struct BuildArgs {
     path: Option<Utf8PathBuf>,
 }
 
-pub fn run(args: BuildArgs) -> Result<()> {
+pub fn run(args: BuildArgs) -> anyhow::Result<()> {
     let source_dir = match args.path {
         Some(path) => {
             if path.is_absolute() {
