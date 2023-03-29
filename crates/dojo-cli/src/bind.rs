@@ -32,6 +32,8 @@ pub fn run(args: BindArgs) -> anyhow::Result<()>  {
         None => Utf8PathBuf::from_path_buf(current_dir().unwrap()).unwrap(),
     };
 
+    let mut all_ts_output = String::new();
+
     for entry in read_dir(input_dir).expect("Unable to read ABI directory") {
         let entry = entry.expect("Unable to read entry");
         let abi_path = entry.path();
@@ -60,15 +62,16 @@ pub fn run(args: BindArgs) -> anyhow::Result<()>  {
                     _ => {}
                 }
             }
-
-            let ts_output_path = abi_path.with_extension("ts");
-            let mut file = File::create(ts_output_path).expect("Unable to create file");
-
-            println!("Generated TypeScript bindings: {}", ts_output);
-            file.write_all(ts_output.as_bytes())
-                .expect("Unable to write TypeScript bindings");
+            all_ts_output.push_str(&ts_output);
         }
     }
+
+    let output_file_name = "game.ts";
+    let mut file = File::create(output_file_name).expect("Unable to create file");
+
+    println!("Generated TypeScript bindings: {}", all_ts_output);
+    file.write_all(all_ts_output.as_bytes())
+        .expect("Unable to write TypeScript bindings");
     Ok(())
 }
 
