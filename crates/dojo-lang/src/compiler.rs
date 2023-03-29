@@ -3,6 +3,8 @@ use std::ops::DerefMut;
 
 use anyhow::{Context, Result};
 use cairo_lang_compiler::db::RootDatabase;
+use cairo_lang_filesystem::db::FilesGroup;
+use cairo_lang_filesystem::ids::CrateLongId;
 use cairo_lang_starknet::contract::find_contracts;
 use cairo_lang_starknet::contract_class::compile_prepared_db;
 use cairo_lang_utils::Upcast;
@@ -36,7 +38,10 @@ impl Compiler for DojoCompiler {
 
         let compiler_config = build_compiler_config(&unit, ws);
 
-        let main_crate_ids = collect_main_crate_ids(&unit, &db);
+        let mut main_crate_ids = collect_main_crate_ids(&unit, &db);
+        if unit.main_component().cairo_package_name() != "dojo" {
+            main_crate_ids.push(db.intern_crate(CrateLongId("dojo".into())));
+        }
 
         let contracts = {
             let _ = trace_span!("find_contracts").enter();
