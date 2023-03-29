@@ -13,7 +13,6 @@ pub enum DeserializationError {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorldConfig {
     pub address: Option<FieldElement>,
-    pub initializer_class_hash: Option<FieldElement>,
 }
 
 pub struct DeploymentConfig {
@@ -45,14 +44,6 @@ impl WorldConfig {
                     let world_address = FieldElement::from_hex_be(world_address)
                         .map_err(|_| DeserializationError::ParsingFieldElement)?;
                     world_config.address = Some(world_address);
-                }
-            }
-
-            if let Some(initializer_class_hash) = dojo_metadata.get("initializer_class_hash") {
-                if let Some(initializer_class_hash) = initializer_class_hash.as_str() {
-                    let initializer_class_hash = FieldElement::from_hex_be(initializer_class_hash)
-                        .map_err(|_| DeserializationError::ParsingFieldElement)?;
-                    world_config.initializer_class_hash = Some(initializer_class_hash);
                 }
             }
         }
