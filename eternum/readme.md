@@ -12,6 +12,7 @@ Realms NFTs are the source of truth for the metadata in this world.
 
 `Goblins/Barbarians` : AI Controlled units that spawn on the map
 
+`Roads` : Go from A-B in the world. Speed up travel. Decay.
 
 ### Systems
 
