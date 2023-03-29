@@ -7,9 +7,9 @@ edition = "2021"
 
 [dependencies]
 anyhow.workspace = true
+async-trait = "0.1.68"
 camino.workspace = true
 clap.workspace = true
-comfy-table = "6.0.0"
 dojo-lang = { path = "../dojo-lang" }
 dojo-project = { path = "../dojo-project" }
 cairo-lang-compiler.workspace = true

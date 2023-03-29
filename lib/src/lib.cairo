@@ -1,4 +1,3 @@
-mod initializer;
 mod constants;
 mod executor;
 mod interfaces;
