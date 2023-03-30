@@ -1,46 +1,75 @@
-use apibara_core::node::v1alpha2::DataFinality;
-use apibara_core::starknet::v1alpha2::{Block, FieldElement, Filter, HeaderFilter};
+use std::marker::PhantomData;
+
 use apibara_sdk::{ClientBuilder, Configuration, DataMessage};
-use bevy_app::{App, Plugin};
-use bevy_core::TaskPoolPlugin;
-use bevy_ecs::component::Component;
-use bevy_ecs::system::{Query, ResMut};
+use bevy::app::{App, Plugin};
+use bevy::ecs::component::Component;
+use bevy::ecs::system::{Res, ResMut, Resource};
 use bevy_tokio_tasks::{TokioTasksPlugin, TokioTasksRuntime};
+use prost::Message;
 use tokio_stream::StreamExt;
+pub use tonic::transport::Uri;
 
-pub struct IndexerPlugin;
+pub struct IndexerPlugin<F: Message + Default, D> {
+    uri: Uri,
+    config: Configuration<F>,
+    _message_data: PhantomData<D>,
+}
 
-impl Plugin for IndexerPlugin {
+#[derive(Resource)]
+struct Config<F: Message + Default, D: Message + Default> {
+    uri: Uri,
+    data_stream_config: Configuration<F>,
+    _message_data: PhantomData<D>,
+}
+
+impl<F, D> Plugin for IndexerPlugin<F, D>
+where
+    F: Message + Default + 'static + Clone,
+    D: Message + Default + 'static,
+{
     fn build(&self, app: &mut App) {
-        app.add_plugin(TaskPoolPlugin::default())
-            .add_plugin(TokioTasksPlugin::default())
-            .add_startup_system(setup)
-            .add_system(log_message);
+        app.add_plugin(TokioTasksPlugin::default())
+            .insert_resource(Config {
+                uri: self.uri.clone(),
+                data_stream_config: self.config.clone(),
+                _message_data: PhantomData::<D>,
+            })
+            .add_startup_system(setup::<F, D>);
     }
 }
 
-fn setup(runtime: ResMut<TokioTasksRuntime>) {
-    let (tx, mut rx) = tokio::sync::mpsc::channel::<DataMessage<Block>>(1);
+impl<F, D> IndexerPlugin<F, D>
+where
+    F: Message + Default + 'static,
+{
+    pub fn new(uri: &'static str) -> Self {
+        Self::new_with_config(uri, Configuration::<F>::default())
+    }
 
+    pub fn new_with_config(uri: &'static str, config: Configuration<F>) -> Self {
+        Self { uri: uri.parse().unwrap(), config, _message_data: PhantomData }
+    }
+}
+
+fn setup<F, D>(runtime: ResMut<TokioTasksRuntime>, config: Res<Config<F, D>>)
+where
+    F: Message + Default + 'static + Clone,
+    D: Message + Default + 'static,
+{
+    let (tx, mut rx) = tokio::sync::mpsc::channel::<DataMessage<D>>(1);
+
+    let data_stream_config = config.data_stream_config.clone();
+    let uri = config.uri.clone();
     runtime.spawn_background_task(|_ctx| async move {
-        let configuration = Configuration::<Filter>::default()
-            .with_finality(DataFinality::DataStatusAccepted)
-            .with_batch_size(10)
-            .with_filter(build_filter);
+        let (mut data_stream, data_client) =
+            ClientBuilder::<F, D>::default().connect(uri).await.unwrap();
 
-        if let Ok(uri) = "https://mainnet.starknet.a5a.ch".parse() {
-            let (mut data_stream, data_client) =
-                ClientBuilder::<Filter, Block>::default().connect(uri).await.unwrap();
+        data_client.send(data_stream_config).await.unwrap();
 
-            data_client.send(configuration).await.unwrap();
-
-            while let Some(message) = data_stream.try_next().await.unwrap() {
-                if let Err(e) = tx.try_send(message) {
-                    println!("Failed to send message: {e}");
-                }
+        while let Some(message) = data_stream.try_next().await.unwrap() {
+            if let Err(e) = tx.try_send(message) {
+                println!("Failed to send message: {e}");
             }
-        } else {
-            println!("Failed to parse uri");
         }
     });
 
@@ -54,38 +83,5 @@ fn setup(runtime: ResMut<TokioTasksRuntime>) {
     });
 }
 
-fn log_message(query: Query<&IndexerMessage>) {
-    query.iter().for_each(|msg| {
-        match &msg.0 {
-            DataMessage::Data { cursor, end_cursor, finality, .. } => {
-                let start_block = cursor.as_ref().map(|c| c.order_key).unwrap_or_default();
-                let end_block = end_cursor.order_key;
-
-                println!(
-                    "Received data from block {start_block} to {end_block} with finality \
-                     {finality:?}"
-                );
-            }
-            DataMessage::Invalidate { cursor } => {
-                println!("{:#?}", cursor);
-            }
-        };
-    });
-}
-
-fn build_filter(f: Filter) -> Filter {
-    let eth_address = FieldElement::from_hex(
-        "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
-    )
-    .unwrap();
-    let transfer_key =
-        FieldElement::from_hex("0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9")
-            .unwrap();
-
-    f.with_header(HeaderFilter::weak()).add_event(|ev| {
-        ev.with_from_address(eth_address.clone()).with_keys(vec![transfer_key.clone()])
-    })
-}
-
 #[derive(Component)]
-struct IndexerMessage(DataMessage<Block>);
+pub struct IndexerMessage<D: Message + Default>(pub DataMessage<D>);
