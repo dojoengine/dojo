@@ -1,5 +1,7 @@
 use bevy::app::App;
 use bevy::ecs::system::Query;
+use bevy::log;
+use bevy::log::LogPlugin;
 use bevy_dojo::apibara::core::node::v1alpha2::DataFinality;
 use bevy_dojo::apibara::core::starknet::v1alpha2::{Block, FieldElement, Filter, HeaderFilter};
 use bevy_dojo::apibara::sdk::{Configuration, DataMessage};
@@ -14,6 +16,7 @@ fn main() {
 
     App::new()
         .set_runner(runner)
+        .add_plugin(LogPlugin::default())
         .add_plugin(IndexerPlugin::<Filter, Block>::new_with_config(
             "https://mainnet.starknet.a5a.ch",
             config,
@@ -79,13 +82,13 @@ fn log_message(query: Query<'_, '_, &IndexerMessage<Block>>) {
                             }
                         }
                         Err(e) => {
-                            println!("{e}");
+                            log::error!("{e}");
                         }
                     }
                 }
             }
             DataMessage::Invalidate { cursor } => {
-                println!("Chain reorganization detected: {cursor:?}");
+                log::error!("Chain reorganization detected: {cursor:?}");
             }
         };
     });

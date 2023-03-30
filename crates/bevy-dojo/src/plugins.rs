@@ -4,6 +4,7 @@ use apibara_sdk::{ClientBuilder, Configuration, DataMessage};
 use bevy::app::{App, Plugin};
 use bevy::ecs::component::Component;
 use bevy::ecs::system::{Res, ResMut, Resource};
+use bevy::log;
 use bevy_tokio_tasks::{TokioTasksPlugin, TokioTasksRuntime};
 use prost::Message;
 use tokio_stream::StreamExt;
@@ -68,7 +69,7 @@ where
 
         while let Some(message) = data_stream.try_next().await.unwrap() {
             if let Err(e) = tx.try_send(message) {
-                println!("Failed to send message: {e}");
+                log::error!("Failed to send message: {e}");
             }
         }
     });

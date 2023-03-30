@@ -8,7 +8,6 @@ apibara-core = { git = "https://github.com/apibara/dna", rev = "2c452070372e80e5
 apibara-sdk = { git = "https://github.com/apibara/dna", rev = "2c452070372e80e5d1a5302c1b8ae5defef7e9a4", optional = true }
 bevy = { version = "0.10", default-features = false }
 bevy-tokio-tasks = "0.10"
-chrono = "0.4"
 tokio = { version = "1.27", features = ["full", "sync"] }
 tokio-stream = "0.1"
 tonic = "0.8"
