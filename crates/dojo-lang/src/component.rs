@@ -201,18 +201,51 @@ pub fn find_components(db: &dyn SemanticGroup, crate_ids: &[CrateId]) -> Vec<Com
                 let Some(aux_data) = mapper.0.as_any(
                 ).downcast_ref::<DojoAuxData>() else { continue; };
 
+
+                let structs = db.module_structs_ids(*module_id).unwrap();
+
+                // // Loop through component_struct directly
+                // for component_struct in &structs {
+
+                //     // let component_name = db.struct_name(*component_struct).unwrap();
+                //     // print!("{:#?}", component_struct);
+
+                //     // let module_type = db.struct_attributes(*component_struct).unwrap();
+
+                //     // let name = db.priv_struct_definition_data(*component_struct).unwrap();
+                //     let members = db
+                //         .struct_members(*component_struct)
+                //         .unwrap()
+                //         .iter()
+                //         .map(|(member_name, member)| ComponentMember {
+                //             name: member_name.to_string(),
+                //             ty: member.ty.format(db),
+                //         })
+                //         .collect();
+
+                //     // print!("{:#?}", name);
+                //     components.push(Component {
+                //         name: "FIX".into(),
+                //         members,
+                //     });
+                // }
+
                 for name in &aux_data.components {
                     let structs = db.module_structs_ids(*module_id);
                     let component_struct = structs.unwrap()[0];
+
+                    print!("{:#?}", component_struct);
                     let members = db
                         .struct_members(component_struct)
                         .unwrap()
                         .iter()
-                        .map(|(name, member)| ComponentMember {
-                            name: name.to_string(),
+                        .map(|(component_name, member)| ComponentMember {
+                            name: component_name.to_string(),
                             ty: member.ty.format(db),
                         })
                         .collect();
+
+                    print!("{:#?}",members);
                     components.push(Component { name: name.clone(), members });
                 }
             }

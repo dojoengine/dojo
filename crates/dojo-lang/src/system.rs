@@ -20,37 +20,6 @@ use crate::plugin::DojoAuxData;
 #[path = "system_test.rs"]
 mod test;
 
-
-// fn serialize_submodule_id<S>(submodule_id: &SubmoduleId, serializer: S) -> Result<S::Ok, S::Error>
-// where
-//     S: Serializer,
-// {
-//     // Convert the SubmoduleId to a tuple with the appropriate field types
-//     // Replace this with the actual conversion logic
-//     let tuple = (submodule_id.field1, submodule_id.field2 /*, ... */);
-
-//     // Serialize the tuple
-//     tuple.serialize(serializer)
-// }
-
-// fn deserialize_submodule_id<'de, D>(deserializer: D) -> Result<SubmoduleId, D::Error>
-// where
-//     D: Deserializer<'de>,
-// {
-//     // Deserialize the tuple with the appropriate field types
-//     let tuple: (FieldType1, FieldType2 /*, ... */) = Deserialize::deserialize(deserializer)?;
-
-//     // Convert the tuple to a SubmoduleId
-//     // Replace this with the actual conversion logic
-//     let submodule_id = SubmoduleId {
-//         field1: tuple.0,
-//         field2: tuple.1,
-//         // ...
-//     };
-
-//     Ok(submodule_id)
-// }
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SystemInput {
     name: String,
@@ -66,12 +35,6 @@ pub struct SystemOutput {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SystemDeclaration {
-    /// The id of the module that defines the system.
-    // #[serde(
-    //     serialize_with = "serialize_submodule_id",
-    //     deserialize_with = "deserialize_submodule_id"
-    // )]
-    // pub submodule_id: SmolStr,
     pub name: SmolStr,
     pub inputs: Vec<SystemInput>,
     pub outputs: Vec<SystemOutput>,
@@ -264,11 +227,20 @@ pub fn find_systems(db: &dyn SemanticGroup, crate_ids: &[CrateId]) -> Vec<System
                 ).downcast_ref::<DojoAuxData>() else { continue; };
 
                 for name in &aux_data.systems {
-                    let structs = db.module_impls(*module_id);
+                    let t = db.module_item_by_name(*module_id, name.clone());
 
-                    for name in &aux_data.systems {
+                    print!("{:#?}", t);
+                    // let structs = db.module_impls(*module_id);
+
+                    // Get inputs
+
+                    // Get outputs
+
+                    // Get deps
+                    
+                    // for name in &aux_data.systems {
                         systems.push(SystemDeclaration { name: name.clone(), inputs: [].to_vec(), outputs: [].to_vec(), dependencies: [].to_vec() });
-                    }
+                    // }
                 }
             }
         }

@@ -1,7 +1,5 @@
 use std::iter::zip;
 use std::ops::DerefMut;
-use std::fs::File;
-use std::io::Write;
 
 use anyhow::{Context, Result};
 use cairo_lang_compiler::db::RootDatabase;
