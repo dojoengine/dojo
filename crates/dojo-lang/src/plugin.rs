@@ -12,7 +12,6 @@ use cairo_lang_semantic::SemanticDiagnostic;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal};
-use dojo_project::WorldConfig;
 
 use crate::component::handle_component_struct;
 use crate::system::System;
@@ -62,18 +61,16 @@ impl PluginAuxData for DojoAuxData {
 mod test;
 
 #[derive(Debug, Default)]
-pub struct DojoPlugin {
-    pub world_config: WorldConfig,
-}
+pub struct DojoPlugin {}
 
 impl DojoPlugin {
-    pub fn new(world_config: WorldConfig) -> Self {
-        Self { world_config }
+    pub fn new() -> Self {
+        Self {}
     }
 
     fn handle_mod(&self, db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult {
         if module_ast.has_attr(db, SYSTEM_ATTR) {
-            return System::from_module(db, self.world_config, module_ast);
+            return System::from_module(db, module_ast);
         }
 
         PluginResult::default()

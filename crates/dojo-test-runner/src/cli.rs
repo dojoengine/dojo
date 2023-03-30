@@ -24,7 +24,6 @@ use clap::Parser;
 use colored::Colorize;
 use dojo_lang::compiler::DojoCompiler;
 use dojo_lang::db::DojoRootDatabaseBuilderEx;
-use dojo_project::WorldConfig;
 use itertools::Itertools;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use scarb::compiler::helpers::{build_project_config, collect_main_crate_ids};
@@ -85,7 +84,6 @@ fn main() -> anyhow::Result<()> {
         std::process::exit(1);
     });
 
-    let world_config = WorldConfig::from_workspace(&ws).unwrap_or_else(|_| WorldConfig::default());
     let resolve = ops::resolve_workspace(&ws)?;
     let compilation_units = ops::generate_compilation_units(&resolve, &ws)?;
 
@@ -93,7 +91,7 @@ fn main() -> anyhow::Result<()> {
 
     let mut db = RootDatabase::builder()
         .with_project_config(build_project_config(&unit)?)
-        .with_dojo(world_config)
+        .with_dojo()
         .build()?;
 
     let main_crate_ids = collect_main_crate_ids(&unit, &db);

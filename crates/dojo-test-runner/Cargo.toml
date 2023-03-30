@@ -25,7 +25,6 @@ cairo-lang-semantic.workspace = true
 cairo-lang-sierra-generator.workspace = true
 cairo-lang-syntax.workspace = true
 dojo-lang = { path = "../dojo-lang" }
-dojo-project = { path = "../dojo-project" }
 itertools.workspace = true
 num-bigint.workspace = true
 rayon.workspace = true
