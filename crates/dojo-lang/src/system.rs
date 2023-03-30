@@ -11,7 +11,6 @@ use cairo_lang_semantic::plugin::DynPluginAuxData;
 use cairo_lang_syntax::node::ast::MaybeModuleBody;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
-use dojo_project::WorldConfig;
 use smol_str::SmolStr;
 
 use crate::commands::Command;
@@ -29,18 +28,13 @@ pub struct SystemDeclaration {
 }
 
 pub struct System {
-    world_config: WorldConfig,
     diagnostics: Vec<PluginDiagnostic>,
 }
 
 impl System {
-    pub fn from_module(
-        db: &dyn SyntaxGroup,
-        world_config: WorldConfig,
-        module_ast: ast::ItemModule,
-    ) -> PluginResult {
+    pub fn from_module(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult {
         let name = module_ast.name(db).text(db);
-        let mut system = System { world_config, diagnostics: vec![] };
+        let mut system = System { diagnostics: vec![] };
 
         if let MaybeModuleBody::Some(body) = module_ast.body(db) {
             let body_nodes = body
@@ -137,13 +131,6 @@ impl System {
             HashMap::from([
                 ("parameters".to_string(), RewriteNode::new_trimmed(parameters.as_syntax_node())),
                 ("separator".to_string(), RewriteNode::Text(separator.to_string())),
-                (
-                    "world_address".to_string(),
-                    RewriteNode::Text(format!(
-                        "{:#x}",
-                        self.world_config.address.unwrap_or_default()
-                    )),
-                ),
                 ("body".to_string(), RewriteNode::new_modified(body_nodes)),
             ]),
         ));

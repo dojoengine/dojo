@@ -14,7 +14,6 @@ use cairo_lang_semantic::test_utils::setup_test_module;
 use cairo_lang_syntax::node::TypedSyntaxNode;
 use cairo_lang_test_utils::parse_test_file::TestFileRunner;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
-use dojo_project::WorldConfig;
 
 use crate::plugin::DojoPlugin;
 use crate::testing::build_test_db;
@@ -43,7 +42,7 @@ impl TestFileRunner for ExpandContractTestRunner {
         let root = Directory(current_path);
         self.db.set_crate_root(crate_id, Some(root));
 
-        let plugin = DojoPlugin::new(WorldConfig::default());
+        let plugin = DojoPlugin {};
         let mut generated_items: Vec<String> = Vec::new();
 
         let mut item_queue = VecDeque::from(syntax_file.items(&self.db).elements(&self.db));
