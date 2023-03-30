@@ -2,25 +2,29 @@ use cairo_lang_filesystem::db::FilesGroup;
 use cairo_lang_semantic::test_utils::setup_test_crate;
 use pretty_assertions::assert_eq;
 
+use crate::manifest::Manifest;
 use crate::testing::build_test_db;
 
 #[test]
-fn test_system_resolving() {
+fn test_manifest_generation() {
     let db = &mut build_test_db().unwrap();
     let _crate_id = setup_test_crate(
         db,
         "
-            mod NotAsystem {}
+            #[derive(Component)]
+            struct Position {
+                x: usize,
+                y: usize,
+            }
 
             #[system]
             mod Move {
-                #[execute]
-                fn move() {}
+                fn execute() {}
             }
         ",
     );
 
-    let systems = find_systems(db, &db.crates());
-    assert_eq!(systems.len(), 1);
-    assert_eq!(systems[0].name, "MoveSystem");
+    let manifest = Manifest::new(db, &db.crates());
+    assert_eq!(manifest.components.len(), 1);
+    assert_eq!(manifest.systems.len(), 1);
 }

@@ -8,9 +8,9 @@ use thiserror::Error;
 
 use crate::plugin::DojoAuxData;
 
-// #[cfg(test)]
-// #[path = "manifest_test.rs"]
-// mod test;
+#[cfg(test)]
+#[path = "manifest_test.rs"]
+mod test;
 
 #[derive(Error, Debug)]
 pub enum ManifestError {

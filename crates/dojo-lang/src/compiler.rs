@@ -72,11 +72,7 @@ impl Compiler for DojoCompiler {
         }
 
         let mut file = target_dir.open_rw("manifest.json", "output file", ws.config())?;
-
         let manifest = Manifest::new(&db, &main_crate_ids);
-
-        println!("manifest: {:#?}", manifest);
-
         serde_json::to_writer_pretty(file.deref_mut(), &manifest)
             .with_context(|| "failed to serialize manifest")?;
 
