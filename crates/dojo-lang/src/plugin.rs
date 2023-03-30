@@ -13,8 +13,6 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal};
 use dojo_project::WorldConfig;
-use starknet::core::crypto::pedersen_hash;
-use starknet::core::types::FieldElement;
 
 use crate::component::handle_component_struct;
 use crate::system::System;
@@ -122,18 +120,3 @@ impl AsDynMacroPlugin for DojoPlugin {
     }
 }
 impl SemanticPlugin for DojoPlugin {}
-
-pub fn get_contract_address(
-    module_name: &str,
-    class_hash: FieldElement,
-    world_address: FieldElement,
-) -> FieldElement {
-    let mut module_name_32_u8: [u8; 32] = [0; 32];
-    module_name_32_u8[32 - module_name.len()..].copy_from_slice(module_name.as_bytes());
-
-    let salt = pedersen_hash(
-        &FieldElement::ZERO,
-        &FieldElement::from_bytes_be(&module_name_32_u8).unwrap(),
-    );
-    starknet::core::utils::get_contract_address(salt, class_hash, &[], world_address)
-}
