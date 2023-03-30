@@ -75,24 +75,20 @@ impl Compiler for DojoCompiler {
                 .with_context(|| format!("failed to serialize contract: {contract_name}"))?;
         }
 
-        let json_filename = "manifest.json";
-
-        if !std::path::Path::new(json_filename).exists() {
-            let initial_json = json!({ "components": [], "systems": [] });
-            let mut file = File::create(json_filename).expect("Unable to create JSON file");
-            file.write_all(initial_json.to_string().as_bytes())
-                .expect("Unable to write to JSON file");
-        }
-
         let components = find_components(&db, &main_crate_ids);
         let systems = find_systems(&db, &main_crate_ids);
         
-        let mut file = File::create(json_filename).expect("Unable to create JSON file");
-        file.write_all(json!({
+        let mut file = target_dir.open_rw(
+            format!("manifest.json"),
+            "output file",
+            ws.config(),
+        )?;
+        
+        serde_json::to_writer_pretty(file.deref_mut(), &json!({
             "components": components,
             "systems": systems, // Ignoring systems part for now
-        }).to_string().as_bytes())
-            .expect("Unable to write to JSON file");
+        }))
+        .with_context(|| format!("failed to serialize contract"))?;
 
         Ok(())
     }

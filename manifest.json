@@ -1,1 +1,36 @@
-{"components":[{"name":"Moves","members":[{"name":"remaining","type":"core::integer::u8"}]},{"name":"Position","members":[{"name":"remaining","type":"core::integer::u8"}]}],"systems":[{"name":"SpawnSystem","inputs":[],"outputs":[],"dependencies":[]},{"name":"MoveSystem","inputs":[],"outputs":[],"dependencies":[]}]}
+{
+    "components": [
+        {
+            "name": "Moves",
+            "members": [
+                {
+                    "name": "remaining",
+                    "type": "core::integer::u8"
+                }
+            ]
+        },
+        {
+            "name": "Position",
+            "members": [
+                {
+                    "name": "remaining",
+                    "type": "core::integer::u8"
+                }
+            ]
+        }
+    ],
+    "systems": [
+        {
+            "name": "SpawnSystem",
+            "inputs": [],
+            "outputs": [],
+            "dependencies": []
+        },
+        {
+            "name": "MoveSystem",
+            "inputs": [],
+            "outputs": [],
+            "dependencies": []
+        }
+    ]
+}

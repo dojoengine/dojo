@@ -265,41 +265,10 @@ pub fn find_systems(db: &dyn SemanticGroup, crate_ids: &[CrateId]) -> Vec<System
 
                 for name in &aux_data.systems {
                     let structs = db.module_impls(*module_id);
-                    // let component_struct = structs.unwrap()[0];
-                    // let component_struct = structs.unwrap()[0];
 
-                    print!("{:#?}", structs);
-                    
                     for name in &aux_data.systems {
-
                         systems.push(SystemDeclaration { name: name.clone(), inputs: [].to_vec(), outputs: [].to_vec(), dependencies: [].to_vec() });
-
                     }
-                    // let inputs = db
-                    //     .struct_members(component_struct)
-                    //     .unwrap()
-                    //     .iter()
-                    //     .map(|(name, member)| SystemInput {
-                    //         name: name.to_string(),
-                    //         input_type: "".to_string()
-                    //     })
-                    //     .collect();
-
-                    // let ouputs = db
-                    //     .struct_members(component_struct)
-                    //     .unwrap()
-                    //     .iter()
-                    //     .map(|(name, member)| SystemOutput {
-                    //         output_type: name.to_string()
-                    //     })
-                    //     .collect();
-                    // // let dependencies = db
-                    // // .struct_members(component_struct)
-                    // // .unwrap()
-                    // // .iter()
-                    // // .map(|(name, member)| "")
-                    // // .collect();                     
-
                 }
             }
         }
