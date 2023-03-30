@@ -2,7 +2,6 @@ use cairo_lang_filesystem::db::FilesGroup;
 use cairo_lang_semantic::test_utils::setup_test_crate;
 use pretty_assertions::assert_eq;
 
-use crate::system::find_systems;
 use crate::testing::build_test_db;
 
 #[test]

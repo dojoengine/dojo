@@ -15,10 +15,9 @@ use scarb::compiler::{CompilationUnit, Compiler};
 use scarb::core::Workspace;
 use tracing::{trace, trace_span};
 
-use crate::component::find_components;
-use crate::system::find_systems;
 use crate::db::DojoRootDatabaseBuilderEx;
-use serde_json::{json};
+use crate::manifest::Manifest;
+use serde_json::json;
 
 pub struct DojoCompiler;
 
@@ -73,20 +72,14 @@ impl Compiler for DojoCompiler {
                 .with_context(|| format!("failed to serialize contract: {contract_name}"))?;
         }
 
-        let components = find_components(&db, &main_crate_ids);
-        let systems = find_systems(&db, &main_crate_ids);
-        
-        let mut file = target_dir.open_rw(
-            format!("manifest.json"),
-            "output file",
-            ws.config(),
-        )?;
-        
-        serde_json::to_writer_pretty(file.deref_mut(), &json!({
-            "components": components,
-            "systems": systems, // Ignoring systems part for now
-        }))
-        .with_context(|| format!("failed to serialize contract"))?;
+        let mut file = target_dir.open_rw("manifest.json", "output file", ws.config())?;
+
+        let manifest = Manifest::new(&db, &main_crate_ids);
+
+        println!("manifest: {:#?}", manifest);
+
+        serde_json::to_writer_pretty(file.deref_mut(), &manifest)
+            .with_context(|| "failed to serialize manifest")?;
 
         Ok(())
     }

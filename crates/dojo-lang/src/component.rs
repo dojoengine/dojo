@@ -1,41 +1,16 @@
 use std::collections::HashMap;
 
-use ::serde::{Deserialize, Serialize};
 use cairo_lang_defs::plugin::{DynGeneratedFileAuxData, PluginGeneratedFile, PluginResult};
-use cairo_lang_filesystem::ids::CrateId;
-use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::patcher::{PatchBuilder, RewriteNode};
 use cairo_lang_semantic::plugin::DynPluginAuxData;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
-use smol_str::SmolStr;
 
 use crate::plugin::DojoAuxData;
-
-#[cfg(test)]
-#[path = "component_test.rs"]
-mod test;
-
-/// Struct member.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ComponentMember {
-    pub name: String,
-    #[serde(rename = "type")]
-    pub ty: String,
-}
-
-/// Represents a declaration of a component.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Component {
-    pub name: SmolStr,
-    pub members: Vec<ComponentMember>,
-}
 
 pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> PluginResult {
     let mut body_nodes = vec![];
     let mut trait_nodes = vec![];
-
-    
 
     body_nodes.push(RewriteNode::interpolate_patched(
         "
@@ -167,8 +142,6 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
         ]),
     ));
 
-    
-
     PluginResult {
         code: Some(PluginGeneratedFile {
             name: name.clone(),
@@ -182,74 +155,4 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
         diagnostics: vec![],
         remove_original_item: true,
     }
-}
-
-/// Finds the inline modules annotated as components in the given crate_ids and
-/// returns the corresponding Components.
-pub fn find_components(db: &dyn SemanticGroup, crate_ids: &[CrateId]) -> Vec<Component> {
-    let mut components = vec![];
-    for crate_id in crate_ids {
-        let modules = db.crate_modules(*crate_id);
-        for module_id in modules.iter() {
-            let generated_file_infos =
-                db.module_generated_file_infos(*module_id).unwrap_or_default();
-
-            for generated_file_info in generated_file_infos.iter().skip(1) {
-                let Some(generated_file_info) = generated_file_info else { continue; };
-                let Some(mapper) = generated_file_info.aux_data.0.as_any(
-                ).downcast_ref::<DynPluginAuxData>() else { continue; };
-                let Some(aux_data) = mapper.0.as_any(
-                ).downcast_ref::<DojoAuxData>() else { continue; };
-
-
-                let structs = db.module_structs_ids(*module_id).unwrap();
-
-                // // Loop through component_struct directly
-                // for component_struct in &structs {
-
-                //     // let component_name = db.struct_name(*component_struct).unwrap();
-                //     // print!("{:#?}", component_struct);
-
-                //     // let module_type = db.struct_attributes(*component_struct).unwrap();
-
-                //     // let name = db.priv_struct_definition_data(*component_struct).unwrap();
-                //     let members = db
-                //         .struct_members(*component_struct)
-                //         .unwrap()
-                //         .iter()
-                //         .map(|(member_name, member)| ComponentMember {
-                //             name: member_name.to_string(),
-                //             ty: member.ty.format(db),
-                //         })
-                //         .collect();
-
-                //     // print!("{:#?}", name);
-                //     components.push(Component {
-                //         name: "FIX".into(),
-                //         members,
-                //     });
-                // }
-
-                for name in &aux_data.components {
-                    let structs = db.module_structs_ids(*module_id);
-                    let component_struct = structs.unwrap()[0];
-
-                    print!("{:#?}", component_struct);
-                    let members = db
-                        .struct_members(component_struct)
-                        .unwrap()
-                        .iter()
-                        .map(|(component_name, member)| ComponentMember {
-                            name: component_name.to_string(),
-                            ty: member.ty.format(db),
-                        })
-                        .collect();
-
-                    print!("{:#?}",members);
-                    components.push(Component { name: name.clone(), members });
-                }
-            }
-        }
-    }
-    components
 }

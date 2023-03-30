@@ -3055,6 +3055,7 @@ dependencies = [
  "test-case",
  "test-case-macros",
  "test-log",
+ "thiserror",
  "tracing",
 ]
 

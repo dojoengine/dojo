@@ -1,45 +1,16 @@
 use std::collections::HashMap;
 
-use ::serde::{Deserialize, Serialize};
 use cairo_lang_defs::plugin::{
     DynGeneratedFileAuxData, PluginDiagnostic, PluginGeneratedFile, PluginResult,
 };
-use cairo_lang_filesystem::ids::CrateId;
-use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::patcher::{PatchBuilder, RewriteNode};
 use cairo_lang_semantic::plugin::DynPluginAuxData;
 use cairo_lang_syntax::node::ast::MaybeModuleBody;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
-use smol_str::SmolStr;
 
 use crate::commands::Command;
 use crate::plugin::DojoAuxData;
-
-#[cfg(test)]
-#[path = "system_test.rs"]
-mod test;
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct SystemInput {
-    name: String,
-    input_type: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct SystemOutput {
-    output_type: String,
-}
-
-/// Represents a declaration of a system.
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct SystemDeclaration {
-    pub name: SmolStr,
-    pub inputs: Vec<SystemInput>,
-    pub outputs: Vec<SystemOutput>,
-    pub dependencies: Vec<String>,
-}
 
 pub struct System {
     diagnostics: Vec<PluginDiagnostic>,
@@ -208,73 +179,3 @@ impl System {
         None
     }
 }
-
-/// Finds the inline modules annotated as systems in the given crate_ids and
-/// returns the corresponding SystemDeclarations.
-pub fn find_systems(db: &dyn SemanticGroup, crate_ids: &[CrateId]) -> Vec<SystemDeclaration> {
-    let mut systems = vec![];
-    for crate_id in crate_ids {
-        let modules = db.crate_modules(*crate_id);
-        for module_id in modules.iter() {
-            let generated_file_infos =
-                db.module_generated_file_infos(*module_id).unwrap_or_default();
-
-            for generated_file_info in generated_file_infos.iter().skip(1) {
-                let Some(generated_file_info) = generated_file_info else { continue; };
-                let Some(mapper) = generated_file_info.aux_data.0.as_any(
-                ).downcast_ref::<DynPluginAuxData>() else { continue; };
-                let Some(aux_data) = mapper.0.as_any(
-                ).downcast_ref::<DojoAuxData>() else { continue; };
-
-                for name in &aux_data.systems {
-                    let t = db.module_item_by_name(*module_id, name.clone());
-
-                    print!("{:#?}", t);
-                    // let structs = db.module_impls(*module_id);
-
-                    // Get inputs
-
-                    // Get outputs
-
-                    // Get deps
-                    
-                    // for name in &aux_data.systems {
-                        systems.push(SystemDeclaration { name: name.clone(), inputs: [].to_vec(), outputs: [].to_vec(), dependencies: [].to_vec() });
-                    // }
-                }
-            }
-        }
-    }
-    systems
-}
-
-// pub fn find_systems(db: &dyn SemanticGroup, crate_ids: &[CrateId]) -> Vec<SystemDeclaration> {
-//     let mut systems = vec![];
-//     for crate_id in crate_ids {
-//         let modules = db.crate_modules(*crate_id);
-//         for module_id in modules.iter() {
-//             let generated_file_infos =
-//                 db.module_generated_file_infos(*module_id).unwrap_or_default();
-
-//             for generated_file_info in generated_file_infos.iter().skip(1) {
-//                 let Some(generated_file_info) = generated_file_info else { continue; };
-//                 let Some(mapper) = generated_file_info.aux_data.0.as_any(
-//                 ).downcast_ref::<DynPluginAuxData>() else { continue; };
-//                 let Some(aux_data) = mapper.0.as_any(
-//                 ).downcast_ref::<DojoAuxData>() else { continue; };
-
-//                 for name in &aux_data.systems {
-//                     if let Ok(Some(ModuleItemId::Submodule(submodule_id))) =
-//                         db.module_item_by_name(*module_id, name.clone())
-//                     {
-//                         systems.push(SystemDeclaration { name: name.clone(), submodule_id });
-//                     } else {
-//                         panic!("System `{name}` was not found.");
-//                     }
-//                 }
-//             }
-//         }
-//     }
-//     systems
-// }
-
