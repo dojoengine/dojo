@@ -15,6 +15,7 @@ use scarb::compiler::{CompilationUnit, Compiler};
 use scarb::core::Workspace;
 use tracing::{trace, trace_span};
 
+use crate::component::find_components;
 use crate::db::DojoRootDatabaseBuilderEx;
 
 pub struct DojoCompiler;
@@ -69,6 +70,10 @@ impl Compiler for DojoCompiler {
             serde_json::to_writer_pretty(file.deref_mut(), &class)
                 .with_context(|| format!("failed to serialize contract: {contract_name}"))?;
         }
+
+        let components = find_components(&db, &main_crate_ids);
+        let res = serde_json::to_string_pretty(&components)?;
+        println!("{}", res);
 
         Ok(())
     }

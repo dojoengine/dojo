@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use cairo_lang_defs::ids::{ModuleItemId, SubmoduleId};
+use ::serde::{Deserialize, Serialize};
 use cairo_lang_defs::plugin::{DynGeneratedFileAuxData, PluginGeneratedFile, PluginResult};
 use cairo_lang_filesystem::ids::CrateId;
 use cairo_lang_semantic::db::SemanticGroup;
@@ -16,12 +16,19 @@ use crate::plugin::DojoAuxData;
 #[path = "component_test.rs"]
 mod test;
 
+/// Struct member.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ComponentMember {
+    pub name: String,
+    #[serde(rename = "type")]
+    pub ty: String,
+}
+
 /// Represents a declaration of a component.
-#[derive(Debug, Clone)]
-pub struct ComponentDeclaration {
-    /// The id of the module that defines the component.
-    pub submodule_id: SubmoduleId,
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Component {
     pub name: SmolStr,
+    pub members: Vec<ComponentMember>,
 }
 
 pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> PluginResult {
@@ -164,7 +171,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
             content: builder.code,
             aux_data: DynGeneratedFileAuxData::new(DynPluginAuxData::new(DojoAuxData {
                 patches: builder.patches,
-                components: vec![format!("{}Component", name).into()],
+                components: vec![format!("{}", name).into()],
                 systems: vec![],
             })),
         }),
@@ -174,8 +181,8 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
 }
 
 /// Finds the inline modules annotated as components in the given crate_ids and
-/// returns the corresponding ComponentDeclarations.
-pub fn find_components(db: &dyn SemanticGroup, crate_ids: &[CrateId]) -> Vec<ComponentDeclaration> {
+/// returns the corresponding Components.
+pub fn find_components(db: &dyn SemanticGroup, crate_ids: &[CrateId]) -> Vec<Component> {
     let mut components = vec![];
     for crate_id in crate_ids {
         let modules = db.crate_modules(*crate_id);
@@ -191,13 +198,18 @@ pub fn find_components(db: &dyn SemanticGroup, crate_ids: &[CrateId]) -> Vec<Com
                 ).downcast_ref::<DojoAuxData>() else { continue; };
 
                 for name in &aux_data.components {
-                    if let Ok(Some(ModuleItemId::Submodule(submodule_id))) =
-                        db.module_item_by_name(*module_id, name.clone())
-                    {
-                        components.push(ComponentDeclaration { name: name.clone(), submodule_id });
-                    } else {
-                        panic!("Component `{name}` was not found.");
-                    }
+                    let structs = db.module_structs_ids(*module_id);
+                    let component_struct = structs.unwrap()[0];
+                    let members = db
+                        .struct_members(component_struct)
+                        .unwrap()
+                        .iter()
+                        .map(|(name, member)| ComponentMember {
+                            name: name.to_string(),
+                            ty: member.ty.format(db),
+                        })
+                        .collect();
+                    components.push(Component { name: name.clone(), members });
                 }
             }
         }
