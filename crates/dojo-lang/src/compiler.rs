@@ -86,18 +86,13 @@ impl Compiler for DojoCompiler {
 
         let components = find_components(&db, &main_crate_ids);
         let systems = find_systems(&db, &main_crate_ids);
-        let res = serde_json::to_string_pretty(&components)?;
-
-
-
+        
         let mut file = File::create(json_filename).expect("Unable to create JSON file");
-
         file.write_all(json!({
             "components": components,
             "systems": systems, // Ignoring systems part for now
         }).to_string().as_bytes())
             .expect("Unable to write to JSON file");
-
 
         Ok(())
     }

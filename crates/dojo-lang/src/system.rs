@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
-use ::serde::{Deserialize, Serialize, Serializer, Deserializer};
-use cairo_lang_defs::ids::{ModuleItemId, SubmoduleId};
+use ::serde::{Deserialize, Serialize};
 use cairo_lang_defs::plugin::{
     DynGeneratedFileAuxData, PluginDiagnostic, PluginGeneratedFile, PluginResult,
 };
@@ -72,7 +71,7 @@ pub struct SystemDeclaration {
     //     serialize_with = "serialize_submodule_id",
     //     deserialize_with = "deserialize_submodule_id"
     // )]
-    pub submodule_id: SmolStr,
+    // pub submodule_id: SmolStr,
     pub name: SmolStr,
     pub inputs: Vec<SystemInput>,
     pub outputs: Vec<SystemOutput>,
@@ -265,22 +264,16 @@ pub fn find_systems(db: &dyn SemanticGroup, crate_ids: &[CrateId]) -> Vec<System
                 ).downcast_ref::<DojoAuxData>() else { continue; };
 
                 for name in &aux_data.systems {
-                    let structs = db.priv_module_data(*module_id);
+                    let structs = db.module_impls(*module_id);
                     // let component_struct = structs.unwrap()[0];
                     // let component_struct = structs.unwrap()[0];
 
                     print!("{:#?}", structs);
                     
                     for name in &aux_data.systems {
-                        if let Ok(Some(ModuleItemId::Submodule(submodule_id))) =
-                            db.module_item_by_name(*module_id, name.clone())
-                        
-                        {
-                            print!("{:#?}", name.clone());
-                            systems.push(SystemDeclaration { name: name.clone(), submodule_id: "1".into(), inputs: [].to_vec(), outputs: [].to_vec(), dependencies: [].to_vec() });
-                        } else {
-                            panic!("System `{name}` was not found.");
-                        }
+
+                        systems.push(SystemDeclaration { name: name.clone(), inputs: [].to_vec(), outputs: [].to_vec(), dependencies: [].to_vec() });
+
                     }
                     // let inputs = db
                     //     .struct_members(component_struct)
@@ -306,7 +299,7 @@ pub fn find_systems(db: &dyn SemanticGroup, crate_ids: &[CrateId]) -> Vec<System
                     // // .iter()
                     // // .map(|(name, member)| "")
                     // // .collect();                     
-                    // systems.push(System { name: name.clone(), inputs, ouputs, dependencies });
+
                 }
             }
         }
