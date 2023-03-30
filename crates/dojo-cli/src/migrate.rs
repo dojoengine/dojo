@@ -194,7 +194,7 @@ impl World {
         for entry in entries.flatten() {
             let file_name = entry.file_name();
             let file_name_str = file_name.to_string_lossy();
-            if !file_name_str.ends_with(".json") {
+            if file_name_str == "manifest.json" || !file_name_str.ends_with(".json") {
                 continue;
             }
 
