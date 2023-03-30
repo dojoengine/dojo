@@ -4,6 +4,7 @@ use bevy_dojo::apibara::core::node::v1alpha2::DataFinality;
 use bevy_dojo::apibara::core::starknet::v1alpha2::{Block, FieldElement, Filter, HeaderFilter};
 use bevy_dojo::apibara::sdk::{Configuration, DataMessage};
 use bevy_dojo::{IndexerMessage, IndexerPlugin};
+use chrono::{DateTime, Utc};
 
 fn main() {
     let config = Configuration::<Filter>::default()
@@ -44,17 +45,47 @@ fn runner(mut app: App) {
 fn log_message(query: Query<'_, '_, &IndexerMessage<Block>>) {
     query.iter().for_each(|msg| {
         match &msg.0 {
-            DataMessage::Data { cursor, end_cursor, finality, .. } => {
-                let start_block = cursor.as_ref().map(|c| c.order_key).unwrap_or_default();
+            DataMessage::Data { cursor, end_cursor, finality, batch } => {
+                let start_block = cursor.clone().map(|c| c.order_key).unwrap_or_default();
                 let end_block = end_cursor.order_key;
 
                 println!(
                     "Received data from block {start_block} to {end_block} with finality \
                      {finality:?}"
                 );
+
+                for block in batch {
+                    let header = block.clone().header.unwrap_or_default();
+
+                    match TryInto::<DateTime<Utc>>::try_into(header.timestamp.unwrap_or_default()) {
+                        Ok(timestamp) => {
+                            println!("  Block {:>6} ({})", header.block_number, timestamp);
+
+                            for event_with_tx in &block.events {
+                                let event = event_with_tx.clone().event.unwrap_or_default();
+                                let tx = event_with_tx.clone().transaction.unwrap_or_default();
+                                let tx_hash =
+                                    tx.meta.unwrap_or_default().hash.unwrap_or_default().to_hex();
+
+                                let from_addr = event.data[0].to_hex();
+                                let to_addr = event.data[1].to_hex();
+
+                                println!(
+                                    "    {} => {} ({})",
+                                    &from_addr[..8],
+                                    &to_addr[..8],
+                                    &tx_hash[..8]
+                                );
+                            }
+                        }
+                        Err(e) => {
+                            println!("{e}");
+                        }
+                    }
+                }
             }
             DataMessage::Invalidate { cursor } => {
-                println!("{:#?}", cursor);
+                println!("Chain reorganization detected: {cursor:?}");
             }
         };
     });

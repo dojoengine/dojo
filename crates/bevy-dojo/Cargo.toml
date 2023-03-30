@@ -14,6 +14,9 @@ tokio-stream = "0.1"
 tonic = "0.8"
 prost = "0.11"
 
+[dev-dependencies]
+chrono = "0.4"
+
 [features]
 default = ["indexer"]
 indexer = ["apibara-core", "apibara-sdk"]
