@@ -68,9 +68,11 @@ impl ResolveRemote for Contract {
         rpc: &JsonRpcClient<HttpTransport>,
     ) -> anyhow::Result<()> {
         if let Some(address) = self.address {
-            let remote_class_hash =
-                rpc.get_class_hash_at(&BlockId::Tag(BlockTag::Latest), address).await?;
-            self.remote = Some(remote_class_hash);
+            if let Ok(remote_class_hash) =
+                rpc.get_class_hash_at(&BlockId::Tag(BlockTag::Latest), address).await
+            {
+                self.remote = Some(remote_class_hash);
+            }
         }
 
         Ok(())
