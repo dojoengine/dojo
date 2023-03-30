@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use ::serde::{Deserialize, Serialize, Serializer, Deserializer};
 use cairo_lang_defs::ids::{ModuleItemId, SubmoduleId};
 use cairo_lang_defs::plugin::{
     DynGeneratedFileAuxData, PluginDiagnostic, PluginGeneratedFile, PluginResult,
@@ -20,11 +21,62 @@ use crate::plugin::DojoAuxData;
 #[path = "system_test.rs"]
 mod test;
 
+
+// fn serialize_submodule_id<S>(submodule_id: &SubmoduleId, serializer: S) -> Result<S::Ok, S::Error>
+// where
+//     S: Serializer,
+// {
+//     // Convert the SubmoduleId to a tuple with the appropriate field types
+//     // Replace this with the actual conversion logic
+//     let tuple = (submodule_id.field1, submodule_id.field2 /*, ... */);
+
+//     // Serialize the tuple
+//     tuple.serialize(serializer)
+// }
+
+// fn deserialize_submodule_id<'de, D>(deserializer: D) -> Result<SubmoduleId, D::Error>
+// where
+//     D: Deserializer<'de>,
+// {
+//     // Deserialize the tuple with the appropriate field types
+//     let tuple: (FieldType1, FieldType2 /*, ... */) = Deserialize::deserialize(deserializer)?;
+
+//     // Convert the tuple to a SubmoduleId
+//     // Replace this with the actual conversion logic
+//     let submodule_id = SubmoduleId {
+//         field1: tuple.0,
+//         field2: tuple.1,
+//         // ...
+//     };
+
+//     Ok(submodule_id)
+// }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SystemInput {
+    name: String,
+    input_type: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SystemOutput {
+    output_type: String,
+}
+
 /// Represents a declaration of a system.
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SystemDeclaration {
     /// The id of the module that defines the system.
-    pub submodule_id: SubmoduleId,
+    // #[serde(
+    //     serialize_with = "serialize_submodule_id",
+    //     deserialize_with = "deserialize_submodule_id"
+    // )]
+    pub submodule_id: SmolStr,
     pub name: SmolStr,
+    pub inputs: Vec<SystemInput>,
+    pub outputs: Vec<SystemOutput>,
+    pub dependencies: Vec<String>,
 }
 
 pub struct System {
@@ -213,16 +265,82 @@ pub fn find_systems(db: &dyn SemanticGroup, crate_ids: &[CrateId]) -> Vec<System
                 ).downcast_ref::<DojoAuxData>() else { continue; };
 
                 for name in &aux_data.systems {
-                    if let Ok(Some(ModuleItemId::Submodule(submodule_id))) =
-                        db.module_item_by_name(*module_id, name.clone())
-                    {
-                        systems.push(SystemDeclaration { name: name.clone(), submodule_id });
-                    } else {
-                        panic!("System `{name}` was not found.");
+                    let structs = db.priv_module_data(*module_id);
+                    // let component_struct = structs.unwrap()[0];
+                    // let component_struct = structs.unwrap()[0];
+
+                    print!("{:#?}", structs);
+                    
+                    for name in &aux_data.systems {
+                        if let Ok(Some(ModuleItemId::Submodule(submodule_id))) =
+                            db.module_item_by_name(*module_id, name.clone())
+                        
+                        {
+                            print!("{:#?}", name.clone());
+                            systems.push(SystemDeclaration { name: name.clone(), submodule_id: "1".into(), inputs: [].to_vec(), outputs: [].to_vec(), dependencies: [].to_vec() });
+                        } else {
+                            panic!("System `{name}` was not found.");
+                        }
                     }
+                    // let inputs = db
+                    //     .struct_members(component_struct)
+                    //     .unwrap()
+                    //     .iter()
+                    //     .map(|(name, member)| SystemInput {
+                    //         name: name.to_string(),
+                    //         input_type: "".to_string()
+                    //     })
+                    //     .collect();
+
+                    // let ouputs = db
+                    //     .struct_members(component_struct)
+                    //     .unwrap()
+                    //     .iter()
+                    //     .map(|(name, member)| SystemOutput {
+                    //         output_type: name.to_string()
+                    //     })
+                    //     .collect();
+                    // // let dependencies = db
+                    // // .struct_members(component_struct)
+                    // // .unwrap()
+                    // // .iter()
+                    // // .map(|(name, member)| "")
+                    // // .collect();                     
+                    // systems.push(System { name: name.clone(), inputs, ouputs, dependencies });
                 }
             }
         }
     }
     systems
 }
+
+// pub fn find_systems(db: &dyn SemanticGroup, crate_ids: &[CrateId]) -> Vec<SystemDeclaration> {
+//     let mut systems = vec![];
+//     for crate_id in crate_ids {
+//         let modules = db.crate_modules(*crate_id);
+//         for module_id in modules.iter() {
+//             let generated_file_infos =
+//                 db.module_generated_file_infos(*module_id).unwrap_or_default();
+
+//             for generated_file_info in generated_file_infos.iter().skip(1) {
+//                 let Some(generated_file_info) = generated_file_info else { continue; };
+//                 let Some(mapper) = generated_file_info.aux_data.0.as_any(
+//                 ).downcast_ref::<DynPluginAuxData>() else { continue; };
+//                 let Some(aux_data) = mapper.0.as_any(
+//                 ).downcast_ref::<DojoAuxData>() else { continue; };
+
+//                 for name in &aux_data.systems {
+//                     if let Ok(Some(ModuleItemId::Submodule(submodule_id))) =
+//                         db.module_item_by_name(*module_id, name.clone())
+//                     {
+//                         systems.push(SystemDeclaration { name: name.clone(), submodule_id });
+//                     } else {
+//                         panic!("System `{name}` was not found.");
+//                     }
+//                 }
+//             }
+//         }
+//     }
+//     systems
+// }
+

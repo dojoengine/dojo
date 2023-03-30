@@ -1,0 +1,38 @@
+{
+    "components": [
+        {
+            "name": "Moves",
+            "members": [
+                {
+                    "name": "remaining",
+                    "type": "core::integer::u8"
+                }
+            ]
+        },
+        {
+            "name": "Position",
+            "members": [
+                {
+                    "name": "remaining",
+                    "type": "core::integer::u8"
+                }
+            ]
+        }
+    ],
+    "systems": [
+        {
+            "submodule_id": "1",
+            "name": "SpawnSystem",
+            "inputs": [],
+            "outputs": [],
+            "dependencies": []
+        },
+        {
+            "submodule_id": "1",
+            "name": "MoveSystem",
+            "inputs": [],
+            "outputs": [],
+            "dependencies": []
+        }
+    ]
+}

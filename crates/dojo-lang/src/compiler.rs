@@ -1,5 +1,7 @@
 use std::iter::zip;
 use std::ops::DerefMut;
+use std::fs::File;
+use std::io::Write;
 
 use anyhow::{Context, Result};
 use cairo_lang_compiler::db::RootDatabase;
@@ -16,7 +18,9 @@ use scarb::core::Workspace;
 use tracing::{trace, trace_span};
 
 use crate::component::find_components;
+use crate::system::find_systems;
 use crate::db::DojoRootDatabaseBuilderEx;
+use serde_json::{json};
 
 pub struct DojoCompiler;
 
@@ -71,9 +75,29 @@ impl Compiler for DojoCompiler {
                 .with_context(|| format!("failed to serialize contract: {contract_name}"))?;
         }
 
+        let json_filename = "manifest.json";
+
+        if !std::path::Path::new(json_filename).exists() {
+            let initial_json = json!({ "components": [], "systems": [] });
+            let mut file = File::create(json_filename).expect("Unable to create JSON file");
+            file.write_all(initial_json.to_string().as_bytes())
+                .expect("Unable to write to JSON file");
+        }
+
         let components = find_components(&db, &main_crate_ids);
+        let systems = find_systems(&db, &main_crate_ids);
         let res = serde_json::to_string_pretty(&components)?;
-        println!("{}", res);
+
+
+
+        let mut file = File::create(json_filename).expect("Unable to create JSON file");
+
+        file.write_all(json!({
+            "components": components,
+            "systems": systems, // Ignoring systems part for now
+        }).to_string().as_bytes())
+            .expect("Unable to write to JSON file");
+
 
         Ok(())
     }

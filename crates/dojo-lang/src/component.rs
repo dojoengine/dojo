@@ -35,6 +35,8 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
     let mut body_nodes = vec![];
     let mut trait_nodes = vec![];
 
+    
+
     body_nodes.push(RewriteNode::interpolate_patched(
         "
             #[view]
@@ -164,6 +166,8 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
             ("body".to_string(), RewriteNode::new_modified(body_nodes)),
         ]),
     ));
+
+    
 
     PluginResult {
         code: Some(PluginGeneratedFile {
