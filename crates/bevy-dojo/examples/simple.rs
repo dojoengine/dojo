@@ -41,7 +41,7 @@ fn runner(mut app: App) {
     }
 }
 
-fn log_message(query: Query<&IndexerMessage<Block>>) {
+fn log_message(query: Query<'_, '_, &IndexerMessage<Block>>) {
     query.iter().for_each(|msg| {
         match &msg.0 {
             DataMessage::Data { cursor, end_cursor, finality, .. } => {

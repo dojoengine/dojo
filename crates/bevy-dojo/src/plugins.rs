@@ -51,7 +51,7 @@ where
     }
 }
 
-fn setup<F, D>(runtime: ResMut<TokioTasksRuntime>, config: Res<Config<F, D>>)
+fn setup<F, D>(runtime: ResMut<'_, TokioTasksRuntime>, config: Res<'_, Config<F, D>>)
 where
     F: Message + Default + 'static + Clone,
     D: Message + Default + 'static,
