@@ -17,7 +17,6 @@ use tracing::{trace, trace_span};
 
 use crate::db::DojoRootDatabaseBuilderEx;
 use crate::manifest::Manifest;
-use serde_json::json;
 
 pub struct DojoCompiler;
 
