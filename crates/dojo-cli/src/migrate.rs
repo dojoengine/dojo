@@ -28,6 +28,7 @@ pub struct MigrateArgs {
     plan: bool,
 }
 
+#[tokio::main]
 pub async fn run(args: MigrateArgs) -> anyhow::Result<()> {
     let source_dir = match args.path {
         Some(path) => {

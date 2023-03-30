@@ -43,8 +43,7 @@ struct InspectArgs {
     world_address: String,
 }
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
@@ -53,7 +52,7 @@ async fn main() -> anyhow::Result<()> {
             init::run(args);
             Ok(())
         }
-        Commands::Migrate(args) => migrate::run(args).await,
+        Commands::Migrate(args) => migrate::run(args),
         Commands::Bind(..) => Ok(print!("Bind")),
         Commands::Inspect(..) => Ok(print!("Inspect")),
     }?;
