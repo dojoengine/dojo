@@ -1,8 +1,8 @@
-use apibara_core::node::v1alpha2::DataFinality;
-use apibara_core::starknet::v1alpha2::{Block, FieldElement, Filter, HeaderFilter};
-use apibara_sdk::{Configuration, DataMessage};
 use bevy::app::App;
 use bevy::ecs::system::Query;
+use bevy_dojo::apibara::core::node::v1alpha2::DataFinality;
+use bevy_dojo::apibara::core::starknet::v1alpha2::{Block, FieldElement, Filter, HeaderFilter};
+use bevy_dojo::apibara::sdk::{Configuration, DataMessage};
 use bevy_dojo::{IndexerMessage, IndexerPlugin};
 
 fn main() {
