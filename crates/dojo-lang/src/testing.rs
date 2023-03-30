@@ -3,7 +3,6 @@ use std::str::FromStr;
 
 use cairo_lang_compiler::db::RootDatabase;
 use camino::Utf8PathBuf;
-use dojo_project::WorldConfig;
 use scarb::compiler::helpers::build_project_config;
 use scarb::compiler::CompilerRepository;
 use scarb::core::Config;
@@ -42,7 +41,7 @@ pub fn build_test_db() -> anyhow::Result<RootDatabase> {
 
     let db = RootDatabase::builder()
         .with_project_config(build_project_config(&unit)?)
-        .with_dojo(WorldConfig::default())
+        .with_dojo()
         .build()?;
 
     Ok(db)

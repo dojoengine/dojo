@@ -1,18 +1,23 @@
 use std::env::{self, current_dir};
 use std::fmt::Display;
 use std::fs;
+use std::str::FromStr;
 
 use anyhow::Context;
+use async_trait::async_trait;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use camino::Utf8PathBuf;
 use clap::Args;
-use comfy_table::Table;
 use dojo_project::WorldConfig;
 use scarb::core::Config;
 use scarb::ops;
 use scarb::ui::Verbosity;
 use starknet::core::types::contract::CompiledClass;
 use starknet::core::types::FieldElement;
+use starknet::core::utils::get_storage_var_address;
+use starknet::providers::jsonrpc::models::{BlockId, BlockTag};
+use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
+use url::Url;
 
 #[derive(Args)]
 pub struct MigrateArgs {
@@ -23,6 +28,7 @@ pub struct MigrateArgs {
     plan: bool,
 }
 
+#[tokio::main]
 pub async fn run(args: MigrateArgs) -> anyhow::Result<()> {
     let source_dir = match args.path {
         Some(path) => {
@@ -37,20 +43,127 @@ pub async fn run(args: MigrateArgs) -> anyhow::Result<()> {
         None => Utf8PathBuf::from_path_buf(current_dir().unwrap()).unwrap(),
     };
 
-    let world = World::from_path(source_dir.clone())?;
+    let world = World::from_path(source_dir).await?;
 
     println!("{world}");
 
     Ok(())
 }
 
-struct World {
+#[async_trait]
+trait ResolveRemote {
+    async fn resolve_remote(&mut self, rpc: &JsonRpcClient<HttpTransport>) -> anyhow::Result<()>;
+}
+
+struct Contract {
+    name: String,
     address: Option<FieldElement>,
-    modules: Modules,
+    local: FieldElement,
+    remote: Option<FieldElement>,
+}
+
+#[async_trait]
+impl ResolveRemote for Contract {
+    async fn resolve_remote(
+        self: &mut Contract,
+        rpc: &JsonRpcClient<HttpTransport>,
+    ) -> anyhow::Result<()> {
+        if let Some(address) = self.address {
+            if let Ok(remote_class_hash) =
+                rpc.get_class_hash_at(&BlockId::Tag(BlockTag::Latest), address).await
+            {
+                self.remote = Some(remote_class_hash);
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl Display for Contract {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "{}:", self.name)?;
+        if let Some(address) = self.address {
+            writeln!(f, "   Address: 0x{:x}", address)?;
+        }
+        writeln!(f, "   Local: 0x{:x}", self.local)?;
+
+        if let Some(remote) = self.remote {
+            writeln!(f, "   Remote: 0x{:x}", remote)?;
+        }
+
+        Ok(())
+    }
+}
+
+struct Class {
+    world: FieldElement,
+    name: String,
+    local: FieldElement,
+    remote: Option<FieldElement>,
+}
+
+#[async_trait]
+impl ResolveRemote for Class {
+    async fn resolve_remote(
+        self: &mut Class,
+        rpc: &JsonRpcClient<HttpTransport>,
+    ) -> anyhow::Result<()> {
+        if !matches!(self.name.as_str(), "Indexer" | "Store") {
+            let remote_class_hash = rpc
+                .get_storage_at(
+                    self.world,
+                    get_storage_var_address(&self.name.to_lowercase(), &[]).unwrap(),
+                    &BlockId::Tag(BlockTag::Latest),
+                )
+                .await?;
+            self.remote = Some(remote_class_hash);
+            return Ok(());
+        }
+
+        let remote_class_hash = rpc
+            .get_storage_at(
+                self.world,
+                get_storage_var_address("indexer", &[FieldElement::from_str(&self.name).unwrap()])
+                    .unwrap(),
+                &BlockId::Tag(BlockTag::Latest),
+            )
+            .await?;
+        self.remote = Some(remote_class_hash);
+        Ok(())
+    }
+}
+
+impl Display for Class {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "{}:", self.name)?;
+        writeln!(f, "   Local: 0x{:x}", self.local)?;
+
+        if let Some(remote) = self.remote {
+            writeln!(f, "   Remote: 0x{:x}", remote)?;
+        }
+
+        Ok(())
+    }
+}
+
+struct World {
+    rpc: JsonRpcClient<HttpTransport>,
+    world: Contract,
+    executor: Contract,
+    indexer: Class,
+    store: Class,
+    contracts: Vec<Class>,
+    components: Vec<Class>,
+    systems: Vec<Class>,
 }
 
 impl World {
-    fn from_path(source_dir: Utf8PathBuf) -> anyhow::Result<World> {
+    async fn from_path(source_dir: Utf8PathBuf) -> anyhow::Result<World> {
+        let rpc_client = JsonRpcClient::new(HttpTransport::new(
+            Url::parse("https://starknet-goerli.cartridge.gg/").unwrap(),
+        ));
+
         let manifest_path = source_dir.join("Scarb.toml");
         let config = Config::builder(manifest_path)
             .ui_verbosity(Verbosity::Verbose)
@@ -64,33 +177,14 @@ impl World {
         let world_config =
             WorldConfig::from_workspace(&ws).unwrap_or_else(|_| WorldConfig::default());
 
-        let modules = Modules::from_path(source_dir.clone())?;
+        let mut world: Option<Contract> = None;
+        let mut executor: Option<Contract> = None;
+        let mut indexer: Option<Class> = None;
+        let mut store: Option<Class> = None;
 
-        Ok(World { address: world_config.address, modules })
-    }
-}
-
-impl Display for World {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "World Address: 0x{:x}", self.address.unwrap())?;
-        writeln!(f, "{}", self.modules)
-    }
-}
-
-struct Module {
-    name: String,
-    hash: FieldElement,
-}
-
-struct Modules {
-    contracts: Vec<Module>,
-    components: Vec<Module>,
-    systems: Vec<Module>,
-}
-
-impl Modules {
-    fn from_path(source_dir: Utf8PathBuf) -> anyhow::Result<Modules> {
-        let mut modules = Modules { contracts: vec![], components: vec![], systems: vec![] };
+        let mut contracts = vec![];
+        let mut components = vec![];
+        let mut systems = vec![];
 
         // Read the directory
         let entries = fs::read_dir(source_dir.join("target/release")).unwrap_or_else(|error| {
@@ -100,7 +194,7 @@ impl Modules {
         for entry in entries.flatten() {
             let file_name = entry.file_name();
             let file_name_str = file_name.to_string_lossy();
-            if !file_name_str.ends_with(".json") {
+            if file_name_str == "manifest.json" || !file_name_str.ends_with(".json") {
                 continue;
             }
 
@@ -120,46 +214,112 @@ impl Modules {
                     panic!("Problem parsing {} artifact: {:?}", file_name_str, error);
                 });
 
-            let hash = compiled_class
+            let local = compiled_class
                 .class_hash()
                 .with_context(|| "Casm contract Serialization failed.")?;
 
             if name.ends_with("Component.json") {
-                modules.components.push(Module {
+                components.push(Class {
+                    world: world_config.address.unwrap(),
                     name: name.strip_suffix("Component.json").unwrap().to_string(),
-                    hash,
+                    local,
+                    remote: None,
                 });
             } else if name.ends_with("System.json") {
-                modules.systems.push(Module {
+                systems.push(Class {
+                    world: world_config.address.unwrap(),
                     name: name.strip_suffix("System.json").unwrap().to_string(),
-                    hash,
+                    local,
+                    remote: None,
                 });
             } else {
-                modules
-                    .contracts
-                    .push(Module { name: name.strip_suffix(".json").unwrap().to_string(), hash });
+                let name = name.strip_suffix(".json").unwrap().to_string();
+                match name.as_str() {
+                    "World" => {
+                        world = Some(Contract {
+                            name,
+                            local,
+                            remote: None,
+                            address: world_config.address,
+                        })
+                    }
+                    "Executor" => {
+                        executor = Some(Contract { name, local, remote: None, address: None })
+                    }
+                    "Indexer" => {
+                        indexer = Some(Class {
+                            world: world_config.address.unwrap(),
+                            name,
+                            local,
+                            remote: None,
+                        })
+                    }
+                    "Store" => {
+                        store = Some(Class {
+                            world: world_config.address.unwrap(),
+                            name,
+                            local,
+                            remote: None,
+                        })
+                    }
+                    _ => contracts.push(Class {
+                        world: world_config.address.unwrap(),
+                        name,
+                        local,
+                        remote: None,
+                    }),
+                }
             };
         }
-        Ok(modules)
+
+        let mut world = World {
+            rpc: rpc_client,
+            world: world.unwrap_or_else(|| {
+                panic!("World contract not found. Did you include `dojo` as a dependency?");
+            }),
+            executor: executor.unwrap_or_else(|| {
+                panic!("Executor contract not found. Did you include `dojo` as a dependency?");
+            }),
+            indexer: indexer.unwrap_or_else(|| {
+                panic!("Indexer contract not found. Did you include `dojo` as a dependency?");
+            }),
+            store: store.unwrap_or_else(|| {
+                panic!("Store contract not found. Did you include `dojo` as a dependency?");
+            }),
+            contracts,
+            components,
+            systems,
+        };
+
+        world.resolve_remote().await?;
+
+        Ok(world)
+    }
+
+    async fn resolve_remote(self: &mut World) -> anyhow::Result<()> {
+        self.world.resolve_remote(&self.rpc).await?;
+        Ok(())
     }
 }
 
-impl Display for Modules {
+impl Display for World {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut components_table = Table::new();
-        components_table.set_header(vec!["Component", "Class Hash"]);
-        for component in &self.components {
-            components_table
-                .add_row(vec![component.name.clone(), format!("0x{:x} ", component.hash)]);
-        }
-        writeln!(f, "{}", components_table)?;
+        writeln!(f, "{}", self.world)?;
+        writeln!(f, "{}", self.executor)?;
+        writeln!(f, "{}", self.store)?;
+        writeln!(f, "{}", self.indexer)?;
 
-        let mut systems_table = Table::new();
-        systems_table.set_header(vec!["System", "Class Hash"]);
-        for system in &self.systems {
-            systems_table.add_row(vec![system.name.clone(), format!("0x{:x} ", system.hash)]);
+        for component in &self.components {
+            writeln!(f, "{}", component)?;
         }
-        writeln!(f, "{}", systems_table)?;
+
+        for system in &self.systems {
+            writeln!(f, "{}", system)?;
+        }
+
+        for contract in &self.contracts {
+            writeln!(f, "{}", contract)?;
+        }
 
         Ok(())
     }

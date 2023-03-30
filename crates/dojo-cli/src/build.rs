@@ -39,10 +39,7 @@ pub fn run(args: BuildArgs) -> anyhow::Result<()> {
         .build()
         .unwrap();
 
-    let ws = ops::read_workspace(config.manifest_path(), &config).unwrap_or_else(|err| {
-        eprintln!("error: {}", err);
-        std::process::exit(1);
-    });
+    let ws = ops::read_workspace(config.manifest_path(), &config)?;
 
     ops::compile(&ws)
 }
