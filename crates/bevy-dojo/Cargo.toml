@@ -6,3 +6,10 @@ edition = "2021"
 [dependencies]
 bevy_app = "0.10"
 bevy_ecs = "0.10"
+
+[dev-dependencies]
+bevy = "0.10"
+
+[[example]]
+name = "simple"
+path = "examples/simple.rs"
