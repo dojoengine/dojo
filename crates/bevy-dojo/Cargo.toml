@@ -1,8 +1,26 @@
 [package]
 name = "bevy_dojo"
-version = "0.0.0"
+version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy_app = "0.10"
-bevy_ecs = "0.10"
+apibara-core = { git = "https://github.com/apibara/dna", rev = "2c452070372e80e5d1a5302c1b8ae5defef7e9a4", optional = true }
+apibara-sdk = { git = "https://github.com/apibara/dna", rev = "2c452070372e80e5d1a5302c1b8ae5defef7e9a4", optional = true }
+bevy = { version = "0.10", default-features = false }
+bevy-tokio-tasks = "0.10"
+tokio = { version = "1.27", features = ["full", "sync"] }
+tokio-stream = "0.1"
+tonic = "0.8"
+prost = "0.11"
+
+[dev-dependencies]
+chrono = "0.4"
+
+[features]
+default = ["indexer"]
+indexer = ["apibara-core", "apibara-sdk"]
+
+[[example]]
+name = "simple"
+path = "examples/simple.rs"
+required-features = ["indexer"]

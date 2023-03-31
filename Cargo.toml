@@ -55,10 +55,7 @@ scarb = "0.1.0-rc.2"
 serde = { version = "1.0.130", features = ["derive"] }
 serde_json = "1.0"
 smol_str = "0.1.23"
-starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "a46d3dd8e0a99ddd73377e730eec1760bec09aac" }
+starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "327be477312d1c0fc5951edb9801791b19f60cbd" }
 thiserror = "1.0.32"
 toml = "0.4.2"
 test-log = "0.2.11"
-
-[patch."https://github.com/xJonathanLEI/starknet-rs"]
-starknet = { git = "https://github.com/tarrencev/starknet-rs", branch = "patchcasm" }

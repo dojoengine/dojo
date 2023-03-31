@@ -8,7 +8,6 @@ use cairo_lang_plugins::get_default_plugins;
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::plugin::SemanticPlugin;
 use cairo_lang_starknet::plugin::StarkNetPlugin;
-use dojo_project::WorldConfig;
 
 use crate::plugin::DojoPlugin;
 
@@ -22,7 +21,7 @@ pub trait DojoRootDatabaseBuilderEx {
     ) -> Result<RootDatabase>;
 
     /// Tunes a compiler database to Dojo (e.g. Dojo plugin).
-    fn with_dojo(&mut self, config: WorldConfig) -> &mut Self;
+    fn with_dojo(&mut self) -> &mut Self;
 }
 
 impl DojoRootDatabaseBuilderEx for RootDatabaseBuilder {
@@ -37,12 +36,12 @@ impl DojoRootDatabaseBuilderEx for RootDatabaseBuilder {
         Ok(db)
     }
 
-    fn with_dojo(&mut self, config: WorldConfig) -> &mut Self {
+    fn with_dojo(&mut self) -> &mut Self {
         // Override implicit precedence for compatibility with the Dojo.
         let precedence = ["Pedersen", "RangeCheck", "Bitwise", "EcOp", "GasBuiltin", "System"];
 
         let mut plugins = get_default_plugins();
-        plugins.push(Arc::new(DojoPlugin::new(config)));
+        plugins.push(Arc::new(DojoPlugin {}));
         plugins.push(Arc::new(StarkNetPlugin {}));
 
         self.with_implicit_precedence(&precedence).with_plugins(plugins)

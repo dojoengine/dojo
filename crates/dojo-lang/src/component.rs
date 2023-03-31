@@ -1,29 +1,12 @@
 use std::collections::HashMap;
 
-use cairo_lang_defs::ids::{ModuleItemId, SubmoduleId};
 use cairo_lang_defs::plugin::{DynGeneratedFileAuxData, PluginGeneratedFile, PluginResult};
-use cairo_lang_filesystem::ids::CrateId;
-use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::patcher::{PatchBuilder, RewriteNode};
 use cairo_lang_semantic::plugin::DynPluginAuxData;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
-use dojo_project::WorldConfig;
-use smol_str::SmolStr;
 
-use crate::plugin::{get_contract_address, DojoAuxData};
-
-#[cfg(test)]
-#[path = "component_test.rs"]
-mod test;
-
-/// Represents a declaration of a component.
-#[derive(Debug, Clone)]
-pub struct ComponentDeclaration {
-    /// The id of the module that defines the component.
-    pub submodule_id: SubmoduleId,
-    pub name: SmolStr,
-}
+use crate::plugin::DojoAuxData;
 
 pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> PluginResult {
     let mut body_nodes = vec![];
@@ -165,63 +148,11 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
             content: builder.code,
             aux_data: DynGeneratedFileAuxData::new(DynPluginAuxData::new(DojoAuxData {
                 patches: builder.patches,
-                components: vec![format!("{}Component", name).into()],
+                components: vec![format!("{}", name).into()],
                 systems: vec![],
             })),
         }),
         diagnostics: vec![],
         remove_original_item: true,
     }
-}
-
-/// Finds the inline modules annotated as components in the given crate_ids and
-/// returns the corresponding ComponentDeclarations.
-pub fn find_components(db: &dyn SemanticGroup, crate_ids: &[CrateId]) -> Vec<ComponentDeclaration> {
-    let mut components = vec![];
-    for crate_id in crate_ids {
-        let modules = db.crate_modules(*crate_id);
-        for module_id in modules.iter() {
-            let generated_file_infos =
-                db.module_generated_file_infos(*module_id).unwrap_or_default();
-
-            for generated_file_info in generated_file_infos.iter().skip(1) {
-                let Some(generated_file_info) = generated_file_info else { continue; };
-                let Some(mapper) = generated_file_info.aux_data.0.as_any(
-                ).downcast_ref::<DynPluginAuxData>() else { continue; };
-                let Some(aux_data) = mapper.0.as_any(
-                ).downcast_ref::<DojoAuxData>() else { continue; };
-
-                for name in &aux_data.components {
-                    if let Ok(Some(ModuleItemId::Submodule(submodule_id))) =
-                        db.module_item_by_name(*module_id, name.clone())
-                    {
-                        components.push(ComponentDeclaration { name: name.clone(), submodule_id });
-                    } else {
-                        panic!("Component `{name}` was not found.");
-                    }
-                }
-            }
-        }
-    }
-    components
-}
-
-pub fn compute_component_id(
-    db: &dyn SyntaxGroup,
-    path: ast::ExprPath,
-    world_config: WorldConfig,
-) -> String {
-    // Component name to felt
-    let component_name_raw = path.as_syntax_node().get_text(db);
-    let mut component_name_parts: Vec<&str> = component_name_raw.split("::").collect();
-    let component_name = component_name_parts.pop().unwrap();
-
-    format!(
-        "{:#x}",
-        get_contract_address(
-            component_name,
-            world_config.initializer_class_hash.unwrap_or_default(),
-            world_config.address.unwrap_or_default(),
-        )
-    )
 }

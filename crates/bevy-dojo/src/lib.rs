@@ -1,13 +1,7 @@
-use bevy_app::{App, Plugin};
+mod plugins;
 
-pub struct IndexerPlugin;
+pub use plugins::*;
 
-impl Plugin for IndexerPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_startup_system(setup);
-    }
-}
-
-fn setup() {
-    println!("Spawn async task for Apibara client: Loop message stream");
+pub mod apibara {
+    pub use {apibara_core as core, apibara_sdk as sdk};
 }
