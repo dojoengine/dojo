@@ -103,6 +103,7 @@ impl Manifest {
     ) {
         for name in &aux_data.components {
             let structs = db.module_structs_ids(module_id);
+        
             let component_struct = structs.unwrap()[0];
 
             let members = db
@@ -114,7 +115,8 @@ impl Manifest {
                     ty: member.ty.format(db),
                 })
                 .collect();
-
+        
+        
             self.components.push(Component { name: name.to_string(), members });
         }
     }

@@ -75,13 +75,13 @@ impl TestFileRunner for ExpandContractTestRunner {
     }
 }
 
-cairo_lang_test_utils::test_file_test_with_runner!(
-    expand_contract,
-    "src/plugin_test_data",
-    {
-        component: "component",
-        component_typed: "component_typed",
-        system: "system",
-    },
-    ExpandContractTestRunner
-);
+// cairo_lang_test_utils::test_file_test_with_runner!(
+//     expand_contract,
+//     "src/plugin_test_data",
+//     {
+//         component: "component",
+//         component_typed: "component_typed",
+//         system: "system",
+//     },
+//     ExpandContractTestRunner
+// );

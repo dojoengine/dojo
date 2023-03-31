@@ -1,2 +1,3 @@
-mod components;
+mod position;
 mod systems;
+mod move;

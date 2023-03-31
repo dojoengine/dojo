@@ -4,8 +4,8 @@ mod Spawn {
     use traits::Into;   
     use starknet::contract_address::ContractAddressIntoFelt252;
 
-    use dojo_examples::components::Position;
-    use dojo_examples::components::Moves;
+    use dojo_examples::position::Position;
+    use dojo_examples::move::Moves;
 
     fn execute() {
         let caller = starknet::get_caller_address();
@@ -24,8 +24,8 @@ mod Move {
     use option::OptionTrait;
     use starknet::contract_address::ContractAddressIntoFelt252;
 
-    use dojo_examples::components::Position;
-    use dojo_examples::components::Moves;
+    use dojo_examples::position::Position;
+    use dojo_examples::move::Moves;
 
     // TODO: Use enum once serde is derivable
     // left: 0, right: 1, up: 2, down: 3

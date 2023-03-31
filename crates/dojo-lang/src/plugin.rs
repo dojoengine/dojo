@@ -23,12 +23,12 @@ const SYSTEM_ATTR: &str = "system";
 pub struct DojoAuxData {
     /// Patches of code that need translation in case they have diagnostics.
     pub patches: Patches,
-
     /// A list of components that were processed by the plugin.
     pub components: Vec<smol_str::SmolStr>,
     /// A list of systems that were processed by the plugin.
     pub systems: Vec<smol_str::SmolStr>,
 }
+
 impl GeneratedFileAuxData for DojoAuxData {
     fn as_any(&self) -> &dyn std::any::Any {
         self
@@ -37,11 +37,13 @@ impl GeneratedFileAuxData for DojoAuxData {
         if let Some(other) = other.as_any().downcast_ref::<Self>() { self == other } else { false }
     }
 }
+
 impl AsDynGeneratedFileAuxData for DojoAuxData {
     fn as_dyn_macro_token(&self) -> &(dyn GeneratedFileAuxData + 'static) {
         self
     }
 }
+
 impl PluginAuxData for DojoAuxData {
     fn map_diag(
         &self,
