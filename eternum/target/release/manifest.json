@@ -1,0 +1,165 @@
+{
+  "components": [
+    {
+      "name": "Army",
+      "members": [
+        {
+          "name": "owner_entity_id",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "light_cavalry_qty",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "light_cavalry_health",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "heavy_cavalry_qty",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "heavy_cavalry_health",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "archer_qty",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "archer_health",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "longbow_qty",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "longbow_health",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "mage_qty",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "mage_health",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "arcanist_qty",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "arcanist_health",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "light_infantry_qty",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "light_infantry_health",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "heavy_infantry_qty",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "heavy_infantry_health",
+          "type": "core::integer::u32"
+        }
+      ]
+    },
+    {
+      "name": "Position",
+      "members": [
+        {
+          "name": "x",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "y",
+          "type": "core::integer::u32"
+        }
+      ]
+    },
+    {
+      "name": "Realm",
+      "members": [
+        {
+          "name": "id",
+          "type": "core::felt252"
+        },
+        {
+          "name": "founder",
+          "type": "core::felt252"
+        },
+        {
+          "name": "armies",
+          "type": "core::felt252"
+        },
+        {
+          "name": "resource_ids",
+          "type": "core::felt252"
+        },
+        {
+          "name": "cities",
+          "type": "core::felt252"
+        },
+        {
+          "name": "harbors",
+          "type": "core::felt252"
+        },
+        {
+          "name": "rivers",
+          "type": "core::felt252"
+        },
+        {
+          "name": "regions",
+          "type": "core::felt252"
+        }
+      ]
+    },
+    {
+      "name": "Buildings",
+      "members": [
+        {
+          "name": "barracks",
+          "type": "core::felt252"
+        },
+        {
+          "name": "castle",
+          "type": "core::felt252"
+        },
+        {
+          "name": "archer_tower",
+          "type": "core::felt252"
+        },
+        {
+          "name": "mage_tower",
+          "type": "core::felt252"
+        },
+        {
+          "name": "store_house",
+          "type": "core::felt252"
+        }
+      ]
+    }
+  ],
+  "systems": [
+    {
+      "name": "SettleSystemSystem",
+      "inputs": [
+        {
+          "name": "realm_id",
+          "type": "core::felt252"
+        }
+      ],
+      "outputs": [],
+      "dependencies": []
+    }
+  ]
+}

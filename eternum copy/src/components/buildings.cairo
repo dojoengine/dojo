@@ -19,7 +19,6 @@ trait BuildingsTrait {
 impl BuildingsImpl of BuildingsTrait {
     fn population(self: Buildings) -> felt252 {
         // calculate building population
-        0
     }
 }
 
