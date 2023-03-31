@@ -14,12 +14,8 @@ mod test;
 
 #[derive(Error, Debug)]
 pub enum ManifestError {
-    #[error("Generic traits are unsupported.")]
-    GenericTraitsUnsupported,
     #[error("Compilation error.")]
     CompilationError,
-    #[error("Got unexpected type.")]
-    UnexpectedType,
 }
 
 /// Component member.
@@ -102,20 +98,21 @@ impl Manifest {
         module_id: ModuleId,
     ) {
         for name in &aux_data.components {
-            let structs = db.module_structs_ids(module_id);
-            let component_struct = structs.unwrap()[0];
+            if let Ok(Some(ModuleItemId::Struct(struct_id))) =
+                db.module_item_by_name(module_id, name.clone())
+            {
+                let members = db
+                    .struct_members(struct_id)
+                    .unwrap()
+                    .iter()
+                    .map(|(component_name, member)| Member {
+                        name: component_name.to_string(),
+                        ty: member.ty.format(db),
+                    })
+                    .collect();
 
-            let members = db
-                .struct_members(component_struct)
-                .unwrap()
-                .iter()
-                .map(|(component_name, member)| Member {
-                    name: component_name.to_string(),
-                    ty: member.ty.format(db),
-                })
-                .collect();
-
-            self.components.push(Component { name: name.to_string(), members });
+                self.components.push(Component { name: name.to_string(), members });
+            }
         }
     }
 
