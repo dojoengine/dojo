@@ -33,3 +33,7 @@ Realms NFTs are the source of truth for the metadata in this world.
 `Buildings` : Buildings that can exist on an Entity
 
 `Position` : Position of entity
+
+
+
+cargo run --bin dojo -- build eternum

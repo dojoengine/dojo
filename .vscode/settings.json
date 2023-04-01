@@ -1,4 +1,5 @@
 {
     "cairo1.languageServerPath": "/workspaces/dojo/cairo/target/release/cairo-language-server",
     "cairo1.enableLanguageServer": true,
+    "editor.formatOnSave": true,
 }

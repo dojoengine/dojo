@@ -1,4 +1,4 @@
-// mod build_labor;
+mod build_labor;
 // mod food_conversion;
 // mod harvest_labor;
 // mod movement;

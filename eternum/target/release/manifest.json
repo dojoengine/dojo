@@ -98,7 +98,7 @@
           "type": "core::felt252"
         },
         {
-          "name": "armies",
+          "name": "army_ids",
           "type": "core::felt252"
         },
         {
@@ -107,18 +107,43 @@
         },
         {
           "name": "cities",
-          "type": "core::felt252"
+          "type": "core::integer::u8"
         },
         {
           "name": "harbors",
-          "type": "core::felt252"
+          "type": "core::integer::u8"
         },
         {
           "name": "rivers",
-          "type": "core::felt252"
+          "type": "core::integer::u8"
         },
         {
           "name": "regions",
+          "type": "core::integer::u8"
+        }
+      ]
+    },
+    {
+      "name": "Wood",
+      "members": [
+        {
+          "name": "labor_balance",
+          "type": "core::felt252"
+        },
+        {
+          "name": "last_update",
+          "type": "core::felt252"
+        },
+        {
+          "name": "qty_built",
+          "type": "core::felt252"
+        },
+        {
+          "name": "balance",
+          "type": "core::felt252"
+        },
+        {
+          "name": "vault_balance",
           "type": "core::felt252"
         }
       ]
@@ -150,6 +175,25 @@
     }
   ],
   "systems": [
+    {
+      "name": "BuildLaborSystemSystem",
+      "inputs": [
+        {
+          "name": "realm_id",
+          "type": "core::felt252"
+        },
+        {
+          "name": "resource_id",
+          "type": "core::felt252"
+        },
+        {
+          "name": "labor_units",
+          "type": "core::felt252"
+        }
+      ],
+      "outputs": [],
+      "dependencies": []
+    },
     {
       "name": "SettleSystemSystem",
       "inputs": [
