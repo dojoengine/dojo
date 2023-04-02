@@ -172,6 +172,31 @@
           "type": "core::felt252"
         }
       ]
+    },
+    {
+      "name": "WorldConfig",
+      "members": [
+        {
+          "name": "day_unix",
+          "type": "core::integer::u128"
+        },
+        {
+          "name": "vault_bp",
+          "type": "core::integer::u128"
+        },
+        {
+          "name": "base_resources_per_day",
+          "type": "core::integer::u128"
+        },
+        {
+          "name": "vault_unix",
+          "type": "core::integer::u128"
+        },
+        {
+          "name": "lords_per_day",
+          "type": "core::integer::u128"
+        }
+      ]
     }
   ],
   "systems": [

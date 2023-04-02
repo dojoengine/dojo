@@ -1,5 +1,7 @@
-const TICK_TIME: felt252 = 86000; // one day
+// Config ID to fetch world config
+const WORLD_CONFIG_ID: felt252 = 999999999999999999;
 
-
-// Resources
-const WOOD: felt252 = 1;
+enum Resources {
+    WOOD: u8,
+    STONE: u8
+}

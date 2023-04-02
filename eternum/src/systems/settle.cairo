@@ -1,14 +1,13 @@
 // Maintains state of Realms
 
 #[system]
-mod SettleSystem {
+mod Settle {
     use array::ArrayTrait;
     use traits::Into;
 
     use eternum::components::realm::Realm;
 
     fn execute(realm_id: felt252) {
-
         // let mut resource_ids = ArrayTrait::new();
 
         // let mut army_ids = ArrayTrait::new();
@@ -30,7 +29,6 @@ mod SettleSystem {
                 harbors: 3_u8,
                 rivers: 2_u8,
                 regions: 2_u8,
-                
             })
         );
 
