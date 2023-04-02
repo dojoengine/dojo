@@ -2,6 +2,10 @@
 
 Realms NFTs are the source of truth for the metadata in this world.
 
+### Config
+
+All constants that run the world reside in the config components. These are fetched in systems and executed upon.
+
 ### Entities
 
 `Realms` : Loot Realms
