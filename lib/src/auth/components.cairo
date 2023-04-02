@@ -1,2 +1,9 @@
-mod authorization_status;
-mod role;
+#[derive(Component)]
+struct AuthorizationStatus {
+    is_authorized: bool
+}
+
+#[derive(Component)]
+struct Role {
+    id: felt252
+}
