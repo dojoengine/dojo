@@ -6,6 +6,11 @@ Realms NFTs are the source of truth for the metadata in this world.
 
 All constants that run the world reside in the config components. These are fetched in systems and executed upon.
 
+
+### High level flow
+
+Eternum runs on a Tick system and acts on Entities state, on every action they take. This simulates a true server tick function.
+
 ### Entities
 
 `Realms` : Loot Realms

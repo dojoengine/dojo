@@ -5,5 +5,6 @@ struct WorldConfig {
     base_resources_per_day: u128,
     vault_unix: u128,
     lords_per_day: u128,
+    tick_time: u128,
 }
 

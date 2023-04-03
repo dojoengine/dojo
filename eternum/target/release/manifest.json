@@ -195,6 +195,19 @@
         {
           "name": "lords_per_day",
           "type": "core::integer::u128"
+        },
+        {
+          "name": "tick_time",
+          "type": "core::integer::u128"
+        }
+      ]
+    },
+    {
+      "name": "Tick",
+      "members": [
+        {
+          "name": "last_update",
+          "type": "core::integer::u128"
         }
       ]
     }
@@ -221,6 +234,17 @@
     },
     {
       "name": "SettleSystem",
+      "inputs": [
+        {
+          "name": "realm_id",
+          "type": "core::felt252"
+        }
+      ],
+      "outputs": [],
+      "dependencies": []
+    },
+    {
+      "name": "TickSystemSystem",
       "inputs": [
         {
           "name": "realm_id",

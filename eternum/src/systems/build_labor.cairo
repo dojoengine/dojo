@@ -8,14 +8,13 @@ mod BuildLabor {
     use eternum::components::config::WorldConfig;
 
     use eternum::components::realm::Realm;
+    use eternum::components::tick::Tick;
     use eternum::components::resources::Resource;
     use eternum::components::resources::Wood;
-
 
     // todo need better way to store resources
     use eternum::constants::Resources;
     use eternum::constants::WORLD_CONFIG_ID;
-
 
     use eternum::utils::math::u128_div_remainder;
     use eternum::utils::math::get_percentage_by_bp;
@@ -33,9 +32,17 @@ mod BuildLabor {
 
         // need DRY way to do this
         // Loop over enum?
+        // When bug fixed fix
         let wood = commands::set(
             (realm_id).into(),
             (Wood { labor_balance: 0, last_update: 0, qty_built: 0, balance: 0, vault_balance: 0 })
         );
+
+        // check tick is needed
+        let tick: Tick = commands::<Tick>::get(realm_id.into());
+
+        let mut tick_data = ArrayTrait::new();
+        tick_data.append(realm_id);
+        let _ = commands::execute(TickSystem, tick_data.span());
     }
 }
