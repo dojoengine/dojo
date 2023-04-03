@@ -6,7 +6,7 @@ use cairo_lang_semantic::plugin::DynPluginAuxData;
 use smol_str::SmolStr;
 use thiserror::Error;
 
-use crate::plugin::DojoAuxData;
+use crate::plugin::{DojoAuxData, SystemAuxData};
 
 #[cfg(test)]
 #[path = "manifest_test.rs"]
@@ -122,7 +122,7 @@ impl Manifest {
         aux_data: &DojoAuxData,
         module_id: ModuleId,
     ) -> Result<(), ManifestError> {
-        for name in &aux_data.systems {
+        for SystemAuxData { name, dependencies } in &aux_data.systems {
             if let Ok(Some(ModuleItemId::Submodule(submodule_id))) =
                 db.module_item_by_name(module_id, name.clone())
             {
@@ -157,7 +157,10 @@ impl Manifest {
                         name: name.clone(),
                         inputs,
                         outputs,
-                        dependencies: vec![],
+                        dependencies: dependencies
+                            .iter()
+                            .map(|s| s.to_string())
+                            .collect::<Vec<_>>(),
                     });
                 }
             } else {
