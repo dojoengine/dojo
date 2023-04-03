@@ -10,6 +10,7 @@ use super::{CommandData, CommandTrait};
 #[derive(Clone)]
 pub struct SetCommand {
     data: CommandData,
+    pub components: Vec<smol_str::SmolStr>,
 }
 
 impl SetCommand {
@@ -18,6 +19,7 @@ impl SetCommand {
             if let Some(ast::PathSegment::Simple(segment)) = ctor.path(db).elements(db).last() {
                 let component = segment.ident(db).text(db);
 
+                self.components.push(component.clone());
                 self.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
                     "               
                     IWorldDispatcher { contract_address: world_address }.set('$component$', \
@@ -45,7 +47,7 @@ impl CommandTrait for SetCommand {
         _let_pattern: Option<ast::Pattern>,
         command_ast: ast::ExprFunctionCall,
     ) -> Self {
-        let mut command = SetCommand { data: CommandData::new() };
+        let mut command = SetCommand { data: CommandData::new(), components: vec![] };
 
         let elements = command_ast.arguments(db).args(db).elements(db);
 
