@@ -22,25 +22,24 @@ license-file = "LICENSE"
 [workspace.dependencies]
 anyhow = "1.0.66"
 cairo-felt = "0.1.1"
-cairo-lang-casm = "1.0.0-alpha.6"
-cairo-lang-compiler = "1.0.0-alpha.6"
-cairo-lang-debug = "1.0.0-alpha.6"
-cairo-lang-defs = "1.0.0-alpha.6"
-cairo-lang-diagnostics = "1.0.0-alpha.6"
-cairo-lang-filesystem = "1.0.0-alpha.6"
-cairo-lang-language-server = "1.0.0-alpha.6"
-cairo-lang-lowering = "1.0.0-alpha.6"
-cairo-lang-parser = "1.0.0-alpha.6"
-cairo-lang-plugins = "1.0.0-alpha.6"
-cairo-lang-project = "1.0.0-alpha.6"
-cairo-lang-semantic = "1.0.0-alpha.6"
-cairo-lang-sierra-generator = "1.0.0-alpha.6"
-cairo-lang-sierra = "1.0.0-alpha.6"
-cairo-lang-sierra-to-casm = "1.0.0-alpha.6"
-cairo-lang-starknet = "1.0.0-alpha.6"
-cairo-lang-syntax = "1.0.0-alpha.6"
-cairo-lang-utils = "1.0.0-alpha.6"
-cairo-vm = "0.1.2"
+cairo-lang-casm = { version = "1.0.0-alpha.6", git = "https://github.com/starkware-libs/cairo.git", rev = "9d320e9d8de0b0dcc236dde8736de6c4d3cb1af7" }
+cairo-lang-compiler = { version = "1.0.0-alpha.6", git = "https://github.com/starkware-libs/cairo.git", rev = "9d320e9d8de0b0dcc236dde8736de6c4d3cb1af7" }
+cairo-lang-debug = { version = "1.0.0-alpha.6", git = "https://github.com/starkware-libs/cairo.git", rev = "9d320e9d8de0b0dcc236dde8736de6c4d3cb1af7" }
+cairo-lang-defs = { version = "1.0.0-alpha.6", git = "https://github.com/starkware-libs/cairo.git", rev = "9d320e9d8de0b0dcc236dde8736de6c4d3cb1af7" }
+cairo-lang-diagnostics = { version = "1.0.0-alpha.6", git = "https://github.com/starkware-libs/cairo.git", rev = "9d320e9d8de0b0dcc236dde8736de6c4d3cb1af7" }
+cairo-lang-filesystem = { version = "1.0.0-alpha.6", git = "https://github.com/starkware-libs/cairo.git", rev = "9d320e9d8de0b0dcc236dde8736de6c4d3cb1af7" }
+cairo-lang-language-server = { version = "1.0.0-alpha.6", git = "https://github.com/starkware-libs/cairo.git", rev = "9d320e9d8de0b0dcc236dde8736de6c4d3cb1af7" }
+cairo-lang-lowering = { version = "1.0.0-alpha.6", git = "https://github.com/starkware-libs/cairo.git", rev = "9d320e9d8de0b0dcc236dde8736de6c4d3cb1af7" }
+cairo-lang-parser = { version = "1.0.0-alpha.6", git = "https://github.com/starkware-libs/cairo.git", rev = "9d320e9d8de0b0dcc236dde8736de6c4d3cb1af7" }
+cairo-lang-plugins = { version = "1.0.0-alpha.6", git = "https://github.com/starkware-libs/cairo.git", rev = "9d320e9d8de0b0dcc236dde8736de6c4d3cb1af7" }
+cairo-lang-project = { version = "1.0.0-alpha.6", git = "https://github.com/starkware-libs/cairo.git", rev = "9d320e9d8de0b0dcc236dde8736de6c4d3cb1af7" }
+cairo-lang-semantic = { version = "1.0.0-alpha.6", git = "https://github.com/starkware-libs/cairo.git", rev = "9d320e9d8de0b0dcc236dde8736de6c4d3cb1af7" }
+cairo-lang-sierra-generator = { version = "1.0.0-alpha.6", git = "https://github.com/starkware-libs/cairo.git", rev = "9d320e9d8de0b0dcc236dde8736de6c4d3cb1af7" }
+cairo-lang-sierra = { version = "1.0.0-alpha.6", git = "https://github.com/starkware-libs/cairo.git", rev = "9d320e9d8de0b0dcc236dde8736de6c4d3cb1af7" }
+cairo-lang-sierra-to-casm = { version = "1.0.0-alpha.6", git = "https://github.com/starkware-libs/cairo.git", rev = "9d320e9d8de0b0dcc236dde8736de6c4d3cb1af7" }
+cairo-lang-starknet = { version = "1.0.0-alpha.6", git = "https://github.com/starkware-libs/cairo.git", rev = "9d320e9d8de0b0dcc236dde8736de6c4d3cb1af7" }
+cairo-lang-syntax = { version = "1.0.0-alpha.6", git = "https://github.com/starkware-libs/cairo.git", rev = "9d320e9d8de0b0dcc236dde8736de6c4d3cb1af7" }
+cairo-lang-utils = { version = "1.0.0-alpha.6", git = "https://github.com/starkware-libs/cairo.git", rev = "9d320e9d8de0b0dcc236dde8736de6c4d3cb1af7" }
 camino = { version = "1.1.2", features = ["serde1"] }
 clap = { version = "4.0", features = ["derive"] }
 colored = "2"
@@ -51,7 +50,7 @@ num-bigint = "0.4"
 pretty_assertions = "1.2.1"
 rayon = "0.9.0"
 salsa = "0.16.1"
-scarb = "0.1.0-rc.2"
+scarb = { version = "0.1.0", git = "https://github.com/software-mansion/scarb.git", rev = "d82979c1eb02bd80eb0a504215f5f26449e888dc" }
 serde = { version = "1.0.130", features = ["derive"] }
 serde_json = "1.0"
 smol_str = "0.1.23"

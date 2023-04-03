@@ -10,7 +10,6 @@ description = "Dojo tests runner. Used to run tests written in Cairo."
 anyhow.workspace = true
 camino.workspace = true
 cairo-felt.workspace = true
-cairo-vm.workspace = true
 cairo-lang-casm.workspace = true
 clap.workspace = true
 colored.workspace = true
