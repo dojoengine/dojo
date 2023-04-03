@@ -12,7 +12,7 @@ path = "src/bin/language_server.rs"
 anyhow.workspace = true
 dojo-lang = { path = "../dojo-lang" }
 cairo-lang-compiler.workspace = true
-cairo-lang-language-server = { version = "1.0.0-alpha.6", git = "https://github.com/starkware-libs/cairo.git", rev = "9d320e9d8de0b0dcc236dde8736de6c4d3cb1af7" }
+cairo-lang-language-server = { version = "1.0.0-alpha.6", git = "https://github.com/starkware-libs/cairo.git" }
 cairo-lang-starknet.workspace = true
 cairo-lang-semantic.workspace = true
 cairo-lang-plugins.workspace = true

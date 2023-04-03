@@ -63,8 +63,7 @@ impl TestFileRunner for ExpandContractTestRunner {
             }
 
             if !res.remove_original_item {
-                generated_items
-                    .push(format_string(&self.db, item.as_syntax_node().get_text(&self.db)));
+                generated_items.push(item.as_syntax_node().get_text(&self.db));
             }
         }
 

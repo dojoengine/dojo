@@ -18,7 +18,7 @@ async fn main() {
 
     let mut plugins = get_default_plugins();
     plugins.push(Arc::new(DojoPlugin::default()));
-    plugins.push(Arc::new(StarkNetPlugin {}));
+    plugins.push(Arc::new(StarkNetPlugin::default()));
 
     let db = RootDatabase::builder().detect_corelib().with_plugins(plugins).build().unwrap_or_else(
         |error| {

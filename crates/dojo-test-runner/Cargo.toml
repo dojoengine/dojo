@@ -18,11 +18,16 @@ cairo-lang-debug.workspace = true
 cairo-lang-defs.workspace = true
 cairo-lang-diagnostics.workspace = true
 cairo-lang-filesystem.workspace = true
-cairo-lang-runner = "1.0.0-alpha.6"
-cairo-lang-sierra = "1.0.0-alpha.6"
+cairo-lang-lowering.workspace = true
+cairo-lang-runner = { version = "1.0.0-alpha.6", git = "https://github.com/starkware-libs/cairo.git" }
+cairo-lang-sierra = { version = "1.0.0-alpha.6", git = "https://github.com/starkware-libs/cairo.git" }
+cairo-lang-sierra-to-casm = { version = "1.0.0-alpha.6", git = "https://github.com/starkware-libs/cairo.git" }
 cairo-lang-semantic.workspace = true
+cairo-lang-starknet.workspace = true
 cairo-lang-sierra-generator.workspace = true
 cairo-lang-syntax.workspace = true
+cairo-lang-test-runner = { version = "1.0.0-alpha.6", git = "https://github.com/starkware-libs/cairo.git" }
+cairo-lang-utils.workspace = true
 dojo-lang = { path = "../dojo-lang" }
 itertools.workspace = true
 num-bigint.workspace = true
@@ -30,6 +35,7 @@ rayon.workspace = true
 salsa.workspace = true
 scarb.workspace = true
 thiserror.workspace = true
+unescaper = "0.1.1"
 
 [[bin]]
 name = "dojo-test"
