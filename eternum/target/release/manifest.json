@@ -201,7 +201,7 @@
   ],
   "systems": [
     {
-      "name": "BuildLaborSystemSystem",
+      "name": "BuildLaborSystem",
       "inputs": [
         {
           "name": "realm_id",
@@ -220,7 +220,7 @@
       "dependencies": []
     },
     {
-      "name": "SettleSystemSystem",
+      "name": "SettleSystem",
       "inputs": [
         {
           "name": "realm_id",
