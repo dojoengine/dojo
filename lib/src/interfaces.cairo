@@ -2,7 +2,9 @@ use dojo::serde::SpanSerde;
 
 #[abi]
 trait IWorld {
+    fn component(name: felt252) -> starknet::ClassHash;
     fn register_component(class_hash: starknet::ClassHash);
+    fn system(name: felt252) -> starknet::ClassHash;
     fn register_system(class_hash: starknet::ClassHash);
     fn uuid() -> felt252;
     fn execute(name: felt252, execute_calldata: Span<felt252>) -> Span<felt252>;

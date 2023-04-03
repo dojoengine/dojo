@@ -57,7 +57,7 @@ impl Command {
                 command.diagnostics.extend(sc.diagnostics());
             }
             "set" => {
-                let sc = set::CreateCommand::from_ast(db, let_pattern, command_ast);
+                let sc = set::SetCommand::from_ast(db, let_pattern, command_ast);
                 command.rewrite_nodes.extend(sc.rewrite_nodes());
                 command.diagnostics.extend(sc.diagnostics());
             }
