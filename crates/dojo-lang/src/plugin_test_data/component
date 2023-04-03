@@ -6,7 +6,7 @@ ExpandContractTestRunner
 //! > cairo_code
 use serde::Serde;
 
-#[derive(Component)]
+#[component]
 struct Position {
     x: felt252,
     y: felt252
@@ -33,12 +33,10 @@ impl PositionImpl of PositionTrait {
 //! > generated_cairo_code
 use serde::Serde;
 
-
 trait PositionTrait {
     fn is_zero(self: Position) -> bool;
     fn is_equal(self: Position, b: Position) -> bool;
 }
-
 
 impl PositionImpl of PositionTrait {
     fn is_zero(self: Position) -> bool {
@@ -53,75 +51,66 @@ impl PositionImpl of PositionTrait {
     }
 }
 
-            #[derive(Copy, Drop)]
-            struct Position {
-                    x: felt252,
+#[derive(Copy, Drop)]
+struct Position {
+    x: felt252,
     y: felt252
+}
 
+#[abi]
+trait IPosition {
+    fn name() -> felt252;
+    fn len() -> u8;
+    fn serialize(raw: Span<felt252>) -> Position;
+    fn deserialize(value: Position) -> Span<felt252>;
+}
+
+impl PositionSerde of serde::Serde<Position> {
+    fn serialize(ref serialized: Array::<felt252>, input: Position) {
+        serde::Serde::<felt252>::serialize(ref serialized, input.x);
+        serde::Serde::<felt252>::serialize(ref serialized, input.y);
+    }
+    fn deserialize(ref serialized: Span::<felt252>) -> Option::<Position> {
+        Option::Some(
+            Position {
+                x: serde::Serde::<felt252>::deserialize(ref serialized)?,
+                y: serde::Serde::<felt252>::deserialize(ref serialized)?,
             }
+        )
+    }
+}
 
+#[contract]
+mod PositionComponent {
+    use array::ArrayTrait;
+    use option::OptionTrait;
+    use dojo::serde::SpanSerde;
+    use super::Position;
 
-            #[abi]
-            trait IPosition {
-                fn name() -> felt252;
-                fn len() -> u8;
-                fn serialize(raw: Span<felt252>) -> Position;
-                fn deserialize(value: Position) -> Span<felt252>;
-            }
+    #[view]
+    fn name() -> felt252 {
+        'Position'
+    }
 
+    #[view]
+    fn len() -> usize {
+        2_usize
+    }
 
-            
-            impl PositionSerde of serde::Serde::<Position> {
-                fn serialize(ref serialized: Array::<felt252>, input: Position) {
-                    serde::Serde::<felt252>::serialize(ref serialized, input.x);serde::Serde::<felt252>::serialize(ref serialized, input.y);
-                }
-                fn deserialize(ref serialized: Span::<felt252>) -> Option::<Position> {
-                    Option::Some(
-                        Position {
-                            x: serde::Serde::<felt252>::deserialize(ref serialized)?,y: serde::Serde::<felt252>::deserialize(ref serialized)?,
-                        }
-                    )
-                }
-            }
+    // Serialize an entity.
+    #[view]
+    fn serialize(mut raw: Span<felt252>) -> Position {
+        serde::Serde::<Position>::deserialize(ref raw).unwrap()
+    }
 
-        
-
-            #[contract]
-            mod PositionComponent {
-                use array::ArrayTrait;
-                use option::OptionTrait;
-                use dojo::serde::SpanSerde;
-                use super::Position;
-                
-            #[view]
-            fn name() -> felt252 {
-                'Position'
-            }
-
-            #[view]
-            fn len() -> usize {
-                2_usize
-            }
-
-            // Serialize an entity.
-            #[view]
-            fn serialize(mut raw: Span<felt252>) -> Position {
-                serde::Serde::<Position>::deserialize(ref raw).unwrap()
-            }
-
-            // Get the state of an entity.
-            #[view]
-            #[raw_output]
-            fn deserialize(value: Position) -> Span<felt252> {
-                let mut arr = ArrayTrait::new();
-                serde::Serde::<Position>::serialize(ref arr, value);
-                arr.span()
-            }
-        
-            }
+    // Get the state of an entity.
+    #[view]
+    #[raw_output]
+    fn deserialize(value: Position) -> Span<felt252> {
+        let mut arr = ArrayTrait::new();
+        serde::Serde::<Position>::serialize(ref arr, value);
+        arr.span()
+    }
+}
 
 //! > expected_diagnostics
-error: Plugin diagnostic: Unsupported trait for derive.
- --> lib.cairo:3:10
-#[derive(Component)]
-         ^*******^

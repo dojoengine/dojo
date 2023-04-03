@@ -32,11 +32,12 @@ serde_json.workspace = true
 smol_str.workspace = true
 thiserror = "1.0.32"
 tracing = "0.1.37"
+salsa.workspace = true
 sanitizer = "0.1.6"
 
 [dev-dependencies]
 env_logger.workspace = true
-cairo-lang-formatter = "1.0.0-alpha.6"
+cairo-lang-formatter = { version = "1.0.0-alpha.6", git = "https://github.com/starkware-libs/cairo.git" }
 cairo-lang-semantic = { version = "1.0.0-alpha.6", git = "https://github.com/starkware-libs/cairo.git", features = [
     "testing",
 ] }

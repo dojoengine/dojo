@@ -11,7 +11,7 @@ fn test_manifest_generation() {
     let _crate_id = setup_test_crate(
         db,
         "
-            #[derive(Component)]
+            #[component]
             struct Position {
                 x: usize,
                 y: usize,

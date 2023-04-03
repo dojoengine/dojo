@@ -1,4 +1,4 @@
-#[derive(Component)]
+#[component]
 struct Position {
     x: felt252,
     y: felt252

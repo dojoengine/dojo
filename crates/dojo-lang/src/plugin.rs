@@ -90,21 +90,8 @@ impl MacroPlugin for DojoPlugin {
             ast::Item::Module(module_ast) => self.handle_mod(db, module_ast),
             ast::Item::Struct(struct_ast) => {
                 for attr in struct_ast.attributes(db).elements(db) {
-                    if attr.attr(db).text(db) == "derive" {
-                        if let ast::OptionAttributeArgs::AttributeArgs(args) = attr.args(db) {
-                            for arg in args.arg_list(db).elements(db) {
-                                if let ast::Expr::Path(expr) = arg {
-                                    if let [ast::PathSegment::Simple(segment)] =
-                                        &expr.elements(db)[..]
-                                    {
-                                        let derived = segment.ident(db).text(db);
-                                        if matches!(derived.as_str(), "Component") {
-                                            return handle_component_struct(db, struct_ast);
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                    if attr.attr(db).text(db) == "component" {
+                        return handle_component_struct(db, struct_ast);
                     }
                 }
 
