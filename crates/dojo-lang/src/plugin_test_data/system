@@ -5,7 +5,6 @@ ExpandContractTestRunner
 
 //! > cairo_code
 use array::ArrayTrait;
-use serde::Serde;
 
 #[component]
 struct Position {
@@ -107,9 +106,7 @@ mod Move {
 //! > generated_cairo_code
 use array::ArrayTrait;
 
-use serde::Serde;
-
-#[derive(Copy, Drop)]
+#[derive(Copy, Drop, Serde)]
 struct Position {
     x: felt252,
     y: felt252,
@@ -121,21 +118,6 @@ trait IPosition {
     fn len() -> u8;
     fn serialize(raw: Span<felt252>) -> Position;
     fn deserialize(value: Position) -> Span<felt252>;
-}
-
-impl PositionSerde of serde::Serde<Position> {
-    fn serialize(ref serialized: Array::<felt252>, input: Position) {
-        serde::Serde::<felt252>::serialize(ref serialized, input.x);
-        serde::Serde::<felt252>::serialize(ref serialized, input.y);
-    }
-    fn deserialize(ref serialized: Span::<felt252>) -> Option::<Position> {
-        Option::Some(
-            Position {
-                x: serde::Serde::<felt252>::deserialize(ref serialized)?,
-                y: serde::Serde::<felt252>::deserialize(ref serialized)?,
-            }
-        )
-    }
 }
 
 #[contract]
@@ -171,7 +153,7 @@ mod PositionComponent {
     }
 }
 
-#[derive(Copy, Drop)]
+#[derive(Copy, Drop, Serde)]
 struct Player {
     name: felt252, 
 }
@@ -182,15 +164,6 @@ trait IPlayer {
     fn len() -> u8;
     fn serialize(raw: Span<felt252>) -> Player;
     fn deserialize(value: Player) -> Span<felt252>;
-}
-
-impl PlayerSerde of serde::Serde<Player> {
-    fn serialize(ref serialized: Array::<felt252>, input: Player) {
-        serde::Serde::<felt252>::serialize(ref serialized, input.name);
-    }
-    fn deserialize(ref serialized: Span::<felt252>) -> Option::<Player> {
-        Option::Some(Player { name: serde::Serde::<felt252>::deserialize(ref serialized)?,  })
-    }
 }
 
 #[contract]
@@ -475,7 +448,7 @@ mod MoveSystem {
 
 //! > expected_diagnostics
 error: Plugin diagnostic: Invalid arguments. Expected "(storage_key, (components,))"
- --> lib.cairo:46:22
+ --> lib.cairo:45:22
         commands::set((
                      ^^
 
