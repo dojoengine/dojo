@@ -12,11 +12,18 @@ use cairo_lang_semantic::SemanticDiagnostic;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal};
+use smol_str::SmolStr;
 
 use crate::component::handle_component_struct;
 use crate::system::System;
 
 const SYSTEM_ATTR: &str = "system";
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct SystemAuxData {
+    pub name: SmolStr,
+    pub dependencies: Vec<SmolStr>,
+}
 
 /// Dojo related auxiliary data of the Dojo plugin.
 #[derive(Debug, PartialEq, Eq)]
@@ -26,8 +33,8 @@ pub struct DojoAuxData {
 
     /// A list of components that were processed by the plugin.
     pub components: Vec<smol_str::SmolStr>,
-    /// A list of systems that were processed by the plugin.
-    pub systems: Vec<smol_str::SmolStr>,
+    /// A list of systems that were processed by the plugin and their component dependencies.
+    pub systems: Vec<SystemAuxData>,
 }
 impl GeneratedFileAuxData for DojoAuxData {
     fn as_any(&self) -> &dyn std::any::Any {

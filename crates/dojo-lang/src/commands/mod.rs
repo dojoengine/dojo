@@ -35,6 +35,7 @@ impl CommandData {
 pub struct Command {
     pub rewrite_nodes: Vec<RewriteNode>,
     pub diagnostics: Vec<PluginDiagnostic>,
+    pub component_deps: Vec<SmolStr>,
 }
 
 impl Command {
@@ -43,7 +44,8 @@ impl Command {
         let_pattern: Option<ast::Pattern>,
         command_ast: ast::ExprFunctionCall,
     ) -> Self {
-        let mut command = Command { rewrite_nodes: vec![], diagnostics: vec![] };
+        let mut command =
+            Command { rewrite_nodes: vec![], diagnostics: vec![], component_deps: vec![] };
 
         match command_name(db, command_ast.clone()).as_str() {
             "uuid" => {
@@ -57,9 +59,10 @@ impl Command {
                 command.diagnostics.extend(sc.diagnostics());
             }
             "set" => {
-                let sc = set::CreateCommand::from_ast(db, let_pattern, command_ast);
+                let sc = set::SetCommand::from_ast(db, let_pattern, command_ast);
                 command.rewrite_nodes.extend(sc.rewrite_nodes());
                 command.diagnostics.extend(sc.diagnostics());
+                command.component_deps.extend(sc.components);
             }
             "entities" => {
                 let sc = entities::EntitiesCommand::from_ast(db, let_pattern, command_ast);

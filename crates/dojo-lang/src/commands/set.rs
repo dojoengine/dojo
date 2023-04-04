@@ -8,36 +8,28 @@ use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use super::{CommandData, CommandTrait};
 
 #[derive(Clone)]
-pub struct CreateCommand {
+pub struct SetCommand {
     data: CommandData,
+    pub components: Vec<smol_str::SmolStr>,
 }
 
-impl CreateCommand {
-    fn handle_struct(
-        &mut self,
-        db: &dyn SyntaxGroup,
-        var_name: ast::Pattern,
-        storage_key: ast::Arg,
-        expr: ast::Expr,
-    ) {
+impl SetCommand {
+    fn handle_struct(&mut self, db: &dyn SyntaxGroup, storage_key: ast::Arg, expr: ast::Expr) {
         if let ast::Expr::StructCtorCall(ctor) = expr {
             if let Some(ast::PathSegment::Simple(segment)) = ctor.path(db).elements(db).last() {
                 let component = segment.ident(db).text(db);
 
+                self.components.push(component.clone());
                 self.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
-                    "
-                    let mut __$var_name$_calldata = ArrayTrait::new();
-                    serde::Serde::<$component$>::serialize(ref __$var_name$_calldata, $ctor$);
+                    "               
                     IWorldDispatcher { contract_address: world_address }.set('$component$', \
-                     $storage_key$, 0_u8, __$var_name$_calldata.span());
+                     $storage_key$, 0_u8, I$component$LibraryDispatcher { class_hash: \
+                     IWorldDispatcher { contract_address: world_address \
+                     }.component('$component$') }.deserialize($ctor$));
                     ",
                     HashMap::from([
                         ("component".to_string(), RewriteNode::Text(component.to_string())),
                         ("ctor".to_string(), RewriteNode::new_trimmed(ctor.as_syntax_node())),
-                        (
-                            "var_name".to_string(),
-                            RewriteNode::new_trimmed(var_name.as_syntax_node()),
-                        ),
                         (
                             "storage_key".to_string(),
                             RewriteNode::new_trimmed(storage_key.as_syntax_node()),
@@ -49,13 +41,13 @@ impl CreateCommand {
     }
 }
 
-impl CommandTrait for CreateCommand {
+impl CommandTrait for SetCommand {
     fn from_ast(
         db: &dyn SyntaxGroup,
-        let_pattern: Option<ast::Pattern>,
+        _let_pattern: Option<ast::Pattern>,
         command_ast: ast::ExprFunctionCall,
     ) -> Self {
-        let mut command = CreateCommand { data: CommandData::new() };
+        let mut command = SetCommand { data: CommandData::new(), components: vec![] };
 
         let elements = command_ast.arguments(db).args(db).elements(db);
 
@@ -67,27 +59,16 @@ impl CommandTrait for CreateCommand {
             return command;
         }
 
-        if let_pattern.is_none() {
-            command.data.diagnostics.push(PluginDiagnostic {
-                message: "commands::set(...) requries assignment to a variable. i.e. let foo = \
-                          commands::set(...)"
-                    .to_string(),
-                stable_ptr: command_ast.arguments(db).as_syntax_node().stable_ptr(),
-            });
-            return command;
-        }
-
-        let var_name = let_pattern.unwrap();
         let storage_key = elements.first().unwrap().clone();
         let bundle = elements.last().unwrap();
         if let ast::ArgClause::Unnamed(clause) = bundle.arg_clause(db) {
             match clause.value(db) {
                 ast::Expr::Parenthesized(bundle) => {
-                    command.handle_struct(db, var_name, storage_key, bundle.expr(db));
+                    command.handle_struct(db, storage_key, bundle.expr(db));
                 }
                 ast::Expr::Tuple(tuple) => {
                     for expr in tuple.expressions(db).elements(db) {
-                        command.handle_struct(db, var_name.clone(), storage_key.clone(), expr);
+                        command.handle_struct(db, storage_key.clone(), expr);
                     }
                 }
                 _ => {

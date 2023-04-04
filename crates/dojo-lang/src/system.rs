@@ -10,16 +10,17 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 
 use crate::commands::Command;
-use crate::plugin::DojoAuxData;
+use crate::plugin::{DojoAuxData, SystemAuxData};
 
 pub struct System {
     diagnostics: Vec<PluginDiagnostic>,
+    dependencies: Vec<smol_str::SmolStr>,
 }
 
 impl System {
     pub fn from_module(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult {
         let name = module_ast.name(db).text(db);
-        let mut system = System { diagnostics: vec![] };
+        let mut system = System { diagnostics: vec![], dependencies: vec![] };
 
         if let MaybeModuleBody::Some(body) = module_ast.body(db) {
             let body_nodes = body
@@ -76,7 +77,10 @@ impl System {
                     aux_data: DynGeneratedFileAuxData::new(DynPluginAuxData::new(DojoAuxData {
                         patches: builder.patches,
                         components: vec![],
-                        systems: vec![format!("{}System", name).into()],
+                        systems: vec![SystemAuxData {
+                            name: format!("{name}System").into(),
+                            dependencies: system.dependencies.clone(),
+                        }],
                     })),
                 }),
                 diagnostics: system.diagnostics,
@@ -164,6 +168,7 @@ impl System {
                 if segment_genric.ident(db).text(db).as_str() == "commands" {
                     let command = Command::from_ast(db, var_name, expr_fn);
                     self.diagnostics.extend(command.diagnostics);
+                    self.dependencies.extend(command.component_deps);
                     return Some(command.rewrite_nodes);
                 }
             }
@@ -171,6 +176,7 @@ impl System {
                 if segment_simple.ident(db).text(db).as_str() == "commands" {
                     let command = Command::from_ast(db, var_name, expr_fn);
                     self.diagnostics.extend(command.diagnostics);
+                    self.dependencies.extend(command.component_deps);
                     return Some(command.rewrite_nodes);
                 }
             }
