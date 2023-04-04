@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::iter::zip;
 use std::ops::DerefMut;
 
@@ -64,7 +65,7 @@ impl Compiler for DojoCompiler {
         };
 
         // (contract name, class hash)
-        let mut compiled_classes: Vec<(SmolStr, FieldElement)> = vec![];
+        let mut compiled_classes: HashMap<SmolStr, FieldElement> = HashMap::new();
 
         for (decl, class) in zip(contracts, classes) {
             let target_name = &unit.target().name;
@@ -76,7 +77,7 @@ impl Compiler for DojoCompiler {
                 .with_context(|| format!("failed to serialize contract: {contract_name}"))?;
 
             let class_hash = compute_class_hash_of_contract_class(&contract_name, class)?;
-            compiled_classes.push((contract_name, class_hash));
+            compiled_classes.insert(contract_name, class_hash);
         }
 
         let mut file = target_dir.open_rw("manifest.json", "output file", ws.config())?;

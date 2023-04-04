@@ -1,4 +1,6 @@
-use std::{fs, iter, path::Path};
+use std::collections::HashMap;
+use std::path::Path;
+use std::{fs, iter};
 
 use ::serde::{Deserialize, Serialize};
 use anyhow::{anyhow, Context, Result};
@@ -9,17 +11,13 @@ use cairo_lang_semantic::plugin::DynPluginAuxData;
 use dojo_project::WorldConfig;
 use serde_with::serde_as;
 use smol_str::SmolStr;
-use starknet::{
-    core::{
-        serde::unsigned_field_element::{UfeHex, UfeHexOption},
-        types::FieldElement,
-        utils::{cairo_short_string_to_felt, get_selector_from_name, get_storage_var_address},
-    },
-    providers::jsonrpc::{
-        models::{BlockId, BlockTag, FunctionCall},
-        HttpTransport, JsonRpcClient,
-    },
+use starknet::core::serde::unsigned_field_element::{UfeHex, UfeHexOption};
+use starknet::core::types::FieldElement;
+use starknet::core::utils::{
+    cairo_short_string_to_felt, get_selector_from_name, get_storage_var_address,
 };
+use starknet::providers::jsonrpc::models::{BlockId, BlockTag, FunctionCall};
+use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 use thiserror::Error;
 use url::Url;
 
@@ -108,28 +106,27 @@ impl Manifest {
     pub fn new(
         db: &dyn SemanticGroup,
         crate_ids: &[CrateId],
-        compiled_classes: Vec<(SmolStr, FieldElement)>,
+        compiled_classes: HashMap<SmolStr, FieldElement>,
     ) -> Self {
         let mut manifest = Manifest::default();
 
-        let world = get_compiled_class_hash(&compiled_classes, "World").unwrap_or_else(|| {
+        let world = compiled_classes.get("World").unwrap_or_else(|| {
             panic!("World contract not found. Did you include `dojo_core` as a dependency?");
         });
-        let store = get_compiled_class_hash(&compiled_classes, "Store").unwrap_or_else(|| {
+        let store = compiled_classes.get("Store").unwrap_or_else(|| {
             panic!("Store contract not found. Did you include `dojo_core` as a dependency?");
         });
-        let indexer = get_compiled_class_hash(&compiled_classes, "Indexer").unwrap_or_else(|| {
+        let indexer = compiled_classes.get("Indexer").unwrap_or_else(|| {
             panic!("Indexer contract not found. Did you include `dojo_core` as a dependency?");
         });
-        let executor =
-            get_compiled_class_hash(&compiled_classes, "Executor").unwrap_or_else(|| {
-                panic!("Executor contract not found. Did you include `dojo_core` as a dependency?");
-            });
+        let executor = compiled_classes.get("Executor").unwrap_or_else(|| {
+            panic!("Executor contract not found. Did you include `dojo_core` as a dependency?");
+        });
 
-        manifest.world = Some(world);
-        manifest.store = Some(store);
-        manifest.indexer = Some(indexer);
-        manifest.executor = Some(executor);
+        manifest.world = Some(world.clone());
+        manifest.store = Some(store.clone());
+        manifest.indexer = Some(indexer.clone());
+        manifest.executor = Some(executor.clone());
 
         for crate_id in crate_ids {
             let modules = db.crate_modules(*crate_id);
@@ -265,7 +262,7 @@ impl Manifest {
         db: &dyn SemanticGroup,
         aux_data: &DojoAuxData,
         module_id: ModuleId,
-        compiled_classes: &[(SmolStr, FieldElement)],
+        compiled_classes: &HashMap<SmolStr, FieldElement>,
     ) {
         for name in &aux_data.components {
             if let Ok(Some(ModuleItemId::Struct(struct_id))) =
@@ -281,13 +278,18 @@ impl Manifest {
                     })
                     .collect();
 
-                // It needs the `Component` suffix because we are searching from the compiled contracts
-                let class_hash =
-                    get_compiled_class_hash(compiled_classes, format!("{name}Component"))
-                        .with_context(|| format!("Contract {name} not found in target."))
-                        .unwrap();
+                // It needs the `Component` suffix because we are
+                // searching from the compiled contracts.
+                let class_hash = compiled_classes
+                    .get(format!("{name}Component").as_str())
+                    .with_context(|| format!("Contract {name} not found in target."))
+                    .unwrap();
 
-                self.components.push(Component { name: name.to_string(), members, class_hash });
+                self.components.push(Component {
+                    members,
+                    name: name.to_string(),
+                    class_hash: class_hash.clone(),
+                });
             }
         }
     }
@@ -297,7 +299,7 @@ impl Manifest {
         db: &dyn SemanticGroup,
         aux_data: &DojoAuxData,
         module_id: ModuleId,
-        compiled_classes: &[(SmolStr, FieldElement)],
+        compiled_classes: &HashMap<SmolStr, FieldElement>,
     ) -> Result<(), ManifestError> {
         for SystemAuxData { name, dependencies } in &aux_data.systems {
             if let Ok(Some(ModuleItemId::Submodule(submodule_id))) =
@@ -331,7 +333,8 @@ impl Manifest {
                         vec![Output { ty: signature.return_type.format(db) }]
                     };
 
-                    let class_hash = get_compiled_class_hash(compiled_classes, name.as_str())
+                    let class_hash = compiled_classes
+                        .get(name.as_str())
                         .with_context(|| format!("Contract {name} not found in target."))
                         .unwrap();
 
@@ -339,7 +342,7 @@ impl Manifest {
                         name: name.clone(),
                         inputs,
                         outputs,
-                        class_hash,
+                        class_hash: class_hash.clone(),
                         dependencies: dependencies
                             .iter()
                             .map(|s| s.to_string())
@@ -353,11 +356,4 @@ impl Manifest {
 
         Ok(())
     }
-}
-
-fn get_compiled_class_hash(
-    contracts: &[(SmolStr, FieldElement)],
-    name: impl AsRef<str>,
-) -> Option<FieldElement> {
-    contracts.iter().find_map(|c| if c.0 == name.as_ref() { Some(c.1) } else { None })
 }
