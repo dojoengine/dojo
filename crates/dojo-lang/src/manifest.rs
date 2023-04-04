@@ -233,7 +233,8 @@ impl Manifest {
                     &FunctionCall {
                         contract_address: world_address,
                         calldata: vec![cairo_short_string_to_felt(
-                            // because the name returns by the `name` method of a system contract is without the 'System' suffix
+                            // because the name returns by the `name` method of
+                            // a system contract is without the 'System' suffix
                             system.name.strip_suffix("System").unwrap_or(&system.name),
                         )?],
                         entry_point_selector: get_selector_from_name("system")?,

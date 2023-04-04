@@ -127,7 +127,8 @@ impl World {
         for system in local_manifest.systems {
             systems.push(Class {
                 world: world_config.address.unwrap(),
-                // because the name returns by the `name` method of a system contract is without the 'System' suffix
+                // because the name returns by the `name` method of a
+                // system contract is without the 'System' suffix
                 name: system.name.strip_suffix("System").unwrap_or(&system.name).to_string(),
                 local: system.class_hash,
                 remote: remote_manifest
@@ -163,7 +164,7 @@ impl World {
         Ok(World {
             world: Contract {
                 name: "World".into(),
-                address: world_config.address.clone(),
+                address: world_config.address,
                 local: local_manifest.world.unwrap(),
                 remote: remote_manifest.world,
             },
