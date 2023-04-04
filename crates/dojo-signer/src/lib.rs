@@ -25,7 +25,12 @@ impl EnvLocalWallet {
                 Some(key) => key,
                 None => {
                     let private_key_str = env::var("STARK_PRIVATE_KEY")?;
-                    let key = SigningKey::from_str(&private_key_str)?;
+                    let private_key = FieldElement::from_hex_be(
+                        &private_key_str,
+                    )
+                    .unwrap();
+            
+                    let key = SigningKey::from_secret_scalar(private_key);
                     *private_key_guard = Some(key.clone());
                     key
                 }
