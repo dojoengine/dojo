@@ -1,10 +1,27 @@
+use std::{fs, iter, path::Path};
+
 use ::serde::{Deserialize, Serialize};
+use anyhow::{anyhow, Context, Result};
 use cairo_lang_defs::ids::{ModuleId, ModuleItemId};
 use cairo_lang_filesystem::ids::CrateId;
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::plugin::DynPluginAuxData;
+use dojo_project::WorldConfig;
+use serde_with::serde_as;
 use smol_str::SmolStr;
+use starknet::{
+    core::{
+        serde::unsigned_field_element::{UfeHex, UfeHexOption},
+        types::FieldElement,
+        utils::{cairo_short_string_to_felt, get_selector_from_name, get_storage_var_address},
+    },
+    providers::jsonrpc::{
+        models::{BlockId, BlockTag, FunctionCall},
+        HttpTransport, JsonRpcClient,
+    },
+};
 use thiserror::Error;
+use url::Url;
 
 use crate::plugin::{DojoAuxData, SystemAuxData};
 
@@ -19,7 +36,7 @@ pub enum ManifestError {
 }
 
 /// Component member.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct Member {
     pub name: String,
     #[serde(rename = "type")]
@@ -27,14 +44,17 @@ pub struct Member {
 }
 
 /// Represents a declaration of a component.
-#[derive(Debug, Serialize, Deserialize)]
+#[serde_as]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct Component {
     pub name: String,
     pub members: Vec<Member>,
+    #[serde_as(as = "UfeHex")]
+    pub class_hash: FieldElement,
 }
 
 /// System input ABI.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct Input {
     pub name: String,
     #[serde(rename = "type")]
@@ -42,31 +62,75 @@ pub struct Input {
 }
 
 /// System Output ABI.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct Output {
     #[serde(rename = "type")]
     pub ty: String,
 }
 
 /// Represents a declaration of a system.
-#[derive(Debug, Serialize, Deserialize)]
+#[serde_as]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct System {
     pub name: SmolStr,
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
+    #[serde_as(as = "UfeHex")]
+    pub class_hash: FieldElement,
     pub dependencies: Vec<String>,
 }
 
-/// Represents a declaration of a system.
-#[derive(Debug, Serialize, Deserialize)]
+#[serde_as]
+#[derive(Default, Debug, Serialize, Deserialize)]
+pub struct Contract {
+    pub name: SmolStr,
+    #[serde_as(as = "UfeHex")]
+    pub class_hash: FieldElement,
+}
+
+#[serde_as]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct Manifest {
+    #[serde_as(as = "UfeHexOption")]
+    pub world: Option<FieldElement>,
+    #[serde_as(as = "UfeHexOption")]
+    pub store: Option<FieldElement>,
+    #[serde_as(as = "UfeHexOption")]
+    pub indexer: Option<FieldElement>,
+    #[serde_as(as = "UfeHexOption")]
+    pub executor: Option<FieldElement>,
     pub components: Vec<Component>,
     pub systems: Vec<System>,
+    pub contracts: Vec<Contract>,
 }
 
 impl Manifest {
-    pub fn new(db: &dyn SemanticGroup, crate_ids: &[CrateId]) -> Self {
-        let mut manifest = Manifest { components: vec![], systems: vec![] };
+    pub fn new(
+        db: &dyn SemanticGroup,
+        crate_ids: &[CrateId],
+        compiled_classes: Vec<(SmolStr, FieldElement)>,
+    ) -> Self {
+        let mut manifest = Manifest::default();
+
+        let world = get_compiled_class_hash(&compiled_classes, "World").unwrap_or_else(|| {
+            panic!("World contract not found. Did you include `dojo` as a dependency?");
+        });
+        let store = get_compiled_class_hash(&compiled_classes, "Store").unwrap_or_else(|| {
+            panic!("Store contract not found. Did you include `dojo` as a dependency?");
+        });
+        let indexer = get_compiled_class_hash(&compiled_classes, "Indexer").unwrap_or_else(|| {
+            panic!("Indexer contract not found. Did you include `dojo` as a dependency?");
+        });
+        let executor =
+            get_compiled_class_hash(&compiled_classes, "Executor").unwrap_or_else(|| {
+                panic!("Executor contract not found. Did you include `dojo` as a dependency?");
+            });
+
+        manifest.world = Some(world);
+        manifest.store = Some(store);
+        manifest.indexer = Some(indexer);
+        manifest.executor = Some(executor);
+
         for crate_id in crate_ids {
             let modules = db.crate_modules(*crate_id);
             for module_id in modules.iter() {
@@ -80,13 +144,117 @@ impl Manifest {
                     let Some(aux_data) = mapper.0.as_any(
                     ).downcast_ref::<DojoAuxData>() else { continue; };
 
-                    manifest.find_components(db, aux_data, *module_id);
-                    manifest.find_systems(db, aux_data, *module_id).unwrap();
+                    manifest.find_components(db, aux_data, *module_id, &compiled_classes);
+                    manifest.find_systems(db, aux_data, *module_id, &compiled_classes).unwrap();
                 }
             }
         }
 
         manifest
+    }
+
+    pub fn load_from_path<P>(manifest_path: P) -> Result<Self>
+    where
+        P: AsRef<Path>,
+    {
+        serde_json::from_reader(fs::File::open(manifest_path)?)
+            .map_err(|e| anyhow!("Problem in loading manifest from path: {e}"))
+    }
+
+    pub async fn from_remote(
+        rpc_url: Url,
+        local_manifest: &Self,
+        world_config: &WorldConfig,
+    ) -> Result<Self> {
+        let mut manifest = Manifest::default();
+
+        let Some(world_address) = world_config.address else {
+            return Ok(manifest);
+        };
+
+        let starknet = JsonRpcClient::new(HttpTransport::new(rpc_url));
+        let world_class_hash =
+            starknet.get_class_hash_at(&BlockId::Tag(BlockTag::Latest), world_address).await.ok();
+
+        if let None = world_class_hash {
+            return Ok(manifest);
+        }
+
+        let store_class_hash = starknet
+            .get_storage_at(
+                world_address,
+                get_storage_var_address("store", &[])?,
+                &BlockId::Tag(BlockTag::Latest),
+            )
+            .await
+            .ok();
+
+        let indexer_class_hash = starknet
+            .get_storage_at(
+                world_address,
+                get_storage_var_address("indexer", &[])?,
+                &BlockId::Tag(BlockTag::Latest),
+            )
+            .await
+            .ok();
+
+        let executor_address = starknet
+            .get_storage_at(
+                world_address,
+                get_storage_var_address("executor", &[])?,
+                &BlockId::Tag(BlockTag::Latest),
+            )
+            .await?;
+        let executor_class_hash = starknet
+            .get_class_hash_at(&BlockId::Tag(BlockTag::Latest), executor_address)
+            .await
+            .ok();
+
+        manifest.world = world_class_hash;
+        manifest.store = store_class_hash;
+        manifest.indexer = indexer_class_hash;
+        manifest.executor = executor_class_hash;
+
+        // Fetch the components/systems class hash if they are registered in the remote World.
+        for (component, system) in iter::zip(&local_manifest.components, &local_manifest.systems) {
+            let comp_class_hash = starknet
+                .call(
+                    &FunctionCall {
+                        contract_address: world_address,
+                        calldata: vec![cairo_short_string_to_felt(&component.name)?],
+                        entry_point_selector: get_selector_from_name("component")?,
+                    },
+                    &BlockId::Tag(BlockTag::Latest),
+                )
+                .await?[0];
+
+            let syst_class_hash = starknet
+                .call(
+                    &FunctionCall {
+                        contract_address: world_address,
+                        calldata: vec![cairo_short_string_to_felt(
+                            // because the name returns by the `name` method of a system contract is without the 'System' suffix
+                            &system.name.strip_suffix("System").unwrap_or(&system.name),
+                        )?],
+                        entry_point_selector: get_selector_from_name("system")?,
+                    },
+                    &BlockId::Tag(BlockTag::Latest),
+                )
+                .await?[0];
+
+            manifest.components.push(Component {
+                name: component.name.clone(),
+                class_hash: comp_class_hash,
+                ..Default::default()
+            });
+            manifest.systems.push(System {
+                name: system.name.clone(),
+                class_hash: syst_class_hash,
+                ..Default::default()
+            });
+        }
+
+        Ok(manifest)
     }
 
     /// Finds the inline modules annotated as components in the given crate_ids and
@@ -96,6 +264,7 @@ impl Manifest {
         db: &dyn SemanticGroup,
         aux_data: &DojoAuxData,
         module_id: ModuleId,
+        compiled_classes: &Vec<(SmolStr, FieldElement)>,
     ) {
         for name in &aux_data.components {
             if let Ok(Some(ModuleItemId::Struct(struct_id))) =
@@ -111,7 +280,13 @@ impl Manifest {
                     })
                     .collect();
 
-                self.components.push(Component { name: name.to_string(), members });
+                // It needs the `Component` suffix because we are searching from the compiled contracts
+                let class_hash =
+                    get_compiled_class_hash(compiled_classes, format!("{name}Component"))
+                        .with_context(|| format!("Contract {name} not found in target."))
+                        .unwrap();
+
+                self.components.push(Component { name: name.to_string(), members, class_hash });
             }
         }
     }
@@ -121,6 +296,7 @@ impl Manifest {
         db: &dyn SemanticGroup,
         aux_data: &DojoAuxData,
         module_id: ModuleId,
+        compiled_classes: &Vec<(SmolStr, FieldElement)>,
     ) -> Result<(), ManifestError> {
         for SystemAuxData { name, dependencies } in &aux_data.systems {
             if let Ok(Some(ModuleItemId::Submodule(submodule_id))) =
@@ -153,10 +329,16 @@ impl Manifest {
                     } else {
                         vec![Output { ty: signature.return_type.format(db) }]
                     };
+
+                    let class_hash = get_compiled_class_hash(compiled_classes, name.as_str())
+                        .with_context(|| format!("Contract {name} not found in target."))
+                        .unwrap();
+
                     self.systems.push(System {
                         name: name.clone(),
                         inputs,
                         outputs,
+                        class_hash,
                         dependencies: dependencies
                             .iter()
                             .map(|s| s.to_string())
@@ -170,4 +352,11 @@ impl Manifest {
 
         Ok(())
     }
+}
+
+fn get_compiled_class_hash(
+    contracts: &Vec<(SmolStr, FieldElement)>,
+    name: impl AsRef<str>,
+) -> Option<FieldElement> {
+    contracts.iter().find_map(|c| if c.0 == name.as_ref() { Some(c.1) } else { None })
 }

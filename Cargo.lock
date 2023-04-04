@@ -3043,6 +3043,7 @@ dependencies = [
  "cairo-lang-test-utils",
  "cairo-lang-utils",
  "camino",
+ "dojo-project",
  "env_logger",
  "indoc 1.0.9",
  "itertools 0.10.5",
@@ -3051,12 +3052,15 @@ dependencies = [
  "scarb",
  "serde",
  "serde_json",
+ "serde_with",
  "smol_str",
+ "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
  "test-case",
  "test-case-macros",
  "test-log",
  "thiserror",
  "tracing",
+ "url",
 ]
 
 [[package]]
