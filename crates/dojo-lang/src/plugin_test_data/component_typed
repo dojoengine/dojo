@@ -56,7 +56,7 @@ impl FighterSerde of serde::Serde::<Fighter> {
 mod FighterComponent {
     use array::ArrayTrait;
     use option::OptionTrait;
-    use dojo::serde::SpanSerde;
+    use dojo_core::serde::SpanSerde;
     use super::Fighter;
 
     #[view]

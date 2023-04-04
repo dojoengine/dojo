@@ -11,8 +11,8 @@ impl U256TryIntoFelt252 of TryInto::<u256, felt252> {
 
 #[contract]
 mod ERC20 {
-    use dojo::world;
-    use dojo::storage::key::StorageKey;
+    use dojo_core::world;
+    use dojo_core::storage::key::StorageKey;
     use zeroable::Zeroable;
     use starknet::get_caller_address;
     use starknet::contract_address_const;

@@ -4,12 +4,12 @@ mod Store {
     use array::SpanTrait;
     use traits::Into;
 
-    use dojo::serde::SpanSerde;
-    use dojo::storage::key::StorageKey;
-    use dojo::storage::key::StorageKeyTrait;
+    use dojo_core::serde::SpanSerde;
+    use dojo_core::storage::key::StorageKey;
+    use dojo_core::storage::key::StorageKeyTrait;
 
-    use dojo::interfaces::IComponentLibraryDispatcher;
-    use dojo::interfaces::IComponentDispatcherTrait;
+    use dojo_core::interfaces::IComponentLibraryDispatcher;
+    use dojo_core::interfaces::IComponentDispatcherTrait;
 
     #[event]
     fn StoreSetRecord(table_id: felt252, key: Span<felt252>, value: Span<felt252>) {}
