@@ -176,7 +176,7 @@ impl Manifest {
         let world_class_hash =
             starknet.get_class_hash_at(&BlockId::Tag(BlockTag::Latest), world_address).await.ok();
 
-        if let None = world_class_hash {
+        if world_class_hash.is_none() {
             return Ok(manifest);
         }
 
@@ -234,7 +234,7 @@ impl Manifest {
                         contract_address: world_address,
                         calldata: vec![cairo_short_string_to_felt(
                             // because the name returns by the `name` method of a system contract is without the 'System' suffix
-                            &system.name.strip_suffix("System").unwrap_or(&system.name),
+                            system.name.strip_suffix("System").unwrap_or(&system.name),
                         )?],
                         entry_point_selector: get_selector_from_name("system")?,
                     },
@@ -264,7 +264,7 @@ impl Manifest {
         db: &dyn SemanticGroup,
         aux_data: &DojoAuxData,
         module_id: ModuleId,
-        compiled_classes: &Vec<(SmolStr, FieldElement)>,
+        compiled_classes: &[(SmolStr, FieldElement)],
     ) {
         for name in &aux_data.components {
             if let Ok(Some(ModuleItemId::Struct(struct_id))) =
@@ -296,7 +296,7 @@ impl Manifest {
         db: &dyn SemanticGroup,
         aux_data: &DojoAuxData,
         module_id: ModuleId,
-        compiled_classes: &Vec<(SmolStr, FieldElement)>,
+        compiled_classes: &[(SmolStr, FieldElement)],
     ) -> Result<(), ManifestError> {
         for SystemAuxData { name, dependencies } in &aux_data.systems {
             if let Ok(Some(ModuleItemId::Submodule(submodule_id))) =
@@ -355,7 +355,7 @@ impl Manifest {
 }
 
 fn get_compiled_class_hash(
-    contracts: &Vec<(SmolStr, FieldElement)>,
+    contracts: &[(SmolStr, FieldElement)],
     name: impl AsRef<str>,
 ) -> Option<FieldElement> {
     contracts.iter().find_map(|c| if c.0 == name.as_ref() { Some(c.1) } else { None })
