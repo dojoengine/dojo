@@ -1,4 +1,4 @@
-use dojo::serde::SpanSerde;
+use dojo_core::serde::SpanSerde;
 
 #[abi]
 trait IWorld {
@@ -9,12 +9,12 @@ trait IWorld {
     fn uuid() -> felt252;
     fn execute(name: felt252, execute_calldata: Span<felt252>) -> Span<felt252>;
     fn get(
-        component: felt252, key: dojo::storage::key::StorageKey, offset: u8, length: usize
+        component: felt252, key: dojo_core::storage::key::StorageKey, offset: u8, length: usize
     ) -> Span<felt252>;
     fn set(
-        component: felt252, key: dojo::storage::key::StorageKey, offset: u8, value: Span<felt252>
+        component: felt252, key: dojo_core::storage::key::StorageKey, offset: u8, value: Span<felt252>
     );
-    fn entities(component: felt252, partition: felt252) -> Array<dojo::storage::key::StorageKey>;
+    fn entities(component: felt252, partition: felt252) -> Array<dojo_core::storage::key::StorageKey>;
     fn has_role(role: felt252, account: starknet::ContractAddress) -> bool;
     fn grant_role(role: felt252, account: starknet::ContractAddress);
     fn revoke_role(role: felt252, account: starknet::ContractAddress);
@@ -37,14 +37,14 @@ trait IStore {
     fn get(
         table: felt252,
         class_hash: starknet::ClassHash,
-        key: dojo::storage::key::StorageKey,
+        key: dojo_core::storage::key::StorageKey,
         offset: u8,
         length: usize
     ) -> Span<felt252>;
     fn set(
         table: felt252,
         class_hash: starknet::ClassHash,
-        key: dojo::storage::key::StorageKey,
+        key: dojo_core::storage::key::StorageKey,
         offset: u8,
         value: Span<felt252>
     );

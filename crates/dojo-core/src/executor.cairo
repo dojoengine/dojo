@@ -4,7 +4,7 @@ mod Executor {
     use traits::Into;
     use starknet::contract_address::ContractAddressIntoFelt252;
 
-    use dojo::serde::SpanSerde;
+    use dojo_core::serde::SpanSerde;
 
     const EXECUTE_ENTRYPOINT: felt252 =
         0x240060cdb34fcc260f41eac7474ee1d7c80b7e3607daff9ac67c7ea2ebb1c44;

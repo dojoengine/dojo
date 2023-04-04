@@ -142,7 +142,7 @@ impl PositionSerde of serde::Serde::<Position> {
 mod PositionComponent {
     use array::ArrayTrait;
     use option::OptionTrait;
-    use dojo::serde::SpanSerde;
+    use dojo_core::serde::SpanSerde;
     use super::Position;
 
     #[view]
@@ -197,7 +197,7 @@ impl PlayerSerde of serde::Serde::<Player> {
 mod PlayerComponent {
     use array::ArrayTrait;
     use option::OptionTrait;
-    use dojo::serde::SpanSerde;
+    use dojo_core::serde::SpanSerde;
     use super::Player;
 
     #[view]
@@ -228,18 +228,18 @@ mod PlayerComponent {
 
 #[contract]
 mod SpawnSystem {
-    use dojo::world;
-    use dojo::interfaces::IWorldDispatcher;
-    use dojo::interfaces::IWorldDispatcherTrait;
-    use dojo::storage::key::StorageKey;
-    use dojo::storage::key::StorageKeyTrait;
-    use dojo::storage::key::Felt252IntoStorageKey;
-    use dojo::storage::key::TupleSize1IntoStorageKey;
-    use dojo::storage::key::TupleSize2IntoStorageKey;
-    use dojo::storage::key::TupleSize3IntoStorageKey;
-    use dojo::storage::key::TupleSize1IntoPartitionedStorageKey;
-    use dojo::storage::key::TupleSize2IntoPartitionedStorageKey;
-    use dojo::storage::key::ContractAddressIntoStorageKey;
+    use dojo_core::world;
+    use dojo_core::interfaces::IWorldDispatcher;
+    use dojo_core::interfaces::IWorldDispatcherTrait;
+    use dojo_core::storage::key::StorageKey;
+    use dojo_core::storage::key::StorageKeyTrait;
+    use dojo_core::storage::key::Felt252IntoStorageKey;
+    use dojo_core::storage::key::TupleSize1IntoStorageKey;
+    use dojo_core::storage::key::TupleSize2IntoStorageKey;
+    use dojo_core::storage::key::TupleSize3IntoStorageKey;
+    use dojo_core::storage::key::TupleSize1IntoPartitionedStorageKey;
+    use dojo_core::storage::key::TupleSize2IntoPartitionedStorageKey;
+    use dojo_core::storage::key::ContractAddressIntoStorageKey;
 
     #[view]
     fn name() -> felt252 {
@@ -388,18 +388,18 @@ mod SpawnSystem {
 
 #[contract]
 mod MoveSystem {
-    use dojo::world;
-    use dojo::interfaces::IWorldDispatcher;
-    use dojo::interfaces::IWorldDispatcherTrait;
-    use dojo::storage::key::StorageKey;
-    use dojo::storage::key::StorageKeyTrait;
-    use dojo::storage::key::Felt252IntoStorageKey;
-    use dojo::storage::key::TupleSize1IntoStorageKey;
-    use dojo::storage::key::TupleSize2IntoStorageKey;
-    use dojo::storage::key::TupleSize3IntoStorageKey;
-    use dojo::storage::key::TupleSize1IntoPartitionedStorageKey;
-    use dojo::storage::key::TupleSize2IntoPartitionedStorageKey;
-    use dojo::storage::key::ContractAddressIntoStorageKey;
+    use dojo_core::world;
+    use dojo_core::interfaces::IWorldDispatcher;
+    use dojo_core::interfaces::IWorldDispatcherTrait;
+    use dojo_core::storage::key::StorageKey;
+    use dojo_core::storage::key::StorageKeyTrait;
+    use dojo_core::storage::key::Felt252IntoStorageKey;
+    use dojo_core::storage::key::TupleSize1IntoStorageKey;
+    use dojo_core::storage::key::TupleSize2IntoStorageKey;
+    use dojo_core::storage::key::TupleSize3IntoStorageKey;
+    use dojo_core::storage::key::TupleSize1IntoPartitionedStorageKey;
+    use dojo_core::storage::key::TupleSize2IntoPartitionedStorageKey;
+    use dojo_core::storage::key::ContractAddressIntoStorageKey;
 
     #[view]
     fn name() -> felt252 {
@@ -479,12 +479,12 @@ error: Plugin diagnostic: Invalid arguments. Expected "(storage_key, (components
         commands::set((
                      ^^
 
-error: Plugin diagnostic: Unexpected argument type. Expected: "dojo::storage::key::StorageKey", found: "(core::felt252, core::felt252, core::felt252, core::felt252, core::felt252)".
+error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::key::StorageKey", found: "(core::felt252, core::felt252, core::felt252, core::felt252, core::felt252)".
  --> Spawn:51:88
                     IWorldDispatcher { contract_address: world_address }.set('Player', (0, 0, 0, 0, 0), 0_u8, IPlayerLibraryDispatcher { class_hash: IWorldDispatcher { contract_address: world_address }.component('Player') }.deserialize(Player { name: name }));
                                                                                        ^*************^
 
-error: Plugin diagnostic: Unexpected argument type. Expected: "dojo::storage::key::StorageKey", found: "(core::felt252, core::felt252, core::felt252, core::felt252, core::felt252)".
+error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::key::StorageKey", found: "(core::felt252, core::felt252, core::felt252, core::felt252, core::felt252)".
  --> Spawn:53:90
                     IWorldDispatcher { contract_address: world_address }.set('Position', (0, 0, 0, 0, 0), 0_u8, IPositionLibraryDispatcher { class_hash: IWorldDispatcher { contract_address: world_address }.component('Position') }.deserialize(Position { x: 0, y: 0 }));
                                                                                          ^*************^

@@ -84,7 +84,7 @@ impl PositionSerde of serde::Serde::<Position> {
 mod PositionComponent {
     use array::ArrayTrait;
     use option::OptionTrait;
-    use dojo::serde::SpanSerde;
+    use dojo_core::serde::SpanSerde;
     use super::Position;
 
     #[view]
