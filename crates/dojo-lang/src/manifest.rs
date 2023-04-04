@@ -123,10 +123,10 @@ impl Manifest {
             panic!("Executor contract not found. Did you include `dojo_core` as a dependency?");
         });
 
-        manifest.world = Some(world.clone());
-        manifest.store = Some(store.clone());
-        manifest.indexer = Some(indexer.clone());
-        manifest.executor = Some(executor.clone());
+        manifest.world = Some(*world);
+        manifest.store = Some(*store);
+        manifest.indexer = Some(*indexer);
+        manifest.executor = Some(*executor);
 
         for crate_id in crate_ids {
             let modules = db.crate_modules(*crate_id);
@@ -288,7 +288,7 @@ impl Manifest {
                 self.components.push(Component {
                     members,
                     name: name.to_string(),
-                    class_hash: class_hash.clone(),
+                    class_hash: *class_hash,
                 });
             }
         }
@@ -342,7 +342,7 @@ impl Manifest {
                         name: name.clone(),
                         inputs,
                         outputs,
-                        class_hash: class_hash.clone(),
+                        class_hash: *class_hash,
                         dependencies: dependencies
                             .iter()
                             .map(|s| s.to_string())
