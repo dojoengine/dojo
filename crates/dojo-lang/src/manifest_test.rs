@@ -1,4 +1,3 @@
-#![allow(unused)]
 use std::collections::HashMap;
 
 use cairo_lang_filesystem::db::FilesGroup;
