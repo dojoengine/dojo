@@ -113,17 +113,17 @@ impl Manifest {
         let mut manifest = Manifest::default();
 
         let world = get_compiled_class_hash(&compiled_classes, "World").unwrap_or_else(|| {
-            panic!("World contract not found. Did you include `dojo` as a dependency?");
+            panic!("World contract not found. Did you include `dojo_core` as a dependency?");
         });
         let store = get_compiled_class_hash(&compiled_classes, "Store").unwrap_or_else(|| {
-            panic!("Store contract not found. Did you include `dojo` as a dependency?");
+            panic!("Store contract not found. Did you include `dojo_core` as a dependency?");
         });
         let indexer = get_compiled_class_hash(&compiled_classes, "Indexer").unwrap_or_else(|| {
-            panic!("Indexer contract not found. Did you include `dojo` as a dependency?");
+            panic!("Indexer contract not found. Did you include `dojo_core` as a dependency?");
         });
         let executor =
             get_compiled_class_hash(&compiled_classes, "Executor").unwrap_or_else(|| {
-                panic!("Executor contract not found. Did you include `dojo` as a dependency?");
+                panic!("Executor contract not found. Did you include `dojo_core` as a dependency?");
             });
 
         manifest.world = Some(world);
