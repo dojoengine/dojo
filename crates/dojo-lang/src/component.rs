@@ -9,9 +9,7 @@ use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use crate::plugin::DojoAuxData;
 
 pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> PluginResult {
-    let mut body_nodes = vec![];
-
-    body_nodes.push(RewriteNode::interpolate_patched(
+    let body_nodes = vec![RewriteNode::interpolate_patched(
         "
             #[view]
             fn name() -> felt252 {
@@ -49,7 +47,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
                 RewriteNode::Text(struct_ast.members(db).elements(db).len().to_string()),
             ),
         ]),
-    ));
+    )];
 
     let mut serialize = vec![];
     let mut deserialize = vec![];
@@ -119,7 +117,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
             content: builder.code,
             aux_data: DynGeneratedFileAuxData::new(DynPluginAuxData::new(DojoAuxData {
                 patches: builder.patches,
-                components: vec![format!("{}", name).into()],
+                components: vec![format!("{name}").into()],
                 systems: vec![],
             })),
         }),

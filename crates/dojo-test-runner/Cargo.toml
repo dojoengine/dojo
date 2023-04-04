@@ -26,7 +26,6 @@ cairo-lang-semantic.workspace = true
 cairo-lang-starknet.workspace = true
 cairo-lang-sierra-generator.workspace = true
 cairo-lang-syntax.workspace = true
-cairo-lang-test-runner = { version = "1.0.0-alpha.6", git = "https://github.com/starkware-libs/cairo.git" }
 cairo-lang-utils.workspace = true
 dojo-lang = { path = "../dojo-lang" }
 itertools.workspace = true

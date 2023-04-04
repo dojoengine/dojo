@@ -84,12 +84,12 @@ impl Display for Contract {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}:", self.name)?;
         if let Some(address) = self.address {
-            writeln!(f, "   Address: 0x{:x}", address)?;
+            writeln!(f, "   Address: 0x{address:x}")?;
         }
         writeln!(f, "   Local: 0x{:x}", self.local)?;
 
         if let Some(remote) = self.remote {
-            writeln!(f, "   Remote: 0x{:x}", remote)?;
+            writeln!(f, "   Remote: 0x{remote:x}")?;
         }
 
         Ok(())
@@ -140,7 +140,7 @@ impl Display for Class {
         writeln!(f, "   Local: 0x{:x}", self.local)?;
 
         if let Some(remote) = self.remote {
-            writeln!(f, "   Remote: 0x{:x}", remote)?;
+            writeln!(f, "   Remote: 0x{remote:x}")?;
         }
 
         Ok(())
@@ -171,7 +171,7 @@ impl World {
             .build()
             .unwrap();
         let ws = ops::read_workspace(config.manifest_path(), &config).unwrap_or_else(|err| {
-            eprintln!("error: {}", err);
+            eprintln!("error: {err}");
             std::process::exit(1);
         });
         let world_config =
@@ -188,7 +188,7 @@ impl World {
 
         // Read the directory
         let entries = fs::read_dir(source_dir.join("target/release")).unwrap_or_else(|error| {
-            panic!("Problem reading source directory: {:?}", error);
+            panic!("Problem reading source directory: {error:?}");
         });
 
         for entry in entries.flatten() {
@@ -201,7 +201,7 @@ impl World {
             let name = file_name_str.split('_').last().unwrap().to_string();
             let contract_class = serde_json::from_reader(fs::File::open(entry.path()).unwrap())
                 .unwrap_or_else(|error| {
-                    panic!("Problem parsing {} artifact: {:?}", file_name_str, error);
+                    panic!("Problem parsing {file_name_str} artifact: {error:?}");
                 });
 
             let casm_contract = CasmContractClass::from_contract_class(contract_class, true)
@@ -211,7 +211,7 @@ impl World {
 
             let compiled_class: CompiledClass =
                 serde_json::from_str(res.as_str()).unwrap_or_else(|error| {
-                    panic!("Problem parsing {} artifact: {:?}", file_name_str, error);
+                    panic!("Problem parsing {file_name_str} artifact: {error:?}");
                 });
 
             let local = compiled_class
@@ -310,15 +310,15 @@ impl Display for World {
         writeln!(f, "{}", self.indexer)?;
 
         for component in &self.components {
-            writeln!(f, "{}", component)?;
+            writeln!(f, "{component}")?;
         }
 
         for system in &self.systems {
-            writeln!(f, "{}", system)?;
+            writeln!(f, "{system}")?;
         }
 
         for contract in &self.contracts {
-            writeln!(f, "{}", contract)?;
+            writeln!(f, "{contract}")?;
         }
 
         Ok(())

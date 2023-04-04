@@ -30,7 +30,7 @@ pub fn build_test_db() -> anyhow::Result<RootDatabase> {
         .unwrap();
 
     let ws = ops::read_workspace(config.manifest_path(), &config).unwrap_or_else(|err| {
-        eprintln!("error: {}", err);
+        eprintln!("error: {err}");
         std::process::exit(1);
     });
 

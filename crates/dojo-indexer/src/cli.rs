@@ -77,7 +77,7 @@ async fn main() -> anyhow::Result<()> {
                 start_indexer(data_stream, stream_client, &pool, &provider, &processors, world);
             let _res = join!(graphql, indexer);
         }
-        std::result::Result::Err(e) => panic!("Error: {:?}", e),
+        std::result::Result::Err(e) => panic!("Error: {e:?}"),
     }
 
     Ok(())
