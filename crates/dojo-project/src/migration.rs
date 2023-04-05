@@ -23,23 +23,26 @@ trait Deployable: Declarable {
     async fn deploy(&self, account: SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>);
 }
 
+#[derive(Debug, Default)]
 pub struct ContractMigration {
     deployed: bool,
-    declared: bool,
     salt: FieldElement,
     contract: Contract,
 }
 
+#[derive(Debug, Default)]
 pub struct ClassMigration {
     declared: bool,
     class: Class,
 }
 
 // TODO: migration config
+#[derive(Debug, Default)]
 pub struct WorldMigration {
     // rpc: Deployments,
     url: String, // sequencer url for testing purposes atm
     world: ContractMigration,
+    executor: ContractMigration,
     store: ClassMigration,
     indexer: ClassMigration,
     systems: Vec<ClassMigration>,
@@ -48,11 +51,12 @@ pub struct WorldMigration {
 
 // should only be created by calling `World::prepare_for_migration`
 impl WorldMigration {
-    pub async fn deploy(&self) {
-        if !self.world.declared {}
+    pub async fn migrate(&self) {
+        if self.world.deployed {}
     }
 }
 
+#[derive(Debug, Default, Clone)]
 struct Contract {
     name: String,
     address: Option<FieldElement>,
@@ -76,6 +80,7 @@ impl Display for Contract {
     }
 }
 
+#[derive(Debug, Default, Clone)]
 struct Class {
     world: FieldElement,
     name: String,
@@ -211,7 +216,93 @@ impl World {
 
     /// evaluate which contracts/classes need to be (re)declared/deployed
     pub fn prepare_for_migration(&self) -> WorldMigration {
-        todo!("World prepare for migration")
+        let world_migration = if self.world.address.is_none() {
+            ContractMigration { contract: self.world.clone(), ..Default::default() }
+        } else {
+            match self.world.remote {
+                Some(remote_hash) if remote_hash == self.world.local => ContractMigration {
+                    deployed: true,
+                    contract: self.world.clone(),
+                    ..Default::default()
+                },
+                _ => ContractMigration { contract: self.world.clone(), ..Default::default() },
+            }
+        };
+
+        let executor_migration = if self.executor.address.is_none() {
+            ContractMigration { contract: self.executor.clone(), ..Default::default() }
+        } else {
+            match self.executor.remote {
+                Some(remote_hash) if remote_hash == self.executor.local => ContractMigration {
+                    deployed: true,
+                    contract: self.world.clone(),
+                    ..Default::default()
+                },
+                _ => ContractMigration { contract: self.executor.clone(), ..Default::default() },
+            }
+        };
+
+        let store_migration = if self.store.remote.is_none() {
+            ClassMigration { class: self.store.clone(), declared: false }
+        } else {
+            match self.store.remote {
+                Some(store_class_hash) if store_class_hash == self.store.local => {
+                    ClassMigration { class: self.store.clone(), declared: true }
+                }
+                _ => ClassMigration { class: self.store.clone(), declared: false },
+            }
+        };
+
+        let indexer_migration = if self.indexer.remote.is_none() {
+            ClassMigration { class: self.store.clone(), declared: false }
+        } else {
+            match self.indexer.remote {
+                Some(indexer_class_hash) if indexer_class_hash == self.indexer.local => {
+                    ClassMigration { class: self.indexer.clone(), declared: true }
+                }
+                _ => ClassMigration { class: self.indexer.clone(), declared: false },
+            }
+        };
+
+        WorldMigration {
+            world: world_migration,
+            store: store_migration,
+            indexer: indexer_migration,
+            executor: executor_migration,
+            systems: self.find_systems_to_be_declared(),
+            components: self.find_components_to_be_declared(),
+            ..Default::default()
+        }
+    }
+
+    fn find_components_to_be_declared(&self) -> Vec<ClassMigration> {
+        self.components
+            .iter()
+            .filter_map(|c| {
+                c.remote.and_then(|remote_hash| {
+                    if remote_hash == c.local {
+                        None
+                    } else {
+                        Some(ClassMigration { declared: false, class: c.clone() })
+                    }
+                })
+            })
+            .collect()
+    }
+
+    fn find_systems_to_be_declared(&self) -> Vec<ClassMigration> {
+        self.systems
+            .iter()
+            .filter_map(|c| {
+                c.remote.and_then(|remote_hash| {
+                    if remote_hash == c.local {
+                        None
+                    } else {
+                        Some(ClassMigration { declared: false, class: c.clone() })
+                    }
+                })
+            })
+            .collect()
     }
 }
 
