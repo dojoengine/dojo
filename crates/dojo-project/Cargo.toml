@@ -9,6 +9,8 @@ description = "Dojo project specification. For example, crates and flags used fo
 [dependencies]
 anyhow.workspace = true
 cairo-lang-project.workspace = true
+camino.workspace = true
+dojo-lang = { path = "../dojo-lang" }
 serde.workspace = true
 smol_str.workspace = true
 thiserror.workspace = true
@@ -16,6 +18,8 @@ toml = "0.7.1"
 cairo-lang-filesystem.workspace = true
 scarb.workspace = true
 starknet.workspace = true
+url = "2.2.2"
+async-trait = "0.1.68"
 
 [dev-dependencies]
 indoc.workspace = true

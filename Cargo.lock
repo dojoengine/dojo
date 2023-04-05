@@ -3043,7 +3043,6 @@ dependencies = [
  "cairo-lang-test-utils",
  "cairo-lang-utils",
  "camino",
- "dojo-project",
  "env_logger",
  "indoc 1.0.9",
  "itertools 0.10.5",
@@ -3086,8 +3085,11 @@ name = "dojo-project"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "cairo-lang-filesystem",
  "cairo-lang-project",
+ "camino",
+ "dojo-lang",
  "indoc 1.0.9",
  "scarb",
  "serde",
@@ -3096,6 +3098,7 @@ dependencies = [
  "test-log",
  "thiserror",
  "toml 0.7.3",
+ "url",
 ]
 
 [[package]]
