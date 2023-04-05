@@ -15,7 +15,6 @@ fn test_compiler() {
 
     let path = Utf8PathBuf::from_path_buf("src/cairo_level_tests/Scarb.toml".into()).unwrap();
 
-    println!("Path: {:?}", path.canonicalize_utf8());
     let config = Config::builder(path.canonicalize_utf8().unwrap())
         .ui_verbosity(Verbosity::Verbose)
         .log_filter_directive(env::var_os("SCARB_LOG"))
