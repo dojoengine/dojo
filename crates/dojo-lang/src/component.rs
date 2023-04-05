@@ -126,7 +126,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
             mod $type_name$Component {
                 use array::ArrayTrait;
                 use option::OptionTrait;
-                use dojo::serde::SpanSerde;
+                use dojo_core::serde::SpanSerde;
                 use super::$type_name$;
                 $body$
             }

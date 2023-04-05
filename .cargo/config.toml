@@ -1,2 +1,2 @@
 [env]
-DOJOLIB_DIR = { value = "lib", relative = true }
+DOJOLIB_DIR = { value = "crates/dojo-core", relative = true }
