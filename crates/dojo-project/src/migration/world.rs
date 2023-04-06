@@ -1,4 +1,4 @@
-use std::{env, fmt::Display};
+use std::{collections::HashMap, env, fmt::Display, fs, path::PathBuf};
 
 use anyhow::{anyhow, Result};
 use camino::Utf8PathBuf;
@@ -13,10 +13,10 @@ use super::{ClassMigration, ContractMigration, Migration};
 
 #[derive(Debug, Default, Clone)]
 pub struct Contract {
-    name: String,
-    address: Option<FieldElement>,
-    local: FieldElement,
-    remote: Option<FieldElement>,
+    pub name: String,
+    pub address: Option<FieldElement>,
+    pub local: FieldElement,
+    pub remote: Option<FieldElement>,
 }
 
 impl Display for Contract {
@@ -37,10 +37,10 @@ impl Display for Contract {
 
 #[derive(Debug, Default, Clone)]
 pub struct Class {
-    world: FieldElement,
-    name: String,
-    local: FieldElement,
-    remote: Option<FieldElement>,
+    pub world: FieldElement,
+    pub name: String,
+    pub local: FieldElement,
+    pub remote: Option<FieldElement>,
 }
 
 impl Display for Class {
@@ -170,15 +170,34 @@ impl World {
     }
 
     /// evaluate which contracts/classes need to be (re)declared/deployed
-    pub fn prepare_for_migration(&self) -> Migration {
-        let world = evaluate_contract_for_migration(&self.world);
-        let executor = evaluate_contract_for_migration(&self.executor);
-        let store = evaluate_class_for_migration(&self.store);
-        let indexer = evaluate_class_for_migration(&self.indexer);
-        let components = evaluate_components_or_systems_to_be_declared(&self.components);
-        let systems = evaluate_components_or_systems_to_be_declared(&self.systems);
+    pub fn prepare_for_migration(&self, source_dir: Utf8PathBuf) -> Migration {
+        let entries = fs::read_dir(source_dir.join("target/release")).unwrap_or_else(|error| {
+            panic!("Problem reading source directory: {:?}", error);
+        });
 
-        Migration { world, store, indexer, executor, systems, components, ..Default::default() }
+        let mut artifact_paths = HashMap::new();
+        for entry in entries.flatten() {
+            let file_name = entry.file_name();
+            let file_name_str = file_name.to_string_lossy();
+            if file_name_str == "manifest.json" || !file_name_str.ends_with(".json") {
+                continue;
+            }
+
+            let name =
+                file_name_str.split('_').last().unwrap().trim_end_matches(".json").to_string();
+
+            artifact_paths.insert(name, entry.path());
+        }
+
+        // TODO: return error if artifact not found instead of panicking
+        let world = evaluate_contract_for_migration(&self.world, &artifact_paths);
+        let executor = evaluate_contract_for_migration(&self.executor, &artifact_paths);
+        let store = evaluate_class_for_migration(&self.store, &artifact_paths);
+        let indexer = evaluate_class_for_migration(&self.indexer, &artifact_paths);
+        let components = evaluate_components_to_be_declared(&self.components, &artifact_paths);
+        let systems = evaluate_systems_to_be_declared(&self.systems, &artifact_paths);
+
+        Migration { world, store, indexer, executor, systems, components }
     }
 }
 
@@ -205,33 +224,80 @@ impl Display for World {
     }
 }
 
-fn evaluate_components_or_systems_to_be_declared(
-    components_or_systems: &[Class],
+fn evaluate_systems_to_be_declared(
+    systems: &[Class],
+    artifact_paths: &HashMap<String, PathBuf>,
 ) -> Vec<ClassMigration> {
-    components_or_systems
+    systems
         .iter()
         .filter_map(|c| {
             c.remote.and_then(|remote_hash| {
                 if remote_hash == c.local {
                     None
                 } else {
-                    Some(ClassMigration { declared: false, class: c.clone() })
+                    let path =
+                        artifact_paths.get(&format!("{}System", c.name)).unwrap_or_else(|| {
+                            panic!("missing contract artifact for `{}` system", c.name)
+                        });
+
+                    Some(ClassMigration {
+                        declared: false,
+                        class: c.clone(),
+                        artifact_path: path.clone(),
+                    })
                 }
             })
         })
         .collect()
 }
 
-fn evaluate_class_for_migration(class: &Class) -> ClassMigration {
-    match class.remote {
-        Some(remote_hash) if remote_hash == class.local => {
-            ClassMigration { declared: true, class: class.clone(), ..Default::default() }
-        }
-        _ => ClassMigration { declared: false, class: class.clone(), ..Default::default() },
-    }
+fn evaluate_components_to_be_declared(
+    components: &[Class],
+    artifact_paths: &HashMap<String, PathBuf>,
+) -> Vec<ClassMigration> {
+    components
+        .iter()
+        .filter_map(|c| {
+            c.remote.and_then(|remote_hash| {
+                if remote_hash == c.local {
+                    None
+                } else {
+                    let path =
+                        artifact_paths.get(&format!("{}Component", c.name)).unwrap_or_else(|| {
+                            panic!("missing contract artifact for `{}` component", c.name)
+                        });
+
+                    Some(ClassMigration {
+                        declared: false,
+                        class: c.clone(),
+                        artifact_path: path.clone(),
+                    })
+                }
+            })
+        })
+        .collect()
 }
 
-fn evaluate_contract_for_migration(contract: &Contract) -> ContractMigration {
+fn evaluate_class_for_migration(
+    class: &Class,
+    artifact_paths: &HashMap<String, PathBuf>,
+) -> ClassMigration {
+    let should_declare = match class.remote {
+        Some(remote_hash) if remote_hash == class.local => false,
+        _ => true,
+    };
+
+    let path = artifact_paths
+        .get(&class.name)
+        .unwrap_or_else(|| panic!("missing contract artifact for `{}` contract", class.name));
+
+    ClassMigration { declared: !should_declare, class: class.clone(), artifact_path: path.clone() }
+}
+
+fn evaluate_contract_for_migration(
+    contract: &Contract,
+    artifact_paths: &HashMap<String, PathBuf>,
+) -> ContractMigration {
     let should_deploy = if contract.address.is_none() {
         true
     } else {
@@ -241,5 +307,14 @@ fn evaluate_contract_for_migration(contract: &Contract) -> ContractMigration {
         }
     };
 
-    ContractMigration { deployed: !should_deploy, contract: contract.clone(), ..Default::default() }
+    let path = artifact_paths
+        .get(&contract.name)
+        .unwrap_or_else(|| panic!("missing contract artifact for `{}` contract", contract.name));
+
+    ContractMigration {
+        deployed: !should_deploy,
+        contract: contract.clone(),
+        artifact_path: path.clone(),
+        ..Default::default()
+    }
 }

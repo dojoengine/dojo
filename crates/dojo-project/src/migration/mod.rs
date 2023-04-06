@@ -1,5 +1,7 @@
 pub mod world;
 
+use std::path::PathBuf;
+
 use anyhow::Result;
 use async_trait::async_trait;
 
@@ -12,42 +14,25 @@ use starknet::{
 
 use self::world::{Class, Contract};
 
-#[async_trait]
-trait Declarable {
-    async fn declare(&self, account: SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>);
-}
-
-#[async_trait]
-trait Deployable: Declarable {
-    async fn deploy(&self, account: SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>);
-}
-
 #[derive(Debug, Default)]
 pub struct ContractMigration {
-    deployed: bool,
-    salt: FieldElement,
-    contract: Contract,
-}
-
-#[async_trait]
-impl Declarable for ContractMigration {
-    async fn declare(&self, account: SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>) {
-        // let contract =
-        // account.declare(contract_class)
-    }
+    pub deployed: bool,
+    pub salt: FieldElement,
+    pub contract: Contract,
+    pub artifact_path: PathBuf,
 }
 
 #[derive(Debug, Default)]
 pub struct ClassMigration {
-    declared: bool,
-    class: Class,
+    pub declared: bool,
+    pub class: Class,
+    pub artifact_path: PathBuf,
 }
 
 // TODO: migration config
 #[derive(Debug, Default)]
 pub struct Migration {
     // rpc: Deployments,
-    url: String, // sequencer url for testing purposes atm
     world: ContractMigration,
     executor: ContractMigration,
     store: ClassMigration,
@@ -58,9 +43,40 @@ pub struct Migration {
 
 // should only be created by calling `World::prepare_for_migration`
 impl Migration {
-    pub async fn migrate(&self) -> Result<()> {
+    // sequencer url for testing purposes
+    pub async fn migrate(&self, url: String) -> Result<()> {
         // if self.world.deployed {}
 
         unimplemented!("world migration")
+    }
+}
+
+#[async_trait]
+trait Declarable {
+    async fn declare(&mut self, account: SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>);
+}
+
+#[async_trait]
+trait Deployable: Declarable {
+    async fn deploy(
+        &mut self,
+        constructor_params: &[FieldElement],
+        account: SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
+    );
+}
+
+#[async_trait]
+impl Declarable for ContractMigration {
+    async fn declare(
+        &mut self,
+        account: SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
+    ) {
+        let name = self.contract.name.as_str();
+
+        if matches!("World", "Executor") {
+
+            // get the contract artifact from `release/target` folder
+        } else {
+        }
     }
 }
