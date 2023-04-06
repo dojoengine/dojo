@@ -1,6 +1,6 @@
 pub mod world;
 
-use std::{fs, path::PathBuf, sync::Arc};
+use std::{fs, path::PathBuf, rc::Rc, sync::Arc};
 
 use anyhow::{Context, Result};
 use async_trait::async_trait;
@@ -102,18 +102,87 @@ impl Migration {
         self.world.declare(&account).await;
         self.world.deploy(vec![executor, store, indexer], &account).await;
 
+        self.register_components(&account).await?;
+        self.register_systems(&account).await?;
+
+        Ok(())
+    }
+
+    async fn register_components(
+        &self,
+        account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
+    ) -> Result<()> {
+        // declare every component
+        for component in &self.components {
+            component.declare(&account).await;
+        }
+
+        let world_address = self
+            .world
+            .contract
+            .address
+            .unwrap_or_else(|| panic!("World contract address not found"));
+
+        let calls = self
+            .components
+            .iter()
+            .map(|c| {
+                let class_hash = c.class.local;
+                Call {
+                    to: world_address,
+                    selector: cairo_short_string_to_felt("register_component").unwrap(),
+                    calldata: vec![class_hash],
+                }
+            })
+            .collect::<Vec<_>>();
+
+        // register components
+        let _res = account.execute(calls).send().await?;
+
+        Ok(())
+    }
+
+    async fn register_systems(
+        &self,
+        account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
+    ) -> Result<()> {
+        // declare every system
+        for system in &self.systems {
+            system.declare(&account).await;
+        }
+
+        let world_address = self
+            .world
+            .contract
+            .address
+            .unwrap_or_else(|| panic!("World contract address not found"));
+
+        let calls = self
+            .systems
+            .iter()
+            .map(|s| {
+                let class_hash = s.class.local;
+                Call {
+                    to: world_address,
+                    selector: cairo_short_string_to_felt("register_component").unwrap(),
+                    calldata: vec![class_hash],
+                }
+            })
+            .collect::<Vec<_>>();
+
+        // register systems
+        let _res = account.execute(calls).send().await?;
+
         Ok(())
     }
 }
 
 #[async_trait]
 trait Declarable {
-    async fn declare(
-        &mut self,
-        account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
-    );
+    async fn declare(&self, account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>);
 }
 
+// can remove `mut` once we can calculate the contract addres before sending the tx
 #[async_trait]
 trait Deployable: Declarable {
     async fn deploy(
@@ -125,10 +194,7 @@ trait Deployable: Declarable {
 
 #[async_trait]
 impl Declarable for ClassMigration {
-    async fn declare(
-        &mut self,
-        account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
-    ) {
+    async fn declare(&self, account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>) {
         let contract_artifact =
             serde_json::from_reader::<_, SierraClass>(fs::File::open(&self.artifact_path).unwrap())
                 .unwrap();
@@ -147,8 +213,6 @@ impl Declarable for ClassMigration {
 
         //  can probably remove this part but just to be sure
 
-        self.class.remote = result.class_hash;
-
         assert!(
             Some(self.class.local) == result.class_hash,
             "local and remote class hash should be equal"
@@ -158,10 +222,7 @@ impl Declarable for ClassMigration {
 
 #[async_trait]
 impl Declarable for ContractMigration {
-    async fn declare(
-        &mut self,
-        account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
-    ) {
+    async fn declare(&self, account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>) {
         let contract_artifact =
             serde_json::from_reader::<_, SierraClass>(fs::File::open(&self.artifact_path).unwrap())
                 .unwrap();
@@ -182,8 +243,6 @@ impl Declarable for ContractMigration {
         );
 
         //  can probably remove this part but just to be sure
-
-        self.contract.remote = result.class_hash;
 
         assert!(
             Some(self.contract.local) == result.class_hash,
