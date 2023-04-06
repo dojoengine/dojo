@@ -5,11 +5,7 @@ mod Spawn {
     use starknet::contract_address::ContractAddressIntoFelt252;
 
     use dojo_examples::components::Position;
-    use dojo_examples::components::IPositionLibraryDispatcher;
-    use dojo_examples::components::IPositionDispatcherTrait;
     use dojo_examples::components::Moves;
-    use dojo_examples::components::IMovesLibraryDispatcher;
-    use dojo_examples::components::IMovesDispatcherTrait;
 
     fn execute() {
         let caller = starknet::get_caller_address();
@@ -29,11 +25,7 @@ mod Move {
     use starknet::contract_address::ContractAddressIntoFelt252;
 
     use dojo_examples::components::Position;
-    use dojo_examples::components::IPositionLibraryDispatcher;
-    use dojo_examples::components::IPositionDispatcherTrait;
     use dojo_examples::components::Moves;
-    use dojo_examples::components::IMovesLibraryDispatcher;
-    use dojo_examples::components::IMovesDispatcherTrait;
 
     // TODO: Use enum once serde is derivable
     // left: 0, right: 1, up: 2, down: 3
