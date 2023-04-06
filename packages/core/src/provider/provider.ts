@@ -7,7 +7,8 @@ interface IProvider {
         offset: number,
         value: number[],
         calldata?: any[]): Promise<any>;
-    get_entity(component: string, entity_id: string, offset: string, length: string): Promise<number>;
+    get_component(component: string, entity_id: string, offset: string, length: string): Promise<number>;
+    get_entity(entity_id: string): Promise<number>;
     get_entities(entites: any[]): Promise<number[]>;
 }
 
@@ -19,12 +20,16 @@ export abstract class Provider extends EventEmitter implements IProvider {
         this.worldAddress = worldAddress;
     }
 
+    // components
+    public abstract get_component(component: string, entity_id: string, offset: string, length: string): Promise<number>;
+
+    // entities
     public abstract set_entity(component: number,
         key: StorageKey,
         offset: number,
         value: number[],
         calldata?: any[]): Promise<any>;
-    public abstract get_entity(component: string, entity_id: string, offset: string, length: string): Promise<any>;
+    public abstract get_entity(entity_id: string): Promise<any>;
     public abstract get_entities(entites: any[]): Promise<any>;
 
 

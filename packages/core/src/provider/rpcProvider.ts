@@ -21,7 +21,7 @@ export class RPCProvider extends Provider {
         return;
     }
 
-    public async get_entity(component: string, entity_id: string, offset: string, length: string): Promise<any> {
+    public async get_component(component: string, entity_id: string, offset: string, length: string): Promise<any> {
 
         // TODO: Can we construct the offset and length from the manifest?
         const call: Call = {
@@ -39,6 +39,9 @@ export class RPCProvider extends Provider {
         }
     }
 
+    public async get_entity(): Promise<any[]> {
+        return [];
+    }
     public async get_entities(): Promise<any[]> {
         return [];
     }
