@@ -33,33 +33,33 @@ mod Spawn {
 
     fn execute(name: felt252) {
         let uuid = commands::uuid();
-        commands::set((420, (69, uuid)).into(), (
+        commands::set_entity((420, (69, uuid)).into(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
-        commands::set(420.into(), (
+        commands::set_entity(420.into(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
         let player_id = starknet::get_caller_address();
-        commands::set(player_id.into(), (
+        commands::set_entity(player_id.into(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
-        commands::set((
+        commands::set_entity((
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
-        commands::set((0, 0, 0, 0, 0), (
+        commands::set_entity((0, 0, 0, 0, 0), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
-        commands::set(1337.into(), (
+        commands::set_entity(1337.into(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
@@ -81,39 +81,39 @@ mod Move {
     fn execute(player_id: felt252) {
         let positions_query = commands::<(Position, Player)>::entities();
         let players_query = commands::<Player>::entities();
-        let player = commands::<Player>::get(player_id.into());
-        let player_position = commands::<(Position, Player)>::get(player_id.into());
+        let player = commands::<Player>::entity(player_id.into());
+        let player_position = commands::<(Position, Player)>::entity(player_id.into());
 
         let mut bar = 123;
         let mut foo = ArrayTrait::<felt252>::new();
         foo.append(bar);
 
         if bar == 123 {
-            let player_position = commands::<(Position, Player)>::get(player_id.into());
+            let player_position = commands::<(Position, Player)>::entity(player_id.into());
             if foo.len() > 0_u32 {
                 let positions_query = commands::<(Position, Player)>::entities();
             }
         } else if bar == 321 {
-            let player_position = commands::<(Position, Player)>::get(player_id.into());
+            let player_position = commands::<(Position, Player)>::entity(player_id.into());
         } else {
-            let player_position = commands::<(Position, Player)>::get(player_id.into());
+            let player_position = commands::<(Position, Player)>::entity(player_id.into());
         }
 
         {
-            let player_position = commands::<(Position, Player)>::get(player_id.into());
+            let player_position = commands::<(Position, Player)>::entity(player_id.into());
         }
 
         let foo_bar = Option::Some(1);
         match foo_bar {
             Option::Some(x) => {
                 let bar = x;
-                let player_position = commands::<(Position, Player)>::get(player_id.into());
+                let player_position = commands::<(Position, Player)>::entity(player_id.into());
                 if bar == 123 {
                     let positions_query = commands::<(Position, Player)>::entities();
                 }
             },
             Option::None(()) => {
-                let player_position = commands::<(Position, Player)>::get(player_id.into());
+                let player_position = commands::<(Position, Player)>::entity(player_id.into());
             }
         }
 
@@ -633,9 +633,9 @@ mod MoveSystem {
 
 //! > expected_diagnostics
 error: Plugin diagnostic: Invalid arguments. Expected "(storage_key, (components,))"
- --> lib.cairo:46:22
-        commands::set((
-                     ^^
+ --> lib.cairo:46:29
+        commands::set_entity((
+                            ^^
 
 error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::key::StorageKey", found: "(core::felt252, core::felt252, core::felt252, core::felt252, core::felt252)".
  --> Spawn:51:88
