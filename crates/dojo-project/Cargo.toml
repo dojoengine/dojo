@@ -8,6 +8,7 @@ description = "Dojo project specification. For example, crates and flags used fo
 
 [dependencies]
 anyhow.workspace = true
+cairo-lang-starknet.workspace = true
 cairo-lang-project.workspace = true
 camino.workspace = true
 dojo-lang = { path = "../dojo-lang" }
@@ -20,6 +21,7 @@ scarb.workspace = true
 starknet.workspace = true
 url = "2.2.2"
 async-trait = "0.1.68"
+serde_json.workspace = true
 
 [dev-dependencies]
 indoc.workspace = true

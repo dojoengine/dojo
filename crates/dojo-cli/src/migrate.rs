@@ -3,7 +3,9 @@ use std::env::current_dir;
 use anyhow::Result;
 use camino::Utf8PathBuf;
 use clap::Args;
-use dojo_project::migration::World;
+use dojo_project::migration::world::World;
+use starknet::providers::SequencerGatewayProvider;
+use url::Url;
 
 #[derive(Args)]
 pub struct MigrateArgs {
@@ -29,7 +31,15 @@ pub async fn run(args: MigrateArgs) -> Result<()> {
         None => Utf8PathBuf::from_path_buf(current_dir().unwrap()).unwrap(),
     };
 
-    let world = World::from_path(source_dir).await?;
+    let world = World::from_path(source_dir.clone()).await?;
+    let mut migration = world.prepare_for_migration(source_dir);
 
-    unimplemented!("dojo migrate");
+    let provider = SequencerGatewayProvider::new(
+        Url::parse("http://127.0.0.1:5050/gateway").unwrap(),
+        Url::parse("http://127.0.0.1:5050/feeder_gateway").unwrap(),
+    );
+
+    migration.execute(provider).await?;
+
+    Ok(())
 }
