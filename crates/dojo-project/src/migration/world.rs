@@ -1,15 +1,20 @@
-use std::{collections::HashMap, env, fmt::Display, fs, path::PathBuf};
+use std::collections::HashMap;
+use std::fmt::Display;
+use std::path::PathBuf;
+use std::{env, fs};
 
 use anyhow::{anyhow, Result};
 use camino::Utf8PathBuf;
 use dojo_lang::manifest::Manifest;
-use scarb::{core::Config, ops, ui::Verbosity};
-use starknet::core::types::{contract::SierraClass, FieldElement};
+use scarb::core::Config;
+use scarb::ops;
+use scarb::ui::Verbosity;
+use starknet::core::types::contract::SierraClass;
+use starknet::core::types::FieldElement;
 use url::Url;
 
-use crate::WorldConfig;
-
 use super::{ClassMigration, ContractMigration, Migration};
+use crate::WorldConfig;
 
 #[derive(Debug, Default, Clone)]
 pub struct Contract {
@@ -23,12 +28,12 @@ impl Display for Contract {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}:", self.name)?;
         if let Some(address) = self.address {
-            writeln!(f, "   Address: 0x{:x}", address)?;
+            writeln!(f, "   Address: {address:#x}",)?;
         }
-        writeln!(f, "   Local: 0x{:x}", self.local)?;
+        writeln!(f, "   Local: {:#x}", self.local)?;
 
         if let Some(remote) = self.remote {
-            writeln!(f, "   Remote: 0x{:x}", remote)?;
+            writeln!(f, "   Remote: {remote:#x}")?;
         }
 
         Ok(())
@@ -46,10 +51,10 @@ pub struct Class {
 impl Display for Class {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}:", self.name)?;
-        writeln!(f, "   Local: 0x{:x}", self.local)?;
+        writeln!(f, "   Local: {:#x}", self.local)?;
 
         if let Some(remote) = self.remote {
-            writeln!(f, "   Remote: 0x{:x}", remote)?;
+            writeln!(f, "   Remote: {remote:#x}")?;
         }
 
         Ok(())
@@ -172,7 +177,7 @@ impl World {
     /// evaluate which contracts/classes need to be (re)declared/deployed
     pub fn prepare_for_migration(&self, source_dir: Utf8PathBuf) -> Migration {
         let entries = fs::read_dir(source_dir.join("target/release")).unwrap_or_else(|error| {
-            panic!("Problem reading source directory: {:?}", error);
+            panic!("Problem reading source directory: {error}");
         });
 
         let mut artifact_paths = HashMap::new();
@@ -209,15 +214,15 @@ impl Display for World {
         writeln!(f, "{}", self.indexer)?;
 
         for component in &self.components {
-            writeln!(f, "{}", component)?;
+            writeln!(f, "{component}")?;
         }
 
         for system in &self.systems {
-            writeln!(f, "{}", system)?;
+            writeln!(f, "{system}")?;
         }
 
         for contract in &self.contracts {
-            writeln!(f, "{}", contract)?;
+            writeln!(f, "{contract}")?;
         }
 
         Ok(())
@@ -240,7 +245,7 @@ fn evaluate_systems_to_be_declared(
                             panic!("missing contract artifact for `{}` system", c.name)
                         });
                     let contract_artifact =
-                        serde_json::from_reader::<_, SierraClass>(fs::File::open(&path).unwrap())
+                        serde_json::from_reader::<_, SierraClass>(fs::File::open(path).unwrap())
                             .unwrap();
 
                     Some(ClassMigration {
@@ -271,7 +276,7 @@ fn evaluate_components_to_be_declared(
                             panic!("missing contract artifact for `{}` component", c.name)
                         });
                     let contract_artifact =
-                        serde_json::from_reader::<_, SierraClass>(fs::File::open(&path).unwrap())
+                        serde_json::from_reader::<_, SierraClass>(fs::File::open(path).unwrap())
                             .unwrap();
 
                     Some(ClassMigration {
@@ -290,16 +295,13 @@ fn evaluate_class_for_migration(
     class: &Class,
     artifact_paths: &HashMap<String, PathBuf>,
 ) -> ClassMigration {
-    let should_declare = match class.remote {
-        Some(remote_hash) if remote_hash == class.local => false,
-        _ => true,
-    };
+    let should_declare = matches!(class.remote, Some(remote_hash) if remote_hash == class.local);
 
     let path = artifact_paths
         .get(&class.name)
         .unwrap_or_else(|| panic!("missing contract artifact for `{}` contract", class.name));
     let contract_artifact =
-        serde_json::from_reader::<_, SierraClass>(fs::File::open(&path).unwrap()).unwrap();
+        serde_json::from_reader::<_, SierraClass>(fs::File::open(path).unwrap()).unwrap();
 
     ClassMigration {
         declared: !should_declare,
@@ -317,10 +319,7 @@ fn evaluate_contract_for_migration(
     let should_deploy = if contract.address.is_none() {
         true
     } else {
-        match contract.remote {
-            Some(remote_hash) if remote_hash == contract.local => false,
-            _ => true,
-        }
+        !matches!(contract.remote, Some(remote_hash) if remote_hash == contract.local)
     };
 
     let path = artifact_paths
@@ -328,7 +327,7 @@ fn evaluate_contract_for_migration(
         .unwrap_or_else(|| panic!("missing contract artifact for `{}` contract", contract.name));
 
     let contract_artifact =
-        serde_json::from_reader::<_, SierraClass>(fs::File::open(&path).unwrap()).unwrap();
+        serde_json::from_reader::<_, SierraClass>(fs::File::open(path).unwrap()).unwrap();
 
     ContractMigration {
         deployed: !should_deploy,

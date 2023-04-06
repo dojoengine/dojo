@@ -1,18 +1,17 @@
 pub mod world;
 
-use std::{fs, path::PathBuf, sync::Arc};
+use std::fs;
+use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use starknet::{
-    accounts::{Account, Call, SingleOwnerAccount},
-    core::{
-        types::{contract::SierraClass, FieldElement},
-        utils::{get_contract_address, get_selector_from_name},
-    },
-    providers::SequencerGatewayProvider,
-    signers::LocalWallet,
-};
+use starknet::accounts::{Account, Call, SingleOwnerAccount};
+use starknet::core::types::contract::SierraClass;
+use starknet::core::types::FieldElement;
+use starknet::core::utils::{get_contract_address, get_selector_from_name};
+use starknet::providers::SequencerGatewayProvider;
+use starknet::signers::LocalWallet;
 
 use self::world::{Class, Contract};
 
@@ -102,7 +101,7 @@ impl Migration {
         account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
     ) -> Result<()> {
         for component in &self.components {
-            component.declare(&account).await;
+            component.declare(account).await;
         }
 
         let world_address = self
@@ -228,7 +227,7 @@ impl Deployable for ContractMigration {
         constructor_calldata: Vec<FieldElement>,
         account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
     ) {
-        self.declare(&account).await;
+        self.declare(account).await;
 
         let calldata = [
             vec![
@@ -273,6 +272,6 @@ impl Deployable for ContractMigration {
             "Declared `{}` contract at transaction `{:#x}`",
             self.contract.name, res.transaction_hash
         );
-        println!("Contract address: {:#x}", contract_address);
+        println!("Contract address: {contract_address:#x}");
     }
 }

@@ -4,12 +4,11 @@ use anyhow::Result;
 use camino::Utf8PathBuf;
 use clap::Args;
 use dojo_project::migration::world::World;
-use starknet::{
-    accounts::SingleOwnerAccount,
-    core::{chain_id, types::FieldElement},
-    providers::SequencerGatewayProvider,
-    signers::{LocalWallet, SigningKey},
-};
+use starknet::accounts::SingleOwnerAccount;
+use starknet::core::chain_id;
+use starknet::core::types::FieldElement;
+use starknet::providers::SequencerGatewayProvider;
+use starknet::signers::{LocalWallet, SigningKey};
 use url::Url;
 
 #[derive(Args)]
