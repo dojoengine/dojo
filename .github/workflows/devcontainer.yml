@@ -42,3 +42,4 @@ jobs:
         tags: ghcr.io/${{ github.repository }}-dev:latest,ghcr.io/${{ github.repository }}-dev:${{ env.DOCKER_TAG }}
         build-args: |
           VARIANT=bullseye
+        platforms: linux/amd64,linux/arm64
