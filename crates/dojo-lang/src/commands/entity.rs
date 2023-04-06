@@ -10,13 +10,13 @@ use sanitizer::StringSanitizer;
 use super::entities::find_components;
 use super::{CommandData, CommandTrait};
 
-pub struct GetCommand {
+pub struct EntityCommand {
     query_id: String,
     query_pattern: String,
     data: CommandData,
 }
 
-impl CommandTrait for GetCommand {
+impl CommandTrait for EntityCommand {
     fn from_ast(
         db: &dyn SyntaxGroup,
         let_pattern: Option<ast::Pattern>,
@@ -25,7 +25,7 @@ impl CommandTrait for GetCommand {
         let var_name = let_pattern.unwrap();
         let mut query_id = StringSanitizer::from(var_name.as_syntax_node().get_text(db));
         query_id.to_snake_case();
-        let mut command = GetCommand {
+        let mut command = EntityCommand {
             query_id: query_id.get(),
             query_pattern: var_name.as_syntax_node().get_text(db),
             data: CommandData::new(),

@@ -23,21 +23,6 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
             fn len() -> usize {
                 $len$_usize
             }
-
-            // Serialize an entity.
-            #[view]
-            fn serialize(mut raw: Span<felt252>) -> $type_name$ {
-                serde::Serde::<$type_name$>::deserialize(ref raw).unwrap()
-            }
-
-            // Get the state of an entity.
-            #[view]
-            #[raw_output]
-            fn deserialize(value: $type_name$) -> Span<felt252> {
-                let mut arr = ArrayTrait::new();
-                serde::Serde::<$type_name$>::serialize(ref arr, value);
-                arr.span()
-            }
         ",
         HashMap::from([
             (

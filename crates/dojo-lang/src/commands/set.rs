@@ -21,11 +21,13 @@ impl SetCommand {
 
                 self.components.push(component.clone());
                 self.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
-                    "               
-                    IWorldDispatcher { contract_address: world_address }.set('$component$', \
-                     $storage_key$, 0_u8, I$component$LibraryDispatcher { class_hash: \
-                     IWorldDispatcher { contract_address: world_address \
-                     }.component('$component$') }.deserialize($ctor$));
+                    "
+                    {
+                        let mut calldata = ArrayTrait::new();
+                        serde::Serde::<$component$>::serialize(ref calldata, $ctor$);
+                        IWorldDispatcher { contract_address: world_address }.set('$component$', \
+                     $storage_key$, 0_u8, calldata.span());
+                    }
                     ",
                     HashMap::from([
                         ("component".to_string(), RewriteNode::Text(component.to_string())),
