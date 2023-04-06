@@ -171,9 +171,9 @@ impl System {
         is_else_if: bool,
     ) -> Vec<RewriteNode> {
         // recurse thru if blocks
-        let if_nodes: Vec<RewriteNode> = self.handle_block(db, expr_if.if_block(db));
+        let if_block: Vec<RewriteNode> = self.handle_block(db, expr_if.if_block(db));
         let else_prefix = if is_else_if { "else " } else { "" };
-        let code = format!("{}if $condition$ {{ $statements$ }}", else_prefix);
+        let code = format!("{}if $condition$ $block$", else_prefix);
         let if_rewrite = RewriteNode::interpolate_patched(
             &code,
             HashMap::from([
@@ -181,7 +181,7 @@ impl System {
                     "condition".to_string(),
                     RewriteNode::Copied(expr_if.condition(db).as_syntax_node()),
                 ),
-                ("statements".to_string(), RewriteNode::new_modified(if_nodes)),
+                ("block".to_string(), RewriteNode::new_modified(if_block)),
             ]),
         );
 
@@ -189,11 +189,12 @@ impl System {
         if let ast::OptionElseClause::ElseClause(else_clause) = expr_if.else_clause(db) {
             match else_clause.else_block_or_if(db) {
                 ast::BlockOrIf::Block(expr_else_block) => {
+                    let else_block = self.handle_block(db, expr_else_block);
                     let else_rewrite = RewriteNode::interpolate_patched(
-                        "else { $statements$ }",
+                        "else $block$",
                         HashMap::from([(
-                            "statements".to_string(),
-                            RewriteNode::new_modified(self.handle_block(db, expr_else_block)),
+                            "block".to_string(),
+                            RewriteNode::new_modified(else_block),
                         )]),
                     );
                     return vec![if_rewrite, else_rewrite];
@@ -219,7 +220,12 @@ impl System {
             .iter()
             .flat_map(|statement| self.handle_statement(db, statement.clone()))
             .collect();
-        return block_nodes;
+
+        let block_rewrite = RewriteNode::interpolate_patched(
+            "{ $nodes$ }",
+            HashMap::from([("nodes".to_string(), RewriteNode::new_modified(block_nodes))]),
+        );
+        vec![block_rewrite]
     }
 
     fn handle_match(
@@ -232,17 +238,20 @@ impl System {
             .elements(db)
             .iter()
             .flat_map(|arm| {
-                let arm_pat = arm.pattern(db);
-                let arm_expr = arm.expression(db);
-                let arm_nodes = self.handle_expr(db, arm_expr).unwrap();
-                let arm_rewrite = RewriteNode::interpolate_patched(
-                    "$pattern$ => { $expression$ },",
-                    HashMap::from([
-                        ("pattern".to_string(), RewriteNode::Copied(arm_pat.as_syntax_node())),
-                        ("expression".to_string(), RewriteNode::new_modified(arm_nodes)),
-                    ]),
-                );
-                vec![arm_rewrite]
+                if let ast::Expr::Block(arm_block) = arm.expression(db) {
+                    let arm_pat = arm.pattern(db);
+                    let arm_block = self.handle_block(db, arm_block);
+                    let arm_rewrite = RewriteNode::interpolate_patched(
+                        "$pattern$ => $block$,",
+                        HashMap::from([
+                            ("pattern".to_string(), RewriteNode::Copied(arm_pat.as_syntax_node())),
+                            ("block".to_string(), RewriteNode::new_modified(arm_block)),
+                        ]),
+                    );
+                    return vec![arm_rewrite];
+                }
+
+                vec![RewriteNode::Copied(arm.as_syntax_node())]
             })
             .collect();
 

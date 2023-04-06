@@ -117,6 +117,11 @@ mod Move {
             }
         }
 
+        let foo = match foo_bar {
+            Option::Some(x) => {'foo'},
+            Option::None(()) => 'bar',
+        };
+
         let mut calldata = ArrayTrait::new();
         calldata.append('name');
         commands::execute(SpawnSystem, calldata.span());
@@ -539,21 +544,22 @@ mod MoveSystem {
             );
             let player_position = (__player_position_position, __player_position_player);
         }
-        let mut __player_position_position_raw = IWorldDispatcher {
-            contract_address: world_address
-        }.get('Position', player_id.into(), 0_u8, 0_usize);
-        let __player_position_position = serde::Serde::<Position>::deserialize(
-            ref __player_position_position_raw
-        );
+        {
+            let mut __player_position_position_raw = IWorldDispatcher {
+                contract_address: world_address
+            }.get('Position', player_id.into(), 0_u8, 0_usize);
+            let __player_position_position = serde::Serde::<Position>::deserialize(
+                ref __player_position_position_raw
+            );
 
-        let mut __player_position_player_raw = IWorldDispatcher {
-            contract_address: world_address
-        }.get('Player', player_id.into(), 0_u8, 0_usize);
-        let __player_position_player = serde::Serde::<Player>::deserialize(
-            ref __player_position_player_raw
-        );
-        let player_position = (__player_position_position, __player_position_player);
-
+            let mut __player_position_player_raw = IWorldDispatcher {
+                contract_address: world_address
+            }.get('Player', player_id.into(), 0_u8, 0_usize);
+            let __player_position_player = serde::Serde::<Player>::deserialize(
+                ref __player_position_player_raw
+            );
+            let player_position = (__player_position_position, __player_position_player);
+        }
         let foo_bar = Option::Some(1);
         match foo_bar {
             Option::Some(x) => {
@@ -601,6 +607,13 @@ mod MoveSystem {
                 let player_position = (__player_position_position, __player_position_player);
             },
         }
+        let foo = match foo_bar {
+            Option::Some(x) => {
+                'foo'
+            },
+            Option::None(()) => 'bar',
+        };
+
         let mut calldata = ArrayTrait::new();
         calldata.append('name');
         IWorldDispatcher {
