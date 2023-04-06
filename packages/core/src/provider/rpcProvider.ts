@@ -1,48 +1,45 @@
-import { HttpProvider } from "./httpProvider";
-import { RPCError } from "./error/rpcError";
-import { IRequestOptions } from "./types";
+import { RpcProvider } from "starknet";
+import { Call } from "starknet";
+import { Provider } from "./provider";
+import { StorageKey, WorldEntryPoints } from "../types";
 
-interface IRPCRequest {
-    jsonrpc: string;
-    id: number;
-    method: string;
-    params?: any[];
-}
+export class RPCProvider extends Provider {
+    private provider: RpcProvider
 
-export class RPCProvider extends HttpProvider {
-    private url: string;
-    private requestId: number;
-
-    constructor(url: string) {
-        super();
-        this.url = url;
-        this.requestId = 1;
+    constructor(world_address: string, url: string) {
+        super(world_address);
+        this.provider = new RpcProvider({
+            nodeUrl: url,
+        })
     }
 
-    public async call(method: string, params?: any[]): Promise<any> {
-        const rpcRequest: IRPCRequest = {
-            jsonrpc: "2.0",
-            id: this.requestId++,
-            method,
-            params,
-        };
+    public async set_entity(component: number,
+        key: StorageKey,
+        offset: number,
+        value: number[],
+        calldata?: any[]): Promise<any> {
+        return;
+    }
 
-        const requestOptions: IRequestOptions = {
-            method: "POST",
-            url: this.url,
-            data: rpcRequest,
-            headers: { "Content-Type": "application/json" },
-        };
+    public async get_entity(component: string, entity_id: string, offset: string, length: string): Promise<any> {
+
+        // TODO: Can we construct the offset and length from the manifest?
+        const call: Call = {
+            entrypoint: WorldEntryPoints.get,
+            contractAddress: this.getWorldAddress(),
+            calldata: [component, entity_id, offset, length]
+        }
 
         try {
-            const response = await this.send(requestOptions);
-            if (response.error) {
-                throw new RPCError(response.error.message, response.error.code, response.error.data);
-            }
+            const response = await this.provider.callContract(call)
             return response.result;
         } catch (error) {
             this.emit("error", error);
             throw error;
         }
+    }
+
+    public async get_entities(): Promise<any[]> {
+        return [];
     }
 }

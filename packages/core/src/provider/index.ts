@@ -1,3 +1,2 @@
-import { HttpProvider } from "./httpProvider";
-import { WebsocketProvider } from "./websocketProvider";
-export { HttpProvider, WebsocketProvider };
+import { RPCProvider } from "./rpcProvider";
+export { RPCProvider };
