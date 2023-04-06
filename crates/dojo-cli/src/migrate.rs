@@ -4,7 +4,12 @@ use anyhow::Result;
 use camino::Utf8PathBuf;
 use clap::Args;
 use dojo_project::migration::world::World;
-use starknet::providers::SequencerGatewayProvider;
+use starknet::{
+    accounts::SingleOwnerAccount,
+    core::{chain_id, types::FieldElement},
+    providers::SequencerGatewayProvider,
+    signers::{LocalWallet, SigningKey},
+};
 use url::Url;
 
 #[derive(Args)]
@@ -39,7 +44,16 @@ pub async fn run(args: MigrateArgs) -> Result<()> {
         Url::parse("http://127.0.0.1:5050/feeder_gateway").unwrap(),
     );
 
-    migration.execute(provider).await?;
+    let signer = LocalWallet::from(SigningKey::from_secret_scalar(
+        FieldElement::from_hex_be("0x5d4fb5e2c807cd78ac51675e06be7099").unwrap(),
+    ));
+    let address = FieldElement::from_hex_be(
+        "0x5f6fd2a43f4bce1bdfb2d0e9212d910227d9f67cf1425f2a9ceae231572c643",
+    )
+    .unwrap();
+    let account = SingleOwnerAccount::new(provider, signer, address, chain_id::TESTNET);
+
+    migration.execute(account).await?;
 
     Ok(())
 }

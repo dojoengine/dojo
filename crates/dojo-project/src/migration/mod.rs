@@ -1,26 +1,23 @@
 pub mod world;
 
-use std::{fs, path::PathBuf, rc::Rc, sync::Arc};
+use std::{fs, path::PathBuf, sync::Arc};
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use async_trait::async_trait;
 
-use cairo_lang_starknet::{casm_contract_class::CasmContractClass, contract_class::ContractClass};
 use starknet::{
     accounts::{Account, Call, SingleOwnerAccount},
     core::{
-        chain_id,
         types::{contract::SierraClass, FieldElement},
         utils::cairo_short_string_to_felt,
     },
     providers::SequencerGatewayProvider,
-    signers::{LocalWallet, SigningKey},
+    signers::LocalWallet,
 };
-use url::Url;
 
 use self::world::{Class, Contract};
 
-// TODO: calculate the contract address before sending the tx
+// TODO: evaluate the contract address when building the migration plan
 #[derive(Debug, Default)]
 pub struct ContractMigration {
     pub deployed: bool,
@@ -36,11 +33,13 @@ pub struct ClassMigration {
     pub artifact_path: PathBuf,
 }
 
+// TODO: refactor type for Contract/Class migration
+// TODO: include migrator account
+// TODO: migration error
 // TODO: migration config
 // should only be created by calling `World::prepare_for_migration`
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct Migration {
-    // rpc: Deployments,
     world: ContractMigration,
     executor: ContractMigration,
     store: ClassMigration,
@@ -50,21 +49,14 @@ pub struct Migration {
 }
 
 impl Migration {
-    // we use sequencer here because devnet still doesnt support cairo1 rpc
-    pub async fn execute(&mut self, provider: SequencerGatewayProvider) -> Result<()> {
-        let signer = LocalWallet::from(SigningKey::from_secret_scalar(
-            FieldElement::from_hex_be("0x5d4fb5e2c807cd78ac51675e06be7099").unwrap(),
-        ));
-        let address = FieldElement::from_hex_be(
-            "0x5f6fd2a43f4bce1bdfb2d0e9212d910227d9f67cf1425f2a9ceae231572c643",
-        )
-        .unwrap();
-        let account = SingleOwnerAccount::new(provider, signer, address, chain_id::TESTNET);
-
+    pub async fn execute(
+        &mut self,
+        migrator: SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
+    ) -> Result<()> {
         if self.world.deployed {
             unimplemented!("migrate: branch -> if world is deployed")
         } else {
-            self.migrate_full_world(&account).await?;
+            self.migrate_full_world(&migrator).await?;
         }
 
         Ok(())
@@ -74,36 +66,32 @@ impl Migration {
         &mut self,
         account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
     ) -> Result<()> {
-        // Can safely unwrap the values here because `World::prepare_for_migration` should ensure
-        // this has value if `declared` == true, and `Declarable::declare` and `Deployable::deploy`
-        // should also set the value accordingly.
-
         let indexer = {
             if !self.indexer.declared {
-                self.indexer.declare(&account).await;
+                self.indexer.declare(account).await;
             }
-            self.indexer.class.remote.unwrap()
+            self.indexer.class.local
         };
 
         let store = {
             if !self.store.declared {
-                self.store.declare(&account).await;
+                self.store.declare(account).await;
             }
-            self.store.class.remote.unwrap()
+            self.store.class.local
         };
 
         let executor = {
             if !self.executor.deployed {
-                self.executor.deploy(vec![], &account).await;
+                self.executor.deploy(vec![], account).await;
             }
             self.executor.contract.address.unwrap()
         };
 
-        self.world.declare(&account).await;
-        self.world.deploy(vec![executor, store, indexer], &account).await;
+        self.world.declare(account).await;
+        self.world.deploy(vec![executor, store, indexer], account).await;
 
-        self.register_components(&account).await?;
-        self.register_systems(&account).await?;
+        self.register_components(account).await?;
+        self.register_systems(account).await?;
 
         Ok(())
     }
@@ -112,7 +100,6 @@ impl Migration {
         &self,
         account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
     ) -> Result<()> {
-        // declare every component
         for component in &self.components {
             component.declare(&account).await;
         }
@@ -146,9 +133,8 @@ impl Migration {
         &self,
         account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
     ) -> Result<()> {
-        // declare every system
         for system in &self.systems {
-            system.declare(&account).await;
+            system.declare(account).await;
         }
 
         let world_address = self
@@ -164,13 +150,12 @@ impl Migration {
                 let class_hash = s.class.local;
                 Call {
                     to: world_address,
-                    selector: cairo_short_string_to_felt("register_component").unwrap(),
+                    selector: cairo_short_string_to_felt("register_system").unwrap(),
                     calldata: vec![class_hash],
                 }
             })
             .collect::<Vec<_>>();
 
-        // register systems
         let _res = account.execute(calls).send().await?;
 
         Ok(())
