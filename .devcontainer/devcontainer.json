@@ -46,7 +46,8 @@
 	// Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
 	// "remoteUser": "vscode",
 	"features": {
-		"node": "18"
+		"node": "18",
+		"python": "3.9"
 	},
 	"remoteEnv": {
 		"PATH": "${containerEnv:PATH}:/workspace/dojo/target/release"

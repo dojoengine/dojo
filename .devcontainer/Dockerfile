@@ -8,5 +8,9 @@ FROM mcr.microsoft.com/vscode/devcontainers/rust:0-${VARIANT}
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends protobuf-compiler libprotobuf-dev
 
+RUN apt install -y libgmp3-dev
+
 RUN rustup toolchain install nightly-2022-11-03 \
     && rustup default nightly-2022-11-03 && rustup component add clippy
+
+RUN pip install starknet-devnet==v0.5.0a2 
