@@ -88,6 +88,40 @@ mod Move {
         let mut foo = ArrayTrait::<felt252>::new();
         foo.append(bar);
 
+        if bar == 123 {
+            let player_position = commands::<(Position, Player)>::get(player_id.into());
+            if foo.len() > 0_u32 {
+                let positions_query = commands::<(Position, Player)>::entities();
+            }
+        } else if bar == 321 {
+            let player_position = commands::<(Position, Player)>::get(player_id.into());
+        } else {
+            let player_position = commands::<(Position, Player)>::get(player_id.into());
+        }
+
+        {
+            let player_position = commands::<(Position, Player)>::get(player_id.into());
+        }
+
+        let foo_bar = Option::Some(1);
+        match foo_bar {
+            Option::Some(x) => {
+                let bar = x;
+                let player_position = commands::<(Position, Player)>::get(player_id.into());
+                if bar == 123 {
+                    let positions_query = commands::<(Position, Player)>::entities();
+                }
+            },
+            Option::None(()) => {
+                let player_position = commands::<(Position, Player)>::get(player_id.into());
+            }
+        }
+
+        let foo = match foo_bar {
+            Option::Some(x) => {'foo'},
+            Option::None(()) => 'bar',
+        };
+
         let mut calldata = ArrayTrait::new();
         calldata.append('name');
         commands::execute(SpawnSystem, calldata.span());
@@ -454,6 +488,131 @@ mod MoveSystem {
         let mut bar = 123;
         let mut foo = ArrayTrait::<felt252>::new();
         foo.append(bar);
+        if bar == 123 {
+            let mut __player_position_position_raw = IWorldDispatcher {
+                contract_address: world_address
+            }.get('Position', player_id.into(), 0_u8, 0_usize);
+            let __player_position_position = serde::Serde::<Position>::deserialize(
+                ref __player_position_position_raw
+            );
+
+            let mut __player_position_player_raw = IWorldDispatcher {
+                contract_address: world_address
+            }.get('Player', player_id.into(), 0_u8, 0_usize);
+            let __player_position_player = serde::Serde::<Player>::deserialize(
+                ref __player_position_player_raw
+            );
+            let player_position = (__player_position_position, __player_position_player);
+            if foo.len() > 0_u32 {
+                let positions_query = ArrayTrait::<usize>::new();
+                let __positions_query_position_ids = IWorldDispatcher {
+                    contract_address: world_address
+                }.entities('Position', 0);
+
+                let __positions_query_player_ids = IWorldDispatcher {
+                    contract_address: world_address
+                }.entities('Player', 0);
+            }
+        } else if bar == 321 {
+            let mut __player_position_position_raw = IWorldDispatcher {
+                contract_address: world_address
+            }.get('Position', player_id.into(), 0_u8, 0_usize);
+            let __player_position_position = serde::Serde::<Position>::deserialize(
+                ref __player_position_position_raw
+            );
+
+            let mut __player_position_player_raw = IWorldDispatcher {
+                contract_address: world_address
+            }.get('Player', player_id.into(), 0_u8, 0_usize);
+            let __player_position_player = serde::Serde::<Player>::deserialize(
+                ref __player_position_player_raw
+            );
+            let player_position = (__player_position_position, __player_position_player);
+        } else {
+            let mut __player_position_position_raw = IWorldDispatcher {
+                contract_address: world_address
+            }.get('Position', player_id.into(), 0_u8, 0_usize);
+            let __player_position_position = serde::Serde::<Position>::deserialize(
+                ref __player_position_position_raw
+            );
+
+            let mut __player_position_player_raw = IWorldDispatcher {
+                contract_address: world_address
+            }.get('Player', player_id.into(), 0_u8, 0_usize);
+            let __player_position_player = serde::Serde::<Player>::deserialize(
+                ref __player_position_player_raw
+            );
+            let player_position = (__player_position_position, __player_position_player);
+        }
+        {
+            let mut __player_position_position_raw = IWorldDispatcher {
+                contract_address: world_address
+            }.get('Position', player_id.into(), 0_u8, 0_usize);
+            let __player_position_position = serde::Serde::<Position>::deserialize(
+                ref __player_position_position_raw
+            );
+
+            let mut __player_position_player_raw = IWorldDispatcher {
+                contract_address: world_address
+            }.get('Player', player_id.into(), 0_u8, 0_usize);
+            let __player_position_player = serde::Serde::<Player>::deserialize(
+                ref __player_position_player_raw
+            );
+            let player_position = (__player_position_position, __player_position_player);
+        }
+        let foo_bar = Option::Some(1);
+        match foo_bar {
+            Option::Some(x) => {
+                let bar = x;
+
+                let mut __player_position_position_raw = IWorldDispatcher {
+                    contract_address: world_address
+                }.get('Position', player_id.into(), 0_u8, 0_usize);
+                let __player_position_position = serde::Serde::<Position>::deserialize(
+                    ref __player_position_position_raw
+                );
+
+                let mut __player_position_player_raw = IWorldDispatcher {
+                    contract_address: world_address
+                }.get('Player', player_id.into(), 0_u8, 0_usize);
+                let __player_position_player = serde::Serde::<Player>::deserialize(
+                    ref __player_position_player_raw
+                );
+                let player_position = (__player_position_position, __player_position_player);
+                if bar == 123 {
+                    let positions_query = ArrayTrait::<usize>::new();
+                    let __positions_query_position_ids = IWorldDispatcher {
+                        contract_address: world_address
+                    }.entities('Position', 0);
+
+                    let __positions_query_player_ids = IWorldDispatcher {
+                        contract_address: world_address
+                    }.entities('Player', 0);
+                }
+            },
+            Option::None(()) => {
+                let mut __player_position_position_raw = IWorldDispatcher {
+                    contract_address: world_address
+                }.get('Position', player_id.into(), 0_u8, 0_usize);
+                let __player_position_position = serde::Serde::<Position>::deserialize(
+                    ref __player_position_position_raw
+                );
+
+                let mut __player_position_player_raw = IWorldDispatcher {
+                    contract_address: world_address
+                }.get('Player', player_id.into(), 0_u8, 0_usize);
+                let __player_position_player = serde::Serde::<Player>::deserialize(
+                    ref __player_position_player_raw
+                );
+                let player_position = (__player_position_position, __player_position_player);
+            },
+        }
+        let foo = match foo_bar {
+            Option::Some(x) => {
+                'foo'
+            },
+            Option::None(()) => 'bar',
+        };
 
         let mut calldata = ArrayTrait::new();
         calldata.append('name');
@@ -462,7 +621,6 @@ mod MoveSystem {
         }.execute('SpawnSystem', calldata.span());
 
         move_inner(@positions_query, 0_u32, positions_query.len());
-
         if bar == 123 {
             return ();
         } else if bar == 0 {
