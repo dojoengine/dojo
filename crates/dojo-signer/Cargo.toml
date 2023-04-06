@@ -4,22 +4,9 @@ version.workspace = true
 edition.workspace = true
 repository.workspace = true
 license-file.workspace = true
-description = "Dojo local signer implementation"
+description = "Dojo Signer implementations"
 
 [dependencies]
-async-trait = "0.1"
-dotenv = "0.15.0"
-lazy_static = "1.4.0"
 anyhow.workspace = true
-cairo-lang-project.workspace = true
-serde.workspace = true
-smol_str.workspace = true
-thiserror.workspace = true
-toml = "0.7.1"
-cairo-lang-filesystem.workspace = true
-scarb.workspace = true
+async-trait = "0.1"
 starknet.workspace = true
-
-[dev-dependencies]
-indoc.workspace = true
-test-log.workspace = true
