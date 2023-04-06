@@ -4,7 +4,7 @@ use anyhow::{anyhow, Result};
 use camino::Utf8PathBuf;
 use dojo_lang::manifest::Manifest;
 use scarb::{core::Config, ops, ui::Verbosity};
-use starknet::core::types::FieldElement;
+use starknet::core::types::{contract::SierraClass, FieldElement};
 use url::Url;
 
 use crate::WorldConfig;
@@ -239,11 +239,15 @@ fn evaluate_systems_to_be_declared(
                         artifact_paths.get(&format!("{}System", c.name)).unwrap_or_else(|| {
                             panic!("missing contract artifact for `{}` system", c.name)
                         });
+                    let contract_artifact =
+                        serde_json::from_reader::<_, SierraClass>(fs::File::open(&path).unwrap())
+                            .unwrap();
 
                     Some(ClassMigration {
                         declared: false,
                         class: c.clone(),
                         artifact_path: path.clone(),
+                        class_hash: contract_artifact.class_hash().unwrap(),
                     })
                 }
             })
@@ -266,11 +270,15 @@ fn evaluate_components_to_be_declared(
                         artifact_paths.get(&format!("{}Component", c.name)).unwrap_or_else(|| {
                             panic!("missing contract artifact for `{}` component", c.name)
                         });
+                    let contract_artifact =
+                        serde_json::from_reader::<_, SierraClass>(fs::File::open(&path).unwrap())
+                            .unwrap();
 
                     Some(ClassMigration {
                         declared: false,
                         class: c.clone(),
                         artifact_path: path.clone(),
+                        class_hash: contract_artifact.class_hash().unwrap(),
                     })
                 }
             })
@@ -290,10 +298,18 @@ fn evaluate_class_for_migration(
     let path = artifact_paths
         .get(&class.name)
         .unwrap_or_else(|| panic!("missing contract artifact for `{}` contract", class.name));
+    let contract_artifact =
+        serde_json::from_reader::<_, SierraClass>(fs::File::open(&path).unwrap()).unwrap();
 
-    ClassMigration { declared: !should_declare, class: class.clone(), artifact_path: path.clone() }
+    ClassMigration {
+        declared: !should_declare,
+        class: class.clone(),
+        artifact_path: path.clone(),
+        class_hash: contract_artifact.class_hash().unwrap(),
+    }
 }
 
+// TODO: generate random salt if need to be redeployed
 fn evaluate_contract_for_migration(
     contract: &Contract,
     artifact_paths: &HashMap<String, PathBuf>,
@@ -311,10 +327,15 @@ fn evaluate_contract_for_migration(
         .get(&contract.name)
         .unwrap_or_else(|| panic!("missing contract artifact for `{}` contract", contract.name));
 
+    let contract_artifact =
+        serde_json::from_reader::<_, SierraClass>(fs::File::open(&path).unwrap()).unwrap();
+
     ContractMigration {
         deployed: !should_deploy,
         contract: contract.clone(),
         artifact_path: path.clone(),
-        ..Default::default()
+        class_hash: contract_artifact.class_hash().unwrap(),
+        contract_address: None,
+        salt: FieldElement::ZERO,
     }
 }
