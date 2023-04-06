@@ -1,4 +1,5 @@
 {
-    "cairo1.languageServerPath": "/Users/tarrence/code/cairo/target/release/cairo-language-server",
-    "cairo1.enableLanguageServer": true,
+  "cairo1.languageServerPath": "/Users/tarrence/code/cairo/target/release/cairo-language-server",
+  "cairo1.enableLanguageServer": true,
+  "rust-analyzer.showUnlinkedFileNotification": false
 }
