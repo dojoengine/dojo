@@ -2,14 +2,7 @@
 // https://github.com/microsoft/vscode-dev-containers/tree/v0.245.2/containers/rust
 {
 	"name": "Rust",
-	"build": {
-		"dockerfile": "Dockerfile",
-		"args": {
-			// Use the VARIANT arg to pick a Debian OS version: buster, bullseye
-			// Use bullseye when on local on arm64/Apple Silicon.
-			"VARIANT": "bullseye"
-		}
-	},
+	"image": "ghcr.io/dojoengine/dojo-dev:latest",
 	"runArgs": [
 		"--cap-add=SYS_PTRACE",
 		"--security-opt",
@@ -45,9 +38,6 @@
 	// "postCreateCommand": ". scripts/startup.sh",
 	// Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
 	// "remoteUser": "vscode",
-	"features": {
-		"node": "18"
-	},
 	"remoteEnv": {
 		"PATH": "${containerEnv:PATH}:/workspace/dojo/target/release"
 	}
