@@ -3,13 +3,12 @@ use std::fmt::Display;
 use std::path::PathBuf;
 use std::{env, fs};
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use camino::Utf8PathBuf;
 use dojo_lang::manifest::Manifest;
 use scarb::core::Config;
 use scarb::ops;
 use scarb::ui::Verbosity;
-use starknet::core::types::contract::SierraClass;
 use starknet::core::types::FieldElement;
 use url::Url;
 
@@ -175,7 +174,7 @@ impl World {
     }
 
     /// evaluate which contracts/classes need to be (re)declared/deployed
-    pub fn prepare_for_migration(&self, source_dir: Utf8PathBuf) -> Migration {
+    pub fn prepare_for_migration(&self, source_dir: Utf8PathBuf) -> Result<Migration> {
         let entries = fs::read_dir(source_dir.join("target/release")).unwrap_or_else(|error| {
             panic!("Problem reading source directory: {error}");
         });
@@ -194,15 +193,14 @@ impl World {
             artifact_paths.insert(name, entry.path());
         }
 
-        // TODO: return error if artifact not found instead of panicking
-        let world = evaluate_contract_for_migration(&self.world, &artifact_paths);
-        let executor = evaluate_contract_for_migration(&self.executor, &artifact_paths);
-        let store = evaluate_class_for_migration(&self.store, &artifact_paths);
-        let indexer = evaluate_class_for_migration(&self.indexer, &artifact_paths);
-        let components = evaluate_components_to_be_declared(&self.components, &artifact_paths);
-        let systems = evaluate_systems_to_be_declared(&self.systems, &artifact_paths);
+        let world = evaluate_contract_for_migration(&self.world, &artifact_paths)?;
+        let executor = evaluate_contract_for_migration(&self.executor, &artifact_paths)?;
+        let store = evaluate_class_for_migration(&self.store, &artifact_paths)?;
+        let indexer = evaluate_class_for_migration(&self.indexer, &artifact_paths)?;
+        let components = evaluate_components_to_be_declared(&self.components, &artifact_paths)?;
+        let systems = evaluate_systems_to_be_declared(&self.systems, &artifact_paths)?;
 
-        Migration { world, store, indexer, executor, systems, components }
+        Ok(Migration { world, store, indexer, executor, systems, components })
     }
 }
 
@@ -232,109 +230,91 @@ impl Display for World {
 fn evaluate_systems_to_be_declared(
     systems: &[Class],
     artifact_paths: &HashMap<String, PathBuf>,
-) -> Vec<ClassMigration> {
-    systems
-        .iter()
-        .filter_map(|c| {
-            c.remote.and_then(|remote_hash| {
-                if remote_hash == c.local {
-                    None
-                } else {
-                    let path =
-                        artifact_paths.get(&format!("{}System", c.name)).unwrap_or_else(|| {
-                            panic!("missing contract artifact for `{}` system", c.name)
-                        });
-                    let contract_artifact =
-                        serde_json::from_reader::<_, SierraClass>(fs::File::open(path).unwrap())
-                            .unwrap();
+) -> Result<Vec<ClassMigration>> {
+    let mut syst_to_migrate: Vec<ClassMigration> = vec![];
 
-                    Some(ClassMigration {
-                        declared: false,
-                        class: c.clone(),
-                        artifact_path: path.clone(),
-                        class_hash: contract_artifact.class_hash().unwrap(),
-                    })
-                }
-            })
-        })
-        .collect()
+    for s in systems {
+        match s.remote {
+            Some(remote) if remote == s.local => continue,
+            _ => {
+                let path = find_artifact_path(&format!("{}System", s.name), &artifact_paths)?;
+                syst_to_migrate.push(ClassMigration {
+                    declared: false,
+                    class: s.clone(),
+                    artifact_path: path.clone(),
+                });
+            }
+        }
+    }
+
+    Ok(syst_to_migrate)
 }
 
 fn evaluate_components_to_be_declared(
     components: &[Class],
     artifact_paths: &HashMap<String, PathBuf>,
-) -> Vec<ClassMigration> {
-    components
-        .iter()
-        .filter_map(|c| {
-            c.remote.and_then(|remote_hash| {
-                if remote_hash == c.local {
-                    None
-                } else {
-                    let path =
-                        artifact_paths.get(&format!("{}Component", c.name)).unwrap_or_else(|| {
-                            panic!("missing contract artifact for `{}` component", c.name)
-                        });
-                    let contract_artifact =
-                        serde_json::from_reader::<_, SierraClass>(fs::File::open(path).unwrap())
-                            .unwrap();
+) -> Result<Vec<ClassMigration>> {
+    let mut comps_to_migrate: Vec<ClassMigration> = vec![];
 
-                    Some(ClassMigration {
-                        declared: false,
-                        class: c.clone(),
-                        artifact_path: path.clone(),
-                        class_hash: contract_artifact.class_hash().unwrap(),
-                    })
-                }
-            })
-        })
-        .collect()
+    for c in components {
+        match c.remote {
+            Some(remote) if remote == c.local => continue,
+            _ => {
+                let path = find_artifact_path(&format!("{}Component", c.name), &artifact_paths)?;
+                comps_to_migrate.push(ClassMigration {
+                    declared: false,
+                    class: c.clone(),
+                    artifact_path: path.clone(),
+                });
+            }
+        }
+    }
+
+    Ok(comps_to_migrate)
 }
 
 fn evaluate_class_for_migration(
     class: &Class,
     artifact_paths: &HashMap<String, PathBuf>,
-) -> ClassMigration {
+) -> Result<ClassMigration> {
     let should_declare = !matches!(class.remote, Some(remote_hash) if remote_hash == class.local);
 
-    let path = artifact_paths
-        .get(&class.name)
-        .unwrap_or_else(|| panic!("missing contract artifact for `{}` contract", class.name));
-    let contract_artifact =
-        serde_json::from_reader::<_, SierraClass>(fs::File::open(path).unwrap()).unwrap();
+    let path = find_artifact_path(&class.name, &artifact_paths)?;
 
-    ClassMigration {
+    Ok(ClassMigration {
         declared: !should_declare,
         class: class.clone(),
         artifact_path: path.clone(),
-        class_hash: contract_artifact.class_hash().unwrap(),
-    }
+    })
 }
 
 // TODO: generate random salt if need to be redeployed
 fn evaluate_contract_for_migration(
     contract: &Contract,
     artifact_paths: &HashMap<String, PathBuf>,
-) -> ContractMigration {
+) -> Result<ContractMigration> {
     let should_deploy = if contract.address.is_none() {
         true
     } else {
         !matches!(contract.remote, Some(remote_hash) if remote_hash == contract.local)
     };
 
-    let path = artifact_paths
-        .get(&contract.name)
-        .unwrap_or_else(|| panic!("missing contract artifact for `{}` contract", contract.name));
+    let path = find_artifact_path(&contract.name, &artifact_paths)?;
 
-    let contract_artifact =
-        serde_json::from_reader::<_, SierraClass>(fs::File::open(path).unwrap()).unwrap();
-
-    ContractMigration {
+    Ok(ContractMigration {
         deployed: !should_deploy,
         contract: contract.clone(),
         artifact_path: path.clone(),
-        class_hash: contract_artifact.class_hash().unwrap(),
         contract_address: None,
         salt: FieldElement::ZERO,
-    }
+    })
+}
+
+fn find_artifact_path<'a>(
+    contract_name: &str,
+    artifact_paths: &'a HashMap<String, PathBuf>,
+) -> Result<&'a PathBuf> {
+    artifact_paths
+        .get(contract_name)
+        .with_context(|| anyhow!("missing contract artifact for `{}` contract", contract_name))
 }
