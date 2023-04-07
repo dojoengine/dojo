@@ -23,6 +23,10 @@ use tracing::{trace, trace_span};
 use crate::db::DojoRootDatabaseBuilderEx;
 use crate::manifest::Manifest;
 
+#[cfg(test)]
+#[path = "compiler_test.rs"]
+mod test;
+
 pub struct DojoCompiler;
 
 impl Compiler for DojoCompiler {
@@ -41,8 +45,8 @@ impl Compiler for DojoCompiler {
         let compiler_config = build_compiler_config(&unit, ws);
 
         let mut main_crate_ids = collect_main_crate_ids(&unit, &db);
-        if unit.main_component().cairo_package_name() != "dojo" {
-            main_crate_ids.push(db.intern_crate(CrateLongId("dojo".into())));
+        if unit.main_component().cairo_package_name() != "dojo_core" {
+            main_crate_ids.push(db.intern_crate(CrateLongId("dojo_core".into())));
         }
 
         let contracts = {

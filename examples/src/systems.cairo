@@ -5,15 +5,11 @@ mod Spawn {
     use starknet::contract_address::ContractAddressIntoFelt252;
 
     use dojo_examples::components::Position;
-    use dojo_examples::components::IPositionLibraryDispatcher;
-    use dojo_examples::components::IPositionDispatcherTrait;
     use dojo_examples::components::Moves;
-    use dojo_examples::components::IMovesLibraryDispatcher;
-    use dojo_examples::components::IMovesDispatcherTrait;
 
     fn execute() {
         let caller = starknet::get_caller_address();
-        let player = commands::set(caller.into(), (
+        let player = commands::set_entity(caller.into(), (
             Moves { remaining: 10_u8 },
             Position { x: 0_u32, y: 0_u32 },
         ));
@@ -29,19 +25,15 @@ mod Move {
     use starknet::contract_address::ContractAddressIntoFelt252;
 
     use dojo_examples::components::Position;
-    use dojo_examples::components::IPositionLibraryDispatcher;
-    use dojo_examples::components::IPositionDispatcherTrait;
     use dojo_examples::components::Moves;
-    use dojo_examples::components::IMovesLibraryDispatcher;
-    use dojo_examples::components::IMovesDispatcherTrait;
 
     // TODO: Use enum once serde is derivable
     // left: 0, right: 1, up: 2, down: 3
     fn execute(direction: felt252) {
         let caller = starknet::get_caller_address();
-        let (position, moves) = commands::<Position, Moves>::get(caller.into());
+        let (position, moves) = commands::<Position, Moves>::entity(caller.into());
         let next = next_position(position.unwrap(), direction);
-        let uh = commands::set(caller.into(), (
+        let uh = commands::set_entity(caller.into(), (
             Moves { remaining: moves.unwrap().remaining - 1_u8 },
             Position { x: next.x, y: next.y },
         ));

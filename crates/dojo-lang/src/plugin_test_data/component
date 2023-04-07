@@ -96,21 +96,6 @@ mod PositionComponent {
     fn len() -> usize {
         2_usize
     }
-
-    // Serialize an entity.
-    #[view]
-    fn serialize(mut raw: Span<felt252>) -> Position {
-        serde::Serde::<Position>::deserialize(ref raw).unwrap()
-    }
-
-    // Get the state of an entity.
-    #[view]
-    #[raw_output]
-    fn deserialize(value: Position) -> Span<felt252> {
-        let mut arr = ArrayTrait::new();
-        serde::Serde::<Position>::serialize(ref arr, value);
-        arr.span()
-    }
 }
 
 //! > expected_diagnostics

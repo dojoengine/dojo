@@ -1,3 +1,5 @@
+pub mod migration;
+
 use scarb::core::Workspace;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
