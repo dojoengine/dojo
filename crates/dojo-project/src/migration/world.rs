@@ -237,7 +237,7 @@ fn evaluate_systems_to_be_declared(
         match s.remote {
             Some(remote) if remote == s.local => continue,
             _ => {
-                let path = find_artifact_path(&format!("{}System", s.name), &artifact_paths)?;
+                let path = find_artifact_path(&format!("{}System", s.name), artifact_paths)?;
                 syst_to_migrate.push(ClassMigration {
                     declared: false,
                     class: s.clone(),
@@ -260,7 +260,7 @@ fn evaluate_components_to_be_declared(
         match c.remote {
             Some(remote) if remote == c.local => continue,
             _ => {
-                let path = find_artifact_path(&format!("{}Component", c.name), &artifact_paths)?;
+                let path = find_artifact_path(&format!("{}Component", c.name), artifact_paths)?;
                 comps_to_migrate.push(ClassMigration {
                     declared: false,
                     class: c.clone(),
@@ -279,7 +279,7 @@ fn evaluate_class_for_migration(
 ) -> Result<ClassMigration> {
     let should_declare = !matches!(class.remote, Some(remote_hash) if remote_hash == class.local);
 
-    let path = find_artifact_path(&class.name, &artifact_paths)?;
+    let path = find_artifact_path(&class.name, artifact_paths)?;
 
     Ok(ClassMigration {
         declared: !should_declare,
@@ -299,7 +299,7 @@ fn evaluate_contract_for_migration(
         !matches!(contract.remote, Some(remote_hash) if remote_hash == contract.local)
     };
 
-    let path = find_artifact_path(&contract.name, &artifact_paths)?;
+    let path = find_artifact_path(&contract.name, artifact_paths)?;
 
     Ok(ContractMigration {
         deployed: !should_deploy,

@@ -274,7 +274,7 @@ fn prepare_contract_declaration_params(
 }
 
 fn get_flattened_class(artifact_path: &PathBuf) -> Result<FlattenedSierraClass> {
-    let file = File::open(&artifact_path)?;
+    let file = File::open(artifact_path)?;
     let contract_artifact: SierraClass = serde_json::from_reader(&file)?;
     Ok(contract_artifact.flatten()?)
 }
