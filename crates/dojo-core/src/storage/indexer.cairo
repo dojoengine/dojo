@@ -7,7 +7,10 @@ mod Indexer {
     use traits::Into;
 
     struct Storage {
-        ids: LegacyMap::<(felt252, felt252), bool>,
+        // Maps id to it's position in the table.
+        // NOTE: ids is 1-indexed to allow for 0
+        // to be used as a sentinel value.
+        ids: LegacyMap::<(felt252, felt252), usize>,
         table_lens: LegacyMap::<felt252, usize>,
         tables: LegacyMap::<(felt252, usize), felt252>,
     }
@@ -15,14 +18,31 @@ mod Indexer {
     #[external]
     fn index(table: felt252, id: felt252) {
         let is_set = ids::read((table, id));
-        if is_set {
+        if is_set != 0_usize {
             return ();
         }
 
-        ids::write((table, id), bool::True(()));
         let table_len = table_lens::read(table);
+        ids::write((table, id), table_len + 1_usize);
         table_lens::write(table, table_len + 1_usize);
         tables::write((table, table_len), id);
+    }
+
+    #[external]
+    fn delete(table: felt252, id: felt252) {
+        let table_len = table_lens::read(table);
+        let table_idx = ids::read((table, id)) - 1_usize;
+        ids::write((table, id), 0_usize);
+        table_lens::write(table, table_len - 1_usize);
+
+        // Replace the deleted element with the last element.
+        // NOTE: We leave the last element set as to not produce an unncessary state diff.
+        tables::write((table, table_idx), tables::read((table, table_len - 1_usize)));
+    }
+
+    #[view]
+    fn exists(table: felt252, id: felt252) -> bool {
+        ids::read((table, id)) != 0_usize
     }
 
     #[view]
@@ -71,4 +91,21 @@ fn test_index_entity() {
     let two_records = Indexer::records(69);
     assert(two_records.len() == 2_usize, 'index should have two records');
     assert(*two_records.at(1_usize) == 1337, 'entity value incorrect');
+}
+
+#[test]
+#[available_gas(2000000)]
+fn test_entity_delete() {
+    Indexer::index(69, 420);
+    let records = Indexer::records(69);
+    assert(records.len() == 1_usize, 'entity not indexed');
+    assert(*records.at(0_usize) == 420, 'entity value incorrect');
+
+    assert(Indexer::exists(69, 420), 'entity should exist');
+
+    Indexer::delete(69, 420);
+
+    assert(!Indexer::exists(69, 420), 'entity should not exist');
+    let no_records = Indexer::records(69);
+    assert(no_records.len() == 0_usize, 'index should have no records');
 }
