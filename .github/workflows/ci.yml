@@ -9,6 +9,11 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/dojoengine/dojo-dev:latest
+      volumes:
+        - ~/.cargo:~/.cargo
+        - ./target:./target
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -21,7 +26,7 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: |
-          cargo test -vv
+          cargo test
 
   # cairofmt:
   #   runs-on: ubuntu-latest

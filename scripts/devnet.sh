@@ -1,0 +1,1 @@
+starknet-devnet --cairo-compiler-manifest ./cairo/Cargo.toml --seed 420 --disable-rpc-request-validation

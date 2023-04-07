@@ -12,6 +12,7 @@ camino.workspace = true
 clap.workspace = true
 dojo-lang = { path = "../dojo-lang" }
 dojo-project = { path = "../dojo-project" }
+dojo-test-utils = { path = "../dojo-test-utils" }
 cairo-lang-compiler.workspace = true
 cairo-lang-filesystem.workspace = true
 cairo-lang-plugins.workspace = true
@@ -28,6 +29,9 @@ thiserror.workspace = true
 tokio = { version = "1.15.0", features = ["full"] }
 toml.workspace = true
 url = "2.2.2"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
 
 [[bin]]
 name = "dojo"

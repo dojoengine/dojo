@@ -56,3 +56,40 @@ pub async fn run(args: MigrateArgs) -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_migrate() {
+    use dojo_test_utils::devnet;
+
+    devnet::start_devnet_and_wait().unwrap_or_else(|err| {
+        panic!(
+            "Failed to start devnet: {}. Make sure you have the devnet running on port 5050",
+            err
+        )
+    });
+
+    let source_dir = Utf8PathBuf::from_path_buf("../../examples".into()).unwrap();
+    let world = World::from_path(source_dir.clone())
+        .await
+        .unwrap_or_else(|err| panic!("Failed to load world from path: {}.", err));
+    let mut migration = world.prepare_for_migration(source_dir);
+
+    let provider = SequencerGatewayProvider::new(
+        Url::parse("http://127.0.0.1:5050/gateway").unwrap(),
+        Url::parse("http://127.0.0.1:5050/feeder_gateway").unwrap(),
+    );
+
+    let signer = LocalWallet::from(SigningKey::from_secret_scalar(
+        FieldElement::from_hex_be("0x5d4fb5e2c807cd78ac51675e06be7099").unwrap(),
+    ));
+    let address = FieldElement::from_hex_be(
+        "0x5f6fd2a43f4bce1bdfb2d0e9212d910227d9f67cf1425f2a9ceae231572c643",
+    )
+    .unwrap();
+    let account = SingleOwnerAccount::new(provider, signer, address, chain_id::TESTNET);
+
+    migration
+        .execute(account)
+        .await
+        .unwrap_or_else(|op| panic!("Failed to execute migration: {}.", op));
+}
