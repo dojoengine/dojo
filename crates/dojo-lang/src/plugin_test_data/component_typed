@@ -68,21 +68,6 @@ mod FighterComponent {
     fn len() -> usize {
         5_usize
     }
-
-    // Serialize an entity.
-    #[view]
-    fn serialize(mut raw: Span<felt252>) -> Fighter {
-        serde::Serde::<Fighter>::deserialize(ref raw).unwrap()
-    }
-
-    // Get the state of an entity.
-    #[view]
-    #[raw_output]
-    fn deserialize(value: Fighter) -> Span<felt252> {
-        let mut arr = ArrayTrait::new();
-        serde::Serde::<Fighter>::serialize(ref arr, value);
-        arr.span()
-    }
 }
 
 //! > expected_diagnostics

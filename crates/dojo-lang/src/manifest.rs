@@ -8,7 +8,6 @@ use cairo_lang_defs::ids::{ModuleId, ModuleItemId};
 use cairo_lang_filesystem::ids::CrateId;
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::plugin::DynPluginAuxData;
-use dojo_project::WorldConfig;
 use serde_with::serde_as;
 use smol_str::SmolStr;
 use starknet::core::serde::unsigned_field_element::{UfeHex, UfeHexOption};
@@ -159,15 +158,11 @@ impl Manifest {
     }
 
     pub async fn from_remote(
+        world_address: FieldElement,
         rpc_url: Url,
         local_manifest: &Self,
-        world_config: &WorldConfig,
     ) -> Result<Self> {
         let mut manifest = Manifest::default();
-
-        let Some(world_address) = world_config.address else {
-            return Ok(manifest);
-        };
 
         let starknet = JsonRpcClient::new(HttpTransport::new(rpc_url));
         let world_class_hash =
