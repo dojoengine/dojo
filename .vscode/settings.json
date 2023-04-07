@@ -1,5 +1,4 @@
 {
-  "cairo1.languageServerPath": "/Users/tarrence/code/cairo/target/release/cairo-language-server",
-  "cairo1.enableLanguageServer": true,
-  "rust-analyzer.showUnlinkedFileNotification": false
+    "cairo1.languageServerPath": "/workspaces/dojo/target/release/dojo-language-server",
+    "cairo1.enableLanguageServer": true,
 }
