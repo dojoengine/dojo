@@ -153,8 +153,8 @@ impl World {
             executor: Contract {
                 name: "Executor".into(),
                 address: None,
-                local: local_manifest.world.unwrap(),
-                remote: remote_manifest.world,
+                local: local_manifest.executor.unwrap(),
+                remote: remote_manifest.executor,
             },
             indexer: Class {
                 world: world_config.address.unwrap(),
@@ -295,7 +295,10 @@ fn evaluate_class_for_migration(
     class: &Class,
     artifact_paths: &HashMap<String, PathBuf>,
 ) -> ClassMigration {
-    let should_declare = matches!(class.remote, Some(remote_hash) if remote_hash == class.local);
+    let should_declare = match class.remote {
+        Some(remote_hash) if remote_hash == class.local => false,
+        _ => true,
+    };
 
     let path = artifact_paths
         .get(&class.name)
@@ -319,7 +322,10 @@ fn evaluate_contract_for_migration(
     let should_deploy = if contract.address.is_none() {
         true
     } else {
-        !matches!(contract.remote, Some(remote_hash) if remote_hash == contract.local)
+        match contract.remote {
+            Some(remote_hash) if remote_hash == contract.local => false,
+            _ => true,
+        }
     };
 
     let path = artifact_paths

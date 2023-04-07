@@ -66,29 +66,28 @@ impl Migration {
         &mut self,
         account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
     ) -> Result<()> {
-        let indexer = {
-            if !self.indexer.declared {
-                self.indexer.declare(account).await;
-            }
-            self.indexer.class_hash
-        };
+        if !self.indexer.declared {
+            self.indexer.declare(account).await;
+        }
 
-        let store = {
-            if !self.store.declared {
-                self.store.declare(account).await;
-            }
-            self.store.class_hash
-        };
+        if !self.store.declared {
+            self.store.declare(account).await;
+        }
 
-        let executor = {
-            if !self.executor.deployed {
-                self.executor.deploy(vec![], account).await;
-            }
-            self.executor.contract.address.unwrap()
-        };
+        if !self.executor.deployed {
+            self.executor.deploy(vec![], account).await;
+        }
 
-        self.world.declare(account).await;
-        self.world.deploy(vec![executor, store, indexer], account).await;
+        self.world
+            .deploy(
+                vec![
+                    self.executor.contract_address.unwrap(),
+                    self.store.class_hash,
+                    self.indexer.class_hash,
+                ],
+                account,
+            )
+            .await;
 
         self.register_components(account).await?;
         self.register_systems(account).await?;
@@ -179,19 +178,17 @@ impl Declarable for ClassMigration {
         let flattened_class = contract_artifact.flatten().unwrap();
 
         let result = account
-            .declare(Arc::new(flattened_class), self.class.local) // compiled_class_hash
+            .declare(Arc::new(flattened_class), self.class.local)
             .send()
             .await
             .unwrap_or_else(|error| {
-                panic!("Problem deploying {} artifact: {}", self.class.name, error);
+                panic!("Problem declaring {} contract: {error}", self.class.name);
             });
 
         println!(
-            "Declared `{}` contract at transaction `{:#x}`",
+            "Declared `{}` contract at transaction: {:#x}",
             self.class.name, result.transaction_hash
         );
-        // probably dont need this but just in case
-        assert!(Some(self.class_hash) == result.class_hash);
     }
 }
 
@@ -208,15 +205,13 @@ impl Declarable for ContractMigration {
             .send()
             .await
             .unwrap_or_else(|error| {
-                panic!("Problem deploying {} artifact: {}", self.contract.name, error);
+                panic!("problem declaring {} contract: {error}", self.contract.name);
             });
 
         println!(
-            "Declared `{}` contract at transaction `{:#x}`",
+            "Declared `{}` contract at transaction: {:#x}",
             self.contract.name, result.transaction_hash
         );
-        // probably dont need this but just in case
-        assert!(Some(self.class_hash) == result.class_hash);
     }
 }
 
@@ -233,7 +228,7 @@ impl Deployable for ContractMigration {
             vec![
                 self.class_hash,                                // class hash
                 self.salt,                                      // salt
-                FieldElement::ONE,                              // unique
+                FieldElement::ZERO,                             // unique
                 FieldElement::from(constructor_calldata.len()), // constructor calldata len
             ],
             constructor_calldata.clone(),
@@ -252,26 +247,24 @@ impl Deployable for ContractMigration {
             }])
             .send()
             .await
-            .unwrap_or_else(|e| {
-                panic!("problem deploying contract for `{}`: {e}", self.contract.name)
-            });
-
-        self.deployed = true;
-        self.contract.address = res.address;
+            .unwrap_or_else(|e| panic!("problem deploying `{}` contract: {e}", self.contract.name));
 
         let contract_address = get_contract_address(
-            FieldElement::ZERO,
+            self.salt,
             self.class_hash,
             &constructor_calldata,
-            account.address(),
+            FieldElement::ZERO,
         );
 
         self.contract_address = Some(contract_address);
 
         println!(
-            "Declared `{}` contract at transaction `{:#x}`",
+            "Deployed `{}` contract at transaction: {:#x}",
             self.contract.name, res.transaction_hash
         );
-        println!("Contract address: {contract_address:#x}");
+        println!("`{} `Contract address: {contract_address:#x}", self.contract.name);
+
+        self.deployed = true;
+        self.contract.address = Some(contract_address);
     }
 }

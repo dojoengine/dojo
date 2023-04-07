@@ -3109,7 +3109,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
+ "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
 ]
 
 [[package]]
