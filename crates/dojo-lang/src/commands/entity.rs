@@ -51,7 +51,7 @@ impl CommandTrait for EntityCommand {
                 "
                     let mut __$query_id$_$query_subtype$_raw = IWorldDispatcher {
                         contract_address: world_address
-                    }.get('$component$', $storage_key$, 0_u8, 0_usize);
+                    }.entity('$component$', $storage_key$, 0_u8, 0_usize);
                     let __$query_id$_$query_subtype$ = serde::Serde::<$component$>::deserialize(
                         ref __$query_id$_$query_subtype$_raw
                     );

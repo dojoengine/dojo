@@ -262,7 +262,7 @@ mod SpawnSystem {
             serde::Serde::<Player>::serialize(ref calldata, Player { name: name });
             IWorldDispatcher {
                 contract_address: world_address
-            }.set('Player', (420, (69, uuid)).into(), 0_u8, calldata.span());
+            }.set_entity('Player', (420, (69, uuid)).into(), 0_u8, calldata.span());
         }
 
         {
@@ -270,7 +270,7 @@ mod SpawnSystem {
             serde::Serde::<Position>::serialize(ref calldata, Position { x: 0, y: 0 });
             IWorldDispatcher {
                 contract_address: world_address
-            }.set('Position', (420, (69, uuid)).into(), 0_u8, calldata.span());
+            }.set_entity('Position', (420, (69, uuid)).into(), 0_u8, calldata.span());
         }
 
         {
@@ -278,7 +278,7 @@ mod SpawnSystem {
             serde::Serde::<Player>::serialize(ref calldata, Player { name: name });
             IWorldDispatcher {
                 contract_address: world_address
-            }.set('Player', 420.into(), 0_u8, calldata.span());
+            }.set_entity('Player', 420.into(), 0_u8, calldata.span());
         }
 
         {
@@ -286,7 +286,7 @@ mod SpawnSystem {
             serde::Serde::<Position>::serialize(ref calldata, Position { x: 0, y: 0 });
             IWorldDispatcher {
                 contract_address: world_address
-            }.set('Position', 420.into(), 0_u8, calldata.span());
+            }.set_entity('Position', 420.into(), 0_u8, calldata.span());
         }
 
         let player_id = starknet::get_caller_address();
@@ -296,7 +296,7 @@ mod SpawnSystem {
             serde::Serde::<Player>::serialize(ref calldata, Player { name: name });
             IWorldDispatcher {
                 contract_address: world_address
-            }.set('Player', player_id.into(), 0_u8, calldata.span());
+            }.set_entity('Player', player_id.into(), 0_u8, calldata.span());
         }
 
         {
@@ -304,7 +304,7 @@ mod SpawnSystem {
             serde::Serde::<Position>::serialize(ref calldata, Position { x: 0, y: 0 });
             IWorldDispatcher {
                 contract_address: world_address
-            }.set('Position', player_id.into(), 0_u8, calldata.span());
+            }.set_entity('Position', player_id.into(), 0_u8, calldata.span());
         }
 
         {
@@ -312,7 +312,7 @@ mod SpawnSystem {
             serde::Serde::<Player>::serialize(ref calldata, Player { name: name });
             IWorldDispatcher {
                 contract_address: world_address
-            }.set('Player', (0, 0, 0, 0, 0), 0_u8, calldata.span());
+            }.set_entity('Player', (0, 0, 0, 0, 0), 0_u8, calldata.span());
         }
 
         {
@@ -320,7 +320,7 @@ mod SpawnSystem {
             serde::Serde::<Position>::serialize(ref calldata, Position { x: 0, y: 0 });
             IWorldDispatcher {
                 contract_address: world_address
-            }.set('Position', (0, 0, 0, 0, 0), 0_u8, calldata.span());
+            }.set_entity('Position', (0, 0, 0, 0, 0), 0_u8, calldata.span());
         }
 
         {
@@ -328,7 +328,7 @@ mod SpawnSystem {
             serde::Serde::<Player>::serialize(ref calldata, Player { name: name });
             IWorldDispatcher {
                 contract_address: world_address
-            }.set('Player', 1337.into(), 0_u8, calldata.span());
+            }.set_entity('Player', 1337.into(), 0_u8, calldata.span());
         }
 
         {
@@ -336,7 +336,7 @@ mod SpawnSystem {
             serde::Serde::<Position>::serialize(ref calldata, Position { x: 0, y: 0 });
             IWorldDispatcher {
                 contract_address: world_address
-            }.set('Position', 1337.into(), 0_u8, calldata.span());
+            }.set_entity('Position', 1337.into(), 0_u8, calldata.span());
         }
         return ();
     }
@@ -388,20 +388,20 @@ mod MoveSystem {
 
         let mut __player_player_raw = IWorldDispatcher {
             contract_address: world_address
-        }.get('Player', player_id.into(), 0_u8, 0_usize);
+        }.entity('Player', player_id.into(), 0_u8, 0_usize);
         let __player_player = serde::Serde::<Player>::deserialize(ref __player_player_raw);
         let player = __player_player;
 
         let mut __player_position_position_raw = IWorldDispatcher {
             contract_address: world_address
-        }.get('Position', player_id.into(), 0_u8, 0_usize);
+        }.entity('Position', player_id.into(), 0_u8, 0_usize);
         let __player_position_position = serde::Serde::<Position>::deserialize(
             ref __player_position_position_raw
         );
 
         let mut __player_position_player_raw = IWorldDispatcher {
             contract_address: world_address
-        }.get('Player', player_id.into(), 0_u8, 0_usize);
+        }.entity('Player', player_id.into(), 0_u8, 0_usize);
         let __player_position_player = serde::Serde::<Player>::deserialize(
             ref __player_position_player_raw
         );
@@ -413,14 +413,14 @@ mod MoveSystem {
         if bar == 123 {
             let mut __player_position_position_raw = IWorldDispatcher {
                 contract_address: world_address
-            }.get('Position', player_id.into(), 0_u8, 0_usize);
+            }.entity('Position', player_id.into(), 0_u8, 0_usize);
             let __player_position_position = serde::Serde::<Position>::deserialize(
                 ref __player_position_position_raw
             );
 
             let mut __player_position_player_raw = IWorldDispatcher {
                 contract_address: world_address
-            }.get('Player', player_id.into(), 0_u8, 0_usize);
+            }.entity('Player', player_id.into(), 0_u8, 0_usize);
             let __player_position_player = serde::Serde::<Player>::deserialize(
                 ref __player_position_player_raw
             );
@@ -438,14 +438,14 @@ mod MoveSystem {
         } else if bar == 321 {
             let mut __player_position_position_raw = IWorldDispatcher {
                 contract_address: world_address
-            }.get('Position', player_id.into(), 0_u8, 0_usize);
+            }.entity('Position', player_id.into(), 0_u8, 0_usize);
             let __player_position_position = serde::Serde::<Position>::deserialize(
                 ref __player_position_position_raw
             );
 
             let mut __player_position_player_raw = IWorldDispatcher {
                 contract_address: world_address
-            }.get('Player', player_id.into(), 0_u8, 0_usize);
+            }.entity('Player', player_id.into(), 0_u8, 0_usize);
             let __player_position_player = serde::Serde::<Player>::deserialize(
                 ref __player_position_player_raw
             );
@@ -453,14 +453,14 @@ mod MoveSystem {
         } else {
             let mut __player_position_position_raw = IWorldDispatcher {
                 contract_address: world_address
-            }.get('Position', player_id.into(), 0_u8, 0_usize);
+            }.entity('Position', player_id.into(), 0_u8, 0_usize);
             let __player_position_position = serde::Serde::<Position>::deserialize(
                 ref __player_position_position_raw
             );
 
             let mut __player_position_player_raw = IWorldDispatcher {
                 contract_address: world_address
-            }.get('Player', player_id.into(), 0_u8, 0_usize);
+            }.entity('Player', player_id.into(), 0_u8, 0_usize);
             let __player_position_player = serde::Serde::<Player>::deserialize(
                 ref __player_position_player_raw
             );
@@ -469,14 +469,14 @@ mod MoveSystem {
         {
             let mut __player_position_position_raw = IWorldDispatcher {
                 contract_address: world_address
-            }.get('Position', player_id.into(), 0_u8, 0_usize);
+            }.entity('Position', player_id.into(), 0_u8, 0_usize);
             let __player_position_position = serde::Serde::<Position>::deserialize(
                 ref __player_position_position_raw
             );
 
             let mut __player_position_player_raw = IWorldDispatcher {
                 contract_address: world_address
-            }.get('Player', player_id.into(), 0_u8, 0_usize);
+            }.entity('Player', player_id.into(), 0_u8, 0_usize);
             let __player_position_player = serde::Serde::<Player>::deserialize(
                 ref __player_position_player_raw
             );
@@ -489,14 +489,14 @@ mod MoveSystem {
 
                 let mut __player_position_position_raw = IWorldDispatcher {
                     contract_address: world_address
-                }.get('Position', player_id.into(), 0_u8, 0_usize);
+                }.entity('Position', player_id.into(), 0_u8, 0_usize);
                 let __player_position_position = serde::Serde::<Position>::deserialize(
                     ref __player_position_position_raw
                 );
 
                 let mut __player_position_player_raw = IWorldDispatcher {
                     contract_address: world_address
-                }.get('Player', player_id.into(), 0_u8, 0_usize);
+                }.entity('Player', player_id.into(), 0_u8, 0_usize);
                 let __player_position_player = serde::Serde::<Player>::deserialize(
                     ref __player_position_player_raw
                 );
@@ -515,14 +515,14 @@ mod MoveSystem {
             Option::None(()) => {
                 let mut __player_position_position_raw = IWorldDispatcher {
                     contract_address: world_address
-                }.get('Position', player_id.into(), 0_u8, 0_usize);
+                }.entity('Position', player_id.into(), 0_u8, 0_usize);
                 let __player_position_position = serde::Serde::<Position>::deserialize(
                     ref __player_position_position_raw
                 );
 
                 let mut __player_position_player_raw = IWorldDispatcher {
                     contract_address: world_address
-                }.get('Player', player_id.into(), 0_u8, 0_usize);
+                }.entity('Player', player_id.into(), 0_u8, 0_usize);
                 let __player_position_player = serde::Serde::<Player>::deserialize(
                     ref __player_position_player_raw
                 );
@@ -560,11 +560,11 @@ error: Plugin diagnostic: Invalid arguments. Expected "(storage_key, (components
                             ^^
 
 error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::key::StorageKey", found: "(core::felt252, core::felt252, core::felt252, core::felt252, core::felt252)".
- --> Spawn:74:92
-                        IWorldDispatcher { contract_address: world_address }.set('Player', (0, 0, 0, 0, 0), 0_u8, calldata.span());
-                                                                                           ^*************^
+ --> Spawn:74:99
+                        IWorldDispatcher { contract_address: world_address }.set_entity('Player', (0, 0, 0, 0, 0), 0_u8, calldata.span());
+                                                                                                  ^*************^
 
 error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::key::StorageKey", found: "(core::felt252, core::felt252, core::felt252, core::felt252, core::felt252)".
- --> Spawn:80:94
-                        IWorldDispatcher { contract_address: world_address }.set('Position', (0, 0, 0, 0, 0), 0_u8, calldata.span());
-                                                                                             ^*************^
+ --> Spawn:80:101
+                        IWorldDispatcher { contract_address: world_address }.set_entity('Position', (0, 0, 0, 0, 0), 0_u8, calldata.span());
+                                                                                                    ^*************^

@@ -21,6 +21,7 @@ mod World {
     use dojo_core::interfaces::IIndexerDispatcherTrait;
     use dojo_core::interfaces::IStoreLibraryDispatcher;
     use dojo_core::interfaces::IStoreDispatcherTrait;
+    use dojo_core::interfaces::IWorld;
 
     struct Storage {
         indexer: ClassHash,
@@ -103,7 +104,7 @@ mod World {
     }
 
     #[external]
-    fn set(component: felt252, key: StorageKey, offset: u8, value: Span<felt252>) {
+    fn set_entity(component: felt252, key: StorageKey, offset: u8, value: Span<felt252>) {
         let system_class_hash = caller::read();
         let table = key.table(component);
         let id = key.id();
@@ -119,7 +120,7 @@ mod World {
     }
 
     #[view]
-    fn get(component: felt252, key: StorageKey, offset: u8, mut length: usize) -> Span<felt252> {
+    fn entity(component: felt252, key: StorageKey, offset: u8, mut length: usize) -> Span<felt252> {
         let class_hash = component_registry::read(component);
 
         let res = IStoreLibraryDispatcher {
@@ -168,13 +169,6 @@ mod World {
         _grant_role(role, account);
     }
 
-    fn _grant_role(role: felt252, account: ContractAddress) {
-        let has_role = role_member::read((role, account));
-        if (!has_role) {
-            role_member::write((role, account), bool::True(()));
-        }
-    }
-
     #[external]
     fn revoke_role(role: felt252, account: ContractAddress) {
         let admin = role_admin::read(role);
@@ -182,17 +176,24 @@ mod World {
         _revoke_role(role, account);
     }
 
+    #[external]
+    fn renounce_role(role: felt252) {
+        let caller_address = get_caller_address();
+        _revoke_role(role, caller_address);
+    }
+
+    fn _grant_role(role: felt252, account: ContractAddress) {
+        let has_role = role_member::read((role, account));
+        if (!has_role) {
+            role_member::write((role, account), bool::True(()));
+        }
+    }
+
     fn _revoke_role(role: felt252, account: ContractAddress) {
         let has_role = role_member::read((role, account));
         if (has_role) {
             role_member::write((role, account), bool::False(()));
         }
-    }
-
-    #[external]
-    fn renounce_role(role: felt252) {
-        let caller_address = get_caller_address();
-        _revoke_role(role, caller_address);
     }
 
     fn assert_only_role(role: felt252) {
@@ -211,8 +212,8 @@ mod World {
 //     let mut data = ArrayTrait::<felt252>::new();
 //     data.append(1337);
 //     let id = World::uuid();
-//     World::set(name, StorageKeyTrait::new_from_id(id), 0_u8, data.span());
-//     let stored = World::get(name, StorageKeyTrait::new_from_id(id), 0_u8, 1_usize);
+//     World::set_entity(name, StorageKeyTrait::new_from_id(id), 0_u8, data.span());
+//     let stored = World::entity(name, StorageKeyTrait::new_from_id(id), 0_u8, 1_usize);
 //     assert(*stored.snapshot.at(0_usize) == 1337, 'data not stored');
 // }
 
@@ -225,8 +226,8 @@ mod World {
 //     let mut data = ArrayTrait::<felt252>::new();
 //     data.append(1337);
 //     let id = World::uuid();
-//     World::set(name, StorageKeyTrait::new_from_id(id), 0_u8, data.span());
-//     let stored = World::get(name, StorageKeyTrait::new_from_id(id), 0_u8, 1_usize);
+//     World::set_entity(name, StorageKeyTrait::new_from_id(id), 0_u8, data.span());
+//     let stored = World::entity(name, StorageKeyTrait::new_from_id(id), 0_u8, 1_usize);
 //     assert(*stored.snapshot.at(0_usize) == 1337, 'data not stored');
 // }
 
