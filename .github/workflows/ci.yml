@@ -21,7 +21,7 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: |
-          cargo test
+          cargo test -vv
 
   # cairofmt:
   #   runs-on: ubuntu-latest
@@ -90,10 +90,19 @@ jobs:
       - uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - id: cache-cargo-udeps
+        uses: actions/cache@v2
+        with:
+          path: ~/.cargo-udeps-cache
+          key: cargo-udeps-v0.1.35-${{ runner.os }}
       - name: "Download and run cargo-udeps"
         run: |
-          wget -O - -c https://github.com/est31/cargo-udeps/releases/download/v0.1.35/cargo-udeps-v0.1.35-x86_64-unknown-linux-gnu.tar.gz | tar -xz
-          cargo-udeps-*/cargo-udeps udeps
+          if [ ! -f ~/.cargo-udeps-cache/cargo-udeps ]; then
+            wget -O - -c https://github.com/est31/cargo-udeps/releases/download/v0.1.35/cargo-udeps-v0.1.35-x86_64-unknown-linux-gnu.tar.gz | tar -xz
+            mkdir -p ~/.cargo-udeps-cache
+            mv cargo-udeps-*/cargo-udeps ~/.cargo-udeps-cache/cargo-udeps
+          fi
+          ~/.cargo-udeps-cache/cargo-udeps udeps
         env:
           RUSTUP_TOOLCHAIN: nightly-2022-11-03
 

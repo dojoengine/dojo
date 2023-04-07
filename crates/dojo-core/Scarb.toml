@@ -1,0 +1,4 @@
+[package]
+name = "dojo_core"
+version = "0.1.0"
+description = "The Dojo Core library for autonomous worlds."

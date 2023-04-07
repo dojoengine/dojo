@@ -348,7 +348,7 @@ version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fcb51a0695d8f838b1ee009b3fbf66bda078cd64590202a864a8f3e8c4315c47"
 dependencies = [
- "getrandom 0.2.8",
+ "getrandom 0.2.9",
  "once_cell",
  "version_check",
 ]
@@ -360,7 +360,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2c99f64d1e06488f620f932677e24bc6e2897582980441ae90a671415bd7ec2f"
 dependencies = [
  "cfg-if",
- "getrandom 0.2.8",
+ "getrandom 0.2.9",
  "once_cell",
  "version_check",
 ]
@@ -746,9 +746,9 @@ dependencies = [
 
 [[package]]
 name = "async-executor"
-version = "1.5.0"
+version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "17adb73da160dfb475c183343c8cccd80721ea5a605d3eb57125f0a7b7a92d0b"
+checksum = "6fa3dc5f2a8564f07759c008b9109dc0d39de92a88d5588b8a5036d286383afb"
 dependencies = [
  "async-lock",
  "async-task",
@@ -769,9 +769,9 @@ dependencies = [
 
 [[package]]
 name = "async-stream"
-version = "0.3.4"
+version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad445822218ce64be7a341abfb0b1ea43b5c23aa83902542a4542e78309d8e5e"
+checksum = "cd56dd203fef61ac097dd65721a419ddccb106b2d2b70ba60a6b529f03961a51"
 dependencies = [
  "async-stream-impl",
  "futures-core",
@@ -780,13 +780,13 @@ dependencies = [
 
 [[package]]
 name = "async-stream-impl"
-version = "0.3.4"
+version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e4655ae1a7b0cdf149156f780c5bf3f1352bc53cbd9e0a361a7ef7b22947e965"
+checksum = "16e62a023e7c117e27523144c5d2459f4397fcc3cab0085af8e2224f643a0193"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 1.0.109",
+ "syn 2.0.13",
 ]
 
 [[package]]
@@ -927,9 +927,9 @@ dependencies = [
 
 [[package]]
 name = "bevy-tokio-tasks"
-version = "0.10.1"
+version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e51bf10a4a62b3b83e5ce6f67bea32ee452ca1b5f6da4ad780f928614c3423e"
+checksum = "45f6a9e07362d3392856983cba0910a6391f9482093eae789fea844f8d150342"
 dependencies = [
  "bevy_app",
  "bevy_ecs",
@@ -1379,7 +1379,7 @@ checksum = "0a88ebbca55d360d72e9fe78df0d22e25cd419933c9559e79dae2757f7c4d066"
 dependencies = [
  "ahash 0.7.6",
  "bevy_utils_proc_macros",
- "getrandom 0.2.8",
+ "getrandom 0.2.9",
  "hashbrown 0.12.3",
  "instant",
  "petgraph",
@@ -1682,7 +1682,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-casm"
 version = "1.0.0-alpha.6"
-source = "git+https://github.com/starkware-libs/cairo.git#0f73bb221dfab5c6b7ce7dc8e5e0d207f50821cf"
+source = "git+https://github.com/starkware-libs/cairo.git#9c3cb9633a9ef8595b3ee041a00b37b84d964af7"
 dependencies = [
  "cairo-lang-utils",
  "indoc 1.0.9",
@@ -1695,7 +1695,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-compiler"
 version = "1.0.0-alpha.6"
-source = "git+https://github.com/starkware-libs/cairo.git#0f73bb221dfab5c6b7ce7dc8e5e0d207f50821cf"
+source = "git+https://github.com/starkware-libs/cairo.git#9c3cb9633a9ef8595b3ee041a00b37b84d964af7"
 dependencies = [
  "anyhow",
  "cairo-lang-defs",
@@ -1719,12 +1719,12 @@ dependencies = [
 [[package]]
 name = "cairo-lang-debug"
 version = "1.0.0-alpha.6"
-source = "git+https://github.com/starkware-libs/cairo.git#0f73bb221dfab5c6b7ce7dc8e5e0d207f50821cf"
+source = "git+https://github.com/starkware-libs/cairo.git#9c3cb9633a9ef8595b3ee041a00b37b84d964af7"
 
 [[package]]
 name = "cairo-lang-defs"
 version = "1.0.0-alpha.6"
-source = "git+https://github.com/starkware-libs/cairo.git#0f73bb221dfab5c6b7ce7dc8e5e0d207f50821cf"
+source = "git+https://github.com/starkware-libs/cairo.git#9c3cb9633a9ef8595b3ee041a00b37b84d964af7"
 dependencies = [
  "cairo-lang-debug",
  "cairo-lang-diagnostics",
@@ -1741,7 +1741,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-diagnostics"
 version = "1.0.0-alpha.6"
-source = "git+https://github.com/starkware-libs/cairo.git#0f73bb221dfab5c6b7ce7dc8e5e0d207f50821cf"
+source = "git+https://github.com/starkware-libs/cairo.git#9c3cb9633a9ef8595b3ee041a00b37b84d964af7"
 dependencies = [
  "cairo-lang-filesystem",
  "cairo-lang-utils",
@@ -1752,7 +1752,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-eq-solver"
 version = "1.0.0-alpha.6"
-source = "git+https://github.com/starkware-libs/cairo.git#0f73bb221dfab5c6b7ce7dc8e5e0d207f50821cf"
+source = "git+https://github.com/starkware-libs/cairo.git#9c3cb9633a9ef8595b3ee041a00b37b84d964af7"
 dependencies = [
  "cairo-lang-utils",
  "good_lp",
@@ -1763,19 +1763,20 @@ dependencies = [
 [[package]]
 name = "cairo-lang-filesystem"
 version = "1.0.0-alpha.6"
-source = "git+https://github.com/starkware-libs/cairo.git#0f73bb221dfab5c6b7ce7dc8e5e0d207f50821cf"
+source = "git+https://github.com/starkware-libs/cairo.git#9c3cb9633a9ef8595b3ee041a00b37b84d964af7"
 dependencies = [
  "cairo-lang-debug",
  "cairo-lang-utils",
  "path-clean",
  "salsa",
+ "serde",
  "smol_str",
 ]
 
 [[package]]
 name = "cairo-lang-formatter"
 version = "1.0.0-alpha.6"
-source = "git+https://github.com/starkware-libs/cairo.git#0f73bb221dfab5c6b7ce7dc8e5e0d207f50821cf"
+source = "git+https://github.com/starkware-libs/cairo.git#9c3cb9633a9ef8595b3ee041a00b37b84d964af7"
 dependencies = [
  "anyhow",
  "cairo-lang-diagnostics",
@@ -1796,7 +1797,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-language-server"
 version = "1.0.0-alpha.6"
-source = "git+https://github.com/starkware-libs/cairo.git#0f73bb221dfab5c6b7ce7dc8e5e0d207f50821cf"
+source = "git+https://github.com/starkware-libs/cairo.git#9c3cb9633a9ef8595b3ee041a00b37b84d964af7"
 dependencies = [
  "anyhow",
  "cairo-lang-compiler",
@@ -1828,7 +1829,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-lowering"
 version = "1.0.0-alpha.6"
-source = "git+https://github.com/starkware-libs/cairo.git#0f73bb221dfab5c6b7ce7dc8e5e0d207f50821cf"
+source = "git+https://github.com/starkware-libs/cairo.git#9c3cb9633a9ef8595b3ee041a00b37b84d964af7"
 dependencies = [
  "cairo-lang-debug",
  "cairo-lang-defs",
@@ -1852,7 +1853,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-parser"
 version = "1.0.0-alpha.6"
-source = "git+https://github.com/starkware-libs/cairo.git#0f73bb221dfab5c6b7ce7dc8e5e0d207f50821cf"
+source = "git+https://github.com/starkware-libs/cairo.git#9c3cb9633a9ef8595b3ee041a00b37b84d964af7"
 dependencies = [
  "cairo-lang-diagnostics",
  "cairo-lang-filesystem",
@@ -1869,7 +1870,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-plugins"
 version = "1.0.0-alpha.6"
-source = "git+https://github.com/starkware-libs/cairo.git#0f73bb221dfab5c6b7ce7dc8e5e0d207f50821cf"
+source = "git+https://github.com/starkware-libs/cairo.git#9c3cb9633a9ef8595b3ee041a00b37b84d964af7"
 dependencies = [
  "cairo-lang-defs",
  "cairo-lang-diagnostics",
@@ -1887,7 +1888,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-proc-macros"
 version = "1.0.0-alpha.6"
-source = "git+https://github.com/starkware-libs/cairo.git#0f73bb221dfab5c6b7ce7dc8e5e0d207f50821cf"
+source = "git+https://github.com/starkware-libs/cairo.git#9c3cb9633a9ef8595b3ee041a00b37b84d964af7"
 dependencies = [
  "cairo-lang-debug",
  "quote",
@@ -1897,7 +1898,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-project"
 version = "1.0.0-alpha.6"
-source = "git+https://github.com/starkware-libs/cairo.git#0f73bb221dfab5c6b7ce7dc8e5e0d207f50821cf"
+source = "git+https://github.com/starkware-libs/cairo.git#9c3cb9633a9ef8595b3ee041a00b37b84d964af7"
 dependencies = [
  "cairo-lang-filesystem",
  "serde",
@@ -1909,7 +1910,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-runner"
 version = "1.0.0-alpha.6"
-source = "git+https://github.com/starkware-libs/cairo.git#0f73bb221dfab5c6b7ce7dc8e5e0d207f50821cf"
+source = "git+https://github.com/starkware-libs/cairo.git#9c3cb9633a9ef8595b3ee041a00b37b84d964af7"
 dependencies = [
  "anyhow",
  "ark-ff 0.4.2",
@@ -1936,7 +1937,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-semantic"
 version = "1.0.0-alpha.6"
-source = "git+https://github.com/starkware-libs/cairo.git#0f73bb221dfab5c6b7ce7dc8e5e0d207f50821cf"
+source = "git+https://github.com/starkware-libs/cairo.git#9c3cb9633a9ef8595b3ee041a00b37b84d964af7"
 dependencies = [
  "cairo-lang-debug",
  "cairo-lang-defs",
@@ -1959,7 +1960,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-sierra"
 version = "1.0.0-alpha.6"
-source = "git+https://github.com/starkware-libs/cairo.git#0f73bb221dfab5c6b7ce7dc8e5e0d207f50821cf"
+source = "git+https://github.com/starkware-libs/cairo.git#9c3cb9633a9ef8595b3ee041a00b37b84d964af7"
 dependencies = [
  "cairo-lang-utils",
  "const-fnv1a-hash",
@@ -1981,7 +1982,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-sierra-ap-change"
 version = "1.0.0-alpha.6"
-source = "git+https://github.com/starkware-libs/cairo.git#0f73bb221dfab5c6b7ce7dc8e5e0d207f50821cf"
+source = "git+https://github.com/starkware-libs/cairo.git#9c3cb9633a9ef8595b3ee041a00b37b84d964af7"
 dependencies = [
  "cairo-lang-eq-solver",
  "cairo-lang-sierra",
@@ -1993,7 +1994,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-sierra-gas"
 version = "1.0.0-alpha.6"
-source = "git+https://github.com/starkware-libs/cairo.git#0f73bb221dfab5c6b7ce7dc8e5e0d207f50821cf"
+source = "git+https://github.com/starkware-libs/cairo.git#9c3cb9633a9ef8595b3ee041a00b37b84d964af7"
 dependencies = [
  "cairo-lang-eq-solver",
  "cairo-lang-sierra",
@@ -2005,7 +2006,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-sierra-generator"
 version = "1.0.0-alpha.6"
-source = "git+https://github.com/starkware-libs/cairo.git#0f73bb221dfab5c6b7ce7dc8e5e0d207f50821cf"
+source = "git+https://github.com/starkware-libs/cairo.git#9c3cb9633a9ef8595b3ee041a00b37b84d964af7"
 dependencies = [
  "cairo-lang-debug",
  "cairo-lang-defs",
@@ -2030,7 +2031,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-sierra-to-casm"
 version = "1.0.0-alpha.6"
-source = "git+https://github.com/starkware-libs/cairo.git#0f73bb221dfab5c6b7ce7dc8e5e0d207f50821cf"
+source = "git+https://github.com/starkware-libs/cairo.git#9c3cb9633a9ef8595b3ee041a00b37b84d964af7"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -2052,7 +2053,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-starknet"
 version = "1.0.0-alpha.6"
-source = "git+https://github.com/starkware-libs/cairo.git#0f73bb221dfab5c6b7ce7dc8e5e0d207f50821cf"
+source = "git+https://github.com/starkware-libs/cairo.git#9c3cb9633a9ef8595b3ee041a00b37b84d964af7"
 dependencies = [
  "anyhow",
  "cairo-lang-casm",
@@ -2091,7 +2092,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-syntax"
 version = "1.0.0-alpha.6"
-source = "git+https://github.com/starkware-libs/cairo.git#0f73bb221dfab5c6b7ce7dc8e5e0d207f50821cf"
+source = "git+https://github.com/starkware-libs/cairo.git#9c3cb9633a9ef8595b3ee041a00b37b84d964af7"
 dependencies = [
  "cairo-lang-debug",
  "cairo-lang-filesystem",
@@ -2103,7 +2104,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-syntax-codegen"
 version = "1.0.0-alpha.6"
-source = "git+https://github.com/starkware-libs/cairo.git#0f73bb221dfab5c6b7ce7dc8e5e0d207f50821cf"
+source = "git+https://github.com/starkware-libs/cairo.git#9c3cb9633a9ef8595b3ee041a00b37b84d964af7"
 dependencies = [
  "cairo-lang-utils",
  "genco",
@@ -2114,7 +2115,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-test-utils"
 version = "1.0.0-alpha.6"
-source = "git+https://github.com/starkware-libs/cairo.git#0f73bb221dfab5c6b7ce7dc8e5e0d207f50821cf"
+source = "git+https://github.com/starkware-libs/cairo.git#9c3cb9633a9ef8595b3ee041a00b37b84d964af7"
 dependencies = [
  "cairo-lang-utils",
  "env_logger",
@@ -2125,7 +2126,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-utils"
 version = "1.0.0-alpha.6"
-source = "git+https://github.com/starkware-libs/cairo.git#0f73bb221dfab5c6b7ce7dc8e5e0d207f50821cf"
+source = "git+https://github.com/starkware-libs/cairo.git#9c3cb9633a9ef8595b3ee041a00b37b84d964af7"
 dependencies = [
  "chrono",
  "env_logger",
@@ -2346,9 +2347,9 @@ dependencies = [
 
 [[package]]
 name = "concurrent-queue"
-version = "2.1.0"
+version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c278839b831783b70278b14df4d45e1beb1aad306c07bb796637de9a0e323e8e"
+checksum = "62ec6771ecfa0762d24683ee5a32ad78487a3d3afdc0fb8cae19d2c5deb50b7c"
 dependencies = [
  "crossbeam-utils",
 ]
@@ -2491,7 +2492,7 @@ dependencies = [
 [[package]]
 name = "create-output-dir"
 version = "1.0.0"
-source = "git+https://github.com/software-mansion/scarb.git#d82979c1eb02bd80eb0a504215f5f26449e888dc"
+source = "git+https://github.com/software-mansion/scarb.git#d678b0415f511507dbe2f6051ad95acb592cd53b"
 dependencies = [
  "anyhow",
  "core-foundation",
@@ -2916,7 +2917,7 @@ dependencies = [
  "serde",
  "serde_json",
  "smol_str",
- "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
+ "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
  "thiserror",
  "tokio",
  "toml 0.4.10",
@@ -2944,7 +2945,7 @@ dependencies = [
  "serde",
  "sha3",
  "sqlx",
- "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
+ "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
  "tokio",
  "tokio-stream",
  "tonic",
@@ -2981,12 +2982,15 @@ dependencies = [
  "scarb",
  "serde",
  "serde_json",
+ "serde_with",
  "smol_str",
+ "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
  "test-case",
  "test-case-macros",
  "test-log",
  "thiserror",
  "tracing",
+ "url",
 ]
 
 [[package]]
@@ -3012,16 +3016,31 @@ name = "dojo-project"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "cairo-lang-filesystem",
  "cairo-lang-project",
+ "cairo-lang-starknet",
+ "camino",
+ "dojo-lang",
  "indoc 1.0.9",
  "scarb",
  "serde",
+ "serde_json",
  "smol_str",
- "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
+ "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
  "test-log",
  "thiserror",
  "toml 0.7.3",
+ "url",
+]
+
+[[package]]
+name = "dojo-signers"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
 ]
 
 [[package]]
@@ -3239,14 +3258,14 @@ dependencies = [
 
 [[package]]
 name = "filetime"
-version = "0.2.20"
+version = "0.2.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a3de6e8d11b22ff9edc6d916f890800597d60f8b2da1caf2955c274638d6412"
+checksum = "5cbc844cecaee9d4443931972e1289c8ff485cb4cc2767cb03ca139ed6885153"
 dependencies = [
  "cfg-if",
  "libc",
  "redox_syscall 0.2.16",
- "windows-sys 0.45.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -3522,9 +3541,9 @@ dependencies = [
 
 [[package]]
 name = "getrandom"
-version = "0.2.8"
+version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c05aeb6a22b8f62540c194aac980f2115af067bfe15a0734d7277a768d396b31"
+checksum = "c85e1d9ab2eadba7e5040d4e09cbd6d072b76a557ad64e797c2cb9d4da21d7e4"
 dependencies = [
  "cfg-if",
  "js-sys",
@@ -4603,13 +4622,13 @@ checksum = "59ce5ef949d49ee85593fc4d3f3f95ad61657076395cbbce23e2121fc5542074"
 
 [[package]]
 name = "io-lifetimes"
-version = "1.0.9"
+version = "1.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09270fd4fa1111bc614ed2246c7ef56239a3063d5be0d1ec3b589c505d400aeb"
+checksum = "9c66c74d2ae7e79a5a8f7ac924adbe38ee42a859c6539ad869eb51f0b52dc220"
 dependencies = [
  "hermit-abi 0.3.1",
  "libc",
- "windows-sys 0.45.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -4620,14 +4639,14 @@ checksum = "12b6ee2129af8d4fb011108c73d99a1b83a85977f23b82460c0ae2e25bb4b57f"
 
 [[package]]
 name = "is-terminal"
-version = "0.4.6"
+version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "256017f749ab3117e93acb91063009e1f1bb56d03965b14c2c8df4eb02c524d8"
+checksum = "adcf93614601c8129ddf72e2d5633df827ba6551541c6d8c59520a371475be1f"
 dependencies = [
  "hermit-abi 0.3.1",
- "io-lifetimes 1.0.9",
- "rustix 0.37.6",
- "windows-sys 0.45.0",
+ "io-lifetimes 1.0.10",
+ "rustix 0.37.8",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -4801,9 +4820,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.140"
+version = "0.2.141"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99227334921fae1a979cf0bfdfcc6b3e5ce376ef57e16fb6fb3ea2ed6095f80c"
+checksum = "3304a64d199bb964be99741b7a14d26972741915b3649639149b2479bb46f4b5"
 
 [[package]]
 name = "libloading"
@@ -4817,9 +4836,9 @@ dependencies = [
 
 [[package]]
 name = "libmimalloc-sys"
-version = "0.1.31"
+version = "0.1.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef2c45001fb108f37d41bed8efd715769acb14674c1ce3e266ef0e317ef5f877"
+checksum = "43a558e3d911bc3c7bfc8c78bc580b404d6e51c1cefbf656e176a94b49b0df40"
 dependencies = [
  "cc",
  "libc",
@@ -4995,9 +5014,9 @@ dependencies = [
 
 [[package]]
 name = "mimalloc"
-version = "0.1.34"
+version = "0.1.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9dcb174b18635f7561a0c6c9fc2ce57218ac7523cf72c50af80e2d79ab8f3ba1"
+checksum = "3d88dad3f985ec267a3fcb7a1726f5cb1a7e8cad8b646e70a84f967210df23da"
 dependencies = [
  "libmimalloc-sys",
 ]
@@ -5446,9 +5465,9 @@ dependencies = [
 
 [[package]]
 name = "orbclient"
-version = "0.3.43"
+version = "0.3.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "974465c5e83cf9df05c1e4137b271d29035c902e39e5ad4c1939837e22160af8"
+checksum = "0e9829e16c5e112e94efb5e2ad1fe17f8c1c99bb0fcdc8c65c44e935d904767d"
 dependencies = [
  "cfg-if",
  "redox_syscall 0.2.16",
@@ -5509,9 +5528,9 @@ dependencies = [
 
 [[package]]
 name = "parking"
-version = "2.0.0"
+version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "427c3892f9e783d91cc128285287e70a59e206ca452770ece88a76f7a3eddd72"
+checksum = "14f2252c834a40ed9bb5422029649578e63aa341ac401f74e719dd1afda8394e"
 
 [[package]]
 name = "parking_lot"
@@ -5997,7 +6016,7 @@ version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
 dependencies = [
- "getrandom 0.2.8",
+ "getrandom 0.2.9",
 ]
 
 [[package]]
@@ -6073,7 +6092,7 @@ version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b033d837a7cf162d7993aded9304e30a83213c648b6e389db233191f891e5c2b"
 dependencies = [
- "getrandom 0.2.8",
+ "getrandom 0.2.9",
  "redox_syscall 0.2.16",
  "thiserror",
 ]
@@ -6255,16 +6274,16 @@ dependencies = [
 
 [[package]]
 name = "rustix"
-version = "0.37.6"
+version = "0.37.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d097081ed288dfe45699b72f5b5d648e5f15d64d900c7080273baa20c16a6849"
+checksum = "1aef160324be24d31a62147fae491c14d2204a3865c7ca8c3b0d7f7bcb3ea635"
 dependencies = [
  "bitflags",
  "errno 0.3.0",
- "io-lifetimes 1.0.9",
+ "io-lifetimes 1.0.10",
  "libc",
  "linux-raw-sys 0.3.1",
- "windows-sys 0.45.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -6377,7 +6396,7 @@ dependencies = [
 [[package]]
 name = "scarb"
 version = "0.1.0"
-source = "git+https://github.com/software-mansion/scarb.git#d82979c1eb02bd80eb0a504215f5f26449e888dc"
+source = "git+https://github.com/software-mansion/scarb.git#d678b0415f511507dbe2f6051ad95acb592cd53b"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6444,7 +6463,7 @@ dependencies = [
 [[package]]
 name = "scarb-metadata"
 version = "1.0.1"
-source = "git+https://github.com/software-mansion/scarb.git#d82979c1eb02bd80eb0a504215f5f26449e888dc"
+source = "git+https://github.com/software-mansion/scarb.git#d678b0415f511507dbe2f6051ad95acb592cd53b"
 dependencies = [
  "camino",
  "derive_builder",
@@ -6609,9 +6628,9 @@ dependencies = [
 
 [[package]]
 name = "serde_with"
-version = "2.3.1"
+version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "85456ffac572dc8826334164f2fb6fb40a7c766aebe195a2a21ee69ee2885ecf"
+checksum = "331bb8c3bf9b92457ab7abecf07078c13f7d270ba490103e84e8b014490cd0b0"
 dependencies = [
  "base64 0.13.1",
  "chrono",
@@ -6625,9 +6644,9 @@ dependencies = [
 
 [[package]]
 name = "serde_with_macros"
-version = "2.3.1"
+version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7cbcd6104f8a4ab6af7f6be2a0da6be86b9de3c401f6e86bb856ab2af739232f"
+checksum = "859011bddcc11f289f07f467cc1fe01c7a941daa4d8f6c40d4d1c92eb6d9319c"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -6904,19 +6923,6 @@ dependencies = [
 [[package]]
 name = "starknet"
 version = "0.2.0"
-source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd#327be477312d1c0fc5951edb9801791b19f60cbd"
-dependencies = [
- "starknet-accounts 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
- "starknet-contract 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
- "starknet-core 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
- "starknet-macros 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
- "starknet-providers 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
- "starknet-signers 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
-]
-
-[[package]]
-name = "starknet"
-version = "0.2.0"
 source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=ca077d3104e11a59d873f79e6090f0ec8cb3fc58#ca077d3104e11a59d873f79e6090f0ec8cb3fc58"
 dependencies = [
  "starknet-accounts 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=ca077d3104e11a59d873f79e6090f0ec8cb3fc58)",
@@ -6928,15 +6934,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "starknet-accounts"
-version = "0.1.0"
-source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd#327be477312d1c0fc5951edb9801791b19f60cbd"
+name = "starknet"
+version = "0.2.0"
+source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2#e72cc0a4b3ea67c7691ebec58300da3c21f0abb2"
 dependencies = [
- "async-trait",
- "starknet-core 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
- "starknet-providers 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
- "starknet-signers 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
- "thiserror",
+ "starknet-accounts 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
+ "starknet-contract 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
+ "starknet-core 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
+ "starknet-macros 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
+ "starknet-providers 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
+ "starknet-signers 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
 ]
 
 [[package]]
@@ -6952,16 +6959,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "starknet-contract"
+name = "starknet-accounts"
 version = "0.1.0"
-source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd#327be477312d1c0fc5951edb9801791b19f60cbd"
+source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2#e72cc0a4b3ea67c7691ebec58300da3c21f0abb2"
 dependencies = [
- "serde",
- "serde_json",
- "serde_with",
- "starknet-accounts 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
- "starknet-core 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
- "starknet-providers 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
+ "async-trait",
+ "starknet-core 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
+ "starknet-providers 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
+ "starknet-signers 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
  "thiserror",
 ]
 
@@ -6980,20 +6985,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "starknet-core"
-version = "0.2.0"
-source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd#327be477312d1c0fc5951edb9801791b19f60cbd"
+name = "starknet-contract"
+version = "0.1.0"
+source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2#e72cc0a4b3ea67c7691ebec58300da3c21f0abb2"
 dependencies = [
- "base64 0.13.1",
- "ethereum-types",
- "flate2",
- "hex",
  "serde",
  "serde_json",
  "serde_with",
- "sha3",
- "starknet-crypto 0.4.2 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
- "starknet-ff 0.3.1 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
+ "starknet-accounts 0.1.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
+ "starknet-core 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
+ "starknet-providers 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
  "thiserror",
 ]
 
@@ -7012,6 +7013,24 @@ dependencies = [
  "sha3",
  "starknet-crypto 0.3.0",
  "starknet-ff 0.3.0",
+ "thiserror",
+]
+
+[[package]]
+name = "starknet-core"
+version = "0.2.0"
+source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2#e72cc0a4b3ea67c7691ebec58300da3c21f0abb2"
+dependencies = [
+ "base64 0.13.1",
+ "ethereum-types",
+ "flate2",
+ "hex",
+ "serde",
+ "serde_json",
+ "serde_with",
+ "sha3",
+ "starknet-crypto 0.4.2 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
+ "starknet-ff 0.3.1 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
  "thiserror",
 ]
 
@@ -7056,7 +7075,7 @@ dependencies = [
 [[package]]
 name = "starknet-crypto"
 version = "0.4.2"
-source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd#327be477312d1c0fc5951edb9801791b19f60cbd"
+source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2#e72cc0a4b3ea67c7691ebec58300da3c21f0abb2"
 dependencies = [
  "crypto-bigint",
  "hex",
@@ -7066,9 +7085,9 @@ dependencies = [
  "num-traits 0.2.15",
  "rfc6979",
  "sha2",
- "starknet-crypto-codegen 0.3.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
- "starknet-curve 0.2.1 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
- "starknet-ff 0.3.1 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
+ "starknet-crypto-codegen 0.3.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
+ "starknet-curve 0.2.1 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
+ "starknet-ff 0.3.1 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
  "zeroize",
 ]
 
@@ -7096,10 +7115,10 @@ dependencies = [
 [[package]]
 name = "starknet-crypto-codegen"
 version = "0.3.0"
-source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd#327be477312d1c0fc5951edb9801791b19f60cbd"
+source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2#e72cc0a4b3ea67c7691ebec58300da3c21f0abb2"
 dependencies = [
- "starknet-curve 0.2.1 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
- "starknet-ff 0.3.1 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
+ "starknet-curve 0.2.1 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
+ "starknet-ff 0.3.1 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
  "syn 1.0.109",
 ]
 
@@ -7123,9 +7142,9 @@ dependencies = [
 [[package]]
 name = "starknet-curve"
 version = "0.2.1"
-source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd#327be477312d1c0fc5951edb9801791b19f60cbd"
+source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2#e72cc0a4b3ea67c7691ebec58300da3c21f0abb2"
 dependencies = [
- "starknet-ff 0.3.1 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
+ "starknet-ff 0.3.1 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
 ]
 
 [[package]]
@@ -7136,7 +7155,7 @@ dependencies = [
  "ark-ff 0.3.0",
  "bigdecimal",
  "crypto-bigint",
- "getrandom 0.2.8",
+ "getrandom 0.2.9",
  "hex",
  "num-bigint",
  "serde",
@@ -7150,19 +7169,19 @@ checksum = "78d484109da192f3a8cd58f674861c2d5e4b3e1765a466362c6f350ef213dfd1"
 dependencies = [
  "ark-ff 0.3.0",
  "crypto-bigint",
- "getrandom 0.2.8",
+ "getrandom 0.2.9",
  "hex",
 ]
 
 [[package]]
 name = "starknet-ff"
 version = "0.3.1"
-source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd#327be477312d1c0fc5951edb9801791b19f60cbd"
+source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2#e72cc0a4b3ea67c7691ebec58300da3c21f0abb2"
 dependencies = [
  "ark-ff 0.3.0",
  "bigdecimal",
  "crypto-bigint",
- "getrandom 0.2.8",
+ "getrandom 0.2.9",
  "hex",
  "num-bigint",
  "serde",
@@ -7171,40 +7190,24 @@ dependencies = [
 [[package]]
 name = "starknet-macros"
 version = "0.1.0"
-source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd#327be477312d1c0fc5951edb9801791b19f60cbd"
+source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=ca077d3104e11a59d873f79e6090f0ec8cb3fc58#ca077d3104e11a59d873f79e6090f0ec8cb3fc58"
 dependencies = [
- "starknet-core 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
+ "starknet-core 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=ca077d3104e11a59d873f79e6090f0ec8cb3fc58)",
  "syn 1.0.109",
 ]
 
 [[package]]
 name = "starknet-macros"
 version = "0.1.0"
-source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=ca077d3104e11a59d873f79e6090f0ec8cb3fc58#ca077d3104e11a59d873f79e6090f0ec8cb3fc58"
+source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2#e72cc0a4b3ea67c7691ebec58300da3c21f0abb2"
 dependencies = [
- "starknet-core 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=ca077d3104e11a59d873f79e6090f0ec8cb3fc58)",
+ "starknet-core 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
  "syn 1.0.109",
 ]
 
 [[package]]
 name = "starknet-providers"
 version = "0.2.0"
-source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd#327be477312d1c0fc5951edb9801791b19f60cbd"
-dependencies = [
- "async-trait",
- "auto_impl",
- "reqwest",
- "serde",
- "serde_json",
- "serde_with",
- "starknet-core 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
- "thiserror",
- "url",
-]
-
-[[package]]
-name = "starknet-providers"
-version = "0.2.0"
 source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=ca077d3104e11a59d873f79e6090f0ec8cb3fc58#ca077d3104e11a59d873f79e6090f0ec8cb3fc58"
 dependencies = [
  "async-trait",
@@ -7219,14 +7222,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "starknet-signers"
-version = "0.1.0"
-source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd#327be477312d1c0fc5951edb9801791b19f60cbd"
+name = "starknet-providers"
+version = "0.2.0"
+source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2#e72cc0a4b3ea67c7691ebec58300da3c21f0abb2"
 dependencies = [
  "async-trait",
- "starknet-core 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
- "starknet-crypto 0.4.2 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
+ "auto_impl",
+ "flate2",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_with",
+ "starknet-core 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
  "thiserror",
+ "url",
 ]
 
 [[package]]
@@ -7237,6 +7246,17 @@ dependencies = [
  "async-trait",
  "starknet-core 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=ca077d3104e11a59d873f79e6090f0ec8cb3fc58)",
  "starknet-crypto 0.3.0",
+ "thiserror",
+]
+
+[[package]]
+name = "starknet-signers"
+version = "0.1.0"
+source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2#e72cc0a4b3ea67c7691ebec58300da3c21f0abb2"
+dependencies = [
+ "async-trait",
+ "starknet-core 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
+ "starknet-crypto 0.4.2 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
  "thiserror",
 ]
 
@@ -7338,7 +7358,7 @@ dependencies = [
  "cfg-if",
  "fastrand",
  "redox_syscall 0.3.5",
- "rustix 0.37.6",
+ "rustix 0.37.8",
  "windows-sys 0.45.0",
 ]
 
@@ -7994,7 +8014,7 @@ version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1674845326ee10d37ca60470760d4288a6f80f304007d92e5c53bab78c9cfd79"
 dependencies = [
- "getrandom 0.2.8",
+ "getrandom 0.2.9",
  "serde",
 ]
 
@@ -8402,6 +8422,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "windows-sys"
+version = "0.48.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "677d2418bec65e3338edb076e806bc1ec15693c5d0104683f2efe857f61056a9"
+dependencies = [
+ "windows-targets 0.48.0",
+]
+
+[[package]]
 name = "windows-targets"
 version = "0.42.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8645,9 +8674,9 @@ dependencies = [
 
 [[package]]
 name = "zstd-safe"
-version = "6.0.4+zstd.1.5.4"
+version = "6.0.5+zstd.1.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7afb4b54b8910cf5447638cb54bf4e8a65cbedd783af98b98c62ffe91f185543"
+checksum = "d56d9e60b4b1758206c238a10165fbcae3ca37b01744e394c463463f6529d23b"
 dependencies = [
  "libc",
  "zstd-sys",
@@ -8655,9 +8684,9 @@ dependencies = [
 
 [[package]]
 name = "zstd-sys"
-version = "2.0.7+zstd.1.5.4"
+version = "2.0.8+zstd.1.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94509c3ba2fe55294d752b79842c530ccfab760192521df74a081a78d2b3c7f5"
+checksum = "5556e6ee25d32df2586c098bbfa278803692a20d0ab9565e049480d52707ec8c"
 dependencies = [
  "cc",
  "libc",
