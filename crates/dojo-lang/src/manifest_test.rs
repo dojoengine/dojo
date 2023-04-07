@@ -1,17 +1,36 @@
 use std::collections::HashMap;
+use std::env;
 
 use cairo_lang_filesystem::db::FilesGroup;
 use cairo_lang_semantic::test_utils::setup_test_crate;
+use camino::Utf8PathBuf;
 use pretty_assertions::assert_eq;
+use scarb::compiler::CompilerRepository;
+use scarb::core::Config;
+use scarb::ops;
+use scarb::ui::Verbosity;
 use smol_str::SmolStr;
 use starknet::core::types::FieldElement;
 
+use crate::compiler::DojoCompiler;
 use crate::manifest::Manifest;
 use crate::testing::build_test_db;
 
 #[test]
 fn test_manifest_generation() {
-    let db = &mut build_test_db().unwrap();
+    let mut compilers = CompilerRepository::empty();
+    compilers.add(Box::new(DojoCompiler)).unwrap();
+
+    let path = Utf8PathBuf::from_path_buf("src/manifest_test_crate/Scarb.toml".into()).unwrap();
+    let config = Config::builder(path.canonicalize_utf8().unwrap())
+        .ui_verbosity(Verbosity::Verbose)
+        .log_filter_directive(env::var_os("SCARB_LOG"))
+        .compilers(compilers)
+        .build()
+        .unwrap();
+
+    let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
+    let db = &mut build_test_db(&ws).unwrap();
     let _crate_id = setup_test_crate(
         db,
         "
