@@ -66,10 +66,10 @@ Systems are functions operating on the world state. They receive some input from
 fn commands::uuid() -> felt252;
 
 // Update an existing entity with the provided components.
-fn commands::set(storage_key: StorageKey, components: T);
+fn commands::set_entity(storage_key: StorageKey, components: T);
 
 // Retreive a components for an entity.
-fn commands::<T>::get(storage_key: StorageKey) -> T;
+fn commands::<T>::entity(storage_key: StorageKey) -> T;
 
 // Retreive all entity ids that match the component selector criteria.
 fn commands::<T>::entities() -> Array<felt252>;
@@ -92,7 +92,7 @@ mod SpawnSystem {
 #[system]
 mod MoveSystem {
     fn execute(player_id: usize) {
-        let player = commands<(Health, Name)>::get(player_id);
+        let player = commands<(Health, Name)>::entity(player_id);
         let positions = commands<(Position, Health)>::entities();
 
         // @NOTE: Loops are not available in Cairo 1.0 yet.

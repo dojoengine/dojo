@@ -5,8 +5,8 @@ use cairo_lang_syntax::node::{ast, Terminal};
 use smol_str::SmolStr;
 
 pub mod entities;
+pub mod entity;
 pub mod execute;
-pub mod get;
 pub mod set;
 pub mod uuid;
 
@@ -53,12 +53,12 @@ impl Command {
                 command.rewrite_nodes.extend(sc.rewrite_nodes());
                 command.diagnostics.extend(sc.diagnostics());
             }
-            "get" => {
-                let sc = get::GetCommand::from_ast(db, let_pattern, command_ast);
+            "entity" => {
+                let sc = entity::EntityCommand::from_ast(db, let_pattern, command_ast);
                 command.rewrite_nodes.extend(sc.rewrite_nodes());
                 command.diagnostics.extend(sc.diagnostics());
             }
-            "set" => {
+            "set_entity" => {
                 let sc = set::SetCommand::from_ast(db, let_pattern, command_ast);
                 command.rewrite_nodes.extend(sc.rewrite_nodes());
                 command.diagnostics.extend(sc.diagnostics());

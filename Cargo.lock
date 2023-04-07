@@ -3099,6 +3099,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "dojo-signers"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=327be477312d1c0fc5951edb9801791b19f60cbd)",
+]
+
+[[package]]
 name = "dojo-test-runner"
 version = "0.1.0"
 dependencies = [
