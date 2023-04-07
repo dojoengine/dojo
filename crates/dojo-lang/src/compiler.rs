@@ -21,11 +21,6 @@ use tracing::{trace, trace_span};
 
 use crate::db::DojoRootDatabaseBuilderEx;
 use crate::manifest::Manifest;
-
-#[cfg(test)]
-#[path = "compiler_test.rs"]
-mod test;
-
 pub struct DojoCompiler;
 
 impl Compiler for DojoCompiler {
@@ -99,4 +94,16 @@ fn compute_class_hash_of_contract_class(class: ContractClass) -> Result<FieldEle
     let sierra_class = serde_json::from_str::<SierraClass>(&class_str)
         .map_err(|e| anyhow!("error parsing Sierra class: {e}"))?;
     sierra_class.class_hash().map_err(|e| anyhow!("problem hashing sierra contract: {e}"))
+}
+
+#[test]
+fn test_compiler() {
+    use scarb::ops;
+
+    use crate::testing::build_test_config;
+
+    let config = build_test_config().unwrap();
+    let ws = ops::read_workspace(config.manifest_path(), &config)
+        .unwrap_or_else(|op| panic!("Error building workspace: {:?}", op));
+    ops::compile(&ws).unwrap_or_else(|op| panic!("Error compiling: {:?}", op))
 }
