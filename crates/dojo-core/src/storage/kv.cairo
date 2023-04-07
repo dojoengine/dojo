@@ -58,12 +58,12 @@ mod KeyValueStore {
     #[external]
     fn set(
         table: felt252,
-        storage_key: felt252,
+        query: felt252,
         offset: u8,
         value: Span<felt252>
     ) {
         let address_domain = 0_u32;
-        let base = address(table, storage_key);
+        let base = address(table, query);
         _set(address_domain, base, value, offset: offset);
     }
 

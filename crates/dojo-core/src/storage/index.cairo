@@ -1,7 +1,7 @@
 use array::ArrayTrait;
 
 #[contract]
-mod Indexer {
+mod Index {
     use array::ArrayTrait;
     use array::SpanTrait;
     use traits::Into;
@@ -75,20 +75,20 @@ mod Indexer {
 #[test]
 #[available_gas(2000000)]
 fn test_index_entity() {
-    let no_records = Indexer::records(69);
+    let no_records = Index::records(69);
     assert(no_records.len() == 0_usize, 'entity indexed');
 
-    Indexer::index(69, 420);
-    let records = Indexer::records(69);
+    Index::index(69, 420);
+    let records = Index::records(69);
     assert(records.len() == 1_usize, 'entity not indexed');
     assert(*records.at(0_usize) == 420, 'entity value incorrect');
 
-    Indexer::index(69, 420);
-    let noop_records = Indexer::records(69);
+    Index::index(69, 420);
+    let noop_records = Index::records(69);
     assert(noop_records.len() == 1_usize, 'index should be noop');
 
-    Indexer::index(69, 1337);
-    let two_records = Indexer::records(69);
+    Index::index(69, 1337);
+    let two_records = Index::records(69);
     assert(two_records.len() == 2_usize, 'index should have two records');
     assert(*two_records.at(1_usize) == 1337, 'entity value incorrect');
 }
@@ -96,16 +96,16 @@ fn test_index_entity() {
 #[test]
 #[available_gas(2000000)]
 fn test_entity_delete() {
-    Indexer::index(69, 420);
-    let records = Indexer::records(69);
+    Index::index(69, 420);
+    let records = Index::records(69);
     assert(records.len() == 1_usize, 'entity not indexed');
     assert(*records.at(0_usize) == 420, 'entity value incorrect');
 
-    assert(Indexer::exists(69, 420), 'entity should exist');
+    assert(Index::exists(69, 420), 'entity should exist');
 
-    Indexer::delete(69, 420);
+    Index::delete(69, 420);
 
-    assert(!Indexer::exists(69, 420), 'entity should not exist');
-    let no_records = Indexer::records(69);
+    assert(!Index::exists(69, 420), 'entity should not exist');
+    let no_records = Index::records(69);
     assert(no_records.len() == 0_usize, 'index should have no records');
 }

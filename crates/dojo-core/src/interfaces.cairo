@@ -9,10 +9,10 @@ trait IWorld {
     fn uuid() -> felt252;
     fn execute(name: felt252, execute_calldata: Span<felt252>) -> Span<felt252>;
     fn entity(
-        component: felt252, key: dojo_core::storage::key::StorageKey, offset: u8, length: usize
+        component: felt252, key: dojo_core::storage::query::Query, offset: u8, length: usize
     ) -> Span<felt252>;
     fn set_entity(
-        component: felt252, key: dojo_core::storage::key::StorageKey, offset: u8, value: Span<felt252>
+        component: felt252, key: dojo_core::storage::query::Query, offset: u8, value: Span<felt252>
     );
     fn entities(component: felt252, partition: felt252) -> Array::<felt252>;
     fn has_role(role: felt252, account: starknet::ContractAddress) -> bool;

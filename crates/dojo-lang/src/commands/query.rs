@@ -57,7 +57,7 @@ impl Query {
 
     pub fn rewrite_entity_query(&mut self, db: &dyn SyntaxGroup, query_ast: ast::ExprFunctionCall) {
         let elements = query_ast.arguments(db).args(db).elements(db);
-        let storage_key = elements.first().unwrap();
+        let query = elements.first().unwrap();
 
         let part_names = self
             .components
@@ -76,7 +76,7 @@ impl Query {
                 "
                 let mut __$query_id$_$query_subtype$_raw = IWorldDispatcher {
                     contract_address: world_address
-                }.read('$component$', $storage_key$, 0_u8, 0_usize);
+                }.read('$component$', $query$, 0_u8, 0_usize);
                 let __$query_id$_$query_subtype$ = serde::Serde::<$component$>::deserialize(
                     ref __$query_id$_$query_subtype$_raw
                 );
@@ -89,8 +89,8 @@ impl Query {
                     ),
                     ("query_id".to_string(), RewriteNode::Text(self.query_id.clone())),
                     (
-                        "storage_key".to_string(),
-                        RewriteNode::new_trimmed(storage_key.as_syntax_node()),
+                        "query".to_string(),
+                        RewriteNode::new_trimmed(query.as_syntax_node()),
                     ),
                 ]),
             ));

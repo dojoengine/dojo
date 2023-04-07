@@ -1,7 +1,7 @@
 import { RpcProvider } from "starknet";
 import { Call } from "starknet";
 import { Provider } from "./provider";
-import { StorageKey, WorldEntryPoints } from "../types";
+import { Query, WorldEntryPoints } from "../types";
 
 export class RPCProvider extends Provider {
     private provider: RpcProvider
@@ -14,7 +14,7 @@ export class RPCProvider extends Provider {
     }
 
     public async set_entity(component: number,
-        key: StorageKey,
+        query: Query,
         offset: number,
         value: number[],
         calldata?: any[]): Promise<any> {

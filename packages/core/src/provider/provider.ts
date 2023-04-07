@@ -1,9 +1,9 @@
 import { EventEmitter } from "events";
-import { StorageKey } from "../types";
+import { Query } from "../types";
 
 interface IProvider {
     set_entity(component: number,
-        key: StorageKey,
+        query: Query,
         offset: number,
         value: number[],
         calldata?: any[]): Promise<any>;
@@ -25,7 +25,7 @@ export abstract class Provider extends EventEmitter implements IProvider {
 
     // entities
     public abstract set_entity(component: number,
-        key: StorageKey,
+        query: Query,
         offset: number,
         value: number[],
         calldata?: any[]): Promise<any>;
