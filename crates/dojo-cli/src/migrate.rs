@@ -36,7 +36,7 @@ pub async fn run(args: MigrateArgs) -> Result<()> {
     };
 
     let world = World::from_path(source_dir.clone()).await?;
-    let mut migration = world.prepare_for_migration(source_dir);
+    let mut migration = world.prepare_for_migration(source_dir)?;
 
     let provider = SequencerGatewayProvider::new(
         Url::parse("http://127.0.0.1:5050/gateway").unwrap(),
