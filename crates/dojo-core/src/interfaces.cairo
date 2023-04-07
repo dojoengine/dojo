@@ -20,37 +20,11 @@ trait IWorld {
     fn revoke_role(role: felt252, account: starknet::ContractAddress);
     fn renounce_role(role: felt252);
     fn set_executor(contract_address: starknet::ContractAddress);
-    fn set_indexer(class_hash: starknet::ClassHash);
-    fn set_store(class_hash: starknet::ClassHash);
 }
 
 #[abi]
 trait IExecutor {
     fn execute(class_hash: starknet::ClassHash, data: Span<felt252>) -> Span<felt252>;
-}
-
-#[abi]
-trait IIndexer {
-    fn index(table: felt252, id: felt252);
-    fn records(table: felt252) -> Array::<felt252>;
-}
-
-#[abi]
-trait IStore {
-    fn get(
-        table: felt252,
-        class_hash: starknet::ClassHash,
-        key: dojo_core::storage::key::StorageKey,
-        offset: u8,
-        length: usize
-    ) -> Span<felt252>;
-    fn set(
-        table: felt252,
-        class_hash: starknet::ClassHash,
-        key: dojo_core::storage::key::StorageKey,
-        offset: u8,
-        value: Span<felt252>
-    );
 }
 
 #[abi]
