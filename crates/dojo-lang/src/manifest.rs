@@ -154,7 +154,7 @@ impl Manifest {
 
         let starknet = JsonRpcClient::new(HttpTransport::new(rpc_url));
         let world_class_hash =
-            starknet.get_class_hash_at(&BlockId::Tag(BlockTag::Latest), world_address).await.ok();
+            starknet.get_class_hash_at(&BlockId::Tag(BlockTag::Pending), world_address).await.ok();
 
         if world_class_hash.is_none() {
             return Ok(manifest);
@@ -164,11 +164,11 @@ impl Manifest {
             .get_storage_at(
                 world_address,
                 get_storage_var_address("executor", &[])?,
-                &BlockId::Tag(BlockTag::Latest),
+                &BlockId::Tag(BlockTag::Pending),
             )
             .await?;
         let executor_class_hash = starknet
-            .get_class_hash_at(&BlockId::Tag(BlockTag::Latest), executor_address)
+            .get_class_hash_at(&BlockId::Tag(BlockTag::Pending), executor_address)
             .await
             .ok();
 
@@ -184,7 +184,7 @@ impl Manifest {
                         calldata: vec![cairo_short_string_to_felt(&component.name)?],
                         entry_point_selector: get_selector_from_name("component")?,
                     },
-                    &BlockId::Tag(BlockTag::Latest),
+                    &BlockId::Tag(BlockTag::Pending),
                 )
                 .await?[0];
 
@@ -199,7 +199,7 @@ impl Manifest {
                         )?],
                         entry_point_selector: get_selector_from_name("system")?,
                     },
-                    &BlockId::Tag(BlockTag::Latest),
+                    &BlockId::Tag(BlockTag::Pending),
                 )
                 .await?[0];
 

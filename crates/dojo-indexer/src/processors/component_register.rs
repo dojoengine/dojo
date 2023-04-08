@@ -45,7 +45,7 @@ impl IProcessor<EventWithTransaction> for ComponentRegistrationProcessor {
 
         let class_hash = provider
             .get_class_hash_at(
-                &BlockId::Tag(BlockTag::Latest),
+                &BlockId::Tag(BlockTag::Pending),
                 FieldElement::from_bytes_be(component.to_bytes_be().as_slice().try_into().unwrap())
                     .unwrap(),
             )

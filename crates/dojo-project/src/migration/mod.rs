@@ -154,18 +154,22 @@ impl Declarable for ClassMigration {
         let (flattened_class, casm_class_hash) =
             prepare_contract_declaration_params(&self.artifact_path).unwrap();
 
-        let result = account
-            .declare(Arc::new(flattened_class), casm_class_hash)
-            .send()
-            .await
-            .unwrap_or_else(|error| {
-                panic!("Problem declaring {} contract: {error}", self.class.name);
-            });
-
-        println!(
-            "Declared `{}` contract at transaction: {:#x}",
-            self.class.name, result.transaction_hash
-        );
+        let result = account.declare(Arc::new(flattened_class), casm_class_hash).send().await;
+        match result {
+            Ok(result) => {
+                println!(
+                    "Declared `{}` class at transaction: {:#x}",
+                    self.class.name, result.transaction_hash
+                );
+            }
+            Err(error) => {
+                if error.to_string().contains("already declared") {
+                    println!("{} class already declared", self.class.name)
+                } else {
+                    panic!("Problem declaring {} class: {error}", self.class.name);
+                }
+            }
+        }
     }
 }
 
@@ -175,18 +179,23 @@ impl Declarable for ContractMigration {
         let (flattened_class, casm_class_hash) =
             prepare_contract_declaration_params(&self.artifact_path).unwrap();
 
-        let result = account
-            .declare(Arc::new(flattened_class), casm_class_hash)
-            .send()
-            .await
-            .unwrap_or_else(|error| {
-                panic!("problem declaring {} contract: {error}", self.contract.name);
-            });
+        let result = account.declare(Arc::new(flattened_class), casm_class_hash).send().await;
 
-        println!(
-            "Declared `{}` contract at transaction: {:#x}",
-            self.contract.name, result.transaction_hash
-        );
+        match result {
+            Ok(result) => {
+                println!(
+                    "Declared `{}` contract at transaction: {:#x}",
+                    self.contract.name, result.transaction_hash
+                );
+            }
+            Err(error) => {
+                if error.to_string().contains("already declared") {
+                    println!("{} contract already declared", self.contract.name)
+                } else {
+                    panic!("Problem declaring {} contract: {error}", self.contract.name);
+                }
+            }
+        }
     }
 }
 
