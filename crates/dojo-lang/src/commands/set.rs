@@ -14,7 +14,7 @@ pub struct SetCommand {
 }
 
 impl SetCommand {
-    fn handle_struct(&mut self, db: &dyn SyntaxGroup, storage_key: ast::Arg, expr: ast::Expr) {
+    fn handle_struct(&mut self, db: &dyn SyntaxGroup, query: ast::Arg, expr: ast::Expr) {
         if let ast::Expr::StructCtorCall(ctor) = expr {
             if let Some(ast::PathSegment::Simple(segment)) = ctor.path(db).elements(db).last() {
                 let component = segment.ident(db).text(db);
@@ -25,17 +25,14 @@ impl SetCommand {
                     {
                         let mut calldata = ArrayTrait::new();
                         serde::Serde::<$component$>::serialize(ref calldata, $ctor$);
-                        IWorldDispatcher { contract_address: world_address }.set('$component$', \
-                     $storage_key$, 0_u8, calldata.span());
+                        IWorldDispatcher { contract_address: world_address \
+                     }.set_entity('$component$', $query$, 0_u8, calldata.span());
                     }
                     ",
                     HashMap::from([
                         ("component".to_string(), RewriteNode::Text(component.to_string())),
                         ("ctor".to_string(), RewriteNode::new_trimmed(ctor.as_syntax_node())),
-                        (
-                            "storage_key".to_string(),
-                            RewriteNode::new_trimmed(storage_key.as_syntax_node()),
-                        ),
+                        ("query".to_string(), RewriteNode::new_trimmed(query.as_syntax_node())),
                     ]),
                 ));
             }
@@ -55,22 +52,22 @@ impl CommandTrait for SetCommand {
 
         if elements.len() != 2 {
             command.data.diagnostics.push(PluginDiagnostic {
-                message: "Invalid arguments. Expected \"(storage_key, (components,))\"".to_string(),
+                message: "Invalid arguments. Expected \"(query, (components,))\"".to_string(),
                 stable_ptr: command_ast.arguments(db).as_syntax_node().stable_ptr(),
             });
             return command;
         }
 
-        let storage_key = elements.first().unwrap().clone();
+        let query = elements.first().unwrap().clone();
         let bundle = elements.last().unwrap();
         if let ast::ArgClause::Unnamed(clause) = bundle.arg_clause(db) {
             match clause.value(db) {
                 ast::Expr::Parenthesized(bundle) => {
-                    command.handle_struct(db, storage_key, bundle.expr(db));
+                    command.handle_struct(db, query, bundle.expr(db));
                 }
                 ast::Expr::Tuple(tuple) => {
                     for expr in tuple.expressions(db).elements(db) {
-                        command.handle_struct(db, storage_key.clone(), expr);
+                        command.handle_struct(db, query.clone(), expr);
                     }
                 }
                 _ => {

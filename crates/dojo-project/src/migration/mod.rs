@@ -1,13 +1,15 @@
 pub mod world;
 
-use std::fs;
+use std::fs::File;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
+use cairo_lang_starknet::casm_contract_class::CasmContractClass;
+use cairo_lang_starknet::contract_class::ContractClass;
 use starknet::accounts::{Account, Call, SingleOwnerAccount};
-use starknet::core::types::contract::SierraClass;
+use starknet::core::types::contract::{CompiledClass, FlattenedSierraClass, SierraClass};
 use starknet::core::types::FieldElement;
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::providers::SequencerGatewayProvider;
@@ -22,8 +24,6 @@ pub struct ContractMigration {
     pub salt: FieldElement,
     pub contract: Contract,
     pub artifact_path: PathBuf,
-    // not to be confused with `compiled_class_hash` fields in `contract`: `local` and `remote`
-    pub class_hash: FieldElement,
     pub contract_address: Option<FieldElement>,
 }
 
@@ -32,8 +32,6 @@ pub struct ClassMigration {
     pub declared: bool,
     pub class: Class,
     pub artifact_path: PathBuf,
-    // not to be confused with `compiled_class_hash` fields in `class`: `local` and `remote`
-    pub class_hash: FieldElement,
 }
 
 // TODO: migration error
@@ -42,8 +40,6 @@ pub struct ClassMigration {
 pub struct Migration {
     world: ContractMigration,
     executor: ContractMigration,
-    store: ClassMigration,
-    indexer: ClassMigration,
     systems: Vec<ClassMigration>,
     components: Vec<ClassMigration>,
 }
@@ -66,28 +62,11 @@ impl Migration {
         &mut self,
         account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
     ) -> Result<()> {
-        if !self.indexer.declared {
-            self.indexer.declare(account).await;
-        }
-
-        if !self.store.declared {
-            self.store.declare(account).await;
-        }
-
         if !self.executor.deployed {
             self.executor.deploy(vec![], account).await;
         }
 
-        self.world
-            .deploy(
-                vec![
-                    self.executor.contract_address.unwrap(),
-                    self.store.class_hash,
-                    self.indexer.class_hash,
-                ],
-                account,
-            )
-            .await;
+        self.world.deploy(vec![self.executor.contract_address.unwrap()], account).await;
 
         self.register_components(account).await?;
         self.register_systems(account).await?;
@@ -115,7 +94,7 @@ impl Migration {
             .map(|c| Call {
                 to: world_address,
                 selector: get_selector_from_name("register_component").unwrap(),
-                calldata: vec![c.class_hash],
+                calldata: vec![c.class.local],
             })
             .collect::<Vec<_>>();
 
@@ -144,7 +123,7 @@ impl Migration {
             .map(|s| Call {
                 to: world_address,
                 selector: get_selector_from_name("register_system").unwrap(),
-                calldata: vec![s.class_hash],
+                calldata: vec![s.class.local],
             })
             .collect::<Vec<_>>();
 
@@ -172,13 +151,11 @@ trait Deployable: Declarable {
 #[async_trait]
 impl Declarable for ClassMigration {
     async fn declare(&self, account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>) {
-        let contract_artifact =
-            serde_json::from_reader::<_, SierraClass>(fs::File::open(&self.artifact_path).unwrap())
-                .unwrap();
-        let flattened_class = contract_artifact.flatten().unwrap();
+        let (flattened_class, casm_class_hash) =
+            prepare_contract_declaration_params(&self.artifact_path).unwrap();
 
         let result = account
-            .declare(Arc::new(flattened_class), self.class.local)
+            .declare(Arc::new(flattened_class), casm_class_hash)
             .send()
             .await
             .unwrap_or_else(|error| {
@@ -195,13 +172,11 @@ impl Declarable for ClassMigration {
 #[async_trait]
 impl Declarable for ContractMigration {
     async fn declare(&self, account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>) {
-        let contract_artifact =
-            serde_json::from_reader::<_, SierraClass>(fs::File::open(&self.artifact_path).unwrap())
-                .unwrap();
-        let flattened_class = contract_artifact.flatten().unwrap();
+        let (flattened_class, casm_class_hash) =
+            prepare_contract_declaration_params(&self.artifact_path).unwrap();
 
         let result = account
-            .declare(Arc::new(flattened_class), self.contract.local)
+            .declare(Arc::new(flattened_class), casm_class_hash)
             .send()
             .await
             .unwrap_or_else(|error| {
@@ -226,7 +201,7 @@ impl Deployable for ContractMigration {
 
         let calldata = [
             vec![
-                self.class_hash,                                // class hash
+                self.contract.local,                            // class hash
                 self.salt,                                      // salt
                 FieldElement::ZERO,                             // unique
                 FieldElement::from(constructor_calldata.len()), // constructor calldata len
@@ -251,7 +226,7 @@ impl Deployable for ContractMigration {
 
         let contract_address = get_contract_address(
             self.salt,
-            self.class_hash,
+            self.contract.local,
             &constructor_calldata,
             FieldElement::ZERO,
         );
@@ -267,4 +242,30 @@ impl Deployable for ContractMigration {
         self.deployed = true;
         self.contract.address = Some(contract_address);
     }
+}
+
+fn prepare_contract_declaration_params(
+    artifact_path: &PathBuf,
+) -> Result<(FlattenedSierraClass, FieldElement)> {
+    let flattened_class = get_flattened_class(artifact_path)
+        .map_err(|e| anyhow!("error flattening the contract class: {e}"))?;
+    let compiled_class_hash = get_compiled_class_hash(artifact_path)
+        .map_err(|e| anyhow!("error computing compiled class hash: {e}"))?;
+    Ok((flattened_class, compiled_class_hash))
+}
+
+fn get_flattened_class(artifact_path: &PathBuf) -> Result<FlattenedSierraClass> {
+    let file = File::open(artifact_path)?;
+    let contract_artifact: SierraClass = serde_json::from_reader(&file)?;
+    Ok(contract_artifact.flatten()?)
+}
+
+fn get_compiled_class_hash(artifact_path: &PathBuf) -> Result<FieldElement> {
+    let file = File::open(artifact_path)?;
+    let casm_contract_class: ContractClass = serde_json::from_reader(file)?;
+    let casm_contract = CasmContractClass::from_contract_class(casm_contract_class, true)
+        .with_context(|| "Compilation failed.")?;
+    let res = serde_json::to_string_pretty(&casm_contract)?;
+    let compiled_class: CompiledClass = serde_json::from_str(&res)?;
+    Ok(compiled_class.class_hash()?)
 }

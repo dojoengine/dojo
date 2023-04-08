@@ -14,9 +14,10 @@ use cairo_lang_semantic::test_utils::setup_test_module;
 use cairo_lang_syntax::node::TypedSyntaxNode;
 use cairo_lang_test_utils::parse_test_file::TestFileRunner;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
+use scarb::ops;
 
 use crate::plugin::DojoPlugin;
-use crate::testing::build_test_db;
+use crate::testing::{build_test_config, build_test_db};
 
 struct ExpandContractTestRunner {
     db: RootDatabase,
@@ -24,7 +25,9 @@ struct ExpandContractTestRunner {
 
 impl Default for ExpandContractTestRunner {
     fn default() -> Self {
-        Self { db: build_test_db().unwrap() }
+        let config = build_test_config().unwrap();
+        let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
+        Self { db: build_test_db(&ws).unwrap() }
     }
 }
 impl TestFileRunner for ExpandContractTestRunner {

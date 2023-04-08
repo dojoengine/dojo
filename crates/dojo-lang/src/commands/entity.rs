@@ -32,7 +32,7 @@ impl CommandTrait for EntityCommand {
         };
 
         let elements = command_ast.arguments(db).args(db).elements(db);
-        let storage_key = elements.first().unwrap();
+        let query = elements.first().unwrap();
 
         let components = find_components(db, command_ast);
         let part_names = components
@@ -51,7 +51,7 @@ impl CommandTrait for EntityCommand {
                 "
                     let mut __$query_id$_$query_subtype$_raw = IWorldDispatcher {
                         contract_address: world_address
-                    }.get('$component$', $storage_key$, 0_u8, 0_usize);
+                    }.entity('$component$', $query$, 0_u8, 0_usize);
                     let __$query_id$_$query_subtype$ = serde::Serde::<$component$>::deserialize(
                         ref __$query_id$_$query_subtype$_raw
                     );
@@ -63,10 +63,7 @@ impl CommandTrait for EntityCommand {
                         RewriteNode::Text(component.to_string().to_ascii_lowercase()),
                     ),
                     ("query_id".to_string(), RewriteNode::Text(command.query_id.clone())),
-                    (
-                        "storage_key".to_string(),
-                        RewriteNode::new_trimmed(storage_key.as_syntax_node()),
-                    ),
+                    ("query".to_string(), RewriteNode::new_trimmed(query.as_syntax_node())),
                 ]),
             ));
         }

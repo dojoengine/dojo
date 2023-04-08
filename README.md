@@ -66,10 +66,10 @@ Systems are functions operating on the world state. They receive some input from
 fn commands::uuid() -> felt252;
 
 // Update an existing entity with the provided components.
-fn commands::set_entity(storage_key: StorageKey, components: T);
+fn commands::set_entity(query: Query, components: T);
 
 // Retreive a components for an entity.
-fn commands::<T>::entity(storage_key: StorageKey) -> T;
+fn commands::<T>::entity(query: Query) -> T;
 
 // Retreive all entity ids that match the component selector criteria.
 fn commands::<T>::entities() -> Array<felt252>;

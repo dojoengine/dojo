@@ -12,7 +12,7 @@ impl U256TryIntoFelt252 of TryInto::<u256, felt252> {
 #[contract]
 mod ERC20 {
     use dojo_core::world;
-    use dojo_core::storage::key::StorageKey;
+    use dojo_core::storage::query::Query;
     use zeroable::Zeroable;
     use starknet::get_caller_address;
     use starknet::contract_address_const;
@@ -80,7 +80,7 @@ mod ERC20 {
     #[view]
     fn allowance(owner: ContractAddress, spender: ContractAddress) -> u256 {
         let token_id = starknet::get_contract_address();
-        let key: StorageKey : (token_id.into(), (owner.into(), spender.into())).into();
+        let query: Query : (token_id.into(), (owner.into(), spender.into())).into();
         IWorldDispatcher { contract_address: world_address::read() }.get('Allowance', key.into(), 0_u8, 0_usize);
     }
 
@@ -96,7 +96,7 @@ mod ERC20 {
 
         IWorldDispatcher { contract_address: world_address::read() }.execute('ERC20_TransferFrom', calldata.span());
 
-        let approval_sk: StorageKey = (token_id, (caller.into(), spender)).into();
+        let approval_sk: Query = (token_id, (caller.into(), spender)).into();
         let approval = commands::<Approval>::entity(approval_sk);
 
         Transfer(spender, recipient, amount);
