@@ -13,36 +13,22 @@ export class RPCProvider extends Provider {
         })
     }
 
-    public async set_entity(component: number,
-        query: Query,
-        offset: number,
-        value: number[],
-        calldata?: any[]): Promise<any> {
-        return;
-    }
-
-    public async get_component(component: string, entity_id: string, offset: string, length: string): Promise<any> {
+    // TODO: Add interface shape
+    public async entity(component: bigint, query: Query, offset: number, length: number): Promise<Array<bigint>> {
 
         // TODO: Can we construct the offset and length from the manifest?
         const call: Call = {
             entrypoint: WorldEntryPoints.get,
             contractAddress: this.getWorldAddress(),
-            calldata: [component, entity_id, offset, length]
+            calldata: [component.toString(), query.partition, ...query.keys, offset, length]
         }
 
         try {
             const response = await this.provider.callContract(call)
-            return response.result;
+            return response.result as unknown as Array<bigint>;
         } catch (error) {
             this.emit("error", error);
             throw error;
         }
-    }
-
-    public async get_entity(): Promise<any[]> {
-        return [];
-    }
-    public async get_entities(): Promise<any[]> {
-        return [];
     }
 }

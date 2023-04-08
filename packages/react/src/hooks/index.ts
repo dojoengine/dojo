@@ -1,0 +1,1 @@
+export { useDojoEntity } from './get';

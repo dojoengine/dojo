@@ -1,6 +1,6 @@
 export enum WorldEntryPoints {
-    get = "get",
-    set = "set",
+    get = "entity",
+    set = "set_entity",
     entities = "entities",
     execute = "execute"
 }
@@ -10,23 +10,21 @@ export interface Query {
     keys: string[]
 }
 
-// TODO: extend Provider to this
+// TODO: add individual interfaces for each of the entrypoints
 export interface IWorld {
-    constructor(executor_: string, store_: string, indexer_: string): void;
-    register_component(class_hash: string): void;
-    component(name: number): string;
-    register_system(class_hash: string): void;
-    system(name: number): string;
-    execute(name: number, execute_calldata: number[]): number[];
-    uuid(): number;
-    set(component: number, query: Query, offset: number, value: number[]): void;
-    get(component: number, query: Query, offset: number, length: number): number[];
-    entities(component: number, partition: number): number[];
-    set_executor(contract_address: string): void;
-    set_indexer(class_hash: string): void;
-    set_store(class_hash: string): void;
-    has_role(role: number, account: string): boolean;
-    grant_role(role: number, account: string): void;
-    revoke_role(role: number, account: string): void;
-    renounce_role(role: number): void;
+    register_component?(string: string): void;
+    component?(name: bigint): Promise<string>;
+    register_system?(string: string): void;
+    system?(name: bigint): Promise<string>;
+    execute?(name: bigint, execute_calldata: Array<bigint>): Promise<Array<bigint>>;
+    uuid?(): Promise<bigint>;
+    set_entity?(component: bigint, query: Query, offset: number, value: Array<bigint>): void;
+    delete_entity?(component: bigint, query: Query): void;
+    entity?(component: bigint, query: Query, offset: number, length: number): Promise<Array<bigint>>;
+    entities?(component: bigint, partition: bigint): Promise<Array<bigint>>;
+    set_executor?(string: string): void;
+    has_role?(role: bigint, account: string): Promise<boolean>;
+    grant_role?(role: bigint, account: string): void;
+    revoke_role?(role: bigint, account: string): void;
+    renounce_role?(role: bigint): void;
   }
