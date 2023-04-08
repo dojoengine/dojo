@@ -2983,6 +2983,8 @@ dependencies = [
  "clap 4.2.1",
  "dojo-lang",
  "dojo-project",
+ "dojo-signers",
+ "dotenv",
  "scarb",
  "serde",
  "serde_json",
@@ -3108,7 +3110,6 @@ name = "dojo-signers"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-trait",
  "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",
 ]
 
@@ -3141,6 +3142,12 @@ dependencies = [
  "scarb",
  "thiserror",
 ]
+
+[[package]]
+name = "dotenv"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 
 [[package]]
 name = "dotenvy"
