@@ -63,8 +63,6 @@ impl Display for Class {
 pub struct World {
     world: Contract,
     executor: Contract,
-    indexer: Class,
-    store: Class,
     contracts: Vec<Class>,
     components: Vec<Class>,
     systems: Vec<Class>,
@@ -155,18 +153,6 @@ impl World {
                 local: local_manifest.executor.unwrap(),
                 remote: remote_manifest.executor,
             },
-            indexer: Class {
-                world: world_config.address.unwrap(),
-                name: "Indexer".into(),
-                local: local_manifest.indexer.unwrap(),
-                remote: remote_manifest.indexer,
-            },
-            store: Class {
-                world: world_config.address.unwrap(),
-                name: "Store".into(),
-                local: local_manifest.store.unwrap(),
-                remote: remote_manifest.store,
-            },
             systems,
             contracts,
             components,
@@ -195,12 +181,10 @@ impl World {
 
         let world = evaluate_contract_for_migration(&self.world, &artifact_paths)?;
         let executor = evaluate_contract_for_migration(&self.executor, &artifact_paths)?;
-        let store = evaluate_class_for_migration(&self.store, &artifact_paths)?;
-        let indexer = evaluate_class_for_migration(&self.indexer, &artifact_paths)?;
         let components = evaluate_components_to_be_declared(&self.components, &artifact_paths)?;
         let systems = evaluate_systems_to_be_declared(&self.systems, &artifact_paths)?;
 
-        Ok(Migration { world, store, indexer, executor, systems, components })
+        Ok(Migration { world, executor, systems, components })
     }
 }
 
@@ -208,8 +192,6 @@ impl Display for World {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}", self.world)?;
         writeln!(f, "{}", self.executor)?;
-        writeln!(f, "{}", self.store)?;
-        writeln!(f, "{}", self.indexer)?;
 
         for component in &self.components {
             writeln!(f, "{component}")?;
@@ -271,21 +253,6 @@ fn evaluate_components_to_be_declared(
     }
 
     Ok(comps_to_migrate)
-}
-
-fn evaluate_class_for_migration(
-    class: &Class,
-    artifact_paths: &HashMap<String, PathBuf>,
-) -> Result<ClassMigration> {
-    let should_declare = !matches!(class.remote, Some(remote_hash) if remote_hash == class.local);
-
-    let path = find_artifact_path(&class.name, artifact_paths)?;
-
-    Ok(ClassMigration {
-        declared: !should_declare,
-        class: class.clone(),
-        artifact_path: path.clone(),
-    })
 }
 
 // TODO: generate random salt if need to be redeployed

@@ -5,7 +5,7 @@ export enum WorldEntryPoints {
     execute = "execute"
 }
 
-export interface StorageKey {
+export interface Query {
     partition: string,
     keys: string[]
 }
@@ -19,8 +19,8 @@ export interface IWorld {
     system(name: number): string;
     execute(name: number, execute_calldata: number[]): number[];
     uuid(): number;
-    set(component: number, key: StorageKey, offset: number, value: number[]): void;
-    get(component: number, key: StorageKey, offset: number, length: number): number[];
+    set(component: number, query: Query, offset: number, value: number[]): void;
+    get(component: number, query: Query, offset: number, length: number): number[];
     entities(component: number, partition: number): number[];
     set_executor(contract_address: string): void;
     set_indexer(class_hash: string): void;

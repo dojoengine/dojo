@@ -91,10 +91,6 @@ pub struct Manifest {
     #[serde_as(as = "UfeHexOption")]
     pub world: Option<FieldElement>,
     #[serde_as(as = "UfeHexOption")]
-    pub store: Option<FieldElement>,
-    #[serde_as(as = "UfeHexOption")]
-    pub indexer: Option<FieldElement>,
-    #[serde_as(as = "UfeHexOption")]
     pub executor: Option<FieldElement>,
     pub components: Vec<Component>,
     pub systems: Vec<System>,
@@ -112,19 +108,11 @@ impl Manifest {
         let world = compiled_classes.get("World").unwrap_or_else(|| {
             panic!("World contract not found. Did you include `dojo_core` as a dependency?");
         });
-        let store = compiled_classes.get("Store").unwrap_or_else(|| {
-            panic!("Store contract not found. Did you include `dojo_core` as a dependency?");
-        });
-        let indexer = compiled_classes.get("Indexer").unwrap_or_else(|| {
-            panic!("Indexer contract not found. Did you include `dojo_core` as a dependency?");
-        });
         let executor = compiled_classes.get("Executor").unwrap_or_else(|| {
             panic!("Executor contract not found. Did you include `dojo_core` as a dependency?");
         });
 
         manifest.world = Some(*world);
-        manifest.store = Some(*store);
-        manifest.indexer = Some(*indexer);
         manifest.executor = Some(*executor);
 
         for crate_id in crate_ids {
@@ -172,24 +160,6 @@ impl Manifest {
             return Ok(manifest);
         }
 
-        let store_class_hash = starknet
-            .get_storage_at(
-                world_address,
-                get_storage_var_address("store", &[])?,
-                &BlockId::Tag(BlockTag::Latest),
-            )
-            .await
-            .ok();
-
-        let indexer_class_hash = starknet
-            .get_storage_at(
-                world_address,
-                get_storage_var_address("indexer", &[])?,
-                &BlockId::Tag(BlockTag::Latest),
-            )
-            .await
-            .ok();
-
         let executor_address = starknet
             .get_storage_at(
                 world_address,
@@ -203,8 +173,6 @@ impl Manifest {
             .ok();
 
         manifest.world = world_class_hash;
-        manifest.store = store_class_hash;
-        manifest.indexer = indexer_class_hash;
         manifest.executor = executor_class_hash;
 
         // Fetch the components/systems class hash if they are registered in the remote World.

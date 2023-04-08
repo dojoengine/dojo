@@ -51,8 +51,6 @@ fn test_manifest_generation() {
 
     let mut compiled_contracts: HashMap<SmolStr, FieldElement> = HashMap::new();
     compiled_contracts.insert("World".into(), class_hash);
-    compiled_contracts.insert("Store".into(), class_hash);
-    compiled_contracts.insert("Indexer".into(), class_hash);
     compiled_contracts.insert("Executor".into(), class_hash);
     compiled_contracts
         .insert("PositionComponent".into(), FieldElement::from_hex_be("0x420").unwrap());
@@ -64,8 +62,6 @@ fn test_manifest_generation() {
     assert_eq!(manifest.systems.len(), 1);
     assert_eq!(manifest.world.unwrap(), class_hash);
     assert_eq!(manifest.executor.unwrap(), class_hash);
-    assert_eq!(manifest.indexer.unwrap(), class_hash);
-    assert_eq!(manifest.store.unwrap(), class_hash);
     assert_eq!(
         manifest.components.iter().find(|c| &c.name == "Position").unwrap().class_hash,
         FieldElement::from_hex_be("0x420").unwrap()
