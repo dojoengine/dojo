@@ -21,3 +21,7 @@ export interface QueryResult<T> {
     loading: boolean;
     error: any;
 }
+
+export interface Component {
+    key: number;
+}

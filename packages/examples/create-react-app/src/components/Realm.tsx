@@ -1,5 +1,8 @@
-import Button from "../elements/Button";
+import { useEffect } from "react";
 import { useDojoEntity } from "../../../../react/src/hooks/index"
+import { Realm } from "../types";
+
+import { RealmParser as parser } from "../parsers";
 
 interface Props {
   entity_id: string;
@@ -11,17 +14,24 @@ const component = {
   length: 1,
 }
 
-export const Realm = ({ entity_id }: Props) => {
+export const RealmView = ({ entity_id }: Props) => {
 
-  // dummy key, this can be added in from the world to update state on change
-  const { entity, getEntity } = useDojoEntity(2); 
-  
-  const Realm = getEntity(BigInt(component.component), { partition: entity_id, keys: [""] }, component.offset, component.length);
+  const { entity, getEntity } = useDojoEntity<Realm>({ key: 2, parser });
+
+  useEffect(() => {
+    getEntity(BigInt(component.component), { partition: entity_id, keys: [''] }, component.offset, component.length);
+  }, [entity_id, getEntity]);
+
+  if (!entity) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div>
-      {/* <h1 className="text-white">{Realm?.name}</h1> */}
-      {/* <Button onClick={() => rpcProvider?.set_entity()}>Realm</Button> */}
+      <h2>{entity.name}</h2>
+      <p>{entity.description}</p>
+      <p>Owner: {entity.owner}</p>
+      <p>Armies: {entity.armies.join(', ')}</p>
     </div>
   );
 };

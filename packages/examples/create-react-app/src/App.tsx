@@ -1,9 +1,8 @@
 import { Canvas } from "@react-three/fiber";
 import { World } from "./layouts/World";
-import {DojoConfig} from "../../../react/src/provider/index"
+import { DojoConfig } from "../../../react/src/provider/index"
 
 const worldAddress = "ws://localhost:8080";
-
 
 function App() {
   return (
