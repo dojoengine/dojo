@@ -40,8 +40,6 @@ pub struct ClassMigration {
 pub struct Migration {
     world: ContractMigration,
     executor: ContractMigration,
-    store: ClassMigration,
-    indexer: ClassMigration,
     systems: Vec<ClassMigration>,
     components: Vec<ClassMigration>,
 }
@@ -64,28 +62,11 @@ impl Migration {
         &mut self,
         account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
     ) -> Result<()> {
-        if !self.indexer.declared {
-            self.indexer.declare(account).await;
-        }
-
-        if !self.store.declared {
-            self.store.declare(account).await;
-        }
-
         if !self.executor.deployed {
             self.executor.deploy(vec![], account).await;
         }
 
-        self.world
-            .deploy(
-                vec![
-                    self.executor.contract_address.unwrap(),
-                    self.store.class.local,
-                    self.indexer.class.local,
-                ],
-                account,
-            )
-            .await;
+        self.world.deploy(vec![self.executor.contract_address.unwrap()], account).await;
 
         self.register_components(account).await?;
         self.register_systems(account).await?;

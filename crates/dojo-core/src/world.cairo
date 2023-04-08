@@ -11,7 +11,6 @@ mod World {
     use dojo_core::serde::SpanSerde;
     use dojo_core::storage::query::Query;
     use dojo_core::storage::query::QueryTrait;
-    use dojo_core::storage::query::QueryIntoFelt252;
     use dojo_core::storage::db::Database;
 
     use dojo_core::interfaces::IComponentLibraryDispatcher;
@@ -37,7 +36,7 @@ mod World {
 
     // Give deployer the default admin role.
     #[constructor]
-    fn constructor(executor_: ContractAddress, index_: ClassHash) {
+    fn constructor(executor_: ContractAddress) {
         let caller = get_caller_address();
         _grant_role(0, caller);
 
@@ -103,9 +102,6 @@ mod World {
         // TODO: verify executor has permission to write
 
         let class_hash = component_registry::read(component);
-        let length = IComponentLibraryDispatcher { class_hash: class_hash }.len();
-        assert(value.len() <= length, 'Value too long');
-
         Database::set(class_hash, table, query, offset, value)
     }
 
@@ -118,13 +114,7 @@ mod World {
     #[view]
     fn entity(component: felt252, query: Query, offset: u8, mut length: usize) -> Span<felt252> {
         let class_hash = component_registry::read(component);
-
-        if length == 0_usize {
-            length = IComponentLibraryDispatcher { class_hash: class_hash }.len()
-        }
-
         let res = Database::get(class_hash, component, query, offset, length);
-
         res
     }
 
@@ -217,7 +207,7 @@ mod World {
 #[available_gas(2000000)]
 fn test_constructor() {
     starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
-    World::constructor(starknet::contract_address_const::<0x1337>(), starknet::class_hash_const::<0x1337>());
+    World::constructor(starknet::contract_address_const::<0x1337>());
     assert(World::has_role(0, starknet::contract_address_const::<0x420>()), 'role not granted');
 }
 
@@ -225,7 +215,7 @@ fn test_constructor() {
 #[available_gas(2000000)]
 fn test_grant_revoke_role() {
     starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
-    World::constructor(starknet::contract_address_const::<0x1337>(), starknet::class_hash_const::<0x1337>());
+    World::constructor(starknet::contract_address_const::<0x1337>());
     World::grant_role(1, starknet::contract_address_const::<0x421>());
     assert(World::has_role(1, starknet::contract_address_const::<0x421>()), 'role not granted');
     World::revoke_role(1, starknet::contract_address_const::<0x421>());
@@ -236,7 +226,7 @@ fn test_grant_revoke_role() {
 #[available_gas(2000000)]
 fn test_renonce_role() {
     starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
-    World::constructor(starknet::contract_address_const::<0x1337>(), starknet::class_hash_const::<0x1337>());
+    World::constructor(starknet::contract_address_const::<0x1337>());
     World::renounce_role(0);
     assert(!World::has_role(0, starknet::contract_address_const::<0x420>()), 'role not renonced');
 }

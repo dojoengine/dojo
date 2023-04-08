@@ -5,12 +5,14 @@ mod Database {
     use traits::Into;
 
     use dojo_core::serde::SpanSerde;
-
     use dojo_core::storage::query::Query;
     use dojo_core::storage::query::QueryTrait;
     use dojo_core::storage::query::QueryIntoFelt252;
     use dojo_core::storage::kv::KeyValueStore;
     use dojo_core::storage::index::Index;
+
+    use dojo_core::interfaces::IComponentLibraryDispatcher;
+    use dojo_core::interfaces::IComponentDispatcherTrait;
 
     #[event]
     fn StoreSetRecord(table_id: felt252, keys: Span<felt252>, value: Span<felt252>) {}
@@ -29,6 +31,10 @@ mod Database {
         offset: u8,
         mut length: usize
     ) -> Span<felt252> {
+        if length == 0_usize {
+            length = IComponentLibraryDispatcher { class_hash: class_hash }.len()
+        }
+
         KeyValueStore::get(table, query.into(), offset, length)
     }
 
@@ -40,25 +46,29 @@ mod Database {
         offset: u8,
         value: Span<felt252>
     ) {
+        let keys = query.keys();
         let id = query.into();
-        // let keys = query.keys();
-        Index::index(table, id);
+
+        let length = IComponentLibraryDispatcher { class_hash: class_hash }.len();
+        assert(value.len() <= length, 'Value too long');
+
+        Index::create(table, id);
         KeyValueStore::set(table, id, offset, value);
 
-        // StoreSetRecord(table, keys, value);
-        // StoreSetField(table, keys, offset, value);
+        StoreSetRecord(table, keys, value);
+        StoreSetField(table, keys, offset, value);
     }
 
     #[external]
     fn del(class_hash: starknet::ClassHash, table: felt252, query: Query) {
-        
+        Index::delete(table, query.into());
     }
 
     fn all(component: felt252, partition: felt252) -> Array::<felt252> {
         if partition == 0 {
-            return Index::records(component);
+            return Index::query(component);
         }
 
-        Index::records(pedersen(component, partition))
+        Index::query(pedersen(component, partition))
     }
 }
