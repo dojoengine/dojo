@@ -8,8 +8,7 @@
   },
   "author": "pondering democritus",
   "license": "MIT",
-  "main": "dist/src/index.js",
-  "types": "dist/src/index.d.ts",
+  "main": "dist/index.js",
   "devDependencies": {
     "@types/events": "^3.0.0",
     "@types/jest": "^29.5.0",
@@ -21,6 +20,7 @@
   },
   "dependencies": {
     "@types/elliptic": "^6.4.14",
-    "starknet": "^4.22.0"
+    "starknet": "^4.22.0",
+    "zustand": "^4.3.7"
   }
 }

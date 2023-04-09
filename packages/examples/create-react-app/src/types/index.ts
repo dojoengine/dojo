@@ -1,21 +1,3 @@
-export enum Entity {
-    Realm = 'Realm',
-    Army = 'Army'
-}
-
-export interface Realm {
-    id: number;
-    name: string;
-    description: string;
-    owner: number;
-    armies: number[];
-}
-
-export interface EntityData {
-    entityId: number;
-    entityType: Entity;
-}
-
 export interface QueryResult<T> {
     data: T | undefined;
     loading: boolean;
@@ -24,4 +6,13 @@ export interface QueryResult<T> {
 
 export interface Component {
     key: number;
+}
+
+export interface Position {
+    x: number;
+    y: number;
+}
+
+export interface Moves {
+    remaining: number;
 }

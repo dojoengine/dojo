@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'; 
-import { Providers } from '../../../core/src';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { Providers } from 'dojo-core';
 
 export interface DojoContext {
   worldAddress?: string;

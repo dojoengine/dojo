@@ -1,24 +1,27 @@
-import { Canvas } from "@react-three/fiber";
-import { World } from "./layouts/World";
-import { DojoConfig } from "../../../react/src/provider/index"
+import { DojoConfig } from "dojo-react"
+import { Position } from "./components/Position";
 
-const worldAddress = "ws://localhost:8080";
+const worldAddress = "0xK4T4N4";
+const rpcUrl = "http://localhost:8545";
 
 function App() {
+
+  const entity_ids = [
+    "1", "2", "3"
+  ]
+
   return (
-    <div className="relative w-screen h-screen bg-black">
-      <DojoConfig worldAddress={worldAddress}>
-        <World />
-        <Canvas className="z-10">
-          <ambientLight intensity={0.1} />
-          <directionalLight color="red" position={[0, 0, 5]} />
-          <mesh>
-            <boxGeometry />
-            <meshStandardMaterial />
-          </mesh>
-        </Canvas>
+    <div>
+      <h3>State</h3>
+      <DojoConfig worldAddress={worldAddress} rpcUrl={rpcUrl}>
+        <div>
+          {entity_ids.map((entity_id, index) => (
+            <Position key={index} entity_id={entity_id} />
+          ))}
+        </div>
       </DojoConfig>
     </div>
+
   );
 }
 

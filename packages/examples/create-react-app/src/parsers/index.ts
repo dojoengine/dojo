@@ -1,11 +1,12 @@
-import { Realm } from "../types";
+import { Position } from "../types";
 
-export const RealmParser = (metadata: number[]): Realm => {
+interface Data {
+    entity: number[];
+}
+
+export const PositionParser = (data: Data): Position => {
     return {
-        id: metadata[0],
-        name: `Realm ${metadata[1]}`,
-        description: `This is Realm ${metadata[1]}`,
-        owner: metadata[2],
-        armies: metadata.slice(3),
+        x: data.entity[0],
+        y: data.entity[1],
     };
 };

@@ -1,27 +1,48 @@
-import { useCallback, useState } from "react";
-import { useDojoContext } from "../provider";
-import { Query } from "../../../core/src/types";
+import { useCallback } from 'react';
+import { useDojoContext } from '../provider';
+import { Query } from 'dojo-core/dist/types';
+import { Store } from 'dojo-core';
 
+export function useDojoEntity<T>({
+  key,
+  parser,
+}: {
+  key: any;
+  parser: (data: any) => T | undefined;
+}) {
 
-// -- Key is used to force a re-render when the key changes
-// -- Parser is used to convert the data from the provider into the correct type
+  // -- Store -- //
+  const store = Store.EntityStore;
 
-export function useDojoEntity<T>({ key, parser }: { key: any; parser: (data: any) => T }) {
-  const [entity, setEntity] = useState<T | null>(null);
+  // -- Context -- //
   const { rpcProvider } = useDojoContext();
 
-  // could get the interface here and pass into function
+  // -- Callbacks -- //
   const getEntity = useCallback(
-    async (component: bigint, query: Query, offset: number, length: number) => {
+    async (
+      component: bigint,
+      query: Query,
+      offset: number,
+      length: number
+    ) => {
       if (rpcProvider) {
-        const fetchedEntity = await rpcProvider.entity(component, query, offset, length);
-        setEntity(parser(fetchedEntity));
+        const fetchedEntity = await rpcProvider.entity(
+          component,
+          query,
+          offset,
+          length
+        );
+        store.setState({ entity: fetchedEntity });
       } else {
-        setEntity(null);
+        store.setState({ entity: [] });
       }
     },
     [rpcProvider, key]
   );
 
-  return { entity, getEntity };
+
+
+  console.log("useDojoEntity", store.getState());
+
+  return { entity: parser(store.getState()), getEntity, setEntity: store.setState };
 }

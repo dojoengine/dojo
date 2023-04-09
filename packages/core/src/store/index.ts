@@ -1,0 +1,1 @@
+export { EntityStore } from './entity';
