@@ -171,7 +171,8 @@ async fn declare(
         prepare_contract_declaration_params(artifact_path).unwrap();
 
     if account.provider().get_class_by_hash(casm_class_hash, BlockId::Pending).await.is_ok() {
-        println!("{} class already declared", name)
+        println!("{} class already declared", name);
+        return;
     }
 
     let result = account.declare(Arc::new(flattened_class), casm_class_hash).send().await;
