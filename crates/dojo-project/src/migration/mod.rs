@@ -8,11 +8,11 @@ use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass;
-use starknet::accounts::{Account, Call, SingleOwnerAccount};
+use starknet::accounts::{Account, Call, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::contract::{CompiledClass, FlattenedSierraClass, SierraClass};
-use starknet::core::types::FieldElement;
+use starknet::core::types::{BlockId, FieldElement};
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
-use starknet::providers::SequencerGatewayProvider;
+use starknet::providers::{Provider, SequencerGatewayProvider};
 use starknet::signers::LocalWallet;
 
 use self::world::{Class, Contract};
@@ -138,7 +138,7 @@ trait Declarable {
     async fn declare(&self, account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>);
 }
 
-// can remove `mut` once we can calculate the contract addres before sending the tx
+// TODO: Remove `mut` once we can calculate the contract address before sending the tx
 #[async_trait]
 trait Deployable: Declarable {
     async fn deploy(
@@ -151,49 +151,40 @@ trait Deployable: Declarable {
 #[async_trait]
 impl Declarable for ClassMigration {
     async fn declare(&self, account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>) {
-        let (flattened_class, casm_class_hash) =
-            prepare_contract_declaration_params(&self.artifact_path).unwrap();
-
-        let result = account.declare(Arc::new(flattened_class), casm_class_hash).send().await;
-        match result {
-            Ok(result) => {
-                println!(
-                    "Declared `{}` class at transaction: {:#x}",
-                    self.class.name, result.transaction_hash
-                );
-            }
-            Err(error) => {
-                if error.to_string().contains("already declared") {
-                    println!("{} class already declared", self.class.name)
-                } else {
-                    panic!("Problem declaring {} class: {error}", self.class.name);
-                }
-            }
-        }
+        declare(self.class.name.clone(), &self.artifact_path, account).await;
     }
 }
 
 #[async_trait]
 impl Declarable for ContractMigration {
     async fn declare(&self, account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>) {
-        let (flattened_class, casm_class_hash) =
-            prepare_contract_declaration_params(&self.artifact_path).unwrap();
+        declare(self.contract.name.clone(), &self.artifact_path, account).await;
+    }
+}
 
-        let result = account.declare(Arc::new(flattened_class), casm_class_hash).send().await;
+async fn declare(
+    name: String,
+    artifact_path: &PathBuf,
+    account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
+) {
+    let (flattened_class, casm_class_hash) =
+        prepare_contract_declaration_params(artifact_path).unwrap();
 
-        match result {
-            Ok(result) => {
-                println!(
-                    "Declared `{}` contract at transaction: {:#x}",
-                    self.contract.name, result.transaction_hash
-                );
-            }
-            Err(error) => {
-                if error.to_string().contains("already declared") {
-                    println!("{} contract already declared", self.contract.name)
-                } else {
-                    panic!("Problem declaring {} contract: {error}", self.contract.name);
-                }
+    if account.provider().get_class_by_hash(casm_class_hash, BlockId::Pending).await.is_ok() {
+        println!("{} class already declared", name)
+    }
+
+    let result = account.declare(Arc::new(flattened_class), casm_class_hash).send().await;
+
+    match result {
+        Ok(result) => {
+            println!("Declared `{}` class at transaction: {:#x}", name, result.transaction_hash);
+        }
+        Err(error) => {
+            if error.to_string().contains("already declared") {
+                println!("{} class already declared", name)
+            } else {
+                panic!("Problem declaring {} class: {error}", name);
             }
         }
     }
@@ -219,6 +210,23 @@ impl Deployable for ContractMigration {
         ]
         .concat();
 
+        let contract_address = get_contract_address(
+            self.salt,
+            self.contract.local,
+            &constructor_calldata,
+            FieldElement::ZERO,
+        );
+
+        self.contract_address = Some(contract_address);
+
+        if account.provider().get_class_hash_at(contract_address, BlockId::Pending).await.is_ok() {
+            self.deployed = true;
+            println!("{} contract already deployed", self.contract.name);
+            return;
+        }
+
+        println!("Deploying `{}` contract", self.contract.name);
+
         let res = account
             .execute(vec![Call {
                 calldata,
@@ -233,15 +241,6 @@ impl Deployable for ContractMigration {
             .await
             .unwrap_or_else(|e| panic!("problem deploying `{}` contract: {e}", self.contract.name));
 
-        let contract_address = get_contract_address(
-            self.salt,
-            self.contract.local,
-            &constructor_calldata,
-            FieldElement::ZERO,
-        );
-
-        self.contract_address = Some(contract_address);
-
         println!(
             "Deployed `{}` contract at transaction: {:#x}",
             self.contract.name, res.transaction_hash
@@ -249,7 +248,6 @@ impl Deployable for ContractMigration {
         println!("`{} `Contract address: {contract_address:#x}", self.contract.name);
 
         self.deployed = true;
-        self.contract.address = Some(contract_address);
     }
 }
 
