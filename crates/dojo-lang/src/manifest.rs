@@ -1,6 +1,6 @@
 use std::collections::HashMap;
+use std::fs;
 use std::path::Path;
-use std::{fs, iter};
 
 use ::serde::{Deserialize, Serialize};
 use anyhow::{anyhow, Context, Result};
@@ -175,8 +175,7 @@ impl Manifest {
         manifest.world = world_class_hash;
         manifest.executor = executor_class_hash;
 
-        // Fetch the components/systems class hash if they are registered in the remote World.
-        for (component, system) in iter::zip(&local_manifest.components, &local_manifest.systems) {
+        for component in &local_manifest.components {
             let comp_class_hash = starknet
                 .call(
                     &FunctionCall {
@@ -188,6 +187,14 @@ impl Manifest {
                 )
                 .await?[0];
 
+            manifest.components.push(Component {
+                name: component.name.clone(),
+                class_hash: comp_class_hash,
+                ..Default::default()
+            });
+        }
+
+        for system in &local_manifest.systems {
             let syst_class_hash = starknet
                 .call(
                     &FunctionCall {
@@ -203,11 +210,6 @@ impl Manifest {
                 )
                 .await?[0];
 
-            manifest.components.push(Component {
-                name: component.name.clone(),
-                class_hash: comp_class_hash,
-                ..Default::default()
-            });
             manifest.systems.push(System {
                 name: system.name.clone(),
                 class_hash: syst_class_hash,
