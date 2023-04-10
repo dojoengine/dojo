@@ -8,21 +8,17 @@ mod World {
     use starknet::ClassHash;
     use starknet::ContractAddress;
 
-    use dojo::serde::SpanSerde;
-    use dojo::storage::key::StorageKey;
-    use dojo::storage::key::StorageKeyTrait;
-    use dojo::storage::key::StorageKeyIntoFelt252;
+    use dojo_core::serde::SpanSerde;
+    use dojo_core::storage::key::StorageKey;
+    use dojo_core::storage::key::StorageKeyTrait;
+    use dojo_core::storage::key::StorageKeyIntoFelt252;
 
-    use dojo::interfaces::IComponentLibraryDispatcher;
-    use dojo::interfaces::IComponentDispatcherTrait;
-    use dojo::interfaces::ISystemLibraryDispatcher;
-    use dojo::interfaces::ISystemDispatcherTrait;
-    use dojo::interfaces::IExecutorDispatcher;
-    use dojo::interfaces::IExecutorDispatcherTrait;
-    use dojo::interfaces::IIndexerLibraryDispatcher;
-    use dojo::interfaces::IIndexerDispatcherTrait;
-    use dojo::interfaces::IStoreLibraryDispatcher;
-    use dojo::interfaces::IStoreDispatcherTrait;
+    use dojo_core::interfaces::IComponentLibraryDispatcher;
+    use dojo_core::interfaces::IComponentDispatcherTrait;
+    use dojo_core::interfaces::IExecutorDispatcher;
+    use dojo_core::interfaces::IExecutorDispatcherTrait;
+    use dojo_core::interfaces::ISystemLibraryDispatcher;
+    use dojo_core::interfaces::ISystemDispatcherTrait;
 
     struct Storage {
         caller: ClassHash,
@@ -132,16 +128,6 @@ mod World {
     #[external]
     fn set_executor(contract_address: ContractAddress) {
         executor::write(contract_address);
-    }
-
-    #[external]
-    fn set_indexer(class_hash: ClassHash) {
-        indexer::write(class_hash);
-    }
-
-    #[external]
-    fn set_store(class_hash: ClassHash) {
-        store::write(class_hash);
     }
 }
 

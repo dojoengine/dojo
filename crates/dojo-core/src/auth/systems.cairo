@@ -3,8 +3,8 @@ mod AuthRouting {
     use array::SpanTrait;
     use option::OptionTrait;
 
-    use dojo::auth::components::AuthorizationStatus;
-    use dojo::auth::components::Role;
+    use dojo_core::auth::components::AuthorizationStatus;
+    use dojo_core::auth::components::Role;
 
     fn execute(
         ref target_ids: Span<felt252>, ref roles: Span<felt252>, ref resources: Span<felt252>
@@ -38,8 +38,8 @@ mod AuthRouting {
 
 #[system]
 mod Authorize {
-    use dojo::auth::components::AuthorizationStatus;
-    use dojo::auth::components::Role;
+    use dojo_core::auth::components::AuthorizationStatus;
+    use dojo_core::auth::components::Role;
 
     fn execute(caller_id: felt252, resource_id: felt252) {
         let role = commands::<Role>::get(caller_id.into());
@@ -52,7 +52,7 @@ mod Authorize {
 
 #[system]
 mod GrantRole {
-    use dojo::auth::components::Role;
+    use dojo_core::auth::components::Role;
 
     fn execute(target_id: felt252, role_id: felt252) {
         commands::<Role>::set(target_id.into(), Role { id: role_id });
@@ -61,7 +61,7 @@ mod GrantRole {
 
 #[system]
 mod GrantResource {
-    use dojo::auth::components::AuthorizationStatus;
+    use dojo_core::auth::components::AuthorizationStatus;
 
     fn execute(role_id: felt252, resource_id: felt252) {
         commands::<AuthorizationStatus>::set((role_id, resource_id).into(), bool::True(()));
@@ -70,7 +70,7 @@ mod GrantResource {
 
 #[system]
 mod RevokeRole {
-    use dojo::auth::components::Role;
+    use dojo_core::auth::components::Role;
 
     fn execute(target_id: felt252) {
         commands::<Role>::set(target_id.into(), Role { id: 0 });
@@ -79,7 +79,7 @@ mod RevokeRole {
 
 #[system]
 mod RevokeResource {
-    use dojo::auth::components::AuthorizationStatus;
+    use dojo_core::auth::components::AuthorizationStatus;
 
     fn execute(role_id: felt252, resource_id: felt252) {
         commands::<AuthorizationStatus>::set((role_id, resource_id).into(), bool::False(()));
