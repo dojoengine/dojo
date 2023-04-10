@@ -9,9 +9,9 @@ mod World {
     use starknet::ContractAddress;
 
     use dojo_core::serde::SpanSerde;
-    use dojo_core::storage::key::StorageKey;
-    use dojo_core::storage::key::StorageKeyTrait;
-    use dojo_core::storage::key::StorageKeyIntoFelt252;
+    use dojo_core::storage::query::Query;
+    use dojo_core::storage::query::QueryTrait;
+    use dojo_core::storage::db::Database;
 
     use dojo_core::interfaces::IComponentLibraryDispatcher;
     use dojo_core::interfaces::IComponentDispatcherTrait;
