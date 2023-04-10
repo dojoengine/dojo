@@ -43,6 +43,9 @@ impl System {
                 "
                 #[contract]
                 mod $name$System {
+                    use option::OptionTrait;
+                    use array::SpanTrait;
+
                     use dojo_core::world;
                     use dojo_core::interfaces::IWorldDispatcher;
                     use dojo_core::interfaces::IWorldDispatcherTrait;

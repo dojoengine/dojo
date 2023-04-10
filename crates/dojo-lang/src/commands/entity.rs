@@ -52,9 +52,11 @@ impl CommandTrait for EntityCommand {
                     let mut __$query_id$_$query_subtype$_raw = IWorldDispatcher {
                         contract_address: world_address
                     }.entity('$component$', $query$, 0_u8, 0_usize);
+                    assert(__$query_id$_$query_subtype$_raw.len() > 0_usize, 'Failed to find \
+                 $component$');
                     let __$query_id$_$query_subtype$ = serde::Serde::<$component$>::deserialize(
                         ref __$query_id$_$query_subtype$_raw
-                    );
+                    ).expect('Failed to deserialize $component$');
                     ",
                 HashMap::from([
                     ("component".to_string(), RewriteNode::Text(component.to_string())),
