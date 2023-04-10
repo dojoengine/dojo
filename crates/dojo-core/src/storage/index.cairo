@@ -15,7 +15,6 @@ mod Index {
         tables: LegacyMap::<(felt252, usize), felt252>,
     }
 
-    #[external]
     fn create(table: felt252, id: felt252) {
         let is_set = ids::read((table, id));
         if is_set != 0_usize {
@@ -28,7 +27,6 @@ mod Index {
         tables::write((table, table_len), id);
     }
 
-    #[external]
     fn delete(table: felt252, id: felt252) {
         let table_len = table_lens::read(table);
         let table_idx = ids::read((table, id)) - 1_usize;
@@ -40,12 +38,10 @@ mod Index {
         tables::write((table, table_idx), tables::read((table, table_len - 1_usize)));
     }
 
-    #[view]
     fn exists(table: felt252, id: felt252) -> bool {
         ids::read((table, id)) != 0_usize
     }
 
-    #[view]
     fn query(table: felt252) -> Array::<felt252> {
         let mut res = ArrayTrait::<felt252>::new();
         let table_len = table_lens::read(table);
