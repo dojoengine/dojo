@@ -1,5 +1,5 @@
 #[derive(Component)]
-struct AuthorizationStatus {
+struct Status {
     is_authorized: bool
 }
 
