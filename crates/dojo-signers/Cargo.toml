@@ -1,0 +1,11 @@
+[package]
+name = "dojo-signers"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+license-file.workspace = true
+description = "Dojo Signer implementations"
+
+[dependencies]
+anyhow.workspace = true
+starknet.workspace = true

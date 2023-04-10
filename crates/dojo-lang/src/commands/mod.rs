@@ -5,8 +5,8 @@ use cairo_lang_syntax::node::{ast, Terminal};
 use smol_str::SmolStr;
 
 pub mod entities;
+pub mod entity;
 pub mod execute;
-pub mod get;
 pub mod set;
 pub mod uuid;
 
@@ -35,6 +35,7 @@ impl CommandData {
 pub struct Command {
     pub rewrite_nodes: Vec<RewriteNode>,
     pub diagnostics: Vec<PluginDiagnostic>,
+    pub component_deps: Vec<SmolStr>,
 }
 
 impl Command {
@@ -43,7 +44,8 @@ impl Command {
         let_pattern: Option<ast::Pattern>,
         command_ast: ast::ExprFunctionCall,
     ) -> Self {
-        let mut command = Command { rewrite_nodes: vec![], diagnostics: vec![] };
+        let mut command =
+            Command { rewrite_nodes: vec![], diagnostics: vec![], component_deps: vec![] };
 
         match command_name(db, command_ast.clone()).as_str() {
             "uuid" => {
@@ -51,15 +53,21 @@ impl Command {
                 command.rewrite_nodes.extend(sc.rewrite_nodes());
                 command.diagnostics.extend(sc.diagnostics());
             }
-            "get" => {
-                let sc = get::GetCommand::from_ast(db, let_pattern, command_ast);
+            "entity" => {
+                let sc = entity::EntityCommand::from_ast(db, let_pattern, command_ast);
                 command.rewrite_nodes.extend(sc.rewrite_nodes());
                 command.diagnostics.extend(sc.diagnostics());
             }
-            "set" => {
-                let sc = set::CreateCommand::from_ast(db, let_pattern, command_ast);
+            "try_entity" => {
+                let sc = entity::EntityCommand::from_ast(db, let_pattern, command_ast);
                 command.rewrite_nodes.extend(sc.rewrite_nodes());
                 command.diagnostics.extend(sc.diagnostics());
+            }
+            "set_entity" => {
+                let sc = set::SetCommand::from_ast(db, let_pattern, command_ast);
+                command.rewrite_nodes.extend(sc.rewrite_nodes());
+                command.diagnostics.extend(sc.diagnostics());
+                command.component_deps.extend(sc.components);
             }
             "entities" => {
                 let sc = entities::EntitiesCommand::from_ast(db, let_pattern, command_ast);
@@ -78,7 +86,7 @@ impl Command {
     }
 }
 
-fn command_name(db: &dyn SyntaxGroup, command_ast: ast::ExprFunctionCall) -> SmolStr {
+pub fn command_name(db: &dyn SyntaxGroup, command_ast: ast::ExprFunctionCall) -> SmolStr {
     let elements = command_ast.path(db).elements(db);
     let segment = elements.last().unwrap();
     if let ast::PathSegment::Simple(method) = segment {

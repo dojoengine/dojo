@@ -14,9 +14,10 @@ use cairo_lang_semantic::test_utils::setup_test_module;
 use cairo_lang_syntax::node::TypedSyntaxNode;
 use cairo_lang_test_utils::parse_test_file::TestFileRunner;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
+use scarb::ops;
 
 use crate::plugin::DojoPlugin;
-use crate::testing::build_test_db;
+use crate::testing::{build_test_config, build_test_db};
 
 struct ExpandContractTestRunner {
     db: RootDatabase,
@@ -24,7 +25,9 @@ struct ExpandContractTestRunner {
 
 impl Default for ExpandContractTestRunner {
     fn default() -> Self {
-        Self { db: build_test_db().unwrap() }
+        let config = build_test_config().unwrap();
+        let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
+        Self { db: build_test_db(&ws).unwrap() }
     }
 }
 impl TestFileRunner for ExpandContractTestRunner {
@@ -36,9 +39,9 @@ impl TestFileRunner for ExpandContractTestRunner {
         let syntax_file = self.db.file_syntax(file_id).unwrap();
 
         let mut current_path = current_dir().unwrap();
-        current_path.push("../../lib/src");
+        current_path.push("../dojo-core/src");
 
-        let crate_id = self.db.intern_crate(CrateLongId("dojo".into()));
+        let crate_id = self.db.intern_crate(CrateLongId("dojo_core".into()));
         let root = Directory(current_path);
         self.db.set_crate_root(crate_id, Some(root));
 

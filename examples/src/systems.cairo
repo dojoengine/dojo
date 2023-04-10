@@ -9,7 +9,7 @@ mod Spawn {
 
     fn execute() {
         let caller = starknet::get_caller_address();
-        let player = commands::set(caller.into(), (
+        let player = commands::set_entity(caller.into(), (
             Moves { remaining: 10_u8 },
             Position { x: 0_u32, y: 0_u32 },
         ));
@@ -21,7 +21,6 @@ mod Spawn {
 mod Move {
     use array::ArrayTrait;
     use traits::Into;
-    use option::OptionTrait;
     use starknet::contract_address::ContractAddressIntoFelt252;
 
     use dojo_examples::components::Position;
@@ -31,10 +30,10 @@ mod Move {
     // left: 0, right: 1, up: 2, down: 3
     fn execute(direction: felt252) {
         let caller = starknet::get_caller_address();
-        let (position, moves) = commands::<Position, Moves>::get(caller.into());
-        let next = next_position(position.unwrap(), direction);
-        let uh = commands::set(caller.into(), (
-            Moves { remaining: moves.unwrap().remaining - 1_u8 },
+        let (position, moves) = commands::<Position, Moves>::entity(caller.into());
+        let next = next_position(position, direction);
+        let uh = commands::set_entity(caller.into(), (
+            Moves { remaining: moves.remaining - 1_u8 },
             Position { x: next.x, y: next.y },
         ));
         return ();
