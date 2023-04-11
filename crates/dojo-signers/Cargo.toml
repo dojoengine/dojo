@@ -8,5 +8,4 @@ description = "Dojo Signer implementations"
 
 [dependencies]
 anyhow.workspace = true
-async-trait = "0.1"
 starknet.workspace = true

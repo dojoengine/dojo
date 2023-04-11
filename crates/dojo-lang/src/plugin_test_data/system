@@ -90,7 +90,15 @@ mod Move {
                 let positions_query = commands::<(Position, Player)>::entities();
             }
         } else if bar == 321 {
-            let player_position = commands::<(Position, Player)>::entity(player_id.into());
+            let positions_query = commands::<(Position, Player)>::try_entity(player_id.into());
+            match positions_query {
+                Option::Some((position, player)) => {
+                    // do nothing
+                },
+                Option::None(()) => {
+                    // do nothing
+                }
+            }
         } else {
             let player_position = commands::<(Position, Player)>::entity(player_id.into());
         }
@@ -228,6 +236,9 @@ mod PlayerComponent {
 
 #[contract]
 mod SpawnSystem {
+    use option::OptionTrait;
+    use array::SpanTrait;
+
     use dojo_core::world;
     use dojo_core::interfaces::IWorldDispatcher;
     use dojo_core::interfaces::IWorldDispatcherTrait;
@@ -344,6 +355,9 @@ mod SpawnSystem {
 
 #[contract]
 mod MoveSystem {
+    use option::OptionTrait;
+    use array::SpanTrait;
+
     use dojo_core::world;
     use dojo_core::interfaces::IWorldDispatcher;
     use dojo_core::interfaces::IWorldDispatcherTrait;
@@ -389,22 +403,27 @@ mod MoveSystem {
         let mut __player_player_raw = IWorldDispatcher {
             contract_address: world_address
         }.entity('Player', player_id.into(), 0_u8, 0_usize);
-        let __player_player = serde::Serde::<Player>::deserialize(ref __player_player_raw);
+        assert(__player_player_raw.len() > 0_usize, 'Failed to find Player');
+        let __player_player = serde::Serde::<Player>::deserialize(
+            ref __player_player_raw
+        ).expect('Failed to deserialize Player');
         let player = __player_player;
 
         let mut __player_position_position_raw = IWorldDispatcher {
             contract_address: world_address
         }.entity('Position', player_id.into(), 0_u8, 0_usize);
+        assert(__player_position_position_raw.len() > 0_usize, 'Failed to find Position');
         let __player_position_position = serde::Serde::<Position>::deserialize(
             ref __player_position_position_raw
-        );
+        ).expect('Failed to deserialize Position');
 
         let mut __player_position_player_raw = IWorldDispatcher {
             contract_address: world_address
         }.entity('Player', player_id.into(), 0_u8, 0_usize);
+        assert(__player_position_player_raw.len() > 0_usize, 'Failed to find Player');
         let __player_position_player = serde::Serde::<Player>::deserialize(
             ref __player_position_player_raw
-        );
+        ).expect('Failed to deserialize Player');
         let player_position = (__player_position_position, __player_position_player);
 
         let mut bar = 123;
@@ -414,16 +433,18 @@ mod MoveSystem {
             let mut __player_position_position_raw = IWorldDispatcher {
                 contract_address: world_address
             }.entity('Position', player_id.into(), 0_u8, 0_usize);
+            assert(__player_position_position_raw.len() > 0_usize, 'Failed to find Position');
             let __player_position_position = serde::Serde::<Position>::deserialize(
                 ref __player_position_position_raw
-            );
+            ).expect('Failed to deserialize Position');
 
             let mut __player_position_player_raw = IWorldDispatcher {
                 contract_address: world_address
             }.entity('Player', player_id.into(), 0_u8, 0_usize);
+            assert(__player_position_player_raw.len() > 0_usize, 'Failed to find Player');
             let __player_position_player = serde::Serde::<Player>::deserialize(
                 ref __player_position_player_raw
-            );
+            ).expect('Failed to deserialize Player');
             let player_position = (__player_position_position, __player_position_player);
             if foo.len() > 0_u32 {
                 let positions_query = ArrayTrait::<usize>::new();
@@ -436,50 +457,81 @@ mod MoveSystem {
                 }.entities('Player', 0);
             }
         } else if bar == 321 {
-            let mut __player_position_position_raw = IWorldDispatcher {
+            let mut __positions_query_position_raw = IWorldDispatcher {
                 contract_address: world_address
             }.entity('Position', player_id.into(), 0_u8, 0_usize);
-            let __player_position_position = serde::Serde::<Position>::deserialize(
-                ref __player_position_position_raw
-            );
+            let __positions_query_position = match __positions_query_position_raw.len() > 0_usize {
+                bool::False(()) => {
+                    Option::None(())
+                },
+                bool::True(()) => {
+                    Option::Some(
+                        serde::Serde::<Position>::deserialize(
+                            ref __positions_query_position_raw
+                        ).expect('Failed to deserialize Position')
+                    )
+                }
+            };
 
-            let mut __player_position_player_raw = IWorldDispatcher {
+            let mut __positions_query_player_raw = IWorldDispatcher {
                 contract_address: world_address
             }.entity('Player', player_id.into(), 0_u8, 0_usize);
-            let __player_position_player = serde::Serde::<Player>::deserialize(
-                ref __player_position_player_raw
-            );
-            let player_position = (__player_position_position, __player_position_player);
+            let __positions_query_player = match __positions_query_player_raw.len() > 0_usize {
+                bool::False(()) => {
+                    Option::None(())
+                },
+                bool::True(()) => {
+                    Option::Some(
+                        serde::Serde::<Player>::deserialize(
+                            ref __positions_query_player_raw
+                        ).expect('Failed to deserialize Player')
+                    )
+                }
+            };
+            let positions_query =
+                if __positions_query_position.is_some() & __positions_query_player.is_some() {
+                Option::Some((__positions_query_position, __positions_query_player))
+            } else {
+                Option::None(())
+            };
+            match positions_query {
+                Option::Some((position, player)) => {},
+                Option::None(()) => {},
+            }
         } else {
             let mut __player_position_position_raw = IWorldDispatcher {
                 contract_address: world_address
             }.entity('Position', player_id.into(), 0_u8, 0_usize);
+            assert(__player_position_position_raw.len() > 0_usize, 'Failed to find Position');
             let __player_position_position = serde::Serde::<Position>::deserialize(
                 ref __player_position_position_raw
-            );
+            ).expect('Failed to deserialize Position');
 
             let mut __player_position_player_raw = IWorldDispatcher {
                 contract_address: world_address
             }.entity('Player', player_id.into(), 0_u8, 0_usize);
+            assert(__player_position_player_raw.len() > 0_usize, 'Failed to find Player');
             let __player_position_player = serde::Serde::<Player>::deserialize(
                 ref __player_position_player_raw
-            );
+            ).expect('Failed to deserialize Player');
             let player_position = (__player_position_position, __player_position_player);
         }
         {
             let mut __player_position_position_raw = IWorldDispatcher {
                 contract_address: world_address
             }.entity('Position', player_id.into(), 0_u8, 0_usize);
+            assert(__player_position_position_raw.len() > 0_usize, 'Failed to find Position');
             let __player_position_position = serde::Serde::<Position>::deserialize(
                 ref __player_position_position_raw
-            );
+            ).expect('Failed to deserialize Position');
 
             let mut __player_position_player_raw = IWorldDispatcher {
                 contract_address: world_address
             }.entity('Player', player_id.into(), 0_u8, 0_usize);
+            assert(__player_position_player_raw.len() > 0_usize, 'Failed to find Player');
             let __player_position_player = serde::Serde::<Player>::deserialize(
                 ref __player_position_player_raw
-            );
+            ).expect('Failed to deserialize Player');
             let player_position = (__player_position_position, __player_position_player);
         }
         let foo_bar = Option::Some(1);
@@ -490,16 +542,18 @@ mod MoveSystem {
                 let mut __player_position_position_raw = IWorldDispatcher {
                     contract_address: world_address
                 }.entity('Position', player_id.into(), 0_u8, 0_usize);
+                assert(__player_position_position_raw.len() > 0_usize, 'Failed to find Position');
                 let __player_position_position = serde::Serde::<Position>::deserialize(
                     ref __player_position_position_raw
-                );
+                ).expect('Failed to deserialize Position');
 
                 let mut __player_position_player_raw = IWorldDispatcher {
                     contract_address: world_address
                 }.entity('Player', player_id.into(), 0_u8, 0_usize);
+                assert(__player_position_player_raw.len() > 0_usize, 'Failed to find Player');
                 let __player_position_player = serde::Serde::<Player>::deserialize(
                     ref __player_position_player_raw
-                );
+                ).expect('Failed to deserialize Player');
                 let player_position = (__player_position_position, __player_position_player);
                 if bar == 123 {
                     let positions_query = ArrayTrait::<usize>::new();
@@ -516,16 +570,18 @@ mod MoveSystem {
                 let mut __player_position_position_raw = IWorldDispatcher {
                     contract_address: world_address
                 }.entity('Position', player_id.into(), 0_u8, 0_usize);
+                assert(__player_position_position_raw.len() > 0_usize, 'Failed to find Position');
                 let __player_position_position = serde::Serde::<Position>::deserialize(
                     ref __player_position_position_raw
-                );
+                ).expect('Failed to deserialize Position');
 
                 let mut __player_position_player_raw = IWorldDispatcher {
                     contract_address: world_address
                 }.entity('Player', player_id.into(), 0_u8, 0_usize);
+                assert(__player_position_player_raw.len() > 0_usize, 'Failed to find Player');
                 let __player_position_player = serde::Serde::<Player>::deserialize(
                     ref __player_position_player_raw
-                );
+                ).expect('Failed to deserialize Player');
                 let player_position = (__player_position_position, __player_position_player);
             },
         }
@@ -560,11 +616,11 @@ error: Plugin diagnostic: Invalid arguments. Expected "(query, (components,))"
                             ^^
 
 error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::query::Query", found: "(core::felt252, core::felt252, core::felt252, core::felt252, core::felt252)".
- --> Spawn:74:99
+ --> Spawn:77:99
                         IWorldDispatcher { contract_address: world_address }.set_entity('Player', (0, 0, 0, 0, 0), 0_u8, calldata.span());
                                                                                                   ^*************^
 
 error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::query::Query", found: "(core::felt252, core::felt252, core::felt252, core::felt252, core::felt252)".
- --> Spawn:80:101
+ --> Spawn:83:101
                         IWorldDispatcher { contract_address: world_address }.set_entity('Position', (0, 0, 0, 0, 0), 0_u8, calldata.span());
                                                                                                     ^*************^

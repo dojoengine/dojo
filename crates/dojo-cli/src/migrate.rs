@@ -4,12 +4,13 @@ use anyhow::Result;
 use camino::Utf8PathBuf;
 use clap::Args;
 use dojo_project::migration::world::World;
+use dojo_signers::FromEnv;
+use dotenv::dotenv;
 use starknet::accounts::SingleOwnerAccount;
 use starknet::core::chain_id;
 use starknet::core::types::FieldElement;
 use starknet::providers::SequencerGatewayProvider;
-use starknet::signers::{LocalWallet, SigningKey};
-use url::Url;
+use starknet::signers::LocalWallet;
 
 #[derive(Args)]
 pub struct MigrateArgs {
@@ -22,6 +23,8 @@ pub struct MigrateArgs {
 
 #[tokio::main]
 pub async fn run(args: MigrateArgs) -> Result<()> {
+    dotenv().ok();
+
     let source_dir = match args.path {
         Some(path) => {
             if path.is_absolute() {
@@ -38,16 +41,10 @@ pub async fn run(args: MigrateArgs) -> Result<()> {
     let world = World::from_path(source_dir.clone()).await?;
     let mut migration = world.prepare_for_migration(source_dir)?;
 
-    let provider = SequencerGatewayProvider::new(
-        Url::parse("http://127.0.0.1:5050/gateway").unwrap(),
-        Url::parse("http://127.0.0.1:5050/feeder_gateway").unwrap(),
-    );
-
-    let signer = LocalWallet::from(SigningKey::from_secret_scalar(
-        FieldElement::from_hex_be("0x5d4fb5e2c807cd78ac51675e06be7099").unwrap(),
-    ));
+    let provider = SequencerGatewayProvider::starknet_alpha_goerli();
+    let signer = LocalWallet::from_env()?;
     let address = FieldElement::from_hex_be(
-        "0x5f6fd2a43f4bce1bdfb2d0e9212d910227d9f67cf1425f2a9ceae231572c643",
+        "0x03cD4f9b4bd4D5eF087012D228E9ee6761eE10d02Bd23bed6055BF6799DD98b8",
     )
     .unwrap();
     let account = SingleOwnerAccount::new(provider, signer, address, chain_id::TESTNET);

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
+use std::fs;
 use std::path::Path;
-use std::{fs, iter};
 
 use ::serde::{Deserialize, Serialize};
 use anyhow::{anyhow, Context, Result};
@@ -154,7 +154,7 @@ impl Manifest {
 
         let starknet = JsonRpcClient::new(HttpTransport::new(rpc_url));
         let world_class_hash =
-            starknet.get_class_hash_at(&BlockId::Tag(BlockTag::Latest), world_address).await.ok();
+            starknet.get_class_hash_at(&BlockId::Tag(BlockTag::Pending), world_address).await.ok();
 
         if world_class_hash.is_none() {
             return Ok(manifest);
@@ -164,19 +164,18 @@ impl Manifest {
             .get_storage_at(
                 world_address,
                 get_storage_var_address("executor", &[])?,
-                &BlockId::Tag(BlockTag::Latest),
+                &BlockId::Tag(BlockTag::Pending),
             )
             .await?;
         let executor_class_hash = starknet
-            .get_class_hash_at(&BlockId::Tag(BlockTag::Latest), executor_address)
+            .get_class_hash_at(&BlockId::Tag(BlockTag::Pending), executor_address)
             .await
             .ok();
 
         manifest.world = world_class_hash;
         manifest.executor = executor_class_hash;
 
-        // Fetch the components/systems class hash if they are registered in the remote World.
-        for (component, system) in iter::zip(&local_manifest.components, &local_manifest.systems) {
+        for component in &local_manifest.components {
             let comp_class_hash = starknet
                 .call(
                     &FunctionCall {
@@ -184,10 +183,18 @@ impl Manifest {
                         calldata: vec![cairo_short_string_to_felt(&component.name)?],
                         entry_point_selector: get_selector_from_name("component")?,
                     },
-                    &BlockId::Tag(BlockTag::Latest),
+                    &BlockId::Tag(BlockTag::Pending),
                 )
                 .await?[0];
 
+            manifest.components.push(Component {
+                name: component.name.clone(),
+                class_hash: comp_class_hash,
+                ..Default::default()
+            });
+        }
+
+        for system in &local_manifest.systems {
             let syst_class_hash = starknet
                 .call(
                     &FunctionCall {
@@ -199,15 +206,10 @@ impl Manifest {
                         )?],
                         entry_point_selector: get_selector_from_name("system")?,
                     },
-                    &BlockId::Tag(BlockTag::Latest),
+                    &BlockId::Tag(BlockTag::Pending),
                 )
                 .await?[0];
 
-            manifest.components.push(Component {
-                name: component.name.clone(),
-                class_hash: comp_class_hash,
-                ..Default::default()
-            });
             manifest.systems.push(System {
                 name: system.name.clone(),
                 class_hash: syst_class_hash,

@@ -114,8 +114,12 @@ mod World {
     #[view]
     fn entity(component: felt252, query: Query, offset: u8, mut length: usize) -> Span<felt252> {
         let class_hash = component_registry::read(component);
-        let res = Database::get(class_hash, component, query, offset, length);
-        res
+        match Database::get(class_hash, component, query, offset, length) {
+            Option::Some(res) => res,
+            Option::None(_) => {
+                ArrayTrait::<felt252>::new().span()
+            }
+        }
     }
 
     // Returns entities that contain the component state.

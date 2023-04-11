@@ -23,22 +23,24 @@ mod Database {
     #[event]
     fn StoreDeleteRecord(tableId: felt252, keys: Span<felt252>) {}
 
-    #[view]
     fn get(
         class_hash: starknet::ClassHash,
         table: felt252,
         query: Query,
         offset: u8,
         mut length: usize
-    ) -> Span<felt252> {
+    ) -> Option<Span<felt252>> {
         if length == 0_usize {
             length = IComponentLibraryDispatcher { class_hash: class_hash }.len()
         }
 
-        KeyValueStore::get(table, query.into(), offset, length)
+        let id = query.id();
+        match Index::exists(table, id) {
+            bool::False(()) => Option::None(()),
+            bool::True(()) => Option::Some(KeyValueStore::get(table, id, offset, length))
+        }
     }
 
-    #[external]
     fn set(
         class_hash: starknet::ClassHash,
         table: felt252,
@@ -59,7 +61,6 @@ mod Database {
         StoreSetField(table, keys, offset, value);
     }
 
-    #[external]
     fn del(class_hash: starknet::ClassHash, table: felt252, query: Query) {
         Index::delete(table, query.into());
     }
