@@ -9,9 +9,9 @@ interface Props {
 }
 
 const component = {
-  component: "0x000",
-  offset: 2,
-  length: 1,
+  component: "Position",
+  offset: 0,
+  length: 0,
 }
 
 export const Position = ({ entity_id }: Props) => {
@@ -21,9 +21,7 @@ export const Position = ({ entity_id }: Props) => {
   const { entity, getEntity, setEntity } = useDojoEntity<PositionType>({ key: 1, parser });
 
   useEffect(() => {
-    // getEntity(BigInt(component.component), { partition: entity_id, keys: [''] }, component.offset, component.length);
-
-    console.log("entity", entity);
+    getEntity(component.component, { partition: entity_id, keys: [''] }, component.offset, component.length);
   }, [entity_id, getEntity, counter]);
 
   if (!entity) {
@@ -38,9 +36,9 @@ export const Position = ({ entity_id }: Props) => {
       <p>Entity ID: {entity_id}</p>
       <p>[{entity.x && entity.x.toString()}, {entity.y && entity.y.toString()}]</p>
       <button onClick={() => {
-        setEntity(pos)
+        // setEntity(pos)
         setCounter(counter + 1);
-      }}>Set Coordinates</button>
+      }}>execute</button>
     </div>
   );
 };
