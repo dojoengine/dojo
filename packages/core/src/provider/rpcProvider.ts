@@ -1,4 +1,4 @@
-import { RpcProvider } from "starknet";
+import { RpcProvider, number } from "starknet";
 import { Call } from "starknet";
 import { Provider } from "./provider";
 import { Query, WorldEntryPoints } from "../types";
@@ -14,13 +14,16 @@ export class RPCProvider extends Provider {
     }
 
     // TODO: Add interface shape
-    public async entity(component: bigint, query: Query, offset: number, length: number): Promise<Array<bigint>> {
+    public async entity(component: string, query: Query, offset: number, length: number): Promise<Array<bigint>> {
 
-        // TODO: Can we construct the offset and length from the manifest?
+        const call_data = [component, query.partition, ...query.keys, offset, length]
+
+        console.log("call", call_data)
+
         const call: Call = {
             entrypoint: WorldEntryPoints.get,
             contractAddress: this.getWorldAddress(),
-            calldata: [component.toString(), query.partition, ...query.keys, offset, length]
+            calldata: call_data
         }
 
         try {
@@ -31,4 +34,22 @@ export class RPCProvider extends Provider {
             throw error;
         }
     }
+
+    // public async execute(name: bigint, execute_calldata: string[]): Promise<Array<bigint>> {
+
+
+    //     const call: Call = {
+    //         entrypoint: WorldEntryPoints.execute,
+    //         contractAddress: this.getWorldAddress(),
+    //         calldata: [name.toString(), ...execute_calldata]
+    //     }
+
+    //     try {
+    //         const response = await this.provider.callContract(call)
+    //         return response.result as unknown as Array<bigint>;
+    //     } catch (error) {
+    //         this.emit("error", error);
+    //         throw error;
+    //     }
+    // }
 }

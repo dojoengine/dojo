@@ -31,7 +31,6 @@ export const DojoConfig: React.FC<DojoConfigProps> = ({
 }: any) => {
   const [rpcProvider, setRpcProvider] = useState<Providers.RPCProvider>();
 
-
   useEffect(() => {
     const newRpcProvider = new Providers.RPCProvider(worldAddress, rpcUrl);
     setRpcProvider(newRpcProvider);

@@ -9,7 +9,7 @@ export abstract class Provider extends EventEmitter implements IWorld {
         this.worldAddress = worldAddress;
     }
 
-    public abstract entity(component: bigint, query: Query, offset: number, length: number): Promise<Array<bigint>>;
+    public abstract entity(component: string, query: Query, offset: number, length: number): Promise<Array<bigint>>;
 
     public getWorldAddress(): string {
         return this.worldAddress;

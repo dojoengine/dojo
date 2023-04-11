@@ -1,7 +1,12 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useDojoContext } from '../provider';
 import { Query } from 'dojo-core/dist/types';
 import { Store } from 'dojo-core';
+import {
+  useContractWrite,
+  Call
+} from "@starknet-react/core";
+// import { Call } from 'starknet';
 
 // todo: this should really be components and not entities
 
@@ -9,12 +14,19 @@ import { Store } from 'dojo-core';
 export function useDojoEntity<T>({
   key,
   parser,
+  optimistic = false,
 }: {
   key: any;
   parser: (data: any) => T | undefined;
+  optimistic: boolean;
 }) {
+
+  const [calls, setCalls] = useState<Call[]>([])
+
+  const { write } = useContractWrite({ calls })
+
   // -- Context -- //
-  const { rpcProvider } = useDojoContext();
+  const { rpcProvider, worldAddress } = useDojoContext();
 
   // -- Store -- //
   const store = Store.EntityStore;
@@ -22,7 +34,7 @@ export function useDojoEntity<T>({
   // -- Callbacks -- //
   const getEntityCallback = useCallback(
     async (
-      component: bigint,
+      component: string,
       query: Query,
       offset: number,
       length: number
@@ -41,23 +53,22 @@ export function useDojoEntity<T>({
 
   const setEntityCallback = useCallback(
     async (
-      optimistic: boolean,
       value: bigint[],
-      component: bigint,
-      query: Query,
-      offset: number,
-      length: number
+      component: string,
+      optimistic: boolean = false,
     ) => {
-      await setEntity(
-        store,
-        rpcProvider,
-        optimistic,
-        value,
-        component,
-        query,
-        offset,
-        length
-      );
+
+      const call: Call = {
+        entrypoint: "execute",
+        contractAddress: worldAddress || "",
+        calldata: [component, ...value]
+      }
+
+      setCalls([call])
+
+      write()
+
+      if (optimistic) store.setState({ entity: value });
     },
     [rpcProvider, key, parser]
   );
@@ -71,48 +82,42 @@ export function useDojoEntity<T>({
 
 // we should pass in providers here
 
-// todo - this should know the component and fill in the gaps
+// TODO: This is very incomplete
+// Set the entity immediately in the store
+// Idea here was to optimistically update the state in zustand to reflect the users input
+// restrictions in the client logic can control auth here.
+// From a User POV, most of the time they just want to see the reflection in the client of what they have done, this gives a client
+// representation of it.
+// this could be replaced in the future with the state diff
 export async function setEntity<T>(
+  worldAddress: string = "",
   store: any, // TODO: Types
   rpcProvider: any,
-  optimistic: boolean,
   value: bigint[],
-  component: bigint,
-  query: Query,
-  offset: number,
-  length: number
+  component: string,
+  optimistic: boolean,
 ) {
-  // TODO: This is very incomplete
-  // Set the entity immediately in the store
-  // Idea here was to optimistically update the state in zustand to reflect the users input
-  // restrictions in the client logic can control auth here.
-  // From a User POV, most of the time they just want to see the reflection in the client of what they have done, this gives a client
-  // representation of it.
-  // this could be replaced in the future with the state diff
-  if (optimistic) store.setState({ entity: value });
 
-  // execute here
-  if (rpcProvider) {
-    await rpcProvider.updateEntity(component, query, offset, length);
-    // Trigger getEntity to fetch the updated entity or 
+  // // TODO: Get world types
+  // const call: Call = {
+  //   entrypoint: "execute",
+  //   contractAddress: worldAddress,
+  //   calldata: [component, ...value]
+  // }
 
-    // Fetch entity 
-    await getEntity(
-      store,
-      rpcProvider,
-      component,
-      query,
-      offset,
-      length
-    );
-  }
+  // const { execute } = useStarknetExecute({ calls: [call] })
+
+  // execute()
+
+  // if (optimistic) store.setState({ entity: value });
+
 }
 
 // we should pass in providers here
 export async function getEntity<T>(
   store: any, // todo: fix types
   rpcProvider: any,
-  component: bigint,
+  component: string,
   query: Query,
   offset: number,
   length: number
