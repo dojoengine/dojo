@@ -18,6 +18,15 @@ mod World {
     use dojo_core::interfaces::IExecutorDispatcher;
     use dojo_core::interfaces::IExecutorDispatcherTrait;
 
+    #[event]
+    fn WorldSpawned(address: ContractAddress, name: felt252) {}
+
+    #[event]
+    fn ComponentRegistered(name: felt252, class_hash: ClassHash) {}
+
+    #[event]
+    fn SystemRegistered(name: felt252, class_hash: ClassHash) {}
+
     struct Storage {
         caller: ClassHash,
         executor: ContractAddress,
@@ -28,19 +37,15 @@ mod World {
         nonce: felt252,
     }
 
-    #[event]
-    fn ComponentRegistered(name: felt252, class_hash: ClassHash) {}
-
-    #[event]
-    fn SystemRegistered(name: felt252, class_hash: ClassHash) {}
-
     // Give deployer the default admin role.
     #[constructor]
-    fn constructor(executor_: ContractAddress) {
+    fn constructor(name: felt252, executor_: ContractAddress) {
         let caller = get_caller_address();
         _grant_role(0, caller);
 
         executor::write(executor_);
+
+        WorldSpawned(get_contract_address(), name);
     }
 
     // Register a component in the world. If the component is already registered,
@@ -211,7 +216,7 @@ mod World {
 #[available_gas(2000000)]
 fn test_constructor() {
     starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
-    World::constructor(starknet::contract_address_const::<0x1337>());
+    World::constructor('world', starknet::contract_address_const::<0x1337>());
     assert(World::has_role(0, starknet::contract_address_const::<0x420>()), 'role not granted');
 }
 
@@ -219,7 +224,7 @@ fn test_constructor() {
 #[available_gas(2000000)]
 fn test_grant_revoke_role() {
     starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
-    World::constructor(starknet::contract_address_const::<0x1337>());
+    World::constructor('world', starknet::contract_address_const::<0x1337>());
     World::grant_role(1, starknet::contract_address_const::<0x421>());
     assert(World::has_role(1, starknet::contract_address_const::<0x421>()), 'role not granted');
     World::revoke_role(1, starknet::contract_address_const::<0x421>());
@@ -230,7 +235,7 @@ fn test_grant_revoke_role() {
 #[available_gas(2000000)]
 fn test_renonce_role() {
     starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
-    World::constructor(starknet::contract_address_const::<0x1337>());
+    World::constructor('world', starknet::contract_address_const::<0x1337>());
     World::renounce_role(0);
     assert(!World::has_role(0, starknet::contract_address_const::<0x420>()), 'role not renonced');
 }
