@@ -1,5 +1,5 @@
-use cubit::dojo_physics::fixed::vec2::Vec2;
-use cubit::dojo_physics::swizzle::vec_traits::Vec2Swizzle;
+use dojo_physics::fixed::vec2::Vec2;
+use dojo_physics::swizzle::vec_traits::Vec2Swizzle;
 
 impl Vec2SwizzleImpl<T, impl TCopy: Copy<T>, impl TDrop: Drop<T>> of Vec2Swizzle<T> {
     #[inline(always)]

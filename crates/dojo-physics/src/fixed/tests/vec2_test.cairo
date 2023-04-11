@@ -2,7 +2,7 @@ use cubit::core::ONE_u128;
 use cubit::core::Fixed;
 use cubit::core::FixedType;
 
-use cubit::dojo_physics::fixed::vec2::Vec2Trait;
+use dojo_physics::fixed::vec2::Vec2Trait;
 
 #[test]
 fn test_vec2() {

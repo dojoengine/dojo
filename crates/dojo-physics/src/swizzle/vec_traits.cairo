@@ -1,4 +1,4 @@
-use cubit::dojo_physics::fixed::vec2::Vec2;
+use dojo_physics::fixed::vec2::Vec2;
 
 trait Vec2Swizzle<T> {
     // Vec2<T> -> Vec2<T>

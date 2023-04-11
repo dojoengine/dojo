@@ -2,9 +2,9 @@ use cubit::core::ONE_u128;
 use cubit::core::Fixed;
 use cubit::core::FixedType;
 
-use cubit::dojo_physics::fixed::vec2::Vec2Trait;
-use cubit::dojo_physics::swizzle::vec_traits::Vec2Swizzle;
-use cubit::dojo_physics::swizzle::vec2_impl::Vec2SwizzleImpl;
+use dojo_physics::fixed::vec2::Vec2Trait;
+use dojo_physics::swizzle::vec_traits::Vec2Swizzle;
+use dojo_physics::swizzle::vec2_impl::Vec2SwizzleImpl;
 
 #[test]
 fn test_vec2_impl() {
