@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useDojoEntity } from "dojo-react"
 import { Position as PositionType } from "../types";
-
 import { PositionParser as parser } from "../parsers";
 
 interface Props {
@@ -18,17 +17,17 @@ export const Position = ({ entity_id }: Props) => {
 
   const [counter, setCounter] = useState(0);
 
-  const { entity, getEntity, setEntity } = useDojoEntity<PositionType>({ key: 1, parser });
+  const { entity, getEntity, setEntity } = useDojoEntity({ key: 1, parser, optimistic: false });
 
   useEffect(() => {
     getEntity(component.component, { partition: entity_id, keys: [''] }, component.offset, component.length);
-  }, [entity_id, getEntity, counter]);
+  }, [counter]);
 
   if (!entity) {
     return <div>Loading...</div>;
   }
 
-  const pos = { entity: [BigInt("1"), BigInt("3")] }
+  const pos = [BigInt(1), BigInt(2)]
 
   return (
     <div>
@@ -36,8 +35,7 @@ export const Position = ({ entity_id }: Props) => {
       <p>Entity ID: {entity_id}</p>
       <p>[{entity.x && entity.x.toString()}, {entity.y && entity.y.toString()}]</p>
       <button onClick={() => {
-        // setEntity(pos)
-        setCounter(counter + 1);
+        setEntity(pos, component.component, true)
       }}>execute</button>
     </div>
   );
