@@ -15,8 +15,8 @@ trait Vec2Trait<T> {
     // Masks
     fn select(mask: Vec2<bool>, if_true: Vec2<T>, if_false: Vec2<T>) -> Vec2<T>;
     // Math
-    fn dot(self: Vec2<FixedType>, rhs: Vec2<FixedType>) -> FixedType;
-    fn dot_into_vec(self: Vec2<FixedType>, rhs: Vec2<FixedType>) -> Vec2<FixedType>;
+    fn dot(self: Vec2<T>, rhs: Vec2<T>) -> T;
+    fn dot_into_vec(self: Vec2<T>, rhs: Vec2<T>) -> Vec2<T>;
 }
 
 impl Vec2Impl<T, impl TCopy: Copy<T>, impl TDrop: Drop<T>> of Vec2Trait<T> {
@@ -60,13 +60,13 @@ impl Vec2Impl<T, impl TCopy: Copy<T>, impl TDrop: Drop<T>> of Vec2Trait<T> {
 
     /// Computes the dot product of `self` and `rhs` . 
     #[inline(always)]
-    fn dot(self: Vec2<FixedType>, rhs: Vec2<FixedType>) -> FixedType {
+    fn dot(self: Vec2<T>, rhs: Vec2<T>) -> T {
         (self.x * rhs.x) + (self.y * rhs.y)
     }
     /// Returns a vector where every component is the dot product
     /// of `self` and `rhs`.
     #[inline(always)]
-    fn dot_into_vec(self: Vec2<FixedType>, rhs: Vec2<FixedType>) -> Vec2<FixedType> {
-        Vec2Trait::<FixedType>::splat(Vec2Trait::<FixedType>::dot(self, rhs))
+    fn dot_into_vec(self: Vec2<T>, rhs: Vec2<T>) -> Vec2<T> {
+        Vec2Trait::<T>::splat(Vec2Trait::<T>::dot(self, rhs))
     }
 }
