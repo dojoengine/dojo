@@ -2,8 +2,8 @@ use juniper::{graphql_object, FieldResult};
 
 use super::entity_state::EntityState;
 use super::entity_state_update::EntityStateUpdate;
+use super::server::Context;
 use super::{entity_state, entity_state_update};
-use crate::server::Context;
 
 pub struct Entity {
     pub id: String,

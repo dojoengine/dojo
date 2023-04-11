@@ -1,8 +1,8 @@
 use entity::Entity;
 use juniper::{graphql_object, FieldResult};
 
+use super::server::Context;
 use super::{component, entity};
-use crate::server::Context;
 
 pub struct EntityStateUpdate {
     pub id: i64,
