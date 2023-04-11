@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useDojoEntity } from "dojo-react"
+import { useComponent, useSystem } from "dojo-react"
 import { Position as PositionType } from "../types";
 import { PositionParser as parser } from "../parsers";
 
@@ -14,28 +14,31 @@ const component = {
 }
 
 export const Position = ({ entity_id }: Props) => {
-
   const [counter, setCounter] = useState(0);
 
-  const { entity, getEntity, setEntity } = useDojoEntity({ key: 1, parser, optimistic: false });
+  const { entity, getEntity } = useComponent<PositionType>({ key: 1, parser, optimistic: false });
+
+  const { execute } = useSystem({ key: 1 });
 
   useEffect(() => {
-    getEntity(component.component, { partition: entity_id, keys: [''] }, component.offset, component.length);
+    getEntity(component.component, { partition: entity_id, keys: [''] });
   }, [counter]);
 
   if (!entity) {
     return <div>Loading...</div>;
   }
 
-  const pos = [BigInt(1), BigInt(2)]
-
   return (
     <div>
       <h4>Position</h4>
       <p>Entity ID: {entity_id}</p>
+
+      {/*  */}
       <p>[{entity.x && entity.x.toString()}, {entity.y && entity.y.toString()}]</p>
+
+      {/*  */}
       <button onClick={() => {
-        setEntity(pos, component.component, true)
+        execute([BigInt(1), BigInt(2)], component.component, true)
       }}>execute</button>
     </div>
   );

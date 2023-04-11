@@ -1,8 +1,10 @@
 import { useConnectors } from "@starknet-react/core"
+import { useWorldContext } from "dojo-react/dist/provider"
 import { useEffect } from "react"
 
 export function Connect() {
-    const { connect, connectors } = useConnectors()
+    const { connect } = useConnectors()
+    const { connectors } = useWorldContext()
 
     return (
         <ul>
