@@ -1,17 +1,18 @@
 use cubit::core::ONE_u128;
 use cubit::core::Fixed;
+use cubit::core::FixedType;
 
-use dojo_physics::fixed_type::vec2::Vec2;
-use dojo_physics::swizzles::vec_traits::Vec2Swizzles;
-use dojo_physics::swizzles::vec2_impl::Vec2SwizzlesImpl;
+use cubit::dojo_physics::fixed::vec2::Vec2Trait;
+use cubit::dojo_physics::swizzle::vec_traits::Vec2Swizzle;
+use cubit::dojo_physics::swizzle::vec2_impl::Vec2SwizzleImpl;
 
 #[test]
 fn test_vec2_impl() {
     let var1_pos = Fixed::new(ONE_u128, false);
     let var2_neg = Fixed::new(2_u128 * ONE_u128, true);
-    let vec2 = Vec2::new(var1_pos, var2_neg);
+    let vec2 = Vec2Trait::<FixedType>::new(var1_pos, var2_neg);
 
-    // tests Vec2Type -> Vec2Type
+    // tests Vec2Trait<FixedType> -> Vec2Trait<FixedType>
     let vec2xx = vec2.xx();
     assert(vec2xx.x.mag == ONE_u128, 'invalid xx x.mag');
     assert(vec2xx.x.sign == false, 'invalid xx x.sign');
