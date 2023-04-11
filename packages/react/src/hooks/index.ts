@@ -1,1 +1,2 @@
-export { useDojoEntity } from './get';
+export { useComponent } from './get';
+export { useSystem } from './set';

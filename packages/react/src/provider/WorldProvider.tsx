@@ -7,10 +7,17 @@ import {
 } from "@starknet-react/core";
 import { DojoConfig } from './DojoConnect';
 
+
+// World Provider
+// Contains an entire world setup for a react app. 
+// It also exposes chain context like block number 
+// and other network specifci information to use 
+// in a client.
+
+
 export interface WorldContextValue {
     connectors: any[];
     connect: (connector: any) => void;
-    // Add any properties or functions you want to expose in this context
 }
 
 const WorldContext = createContext<WorldContextValue | null>(null);
@@ -19,40 +26,25 @@ interface WorldProviderProps {
     worldAddress: string;
     rpcUrl?: string;
     children: ReactNode;
+    connectors: any[];
 }
 
 const rpcUrl = "https://starknet-goerli.cartridge.gg/";
 
-// might need to pass this in as a prop
-const controllerConnector = new ControllerConnector([
-    {
-        target: "0x0248cacaeac64c45be0c19ee8727e0bb86623ca7fa3f0d431a6c55e200697e5a",
-        method: "execute",
-    },
-]);
-
-const argentConnector = new InjectedConnector({
-    options: {
-        id: "argentX",
-    },
-});
-
-const connectors = [controllerConnector as any, argentConnector];
-
-export const WorldProvider: React.FC<WorldProviderProps> = ({ worldAddress, rpcUrl, children }) => {
+export const WorldProvider: React.FC<WorldProviderProps> = ({ worldAddress, rpcUrl, children, connectors }) => {
     const { connect } = useConnectors()
     const value: WorldContextValue = {
         connectors,
         connect
     };
     return (
-        <WorldContext.Provider value={value}>
-            <StarknetProvider connectors={connectors}>
+        <StarknetProvider connectors={connectors}>
+            <WorldContext.Provider value={value}>
                 <DojoConfig worldAddress={worldAddress} rpcUrl={rpcUrl}>
                     {children}
                 </DojoConfig>
-            </StarknetProvider>
-        </WorldContext.Provider>
+            </WorldContext.Provider>
+        </StarknetProvider>
     );
 };
 

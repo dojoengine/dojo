@@ -1,2 +1,2 @@
 export { DojoConfig, useDojoContext, WorldProvider } from './provider';
-export { useDojoEntity } from './hooks';
+export { useSystem, useComponent } from './hooks';

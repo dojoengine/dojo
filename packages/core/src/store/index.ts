@@ -1,1 +1,1 @@
-export { EntityStore } from './entity';
+export { ComponentStore } from './component';
