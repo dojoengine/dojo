@@ -35,8 +35,8 @@ tokio = { version = "1.20.1", features = ["full"] }
 tokio-stream = "0.1.11"
 tokio-util = "0.7.7"
 tonic = { version = "0.8.3", features = ["tls", "tls-roots"] }
-tracing = "0.1"
-tracing-subscriber = "0.3.16"
+tracing.workspace = true
+tracing-subscriber.workspace = true
 url = "2.2.2"
 
 [features]

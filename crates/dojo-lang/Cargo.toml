@@ -31,17 +31,18 @@ serde.workspace = true
 serde_json.workspace = true
 smol_str.workspace = true
 thiserror = "1.0.32"
-tracing = "0.1.37"
+tracing.workspace = true
 sanitizer = "0.1.6"
 starknet.workspace = true
 serde_with = "2.3.1"
 url = "2.2.2"
 
 [dev-dependencies]
-env_logger.workspace = true
+assert_fs = "1.0.9"
 cairo-lang-formatter = "1.0.0-alpha.6"
 cairo-lang-semantic = { version = "1.0.0-alpha.6", features = ["testing"] }
 cairo-lang-test-utils = "1.0.0-alpha.6"
+env_logger = "0.9.3"
 pretty_assertions.workspace = true
 test-case = "2.2.2"
 test-case-macros = "2.2.2"
