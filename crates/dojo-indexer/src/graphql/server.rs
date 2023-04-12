@@ -42,7 +42,7 @@ async fn graphql_route(
 }
 
 pub async fn start_graphql(pool: &SqlitePool) -> std::io::Result<()> {
-    info!("starting graphql server");
+    info!(target: "starting graphql server", addr = "127.0.0.1:8080");
 
     let pool = Arc::new(pool.clone());
 
