@@ -90,6 +90,10 @@ mod Move {
                 let positions_query = commands::<(Position, Player)>::entities();
             }
         } else if bar == 321 {
+            let maybe_player = commands::<Player>::try_entity(player_id.into());
+            let player = maybe_player.expect('not_found');
+            let name = player.name;
+
             let positions_query = commands::<(Position, Player)>::try_entity(player_id.into());
             match positions_query {
                 Option::Some((position, player)) => {
@@ -457,6 +461,29 @@ mod MoveSystem {
                 }.entities('Player', 0);
             }
         } else if bar == 321 {
+            let mut __maybe_player_player_raw = IWorldDispatcher {
+                contract_address: world_address
+            }.entity('Player', player_id.into(), 0_u8, 0_usize);
+            let __maybe_player_player = match __maybe_player_player_raw.len() > 0_usize {
+                bool::False(()) => {
+                    Option::None(())
+                },
+                bool::True(()) => {
+                    Option::Some(
+                        serde::Serde::<Player>::deserialize(
+                            ref __maybe_player_player_raw
+                        ).expect('Failed to deserialize Player')
+                    )
+                }
+            };
+            let maybe_player = if __maybe_player_player.is_some() {
+                Option::Some(__maybe_player_player.unwrap())
+            } else {
+                Option::None(())
+            };
+            let player = maybe_player.expect('not_found');
+            let name = player.name;
+
             let mut __positions_query_position_raw = IWorldDispatcher {
                 contract_address: world_address
             }.entity('Position', player_id.into(), 0_u8, 0_usize);
@@ -490,7 +517,9 @@ mod MoveSystem {
             };
             let positions_query =
                 if __positions_query_position.is_some() & __positions_query_player.is_some() {
-                Option::Some((__positions_query_position, __positions_query_player))
+                Option::Some(
+                    (__positions_query_position.unwrap(), __positions_query_player.unwrap())
+                )
             } else {
                 Option::None(())
             };

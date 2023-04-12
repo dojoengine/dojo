@@ -148,10 +148,10 @@ impl EntityCommand {
         let part_names_condition_str =
             part_names.iter().map(|part_name| format!("{part_name}.is_some()")).join(" & ");
 
-        let part_names_str = if components.len() > 1 {
-            format!("({})", part_names.join(", "))
-        } else {
-            part_names.join(", ")
+        let part_names_str = match part_names.len() {
+            n if n > 1 => format!("({}.unwrap())", part_names.join(".unwrap(), ")),
+            1 => format!("{}.unwrap()", part_names[0]),
+            _ => "()".to_string(),
         };
 
         self.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
