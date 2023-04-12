@@ -39,7 +39,7 @@ mod World {
 
     // Give deployer the default admin role.
     #[constructor]
-    fn constructor(executor_: ContractAddress, store_: ClassHash, indexer_: ClassHash) {
+    fn constructor(name: felt252, executor_: ContractAddress) {
         executor::write(executor_);
 
         WorldSpawned(get_contract_address(), name);
@@ -169,8 +169,7 @@ mod World {
 fn test_constructor() {
     starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
     World::constructor(
+        'World',
         starknet::contract_address_const::<0x1337>(),
-        starknet::class_hash_const::<0x1337>(),
-        starknet::class_hash_const::<0x1337>()
     );
 }
