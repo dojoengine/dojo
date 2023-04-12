@@ -1,0 +1,9 @@
+githubRepoOwner: dojoengine
+githubRepoName: dojo
+githubHost: github.com
+requireChecks: true
+requireApproval: true
+githubRemote: origin
+githubBranch: main
+remoteBranches: []
+mergeMethod: rebase
