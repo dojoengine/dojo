@@ -1,6 +1,6 @@
-use cubit::core::ONE_u128;
-use cubit::core::Fixed;
-use cubit::core::FixedType;
+use dojo_physics::cubit::core::ONE_u128;
+use dojo_physics::cubit::core::Fixed;
+use dojo_physics::cubit::core::FixedType;
 
 use dojo_physics::fixed::vec2::Vec2Trait;
 use dojo_physics::swizzle::vec_traits::Vec2Swizzle;

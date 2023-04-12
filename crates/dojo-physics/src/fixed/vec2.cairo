@@ -1,4 +1,4 @@
-use cubit::core::FixedType;
+use dojo_physics::cubit::core::FixedType;
 
 struct Vec2<T> {
     x: T,
@@ -12,11 +12,11 @@ trait Vec2Trait<T> {
     // Constructors
     fn new(x: T, y: T) -> Vec2<T>;
     fn splat(self: T) -> Vec2<T>;
-    // Masks
+    // // Masks
     fn select(mask: Vec2<bool>, if_true: Vec2<T>, if_false: Vec2<T>) -> Vec2<T>;
     // Math
-    fn dot(self: Vec2<T>, rhs: Vec2<T>) -> T;
-    fn dot_into_vec(self: Vec2<T>, rhs: Vec2<T>) -> Vec2<T>;
+    fn dot<impl TMul: Mul<T>, impl TAdd: Add<T>>(self: Vec2<T>, rhs: Vec2<T>) -> T;
+    fn dot_into_vec<impl TMul: Mul<T>, impl TAdd: Add<T>>(self: Vec2<T>, rhs: Vec2<T>) -> Vec2<T>;
 }
 
 impl Vec2Impl<T, impl TCopy: Copy<T>, impl TDrop: Drop<T>> of Vec2Trait<T> {
@@ -59,14 +59,13 @@ impl Vec2Impl<T, impl TCopy: Copy<T>, impl TDrop: Drop<T>> of Vec2Trait<T> {
     // Math
 
     /// Computes the dot product of `self` and `rhs` . 
-    #[inline(always)]
-    fn dot(self: Vec2<T>, rhs: Vec2<T>) -> T {
+    // #[inline(always)] is not allowed for functions with impl generic parameters.
+    fn dot<impl TMul: Mul<T>, impl TAdd: Add<T>>(self: Vec2<T>, rhs: Vec2<T>) -> T {
         (self.x * rhs.x) + (self.y * rhs.y)
     }
     /// Returns a vector where every component is the dot product
     /// of `self` and `rhs`.
-    #[inline(always)]
-    fn dot_into_vec(self: Vec2<T>, rhs: Vec2<T>) -> Vec2<T> {
+    fn dot_into_vec<impl TMul: Mul<T>, impl TAdd: Add<T>>(self: Vec2<T>, rhs: Vec2<T>) -> Vec2<T> {
         Vec2Trait::<T>::splat(Vec2Trait::<T>::dot(self, rhs))
     }
 }
