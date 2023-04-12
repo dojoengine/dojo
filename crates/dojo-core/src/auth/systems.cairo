@@ -1,39 +1,34 @@
 #[system]
-mod AuthRouting {
-    use traits::Into;
+mod RouteAuth {
     use array::ArrayTrait;
+    use traits::Into;
+
+    use starknet::ContractAddress;
 
     use dojo_core::auth::components::Status;
     use dojo_core::auth::components::Role;
+    use dojo_core::auth::types::Route;
 
-    fn execute(
-        ref target_ids: Array<felt252>, ref roles: Array<felt252>, ref resources: Array<felt252>
-    ) {
-        let target_ids_len = target_ids.len();
-        let roles_len = roles.len();
-        let resources_len = resources.len();
-
-        assert((target_ids_len == roles_len) & (roles_len == resources_len), 'length mismatch');
-
-        _set_authorization_routing(ref target_ids, ref roles, ref resources);
+    fn execute(ref routing: Array<Route>) {
+        _set_authorization_routing(ref routing, world_address);
     }
 
-    fn _set_authorization_routing(
-        ref target_ids: Array<felt252>, ref roles: Array<felt252>, ref resources: Array<felt252>
-    ) {
-        if target_ids.is_empty() {
+    fn _set_authorization_routing(ref routing: Array<Route>, world_address: ContractAddress) {
+        if routing.is_empty() {
             return ();
         }
 
-        let target_id = target_ids.pop_front().unwrap();
-        let role_id = roles.pop_front().unwrap();
-        let resource_id = resources.pop_front().unwrap();
+        let r = routing.pop_front().unwrap();
 
-        // TODO: fails due to commands::set_entity not supported outside of execute
-        // commands::set_entity(target_id.into(), (Role { id: role_id }));
-        // commands::set_entity((role_id, resource_id).into(), (bool::True(())));
+        let mut calldata = ArrayTrait::new(); 
+        serde::Serde::<Role>::serialize(ref calldata, Role { id: r.role_id });
+        IWorldDispatcher { contract_address: world_address }.set_entity('Role', r.target_id.into(), 0_u8, calldata.span());
 
-        _set_authorization_routing(ref target_ids, ref roles, ref resources);
+        let mut calldata = ArrayTrait::new(); 
+        serde::Serde::<Status>::serialize(ref calldata, Status { is_authorized: bool::True(()) });
+        IWorldDispatcher { contract_address: world_address }.set_entity('Status', (r.role_id, r.resource_id).into(), 0_u8, calldata.span());
+
+        _set_authorization_routing(ref routing, world_address);
     }
 }
 
