@@ -29,6 +29,7 @@ starknet.workspace = true
 thiserror.workspace = true
 tokio = { version = "1.15.0", features = ["full"] }
 toml.workspace = true
+tracing.workspace = true
 url = "2.2.2"
 
 [[bin]]

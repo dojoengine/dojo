@@ -20,6 +20,15 @@ mod World {
     use dojo_core::interfaces::ISystemLibraryDispatcher;
     use dojo_core::interfaces::ISystemDispatcherTrait;
 
+    #[event]
+    fn WorldSpawned(address: ContractAddress, name: felt252) {}
+
+    #[event]
+    fn ComponentRegistered(name: felt252, class_hash: ClassHash) {}
+
+    #[event]
+    fn SystemRegistered(name: felt252, class_hash: ClassHash) {}
+
     struct Storage {
         caller: ClassHash,
         executor: ContractAddress,
@@ -28,16 +37,12 @@ mod World {
         nonce: felt252,
     }
 
-    #[event]
-    fn ComponentRegistered(name: felt252, class_hash: ClassHash) {}
-
-    #[event]
-    fn SystemRegistered(name: felt252, class_hash: ClassHash) {}
-
     // Give deployer the default admin role.
     #[constructor]
     fn constructor(executor_: ContractAddress, store_: ClassHash, indexer_: ClassHash) {
         executor::write(executor_);
+
+        WorldSpawned(get_contract_address(), name);
     }
 
     // Register a component in the world. If the component is already registered,

@@ -1,4 +1,3 @@
-use std::env;
 use std::sync::Arc;
 
 use actix_cors::Cors;
@@ -8,8 +7,9 @@ use actix_web::{middleware, App, Error, HttpResponse, HttpServer};
 use juniper::{EmptyMutation, EmptySubscription, RootNode};
 use juniper_actix::{graphql_handler, playground_handler};
 use sqlx::SqlitePool;
+use tracing::info;
 
-use crate::graphql::Query;
+use super::Query;
 
 type Schema = RootNode<'static, Query, EmptyMutation<Context>, EmptySubscription<Context>>;
 
@@ -41,9 +41,8 @@ async fn graphql_route(
     graphql_handler(schema, &context, req, payload).await
 }
 
-pub async fn start_server(pool: &SqlitePool) -> std::io::Result<()> {
-    env::set_var("RUST_LOG", "info");
-    env_logger::init();
+pub async fn start_graphql(pool: &SqlitePool) -> std::io::Result<()> {
+    info!("starting graphql server");
 
     let pool = Arc::new(pool.clone());
 
@@ -69,11 +68,4 @@ pub async fn start_server(pool: &SqlitePool) -> std::io::Result<()> {
             .service(web::resource("/playground").route(web::get().to(playground_route)))
     });
     server.bind("127.0.0.1:8080").unwrap().run().await
-}
-
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
-    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
-
-    start_server(&pool).await
 }

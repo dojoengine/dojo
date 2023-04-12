@@ -5,7 +5,7 @@ use apibara_core::node::v1alpha2::DataFinality;
 use apibara_core::starknet::v1alpha2::{
     DeployedContractFilter, EventFilter, FieldElement, Filter, HeaderFilter, StateUpdateFilter,
 };
-use apibara_sdk::{Configuration, DataMessage};
+use apibara_sdk::{Configuration, DataMessage, Uri};
 use futures::TryStreamExt;
 use log::{debug, info, warn};
 use num::BigUint;
@@ -13,8 +13,11 @@ use sqlx::{Pool, Sqlite};
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 
 use crate::hash::starknet_hash;
+use crate::processors::component_register::ComponentRegistrationProcessor;
+use crate::processors::component_state_update::ComponentStateUpdateProcessor;
+use crate::processors::system_register::SystemRegistrationProcessor;
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
-use crate::stream::{FieldElementExt, StarknetDataStream, StarknetDataStreamClient};
+use crate::stream::{FieldElementExt, StarknetClientBuilder};
 
 pub struct Processors {
     pub event_processors: Vec<Box<dyn EventProcessor>>,
@@ -35,13 +38,21 @@ fn filter_by_processors(filter: &mut Filter, processors: &Processors) {
 }
 
 pub async fn start_indexer(
-    mut data_stream: StarknetDataStream,
-    stream_client: StarknetDataStreamClient,
+    world: BigUint,
+    node_uri: Uri,
     pool: &Pool<Sqlite>,
     provider: &JsonRpcClient<HttpTransport>,
-    processors: &Processors,
-    world: BigUint,
 ) -> Result<(), Box<dyn Error>> {
+    let processors = Processors {
+        event_processors: vec![
+            Box::new(ComponentStateUpdateProcessor::new()),
+            Box::new(ComponentRegistrationProcessor::new()),
+            Box::new(SystemRegistrationProcessor::new()),
+        ],
+        block_processors: vec![],
+        transaction_processors: vec![],
+    };
+
     let mut filter = Filter {
         header: Some(HeaderFilter { weak: true }),
         transactions: vec![],
@@ -59,8 +70,11 @@ pub async fn start_indexer(
         }),
     };
 
+    let (mut data_stream, stream_client) =
+        StarknetClientBuilder::default().connect(node_uri).await?;
+
     // filter requested data by the events we process
-    filter_by_processors(&mut filter, processors);
+    filter_by_processors(&mut filter, &processors);
 
     // TODO: should set starting block.
     let starting_configuration = Configuration::<Filter>::default()
