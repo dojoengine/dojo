@@ -3,6 +3,8 @@ import { useComponent, useSystem, useDojo } from "@dojoengine/react"
 import { Position as PositionType } from "../types";
 import { PositionParser as parser } from "../parsers";
 
+// TODO: add types for component
+
 interface Props {
   entity_id: string;
   src: string;
@@ -30,7 +32,7 @@ export const Position = ({ entity_id, src, position, direction }: Props) => {
   const {
     useComponent: { component, getComponent },
     useSystem: { execute }
-  } = useDojo({ key: "1", parser, optimistic: false });
+  } = useDojo({ key: "1", parser, optimistic: false, componentState: [BigInt(position.x), BigInt(position.y)] });
 
 
   useEffect(() => {
@@ -41,6 +43,7 @@ export const Position = ({ entity_id, src, position, direction }: Props) => {
       [BigInt(direction)],
       system.name
     )
+    console.log(component)
   }, [position, entity_id, execute]);
 
   // get component

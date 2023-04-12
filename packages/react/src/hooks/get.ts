@@ -21,7 +21,7 @@ export function useComponent<T>({
       query: Query
     ) => {
 
-      // we should pass in providers here to make it modular
+      // todo pass in different providers here
       await getComponent(
         store,
         rpcProvider,
@@ -32,12 +32,15 @@ export function useComponent<T>({
     [rpcProvider, key, parser]
   );
 
+  console.log("useComponent: ", store.getState())
+
   return {
-    component: parser(store.getState()),
+    component: parser(store.getState().value),
     getComponent: getComponentCallback
   };
 }
 
+// we should pass in providers here to make it modular
 export async function getComponent<T>(
   store: any, // todo: fix types
   rpcProvider: any,
@@ -46,15 +49,14 @@ export async function getComponent<T>(
   offset: number = 0,
   length: number = 0
 ) {
-
-  const componentState = await rpcProvider.entity(
-    component,
-    query,
-    offset,
-    length
-  );
-
-  // set raw state
-  store.setState({ value: componentState });
+  if (rpcProvider) {
+    const componentState = await rpcProvider.entity(
+      component,
+      query,
+      offset,
+      length
+    );
+    store.setState({ value: componentState });
+  }
 }
 
