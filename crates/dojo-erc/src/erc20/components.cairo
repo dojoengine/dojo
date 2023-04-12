@@ -4,6 +4,6 @@ struct Approval {
 }
 
 #[derive(Component)]
-struct Ownership {
-    balance: felt252,
+struct Balance {
+    amount: felt252,
 }

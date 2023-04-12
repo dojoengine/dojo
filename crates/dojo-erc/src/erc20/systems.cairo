@@ -1,6 +1,7 @@
 #[system]
 mod ERC20_Approve {
     use traits::Into;
+    use array::ArrayTrait;
     use starknet::ContractAddress;
     use dojo_erc::erc20::components::Approval;
 
@@ -17,10 +18,12 @@ mod ERC20_Approve {
 #[system]
 mod ERC20_TransferFrom {
     use traits::Into;
-    use starknet::ContractAddress;
-    use dojo_erc::erc20::components::Approval;
-    use dojo_erc::erc20::components::Ownership;
+    use array::ArrayTrait;
     use zeroable::Zeroable;
+
+    use dojo_erc::erc20::components::Approval;
+    use dojo_erc::erc20::components::Balance;
+    use starknet::ContractAddress;
     use starknet::ContractAddressZeroable;
 
     fn execute(token_address: ContractAddress, spender: ContractAddress, recipient: ContractAddress, amount: felt252) {
@@ -31,17 +34,17 @@ mod ERC20_TransferFrom {
         let spender_ownership_sk: Query = (token_address, (spender)).into();
         let recipient_ownership_sk: Query = (token_address, (recipient)).into();
 
-        let spen_ownershipder = commands::<Ownership>::entity(spender_ownership_sk);
+        let spen_ownershipder = commands::<Balance>::entity(spender_ownership_sk);
         commands::set_entity(spender_ownership_sk, (
-            Ownership { balance : spen_ownershipder.balance - amount}
+            Balance { amount : spen_ownershipder.amount - amount}
         ));
 
-        let recipient_ownership = commands::<Ownership>::entity(recipient_ownership_sk);
+        let recipient_ownership = commands::<Balance>::entity(recipient_ownership_sk);
         commands::set_entity(recipient_ownership_sk, (
-            Ownership { balance : recipient_ownership.balance + amount}
+            Balance { amount : recipient_ownership.amount + amount}
         ));
 
-        //update allowance
+        // update allowance
         let approval_sk_transfer: Query = (token_address.into(), (caller.into(), spender.into())).into();
         let approval_transfer = commands::<Approval>::entity(approval_sk_transfer);
         
