@@ -18,21 +18,22 @@ impl U256TryIntoFelt252 of TryInto::<u256, felt252> {
 mod ERC20 {
     use dojo_core::world;
     use array::ArrayTrait;
-    use integer::Felt252IntoU256;
+    use array::SpanTrait;
     use traits::Into;
+    use integer::Felt252IntoU256;
+    use super::U256TryIntoFelt252;
+
     use dojo_core::storage::query::Query;
     use dojo_core::storage::query::TupleSize2IntoPartitionedQuery;
     use dojo_core::storage::query::TupleSize1IntoPartitionedQuery;
     use dojo_core::interfaces::IWorldDispatcher;
     use dojo_core::interfaces::IWorldDispatcherTrait;
-    use dojo_erc::erc20::components::Ownership;
     use zeroable::Zeroable;
     use starknet::get_caller_address;
     use starknet::contract_address_const;
     use starknet::ContractAddress;
     use starknet::ContractAddressZeroable;
     use starknet::contract_address::ContractAddressIntoFelt252;
-    use array::SpanTrait;
 
     struct Storage {
         world_address: ContractAddress,
@@ -89,39 +90,45 @@ mod ERC20 {
 
     #[view]
     fn balance_of(account: ContractAddress) -> u256 {
-        //balances::read(account)
-        //IWorldDispatcher { contract_address: world_address::read() }.entity('Ownership', account.into(),0_u8,0_usize).balance
         let token_id = starknet::get_contract_address();
         let query: Query = (token_id.into(), (account.into(),)).into();
-        IWorldDispatcher { contract_address: world_address::read() }.entity('Ownership', query,0_u8,0_usize)
+        let balance = IWorldDispatcher { contract_address: world_address::read() }.entity('Balance', query, 0_u8, 0_usize);
+        if balance.is_empty() {
+            return 0.into();
+        }
+
+        (*balance.at(0_usize)).into()
     }
 
     #[view]
     fn allowance(owner: ContractAddress, spender: ContractAddress) -> u256 {
         let token_id = starknet::get_contract_address();
         let query: Query = (token_id.into(), (owner.into(), spender.into())).into();
-        //IWorldDispatcher { contract_address: world_address::read() }.entity('Allowance', query.into(), 0_u8, 0_usize).amount
-        IWorldDispatcher { contract_address: world_address::read() }.entity('Allowance', query, 0_u8, 0_usize)
+        let approval = IWorldDispatcher { contract_address: world_address::read() }.entity('Approval', query, 0_u8, 0_usize);
+        if approval.is_empty() {
+            return 0.into();
+        }
+
+        (*approval.at(0_usize)).into()
     }
 
     #[external]
     fn transfer(spender: ContractAddress, recipient: ContractAddress, amount: u256) {
-        //ERC20_Transfer.execute(symbol,spender, recipient, amount);
-
-        let mut calldata = ArrayTrait::<felt252>::new();
-        calldata.append(starknet::get_contract_address().into());
-        calldata.append(spender.into());
-        calldata.append(recipient.into());
-        calldata.append(amount.into());
-
-        IWorldDispatcher { contract_address: world_address::read() }.execute('ERC20_TransferFrom', calldata.span());
         let token_id = starknet::get_contract_address();
 
-        let approval_sk: Query = (token_id.into(), (recipient.into(), spender.into())).into();
-        let approval = commands::<Approval>::entity(approval_sk);
+        let mut calldata = ArrayTrait::<felt252>::new();
+        calldata.append(token_id.into());
+        calldata.append(spender.into());
+        calldata.append(recipient.into());
+        calldata.append(amount.try_into());
 
-        Transfer(spender, recipient, amount);
-        Approval(get_caller_address(),spender,approval.amount);
+        IWorldDispatcher { contract_address: world_address::read() }.execute('ERC20_TransferFrom', calldata.span());
+
+        // let approval_sk: Query = (token_id.into(), (recipient.into(), spender.into())).into();
+        // let approval = commands::<Approval>::entity(approval_sk);
+
+        // Transfer(spender, recipient, amount);
+        // Approval(get_caller_address(), spender, approval.amount);
     }
 
     #[external]
@@ -132,6 +139,6 @@ mod ERC20 {
         calldata.append(amount.try_into());
 
         IWorldDispatcher { contract_address: world_address::read() }.execute('ERC20_Approve', calldata.span());
-        Approval(get_caller_address(),spender,amount);
+        Approval(get_caller_address(), spender, amount);
     }
 }
