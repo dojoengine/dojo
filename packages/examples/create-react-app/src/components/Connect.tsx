@@ -1,5 +1,5 @@
 import { useConnectors } from "@starknet-react/core"
-import { useWorldContext } from "dojo-react/dist/provider"
+import { useWorldContext } from "@dojoengine/react/dist/provider"
 import { useEffect } from "react"
 
 export function Connect() {

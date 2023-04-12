@@ -24,7 +24,7 @@ Dojo React aims to expose a set of React hooks using Dojo Core for seamless inte
 
 ### Create React App
 
-The bare minimum Dojo world
+The bare minimum Dojo world using the Dojo starter positions
 
 
 ## Contributing 

@@ -1,5 +1,5 @@
 {
-  "name": "dojo-core",
+  "name": "@dojoengine/core",
   "version": "1.0.0",
   "description": "Dojo core providers and types",
   "scripts": {

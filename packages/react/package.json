@@ -1,5 +1,5 @@
 {
-  "name": "dojo-react",
+  "name": "@dojoengine/react",
   "version": "0.1.0",
   "description": "A set of Providers to interface with a Dojo Autonomous World",
   "source": "src/index.ts",

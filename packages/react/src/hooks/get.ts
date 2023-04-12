@@ -1,32 +1,28 @@
 import { useCallback } from 'react';
 import { useDojoContext } from '../provider';
-import { Query } from 'dojo-core/dist/types';
-import { Store } from 'dojo-core';
+import { Query } from '@dojoengine/core/dist/types';
 
 // key should be from world setup, and should be an optional trigger to rerender
 export function useComponent<T>({
   key,
   parser,
-  optimistic = false,
+  store
 }: {
-  key: any;
+  key: string;
   parser: (data: any) => T | undefined;
-  optimistic: boolean;
+  store: any;
 }) {
-
-  // -- Context -- //
   const { rpcProvider } = useDojoContext();
 
-  // -- Store -- //
-  const store = Store.ComponentStore;
 
-  // -- Callbacks -- //
   const getComponentCallback = useCallback(
     async (
       component: string,
       query: Query
     ) => {
-      await getEntity(
+
+      // we should pass in providers here to make it modular
+      await getComponent(
         store,
         rpcProvider,
         component,
@@ -37,13 +33,12 @@ export function useComponent<T>({
   );
 
   return {
-    entity: parser(store.getState()),
-    getEntity: getComponentCallback
+    component: parser(store.getState()),
+    getComponent: getComponentCallback
   };
 }
 
-// we should pass in providers here to make it modular
-export async function getEntity<T>(
+export async function getComponent<T>(
   store: any, // todo: fix types
   rpcProvider: any,
   component: string,
@@ -51,15 +46,15 @@ export async function getEntity<T>(
   offset: number = 0,
   length: number = 0
 ) {
-  if (rpcProvider) {
-    const fetchedEntity = await rpcProvider.entity(
-      component,
-      query,
-      offset,
-      length
-    );
-    store.setState({ entity: fetchedEntity });
-  } else {
-    store.setState({ entity: [] });
-  }
+
+  const componentState = await rpcProvider.entity(
+    component,
+    query,
+    offset,
+    length
+  );
+
+  // set raw state
+  store.setState({ value: componentState });
 }
+

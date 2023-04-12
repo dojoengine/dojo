@@ -1,45 +1,64 @@
 import { useEffect, useState } from "react";
-import { useComponent, useSystem } from "dojo-react"
+import { useComponent, useSystem, useDojo } from "@dojoengine/react"
 import { Position as PositionType } from "../types";
 import { PositionParser as parser } from "../parsers";
 
 interface Props {
   entity_id: string;
+  src: string;
+  direction: number;
+  position: {
+    x: number;
+    y: number;
+  };
 }
 
-const component = {
-  component: "Position",
+
+const componentStruct = {
+  name: "Position",
   offset: 0,
   length: 0,
 }
 
-export const Position = ({ entity_id }: Props) => {
-  const [counter, setCounter] = useState(0);
+// takes directional input
+const system = {
+  name: "Movement"
+}
 
-  const { entity, getEntity } = useComponent<PositionType>({ key: 1, parser, optimistic: false });
+export const Position = ({ entity_id, src, position, direction }: Props) => {
 
-  const { execute } = useSystem({ key: 1 });
+  const {
+    useComponent: { component, getComponent },
+    useSystem: { execute }
+  } = useDojo({ key: "1", parser, optimistic: false });
+
 
   useEffect(() => {
-    getEntity(component.component, { partition: entity_id, keys: [''] });
-  }, [counter]);
+    console.log("Moving ", entity_id, " to ", position.x, position.y)
 
-  if (!entity) {
-    return <div>Loading...</div>;
-  }
+    // execute direction
+    execute(
+      [BigInt(direction)],
+      system.name
+    )
+  }, [position, entity_id, execute]);
+
+  // get component
+  useEffect(() => {
+    getComponent(entity_id,
+      {
+        partition: componentStruct.name,
+        keys: [""]
+      }
+    );
+  }, [entity_id])
 
   return (
-    <div>
-      <h4>Position</h4>
-      <p>Entity ID: {entity_id}</p>
-
-      {/*  */}
-      <p>[{entity.x && entity.x.toString()}, {entity.y && entity.y.toString()}]</p>
-
-      {/*  */}
-      <button onClick={() => {
-        execute([BigInt(1), BigInt(2)], component.component, true)
-      }}>execute</button>
-    </div>
+    <img
+      src={src}
+      alt={entity_id}
+      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+    />
   );
 };
+
