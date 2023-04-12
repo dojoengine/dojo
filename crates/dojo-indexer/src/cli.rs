@@ -74,7 +74,7 @@ async fn main() -> anyhow::Result<()> {
     // #[cfg(feature = "postgres")]
     // let pool = PgPoolOptions::new().max_connections(5).connect(database_url).await?;
 
-    let mut node_uri = Uri::from_str("http://localhost:4317")?;
+    let mut node_uri = Uri::from_str("http://localhost:7171")?;
     if let Some(node) = args.apibara {
         node_uri = Uri::from_str(&node)?;
     }
@@ -82,7 +82,7 @@ async fn main() -> anyhow::Result<()> {
     let provider = JsonRpcClient::new(HttpTransport::new(Url::parse(&args.rpc).unwrap()));
 
     let graphql = start_graphql(&pool);
-    let indexer = start_indexer(world, node_uri, &pool, &provider);
+    let indexer = start_indexer(cts.clone(), world, node_uri, &pool, &provider);
     let apibara = start_apibara(cts, args.rpc.clone());
 
     let _ = join!(graphql, indexer, apibara);

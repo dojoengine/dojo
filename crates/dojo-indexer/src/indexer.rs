@@ -7,10 +7,11 @@ use apibara_core::starknet::v1alpha2::{
 };
 use apibara_sdk::{Configuration, DataMessage, Uri};
 use futures::TryStreamExt;
-use log::{debug, info, warn};
 use num::BigUint;
 use sqlx::{Pool, Sqlite};
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
+use tokio_util::sync::CancellationToken;
+use tracing::{debug, info, warn};
 
 use crate::hash::starknet_hash;
 use crate::processors::component_register::ComponentRegistrationProcessor;
@@ -38,11 +39,14 @@ fn filter_by_processors(filter: &mut Filter, processors: &Processors) {
 }
 
 pub async fn start_indexer(
+    ct: CancellationToken,
     world: BigUint,
     node_uri: Uri,
     pool: &Pool<Sqlite>,
     provider: &JsonRpcClient<HttpTransport>,
 ) -> Result<(), Box<dyn Error>> {
+    info!("starting indexer");
+
     let processors = Processors {
         event_processors: vec![
             Box::new(ComponentStateUpdateProcessor::new()),
@@ -85,6 +89,10 @@ pub async fn start_indexer(
     // dont process anything until our world is deployed
     let mut world_deployed = false;
     while let Some(message) = data_stream.try_next().await? {
+        if ct.is_cancelled() {
+            return Ok(());
+        }
+
         debug!("Received message");
         match message {
             DataMessage::Invalidate { cursor } => {
