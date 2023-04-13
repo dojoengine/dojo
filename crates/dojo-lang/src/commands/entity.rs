@@ -37,7 +37,15 @@ impl CommandTrait for EntityCommand {
         let elements = command_ast.arguments(db).args(db).elements(db);
         let query = elements.first().unwrap();
 
-        let components = find_components(db, command_ast);
+        let components = find_components(db, &command_ast);
+        if components.len() == 0 {
+            command.data.diagnostics.push(PluginDiagnostic {
+                message: "Component types cannot be empty".to_string(),
+                stable_ptr: command_ast.stable_ptr().untyped(),
+            });
+            return command;
+        }
+          
         let part_names = components
             .iter()
             .map(|component| {
@@ -149,9 +157,8 @@ impl EntityCommand {
             part_names.iter().map(|part_name| format!("{part_name}.is_some()")).join(" & ");
 
         let part_names_str = match part_names.len() {
-            n if n > 1 => format!("({}.unwrap())", part_names.join(".unwrap(), ")),
             1 => format!("{}.unwrap()", part_names[0]),
-            _ => "()".to_string(),
+            _ => format!("({}.unwrap())", part_names.join(".unwrap(), ")),
         };
 
         self.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
