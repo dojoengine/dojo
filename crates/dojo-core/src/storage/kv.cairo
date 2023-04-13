@@ -1,4 +1,3 @@
-#[contract]
 mod KeyValueStore {
     use array::ArrayTrait;
     use array::SpanTrait;
