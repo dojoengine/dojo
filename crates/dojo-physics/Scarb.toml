@@ -6,4 +6,6 @@ description = "Implementations of a physics library for the Dojo framework"
 [dependencies]
 dojo_core = { path = "../dojo-core" }
 
+cubit= { git = "https://github.com/influenceth/cubit" }
+
 [[target.dojo]]
