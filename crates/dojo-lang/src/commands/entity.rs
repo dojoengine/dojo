@@ -38,14 +38,14 @@ impl CommandTrait for EntityCommand {
         let query = elements.first().unwrap();
 
         let components = find_components(db, &command_ast);
-        if components.len() == 0 {
+        if components.is_empty() {
             command.data.diagnostics.push(PluginDiagnostic {
                 message: "Component types cannot be empty".to_string(),
                 stable_ptr: command_ast.stable_ptr().untyped(),
             });
             return command;
         }
-          
+
         let part_names = components
             .iter()
             .map(|component| {
