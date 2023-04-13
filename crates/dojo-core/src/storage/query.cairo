@@ -4,15 +4,16 @@ use hash::LegacyHash;
 use serde::Serde;
 use traits::Into;
 use starknet::ClassHashIntoFelt252;
+use dojo_core::serde::SpanSerde;
 
 #[derive(Drop)]
 struct Query {
     partition: felt252,
-    keys: Array<felt252>,
+    keys: Span<felt252>,
 }
 
 trait QueryTrait {
-    fn new(partition: felt252, keys: Array<felt252>) -> Query;
+    fn new(partition: felt252, keys: Span<felt252>) -> Query;
     fn new_from_id(id: felt252) -> Query;
     fn id(self: @Query) -> felt252;
     fn table(self: @Query, component: felt252) -> felt252;
@@ -20,21 +21,16 @@ trait QueryTrait {
 }
 
 impl QueryImpl of QueryTrait {
-    fn new(partition: felt252, keys: Array<felt252>) -> Query {
+    fn new(partition: felt252, keys: Span<felt252>) -> Query {
         Query { keys: keys, partition: partition }
     }
     fn new_from_id(id: felt252) -> Query {
         let mut keys = ArrayTrait::new();
         keys.append(id);
-        Query { keys: keys, partition: 0 }
+        Query { keys: keys.span(), partition: 0 }
     }
     fn id(self: @Query) -> felt252 {
-        let span = self.keys.span();
-        if span.len() == 1_usize {
-            return *span.at(0_usize);
-        }
-
-        inner_id(0, span, span.len())
+        inner_id(0, *self.keys, (*self.keys).len())
     }
     fn table(self: @Query, component: felt252) -> felt252 {
         if *self.partition == 0 {
@@ -44,18 +40,17 @@ impl QueryImpl of QueryTrait {
         pedersen(component, *self.partition)
     }
     fn keys(self: @Query) -> Span<felt252> {
-        self.keys.span()
+        *self.keys
     }
 }
 
 impl QueryIntoFelt252 of Into::<Query, felt252> {
     fn into(self: Query) -> felt252 {
-        let span = self.keys.span();
-        if span.len() == 1_usize {
-            return *span.at(0_usize);
+        if self.keys.len() == 1_usize {
+            return *self.keys.at(0_usize);
         }
 
-        inner_id(0, span, span.len())
+        inner_id(0, self.keys, self.keys.len())
     }
 }
 
@@ -95,12 +90,12 @@ impl LegacyHashClassHashQuery of LegacyHash::<(starknet::ClassHash, Query)> {
 impl QuerySerde of serde::Serde::<Query> {
     fn serialize(ref serialized: Array::<felt252>, input: Query) {
         Serde::<felt252>::serialize(ref serialized, input.partition);
-        Serde::<Array<felt252>>::serialize(ref serialized, input.keys);
+        Serde::<Span<felt252>>::serialize(ref serialized, input.keys);
     }
     fn deserialize(ref serialized: Span::<felt252>) -> Option::<Query> {
         let partition = Serde::<felt252>::deserialize(ref serialized)?;
         let mut arr = ArrayTrait::<felt252>::new();
-        match Serde::<Array<felt252>>::deserialize(ref serialized) {
+        match Serde::<Span<felt252>>::deserialize(ref serialized) {
             Option::Some(keys) => {
                 Option::Some(Query { partition: partition, keys: keys,  })
             },
@@ -115,7 +110,7 @@ impl ContractAddressIntoQuery of Into::<starknet::ContractAddress, Query> {
     fn into(self: starknet::ContractAddress) -> Query {
         let mut keys = ArrayTrait::<felt252>::new();
         keys.append(self.into());
-        Query { keys: keys, partition: 0 }
+        QueryTrait::new(0, keys.span())
     }
 }
 
@@ -123,7 +118,7 @@ impl Felt252IntoQuery of Into::<felt252, Query> {
     fn into(self: felt252) -> Query {
         let mut keys = ArrayTrait::new();
         keys.append(self);
-        Query { keys: keys, partition: 0 }
+        QueryTrait::new(0, keys.span())
     }
 }
 
@@ -132,7 +127,7 @@ impl TupleSize1IntoQuery of Into::<(felt252, ), Query> {
         let (first) = self;
         let mut keys = ArrayTrait::new();
         keys.append(first);
-        Query { keys: keys, partition: 0 }
+        QueryTrait::new(0, keys.span())
     }
 }
 
@@ -142,7 +137,7 @@ impl TupleSize2IntoQuery of Into::<(felt252, felt252), Query> {
         let mut keys = ArrayTrait::new();
         keys.append(first);
         keys.append(second);
-        Query { keys: keys, partition: 0 }
+        QueryTrait::new(0, keys.span())
     }
 }
 
@@ -153,7 +148,7 @@ impl TupleSize3IntoQuery of Into::<(felt252, felt252, felt252), Query> {
         keys.append(first);
         keys.append(second);
         keys.append(third);
-        Query { keys: keys, partition: 0 }
+        QueryTrait::new(0, keys.span())
     }
 }
 
@@ -180,7 +175,7 @@ impl TupleSize2IntoPartitionedQuery of Into::<(felt252, (felt252, felt252)), Que
 fn test_query_id() {
     let mut keys = ArrayTrait::new();
     keys.append(420);
-    let query = QueryTrait::new(0, keys);
+    let query = QueryTrait::new(0, keys.span());
     assert(query.into() == 420, 'Incorrect hash');
 }
 
