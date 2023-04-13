@@ -51,7 +51,7 @@ impl PositionImpl of PositionTrait {
     }
 }
 
-#[derive(Copy, Drop)]
+#[derive(Copy, Drop, Serde)]
 struct Position {
     x: felt252,
     y: felt252
@@ -63,21 +63,6 @@ trait IPosition {
     fn len() -> u8;
     fn serialize(raw: Span<felt252>) -> Position;
     fn deserialize(value: Position) -> Span<felt252>;
-}
-
-impl PositionSerde of serde::Serde::<Position> {
-    fn serialize(ref serialized: Array::<felt252>, input: Position) {
-        serde::Serde::<felt252>::serialize(ref serialized, input.x);
-        serde::Serde::<felt252>::serialize(ref serialized, input.y);
-    }
-    fn deserialize(ref serialized: Span::<felt252>) -> Option::<Position> {
-        Option::Some(
-            Position {
-                x: serde::Serde::<felt252>::deserialize(ref serialized)?,
-                y: serde::Serde::<felt252>::deserialize(ref serialized)?,
-            }
-        )
-    }
 }
 
 #[contract]

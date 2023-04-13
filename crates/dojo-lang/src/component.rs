@@ -9,10 +9,7 @@ use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use crate::plugin::DojoAuxData;
 
 pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> PluginResult {
-    let mut body_nodes = vec![];
-    let mut trait_nodes = vec![];
-
-    body_nodes.push(RewriteNode::interpolate_patched(
+    let body_nodes = vec![RewriteNode::interpolate_patched(
         "
             #[view]
             fn name() -> felt252 {
@@ -35,7 +32,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
                 RewriteNode::Text(struct_ast.members(db).elements(db).len().to_string()),
             ),
         ]),
-    ));
+    )];
 
     let mut serialize = vec![];
     let mut deserialize = vec![];
@@ -63,36 +60,11 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
         ));
     });
 
-    trait_nodes.push(RewriteNode::interpolate_patched(
-        "
-            impl $type_name$Serde of serde::Serde::<$type_name$> {
-                fn serialize(ref serialized: Array::<felt252>, input: $type_name$) {
-                    $serialize$
-                }
-                fn deserialize(ref serialized: Span::<felt252>) -> Option::<$type_name$> {
-                    Option::Some(
-                        $type_name$ {
-                            $deserialize$
-                        }
-                    )
-                }
-            }
-        ",
-        HashMap::from([
-            (
-                "type_name".to_string(),
-                RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
-            ),
-            ("serialize".to_string(), RewriteNode::new_modified(serialize)),
-            ("deserialize".to_string(), RewriteNode::new_modified(deserialize)),
-        ]),
-    ));
-
     let name = struct_ast.name(db).text(db);
     let mut builder = PatchBuilder::new(db);
     builder.add_modified(RewriteNode::interpolate_patched(
         "
-            #[derive(Copy, Drop)]
+            #[derive(Copy, Drop, Serde)]
             struct $type_name$ {
                 $members$
             }
@@ -104,8 +76,6 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
                 fn serialize(raw: Span<felt252>) -> $type_name$;
                 fn deserialize(value: $type_name$) -> Span<felt252>;
             }
-
-            $traits$
 
             #[contract]
             mod $type_name$Component {
@@ -122,7 +92,6 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
                 RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
             ),
             ("members".to_string(), RewriteNode::Copied(struct_ast.members(db).as_syntax_node())),
-            ("traits".to_string(), RewriteNode::new_modified(trait_nodes)),
             ("body".to_string(), RewriteNode::new_modified(body_nodes)),
         ]),
     ));
@@ -133,7 +102,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
             content: builder.code,
             aux_data: DynGeneratedFileAuxData::new(DynPluginAuxData::new(DojoAuxData {
                 patches: builder.patches,
-                components: vec![format!("{}", name).into()],
+                components: vec![name],
                 systems: vec![],
             })),
         }),
