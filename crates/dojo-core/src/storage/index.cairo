@@ -5,6 +5,7 @@ mod Index {
     use array::ArrayTrait;
     use array::SpanTrait;
     use traits::Into;
+    use option::OptionTrait;
 
     struct Storage {
         // Maps id to it's position in the table.
@@ -50,14 +51,7 @@ mod Index {
     }
 
     fn _query(table: felt252, idx: usize, table_len: usize, ref res: Array::<felt252>) {
-        match gas::withdraw_gas_all(get_builtin_costs()) {
-            Option::Some(_) => {},
-            Option::None(_) => {
-                let mut data = ArrayTrait::new();
-                data.append('Out of gas');
-                panic(data);
-            },
-        }
+        gas::withdraw_gas_all(get_builtin_costs()).expect('Out of gas');
 
         if (idx == table_len) {
             return ();

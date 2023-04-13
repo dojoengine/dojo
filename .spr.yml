@@ -2,7 +2,7 @@ githubRepoOwner: dojoengine
 githubRepoName: dojo
 githubHost: github.com
 requireChecks: true
-requireApproval: true
+requireApproval: false
 githubRemote: origin
 githubBranch: main
 remoteBranches: []
