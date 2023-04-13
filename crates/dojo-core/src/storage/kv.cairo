@@ -2,6 +2,7 @@ mod KeyValueStore {
     use array::ArrayTrait;
     use array::SpanTrait;
     use traits::Into;
+    use starknet::SyscallResultTrait;
 
     use dojo_core::serde::SpanSerde;
 
