@@ -22,15 +22,15 @@ trait World {
 
     // Returns a globally unique identifier.
     #[view]
-    fn get(component: felt252, key: StorageKey, offset: u8, length: usize) -> Span<felt252>;
+    fn get(component: felt252, query: Query, offset: u8, length: usize) -> Span<felt252>;
 
     // Returns all entities that contain the component.
     #[view]
-    fn entities(component: felt252, partition: felt252) -> Array<StorageKey>;
+    fn entities(component: felt252, partition: felt252) -> Array<Query>;
 
     // Sets a components value.
     #[external]
-    fn set(component: felt252, key: StorageKey, offset: u8, value: Span<felt252>);
+    fn set(component: felt252, query: Query, offset: u8, value: Span<felt252>);
 
     // Returns all entities that contain the component.
     #[external]

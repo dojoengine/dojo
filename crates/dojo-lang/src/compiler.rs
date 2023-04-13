@@ -2,11 +2,10 @@ use std::collections::HashMap;
 use std::iter::zip;
 use std::ops::DerefMut;
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_filesystem::db::FilesGroup;
 use cairo_lang_filesystem::ids::CrateLongId;
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract::find_contracts;
 use cairo_lang_starknet::contract_class::{compile_prepared_db, ContractClass};
 use cairo_lang_utils::Upcast;
@@ -16,17 +15,12 @@ use scarb::compiler::helpers::{
 use scarb::compiler::{CompilationUnit, Compiler};
 use scarb::core::Workspace;
 use smol_str::SmolStr;
-use starknet::core::types::contract::CompiledClass;
+use starknet::core::types::contract::SierraClass;
 use starknet::core::types::FieldElement;
 use tracing::{trace, trace_span};
 
 use crate::db::DojoRootDatabaseBuilderEx;
 use crate::manifest::Manifest;
-
-#[cfg(test)]
-#[path = "compiler_test.rs"]
-mod test;
-
 pub struct DojoCompiler;
 
 impl Compiler for DojoCompiler {
@@ -35,7 +29,7 @@ impl Compiler for DojoCompiler {
     }
 
     fn compile(&self, unit: CompilationUnit, ws: &Workspace<'_>) -> Result<()> {
-        let target_dir = unit.profile.target_dir(ws.config());
+        let target_dir = unit.target_dir(ws.config());
 
         let mut db = RootDatabase::builder()
             .with_project_config(build_project_config(&unit)?)
@@ -80,7 +74,9 @@ impl Compiler for DojoCompiler {
             serde_json::to_writer_pretty(file.deref_mut(), &class)
                 .with_context(|| format!("failed to serialize contract: {contract_name}"))?;
 
-            let class_hash = compute_class_hash_of_contract_class(&contract_name, class)?;
+            let class_hash = compute_class_hash_of_contract_class(class).with_context(|| {
+                format!("problem computing class hash for contract `{contract_name}`")
+            })?;
             compiled_classes.insert(contract_name, class_hash);
         }
 
@@ -93,17 +89,21 @@ impl Compiler for DojoCompiler {
     }
 }
 
-fn compute_class_hash_of_contract_class(
-    contract_name: &str,
-    class: ContractClass,
-) -> Result<FieldElement> {
-    let casm_contract = CasmContractClass::from_contract_class(class, true)
-        .with_context(|| "Compilation failed.")?;
-    let class_json = serde_json::to_string_pretty(&casm_contract)
-        .with_context(|| "Casm contract Serialization failed.")?;
-    let compiled_class: CompiledClass = serde_json::from_str(&class_json).unwrap_or_else(|error| {
-        panic!("Problem parsing {contract_name} artifact: {error:?}");
-    });
+fn compute_class_hash_of_contract_class(class: ContractClass) -> Result<FieldElement> {
+    let class_str = serde_json::to_string(&class)?;
+    let sierra_class = serde_json::from_str::<SierraClass>(&class_str)
+        .map_err(|e| anyhow!("error parsing Sierra class: {e}"))?;
+    sierra_class.class_hash().map_err(|e| anyhow!("problem hashing sierra contract: {e}"))
+}
 
-    compiled_class.class_hash().with_context(|| "Casm contract Serialization failed.")
+#[test]
+fn test_compiler() {
+    use scarb::ops;
+
+    use crate::testing::build_test_config;
+
+    let config = build_test_config().unwrap();
+    let ws = ops::read_workspace(config.manifest_path(), &config)
+        .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
+    ops::compile(&ws).unwrap_or_else(|op| panic!("Error compiling: {op:?}"))
 }

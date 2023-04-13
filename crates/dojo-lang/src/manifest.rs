@@ -1,6 +1,6 @@
 use std::collections::HashMap;
+use std::fs;
 use std::path::Path;
-use std::{fs, iter};
 
 use ::serde::{Deserialize, Serialize};
 use anyhow::{anyhow, Context, Result};
@@ -8,7 +8,6 @@ use cairo_lang_defs::ids::{ModuleId, ModuleItemId};
 use cairo_lang_filesystem::ids::CrateId;
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::plugin::DynPluginAuxData;
-use dojo_project::WorldConfig;
 use serde_with::serde_as;
 use smol_str::SmolStr;
 use starknet::core::serde::unsigned_field_element::{UfeHex, UfeHexOption};
@@ -92,10 +91,6 @@ pub struct Manifest {
     #[serde_as(as = "UfeHexOption")]
     pub world: Option<FieldElement>,
     #[serde_as(as = "UfeHexOption")]
-    pub store: Option<FieldElement>,
-    #[serde_as(as = "UfeHexOption")]
-    pub indexer: Option<FieldElement>,
-    #[serde_as(as = "UfeHexOption")]
     pub executor: Option<FieldElement>,
     pub components: Vec<Component>,
     pub systems: Vec<System>,
@@ -113,19 +108,11 @@ impl Manifest {
         let world = compiled_classes.get("World").unwrap_or_else(|| {
             panic!("World contract not found. Did you include `dojo_core` as a dependency?");
         });
-        let store = compiled_classes.get("Store").unwrap_or_else(|| {
-            panic!("Store contract not found. Did you include `dojo_core` as a dependency?");
-        });
-        let indexer = compiled_classes.get("Indexer").unwrap_or_else(|| {
-            panic!("Indexer contract not found. Did you include `dojo_core` as a dependency?");
-        });
         let executor = compiled_classes.get("Executor").unwrap_or_else(|| {
             panic!("Executor contract not found. Did you include `dojo_core` as a dependency?");
         });
 
         manifest.world = Some(*world);
-        manifest.store = Some(*store);
-        manifest.indexer = Some(*indexer);
         manifest.executor = Some(*executor);
 
         for crate_id in crate_ids {
@@ -159,61 +146,36 @@ impl Manifest {
     }
 
     pub async fn from_remote(
+        world_address: FieldElement,
         rpc_url: Url,
         local_manifest: &Self,
-        world_config: &WorldConfig,
     ) -> Result<Self> {
         let mut manifest = Manifest::default();
 
-        let Some(world_address) = world_config.address else {
-            return Ok(manifest);
-        };
-
         let starknet = JsonRpcClient::new(HttpTransport::new(rpc_url));
         let world_class_hash =
-            starknet.get_class_hash_at(&BlockId::Tag(BlockTag::Latest), world_address).await.ok();
+            starknet.get_class_hash_at(&BlockId::Tag(BlockTag::Pending), world_address).await.ok();
 
         if world_class_hash.is_none() {
             return Ok(manifest);
         }
 
-        let store_class_hash = starknet
-            .get_storage_at(
-                world_address,
-                get_storage_var_address("store", &[])?,
-                &BlockId::Tag(BlockTag::Latest),
-            )
-            .await
-            .ok();
-
-        let indexer_class_hash = starknet
-            .get_storage_at(
-                world_address,
-                get_storage_var_address("indexer", &[])?,
-                &BlockId::Tag(BlockTag::Latest),
-            )
-            .await
-            .ok();
-
         let executor_address = starknet
             .get_storage_at(
                 world_address,
                 get_storage_var_address("executor", &[])?,
-                &BlockId::Tag(BlockTag::Latest),
+                &BlockId::Tag(BlockTag::Pending),
             )
             .await?;
         let executor_class_hash = starknet
-            .get_class_hash_at(&BlockId::Tag(BlockTag::Latest), executor_address)
+            .get_class_hash_at(&BlockId::Tag(BlockTag::Pending), executor_address)
             .await
             .ok();
 
         manifest.world = world_class_hash;
-        manifest.store = store_class_hash;
-        manifest.indexer = indexer_class_hash;
         manifest.executor = executor_class_hash;
 
-        // Fetch the components/systems class hash if they are registered in the remote World.
-        for (component, system) in iter::zip(&local_manifest.components, &local_manifest.systems) {
+        for component in &local_manifest.components {
             let comp_class_hash = starknet
                 .call(
                     &FunctionCall {
@@ -221,10 +183,18 @@ impl Manifest {
                         calldata: vec![cairo_short_string_to_felt(&component.name)?],
                         entry_point_selector: get_selector_from_name("component")?,
                     },
-                    &BlockId::Tag(BlockTag::Latest),
+                    &BlockId::Tag(BlockTag::Pending),
                 )
                 .await?[0];
 
+            manifest.components.push(Component {
+                name: component.name.clone(),
+                class_hash: comp_class_hash,
+                ..Default::default()
+            });
+        }
+
+        for system in &local_manifest.systems {
             let syst_class_hash = starknet
                 .call(
                     &FunctionCall {
@@ -236,15 +206,10 @@ impl Manifest {
                         )?],
                         entry_point_selector: get_selector_from_name("system")?,
                     },
-                    &BlockId::Tag(BlockTag::Latest),
+                    &BlockId::Tag(BlockTag::Pending),
                 )
                 .await?[0];
 
-            manifest.components.push(Component {
-                name: component.name.clone(),
-                class_hash: comp_class_hash,
-                ..Default::default()
-            });
             manifest.systems.push(System {
                 name: system.name.clone(),
                 class_hash: syst_class_hash,

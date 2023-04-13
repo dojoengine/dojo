@@ -43,18 +43,21 @@ impl System {
                 "
                 #[contract]
                 mod $name$System {
+                    use option::OptionTrait;
+                    use array::SpanTrait;
+
                     use dojo_core::world;
                     use dojo_core::interfaces::IWorldDispatcher;
                     use dojo_core::interfaces::IWorldDispatcherTrait;
-                    use dojo_core::storage::key::StorageKey;
-                    use dojo_core::storage::key::StorageKeyTrait;
-                    use dojo_core::storage::key::Felt252IntoStorageKey;
-                    use dojo_core::storage::key::TupleSize1IntoStorageKey;
-                    use dojo_core::storage::key::TupleSize2IntoStorageKey;
-                    use dojo_core::storage::key::TupleSize3IntoStorageKey;
-                    use dojo_core::storage::key::TupleSize1IntoPartitionedStorageKey;
-                    use dojo_core::storage::key::TupleSize2IntoPartitionedStorageKey;
-                    use dojo_core::storage::key::ContractAddressIntoStorageKey;
+                    use dojo_core::storage::query::Query;
+                    use dojo_core::storage::query::QueryTrait;
+                    use dojo_core::storage::query::Felt252IntoQuery;
+                    use dojo_core::storage::query::TupleSize1IntoQuery;
+                    use dojo_core::storage::query::TupleSize2IntoQuery;
+                    use dojo_core::storage::query::TupleSize3IntoQuery;
+                    use dojo_core::storage::query::TupleSize1IntoPartitionedQuery;
+                    use dojo_core::storage::query::TupleSize2IntoPartitionedQuery;
+                    use dojo_core::storage::query::ContractAddressIntoQuery;
 
                     #[view]
                     fn name() -> felt252 {
@@ -173,7 +176,7 @@ impl System {
         // recurse thru if blocks
         let if_block: Vec<RewriteNode> = self.handle_block(db, expr_if.if_block(db));
         let else_prefix = if is_else_if { "else " } else { "" };
-        let code = format!("{}if $condition$ $block$", else_prefix);
+        let code = format!("{else_prefix}if $condition$ $block$");
         let if_rewrite = RewriteNode::interpolate_patched(
             &code,
             HashMap::from([

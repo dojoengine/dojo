@@ -58,6 +58,11 @@ impl Command {
                 command.rewrite_nodes.extend(sc.rewrite_nodes());
                 command.diagnostics.extend(sc.diagnostics());
             }
+            "try_entity" => {
+                let sc = entity::EntityCommand::from_ast(db, let_pattern, command_ast);
+                command.rewrite_nodes.extend(sc.rewrite_nodes());
+                command.diagnostics.extend(sc.diagnostics());
+            }
             "set_entity" => {
                 let sc = set::SetCommand::from_ast(db, let_pattern, command_ast);
                 command.rewrite_nodes.extend(sc.rewrite_nodes());
@@ -81,7 +86,7 @@ impl Command {
     }
 }
 
-fn command_name(db: &dyn SyntaxGroup, command_ast: ast::ExprFunctionCall) -> SmolStr {
+pub fn command_name(db: &dyn SyntaxGroup, command_ast: ast::ExprFunctionCall) -> SmolStr {
     let elements = command_ast.path(db).elements(db);
     let segment = elements.last().unwrap();
     if let ast::PathSegment::Simple(method) = segment {

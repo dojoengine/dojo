@@ -1,44 +1,27 @@
-#[contract]
-mod Store {
+mod KeyValueStore {
     use array::ArrayTrait;
     use array::SpanTrait;
     use traits::Into;
+    use starknet::SyscallResultTrait;
 
     use dojo_core::serde::SpanSerde;
-    use dojo_core::storage::key::StorageKey;
-    use dojo_core::storage::key::StorageKeyTrait;
 
-    use dojo_core::interfaces::IComponentLibraryDispatcher;
-    use dojo_core::interfaces::IComponentDispatcherTrait;
-
-    #[event]
-    fn StoreSetRecord(table_id: felt252, key: Span<felt252>, value: Span<felt252>) {}
-
-    #[event]
-    fn StoreSetField(table_id: felt252, key: Span<felt252>, offset: u8, value: Span<felt252>) {}
-
-    fn address(table: felt252, key: StorageKey) -> starknet::StorageBaseAddress {
+    fn address(table: felt252, key: felt252) -> starknet::StorageBaseAddress {
         starknet::storage_base_address_from_felt252(
-            hash::LegacyHash::<(felt252, StorageKey)>::hash(0x420, (table, key))
+            hash::LegacyHash::<(felt252, felt252)>::hash(0x420, (table, key))
         )
     }
 
     #[view]
     fn get(
         table: felt252,
-        class_hash: starknet::ClassHash,
-        key: StorageKey,
+        key: felt252,
         offset: u8,
         mut length: usize
     ) -> Span<felt252> {
         let address_domain = 0_u32;
         let base = address(table, key);
         let mut value = ArrayTrait::<felt252>::new();
-
-        if length == 0_usize {
-            length = IComponentLibraryDispatcher { class_hash: class_hash }.len()
-        }
-
         _get(address_domain, base, ref value, offset, length);
         value.span()
     }
@@ -75,21 +58,13 @@ mod Store {
     #[external]
     fn set(
         table: felt252,
-        class_hash: starknet::ClassHash,
-        storage_key: StorageKey,
+        query: felt252,
         offset: u8,
         value: Span<felt252>
     ) {
-        let keys = storage_key.keys();
-        let length = IComponentLibraryDispatcher { class_hash: class_hash }.len();
-        assert(value.len() <= length, 'Value too long');
-
         let address_domain = 0_u32;
-        let base = address(table, storage_key);
+        let base = address(table, query);
         _set(address_domain, base, value, offset: offset);
-
-        StoreSetRecord(table, keys, value);
-        StoreSetField(table, keys, offset, value);
     }
 
     fn _set(

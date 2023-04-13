@@ -1,7 +1,7 @@
 use juniper::{graphql_object, FieldResult};
 
+use super::server::Context;
 use super::system;
-use crate::server::Context;
 
 pub struct SystemCall {
     pub id: i64,

@@ -2,13 +2,13 @@ pub mod component;
 pub mod entity;
 pub mod entity_state;
 pub mod entity_state_update;
+pub mod server;
 pub mod system;
 pub mod system_call;
 
 use component::Component;
 use juniper::{graphql_object, FieldResult};
-
-use super::server::Context;
+use server::Context;
 
 pub struct Query;
 

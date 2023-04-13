@@ -6,27 +6,48 @@ use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_compiler::diagnostics::get_diagnostics_as_string;
 use cairo_lang_defs::db::DefsGroup;
 use cairo_lang_defs::plugin::MacroPlugin;
-use cairo_lang_filesystem::db::{FilesGroup, FilesGroupEx};
+use cairo_lang_filesystem::db::{FilesDatabase, FilesGroup, FilesGroupEx};
 use cairo_lang_filesystem::ids::{CrateLongId, Directory, FileLongId, VirtualFile};
 use cairo_lang_formatter::format_string;
 use cairo_lang_parser::db::ParserGroup;
+use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_semantic::test_utils::setup_test_module;
+use cairo_lang_syntax::node::db::SyntaxDatabase;
 use cairo_lang_syntax::node::TypedSyntaxNode;
 use cairo_lang_test_utils::parse_test_file::TestFileRunner;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
+use cairo_lang_utils::Upcast;
+use scarb::ops;
 
 use crate::plugin::DojoPlugin;
-use crate::testing::build_test_db;
+use crate::testing::{build_test_config, build_test_db};
+
+#[salsa::database(SyntaxDatabase, FilesDatabase)]
+#[derive(Default)]
+pub struct DatabaseImpl {
+    storage: salsa::Storage<DatabaseImpl>,
+}
+impl salsa::Database for DatabaseImpl {}
+impl Upcast<dyn FilesGroup> for DatabaseImpl {
+    fn upcast(&self) -> &(dyn FilesGroup + 'static) {
+        self
+    }
+}
 
 struct ExpandContractTestRunner {
     db: RootDatabase,
+    parser_db: SimpleParserDatabase,
 }
 
 impl Default for ExpandContractTestRunner {
     fn default() -> Self {
-        Self { db: build_test_db().unwrap() }
+        let parser_db = SimpleParserDatabase::default();
+        let config = build_test_config().unwrap();
+        let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
+        Self { db: build_test_db(&ws).unwrap(), parser_db }
     }
 }
+
 impl TestFileRunner for ExpandContractTestRunner {
     fn run(&mut self, inputs: &OrderedHashMap<String, String>) -> OrderedHashMap<String, String> {
         let (test_module, _semantic_diagnostics) =
@@ -64,7 +85,7 @@ impl TestFileRunner for ExpandContractTestRunner {
 
             if !res.remove_original_item {
                 generated_items
-                    .push(format_string(&self.db, item.as_syntax_node().get_text(&self.db)));
+                    .push(format_string(&self.parser_db, item.as_syntax_node().get_text(&self.db)));
             }
         }
 
@@ -80,7 +101,6 @@ cairo_lang_test_utils::test_file_test_with_runner!(
     "src/plugin_test_data",
     {
         component: "component",
-        component_typed: "component_typed",
         system: "system",
     },
     ExpandContractTestRunner

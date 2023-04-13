@@ -1,14 +1,8 @@
 use apibara_core::starknet::v1alpha2::{Block, FieldElement, Filter};
-use apibara_sdk::{ClientBuilder, DataStream, DataStreamClient};
+use apibara_sdk::ClientBuilder;
 
 /// Starknet version of [ClientBuilder].
 pub type StarknetClientBuilder = ClientBuilder<Filter, Block>;
-
-/// Starknet version of [DataStream].
-pub type StarknetDataStream = DataStream<Filter, Block>;
-
-/// Starknet data stream client.
-pub type StarknetDataStreamClient = DataStreamClient<Filter>;
 
 pub trait FieldElementExt {
     /// Returns the field element as [num::BigUint];

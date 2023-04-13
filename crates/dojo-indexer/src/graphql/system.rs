@@ -1,6 +1,6 @@
 use juniper::{graphql_object, FieldResult};
 
-use crate::server::Context;
+use super::server::Context;
 
 pub struct System {
     pub id: String,
