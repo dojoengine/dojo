@@ -29,7 +29,7 @@ impl Compiler for DojoCompiler {
     }
 
     fn compile(&self, unit: CompilationUnit, ws: &Workspace<'_>) -> Result<()> {
-        let target_dir = unit.profile.target_dir(ws.config());
+        let target_dir = unit.target_dir(ws.config());
 
         let mut db = RootDatabase::builder()
             .with_project_config(build_project_config(&unit)?)
@@ -104,6 +104,6 @@ fn test_compiler() {
 
     let config = build_test_config().unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config)
-        .unwrap_or_else(|op| panic!("Error building workspace: {:?}", op));
-    ops::compile(&ws).unwrap_or_else(|op| panic!("Error compiling: {:?}", op))
+        .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
+    ops::compile(&ws).unwrap_or_else(|op| panic!("Error compiling: {op:?}"))
 }

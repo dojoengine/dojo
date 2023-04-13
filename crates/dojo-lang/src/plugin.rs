@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use cairo_lang_defs::plugin::{GeneratedFileAuxData, MacroPlugin, PluginResult};
+use cairo_lang_defs::plugin::{GeneratedFileAuxData, MacroPlugin, PluginDiagnostic, PluginResult};
 use cairo_lang_diagnostics::DiagnosticEntry;
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::patcher::Patches;
@@ -9,6 +9,9 @@ use cairo_lang_semantic::plugin::{
     SemanticPlugin,
 };
 use cairo_lang_semantic::SemanticDiagnostic;
+use cairo_lang_syntax::attribute::structured::{
+    AttributeArg, AttributeArgVariant, AttributeStructurize,
+};
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal};
@@ -89,26 +92,51 @@ impl MacroPlugin for DojoPlugin {
         match item_ast {
             ast::Item::Module(module_ast) => self.handle_mod(db, module_ast),
             ast::Item::Struct(struct_ast) => {
-                for attr in struct_ast.attributes(db).elements(db) {
-                    if attr.attr(db).text(db) == "derive" {
-                        if let ast::OptionAttributeArgs::AttributeArgs(args) = attr.args(db) {
-                            for arg in args.arg_list(db).elements(db) {
-                                if let ast::Expr::Path(expr) = arg {
-                                    if let [ast::PathSegment::Simple(segment)] =
-                                        &expr.elements(db)[..]
-                                    {
-                                        let derived = segment.ident(db).text(db);
-                                        if matches!(derived.as_str(), "Component") {
-                                            return handle_component_struct(db, struct_ast);
-                                        }
-                                    }
-                                }
-                            }
+                let mut diagnostics = vec![];
+
+                for attr in struct_ast.attributes(db).query_attr(db, "derive") {
+                    let attr = attr.structurize(db);
+
+                    if attr.args.is_empty() {
+                        diagnostics.push(PluginDiagnostic {
+                            stable_ptr: attr.args_stable_ptr.untyped(),
+                            message: "Expected args.".into(),
+                        });
+                        continue;
+                    }
+
+                    for arg in attr.args {
+                        let AttributeArg{
+                            variant: AttributeArgVariant::Unnamed {
+                                value: ast::Expr::Path(path),
+                                value_stable_ptr,
+                                ..
+                            },
+                            ..
+                        } = arg else {
+                            diagnostics.push(PluginDiagnostic {
+                                stable_ptr: arg.arg_stable_ptr.untyped(),
+                                message: "Expected path.".into(),
+                            });
+                            continue;
+                        };
+
+                        let [ast::PathSegment::Simple(segment)] = &path.elements(db)[..] else {
+                            diagnostics.push(PluginDiagnostic {
+                                stable_ptr: value_stable_ptr.untyped(),
+                                message: "Expected a single segment.".into(),
+                            });
+                            continue;
+                        };
+
+                        let derived = segment.ident(db).text(db);
+                        if matches!(derived.as_str(), "Component") {
+                            return handle_component_struct(db, struct_ast);
                         }
                     }
                 }
 
-                PluginResult::default()
+                PluginResult { diagnostics, ..PluginResult::default() }
             }
             _ => PluginResult::default(),
         }

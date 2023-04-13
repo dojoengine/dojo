@@ -147,7 +147,7 @@ use array::ArrayTrait;
 
 use serde::Serde;
 
-#[derive(Copy, Drop)]
+#[derive(Copy, Drop, Serde)]
 struct Position {
     x: felt252,
     y: felt252,
@@ -159,21 +159,6 @@ trait IPosition {
     fn len() -> u8;
     fn serialize(raw: Span<felt252>) -> Position;
     fn deserialize(value: Position) -> Span<felt252>;
-}
-
-impl PositionSerde of serde::Serde::<Position> {
-    fn serialize(ref serialized: Array::<felt252>, input: Position) {
-        serde::Serde::<felt252>::serialize(ref serialized, input.x);
-        serde::Serde::<felt252>::serialize(ref serialized, input.y);
-    }
-    fn deserialize(ref serialized: Span::<felt252>) -> Option::<Position> {
-        Option::Some(
-            Position {
-                x: serde::Serde::<felt252>::deserialize(ref serialized)?,
-                y: serde::Serde::<felt252>::deserialize(ref serialized)?,
-            }
-        )
-    }
 }
 
 #[contract]
@@ -194,7 +179,7 @@ mod PositionComponent {
     }
 }
 
-#[derive(Copy, Drop)]
+#[derive(Copy, Drop, Serde)]
 struct Player {
     name: felt252, 
 }
@@ -205,15 +190,6 @@ trait IPlayer {
     fn len() -> u8;
     fn serialize(raw: Span<felt252>) -> Player;
     fn deserialize(value: Player) -> Span<felt252>;
-}
-
-impl PlayerSerde of serde::Serde::<Player> {
-    fn serialize(ref serialized: Array::<felt252>, input: Player) {
-        serde::Serde::<felt252>::serialize(ref serialized, input.name);
-    }
-    fn deserialize(ref serialized: Span::<felt252>) -> Option::<Player> {
-        Option::Some(Player { name: serde::Serde::<felt252>::deserialize(ref serialized)?,  })
-    }
 }
 
 #[contract]
@@ -615,12 +591,12 @@ error: Plugin diagnostic: Invalid arguments. Expected "(query, (components,))"
         commands::set_entity((
                             ^^
 
-error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::query::Query", found: "(core::felt252, core::felt252, core::felt252, core::felt252, core::felt252)".
+error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::query::Query", found: "(?58, ?59, ?60, ?61, ?62)".
  --> Spawn:77:99
                         IWorldDispatcher { contract_address: world_address }.set_entity('Player', (0, 0, 0, 0, 0), 0_u8, calldata.span());
                                                                                                   ^*************^
 
-error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::query::Query", found: "(core::felt252, core::felt252, core::felt252, core::felt252, core::felt252)".
+error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::query::Query", found: "(?70, ?71, ?72, ?73, ?74)".
  --> Spawn:83:101
                         IWorldDispatcher { contract_address: world_address }.set_entity('Position', (0, 0, 0, 0, 0), 0_u8, calldata.span());
                                                                                                     ^*************^
