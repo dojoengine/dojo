@@ -6,7 +6,6 @@ description = "Implementations of a physics library for the Dojo framework"
 [dependencies]
 dojo_core = { path = "../dojo-core" }
 
-# TODO uncomment when cubit repo is updated to current version of Cairo
-# cubit= { git = "https://github.com/influenceth/cubit" }
+cubit= { git = "https://github.com/influenceth/cubit" }
 
 [[target.dojo]]
