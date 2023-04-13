@@ -14,6 +14,8 @@ mod RouteAuth {
     }
 
     fn _set_authorization_routing(ref routing: Array<Route>, world_address: ContractAddress) {
+        gas::withdraw_gas().expect('Out of gas');
+
         if routing.is_empty() {
             return ();
         }
