@@ -36,7 +36,12 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
 
     let mut serialize = vec![];
     let mut deserialize = vec![];
-    struct_ast.members(db).elements(db).iter().for_each(|member| {
+    let mut schema = vec![];
+
+    let binding = struct_ast.members(db).elements(db);
+    binding.iter().for_each(|member| {
+        schema.push(member);
+
         serialize.push(RewriteNode::interpolate_patched(
             "serde::Serde::<$type_clause$>::serialize(ref serialized, input.$key$);",
             HashMap::from([
@@ -64,6 +69,14 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
     let mut builder = PatchBuilder::new(db);
     builder.add_modified(RewriteNode::interpolate_patched(
         "
+
+            #[view]
+            fn schema() -> Array<name, kind, len> {
+                Array::new([        
+                    $schemas$
+                ])
+            }
+
             #[derive(Copy, Drop, Serde)]
             struct $type_name$ {
                 $members$
@@ -93,6 +106,13 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
             ),
             ("members".to_string(), RewriteNode::Copied(struct_ast.members(db).as_syntax_node())),
             ("body".to_string(), RewriteNode::new_modified(body_nodes)),
+            (
+                "schemas".to_string(),
+                RewriteNode::Text(schema.iter().map(|member| {
+                    let name = member.name(db).text(db);
+                    format!("('{}', '{}', {}),", name, "coucou", 252)
+                }).collect::<String>()),
+            ),
         ]),
     ));
 
