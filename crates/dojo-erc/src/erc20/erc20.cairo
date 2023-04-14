@@ -19,6 +19,7 @@ mod ERC20 {
 
     use dojo_core::storage::query::ContractAddressIntoQuery;
     use dojo_core::storage::query::Query;
+    use dojo_core::storage::query::ContractAddressIntoQuery;
     use dojo_core::storage::query::TupleSize2IntoPartitionedQuery;
     use dojo_core::storage::query::TupleSize1IntoPartitionedQuery;
     use dojo_core::interfaces::IWorldDispatcher;
@@ -56,7 +57,7 @@ mod ERC20 {
         token_decimals::write(decimals);
 
         if initial_supply != 0 {
-            assert(recipient.is_non_zero(), 'ERC20: mint to 0');
+            assert(recipient.is_non_zero(), 'ERC20: mint to the 0 address');
             let token = get_contract_address();
             let mut calldata = ArrayTrait::<felt252>::new();
             calldata.append(token.into());

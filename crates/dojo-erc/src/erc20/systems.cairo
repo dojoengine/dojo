@@ -1,6 +1,8 @@
 #[system]
 mod ERC20Approve {
     use traits::Into;
+    use array::ArrayTrait;
+    use starknet::ContractAddress;
     use dojo_erc::erc20::components::Allowance;
 
     fn execute(token: felt252, owner: felt252, spender: felt252, amount: felt252) {
@@ -55,27 +57,25 @@ mod ERC20TransferFrom {
 
 #[system]
 mod ERC20Mint {
+    use array::ArrayTrait;
+    use starknet::ContractAddress;
     use traits::Into;
-    use zeroable::Zeroable;
     use dojo_erc::erc20::components::Balance;
     use dojo_erc::erc20::components::Supply;
 
-    fn execute(token: felt252, recipient: felt252, amount: felt252) {
-        assert(recipient.is_non_zero(), 'ERC20: mint to 0');
-
-        // increase token supply
+    fn execute(token: ContractAddress, recipient: ContractAddress, amount: felt252) {
         let supply = commands::<Supply>::entity(token.into());
+        let new_amount = supply.amount + amount;
         commands::set_entity(token.into(), (
-            Supply { amount: supply.amount + amount }
+            Supply { amount: new_amount }
         ));
 
-        // increase balance of recipient
-        let balance = commands::<Balance>::entity((token, (recipient)).into());
-        commands::set_entity((token, (recipient)).into(), (
-            Balance { amount: balance.amount + amount }
+        // inc balance of recipient
+        let balance = commands::<Balance>::entity(recipient.into());
+        let new_amount = balance.amount + amount;
+        commands::set_entity(recipient.into(), (
+            Balance { amount: new_amount }
         ));
-    }
-}
 
 #[system]
 mod ERC20Burn {
