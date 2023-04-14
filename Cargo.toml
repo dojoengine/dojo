@@ -11,6 +11,7 @@ members = [
     "crates/dojo-test-runner",
     "crates/dojo-signers",
     "crates/bevy-dojo",
+    "crates/dojo-mock-networks",
 ]
 
 [workspace.package]
