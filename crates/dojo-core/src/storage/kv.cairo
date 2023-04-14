@@ -1,8 +1,9 @@
-#[contract]
 mod KeyValueStore {
     use array::ArrayTrait;
     use array::SpanTrait;
     use traits::Into;
+    use starknet::SyscallResultTrait;
+    use option::OptionTrait;
 
     use dojo_core::serde::SpanSerde;
 
@@ -33,14 +34,7 @@ mod KeyValueStore {
         offset: u8,
         length: usize
     ) {
-        match gas::withdraw_gas() {
-            Option::Some(_) => {},
-            Option::None(_) => {
-                let mut data = ArrayTrait::new();
-                data.append('Out of gas');
-                panic(data);
-            },
-        }
+        gas::withdraw_gas().expect('Out of gas');
 
         if length.into() == offset.into() {
             return ();
@@ -73,14 +67,7 @@ mod KeyValueStore {
         mut value: Span<felt252>,
         offset: u8
     ) {
-        match gas::withdraw_gas() {
-            Option::Some(_) => {},
-            Option::None(_) => {
-                let mut data = ArrayTrait::new();
-                data.append('Out of gas');
-                panic(data);
-            },
-        }
+        gas::withdraw_gas().expect('Out of gas');
         match value.pop_front() {
             Option::Some(v) => {
                 starknet::storage_write_syscall(

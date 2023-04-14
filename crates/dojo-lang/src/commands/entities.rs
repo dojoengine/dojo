@@ -40,7 +40,7 @@ impl CommandTrait for EntitiesCommand {
             )]),
         ));
         command.data.rewrite_nodes.extend(
-            find_components(db, command_ast)
+            find_components(db, &command_ast)
                 .iter()
                 .map(|component| {
                     RewriteNode::interpolate_patched(
@@ -74,7 +74,7 @@ impl CommandTrait for EntitiesCommand {
     }
 }
 
-pub fn find_components(db: &dyn SyntaxGroup, command_ast: ast::ExprFunctionCall) -> Vec<SmolStr> {
+pub fn find_components(db: &dyn SyntaxGroup, command_ast: &ast::ExprFunctionCall) -> Vec<SmolStr> {
     let mut components = vec![];
     if let ast::PathSegment::WithGenericArgs(generic) =
         command_ast.path(db).elements(db).first().unwrap()

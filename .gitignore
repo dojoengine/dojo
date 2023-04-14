@@ -7,3 +7,4 @@ dojo.iml
 *.db-shm
 .DS_Store
 .env
+data
