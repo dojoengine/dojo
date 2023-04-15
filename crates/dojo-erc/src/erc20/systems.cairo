@@ -5,8 +5,18 @@ mod ERC20Approve {
     use starknet::ContractAddress;
     use dojo_erc::erc20::components::Allowance;
 
-    fn execute(token: felt252, owner: felt252, spender: felt252, amount: felt252) {
-        commands::set_entity((token, (owner, spender)).into(), (
+    // TODO: what types to use in execute? felt252 or ContractAddress?
+    //       with felts, there would be less conversions (on both sides)
+    //       but ContractAddress better communicates the data
+    fn execute(token: ContractAddress, owner: ContractAddress, spender: ContractAddress, amount: felt252) {
+        // TODO: which query to use? token as key + (owner, spender) partition?
+        //       or all three as keys?
+
+        //let query: Query = (token.into(), owner.into(), spender.into());
+
+        let token: felt252 = token.into();
+        let query: Query = (token, (owner.into(), spender.into())).into();
+        commands::set_entity(query, (
             Allowance { amount }
         ))
     }
@@ -15,6 +25,8 @@ mod ERC20Approve {
 #[system]
 mod ERC20TransferFrom {
     const UNLIMITED_ALLOWANCE: felt252 = 3618502788666131213697322783095070105623107215331596699973092056135872020480;
+    
+}
 
     use starknet::get_caller_address;
     use traits::Into;

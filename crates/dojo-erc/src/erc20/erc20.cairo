@@ -20,6 +20,7 @@ mod ERC20 {
     use dojo_core::storage::query::ContractAddressIntoQuery;
     use dojo_core::storage::query::Query;
     use dojo_core::storage::query::ContractAddressIntoQuery;
+    use dojo_core::storage::query::Query;
     use dojo_core::storage::query::TupleSize2IntoPartitionedQuery;
     use dojo_core::storage::query::TupleSize1IntoPartitionedQuery;
     use dojo_core::interfaces::IWorldDispatcher;
@@ -111,7 +112,7 @@ mod ERC20 {
 
     #[external]
     fn approve(spender: ContractAddress, amount: u256) -> bool {
-        assert(spender.is_non_zero(), 'ERC20: approve to 0');
+        assert(spender.is_non_zero(), 'ERC20: approve to 0 address');
 
         let token = get_contract_address();
         let owner = get_caller_address();
