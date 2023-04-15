@@ -2,21 +2,12 @@
 mod ERC20Approve {
     use traits::Into;
     use array::ArrayTrait;
-    use starknet::ContractAddress;
     use dojo_erc::erc20::components::Allowance;
 
-    // TODO: what types to use in execute? felt252 or ContractAddress?
-    //       with felts, there would be less conversions (on both sides)
-    //       but ContractAddress better communicates the data
-    fn execute(token: ContractAddress, owner: ContractAddress, spender: ContractAddress, amount: felt252) {
+    fn execute(token: felt252, owner: felt252, sender: felt252, amount: felt252) {
         // TODO: which query to use? token as key + (owner, spender) partition?
         //       or all three as keys?
-
-        //let query: Query = (token.into(), owner.into(), spender.into());
-
-        let token: felt252 = token.into();
-        let query: Query = (token, (owner.into(), spender.into())).into();
-        commands::set_entity(query, (
+        commands::set_entity((token, (owner, sender)).into(), (
             Allowance { amount }
         ))
     }
@@ -24,65 +15,66 @@ mod ERC20Approve {
 
 #[system]
 mod ERC20TransferFrom {
-    
+    const UNLIMITED_ALLOWANCE: felt252 = 3618502788666131213697322783095070105623107215331596699973092056135872020480;
+
+    use array::ArrayTrait;
+    use starknet::get_caller_address;
+    use traits::Into;
+    use zeroable::Zeroable;
+    use dojo_erc::erc20::components::Allowance;
+    use dojo_erc::erc20::components::Balance;
+
+    fn execute(token: felt252, sender: felt252, recipient: felt252, amount: felt252) {
+        assert(sender.is_non_zero(), 'ERC20: transfer from 0');
+        assert(recipient.is_non_zero(), 'ERC20: transfer to 0');
+
+        let caller: felt252 = get_caller_address().into();
+        if sender != caller {
+            // decrease allowance if it's not owner doing the transfer
+            let allowance = commands::<Allowance>::entity((token, (caller, sender)).into());
+            if !is_unlimited_allowance(allowance) {
+                commands::set_entity((token, (caller, sender)).into(), (
+                    Allowance { amount: allowance.amount - amount }
+                ));
+            }
+        }
+
+        // decrease sender's balance
+        let balance = commands::<Balance>::entity(sender.into());
+        commands::set_entity(sender.into(), (
+            Balance { amount: balance.amount - amount }
+        ));
+
+        // increase recipient's balance
+        let balance = commands::<Balance>::entity(recipient.into());
+        commands::set_entity(recipient.into(), (
+            Balance { amount: balance.amount + amount }
+        ));
+    }
+
+    fn is_unlimited_allowance(allowance: Allowance) -> bool {
+        allowance.amount == UNLIMITED_ALLOWANCE
+    }
 }
-//     use traits::Into;
-//     use array::ArrayTrait;
-//     use zeroable::Zeroable;
-
-//     use dojo_erc::erc20::components::Alloawnce;
-//     use dojo_erc::erc20::components::Balance;
-//     use starknet::ContractAddress;
-//     use starknet::ContractAddressZeroable;
-
-//     fn execute(token_address: ContractAddress, spender: ContractAddress, recipient: ContractAddress, amount: felt252) {
-//         assert(!spender.is_zero(), 'ERC20: transfer from 0');
-//         assert(!recipient.is_zero(), 'ERC20: transfer to 0');
-//         let caller = starknet::get_caller_address();
-
-//         let spender_ownership_sk: Query = (token_address, (spender)).into();
-//         let recipient_ownership_sk: Query = (token_address, (recipient)).into();
-
-//         let spen_ownershipder = commands::<Balance>::entity(spender_ownership_sk);
-//         commands::set_entity(spender_ownership_sk, (
-//             Balance { amount : spen_ownershipder.amount - amount}
-//         ));
-
-//         let recipient_ownership = commands::<Balance>::entity(recipient_ownership_sk);
-//         commands::set_entity(recipient_ownership_sk, (
-//             Balance { amount : recipient_ownership.amount + amount}
-//         ));
-
-//         // update allowance
-//         let approval_sk_transfer: Query = (token_address.into(), (caller.into(), spender.into())).into();
-//         let approval_transfer = commands::<Approval>::entity(approval_sk_transfer);
-        
-//         commands::set_entity(approval_sk_transfer, (
-//             Approval { amount: approval_transfer.amount - amount }
-//         ))
-//     }
-// }
 
 #[system]
 mod ERC20Mint {
     use array::ArrayTrait;
-    use starknet::ContractAddress;
     use traits::Into;
     use dojo_erc::erc20::components::Balance;
     use dojo_erc::erc20::components::Supply;
 
-    fn execute(token: ContractAddress, recipient: ContractAddress, amount: felt252) {
+    fn execute(token: felt252, recipient: felt252, amount: felt252) {
+        // increase token supply
         let supply = commands::<Supply>::entity(token.into());
-        let new_amount = supply.amount + amount;
         commands::set_entity(token.into(), (
-            Supply { amount: new_amount }
+            Supply { amount: supply.amount + amount }
         ));
 
-        // inc balance of recipient
+        // increase balance of recipient
         let balance = commands::<Balance>::entity(recipient.into());
-        let new_amount = balance.amount + amount;
         commands::set_entity(recipient.into(), (
-            Balance { amount: new_amount }
+            Balance { amount: balance.amount + amount }
         ));
     }
 }
