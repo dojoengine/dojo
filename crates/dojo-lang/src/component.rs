@@ -6,10 +6,13 @@ use cairo_lang_semantic::plugin::DynPluginAuxData;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 
-
 use crate::plugin::DojoAuxData;
 
-pub fn handle_component_struct(db: &dyn SyntaxGroup, ref struct_ast: ast::ItemStruct, indexed: bool) -> PluginResult {
+pub fn handle_component_struct(
+    db: &dyn SyntaxGroup,
+    ref struct_ast: ast::ItemStruct,
+    indexed: bool,
+) -> PluginResult {
     let mut body_nodes = vec![RewriteNode::interpolate_patched(
         "
             #[view]
