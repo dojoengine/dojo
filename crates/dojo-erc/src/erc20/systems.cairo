@@ -5,18 +5,27 @@ mod ERC20Approve {
     use starknet::ContractAddress;
     use dojo_erc::erc20::components::Allowance;
 
-    fn execute(token_id: felt252, spender: ContractAddress, amount: felt252) {
-        // let caller = starknet::get_caller_address();
-        // let approval_sk: Query = (token_id, (caller.into(), spender.into())).into();
-        // let approval = commands::<Approval>::entity(approval_sk);
-        // commands::set_entity(approval_sk, (
-        //     Approval { amount: amount }
-        // ))
+    // TODO: what types to use in execute? felt252 or ContractAddress?
+    //       with felts, there would be less conversions (on both sides)
+    //       but ContractAddress better communicates the data
+    fn execute(token: ContractAddress, owner: ContractAddress, spender: ContractAddress, amount: felt252) {
+        // TODO: which query to use? token as key + (owner, spender) partition?
+        //       or all three as keys?
+
+        //let query: Query = (token.into(), owner.into(), spender.into());
+
+        let token: felt252 = token.into();
+        let query: Query = (token, (owner.into(), spender.into())).into();
+        commands::set_entity(query, (
+            Allowance { amount }
+        ))
     }
 }
 
-// #[system]
-// mod ERC20TransferFrom {
+#[system]
+mod ERC20TransferFrom {
+    
+}
 //     use traits::Into;
 //     use array::ArrayTrait;
 //     use zeroable::Zeroable;
