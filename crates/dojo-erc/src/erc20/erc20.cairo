@@ -1,36 +1,20 @@
-// use traits::Into;
-// use option::OptionTrait;
-
-// impl U256TryIntoFelt252 of TryInto::<u256, felt252> {
-//     fn try_into(self: u256) -> Option<felt252> {
-//         let low: felt252 = self.low.into();
-//         let high: felt252 = self.low.into();
-//         // TODO: bounds checking
-//         let result : Option<felt252> = Option::Some(low + high);
-//         match result {
-//             Option::Some(val) => Option::Some(val),
-//             Option::None(_) => Option::None(()),
-//         }
-//     }
-// }
-
 #[contract]
 mod ERC20 {
     use array::ArrayTrait;
-    use traits::Into;
     use option::OptionTrait;
+    use starknet::ContractAddress;
+    use starknet::ContractAddressZeroable;
+    use starknet::get_caller_address;
+    use starknet::get_contract_address;
+    use traits::Into;
+    use zeroable::Zeroable;
 
-    use dojo_core::storage::query::Query;
     use dojo_core::storage::query::ContractAddressIntoQuery;
+    use dojo_core::storage::query::Query;
     use dojo_core::storage::query::TupleSize2IntoPartitionedQuery;
     use dojo_core::storage::query::TupleSize1IntoPartitionedQuery;
     use dojo_core::interfaces::IWorldDispatcher;
     use dojo_core::interfaces::IWorldDispatcherTrait;
-    use zeroable::Zeroable;
-    use starknet::get_caller_address;
-    use starknet::get_contract_address;
-    use starknet::ContractAddress;
-    use starknet::ContractAddressZeroable;
 
     use dojo_erc::erc20::components::Allowance;
     use dojo_erc::erc20::components::Balance;
@@ -47,7 +31,7 @@ mod ERC20 {
     fn Transfer(from: ContractAddress, to: ContractAddress, value: u256) {}
 
     #[event]
-    fn Approval(from: ContractAddress, to: ContractAddress, value: u256) {}
+    fn Approval(owner: ContractAddress, spender: ContractAddress, value: u256) {}
 
     #[constructor]
     fn constructor(
@@ -105,8 +89,7 @@ mod ERC20 {
     #[view]
     fn balance_of(account: ContractAddress) -> u256 {
         let token = get_contract_address();
-        let query: Query = (token.into(), (account.into(),)).into();
-        
+        let query: Query = (token.into(), (account.into(),)).into();        
         let mut balance_raw = IWorldDispatcher { contract_address: world_address::read() }.entity(
             'Balance', query, 0_u8, 0_usize
         );
@@ -114,45 +97,72 @@ mod ERC20 {
         balance.amount.into()
     }
 
-    // #[view]
-    // fn allowance(owner: ContractAddress, spender: ContractAddress) -> u256 {
-    //     let token_id = starknet::get_contract_address();
-    //     let query: Query = (token_id.into(), (owner.into(), spender.into())).into();
-    //     let approval = IWorldDispatcher { contract_address: world_address::read() }.entity('Approval', query, 0_u8, 0_usize);
-    //     if approval.is_empty() {
-    //         return 0.into();
-    //     }
+    #[view]
+    fn allowance(owner: ContractAddress, spender: ContractAddress) -> u256 {
+        let token = get_contract_address();
+        let query: Query = (token.into(), (owner.into(), spender.into())).into();
+        let mut allowance_raw = IWorldDispatcher { contract_address: world_address::read() }.entity(
+            'Allowance', query, 0_u8, 0_usize
+        );
+        let allowance = serde::Serde::<Allowance>::deserialize(ref allowance_raw).unwrap();
+        allowance.amount.into()
+    }
 
-    //     (*approval.at(0_usize)).into()
-    // }
+    #[external]
+    fn approve(spender: ContractAddress, amount: u256) -> bool {
+        assert(spender.is_non_zero(), 'ERC20: approve to 0 address');
 
-    // #[external]
-    // fn transfer(spender: ContractAddress, recipient: ContractAddress, amount: u256) {
-    //     let token_id = starknet::get_contract_address();
+        let token = get_contract_address();
+        let owner = get_caller_address();
+        let mut calldata = ArrayTrait::<felt252>::new();
+        calldata.append(token.into());
+        calldata.append(owner.into());
+        calldata.append(spender.into());
+        calldata.append(u256_as_felt252(amount));
 
-    //     let mut calldata = ArrayTrait::<felt252>::new();
-    //     calldata.append(token_id.into());
-    //     calldata.append(spender.into());
-    //     calldata.append(recipient.into());
-    //     calldata.append(amount.try_into());
+        IWorldDispatcher { contract_address: world_address::read() }.execute(
+            'ERC20Approve', calldata.span()
+        );
 
-    //     IWorldDispatcher { contract_address: world_address::read() }.execute('ERC20_TransferFrom', calldata.span());
+        Approval(owner, spender, amount);
 
-    //     // let approval_sk: Query = (token_id.into(), (recipient.into(), spender.into())).into();
-    //     // let approval = commands::<Approval>::entity(approval_sk);
+        true
+    }
 
-    //     // Transfer(spender, recipient, amount);
-    //     // Approval(get_caller_address(), spender, approval.amount);
-    // }
+    // temporary, until TryInto of this is in corelib
+    fn u256_as_felt252(val: u256) -> felt252 {
+        val.low.into() + val.high.into() * 0x100000000000000000000000000000000
+    }
 
-    // #[external]
-    // fn approve(spender: ContractAddress, amount: u256) {
-    //     let mut calldata = ArrayTrait::<felt252>::new();
-    //     calldata.append(starknet::get_contract_address().into());
-    //     calldata.append(spender.into());
-    //     calldata.append(amount.try_into());
+    #[external]
+    fn transfer(spender: ContractAddress, recipient: ContractAddress, amount: u256) -> bool {
+        transfer_internal(get_caller_address(), spender, amount);
+        true
+    }
 
-    //     IWorldDispatcher { contract_address: world_address::read() }.execute('ERC20_Approve', calldata.span());
-    //     Approval(get_caller_address(), spender, amount);
-    // }
+    #[external]
+    fn transfer_from(sender: ContractAddress, recipient: ContractAddress, amount: u256) -> bool {
+        // TODO: spend_allowance(sender, get_caller_address(), amount);
+        //       decrease the allowance in the system, if sender != caller
+        //       that means we will need to exec the system with both in transfer_internal
+        transfer_internal(sender, recipient, amount);
+        true
+    }
+
+    fn transfer_internal(spender: ContractAddress, recipient: ContractAddress, amount: u256) {
+        assert(recipient.is_non_zero(), 'ERC20: transfer to 0 address');
+
+        let token = get_contract_address();
+        let mut calldata = ArrayTrait::<felt252>::new();
+        calldata.append(token.into());
+        calldata.append(spender.into());
+        calldata.append(recipient.into());
+        calldata.append(u256_as_felt252(amount));
+
+        IWorldDispatcher { contract_address: world_address::read() }.execute(
+            'ERC20TransferFrom', calldata.span()
+        );
+
+        Transfer(spender, recipient, amount);
+    }
 }
