@@ -5,7 +5,6 @@
 
 #[contract]
 mod ERC20 {
-    // max(felt252)
     const UNLIMITED_ALLOWANCE: felt252 = 3618502788666131213697322783095070105623107215331596699973092056135872020480;
 
     use array::ArrayTrait;
@@ -120,8 +119,11 @@ mod ERC20 {
         calldata.append(token.into());
         calldata.append(owner.into());
         calldata.append(spender.into());
-        calldata.append(u256_as_allowance(amount));
-        world().execute('ERC20Approve', calldata.span());
+        calldata.append(u256_as_felt252_allowance(amount));
+
+        IWorldDispatcher { contract_address: world_address::read() }.execute(
+            'ERC20Approve', calldata.span()
+        );
 
         Approval(owner, spender, amount);
 
@@ -135,33 +137,41 @@ mod ERC20 {
     }
 
     #[external]
-    fn transfer_from(spender: ContractAddress, recipient: ContractAddress, amount: u256) -> bool {
-        transfer_internal(spender, recipient, amount);
+    fn transfer_from(sender: ContractAddress, recipient: ContractAddress, amount: u256) -> bool {
+        transfer_internal(sender, recipient, amount);
         true
     }
 
-    //
-    // Internal
-    //
-
-    // NOTE: temporary, until we have inline commands outside of systems
-    fn world() -> IWorldDispatcher {
-        IWorldDispatcher { contract_address: world_address::read() }
-    }
-
-    fn transfer_internal(spender: ContractAddress, recipient: ContractAddress, amount: u256) {
-        assert(recipient.is_non_zero(), 'ERC20: transfer to 0');
+    fn transfer_internal(sender: ContractAddress, recipient: ContractAddress, amount: u256) {
+        assert(recipient.is_non_zero(), 'ERC20: transfer to 0 address');
 
         let token = get_contract_address();
         let mut calldata = ArrayTrait::<felt252>::new();
         calldata.append(token.into());
-        calldata.append(spender.into());
+        calldata.append(sender.into());
         calldata.append(recipient.into());
         calldata.append(u256_into_felt252(amount));
 
         world().execute('ERC20TransferFrom', calldata.span());
 
-        Transfer(spender, recipient, amount);
+        Transfer(sender, recipient, amount);
+    }
+
+    fn u256_as_felt252_allowance(val: u256) -> felt252 {
+        // by convention, max(u256) means unlimited amount,
+        // but since we're using felts, use max(felt252) to do the same
+        // TODO: use BoundedInt when available
+        let max_u128 = 0xffffffffffffffffffffffffffffffff_u128;
+        let max_u256 = u256 { low: max_u128, high: max_u128 };
+        if val == max_u256 {
+            return UNLIMITED_ALLOWANCE;
+        }
+        u256_as_felt252(val)
+    }
+
+    fn u256_as_felt252(val: u256) -> felt252 {
+        // temporary, until TryInto of this is in corelib
+        val.low.into() + val.high.into() * 0x100000000000000000000000000000000
     }
 
     fn u256_as_allowance(val: u256) -> felt252 {
