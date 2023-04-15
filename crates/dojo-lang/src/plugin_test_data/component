@@ -74,7 +74,7 @@ mod PositionComponent {
 
     #[view]
     fn schema() -> Array<name, kind, len> {
-        Array::new([ ('x', 'felt252', 255), ('y', 'felt252', 255), ])
+        ArrayTrait::new([ ('x', 'felt252', 252), ('y', 'felt252', 252), ])
     }
 
 
@@ -91,114 +91,9 @@ mod PositionComponent {
 
 //! > expected_diagnostics
 error: Skipped tokens. Expected: argument.
- --> Position:26:32
-                    Array::new([        
-                               ^
-
-error: Skipped tokens. Expected: argument.
- --> Position:30:21
-                    ])
-                    ^
-
-error: Skipped tokens. Expected: argument.
- --> contract:12:32
-                    Array::new([        
-                               ^
-
-error: Skipped tokens. Expected: argument.
- --> contract:16:21
-                    ])
-                    ^
-
-error: Skipped tokens. Expected: argument.
- --> contract:12:32
-                    Array::new([        
-                               ^
-
-error: Skipped tokens. Expected: argument.
- --> contract:16:21
-                    ])
-                    ^
-
-error: Plugin diagnostic: Wrong number of generic arguments. Expected 1, found: 3
- --> Position:25:32
-                fn schema() -> Array<name, kind, len> {
-                               ^***^
-
-error: Plugin diagnostic: Not a type.
- --> Position:25:38
-                fn schema() -> Array<name, kind, len> {
-                                     ^**^
-
-error: Plugin diagnostic: Invalid path.
- --> Position:26:28
-                    Array::new([        
-                           ^*^
-
-error: Plugin diagnostic: Type annotations needed. Failed to infer ?0
- --> Position:26:21
-                    Array::new([        
-                    ^***^
-
-error: Plugin diagnostic: Wrong number of generic arguments. Expected 1, found: 3
- --> Position:25:32
-                fn schema() -> Array<name, kind, len> {
-                               ^***^
-
-error: Plugin diagnostic: Not a type.
- --> Position:25:38
-                fn schema() -> Array<name, kind, len> {
-                                     ^**^
-
-error: Skipped tokens. Expected: argument.
- --> contract:12:32
-                    Array::new([        
-                               ^
-
-error: Skipped tokens. Expected: argument.
- --> contract:16:21
-                    ])
-                    ^
-
-error: Wrong number of generic arguments. Expected 1, found: 3
- --> contract:73:28
-            serde::Serde::<Array<name, kind, len>>::serialize(ref arr, res);
-                           ^***^
-
-error: Not a type.
- --> contract:73:34
-            serde::Serde::<Array<name, kind, len>>::serialize(ref arr, res);
-                                 ^**^
-
-error: Trait `core::serde::Serde::<<missing>>` has multiple implementations, in: "dojo_core::serde::SpanSerde", "core::starknet::class_hash::ClassHashSerde", "core::starknet::contract_address::ContractAddressSerde", "core::starknet::storage_access::StorageAddressSerde", "core::serde::Felt252Serde", "core::serde::BoolSerde", "core::serde::U8Serde", "core::serde::U16Serde", "core::serde::U32Serde", "core::serde::U64Serde", "core::serde::U128Serde", "core::serde::ArraySerde", "core::serde::TupleSize0Serde", "core::serde::TupleSize1Serde", "core::serde::TupleSize2Serde", "core::serde::TupleSize3Serde", "core::serde::TupleSize4Serde", "core::integer::u256Serde"
- --> contract:73:53
-            serde::Serde::<Array<name, kind, len>>::serialize(ref arr, res);
-                                                    ^*******^
-
-error: Skipped tokens. Expected: argument.
- --> contract:12:32
-                    Array::new([        
-                               ^
-
-error: Skipped tokens. Expected: argument.
- --> contract:16:21
-                    ])
-                    ^
-
-error: Skipped tokens. Expected: argument.
- --> contract:12:32
-                    Array::new([        
-                               ^
-
-error: Skipped tokens. Expected: argument.
- --> contract:16:21
-                    ])
-                    ^
-
-error: Skipped tokens. Expected: argument.
- --> Moves:25:32
-                    Array::new([        
-                               ^
+ --> Moves:25:37
+                    ArrayTrait::new([        
+                                    ^
 
 error: Skipped tokens. Expected: argument.
  --> Moves:28:21
@@ -206,9 +101,9 @@ error: Skipped tokens. Expected: argument.
                     ^
 
 error: Skipped tokens. Expected: argument.
- --> Position:26:32
-                    Array::new([        
-                               ^
+ --> Position:26:37
+                    ArrayTrait::new([        
+                                    ^
 
 error: Skipped tokens. Expected: argument.
  --> Position:30:21
@@ -216,9 +111,9 @@ error: Skipped tokens. Expected: argument.
                     ^
 
 error: Skipped tokens. Expected: argument.
- --> contract:12:32
-                    Array::new([        
-                               ^
+ --> contract:12:37
+                    ArrayTrait::new([        
+                                    ^
 
 error: Skipped tokens. Expected: argument.
  --> contract:15:21
@@ -226,9 +121,9 @@ error: Skipped tokens. Expected: argument.
                     ^
 
 error: Skipped tokens. Expected: argument.
- --> contract:12:32
-                    Array::new([        
-                               ^
+ --> contract:12:37
+                    ArrayTrait::new([        
+                                    ^
 
 error: Skipped tokens. Expected: argument.
  --> contract:16:21
@@ -236,9 +131,9 @@ error: Skipped tokens. Expected: argument.
                     ^
 
 error: Skipped tokens. Expected: argument.
- --> contract:12:32
-                    Array::new([        
-                               ^
+ --> contract:12:37
+                    ArrayTrait::new([        
+                                    ^
 
 error: Skipped tokens. Expected: argument.
  --> contract:15:21
@@ -255,15 +150,15 @@ error: Plugin diagnostic: Not a type.
                 fn schema() -> Array<name, kind, len> {
                                      ^**^
 
-error: Plugin diagnostic: Invalid path.
- --> Moves:25:28
-                    Array::new([        
-                           ^*^
+error: Plugin diagnostic: Wrong number of arguments. Expected 0, found: 1
+ --> Moves:25:21
+                    ArrayTrait::new([        
+                    ^***********************^
 
 error: Plugin diagnostic: Type annotations needed. Failed to infer ?0
  --> Moves:25:21
-                    Array::new([        
-                    ^***^
+                    ArrayTrait::new([        
+                    ^********^
 
 error: Plugin diagnostic: Wrong number of generic arguments. Expected 1, found: 3
  --> Moves:24:32
@@ -276,9 +171,9 @@ error: Plugin diagnostic: Not a type.
                                      ^**^
 
 error: Skipped tokens. Expected: argument.
- --> contract:12:32
-                    Array::new([        
-                               ^
+ --> contract:12:37
+                    ArrayTrait::new([        
+                                    ^
 
 error: Skipped tokens. Expected: argument.
  --> contract:15:21
@@ -301,9 +196,9 @@ error: Trait `core::serde::Serde::<<missing>>` has multiple implementations, in:
                                                     ^*******^
 
 error: Skipped tokens. Expected: argument.
- --> contract:12:32
-                    Array::new([        
-                               ^
+ --> contract:12:37
+                    ArrayTrait::new([        
+                                    ^
 
 error: Skipped tokens. Expected: argument.
  --> contract:15:21
@@ -311,9 +206,9 @@ error: Skipped tokens. Expected: argument.
                     ^
 
 error: Skipped tokens. Expected: argument.
- --> contract:12:32
-                    Array::new([        
-                               ^
+ --> contract:12:37
+                    ArrayTrait::new([        
+                                    ^
 
 error: Skipped tokens. Expected: argument.
  --> contract:15:21
@@ -321,9 +216,9 @@ error: Skipped tokens. Expected: argument.
                     ^
 
 error: Skipped tokens. Expected: argument.
- --> contract:12:32
-                    Array::new([        
-                               ^
+ --> contract:12:37
+                    ArrayTrait::new([        
+                                    ^
 
 error: Skipped tokens. Expected: argument.
  --> contract:16:21
@@ -340,15 +235,15 @@ error: Plugin diagnostic: Not a type.
                 fn schema() -> Array<name, kind, len> {
                                      ^**^
 
-error: Plugin diagnostic: Invalid path.
- --> Position:26:28
-                    Array::new([        
-                           ^*^
+error: Plugin diagnostic: Wrong number of arguments. Expected 0, found: 2
+ --> Position:26:21
+                    ArrayTrait::new([        
+                    ^***********************^
 
 error: Plugin diagnostic: Type annotations needed. Failed to infer ?0
  --> Position:26:21
-                    Array::new([        
-                    ^***^
+                    ArrayTrait::new([        
+                    ^********^
 
 error: Plugin diagnostic: Wrong number of generic arguments. Expected 1, found: 3
  --> Position:25:32
@@ -361,9 +256,9 @@ error: Plugin diagnostic: Not a type.
                                      ^**^
 
 error: Skipped tokens. Expected: argument.
- --> contract:12:32
-                    Array::new([        
-                               ^
+ --> contract:12:37
+                    ArrayTrait::new([        
+                                    ^
 
 error: Skipped tokens. Expected: argument.
  --> contract:16:21
@@ -386,9 +281,9 @@ error: Trait `core::serde::Serde::<<missing>>` has multiple implementations, in:
                                                     ^*******^
 
 error: Skipped tokens. Expected: argument.
- --> contract:12:32
-                    Array::new([        
-                               ^
+ --> contract:12:37
+                    ArrayTrait::new([        
+                                    ^
 
 error: Skipped tokens. Expected: argument.
  --> contract:16:21
@@ -396,9 +291,9 @@ error: Skipped tokens. Expected: argument.
                     ^
 
 error: Skipped tokens. Expected: argument.
- --> contract:12:32
-                    Array::new([        
-                               ^
+ --> contract:12:37
+                    ArrayTrait::new([        
+                                    ^
 
 error: Skipped tokens. Expected: argument.
  --> contract:16:21
@@ -406,9 +301,9 @@ error: Skipped tokens. Expected: argument.
                     ^
 
 error: Skipped tokens. Expected: argument.
- --> Status:25:32
-                    Array::new([        
-                               ^
+ --> Status:25:37
+                    ArrayTrait::new([        
+                                    ^
 
 error: Skipped tokens. Expected: argument.
  --> Status:28:21
@@ -416,9 +311,9 @@ error: Skipped tokens. Expected: argument.
                     ^
 
 error: Skipped tokens. Expected: argument.
- --> Role:25:32
-                    Array::new([        
-                               ^
+ --> Role:25:37
+                    ArrayTrait::new([        
+                                    ^
 
 error: Skipped tokens. Expected: argument.
  --> Role:28:21
@@ -426,9 +321,9 @@ error: Skipped tokens. Expected: argument.
                     ^
 
 error: Skipped tokens. Expected: argument.
- --> contract:12:32
-                    Array::new([        
-                               ^
+ --> contract:12:37
+                    ArrayTrait::new([        
+                                    ^
 
 error: Skipped tokens. Expected: argument.
  --> contract:15:21
@@ -436,9 +331,9 @@ error: Skipped tokens. Expected: argument.
                     ^
 
 error: Skipped tokens. Expected: argument.
- --> contract:12:32
-                    Array::new([        
-                               ^
+ --> contract:12:37
+                    ArrayTrait::new([        
+                                    ^
 
 error: Skipped tokens. Expected: argument.
  --> contract:15:21
@@ -446,9 +341,9 @@ error: Skipped tokens. Expected: argument.
                     ^
 
 error: Skipped tokens. Expected: argument.
- --> contract:12:32
-                    Array::new([        
-                               ^
+ --> contract:12:37
+                    ArrayTrait::new([        
+                                    ^
 
 error: Skipped tokens. Expected: argument.
  --> contract:15:21
@@ -465,15 +360,15 @@ error: Plugin diagnostic: Not a type.
                 fn schema() -> Array<name, kind, len> {
                                      ^**^
 
-error: Plugin diagnostic: Invalid path.
- --> Status:25:28
-                    Array::new([        
-                           ^*^
+error: Plugin diagnostic: Wrong number of arguments. Expected 0, found: 1
+ --> Status:25:21
+                    ArrayTrait::new([        
+                    ^***********************^
 
 error: Plugin diagnostic: Type annotations needed. Failed to infer ?0
  --> Status:25:21
-                    Array::new([        
-                    ^***^
+                    ArrayTrait::new([        
+                    ^********^
 
 error: Plugin diagnostic: Wrong number of generic arguments. Expected 1, found: 3
  --> Status:24:32
@@ -486,9 +381,9 @@ error: Plugin diagnostic: Not a type.
                                      ^**^
 
 error: Skipped tokens. Expected: argument.
- --> contract:12:32
-                    Array::new([        
-                               ^
+ --> contract:12:37
+                    ArrayTrait::new([        
+                                    ^
 
 error: Skipped tokens. Expected: argument.
  --> contract:15:21
@@ -511,9 +406,9 @@ error: Trait `core::serde::Serde::<<missing>>` has multiple implementations, in:
                                                     ^*******^
 
 error: Skipped tokens. Expected: argument.
- --> contract:12:32
-                    Array::new([        
-                               ^
+ --> contract:12:37
+                    ArrayTrait::new([        
+                                    ^
 
 error: Skipped tokens. Expected: argument.
  --> contract:15:21
@@ -521,9 +416,9 @@ error: Skipped tokens. Expected: argument.
                     ^
 
 error: Skipped tokens. Expected: argument.
- --> contract:12:32
-                    Array::new([        
-                               ^
+ --> contract:12:37
+                    ArrayTrait::new([        
+                                    ^
 
 error: Skipped tokens. Expected: argument.
  --> contract:15:21
@@ -531,9 +426,9 @@ error: Skipped tokens. Expected: argument.
                     ^
 
 error: Skipped tokens. Expected: argument.
- --> contract:12:32
-                    Array::new([        
-                               ^
+ --> contract:12:37
+                    ArrayTrait::new([        
+                                    ^
 
 error: Skipped tokens. Expected: argument.
  --> contract:15:21
@@ -550,15 +445,15 @@ error: Plugin diagnostic: Not a type.
                 fn schema() -> Array<name, kind, len> {
                                      ^**^
 
-error: Plugin diagnostic: Invalid path.
- --> Role:25:28
-                    Array::new([        
-                           ^*^
+error: Plugin diagnostic: Wrong number of arguments. Expected 0, found: 1
+ --> Role:25:21
+                    ArrayTrait::new([        
+                    ^***********************^
 
 error: Plugin diagnostic: Type annotations needed. Failed to infer ?0
  --> Role:25:21
-                    Array::new([        
-                    ^***^
+                    ArrayTrait::new([        
+                    ^********^
 
 error: Plugin diagnostic: Wrong number of generic arguments. Expected 1, found: 3
  --> Role:24:32
@@ -571,9 +466,9 @@ error: Plugin diagnostic: Not a type.
                                      ^**^
 
 error: Skipped tokens. Expected: argument.
- --> contract:12:32
-                    Array::new([        
-                               ^
+ --> contract:12:37
+                    ArrayTrait::new([        
+                                    ^
 
 error: Skipped tokens. Expected: argument.
  --> contract:15:21
@@ -596,9 +491,9 @@ error: Trait `core::serde::Serde::<<missing>>` has multiple implementations, in:
                                                     ^*******^
 
 error: Skipped tokens. Expected: argument.
- --> contract:12:32
-                    Array::new([        
-                               ^
+ --> contract:12:37
+                    ArrayTrait::new([        
+                                    ^
 
 error: Skipped tokens. Expected: argument.
  --> contract:15:21
@@ -606,11 +501,116 @@ error: Skipped tokens. Expected: argument.
                     ^
 
 error: Skipped tokens. Expected: argument.
- --> contract:12:32
-                    Array::new([        
-                               ^
+ --> contract:12:37
+                    ArrayTrait::new([        
+                                    ^
 
 error: Skipped tokens. Expected: argument.
  --> contract:15:21
+                    ])
+                    ^
+
+error: Skipped tokens. Expected: argument.
+ --> Position:26:37
+                    ArrayTrait::new([        
+                                    ^
+
+error: Skipped tokens. Expected: argument.
+ --> Position:30:21
+                    ])
+                    ^
+
+error: Skipped tokens. Expected: argument.
+ --> contract:12:37
+                    ArrayTrait::new([        
+                                    ^
+
+error: Skipped tokens. Expected: argument.
+ --> contract:16:21
+                    ])
+                    ^
+
+error: Skipped tokens. Expected: argument.
+ --> contract:12:37
+                    ArrayTrait::new([        
+                                    ^
+
+error: Skipped tokens. Expected: argument.
+ --> contract:16:21
+                    ])
+                    ^
+
+error: Plugin diagnostic: Wrong number of generic arguments. Expected 1, found: 3
+ --> Position:25:32
+                fn schema() -> Array<name, kind, len> {
+                               ^***^
+
+error: Plugin diagnostic: Not a type.
+ --> Position:25:38
+                fn schema() -> Array<name, kind, len> {
+                                     ^**^
+
+error: Plugin diagnostic: Wrong number of arguments. Expected 0, found: 2
+ --> Position:26:21
+                    ArrayTrait::new([        
+                    ^***********************^
+
+error: Plugin diagnostic: Type annotations needed. Failed to infer ?0
+ --> Position:26:21
+                    ArrayTrait::new([        
+                    ^********^
+
+error: Plugin diagnostic: Wrong number of generic arguments. Expected 1, found: 3
+ --> Position:25:32
+                fn schema() -> Array<name, kind, len> {
+                               ^***^
+
+error: Plugin diagnostic: Not a type.
+ --> Position:25:38
+                fn schema() -> Array<name, kind, len> {
+                                     ^**^
+
+error: Skipped tokens. Expected: argument.
+ --> contract:12:37
+                    ArrayTrait::new([        
+                                    ^
+
+error: Skipped tokens. Expected: argument.
+ --> contract:16:21
+                    ])
+                    ^
+
+error: Wrong number of generic arguments. Expected 1, found: 3
+ --> contract:73:28
+            serde::Serde::<Array<name, kind, len>>::serialize(ref arr, res);
+                           ^***^
+
+error: Not a type.
+ --> contract:73:34
+            serde::Serde::<Array<name, kind, len>>::serialize(ref arr, res);
+                                 ^**^
+
+error: Trait `core::serde::Serde::<<missing>>` has multiple implementations, in: "dojo_core::serde::SpanSerde", "core::starknet::class_hash::ClassHashSerde", "core::starknet::contract_address::ContractAddressSerde", "core::starknet::storage_access::StorageAddressSerde", "core::serde::Felt252Serde", "core::serde::BoolSerde", "core::serde::U8Serde", "core::serde::U16Serde", "core::serde::U32Serde", "core::serde::U64Serde", "core::serde::U128Serde", "core::serde::ArraySerde", "core::serde::TupleSize0Serde", "core::serde::TupleSize1Serde", "core::serde::TupleSize2Serde", "core::serde::TupleSize3Serde", "core::serde::TupleSize4Serde", "core::integer::u256Serde"
+ --> contract:73:53
+            serde::Serde::<Array<name, kind, len>>::serialize(ref arr, res);
+                                                    ^*******^
+
+error: Skipped tokens. Expected: argument.
+ --> contract:12:37
+                    ArrayTrait::new([        
+                                    ^
+
+error: Skipped tokens. Expected: argument.
+ --> contract:16:21
+                    ])
+                    ^
+
+error: Skipped tokens. Expected: argument.
+ --> contract:12:37
+                    ArrayTrait::new([        
+                                    ^
+
+error: Skipped tokens. Expected: argument.
+ --> contract:16:21
                     ])
                     ^

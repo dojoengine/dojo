@@ -42,7 +42,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
     binding.iter().for_each(|member| {
         
         schema.push(RewriteNode::interpolate_patched(
-            "('$name$' , '$type_clause$' , 255),\n",
+            "('$name$' , '$type_clause$' , 252),\n",
             HashMap::from([
                 ("name".to_string(), RewriteNode::new_trimmed(member.name(db).as_syntax_node())),
                 (
@@ -101,7 +101,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
 
                 #[view]
                 fn schema() -> Array<name, kind, len> {
-                    Array::new([        
+                    ArrayTrait::new([        
                         $schemas$
                     ])
                 }
