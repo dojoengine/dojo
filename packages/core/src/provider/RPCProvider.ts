@@ -22,6 +22,7 @@ export class RPCProvider extends Provider {
         }
     }
 
+    // fetches a component of an entity
     public async entity(component: string, query: Query, offset: number, length: number): Promise<Array<bigint>> {
 
         const call_data = [component, query.partition, ...query.keys, offset, length]
@@ -41,5 +42,25 @@ export class RPCProvider extends Provider {
             this.emit("error", error);
             throw error;
         }
+    }
+
+    // fetches multiple components of an entity
+    public async constructEntity(parameters: Array<{ component: string; query: Query; offset: number; length: number }>): Promise<{ [key: string]: Array<bigint> }> {
+        const responseObj: { [key: string]: Array<bigint> } = {};
+
+        for (const param of parameters) {
+            const { component, query, offset, length } = param;
+            try {
+                const response = await this.entity(component, query, offset, length);
+                responseObj[component] = response;
+            } catch (error) {
+                this.log("error", `Fetch multiple entities failed for component ${component}: ${error}`);
+                this.emit("error", error);
+                throw error;
+            }
+        }
+
+        this.log("info", `Fetch multiple entities successful: ${JSON.stringify(responseObj)}`);
+        return responseObj;
     }
 }
