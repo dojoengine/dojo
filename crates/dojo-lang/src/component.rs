@@ -40,7 +40,17 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
 
     let binding = struct_ast.members(db).elements(db);
     binding.iter().for_each(|member| {
-        schema.push(member);
+        
+        schema.push(RewriteNode::interpolate_patched(
+            "('$name$' , '$type_clause$' , 255),\n",
+            HashMap::from([
+                ("name".to_string(), RewriteNode::new_trimmed(member.name(db).as_syntax_node())),
+                (
+                    "type_clause".to_string(),
+                    RewriteNode::new_trimmed(member.type_clause(db).ty(db).as_syntax_node()),
+                ),
+            ]),
+        ));
 
         serialize.push(RewriteNode::interpolate_patched(
             "serde::Serde::<$type_clause$>::serialize(ref serialized, input.$key$);",
@@ -69,14 +79,6 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
     let mut builder = PatchBuilder::new(db);
     builder.add_modified(RewriteNode::interpolate_patched(
         "
-
-            #[view]
-            fn schema() -> Array<name, kind, len> {
-                Array::new([        
-                    $schemas$
-                ])
-            }
-
             #[derive(Copy, Drop, Serde)]
             struct $type_name$ {
                 $members$
@@ -96,6 +98,14 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
                 use option::OptionTrait;
                 use dojo_core::serde::SpanSerde;
                 use super::$type_name$;
+
+                #[view]
+                fn schema() -> Array<name, kind, len> {
+                    Array::new([        
+                        $schemas$
+                    ])
+                }
+
                 $body$
             }
         ",
@@ -108,10 +118,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
             ("body".to_string(), RewriteNode::new_modified(body_nodes)),
             (
                 "schemas".to_string(),
-                RewriteNode::Text(schema.iter().map(|member| {
-                    let name = member.name(db).text(db);
-                    format!("('{}', '{}', {}),", name, "coucou", 252)
-                }).collect::<String>()),
+                RewriteNode::new_modified(schema)
             ),
         ]),
     ));
