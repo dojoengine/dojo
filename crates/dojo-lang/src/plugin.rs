@@ -12,6 +12,7 @@ use cairo_lang_semantic::SemanticDiagnostic;
 use cairo_lang_syntax::attribute::structured::{
     AttributeArg, AttributeArgVariant, AttributeStructurize,
 };
+use cairo_lang_syntax::node::ast::ItemStruct;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal};
@@ -89,11 +90,14 @@ impl DojoPlugin {
 
 impl MacroPlugin for DojoPlugin {
     fn generate_code(&self, db: &dyn SyntaxGroup, item_ast: ast::Item) -> PluginResult {
+
         match item_ast {
             ast::Item::Module(module_ast) => self.handle_mod(db, module_ast),
             ast::Item::Struct(struct_ast) => {
                 let mut diagnostics = vec![];
-
+                
+                let indexed = is_indexed(db,  struct_ast.clone());
+                
                 for attr in struct_ast.attributes(db).query_attr(db, "derive") {
                     let attr = attr.structurize(db);
 
@@ -129,9 +133,11 @@ impl MacroPlugin for DojoPlugin {
                             continue;
                         };
 
+                        
+
                         let derived = segment.ident(db).text(db);
                         if matches!(derived.as_str(), "Component") {
-                            return handle_component_struct(db, struct_ast);
+                            return handle_component_struct(db, struct_ast, indexed.unwrap_or(false));
                         }
                     }
                 }
@@ -141,6 +147,7 @@ impl MacroPlugin for DojoPlugin {
             _ => PluginResult::default(),
         }
     }
+    
 }
 
 impl AsDynMacroPlugin for DojoPlugin {
@@ -152,3 +159,37 @@ impl AsDynMacroPlugin for DojoPlugin {
     }
 }
 impl SemanticPlugin for DojoPlugin {}
+
+fn is_indexed(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> Option<bool> {
+    for attr in struct_ast.attributes(db).query_attr(db, "component") {
+        let attr = attr.structurize(db);
+
+        for arg in attr.args {
+            let AttributeArg {
+                variant: AttributeArgVariant::Unnamed {
+                    value: ast::Expr::Path(path),
+                    ..
+                },
+                ..
+            } = arg else {
+                continue;
+            };
+
+            let path_elements = path.elements(db);
+            if path_elements.len() != 1 {
+                continue;
+            }
+
+            let segment = match &path_elements[0] {
+                ast::PathSegment::Simple(segment) => segment,
+                _ => continue,
+            };
+
+            let derived = segment.ident(db).text(db);
+            if matches!(derived.as_str(), "Indexed") {
+                return Some(true);
+            }
+        }
+    }
+    None
+}

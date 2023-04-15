@@ -6,10 +6,11 @@ use cairo_lang_semantic::plugin::DynPluginAuxData;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 
+
 use crate::plugin::DojoAuxData;
 
-pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> PluginResult {
-    let body_nodes = vec![RewriteNode::interpolate_patched(
+pub fn handle_component_struct(db: &dyn SyntaxGroup, ref struct_ast: ast::ItemStruct, indexed: bool) -> PluginResult {
+    let mut body_nodes = vec![RewriteNode::interpolate_patched(
         "
             #[view]
             fn name() -> felt252 {
@@ -33,6 +34,33 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
             ),
         ]),
     )];
+
+    // let is_indexed = get_indexed_attr_value(&struct_ast, db).unwrap_or(false);
+
+    let is_indexed_fn = if indexed {
+        RewriteNode::interpolate_patched(
+            "
+                #[view]
+                fn is_indexed() -> bool {
+                    bool::True(())
+                }
+            ",
+            HashMap::new(),
+        )
+    } else {
+        RewriteNode::interpolate_patched(
+            "
+                #[view]
+                fn is_indexed() -> bool {
+                    bool::False(())
+                }
+            ",
+            HashMap::new(),
+        )
+    };
+
+    // Add the is_indexed function to the body
+    body_nodes.push(is_indexed_fn);
 
     let mut serialize = vec![];
     let mut deserialize = vec![];
