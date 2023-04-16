@@ -176,6 +176,16 @@ mod PositionComponent {
     use super::Position;
 
     #[view]
+    fn schema() -> Array<(felt252, felt252, u8)> {
+        let mut array = ArrayTrait::new();
+        array.append(('x', 'felt252', 252));
+        array.append(('y', 'felt252', 252));
+
+        array
+    }
+
+
+    #[view]
     fn name() -> felt252 {
         'Position'
     }
@@ -210,6 +220,15 @@ mod PlayerComponent {
     use option::OptionTrait;
     use dojo_core::serde::SpanSerde;
     use super::Player;
+
+    #[view]
+    fn schema() -> Array<(felt252, felt252, u8)> {
+        let mut array = ArrayTrait::new();
+        array.append(('name', 'felt252', 252));
+
+        array
+    }
+
 
     #[view]
     fn name() -> felt252 {
