@@ -89,14 +89,11 @@ impl DojoPlugin {
 
 impl MacroPlugin for DojoPlugin {
     fn generate_code(&self, db: &dyn SyntaxGroup, item_ast: ast::Item) -> PluginResult {
-
         match item_ast {
             ast::Item::Module(module_ast) => self.handle_mod(db, module_ast),
             ast::Item::Struct(struct_ast) => {
                 let mut diagnostics = vec![];
-                
-                
-                
+
                 for attr in struct_ast.attributes(db).query_attr(db, "derive") {
                     let attr = attr.structurize(db);
 
@@ -132,8 +129,6 @@ impl MacroPlugin for DojoPlugin {
                             continue;
                         };
 
-                        
-
                         let derived = segment.ident(db).text(db);
                         if matches!(derived.as_str(), "Component") {
                             return handle_component_struct(db, struct_ast);
@@ -146,7 +141,6 @@ impl MacroPlugin for DojoPlugin {
             _ => PluginResult::default(),
         }
     }
-    
 }
 
 impl AsDynMacroPlugin for DojoPlugin {
@@ -158,4 +152,3 @@ impl AsDynMacroPlugin for DojoPlugin {
     }
 }
 impl SemanticPlugin for DojoPlugin {}
-

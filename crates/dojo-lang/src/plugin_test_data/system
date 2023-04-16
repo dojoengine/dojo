@@ -14,6 +14,7 @@ struct Position {
 }
 
 #[derive(Component)]
+#[component(indexed: true)]
 struct Player {
     name: felt252, 
 }
@@ -183,6 +184,11 @@ mod PositionComponent {
     fn len() -> usize {
         2_usize
     }
+
+    #[view]
+    fn is_indexed() -> bool {
+        bool::False(())
+    }
 }
 
 #[derive(Copy, Drop, Serde)]
@@ -213,6 +219,11 @@ mod PlayerComponent {
     #[view]
     fn len() -> usize {
         1_usize
+    }
+
+    #[view]
+    fn is_indexed() -> bool {
+        bool::True(())
     }
 }
 
@@ -618,12 +629,12 @@ mod MoveSystem {
 
 //! > expected_diagnostics
 error: Plugin diagnostic: Invalid arguments. Expected "(query, (components,))"
- --> lib.cairo:42:29
+ --> lib.cairo:43:29
         commands::set_entity((
                             ^^
 
 error: Plugin diagnostic: Component types cannot be empty
- --> lib.cairo:133:19
+ --> lib.cairo:134:19
         let err = commands::<>::entity(player_id.into());
                   ^************************************^
 
