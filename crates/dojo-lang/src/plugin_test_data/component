@@ -91,6 +91,11 @@ mod PositionComponent {
     fn len() -> usize {
         2_usize
     }
+
+    #[view]
+    fn is_indexed() -> bool {
+        bool::False(())
+    }
 }
 
 //! > expected_diagnostics

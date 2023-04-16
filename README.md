@@ -112,7 +112,7 @@ An entity is addressed by a `felt252`. An entity represents a collection of comp
 
 ### Dev Container
 
-It is recommended to use the dev container when building on Dojo as it contains everything needed to begin developing.
+It is recommended to use the Dev Containers VSCode extention when building on Dojo as it contains everything needed to begin developing.
 
 Make sure you update your Docker to the latest stable version, sometimes the Dev containers do not play nicely with old Docker versions.
 
@@ -122,7 +122,7 @@ Make sure you update your Docker to the latest stable version, sometimes the Dev
 
 Command pallete: `ctrl + shift + p`
 
-Then: `Remote-Containers: Rebuild Container Without Cache`
+Then: `Dev Containers: Rebuild Without Cache And Reopen In Container`
 
 ##### Setup the language server 
 
