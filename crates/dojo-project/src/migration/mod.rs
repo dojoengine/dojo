@@ -171,7 +171,7 @@ async fn declare(
         prepare_contract_declaration_params(artifact_path).unwrap();
 
     if account.provider().get_class_by_hash(casm_class_hash, BlockId::Pending).await.is_ok() {
-        println!("{} class already declared", name);
+        println!("{name} class already declared");
         return;
     }
 
@@ -183,9 +183,9 @@ async fn declare(
         }
         Err(error) => {
             if error.to_string().contains("already declared") {
-                println!("{} class already declared", name)
+                println!("{name} class already declared")
             } else {
-                panic!("Problem declaring {} class: {error}", name);
+                panic!("Problem declaring {name} class: {error}");
             }
         }
     }

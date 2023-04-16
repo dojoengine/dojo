@@ -1,6 +1,7 @@
 use array::ArrayTrait;
 
 #[derive(Component)]
+#[component(indexed = true)]
 struct Moves {
     remaining: u8, 
 }
@@ -39,6 +40,9 @@ fn test_position_is_zero() {
 #[available_gas(100000)]
 fn test_position_is_equal() {
     assert(
-        PositionTrait::is_equal(Position { x: 420_u32, y: 0_u32 }, Position { x: 420_u32, y: 0_u32 }), 'not equal'
+        PositionTrait::is_equal(
+            Position { x: 420_u32, y: 0_u32 }, Position { x: 420_u32, y: 0_u32 }
+        ),
+        'not equal'
     );
 }

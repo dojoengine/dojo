@@ -1,6 +1,8 @@
 #[contract]
 mod Executor {
     use array::ArrayTrait;
+    use array::ArrayTCloneImpl;
+    use clone::Clone;
     use traits::Into;
     use starknet::contract_address::ContractAddressIntoFelt252;
 
@@ -14,9 +16,7 @@ mod Executor {
     fn execute(class_hash: starknet::ClassHash, mut calldata: Span<felt252>, ) -> Span<felt252> {
         let world_address = starknet::get_caller_address();
 
-        // TODO: use span pop_back to mutate input calldata once it is available.
-        let mut calldata_arr = ArrayTrait::new();
-        array::clone_loop(calldata, ref calldata_arr);
+        let mut calldata_arr = calldata.snapshot.clone();
         calldata_arr.append(world_address.into());
 
         let res = starknet::syscalls::library_call_syscall(

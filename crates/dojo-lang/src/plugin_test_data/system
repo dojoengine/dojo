@@ -14,6 +14,7 @@ struct Position {
 }
 
 #[derive(Component)]
+#[component(indexed: true)]
 struct Player {
     name: felt252, 
 }
@@ -90,6 +91,10 @@ mod Move {
                 let positions_query = commands::<(Position, Player)>::entities();
             }
         } else if bar == 321 {
+            let maybe_player = commands::<Player>::try_entity(player_id.into());
+            let player = maybe_player.expect('not_found');
+            let name = player.name;
+
             let positions_query = commands::<(Position, Player)>::try_entity(player_id.into());
             match positions_query {
                 Option::Some((position, player)) => {
@@ -132,6 +137,8 @@ mod Move {
 
         move_inner(@positions_query, 0_u32, positions_query.len());
 
+        let err = commands::<>::entity(player_id.into());
+
         if bar == 123 {
             return ();
         } else if bar == 0 {
@@ -147,7 +154,7 @@ use array::ArrayTrait;
 
 use serde::Serde;
 
-#[derive(Copy, Drop)]
+#[derive(Copy, Drop, Serde)]
 struct Position {
     x: felt252,
     y: felt252,
@@ -159,21 +166,6 @@ trait IPosition {
     fn len() -> u8;
     fn serialize(raw: Span<felt252>) -> Position;
     fn deserialize(value: Position) -> Span<felt252>;
-}
-
-impl PositionSerde of serde::Serde::<Position> {
-    fn serialize(ref serialized: Array::<felt252>, input: Position) {
-        serde::Serde::<felt252>::serialize(ref serialized, input.x);
-        serde::Serde::<felt252>::serialize(ref serialized, input.y);
-    }
-    fn deserialize(ref serialized: Span::<felt252>) -> Option::<Position> {
-        Option::Some(
-            Position {
-                x: serde::Serde::<felt252>::deserialize(ref serialized)?,
-                y: serde::Serde::<felt252>::deserialize(ref serialized)?,
-            }
-        )
-    }
 }
 
 #[contract]
@@ -192,9 +184,14 @@ mod PositionComponent {
     fn len() -> usize {
         2_usize
     }
+
+    #[view]
+    fn is_indexed() -> bool {
+        bool::False(())
+    }
 }
 
-#[derive(Copy, Drop)]
+#[derive(Copy, Drop, Serde)]
 struct Player {
     name: felt252, 
 }
@@ -205,15 +202,6 @@ trait IPlayer {
     fn len() -> u8;
     fn serialize(raw: Span<felt252>) -> Player;
     fn deserialize(value: Player) -> Span<felt252>;
-}
-
-impl PlayerSerde of serde::Serde::<Player> {
-    fn serialize(ref serialized: Array::<felt252>, input: Player) {
-        serde::Serde::<felt252>::serialize(ref serialized, input.name);
-    }
-    fn deserialize(ref serialized: Span::<felt252>) -> Option::<Player> {
-        Option::Some(Player { name: serde::Serde::<felt252>::deserialize(ref serialized)?,  })
-    }
 }
 
 #[contract]
@@ -231,6 +219,11 @@ mod PlayerComponent {
     #[view]
     fn len() -> usize {
         1_usize
+    }
+
+    #[view]
+    fn is_indexed() -> bool {
+        bool::True(())
     }
 }
 
@@ -457,6 +450,29 @@ mod MoveSystem {
                 }.entities('Player', 0);
             }
         } else if bar == 321 {
+            let mut __maybe_player_player_raw = IWorldDispatcher {
+                contract_address: world_address
+            }.entity('Player', player_id.into(), 0_u8, 0_usize);
+            let __maybe_player_player = match __maybe_player_player_raw.len() > 0_usize {
+                bool::False(()) => {
+                    Option::None(())
+                },
+                bool::True(()) => {
+                    Option::Some(
+                        serde::Serde::<Player>::deserialize(
+                            ref __maybe_player_player_raw
+                        ).expect('Failed to deserialize Player')
+                    )
+                }
+            };
+            let maybe_player = if __maybe_player_player.is_some() {
+                Option::Some(__maybe_player_player.unwrap())
+            } else {
+                Option::None(())
+            };
+            let player = maybe_player.expect('not_found');
+            let name = player.name;
+
             let mut __positions_query_position_raw = IWorldDispatcher {
                 contract_address: world_address
             }.entity('Position', player_id.into(), 0_u8, 0_usize);
@@ -490,7 +506,9 @@ mod MoveSystem {
             };
             let positions_query =
                 if __positions_query_position.is_some() & __positions_query_player.is_some() {
-                Option::Some((__positions_query_position, __positions_query_player))
+                Option::Some(
+                    (__positions_query_position.unwrap(), __positions_query_player.unwrap())
+                )
             } else {
                 Option::None(())
             };
@@ -611,16 +629,21 @@ mod MoveSystem {
 
 //! > expected_diagnostics
 error: Plugin diagnostic: Invalid arguments. Expected "(query, (components,))"
- --> lib.cairo:42:29
+ --> lib.cairo:43:29
         commands::set_entity((
                             ^^
 
-error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::query::Query", found: "(core::felt252, core::felt252, core::felt252, core::felt252, core::felt252)".
+error: Plugin diagnostic: Component types cannot be empty
+ --> lib.cairo:134:19
+        let err = commands::<>::entity(player_id.into());
+                  ^************************************^
+
+error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::query::Query", found: "(?58, ?59, ?60, ?61, ?62)".
  --> Spawn:77:99
                         IWorldDispatcher { contract_address: world_address }.set_entity('Player', (0, 0, 0, 0, 0), 0_u8, calldata.span());
                                                                                                   ^*************^
 
-error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::query::Query", found: "(core::felt252, core::felt252, core::felt252, core::felt252, core::felt252)".
+error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::query::Query", found: "(?70, ?71, ?72, ?73, ?74)".
  --> Spawn:83:101
                         IWorldDispatcher { contract_address: world_address }.set_entity('Position', (0, 0, 0, 0, 0), 0_u8, calldata.span());
                                                                                                     ^*************^

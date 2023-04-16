@@ -176,7 +176,7 @@ impl System {
         // recurse thru if blocks
         let if_block: Vec<RewriteNode> = self.handle_block(db, expr_if.if_block(db));
         let else_prefix = if is_else_if { "else " } else { "" };
-        let code = format!("{}if $condition$ $block$", else_prefix);
+        let code = format!("{else_prefix}if $condition$ $block$");
         let if_rewrite = RewriteNode::interpolate_patched(
             &code,
             HashMap::from([
