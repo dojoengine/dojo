@@ -96,7 +96,7 @@ impl MacroPlugin for DojoPlugin {
             ast::Item::Struct(struct_ast) => {
                 let mut diagnostics = vec![];
                 
-                let indexed = is_indexed(db,  struct_ast.clone());
+                
                 
                 for attr in struct_ast.attributes(db).query_attr(db, "derive") {
                     let attr = attr.structurize(db);
@@ -137,7 +137,7 @@ impl MacroPlugin for DojoPlugin {
 
                         let derived = segment.ident(db).text(db);
                         if matches!(derived.as_str(), "Component") {
-                            return handle_component_struct(db, struct_ast, indexed.unwrap_or(false));
+                            return handle_component_struct(db, struct_ast);
                         }
                     }
                 }
@@ -160,36 +160,3 @@ impl AsDynMacroPlugin for DojoPlugin {
 }
 impl SemanticPlugin for DojoPlugin {}
 
-fn is_indexed(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> Option<bool> {
-    for attr in struct_ast.attributes(db).query_attr(db, "component") {
-        let attr = attr.structurize(db);
-
-        for arg in attr.args {
-            let AttributeArg {
-                variant: AttributeArgVariant::Unnamed {
-                    value: ast::Expr::Path(path),
-                    ..
-                },
-                ..
-            } = arg else {
-                continue;
-            };
-
-            let path_elements = path.elements(db);
-            if path_elements.len() != 1 {
-                continue;
-            }
-
-            let segment = match &path_elements[0] {
-                ast::PathSegment::Simple(segment) => segment,
-                _ => continue,
-            };
-
-            let derived = segment.ident(db).text(db);
-            if matches!(derived.as_str(), "Indexed") {
-                return Some(true);
-            }
-        }
-    }
-    None
-}

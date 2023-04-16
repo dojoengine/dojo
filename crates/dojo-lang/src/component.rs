@@ -10,8 +10,7 @@ use crate::plugin::DojoAuxData;
 
 pub fn handle_component_struct(
     db: &dyn SyntaxGroup,
-    ref struct_ast: ast::ItemStruct,
-    indexed: bool,
+    ref struct_ast: ast::ItemStruct
 ) -> PluginResult {
     let mut body_nodes = vec![RewriteNode::interpolate_patched(
         "
@@ -38,27 +37,18 @@ pub fn handle_component_struct(
         ]),
     )];
 
-    // let is_indexed = get_indexed_attr_value(&struct_ast, db).unwrap_or(false);
+    let indexed = is_indexed(db,  struct_ast.clone());
 
     let is_indexed_fn = if indexed {
         RewriteNode::interpolate_patched(
             "
                 #[view]
                 fn is_indexed() -> bool {
-                    bool::True(())
+                    bool::$retval$(())
                 }
             ",
-            HashMap::new(),
-        )
-    } else {
-        RewriteNode::interpolate_patched(
-            "
-                #[view]
-                fn is_indexed() -> bool {
-                    bool::False(())
-                }
-            ",
-            HashMap::new(),
+            HashMap::from(["$retval$".to_string(), RewriteNode::Text(
+                if indexed { "True" } else { "False" })])
         )
     };
 
@@ -140,4 +130,39 @@ pub fn handle_component_struct(
         diagnostics: vec![],
         remove_original_item: true,
     }
+}
+
+
+fn is_indexed(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> Option<bool> {
+    for attr in struct_ast.attributes(db).query_attr(db, "component") {
+        let attr = attr.structurize(db);
+
+        for arg in attr.args {
+            let AttributeArg {
+                variant: AttributeArgVariant::Unnamed {
+                    value: ast::Expr::Path(path),
+                    ..
+                },
+                ..
+            } = arg else {
+                continue;
+            };
+
+            let path_elements = path.elements(db);
+            if path_elements.len() != 1 {
+                continue;
+            }
+
+            let segment = match &path_elements[0] {
+                ast::PathSegment::Simple(segment) => segment,
+                _ => continue,
+            };
+
+            let derived = segment.ident(db).text(db);
+            if matches!(derived.as_str(), "Indexed") {
+                return Some(true);
+            }
+        }
+    }
+    None
 }
