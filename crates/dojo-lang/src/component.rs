@@ -13,7 +13,7 @@ use crate::plugin::DojoAuxData;
 
 pub fn handle_component_struct(
     db: &dyn SyntaxGroup,
-    ref struct_ast: ast::ItemStruct
+    struct_ast: ast::ItemStruct
 ) -> PluginResult {
     let mut body_nodes = vec![RewriteNode::interpolate_patched(
         "

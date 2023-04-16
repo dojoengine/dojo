@@ -95,8 +95,6 @@ impl MacroPlugin for DojoPlugin {
             ast::Item::Struct(struct_ast) => {
                 let mut diagnostics = vec![];
                 
-                
-                
                 for attr in struct_ast.attributes(db).query_attr(db, "derive") {
                     let attr = attr.structurize(db);
 
@@ -131,8 +129,6 @@ impl MacroPlugin for DojoPlugin {
                             });
                             continue;
                         };
-
-                        
 
                         let derived = segment.ident(db).text(db);
                         if matches!(derived.as_str(), "Component") {
