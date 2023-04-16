@@ -21,7 +21,6 @@ struct Player {
 
 #[system]
 mod Spawn {
-    use array::ArrayTrait;
     use traits::Into;   
     use starknet::contract_address::ContractAddressIntoFelt252;
 
@@ -170,8 +169,6 @@ trait IPosition {
 
 #[contract]
 mod PositionComponent {
-    use array::ArrayTrait;
-    use option::OptionTrait;
     use dojo_core::serde::SpanSerde;
     use super::Position;
 
@@ -206,8 +203,6 @@ trait IPlayer {
 
 #[contract]
 mod PlayerComponent {
-    use array::ArrayTrait;
-    use option::OptionTrait;
     use dojo_core::serde::SpanSerde;
     use super::Player;
 
@@ -250,7 +245,6 @@ mod SpawnSystem {
         'Spawn'
     }
 
-    use array::ArrayTrait;
     use traits::Into;
     use starknet::contract_address::ContractAddressIntoFelt252;
 
@@ -262,85 +256,89 @@ mod SpawnSystem {
         let uuid = IWorldDispatcher { contract_address: world_address }.uuid();
 
         {
-            let mut calldata = ArrayTrait::new();
+            let mut calldata = array::ArrayTrait::new();
             serde::Serde::<Player>::serialize(ref calldata, Player { name: name });
             IWorldDispatcher {
                 contract_address: world_address
-            }.set_entity('Player', (420, (69, uuid)).into(), 0_u8, calldata.span());
+            }.set_entity(
+                'Player', (420, (69, uuid)).into(), 0_u8, array::ArrayTrait::span(@calldata)
+            );
         }
 
         {
-            let mut calldata = ArrayTrait::new();
+            let mut calldata = array::ArrayTrait::new();
             serde::Serde::<Position>::serialize(ref calldata, Position { x: 0, y: 0 });
             IWorldDispatcher {
                 contract_address: world_address
-            }.set_entity('Position', (420, (69, uuid)).into(), 0_u8, calldata.span());
+            }.set_entity(
+                'Position', (420, (69, uuid)).into(), 0_u8, array::ArrayTrait::span(@calldata)
+            );
         }
 
         {
-            let mut calldata = ArrayTrait::new();
+            let mut calldata = array::ArrayTrait::new();
             serde::Serde::<Player>::serialize(ref calldata, Player { name: name });
             IWorldDispatcher {
                 contract_address: world_address
-            }.set_entity('Player', 420.into(), 0_u8, calldata.span());
+            }.set_entity('Player', 420.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
-            let mut calldata = ArrayTrait::new();
+            let mut calldata = array::ArrayTrait::new();
             serde::Serde::<Position>::serialize(ref calldata, Position { x: 0, y: 0 });
             IWorldDispatcher {
                 contract_address: world_address
-            }.set_entity('Position', 420.into(), 0_u8, calldata.span());
+            }.set_entity('Position', 420.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         let player_id = starknet::get_caller_address();
 
         {
-            let mut calldata = ArrayTrait::new();
+            let mut calldata = array::ArrayTrait::new();
             serde::Serde::<Player>::serialize(ref calldata, Player { name: name });
             IWorldDispatcher {
                 contract_address: world_address
-            }.set_entity('Player', player_id.into(), 0_u8, calldata.span());
+            }.set_entity('Player', player_id.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
-            let mut calldata = ArrayTrait::new();
+            let mut calldata = array::ArrayTrait::new();
             serde::Serde::<Position>::serialize(ref calldata, Position { x: 0, y: 0 });
             IWorldDispatcher {
                 contract_address: world_address
-            }.set_entity('Position', player_id.into(), 0_u8, calldata.span());
+            }.set_entity('Position', player_id.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
-            let mut calldata = ArrayTrait::new();
+            let mut calldata = array::ArrayTrait::new();
             serde::Serde::<Player>::serialize(ref calldata, Player { name: name });
             IWorldDispatcher {
                 contract_address: world_address
-            }.set_entity('Player', (0, 0, 0, 0, 0), 0_u8, calldata.span());
+            }.set_entity('Player', (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
-            let mut calldata = ArrayTrait::new();
+            let mut calldata = array::ArrayTrait::new();
             serde::Serde::<Position>::serialize(ref calldata, Position { x: 0, y: 0 });
             IWorldDispatcher {
                 contract_address: world_address
-            }.set_entity('Position', (0, 0, 0, 0, 0), 0_u8, calldata.span());
+            }.set_entity('Position', (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
-            let mut calldata = ArrayTrait::new();
+            let mut calldata = array::ArrayTrait::new();
             serde::Serde::<Player>::serialize(ref calldata, Player { name: name });
             IWorldDispatcher {
                 contract_address: world_address
-            }.set_entity('Player', 1337.into(), 0_u8, calldata.span());
+            }.set_entity('Player', 1337.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
-            let mut calldata = ArrayTrait::new();
+            let mut calldata = array::ArrayTrait::new();
             serde::Serde::<Position>::serialize(ref calldata, Position { x: 0, y: 0 });
             IWorldDispatcher {
                 contract_address: world_address
-            }.set_entity('Position', 1337.into(), 0_u8, calldata.span());
+            }.set_entity('Position', 1337.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
         return ();
     }
@@ -380,7 +378,7 @@ mod MoveSystem {
 
     #[external]
     fn execute(player_id: felt252, world_address: starknet::ContractAddress) {
-        let positions_query = ArrayTrait::<usize>::new();
+        let positions_query = array::ArrayTrait::<usize>::new();
         let __positions_query_position_ids = IWorldDispatcher {
             contract_address: world_address
         }.entities('Position', 0);
@@ -388,7 +386,7 @@ mod MoveSystem {
         let __positions_query_player_ids = IWorldDispatcher {
             contract_address: world_address
         }.entities('Player', 0);
-        let players_query = ArrayTrait::<usize>::new();
+        let players_query = array::ArrayTrait::<usize>::new();
         let __players_query_player_ids = IWorldDispatcher {
             contract_address: world_address
         }.entities('Player', 0);
@@ -440,7 +438,7 @@ mod MoveSystem {
             ).expect('Failed to deserialize Player');
             let player_position = (__player_position_position, __player_position_player);
             if foo.len() > 0_u32 {
-                let positions_query = ArrayTrait::<usize>::new();
+                let positions_query = array::ArrayTrait::<usize>::new();
                 let __positions_query_position_ids = IWorldDispatcher {
                     contract_address: world_address
                 }.entities('Position', 0);
@@ -574,7 +572,7 @@ mod MoveSystem {
                 ).expect('Failed to deserialize Player');
                 let player_position = (__player_position_position, __player_position_player);
                 if bar == 123 {
-                    let positions_query = ArrayTrait::<usize>::new();
+                    let positions_query = array::ArrayTrait::<usize>::new();
                     let __positions_query_position_ids = IWorldDispatcher {
                         contract_address: world_address
                     }.entities('Position', 0);
@@ -629,21 +627,21 @@ mod MoveSystem {
 
 //! > expected_diagnostics
 error: Plugin diagnostic: Invalid arguments. Expected "(query, (components,))"
- --> lib.cairo:43:29
+ --> lib.cairo:42:29
         commands::set_entity((
                             ^^
 
 error: Plugin diagnostic: Component types cannot be empty
- --> lib.cairo:134:19
+ --> lib.cairo:133:19
         let err = commands::<>::entity(player_id.into());
                   ^************************************^
 
-error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::query::Query", found: "(?58, ?59, ?60, ?61, ?62)".
- --> Spawn:77:99
-                        IWorldDispatcher { contract_address: world_address }.set_entity('Player', (0, 0, 0, 0, 0), 0_u8, calldata.span());
+error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::query::Query", found: "(?52, ?53, ?54, ?55, ?56)".
+ --> Spawn:76:99
+                        IWorldDispatcher { contract_address: world_address }.set_entity('Player', (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
                                                                                                   ^*************^
 
-error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::query::Query", found: "(?70, ?71, ?72, ?73, ?74)".
- --> Spawn:83:101
-                        IWorldDispatcher { contract_address: world_address }.set_entity('Position', (0, 0, 0, 0, 0), 0_u8, calldata.span());
+error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::query::Query", found: "(?63, ?64, ?65, ?66, ?67)".
+ --> Spawn:82:101
+                        IWorldDispatcher { contract_address: world_address }.set_entity('Position', (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
                                                                                                     ^*************^

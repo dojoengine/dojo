@@ -33,7 +33,7 @@ impl CommandTrait for EntitiesCommand {
             };
 
         command.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
-            "let $query_pattern$ = ArrayTrait::<usize>::new();",
+            "let $query_pattern$ = array::ArrayTrait::<usize>::new();",
             HashMap::from([(
                 "query_pattern".to_string(),
                 RewriteNode::Text(command.query_id.clone()),
