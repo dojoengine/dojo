@@ -3,13 +3,17 @@ use std::collections::HashMap;
 use cairo_lang_defs::plugin::{DynGeneratedFileAuxData, PluginGeneratedFile, PluginResult};
 use cairo_lang_semantic::patcher::{PatchBuilder, RewriteNode};
 use cairo_lang_semantic::plugin::DynPluginAuxData;
+use cairo_lang_syntax::attribute::structured::{
+    AttributeArg, AttributeArgVariant, AttributeStructurize,
+};
 use cairo_lang_syntax::node::db::SyntaxGroup;
+use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 
 use crate::plugin::DojoAuxData;
 
 pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> PluginResult {
-    let body_nodes = vec![RewriteNode::interpolate_patched(
+    let mut body_nodes = vec![RewriteNode::interpolate_patched(
         "
             #[view]
             fn name() -> felt252 {
@@ -33,6 +37,27 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
             ),
         ]),
     )];
+
+    let is_indexed_fn = {
+        let retval_str = if is_indexed(db, struct_ast.clone()) {
+            "True".to_string()
+        } else {
+            "False".to_string()
+        };
+
+        RewriteNode::interpolate_patched(
+            "
+                #[view]
+                fn is_indexed() -> bool {
+                    bool::$retval$(())
+                }
+            ",
+            HashMap::from([("retval".to_string(), RewriteNode::Text(retval_str))]),
+        )
+    };
+
+    // Add the is_indexed function to the body
+    body_nodes.push(is_indexed_fn);
 
     let mut serialize = vec![];
     let mut deserialize = vec![];
@@ -109,4 +134,28 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
         diagnostics: vec![],
         remove_original_item: true,
     }
+}
+
+fn is_indexed(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> bool {
+    for attr in struct_ast.attributes(db).query_attr(db, "component") {
+        let attr = attr.structurize(db);
+
+        for arg in attr.args {
+            let AttributeArg {
+                variant: AttributeArgVariant::Named {
+                    value: ast::Expr::True(_),
+                    name,
+                    ..
+                },
+                ..
+            } = arg else {
+                continue;
+            };
+
+            if name == "indexed" {
+                return true;
+            }
+        }
+    }
+    false
 }
