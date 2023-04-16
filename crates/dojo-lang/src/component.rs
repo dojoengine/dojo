@@ -3,13 +3,19 @@ use std::collections::HashMap;
 use cairo_lang_defs::plugin::{DynGeneratedFileAuxData, PluginGeneratedFile, PluginResult};
 use cairo_lang_semantic::patcher::{PatchBuilder, RewriteNode};
 use cairo_lang_semantic::plugin::DynPluginAuxData;
-use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
-
+use cairo_lang_syntax::node::{
+    ast, db::SyntaxGroup, helpers::QueryAttrs, Terminal, TypedSyntaxNode,
+};
+use cairo_lang_syntax::attribute::structured::{
+    AttributeArg, AttributeArgVariant, AttributeStructurize,
+};
 use crate::plugin::DojoAuxData;
 
-pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> PluginResult {
-    let body_nodes = vec![RewriteNode::interpolate_patched(
+pub fn handle_component_struct(
+    db: &dyn SyntaxGroup,
+    ref struct_ast: ast::ItemStruct
+) -> PluginResult {
+    let mut body_nodes = vec![RewriteNode::interpolate_patched(
         "
             #[view]
             fn name() -> felt252 {
@@ -33,6 +39,30 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
             ),
         ]),
     )];
+
+    let indexed = is_indexed(db,  struct_ast.clone());
+
+    let is_indexed_fn = {
+
+        let retval_str = if indexed.unwrap_or(false) {
+            "True".to_string()
+        } else {
+            "False".to_string()
+        };
+    
+        RewriteNode::interpolate_patched(
+            "
+                #[view]
+                fn is_indexed() -> bool {
+                    bool::$retval$(())
+                }
+            ",
+            HashMap::from([("$retval$".to_string(), RewriteNode::Text(retval_str))])
+        )
+    };
+
+    // Add the is_indexed function to the body
+    body_nodes.push(is_indexed_fn);
 
     let mut serialize = vec![];
     let mut deserialize = vec![];
@@ -109,4 +139,39 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
         diagnostics: vec![],
         remove_original_item: true,
     }
+}
+
+
+fn is_indexed(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> Option<bool> {
+    for attr in struct_ast.attributes(db).query_attr(db, "component") {
+        let attr = attr.structurize(db);
+
+        for arg in attr.args {
+            let AttributeArg {
+                variant: AttributeArgVariant::Unnamed {
+                    value: ast::Expr::Path(path),
+                    ..
+                },
+                ..
+            } = arg else {
+                continue;
+            };
+
+            let path_elements = path.elements(db);
+            if path_elements.len() != 1 {
+                continue;
+            }
+
+            let segment = match &path_elements[0] {
+                ast::PathSegment::Simple(segment) => segment,
+                _ => continue,
+            };
+
+            let derived = segment.ident(db).text(db);
+            if matches!(derived.as_str(), "indexed = true") {
+                return Some(true);
+            }
+        }
+    }
+    None
 }
