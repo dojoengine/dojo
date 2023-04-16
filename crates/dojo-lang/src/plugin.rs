@@ -12,7 +12,6 @@ use cairo_lang_semantic::SemanticDiagnostic;
 use cairo_lang_syntax::attribute::structured::{
     AttributeArg, AttributeArgVariant, AttributeStructurize,
 };
-use cairo_lang_syntax::node::ast::ItemStruct;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal};

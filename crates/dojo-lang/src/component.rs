@@ -3,9 +3,12 @@ use std::collections::HashMap;
 use cairo_lang_defs::plugin::{DynGeneratedFileAuxData, PluginGeneratedFile, PluginResult};
 use cairo_lang_semantic::patcher::{PatchBuilder, RewriteNode};
 use cairo_lang_semantic::plugin::DynPluginAuxData;
-use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
-
+use cairo_lang_syntax::node::{
+    ast, db::SyntaxGroup, helpers::QueryAttrs, Terminal, TypedSyntaxNode,
+};
+use cairo_lang_syntax::attribute::structured::{
+    AttributeArg, AttributeArgVariant, AttributeStructurize,
+};
 use crate::plugin::DojoAuxData;
 
 pub fn handle_component_struct(
@@ -39,7 +42,14 @@ pub fn handle_component_struct(
 
     let indexed = is_indexed(db,  struct_ast.clone());
 
-    let is_indexed_fn = if indexed {
+    let is_indexed_fn = {
+
+        let retval_str = if indexed.unwrap_or(false) {
+            "True".to_string()
+        } else {
+            "False".to_string()
+        };
+    
         RewriteNode::interpolate_patched(
             "
                 #[view]
@@ -47,8 +57,7 @@ pub fn handle_component_struct(
                     bool::$retval$(())
                 }
             ",
-            HashMap::from(["$retval$".to_string(), RewriteNode::Text(
-                if indexed { "True" } else { "False" })])
+            HashMap::from([("$retval$".to_string(), RewriteNode::Text(retval_str))])
         )
     };
 
@@ -159,7 +168,7 @@ fn is_indexed(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> Option<bool>
             };
 
             let derived = segment.ident(db).text(db);
-            if matches!(derived.as_str(), "Indexed") {
+            if matches!(derived.as_str(), "indexed = true") {
                 return Some(true);
             }
         }
