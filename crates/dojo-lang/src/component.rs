@@ -40,9 +40,8 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
 
     let binding = struct_ast.members(db).elements(db);
     binding.iter().for_each(|member| {
-        
         schema.push(RewriteNode::interpolate_patched(
-            "('$name$' , '$type_clause$' , 252),\n",
+            "array.append(('$name$' , '$type_clause$' , 252));\n",
             HashMap::from([
                 ("name".to_string(), RewriteNode::new_trimmed(member.name(db).as_syntax_node())),
                 (
@@ -100,10 +99,10 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
                 use super::$type_name$;
 
                 #[view]
-                fn schema() -> Array<name, kind, len> {
-                    ArrayTrait::new([        
-                        $schemas$
-                    ])
+                fn schema() -> Array<(felt252,felt252,u8)> {
+                    let mut array=ArrayTrait::new();
+                    $schemas$
+                    array
                 }
 
                 $body$
@@ -116,10 +115,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
             ),
             ("members".to_string(), RewriteNode::Copied(struct_ast.members(db).as_syntax_node())),
             ("body".to_string(), RewriteNode::new_modified(body_nodes)),
-            (
-                "schemas".to_string(),
-                RewriteNode::new_modified(schema)
-            ),
+            ("schemas".to_string(), RewriteNode::new_modified(schema)),
         ]),
     ));
 
