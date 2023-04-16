@@ -23,11 +23,11 @@ pub struct ApiResponse {
 }
 
 /// Returns the base URL for Starkscan-verifier API depending on the network type.
-fn get_starkscan_base_url(network: &str) -> String {
+fn get_starkscan_base_url(network: &str) -> &str {
     match network {
         "mainnet" => "https://api.starkscan.co/api",
-        "testnet" => "https://api-testnet-2.starkscan.co/api",
-        "testnet-2" => "https://api-testnet.starkscan.co/api",
+        "testnet" => "https://api-testnet.starkscan.co/api",
+        "testnet-2" => "https://api-testnet-2.starkscan.co/api",
         _ => panic!("Unsupported network"),
     }
 }
