@@ -38,7 +38,6 @@ pub fn handle_component_struct(
         ]),
     )];
 
-    // let is_indexed = get_indexed_attr_value(&struct_ast, db).unwrap_or(false);
 
     let is_indexed_fn = if indexed {
         RewriteNode::interpolate_patched(
