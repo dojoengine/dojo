@@ -118,8 +118,6 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
 
             #[contract]
             mod $type_name$Component {
-                use array::ArrayTrait;
-                use option::OptionTrait;
                 use dojo_core::serde::SpanSerde;
                 use super::$type_name$;
 
