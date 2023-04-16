@@ -67,8 +67,6 @@ trait IPosition {
 
 #[contract]
 mod PositionComponent {
-    use array::ArrayTrait;
-    use option::OptionTrait;
     use dojo_core::serde::SpanSerde;
     use super::Position;
 
