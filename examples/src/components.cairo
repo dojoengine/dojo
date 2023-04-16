@@ -1,7 +1,7 @@
 use array::ArrayTrait;
 
 #[derive(Component)]
-#[component(Indexed)]
+#[component(indexed = true)]
 struct Moves {
     remaining: u8, 
 }
