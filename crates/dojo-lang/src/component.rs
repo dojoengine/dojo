@@ -61,7 +61,21 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
 
     let mut serialize = vec![];
     let mut deserialize = vec![];
-    struct_ast.members(db).elements(db).iter().for_each(|member| {
+    let mut schema = vec![];
+
+    let binding = struct_ast.members(db).elements(db);
+    binding.iter().for_each(|member| {
+        schema.push(RewriteNode::interpolate_patched(
+            "array.append(('$name$' , '$type_clause$' , 252));\n",
+            HashMap::from([
+                ("name".to_string(), RewriteNode::new_trimmed(member.name(db).as_syntax_node())),
+                (
+                    "type_clause".to_string(),
+                    RewriteNode::new_trimmed(member.type_clause(db).ty(db).as_syntax_node()),
+                ),
+            ]),
+        ));
+
         serialize.push(RewriteNode::interpolate_patched(
             "serde::Serde::<$type_clause$>::serialize(ref serialized, input.$key$);",
             HashMap::from([
@@ -108,6 +122,14 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
                 use option::OptionTrait;
                 use dojo_core::serde::SpanSerde;
                 use super::$type_name$;
+
+                #[view]
+                fn schema() -> Array<(felt252,felt252,u8)> {
+                    let mut array=ArrayTrait::new();
+                    $schemas$
+                    array
+                }
+
                 $body$
             }
         ",
@@ -118,6 +140,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
             ),
             ("members".to_string(), RewriteNode::Copied(struct_ast.members(db).as_syntax_node())),
             ("body".to_string(), RewriteNode::new_modified(body_nodes)),
+            ("schemas".to_string(), RewriteNode::new_modified(schema)),
         ]),
     ));
 
