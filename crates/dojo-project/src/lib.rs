@@ -78,50 +78,37 @@ impl EnvironmentConfig {
     ) -> Result<Self, DeserializationError> {
         let mut config = EnvironmentConfig::default();
 
-        if let Some(dojo_metadata) = dojo_metadata_from_workspace(ws) {
-            if let Some(env_metadata) = dojo_metadata.get("env") {
-                if let Some(env) = env_metadata.get(env.as_ref()) {
-                    if let Some(rpc) = env.get("rpc_url") {
-                        if let Some(rpc) = rpc.as_str() {
-                            let url =
-                                Url::parse(rpc).map_err(|_| DeserializationError::ParsingUrl)?;
-                            config.rpc = Some(url);
-                        };
-                    }
+        if let Some(env) = dojo_metadata_from_workspace(ws)
+            .and_then(|dojo_metadata| dojo_metadata.get("env").cloned())
+            .and_then(|env_metadata| env_metadata.get(env.as_ref()).cloned())
+        {
+            if let Some(rpc) = env.get("rpc_url").and_then(|v| v.as_str()) {
+                let url = Url::parse(rpc).map_err(|_| DeserializationError::ParsingUrl)?;
+                config.rpc = Some(url);
+            }
 
-                    if let Some(chain_id) = env.get("chain_id") {
-                        if let Some(chain_id) = chain_id.as_str() {
-                            let chain_id = FieldElement::from_str(chain_id)
-                                .map_err(|_| DeserializationError::ParsingFieldElement)?;
-                            config.chain_id = Some(chain_id);
-                        };
-                    }
+            if let Some(chain_id) = env.get("chain_id").and_then(|v| v.as_str()) {
+                let chain_id = FieldElement::from_str(chain_id)
+                    .map_err(|_| DeserializationError::ParsingFieldElement)?;
+                config.chain_id = Some(chain_id);
+            }
 
-                    if let Some(private_key) = env.get("private_key") {
-                        if let Some(private_key) = private_key.as_str() {
-                            let pk = FieldElement::from_hex_be(private_key)
-                                .map_err(|_| DeserializationError::ParsingFieldElement)?;
-                            config.private_key = Some(pk);
-                        }
-                    }
+            if let Some(private_key) = env.get("private_key").and_then(|v| v.as_str()) {
+                let pk = FieldElement::from_hex_be(private_key)
+                    .map_err(|_| DeserializationError::ParsingFieldElement)?;
+                config.private_key = Some(pk);
+            }
 
-                    if let Some(account_address) = env.get("account_address") {
-                        if let Some(account_address) = account_address.as_str() {
-                            let address = FieldElement::from_hex_be(account_address)
-                                .map_err(|_| DeserializationError::ParsingFieldElement)?;
-                            config.account_address = Some(address);
-                        }
-                    }
+            if let Some(account_address) = env.get("account_address").and_then(|v| v.as_str()) {
+                let address = FieldElement::from_hex_be(account_address)
+                    .map_err(|_| DeserializationError::ParsingFieldElement)?;
+                config.account_address = Some(address);
+            }
 
-                    if let Some(network) = env.get("network") {
-                        if let Some(network) = network.as_str() {
-                            config.network = Some(network.into());
-
-                            if config.chain_id.is_none() {
-                                config.chain_id = get_chain_id_from_network(network);
-                            }
-                        }
-                    }
+            if let Some(network) = env.get("network").and_then(|v| v.as_str()) {
+                config.network = Some(network.into());
+                if config.chain_id.is_none() {
+                    config.chain_id = get_chain_id_from_network(network);
                 }
             }
         }
