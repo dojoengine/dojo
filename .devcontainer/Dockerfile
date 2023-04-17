@@ -30,4 +30,8 @@ RUN apt-get update && bash /tmp/library-scripts/node-debian.sh "${NVM_DIR}"
 
 RUN pip install starknet-devnet==v0.5.0a2 
 
+# Install protostar
+RUN curl -L https://raw.githubusercontent.com/software-mansion/protostar/master/install.sh | bash
+RUN protostar -v
+
 ENV PATH=${PATH}:/workspaces/dojo/target/release
