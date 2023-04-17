@@ -1,5 +1,11 @@
+// TODO: future improvements when Cairo catches up
+//    * use BoundedInt in allowance calc
+//    * use inline commands (currently available only in systems)
+//    * use ufelt when available
+
 #[contract]
 mod ERC20 {
+    // max(felt252)
     const UNLIMITED_ALLOWANCE: felt252 = 3618502788666131213697322783095070105623107215331596699973092056135872020480;
 
     use array::ArrayTrait;
@@ -50,15 +56,13 @@ mod ERC20 {
         token_decimals::write(decimals);
 
         if initial_supply != 0 {
-            assert(recipient.is_non_zero(), 'ERC20: mint to the 0 address');
+            assert(recipient.is_non_zero(), 'ERC20: mint to 0');
             let token = get_contract_address();
             let mut calldata = ArrayTrait::<felt252>::new();
             calldata.append(token.into());
             calldata.append(recipient.into());
             calldata.append(initial_supply);
-            IWorldDispatcher { contract_address: world }.execute(
-                'ERC20Mint', calldata.span()
-            );
+            world().execute('ERC20Mint', calldata.span());
             Transfer(Zeroable::zero(), recipient, initial_supply.into());
         }
     }
@@ -81,9 +85,7 @@ mod ERC20 {
     #[view]
     fn total_supply() -> u256 {
         let query: Query = get_contract_address().into();
-        let mut supply_raw = IWorldDispatcher { contract_address: world_address::read() }.entity(
-            'Supply', query, 0_u8, 0_usize
-        );
+        let mut supply_raw = world().entity('Supply', query, 0_u8, 0_usize);
         let supply = serde::Serde::<Supply>::deserialize(ref supply_raw).unwrap();
         supply.amount.into()
     }
@@ -92,9 +94,7 @@ mod ERC20 {
     fn balance_of(account: ContractAddress) -> u256 {
         let token = get_contract_address();
         let query: Query = (token.into(), (account.into(),)).into();        
-        let mut balance_raw = IWorldDispatcher { contract_address: world_address::read() }.entity(
-            'Balance', query, 0_u8, 0_usize
-        );
+        let mut balance_raw = world().entity('Balance', query, 0_u8, 0_usize);
         let balance = serde::Serde::<Balance>::deserialize(ref balance_raw).unwrap();
         balance.amount.into()
     }
@@ -103,16 +103,14 @@ mod ERC20 {
     fn allowance(owner: ContractAddress, spender: ContractAddress) -> u256 {
         let token = get_contract_address();
         let query: Query = (token.into(), (owner.into(), spender.into())).into();
-        let mut allowance_raw = IWorldDispatcher { contract_address: world_address::read() }.entity(
-            'Allowance', query, 0_u8, 0_usize
-        );
+        let mut allowance_raw = world().entity('Allowance', query, 0_u8, 0_usize);
         let allowance = serde::Serde::<Allowance>::deserialize(ref allowance_raw).unwrap();
         allowance.amount.into()
     }
 
     #[external]
     fn approve(spender: ContractAddress, amount: u256) -> bool {
-        assert(spender.is_non_zero(), 'ERC20: approve to 0 address');
+        assert(spender.is_non_zero(), 'ERC20: approve to 0');
 
         let token = get_contract_address();
         let owner = get_caller_address();
@@ -120,11 +118,8 @@ mod ERC20 {
         calldata.append(token.into());
         calldata.append(owner.into());
         calldata.append(spender.into());
-        calldata.append(u256_as_felt252_allowance(amount));
-
-        IWorldDispatcher { contract_address: world_address::read() }.execute(
-            'ERC20Approve', calldata.span()
-        );
+        calldata.append(u256_as_allowance(amount));
+        world().execute('ERC20Approve', calldata.span());
 
         Approval(owner, spender, amount);
 
@@ -138,29 +133,36 @@ mod ERC20 {
     }
 
     #[external]
-    fn transfer_from(sender: ContractAddress, recipient: ContractAddress, amount: u256) -> bool {
-        transfer_internal(sender, recipient, amount);
+    fn transfer_from(spender: ContractAddress, recipient: ContractAddress, amount: u256) -> bool {
+        transfer_internal(spender, recipient, amount);
         true
     }
 
-    fn transfer_internal(sender: ContractAddress, recipient: ContractAddress, amount: u256) {
-        assert(recipient.is_non_zero(), 'ERC20: transfer to 0 address');
+    //
+    // Internal
+    //
+
+    // NOTE: temporary, until we have inline commands outside of systems
+    fn world() -> IWorldDispatcher {
+        IWorldDispatcher { contract_address: world_address::read() }
+    }
+
+    fn transfer_internal(spender: ContractAddress, recipient: ContractAddress, amount: u256) {
+        assert(recipient.is_non_zero(), 'ERC20: transfer to 0');
 
         let token = get_contract_address();
         let mut calldata = ArrayTrait::<felt252>::new();
         calldata.append(token.into());
-        calldata.append(sender.into());
+        calldata.append(spender.into());
         calldata.append(recipient.into());
-        calldata.append(u256_as_felt252(amount));
+        calldata.append(u256_into_felt252(amount));
 
-        IWorldDispatcher { contract_address: world_address::read() }.execute(
-            'ERC20TransferFrom', calldata.span()
-        );
+        world().execute('ERC20TransferFrom', calldata.span());
 
-        Transfer(sender, recipient, amount);
+        Transfer(spender, recipient, amount);
     }
 
-    fn u256_as_felt252_allowance(val: u256) -> felt252 {
+    fn u256_as_allowance(val: u256) -> felt252 {
         // by convention, max(u256) means unlimited amount,
         // but since we're using felts, use max(felt252) to do the same
         // TODO: use BoundedInt when available
@@ -169,10 +171,10 @@ mod ERC20 {
         if val == max_u256 {
             return UNLIMITED_ALLOWANCE;
         }
-        u256_as_felt252(val)
+        u256_into_felt252(val)
     }
 
-    fn u256_as_felt252(val: u256) -> felt252 {
+    fn u256_into_felt252(val: u256) -> felt252 {
         // temporary, until TryInto of this is in corelib
         val.low.into() + val.high.into() * 0x100000000000000000000000000000000
     }
