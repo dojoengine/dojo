@@ -93,14 +93,22 @@ impl EnvironmentConfig {
                 config.chain_id = Some(chain_id);
             }
 
-            if let Some(private_key) = env.get("private_key").and_then(|v| v.as_str()) {
-                let pk = FieldElement::from_hex_be(private_key)
+            if let Some(private_key) = env
+                .get("private_key")
+                .and_then(|v| v.as_str().map(|s| s.to_string()))
+                .or(std::env::var("DOJO_PRIVATE_KEY").ok())
+            {
+                let pk = FieldElement::from_hex_be(&private_key)
                     .map_err(|_| DeserializationError::ParsingFieldElement)?;
                 config.private_key = Some(pk);
             }
 
-            if let Some(account_address) = env.get("account_address").and_then(|v| v.as_str()) {
-                let address = FieldElement::from_hex_be(account_address)
+            if let Some(account_address) = env
+                .get("account_address")
+                .and_then(|v| v.as_str().map(|s| s.to_string()))
+                .or(std::env::var("DOJO_ACCOUNT_ADDRESS").ok())
+            {
+                let address = FieldElement::from_hex_be(&account_address)
                     .map_err(|_| DeserializationError::ParsingFieldElement)?;
                 config.account_address = Some(address);
             }
