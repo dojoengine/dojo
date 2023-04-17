@@ -56,6 +56,7 @@ mod ERC20TransferFrom {
 #[system]
 mod ERC20Mint {
     use traits::Into;
+    use zeroable::Zeroable;
     use dojo_erc::erc20::components::Balance;
     use dojo_erc::erc20::components::Supply;
 
@@ -79,6 +80,7 @@ mod ERC20Mint {
 #[system]
 mod ERC20Burn {
     use traits::Into;
+    use zeroable::Zeroable;        
     use dojo_erc::erc20::components::Balance;
     use dojo_erc::erc20::components::Supply;
 
