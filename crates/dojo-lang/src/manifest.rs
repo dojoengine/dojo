@@ -11,14 +11,12 @@ use cairo_lang_semantic::plugin::DynPluginAuxData;
 use serde_with::serde_as;
 use smol_str::SmolStr;
 use starknet::core::serde::unsigned_field_element::{UfeHex, UfeHexOption};
-use starknet::core::types::FieldElement;
+use starknet::core::types::{BlockId, CallContractResult, CallFunction, FieldElement};
 use starknet::core::utils::{
     cairo_short_string_to_felt, get_selector_from_name, get_storage_var_address,
 };
-use starknet::providers::jsonrpc::models::{BlockId, BlockTag, FunctionCall};
-use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
+use starknet::providers::Provider;
 use thiserror::Error;
-use url::Url;
 
 use crate::plugin::{DojoAuxData, SystemAuxData};
 
@@ -30,6 +28,8 @@ mod test;
 pub enum ManifestError {
     #[error("Compilation error.")]
     CompilationError,
+    #[error("Provider error.")]
+    ProviderError,
 }
 
 /// Component member.
@@ -145,59 +145,59 @@ impl Manifest {
             .map_err(|e| anyhow!("Problem in loading manifest from path: {e}"))
     }
 
-    pub async fn from_remote(
+    pub async fn from_remote<P: Provider>(
         world_address: FieldElement,
-        rpc_url: Url,
+        provider: P,
         local_manifest: &Self,
     ) -> Result<Self> {
         let mut manifest = Manifest::default();
 
-        let starknet = JsonRpcClient::new(HttpTransport::new(rpc_url));
         let world_class_hash =
-            starknet.get_class_hash_at(&BlockId::Tag(BlockTag::Pending), world_address).await.ok();
+            provider.get_class_hash_at(world_address, BlockId::Pending).await.ok();
 
         if world_class_hash.is_none() {
             return Ok(manifest);
         }
 
-        let executor_address = starknet
+        let executor_address = provider
             .get_storage_at(
                 world_address,
                 get_storage_var_address("executor", &[])?,
-                &BlockId::Tag(BlockTag::Pending),
+                BlockId::Pending,
             )
-            .await?;
-        let executor_class_hash = starknet
-            .get_class_hash_at(&BlockId::Tag(BlockTag::Pending), executor_address)
             .await
-            .ok();
+            .map_err(|_| ManifestError::ProviderError)?;
+
+        let executor_class_hash =
+            provider.get_class_hash_at(executor_address, BlockId::Pending).await.ok();
 
         manifest.world = world_class_hash;
         manifest.executor = executor_class_hash;
 
         for component in &local_manifest.components {
-            let comp_class_hash = starknet
-                .call(
-                    &FunctionCall {
+            let CallContractResult { result } = provider
+                .call_contract(
+                    CallFunction {
                         contract_address: world_address,
                         calldata: vec![cairo_short_string_to_felt(&component.name)?],
                         entry_point_selector: get_selector_from_name("component")?,
                     },
-                    &BlockId::Tag(BlockTag::Pending),
+                    BlockId::Pending,
                 )
-                .await?[0];
+                .await
+                .map_err(|_| ManifestError::ProviderError)?;
 
             manifest.components.push(Component {
                 name: component.name.clone(),
-                class_hash: comp_class_hash,
+                class_hash: result[0],
                 ..Default::default()
             });
         }
 
         for system in &local_manifest.systems {
-            let syst_class_hash = starknet
-                .call(
-                    &FunctionCall {
+            let CallContractResult { result } = provider
+                .call_contract(
+                    CallFunction {
                         contract_address: world_address,
                         calldata: vec![cairo_short_string_to_felt(
                             // because the name returns by the `name` method of
@@ -206,13 +206,14 @@ impl Manifest {
                         )?],
                         entry_point_selector: get_selector_from_name("system")?,
                     },
-                    &BlockId::Tag(BlockTag::Pending),
+                    BlockId::Pending,
                 )
-                .await?[0];
+                .await
+                .map_err(|_| ManifestError::ProviderError)?;
 
             manifest.systems.push(System {
                 name: system.name.clone(),
-                class_hash: syst_class_hash,
+                class_hash: result[0],
                 ..Default::default()
             });
         }
