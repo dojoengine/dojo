@@ -36,50 +36,41 @@ pub struct ClassMigration {
 
 // TODO: migration error
 // should only be created by calling `World::prepare_for_migration`
-#[derive(Default)]
 pub struct Migration {
     world: ContractMigration,
     executor: ContractMigration,
     systems: Vec<ClassMigration>,
     components: Vec<ClassMigration>,
+    migrator: SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
 }
 
 impl Migration {
-    pub async fn execute(
-        &mut self,
-        migrator: SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
-    ) -> Result<()> {
+    pub async fn execute(&mut self) -> Result<()> {
         if self.world.deployed {
             unimplemented!("migrate: branch -> if world is deployed")
         } else {
-            self.migrate_full_world(&migrator).await?;
+            self.migrate_full_world().await?;
         }
 
         Ok(())
     }
 
-    async fn migrate_full_world(
-        &mut self,
-        account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
-    ) -> Result<()> {
+    async fn migrate_full_world(&mut self) -> Result<()> {
         if !self.executor.deployed {
-            self.executor.deploy(vec![], account).await;
+            self.executor.deploy(vec![], &self.migrator).await;
         }
 
-        self.world.deploy(vec![self.executor.contract_address.unwrap()], account).await;
+        self.world.deploy(vec![self.executor.contract_address.unwrap()], &self.migrator).await;
 
-        self.register_components(account).await?;
-        self.register_systems(account).await?;
+        self.register_components().await?;
+        self.register_systems().await?;
 
         Ok(())
     }
 
-    async fn register_components(
-        &self,
-        account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
-    ) -> Result<()> {
+    async fn register_components(&self) -> Result<()> {
         for component in &self.components {
-            component.declare(account).await;
+            component.declare(&self.migrator).await;
         }
 
         let world_address = self
@@ -98,17 +89,14 @@ impl Migration {
             })
             .collect::<Vec<_>>();
 
-        account.execute(calls).send().await?;
+        self.migrator.execute(calls).send().await?;
 
         Ok(())
     }
 
-    async fn register_systems(
-        &self,
-        account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
-    ) -> Result<()> {
+    async fn register_systems(&self) -> Result<()> {
         for system in &self.systems {
-            system.declare(account).await;
+            system.declare(&self.migrator).await;
         }
 
         let world_address = self
@@ -127,7 +115,7 @@ impl Migration {
             })
             .collect::<Vec<_>>();
 
-        account.execute(calls).send().await?;
+        self.migrator.execute(calls).send().await?;
 
         Ok(())
     }

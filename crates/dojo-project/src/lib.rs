@@ -5,10 +5,9 @@ use std::str::FromStr;
 use anyhow::anyhow;
 use scarb::core::Workspace;
 use serde::{Deserialize, Serialize};
-use starknet::{
-    core::{chain_id, types::FieldElement},
-    providers::SequencerGatewayProvider,
-};
+use starknet::core::chain_id;
+use starknet::core::types::FieldElement;
+use starknet::providers::SequencerGatewayProvider;
 use toml::Value;
 use url::Url;
 
