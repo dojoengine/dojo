@@ -116,17 +116,13 @@ impl QuerySerde of serde::Serde::<Query> {
 
 impl ContractAddressIntoQuery of Into::<starknet::ContractAddress, Query> {
     fn into(self: starknet::ContractAddress) -> Query {
-        let mut keys = ArrayTrait::<felt252>::new();
-        keys.append(self.into());
-        QueryTrait::new(0, 0, keys.span())
+        QueryTrait::new_from_id(self.into())
     }
 }
 
 impl Felt252IntoQuery of Into::<felt252, Query> {
     fn into(self: felt252) -> Query {
-        let mut keys = ArrayTrait::new();
-        keys.append(self);
-        QueryTrait::new(0, 0, keys.span())
+        QueryTrait::new_from_id(self)
     }
 }
 
