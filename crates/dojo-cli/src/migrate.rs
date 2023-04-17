@@ -16,7 +16,7 @@ pub struct MigrateArgs {
     path: Option<Utf8PathBuf>,
 
     #[clap(short, long)]
-    #[clap(value_name = "ENVIRONMENT")]
+    #[clap(value_name = "DOJO_ENV")]
     #[clap(help = "Execute the migration based on the environment configuration.")]
     env: String,
 
