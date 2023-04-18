@@ -1,0 +1,17 @@
+[package]
+name = "katana-rpc"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+license-file.workspace = true
+description = "Katana RPC Implementation."
+
+[dependencies]
+katana-core = { path = "../katana-core" }
+jsonrpsee = { version = "0.16.2", features = ["full"] }
+serde.workspace = true
+starknet.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+assert_matches = "1.5.0"

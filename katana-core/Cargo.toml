@@ -1,0 +1,15 @@
+[package]
+name = "katana-core"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+license-file.workspace = true
+description = "Katana core implementation."
+
+[dependencies]
+anyhow.workspace = true
+blockifier = { git = "https://github.com/starkware-libs/blockifier" }
+futures = "0.3"
+tracing = "0.1.34"
+starknet_api = { git = "https://github.com/starkware-libs/starknet-api", rev = "0029ffe" }
+thiserror.workspace = true
