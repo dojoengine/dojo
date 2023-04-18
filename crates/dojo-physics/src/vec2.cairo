@@ -14,13 +14,15 @@ trait Vec2Trait<T> {
     // Constructors
     fn new(x: T, y: T) -> Vec2<T>;
     fn splat(self: T) -> Vec2<T>;
+
     // Masks
     fn select(mask: Vec2<bool>, if_true: Vec2<T>, if_false: Vec2<T>) -> Vec2<T>;
+
     // Math
     fn dot<impl TMul: Mul<T>, impl TAdd: Add<T>>(self: Vec2<T>, rhs: Vec2<T>) -> T;
     fn dot_into_vec<impl TMul: Mul<T>, impl TAdd: Add<T>>(self: Vec2<T>, rhs: Vec2<T>) -> Vec2<T>;
+    
     // Swizzles
-
     fn xy(self: Vec2<T>) -> Vec2<T>;
     fn xx(self: Vec2<T>) -> Vec2<T>;
     fn yx(self: Vec2<T>) -> Vec2<T>;
