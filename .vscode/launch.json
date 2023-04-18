@@ -41,7 +41,7 @@
                     "kind": "bin"
                 }
             },
-            "args": ["/Users/tarrence/code/dojo/crates/dojo-lang/src/cairo_level_tests/component.cairo"],
+            "args": ["${workspaceFolder}/crates/dojo-lang/src/cairo_level_tests/component.cairo"],
             "cwd": "${workspaceFolder}/crates/dojo-lang"
         },
         {
