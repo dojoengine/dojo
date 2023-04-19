@@ -53,6 +53,10 @@ impl KatanaApiServer for KatanaRpc {
 
         Ok(to_trimmed_hex_string(nonce.0.bytes()))
     }
+
+    async fn block_number(&self) -> Result<u64, Error> {
+        Ok(self.sequencer.block_context.block_number.0)
+    }
 }
 
 #[cfg(test)]
@@ -73,5 +77,12 @@ mod tests {
         let rpc = KatanaRpc::new(Sequencer::new());
         let nonce = rpc.get_nonce("0xdead".to_string()).await.unwrap();
         assert_eq!(nonce, "0x0");
+    }
+
+    #[tokio::test]
+    async fn block_number_is_ok() {
+        let rpc = KatanaRpc::new(Sequencer::new());
+        let block_number = rpc.block_number().await.unwrap();
+        assert_eq!(block_number, 0);
     }
 }
