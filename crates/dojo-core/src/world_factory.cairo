@@ -13,46 +13,31 @@ mod WorldFactory {
     use starknet::contract_address::ContractAddressIntoFelt252;
 
     struct Storage {
-        executor_class_hash: ClassHash,
         world_class_hash: ClassHash,
-        executor_contracts: LegacyMap::<felt252, ContractAddress>,
-        world_contracts: LegacyMap::<felt252, ContractAddress>,
+        executor_address: ContractAddress,
     }
 
     #[event]
-    fn ContractsDeployed(name: felt252, executor: ContractAddress, world: ContractAddress) {}
+    fn WorldSpawned(address: ContractAddress) {}
 
     #[constructor]
-    fn constructor(executor_class_hash_: ClassHash, world_class_hash_: ClassHash) {
-        executor_class_hash::write(executor_class_hash_);
+    fn constructor(world_class_hash_: ClassHash, executor_address_: ContractAddress) {
         world_class_hash::write(world_class_hash_);
+        executor_address::write(executor_address_);
     }
 
     #[external]
     fn spawn(name: felt252, components: Array::<ClassHash>, systems: Array::<ClassHash>) {
-        // assert name not taken
-        assert(world_contracts::read(name).into() == 0, 'name already taken');
-
-        // deploy executor
-        let mut executor_constructor_calldata: Array<felt252> = ArrayTrait::new();
-        let executor_class_hash = executor_class_hash::read();
-        let result = deploy_syscall(
-            executor_class_hash, 0, executor_constructor_calldata.span(), true
-        );
-        let (executor_address, _) = result.unwrap_syscall();
-        executor_contracts::write(name, executor_address);
-
         // deploy world
         let mut world_constructor_calldata: Array<felt252> = ArrayTrait::new();
         world_constructor_calldata.append(name);
-        world_constructor_calldata.append(executor_address.into());
+        world_constructor_calldata.append(executor_address::read().into());
         let world_class_hash = world_class_hash::read();
         let result = deploy_syscall(world_class_hash, 0, world_constructor_calldata.span(), true);
         let (world_address, _) = result.unwrap_syscall();
-        world_contracts::write(name, world_address);
 
         // events
-        ContractsDeployed(name, executor_address, world_address);
+        WorldSpawned(world_address);
 
         // register components
         let components_len = components.len();
@@ -64,8 +49,8 @@ mod WorldFactory {
     }
 
     #[external]
-    fn set_executor(class_hash: ClassHash) {
-        executor_class_hash::write(class_hash);
+    fn set_executor(executor_address_: ContractAddress) {
+        executor_address::write(executor_address_);
     }
 
     #[external]
@@ -74,12 +59,12 @@ mod WorldFactory {
     }
 
     #[view]
-    fn get_executor_class_hash() -> ClassHash {
-        return executor_class_hash::read();
+    fn executor() -> ContractAddress {
+        return executor_address::read();
     }
 
     #[view]
-    fn get_world_class_hash() -> ClassHash {
+    fn world() -> ClassHash {
         return world_class_hash::read();
     }
 
@@ -89,14 +74,7 @@ mod WorldFactory {
         index: usize,
         world_address: ContractAddress
     ) {
-        match gas::withdraw_gas() {
-            Option::Some(_) => {},
-            Option::None(_) => {
-                let mut data = ArrayTrait::new();
-                data.append('Out of gas');
-                panic(data);
-            },
-        }
+        gas::withdraw_gas().expect('Out of gas');
         if (index == components_len) {
             return ();
         }
@@ -109,14 +87,7 @@ mod WorldFactory {
     fn register_systems(
         systems: Array<ClassHash>, systems_len: usize, index: usize, world_address: ContractAddress
     ) {
-        match gas::withdraw_gas() {
-            Option::Some(_) => {},
-            Option::None(_) => {
-                let mut data = ArrayTrait::new();
-                data.append('Out of gas');
-                panic(data);
-            },
-        }
+        gas::withdraw_gas().expect('Out of gas');
         if (index == systems_len) {
             return ();
         }
@@ -128,9 +99,9 @@ mod WorldFactory {
 #[test]
 #[available_gas(2000000)]
 fn test_constructor() {
-    WorldFactory::constructor(starknet::class_hash_const::<0x420>(), starknet::class_hash_const::<0x69>());
-    let executor_class_hash = WorldFactory::get_executor_class_hash();
-    assert(executor_class_hash == starknet::class_hash_const::<0x420>(), 'wrong executor class hash');
-    let world_class_hash = WorldFactory::get_world_class_hash();
-    assert(world_class_hash == starknet::class_hash_const::<0x69>(), 'wrong world class hash');
+    WorldFactory::constructor(starknet::class_hash_const::<0x420>(), starknet::contract_address_const::<0x69>());
+    let world_class_hash = WorldFactory::world();
+    assert(world_class_hash == starknet::class_hash_const::<0x420>(), 'wrong world class hash');
+    let executor_address = WorldFactory::executor();
+    assert(executor_address == starknet::contract_address_const::<0x69>(), 'wrong executor contract');
 }
