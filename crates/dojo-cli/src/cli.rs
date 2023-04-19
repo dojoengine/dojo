@@ -6,6 +6,7 @@ use build::BuildArgs;
 use clap::{Args, Parser, Subcommand};
 use init::InitArgs;
 use migrate::MigrateArgs;
+use tracing_subscriber::EnvFilter;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -44,6 +45,8 @@ struct InspectArgs {
 }
 
 fn main() -> anyhow::Result<()> {
+    tracing_subscriber::fmt().with_env_filter(EnvFilter::from_default_env()).init();
+
     let cli = Cli::parse();
 
     match cli.command {
