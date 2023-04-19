@@ -497,7 +497,7 @@ dependencies = [
 [[package]]
 name = "apibara-core"
 version = "0.1.0"
-source = "git+https://github.com/apibara/apibara?rev=5afaa6db00f2d1b36825215bbf894f0341121d39#5afaa6db00f2d1b36825215bbf894f0341121d39"
+source = "git+https://github.com/ponderingdemocritus/dna#5d338419af7dd92b28ebe43a7e511bcf644fa098"
 dependencies = [
  "anyhow",
  "hex",
@@ -517,10 +517,10 @@ dependencies = [
 [[package]]
 name = "apibara-node"
 version = "0.1.0"
-source = "git+https://github.com/apibara/apibara?rev=5afaa6db00f2d1b36825215bbf894f0341121d39#5afaa6db00f2d1b36825215bbf894f0341121d39"
+source = "git+https://github.com/ponderingdemocritus/dna#5d338419af7dd92b28ebe43a7e511bcf644fa098"
 dependencies = [
  "anyhow",
- "apibara-core 0.1.0 (git+https://github.com/apibara/apibara?rev=5afaa6db00f2d1b36825215bbf894f0341121d39)",
+ "apibara-core 0.1.0 (git+https://github.com/ponderingdemocritus/dna)",
  "arrayvec",
  "async-trait",
  "byte-unit",
@@ -578,10 +578,10 @@ dependencies = [
 [[package]]
 name = "apibara-sdk"
 version = "0.1.0"
-source = "git+https://github.com/apibara/apibara?rev=5afaa6db00f2d1b36825215bbf894f0341121d39#5afaa6db00f2d1b36825215bbf894f0341121d39"
+source = "git+https://github.com/ponderingdemocritus/dna#5d338419af7dd92b28ebe43a7e511bcf644fa098"
 dependencies = [
  "anyhow",
- "apibara-core 0.1.0 (git+https://github.com/apibara/apibara?rev=5afaa6db00f2d1b36825215bbf894f0341121d39)",
+ "apibara-core 0.1.0 (git+https://github.com/ponderingdemocritus/dna)",
  "async-stream",
  "async-trait",
  "futures 0.3.28",
@@ -601,10 +601,10 @@ dependencies = [
 [[package]]
 name = "apibara-starknet"
 version = "0.1.0"
-source = "git+https://github.com/apibara/apibara?rev=5afaa6db00f2d1b36825215bbf894f0341121d39#5afaa6db00f2d1b36825215bbf894f0341121d39"
+source = "git+https://github.com/ponderingdemocritus/dna#5d338419af7dd92b28ebe43a7e511bcf644fa098"
 dependencies = [
  "anyhow",
- "apibara-core 0.1.0 (git+https://github.com/apibara/apibara?rev=5afaa6db00f2d1b36825215bbf894f0341121d39)",
+ "apibara-core 0.1.0 (git+https://github.com/ponderingdemocritus/dna)",
  "apibara-node",
  "backoff",
  "bloomfilter",
@@ -3253,8 +3253,8 @@ dependencies = [
  "actix-cors",
  "actix-web",
  "anyhow",
- "apibara-core 0.1.0 (git+https://github.com/apibara/apibara?rev=5afaa6db00f2d1b36825215bbf894f0341121d39)",
- "apibara-sdk 0.1.0 (git+https://github.com/apibara/apibara?rev=5afaa6db00f2d1b36825215bbf894f0341121d39)",
+ "apibara-core 0.1.0 (git+https://github.com/ponderingdemocritus/dna)",
+ "apibara-sdk 0.1.0 (git+https://github.com/ponderingdemocritus/dna)",
  "apibara-starknet",
  "clap 4.2.1",
  "ctrlc",
@@ -8654,7 +8654,7 @@ dependencies = [
 [[package]]
 name = "tonic-reflection"
 version = "0.5.0"
-source = "git+https://github.com/apibara/apibara?rev=5afaa6db00f2d1b36825215bbf894f0341121d39#5afaa6db00f2d1b36825215bbf894f0341121d39"
+source = "git+https://github.com/ponderingdemocritus/dna#5d338419af7dd92b28ebe43a7e511bcf644fa098"
 dependencies = [
  "bytes 1.4.0",
  "prost",

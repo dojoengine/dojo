@@ -9,9 +9,9 @@ edition = "2021"
 actix-web = "4.3.0"
 actix-cors = "0.6.4"
 anyhow.workspace = true
-apibara-core = { git = "https://github.com/apibara/apibara", rev = "5afaa6db00f2d1b36825215bbf894f0341121d39" }
-apibara-sdk = { git = "https://github.com/apibara/apibara", rev = "5afaa6db00f2d1b36825215bbf894f0341121d39" }
-apibara-starknet = { git = "https://github.com/apibara/apibara", rev = "5afaa6db00f2d1b36825215bbf894f0341121d39" }
+apibara-core = { git = "https://github.com/ponderingdemocritus/dna" }
+apibara-sdk = { git = "https://github.com/ponderingdemocritus/dna" }
+apibara-starknet = { git = "https://github.com/ponderingdemocritus/dna" }
 clap.workspace = true
 ctrlc = "3.2.5"
 futures = "0.3.26"
