@@ -22,6 +22,7 @@ starknet.workspace = true
 url = "2.2.2"
 async-trait = "0.1.68"
 serde_json.workspace = true
+tracing.workspace = true
 
 [dev-dependencies]
 indoc.workspace = true
