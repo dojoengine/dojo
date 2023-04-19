@@ -13,7 +13,7 @@ jsonrpsee = { version = "0.16.2", features = ["full"] }
 katana-core = { path = "../katana-core" }
 serde.workspace = true
 starknet.workspace = true
-starknet_api = { git = "https://github.com/starkware-libs/starknet-api", rev = "0029ffe" }
+starknet_api.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]

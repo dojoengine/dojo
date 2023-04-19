@@ -12,6 +12,7 @@ log.workspace = true
 tokio.workspace = true
 katana-core = { path = "../katana-core" }
 katana-rpc = { path = "../katana-rpc" }
+starknet_api.workspace = true
 
 [dev-dependencies]
 assert_matches = "1.5.0"

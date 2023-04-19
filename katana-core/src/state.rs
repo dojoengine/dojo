@@ -16,6 +16,8 @@ use std::sync::Arc;
 use crate::util::get_contract_class;
 use crate::FEE_ERC20_CONTRACT_ADDRESS;
 
+pub const ACCOUNT_CONTRACT_CLASS_HASH: &str = "0x100";
+pub const ERC20_CONTRACT_CLASS_HASH: &str = "0x200";
 pub const ACCOUNT_CONTRACT_PATH: &str = "contracts/account.json";
 pub const ERC20_CONTRACT_PATH: &str = "./contracts/erc20.json";
 
@@ -30,8 +32,8 @@ pub struct DictStateReader {
 impl DictStateReader {
     pub fn new() -> Self {
         // Declare all the needed contracts.
-        let account_class_hash = ClassHash(stark_felt!("0x100"));
-        let erc20_class_hash = ClassHash(stark_felt!("0x200"));
+        let account_class_hash = ClassHash(stark_felt!(ACCOUNT_CONTRACT_CLASS_HASH));
+        let erc20_class_hash = ClassHash(stark_felt!(ERC20_CONTRACT_CLASS_HASH));
         let class_hash_to_class: HashMap<ClassHash, ContractClass> = HashMap::from([
             (
                 account_class_hash,
