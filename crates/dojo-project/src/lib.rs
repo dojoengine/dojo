@@ -9,6 +9,7 @@ use starknet::core::chain_id;
 use starknet::core::types::FieldElement;
 use starknet::providers::SequencerGatewayProvider;
 use toml::Value;
+use tracing::warn;
 use url::Url;
 
 #[allow(clippy::enum_variant_names)]
@@ -127,6 +128,10 @@ impl EnvironmentConfig {
     pub fn get_provider(&self) -> anyhow::Result<SequencerGatewayProvider> {
         if self.rpc.is_none() && self.network.is_none() {
             return Err(anyhow!("Missing `rpc_url` or `network` in the environment config"));
+        }
+
+        if self.rpc.is_some() && self.network.is_some() {
+            warn!("Both `rpc_url` and `network` are set but `rpc_url` will be used instead")
         }
 
         let provider = if let Some(url) = &self.rpc {

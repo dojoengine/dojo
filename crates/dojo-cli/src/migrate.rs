@@ -9,6 +9,7 @@ use dotenv::dotenv;
 use scarb::core::Config;
 use scarb::ops;
 use scarb::ui::Verbosity;
+use tracing::error;
 
 #[derive(Args)]
 pub struct MigrateArgs {
@@ -50,7 +51,7 @@ pub async fn run(args: MigrateArgs) -> Result<()> {
         .build()
         .unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config).unwrap_or_else(|err| {
-        eprintln!("error: {err}");
+        error!("error: {err}");
         std::process::exit(1);
     });
 
