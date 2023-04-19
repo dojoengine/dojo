@@ -12,6 +12,10 @@ use starknet::core::types::FieldElement;
 use starknet::providers::SequencerGatewayProvider;
 use starknet::signers::LocalWallet;
 
+// migrate only the release version
+// check first if `release` is available
+// if yes, migrate
+// otherwise, build first with `release` profile
 #[derive(Args)]
 pub struct MigrateArgs {
     #[clap(help = "Source directory")]
