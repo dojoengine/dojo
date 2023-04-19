@@ -13,8 +13,8 @@ use starknet_api::{
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::sequencer::FEE_ERC20_CONTRACT_ADDRESS;
 use crate::util::get_contract_class;
+use crate::FEE_ERC20_CONTRACT_ADDRESS;
 
 pub const ACCOUNT_CONTRACT_PATH: &str = "contracts/account.json";
 pub const ERC20_CONTRACT_PATH: &str = "./contracts/erc20.json";
