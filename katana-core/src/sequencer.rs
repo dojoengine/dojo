@@ -1,10 +1,6 @@
 use std::{collections::HashMap, sync::Mutex};
 
-use blockifier::{
-    block_context::BlockContext,
-    state::cached_state::CachedState,
-    test_utils::{DEFAULT_GAS_PRICE, TEST_ERC20_CONTRACT_ADDRESS, TEST_SEQUENCER_ADDRESS},
-};
+use blockifier::{block_context::BlockContext, state::cached_state::CachedState};
 use starknet_api::{
     block::{BlockNumber, BlockTimestamp},
     core::{ChainId, ContractAddress, PatriciaKey},
@@ -13,6 +9,10 @@ use starknet_api::{
 };
 
 use crate::state::DictStateReader;
+
+pub const DEFAULT_GAS_PRICE: u128 = 100 * u128::pow(10, 9); // Given in units of wei.
+pub const SEQUENCER_ADDRESS: &str = "0x69";
+pub const FEE_ERC20_CONTRACT_ADDRESS: &str = "0x420";
 
 pub struct KatanaSequencer {
     pub block_context: BlockContext,
@@ -26,8 +26,8 @@ impl KatanaSequencer {
                 chain_id: ChainId("KATANA".to_string()),
                 block_number: BlockNumber::default(),
                 block_timestamp: BlockTimestamp::default(),
-                sequencer_address: ContractAddress(patricia_key!(TEST_SEQUENCER_ADDRESS)),
-                fee_token_address: ContractAddress(patricia_key!(TEST_ERC20_CONTRACT_ADDRESS)),
+                sequencer_address: ContractAddress(patricia_key!(SEQUENCER_ADDRESS)),
+                fee_token_address: ContractAddress(patricia_key!(FEE_ERC20_CONTRACT_ADDRESS)),
                 cairo_resource_fee_weights: HashMap::from([
                     (String::from("n_steps"), 1_f64),
                     (String::from("pedersen_builtin"), 1_f64),
@@ -42,7 +42,7 @@ impl KatanaSequencer {
                 invoke_tx_max_n_steps: 1_000_000,
                 validate_max_n_steps: 1_000_000,
             },
-            state: Mutex::new(CachedState::new(DictStateReader::default())),
+            state: Mutex::new(CachedState::new(DictStateReader::new())),
         }
     }
 }

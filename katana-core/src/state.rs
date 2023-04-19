@@ -1,14 +1,23 @@
+use blockifier::execution::contract_class::ContractClass;
 use blockifier::state::cached_state::ContractStorageKey;
 use blockifier::state::errors::StateError;
+use blockifier::state::state_api::StateReader;
 use blockifier::state::state_api::StateResult;
-use blockifier::{execution::contract_class::ContractClass, state::state_api::StateReader};
+use starknet_api::patricia_key;
+use starknet_api::stark_felt;
 use starknet_api::state::StorageKey;
 use starknet_api::{
-    core::{ClassHash, ContractAddress, Nonce},
-    hash::StarkFelt,
+    core::{ClassHash, ContractAddress, Nonce, PatriciaKey},
+    hash::{StarkFelt, StarkHash},
 };
 use std::collections::HashMap;
 use std::sync::Arc;
+
+use crate::sequencer::FEE_ERC20_CONTRACT_ADDRESS;
+use crate::util::get_contract_class;
+
+pub const ACCOUNT_CONTRACT_PATH: &str = "contracts/account.json";
+pub const ERC20_CONTRACT_PATH: &str = "./contracts/erc20.json";
 
 #[derive(Clone, Debug, Default)]
 pub struct DictStateReader {
@@ -16,6 +25,32 @@ pub struct DictStateReader {
     pub address_to_nonce: HashMap<ContractAddress, Nonce>,
     pub address_to_class_hash: HashMap<ContractAddress, ClassHash>,
     pub class_hash_to_class: HashMap<ClassHash, ContractClass>,
+}
+
+impl DictStateReader {
+    pub fn new() -> Self {
+        // Declare all the needed contracts.
+        let account_class_hash = ClassHash(stark_felt!("0x100"));
+        let erc20_class_hash = ClassHash(stark_felt!("0x200"));
+        let class_hash_to_class: HashMap<ClassHash, ContractClass> = HashMap::from([
+            (
+                account_class_hash,
+                get_contract_class(ACCOUNT_CONTRACT_PATH),
+            ),
+            (erc20_class_hash, get_contract_class(ERC20_CONTRACT_PATH)),
+        ]);
+
+        let address_to_class_hash = HashMap::from([(
+            ContractAddress(patricia_key!(FEE_ERC20_CONTRACT_ADDRESS)),
+            erc20_class_hash,
+        )]);
+
+        Self {
+            address_to_class_hash,
+            class_hash_to_class,
+            ..Default::default()
+        }
+    }
 }
 
 impl StateReader for DictStateReader {
