@@ -7,6 +7,7 @@ license-file.workspace = true
 description = "Katana RPC Implementation."
 
 [dependencies]
+anyhow = "1.0.40"
 blockifier = { git = "https://github.com/starkware-libs/blockifier" }
 hex = { version = "0.4.3", default-features = false }
 jsonrpsee = { version = "0.16.2", features = ["full"] }

@@ -2,12 +2,19 @@ use blockifier::state::state_api::StateReader;
 use jsonrpsee::{
     core::{async_trait, Error},
     server::{ServerBuilder, ServerHandle},
+    types::error::CallError,
 };
 use katana_core::sequencer::KatanaSequencer;
-use starknet_api::core::{ContractAddress, PatriciaKey};
-use starknet_api::hash::StarkHash;
+use starknet::{core::types::FieldElement, providers::jsonrpc::models::DeployTransactionResult};
 use starknet_api::patricia_key;
-use std::net::SocketAddr;
+use starknet_api::{
+    core::{ClassHash, ContractAddress, PatriciaKey},
+    hash::StarkFelt,
+    stark_felt,
+    transaction::{Calldata, ContractAddressSalt, TransactionVersion},
+};
+use starknet_api::{hash::StarkHash, transaction::TransactionSignature};
+use std::{net::SocketAddr, sync::Arc};
 use util::to_trimmed_hex_string;
 
 use crate::api::{KatanaApiError, KatanaApiServer};
@@ -15,12 +22,14 @@ pub mod api;
 mod util;
 
 pub struct KatanaRpc {
-    sequencer: KatanaSequencer,
+    sequencer: Arc<KatanaSequencer>,
 }
 
 impl KatanaRpc {
     pub fn new(sequencer: KatanaSequencer) -> Self {
-        Self { sequencer }
+        Self {
+            sequencer: Arc::new(sequencer),
+        }
     }
 
     pub async fn run(self) -> Result<(SocketAddr, ServerHandle), Error> {
@@ -56,6 +65,37 @@ impl KatanaApiServer for KatanaRpc {
 
     async fn block_number(&self) -> Result<u64, Error> {
         Ok(self.sequencer.block_context.block_number.0)
+    }
+
+    async fn add_deploy_account_transaction(
+        &self,
+        contract_class: String,
+        version: String,
+        contract_address_salt: String,
+        constructor_calldata: Vec<String>,
+    ) -> Result<DeployTransactionResult, Error> {
+        let (transaction_hash, contract_address) = self
+            .sequencer
+            .deploy_account(
+                ClassHash(stark_felt!(contract_class.as_str())),
+                TransactionVersion(stark_felt!(version.as_str())),
+                ContractAddressSalt(stark_felt!(contract_address_salt.as_str())),
+                Calldata(Arc::new(
+                    constructor_calldata
+                        .iter()
+                        .map(|calldata| stark_felt!(calldata.as_str()))
+                        .collect(),
+                )),
+                TransactionSignature::default(),
+            )
+            .map_err(|e| Error::Call(CallError::Failed(anyhow::anyhow!(e.to_string()))))?;
+
+        Ok(DeployTransactionResult {
+            transaction_hash: FieldElement::from_byte_slice_be(transaction_hash.0.bytes())
+                .map_err(|_| Error::from(KatanaApiError::InternalServerError))?,
+            contract_address: FieldElement::from_byte_slice_be(contract_address.0.key().bytes())
+                .map_err(|_| Error::from(KatanaApiError::InternalServerError))?,
+        })
     }
 }
 
