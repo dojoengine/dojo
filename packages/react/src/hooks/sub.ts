@@ -32,6 +32,6 @@ export function useWebSocket<T>({
     }, [entityId, componentId, addMessageListener, removeMessageListener, store]);
 
     return {
-        component: parser(store.getState().value),
+        stream: parser(store.getState().value),
     };
 }

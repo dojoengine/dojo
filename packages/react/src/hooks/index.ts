@@ -21,7 +21,6 @@ export function useDojo<T>({
 }: {
     key: string;
     parser: (data: any) => T | undefined;
-    optimistic?: boolean;
     componentState?: bigint[];
     componentId: string;
     entityId: string;
@@ -33,9 +32,14 @@ export function useDojo<T>({
         store.setState({ value: componentState });
     }
 
+    const { component, fetch } = useComponent({ key, parser, store });
+    const { execute } = useSystem({ key })
+    const { stream } = useWebSocket({ entityId, componentId, parser, store })
+
     return {
-        useComponent: useComponent<T>({ key, parser, store }),
-        useSystem: useSystem<T>({ key }),
-        useWebSocket: useWebSocket<T>({ entityId, componentId, parser, store }),
+        component,
+        fetch,
+        execute,
+        stream
     };
 }

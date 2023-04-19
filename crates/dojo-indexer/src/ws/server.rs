@@ -1,36 +1,49 @@
-use actix::{Actor, StreamHandler};
-use actix_web::{web, App, Error, HttpRequest, HttpResponse, HttpServer};
+use actix::prelude::*;
+use actix_web::{middleware, web, App, Error, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
 
-/// Define HTTP actor
-struct MyWs;
+async fn ws_index(r: HttpRequest, stream: web::Payload) -> Result<HttpResponse, Error> {
+    ws::start(AutobahnWebSocket::default(), &r, stream)
+}
 
-impl Actor for MyWs {
+#[derive(Debug, Clone, Default)]
+struct AutobahnWebSocket;
+
+impl Actor for AutobahnWebSocket {
     type Context = ws::WebsocketContext<Self>;
 }
 
-/// Handler for ws::Message message
-impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MyWs {
+impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for AutobahnWebSocket {
     fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
-        match msg {
-            Ok(ws::Message::Ping(msg)) => ctx.pong(&msg),
-            Ok(ws::Message::Text(text)) => ctx.text(text),
-            Ok(ws::Message::Binary(bin)) => ctx.binary(bin),
-            _ => (),
+        if let Ok(msg) = msg {
+            match msg {
+                ws::Message::Text(text) => ctx.text(text),
+                ws::Message::Binary(bin) => ctx.binary(bin),
+                ws::Message::Ping(bytes) => ctx.pong(&bytes),
+                ws::Message::Close(reason) => {
+                    ctx.close(reason);
+                    ctx.stop();
+                }
+                _ => {}
+            }
+        } else {
+            ctx.stop();
         }
     }
 }
 
-async fn index(req: HttpRequest, stream: web::Payload) -> Result<HttpResponse, Error> {
-    let resp = ws::start(MyWs {}, &req, stream);
-    println!("{:?}", resp);
-    resp
-}
-
 pub async fn start_ws() -> std::io::Result<()> {
-    let server = HttpServer::new(|| App::new().route("/ws/", web::get().to(index)))
-        .bind(("127.0.0.2", 8080))?
-        .run()
-        .await;
-    server
+    // env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+
+    log::info!("starting HTTP server at http://localhost:9001");
+
+    HttpServer::new(|| {
+        App::new()
+            .wrap(middleware::Logger::default())
+            .service(web::resource("/").route(web::get().to(ws_index)))
+    })
+    .workers(2)
+    .bind(("127.0.0.1", 9001))?
+    .run()
+    .await
 }

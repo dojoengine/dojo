@@ -35,9 +35,10 @@ export const Position = ({ entityId, src, position, direction }: Props) => {
   }
 
   const {
-    useComponent: { component, getComponent },
-    useSystem: { execute },
-    useWebSocket: { component: WSComponent }
+    component,
+    fetch,
+    execute,
+    stream
   } = useDojo(params);
 
   useEffect(() => {
@@ -50,7 +51,7 @@ export const Position = ({ entityId, src, position, direction }: Props) => {
 
 
   useEffect(() => {
-    getComponent(entityId,
+    fetch(entityId,
       {
         partition: componentStruct.id,
         keys: [""]

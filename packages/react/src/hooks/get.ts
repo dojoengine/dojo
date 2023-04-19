@@ -36,7 +36,7 @@ export function useComponent<T>({
 
   return {
     component: parser(store.getState().value),
-    getComponent: getComponentCallback
+    fetch: getComponentCallback
   };
 }
 
