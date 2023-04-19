@@ -8,6 +8,9 @@ edition = "2021"
 [dependencies]
 actix-web = "4.3.0"
 actix-cors = "0.6.4"
+actix = "0.13.0"
+actix-web-actors = "4.2.0"
+
 anyhow.workspace = true
 apibara-core = { git = "https://github.com/ponderingdemocritus/dna" }
 apibara-sdk = { git = "https://github.com/ponderingdemocritus/dna" }

@@ -15,6 +15,7 @@ use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 use tokio_util::sync::CancellationToken;
 use tracing_subscriber::fmt;
 use url::Url;
+use ws::server::start_ws;
 
 use crate::indexer::start_indexer;
 
@@ -24,6 +25,7 @@ mod graphql;
 mod hash;
 mod indexer;
 mod stream;
+mod ws;
 
 /// Dojo World Indexer
 #[derive(Parser, Debug)]
@@ -85,7 +87,9 @@ async fn main() -> anyhow::Result<()> {
     let indexer = start_indexer(cts.clone(), world, node_uri, &pool, &provider);
     let apibara = start_apibara(cts, args.rpc.clone());
 
-    let _ = join!(graphql, indexer, apibara);
+    let web_sockets = start_ws();
+
+    let _ = join!(graphql, indexer, apibara, web_sockets);
 
     Ok(())
 }
