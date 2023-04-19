@@ -2,6 +2,7 @@ use std::{collections::HashMap, sync::Mutex};
 
 use blockifier::{
     block_context::BlockContext,
+    state::cached_state::CachedState,
     test_utils::{DEFAULT_GAS_PRICE, TEST_ERC20_CONTRACT_ADDRESS, TEST_SEQUENCER_ADDRESS},
 };
 use starknet_api::{
@@ -13,12 +14,12 @@ use starknet_api::{
 
 use crate::state::DictStateReader;
 
-pub struct Sequencer {
+pub struct KatanaSequencer {
     pub block_context: BlockContext,
-    pub state: Mutex<DictStateReader>,
+    pub state: Mutex<CachedState<DictStateReader>>,
 }
 
-impl Sequencer {
+impl KatanaSequencer {
     pub fn new() -> Self {
         Self {
             block_context: BlockContext {
@@ -41,12 +42,12 @@ impl Sequencer {
                 invoke_tx_max_n_steps: 1_000_000,
                 validate_max_n_steps: 1_000_000,
             },
-            state: Mutex::new(DictStateReader::default()),
+            state: Mutex::new(CachedState::new(DictStateReader::default())),
         }
     }
 }
 
-impl Default for Sequencer {
+impl Default for KatanaSequencer {
     fn default() -> Self {
         Self::new()
     }

@@ -3,7 +3,7 @@ use jsonrpsee::{
     core::{async_trait, Error},
     server::{ServerBuilder, ServerHandle},
 };
-use katana_core::sequencer::Sequencer;
+use katana_core::sequencer::KatanaSequencer;
 use starknet_api::core::{ContractAddress, PatriciaKey};
 use starknet_api::hash::StarkHash;
 use starknet_api::patricia_key;
@@ -15,11 +15,11 @@ pub mod api;
 mod util;
 
 pub struct KatanaRpc {
-    sequencer: Sequencer,
+    sequencer: KatanaSequencer,
 }
 
 impl KatanaRpc {
-    pub fn new(sequencer: Sequencer) -> Self {
+    pub fn new(sequencer: KatanaSequencer) -> Self {
         Self { sequencer }
     }
 
@@ -61,27 +61,27 @@ impl KatanaApiServer for KatanaRpc {
 
 #[cfg(test)]
 mod tests {
-    use katana_core::sequencer::Sequencer;
+    use katana_core::sequencer::KatanaSequencer;
 
     use crate::{api::KatanaApiServer, KatanaRpc};
 
     #[tokio::test]
     async fn chain_id_is_ok() {
-        let rpc = KatanaRpc::new(Sequencer::new());
+        let rpc = KatanaRpc::new(KatanaSequencer::new());
         let chain_id = rpc.chain_id().await.unwrap();
         assert_eq!(chain_id, "KATANA");
     }
 
     #[tokio::test]
     async fn nonce_is_ok() {
-        let rpc = KatanaRpc::new(Sequencer::new());
+        let rpc = KatanaRpc::new(KatanaSequencer::new());
         let nonce = rpc.get_nonce("0xdead".to_string()).await.unwrap();
         assert_eq!(nonce, "0x0");
     }
 
     #[tokio::test]
     async fn block_number_is_ok() {
-        let rpc = KatanaRpc::new(Sequencer::new());
+        let rpc = KatanaRpc::new(KatanaSequencer::new());
         let block_number = rpc.block_number().await.unwrap();
         assert_eq!(block_number, 0);
     }
