@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Mutex};
 
 use blockifier::{
     block_context::BlockContext,
@@ -15,14 +15,14 @@ use crate::state::DictStateReader;
 
 pub struct Sequencer {
     pub block_context: BlockContext,
-    pub state: DictStateReader,
+    pub state: Mutex<DictStateReader>,
 }
 
 impl Sequencer {
     pub fn new() -> Self {
         Self {
             block_context: BlockContext {
-                chain_id: ChainId("SN_GOERLI".to_string()),
+                chain_id: ChainId("KATANA".to_string()),
                 block_number: BlockNumber::default(),
                 block_timestamp: BlockTimestamp::default(),
                 sequencer_address: ContractAddress(patricia_key!(TEST_SEQUENCER_ADDRESS)),
@@ -41,7 +41,7 @@ impl Sequencer {
                 invoke_tx_max_n_steps: 1_000_000,
                 validate_max_n_steps: 1_000_000,
             },
-            state: DictStateReader::default(),
+            state: Mutex::new(DictStateReader::default()),
         }
     }
 }
