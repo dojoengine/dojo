@@ -1,0 +1,1 @@
+export { ComponentStore } from './component';

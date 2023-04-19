@@ -430,15 +430,15 @@ dependencies = [
 
 [[package]]
 name = "anstream"
-version = "0.2.6"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "342258dd14006105c2b75ab1bd7543a03bdf0cfc94383303ac212a04939dff6f"
+checksum = "9e579a7752471abc2a8268df8b20005e3eadd975f585398f17efcfd8d4927371"
 dependencies = [
- "anstyle",
+ "anstyle 1.0.0",
  "anstyle-parse",
+ "anstyle-query",
  "anstyle-wincon",
- "concolor-override",
- "concolor-query",
+ "colorchoice",
  "is-terminal",
  "utf8parse",
 ]
@@ -450,22 +450,37 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "23ea9e81bd02e310c216d080f6223c179012256e5151c41db88d12c88a1684d2"
 
 [[package]]
-name = "anstyle-parse"
-version = "0.1.1"
+name = "anstyle"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7d1bb534e9efed14f3e5f44e7dd1a4f709384023a4165199a4241e18dff0116"
+checksum = "41ed9a86bf92ae6580e0a31281f65a1b1d867c0cc68d5346e2ae128dddfa6a7d"
+
+[[package]]
+name = "anstyle-parse"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e765fd216e48e067936442276d1d57399e37bce53c264d6fefbe298080cb57ee"
 dependencies = [
  "utf8parse",
 ]
 
 [[package]]
-name = "anstyle-wincon"
-version = "0.2.0"
+name = "anstyle-query"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3127af6145b149f3287bb9a0d10ad9c5692dba8c53ad48285e5bec4063834fa"
+checksum = "5ca11d4be1bab0c8bc8734a9aa7bf4ee8316d462a08c6ac5052f888fef5b494b"
 dependencies = [
- "anstyle",
- "windows-sys 0.45.0",
+ "windows-sys 0.48.0",
+]
+
+[[package]]
+name = "anstyle-wincon"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4bcd8291a340dd8ac70e18878bc4501dd7b4ff970cfa21c207d36ece51ea88fd"
+dependencies = [
+ "anstyle 1.0.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -611,7 +626,7 @@ dependencies = [
  "byte-unit",
  "byteorder",
  "chrono",
- "clap 4.2.1",
+ "clap 4.2.2",
  "ctrlc",
  "futures 0.3.28",
  "hex",
@@ -811,7 +826,7 @@ version = "1.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e9d5bf7e5441c6393b5a9670a5036abe6b4847612f594b870f7332dbf10cf6fa"
 dependencies = [
- "anstyle",
+ "anstyle 0.3.5",
  "doc-comment",
  "globwalk",
  "predicates",
@@ -1870,7 +1885,7 @@ dependencies = [
  "cairo-lang-sierra-generator",
  "cairo-lang-syntax",
  "cairo-lang-utils",
- "clap 4.2.1",
+ "clap 4.2.2",
  "log",
  "salsa",
  "thiserror",
@@ -1950,7 +1965,7 @@ dependencies = [
  "cairo-lang-parser",
  "cairo-lang-syntax",
  "cairo-lang-utils",
- "clap 4.2.1",
+ "clap 4.2.2",
  "colored",
  "diffy",
  "ignore",
@@ -2100,7 +2115,7 @@ dependencies = [
  "cairo-lang-sierra-to-casm",
  "cairo-lang-utils",
  "cairo-vm",
- "clap 4.2.1",
+ "clap 4.2.2",
  "itertools",
  "num-bigint",
  "num-integer",
@@ -2222,7 +2237,7 @@ dependencies = [
  "cairo-lang-sierra-ap-change",
  "cairo-lang-sierra-gas",
  "cairo-lang-utils",
- "clap 4.2.1",
+ "clap 4.2.2",
  "indoc 2.0.1",
  "itertools",
  "log",
@@ -2254,7 +2269,7 @@ dependencies = [
  "cairo-lang-sierra-to-casm",
  "cairo-lang-syntax",
  "cairo-lang-utils",
- "clap 4.2.1",
+ "clap 4.2.2",
  "convert_case 0.6.0",
  "genco",
  "indoc 2.0.1",
@@ -2456,9 +2471,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.2.1"
+version = "4.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "046ae530c528f252094e4a77886ee1374437744b2bff1497aa898bbddbbb29b3"
+checksum = "9b802d85aaf3a1cdb02b224ba472ebdea62014fccfcb269b95a4d76443b5ee5a"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -2471,18 +2486,18 @@ version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1eef05769009513df2eb1c3b4613e7fad873a14c600ff025b08f250f59fee7de"
 dependencies = [
- "clap 4.2.1",
+ "clap 4.2.2",
  "log",
 ]
 
 [[package]]
 name = "clap_builder"
-version = "4.2.1"
+version = "4.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "223163f58c9a40c3b0a43e1c4b50a9ce09f007ea2cb1ec258a687945b4b7929f"
+checksum = "14a1a858f532119338887a4b8e1af9c60de8249cd7bafd68036a489e261e37b6"
 dependencies = [
  "anstream",
- "anstyle",
+ "anstyle 1.0.0",
  "bitflags",
  "clap_lex 0.4.1",
  "once_cell",
@@ -2550,6 +2565,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d7b894f5411737b7867f4827955924d7c254fc9f4d91a6aad6b097804b1018b"
 
 [[package]]
+name = "colorchoice"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "acbf1af155f9b9ef647e42cdc158db4b64a1b61f743629225fde6f3e0be2a7c7"
+
+[[package]]
 name = "colored"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2577,21 +2598,6 @@ dependencies = [
  "either",
  "memchr",
  "unreachable",
-]
-
-[[package]]
-name = "concolor-override"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a855d4a1978dc52fb0536a04d384c2c0c1aa273597f08b77c8c4d3b2eec6037f"
-
-[[package]]
-name = "concolor-query"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88d11d52c3d7ca2e6d0040212be9e4dbbcd78b6447f535b6b561f449427944cf"
-dependencies = [
- "windows-sys 0.45.0",
 ]
 
 [[package]]
@@ -3229,7 +3235,7 @@ dependencies = [
  "cairo-lang-sierra-to-casm",
  "cairo-lang-starknet",
  "camino",
- "clap 4.2.1",
+ "clap 4.2.2",
  "dojo-lang",
  "dojo-project",
  "dojo-signers",
@@ -3256,7 +3262,7 @@ dependencies = [
  "apibara-core 0.1.0 (git+https://github.com/apibara/apibara?rev=5afaa6db00f2d1b36825215bbf894f0341121d39)",
  "apibara-sdk 0.1.0 (git+https://github.com/apibara/apibara?rev=5afaa6db00f2d1b36825215bbf894f0341121d39)",
  "apibara-starknet",
- "clap 4.2.1",
+ "clap 4.2.2",
  "ctrlc",
  "futures 0.3.28",
  "futures-util",
@@ -3390,7 +3396,7 @@ dependencies = [
  "cairo-lang-syntax",
  "cairo-lang-utils",
  "camino",
- "clap 4.2.1",
+ "clap 4.2.2",
  "colored",
  "dojo-lang",
  "itertools",
@@ -6415,7 +6421,7 @@ version = "3.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c575290b64d24745b6c57a12a31465f0a66f3a4799686a6921526a33b0797965"
 dependencies = [
- "anstyle",
+ "anstyle 0.3.5",
  "difflib",
  "itertools",
  "predicates-core",
@@ -7096,7 +7102,7 @@ dependencies = [
  "cairo-lang-starknet",
  "cairo-lang-utils",
  "camino",
- "clap 4.2.1",
+ "clap 4.2.2",
  "clap-verbosity-flag",
  "console",
  "create-output-dir",

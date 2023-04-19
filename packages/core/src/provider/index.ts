@@ -1,2 +1,2 @@
-import { RPCProvider } from "./rpcProvider";
+import { RPCProvider } from "./RPCProvider";
 export { RPCProvider };
