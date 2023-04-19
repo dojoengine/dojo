@@ -18,7 +18,7 @@ export function useWebSocket<T>({
         const messageListener = (message: any) => {
             if (message.entityId === entityId && message.componentId === componentId) {
                 // Update the store with the received data
-                store.update(message.data);
+                store.setState({ value: message });
             }
         };
 
