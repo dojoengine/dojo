@@ -17,7 +17,7 @@ pub struct MigrateArgs {
 
     #[clap(short, long)]
     #[clap(value_name = "DOJO_ENV")]
-    #[clap(help = "Execute the migration based on the environment configuration.")]
+    #[clap(help = "Specify the environment to perform the migration on.")]
     env: String,
 
     #[clap(short, long, help = "Perform a dry run and outputs the plan to be executed")]
