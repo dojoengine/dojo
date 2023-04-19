@@ -29,7 +29,7 @@ async fn index(req: HttpRequest, stream: web::Payload) -> Result<HttpResponse, E
 
 pub async fn start_ws() -> std::io::Result<()> {
     let server = HttpServer::new(|| App::new().route("/ws/", web::get().to(index)))
-        .bind(("127.0.0.1", 8080))?
+        .bind(("127.0.0.2", 8080))?
         .run()
         .await;
     server

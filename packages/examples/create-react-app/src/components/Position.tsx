@@ -1,12 +1,10 @@
-import { useEffect, useState } from "react";
-import { useComponent, useSystem, useDojo } from "@dojoengine/react"
-import { Position as PositionType } from "../types";
+import { useEffect } from "react";
+import { useDojo } from "@dojoengine/react"
 import { PositionParser as parser } from "../parsers";
 
 // TODO: add types for component
-
 interface Props {
-  entity_id: string;
+  entityId: string;
   src: string;
   direction: number;
   position: {
@@ -15,9 +13,8 @@ interface Props {
   };
 }
 
-
 const componentStruct = {
-  name: "Position",
+  id: "Position",
   offset: 0,
   length: 0,
 }
@@ -27,39 +24,44 @@ const system = {
   name: "Movement"
 }
 
-export const Position = ({ entity_id, src, position, direction }: Props) => {
+export const Position = ({ entityId, src, position, direction }: Props) => {
+
+  const params = {
+    key: "1",
+    parser,
+    componentState: [BigInt(position.x), BigInt(position.y)],
+    componentId: componentStruct.id,
+    entityId
+  }
 
   const {
     useComponent: { component, getComponent },
-    useSystem: { execute }
-  } = useDojo({ key: "1", parser, optimistic: false, componentState: [BigInt(position.x), BigInt(position.y)] });
-
+    useSystem: { execute },
+    useWebSocket: { component: WSComponent }
+  } = useDojo(params);
 
   useEffect(() => {
-    console.log("Moving ", entity_id, " to ", position.x, position.y)
-
-    // execute direction
+    console.log("Moving ", entityId, " to ", position.x, position.y)
     execute(
-      [BigInt(direction)],
+      [BigInt(entityId), BigInt(direction)],
       system.name
     )
-    console.log(component)
-  }, [position, entity_id, execute]);
+  }, [position, entityId, execute]);
 
-  // get component
+
   useEffect(() => {
-    getComponent(entity_id,
+    getComponent(entityId,
       {
-        partition: componentStruct.name,
+        partition: componentStruct.id,
         keys: [""]
       }
     );
-  }, [entity_id])
+  }, [entityId])
 
   return (
     <img
       src={src}
-      alt={entity_id}
+      alt={entityId}
       style={{ width: '100%', height: '100%', objectFit: 'contain' }}
     />
   );

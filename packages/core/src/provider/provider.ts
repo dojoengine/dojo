@@ -1,7 +1,7 @@
 import { EventEmitter } from "events";
-import { IWorld, Query } from "../types";
+import { ICommands, Query } from "../types";
 
-export abstract class Provider extends EventEmitter implements IWorld {
+export abstract class Provider extends EventEmitter implements ICommands {
     private readonly worldAddress: string;
 
     constructor(worldAddress: string) {

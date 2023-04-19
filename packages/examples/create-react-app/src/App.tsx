@@ -1,6 +1,6 @@
 import { DojoConfig, WorldProvider } from "@dojoengine/react"
 import { Position } from "./components/Position";
-import manifest from "../../../../examples/target/release/manifest.json"
+// import manifest from "../../../../examples/target/release/manifest.json"
 import { Connect } from "./components/Connect";
 import ControllerConnector from "@cartridge/connector";
 import { InjectedConnector } from "@starknet-react/core";
