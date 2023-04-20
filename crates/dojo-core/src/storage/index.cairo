@@ -17,8 +17,7 @@ mod Index {
     }
 
     fn create(table: felt252, id: felt252) {
-        let is_set = ids::read((table, id));
-        if is_set != 0_usize {
+        if exists(table, id) {
             return ();
         }
 
@@ -29,6 +28,10 @@ mod Index {
     }
 
     fn delete(table: felt252, id: felt252) {
+        if !exists(table, id) {
+            return ();
+        }
+
         let table_len = table_lens::read(table);
         let table_idx = ids::read((table, id)) - 1_usize;
         ids::write((table, id), 0_usize);
@@ -85,7 +88,7 @@ fn test_index_entity() {
 
 #[test]
 #[available_gas(2000000)]
-fn test_entity_delete() {
+fn test_entity_delete_basic() {
     Index::create(69, 420);
     let query = Index::query(69);
     assert(query.len() == 1_usize, 'entity not indexed');
@@ -98,4 +101,27 @@ fn test_entity_delete() {
     assert(!Index::exists(69, 420), 'entity should not exist');
     let no_query = Index::query(69);
     assert(no_query.len() == 0_usize, 'index should have no query');
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_entity_query_delete_shuffle() {
+    let table = 1;
+    Index::create(table, 10);
+    Index::create(table, 20);
+    Index::create(table, 30);
+    assert(Index::query(table).len() == 3_usize, 'wrong size');
+
+    Index::delete(table, 10);
+    let entities = Index::query(table);
+    assert(entities.len() == 2_usize, 'wrong size');
+    assert(*entities.at(0_usize) == 30, 'idx 0 not 30');
+    assert(*entities.at(1_usize) == 20, 'idx 1 not 20');
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_entity_query_delete_non_existing() {
+    assert(Index::query(69).len() == 0_usize, 'table len != 0');
+    Index::delete(69, 999); // deleting non-existing should not panic
 }

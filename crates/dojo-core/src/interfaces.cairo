@@ -37,3 +37,12 @@ trait IComponent {
 trait ISystem {
     fn name() -> felt252;
 }
+
+#[abi]
+trait IWorldFactory {
+    fn set_world(class_hash: starknet::ClassHash);
+    fn set_executor(class_hash: starknet::ClassHash);
+    fn spawn(name: felt252, components: Array::<starknet::ClassHash>, systems: Array::<starknet::ClassHash>);
+    fn world_class_hash() -> starknet::ClassHash;
+    fn executor_address() -> starknet::ContractAddress;
+}
