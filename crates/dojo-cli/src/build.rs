@@ -13,7 +13,7 @@ use smol_str::SmolStr;
 #[derive(Args, Debug)]
 pub struct BuildArgs {
     #[clap(help = "Source directory")]
-    path: Option<Utf8PathBuf>,
+    pub path: Option<Utf8PathBuf>,
 
     /// Specify the profile to use.
     #[command(flatten)]

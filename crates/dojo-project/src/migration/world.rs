@@ -69,12 +69,11 @@ pub struct World {
 
 impl World {
     pub async fn from_path(
-        source_dir: Utf8PathBuf,
+        target_dir: Utf8PathBuf,
         world_config: WorldConfig,
         env_config: EnvironmentConfig,
     ) -> Result<World> {
-        let local_manifest =
-            Manifest::load_from_path(source_dir.join("target/release/manifest.json"))?;
+        let local_manifest = Manifest::load_from_path(target_dir.join("manifest.json"))?;
 
         let remote_manifest = if let Some(world_address) = world_config.address {
             let provider = env_config.get_provider()?;
@@ -152,8 +151,8 @@ impl World {
     }
 
     /// evaluate which contracts/classes need to be (re)declared/deployed
-    pub fn prepare_for_migration(&self, source_dir: Utf8PathBuf) -> Result<Migration> {
-        let entries = fs::read_dir(source_dir.join("target/release")).unwrap_or_else(|error| {
+    pub fn prepare_for_migration(&self, target_dir: Utf8PathBuf) -> Result<Migration> {
+        let entries = fs::read_dir(target_dir).unwrap_or_else(|error| {
             panic!("Problem reading source directory: {error}");
         });
 
