@@ -10,10 +10,7 @@ use blockifier::{
     },
     transaction::{account_transaction::AccountTransaction, transactions::ExecutableTransaction},
 };
-use starknet::{
-    core::types::{FieldElement, FromByteSliceError},
-    providers::jsonrpc::models::BlockId,
-};
+use starknet::providers::jsonrpc::models::BlockId;
 use starknet_api::{
     core::{calculate_contract_address, ClassHash, ContractAddress, Nonce},
     hash::StarkFelt,
@@ -113,18 +110,15 @@ impl KatanaSequencer {
         Ok((tx_hash, contract_address))
     }
 
-    pub async fn starknet_get_class_hash_at(
+    pub async fn get_class_hash_at(
         &self,
-        block_id: BlockId,
+        _block_id: BlockId,
         contract_address: ContractAddress,
-    ) -> Result<FieldElement, FromByteSliceError> {
-        let classHash = self
-            .state
+    ) -> Result<ClassHash, blockifier::state::errors::StateError> {
+        self.state
             .lock()
             .unwrap()
-            .get_class_hash_at(block_id, contract_address)
-            .unwrap();
-        FieldElement::from_byte_slice_be(classHash.0.bytes())
+            .get_class_hash_at(contract_address)
     }
 }
 

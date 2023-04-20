@@ -9,6 +9,7 @@ use starknet::{
     core::types::FieldElement,
     providers::jsonrpc::models::{BlockId, DeployTransactionResult},
 };
+use starknet_api::patricia_key;
 use starknet_api::{
     core::{ClassHash, ContractAddress, PatriciaKey},
     hash::StarkFelt,
@@ -16,7 +17,6 @@ use starknet_api::{
     transaction::{Calldata, ContractAddressSalt, TransactionVersion},
 };
 use starknet_api::{hash::StarkHash, transaction::TransactionSignature};
-use starknet_api::{patricia_key, state::StorageKey};
 use std::{net::SocketAddr, sync::Arc};
 use util::to_trimmed_hex_string;
 
@@ -106,10 +106,18 @@ impl KatanaApiServer for KatanaRpc {
         _block_id: BlockId,
         _contract_address: String,
     ) -> Result<FieldElement, Error> {
-        self.sequencer
-            .starknet_get_class_hash_at(ContractAddress(patricia_key!(_contract_address.as_str())))
+        let class_hash = self
+            .sequencer
+            .get_class_hash_at(
+                starknet::providers::jsonrpc::models::BlockId::Number(0),
+                ContractAddress(patricia_key!(_contract_address.as_str())),
+            )
             .await
             .map_err(|_| Error::from(KatanaApiError::ContractError))
+            .unwrap();
+
+        FieldElement::from_byte_slice_be(class_hash.0.bytes())
+            .map_err(|_| Error::from(KatanaApiError::InternalServerError))
     }
 }
 
