@@ -73,16 +73,20 @@ pub struct EnvironmentConfig {
 }
 
 impl EnvironmentConfig {
-    pub fn from_workspace<T: AsRef<str>>(
-        env: T,
-        ws: &Workspace<'_>,
-    ) -> Result<Self, DeserializationError> {
+    pub fn from_workspace<T: AsRef<str>>(profile: T, ws: &Workspace<'_>) -> anyhow::Result<Self> {
         let mut config = EnvironmentConfig::default();
 
-        if let Some(env) = dojo_metadata_from_workspace(ws)
-            .and_then(|dojo_metadata| dojo_metadata.get("env").cloned())
-            .and_then(|env_metadata| env_metadata.get(env.as_ref()).cloned())
-        {
+        let mut env_metadata = dojo_metadata_from_workspace(ws)
+            .and_then(|dojo_metadata| dojo_metadata.get("env").cloned());
+
+        // If there is an environment-specific metadata, use that, otherwise use the
+        // workspace's default environment metadata.
+        env_metadata = env_metadata
+            .as_ref()
+            .and_then(|env_metadata| env_metadata.get(profile.as_ref()).cloned())
+            .or(env_metadata);
+
+        if let Some(env) = env_metadata {
             if let Some(rpc) = env.get("rpc_url").and_then(|v| v.as_str()) {
                 let url = Url::parse(rpc).map_err(|_| DeserializationError::ParsingUrl)?;
                 config.rpc = Some(url);

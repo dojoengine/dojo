@@ -11,25 +11,24 @@ use scarb::ops;
 use scarb::ui::Verbosity;
 use tracing::error;
 
+use crate::build::{self, BuildArgs, ProfileSpec};
+
 #[derive(Args)]
 pub struct MigrateArgs {
     #[clap(help = "Source directory")]
     path: Option<Utf8PathBuf>,
 
-    #[clap(short, long)]
-    #[clap(value_name = "DOJO_ENV")]
-    #[clap(help = "Specify the environment to perform the migration on.")]
-    env: String,
-
     #[clap(short, long, help = "Perform a dry run and outputs the plan to be executed")]
     plan: bool,
+
+    #[command(flatten)]
+    profile_spec: ProfileSpec,
 }
 
-#[tokio::main]
-pub async fn run(args: MigrateArgs) -> Result<()> {
+pub fn run(args: MigrateArgs) -> Result<()> {
     dotenv().ok();
 
-    let MigrateArgs { path, env, .. } = args;
+    let MigrateArgs { path, profile_spec, .. } = args;
 
     let source_dir = match path {
         Some(path) => {
@@ -55,12 +54,21 @@ pub async fn run(args: MigrateArgs) -> Result<()> {
         std::process::exit(1);
     });
 
-    let world_config = WorldConfig::from_workspace(&ws).unwrap_or_default();
-    let env_config = EnvironmentConfig::from_workspace(env, &ws).unwrap_or_default();
+    let profile = profile_spec.determine()?;
+    let target_dir = source_dir.join(format!("target/{}", profile.as_str()));
 
-    let world = World::from_path(source_dir.clone(), world_config, env_config).await?;
-    let mut migration = world.prepare_for_migration(source_dir)?;
-    migration.execute().await?;
+    if !target_dir.join("manifest.json").exists() {
+        build::run(BuildArgs { path: Some(source_dir), profile_spec })?;
+    }
+
+    let world_config = WorldConfig::from_workspace(&ws).unwrap_or_default();
+    let env_config = EnvironmentConfig::from_workspace(profile.as_str(), &ws)?;
+
+    ws.config().tokio_handle().block_on(async {
+        let world = World::from_path(target_dir.clone(), world_config, env_config).await?;
+        let mut migration = world.prepare_for_migration(target_dir)?;
+        migration.execute().await
+    })?;
 
     Ok(())
 }
