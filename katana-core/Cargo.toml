@@ -15,4 +15,3 @@ starknet_api.workspace = true
 thiserror.workspace = true
 starknet.workspace = true
 serde_json = "1.0.70"
-eyre.workspace = true

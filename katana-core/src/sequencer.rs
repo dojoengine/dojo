@@ -8,7 +8,6 @@ use blockifier::{
     },
     transaction::{account_transaction::AccountTransaction, transactions::ExecutableTransaction},
 };
-use eyre::Result;
 use starknet_api::{
     core::{calculate_contract_address, ClassHash, ContractAddress, Nonce},
     hash::StarkFelt,
