@@ -106,16 +106,10 @@ impl KatanaApiServer for KatanaRpc {
         _block_id: BlockId,
         _contract_address: String,
     ) -> Result<FieldElement, Error> {
-        let class_hash = self
-            .sequencer
-            .state
-            .lock()
-            .unwrap()
-            .get_class_hash_at(ContractAddress(patricia_key!(_contract_address.as_str())))
-            .unwrap();
-
-        Ok(FieldElement::from_byte_slice_be(class_hash.0.bytes())
-            .map_err(|_| Error::from(KatanaApiError::InternalServerError))?)
+        self.sequencer
+            .starknet_get_class_hash_at(ContractAddress(patricia_key!(_contract_address.as_str())))
+            .await
+            .map_err(|_| Error::from(KatanaApiError::ContractError))
     }
 }
 
