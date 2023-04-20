@@ -117,13 +117,11 @@ impl KatanaSequencer {
         contract_address: ContractAddress,
         storage_key: StorageKey,
     ) -> Result<FieldElement, FromByteSliceError> {
-        let storage = self
+        self
             .state
             .lock()
             .unwrap()
             .get_storage_at(contract_address, storage_key)
-            .unwrap();
-        FieldElement::from_byte_slice_be(storage.bytes())
     }
 }
 
