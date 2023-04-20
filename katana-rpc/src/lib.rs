@@ -103,13 +103,18 @@ impl KatanaApiServer for KatanaRpc {
         _contract_address: String,
         _key: String,
     ) -> Result<FieldElement, Error> {
-        self.sequencer
+        let storage = self
+            .sequencer
             .starknet_get_storage_at(
                 ContractAddress(patricia_key!(_contract_address.as_str())),
                 StorageKey(patricia_key!(_key.as_str())),
             )
             .await
             .map_err(|_| Error::from(KatanaApiError::ContractError))
+            .unwrap();
+
+        FieldElement::from_byte_slice_be(storage.bytes())
+            .map_err(|_| Error::from(KatanaApiError::InternalServerError))
     }
 }
 

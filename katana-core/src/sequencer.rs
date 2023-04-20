@@ -116,9 +116,8 @@ impl KatanaSequencer {
         &self,
         contract_address: ContractAddress,
         storage_key: StorageKey,
-    ) -> Result<FieldElement, FromByteSliceError> {
-        self
-            .state
+    ) -> Result<StarkFelt, blockifier::state::errors::StateError> {
+        self.state
             .lock()
             .unwrap()
             .get_storage_at(contract_address, storage_key)
