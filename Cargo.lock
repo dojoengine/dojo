@@ -3275,6 +3275,7 @@ dependencies = [
  "log",
  "num",
  "serde",
+ "serde_json",
  "sha3",
  "sqlx",
  "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=e72cc0a4b3ea67c7691ebec58300da3c21f0abb2)",

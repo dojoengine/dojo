@@ -1,6 +1,9 @@
+use std::time::Duration;
+
 use actix::prelude::*;
 use actix_web::{middleware, web, App, Error, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
+use serde_json::{json, Value};
 
 async fn ws_index(r: HttpRequest, stream: web::Payload) -> Result<HttpResponse, Error> {
     ws::start(AutobahnWebSocket::default(), &r, stream)
@@ -14,10 +17,38 @@ impl Actor for AutobahnWebSocket {
 }
 
 impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for AutobahnWebSocket {
+    fn started(&mut self, ctx: &mut Self::Context) {
+        let interval = Duration::from_secs(1);
+        ctx.run_interval(interval, |_, ctx| {
+            let response = json!({
+                "entity": "1",
+                "component": "position",
+                "data": ["1", "2"]
+            });
+
+            let json_string = serde_json::to_string(&response).unwrap();
+
+            ctx.text(json_string);
+        });
+    }
+
     fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
         if let Ok(msg) = msg {
             match msg {
-                ws::Message::Text(text) => ctx.text(text),
+                ws::Message::Text(text) => {
+                    // Create the JSON object
+                    let response = json!({
+                        "entity": "1",
+                        "component": "position",
+                        "data": ["1", "2"]
+                    });
+
+                    // Serialize the JSON object back to a string
+                    let json_string = serde_json::to_string(&response).unwrap();
+
+                    // Send the JSON string as a text message
+                    ctx.text(json_string);
+                }
                 ws::Message::Binary(bin) => ctx.binary(bin),
                 ws::Message::Ping(bytes) => ctx.pong(&bytes),
                 ws::Message::Close(reason) => {
