@@ -58,7 +58,7 @@ pub fn run(args: MigrateArgs) -> Result<()> {
     let target_dir = source_dir.join(format!("target/{}", profile.as_str()));
 
     if !target_dir.join("manifest.json").exists() {
-        build::run(BuildArgs { path: Some(source_dir.clone()), profile_spec })?;
+        build::run(BuildArgs { path: Some(source_dir), profile_spec })?;
     }
 
     let world_config = WorldConfig::from_workspace(&ws).unwrap_or_default();
