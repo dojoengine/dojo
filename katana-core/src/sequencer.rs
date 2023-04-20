@@ -1,5 +1,3 @@
-use std::sync::Mutex;
-
 use crate::{block_context::Base, state::DictStateReader};
 use blockifier::{
     abi::abi_utils::get_storage_var_address,
@@ -10,15 +8,20 @@ use blockifier::{
     },
     transaction::{account_transaction::AccountTransaction, transactions::ExecutableTransaction},
 };
+use eyre::Result;
 use starknet_api::{
     core::{calculate_contract_address, ClassHash, ContractAddress, Nonce},
     hash::StarkFelt,
     stark_felt,
+    state::StorageKey,
     transaction::{
         Calldata, ContractAddressSalt, DeployAccountTransaction, Fee, TransactionHash,
         TransactionSignature, TransactionVersion,
     },
 };
+use std::sync::Mutex;
+
+use starknet::core::types::{FieldElement, FromByteSliceError};
 
 pub struct KatanaSequencer {
     pub block_context: BlockContext,
@@ -108,6 +111,20 @@ impl KatanaSequencer {
         tx.execute(&mut self.state.lock().unwrap(), &self.block_context)?;
 
         Ok((tx_hash, contract_address))
+    }
+
+    pub async fn starknet_get_storage_at(
+        &self,
+        contract_address: ContractAddress,
+        storage_key: StorageKey,
+    ) -> Result<FieldElement, FromByteSliceError> {
+        let storage = self
+            .state
+            .lock()
+            .unwrap()
+            .get_storage_at(contract_address, storage_key)
+            .unwrap();
+        FieldElement::from_byte_slice_be(storage.bytes())
     }
 }
 
