@@ -5,7 +5,10 @@ use jsonrpsee::{
     types::error::CallError,
 };
 use katana_core::sequencer::KatanaSequencer;
+use starknet::providers::jsonrpc::models::BlockId;
 use starknet::{core::types::FieldElement, providers::jsonrpc::models::DeployTransactionResult};
+use starknet_api::patricia_key;
+use starknet_api::state::StorageKey;
 use starknet_api::{
     core::{ClassHash, ContractAddress, PatriciaKey},
     hash::StarkFelt,
@@ -13,7 +16,6 @@ use starknet_api::{
     transaction::{Calldata, ContractAddressSalt, TransactionVersion},
 };
 use starknet_api::{hash::StarkHash, transaction::TransactionSignature};
-use starknet_api::{patricia_key, state::StorageKey};
 use std::{net::SocketAddr, sync::Arc};
 use util::to_trimmed_hex_string;
 
@@ -98,6 +100,24 @@ impl KatanaApiServer for KatanaRpc {
         })
     }
 
+    async fn get_class_hash_at(
+        &self,
+        _block_id: BlockId,
+        _contract_address: String,
+    ) -> Result<FieldElement, Error> {
+        let class_hash = self
+            .sequencer
+            .class_hash_at(
+                starknet::providers::jsonrpc::models::BlockId::Number(0),
+                ContractAddress(patricia_key!(_contract_address.as_str())),
+            )
+            .await
+            .map_err(|_| Error::from(KatanaApiError::ContractError))
+            .unwrap();
+        FieldElement::from_byte_slice_be(class_hash.0.bytes())
+            .map_err(|_| Error::from(KatanaApiError::InternalServerError))
+    }
+
     async fn get_storage_at(
         &self,
         _contract_address: String,
@@ -105,7 +125,7 @@ impl KatanaApiServer for KatanaRpc {
     ) -> Result<FieldElement, Error> {
         let storage = self
             .sequencer
-            .starknet_get_storage_at(
+            .get_storage_at(
                 ContractAddress(patricia_key!(_contract_address.as_str())),
                 StorageKey(patricia_key!(_key.as_str())),
             )

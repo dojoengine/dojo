@@ -8,6 +8,7 @@ use blockifier::{
     },
     transaction::{account_transaction::AccountTransaction, transactions::ExecutableTransaction},
 };
+use starknet::providers::jsonrpc::models::BlockId;
 use starknet_api::{
     core::{calculate_contract_address, ClassHash, ContractAddress, Nonce},
     hash::StarkFelt,
@@ -109,7 +110,18 @@ impl KatanaSequencer {
         Ok((tx_hash, contract_address))
     }
 
-    pub async fn starknet_get_storage_at(
+    pub async fn class_hash_at(
+        &self,
+        _block_id: BlockId,
+        contract_address: ContractAddress,
+    ) -> Result<ClassHash, blockifier::state::errors::StateError> {
+        self.state
+            .lock()
+            .unwrap()
+            .get_class_hash_at(contract_address)
+    }
+
+    pub async fn get_storage_at(
         &self,
         contract_address: ContractAddress,
         storage_key: StorageKey,
