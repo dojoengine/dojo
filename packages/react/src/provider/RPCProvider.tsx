@@ -14,15 +14,15 @@ const RpcContext = createContext<DojoContext>(DOJO_INITIAL_STATE);
 
 interface DojoConfigProps {
   worldAddress: string;
-  rpcUrl?: string;
+  rpcUrl: string | "https://starknet-goerli.cartridge.gg/";
   children: React.ReactNode;
 }
 
-export const RPCProvider: React.FC<DojoConfigProps> = ({
+export function RPCProvider({
   children,
   worldAddress,
   rpcUrl,
-}: any) => {
+}: DojoConfigProps) {
   const [rpcProvider, setRpcProvider] = useState<Providers.RPCProvider>();
 
   useEffect(() => {

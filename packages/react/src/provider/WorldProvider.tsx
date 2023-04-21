@@ -1,9 +1,6 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import ControllerConnector from "@cartridge/connector";
 import {
-    InjectedConnector,
     StarknetConfig,
-    useConnectors,
 } from "@starknet-react/core";
 import { RPCProvider } from './RPCProvider';
 import { WebSocketProvider } from './WSProvider';
@@ -16,7 +13,7 @@ const WorldContext = createContext<WorldContextValue | null>(null);
 
 interface WorldProviderProps {
     worldAddress: string;
-    rpcUrl?: string;
+    rpcUrl: string | "https://starknet-goerli.cartridge.gg/";
     ws: string;
     children: ReactNode;
     connectors: any[];
