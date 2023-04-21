@@ -20,8 +20,6 @@ use starknet_api::{
 };
 use std::sync::Mutex;
 
-use starknet::core::types::{FieldElement, FromByteSliceError};
-
 pub struct KatanaSequencer {
     pub block_context: BlockContext,
     pub state: Mutex<CachedState<DictStateReader>>,
