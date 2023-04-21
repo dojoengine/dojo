@@ -55,7 +55,7 @@ impl KatanaSequencer {
         self.state.lock().unwrap().set_storage_at(
             self.block_context.fee_token_address,
             deployed_account_balance_key,
-            stark_felt!(Fee(u128::from(balance)).0 as u64),
+            stark_felt!(balance),
         );
 
         self.deploy_account(
@@ -91,11 +91,10 @@ impl KatanaSequencer {
             .unwrap()
             .get_storage_at(self.block_context.fee_token_address, account_balance_key)?;
 
-        let max_fee_b16 = &max_fee.bytes()[..16];
         // TODO: Compute txn hash
         let tx_hash = TransactionHash::default();
         let tx = AccountTransaction::DeployAccount(DeployAccountTransaction {
-            max_fee: Fee(u128::from_be_bytes(max_fee_b16.try_into().unwrap())),
+            max_fee: Fee(max_fee.try_into().unwrap()),
             version,
             class_hash,
             contract_address,
