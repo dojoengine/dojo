@@ -107,7 +107,7 @@ impl KatanaApiServer for KatanaRpc {
     ) -> Result<FieldElement, Error> {
         let class_hash = self
             .sequencer
-            .get_class_hash_at(
+            .class_hash_at(
                 starknet::providers::jsonrpc::models::BlockId::Number(0),
                 ContractAddress(patricia_key!(_contract_address.as_str())),
             )
