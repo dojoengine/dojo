@@ -48,7 +48,7 @@ impl KatanaRpc {
 #[async_trait]
 impl KatanaApiServer for KatanaRpc {
     async fn chain_id(&self) -> Result<String, Error> {
-        Ok(self.sequencer.block_context.chain_id.to_string())
+        Ok(self.sequencer.block_context.chain_id.as_hex())
     }
 
     async fn get_nonce(&self, contract_address: String) -> Result<String, Error> {
