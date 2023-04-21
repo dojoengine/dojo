@@ -1,8 +1,8 @@
 export type MessageListener = (message: any) => void;
 
 export class WebSocketProvider {
-    private ws: WebSocket;
-    private listeners: MessageListener[];
+    public ws: WebSocket;
+    public listeners: MessageListener[];
 
     constructor(ws: string) {
         this.ws = new WebSocket(ws);

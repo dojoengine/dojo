@@ -1632,6 +1632,11 @@ bn.js@^5.2.1:
   resolved "https://registry.yarnpkg.com/bn.js/-/bn.js-5.2.1.tgz#0bc527a6a0d18d0aa8d5b0538ce4a77dccfa7b70"
   integrity sha512-eXRvHzWyYPBuB4NBy0cmYQjGitUrtqwbvlzP3G6VFnNRbsZQIxQ10PbKKHt8gZ/HW/D/747aDl+QkDqg3KQLMQ==
 
+bowser@^2.11.0:
+  version "2.11.0"
+  resolved "https://registry.yarnpkg.com/bowser/-/bowser-2.11.0.tgz#5ca3c35757a7aa5771500c70a73a9f91ef420a8f"
+  integrity sha512-AlcaJBi/pqqJBIQ8U9Mcpc9i8Aqxn88Skv5d+xBX006BY5u8N3mGLHa5Lgppa7L/HfwgwLgZ6NYs+Ag6uUmJRA==
+
 brace-expansion@^1.1.7:
   version "1.1.11"
   resolved "https://registry.yarnpkg.com/brace-expansion/-/brace-expansion-1.1.11.tgz#3c7fcbf529d87226f3d2f52b966ff5271eb441dd"
@@ -2038,10 +2043,18 @@ get-package-type@^0.1.0:
   resolved "https://registry.yarnpkg.com/get-package-type/-/get-package-type-0.1.0.tgz#8de2d803cff44df3bc6c456e6668b36c3926e11a"
   integrity sha512-pjzuKtY64GYfWizNAJ0fr9VqttZkNiK2iS430LtIHzjBEr6bX8Am2zm4sW4Ro5wjWW5cAlRL1qAMTcXbjNAO2Q==
 
-get-starknet-core@^2.0.0:
+get-starknet-core@^2.0.0, get-starknet-core@^2.1.0:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/get-starknet-core/-/get-starknet-core-2.1.0.tgz#f8dee81c0b050fbb6d284fad81a5bbdad79ef74c"
   integrity sha512-sT9fxIiM3maEqz1cVggiB/jGn+nUCavhhhJRnU/G1zKMmJFYORjRNohEZ1xXgRt6MFVUNPnAzxQrhI1F645VNA==
+
+get-starknet@^2.1.0:
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/get-starknet/-/get-starknet-2.1.0.tgz#990e275dd1ce3b531b9b8a8a51f9699beba8951b"
+  integrity sha512-cJX1M/IsFYBpMI/oyn05CPiM3a/95RLesYkc4pCeuO6x3upSaJDa6kanWi294qPRBnhwanAIB3zeGhVZ9ymBMg==
+  dependencies:
+    bowser "^2.11.0"
+    get-starknet-core "^2.1.0"
 
 get-stream@^6.0.0:
   version "6.0.1"
@@ -3054,7 +3067,7 @@ stack-utils@^2.0.3:
   dependencies:
     escape-string-regexp "^2.0.0"
 
-starknet@^4.17.1:
+starknet@^4.17.1, starknet@^4.22.0:
   version "4.22.0"
   resolved "https://registry.yarnpkg.com/starknet/-/starknet-4.22.0.tgz#8d0c628e2a8e868ee9b4757afe89f07b05ec55ff"
   integrity sha512-jC9Taxb6a/ht9zmS1LU/DSLfwJKpgCJnE9AktVksc5SE/+jQMpqxsq6fm7PRiqupjiqRC1DOS8N47cj+KaGv4Q==

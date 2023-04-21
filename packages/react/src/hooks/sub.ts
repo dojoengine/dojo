@@ -12,14 +12,19 @@ export function useWebSocket<T>({
     parser: (data: any) => T | undefined;
     store: any;
 }) {
-    const { addMessageListener, removeMessageListener } = useWebSocketContext();
+    const { sendMessage, addMessageListener, removeMessageListener } = useWebSocketContext();
 
     useEffect(() => {
+
+        // TODO: Types
         const messageListener = (message: any) => {
-            if (message.entityId === entityId && message.componentId === componentId) {
-                // Update the store with the received data
-                store.setState({ value: message });
-            }
+            // console.log(entityId, "Received message:", message);
+            // if (message.entityId === entityId && message.componentId === componentId) {
+            // Update the store with the received data
+            store.setState({ value: message.data });
+
+            // console.log(entityId, message.data)
+            // }
         };
 
         // Add the message listener

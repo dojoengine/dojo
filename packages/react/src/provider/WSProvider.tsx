@@ -1,44 +1,62 @@
 // WebSocketContext.tsx
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, Component } from "react";
 import { Providers } from '@dojoengine/core';
+import { MessageListener } from "@dojoengine/core/dist/provider/WSProvider";
 
 type WebSocketContextType = {
     sendMessage: (message: any) => void;
-    addMessageListener: (listener: (message: any) => void) => void;
-    removeMessageListener: (listener: (message: any) => void) => void;
+    addMessageListener: (listener: MessageListener) => void;
+    removeMessageListener: (listener: MessageListener) => void;
 };
 
 const WebSocketContext = createContext<WebSocketContextType | null>(null);
 
 interface WebSocketProviderProps {
-    url: string;
+    ws: string;
     children: React.ReactNode;
 }
 
-const WebSocketProviderComponent: React.FC<WebSocketProviderProps> = ({ url, children }) => {
-    const [wsProvider, setWsProvider] = useState<Providers.WebSocketProvider | null>(null);
-
-    useEffect(() => {
-        const provider = new Providers.WebSocketProvider(url);
-        setWsProvider(provider);
-
-        return () => {
-            provider.close();
+class WebSocketProvider extends Component<WebSocketProviderProps, { wsProvider: Providers.WebSocketProvider | null }> {
+    constructor(props: WebSocketProviderProps) {
+        super(props);
+        this.state = {
+            wsProvider: null,
         };
-    }, [url]);
-
-    if (!wsProvider) {
-        return null;
     }
 
-    const value: WebSocketContextType = {
-        sendMessage: wsProvider.sendMessage,
-        addMessageListener: wsProvider.addMessageListener,
-        removeMessageListener: wsProvider.removeMessageListener,
-    };
+    componentDidMount() {
+        const provider = new Providers.WebSocketProvider(this.props.ws);
+        this.setState({ wsProvider: provider });
 
-    return <WebSocketContext.Provider value={value}>{children}</WebSocketContext.Provider>;
-};
+        provider.ws.addEventListener('open', () => {
+            provider.sendMessage("Hello, Dojo");
+        });
+    }
+
+    componentWillUnmount() {
+        if (this.state.wsProvider) {
+            this.state.wsProvider.close();
+        }
+    }
+
+    render() {
+        if (!this.state.wsProvider) {
+            return null;
+        }
+
+        const value: WebSocketContextType = {
+            sendMessage: this.state.wsProvider.sendMessage.bind(this.state.wsProvider),
+            addMessageListener: this.state.wsProvider.addMessageListener.bind(this.state.wsProvider),
+            removeMessageListener: this.state.wsProvider.removeMessageListener.bind(this.state.wsProvider),
+        };
+
+        return (
+            <WebSocketContext.Provider value={value}>
+                {this.props.children}
+            </WebSocketContext.Provider>
+        );
+    }
+}
 
 const useWebSocketContext = (): WebSocketContextType => {
     const context = useContext(WebSocketContext);
@@ -48,4 +66,4 @@ const useWebSocketContext = (): WebSocketContextType => {
     return context;
 };
 
-export { WebSocketProviderComponent, useWebSocketContext };
+export { WebSocketProvider, useWebSocketContext };

@@ -44,9 +44,12 @@ export const Position = ({ entityId, src, position, direction }: Props) => {
   useEffect(() => {
     console.log("Moving ", entityId, " to ", position.x, position.y)
     execute(
-      [BigInt(entityId), BigInt(direction)],
+      [BigInt(1), BigInt(direction)],
       system.name
     )
+
+    if (stream) console.log(stream)
+
   }, [position, entityId, execute]);
 
 
@@ -60,11 +63,15 @@ export const Position = ({ entityId, src, position, direction }: Props) => {
   }, [entityId])
 
   return (
-    <img
-      src={src}
-      alt={entityId}
-      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-    />
+    <div>
+
+      <img
+        src={src}
+        alt={entityId}
+        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+      />
+    </div>
+
   );
 };
 

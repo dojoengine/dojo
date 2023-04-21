@@ -8,6 +8,7 @@ import GridComponent from "./components/Grid";
 
 const worldAddress = "0x0248cacaeac64c45be0c19ee8727e0bb86623ca7fa3f0d431a6c55e200697e5a";
 const rpcUrl = "https://starknet-goerli.cartridge.gg/";
+const ws = "ws://localhost:9001"
 // might need to pass this in as a prop
 const controllerConnector = new ControllerConnector([
   {
@@ -26,7 +27,7 @@ const connectors = [controllerConnector as any, argentConnector];
 
 function App() {
   return (
-    <WorldProvider worldAddress={worldAddress} rpcUrl={rpcUrl} connectors={connectors}>
+    <WorldProvider worldAddress={worldAddress} rpcUrl={rpcUrl} connectors={connectors} ws={ws}>
       <div>
         <Connect />
         <GridComponent />
