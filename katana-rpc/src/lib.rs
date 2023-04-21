@@ -121,6 +121,7 @@ impl KatanaApiServer for KatanaRpc {
 #[cfg(test)]
 mod tests {
     use katana_core::sequencer::KatanaSequencer;
+    use starknet_api::core::ChainId;
 
     use crate::{api::KatanaApiServer, KatanaRpc};
 
@@ -128,7 +129,7 @@ mod tests {
     async fn chain_id_is_ok() {
         let rpc = KatanaRpc::new(KatanaSequencer::new());
         let chain_id = rpc.chain_id().await.unwrap();
-        assert_eq!(chain_id, "KATANA");
+        assert_eq!(chain_id, ChainId("KATANA".to_string()).as_hex());
     }
 
     #[tokio::test]
