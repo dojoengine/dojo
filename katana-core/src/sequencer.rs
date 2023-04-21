@@ -1,5 +1,3 @@
-use std::sync::Mutex;
-
 use crate::{block_context::Base, state::DictStateReader};
 use blockifier::{
     abi::abi_utils::get_storage_var_address,
@@ -15,11 +13,14 @@ use starknet_api::{
     core::{calculate_contract_address, ClassHash, ContractAddress, Nonce},
     hash::StarkFelt,
     stark_felt,
+    state::StorageKey,
     transaction::{
         Calldata, ContractAddressSalt, DeployAccountTransaction, Fee, TransactionHash,
         TransactionSignature, TransactionVersion,
     },
 };
+use std::sync::Mutex;
+
 pub struct KatanaSequencer {
     pub block_context: BlockContext,
     pub state: Mutex<CachedState<DictStateReader>>,
@@ -119,6 +120,17 @@ impl KatanaSequencer {
             .lock()
             .unwrap()
             .get_class_hash_at(contract_address)
+    }
+
+    pub async fn get_storage_at(
+        &self,
+        contract_address: ContractAddress,
+        storage_key: StorageKey,
+    ) -> Result<StarkFelt, blockifier::state::errors::StateError> {
+        self.state
+            .lock()
+            .unwrap()
+            .get_storage_at(contract_address, storage_key)
     }
 }
 
