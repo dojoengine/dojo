@@ -111,7 +111,7 @@ impl KatanaSequencer {
         Ok((tx_hash, contract_address))
     }
 
-    pub async fn get_class_hash_at(
+    pub async fn class_hash_at(
         &self,
         _block_id: BlockId,
         contract_address: ContractAddress,
