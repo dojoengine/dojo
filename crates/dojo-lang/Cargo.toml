@@ -39,9 +39,9 @@ url = "2.2.2"
 
 [dev-dependencies]
 assert_fs = "1.0.9"
-cairo-lang-formatter = "1.0.0-alpha.7"
-cairo-lang-semantic = { version = "1.0.0-alpha.7", features = ["testing"] }
-cairo-lang-test-utils = "1.0.0-alpha.7"
+cairo-lang-formatter.workspace = true
+cairo-lang-semantic.workspace = true
+cairo-lang-test-utils.workspace = true
 env_logger = "0.10.0"
 pretty_assertions.workspace = true
 test-case = "2.2.2"

@@ -7,7 +7,7 @@ use traits::Into;
 use starknet::ClassHashIntoFelt252;
 use dojo_core::serde::SpanSerde;
 
-#[derive(Drop)]
+#[derive(Drop, Serde)]
 struct Query {
     address_domain: u32,
     partition: felt252,
@@ -77,40 +77,17 @@ fn inner_id(state: felt252, keys: Span<felt252>, remain: usize) -> felt252 {
 }
 
 impl LegacyHashQuery of LegacyHash::<Query> {
-    fn hash(state: felt252, query: Query) -> felt252 {
-        LegacyHash::hash(state, query.into())
+    fn hash(state: felt252, value: Query) -> felt252 {
+        LegacyHash::hash(state, value.into())
     }
 }
 
 impl LegacyHashClassHashQuery of LegacyHash::<(starknet::ClassHash, Query)> {
-    fn hash(state: felt252, key: (starknet::ClassHash, Query)) -> felt252 {
-        let (class_hash, query) = key;
+    fn hash(state: felt252, value: (starknet::ClassHash, Query)) -> felt252 {
+        let (class_hash, query) = value;
         let class_hash_felt: felt252 = class_hash.into();
         let query_felt: felt252 = query.into();
         LegacyHash::hash(state, (class_hash_felt, query_felt))
-    }
-}
-
-impl QuerySerde of serde::Serde::<Query> {
-    fn serialize(ref serialized: Array::<felt252>, input: Query) {
-        Serde::<u32>::serialize(ref serialized, input.address_domain);
-        Serde::<felt252>::serialize(ref serialized, input.partition);
-        Serde::<felt252>::serialize(ref serialized, input.computed_key);
-        Serde::<Span<felt252>>::serialize(ref serialized, input.keys);
-    }
-    fn deserialize(ref serialized: Span::<felt252>) -> Option::<Query> {
-        let address_domain = Serde::<u32>::deserialize(ref serialized)?;
-        let partition = Serde::<felt252>::deserialize(ref serialized)?;
-        let computed_key = Serde::<felt252>::deserialize(ref serialized)?;
-        let mut arr = ArrayTrait::<felt252>::new();
-        match Serde::<Span<felt252>>::deserialize(ref serialized) {
-            Option::Some(keys) => {
-                Option::Some(Query { address_domain: address_domain, partition: partition, keys: keys, computed_key: computed_key })
-            },
-            Option::None(_) => {
-                Option::None(())
-            },
-        }
     }
 }
 
