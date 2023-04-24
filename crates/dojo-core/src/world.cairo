@@ -8,7 +8,6 @@ mod World {
     use starknet::ClassHash;
     use starknet::ContractAddress;
 
-    use dojo_core::serde::SpanSerde;
     use dojo_core::storage::query::Query;
     use dojo_core::storage::query::QueryTrait;
     use dojo_core::storage::db::Database;
