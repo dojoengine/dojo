@@ -1,0 +1,9 @@
+[package]
+name = "dojo_defi"
+version = "0.1.0"
+description = "Implementations of a defi primitives for the Dojo framework"
+
+[dependencies]
+dojo_core = { path = "../dojo-core" }
+
+[[target.dojo]]
