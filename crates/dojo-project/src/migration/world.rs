@@ -10,7 +10,7 @@ use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::FieldElement;
 use starknet::signers::{LocalWallet, SigningKey};
 
-use super::{ClassMigration, ContractMigration, Migration};
+use super::{ClassMigration, ContractMigration, Migration, WorldContractMigration};
 use crate::{EnvironmentConfig, WorldConfig};
 
 #[derive(Debug, Default, Clone)]
@@ -196,7 +196,13 @@ impl World {
             )
         };
 
-        Ok(Migration { world, executor, systems, components, migrator })
+        Ok(Migration {
+            world: WorldContractMigration(world),
+            executor,
+            systems,
+            components,
+            migrator,
+        })
     }
 }
 

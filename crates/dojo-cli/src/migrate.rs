@@ -1,6 +1,6 @@
 use std::env::{self, current_dir};
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use camino::Utf8PathBuf;
 use clap::Args;
 use dojo_project::migration::world::World;
@@ -67,7 +67,7 @@ pub fn run(args: MigrateArgs) -> Result<()> {
     ws.config().tokio_handle().block_on(async {
         let world = World::from_path(target_dir.clone(), world_config, env_config).await?;
         let mut migration = world.prepare_for_migration(target_dir)?;
-        migration.execute().await
+        migration.execute().await.map_err(|e| anyhow!(e))
     })?;
 
     Ok(())

@@ -5,6 +5,9 @@ version = "0.1.0"
 [cairo]
 sierra-replace-ids = true
 
+[profile.testnet.cairo]
+sierra-replace-ids = true
+
 [dependencies]
 dojo_core = { path = "../crates/dojo-core" }
 
@@ -14,5 +17,16 @@ dojo_core = { path = "../crates/dojo-core" }
 world_address = "0xdead"
 initializer_class_hash = "0xbeef"
 
-[tool.dojo.testnet]
-rpc = "https://rpc.testnet.starkware.co"
+[tool.dojo.env]
+rpc_url = "http://localhost:5050"
+chain_id = "1536727068981429685321"
+private_key = "0xfeedc99a7ba3550e358c493ca4fb706"
+account_address = "0x5e9e8c035453993f8d86dc8703c208e2124628bff15874bf5005706d1d54a55"
+
+[tool.dojo.env.nahara]
+rpc_url = "http://localhost:1111"
+chain_id = "0x6969"
+private_key = "0x123124"
+account_address = "0x420"
+
+
