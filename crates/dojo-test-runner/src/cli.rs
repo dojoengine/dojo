@@ -2,7 +2,9 @@
 
 use std::env::{self, current_dir};
 
+use anyhow::bail;
 use cairo_lang_compiler::db::RootDatabase;
+use cairo_lang_compiler::diagnostics::DiagnosticsReporter;
 use cairo_lang_test_runner::TestRunner;
 use camino::Utf8PathBuf;
 use clap::Parser;
@@ -69,6 +71,10 @@ fn main() -> anyhow::Result<()> {
         .build()?;
 
     let main_crate_ids = collect_main_crate_ids(&unit, db);
+
+    if DiagnosticsReporter::stderr().check(db) {
+        bail!("failed to compile");
+    }
 
     let runner = TestRunner {
         db: db.snapshot(),
