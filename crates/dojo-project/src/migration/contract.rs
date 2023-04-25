@@ -58,7 +58,7 @@ impl Declarable for ClassMigration {
         &self,
         account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
     ) -> Result<()> {
-        return declare(self.class.name.clone(), &self.artifact_path, account).await;
+        declare(self.class.name.clone(), &self.artifact_path, account).await
     }
 }
 
@@ -68,7 +68,7 @@ impl Declarable for ContractMigration {
         &self,
         account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
     ) -> Result<()> {
-        return declare(self.contract.name.clone(), &self.artifact_path, account).await;
+        declare(self.contract.name.clone(), &self.artifact_path, account).await
     }
 }
 
@@ -171,7 +171,7 @@ impl WorldContractMigration {
         executor: FieldElement,
         migrator: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
     ) -> Result<()> {
-        return self.0.deploy(vec![executor], migrator).await;
+        self.0.deploy(vec![executor], migrator).await
     }
 
     pub async fn set_executor(
