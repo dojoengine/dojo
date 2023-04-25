@@ -6,6 +6,7 @@ use cairo_lang_defs::plugin::{
 use cairo_lang_semantic::patcher::{PatchBuilder, RewriteNode};
 use cairo_lang_semantic::plugin::DynPluginAuxData;
 use cairo_lang_syntax::node::ast::MaybeModuleBody;
+use cairo_lang_syntax::node::ast::OptionReturnTypeClause::ReturnTypeClause;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 
@@ -113,10 +114,17 @@ impl System {
 
         let parameters = signature.parameters(db);
         let separator = if parameters.elements(db).is_empty() { "" } else { ", " };
+        let ret_clause = if let ReturnTypeClause(clause) = signature.ret_ty(db) {
+            RewriteNode::new_trimmed(clause.as_syntax_node())
+        } else {
+            RewriteNode::Text("".to_string())
+        };
+
         rewrite_nodes.push(RewriteNode::interpolate_patched(
             "
                 #[external]
-                fn execute($parameters$$separator$world_address: starknet::ContractAddress) {
+                fn execute($parameters$$separator$world_address: starknet::ContractAddress) \
+             $ret_clause$ {
                     $body$
                 }
             ",
@@ -124,6 +132,7 @@ impl System {
                 ("parameters".to_string(), RewriteNode::new_trimmed(parameters.as_syntax_node())),
                 ("separator".to_string(), RewriteNode::Text(separator.to_string())),
                 ("body".to_string(), RewriteNode::new_modified(body_nodes)),
+                ("ret_clause".to_string(), ret_clause),
             ]),
         ));
 
