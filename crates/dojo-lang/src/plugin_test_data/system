@@ -148,6 +148,13 @@ mod Move {
     }
 }
 
+#[system]
+mod Proxy {
+    fn execute(value: felt252) -> felt252 {
+        value
+    }
+}
+
 //! > generated_cairo_code
 use array::ArrayTrait;
 
@@ -641,6 +648,36 @@ mod MoveSystem {
         } else {
             return ();
         }
+    }
+}
+
+#[contract]
+mod ProxySystem {
+    use option::OptionTrait;
+    use array::SpanTrait;
+
+    use dojo_core::world;
+    use dojo_core::interfaces::IWorldDispatcher;
+    use dojo_core::interfaces::IWorldDispatcherTrait;
+    use dojo_core::storage::query::Query;
+    use dojo_core::storage::query::QueryTrait;
+    use dojo_core::storage::query::Felt252IntoQuery;
+    use dojo_core::storage::query::TupleSize1IntoQuery;
+    use dojo_core::storage::query::TupleSize2IntoQuery;
+    use dojo_core::storage::query::TupleSize3IntoQuery;
+    use dojo_core::storage::query::TupleSize1IntoPartitionedQuery;
+    use dojo_core::storage::query::TupleSize2IntoPartitionedQuery;
+    use dojo_core::storage::query::ContractAddressIntoQuery;
+
+    #[view]
+    fn name() -> felt252 {
+        'Proxy'
+    }
+
+
+    #[external]
+    fn execute(value: felt252, world_address: starknet::ContractAddress) -> felt252 {
+        value
     }
 }
 
