@@ -171,7 +171,7 @@ impl System {
             ast::Expr::If(expr_if) => Some(self.handle_if(db, expr_if, false)),
             ast::Expr::Block(expr_block) => Some(self.handle_block(db, expr_block)),
             ast::Expr::Match(expr_match) => Some(self.handle_match(db, expr_match)),
-            // TODO: loop expression when supported
+            ast::Expr::Loop(expr_loop) => Some(self.handle_loop(db, expr_loop)),
             _ => None,
         }
     }
@@ -219,6 +219,15 @@ impl System {
         }
 
         vec![if_rewrite]
+    }
+
+    fn handle_loop(&mut self, db: &dyn SyntaxGroup, expr_loop: ast::ExprLoop) -> Vec<RewriteNode> {
+        let loop_nodes: Vec<RewriteNode> = self.handle_block(db, expr_loop.body(db));
+        let loop_rewrite = RewriteNode::interpolate_patched(
+            "loop $block$;",
+            HashMap::from([("block".to_string(), RewriteNode::new_modified(loop_nodes))]),
+        );
+        vec![loop_rewrite]
     }
 
     fn handle_block(
