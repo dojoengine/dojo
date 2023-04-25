@@ -138,6 +138,15 @@ mod Move {
 
         let err = commands::<>::entity(player_id.into());
 
+        let mut i = 0;
+        loop {
+            if i == 3 {
+                break ();
+            }
+            let player_position = commands::<(Position, Player)>::entity(player_id.into());
+            i+=0;
+        };
+
         if bar == 123 {
             return ();
         } else if bar == 0 {
@@ -634,6 +643,30 @@ mod MoveSystem {
         }.execute('SpawnSystem', calldata.span());
 
         move_inner(@positions_query, 0_u32, positions_query.len());
+
+        let mut i = 0;
+        loop {
+            if i == 3 {
+                break ();
+            }
+            let mut __player_position_position_raw = IWorldDispatcher {
+                contract_address: world_address
+            }.entity('Position', player_id.into(), 0_u8, 0_usize);
+            assert(__player_position_position_raw.len() > 0_usize, 'Position not found');
+            let __player_position_position = serde::Serde::<Position>::deserialize(
+                ref __player_position_position_raw
+            ).expect('Position failed to deserialize');
+
+            let mut __player_position_player_raw = IWorldDispatcher {
+                contract_address: world_address
+            }.entity('Player', player_id.into(), 0_u8, 0_usize);
+            assert(__player_position_player_raw.len() > 0_usize, 'Player not found');
+            let __player_position_player = serde::Serde::<Player>::deserialize(
+                ref __player_position_player_raw
+            ).expect('Player failed to deserialize');
+            let player_position = (__player_position_position, __player_position_player);
+            i += 0;
+        };
         if bar == 123 {
             return ();
         } else if bar == 0 {
