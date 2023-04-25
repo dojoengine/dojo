@@ -107,11 +107,11 @@ impl Felt252IntoQuery of Into::<felt252, Query> {
     }
 }
 
-impl TupleSize1IntoQuery of Into::<(felt252, ), Query> {
-    fn into(self: (felt252, )) -> Query {
+impl TupleSize1IntoQuery<E0, impl E0Into: Into<E0, felt252>> of Into::<(E0, ), Query> {
+    fn into(self: (E0, )) -> Query {
         let (first) = self;
         let mut keys = ArrayTrait::new();
-        keys.append(first);
+        keys.append(E0Into::into(first));
         QueryTrait::new(0, 0, keys.span())
     }
 }
@@ -137,11 +137,11 @@ impl TupleSize3IntoQuery of Into::<(felt252, felt252, felt252), Query> {
     }
 }
 
-impl TupleSize1IntoPartitionedQuery of Into::<(felt252, (felt252, )), Query> {
-    fn into(self: (felt252, (felt252, ))) -> Query {
+impl TupleSize1IntoPartitionedQuery<E0, E1, impl E0Into: Into<E0, felt252>, impl E1Into: Into<E1, felt252>> of Into::<(E0, (E1, )), Query> {
+    fn into(self: (E0, (E1, ))) -> Query {
         let (partition, keys) = self;
         let mut query: Query = keys.into();
-        query.partition = partition;
+        query.partition = E0Into::into(partition);
         query
     }
 }
