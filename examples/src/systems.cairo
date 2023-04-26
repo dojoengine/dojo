@@ -2,7 +2,6 @@
 mod Spawn {
     use array::ArrayTrait;
     use traits::Into;   
-    use starknet::contract_address::ContractAddressIntoFelt252;
 
     use dojo_examples::components::Position;
     use dojo_examples::components::Moves;
@@ -21,7 +20,6 @@ mod Spawn {
 mod Move {
     use array::ArrayTrait;
     use traits::Into;
-    use starknet::contract_address::ContractAddressIntoFelt252;
 
     use dojo_examples::components::Position;
     use dojo_examples::components::Moves;

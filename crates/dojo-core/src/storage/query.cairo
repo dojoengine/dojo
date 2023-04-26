@@ -4,153 +4,141 @@ use hash::LegacyHash;
 use option::OptionTrait;
 use serde::Serde;
 use traits::Into;
+use zeroable::IsZeroResult;
 use starknet::ClassHashIntoFelt252;
+use poseidon::poseidon_hash_span;
+use dojo_core::integer::u250;
+use dojo_core::integer::Felt252IntoU250;
+use dojo_core::integer::U250IntoFelt252;
 use dojo_core::serde::SpanSerde;
+use dojo_core::string::ShortString;
 
 #[derive(Copy, Drop, Serde)]
 struct Query {
     address_domain: u32,
-    partition: felt252,
-    keys: Span<felt252>,
-    computed_key: felt252,
+    partition: u250,
+    keys: Span<u250>,
+    hash: u250,
 }
 
 trait QueryTrait {
-    fn new(address_domain: u32, partition: felt252, keys: Span<felt252>) -> Query;
-    fn new_from_id(id: felt252) -> Query;
-    fn id(self: @Query) -> felt252;
-    fn table(self: @Query, component: felt252) -> felt252;
-    fn keys(self: @Query) -> Span<felt252>;
+    fn new(address_domain: u32, partition: u250, keys: Span<u250>) -> Query;
+    fn new_from_id(id: u250) -> Query;
+    fn id(self: @Query) -> u250;
+    fn table(self: @Query, component: ShortString) -> u250;
+    fn keys(self: @Query) -> Span<u250>;
 }
 
 impl QueryImpl of QueryTrait {
-    fn new(address_domain: u32, partition: felt252, keys: Span<felt252>) -> Query {
+    fn new(address_domain: u32, partition: u250, keys: Span<u250>) -> Query {
         if keys.len() == 1_usize {
-            if partition == 0 {
-                let computed_key = *keys.at(0_usize);
-                return Query { address_domain, keys, partition, computed_key };
+            if partition == 0.into() {
+                let hash = *keys.at(0_usize);
+                return Query { address_domain, keys, partition, hash };
             }
 
             gas::withdraw_gas_all(get_builtin_costs()).expect('Out of gas');
-            let computed_key = pedersen(partition, *keys.at(0_usize));
-            return Query { address_domain, keys, partition, computed_key };
+
+            let hash = LegacyHash::hash(0, (partition, *keys.at(0_usize)));
+            return Query { address_domain, keys, partition, hash: hash.into() };
         }
 
-        let computed_key = inner_id(0, keys, keys.len());
-        Query { address_domain, keys, partition, computed_key }
+        let mut serialized = ArrayTrait::new();
+        Serde::serialize(ref serialized, partition);
+        Serde::serialize(ref serialized, keys);
+        let hash = poseidon_hash_span(serialized.span());
+        Query { address_domain, keys, partition, hash: hash.into() }
     }
-    fn new_from_id(id: felt252) -> Query {
+    fn new_from_id(id: u250) -> Query {
         let mut keys = ArrayTrait::new();
         keys.append(id);
-        QueryTrait::new(0, 0, keys.span())
+        QueryTrait::new(0, 0.into(), keys.span())
     }
-    fn id(self: @Query) -> felt252 {
-        *self.computed_key
+    fn id(self: @Query) -> u250 {
+        *self.hash
     }
-    fn table(self: @Query, component: felt252) -> felt252 {
-        if *self.partition == 0 {
-            return component;
+    fn table(self: @Query, component: ShortString) -> u250 {
+        if *self.partition == 0.into() {
+            return component.into();
         }
 
-        pedersen(component, *self.partition)
+        let mut serialized = ArrayTrait::new();
+        Serde::serialize(ref serialized, component);
+        Serde::serialize(ref serialized, *self.partition);
+        let hash = poseidon_hash_span(serialized.span());
+        hash.into()
     }
-    fn keys(self: @Query) -> Span<felt252> {
+    fn keys(self: @Query) -> Span<u250> {
         *self.keys
     }
 }
 
-impl QueryIntoFelt252 of Into::<Query, felt252> {
-    fn into(self: Query) -> felt252 {
-        self.computed_key
+impl QueryIntoFelt252 of Into::<Query, u250> {
+    fn into(self: Query) -> u250 {
+        self.hash
     }
 }
 
-fn inner_id(state: felt252, keys: Span<felt252>, remain: usize) -> felt252 {
-    gas::withdraw_gas_all(get_builtin_costs()).expect('Out of gas');
-
-    if (remain == 0_usize) {
-        return state;
-    }
-
-    let next_state = pedersen(state, *keys.at(remain - 1_usize));
-    return inner_id(next_state, keys, remain - 1_usize);
-}
-
-impl LegacyHashQuery of LegacyHash::<Query> {
-    fn hash(state: felt252, value: Query) -> felt252 {
-        LegacyHash::hash(state, value.into())
-    }
-}
-
-impl LegacyHashClassHashQuery of LegacyHash::<(starknet::ClassHash, Query)> {
-    fn hash(state: felt252, value: (starknet::ClassHash, Query)) -> felt252 {
-        let (class_hash, query) = value;
-        let class_hash_felt: felt252 = class_hash.into();
-        let query_felt: felt252 = query.into();
-        LegacyHash::hash(state, (class_hash_felt, query_felt))
-    }
-}
-
-impl ContractAddressIntoQuery of Into::<starknet::ContractAddress, Query> {
-    fn into(self: starknet::ContractAddress) -> Query {
-        let mut keys = ArrayTrait::<felt252>::new();
-        keys.append(self.into());
-        QueryTrait::new(0, 0, keys.span())
-    }
-}
-
-impl Felt252IntoQuery of Into::<felt252, Query> {
-    fn into(self: felt252) -> Query {
+impl LiteralIntoQuery<E0, impl E0Into: Into<E0, u250>, impl E0Drop: Drop<E0>> of Into::<E0, Query> {
+    fn into(self: E0) -> Query {
         let mut keys = ArrayTrait::new();
-        keys.append(self);
-        QueryTrait::new(0, 0, keys.span())
+        keys.append(E0Into::into(self));
+        QueryTrait::new(0, 0.into(), keys.span())
     }
 }
 
-impl TupleSize1IntoQuery<E0, impl E0Into: Into<E0, felt252>> of Into::<(E0, ), Query> {
-    fn into(self: (E0, )) -> Query {
+impl TupleSize1IntoQuery<E0, impl E0Into: Into<E0, u250>, impl E0Drop: Drop<E0>> of Into::<(E0,), Query> {
+    fn into(self: (E0,)) -> Query {
         let (first) = self;
         let mut keys = ArrayTrait::new();
         keys.append(E0Into::into(first));
-        QueryTrait::new(0, 0, keys.span())
+        QueryTrait::new(0, 0.into(), keys.span())
     }
 }
 
-impl TupleSize2IntoQuery of Into::<(felt252, felt252), Query> {
-    fn into(self: (felt252, felt252)) -> Query {
+impl TupleSize2IntoQuery<
+        E0, E1,
+        impl E0Into: Into<E0, u250>, impl E0Drop: Drop<E0>,
+        impl E1Into: Into<E1, u250>, impl E1Drop: Drop<E1>,
+    > of Into::<(E0, E1), Query> {
+    fn into(self: (E0, E1)) -> Query {
         let (first, second) = self;
         let mut keys = ArrayTrait::new();
-        keys.append(first);
-        keys.append(second);
-        QueryTrait::new(0, 0, keys.span())
+        keys.append(E0Into::into(first));
+        keys.append(E1Into::into(second));
+        QueryTrait::new(0, 0.into(), keys.span())
     }
 }
 
-impl TupleSize3IntoQuery of Into::<(felt252, felt252, felt252), Query> {
-    fn into(self: (felt252, felt252, felt252)) -> Query {
+impl TupleSize3IntoQuery<
+        E0, E1, E2,
+        impl E0Into: Into<E0, u250>, impl E0Drop: Drop<E0>,
+        impl E1Into: Into<E1, u250>, impl E1Drop: Drop<E1>,
+        impl E2Into: Into<E2, u250>, impl E2Drop: Drop<E2>,
+    > of Into::<(E0, E1, E2), Query> {
+    fn into(self: (E0, E1, E2)) -> Query {
         let (first, second, third) = self;
         let mut keys = ArrayTrait::new();
-        keys.append(first);
-        keys.append(second);
-        keys.append(third);
-        QueryTrait::new(0, 0, keys.span())
+        keys.append(E0Into::into(first));
+        keys.append(E1Into::into(second));
+        keys.append(E2Into::into(third));
+        QueryTrait::new(0, 0.into(), keys.span())
     }
 }
 
-impl TupleSize1IntoPartitionedQuery<E0, E1, impl E0Into: Into<E0, felt252>, impl E1Into: Into<E1, felt252>> of Into::<(E0, (E1, )), Query> {
-    fn into(self: (E0, (E1, ))) -> Query {
+trait IntoPartitioned<T, Query> {
+    fn into_partitioned(self: T) -> Query;
+}
+
+impl IntoPartitionedQuery<
+        E0, E1,
+        impl E0Into: Into<E0, u250>, impl E0Drop: Drop<E0>,
+        impl E1Into: Into<E1, Query>, impl E1Drop: Drop<E1>,
+    > of IntoPartitioned::<(E0, E1), Query> {
+    fn into_partitioned(self: (E0, E1)) -> Query {
         let (partition, keys) = self;
-        let mut query: Query = keys.into();
+        let mut query: Query = E1Into::into(keys);
         query.partition = E0Into::into(partition);
-        query
-    }
-}
-
-impl TupleSize2IntoPartitionedQuery of Into::<(felt252, (felt252, felt252)), Query> {
-    fn into(self: (felt252, (felt252, felt252))) -> Query {
-        let (partition, keys) = self;
-        let mut query: Query = keys.into();
-        query.partition = partition;
         query
     }
 }
@@ -159,35 +147,35 @@ impl TupleSize2IntoPartitionedQuery of Into::<(felt252, (felt252, felt252)), Que
 #[available_gas(2000000)]
 fn test_query_id() {
     let mut keys = ArrayTrait::new();
-    keys.append(420);
-    let query = QueryTrait::new(0, 0, keys.span());
-    assert(query.into() == 420, 'Incorrect hash');
+    keys.append(420.into());
+    let query: u250 = QueryTrait::new(0, 0.into(), keys.span()).into();
+    assert(query == 420.into(), 'Incorrect hash');
 }
 
 #[test]
 #[available_gas(2000000)]
 fn test_query_into() {
     let query: Query = 420.into();
-    assert(*query.keys.at(0_usize) == 420, 'Incorrect query');
+    assert(*query.keys.at(0_usize) == 420.into(), 'Incorrect query');
     let query1: Query = (69).into();
-    assert(*query1.keys.at(0_usize) == 69, 'Incorrect query');
+    assert(*query1.keys.at(0_usize) == 69.into(), 'Incorrect query');
     let query2: Query = (69, 420).into();
-    assert(*query2.keys.at(0_usize) == 69, 'Incorrect query');
-    assert(*query2.keys.at(1_usize) == 420, 'Incorrect query');
+    assert(*query2.keys.at(0_usize) == 69.into(), 'Incorrect query');
+    assert(*query2.keys.at(1_usize) == 420.into(), 'Incorrect query');
     let query3: Query = (69, 420, 777).into();
-    assert(*query3.keys.at(0_usize) == 69, 'Incorrect query');
-    assert(*query3.keys.at(1_usize) == 420, 'Incorrect query');
-    assert(*query3.keys.at(2_usize) == 777, 'Incorrect query');
+    assert(*query3.keys.at(0_usize) == 69.into(), 'Incorrect query');
+    assert(*query3.keys.at(1_usize) == 420.into(), 'Incorrect query');
+    assert(*query3.keys.at(2_usize) == 777.into(), 'Incorrect query');
 }
 
 #[test]
 #[available_gas(2000000)]
 fn test_partitioned_query_into() {
-    let query: Query = (69, (420, )).into();
-    assert(query.partition == 69, 'Incorrect partition');
-    assert(*query.keys.at(0_usize) == 420, 'Incorrect query');
+    let query: Query = (69, (420, )).into_partitioned();
+    assert(query.partition == 69.into(), 'Incorrect partition');
+    assert(*query.keys.at(0_usize) == 420.into(), 'Incorrect query');
 
-    let query2: Query = (69, (420, 777)).into();
-    assert(query2.partition == 69, 'Incorrect partition');
-    assert(*query2.keys.at(1_usize) == 777, 'Incorrect query');
+    let query2: Query = (69, (420, 777)).into_partitioned();
+    assert(query2.partition == 69.into(), 'Incorrect partition');
+    assert(*query2.keys.at(1_usize) == 777.into(), 'Incorrect query');
 }

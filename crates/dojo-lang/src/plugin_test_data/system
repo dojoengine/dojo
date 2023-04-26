@@ -21,20 +21,23 @@ struct Player {
 
 #[system]
 mod Spawn {
-    use traits::Into;   
-    use starknet::contract_address::ContractAddressIntoFelt252;
-
+    use traits::Into;
     use super::Position;
     use super::Player;
 
     fn execute(name: felt252) {
         let uuid = commands::uuid();
-        commands::set_entity((420, (69, uuid)).into(), (
+        commands::set_entity((420, (69, uuid)).into_partitioned(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
         commands::set_entity(420.into(), (
+            Player { name: name },
+            Position { x: 0, y: 0 },
+        ));
+
+        commands::set_entity(u250Trait::new(120).into(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
@@ -267,22 +270,21 @@ mod SpawnSystem {
     use dojo_core::interfaces::IWorldDispatcherTrait;
     use dojo_core::storage::query::Query;
     use dojo_core::storage::query::QueryTrait;
-    use dojo_core::storage::query::Felt252IntoQuery;
+    use dojo_core::storage::query::LiteralIntoQuery;
     use dojo_core::storage::query::TupleSize1IntoQuery;
     use dojo_core::storage::query::TupleSize2IntoQuery;
     use dojo_core::storage::query::TupleSize3IntoQuery;
-    use dojo_core::storage::query::TupleSize1IntoPartitionedQuery;
-    use dojo_core::storage::query::TupleSize2IntoPartitionedQuery;
-    use dojo_core::storage::query::ContractAddressIntoQuery;
+    use dojo_core::storage::query::IntoPartitioned;
+    use dojo_core::storage::query::IntoPartitionedQuery;
+    use dojo_core::integer::u250;
+    use dojo_core::integer::u250Trait;
 
     #[view]
-    fn name() -> felt252 {
-        'Spawn'
+    fn name() -> dojo_core::string::ShortString {
+        dojo_core::string::ShortStringTrait::new('Spawn')
     }
 
     use traits::Into;
-    use starknet::contract_address::ContractAddressIntoFelt252;
-
     use super::Position;
     use super::Player;
 
@@ -296,7 +298,10 @@ mod SpawnSystem {
             IWorldDispatcher {
                 contract_address: world_address
             }.set_entity(
-                'Player', (420, (69, uuid)).into(), 0_u8, array::ArrayTrait::span(@calldata)
+                dojo_core::string::ShortStringTrait::new('Player'),
+                (420, (69, uuid)).into_partitioned(),
+                0_u8,
+                array::ArrayTrait::span(@calldata)
             );
         }
 
@@ -306,7 +311,10 @@ mod SpawnSystem {
             IWorldDispatcher {
                 contract_address: world_address
             }.set_entity(
-                'Position', (420, (69, uuid)).into(), 0_u8, array::ArrayTrait::span(@calldata)
+                dojo_core::string::ShortStringTrait::new('Position'),
+                (420, (69, uuid)).into_partitioned(),
+                0_u8,
+                array::ArrayTrait::span(@calldata)
             );
         }
 
@@ -315,7 +323,12 @@ mod SpawnSystem {
             serde::Serde::<Player>::serialize(ref calldata, Player { name: name });
             IWorldDispatcher {
                 contract_address: world_address
-            }.set_entity('Player', 420.into(), 0_u8, array::ArrayTrait::span(@calldata));
+            }.set_entity(
+                dojo_core::string::ShortStringTrait::new('Player'),
+                420.into(),
+                0_u8,
+                array::ArrayTrait::span(@calldata)
+            );
         }
 
         {
@@ -323,7 +336,38 @@ mod SpawnSystem {
             serde::Serde::<Position>::serialize(ref calldata, Position { x: 0, y: 0 });
             IWorldDispatcher {
                 contract_address: world_address
-            }.set_entity('Position', 420.into(), 0_u8, array::ArrayTrait::span(@calldata));
+            }.set_entity(
+                dojo_core::string::ShortStringTrait::new('Position'),
+                420.into(),
+                0_u8,
+                array::ArrayTrait::span(@calldata)
+            );
+        }
+
+        {
+            let mut calldata = array::ArrayTrait::new();
+            serde::Serde::<Player>::serialize(ref calldata, Player { name: name });
+            IWorldDispatcher {
+                contract_address: world_address
+            }.set_entity(
+                dojo_core::string::ShortStringTrait::new('Player'),
+                u250Trait::new(120).into(),
+                0_u8,
+                array::ArrayTrait::span(@calldata)
+            );
+        }
+
+        {
+            let mut calldata = array::ArrayTrait::new();
+            serde::Serde::<Position>::serialize(ref calldata, Position { x: 0, y: 0 });
+            IWorldDispatcher {
+                contract_address: world_address
+            }.set_entity(
+                dojo_core::string::ShortStringTrait::new('Position'),
+                u250Trait::new(120).into(),
+                0_u8,
+                array::ArrayTrait::span(@calldata)
+            );
         }
 
         let player_id = starknet::get_caller_address();
@@ -333,7 +377,12 @@ mod SpawnSystem {
             serde::Serde::<Player>::serialize(ref calldata, Player { name: name });
             IWorldDispatcher {
                 contract_address: world_address
-            }.set_entity('Player', player_id.into(), 0_u8, array::ArrayTrait::span(@calldata));
+            }.set_entity(
+                dojo_core::string::ShortStringTrait::new('Player'),
+                player_id.into(),
+                0_u8,
+                array::ArrayTrait::span(@calldata)
+            );
         }
 
         {
@@ -341,7 +390,12 @@ mod SpawnSystem {
             serde::Serde::<Position>::serialize(ref calldata, Position { x: 0, y: 0 });
             IWorldDispatcher {
                 contract_address: world_address
-            }.set_entity('Position', player_id.into(), 0_u8, array::ArrayTrait::span(@calldata));
+            }.set_entity(
+                dojo_core::string::ShortStringTrait::new('Position'),
+                player_id.into(),
+                0_u8,
+                array::ArrayTrait::span(@calldata)
+            );
         }
 
         {
@@ -349,7 +403,12 @@ mod SpawnSystem {
             serde::Serde::<Player>::serialize(ref calldata, Player { name: name });
             IWorldDispatcher {
                 contract_address: world_address
-            }.set_entity('Player', (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
+            }.set_entity(
+                dojo_core::string::ShortStringTrait::new('Player'),
+                (0, 0, 0, 0, 0),
+                0_u8,
+                array::ArrayTrait::span(@calldata)
+            );
         }
 
         {
@@ -357,7 +416,12 @@ mod SpawnSystem {
             serde::Serde::<Position>::serialize(ref calldata, Position { x: 0, y: 0 });
             IWorldDispatcher {
                 contract_address: world_address
-            }.set_entity('Position', (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
+            }.set_entity(
+                dojo_core::string::ShortStringTrait::new('Position'),
+                (0, 0, 0, 0, 0),
+                0_u8,
+                array::ArrayTrait::span(@calldata)
+            );
         }
 
         {
@@ -365,7 +429,12 @@ mod SpawnSystem {
             serde::Serde::<Player>::serialize(ref calldata, Player { name: name });
             IWorldDispatcher {
                 contract_address: world_address
-            }.set_entity('Player', 1337.into(), 0_u8, array::ArrayTrait::span(@calldata));
+            }.set_entity(
+                dojo_core::string::ShortStringTrait::new('Player'),
+                1337.into(),
+                0_u8,
+                array::ArrayTrait::span(@calldata)
+            );
         }
 
         {
@@ -373,7 +442,12 @@ mod SpawnSystem {
             serde::Serde::<Position>::serialize(ref calldata, Position { x: 0, y: 0 });
             IWorldDispatcher {
                 contract_address: world_address
-            }.set_entity('Position', 1337.into(), 0_u8, array::ArrayTrait::span(@calldata));
+            }.set_entity(
+                dojo_core::string::ShortStringTrait::new('Position'),
+                1337.into(),
+                0_u8,
+                array::ArrayTrait::span(@calldata)
+            );
         }
         return ();
     }
@@ -389,17 +463,18 @@ mod MoveSystem {
     use dojo_core::interfaces::IWorldDispatcherTrait;
     use dojo_core::storage::query::Query;
     use dojo_core::storage::query::QueryTrait;
-    use dojo_core::storage::query::Felt252IntoQuery;
+    use dojo_core::storage::query::LiteralIntoQuery;
     use dojo_core::storage::query::TupleSize1IntoQuery;
     use dojo_core::storage::query::TupleSize2IntoQuery;
     use dojo_core::storage::query::TupleSize3IntoQuery;
-    use dojo_core::storage::query::TupleSize1IntoPartitionedQuery;
-    use dojo_core::storage::query::TupleSize2IntoPartitionedQuery;
-    use dojo_core::storage::query::ContractAddressIntoQuery;
+    use dojo_core::storage::query::IntoPartitioned;
+    use dojo_core::storage::query::IntoPartitionedQuery;
+    use dojo_core::integer::u250;
+    use dojo_core::integer::u250Trait;
 
     #[view]
-    fn name() -> felt252 {
-        'Move'
+    fn name() -> dojo_core::string::ShortString {
+        dojo_core::string::ShortStringTrait::new('Move')
     }
 
     use traits::Into;
@@ -416,19 +491,30 @@ mod MoveSystem {
         let positions_query = array::ArrayTrait::<usize>::new();
         let __positions_query_position_ids = IWorldDispatcher {
             contract_address: world_address
-        }.entities('Position', 0);
+        }.entities(
+            dojo_core::string::ShortStringTrait::new('Position'),
+            dojo_core::integer::u250Trait::new(0)
+        );
 
         let __positions_query_player_ids = IWorldDispatcher {
             contract_address: world_address
-        }.entities('Player', 0);
+        }.entities(
+            dojo_core::string::ShortStringTrait::new('Player'),
+            dojo_core::integer::u250Trait::new(0)
+        );
         let players_query = array::ArrayTrait::<usize>::new();
         let __players_query_player_ids = IWorldDispatcher {
             contract_address: world_address
-        }.entities('Player', 0);
+        }.entities(
+            dojo_core::string::ShortStringTrait::new('Player'),
+            dojo_core::integer::u250Trait::new(0)
+        );
 
         let mut __player_player_raw = IWorldDispatcher {
             contract_address: world_address
-        }.entity('Player', player_id.into(), 0_u8, 0_usize);
+        }.entity(
+            dojo_core::string::ShortStringTrait::new('Player'), player_id.into(), 0_u8, 0_usize
+        );
         assert(__player_player_raw.len() > 0_usize, 'Player not found');
         let __player_player = serde::Serde::<Player>::deserialize(
             ref __player_player_raw
@@ -437,7 +523,9 @@ mod MoveSystem {
 
         let mut __player_position_position_raw = IWorldDispatcher {
             contract_address: world_address
-        }.entity('Position', player_id.into(), 0_u8, 0_usize);
+        }.entity(
+            dojo_core::string::ShortStringTrait::new('Position'), player_id.into(), 0_u8, 0_usize
+        );
         assert(__player_position_position_raw.len() > 0_usize, 'Position not found');
         let __player_position_position = serde::Serde::<Position>::deserialize(
             ref __player_position_position_raw
@@ -445,7 +533,9 @@ mod MoveSystem {
 
         let mut __player_position_player_raw = IWorldDispatcher {
             contract_address: world_address
-        }.entity('Player', player_id.into(), 0_u8, 0_usize);
+        }.entity(
+            dojo_core::string::ShortStringTrait::new('Player'), player_id.into(), 0_u8, 0_usize
+        );
         assert(__player_position_player_raw.len() > 0_usize, 'Player not found');
         let __player_position_player = serde::Serde::<Player>::deserialize(
             ref __player_position_player_raw
@@ -458,7 +548,12 @@ mod MoveSystem {
         if bar == 123 {
             let mut __player_position_position_raw = IWorldDispatcher {
                 contract_address: world_address
-            }.entity('Position', player_id.into(), 0_u8, 0_usize);
+            }.entity(
+                dojo_core::string::ShortStringTrait::new('Position'),
+                player_id.into(),
+                0_u8,
+                0_usize
+            );
             assert(__player_position_position_raw.len() > 0_usize, 'Position not found');
             let __player_position_position = serde::Serde::<Position>::deserialize(
                 ref __player_position_position_raw
@@ -466,7 +561,9 @@ mod MoveSystem {
 
             let mut __player_position_player_raw = IWorldDispatcher {
                 contract_address: world_address
-            }.entity('Player', player_id.into(), 0_u8, 0_usize);
+            }.entity(
+                dojo_core::string::ShortStringTrait::new('Player'), player_id.into(), 0_u8, 0_usize
+            );
             assert(__player_position_player_raw.len() > 0_usize, 'Player not found');
             let __player_position_player = serde::Serde::<Player>::deserialize(
                 ref __player_position_player_raw
@@ -476,16 +573,24 @@ mod MoveSystem {
                 let positions_query = array::ArrayTrait::<usize>::new();
                 let __positions_query_position_ids = IWorldDispatcher {
                     contract_address: world_address
-                }.entities('Position', 0);
+                }.entities(
+                    dojo_core::string::ShortStringTrait::new('Position'),
+                    dojo_core::integer::u250Trait::new(0)
+                );
 
                 let __positions_query_player_ids = IWorldDispatcher {
                     contract_address: world_address
-                }.entities('Player', 0);
+                }.entities(
+                    dojo_core::string::ShortStringTrait::new('Player'),
+                    dojo_core::integer::u250Trait::new(0)
+                );
             }
         } else if bar == 321 {
             let mut __maybe_player_player_raw = IWorldDispatcher {
                 contract_address: world_address
-            }.entity('Player', player_id.into(), 0_u8, 0_usize);
+            }.entity(
+                dojo_core::string::ShortStringTrait::new('Player'), player_id.into(), 0_u8, 0_usize
+            );
             let __maybe_player_player = match __maybe_player_player_raw.len() > 0_usize {
                 bool::False(()) => {
                     Option::None(())
@@ -508,7 +613,12 @@ mod MoveSystem {
 
             let mut __positions_query_position_raw = IWorldDispatcher {
                 contract_address: world_address
-            }.entity('Position', player_id.into(), 0_u8, 0_usize);
+            }.entity(
+                dojo_core::string::ShortStringTrait::new('Position'),
+                player_id.into(),
+                0_u8,
+                0_usize
+            );
             let __positions_query_position = match __positions_query_position_raw.len() > 0_usize {
                 bool::False(()) => {
                     Option::None(())
@@ -524,7 +634,9 @@ mod MoveSystem {
 
             let mut __positions_query_player_raw = IWorldDispatcher {
                 contract_address: world_address
-            }.entity('Player', player_id.into(), 0_u8, 0_usize);
+            }.entity(
+                dojo_core::string::ShortStringTrait::new('Player'), player_id.into(), 0_u8, 0_usize
+            );
             let __positions_query_player = match __positions_query_player_raw.len() > 0_usize {
                 bool::False(()) => {
                     Option::None(())
@@ -552,7 +664,12 @@ mod MoveSystem {
         } else {
             let mut __player_position_position_raw = IWorldDispatcher {
                 contract_address: world_address
-            }.entity('Position', player_id.into(), 0_u8, 0_usize);
+            }.entity(
+                dojo_core::string::ShortStringTrait::new('Position'),
+                player_id.into(),
+                0_u8,
+                0_usize
+            );
             assert(__player_position_position_raw.len() > 0_usize, 'Position not found');
             let __player_position_position = serde::Serde::<Position>::deserialize(
                 ref __player_position_position_raw
@@ -560,7 +677,9 @@ mod MoveSystem {
 
             let mut __player_position_player_raw = IWorldDispatcher {
                 contract_address: world_address
-            }.entity('Player', player_id.into(), 0_u8, 0_usize);
+            }.entity(
+                dojo_core::string::ShortStringTrait::new('Player'), player_id.into(), 0_u8, 0_usize
+            );
             assert(__player_position_player_raw.len() > 0_usize, 'Player not found');
             let __player_position_player = serde::Serde::<Player>::deserialize(
                 ref __player_position_player_raw
@@ -570,7 +689,12 @@ mod MoveSystem {
         {
             let mut __player_position_position_raw = IWorldDispatcher {
                 contract_address: world_address
-            }.entity('Position', player_id.into(), 0_u8, 0_usize);
+            }.entity(
+                dojo_core::string::ShortStringTrait::new('Position'),
+                player_id.into(),
+                0_u8,
+                0_usize
+            );
             assert(__player_position_position_raw.len() > 0_usize, 'Position not found');
             let __player_position_position = serde::Serde::<Position>::deserialize(
                 ref __player_position_position_raw
@@ -578,7 +702,9 @@ mod MoveSystem {
 
             let mut __player_position_player_raw = IWorldDispatcher {
                 contract_address: world_address
-            }.entity('Player', player_id.into(), 0_u8, 0_usize);
+            }.entity(
+                dojo_core::string::ShortStringTrait::new('Player'), player_id.into(), 0_u8, 0_usize
+            );
             assert(__player_position_player_raw.len() > 0_usize, 'Player not found');
             let __player_position_player = serde::Serde::<Player>::deserialize(
                 ref __player_position_player_raw
@@ -592,7 +718,12 @@ mod MoveSystem {
 
                 let mut __player_position_position_raw = IWorldDispatcher {
                     contract_address: world_address
-                }.entity('Position', player_id.into(), 0_u8, 0_usize);
+                }.entity(
+                    dojo_core::string::ShortStringTrait::new('Position'),
+                    player_id.into(),
+                    0_u8,
+                    0_usize
+                );
                 assert(__player_position_position_raw.len() > 0_usize, 'Position not found');
                 let __player_position_position = serde::Serde::<Position>::deserialize(
                     ref __player_position_position_raw
@@ -600,7 +731,12 @@ mod MoveSystem {
 
                 let mut __player_position_player_raw = IWorldDispatcher {
                     contract_address: world_address
-                }.entity('Player', player_id.into(), 0_u8, 0_usize);
+                }.entity(
+                    dojo_core::string::ShortStringTrait::new('Player'),
+                    player_id.into(),
+                    0_u8,
+                    0_usize
+                );
                 assert(__player_position_player_raw.len() > 0_usize, 'Player not found');
                 let __player_position_player = serde::Serde::<Player>::deserialize(
                     ref __player_position_player_raw
@@ -610,17 +746,28 @@ mod MoveSystem {
                     let positions_query = array::ArrayTrait::<usize>::new();
                     let __positions_query_position_ids = IWorldDispatcher {
                         contract_address: world_address
-                    }.entities('Position', 0);
+                    }.entities(
+                        dojo_core::string::ShortStringTrait::new('Position'),
+                        dojo_core::integer::u250Trait::new(0)
+                    );
 
                     let __positions_query_player_ids = IWorldDispatcher {
                         contract_address: world_address
-                    }.entities('Player', 0);
+                    }.entities(
+                        dojo_core::string::ShortStringTrait::new('Player'),
+                        dojo_core::integer::u250Trait::new(0)
+                    );
                 }
             },
             Option::None(()) => {
                 let mut __player_position_position_raw = IWorldDispatcher {
                     contract_address: world_address
-                }.entity('Position', player_id.into(), 0_u8, 0_usize);
+                }.entity(
+                    dojo_core::string::ShortStringTrait::new('Position'),
+                    player_id.into(),
+                    0_u8,
+                    0_usize
+                );
                 assert(__player_position_position_raw.len() > 0_usize, 'Position not found');
                 let __player_position_position = serde::Serde::<Position>::deserialize(
                     ref __player_position_position_raw
@@ -628,7 +775,12 @@ mod MoveSystem {
 
                 let mut __player_position_player_raw = IWorldDispatcher {
                     contract_address: world_address
-                }.entity('Player', player_id.into(), 0_u8, 0_usize);
+                }.entity(
+                    dojo_core::string::ShortStringTrait::new('Player'),
+                    player_id.into(),
+                    0_u8,
+                    0_usize
+                );
                 assert(__player_position_player_raw.len() > 0_usize, 'Player not found');
                 let __player_position_player = serde::Serde::<Player>::deserialize(
                     ref __player_position_player_raw
@@ -647,7 +799,7 @@ mod MoveSystem {
         calldata.append('name');
         IWorldDispatcher {
             contract_address: world_address
-        }.execute('SpawnSystem', calldata.span());
+        }.execute(dojo_core::string::ShortStringTrait::new('SpawnSystem'), calldata.span());
 
         move_inner(@positions_query, 0_u32, positions_query.len());
 
@@ -658,7 +810,12 @@ mod MoveSystem {
             }
             let mut __player_position_position_raw = IWorldDispatcher {
                 contract_address: world_address
-            }.entity('Position', player_id.into(), 0_u8, 0_usize);
+            }.entity(
+                dojo_core::string::ShortStringTrait::new('Position'),
+                player_id.into(),
+                0_u8,
+                0_usize
+            );
             assert(__player_position_position_raw.len() > 0_usize, 'Position not found');
             let __player_position_position = serde::Serde::<Position>::deserialize(
                 ref __player_position_position_raw
@@ -666,7 +823,9 @@ mod MoveSystem {
 
             let mut __player_position_player_raw = IWorldDispatcher {
                 contract_address: world_address
-            }.entity('Player', player_id.into(), 0_u8, 0_usize);
+            }.entity(
+                dojo_core::string::ShortStringTrait::new('Player'), player_id.into(), 0_u8, 0_usize
+            );
             assert(__player_position_player_raw.len() > 0_usize, 'Player not found');
             let __player_position_player = serde::Serde::<Player>::deserialize(
                 ref __player_position_player_raw
@@ -694,17 +853,18 @@ mod ProxySystem {
     use dojo_core::interfaces::IWorldDispatcherTrait;
     use dojo_core::storage::query::Query;
     use dojo_core::storage::query::QueryTrait;
-    use dojo_core::storage::query::Felt252IntoQuery;
+    use dojo_core::storage::query::LiteralIntoQuery;
     use dojo_core::storage::query::TupleSize1IntoQuery;
     use dojo_core::storage::query::TupleSize2IntoQuery;
     use dojo_core::storage::query::TupleSize3IntoQuery;
-    use dojo_core::storage::query::TupleSize1IntoPartitionedQuery;
-    use dojo_core::storage::query::TupleSize2IntoPartitionedQuery;
-    use dojo_core::storage::query::ContractAddressIntoQuery;
+    use dojo_core::storage::query::IntoPartitioned;
+    use dojo_core::storage::query::IntoPartitionedQuery;
+    use dojo_core::integer::u250;
+    use dojo_core::integer::u250Trait;
 
     #[view]
-    fn name() -> felt252 {
-        'Proxy'
+    fn name() -> dojo_core::string::ShortString {
+        dojo_core::string::ShortStringTrait::new('Proxy')
     }
 
 
@@ -716,21 +876,21 @@ mod ProxySystem {
 
 //! > expected_diagnostics
 error: Plugin diagnostic: Invalid arguments. Expected "(query, (components,))"
- --> lib.cairo:42:29
+ --> lib.cairo:45:29
         commands::set_entity((
                             ^^
 
 error: Plugin diagnostic: Component types cannot be empty
- --> lib.cairo:133:19
+ --> lib.cairo:136:19
         let err = commands::<>::entity(player_id.into());
                   ^************************************^
 
-error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::query::Query", found: "(?52, ?53, ?54, ?55, ?56)".
- --> Spawn:76:99
-                        IWorldDispatcher { contract_address: world_address }.set_entity('Player', (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
-                                                                                                  ^*************^
+error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::query::Query", found: "(?80, ?81, ?82, ?83, ?84)".
+ --> Spawn:87:141
+                        IWorldDispatcher { contract_address: world_address }.set_entity(dojo_core::string::ShortStringTrait::new('Player'), (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
+                                                                                                                                            ^*************^
 
-error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::query::Query", found: "(?63, ?64, ?65, ?66, ?67)".
- --> Spawn:82:101
-                        IWorldDispatcher { contract_address: world_address }.set_entity('Position', (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
-                                                                                                    ^*************^
+error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::query::Query", found: "(?91, ?92, ?93, ?94, ?95)".
+ --> Spawn:93:143
+                        IWorldDispatcher { contract_address: world_address }.set_entity(dojo_core::string::ShortStringTrait::new('Position'), (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
+                                                                                                                                              ^*************^

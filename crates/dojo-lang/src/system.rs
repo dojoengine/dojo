@@ -46,23 +46,24 @@ impl System {
                 mod $name$System {
                     use option::OptionTrait;
                     use array::SpanTrait;
-
+                    
                     use dojo_core::world;
                     use dojo_core::interfaces::IWorldDispatcher;
                     use dojo_core::interfaces::IWorldDispatcherTrait;
                     use dojo_core::storage::query::Query;
                     use dojo_core::storage::query::QueryTrait;
-                    use dojo_core::storage::query::Felt252IntoQuery;
+                    use dojo_core::storage::query::LiteralIntoQuery;
                     use dojo_core::storage::query::TupleSize1IntoQuery;
                     use dojo_core::storage::query::TupleSize2IntoQuery;
                     use dojo_core::storage::query::TupleSize3IntoQuery;
-                    use dojo_core::storage::query::TupleSize1IntoPartitionedQuery;
-                    use dojo_core::storage::query::TupleSize2IntoPartitionedQuery;
-                    use dojo_core::storage::query::ContractAddressIntoQuery;
+                    use dojo_core::storage::query::IntoPartitioned;
+                    use dojo_core::storage::query::IntoPartitionedQuery;
+                    use dojo_core::integer::u250;
+                    use dojo_core::integer::u250Trait;
 
                     #[view]
-                    fn name() -> felt252 {
-                        '$name$'
+                    fn name() -> dojo_core::string::ShortString {
+                        dojo_core::string::ShortStringTrait::new('$name$')
                     }
 
                     $body$
