@@ -1,7 +1,6 @@
 use traits::Into;
 use traits::TryInto;
 use option::OptionTrait;
-use debug::PrintTrait;
 
 const SCALING_FACTOR: u128 = 10000_u128;
 
