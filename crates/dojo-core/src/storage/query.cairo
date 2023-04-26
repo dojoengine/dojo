@@ -7,7 +7,7 @@ use traits::Into;
 use starknet::ClassHashIntoFelt252;
 use dojo_core::serde::SpanSerde;
 
-#[derive(Drop, Serde)]
+#[derive(Copy, Drop, Serde)]
 struct Query {
     address_domain: u32,
     partition: felt252,
