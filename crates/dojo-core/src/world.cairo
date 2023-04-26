@@ -114,7 +114,7 @@ mod World {
     }
 
     #[view]
-    fn entity(component: felt252, query: Query, offset: u8, mut length: usize) -> Span<felt252> {
+    fn entity(component: felt252, query: Query, offset: u8, length: usize) -> Span<felt252> {
         let class_hash = component_registry::read(component);
         match Database::get(class_hash, component, query, offset, length) {
             Option::Some(res) => res,

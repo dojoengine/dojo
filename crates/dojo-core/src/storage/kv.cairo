@@ -18,7 +18,7 @@ mod KeyValueStore {
         table: felt252,
         key: felt252,
         offset: u8,
-        mut length: usize
+        length: usize
     ) -> Span<felt252> {
         let address_domain = 0_u32;
         let base = address(table, key);
