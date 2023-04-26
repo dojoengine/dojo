@@ -2,10 +2,10 @@
 mod Buy {
     use traits::Into;
     use array::ArrayTrait;
-    use dojo_defi::simple_market::components::Item;
-    use dojo_defi::simple_market::components::Cash;
-    use dojo_defi::simple_market::components::Market;
-    use dojo_defi::simple_market::components::MarketTrait;
+    use dojo_defi::constant_product_market::components::Item;
+    use dojo_defi::constant_product_market::components::Cash;
+    use dojo_defi::constant_product_market::components::Market;
+    use dojo_defi::constant_product_market::components::MarketTrait;
 
     fn execute(game_id: felt252, item_id: felt252, quantity: usize) {
         let player: felt252 = starknet::get_caller_address().into();
@@ -46,10 +46,10 @@ mod Buy {
 mod Sell {
     use traits::Into;
     use array::ArrayTrait;
-    use dojo_defi::simple_market::components::Item;
-    use dojo_defi::simple_market::components::Cash;
-    use dojo_defi::simple_market::components::Market;
-    use dojo_defi::simple_market::components::MarketTrait;
+    use dojo_defi::constant_product_market::components::Item;
+    use dojo_defi::constant_product_market::components::Cash;
+    use dojo_defi::constant_product_market::components::Market;
+    use dojo_defi::constant_product_market::components::MarketTrait;
 
     fn execute(game_id: felt252, item_id: felt252, quantity: usize) {
         let player: felt252 = starknet::get_caller_address().into();
