@@ -3,9 +3,9 @@ mod ERC721Approve {
     use starknet::ContractAddress;
     use super::components::TokenApproval;
 
-    fn execute(address: ContractAddress, token_id: felt252) {
+    fn execute(token: felt252, approved: felt252, token_id: felt252) {
         // approve an address
-        commands::set_entity(token_id, (TokenApproval { address }));
+        commands::set_entity((token, token_id), (TokenApproval { address: approved.into() }));
     }
 }
 
@@ -14,9 +14,9 @@ mod ERC721SetApprovalForAll {
     use starknet::ContractAddress;
     use super::components::OperatorApproval;
 
-    fn execute(owner: ContractAddress, operator: ContractAddress, approval: bool) {
-        commands::set_entity((owner, operator).into(), (
-           OperatorApproval { value: approval } 
+    fn execute(token: felt252, owner: felt252, operator: felt252, approval: felt252) {
+        commands::set_entity((token, owner, operator).into(), (
+           OperatorApproval { value: approval.into() } 
         ));
     }
 }
@@ -24,29 +24,30 @@ mod ERC721SetApprovalForAll {
 #[system]
 mod ERC721TransferFrom {
     use starknet::ContractAddress;
+    use zeroable::Zeroable;
 
-    fn execute(from: ContractAddress, to: ContractAddress, token_id: felt252) {
-        // reset approvals
+    fn execute(token: felt252, from: felt252, to: felt252, token_id: felt252) {
+        let query: Query = (token, token_id).into();
+        commands::set_entity(query, (
+            // reset approvals
+            TokenApproval { Zeroable::zero() },
+            // update ownership
+            Owner { address: to.into() }
+        ));
 
-        // update balance
+        // update old owner balance
+        let query: Query = (token, from).into();
+        let balance = commands::<Balance>::entity(query);
+        commands::set_entity(query, (
+            Balance { value: balance.value - 1 }
+        ));
 
-        // update ownership
-
-
-
-        // reset approvals
-        token_approvals::write(token_id, Zeroable::zero());
-
-        // update balances
-        let owner_balance = balances::read(from);
-        balances::write(from, owner_balance - 1.into());
-        let receiver_balance = balances::read(to);
-        balances::write(to, receiver_balance + 1.into());
-
-        // update ownership
-        owners::write(token_id, to);
-
-
+        // update new owner balance
+        let query: Query = (token, to).into();
+        let balance = commands::<Balance>::entity(query);
+        commands::set_entity(query, (
+            Balance { value: balance.value + 1 }
+        ));
     }
 }
 
@@ -55,16 +56,17 @@ mod ERC721Mint {
     use starknet::contract_address;
     use starknet::ContractAddress;
     use super::components::Owner;
-    use super::components::Balance;
 
-    fn execute(owner: ContractAddress, token_id: felt252) {
+    fn execute(token: felt252, owner: felt252, token_id: felt252) {
         // assign token to owner
-        commands::set_entity(token_id, ( Owner { address: owner }));
+        commands::set_entity((token, token_id), ( Owner { address: owner.into() }));
 
         // update owner's balance
-        let balance = commands::<Balance>::entity(owner.into());
-        let balance = Balance { value: balance.value + 1 };
-        commands::entity(owner.into(), (balance));
+        let query: Query = (token, owner).into();
+        let balance = commands::<Balance>::entity(query);
+        commands::set_entity(query, (
+            Balance { value: balance.value + 1 }
+        ))
     }
 }
 
@@ -73,13 +75,15 @@ mod ERC721Burn {
     use starknet::contract_address;
     use starknet::ContractAddress;
 
-    fn execute(owner: ContractAddress, token_id: felt252) {
+    fn execute(token: felt252, owner: felt252, token_id: felt252) {
         // remove token from owner
-        commands::delete_entity(token_id, ( Owner { address: owner }));
+        commands::delete_entity((token, token_id), ( Owner { address: owner.into() }));
 
         // update owner's balance
-        let balance = commands::<Balance>::entity(owner.into());
-        let balance = Balance { value: balance.value - 1 };
-        commands::entity(owner.into(), (balance));
+        let query: Query = (token, owner).into()
+        let balance = commands::<Balance>::entity(query);
+        commands::set_entity(query, (
+            Balance { value: balance.value - 1 }
+        ))
     }
 }

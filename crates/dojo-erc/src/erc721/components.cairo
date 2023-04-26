@@ -12,7 +12,7 @@ struct OperatorApproval {
 
 #[derive(Component)]
 struct Balance {
-    value: u64
+    value: u128
 }
 
 #[derive(Component)]
