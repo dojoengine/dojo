@@ -30,8 +30,9 @@ mod Database {
         offset: u8,
         length: usize
     ) -> Option<Span<felt252>> {
+        let mut length = length;
         if length == 0_usize {
-            let length = IComponentLibraryDispatcher { class_hash: class_hash }.len();
+            length = IComponentLibraryDispatcher { class_hash: class_hash }.len();
         }
 
         let id = query.id();
