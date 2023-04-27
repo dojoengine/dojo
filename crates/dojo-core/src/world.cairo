@@ -11,6 +11,8 @@ mod World {
     use dojo_core::storage::query::Query;
     use dojo_core::storage::query::QueryTrait;
     use dojo_core::storage::db::Database;
+    use dojo_core::integer::u250;
+    use dojo_core::string::ShortString;
 
     use dojo_core::interfaces::IComponentLibraryDispatcher;
     use dojo_core::interfaces::IComponentDispatcherTrait;
@@ -20,25 +22,25 @@ mod World {
     use dojo_core::interfaces::ISystemDispatcherTrait;
 
     #[event]
-    fn WorldSpawned(address: ContractAddress, name: felt252) {}
+    fn WorldSpawned(address: ContractAddress, name: ShortString) {}
 
     #[event]
-    fn ComponentRegistered(name: felt252, class_hash: ClassHash) {}
+    fn ComponentRegistered(name: ShortString, class_hash: ClassHash) {}
 
     #[event]
-    fn SystemRegistered(name: felt252, class_hash: ClassHash) {}
+    fn SystemRegistered(name: ShortString, class_hash: ClassHash) {}
 
     struct Storage {
         caller: ClassHash,
         executor: ContractAddress,
-        component_registry: LegacyMap::<felt252, ClassHash>,
-        system_registry: LegacyMap::<felt252, ClassHash>,
-        nonce: felt252,
+        component_registry: LegacyMap::<ShortString, ClassHash>,
+        system_registry: LegacyMap::<ShortString, ClassHash>,
+        nonce: usize,
     }
 
     // Give deployer the default admin role.
     #[constructor]
-    fn constructor(name: felt252, executor_: ContractAddress) {
+    fn constructor(name: ShortString, executor_: ContractAddress) {
         executor::write(executor_);
 
         WorldSpawned(get_contract_address(), name);
@@ -55,7 +57,7 @@ mod World {
     }
 
     #[view]
-    fn component(name: felt252) -> ClassHash {
+    fn component(name: ShortString) -> ClassHash {
         component_registry::read(name)
     }
 
@@ -70,12 +72,12 @@ mod World {
     }
 
     #[view]
-    fn system(name: felt252) -> ClassHash {
+    fn system(name: ShortString) -> ClassHash {
         system_registry::read(name)
     }
 
     #[external]
-    fn execute(name: felt252, execute_calldata: Span<felt252>) -> Span<felt252> {
+    fn execute(name: ShortString, execute_calldata: Span<felt252>) -> Span<felt252> {
         let class_hash = system_registry::read(name);
         caller::write(class_hash);
 
@@ -89,14 +91,14 @@ mod World {
 
     // Issue an autoincremented id to the caller.
     #[external]
-    fn uuid() -> felt252 {
+    fn uuid() -> usize {
         let next = nonce::read();
         nonce::write(next + 1);
-        return pedersen(next, 0);
+        return next;
     }
 
     #[external]
-    fn set_entity(component: felt252, query: Query, offset: u8, value: Span<felt252>) {
+    fn set_entity(component: ShortString, query: Query, offset: u8, value: Span<felt252>) {
         let system_class_hash = caller::read();
         let table = query.table(component);
 
@@ -107,15 +109,15 @@ mod World {
     }
 
     #[external]
-    fn delete_entity(component: felt252, query: Query) {
+    fn delete_entity(component: ShortString, query: Query) {
         let class_hash = caller::read();
-        let res = Database::del(class_hash, component, query);
+        let res = Database::del(class_hash, component.into(), query);
     }
 
     #[view]
-    fn entity(component: felt252, query: Query, offset: u8, length: usize) -> Span<felt252> {
+    fn entity(component: ShortString, query: Query, offset: u8, length: usize) -> Span<felt252> {
         let class_hash = component_registry::read(component);
-        match Database::get(class_hash, component, query, offset, length) {
+        match Database::get(class_hash, component.into(), query, offset, length) {
             Option::Some(res) => res,
             Option::None(_) => {
                 ArrayTrait::<felt252>::new().span()
@@ -125,8 +127,8 @@ mod World {
 
     // Returns entities that contain the component state.
     #[view]
-    fn entities(component: felt252, partition: felt252) -> Array::<felt252> {
-        Database::all(component, partition)
+    fn entities(component: ShortString, partition: u250) -> Array::<u250> {
+        Database::all(component.into(), partition)
     }
 
     #[external]
@@ -135,40 +137,45 @@ mod World {
     }
 }
 
-// TODO: Uncomment once library call is supported in tests.
-// #[test]
-// #[available_gas(2000000)]
-// fn test_component() {
-//     let name = 'Position';
-//     World::register_component(starknet::class_hash_const::<0x420>());
-//     let mut data = ArrayTrait::<felt252>::new();
-//     data.append(1337);
-//     let id = World::uuid();
-//     World::set_entity(name, QueryTrait::new_from_id(id), 0_u8, data.span());
-//     let stored = World::entity(name, QueryTrait::new_from_id(id), 0_u8, 1_usize);
-//     assert(*stored.snapshot.at(0_usize) == 1337, 'data not stored');
-// }
+mod tests {
+    use traits::Into;
+    use super::World;
 
-// TODO: Uncomment once library call is supported in tests.
-// #[test]
-// #[available_gas(2000000)]
-// fn test_system() {
-//     let name = 'Position';
-//     World::register_system(starknet::class_hash_const::<0x420>());
-//     let mut data = ArrayTrait::<felt252>::new();
-//     data.append(1337);
-//     let id = World::uuid();
-//     World::set_entity(name, QueryTrait::new_from_id(id), 0_u8, data.span());
-//     let stored = World::entity(name, QueryTrait::new_from_id(id), 0_u8, 1_usize);
-//     assert(*stored.snapshot.at(0_usize) == 1337, 'data not stored');
-// }
+    // TODO: Uncomment once library call is supported in tests.
+    // #[test]
+    // #[available_gas(2000000)]
+    // fn test_component() {
+    //     let name = 'Position';
+    //     World::register_component(starknet::class_hash_const::<0x420>());
+    //     let mut data = ArrayTrait::<felt252>::new();
+    //     data.append(1337);
+    //     let id = World::uuid();
+    //     World::set_entity(name, QueryTrait::new_from_id(id), 0_u8, data.span());
+    //     let stored = World::entity(name, QueryTrait::new_from_id(id), 0_u8, 1_usize);
+    //     assert(*stored.snapshot.at(0_usize) == 1337, 'data not stored');
+    // }
 
-#[test]
-#[available_gas(2000000)]
-fn test_constructor() {
-    starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
-    World::constructor(
-        'World',
-        starknet::contract_address_const::<0x1337>(),
-    );
+    // TODO: Uncomment once library call is supported in tests.
+    // #[test]
+    // #[available_gas(2000000)]
+    // fn test_system() {
+    //     let name = 'Position';
+    //     World::register_system(starknet::class_hash_const::<0x420>());
+    //     let mut data = ArrayTrait::<felt252>::new();
+    //     data.append(1337);
+    //     let id = World::uuid();
+    //     World::set_entity(name, QueryTrait::new_from_id(id), 0_u8, data.span());
+    //     let stored = World::entity(name, QueryTrait::new_from_id(id), 0_u8, 1_usize);
+    //     assert(*stored.snapshot.at(0_usize) == 1337, 'data not stored');
+    // }
+
+    #[test]
+    #[available_gas(2000000)]
+    fn test_constructor() {
+        starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
+        World::constructor(
+            'World'.into(),
+            starknet::contract_address_const::<0x1337>(),
+        );
+    }
 }

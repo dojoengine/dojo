@@ -2,15 +2,18 @@ use array::ArrayTrait;
 
 #[contract]
 mod WorldFactory {
+    use array::ArrayTrait;
+    use option::OptionTrait;
+    use traits::Into;
+
+    use starknet::ClassHash;
+    use starknet::ContractAddress;
+    use starknet::contract_address::ContractAddressIntoFelt252;
+    use starknet::syscalls::deploy_syscall;
+
     use dojo_core::interfaces::IWorldDispatcher;
     use dojo_core::interfaces::IWorldDispatcherTrait;
-    use starknet::ContractAddress;
-    use starknet::ClassHash;
-    use starknet::syscalls::deploy_syscall;
-    use array::ArrayTrait;
-    use traits::Into;
-    use option::OptionTrait;
-    use starknet::contract_address::ContractAddressIntoFelt252;
+    use dojo_core::string::ShortString;
 
     struct Storage {
         world_class_hash: ClassHash,
@@ -27,10 +30,10 @@ mod WorldFactory {
     }
 
     #[external]
-    fn spawn(name: felt252, components: Array::<ClassHash>, systems: Array::<ClassHash>) {
+    fn spawn(name: ShortString, components: Array::<ClassHash>, systems: Array::<ClassHash>) {
         // deploy world
         let mut world_constructor_calldata: Array<felt252> = ArrayTrait::new();
-        world_constructor_calldata.append(name);
+        world_constructor_calldata.append(name.into());
         world_constructor_calldata.append(executor_address::read().into());
         let world_class_hash = world_class_hash::read();
         let result = deploy_syscall(world_class_hash, 0, world_constructor_calldata.span(), true);

@@ -2,37 +2,29 @@ use array::ArrayTrait;
 use array::SpanTrait;
 use option::OptionTrait;
 use serde::Serde;
+use serde::deserialize_array_helper;
 
-impl SpanSerde of Serde::<Span<felt252>> {
-    fn serialize(ref output: Array<felt252>, mut input: Span<felt252>) {
+impl SpanSerde<T, impl TSerde: Serde<T>, impl TCopy: Copy<T>, impl TDrop: Drop<T>> of Serde::<Span<T>> {
+    fn serialize(ref output: Array<felt252>, mut input: Span<T>) {
         Serde::<usize>::serialize(ref output, input.len());
         serialize_span_helper(ref output, input);
     }
-    fn deserialize(ref serialized: Span<felt252>) -> Option<Span<felt252>> {
+    fn deserialize(ref serialized: Span<felt252>) -> Option<Span<T>> {
         let length = *serialized.pop_front()?;
         let mut arr = ArrayTrait::new();
-        deserialize_array_helper(ref serialized, arr, length)
+        Option::Some(deserialize_array_helper(ref serialized, arr, length)?.span())
     }
 }
 
-fn serialize_span_helper(
-    ref output: Array<felt252>, mut input: Span<felt252>
+fn serialize_span_helper<T, impl TSerde: Serde<T>, impl TCopy: Copy<T>, impl TDrop: Drop<T>>(
+    ref output: Array<felt252>, mut input: Span<T>
 ) {
     match input.pop_front() {
-        Option::Some(v) => {
-            output.append(*v);
+        Option::Some(value) => {
+            let value = *value;
+            TSerde::serialize(ref output, value);
             serialize_span_helper(ref output, input);
         },
         Option::None(_) => {},
     }
-}
-
-fn deserialize_array_helper(
-    ref serialized: Span<felt252>, mut curr_output: Array<felt252>, remaining: felt252
-) -> Option<Span<felt252>> {
-    if remaining == 0 {
-        return Option::Some(curr_output.span());
-    }
-    curr_output.append(*serialized.pop_front()?);
-    deserialize_array_helper(ref serialized, curr_output, remaining - 1)
 }
