@@ -60,7 +60,7 @@ impl ContractAddressIntoU250 of Into<ContractAddress, u250> {
     }
 }
 
-impl u32IntoU250 of Into<u32, u250> {
+impl U32IntoU250 of Into<u32, u250> {
     fn into(self: u32) -> u250 {
         u250 { inner: self.into() }
     }
