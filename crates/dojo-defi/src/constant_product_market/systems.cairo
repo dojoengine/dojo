@@ -2,18 +2,20 @@
 mod Buy {
     use traits::Into;
     use array::ArrayTrait;
+    use dojo_core::integer::u250;
+    use dojo_core::integer::ContractAddressIntoU250;
     use dojo_defi::constant_product_market::components::Item;
     use dojo_defi::constant_product_market::components::Cash;
     use dojo_defi::constant_product_market::components::Market;
     use dojo_defi::constant_product_market::components::MarketTrait;
 
-    fn execute(game_id: felt252, item_id: felt252, quantity: usize) {
-        let player: felt252 = starknet::get_caller_address().into();
+    fn execute(partition: u250, item_id: u250, quantity: usize) {
+        let player: u250 = starknet::get_caller_address().into();
 
-        let cash_sk: Query = (game_id, (player)).into();
+        let cash_sk: Query = (partition, (player)).into_partitioned();
         let player_cash = commands::<Cash>::entity(cash_sk);
 
-        let market_sk: Query = (game_id, (item_id)).into();
+        let market_sk: Query = (partition, (item_id)).into_partitioned();
         let market = commands::<Market>::entity(market_sk);
 
         let cost = market.buy(quantity);
@@ -32,7 +34,7 @@ mod Buy {
         commands::set_entity(cash_sk, (Cash { amount: player_cash.amount - cost }));
 
         // update player item
-        let item_sk: Query = (game_id, (player, item_id)).into();
+        let item_sk: Query = (partition, (player, item_id)).into_partitioned();
         let maybe_item = commands::<Item>::try_entity(item_sk);
         let player_quantity = match maybe_item {
             Option::Some(item) => item.quantity + quantity,
@@ -46,15 +48,17 @@ mod Buy {
 mod Sell {
     use traits::Into;
     use array::ArrayTrait;
+    use dojo_core::integer::u250;
+    use dojo_core::integer::ContractAddressIntoU250;
     use dojo_defi::constant_product_market::components::Item;
     use dojo_defi::constant_product_market::components::Cash;
     use dojo_defi::constant_product_market::components::Market;
     use dojo_defi::constant_product_market::components::MarketTrait;
 
-    fn execute(game_id: felt252, item_id: felt252, quantity: usize) {
-        let player: felt252 = starknet::get_caller_address().into();
+    fn execute(partition: u250, item_id: u250, quantity: usize) {
+        let player: u250 = starknet::get_caller_address().into();
 
-        let item_sk: Query = (game_id, (player, item_id)).into();
+        let item_sk: Query = (partition, (player, item_id)).into_partitioned();
         let maybe_item = commands::<Item>::try_entity(item_sk);
         let player_quantity = match maybe_item {
             Option::Some(item) => item.quantity,
@@ -62,10 +66,10 @@ mod Sell {
         };
         assert(player_quantity >= quantity, 'not enough items');
 
-        let cash_sk: Query = (game_id, (player)).into();
+        let cash_sk: Query = (partition, (player)).into_partitioned();
         let player_cash = commands::<Cash>::entity(cash_sk);
 
-        let market_sk: Query = (game_id, (item_id)).into();
+        let market_sk: Query = (partition, (item_id)).into_partitioned();
         let market = commands::<Market>::entity(market_sk);
         let payout = market.sell(quantity);
 

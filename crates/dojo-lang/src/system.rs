@@ -58,8 +58,6 @@ impl System {
                     use dojo_core::storage::query::TupleSize3IntoQuery;
                     use dojo_core::storage::query::IntoPartitioned;
                     use dojo_core::storage::query::IntoPartitionedQuery;
-                    use dojo_core::integer::u250;
-                    use dojo_core::integer::u250Trait;
 
                     #[view]
                     fn name() -> dojo_core::string::ShortString {

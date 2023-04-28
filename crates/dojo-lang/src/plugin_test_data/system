@@ -37,7 +37,7 @@ mod Spawn {
             Position { x: 0, y: 0 },
         ));
 
-        commands::set_entity(u250Trait::new(120).into(), (
+        commands::set_entity(120.into(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
@@ -276,8 +276,6 @@ mod SpawnSystem {
     use dojo_core::storage::query::TupleSize3IntoQuery;
     use dojo_core::storage::query::IntoPartitioned;
     use dojo_core::storage::query::IntoPartitionedQuery;
-    use dojo_core::integer::u250;
-    use dojo_core::integer::u250Trait;
 
     #[view]
     fn name() -> dojo_core::string::ShortString {
@@ -351,7 +349,7 @@ mod SpawnSystem {
                 contract_address: world_address
             }.set_entity(
                 dojo_core::string::ShortStringTrait::new('Player'),
-                u250Trait::new(120).into(),
+                120.into(),
                 0_u8,
                 array::ArrayTrait::span(@calldata)
             );
@@ -364,7 +362,7 @@ mod SpawnSystem {
                 contract_address: world_address
             }.set_entity(
                 dojo_core::string::ShortStringTrait::new('Position'),
-                u250Trait::new(120).into(),
+                120.into(),
                 0_u8,
                 array::ArrayTrait::span(@calldata)
             );
@@ -469,8 +467,6 @@ mod MoveSystem {
     use dojo_core::storage::query::TupleSize3IntoQuery;
     use dojo_core::storage::query::IntoPartitioned;
     use dojo_core::storage::query::IntoPartitionedQuery;
-    use dojo_core::integer::u250;
-    use dojo_core::integer::u250Trait;
 
     #[view]
     fn name() -> dojo_core::string::ShortString {
@@ -859,8 +855,6 @@ mod ProxySystem {
     use dojo_core::storage::query::TupleSize3IntoQuery;
     use dojo_core::storage::query::IntoPartitioned;
     use dojo_core::storage::query::IntoPartitionedQuery;
-    use dojo_core::integer::u250;
-    use dojo_core::integer::u250Trait;
 
     #[view]
     fn name() -> dojo_core::string::ShortString {
@@ -886,11 +880,11 @@ error: Plugin diagnostic: Component types cannot be empty
                   ^************************************^
 
 error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::query::Query", found: "(?80, ?81, ?82, ?83, ?84)".
- --> Spawn:87:141
+ --> Spawn:85:141
                         IWorldDispatcher { contract_address: world_address }.set_entity(dojo_core::string::ShortStringTrait::new('Player'), (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
                                                                                                                                             ^*************^
 
 error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::query::Query", found: "(?91, ?92, ?93, ?94, ?95)".
- --> Spawn:93:143
+ --> Spawn:91:143
                         IWorldDispatcher { contract_address: world_address }.set_entity(dojo_core::string::ShortStringTrait::new('Position'), (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
                                                                                                                                               ^*************^

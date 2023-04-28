@@ -48,6 +48,7 @@ mod RouteAuth {
 #[system]
 mod Authorize {
     use traits::Into;
+    use dojo_core::integer::u250;
     use dojo_core::auth::components::Status;
     use dojo_core::auth::components::Role;
 
@@ -64,7 +65,7 @@ mod Authorize {
 mod GrantRole {
     use traits::Into;
     use array::ArrayTrait;
-
+    use dojo_core::integer::u250;
     use dojo_core::auth::components::Role;
 
     fn execute(target_id: u250, role_id: u250) {
@@ -75,6 +76,7 @@ mod GrantRole {
 #[system]
 mod GrantResource {
     use traits::Into;
+    use dojo_core::integer::u250;
     use dojo_core::auth::components::Status;
 
     fn execute(role_id: u250, resource_id: u250) {
@@ -86,7 +88,7 @@ mod GrantResource {
 mod RevokeRole {
     use traits::Into;
     use array::ArrayTrait;
-
+    use dojo_core::integer::u250;
     use dojo_core::auth::components::Role;
 
     fn execute(target_id: u250) {
@@ -97,6 +99,7 @@ mod RevokeRole {
 #[system]
 mod RevokeResource {
     use traits::Into;
+    use dojo_core::integer::u250;
     use dojo_core::auth::components::Status;
 
     fn execute(role_id: u250, resource_id: u250) {
