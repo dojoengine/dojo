@@ -2,7 +2,7 @@ use traits::Into;
 use traits::TryInto;
 use option::OptionTrait;
 
-const SCALING_FACTOR: u128 = 10000_u128;
+const SCALING_FACTOR: u128 = 10000;
 
 #[derive(Component)]
 struct Cash {
@@ -53,7 +53,7 @@ fn normalize(quantity: usize, market: @Market) -> (u128, u128, u128) {
 #[should_panic(expected: ('not enough liquidity', ))]
 fn test_not_enough_quantity() {
     let market = Market {
-        cash_amount: SCALING_FACTOR * 1_u128, item_quantity: 1_usize
+        cash_amount: SCALING_FACTOR * 1, item_quantity: 1
     }; // pool 1:1
     let cost = market.buy(10_usize);
 }
@@ -62,18 +62,18 @@ fn test_not_enough_quantity() {
 #[available_gas(100000)]
 fn test_market_buy() {
     let market = Market {
-        cash_amount: SCALING_FACTOR * 1_u128, item_quantity: 10_usize
+        cash_amount: SCALING_FACTOR * 1, item_quantity: 10
     }; // pool 1:10
-    let cost = market.buy(5_usize);
-    assert(cost == SCALING_FACTOR * 1_u128, 'wrong cost');
+    let cost = market.buy(5);
+    assert(cost == SCALING_FACTOR * 1, 'wrong cost');
 }
 
 #[test]
 #[available_gas(100000)]
 fn test_market_sell() {
     let market = Market {
-        cash_amount: SCALING_FACTOR * 1_u128, item_quantity: 10_usize
+        cash_amount: SCALING_FACTOR * 1, item_quantity: 10
     }; // pool 1:10
-    let payout = market.sell(5_usize);
-    assert(payout == 3334_u128, 'wrong payout');
+    let payout = market.sell(5);
+    assert(payout == 3334, 'wrong payout');
 }
