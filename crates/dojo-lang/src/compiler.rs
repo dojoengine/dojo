@@ -5,7 +5,7 @@ use std::ops::DerefMut;
 use anyhow::{anyhow, Context, Result};
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_filesystem::db::FilesGroup;
-use cairo_lang_filesystem::ids::CrateLongId;
+use cairo_lang_filesystem::ids::{CrateId, CrateLongId};
 use cairo_lang_starknet::contract::find_contracts;
 use cairo_lang_starknet::contract_class::{compile_prepared_db, ContractClass};
 use cairo_lang_utils::Upcast;
@@ -31,17 +31,9 @@ impl Compiler for DojoCompiler {
     fn compile(&self, unit: CompilationUnit, ws: &Workspace<'_>) -> Result<()> {
         let target_dir = unit.target_dir(ws.config());
 
-        let mut db = RootDatabase::builder()
-            .with_project_config(build_project_config(&unit)?)
-            .with_dojo()
-            .build()?;
+        let (mut db, main_crate_ids) = self.prepare(&unit)?;
 
         let compiler_config = build_compiler_config(&unit, ws);
-
-        let mut main_crate_ids = collect_main_crate_ids(&unit, &db);
-        if unit.main_component().cairo_package_name() != "dojo_core" {
-            main_crate_ids.push(db.intern_crate(CrateLongId("dojo_core".into())));
-        }
 
         let contracts = {
             let _ = trace_span!("find_contracts").enter();
@@ -86,6 +78,22 @@ impl Compiler for DojoCompiler {
             .with_context(|| "failed to serialize manifest")?;
 
         Ok(())
+    }
+}
+
+impl DojoCompiler {
+    pub fn prepare(&self, unit: &CompilationUnit) -> Result<(RootDatabase, Vec<CrateId>)> {
+        let db = RootDatabase::builder()
+            .with_project_config(build_project_config(unit)?)
+            .with_dojo()
+            .build()?;
+
+        let mut main_crate_ids = collect_main_crate_ids(unit, &db);
+        if unit.main_component().cairo_package_name() != "dojo_core" {
+            main_crate_ids.push(db.intern_crate(CrateLongId("dojo_core".into())));
+        }
+
+        Ok((db, main_crate_ids))
     }
 }
 
