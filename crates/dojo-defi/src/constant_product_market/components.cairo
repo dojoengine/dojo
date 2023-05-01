@@ -6,10 +6,6 @@ use option::OptionTrait;
 use cubit::types::fixed::Fixed;
 use cubit::types::fixed::FixedInto;
 use cubit::types::fixed::FixedType;
-use cubit::types::fixed::FixedAdd;
-use cubit::types::fixed::FixedDiv;
-use cubit::types::fixed::FixedMul;
-use cubit::types::fixed::FixedNeg;
 use cubit::types::fixed::ONE_u128;
 
 use cubit::test::helpers::assert_precise;
@@ -35,19 +31,6 @@ struct Liquidity {
 struct Market {
     cash_amount: u128,
     item_quantity: usize,
-}
-
-// Add serde implementation for FixedType
-// TODO: Remove once cubit fixed point math library implements serde
-impl FixedTypeSerde of serde::Serde<FixedType> {
-    fn serialize(ref output: Array<felt252>, input: FixedType) {
-        serde::Serde::serialize(ref output, input.into());
-    }
-    fn deserialize(ref serialized: Span<felt252>) -> Option<FixedType> {
-        Option::Some(
-            Fixed::from_unscaled_felt(serde::Serde::<felt252>::deserialize(ref serialized)?)
-        )
-    }
 }
 
 trait MarketTrait {
