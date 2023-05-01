@@ -9,6 +9,8 @@ mod Buy {
     use dojo_defi::constant_product_market::components::Market;
     use dojo_defi::constant_product_market::components::Liquidity;
     use dojo_defi::constant_product_market::components::MarketTrait;
+    use cubit::types::fixed::FixedType;
+    use cubit::types::fixed::Fixed;
 
     fn execute(partition: u250, item_id: u250, quantity: usize) {
         let player: u250 = starknet::get_caller_address().into();
@@ -144,3 +146,47 @@ mod AddLiquidity {
     // );
     }
 }
+// TODO: uncomment once error: Plugin diagnostic: Type not found is solved
+// #[system]
+// mod RemoveLiquidity {
+//     use traits::Into;
+//     use array::ArrayTrait;
+//     use dojo_core::integer::u250;
+//     use dojo_core::integer::ContractAddressIntoU250;
+//     use dojo_defi::constant_product_market::components::Item;
+//     use dojo_defi::constant_product_market::components::Cash;
+//     use dojo_defi::constant_product_market::components::Market;
+//     use dojo_defi::constant_product_market::components::MarketTrait;
+
+//     fn execute(partition: u250, item_id: u250, shares: FixedType) {
+//         let player: u250 = starknet::get_caller_address().into();
+
+//         let liquidity_sk: Query = (partition, (player, item_id)).into_partitioned();
+//         let player_liquidity = commands::<Liquidity>::entity(liquidity_sk);
+//         assert(player_liquidity.shares >= shares, 'not enough shares');
+
+//         let market_sk: Query = (partition, (item_id)).into_partitioned();
+//         let market = commands::<Market>::entity(market_sk);
+//         let (payout_cash, payout_quantity) = market.remove_liquidity(shares);
+
+//         // update market
+//         commands::set_entity(
+//             market_sk,
+//             (Market {
+//                 cash_amount: market.cash_amount + cost_cash,
+//                 item_quantity: market.item_quantity + cost_quantity
+//             })
+//         );
+
+//         // update player cash
+//         commands::set_entity(cash_sk, (Cash { amount: player_cash.amount + cost_cash }));
+
+//         // update player item
+//         commands::set_entity(item_sk, (Item { quantity: player_quantity + cost_quantity }));
+//         // update player liquidity
+//         let liquidity_sk: Query = (partition, (player, item_id)).into_partitioned();
+//         let player_liquidity = commands::<Liquidity>::entity(liquidity_sk);
+//         commands::set_entity(lquidity_sk, (Liquidity { shares: player_liquidity.shares - shares }));
+//     }
+// }
+

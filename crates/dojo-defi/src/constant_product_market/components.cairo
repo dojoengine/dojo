@@ -61,6 +61,7 @@ trait MarketTrait {
     fn add_liquidity_inner(self: @Market, amount: u128, quantity: usize) -> (u128, usize);
     fn add_liquidity(self: @Market, amount: u128, quantity: usize) -> (u128, usize, FixedType);
     fn mint_shares(self: @Market, amount: u128, quantity: usize) -> FixedType;
+    fn remove_liquidity(self: @Market, shares: FixedType) -> (u128, usize);
 }
 
 impl MarketImpl of MarketTrait {
@@ -226,6 +227,41 @@ impl MarketImpl of MarketTrait {
             (amount * liquidity) / reserve_amount
         }
     }
+
+    // Remove liquidity from the market, return the corresponding amount and quantity payout
+    //
+    // Arguments:
+    //
+    // shares: The amount of liquidity shares to remove from the market
+    //
+    // Returns:
+    //
+    // (amount, quantity): The amount of cash and quantity of items removed from the market
+    fn remove_liquidity(self: @Market, shares: FixedType) -> (u128, usize) {
+        // Ensure that the market has liquidity
+        let liquidity = self.liquidity();
+        assert(shares <= liquidity, 'insufficient liquidity');
+
+        // Get normalized reserve cash amount and item quantity
+        let (reserve_amount, reserve_quantity) = self.get_reserves();
+
+        // Convert reserve amount and quantity to fixed point
+        let reserve_amount = Fixed::new_unscaled(reserve_amount, false);
+        let reserve_quantity = Fixed::new_unscaled(reserve_quantity, false);
+
+        // Compute the amount and quantity to remove from the market
+        // dx = S * X / L
+        let amount = (shares * reserve_amount) / liquidity;
+        // dy = S * Y / L
+        let quantity = (shares * reserve_quantity) / liquidity;
+
+        // Unscale and convert amount and quantity to u128 and usize
+        (
+            amount.into().try_into().unwrap() / ONE_u128,
+            (quantity.into().try_into().unwrap()
+                / (SCALING_FACTOR * ONE_u128)).into().try_into().unwrap()
+        )
+    }
 }
 
 fn normalize(quantity: usize, market: @Market) -> (u128, u128, u128) {
@@ -302,10 +338,8 @@ fn test_market_add_liquidity_optimal() {
 
     // Compute the expected liquidity shares
     let expected_liquidity = Fixed::sqrt(expected_amount * expected_quantity);
-
-    assert_precise(
-        expected_liquidity, (initial_liquidity + liquidity_add).into(), 'wrong liquidity'
-    );
+    let final_liquidity = initial_liquidity + liquidity_add;
+    assert_precise(expected_liquidity, final_liquidity.into(), 'wrong liquidity');
 }
 
 #[test]
@@ -334,9 +368,7 @@ fn test_market_add_liquidity_not_optimal() {
     let expected_liquidity = Fixed::sqrt(expected_amount * expected_quantity);
 
     let final_liquidity = initial_liquidity + liquidity_add;
-    assert_precise(
-        expected_liquidity, (initial_liquidity + liquidity_add).into(), 'wrong liquidity'
-    );
+    assert_precise(expected_liquidity, final_liquidity.into(), 'wrong liquidity');
 }
 
 #[test]
@@ -346,4 +378,59 @@ fn test_market_add_liquidity_insufficient_amount() {
     // Adding 20 items requires (SCALING_FACTOR * 2) cash amount to maintain the ratio
     // Therefore this should fail
     let (amount_add, quantity_add, liquidity_add) = market.add_liquidity(SCALING_FACTOR * 1, 20);
+}
+
+
+#[test]
+#[available_gas(1000000)]
+fn test_market_remove_liquidity() {
+    // With initial liquidity
+    let market = Market { cash_amount: SCALING_FACTOR * 2, item_quantity: 20 }; // pool 1:10
+    let initial_liquidity = market.liquidity();
+
+    // Remove half of the liquidity
+    let two = Fixed::new_unscaled(2, false);
+    let liquidity_remove = initial_liquidity / two;
+
+    let (amount_remove, quantity_remove) = market.remove_liquidity(liquidity_remove);
+
+    // Assert that the amount and quantity removed are half of the initial amount and quantity
+    assert(amount_remove == SCALING_FACTOR * 1, 'wrong cash amount');
+    assert(quantity_remove == 10, 'wrong item quantity');
+
+    // Get expected amount and convert to fixed point
+    let expected_amount = Fixed::new_unscaled(SCALING_FACTOR * 2 - amount_remove, false);
+    let expected_quantity = Fixed::new_unscaled(
+        (20 - quantity_remove).into().try_into().unwrap() * SCALING_FACTOR, false
+    );
+    let expected_liquidity = Fixed::sqrt(expected_amount * expected_quantity);
+
+    let final_liquidity = initial_liquidity - liquidity_remove;
+    assert_precise(expected_liquidity, final_liquidity.into(), 'wrong liquidity');
+}
+
+#[test]
+#[should_panic(expected: ('insufficient liquidity', ))]
+fn test_market_remove_liquidity_no_initial() {
+    // Without initial liquidity
+    let market = Market { cash_amount: 0, item_quantity: 0 }; // pool 1:10
+
+    // Remove liquidity
+    let one = Fixed::new_unscaled(1, false);
+
+    let (amount_remove, quantity_remove) = market.remove_liquidity(one);
+}
+
+#[test]
+#[should_panic(expected: ('insufficient liquidity', ))]
+fn test_market_remove_liquidity_more_than_available() {
+    // With initial liquidity
+    let market = Market { cash_amount: SCALING_FACTOR * 2, item_quantity: 20 }; // pool 1:10
+    let initial_liquidity = market.liquidity();
+
+    // Remove twice of the liquidity
+    let two = Fixed::new_unscaled(2, false);
+    let liquidity_remove = initial_liquidity * two;
+
+    let (amount_remove, quantity_remove) = market.remove_liquidity(liquidity_remove);
 }
