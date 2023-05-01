@@ -3,15 +3,11 @@
 use std::env::{self, current_dir};
 
 use anyhow::bail;
-use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_compiler::diagnostics::DiagnosticsReporter;
 use cairo_lang_test_runner::TestRunner;
 use camino::Utf8PathBuf;
 use clap::Parser;
 use dojo_lang::compiler::DojoCompiler;
-use dojo_lang::db::DojoRootDatabaseBuilderEx;
-use scarb::compiler::helpers::{build_project_config, collect_main_crate_ids};
-use scarb::compiler::CompilerRepository;
 use scarb::core::Config;
 use scarb::ops;
 use scarb::ui::Verbosity;
@@ -44,14 +40,11 @@ fn main() -> anyhow::Result<()> {
         Utf8PathBuf::from_path_buf(current_path).unwrap()
     };
 
-    let mut compilers = CompilerRepository::empty();
-    compilers.add(Box::new(DojoCompiler)).unwrap();
-
+    let dojo_compiler = DojoCompiler {};
     let manifest_path = source_dir.join("Scarb.toml");
     let config = Config::builder(manifest_path)
         .ui_verbosity(Verbosity::Verbose)
         .log_filter_directive(env::var_os("SCARB_LOG"))
-        .compilers(compilers)
         .build()
         .unwrap();
 
@@ -65,14 +58,9 @@ fn main() -> anyhow::Result<()> {
 
     let unit = compilation_units[0].clone();
 
-    let db = &mut RootDatabase::builder()
-        .with_project_config(build_project_config(&unit)?)
-        .with_dojo()
-        .build()?;
+    let (db, main_crate_ids) = dojo_compiler.prepare(&unit)?;
 
-    let main_crate_ids = collect_main_crate_ids(&unit, db);
-
-    if DiagnosticsReporter::stderr().check(db) {
+    if DiagnosticsReporter::stderr().check(&db) {
         bail!("failed to compile");
     }
 

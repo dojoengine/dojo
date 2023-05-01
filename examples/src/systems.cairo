@@ -54,7 +54,6 @@ mod Move {
     }
 }
 
-
 mod tests {
     use core::traits::Into;
     use array::ArrayTrait;
