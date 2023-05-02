@@ -77,8 +77,8 @@ mod Database {
         }
 
         let mut serialized = ArrayTrait::new();
-        Serde::serialize(ref serialized, component);
-        Serde::serialize(ref serialized, partition);
+        component.serialize(ref serialized);
+        partition.serialize(ref serialized);
         let hash = poseidon_hash_span(serialized.span());
         Index::query(hash.into())
     }

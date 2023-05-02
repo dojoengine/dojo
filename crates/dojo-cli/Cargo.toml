@@ -21,6 +21,7 @@ cairo-lang-sierra.workspace = true
 cairo-lang-sierra-to-casm.workspace = true
 cairo-lang-starknet.workspace = true
 scarb.workspace = true
+semver.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 smol_str.workspace = true

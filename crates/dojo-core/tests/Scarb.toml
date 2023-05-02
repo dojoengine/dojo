@@ -5,3 +5,5 @@ description = "Tests for Dojo Core"
 
 [dependencies]
 dojo_core = { path = "../" }
+
+[[target.dojo]]

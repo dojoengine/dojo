@@ -182,8 +182,6 @@ struct Position {
 trait IPosition {
     fn name() -> felt252;
     fn len() -> u8;
-    fn serialize(raw: Span<felt252>) -> Position;
-    fn deserialize(value: Position) -> Span<felt252>;
 }
 
 #[contract]
@@ -226,8 +224,6 @@ struct Player {
 trait IPlayer {
     fn name() -> felt252;
     fn len() -> u8;
-    fn serialize(raw: Span<felt252>) -> Player;
-    fn deserialize(value: Player) -> Span<felt252>;
 }
 
 #[contract]
@@ -292,7 +288,7 @@ mod SpawnSystem {
 
         {
             let mut calldata = array::ArrayTrait::new();
-            serde::Serde::<Player>::serialize(ref calldata, Player { name: name });
+            serde::Serde::serialize(@Player { name: name }, ref calldata);
             IWorldDispatcher {
                 contract_address: world_address
             }.set_entity(
@@ -305,7 +301,7 @@ mod SpawnSystem {
 
         {
             let mut calldata = array::ArrayTrait::new();
-            serde::Serde::<Position>::serialize(ref calldata, Position { x: 0, y: 0 });
+            serde::Serde::serialize(@Position { x: 0, y: 0 }, ref calldata);
             IWorldDispatcher {
                 contract_address: world_address
             }.set_entity(
@@ -318,7 +314,7 @@ mod SpawnSystem {
 
         {
             let mut calldata = array::ArrayTrait::new();
-            serde::Serde::<Player>::serialize(ref calldata, Player { name: name });
+            serde::Serde::serialize(@Player { name: name }, ref calldata);
             IWorldDispatcher {
                 contract_address: world_address
             }.set_entity(
@@ -331,7 +327,7 @@ mod SpawnSystem {
 
         {
             let mut calldata = array::ArrayTrait::new();
-            serde::Serde::<Position>::serialize(ref calldata, Position { x: 0, y: 0 });
+            serde::Serde::serialize(@Position { x: 0, y: 0 }, ref calldata);
             IWorldDispatcher {
                 contract_address: world_address
             }.set_entity(
@@ -344,7 +340,7 @@ mod SpawnSystem {
 
         {
             let mut calldata = array::ArrayTrait::new();
-            serde::Serde::<Player>::serialize(ref calldata, Player { name: name });
+            serde::Serde::serialize(@Player { name: name }, ref calldata);
             IWorldDispatcher {
                 contract_address: world_address
             }.set_entity(
@@ -357,7 +353,7 @@ mod SpawnSystem {
 
         {
             let mut calldata = array::ArrayTrait::new();
-            serde::Serde::<Position>::serialize(ref calldata, Position { x: 0, y: 0 });
+            serde::Serde::serialize(@Position { x: 0, y: 0 }, ref calldata);
             IWorldDispatcher {
                 contract_address: world_address
             }.set_entity(
@@ -372,7 +368,7 @@ mod SpawnSystem {
 
         {
             let mut calldata = array::ArrayTrait::new();
-            serde::Serde::<Player>::serialize(ref calldata, Player { name: name });
+            serde::Serde::serialize(@Player { name: name }, ref calldata);
             IWorldDispatcher {
                 contract_address: world_address
             }.set_entity(
@@ -385,7 +381,7 @@ mod SpawnSystem {
 
         {
             let mut calldata = array::ArrayTrait::new();
-            serde::Serde::<Position>::serialize(ref calldata, Position { x: 0, y: 0 });
+            serde::Serde::serialize(@Position { x: 0, y: 0 }, ref calldata);
             IWorldDispatcher {
                 contract_address: world_address
             }.set_entity(
@@ -398,7 +394,7 @@ mod SpawnSystem {
 
         {
             let mut calldata = array::ArrayTrait::new();
-            serde::Serde::<Player>::serialize(ref calldata, Player { name: name });
+            serde::Serde::serialize(@Player { name: name }, ref calldata);
             IWorldDispatcher {
                 contract_address: world_address
             }.set_entity(
@@ -411,7 +407,7 @@ mod SpawnSystem {
 
         {
             let mut calldata = array::ArrayTrait::new();
-            serde::Serde::<Position>::serialize(ref calldata, Position { x: 0, y: 0 });
+            serde::Serde::serialize(@Position { x: 0, y: 0 }, ref calldata);
             IWorldDispatcher {
                 contract_address: world_address
             }.set_entity(
@@ -424,7 +420,7 @@ mod SpawnSystem {
 
         {
             let mut calldata = array::ArrayTrait::new();
-            serde::Serde::<Player>::serialize(ref calldata, Player { name: name });
+            serde::Serde::serialize(@Player { name: name }, ref calldata);
             IWorldDispatcher {
                 contract_address: world_address
             }.set_entity(
@@ -437,7 +433,7 @@ mod SpawnSystem {
 
         {
             let mut calldata = array::ArrayTrait::new();
-            serde::Serde::<Position>::serialize(ref calldata, Position { x: 0, y: 0 });
+            serde::Serde::serialize(@Position { x: 0, y: 0 }, ref calldata);
             IWorldDispatcher {
                 contract_address: world_address
             }.set_entity(
@@ -879,12 +875,12 @@ error: Plugin diagnostic: Component types cannot be empty
         let err = commands::<>::entity(player_id.into());
                   ^************************************^
 
-error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::query::Query", found: "(?80, ?81, ?82, ?83, ?84)".
+error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::query::Query", found: "(?89, ?90, ?91, ?92, ?93)".
  --> Spawn:85:141
                         IWorldDispatcher { contract_address: world_address }.set_entity(dojo_core::string::ShortStringTrait::new('Player'), (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
                                                                                                                                             ^*************^
 
-error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::query::Query", found: "(?91, ?92, ?93, ?94, ?95)".
+error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::query::Query", found: "(?101, ?102, ?103, ?104, ?105)".
  --> Spawn:91:143
                         IWorldDispatcher { contract_address: world_address }.set_entity(dojo_core::string::ShortStringTrait::new('Position'), (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
                                                                                                                                               ^*************^

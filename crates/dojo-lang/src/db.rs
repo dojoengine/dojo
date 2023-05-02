@@ -4,7 +4,6 @@ use std::sync::Arc;
 use anyhow::Result;
 use cairo_lang_compiler::db::{RootDatabase, RootDatabaseBuilder};
 use cairo_lang_filesystem::db::init_dev_corelib;
-use cairo_lang_plugins::get_default_plugins;
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::plugin::SemanticPlugin;
 use cairo_lang_starknet::plugin::StarkNetPlugin;
@@ -37,13 +36,8 @@ impl DojoRootDatabaseBuilderEx for RootDatabaseBuilder {
     }
 
     fn with_dojo(&mut self) -> &mut Self {
-        // Override implicit precedence for compatibility with the Dojo.
-        let precedence = ["Pedersen", "RangeCheck", "Bitwise", "EcOp", "GasBuiltin", "System"];
-
-        let mut plugins = get_default_plugins();
-        plugins.push(Arc::new(DojoPlugin {}));
-        plugins.push(Arc::new(StarkNetPlugin::default()));
-
-        self.with_implicit_precedence(&precedence).with_plugins(plugins)
+        self.with_semantic_plugin(Arc::new(DojoPlugin {}));
+        self.with_semantic_plugin(Arc::new(StarkNetPlugin::default()));
+        self
     }
 }

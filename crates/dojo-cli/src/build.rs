@@ -4,6 +4,7 @@ use anyhow::Result;
 use camino::Utf8PathBuf;
 use clap::{Args, Parser};
 use dojo_lang::compiler::DojoCompiler;
+use dojo_lang::plugin::CairoPluginRepository;
 use scarb::compiler::{CompilerRepository, Profile};
 use scarb::core::Config;
 use scarb::ops;
@@ -65,11 +66,14 @@ pub fn run(args: BuildArgs) -> anyhow::Result<()> {
     let mut compilers = CompilerRepository::empty();
     compilers.add(Box::new(DojoCompiler)).unwrap();
 
+    let cairo_plugins = CairoPluginRepository::new()?;
+
     let manifest_path = source_dir.join("Scarb.toml");
     let config = Config::builder(manifest_path)
         .ui_verbosity(Verbosity::Verbose)
         .log_filter_directive(env::var_os("SCARB_LOG"))
         .compilers(compilers)
+        .cairo_plugins(cairo_plugins.into())
         .profile(args.profile_spec.determine()?)
         .build()
         .unwrap();
