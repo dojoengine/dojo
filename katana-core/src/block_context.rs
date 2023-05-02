@@ -8,7 +8,7 @@ use starknet_api::{
     patricia_key,
 };
 
-use crate::{DEFAULT_GAS_PRICE, FEE_ERC20_CONTRACT_ADDRESS, SEQUENCER_ADDRESS};
+use crate::constants::{DEFAULT_GAS_PRICE, FEE_ERC20_CONTRACT_ADDRESS, SEQUENCER_ADDRESS};
 
 pub trait Base {
     fn base() -> Self;

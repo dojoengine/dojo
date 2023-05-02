@@ -1,16 +1,18 @@
-use crate::{block_context::Base, state::DictStateReader};
+use std::sync::{Arc, RwLock};
+
+use anyhow::Result;
+
+use crate::starknet::{transaction::ExternalFunctionCall, StarknetConfig, StarknetWrapper};
+
 use blockifier::{
     abi::abi_utils::get_storage_var_address,
-    block_context::BlockContext,
-    state::{
-        cached_state::CachedState,
-        state_api::{State, StateReader},
-    },
+    state::state_api::{State, StateReader},
     transaction::{account_transaction::AccountTransaction, transactions::ExecutableTransaction},
 };
 use starknet::providers::jsonrpc::models::BlockId;
 use starknet_api::{
-    core::{calculate_contract_address, ClassHash, ContractAddress, Nonce},
+    block::BlockNumber,
+    core::{calculate_contract_address, ChainId, ClassHash, ContractAddress, Nonce},
     hash::StarkFelt,
     stark_felt,
     state::StorageKey,
@@ -19,19 +21,22 @@ use starknet_api::{
         TransactionSignature, TransactionVersion,
     },
 };
-use std::sync::Mutex;
 
 pub struct KatanaSequencer {
-    pub block_context: BlockContext,
-    pub state: Mutex<CachedState<DictStateReader>>,
+    pub starknet: Arc<RwLock<StarknetWrapper>>,
 }
 
 impl KatanaSequencer {
-    pub fn new() -> Self {
+    pub fn new(config: StarknetConfig) -> Self {
         Self {
-            block_context: BlockContext::base(),
-            state: Mutex::new(CachedState::new(DictStateReader::new())),
+            starknet: Arc::new(RwLock::new(StarknetWrapper::new(config))),
         }
+    }
+
+    // The starting point of the sequencer
+    // Once we add support periodic block generation, the logic should be here.
+    pub fn start(&self) {
+        self.starknet.write().unwrap().generate_pending_block();
     }
 
     pub fn drip_and_deploy_account(
@@ -53,8 +58,12 @@ impl KatanaSequencer {
 
         let deployed_account_balance_key =
             get_storage_var_address("ERC20_balances", &[*contract_address.0.key()]).unwrap();
-        self.state.lock().unwrap().set_storage_at(
-            self.block_context.fee_token_address,
+        self.starknet.write().unwrap().state.set_storage_at(
+            self.starknet
+                .read()
+                .unwrap()
+                .block_context
+                .fee_token_address,
             deployed_account_balance_key,
             stark_felt!(balance),
         );
@@ -86,12 +95,16 @@ impl KatanaSequencer {
 
         let account_balance_key =
             get_storage_var_address("ERC20_balances", &[*contract_address.0.key()]).unwrap();
-        let max_fee = self
-            .state
-            .lock()
-            .unwrap()
-            .get_storage_at(self.block_context.fee_token_address, account_balance_key)?;
-
+        let max_fee = {
+            self.starknet.write().unwrap().state.get_storage_at(
+                self.starknet
+                    .read()
+                    .unwrap()
+                    .block_context
+                    .fee_token_address,
+                account_balance_key,
+            )?
+        };
         // TODO: Compute txn hash
         let tx_hash = TransactionHash::default();
         let tx = AccountTransaction::DeployAccount(DeployAccountTransaction {
@@ -105,36 +118,65 @@ impl KatanaSequencer {
             signature,
             transaction_hash: tx_hash,
         });
-        tx.execute(&mut self.state.lock().unwrap(), &self.block_context)?;
+
+        tx.execute(
+            &mut self.starknet.write().unwrap().state,
+            &self.starknet.read().unwrap().block_context,
+        )?;
 
         Ok((tx_hash, contract_address))
     }
 
-    pub async fn class_hash_at(
+    pub fn class_hash_at(
         &self,
         _block_id: BlockId,
         contract_address: ContractAddress,
     ) -> Result<ClassHash, blockifier::state::errors::StateError> {
-        self.state
-            .lock()
+        self.starknet
+            .write()
             .unwrap()
+            .state
             .get_class_hash_at(contract_address)
     }
 
-    pub async fn get_storage_at(
+    pub fn get_storage_at(
         &self,
         contract_address: ContractAddress,
         storage_key: StorageKey,
     ) -> Result<StarkFelt, blockifier::state::errors::StateError> {
-        self.state
-            .lock()
+        self.starknet
+            .write()
             .unwrap()
+            .state
             .get_storage_at(contract_address, storage_key)
     }
-}
 
-impl Default for KatanaSequencer {
-    fn default() -> Self {
-        Self::new()
+    pub fn chain_id(&self) -> ChainId {
+        self.starknet.read().unwrap().block_context.chain_id.clone()
+    }
+
+    pub fn block_number(&self) -> BlockNumber {
+        self.starknet.read().unwrap().block_context.block_number
+    }
+
+    pub fn get_nonce_at(
+        &self,
+        _block_id: BlockId,
+        contract_address: ContractAddress,
+    ) -> Result<Nonce, blockifier::state::errors::StateError> {
+        self.starknet
+            .write()
+            .unwrap()
+            .state
+            .get_nonce_at(contract_address)
+    }
+
+    pub fn call(
+        &self,
+        _block_id: BlockId,
+        function_call: ExternalFunctionCall,
+    ) -> Result<Vec<StarkFelt>> {
+        let execution_info = self.starknet.read().unwrap().call(function_call)?;
+        Ok(execution_info.execution.retdata.0)
     }
 }

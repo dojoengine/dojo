@@ -1,16 +1,24 @@
 use jsonrpsee::{
     core::Error,
     proc_macros::rpc,
-    types::error::{CallError, ErrorObject},
+    server::logger::{Logger, MethodKind, TransportProtocol},
+    tracing::info,
+    types::{
+        error::{CallError, ErrorObject},
+        Params,
+    },
 };
+use std::time::Instant;
 
 use starknet::{
     core::types::FieldElement,
     providers::jsonrpc::models::{
-        BlockHashAndNumber, BlockId, BroadcastedInvokeTransaction, ContractClass,
-        DeclareTransactionResult, DeployTransactionResult, EventFilter, EventsPage, FeeEstimate,
-        FunctionCall, InvokeTransactionResult, MaybePendingBlockWithTxHashes,
-        MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, StateUpdate, Transaction,
+        BlockHashAndNumber, BlockId, BroadcastedDeclareTransaction,
+        BroadcastedDeployAccountTransaction, BroadcastedInvokeTransaction, BroadcastedTransaction,
+        ContractClass, DeclareTransactionResult, DeployAccountTransactionResult, EventFilter,
+        EventsPage, FeeEstimate, FunctionCall, InvokeTransactionResult,
+        MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, MaybePendingTransactionReceipt,
+        StateUpdate, Transaction,
     },
 };
 
@@ -65,171 +73,174 @@ impl From<KatanaApiError> for Error {
 #[rpc(server, client, namespace = "starknet")]
 pub trait KatanaApi {
     #[method(name = "chainId")]
-    async fn chain_id(&self) -> Result<String, Error> {
-        unimplemented!("chain_id");
-    }
+    async fn chain_id(&self) -> Result<String, Error>;
 
     #[method(name = "getNonce")]
-    async fn get_nonce(&self, _contract_address: String) -> Result<String, Error> {
-        unimplemented!("get_nonce");
-    }
+    async fn get_nonce(
+        &self,
+        block_id: BlockId,
+        contract_address: FieldElement,
+    ) -> Result<FieldElement, Error>;
 
     #[method(name = "blockNumber")]
-    async fn block_number(&self) -> Result<u64, Error> {
-        unimplemented!("block_number");
-    }
+    async fn block_number(&self) -> Result<u64, Error>;
 
     #[method(name = "getTransactionByHash")]
-    async fn get_transaction_by_hash(&self, _tx_hash: &str) -> Result<Transaction, Error> {
-        unimplemented!("get_transaction_by_hash");
-    }
+    async fn get_transaction_by_hash(
+        &self,
+        transaction_hash: FieldElement,
+    ) -> Result<Transaction, Error>;
 
     #[method(name = "getBlockTransactionCount")]
-    async fn get_block_transaction_count(&self, _block_id: BlockId) -> Result<u64, Error> {
-        unimplemented!("get_block_transaction_count");
-    }
+    async fn get_block_transaction_count(&self, block_id: BlockId) -> Result<u64, Error>;
 
     #[method(name = "getClassAt")]
     async fn get_class_at(
         &self,
-        _block_id: BlockId,
-        _contract_address: String,
-    ) -> Result<ContractClass, Error> {
-        unimplemented!("get_class_at");
-    }
+        block_id: BlockId,
+        contract_address: FieldElement,
+    ) -> Result<ContractClass, Error>;
 
     #[method(name = "blockHashAndNumber")]
-    async fn block_hash_and_number(&self) -> Result<BlockHashAndNumber, Error> {
-        unimplemented!("block_hash_and_number");
-    }
+    async fn block_hash_and_number(&self) -> Result<BlockHashAndNumber, Error>;
 
     #[method(name = "getBlockWithTxHashes")]
     async fn get_block_with_tx_hashes(
         &self,
-        _block_id: BlockId,
-    ) -> Result<MaybePendingBlockWithTxHashes, Error> {
-        unimplemented!("get_block_with_tx_hashes");
-    }
+        block_id: BlockId,
+    ) -> Result<MaybePendingBlockWithTxHashes, Error>;
 
     #[method(name = "getTransactionByBlockIdAndIndex")]
     async fn get_transaction_by_block_id_and_index(
         &self,
-        _block_id: BlockId,
-        _index: &str,
-    ) -> Result<Transaction, Error> {
-        unimplemented!("get_transaction_by_block_id_and_index");
-    }
-
-    #[method(name = "addInvokeTransaction")]
-    async fn add_invoke_transaction(
-        &self,
-        _invoke_transaction: BroadcastedInvokeTransaction,
-    ) -> Result<InvokeTransactionResult, Error> {
-        unimplemented!("add_invoke_transaction");
-    }
+        block_id: BlockId,
+        index: usize,
+    ) -> Result<Transaction, Error>;
 
     #[method(name = "getBlockWithTxs")]
     async fn get_block_with_txs(
         &self,
-        _block_id: BlockId,
-    ) -> Result<MaybePendingBlockWithTxs, Error> {
-        unimplemented!("get_block_with_txs");
-    }
+        block_id: BlockId,
+    ) -> Result<MaybePendingBlockWithTxs, Error>;
 
     #[method(name = "getStateUpdate")]
-    async fn get_state_update(&self, _block_id: BlockId) -> Result<StateUpdate, Error> {
-        unimplemented!("get_state_update");
-    }
+    async fn get_state_update(&self, block_id: BlockId) -> Result<StateUpdate, Error>;
 
     #[method(name = "getTransactionReceipt")]
     async fn get_transaction_receipt(
         &self,
-        _tx_hash: String,
-    ) -> Result<MaybePendingTransactionReceipt, Error> {
-        unimplemented!("get_transaction_receipt");
-    }
+        transaction_hash: FieldElement,
+    ) -> Result<MaybePendingTransactionReceipt, Error>;
 
     #[method(name = "getClassHashAt")]
     async fn get_class_hash_at(
         &self,
-        _block_id: BlockId,
-        _contract_address: String,
-    ) -> Result<FieldElement, Error> {
-        unimplemented!("get_class_hash_at");
-    }
+        block_id: BlockId,
+        contract_address: FieldElement,
+    ) -> Result<FieldElement, Error>;
 
     #[method(name = "getClass")]
     async fn get_class(
         &self,
-        _block_id: BlockId,
-        _class_hash: String,
-    ) -> Result<ContractClass, Error> {
-        unimplemented!("get_class");
-    }
-
-    #[method(name = "addDeployAccountTransaction")]
-    async fn add_deploy_account_transaction(
-        &self,
-        _contract_class: String,
-        _version: String,
-        _contract_address_salt: String,
-        _constructor_calldata: Vec<String>,
-    ) -> Result<DeployTransactionResult, Error> {
-        unimplemented!("add_deploy_account_transaction");
-    }
+        block_id: BlockId,
+        class_hash: FieldElement,
+    ) -> Result<ContractClass, Error>;
 
     #[method(name = "getEvents")]
     async fn get_events(
         &self,
-        _filter: EventFilter,
-        _continuation_token: Option<String>,
-        _chunk_size: u64,
-    ) -> Result<EventsPage, Error> {
-        unimplemented!("get_events");
-    }
-
-    #[method(name = "addDeclareTransaction")]
-    async fn add_declare_transaction(
-        &self,
-        _version: String,
-        _max_fee: String,
-        _signature: Vec<String>,
-        _nonce: String,
-        _contract_class: String,
-        _sender_address: String,
-    ) -> Result<DeclareTransactionResult, Error> {
-        unimplemented!("add_declare_transaction");
-    }
+        filter: EventFilter,
+        continuation_token: Option<String>,
+        chunk_size: u64,
+    ) -> Result<EventsPage, Error>;
 
     #[method(name = "pendingTransactions")]
-    async fn pending_transactions(&self) -> Result<Vec<Transaction>, Error> {
-        unimplemented!("pending_transactions");
-    }
+    async fn pending_transactions(&self) -> Result<Vec<Transaction>, Error>;
 
     #[method(name = "estimateFee")]
     async fn estimate_fee(
         &self,
-        _block_id: BlockId,
-        _broadcasted_transaction: String,
-    ) -> Result<FeeEstimate, Error> {
-        unimplemented!("estimate_fee");
-    }
+        request: BroadcastedTransaction,
+        block_id: BlockId,
+    ) -> Result<FeeEstimate, Error>;
 
     #[method(name = "call")]
     async fn call(
         &self,
-        _request: FunctionCall,
-        _block_number: u64,
-    ) -> Result<Vec<FieldElement>, Error> {
-        unimplemented!("call");
-    }
+        request: FunctionCall,
+        block_id: BlockId,
+    ) -> Result<Vec<FieldElement>, Error>;
 
     #[method(name = "getStorageAt")]
     async fn get_storage_at(
         &self,
-        _contract_address: String,
-        _key: String,
-    ) -> Result<FieldElement, Error> {
-        unimplemented!("get_storage_at");
+        contract_address: FieldElement,
+        key: FieldElement,
+        block_id: BlockId,
+    ) -> Result<FieldElement, Error>;
+
+    #[method(name = "addDeployAccountTransaction")]
+    async fn add_deploy_account_transaction(
+        &self,
+        deploy_account_transaction: BroadcastedDeployAccountTransaction,
+    ) -> Result<DeployAccountTransactionResult, Error>;
+
+    #[method(name = "addDeclareTransaction")]
+    async fn add_declare_transaction(
+        &self,
+        transaction: BroadcastedDeclareTransaction,
+    ) -> Result<DeclareTransactionResult, Error>;
+
+    #[method(name = "addInvokeTransaction")]
+    async fn add_invoke_transaction(
+        &self,
+        invoke_transaction: BroadcastedInvokeTransaction,
+    ) -> Result<InvokeTransactionResult, Error>;
+}
+
+#[derive(Debug, Clone)]
+pub struct KatanaRpcLogger;
+
+impl Logger for KatanaRpcLogger {
+    type Instant = std::time::Instant;
+
+    fn on_connect(
+        &self,
+        _remote_addr: std::net::SocketAddr,
+        _request: &jsonrpsee::server::logger::HttpRequest,
+        _t: TransportProtocol,
+    ) {
     }
+
+    fn on_request(&self, _transport: TransportProtocol) -> Self::Instant {
+        Instant::now()
+    }
+
+    fn on_call(
+        &self,
+        method_name: &str,
+        _params: Params<'_>,
+        _kind: MethodKind,
+        _transport: TransportProtocol,
+    ) {
+        info!("method: '{}'", method_name);
+    }
+
+    fn on_result(
+        &self,
+        _method_name: &str,
+        _success: bool,
+        _started_at: Self::Instant,
+        _transport: TransportProtocol,
+    ) {
+    }
+
+    fn on_response(
+        &self,
+        _result: &str,
+        _started_at: Self::Instant,
+        _transport: TransportProtocol,
+    ) {
+    }
+    fn on_disconnect(&self, _remote_addr: std::net::SocketAddr, _transport: TransportProtocol) {}
 }

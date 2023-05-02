@@ -1,49 +1,39 @@
-use env_logger::Env;
-use katana_core::{sequencer::KatanaSequencer, state::ACCOUNT_CONTRACT_CLASS_HASH};
-use katana_rpc::KatanaRpc;
-use log::{error, info};
-use starknet_api::{
-    core::ClassHash,
-    hash::StarkFelt,
-    stark_felt,
-    transaction::{Calldata, ContractAddressSalt, TransactionSignature, TransactionVersion},
-};
-use std::process::exit;
+use std::{path::PathBuf, process::exit, sync::Arc};
 
-pub const DEFAULT_BALANCE: u64 = 1000000 * 100000000000; // 1000000 * min_gas_price.
+use clap::Parser;
+use env_logger::Env;
+use katana_core::{sequencer::KatanaSequencer, starknet::StarknetConfig};
+use katana_rpc::{config::RpcConfig, KatanaRpc};
+use log::error;
+use yansi::Paint;
 
 #[tokio::main]
 async fn main() {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
 
-    let sequencer = KatanaSequencer::new();
+    let config = Cli::parse();
+    let rpc_config = config.get_rpc_config();
+    let starknet_config = config.get_starknet_config();
 
-    let (tx_hash, account_address) = sequencer
-        .drip_and_deploy_account(
-            ClassHash(stark_felt!(ACCOUNT_CONTRACT_CLASS_HASH)),
-            TransactionVersion(stark_felt!(1)),
-            ContractAddressSalt::default(),
-            Calldata::default(),
-            TransactionSignature::default(),
-            DEFAULT_BALANCE,
-        )
-        .unwrap_or_else(|err| {
-            error! {"{}", err};
-            exit(1);
-        });
+    let sequencer = Arc::new(KatanaSequencer::new(starknet_config));
+    sequencer.start();
 
-    info!(
-        "Deployed test account at: {} with txn: {}",
-        account_address.0.key(),
-        tx_hash.0
-    );
+    let predeployed_accounts = sequencer
+        .starknet
+        .read()
+        .unwrap()
+        .predeployed_accounts
+        .display();
 
-    info!("starting katana rpc server...");
-    match KatanaRpc::new(sequencer).run().await {
+    match KatanaRpc::new(sequencer, rpc_config).run().await {
         Ok((addr, server_handle)) => {
-            info!("===================================================");
-            info!("Katana JSON-RPC Server started: http://{addr}");
-            info!("===================================================");
+            print_intro(
+                predeployed_accounts,
+                format!(
+                    "🚀 JSON-RPC server started: {}",
+                    Paint::red(format!("http://{addr}"))
+                ),
+            );
 
             server_handle.stopped().await;
         }
@@ -52,4 +42,60 @@ async fn main() {
             exit(1);
         }
     };
+}
+
+#[derive(Parser, Debug)]
+struct Cli {
+    #[arg(short, long)]
+    #[arg(default_value = "5050")]
+    #[arg(help = "Port number to listen on.")]
+    port: u16,
+
+    #[arg(long)]
+    #[arg(default_value = "10")]
+    #[arg(help = "Number of pre-funded accounts to generate.")]
+    accounts: u8,
+
+    #[arg(long)]
+    account_path: Option<PathBuf>,
+}
+
+impl Cli {
+    fn get_rpc_config(&self) -> RpcConfig {
+        RpcConfig { port: self.port }
+    }
+
+    fn get_starknet_config(&self) -> StarknetConfig {
+        StarknetConfig {
+            total_accounts: self.accounts,
+            account_path: self.account_path.clone(),
+        }
+    }
+}
+
+fn print_intro(accounts: String, address: String) {
+    println!(
+        "{}",
+        Paint::red(
+            r"
+
+
+██╗  ██╗ █████╗ ████████╗ █████╗ ███╗   ██╗ █████╗ 
+██║ ██╔╝██╔══██╗╚══██╔══╝██╔══██╗████╗  ██║██╔══██╗
+█████╔╝ ███████║   ██║   ███████║██╔██╗ ██║███████║
+██╔═██╗ ██╔══██║   ██║   ██╔══██║██║╚██╗██║██╔══██║
+██║  ██╗██║  ██║   ██║   ██║  ██║██║ ╚████║██║  ██║
+╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝
+                                                      
+"
+        )
+    );
+    println!(
+        r"        
+PREFUNDED ACCOUNTS
+==================
+{accounts}
+"
+    );
+    println!("\n{address}\n\n");
 }

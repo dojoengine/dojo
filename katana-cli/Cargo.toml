@@ -13,6 +13,8 @@ tokio.workspace = true
 katana-core = { path = "../katana-core" }
 katana-rpc = { path = "../katana-rpc" }
 starknet_api.workspace = true
+clap = { version = "4.2.5", features = ["derive"] }
+yansi = "0.5.1"
 
 [dev-dependencies]
 assert_matches = "1.5.0"

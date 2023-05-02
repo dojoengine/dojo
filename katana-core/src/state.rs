@@ -3,26 +3,15 @@ use blockifier::state::cached_state::ContractStorageKey;
 use blockifier::state::errors::StateError;
 use blockifier::state::state_api::StateReader;
 use blockifier::state::state_api::StateResult;
-use starknet_api::patricia_key;
-use starknet_api::stark_felt;
 use starknet_api::state::StorageKey;
 use starknet_api::{
-    core::{ClassHash, ContractAddress, Nonce, PatriciaKey},
-    hash::{StarkFelt, StarkHash},
+    core::{ClassHash, ContractAddress, Nonce},
+    hash::StarkFelt,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::util::get_contract_class;
-use crate::{FEE_ERC20_CONTRACT_ADDRESS, UNIVERSAL_DEPLOYER_CONTRACT_ADDRESS};
-
-pub const ACCOUNT_CONTRACT_CLASS_HASH: &str = "0x100";
-pub const ERC20_CONTRACT_CLASS_HASH: &str = "0x200";
-pub const UNIVERSAL_DEPLOYER_CLASS_HASH: &str = "0x300";
-
-pub const ACCOUNT_CONTRACT_PATH: &str = "contracts/compiled/account.json";
-pub const ERC20_CONTRACT_PATH: &str = "./contracts/compiled/erc20.json";
-pub const UNIVERSAL_DEPLOYER_CONTRACT_PATH: &str = "./contracts/compiled/universal_deployer.json";
+use crate::default_state::KatanaDefaultState;
 
 #[derive(Clone, Debug, Default)]
 pub struct DictStateReader {
@@ -33,40 +22,10 @@ pub struct DictStateReader {
 }
 
 impl DictStateReader {
-    pub fn new() -> Self {
-        // Declare all the needed contracts.
-        let account_class_hash = ClassHash(stark_felt!(ACCOUNT_CONTRACT_CLASS_HASH));
-        let erc20_class_hash = ClassHash(stark_felt!(ERC20_CONTRACT_CLASS_HASH));
-        let universal_deployer_class_hash = ClassHash(stark_felt!(UNIVERSAL_DEPLOYER_CLASS_HASH));
-
-        let class_hash_to_class: HashMap<ClassHash, ContractClass> = HashMap::from([
-            (
-                account_class_hash,
-                get_contract_class(ACCOUNT_CONTRACT_PATH),
-            ),
-            (erc20_class_hash, get_contract_class(ERC20_CONTRACT_PATH)),
-            (
-                universal_deployer_class_hash,
-                get_contract_class(UNIVERSAL_DEPLOYER_CONTRACT_PATH),
-            ),
-        ]);
-
-        let address_to_class_hash = HashMap::from([
-            (
-                ContractAddress(patricia_key!(FEE_ERC20_CONTRACT_ADDRESS)),
-                erc20_class_hash,
-            ),
-            (
-                ContractAddress(patricia_key!(UNIVERSAL_DEPLOYER_CONTRACT_ADDRESS)),
-                universal_deployer_class_hash,
-            ),
-        ]);
-
-        Self {
-            address_to_class_hash,
-            class_hash_to_class,
-            ..Default::default()
-        }
+    pub fn get_default() -> Self {
+        let mut state = DictStateReader::default();
+        KatanaDefaultState::initialize_state(&mut state);
+        state
     }
 }
 
