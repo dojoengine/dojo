@@ -26,7 +26,9 @@ use starknet_api::{
 use starknet_api::{hash::StarkHash, transaction::TransactionSignature};
 use starknet_api::{state::StorageKey, transaction::InvokeTransactionV1};
 use std::{net::SocketAddr, sync::Arc};
-use util::{compute_invoke_v1_transaction_hash, stark_felt_to_field_element};
+use util::{
+    compute_invoke_v1_transaction_hash, convert_inner_to_rpc_tx, stark_felt_to_field_element,
+};
 
 pub mod api;
 pub mod config;
@@ -87,7 +89,13 @@ impl KatanaApiServer for KatanaRpc {
         &self,
         transaction_hash: FieldElement,
     ) -> Result<Transaction, Error> {
-        unimplemented!("KatanaRpc::get_transaction_by_hash")
+        let starknet = self.sequencer.starknet.read().unwrap();
+        let tx = starknet
+            .transactions
+            .get_transaction(&TransactionHash(StarkFelt::from(transaction_hash)))
+            .ok_or(Error::from(KatanaApiError::TxnHashNotFound))?;
+
+        convert_inner_to_rpc_tx(tx).map_err(|_| Error::from(KatanaApiError::InternalServerError))
     }
 
     async fn get_block_transaction_count(&self, block_id: BlockId) -> Result<u64, Error> {

@@ -189,3 +189,9 @@ impl StarknetTransaction {
 pub struct StarknetTransactions {
     pub transactions: HashMap<TransactionHash, StarknetTransaction>,
 }
+
+impl StarknetTransactions {
+    pub fn get_transaction(&self, hash: &TransactionHash) -> Option<Transaction> {
+        self.transactions.get(hash).map(|tx| tx.inner.clone())
+    }
+}
