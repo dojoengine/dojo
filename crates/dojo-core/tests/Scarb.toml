@@ -1,0 +1,7 @@
+[package]
+name = "dojo_core_tests"
+version = "0.1.0"
+description = "Tests for Dojo Core"
+
+[dependencies]
+dojo_core = { path = "../" }

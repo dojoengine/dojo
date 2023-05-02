@@ -26,7 +26,7 @@ impl CommandTrait for ExecuteCommand {
         if let Some(var_name) = let_pattern {
             command.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
                 "let $var_name$ = IWorldDispatcher { contract_address: world_address \
-                 }.execute('$system$', $calldata$);
+                 }.execute(dojo_core::string::ShortStringTrait::new('$system$'), $calldata$);
                 ",
                 HashMap::from([
                     ("var_name".to_string(), RewriteNode::new_trimmed(var_name.as_syntax_node())),
@@ -36,8 +36,8 @@ impl CommandTrait for ExecuteCommand {
             ));
         } else {
             command.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
-                "IWorldDispatcher { contract_address: world_address }.execute('$system$', \
-                 $calldata$);
+                "IWorldDispatcher { contract_address: world_address \
+                 }.execute(dojo_core::string::ShortStringTrait::new('$system$'), $calldata$);
                 ",
                 HashMap::from([
                     ("system".to_string(), RewriteNode::new_trimmed(system.as_syntax_node())),
