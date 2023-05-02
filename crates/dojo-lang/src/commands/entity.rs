@@ -89,7 +89,8 @@ impl EntityCommand {
                 "
                     let mut __$query_id$_$query_subtype$_raw = IWorldDispatcher {
                         contract_address: world_address
-                    }.entity('$component$', $query$, 0_u8, 0_usize);
+                    }.entity(dojo_core::string::ShortStringTrait::new('$component$'), $query$, \
+                 0_u8, 0_usize);
                     assert(__$query_id$_$query_subtype$_raw.len() > 0_usize, '$lookup_err_msg$');
                     let __$query_id$_$query_subtype$ = serde::Serde::<$component$>::deserialize(
                         ref __$query_id$_$query_subtype$_raw
@@ -139,7 +140,8 @@ impl EntityCommand {
                 "
                     let mut __$query_id$_$query_subtype$_raw = IWorldDispatcher {
                         contract_address: world_address
-                    }.entity('$component$', $query$, 0_u8, 0_usize);
+                    }.entity(dojo_core::string::ShortStringTrait::new('$component$'), $query$, \
+                 0_u8, 0_usize);
                     let __$query_id$_$query_subtype$ = match \
                  __$query_id$_$query_subtype$_raw.len() > 0_usize {
                         bool::False(()) => {

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use cairo_lang_compiler::db::RootDatabase;
-use cairo_lang_language_server::{Backend, State};
+use cairo_lang_language_server::Backend;
 use cairo_lang_plugins::get_default_plugins;
 use cairo_lang_starknet::plugin::StarkNetPlugin;
 use dojo_lang::plugin::DojoPlugin;
@@ -26,12 +26,8 @@ async fn main() {
         },
     );
 
-    let (service, socket) = LspService::build(|client| Backend {
-        client,
-        db_mutex: db.into(),
-        state_mutex: State::default().into(),
-    })
-    .custom_method("vfs/provide", Backend::vfs_provide)
-    .finish();
+    let (service, socket) = LspService::build(|client| Backend::new(client, db.into()))
+        .custom_method("vfs/provide", Backend::vfs_provide)
+        .finish();
     Server::new(stdin, stdout, socket).serve(service).await;
 }
