@@ -19,10 +19,7 @@ mod ERC20 {
 
     use dojo_core::storage::query::ContractAddressIntoQuery;
     use dojo_core::storage::query::Query;
-    use dojo_core::storage::query::ContractAddressIntoQuery;
-    use dojo_core::storage::query::Query;
     use dojo_core::storage::query::TupleSize2IntoPartitionedQuery;
-    use dojo_core::storage::query::TupleSize1IntoPartitionedQuery;
     use dojo_core::interfaces::IWorldDispatcher;
     use dojo_core::interfaces::IWorldDispatcherTrait;
 
@@ -162,23 +159,6 @@ mod ERC20 {
         world().execute('ERC20TransferFrom', calldata.span());
 
         Transfer(spender, recipient, amount);
-    }
-
-    fn u256_as_allowance(val: u256) -> felt252 {
-        // by convention, max(u256) means unlimited amount,
-        // but since we're using felts, use max(felt252) to do the same
-        // TODO: use BoundedInt when available
-        let max_u128 = 0xffffffffffffffffffffffffffffffff_u128;
-        let max_u256 = u256 { low: max_u128, high: max_u128 };
-        if val == max_u256 {
-            return UNLIMITED_ALLOWANCE;
-        }
-        u256_into_felt252(val)
-    }
-
-    fn u256_into_felt252(val: u256) -> felt252 {
-        // temporary, until TryInto of this is in corelib
-        val.low.into() + val.high.into() * 0x100000000000000000000000000000000
     }
 
     fn u256_as_allowance(val: u256) -> felt252 {
