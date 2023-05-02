@@ -74,6 +74,7 @@ mod ERC20Mint {
         commands::set_entity((token, (recipient)).into(), (
             Balance { amount: balance.amount + amount }
         ));
+}
 
 #[system]
 mod ERC20Burn {

@@ -11,15 +11,12 @@ mod ERC20 {
     use array::ArrayTrait;
     use option::OptionTrait;
     use starknet::ContractAddress;
-    use starknet::ContractAddressZeroable;
     use starknet::get_caller_address;
     use starknet::get_contract_address;
     use traits::Into;
     use zeroable::Zeroable;
 
-    use dojo_core::storage::query::ContractAddressIntoQuery;
     use dojo_core::storage::query::Query;
-    use dojo_core::storage::query::TupleSize2IntoPartitionedQuery;
     use dojo_core::interfaces::IWorldDispatcher;
     use dojo_core::interfaces::IWorldDispatcherTrait;
 
