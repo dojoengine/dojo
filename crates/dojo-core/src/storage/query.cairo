@@ -131,6 +131,8 @@ impl ContractAddressIntoQuery of Into::<starknet::ContractAddress, Query> {
 impl Felt252IntoQuery of Into::<felt252, Query> {
     fn into(self: felt252) -> Query {
         QueryTrait::new_from_id(self)
+    }
+}
 
 impl QueryIntoFelt252 of Into::<Query, u250> {
     fn into(self: Query) -> u250 {
