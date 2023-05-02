@@ -73,67 +73,6 @@ impl QueryImpl of QueryTrait {
     }
 }
 
-fn inner_id(state: felt252, keys: Span<felt252>, remain: usize) -> felt252 {
-    gas::withdraw_gas_all(get_builtin_costs()).expect('Out of gas');
-
-    if (remain == 0_usize) {
-        return state;
-    }
-
-    let next_state = pedersen(state, *keys.at(remain - 1_usize));
-    return inner_id(next_state, keys, remain - 1_usize);
-}
-
-impl LegacyHashQuery of LegacyHash::<Query> {
-    fn hash(state: felt252, query: Query) -> felt252 {
-        LegacyHash::hash(state, query.into())
-    }
-}
-
-impl LegacyHashClassHashQuery of LegacyHash::<(starknet::ClassHash, Query)> {
-    fn hash(state: felt252, key: (starknet::ClassHash, Query)) -> felt252 {
-        let (class_hash, query) = key;
-        let class_hash_felt: felt252 = class_hash.into();
-        let query_felt: felt252 = query.into();
-        LegacyHash::hash(state, (class_hash_felt, query_felt))
-    }
-}
-
-impl QuerySerde of serde::Serde::<Query> {
-    fn serialize(ref serialized: Array::<felt252>, input: Query) {
-        Serde::<u32>::serialize(ref serialized, input.address_domain);
-        Serde::<felt252>::serialize(ref serialized, input.partition);
-        Serde::<felt252>::serialize(ref serialized, input.computed_key);
-        Serde::<Span<felt252>>::serialize(ref serialized, input.keys);
-    }
-    fn deserialize(ref serialized: Span::<felt252>) -> Option::<Query> {
-        let address_domain = Serde::<u32>::deserialize(ref serialized)?;
-        let partition = Serde::<felt252>::deserialize(ref serialized)?;
-        let computed_key = Serde::<felt252>::deserialize(ref serialized)?;
-        let mut arr = ArrayTrait::<felt252>::new();
-        match Serde::<Span<felt252>>::deserialize(ref serialized) {
-            Option::Some(keys) => {
-                Option::Some(Query { address_domain: address_domain, partition: partition, keys: keys, computed_key: computed_key })
-            },
-            Option::None(_) => {
-                Option::None(())
-            },
-        }
-    }
-}
-
-impl ContractAddressIntoQuery of Into::<starknet::ContractAddress, Query> {
-    fn into(self: starknet::ContractAddress) -> Query {
-        QueryTrait::new_from_id(self.into())
-    }
-}
-
-impl Felt252IntoQuery of Into::<felt252, Query> {
-    fn into(self: felt252) -> Query {
-        QueryTrait::new_from_id(self)
-    }
-}
-
 impl QueryIntoFelt252 of Into::<Query, u250> {
     fn into(self: Query) -> u250 {
         self.hash
