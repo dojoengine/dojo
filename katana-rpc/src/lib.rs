@@ -13,16 +13,20 @@ use starknet::providers::jsonrpc::models::{
     EventsPage, FeeEstimate, FunctionCall, InvokeTransactionResult, MaybePendingBlockWithTxHashes,
     MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, StateUpdate, Transaction,
 };
-use starknet_api::state::StorageKey;
-use starknet_api::{core::EntryPointSelector, patricia_key};
 use starknet_api::{
     core::{ClassHash, ContractAddress, PatriciaKey},
     hash::StarkFelt,
-    transaction::{Calldata, ContractAddressSalt, TransactionVersion},
+    transaction::{Calldata, ContractAddressSalt, Fee, TransactionVersion},
+};
+use starknet_api::{
+    core::{EntryPointSelector, Nonce},
+    patricia_key,
+    transaction::TransactionHash,
 };
 use starknet_api::{hash::StarkHash, transaction::TransactionSignature};
+use starknet_api::{state::StorageKey, transaction::InvokeTransactionV1};
 use std::{net::SocketAddr, sync::Arc};
-use util::stark_felt_to_field_element;
+use util::{compute_invoke_v1_transaction_hash, stark_felt_to_field_element};
 
 pub mod api;
 pub mod config;
@@ -275,6 +279,48 @@ impl KatanaApiServer for KatanaRpc {
         &self,
         invoke_transaction: BroadcastedInvokeTransaction,
     ) -> Result<InvokeTransactionResult, Error> {
-        unimplemented!("KatanaRpc::add_invoke_transaction")
+        match invoke_transaction {
+            BroadcastedInvokeTransaction::V1(transaction) => {
+                let chain_id = FieldElement::from_hex_be(&self.sequencer.chain_id().as_hex())
+                    .map_err(|_| Error::from(KatanaApiError::InternalServerError))?;
+
+                let transaction_hash = compute_invoke_v1_transaction_hash(
+                    transaction.sender_address,
+                    &transaction.calldata,
+                    transaction.max_fee,
+                    chain_id,
+                    transaction.nonce,
+                );
+
+                let transaction = InvokeTransactionV1 {
+                    transaction_hash: TransactionHash(StarkFelt::from(transaction_hash)),
+                    sender_address: ContractAddress(patricia_key!(transaction.sender_address)),
+                    nonce: Nonce(StarkFelt::from(transaction.nonce)),
+                    calldata: Calldata(Arc::new(
+                        transaction
+                            .calldata
+                            .into_iter()
+                            .map(StarkFelt::from)
+                            .collect(),
+                    )),
+                    max_fee: Fee(StarkFelt::from(transaction.max_fee)
+                        .try_into()
+                        .map_err(|_| Error::from(KatanaApiError::InternalServerError))?),
+                    signature: TransactionSignature(
+                        transaction
+                            .signature
+                            .into_iter()
+                            .map(StarkFelt::from)
+                            .collect(),
+                    ),
+                };
+
+                self.sequencer.add_invoke_transaction(transaction);
+
+                Ok(InvokeTransactionResult { transaction_hash })
+            }
+
+            _ => Err(Error::from(KatanaApiError::InternalServerError)),
+        }
     }
 }

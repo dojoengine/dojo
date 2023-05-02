@@ -7,7 +7,10 @@ use crate::starknet::{transaction::ExternalFunctionCall, StarknetConfig, Starkne
 use blockifier::{
     abi::abi_utils::get_storage_var_address,
     state::state_api::{State, StateReader},
-    transaction::{account_transaction::AccountTransaction, transactions::ExecutableTransaction},
+    transaction::{
+        account_transaction::AccountTransaction, transaction_execution::Transaction,
+        transactions::ExecutableTransaction,
+    },
 };
 use starknet::providers::jsonrpc::models::BlockId;
 use starknet_api::{
@@ -17,8 +20,8 @@ use starknet_api::{
     stark_felt,
     state::StorageKey,
     transaction::{
-        Calldata, ContractAddressSalt, DeployAccountTransaction, Fee, TransactionHash,
-        TransactionSignature, TransactionVersion,
+        Calldata, ContractAddressSalt, DeployAccountTransaction, Fee, InvokeTransactionV1,
+        TransactionHash, TransactionSignature, TransactionVersion,
     },
 };
 
@@ -125,6 +128,15 @@ impl KatanaSequencer {
         )?;
 
         Ok((tx_hash, contract_address))
+    }
+
+    pub fn add_invoke_transaction(&self, transaction: InvokeTransactionV1) {
+        self.starknet
+            .write()
+            .unwrap()
+            .handle_transaction(Transaction::AccountTransaction(AccountTransaction::Invoke(
+                transaction,
+            )));
     }
 
     pub fn class_hash_at(
