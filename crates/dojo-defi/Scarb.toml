@@ -4,6 +4,8 @@ version = "0.1.0"
 description = "Implementations of a defi primitives for the Dojo framework"
 
 [dependencies]
+# This is a fork of https://github.com/influenceth/cubit with Serde support
+cubit = { version = "0.1.0", git = "https://github.com/ftupas/cubit" }
 dojo_core = { path = "../dojo-core" }
 
 [[target.dojo]]
