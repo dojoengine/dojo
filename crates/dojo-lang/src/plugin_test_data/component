@@ -61,8 +61,6 @@ struct Position {
 trait IPosition {
     fn name() -> felt252;
     fn len() -> u8;
-    fn serialize(raw: Span<felt252>) -> Position;
-    fn deserialize(value: Position) -> Span<felt252>;
 }
 
 #[contract]

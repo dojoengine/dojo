@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use anyhow::Result;
 use cairo_lang_defs::plugin::{GeneratedFileAuxData, MacroPlugin, PluginDiagnostic, PluginResult};
 use cairo_lang_diagnostics::DiagnosticEntry;
 use cairo_lang_semantic::db::SemanticGroup;
@@ -9,12 +10,16 @@ use cairo_lang_semantic::plugin::{
     SemanticPlugin,
 };
 use cairo_lang_semantic::SemanticDiagnostic;
+use cairo_lang_starknet::plugin::StarkNetPlugin;
 use cairo_lang_syntax::attribute::structured::{
     AttributeArg, AttributeArgVariant, AttributeStructurize,
 };
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal};
+use scarb::compiler::plugin::builtin::BuiltinSemanticCairoPlugin;
+use scarb::core::{PackageId, PackageName, SourceId};
+use semver::Version;
 use smol_str::SmolStr;
 
 use crate::component::handle_component_struct;
@@ -71,13 +76,9 @@ impl PluginAuxData for DojoAuxData {
 mod test;
 
 #[derive(Debug, Default)]
-pub struct DojoPlugin {}
+pub struct DojoPlugin;
 
 impl DojoPlugin {
-    pub fn new() -> Self {
-        Self {}
-    }
-
     fn handle_mod(&self, db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult {
         if module_ast.has_attr(db, SYSTEM_ATTR) {
             return System::from_module(db, module_ast);
@@ -152,3 +153,31 @@ impl AsDynMacroPlugin for DojoPlugin {
     }
 }
 impl SemanticPlugin for DojoPlugin {}
+
+pub struct CairoPluginRepository(scarb::compiler::plugin::CairoPluginRepository);
+
+impl CairoPluginRepository {
+    pub fn new() -> Result<Self> {
+        let mut repo = scarb::compiler::plugin::CairoPluginRepository::empty();
+        let dojo_package_id = PackageId::new(
+            PackageName::new("dojo_core"),
+            Version::parse("0.1.0").unwrap(),
+            SourceId::for_std(),
+        );
+        repo.add(Box::new(BuiltinSemanticCairoPlugin::<DojoPlugin>::new(dojo_package_id)))?;
+        let starknet_package_id = PackageId::new(
+            PackageName::STARKNET,
+            Version::parse("0.1.0").unwrap(),
+            SourceId::for_std(),
+        );
+        repo.add(Box::new(BuiltinSemanticCairoPlugin::<StarkNetPlugin>::new(starknet_package_id)))
+            .unwrap();
+        Ok(Self(repo))
+    }
+}
+
+impl From<CairoPluginRepository> for scarb::compiler::plugin::CairoPluginRepository {
+    fn from(val: CairoPluginRepository) -> Self {
+        val.0
+    }
+}

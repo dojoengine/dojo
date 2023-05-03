@@ -35,9 +35,7 @@ mod KeyValueStore {
         offset: u8,
         length: usize
     ) {
-        gas::withdraw_gas().expect('Out of gas');
-
-        if length.into() == offset.into() {
+        if length == offset.into() {
             return ();
         }
 

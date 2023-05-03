@@ -44,8 +44,8 @@ impl QueryImpl of QueryTrait {
         }
 
         let mut serialized = ArrayTrait::new();
-        Serde::serialize(ref serialized, partition);
-        Serde::serialize(ref serialized, keys);
+        partition.serialize(ref serialized);
+        keys.serialize(ref serialized);
         let hash = poseidon_hash_span(serialized.span());
         Query { address_domain, keys, partition, hash: hash.into() }
     }
@@ -63,8 +63,8 @@ impl QueryImpl of QueryTrait {
         }
 
         let mut serialized = ArrayTrait::new();
-        Serde::serialize(ref serialized, component);
-        Serde::serialize(ref serialized, *self.partition);
+        component.serialize(ref serialized);
+        (*self.partition).serialize(ref serialized);
         let hash = poseidon_hash_span(serialized.span());
         hash.into()
     }
