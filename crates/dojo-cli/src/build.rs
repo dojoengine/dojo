@@ -63,7 +63,7 @@ pub fn run(args: BuildArgs) -> anyhow::Result<()> {
         None => Utf8PathBuf::from_path_buf(current_dir().unwrap()).unwrap(),
     };
 
-    let mut compilers = CompilerRepository::empty();
+    let mut compilers = CompilerRepository::std();
     compilers.add(Box::new(DojoCompiler)).unwrap();
 
     let cairo_plugins = CairoPluginRepository::new()?;

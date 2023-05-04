@@ -41,7 +41,7 @@ fn main() -> anyhow::Result<()> {
         Utf8PathBuf::from_path_buf(current_path).unwrap()
     };
 
-    let mut compilers = CompilerRepository::empty();
+    let mut compilers = CompilerRepository::std();
     compilers.add(Box::new(DojoTestCompiler)).unwrap();
 
     let cairo_plugins = CairoPluginRepository::new()?;
