@@ -17,6 +17,8 @@ cairo-lang-starknet = "1.0.0-rc0"
 cairo-lang-semantic = "1.0.0-rc0"
 cairo-lang-plugins = "1.0.0-rc0"
 cairo-lang-filesystem = "1.0.0-rc0"
+cairo-lang-utils = "1.0.0-rc0"
+log = "0.4.14"
 tokio = { version = "1.18.2", features = ["full", "sync"] }
 tower-lsp = "0.17.0"
 salsa = "0.16.1"
