@@ -59,8 +59,6 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
     // Add the is_indexed function to the body
     body_nodes.push(is_indexed_fn);
 
-    let mut serialize = vec![];
-    let mut deserialize = vec![];
     let mut schema = vec![];
 
     let binding = struct_ast.members(db).elements(db);
@@ -69,28 +67,6 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
             "array::ArrayTrait::append(ref arr, ('$name$' , '$type_clause$' , 252));\n",
             HashMap::from([
                 ("name".to_string(), RewriteNode::new_trimmed(member.name(db).as_syntax_node())),
-                (
-                    "type_clause".to_string(),
-                    RewriteNode::new_trimmed(member.type_clause(db).ty(db).as_syntax_node()),
-                ),
-            ]),
-        ));
-
-        serialize.push(RewriteNode::interpolate_patched(
-            "serde::Serde::<$type_clause$>::serialize(ref serialized, input.$key$);",
-            HashMap::from([
-                ("key".to_string(), RewriteNode::new_trimmed(member.name(db).as_syntax_node())),
-                (
-                    "type_clause".to_string(),
-                    RewriteNode::new_trimmed(member.type_clause(db).ty(db).as_syntax_node()),
-                ),
-            ]),
-        ));
-
-        deserialize.push(RewriteNode::interpolate_patched(
-            "$key$: serde::Serde::<$type_clause$>::deserialize(ref serialized)?,",
-            HashMap::from([
-                ("key".to_string(), RewriteNode::new_trimmed(member.name(db).as_syntax_node())),
                 (
                     "type_clause".to_string(),
                     RewriteNode::new_trimmed(member.type_clause(db).ty(db).as_syntax_node()),
@@ -112,8 +88,6 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
             trait I$type_name$ {
                 fn name() -> felt252;
                 fn len() -> u8;
-                fn serialize(raw: Span<felt252>) -> $type_name$;
-                fn deserialize(value: $type_name$) -> Span<felt252>;
             }
 
             #[contract]

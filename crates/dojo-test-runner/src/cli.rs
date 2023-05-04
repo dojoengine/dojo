@@ -2,15 +2,16 @@
 
 use std::env::{self, current_dir};
 
-use anyhow::bail;
-use cairo_lang_compiler::diagnostics::DiagnosticsReporter;
-use cairo_lang_test_runner::TestRunner;
 use camino::Utf8PathBuf;
 use clap::Parser;
-use dojo_lang::compiler::DojoCompiler;
+use compiler::DojoTestCompiler;
+use dojo_lang::plugin::CairoPluginRepository;
+use scarb::compiler::CompilerRepository;
 use scarb::core::Config;
 use scarb::ops;
 use scarb::ui::Verbosity;
+
+mod compiler;
 
 /// Command line args parser.
 /// Exits with 0/1 if the input is formatted correctly/incorrectly.
@@ -40,11 +41,17 @@ fn main() -> anyhow::Result<()> {
         Utf8PathBuf::from_path_buf(current_path).unwrap()
     };
 
-    let dojo_compiler = DojoCompiler {};
+    let mut compilers = CompilerRepository::std();
+    compilers.add(Box::new(DojoTestCompiler)).unwrap();
+
+    let cairo_plugins = CairoPluginRepository::new()?;
+
     let manifest_path = source_dir.join("Scarb.toml");
     let config = Config::builder(manifest_path)
         .ui_verbosity(Verbosity::Verbose)
         .log_filter_directive(env::var_os("SCARB_LOG"))
+        .compilers(compilers)
+        .cairo_plugins(cairo_plugins.into())
         .build()
         .unwrap();
 
@@ -53,27 +60,5 @@ fn main() -> anyhow::Result<()> {
         std::process::exit(1);
     });
 
-    let resolve = ops::resolve_workspace(&ws)?;
-    let compilation_units = ops::generate_compilation_units(&resolve, &ws)?;
-
-    let unit = compilation_units[0].clone();
-
-    let (db, main_crate_ids) = dojo_compiler.prepare(&unit)?;
-
-    if DiagnosticsReporter::stderr().check(&db) {
-        bail!("failed to compile");
-    }
-
-    let runner = TestRunner {
-        db: db.snapshot(),
-        main_crate_ids,
-        filter: args.filter,
-        include_ignored: args.include_ignored,
-        ignored: args.ignored,
-        starknet: true,
-    };
-
-    runner.run()?;
-
-    Ok(())
+    ops::compile(&ws)
 }

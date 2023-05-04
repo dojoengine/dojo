@@ -14,6 +14,7 @@ cairo-lang-test-runner.workspace = true
 clap.workspace = true
 dojo-lang = { path = "../dojo-lang" }
 scarb.workspace = true
+semver.workspace = true
 
 [[bin]]
 name = "dojo-test"

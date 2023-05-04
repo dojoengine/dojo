@@ -32,12 +32,12 @@ mod RouteAuth {
         let r = routing.pop_front().unwrap();
 
         let mut calldata = ArrayTrait::new(); 
-        serde::Serde::<Role>::serialize(ref calldata, Role { id: r.role_id });
+        serde::Serde::<Role>::serialize(@Role { id: r.role_id }, ref calldata);
         IWorldDispatcher { contract_address: world_address }.set_entity(
             dojo_core::string::ShortStringTrait::new('Role'), QueryTrait::new_from_id(r.target_id), 0_u8, calldata.span());
 
         let mut calldata = ArrayTrait::new(); 
-        serde::Serde::<Status>::serialize(ref calldata, Status { is_authorized: bool::True(()) });
+        serde::Serde::<Status>::serialize(@Status { is_authorized: bool::True(()) }, ref calldata);
         IWorldDispatcher { contract_address: world_address }.set_entity(
             dojo_core::string::ShortStringTrait::new('Status'), (r.role_id, r.resource_id).into(), 0_u8, calldata.span());
 
