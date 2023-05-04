@@ -65,7 +65,8 @@ impl MarketImpl of MarketTrait {
 
     // Get normalized reserve cash amount and item quantity
     fn get_reserves(self: @Market) -> (u128, u128) {
-        (*self.cash_amount, (*self.item_quantity).into().try_into().unwrap() * SCALING_FACTOR)
+        let reserve_quantity: felt252 = (*self.item_quantity).into();
+        (*self.cash_amount, reserve_quantity.try_into().unwrap() * SCALING_FACTOR)
     }
 
     // Get the liquidity of the market
@@ -123,7 +124,8 @@ impl MarketImpl of MarketTrait {
         let reserve_quantity = Fixed::new_unscaled(reserve_quantity, false);
 
         // Normalize quantity
-        let quantity = quantity.into().try_into().unwrap() * SCALING_FACTOR;
+        let quantity: felt252 = quantity.into();
+        let quantity: u128 = quantity.try_into().unwrap() * SCALING_FACTOR;
 
         // Convert quantity to fixed point
         let quantity = Fixed::new_unscaled(quantity, false);
@@ -188,10 +190,9 @@ impl MarketImpl of MarketTrait {
     fn mint_shares(self: @Market, amount: u128, quantity: usize) -> FixedType {
         // If there is no liquidity, then mint total shares
         if !self.has_liquidity() {
-            (Fixed::new_unscaled(amount, false)
-                * Fixed::new_unscaled(
-                    quantity.into().try_into().unwrap() * SCALING_FACTOR, false
-                )).sqrt()
+            let quantity: felt252 = quantity.into();
+            let quantity: u128 = quantity.try_into().unwrap() * SCALING_FACTOR;
+            (Fixed::new_unscaled(amount, false) * Fixed::new_unscaled(quantity, false)).sqrt()
         } else {
             // Convert amount to fixed point
             let amount = Fixed::new_unscaled(amount, false);
@@ -294,7 +295,8 @@ fn test_market_add_liquidity_no_initial() {
 
     // Convert amount and quantity to fixed point
     let amount = Fixed::new_unscaled(amount, false);
-    let quantity = Fixed::new_unscaled(quantity.into().try_into().unwrap() * SCALING_FACTOR, false);
+    let quantity: felt252 = quantity.into();
+    let quantity = Fixed::new_unscaled(quantity.try_into().unwrap() * SCALING_FACTOR, false);
     assert(liquidity_add == (amount * quantity).sqrt(), 'wrong liquidity');
 }
 
@@ -315,14 +317,15 @@ fn test_market_add_liquidity_optimal() {
 
     // Get expected amount and convert to fixed point
     let expected_amount = Fixed::new_unscaled(SCALING_FACTOR * 1 + amount, false);
+    let expected_quantity: felt252 = (10 + quantity).into();
     let expected_quantity = Fixed::new_unscaled(
-        (10 + quantity).into().try_into().unwrap() * SCALING_FACTOR, false
+        expected_quantity.try_into().unwrap() * SCALING_FACTOR, false
     );
 
     // Compute the expected liquidity shares
     let expected_liquidity = Fixed::sqrt(expected_amount * expected_quantity);
     let final_liquidity = initial_liquidity + liquidity_add;
-    assert_precise(expected_liquidity, final_liquidity.into(), 'wrong liquidity');
+    assert_precise(expected_liquidity, final_liquidity.into(), 'wrong liquidity', Option::None(()));
 }
 
 #[test]
@@ -345,13 +348,14 @@ fn test_market_add_liquidity_not_optimal() {
 
     // Get expected amount and convert to fixed point
     let expected_amount = Fixed::new_unscaled(SCALING_FACTOR * 1 + amount_add, false);
+    let expected_quantity: felt252 = (10 + quantity_add).into();
     let expected_quantity = Fixed::new_unscaled(
-        (10 + quantity_add).into().try_into().unwrap() * SCALING_FACTOR, false
+        expected_quantity.try_into().unwrap() * SCALING_FACTOR, false
     );
     let expected_liquidity = Fixed::sqrt(expected_amount * expected_quantity);
 
     let final_liquidity = initial_liquidity + liquidity_add;
-    assert_precise(expected_liquidity, final_liquidity.into(), 'wrong liquidity');
+    assert_precise(expected_liquidity, final_liquidity.into(), 'wrong liquidity', Option::None(()));
 }
 
 #[test]
@@ -383,13 +387,14 @@ fn test_market_remove_liquidity() {
 
     // Get expected amount and convert to fixed point
     let expected_amount = Fixed::new_unscaled(SCALING_FACTOR * 2 - amount_remove, false);
+    let expected_quantity: felt252 = (20 - quantity_remove).into();
     let expected_quantity = Fixed::new_unscaled(
-        (20 - quantity_remove).into().try_into().unwrap() * SCALING_FACTOR, false
+        expected_quantity.try_into().unwrap() * SCALING_FACTOR, false
     );
     let expected_liquidity = Fixed::sqrt(expected_amount * expected_quantity);
 
     let final_liquidity = initial_liquidity - liquidity_remove;
-    assert_precise(expected_liquidity, final_liquidity.into(), 'wrong liquidity');
+    assert_precise(expected_liquidity, final_liquidity.into(), 'wrong liquidity', Option::None(()));
 }
 
 #[test]
