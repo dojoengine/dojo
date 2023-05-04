@@ -74,29 +74,6 @@ mod ERC20Mint {
         commands::set_entity((token, (recipient)).into(), (
             Balance { amount: balance.amount + amount }
         ));
-}
-
-#[system]
-mod ERC20Burn {
-    use traits::Into;
-    use zeroable::Zeroable;        
-    use dojo_erc::erc20::components::Balance;
-    use dojo_erc::erc20::components::Supply;
-
-    fn execute(token: felt252, owner: felt252, amount: felt252) {
-        assert(owner.is_non_zero(), 'ERC20: burn from 0');
-
-        // decrease token supply
-        let supply = commands::<Supply>::entity(token.into());
-        commands::set_entity(token.into(), (
-            Supply { amount: supply.amount - amount }
-        ));
-
-        // decrease balance of owner
-        let balance = commands::<Balance>::entity((token, (owner)).into());
-        commands::set_entity((token, (owner)).into(), (
-            Balance { amount: balance.amount - amount }
-        ));
     }
 }
 
