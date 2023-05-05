@@ -4,7 +4,10 @@ use anyhow::Result;
 use blockifier::{
     block_context::BlockContext,
     execution::entry_point::{CallEntryPoint, CallInfo, ExecutionContext, ExecutionResources},
-    state::cached_state::{CachedState, MutRefState},
+    state::{
+        cached_state::{CachedState, MutRefState},
+        state_api::State,
+    },
     transaction::{
         objects::AccountTransactionContext, transaction_execution::Transaction,
         transactions::ExecutableTransaction,
@@ -17,6 +20,7 @@ use starknet_api::{
     hash::StarkFelt,
     stark_felt,
 };
+use tracing::info;
 
 pub mod block;
 pub mod transaction;
@@ -77,6 +81,11 @@ impl StarknetWrapper {
     // execute the tx
     pub fn handle_transaction(&mut self, transaction: Transaction) {
         let api_tx = convert_blockifier_tx_to_starknet_api_tx(&transaction);
+
+        info!(
+            "Transaction received | Transaction hash: {}",
+            api_tx.transaction_hash()
+        );
 
         let res = match transaction {
             Transaction::AccountTransaction(tx) => tx.execute(&mut self.state, &self.block_context),
@@ -144,10 +153,17 @@ impl StarknetWrapper {
             }
         }
 
+        info!(
+            "New block generated | Block hash: {} | Block number: {}",
+            latest_block.block_hash(),
+            latest_block.block_number()
+        );
+
         // reset the pending block
         self.blocks.pending_block = None;
         self.blocks.append_block(latest_block.clone());
         self.update_block_context();
+        self.update_latest_state();
 
         latest_block
     }
@@ -233,5 +249,54 @@ impl StarknetWrapper {
         self.blocks.current_height = next_block_number;
         self.block_context.block_number = next_block_number;
         self.block_context.block_timestamp = BlockTimestamp(timestamp);
+    }
+
+    fn update_latest_state(&mut self) {
+        let state_diff = self.state.to_state_diff();
+        let state = &mut self.state.state;
+
+        // update contract storages
+
+        state_diff
+            .storage_diffs
+            .into_iter()
+            .for_each(|(contract_address, storages)| {
+                storages.into_iter().for_each(|(key, value)| {
+                    state.storage_view.insert((contract_address, key), value);
+                })
+            });
+
+        // update declared contracts
+
+        state_diff.declared_classes.into_iter().for_each(
+            |(class_hash, (compiled_class_hash, _contract_class))| {
+                // TODO: convert `ContractClass` to `ContractClass`
+                // state.class_hash_to_class.insert(class_hash, _contract_class);
+
+                state
+                    .class_hash_to_compiled_class_hash
+                    .insert(class_hash, compiled_class_hash);
+            },
+        );
+
+        // update deployed contracts
+
+        state_diff
+            .deployed_contracts
+            .into_iter()
+            .for_each(|(contract_address, class_hash)| {
+                state
+                    .address_to_class_hash
+                    .insert(contract_address, class_hash);
+            });
+
+        // update accounts nonce
+
+        state_diff
+            .nonces
+            .into_iter()
+            .for_each(|(contract_address, nonce)| {
+                state.address_to_nonce.insert(contract_address, nonce);
+            });
     }
 }

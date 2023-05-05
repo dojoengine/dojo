@@ -1,4 +1,4 @@
-use blockifier::abi::abi_utils::selector_from_name;
+use blockifier::abi::abi_utils::{get_storage_var_address, selector_from_name};
 use blockifier::transaction::{
     account_transaction::AccountTransaction, transaction_execution::Transaction,
 };
@@ -62,8 +62,9 @@ fn test_add_transaction() {
     let a = starknet.predeployed_accounts.accounts[0].clone();
     let b = starknet.predeployed_accounts.accounts[1].clone();
 
-    println!("{}", a.account_address.0.key());
-    println!("{}", b.account_address.0.key());
+    //
+    // CREATE `transfer` INVOKE TRANSACTION
+    //
 
     let entry_point_selector = selector_from_name("transfer");
     let execute_calldata = calldata![
@@ -84,12 +85,14 @@ fn test_add_transaction() {
         }),
     )));
 
+    //
+    // SEND INVOKE TRANSACTION
+    //
+
     let tx = starknet
         .transactions
         .transactions
         .get(&TransactionHash(stark_felt!("0x6969")));
-
-    println!("{:?}", tx.unwrap().execution_error);
 
     let block = starknet.blocks.get_by_number(BlockNumber(0)).unwrap();
 
@@ -109,6 +112,27 @@ fn test_add_transaction() {
     );
     assert_eq!(tx.unwrap().status, TransactionStatus::AcceptedOnL2);
     assert_eq!(starknet.block_context.block_number, BlockNumber(1));
+
+    //
+    // CHECK THAT THE BALANCE IS UPDATED
+    //
+
+    println!("FEE Address : {}", stark_felt!(FEE_ERC20_CONTRACT_ADDRESS));
+    println!(
+        "STORAGE ADDR : {}",
+        get_storage_var_address("ERC20_balances", &[*a.account_address.0.key()])
+            .unwrap()
+            .0
+            .key()
+    );
+
+    // println!(
+    //     "After {:?}",
+    //     starknet.state.state.storage_view.get(&(
+    //         ContractAddress(patricia_key!(FEE_ERC20_CONTRACT_ADDRESS)),
+    //         get_storage_var_address("ERC20_balances", &[*a.account_address.0.key()]).unwrap()
+    //     ))
+    // );
 }
 
 #[test]
