@@ -1,24 +1,14 @@
 use std::collections::HashMap;
-use std::fs;
-use std::path::Path;
 
-use ::serde::{Deserialize, Serialize};
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result};
 use cairo_lang_defs::ids::{ModuleId, ModuleItemId};
 use cairo_lang_filesystem::ids::CrateId;
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::plugin::DynPluginAuxData;
-use serde_with::serde_as;
+use dojo_world::manifest::{Component, Input, Member, Output, System};
+use serde::Serialize;
 use smol_str::SmolStr;
-use starknet::core::serde::unsigned_field_element::{UfeHex, UfeHexOption};
-use starknet::core::types::{CallContractResult, CallFunction, FieldElement};
-use starknet::core::utils::{
-    cairo_short_string_to_felt, get_selector_from_name, get_storage_var_address,
-};
-use starknet::providers::jsonrpc::models::{BlockId, BlockTag};
-use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
-use starknet::providers::Provider;
-use thiserror::Error;
+use starknet::core::types::FieldElement;
 
 use crate::plugin::{DojoAuxData, SystemAuxData};
 
@@ -26,78 +16,8 @@ use crate::plugin::{DojoAuxData, SystemAuxData};
 #[path = "manifest_test.rs"]
 mod test;
 
-#[derive(Error, Debug)]
-pub enum ManifestError {
-    #[error("Compilation error.")]
-    CompilationError,
-    #[error("Provider error.")]
-    ProviderError,
-}
-
-/// Component member.
-#[derive(Default, Debug, Serialize, Deserialize)]
-pub struct Member {
-    pub name: String,
-    #[serde(rename = "type")]
-    pub ty: String,
-}
-
-/// Represents a declaration of a component.
-#[serde_as]
-#[derive(Default, Debug, Serialize, Deserialize)]
-pub struct Component {
-    pub name: String,
-    pub members: Vec<Member>,
-    #[serde_as(as = "UfeHex")]
-    pub class_hash: FieldElement,
-}
-
-/// System input ABI.
-#[derive(Default, Debug, Serialize, Deserialize)]
-pub struct Input {
-    pub name: String,
-    #[serde(rename = "type")]
-    pub ty: String,
-}
-
-/// System Output ABI.
-#[derive(Default, Debug, Serialize, Deserialize)]
-pub struct Output {
-    #[serde(rename = "type")]
-    pub ty: String,
-}
-
-/// Represents a declaration of a system.
-#[serde_as]
-#[derive(Default, Debug, Serialize, Deserialize)]
-pub struct System {
-    pub name: SmolStr,
-    pub inputs: Vec<Input>,
-    pub outputs: Vec<Output>,
-    #[serde_as(as = "UfeHex")]
-    pub class_hash: FieldElement,
-    pub dependencies: Vec<String>,
-}
-
-#[serde_as]
-#[derive(Default, Debug, Serialize, Deserialize)]
-pub struct Contract {
-    pub name: SmolStr,
-    #[serde_as(as = "UfeHex")]
-    pub class_hash: FieldElement,
-}
-
-#[serde_as]
-#[derive(Default, Debug, Serialize, Deserialize)]
-pub struct Manifest {
-    #[serde_as(as = "UfeHexOption")]
-    pub world: Option<FieldElement>,
-    #[serde_as(as = "UfeHexOption")]
-    pub executor: Option<FieldElement>,
-    pub components: Vec<Component>,
-    pub systems: Vec<System>,
-    pub contracts: Vec<Contract>,
-}
+#[derive(Default, Debug, Serialize)]
+pub(crate) struct Manifest(dojo_world::manifest::Manifest);
 
 impl Manifest {
     pub fn new(
@@ -105,7 +25,7 @@ impl Manifest {
         crate_ids: &[CrateId],
         compiled_classes: HashMap<SmolStr, FieldElement>,
     ) -> Self {
-        let mut manifest = Manifest::default();
+        let mut manifest = Manifest(dojo_world::manifest::Manifest::default());
 
         let world = compiled_classes.get("World").unwrap_or_else(|| {
             panic!("World contract not found. Did you include `dojo_core` as a dependency?");
@@ -114,8 +34,8 @@ impl Manifest {
             panic!("Executor contract not found. Did you include `dojo_core` as a dependency?");
         });
 
-        manifest.world = Some(*world);
-        manifest.executor = Some(*executor);
+        manifest.0.world = Some(*world);
+        manifest.0.executor = Some(*executor);
 
         for crate_id in crate_ids {
             let modules = db.crate_modules(*crate_id);
@@ -126,9 +46,9 @@ impl Manifest {
                 for generated_file_info in generated_file_infos.iter().skip(1) {
                     let Some(generated_file_info) = generated_file_info else { continue; };
                     let Some(mapper) = generated_file_info.aux_data.0.as_any(
-                    ).downcast_ref::<DynPluginAuxData>() else { continue; };
+                ).downcast_ref::<DynPluginAuxData>() else { continue; };
                     let Some(aux_data) = mapper.0.as_any(
-                    ).downcast_ref::<DojoAuxData>() else { continue; };
+                ).downcast_ref::<DojoAuxData>() else { continue; };
 
                     manifest.find_components(db, aux_data, *module_id, &compiled_classes);
                     manifest.find_systems(db, aux_data, *module_id, &compiled_classes).unwrap();
@@ -137,92 +57,6 @@ impl Manifest {
         }
 
         manifest
-    }
-
-    pub fn load_from_path<P>(manifest_path: P) -> Result<Self>
-    where
-        P: AsRef<Path>,
-    {
-        serde_json::from_reader(fs::File::open(manifest_path)?)
-            .map_err(|e| anyhow!("Problem in loading manifest from path: {e}"))
-    }
-
-    pub async fn from_remote<P: JsonRpcTransport + Sync + Send>(
-        world_address: FieldElement,
-        provider: JsonRpcClient<P>,
-        local_manifest: &Self,
-    ) -> Result<Self> {
-        let mut manifest = Manifest::default();
-
-        let world_class_hash =
-            provider.get_class_hash_at(&BlockId::Tag(BlockTag::Pending), world_address).await.ok();
-
-        if world_class_hash.is_none() {
-            return Ok(manifest);
-        }
-
-        let executor_address = provider
-            .get_storage_at(
-                world_address,
-                get_storage_var_address("executor", &[])?,
-                &BlockId::Tag(BlockTag::Pending),
-            )
-            .await
-            .map_err(|_| ManifestError::ProviderError)?;
-
-        let executor_class_hash = provider
-            .get_class_hash_at(&BlockId::Tag(BlockTag::Pending), executor_address)
-            .await
-            .ok();
-
-        manifest.world = world_class_hash;
-        manifest.executor = executor_class_hash;
-
-        for component in &local_manifest.components {
-            let CallContractResult { result } = provider
-                .call_contract(
-                    CallFunction {
-                        contract_address: world_address,
-                        calldata: vec![cairo_short_string_to_felt(&component.name)?],
-                        entry_point_selector: get_selector_from_name("component")?,
-                    },
-                    starknet::core::types::BlockId::Pending,
-                )
-                .await
-                .map_err(|_| ManifestError::ProviderError)?;
-
-            manifest.components.push(Component {
-                name: component.name.clone(),
-                class_hash: result[0],
-                ..Default::default()
-            });
-        }
-
-        for system in &local_manifest.systems {
-            let CallContractResult { result } = provider
-                .call_contract(
-                    CallFunction {
-                        contract_address: world_address,
-                        calldata: vec![cairo_short_string_to_felt(
-                            // because the name returns by the `name` method of
-                            // a system contract is without the 'System' suffix
-                            system.name.strip_suffix("System").unwrap_or(&system.name),
-                        )?],
-                        entry_point_selector: get_selector_from_name("system")?,
-                    },
-                    starknet::core::types::BlockId::Pending,
-                )
-                .await
-                .map_err(|_| ManifestError::ProviderError)?;
-
-            manifest.systems.push(System {
-                name: system.name.clone(),
-                class_hash: result[0],
-                ..Default::default()
-            });
-        }
-
-        Ok(manifest)
     }
 
     /// Finds the inline modules annotated as components in the given crate_ids and
@@ -255,7 +89,7 @@ impl Manifest {
                     .with_context(|| format!("Contract {name} not found in target."))
                     .unwrap();
 
-                self.components.push(Component {
+                self.0.components.push(Component {
                     members,
                     name: name.to_string(),
                     class_hash: *class_hash,
@@ -270,7 +104,7 @@ impl Manifest {
         aux_data: &DojoAuxData,
         module_id: ModuleId,
         compiled_classes: &HashMap<SmolStr, FieldElement>,
-    ) -> Result<(), ManifestError> {
+    ) -> Result<()> {
         for SystemAuxData { name, dependencies } in &aux_data.systems {
             if let Ok(Some(ModuleItemId::Submodule(submodule_id))) =
                 db.module_item_by_name(module_id, name.clone())
@@ -281,9 +115,7 @@ impl Manifest {
                     if fn_id.name(defs_db) != "execute" {
                         continue;
                     }
-                    let signature = db
-                        .free_function_signature(fn_id)
-                        .map_err(|_| ManifestError::CompilationError)?;
+                    let signature = db.free_function_signature(fn_id).unwrap();
 
                     let mut inputs = vec![];
                     let mut params = signature.params;
@@ -308,7 +140,7 @@ impl Manifest {
                         .with_context(|| format!("Contract {name} not found in target."))
                         .unwrap();
 
-                    self.systems.push(System {
+                    self.0.systems.push(System {
                         name: name.clone(),
                         inputs,
                         outputs,

@@ -3340,7 +3340,7 @@ dependencies = [
  "camino",
  "clap 4.2.7",
  "dojo-lang",
- "dojo-project",
+ "dojo-world",
  "dotenv",
  "scarb",
  "semver 1.0.17",
@@ -3410,6 +3410,7 @@ dependencies = [
  "cairo-lang-test-utils",
  "cairo-lang-utils",
  "camino",
+ "dojo-world",
  "env_logger 0.10.0",
  "itertools",
  "pretty_assertions",
@@ -3451,30 +3452,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dojo-project"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "cairo-lang-filesystem",
- "cairo-lang-project",
- "cairo-lang-starknet",
- "camino",
- "dojo-lang",
- "indoc 1.0.9",
- "scarb",
- "serde",
- "serde_json",
- "smol_str",
- "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=5d3f9d7cc6df0d01a299f0fb0ebc00ec2f28b983)",
- "test-log",
- "thiserror",
- "toml 0.7.3",
- "tracing",
- "url",
-]
-
-[[package]]
 name = "dojo-signers"
 version = "0.1.0"
 dependencies = [
@@ -3494,6 +3471,30 @@ dependencies = [
  "dojo-lang",
  "scarb",
  "semver 1.0.17",
+]
+
+[[package]]
+name = "dojo-world"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cairo-lang-filesystem",
+ "cairo-lang-project",
+ "cairo-lang-starknet",
+ "camino",
+ "indoc 1.0.9",
+ "scarb",
+ "serde",
+ "serde_json",
+ "serde_with",
+ "smol_str",
+ "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=5d3f9d7cc6df0d01a299f0fb0ebc00ec2f28b983)",
+ "test-log",
+ "thiserror",
+ "toml 0.7.3",
+ "tracing",
+ "url",
 ]
 
 [[package]]

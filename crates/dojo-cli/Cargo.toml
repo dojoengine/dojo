@@ -11,7 +11,7 @@ async-trait = "0.1.68"
 camino.workspace = true
 clap.workspace = true
 dojo-lang = { path = "../dojo-lang" }
-dojo-project = { path = "../dojo-project" }
+dojo-world = { path = "../dojo-world" }
 dotenv = "0.15.0"
 cairo-lang-compiler.workspace = true
 cairo-lang-filesystem.workspace = true
