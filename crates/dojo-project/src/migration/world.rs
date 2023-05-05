@@ -76,7 +76,7 @@ impl World {
         let local_manifest = Manifest::load_from_path(target_dir.join("manifest.json"))?;
 
         let remote_manifest = if let Some(world_address) = world_config.address {
-            let provider = env_config.get_provider()?;
+            let provider = env_config.provider()?;
 
             Manifest::from_remote(world_address, provider, &local_manifest)
                 .await
@@ -176,7 +176,7 @@ impl World {
         let systems = evaluate_systems_to_be_declared(&self.systems, &artifact_paths)?;
 
         let migrator = {
-            let provider = self.environment_config.get_provider()?;
+            let provider = self.environment_config.provider()?;
 
             let private_key = self
                 .environment_config

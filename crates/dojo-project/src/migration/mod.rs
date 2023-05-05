@@ -10,9 +10,10 @@ use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass;
 use starknet::accounts::{Account, Call, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::contract::{CompiledClass, FlattenedSierraClass, SierraClass};
-use starknet::core::types::{BlockId, FieldElement};
+use starknet::core::types::FieldElement;
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
-use starknet::providers::{Provider, SequencerGatewayProvider};
+use starknet::providers::jsonrpc::models::{BlockId, BlockTag};
+use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 use starknet::signers::LocalWallet;
 
 use self::world::{Class, Contract};
@@ -41,7 +42,7 @@ pub struct Migration {
     executor: ContractMigration,
     systems: Vec<ClassMigration>,
     components: Vec<ClassMigration>,
-    migrator: SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
+    migrator: SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
 }
 
 impl Migration {
@@ -123,7 +124,10 @@ impl Migration {
 
 #[async_trait]
 trait Declarable {
-    async fn declare(&self, account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>);
+    async fn declare(
+        &self,
+        account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
+    );
 }
 
 // TODO: Remove `mut` once we can calculate the contract address before sending the tx
@@ -132,20 +136,26 @@ trait Deployable: Declarable {
     async fn deploy(
         &mut self,
         constructor_params: Vec<FieldElement>,
-        account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
+        account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
     );
 }
 
 #[async_trait]
 impl Declarable for ClassMigration {
-    async fn declare(&self, account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>) {
+    async fn declare(
+        &self,
+        account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
+    ) {
         declare(self.class.name.clone(), &self.artifact_path, account).await;
     }
 }
 
 #[async_trait]
 impl Declarable for ContractMigration {
-    async fn declare(&self, account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>) {
+    async fn declare(
+        &self,
+        account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
+    ) {
         declare(self.contract.name.clone(), &self.artifact_path, account).await;
     }
 }
@@ -153,12 +163,13 @@ impl Declarable for ContractMigration {
 async fn declare(
     name: String,
     artifact_path: &PathBuf,
-    account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
+    account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
 ) {
     let (flattened_class, casm_class_hash) =
         prepare_contract_declaration_params(artifact_path).unwrap();
 
-    if account.provider().get_class_by_hash(casm_class_hash, BlockId::Pending).await.is_ok() {
+    if account.provider().get_class(&BlockId::Tag(BlockTag::Pending), casm_class_hash).await.is_ok()
+    {
         println!("{name} class already declared");
         return;
     }
@@ -184,7 +195,7 @@ impl Deployable for ContractMigration {
     async fn deploy(
         &mut self,
         constructor_calldata: Vec<FieldElement>,
-        account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
+        account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
     ) {
         self.declare(account).await;
 
@@ -208,7 +219,12 @@ impl Deployable for ContractMigration {
 
         self.contract_address = Some(contract_address);
 
-        if account.provider().get_class_hash_at(contract_address, BlockId::Pending).await.is_ok() {
+        if account
+            .provider()
+            .get_class_hash_at(&BlockId::Tag(BlockTag::Pending), contract_address)
+            .await
+            .is_ok()
+        {
             self.deployed = true;
             println!("{} contract already deployed", self.contract.name);
             return;
