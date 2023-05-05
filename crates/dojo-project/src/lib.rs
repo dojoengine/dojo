@@ -5,8 +5,8 @@ use std::str::FromStr;
 use anyhow::anyhow;
 use scarb::core::Workspace;
 use serde::{Deserialize, Serialize};
-use starknet::core::chain_id;
 use starknet::core::types::FieldElement;
+use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 use toml::Value;
 use tracing::warn;
@@ -121,7 +121,7 @@ impl EnvironmentConfig {
             if let Some(network) = env.get("network").and_then(|v| v.as_str()) {
                 config.network = Some(network.into());
                 if config.chain_id.is_none() {
-                    config.chain_id = get_chain_id_from_network(network);
+                    config.chain_id = Some(cairo_short_string_to_felt(network)?);
                 }
             }
         }
@@ -159,13 +159,5 @@ impl EnvironmentConfig {
         };
 
         Ok(provider)
-    }
-}
-
-fn get_chain_id_from_network(network: &str) -> Option<FieldElement> {
-    match network {
-        "mainnet" => Some(chain_id::MAINNET),
-        "goerli" => Some(chain_id::TESTNET),
-        _ => None,
     }
 }
