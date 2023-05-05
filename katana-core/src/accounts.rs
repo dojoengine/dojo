@@ -16,7 +16,7 @@ use starknet_api::{
 use crate::{
     constants::{FEE_ERC20_CONTRACT_ADDRESS, TEST_ACCOUNT_CONTRACT_PATH},
     state::DictStateReader,
-    util::compute_legacy_class_hash,
+    util::{compute_legacy_class_hash, field_element_to_starkfelt},
 };
 
 #[derive(Debug, Clone)]
@@ -188,8 +188,8 @@ impl PredeployedAccounts {
 
 // TODO: remove starknet-rs dependency
 fn compute_public_key_from_private_key(private_key: &StarkFelt) -> StarkFelt {
-    StarkFelt::from(
-        SigningKey::from_secret_scalar(
+    field_element_to_starkfelt(
+        &SigningKey::from_secret_scalar(
             FieldElement::from_byte_slice_be(private_key.bytes()).unwrap(),
         )
         .verifying_key()

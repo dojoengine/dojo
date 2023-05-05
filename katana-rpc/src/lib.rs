@@ -4,7 +4,11 @@ use jsonrpsee::{
     server::{ServerBuilder, ServerHandle},
     types::error::CallError,
 };
-use katana_core::{sequencer::KatanaSequencer, starknet::transaction::ExternalFunctionCall};
+use katana_core::{
+    sequencer::KatanaSequencer,
+    starknet::transaction::ExternalFunctionCall,
+    util::{field_element_to_starkfelt, starkfelt_to_u128},
+};
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::models::{
     BlockHashAndNumber, BlockId, BroadcastedDeclareTransaction,
@@ -26,6 +30,7 @@ use starknet_api::{
 use starknet_api::{hash::StarkHash, transaction::TransactionSignature};
 use starknet_api::{state::StorageKey, transaction::InvokeTransactionV1};
 use std::{net::SocketAddr, sync::Arc};
+use tokio::sync::RwLock;
 use util::{
     compute_invoke_v1_transaction_hash, convert_inner_to_rpc_tx, stark_felt_to_field_element,
 };
@@ -38,11 +43,11 @@ use api::{KatanaApiError, KatanaApiServer, KatanaRpcLogger};
 
 pub struct KatanaRpc {
     pub config: RpcConfig,
-    pub sequencer: Arc<KatanaSequencer>,
+    pub sequencer: Arc<RwLock<KatanaSequencer>>,
 }
 
 impl KatanaRpc {
-    pub fn new(sequencer: Arc<KatanaSequencer>, config: RpcConfig) -> Self {
+    pub fn new(sequencer: Arc<RwLock<KatanaSequencer>>, config: RpcConfig) -> Self {
         Self { config, sequencer }
     }
 
@@ -64,7 +69,7 @@ impl KatanaRpc {
 #[async_trait]
 impl KatanaApiServer for KatanaRpc {
     async fn chain_id(&self) -> Result<String, Error> {
-        Ok(self.sequencer.chain_id().as_hex())
+        Ok(self.sequencer.read().await.chain_id().as_hex())
     }
 
     async fn get_nonce(
@@ -74,7 +79,12 @@ impl KatanaApiServer for KatanaRpc {
     ) -> Result<FieldElement, Error> {
         let nonce = self
             .sequencer
-            .get_nonce_at(block_id, ContractAddress(patricia_key!(contract_address)))
+            .write()
+            .await
+            .get_nonce_at(
+                block_id,
+                ContractAddress(patricia_key!(field_element_to_starkfelt(&contract_address))),
+            )
             .map_err(|_| Error::from(KatanaApiError::ContractError))?;
 
         stark_felt_to_field_element(nonce.0)
@@ -82,17 +92,22 @@ impl KatanaApiServer for KatanaRpc {
     }
 
     async fn block_number(&self) -> Result<u64, Error> {
-        Ok(self.sequencer.block_number().0)
+        Ok(self.sequencer.read().await.block_number().0)
     }
 
     async fn get_transaction_by_hash(
         &self,
         transaction_hash: FieldElement,
     ) -> Result<Transaction, Error> {
-        let starknet = self.sequencer.starknet.read().unwrap();
-        let tx = starknet
+        let tx = self
+            .sequencer
+            .write()
+            .await
+            .starknet
             .transactions
-            .get_transaction(&TransactionHash(StarkFelt::from(transaction_hash)))
+            .get_transaction(&TransactionHash(field_element_to_starkfelt(
+                &transaction_hash,
+            )))
             .ok_or(Error::from(KatanaApiError::TxnHashNotFound))?;
 
         convert_inner_to_rpc_tx(tx).map_err(|_| Error::from(KatanaApiError::InternalServerError))
@@ -154,7 +169,12 @@ impl KatanaApiServer for KatanaRpc {
     ) -> Result<FieldElement, Error> {
         let class_hash = self
             .sequencer
-            .class_hash_at(block_id, ContractAddress(patricia_key!(contract_address)))
+            .write()
+            .await
+            .class_hash_at(
+                block_id,
+                ContractAddress(patricia_key!(field_element_to_starkfelt(&contract_address))),
+            )
             .map_err(|_| Error::from(KatanaApiError::ContractError))?;
 
         stark_felt_to_field_element(class_hash.0)
@@ -196,15 +216,25 @@ impl KatanaApiServer for KatanaRpc {
         block_id: BlockId,
     ) -> Result<Vec<FieldElement>, Error> {
         let call = ExternalFunctionCall {
-            contract_address: ContractAddress(patricia_key!(request.contract_address)),
+            contract_address: ContractAddress(patricia_key!(field_element_to_starkfelt(
+                &request.contract_address
+            ))),
             calldata: Calldata(Arc::new(
-                request.calldata.into_iter().map(StarkFelt::from).collect(),
+                request
+                    .calldata
+                    .iter()
+                    .map(field_element_to_starkfelt)
+                    .collect(),
             )),
-            entry_point_selector: EntryPointSelector(StarkFelt::from(request.entry_point_selector)),
+            entry_point_selector: EntryPointSelector(field_element_to_starkfelt(
+                &request.entry_point_selector,
+            )),
         };
 
         let res = self
             .sequencer
+            .read()
+            .await
             .call(block_id, call)
             .map_err(|_| Error::from(KatanaApiError::ContractError))?;
 
@@ -228,9 +258,11 @@ impl KatanaApiServer for KatanaRpc {
     ) -> Result<FieldElement, Error> {
         let value = self
             .sequencer
+            .write()
+            .await
             .get_storage_at(
-                ContractAddress(patricia_key!(contract_address)),
-                StorageKey(patricia_key!(key)),
+                ContractAddress(patricia_key!(field_element_to_starkfelt(&contract_address))),
+                StorageKey(patricia_key!(field_element_to_starkfelt(&key))),
             )
             .map_err(|_| Error::from(KatanaApiError::ContractError))?;
 
@@ -254,17 +286,19 @@ impl KatanaApiServer for KatanaRpc {
 
         let (transaction_hash, contract_address) = self
             .sequencer
+            .write()
+            .await
             .deploy_account(
-                ClassHash(StarkFelt::from(class_hash)),
+                ClassHash(field_element_to_starkfelt(&class_hash)),
                 TransactionVersion(StarkFelt::from(version)),
-                ContractAddressSalt(StarkFelt::from(contract_address_salt)),
+                ContractAddressSalt(field_element_to_starkfelt(&contract_address_salt)),
                 Calldata(Arc::new(
                     constructor_calldata
-                        .into_iter()
-                        .map(StarkFelt::from)
+                        .iter()
+                        .map(field_element_to_starkfelt)
                         .collect(),
                 )),
-                TransactionSignature(signature.into_iter().map(StarkFelt::from).collect()),
+                TransactionSignature(signature.iter().map(field_element_to_starkfelt).collect()),
             )
             .map_err(|e| Error::Call(CallError::Failed(anyhow::anyhow!(e.to_string()))))?;
 
@@ -289,8 +323,9 @@ impl KatanaApiServer for KatanaRpc {
     ) -> Result<InvokeTransactionResult, Error> {
         match invoke_transaction {
             BroadcastedInvokeTransaction::V1(transaction) => {
-                let chain_id = FieldElement::from_hex_be(&self.sequencer.chain_id().as_hex())
-                    .map_err(|_| Error::from(KatanaApiError::InternalServerError))?;
+                let chain_id =
+                    FieldElement::from_hex_be(&self.sequencer.read().await.chain_id().as_hex())
+                        .map_err(|_| Error::from(KatanaApiError::InternalServerError))?;
 
                 let transaction_hash = compute_invoke_v1_transaction_hash(
                     transaction.sender_address,
@@ -301,29 +336,37 @@ impl KatanaApiServer for KatanaRpc {
                 );
 
                 let transaction = InvokeTransactionV1 {
-                    transaction_hash: TransactionHash(StarkFelt::from(transaction_hash)),
-                    sender_address: ContractAddress(patricia_key!(transaction.sender_address)),
-                    nonce: Nonce(StarkFelt::from(transaction.nonce)),
+                    transaction_hash: TransactionHash(field_element_to_starkfelt(
+                        &transaction_hash,
+                    )),
+                    sender_address: ContractAddress(patricia_key!(field_element_to_starkfelt(
+                        &transaction.sender_address
+                    ))),
+                    nonce: Nonce(field_element_to_starkfelt(&transaction.nonce)),
                     calldata: Calldata(Arc::new(
                         transaction
                             .calldata
-                            .into_iter()
-                            .map(StarkFelt::from)
+                            .iter()
+                            .map(field_element_to_starkfelt)
                             .collect(),
                     )),
-                    max_fee: Fee(StarkFelt::from(transaction.max_fee)
-                        .try_into()
-                        .map_err(|_| Error::from(KatanaApiError::InternalServerError))?),
+                    max_fee: Fee(starkfelt_to_u128(field_element_to_starkfelt(
+                        &transaction.max_fee,
+                    ))
+                    .map_err(|_| Error::from(KatanaApiError::InternalServerError))?),
                     signature: TransactionSignature(
                         transaction
                             .signature
-                            .into_iter()
-                            .map(StarkFelt::from)
+                            .iter()
+                            .map(field_element_to_starkfelt)
                             .collect(),
                     ),
                 };
 
-                self.sequencer.add_invoke_transaction(transaction);
+                self.sequencer
+                    .write()
+                    .await
+                    .add_invoke_transaction(transaction);
 
                 Ok(InvokeTransactionResult { transaction_hash })
             }

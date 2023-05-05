@@ -8,8 +8,9 @@ description = "Katana core implementation."
 
 [dependencies]
 anyhow.workspace = true
-blockifier = { git = "https://github.com/starkware-libs/blockifier" }
+blockifier.workspace = true
 futures = "0.3"
+tokio.workspace = true
 tracing = "0.1.34"
 starknet_api.workspace = true
 starknet.workspace = true

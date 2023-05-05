@@ -5,6 +5,7 @@ use env_logger::Env;
 use katana_core::{sequencer::KatanaSequencer, starknet::StarknetConfig};
 use katana_rpc::{config::RpcConfig, KatanaRpc};
 use log::error;
+use tokio::sync::RwLock;
 use yansi::Paint;
 
 #[tokio::main]
@@ -15,17 +16,17 @@ async fn main() {
     let rpc_config = config.get_rpc_config();
     let starknet_config = config.get_starknet_config();
 
-    let sequencer = Arc::new(KatanaSequencer::new(starknet_config));
-    sequencer.start();
+    let sequencer = Arc::new(RwLock::new(KatanaSequencer::new(starknet_config)));
+    sequencer.write().await.start();
 
     let predeployed_accounts = sequencer
-        .starknet
         .read()
-        .unwrap()
+        .await
+        .starknet
         .predeployed_accounts
         .display();
 
-    match KatanaRpc::new(sequencer, rpc_config).run().await {
+    match KatanaRpc::new(sequencer.clone(), rpc_config).run().await {
         Ok((addr, server_handle)) => {
             print_intro(
                 predeployed_accounts,

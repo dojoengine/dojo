@@ -8,7 +8,8 @@ description = "Katana RPC Implementation."
 
 [dependencies]
 anyhow = "1.0.40"
-blockifier = { git = "https://github.com/starkware-libs/blockifier" }
+blockifier.workspace = true
+tokio.workspace = true
 hex = { version = "0.4.3", default-features = false }
 jsonrpsee = { version = "0.16.2", features = ["full"] }
 katana-core = { path = "../katana-core" }

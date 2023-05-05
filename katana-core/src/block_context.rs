@@ -22,7 +22,7 @@ impl Base for BlockContext {
             block_timestamp: BlockTimestamp::default(),
             sequencer_address: ContractAddress(patricia_key!(SEQUENCER_ADDRESS)),
             fee_token_address: ContractAddress(patricia_key!(FEE_ERC20_CONTRACT_ADDRESS)),
-            cairo_resource_fee_weights: HashMap::from([
+            vm_resource_fee_cost: HashMap::from([
                 (String::from("n_steps"), 1_f64),
                 (String::from("pedersen_builtin"), 1_f64),
                 (String::from("range_check_builtin"), 1_f64),
