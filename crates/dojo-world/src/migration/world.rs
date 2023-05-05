@@ -5,12 +5,12 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, Context, Result};
 use camino::Utf8PathBuf;
-use dojo_lang::manifest::Manifest;
 use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::FieldElement;
 use starknet::signers::{LocalWallet, SigningKey};
 
 use super::{ClassMigration, ContractMigration, Migration};
+use crate::manifest::Manifest;
 use crate::{EnvironmentConfig, WorldConfig};
 
 #[derive(Debug, Default, Clone)]

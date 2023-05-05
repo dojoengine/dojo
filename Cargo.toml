@@ -7,7 +7,7 @@ members = [
     "crates/dojo-cli",
     "crates/dojo-indexer",
     "crates/dojo-language-server",
-    "crates/dojo-project",
+    "crates/dojo-world",
     "crates/dojo-test-runner",
     "crates/dojo-signers",
     "crates/bevy-dojo",

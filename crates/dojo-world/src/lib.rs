@@ -1,5 +1,3 @@
-pub mod migration;
-
 use std::str::FromStr;
 
 use anyhow::anyhow;
@@ -11,6 +9,9 @@ use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 use toml::Value;
 use tracing::warn;
 use url::Url;
+
+pub mod manifest;
+pub mod migration;
 
 #[allow(clippy::enum_variant_names)]
 #[derive(thiserror::Error, Debug)]
