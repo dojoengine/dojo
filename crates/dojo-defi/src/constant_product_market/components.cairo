@@ -65,8 +65,8 @@ impl MarketImpl of MarketTrait {
 
     // Get normalized reserve cash amount and item quantity
     fn get_reserves(self: @Market) -> (u128, u128) {
-        let reserve_quantity: felt252 = (*self.item_quantity).into();
-        (*self.cash_amount, reserve_quantity.try_into().unwrap() * SCALING_FACTOR)
+        let reserve_quantity: u128 = (*self.item_quantity).into() * SCALING_FACTOR;
+        (*self.cash_amount, reserve_quantity)
     }
 
     // Get the liquidity of the market
@@ -106,8 +106,10 @@ impl MarketImpl of MarketTrait {
 
         // dy = Y * dx / X
         let quantity_optimal = (reserve_quantity * amount) / reserve_amount;
+
         // Unscale and convert to usize
-        (quantity_optimal.into().try_into().unwrap() / ONE_u128).into().try_into().unwrap()
+        // Need intermediate conversion to felt252 because there's no impl for Into<FixedType, u128>
+        (quantity_optimal.into().try_into().unwrap() / ONE_u128).try_into().unwrap()
     }
 
     // Given some quantity of items, return the equivalent/optimal amount of cash
@@ -124,15 +126,16 @@ impl MarketImpl of MarketTrait {
         let reserve_quantity = Fixed::new_unscaled(reserve_quantity, false);
 
         // Normalize quantity
-        let quantity: felt252 = quantity.into();
-        let quantity: u128 = quantity.try_into().unwrap() * SCALING_FACTOR;
+        let quantity: u128 = quantity.into() * SCALING_FACTOR;
 
         // Convert quantity to fixed point
         let quantity = Fixed::new_unscaled(quantity, false);
 
         // dx = X * dy / Y
         let amount_optimal = (reserve_amount * quantity) / reserve_quantity;
+
         // Convert amount to u128 and unscale
+        // Need intermediate conversion to felt252 because there's no impl for Into<FixedType, u128>
         amount_optimal.into().try_into().unwrap() / ONE_u128
     }
 
@@ -190,8 +193,7 @@ impl MarketImpl of MarketTrait {
     fn mint_shares(self: @Market, amount: u128, quantity: usize) -> FixedType {
         // If there is no liquidity, then mint total shares
         if !self.has_liquidity() {
-            let quantity: felt252 = quantity.into();
-            let quantity: u128 = quantity.try_into().unwrap() * SCALING_FACTOR;
+            let quantity: u128 = quantity.into() * SCALING_FACTOR;
             (Fixed::new_unscaled(amount, false) * Fixed::new_unscaled(quantity, false)).sqrt()
         } else {
             // Convert amount to fixed point
@@ -240,6 +242,7 @@ impl MarketImpl of MarketTrait {
         let quantity = (shares * reserve_quantity) / liquidity;
 
         // Unscale and convert amount and quantity to u128 and usize
+        // Need intermediate conversion to felt252 because there's no impl for Into<FixedType, u128>
         (
             amount.into().try_into().unwrap() / ONE_u128,
             (quantity.into().try_into().unwrap()
@@ -295,8 +298,8 @@ fn test_market_add_liquidity_no_initial() {
 
     // Convert amount and quantity to fixed point
     let amount = Fixed::new_unscaled(amount, false);
-    let quantity: felt252 = quantity.into();
-    let quantity = Fixed::new_unscaled(quantity.try_into().unwrap() * SCALING_FACTOR, false);
+    let quantity: u128 = quantity.into() * SCALING_FACTOR;
+    let quantity = Fixed::new_unscaled(quantity, false);
     assert(liquidity_add == (amount * quantity).sqrt(), 'wrong liquidity');
 }
 
@@ -317,10 +320,8 @@ fn test_market_add_liquidity_optimal() {
 
     // Get expected amount and convert to fixed point
     let expected_amount = Fixed::new_unscaled(SCALING_FACTOR * 1 + amount, false);
-    let expected_quantity: felt252 = (10 + quantity).into();
-    let expected_quantity = Fixed::new_unscaled(
-        expected_quantity.try_into().unwrap() * SCALING_FACTOR, false
-    );
+    let expected_quantity: u128 = (10 + quantity).into() * SCALING_FACTOR;
+    let expected_quantity = Fixed::new_unscaled(expected_quantity, false);
 
     // Compute the expected liquidity shares
     let expected_liquidity = Fixed::sqrt(expected_amount * expected_quantity);
@@ -348,10 +349,10 @@ fn test_market_add_liquidity_not_optimal() {
 
     // Get expected amount and convert to fixed point
     let expected_amount = Fixed::new_unscaled(SCALING_FACTOR * 1 + amount_add, false);
-    let expected_quantity: felt252 = (10 + quantity_add).into();
-    let expected_quantity = Fixed::new_unscaled(
-        expected_quantity.try_into().unwrap() * SCALING_FACTOR, false
-    );
+    let expected_quantity: u128 = (10 + quantity).into() * SCALING_FACTOR;
+    let expected_quantity = Fixed::new_unscaled(expected_quantity, false);
+
+    // Get expecteed liquidity
     let expected_liquidity = Fixed::sqrt(expected_amount * expected_quantity);
 
     let final_liquidity = initial_liquidity + liquidity_add;
@@ -387,10 +388,10 @@ fn test_market_remove_liquidity() {
 
     // Get expected amount and convert to fixed point
     let expected_amount = Fixed::new_unscaled(SCALING_FACTOR * 2 - amount_remove, false);
-    let expected_quantity: felt252 = (20 - quantity_remove).into();
-    let expected_quantity = Fixed::new_unscaled(
-        expected_quantity.try_into().unwrap() * SCALING_FACTOR, false
-    );
+    let expected_quantity: u128 = (20 - quantity_remove).into() * SCALING_FACTOR;
+    let expected_quantity = Fixed::new_unscaled(expected_quantity, false);
+
+    // Get expecteed liquidity
     let expected_liquidity = Fixed::sqrt(expected_amount * expected_quantity);
 
     let final_liquidity = initial_liquidity - liquidity_remove;
