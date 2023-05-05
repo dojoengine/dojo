@@ -21,8 +21,8 @@ use starknet_api::{
     stark_felt,
     state::StorageKey,
     transaction::{
-        Calldata, ContractAddressSalt, DeployAccountTransaction, Fee, InvokeTransaction,
-        InvokeTransactionV1, TransactionHash, TransactionSignature, TransactionVersion,
+        Calldata, ContractAddressSalt, DeployAccountTransaction, Fee, TransactionHash,
+        TransactionSignature, TransactionVersion,
     },
 };
 
@@ -122,11 +122,9 @@ impl Sequencer for KatanaSequencer {
         Ok((tx_hash, contract_address))
     }
 
-    fn add_invoke_transaction(&mut self, transaction: InvokeTransactionV1) {
+    fn add_account_transaction(&mut self, transaction: AccountTransaction) {
         self.starknet
-            .handle_transaction(Transaction::AccountTransaction(AccountTransaction::Invoke(
-                InvokeTransaction::V1(transaction),
-            )));
+            .handle_transaction(Transaction::AccountTransaction(transaction));
     }
 
     fn class_hash_at(
@@ -221,5 +219,5 @@ pub trait Sequencer {
         signature: TransactionSignature,
     ) -> anyhow::Result<(TransactionHash, ContractAddress)>;
 
-    fn add_invoke_transaction(&mut self, transaction: InvokeTransactionV1);
+    fn add_account_transaction(&mut self, transaction: AccountTransaction);
 }
