@@ -11,10 +11,12 @@ use cairo_lang_semantic::plugin::DynPluginAuxData;
 use serde_with::serde_as;
 use smol_str::SmolStr;
 use starknet::core::serde::unsigned_field_element::{UfeHex, UfeHexOption};
-use starknet::core::types::{BlockId, CallContractResult, CallFunction, FieldElement};
+use starknet::core::types::{CallContractResult, CallFunction, FieldElement};
 use starknet::core::utils::{
     cairo_short_string_to_felt, get_selector_from_name, get_storage_var_address,
 };
+use starknet::providers::jsonrpc::models::{BlockId, BlockTag};
+use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
 use starknet::providers::Provider;
 use thiserror::Error;
 
@@ -145,15 +147,15 @@ impl Manifest {
             .map_err(|e| anyhow!("Problem in loading manifest from path: {e}"))
     }
 
-    pub async fn from_remote<P: Provider>(
+    pub async fn from_remote<P: JsonRpcTransport + Sync + Send>(
         world_address: FieldElement,
-        provider: P,
+        provider: JsonRpcClient<P>,
         local_manifest: &Self,
     ) -> Result<Self> {
         let mut manifest = Manifest::default();
 
         let world_class_hash =
-            provider.get_class_hash_at(world_address, BlockId::Pending).await.ok();
+            provider.get_class_hash_at(&BlockId::Tag(BlockTag::Pending), world_address).await.ok();
 
         if world_class_hash.is_none() {
             return Ok(manifest);
@@ -163,13 +165,15 @@ impl Manifest {
             .get_storage_at(
                 world_address,
                 get_storage_var_address("executor", &[])?,
-                BlockId::Pending,
+                &BlockId::Tag(BlockTag::Pending),
             )
             .await
             .map_err(|_| ManifestError::ProviderError)?;
 
-        let executor_class_hash =
-            provider.get_class_hash_at(executor_address, BlockId::Pending).await.ok();
+        let executor_class_hash = provider
+            .get_class_hash_at(&BlockId::Tag(BlockTag::Pending), executor_address)
+            .await
+            .ok();
 
         manifest.world = world_class_hash;
         manifest.executor = executor_class_hash;
@@ -182,7 +186,7 @@ impl Manifest {
                         calldata: vec![cairo_short_string_to_felt(&component.name)?],
                         entry_point_selector: get_selector_from_name("component")?,
                     },
-                    BlockId::Pending,
+                    starknet::core::types::BlockId::Pending,
                 )
                 .await
                 .map_err(|_| ManifestError::ProviderError)?;
@@ -206,7 +210,7 @@ impl Manifest {
                         )?],
                         entry_point_selector: get_selector_from_name("system")?,
                     },
-                    BlockId::Pending,
+                    starknet::core::types::BlockId::Pending,
                 )
                 .await
                 .map_err(|_| ManifestError::ProviderError)?;
