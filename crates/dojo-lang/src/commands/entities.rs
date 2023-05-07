@@ -101,7 +101,11 @@ impl CommandTrait for EntitiesCommand {
                     loop {
                         match __$query_subtype$_ids_idxs.pop_front() {
                             Option::Some(idx) => {
-                                let entity = serde::Serde::<$component$>::deserialize(ref *(__$query_id$_$query_subtype$_raw[*idx])).expect('$deser_err_msg$');
+                                let entity = __$query_id$_$query_subtype$_raw[*idx];
+                                let mut entity = *entity;
+                                let entity = serde::Serde::<$component$>::deserialize(
+                                    ref entity
+                                ).expect('$deser_err_msg$');
                                 __$query_subtype$s.append(entity);
                             },
                             Option::None(_) => {

@@ -137,7 +137,7 @@ mod Move {
         calldata.append('name');
         commands::execute(SpawnSystem, calldata.span());
 
-        move_inner(@positions_query, 0_u32, positions_query.len());
+        // move_inner(@positions_query, 0_u32, positions_query.len());
 
         let err = commands::<>::entity(player_id.into());
 
@@ -502,8 +502,10 @@ mod MoveSystem {
         loop {
             match __position_ids_idxs.pop_front() {
                 Option::Some(idx) => {
+                    let entity = __positions_query_position_raw[*idx];
+                    let mut entity = *entity;
                     let entity = serde::Serde::<Position>::deserialize(
-                        ref *(__positions_query_position_raw[*idx])
+                        ref entity
                     ).expect('Position failed to deserialize');
                     __positions.append(entity);
                 },
@@ -517,8 +519,10 @@ mod MoveSystem {
         loop {
             match __player_ids_idxs.pop_front() {
                 Option::Some(idx) => {
+                    let entity = __positions_query_player_raw[*idx];
+                    let mut entity = *entity;
                     let entity = serde::Serde::<Player>::deserialize(
-                        ref *(__positions_query_player_raw[*idx])
+                        ref entity
                     ).expect('Player failed to deserialize');
                     __players.append(entity);
                 },
@@ -540,8 +544,10 @@ mod MoveSystem {
         loop {
             match __player_ids_idxs.pop_front() {
                 Option::Some(idx) => {
+                    let entity = __players_query_player_raw[*idx];
+                    let mut entity = *entity;
                     let entity = serde::Serde::<Player>::deserialize(
-                        ref *(__players_query_player_raw[*idx])
+                        ref entity
                     ).expect('Player failed to deserialize');
                     __players.append(entity);
                 },
@@ -638,8 +644,10 @@ mod MoveSystem {
                 loop {
                     match __position_ids_idxs.pop_front() {
                         Option::Some(idx) => {
+                            let entity = __positions_query_position_raw[*idx];
+                            let mut entity = *entity;
                             let entity = serde::Serde::<Position>::deserialize(
-                                ref *(__positions_query_position_raw[*idx])
+                                ref entity
                             ).expect('Position failed to deserialize');
                             __positions.append(entity);
                         },
@@ -653,8 +661,10 @@ mod MoveSystem {
                 loop {
                     match __player_ids_idxs.pop_front() {
                         Option::Some(idx) => {
+                            let entity = __positions_query_player_raw[*idx];
+                            let mut entity = *entity;
                             let entity = serde::Serde::<Player>::deserialize(
-                                ref *(__positions_query_player_raw[*idx])
+                                ref entity
                             ).expect('Player failed to deserialize');
                             __players.append(entity);
                         },
@@ -849,8 +859,10 @@ mod MoveSystem {
                     loop {
                         match __position_ids_idxs.pop_front() {
                             Option::Some(idx) => {
+                                let entity = __positions_query_position_raw[*idx];
+                                let mut entity = *entity;
                                 let entity = serde::Serde::<Position>::deserialize(
-                                    ref *(__positions_query_position_raw[*idx])
+                                    ref entity
                                 ).expect('Position failed to deserialize');
                                 __positions.append(entity);
                             },
@@ -864,8 +876,10 @@ mod MoveSystem {
                     loop {
                         match __player_ids_idxs.pop_front() {
                             Option::Some(idx) => {
+                                let entity = __positions_query_player_raw[*idx];
+                                let mut entity = *entity;
                                 let entity = serde::Serde::<Player>::deserialize(
-                                    ref *(__positions_query_player_raw[*idx])
+                                    ref entity
                                 ).expect('Player failed to deserialize');
                                 __players.append(entity);
                             },
@@ -918,8 +932,6 @@ mod MoveSystem {
         IWorldDispatcher {
             contract_address: world_address
         }.execute(dojo_core::string::ShortStringTrait::new('SpawnSystem'), calldata.span());
-
-        move_inner(@positions_query, 0_u32, positions_query.len());
 
         let mut i = 0;
         loop {
