@@ -10,8 +10,7 @@ use sanitizer::StringSanitizer;
 use smol_str::SmolStr;
 
 use super::entities::find_components;
-use super::{CAIRO_ERR_MSG_LEN, command_name, CommandData, CommandTrait};
-
+use super::{command_name, CommandData, CommandTrait, CAIRO_ERR_MSG_LEN};
 
 pub struct EntityCommand {
     query_id: String,
