@@ -1,6 +1,12 @@
 use std::str::FromStr;
 
 use anyhow::{Ok, Result};
+use blockifier::execution::contract_class::{
+    casm_contract_into_contract_class, ContractClass as BlockifierContractClass,
+};
+use cairo_lang_starknet::{casm_contract_class::CasmContractClass, contract_class::ContractClass};
+use starknet::core::types::contract::legacy::LegacyContractClass;
+use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::{
     core::{crypto::compute_hash_on_elements, types::FieldElement},
     providers::jsonrpc::models::{
@@ -25,6 +31,14 @@ const PREFIX_INVOKE: FieldElement = FieldElement::from_mont([
     513398556346534256,
 ]);
 
+/// Cairo string for "declare"
+const PREFIX_DECLARE: FieldElement = FieldElement::from_mont([
+    17542456862011667323,
+    18446744073709551615,
+    18446744073709551615,
+    191557713328401194,
+]);
+
 pub fn to_trimmed_hex_string(bytes: &[u8]) -> String {
     let hex_str = hex::encode(bytes);
     let trimmed_hex_str = hex_str.trim_start_matches('0');
@@ -37,6 +51,46 @@ pub fn to_trimmed_hex_string(bytes: &[u8]) -> String {
 
 pub fn stark_felt_to_field_element(felt: StarkFelt) -> Result<FieldElement> {
     Ok(FieldElement::from_byte_slice_be(felt.bytes())?)
+}
+
+pub fn compute_declare_v1_transaction_hash(
+    sender_address: FieldElement,
+    class_hash: FieldElement,
+    max_fee: FieldElement,
+    chain_id: FieldElement,
+    nonce: FieldElement,
+) -> FieldElement {
+    compute_hash_on_elements(&[
+        PREFIX_DECLARE,
+        FieldElement::ONE, // version
+        sender_address,
+        FieldElement::ZERO, // entry_point_selector
+        compute_hash_on_elements(&[class_hash]),
+        max_fee,
+        chain_id,
+        nonce,
+    ])
+}
+
+pub fn compute_declare_v2_transaction_hash(
+    sender_address: FieldElement,
+    class_hash: FieldElement,
+    max_fee: FieldElement,
+    chain_id: FieldElement,
+    nonce: FieldElement,
+    compiled_class_hash: FieldElement,
+) -> FieldElement {
+    compute_hash_on_elements(&[
+        PREFIX_DECLARE,
+        FieldElement::TWO, // version
+        sender_address,
+        FieldElement::ZERO, // entry_point_selector
+        compute_hash_on_elements(&[class_hash]),
+        max_fee,
+        chain_id,
+        nonce,
+        compiled_class_hash,
+    ])
 }
 
 pub fn compute_invoke_v1_transaction_hash(
@@ -155,4 +209,28 @@ fn convert_declare_to_rpc_tx(transaction: InnerDeclareTransaction) -> Result<Dec
             compiled_class_hash: stark_felt_to_field_element(tx.compiled_class_hash.0)?,
         }),
     })
+}
+
+pub fn get_casm_class_hash(raw_contract_class: &str) -> Result<FieldElement> {
+    let casm_contract_class: ContractClass = serde_json::from_str(raw_contract_class)?;
+    let casm_contract = CasmContractClass::from_contract_class(casm_contract_class, true)?;
+    let res = serde_json::to_string(&casm_contract)?;
+    let compiled_class: CompiledClass = serde_json::from_str(&res)?;
+    Ok(compiled_class.class_hash()?)
+}
+
+pub fn get_sierra_class_hash(raw_contract_class: &str) -> Result<FieldElement> {
+    let sierra_class: SierraClass = serde_json::from_str(raw_contract_class)?;
+    Ok(sierra_class.class_hash()?)
+}
+
+pub fn get_legacy_contract_class_hash(raw_contract_class: &str) -> Result<FieldElement> {
+    let legacy_contract_class: LegacyContractClass = serde_json::from_str(raw_contract_class)?;
+    Ok(legacy_contract_class.class_hash()?)
+}
+
+pub fn get_blockifier_contract_class(raw_contract_class: &str) -> Result<BlockifierContractClass> {
+    let casm_contract_class: ContractClass = serde_json::from_str(raw_contract_class)?;
+    let casm_contract = CasmContractClass::from_contract_class(casm_contract_class, true)?;
+    Ok(casm_contract_into_contract_class(casm_contract)?)
 }

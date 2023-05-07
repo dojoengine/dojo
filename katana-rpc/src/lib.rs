@@ -1,3 +1,6 @@
+use blockifier::transaction::{
+    account_transaction::AccountTransaction, transactions::DeclareTransaction,
+};
 use config::RpcConfig;
 use jsonrpsee::{
     core::{async_trait, Error},
@@ -18,9 +21,12 @@ use starknet::providers::jsonrpc::models::{
     MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, StateUpdate, Transaction,
 };
 use starknet_api::{
-    core::{ClassHash, ContractAddress, PatriciaKey},
+    core::{ClassHash, CompiledClassHash, ContractAddress, PatriciaKey},
     hash::StarkFelt,
-    transaction::{Calldata, ContractAddressSalt, Fee, TransactionVersion},
+    transaction::{
+        Calldata, ContractAddressSalt, DeclareTransactionV0V1, DeclareTransactionV2, Fee,
+        InvokeTransaction, TransactionVersion,
+    },
 };
 use starknet_api::{
     core::{EntryPointSelector, Nonce},
@@ -32,7 +38,8 @@ use starknet_api::{state::StorageKey, transaction::InvokeTransactionV1};
 use std::{net::SocketAddr, sync::Arc};
 use tokio::sync::RwLock;
 use util::{
-    compute_invoke_v1_transaction_hash, convert_inner_to_rpc_tx, stark_felt_to_field_element,
+    compute_invoke_v1_transaction_hash, convert_inner_to_rpc_tx, get_blockifier_contract_class,
+    get_legacy_contract_class_hash, get_sierra_class_hash, stark_felt_to_field_element,
 };
 
 pub mod api;
@@ -40,6 +47,8 @@ pub mod config;
 pub mod util;
 
 use api::{KatanaApiError, KatanaApiServer, KatanaRpcLogger};
+
+use crate::util::{compute_declare_v1_transaction_hash, compute_declare_v2_transaction_hash};
 
 pub struct KatanaRpc<S> {
     pub config: RpcConfig,
@@ -315,7 +324,110 @@ impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
         &self,
         transaction: BroadcastedDeclareTransaction,
     ) -> Result<DeclareTransactionResult, Error> {
-        unimplemented!("KatanaRpc::add_declare_transaction")
+        let chain_id = FieldElement::from_hex_be(&self.sequencer.read().await.chain_id().as_hex())
+            .map_err(|_| Error::from(KatanaApiError::InternalServerError))?;
+
+        let (transaction_hash, class_hash, transaction) = match transaction {
+            BroadcastedDeclareTransaction::V1(tx) => {
+                let raw_class_str = serde_json::to_string(&tx.contract_class)?;
+                let class_hash = get_legacy_contract_class_hash(&raw_class_str)
+                    .map_err(|_| Error::from(KatanaApiError::InvalidContractClass))?;
+
+                let transaction_hash = compute_declare_v1_transaction_hash(
+                    tx.sender_address,
+                    class_hash,
+                    tx.max_fee,
+                    chain_id,
+                    tx.nonce,
+                );
+
+                let transaction = DeclareTransactionV0V1 {
+                    transaction_hash: TransactionHash(field_element_to_starkfelt(
+                        &transaction_hash,
+                    )),
+                    class_hash: ClassHash(field_element_to_starkfelt(&class_hash)),
+                    sender_address: ContractAddress(patricia_key!(field_element_to_starkfelt(
+                        &tx.sender_address
+                    ))),
+                    nonce: Nonce(field_element_to_starkfelt(&tx.nonce)),
+
+                    max_fee: Fee(starkfelt_to_u128(field_element_to_starkfelt(&tx.max_fee))
+                        .map_err(|_| Error::from(KatanaApiError::InternalServerError))?),
+                    signature: TransactionSignature(
+                        tx.signature
+                            .iter()
+                            .map(field_element_to_starkfelt)
+                            .collect(),
+                    ),
+                };
+
+                (
+                    transaction_hash,
+                    class_hash,
+                    AccountTransaction::Declare(DeclareTransaction {
+                        tx: starknet_api::transaction::DeclareTransaction::V1(transaction),
+                        contract_class: Default::default(),
+                    }),
+                )
+            }
+            BroadcastedDeclareTransaction::V2(tx) => {
+                let raw_class_str = serde_json::to_string(&tx.contract_class)?;
+                let class_hash = get_sierra_class_hash(&raw_class_str)
+                    .map_err(|_| Error::from(KatanaApiError::InvalidContractClass))?;
+                let contract_class = get_blockifier_contract_class(&raw_class_str)
+                    .map_err(|_| Error::from(KatanaApiError::InternalServerError))?;
+
+                let transaction_hash = compute_declare_v2_transaction_hash(
+                    tx.sender_address,
+                    class_hash,
+                    tx.max_fee,
+                    chain_id,
+                    tx.nonce,
+                    tx.compiled_class_hash,
+                );
+
+                let transaction = DeclareTransactionV2 {
+                    transaction_hash: TransactionHash(field_element_to_starkfelt(
+                        &transaction_hash,
+                    )),
+                    class_hash: ClassHash(field_element_to_starkfelt(&class_hash)),
+                    sender_address: ContractAddress(patricia_key!(field_element_to_starkfelt(
+                        &tx.sender_address
+                    ))),
+                    nonce: Nonce(field_element_to_starkfelt(&tx.nonce)),
+                    max_fee: Fee(starkfelt_to_u128(field_element_to_starkfelt(&tx.max_fee))
+                        .map_err(|_| Error::from(KatanaApiError::InternalServerError))?),
+                    signature: TransactionSignature(
+                        tx.signature
+                            .iter()
+                            .map(field_element_to_starkfelt)
+                            .collect(),
+                    ),
+                    compiled_class_hash: CompiledClassHash(field_element_to_starkfelt(
+                        &tx.compiled_class_hash,
+                    )),
+                };
+
+                (
+                    transaction_hash,
+                    class_hash,
+                    AccountTransaction::Declare(DeclareTransaction {
+                        tx: starknet_api::transaction::DeclareTransaction::V2(transaction),
+                        contract_class,
+                    }),
+                )
+            }
+        };
+
+        self.sequencer
+            .write()
+            .await
+            .add_account_transaction(transaction);
+
+        Ok(DeclareTransactionResult {
+            transaction_hash,
+            class_hash,
+        })
     }
 
     async fn add_invoke_transaction(
@@ -367,7 +479,9 @@ impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
                 self.sequencer
                     .write()
                     .await
-                    .add_invoke_transaction(transaction);
+                    .add_account_transaction(AccountTransaction::Invoke(InvokeTransaction::V1(
+                        transaction,
+                    )));
 
                 Ok(InvokeTransactionResult { transaction_hash })
             }
