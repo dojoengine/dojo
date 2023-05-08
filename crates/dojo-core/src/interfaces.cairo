@@ -18,7 +18,7 @@ trait IWorld {
     );
     fn entities(component: ShortString, partition: u250) -> Array::<u250>;
     fn set_executor(contract_address: starknet::ContractAddress);
-    fn delete_entity(component: ShortString, query: Query) {};
+    fn delete_entity(component: ShortString, query: Query);
 }
 
 #[abi]
