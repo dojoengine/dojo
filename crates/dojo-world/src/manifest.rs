@@ -22,7 +22,7 @@ pub enum ManifestError {
 }
 
 /// Component member.
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct Member {
     pub name: String,
     #[serde(rename = "type")]
@@ -31,7 +31,7 @@ pub struct Member {
 
 /// Represents a declaration of a component.
 #[serde_as]
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct Component {
     pub name: String,
     pub members: Vec<Member>,
@@ -40,7 +40,7 @@ pub struct Component {
 }
 
 /// System input ABI.
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct Input {
     pub name: String,
     #[serde(rename = "type")]
@@ -48,7 +48,7 @@ pub struct Input {
 }
 
 /// System Output ABI.
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct Output {
     #[serde(rename = "type")]
     pub ty: String,
@@ -56,7 +56,7 @@ pub struct Output {
 
 /// Represents a declaration of a system.
 #[serde_as]
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct System {
     pub name: SmolStr,
     pub inputs: Vec<Input>,
@@ -67,7 +67,7 @@ pub struct System {
 }
 
 #[serde_as]
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct Contract {
     pub name: SmolStr,
     #[serde_as(as = "UfeHex")]
@@ -75,7 +75,7 @@ pub struct Contract {
 }
 
 #[serde_as]
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct Manifest {
     #[serde_as(as = "UfeHexOption")]
     pub world: Option<FieldElement>,
@@ -98,7 +98,7 @@ impl Manifest {
     pub async fn from_remote<P: JsonRpcTransport + Sync + Send>(
         world_address: FieldElement,
         provider: JsonRpcClient<P>,
-        local_manifest: &Self,
+        match_manifest: Option<Manifest>,
     ) -> Result<Self> {
         let mut manifest = Manifest::default();
 
@@ -126,48 +126,50 @@ impl Manifest {
         manifest.world = world_class_hash;
         manifest.executor = executor_class_hash;
 
-        for component in &local_manifest.components {
-            let CallContractResult { result } = provider
-                .call_contract(
-                    CallFunction {
-                        contract_address: world_address,
-                        calldata: vec![cairo_short_string_to_felt(&component.name)?],
-                        entry_point_selector: get_selector_from_name("component")?,
-                    },
-                    starknet::core::types::BlockId::Pending,
-                )
-                .await
-                .map_err(|_| ManifestError::ProviderError)?;
+        if let Some(match_manifest) = match_manifest {
+            for component in match_manifest.components {
+                let CallContractResult { result } = provider
+                    .call_contract(
+                        CallFunction {
+                            contract_address: world_address,
+                            calldata: vec![cairo_short_string_to_felt(&component.name)?],
+                            entry_point_selector: get_selector_from_name("component")?,
+                        },
+                        starknet::core::types::BlockId::Pending,
+                    )
+                    .await
+                    .map_err(|_| ManifestError::ProviderError)?;
 
-            manifest.components.push(Component {
-                name: component.name.clone(),
-                class_hash: result[0],
-                ..Default::default()
-            });
-        }
+                manifest.components.push(Component {
+                    name: component.name.clone(),
+                    class_hash: result[0],
+                    ..Default::default()
+                });
+            }
 
-        for system in &local_manifest.systems {
-            let CallContractResult { result } = provider
-                .call_contract(
-                    CallFunction {
-                        contract_address: world_address,
-                        calldata: vec![cairo_short_string_to_felt(
-                            // because the name returns by the `name` method of
-                            // a system contract is without the 'System' suffix
-                            system.name.strip_suffix("System").unwrap_or(&system.name),
-                        )?],
-                        entry_point_selector: get_selector_from_name("system")?,
-                    },
-                    starknet::core::types::BlockId::Pending,
-                )
-                .await
-                .map_err(|_| ManifestError::ProviderError)?;
+            for system in match_manifest.systems {
+                let CallContractResult { result } = provider
+                    .call_contract(
+                        CallFunction {
+                            contract_address: world_address,
+                            calldata: vec![cairo_short_string_to_felt(
+                                // because the name returns by the `name` method of
+                                // a system contract is without the 'System' suffix
+                                system.name.strip_suffix("System").unwrap_or(&system.name),
+                            )?],
+                            entry_point_selector: get_selector_from_name("system")?,
+                        },
+                        starknet::core::types::BlockId::Pending,
+                    )
+                    .await
+                    .map_err(|_| ManifestError::ProviderError)?;
 
-            manifest.systems.push(System {
-                name: system.name.clone(),
-                class_hash: result[0],
-                ..Default::default()
-            });
+                manifest.systems.push(System {
+                    name: system.name.clone(),
+                    class_hash: result[0],
+                    ..Default::default()
+                });
+            }
         }
 
         Ok(manifest)
