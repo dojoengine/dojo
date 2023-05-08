@@ -27,3 +27,4 @@ tracing.workspace = true
 [dev-dependencies]
 indoc.workspace = true
 test-log.workspace = true
+tokio = { version = "1.28.0", features = ["full"] }

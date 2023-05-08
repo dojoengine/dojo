@@ -3492,6 +3492,7 @@ dependencies = [
  "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=5d3f9d7cc6df0d01a299f0fb0ebc00ec2f28b983)",
  "test-log",
  "thiserror",
+ "tokio 1.28.0",
  "toml 0.7.3",
  "tracing",
  "url",
