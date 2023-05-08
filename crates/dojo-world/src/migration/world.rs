@@ -78,7 +78,7 @@ impl World {
         let remote_manifest = if let Some(world_address) = world_config.address {
             let provider = env_config.provider()?;
 
-            Manifest::from_remote(world_address, provider, &local_manifest)
+            Manifest::from_remote(world_address, provider, Some(local_manifest.clone()))
                 .await
                 .map_err(|e| anyhow!("Problem creating remote manifest: {e}"))?
         } else {
