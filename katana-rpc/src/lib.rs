@@ -12,6 +12,7 @@ use katana_core::{
     starknet::transaction::ExternalFunctionCall,
     util::{field_element_to_starkfelt, starkfelt_to_u128},
 };
+use starknet::core::types::contract::FlattenedSierraClass;
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::models::{
     BlockHashAndNumber, BlockId, BroadcastedDeclareTransaction,
@@ -38,7 +39,7 @@ use starknet_api::{state::StorageKey, transaction::InvokeTransactionV1};
 use std::{net::SocketAddr, sync::Arc};
 use tokio::sync::RwLock;
 use util::{
-    compute_invoke_v1_transaction_hash, convert_inner_to_rpc_tx, get_blockifier_contract_class,
+    compute_invoke_v1_transaction_hash, convert_inner_to_rpc_tx, get_casm_contract_class,
     get_legacy_contract_class_hash, get_sierra_class_hash, stark_felt_to_field_element,
 };
 
@@ -372,9 +373,12 @@ impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
             }
             BroadcastedDeclareTransaction::V2(tx) => {
                 let raw_class_str = serde_json::to_string(&tx.contract_class)?;
-                let class_hash = get_sierra_class_hash(&raw_class_str)
-                    .map_err(|_| Error::from(KatanaApiError::InvalidContractClass))?;
-                let contract_class = get_blockifier_contract_class(&raw_class_str)
+                // let class_hash = get_sierra_class_hash(&raw_class_str)
+                //     .map_err(|_| Error::from(KatanaApiError::InvalidContractClass))?;
+                let class_hash = serde_json::from_str::<FlattenedSierraClass>(&raw_class_str)
+                    .map_err(|_| Error::from(KatanaApiError::InvalidContractClass))?
+                    .class_hash();
+                let contract_class = get_casm_contract_class(&raw_class_str)
                     .map_err(|_| Error::from(KatanaApiError::InternalServerError))?;
 
                 let transaction_hash = compute_declare_v2_transaction_hash(

@@ -1,12 +1,12 @@
 use std::str::FromStr;
 
-use anyhow::{Ok, Result};
+use anyhow::{Context, Ok, Result};
 use blockifier::execution::contract_class::{
     casm_contract_into_contract_class, ContractClass as BlockifierContractClass,
 };
 use cairo_lang_starknet::{casm_contract_class::CasmContractClass, contract_class::ContractClass};
 use starknet::core::types::contract::legacy::LegacyContractClass;
-use starknet::core::types::contract::{CompiledClass, SierraClass};
+use starknet::core::types::contract::{CompiledClass, FlattenedSierraClass, SierraClass};
 use starknet::{
     core::{crypto::compute_hash_on_elements, types::FieldElement},
     providers::jsonrpc::models::{
@@ -112,14 +112,13 @@ pub fn compute_invoke_v1_transaction_hash(
     ])
 }
 
-pub fn convert_stark_felt_to_field_element_array(
+pub fn convert_stark_felt_array_to_field_element_array(
     calldata: &[StarkFelt],
 ) -> Result<Vec<FieldElement>> {
-    let mut data = vec![];
-    for felt in calldata {
-        data.push(stark_felt_to_field_element(*felt)?);
-    }
-    Ok(data)
+    calldata.iter().try_fold(Vec::new(), |mut data, &felt| {
+        data.push(stark_felt_to_field_element(felt)?);
+        Ok(data)
+    })
 }
 
 pub fn convert_inner_to_rpc_tx(transaction: InnerTransaction) -> Result<Transaction> {
@@ -152,7 +151,7 @@ fn convert_l1_handle_to_rpc(
             .try_into()
             .unwrap(),
         entry_point_selector: stark_felt_to_field_element(transaction.entry_point_selector.0)?,
-        calldata: convert_stark_felt_to_field_element_array(&transaction.calldata.0)?,
+        calldata: convert_stark_felt_array_to_field_element_array(&transaction.calldata.0)?,
     })
 }
 
@@ -165,10 +164,10 @@ fn convert_deploy_account_to_rpc_tx(
         class_hash: stark_felt_to_field_element(transaction.class_hash.0)?,
         contract_address_salt: stark_felt_to_field_element(transaction.contract_address_salt.0)?,
         nonce: stark_felt_to_field_element(transaction.nonce.0)?,
-        constructor_calldata: convert_stark_felt_to_field_element_array(
+        constructor_calldata: convert_stark_felt_array_to_field_element_array(
             &transaction.constructor_calldata.0,
         )?,
-        signature: convert_stark_felt_to_field_element_array(&transaction.signature.0)?,
+        signature: convert_stark_felt_array_to_field_element_array(&transaction.signature.0)?,
         max_fee: FieldElement::from_str(&transaction.max_fee.0.to_string())?,
     })
 }
@@ -179,8 +178,8 @@ fn convert_invoke_to_rpc_tx(transaction: InnerInvokeTransaction) -> Result<Invok
             transaction_hash: stark_felt_to_field_element(tx.transaction_hash.0)?,
             sender_address: stark_felt_to_field_element(*tx.sender_address.0.key())?,
             nonce: stark_felt_to_field_element(tx.nonce.0)?,
-            calldata: convert_stark_felt_to_field_element_array(&tx.calldata.0)?,
-            signature: convert_stark_felt_to_field_element_array(&tx.signature.0)?,
+            calldata: convert_stark_felt_array_to_field_element_array(&tx.calldata.0)?,
+            signature: convert_stark_felt_array_to_field_element_array(&tx.signature.0)?,
             max_fee: FieldElement::from_str(&tx.max_fee.0.to_string())?,
         }),
         _ => unimplemented!("invoke v0 not supported"),
@@ -196,7 +195,7 @@ fn convert_declare_to_rpc_tx(transaction: InnerDeclareTransaction) -> Result<Dec
                 class_hash: stark_felt_to_field_element(tx.class_hash.0)?,
                 transaction_hash: stark_felt_to_field_element(tx.transaction_hash.0)?,
                 sender_address: stark_felt_to_field_element(*tx.sender_address.0.key())?,
-                signature: convert_stark_felt_to_field_element_array(&tx.signature.0)?,
+                signature: convert_stark_felt_array_to_field_element_array(&tx.signature.0)?,
             })
         }
         InnerDeclareTransaction::V2(tx) => DeclareTransaction::V2(DeclareTransactionV2 {
@@ -205,17 +204,20 @@ fn convert_declare_to_rpc_tx(transaction: InnerDeclareTransaction) -> Result<Dec
             class_hash: stark_felt_to_field_element(tx.class_hash.0)?,
             transaction_hash: stark_felt_to_field_element(tx.transaction_hash.0)?,
             sender_address: stark_felt_to_field_element(*tx.sender_address.0.key())?,
-            signature: convert_stark_felt_to_field_element_array(&tx.signature.0)?,
+            signature: convert_stark_felt_array_to_field_element_array(&tx.signature.0)?,
             compiled_class_hash: stark_felt_to_field_element(tx.compiled_class_hash.0)?,
         }),
     })
 }
 
 pub fn get_casm_class_hash(raw_contract_class: &str) -> Result<FieldElement> {
-    let casm_contract_class: ContractClass = serde_json::from_str(raw_contract_class)?;
-    let casm_contract = CasmContractClass::from_contract_class(casm_contract_class, true)?;
+    let casm_contract_class: ContractClass = serde_json::from_str(raw_contract_class)
+        .with_context(|| "unable to deserialize contract")?;
+    let casm_contract = CasmContractClass::from_contract_class(casm_contract_class, true)
+        .with_context(|| "unable to convert as CasmContractClass")?;
     let res = serde_json::to_string(&casm_contract)?;
-    let compiled_class: CompiledClass = serde_json::from_str(&res)?;
+    let compiled_class: CompiledClass =
+        serde_json::from_str(&res).with_context(|| "unable to parse as CompiledClass")?;
     Ok(compiled_class.class_hash()?)
 }
 
@@ -229,8 +231,13 @@ pub fn get_legacy_contract_class_hash(raw_contract_class: &str) -> Result<FieldE
     Ok(legacy_contract_class.class_hash()?)
 }
 
-pub fn get_blockifier_contract_class(raw_contract_class: &str) -> Result<BlockifierContractClass> {
+pub fn get_casm_contract_class(raw_contract_class: &str) -> Result<BlockifierContractClass> {
     let casm_contract_class: ContractClass = serde_json::from_str(raw_contract_class)?;
     let casm_contract = CasmContractClass::from_contract_class(casm_contract_class, true)?;
     Ok(casm_contract_into_contract_class(casm_contract)?)
+}
+
+pub fn get_flattened_sierra_class(raw_contract_class: &str) -> Result<FlattenedSierraClass> {
+    let contract_artifact: SierraClass = serde_json::from_str(raw_contract_class)?;
+    Ok(contract_artifact.flatten()?)
 }
