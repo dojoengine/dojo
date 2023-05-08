@@ -23,8 +23,7 @@ trait IWorld {
     );
     fn entities(component: ShortString, partition: u250) -> Array::<u250>;
     fn set_executor(contract_address: ContractAddress);
-    fn check_auth(system: ClassHash, component: ClassHash) -> bool;
-    fn assert_auth(system: ClassHash, component: ClassHash) -> Span<felt252>;
+    fn is_authorized(system: ClassHash, component: ClassHash) -> bool;
 }
 
 #[abi]
