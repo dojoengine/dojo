@@ -30,10 +30,7 @@ mod World {
     use dojo_core::interfaces::ISystemDispatcherTrait;
 
     #[event]
-    fn WorldSpawned(address: ContractAddress, name: ShortString) {}
-
-    #[event]
-    fn WorldInitialized(address: ContractAddress, caller: ContractAddress) {}
+    fn WorldSpawned(address: ContractAddress, caller: ContractAddress, name: ShortString) {}
 
     #[event]
     fn ComponentRegistered(name: ShortString, class_hash: ClassHash) {}
@@ -54,7 +51,7 @@ mod World {
     fn constructor(name: ShortString, executor_: ContractAddress) {
         executor::write(executor_);
 
-        WorldSpawned(get_contract_address(), name);
+        WorldSpawned(get_contract_address(), get_tx_info().unbox().account_contract_address, name);
     }
 
     // Initialize the world with the routes that specify
@@ -94,9 +91,6 @@ mod World {
 
         // Set the initialized flag.
         initialized::write(true);
-
-        // Emit the event.
-        WorldInitialized(get_contract_address(), get_caller_address());
     }
 
     // Check if the world has been initialized.
