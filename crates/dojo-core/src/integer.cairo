@@ -12,6 +12,26 @@ use starknet::storage_access::StorageBaseAddress;
 // max value of u256's high part when u250::max is converted into u256
 const HIGH_BOUND: u128 = 0x3ffffffffffffffffffffffffffffff_u128;
 
+// temporary, until we (Scarb) catches up with Cairo
+// src: https://github.com/starkware-libs/cairo/pull/3055/
+impl U256TryIntoFelt252 of TryInto<u256, felt252> {
+    fn try_into(self: u256) -> Option<felt252> {
+        let FELT252_PRIME_HIGH = 0x8000000000000110000000000000000_u128;
+        if self.high > FELT252_PRIME_HIGH {
+            return Option::None(());
+        }
+        if self.high == FELT252_PRIME_HIGH {
+            // since FELT252_PRIME_LOW is 1.
+            if self.low != 0 {
+                return Option::None(());
+            }
+        }
+        Option::Some(
+            self.high.into() * 0x100000000000000000000000000000000_felt252 + self.low.into()
+        )
+    }
+}
+
 #[derive(Copy, Drop, Serde)]
 struct u250 {
     inner: felt252
