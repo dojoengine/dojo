@@ -101,15 +101,22 @@ mod World {
 
     // Check if system is authorized to write to the component
     #[view]
-    fn check_auth(system: ClassHash, component: ClassHash) -> bool {
-        let class_hash = system_registry::read('Authorize'.into());
-        let mut calldata = ArrayTrait::<felt252>::new();
-        calldata.append(system.into()); // caller_id
-        calldata.append(component.into()); // resource_id
-        let res = IExecutorDispatcher {
-            contract_address: executor::read()
-        }.execute(class_hash, calldata.span());
-        (*res[0]).is_non_zero()
+    fn is_authorized(system: ClassHash, component: ClassHash) -> bool {
+        let authorize_class_hash = system_registry::read('Authorize'.into());
+
+        // Check only when world is initialized
+        // This is so initial roles and status can be set before the world is initialized.
+        if initialized::read() {
+            let mut calldata = ArrayTrait::<felt252>::new();
+            calldata.append(system.into()); // caller_id
+            calldata.append(component.into()); // resource_id
+            let res = IExecutorDispatcher {
+                contract_address: executor::read()
+            }.execute(authorize_class_hash, calldata.span());
+            (*res[0]).is_non_zero()
+        } else {
+            true
+        }
     }
 
     // Register a component in the world. If the component is already registered,
@@ -170,7 +177,7 @@ mod World {
         let component_class_hash = component_registry::read(component);
 
         // Validate the calling system has permission to write to the component
-        assert_auth(system_class_hash, component_class_hash);
+        assert(is_authorized(system_class_hash, component_class_hash), 'system not authorized');
         Database::set(component_class_hash, table, query, offset, value)
     }
 
@@ -181,7 +188,7 @@ mod World {
         let component_class_hash = component_registry::read(component);
 
         // Validate the calling system has permission to write to the component
-        assert_auth(system_class_hash, component_class_hash);
+        assert(is_authorized(system_class_hash, component_class_hash), 'system not authorized');
         let res = Database::del(system_class_hash, component.into(), query);
     }
 
@@ -205,24 +212,5 @@ mod World {
     #[external]
     fn set_executor(contract_address: ContractAddress) {
         executor::write(contract_address);
-    }
-
-    // Internals
-
-    // Assert that calling system has authorization to write to the component
-    fn assert_auth(system: ClassHash, component: ClassHash) {
-        // Get AuthorizeSystem ClassHash
-        let authorize_class_hash = system_registry::read('Authorize'.into());
-
-        // Assert only when world is initialized
-        // This is so initial roles can be set before the world is initialized.
-        if initialized::read() {
-            let mut calldata = ArrayTrait::new();
-            calldata.append(system.into()); // caller_id
-            calldata.append(component.into()); // resource_id
-            IExecutorDispatcher {
-                contract_address: executor::read()
-            }.execute(authorize_class_hash, calldata.span());
-        }
     }
 }
