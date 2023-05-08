@@ -9,14 +9,27 @@ use starknet::core::serde::unsigned_field_element::{UfeHex, UfeHexOption};
 use starknet::core::types::{CallContractResult, CallFunction, FieldElement};
 use starknet::core::utils::{
     cairo_short_string_to_felt, get_selector_from_name, get_storage_var_address,
+    CairoShortStringToFeltError,
 };
-use starknet::providers::jsonrpc::models::{BlockId, BlockTag};
-use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
+use starknet::providers::jsonrpc::models::{BlockId, BlockTag, ErrorCode};
+use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcClientError, JsonRpcTransport, RpcError};
 use starknet::providers::Provider;
 use thiserror::Error;
 
+#[cfg(test)]
+#[path = "manifest_test.rs"]
+mod test;
+
 #[derive(Error, Debug)]
-pub enum ManifestError {
+pub enum ManifestError<T> {
+    #[error(transparent)]
+    ClientError(JsonRpcClientError<T>),
+    #[error("World not deployed.")]
+    NotDeployed,
+    #[error("Entry point name contains non-ASCII characters.")]
+    InvalidEntryPointError,
+    #[error(transparent)]
+    InvalidNameError(CairoShortStringToFeltError),
     #[error("Provider error.")]
     ProviderError,
 }
@@ -99,31 +112,35 @@ impl Manifest {
         world_address: FieldElement,
         provider: JsonRpcClient<P>,
         match_manifest: Option<Manifest>,
-    ) -> Result<Self> {
+    ) -> Result<Self, ManifestError<P::Error>> {
         let mut manifest = Manifest::default();
 
-        let world_class_hash =
-            provider.get_class_hash_at(&BlockId::Tag(BlockTag::Pending), world_address).await.ok();
-
-        if world_class_hash.is_none() {
-            return Ok(manifest);
-        }
+        let world_class_hash = provider
+            .get_class_hash_at(&BlockId::Tag(BlockTag::Pending), world_address)
+            .await
+            .map_err(|err| match err {
+                JsonRpcClientError::RpcError(RpcError::Code(ErrorCode::ContractNotFound)) => {
+                    ManifestError::NotDeployed
+                }
+                _ => ManifestError::ClientError(err),
+            })?;
 
         let executor_address = provider
             .get_storage_at(
                 world_address,
-                get_storage_var_address("executor", &[])?,
+                get_storage_var_address("executor", &[])
+                    .map_err(|_| ManifestError::InvalidEntryPointError)?,
                 &BlockId::Tag(BlockTag::Pending),
             )
             .await
-            .map_err(|_| ManifestError::ProviderError)?;
+            .map_err(ManifestError::ClientError)?;
 
         let executor_class_hash = provider
             .get_class_hash_at(&BlockId::Tag(BlockTag::Pending), executor_address)
             .await
             .ok();
 
-        manifest.world = world_class_hash;
+        manifest.world = Some(world_class_hash);
         manifest.executor = executor_class_hash;
 
         if let Some(match_manifest) = match_manifest {
@@ -132,8 +149,12 @@ impl Manifest {
                     .call_contract(
                         CallFunction {
                             contract_address: world_address,
-                            calldata: vec![cairo_short_string_to_felt(&component.name)?],
-                            entry_point_selector: get_selector_from_name("component")?,
+                            calldata: vec![
+                                cairo_short_string_to_felt(&component.name)
+                                    .map_err(ManifestError::InvalidNameError)?,
+                            ],
+                            entry_point_selector: get_selector_from_name("component")
+                                .map_err(|_| ManifestError::InvalidEntryPointError)?,
                         },
                         starknet::core::types::BlockId::Pending,
                     )
@@ -152,12 +173,16 @@ impl Manifest {
                     .call_contract(
                         CallFunction {
                             contract_address: world_address,
-                            calldata: vec![cairo_short_string_to_felt(
-                                // because the name returns by the `name` method of
-                                // a system contract is without the 'System' suffix
-                                system.name.strip_suffix("System").unwrap_or(&system.name),
-                            )?],
-                            entry_point_selector: get_selector_from_name("system")?,
+                            calldata: vec![
+                                cairo_short_string_to_felt(
+                                    // because the name returns by the `name` method of
+                                    // a system contract is without the 'System' suffix
+                                    system.name.strip_suffix("System").unwrap_or(&system.name),
+                                )
+                                .map_err(ManifestError::InvalidNameError)?,
+                            ],
+                            entry_point_selector: get_selector_from_name("system")
+                                .map_err(|_| ManifestError::InvalidEntryPointError)?,
                         },
                         starknet::core::types::BlockId::Pending,
                     )
