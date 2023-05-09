@@ -20,6 +20,12 @@ use starknet_api::{
     StarknetApiError,
 };
 
+use anyhow::Ok;
+use blockifier::execution::contract_class::{
+    casm_contract_into_contract_class, ContractClass as BlockifierContractClass,
+};
+use cairo_lang_starknet::casm_contract_class::CasmContractClass;
+
 pub fn get_contract_class(contract_path: &str) -> ContractClass {
     let path: PathBuf = [env!("CARGO_MANIFEST_DIR"), contract_path].iter().collect();
     let raw_contract_class = fs::read_to_string(path).unwrap();
@@ -136,4 +142,23 @@ pub fn starkfelt_to_u128(felt: StarkFelt) -> Result<u128> {
                 .expect("u128_bytes should be of size usize."),
         ))
     }
+}
+
+pub fn get_blockifier_contract_class_from_flattened_sierra_class(
+    raw_contract_class: &str,
+) -> Result<BlockifierContractClass> {
+    let value = serde_json::from_str::<serde_json::Value>(raw_contract_class)?;
+    let contract_class = cairo_lang_starknet::contract_class::ContractClass {
+        abi: serde_json::from_value(value["abi"].clone()).ok(),
+        sierra_program: serde_json::from_value(value["sierra_program"].clone())?,
+        entry_points_by_type: serde_json::from_value(value["entry_points_by_type"].clone())?,
+        contract_class_version: serde_json::from_value(value["contract_class_version"].clone())?,
+        sierra_program_debug_info: serde_json::from_value(
+            value["sierra_program_debug_info"].clone(),
+        )
+        .ok(),
+    };
+
+    let casm_contract = CasmContractClass::from_contract_class(contract_class, true)?;
+    Ok(casm_contract_into_contract_class(casm_contract)?)
 }

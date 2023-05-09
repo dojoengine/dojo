@@ -1,28 +1,38 @@
+use std::path::PathBuf;
 use std::{fs, str::FromStr};
 
-use katana_rpc::util::{get_casm_class_hash, get_flattened_sierra_class};
+use anyhow::{Ok, Result};
+use starknet::core::types::contract::{FlattenedSierraClass, SierraClass};
 use starknet::{
-    core::types::{contract::legacy::LegacyContractClass, FieldElement},
+    core::types::FieldElement,
     providers::jsonrpc::{
         models::{
-            BroadcastedDeclareTransaction, BroadcastedDeclareTransactionV1,
-            BroadcastedDeclareTransactionV2, LegacyContractClass as BroadcastedLegacyContractClass,
-            SierraContractClass,
+            BroadcastedDeclareTransaction, BroadcastedDeclareTransactionV2, SierraContractClass,
         },
         HttpTransport, JsonRpcClient,
     },
 };
 use url::Url;
 
+fn get_flattened_sierra_class(raw_contract_class: &str) -> Result<FlattenedSierraClass> {
+    let contract_artifact: SierraClass = serde_json::from_str(raw_contract_class)?;
+    Ok(contract_artifact.flatten()?)
+}
+
 #[tokio::test]
-async fn test_send_declare_v1_tx() {
+async fn test_send_declare_v2_tx() {
     let provider = JsonRpcClient::new(HttpTransport::new(
         Url::parse("http://localhost:5050").unwrap(),
     ));
 
-    let raw_contract_str = fs::read_to_string("/home/kari/project/work/dojoengine/katana/crates/katana-core/contracts/compiled/executor.json").unwrap();
-    // let compiled_class_hash = get_casm_class_hash(&raw_contract_str).unwrap();
-    // println!("{:#x}");
+    let path: PathBuf = [
+        env!("CARGO_MANIFEST_DIR"),
+        "tests/test_data/cairo1_contract.json",
+    ]
+    .iter()
+    .collect();
+
+    let raw_contract_str = fs::read_to_string(path).unwrap();
     let contract =
         serde_json::to_string(&get_flattened_sierra_class(&raw_contract_str).unwrap()).unwrap();
     let contract_class: SierraContractClass = serde_json::from_str(&contract).unwrap();
@@ -47,5 +57,5 @@ async fn test_send_declare_v1_tx() {
         .await;
 
     println!("{res:?}");
-    // assert!(res.is_ok())
+    assert!(res.is_ok())
 }

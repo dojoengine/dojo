@@ -26,9 +26,14 @@ pub mod block;
 pub mod transaction;
 
 use crate::{
-    accounts::PredeployedAccounts, block_context::Base,
-    constants::DEFAULT_PREFUNDED_ACCOUNT_BALANCE, state::DictStateReader,
-    util::convert_blockifier_tx_to_starknet_api_tx,
+    accounts::PredeployedAccounts,
+    block_context::Base,
+    constants::DEFAULT_PREFUNDED_ACCOUNT_BALANCE,
+    state::DictStateReader,
+    util::{
+        convert_blockifier_tx_to_starknet_api_tx,
+        get_blockifier_contract_class_from_flattened_sierra_class,
+    },
 };
 use block::{StarknetBlock, StarknetBlocks};
 use transaction::{StarknetTransaction, StarknetTransactions};
@@ -269,9 +274,13 @@ impl StarknetWrapper {
         // update declared contracts
 
         state_diff.declared_classes.into_iter().for_each(
-            |(class_hash, (compiled_class_hash, _contract_class))| {
-                // TODO: convert `ContractClass` to `ContractClass`
-                // state.class_hash_to_class.insert(class_hash, _contract_class);
+            |(class_hash, (compiled_class_hash, contract_class))| {
+                let raw_contract_class = serde_json::to_string(&contract_class).unwrap();
+                let contract_class =
+                    get_blockifier_contract_class_from_flattened_sierra_class(&raw_contract_class)
+                        .expect("get_blockifier_contract_class_from_flattened_sierra_class");
+
+                state.class_hash_to_class.insert(class_hash, contract_class);
 
                 state
                     .class_hash_to_compiled_class_hash

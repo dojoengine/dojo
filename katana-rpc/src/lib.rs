@@ -10,7 +10,10 @@ use jsonrpsee::{
 use katana_core::{
     sequencer::Sequencer,
     starknet::transaction::ExternalFunctionCall,
-    util::{field_element_to_starkfelt, starkfelt_to_u128},
+    util::{
+        field_element_to_starkfelt, get_blockifier_contract_class_from_flattened_sierra_class,
+        starkfelt_to_u128,
+    },
 };
 use starknet::core::types::contract::FlattenedSierraClass;
 use starknet::core::types::FieldElement;
@@ -25,8 +28,8 @@ use starknet_api::{
     core::{ClassHash, CompiledClassHash, ContractAddress, PatriciaKey},
     hash::StarkFelt,
     transaction::{
-        Calldata, ContractAddressSalt, DeclareTransactionV0V1, DeclareTransactionV2, Fee,
-        InvokeTransaction, TransactionVersion,
+        Calldata, ContractAddressSalt, DeclareTransactionV2, Fee, InvokeTransaction,
+        TransactionVersion,
     },
 };
 use starknet_api::{
@@ -38,12 +41,9 @@ use starknet_api::{hash::StarkHash, transaction::TransactionSignature};
 use starknet_api::{state::StorageKey, transaction::InvokeTransactionV1};
 use std::{net::SocketAddr, sync::Arc};
 use tokio::sync::RwLock;
-use utils::{
-    contract::{get_casm_contract_class, get_legacy_contract_class_hash},
-    transaction::{
-        compute_declare_v1_transaction_hash, compute_declare_v2_transaction_hash,
-        compute_invoke_v1_transaction_hash, convert_inner_to_rpc_tx, stark_felt_to_field_element,
-    },
+use utils::transaction::{
+    compute_declare_v2_transaction_hash, compute_invoke_v1_transaction_hash,
+    convert_inner_to_rpc_tx, stark_felt_to_field_element,
 };
 
 pub mod api;
@@ -330,57 +330,17 @@ impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
             .map_err(|_| Error::from(KatanaApiError::InternalServerError))?;
 
         let (transaction_hash, class_hash, transaction) = match transaction {
-            BroadcastedDeclareTransaction::V1(tx) => {
-                let raw_class_str = serde_json::to_string(&tx.contract_class)?;
-                let class_hash = get_legacy_contract_class_hash(&raw_class_str)
-                    .map_err(|_| Error::from(KatanaApiError::InvalidContractClass))?;
-
-                let transaction_hash = compute_declare_v1_transaction_hash(
-                    tx.sender_address,
-                    class_hash,
-                    tx.max_fee,
-                    chain_id,
-                    tx.nonce,
-                );
-
-                let transaction = DeclareTransactionV0V1 {
-                    transaction_hash: TransactionHash(field_element_to_starkfelt(
-                        &transaction_hash,
-                    )),
-                    class_hash: ClassHash(field_element_to_starkfelt(&class_hash)),
-                    sender_address: ContractAddress(patricia_key!(field_element_to_starkfelt(
-                        &tx.sender_address
-                    ))),
-                    nonce: Nonce(field_element_to_starkfelt(&tx.nonce)),
-
-                    max_fee: Fee(starkfelt_to_u128(field_element_to_starkfelt(&tx.max_fee))
-                        .map_err(|_| Error::from(KatanaApiError::InternalServerError))?),
-                    signature: TransactionSignature(
-                        tx.signature
-                            .iter()
-                            .map(field_element_to_starkfelt)
-                            .collect(),
-                    ),
-                };
-
-                (
-                    transaction_hash,
-                    class_hash,
-                    AccountTransaction::Declare(DeclareTransaction {
-                        tx: starknet_api::transaction::DeclareTransaction::V1(transaction),
-                        contract_class: Default::default(),
-                    }),
-                )
+            BroadcastedDeclareTransaction::V1(_) => {
+                unimplemented!("KatanaRpc::add_declare_transaction v1")
             }
             BroadcastedDeclareTransaction::V2(tx) => {
                 let raw_class_str = serde_json::to_string(&tx.contract_class)?;
-                // let class_hash = get_sierra_class_hash(&raw_class_str)
-                //     .map_err(|_| Error::from(KatanaApiError::InvalidContractClass))?;
                 let class_hash = serde_json::from_str::<FlattenedSierraClass>(&raw_class_str)
                     .map_err(|_| Error::from(KatanaApiError::InvalidContractClass))?
                     .class_hash();
-                let contract_class = get_casm_contract_class(&raw_class_str)
-                    .map_err(|_| Error::from(KatanaApiError::InternalServerError))?;
+                let contract_class =
+                    get_blockifier_contract_class_from_flattened_sierra_class(&raw_class_str)
+                        .map_err(|_| Error::from(KatanaApiError::InternalServerError))?;
 
                 let transaction_hash = compute_declare_v2_transaction_hash(
                     tx.sender_address,
