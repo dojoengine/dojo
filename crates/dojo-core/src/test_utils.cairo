@@ -84,6 +84,12 @@ fn spawn_test_world(components: Array<felt252>, systems: Array<felt252>) -> IWor
     grant_role_calldata.append('Admin'); // role_id
     world.execute('GrantRole'.into(), grant_role_calldata.span());
 
+    let mut calldata: Array<felt252> = ArrayTrait::new();
+
+    calldata.append(123); // target_id
+    calldata.append('Admin'); // role_id
+    world.execute('GrantRole'.into(), calldata.span());
+
     world
 }
 
