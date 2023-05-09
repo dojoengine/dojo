@@ -8,6 +8,7 @@ use jsonrpsee::{
     types::error::CallError,
 };
 use katana_core::{
+    constants::SEQUENCER_ADDRESS,
     sequencer::Sequencer,
     starknet::transaction::ExternalFunctionCall,
     util::{
@@ -15,15 +16,15 @@ use katana_core::{
         starkfelt_to_u128,
     },
 };
-use starknet::core::types::contract::FlattenedSierraClass;
-use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::models::{
-    BlockHashAndNumber, BlockId, BroadcastedDeclareTransaction,
+    BlockHashAndNumber, BlockId, BlockStatus, BlockWithTxHashes, BroadcastedDeclareTransaction,
     BroadcastedDeployAccountTransaction, BroadcastedInvokeTransaction, BroadcastedTransaction,
     ContractClass, DeclareTransactionResult, DeployAccountTransactionResult, EventFilter,
     EventsPage, FeeEstimate, FunctionCall, InvokeTransactionResult, MaybePendingBlockWithTxHashes,
     MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, StateUpdate, Transaction,
 };
+use starknet::{core::types::contract::FlattenedSierraClass, providers::jsonrpc::models::BlockTag};
+use starknet::{core::types::FieldElement, providers::jsonrpc::models::PendingBlockWithTxHashes};
 use starknet_api::{
     core::{ClassHash, CompiledClassHash, ContractAddress, PatriciaKey},
     hash::StarkFelt,
@@ -145,7 +146,44 @@ impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
         &self,
         block_id: BlockId,
     ) -> Result<MaybePendingBlockWithTxHashes, Error> {
-        unimplemented!("KatanaRpc::block_with_tx_hashes")
+        let block = self
+            .sequencer
+            .read()
+            .await
+            .block(block_id.clone())
+            .map_err(|_| Error::from(KatanaApiError::BlockNotFound))?;
+
+        let sequencer_address = FieldElement::from_hex_be(SEQUENCER_ADDRESS).unwrap();
+        let transactions = block
+            .body
+            .transactions
+            .iter()
+            .map(|tx| stark_felt_to_field_element(tx.transaction_hash().0).unwrap())
+            .collect::<Vec<_>>();
+        let timestamp = block.header.timestamp.0;
+        let parent_hash = stark_felt_to_field_element(block.header.parent_hash.0).unwrap();
+
+        if BlockId::Tag(BlockTag::Pending) == block_id {
+            return Ok(MaybePendingBlockWithTxHashes::PendingBlock(
+                PendingBlockWithTxHashes {
+                    transactions,
+                    sequencer_address,
+                    timestamp,
+                    parent_hash,
+                },
+            ));
+        }
+
+        Ok(MaybePendingBlockWithTxHashes::Block(BlockWithTxHashes {
+            new_root: stark_felt_to_field_element(block.header.state_root.0).unwrap(),
+            block_hash: stark_felt_to_field_element(block.header.block_hash.0).unwrap(),
+            block_number: block.header.block_number.0,
+            status: BlockStatus::AcceptedOnL2,
+            transactions,
+            sequencer_address,
+            timestamp,
+            parent_hash,
+        }))
     }
 
     async fn transaction_by_block_id_and_index(
