@@ -59,7 +59,7 @@ impl StarknetWrapper {
         let blocks = StarknetBlocks::default();
         let block_context = BlockContext::base();
         let transactions = StarknetTransactions::default();
-        let mut state = CachedState::new(DictStateReader::get_default());
+        let mut state = CachedState::new(DictStateReader::default());
 
         let predeployed_accounts = PredeployedAccounts::generate(
             config.total_accounts,
@@ -201,8 +201,8 @@ impl StarknetWrapper {
 
     // Returns the StarknetState of the underlying Starknet instance.
     #[allow(unused)]
-    fn get_state(&self) -> &DictStateReader {
-        unimplemented!("StarknetWrapper::get_state")
+    fn state(&self) -> &DictStateReader {
+        unimplemented!("StarknetWrapper::state")
     }
 
     fn create_empty_block(&self) -> StarknetBlock {
