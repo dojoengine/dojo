@@ -7,10 +7,7 @@ use serde_with::serde_as;
 use smol_str::SmolStr;
 use starknet::core::serde::unsigned_field_element::{UfeHex, UfeHexOption};
 use starknet::core::types::{CallContractResult, CallFunction, FieldElement};
-use starknet::core::utils::{
-    cairo_short_string_to_felt, get_selector_from_name, get_storage_var_address,
-    CairoShortStringToFeltError,
-};
+use starknet::core::utils::{cairo_short_string_to_felt, CairoShortStringToFeltError};
 use starknet::providers::jsonrpc::models::{BlockId, BlockTag, ErrorCode};
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcClientError, JsonRpcTransport, RpcError};
 use starknet::providers::Provider;
@@ -19,6 +16,27 @@ use thiserror::Error;
 #[cfg(test)]
 #[path = "manifest_test.rs"]
 mod test;
+
+const EXECUTOR_ADDRESS_SLOT: FieldElement = FieldElement::from_mont([
+    7467091854009816808,
+    5217539096067869628,
+    17301706476858600182,
+    440859966107478631,
+]);
+
+const COMPONENT_ENTRYPOINT: FieldElement = FieldElement::from_mont([
+    2012748018737461584,
+    17346441013657197760,
+    13481606495872588402,
+    416862702099901043,
+]);
+
+const SYSTEM_ENTRYPOINT: FieldElement = FieldElement::from_mont([
+    5274299164659238291,
+    8011946809036665273,
+    17510334645946118431,
+    553330538481721971,
+]);
 
 #[derive(Error, Debug)]
 pub enum ManifestError<T> {
@@ -126,12 +144,7 @@ impl Manifest {
             })?;
 
         let executor_address = provider
-            .get_storage_at(
-                world_address,
-                get_storage_var_address("executor", &[])
-                    .map_err(|_| ManifestError::InvalidEntryPointError)?,
-                &BlockId::Tag(BlockTag::Pending),
-            )
+            .get_storage_at(world_address, EXECUTOR_ADDRESS_SLOT, &BlockId::Tag(BlockTag::Pending))
             .await
             .map_err(ManifestError::ClientError)?;
 
@@ -153,8 +166,7 @@ impl Manifest {
                                 cairo_short_string_to_felt(&component.name)
                                     .map_err(ManifestError::InvalidNameError)?,
                             ],
-                            entry_point_selector: get_selector_from_name("component")
-                                .map_err(|_| ManifestError::InvalidEntryPointError)?,
+                            entry_point_selector: COMPONENT_ENTRYPOINT,
                         },
                         starknet::core::types::BlockId::Pending,
                     )
@@ -181,8 +193,7 @@ impl Manifest {
                                 )
                                 .map_err(ManifestError::InvalidNameError)?,
                             ],
-                            entry_point_selector: get_selector_from_name("system")
-                                .map_err(|_| ManifestError::InvalidEntryPointError)?,
+                            entry_point_selector: SYSTEM_ENTRYPOINT,
                         },
                         starknet::core::types::BlockId::Pending,
                     )
