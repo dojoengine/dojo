@@ -44,9 +44,9 @@ fn test_creating_blocks() {
     assert_eq!(starknet.blocks.num_to_blocks.len(), 3);
     assert_eq!(starknet.blocks.current_height, BlockNumber(3));
 
-    let block0 = starknet.blocks.get_by_number(BlockNumber(0)).unwrap();
-    let block1 = starknet.blocks.get_by_number(BlockNumber(1)).unwrap();
-    let last_block = starknet.blocks.get_lastest().unwrap();
+    let block0 = starknet.blocks.by_number(BlockNumber(0)).unwrap();
+    let block1 = starknet.blocks.by_number(BlockNumber(1)).unwrap();
+    let last_block = starknet.blocks.lastest().unwrap();
 
     assert_eq!(block0.transactions(), &[]);
     assert_eq!(block0.block_number(), BlockNumber(0));
@@ -94,20 +94,17 @@ fn test_add_transaction() {
         .transactions
         .get(&TransactionHash(stark_felt!("0x6969")));
 
-    let block = starknet.blocks.get_by_number(BlockNumber(0)).unwrap();
+    let block = starknet.blocks.by_number(BlockNumber(0)).unwrap();
 
     assert!(tx.is_some(), "transaction must be stored");
     assert_eq!(tx.unwrap().block_number, Some(BlockNumber(0)));
     assert_eq!(starknet.blocks.current_height, BlockNumber(1));
     assert!(
-        block.get_transaction_by_index(0).is_some(),
+        block.transaction_by_index(0).is_some(),
         "transaction must be included in the block"
     );
     assert_eq!(
-        block
-            .get_transaction_by_index(0)
-            .unwrap()
-            .transaction_hash(),
+        block.transaction_by_index(0).unwrap().transaction_hash(),
         TransactionHash(stark_felt!("0x6969"))
     );
     assert_eq!(tx.unwrap().status, TransactionStatus::AcceptedOnL2);

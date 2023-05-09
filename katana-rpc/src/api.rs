@@ -76,7 +76,7 @@ pub trait KatanaApi {
     async fn chain_id(&self) -> Result<String, Error>;
 
     #[method(name = "getNonce")]
-    async fn get_nonce(
+    async fn nonce(
         &self,
         block_id: BlockId,
         contract_address: FieldElement,
@@ -86,16 +86,16 @@ pub trait KatanaApi {
     async fn block_number(&self) -> Result<u64, Error>;
 
     #[method(name = "getTransactionByHash")]
-    async fn get_transaction_by_hash(
+    async fn transaction_by_hash(
         &self,
         transaction_hash: FieldElement,
     ) -> Result<Transaction, Error>;
 
     #[method(name = "getBlockTransactionCount")]
-    async fn get_block_transaction_count(&self, block_id: BlockId) -> Result<u64, Error>;
+    async fn block_transaction_count(&self, block_id: BlockId) -> Result<u64, Error>;
 
     #[method(name = "getClassAt")]
-    async fn get_class_at(
+    async fn class_at(
         &self,
         block_id: BlockId,
         contract_address: FieldElement,
@@ -105,49 +105,46 @@ pub trait KatanaApi {
     async fn block_hash_and_number(&self) -> Result<BlockHashAndNumber, Error>;
 
     #[method(name = "getBlockWithTxHashes")]
-    async fn get_block_with_tx_hashes(
+    async fn block_with_tx_hashes(
         &self,
         block_id: BlockId,
     ) -> Result<MaybePendingBlockWithTxHashes, Error>;
 
     #[method(name = "getTransactionByBlockIdAndIndex")]
-    async fn get_transaction_by_block_id_and_index(
+    async fn transaction_by_block_id_and_index(
         &self,
         block_id: BlockId,
         index: usize,
     ) -> Result<Transaction, Error>;
 
     #[method(name = "getBlockWithTxs")]
-    async fn get_block_with_txs(
-        &self,
-        block_id: BlockId,
-    ) -> Result<MaybePendingBlockWithTxs, Error>;
+    async fn block_with_txs(&self, block_id: BlockId) -> Result<MaybePendingBlockWithTxs, Error>;
 
     #[method(name = "getStateUpdate")]
-    async fn get_state_update(&self, block_id: BlockId) -> Result<StateUpdate, Error>;
+    async fn state_update(&self, block_id: BlockId) -> Result<StateUpdate, Error>;
 
     #[method(name = "getTransactionReceipt")]
-    async fn get_transaction_receipt(
+    async fn transaction_receipt(
         &self,
         transaction_hash: FieldElement,
     ) -> Result<MaybePendingTransactionReceipt, Error>;
 
     #[method(name = "getClassHashAt")]
-    async fn get_class_hash_at(
+    async fn class_hash_at(
         &self,
         block_id: BlockId,
         contract_address: FieldElement,
     ) -> Result<FieldElement, Error>;
 
     #[method(name = "getClass")]
-    async fn get_class(
+    async fn class(
         &self,
         block_id: BlockId,
         class_hash: FieldElement,
     ) -> Result<ContractClass, Error>;
 
     #[method(name = "getEvents")]
-    async fn get_events(
+    async fn events(
         &self,
         filter: EventFilter,
         continuation_token: Option<String>,
@@ -172,7 +169,7 @@ pub trait KatanaApi {
     ) -> Result<Vec<FieldElement>, Error>;
 
     #[method(name = "getStorageAt")]
-    async fn get_storage_at(
+    async fn storage_at(
         &self,
         contract_address: FieldElement,
         key: FieldElement,

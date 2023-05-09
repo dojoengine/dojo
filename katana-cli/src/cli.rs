@@ -13,8 +13,8 @@ async fn main() {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
 
     let config = Cli::parse();
-    let rpc_config = config.get_rpc_config();
-    let starknet_config = config.get_starknet_config();
+    let rpc_config = config.rpc_config();
+    let starknet_config = config.starknet_config();
 
     let sequencer = Arc::new(RwLock::new(KatanaSequencer::new(starknet_config)));
     sequencer.write().await.start();
@@ -62,11 +62,11 @@ struct Cli {
 }
 
 impl Cli {
-    fn get_rpc_config(&self) -> RpcConfig {
+    fn rpc_config(&self) -> RpcConfig {
         RpcConfig { port: self.port }
     }
 
-    fn get_starknet_config(&self) -> StarknetConfig {
+    fn starknet_config(&self) -> StarknetConfig {
         StarknetConfig {
             total_accounts: self.accounts,
             account_path: self.account_path.clone(),

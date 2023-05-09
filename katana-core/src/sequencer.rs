@@ -174,7 +174,7 @@ impl Sequencer for KatanaSequencer {
         &self,
         hash: &TransactionHash,
     ) -> Option<starknet_api::transaction::Transaction> {
-        self.starknet.transactions.get_transaction(hash)
+        self.starknet.transactions.transaction(hash)
     }
 }
 

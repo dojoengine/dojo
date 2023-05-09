@@ -11,7 +11,7 @@ use katana_core::{
     sequencer::Sequencer,
     starknet::transaction::ExternalFunctionCall,
     util::{
-        field_element_to_starkfelt, get_blockifier_contract_class_from_flattened_sierra_class,
+        blockifier_contract_class_from_flattened_sierra_class, field_element_to_starkfelt,
         starkfelt_to_u128,
     },
 };
@@ -86,7 +86,7 @@ impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
         Ok(self.sequencer.read().await.chain_id().as_hex())
     }
 
-    async fn get_nonce(
+    async fn nonce(
         &self,
         block_id: BlockId,
         contract_address: FieldElement,
@@ -109,7 +109,7 @@ impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
         Ok(self.sequencer.read().await.block_number().0)
     }
 
-    async fn get_transaction_by_hash(
+    async fn transaction_by_hash(
         &self,
         transaction_hash: FieldElement,
     ) -> Result<Transaction, Error> {
@@ -125,56 +125,53 @@ impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
         convert_inner_to_rpc_tx(tx).map_err(|_| Error::from(KatanaApiError::InternalServerError))
     }
 
-    async fn get_block_transaction_count(&self, block_id: BlockId) -> Result<u64, Error> {
-        unimplemented!("KatanaRpc::get_block_transaction_count")
+    async fn block_transaction_count(&self, block_id: BlockId) -> Result<u64, Error> {
+        unimplemented!("KatanaRpc::block_transaction_count")
     }
 
-    async fn get_class_at(
+    async fn class_at(
         &self,
         block_id: BlockId,
         contract_address: FieldElement,
     ) -> Result<ContractClass, Error> {
-        unimplemented!("KatanaRpc::get_class_at")
+        unimplemented!("KatanaRpc::class_at")
     }
 
     async fn block_hash_and_number(&self) -> Result<BlockHashAndNumber, Error> {
         unimplemented!("KatanaRpc::block_hash_and_number")
     }
 
-    async fn get_block_with_tx_hashes(
+    async fn block_with_tx_hashes(
         &self,
         block_id: BlockId,
     ) -> Result<MaybePendingBlockWithTxHashes, Error> {
-        unimplemented!("KatanaRpc::get_block_with_tx_hashes")
+        unimplemented!("KatanaRpc::block_with_tx_hashes")
     }
 
-    async fn get_transaction_by_block_id_and_index(
+    async fn transaction_by_block_id_and_index(
         &self,
         block_id: BlockId,
         index: usize,
     ) -> Result<Transaction, Error> {
-        unimplemented!("KatanaRpc::get_transaction_by_block_id_and_index")
+        unimplemented!("KatanaRpc::transaction_by_block_id_and_index")
     }
 
-    async fn get_block_with_txs(
-        &self,
-        block_id: BlockId,
-    ) -> Result<MaybePendingBlockWithTxs, Error> {
-        unimplemented!("KatanaRpc::get_block_with_txs")
+    async fn block_with_txs(&self, block_id: BlockId) -> Result<MaybePendingBlockWithTxs, Error> {
+        unimplemented!("KatanaRpc::block_with_txs")
     }
 
-    async fn get_state_update(&self, block_id: BlockId) -> Result<StateUpdate, Error> {
-        unimplemented!("KatanaRpc::get_state_update")
+    async fn state_update(&self, block_id: BlockId) -> Result<StateUpdate, Error> {
+        unimplemented!("KatanaRpc::state_update")
     }
 
-    async fn get_transaction_receipt(
+    async fn transaction_receipt(
         &self,
         transaction_hash: FieldElement,
     ) -> Result<MaybePendingTransactionReceipt, Error> {
-        unimplemented!("KatanaRpc::get_transaction_receipt")
+        unimplemented!("KatanaRpc::transaction_receipt")
     }
 
-    async fn get_class_hash_at(
+    async fn class_hash_at(
         &self,
         block_id: BlockId,
         contract_address: FieldElement,
@@ -193,21 +190,21 @@ impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
             .map_err(|_| Error::from(KatanaApiError::InternalServerError))
     }
 
-    async fn get_class(
+    async fn class(
         &self,
         block_id: BlockId,
         class_hash: FieldElement,
     ) -> Result<ContractClass, Error> {
-        unimplemented!("KatanaRpc::get_class")
+        unimplemented!("KatanaRpc::class")
     }
 
-    async fn get_events(
+    async fn events(
         &self,
         filter: EventFilter,
         continuation_token: Option<String>,
         chunk_size: u64,
     ) -> Result<EventsPage, Error> {
-        unimplemented!("KatanaRpc::get_events")
+        unimplemented!("KatanaRpc::events")
     }
 
     async fn pending_transactions(&self) -> Result<Vec<Transaction>, Error> {
@@ -262,7 +259,7 @@ impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
         Ok(values)
     }
 
-    async fn get_storage_at(
+    async fn storage_at(
         &self,
         contract_address: FieldElement,
         key: FieldElement,
@@ -339,7 +336,7 @@ impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
                     .map_err(|_| Error::from(KatanaApiError::InvalidContractClass))?
                     .class_hash();
                 let contract_class =
-                    get_blockifier_contract_class_from_flattened_sierra_class(&raw_class_str)
+                    blockifier_contract_class_from_flattened_sierra_class(&raw_class_str)
                         .map_err(|_| Error::from(KatanaApiError::InternalServerError))?;
 
                 let transaction_hash = compute_declare_v2_transaction_hash(

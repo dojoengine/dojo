@@ -59,16 +59,16 @@ impl StarknetTransaction {
             .map_or(Fee(0), |info| info.actual_fee)
     }
 
-    pub fn get_receipt(&self) -> TransactionReceipt {
+    pub fn receipt(&self) -> TransactionReceipt {
         TransactionReceipt {
-            output: self.get_output(),
+            output: self.output(),
             transaction_hash: self.inner.transaction_hash(),
             block_number: self.block_number.unwrap_or(BlockNumber(0)),
             block_hash: self.block_hash.unwrap_or(BlockHash(stark_felt!(0))),
         }
     }
 
-    pub fn get_emitted_events(&self) -> Vec<Event> {
+    pub fn emitted_events(&self) -> Vec<Event> {
         let mut events: Vec<Event> = vec![];
 
         let Some(ref execution_info) = self.execution_info else {
@@ -99,7 +99,7 @@ impl StarknetTransaction {
         events
     }
 
-    pub fn get_l2_to_l1_messages(&self) -> Vec<MessageToL1> {
+    pub fn l2_to_l1_messages(&self) -> Vec<MessageToL1> {
         let mut messages: Vec<MessageToL1> = vec![];
 
         let Some(ref execution_info) = self.execution_info else {
@@ -148,10 +148,10 @@ impl StarknetTransaction {
         messages
     }
 
-    fn get_output(&self) -> TransactionOutput {
+    fn output(&self) -> TransactionOutput {
         let actual_fee = self.actual_fee();
-        let events = self.get_emitted_events();
-        let messages_sent = self.get_l2_to_l1_messages();
+        let events = self.emitted_events();
+        let messages_sent = self.l2_to_l1_messages();
 
         match self.inner {
             Transaction::Invoke(_) => TransactionOutput::Invoke(InvokeTransactionOutput {
@@ -191,7 +191,7 @@ pub struct StarknetTransactions {
 }
 
 impl StarknetTransactions {
-    pub fn get_transaction(&self, hash: &TransactionHash) -> Option<Transaction> {
+    pub fn transaction(&self, hash: &TransactionHash) -> Option<Transaction> {
         self.transactions.get(hash).map(|tx| tx.inner.clone())
     }
 }

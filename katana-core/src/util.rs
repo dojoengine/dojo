@@ -144,7 +144,7 @@ pub fn starkfelt_to_u128(felt: StarkFelt) -> Result<u128> {
     }
 }
 
-pub fn get_blockifier_contract_class_from_flattened_sierra_class(
+pub fn blockifier_contract_class_from_flattened_sierra_class(
     raw_contract_class: &str,
 ) -> Result<BlockifierContractClass> {
     let value = serde_json::from_str::<serde_json::Value>(raw_contract_class)?;

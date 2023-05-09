@@ -49,7 +49,7 @@ impl StarknetBlock {
         &self.0.body.transactions
     }
 
-    pub fn get_transaction_by_index(&self, transaction_id: usize) -> Option<Transaction> {
+    pub fn transaction_by_index(&self, transaction_id: usize) -> Option<Transaction> {
         self.0.body.transactions.get(transaction_id).cloned()
     }
 
@@ -98,29 +98,29 @@ impl StarknetBlocks {
         self.num_to_blocks.insert(block_number, block);
     }
 
-    pub fn get_lastest(&self) -> Option<StarknetBlock> {
+    pub fn lastest(&self) -> Option<StarknetBlock> {
         self.current_height
             .prev()
             .and_then(|block_number| self.num_to_blocks.get(&block_number).cloned())
     }
 
-    pub fn get_by_hash(&self, block_hash: BlockHash) -> Option<StarknetBlock> {
+    pub fn by_hash(&self, block_hash: BlockHash) -> Option<StarknetBlock> {
         self.hash_to_num
             .get(&block_hash)
-            .and_then(|block_number| self.get_by_number(*block_number))
+            .and_then(|block_number| self.by_number(*block_number))
     }
 
-    pub fn get_by_number(&self, block_number: BlockNumber) -> Option<StarknetBlock> {
+    pub fn by_number(&self, block_number: BlockNumber) -> Option<StarknetBlock> {
         self.num_to_blocks.get(&block_number).cloned()
     }
 
-    pub fn get_transaction_by_block_num_and_index(
+    pub fn transaction_by_block_num_and_index(
         &self,
         number: BlockNumber,
         index: usize,
     ) -> Option<Transaction> {
         self.num_to_blocks
             .get(&number)
-            .and_then(|block| block.get_transaction_by_index(index))
+            .and_then(|block| block.transaction_by_index(index))
     }
 }
