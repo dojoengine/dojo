@@ -53,7 +53,7 @@ pub enum ManifestError<T> {
 }
 
 /// Component member.
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Member {
     pub name: String,
     #[serde(rename = "type")]
@@ -62,7 +62,7 @@ pub struct Member {
 
 /// Represents a declaration of a component.
 #[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Component {
     pub name: String,
     pub members: Vec<Member>,
@@ -71,7 +71,7 @@ pub struct Component {
 }
 
 /// System input ABI.
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Input {
     pub name: String,
     #[serde(rename = "type")]
@@ -79,7 +79,7 @@ pub struct Input {
 }
 
 /// System Output ABI.
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Output {
     #[serde(rename = "type")]
     pub ty: String,
@@ -87,7 +87,7 @@ pub struct Output {
 
 /// Represents a declaration of a system.
 #[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct System {
     pub name: SmolStr,
     pub inputs: Vec<Input>,
@@ -98,7 +98,7 @@ pub struct System {
 }
 
 #[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Contract {
     pub name: SmolStr,
     #[serde_as(as = "UfeHex")]
@@ -106,7 +106,7 @@ pub struct Contract {
 }
 
 #[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Manifest {
     #[serde_as(as = "UfeHexOption")]
     pub world: Option<FieldElement>,
