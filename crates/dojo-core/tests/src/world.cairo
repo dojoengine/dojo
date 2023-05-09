@@ -6,6 +6,7 @@ use traits::TryInto;
 use option::OptionTrait;
 use starknet::class_hash::Felt252TryIntoClassHash;
 use starknet::syscalls::deploy_syscall;
+use debug::PrintTrait;
 
 use dojo_core::integer::u250;
 use dojo_core::integer::U32IntoU250;
@@ -40,9 +41,13 @@ fn test_component() {
 #[system]
 mod Bar {
     use super::Foo;
+    use traits::Into;
+    use starknet::get_caller_address;
+    use dojo_core::integer::u250;
 
-    fn execute(foo: Foo) -> Foo {
-        foo
+    fn execute(a: felt252, b: u128) {
+        let caller = get_caller_address();
+        commands::set_entity(caller.into(), (Foo { a, b }));
     }
 }
 
@@ -63,6 +68,7 @@ fn test_system() {
     let world = IWorldDispatcher { contract_address: world_address };
 
     world.register_system(BarSystem::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
     let mut data = ArrayTrait::<felt252>::new();
     data.append(1337);
     data.append(1337);
@@ -81,7 +87,7 @@ fn test_constructor() {
 }
 
 #[test]
-#[available_gas(6000000)]
+#[available_gas(8000000)]
 fn test_initialize() {
     // Prepare world
     let mut components = ArrayTrait::<felt252>::new();
@@ -89,6 +95,7 @@ fn test_initialize() {
     let mut systems = ArrayTrait::<felt252>::new();
     systems.append(BarSystem::TEST_CLASS_HASH);
 
+    // Spawn world
     let world = spawn_test_world(components, systems);
 
     // Prepare init data
@@ -106,17 +113,19 @@ fn test_initialize() {
     // Initialize world
     world.initialize(route);
 
-    // Assert world is initialized
-    let is_initialized = world.is_initialized();
-    assert(is_initialized, 'world not initialized');
-
     // Assert that the role is stored
-    let role = world.entity('Role'.into(), QueryTrait::new_from_id(target_id.into()), 0_u8, 0_usize);
+    let role = world.entity('Role'.into(), (target_id, resource_id).into(), 0_u8, 0_usize);
     assert(*role[0] == 'FooWriter', 'role not stored');
 
     // Assert that the status is stored
     let status = world.entity('Status'.into(), (role_id, resource_id).into(), 0_u8, 0_usize);
     assert(*status[0] == 1, 'status not stored');
+
+    let is_authorized = world.is_authorized(
+        BarSystem::TEST_CLASS_HASH.try_into().unwrap(),
+        FooComponent::TEST_CLASS_HASH.try_into().unwrap()
+    );
+    assert(is_authorized, 'auth route not set');
 }
 
 #[test]
@@ -127,6 +136,7 @@ fn test_initialize_not_more_than_once() {
     let components = ArrayTrait::<felt252>::new();
     let systems = ArrayTrait::<felt252>::new();
 
+    // Spawn world
     let world = spawn_test_world(components, systems);
 
     // Prepare init data
@@ -136,17 +146,87 @@ fn test_initialize_not_more_than_once() {
     // Initialize world
     world.initialize(route_a);
 
-    // Assert world is initialized
-    let is_initialized = world.is_initialized();
-    assert(is_initialized, 'world not initialized');
-
     // Reinitialize world
     world.initialize(route_b);
 }
 
 #[test]
-#[available_gas(6000000)]
+#[available_gas(9000000)]
 fn test_set_entity() {
+    // Prepare world
+    // components
+    let mut components = array::ArrayTrait::<felt252>::new();
+    components.append(FooComponent::TEST_CLASS_HASH);
+
+    // systems
+    let mut systems = array::ArrayTrait::<felt252>::new();
+    systems.append(BarSystem::TEST_CLASS_HASH);
+
+    // Spawn world
+    let world = spawn_test_world(components, systems);
+
+    // Prepare init data
+    let mut route = ArrayTrait::<Route>::new();
+    let target_id = 'Bar'.into();
+    let role_id = 'FooWriter'.into();
+    let resource_id = 'Foo'.into();
+    let r = Route {
+        target_id,
+        role_id,
+        resource_id,
+    };
+    route.append(r);
+
+    // Initialize world
+    world.initialize(route);
+
+    // Call Bar system
+    let mut data = ArrayTrait::<felt252>::new();
+    data.append(420);
+    data.append(1337);
+    world.execute('Bar'.into(), data.span());
+
+    // Assert that the data is stored
+    // Caller here is the world contract via the executor
+    let world_address = world.contract_address;
+    let foo = world.entity('Foo'.into(), world_address.into(), 0_u8, 0_usize);
+    assert(*foo[0] == 420, 'data not stored');
+    assert(*foo[1] == 1337, 'data not stored');
+}
+
+#[test]
+#[available_gas(9000000)]
+#[should_panic]
+fn test_set_entity_unauthorized() {
+    // Prepare world
+    // components
+    let mut components = array::ArrayTrait::<felt252>::new();
+    components.append(FooComponent::TEST_CLASS_HASH);
+
+    // systems
+    let mut systems = array::ArrayTrait::<felt252>::new();
+    systems.append(BarSystem::TEST_CLASS_HASH);
+
+    // Spawn world
+    let world = spawn_test_world(components, systems);
+
+    // No Auth route
+    let mut route = ArrayTrait::<Route>::new();
+
+    // Initialize world
+    world.initialize(route);
+
+    // Call Bar system
+    let mut data = ArrayTrait::<felt252>::new();
+    data.append(420);
+    data.append(1337);
+    world.execute('Bar'.into(), data.span());
+}
+
+#[test]
+#[available_gas(9000000)]
+#[should_panic]
+fn test_set_entity_directly() {
     // Prepare world
     // components
     let mut components = array::ArrayTrait::<felt252>::new();
@@ -173,12 +253,10 @@ fn test_set_entity() {
     // Initialize world
     world.initialize(route);
 
-    // Call Bar system
+    // Change Foo component directly
+    let id = world.uuid();
     let mut data = ArrayTrait::<felt252>::new();
     data.append(420);
     data.append(1337);
-
-    let foo = world.execute('Bar'.into(), data.span());
-    assert(*foo[0] == 420, 'data not stored');
-    assert(*foo[1] == 1337, 'data not stored');
+    world.set_entity('Foo'.into(), QueryTrait::new_from_id(id.into()), 0_u8, data.span());
 }

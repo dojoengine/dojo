@@ -57,12 +57,7 @@ mod World {
     // Initialize the world with the routes that specify
     // the permissions for each system to access components.
     #[external]
-    fn initialize(routing: Array<Route>) {
-        // Assert only the Admin role can initialize the world.
-        let caller: u250  = get_caller_address().into();
-        let role = entity('Role'.into(), QueryTrait::new_from_id(caller), 0_u8, 0_usize);
-        assert(*role[0] == 'Admin', 'caller not admin');
-
+    fn initialize(routes: Array<Route>) {
         // Assert that the world has not been initialized
         assert(!initialized::read(), 'already initialized');
 
@@ -72,13 +67,13 @@ mod World {
         // Loop through each route and handle the auth.
         // This grants the system the permission to specific components.
         loop {
-            if index == routing.len() {
+            if index == routes.len() {
                 break ();
             }
 
             // Serialize the route
             let mut calldata = ArrayTrait::new();
-            let r = routing.at(index);
+            let r = routes.at(index);
             r.serialize(ref calldata);
  
             // Call RouteAuth system via executor with the serialized route
@@ -93,28 +88,29 @@ mod World {
         initialized::write(true);
     }
 
-    // Check if the world has been initialized.
-    #[view]
-    fn is_initialized() -> bool {
-        initialized::read()
-    }
-
     // Check if system is authorized to write to the component
     #[view]
     fn is_authorized(system: ClassHash, component: ClassHash) -> bool {
         let authorize_class_hash = system_registry::read('Authorize'.into());
 
-        // Check only when world is initialized
-        // This is so initial roles and status can be set before the world is initialized.
+        // If the world has been initialized, check the authorization.
+        // World is initialized when WorldFactory::spawn is called
         if initialized::read() {
             let mut calldata = ArrayTrait::<felt252>::new();
-            calldata.append(system.into()); // caller_id
-            calldata.append(component.into()); // resource_id
+            let system_name = ISystemLibraryDispatcher { class_hash: system }.name();
+            let component_name = IComponentLibraryDispatcher { class_hash: component }.name();
+            calldata.append(system_name.into()); // caller_id
+            calldata.append(component_name.into()); // resource_id
+
+            // Call Authorize system via executor with serialized system and component
+            // If the system is authorized, the result will be non-zero
             let res = IExecutorDispatcher {
                 contract_address: executor::read()
             }.execute(authorize_class_hash, calldata.span());
             (*res[0]).is_non_zero()
         } else {
+            // If the world has not been initialized, all systems are authorized.
+            // This is to allow the initial roles and auth routes to be set
             true
         }
     }
@@ -172,6 +168,10 @@ mod World {
 
     #[external]
     fn set_entity(component: ShortString, query: Query, offset: u8, value: Span<felt252>) {
+        // Assert can only be called through the executor
+        // This is to prevent system from writing to storage directly
+        assert(get_caller_address() == executor::read(), 'must be called thru executor');
+
         let system_class_hash = caller::read();
         let table = query.table(component);
         let component_class_hash = component_registry::read(component);
@@ -183,6 +183,10 @@ mod World {
 
     #[external]
     fn delete_entity(component: ShortString, query: Query) {
+        // Assert can only be called through the executor
+        // This is to prevent system from writing to storage directly
+        assert(get_caller_address() == executor::read(), 'must be called thru executor');
+
         let system_class_hash = caller::read();
         let table = query.table(component);
         let component_class_hash = component_registry::read(component);

@@ -7,8 +7,7 @@ use starknet::{ClassHash, ContractAddress};
 
 #[abi]
 trait IWorld {
-    fn initialize(routing: Array<Route>);
-    fn is_initialized() -> bool;
+    fn initialize(routes: Array<Route>);
     fn component(name: ShortString) -> ClassHash;
     fn register_component(class_hash: ClassHash);
     fn system(name: ShortString) -> ClassHash;
