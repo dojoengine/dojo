@@ -135,7 +135,7 @@ impl Sequencer for KatanaSequencer {
         self.starknet.state.get_class_hash_at(contract_address)
     }
 
-    fn get_storage_at(
+    fn storage_at(
         &mut self,
         contract_address: ContractAddress,
         storage_key: StorageKey,
@@ -153,7 +153,7 @@ impl Sequencer for KatanaSequencer {
         self.starknet.block_context.block_number
     }
 
-    fn get_nonce_at(
+    fn nonce_at(
         &mut self,
         _block_id: BlockId,
         contract_address: ContractAddress,
@@ -181,7 +181,7 @@ impl Sequencer for KatanaSequencer {
 pub trait Sequencer {
     fn chain_id(&self) -> ChainId;
 
-    fn get_nonce_at(
+    fn nonce_at(
         &mut self,
         block_id: BlockId,
         contract_address: ContractAddress,
@@ -204,7 +204,7 @@ pub trait Sequencer {
         function_call: ExternalFunctionCall,
     ) -> Result<Vec<StarkFelt>>;
 
-    fn get_storage_at(
+    fn storage_at(
         &mut self,
         contract_address: ContractAddress,
         storage_key: StorageKey,

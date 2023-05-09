@@ -95,7 +95,7 @@ impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
             .sequencer
             .write()
             .await
-            .get_nonce_at(
+            .nonce_at(
                 block_id,
                 ContractAddress(patricia_key!(field_element_to_starkfelt(&contract_address))),
             )
@@ -269,7 +269,7 @@ impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
             .sequencer
             .write()
             .await
-            .get_storage_at(
+            .storage_at(
                 ContractAddress(patricia_key!(field_element_to_starkfelt(&contract_address))),
                 StorageKey(patricia_key!(field_element_to_starkfelt(&key))),
             )
