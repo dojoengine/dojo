@@ -203,7 +203,21 @@ impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
         block_id: BlockId,
         index: usize,
     ) -> Result<Transaction, Error> {
-        unimplemented!("KatanaRpc::transaction_by_block_id_and_index")
+        let block = self
+            .sequencer
+            .read()
+            .await
+            .block(block_id.clone())
+            .map_err(|_| Error::from(KatanaApiError::BlockNotFound))?;
+
+        let transaction = block
+            .body
+            .transactions
+            .get(index)
+            .ok_or(Error::from(KatanaApiError::InvalidTxnIndex))?;
+
+        convert_inner_to_rpc_tx(transaction.clone())
+            .map_err(|_| Error::from(KatanaApiError::InternalServerError))
     }
 
     async fn block_with_txs(&self, block_id: BlockId) -> Result<MaybePendingBlockWithTxs, Error> {
