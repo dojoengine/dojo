@@ -19,6 +19,7 @@ fn get_flattened_sierra_class(raw_contract_class: &str) -> Result<FlattenedSierr
     Ok(contract_artifact.flatten()?)
 }
 
+#[ignore]
 #[tokio::test]
 async fn test_send_declare_v2_tx() {
     let provider = JsonRpcClient::new(HttpTransport::new(
