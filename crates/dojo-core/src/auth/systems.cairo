@@ -10,7 +10,6 @@ struct Route {
 #[system]
 mod RouteAuth {
     use traits::Into;
-    use array::ArrayTrait;
 
     use dojo_core::auth::components::Status;
     use dojo_core::auth::components::Role;
@@ -19,11 +18,12 @@ mod RouteAuth {
     use starknet::ContractAddress;
 
     fn execute(route: Route) {
+        // TODO: Figure out how to store multiple roles per entity
         // Set role
         commands::set_entity(route.target_id.into(), (Role { id: route.role_id }));
 
         // Set status
-        commands::set_entity((route.role_id, route.resource_id).into(), (Status { is_authorized: true }));
+        commands::set_entity((route.role_id, route.resource_id).into(), (Status { is_authorized: bool::True(()) }));
     }
 }
 

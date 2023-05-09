@@ -33,6 +33,9 @@ mod World {
     fn WorldSpawned(address: ContractAddress, name: ShortString) {}
 
     #[event]
+    fn WorldInitialized(address: ContractAddress, caller: ContractAddress) {}
+
+    #[event]
     fn ComponentRegistered(name: ShortString, class_hash: ClassHash) {}
 
     #[event]
@@ -47,7 +50,6 @@ mod World {
         nonce: usize,
     }
 
-    // Give deployer the default admin role.
     #[constructor]
     fn constructor(name: ShortString, executor_: ContractAddress) {
         executor::write(executor_);
@@ -55,6 +57,8 @@ mod World {
         WorldSpawned(get_contract_address(), name);
     }
 
+    // Initialize the world with the routes that specify
+    // the permissions for each system to access components.
     #[external]
     fn initialize(routing: Array<Route>) {
         // Assert only the Admin role can initialize the world.
@@ -90,11 +94,28 @@ mod World {
 
         // Set the initialized flag.
         initialized::write(true);
+
+        // Emit the event.
+        WorldInitialized(get_contract_address(), get_caller_address());
     }
 
+    // Check if the world has been initialized.
     #[view]
     fn is_initialized() -> bool {
         initialized::read()
+    }
+
+    // Check if system is authorized to write to the component
+    #[view]
+    fn check_auth(system: ClassHash, component: ClassHash) -> bool {
+        let class_hash = system_registry::read('Authorize'.into());
+        let mut calldata = ArrayTrait::<felt252>::new();
+        calldata.append(system.into()); // caller_id
+        calldata.append(component.into()); // resource_id
+        let res = IExecutorDispatcher {
+            contract_address: executor::read()
+        }.execute(class_hash, calldata.span());
+        (*res[0]).is_non_zero()
     }
 
     // Register a component in the world. If the component is already registered,
@@ -152,17 +173,22 @@ mod World {
     fn set_entity(component: ShortString, query: Query, offset: u8, value: Span<felt252>) {
         let system_class_hash = caller::read();
         let table = query.table(component);
+        let component_class_hash = component_registry::read(component);
 
-        // TODO: verify executor has permission to write
-
-        let class_hash = component_registry::read(component);
-        Database::set(class_hash, table, query, offset, value)
+        // Validate the calling system has permission to write to the component
+        assert_auth(system_class_hash, component_class_hash);
+        Database::set(component_class_hash, table, query, offset, value)
     }
 
     #[external]
     fn delete_entity(component: ShortString, query: Query) {
-        let class_hash = caller::read();
-        let res = Database::del(class_hash, component.into(), query);
+        let system_class_hash = caller::read();
+        let table = query.table(component);
+        let component_class_hash = component_registry::read(component);
+
+        // Validate the calling system has permission to write to the component
+        assert_auth(system_class_hash, component_class_hash);
+        let res = Database::del(system_class_hash, component.into(), query);
     }
 
     #[view]
@@ -185,5 +211,24 @@ mod World {
     #[external]
     fn set_executor(contract_address: ContractAddress) {
         executor::write(contract_address);
+    }
+
+    // Internals
+
+    // Assert that calling system has authorization to write to the component
+    fn assert_auth(system: ClassHash, component: ClassHash) {
+        // Get AuthorizeSystem ClassHash
+        let authorize_class_hash = system_registry::read('Authorize'.into());
+
+        // Assert only when world is initialized
+        // This is so initial roles can be set before the world is initialized.
+        if initialized::read() {
+            let mut calldata = ArrayTrait::new();
+            calldata.append(system.into()); // caller_id
+            calldata.append(component.into()); // resource_id
+            IExecutorDispatcher {
+                contract_address: executor::read()
+            }.execute(authorize_class_hash, calldata.span());
+        }
     }
 }

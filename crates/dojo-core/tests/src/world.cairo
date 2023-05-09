@@ -81,11 +81,13 @@ fn test_constructor() {
 }
 
 #[test]
-#[available_gas(5000000)]
+#[available_gas(6000000)]
 fn test_initialize() {
     // Prepare world
-    let components = ArrayTrait::<felt252>::new();
-    let systems = ArrayTrait::<felt252>::new();
+    let mut components = ArrayTrait::<felt252>::new();
+    components.append(FooComponent::TEST_CLASS_HASH);
+    let mut systems = ArrayTrait::<felt252>::new();
+    systems.append(BarSystem::TEST_CLASS_HASH);
 
     let world = spawn_test_world(components, systems);
 
@@ -140,4 +142,43 @@ fn test_initialize_not_more_than_once() {
 
     // Reinitialize world
     world.initialize(route_b);
+}
+
+#[test]
+#[available_gas(6000000)]
+fn test_set_entity() {
+    // Prepare world
+    // components
+    let mut components = array::ArrayTrait::<felt252>::new();
+    components.append(FooComponent::TEST_CLASS_HASH);
+
+    // systems
+    let mut systems = array::ArrayTrait::<felt252>::new();
+    systems.append(BarSystem::TEST_CLASS_HASH);
+
+    let world = spawn_test_world(components, systems);
+
+    // // Prepare init data
+    let mut route = ArrayTrait::<Route>::new();
+    let target_id = 'Bar'.into();
+    let role_id = 'FooWriter'.into();
+    let resource_id = 'Foo'.into();
+    let r = Route {
+        target_id,
+        role_id,
+        resource_id,
+    };
+    route.append(r);
+
+    // Initialize world
+    world.initialize(route);
+
+    // Call Bar system
+    let mut data = ArrayTrait::<felt252>::new();
+    data.append(420);
+    data.append(1337);
+
+    let foo = world.execute('Bar'.into(), data.span());
+    assert(*foo[0] == 420, 'data not stored');
+    assert(*foo[1] == 1337, 'data not stored');
 }

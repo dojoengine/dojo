@@ -3,15 +3,16 @@ use dojo_core::string::ShortString;
 use dojo_core::serde::SpanSerde;
 use dojo_core::storage::query::Query;
 use dojo_core::auth::systems::Route;
+use starknet::{ClassHash, ContractAddress};
 
 #[abi]
 trait IWorld {
     fn initialize(routing: Array<Route>);
     fn is_initialized() -> bool;
-    fn component(name: ShortString) -> starknet::ClassHash;
-    fn register_component(class_hash: starknet::ClassHash);
-    fn system(name: ShortString) -> starknet::ClassHash;
-    fn register_system(class_hash: starknet::ClassHash);
+    fn component(name: ShortString) -> ClassHash;
+    fn register_component(class_hash: ClassHash);
+    fn system(name: ShortString) -> ClassHash;
+    fn register_system(class_hash: ClassHash);
     fn uuid() -> usize;
     fn execute(name: ShortString, execute_calldata: Span<felt252>) -> Span<felt252>;
     fn entity(
@@ -21,13 +22,14 @@ trait IWorld {
         component: ShortString, key: Query, offset: u8, value: Span<felt252>
     );
     fn entities(component: ShortString, partition: u250) -> Array::<u250>;
-    fn set_executor(contract_address: starknet::ContractAddress);
-    fn delete_entity(component: ShortString, query: Query);
+    fn set_executor(contract_address: ContractAddress);
+    fn check_auth(system: ClassHash, component: ClassHash) -> bool;
+    fn assert_auth(system: ClassHash, component: ClassHash) -> Span<felt252>;
 }
 
 #[abi]
 trait IExecutor {
-    fn execute(class_hash: starknet::ClassHash, data: Span<felt252>) -> Span<felt252>;
+    fn execute(class_hash: ClassHash, data: Span<felt252>) -> Span<felt252>;
 }
 
 #[abi]
@@ -43,15 +45,15 @@ trait ISystem {
 
 #[abi]
 trait IWorldFactory {
-    fn set_world(class_hash: starknet::ClassHash);
-    fn set_executor(class_hash: starknet::ClassHash);
+    fn set_world(class_hash: ClassHash);
+    fn set_executor(class_hash: ClassHash);
     fn spawn(
         name: ShortString,
-        components: Array::<starknet::ClassHash>,
-        systems: Array::<starknet::ClassHash>,
-        auth_components: Array::<starknet::ClassHash>,
-        auth_systems: Array::<starknet::ClassHash>
+        components: Array::<ClassHash>,
+        systems: Array::<ClassHash>,
+        auth_components: Array::<ClassHash>,
+        auth_systems: Array::<ClassHash>
     );
-    fn world_class_hash() -> starknet::ClassHash;
-    fn executor_address() -> starknet::ContractAddress;
+    fn world_class_hash() -> ClassHash;
+    fn executor_address() -> ContractAddress;
 }
