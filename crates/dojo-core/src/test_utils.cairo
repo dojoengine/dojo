@@ -1,6 +1,7 @@
 use starknet::ClassHash;
 use starknet::syscalls::deploy_syscall;
 use starknet::class_hash::Felt252TryIntoClassHash;
+use starknet::get_caller_address;
 
 use array::ArrayTrait;
 use traits::TryInto;
@@ -35,6 +36,26 @@ fn spawn_test_world(components: Array<felt252>, systems: Array<felt252>) -> IWor
     ).unwrap();
     let world = IWorldDispatcher { contract_address: world_address };
 
+    // register auth components and systems
+    let (auth_components, auth_systems) = mock_auth_components_systems();
+    let mut auth_components_index = 0;
+    loop {
+        if auth_components_index == auth_components.len() {
+            break ();
+        }
+        world.register_component(*auth_components.at(auth_components_index));
+        auth_components_index += 1;
+    };
+
+    let mut auth_systems_index = 0;
+    loop {
+        if auth_systems_index == auth_systems.len() {
+            break ();
+        }
+        world.register_system(*auth_systems.at(auth_systems_index));
+        auth_systems_index += 1;
+    };
+
     // register components
     let mut components_index = 0;
     loop {
@@ -54,6 +75,14 @@ fn spawn_test_world(components: Array<felt252>, systems: Array<felt252>) -> IWor
         world.register_system((*systems[systems_index]).try_into().unwrap());
         systems_index+=1;
     };
+
+    // Grant Admin role to the spawner
+    let caller = get_caller_address();
+    let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
+
+    grant_role_calldata.append(caller.into()); // target_id
+    grant_role_calldata.append('Admin'); // role_id
+    world.execute('GrantRole'.into(), grant_role_calldata.span());
 
     world
 }

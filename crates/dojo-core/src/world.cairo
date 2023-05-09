@@ -3,16 +3,24 @@ mod World {
     use array::ArrayTrait;
     use array::SpanTrait;
     use traits::Into;
+    use option::OptionTrait;
+    use box::BoxTrait;
+    use serde::Serde;
     use starknet::get_caller_address;
     use starknet::get_contract_address;
+    use starknet::get_tx_info;
+    use starknet::contract_address::ContractAddressIntoFelt252;
     use starknet::ClassHash;
+    use starknet::Zeroable;
     use starknet::ContractAddress;
 
     use dojo_core::storage::query::Query;
     use dojo_core::storage::query::QueryTrait;
     use dojo_core::storage::db::Database;
     use dojo_core::integer::u250;
+    use dojo_core::integer::ContractAddressIntoU250;
     use dojo_core::string::ShortString;
+    use dojo_core::auth::systems::Route;
 
     use dojo_core::interfaces::IComponentLibraryDispatcher;
     use dojo_core::interfaces::IComponentDispatcherTrait;
@@ -35,6 +43,7 @@ mod World {
         executor: ContractAddress,
         component_registry: LegacyMap::<ShortString, ClassHash>,
         system_registry: LegacyMap::<ShortString, ClassHash>,
+        initialized: bool,
         nonce: usize,
     }
 
@@ -44,6 +53,48 @@ mod World {
         executor::write(executor_);
 
         WorldSpawned(get_contract_address(), name);
+    }
+
+    #[external]
+    fn initialize(routing: Array<Route>) {
+        // Assert only the Admin role can initialize the world.
+        let caller: u250  = get_caller_address().into();
+        let role = entity('Role'.into(), QueryTrait::new_from_id(caller), 0_u8, 0_usize);
+        assert(*role[0] == 'Admin', 'caller not admin');
+
+        // Assert that the world has not been initialized
+        assert(!initialized::read(), 'already initialized');
+
+        let class_hash = system_registry::read('RouteAuth'.into());
+        let mut index = 0;
+
+        // Loop through each route and handle the auth.
+        // This grants the system the permission to specific components.
+        loop {
+            if index == routing.len() {
+                break ();
+            }
+
+            // Serialize the route
+            let mut calldata = ArrayTrait::new();
+            let r = routing.at(index);
+            r.serialize(ref calldata);
+ 
+            // Call RouteAuth system via executor with the serialized route
+            IExecutorDispatcher {
+                contract_address: executor::read()
+            }.execute(class_hash, calldata.span());
+
+            index += 1;
+        };
+
+        // Set the initialized flag.
+        initialized::write(true);
+    }
+
+    #[view]
+    fn is_initialized() -> bool {
+        initialized::read()
     }
 
     // Register a component in the world. If the component is already registered,
