@@ -41,7 +41,7 @@ fn test_creating_blocks() {
     starknet.generate_latest_block();
 
     assert_eq!(starknet.blocks.hash_to_num.len(), 3);
-    assert_eq!(starknet.blocks.num_to_blocks.len(), 3);
+    assert_eq!(starknet.blocks.num_to_block.len(), 3);
     assert_eq!(starknet.blocks.current_height, BlockNumber(3));
 
     let block0 = starknet.blocks.by_number(BlockNumber(0)).unwrap();
@@ -162,7 +162,7 @@ fn test_add_reverted_transaction() {
         BlockNumber(0),
         "block height must not increase"
     );
-    assert_eq!(starknet.blocks.num_to_blocks.len(), 0, "no blocks added");
+    assert_eq!(starknet.blocks.num_to_block.len(), 0, "no blocks added");
 }
 
 // #[test]

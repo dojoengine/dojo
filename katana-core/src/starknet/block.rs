@@ -87,7 +87,7 @@ impl StarknetBlock {
 pub struct StarknetBlocks {
     pub current_height: BlockNumber,
     pub hash_to_num: HashMap<BlockHash, BlockNumber>,
-    pub num_to_blocks: HashMap<BlockNumber, StarknetBlock>,
+    pub num_to_block: HashMap<BlockNumber, StarknetBlock>,
     pub pending_block: Option<StarknetBlock>,
 }
 
@@ -95,13 +95,13 @@ impl StarknetBlocks {
     pub fn append_block(&mut self, block: StarknetBlock) {
         let block_number = block.block_number();
         self.hash_to_num.insert(block.block_hash(), block_number);
-        self.num_to_blocks.insert(block_number, block);
+        self.num_to_block.insert(block_number, block);
     }
 
     pub fn lastest(&self) -> Option<StarknetBlock> {
         self.current_height
             .prev()
-            .and_then(|block_number| self.num_to_blocks.get(&block_number).cloned())
+            .and_then(|block_number| self.num_to_block.get(&block_number).cloned())
     }
 
     pub fn by_hash(&self, block_hash: BlockHash) -> Option<StarknetBlock> {
@@ -111,7 +111,7 @@ impl StarknetBlocks {
     }
 
     pub fn by_number(&self, block_number: BlockNumber) -> Option<StarknetBlock> {
-        self.num_to_blocks.get(&block_number).cloned()
+        self.num_to_block.get(&block_number).cloned()
     }
 
     pub fn transaction_by_block_num_and_index(
@@ -119,7 +119,7 @@ impl StarknetBlocks {
         number: BlockNumber,
         index: usize,
     ) -> Option<Transaction> {
-        self.num_to_blocks
+        self.num_to_block
             .get(&number)
             .and_then(|block| block.transaction_by_index(index))
     }
