@@ -38,18 +38,19 @@ use starknet_api::{hash::StarkHash, transaction::TransactionSignature};
 use starknet_api::{state::StorageKey, transaction::InvokeTransactionV1};
 use std::{net::SocketAddr, sync::Arc};
 use tokio::sync::RwLock;
-use util::{
-    compute_invoke_v1_transaction_hash, convert_inner_to_rpc_tx, get_casm_contract_class,
-    get_legacy_contract_class_hash, get_sierra_class_hash, stark_felt_to_field_element,
+use utils::{
+    contract::{get_casm_contract_class, get_legacy_contract_class_hash},
+    transaction::{
+        compute_declare_v1_transaction_hash, compute_declare_v2_transaction_hash,
+        compute_invoke_v1_transaction_hash, convert_inner_to_rpc_tx, stark_felt_to_field_element,
+    },
 };
 
 pub mod api;
 pub mod config;
-pub mod util;
+pub mod utils;
 
 use api::{KatanaApiError, KatanaApiServer, KatanaRpcLogger};
-
-use crate::util::{compute_declare_v1_transaction_hash, compute_declare_v2_transaction_hash};
 
 pub struct KatanaRpc<S> {
     pub config: RpcConfig,
