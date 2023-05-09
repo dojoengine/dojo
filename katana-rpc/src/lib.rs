@@ -127,7 +127,19 @@ impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
     }
 
     async fn block_transaction_count(&self, block_id: BlockId) -> Result<u64, Error> {
-        unimplemented!("KatanaRpc::block_transaction_count")
+        let block = self
+            .sequencer
+            .read()
+            .await
+            .block(block_id.clone())
+            .map_err(|_| Error::from(KatanaApiError::BlockNotFound))?;
+
+        block
+            .body
+            .transactions
+            .len()
+            .try_into()
+            .map_err(|_| Error::from(KatanaApiError::InternalServerError))
     }
 
     async fn class_at(
