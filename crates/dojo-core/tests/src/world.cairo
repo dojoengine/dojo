@@ -1,4 +1,5 @@
 use array::ArrayTrait;
+use array::SpanTrait;
 use core::result::ResultTrait;
 use traits::Into;
 use traits::TryInto;
@@ -13,6 +14,9 @@ use dojo_core::interfaces::IWorldDispatcher;
 use dojo_core::interfaces::IWorldDispatcherTrait;
 use dojo_core::executor::Executor;
 use dojo_core::world::World;
+use dojo_core::test_utils::spawn_test_world;
+use dojo_core::auth::systems::Route;
+use starknet::get_caller_address;
 
 #[derive(Component, Copy, Drop, Serde)]
 struct Foo {
@@ -74,4 +78,66 @@ fn test_constructor() {
         'World'.into(),
         starknet::contract_address_const::<0x1337>(),
     );
+}
+
+#[test]
+#[available_gas(5000000)]
+fn test_initialize() {
+    // Prepare world
+    let components = ArrayTrait::<felt252>::new();
+    let systems = ArrayTrait::<felt252>::new();
+
+    let world = spawn_test_world(components, systems);
+
+    // Prepare init data
+    let mut route = ArrayTrait::<Route>::new();
+    let target_id = 'Bar'.into();
+    let role_id = 'FooWriter'.into();
+    let resource_id = 'Foo'.into();
+    let r = Route {
+        target_id,
+        role_id,
+        resource_id,
+    };
+    route.append(r);
+
+    // Initialize world
+    world.initialize(route);
+
+    // Assert world is initialized
+    let is_initialized = world.is_initialized();
+    assert(is_initialized, 'world not initialized');
+
+    // Assert that the role is stored
+    let role = world.entity('Role'.into(), QueryTrait::new_from_id(target_id.into()), 0_u8, 0_usize);
+    assert(*role[0] == 'FooWriter', 'role not stored');
+
+    // Assert that the status is stored
+    let status = world.entity('Status'.into(), (role_id, resource_id).into(), 0_u8, 0_usize);
+    assert(*status[0] == 1, 'status not stored');
+}
+
+#[test]
+#[available_gas(3000000)]
+#[should_panic]
+fn test_initialize_not_more_than_once() {
+    // Prepare world
+    let components = ArrayTrait::<felt252>::new();
+    let systems = ArrayTrait::<felt252>::new();
+
+    let world = spawn_test_world(components, systems);
+
+    // Prepare init data
+    let route_a = ArrayTrait::<Route>::new();
+    let route_b = ArrayTrait::<Route>::new();
+
+    // Initialize world
+    world.initialize(route_a);
+
+    // Assert world is initialized
+    let is_initialized = world.is_initialized();
+    assert(is_initialized, 'world not initialized');
+
+    // Reinitialize world
+    world.initialize(route_b);
 }

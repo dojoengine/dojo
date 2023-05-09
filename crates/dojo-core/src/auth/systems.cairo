@@ -18,30 +18,12 @@ mod RouteAuth {
 
     use starknet::ContractAddress;
 
-    fn execute(ref routing: Array<Route>) {
-        _set_authorization_routing(ref routing, world_address);
-    }
+    fn execute(route: Route) {
+        // Set role
+        commands::set_entity(route.target_id.into(), (Role { id: route.role_id }));
 
-    fn _set_authorization_routing(ref routing: Array<Route>, world_address: starknet::ContractAddress) {
-        gas::withdraw_gas().expect('Out of gas');
-
-        if routing.is_empty() {
-            return ();
-        }
-
-        let r = routing.pop_front().unwrap();
-
-        let mut calldata = ArrayTrait::new(); 
-        serde::Serde::<Role>::serialize(@Role { id: r.role_id }, ref calldata);
-        IWorldDispatcher { contract_address: world_address }.set_entity(
-            dojo_core::string::ShortStringTrait::new('Role'), QueryTrait::new_from_id(r.target_id), 0_u8, calldata.span());
-
-        let mut calldata = ArrayTrait::new(); 
-        serde::Serde::<Status>::serialize(@Status { is_authorized: bool::True(()) }, ref calldata);
-        IWorldDispatcher { contract_address: world_address }.set_entity(
-            dojo_core::string::ShortStringTrait::new('Status'), (r.role_id, r.resource_id).into(), 0_u8, calldata.span());
-
-        _set_authorization_routing(ref routing, world_address);
+        // Set status
+        commands::set_entity((route.role_id, route.resource_id).into(), (Status { is_authorized: true }));
     }
 }
 

@@ -2,9 +2,12 @@ use dojo_core::integer::u250;
 use dojo_core::string::ShortString;
 use dojo_core::serde::SpanSerde;
 use dojo_core::storage::query::Query;
+use dojo_core::auth::systems::Route;
 
 #[abi]
 trait IWorld {
+    fn initialize(routing: Array<Route>);
+    fn is_initialized() -> bool;
     fn component(name: ShortString) -> starknet::ClassHash;
     fn register_component(class_hash: starknet::ClassHash);
     fn system(name: ShortString) -> starknet::ClassHash;
@@ -42,7 +45,13 @@ trait ISystem {
 trait IWorldFactory {
     fn set_world(class_hash: starknet::ClassHash);
     fn set_executor(class_hash: starknet::ClassHash);
-    fn spawn(name: ShortString, components: Array::<starknet::ClassHash>, systems: Array::<starknet::ClassHash>);
+    fn spawn(
+        name: ShortString,
+        components: Array::<starknet::ClassHash>,
+        systems: Array::<starknet::ClassHash>,
+        auth_components: Array::<starknet::ClassHash>,
+        auth_systems: Array::<starknet::ClassHash>
+    );
     fn world_class_hash() -> starknet::ClassHash;
     fn executor_address() -> starknet::ContractAddress;
 }
