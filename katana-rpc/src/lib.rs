@@ -17,11 +17,12 @@ use katana_core::{
     },
 };
 use starknet::providers::jsonrpc::models::{
-    BlockHashAndNumber, BlockId, BlockStatus, BlockWithTxHashes, BroadcastedDeclareTransaction,
-    BroadcastedDeployAccountTransaction, BroadcastedInvokeTransaction, BroadcastedTransaction,
-    ContractClass, DeclareTransactionResult, DeployAccountTransactionResult, EventFilter,
-    EventsPage, FeeEstimate, FunctionCall, InvokeTransactionResult, MaybePendingBlockWithTxHashes,
-    MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, StateUpdate, Transaction,
+    BlockHashAndNumber, BlockId, BlockStatus, BlockWithTxHashes, BlockWithTxs,
+    BroadcastedDeclareTransaction, BroadcastedDeployAccountTransaction,
+    BroadcastedInvokeTransaction, BroadcastedTransaction, ContractClass, DeclareTransactionResult,
+    DeployAccountTransactionResult, EventFilter, EventsPage, FeeEstimate, FunctionCall,
+    InvokeTransactionResult, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
+    MaybePendingTransactionReceipt, PendingBlockWithTxs, StateUpdate, Transaction,
 };
 use starknet::{core::types::contract::FlattenedSierraClass, providers::jsonrpc::models::BlockTag};
 use starknet::{core::types::FieldElement, providers::jsonrpc::models::PendingBlockWithTxHashes};
@@ -221,7 +222,44 @@ impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
     }
 
     async fn block_with_txs(&self, block_id: BlockId) -> Result<MaybePendingBlockWithTxs, Error> {
-        unimplemented!("KatanaRpc::block_with_txs")
+        let block = self
+            .sequencer
+            .read()
+            .await
+            .block(block_id.clone())
+            .map_err(|_| Error::from(KatanaApiError::BlockNotFound))?;
+
+        let sequencer_address = FieldElement::from_hex_be(SEQUENCER_ADDRESS).unwrap();
+        let transactions = block
+            .body
+            .transactions
+            .iter()
+            .map(|tx| convert_inner_to_rpc_tx(tx.clone()).unwrap())
+            .collect::<Vec<_>>();
+        let timestamp = block.header.timestamp.0;
+        let parent_hash = stark_felt_to_field_element(block.header.parent_hash.0).unwrap();
+
+        if BlockId::Tag(BlockTag::Pending) == block_id {
+            return Ok(MaybePendingBlockWithTxs::PendingBlock(
+                PendingBlockWithTxs {
+                    transactions,
+                    sequencer_address,
+                    timestamp,
+                    parent_hash,
+                },
+            ));
+        }
+
+        Ok(MaybePendingBlockWithTxs::Block(BlockWithTxs {
+            new_root: stark_felt_to_field_element(block.header.state_root.0).unwrap(),
+            block_hash: stark_felt_to_field_element(block.header.block_hash.0).unwrap(),
+            block_number: block.header.block_number.0,
+            status: BlockStatus::AcceptedOnL2,
+            transactions,
+            sequencer_address,
+            timestamp,
+            parent_hash,
+        }))
     }
 
     async fn state_update(&self, block_id: BlockId) -> Result<StateUpdate, Error> {
