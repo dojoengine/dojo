@@ -67,7 +67,10 @@ impl StateReader for DictStateReader {
         Ok(nonce)
     }
 
-    fn get_contract_class(&mut self, class_hash: &ClassHash) -> StateResult<ContractClass> {
+    fn get_compiled_contract_class(
+        &mut self,
+        class_hash: &ClassHash,
+    ) -> StateResult<ContractClass> {
         let contract_class = self.class_hash_to_class.get(class_hash).cloned();
         match contract_class {
             Some(contract_class) => Ok(contract_class),

@@ -1,5 +1,5 @@
 use anyhow::Result;
-use starknet::providers::jsonrpc::models::{BlockId, BlockTag};
+use starknet::providers::jsonrpc::models::{BlockId, BlockTag, StateUpdate};
 
 use crate::{
     starknet::{
@@ -22,7 +22,7 @@ use starknet_api::{
     core::{calculate_contract_address, ChainId, ClassHash, ContractAddress, Nonce},
     hash::StarkFelt,
     stark_felt,
-    state::{StateUpdate, StorageKey},
+    state::StorageKey,
     transaction::{
         Calldata, ContractAddressSalt, DeployAccountTransaction, Fee,
         Transaction as StarknetApiTransaction, TransactionHash, TransactionSignature,

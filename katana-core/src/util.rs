@@ -3,13 +3,19 @@ use std::{fs, path::PathBuf};
 use anyhow::{anyhow, Result};
 use blockifier::{
     execution::contract_class::ContractClass,
+    state::cached_state::CommitmentStateDiff,
     transaction::{
         account_transaction::AccountTransaction,
         transaction_execution::Transaction as BlockifierTransaction,
         transactions::DeclareTransaction,
     },
 };
-use starknet::core::types::{contract::legacy::LegacyContractClass, FieldElement};
+use starknet::{
+    core::types::{contract::legacy::LegacyContractClass, FieldElement},
+    providers::jsonrpc::models::{
+        ContractStorageDiffItem, DeployedContractItem, NonceUpdate, StateDiff, StorageEntry,
+    },
+};
 use starknet_api::{
     core::ClassHash,
     hash::StarkFelt,
@@ -161,4 +167,45 @@ pub fn blockifier_contract_class_from_flattened_sierra_class(
 
     let casm_contract = CasmContractClass::from_contract_class(contract_class, true)?;
     Ok(casm_contract_into_contract_class(casm_contract)?)
+}
+
+pub fn convert_state_diff_to_rpc_state_diff(state_diff: CommitmentStateDiff) -> StateDiff {
+    StateDiff {
+        storage_diffs: state_diff
+            .storage_updates
+            .iter()
+            .map(|(address, entries)| ContractStorageDiffItem {
+                address: (*address.0.key()).into(),
+                storage_entries: entries
+                    .iter()
+                    .map(|(key, value)| StorageEntry {
+                        key: (*key.0.key()).into(),
+                        value: (*value).into(),
+                    })
+                    .collect(),
+            })
+            .collect(),
+        // TODO: This will change with RPC spec v3.0.0. Also, are we supposed to return the class hash or the compiled class hash?
+        declared_contract_hashes: state_diff
+            .class_hash_to_compiled_class_hash
+            .iter()
+            .map(|class_hash| class_hash.0 .0.into())
+            .collect(),
+        deployed_contracts: state_diff
+            .address_to_class_hash
+            .iter()
+            .map(|(address, class_hash)| DeployedContractItem {
+                address: (*address.0.key()).into(),
+                class_hash: class_hash.0.into(),
+            })
+            .collect(),
+        nonces: state_diff
+            .address_to_nonce
+            .iter()
+            .map(|(address, nonce)| NonceUpdate {
+                contract_address: (*address.0.key()).into(),
+                nonce: nonce.0.into(),
+            })
+            .collect(),
+    }
 }

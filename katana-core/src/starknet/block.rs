@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
+use starknet::providers::jsonrpc::models::StateUpdate;
 use starknet_api::{
     block::{Block, BlockBody, BlockHash, BlockHeader, BlockNumber, BlockTimestamp, GasPrice},
     core::{ContractAddress, GlobalRoot},
     hash::{pedersen_hash_array, StarkFelt},
     stark_felt,
-    state::StateUpdate,
     transaction::{Transaction, TransactionOutput},
 };
 

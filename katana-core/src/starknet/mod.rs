@@ -5,7 +5,7 @@ use blockifier::{
     block_context::BlockContext,
     execution::entry_point::{CallEntryPoint, CallInfo, ExecutionContext, ExecutionResources},
     state::{
-        cached_state::{CachedState, MutRefState},
+        cached_state::{CachedState, CommitmentStateDiff, MutRefState},
         state_api::State,
     },
     transaction::{
@@ -13,13 +13,15 @@ use blockifier::{
         transactions::ExecutableTransaction,
     },
 };
-use starknet::core::types::TransactionStatus;
+use starknet::{
+    core::types::{FieldElement, TransactionStatus},
+    providers::jsonrpc::models::StateUpdate,
+};
 use starknet_api::{
     block::{BlockHash, BlockNumber, BlockTimestamp, GasPrice},
     core::GlobalRoot,
     hash::StarkFelt,
     stark_felt,
-    state::{StateDiff, StateUpdate},
 };
 use tracing::info;
 
@@ -32,10 +34,7 @@ use crate::{
     block_context::Base,
     constants::DEFAULT_PREFUNDED_ACCOUNT_BALANCE,
     state::DictStateReader,
-    util::{
-        blockifier_contract_class_from_flattened_sierra_class,
-        convert_blockifier_tx_to_starknet_api_tx,
-    },
+    util::{convert_blockifier_tx_to_starknet_api_tx, convert_state_diff_to_rpc_state_diff},
 };
 use block::{StarknetBlock, StarknetBlocks};
 use transaction::{StarknetTransaction, StarknetTransactions};
@@ -174,17 +173,17 @@ impl StarknetWrapper {
         self.blocks.num_to_state_update.insert(
             self.blocks.current_height,
             StateUpdate {
-                block_hash,
-                new_root: latest_block.0.header.state_root,
+                block_hash: block_hash.0.into(),
+                new_root: latest_block.0.header.state_root.0.into(),
                 old_root: if latest_block.block_number() == BlockNumber(0) {
-                    GlobalRoot(stark_felt!(0))
+                    FieldElement::ZERO
                 } else {
                     self.blocks
                         .lastest()
-                        .map(|last_block| last_block.0.header.state_root)
+                        .map(|last_block| last_block.0.header.state_root.0.into())
                         .unwrap()
                 },
-                state_diff,
+                state_diff: convert_state_diff_to_rpc_state_diff(state_diff),
             },
         );
 
@@ -277,13 +276,12 @@ impl StarknetWrapper {
             .insert(transaction.inner.transaction_hash(), transaction)
     }
 
-    fn apply_state_diff(&mut self, state_diff: StateDiff) {
+    fn apply_state_diff(&mut self, state_diff: CommitmentStateDiff) {
         let state = &mut self.state.state;
 
         // update contract storages
-
         state_diff
-            .storage_diffs
+            .storage_updates
             .into_iter()
             .for_each(|(contract_address, storages)| {
                 storages.into_iter().for_each(|(key, value)| {
@@ -292,26 +290,18 @@ impl StarknetWrapper {
             });
 
         // update declared contracts
-
-        state_diff.declared_classes.into_iter().for_each(
-            |(class_hash, (compiled_class_hash, contract_class))| {
-                let raw_contract_class = serde_json::to_string(&contract_class).unwrap();
-                let contract_class =
-                    blockifier_contract_class_from_flattened_sierra_class(&raw_contract_class)
-                        .expect("get_blockifier_contract_class_from_flattened_sierra_class");
-
-                state.class_hash_to_class.insert(class_hash, contract_class);
-
+        state_diff
+            .class_hash_to_compiled_class_hash
+            .into_iter()
+            .for_each(|(class_hash, compiled_class_hash)| {
                 state
                     .class_hash_to_compiled_class_hash
                     .insert(class_hash, compiled_class_hash);
-            },
-        );
+            });
 
         // update deployed contracts
-
         state_diff
-            .deployed_contracts
+            .address_to_class_hash
             .into_iter()
             .for_each(|(contract_address, class_hash)| {
                 state
@@ -320,9 +310,8 @@ impl StarknetWrapper {
             });
 
         // update accounts nonce
-
         state_diff
-            .nonces
+            .address_to_nonce
             .into_iter()
             .for_each(|(contract_address, nonce)| {
                 state.address_to_nonce.insert(contract_address, nonce);

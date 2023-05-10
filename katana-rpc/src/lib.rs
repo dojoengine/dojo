@@ -43,12 +43,9 @@ use starknet_api::{hash::StarkHash, transaction::TransactionSignature};
 use starknet_api::{state::StorageKey, transaction::InvokeTransactionV1};
 use std::{net::SocketAddr, sync::Arc};
 use tokio::sync::RwLock;
-use utils::{
-    state_diff::convert_state_diff_to_rpc_state_diff,
-    transaction::{
-        compute_declare_v2_transaction_hash, compute_invoke_v1_transaction_hash,
-        convert_inner_to_rpc_tx, stark_felt_to_field_element,
-    },
+use utils::transaction::{
+    compute_declare_v2_transaction_hash, compute_invoke_v1_transaction_hash,
+    convert_inner_to_rpc_tx, stark_felt_to_field_element,
 };
 
 pub mod api;
@@ -266,20 +263,11 @@ impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
     }
 
     async fn state_update(&self, block_id: BlockId) -> Result<StateUpdate, Error> {
-        let state_update = self
-            .sequencer
+        self.sequencer
             .read()
             .await
             .state_update(block_id)
-            .map_err(|_| Error::from(KatanaApiError::BlockNotFound))?;
-
-        Ok(StateUpdate {
-            block_hash: stark_felt_to_field_element(state_update.block_hash.0).unwrap(),
-            new_root: stark_felt_to_field_element(state_update.new_root.0).unwrap(),
-            old_root: stark_felt_to_field_element(state_update.old_root.0).unwrap(),
-            state_diff: convert_state_diff_to_rpc_state_diff(state_update.state_diff)
-                .map_err(|_| Error::from(KatanaApiError::InternalServerError))?,
-        })
+            .map_err(|_| Error::from(KatanaApiError::BlockNotFound))
     }
 
     async fn transaction_receipt(
