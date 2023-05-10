@@ -23,6 +23,7 @@ use starknet_api::{
 use tracing::info;
 
 pub mod block;
+pub mod event;
 pub mod transaction;
 
 use crate::{

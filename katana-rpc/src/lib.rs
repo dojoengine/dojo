@@ -20,8 +20,8 @@ use starknet::providers::jsonrpc::models::{
     BlockHashAndNumber, BlockId, BlockStatus, BlockWithTxHashes, BlockWithTxs,
     BroadcastedDeclareTransaction, BroadcastedDeployAccountTransaction,
     BroadcastedInvokeTransaction, BroadcastedTransaction, ContractClass, DeclareTransactionResult,
-    DeployAccountTransactionResult, EventFilter, EventsPage, FeeEstimate, FunctionCall,
-    InvokeTransactionResult, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
+    DeployAccountTransactionResult, EmittedEvent, EventFilter, EventsPage, FeeEstimate,
+    FunctionCall, InvokeTransactionResult, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
     MaybePendingTransactionReceipt, PendingBlockWithTxs, StateUpdate, Transaction,
 };
 use starknet::{core::types::contract::FlattenedSierraClass, providers::jsonrpc::models::BlockTag};
@@ -306,7 +306,53 @@ impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
         continuation_token: Option<String>,
         chunk_size: u64,
     ) -> Result<EventsPage, Error> {
-        unimplemented!("KatanaRpc::events")
+        let from_block = filter.from_block.unwrap_or(BlockId::Number(0));
+        let to_block = filter.to_block.unwrap_or(BlockId::Tag(BlockTag::Latest));
+
+        let events = self
+            .sequencer
+            .read()
+            .await
+            .events(
+                from_block,
+                to_block,
+                filter.address.map(|fe| field_element_to_starkfelt(&fe)),
+                filter
+                    .keys
+                    .map(|keys| keys.iter().map(field_element_to_starkfelt).collect()),
+                continuation_token,
+                chunk_size,
+            )
+            .map_err(|_| Error::from(KatanaApiError::InternalServerError))?;
+
+        Ok(EventsPage {
+            events: events
+                .iter()
+                .map(|e| EmittedEvent {
+                    block_number: e.block_number.0,
+                    block_hash: stark_felt_to_field_element(e.block_hash.0).unwrap(),
+                    transaction_hash: stark_felt_to_field_element(e.transaction_hash.0).unwrap(),
+                    from_address: stark_felt_to_field_element(*e.inner.from_address.0.key())
+                        .unwrap(),
+                    keys: e
+                        .inner
+                        .content
+                        .keys
+                        .iter()
+                        .map(|key| stark_felt_to_field_element(key.0).unwrap())
+                        .collect(),
+                    data: e
+                        .inner
+                        .content
+                        .data
+                        .0
+                        .iter()
+                        .map(|fe| stark_felt_to_field_element(*fe).unwrap())
+                        .collect(),
+                })
+                .collect(),
+            continuation_token: None,
+        })
     }
 
     async fn pending_transactions(&self) -> Result<Vec<Transaction>, Error> {

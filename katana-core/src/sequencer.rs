@@ -2,7 +2,9 @@ use anyhow::Result;
 use starknet::providers::jsonrpc::models::{BlockId, BlockTag};
 
 use crate::{
-    starknet::{transaction::ExternalFunctionCall, StarknetConfig, StarknetWrapper},
+    starknet::{
+        event::EmittedEvent, transaction::ExternalFunctionCall, StarknetConfig, StarknetWrapper,
+    },
     util::{field_element_to_starkfelt, starkfelt_to_u128},
 };
 
@@ -22,8 +24,9 @@ use starknet_api::{
     stark_felt,
     state::StorageKey,
     transaction::{
-        Calldata, ContractAddressSalt, DeployAccountTransaction, Fee, TransactionHash,
-        TransactionSignature, TransactionVersion,
+        Calldata, ContractAddressSalt, DeployAccountTransaction, Fee,
+        Transaction as StarknetApiTransaction, TransactionHash, TransactionSignature,
+        TransactionVersion,
     },
 };
 
@@ -76,6 +79,32 @@ impl KatanaSequencer {
             constructor_calldata,
             signature,
         )
+    }
+
+    fn block_number_from_block_id(
+        &self,
+        block_id: BlockId,
+    ) -> Result<BlockNumber, blockifier::state::errors::StateError> {
+        let block_number = match block_id {
+            BlockId::Number(number) => BlockNumber(number),
+            BlockId::Hash(hash) => *self
+                .starknet
+                .blocks
+                .hash_to_num
+                .get(&BlockHash(field_element_to_starkfelt(&hash)))
+                .ok_or(blockifier::state::errors::StateError::StateReadError(
+                    "block not found".to_string(),
+                ))?,
+            BlockId::Tag(tag) => {
+                let current_height = self.starknet.blocks.current_height;
+                match tag {
+                    BlockTag::Latest => current_height.prev().unwrap(),
+                    BlockTag::Pending => current_height,
+                }
+            }
+        };
+
+        Ok(block_number)
     }
 }
 
@@ -155,25 +184,7 @@ impl Sequencer for KatanaSequencer {
     }
 
     fn block(&self, block_id: BlockId) -> Result<Block, blockifier::state::errors::StateError> {
-        let block_number = match block_id {
-            BlockId::Number(number) => BlockNumber(number),
-            BlockId::Hash(hash) => *self
-                .starknet
-                .blocks
-                .hash_to_num
-                .get(&BlockHash(field_element_to_starkfelt(&hash)))
-                .ok_or(blockifier::state::errors::StateError::StateReadError(
-                    "block not found".to_string(),
-                ))?,
-            BlockId::Tag(tag) => {
-                let current_height = self.starknet.blocks.current_height;
-                match tag {
-                    BlockTag::Latest => current_height.prev().unwrap(),
-                    BlockTag::Pending => current_height,
-                }
-            }
-        };
-
+        let block_number = self.block_number_from_block_id(block_id)?;
         let block = self.starknet.blocks.num_to_block.get(&block_number).ok_or(
             blockifier::state::errors::StateError::StateReadError("block not found".to_string()),
         )?;
@@ -203,6 +214,86 @@ impl Sequencer for KatanaSequencer {
         hash: &TransactionHash,
     ) -> Option<starknet_api::transaction::Transaction> {
         self.starknet.transactions.transaction(hash)
+    }
+
+    fn events(
+        &self,
+        from_block: BlockId,
+        to_block: BlockId,
+        address: Option<StarkFelt>,
+        keys: Option<Vec<StarkFelt>>,
+        _continuation_token: Option<String>,
+        _chunk_size: u64,
+    ) -> Result<Vec<EmittedEvent>, blockifier::state::errors::StateError> {
+        let from_block = self.block_number_from_block_id(from_block)?;
+        let to_block = self.block_number_from_block_id(to_block)?;
+
+        let mut events = Vec::new();
+        for i in from_block.0..to_block.0 {
+            let block = self
+                .starknet
+                .blocks
+                .num_to_block
+                .get(&BlockNumber(i))
+                .ok_or(blockifier::state::errors::StateError::StateReadError(
+                    "block not found".to_string(),
+                ))?;
+
+            for tx in &block.0.body.transactions {
+                match tx {
+                    StarknetApiTransaction::Invoke(_) | StarknetApiTransaction::L1Handler(_) => {}
+                    _ => continue,
+                }
+
+                let sn_tx = self
+                    .starknet
+                    .transactions
+                    .transactions
+                    .get(&tx.transaction_hash())
+                    .ok_or(blockifier::state::errors::StateError::StateReadError(
+                        "block not found".to_string(),
+                    ))?;
+
+                events.extend(
+                    sn_tx
+                        .emitted_events()
+                        .iter()
+                        .filter(|event| {
+                            // Check the address condition
+                            let address_condition = match &address {
+                                Some(a) => a != event.from_address.0.key(),
+                                None => true,
+                            };
+
+                            // If the address condition is false, no need to check the keys
+                            if !address_condition {
+                                return false;
+                            }
+
+                            // Check the keys condition
+                            match &keys {
+                                Some(keys) => {
+                                    if let Some(event_key) = event.content.keys.first() {
+                                        keys.contains(&event_key.0)
+                                    } else {
+                                        false
+                                    }
+                                }
+                                None => true,
+                            }
+                        })
+                        .map(|event| EmittedEvent {
+                            inner: event.clone(),
+                            block_hash: block.0.header.block_hash,
+                            block_number: block.0.header.block_number,
+                            transaction_hash: tx.transaction_hash(),
+                        })
+                        .collect::<Vec<_>>(),
+                );
+            }
+        }
+
+        Ok(events)
     }
 }
 
@@ -250,4 +341,14 @@ pub trait Sequencer {
     ) -> anyhow::Result<(TransactionHash, ContractAddress)>;
 
     fn add_account_transaction(&mut self, transaction: AccountTransaction);
+
+    fn events(
+        &self,
+        from_block: BlockId,
+        to_block: BlockId,
+        address: Option<StarkFelt>,
+        keys: Option<Vec<StarkFelt>>,
+        continuation_token: Option<String>,
+        chunk_size: u64,
+    ) -> Result<Vec<EmittedEvent>, blockifier::state::errors::StateError>;
 }
