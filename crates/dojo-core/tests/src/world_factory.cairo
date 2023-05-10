@@ -53,8 +53,13 @@ fn test_constructor() {
     assert(
         executor_address == starknet::contract_address_const::<0x69>(), 'wrong executor contract'
     );
-    assert(WorldFactory::default_auth_components().len() == auth_components.len(), 'wrong components length');
-    assert(WorldFactory::default_auth_systems().len() == auth_systems.len(), 'wrong systems length');
+    assert(
+        WorldFactory::default_auth_components().len() == auth_components.len(),
+        'wrong components length'
+    );
+    assert(
+        WorldFactory::default_auth_systems().len() == auth_systems.len(), 'wrong systems length'
+    );
 }
 
 #[test]
@@ -69,10 +74,7 @@ fn test_spawn_world() {
     // WorldFactory constructor
     let (auth_components, auth_systems) = mock_auth_components_systems();
     WorldFactory::constructor(
-        World::TEST_CLASS_HASH.try_into().unwrap(),
-        executor_address,
-        auth_components,
-        auth_systems
+        World::TEST_CLASS_HASH.try_into().unwrap(), executor_address, auth_components, auth_systems
     );
 
     assert(WorldFactory::executor() == executor_address, 'wrong executor address');
@@ -103,11 +105,15 @@ fn test_spawn_world() {
     // Check AuthRole component and GrantAuthRole system are registered
     let role_hash = world.component('AuthRole'.into());
     assert(
-        role_hash == AuthRoleComponent::TEST_CLASS_HASH.try_into().unwrap(), 'component not registered'
+        role_hash == AuthRoleComponent::TEST_CLASS_HASH.try_into().unwrap(),
+        'component not registered'
     );
 
     let grant_role_hash = world.system('GrantAuthRole'.into());
-    assert(grant_role_hash == GrantAuthRoleSystem::TEST_CLASS_HASH.try_into().unwrap(), 'system not registered');
+    assert(
+        grant_role_hash == GrantAuthRoleSystem::TEST_CLASS_HASH.try_into().unwrap(),
+        'system not registered'
+    );
 
     // Check Foo component and Bar system are registered
     let foo_hash = world.component('Foo'.into());

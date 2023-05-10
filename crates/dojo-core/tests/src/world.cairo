@@ -69,10 +69,7 @@ fn test_system() {
 #[available_gas(2000000)]
 fn test_constructor() {
     starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
-    World::constructor(
-        'World'.into(),
-        starknet::contract_address_const::<0x1337>(),
-    );
+    World::constructor('World'.into(), starknet::contract_address_const::<0x1337>(), );
 }
 
 #[test]
@@ -87,11 +84,7 @@ fn test_initialize() {
     let target_id = 'Bar'.into();
     let role_id = 'FooWriter'.into();
     let resource_id = 'Foo'.into();
-    let r = Route {
-        target_id,
-        role_id,
-        resource_id,
-    };
+    let r = Route { target_id, role_id, resource_id,  };
     route.append(r);
 
     // Initialize world
@@ -144,11 +137,7 @@ fn test_set_entity_authorized() {
     let target_id = 'Bar'.into();
     let role_id = 'FooWriter'.into();
     let resource_id = 'Foo'.into();
-    let r = Route {
-        target_id,
-        role_id,
-        resource_id,
-    };
+    let r = Route { target_id, role_id, resource_id,  };
     route.append(r);
 
     // Initialize world
@@ -241,11 +230,7 @@ fn test_set_entity_directly() {
     let target_id = 'Bar'.into();
     let role_id = 'FooWriter'.into();
     let resource_id = 'Foo'.into();
-    let r = Route {
-        target_id,
-        role_id,
-        resource_id,
-    };
+    let r = Route { target_id, role_id, resource_id,  };
     route.append(r);
 
     // Initialize world
@@ -263,7 +248,10 @@ fn spawn_empty_world() -> IWorldDispatcher {
     // Deploy executor contract
     let executor_constructor_calldata = array::ArrayTrait::<felt252>::new();
     let (executor_address, _) = deploy_syscall(
-        Executor::TEST_CLASS_HASH.try_into().unwrap(), 0, executor_constructor_calldata.span(), false
+        Executor::TEST_CLASS_HASH.try_into().unwrap(),
+        0,
+        executor_constructor_calldata.span(),
+        false
     ).unwrap();
 
     // Deploy world contract

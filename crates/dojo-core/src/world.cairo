@@ -75,7 +75,7 @@ mod World {
             let mut calldata = ArrayTrait::new();
             let r = routes.at(index);
             r.serialize(ref calldata);
- 
+
             // Call RouteAuth system via executor with the serialized route
             IExecutorDispatcher {
                 contract_address: executor::read()
@@ -101,7 +101,7 @@ mod World {
 
             // If component to be updated is AuthStatus or AuthRole, check if the caller account is Admin
             if component == 'AuthStatus' | component == 'AuthRole' {
-               is_account_admin() 
+                is_account_admin()
             } else {
                 // Check if the system is authorized to write to the component
                 let mut calldata = ArrayTrait::<felt252>::new();
@@ -140,7 +140,9 @@ mod World {
     fn register_component(class_hash: ClassHash) {
         let name = IComponentLibraryDispatcher { class_hash: class_hash }.name();
         // If component is already registered, validate permission to update.
-        if component_registry::read(name).is_non_zero() {
+        if component_registry::read(
+            name
+        ).is_non_zero() {
             assert(is_account_admin(), 'only admin can update');
         }
         component_registry::write(name, class_hash);
@@ -158,7 +160,9 @@ mod World {
     fn register_system(class_hash: ClassHash) {
         let name = ISystemLibraryDispatcher { class_hash: class_hash }.name();
         // If system is already registered, validate permission to update.
-        if system_registry::read(name).is_non_zero() {
+        if system_registry::read(
+            name
+        ).is_non_zero() {
             assert(is_account_admin(), 'only admin can update');
         }
         system_registry::write(name, class_hash);

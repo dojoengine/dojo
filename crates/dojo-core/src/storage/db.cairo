@@ -29,11 +29,7 @@ mod Database {
     fn StoreDeleteRecord(tableId: u250, keys: Span<u250>) {}
 
     fn get(
-        class_hash: starknet::ClassHash,
-        table: u250,
-        query: Query,
-        offset: u8,
-        length: usize
+        class_hash: starknet::ClassHash, table: u250, query: Query, offset: u8, length: usize
     ) -> Option<Span<felt252>> {
         let mut length = length;
         if length == 0_usize {
@@ -48,11 +44,7 @@ mod Database {
     }
 
     fn set(
-        class_hash: starknet::ClassHash,
-        table: u250,
-        query: Query,
-        offset: u8,
-        value: Span<felt252>
+        class_hash: starknet::ClassHash, table: u250, query: Query, offset: u8, value: Span<felt252>
     ) {
         let keys = query.keys();
         let id = query.into();

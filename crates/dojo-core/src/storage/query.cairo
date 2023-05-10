@@ -73,13 +73,13 @@ impl QueryImpl of QueryTrait {
     }
 }
 
-impl QueryIntoFelt252 of Into::<Query, u250> {
+impl QueryIntoFelt252 of Into<Query, u250> {
     fn into(self: Query) -> u250 {
         self.hash
     }
 }
 
-impl LiteralIntoQuery<E0, impl E0Into: Into<E0, u250>, impl E0Drop: Drop<E0>> of Into::<E0, Query> {
+impl LiteralIntoQuery<E0, impl E0Into: Into<E0, u250>, impl E0Drop: Drop<E0>> of Into<E0, Query> {
     fn into(self: E0) -> Query {
         let mut keys = ArrayTrait::new();
         keys.append(E0Into::into(self));
@@ -87,8 +87,10 @@ impl LiteralIntoQuery<E0, impl E0Into: Into<E0, u250>, impl E0Drop: Drop<E0>> of
     }
 }
 
-impl TupleSize1IntoQuery<E0, impl E0Into: Into<E0, u250>, impl E0Drop: Drop<E0>> of Into::<(E0,), Query> {
-    fn into(self: (E0,)) -> Query {
+impl TupleSize1IntoQuery<E0,
+impl E0Into: Into<E0, u250>,
+impl E0Drop: Drop<E0>> of Into<(E0, ), Query> {
+    fn into(self: (E0, )) -> Query {
         let (first) = self;
         let mut keys = ArrayTrait::new();
         keys.append(E0Into::into(first));
@@ -96,11 +98,13 @@ impl TupleSize1IntoQuery<E0, impl E0Into: Into<E0, u250>, impl E0Drop: Drop<E0>>
     }
 }
 
-impl TupleSize2IntoQuery<
-        E0, E1,
-        impl E0Into: Into<E0, u250>, impl E0Drop: Drop<E0>,
-        impl E1Into: Into<E1, u250>, impl E1Drop: Drop<E1>,
-    > of Into::<(E0, E1), Query> {
+impl TupleSize2IntoQuery<E0,
+E1,
+impl E0Into: Into<E0, u250>,
+impl E0Drop: Drop<E0>,
+impl E1Into: Into<E1, u250>,
+impl E1Drop: Drop<E1>,
+> of Into<(E0, E1), Query> {
     fn into(self: (E0, E1)) -> Query {
         let (first, second) = self;
         let mut keys = ArrayTrait::new();
@@ -110,12 +114,16 @@ impl TupleSize2IntoQuery<
     }
 }
 
-impl TupleSize3IntoQuery<
-        E0, E1, E2,
-        impl E0Into: Into<E0, u250>, impl E0Drop: Drop<E0>,
-        impl E1Into: Into<E1, u250>, impl E1Drop: Drop<E1>,
-        impl E2Into: Into<E2, u250>, impl E2Drop: Drop<E2>,
-    > of Into::<(E0, E1, E2), Query> {
+impl TupleSize3IntoQuery<E0,
+E1,
+E2,
+impl E0Into: Into<E0, u250>,
+impl E0Drop: Drop<E0>,
+impl E1Into: Into<E1, u250>,
+impl E1Drop: Drop<E1>,
+impl E2Into: Into<E2, u250>,
+impl E2Drop: Drop<E2>,
+> of Into<(E0, E1, E2), Query> {
     fn into(self: (E0, E1, E2)) -> Query {
         let (first, second, third) = self;
         let mut keys = ArrayTrait::new();
@@ -130,11 +138,13 @@ trait IntoPartitioned<T, Query> {
     fn into_partitioned(self: T) -> Query;
 }
 
-impl IntoPartitionedQuery<
-        E0, E1,
-        impl E0Into: Into<E0, u250>, impl E0Drop: Drop<E0>,
-        impl E1Into: Into<E1, Query>, impl E1Drop: Drop<E1>,
-    > of IntoPartitioned::<(E0, E1), Query> {
+impl IntoPartitionedQuery<E0,
+E1,
+impl E0Into: Into<E0, u250>,
+impl E0Drop: Drop<E0>,
+impl E1Into: Into<E1, Query>,
+impl E1Drop: Drop<E1>,
+> of IntoPartitioned<(E0, E1), Query> {
     fn into_partitioned(self: (E0, E1)) -> Query {
         let (partition, keys) = self;
         let mut query: Query = E1Into::into(keys);

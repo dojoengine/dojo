@@ -66,13 +66,15 @@ impl LegacyHashShortString of LegacyHash<ShortString> {
 impl StorageAccessShortString of StorageAccess<ShortString> {
     fn read(address_domain: u32, base: StorageBaseAddress) -> SyscallResult<ShortString> {
         Result::Ok(
-            Felt252TryIntoShortString::try_into(StorageAccess::<felt252>::read(
-                address_domain, base
-            )?).expect('Not ShortString')
+            Felt252TryIntoShortString::try_into(
+                StorageAccess::<felt252>::read(address_domain, base)?
+            ).expect('Not ShortString')
         )
     }
     #[inline(always)]
-    fn write(address_domain: u32, base: StorageBaseAddress, value: ShortString) -> SyscallResult<()> {
+    fn write(
+        address_domain: u32, base: StorageBaseAddress, value: ShortString
+    ) -> SyscallResult<()> {
         StorageAccess::<felt252>::write(address_domain, base, ShortStringIntoFelt252::into(value))
     }
 }

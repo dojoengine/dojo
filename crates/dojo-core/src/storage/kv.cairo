@@ -15,12 +15,7 @@ mod KeyValueStore {
     }
 
     #[view]
-    fn get(
-        table: u250,
-        key: u250,
-        offset: u8,
-        length: usize
-    ) -> Span<felt252> {
+    fn get(table: u250, key: u250, offset: u8, length: usize) -> Span<felt252> {
         let address_domain = 0_u32;
         let base = address(table, key);
         let mut value = ArrayTrait::<felt252>::new();
@@ -49,12 +44,7 @@ mod KeyValueStore {
     }
 
     #[external]
-    fn set(
-        table: u250,
-        query: u250,
-        offset: u8,
-        value: Span<felt252>
-    ) {
+    fn set(table: u250, query: u250, offset: u8, value: Span<felt252>) {
         let address_domain = 0_u32;
         let base = address(table, query);
         _set(address_domain, base, value, offset: offset);

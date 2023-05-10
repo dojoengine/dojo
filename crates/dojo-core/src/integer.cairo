@@ -54,7 +54,7 @@ impl U250PartialEq of PartialEq<u250> {
     }
 
     fn ne(lhs: u250, rhs: u250) -> bool {
-        lhs.inner !=rhs.inner
+        lhs.inner != rhs.inner
     }
 }
 
@@ -107,9 +107,9 @@ impl LegacyHashU250 of LegacyHash<u250> {
 impl StorageAccessU250 of StorageAccess<u250> {
     fn read(address_domain: u32, base: StorageBaseAddress) -> SyscallResult<u250> {
         Result::Ok(
-            Felt252TryIntoU250::try_into(StorageAccess::<felt252>::read(
-                address_domain, base
-            )?).expect('StorageAccessU250 - non u250')
+            Felt252TryIntoU250::try_into(
+                StorageAccess::<felt252>::read(address_domain, base)?
+            ).expect('StorageAccessU250 - non u250')
         )
     }
     #[inline(always)]
