@@ -16,11 +16,13 @@ use dojo_core::interfaces::IWorldDispatcherTrait;
 
 use dojo_core::auth::components::{AuthRoleComponent, AuthStatusComponent};
 use dojo_core::auth::systems::{
-    Route, RouteAuthSystem, IsAuthorizedSystem, IsAccountAdminSystem,
-    GrantAuthRoleSystem, RevokeAuthRoleSystem, GrantResourceSystem, RevokeResourceSystem
+    Route, RouteAuthSystem, IsAuthorizedSystem, IsAccountAdminSystem, GrantAuthRoleSystem,
+    RevokeAuthRoleSystem, GrantResourceSystem, RevokeResourceSystem
 };
 
-fn spawn_test_world(components: Array<felt252>, systems: Array<felt252>, routes: Array<Route>) -> IWorldDispatcher {
+fn spawn_test_world(
+    components: Array<felt252>, systems: Array<felt252>, routes: Array<Route>
+) -> IWorldDispatcher {
     // deploy executor
     let constructor_calldata = array::ArrayTrait::<felt252>::new();
     let (executor_address, _) = deploy_syscall(
@@ -71,7 +73,7 @@ fn spawn_test_world(components: Array<felt252>, systems: Array<felt252>, routes:
             break ();
         }
         world.register_component((*components[index]).try_into().unwrap());
-        index+=1;
+        index += 1;
     };
 
     // register systems
@@ -81,7 +83,7 @@ fn spawn_test_world(components: Array<felt252>, systems: Array<felt252>, routes:
             break ();
         }
         world.register_system((*systems[index]).try_into().unwrap());
-        index+=1;
+        index += 1;
     };
 
     // initialize world by setting the auth routes

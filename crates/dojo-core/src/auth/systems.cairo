@@ -13,11 +13,7 @@ trait RouteTrait {
 
 impl RouteImpl of RouteTrait {
     fn new(target_id: u250, role_id: u250, resource_id: u250) -> Route {
-        Route {
-            target_id,
-            role_id,
-            resource_id,
-        }
+        Route { target_id, role_id, resource_id,  }
     }
 }
 
@@ -33,10 +29,15 @@ mod RouteAuth {
 
     fn execute(route: Route) {
         // Set scoped role
-        commands::set_entity((route.target_id, route.resource_id).into(), (AuthRole { id: route.role_id }));
+        commands::set_entity(
+            (route.target_id, route.resource_id).into(), (AuthRole { id: route.role_id })
+        );
 
         // Set status
-        commands::set_entity((route.role_id, route.resource_id).into(), (AuthStatus { is_authorized: bool::True(()) }));
+        commands::set_entity(
+            (route.role_id, route.resource_id).into(),
+            (AuthStatus { is_authorized: bool::True(()) })
+        );
     }
 }
 
@@ -78,7 +79,7 @@ mod IsAuthorized {
         let scoped_role = match maybe_scoped_role {
             Option::Some(scoped_role) => scoped_role.id.into(),
             Option::None(_) => 0,
-        }; 
+        };
 
         // Get authorization status for scoped role
         let maybe_authorization_status = commands::<AuthStatus>::try_entity(
