@@ -48,11 +48,12 @@ trait IWorldFactory {
     fn set_executor(class_hash: ClassHash);
     fn spawn(
         name: ShortString,
-        components: Array::<ClassHash>,
-        systems: Array::<ClassHash>,
-        auth_components: Array::<ClassHash>,
-        auth_systems: Array::<ClassHash>
+        components: Array<ClassHash>,
+        systems: Array<ClassHash>,
+        routes: Array<Route>
     );
     fn world_class_hash() -> ClassHash;
     fn executor_address() -> ContractAddress;
+    fn default_auth_components() -> Array<ClassHash>;
+    fn default_auth_systems() -> Array<ClassHash>;
 }

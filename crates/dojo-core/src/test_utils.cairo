@@ -16,11 +16,11 @@ use dojo_core::interfaces::IWorldDispatcherTrait;
 
 use dojo_core::auth::components::{AuthRoleComponent, AuthStatusComponent};
 use dojo_core::auth::systems::{
-    RouteAuthSystem, IsAuthorizedSystem, IsAccountAdminSystem, GrantAuthRoleSystem,
-    RevokeAuthRoleSystem, GrantResourceSystem, RevokeResourceSystem
+    Route, RouteAuthSystem, IsAuthorizedSystem, IsAccountAdminSystem,
+    GrantAuthRoleSystem, RevokeAuthRoleSystem, GrantResourceSystem, RevokeResourceSystem
 };
 
-fn spawn_test_world(components: Array<felt252>, systems: Array<felt252>) -> IWorldDispatcher {
+fn spawn_test_world(components: Array<felt252>, systems: Array<felt252>, routes: Array<Route>) -> IWorldDispatcher {
     // deploy executor
     let constructor_calldata = array::ArrayTrait::<felt252>::new();
     let (executor_address, _) = deploy_syscall(
@@ -38,42 +38,22 @@ fn spawn_test_world(components: Array<felt252>, systems: Array<felt252>) -> IWor
 
     // register auth components and systems
     let (auth_components, auth_systems) = mock_auth_components_systems();
-    let mut auth_components_index = 0;
+    let mut index = 0;
     loop {
-        if auth_components_index == auth_components.len() {
+        if index == auth_components.len() {
             break ();
         }
-        world.register_component(*auth_components.at(auth_components_index));
-        auth_components_index += 1;
+        world.register_component(*auth_components.at(index));
+        index += 1;
     };
 
-    let mut auth_systems_index = 0;
+    let mut index = 0;
     loop {
-        if auth_systems_index == auth_systems.len() {
+        if index == auth_systems.len() {
             break ();
         }
-        world.register_system(*auth_systems.at(auth_systems_index));
-        auth_systems_index += 1;
-    };
-
-    // register components
-    let mut components_index = 0;
-    loop {
-        if components_index == components.len() {
-            break ();
-        }
-        world.register_component((*components[components_index]).try_into().unwrap());
-        components_index+=1;
-    };
-
-    // register systems
-    let mut systems_index = 0;
-    loop {
-        if systems_index == systems.len() {
-            break ();
-        }
-        world.register_system((*systems[systems_index]).try_into().unwrap());
-        systems_index+=1;
+        world.register_system(*auth_systems.at(index));
+        index += 1;
     };
 
     // Grant Admin role to the spawner
@@ -83,6 +63,29 @@ fn spawn_test_world(components: Array<felt252>, systems: Array<felt252>) -> IWor
     grant_role_calldata.append(caller.into()); // target_id
     grant_role_calldata.append('Admin'); // role_id
     world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
+
+    // register components
+    let mut index = 0;
+    loop {
+        if index == components.len() {
+            break ();
+        }
+        world.register_component((*components[index]).try_into().unwrap());
+        index+=1;
+    };
+
+    // register systems
+    let mut index = 0;
+    loop {
+        if index == systems.len() {
+            break ();
+        }
+        world.register_system((*systems[index]).try_into().unwrap());
+        index+=1;
+    };
+
+    // initialize world by setting the auth routes
+    world.initialize(routes);
 
     world
 }
