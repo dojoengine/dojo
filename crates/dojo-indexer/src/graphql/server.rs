@@ -11,7 +11,7 @@ use tracing::info;
 
 use super::Query;
 
-type Schema = RootNode<'static, Query, EmptyMutation<Context>, EmptySubscription<Context>>;
+pub type Schema = RootNode<'static, Query, EmptyMutation<Context>, EmptySubscription<Context>>;
 
 // To make our context usable by Juniper, we have to implement a marker trait.
 impl juniper::Context for Context {}
