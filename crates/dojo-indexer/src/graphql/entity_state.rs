@@ -64,8 +64,7 @@ pub async fn entity_states_by_entity(
         entity_id
     )
     .fetch_all(&mut conn)
-    .await
-    .unwrap();
+    .await?;
 
     Ok(entity_states)
 }
@@ -84,8 +83,7 @@ pub async fn entity_states_by_component(
         component_id
     )
     .fetch_all(&mut conn)
-    .await
-    .unwrap();
+    .await?;
 
     Ok(entity_states)
 }

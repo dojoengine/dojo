@@ -47,8 +47,7 @@ pub async fn system_calls_by_system(
         system_id
     )
     .fetch_all(&mut conn)
-    .await
-    .unwrap();
+    .await?;
 
     Ok(system_calls)
 }

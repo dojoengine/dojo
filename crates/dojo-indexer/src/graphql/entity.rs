@@ -45,8 +45,7 @@ pub async fn entity(context: &Context, id: String) -> FieldResult<Entity> {
         id
     )
     .fetch_one(&mut conn)
-    .await
-    .unwrap();
+    .await?;
 
     Ok(entity)
 }
@@ -61,8 +60,7 @@ pub async fn entities(context: &Context) -> FieldResult<Vec<Entity>> {
         "#
     )
     .fetch_all(&mut conn)
-    .await
-    .unwrap();
+    .await?;
 
     Ok(entities)
 }
