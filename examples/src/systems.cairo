@@ -58,6 +58,7 @@ mod tests {
     use core::traits::Into;
     use array::ArrayTrait;
 
+    use dojo_core::auth::systems::{Route, RouteTrait};
     use dojo_core::interfaces::IWorldDispatcherTrait;
     use dojo_core::test_utils::spawn_test_world;
 
@@ -77,9 +78,31 @@ mod tests {
         let mut systems = array::ArrayTrait::<felt252>::new();
         systems.append(SpawnSystem::TEST_CLASS_HASH);
         systems.append(MoveSystem::TEST_CLASS_HASH);
+        // routes
+        let mut routes = array::ArrayTrait::<Route>::new();
+        routes.append(RouteTrait::new(
+            'Move'.into(), // target_id
+            'MovesWriter'.into(), // role_id
+            'Moves'.into(), // resource_id
+        ));
+        routes.append(RouteTrait::new(
+            'Move'.into(), // target_id
+            'PositionWriter'.into(), // role_id
+            'Position'.into(), // resource_id
+        ));
+        routes.append(RouteTrait::new(
+            'Spawn'.into(), // target_id
+            'MovesWriter'.into(), // role_id
+            'Moves'.into(), // resource_id
+        ));
+        routes.append(RouteTrait::new(
+            'Spawn'.into(), // target_id
+            'PositionWriter'.into(), // role_id
+            'Position'.into(), // resource_id
+        ));
 
         // deploy executor, world and register components/systems
-        let world = spawn_test_world(components, systems);
+        let world = spawn_test_world(components, systems, routes);
     
         let spawn_call_data = array::ArrayTrait::<felt252>::new();
         world.execute('Spawn'.into(), spawn_call_data.span());
@@ -99,4 +122,3 @@ mod tests {
     }
 
 }
-

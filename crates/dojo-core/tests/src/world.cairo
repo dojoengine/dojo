@@ -14,7 +14,7 @@ use dojo_core::interfaces::IWorldDispatcher;
 use dojo_core::interfaces::IWorldDispatcherTrait;
 use dojo_core::executor::Executor;
 use dojo_core::world::World;
-use dojo_core::test_utils::spawn_test_world;
+use dojo_core::test_utils::mock_auth_components_systems;
 use dojo_core::auth::systems::Route;
 use starknet::get_caller_address;
 
@@ -51,20 +51,10 @@ mod Bar {
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(5000000)]
 fn test_system() {
-    let executor_constructor_calldata = array::ArrayTrait::<felt252>::new();
-    let (executor_address, _) = deploy_syscall(
-        Executor::TEST_CLASS_HASH.try_into().unwrap(), 0, executor_constructor_calldata.span(), false
-    ).unwrap();
-
-    let mut constructor_calldata = array::ArrayTrait::<felt252>::new();
-    constructor_calldata.append('World');
-    constructor_calldata.append(executor_address.into());
-    let (world_address, _) = deploy_syscall(
-        World::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
-    ).unwrap();
-    let world = IWorldDispatcher { contract_address: world_address };
+    // Spawn empty world
+    let world = spawn_empty_world();
 
     world.register_system(BarSystem::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
@@ -86,18 +76,13 @@ fn test_constructor() {
 }
 
 #[test]
-#[available_gas(10000000)]
+#[available_gas(8000000)]
 fn test_initialize() {
-    // Prepare world
-    let mut components = ArrayTrait::<felt252>::new();
-    components.append(FooComponent::TEST_CLASS_HASH);
-    let mut systems = ArrayTrait::<felt252>::new();
-    systems.append(BarSystem::TEST_CLASS_HASH);
+    // Spawn empty world
+    let world = spawn_empty_world();
 
-    // Spawn world
-    let world = spawn_test_world(components, systems);
-
-    // Prepare init data
+    world.register_system(BarSystem::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
     let mut route = ArrayTrait::<Route>::new();
     let target_id = 'Bar'.into();
     let role_id = 'FooWriter'.into();
@@ -131,12 +116,8 @@ fn test_initialize() {
 #[available_gas(3000000)]
 #[should_panic]
 fn test_initialize_not_more_than_once() {
-    // Prepare world
-    let components = ArrayTrait::<felt252>::new();
-    let systems = ArrayTrait::<felt252>::new();
-
-    // Spawn world
-    let world = spawn_test_world(components, systems);
+    // Spawn empty world
+    let world = spawn_empty_world();
 
     // Prepare init data
     let route_a = ArrayTrait::<Route>::new();
@@ -150,21 +131,15 @@ fn test_initialize_not_more_than_once() {
 }
 
 #[test]
-#[available_gas(10000000)]
+#[available_gas(9000000)]
 fn test_set_entity_authorized() {
-    // Prepare world
-    // components
-    let mut components = array::ArrayTrait::<felt252>::new();
-    components.append(FooComponent::TEST_CLASS_HASH);
+    // Spawn empty world
+    let world = spawn_empty_world();
 
-    // systems
-    let mut systems = array::ArrayTrait::<felt252>::new();
-    systems.append(BarSystem::TEST_CLASS_HASH);
+    world.register_system(BarSystem::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
 
-    // Spawn world
-    let world = spawn_test_world(components, systems);
-
-    // Prepare init data
+    // Prepare route
     let mut route = ArrayTrait::<Route>::new();
     let target_id = 'Bar'.into();
     let role_id = 'FooWriter'.into();
@@ -194,19 +169,13 @@ fn test_set_entity_authorized() {
 }
 
 #[test]
-#[available_gas(10000000)]
+#[available_gas(9000000)]
 fn test_set_entity_admin() {
-    // Prepare world
-    // components
-    let mut components = array::ArrayTrait::<felt252>::new();
-    components.append(FooComponent::TEST_CLASS_HASH);
+    // Spawn empty world
+    let world = spawn_empty_world();
 
-    // systems
-    let mut systems = array::ArrayTrait::<felt252>::new();
-    systems.append(BarSystem::TEST_CLASS_HASH);
-
-    // Spawn world
-    let world = spawn_test_world(components, systems);
+    world.register_system(BarSystem::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
 
     // No Auth route
     let mut route = ArrayTrait::<Route>::new();
@@ -234,50 +203,38 @@ fn test_set_entity_admin() {
     assert(*foo[1] == 1337, 'data not stored');
 }
 
-// Uncomment when set_account_contract_address is implemented
-// #[test]
-// #[available_gas(10000000)]
-// #[should_panic]
-// fn test_set_entity_unauthorized() {
-//     // Prepare world
-//     // components
-//     let mut components = array::ArrayTrait::<felt252>::new();
-//     components.append(FooComponent::TEST_CLASS_HASH);
+#[test]
+#[available_gas(8000000)]
+#[should_panic]
+fn test_set_entity_unauthorized() {
+    // Spawn empty world
+    let world = spawn_empty_world();
 
-//     // systems
-//     let mut systems = array::ArrayTrait::<felt252>::new();
-//     systems.append(BarSystem::TEST_CLASS_HASH);
+    world.register_system(BarSystem::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
 
-//     // Spawn world
-//     let world = spawn_test_world(components, systems);
+    // No Auth route
+    let mut route = ArrayTrait::<Route>::new();
 
-//     // No Auth route
-//     let mut route = ArrayTrait::<Route>::new();
+    // Initialize world
+    world.initialize(route);
 
-//     // Initialize world
-//     world.initialize(route);
-
-//     // Call Bar system
-//     let mut data = ArrayTrait::<felt252>::new();
-//     data.append(420);
-//     data.append(1337);
-//     world.execute('Bar'.into(), data.span());
-// }
+    // Call Bar system, should panic as it's not authorized
+    let mut data = ArrayTrait::<felt252>::new();
+    data.append(420);
+    data.append(1337);
+    world.execute('Bar'.into(), data.span());
+}
 
 #[test]
 #[available_gas(8000000)]
 #[should_panic]
 fn test_set_entity_directly() {
-    // Prepare world
-    // components
-    let mut components = array::ArrayTrait::<felt252>::new();
-    components.append(FooComponent::TEST_CLASS_HASH);
+    // Spawn empty world
+    let world = spawn_empty_world();
 
-    // systems
-    let mut systems = array::ArrayTrait::<felt252>::new();
-    systems.append(BarSystem::TEST_CLASS_HASH);
-
-    let world = spawn_test_world(components, systems);
+    world.register_system(BarSystem::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
 
     // Prepare init data
     let mut route = ArrayTrait::<Route>::new();
@@ -300,4 +257,50 @@ fn test_set_entity_directly() {
     data.append(420);
     data.append(1337);
     world.set_entity('Foo'.into(), QueryTrait::new_from_id(id.into()), 0_u8, data.span());
+}
+
+fn spawn_empty_world() -> IWorldDispatcher {
+    // Deploy executor contract
+    let executor_constructor_calldata = array::ArrayTrait::<felt252>::new();
+    let (executor_address, _) = deploy_syscall(
+        Executor::TEST_CLASS_HASH.try_into().unwrap(), 0, executor_constructor_calldata.span(), false
+    ).unwrap();
+
+    // Deploy world contract
+    let mut constructor_calldata = array::ArrayTrait::<felt252>::new();
+    constructor_calldata.append('World');
+    constructor_calldata.append(executor_address.into());
+    let (world_address, _) = deploy_syscall(
+        World::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
+    ).unwrap();
+    let world = IWorldDispatcher { contract_address: world_address };
+
+    // Install default auth components and systems
+    let (auth_components, auth_systems) = mock_auth_components_systems();
+    let mut index = 0;
+    loop {
+        if index == auth_components.len() {
+            break ();
+        }
+        world.register_component(*auth_components.at(index));
+        index += 1;
+    };
+    let mut index = 0;
+    loop {
+        if index == auth_systems.len() {
+            break ();
+        }
+        world.register_system(*auth_systems.at(index));
+        index += 1;
+    };
+
+    // give deployer the Admin role
+    let caller = get_caller_address();
+    let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
+
+    grant_role_calldata.append(caller.into()); // target_id
+    grant_role_calldata.append('Admin'); // role_id
+    world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
+
+    world
 }
