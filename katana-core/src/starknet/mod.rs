@@ -19,6 +19,7 @@ use starknet_api::{
     core::GlobalRoot,
     hash::StarkFelt,
     stark_felt,
+    state::{StateDiff, StateUpdate},
 };
 use tracing::info;
 
@@ -165,11 +166,42 @@ impl StarknetWrapper {
             latest_block.block_number()
         );
 
+        // apply state diff
+        let state_diff = self.state.to_state_diff();
+        // TODO: Compute state root
+        self.apply_state_diff(state_diff.clone());
+
+        self.blocks.num_to_state_update.insert(
+            self.blocks.current_height,
+            StateUpdate {
+                block_hash,
+                new_root: latest_block.0.header.state_root,
+                old_root: if latest_block.block_number() == BlockNumber(0) {
+                    GlobalRoot(stark_felt!(0))
+                } else {
+                    self.blocks
+                        .lastest()
+                        .map(|last_block| last_block.0.header.state_root)
+                        .unwrap()
+                },
+                state_diff,
+            },
+        );
+
         // reset the pending block
         self.blocks.pending_block = None;
         self.blocks.append_block(latest_block.clone());
-        self.update_block_context();
-        self.update_latest_state();
+
+        // update block context
+        let next_block_number = BlockNumber(self.blocks.current_height.0 + 1);
+        let timestamp = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+
+        self.blocks.current_height = next_block_number;
+        self.block_context.block_number = next_block_number;
+        self.block_context.block_timestamp = BlockTimestamp(timestamp);
 
         latest_block
     }
@@ -245,20 +277,7 @@ impl StarknetWrapper {
             .insert(transaction.inner.transaction_hash(), transaction)
     }
 
-    fn update_block_context(&mut self) {
-        let next_block_number = BlockNumber(self.blocks.current_height.0 + 1);
-        let timestamp = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-
-        self.blocks.current_height = next_block_number;
-        self.block_context.block_number = next_block_number;
-        self.block_context.block_timestamp = BlockTimestamp(timestamp);
-    }
-
-    fn update_latest_state(&mut self) {
-        let state_diff = self.state.to_state_diff();
+    fn apply_state_diff(&mut self, state_diff: StateDiff) {
         let state = &mut self.state.state;
 
         // update contract storages

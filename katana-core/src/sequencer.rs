@@ -22,7 +22,7 @@ use starknet_api::{
     core::{calculate_contract_address, ChainId, ClassHash, ContractAddress, Nonce},
     hash::StarkFelt,
     stark_felt,
-    state::StorageKey,
+    state::{StateUpdate, StorageKey},
     transaction::{
         Calldata, ContractAddressSalt, DeployAccountTransaction, Fee,
         Transaction as StarknetApiTransaction, TransactionHash, TransactionSignature,
@@ -295,6 +295,21 @@ impl Sequencer for KatanaSequencer {
 
         Ok(events)
     }
+
+    fn state_update(
+        &self,
+        block_id: BlockId,
+    ) -> Result<StateUpdate, blockifier::state::errors::StateError> {
+        let block_number = self.block_number_from_block_id(block_id)?;
+        self.starknet
+            .blocks
+            .num_to_state_update
+            .get(&block_number)
+            .ok_or(blockifier::state::errors::StateError::StateReadError(
+                "storage diff for block not found".to_string(),
+            ))
+            .cloned()
+    }
 }
 
 pub trait Sequencer {
@@ -351,4 +366,9 @@ pub trait Sequencer {
         continuation_token: Option<String>,
         chunk_size: u64,
     ) -> Result<Vec<EmittedEvent>, blockifier::state::errors::StateError>;
+
+    fn state_update(
+        &self,
+        block_id: BlockId,
+    ) -> Result<StateUpdate, blockifier::state::errors::StateError>;
 }

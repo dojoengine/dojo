@@ -5,6 +5,7 @@ use starknet_api::{
     core::{ContractAddress, GlobalRoot},
     hash::{pedersen_hash_array, StarkFelt},
     stark_felt,
+    state::StateUpdate,
     transaction::{Transaction, TransactionOutput},
 };
 
@@ -89,6 +90,7 @@ pub struct StarknetBlocks {
     pub hash_to_num: HashMap<BlockHash, BlockNumber>,
     pub num_to_block: HashMap<BlockNumber, StarknetBlock>,
     pub pending_block: Option<StarknetBlock>,
+    pub num_to_state_update: HashMap<BlockNumber, StateUpdate>,
 }
 
 impl StarknetBlocks {
