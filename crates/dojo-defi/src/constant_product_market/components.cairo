@@ -107,9 +107,8 @@ impl MarketImpl of MarketTrait {
         // dy = Y * dx / X
         let quantity_optimal = (reserve_quantity * amount) / reserve_amount;
 
-        // Unscale and convert to usize
-        // Need intermediate conversion to felt252 because there's no impl for Into<FixedType, u128>
-        (quantity_optimal.into().try_into().unwrap() / ONE_u128).try_into().unwrap()
+        // Convert from fixed point to usize
+        quantity_optimal.try_into().unwrap().try_into().unwrap()
     }
 
     // Given some quantity of items, return the equivalent/optimal amount of cash
@@ -134,9 +133,8 @@ impl MarketImpl of MarketTrait {
         // dx = X * dy / Y
         let amount_optimal = (reserve_amount * quantity) / reserve_quantity;
 
-        // Convert amount to u128 and unscale
-        // Need intermediate conversion to felt252 because there's no impl for Into<FixedType, u128>
-        amount_optimal.into().try_into().unwrap() / ONE_u128
+        // Convert from fixed point to u128
+        amount_optimal.try_into().unwrap()
     }
 
     // Inner function to add liquidity to the market, computes the optimal amount and quantity
@@ -241,12 +239,10 @@ impl MarketImpl of MarketTrait {
         // dy = S * Y / L
         let quantity = (shares * reserve_quantity) / liquidity;
 
-        // Unscale and convert amount and quantity to u128 and usize
-        // Need intermediate conversion to felt252 because there's no impl for Into<FixedType, u128>
+        // Convert amount and quantity both from fixed point to u128 and unscaled usize, respectively
         (
-            amount.into().try_into().unwrap() / ONE_u128,
-            (quantity.into().try_into().unwrap()
-                / (SCALING_FACTOR * ONE_u128)).into().try_into().unwrap()
+            amount.try_into().unwrap(),
+            (quantity.try_into().unwrap() / SCALING_FACTOR).try_into().unwrap()
         )
     }
 }
