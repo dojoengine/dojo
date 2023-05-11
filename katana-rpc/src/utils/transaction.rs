@@ -43,10 +43,6 @@ pub fn to_trimmed_hex_string(bytes: &[u8]) -> String {
     }
 }
 
-pub fn stark_felt_to_field_element(felt: StarkFelt) -> Result<FieldElement> {
-    Ok(FieldElement::from_byte_slice_be(felt.bytes())?)
-}
-
 pub fn compute_declare_v1_transaction_hash(
     sender_address: FieldElement,
     class_hash: FieldElement,
@@ -110,7 +106,7 @@ pub fn convert_stark_felt_array_to_field_element_array(
     calldata: &[StarkFelt],
 ) -> Result<Vec<FieldElement>> {
     calldata.iter().try_fold(Vec::new(), |mut data, &felt| {
-        data.push(stark_felt_to_field_element(felt)?);
+        data.push(felt.into());
         Ok(data)
     })
 }
@@ -136,15 +132,15 @@ fn convert_l1_handle_to_rpc(
     transaction: InnerL1HandlerTransaction,
 ) -> Result<L1HandlerTransaction> {
     Ok(L1HandlerTransaction {
-        transaction_hash: stark_felt_to_field_element(transaction.transaction_hash.0)?,
-        contract_address: stark_felt_to_field_element(*transaction.contract_address.0.key())?,
-        nonce: stark_felt_to_field_element(transaction.nonce.0)?
+        transaction_hash: transaction.transaction_hash.0.into(),
+        contract_address: (*transaction.contract_address.0.key()).into(),
+        nonce: <StarkFelt as Into<FieldElement>>::into(transaction.nonce.0)
             .try_into()
             .unwrap(),
-        version: stark_felt_to_field_element(transaction.version.0)?
+        version: <StarkFelt as Into<FieldElement>>::into(transaction.version.0)
             .try_into()
             .unwrap(),
-        entry_point_selector: stark_felt_to_field_element(transaction.entry_point_selector.0)?,
+        entry_point_selector: transaction.entry_point_selector.0.into(),
         calldata: convert_stark_felt_array_to_field_element_array(&transaction.calldata.0)?,
     })
 }
@@ -153,11 +149,11 @@ fn convert_deploy_account_to_rpc_tx(
     transaction: InnerDeployAccountTransaction,
 ) -> Result<DeployAccountTransaction> {
     Ok(DeployAccountTransaction {
-        transaction_hash: stark_felt_to_field_element(transaction.transaction_hash.0)?,
-        version: stark_felt_to_field_element(transaction.version.0)?.try_into()?,
-        class_hash: stark_felt_to_field_element(transaction.class_hash.0)?,
-        contract_address_salt: stark_felt_to_field_element(transaction.contract_address_salt.0)?,
-        nonce: stark_felt_to_field_element(transaction.nonce.0)?,
+        transaction_hash: transaction.transaction_hash.0.into(),
+        version: <StarkFelt as Into<FieldElement>>::into(transaction.version.0).try_into()?,
+        class_hash: transaction.class_hash.0.into(),
+        contract_address_salt: transaction.contract_address_salt.0.into(),
+        nonce: transaction.nonce.0.into(),
         constructor_calldata: convert_stark_felt_array_to_field_element_array(
             &transaction.constructor_calldata.0,
         )?,
@@ -169,9 +165,9 @@ fn convert_deploy_account_to_rpc_tx(
 fn convert_invoke_to_rpc_tx(transaction: InnerInvokeTransaction) -> Result<InvokeTransaction> {
     Ok(match transaction {
         InnerInvokeTransaction::V1(tx) => InvokeTransaction::V1(InvokeTransactionV1 {
-            transaction_hash: stark_felt_to_field_element(tx.transaction_hash.0)?,
-            sender_address: stark_felt_to_field_element(*tx.sender_address.0.key())?,
-            nonce: stark_felt_to_field_element(tx.nonce.0)?,
+            transaction_hash: tx.transaction_hash.0.into(),
+            sender_address: (*tx.sender_address.0.key()).into(),
+            nonce: tx.nonce.0.into(),
             calldata: convert_stark_felt_array_to_field_element_array(&tx.calldata.0)?,
             signature: convert_stark_felt_array_to_field_element_array(&tx.signature.0)?,
             max_fee: FieldElement::from_str(&tx.max_fee.0.to_string())?,
@@ -184,22 +180,22 @@ fn convert_declare_to_rpc_tx(transaction: InnerDeclareTransaction) -> Result<Dec
     Ok(match transaction {
         InnerDeclareTransaction::V0(tx) | InnerDeclareTransaction::V1(tx) => {
             DeclareTransaction::V1(DeclareTransactionV1 {
-                nonce: stark_felt_to_field_element(tx.nonce.0)?,
+                nonce: tx.nonce.0.into(),
                 max_fee: FieldElement::from_str(&tx.max_fee.0.to_string())?,
-                class_hash: stark_felt_to_field_element(tx.class_hash.0)?,
-                transaction_hash: stark_felt_to_field_element(tx.transaction_hash.0)?,
-                sender_address: stark_felt_to_field_element(*tx.sender_address.0.key())?,
+                class_hash: tx.class_hash.0.into(),
+                transaction_hash: tx.transaction_hash.0.into(),
+                sender_address: (*tx.sender_address.0.key()).into(),
                 signature: convert_stark_felt_array_to_field_element_array(&tx.signature.0)?,
             })
         }
         InnerDeclareTransaction::V2(tx) => DeclareTransaction::V2(DeclareTransactionV2 {
-            nonce: stark_felt_to_field_element(tx.nonce.0)?,
+            nonce: tx.nonce.0.into(),
             max_fee: FieldElement::from_str(&tx.max_fee.0.to_string())?,
-            class_hash: stark_felt_to_field_element(tx.class_hash.0)?,
-            transaction_hash: stark_felt_to_field_element(tx.transaction_hash.0)?,
-            sender_address: stark_felt_to_field_element(*tx.sender_address.0.key())?,
+            class_hash: tx.class_hash.0.into(),
+            transaction_hash: tx.transaction_hash.0.into(),
+            sender_address: (*tx.sender_address.0.key()).into(),
             signature: convert_stark_felt_array_to_field_element_array(&tx.signature.0)?,
-            compiled_class_hash: stark_felt_to_field_element(tx.compiled_class_hash.0)?,
+            compiled_class_hash: tx.compiled_class_hash.0.into(),
         }),
     })
 }
