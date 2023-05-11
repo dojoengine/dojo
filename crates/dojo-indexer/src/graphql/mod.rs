@@ -5,7 +5,6 @@ pub mod entity_state_update;
 pub mod server;
 pub mod system;
 pub mod system_call;
-mod tests;
 
 use component::Component;
 use juniper::{graphql_object, FieldResult};
