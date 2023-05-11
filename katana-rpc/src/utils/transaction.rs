@@ -189,12 +189,14 @@ fn convert_declare_to_rpc_tx(transaction: InnerDeclareTransaction) -> Result<Dec
             })
         }
         InnerDeclareTransaction::V2(tx) => DeclareTransaction::V2(DeclareTransactionV2 {
-            nonce: tx.nonce.0.into(),
-            max_fee: FieldElement::from_str(&tx.max_fee.0.to_string())?,
-            class_hash: tx.class_hash.0.into(),
-            transaction_hash: tx.transaction_hash.0.into(),
-            sender_address: (*tx.sender_address.0.key()).into(),
-            signature: convert_stark_felt_array_to_field_element_array(&tx.signature.0)?,
+            declare_txn_v1: DeclareTransactionV1 {
+                nonce: tx.nonce.0.into(),
+                max_fee: FieldElement::from_str(&tx.max_fee.0.to_string())?,
+                class_hash: tx.class_hash.0.into(),
+                transaction_hash: tx.transaction_hash.0.into(),
+                sender_address: (*tx.sender_address.0.key()).into(),
+                signature: convert_stark_felt_array_to_field_element_array(&tx.signature.0)?,
+            },
             compiled_class_hash: tx.compiled_class_hash.0.into(),
         }),
     })

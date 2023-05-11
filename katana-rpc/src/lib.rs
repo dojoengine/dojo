@@ -131,7 +131,7 @@ impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
             .sequencer
             .read()
             .await
-            .block(block_id.clone())
+            .block(block_id)
             .ok_or(Error::from(KatanaApiError::BlockNotFound))?;
 
         block
@@ -161,7 +161,7 @@ impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
             .sequencer
             .read()
             .await
-            .block(block_id.clone())
+            .block(block_id)
             .ok_or(Error::from(KatanaApiError::BlockNotFound))?;
 
         let sequencer_address = FieldElement::from_hex_be(SEQUENCER_ADDRESS).unwrap();
@@ -206,7 +206,7 @@ impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
             .sequencer
             .read()
             .await
-            .block(block_id.clone())
+            .block(block_id)
             .ok_or(Error::from(KatanaApiError::BlockNotFound))?;
 
         let transaction = block
@@ -223,7 +223,7 @@ impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
             .sequencer
             .read()
             .await
-            .block(block_id.clone())
+            .block(block_id)
             .ok_or(Error::from(KatanaApiError::BlockNotFound))?;
 
         let sequencer_address = FieldElement::from_hex_be(SEQUENCER_ADDRESS).unwrap();
@@ -316,9 +316,11 @@ impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
                 from_block,
                 to_block,
                 filter.address.map(|fe| field_element_to_starkfelt(&fe)),
-                filter
-                    .keys
-                    .map(|keys| keys.iter().map(field_element_to_starkfelt).collect()),
+                filter.keys.map(|keys| {
+                    keys.iter()
+                        .map(|key| key.iter().map(|key| (*key).into()).collect())
+                        .collect()
+                }),
                 continuation_token,
                 chunk_size,
             )

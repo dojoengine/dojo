@@ -15,7 +15,7 @@ use blockifier::{
 };
 use starknet::{
     core::types::{FieldElement, TransactionStatus},
-    providers::jsonrpc::models::StateUpdate,
+    providers::jsonrpc::models::{PendingStateUpdate, StateUpdate},
 };
 use starknet_api::{
     block::{BlockHash, BlockNumber, BlockTimestamp, GasPrice},
@@ -180,15 +180,17 @@ impl StarknetWrapper {
             StateUpdate {
                 block_hash: block_hash.0.into(),
                 new_root: new_block.header().state_root.0.into(),
-                old_root: if new_block.block_number() == BlockNumber(0) {
-                    FieldElement::ZERO
-                } else {
-                    self.blocks
-                        .latest()
-                        .map(|last_block| last_block.header().state_root.0.into())
-                        .unwrap()
+                pending_state_update: PendingStateUpdate {
+                    old_root: if new_block.block_number() == BlockNumber(0) {
+                        FieldElement::ZERO
+                    } else {
+                        self.blocks
+                            .latest()
+                            .map(|last_block| last_block.header().state_root.0.into())
+                            .unwrap()
+                    },
+                    state_diff: convert_state_diff_to_rpc_state_diff(state_diff.clone()),
                 },
-                state_diff: convert_state_diff_to_rpc_state_diff(state_diff.clone()),
             },
         );
 

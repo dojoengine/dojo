@@ -219,7 +219,7 @@ impl Sequencer for KatanaSequencer {
         from_block: BlockId,
         to_block: BlockId,
         address: Option<StarkFelt>,
-        keys: Option<Vec<StarkFelt>>,
+        keys: Option<Vec<Vec<StarkFelt>>>,
         _continuation_token: Option<String>,
         _chunk_size: u64,
     ) -> Result<Vec<EmittedEvent>, blockifier::state::errors::StateError> {
@@ -274,11 +274,18 @@ impl Sequencer for KatanaSequencer {
                             // Check the keys condition
                             match &keys {
                                 Some(keys) => {
-                                    if let Some(event_key) = event.content.keys.first() {
-                                        keys.contains(&event_key.0)
-                                    } else {
-                                        false
-                                    }
+                                    // "Per key (by position), designate the possible values to be matched
+                                    // for events to be returned. Empty array designates 'any' value"
+                                    let keys_to_check =
+                                        std::cmp::min(keys.len(), event.content.keys.len());
+
+                                    event
+                                        .content
+                                        .keys
+                                        .iter()
+                                        .zip(keys.iter())
+                                        .take(keys_to_check)
+                                        .all(|(key, filter)| filter.contains(&key.0))
                                 }
                                 None => true,
                             }
@@ -301,7 +308,7 @@ impl Sequencer for KatanaSequencer {
         &self,
         block_id: BlockId,
     ) -> Result<StateUpdate, blockifier::state::errors::StateError> {
-        let block_number = self.block_number_from_block_id(block_id.clone()).ok_or(
+        let block_number = self.block_number_from_block_id(block_id).ok_or(
             blockifier::state::errors::StateError::StateReadError(format!(
                 "block id {block_id:?} not found",
             )),
@@ -365,7 +372,7 @@ pub trait Sequencer {
         from_block: BlockId,
         to_block: BlockId,
         address: Option<StarkFelt>,
-        keys: Option<Vec<StarkFelt>>,
+        keys: Option<Vec<Vec<StarkFelt>>>,
         continuation_token: Option<String>,
         chunk_size: u64,
     ) -> Result<Vec<EmittedEvent>, blockifier::state::errors::StateError>;
