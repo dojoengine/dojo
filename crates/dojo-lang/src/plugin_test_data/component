@@ -5,6 +5,7 @@ ExpandContractTestRunner
 
 //! > cairo_code
 use serde::Serde;
+use dict::Felt252Dict;
 
 #[derive(Component)]
 struct Position {
@@ -30,8 +31,23 @@ impl PositionImpl of PositionTrait {
     }
 }
 
+#[derive(Component)]
+#[component(custom: true, traits: (Destruct))]
+struct Roles {
+    is_authorized: Felt252Dict<u8>,
+    roles_len: u8
+}
+
+#[derive(Component)]
+#[component(custom: true, traits: (Copy, Drop))]
+struct Player {
+    name: felt252, 
+}
+
 //! > generated_cairo_code
 use serde::Serde;
+
+use dict::Felt252Dict;
 
 trait PositionTrait {
     fn is_zero(self: Position) -> bool;
@@ -94,4 +110,87 @@ mod PositionComponent {
     }
 }
 
+#[derive(Destruct)]
+struct Roles {
+    is_authorized: Felt252Dict<u8>,
+    roles_len: u8
+}
+
+#[abi]
+trait IRoles {
+    fn name() -> felt252;
+    fn len() -> u8;
+}
+
+#[contract]
+mod RolesComponent {
+    use dojo_core::serde::SpanSerde;
+    use super::Roles;
+
+    #[view]
+    fn schema() -> Array<(felt252, felt252, u8)> {
+        let mut arr = array::ArrayTrait::new();
+        array::ArrayTrait::append(ref arr, ('is_authorized', 'Felt252Dict<u8>', 252));
+        array::ArrayTrait::append(ref arr, ('roles_len', 'u8', 252));
+
+        arr
+    }
+
+
+    #[view]
+    fn name() -> felt252 {
+        'Roles'
+    }
+
+    #[view]
+    fn len() -> usize {
+        2_usize
+    }
+
+    #[view]
+    fn is_indexed() -> bool {
+        bool::False(())
+    }
+}
+
+#[derive(Copy, Drop)]
+struct Player {
+    name: felt252, 
+}
+
+#[abi]
+trait IPlayer {
+    fn name() -> felt252;
+    fn len() -> u8;
+}
+
+#[contract]
+mod PlayerComponent {
+    use dojo_core::serde::SpanSerde;
+    use super::Player;
+
+    #[view]
+    fn schema() -> Array<(felt252, felt252, u8)> {
+        let mut arr = array::ArrayTrait::new();
+        array::ArrayTrait::append(ref arr, ('name', 'felt252', 252));
+
+        arr
+    }
+
+
+    #[view]
+    fn name() -> felt252 {
+        'Player'
+    }
+
+    #[view]
+    fn len() -> usize {
+        1_usize
+    }
+
+    #[view]
+    fn is_indexed() -> bool {
+        bool::False(())
+    }
+}
 //! > expected_diagnostics
