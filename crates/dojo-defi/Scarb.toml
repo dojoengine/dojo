@@ -1,0 +1,10 @@
+[package]
+name = "dojo_defi"
+version = "0.1.0"
+description = "Implementations of a defi primitives for the Dojo framework"
+
+[dependencies]
+cubit = { version = "0.1.0", git = "https://github.com/influenceth/cubit" }
+dojo_core = { path = "../dojo-core" }
+
+[[target.dojo]]

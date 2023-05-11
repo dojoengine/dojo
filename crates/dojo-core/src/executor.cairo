@@ -9,11 +9,10 @@ mod Executor {
     use dojo_core::serde::SpanSerde;
 
     const EXECUTE_ENTRYPOINT: felt252 =
-        0x240060cdb34fcc260f41eac7474ee1d7c80b7e3607daff9ac67c7ea2ebb1c44;
+        0x0240060cdb34fcc260f41eac7474ee1d7c80b7e3607daff9ac67c7ea2ebb1c44;
 
     #[external]
-    #[raw_output]
-    fn execute(class_hash: starknet::ClassHash, mut calldata: Span<felt252>, ) -> Span<felt252> {
+    fn execute(class_hash: starknet::ClassHash, calldata: Span<felt252>) -> Span<felt252> {
         let world_address = starknet::get_caller_address();
 
         let mut calldata_arr = calldata.snapshot.clone();

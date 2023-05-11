@@ -29,11 +29,11 @@ impl CommandTrait for EntitiesCommand {
             if let Some(partition) = command_ast.arguments(db).args(db).elements(db).first() {
                 RewriteNode::new_trimmed(partition.as_syntax_node())
             } else {
-                RewriteNode::Text("0".to_string())
+                RewriteNode::Text("dojo_core::integer::u250Trait::new(0)".to_string())
             };
 
         command.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
-            "let $query_pattern$ = ArrayTrait::<usize>::new();",
+            "let $query_pattern$ = array::ArrayTrait::<usize>::new();",
             HashMap::from([(
                 "query_pattern".to_string(),
                 RewriteNode::Text(command.query_id.clone()),
@@ -46,7 +46,9 @@ impl CommandTrait for EntitiesCommand {
                     RewriteNode::interpolate_patched(
                         "
                         let __$query_id$_$query_subtype$_ids = IWorldDispatcher { \
-                         contract_address: world_address }.entities('$component$', $partition$);
+                         contract_address: world_address \
+                         }.entities(dojo_core::string::ShortStringTrait::new('$component$'), \
+                         $partition$);
                         ",
                         HashMap::from([
                             (

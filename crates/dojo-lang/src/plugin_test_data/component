@@ -61,16 +61,22 @@ struct Position {
 trait IPosition {
     fn name() -> felt252;
     fn len() -> u8;
-    fn serialize(raw: Span<felt252>) -> Position;
-    fn deserialize(value: Position) -> Span<felt252>;
 }
 
 #[contract]
 mod PositionComponent {
-    use array::ArrayTrait;
-    use option::OptionTrait;
     use dojo_core::serde::SpanSerde;
     use super::Position;
+
+    #[view]
+    fn schema() -> Array<(felt252, felt252, u8)> {
+        let mut arr = array::ArrayTrait::new();
+        array::ArrayTrait::append(ref arr, ('x', 'felt252', 252));
+        array::ArrayTrait::append(ref arr, ('y', 'felt252', 252));
+
+        arr
+    }
+
 
     #[view]
     fn name() -> felt252 {
@@ -80,6 +86,11 @@ mod PositionComponent {
     #[view]
     fn len() -> usize {
         2_usize
+    }
+
+    #[view]
+    fn is_indexed() -> bool {
+        bool::False(())
     }
 }
 

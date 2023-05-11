@@ -21,7 +21,6 @@ use crate::indexer::start_indexer;
 mod processors;
 
 mod graphql;
-mod hash;
 mod indexer;
 mod stream;
 
@@ -90,7 +89,7 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn start_apibara(cts: CancellationToken, rpc: String) -> Result<()> {
+pub async fn start_apibara(cts: CancellationToken, rpc: String) -> Result<()> {
     let mut node = StarkNetNode::<HttpProvider, SimpleRequestObserver, NoWriteMap>::builder(&rpc)?
         .with_request_observer(MetadataKeyRequestObserver::new("x-api-key".to_string()));
 

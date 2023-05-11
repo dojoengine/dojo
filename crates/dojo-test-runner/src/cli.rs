@@ -1,47 +1,17 @@
 //! Compiles and runs a Dojo project.
 
 use std::env::{self, current_dir};
-use std::sync::Mutex;
 
-use anyhow::{bail, Context};
-use cairo_lang_compiler::db::RootDatabase;
-use cairo_lang_compiler::diagnostics::DiagnosticsReporter;
-use cairo_lang_debug::DebugWithDb;
-use cairo_lang_defs::ids::{FreeFunctionId, FunctionWithBodyId, ModuleItemId};
-use cairo_lang_diagnostics::ToOption;
-use cairo_lang_filesystem::ids::CrateId;
-use cairo_lang_lowering::ids::ConcreteFunctionWithBodyId;
-use cairo_lang_runner::short_string::as_cairo_short_string;
-use cairo_lang_runner::{RunResultValue, SierraCasmRunner};
-use cairo_lang_semantic::db::SemanticGroup;
-use cairo_lang_semantic::items::functions::GenericFunctionId;
-use cairo_lang_semantic::{ConcreteFunction, FunctionLongId};
-use cairo_lang_sierra::extensions::gas::CostTokenType;
-use cairo_lang_sierra::ids::FunctionId;
-use cairo_lang_sierra_generator::db::SierraGenGroup;
-use cairo_lang_sierra_generator::replace_ids::replace_sierra_ids_in_program;
-use cairo_lang_sierra_to_casm::metadata::MetadataComputationConfig;
-use cairo_lang_starknet::casm_contract_class::ENTRY_POINT_COST;
-use cairo_lang_starknet::contract::{find_contracts, get_module_functions};
-use cairo_lang_starknet::plugin::consts::{CONSTRUCTOR_MODULE, EXTERNAL_MODULE, L1_HANDLER_MODULE};
-use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
 use camino::Utf8PathBuf;
 use clap::Parser;
-use colored::Colorize;
-use dojo_lang::compiler::DojoCompiler;
-use dojo_lang::db::DojoRootDatabaseBuilderEx;
-use itertools::{chain, Itertools};
-use rayon::prelude::{IntoParallelIterator, ParallelIterator};
-use scarb::compiler::helpers::{build_project_config, collect_main_crate_ids};
+use compiler::DojoTestCompiler;
+use dojo_lang::plugin::CairoPluginRepository;
 use scarb::compiler::CompilerRepository;
 use scarb::core::Config;
 use scarb::ops;
 use scarb::ui::Verbosity;
-use test_config::{try_extract_test_config, TestConfig};
 
-use crate::test_config::{PanicExpectation, TestExpectation};
-
-mod test_config;
+mod compiler;
 
 /// Command line args parser.
 /// Exits with 0/1 if the input is formatted correctly/incorrectly.
@@ -49,7 +19,6 @@ mod test_config;
 #[clap(version, verbatim_doc_comment)]
 struct Args {
     /// The path to compile and run its tests.
-    #[arg(short, long)]
     path: Utf8PathBuf,
     /// The filter for the tests, running only tests containing the filter string.
     #[arg(short, long, default_value_t = String::default())]
@@ -62,13 +31,6 @@ struct Args {
     ignored: bool,
 }
 
-/// The status of a ran test.
-enum TestStatus {
-    Success,
-    Fail(RunResultValue),
-    Ignore,
-}
-
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     let source_dir = if args.path.is_absolute() {
@@ -79,14 +41,17 @@ fn main() -> anyhow::Result<()> {
         Utf8PathBuf::from_path_buf(current_path).unwrap()
     };
 
-    let mut compilers = CompilerRepository::empty();
-    compilers.add(Box::new(DojoCompiler)).unwrap();
+    let mut compilers = CompilerRepository::std();
+    compilers.add(Box::new(DojoTestCompiler)).unwrap();
+
+    let cairo_plugins = CairoPluginRepository::new()?;
 
     let manifest_path = source_dir.join("Scarb.toml");
     let config = Config::builder(manifest_path)
         .ui_verbosity(Verbosity::Verbose)
         .log_filter_directive(env::var_os("SCARB_LOG"))
         .compilers(compilers)
+        .cairo_plugins(cairo_plugins.into())
         .build()
         .unwrap();
 
@@ -95,227 +60,5 @@ fn main() -> anyhow::Result<()> {
         std::process::exit(1);
     });
 
-    let resolve = ops::resolve_workspace(&ws)?;
-    let compilation_units = ops::generate_compilation_units(&resolve, &ws)?;
-
-    let unit = compilation_units[0].clone();
-
-    let db = &mut RootDatabase::builder()
-        .with_project_config(build_project_config(&unit)?)
-        .with_dojo()
-        .build()?;
-
-    let main_crate_ids = collect_main_crate_ids(&unit, db);
-
-    if DiagnosticsReporter::stderr().check(db) {
-        bail!("failed to compile: {}", source_dir);
-    }
-    let all_entry_points: Vec<ConcreteFunctionWithBodyId> = find_contracts(db, &main_crate_ids)
-        .iter()
-        .flat_map(|contract| {
-            chain!(
-                get_module_functions(db, contract, EXTERNAL_MODULE).unwrap(),
-                get_module_functions(db, contract, CONSTRUCTOR_MODULE).unwrap(),
-                get_module_functions(db, contract, L1_HANDLER_MODULE).unwrap()
-            )
-        })
-        .flat_map(|func_id| ConcreteFunctionWithBodyId::from_no_generics_free(db, func_id))
-        .collect();
-    let function_set_costs: OrderedHashMap<FunctionId, OrderedHashMap<CostTokenType, i32>> =
-        all_entry_points
-            .iter()
-            .map(|func_id| {
-                (
-                    db.function_with_body_sierra(*func_id).unwrap().id.clone(),
-                    [(CostTokenType::Const, ENTRY_POINT_COST)].into(),
-                )
-            })
-            .collect();
-    let all_tests = find_all_tests(db, main_crate_ids);
-    let sierra_program = db
-        .get_sierra_program_for_functions(
-            chain!(
-                all_entry_points.into_iter(),
-                all_tests.iter().flat_map(|(func_id, _cfg)| {
-                    ConcreteFunctionWithBodyId::from_no_generics_free(db, *func_id)
-                })
-            )
-            .collect(),
-        )
-        .to_option()
-        .with_context(|| "Compilation failed without any diagnostics.")?;
-    let sierra_program = replace_sierra_ids_in_program(db, &sierra_program);
-    let sierra_program = replace_sierra_ids_in_program(db, &sierra_program);
-    let total_tests_count = all_tests.len();
-    let named_tests = all_tests
-        .into_iter()
-        .map(|(func_id, mut test)| {
-            // Un-ignoring all the tests in `include-ignored` mode.
-            if args.include_ignored {
-                test.ignored = false;
-            }
-            (
-                format!(
-                    "{:?}",
-                    FunctionLongId {
-                        function: ConcreteFunction {
-                            generic_function: GenericFunctionId::Free(func_id),
-                            generic_args: vec![]
-                        }
-                    }
-                    .debug(db)
-                ),
-                test,
-            )
-        })
-        .filter(|(name, _)| name.contains(&args.filter))
-        // Filtering unignored tests in `ignored` mode.
-        .filter(|(_, test)| !args.ignored || test.ignored)
-        .collect_vec();
-    let filtered_out = total_tests_count - named_tests.len();
-    let TestsSummary { passed, failed, ignored, failed_run_results } =
-        run_tests(named_tests, sierra_program, function_set_costs)?;
-    if failed.is_empty() {
-        println!(
-            "test result: {}. {} passed; {} failed; {} ignored; {filtered_out} filtered out;",
-            "ok".bright_green(),
-            passed.len(),
-            failed.len(),
-            ignored.len()
-        );
-        Ok(())
-    } else {
-        println!("failures:");
-        for (failure, run_result) in failed.iter().zip_eq(failed_run_results) {
-            print!("   {failure} - ");
-            match run_result {
-                RunResultValue::Success(_) => {
-                    println!("expected panic but finished successfully.");
-                }
-                RunResultValue::Panic(values) => {
-                    print!("panicked with [");
-                    for value in &values {
-                        match as_cairo_short_string(value) {
-                            Some(as_string) => print!("{value} ('{as_string}'), "),
-                            None => print!("{value}, "),
-                        }
-                    }
-                    println!("].")
-                }
-            }
-        }
-        println!();
-        bail!(
-            "test result: {}. {} passed; {} failed; {} ignored",
-            "FAILED".bright_red(),
-            passed.len(),
-            failed.len(),
-            ignored.len()
-        );
-    }
-}
-
-/// Summary data of the ran tests.
-struct TestsSummary {
-    passed: Vec<String>,
-    failed: Vec<String>,
-    ignored: Vec<String>,
-    failed_run_results: Vec<RunResultValue>,
-}
-
-/// Runs the tests and process the results for a summary.
-fn run_tests(
-    named_tests: Vec<(String, TestConfig)>,
-    sierra_program: cairo_lang_sierra::program::Program,
-    function_set_costs: OrderedHashMap<FunctionId, OrderedHashMap<CostTokenType, i32>>,
-) -> anyhow::Result<TestsSummary> {
-    let runner = SierraCasmRunner::new(
-        sierra_program,
-        Some(MetadataComputationConfig { function_set_costs }),
-    )
-    .with_context(|| "Failed setting up runner.")?;
-    println!("running {} tests", named_tests.len());
-    let wrapped_summary = Mutex::new(Ok(TestsSummary {
-        passed: vec![],
-        failed: vec![],
-        ignored: vec![],
-        failed_run_results: vec![],
-    }));
-    named_tests
-        .into_par_iter()
-        .map(|(name, test)| -> anyhow::Result<(String, TestStatus)> {
-            if test.ignored {
-                return Ok((name, TestStatus::Ignore));
-            }
-            let result = runner
-                .run_function(name.as_str(), &[], test.available_gas)
-                .with_context(|| format!("Failed to run the function `{}`.", name.as_str()))?;
-            Ok((
-                name,
-                match &result.value {
-                    RunResultValue::Success(_) => match test.expectation {
-                        TestExpectation::Success => TestStatus::Success,
-                        TestExpectation::Panics(_) => TestStatus::Fail(result.value),
-                    },
-                    RunResultValue::Panic(value) => match test.expectation {
-                        TestExpectation::Success => TestStatus::Fail(result.value),
-                        TestExpectation::Panics(panic_expectation) => match panic_expectation {
-                            PanicExpectation::Exact(expected) if value != &expected => {
-                                TestStatus::Fail(result.value)
-                            }
-                            _ => TestStatus::Success,
-                        },
-                    },
-                },
-            ))
-        })
-        .for_each(|r| {
-            let mut wrapped_summary = wrapped_summary.lock().unwrap();
-            if wrapped_summary.is_err() {
-                return;
-            }
-            let (name, status) = match r {
-                Ok((name, status)) => (name, status),
-                Err(err) => {
-                    *wrapped_summary = Err(err);
-                    return;
-                }
-            };
-            let summary = wrapped_summary.as_mut().unwrap();
-            let (res_type, status_str) = match status {
-                TestStatus::Success => (&mut summary.passed, "ok".bright_green()),
-                TestStatus::Fail(run_result) => {
-                    summary.failed_run_results.push(run_result);
-                    (&mut summary.failed, "fail".bright_red())
-                }
-                TestStatus::Ignore => (&mut summary.ignored, "ignored".bright_yellow()),
-            };
-            println!("test {name} ... {status_str}",);
-            res_type.push(name);
-        });
-    wrapped_summary.into_inner().unwrap()
-}
-
-/// Finds the tests in the requested crates.
-fn find_all_tests(
-    db: &dyn SemanticGroup,
-    main_crates: Vec<CrateId>,
-) -> Vec<(FreeFunctionId, TestConfig)> {
-    let mut tests = vec![];
-    for crate_id in main_crates {
-        let modules = db.crate_modules(crate_id);
-        for module_id in modules.iter() {
-            let Ok(module_items) = db.module_items(*module_id) else {
-                continue;
-            };
-            tests.extend(
-                module_items.iter().filter_map(|item| {
-                    let ModuleItemId::FreeFunction(func_id) = item else { return None };
-                    let Ok(attrs) = db.function_with_body_attributes(FunctionWithBodyId::Free(*func_id)) else { return None };
-                    Some((*func_id, try_extract_test_config(db.upcast(), attrs).unwrap()?))
-                }),
-            );
-        }
-    }
-    tests
+    ops::compile(&ws)
 }

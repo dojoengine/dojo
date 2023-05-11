@@ -1,16 +1,17 @@
-use std::env::current_dir;
+use std::env::{self, current_dir};
 
 use anyhow::Result;
 use camino::Utf8PathBuf;
 use clap::Args;
-use dojo_project::migration::world::World;
-use dojo_signers::FromEnv;
+use dojo_world::migration::world::World;
+use dojo_world::{EnvironmentConfig, WorldConfig};
 use dotenv::dotenv;
-use starknet::accounts::SingleOwnerAccount;
-use starknet::core::chain_id;
-use starknet::core::types::FieldElement;
-use starknet::providers::SequencerGatewayProvider;
-use starknet::signers::LocalWallet;
+use scarb::core::Config;
+use scarb::ops;
+use scarb::ui::Verbosity;
+use tracing::error;
+
+use crate::build::{self, BuildArgs, ProfileSpec};
 
 #[derive(Args)]
 pub struct MigrateArgs {
@@ -19,13 +20,17 @@ pub struct MigrateArgs {
 
     #[clap(short, long, help = "Perform a dry run and outputs the plan to be executed")]
     plan: bool,
+
+    #[command(flatten)]
+    profile_spec: ProfileSpec,
 }
 
-#[tokio::main]
-pub async fn run(args: MigrateArgs) -> Result<()> {
+pub fn run(args: MigrateArgs) -> Result<()> {
     dotenv().ok();
 
-    let source_dir = match args.path {
+    let MigrateArgs { path, profile_spec, .. } = args;
+
+    let source_dir = match path {
         Some(path) => {
             if path.is_absolute() {
                 path
@@ -38,18 +43,32 @@ pub async fn run(args: MigrateArgs) -> Result<()> {
         None => Utf8PathBuf::from_path_buf(current_dir().unwrap()).unwrap(),
     };
 
-    let world = World::from_path(source_dir.clone()).await?;
-    let mut migration = world.prepare_for_migration(source_dir)?;
+    let manifest_path = source_dir.join("Scarb.toml");
+    let config = Config::builder(manifest_path)
+        .ui_verbosity(Verbosity::Verbose)
+        .log_filter_directive(env::var_os("SCARB_LOG"))
+        .build()
+        .unwrap();
+    let ws = ops::read_workspace(config.manifest_path(), &config).unwrap_or_else(|err| {
+        error!("error: {err}");
+        std::process::exit(1);
+    });
 
-    let provider = SequencerGatewayProvider::starknet_alpha_goerli();
-    let signer = LocalWallet::from_env()?;
-    let address = FieldElement::from_hex_be(
-        "0x03cD4f9b4bd4D5eF087012D228E9ee6761eE10d02Bd23bed6055BF6799DD98b8",
-    )
-    .unwrap();
-    let account = SingleOwnerAccount::new(provider, signer, address, chain_id::TESTNET);
+    let profile = profile_spec.determine()?;
+    let target_dir = source_dir.join(format!("target/{}", profile.as_str()));
 
-    migration.execute(account).await?;
+    if !target_dir.join("manifest.json").exists() {
+        build::run(BuildArgs { path: Some(source_dir), profile_spec })?;
+    }
+
+    let world_config = WorldConfig::from_workspace(&ws).unwrap_or_default();
+    let env_config = EnvironmentConfig::from_workspace(profile.as_str(), &ws)?;
+
+    ws.config().tokio_handle().block_on(async {
+        let world = World::from_path(target_dir.clone(), world_config, env_config).await?;
+        let mut migration = world.prepare_for_migration(target_dir)?;
+        migration.execute().await
+    })?;
 
     Ok(())
 }

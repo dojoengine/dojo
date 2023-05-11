@@ -8,6 +8,7 @@ on:
     paths:
       - '.devcontainer/**'
       - '.github/workflows/devcontainer.yml'
+      - '!.devcontainer/devcontainer.json'
 
 jobs:
   build-and-push:
@@ -26,7 +27,7 @@ jobs:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-    
+
     - name: Set Docker tag for release event
       if: github.event_name == 'release'
       run: echo "DOCKER_TAG=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
@@ -44,3 +45,39 @@ jobs:
         build-args: |
           VARIANT=bullseye
         platforms: linux/amd64,linux/arm64
+        cache-from: type=registry,ref=ghcr.io/${{ github.repository }}-dev:latest
+        cache-to: type=registry,ref=ghcr.io/${{ github.repository }}-dev:cache
+
+  propose-update-pr:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Update devcontainer.json
+      run: |
+        sed -i "s|ghcr.io/dojoengine/dojo-dev:[a-zA-Z0-9._-]*|ghcr.io/dojoengine/dojo-dev:${{ needs.build-and-push.outputs.DOCKER_TAG }}|" .devcontainer/devcontainer.json
+
+    - name: Setup Git credentials
+      run: |
+        git config user.name "GitHub Action"
+        git config user.email "action@github.com"
+
+    - name: Commit and push changes
+      run: |
+        git add .devcontainer/devcontainer.json
+        git commit -m "Update devcontainer image hash"
+        git push
+
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        title: "Update devcontainer image hash"
+        commit-message: "Update devcontainer image hash"
+        branch: update-devcontainer-image-hash
+        base: main
+        delete-branch: true

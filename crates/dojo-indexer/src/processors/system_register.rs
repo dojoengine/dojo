@@ -1,45 +1,31 @@
-use std::cmp::Ordering;
-
 use anyhow::{Error, Ok, Result};
 use apibara_core::starknet::v1alpha2::EventWithTransaction;
 use num::BigUint;
 use sqlx::{Executor, Pool, Sqlite};
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::models::{BlockId, BlockTag};
-use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
+use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
 use tonic::async_trait;
 
-use super::{EventProcessor, IProcessor};
-use crate::hash::starknet_hash;
+use super::EventProcessor;
 use crate::stream::FieldElementExt;
 
+#[derive(Default)]
 pub struct SystemRegistrationProcessor;
-impl SystemRegistrationProcessor {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
-
-impl EventProcessor for SystemRegistrationProcessor {
-    fn get_event_key(&self) -> String {
-        "SystemRegistered".to_string()
-    }
-}
 
 #[async_trait]
-impl IProcessor<EventWithTransaction> for SystemRegistrationProcessor {
+impl<T: JsonRpcTransport + Sync + Send> EventProcessor<T> for SystemRegistrationProcessor {
+    fn event_key(&self) -> String {
+        "SystemRegistered".to_string()
+    }
+
     async fn process(
         &self,
         pool: &Pool<Sqlite>,
-        provider: &JsonRpcClient<HttpTransport>,
+        provider: &JsonRpcClient<T>,
         data: EventWithTransaction,
     ) -> Result<(), Error> {
         let event = &data.event.unwrap();
-        let event_key = &event.keys[0].to_biguint();
-        if event_key.cmp(&starknet_hash(self.get_event_key().as_bytes())) != Ordering::Equal {
-            return Ok(());
-        }
-
         let transaction_hash = &data.transaction.unwrap().meta.unwrap().hash.unwrap().to_biguint();
         let system = &event.data[0].to_biguint();
 

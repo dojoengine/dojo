@@ -12,6 +12,8 @@ use smol_str::SmolStr;
 use super::entities::find_components;
 use super::{command_name, CommandData, CommandTrait};
 
+const CAIRO_ERR_MSG_LEN: usize = 31;
+
 pub struct EntityCommand {
     query_id: String,
     query_pattern: String,
@@ -78,16 +80,21 @@ impl CommandTrait for EntityCommand {
 impl EntityCommand {
     fn handle_entity(&mut self, components: Vec<SmolStr>, query: &Arg, part_names: Vec<String>) {
         for component in components.iter() {
+            let mut lookup_err_msg = format!("{} not found", component.to_string());
+            lookup_err_msg.truncate(CAIRO_ERR_MSG_LEN);
+            let mut deser_err_msg = format!("{} failed to deserialize", component.to_string());
+            deser_err_msg.truncate(CAIRO_ERR_MSG_LEN);
+
             self.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
                 "
                     let mut __$query_id$_$query_subtype$_raw = IWorldDispatcher {
                         contract_address: world_address
-                    }.entity('$component$', $query$, 0_u8, 0_usize);
-                    assert(__$query_id$_$query_subtype$_raw.len() > 0_usize, 'Failed to find \
-                 $component$');
+                    }.entity(dojo_core::string::ShortStringTrait::new('$component$'), $query$, \
+                 0_u8, 0_usize);
+                    assert(__$query_id$_$query_subtype$_raw.len() > 0_usize, '$lookup_err_msg$');
                     let __$query_id$_$query_subtype$ = serde::Serde::<$component$>::deserialize(
                         ref __$query_id$_$query_subtype$_raw
-                    ).expect('Failed to deserialize $component$');
+                    ).expect('$deser_err_msg$');
                     ",
                 HashMap::from([
                     ("component".to_string(), RewriteNode::Text(component.to_string())),
@@ -97,6 +104,8 @@ impl EntityCommand {
                     ),
                     ("query_id".to_string(), RewriteNode::Text(self.query_id.clone())),
                     ("query".to_string(), RewriteNode::new_trimmed(query.as_syntax_node())),
+                    ("lookup_err_msg".to_string(), RewriteNode::Text(lookup_err_msg)),
+                    ("deser_err_msg".to_string(), RewriteNode::Text(deser_err_msg)),
                 ]),
             ));
         }
@@ -124,11 +133,15 @@ impl EntityCommand {
         part_names: Vec<String>,
     ) {
         for component in components.iter() {
+            let mut deser_err_msg = format!("{} failed to deserialize", component.to_string());
+            deser_err_msg.truncate(CAIRO_ERR_MSG_LEN);
+
             self.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
                 "
                     let mut __$query_id$_$query_subtype$_raw = IWorldDispatcher {
                         contract_address: world_address
-                    }.entity('$component$', $query$, 0_u8, 0_usize);
+                    }.entity(dojo_core::string::ShortStringTrait::new('$component$'), $query$, \
+                 0_u8, 0_usize);
                     let __$query_id$_$query_subtype$ = match \
                  __$query_id$_$query_subtype$_raw.len() > 0_usize {
                         bool::False(()) => {
@@ -137,7 +150,7 @@ impl EntityCommand {
                         bool::True(()) => {
                             Option::Some(serde::Serde::<$component$>::deserialize(
                                 ref __$query_id$_$query_subtype$_raw
-                            ).expect('Failed to deserialize $component$'))
+                            ).expect('$deser_err_msg$'))
                         }
                     };
                     ",
@@ -149,6 +162,7 @@ impl EntityCommand {
                     ),
                     ("query_id".to_string(), RewriteNode::Text(self.query_id.clone())),
                     ("query".to_string(), RewriteNode::new_trimmed(query.as_syntax_node())),
+                    ("deser_err_msg".to_string(), RewriteNode::Text(deser_err_msg)),
                 ]),
             ));
         }

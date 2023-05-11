@@ -34,7 +34,7 @@ The `world` is the top-level concept in an onchain game, serving as a centralize
 
 Components form the schema of the world, holding state for systems to operate on. Components struct, for example, the following implements a `Position` component which exposes a `is_zero` and `is_equal` method. The Dojo toolchain compiles components to contracts which can be declared and installed into a world.
 
-##### Example
+##### Components Example
 
 ```rust
 #[derive(Component)]
@@ -56,8 +56,7 @@ impl PositionImpl of PositionTrait {
 
 #### Systems
 
-Systems are functions operating on the world state. They receive some input from the user, retreive state from the world, compute a state transition and apply it. A system has a single entrypoint, the `execute` function. Systems can leverage `commands` to easily interact with the world.
-
+Systems are functions operating on the world state. They receive some input from the user, retrieve state from the world, compute a state transition and apply it. A system has a single entrypoint, the `execute` function. Systems can leverage `commands` to easily interact with the world.
 
 ##### Commands
 
@@ -68,14 +67,14 @@ fn commands::uuid() -> felt252;
 // Update an existing entity with the provided components.
 fn commands::set_entity(query: Query, components: T);
 
-// Retreive a components for an entity.
+// Retrieve a components for an entity.
 fn commands::<T>::entity(query: Query) -> T;
 
-// Retreive all entity ids that match the component selector criteria.
+// Retrieve all entity ids that match the component selector criteria.
 fn commands::<T>::entities() -> Array<felt252>;
 ```
 
-##### Example
+##### System Example
 
 ```rust
 #[system]
@@ -110,9 +109,17 @@ An entity is addressed by a `felt252`. An entity represents a collection of comp
 
 ## Development
 
+### Cairo Submodule
+
+Make sure that the Cairo 1 submodule is present when this repository is cloned
+
+```bash
+git submodule init && git submodule update
+```
+
 ### Dev Container
 
-It is recommended to use the dev container when building on Dojo as it contains everything needed to begin developing.
+It is recommended to use the Dev Containers VSCode extension when building on Dojo as it contains everything needed to begin developing.
 
 Make sure you update your Docker to the latest stable version, sometimes the Dev containers do not play nicely with old Docker versions.
 
@@ -120,13 +127,13 @@ Make sure you update your Docker to the latest stable version, sometimes the Dev
 
 ##### Open and build container
 
-Command pallete: `ctrl + shift + p`
+Command palette: `ctrl + shift + p`
 
-Then: `Remote-Containers: Rebuild Container Without Cache`
+Then: `Dev Containers: Rebuild Without Cache And Reopen In Container`
 
-##### Setup the language server 
+##### Setup the language server
 
-```
+```bash
 cd cairo/vscode-cairo
 
 npm install --global @vscode/vsce
@@ -142,10 +149,11 @@ cargo build --bin dojo-language-server --release
 ### Development without container
 
 - Install [Rust](https://www.rust-lang.org/tools/install)
-- Setup Rust:
-```
+
+```bash
 rustup override set stable && rustup update && cargo test
 ```
+
 Then install the language like described above.
 
 ---

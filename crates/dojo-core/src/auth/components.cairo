@@ -1,3 +1,5 @@
+use dojo_core::integer::u250;
+
 #[derive(Component)]
 struct Status {
     is_authorized: bool
@@ -5,5 +7,5 @@ struct Status {
 
 #[derive(Component)]
 struct Role {
-    id: felt252
+    id: u250
 }

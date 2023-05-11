@@ -5,13 +5,11 @@ use std::ops::DerefMut;
 use anyhow::{anyhow, Context, Result};
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_filesystem::db::FilesGroup;
-use cairo_lang_filesystem::ids::CrateLongId;
+use cairo_lang_filesystem::ids::{CrateId, CrateLongId};
 use cairo_lang_starknet::contract::find_contracts;
 use cairo_lang_starknet::contract_class::{compile_prepared_db, ContractClass};
-use cairo_lang_utils::Upcast;
-use scarb::compiler::helpers::{
-    build_compiler_config, build_project_config, collect_main_crate_ids,
-};
+use cairo_lang_utils::UpcastMut;
+use scarb::compiler::helpers::build_compiler_config;
 use scarb::compiler::{CompilationUnit, Compiler};
 use scarb::core::Workspace;
 use smol_str::SmolStr;
@@ -19,8 +17,8 @@ use starknet::core::types::contract::SierraClass;
 use starknet::core::types::FieldElement;
 use tracing::{trace, trace_span};
 
-use crate::db::DojoRootDatabaseBuilderEx;
 use crate::manifest::Manifest;
+
 pub struct DojoCompiler;
 
 impl Compiler for DojoCompiler {
@@ -28,30 +26,25 @@ impl Compiler for DojoCompiler {
         "dojo"
     }
 
-    fn compile(&self, unit: CompilationUnit, ws: &Workspace<'_>) -> Result<()> {
+    fn compile(
+        &self,
+        unit: CompilationUnit,
+        db: &mut RootDatabase,
+        ws: &Workspace<'_>,
+    ) -> Result<()> {
         let target_dir = unit.target_dir(ws.config());
-
-        let mut db = RootDatabase::builder()
-            .with_project_config(build_project_config(&unit)?)
-            .with_dojo()
-            .build()?;
-
         let compiler_config = build_compiler_config(&unit, ws);
-
-        let mut main_crate_ids = collect_main_crate_ids(&unit, &db);
-        if unit.main_component().cairo_package_name() != "dojo_core" {
-            main_crate_ids.push(db.intern_crate(CrateLongId("dojo_core".into())));
-        }
+        let main_crate_ids = collect_main_crate_ids(&unit, db);
 
         let contracts = {
             let _ = trace_span!("find_contracts").enter();
-            find_contracts(&db, &main_crate_ids)
+            find_contracts(db, &main_crate_ids)
         };
 
         trace!(
             contracts = ?contracts
                 .iter()
-                .map(|decl| decl.module_id().full_path(db.upcast()))
+                .map(|decl| decl.module_id().full_path(db.upcast_mut()))
                 .collect::<Vec<_>>()
         );
 
@@ -59,7 +52,7 @@ impl Compiler for DojoCompiler {
 
         let classes = {
             let _ = trace_span!("compile_starknet").enter();
-            compile_prepared_db(&mut db, &contracts, compiler_config)?
+            compile_prepared_db(db, &contracts, compiler_config)?
         };
 
         // (contract name, class hash)
@@ -67,7 +60,7 @@ impl Compiler for DojoCompiler {
 
         for (decl, class) in zip(contracts, classes) {
             let target_name = &unit.target().name;
-            let contract_name = decl.submodule_id.name(db.upcast());
+            let contract_name = decl.submodule_id.name(db.upcast_mut());
             let file_name = format!("{target_name}_{contract_name}.json");
 
             let mut file = target_dir.open_rw(file_name.clone(), "output file", ws.config())?;
@@ -81,7 +74,7 @@ impl Compiler for DojoCompiler {
         }
 
         let mut file = target_dir.open_rw("manifest.json", "output file", ws.config())?;
-        let manifest = Manifest::new(&db, &main_crate_ids, compiled_classes);
+        let manifest = Manifest::new(db, &main_crate_ids, compiled_classes);
         serde_json::to_writer_pretty(file.deref_mut(), &manifest)
             .with_context(|| "failed to serialize manifest")?;
 
@@ -94,6 +87,14 @@ fn compute_class_hash_of_contract_class(class: ContractClass) -> Result<FieldEle
     let sierra_class = serde_json::from_str::<SierraClass>(&class_str)
         .map_err(|e| anyhow!("error parsing Sierra class: {e}"))?;
     sierra_class.class_hash().map_err(|e| anyhow!("problem hashing sierra contract: {e}"))
+}
+
+pub fn collect_main_crate_ids(unit: &CompilationUnit, db: &RootDatabase) -> Vec<CrateId> {
+    let mut main_crate_ids = scarb::compiler::helpers::collect_main_crate_ids(unit, db);
+    if unit.main_component().cairo_package_name() != "dojo_core" {
+        main_crate_ids.push(db.intern_crate(CrateLongId("dojo_core".into())));
+    }
+    main_crate_ids
 }
 
 #[test]
