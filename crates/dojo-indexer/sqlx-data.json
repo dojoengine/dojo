@@ -1,15 +1,5 @@
 {
   "db": "SQLite",
-  "00b0f12114994886525c0b39cececd40edaf1e013e6f0f273d6e7dba85ac2f2d": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Right": 7
-      }
-    },
-    "query": "\n                INSERT INTO entities (\n                    id, \n                    name, \n                    partition_id, \n                    partition_keys, \n                    transaction_hash, \n                    created_at,\n                    updated_at\n                ) VALUES ($1, $2, $3, $4, $5, $6, $7)\n            "
-  },
   "03ab3e97bf8f5b6a79a445369edc4ad5d9b167888030830676980d376a900a57": {
     "describe": {
       "columns": [

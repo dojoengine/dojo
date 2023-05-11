@@ -60,7 +60,8 @@ impl Entity {
 
 pub async fn entity(context: &Context, id: String) -> FieldResult<Entity> {
     let mut conn = context.pool.acquire().await.unwrap();
-
+    
+    // timestamp workaround: https://github.com/launchbadge/sqlx/issues/598
     let entity = sqlx::query_as!(
         Entity,
         r#"

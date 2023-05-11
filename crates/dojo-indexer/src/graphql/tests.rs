@@ -1,53 +1,12 @@
 use std::sync::Arc;
 use serde_json::Value;
-use sqlx::{Sqlite, SqlitePool};
-use sqlx::pool::PoolConnection;
-use chrono::Utc;
+use sqlx::{SqlitePool};
 use juniper::{EmptyMutation, EmptySubscription, Variables};
 
-use super::component::Component;
 use super::entity::Entity;
-use super::system::System;
-
 use super::server::Context;
 use super::server::Schema;
 use super::Query;
-
-async fn insert_sqlx_data(mut conn: PoolConnection<Sqlite>) -> sqlx::Result<()> {
-    for i in 0..3 {
-        let entity = Entity {
-            id: i.to_string(),
-            name: Some("test".to_string()),
-            partition_id: "420".to_string(),
-            partition_keys: (i*2).to_string(),
-            transaction_hash: "0x0".to_string(),
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-        };
-        let _ = sqlx::query_as!(
-            Entity,
-            r#"
-                INSERT INTO entities (
-                    id, 
-                    name, 
-                    partition_id, 
-                    partition_keys, 
-                    transaction_hash, 
-                    created_at,
-                    updated_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-            "#,
-            entity.id,
-            entity.name,
-            entity.partition_id,
-            entity.partition_keys,
-            entity.transaction_hash,
-            entity.created_at,
-            entity.updated_at
-        ).execute(&mut conn).await?;
-    }
-    Ok(())
-}
 
 
 async fn run_graphql_query(pool: &SqlitePool, query: &str) -> Value {
@@ -72,50 +31,50 @@ async fn run_graphql_query(pool: &SqlitePool, query: &str) -> Value {
 }
 
 
-#[sqlx::test(migrations = "./migrations")]
-async fn test_entity(pool: SqlitePool) -> sqlx::Result<()> {
-    let conn = pool.acquire().await?;
-    insert_sqlx_data(conn).await?;
+#[sqlx::test(migrations = "./migrations", fixtures("entities"))]
+async fn test_entity(pool: SqlitePool) {
+    let _ = pool.acquire().await;
 
     let query = "{ entity(id: \"1\") { id name partitionId partitionKeys transactionHash createdAt updatedAt } }";
     let value = run_graphql_query(&pool, query).await;
 
-    if let Some(entity) = value.get("entity") {
-        let entity: Entity = serde_json::from_value(entity.clone()).unwrap();
-        assert_eq!(entity.id, "1".to_string());
-        return Ok(());
-    }
-    panic!("no entity found");
+    let entity = value.get("entity").ok_or_else(|| "no entity found").unwrap();
+    let entity: Entity = serde_json::from_value(entity.clone()).unwrap();
+    assert_eq!(entity.id, "1".to_string());
 }
 
-#[sqlx::test(migrations = "./migrations")]
-async fn test_entities(pool: SqlitePool) -> sqlx::Result<()> {
-    let conn = pool.acquire().await?;
-    insert_sqlx_data(conn).await?;
+#[sqlx::test(migrations = "./migrations", fixtures("entities"))]
+async fn test_entities(pool: SqlitePool) {
+    let _ = pool.acquire().await;
 
     let query = "{ entities { id name partitionId partitionKeys transactionHash createdAt updatedAt } }";
     let value = run_graphql_query(&pool, query).await;
 
-    if let Some(entities) = value.get("entities") {
-        let entities: Vec<Entity> = serde_json::from_value(entities.clone()).unwrap();
-        assert_eq!(entities.len(), 3);
-        return Ok(());
-    }
-    panic!("incorrect entities");
+    let entities = value.get("entities").ok_or_else(|| "incorrect entities").unwrap();
+    let entities: Vec<Entity> = serde_json::from_value(entities.clone()).unwrap();
+    assert_eq!(entities.len(), 3);
 }
 
-#[sqlx::test(migrations = "./migrations")]
-async fn test_entities_partition_id(pool: SqlitePool) -> sqlx::Result<()> {
-    let conn = pool.acquire().await?;
-    insert_sqlx_data(conn).await?;
+#[sqlx::test(migrations = "./migrations", fixtures("entities"))]
+async fn test_entities_partition_id(pool: SqlitePool) {
+    let _ = pool.acquire().await;
 
-    let query = "{ entities(partitionId: \"420\") { id name partitionId partitionKeys transactionHash createdAt updatedAt } }";
+    let query = "{ entitiesByPartitionId (partitionId: \"420\") { id name partitionId partitionKeys transactionHash createdAt updatedAt } }";
     let value = run_graphql_query(&pool, query).await;
 
-    if let Some(entities) = value.get("entities") {
-        let entities: Vec<Entity> = serde_json::from_value(entities.clone()).unwrap();
-        assert_eq!(entities.len(), 3);
-        return Ok(());
-    }
-    panic!("incorrect entities");
+    let entities = value.get("entitiesByPartitionId").ok_or_else(|| "incorrect entities").unwrap();
+    let entities: Vec<Entity> = serde_json::from_value(entities.clone()).unwrap();
+    assert_eq!(entities.len(), 2);
+}
+
+#[sqlx::test(migrations = "./migrations", fixtures("entities"))]
+async fn test_entities_partition_id_keys(pool: SqlitePool) {
+    let _ = pool.acquire().await;
+
+    let query = "{ entityByPartitionIdKeys (partitionId: \"69\", partitionKeys: \"420\") { id name partitionId partitionKeys transactionHash createdAt updatedAt } }";
+    let value = run_graphql_query(&pool, query).await;
+
+    let entity = value.get("entityByPartitionIdKeys").ok_or_else(|| "no entity found").unwrap();
+    let entity: Entity = serde_json::from_value(entity.clone()).unwrap();
+    assert_eq!(entity.id, "3".to_string());
 }
