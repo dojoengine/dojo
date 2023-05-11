@@ -2,7 +2,8 @@ use std::{fs, path::PathBuf, sync::Arc};
 
 use anyhow::Result;
 use blockifier::{
-    abi::abi_utils::get_storage_var_address, execution::contract_class::ContractClass,
+    abi::abi_utils::get_storage_var_address,
+    execution::contract_class::{ContractClass, ContractClassV0},
 };
 use rand::{rngs::SmallRng, RngCore, SeedableRng};
 use starknet::{core::types::FieldElement, signers::SigningKey};
@@ -104,13 +105,18 @@ impl PredeployedAccounts {
         contract_class_path: PathBuf,
     ) -> Result<Self> {
         let contract_class_str = fs::read_to_string(&contract_class_path)?;
-        let contract_class = serde_json::from_str::<ContractClass>(&contract_class_str)
+        let contract_class = serde_json::from_str::<ContractClassV0>(&contract_class_str)
             .expect("can deserialize contract class");
         let class_hash = compute_legacy_class_hash(&contract_class_str)
             .expect("can compute legacy contract class hash");
 
-        let accounts =
-            Self::generate_accounts(total, seed, initial_balance, class_hash, contract_class);
+        let accounts = Self::generate_accounts(
+            total,
+            seed,
+            initial_balance,
+            class_hash,
+            ContractClass::V0(contract_class),
+        );
 
         Ok(Self {
             seed,

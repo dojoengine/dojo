@@ -517,7 +517,9 @@ impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
                     class_hash,
                     AccountTransaction::Declare(DeclareTransaction {
                         tx: starknet_api::transaction::DeclareTransaction::V2(transaction),
-                        contract_class,
+                        contract_class: blockifier::execution::contract_class::ContractClass::V1(
+                            contract_class,
+                        ),
                     }),
                 )
             }

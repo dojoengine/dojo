@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use blockifier::{
     block_context::BlockContext,
-    execution::entry_point::{CallEntryPoint, CallInfo, ExecutionContext, ExecutionResources},
+    execution::entry_point::{CallEntryPoint, CallInfo, ExecutionContext},
     state::{
         cached_state::{CachedState, CommitmentStateDiff, MutRefState},
         state_api::State,
@@ -220,10 +220,10 @@ impl StarknetWrapper {
 
         call.execute(
             &mut state,
-            &mut ExecutionResources::default(),
-            &mut ExecutionContext::default(),
-            &self.block_context,
-            &AccountTransactionContext::default(),
+            &mut ExecutionContext::new(
+                self.block_context.clone(),
+                AccountTransactionContext::default(),
+            ),
         )
         .map_err(|e| e.into())
     }

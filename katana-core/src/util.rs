@@ -6,7 +6,7 @@ use std::{
 
 use anyhow::{anyhow, Result};
 use blockifier::{
-    execution::contract_class::ContractClass,
+    execution::contract_class::{ContractClass, ContractClassV0},
     state::cached_state::CommitmentStateDiff,
     transaction::{
         account_transaction::AccountTransaction,
@@ -30,9 +30,7 @@ use starknet_api::{
     StarknetApiError,
 };
 
-use blockifier::execution::contract_class::{
-    casm_contract_into_contract_class, ContractClass as BlockifierContractClass,
-};
+use blockifier::execution::contract_class::ContractClassV1 as BlockifierContractClass;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 
 pub fn get_current_timestamp() -> Duration {
@@ -44,7 +42,8 @@ pub fn get_current_timestamp() -> Duration {
 pub fn get_contract_class(contract_path: &str) -> ContractClass {
     let path: PathBuf = [env!("CARGO_MANIFEST_DIR"), contract_path].iter().collect();
     let raw_contract_class = fs::read_to_string(path).unwrap();
-    serde_json::from_str(&raw_contract_class).unwrap()
+    let legacy_contract_class: ContractClassV0 = serde_json::from_str(&raw_contract_class).unwrap();
+    ContractClass::V0(legacy_contract_class)
 }
 
 pub fn convert_blockifier_tx_to_starknet_api_tx(
@@ -175,7 +174,7 @@ pub fn blockifier_contract_class_from_flattened_sierra_class(
     };
 
     let casm_contract = CasmContractClass::from_contract_class(contract_class, true)?;
-    Ok(casm_contract_into_contract_class(casm_contract)?)
+    Ok(casm_contract.try_into()?)
 }
 
 pub fn convert_state_diff_to_rpc_state_diff(state_diff: CommitmentStateDiff) -> StateDiff {
