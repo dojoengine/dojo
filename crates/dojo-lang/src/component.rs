@@ -6,13 +6,14 @@ use cairo_lang_semantic::plugin::DynPluginAuxData;
 use cairo_lang_syntax::attribute::structured::{
     AttributeArg, AttributeArgVariant, AttributeStructurize,
 };
+use cairo_lang_syntax::node::ast::ItemStruct;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 
 use crate::plugin::DojoAuxData;
 
-pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> PluginResult {
+pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> PluginResult {
     let mut body_nodes = vec![RewriteNode::interpolate_patched(
         "
             #[view]
@@ -77,9 +78,18 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
 
     let name = struct_ast.name(db).text(db);
     let mut builder = PatchBuilder::new(db);
+    let derive = {
+        if is_custom(db, struct_ast.clone()) {
+            // Get the traits that the user wants to derive
+            format!("({})", get_traits(db, struct_ast.clone()).join(", "))
+        } else {
+            "(Copy, Drop, Serde)".to_string()
+        }
+    };
+
     builder.add_modified(RewriteNode::interpolate_patched(
         "
-            #[derive(Copy, Drop, Serde)]
+            #[derive$derive$]
             struct $type_name$ {
                 $members$
             }
@@ -106,6 +116,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
             }
         ",
         HashMap::from([
+            ("derive".to_string(), RewriteNode::Text(derive)),
             (
                 "type_name".to_string(),
                 RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
@@ -131,7 +142,8 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
     }
 }
 
-fn is_indexed(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> bool {
+/// Returns true if the component is indexed #[component(indexed: true)]
+fn is_indexed(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> bool {
     for attr in struct_ast.attributes(db).query_attr(db, "component") {
         let attr = attr.structurize(db);
 
@@ -153,4 +165,80 @@ fn is_indexed(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> bool {
         }
     }
     false
+}
+
+/// Returns true if the component is custom #[component(custom: true)]
+fn is_custom(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> bool {
+    for attr in struct_ast.attributes(db).query_attr(db, "component") {
+        let attr = attr.structurize(db);
+
+        for arg in attr.args {
+            let AttributeArg {
+                variant: AttributeArgVariant::Named {
+                    value,
+                    name,
+                    ..
+                },
+                ..
+            } = arg else {
+                continue;
+            };
+
+            if name == "custom" {
+                if let Expr::True(_) = value {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
+
+/// Returns all the traits defined in the component attribute
+/// #[component(indexed: true, custom: true, traits: (Copy, Drop))]
+/// Returns ["Copy", "Drop"]
+fn get_traits(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> Vec<String> {
+    let mut traits = Vec::new();
+
+    for attr in struct_ast.attributes(db).query_attr(db, "component") {
+        let attr = attr.structurize(db);
+
+        for arg in attr.args {
+            // Unpack the attribute argument
+            let AttributeArg {
+                variant: AttributeArgVariant::Named {
+                    value,
+                    name,
+                    ..
+                },
+                ..
+            } = arg else {
+                continue;
+            };
+
+            // Check if the attribute is traits
+            if name == "traits" {
+                // Check if the value is a tuple i.e. (Copy, Drop)
+                if let Expr::Tuple(tuple_expr) = value {
+                    // Loop over the elements in the tuple
+                    let tuple_iter: Vec<Expr> = tuple_expr.expressions(db).elements(db);
+                    for elem in tuple_iter {
+                        // Check if the element is an identifier (which it should be for a trait)
+                        if let Expr::Path(path_expr) = elem {
+                            // Add the trait to the vector
+                            traits.push(path_expr.node.get_text(db));
+                        }
+                    }
+                // Check if the value is parenthesized i.e. (Copy)
+                } else if let Expr::Parenthesized(parenthesized_expr) = value {
+                    // Check if the parenthesized expression is a path expression
+                    if let Expr::Path(path_expr) = parenthesized_expr.expr(db) {
+                        // Add the trait to the vector
+                        traits.push(path_expr.node.get_text(db));
+                    }
+                }
+            }
+        }
+    }
+    traits
 }
