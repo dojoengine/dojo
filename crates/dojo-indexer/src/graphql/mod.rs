@@ -50,16 +50,16 @@ impl Query {
     }
 
     async fn entities_by_partition_id(
-        context: &Context, 
-        partition_id: String
+        context: &Context,
+        partition_id: String,
     ) -> FieldResult<Vec<entity::Entity>> {
         entity::entities_by_partition_id(context, partition_id).await
     }
 
     async fn entity_by_partition_id_keys(
-        context: &Context, 
-        partition_id: String, 
-        partition_keys: String
+        context: &Context,
+        partition_id: String,
+        partition_keys: String,
     ) -> FieldResult<entity::Entity> {
         entity::entity_by_partition_id_keys(context, partition_id, partition_keys).await
     }

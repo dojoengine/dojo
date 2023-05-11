@@ -1,5 +1,5 @@
-use juniper::{graphql_object, FieldResult};
 use chrono::{DateTime, Utc};
+use juniper::{graphql_object, FieldResult};
 use serde::Deserialize;
 
 use super::entity_state::EntityState;
@@ -60,7 +60,7 @@ impl Entity {
 
 pub async fn entity(context: &Context, id: String) -> FieldResult<Entity> {
     let mut conn = context.pool.acquire().await.unwrap();
-    
+
     // timestamp workaround: https://github.com/launchbadge/sqlx/issues/598
     let entity = sqlx::query_as!(
         Entity,
@@ -108,8 +108,8 @@ pub async fn entities(context: &Context) -> FieldResult<Vec<Entity>> {
 }
 
 pub async fn entities_by_partition_id(
-    context: &Context, 
-    partition_id: String 
+    context: &Context,
+    partition_id: String,
 ) -> FieldResult<Vec<Entity>> {
     let mut conn = context.pool.acquire().await.unwrap();
 
@@ -135,9 +135,9 @@ pub async fn entities_by_partition_id(
 }
 
 pub async fn entity_by_partition_id_keys(
-    context: &Context, 
-    partition_id: String, 
-    partition_keys: String 
+    context: &Context,
+    partition_id: String,
+    partition_keys: String,
 ) -> FieldResult<Entity> {
     let mut conn = context.pool.acquire().await.unwrap();
 
