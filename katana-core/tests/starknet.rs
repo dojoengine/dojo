@@ -31,22 +31,32 @@ fn test_creating_blocks() {
     starknet.generate_pending_block();
 
     assert_eq!(
-        starknet.blocks.current_height,
-        BlockNumber(0),
+        starknet.blocks.total_blocks(),
+        0,
         "pending block should not be added to the chain"
     );
 
-    starknet.generate_latest_block();
-    starknet.generate_latest_block();
-    starknet.generate_latest_block();
+    assert_eq!(
+        starknet.block_context.block_number,
+        BlockNumber(0),
+        "pending block should not increment block context number"
+    );
+
+    starknet.generate_latest_block().unwrap();
+    starknet.generate_latest_block().unwrap();
+    starknet.generate_latest_block().unwrap();
 
     assert_eq!(starknet.blocks.hash_to_num.len(), 3);
     assert_eq!(starknet.blocks.num_to_block.len(), 3);
-    assert_eq!(starknet.blocks.current_height, BlockNumber(3));
+    assert_eq!(
+        starknet.block_context.block_number,
+        BlockNumber(3),
+        "current block context number should be 3"
+    );
 
     let block0 = starknet.blocks.by_number(BlockNumber(0)).unwrap();
     let block1 = starknet.blocks.by_number(BlockNumber(1)).unwrap();
-    let last_block = starknet.blocks.lastest().unwrap();
+    let last_block = starknet.blocks.latest().unwrap();
 
     assert_eq!(block0.transactions(), &[]);
     assert_eq!(block0.block_number(), BlockNumber(0));
@@ -76,14 +86,16 @@ fn test_add_transaction() {
         stark_felt!(0x0)                         // Calldata: num.
     ];
 
-    starknet.handle_transaction(Transaction::AccountTransaction(AccountTransaction::Invoke(
-        InvokeTransaction::V1(InvokeTransactionV1 {
-            sender_address: a.account_address,
-            calldata: execute_calldata,
-            transaction_hash: TransactionHash(stark_felt!("0x6969")),
-            ..Default::default()
-        }),
-    )));
+    starknet
+        .handle_transaction(Transaction::AccountTransaction(AccountTransaction::Invoke(
+            InvokeTransaction::V1(InvokeTransactionV1 {
+                sender_address: a.account_address,
+                calldata: execute_calldata,
+                transaction_hash: TransactionHash(stark_felt!("0x6969")),
+                ..Default::default()
+            }),
+        )))
+        .unwrap();
 
     //
     // SEND INVOKE TRANSACTION
@@ -98,7 +110,7 @@ fn test_add_transaction() {
 
     assert!(tx.is_some(), "transaction must be stored");
     assert_eq!(tx.unwrap().block_number, Some(BlockNumber(0)));
-    assert_eq!(starknet.blocks.current_height, BlockNumber(1));
+    assert_eq!(starknet.blocks.total_blocks(), 1);
     assert!(
         block.transaction_by_index(0).is_some(),
         "transaction must be included in the block"
@@ -145,7 +157,7 @@ fn test_add_reverted_transaction() {
         }),
     ));
 
-    starknet.handle_transaction(transaction);
+    starknet.handle_transaction(transaction).unwrap();
 
     let tx = starknet.transactions.transactions.get(&transaction_hash);
 
@@ -158,7 +170,7 @@ fn test_add_reverted_transaction() {
     assert_eq!(tx.unwrap().block_number, None);
     assert_eq!(tx.unwrap().status, TransactionStatus::Rejected);
     assert_eq!(
-        starknet.blocks.current_height,
+        starknet.block_context.block_number,
         BlockNumber(0),
         "block height must not increase"
     );

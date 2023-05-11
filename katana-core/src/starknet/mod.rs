@@ -1,4 +1,4 @@
-use std::{path::PathBuf, time::SystemTime};
+use std::path::PathBuf;
 
 use anyhow::Result;
 use blockifier::{
@@ -34,7 +34,10 @@ use crate::{
     block_context::Base,
     constants::DEFAULT_PREFUNDED_ACCOUNT_BALANCE,
     state::DictStateReader,
-    util::{convert_blockifier_tx_to_starknet_api_tx, convert_state_diff_to_rpc_state_diff},
+    util::{
+        convert_blockifier_tx_to_starknet_api_tx, convert_state_diff_to_rpc_state_diff,
+        get_current_timestamp,
+    },
 };
 use block::{StarknetBlock, StarknetBlocks};
 use transaction::{StarknetTransaction, StarknetTransactions};
@@ -85,7 +88,7 @@ impl StarknetWrapper {
     }
 
     // execute the tx
-    pub fn handle_transaction(&mut self, transaction: Transaction) {
+    pub fn handle_transaction(&mut self, transaction: Transaction) -> Result<()> {
         let api_tx = convert_blockifier_tx_to_starknet_api_tx(&transaction);
 
         info!(
@@ -117,7 +120,7 @@ impl StarknetWrapper {
                     .insert_transaction(api_tx);
 
                 self.store_transaction(starknet_tx);
-                self.generate_latest_block();
+                self.generate_latest_block()?;
 
                 self.generate_pending_block();
             }
@@ -133,80 +136,74 @@ impl StarknetWrapper {
                 self.store_transaction(tx);
             }
         }
+
+        Ok(())
     }
 
     // Creates a new block that contains all the pending txs
     // Will update the txs status to accepted
     // Append the block to the chain
     // Update the block context
-    pub fn generate_latest_block(&mut self) -> StarknetBlock {
-        let mut latest_block = if let Some(ref pending) = self.blocks.pending_block {
+    pub fn generate_latest_block(&mut self) -> Result<StarknetBlock> {
+        let mut new_block = if let Some(ref pending) = self.blocks.pending_block {
             pending.clone()
         } else {
-            self.create_empty_block()
+            self.create_new_empty_block()
         };
 
-        let block_hash = latest_block.compute_block_hash();
-        latest_block.0.header.block_hash = block_hash;
+        let block_hash = new_block.compute_block_hash();
+        new_block.inner.header.block_hash = block_hash;
 
-        for pending_tx in latest_block.transactions() {
+        for pending_tx in new_block.transactions() {
             let tx_hash = pending_tx.transaction_hash();
+
+            // Update the tx block hash and number in the tx store //
 
             if let Some(tx) = self.transactions.transactions.get_mut(&tx_hash) {
                 tx.block_hash = Some(block_hash);
                 tx.status = TransactionStatus::AcceptedOnL2;
-                tx.block_number = Some(latest_block.block_number());
+                tx.block_number = Some(new_block.block_number());
             }
         }
 
         info!(
-            "New block generated | Block hash: {} | Block number: {}",
-            latest_block.block_hash(),
-            latest_block.block_number()
+            "⛏️ New block generated | Block hash: {} | Block number: {}",
+            new_block.block_hash(),
+            new_block.block_number()
         );
 
         // apply state diff
         let state_diff = self.state.to_state_diff();
-        // TODO: Compute state root
-        self.apply_state_diff(state_diff.clone());
 
         self.blocks.num_to_state_update.insert(
-            self.blocks.current_height,
+            new_block.block_number(),
             StateUpdate {
                 block_hash: block_hash.0.into(),
-                new_root: latest_block.0.header.state_root.0.into(),
-                old_root: if latest_block.block_number() == BlockNumber(0) {
+                new_root: new_block.header().state_root.0.into(),
+                old_root: if new_block.block_number() == BlockNumber(0) {
                     FieldElement::ZERO
                 } else {
                     self.blocks
-                        .lastest()
-                        .map(|last_block| last_block.0.header.state_root.0.into())
+                        .latest()
+                        .map(|last_block| last_block.header().state_root.0.into())
                         .unwrap()
                 },
-                state_diff: convert_state_diff_to_rpc_state_diff(state_diff),
+                state_diff: convert_state_diff_to_rpc_state_diff(state_diff.clone()),
             },
         );
 
         // reset the pending block
         self.blocks.pending_block = None;
-        self.blocks.append_block(latest_block.clone());
+        self.blocks.append_block(new_block.clone())?;
+        self.update_block_context();
+        // TODO: Compute state root
+        self.apply_state_diff(state_diff);
 
-        // update block context
-        let next_block_number = BlockNumber(self.blocks.current_height.0 + 1);
-        let timestamp = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-
-        self.blocks.current_height = next_block_number;
-        self.block_context.block_number = next_block_number;
-        self.block_context.block_timestamp = BlockTimestamp(timestamp);
-
-        latest_block
+        Ok(new_block)
     }
 
     pub fn generate_pending_block(&mut self) {
-        self.blocks.pending_block = Some(self.create_empty_block());
+        self.blocks.pending_block = Some(self.create_new_empty_block());
     }
 
     // TODO: perform call based on specific block state
@@ -237,18 +234,14 @@ impl StarknetWrapper {
         unimplemented!("StarknetWrapper::state")
     }
 
-    fn create_empty_block(&self) -> StarknetBlock {
-        let timestamp = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .map(|t| BlockTimestamp(t.as_secs()))
-            .expect("should get unix timestamp");
+    fn create_new_empty_block(&self) -> StarknetBlock {
+        let block_number = self.block_context.block_number;
 
-        let block_number = self.blocks.current_height;
         let parent_hash = if block_number.0 == 0 {
             BlockHash(stark_felt!(0))
         } else {
             self.blocks
-                .lastest()
+                .latest()
                 .map(|last_block| last_block.block_hash())
                 .unwrap()
         };
@@ -260,9 +253,10 @@ impl StarknetWrapper {
             GasPrice(self.block_context.gas_price),
             GlobalRoot(stark_felt!(0)),
             self.block_context.sequencer_address,
-            timestamp,
+            BlockTimestamp(get_current_timestamp().as_secs()),
             vec![],
             vec![],
+            None,
         )
     }
 
@@ -274,6 +268,11 @@ impl StarknetWrapper {
         self.transactions
             .transactions
             .insert(transaction.inner.transaction_hash(), transaction)
+    }
+
+    fn update_block_context(&mut self) {
+        self.block_context.block_number = self.block_context.block_number.next();
+        self.block_context.block_timestamp = BlockTimestamp(get_current_timestamp().as_secs());
     }
 
     fn apply_state_diff(&mut self, state_diff: CommitmentStateDiff) {

@@ -1,4 +1,8 @@
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::PathBuf,
+    time::{Duration, SystemTime},
+};
 
 use anyhow::{anyhow, Result};
 use blockifier::{
@@ -26,11 +30,16 @@ use starknet_api::{
     StarknetApiError,
 };
 
-use anyhow::Ok;
 use blockifier::execution::contract_class::{
     casm_contract_into_contract_class, ContractClass as BlockifierContractClass,
 };
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
+
+pub fn get_current_timestamp() -> Duration {
+    SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .expect("should get current UNIX timestamp")
+}
 
 pub fn get_contract_class(contract_path: &str) -> ContractClass {
     let path: PathBuf = [env!("CARGO_MANIFEST_DIR"), contract_path].iter().collect();
