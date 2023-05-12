@@ -56,8 +56,7 @@ pub async fn system(context: &Context, id: String) -> FieldResult<System> {
         id
     )
     .fetch_one(&mut conn)
-    .await
-    .unwrap();
+    .await?;
 
     Ok(system)
 }
@@ -72,8 +71,7 @@ pub async fn systems(context: &Context) -> FieldResult<Vec<System>> {
         "#
     )
     .fetch_all(&mut conn)
-    .await
-    .unwrap();
+    .await?;
 
     Ok(systems)
 }

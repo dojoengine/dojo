@@ -64,8 +64,7 @@ pub async fn component(context: &Context, id: String) -> FieldResult<Component> 
         id
     )
     .fetch_one(&mut conn)
-    .await
-    .unwrap();
+    .await?;
 
     Ok(component)
 }
@@ -80,8 +79,7 @@ pub async fn components(context: &Context) -> FieldResult<Vec<Component>> {
         "#
     )
     .fetch_all(&mut conn)
-    .await
-    .unwrap();
+    .await?;
 
     Ok(components)
 }
