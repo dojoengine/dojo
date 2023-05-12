@@ -23,6 +23,7 @@ mod processors;
 mod graphql;
 mod indexer;
 mod stream;
+mod tests;
 
 /// Dojo World Indexer
 #[derive(Parser, Debug)]

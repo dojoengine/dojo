@@ -58,8 +58,8 @@ impl Query {
     async fn entity_by_partition_id_keys(
         context: &Context,
         partition_id: String,
-        partition_keys: String,
+        keys: String,
     ) -> FieldResult<entity::Entity> {
-        entity::entity_by_partition_id_keys(context, partition_id, partition_keys).await
+        entity::entity_by_partition_id_keys(context, partition_id, keys).await
     }
 }

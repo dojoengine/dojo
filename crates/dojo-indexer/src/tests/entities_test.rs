@@ -19,20 +19,24 @@ mod tests {
             )),
             pool: Arc::new(pool.clone()),
         };
-        let schema = context.schema.clone();
-        let (result, error) =
-            juniper::execute(query, None, &schema, &Variables::new(), &context).await.unwrap();
-        assert!(error.is_empty());
 
-        serde_json::from_str(&(result.to_string())).unwrap()
+        let schema = context.schema.clone();
+        let (result, error) = juniper::execute(query, None, &schema, &Variables::new(), &context)
+            .await
+            .unwrap_or_else(|error| panic!("GraphQL query failed: {}", error));
+
+        assert!(error.is_empty(), "GraphQL query returned errors: {:?}", error);
+
+        serde_json::from_str(&result.to_string())
+            .expect("Failed to parse GraphQL query result as JSON")
     }
 
     #[sqlx::test(migrations = "./migrations", fixtures("entities"))]
     async fn test_entity(pool: SqlitePool) {
         let _ = pool.acquire().await;
 
-        let query = "{ entity(id: \"1\") { id name partitionId partitionKeys transactionHash \
-                     createdAt updatedAt } }";
+        let query = "{ entity(id: \"1\") { id name partitionId keys transactionHash createdAt \
+                     updatedAt } }";
         let value = run_graphql_query(&pool, query).await;
 
         let entity = value.get("entity").ok_or("no entity found").unwrap();
@@ -44,8 +48,7 @@ mod tests {
     async fn test_entities(pool: SqlitePool) {
         let _ = pool.acquire().await;
 
-        let query = "{ entities { id name partitionId partitionKeys transactionHash createdAt \
-                     updatedAt } }";
+        let query = "{ entities { id name partitionId keys transactionHash createdAt updatedAt } }";
         let value = run_graphql_query(&pool, query).await;
 
         let entities = value.get("entities").ok_or("incorrect entities").unwrap();
@@ -57,8 +60,8 @@ mod tests {
     async fn test_entities_partition_id(pool: SqlitePool) {
         let _ = pool.acquire().await;
 
-        let query = "{ entitiesByPartitionId (partitionId: \"420\") { id name partitionId \
-                     partitionKeys transactionHash createdAt updatedAt } }";
+        let query = "{ entitiesByPartitionId (partitionId: \"420\") { id name partitionId keys \
+                     transactionHash createdAt updatedAt } }";
         let value = run_graphql_query(&pool, query).await;
 
         let entities = value.get("entitiesByPartitionId").ok_or("incorrect entities").unwrap();
@@ -70,8 +73,8 @@ mod tests {
     async fn test_entities_partition_id_keys(pool: SqlitePool) {
         let _ = pool.acquire().await;
 
-        let query = "{ entityByPartitionIdKeys (partitionId: \"69\", partitionKeys: \"420\") { id \
-                     name partitionId partitionKeys transactionHash createdAt updatedAt } }";
+        let query = "{ entityByPartitionIdKeys (partitionId: \"69\", keys: \"420\") { id name \
+                     partitionId keys transactionHash createdAt updatedAt } }";
         let value = run_graphql_query(&pool, query).await;
 
         let entity = value.get("entityByPartitionIdKeys").ok_or("no entity found").unwrap();

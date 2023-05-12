@@ -13,7 +13,7 @@ pub struct Entity {
     pub id: String,
     pub name: Option<String>,
     pub partition_id: String,
-    pub partition_keys: String,
+    pub keys: String,
     pub transaction_hash: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -33,8 +33,8 @@ impl Entity {
         &self.partition_id
     }
 
-    pub fn partition_keys(&self) -> &str {
-        &self.partition_keys
+    pub fn keys(&self) -> &str {
+        &self.keys
     }
 
     pub fn transaction_hash(&self) -> &str {
@@ -59,7 +59,7 @@ impl Entity {
 }
 
 pub async fn entity(context: &Context, id: String) -> FieldResult<Entity> {
-    let mut conn = context.pool.acquire().await.unwrap();
+    let mut conn = context.pool.acquire().await?;
 
     // timestamp workaround: https://github.com/launchbadge/sqlx/issues/598
     let entity = sqlx::query_as!(
@@ -69,7 +69,7 @@ pub async fn entity(context: &Context, id: String) -> FieldResult<Entity> {
                 id,
                 name,
                 partition_id,
-                partition_keys,
+                keys,
                 transaction_hash,
                 created_at as "created_at: _",
                 updated_at as "updated_at: _"
@@ -85,7 +85,7 @@ pub async fn entity(context: &Context, id: String) -> FieldResult<Entity> {
 }
 
 pub async fn entities(context: &Context) -> FieldResult<Vec<Entity>> {
-    let mut conn = context.pool.acquire().await.unwrap();
+    let mut conn = context.pool.acquire().await?;
 
     let entities = sqlx::query_as!(
         Entity,
@@ -94,7 +94,7 @@ pub async fn entities(context: &Context) -> FieldResult<Vec<Entity>> {
                 id,
                 name,
                 partition_id,
-                partition_keys,
+                keys,
                 transaction_hash,
                 created_at as "created_at: _",
                 updated_at as "updated_at: _"
@@ -111,7 +111,7 @@ pub async fn entities_by_partition_id(
     context: &Context,
     partition_id: String,
 ) -> FieldResult<Vec<Entity>> {
-    let mut conn = context.pool.acquire().await.unwrap();
+    let mut conn = context.pool.acquire().await?;
 
     let entities = sqlx::query_as!(
         Entity,
@@ -120,7 +120,7 @@ pub async fn entities_by_partition_id(
                 id,
                 name,
                 partition_id,
-                partition_keys,
+                keys,
                 transaction_hash,
                 created_at as "created_at: _",
                 updated_at as "updated_at: _"
@@ -137,9 +137,9 @@ pub async fn entities_by_partition_id(
 pub async fn entity_by_partition_id_keys(
     context: &Context,
     partition_id: String,
-    partition_keys: String,
+    keys: String,
 ) -> FieldResult<Entity> {
-    let mut conn = context.pool.acquire().await.unwrap();
+    let mut conn = context.pool.acquire().await?;
 
     let entity = sqlx::query_as!(
         Entity,
@@ -148,14 +148,14 @@ pub async fn entity_by_partition_id_keys(
                 id,
                 name,
                 partition_id,
-                partition_keys,
+                keys,
                 transaction_hash,
                 created_at as "created_at: _",
                 updated_at as "updated_at: _"
-            FROM entities where partition_id = $1 AND partition_keys = $2
+            FROM entities where partition_id = $1 AND keys = $2
         "#,
         partition_id,
-        partition_keys
+        keys
     )
     .fetch_one(&mut conn)
     .await?;
