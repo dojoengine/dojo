@@ -1,4 +1,3 @@
--- Add migration script here
 ALTER TABLE entities ADD COLUMN partition_id TEXT NOT NULL;
 ALTER TABLE entities ADD COLUMN keys TEXT NOT NULL;
 ALTER TABLE entities ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP;
