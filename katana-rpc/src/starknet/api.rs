@@ -1,14 +1,8 @@
 use jsonrpsee::{
     core::Error,
     proc_macros::rpc,
-    server::logger::{Logger, MethodKind, TransportProtocol},
-    tracing::info,
-    types::{
-        error::{CallError, ErrorObject},
-        Params,
-    },
+    types::error::{CallError, ErrorObject},
 };
-use std::time::Instant;
 
 use starknet::{
     core::types::FieldElement,
@@ -23,7 +17,7 @@ use starknet::{
 };
 
 #[derive(thiserror::Error, Clone, Copy, Debug)]
-pub enum KatanaApiError {
+pub enum StarknetApiError {
     #[error("Failed to write transaction")]
     FailedToReceiveTxn = 1,
     #[error("Contract not found")]
@@ -60,8 +54,8 @@ pub enum KatanaApiError {
     FailedToFetchPendingTransactions = 38,
 }
 
-impl From<KatanaApiError> for Error {
-    fn from(err: KatanaApiError) -> Self {
+impl From<StarknetApiError> for Error {
+    fn from(err: StarknetApiError) -> Self {
         Error::Call(CallError::Custom(ErrorObject::owned(
             err as i32,
             err.to_string(),
@@ -71,7 +65,7 @@ impl From<KatanaApiError> for Error {
 }
 
 #[rpc(server, client, namespace = "starknet")]
-pub trait KatanaApi {
+pub trait StarknetApi {
     #[method(name = "chainId")]
     async fn chain_id(&self) -> Result<String, Error>;
 
@@ -193,51 +187,4 @@ pub trait KatanaApi {
         &self,
         invoke_transaction: BroadcastedInvokeTransaction,
     ) -> Result<InvokeTransactionResult, Error>;
-}
-
-#[derive(Debug, Clone)]
-pub struct KatanaRpcLogger;
-
-impl Logger for KatanaRpcLogger {
-    type Instant = std::time::Instant;
-
-    fn on_connect(
-        &self,
-        _remote_addr: std::net::SocketAddr,
-        _request: &jsonrpsee::server::logger::HttpRequest,
-        _t: TransportProtocol,
-    ) {
-    }
-
-    fn on_request(&self, _transport: TransportProtocol) -> Self::Instant {
-        Instant::now()
-    }
-
-    fn on_call(
-        &self,
-        method_name: &str,
-        _params: Params<'_>,
-        _kind: MethodKind,
-        _transport: TransportProtocol,
-    ) {
-        info!("method: '{}'", method_name);
-    }
-
-    fn on_result(
-        &self,
-        _method_name: &str,
-        _success: bool,
-        _started_at: Self::Instant,
-        _transport: TransportProtocol,
-    ) {
-    }
-
-    fn on_response(
-        &self,
-        _result: &str,
-        _started_at: Self::Instant,
-        _transport: TransportProtocol,
-    ) {
-    }
-    fn on_disconnect(&self, _remote_addr: std::net::SocketAddr, _transport: TransportProtocol) {}
 }

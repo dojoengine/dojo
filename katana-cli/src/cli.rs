@@ -1,12 +1,16 @@
-use std::{path::PathBuf, process::exit, sync::Arc};
+use std::{process::exit, sync::Arc};
 
 use clap::Parser;
 use env_logger::Env;
-use katana_core::{sequencer::KatanaSequencer, starknet::StarknetConfig};
-use katana_rpc::{config::RpcConfig, KatanaRpc};
+use katana_core::sequencer::KatanaSequencer;
+use katana_rpc::KatanaNodeRpc;
 use log::error;
 use tokio::sync::RwLock;
 use yansi::Paint;
+
+mod config;
+
+use config::Cli;
 
 #[tokio::main]
 async fn main() {
@@ -19,17 +23,27 @@ async fn main() {
     let sequencer = Arc::new(RwLock::new(KatanaSequencer::new(starknet_config)));
     sequencer.write().await.start();
 
-    let predeployed_accounts = sequencer
-        .read()
-        .await
-        .starknet
-        .predeployed_accounts
-        .display();
+    let predeployed_accounts = if config.hide_predeployed_accounts {
+        None
+    } else {
+        Some(
+            sequencer
+                .read()
+                .await
+                .starknet
+                .predeployed_accounts
+                .display(),
+        )
+    };
 
-    match KatanaRpc::new(sequencer.clone(), rpc_config).run().await {
+    match KatanaNodeRpc::new(sequencer.clone(), rpc_config)
+        .run()
+        .await
+    {
         Ok((addr, server_handle)) => {
             print_intro(
                 predeployed_accounts,
+                config.seed,
                 format!(
                     "🚀 JSON-RPC server started: {}",
                     Paint::red(format!("http://{addr}"))
@@ -45,36 +59,7 @@ async fn main() {
     };
 }
 
-#[derive(Parser, Debug)]
-struct Cli {
-    #[arg(short, long)]
-    #[arg(default_value = "5050")]
-    #[arg(help = "Port number to listen on.")]
-    port: u16,
-
-    #[arg(long)]
-    #[arg(default_value = "10")]
-    #[arg(help = "Number of pre-funded accounts to generate.")]
-    accounts: u8,
-
-    #[arg(long)]
-    account_path: Option<PathBuf>,
-}
-
-impl Cli {
-    fn rpc_config(&self) -> RpcConfig {
-        RpcConfig { port: self.port }
-    }
-
-    fn starknet_config(&self) -> StarknetConfig {
-        StarknetConfig {
-            total_accounts: self.accounts,
-            account_path: self.account_path.clone(),
-        }
-    }
-}
-
-fn print_intro(accounts: String, address: String) {
+fn print_intro(accounts: Option<String>, seed: Option<String>, address: String) {
     println!(
         "{}",
         Paint::red(
@@ -91,12 +76,26 @@ fn print_intro(accounts: String, address: String) {
 "
         )
     );
-    println!(
-        r"        
+
+    if let Some(accounts) = accounts {
+        println!(
+            r"        
 PREFUNDED ACCOUNTS
 ==================
 {accounts}
-"
-    );
+    "
+        );
+    }
+
+    if let Some(seed) = seed {
+        println!(
+            r"
+ACCOUNTS SEED
+=============
+{seed}
+    "
+        );
+    }
+
     println!("\n{address}\n\n");
 }

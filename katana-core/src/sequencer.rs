@@ -320,10 +320,18 @@ impl Sequencer for KatanaSequencer {
             )),
         )
     }
+
+    fn generate_new_block(&mut self) -> Result<()> {
+        self.starknet.generate_latest_block()?;
+        self.starknet.generate_pending_block();
+        Ok(())
+    }
 }
 
 pub trait Sequencer {
     fn chain_id(&self) -> ChainId;
+
+    fn generate_new_block(&mut self) -> Result<()>;
 
     fn nonce_at(
         &mut self,

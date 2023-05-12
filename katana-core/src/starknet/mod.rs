@@ -9,8 +9,10 @@ use blockifier::{
         state_api::State,
     },
     transaction::{
-        objects::AccountTransactionContext, transaction_execution::Transaction,
-        transactions::ExecutableTransaction,
+        account_transaction::AccountTransaction,
+        objects::AccountTransactionContext,
+        transaction_execution::Transaction,
+        transactions::{DeclareTransaction, ExecutableTransaction},
     },
 };
 use starknet::{
@@ -45,7 +47,10 @@ use transaction::{StarknetTransaction, StarknetTransactions};
 use self::transaction::ExternalFunctionCall;
 
 pub struct StarknetConfig {
+    pub seed: [u8; 32],
     pub total_accounts: u8,
+    pub block_on_demand: bool,
+    pub allow_zero_max_fee: bool,
     pub account_path: Option<PathBuf>,
 }
 
@@ -67,7 +72,7 @@ impl StarknetWrapper {
 
         let predeployed_accounts = PredeployedAccounts::generate(
             config.total_accounts,
-            [0u8; 32],
+            config.seed,
             stark_felt!(DEFAULT_PREFUNDED_ACCOUNT_BALANCE),
             config
                 .account_path
@@ -97,7 +102,10 @@ impl StarknetWrapper {
         );
 
         let res = match transaction {
-            Transaction::AccountTransaction(tx) => tx.execute(&mut self.state, &self.block_context),
+            Transaction::AccountTransaction(tx) => {
+                self.check_tx_fee(&tx);
+                tx.execute(&mut self.state, &self.block_context)
+            }
             Transaction::L1HandlerTransaction(tx) => {
                 tx.execute(&mut self.state, &self.block_context)
             }
@@ -120,9 +128,11 @@ impl StarknetWrapper {
                     .insert_transaction(api_tx);
 
                 self.store_transaction(starknet_tx);
-                self.generate_latest_block()?;
 
-                self.generate_pending_block();
+                if !self.config.block_on_demand {
+                    self.generate_latest_block()?;
+                    self.generate_pending_block();
+                }
             }
 
             Err(exec_err) => {
@@ -234,6 +244,22 @@ impl StarknetWrapper {
     #[allow(unused)]
     fn state(&self) -> &DictStateReader {
         unimplemented!("StarknetWrapper::state")
+    }
+
+    fn check_tx_fee(&self, transaction: &AccountTransaction) {
+        let max_fee = match transaction {
+            AccountTransaction::Invoke(tx) => tx.max_fee(),
+            AccountTransaction::DeployAccount(tx) => tx.max_fee,
+            AccountTransaction::Declare(DeclareTransaction { tx, .. }) => match tx {
+                starknet_api::transaction::DeclareTransaction::V0(tx) => tx.max_fee,
+                starknet_api::transaction::DeclareTransaction::V1(tx) => tx.max_fee,
+                starknet_api::transaction::DeclareTransaction::V2(tx) => tx.max_fee,
+            },
+        };
+
+        if !self.config.allow_zero_max_fee && max_fee.0 == 0 {
+            panic!("max fee == 0 is not supported")
+        }
     }
 
     fn create_new_empty_block(&self) -> StarknetBlock {
