@@ -46,6 +46,7 @@ use transaction::{StarknetTransaction, StarknetTransactions};
 
 use self::transaction::ExternalFunctionCall;
 
+#[derive(Debug, Default)]
 pub struct StarknetConfig {
     pub seed: [u8; 32],
     pub total_accounts: u8,
@@ -53,7 +54,6 @@ pub struct StarknetConfig {
     pub allow_zero_max_fee: bool,
     pub account_path: Option<PathBuf>,
 }
-
 pub struct StarknetWrapper {
     pub config: StarknetConfig,
     pub blocks: StarknetBlocks,
