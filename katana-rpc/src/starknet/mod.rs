@@ -4,6 +4,7 @@ use blockifier::transaction::{
 
 use jsonrpsee::{
     core::{async_trait, Error},
+    tracing::log::warn,
     types::error::CallError,
 };
 use katana_core::{
@@ -389,7 +390,7 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
         &self,
         contract_address: FieldElement,
         key: FieldElement,
-        _block_id: BlockId,
+        block_id: BlockId,
     ) -> Result<FieldElement, Error> {
         let value = self
             .sequencer
@@ -398,8 +399,12 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
             .storage_at(
                 ContractAddress(patricia_key!(field_element_to_starkfelt(&contract_address))),
                 StorageKey(patricia_key!(field_element_to_starkfelt(&key))),
+                block_id,
             )
-            .map_err(|_| Error::from(StarknetApiError::ContractError))?;
+            .map_err(|e| {
+                warn!("{e}");
+                Error::from(StarknetApiError::ContractError)
+            })?;
 
         Ok(value.into())
     }

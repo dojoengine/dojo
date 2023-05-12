@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use blockifier::{
     block_context::BlockContext,
     execution::entry_point::{CallEntryPoint, CallInfo, ExecutionContext},
@@ -59,8 +59,9 @@ pub struct StarknetWrapper {
     pub blocks: StarknetBlocks,
     pub block_context: BlockContext,
     pub transactions: StarknetTransactions,
-    pub state: CachedState<DictStateReader>,
+    pub state: DictStateReader,
     pub predeployed_accounts: PredeployedAccounts,
+    pub pending_state: CachedState<DictStateReader>,
 }
 
 impl StarknetWrapper {
@@ -68,7 +69,8 @@ impl StarknetWrapper {
         let blocks = StarknetBlocks::default();
         let block_context = BlockContext::base();
         let transactions = StarknetTransactions::default();
-        let mut state = CachedState::new(DictStateReader::default());
+        let mut state = DictStateReader::default();
+        let pending_state = CachedState::new(state.clone());
 
         let predeployed_accounts = PredeployedAccounts::generate(
             config.total_accounts,
@@ -80,7 +82,7 @@ impl StarknetWrapper {
                 .unwrap_or(PredeployedAccounts::default_account_class_path()),
         )
         .expect("should be able to generate accounts");
-        predeployed_accounts.deploy_accounts(&mut state.state);
+        predeployed_accounts.deploy_accounts(&mut state);
 
         Self {
             state,
@@ -88,6 +90,7 @@ impl StarknetWrapper {
             blocks,
             transactions,
             block_context,
+            pending_state,
             predeployed_accounts,
         }
     }
@@ -104,10 +107,10 @@ impl StarknetWrapper {
         let res = match transaction {
             Transaction::AccountTransaction(tx) => {
                 self.check_tx_fee(&tx);
-                tx.execute(&mut self.state, &self.block_context)
+                tx.execute(&mut self.pending_state, &self.block_context)
             }
             Transaction::L1HandlerTransaction(tx) => {
-                tx.execute(&mut self.state, &self.block_context)
+                tx.execute(&mut self.pending_state, &self.block_context)
             }
         };
 
@@ -183,7 +186,7 @@ impl StarknetWrapper {
         );
 
         // apply state diff
-        let state_diff = self.state.to_state_diff();
+        let pending_state_diff = self.pending_state.to_state_diff();
 
         self.blocks.num_to_state_update.insert(
             new_block.block_number(),
@@ -199,28 +202,41 @@ impl StarknetWrapper {
                             .map(|last_block| last_block.header().state_root.0.into())
                             .unwrap()
                     },
-                    state_diff: convert_state_diff_to_rpc_state_diff(state_diff.clone()),
+                    state_diff: convert_state_diff_to_rpc_state_diff(pending_state_diff.clone()),
                 },
             },
         );
 
         // reset the pending block
         self.blocks.pending_block = None;
-        self.blocks.append_block(new_block.clone())?;
-        self.update_block_context();
+
         // TODO: Compute state root
-        self.apply_state_diff(state_diff);
+        self.blocks.append_block(new_block.clone())?;
+
+        self.apply_state_diff_to_state(pending_state_diff);
+
+        self.update_block_context();
 
         Ok(new_block)
     }
 
     pub fn generate_pending_block(&mut self) {
         self.blocks.pending_block = Some(self.create_new_empty_block());
+        // Update the pending state to the latest committed state
+        self.pending_state = CachedState::new(self.state.clone());
     }
 
-    // TODO: perform call based on specific block state
-    pub fn call(&self, call: ExternalFunctionCall) -> Result<CallInfo> {
-        let mut state = CachedState::new(self.state.state.clone());
+    pub fn call(
+        &self,
+        call: ExternalFunctionCall,
+        block_number: Option<BlockNumber>,
+    ) -> Result<CallInfo> {
+        let state = match block_number {
+            Some(num) => self.state(num).ok_or(anyhow!("block not found"))?,
+            None => self.pending_state(),
+        };
+
+        let mut state = CachedState::new(state);
         let mut state = CachedState::new(MutRefState::new(&mut state));
 
         let call = CallEntryPoint {
@@ -240,10 +256,18 @@ impl StarknetWrapper {
         .map_err(|e| e.into())
     }
 
-    // Returns the StarknetState of the underlying Starknet instance.
-    #[allow(unused)]
-    fn state(&self) -> &DictStateReader {
-        unimplemented!("StarknetWrapper::state")
+    pub fn state(&self, block_number: BlockNumber) -> Option<DictStateReader> {
+        self.blocks.get_state(&block_number).cloned()
+    }
+
+    pub fn pending_state(&self) -> DictStateReader {
+        let mut state = self.pending_state.state.clone();
+        apply_state_diff(&mut state, self.pending_state.to_state_diff());
+        state
+    }
+
+    pub fn latest_state(&self) -> DictStateReader {
+        self.state.clone()
     }
 
     fn check_tx_fee(&self, transaction: &AccountTransaction) {
@@ -303,45 +327,53 @@ impl StarknetWrapper {
         self.block_context.block_timestamp = BlockTimestamp(get_current_timestamp().as_secs());
     }
 
-    fn apply_state_diff(&mut self, state_diff: CommitmentStateDiff) {
-        let state = &mut self.state.state;
+    // apply the pending state diff to the state
+    fn apply_state_diff_to_state(&mut self, state_diff: CommitmentStateDiff) {
+        let state = &mut self.state;
+        apply_state_diff(state, state_diff);
 
-        // update contract storages
-        state_diff
-            .storage_updates
-            .into_iter()
-            .for_each(|(contract_address, storages)| {
-                storages.into_iter().for_each(|(key, value)| {
-                    state.storage_view.insert((contract_address, key), value);
-                })
-            });
-
-        // update declared contracts
-        state_diff
-            .class_hash_to_compiled_class_hash
-            .into_iter()
-            .for_each(|(class_hash, compiled_class_hash)| {
-                state
-                    .class_hash_to_compiled_class_hash
-                    .insert(class_hash, compiled_class_hash);
-            });
-
-        // update deployed contracts
-        state_diff
-            .address_to_class_hash
-            .into_iter()
-            .for_each(|(contract_address, class_hash)| {
-                state
-                    .address_to_class_hash
-                    .insert(contract_address, class_hash);
-            });
-
-        // update accounts nonce
-        state_diff
-            .address_to_nonce
-            .into_iter()
-            .for_each(|(contract_address, nonce)| {
-                state.address_to_nonce.insert(contract_address, nonce);
-            });
+        // Store the block state
+        self.blocks
+            .store_state(self.block_context.block_number, state.clone());
     }
+}
+
+fn apply_state_diff(state: &mut DictStateReader, state_diff: CommitmentStateDiff) {
+    // update contract storages
+    state_diff
+        .storage_updates
+        .into_iter()
+        .for_each(|(contract_address, storages)| {
+            storages.into_iter().for_each(|(key, value)| {
+                state.storage_view.insert((contract_address, key), value);
+            })
+        });
+
+    // update declared contracts
+    state_diff
+        .class_hash_to_compiled_class_hash
+        .into_iter()
+        .for_each(|(class_hash, compiled_class_hash)| {
+            state
+                .class_hash_to_compiled_class_hash
+                .insert(class_hash, compiled_class_hash);
+        });
+
+    // update deployed contracts
+    state_diff
+        .address_to_class_hash
+        .into_iter()
+        .for_each(|(contract_address, class_hash)| {
+            state
+                .address_to_class_hash
+                .insert(contract_address, class_hash);
+        });
+
+    // update accounts nonce
+    state_diff
+        .address_to_nonce
+        .into_iter()
+        .for_each(|(contract_address, nonce)| {
+            state.address_to_nonce.insert(contract_address, nonce);
+        });
 }

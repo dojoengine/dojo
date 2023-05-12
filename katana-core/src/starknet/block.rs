@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::state::DictStateReader;
 use anyhow::{ensure, Result};
 use starknet::providers::jsonrpc::models::StateUpdate;
 use starknet_api::{
@@ -108,6 +109,7 @@ pub struct StarknetBlocks {
     pub hash_to_num: HashMap<BlockHash, BlockNumber>,
     pub num_to_block: HashMap<BlockNumber, StarknetBlock>,
     pub pending_block: Option<StarknetBlock>,
+    pub state_archive: HashMap<BlockNumber, DictStateReader>,
     pub num_to_state_update: HashMap<BlockNumber, StateUpdate>,
 }
 
@@ -127,8 +129,13 @@ impl StarknetBlocks {
         Ok(())
     }
 
-    pub fn current_block_number(&self) -> BlockNumber {
-        BlockNumber(self.total_blocks() as u64 - 1)
+    pub fn current_block_number(&self) -> Option<BlockNumber> {
+        let block_len = self.total_blocks();
+        if block_len == 0 {
+            None
+        } else {
+            Some(BlockNumber(block_len as u64 - 1))
+        }
     }
 
     pub fn latest(&self) -> Option<StarknetBlock> {
@@ -163,5 +170,13 @@ impl StarknetBlocks {
 
     pub fn get_state_update(&self, block_number: BlockNumber) -> Option<StateUpdate> {
         self.num_to_state_update.get(&block_number).cloned()
+    }
+
+    pub fn get_state(&self, block_number: &BlockNumber) -> Option<&DictStateReader> {
+        self.state_archive.get(block_number)
+    }
+
+    pub fn store_state(&mut self, block_number: BlockNumber, state: DictStateReader) {
+        self.state_archive.insert(block_number, state);
     }
 }

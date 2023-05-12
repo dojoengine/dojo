@@ -6,6 +6,7 @@ use crate::{
         block::StarknetBlock, event::EmittedEvent, transaction::ExternalFunctionCall,
         StarknetConfig, StarknetWrapper,
     },
+    state::DictStateReader,
     util::{field_element_to_starkfelt, starkfelt_to_u128},
 };
 
@@ -67,7 +68,8 @@ impl KatanaSequencer {
 
         let deployed_account_balance_key =
             get_storage_var_address("ERC20_balances", &[*contract_address.0.key()]).unwrap();
-        self.starknet.state.set_storage_at(
+
+        self.starknet.pending_state.set_storage_at(
             self.starknet.block_context.fee_token_address,
             deployed_account_balance_key,
             stark_felt!(balance),
@@ -93,14 +95,19 @@ impl KatanaSequencer {
                 .get(&BlockHash(field_element_to_starkfelt(&hash)))
                 .cloned(),
 
-            BlockId::Tag(tag) => {
-                let current_height = self.starknet.blocks.current_block_number();
+            BlockId::Tag(BlockTag::Pending) => None,
+            BlockId::Tag(BlockTag::Latest) => self.starknet.blocks.current_block_number(),
+        }
+    }
 
-                match tag {
-                    BlockTag::Pending => None,
-                    BlockTag::Latest => Some(current_height),
-                }
-            }
+    fn state_from_block_id(&self, block_id: BlockId) -> Option<DictStateReader> {
+        match block_id {
+            BlockId::Tag(BlockTag::Latest) => Some(self.starknet.latest_state()),
+            BlockId::Tag(BlockTag::Pending) => Some(self.starknet.pending_state()),
+
+            id => self
+                .block_number_from_block_id(id)
+                .and_then(|n| self.starknet.state(n)),
         }
     }
 }
@@ -144,7 +151,10 @@ impl Sequencer for KatanaSequencer {
             transaction_hash: tx_hash,
         });
 
-        tx.execute(&mut self.starknet.state, &self.starknet.block_context)?;
+        tx.execute(
+            &mut self.starknet.pending_state,
+            &self.starknet.block_context,
+        )?;
 
         Ok((tx_hash, contract_address))
     }
@@ -166,10 +176,18 @@ impl Sequencer for KatanaSequencer {
         &mut self,
         contract_address: ContractAddress,
         storage_key: StorageKey,
+        block_id: BlockId,
     ) -> Result<StarkFelt, blockifier::state::errors::StateError> {
-        self.starknet
-            .state
-            .get_storage_at(contract_address, storage_key)
+        let block_number = self.block_number_from_block_id(block_id);
+
+        let mut state = self.state_from_block_id(block_id).ok_or(
+            blockifier::state::errors::StateError::StateReadError(format!(
+                "State not found for block number {:?}",
+                block_number
+            )),
+        )?;
+
+        state.get_storage_at(contract_address, storage_key)
     }
 
     fn chain_id(&self) -> ChainId {
@@ -200,10 +218,11 @@ impl Sequencer for KatanaSequencer {
 
     fn call(
         &self,
-        _block_id: BlockId,
+        block_id: BlockId,
         function_call: ExternalFunctionCall,
     ) -> Result<Vec<StarkFelt>> {
-        let execution_info = self.starknet.call(function_call)?;
+        let block_number = self.block_number_from_block_id(block_id);
+        let execution_info = self.starknet.call(function_call, block_number)?;
         Ok(execution_info.execution.retdata.0)
     }
 
@@ -354,7 +373,7 @@ pub trait Sequencer {
 
     fn call(
         &self,
-        _block_id: BlockId,
+        block_id: BlockId,
         function_call: ExternalFunctionCall,
     ) -> Result<Vec<StarkFelt>>;
 
@@ -362,6 +381,7 @@ pub trait Sequencer {
         &mut self,
         contract_address: ContractAddress,
         storage_key: StorageKey,
+        block_id: BlockId,
     ) -> Result<StarkFelt, blockifier::state::errors::StateError>;
 
     fn deploy_account(
