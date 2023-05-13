@@ -4,32 +4,27 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-apibara-core = { git = "https://github.com/apibara/dna", rev = "2c452070372e80e5d1a5302c1b8ae5defef7e9a4", optional = true }
-apibara-sdk = { git = "https://github.com/apibara/dna", rev = "2c452070372e80e5d1a5302c1b8ae5defef7e9a4", optional = true }
-beerus-core = { git = "https://github.com/keep-starknet-strange/beerus", rev = "741ae7739eb60851f9cce2e6511b7e11a86ce841", optional = true }
+beerus-core = { git = "https://github.com/keep-starknet-strange/beerus", rev = "fbb39bd72fb283f653db4a5d279443e2f122153d" }
 bevy = { version = "0.10", default-features = false }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+apibara-core = { git = "https://github.com/apibara/dna", rev = "2c452070372e80e5d1a5302c1b8ae5defef7e9a4" }
+apibara-sdk = { git = "https://github.com/apibara/dna", rev = "2c452070372e80e5d1a5302c1b8ae5defef7e9a4" }
 bevy-tokio-tasks = "0.10"
 prost = "0.11"
-tokio = { version = "1.27", features = ["full", "sync"] }
+tokio = { version = "1.27", features = ["sync"] }
 tokio-stream = "0.1"
-tonic = "0.8"
+tonic = { version = "0.8" }
 
 [dev-dependencies]
 chrono = "0.4"
 
-[features]
-default = ["full"]
-full = ["indexer", "light-client"]
-indexer = ["apibara-core", "apibara-sdk"]
-light-client = ["beerus-core"]
-
 [[example]]
 name = "indexer"
 path = "examples/indexer-simple.rs"
-required-features = ["indexer"]
-
+# required-features = ["indexer"]
 
 [[example]]
 name = "light-client"
 path = "examples/light_client.rs"
-required-features = ["light-client"]
+# required-features = ["light-client"]
