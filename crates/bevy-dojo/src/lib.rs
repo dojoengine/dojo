@@ -1,13 +1,9 @@
-mod light_client;
-
 #[cfg(not(target_arch = "wasm32"))]
-mod indexer;
+pub mod indexer;
+pub mod light_client;
 
-#[cfg(not(target_arch = "wasm32"))]
-pub mod apibara {
-    pub use {apibara_core as core, apibara_sdk as sdk};
-
-    pub use crate::indexer::*;
+pub mod prelude {
+    #[cfg(not(target_arch = "wasm32"))]
+    pub use crate::indexer::IndexerPlugin;
+    pub use crate::light_client::LightClientPlugin;
 }
-
-pub use light_client::*;

@@ -1,5 +1,5 @@
 use bevy::app::App;
-use bevy_dojo::LightClientPlugin;
+use bevy_dojo::prelude::*;
 
 fn main() {
     App::new().add_plugin(LightClientPlugin).set_runner(runner).run();

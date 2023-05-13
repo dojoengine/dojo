@@ -22,9 +22,7 @@ chrono = "0.4"
 [[example]]
 name = "indexer"
 path = "examples/indexer-simple.rs"
-# required-features = ["indexer"]
 
 [[example]]
 name = "light-client"
 path = "examples/light_client.rs"
-# required-features = ["light-client"]

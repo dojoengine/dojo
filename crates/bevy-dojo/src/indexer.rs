@@ -1,3 +1,7 @@
+pub mod apibara {
+    pub use {apibara_core as core, apibara_sdk as sdk};
+}
+
 use std::marker::PhantomData;
 
 use apibara_sdk::{ClientBuilder, Configuration, DataMessage};
