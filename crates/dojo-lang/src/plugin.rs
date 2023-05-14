@@ -95,9 +95,11 @@ impl MacroPlugin for DojoPlugin {
             ast::Item::Struct(struct_ast) => {
                 let mut diagnostics = vec![];
 
+                // Iterate over all the derive attributes of the struct
                 for attr in struct_ast.attributes(db).query_attr(db, "derive") {
                     let attr = attr.structurize(db);
 
+                    // Check if the derive attribute has arguments
                     if attr.args.is_empty() {
                         diagnostics.push(PluginDiagnostic {
                             stable_ptr: attr.args_stable_ptr.untyped(),
@@ -106,7 +108,9 @@ impl MacroPlugin for DojoPlugin {
                         continue;
                     }
 
+                    // Iterate over all the arguments of the derive attribute
                     for arg in attr.args {
+                        // Check if the argument is a path then set it to arg
                         let AttributeArg{
                             variant: AttributeArgVariant::Unnamed {
                                 value: ast::Expr::Path(path),
@@ -122,6 +126,7 @@ impl MacroPlugin for DojoPlugin {
                             continue;
                         };
 
+                        // Check if the path has a single segment
                         let [ast::PathSegment::Simple(segment)] = &path.elements(db)[..] else {
                             diagnostics.push(PluginDiagnostic {
                                 stable_ptr: value_stable_ptr.untyped(),
@@ -130,7 +135,10 @@ impl MacroPlugin for DojoPlugin {
                             continue;
                         };
 
+                        // Get the text of the segment and check if it is "Component"
                         let derived = segment.ident(db).text(db);
+
+                        // If struct has a derive attribute with "Component" then handle it
                         if matches!(derived.as_str(), "Component") {
                             return handle_component_struct(db, struct_ast);
                         }

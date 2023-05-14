@@ -37,7 +37,7 @@ Components form the schema of the world, holding state for systems to operate on
 ##### Components Example
 
 ```rust
-#[derive(Component)]
+#[derive(Component, Copy, Drop, Serde)]
 struct Position {
     x: u32,
     y: u32

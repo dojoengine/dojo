@@ -5,9 +5,8 @@ ExpandContractTestRunner
 
 //! > cairo_code
 use serde::Serde;
-use dict::Felt252Dict;
 
-#[derive(Component)]
+#[derive(Component, Copy, Drop, Serde)]
 struct Position {
     x: felt252,
     y: felt252
@@ -31,23 +30,18 @@ impl PositionImpl of PositionTrait {
     }
 }
 
-#[derive(Component)]
-#[component(custom: true, traits: (Destruct))]
+#[derive(Component, Serde)]
 struct Roles {
-    is_authorized: Felt252Dict<u8>,
-    roles_len: u8
+    role_ids: Array<u8>
 }
 
-#[derive(Component)]
-#[component(custom: true, traits: (Copy, Drop))]
+#[derive(Component, Copy, Drop, Serde)]
 struct Player {
     name: felt252, 
 }
 
 //! > generated_cairo_code
 use serde::Serde;
-
-use dict::Felt252Dict;
 
 trait PositionTrait {
     fn is_zero(self: Position) -> bool;
@@ -67,7 +61,6 @@ impl PositionImpl of PositionTrait {
     }
 }
 
-#[derive(Copy, Drop, Serde)]
 struct Position {
     x: felt252,
     y: felt252
@@ -110,10 +103,8 @@ mod PositionComponent {
     }
 }
 
-#[derive(Destruct)]
 struct Roles {
-    is_authorized: Felt252Dict<u8>,
-    roles_len: u8
+    role_ids: Array<u8>
 }
 
 #[abi]
@@ -130,8 +121,7 @@ mod RolesComponent {
     #[view]
     fn schema() -> Array<(felt252, felt252, u8)> {
         let mut arr = array::ArrayTrait::new();
-        array::ArrayTrait::append(ref arr, ('is_authorized', 'Felt252Dict<u8>', 252));
-        array::ArrayTrait::append(ref arr, ('roles_len', 'u8', 252));
+        array::ArrayTrait::append(ref arr, ('role_ids', 'Array<u8>', 252));
 
         arr
     }
@@ -144,7 +134,7 @@ mod RolesComponent {
 
     #[view]
     fn len() -> usize {
-        2_usize
+        1_usize
     }
 
     #[view]
@@ -153,7 +143,6 @@ mod RolesComponent {
     }
 }
 
-#[derive(Copy, Drop)]
 struct Player {
     name: felt252, 
 }

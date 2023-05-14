@@ -12,22 +12,22 @@ use cubit::test::helpers::assert_precise;
 
 const SCALING_FACTOR: u128 = 10000;
 
-#[derive(Component)]
+#[derive(Component, Copy, Drop, Serde)]
 struct Cash {
     amount: u128, 
 }
 
-#[derive(Component)]
+#[derive(Component, Copy, Drop, Serde)]
 struct Item {
     quantity: usize, 
 }
 
-#[derive(Component)]
+#[derive(Component, Copy, Drop, Serde)]
 struct Liquidity {
     shares: FixedType, 
 }
 
-#[derive(Component)]
+#[derive(Component, Copy, Drop, Serde)]
 struct Market {
     cash_amount: u128,
     item_quantity: usize,

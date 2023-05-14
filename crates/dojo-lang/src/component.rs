@@ -13,6 +13,12 @@ use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 
 use crate::plugin::DojoAuxData;
 
+/// A handler for Dojo code that modifies a component struct.
+/// Parameters:
+/// * db: The semantic database.
+/// * struct_ast: The AST of the component struct.
+/// Returns:
+/// * A PluginResult containing the generated code.
 pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> PluginResult {
     let mut body_nodes = vec![RewriteNode::interpolate_patched(
         "
@@ -78,18 +84,8 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> 
 
     let name = struct_ast.name(db).text(db);
     let mut builder = PatchBuilder::new(db);
-    let derive = {
-        if is_custom(db, struct_ast.clone()) {
-            // Get the traits that the user wants to derive
-            format!("({})", get_traits(db, struct_ast.clone()).join(", "))
-        } else {
-            "(Copy, Drop, Serde)".to_string()
-        }
-    };
-
     builder.add_modified(RewriteNode::interpolate_patched(
         "
-            #[derive$derive$]
             struct $type_name$ {
                 $members$
             }
@@ -116,7 +112,6 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> 
             }
         ",
         HashMap::from([
-            ("derive".to_string(), RewriteNode::Text(derive)),
             (
                 "type_name".to_string(),
                 RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
@@ -165,80 +160,4 @@ fn is_indexed(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> bool {
         }
     }
     false
-}
-
-/// Returns true if the component is custom #[component(custom: true)]
-fn is_custom(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> bool {
-    for attr in struct_ast.attributes(db).query_attr(db, "component") {
-        let attr = attr.structurize(db);
-
-        for arg in attr.args {
-            let AttributeArg {
-                variant: AttributeArgVariant::Named {
-                    value,
-                    name,
-                    ..
-                },
-                ..
-            } = arg else {
-                continue;
-            };
-
-            if name == "custom" {
-                if let Expr::True(_) = value {
-                    return true;
-                }
-            }
-        }
-    }
-    false
-}
-
-/// Returns all the traits defined in the component attribute
-/// #[component(indexed: true, custom: true, traits: (Copy, Drop))]
-/// Returns ["Copy", "Drop"]
-fn get_traits(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> Vec<String> {
-    let mut traits = Vec::new();
-
-    for attr in struct_ast.attributes(db).query_attr(db, "component") {
-        let attr = attr.structurize(db);
-
-        for arg in attr.args {
-            // Unpack the attribute argument
-            let AttributeArg {
-                variant: AttributeArgVariant::Named {
-                    value,
-                    name,
-                    ..
-                },
-                ..
-            } = arg else {
-                continue;
-            };
-
-            // Check if the attribute is traits
-            if name == "traits" {
-                // Check if the value is a tuple i.e. (Copy, Drop)
-                if let Expr::Tuple(tuple_expr) = value {
-                    // Loop over the elements in the tuple
-                    let tuple_iter: Vec<Expr> = tuple_expr.expressions(db).elements(db);
-                    for elem in tuple_iter {
-                        // Check if the element is an identifier (which it should be for a trait)
-                        if let Expr::Path(path_expr) = elem {
-                            // Add the trait to the vector
-                            traits.push(path_expr.node.get_text(db));
-                        }
-                    }
-                // Check if the value is parenthesized i.e. (Copy)
-                } else if let Expr::Parenthesized(parenthesized_expr) = value {
-                    // Check if the parenthesized expression is a path expression
-                    if let Expr::Path(path_expr) = parenthesized_expr.expr(db) {
-                        // Add the trait to the vector
-                        traits.push(path_expr.node.get_text(db));
-                    }
-                }
-            }
-        }
-    }
-    traits
 }
