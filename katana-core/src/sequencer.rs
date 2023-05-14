@@ -164,6 +164,11 @@ impl Sequencer for KatanaSequencer {
             .handle_transaction(Transaction::AccountTransaction(transaction))
     }
 
+    fn block_hash_and_number(&self) -> Option<(BlockHash, BlockNumber)> {
+        let block = self.starknet.blocks.latest()?;
+        Some((block.block_hash(), block.block_number()))
+    }
+
     fn class_hash_at(
         &mut self,
         _block_id: BlockId,
@@ -370,6 +375,8 @@ pub trait Sequencer {
         block_id: BlockId,
         contract_address: ContractAddress,
     ) -> Result<ClassHash, blockifier::state::errors::StateError>;
+
+    fn block_hash_and_number(&self) -> Option<(BlockHash, BlockNumber)>;
 
     fn call(
         &self,

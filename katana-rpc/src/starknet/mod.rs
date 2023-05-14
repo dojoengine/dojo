@@ -132,7 +132,17 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
     }
 
     async fn block_hash_and_number(&self) -> Result<BlockHashAndNumber, Error> {
-        unimplemented!("KatanaRpc::block_hash_and_number")
+        let (hash, number) = self
+            .sequencer
+            .read()
+            .await
+            .block_hash_and_number()
+            .ok_or(Error::from(StarknetApiError::NoBlocks))?;
+
+        Ok(BlockHashAndNumber {
+            block_number: number.0,
+            block_hash: hash.0.into(),
+        })
     }
 
     async fn block_with_tx_hashes(
