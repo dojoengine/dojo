@@ -1,35 +1,33 @@
 use anyhow::{Error, Ok, Result};
-use apibara_core::starknet::v1alpha2::EventWithTransaction;
 use num::BigUint;
-use sqlx::{Executor, Pool, Sqlite};
+use sqlx::{Executor, Pool, Database};
 use starknet::core::types::FieldElement;
-use starknet::providers::jsonrpc::models::{BlockId, BlockTag};
+use starknet::providers::jsonrpc::models::{BlockId, BlockTag, Event};
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
 use tonic::async_trait;
 
 use super::EventProcessor;
-use crate::stream::FieldElementExt;
 
 #[derive(Default)]
-pub struct SystemRegistrationProcessor;
+pub struct SystemRegistrationProcessor<'a, DB: Database, T: JsonRpcTransport + Sync + Send> {
+    pool: &'a Pool<DB>,
+    provider: &'a JsonRpcClient<T>,
+}
 
 #[async_trait]
-impl<T: JsonRpcTransport + Sync + Send> EventProcessor<T> for SystemRegistrationProcessor {
+impl EventProcessor for SystemRegistrationProcessor {
     fn event_key(&self) -> String {
         "SystemRegistered".to_string()
     }
 
     async fn process(
         &self,
-        pool: &Pool<Sqlite>,
-        provider: &JsonRpcClient<T>,
-        data: EventWithTransaction,
+        event: Event,
     ) -> Result<(), Error> {
-        let event = &data.event.unwrap();
         let transaction_hash = &data.transaction.unwrap().meta.unwrap().hash.unwrap().to_biguint();
         let system = &event.data[0].to_biguint();
 
-        let class_hash = provider
+        let class_hash: std::result::Result<FieldElement, starknet::providers::jsonrpc::JsonRpcClientError<_>> = self.provider
             .get_class_hash_at(
                 &BlockId::Tag(BlockTag::Pending),
                 FieldElement::from_bytes_be(system.to_bytes_be().as_slice().try_into().unwrap())
@@ -48,7 +46,7 @@ impl<T: JsonRpcTransport + Sync + Send> EventProcessor<T> for SystemRegistration
                 .as_str();
 
         // create a new system
-        let mut tx = pool.begin().await?;
+        let mut tx = self.storage.begin().await?;
         tx.execute(sqlx::query!(
             "
             INSERT INTO systems (id, address, class_hash, transaction_hash)

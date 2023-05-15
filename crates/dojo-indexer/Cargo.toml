@@ -9,9 +9,6 @@ edition = "2021"
 actix-web = "4.3.0"
 actix-cors = "0.6.4"
 anyhow.workspace = true
-apibara-core = { git = "https://github.com/apibara/apibara", rev = "5afaa6db00f2d1b36825215bbf894f0341121d39" }
-apibara-sdk = { git = "https://github.com/apibara/apibara", rev = "5afaa6db00f2d1b36825215bbf894f0341121d39" }
-apibara-starknet = { git = "https://github.com/apibara/apibara", rev = "5afaa6db00f2d1b36825215bbf894f0341121d39" }
 clap.workspace = true
 ctrlc = "3.2.5"
 futures = "0.3.26"
@@ -32,6 +29,7 @@ sqlx = { version = "0.6.2", features = [
     "offline",
 ] }
 starknet.workspace = true
+thiserror.workspace = true
 tokio = { version = "1.20.1", features = ["full"] }
 tokio-stream = "0.1.11"
 tokio-util = "0.7.7"

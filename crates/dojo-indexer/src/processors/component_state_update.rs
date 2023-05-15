@@ -1,11 +1,9 @@
 use anyhow::{Error, Ok, Result};
-use apibara_core::starknet::v1alpha2::EventWithTransaction;
 use sqlx::{Executor, Pool, Sqlite};
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
 use tonic::async_trait;
 
 use super::EventProcessor;
-use crate::stream::FieldElementExt;
 
 #[derive(Default)]
 pub struct ComponentStateUpdateProcessor;

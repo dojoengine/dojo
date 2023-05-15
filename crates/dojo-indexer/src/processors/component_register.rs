@@ -8,7 +8,6 @@ use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
 use tonic::async_trait;
 
 use super::EventProcessor;
-use crate::stream::FieldElementExt;
 
 #[derive(Default)]
 pub struct ComponentRegistrationProcessor;
@@ -21,7 +20,7 @@ impl<T: JsonRpcTransport + Sync + Send> EventProcessor<T> for ComponentRegistrat
 
     async fn process(
         &self,
-        pool: &Pool<Sqlite>,
+        storage: &Pool<Sqlite>,
         provider: &JsonRpcClient<T>,
         data: EventWithTransaction,
     ) -> Result<(), Error> {
@@ -47,7 +46,7 @@ impl<T: JsonRpcTransport + Sync + Send> EventProcessor<T> for ComponentRegistrat
                 .to_str_radix(16)
                 .as_str();
 
-        let mut tx = pool.begin().await?;
+        let mut tx = storage.begin().await?;
         tx.execute(sqlx::query!(
             "
             INSERT INTO components (id, properties, address, class_hash, transaction_hash)

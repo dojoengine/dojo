@@ -162,16 +162,6 @@
     },
     "query": "\n            SELECT * FROM components\n        "
   },
-  "35788913ec600ac7aee35079c5bc03d9941c6f78a007d1e0086da19315dbe1ba": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Right": 4
-      }
-    },
-    "query": "\n            INSERT INTO systems (id, address, class_hash, transaction_hash)\n            VALUES ($1, $2, $3, $4)\n            "
-  },
   "5f565f260f4973e1130693942bbdfb078d6ba3da2ef6c3445d7c4f54621e8b9b": {
     "describe": {
       "columns": [
@@ -370,16 +360,6 @@
     },
     "query": "\n            SELECT \n                id,\n                name,\n                partition_id,\n                keys,\n                transaction_hash,\n                created_at as \"created_at: _\",\n                updated_at as \"updated_at: _\"\n            FROM entities\n        "
   },
-  "800bda25f25a304fb049dd2a75f90053dec947a50d3f5d1d8e47bb1af5d52d4e": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Right": 2
-      }
-    },
-    "query": "\n            INSERT INTO entities (id, transaction_hash)\n            VALUES ($1, $2)\n            ON CONFLICT DO NOTHING\n            "
-  },
   "82f15c8bb2a478e92b13d58f15d7925f0581c49e261396bed747b376f9679954": {
     "describe": {
       "columns": [
@@ -457,26 +437,6 @@
       }
     },
     "query": "\n            SELECT * FROM systems\n        "
-  },
-  "9d6d7f521d3ed970346fbd193c0712c5aa4fe10777d6f76e96f9855b1959eda5": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Right": 3
-      }
-    },
-    "query": "\n            INSERT INTO entity_states (entity_id, component_id, data)\n            VALUES ($1, $2, $3)\n            ON CONFLICT (entity_id, component_id) DO UPDATE SET data = $3\n            "
-  },
-  "ab26f7ade031d78a20f5563e313e4f77d7bf02b7afa2e4309a385850f3f82340": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Right": 5
-      }
-    },
-    "query": "\n            INSERT INTO components (id, properties, address, class_hash, transaction_hash)\n            VALUES ($1, $2, $3, $4, $5)\n            "
   },
   "ac806d2453a086f04ba3cb213825fc84d46f83b78b56502f6c74844beef244a3": {
     "describe": {
@@ -735,15 +695,5 @@
       }
     },
     "query": "\n            SELECT * FROM entity_states WHERE entity_id = $1\n        "
-  },
-  "ffb6351221bc41f130e84efa2f18b80c2a66a20739eca222fb13cd931e928956": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Right": 4
-      }
-    },
-    "query": "\n            INSERT INTO entity_state_updates (entity_id, component_id, transaction_hash, data)\n            VALUES ($1, $2, $3, $4)\n            "
   }
 }
