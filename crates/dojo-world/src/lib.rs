@@ -1,10 +1,7 @@
-use std::str::FromStr;
-
 use anyhow::anyhow;
 use scarb::core::Workspace;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
-use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 use starknet::signers::{LocalWallet, SigningKey};
 use toml::Value;
@@ -72,7 +69,6 @@ impl WorldConfig {
 pub struct EnvironmentConfig {
     pub rpc: Option<Url>,
     pub network: Option<String>,
-    pub chain_id: Option<FieldElement>,
     pub private_key: Option<FieldElement>,
     pub account_address: Option<FieldElement>,
     pub keystore_path: Option<String>,
@@ -97,12 +93,6 @@ impl EnvironmentConfig {
             if let Some(rpc) = env.get("rpc_url").and_then(|v| v.as_str()) {
                 let url = Url::parse(rpc).map_err(|_| DeserializationError::ParsingUrl)?;
                 config.rpc = Some(url);
-            }
-
-            if let Some(chain_id) = env.get("chain_id").and_then(|v| v.as_str()) {
-                let chain_id = FieldElement::from_str(chain_id)
-                    .map_err(|_| DeserializationError::ParsingFieldElement)?;
-                config.chain_id = Some(chain_id);
             }
 
             if let Some(private_key) = env
@@ -139,13 +129,6 @@ impl EnvironmentConfig {
                 let address = FieldElement::from_hex_be(&account_address)
                     .map_err(|_| DeserializationError::ParsingFieldElement)?;
                 config.account_address = Some(address);
-            }
-
-            if let Some(network) = env.get("network").and_then(|v| v.as_str()) {
-                config.network = Some(network.into());
-                if config.chain_id.is_none() {
-                    config.chain_id = Some(cairo_short_string_to_felt(network)?);
-                }
             }
         }
 
