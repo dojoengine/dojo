@@ -25,77 +25,95 @@ impl RouteImpl of RouteTrait {
 mod RouteAuth {
     use traits::Into;
 
-    use dojo_core::auth::components::Status;
-    use dojo_core::auth::components::Role;
+    use dojo_core::auth::components::AuthStatus;
+    use dojo_core::auth::components::AuthRole;
     use super::Route;
 
     use starknet::ContractAddress;
 
     fn execute(route: Route) {
         // Set scoped role
-        commands::set_entity((route.target_id, route.resource_id).into(), (Role { id: route.role_id }));
+        commands::set_entity((route.target_id, route.resource_id).into(), (AuthRole { id: route.role_id }));
 
         // Set status
-        commands::set_entity((route.role_id, route.resource_id).into(), (Status { is_authorized: bool::True(()) }));
+        commands::set_entity((route.role_id, route.resource_id).into(), (AuthStatus { is_authorized: bool::True(()) }));
     }
 }
 
 #[system]
-mod Authorize {
+mod IsAccountAdmin {
+    use traits::Into;
+    use starknet::get_tx_info;
+    use box::BoxTrait;
+    use dojo_core::integer::u250;
+    use dojo_core::auth::components::AuthStatus;
+    use dojo_core::auth::components::AuthRole;
+
+    fn execute() -> bool {
+        // Get calling account contract address
+        let caller = get_tx_info().unbox().account_contract_address; // tx origin
+        let role = commands::<AuthRole>::entity(caller.into());
+        // Authorize if role is Admin
+        role.id.into() == 'Admin'
+    }
+}
+
+#[system]
+mod IsAuthorized {
     use traits::Into;
     use dojo_core::integer::u250;
-    use dojo_core::auth::components::Status;
-    use dojo_core::auth::components::Role;
+    use dojo_core::auth::components::AuthStatus;
+    use dojo_core::auth::components::AuthRole;
 
-    fn execute(caller_id: u250, resource_id: u250) -> bool {
+    fn execute(target_id: u250, resource_id: u250) -> bool {
         // Get World level role
-        let maybe_role = commands::<Role>::try_entity(caller_id.into());
+        let maybe_role = commands::<AuthRole>::try_entity(target_id.into());
         let role = match maybe_role {
             Option::Some(role) => role.id.into(),
             Option::None(()) => 0,
         };
 
         // Get component-scoped role
-        let maybe_scoped_role = commands::<Role>::try_entity((caller_id, resource_id).into());
+        let maybe_scoped_role = commands::<AuthRole>::try_entity((target_id, resource_id).into());
         let scoped_role = match maybe_scoped_role {
             Option::Some(scoped_role) => scoped_role.id.into(),
             Option::None(_) => 0,
         }; 
 
         // Get authorization status for scoped role
-        let maybe_authorization_status = commands::<Status>::try_entity(
+        let maybe_authorization_status = commands::<AuthStatus>::try_entity(
             (scoped_role, resource_id).into()
         );
         let authorization_status = match maybe_authorization_status {
             Option::Some(authorization_status) => authorization_status.is_authorized,
             Option::None(_) => bool::False(()),
         };
-        // Authorize if role is Admin or authorization status is true
+        // Authorize if system's role is Admin or authorization status is true
         role == 'Admin' | authorization_status
     }
 }
 
 #[system]
-mod GrantRole {
+mod GrantAuthRole {
     use traits::Into;
     use array::ArrayTrait;
     use dojo_core::integer::u250;
-    use dojo_core::auth::components::Role;
+    use dojo_core::auth::components::AuthRole;
 
     fn execute(target_id: u250, role_id: u250) {
-        commands::set_entity(target_id.into(), (Role { id: role_id }));
+        commands::set_entity(target_id.into(), (AuthRole { id: role_id }));
     }
 }
 
 #[system]
-mod GrantScopedRole {
+mod GrantScopedAuthRole {
     use traits::Into;
     use array::ArrayTrait;
     use dojo_core::integer::u250;
-    use dojo_core::auth::components::Role;
+    use dojo_core::auth::components::AuthRole;
 
     fn execute(target_id: u250, role_id: u250, resource_id: u250) {
-        commands::set_entity((target_id, resource_id).into(), (Role { id: role_id }));
+        commands::set_entity((target_id, resource_id).into(), (AuthRole { id: role_id }));
     }
 }
 
@@ -103,7 +121,7 @@ mod GrantScopedRole {
 mod GrantResource {
     use traits::Into;
     use dojo_core::integer::u250;
-    use dojo_core::auth::components::Status;
+    use dojo_core::auth::components::AuthStatus;
 
     fn execute(role_id: u250, resource_id: u250) {
         commands::set_entity((role_id, resource_id).into(), (bool::True(())));
@@ -111,26 +129,26 @@ mod GrantResource {
 }
 
 #[system]
-mod RevokeRole {
+mod RevokeAuthRole {
     use traits::Into;
     use array::ArrayTrait;
     use dojo_core::integer::u250;
-    use dojo_core::auth::components::Role;
+    use dojo_core::auth::components::AuthRole;
 
     fn execute(target_id: u250) {
-        commands::set_entity(target_id.into(), (Role { id: 0.into() }));
+        commands::set_entity(target_id.into(), (AuthRole { id: 0.into() }));
     }
 }
 
 #[system]
-mod RevokeScopedRole {
+mod RevokeScopedAuthRole {
     use traits::Into;
     use array::ArrayTrait;
     use dojo_core::integer::u250;
-    use dojo_core::auth::components::Role;
+    use dojo_core::auth::components::AuthRole;
 
     fn execute(target_id: u250, resource_id: u250) {
-        commands::set_entity((target_id, resource_id).into(), (Role { id: 0.into() }));
+        commands::set_entity((target_id, resource_id).into(), (AuthRole { id: 0.into() }));
     }
 }
 
@@ -138,7 +156,7 @@ mod RevokeScopedRole {
 mod RevokeResource {
     use traits::Into;
     use dojo_core::integer::u250;
-    use dojo_core::auth::components::Status;
+    use dojo_core::auth::components::AuthStatus;
 
     fn execute(role_id: u250, resource_id: u250) {
         commands::set_entity((role_id, resource_id).into(), (bool::False(())));

@@ -1,11 +1,11 @@
 use dojo_core::integer::u250;
 
 #[derive(Component, Copy, Drop, Serde)]
-struct Status {
+struct AuthStatus {
     is_authorized: bool
 }
 
 #[derive(Component, Copy, Drop, Serde)]
-struct Role {
+struct AuthRole {
     id: u250
 }
