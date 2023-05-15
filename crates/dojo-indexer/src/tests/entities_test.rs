@@ -47,7 +47,7 @@ mod tests {
     async fn test_entities_partition_id_keys(pool: SqlitePool) {
         let _ = pool.acquire().await;
 
-        let query = "{ entityByPartitionIdKeys (partitionId: \"69\", keys: \"420\") { id name \
+        let query = "{ entityByPartitionIdKeys (partitionId: \"69\", keys: [\"420\"]) { id name \
                      partitionId keys transactionHash createdAt updatedAt } }";
         let value = run_graphql_query(&pool, query).await;
 

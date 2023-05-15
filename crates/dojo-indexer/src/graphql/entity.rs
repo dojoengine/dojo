@@ -137,9 +137,10 @@ pub async fn entities_by_partition_id(
 pub async fn entity_by_partition_id_keys(
     context: &Context,
     partition_id: String,
-    keys: String,
+    keys: Vec<String>,
 ) -> FieldResult<Entity> {
     let mut conn = context.pool.acquire().await?;
+    let keys_str = format!("{}%", keys.join(","));
 
     let entity = sqlx::query_as!(
         Entity,
@@ -152,10 +153,10 @@ pub async fn entity_by_partition_id_keys(
                 transaction_hash,
                 created_at as "created_at: _",
                 updated_at as "updated_at: _"
-            FROM entities where partition_id = $1 AND keys = $2
+            FROM entities where partition_id = $1 AND keys LIKE $2
         "#,
         partition_id,
-        keys
+        keys_str
     )
     .fetch_one(&mut conn)
     .await?;
