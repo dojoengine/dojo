@@ -14,10 +14,10 @@ use dojo_core::world::World;
 use dojo_core::interfaces::IWorldDispatcher;
 use dojo_core::interfaces::IWorldDispatcherTrait;
 
-use dojo_core::auth::components::{RoleComponent, StatusComponent};
+use dojo_core::auth::components::{AuthRoleComponent, AuthStatusComponent};
 use dojo_core::auth::systems::{
-    RouteAuthSystem, AuthorizeSystem, GrantRoleSystem, RevokeRoleSystem, 
-    GrantResourceSystem, RevokeResourceSystem
+    RouteAuthSystem, IsAuthorizedSystem, IsAccountAdminSystem, GrantAuthRoleSystem,
+    RevokeAuthRoleSystem, GrantResourceSystem, RevokeResourceSystem
 };
 
 fn spawn_test_world(components: Array<felt252>, systems: Array<felt252>) -> IWorldDispatcher {
@@ -82,13 +82,7 @@ fn spawn_test_world(components: Array<felt252>, systems: Array<felt252>) -> IWor
 
     grant_role_calldata.append(caller.into()); // target_id
     grant_role_calldata.append('Admin'); // role_id
-    world.execute('GrantRole'.into(), grant_role_calldata.span());
-
-    let mut calldata: Array<felt252> = ArrayTrait::new();
-
-    calldata.append(123); // target_id
-    calldata.append('Admin'); // role_id
-    world.execute('GrantRole'.into(), calldata.span());
+    world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
 
     world
 }
@@ -97,15 +91,16 @@ fn spawn_test_world(components: Array<felt252>, systems: Array<felt252>) -> IWor
 fn mock_auth_components_systems() -> (Array<ClassHash>, Array<ClassHash>) {
     // Auth components
     let mut components = array::ArrayTrait::<ClassHash>::new();
-    components.append(RoleComponent::TEST_CLASS_HASH.try_into().unwrap());
-    components.append(StatusComponent::TEST_CLASS_HASH.try_into().unwrap());
+    components.append(AuthRoleComponent::TEST_CLASS_HASH.try_into().unwrap());
+    components.append(AuthStatusComponent::TEST_CLASS_HASH.try_into().unwrap());
 
     // Auth systems
     let mut systems = array::ArrayTrait::<ClassHash>::new();
     systems.append(RouteAuthSystem::TEST_CLASS_HASH.try_into().unwrap());
-    systems.append(AuthorizeSystem::TEST_CLASS_HASH.try_into().unwrap());
-    systems.append(GrantRoleSystem::TEST_CLASS_HASH.try_into().unwrap());
-    systems.append(RevokeRoleSystem::TEST_CLASS_HASH.try_into().unwrap());
+    systems.append(IsAuthorizedSystem::TEST_CLASS_HASH.try_into().unwrap());
+    systems.append(IsAccountAdminSystem::TEST_CLASS_HASH.try_into().unwrap());
+    systems.append(GrantAuthRoleSystem::TEST_CLASS_HASH.try_into().unwrap());
+    systems.append(RevokeAuthRoleSystem::TEST_CLASS_HASH.try_into().unwrap());
     systems.append(GrantResourceSystem::TEST_CLASS_HASH.try_into().unwrap());
     systems.append(RevokeResourceSystem::TEST_CLASS_HASH.try_into().unwrap());
 

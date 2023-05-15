@@ -61,7 +61,7 @@ mod World {
         // Assert that the world has not been initialized
         assert(!initialized::read(), 'already initialized');
 
-        let class_hash = system_registry::read('RouteAuth'.into());
+        let route_auth_class_hash = system_registry::read('RouteAuth'.into());
         let mut index = 0;
 
         // Loop through each route and handle the auth.
@@ -79,7 +79,7 @@ mod World {
             // Call RouteAuth system via executor with the serialized route
             IExecutorDispatcher {
                 contract_address: executor::read()
-            }.execute(class_hash, calldata.span());
+            }.execute(route_auth_class_hash, calldata.span());
 
             index += 1;
         };
@@ -91,28 +91,47 @@ mod World {
     // Check if system is authorized to write to the component
     #[view]
     fn is_authorized(system: ClassHash, component: ClassHash) -> bool {
-        let authorize_class_hash = system_registry::read('Authorize'.into());
+        let authorize_class_hash = system_registry::read('IsAuthorized'.into());
 
         // If the world has been initialized, check the authorization.
         // World is initialized when WorldFactory::spawn is called
         if initialized::read() {
-            let mut calldata = ArrayTrait::<felt252>::new();
-            let system_name = ISystemLibraryDispatcher { class_hash: system }.name();
-            let component_name = IComponentLibraryDispatcher { class_hash: component }.name();
-            calldata.append(system_name.into()); // caller_id
-            calldata.append(component_name.into()); // resource_id
+            let system = ISystemLibraryDispatcher { class_hash: system }.name().into();
+            let component = IComponentLibraryDispatcher { class_hash: component }.name().into();
 
-            // Call Authorize system via executor with serialized system and component
-            // If the system is authorized, the result will be non-zero
-            let res = IExecutorDispatcher {
-                contract_address: executor::read()
-            }.execute(authorize_class_hash, calldata.span());
-            (*res[0]).is_non_zero()
+            // If component to be updated is AuthStatus or AuthRole, check if the caller account is Admin
+            if component == 'AuthStatus' | component == 'AuthRole' {
+               is_account_admin() 
+            } else {
+                // Check if the system is authorized to write to the component
+                let mut calldata = ArrayTrait::<felt252>::new();
+                calldata.append(system); // target_id
+                calldata.append(component); // resource_id
+
+                // Call IsAuthorized system via executor with serialized system and component
+                // If the system is authorized, the result will be non-zero
+                let res = IExecutorDispatcher {
+                    contract_address: executor::read()
+                }.execute(authorize_class_hash, calldata.span());
+                (*res[0]).is_non_zero()
+            }
         } else {
-            // If the world has not been initialized, all systems are authorized.
-            // This is to allow the initial roles and auth routes to be set
-            true
+            // If the world has not yet been initialized, all systems are authorized.
+            // This is to allow the initial Admin role to be set
+            bool::True(())
         }
+    }
+
+    // Check if the calling account has Admin role
+    #[view]
+    fn is_account_admin() -> bool {
+        let admin_class_hash = system_registry::read('IsAccountAdmin'.into());
+        // Call IsAccountAdmin system via executor
+        let mut calldata = ArrayTrait::<felt252>::new();
+        let res = IExecutorDispatcher {
+            contract_address: executor::read()
+        }.execute(admin_class_hash, calldata.span());
+        (*res[0]).is_non_zero()
     }
 
     // Register a component in the world. If the component is already registered,
@@ -120,7 +139,10 @@ mod World {
     #[external]
     fn register_component(class_hash: ClassHash) {
         let name = IComponentLibraryDispatcher { class_hash: class_hash }.name();
-        // TODO: If component is already registered, vaildate permission to update.
+        // If component is already registered, validate permission to update.
+        if component_registry::read(name).is_non_zero() {
+            assert(is_account_admin(), 'only admin can update');
+        }
         component_registry::write(name, class_hash);
         ComponentRegistered(name, class_hash);
     }
@@ -135,7 +157,10 @@ mod World {
     #[external]
     fn register_system(class_hash: ClassHash) {
         let name = ISystemLibraryDispatcher { class_hash: class_hash }.name();
-        // TODO: If system is already registered, vaildate permission to update.
+        // If system is already registered, validate permission to update.
+        if system_registry::read(name).is_non_zero() {
+            assert(is_account_admin(), 'only admin can update');
+        }
         system_registry::write(name, class_hash);
         SystemRegistered(name, class_hash);
     }

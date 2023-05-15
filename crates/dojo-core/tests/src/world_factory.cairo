@@ -14,8 +14,8 @@ use dojo_core::executor::Executor;
 use dojo_core::world::World;
 use dojo_core::world_factory::WorldFactory;
 
-use dojo_core::auth::components::RoleComponent;
-use dojo_core::auth::systems::GrantRoleSystem;
+use dojo_core::auth::components::AuthRoleComponent;
+use dojo_core::auth::systems::GrantAuthRoleSystem;
 use dojo_core::test_utils::mock_auth_components_systems;
 
 #[derive(Component, Copy, Drop, Serde)]
@@ -76,17 +76,17 @@ fn test_spawn_world() {
 
     // Check Admin role is set
     let caller = get_caller_address();
-    let role = IWorldDispatcher { contract_address: world_address }.entity('Role'.into(), caller.into(), 0_u8, 0_usize);
+    let role = IWorldDispatcher { contract_address: world_address }.entity('AuthRole'.into(), caller.into(), 0_u8, 0_usize);
     assert(*role[0] == 'Admin', 'admin role not set');
 
-    // Check Role component and GrantRole system are registered
-    let role_hash = IWorldDispatcher { contract_address: world_address }.component('Role'.into());
+    // Check AuthRole component and GrantAuthRole system are registered
+    let role_hash = IWorldDispatcher { contract_address: world_address }.component('AuthRole'.into());
     assert(
-        role_hash == RoleComponent::TEST_CLASS_HASH.try_into().unwrap(), 'component not registered'
+        role_hash == AuthRoleComponent::TEST_CLASS_HASH.try_into().unwrap(), 'component not registered'
     );
 
-    let grant_role_hash = IWorldDispatcher { contract_address: world_address }.system('GrantRole'.into());
-    assert(grant_role_hash == GrantRoleSystem::TEST_CLASS_HASH.try_into().unwrap(), 'system not registered');
+    let grant_role_hash = IWorldDispatcher { contract_address: world_address }.system('GrantAuthRole'.into());
+    assert(grant_role_hash == GrantAuthRoleSystem::TEST_CLASS_HASH.try_into().unwrap(), 'system not registered');
 
     // Check Foo component and Bar system are registered
     let foo_hash = IWorldDispatcher { contract_address: world_address }.component('Foo'.into());

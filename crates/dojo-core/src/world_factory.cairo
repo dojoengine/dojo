@@ -68,7 +68,7 @@ mod WorldFactory {
         grant_role_calldata.append('Admin'); // role_id
         IWorldDispatcher {
             contract_address: world_address
-        }.execute('GrantRole'.into(), grant_role_calldata.span());
+        }.execute('GrantAuthRole'.into(), grant_role_calldata.span());
 
         return world_address;
     }
