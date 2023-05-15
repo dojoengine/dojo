@@ -13,6 +13,10 @@ use super::{ClassMigration, ContractMigration, Migration};
 use crate::manifest::Manifest;
 use crate::{EnvironmentConfig, WorldConfig};
 
+#[cfg(test)]
+#[path = "world_test.rs"]
+mod test;
+
 #[derive(Debug, Default, Clone)]
 pub struct Contract {
     pub name: String,
@@ -39,7 +43,6 @@ impl Display for Contract {
 
 #[derive(Debug, Default, Clone)]
 pub struct Class {
-    pub world: FieldElement,
     pub name: String,
     pub local: FieldElement,
     pub remote: Option<FieldElement>,
@@ -90,7 +93,6 @@ impl World {
             .iter()
             .map(|system| {
                 Class {
-                    world: world_config.address.unwrap(),
                     // because the name returns by the `name` method of a
                     // system contract is without the 'System' suffix
                     name: system.name.strip_suffix("System").unwrap_or(&system.name).to_string(),
@@ -108,7 +110,6 @@ impl World {
             .components
             .iter()
             .map(|component| Class {
-                world: world_config.address.unwrap(),
                 name: component.name.to_string(),
                 local: component.class_hash,
                 remote: remote_manifest
@@ -123,7 +124,6 @@ impl World {
             .contracts
             .iter()
             .map(|contract| Class {
-                world: world_config.address.unwrap(),
                 name: contract.name.to_string(),
                 local: contract.class_hash,
                 remote: None,
@@ -151,7 +151,7 @@ impl World {
     }
 
     /// evaluate which contracts/classes need to be (re)declared/deployed
-    pub fn prepare_for_migration(&self, target_dir: Utf8PathBuf) -> Result<Migration> {
+    pub async fn prepare_for_migration(&self, target_dir: Utf8PathBuf) -> Result<Migration> {
         let entries = fs::read_dir(target_dir).unwrap_or_else(|error| {
             panic!("Problem reading source directory: {error}");
         });
@@ -177,6 +177,7 @@ impl World {
 
         let migrator = {
             let provider = self.environment_config.provider()?;
+            let chain_id = provider.chain_id().await?;
 
             let private_key = self
                 .environment_config
@@ -192,7 +193,7 @@ impl World {
                 provider,
                 LocalWallet::from_signing_key(SigningKey::from_secret_scalar(private_key)),
                 account_address,
-                self.environment_config.chain_id.unwrap(),
+                chain_id,
             )
         };
 

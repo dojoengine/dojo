@@ -168,11 +168,12 @@ async fn declare(
     let (flattened_class, casm_class_hash) =
         prepare_contract_declaration_params(artifact_path).unwrap();
 
-    if account.provider().get_class(&BlockId::Tag(BlockTag::Pending), casm_class_hash).await.is_ok()
-    {
-        println!("{name} class already declared");
-        return;
-    }
+    // TODO: Uncomment once supported by Katana
+    // if account.provider().get_class(&BlockId::Tag(BlockTag::Pending), casm_class_hash).await.is_ok()
+    // {
+    //     println!("{name} class already declared");
+    //     return;
+    // }
 
     let result = account.declare(Arc::new(flattened_class), casm_class_hash).send().await;
 
