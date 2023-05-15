@@ -13,6 +13,12 @@ use dojo_core::world::World;
 use dojo_core::interfaces::IWorldDispatcher;
 use dojo_core::interfaces::IWorldDispatcherTrait;
 
+use dojo_core::auth::components::{RoleComponent, StatusComponent};
+use dojo_core::auth::systems::{
+    RouteAuthSystem, AuthorizeSystem, GrantRoleSystem, RevokeRoleSystem, 
+    GrantResourceSystem, RevokeResourceSystem
+};
+
 fn spawn_test_world(components: Array<felt252>, systems: Array<felt252>) -> IWorldDispatcher {
     // deploy executor
     let constructor_calldata = array::ArrayTrait::<felt252>::new();
@@ -50,4 +56,23 @@ fn spawn_test_world(components: Array<felt252>, systems: Array<felt252>) -> IWor
     };
 
     world
+}
+
+// Creates auth components and systems for testing
+fn mock_auth_components_systems() -> (Array<ClassHash>, Array<ClassHash>) {
+    // Auth components
+    let mut components = array::ArrayTrait::<ClassHash>::new();
+    components.append(RoleComponent::TEST_CLASS_HASH.try_into().unwrap());
+    components.append(StatusComponent::TEST_CLASS_HASH.try_into().unwrap());
+
+    // Auth systems
+    let mut systems = array::ArrayTrait::<ClassHash>::new();
+    systems.append(RouteAuthSystem::TEST_CLASS_HASH.try_into().unwrap());
+    systems.append(AuthorizeSystem::TEST_CLASS_HASH.try_into().unwrap());
+    systems.append(GrantRoleSystem::TEST_CLASS_HASH.try_into().unwrap());
+    systems.append(RevokeRoleSystem::TEST_CLASS_HASH.try_into().unwrap());
+    systems.append(GrantResourceSystem::TEST_CLASS_HASH.try_into().unwrap());
+    systems.append(RevokeResourceSystem::TEST_CLASS_HASH.try_into().unwrap());
+
+    (components, systems)
 }
