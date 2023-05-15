@@ -1,0 +1,170 @@
+{
+  "world": "0x00b8e288d0288ef984767e88050357c3cb11025de550b0f206f52865fea5aa3f",
+  "executor": "0x0412161d79a1b9520d20f0eaae47af93b5eb9854fc46e0ee7dabefccd4ba6525",
+  "components": [
+    {
+      "name": "Moves",
+      "members": [
+        {
+          "name": "remaining",
+          "type": "core::integer::u8"
+        }
+      ],
+      "class_hash": "0xbdc2144bd53e140231d5494f7b6f50081d8f23efd28ec338281426c1439f2f"
+    },
+    {
+      "name": "Position",
+      "members": [
+        {
+          "name": "x",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "y",
+          "type": "core::integer::u32"
+        }
+      ],
+      "class_hash": "0x202d8a933324170d142f4104e8fb4fc342e4b749ce755acc09f3317d72dc290"
+    },
+    {
+      "name": "Status",
+      "members": [
+        {
+          "name": "is_authorized",
+          "type": "core::bool"
+        }
+      ],
+      "class_hash": "0x78f8cd12aa09037cfb67d1ff5ab51fe19c6e1d42313dcd95cd1659dbe8baa5f"
+    },
+    {
+      "name": "Role",
+      "members": [
+        {
+          "name": "id",
+          "type": "dojo_core::integer::u250"
+        }
+      ],
+      "class_hash": "0x6a1fb12e13ebc63ebad84a1657e86cac695043cb93c0bedd6e2d16c1b8d3f66"
+    }
+  ],
+  "systems": [
+    {
+      "name": "SpawnSystem",
+      "inputs": [],
+      "outputs": [],
+      "class_hash": "0x6a0f6a004b6473d6b260d31784c006a72cb72e2821d0f1ae78d271b434fe644",
+      "dependencies": [
+        "Moves",
+        "Position"
+      ]
+    },
+    {
+      "name": "MoveSystem",
+      "inputs": [
+        {
+          "name": "direction",
+          "type": "core::felt252"
+        }
+      ],
+      "outputs": [],
+      "class_hash": "0x4bb308da04505083a5946b4c7564cba1fcfd8092f6fba51134d37d0c151d2ac",
+      "dependencies": [
+        "Moves",
+        "Position"
+      ]
+    },
+    {
+      "name": "RouteAuthSystem",
+      "inputs": [
+        {
+          "name": "routing",
+          "type": "core::array::Array::<dojo_core::auth::systems::Route>"
+        }
+      ],
+      "outputs": [],
+      "class_hash": "0x7a0f6bce15caea8575a840518aaa731fd64ac533d98ee4a11dad715c3c170cc",
+      "dependencies": []
+    },
+    {
+      "name": "AuthorizeSystem",
+      "inputs": [
+        {
+          "name": "caller_id",
+          "type": "dojo_core::integer::u250"
+        },
+        {
+          "name": "resource_id",
+          "type": "dojo_core::integer::u250"
+        }
+      ],
+      "outputs": [],
+      "class_hash": "0x175457a426725187ea9492690bb5764717f9bf4acd21c0332db72d3367e9853",
+      "dependencies": []
+    },
+    {
+      "name": "GrantRoleSystem",
+      "inputs": [
+        {
+          "name": "target_id",
+          "type": "dojo_core::integer::u250"
+        },
+        {
+          "name": "role_id",
+          "type": "dojo_core::integer::u250"
+        }
+      ],
+      "outputs": [],
+      "class_hash": "0x2f738967f6bc23c4049228249022e3fca8d7896883f9ef3916ffa062148dbac",
+      "dependencies": [
+        "Role"
+      ]
+    },
+    {
+      "name": "GrantResourceSystem",
+      "inputs": [
+        {
+          "name": "role_id",
+          "type": "dojo_core::integer::u250"
+        },
+        {
+          "name": "resource_id",
+          "type": "dojo_core::integer::u250"
+        }
+      ],
+      "outputs": [],
+      "class_hash": "0x77435684429043303b1ad93ec44b1cb8b5a449f2a0b4b1811c2f6a0057c8ba1",
+      "dependencies": []
+    },
+    {
+      "name": "RevokeRoleSystem",
+      "inputs": [
+        {
+          "name": "target_id",
+          "type": "dojo_core::integer::u250"
+        }
+      ],
+      "outputs": [],
+      "class_hash": "0x70de26ffddc8f70004d2cdbdff5396d1e461e0564f8508323a2e0e1af418555",
+      "dependencies": [
+        "Role"
+      ]
+    },
+    {
+      "name": "RevokeResourceSystem",
+      "inputs": [
+        {
+          "name": "role_id",
+          "type": "dojo_core::integer::u250"
+        },
+        {
+          "name": "resource_id",
+          "type": "dojo_core::integer::u250"
+        }
+      ],
+      "outputs": [],
+      "class_hash": "0x576494d7aeb128ce668bb1e4b309ddabb4ec79394f7739003a0304abf0f3f68",
+      "dependencies": []
+    }
+  ],
+  "contracts": []
+}

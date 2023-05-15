@@ -25,6 +25,10 @@ url = "2.2.2"
 tracing.workspace = true
 
 [dev-dependencies]
+assert_fs = "1.0.9"
+dojo-lang = { path = "../dojo-lang" }
 indoc.workspace = true
+katana-core = { git = "https://github.com/dojoengine/katana" }
+katana-rpc = { git = "https://github.com/dojoengine/katana" }
 test-log.workspace = true
 tokio = { version = "1.28.0", features = [ "full" ] }
