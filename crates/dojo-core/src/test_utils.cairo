@@ -17,7 +17,8 @@ use dojo_core::interfaces::IWorldDispatcherTrait;
 use dojo_core::auth::components::{AuthRoleComponent, AuthStatusComponent};
 use dojo_core::auth::systems::{
     Route, RouteAuthSystem, IsAuthorizedSystem, IsAccountAdminSystem, GrantAuthRoleSystem,
-    RevokeAuthRoleSystem, GrantResourceSystem, RevokeResourceSystem
+    RevokeAuthRoleSystem, GrantResourceSystem, RevokeResourceSystem, GrantScopedAuthRoleSystem,
+    RevokeScopedAuthRoleSystem
 };
 
 fn spawn_test_world(
@@ -108,6 +109,8 @@ fn mock_auth_components_systems() -> (Array<ClassHash>, Array<ClassHash>) {
     systems.append(RevokeAuthRoleSystem::TEST_CLASS_HASH.try_into().unwrap());
     systems.append(GrantResourceSystem::TEST_CLASS_HASH.try_into().unwrap());
     systems.append(RevokeResourceSystem::TEST_CLASS_HASH.try_into().unwrap());
+    systems.append(GrantScopedAuthRoleSystem::TEST_CLASS_HASH.try_into().unwrap());
+    systems.append(RevokeScopedAuthRoleSystem::TEST_CLASS_HASH.try_into().unwrap());
 
     (components, systems)
 }

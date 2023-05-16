@@ -127,7 +127,9 @@ mod GrantResource {
     use dojo_core::auth::components::AuthStatus;
 
     fn execute(role_id: u250, resource_id: u250) {
-        commands::set_entity((role_id, resource_id).into(), (bool::True(())));
+        commands::set_entity(
+            (role_id, resource_id).into(), (AuthStatus { is_authorized: bool::True(()) })
+        );
     }
 }
 
@@ -162,6 +164,8 @@ mod RevokeResource {
     use dojo_core::auth::components::AuthStatus;
 
     fn execute(role_id: u250, resource_id: u250) {
-        commands::set_entity((role_id, resource_id).into(), (bool::False(())));
+        commands::set_entity(
+            (role_id, resource_id).into(), (AuthStatus { is_authorized: bool::False(()) })
+        );
     }
 }
