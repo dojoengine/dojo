@@ -10,14 +10,15 @@ use blockifier::{
     },
     transaction::{
         account_transaction::AccountTransaction,
-        objects::AccountTransactionContext,
+        errors::TransactionExecutionError,
+        objects::{AccountTransactionContext, TransactionExecutionInfo},
         transaction_execution::Transaction,
         transactions::{DeclareTransaction, ExecutableTransaction},
     },
 };
 use starknet::{
     core::types::{FieldElement, TransactionStatus},
-    providers::jsonrpc::models::{PendingStateUpdate, StateUpdate},
+    providers::jsonrpc::models::{BlockId, BlockTag, PendingStateUpdate, StateUpdate},
 };
 use starknet_api::{
     block::{BlockHash, BlockNumber, BlockTimestamp, GasPrice},
@@ -38,7 +39,7 @@ use crate::{
     state::DictStateReader,
     util::{
         convert_blockifier_tx_to_starknet_api_tx, convert_state_diff_to_rpc_state_diff,
-        get_current_timestamp,
+        field_element_to_starkfelt, get_current_timestamp,
     },
 };
 use block::{StarknetBlock, StarknetBlocks};
@@ -93,6 +94,42 @@ impl StarknetWrapper {
             pending_state,
             predeployed_accounts,
         }
+    }
+
+    pub fn state_from_block_id(&self, block_id: BlockId) -> Option<DictStateReader> {
+        match block_id {
+            BlockId::Tag(BlockTag::Latest) => Some(self.latest_state()),
+            BlockId::Tag(BlockTag::Pending) => Some(self.pending_state()),
+
+            id => self
+                .block_number_from_block_id(id)
+                .and_then(|n| self.state(n)),
+        }
+    }
+
+    pub fn block_number_from_block_id(&self, block_id: BlockId) -> Option<BlockNumber> {
+        match block_id {
+            BlockId::Number(number) => Some(BlockNumber(number)),
+
+            BlockId::Hash(hash) => self
+                .blocks
+                .hash_to_num
+                .get(&BlockHash(field_element_to_starkfelt(&hash)))
+                .cloned(),
+
+            BlockId::Tag(BlockTag::Pending) => None,
+            BlockId::Tag(BlockTag::Latest) => self.blocks.current_block_number(),
+        }
+    }
+
+    // Simulate a transaction without modifying the state
+    pub fn simulate_transaction(
+        &self,
+        transaction: AccountTransaction,
+        state: Option<DictStateReader>,
+    ) -> Result<TransactionExecutionInfo, TransactionExecutionError> {
+        let mut state = CachedState::new(state.unwrap_or(self.pending_state()));
+        transaction.execute(&mut state, &self.block_context)
     }
 
     // execute the tx
