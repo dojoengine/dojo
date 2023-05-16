@@ -1,4 +1,5 @@
 use juniper::{graphql_object, FieldResult};
+use chrono::{DateTime, Utc};
 
 use super::server::Context;
 use super::system;
@@ -8,6 +9,7 @@ pub struct SystemCall {
     pub system_id: String,
     pub transaction_hash: String,
     pub data: Option<String>,
+    pub created_at: DateTime<Utc>,
 }
 
 #[graphql_object(context = Context)]
@@ -28,6 +30,10 @@ impl SystemCall {
         &self.data
     }
 
+    pub fn created_at(&self) -> &DateTime<Utc> {
+        &self.created_at
+    }
+
     async fn system(&self, context: &Context) -> FieldResult<system::System> {
         system::system(context, self.system_id.clone()).await
     }
@@ -39,7 +45,13 @@ pub async fn system_call(context: &Context, id: i64) -> FieldResult<SystemCall> 
     let system_call = sqlx::query_as!(
         SystemCall,
         r#"
-            SELECT * FROM system_calls WHERE id = $1
+            SELECT 
+                id,
+                data,
+                transaction_hash,
+                system_id,
+                created_at as "created_at: _"
+            FROM system_calls WHERE id = $1
         "#,
         id
     )
@@ -58,7 +70,13 @@ pub async fn system_calls_by_system(
     let system_calls = sqlx::query_as!(
         SystemCall,
         r#"
-            SELECT * FROM system_calls WHERE system_id = $1
+            SELECT 
+                id,
+                data,
+                transaction_hash,
+                system_id,
+                created_at as "created_at: _"
+            FROM system_calls WHERE system_id = $1
         "#,
         system_id
     )

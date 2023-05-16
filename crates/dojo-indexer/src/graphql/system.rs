@@ -1,4 +1,5 @@
 use juniper::{graphql_object, FieldResult};
+use chrono::{DateTime, Utc};
 
 use super::server::Context;
 
@@ -8,6 +9,7 @@ pub struct System {
     pub address: String,
     pub class_hash: String,
     pub transaction_hash: String,
+    pub created_at: DateTime<Utc>,
 }
 
 #[graphql_object(context = Context)]
@@ -32,10 +34,9 @@ impl System {
         &self.transaction_hash
     }
 
-    // pub async fn entity_state_updates(&self, context: &Context) ->
-    // FieldResult<Vec<super::entity_state_update::EntityStateUpdate>> {
-    //     super::entity_state_update::entity_state_updates_by_system(context,
-    // self.id.clone()).await }
+    pub fn created_at(&self) -> &DateTime<Utc> {
+        &self.created_at
+    }
 
     pub async fn system_calls(
         &self,
@@ -51,7 +52,14 @@ pub async fn system(context: &Context, id: String) -> FieldResult<System> {
     let system = sqlx::query_as!(
         System,
         r#"
-            SELECT * FROM systems WHERE id = $1
+            SELECT 
+                id,
+                name,
+                address,
+                class_hash,
+                transaction_hash,
+                created_at as "created_at: _"
+            FROM systems WHERE id = $1
         "#,
         id
     )
@@ -67,7 +75,14 @@ pub async fn systems(context: &Context) -> FieldResult<Vec<System>> {
     let systems = sqlx::query_as!(
         System,
         r#"
-            SELECT * FROM systems
+            SELECT 
+                id,
+                name,
+                address,
+                class_hash,
+                transaction_hash,
+                created_at as "created_at: _" 
+            FROM systems
         "#
     )
     .fetch_all(&mut conn)

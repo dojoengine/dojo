@@ -1,4 +1,5 @@
 use juniper::{graphql_object, FieldResult};
+use chrono::{DateTime, Utc};
 
 use super::server::Context;
 
@@ -9,6 +10,7 @@ pub struct Component {
     pub address: String,
     pub class_hash: String,
     pub transaction_hash: String,
+    pub created_at: DateTime<Utc>,
 }
 
 #[graphql_object(context = Context)]
@@ -37,13 +39,10 @@ impl Component {
         &self.transaction_hash
     }
 
-    pub async fn entity_state_updates(
-        &self,
-        context: &Context,
-    ) -> FieldResult<Vec<super::entity_state_update::EntityStateUpdate>> {
-        super::entity_state_update::entity_state_updates_by_component(context, self.id.clone())
-            .await
+    pub fn created_at(&self) -> &DateTime<Utc> {
+        &self.created_at
     }
+
 
     pub async fn entity_states(
         &self,
@@ -59,7 +58,15 @@ pub async fn component(context: &Context, id: String) -> FieldResult<Component> 
     let component = sqlx::query_as!(
         Component,
         r#"
-            SELECT * FROM components WHERE id = $1
+            SELECT 
+                id,
+                name,
+                properties,
+                address,
+                class_hash,
+                transaction_hash,
+                created_at as "created_at: _"
+            FROM components WHERE id = $1
         "#,
         id
     )
@@ -75,7 +82,15 @@ pub async fn components(context: &Context) -> FieldResult<Vec<Component>> {
     let components = sqlx::query_as!(
         Component,
         r#"
-            SELECT * FROM components
+            SELECT 
+                id,
+                name,
+                properties,
+                address,
+                class_hash,
+                transaction_hash,
+                created_at as "created_at: _"
+            FROM components
         "#
     )
     .fetch_all(&mut conn)

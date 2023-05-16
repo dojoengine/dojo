@@ -1,7 +1,6 @@
 pub mod component;
 pub mod entity;
 pub mod entity_state;
-pub mod entity_state_update;
 pub mod event;
 pub mod server;
 pub mod system;
@@ -33,16 +32,6 @@ impl Query {
     async fn systems(context: &Context) -> FieldResult<Vec<System>> {
         system::systems(context).await
     }
-
-    // async fn entity_state_update(context: &Context, id: i64) ->
-    // FieldResult<entity_state_update::EntityStateUpdate> {
-    //     entity_state_update::entity_state_update(context, id).await
-    // }
-
-    // async fn entity_state_updates(context: &Context) ->
-    // FieldResult<Vec<entity_state_update::EntityStateUpdate>> {
-    //     entity_state_update::entity_state_updates(context).await
-    // }
 
     async fn entity(context: &Context, id: String) -> FieldResult<Entity> {
         entity::entity(context, id).await

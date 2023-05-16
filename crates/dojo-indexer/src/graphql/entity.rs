@@ -3,11 +3,11 @@ use juniper::{graphql_object, FieldResult};
 use serde::Deserialize;
 use sqlx::pool::PoolConnection;
 use sqlx::Sqlite;
+use juniper_relay_connection::RelayConnectionNode;
 
+use super::entity_state;
 use super::entity_state::EntityState;
-use super::entity_state_update::EntityStateUpdate;
 use super::server::Context;
-use super::{entity_state, entity_state_update};
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -15,10 +15,9 @@ pub struct Entity {
     pub id: String,
     pub name: Option<String>,
     pub partition_id: String,
-    pub keys: String,
+    pub keys: Option<String>,
     pub transaction_hash: String,
     pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
 }
 
 #[graphql_object(context = Context)]
@@ -35,7 +34,7 @@ impl Entity {
         &self.partition_id
     }
 
-    pub fn keys(&self) -> &str {
+    pub fn keys(&self) -> &Option<String> {
         &self.keys
     }
 
@@ -46,15 +45,7 @@ impl Entity {
     pub fn created_at(&self) -> &DateTime<Utc> {
         &self.created_at
     }
-
-    pub fn updated_at(&self) -> &DateTime<Utc> {
-        &self.updated_at
-    }
-
-    pub async fn state_updates(&self, context: &Context) -> FieldResult<Vec<EntityStateUpdate>> {
-        entity_state_update::entity_state_updates_by_entity(context, self.id.clone()).await
-    }
-
+    
     pub async fn states(&self, context: &Context) -> FieldResult<Vec<EntityState>> {
         entity_state::entity_states_by_entity(context, self.id.clone()).await
     }
@@ -73,8 +64,7 @@ pub async fn entity(context: &Context, id: String) -> FieldResult<Entity> {
                 partition_id,
                 keys,
                 transaction_hash,
-                created_at as "created_at: _",
-                updated_at as "updated_at: _"
+                created_at as "created_at: _"
             FROM entities 
             WHERE id = $1
         "#,
@@ -114,8 +104,7 @@ async fn query_by_keys(
                 partition_id,
                 keys,
                 transaction_hash,
-                created_at as "created_at: _",
-                updated_at as "updated_at: _"
+                created_at as "created_at: _"
             FROM entities where partition_id = $1 AND keys LIKE $2
         "#,
         partition_id,
@@ -140,8 +129,7 @@ async fn query_by_partition(
                 partition_id,
                 keys,
                 transaction_hash,
-                created_at as "created_at: _",
-                updated_at as "updated_at: _"
+                created_at as "created_at: _"
             FROM entities where partition_id = $1
         "#,
         partition_id,
@@ -150,4 +138,19 @@ async fn query_by_partition(
     .await?;
 
     Ok(entities)
+}
+
+impl RelayConnectionNode for Entity {
+    type Cursor = String;
+    fn cursor(&self) -> Self::Cursor {
+        self.id
+    }
+
+    fn connection_type_name() -> &'static str {
+        "EntityConnection"
+    }
+
+    fn edge_type_name() -> &'static str {
+        "EntityEdge"
+    }
 }

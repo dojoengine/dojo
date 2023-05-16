@@ -1,9 +1,6 @@
-// Copy entity_state_update to entity_state.rs and replace all entity_state_update with entity_state
-//
-// Copy the content of entity
-
 use entity::Entity;
 use juniper::{graphql_object, FieldResult};
+use chrono::{DateTime, Utc};
 
 use super::server::Context;
 use super::{component, entity};
@@ -12,6 +9,8 @@ pub struct EntityState {
     pub entity_id: String,
     pub component_id: String,
     pub data: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 #[graphql_object(context = Context)]
@@ -28,6 +27,14 @@ impl EntityState {
         &self.data
     }
 
+    pub fn created_at(&self) -> &DateTime<Utc> {
+        &self.created_at
+    }
+
+    pub fn updated_at(&self) -> &DateTime<Utc> {
+        &self.updated_at
+    }
+
     async fn component(&self, context: &Context) -> FieldResult<component::Component> {
         component::component(context, self.component_id.clone()).await
     }
@@ -36,19 +43,6 @@ impl EntityState {
         entity::entity(context, self.entity_id.clone()).await
     }
 }
-
-// pub async fn entity_states(context: &Context) -> FieldResult<Vec<EntityState>> {
-//     let mut conn = context.pool.acquire().await.unwrap();
-
-//     let entity_states = sqlx::query_as!(
-//         EntityState,
-//         r#"
-//             SELECT * FROM entity_states
-//         "#
-//     ).fetch_all(&mut conn).await.unwrap();
-
-//     Ok(entity_states)
-// }
 
 pub async fn entity_states_by_entity(
     context: &Context,
@@ -59,7 +53,13 @@ pub async fn entity_states_by_entity(
     let entity_states = sqlx::query_as!(
         EntityState,
         r#"
-            SELECT * FROM entity_states WHERE entity_id = $1
+            SELECT 
+                entity_id, 
+                component_id, 
+                data, 
+                created_at as "created_at: _",
+                updated_at as "updated_at: _"
+            FROM entity_states WHERE entity_id = $1
         "#,
         entity_id
     )
@@ -78,7 +78,13 @@ pub async fn entity_states_by_component(
     let entity_states = sqlx::query_as!(
         EntityState,
         r#"
-            SELECT * FROM entity_states WHERE component_id = $1
+            SELECT 
+                entity_id, 
+                component_id, 
+                data, 
+                created_at as "created_at: _",
+                updated_at as "updated_at: _"
+            FROM entity_states WHERE component_id = $1
         "#,
         component_id
     )

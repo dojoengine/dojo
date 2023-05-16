@@ -46,19 +46,6 @@ impl<T: JsonRpcTransport + Sync + Send> EventProcessor<T> for ComponentStateUpda
             txn_hash,
         ));
 
-        // insert entity state update
-        tx.execute(sqlx::query!(
-            "
-            INSERT INTO entity_state_updates (entity_id, component_id, transaction_hash, data)
-            VALUES ($1, $2, $3, $4)
-            ",
-            entity_id,
-            component_address,
-            txn_hash,
-            parsed_data,
-        ))
-        .await?;
-
         // insert or update entity state
         tx.execute(sqlx::query!(
             "

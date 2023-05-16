@@ -3375,6 +3375,7 @@ dependencies = [
  "hex",
  "juniper",
  "juniper_actix",
+ "juniper_relay_connection",
  "log",
  "num",
  "serde",
@@ -5348,6 +5349,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "juniper_relay_connection"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e39e3bab58ad4a65274507985543abaa442478b2781ec8e20474519c980e8e0b"
+dependencies = [
+ "juniper",
 ]
 
 [[package]]
