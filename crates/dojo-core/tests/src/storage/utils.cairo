@@ -2,8 +2,6 @@ use array::{ArrayTrait, SpanTrait};
 use option::OptionTrait;
 use traits::Into;
 
-use debug::PrintTrait;
-
 use dojo_core::integer::u250;
 use dojo_core::storage::utils::find_matching;
 
@@ -82,7 +80,6 @@ fn test_find_matching() {
     //   [[300, 300, 300], [500, 500, 500]]
     // ]
 
-    matching.len().print();
     assert(matching.len() == 3, 'matching len');
 
     let entities0 = *matching[0];
