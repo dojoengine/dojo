@@ -128,7 +128,7 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
         block_id: BlockId,
         contract_address: FieldElement,
     ) -> Result<ContractClass, Error> {
-        unimplemented!("KatanaRpc::class_at")
+        Err(Error::from(StarknetApiError::InternalServerError))
     }
 
     async fn block_hash_and_number(&self) -> Result<BlockHashAndNumber, Error> {
@@ -262,7 +262,7 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
         &self,
         transaction_hash: FieldElement,
     ) -> Result<MaybePendingTransactionReceipt, Error> {
-        unimplemented!("KatanaRpc::transaction_receipt")
+        Err(Error::from(StarknetApiError::InternalServerError))
     }
 
     async fn class_hash_at(
@@ -288,7 +288,7 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
         block_id: BlockId,
         class_hash: FieldElement,
     ) -> Result<ContractClass, Error> {
-        unimplemented!("KatanaRpc::class")
+        Err(Error::from(StarknetApiError::InternalServerError))
     }
 
     async fn events(
@@ -348,7 +348,7 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
     }
 
     async fn pending_transactions(&self) -> Result<Vec<Transaction>, Error> {
-        unimplemented!("KatanaRpc::pending_transactions")
+        Err(Error::from(StarknetApiError::InternalServerError))
     }
 
     async fn estimate_fee(
@@ -356,7 +356,7 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
         request: BroadcastedTransaction,
         block_id: BlockId,
     ) -> Result<FeeEstimate, Error> {
-        unimplemented!("KatanaRpc::estimate_fee")
+        Err(Error::from(StarknetApiError::InternalServerError))
     }
 
     async fn call(
@@ -468,7 +468,7 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
 
         let (transaction_hash, class_hash, transaction) = match transaction {
             BroadcastedDeclareTransaction::V1(_) => {
-                unimplemented!("KatanaRpc::add_declare_transaction v1")
+                return Err(Error::from(StarknetApiError::InternalServerError))
             }
             BroadcastedDeclareTransaction::V2(tx) => {
                 let raw_class_str = serde_json::to_string(&tx.contract_class)?;
