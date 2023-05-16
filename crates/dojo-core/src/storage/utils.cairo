@@ -1,48 +1,89 @@
 use array::{ArrayTrait, SpanTrait};
 use dict::Felt252DictTrait;
 use option::OptionTrait;
-use traits::TryInto;
+use traits::{Into, TryInto};
 
 use dojo_core::integer::u250;
 
-const FIND_2: u8 = 2;
-const FIND_3: u8 = 3;
-const FIND_4: u8 = 4;
+// big enough number used to construct a compound key in `find_matching`
+const OFFSET: felt252 = 0x10000000000000000000000000000000000; 
 
-// finds elements with matching values across all input arrays
-// the function accepts 2 to 4 arrays (spans) through which it loops and returns
-// a corresponding amount of spans, each of the same length, each holding an index
-// of the position in the input array where all the other arrays have the same value
+// finds only those entities that have same IDs across all provided entities and 
+// returns these entities, obeying the order of IDs of the first ID array
 //
-// to illustrate, imagine these two:
-// s1: [10, 20, 30, 40, 50, 60]
-// s2: [60, 40, 20]
+// the function takes two aruments:
+// * `ids` is a list of lists of entity IDs; each inner list is an ID of an entity
+//    at the same index in the corresponding `entities` list
+// * `entities` is a list of lists of deserialized entities; each list of entities
+//   is of the same entity type in the order of IDs from `ids
 //
-// when called with these two, the function will return:
-// r1: [1, 3, 5] // indexes of 20, 40, 60 in s1, because those values are found in s2 as well
-// r2: [2, 1, 0] // indexes of 20, 40, 60 respectively in s2
-// r3: Option::None(())
-// r4: Opiton::None(())
-//
-// the function perserves the order of the elements from s1
+// to illustrate, consider we have two entity types (components), Place and Owner
+// `ids` are [[4, 2, 3], [3, 4, 5]]
+// `entities` are [[P4, P2, P3], [O3, O4, O5]]
+// where P4 is a deserialized (i.e. a Span<felt252>) Place entity with ID 4,
+// O3 is a deserialized Owner entity with ID 4 and so on..
+// 
+// the function would return [[P4, P3], [O4, O3]] because IDs 3 and 4 are found
+// for all entities and the function respects the ID order from the first ID array,
+// hence 4 and 3 in this case
 fn find_matching(
-    mut s1: Span<u250>,
-    mut s2: Span<u250>,
-    mut s3: Option<Span<u250>>,
-    mut s4: Option<Span<u250>>,
-) -> (Span<usize>, Span<usize>, Option<Span<usize>>, Option<Span<usize>>) {
-    let mut seen_ids: Felt252Dict<u8> = Felt252DictTrait::new();
-    let mut present_in_all: u8 = FIND_2;
+    mut ids: Span<Span<u250>>,
+    mut entities: Span<Span<Span<felt252>>> 
+) -> Span<Span<Span<felt252>>> {
+    assert(ids.len() == entities.len(), 'lengths dont match');
 
-    // iterate through the second array and mark all its IDs
-    let mut s2ii: Felt252Dict<usize> = Felt252DictTrait::new(); // mapping of ID to its index in s2
-    let mut index: usize = 0;
+    let entity_types_count = entities.len();
+    if entity_types_count == 1 {
+        return entities;
+    }
+
+    // keeps track of how many times has an ID been encountered
+    let mut ids_match: Felt252Dict<u8> = Felt252DictTrait::new();
+
+    // keeps track of indexes where a particular entity with ID is in
+    // each entity array; to do so, we're using a compound key or 2 parts
+    // first part is the entity *type* (calculated as OFFSET * entity_type_counter)
+    // second part is the entity ID itself
+    let mut id_to_idx: Felt252Dict<usize> = Felt252DictTrait::new();
+
+    // how many ID arrays have we looped over so far; ultimately
+    // this number is the same as ids.len() and we use only those
+    // IDs from ids_match where the value is the same as match_count
+    
+    // we want to keep the ordering from the first entity IDs
+    let mut ids1: Span<u250> = *(ids.pop_front().unwrap());
+
+    // counts how many ID arrays and hence entity types we've looped over
+    // starts at 1 because we skip the first element to keep ordering (see above)
+    let mut entity_type_counter: u8 = 1;
+
     loop {
-        match s2.pop_front() {
-            Option::Some(id) => {
-                seen_ids.insert(*id.inner, FIND_2);
-                s2ii.insert(*id.inner, index);
-                index += 1;
+        // loop through the rest of the IDs for entity types 2..N
+        match ids.pop_front() {
+            Option::Some(entity_ids) => {
+                let mut index: usize = 0;
+                let mut entity_ids = *entity_ids;
+
+                loop {
+                    // loop through each ID of an entity type
+                    match entity_ids.pop_front() {
+                        Option::Some(id) => {
+                            // keep track how many times we've encountered a particular ID
+                            let c = ids_match[*id.inner];                            
+                            ids_match.insert(*id.inner, c + 1);
+                            // keep track of the index of the particular entity in an
+                            // entity type array, i.e. at which index is the entity
+                            // with `id` at, using the compound key
+                            id_to_idx.insert(OFFSET * entity_type_counter.into() + *id.inner, index);
+                            index += 1;
+                        },
+                        Option::None(_) => {
+                            break ();
+                        }
+                    };
+                };
+                
+                entity_type_counter += 1;
             },
             Option::None(_) => {
                 break ();
@@ -50,90 +91,41 @@ fn find_matching(
         };
     };
 
-    // if we have a third array, iterate through it; if there's
-    // an ID in s3 that has also been encountered in s2, mark it
-    // and store the s3 value into a dict, using the matching ID as key
-    let mut s3ii: Felt252Dict<usize> = Felt252DictTrait::new();
-    if s3.is_some() {
-        let mut s3 = s3.unwrap();
-        let mut index: usize = 0;
-        loop {
-            match s3.pop_front() {
-                Option::Some(id) => {
-                    if seen_ids[*id.inner] == FIND_2 {
-                        seen_ids.insert(*id.inner, FIND_3);
-                        s3ii.insert(*id.inner, index);
-                    }
-                    index += 1;
-                },
-                Option::None(_) => {
-                    break ();
-                }
-            };
-        };
-        present_in_all = FIND_3;
-    }
+    let first_entities: Span<Span<felt252>> = *entities[0];
+    let mut first_entities_idx = 0;
 
-    // similar as with s3, iterate through fourth array if present,
-    // mark IDs that are found in both s2 and s3, mark those that
-    // are in s4 and store their values in a dict
-    let mut s4ii: Felt252Dict<usize> = Felt252DictTrait::new(); 
-    if s4.is_some() {
-        // preventing *not* passing in s3 but passing in s4
-        //assert(got_s3, 'wrong argument order');
-        assert(s3.is_some(), 'wrong argument order');
+    // an array into which we append those entities who's IDs are found across
+    // every ID array; the entities are appended sequentially, e.g.
+    // [entity1_id1, entity2_id1, entity3_id1, entity1_id2, entity2_id2, entity3_id2]
+    // perserving the ID order from the first ID array
+    let mut entities_with_matching_ids: Array<Span<felt252>> = ArrayTrait::new();
 
-        let mut s4 = s4.unwrap();
-        let mut index: usize = 0;
-        loop {
-            match s4.pop_front() {
-                Option::Some(id) => {
-                    if seen_ids[*id.inner] == FIND_3 {
-                        seen_ids.insert(*id.inner, FIND_4);
-                        s4ii.insert(*id.inner, index);
-                    }
-                    index += 1;
-                },
-                Option::None(_) => {
-                    break ();
-                }
-            };
-        };
-        present_in_all = FIND_4;
-    }
+    let found_in_all: u8 = entity_type_counter - 1;
 
-    // finally, loop through the first array (as last to keep its ID order),
-    // and populate the return arrays
-    let mut r1: Array<usize> = ArrayTrait::new();
-    let mut r2: Array<usize> = ArrayTrait::new();
-    let mut r3: Array<usize> = ArrayTrait::new();
-    let mut r4: Array<usize> = ArrayTrait::new();
-
-    index = 0;
     loop {
-        match s1.pop_front() {
+        match ids1.pop_front() {
             Option::Some(id) => {
                 let id = *id.inner;
-                // if the current ID from a1 has been
-                // seen in every zipped array
-                if seen_ids[id] == present_in_all {
-                    // add index from s1
-                    r1.append(index);
+                if ids_match[id] == found_in_all {
+                    // id was found in every entity_ids array
 
-                    // add index from s2
-                    r2.append(s2ii.get(id));
+                    // append the matching entity to the array
+                    entities_with_matching_ids.append(*first_entities[first_entities_idx]);
 
-                    // if we're zipping 3 arrays, add index from s3
-                    let i3 = if (present_in_all >= FIND_3) {
-                        r3.append(s3ii.get(id));
-                    };
+                    // now append all the other matching entities there too
+                    let mut entity_types_idx = 1;
+                    loop {
+                        if entity_types_idx == entity_types_count {
+                            break ();
+                        }
+                        let idx_for_matching_id = id_to_idx[OFFSET * entity_types_idx.into() + id];
+                        let same_type_entities = entities[entity_types_idx];
+                        entities_with_matching_ids.append(*same_type_entities[idx_for_matching_id]);
 
-                    // if we're zipping 4 arrays, add index from s4
-                    let i4 = if (present_in_all == FIND_4) {
-                        r4.append(s4ii.get(id));
-                    };
+                        entity_types_idx += 1;
+                    }
                 }
-                index += 1;
+                first_entities_idx += 1;
             },
             Option::None(_) => {
                 break ();
@@ -141,25 +133,37 @@ fn find_matching(
         };
     };
 
-    seen_ids.squash();
-    s2ii.squash();
-    s3ii.squash();
-    s4ii.squash();
-    
-    let or3: Option<Span<usize>> = {
-        if s3.is_some() {
-            Option::Some(r3.span())
-        } else {
-            Option::None(())
+    ids_match.squash();
+    id_to_idx.squash();
+
+    let mut entities_with_matching_ids = entities_with_matching_ids.span();
+    // calculate how many common IDs across all entities we found
+    // guaranteed to be a round number
+    let matches = entities_with_matching_ids.len() / entity_types_count; 
+    let mut result: Array<Span<Span<felt252>>> = ArrayTrait::new();
+    let mut i = 0;
+
+    // finally, reorder the entities from the temporary array
+    // into the resulting one in a way where they are grouped together by
+    // entity type
+    loop {
+        if i == entity_types_count {
+            break ();
         }
-    };
-    let or4: Option<Span<usize>> = {
-        if s4.is_some() {
-            Option::Some(r4.span())
-        } else {
-            Option::None(())
-        }
+
+        let mut j = 0;
+        let mut same_entities: Array<Span<felt252>> = ArrayTrait::new();
+        loop {
+            if j == matches {
+                break ();
+            }
+            same_entities.append(*entities_with_matching_ids[j * entity_types_count + i]);
+            j += 1;
+        };
+
+        result.append(same_entities.span());
+        i += 1;
     };
 
-    (r1.span(), r2.span(), or3, or4)
+    result.span()
 }

@@ -2,70 +2,148 @@ use array::{ArrayTrait, SpanTrait};
 use option::OptionTrait;
 use traits::Into;
 
+use debug::PrintTrait;
+
 use dojo_core::integer::u250;
 use dojo_core::storage::utils::find_matching;
 
-#[test]
-#[available_gas(1000000000)]
-fn test_find_matching() {
-    let mut a1: Array<u250> = ArrayTrait::new();
-    let mut a2: Array<u250> = ArrayTrait::new();
-    let mut a3: Array<u250> = ArrayTrait::new();
+fn build_fake_entity(v: felt252) -> Span<felt252> {
+    let mut e = ArrayTrait::new();
+    e.append(v);
+    e.append(v);
+    e.append(v);
+    e.span()
+}
 
-    a1.append(1.into());
-    a1.append(3.into());
-    a1.append(6.into());
-    a1.append(5.into());
-
-    a2.append(4.into());
-    a2.append(5.into());
-    a2.append(3.into());
-
-    a3.append(3.into());
-    a3.append(2.into());
-    a3.append(1.into());
-    a3.append(7.into());
-    a3.append(5.into());
-
-    let (r1, r2, r3, r4) = find_matching(a1.span(), a2.span(), Option::Some(a3.span()), Option::None(()));
-    assert(r1.len() == 2, 'r1 len');
-    assert(r2.len() == 2, 'r2 len');
-    let r3 = r3.expect('r3 is not Some');
-    assert(r3.len() == 2, 'r3 len');
-    assert(r4.is_none(), 'r4 is none');
-
-    assert(*r1[0] == 1, 'r1[0]');
-    assert(*r1[1] == 3, 'r1[1]');
-    assert(*r2[0] == 2, 'r2[0]');
-    assert(*r2[1] == 1, 'r2[1]');
-    assert(*r3[0] == 0, 'r3[0]');
-    assert(*r3[1] == 4, 'r3[1]');
-
-    let mut a5: Array<u250> = ArrayTrait::new();
-    let mut a6: Array<u250> = ArrayTrait::new();
-
-    a5.append(10.into());
-    a5.append(11.into());
-
-    a6.append(12.into());
-    a6.append(13.into());
-
-    let (r5, r6, r7, r8) = find_matching(a5.span(), a6.span(), Option::None(()), Option::None(()));
-    assert(r5.len() == 0, 'r5 len');
-    assert(r6.len() == 0, 'r6 len');
+fn assert_entity(entity: Span<felt252>, v: felt252) {
+    assert(entity.len() == 3, 'entity len');
+    assert(*entity[0] == v, 'entity 0');
+    assert(*entity[1] == v, 'entity 1');
+    assert(*entity[2] == v, 'entity 2');
 }
 
 #[test]
 #[available_gas(1000000000)]
-#[should_panic(expected: ('wrong argument order', ))]
-fn test_find_matching_wrong_arg_order() {
-    let mut a1: Array<u250> = ArrayTrait::new();
-    let mut a2: Array<u250> = ArrayTrait::new();
-    let mut a3: Array<u250> = ArrayTrait::new();
+fn test_find_matching() {
+    let mut ids1: Array<u250> = ArrayTrait::new();
+    let mut ids2: Array<u250> = ArrayTrait::new();
+    let mut ids3: Array<u250> = ArrayTrait::new();
 
-    a1.append(5.into());
-    a2.append(5.into());
-    a3.append(5.into());
+    ids1.append(u250 { inner: 1 } );
+    ids1.append(u250 { inner: 3 } );
+    ids1.append(u250 { inner: 6 } );
+    ids1.append(u250 { inner: 5 } );
 
-    find_matching(a1.span(), a2.span(), Option::None(()), Option::Some(a3.span()));
+    ids2.append(u250 { inner: 4} );
+    ids2.append(u250 { inner: 5} );
+    ids2.append(u250 { inner: 3} );
+
+    ids3.append(u250 { inner: 3} );
+    ids3.append(u250 { inner: 2} );
+    ids3.append(u250 { inner: 1} );
+    ids3.append(u250 { inner: 7} );
+    ids3.append(u250 { inner: 5} );
+
+    let mut ids: Array<Span<u250>> = ArrayTrait::new();
+    ids.append(ids1.span());
+    ids.append(ids2.span());
+    ids.append(ids3.span());
+
+    let mut e1: Array<Span<felt252>> = ArrayTrait::new();
+    e1.append(build_fake_entity(1));
+    e1.append(build_fake_entity(3));
+    e1.append(build_fake_entity(6));
+    e1.append(build_fake_entity(5));
+
+    let mut e2: Array<Span<felt252>> = ArrayTrait::new();
+    e2.append(build_fake_entity(40));
+    e2.append(build_fake_entity(50));
+    e2.append(build_fake_entity(30));
+
+    let mut e3: Array<Span<felt252>> = ArrayTrait::new();
+    e3.append(build_fake_entity(300));
+    e3.append(build_fake_entity(200));
+    e3.append(build_fake_entity(100));
+    e3.append(build_fake_entity(700));
+    e3.append(build_fake_entity(500));
+
+    let mut entities: Array<Span<Span<felt252>>> = ArrayTrait::new();
+    entities.append(e1.span());
+    entities.append(e2.span());
+    entities.append(e3.span());
+
+    let matching = find_matching(ids.span(), entities.span());
+
+    // there is a match only on entities with IDs 3 and 5
+    // and matching should look like:
+    // [
+    //   [[3, 3, 3], [5, 5, 5]],
+    //   [[30, 30, 30], [50, 50, 50]],
+    //   [[300, 300, 300], [500, 500, 500]]
+    // ]
+
+    matching.len().print();
+    assert(matching.len() == 3, 'matching len');
+
+    let entities0 = *matching[0];
+    assert(entities0.len() == 2, 'entities0 len');
+    assert_entity(*entities0[0], 3);
+    assert_entity(*entities0[1], 5);
+
+    let entities1 = *matching[1];
+    assert(entities1.len() == 2, 'entities1 len');
+    assert_entity(*entities1[0], 30);
+    assert_entity(*entities1[1], 50);
+
+    let entities2 = *matching[2];
+    assert(entities2.len() == 2, 'entities2 len');
+    assert_entity(*entities2[0], 300);
+    assert_entity(*entities2[1], 500);
+}
+
+#[test]
+#[available_gas(1000000000)]
+#[should_panic(expected: ('lengths dont match', ))]
+fn test_find_matching_wrong_arg_len() {
+    let mut ids1: Array<u250> = ArrayTrait::new();
+    let mut ids2: Array<u250> = ArrayTrait::new();
+    let mut ids3: Array<u250> = ArrayTrait::new();
+
+    ids1.append(u250 { inner: 1 } );
+    ids1.append(u250 { inner: 3 } );
+    ids1.append(u250 { inner: 6 } );
+    ids1.append(u250 { inner: 5 } );
+
+    ids2.append(u250 { inner: 4} );
+    ids2.append(u250 { inner: 5} );
+    ids2.append(u250 { inner: 3} );
+
+    let mut ids: Array<Span<u250>> = ArrayTrait::new();
+    ids.append(ids1.span());
+    ids.append(ids2.span());
+
+    let mut e1: Array<Span<felt252>> = ArrayTrait::new();
+    e1.append(build_fake_entity(1));
+    e1.append(build_fake_entity(3));
+    e1.append(build_fake_entity(6));
+    e1.append(build_fake_entity(5));
+
+    let mut e2: Array<Span<felt252>> = ArrayTrait::new();
+    e2.append(build_fake_entity(40));
+    e2.append(build_fake_entity(50));
+    e2.append(build_fake_entity(30));
+
+    let mut e3: Array<Span<felt252>> = ArrayTrait::new();
+    e3.append(build_fake_entity(300));
+    e3.append(build_fake_entity(200));
+    e3.append(build_fake_entity(100));
+    e3.append(build_fake_entity(700));
+    e3.append(build_fake_entity(500));
+
+    let mut entities: Array<Span<Span<felt252>>> = ArrayTrait::new();
+    entities.append(e1.span());
+    entities.append(e2.span());
+    entities.append(e3.span());
+
+    let matching = find_matching(ids.span(), entities.span());
 }

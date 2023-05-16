@@ -32,6 +32,15 @@ impl CommandTrait for EntitiesCommand {
                 RewriteNode::Text("0".to_string())
             };
 
+        command.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
+            "
+            let mut __$query_id$_ids: Array<Span<dojo_core::integer::u250>> = ArrayTrait::new();
+            let mut __$query_id$_entities_raw: Array<Span<Span<felt252>>> = ArrayTrait::new();
+
+            ",
+            HashMap::from([("query_id".to_string(), RewriteNode::Text(command.query_id.clone()))]),
+        ));
+
         command.data.rewrite_nodes.extend(
             find_components(db, &command_ast)
                 .iter()
@@ -42,13 +51,15 @@ impl CommandTrait for EntitiesCommand {
                          IWorldDispatcher { contract_address: world_address
                         }.entities(dojo_core::string::ShortStringTrait::new('$component$'), \
                          dojo_core::integer::u250Trait::new($partition$));
+                        __$query_id$_ids.append(__$query_id$_$query_subtype$_ids);
+                        __$query_id$_entities_raw.append(__$query_id$_$query_subtype$_raw);
                         ",
                         HashMap::from([
+                            ("query_id".to_string(), RewriteNode::Text(command.query_id.clone())),
                             (
                                 "query_subtype".to_string(),
                                 RewriteNode::Text(component.to_string().to_ascii_lowercase()),
                             ),
-                            ("query_id".to_string(), RewriteNode::Text(command.query_id.clone())),
                             ("partition".to_string(), partition.clone()),
                             ("component".to_string(), RewriteNode::Text(component.to_string())),
                         ]),
@@ -57,77 +68,59 @@ impl CommandTrait for EntitiesCommand {
                 .collect::<Vec<_>>(),
         );
 
-        let entity_compontents = find_components(db, &command_ast);
-        if entity_compontents.len() == 1 {
-            // no need to call find_matching if querying only for 1 entity
-            command.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
-                "let __$query_subtype$_idxs = __$query_id$_$query_subtype$_ids;",
-                HashMap::from([
-                    (
-                        "query_subtype".to_string(),
-                        RewriteNode::Text(entity_compontents[0].to_string().to_ascii_lowercase()),
-                    ),
-                    ("query_id".to_string(), RewriteNode::Text(command.query_id.clone())),
-                ]),
-            ));
-        } else {
-            // handling up to 4 entities
-            let mut variables: Vec<String> = Vec::with_capacity(4);
-            let mut arguments: Vec<String> = Vec::with_capacity(4);
+        command.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
+            "
+            let mut __$query_id$_matching_entities = dojo_core::storage::utils::find_matching(
+                __$query_id$_ids.span(), __$query_id$_entities_raw.span()
+            );
 
-            for component in entity_compontents {
-                variables
-                    .push(format!("mut __{}_ids_idxs", component.to_string().to_ascii_lowercase()));
-                arguments.push(format!(
-                    "__{}_{}_ids",
-                    String::from(command.query_id.as_str()),
-                    component.to_string().to_ascii_lowercase()
-                ));
-            }
-            variables.resize(4, String::from("_"));
-            arguments.resize(4, String::from("Option::None(())"));
-
-            command.data.rewrite_nodes.push(RewriteNode::Text(format!(
-                "let ({}) = dojo_core::storage::utils::find_matching({});",
-                variables.join(", "),
-                arguments.join(", ")
-            )))
-        }
+            ",
+            HashMap::from([("query_id".to_string(), RewriteNode::Text(command.query_id.clone()))]),
+        ));
 
         command.data.rewrite_nodes.extend(
             find_components(db, &command_ast)
                 .iter()
-                .map(|component| {
+                .enumerate()
+                .map(|(idx, component)| {
                     let mut deser_err_msg =
                         format!("{} failed to deserialize", component.to_string());
                     deser_err_msg.truncate(CAIRO_ERR_MSG_LEN);
 
                     RewriteNode::interpolate_patched(
                         "
-                    let mut __$query_subtype$s: Array<$component$> = ArrayTrait::new();
-                    loop {
-                        match __$query_subtype$_ids_idxs.pop_front() {
-                            Option::Some(idx) => {
-                                let entity = __$query_id$_$query_subtype$_raw[*idx];
-                                let mut entity = *entity;
-                                let entity = serde::Serde::<$component$>::deserialize(
-                                    ref entity
-                                ).expect('$deser_err_msg$');
-                                __$query_subtype$s.append(entity);
+                        let __$query_subtype$s = match __$query_id$_matching_entities.get($idx$) {
+                            Option::Some(raw_entities) => {
+                                let mut raw_entities = *box::BoxTrait::unbox(raw_entities);
+                                let mut entities: Array<$component$> = ArrayTrait::new();
+                                loop {
+                                    match raw_entities.pop_front() {
+                                        Option::Some(raw) => {
+                                            let mut raw = *raw;
+                                            let e = serde::Serde::<$component$>::deserialize(ref \
+                         raw).expect('$deser_err_msg$');
+                                            entities.append(e);
+                                        },
+                                        Option::None(_) => {
+                                            break ();
+                                        }
+                                    };
+                                };
+                                entities.span()
                             },
                             Option::None(_) => {
-                                break ();
+                                ArrayTrait::<$component$>::new().span()
                             }
                         };
-                    };
-                    ",
+                        ",
                         HashMap::from([
+                            ("query_id".to_string(), RewriteNode::Text(command.query_id.clone())),
                             (
                                 "query_subtype".to_string(),
                                 RewriteNode::Text(component.to_string().to_ascii_lowercase()),
                             ),
+                            ("idx".to_string(), RewriteNode::Text(idx.to_string())),
                             ("component".to_string(), RewriteNode::Text(component.to_string())),
-                            ("query_id".to_string(), RewriteNode::Text(command.query_id.clone())),
                             ("deser_err_msg".to_string(), RewriteNode::Text(deser_err_msg)),
                         ]),
                     )
@@ -135,17 +128,21 @@ impl CommandTrait for EntitiesCommand {
                 .collect::<Vec<_>>(),
         );
 
-        let deser_entities: String = find_components(db, &command_ast)
+        let desered_entities: String = find_components(db, &command_ast)
             .iter()
             .map(|component| format!("__{}s", component.to_string().to_ascii_lowercase()))
             .collect::<Vec<String>>()
             .join(", ");
 
-        command.data.rewrite_nodes.push(RewriteNode::Text(format!(
-            "let {} = ({});\n",
-            command.query_id.clone(),
-            deser_entities
-        )));
+        command.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
+            "
+            let $query_id$ = ($desered_entities$);
+            ",
+            HashMap::from([
+                ("query_id".to_string(), RewriteNode::Text(command.query_id.clone())),
+                ("desered_entities".to_string(), RewriteNode::Text(desered_entities)),
+            ]),
+        ));
 
         command
     }
