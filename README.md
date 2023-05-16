@@ -109,14 +109,6 @@ An entity is addressed by a `felt252`. An entity represents a collection of comp
 
 ## Development
 
-### Cairo Submodule
-
-Make sure that the Cairo 1 submodule is present when this repository is cloned
-
-```bash
-git submodule init && git submodule update
-```
-
 ### Dev Container
 
 It is recommended to use the Dev Containers VSCode extension when building on Dojo as it contains everything needed to begin developing.
