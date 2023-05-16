@@ -1,6 +1,8 @@
 use chrono::{DateTime, Utc};
 use juniper::{graphql_object, FieldResult};
 use serde::Deserialize;
+use sqlx::pool::PoolConnection;
+use sqlx::Sqlite;
 
 use super::entity_state::EntityState;
 use super::entity_state_update::EntityStateUpdate;
@@ -84,65 +86,26 @@ pub async fn entity(context: &Context, id: String) -> FieldResult<Entity> {
     Ok(entity)
 }
 
-pub async fn entities(context: &Context) -> FieldResult<Vec<Entity>> {
-    let mut conn = context.pool.acquire().await?;
-
-    let entities = sqlx::query_as!(
-        Entity,
-        r#"
-            SELECT 
-                id,
-                name,
-                partition_id,
-                keys,
-                transaction_hash,
-                created_at as "created_at: _",
-                updated_at as "updated_at: _"
-            FROM entities
-        "#
-    )
-    .fetch_all(&mut conn)
-    .await?;
-
-    Ok(entities)
-}
-
-pub async fn entities_by_partition_id(
+pub async fn entities(
     context: &Context,
     partition_id: String,
+    keys: Option<Vec<String>>,
 ) -> FieldResult<Vec<Entity>> {
     let mut conn = context.pool.acquire().await?;
 
-    let entities = sqlx::query_as!(
-        Entity,
-        r#"
-            SELECT 
-                id,
-                name,
-                partition_id,
-                keys,
-                transaction_hash,
-                created_at as "created_at: _",
-                updated_at as "updated_at: _"
-            FROM entities where partition_id = $1
-        "#,
-        partition_id
-    )
-    .fetch_all(&mut conn)
-    .await?;
-
-    Ok(entities)
+    match keys {
+        Some(keys) => query_by_keys(&mut conn, partition_id, keys).await,
+        None => query_by_partition(&mut conn, partition_id).await,
+    }
 }
 
-pub async fn entity_by_partition_id_keys(
-    context: &Context,
+async fn query_by_keys(
+    conn: &mut PoolConnection<Sqlite>,
     partition_id: String,
     keys: Vec<String>,
-) -> FieldResult<Entity> {
-    let mut conn = context.pool.acquire().await?;
+) -> FieldResult<Vec<Entity>> {
     let keys_str = format!("{}%", keys.join(","));
-
-    let entity = sqlx::query_as!(
+    let entities = sqlx::query_as!(
         Entity,
         r#"
             SELECT                 
@@ -158,8 +121,33 @@ pub async fn entity_by_partition_id_keys(
         partition_id,
         keys_str
     )
-    .fetch_one(&mut conn)
+    .fetch_all(conn)
     .await?;
 
-    Ok(entity)
+    Ok(entities)
+}
+
+async fn query_by_partition(
+    conn: &mut PoolConnection<Sqlite>,
+    partition_id: String,
+) -> FieldResult<Vec<Entity>> {
+    let entities = sqlx::query_as!(
+        Entity,
+        r#"
+            SELECT 
+                id,
+                name,
+                partition_id,
+                keys,
+                transaction_hash,
+                created_at as "created_at: _",
+                updated_at as "updated_at: _"
+            FROM entities where partition_id = $1
+        "#,
+        partition_id,
+    )
+    .fetch_all(conn)
+    .await?;
+
+    Ok(entities)
 }

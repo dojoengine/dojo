@@ -21,23 +21,23 @@ mod tests {
     async fn test_event_by_keys(pool: SqlitePool) {
         let _ = pool.acquire().await;
 
-        let query = "{ eventsByKeys(keys: [\"key_1\", \"key_2\", \"key_3\"]) { id keys data \
+        let query = "{ events(keys: [\"key_1\", \"key_2\", \"key_3\"]) { id keys data \
                      systemCallId createdAt } }";
         let value = run_graphql_query(&pool, query).await;
-        let events = value.get("eventsByKeys").ok_or("no event found").unwrap();
+        let events = value.get("events").ok_or("no event found").unwrap();
         let events: Vec<Event> = serde_json::from_value(events.clone()).unwrap();
         assert_eq!(events[0].id, "event_1".to_string());
 
-        let query = "{ eventsByKeys(keys: [\"key_1\", \"key_2\"]) { id keys data systemCallId \
-                     createdAt } }";
+        let query =
+            "{ events(keys: [\"key_1\", \"key_2\"]) { id keys data systemCallId createdAt } }";
         let value = run_graphql_query(&pool, query).await;
-        let events = value.get("eventsByKeys").ok_or("no event found").unwrap();
+        let events = value.get("events").ok_or("no event found").unwrap();
         let events: Vec<Event> = serde_json::from_value(events.clone()).unwrap();
         assert_eq!(events.len(), 2);
 
-        let query = "{ eventsByKeys(keys: [\"key_3\"]) { id keys data systemCallId createdAt } }";
+        let query = "{ events(keys: [\"key_3\"]) { id keys data systemCallId createdAt } }";
         let value = run_graphql_query(&pool, query).await;
-        let events = value.get("eventsByKeys").ok_or("no event found").unwrap();
+        let events = value.get("events").ok_or("no event found").unwrap();
         let events: Vec<Event> = serde_json::from_value(events.clone()).unwrap();
         assert_eq!(events[0].id, "event_3".to_string());
     }

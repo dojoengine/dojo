@@ -66,7 +66,7 @@ pub async fn event(context: &Context, id: String) -> FieldResult<Event> {
 }
 
 // flatten keys array and pattern match
-pub async fn events_by_keys(context: &Context, keys: Vec<String>) -> FieldResult<Vec<Event>> {
+pub async fn events(context: &Context, keys: Vec<String>) -> FieldResult<Vec<Event>> {
     let mut conn = context.pool.acquire().await?;
     let keys_str = format!("{}%", keys.join(","));
 
