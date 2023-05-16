@@ -67,13 +67,6 @@ mod IsAuthorized {
     use dojo_core::auth::components::AuthRole;
 
     fn execute(target_id: u250, resource_id: u250) -> bool {
-        // Get World level role
-        let maybe_role = commands::<AuthRole>::try_entity(target_id.into());
-        let role = match maybe_role {
-            Option::Some(role) => role.id.into(),
-            Option::None(()) => 0,
-        };
-
         // Get component-scoped role
         let maybe_scoped_role = commands::<AuthRole>::try_entity((target_id, resource_id).into());
         let scoped_role = match maybe_scoped_role {
@@ -89,8 +82,17 @@ mod IsAuthorized {
             Option::Some(authorization_status) => authorization_status.is_authorized,
             Option::None(_) => bool::False(()),
         };
-        // Authorize if system's role is Admin or authorization status is true
-        role == 'Admin' | authorization_status
+
+        // Check if system is authorized
+        if authorization_status {
+            return authorization_status;
+        }
+
+        // If system is not authorized, get World level role
+        let role = commands::<AuthRole>::entity(target_id.into());
+
+        // Check if system's role is Admin
+        role.id.into() == 'Admin'
     }
 }
 
