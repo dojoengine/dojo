@@ -9,9 +9,6 @@ edition = "2021"
 actix-web = "4.3.0"
 actix-cors = "0.6.4"
 anyhow.workspace = true
-apibara-core = { git = "https://github.com/apibara/apibara", rev = "5afaa6db00f2d1b36825215bbf894f0341121d39" }
-apibara-sdk = { git = "https://github.com/apibara/apibara", rev = "5afaa6db00f2d1b36825215bbf894f0341121d39" }
-apibara-starknet = { git = "https://github.com/apibara/apibara", rev = "5afaa6db00f2d1b36825215bbf894f0341121d39" }
 clap.workspace = true
 ctrlc = "3.2.5"
 futures = "0.3.26"
@@ -20,10 +17,8 @@ hex = "0.4.3"
 juniper = "0.15.11"
 juniper_actix = "0.4.0"
 log = "0.4.17"
-num = "0.4.0"
 serde.workspace = true
 serde_json.workspace = true
-sha3 = "0.10.6"
 sqlx = { version = "0.6.2", features = [
     "runtime-actix-native-tls",
     "uuid",
@@ -31,11 +26,9 @@ sqlx = { version = "0.6.2", features = [
     "macros",
     "offline",
 ] }
-starknet.workspace = true
 tokio = { version = "1.20.1", features = ["full"] }
 tokio-stream = "0.1.11"
 tokio-util = "0.7.7"
-tonic = { version = "0.8.3", features = ["tls", "tls-roots"] }
 tracing.workspace = true
 tracing-subscriber.workspace = true
 url = "2.2.2"

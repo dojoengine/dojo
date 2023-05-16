@@ -1,13 +1,6 @@
 use std::cmp::Ordering;
 use std::error::Error;
 
-use apibara_core::node::v1alpha2::DataFinality;
-use apibara_core::starknet::v1alpha2::{
-    DeployedContractFilter, EventFilter, FieldElement as ApibaraFieldElement, Filter, HeaderFilter,
-    StateUpdateFilter,
-};
-use apibara_sdk::{Configuration, DataMessage, Uri};
-use futures::TryStreamExt;
 use num::BigUint;
 use sqlx::{Pool, Sqlite};
 use starknet::core::types::FieldElement;
@@ -20,8 +13,6 @@ use crate::processors::component_register::ComponentRegistrationProcessor;
 use crate::processors::component_state_update::ComponentStateUpdateProcessor;
 use crate::processors::system_register::SystemRegistrationProcessor;
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
-use crate::stream::{FieldElementExt, StarknetClientBuilder};
-
 pub struct Processors<T> {
     pub event_processors: Vec<Box<dyn EventProcessor<T>>>,
     pub block_processors: Vec<Box<dyn BlockProcessor<T>>>,
