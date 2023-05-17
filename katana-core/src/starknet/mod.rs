@@ -34,7 +34,7 @@ pub mod transaction;
 
 use crate::{
     accounts::PredeployedAccounts,
-    block_context::Base,
+    block_context::block_context_from_config,
     constants::DEFAULT_PREFUNDED_ACCOUNT_BALANCE,
     state::DictStateReader,
     util::{
@@ -47,14 +47,17 @@ use transaction::{StarknetTransaction, StarknetTransactions};
 
 use self::transaction::ExternalFunctionCall;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct StarknetConfig {
     pub seed: [u8; 32],
+    pub gas_price: u128,
+    pub chain_id: String,
     pub total_accounts: u8,
-    pub block_on_demand: bool,
+    pub blocks_on_demand: bool,
     pub allow_zero_max_fee: bool,
     pub account_path: Option<PathBuf>,
 }
+
 pub struct StarknetWrapper {
     pub config: StarknetConfig,
     pub blocks: StarknetBlocks,
@@ -68,7 +71,7 @@ pub struct StarknetWrapper {
 impl StarknetWrapper {
     pub fn new(config: StarknetConfig) -> Self {
         let blocks = StarknetBlocks::default();
-        let block_context = BlockContext::base();
+        let block_context = block_context_from_config(&config);
         let transactions = StarknetTransactions::default();
         let mut state = DictStateReader::default();
         let pending_state = CachedState::new(state.clone());
@@ -169,7 +172,7 @@ impl StarknetWrapper {
 
                 self.store_transaction(starknet_tx);
 
-                if !self.config.block_on_demand {
+                if !self.config.blocks_on_demand {
                     self.generate_latest_block()?;
                     self.generate_pending_block();
                 }

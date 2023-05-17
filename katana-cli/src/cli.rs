@@ -1,101 +1,115 @@
-use std::{process::exit, sync::Arc};
+use std::path::PathBuf;
 
-use clap::Parser;
-use env_logger::Env;
-use katana_core::sequencer::KatanaSequencer;
-use katana_rpc::KatanaNodeRpc;
-use log::error;
-use tokio::sync::RwLock;
-use yansi::Paint;
+use clap::{Args, Parser};
+use katana_core::{constants::DEFAULT_GAS_PRICE, starknet::StarknetConfig};
+use katana_rpc::config::RpcConfig;
 
-mod config;
+#[derive(Parser, Debug)]
+#[command(about = "A fast and lightweight local Starknet development node.")]
+pub struct App {
+    #[arg(long)]
+    #[arg(help = "Hide the predeployed accounts details.")]
+    pub hide_predeployed_accounts: bool,
 
-use config::Cli;
+    #[command(flatten)]
+    #[command(next_help_heading = "Server options")]
+    pub rpc: RpcOptions,
 
-#[tokio::main]
-async fn main() {
-    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
-
-    let config = Cli::parse();
-    let rpc_config = config.rpc_config();
-    let starknet_config = config.starknet_config();
-
-    let sequencer = Arc::new(RwLock::new(KatanaSequencer::new(starknet_config)));
-    sequencer.write().await.start();
-
-    let predeployed_accounts = if config.hide_predeployed_accounts {
-        None
-    } else {
-        Some(
-            sequencer
-                .read()
-                .await
-                .starknet
-                .predeployed_accounts
-                .display(),
-        )
-    };
-
-    match KatanaNodeRpc::new(sequencer.clone(), rpc_config)
-        .run()
-        .await
-    {
-        Ok((addr, server_handle)) => {
-            print_intro(
-                predeployed_accounts,
-                config.seed,
-                format!(
-                    "🚀 JSON-RPC server started: {}",
-                    Paint::red(format!("http://{addr}"))
-                ),
-            );
-
-            server_handle.stopped().await;
-        }
-        Err(err) => {
-            error! {"{}", err};
-            exit(1);
-        }
-    };
+    #[command(flatten)]
+    #[command(next_help_heading = "Starknet options")]
+    pub starknet: StarknetOptions,
 }
 
-fn print_intro(accounts: Option<String>, seed: Option<String>, address: String) {
-    println!(
-        "{}",
-        Paint::red(
-            r"
+#[derive(Debug, Args, Clone)]
+pub struct RpcOptions {
+    #[arg(short, long)]
+    #[arg(default_value = "5050")]
+    #[arg(help = "Port number to listen on.")]
+    pub port: u16,
+}
 
+#[derive(Debug, Args, Clone)]
+pub struct StarknetOptions {
+    #[arg(long)]
+    #[arg(help = "Specify the seed for randomness of accounts to be predeployed.")]
+    pub seed: Option<String>,
 
-██╗  ██╗ █████╗ ████████╗ █████╗ ███╗   ██╗ █████╗ 
-██║ ██╔╝██╔══██╗╚══██╔══╝██╔══██╗████╗  ██║██╔══██╗
-█████╔╝ ███████║   ██║   ███████║██╔██╗ ██║███████║
-██╔═██╗ ██╔══██║   ██║   ██╔══██║██║╚██╗██║██╔══██║
-██║  ██╗██║  ██║   ██║   ██║  ██║██║ ╚████║██║  ██║
-╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝
-                                                      
-"
-        )
-    );
+    #[arg(long = "accounts")]
+    #[arg(value_name = "NUM")]
+    #[arg(default_value = "10")]
+    #[arg(help = "Number of pre-funded accounts to generate.")]
+    pub total_accounts: u8,
 
-    if let Some(accounts) = accounts {
-        println!(
-            r"        
-PREFUNDED ACCOUNTS
-==================
-{accounts}
-    "
-        );
+    #[arg(value_name = "PATH")]
+    #[arg(long = "account-class")]
+    #[arg(help = "The account implementation for the predeployed accounts.")]
+    #[arg(
+        long_help = "Specify the account implementation to be used for the predeployed accounts; should be a path to the compiled JSON artifact."
+    )]
+    pub account_path: Option<PathBuf>,
+
+    #[arg(long)]
+    #[arg(help = "Block generation on demand via an endpoint.")]
+    pub blocks_on_demand: bool,
+
+    #[arg(long)]
+    #[arg(help = "Allow transaction max fee to be zero.")]
+    pub allow_zero_max_fee: bool,
+
+    #[command(flatten)]
+    #[command(next_help_heading = "Environment options")]
+    pub environment: EnvironmentOptions,
+}
+
+#[derive(Debug, Args, Clone)]
+pub struct EnvironmentOptions {
+    #[arg(long)]
+    #[arg(help = "The chain ID.")]
+    #[arg(default_value = "KATANA")]
+    pub chain_id: String,
+
+    #[arg(long)]
+    #[arg(help = "The gas price.")]
+    pub gas_price: Option<u128>,
+}
+
+impl App {
+    pub fn rpc_config(&self) -> RpcConfig {
+        RpcConfig {
+            port: self.rpc.port,
+        }
     }
 
-    if let Some(seed) = seed {
-        println!(
-            r"
-ACCOUNTS SEED
-=============
-{seed}
-    "
-        );
+    pub fn starknet_config(&self) -> StarknetConfig {
+        StarknetConfig {
+            total_accounts: self.starknet.total_accounts,
+            seed: parse_seed(self.starknet.seed.clone()),
+            gas_price: self
+                .starknet
+                .environment
+                .gas_price
+                .unwrap_or(DEFAULT_GAS_PRICE),
+            blocks_on_demand: self.starknet.blocks_on_demand,
+            account_path: self.starknet.account_path.clone(),
+            allow_zero_max_fee: self.starknet.allow_zero_max_fee,
+            chain_id: self.starknet.environment.chain_id.clone(),
+        }
     }
+}
 
-    println!("\n{address}\n\n");
+fn parse_seed(seed: Option<String>) -> [u8; 32] {
+    seed.map(|seed| {
+        let seed = seed.as_bytes();
+
+        if seed.len() >= 32 {
+            unsafe { *(seed[..32].as_ptr() as *const [u8; 32]) }
+        } else {
+            let mut actual_seed = [0u8; 32];
+            seed.iter()
+                .enumerate()
+                .for_each(|(i, b)| actual_seed[i] = *b);
+            actual_seed
+        }
+    })
+    .unwrap_or_default()
 }

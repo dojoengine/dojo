@@ -2,7 +2,9 @@ use blockifier::abi::abi_utils::{get_storage_var_address, selector_from_name};
 use blockifier::transaction::{
     account_transaction::AccountTransaction, transaction_execution::Transaction,
 };
-use katana_core::constants::{FEE_ERC20_CONTRACT_ADDRESS, TEST_ACCOUNT_CONTRACT_PATH};
+use katana_core::constants::{
+    DEFAULT_GAS_PRICE, FEE_ERC20_CONTRACT_ADDRESS, TEST_ACCOUNT_CONTRACT_PATH,
+};
 use katana_core::starknet::{StarknetConfig, StarknetWrapper};
 use starknet::core::types::TransactionStatus;
 use starknet_api::calldata;
@@ -22,8 +24,10 @@ fn create_test_starknet() -> StarknetWrapper {
     StarknetWrapper::new(StarknetConfig {
         seed: [0u8; 32],
         total_accounts: 2,
-        block_on_demand: false,
+        blocks_on_demand: false,
         allow_zero_max_fee: true,
+        gas_price: DEFAULT_GAS_PRICE,
+        chain_id: String::from("KATANA"),
         account_path: Some(test_account_path),
     })
 }
