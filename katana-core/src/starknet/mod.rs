@@ -39,7 +39,7 @@ use crate::{
     state::DictStateReader,
     util::{
         convert_blockifier_tx_to_starknet_api_tx, convert_state_diff_to_rpc_state_diff,
-        field_element_to_starkfelt, get_current_timestamp,
+        get_current_timestamp,
     },
 };
 use block::{StarknetBlock, StarknetBlocks};
@@ -117,7 +117,7 @@ impl StarknetWrapper {
             BlockId::Hash(hash) => self
                 .blocks
                 .hash_to_num
-                .get(&BlockHash(field_element_to_starkfelt(&hash)))
+                .get(&BlockHash(StarkFelt::from(hash)))
                 .cloned(),
 
             BlockId::Tag(BlockTag::Pending) => None,
