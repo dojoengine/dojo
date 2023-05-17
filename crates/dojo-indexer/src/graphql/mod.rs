@@ -2,13 +2,17 @@ pub mod component;
 pub mod entity;
 pub mod entity_state;
 pub mod entity_state_update;
+pub mod event;
 pub mod server;
 pub mod system;
 pub mod system_call;
 
 use component::Component;
+use entity::Entity;
+use event::Event;
 use juniper::{graphql_object, FieldResult};
 use server::Context;
+use system::System;
 
 pub struct Query;
 
@@ -22,11 +26,11 @@ impl Query {
         component::components(context).await
     }
 
-    async fn system(context: &Context, id: String) -> FieldResult<system::System> {
+    async fn system(context: &Context, id: String) -> FieldResult<System> {
         system::system(context, id).await
     }
 
-    async fn systems(context: &Context) -> FieldResult<Vec<system::System>> {
+    async fn systems(context: &Context) -> FieldResult<Vec<System>> {
         system::systems(context).await
     }
 
@@ -40,11 +44,23 @@ impl Query {
     //     entity_state_update::entity_state_updates(context).await
     // }
 
-    async fn entity(context: &Context, id: String) -> FieldResult<entity::Entity> {
+    async fn entity(context: &Context, id: String) -> FieldResult<Entity> {
         entity::entity(context, id).await
     }
 
-    async fn entities(context: &Context) -> FieldResult<Vec<entity::Entity>> {
-        entity::entities(context).await
+    async fn entities(
+        context: &Context,
+        partition_id: String,
+        keys: Option<Vec<String>>,
+    ) -> FieldResult<Vec<Entity>> {
+        entity::entities(context, partition_id, keys).await
+    }
+
+    async fn event(context: &Context, id: String) -> FieldResult<Event> {
+        event::event(context, id).await
+    }
+
+    async fn events(context: &Context, keys: Vec<String>) -> FieldResult<Vec<Event>> {
+        event::events(context, keys).await
     }
 }

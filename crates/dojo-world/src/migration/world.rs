@@ -5,12 +5,12 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, Context, Result};
 use camino::Utf8PathBuf;
-use dojo_lang::manifest::Manifest;
 use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::FieldElement;
 use starknet::signers::{LocalWallet, SigningKey};
 
 use super::{ClassMigration, ContractMigration, Migration};
+use crate::manifest::Manifest;
 use crate::{EnvironmentConfig, WorldConfig};
 
 #[derive(Debug, Default, Clone)]
@@ -76,9 +76,9 @@ impl World {
         let local_manifest = Manifest::load_from_path(target_dir.join("manifest.json"))?;
 
         let remote_manifest = if let Some(world_address) = world_config.address {
-            let provider = env_config.get_provider()?;
+            let provider = env_config.provider()?;
 
-            Manifest::from_remote(world_address, provider, &local_manifest)
+            Manifest::from_remote(world_address, provider, Some(local_manifest.clone()))
                 .await
                 .map_err(|e| anyhow!("Problem creating remote manifest: {e}"))?
         } else {
@@ -176,7 +176,7 @@ impl World {
         let systems = evaluate_systems_to_be_declared(&self.systems, &artifact_paths)?;
 
         let migrator = {
-            let provider = self.environment_config.get_provider()?;
+            let provider = self.environment_config.provider()?;
 
             let private_key = self
                 .environment_config

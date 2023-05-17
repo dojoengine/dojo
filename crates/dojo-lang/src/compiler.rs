@@ -18,6 +18,7 @@ use starknet::core::types::FieldElement;
 use tracing::{trace, trace_span};
 
 use crate::manifest::Manifest;
+
 pub struct DojoCompiler;
 
 impl Compiler for DojoCompiler {

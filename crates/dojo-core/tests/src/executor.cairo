@@ -10,7 +10,7 @@ use dojo_core::interfaces::IExecutorDispatcher;
 use dojo_core::interfaces::IExecutorDispatcherTrait;
 use dojo_core::executor::Executor;
 
-#[derive(Component)]
+#[derive(Component, Copy, Drop, Serde)]
 struct Foo {
     a: felt252,
     b: u128,

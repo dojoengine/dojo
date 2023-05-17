@@ -84,8 +84,7 @@ pub async fn entity_state_updates_by_component(
         component_id
     )
     .fetch_all(&mut conn)
-    .await
-    .unwrap();
+    .await?;
 
     Ok(entity_state_updates)
 }
@@ -104,8 +103,7 @@ pub async fn entity_state_updates_by_entity(
         entity_id
     )
     .fetch_all(&mut conn)
-    .await
-    .unwrap();
+    .await?;
 
     Ok(entity_state_updates)
 }

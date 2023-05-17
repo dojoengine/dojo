@@ -14,7 +14,7 @@ use dojo_core::executor::Executor;
 use dojo_core::world::World;
 use dojo_core::world_factory::WorldFactory;
 
-#[derive(Component)]
+#[derive(Component, Copy, Drop, Serde)]
 struct Foo {
     a: felt252,
     b: u128,

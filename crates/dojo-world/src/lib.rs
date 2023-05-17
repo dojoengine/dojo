@@ -1,16 +1,20 @@
-pub mod migration;
-
 use std::str::FromStr;
 
 use anyhow::anyhow;
 use scarb::core::Workspace;
 use serde::{Deserialize, Serialize};
-use starknet::core::chain_id;
 use starknet::core::types::FieldElement;
-use starknet::providers::SequencerGatewayProvider;
+use starknet::core::utils::cairo_short_string_to_felt;
+use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 use toml::Value;
 use tracing::warn;
 use url::Url;
+
+pub mod manifest;
+pub mod migration;
+
+#[cfg(test)]
+mod test_utils;
 
 #[allow(clippy::enum_variant_names)]
 #[derive(thiserror::Error, Debug)]
@@ -121,7 +125,7 @@ impl EnvironmentConfig {
             if let Some(network) = env.get("network").and_then(|v| v.as_str()) {
                 config.network = Some(network.into());
                 if config.chain_id.is_none() {
-                    config.chain_id = get_chain_id_from_network(network);
+                    config.chain_id = Some(cairo_short_string_to_felt(network)?);
                 }
             }
         }
@@ -129,7 +133,7 @@ impl EnvironmentConfig {
         Ok(config)
     }
 
-    pub fn get_provider(&self) -> anyhow::Result<SequencerGatewayProvider> {
+    pub fn provider(&self) -> anyhow::Result<JsonRpcClient<HttpTransport>> {
         if self.rpc.is_none() && self.network.is_none() {
             return Err(anyhow!("Missing `rpc_url` or `network` in the environment config"));
         }
@@ -139,33 +143,25 @@ impl EnvironmentConfig {
         }
 
         let provider = if let Some(url) = &self.rpc {
-            let mut base = url.clone();
-            base.path_segments_mut().unwrap().pop_if_empty();
-
-            let mut gateway = base.clone();
-            gateway.path_segments_mut().unwrap().push("gateway");
-            let mut feeder_gateway = base.clone();
-            feeder_gateway.path_segments_mut().unwrap().push("feeder_gateway");
-
-            SequencerGatewayProvider::new(gateway, feeder_gateway)
+            JsonRpcClient::new(HttpTransport::new(url.clone()))
         } else {
             match self.network.as_ref().unwrap().as_str() {
-                "mainnet" => SequencerGatewayProvider::starknet_alpha_mainnet(),
-                "goerli" => SequencerGatewayProvider::starknet_alpha_goerli(),
-                "goerli2" => SequencerGatewayProvider::starknet_alpha_goerli_2(),
+                "mainnet" => JsonRpcClient::new(HttpTransport::new(
+                    Url::parse(
+                        "https://starknet-goerli.g.alchemy.com/v2/KE9ZWlO2zAaXFvpjbyb63gZIX1SozzON",
+                    )
+                    .unwrap(),
+                )),
+                "goerli" => JsonRpcClient::new(HttpTransport::new(
+                    Url::parse(
+                        "https://starknet-mainnet.g.alchemy.com/v2/qnYLy7taPFweUC6wad3qF7-bCb4YnQN4",
+                    )
+                    .unwrap(),
+                )),
                 n => return Err(anyhow!("Unsupported network: {n}")),
             }
         };
 
         Ok(provider)
-    }
-}
-
-fn get_chain_id_from_network(network: &str) -> Option<FieldElement> {
-    match network {
-        "mainnet" => Some(chain_id::MAINNET),
-        "goerli" => Some(chain_id::TESTNET),
-        "goerli2" => Some(chain_id::TESTNET2),
-        _ => None,
     }
 }

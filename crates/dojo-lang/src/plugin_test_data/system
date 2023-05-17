@@ -7,13 +7,13 @@ ExpandContractTestRunner
 use array::ArrayTrait;
 use serde::Serde;
 
-#[derive(Component)]
+#[derive(Component, Copy, Drop, Serde)]
 struct Position {
     x: felt252,
     y: felt252,
 }
 
-#[derive(Component)]
+#[derive(Component, Copy, Drop, Serde)]
 #[component(indexed: true)]
 struct Player {
     name: felt252, 
@@ -172,7 +172,6 @@ use array::ArrayTrait;
 
 use serde::Serde;
 
-#[derive(Copy, Drop, Serde)]
 struct Position {
     x: felt252,
     y: felt252,
@@ -215,7 +214,6 @@ mod PositionComponent {
     }
 }
 
-#[derive(Copy, Drop, Serde)]
 struct Player {
     name: felt252, 
 }
