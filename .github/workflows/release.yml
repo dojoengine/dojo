@@ -64,9 +64,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   release:
-    name: Release for ${{ matrix.os }}
+    name: ${{ matrix.job.target }} (${{ matrix.job.os }})
     needs: prepare
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.job.os }}
     strategy:
       matrix:
         job:
