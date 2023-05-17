@@ -4,6 +4,9 @@ on:
   push:
     tags:
       - "*"
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
 
 env:
   IS_NIGHTLY: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
