@@ -32,11 +32,11 @@ jobs:
         id: release_info
         run: |
           if [[ $IS_NIGHTLY ]]; then
-            echo "tag_name::nightly-${GITHUB_SHA}" >> $GITHUB_OUTPUT
-            echo "release_name::Nightly ($(date '+%Y-%m-%d'))" >> $GITHUB_OUTPUT
+            echo "::set-output name=tag_name::nightly-${GITHUB_SHA}"
+            echo "::set-output name=release_name::Nightly ($(date '+%Y-%m-%d'))"
           else
-            echo "tag_name::${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
-            echo "release_name::${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+            echo "::set-output name=tag_name::${GITHUB_REF_NAME}"
+            echo "::set-output name=release_name::${GITHUB_REF_NAME}"
           fi
 
       # Creates a `nightly-SHA` tag for this specific nightly
@@ -125,7 +125,7 @@ jobs:
         if: ${{ matrix.job.target == 'aarch64-unknown-linux-gnu' }}
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y gcc-aarch64-linux-gnu
+          sudo apt-get install -y gcc-aarch64-linux-gnu libssl-dev
           echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
 
       - name: Build binaries
@@ -146,17 +146,17 @@ jobs:
         run: |
           if [ "$PLATFORM_NAME" == "linux" ]; then
             tar -czvf "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C ./target/${TARGET}/release dojo
-            echo "file_name::dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" >> $GITHUB_OUTPUT
+            echo "::set-output name=file_name::dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz"
           elif [ "$PLATFORM_NAME" == "darwin" ]; then
             # We need to use gtar here otherwise the archive is corrupt.
             # See: https://github.com/actions/virtual-environments/issues/2619
             gtar -czvf "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C ./target/${TARGET}/release dojo
-            echo "file_name::dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" >> $GITHUB_OUTPUT
+            echo "::set-output name=file_name::dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz"
           else
             cd ./target/${TARGET}/release
             7z a -tzip "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" dojo
             mv "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" ../../../
-            echo "file_name::dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" >> $GITHUB_OUTPUT
+            echo "::set-output name=file_name::dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip"
           fi
         shell: bash
 
