@@ -154,7 +154,7 @@ jobs:
             echo "::set-output name=file_name::dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz"
           else
             cd ./target/${TARGET}/release
-            7z a -tzip "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" dojo
+            7z a -tzip "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" dojo.exe
             mv "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" ../../../
             echo "::set-output name=file_name::dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip"
           fi
