@@ -6,18 +6,17 @@ use blockifier::state::state_api::StateResult;
 use starknet_api::{
     core::{ClassHash, CompiledClassHash, ContractAddress, Nonce, PatriciaKey},
     hash::{StarkFelt, StarkHash},
-    patricia_key, stark_felt,
+    patricia_key,
     state::StorageKey,
 };
 use std::collections::HashMap;
 
+use crate::constants::ERC20_CONTRACT;
 use crate::constants::ERC20_CONTRACT_CLASS_HASH;
-use crate::constants::ERC20_CONTRACT_PATH;
-use crate::constants::FEE_ERC20_CONTRACT_ADDRESS;
-use crate::constants::UNIVERSAL_DEPLOYER_CLASS_HASH;
-use crate::constants::UNIVERSAL_DEPLOYER_CONTRACT_ADDRESS;
-use crate::constants::UNIVERSAL_DEPLOYER_CONTRACT_PATH;
-use crate::util::get_contract_class;
+use crate::constants::FEE_TOKEN_ADDRESS;
+use crate::constants::UDC_ADDRESS;
+use crate::constants::UDC_CLASS_HASH;
+use crate::constants::UDC_CONTRACT;
 
 #[derive(Clone, Debug)]
 pub struct DictStateReader {
@@ -101,24 +100,23 @@ impl StateReader for DictStateReader {
 }
 
 fn deploy_fee_contract(state: &mut DictStateReader) {
-    let erc20_class_hash = ClassHash(stark_felt!(ERC20_CONTRACT_CLASS_HASH));
+    let erc20_class_hash = ClassHash(*ERC20_CONTRACT_CLASS_HASH);
     state
         .class_hash_to_class
-        .insert(erc20_class_hash, get_contract_class(ERC20_CONTRACT_PATH));
+        .insert(erc20_class_hash, (*ERC20_CONTRACT).clone());
     state.address_to_class_hash.insert(
-        ContractAddress(patricia_key!(FEE_ERC20_CONTRACT_ADDRESS)),
+        ContractAddress(patricia_key!(*FEE_TOKEN_ADDRESS)),
         erc20_class_hash,
     );
 }
 
 fn deploy_universal_deployer_contract(state: &mut DictStateReader) {
-    let universal_deployer_class_hash = ClassHash(stark_felt!(UNIVERSAL_DEPLOYER_CLASS_HASH));
-    state.class_hash_to_class.insert(
-        universal_deployer_class_hash,
-        get_contract_class(UNIVERSAL_DEPLOYER_CONTRACT_PATH),
-    );
+    let universal_deployer_class_hash = ClassHash(*UDC_CLASS_HASH);
+    state
+        .class_hash_to_class
+        .insert(universal_deployer_class_hash, (*UDC_CONTRACT).clone());
     state.address_to_class_hash.insert(
-        ContractAddress(patricia_key!(UNIVERSAL_DEPLOYER_CONTRACT_ADDRESS)),
+        ContractAddress(patricia_key!(*UDC_ADDRESS)),
         universal_deployer_class_hash,
     );
 }

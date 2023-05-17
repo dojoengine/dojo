@@ -76,14 +76,11 @@ impl StarknetWrapper {
         let mut state = DictStateReader::default();
         let pending_state = CachedState::new(state.clone());
 
-        let predeployed_accounts = PredeployedAccounts::generate(
+        let predeployed_accounts = PredeployedAccounts::initialize(
             config.total_accounts,
             config.seed,
-            stark_felt!(DEFAULT_PREFUNDED_ACCOUNT_BALANCE),
-            config
-                .account_path
-                .clone()
-                .unwrap_or(PredeployedAccounts::default_account_class_path()),
+            *DEFAULT_PREFUNDED_ACCOUNT_BALANCE,
+            config.account_path.clone(),
         )
         .expect("should be able to generate accounts");
         predeployed_accounts.deploy_accounts(&mut state);

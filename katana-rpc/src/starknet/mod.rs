@@ -147,7 +147,7 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
             .block(block_id)
             .ok_or(Error::from(StarknetApiError::BlockNotFound))?;
 
-        let sequencer_address = FieldElement::from_hex_be(SEQUENCER_ADDRESS).unwrap();
+        let sequencer_address = FieldElement::from(*SEQUENCER_ADDRESS);
         let transactions = block
             .transactions()
             .iter()
@@ -209,7 +209,7 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
             .block(block_id)
             .ok_or(Error::from(StarknetApiError::BlockNotFound))?;
 
-        let sequencer_address = FieldElement::from_hex_be(SEQUENCER_ADDRESS).unwrap();
+        let sequencer_address = FieldElement::from(*SEQUENCER_ADDRESS);
         let transactions = block
             .transactions()
             .iter()

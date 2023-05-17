@@ -9,7 +9,7 @@ use starknet_api::{
 };
 
 use crate::{
-    constants::{DEFAULT_GAS_PRICE, FEE_ERC20_CONTRACT_ADDRESS, SEQUENCER_ADDRESS},
+    constants::{DEFAULT_GAS_PRICE, FEE_TOKEN_ADDRESS, SEQUENCER_ADDRESS},
     starknet::StarknetConfig,
 };
 
@@ -23,8 +23,8 @@ impl Base for BlockContext {
             chain_id: ChainId("KATANA".to_string()),
             block_number: BlockNumber::default(),
             block_timestamp: BlockTimestamp::default(),
-            sequencer_address: ContractAddress(patricia_key!(SEQUENCER_ADDRESS)),
-            fee_token_address: ContractAddress(patricia_key!(FEE_ERC20_CONTRACT_ADDRESS)),
+            sequencer_address: ContractAddress(patricia_key!(*SEQUENCER_ADDRESS)),
+            fee_token_address: ContractAddress(patricia_key!(*FEE_TOKEN_ADDRESS)),
             vm_resource_fee_cost: HashMap::from([
                 (String::from("n_steps"), 1_f64),
                 (String::from("pedersen"), 1_f64),
@@ -47,8 +47,8 @@ pub fn block_context_from_config(config: &StarknetConfig) -> BlockContext {
         block_number: BlockNumber::default(),
         chain_id: ChainId(config.chain_id.clone()),
         block_timestamp: BlockTimestamp::default(),
-        sequencer_address: ContractAddress(patricia_key!(SEQUENCER_ADDRESS)),
-        fee_token_address: ContractAddress(patricia_key!(FEE_ERC20_CONTRACT_ADDRESS)),
+        sequencer_address: ContractAddress(patricia_key!(*SEQUENCER_ADDRESS)),
+        fee_token_address: ContractAddress(patricia_key!(*FEE_TOKEN_ADDRESS)),
         vm_resource_fee_cost: HashMap::from([
             (String::from("n_steps"), 1_f64),
             (String::from("pedersen"), 1_f64),

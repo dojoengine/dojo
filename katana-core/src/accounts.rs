@@ -15,7 +15,7 @@ use starknet_api::{
 };
 
 use crate::{
-    constants::{FEE_ERC20_CONTRACT_ADDRESS, TEST_ACCOUNT_CONTRACT_PATH},
+    constants::{DEFAULT_ACCOUNT_CONTRACT, DEFAULT_ACCOUNT_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS},
     state::DictStateReader,
     util::compute_legacy_class_hash,
 };
@@ -66,7 +66,7 @@ impl Account {
         // set the balance in the FEE CONTRACT
         state.storage_view.insert(
             (
-                ContractAddress(patricia_key!(FEE_ERC20_CONTRACT_ADDRESS)),
+                ContractAddress(patricia_key!(*FEE_TOKEN_ADDRESS)),
                 get_storage_var_address("ERC20_balances", &[*self.account_address.0.key()])
                     .unwrap(),
             ),
@@ -94,35 +94,41 @@ pub struct PredeployedAccounts {
     pub seed: [u8; 32],
     pub accounts: Vec<Account>,
     pub initial_balance: StarkFelt,
-    pub contract_class_path: PathBuf,
+    pub contract_class: ContractClass,
 }
 
 impl PredeployedAccounts {
-    pub fn generate(
+    pub fn initialize(
         total: u8,
         seed: [u8; 32],
         initial_balance: StarkFelt,
-        contract_class_path: PathBuf,
+        contract_class_path: Option<PathBuf>,
     ) -> Result<Self> {
-        let contract_class_str = fs::read_to_string(&contract_class_path)?;
-        let contract_class = serde_json::from_str::<ContractClassV0>(&contract_class_str)
-            .expect("can deserialize contract class");
-        let class_hash = compute_legacy_class_hash(&contract_class_str)
-            .expect("can compute legacy contract class hash");
+        let (class_hash, contract_class) = if let Some(path) = contract_class_path {
+            let contract_class_str = fs::read_to_string(path)?;
+            let contract_class = serde_json::from_str::<ContractClassV0>(&contract_class_str)
+                .expect("can deserialize contract class");
+            let class_hash = compute_legacy_class_hash(&contract_class_str)
+                .expect("can compute legacy contract class hash");
+
+            (class_hash, ContractClass::V0(contract_class))
+        } else {
+            Self::default_account_class()
+        };
 
         let accounts = Self::generate_accounts(
             total,
             seed,
             initial_balance,
             class_hash,
-            ContractClass::V0(contract_class),
+            contract_class.clone(),
         );
 
         Ok(Self {
             seed,
             accounts,
+            contract_class,
             initial_balance,
-            contract_class_path,
         })
     }
 
@@ -185,10 +191,11 @@ impl PredeployedAccounts {
         accounts
     }
 
-    pub fn default_account_class_path() -> PathBuf {
-        [env!("CARGO_MANIFEST_DIR"), TEST_ACCOUNT_CONTRACT_PATH]
-            .iter()
-            .collect()
+    pub fn default_account_class() -> (ClassHash, ContractClass) {
+        (
+            ClassHash(*DEFAULT_ACCOUNT_CONTRACT_CLASS_HASH),
+            (*DEFAULT_ACCOUNT_CONTRACT).clone(),
+        )
     }
 }
 

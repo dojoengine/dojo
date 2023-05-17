@@ -2,9 +2,7 @@ use blockifier::abi::abi_utils::{get_storage_var_address, selector_from_name};
 use blockifier::transaction::{
     account_transaction::AccountTransaction, transaction_execution::Transaction,
 };
-use katana_core::constants::{
-    DEFAULT_GAS_PRICE, FEE_ERC20_CONTRACT_ADDRESS, TEST_ACCOUNT_CONTRACT_PATH,
-};
+use katana_core::constants::{DEFAULT_GAS_PRICE, FEE_TOKEN_ADDRESS, TEST_ACCOUNT_CONTRACT_PATH};
 use katana_core::starknet::{StarknetConfig, StarknetWrapper};
 use starknet::core::types::TransactionStatus;
 use starknet_api::calldata;
@@ -85,12 +83,12 @@ fn test_add_transaction() {
 
     let entry_point_selector = selector_from_name("transfer");
     let execute_calldata = calldata![
-        stark_felt!(FEE_ERC20_CONTRACT_ADDRESS), // Contract address.
-        entry_point_selector.0,                  // EP selector.
-        stark_felt!(3),                          // Calldata length.
-        *b.account_address.0.key(),              // Calldata: num.
-        stark_felt!("0x99"),                     // Calldata: num.
-        stark_felt!(0x0)                         // Calldata: num.
+        *FEE_TOKEN_ADDRESS,         // Contract address.
+        entry_point_selector.0,     // EP selector.
+        stark_felt!(3),             // Calldata length.
+        *b.account_address.0.key(), // Calldata: num.
+        stark_felt!("0x99"),        // Calldata: num.
+        stark_felt!(0x0)            // Calldata: num.
     ];
 
     starknet
@@ -133,7 +131,7 @@ fn test_add_transaction() {
     // CHECK THAT THE BALANCE IS UPDATED
     //
 
-    println!("FEE Address : {}", stark_felt!(FEE_ERC20_CONTRACT_ADDRESS));
+    println!("FEE Address : {}", *FEE_TOKEN_ADDRESS);
     println!(
         "STORAGE ADDR : {}",
         get_storage_var_address("ERC20_balances", &[*a.account_address.0.key()])
