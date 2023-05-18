@@ -52,6 +52,7 @@ camino = { version = "1.1.2", features = ["serde1"] }
 chrono = { version = "0.4.24", features = ["serde"] }
 clap = { version = "4.2", features = ["derive"] }
 colored = "2"
+env_logger = "0.10.0"
 indoc = "1.0.7"
 itertools = "0.10.3"
 log = "0.4.17"
@@ -72,6 +73,7 @@ tokio = { version = "1.16", features = ["full"] }
 toml = "0.4.2"
 tracing = "0.1"
 tracing-subscriber = "0.3.16"
+yansi = "0.5.1"
 
 [patch."https://github.com/starkware-libs/blockifier"]
 blockifier = { git = "https://github.com/dojoengine/blockifier", branch = "dev" }

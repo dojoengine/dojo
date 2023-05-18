@@ -7647,6 +7647,8 @@ dependencies = [
  "dojo-lang",
  "dojo-world",
  "dotenv",
+ "env_logger 0.10.0",
+ "log",
  "scarb",
  "semver 1.0.17",
  "serde",
@@ -7656,8 +7658,6 @@ dependencies = [
  "thiserror",
  "tokio",
  "toml 0.4.10",
- "tracing",
- "tracing-subscriber",
  "url",
 ]
 
