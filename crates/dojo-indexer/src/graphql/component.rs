@@ -1,60 +1,34 @@
-use juniper::{graphql_object, FieldResult};
+use async_graphql::{ComplexObject, Context, Result, SimpleObject};
+use chrono::{DateTime, Utc};
+use serde::Deserialize;
+use sqlx::{Pool, Sqlite};
 
-use super::server::Context;
+use super::entity_state;
 
+#[derive(SimpleObject, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[graphql(complex)]
 pub struct Component {
     pub id: String,
-    pub name: Option<String>,
+    pub name: String,
     pub properties: Option<String>,
     pub address: String,
     pub class_hash: String,
     pub transaction_hash: String,
 }
 
-#[graphql_object(context = Context)]
+#[ComplexObject]
 impl Component {
-    pub fn id(&self) -> &str {
-        &self.id
-    }
-
-    pub fn name(&self) -> &Option<String> {
-        &self.name
-    }
-
-    pub fn properties(&self) -> &Option<String> {
-        &self.properties
-    }
-
-    pub fn address(&self) -> &str {
-        &self.address
-    }
-
-    pub fn class_hash(&self) -> &str {
-        &self.class_hash
-    }
-
-    pub fn transaction_hash(&self) -> &str {
-        &self.transaction_hash
-    }
-
-    pub async fn entity_state_updates(
+    async fn entity_states<'ctx>(
         &self,
-        context: &Context,
-    ) -> FieldResult<Vec<super::entity_state_update::EntityStateUpdate>> {
-        super::entity_state_update::entity_state_updates_by_component(context, self.id.clone())
-            .await
-    }
-
-    pub async fn entity_states(
-        &self,
-        context: &Context,
-    ) -> FieldResult<Vec<super::entity_state::EntityState>> {
-        super::entity_state::entity_states_by_component(context, self.id.clone()).await
+        context: &Context<'ctx>,
+    ) -> Result<Vec<entity_state::EntityState>> {
+        entity_state::entity_states_by_component(context, self.id.clone()).await
     }
 }
 
-pub async fn component(context: &Context, id: String) -> FieldResult<Component> {
-    let mut conn = context.pool.acquire().await.unwrap();
+pub async fn component<'ctx>(context: &Context<'ctx>, id: String) -> Result<Component> {
+    let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
 
     let component = sqlx::query_as!(
         Component,
@@ -69,8 +43,8 @@ pub async fn component(context: &Context, id: String) -> FieldResult<Component> 
     Ok(component)
 }
 
-pub async fn components(context: &Context) -> FieldResult<Vec<Component>> {
-    let mut conn = context.pool.acquire().await.unwrap();
+pub async fn components<'ctx>(context: &Context<'ctx>) -> Result<Vec<Component>> {
+    let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
 
     let components = sqlx::query_as!(
         Component,

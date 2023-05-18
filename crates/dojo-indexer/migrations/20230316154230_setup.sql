@@ -7,7 +7,7 @@ INSERT INTO indexer (head) VALUES (0);
 
 CREATE TABLE components (
     id TEXT NOT NULL PRIMARY KEY,
-    name TEXT,
+    name TEXT NOT NULL,
     properties TEXT,
     address TEXT NOT NULL,
     class_hash TEXT NOT NULL,
@@ -32,7 +32,7 @@ CREATE TABLE systems (
 
 CREATE TABLE entities (
     id TEXT NOT NULL PRIMARY KEY,
-    name TEXT,
+    name TEXT NOT NULL,
     transaction_hash TEXT NOT NULL,
     partition_id TEXT NOT NULL,
     keys TEXT,

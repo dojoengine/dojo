@@ -1,8 +1,13 @@
-use juniper::{graphql_object, FieldResult};
+use async_graphql::{ComplexObject, Context, Result, SimpleObject};
+use chrono::{DateTime, Utc};
+use serde::Deserialize;
+use sqlx::{Pool, Sqlite};
 
-use super::server::Context;
 use super::system;
 
+#[derive(SimpleObject, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[graphql(complex)]
 pub struct SystemCall {
     pub id: i64,
     pub system_id: String,
@@ -10,31 +15,15 @@ pub struct SystemCall {
     pub data: Option<String>,
 }
 
-#[graphql_object(context = Context)]
+#[ComplexObject]
 impl SystemCall {
-    pub fn id(&self) -> i32 {
-        i32::try_from(self.id).unwrap()
-    }
-
-    pub fn system_id(&self) -> &str {
-        &self.system_id
-    }
-
-    pub fn transaction_hash(&self) -> &str {
-        &self.transaction_hash
-    }
-
-    pub fn data(&self) -> &Option<String> {
-        &self.data
-    }
-
-    async fn system(&self, context: &Context) -> FieldResult<system::System> {
-        system::system(context, self.system_id.clone()).await
+    async fn system<'ctx>(&self, context: &Context<'ctx>) -> Result<system::System> {
+        system::system(&context, self.system_id.clone()).await
     }
 }
 
-pub async fn system_call(context: &Context, id: i64) -> FieldResult<SystemCall> {
-    let mut conn = context.pool.acquire().await.unwrap();
+pub async fn system_call<'ctx>(context: &Context<'ctx>, id: i64) -> Result<SystemCall> {
+    let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
 
     let system_call = sqlx::query_as!(
         SystemCall,
@@ -49,11 +38,11 @@ pub async fn system_call(context: &Context, id: i64) -> FieldResult<SystemCall> 
     Ok(system_call)
 }
 
-pub async fn system_calls_by_system(
-    context: &Context,
+pub async fn system_calls_by_system<'ctx>(
+    context: &Context<'ctx>,
     system_id: String,
-) -> FieldResult<Vec<SystemCall>> {
-    let mut conn = context.pool.acquire().await.unwrap();
+) -> Result<Vec<SystemCall>> {
+    let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
 
     let system_calls = sqlx::query_as!(
         SystemCall,
