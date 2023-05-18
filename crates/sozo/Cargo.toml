@@ -1,5 +1,5 @@
 [package]
-name = "dojo-cli"
+name = "sozo"
 version = "0.1.0"
 edition = "2021"
 
@@ -34,5 +34,5 @@ tracing-subscriber.workspace = true
 url = "2.2.2"
 
 [[bin]]
-name = "dojo"
+name = "sozo"
 path = "src/cli.rs"

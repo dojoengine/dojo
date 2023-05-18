@@ -1,17 +1,16 @@
 #[system]
 mod Spawn {
     use array::ArrayTrait;
-    use traits::Into;   
+    use traits::Into;
 
     use dojo_examples::components::Position;
     use dojo_examples::components::Moves;
 
     fn execute() {
         let caller = starknet::get_caller_address();
-        let player = commands::set_entity(caller.into(), (
-            Moves { remaining: 10_u8 },
-            Position { x: 0_u32, y: 0_u32 },
-        ));
+        let player = commands::set_entity(
+            caller.into(), (Moves { remaining: 10_u8 }, Position { x: 0_u32, y: 0_u32 }, )
+        );
         return ();
     }
 }
@@ -30,10 +29,10 @@ mod Move {
         let caller = starknet::get_caller_address();
         let (position, moves) = commands::<Position, Moves>::entity(caller.into());
         let next = next_position(position, direction);
-        let uh = commands::set_entity(caller.into(), (
-            Moves { remaining: moves.remaining - 1_u8 },
-            Position { x: next.x, y: next.y },
-        ));
+        let uh = commands::set_entity(
+            caller.into(),
+            (Moves { remaining: moves.remaining - 1_u8 }, Position { x: next.x, y: next.y }, )
+        );
         return ();
     }
 
@@ -58,6 +57,7 @@ mod tests {
     use core::traits::Into;
     use array::ArrayTrait;
 
+    use dojo_core::auth::systems::{Route, RouteTrait};
     use dojo_core::interfaces::IWorldDispatcherTrait;
     use dojo_core::test_utils::spawn_test_world;
 
@@ -77,10 +77,40 @@ mod tests {
         let mut systems = array::ArrayTrait::<felt252>::new();
         systems.append(SpawnSystem::TEST_CLASS_HASH);
         systems.append(MoveSystem::TEST_CLASS_HASH);
+        // routes
+        let mut routes = array::ArrayTrait::<Route>::new();
+        routes.append(
+            RouteTrait::new(
+                'Move'.into(), // target_id
+                'MovesWriter'.into(), // role_id
+                'Moves'.into(), // resource_id
+            )
+        );
+        routes.append(
+            RouteTrait::new(
+                'Move'.into(), // target_id
+                'PositionWriter'.into(), // role_id
+                'Position'.into(), // resource_id
+            )
+        );
+        routes.append(
+            RouteTrait::new(
+                'Spawn'.into(), // target_id
+                'MovesWriter'.into(), // role_id
+                'Moves'.into(), // resource_id
+            )
+        );
+        routes.append(
+            RouteTrait::new(
+                'Spawn'.into(), // target_id
+                'PositionWriter'.into(), // role_id
+                'Position'.into(), // resource_id
+            )
+        );
 
         // deploy executor, world and register components/systems
-        let world = spawn_test_world(components, systems);
-    
+        let world = spawn_test_world(components, systems, routes);
+
         let spawn_call_data = array::ArrayTrait::<felt252>::new();
         world.execute('Spawn'.into(), spawn_call_data.span());
 
@@ -97,6 +127,4 @@ mod tests {
         assert(*new_position[0] == 1, 'position x is wrong');
         assert(*new_position[1] == 0, 'position y is wrong');
     }
-
 }
-

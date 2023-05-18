@@ -4,7 +4,6 @@ set -e
 BASE_DIR=${XDG_CONFIG_HOME:-$HOME}
 DOJO_DIR=${DOJO_DIR-"$BASE_DIR/.dojo"}
 DOJO_BIN_DIR="$DOJO_DIR/bin"
-DOJO_MAN_DIR="$DOJO_DIR/share/man/man1"
 
 BINS=(dojo)
 
@@ -133,7 +132,8 @@ main() {
     # Compute the URL of the release tarball in the Dojo repository.
     RELEASE_URL="https://github.com/${DOJOUP_REPO}/releases/download/${DOJOUP_TAG}/"
     BIN_ARCHIVE_URL="${RELEASE_URL}dojo_${DOJOUP_VERSION}_${PLATFORM}_${ARCHITECTURE}.$EXT"
-    MAN_TARBALL_URL="${RELEASE_URL}dojo_man_${DOJOUP_VERSION}.tar.gz"
+
+    echo $BIN_ARCHIVE_URL
 
     # Download and extract the binaries archive
     say "downloading latest dojo"
@@ -144,15 +144,6 @@ main() {
       rm -f "$tmp"
     else
       ensure download "$BIN_ARCHIVE_URL" | ensure tar -xzC "$DOJO_BIN_DIR"
-    fi
-
-    # Optionally download the manuals
-    if check_cmd tar; then
-      say "downloading manpages"
-      mkdir -p "$DOJO_MAN_DIR"
-      download "$MAN_TARBALL_URL" | tar -xzC "$DOJO_MAN_DIR"
-    else
-      say 'skipping manpage download: missing "tar"'
     fi
 
     for bin in "${BINS[@]}"; do
@@ -206,13 +197,6 @@ EOF
     # Build the repo and install the binaries locally to the .dojo bin directory.
     # --root appends /bin to the directory it is given, so we pass DOJO_DIR.
     ensure cargo install --path ./dojo --bin dojo --locked --force --root "$DOJO_DIR"
-
-    # If help2man is installed, use it to add Dojo man pages.
-    if check_cmd help2man; then
-      for bin in "${BINS[@]}"; do
-        help2man -N "$DOJO_BIN_DIR/$bin" > "$DOJO_MAN_DIR/$bin.1"
-      done
-    fi
 
     say "done"
   fi
