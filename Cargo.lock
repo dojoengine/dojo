@@ -3074,38 +3074,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
-name = "dojo-cli"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "cairo-lang-compiler",
- "cairo-lang-filesystem",
- "cairo-lang-plugins",
- "cairo-lang-project",
- "cairo-lang-sierra",
- "cairo-lang-sierra-to-casm",
- "cairo-lang-starknet",
- "camino",
- "clap",
- "dojo-lang",
- "dojo-world",
- "dotenv",
- "scarb",
- "semver 1.0.17",
- "serde",
- "serde_json",
- "smol_str",
- "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?branch=dev/jsonrpc_0_3_0)",
- "thiserror",
- "tokio",
- "toml 0.4.10",
- "tracing",
- "tracing-subscriber",
- "url",
-]
-
-[[package]]
 name = "dojo-indexer"
 version = "0.1.0"
 dependencies = [
@@ -5377,7 +5345,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "katana-cli"
+name = "katana"
 version = "0.1.0"
 dependencies = [
  "assert_matches",
@@ -7659,6 +7627,38 @@ dependencies = [
  "log",
  "rand 0.8.5",
  "sha-1",
+]
+
+[[package]]
+name = "sozo"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cairo-lang-compiler",
+ "cairo-lang-filesystem",
+ "cairo-lang-plugins",
+ "cairo-lang-project",
+ "cairo-lang-sierra",
+ "cairo-lang-sierra-to-casm",
+ "cairo-lang-starknet",
+ "camino",
+ "clap",
+ "dojo-lang",
+ "dojo-world",
+ "dotenv",
+ "scarb",
+ "semver 1.0.17",
+ "serde",
+ "serde_json",
+ "smol_str",
+ "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?branch=dev/jsonrpc_0_3_0)",
+ "thiserror",
+ "tokio",
+ "toml 0.4.10",
+ "tracing",
+ "tracing-subscriber",
+ "url",
 ]
 
 [[package]]

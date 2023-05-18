@@ -3,17 +3,17 @@
 resolver = "2"
 
 members = [
+    "crates/bevy-dojo",
     "crates/dojo-lang",
-    "crates/dojo-cli",
     "crates/dojo-indexer",
     "crates/dojo-language-server",
     "crates/dojo-world",
     "crates/dojo-test-runner",
     "crates/dojo-signers",
-    "crates/bevy-dojo",
-    "crates/katana-cli",
+    "crates/katana",
     "crates/katana-core",
     "crates/katana-rpc",
+    "crates/sozo",
 ]
 
 [workspace.package]

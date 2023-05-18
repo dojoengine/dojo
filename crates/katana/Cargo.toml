@@ -1,5 +1,5 @@
 [package]
-name = "katana-cli"
+name = "katana"
 version.workspace = true
 edition.workspace = true
 repository.workspace = true
