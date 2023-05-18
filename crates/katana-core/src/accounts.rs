@@ -39,10 +39,10 @@ impl Account {
         contract_class: ContractClass,
     ) -> Self {
         let account_address = calculate_contract_address(
-            ContractAddressSalt(stark_felt!(666)),
+            ContractAddressSalt(stark_felt!(666_u128)),
             class_hash,
             &Calldata(Arc::new(vec![public_key])),
-            ContractAddress(patricia_key!(0)),
+            ContractAddress(patricia_key!(0_u8)),
         )
         .expect("should calculate contract address");
 

@@ -76,10 +76,10 @@ fn test_add_transaction() {
     let execute_calldata = calldata![
         *FEE_TOKEN_ADDRESS,         // Contract address.
         entry_point_selector.0,     // EP selector.
-        stark_felt!(3),             // Calldata length.
+        stark_felt!(3_u8),          // Calldata length.
         *b.account_address.0.key(), // Calldata: num.
         stark_felt!("0x99"),        // Calldata: num.
-        stark_felt!(0x0)            // Calldata: num.
+        stark_felt!(0_u8)           // Calldata: num.
     ];
 
     starknet

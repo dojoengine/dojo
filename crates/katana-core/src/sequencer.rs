@@ -112,7 +112,7 @@ impl Sequencer for KatanaSequencer {
             contract_address,
             contract_address_salt,
             constructor_calldata,
-            nonce: Nonce(stark_felt!(0)),
+            nonce: Nonce(stark_felt!(0_u8)),
             signature,
             transaction_hash: tx_hash,
         });

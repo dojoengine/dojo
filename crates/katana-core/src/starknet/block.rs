@@ -84,15 +84,15 @@ impl StarknetBlock {
     pub fn compute_block_hash(&self) -> BlockHash {
         BlockHash(pedersen_hash_array(&[
             stark_felt!(self.inner.header.block_number.0), // block number
-            stark_felt!(0),                                // global_state_root
+            stark_felt!(0_u8),                             // global_state_root
             self.inner.header.state_root.0,                // sequencer_address
             *self.inner.header.sequencer.0.key(),          // block_timestamp
             stark_felt!(self.inner.header.timestamp.0),    // transaction_count
             stark_felt!(self.inner.body.transactions.len() as u64), // transaction_commitment
-            stark_felt!(0),                                // event_count
-            stark_felt!(0),                                // event_commitment
-            stark_felt!(0),                                // protocol_version
-            stark_felt!(0),                                // extra_data
+            stark_felt!(0_u8),                             // event_count
+            stark_felt!(0_u8),                             // event_commitment
+            stark_felt!(0_u8),                             // protocol_version
+            stark_felt!(0_u8),                             // extra_data
             stark_felt!(self.parent_hash().0),             // parent_block_hash
         ]))
     }
