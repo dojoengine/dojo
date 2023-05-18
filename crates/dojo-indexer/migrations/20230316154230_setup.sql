@@ -11,7 +11,8 @@ CREATE TABLE components (
     properties TEXT,
     address TEXT NOT NULL,
     class_hash TEXT NOT NULL,
-    transaction_hash TEXT NOT NULL
+    transaction_hash TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE system_calls (
@@ -19,15 +20,17 @@ CREATE TABLE system_calls (
     data TEXT,
     transaction_hash TEXT NOT NULL,
     system_id TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (system_id) REFERENCES systems(id)
-);
+);  
 
 CREATE TABLE systems (
     id TEXT NOT NULL PRIMARY KEY,
     name TEXT,
     address TEXT NOT NULL,
     class_hash TEXT NOT NULL,
-    transaction_hash TEXT NOT NULL
+    transaction_hash TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE entities (
@@ -36,27 +39,18 @@ CREATE TABLE entities (
     transaction_hash TEXT NOT NULL,
     partition_id TEXT NOT NULL,
     keys TEXT,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_entities_partition_id ON entities (partition_id);
 CREATE INDEX idx_entities_keys ON entities (keys);
 
-CREATE TABLE entity_state_updates (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    entity_id TEXT NOT NULL,
-    component_id TEXT NOT NULL,
-    transaction_hash TEXT NOT NULL,
-    data TEXT,
-    FOREIGN KEY (entity_id) REFERENCES entities(id),
-    FOREIGN KEY (component_id) REFERENCES components(id)
-);
-    
 CREATE TABLE entity_states (
     entity_id TEXT NOT NULL,
     component_id TEXT NOT NULL,
     data TEXT,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (entity_id) REFERENCES entities(id),
     FOREIGN KEY (component_id) REFERENCES components(id),
     UNIQUE (entity_id, component_id)

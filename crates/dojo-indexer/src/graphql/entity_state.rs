@@ -12,21 +12,23 @@ pub struct EntityState {
     pub entity_id: String,
     pub component_id: String,
     pub data: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 #[ComplexObject]
 impl EntityState {
-    async fn entity<'ctx>(&self, context: &Context<'ctx>) -> Result<entity::Entity> {
+    async fn entity(&self, context: &Context<'_>) -> Result<entity::Entity> {
         entity::entity(context, self.entity_id.clone()).await
     }
 
-    async fn component<'ctx>(&self, context: &Context<'ctx>) -> Result<component::Component> {
+    async fn component(&self, context: &Context<'_>) -> Result<component::Component> {
         component::component(context, self.component_id.clone()).await
     }
 }
 
-pub async fn entity_states_by_entity<'ctx>(
-    context: &Context<'ctx>,
+pub async fn entity_states_by_entity(
+    context: &Context<'_>,
     entity_id: String,
 ) -> Result<Vec<EntityState>> {
     let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
@@ -34,7 +36,13 @@ pub async fn entity_states_by_entity<'ctx>(
     let entity_states = sqlx::query_as!(
         EntityState,
         r#"
-            SELECT * FROM entity_states WHERE entity_id = $1
+            SELECT
+                entity_id,
+                component_id,
+                data,
+                created_at as "created_at: _",
+                updated_at as "updated_at: _"
+            FROM entity_states WHERE entity_id = $1
         "#,
         entity_id
     )
@@ -44,8 +52,8 @@ pub async fn entity_states_by_entity<'ctx>(
     Ok(entity_states)
 }
 
-pub async fn entity_states_by_component<'ctx>(
-    context: &Context<'ctx>,
+pub async fn entity_states_by_component(
+    context: &Context<'_>,
     component_id: String,
 ) -> Result<Vec<EntityState>> {
     let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
@@ -53,7 +61,13 @@ pub async fn entity_states_by_component<'ctx>(
     let entity_states = sqlx::query_as!(
         EntityState,
         r#"
-            SELECT * FROM entity_states WHERE component_id = $1
+            SELECT
+                entity_id,
+                component_id,
+                data,
+                created_at as "created_at: _",
+                updated_at as "updated_at: _"
+            FROM entity_states WHERE component_id = $1
         "#,
         component_id
     )

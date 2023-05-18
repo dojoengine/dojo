@@ -16,7 +16,6 @@ pub struct Entity {
     pub keys: Option<String>,
     pub transaction_hash: String,
     pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
 }
 
 #[ComplexObject]
@@ -26,7 +25,7 @@ impl Entity {
     }
 }
 
-pub async fn entity<'ctx>(context: &Context<'ctx>, id: String) -> Result<Entity> {
+pub async fn entity(context: &Context<'_>, id: String) -> Result<Entity> {
     let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
 
     // timestamp workaround: https://github.com/launchbadge/sqlx/issues/598
@@ -39,8 +38,7 @@ pub async fn entity<'ctx>(context: &Context<'ctx>, id: String) -> Result<Entity>
                 partition_id,
                 keys,
                 transaction_hash,
-                created_at as "created_at: _",
-                updated_at as "updated_at: _"
+                created_at as "created_at: _"
             FROM entities 
             WHERE id = $1
         "#,
@@ -52,8 +50,8 @@ pub async fn entity<'ctx>(context: &Context<'ctx>, id: String) -> Result<Entity>
     Ok(entity)
 }
 
-pub async fn entities<'ctx>(
-    context: &Context<'ctx>,
+pub async fn entities(
+    context: &Context<'_>,
     partition_id: String,
     keys: Option<Vec<String>>,
 ) -> Result<Vec<Entity>> {
@@ -80,8 +78,7 @@ async fn query_by_keys(
                 partition_id,
                 keys,
                 transaction_hash,
-                created_at as "created_at: _",
-                updated_at as "updated_at: _"
+                created_at as "created_at: _"
             FROM entities where partition_id = $1 AND keys LIKE $2
         "#,
         partition_id,
@@ -106,8 +103,7 @@ async fn query_by_partition(
                 partition_id,
                 keys,
                 transaction_hash,
-                created_at as "created_at: _",
-                updated_at as "updated_at: _"
+                created_at as "created_at: _"
             FROM entities where partition_id = $1
         "#,
         partition_id,

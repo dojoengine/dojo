@@ -18,12 +18,12 @@ pub struct Event {
 
 #[ComplexObject]
 impl Event {
-    async fn system_call<'ctx>(&self, context: &Context<'ctx>) -> Result<system_call::SystemCall> {
-        system_call::system_call(&context, self.system_call_id).await
+    async fn system_call(&self, context: &Context<'_>) -> Result<system_call::SystemCall> {
+        system_call::system_call(context, self.system_call_id).await
     }
 }
 
-pub async fn event<'ctx>(context: &Context<'ctx>, id: String) -> Result<Event> {
+pub async fn event(context: &Context<'_>, id: String) -> Result<Event> {
     let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
 
     let event = sqlx::query_as!(
@@ -47,7 +47,7 @@ pub async fn event<'ctx>(context: &Context<'ctx>, id: String) -> Result<Event> {
     Ok(event)
 }
 
-pub async fn events<'ctx>(context: &Context<'ctx>, keys: &Vec<String>) -> Result<Vec<Event>> {
+pub async fn events(context: &Context<'_>, keys: &[String]) -> Result<Vec<Event>> {
     let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
     let keys_str = format!("{}%", keys.join(","));
 

@@ -16,40 +16,40 @@ pub struct Query;
 
 #[Object]
 impl Query {
-    async fn component<'ctx>(&self, ctx: &Context<'ctx>, id: String) -> Result<Component> {
-        component::component(&ctx, id).await
+    async fn component(&self, ctx: &Context<'_>, id: String) -> Result<Component> {
+        component::component(ctx, id).await
     }
 
-    async fn components<'ctx>(&self, ctx: &Context<'ctx>) -> Result<Vec<Component>> {
-        component::components(&ctx).await
+    async fn components(&self, ctx: &Context<'_>) -> Result<Vec<Component>> {
+        component::components(ctx).await
     }
 
-    async fn system<'ctx>(&self, ctx: &Context<'ctx>, id: String) -> Result<System> {
-        system::system(&ctx, id).await
+    async fn system(&self, ctx: &Context<'_>, id: String) -> Result<System> {
+        system::system(ctx, id).await
     }
 
-    async fn systems<'ctx>(&self, ctx: &Context<'ctx>) -> Result<Vec<System>> {
-        system::systems(&ctx).await
+    async fn systems(&self, ctx: &Context<'_>) -> Result<Vec<System>> {
+        system::systems(ctx).await
     }
 
-    async fn entity<'ctx>(&self, ctx: &Context<'ctx>, id: String) -> Result<Entity> {
-        entity::entity(&ctx, id).await
+    async fn entity(&self, ctx: &Context<'_>, id: String) -> Result<Entity> {
+        entity::entity(ctx, id).await
     }
 
-    async fn entities<'ctx>(
+    async fn entities(
         &self,
-        ctx: &Context<'ctx>,
+        ctx: &Context<'_>,
         partition_id: String,
         keys: Option<Vec<String>>,
     ) -> Result<Vec<Entity>> {
-        entity::entities(&ctx, partition_id, keys).await
+        entity::entities(ctx, partition_id, keys).await
     }
 
-    async fn event<'ctx>(&self, ctx: &Context<'ctx>, id: String) -> Result<Event> {
-        event::event(&ctx, id).await
+    async fn event(&self, ctx: &Context<'_>, id: String) -> Result<Event> {
+        event::event(ctx, id).await
     }
 
-    async fn events<'ctx>(&self, ctx: &Context<'ctx>, keys: Vec<String>) -> Result<Vec<Event>> {
-        event::events(&ctx, &keys).await
+    async fn events(&self, ctx: &Context<'_>, keys: Vec<String>) -> Result<Vec<Event>> {
+        event::events(ctx, &keys).await
     }
 }

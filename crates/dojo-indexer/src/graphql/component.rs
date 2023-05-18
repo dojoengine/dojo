@@ -15,25 +15,31 @@ pub struct Component {
     pub address: String,
     pub class_hash: String,
     pub transaction_hash: String,
+    pub created_at: DateTime<Utc>,
 }
 
 #[ComplexObject]
 impl Component {
-    async fn entity_states<'ctx>(
-        &self,
-        context: &Context<'ctx>,
-    ) -> Result<Vec<entity_state::EntityState>> {
+    async fn entity_states(&self, context: &Context<'_>) -> Result<Vec<entity_state::EntityState>> {
         entity_state::entity_states_by_component(context, self.id.clone()).await
     }
 }
 
-pub async fn component<'ctx>(context: &Context<'ctx>, id: String) -> Result<Component> {
+pub async fn component(context: &Context<'_>, id: String) -> Result<Component> {
     let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
 
     let component = sqlx::query_as!(
         Component,
         r#"
-            SELECT * FROM components WHERE id = $1
+            SELECT 
+                id,
+                name,
+                properties,
+                address,
+                class_hash,
+                transaction_hash,
+                created_at as "created_at: _"
+            FROM components WHERE id = $1
         "#,
         id
     )
@@ -43,13 +49,21 @@ pub async fn component<'ctx>(context: &Context<'ctx>, id: String) -> Result<Comp
     Ok(component)
 }
 
-pub async fn components<'ctx>(context: &Context<'ctx>) -> Result<Vec<Component>> {
+pub async fn components(context: &Context<'_>) -> Result<Vec<Component>> {
     let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
 
     let components = sqlx::query_as!(
         Component,
         r#"
-            SELECT * FROM components
+            SELECT 
+                id,
+                name,
+                properties,
+                address,
+                class_hash,
+                transaction_hash,
+                created_at as "created_at: _"
+            FROM components
         "#
     )
     .fetch_all(&mut conn)

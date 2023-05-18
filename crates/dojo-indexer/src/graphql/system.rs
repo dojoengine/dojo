@@ -14,25 +14,30 @@ pub struct System {
     pub address: String,
     pub class_hash: String,
     pub transaction_hash: String,
+    pub created_at: DateTime<Utc>,
 }
 
 #[ComplexObject]
 impl System {
-    async fn system_calls<'ctx>(
-        &self,
-        context: &Context<'ctx>,
-    ) -> Result<Vec<system_call::SystemCall>> {
+    async fn system_calls(&self, context: &Context<'_>) -> Result<Vec<system_call::SystemCall>> {
         system_call::system_calls_by_system(context, self.id.clone()).await
     }
 }
 
-pub async fn system<'ctx>(context: &Context<'ctx>, id: String) -> Result<System> {
+pub async fn system(context: &Context<'_>, id: String) -> Result<System> {
     let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
 
     let system = sqlx::query_as!(
         System,
         r#"
-            SELECT * FROM systems WHERE id = $1
+            SELECT
+                id,
+                name,
+                address,
+                class_hash,
+                transaction_hash,
+                created_at as "created_at: _"
+            FROM systems WHERE id = $1
         "#,
         id
     )
@@ -42,13 +47,20 @@ pub async fn system<'ctx>(context: &Context<'ctx>, id: String) -> Result<System>
     Ok(system)
 }
 
-pub async fn systems<'ctx>(context: &Context<'ctx>) -> Result<Vec<System>> {
+pub async fn systems(context: &Context<'_>) -> Result<Vec<System>> {
     let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
 
     let systems = sqlx::query_as!(
         System,
         r#"
-            SELECT * FROM systems
+            SELECT
+                id,
+                name,
+                address,
+                class_hash,
+                transaction_hash,
+                created_at as "created_at: _"
+            FROM systems
         "#
     )
     .fetch_all(&mut conn)
