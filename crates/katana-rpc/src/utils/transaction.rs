@@ -1,21 +1,18 @@
 use std::str::FromStr;
 
 use anyhow::{Ok, Result};
-use starknet::{
-    core::{crypto::compute_hash_on_elements, types::FieldElement},
-    providers::jsonrpc::models::{
-        DeclareTransaction, DeclareTransactionV1, DeclareTransactionV2, DeployAccountTransaction,
-        InvokeTransaction, InvokeTransactionV1, L1HandlerTransaction, Transaction,
-    },
+use starknet::core::crypto::compute_hash_on_elements;
+use starknet::core::types::FieldElement;
+use starknet::providers::jsonrpc::models::{
+    DeclareTransaction, DeclareTransactionV1, DeclareTransactionV2, DeployAccountTransaction,
+    InvokeTransaction, InvokeTransactionV1, L1HandlerTransaction, Transaction,
 };
-use starknet_api::{
-    hash::StarkFelt,
-    transaction::{
-        DeclareTransaction as InnerDeclareTransaction,
-        DeployAccountTransaction as InnerDeployAccountTransaction,
-        InvokeTransaction as InnerInvokeTransaction,
-        L1HandlerTransaction as InnerL1HandlerTransaction, Transaction as InnerTransaction,
-    },
+use starknet_api::hash::StarkFelt;
+use starknet_api::transaction::{
+    DeclareTransaction as InnerDeclareTransaction,
+    DeployAccountTransaction as InnerDeployAccountTransaction,
+    InvokeTransaction as InnerInvokeTransaction, L1HandlerTransaction as InnerL1HandlerTransaction,
+    Transaction as InnerTransaction,
 };
 
 const PREFIX_INVOKE: FieldElement = FieldElement::from_mont([
@@ -36,11 +33,7 @@ const PREFIX_DECLARE: FieldElement = FieldElement::from_mont([
 pub fn to_trimmed_hex_string(bytes: &[u8]) -> String {
     let hex_str = hex::encode(bytes);
     let trimmed_hex_str = hex_str.trim_start_matches('0');
-    if trimmed_hex_str.is_empty() {
-        "0x0".to_string()
-    } else {
-        format!("0x{}", trimmed_hex_str)
-    }
+    if trimmed_hex_str.is_empty() { "0x0".to_string() } else { format!("0x{}", trimmed_hex_str) }
 }
 
 pub fn compute_declare_v1_transaction_hash(
@@ -134,12 +127,8 @@ fn convert_l1_handle_to_rpc(
     Ok(L1HandlerTransaction {
         transaction_hash: transaction.transaction_hash.0.into(),
         contract_address: (*transaction.contract_address.0.key()).into(),
-        nonce: <StarkFelt as Into<FieldElement>>::into(transaction.nonce.0)
-            .try_into()
-            .unwrap(),
-        version: <StarkFelt as Into<FieldElement>>::into(transaction.version.0)
-            .try_into()
-            .unwrap(),
+        nonce: <StarkFelt as Into<FieldElement>>::into(transaction.nonce.0).try_into().unwrap(),
+        version: <StarkFelt as Into<FieldElement>>::into(transaction.version.0).try_into().unwrap(),
         entry_point_selector: transaction.entry_point_selector.0.into(),
         calldata: convert_stark_felt_array_to_field_element_array(&transaction.calldata.0)?,
     })

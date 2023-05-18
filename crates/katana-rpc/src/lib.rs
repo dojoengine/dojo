@@ -1,11 +1,12 @@
+use std::net::SocketAddr;
+use std::sync::Arc;
+
 use config::RpcConfig;
-use jsonrpsee::{
-    core::Error,
-    server::{ServerBuilder, ServerHandle},
-};
-use katana::{api::KatanaApiServer, KatanaRpc};
+use jsonrpsee::core::Error;
+use jsonrpsee::server::{ServerBuilder, ServerHandle};
+use katana::api::KatanaApiServer;
+use katana::KatanaRpc;
 use katana_core::sequencer::Sequencer;
-use std::{net::SocketAddr, sync::Arc};
 use tokio::sync::RwLock;
 
 pub mod config;
@@ -13,10 +14,8 @@ mod katana;
 mod starknet;
 mod utils;
 
-use self::starknet::{
-    api::{StarknetApiError, StarknetApiServer},
-    StarknetRpc,
-};
+use self::starknet::api::{StarknetApiError, StarknetApiServer};
+use self::starknet::StarknetRpc;
 
 #[derive(Debug, Clone)]
 pub struct KatanaNodeRpc<S> {
@@ -51,11 +50,9 @@ where
 
 use std::time::Instant;
 
-use jsonrpsee::{
-    server::logger::{Logger, MethodKind, TransportProtocol},
-    tracing::info,
-    types::Params,
-};
+use jsonrpsee::server::logger::{Logger, MethodKind, TransportProtocol};
+use jsonrpsee::tracing::info;
+use jsonrpsee::types::Params;
 
 #[derive(Debug, Clone)]
 pub struct KatanaNodeRpcLogger;

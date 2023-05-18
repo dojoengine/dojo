@@ -1,26 +1,12 @@
 use anyhow::Result;
-use starknet::{
-    core::types::{FeeEstimate, FeeUnit},
-    providers::jsonrpc::models::{BlockId, BlockTag, StateUpdate},
-};
-
-use crate::{
-    starknet::{
-        block::StarknetBlock, event::EmittedEvent, transaction::ExternalFunctionCall,
-        StarknetConfig, StarknetWrapper,
-    },
-    util::starkfelt_to_u128,
-};
-
-use blockifier::{
-    abi::abi_utils::get_storage_var_address,
-    fee::fee_utils::{calculate_l1_gas_by_vm_usage, extract_l1_gas_and_vm_usage},
-    state::state_api::{State, StateReader},
-    transaction::{
-        account_transaction::AccountTransaction, transaction_execution::Transaction,
-        transactions::ExecutableTransaction,
-    },
-};
+use blockifier::abi::abi_utils::get_storage_var_address;
+use blockifier::fee::fee_utils::{calculate_l1_gas_by_vm_usage, extract_l1_gas_and_vm_usage};
+use blockifier::state::state_api::{State, StateReader};
+use blockifier::transaction::account_transaction::AccountTransaction;
+use blockifier::transaction::transaction_execution::Transaction;
+use blockifier::transaction::transactions::ExecutableTransaction;
+use starknet::core::types::{FeeEstimate, FeeUnit};
+use starknet::providers::jsonrpc::models::{BlockId, BlockTag, StateUpdate};
 // use starknet::providers::jsonrpc::models::BlockId;
 use starknet_api::{
     block::{BlockHash, BlockNumber},
@@ -35,15 +21,19 @@ use starknet_api::{
     },
 };
 
+use crate::starknet::block::StarknetBlock;
+use crate::starknet::event::EmittedEvent;
+use crate::starknet::transaction::ExternalFunctionCall;
+use crate::starknet::{StarknetConfig, StarknetWrapper};
+use crate::util::starkfelt_to_u128;
+
 pub struct KatanaSequencer {
     pub starknet: StarknetWrapper,
 }
 
 impl KatanaSequencer {
     pub fn new(config: StarknetConfig) -> Self {
-        Self {
-            starknet: StarknetWrapper::new(config),
-        }
+        Self { starknet: StarknetWrapper::new(config) }
     }
 
     // The starting point of the sequencer
@@ -127,17 +117,13 @@ impl Sequencer for KatanaSequencer {
             transaction_hash: tx_hash,
         });
 
-        tx.execute(
-            &mut self.starknet.pending_state,
-            &self.starknet.block_context,
-        )?;
+        tx.execute(&mut self.starknet.pending_state, &self.starknet.block_context)?;
 
         Ok((tx_hash, contract_address))
     }
 
     fn add_account_transaction(&mut self, transaction: AccountTransaction) -> Result<()> {
-        self.starknet
-            .handle_transaction(Transaction::AccountTransaction(transaction))
+        self.starknet.handle_transaction(Transaction::AccountTransaction(transaction))
     }
 
     fn estimate_fee(
@@ -151,9 +137,7 @@ impl Sequencer for KatanaSequencer {
             )),
         )?;
 
-        let exec_info = self
-            .starknet
-            .simulate_transaction(account_transaction, Some(state))?;
+        let exec_info = self.starknet.simulate_transaction(account_transaction, Some(state))?;
 
         let (l1_gas_usage, vm_resources) = extract_l1_gas_and_vm_usage(&exec_info.actual_resources);
         let l1_gas_by_vm_usage =
@@ -274,14 +258,12 @@ impl Sequencer for KatanaSequencer {
                     _ => continue,
                 }
 
-                let sn_tx = self
-                    .starknet
-                    .transactions
-                    .transactions
-                    .get(&tx.transaction_hash())
-                    .ok_or(blockifier::state::errors::StateError::StateReadError(
-                        "transaction not found".to_string(),
-                    ))?;
+                let sn_tx =
+                    self.starknet.transactions.transactions.get(&tx.transaction_hash()).ok_or(
+                        blockifier::state::errors::StateError::StateReadError(
+                            "transaction not found".to_string(),
+                        ),
+                    )?;
 
                 events.extend(
                     sn_tx
@@ -302,8 +284,9 @@ impl Sequencer for KatanaSequencer {
                             // Check the keys condition
                             match &keys {
                                 Some(keys) => {
-                                    // "Per key (by position), designate the possible values to be matched
-                                    // for events to be returned. Empty array designates 'any' value"
+                                    // "Per key (by position), designate the possible values to be
+                                    // matched for events to be
+                                    // returned. Empty array designates 'any' value"
                                     let keys_to_check =
                                         std::cmp::min(keys.len(), event.content.keys.len());
 
@@ -372,7 +355,7 @@ pub trait Sequencer {
     fn block(&self, block_id: BlockId) -> Option<StarknetBlock>;
 
     fn transaction(&self, hash: &TransactionHash)
-        -> Option<starknet_api::transaction::Transaction>;
+    -> Option<starknet_api::transaction::Transaction>;
 
     fn class_hash_at(
         &mut self,

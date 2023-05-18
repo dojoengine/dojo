@@ -1,38 +1,29 @@
-use std::{
-    fs,
-    path::PathBuf,
-    time::{Duration, SystemTime},
-};
+use std::fs;
+use std::path::PathBuf;
+use std::time::{Duration, SystemTime};
 
 use anyhow::{anyhow, Result};
-use blockifier::{
-    execution::contract_class::{ContractClass, ContractClassV0},
-    state::cached_state::CommitmentStateDiff,
-    transaction::{
-        account_transaction::AccountTransaction,
-        transaction_execution::Transaction as BlockifierTransaction,
-        transactions::DeclareTransaction,
-    },
+use blockifier::execution::contract_class::{
+    ContractClass, ContractClassV0, ContractClassV1 as BlockifierContractClass,
 };
-use starknet::{
-    core::types::{contract::legacy::LegacyContractClass, FieldElement},
-    providers::jsonrpc::models::{
-        ContractStorageDiffItem, DeclaredClassItem, DeployedContractItem, NonceUpdate, StateDiff,
-        StorageEntry,
-    },
-};
-use starknet_api::{
-    core::ClassHash,
-    hash::StarkFelt,
-    transaction::{
-        DeployAccountTransaction, InvokeTransaction, InvokeTransactionV1, L1HandlerTransaction,
-        Transaction,
-    },
-    StarknetApiError,
-};
-
-use blockifier::execution::contract_class::ContractClassV1 as BlockifierContractClass;
+use blockifier::state::cached_state::CommitmentStateDiff;
+use blockifier::transaction::account_transaction::AccountTransaction;
+use blockifier::transaction::transaction_execution::Transaction as BlockifierTransaction;
+use blockifier::transaction::transactions::DeclareTransaction;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
+use starknet::core::types::contract::legacy::LegacyContractClass;
+use starknet::core::types::FieldElement;
+use starknet::providers::jsonrpc::models::{
+    ContractStorageDiffItem, DeclaredClassItem, DeployedContractItem, NonceUpdate, StateDiff,
+    StorageEntry,
+};
+use starknet_api::core::ClassHash;
+use starknet_api::hash::StarkFelt;
+use starknet_api::transaction::{
+    DeployAccountTransaction, InvokeTransaction, InvokeTransactionV1, L1HandlerTransaction,
+    Transaction,
+};
+use starknet_api::StarknetApiError;
 
 pub fn get_current_timestamp() -> Duration {
     SystemTime::now()
@@ -147,15 +138,9 @@ pub fn starkfelt_to_u128(felt: StarkFelt) -> Result<u128> {
 
     let (rest, u128_bytes) = felt.bytes().split_at(COMPLIMENT_OF_U128);
     if rest != [0u8; COMPLIMENT_OF_U128] {
-        Err(anyhow!(StarknetApiError::OutOfRange {
-            string: felt.to_string(),
-        }))
+        Err(anyhow!(StarknetApiError::OutOfRange { string: felt.to_string() }))
     } else {
-        Ok(u128::from_be_bytes(
-            u128_bytes
-                .try_into()
-                .expect("u128_bytes should be of size usize."),
-        ))
+        Ok(u128::from_be_bytes(u128_bytes.try_into().expect("u128_bytes should be of size usize.")))
     }
 }
 
@@ -195,7 +180,8 @@ pub fn convert_state_diff_to_rpc_state_diff(state_diff: CommitmentStateDiff) -> 
             })
             .collect(),
         deprecated_declared_classes: vec![],
-        // TODO: This will change with RPC spec v3.0.0. Also, are we supposed to return the class hash or the compiled class hash?
+        // TODO: This will change with RPC spec v3.0.0. Also, are we supposed to return the class
+        // hash or the compiled class hash?
         declared_classes: state_diff
             .class_hash_to_compiled_class_hash
             .iter()

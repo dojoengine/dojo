@@ -1,23 +1,19 @@
 use blockifier::abi::abi_utils::{get_storage_var_address, selector_from_name};
-use blockifier::transaction::{
-    account_transaction::AccountTransaction, transaction_execution::Transaction,
-};
+use blockifier::transaction::account_transaction::AccountTransaction;
+use blockifier::transaction::transaction_execution::Transaction;
 use katana_core::constants::{DEFAULT_GAS_PRICE, FEE_TOKEN_ADDRESS, TEST_ACCOUNT_CONTRACT_PATH};
 use katana_core::starknet::{StarknetConfig, StarknetWrapper};
 use starknet::core::types::TransactionStatus;
-use starknet_api::calldata;
-use starknet_api::transaction::InvokeTransaction;
-use starknet_api::{
-    block::BlockNumber,
-    hash::StarkFelt,
-    stark_felt,
-    transaction::{Calldata, InvokeTransactionV1, TransactionHash},
+use starknet_api::block::BlockNumber;
+use starknet_api::hash::StarkFelt;
+use starknet_api::transaction::{
+    Calldata, InvokeTransaction, InvokeTransactionV1, TransactionHash,
 };
+use starknet_api::{calldata, stark_felt};
 
 fn create_test_starknet() -> StarknetWrapper {
-    let test_account_path = [env!("CARGO_MANIFEST_DIR"), TEST_ACCOUNT_CONTRACT_PATH]
-        .iter()
-        .collect();
+    let test_account_path =
+        [env!("CARGO_MANIFEST_DIR"), TEST_ACCOUNT_CONTRACT_PATH].iter().collect();
 
     StarknetWrapper::new(StarknetConfig {
         seed: [0u8; 32],
@@ -35,11 +31,7 @@ fn test_creating_blocks() {
     let mut starknet = create_test_starknet();
     starknet.generate_pending_block();
 
-    assert_eq!(
-        starknet.blocks.total_blocks(),
-        0,
-        "pending block should not be added to the chain"
-    );
+    assert_eq!(starknet.blocks.total_blocks(), 0, "pending block should not be added to the chain");
 
     assert_eq!(
         starknet.block_context.block_number,
@@ -77,7 +69,6 @@ fn test_add_transaction() {
     let a = starknet.predeployed_accounts.accounts[0].clone();
     let b = starknet.predeployed_accounts.accounts[1].clone();
 
-    //
     // CREATE `transfer` INVOKE TRANSACTION
     //
 
@@ -102,24 +93,17 @@ fn test_add_transaction() {
         )))
         .unwrap();
 
-    //
     // SEND INVOKE TRANSACTION
     //
 
-    let tx = starknet
-        .transactions
-        .transactions
-        .get(&TransactionHash(stark_felt!("0x6969")));
+    let tx = starknet.transactions.transactions.get(&TransactionHash(stark_felt!("0x6969")));
 
     let block = starknet.blocks.by_number(BlockNumber(0)).unwrap();
 
     assert!(tx.is_some(), "transaction must be stored");
     assert_eq!(tx.unwrap().block_number, Some(BlockNumber(0)));
     assert_eq!(starknet.blocks.total_blocks(), 1);
-    assert!(
-        block.transaction_by_index(0).is_some(),
-        "transaction must be included in the block"
-    );
+    assert!(block.transaction_by_index(0).is_some(), "transaction must be included in the block");
     assert_eq!(
         block.transaction_by_index(0).unwrap().transaction_hash(),
         TransactionHash(stark_felt!("0x6969"))
@@ -127,17 +111,13 @@ fn test_add_transaction() {
     assert_eq!(tx.unwrap().status, TransactionStatus::AcceptedOnL2);
     assert_eq!(starknet.block_context.block_number, BlockNumber(1));
 
-    //
     // CHECK THAT THE BALANCE IS UPDATED
     //
 
     println!("FEE Address : {}", *FEE_TOKEN_ADDRESS);
     println!(
         "STORAGE ADDR : {}",
-        get_storage_var_address("ERC20_balances", &[*a.account_address.0.key()])
-            .unwrap()
-            .0
-            .key()
+        get_storage_var_address("ERC20_balances", &[*a.account_address.0.key()]).unwrap().0.key()
     );
 
     // println!(
@@ -156,10 +136,7 @@ fn test_add_reverted_transaction() {
 
     let transaction_hash = TransactionHash(stark_felt!("0x1234"));
     let transaction = Transaction::AccountTransaction(AccountTransaction::Invoke(
-        InvokeTransaction::V1(InvokeTransactionV1 {
-            transaction_hash,
-            ..Default::default()
-        }),
+        InvokeTransaction::V1(InvokeTransactionV1 { transaction_hash, ..Default::default() }),
     ));
 
     starknet.handle_transaction(transaction).unwrap();

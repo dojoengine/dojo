@@ -1,19 +1,17 @@
-use std::{collections::HashMap, vec};
+use std::collections::HashMap;
+use std::vec;
 
-use blockifier::transaction::{
-    errors::TransactionExecutionError, objects::TransactionExecutionInfo,
-};
+use blockifier::transaction::errors::TransactionExecutionError;
+use blockifier::transaction::objects::TransactionExecutionInfo;
 use starknet::core::types::TransactionStatus;
-use starknet_api::{
-    block::{BlockHash, BlockNumber},
-    core::{ContractAddress, EntryPointSelector},
-    hash::StarkFelt,
-    stark_felt,
-    transaction::{
-        Calldata, DeclareTransactionOutput, DeployAccountTransactionOutput,
-        DeployTransactionOutput, Event, Fee, InvokeTransactionOutput, L1HandlerTransactionOutput,
-        MessageToL1, Transaction, TransactionHash, TransactionOutput, TransactionReceipt,
-    },
+use starknet_api::block::{BlockHash, BlockNumber};
+use starknet_api::core::{ContractAddress, EntryPointSelector};
+use starknet_api::hash::StarkFelt;
+use starknet_api::stark_felt;
+use starknet_api::transaction::{
+    Calldata, DeclareTransactionOutput, DeployAccountTransactionOutput, DeployTransactionOutput,
+    Event, Fee, InvokeTransactionOutput, L1HandlerTransactionOutput, MessageToL1, Transaction,
+    TransactionHash, TransactionOutput, TransactionReceipt,
 };
 
 pub struct ExternalFunctionCall {
@@ -54,9 +52,7 @@ impl StarknetTransaction {
     }
 
     pub fn actual_fee(&self) -> Fee {
-        self.execution_info
-            .as_ref()
-            .map_or(Fee(0), |info| info.actual_fee)
+        self.execution_info.as_ref().map_or(Fee(0), |info| info.actual_fee)
     }
 
     pub fn receipt(&self) -> TransactionReceipt {
@@ -107,42 +103,27 @@ impl StarknetTransaction {
         };
 
         if let Some(ref info) = execution_info.validate_call_info {
-            messages.extend(
-                info.execution
-                    .l2_to_l1_messages
-                    .iter()
-                    .map(|m| MessageToL1 {
-                        to_address: m.message.to_address,
-                        payload: m.message.payload.clone(),
-                        from_address: info.call.caller_address,
-                    }),
-            )
+            messages.extend(info.execution.l2_to_l1_messages.iter().map(|m| MessageToL1 {
+                to_address: m.message.to_address,
+                payload: m.message.payload.clone(),
+                from_address: info.call.caller_address,
+            }))
         }
 
         if let Some(ref info) = execution_info.execute_call_info {
-            messages.extend(
-                info.execution
-                    .l2_to_l1_messages
-                    .iter()
-                    .map(|m| MessageToL1 {
-                        to_address: m.message.to_address,
-                        payload: m.message.payload.clone(),
-                        from_address: info.call.caller_address,
-                    }),
-            )
+            messages.extend(info.execution.l2_to_l1_messages.iter().map(|m| MessageToL1 {
+                to_address: m.message.to_address,
+                payload: m.message.payload.clone(),
+                from_address: info.call.caller_address,
+            }))
         }
 
         if let Some(ref info) = execution_info.fee_transfer_call_info {
-            messages.extend(
-                info.execution
-                    .l2_to_l1_messages
-                    .iter()
-                    .map(|m| MessageToL1 {
-                        to_address: m.message.to_address,
-                        payload: m.message.payload.clone(),
-                        from_address: info.call.caller_address,
-                    }),
-            )
+            messages.extend(info.execution.l2_to_l1_messages.iter().map(|m| MessageToL1 {
+                to_address: m.message.to_address,
+                payload: m.message.payload.clone(),
+                from_address: info.call.caller_address,
+            }))
         }
 
         messages

@@ -1,17 +1,14 @@
+use std::fs;
 use std::path::PathBuf;
-use std::{fs, str::FromStr};
+use std::str::FromStr;
 
 use anyhow::{Ok, Result};
 use starknet::core::types::contract::{FlattenedSierraClass, SierraClass};
-use starknet::{
-    core::types::FieldElement,
-    providers::jsonrpc::{
-        models::{
-            BroadcastedDeclareTransaction, BroadcastedDeclareTransactionV2, SierraContractClass,
-        },
-        HttpTransport, JsonRpcClient,
-    },
+use starknet::core::types::FieldElement;
+use starknet::providers::jsonrpc::models::{
+    BroadcastedDeclareTransaction, BroadcastedDeclareTransactionV2, SierraContractClass,
 };
+use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 use url::Url;
 
 fn get_flattened_sierra_class(raw_contract_class: &str) -> Result<FlattenedSierraClass> {
@@ -22,16 +19,11 @@ fn get_flattened_sierra_class(raw_contract_class: &str) -> Result<FlattenedSierr
 #[ignore]
 #[tokio::test]
 async fn test_send_declare_v2_tx() {
-    let provider = JsonRpcClient::new(HttpTransport::new(
-        Url::parse("http://localhost:5050").unwrap(),
-    ));
+    let provider =
+        JsonRpcClient::new(HttpTransport::new(Url::parse("http://localhost:5050").unwrap()));
 
-    let path: PathBuf = [
-        env!("CARGO_MANIFEST_DIR"),
-        "tests/test_data/cairo1_contract.json",
-    ]
-    .iter()
-    .collect();
+    let path: PathBuf =
+        [env!("CARGO_MANIFEST_DIR"), "tests/test_data/cairo1_contract.json"].iter().collect();
 
     let raw_contract_str = fs::read_to_string(path).unwrap();
     let contract =

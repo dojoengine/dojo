@@ -1,17 +1,13 @@
 use std::collections::HashMap;
 
 use blockifier::block_context::BlockContext;
-use starknet_api::{
-    block::{BlockNumber, BlockTimestamp},
-    core::{ChainId, ContractAddress, PatriciaKey},
-    hash::StarkHash,
-    patricia_key,
-};
+use starknet_api::block::{BlockNumber, BlockTimestamp};
+use starknet_api::core::{ChainId, ContractAddress, PatriciaKey};
+use starknet_api::hash::StarkHash;
+use starknet_api::patricia_key;
 
-use crate::{
-    constants::{DEFAULT_GAS_PRICE, FEE_TOKEN_ADDRESS, SEQUENCER_ADDRESS},
-    starknet::StarknetConfig,
-};
+use crate::constants::{DEFAULT_GAS_PRICE, FEE_TOKEN_ADDRESS, SEQUENCER_ADDRESS};
+use crate::starknet::StarknetConfig;
 
 pub trait Base {
     fn base() -> Self;

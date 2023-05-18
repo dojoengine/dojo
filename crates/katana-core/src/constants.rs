@@ -1,6 +1,7 @@
 use blockifier::execution::contract_class::ContractClass;
 use lazy_static::lazy_static;
-use starknet_api::{hash::StarkFelt, stark_felt};
+use starknet_api::hash::StarkFelt;
+use starknet_api::stark_felt;
 
 use crate::util::get_contract_class;
 

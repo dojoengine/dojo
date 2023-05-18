@@ -1,19 +1,13 @@
-use jsonrpsee::{
-    core::Error,
-    proc_macros::rpc,
-    types::error::{CallError, ErrorObject},
-};
-
-use starknet::{
-    core::types::FieldElement,
-    providers::jsonrpc::models::{
-        BlockHashAndNumber, BlockId, BroadcastedDeclareTransaction,
-        BroadcastedDeployAccountTransaction, BroadcastedInvokeTransaction, BroadcastedTransaction,
-        ContractClass, DeclareTransactionResult, DeployAccountTransactionResult, EventFilter,
-        EventsPage, FeeEstimate, FunctionCall, InvokeTransactionResult,
-        MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, MaybePendingTransactionReceipt,
-        StateUpdate, Transaction,
-    },
+use jsonrpsee::core::Error;
+use jsonrpsee::proc_macros::rpc;
+use jsonrpsee::types::error::{CallError, ErrorObject};
+use starknet::core::types::FieldElement;
+use starknet::providers::jsonrpc::models::{
+    BlockHashAndNumber, BlockId, BroadcastedDeclareTransaction,
+    BroadcastedDeployAccountTransaction, BroadcastedInvokeTransaction, BroadcastedTransaction,
+    ContractClass, DeclareTransactionResult, DeployAccountTransactionResult, EventFilter,
+    EventsPage, FeeEstimate, FunctionCall, InvokeTransactionResult, MaybePendingBlockWithTxHashes,
+    MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, StateUpdate, Transaction,
 };
 
 #[derive(thiserror::Error, Clone, Copy, Debug)]
@@ -56,11 +50,7 @@ pub enum StarknetApiError {
 
 impl From<StarknetApiError> for Error {
     fn from(err: StarknetApiError) -> Self {
-        Error::Call(CallError::Custom(ErrorObject::owned(
-            err as i32,
-            err.to_string(),
-            None::<()>,
-        )))
+        Error::Call(CallError::Custom(ErrorObject::owned(err as i32, err.to_string(), None::<()>)))
     }
 }
 

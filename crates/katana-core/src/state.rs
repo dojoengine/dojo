@@ -1,22 +1,18 @@
+use std::collections::HashMap;
+
 use blockifier::execution::contract_class::ContractClass;
 use blockifier::state::cached_state::ContractStorageKey;
 use blockifier::state::errors::StateError;
-use blockifier::state::state_api::StateReader;
-use blockifier::state::state_api::StateResult;
-use starknet_api::{
-    core::{ClassHash, CompiledClassHash, ContractAddress, Nonce, PatriciaKey},
-    hash::{StarkFelt, StarkHash},
-    patricia_key,
-    state::StorageKey,
-};
-use std::collections::HashMap;
+use blockifier::state::state_api::{StateReader, StateResult};
+use starknet_api::core::{ClassHash, CompiledClassHash, ContractAddress, Nonce, PatriciaKey};
+use starknet_api::hash::{StarkFelt, StarkHash};
+use starknet_api::patricia_key;
+use starknet_api::state::StorageKey;
 
-use crate::constants::ERC20_CONTRACT;
-use crate::constants::ERC20_CONTRACT_CLASS_HASH;
-use crate::constants::FEE_TOKEN_ADDRESS;
-use crate::constants::UDC_ADDRESS;
-use crate::constants::UDC_CLASS_HASH;
-use crate::constants::UDC_CONTRACT;
+use crate::constants::{
+    ERC20_CONTRACT, ERC20_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS, UDC_ADDRESS, UDC_CLASS_HASH,
+    UDC_CONTRACT,
+};
 
 #[derive(Clone, Debug)]
 pub struct DictStateReader {
@@ -49,20 +45,12 @@ impl StateReader for DictStateReader {
         key: StorageKey,
     ) -> StateResult<StarkFelt> {
         let contract_storage_key = (contract_address, key);
-        let value = self
-            .storage_view
-            .get(&contract_storage_key)
-            .copied()
-            .unwrap_or_default();
+        let value = self.storage_view.get(&contract_storage_key).copied().unwrap_or_default();
         Ok(value)
     }
 
     fn get_nonce_at(&mut self, contract_address: ContractAddress) -> StateResult<Nonce> {
-        let nonce = self
-            .address_to_nonce
-            .get(&contract_address)
-            .copied()
-            .unwrap_or_default();
+        let nonce = self.address_to_nonce.get(&contract_address).copied().unwrap_or_default();
         Ok(nonce)
     }
 
@@ -78,11 +66,8 @@ impl StateReader for DictStateReader {
     }
 
     fn get_class_hash_at(&mut self, contract_address: ContractAddress) -> StateResult<ClassHash> {
-        let class_hash = self
-            .address_to_class_hash
-            .get(&contract_address)
-            .copied()
-            .unwrap_or_default();
+        let class_hash =
+            self.address_to_class_hash.get(&contract_address).copied().unwrap_or_default();
         Ok(class_hash)
     }
 
@@ -90,33 +75,24 @@ impl StateReader for DictStateReader {
         &mut self,
         class_hash: ClassHash,
     ) -> StateResult<starknet_api::core::CompiledClassHash> {
-        let compiled_class_hash = self
-            .class_hash_to_compiled_class_hash
-            .get(&class_hash)
-            .copied()
-            .unwrap_or_default();
+        let compiled_class_hash =
+            self.class_hash_to_compiled_class_hash.get(&class_hash).copied().unwrap_or_default();
         Ok(compiled_class_hash)
     }
 }
 
 fn deploy_fee_contract(state: &mut DictStateReader) {
     let erc20_class_hash = ClassHash(*ERC20_CONTRACT_CLASS_HASH);
+    state.class_hash_to_class.insert(erc20_class_hash, (*ERC20_CONTRACT).clone());
     state
-        .class_hash_to_class
-        .insert(erc20_class_hash, (*ERC20_CONTRACT).clone());
-    state.address_to_class_hash.insert(
-        ContractAddress(patricia_key!(*FEE_TOKEN_ADDRESS)),
-        erc20_class_hash,
-    );
+        .address_to_class_hash
+        .insert(ContractAddress(patricia_key!(*FEE_TOKEN_ADDRESS)), erc20_class_hash);
 }
 
 fn deploy_universal_deployer_contract(state: &mut DictStateReader) {
     let universal_deployer_class_hash = ClassHash(*UDC_CLASS_HASH);
+    state.class_hash_to_class.insert(universal_deployer_class_hash, (*UDC_CONTRACT).clone());
     state
-        .class_hash_to_class
-        .insert(universal_deployer_class_hash, (*UDC_CONTRACT).clone());
-    state.address_to_class_hash.insert(
-        ContractAddress(patricia_key!(*UDC_ADDRESS)),
-        universal_deployer_class_hash,
-    );
+        .address_to_class_hash
+        .insert(ContractAddress(patricia_key!(*UDC_ADDRESS)), universal_deployer_class_hash);
 }

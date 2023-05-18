@@ -1,51 +1,39 @@
 use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
-use blockifier::{
-    block_context::BlockContext,
-    execution::entry_point::{CallEntryPoint, CallInfo, ExecutionContext},
-    state::{
-        cached_state::{CachedState, CommitmentStateDiff, MutRefState},
-        state_api::State,
-    },
-    transaction::{
-        account_transaction::AccountTransaction,
-        errors::TransactionExecutionError,
-        objects::{AccountTransactionContext, TransactionExecutionInfo},
-        transaction_execution::Transaction,
-        transactions::{DeclareTransaction, ExecutableTransaction},
-    },
-};
-use starknet::{
-    core::types::{FieldElement, TransactionStatus},
-    providers::jsonrpc::models::{BlockId, BlockTag, PendingStateUpdate, StateUpdate},
-};
-use starknet_api::{
-    block::{BlockHash, BlockNumber, BlockTimestamp, GasPrice},
-    core::GlobalRoot,
-    hash::StarkFelt,
-    stark_felt,
-};
+use blockifier::block_context::BlockContext;
+use blockifier::execution::entry_point::{CallEntryPoint, CallInfo, ExecutionContext};
+use blockifier::state::cached_state::{CachedState, CommitmentStateDiff, MutRefState};
+use blockifier::state::state_api::State;
+use blockifier::transaction::account_transaction::AccountTransaction;
+use blockifier::transaction::errors::TransactionExecutionError;
+use blockifier::transaction::objects::{AccountTransactionContext, TransactionExecutionInfo};
+use blockifier::transaction::transaction_execution::Transaction;
+use blockifier::transaction::transactions::{DeclareTransaction, ExecutableTransaction};
+use starknet::core::types::{FieldElement, TransactionStatus};
+use starknet::providers::jsonrpc::models::{BlockId, BlockTag, PendingStateUpdate, StateUpdate};
+use starknet_api::block::{BlockHash, BlockNumber, BlockTimestamp, GasPrice};
+use starknet_api::core::GlobalRoot;
+use starknet_api::hash::StarkFelt;
+use starknet_api::stark_felt;
 use tracing::info;
 
 pub mod block;
 pub mod event;
 pub mod transaction;
 
-use crate::{
-    accounts::PredeployedAccounts,
-    block_context::block_context_from_config,
-    constants::DEFAULT_PREFUNDED_ACCOUNT_BALANCE,
-    state::DictStateReader,
-    util::{
-        convert_blockifier_tx_to_starknet_api_tx, convert_state_diff_to_rpc_state_diff,
-        get_current_timestamp,
-    },
-};
 use block::{StarknetBlock, StarknetBlocks};
 use transaction::{StarknetTransaction, StarknetTransactions};
 
 use self::transaction::ExternalFunctionCall;
+use crate::accounts::PredeployedAccounts;
+use crate::block_context::block_context_from_config;
+use crate::constants::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
+use crate::state::DictStateReader;
+use crate::util::{
+    convert_blockifier_tx_to_starknet_api_tx, convert_state_diff_to_rpc_state_diff,
+    get_current_timestamp,
+};
 
 #[derive(Debug)]
 pub struct StarknetConfig {
@@ -101,9 +89,7 @@ impl StarknetWrapper {
             BlockId::Tag(BlockTag::Latest) => Some(self.latest_state()),
             BlockId::Tag(BlockTag::Pending) => Some(self.pending_state()),
 
-            id => self
-                .block_number_from_block_id(id)
-                .and_then(|n| self.state(n)),
+            id => self.block_number_from_block_id(id).and_then(|n| self.state(n)),
         }
     }
 
@@ -111,11 +97,9 @@ impl StarknetWrapper {
         match block_id {
             BlockId::Number(number) => Some(BlockNumber(number)),
 
-            BlockId::Hash(hash) => self
-                .blocks
-                .hash_to_num
-                .get(&BlockHash(StarkFelt::from(hash)))
-                .cloned(),
+            BlockId::Hash(hash) => {
+                self.blocks.hash_to_num.get(&BlockHash(StarkFelt::from(hash))).cloned()
+            }
 
             BlockId::Tag(BlockTag::Pending) => None,
             BlockId::Tag(BlockTag::Latest) => self.blocks.current_block_number(),
@@ -136,10 +120,7 @@ impl StarknetWrapper {
     pub fn handle_transaction(&mut self, transaction: Transaction) -> Result<()> {
         let api_tx = convert_blockifier_tx_to_starknet_api_tx(&transaction);
 
-        info!(
-            "Transaction received | Transaction hash: {}",
-            api_tx.transaction_hash()
-        );
+        info!("Transaction received | Transaction hash: {}", api_tx.transaction_hash());
 
         let res = match transaction {
             Transaction::AccountTransaction(tx) => {
@@ -329,10 +310,7 @@ impl StarknetWrapper {
         let parent_hash = if block_number.0 == 0 {
             BlockHash(stark_felt!(0))
         } else {
-            self.blocks
-                .latest()
-                .map(|last_block| last_block.block_hash())
-                .unwrap()
+            self.blocks.latest().map(|last_block| last_block.block_hash()).unwrap()
         };
 
         StarknetBlock::new(
@@ -354,9 +332,7 @@ impl StarknetWrapper {
         &mut self,
         transaction: StarknetTransaction,
     ) -> Option<StarknetTransaction> {
-        self.transactions
-            .transactions
-            .insert(transaction.inner.transaction_hash(), transaction)
+        self.transactions.transactions.insert(transaction.inner.transaction_hash(), transaction)
     }
 
     fn update_block_context(&mut self) {
@@ -370,47 +346,32 @@ impl StarknetWrapper {
         apply_state_diff(state, state_diff);
 
         // Store the block state
-        self.blocks
-            .store_state(self.block_context.block_number, state.clone());
+        self.blocks.store_state(self.block_context.block_number, state.clone());
     }
 }
 
 fn apply_state_diff(state: &mut DictStateReader, state_diff: CommitmentStateDiff) {
     // update contract storages
-    state_diff
-        .storage_updates
-        .into_iter()
-        .for_each(|(contract_address, storages)| {
-            storages.into_iter().for_each(|(key, value)| {
-                state.storage_view.insert((contract_address, key), value);
-            })
-        });
+    state_diff.storage_updates.into_iter().for_each(|(contract_address, storages)| {
+        storages.into_iter().for_each(|(key, value)| {
+            state.storage_view.insert((contract_address, key), value);
+        })
+    });
 
     // update declared contracts
-    state_diff
-        .class_hash_to_compiled_class_hash
-        .into_iter()
-        .for_each(|(class_hash, compiled_class_hash)| {
-            state
-                .class_hash_to_compiled_class_hash
-                .insert(class_hash, compiled_class_hash);
-        });
+    state_diff.class_hash_to_compiled_class_hash.into_iter().for_each(
+        |(class_hash, compiled_class_hash)| {
+            state.class_hash_to_compiled_class_hash.insert(class_hash, compiled_class_hash);
+        },
+    );
 
     // update deployed contracts
-    state_diff
-        .address_to_class_hash
-        .into_iter()
-        .for_each(|(contract_address, class_hash)| {
-            state
-                .address_to_class_hash
-                .insert(contract_address, class_hash);
-        });
+    state_diff.address_to_class_hash.into_iter().for_each(|(contract_address, class_hash)| {
+        state.address_to_class_hash.insert(contract_address, class_hash);
+    });
 
     // update accounts nonce
-    state_diff
-        .address_to_nonce
-        .into_iter()
-        .for_each(|(contract_address, nonce)| {
-            state.address_to_nonce.insert(contract_address, nonce);
-        });
+    state_diff.address_to_nonce.into_iter().for_each(|(contract_address, nonce)| {
+        state.address_to_nonce.insert(contract_address, nonce);
+    });
 }

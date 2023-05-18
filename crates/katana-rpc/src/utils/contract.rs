@@ -1,5 +1,6 @@
 use anyhow::{Context, Ok, Result};
-use cairo_lang_starknet::{casm_contract_class::CasmContractClass, contract_class::ContractClass};
+use cairo_lang_starknet::casm_contract_class::CasmContractClass;
+use cairo_lang_starknet::contract_class::ContractClass;
 use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::FieldElement;

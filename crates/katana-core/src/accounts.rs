@@ -1,24 +1,24 @@
-use std::{fs, path::PathBuf, sync::Arc};
+use std::fs;
+use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::Result;
-use blockifier::{
-    abi::abi_utils::get_storage_var_address,
-    execution::contract_class::{ContractClass, ContractClassV0},
-};
-use rand::{rngs::SmallRng, RngCore, SeedableRng};
-use starknet::{core::types::FieldElement, signers::SigningKey};
-use starknet_api::{
-    core::{calculate_contract_address, ClassHash, ContractAddress, PatriciaKey},
-    hash::{StarkFelt, StarkHash},
-    patricia_key, stark_felt,
-    transaction::{Calldata, ContractAddressSalt},
-};
+use blockifier::abi::abi_utils::get_storage_var_address;
+use blockifier::execution::contract_class::{ContractClass, ContractClassV0};
+use rand::rngs::SmallRng;
+use rand::{RngCore, SeedableRng};
+use starknet::core::types::FieldElement;
+use starknet::signers::SigningKey;
+use starknet_api::core::{calculate_contract_address, ClassHash, ContractAddress, PatriciaKey};
+use starknet_api::hash::{StarkFelt, StarkHash};
+use starknet_api::transaction::{Calldata, ContractAddressSalt};
+use starknet_api::{patricia_key, stark_felt};
 
-use crate::{
-    constants::{DEFAULT_ACCOUNT_CONTRACT, DEFAULT_ACCOUNT_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS},
-    state::DictStateReader,
-    util::compute_legacy_class_hash,
+use crate::constants::{
+    DEFAULT_ACCOUNT_CONTRACT, DEFAULT_ACCOUNT_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS,
 };
+use crate::state::DictStateReader;
+use crate::util::compute_legacy_class_hash;
 
 #[derive(Debug, Clone)]
 pub struct Account {
@@ -46,23 +46,14 @@ impl Account {
         )
         .expect("should calculate contract address");
 
-        Self {
-            balance,
-            public_key,
-            private_key,
-            class_hash,
-            contract_class,
-            account_address,
-        }
+        Self { balance, public_key, private_key, class_hash, contract_class, account_address }
     }
 
     pub fn deploy(&self, state: &mut DictStateReader) {
         self.declare(state);
 
         // set the contract
-        state
-            .address_to_class_hash
-            .insert(self.account_address, self.class_hash);
+        state.address_to_class_hash.insert(self.account_address, self.class_hash);
         // set the balance in the FEE CONTRACT
         state.storage_view.insert(
             (
@@ -74,18 +65,13 @@ impl Account {
         );
         // set the public key in the account contract
         state.storage_view.insert(
-            (
-                self.account_address,
-                get_storage_var_address("Account_public_key", &[]).unwrap(),
-            ),
+            (self.account_address, get_storage_var_address("Account_public_key", &[]).unwrap()),
             self.public_key,
         );
     }
 
     fn declare(&self, state: &mut DictStateReader) {
-        state
-            .class_hash_to_class
-            .insert(self.class_hash, self.contract_class.clone());
+        state.class_hash_to_class.insert(self.class_hash, self.contract_class.clone());
     }
 }
 
@@ -124,12 +110,7 @@ impl PredeployedAccounts {
             contract_class.clone(),
         );
 
-        Ok(Self {
-            seed,
-            accounts,
-            contract_class,
-            initial_balance,
-        })
+        Ok(Self { seed, accounts, contract_class, initial_balance })
     }
 
     pub fn deploy_accounts(&self, state: &mut DictStateReader) {
@@ -151,11 +132,7 @@ impl PredeployedAccounts {
             )
         }
 
-        self.accounts
-            .iter()
-            .map(print_account)
-            .collect::<Vec<String>>()
-            .join("\n")
+        self.accounts.iter().map(print_account).collect::<Vec<String>>().join("\n")
     }
 
     fn generate_accounts(
@@ -192,18 +169,13 @@ impl PredeployedAccounts {
     }
 
     pub fn default_account_class() -> (ClassHash, ContractClass) {
-        (
-            ClassHash(*DEFAULT_ACCOUNT_CONTRACT_CLASS_HASH),
-            (*DEFAULT_ACCOUNT_CONTRACT).clone(),
-        )
+        (ClassHash(*DEFAULT_ACCOUNT_CONTRACT_CLASS_HASH), (*DEFAULT_ACCOUNT_CONTRACT).clone())
     }
 }
 
 // TODO: remove starknet-rs dependency
 fn compute_public_key_from_private_key(private_key: StarkFelt) -> StarkFelt {
     StarkFelt::from(
-        SigningKey::from_secret_scalar(FieldElement::from(private_key))
-            .verifying_key()
-            .scalar(),
+        SigningKey::from_secret_scalar(FieldElement::from(private_key)).verifying_key().scalar(),
     )
 }

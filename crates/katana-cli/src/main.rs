@@ -1,4 +1,5 @@
-use std::{process::exit, sync::Arc};
+use std::process::exit;
+use std::sync::Arc;
 
 use clap::Parser;
 use env_logger::Env;
@@ -26,28 +27,15 @@ async fn main() {
     let predeployed_accounts = if config.hide_predeployed_accounts {
         None
     } else {
-        Some(
-            sequencer
-                .read()
-                .await
-                .starknet
-                .predeployed_accounts
-                .display(),
-        )
+        Some(sequencer.read().await.starknet.predeployed_accounts.display())
     };
 
-    match KatanaNodeRpc::new(sequencer.clone(), rpc_config)
-        .run()
-        .await
-    {
+    match KatanaNodeRpc::new(sequencer.clone(), rpc_config).run().await {
         Ok((addr, server_handle)) => {
             print_intro(
                 predeployed_accounts,
                 config.starknet.seed,
-                format!(
-                    "🚀 JSON-RPC server started: {}",
-                    Paint::red(format!("http://{addr}"))
-                ),
+                format!("🚀 JSON-RPC server started: {}", Paint::red(format!("http://{addr}"))),
             );
 
             server_handle.stopped().await;

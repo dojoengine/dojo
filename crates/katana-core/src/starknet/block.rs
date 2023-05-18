@@ -1,18 +1,16 @@
 use std::collections::HashMap;
 
-use crate::state::DictStateReader;
 use anyhow::{ensure, Result};
 use starknet::providers::jsonrpc::models::StateUpdate;
-use starknet_api::{
-    block::{
-        Block, BlockBody, BlockHash, BlockHeader, BlockNumber, BlockStatus, BlockTimestamp,
-        GasPrice,
-    },
-    core::{ContractAddress, GlobalRoot},
-    hash::{pedersen_hash_array, StarkFelt},
-    stark_felt,
-    transaction::{Transaction, TransactionOutput},
+use starknet_api::block::{
+    Block, BlockBody, BlockHash, BlockHeader, BlockNumber, BlockStatus, BlockTimestamp, GasPrice,
 };
+use starknet_api::core::{ContractAddress, GlobalRoot};
+use starknet_api::hash::{pedersen_hash_array, StarkFelt};
+use starknet_api::stark_felt;
+use starknet_api::transaction::{Transaction, TransactionOutput};
+
+use crate::state::DictStateReader;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct StarknetBlock {
@@ -45,10 +43,7 @@ impl StarknetBlock {
                     sequencer,
                     timestamp,
                 },
-                body: BlockBody {
-                    transactions,
-                    transaction_outputs,
-                },
+                body: BlockBody { transactions, transaction_outputs },
             },
             status,
         }
@@ -120,7 +115,8 @@ impl StarknetBlocks {
 
         ensure!(
             expected_block_number == block_number,
-            "unable to append block; expected block number {expected_block_number}, actual {block_number}"
+            "unable to append block; expected block number {expected_block_number}, actual \
+             {block_number}"
         );
 
         self.hash_to_num.insert(block.block_hash(), block_number);
@@ -131,11 +127,7 @@ impl StarknetBlocks {
 
     pub fn current_block_number(&self) -> Option<BlockNumber> {
         let block_len = self.total_blocks();
-        if block_len == 0 {
-            None
-        } else {
-            Some(BlockNumber(block_len as u64 - 1))
-        }
+        if block_len == 0 { None } else { Some(BlockNumber(block_len as u64 - 1)) }
     }
 
     pub fn latest(&self) -> Option<StarknetBlock> {
@@ -145,9 +137,7 @@ impl StarknetBlocks {
     }
 
     pub fn by_hash(&self, block_hash: BlockHash) -> Option<StarknetBlock> {
-        self.hash_to_num
-            .get(&block_hash)
-            .and_then(|block_number| self.by_number(*block_number))
+        self.hash_to_num.get(&block_hash).and_then(|block_number| self.by_number(*block_number))
     }
 
     pub fn by_number(&self, block_number: BlockNumber) -> Option<StarknetBlock> {
@@ -159,9 +149,7 @@ impl StarknetBlocks {
         number: BlockNumber,
         index: usize,
     ) -> Option<Transaction> {
-        self.num_to_block
-            .get(&number)
-            .and_then(|block| block.transaction_by_index(index))
+        self.num_to_block.get(&number).and_then(|block| block.transaction_by_index(index))
     }
 
     pub fn total_blocks(&self) -> usize {

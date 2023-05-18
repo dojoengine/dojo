@@ -1,7 +1,5 @@
-use starknet_api::{
-    block::{BlockHash, BlockNumber},
-    transaction::{Event, TransactionHash},
-};
+use starknet_api::block::{BlockHash, BlockNumber};
+use starknet_api::transaction::{Event, TransactionHash};
 
 pub struct EmittedEvent {
     pub inner: Event,
