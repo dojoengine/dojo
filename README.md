@@ -20,6 +20,10 @@ Dojo provides:
 - Concise macros for interacting with world state and functions.
 - Typed interface generation for client libraries (Coming soon)
 
+## Installation
+
+See the [installation guide](https://book.dojoengine.org/getting-started/installation.html) in the book.
+
 ## Overview
 
 ### Entity Component System
