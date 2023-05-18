@@ -1,45 +1,41 @@
-use juniper::{graphql_object, FieldResult};
+use async_graphql::{ComplexObject, Context, Result, SimpleObject};
+use chrono::{DateTime, Utc};
+use serde::Deserialize;
+use sqlx::{Pool, Sqlite};
 
-use super::server::Context;
 use super::system;
 
+#[derive(SimpleObject, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[graphql(complex)]
 pub struct SystemCall {
     pub id: i64,
     pub system_id: String,
     pub transaction_hash: String,
     pub data: Option<String>,
+    pub created_at: DateTime<Utc>,
 }
 
-#[graphql_object(context = Context)]
+#[ComplexObject]
 impl SystemCall {
-    pub fn id(&self) -> i32 {
-        i32::try_from(self.id).unwrap()
-    }
-
-    pub fn system_id(&self) -> &str {
-        &self.system_id
-    }
-
-    pub fn transaction_hash(&self) -> &str {
-        &self.transaction_hash
-    }
-
-    pub fn data(&self) -> &Option<String> {
-        &self.data
-    }
-
-    async fn system(&self, context: &Context) -> FieldResult<system::System> {
+    async fn system(&self, context: &Context<'_>) -> Result<system::System> {
         system::system(context, self.system_id.clone()).await
     }
 }
 
-pub async fn system_call(context: &Context, id: i64) -> FieldResult<SystemCall> {
-    let mut conn = context.pool.acquire().await.unwrap();
+pub async fn system_call(context: &Context<'_>, id: i64) -> Result<SystemCall> {
+    let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
 
     let system_call = sqlx::query_as!(
         SystemCall,
         r#"
-            SELECT * FROM system_calls WHERE id = $1
+            SELECT
+                id,
+                data,
+                transaction_hash,
+                system_id,
+                created_at as "created_at: _"
+            FROM system_calls WHERE id = $1
         "#,
         id
     )
@@ -50,15 +46,21 @@ pub async fn system_call(context: &Context, id: i64) -> FieldResult<SystemCall> 
 }
 
 pub async fn system_calls_by_system(
-    context: &Context,
+    context: &Context<'_>,
     system_id: String,
-) -> FieldResult<Vec<SystemCall>> {
-    let mut conn = context.pool.acquire().await.unwrap();
+) -> Result<Vec<SystemCall>> {
+    let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
 
     let system_calls = sqlx::query_as!(
         SystemCall,
         r#"
-            SELECT * FROM system_calls WHERE system_id = $1
+            SELECT
+                id,
+                data,
+                transaction_hash,
+                system_id,
+                created_at as "created_at: _"
+            FROM system_calls WHERE system_id = $1
         "#,
         system_id
     )

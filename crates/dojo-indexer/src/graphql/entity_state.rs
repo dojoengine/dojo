@@ -1,65 +1,48 @@
-// Copy entity_state_update to entity_state.rs and replace all entity_state_update with entity_state
-//
-// Copy the content of entity
+use async_graphql::{ComplexObject, Context, Result, SimpleObject};
+use chrono::{DateTime, Utc};
+use serde::Deserialize;
+use sqlx::{Pool, Sqlite};
 
-use entity::Entity;
-use juniper::{graphql_object, FieldResult};
-
-use super::server::Context;
 use super::{component, entity};
 
+#[derive(SimpleObject, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[graphql(complex)]
 pub struct EntityState {
     pub entity_id: String,
     pub component_id: String,
     pub data: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
-#[graphql_object(context = Context)]
+#[ComplexObject]
 impl EntityState {
-    pub fn entity_id(&self) -> &str {
-        &self.entity_id
-    }
-
-    pub fn component_id(&self) -> &str {
-        &self.component_id
-    }
-
-    pub fn data(&self) -> &Option<String> {
-        &self.data
-    }
-
-    async fn component(&self, context: &Context) -> FieldResult<component::Component> {
-        component::component(context, self.component_id.clone()).await
-    }
-
-    async fn entity(context: &Context) -> FieldResult<Entity> {
+    async fn entity(&self, context: &Context<'_>) -> Result<entity::Entity> {
         entity::entity(context, self.entity_id.clone()).await
     }
+
+    async fn component(&self, context: &Context<'_>) -> Result<component::Component> {
+        component::component(context, self.component_id.clone()).await
+    }
 }
 
-// pub async fn entity_states(context: &Context) -> FieldResult<Vec<EntityState>> {
-//     let mut conn = context.pool.acquire().await.unwrap();
-
-//     let entity_states = sqlx::query_as!(
-//         EntityState,
-//         r#"
-//             SELECT * FROM entity_states
-//         "#
-//     ).fetch_all(&mut conn).await.unwrap();
-
-//     Ok(entity_states)
-// }
-
 pub async fn entity_states_by_entity(
-    context: &Context,
+    context: &Context<'_>,
     entity_id: String,
-) -> FieldResult<Vec<EntityState>> {
-    let mut conn = context.pool.acquire().await.unwrap();
+) -> Result<Vec<EntityState>> {
+    let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
 
     let entity_states = sqlx::query_as!(
         EntityState,
         r#"
-            SELECT * FROM entity_states WHERE entity_id = $1
+            SELECT
+                entity_id,
+                component_id,
+                data,
+                created_at as "created_at: _",
+                updated_at as "updated_at: _"
+            FROM entity_states WHERE entity_id = $1
         "#,
         entity_id
     )
@@ -70,15 +53,21 @@ pub async fn entity_states_by_entity(
 }
 
 pub async fn entity_states_by_component(
-    context: &Context,
+    context: &Context<'_>,
     component_id: String,
-) -> FieldResult<Vec<EntityState>> {
-    let mut conn = context.pool.acquire().await.unwrap();
+) -> Result<Vec<EntityState>> {
+    let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
 
     let entity_states = sqlx::query_as!(
         EntityState,
         r#"
-            SELECT * FROM entity_states WHERE component_id = $1
+            SELECT
+                entity_id,
+                component_id,
+                data,
+                created_at as "created_at: _",
+                updated_at as "updated_at: _"
+            FROM entity_states WHERE component_id = $1
         "#,
         component_id
     )
