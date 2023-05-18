@@ -108,14 +108,14 @@ pub fn convert_blockifier_tx_to_starknet_api_tx(
                 }
             },
         },
-        BlockifierTransaction::L1HandlerTransaction(tx) => {
+        BlockifierTransaction::L1HandlerTransaction(l1_tx) => {
             Transaction::L1Handler(L1HandlerTransaction {
-                nonce: tx.nonce,
-                version: tx.version,
-                calldata: tx.calldata.clone(),
-                transaction_hash: tx.transaction_hash,
-                contract_address: tx.contract_address,
-                entry_point_selector: tx.entry_point_selector,
+                nonce: l1_tx.tx.nonce,
+                version: l1_tx.tx.version,
+                calldata: l1_tx.tx.calldata.clone(),
+                transaction_hash: l1_tx.tx.transaction_hash,
+                contract_address: l1_tx.tx.contract_address,
+                entry_point_selector: l1_tx.tx.entry_point_selector,
             })
         }
     }
