@@ -13,7 +13,7 @@ Dojo Indexer is a command line tool that allows you to index data from a given D
   1. Set the database URL that will be used by `sqlx`:
 
      ```
-     cd crates/dojo-indexer
+     cd crates/torii
      ```  
 
      ```
@@ -34,11 +34,11 @@ Dojo Indexer is a command line tool that allows you to index data from a given D
 
 ## Usage
 
-To run the `dojo-indexer` command, open your terminal or command prompt, make sure you are in the `dojo-indexer` directory.
+To run the `torii` command, open your terminal or command prompt, make sure you are in the `torii` directory.
 
 
 ```
-cargo run --bin dojo-indexer <world> <node> <rpc> <database_url>
+cargo run --bin torii <world> <node> <rpc> <database_url>
 ```
 
 - `<world>`: The address of the world you want to index.
