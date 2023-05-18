@@ -1,5 +1,5 @@
 [package]
-name = "dojo-indexer"
+name = "torii"
 version = "0.1.0"
 edition = "2021"
 
@@ -13,7 +13,6 @@ clap.workspace = true
 ctrlc = "3.2.5"
 futures = "0.3.26"
 futures-util = "0.3.26"
-hex = "0.4.3"
 log = "0.4.17"
 serde.workspace = true
 serde_json.workspace = true
@@ -39,5 +38,5 @@ default = ["sqlite"]
 sqlite = ["sqlx/sqlite"]
 
 [[bin]]
-name = "dojo-indexer"
+name = "torii"
 path = "src/cli.rs"

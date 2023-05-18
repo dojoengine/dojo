@@ -3115,33 +3115,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
-name = "dojo-indexer"
-version = "0.1.0"
-dependencies = [
- "actix-cors",
- "actix-web",
- "anyhow",
- "async-graphql",
- "async-graphql-actix-web",
- "chrono",
- "clap",
- "ctrlc",
- "futures",
- "futures-util",
- "hex",
- "log",
- "serde",
- "serde_json",
- "sqlx",
- "tokio",
- "tokio-stream",
- "tokio-util 0.7.8",
- "tracing",
- "tracing-subscriber",
- "url",
-]
-
-[[package]]
 name = "dojo-lang"
 version = "0.1.0"
 dependencies = [
@@ -8640,6 +8613,32 @@ dependencies = [
  "prost-build",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "torii"
+version = "0.1.0"
+dependencies = [
+ "actix-cors",
+ "actix-web",
+ "anyhow",
+ "async-graphql",
+ "async-graphql-actix-web",
+ "chrono",
+ "clap",
+ "ctrlc",
+ "futures",
+ "futures-util",
+ "log",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tokio-stream",
+ "tokio-util 0.7.8",
+ "tracing",
+ "tracing-subscriber",
+ "url",
 ]
 
 [[package]]

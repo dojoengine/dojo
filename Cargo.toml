@@ -5,7 +5,6 @@ resolver = "2"
 members = [
     "crates/bevy-dojo",
     "crates/dojo-lang",
-    "crates/dojo-indexer",
     "crates/dojo-language-server",
     "crates/dojo-world",
     "crates/dojo-test-runner",
@@ -14,6 +13,7 @@ members = [
     "crates/katana-core",
     "crates/katana-rpc",
     "crates/sozo",
+    "crates/torii",
 ]
 
 [workspace.package]
