@@ -9,7 +9,6 @@ use dotenv::dotenv;
 use scarb::core::Config;
 use scarb::ops;
 use scarb::ui::Verbosity;
-use tracing::error;
 
 use crate::build::{self, BuildArgs, ProfileSpec};
 
@@ -49,10 +48,7 @@ pub fn run(args: MigrateArgs) -> Result<()> {
         .log_filter_directive(env::var_os("SCARB_LOG"))
         .build()
         .unwrap();
-    let ws = ops::read_workspace(config.manifest_path(), &config).unwrap_or_else(|err| {
-        error!("error: {err}");
-        std::process::exit(1);
-    });
+    let ws = ops::read_workspace(config.manifest_path(), &config)?;
 
     let profile = profile_spec.determine()?;
     let target_dir = source_dir.join(format!("target/{}", profile.as_str()));
