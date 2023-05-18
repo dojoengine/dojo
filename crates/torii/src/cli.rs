@@ -6,20 +6,17 @@ use sqlx::sqlite::SqlitePoolOptions;
 // use sqlx::postgres::{PgPoolOptions};
 use tokio_util::sync::CancellationToken;
 use tracing_subscriber::fmt;
-use url::Url;
-use ws::server::start_ws;
 
 // use crate::indexer::start_indexer;
 
-mod processors;
+// mod processors;
 
 mod graphql;
-mod indexer;
 // mod indexer;
 mod tests;
-mod ws;
 
 /// Dojo World Indexer
+#[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// The world to index
