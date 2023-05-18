@@ -1,57 +1,49 @@
 use std::cmp::Ordering;
 use std::error::Error;
 
-use apibara_core::node::v1alpha2::DataFinality;
-use apibara_core::starknet::v1alpha2::{
-    DeployedContractFilter, EventFilter, FieldElement, Filter, HeaderFilter, StateUpdateFilter,
-};
-use apibara_sdk::{Configuration, DataMessage, Uri};
-use futures::TryStreamExt;
 use num::BigUint;
 use sqlx::{Pool, Sqlite};
-use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
+use starknet::core::types::FieldElement;
+use starknet::core::utils::starknet_keccak;
+use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, info, warn};
 
-use crate::hash::starknet_hash;
 use crate::processors::component_register::ComponentRegistrationProcessor;
 use crate::processors::component_state_update::ComponentStateUpdateProcessor;
 use crate::processors::system_register::SystemRegistrationProcessor;
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
-use crate::stream::{FieldElementExt, StarknetClientBuilder};
-
-pub struct Processors {
-    pub event_processors: Vec<Box<dyn EventProcessor>>,
-    pub block_processors: Vec<Box<dyn BlockProcessor>>,
-    pub transaction_processors: Vec<Box<dyn TransactionProcessor>>,
+pub struct Processors<T> {
+    pub event_processors: Vec<Box<dyn EventProcessor<T>>>,
+    pub block_processors: Vec<Box<dyn BlockProcessor<T>>>,
+    pub transaction_processors: Vec<Box<dyn TransactionProcessor<T>>>,
 }
 
-fn filter_by_processors(filter: &mut Filter, processors: &Processors) {
+fn filter_by_processors<T: JsonRpcTransport>(filter: &mut Filter, processors: &Processors<T>) {
     for processor in &processors.event_processors {
-        let bytes: [u8; 32] =
-            starknet_hash(processor.get_event_key().as_bytes()).to_bytes_be().try_into().unwrap();
+        let bytes: [u8; 32] = starknet_keccak(processor.event_key().as_bytes()).to_bytes_be();
 
         filter.events.push(EventFilter {
-            keys: vec![FieldElement::from_bytes(&bytes)],
+            keys: vec![ApibaraFieldElement::from_bytes(&bytes)],
             ..Default::default()
         })
     }
 }
 
-pub async fn start_indexer(
+pub async fn start_indexer<T: JsonRpcTransport + Sync + Send>(
     ct: CancellationToken,
     world: BigUint,
     node_uri: Uri,
     pool: &Pool<Sqlite>,
-    provider: &JsonRpcClient<HttpTransport>,
+    provider: &JsonRpcClient<T>,
 ) -> Result<(), Box<dyn Error>> {
     info!("starting indexer");
 
     let processors = Processors {
         event_processors: vec![
-            Box::new(ComponentStateUpdateProcessor::new()),
-            Box::new(ComponentRegistrationProcessor::new()),
-            Box::new(SystemRegistrationProcessor::new()),
+            Box::<ComponentStateUpdateProcessor>::default(),
+            Box::<ComponentRegistrationProcessor>::default(),
+            Box::<SystemRegistrationProcessor>::default(),
         ],
         block_processors: vec![],
         transaction_processors: vec![],
@@ -65,7 +57,7 @@ pub async fn start_indexer(
         state_update: Some(StateUpdateFilter {
             deployed_contracts: vec![DeployedContractFilter {
                 // we just want to know when our world contract is deployed
-                contract_address: Some(FieldElement::from_bytes(
+                contract_address: Some(ApibaraFieldElement::from_bytes(
                     &world.to_bytes_be().try_into().unwrap(),
                 )),
                 ..Default::default()
@@ -85,6 +77,13 @@ pub async fn start_indexer(
         .with_finality(DataFinality::DataStatusAccepted)
         .with_filter(|filter| filter.with_header(HeaderFilter { weak: false }));
     stream_client.send(starting_configuration).await?;
+
+    // Reduce event processors into a Map that maps event_key to the processor
+    let event_processors = processors
+        .event_processors
+        .into_iter()
+        .map(|processor| (starknet_keccak(processor.event_key().as_bytes()), processor))
+        .collect::<std::collections::HashMap<_, _>>();
 
     // dont process anything until our world is deployed
     let mut world_deployed = false;
@@ -159,21 +158,17 @@ pub async fn start_indexer(
                         }
                     }
 
-                    for event in &block.events {
-                        match &event.event {
-                            Some(_ev_data) => {
-                                for processor in &processors.event_processors {
-                                    processor
-                                        .process(pool, provider, event.clone())
-                                        .await
-                                        .unwrap_or_else(|op| {
-                                            panic!("Failed processing event: {op:?}");
-                                        });
-                                }
-                            }
-                            None => {
-                                warn!("Received event without key");
-                            }
+                    for event_w_tx in block.events {
+                        let event = event_w_tx.clone().event.unwrap();
+                        let event_key = event.keys[0].to_biguint();
+                        if let Some(processor) = event_processors.get(
+                            &FieldElement::from_byte_slice_be(&event_key.to_bytes_be()).unwrap(),
+                        ) {
+                            processor.process(pool, provider, event_w_tx).await.unwrap_or_else(
+                                |op| {
+                                    panic!("Failed processing event: {op:?}");
+                                },
+                            );
                         }
                     }
                 }
@@ -183,3 +178,18 @@ pub async fn start_indexer(
 
     Ok(())
 }
+
+// #[test]
+// fn test_indexer() {
+//     use crate::start_apibara;
+
+//     let rpc_url = "http://localhost:5050";
+//     let (sequencer, rpc) = build_mock_rpc(5050);
+//     let ct = CancellationToken::new();
+//     let pool = sqlx::sqlite::SqlitePool::connect("sqlite::memory:").unwrap();
+//     let world = BigUint::from(0x1234567890);
+//     let provider = JsonRpcClient::new(HttpTransport::new(Uri::parse(rpc_url)));
+
+//     start_apibara(ct, rpc_url.into());
+//     start_indexer(ct, world, Uri::from_str("http://localhost:7171").unwrap(), pool, &provider)
+// }

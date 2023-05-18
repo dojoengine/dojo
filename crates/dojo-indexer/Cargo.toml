@@ -12,9 +12,6 @@ actix = "0.13.0"
 actix-web-actors = "4.2.0"
 
 anyhow.workspace = true
-apibara-core = { git = "https://github.com/ponderingdemocritus/dna" }
-apibara-sdk = { git = "https://github.com/ponderingdemocritus/dna" }
-apibara-starknet = { git = "https://github.com/ponderingdemocritus/dna" }
 clap.workspace = true
 ctrlc = "3.2.5"
 futures = "0.3.26"
@@ -23,9 +20,8 @@ hex = "0.4.3"
 juniper = "0.15.11"
 juniper_actix = "0.4.0"
 log = "0.4.17"
-num = "0.4.0"
 serde.workspace = true
-sha3 = "0.10.6"
+serde_json.workspace = true
 sqlx = { version = "0.6.2", features = [
     "runtime-actix-native-tls",
     "uuid",
@@ -33,15 +29,14 @@ sqlx = { version = "0.6.2", features = [
     "macros",
     "offline",
 ] }
-starknet.workspace = true
 tokio = { version = "1.20.1", features = ["full"] }
 tokio-stream = "0.1.11"
 tokio-util = "0.7.7"
-tonic = { version = "0.8.3", features = ["tls", "tls-roots"] }
 tracing.workspace = true
 tracing-subscriber.workspace = true
 url = "2.2.2"
-serde_json = "1.0"
+chrono.workspace = true
+starknet.workspace = true
 
 [features]
 default = ["sqlite"]

@@ -33,6 +33,22 @@ impl SystemCall {
     }
 }
 
+pub async fn system_call(context: &Context, id: i64) -> FieldResult<SystemCall> {
+    let mut conn = context.pool.acquire().await.unwrap();
+
+    let system_call = sqlx::query_as!(
+        SystemCall,
+        r#"
+            SELECT * FROM system_calls WHERE id = $1
+        "#,
+        id
+    )
+    .fetch_one(&mut conn)
+    .await?;
+
+    Ok(system_call)
+}
+
 pub async fn system_calls_by_system(
     context: &Context,
     system_id: String,
@@ -47,8 +63,7 @@ pub async fn system_calls_by_system(
         system_id
     )
     .fetch_all(&mut conn)
-    .await
-    .unwrap();
+    .await?;
 
     Ok(system_calls)
 }

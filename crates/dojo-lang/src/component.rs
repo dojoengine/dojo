@@ -6,13 +6,20 @@ use cairo_lang_semantic::plugin::DynPluginAuxData;
 use cairo_lang_syntax::attribute::structured::{
     AttributeArg, AttributeArgVariant, AttributeStructurize,
 };
+use cairo_lang_syntax::node::ast::ItemStruct;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 
 use crate::plugin::DojoAuxData;
 
-pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> PluginResult {
+/// A handler for Dojo code that modifies a component struct.
+/// Parameters:
+/// * db: The semantic database.
+/// * struct_ast: The AST of the component struct.
+/// Returns:
+/// * A PluginResult containing the generated code.
+pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> PluginResult {
     let mut body_nodes = vec![RewriteNode::interpolate_patched(
         "
             #[view]
@@ -59,8 +66,6 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
     // Add the is_indexed function to the body
     body_nodes.push(is_indexed_fn);
 
-    let mut serialize = vec![];
-    let mut deserialize = vec![];
     let mut schema = vec![];
 
     let binding = struct_ast.members(db).elements(db);
@@ -75,35 +80,12 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
                 ),
             ]),
         ));
-
-        serialize.push(RewriteNode::interpolate_patched(
-            "serde::Serde::<$type_clause$>::serialize(ref serialized, input.$key$);",
-            HashMap::from([
-                ("key".to_string(), RewriteNode::new_trimmed(member.name(db).as_syntax_node())),
-                (
-                    "type_clause".to_string(),
-                    RewriteNode::new_trimmed(member.type_clause(db).ty(db).as_syntax_node()),
-                ),
-            ]),
-        ));
-
-        deserialize.push(RewriteNode::interpolate_patched(
-            "$key$: serde::Serde::<$type_clause$>::deserialize(ref serialized)?,",
-            HashMap::from([
-                ("key".to_string(), RewriteNode::new_trimmed(member.name(db).as_syntax_node())),
-                (
-                    "type_clause".to_string(),
-                    RewriteNode::new_trimmed(member.type_clause(db).ty(db).as_syntax_node()),
-                ),
-            ]),
-        ));
     });
 
     let name = struct_ast.name(db).text(db);
     let mut builder = PatchBuilder::new(db);
     builder.add_modified(RewriteNode::interpolate_patched(
         "
-            #[derive(Copy, Drop, Serde)]
             struct $type_name$ {
                 $members$
             }
@@ -112,8 +94,6 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
             trait I$type_name$ {
                 fn name() -> felt252;
                 fn len() -> u8;
-                fn serialize(raw: Span<felt252>) -> $type_name$;
-                fn deserialize(value: $type_name$) -> Span<felt252>;
             }
 
             #[contract]
@@ -157,7 +137,8 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
     }
 }
 
-fn is_indexed(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> bool {
+/// Returns true if the component is indexed #[component(indexed: true)]
+fn is_indexed(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> bool {
     for attr in struct_ast.attributes(db).query_attr(db, "component") {
         let attr = attr.structurize(db);
 

@@ -1,19 +1,17 @@
 use std::collections::HashMap;
 use std::fmt::Display;
+use std::fs;
 use std::path::PathBuf;
-use std::{env, fs};
 
 use anyhow::{anyhow, Context, Result};
 use camino::Utf8PathBuf;
-use dojo_lang::manifest::Manifest;
-use scarb::core::Config;
-use scarb::ops;
-use scarb::ui::Verbosity;
+use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::FieldElement;
-use url::Url;
+use starknet::signers::{LocalWallet, SigningKey};
 
 use super::{ClassMigration, ContractMigration, Migration};
-use crate::WorldConfig;
+use crate::manifest::Manifest;
+use crate::{EnvironmentConfig, WorldConfig};
 
 #[derive(Debug, Default, Clone)]
 pub struct Contract {
@@ -66,29 +64,21 @@ pub struct World {
     contracts: Vec<Class>,
     components: Vec<Class>,
     systems: Vec<Class>,
+    environment_config: EnvironmentConfig,
 }
 
 impl World {
-    pub async fn from_path(source_dir: Utf8PathBuf) -> Result<World> {
-        let url = Url::parse("https://starknet-goerli.cartridge.gg/").unwrap();
-
-        let manifest_path = source_dir.join("Scarb.toml");
-        let config = Config::builder(manifest_path)
-            .ui_verbosity(Verbosity::Verbose)
-            .log_filter_directive(env::var_os("SCARB_LOG"))
-            .build()
-            .unwrap();
-        let ws = ops::read_workspace(config.manifest_path(), &config).unwrap_or_else(|err| {
-            eprintln!("error: {err}");
-            std::process::exit(1);
-        });
-        let world_config = WorldConfig::from_workspace(&ws).unwrap_or_default();
-
-        let local_manifest =
-            Manifest::load_from_path(source_dir.join("target/release/manifest.json"))?;
+    pub async fn from_path(
+        target_dir: Utf8PathBuf,
+        world_config: WorldConfig,
+        env_config: EnvironmentConfig,
+    ) -> Result<World> {
+        let local_manifest = Manifest::load_from_path(target_dir.join("manifest.json"))?;
 
         let remote_manifest = if let Some(world_address) = world_config.address {
-            Manifest::from_remote(world_address, url, &local_manifest)
+            let provider = env_config.provider()?;
+
+            Manifest::from_remote(world_address, provider, Some(local_manifest.clone()))
                 .await
                 .map_err(|e| anyhow!("Problem creating remote manifest: {e}"))?
         } else {
@@ -156,12 +146,13 @@ impl World {
             systems,
             contracts,
             components,
+            environment_config: env_config,
         })
     }
 
     /// evaluate which contracts/classes need to be (re)declared/deployed
-    pub fn prepare_for_migration(&self, source_dir: Utf8PathBuf) -> Result<Migration> {
-        let entries = fs::read_dir(source_dir.join("target/release")).unwrap_or_else(|error| {
+    pub fn prepare_for_migration(&self, target_dir: Utf8PathBuf) -> Result<Migration> {
+        let entries = fs::read_dir(target_dir).unwrap_or_else(|error| {
             panic!("Problem reading source directory: {error}");
         });
 
@@ -184,7 +175,28 @@ impl World {
         let components = evaluate_components_to_be_declared(&self.components, &artifact_paths)?;
         let systems = evaluate_systems_to_be_declared(&self.systems, &artifact_paths)?;
 
-        Ok(Migration { world, executor, systems, components })
+        let migrator = {
+            let provider = self.environment_config.provider()?;
+
+            let private_key = self
+                .environment_config
+                .private_key
+                .ok_or(anyhow!("missing private key for migration."))?;
+
+            let account_address = self
+                .environment_config
+                .account_address
+                .ok_or(anyhow!("missing account address for migration."))?;
+
+            SingleOwnerAccount::new(
+                provider,
+                LocalWallet::from_signing_key(SigningKey::from_secret_scalar(private_key)),
+                account_address,
+                self.environment_config.chain_id.unwrap(),
+            )
+        };
+
+        Ok(Migration { world, executor, systems, components, migrator })
     }
 }
 

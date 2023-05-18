@@ -39,7 +39,7 @@ fn test_manifest_generation() {
     let _crate_id = setup_test_crate(
         db,
         "
-            #[derive(Component)]
+            #[derive(Component, Copy, Drop, Serde)]
             struct Position {
                 x: usize,
                 y: usize,
@@ -63,16 +63,16 @@ fn test_manifest_generation() {
 
     let manifest = Manifest::new(db, &db.crates(), compiled_contracts);
 
-    assert_eq!(manifest.components.len(), 1);
-    assert_eq!(manifest.systems.len(), 1);
-    assert_eq!(manifest.world.unwrap(), class_hash);
-    assert_eq!(manifest.executor.unwrap(), class_hash);
+    assert_eq!(manifest.0.components.len(), 1);
+    assert_eq!(manifest.0.systems.len(), 1);
+    assert_eq!(manifest.0.world.unwrap(), class_hash);
+    assert_eq!(manifest.0.executor.unwrap(), class_hash);
     assert_eq!(
-        manifest.components.iter().find(|c| &c.name == "Position").unwrap().class_hash,
+        manifest.0.components.iter().find(|c| &c.name == "Position").unwrap().class_hash,
         FieldElement::from_hex_be("0x420").unwrap()
     );
     assert_eq!(
-        manifest.systems.iter().find(|c| &c.name == "MoveSystem").unwrap().class_hash,
+        manifest.0.systems.iter().find(|c| &c.name == "MoveSystem").unwrap().class_hash,
         FieldElement::from_hex_be("0x69").unwrap()
     );
 }

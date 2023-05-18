@@ -24,24 +24,26 @@ cairo-lang-sierra-generator.workspace = true
 cairo-lang-syntax.workspace = true
 cairo-lang-starknet.workspace = true
 cairo-lang-utils.workspace = true
+dojo-world = { path = "../dojo-world" }
 itertools.workspace = true
 scarb.workspace = true
+semver.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+serde_with = "2.3.1"
 smol_str.workspace = true
 thiserror = "1.0.32"
 tracing.workspace = true
 salsa.workspace = true
 sanitizer = "0.1.6"
 starknet.workspace = true
-serde_with = "2.3.1"
 url = "2.2.2"
 
 [dev-dependencies]
 assert_fs = "1.0.9"
-cairo-lang-formatter = "1.0.0-alpha.7"
-cairo-lang-semantic = { version = "1.0.0-alpha.7", features = ["testing"] }
-cairo-lang-test-utils = "1.0.0-alpha.7"
+cairo-lang-formatter.workspace = true
+cairo-lang-semantic.workspace = true
+cairo-lang-test-utils.workspace = true
 env_logger = "0.10.0"
 pretty_assertions.workspace = true
 test-case = "2.2.2"

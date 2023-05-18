@@ -5,21 +5,17 @@ mod KeyValueStore {
     use starknet::SyscallResultTrait;
     use option::OptionTrait;
 
+    use dojo_core::integer::u250;
     use dojo_core::serde::SpanSerde;
 
-    fn address(table: felt252, key: felt252) -> starknet::StorageBaseAddress {
+    fn address(table: u250, key: u250) -> starknet::StorageBaseAddress {
         starknet::storage_base_address_from_felt252(
-            hash::LegacyHash::<(felt252, felt252)>::hash(0x420, (table, key))
+            hash::LegacyHash::<(u250, u250)>::hash(0x420, (table, key))
         )
     }
 
     #[view]
-    fn get(
-        table: felt252,
-        key: felt252,
-        offset: u8,
-        mut length: usize
-    ) -> Span<felt252> {
+    fn get(table: u250, key: u250, offset: u8, length: usize) -> Span<felt252> {
         let address_domain = 0_u32;
         let base = address(table, key);
         let mut value = ArrayTrait::<felt252>::new();
@@ -34,9 +30,7 @@ mod KeyValueStore {
         offset: u8,
         length: usize
     ) {
-        gas::withdraw_gas().expect('Out of gas');
-
-        if length.into() == offset.into() {
+        if length == offset.into() {
             return ();
         }
 
@@ -50,12 +44,7 @@ mod KeyValueStore {
     }
 
     #[external]
-    fn set(
-        table: felt252,
-        query: felt252,
-        offset: u8,
-        value: Span<felt252>
-    ) {
+    fn set(table: u250, query: u250, offset: u8, value: Span<felt252>) {
         let address_domain = 0_u32;
         let base = address(table, query);
         _set(address_domain, base, value, offset: offset);

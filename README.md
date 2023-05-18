@@ -37,7 +37,7 @@ Components form the schema of the world, holding state for systems to operate on
 ##### Components Example
 
 ```rust
-#[derive(Component)]
+#[derive(Component, Copy, Drop, Serde)]
 struct Position {
     x: u32,
     y: u32
@@ -108,14 +108,6 @@ mod MoveSystem {
 An entity is addressed by a `felt252`. An entity represents a collection of component state.
 
 ## Development
-
-### Cairo Submodule
-
-Make sure that the Cairo 1 submodule is present when this repository is cloned
-
-```bash
-git submodule init && git submodule update
-```
 
 ### Dev Container
 

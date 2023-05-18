@@ -1,12 +1,12 @@
 use array::ArrayTrait;
 
-#[derive(Component)]
+#[derive(Component, Copy, Drop, Serde)]
 #[component(indexed = true)]
 struct Moves {
     remaining: u8, 
 }
 
-#[derive(Component)]
+#[derive(Component, Copy, Drop, Serde)]
 struct Position {
     x: u32,
     y: u32
