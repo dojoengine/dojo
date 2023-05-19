@@ -124,6 +124,40 @@
             background-color: #FF2F42;
         }
 
+        .install {
+            margin-top: 48px;
+        }
+
+        .script {
+            height: 42px;
+            font-weight: 700;
+            line-height: 18px;
+            background-color: #84ADE5;
+            box-shadow: 0px 70px 28px rgba(22, 33, 48, 0.01), 0px 40px 24px rgba(22, 33, 48, 0.05), 0px 18px 18px rgba(22, 33, 48, 0.09), 0px 4px 10px rgba(22, 33, 48, 0.1), 0px 0px 0px rgba(22, 33, 48, 0.1);
+            border-radius: 6px;
+            color: #071E3F;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            > button {
+                margin-left: 10px;
+                background: none;
+                outline: none;
+                border: none;
+                margin-bottom: -4px;
+                cursor: pointer;
+
+                > svg {
+                    fill: #071E3F;
+                }
+
+                > svg:hover {
+                    fill: black;
+                }
+            }
+        }
+
         @media screen and (max-width: 800px) {
             .content-wrapper {
                 flex-direction: column;
@@ -197,9 +231,17 @@
                 <path d="M118.898 66.1107L153.972 66.1583V91.568C153.972 96.2753 153.972 109.246 137.381 109.246C127.008 109.246 118.898 103.845 118.898 94.3828V87.2126H128.739V92.9754C128.739 96.979 131.819 100.222 136.896 100.222C143.542 100.222 144.084 95.8378 144.084 92.9184V81.9823C144.084 79.1693 144.586 76.9328 145.472 74.27C145.481 74.2415 145.472 74.2224 145.443 74.2129C145.225 74.1163 144.369 73.5568 144.16 73.6614C141.767 74.8992 139.194 75.2019 136.544 75.2019H118.898V66.1107Z" fill="#FF2F42"/>
             </svg>                
         </div>
-        <p class="content">
-          <b>DOJO</b> is an open source ECS framework for the Starknet ecosystem. It standardizes the way games are built on-chain and provides a suite of developer tools right out of the box.
-        </p>
+        <div class="content">
+            <p><b>Dojo</b> is an verifiable game engine and toolchain for building onchain games and autonomous worlds with Cairo 1.0.</p>
+            <div class="install">
+                <pre><code class="script">curl -L https://install.dojoengine.org | bash<button onclick="(function() {
+                  navigator.clipboard.writeText('curl -L https://install.dojoengine.org | bash')  
+                })()"><svg width="19" height="19" viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path opacity="0.5" d="M5 14.3164H10.25C10.6648 14.3164 11 13.9812 11 13.5664V12.4414C11 12.2352 11.1687 12.0664 11.375 12.0664C11.5813 12.0664 11.75 12.2352 11.75 12.4414V13.5664C11.75 14.3938 11.0773 15.0664 10.25 15.0664H5C4.17148 15.0664 3.5 14.3938 3.5 13.5664V8.31641C3.5 7.48906 4.17148 6.81641 5 6.81641H6.125C6.33125 6.81641 6.5 6.98516 6.5 7.19141C6.5 7.39766 6.33125 7.56641 6.125 7.56641H5C4.58586 7.56641 4.25 7.90156 4.25 8.31641V13.5664C4.25 13.9812 4.58586 14.3164 5 14.3164ZM7.25 4.56641C7.25 3.73789 7.92266 3.06641 8.75 3.06641H14C14.8273 3.06641 15.5 3.73789 15.5 4.56641V9.81641C15.5 10.6438 14.8273 11.3164 14 11.3164H8.75C7.92266 11.3164 7.25 10.6438 7.25 9.81641V4.56641ZM8.75 10.5664H14C14.4148 10.5664 14.75 10.2312 14.75 9.81641V4.56641C14.75 4.15227 14.4148 3.81641 14 3.81641H8.75C8.33516 3.81641 8 4.15227 8 4.56641V9.81641C8 10.2312 8.33516 10.5664 8.75 10.5664Z" fill="#071E3F"/>
+                    </svg></button>
+                </code></pre>
+            </div>
+        </div>
     </div>
     <div id="background">
         <svg>
