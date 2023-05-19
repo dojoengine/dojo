@@ -23,9 +23,26 @@ mod Move {
     use dojo_examples::components::Position;
     use dojo_examples::components::Moves;
 
-    // TODO: Use enum once serde is derivable
-    // left: 0, right: 1, up: 2, down: 3
-    fn execute(direction: felt252) {
+    #[derive(Serde, Drop)]
+    enum Direction {
+        Left: (),
+        Right: (),
+        Up: (),
+        Down: (),
+    }
+
+    impl DirectionIntoFelt252 of Into<Direction, felt252> {
+        fn into(self: Direction) -> felt252 {
+            match self {
+                Direction::Left(()) => 0,
+                Direction::Right(()) => 1,
+                Direction::Up(()) => 2,
+                Direction::Down(()) => 3,
+            }
+        }
+    }
+
+    fn execute(direction: Direction) {
         let caller = starknet::get_caller_address();
         let (position, moves) = commands::<Position, Moves>::entity(caller.into());
         let next = next_position(position, direction);
@@ -36,19 +53,20 @@ mod Move {
         return ();
     }
 
-    fn next_position(position: Position, direction: felt252) -> Position {
-        // TODO: Use match once supported
-        // error: Only match zero (match ... { 0 => ..., _ => ... }) is currently supported.
-        if direction == 0 {
-            Position { x: position.x - 1_u32, y: position.y }
-        } else if direction == 1 {
-            Position { x: position.x + 1_u32, y: position.y }
-        } else if direction == 2 {
-            Position { x: position.x, y: position.y - 1_u32 }
-        } else if direction == 3 {
-            Position { x: position.x, y: position.y + 1_u32 }
-        } else {
-            position
+    fn next_position(position: Position, direction: Direction) -> Position {
+        match direction {
+            Direction::Left(()) => {
+                Position { x: position.x - 1_u32, y: position.y }
+            },
+            Direction::Right(()) => {
+                Position { x: position.x + 1_u32, y: position.y }
+            },
+            Direction::Up(()) => {
+                Position { x: position.x, y: position.y - 1_u32 }
+            },
+            Direction::Down(()) => {
+                Position { x: position.x, y: position.y + 1_u32 }
+            },
         }
     }
 }
@@ -115,7 +133,7 @@ mod tests {
         world.execute('Spawn'.into(), spawn_call_data.span());
 
         let mut move_calldata = array::ArrayTrait::<felt252>::new();
-        move_calldata.append(1);
+        move_calldata.append(MoveSystem::Direction::Right(()).into());
         world.execute('Move'.into(), move_calldata.span());
 
         let world_address = world.contract_address;
