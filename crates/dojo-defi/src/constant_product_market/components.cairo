@@ -1,12 +1,9 @@
-use traits::Into;
-use traits::TryInto;
+use traits::{Into, TryInto};
 use option::OptionTrait;
 
 // Cubit fixed point math library
-use cubit::types::fixed::Fixed;
-use cubit::types::fixed::FixedInto;
-use cubit::types::fixed::FixedType;
-use cubit::types::fixed::ONE_u128;
+use cubit::types::fixed::{Fixed, FixedInto, FixedType, ONE_u128};
+
 
 use cubit::test::helpers::assert_precise;
 
@@ -258,7 +255,7 @@ fn normalize(quantity: usize, market: @Market) -> (u128, u128, u128) {
 #[should_panic(expected: ('not enough liquidity', ))]
 fn test_not_enough_quantity() {
     let market = Market { cash_amount: SCALING_FACTOR * 1, item_quantity: 1 }; // pool 1:1
-    let cost = market.buy(10_usize);
+    let cost = market.buy(10);
 }
 
 #[test]

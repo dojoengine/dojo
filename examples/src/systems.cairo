@@ -9,7 +9,7 @@ mod Spawn {
     fn execute() {
         let caller = starknet::get_caller_address();
         let player = commands::set_entity(
-            caller.into(), (Moves { remaining: 10_u8 }, Position { x: 0_u32, y: 0_u32 }, )
+            caller.into(), (Moves { remaining: 10 }, Position { x: 0, y: 0 }, )
         );
         return ();
     }
@@ -31,7 +31,7 @@ mod Move {
         let next = next_position(position, direction);
         let uh = commands::set_entity(
             caller.into(),
-            (Moves { remaining: moves.remaining - 1_u8 }, Position { x: next.x, y: next.y }, )
+            (Moves { remaining: moves.remaining - 1 }, Position { x: next.x, y: next.y }, )
         );
         return ();
     }
@@ -40,13 +40,13 @@ mod Move {
         // TODO: Use match once supported
         // error: Only match zero (match ... { 0 => ..., _ => ... }) is currently supported.
         if direction == 0 {
-            Position { x: position.x - 1_u32, y: position.y }
+            Position { x: position.x - 1, y: position.y }
         } else if direction == 1 {
-            Position { x: position.x + 1_u32, y: position.y }
+            Position { x: position.x + 1, y: position.y }
         } else if direction == 2 {
-            Position { x: position.x, y: position.y - 1_u32 }
+            Position { x: position.x, y: position.y - 1 }
         } else if direction == 3 {
-            Position { x: position.x, y: position.y + 1_u32 }
+            Position { x: position.x, y: position.y + 1 }
         } else {
             position
         }
@@ -70,15 +70,15 @@ mod tests {
     #[available_gas(30000000)]
     fn test_move() {
         // components
-        let mut components = array::ArrayTrait::<felt252>::new();
+        let mut components = array::ArrayTrait::new();
         components.append(PositionComponent::TEST_CLASS_HASH);
         components.append(MovesComponent::TEST_CLASS_HASH);
         // systems
-        let mut systems = array::ArrayTrait::<felt252>::new();
+        let mut systems = array::ArrayTrait::new();
         systems.append(SpawnSystem::TEST_CLASS_HASH);
         systems.append(MoveSystem::TEST_CLASS_HASH);
         // routes
-        let mut routes = array::ArrayTrait::<Route>::new();
+        let mut routes = array::ArrayTrait::new();
         routes.append(
             RouteTrait::new(
                 'Move'.into(), // target_id
@@ -111,19 +111,19 @@ mod tests {
         // deploy executor, world and register components/systems
         let world = spawn_test_world(components, systems, routes);
 
-        let spawn_call_data = array::ArrayTrait::<felt252>::new();
+        let spawn_call_data = array::ArrayTrait::new();
         world.execute('Spawn'.into(), spawn_call_data.span());
 
-        let mut move_calldata = array::ArrayTrait::<felt252>::new();
+        let mut move_calldata = array::ArrayTrait::new();
         move_calldata.append(1);
         world.execute('Move'.into(), move_calldata.span());
 
         let world_address = world.contract_address;
 
-        let moves = world.entity('Moves'.into(), world_address.into(), 0_u8, 0_usize);
+        let moves = world.entity('Moves'.into(), world_address.into(), 0, 0);
         assert(*moves[0] == 9, 'moves is wrong');
 
-        let new_position = world.entity('Position'.into(), world_address.into(), 0_u8, 0_usize);
+        let new_position = world.entity('Position'.into(), world_address.into(), 0, 0);
         assert(*new_position[0] == 1, 'position x is wrong');
         assert(*new_position[1] == 0, 'position y is wrong');
     }

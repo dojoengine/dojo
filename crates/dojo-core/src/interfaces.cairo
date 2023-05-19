@@ -1,8 +1,4 @@
-use dojo_core::integer::u250;
-use dojo_core::string::ShortString;
-use dojo_core::serde::SpanSerde;
-use dojo_core::storage::query::Query;
-use dojo_core::auth::systems::Route;
+use dojo_core::{integer::u250, string::ShortString, serde::SpanSerde, storage::query::Query, auth::systems::Route};
 use starknet::{ClassHash, ContractAddress};
 
 #[abi]

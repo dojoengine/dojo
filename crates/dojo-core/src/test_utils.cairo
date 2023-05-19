@@ -1,19 +1,10 @@
-use starknet::ClassHash;
-use starknet::syscalls::deploy_syscall;
-use starknet::class_hash::Felt252TryIntoClassHash;
-use starknet::get_caller_address;
-
+use starknet::{ClassHash, syscalls::deploy_syscall, class_hash::Felt252TryIntoClassHash, get_caller_address};
 use array::ArrayTrait;
 use traits::TryInto;
 use option::OptionTrait;
-use core::result::ResultTrait;
-use core::traits::Into;
+use core::{result::ResultTrait, traits::Into};
 
-use dojo_core::executor::Executor;
-use dojo_core::world::World;
-use dojo_core::interfaces::IWorldDispatcher;
-use dojo_core::interfaces::IWorldDispatcherTrait;
-
+use dojo_core::{executor::Executor, world::World, interfaces::{IWorldDispatcher, IWorldDispatcherTrait}};
 use dojo_core::auth::components::{AuthRoleComponent, AuthStatusComponent};
 use dojo_core::auth::systems::{
     Route, RouteAuthSystem, IsAuthorizedSystem, IsAccountAdminSystem, GrantAuthRoleSystem,
@@ -25,13 +16,13 @@ fn spawn_test_world(
     components: Array<felt252>, systems: Array<felt252>, routes: Array<Route>
 ) -> IWorldDispatcher {
     // deploy executor
-    let constructor_calldata = array::ArrayTrait::<felt252>::new();
+    let constructor_calldata = array::ArrayTrait::new();
     let (executor_address, _) = deploy_syscall(
         Executor::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
     ).unwrap();
 
     // deploy world
-    let mut world_constructor_calldata = array::ArrayTrait::<felt252>::new();
+    let mut world_constructor_calldata = array::ArrayTrait::new();
     world_constructor_calldata.append('World');
     world_constructor_calldata.append(executor_address.into());
     let (world_address, _) = deploy_syscall(
@@ -96,12 +87,12 @@ fn spawn_test_world(
 // Creates auth components and systems for testing
 fn mock_auth_components_systems() -> (Array<ClassHash>, Array<ClassHash>) {
     // Auth components
-    let mut components = array::ArrayTrait::<ClassHash>::new();
+    let mut components = array::ArrayTrait::new();
     components.append(AuthRoleComponent::TEST_CLASS_HASH.try_into().unwrap());
     components.append(AuthStatusComponent::TEST_CLASS_HASH.try_into().unwrap());
 
     // Auth systems
-    let mut systems = array::ArrayTrait::<ClassHash>::new();
+    let mut systems = array::ArrayTrait::new();
     systems.append(RouteAuthSystem::TEST_CLASS_HASH.try_into().unwrap());
     systems.append(IsAuthorizedSystem::TEST_CLASS_HASH.try_into().unwrap());
     systems.append(IsAccountAdminSystem::TEST_CLASS_HASH.try_into().unwrap());

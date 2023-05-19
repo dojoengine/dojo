@@ -10,13 +10,10 @@ mod ERC20 {
 
     use array::ArrayTrait;
     use option::OptionTrait;
-    use starknet::ContractAddress;
-    use starknet::get_caller_address;
-    use starknet::get_contract_address;
+    use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use traits::Into;
     use zeroable::Zeroable;
 
-    use dojo_core::integer::u250;
     use dojo_core::storage::query::{
         Query,
         LiteralIntoQuery,
@@ -25,13 +22,9 @@ mod ERC20 {
         IntoPartitioned,
         IntoPartitionedQuery
     };
-    use dojo_core::string::ShortString;
-    use dojo_core::interfaces::IWorldDispatcher;
-    use dojo_core::interfaces::IWorldDispatcherTrait;
-
-    use dojo_erc::erc20::components::Allowance;
-    use dojo_erc::erc20::components::Balance;
-    use dojo_erc::erc20::components::Supply;
+    
+    use dojo_core::{integer::u250, string::ShortString, interfaces::{IWorldDispatcher, IWorldDispatcherTrait}};
+    use dojo_erc::erc20::components::{Allowance, Balance, Supply};
 
     struct Storage {
         world_address: ContractAddress,
@@ -63,7 +56,7 @@ mod ERC20 {
         if initial_supply != 0 {
             assert(recipient.is_non_zero(), 'ERC20: mint to 0');
             let token = get_contract_address();
-            let mut calldata = ArrayTrait::<felt252>::new();
+            let mut calldata = ArrayTrait::new();
             calldata.append(token.into());
             calldata.append(recipient.into());
             calldata.append(initial_supply);
@@ -119,7 +112,7 @@ mod ERC20 {
 
         let token = get_contract_address();
         let owner = get_caller_address();
-        let mut calldata = ArrayTrait::<felt252>::new();
+        let mut calldata = ArrayTrait::new();
         calldata.append(token.into());
         calldata.append(owner.into());
         calldata.append(spender.into());
@@ -156,7 +149,7 @@ mod ERC20 {
         assert(recipient.is_non_zero(), 'ERC20: transfer to 0');
 
         let token = get_contract_address();
-        let mut calldata = ArrayTrait::<felt252>::new();
+        let mut calldata = ArrayTrait::new();
         calldata.append(token.into());
         calldata.append(spender.into());
         calldata.append(recipient.into());

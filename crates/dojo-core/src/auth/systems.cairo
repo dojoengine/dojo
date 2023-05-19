@@ -21,8 +21,7 @@ impl RouteImpl of RouteTrait {
 mod RouteAuth {
     use traits::Into;
 
-    use dojo_core::auth::components::AuthStatus;
-    use dojo_core::auth::components::AuthRole;
+    use dojo_core::auth::components::{AuthStatus, AuthRole};
     use super::Route;
 
     use starknet::ContractAddress;
@@ -36,7 +35,7 @@ mod RouteAuth {
         // Set status
         commands::set_entity(
             (route.role_id, route.resource_id).into(),
-            (AuthStatus { is_authorized: bool::True(()) })
+            (AuthStatus { is_authorized: true })
         );
     }
 }
@@ -46,9 +45,7 @@ mod IsAccountAdmin {
     use traits::Into;
     use starknet::get_tx_info;
     use box::BoxTrait;
-    use dojo_core::integer::u250;
-    use dojo_core::auth::components::AuthStatus;
-    use dojo_core::auth::components::AuthRole;
+    use dojo_core::{auth::components::{AuthStatus, AuthRole}, integer::u250};
 
     fn execute() -> bool {
         // Get calling account contract address
@@ -62,9 +59,8 @@ mod IsAccountAdmin {
 #[system]
 mod IsAuthorized {
     use traits::Into;
-    use dojo_core::integer::u250;
-    use dojo_core::auth::components::AuthStatus;
-    use dojo_core::auth::components::AuthRole;
+    use dojo_core::{auth::components::{AuthStatus, AuthRole}, integer::u250};
+
 
     fn execute(target_id: u250, resource_id: u250) -> bool {
         // Get component-scoped role
@@ -80,7 +76,7 @@ mod IsAuthorized {
         );
         let authorization_status = match maybe_authorization_status {
             Option::Some(authorization_status) => authorization_status.is_authorized,
-            Option::None(_) => bool::False(()),
+            Option::None(_) => false,
         };
 
         // Check if system is authorized
@@ -100,8 +96,7 @@ mod IsAuthorized {
 mod GrantAuthRole {
     use traits::Into;
     use array::ArrayTrait;
-    use dojo_core::integer::u250;
-    use dojo_core::auth::components::AuthRole;
+    use dojo_core::{auth::components::AuthRole, integer::u250};
 
     fn execute(target_id: u250, role_id: u250) {
         commands::set_entity(target_id.into(), (AuthRole { id: role_id }));
@@ -112,8 +107,8 @@ mod GrantAuthRole {
 mod GrantScopedAuthRole {
     use traits::Into;
     use array::ArrayTrait;
-    use dojo_core::integer::u250;
-    use dojo_core::auth::components::AuthRole;
+    use dojo_core::{auth::components::AuthRole, integer::u250};
+
 
     fn execute(target_id: u250, role_id: u250, resource_id: u250) {
         commands::set_entity((target_id, resource_id).into(), (AuthRole { id: role_id }));
@@ -123,12 +118,11 @@ mod GrantScopedAuthRole {
 #[system]
 mod GrantResource {
     use traits::Into;
-    use dojo_core::integer::u250;
-    use dojo_core::auth::components::AuthStatus;
+    use dojo_core::{auth::components::AuthStatus, integer::u250};
 
     fn execute(role_id: u250, resource_id: u250) {
         commands::set_entity(
-            (role_id, resource_id).into(), (AuthStatus { is_authorized: bool::True(()) })
+            (role_id, resource_id).into(), (AuthStatus { is_authorized: true })
         );
     }
 }
@@ -137,8 +131,7 @@ mod GrantResource {
 mod RevokeAuthRole {
     use traits::Into;
     use array::ArrayTrait;
-    use dojo_core::integer::u250;
-    use dojo_core::auth::components::AuthRole;
+    use dojo_core::{auth::components::AuthRole, integer::u250};
 
     fn execute(target_id: u250) {
         commands::set_entity(target_id.into(), (AuthRole { id: 0.into() }));
@@ -149,8 +142,7 @@ mod RevokeAuthRole {
 mod RevokeScopedAuthRole {
     use traits::Into;
     use array::ArrayTrait;
-    use dojo_core::integer::u250;
-    use dojo_core::auth::components::AuthRole;
+    use dojo_core::{auth::components::AuthRole, integer::u250};
 
     fn execute(target_id: u250, resource_id: u250) {
         commands::set_entity((target_id, resource_id).into(), (AuthRole { id: 0.into() }));
@@ -160,12 +152,11 @@ mod RevokeScopedAuthRole {
 #[system]
 mod RevokeResource {
     use traits::Into;
-    use dojo_core::integer::u250;
-    use dojo_core::auth::components::AuthStatus;
+    use dojo_core::{auth::components::AuthStatus, integer::u250};
 
     fn execute(role_id: u250, resource_id: u250) {
         commands::set_entity(
-            (role_id, resource_id).into(), (AuthStatus { is_authorized: bool::False(()) })
+            (role_id, resource_id).into(), (AuthStatus { is_authorized: false })
         );
     }
 }

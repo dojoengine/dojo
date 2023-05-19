@@ -30,16 +30,16 @@ fn test_query_id() {
 #[available_gas(2000000)]
 fn test_query_into() {
     let query: Query = 420.into();
-    assert(*query.keys.at(0_usize) == 420.into(), 'Incorrect query');
+    assert(*query.keys.at(0) == 420.into(), 'Incorrect query');
     let query1: Query = (69).into();
-    assert(*query1.keys.at(0_usize) == 69.into(), 'Incorrect query');
+    assert(*query1.keys.at(0) == 69.into(), 'Incorrect query');
     let query2: Query = (69, 420).into();
-    assert(*query2.keys.at(0_usize) == 69.into(), 'Incorrect query');
-    assert(*query2.keys.at(1_usize) == 420.into(), 'Incorrect query');
+    assert(*query2.keys.at(0) == 69.into(), 'Incorrect query');
+    assert(*query2.keys.at(1) == 420.into(), 'Incorrect query');
     let query3: Query = (69, 420, 777).into();
-    assert(*query3.keys.at(0_usize) == 69.into(), 'Incorrect query');
-    assert(*query3.keys.at(1_usize) == 420.into(), 'Incorrect query');
-    assert(*query3.keys.at(2_usize) == 777.into(), 'Incorrect query');
+    assert(*query3.keys.at(0) == 69.into(), 'Incorrect query');
+    assert(*query3.keys.at(1) == 420.into(), 'Incorrect query');
+    assert(*query3.keys.at(2) == 777.into(), 'Incorrect query');
 }
 
 #[test]
@@ -47,9 +47,9 @@ fn test_query_into() {
 fn test_partitioned_query_into() {
     let query: Query = (69, (420, )).into_partitioned();
     assert(query.partition == 69.into(), 'Incorrect partition');
-    assert(*query.keys.at(0_usize) == 420.into(), 'Incorrect query');
+    assert(*query.keys.at(0) == 420.into(), 'Incorrect query');
 
     let query2: Query = (69, (420, 777)).into_partitioned();
     assert(query2.partition == 69.into(), 'Incorrect partition');
-    assert(*query2.keys.at(1_usize) == 777.into(), 'Incorrect query');
+    assert(*query2.keys.at(1) == 777.into(), 'Incorrect query');
 }
