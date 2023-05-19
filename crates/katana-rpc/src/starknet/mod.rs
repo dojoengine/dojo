@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use std::sync::Arc;
 
 use blockifier::transaction::account_transaction::AccountTransaction;
@@ -13,11 +14,14 @@ use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::models::{
     BlockHashAndNumber, BlockId, BlockStatus, BlockTag, BlockWithTxHashes, BlockWithTxs,
     BroadcastedDeclareTransaction, BroadcastedDeployAccountTransaction,
-    BroadcastedInvokeTransaction, BroadcastedTransaction, ContractClass, DeclareTransactionResult,
-    DeployAccountTransactionResult, EmittedEvent, EventFilter, EventsPage, FeeEstimate,
-    FunctionCall, InvokeTransactionResult, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
-    MaybePendingTransactionReceipt, PendingBlockWithTxHashes, PendingBlockWithTxs, StateUpdate,
-    Transaction,
+    BroadcastedInvokeTransaction, BroadcastedTransaction, ContractClass, DeclareTransactionReceipt,
+    DeclareTransactionResult, DeployAccountTransactionReceipt, DeployAccountTransactionResult,
+    EmittedEvent, Event, EventFilter, EventsPage, FeeEstimate, FunctionCall,
+    InvokeTransactionReceipt, InvokeTransactionResult, MaybePendingBlockWithTxHashes,
+    MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, MsgToL1, PendingBlockWithTxHashes,
+    PendingBlockWithTxs, PendingDeclareTransactionReceipt, PendingDeployAccountTransactionReceipt,
+    PendingInvokeTransactionReceipt, PendingTransactionReceipt, StateUpdate, Transaction,
+    TransactionReceipt, TransactionStatus,
 };
 use starknet_api::core::{
     ClassHash, CompiledClassHash, ContractAddress, EntryPointSelector, Nonce, PatriciaKey,
@@ -27,7 +31,8 @@ use starknet_api::patricia_key;
 use starknet_api::state::StorageKey;
 use starknet_api::transaction::{
     Calldata, ContractAddressSalt, DeclareTransactionV2, Fee, InvokeTransaction,
-    InvokeTransactionV1, TransactionHash, TransactionSignature, TransactionVersion,
+    InvokeTransactionV1, Transaction as InnerTransaction, TransactionHash, TransactionOutput,
+    TransactionSignature, TransactionVersion,
 };
 use tokio::sync::RwLock;
 use utils::transaction::{
@@ -236,7 +241,246 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
         &self,
         transaction_hash: FieldElement,
     ) -> Result<MaybePendingTransactionReceipt, Error> {
-        Err(Error::from(StarknetApiError::InternalServerError))
+        let sequencer = self.sequencer.read().await;
+        let hash = TransactionHash(StarkFelt::from(transaction_hash));
+
+        let tx =
+            sequencer.transaction(&hash).ok_or(Error::from(StarknetApiError::TxnHashNotFound))?;
+        let receipt = sequencer
+            .transaction_receipt(&hash)
+            .ok_or(Error::from(StarknetApiError::TxnHashNotFound))?;
+        let status = sequencer
+            .transaction_status(&hash)
+            .ok_or(Error::from(StarknetApiError::TxnHashNotFound))?;
+
+        let receipt = match status {
+            TransactionStatus::Pending => match receipt.output {
+                TransactionOutput::Invoke(output) => {
+                    MaybePendingTransactionReceipt::PendingReceipt(
+                        PendingTransactionReceipt::Invoke(PendingInvokeTransactionReceipt {
+                            transaction_hash,
+                            actual_fee: FieldElement::from_str(&format!("{}", output.actual_fee.0))
+                                .unwrap(),
+                            messages_sent: output
+                                .messages_sent
+                                .iter()
+                                .map(|m| MsgToL1 {
+                                    from_address: (*m.from_address.0.key()).into(),
+                                    to_address: FieldElement::from_byte_slice_be(
+                                        m.to_address.0.as_bytes(),
+                                    )
+                                    .unwrap(),
+                                    payload: m.payload.0.iter().map(|f| (*f).into()).collect(),
+                                })
+                                .collect(),
+                            events: output
+                                .events
+                                .into_iter()
+                                .map(|e| Event {
+                                    from_address: (*e.from_address.0.key()).into(),
+                                    keys: e.content.keys.into_iter().map(|k| k.0.into()).collect(),
+                                    data: e.content.data.0.into_iter().map(|d| d.into()).collect(),
+                                })
+                                .collect(),
+                        }),
+                    )
+                }
+
+                TransactionOutput::Declare(output) => {
+                    MaybePendingTransactionReceipt::PendingReceipt(
+                        PendingTransactionReceipt::Declare(PendingDeclareTransactionReceipt {
+                            transaction_hash,
+                            actual_fee: FieldElement::from_str(&format!("{}", output.actual_fee.0))
+                                .unwrap(),
+                            messages_sent: output
+                                .messages_sent
+                                .iter()
+                                .map(|m| MsgToL1 {
+                                    from_address: (*m.from_address.0.key()).into(),
+                                    to_address: FieldElement::from_byte_slice_be(
+                                        m.to_address.0.as_bytes(),
+                                    )
+                                    .unwrap(),
+                                    payload: m.payload.0.iter().map(|f| (*f).into()).collect(),
+                                })
+                                .collect(),
+                            events: output
+                                .events
+                                .into_iter()
+                                .map(|e| Event {
+                                    from_address: (*e.from_address.0.key()).into(),
+                                    keys: e.content.keys.into_iter().map(|k| k.0.into()).collect(),
+                                    data: e.content.data.0.into_iter().map(|d| d.into()).collect(),
+                                })
+                                .collect(),
+                        }),
+                    )
+                }
+
+                TransactionOutput::DeployAccount(output) => {
+                    MaybePendingTransactionReceipt::PendingReceipt(
+                        PendingTransactionReceipt::DeployAccount(
+                            PendingDeployAccountTransactionReceipt {
+                                transaction_hash,
+                                actual_fee: FieldElement::from_str(&format!(
+                                    "{}",
+                                    output.actual_fee.0
+                                ))
+                                .unwrap(),
+                                messages_sent: output
+                                    .messages_sent
+                                    .iter()
+                                    .map(|m| MsgToL1 {
+                                        from_address: (*m.from_address.0.key()).into(),
+                                        to_address: FieldElement::from_byte_slice_be(
+                                            m.to_address.0.as_bytes(),
+                                        )
+                                        .unwrap(),
+                                        payload: m.payload.0.iter().map(|f| (*f).into()).collect(),
+                                    })
+                                    .collect(),
+                                events: output
+                                    .events
+                                    .into_iter()
+                                    .map(|e| Event {
+                                        from_address: (*e.from_address.0.key()).into(),
+                                        keys: e
+                                            .content
+                                            .keys
+                                            .into_iter()
+                                            .map(|k| k.0.into())
+                                            .collect(),
+                                        data: e
+                                            .content
+                                            .data
+                                            .0
+                                            .into_iter()
+                                            .map(|d| d.into())
+                                            .collect(),
+                                    })
+                                    .collect(),
+                            },
+                        ),
+                    )
+                }
+
+                _ => return Err(Error::from(StarknetApiError::UnsupportedTransactionVersion)),
+            },
+
+            TransactionStatus::AcceptedOnL2 => match receipt.output {
+                TransactionOutput::Invoke(output) => MaybePendingTransactionReceipt::Receipt(
+                    TransactionReceipt::Invoke(InvokeTransactionReceipt {
+                        transaction_hash,
+                        actual_fee: FieldElement::from_str(&format!("{}", output.actual_fee.0))
+                            .unwrap(),
+                        messages_sent: output
+                            .messages_sent
+                            .iter()
+                            .map(|m| MsgToL1 {
+                                from_address: (*m.from_address.0.key()).into(),
+                                to_address: FieldElement::from_byte_slice_be(
+                                    m.to_address.0.as_bytes(),
+                                )
+                                .unwrap(),
+                                payload: m.payload.0.iter().map(|f| (*f).into()).collect(),
+                            })
+                            .collect(),
+                        events: output
+                            .events
+                            .into_iter()
+                            .map(|e| Event {
+                                from_address: (*e.from_address.0.key()).into(),
+                                keys: e.content.keys.into_iter().map(|k| k.0.into()).collect(),
+                                data: e.content.data.0.into_iter().map(|d| d.into()).collect(),
+                            })
+                            .collect(),
+                        block_hash: receipt.block_hash.0.into(),
+                        block_number: receipt.block_number.0,
+                        status: TransactionStatus::AcceptedOnL2,
+                    }),
+                ),
+
+                TransactionOutput::Declare(output) => MaybePendingTransactionReceipt::Receipt(
+                    TransactionReceipt::Declare(DeclareTransactionReceipt {
+                        transaction_hash,
+                        actual_fee: FieldElement::from_str(&format!("{}", output.actual_fee.0))
+                            .unwrap(),
+                        messages_sent: output
+                            .messages_sent
+                            .iter()
+                            .map(|m| MsgToL1 {
+                                from_address: (*m.from_address.0.key()).into(),
+                                to_address: FieldElement::from_byte_slice_be(
+                                    m.to_address.0.as_bytes(),
+                                )
+                                .unwrap(),
+                                payload: m.payload.0.iter().map(|f| (*f).into()).collect(),
+                            })
+                            .collect(),
+                        events: output
+                            .events
+                            .into_iter()
+                            .map(|e| Event {
+                                from_address: (*e.from_address.0.key()).into(),
+                                keys: e.content.keys.into_iter().map(|k| k.0.into()).collect(),
+                                data: e.content.data.0.into_iter().map(|d| d.into()).collect(),
+                            })
+                            .collect(),
+                        block_hash: receipt.block_hash.0.into(),
+                        block_number: receipt.block_number.0,
+                        status: TransactionStatus::AcceptedOnL2,
+                    }),
+                ),
+
+                TransactionOutput::DeployAccount(output) => {
+                    MaybePendingTransactionReceipt::Receipt(TransactionReceipt::DeployAccount(
+                        DeployAccountTransactionReceipt {
+                            transaction_hash,
+                            actual_fee: FieldElement::from_str(&format!("{}", output.actual_fee.0))
+                                .unwrap(),
+                            messages_sent: output
+                                .messages_sent
+                                .iter()
+                                .map(|m| MsgToL1 {
+                                    from_address: (*m.from_address.0.key()).into(),
+                                    to_address: FieldElement::from_byte_slice_be(
+                                        m.to_address.0.as_bytes(),
+                                    )
+                                    .unwrap(),
+                                    payload: m.payload.0.iter().map(|f| (*f).into()).collect(),
+                                })
+                                .collect(),
+                            events: output
+                                .events
+                                .into_iter()
+                                .map(|e| Event {
+                                    from_address: (*e.from_address.0.key()).into(),
+                                    keys: e.content.keys.into_iter().map(|k| k.0.into()).collect(),
+                                    data: e.content.data.0.into_iter().map(|d| d.into()).collect(),
+                                })
+                                .collect(),
+                            block_hash: receipt.block_hash.0.into(),
+                            block_number: receipt.block_number.0,
+                            status: TransactionStatus::AcceptedOnL2,
+                            contract_address: match tx {
+                                InnerTransaction::DeployAccount(tx) => {
+                                    (*tx.contract_address.0.key()).into()
+                                }
+                                _ => {
+                                    return Err(Error::from(StarknetApiError::InternalServerError));
+                                }
+                            },
+                        },
+                    ))
+                }
+
+                _ => return Err(Error::from(StarknetApiError::UnsupportedTransactionVersion)),
+            },
+
+            _ => return Err(Error::from(StarknetApiError::UnsupportedTransactionVersion)),
+        };
+
+        Ok(receipt)
     }
 
     async fn class_hash_at(
