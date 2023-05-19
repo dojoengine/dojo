@@ -6,7 +6,7 @@ use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transaction_execution::Transaction;
 use blockifier::transaction::transactions::ExecutableTransaction;
 use starknet::core::types::{FeeEstimate, FeeUnit};
-use starknet::providers::jsonrpc::models::{BlockId, BlockTag, StateUpdate};
+use starknet::providers::jsonrpc::models::{BlockId, BlockTag, StateUpdate, TransactionStatus};
 // use starknet::providers::jsonrpc::models::BlockId;
 use starknet_api::{
     block::{BlockHash, BlockNumber},
@@ -219,11 +219,22 @@ impl Sequencer for KatanaSequencer {
         Ok(execution_info.execution.retdata.0)
     }
 
+    fn transaction_status(&self, hash: &TransactionHash) -> Option<TransactionStatus> {
+        self.starknet.transactions.by_hash(hash).map(|tx| tx.status)
+    }
+
+    fn transaction_receipt(
+        &self,
+        hash: &TransactionHash,
+    ) -> Option<starknet_api::transaction::TransactionReceipt> {
+        self.starknet.transactions.by_hash(hash).map(|tx| tx.receipt())
+    }
+
     fn transaction(
         &self,
         hash: &TransactionHash,
     ) -> Option<starknet_api::transaction::Transaction> {
-        self.starknet.transactions.by_hash(hash)
+        self.starknet.transactions.by_hash(hash).map(|tx| tx.inner.clone())
     }
 
     fn events(
@@ -343,6 +354,13 @@ pub trait Sequencer {
     fn chain_id(&self) -> ChainId;
 
     fn generate_new_block(&mut self) -> Result<()>;
+
+    fn transaction_receipt(
+        &self,
+        hash: &TransactionHash,
+    ) -> Option<starknet_api::transaction::TransactionReceipt>;
+
+    fn transaction_status(&self, hash: &TransactionHash) -> Option<TransactionStatus>;
 
     fn nonce_at(
         &mut self,

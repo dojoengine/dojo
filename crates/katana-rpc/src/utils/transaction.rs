@@ -5,14 +5,17 @@ use starknet::core::crypto::compute_hash_on_elements;
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::models::{
     DeclareTransaction, DeclareTransactionV1, DeclareTransactionV2, DeployAccountTransaction,
-    InvokeTransaction, InvokeTransactionV1, L1HandlerTransaction, Transaction,
+    InvokeTransaction, InvokeTransactionV1, L1HandlerTransaction, MaybePendingTransactionReceipt,
+    Transaction,
 };
+use starknet_api::block::{BlockHash, BlockNumber};
 use starknet_api::hash::StarkFelt;
 use starknet_api::transaction::{
     DeclareTransaction as InnerDeclareTransaction,
     DeployAccountTransaction as InnerDeployAccountTransaction,
-    InvokeTransaction as InnerInvokeTransaction, L1HandlerTransaction as InnerL1HandlerTransaction,
-    Transaction as InnerTransaction,
+    InvokeTransaction as InnerInvokeTransaction, InvokeTransactionOutput,
+    L1HandlerTransaction as InnerL1HandlerTransaction, Transaction as InnerTransaction,
+    TransactionOutput, TransactionReceipt,
 };
 
 const PREFIX_INVOKE: FieldElement = FieldElement::from_mont([
