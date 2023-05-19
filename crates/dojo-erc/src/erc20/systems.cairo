@@ -17,8 +17,7 @@ mod ERC20TransferFrom {
     use starknet::get_caller_address;
     use traits::Into;
     use zeroable::Zeroable;
-    use dojo_erc::erc20::components::Allowance;
-    use dojo_erc::erc20::components::Balance;
+    use dojo_erc::erc20::components::{Allowance, Balance};
 
     fn execute(token: felt252, spender: felt252, recipient: felt252, amount: felt252) {
         assert(spender.is_non_zero(), 'ERC20: transfer from 0');
@@ -57,8 +56,7 @@ mod ERC20TransferFrom {
 mod ERC20Mint {
     use traits::Into;
     use zeroable::Zeroable;
-    use dojo_erc::erc20::components::Balance;
-    use dojo_erc::erc20::components::Supply;
+    use dojo_erc::erc20::components::{Balance, Supply};
 
     fn execute(token: felt252, recipient: felt252, amount: felt252) {
         assert(recipient.is_non_zero(), 'ERC20: mint to 0');
@@ -81,8 +79,7 @@ mod ERC20Mint {
 mod ERC20Burn {
     use traits::Into;
     use zeroable::Zeroable;        
-    use dojo_erc::erc20::components::Balance;
-    use dojo_erc::erc20::components::Supply;
+    use dojo_erc::erc20::components::{Balance, Supply};
 
     fn execute(token: felt252, owner: felt252, amount: felt252) {
         assert(owner.is_non_zero(), 'ERC20: burn from 0');

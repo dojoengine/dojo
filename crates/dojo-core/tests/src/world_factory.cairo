@@ -66,7 +66,7 @@ fn test_constructor() {
 #[available_gas(100000000)]
 fn test_spawn_world() {
     // Deploy Executor
-    let constructor_calldata = array::ArrayTrait::<felt252>::new();
+    let constructor_calldata = array::ArrayTrait::new();
     let (executor_address, _) = deploy_syscall(
         Executor::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
     ).unwrap();
@@ -84,13 +84,13 @@ fn test_spawn_world() {
     );
 
     // Prepare components and systems and routes
-    let mut systems = array::ArrayTrait::<ClassHash>::new();
+    let mut systems = array::ArrayTrait::new();
     systems.append(BarSystem::TEST_CLASS_HASH.try_into().unwrap());
 
-    let mut components = array::ArrayTrait::<ClassHash>::new();
+    let mut components = array::ArrayTrait::new();
     components.append(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
 
-    let mut routes = array::ArrayTrait::<Route>::new();
+    let mut routes = array::ArrayTrait::new();
     routes.append(RouteTrait::new('Bar'.into(), 'FooWriter'.into(), 'Foo'.into(), ));
 
     // Spawn World from WorldFactory
@@ -99,7 +99,7 @@ fn test_spawn_world() {
 
     // Check Admin role is set
     let caller = get_caller_address();
-    let role = world.entity('AuthRole'.into(), caller.into(), 0_u8, 0_usize);
+    let role = world.entity('AuthRole'.into(), caller.into(), 0, 0);
     assert(*role[0] == 'Admin', 'admin role not set');
 
     // Check AuthRole component and GrantAuthRole system are registered
@@ -125,9 +125,9 @@ fn test_spawn_world() {
     assert(bar_hash == BarSystem::TEST_CLASS_HASH.try_into().unwrap(), 'system not registered');
 
     // Check that the auth routes are registered
-    let role = world.entity('AuthRole'.into(), ('Bar', 'Foo').into(), 0_u8, 0_usize);
+    let role = world.entity('AuthRole'.into(), ('Bar', 'Foo').into(), 0, 0);
     assert(*role[0] == 'FooWriter', 'role not set');
 
-    let status = world.entity('AuthStatus'.into(), (*role[0], 'Foo').into(), 0_u8, 0_usize);
+    let status = world.entity('AuthStatus'.into(), (*role[0], 'Foo').into(), 0, 0);
     assert(*status[0] == 1, 'role not set');
 }

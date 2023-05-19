@@ -1,23 +1,15 @@
 #[contract]
 mod Database {
-    use array::ArrayTrait;
-    use array::SpanTrait;
-    use traits::Into;
-    use traits::TryInto;
+    use array::{ArrayTrait, SpanTrait};
+    use traits::{Into, TryInto};
     use serde::Serde;
     use hash::LegacyHash;
     use poseidon::poseidon_hash_span;
 
     use dojo_core::serde::SpanSerde;
-    use dojo_core::storage::query::Query;
-    use dojo_core::storage::query::QueryTrait;
-    use dojo_core::storage::query::QueryIntoFelt252;
-    use dojo_core::storage::kv::KeyValueStore;
-    use dojo_core::storage::index::Index;
-    use dojo_core::integer::u250;
-    use dojo_core::integer::Felt252IntoU250;
-    use dojo_core::interfaces::IComponentLibraryDispatcher;
-    use dojo_core::interfaces::IComponentDispatcherTrait;
+    use dojo_core::storage::{index::Index, kv::KeyValueStore, query::{Query, QueryTrait, QueryIntoFelt252}};
+    use dojo_core::integer::{u250, Felt252IntoU250};
+    use dojo_core::interfaces::{IComponentLibraryDispatcher, IComponentDispatcherTrait};
 
     #[event]
     fn StoreSetRecord(table_id: u250, keys: Span<u250>, value: Span<felt252>) {}
@@ -32,7 +24,7 @@ mod Database {
         class_hash: starknet::ClassHash, table: u250, query: Query, offset: u8, length: usize
     ) -> Option<Span<felt252>> {
         let mut length = length;
-        if length == 0_usize {
+        if length == 0 {
             length = IComponentLibraryDispatcher { class_hash: class_hash }.len();
         }
 
