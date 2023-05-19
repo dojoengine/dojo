@@ -310,17 +310,17 @@ impl StarknetWrapper {
         let block_number = self.block_context.block_number;
 
         let parent_hash = if block_number.0 == 0 {
-            BlockHash(stark_felt!(0))
+            BlockHash(stark_felt!(0_u8))
         } else {
             self.blocks.latest().map(|last_block| last_block.block_hash()).unwrap()
         };
 
         StarknetBlock::new(
-            BlockHash(stark_felt!(0)),
+            BlockHash(stark_felt!(0_u8)),
             parent_hash,
             block_number,
             GasPrice(self.block_context.gas_price),
-            GlobalRoot(stark_felt!(0)),
+            GlobalRoot(stark_felt!(0_u8)),
             self.block_context.sequencer_address,
             BlockTimestamp(get_current_timestamp().as_secs()),
             vec![],

@@ -1,0 +1,42 @@
+[package]
+name = "torii"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+actix-web = "4.3.0"
+actix-cors = "0.6.4"
+anyhow.workspace = true
+clap.workspace = true
+ctrlc = "3.2.5"
+futures = "0.3.26"
+futures-util = "0.3.26"
+log = "0.4.17"
+serde.workspace = true
+serde_json.workspace = true
+sqlx = { version = "0.6.2", features = [
+    "runtime-actix-native-tls",
+    "uuid",
+    "chrono",
+    "macros",
+    "offline",
+] }
+tokio = { version = "1.20.1", features = ["full"] }
+tokio-stream = "0.1.11"
+tokio-util = "0.7.7"
+tracing.workspace = true
+tracing-subscriber.workspace = true
+url = "2.2.2"
+chrono.workspace = true
+async-graphql = { version = "5.0.8", features = ["chrono"]}
+async-graphql-actix-web = "5.0.8"
+
+[features]
+default = ["sqlite"]
+sqlite = ["sqlx/sqlite"]
+
+[[bin]]
+name = "torii"
+path = "src/cli.rs"

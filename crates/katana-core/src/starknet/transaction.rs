@@ -60,7 +60,7 @@ impl StarknetTransaction {
             output: self.output(),
             transaction_hash: self.inner.transaction_hash(),
             block_number: self.block_number.unwrap_or(BlockNumber(0)),
-            block_hash: self.block_hash.unwrap_or(BlockHash(stark_felt!(0))),
+            block_hash: self.block_hash.unwrap_or(BlockHash(stark_felt!(0_u8))),
         }
     }
 

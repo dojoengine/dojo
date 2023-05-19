@@ -1,0 +1,42 @@
+[package]
+name = "sozo"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow.workspace = true
+async-trait = "0.1.68"
+camino.workspace = true
+clap.workspace = true
+dojo-lang = { path = "../dojo-lang" }
+dojo-world = { path = "../dojo-world" }
+dotenv = "0.15.0"
+env_logger.workspace = true
+log.workspace = true
+cairo-lang-compiler.workspace = true
+cairo-lang-filesystem.workspace = true
+cairo-lang-plugins.workspace = true
+cairo-lang-project.workspace = true
+cairo-lang-sierra.workspace = true
+cairo-lang-sierra-to-casm.workspace = true
+cairo-lang-starknet.workspace = true
+scarb.workspace = true
+semver.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+smol_str.workspace = true
+starknet.workspace = true
+thiserror.workspace = true
+tokio = { version = "1.15.0", features = ["full"] }
+toml.workspace = true
+url = "2.2.2"
+
+[dev-dependencies]
+assert_fs = "1.0.10"
+snapbox = "0.4.6"
+
+[[bin]]
+name = "sozo"
+path = "src/main.rs"
