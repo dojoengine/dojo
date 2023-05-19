@@ -38,7 +38,7 @@ pub fn run(args: InitArgs) {
         None => current_dir().unwrap(),
     };
 
-    let template_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("dojo-template");
+    let template_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("sozo-template");
     println!("Copying template from {template_dir:#?} to {target_dir:#?}");
 
     copy_dir_all(template_dir, target_dir).unwrap();
