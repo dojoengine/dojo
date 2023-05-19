@@ -57,7 +57,7 @@ pub struct StarknetWrapper {
 }
 
 impl StarknetWrapper {
-    pub fn new(config: StarknetConfig) -> Self {
+    pub fn new(config: StarknetConfig) -> Result<Self> {
         let blocks = StarknetBlocks::default();
         let block_context = block_context_from_config(&config);
         let transactions = StarknetTransactions::default();
@@ -73,7 +73,7 @@ impl StarknetWrapper {
         .expect("should be able to generate accounts");
         predeployed_accounts.deploy_accounts(&mut state);
 
-        Self {
+        let mut starknet = Self {
             state,
             config,
             blocks,
@@ -81,7 +81,11 @@ impl StarknetWrapper {
             block_context,
             pending_state,
             predeployed_accounts,
-        }
+        };
+
+        starknet.generate_genesis_block()?;
+
+        Ok(starknet)
     }
 
     pub fn state_from_block_id(&self, block_id: BlockId) -> Option<DictStateReader> {
@@ -302,6 +306,14 @@ impl StarknetWrapper {
         if !self.config.allow_zero_max_fee && max_fee.0 == 0 {
             panic!("max fee == 0 is not supported")
         }
+    }
+
+    /// Generate the genesis block and append it to the chain.
+    /// This block should include transactions which set the initial state of the chain.
+    // TODO: Include transactions in the block
+    pub fn generate_genesis_block(&mut self) -> Result<()> {
+        self.generate_latest_block()?;
+        Ok(())
     }
 
     fn create_new_empty_block(&self) -> StarknetBlock {

@@ -33,7 +33,9 @@ pub struct KatanaSequencer {
 
 impl KatanaSequencer {
     pub fn new(config: StarknetConfig) -> Self {
-        Self { starknet: StarknetWrapper::new(config) }
+        Self {
+            starknet: StarknetWrapper::new(config).expect("should create new Starknet instance"),
+        }
     }
 
     // The starting point of the sequencer
