@@ -83,7 +83,7 @@ mod ERC20 {
     #[view]
     fn total_supply() -> u256 {
         let query: Query = get_contract_address().into();
-        let mut supply_raw = world().entity('Supply'.into(), query, 0_u8, 0_usize);
+        let mut supply_raw = world().entity('Supply'.into(), query, 0, 0);
         let supply = serde::Serde::<Supply>::deserialize(ref supply_raw).unwrap();
         supply.amount.into()
     }
@@ -92,7 +92,7 @@ mod ERC20 {
     fn balance_of(account: ContractAddress) -> u256 {
         let token = get_contract_address();
         let query: Query = (token, (account,)).into_partitioned();        
-        let mut balance_raw = world().entity('Balance'.into(), query, 0_u8, 0_usize);
+        let mut balance_raw = world().entity('Balance'.into(), query, 0, 0);
         let balance = serde::Serde::<Balance>::deserialize(ref balance_raw).unwrap();
         balance.amount.into()
     }
@@ -101,7 +101,7 @@ mod ERC20 {
     fn allowance(owner: ContractAddress, spender: ContractAddress) -> u256 {
         let token = get_contract_address();
         let query: Query = (token, (owner, spender)).into_partitioned();
-        let mut allowance_raw = world().entity('Allowance'.into(), query, 0_u8, 0_usize);
+        let mut allowance_raw = world().entity('Allowance'.into(), query, 0, 0);
         let allowance = serde::Serde::<Allowance>::deserialize(ref allowance_raw).unwrap();
         allowance.amount.into()
     }
@@ -164,7 +164,7 @@ mod ERC20 {
         // by convention, max(u256) means unlimited amount,
         // but since we're using felts, use max(felt252) to do the same
         // TODO: use BoundedInt when available
-        let max_u128 = 0xffffffffffffffffffffffffffffffff_u128;
+        let max_u128 = 0xffffffffffffffffffffffffffffffff;
         let max_u256 = u256 { low: max_u128, high: max_u128 };
         if val == max_u256 {
             return UNLIMITED_ALLOWANCE;

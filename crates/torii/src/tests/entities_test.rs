@@ -9,8 +9,8 @@ mod tests {
     async fn test_entity(pool: SqlitePool) {
         let _ = pool.acquire().await;
 
-        let query = "{ entity(id: \"entity_1\") { id name partitionId keys transactionHash \
-                     createdAt updatedAt } }";
+        let query =
+            "{ entity(id: \"entity_1\") { id name partitionId keys transactionHash createdAt } }";
         let value = run_graphql_query(&pool, query).await;
 
         let entity = value.get("entity").ok_or("no entity found").unwrap();
@@ -23,7 +23,7 @@ mod tests {
         let _ = pool.acquire().await;
 
         let query = "{ entities (partitionId: \"420\") { id name partitionId keys transactionHash \
-                     createdAt updatedAt } }";
+                     createdAt } }";
         let value = run_graphql_query(&pool, query).await;
 
         let entities = value.get("entities").ok_or("incorrect entities").unwrap();
@@ -36,7 +36,7 @@ mod tests {
         let _ = pool.acquire().await;
 
         let query = "{ entities (partitionId: \"69\", keys: [\"420\"]) { id name partitionId keys \
-                     transactionHash createdAt updatedAt } }";
+                     transactionHash createdAt } }";
         let value = run_graphql_query(&pool, query).await;
 
         let entities = value.get("entities").ok_or("no entity found").unwrap();

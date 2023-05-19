@@ -1,12 +1,13 @@
+use async_graphql::{ComplexObject, Context, Result, SimpleObject};
 use chrono::{DateTime, Utc};
-use juniper::{graphql_object, FieldResult};
 use serde::Deserialize;
+use sqlx::{Pool, Sqlite};
 
-use super::server::Context;
 use super::system_call;
 
-#[derive(Debug, Deserialize)]
+#[derive(SimpleObject, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[graphql(complex)]
 pub struct Event {
     pub id: String,
     pub keys: String,
@@ -15,35 +16,15 @@ pub struct Event {
     pub created_at: DateTime<Utc>,
 }
 
-#[graphql_object(context = Context)]
+#[ComplexObject]
 impl Event {
-    pub fn id(&self) -> &str {
-        &self.id
-    }
-
-    pub fn keys(&self) -> &str {
-        &self.keys
-    }
-
-    pub fn data(&self) -> &str {
-        &self.data
-    }
-
-    pub fn system_call_id(&self) -> i32 {
-        i32::try_from(self.system_call_id).unwrap()
-    }
-
-    pub async fn system_call(&self, context: &Context) -> FieldResult<system_call::SystemCall> {
+    async fn system_call(&self, context: &Context<'_>) -> Result<system_call::SystemCall> {
         system_call::system_call(context, self.system_call_id).await
-    }
-
-    pub fn created_at(&self) -> &DateTime<Utc> {
-        &self.created_at
     }
 }
 
-pub async fn event(context: &Context, id: String) -> FieldResult<Event> {
-    let mut conn = context.pool.acquire().await?;
+pub async fn event(context: &Context<'_>, id: String) -> Result<Event> {
+    let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
 
     let event = sqlx::query_as!(
         Event,
@@ -60,14 +41,14 @@ pub async fn event(context: &Context, id: String) -> FieldResult<Event> {
         id
     )
     .fetch_one(&mut conn)
-    .await?;
+    .await
+    .unwrap();
 
     Ok(event)
 }
 
-// flatten keys array and pattern match
-pub async fn events(context: &Context, keys: Vec<String>) -> FieldResult<Vec<Event>> {
-    let mut conn = context.pool.acquire().await?;
+pub async fn events(context: &Context<'_>, keys: &[String]) -> Result<Vec<Event>> {
+    let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
     let keys_str = format!("{}%", keys.join(","));
 
     let events = sqlx::query_as!(

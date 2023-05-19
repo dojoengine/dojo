@@ -1,0 +1,11 @@
+[package]
+name = "dojo_examples"
+version = "0.1.0"
+
+[cairo]
+sierra-replace-ids = true
+
+[dependencies]
+dojo_core = { git = "https://github.com/dojoengine/dojo", version = "0.1.0"}
+
+[[target.dojo]]

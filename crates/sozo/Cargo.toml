@@ -13,6 +13,8 @@ clap.workspace = true
 dojo-lang = { path = "../dojo-lang" }
 dojo-world = { path = "../dojo-world" }
 dotenv = "0.15.0"
+env_logger.workspace = true
+log.workspace = true
 cairo-lang-compiler.workspace = true
 cairo-lang-filesystem.workspace = true
 cairo-lang-plugins.workspace = true
@@ -29,10 +31,12 @@ starknet.workspace = true
 thiserror.workspace = true
 tokio = { version = "1.15.0", features = ["full"] }
 toml.workspace = true
-tracing.workspace = true
-tracing-subscriber.workspace = true
 url = "2.2.2"
+
+[dev-dependencies]
+assert_fs = "1.0.10"
+snapbox = "0.4.6"
 
 [[bin]]
 name = "sozo"
-path = "src/cli.rs"
+path = "src/main.rs"
