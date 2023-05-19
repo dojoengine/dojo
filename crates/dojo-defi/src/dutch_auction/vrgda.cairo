@@ -1,27 +1,27 @@
-use cubit::types::fixed::{Fixed, FixedType, FixedAdd, FixedMul, FixedSub, FixedDiv};
+use cubit::types::fixed::{Fixed, FixedAdd, FixedMul, FixedSub, FixedDiv};
 
 #[derive(Component)]
 #[derive(Drop)]
 struct Market {
-    target_price: FixedType,
-    scale_factor: FixedType,
-    decay_constant: FixedType,
-    per_time_unit: FixedType,
+    target_price: Fixed,
+    scale_factor: Fixed,
+    decay_constant: Fixed,
+    per_time_unit: Fixed,
 }
 
 trait VrgdaTrait {
-    fn get_target_sale_time(sold: u128) -> FixedType;
-    fn vrgda_price(time_start: u128, sold: u128) -> FixedType;
+    fn get_target_sale_time(sold: u128) -> Fixed;
+    fn vrgda_price(time_start: u128, sold: u128) -> Fixed;
 }
 
 impl VrgdaImpl of VrgdaTrait {
-    fn get_target_sale_time(self: @Market, sold: u128) -> FixedType {
+    fn get_target_sale_time(self: @Market, sold: u128) -> Fixed {
         let sold_fp = Fixed::new(sold, false);
 
         FixedDiv::div(sold_fp, *self.per_time_unit)
     }
 
-    fn vrgda_price(time_start: u128, sold: u128) -> FixedType {
+    fn vrgda_price(time_start: u128, sold: u128) -> Fixed {
         time_start_fp = Fixed::new(time_start, false);
         sold_fp = Fixed::new(sold, false);
 
