@@ -4,7 +4,8 @@ Content-Type: application/json
     "jsonrpc": "2.0",
     "method": "starknet_getNonce",
     "params": [
-        "0x010b6c96d364cf182964fbd4a3438a5ae84cab990770c07994f9cb99fd26f6dc"
+        "latest",
+        "0x03fc02daad5e6fbe732a214d0e44cc7029701004c679dd18f0cc1b8e5276a306"
     ],
     "id":1
 }
