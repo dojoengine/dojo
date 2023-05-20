@@ -175,4 +175,8 @@ impl StarknetTransactions {
     pub fn by_hash(&self, hash: &TransactionHash) -> Option<&StarknetTransaction> {
         self.transactions.get(hash)
     }
+
+    pub fn total(&self) -> usize {
+        self.transactions.len()
+    }
 }

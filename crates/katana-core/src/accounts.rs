@@ -7,7 +7,6 @@ use blockifier::abi::abi_utils::get_storage_var_address;
 use blockifier::execution::contract_class::{ContractClass, ContractClassV0};
 use rand::rngs::SmallRng;
 use rand::{RngCore, SeedableRng};
-use starknet::core::types::FieldElement;
 use starknet::signers::SigningKey;
 use starknet_api::core::{calculate_contract_address, ClassHash, ContractAddress, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};
@@ -150,7 +149,7 @@ impl PredeployedAccounts {
             let mut private_key_bytes = [0u8; 32];
 
             rng.fill_bytes(&mut private_key_bytes);
-            private_key_bytes[0] = 0;
+            private_key_bytes[0] %= 0x9;
             seed = private_key_bytes;
 
             let private_key =
@@ -175,7 +174,5 @@ impl PredeployedAccounts {
 
 // TODO: remove starknet-rs dependency
 fn compute_public_key_from_private_key(private_key: StarkFelt) -> StarkFelt {
-    StarkFelt::from(
-        SigningKey::from_secret_scalar(FieldElement::from(private_key)).verifying_key().scalar(),
-    )
+    StarkFelt::from(SigningKey::from_secret_scalar(private_key.into()).verifying_key().scalar())
 }

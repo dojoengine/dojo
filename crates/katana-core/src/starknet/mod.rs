@@ -15,9 +15,10 @@ use starknet::providers::jsonrpc::models::{
     BlockId, BlockTag, PendingStateUpdate, StateUpdate, TransactionStatus,
 };
 use starknet_api::block::{BlockHash, BlockNumber, BlockTimestamp, GasPrice};
-use starknet_api::core::GlobalRoot;
-use starknet_api::hash::StarkFelt;
-use starknet_api::stark_felt;
+use starknet_api::core::{ClassHash, ContractAddress, GlobalRoot, PatriciaKey};
+use starknet_api::hash::{StarkFelt, StarkHash};
+use starknet_api::transaction::{DeclareTransactionV0V1, DeployTransaction, TransactionHash};
+use starknet_api::{patricia_key, stark_felt};
 use tracing::info;
 
 pub mod block;
@@ -30,7 +31,10 @@ use transaction::{StarknetTransaction, StarknetTransactions};
 use self::transaction::ExternalFunctionCall;
 use crate::accounts::PredeployedAccounts;
 use crate::block_context::block_context_from_config;
-use crate::constants::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
+use crate::constants::{
+    DEFAULT_PREFUNDED_ACCOUNT_BALANCE, ERC20_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS, UDC_ADDRESS,
+    UDC_CLASS_HASH,
+};
 use crate::state::DictStateReader;
 use crate::util::{
     convert_blockifier_tx_to_starknet_api_tx, convert_state_diff_to_rpc_state_diff,
@@ -119,7 +123,7 @@ impl StarknetWrapper {
     }
 
     // execute the tx
-    pub fn handle_transaction(&mut self, transaction: Transaction) -> Result<()> {
+    pub fn handle_transaction(&mut self, transaction: Transaction) {
         let api_tx = convert_blockifier_tx_to_starknet_api_tx(&transaction);
 
         info!("Transaction received | Transaction hash: {}", api_tx.transaction_hash());
@@ -153,7 +157,7 @@ impl StarknetWrapper {
                 self.store_transaction(starknet_tx);
 
                 if !self.config.blocks_on_demand {
-                    self.generate_latest_block()?;
+                    self.generate_latest_block();
                     self.generate_pending_block();
                 }
             }
@@ -169,21 +173,20 @@ impl StarknetWrapper {
                 self.store_transaction(tx);
             }
         }
-
-        Ok(())
     }
 
     // Creates a new block that contains all the pending txs
     // Will update the txs status to accepted
     // Append the block to the chain
     // Update the block context
-    pub fn generate_latest_block(&mut self) -> Result<StarknetBlock> {
+    pub fn generate_latest_block(&mut self) {
         let mut new_block = if let Some(ref pending) = self.blocks.pending_block {
             pending.clone()
         } else {
-            self.create_new_empty_block()
+            self.create_empty_block()
         };
 
+        new_block.inner.header.block_number = self.block_context.block_number;
         let block_hash = new_block.compute_block_hash();
         new_block.inner.header.block_hash = block_hash;
 
@@ -231,17 +234,15 @@ impl StarknetWrapper {
         self.blocks.pending_block = None;
 
         // TODO: Compute state root
-        self.blocks.append_block(new_block.clone())?;
+        self.blocks.insert(new_block);
 
         self.apply_state_diff_to_state(pending_state_diff);
 
         self.update_block_context();
-
-        Ok(new_block)
     }
 
     pub fn generate_pending_block(&mut self) {
-        self.blocks.pending_block = Some(self.create_new_empty_block());
+        self.blocks.pending_block = Some(self.create_empty_block());
         // Update the pending state to the latest committed state
         self.pending_state = CachedState::new(self.state.clone());
     }
@@ -306,25 +307,71 @@ impl StarknetWrapper {
         }
     }
 
-    fn create_new_empty_block(&self) -> StarknetBlock {
-        let block_number = self.block_context.block_number;
+    /// Generate the genesis block and append it to the chain.
+    /// This block should include transactions which set the initial state of the chain.
+    pub fn generate_genesis_block(&mut self) {
+        self.generate_pending_block();
 
-        let parent_hash = if block_number.0 == 0 {
-            BlockHash(stark_felt!(0_u8))
-        } else {
-            self.blocks.latest().map(|last_block| last_block.block_hash()).unwrap()
-        };
+        let mut transactions = vec![];
+        let deploy_data =
+            vec![(*UDC_CLASS_HASH, *UDC_ADDRESS), (*ERC20_CONTRACT_CLASS_HASH, *FEE_TOKEN_ADDRESS)];
 
+        deploy_data.into_iter().for_each(|(class_hash, address)| {
+            let declare_tx = starknet_api::transaction::Transaction::Declare(
+                starknet_api::transaction::DeclareTransaction::V1(DeclareTransactionV0V1 {
+                    class_hash: ClassHash(class_hash),
+                    transaction_hash: TransactionHash(
+                        stark_felt!(self.transactions.total() as u32),
+                    ),
+                    ..Default::default()
+                }),
+            );
+
+            self.store_transaction(StarknetTransaction {
+                execution_info: None,
+                execution_error: None,
+                inner: declare_tx.clone(),
+                block_hash: Default::default(),
+                block_number: Default::default(),
+                status: TransactionStatus::AcceptedOnL2,
+            });
+
+            let deploy_tx = starknet_api::transaction::Transaction::Deploy(DeployTransaction {
+                class_hash: ClassHash(class_hash),
+                transaction_hash: TransactionHash(stark_felt!(self.transactions.total() as u32)),
+                contract_address: ContractAddress(patricia_key!(address)),
+                ..Default::default()
+            });
+
+            self.store_transaction(StarknetTransaction {
+                execution_info: None,
+                execution_error: None,
+                inner: deploy_tx.clone(),
+                block_hash: Default::default(),
+                block_number: Default::default(),
+                status: TransactionStatus::AcceptedOnL2,
+            });
+
+            transactions.push(declare_tx);
+            transactions.push(deploy_tx);
+        });
+
+        self.blocks.pending_block.as_mut().unwrap().inner.body.transactions = transactions;
+
+        self.generate_latest_block();
+    }
+
+    fn create_empty_block(&self) -> StarknetBlock {
         StarknetBlock::new(
-            BlockHash(stark_felt!(0_u8)),
-            parent_hash,
-            block_number,
+            BlockHash::default(),
+            BlockHash::default(),
+            BlockNumber::default(),
             GasPrice(self.block_context.gas_price),
-            GlobalRoot(stark_felt!(0_u8)),
+            GlobalRoot::default(),
             self.block_context.sequencer_address,
             BlockTimestamp(get_current_timestamp().as_secs()),
-            vec![],
-            vec![],
+            Vec::default(),
+            Vec::default(),
             None,
         )
     }
