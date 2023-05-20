@@ -1,33 +1,16 @@
 #[contract]
 mod World {
-    use array::ArrayTrait;
-    use array::SpanTrait;
+    use array::{ArrayTrait, SpanTrait};
     use traits::Into;
     use option::OptionTrait;
     use box::BoxTrait;
     use serde::Serde;
-    use starknet::get_caller_address;
-    use starknet::get_contract_address;
-    use starknet::get_tx_info;
-    use starknet::contract_address::ContractAddressIntoFelt252;
-    use starknet::ClassHash;
-    use starknet::Zeroable;
-    use starknet::ContractAddress;
+    use starknet::{get_caller_address, get_contract_address, get_tx_info, contract_address::ContractAddressIntoFelt252, ClassHash, Zeroable, ContractAddress};
 
-    use dojo_core::storage::query::Query;
-    use dojo_core::storage::query::QueryTrait;
-    use dojo_core::storage::db::Database;
-    use dojo_core::integer::u250;
-    use dojo_core::integer::ContractAddressIntoU250;
-    use dojo_core::string::ShortString;
-    use dojo_core::auth::systems::Route;
-
-    use dojo_core::interfaces::IComponentLibraryDispatcher;
-    use dojo_core::interfaces::IComponentDispatcherTrait;
-    use dojo_core::interfaces::IExecutorDispatcher;
-    use dojo_core::interfaces::IExecutorDispatcherTrait;
-    use dojo_core::interfaces::ISystemLibraryDispatcher;
-    use dojo_core::interfaces::ISystemDispatcherTrait;
+    use dojo_core::storage::{db::Database, query::{Query, QueryTrait}};
+    use dojo_core::integer::{u250, ContractAddressIntoU250};
+    use dojo_core::{string::ShortString, auth::systems::Route};
+    use dojo_core::interfaces::{IComponentLibraryDispatcher, IComponentDispatcherTrait, IExecutorDispatcher, IExecutorDispatcherTrait, ISystemLibraryDispatcher, ISystemDispatcherTrait};
 
     #[event]
     fn WorldSpawned(address: ContractAddress, caller: ContractAddress, name: ShortString) {}
@@ -104,7 +87,7 @@ mod World {
                 is_account_admin()
             } else {
                 // Check if the system is authorized to write to the component
-                let mut calldata = ArrayTrait::<felt252>::new();
+                let mut calldata = ArrayTrait::new();
                 calldata.append(system); // target_id
                 calldata.append(component); // resource_id
 
@@ -118,7 +101,7 @@ mod World {
         } else {
             // If the world has not yet been initialized, all systems are authorized.
             // This is to allow the initial Admin role to be set
-            bool::True(())
+            true
         }
     }
 
@@ -127,7 +110,7 @@ mod World {
     fn is_account_admin() -> bool {
         let admin_class_hash = system_registry::read('IsAccountAdmin'.into());
         // Call IsAccountAdmin system via executor
-        let mut calldata = ArrayTrait::<felt252>::new();
+        let mut calldata = ArrayTrait::new();
         let res = IExecutorDispatcher {
             contract_address: executor::read()
         }.execute(admin_class_hash, calldata.span());
@@ -231,7 +214,7 @@ mod World {
         match Database::get(class_hash, component.into(), query, offset, length) {
             Option::Some(res) => res,
             Option::None(_) => {
-                ArrayTrait::<felt252>::new().span()
+                ArrayTrait::new().span()
             }
         }
     }

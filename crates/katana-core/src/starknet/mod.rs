@@ -10,8 +10,10 @@ use blockifier::transaction::errors::TransactionExecutionError;
 use blockifier::transaction::objects::{AccountTransactionContext, TransactionExecutionInfo};
 use blockifier::transaction::transaction_execution::Transaction;
 use blockifier::transaction::transactions::{DeclareTransaction, ExecutableTransaction};
-use starknet::core::types::{FieldElement, TransactionStatus};
-use starknet::providers::jsonrpc::models::{BlockId, BlockTag, PendingStateUpdate, StateUpdate};
+use starknet::core::types::FieldElement;
+use starknet::providers::jsonrpc::models::{
+    BlockId, BlockTag, PendingStateUpdate, StateUpdate, TransactionStatus,
+};
 use starknet_api::block::{BlockHash, BlockNumber, BlockTimestamp, GasPrice};
 use starknet_api::core::GlobalRoot;
 use starknet_api::hash::StarkFelt;

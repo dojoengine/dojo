@@ -6,16 +6,10 @@ mod WorldFactory {
     use option::OptionTrait;
     use traits::Into;
 
-    use starknet::ClassHash;
-    use starknet::ContractAddress;
-    use starknet::contract_address::ContractAddressIntoFelt252;
-    use starknet::syscalls::deploy_syscall;
-    use starknet::get_caller_address;
+    use starknet::{ClassHash, ContractAddress, contract_address::ContractAddressIntoFelt252, syscalls::deploy_syscall, get_caller_address};
 
-    use dojo_core::interfaces::IWorldDispatcher;
-    use dojo_core::interfaces::IWorldDispatcherTrait;
-    use dojo_core::string::ShortString;
-    use dojo_core::auth::systems::Route;
+    use dojo_core::interfaces::{IWorldDispatcher, IWorldDispatcherTrait};
+    use dojo_core::{string::ShortString, auth::systems::Route};
 
     struct Storage {
         world_class_hash: ClassHash,
@@ -95,11 +89,11 @@ mod WorldFactory {
 
         // register components
         let components_len = components.len();
-        register_components(components, components_len, 0_usize, world_address);
+        register_components(components, components_len, 0, world_address);
 
         // register systems
         let systems_len = systems.len();
-        register_systems(systems, systems_len, 0_usize, world_address);
+        register_systems(systems, systems_len, 0, world_address);
 
         // initialize world by setting the auth routes
         world.initialize(routes);
@@ -163,25 +157,23 @@ mod WorldFactory {
         index: usize,
         world_address: ContractAddress
     ) {
-        gas::withdraw_gas().expect('Out of gas');
         if (index == components_len) {
             return ();
         }
         IWorldDispatcher {
             contract_address: world_address
         }.register_component(*components.at(index));
-        return register_components(components, components_len, index + 1_usize, world_address);
+        return register_components(components, components_len, index + 1, world_address);
     }
 
     fn register_systems(
         systems: Array<ClassHash>, systems_len: usize, index: usize, world_address: ContractAddress
     ) {
-        gas::withdraw_gas().expect('Out of gas');
         if (index == systems_len) {
             return ();
         }
         IWorldDispatcher { contract_address: world_address }.register_system(*systems.at(index));
-        return register_systems(systems, systems_len, index + 1_usize, world_address);
+        return register_systems(systems, systems_len, index + 1, world_address);
     }
 
     fn register_auth(world_address: ContractAddress) {
