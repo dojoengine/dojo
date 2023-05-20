@@ -1,4 +1,4 @@
-use async_graphql::{ComplexObject, Context, Result, SimpleObject};
+use async_graphql::{ComplexObject, Context, Result, SimpleObject, ID};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use sqlx::{Pool, Sqlite};
@@ -24,9 +24,9 @@ impl System {
     }
 }
 
-pub async fn system(context: &Context<'_>, id: String) -> Result<System> {
+pub async fn system(context: &Context<'_>, id: ID) -> Result<System> {
     let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
-
+    let id = id.to_string();
     let system = sqlx::query_as!(
         System,
         r#"

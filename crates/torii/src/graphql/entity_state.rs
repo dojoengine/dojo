@@ -1,4 +1,4 @@
-use async_graphql::{ComplexObject, Context, Result, SimpleObject};
+use async_graphql::{ComplexObject, Context, Result, SimpleObject, ID};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use sqlx::{Pool, Sqlite};
@@ -19,20 +19,20 @@ pub struct EntityState {
 #[ComplexObject]
 impl EntityState {
     async fn entity(&self, context: &Context<'_>) -> Result<entity::Entity> {
-        entity::entity(context, self.entity_id.clone()).await
+        entity::entity(context, ID(self.entity_id.clone())).await
     }
 
     async fn component(&self, context: &Context<'_>) -> Result<component::Component> {
-        component::component(context, self.component_id.clone()).await
+        component::component(context, ID(self.component_id.clone())).await
     }
 }
 
 pub async fn entity_states_by_entity(
     context: &Context<'_>,
-    entity_id: String,
+    entity_id: ID,
 ) -> Result<Vec<EntityState>> {
     let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
-
+    let id = entity_id.to_string();
     let entity_states = sqlx::query_as!(
         EntityState,
         r#"
@@ -44,7 +44,7 @@ pub async fn entity_states_by_entity(
                 updated_at as "updated_at: _"
             FROM entity_states WHERE entity_id = $1
         "#,
-        entity_id
+        id
     )
     .fetch_all(&mut conn)
     .await?;
@@ -54,10 +54,10 @@ pub async fn entity_states_by_entity(
 
 pub async fn entity_states_by_component(
     context: &Context<'_>,
-    component_id: String,
+    component_id: ID,
 ) -> Result<Vec<EntityState>> {
     let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
-
+    let id = component_id.to_string();
     let entity_states = sqlx::query_as!(
         EntityState,
         r#"
@@ -69,7 +69,7 @@ pub async fn entity_states_by_component(
                 updated_at as "updated_at: _"
             FROM entity_states WHERE component_id = $1
         "#,
-        component_id
+        id
     )
     .fetch_all(&mut conn)
     .await?;

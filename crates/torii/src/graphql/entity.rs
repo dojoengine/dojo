@@ -1,4 +1,4 @@
-use async_graphql::{ComplexObject, Context, Result, SimpleObject};
+use async_graphql::{ComplexObject, Context, Result, SimpleObject, ID};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use sqlx::pool::PoolConnection;
@@ -21,13 +21,13 @@ pub struct Entity {
 #[ComplexObject]
 impl Entity {
     async fn states(&self, context: &Context<'_>) -> Result<Vec<entity_state::EntityState>> {
-        entity_state::entity_states_by_entity(context, self.id.clone()).await
+        entity_state::entity_states_by_entity(context, ID(self.id.clone())).await
     }
 }
 
-pub async fn entity(context: &Context<'_>, id: String) -> Result<Entity> {
+pub async fn entity(context: &Context<'_>, id: ID) -> Result<Entity> {
     let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
-
+    let id = id.to_string();
     // timestamp workaround: https://github.com/launchbadge/sqlx/issues/598
     let entity = sqlx::query_as!(
         Entity,

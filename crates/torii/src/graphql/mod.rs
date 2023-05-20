@@ -6,7 +6,7 @@ pub mod server;
 pub mod system;
 pub mod system_call;
 
-use async_graphql::{Context, Object, Result};
+use async_graphql::{Context, Object, Result, ID};
 use component::Component;
 use entity::Entity;
 use event::Event;
@@ -16,7 +16,7 @@ pub struct Query;
 
 #[Object]
 impl Query {
-    async fn component(&self, ctx: &Context<'_>, id: String) -> Result<Component> {
+    async fn component(&self, ctx: &Context<'_>, id: ID) -> Result<Component> {
         component::component(ctx, id).await
     }
 
@@ -24,7 +24,7 @@ impl Query {
         component::components(ctx).await
     }
 
-    async fn system(&self, ctx: &Context<'_>, id: String) -> Result<System> {
+    async fn system(&self, ctx: &Context<'_>, id: ID) -> Result<System> {
         system::system(ctx, id).await
     }
 
@@ -32,7 +32,7 @@ impl Query {
         system::systems(ctx).await
     }
 
-    async fn entity(&self, ctx: &Context<'_>, id: String) -> Result<Entity> {
+    async fn entity(&self, ctx: &Context<'_>, id: ID) -> Result<Entity> {
         entity::entity(ctx, id).await
     }
 
@@ -45,7 +45,7 @@ impl Query {
         entity::entities(ctx, partition_id, keys).await
     }
 
-    async fn event(&self, ctx: &Context<'_>, id: String) -> Result<Event> {
+    async fn event(&self, ctx: &Context<'_>, id: ID) -> Result<Event> {
         event::event(ctx, id).await
     }
 

@@ -1,4 +1,4 @@
-use async_graphql::{ComplexObject, Context, Result, SimpleObject};
+use async_graphql::{ComplexObject, Context, Result, SimpleObject, ID};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use sqlx::{Pool, Sqlite};
@@ -19,13 +19,13 @@ pub struct SystemCall {
 #[ComplexObject]
 impl SystemCall {
     async fn system(&self, context: &Context<'_>) -> Result<system::System> {
-        system::system(context, self.system_id.clone()).await
+        system::system(context, ID(self.system_id.clone())).await
     }
 }
 
-pub async fn system_call(context: &Context<'_>, id: i64) -> Result<SystemCall> {
+pub async fn system_call(context: &Context<'_>, id: ID) -> Result<SystemCall> {
     let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
-
+    let id: i64 = id.try_into().expect("invalid id"); 
     let system_call = sqlx::query_as!(
         SystemCall,
         r#"

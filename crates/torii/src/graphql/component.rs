@@ -1,4 +1,4 @@
-use async_graphql::{ComplexObject, Context, Result, SimpleObject};
+use async_graphql::{ComplexObject, Context, Result, SimpleObject, ID};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use sqlx::{Pool, Sqlite};
@@ -21,13 +21,13 @@ pub struct Component {
 #[ComplexObject]
 impl Component {
     async fn entity_states(&self, context: &Context<'_>) -> Result<Vec<entity_state::EntityState>> {
-        entity_state::entity_states_by_component(context, self.id.clone()).await
+        entity_state::entity_states_by_component(context, ID(self.id.clone())).await
     }
 }
 
-pub async fn component(context: &Context<'_>, id: String) -> Result<Component> {
+pub async fn component(context: &Context<'_>, id: ID) -> Result<Component> {
     let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
-
+    let id = id.to_string();
     let component = sqlx::query_as!(
         Component,
         r#"
