@@ -8,7 +8,7 @@ struct GradualDutchAuction {
     auction_start_time: FixedType,
 }
 
-trait GdaTrait {
+trait GradualDutchAuctionTrait {
     fn purchase_price(
         self: @Market, quantity: u128, existing: u128, current_time: u128
     ) -> FixedType;
