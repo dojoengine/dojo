@@ -7,7 +7,7 @@ mod Index {
     use dojo_core::integer::u250;
 
     struct Storage {
-        // Maps id to it's position in the table.
+        // Maps id to its position in the table.
         // NOTE: ids is 1-indexed to allow for 0
         // to be used as a sentinel value.
         ids: LegacyMap::<(u250, u250), usize>,
@@ -48,18 +48,17 @@ mod Index {
     fn query(table: u250) -> Array<u250> {
         let mut res = ArrayTrait::new();
         let table_len = table_lens::read(table);
-        _query(table, 0, table_len, ref res);
+        let mut idx: usize = 0;
+
+        loop {
+            if idx == table_len {
+                break ();
+            }
+            
+            res.append(tables::read((table, idx)));
+            idx += 1;
+        };
+
         res
-    }
-
-    fn _query(table: u250, idx: usize, table_len: usize, ref res: Array<u250>) {
-        gas::withdraw_gas_all(get_builtin_costs()).expect('Out of gas');
-
-        if (idx == table_len) {
-            return ();
-        }
-
-        res.append(tables::read((table, idx)));
-        return _query(table, idx + 1, table_len, ref res);
     }
 }

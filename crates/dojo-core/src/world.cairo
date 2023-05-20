@@ -173,9 +173,9 @@ mod World {
     // Issue an autoincremented id to the caller.
     #[external]
     fn uuid() -> usize {
-        let next = nonce::read();
-        nonce::write(next + 1);
-        return next;
+        let current = nonce::read();
+        nonce::write(current + 1);
+        current
     }
 
     #[external]
@@ -219,10 +219,11 @@ mod World {
         }
     }
 
-    // Returns entities that contain the component state.
+    // Returns entity IDs and entities that contain the component state.
     #[view]
-    fn entities(component: ShortString, partition: u250) -> Array::<u250> {
-        Database::all(component.into(), partition)
+    fn entities(component: ShortString, partition: u250) -> (Span<u250>, Span<Span<felt252>>) {
+        let class_hash = component_registry::read(component);
+        Database::all(class_hash, component.into(), partition)
     }
 
     #[external]
