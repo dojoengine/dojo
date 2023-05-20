@@ -39,9 +39,9 @@ fn test_creating_blocks() {
         "pending block should not increment block context number"
     );
 
-    starknet.generate_latest_block().unwrap();
-    starknet.generate_latest_block().unwrap();
-    starknet.generate_latest_block().unwrap();
+    starknet.generate_latest_block();
+    starknet.generate_latest_block();
+    starknet.generate_latest_block();
 
     assert_eq!(starknet.blocks.hash_to_num.len(), 3);
     assert_eq!(starknet.blocks.num_to_block.len(), 3);
@@ -82,16 +82,14 @@ fn test_add_transaction() {
         stark_felt!(0_u8)           // Calldata: num.
     ];
 
-    starknet
-        .handle_transaction(Transaction::AccountTransaction(AccountTransaction::Invoke(
-            InvokeTransaction::V1(InvokeTransactionV1 {
-                sender_address: a.account_address,
-                calldata: execute_calldata,
-                transaction_hash: TransactionHash(stark_felt!("0x6969")),
-                ..Default::default()
-            }),
-        )))
-        .unwrap();
+    starknet.handle_transaction(Transaction::AccountTransaction(AccountTransaction::Invoke(
+        InvokeTransaction::V1(InvokeTransactionV1 {
+            sender_address: a.account_address,
+            calldata: execute_calldata,
+            transaction_hash: TransactionHash(stark_felt!("0x6969")),
+            ..Default::default()
+        }),
+    )));
 
     // SEND INVOKE TRANSACTION
     //
@@ -139,7 +137,7 @@ fn test_add_reverted_transaction() {
         InvokeTransaction::V1(InvokeTransactionV1 { transaction_hash, ..Default::default() }),
     ));
 
-    starknet.handle_transaction(transaction).unwrap();
+    starknet.handle_transaction(transaction);
 
     let tx = starknet.transactions.transactions.get(&transaction_hash);
 

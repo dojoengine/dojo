@@ -21,7 +21,7 @@ impl<S: Sequencer + Send + Sync + 'static> KatanaRpc<S> {
 #[async_trait]
 impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
     async fn generate_block(&self) -> Result<(), Error> {
-        self.sequencer.write().await.generate_new_block()?;
+        self.sequencer.write().await.generate_new_block();
         Ok(())
     }
 }

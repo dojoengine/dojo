@@ -57,7 +57,7 @@ pub struct StarknetWrapper {
 }
 
 impl StarknetWrapper {
-    pub fn new(config: StarknetConfig) -> Result<Self> {
+    pub fn new(config: StarknetConfig) -> Self {
         let blocks = StarknetBlocks::default();
         let block_context = block_context_from_config(&config);
         let transactions = StarknetTransactions::default();
@@ -83,9 +83,9 @@ impl StarknetWrapper {
             predeployed_accounts,
         };
 
-        starknet.generate_genesis_block()?;
+        starknet.generate_genesis_block();
 
-        Ok(starknet)
+        starknet
     }
 
     pub fn state_from_block_id(&self, block_id: BlockId) -> Option<DictStateReader> {
@@ -121,7 +121,7 @@ impl StarknetWrapper {
     }
 
     // execute the tx
-    pub fn handle_transaction(&mut self, transaction: Transaction) -> Result<()> {
+    pub fn handle_transaction(&mut self, transaction: Transaction) {
         let api_tx = convert_blockifier_tx_to_starknet_api_tx(&transaction);
 
         info!("Transaction received | Transaction hash: {}", api_tx.transaction_hash());
@@ -155,7 +155,7 @@ impl StarknetWrapper {
                 self.store_transaction(starknet_tx);
 
                 if !self.config.blocks_on_demand {
-                    self.generate_latest_block()?;
+                    self.generate_latest_block();
                     self.generate_pending_block();
                 }
             }
@@ -171,15 +171,13 @@ impl StarknetWrapper {
                 self.store_transaction(tx);
             }
         }
-
-        Ok(())
     }
 
     // Creates a new block that contains all the pending txs
     // Will update the txs status to accepted
     // Append the block to the chain
     // Update the block context
-    pub fn generate_latest_block(&mut self) -> Result<StarknetBlock> {
+    pub fn generate_latest_block(&mut self) {
         let mut new_block = if let Some(ref pending) = self.blocks.pending_block {
             pending.clone()
         } else {
@@ -233,13 +231,11 @@ impl StarknetWrapper {
         self.blocks.pending_block = None;
 
         // TODO: Compute state root
-        self.blocks.append_block(new_block.clone())?;
+        self.blocks.insert(new_block.clone());
 
         self.apply_state_diff_to_state(pending_state_diff);
 
         self.update_block_context();
-
-        Ok(new_block)
     }
 
     pub fn generate_pending_block(&mut self) {
@@ -311,9 +307,8 @@ impl StarknetWrapper {
     /// Generate the genesis block and append it to the chain.
     /// This block should include transactions which set the initial state of the chain.
     // TODO: Include transactions in the block
-    pub fn generate_genesis_block(&mut self) -> Result<()> {
-        self.generate_latest_block()?;
-        Ok(())
+    pub fn generate_genesis_block(&mut self) {
+        self.create_new_empty_block();
     }
 
     fn create_new_empty_block(&self) -> StarknetBlock {

@@ -33,9 +33,7 @@ pub struct KatanaSequencer {
 
 impl KatanaSequencer {
     pub fn new(config: StarknetConfig) -> Self {
-        Self {
-            starknet: StarknetWrapper::new(config).expect("should create new Starknet instance"),
-        }
+        Self { starknet: StarknetWrapper::new(config) }
     }
 
     // The starting point of the sequencer
@@ -124,8 +122,8 @@ impl Sequencer for KatanaSequencer {
         Ok((tx_hash, contract_address))
     }
 
-    fn add_account_transaction(&mut self, transaction: AccountTransaction) -> Result<()> {
-        self.starknet.handle_transaction(Transaction::AccountTransaction(transaction))
+    fn add_account_transaction(&mut self, transaction: AccountTransaction) {
+        self.starknet.handle_transaction(Transaction::AccountTransaction(transaction));
     }
 
     fn estimate_fee(
@@ -334,17 +332,16 @@ impl Sequencer for KatanaSequencer {
         )
     }
 
-    fn generate_new_block(&mut self) -> Result<()> {
-        self.starknet.generate_latest_block()?;
+    fn generate_new_block(&mut self) {
+        self.starknet.generate_latest_block();
         self.starknet.generate_pending_block();
-        Ok(())
     }
 }
 
 pub trait Sequencer {
     fn chain_id(&self) -> ChainId;
 
-    fn generate_new_block(&mut self) -> Result<()>;
+    fn generate_new_block(&mut self);
 
     fn nonce_at(
         &mut self,
@@ -389,7 +386,7 @@ pub trait Sequencer {
         signature: TransactionSignature,
     ) -> anyhow::Result<(TransactionHash, ContractAddress)>;
 
-    fn add_account_transaction(&mut self, transaction: AccountTransaction) -> Result<()>;
+    fn add_account_transaction(&mut self, transaction: AccountTransaction);
 
     fn estimate_fee(
         &self,
