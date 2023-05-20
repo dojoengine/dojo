@@ -14,7 +14,7 @@ trait GradualDutchAuctionTrait {
     ) -> FixedType;
 }
 
-impl GdaImpl of GdaTrait {
+impl GradualDutchAuctionImpl of GradualDutchAuctionTrait {
     fn purchase_price(
         self: @Market, quantity: u128, existing: u128, current_time: u128
     ) -> FixedType {
