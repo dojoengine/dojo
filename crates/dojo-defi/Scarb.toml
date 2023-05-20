@@ -7,4 +7,4 @@ description = "Implementations of a defi primitives for the Dojo framework"
 cubit = { git = "https://github.com/influenceth/cubit", version = "0.1.0" }
 dojo_core = { path = "../dojo-core" }
 
-# [[target.dojo]]
+[[target.dojo]]
