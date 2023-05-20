@@ -39,6 +39,7 @@ impl KatanaSequencer {
     // The starting point of the sequencer
     // Once we add support periodic block generation, the logic should be here.
     pub fn start(&mut self) {
+        self.starknet.generate_genesis_block();
         self.starknet.generate_pending_block();
     }
 

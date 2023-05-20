@@ -79,7 +79,7 @@ impl StarknetWrapper {
         .expect("should be able to generate accounts");
         predeployed_accounts.deploy_accounts(&mut state);
 
-        let mut starknet = Self {
+        Self {
             state,
             config,
             blocks,
@@ -87,11 +87,7 @@ impl StarknetWrapper {
             block_context,
             pending_state,
             predeployed_accounts,
-        };
-
-        starknet.generate_genesis_block();
-
-        starknet
+        }
     }
 
     pub fn state_from_block_id(&self, block_id: BlockId) -> Option<DictStateReader> {

@@ -22,7 +22,6 @@ async fn main() {
     let starknet_config = config.starknet_config();
 
     let sequencer = Arc::new(RwLock::new(KatanaSequencer::new(starknet_config)));
-    sequencer.write().await.start();
 
     let predeployed_accounts = if config.hide_predeployed_accounts {
         None
@@ -38,6 +37,7 @@ async fn main() {
                 format!("🚀 JSON-RPC server started: {}", Paint::red(format!("http://{addr}"))),
             );
 
+            sequencer.write().await.start();
             server_handle.stopped().await;
         }
         Err(err) => {
