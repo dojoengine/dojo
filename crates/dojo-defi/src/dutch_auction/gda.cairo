@@ -1,7 +1,7 @@
 use cubit::types::fixed::{Fixed, FixedType, FixedMul, FixedSub, FixedDiv};
 
 #[derive(Component, Drop)]
-struct Market {
+struct GradualDutchAuction {
     initial_price: FixedType,
     scale_factor: FixedType,
     decay_constant: FixedType,
