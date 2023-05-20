@@ -1,23 +1,19 @@
-use cubit::types::fixed::{Fixed, FixedType, FixedMul, FixedSub, FixedDiv};
+use cubit::types::fixed::{Fixed, FixedMul, FixedSub, FixedDiv};
 
 #[derive(Component, Drop)]
 struct GradualDutchAuction {
-    initial_price: FixedType,
-    scale_factor: FixedType,
-    decay_constant: FixedType,
-    auction_start_time: FixedType,
+    initial_price: Fixed,
+    scale_factor: Fixed,
+    decay_constant: Fixed,
+    auction_start_time: Fixed,
 }
 
 trait GradualDutchAuctionTrait {
-    fn purchase_price(
-        self: @Market, quantity: u128, existing: u128, current_time: u128
-    ) -> FixedType;
+    fn purchase_price(self: @Market, quantity: u128, existing: u128, current_time: u128) -> Fixed;
 }
 
 impl GradualDutchAuctionImpl of GradualDutchAuctionTrait {
-    fn purchase_price(
-        self: @Market, quantity: u128, existing: u128, current_time: u128
-    ) -> FixedType {
+    fn purchase_price(self: @Market, quantity: u128, existing: u128, current_time: u128) -> Fixed {
         let quantity_fp = Fixed::new(quantity, true);
         let existing_fp = Fixed::new(existing, true);
         let current_time_fp = Fixed::new(current_time, true);
