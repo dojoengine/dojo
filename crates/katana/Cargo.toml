@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 repository.workspace = true
 license-file.workspace = true
-description = "Katana command line interface."
+description = "A fast and lightweight local Starknet development sequencer."
 
 [dependencies]
 clap.workspace = true

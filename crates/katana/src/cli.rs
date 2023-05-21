@@ -6,7 +6,8 @@ use katana_core::starknet::StarknetConfig;
 use katana_rpc::config::RpcConfig;
 
 #[derive(Parser, Debug)]
-#[command(about = "A fast and lightweight local Starknet development node.")]
+#[command(author, version, about, long_about = None)]
+#[command(propagate_version = true)]
 pub struct App {
     #[arg(long)]
     #[arg(help = "Hide the predeployed accounts details.")]

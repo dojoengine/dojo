@@ -5,14 +5,17 @@ use starknet::core::crypto::compute_hash_on_elements;
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::models::{
     DeclareTransaction, DeclareTransactionV1, DeclareTransactionV2, DeployAccountTransaction,
-    InvokeTransaction, InvokeTransactionV1, L1HandlerTransaction, Transaction,
+    DeployTransaction, InvokeTransaction, InvokeTransactionV1, L1HandlerTransaction,
+    MaybePendingTransactionReceipt, Transaction,
 };
+use starknet_api::block::{BlockHash, BlockNumber};
 use starknet_api::hash::StarkFelt;
 use starknet_api::transaction::{
     DeclareTransaction as InnerDeclareTransaction,
     DeployAccountTransaction as InnerDeployAccountTransaction,
-    InvokeTransaction as InnerInvokeTransaction, L1HandlerTransaction as InnerL1HandlerTransaction,
-    Transaction as InnerTransaction,
+    DeployTransaction as InnerDeployTransaction, InvokeTransaction as InnerInvokeTransaction,
+    InvokeTransactionOutput, L1HandlerTransaction as InnerL1HandlerTransaction,
+    Transaction as InnerTransaction, TransactionOutput, TransactionReceipt,
 };
 
 const PREFIX_INVOKE: FieldElement = FieldElement::from_mont([
@@ -116,7 +119,7 @@ pub fn convert_inner_to_rpc_tx(transaction: InnerTransaction) -> Result<Transact
         InnerTransaction::L1Handler(l1handler) => {
             Transaction::L1Handler(convert_l1_handle_to_rpc(l1handler)?)
         }
-        InnerTransaction::Deploy(_) => unimplemented!("deploy transaction not supported"),
+        InnerTransaction::Deploy(deploy) => Transaction::Deploy(convert_deploy_to_rpc(deploy)?),
     };
     Ok(tx)
 }
@@ -131,6 +134,18 @@ fn convert_l1_handle_to_rpc(
         version: <StarkFelt as Into<FieldElement>>::into(transaction.version.0).try_into().unwrap(),
         entry_point_selector: transaction.entry_point_selector.0.into(),
         calldata: convert_stark_felt_array_to_field_element_array(&transaction.calldata.0)?,
+    })
+}
+
+fn convert_deploy_to_rpc(transaction: InnerDeployTransaction) -> Result<DeployTransaction> {
+    Ok(DeployTransaction {
+        transaction_hash: transaction.transaction_hash.0.into(),
+        version: <StarkFelt as Into<FieldElement>>::into(transaction.version.0).try_into()?,
+        class_hash: transaction.class_hash.0.into(),
+        contract_address_salt: transaction.contract_address_salt.0.into(),
+        constructor_calldata: convert_stark_felt_array_to_field_element_array(
+            &transaction.constructor_calldata.0,
+        )?,
     })
 }
 

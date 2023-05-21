@@ -3,7 +3,7 @@ use std::vec;
 
 use blockifier::transaction::errors::TransactionExecutionError;
 use blockifier::transaction::objects::TransactionExecutionInfo;
-use starknet::core::types::TransactionStatus;
+use starknet::providers::jsonrpc::models::TransactionStatus;
 use starknet_api::block::{BlockHash, BlockNumber};
 use starknet_api::core::{ContractAddress, EntryPointSelector};
 use starknet_api::hash::StarkFelt;
@@ -172,7 +172,11 @@ pub struct StarknetTransactions {
 }
 
 impl StarknetTransactions {
-    pub fn by_hash(&self, hash: &TransactionHash) -> Option<Transaction> {
-        self.transactions.get(hash).map(|tx| tx.inner.clone())
+    pub fn by_hash(&self, hash: &TransactionHash) -> Option<&StarknetTransaction> {
+        self.transactions.get(hash)
+    }
+
+    pub fn total(&self) -> usize {
+        self.transactions.len()
     }
 }

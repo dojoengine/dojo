@@ -5,7 +5,7 @@ Content-Type: application/json
     "method": "starknet_getTransactionByBlockIdAndIndex",
     "params": [
         "latest",
-        "0"
+        0
     ],
     "id": 1
 }

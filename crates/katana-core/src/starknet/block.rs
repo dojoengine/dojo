@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use anyhow::{ensure, Result};
 use starknet::providers::jsonrpc::models::StateUpdate;
 use starknet_api::block::{
     Block, BlockBody, BlockHash, BlockHeader, BlockNumber, BlockStatus, BlockTimestamp, GasPrice,
@@ -109,20 +108,10 @@ pub struct StarknetBlocks {
 }
 
 impl StarknetBlocks {
-    pub fn append_block(&mut self, block: StarknetBlock) -> Result<()> {
+    pub fn insert(&mut self, block: StarknetBlock) {
         let block_number = block.block_number();
-        let expected_block_number = BlockNumber(self.num_to_block.len() as u64);
-
-        ensure!(
-            expected_block_number == block_number,
-            "unable to append block; expected block number {expected_block_number}, actual \
-             {block_number}"
-        );
-
         self.hash_to_num.insert(block.block_hash(), block_number);
         self.num_to_block.insert(block_number, block);
-
-        Ok(())
     }
 
     pub fn current_block_number(&self) -> Option<BlockNumber> {

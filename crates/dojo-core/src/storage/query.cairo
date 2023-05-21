@@ -1,5 +1,4 @@
-use array::ArrayTrait;
-use array::SpanTrait;
+use array::{ArrayTrait, SpanTrait};
 use hash::LegacyHash;
 use option::OptionTrait;
 use serde::Serde;
@@ -7,11 +6,7 @@ use traits::Into;
 use zeroable::IsZeroResult;
 use starknet::ClassHashIntoFelt252;
 use poseidon::poseidon_hash_span;
-use dojo_core::integer::u250;
-use dojo_core::integer::Felt252IntoU250;
-use dojo_core::integer::U250IntoFelt252;
-use dojo_core::serde::SpanSerde;
-use dojo_core::string::ShortString;
+use dojo_core::{string::ShortString, serde::SpanSerde, integer::{u250, Felt252IntoU250, U250IntoFelt252}};
 
 #[derive(Copy, Drop, Serde)]
 struct Query {
@@ -31,15 +26,15 @@ trait QueryTrait {
 
 impl QueryImpl of QueryTrait {
     fn new(address_domain: u32, partition: u250, keys: Span<u250>) -> Query {
-        if keys.len() == 1_usize {
+        if keys.len() == 1 {
             if partition == 0.into() {
-                let hash = *keys.at(0_usize);
+                let hash = *keys.at(0);
                 return Query { address_domain, keys, partition, hash };
             }
 
             gas::withdraw_gas_all(get_builtin_costs()).expect('Out of gas');
 
-            let hash = LegacyHash::hash(0, (partition, *keys.at(0_usize)));
+            let hash = LegacyHash::hash(0, (partition, *keys.at(0)));
             return Query { address_domain, keys, partition, hash: hash.into() };
         }
 

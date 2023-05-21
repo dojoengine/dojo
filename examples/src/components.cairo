@@ -19,10 +19,10 @@ trait PositionTrait {
 
 impl PositionImpl of PositionTrait {
     fn is_zero(self: Position) -> bool {
-        if self.x - self.y == 0_u32 {
-            return bool::True(());
+        if self.x - self.y == 0 {
+            return true;
         }
-        bool::False(())
+        false
     }
 
     fn is_equal(self: Position, b: Position) -> bool {
@@ -33,7 +33,7 @@ impl PositionImpl of PositionTrait {
 #[test]
 #[available_gas(100000)]
 fn test_position_is_zero() {
-    assert(PositionTrait::is_zero(Position { x: 0_u32, y: 0_u32 }), 'not zero');
+    assert(PositionTrait::is_zero(Position { x: 0, y: 0 }), 'not zero');
 }
 
 #[test]
@@ -41,7 +41,7 @@ fn test_position_is_zero() {
 fn test_position_is_equal() {
     assert(
         PositionTrait::is_equal(
-            Position { x: 420_u32, y: 0_u32 }, Position { x: 420_u32, y: 0_u32 }
+            Position { x: 420, y: 0 }, Position { x: 420, y: 0 }
         ),
         'not equal'
     );

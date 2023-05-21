@@ -58,11 +58,10 @@ impl StateReader for DictStateReader {
         &mut self,
         class_hash: &ClassHash,
     ) -> StateResult<ContractClass> {
-        let contract_class = self.class_hash_to_class.get(class_hash).cloned();
-        match contract_class {
-            Some(contract_class) => Ok(contract_class),
-            None => Err(StateError::UndeclaredClassHash(*class_hash)),
-        }
+        self.class_hash_to_class
+            .get(class_hash)
+            .cloned()
+            .ok_or(StateError::UndeclaredClassHash(*class_hash))
     }
 
     fn get_class_hash_at(&mut self, contract_address: ContractAddress) -> StateResult<ClassHash> {
@@ -75,9 +74,10 @@ impl StateReader for DictStateReader {
         &mut self,
         class_hash: ClassHash,
     ) -> StateResult<starknet_api::core::CompiledClassHash> {
-        let compiled_class_hash =
-            self.class_hash_to_compiled_class_hash.get(&class_hash).copied().unwrap_or_default();
-        Ok(compiled_class_hash)
+        self.class_hash_to_compiled_class_hash
+            .get(&class_hash)
+            .copied()
+            .ok_or(StateError::UndeclaredClassHash(class_hash))
     }
 }
 

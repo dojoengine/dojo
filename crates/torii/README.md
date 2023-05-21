@@ -38,10 +38,8 @@ To run the `torii` command, open your terminal or command prompt, make sure you 
 
 
 ```
-cargo run --bin torii <world> <node> <rpc> <database_url>
+cargo run --bin torii <world> <rpc> 
 ```
 
 - `<world>`: The address of the world you want to index.
-- `<node>`: The Apibara node you want to use for indexing.
 - `<rpc>`: The RPC endpoint of your starknet node.
-- `<database_url>`: The URL of the database where you want to store the indexed data.

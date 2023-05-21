@@ -44,6 +44,8 @@ pub enum StarknetApiError {
     TooManyKeysInFilter = 34,
     #[error("Internal server error")]
     InternalServerError = 500,
+    #[error("Unsupported transaction version")]
+    UnsupportedTransactionVersion = 53,
     #[error("Failed to fetch pending transactions")]
     FailedToFetchPendingTransactions = 38,
 }

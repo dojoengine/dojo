@@ -29,12 +29,12 @@ struct Foo {
 fn test_component() {
     let name = 'Foo'.into();
     World::register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
-    let mut data = ArrayTrait::<felt252>::new();
+    let mut data = ArrayTrait::new();
     data.append(1337);
     let id = World::uuid();
-    World::set_entity(name, QueryTrait::new_from_id(id.into()), 0_u8, data.span());
-    let stored = World::entity(name, QueryTrait::new_from_id(id.into()), 0_u8, 1_usize);
-    assert(*stored.snapshot.at(0_usize) == 1337, 'data not stored');
+    World::set_entity(name, QueryTrait::new_from_id(id.into()), 0, data.span());
+    let stored = World::entity(name, QueryTrait::new_from_id(id.into()), 0, 1);
+    assert(*stored.snapshot.at(0) == 1337, 'data not stored');
 }
 
 #[system]
@@ -58,7 +58,7 @@ fn test_system() {
 
     world.register_system(BarSystem::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
-    let mut data = ArrayTrait::<felt252>::new();
+    let mut data = ArrayTrait::new();
     data.append(1337);
     data.append(1337);
     let id = world.uuid();
@@ -80,7 +80,7 @@ fn test_initialize() {
 
     world.register_system(BarSystem::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
-    let mut route = ArrayTrait::<Route>::new();
+    let mut route = ArrayTrait::new();
     let target_id = 'Bar'.into();
     let role_id = 'FooWriter'.into();
     let resource_id = 'Foo'.into();
@@ -91,11 +91,11 @@ fn test_initialize() {
     world.initialize(route);
 
     // Assert that the role is stored
-    let role = world.entity('AuthRole'.into(), (target_id, resource_id).into(), 0_u8, 0_usize);
+    let role = world.entity('AuthRole'.into(), (target_id, resource_id).into(), 0, 0);
     assert(*role[0] == 'FooWriter', 'role not stored');
 
     // Assert that the status is stored
-    let status = world.entity('AuthStatus'.into(), (role_id, resource_id).into(), 0_u8, 0_usize);
+    let status = world.entity('AuthStatus'.into(), (role_id, resource_id).into(), 0, 0);
     assert(*status[0] == 1, 'status not stored');
 
     let is_authorized = world.is_authorized(
@@ -113,8 +113,8 @@ fn test_initialize_not_more_than_once() {
     let world = spawn_empty_world();
 
     // Prepare init data
-    let route_a = ArrayTrait::<Route>::new();
-    let route_b = ArrayTrait::<Route>::new();
+    let route_a = ArrayTrait::new();
+    let route_b = ArrayTrait::new();
 
     // Initialize world
     world.initialize(route_a);
@@ -133,7 +133,7 @@ fn test_set_entity_authorized() {
     world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
 
     // Prepare route
-    let mut route = ArrayTrait::<Route>::new();
+    let mut route = ArrayTrait::new();
     let target_id = 'Bar'.into();
     let role_id = 'FooWriter'.into();
     let resource_id = 'Foo'.into();
@@ -144,7 +144,7 @@ fn test_set_entity_authorized() {
     world.initialize(route);
 
     // Call Bar system
-    let mut data = ArrayTrait::<felt252>::new();
+    let mut data = ArrayTrait::new();
     data.append(420);
     data.append(1337);
     world.execute('Bar'.into(), data.span());
@@ -152,7 +152,7 @@ fn test_set_entity_authorized() {
     // Assert that the data is stored
     // Caller here is the world contract via the executor
     let world_address = world.contract_address;
-    let foo = world.entity('Foo'.into(), world_address.into(), 0_u8, 0_usize);
+    let foo = world.entity('Foo'.into(), world_address.into(), 0, 0);
     assert(*foo[0] == 420, 'data not stored');
     assert(*foo[1] == 1337, 'data not stored');
 }
@@ -167,7 +167,7 @@ fn test_set_entity_admin() {
     world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
 
     // No Auth route
-    let mut route = ArrayTrait::<Route>::new();
+    let mut route = ArrayTrait::new();
 
     // Initialize world
     world.initialize(route);
@@ -179,7 +179,7 @@ fn test_set_entity_admin() {
     world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
 
     // Call Bar system
-    let mut data = ArrayTrait::<felt252>::new();
+    let mut data = ArrayTrait::new();
     data.append(420);
     data.append(1337);
     world.execute('Bar'.into(), data.span());
@@ -187,7 +187,7 @@ fn test_set_entity_admin() {
     // Assert that the data is stored
     // Caller here is the world contract via the executor
     let world_address = world.contract_address;
-    let foo = world.entity('Foo'.into(), world_address.into(), 0_u8, 0_usize);
+    let foo = world.entity('Foo'.into(), world_address.into(), 0, 0);
     assert(*foo[0] == 420, 'data not stored');
     assert(*foo[1] == 1337, 'data not stored');
 }
@@ -203,13 +203,13 @@ fn test_set_entity_unauthorized() {
     world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
 
     // No Auth route
-    let mut route = ArrayTrait::<Route>::new();
+    let mut route = ArrayTrait::new();
 
     // Initialize world
     world.initialize(route);
 
     // Call Bar system, should panic as it's not authorized
-    let mut data = ArrayTrait::<felt252>::new();
+    let mut data = ArrayTrait::new();
     data.append(420);
     data.append(1337);
     world.execute('Bar'.into(), data.span());
@@ -226,7 +226,7 @@ fn test_set_entity_directly() {
     world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
 
     // Prepare init data
-    let mut route = ArrayTrait::<Route>::new();
+    let mut route = ArrayTrait::new();
     let target_id = 'Bar'.into();
     let role_id = 'FooWriter'.into();
     let resource_id = 'Foo'.into();
@@ -238,10 +238,10 @@ fn test_set_entity_directly() {
 
     // Change Foo component directly
     let id = world.uuid();
-    let mut data = ArrayTrait::<felt252>::new();
+    let mut data = ArrayTrait::new();
     data.append(420);
     data.append(1337);
-    world.set_entity('Foo'.into(), QueryTrait::new_from_id(id.into()), 0_u8, data.span());
+    world.set_entity('Foo'.into(), QueryTrait::new_from_id(id.into()), 0, data.span());
 }
 
 #[test]
@@ -254,7 +254,7 @@ fn test_grant_role() {
     world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
 
     // No Auth route
-    let mut route = ArrayTrait::<Route>::new();
+    let mut route = ArrayTrait::new();
 
     // Initialize world
     world.initialize(route);
@@ -266,7 +266,7 @@ fn test_grant_role() {
     world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
 
     // Assert that the role is set
-    let role = world.entity('AuthRole'.into(), 'Bar'.into(), 0_u8, 0_usize);
+    let role = world.entity('AuthRole'.into(), 'Bar'.into(), 0, 0);
     assert(*role[0] == 'FooWriter', 'role not granted');
 }
 
@@ -280,7 +280,7 @@ fn test_revoke_role() {
     world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
 
     // No Auth route
-    let mut route = ArrayTrait::<Route>::new();
+    let mut route = ArrayTrait::new();
 
     // Initialize world
     world.initialize(route);
@@ -292,7 +292,7 @@ fn test_revoke_role() {
     world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
 
     // Assert that the role is set
-    let role = world.entity('AuthRole'.into(), 'Bar'.into(), 0_u8, 0_usize);
+    let role = world.entity('AuthRole'.into(), 'Bar'.into(), 0, 0);
     assert(*role[0] == 'FooWriter', 'role not granted');
 
     // Admin revokes role of Bar system
@@ -301,7 +301,7 @@ fn test_revoke_role() {
     world.execute('RevokeAuthRole'.into(), revoke_role_calldata.span());
 
     // Assert that the role is not set
-    let role = world.entity('AuthRole'.into(), 'Bar'.into(), 0_u8, 0_usize);
+    let role = world.entity('AuthRole'.into(), 'Bar'.into(), 0, 0);
     assert(*role[0] == 0, 'role not revoked');
 }
 
@@ -315,7 +315,7 @@ fn test_grant_scoped_role() {
     world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
 
     // No Auth route
-    let mut route = ArrayTrait::<Route>::new();
+    let mut route = ArrayTrait::new();
 
     // Initialize world
     world.initialize(route);
@@ -328,7 +328,7 @@ fn test_grant_scoped_role() {
     world.execute('GrantScopedAuthRole'.into(), grant_role_calldata.span());
 
     // Assert that the role is set
-    let role = world.entity('AuthRole'.into(), ('Bar', 'Foo').into(), 0_u8, 0_usize);
+    let role = world.entity('AuthRole'.into(), ('Bar', 'Foo').into(), 0, 0);
     assert(*role[0] == 'FooWriter', 'role not granted');
 }
 
@@ -342,7 +342,7 @@ fn test_revoke_scoped_role() {
     world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
 
     // No Auth route
-    let mut route = ArrayTrait::<Route>::new();
+    let mut route = ArrayTrait::new();
 
     // Initialize world
     world.initialize(route);
@@ -355,7 +355,7 @@ fn test_revoke_scoped_role() {
     world.execute('GrantScopedAuthRole'.into(), grant_role_calldata.span());
 
     // Assert that the role is set
-    let role = world.entity('AuthRole'.into(), ('Bar', 'Foo').into(), 0_u8, 0_usize);
+    let role = world.entity('AuthRole'.into(), ('Bar', 'Foo').into(), 0, 0);
     assert(*role[0] == 'FooWriter', 'role not granted');
 
     // Admin revokes role of Bar system for Foo
@@ -365,7 +365,7 @@ fn test_revoke_scoped_role() {
     world.execute('RevokeScopedAuthRole'.into(), revoke_role_calldata.span());
 
     // Assert that the role is revoked
-    let role = world.entity('AuthRole'.into(), ('Bar', 'Foo').into(), 0_u8, 0_usize);
+    let role = world.entity('AuthRole'.into(), ('Bar', 'Foo').into(), 0, 0);
     assert(*role[0] == 0, 'role not revoked');
 }
 
@@ -379,7 +379,7 @@ fn test_grant_resource() {
     world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
 
     // No Auth route
-    let mut route = ArrayTrait::<Route>::new();
+    let mut route = ArrayTrait::new();
 
     // Initialize world
     world.initialize(route);
@@ -391,7 +391,7 @@ fn test_grant_resource() {
     world.execute('GrantResource'.into(), grant_role_calldata.span());
 
     // Assert that the access is set
-    let status = world.entity('AuthStatus'.into(), ('FooWriter', 'Foo').into(), 0_u8, 0_usize);
+    let status = world.entity('AuthStatus'.into(), ('FooWriter', 'Foo').into(), 0, 0);
     assert(*status[0] == 1, 'access not granted');
 }
 
@@ -405,7 +405,7 @@ fn test_revoke_resource() {
     world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
 
     // No Auth route
-    let mut route = ArrayTrait::<Route>::new();
+    let mut route = ArrayTrait::new();
 
     // Initialize world
     world.initialize(route);
@@ -417,7 +417,7 @@ fn test_revoke_resource() {
     world.execute('GrantResource'.into(), grant_role_calldata.span());
 
     // Assert that the access is set
-    let status = world.entity('AuthStatus'.into(), ('FooWriter', 'Foo').into(), 0_u8, 0_usize);
+    let status = world.entity('AuthStatus'.into(), ('FooWriter', 'Foo').into(), 0, 0);
     assert(*status[0] == 1, 'access not granted');
 
     // Admin revokes access for FooWriter Role to Foo
@@ -427,13 +427,13 @@ fn test_revoke_resource() {
     world.execute('RevokeResource'.into(), revoke_role_calldata.span());
 
     // Assert that the access is revoked
-    let status = world.entity('AuthStatus'.into(), ('FooWriter', 'Foo').into(), 0_u8, 0_usize);
+    let status = world.entity('AuthStatus'.into(), ('FooWriter', 'Foo').into(), 0, 0);
     assert(*status[0] == 0, 'access not revoked');
 }
 
 fn spawn_empty_world() -> IWorldDispatcher {
     // Deploy executor contract
-    let executor_constructor_calldata = array::ArrayTrait::<felt252>::new();
+    let executor_constructor_calldata = array::ArrayTrait::new();
     let (executor_address, _) = deploy_syscall(
         Executor::TEST_CLASS_HASH.try_into().unwrap(),
         0,
@@ -442,7 +442,7 @@ fn spawn_empty_world() -> IWorldDispatcher {
     ).unwrap();
 
     // Deploy world contract
-    let mut constructor_calldata = array::ArrayTrait::<felt252>::new();
+    let mut constructor_calldata = array::ArrayTrait::new();
     constructor_calldata.append('World');
     constructor_calldata.append(executor_address.into());
     let (world_address, _) = deploy_syscall(

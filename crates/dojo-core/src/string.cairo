@@ -1,9 +1,7 @@
 use hash::LegacyHash;
 use option::OptionTrait;
 
-use starknet::SyscallResult;
-use starknet::storage_access::StorageAccess;
-use starknet::storage_access::StorageBaseAddress;
+use starknet::{SyscallResult, storage_access::{StorageAccess, StorageBaseAddress}};
 
 use dojo_core::integer::u250;
 
@@ -67,7 +65,7 @@ impl StorageAccessShortString of StorageAccess<ShortString> {
     fn read(address_domain: u32, base: StorageBaseAddress) -> SyscallResult<ShortString> {
         Result::Ok(
             Felt252TryIntoShortString::try_into(
-                StorageAccess::<felt252>::read(address_domain, base)?
+                StorageAccess::read(address_domain, base)?
             ).expect('Not ShortString')
         )
     }
@@ -75,6 +73,6 @@ impl StorageAccessShortString of StorageAccess<ShortString> {
     fn write(
         address_domain: u32, base: StorageBaseAddress, value: ShortString
     ) -> SyscallResult<()> {
-        StorageAccess::<felt252>::write(address_domain, base, ShortStringIntoFelt252::into(value))
+        StorageAccess::write(address_domain, base, ShortStringIntoFelt252::into(value))
     }
 }

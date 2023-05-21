@@ -1,23 +1,15 @@
 #[contract]
 mod Database {
-    use array::ArrayTrait;
-    use array::SpanTrait;
-    use traits::Into;
-    use traits::TryInto;
+    use array::{ArrayTrait, SpanTrait};
+    use traits::{Into, TryInto};
     use serde::Serde;
     use hash::LegacyHash;
     use poseidon::poseidon_hash_span;
 
     use dojo_core::serde::SpanSerde;
-    use dojo_core::storage::query::Query;
-    use dojo_core::storage::query::QueryTrait;
-    use dojo_core::storage::query::QueryIntoFelt252;
-    use dojo_core::storage::kv::KeyValueStore;
-    use dojo_core::storage::index::Index;
-    use dojo_core::integer::u250;
-    use dojo_core::integer::Felt252IntoU250;
-    use dojo_core::interfaces::IComponentLibraryDispatcher;
-    use dojo_core::interfaces::IComponentDispatcherTrait;
+    use dojo_core::storage::{index::Index, kv::KeyValueStore, query::{Query, QueryTrait, QueryIntoFelt252}};
+    use dojo_core::integer::{u250, Felt252IntoU250};
+    use dojo_core::interfaces::{IComponentLibraryDispatcher, IComponentDispatcherTrait};
 
     #[event]
     fn StoreSetRecord(table_id: u250, keys: Span<u250>, value: Span<felt252>) {}
@@ -32,7 +24,7 @@ mod Database {
         class_hash: starknet::ClassHash, table: u250, query: Query, offset: u8, length: usize
     ) -> Option<Span<felt252>> {
         let mut length = length;
-        if length == 0_usize {
+        if length == 0 {
             length = IComponentLibraryDispatcher { class_hash: class_hash }.len();
         }
 
@@ -47,7 +39,7 @@ mod Database {
         class_hash: starknet::ClassHash, table: u250, query: Query, offset: u8, value: Span<felt252>
     ) {
         let keys = query.keys();
-        let id = query.into();
+        let id = query.id();
 
         let length = IComponentLibraryDispatcher { class_hash: class_hash }.len();
         assert(value.len() <= length, 'Value too long');
@@ -61,17 +53,39 @@ mod Database {
 
     fn del(class_hash: starknet::ClassHash, table: u250, query: Query) {
         Index::delete(table, query.into());
+        // TODO: emit delete event
     }
 
-    fn all(component: u250, partition: u250) -> Array<u250> {
-        if partition == 0.into() {
-            return Index::query(component);
-        }
+    // returns a tuple of spans, first contains the entity IDs,
+    // second the deserialized entities themselves
+    fn all(class_hash: starknet::ClassHash, component: u250, partition: u250) -> (Span<u250>, Span<Span<felt252>>) {
+        let table = {
+            if partition == 0.into() {
+                component
+            } else {
+                let mut serialized = ArrayTrait::new();
+                component.serialize(ref serialized);
+                partition.serialize(ref serialized);
+                let hash = poseidon_hash_span(serialized.span());
+                hash.into()
+            }
+        };
 
-        let mut serialized = ArrayTrait::new();
-        component.serialize(ref serialized);
-        partition.serialize(ref serialized);
-        let hash = poseidon_hash_span(serialized.span());
-        Index::query(hash.into())
+        let all_ids = Index::query(table);
+        let length = IComponentLibraryDispatcher { class_hash: class_hash }.len();
+
+        let mut ids = all_ids.span();
+        let mut entities: Array<Span<felt252>> = ArrayTrait::new();
+        loop {
+            match ids.pop_front() {
+                Option::Some(id) => {
+                    let value: Span<felt252> = KeyValueStore::get(table, *id, 0_u8, length);
+                    entities.append(value);
+                },
+                Option::None(_) => {
+                    break (all_ids.span(), entities.span());
+                }
+            };
+        }
     }
 }

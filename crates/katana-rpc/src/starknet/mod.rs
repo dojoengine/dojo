@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use std::sync::Arc;
 
 use blockifier::transaction::account_transaction::AccountTransaction;
@@ -6,6 +7,7 @@ use jsonrpsee::core::{async_trait, Error};
 use jsonrpsee::types::error::CallError;
 use katana_core::constants::SEQUENCER_ADDRESS;
 use katana_core::sequencer::Sequencer;
+use katana_core::sequencer_error::SequencerError;
 use katana_core::starknet::transaction::ExternalFunctionCall;
 use katana_core::util::{blockifier_contract_class_from_flattened_sierra_class, starkfelt_to_u128};
 use starknet::core::types::contract::FlattenedSierraClass;
@@ -13,11 +15,14 @@ use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::models::{
     BlockHashAndNumber, BlockId, BlockStatus, BlockTag, BlockWithTxHashes, BlockWithTxs,
     BroadcastedDeclareTransaction, BroadcastedDeployAccountTransaction,
-    BroadcastedInvokeTransaction, BroadcastedTransaction, ContractClass, DeclareTransactionResult,
-    DeployAccountTransactionResult, EmittedEvent, EventFilter, EventsPage, FeeEstimate,
-    FunctionCall, InvokeTransactionResult, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
-    MaybePendingTransactionReceipt, PendingBlockWithTxHashes, PendingBlockWithTxs, StateUpdate,
-    Transaction,
+    BroadcastedInvokeTransaction, BroadcastedTransaction, ContractClass, DeclareTransactionReceipt,
+    DeclareTransactionResult, DeployAccountTransactionReceipt, DeployAccountTransactionResult,
+    EmittedEvent, Event, EventFilter, EventsPage, FeeEstimate, FunctionCall,
+    InvokeTransactionReceipt, InvokeTransactionResult, MaybePendingBlockWithTxHashes,
+    MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, MsgToL1, PendingBlockWithTxHashes,
+    PendingBlockWithTxs, PendingDeclareTransactionReceipt, PendingDeployAccountTransactionReceipt,
+    PendingInvokeTransactionReceipt, PendingTransactionReceipt, StateUpdate, Transaction,
+    TransactionReceipt, TransactionStatus,
 };
 use starknet_api::core::{
     ClassHash, CompiledClassHash, ContractAddress, EntryPointSelector, Nonce, PatriciaKey,
@@ -27,7 +32,8 @@ use starknet_api::patricia_key;
 use starknet_api::state::StorageKey;
 use starknet_api::transaction::{
     Calldata, ContractAddressSalt, DeclareTransactionV2, Fee, InvokeTransaction,
-    InvokeTransactionV1, TransactionHash, TransactionSignature, TransactionVersion,
+    InvokeTransactionV1, Transaction as InnerTransaction, TransactionHash, TransactionOutput,
+    TransactionSignature, TransactionVersion,
 };
 use tokio::sync::RwLock;
 use utils::transaction::{
@@ -66,7 +72,11 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
             .write()
             .await
             .nonce_at(block_id, ContractAddress(patricia_key!(contract_address)))
-            .map_err(|_| Error::from(StarknetApiError::ContractError))?;
+            .map_err(|e| match e {
+                SequencerError::StateNotFound(_) => Error::from(StarknetApiError::BlockNotFound),
+                SequencerError::State(_) => Error::from(StarknetApiError::ContractNotFound),
+                _ => Error::from(StarknetApiError::InternalServerError),
+            })?;
 
         Ok(nonce.0.into())
     }
@@ -236,7 +246,246 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
         &self,
         transaction_hash: FieldElement,
     ) -> Result<MaybePendingTransactionReceipt, Error> {
-        Err(Error::from(StarknetApiError::InternalServerError))
+        let sequencer = self.sequencer.read().await;
+        let hash = TransactionHash(StarkFelt::from(transaction_hash));
+
+        let tx =
+            sequencer.transaction(&hash).ok_or(Error::from(StarknetApiError::TxnHashNotFound))?;
+        let receipt = sequencer
+            .transaction_receipt(&hash)
+            .ok_or(Error::from(StarknetApiError::TxnHashNotFound))?;
+        let status = sequencer
+            .transaction_status(&hash)
+            .ok_or(Error::from(StarknetApiError::TxnHashNotFound))?;
+
+        let receipt = match status {
+            TransactionStatus::Pending => match receipt.output {
+                TransactionOutput::Invoke(output) => {
+                    MaybePendingTransactionReceipt::PendingReceipt(
+                        PendingTransactionReceipt::Invoke(PendingInvokeTransactionReceipt {
+                            transaction_hash,
+                            actual_fee: FieldElement::from_str(&format!("{}", output.actual_fee.0))
+                                .unwrap(),
+                            messages_sent: output
+                                .messages_sent
+                                .iter()
+                                .map(|m| MsgToL1 {
+                                    from_address: (*m.from_address.0.key()).into(),
+                                    to_address: FieldElement::from_byte_slice_be(
+                                        m.to_address.0.as_bytes(),
+                                    )
+                                    .unwrap(),
+                                    payload: m.payload.0.iter().map(|f| (*f).into()).collect(),
+                                })
+                                .collect(),
+                            events: output
+                                .events
+                                .into_iter()
+                                .map(|e| Event {
+                                    from_address: (*e.from_address.0.key()).into(),
+                                    keys: e.content.keys.into_iter().map(|k| k.0.into()).collect(),
+                                    data: e.content.data.0.into_iter().map(|d| d.into()).collect(),
+                                })
+                                .collect(),
+                        }),
+                    )
+                }
+
+                TransactionOutput::Declare(output) => {
+                    MaybePendingTransactionReceipt::PendingReceipt(
+                        PendingTransactionReceipt::Declare(PendingDeclareTransactionReceipt {
+                            transaction_hash,
+                            actual_fee: FieldElement::from_str(&format!("{}", output.actual_fee.0))
+                                .unwrap(),
+                            messages_sent: output
+                                .messages_sent
+                                .iter()
+                                .map(|m| MsgToL1 {
+                                    from_address: (*m.from_address.0.key()).into(),
+                                    to_address: FieldElement::from_byte_slice_be(
+                                        m.to_address.0.as_bytes(),
+                                    )
+                                    .unwrap(),
+                                    payload: m.payload.0.iter().map(|f| (*f).into()).collect(),
+                                })
+                                .collect(),
+                            events: output
+                                .events
+                                .into_iter()
+                                .map(|e| Event {
+                                    from_address: (*e.from_address.0.key()).into(),
+                                    keys: e.content.keys.into_iter().map(|k| k.0.into()).collect(),
+                                    data: e.content.data.0.into_iter().map(|d| d.into()).collect(),
+                                })
+                                .collect(),
+                        }),
+                    )
+                }
+
+                TransactionOutput::DeployAccount(output) => {
+                    MaybePendingTransactionReceipt::PendingReceipt(
+                        PendingTransactionReceipt::DeployAccount(
+                            PendingDeployAccountTransactionReceipt {
+                                transaction_hash,
+                                actual_fee: FieldElement::from_str(&format!(
+                                    "{}",
+                                    output.actual_fee.0
+                                ))
+                                .unwrap(),
+                                messages_sent: output
+                                    .messages_sent
+                                    .iter()
+                                    .map(|m| MsgToL1 {
+                                        from_address: (*m.from_address.0.key()).into(),
+                                        to_address: FieldElement::from_byte_slice_be(
+                                            m.to_address.0.as_bytes(),
+                                        )
+                                        .unwrap(),
+                                        payload: m.payload.0.iter().map(|f| (*f).into()).collect(),
+                                    })
+                                    .collect(),
+                                events: output
+                                    .events
+                                    .into_iter()
+                                    .map(|e| Event {
+                                        from_address: (*e.from_address.0.key()).into(),
+                                        keys: e
+                                            .content
+                                            .keys
+                                            .into_iter()
+                                            .map(|k| k.0.into())
+                                            .collect(),
+                                        data: e
+                                            .content
+                                            .data
+                                            .0
+                                            .into_iter()
+                                            .map(|d| d.into())
+                                            .collect(),
+                                    })
+                                    .collect(),
+                            },
+                        ),
+                    )
+                }
+
+                _ => return Err(Error::from(StarknetApiError::UnsupportedTransactionVersion)),
+            },
+
+            TransactionStatus::AcceptedOnL2 => match receipt.output {
+                TransactionOutput::Invoke(output) => MaybePendingTransactionReceipt::Receipt(
+                    TransactionReceipt::Invoke(InvokeTransactionReceipt {
+                        transaction_hash,
+                        actual_fee: FieldElement::from_str(&format!("{}", output.actual_fee.0))
+                            .unwrap(),
+                        messages_sent: output
+                            .messages_sent
+                            .iter()
+                            .map(|m| MsgToL1 {
+                                from_address: (*m.from_address.0.key()).into(),
+                                to_address: FieldElement::from_byte_slice_be(
+                                    m.to_address.0.as_bytes(),
+                                )
+                                .unwrap(),
+                                payload: m.payload.0.iter().map(|f| (*f).into()).collect(),
+                            })
+                            .collect(),
+                        events: output
+                            .events
+                            .into_iter()
+                            .map(|e| Event {
+                                from_address: (*e.from_address.0.key()).into(),
+                                keys: e.content.keys.into_iter().map(|k| k.0.into()).collect(),
+                                data: e.content.data.0.into_iter().map(|d| d.into()).collect(),
+                            })
+                            .collect(),
+                        block_hash: receipt.block_hash.0.into(),
+                        block_number: receipt.block_number.0,
+                        status: TransactionStatus::AcceptedOnL2,
+                    }),
+                ),
+
+                TransactionOutput::Declare(output) => MaybePendingTransactionReceipt::Receipt(
+                    TransactionReceipt::Declare(DeclareTransactionReceipt {
+                        transaction_hash,
+                        actual_fee: FieldElement::from_str(&format!("{}", output.actual_fee.0))
+                            .unwrap(),
+                        messages_sent: output
+                            .messages_sent
+                            .iter()
+                            .map(|m| MsgToL1 {
+                                from_address: (*m.from_address.0.key()).into(),
+                                to_address: FieldElement::from_byte_slice_be(
+                                    m.to_address.0.as_bytes(),
+                                )
+                                .unwrap(),
+                                payload: m.payload.0.iter().map(|f| (*f).into()).collect(),
+                            })
+                            .collect(),
+                        events: output
+                            .events
+                            .into_iter()
+                            .map(|e| Event {
+                                from_address: (*e.from_address.0.key()).into(),
+                                keys: e.content.keys.into_iter().map(|k| k.0.into()).collect(),
+                                data: e.content.data.0.into_iter().map(|d| d.into()).collect(),
+                            })
+                            .collect(),
+                        block_hash: receipt.block_hash.0.into(),
+                        block_number: receipt.block_number.0,
+                        status: TransactionStatus::AcceptedOnL2,
+                    }),
+                ),
+
+                TransactionOutput::DeployAccount(output) => {
+                    MaybePendingTransactionReceipt::Receipt(TransactionReceipt::DeployAccount(
+                        DeployAccountTransactionReceipt {
+                            transaction_hash,
+                            actual_fee: FieldElement::from_str(&format!("{}", output.actual_fee.0))
+                                .unwrap(),
+                            messages_sent: output
+                                .messages_sent
+                                .iter()
+                                .map(|m| MsgToL1 {
+                                    from_address: (*m.from_address.0.key()).into(),
+                                    to_address: FieldElement::from_byte_slice_be(
+                                        m.to_address.0.as_bytes(),
+                                    )
+                                    .unwrap(),
+                                    payload: m.payload.0.iter().map(|f| (*f).into()).collect(),
+                                })
+                                .collect(),
+                            events: output
+                                .events
+                                .into_iter()
+                                .map(|e| Event {
+                                    from_address: (*e.from_address.0.key()).into(),
+                                    keys: e.content.keys.into_iter().map(|k| k.0.into()).collect(),
+                                    data: e.content.data.0.into_iter().map(|d| d.into()).collect(),
+                                })
+                                .collect(),
+                            block_hash: receipt.block_hash.0.into(),
+                            block_number: receipt.block_number.0,
+                            status: TransactionStatus::AcceptedOnL2,
+                            contract_address: match tx {
+                                InnerTransaction::DeployAccount(tx) => {
+                                    (*tx.contract_address.0.key()).into()
+                                }
+                                _ => {
+                                    return Err(Error::from(StarknetApiError::InternalServerError));
+                                }
+                            },
+                        },
+                    ))
+                }
+
+                _ => return Err(Error::from(StarknetApiError::UnsupportedTransactionVersion)),
+            },
+
+            _ => return Err(Error::from(StarknetApiError::UnsupportedTransactionVersion)),
+        };
+
+        Ok(receipt)
     }
 
     async fn class_hash_at(
@@ -249,7 +498,11 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
             .write()
             .await
             .class_hash_at(block_id, ContractAddress(patricia_key!(contract_address)))
-            .map_err(|_| Error::from(StarknetApiError::ContractError))?;
+            .map_err(|e| match e {
+                SequencerError::State(_) => StarknetApiError::ContractNotFound,
+                SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
+                _ => StarknetApiError::InternalServerError,
+            })?;
 
         Ok(class_hash.0.into())
     }
@@ -285,7 +538,10 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
                 continuation_token,
                 chunk_size,
             )
-            .map_err(|_| Error::from(StarknetApiError::InternalServerError))?;
+            .map_err(|e| match e {
+                SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
+                _ => StarknetApiError::InternalServerError,
+            })?;
 
         Ok(EventsPage {
             events: events
@@ -351,7 +607,11 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
                 StorageKey(patricia_key!(key)),
                 block_id,
             )
-            .map_err(|e| Error::from(StarknetApiError::ContractError))?;
+            .map_err(|e| match e {
+                SequencerError::StateNotFound(_) => Error::from(StarknetApiError::BlockNotFound),
+                SequencerError::State(_) => Error::from(StarknetApiError::ContractNotFound),
+                _ => Error::from(StarknetApiError::InternalServerError),
+            })?;
 
         Ok(value.into())
     }
@@ -463,7 +723,7 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
                 AccountTransaction::Invoke(InvokeTransaction::V1(transaction))
             }
 
-            _ => return Err(Error::from(StarknetApiError::InternalServerError)),
+            _ => return Err(Error::from(StarknetApiError::UnsupportedTransactionVersion)),
         };
 
         let fee_estimate = self
@@ -471,7 +731,13 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
             .read()
             .await
             .estimate_fee(transaction, block_id)
-            .map_err(|e| Error::from(StarknetApiError::InternalServerError))?;
+            .map_err(|e| match e {
+                SequencerError::StateNotFound(_) => Error::from(StarknetApiError::BlockNotFound),
+                SequencerError::TransactionExecution(_) => {
+                    Error::from(StarknetApiError::ContractError)
+                }
+                _ => Error::from(StarknetApiError::InternalServerError),
+            })?;
 
         Ok(FeeEstimate {
             gas_price: fee_estimate.gas_price,
@@ -489,10 +755,11 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
 
         let (transaction_hash, class_hash, transaction) = match transaction {
             BroadcastedDeclareTransaction::V1(_) => {
-                return Err(Error::from(StarknetApiError::InternalServerError));
+                return Err(Error::from(StarknetApiError::UnsupportedTransactionVersion));
             }
             BroadcastedDeclareTransaction::V2(tx) => {
-                let raw_class_str = serde_json::to_string(&tx.contract_class)?;
+                let raw_class_str = serde_json::to_string(&tx.contract_class)
+                    .map_err(|_| Error::from(StarknetApiError::InvalidContractClass))?;
                 let class_hash = serde_json::from_str::<FlattenedSierraClass>(&raw_class_str)
                     .map_err(|_| Error::from(StarknetApiError::InvalidContractClass))?
                     .class_hash();
@@ -579,7 +846,7 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
                 Ok(InvokeTransactionResult { transaction_hash })
             }
 
-            _ => Err(Error::from(StarknetApiError::InternalServerError)),
+            _ => Err(Error::from(StarknetApiError::UnsupportedTransactionVersion)),
         }
     }
 }
