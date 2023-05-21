@@ -2,7 +2,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::time::{Duration, SystemTime};
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use blockifier::execution::contract_class::{
     ContractClass, ContractClassV0, ContractClassV1 as BlockifierContractClass,
 };
@@ -132,13 +132,13 @@ pub fn field_element_to_starkfelt(field_element: &FieldElement) -> StarkFelt {
         .expect("must be able to convert to StarkFelt from FieldElement")
 }
 
-pub fn starkfelt_to_u128(felt: StarkFelt) -> Result<u128> {
+pub fn starkfelt_to_u128(felt: StarkFelt) -> Result<u128, StarknetApiError> {
     const COMPLIMENT_OF_U128: usize =
         std::mem::size_of::<StarkFelt>() - std::mem::size_of::<u128>();
 
     let (rest, u128_bytes) = felt.bytes().split_at(COMPLIMENT_OF_U128);
     if rest != [0u8; COMPLIMENT_OF_U128] {
-        Err(anyhow!(StarknetApiError::OutOfRange { string: felt.to_string() }))
+        Err(StarknetApiError::OutOfRange { string: felt.to_string() })
     } else {
         Ok(u128::from_be_bytes(u128_bytes.try_into().expect("u128_bytes should be of size usize.")))
     }

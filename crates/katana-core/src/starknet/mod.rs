@@ -1,8 +1,9 @@
 use std::path::PathBuf;
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use blockifier::block_context::BlockContext;
 use blockifier::execution::entry_point::{CallEntryPoint, CallInfo, ExecutionContext};
+use blockifier::execution::errors::EntryPointExecutionError;
 use blockifier::state::cached_state::{CachedState, CommitmentStateDiff, MutRefState};
 use blockifier::state::state_api::State;
 use blockifier::transaction::account_transaction::AccountTransaction;
@@ -250,14 +251,9 @@ impl StarknetWrapper {
     pub fn call(
         &self,
         call: ExternalFunctionCall,
-        block_number: Option<BlockNumber>,
-    ) -> Result<CallInfo> {
-        let state = match block_number {
-            Some(num) => self.state(num).ok_or(anyhow!("block not found"))?,
-            None => self.pending_state(),
-        };
-
-        let mut state = CachedState::new(state);
+        state: Option<DictStateReader>,
+    ) -> Result<CallInfo, EntryPointExecutionError> {
+        let mut state = CachedState::new(state.unwrap_or(self.pending_state()));
         let mut state = CachedState::new(MutRefState::new(&mut state));
 
         let call = CallEntryPoint {
@@ -274,7 +270,6 @@ impl StarknetWrapper {
                 AccountTransactionContext::default(),
             ),
         )
-        .map_err(|e| e.into())
     }
 
     pub fn state(&self, block_number: BlockNumber) -> Option<DictStateReader> {

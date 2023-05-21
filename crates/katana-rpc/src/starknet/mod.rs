@@ -7,6 +7,7 @@ use jsonrpsee::core::{async_trait, Error};
 use jsonrpsee::types::error::CallError;
 use katana_core::constants::SEQUENCER_ADDRESS;
 use katana_core::sequencer::Sequencer;
+use katana_core::sequencer_error::SequencerError;
 use katana_core::starknet::transaction::ExternalFunctionCall;
 use katana_core::util::{blockifier_contract_class_from_flattened_sierra_class, starkfelt_to_u128};
 use starknet::core::types::contract::FlattenedSierraClass;
@@ -71,7 +72,11 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
             .write()
             .await
             .nonce_at(block_id, ContractAddress(patricia_key!(contract_address)))
-            .map_err(|_| Error::from(StarknetApiError::ContractError))?;
+            .map_err(|e| match e {
+                SequencerError::StateNotFound(_) => Error::from(StarknetApiError::BlockNotFound),
+                SequencerError::State(_) => Error::from(StarknetApiError::ContractNotFound),
+                _ => Error::from(StarknetApiError::InternalServerError),
+            })?;
 
         Ok(nonce.0.into())
     }
@@ -493,7 +498,11 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
             .write()
             .await
             .class_hash_at(block_id, ContractAddress(patricia_key!(contract_address)))
-            .map_err(|_| Error::from(StarknetApiError::ContractError))?;
+            .map_err(|e| match e {
+                SequencerError::State(_) => StarknetApiError::ContractNotFound,
+                SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
+                _ => StarknetApiError::InternalServerError,
+            })?;
 
         Ok(class_hash.0.into())
     }
@@ -529,7 +538,10 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
                 continuation_token,
                 chunk_size,
             )
-            .map_err(|_| Error::from(StarknetApiError::InternalServerError))?;
+            .map_err(|e| match e {
+                SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
+                _ => StarknetApiError::InternalServerError,
+            })?;
 
         Ok(EventsPage {
             events: events
@@ -595,7 +607,11 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
                 StorageKey(patricia_key!(key)),
                 block_id,
             )
-            .map_err(|e| Error::from(StarknetApiError::ContractError))?;
+            .map_err(|e| match e {
+                SequencerError::StateNotFound(_) => Error::from(StarknetApiError::BlockNotFound),
+                SequencerError::State(_) => Error::from(StarknetApiError::ContractNotFound),
+                _ => Error::from(StarknetApiError::InternalServerError),
+            })?;
 
         Ok(value.into())
     }
@@ -707,7 +723,7 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
                 AccountTransaction::Invoke(InvokeTransaction::V1(transaction))
             }
 
-            _ => return Err(Error::from(StarknetApiError::InternalServerError)),
+            _ => return Err(Error::from(StarknetApiError::UnsupportedTransactionVersion)),
         };
 
         let fee_estimate = self
@@ -715,7 +731,13 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
             .read()
             .await
             .estimate_fee(transaction, block_id)
-            .map_err(|e| Error::from(StarknetApiError::InternalServerError))?;
+            .map_err(|e| match e {
+                SequencerError::StateNotFound(_) => Error::from(StarknetApiError::BlockNotFound),
+                SequencerError::TransactionExecution(_) => {
+                    Error::from(StarknetApiError::ContractError)
+                }
+                _ => Error::from(StarknetApiError::InternalServerError),
+            })?;
 
         Ok(FeeEstimate {
             gas_price: fee_estimate.gas_price,
@@ -733,10 +755,11 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
 
         let (transaction_hash, class_hash, transaction) = match transaction {
             BroadcastedDeclareTransaction::V1(_) => {
-                return Err(Error::from(StarknetApiError::InternalServerError));
+                return Err(Error::from(StarknetApiError::UnsupportedTransactionVersion));
             }
             BroadcastedDeclareTransaction::V2(tx) => {
-                let raw_class_str = serde_json::to_string(&tx.contract_class)?;
+                let raw_class_str = serde_json::to_string(&tx.contract_class)
+                    .map_err(|_| Error::from(StarknetApiError::InvalidContractClass))?;
                 let class_hash = serde_json::from_str::<FlattenedSierraClass>(&raw_class_str)
                     .map_err(|_| Error::from(StarknetApiError::InvalidContractClass))?
                     .class_hash();
@@ -823,7 +846,7 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
                 Ok(InvokeTransactionResult { transaction_hash })
             }
 
-            _ => Err(Error::from(StarknetApiError::InternalServerError)),
+            _ => Err(Error::from(StarknetApiError::UnsupportedTransactionVersion)),
         }
     }
 }
