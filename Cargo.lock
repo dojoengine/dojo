@@ -8668,10 +8668,8 @@ dependencies = [
 name = "torii"
 version = "0.1.0"
 dependencies = [
- "actix",
  "actix-cors",
  "actix-web",
- "actix-web-actors",
  "anyhow",
  "async-graphql",
  "async-graphql-actix-web",
