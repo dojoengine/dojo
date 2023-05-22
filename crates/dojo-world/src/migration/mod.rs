@@ -9,11 +9,12 @@ use async_trait::async_trait;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass;
 use starknet::accounts::{Account, Call, ConnectedAccount, SingleOwnerAccount};
-use starknet::core::types::contract::{CompiledClass, FlattenedSierraClass, SierraClass};
-use starknet::core::types::FieldElement;
+use starknet::core::types::contract::{CompiledClass, SierraClass};
+use starknet::core::types::{BlockId, BlockTag};
+use starknet::core::types::{FieldElement, FlattenedSierraClass};
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
-use starknet::providers::jsonrpc::models::{BlockId, BlockTag};
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
+use starknet::providers::Provider;
 use starknet::signers::LocalWallet;
 
 use self::world::{Class, Contract};
