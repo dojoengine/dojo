@@ -5,8 +5,8 @@ use blockifier::state::state_api::{State, StateReader};
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transaction_execution::Transaction;
 use blockifier::transaction::transactions::ExecutableTransaction;
-use starknet::core::types::{FeeEstimate, FeeUnit};
-use starknet::providers::jsonrpc::models::{BlockId, BlockTag, StateUpdate, TransactionStatus};
+use starknet::core::types::FeeEstimate;
+use starknet::core::types::{BlockId, BlockTag, StateUpdate, TransactionStatus};
 // use starknet::providers::jsonrpc::models::BlockId;
 use starknet_api::{
     block::{BlockHash, BlockNumber},
@@ -163,10 +163,9 @@ impl Sequencer for KatanaSequencer {
         let total_l1_gas_usage = l1_gas_usage as f64 + l1_gas_by_vm_usage;
 
         Ok(FeeEstimate {
-            unit: FeeUnit::Wei,
             overall_fee: total_l1_gas_usage.ceil() as u64
                 * self.starknet.block_context.gas_price as u64,
-            gas_usage: total_l1_gas_usage.ceil() as u64,
+            gas_consumed: total_l1_gas_usage.ceil() as u64,
             gas_price: self.starknet.block_context.gas_price as u64,
         })
     }
@@ -400,7 +399,7 @@ pub trait Sequencer {
     fn block(&self, block_id: BlockId) -> Option<StarknetBlock>;
 
     fn transaction(&self, hash: &TransactionHash)
-    -> Option<starknet_api::transaction::Transaction>;
+        -> Option<starknet_api::transaction::Transaction>;
 
     fn class_hash_at(
         &mut self,
