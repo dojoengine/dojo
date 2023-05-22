@@ -1,7 +1,7 @@
 use blockifier::execution::errors::EntryPointExecutionError;
 use blockifier::state::errors::StateError;
 use blockifier::transaction::errors::TransactionExecutionError;
-use starknet::providers::jsonrpc::models::BlockId;
+use starknet::core::types::BlockId;
 use starknet_api::transaction::TransactionHash;
 use starknet_api::StarknetApiError;
 

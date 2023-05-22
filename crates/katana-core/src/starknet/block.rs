@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use starknet::providers::jsonrpc::models::StateUpdate;
+use starknet::core::types::StateUpdate;
 use starknet_api::block::{
     Block, BlockBody, BlockHash, BlockHeader, BlockNumber, BlockStatus, BlockTimestamp, GasPrice,
 };
