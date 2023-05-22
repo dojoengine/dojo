@@ -5,20 +5,15 @@ use blockifier::state::state_api::{State, StateReader};
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transaction_execution::Transaction;
 use blockifier::transaction::transactions::ExecutableTransaction;
-use starknet::core::types::{FeeEstimate, FeeUnit};
-use starknet::providers::jsonrpc::models::{BlockId, BlockTag, StateUpdate, TransactionStatus};
-// use starknet::providers::jsonrpc::models::BlockId;
-use starknet_api::{
-    block::{BlockHash, BlockNumber},
-    core::{calculate_contract_address, ChainId, ClassHash, ContractAddress, Nonce},
-    hash::StarkFelt,
-    stark_felt,
-    state::StorageKey,
-    transaction::{
-        Calldata, ContractAddressSalt, DeployAccountTransaction, Fee,
-        Transaction as StarknetApiTransaction, TransactionHash, TransactionSignature,
-        TransactionVersion,
-    },
+use starknet::core::types::{BlockId, BlockTag, FeeEstimate, StateUpdate, TransactionStatus};
+use starknet_api::block::{BlockHash, BlockNumber};
+use starknet_api::core::{calculate_contract_address, ChainId, ClassHash, ContractAddress, Nonce};
+use starknet_api::hash::StarkFelt;
+use starknet_api::stark_felt;
+use starknet_api::state::StorageKey;
+use starknet_api::transaction::{
+    Calldata, ContractAddressSalt, DeployAccountTransaction, Fee,
+    Transaction as StarknetApiTransaction, TransactionHash, TransactionSignature,
 };
 
 use crate::sequencer_error::SequencerError;
@@ -49,7 +44,6 @@ impl KatanaSequencer {
     pub fn drip_and_deploy_account(
         &mut self,
         class_hash: ClassHash,
-        version: TransactionVersion,
         contract_address_salt: ContractAddressSalt,
         constructor_calldata: Calldata,
         signature: TransactionSignature,
@@ -73,13 +67,7 @@ impl KatanaSequencer {
             stark_felt!(balance),
         );
 
-        self.deploy_account(
-            class_hash,
-            version,
-            contract_address_salt,
-            constructor_calldata,
-            signature,
-        )
+        self.deploy_account(class_hash, contract_address_salt, constructor_calldata, signature)
     }
 }
 
@@ -87,7 +75,6 @@ impl Sequencer for KatanaSequencer {
     fn deploy_account(
         &mut self,
         class_hash: ClassHash,
-        version: TransactionVersion,
         contract_address_salt: ContractAddressSalt,
         constructor_calldata: Calldata,
         signature: TransactionSignature,
@@ -113,11 +100,11 @@ impl Sequencer for KatanaSequencer {
         // TODO: Compute txn hash
         let tx_hash = TransactionHash::default();
         let tx = AccountTransaction::DeployAccount(DeployAccountTransaction {
-            version,
             class_hash,
             contract_address,
             contract_address_salt,
             constructor_calldata,
+            version: Default::default(),
             nonce: Nonce(stark_felt!(0_u8)),
             signature,
             transaction_hash: tx_hash,
@@ -163,10 +150,9 @@ impl Sequencer for KatanaSequencer {
         let total_l1_gas_usage = l1_gas_usage as f64 + l1_gas_by_vm_usage;
 
         Ok(FeeEstimate {
-            unit: FeeUnit::Wei,
             overall_fee: total_l1_gas_usage.ceil() as u64
                 * self.starknet.block_context.gas_price as u64,
-            gas_usage: total_l1_gas_usage.ceil() as u64,
+            gas_consumed: total_l1_gas_usage.ceil() as u64,
             gas_price: self.starknet.block_context.gas_price as u64,
         })
     }
@@ -426,7 +412,6 @@ pub trait Sequencer {
     fn deploy_account(
         &mut self,
         class_hash: ClassHash,
-        version: TransactionVersion,
         contract_address_salt: ContractAddressSalt,
         constructor_calldata: Calldata,
         signature: TransactionSignature,

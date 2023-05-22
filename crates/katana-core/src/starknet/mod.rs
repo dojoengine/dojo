@@ -11,10 +11,7 @@ use blockifier::transaction::errors::TransactionExecutionError;
 use blockifier::transaction::objects::{AccountTransactionContext, TransactionExecutionInfo};
 use blockifier::transaction::transaction_execution::Transaction;
 use blockifier::transaction::transactions::{DeclareTransaction, ExecutableTransaction};
-use starknet::core::types::FieldElement;
-use starknet::providers::jsonrpc::models::{
-    BlockId, BlockTag, PendingStateUpdate, StateUpdate, TransactionStatus,
-};
+use starknet::core::types::{BlockId, BlockTag, FieldElement, StateUpdate, TransactionStatus};
 use starknet_api::block::{BlockHash, BlockNumber, BlockTimestamp, GasPrice};
 use starknet_api::core::{ClassHash, ContractAddress, GlobalRoot, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};
@@ -217,17 +214,15 @@ impl StarknetWrapper {
             StateUpdate {
                 block_hash: block_hash.0.into(),
                 new_root: new_block.header().state_root.0.into(),
-                pending_state_update: PendingStateUpdate {
-                    old_root: if new_block.block_number() == BlockNumber(0) {
-                        FieldElement::ZERO
-                    } else {
-                        self.blocks
-                            .latest()
-                            .map(|last_block| last_block.header().state_root.0.into())
-                            .unwrap()
-                    },
-                    state_diff: convert_state_diff_to_rpc_state_diff(pending_state_diff.clone()),
+                old_root: if new_block.block_number() == BlockNumber(0) {
+                    FieldElement::ZERO
+                } else {
+                    self.blocks
+                        .latest()
+                        .map(|last_block| last_block.header().state_root.0.into())
+                        .unwrap()
                 },
+                state_diff: convert_state_diff_to_rpc_state_diff(pending_state_diff.clone()),
             },
         );
 
