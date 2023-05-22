@@ -3,7 +3,7 @@ use std::str::FromStr;
 use anyhow::{Ok, Result};
 use starknet::core::crypto::compute_hash_on_elements;
 use starknet::core::types::FieldElement;
-use starknet::providers::jsonrpc::models::{
+use starknet::core::types::{
     DeclareTransaction, DeclareTransactionV1, DeclareTransactionV2, DeployAccountTransaction,
     DeployTransaction, InvokeTransaction, InvokeTransactionV1, L1HandlerTransaction,
     MaybePendingTransactionReceipt, Transaction,
@@ -36,7 +36,11 @@ const PREFIX_DECLARE: FieldElement = FieldElement::from_mont([
 pub fn to_trimmed_hex_string(bytes: &[u8]) -> String {
     let hex_str = hex::encode(bytes);
     let trimmed_hex_str = hex_str.trim_start_matches('0');
-    if trimmed_hex_str.is_empty() { "0x0".to_string() } else { format!("0x{}", trimmed_hex_str) }
+    if trimmed_hex_str.is_empty() {
+        "0x0".to_string()
+    } else {
+        format!("0x{}", trimmed_hex_str)
+    }
 }
 
 pub fn compute_declare_v1_transaction_hash(
@@ -154,7 +158,6 @@ fn convert_deploy_account_to_rpc_tx(
 ) -> Result<DeployAccountTransaction> {
     Ok(DeployAccountTransaction {
         transaction_hash: transaction.transaction_hash.0.into(),
-        version: <StarkFelt as Into<FieldElement>>::into(transaction.version.0).try_into()?,
         class_hash: transaction.class_hash.0.into(),
         contract_address_salt: transaction.contract_address_salt.0.into(),
         nonce: transaction.nonce.0.into(),
@@ -193,15 +196,13 @@ fn convert_declare_to_rpc_tx(transaction: InnerDeclareTransaction) -> Result<Dec
             })
         }
         InnerDeclareTransaction::V2(tx) => DeclareTransaction::V2(DeclareTransactionV2 {
-            declare_txn_v1: DeclareTransactionV1 {
-                nonce: tx.nonce.0.into(),
-                max_fee: FieldElement::from_str(&tx.max_fee.0.to_string())?,
-                class_hash: tx.class_hash.0.into(),
-                transaction_hash: tx.transaction_hash.0.into(),
-                sender_address: (*tx.sender_address.0.key()).into(),
-                signature: convert_stark_felt_array_to_field_element_array(&tx.signature.0)?,
-            },
+            nonce: tx.nonce.0.into(),
+            class_hash: tx.class_hash.0.into(),
+            transaction_hash: tx.transaction_hash.0.into(),
+            sender_address: (*tx.sender_address.0.key()).into(),
             compiled_class_hash: tx.compiled_class_hash.0.into(),
+            max_fee: FieldElement::from_str(&tx.max_fee.0.to_string())?,
+            signature: convert_stark_felt_array_to_field_element_array(&tx.signature.0)?,
         }),
     })
 }
