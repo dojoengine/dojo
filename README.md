@@ -5,13 +5,16 @@
 
 ## Dojo
 
+[![discord](https://img.shields.io/badge/join-dojo-green?logo=discord&logoColor=white)](https://discord.gg/PwDa2mKhR4)
 ![Github Actions][gha-badge] [![Telegram Chat][tg-badge]][tg-url]
+
 
 [gha-badge]: https://img.shields.io/github/actions/workflow/status/dojoengine/dojo/ci.yml?branch=main
 [tg-badge]: https://img.shields.io/endpoint?color=neon&logo=telegram&label=chat&style=flat-square&url=https%3A%2F%2Ftg.sumanjay.workers.dev%2Fdojoengine
+
 [tg-url]: https://t.me/dojoengine
 
-**Dojo is a toolchain for building Autonomous Worlds in Cairo.**
+**Dojo is a community driven open-source, Provable Game Engine, providing a comprehensive toolkit for building verifiable games and autonomous worlds.**
 
 Dojo provides:
 
@@ -109,7 +112,7 @@ mod MoveSystem {
 
 #### Entities
 
-An entity is addressed by a `felt252`. An entity represents a collection of component state.
+An entity is addressed by a `felt250`. An entity represents a collection of component state.
 
 ## Development
 
