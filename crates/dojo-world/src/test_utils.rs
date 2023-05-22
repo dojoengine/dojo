@@ -54,7 +54,7 @@ impl JsonRpcTransport for MockJsonRpcTransport {
         match self.responses.get(&(method.clone(), params.clone())) {
             Some(res) => serde_json::from_str(res).map_err(|e| MockError { msg: e.to_string() }),
             None => {
-                panic!("Response not set in mock for method {:?} and params {:?}", method, params)
+                panic!("Response not set in mock for method {method:?} and params {params:?}")
             }
         }
     }

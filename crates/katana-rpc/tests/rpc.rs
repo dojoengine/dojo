@@ -1,14 +1,16 @@
 use std::fs;
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use anyhow::{Ok, Result};
-use starknet::core::types::contract::{FlattenedSierraClass, SierraClass};
-use starknet::core::types::FieldElement;
-use starknet::providers::jsonrpc::models::{
-    BroadcastedDeclareTransaction, BroadcastedDeclareTransactionV2, SierraContractClass,
+use starknet::core::types::contract::SierraClass;
+use starknet::core::types::{
+    BroadcastedDeclareTransaction, BroadcastedDeclareTransactionV2, FieldElement,
+    FlattenedSierraClass,
 };
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
+use starknet::providers::Provider;
 use url::Url;
 
 fn get_flattened_sierra_class(raw_contract_class: &str) -> Result<FlattenedSierraClass> {
@@ -26,9 +28,7 @@ async fn test_send_declare_v2_tx() {
         [env!("CARGO_MANIFEST_DIR"), "tests/test_data/cairo1_contract.json"].iter().collect();
 
     let raw_contract_str = fs::read_to_string(path).unwrap();
-    let contract =
-        serde_json::to_string(&get_flattened_sierra_class(&raw_contract_str).unwrap()).unwrap();
-    let contract_class: SierraContractClass = serde_json::from_str(&contract).unwrap();
+    let contract_class = Arc::new(get_flattened_sierra_class(&raw_contract_str).unwrap());
 
     let res = provider
         .add_declare_transaction(&BroadcastedDeclareTransaction::V2(

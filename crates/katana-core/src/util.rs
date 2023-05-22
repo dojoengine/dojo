@@ -12,10 +12,9 @@ use blockifier::transaction::transaction_execution::Transaction as BlockifierTra
 use blockifier::transaction::transactions::DeclareTransaction;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use starknet::core::types::contract::legacy::LegacyContractClass;
-use starknet::core::types::FieldElement;
-use starknet::providers::jsonrpc::models::{
-    ContractStorageDiffItem, DeclaredClassItem, DeployedContractItem, NonceUpdate, StateDiff,
-    StorageEntry,
+use starknet::core::types::{
+    ContractStorageDiffItem, DeclaredClassItem, DeployedContractItem, FieldElement, NonceUpdate,
+    StateDiff, StorageEntry,
 };
 use starknet_api::core::ClassHash;
 use starknet_api::hash::StarkFelt;

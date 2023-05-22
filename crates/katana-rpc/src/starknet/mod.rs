@@ -10,15 +10,13 @@ use katana_core::sequencer::Sequencer;
 use katana_core::sequencer_error::SequencerError;
 use katana_core::starknet::transaction::ExternalFunctionCall;
 use katana_core::util::{blockifier_contract_class_from_flattened_sierra_class, starkfelt_to_u128};
-use starknet::core::types::contract::FlattenedSierraClass;
-use starknet::core::types::FieldElement;
-use starknet::providers::jsonrpc::models::{
+use starknet::core::types::{
     BlockHashAndNumber, BlockId, BlockStatus, BlockTag, BlockWithTxHashes, BlockWithTxs,
     BroadcastedDeclareTransaction, BroadcastedDeployAccountTransaction,
     BroadcastedInvokeTransaction, BroadcastedTransaction, ContractClass, DeclareTransactionReceipt,
     DeclareTransactionResult, DeployAccountTransactionReceipt, DeployAccountTransactionResult,
-    EmittedEvent, Event, EventFilter, EventsPage, FeeEstimate, FunctionCall,
-    InvokeTransactionReceipt, InvokeTransactionResult, MaybePendingBlockWithTxHashes,
+    EmittedEvent, Event, EventFilter, EventsPage, FeeEstimate, FieldElement, FlattenedSierraClass,
+    FunctionCall, InvokeTransactionReceipt, InvokeTransactionResult, MaybePendingBlockWithTxHashes,
     MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, MsgToL1, PendingBlockWithTxHashes,
     PendingBlockWithTxs, PendingDeclareTransactionReceipt, PendingDeployAccountTransactionReceipt,
     PendingInvokeTransactionReceipt, PendingTransactionReceipt, StateUpdate, Transaction,
@@ -33,7 +31,7 @@ use starknet_api::state::StorageKey;
 use starknet_api::transaction::{
     Calldata, ContractAddressSalt, DeclareTransactionV2, Fee, InvokeTransaction,
     InvokeTransactionV1, Transaction as InnerTransaction, TransactionHash, TransactionOutput,
-    TransactionSignature, TransactionVersion,
+    TransactionSignature,
 };
 use tokio::sync::RwLock;
 use utils::transaction::{
@@ -622,7 +620,6 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
     ) -> Result<DeployAccountTransactionResult, Error> {
         let BroadcastedDeployAccountTransaction {
             max_fee,
-            version,
             signature,
             nonce,
             contract_address_salt,
@@ -636,7 +633,6 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
             .await
             .deploy_account(
                 ClassHash(StarkFelt::from(class_hash)),
-                TransactionVersion(StarkFelt::from(version)),
                 ContractAddressSalt(StarkFelt::from(contract_address_salt)),
                 Calldata(Arc::new(constructor_calldata.into_iter().map(StarkFelt::from).collect())),
                 TransactionSignature(signature.into_iter().map(StarkFelt::from).collect()),
@@ -741,8 +737,8 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
 
         Ok(FeeEstimate {
             gas_price: fee_estimate.gas_price,
-            gas_consumed: fee_estimate.gas_usage,
             overall_fee: fee_estimate.overall_fee,
+            gas_consumed: fee_estimate.gas_consumed,
         })
     }
 
