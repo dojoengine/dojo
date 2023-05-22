@@ -2,10 +2,9 @@ use std::str::FromStr;
 
 use anyhow::{Ok, Result};
 use starknet::core::crypto::compute_hash_on_elements;
-use starknet::core::types::FieldElement;
 use starknet::core::types::{
     DeclareTransaction, DeclareTransactionV1, DeclareTransactionV2, DeployAccountTransaction,
-    DeployTransaction, InvokeTransaction, InvokeTransactionV1, L1HandlerTransaction,
+    DeployTransaction, FieldElement, InvokeTransaction, InvokeTransactionV1, L1HandlerTransaction,
     MaybePendingTransactionReceipt, Transaction,
 };
 use starknet_api::block::{BlockHash, BlockNumber};
@@ -36,11 +35,7 @@ const PREFIX_DECLARE: FieldElement = FieldElement::from_mont([
 pub fn to_trimmed_hex_string(bytes: &[u8]) -> String {
     let hex_str = hex::encode(bytes);
     let trimmed_hex_str = hex_str.trim_start_matches('0');
-    if trimmed_hex_str.is_empty() {
-        "0x0".to_string()
-    } else {
-        format!("0x{}", trimmed_hex_str)
-    }
+    if trimmed_hex_str.is_empty() { "0x0".to_string() } else { format!("0x{trimmed_hex_str}") }
 }
 
 pub fn compute_declare_v1_transaction_hash(

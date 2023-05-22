@@ -5,18 +5,15 @@ use blockifier::state::state_api::{State, StateReader};
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transaction_execution::Transaction;
 use blockifier::transaction::transactions::ExecutableTransaction;
-use starknet::core::types::FeeEstimate;
-use starknet::core::types::{BlockId, BlockTag, StateUpdate, TransactionStatus};
-use starknet_api::{
-    block::{BlockHash, BlockNumber},
-    core::{calculate_contract_address, ChainId, ClassHash, ContractAddress, Nonce},
-    hash::StarkFelt,
-    stark_felt,
-    state::StorageKey,
-    transaction::{
-        Calldata, ContractAddressSalt, DeployAccountTransaction, Fee,
-        Transaction as StarknetApiTransaction, TransactionHash, TransactionSignature,
-    },
+use starknet::core::types::{BlockId, BlockTag, FeeEstimate, StateUpdate, TransactionStatus};
+use starknet_api::block::{BlockHash, BlockNumber};
+use starknet_api::core::{calculate_contract_address, ChainId, ClassHash, ContractAddress, Nonce};
+use starknet_api::hash::StarkFelt;
+use starknet_api::stark_felt;
+use starknet_api::state::StorageKey;
+use starknet_api::transaction::{
+    Calldata, ContractAddressSalt, DeployAccountTransaction, Fee,
+    Transaction as StarknetApiTransaction, TransactionHash, TransactionSignature,
 };
 
 use crate::sequencer_error::SequencerError;
@@ -389,7 +386,7 @@ pub trait Sequencer {
     fn block(&self, block_id: BlockId) -> Option<StarknetBlock>;
 
     fn transaction(&self, hash: &TransactionHash)
-        -> Option<starknet_api::transaction::Transaction>;
+    -> Option<starknet_api::transaction::Transaction>;
 
     fn class_hash_at(
         &mut self,

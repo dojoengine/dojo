@@ -10,15 +10,13 @@ use katana_core::sequencer::Sequencer;
 use katana_core::sequencer_error::SequencerError;
 use katana_core::starknet::transaction::ExternalFunctionCall;
 use katana_core::util::{blockifier_contract_class_from_flattened_sierra_class, starkfelt_to_u128};
-use starknet::core::types::FieldElement;
-use starknet::core::types::FlattenedSierraClass;
 use starknet::core::types::{
     BlockHashAndNumber, BlockId, BlockStatus, BlockTag, BlockWithTxHashes, BlockWithTxs,
     BroadcastedDeclareTransaction, BroadcastedDeployAccountTransaction,
     BroadcastedInvokeTransaction, BroadcastedTransaction, ContractClass, DeclareTransactionReceipt,
     DeclareTransactionResult, DeployAccountTransactionReceipt, DeployAccountTransactionResult,
-    EmittedEvent, Event, EventFilter, EventsPage, FeeEstimate, FunctionCall,
-    InvokeTransactionReceipt, InvokeTransactionResult, MaybePendingBlockWithTxHashes,
+    EmittedEvent, Event, EventFilter, EventsPage, FeeEstimate, FieldElement, FlattenedSierraClass,
+    FunctionCall, InvokeTransactionReceipt, InvokeTransactionResult, MaybePendingBlockWithTxHashes,
     MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, MsgToL1, PendingBlockWithTxHashes,
     PendingBlockWithTxs, PendingDeclareTransactionReceipt, PendingDeployAccountTransactionReceipt,
     PendingInvokeTransactionReceipt, PendingTransactionReceipt, StateUpdate, Transaction,
