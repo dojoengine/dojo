@@ -1,7 +1,7 @@
 use blockifier::abi::abi_utils::{get_storage_var_address, selector_from_name};
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transaction_execution::Transaction;
-use katana_core::constants::{DEFAULT_GAS_PRICE, FEE_TOKEN_ADDRESS, TEST_ACCOUNT_CONTRACT_PATH};
+use katana_core::constants::{DEFAULT_GAS_PRICE, FEE_TOKEN_ADDRESS};
 use katana_core::starknet::{StarknetConfig, StarknetWrapper};
 use starknet::core::types::TransactionStatus;
 use starknet_api::block::BlockNumber;
@@ -13,7 +13,9 @@ use starknet_api::{calldata, stark_felt};
 
 fn create_test_starknet() -> StarknetWrapper {
     let test_account_path =
-        [env!("CARGO_MANIFEST_DIR"), TEST_ACCOUNT_CONTRACT_PATH].iter().collect();
+        [env!("CARGO_MANIFEST_DIR"), "./contracts/compiled/account_without_validation.json"]
+            .iter()
+            .collect();
 
     StarknetWrapper::new(StarknetConfig {
         seed: [0u8; 32],

@@ -24,12 +24,11 @@ lazy_static! {
     pub static ref ERC20_CONTRACT: ContractClass = get_contract_class(include_str!("../contracts/compiled/erc20.json"));
     pub static ref UDC_CONTRACT: ContractClass = get_contract_class(include_str!("../contracts/compiled/universal_deployer.json"));
     pub static ref DEFAULT_ACCOUNT_CONTRACT: ContractClass = get_contract_class(include_str!("../contracts/compiled/account.json"));
-    pub static ref TEST_ACCOUNT_CONTRACT: ContractClass = get_contract_class(include_str!("../contracts/compiled/account_without_validation.json"));
 
     pub static ref DEFAULT_PREFUNDED_ACCOUNT_BALANCE: StarkFelt = stark_felt!("0x3635c9adc5dea00000"); // 10^21
 }
 
 fn get_contract_class(contract_class_str: &str) -> ContractClass {
-    let legacy_contract_class: ContractClassV0 = serde_json::from_str(&contract_class_str).unwrap();
+    let legacy_contract_class: ContractClassV0 = serde_json::from_str(contract_class_str).unwrap();
     ContractClass::V0(legacy_contract_class)
 }
