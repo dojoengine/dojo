@@ -25,6 +25,7 @@ license-file = "LICENSE"
 
 [workspace.dependencies]
 anyhow = "1.0.66"
+async-trait = "0.1.68"
 blockifier = { git = "https://github.com/starkware-libs/blockifier" }
 cairo-vm = { git = "https://github.com/lambdaclass/cairo-rs.git", rev = "eaea41fe" }
 cairo-lang-casm = "1.0.0"
