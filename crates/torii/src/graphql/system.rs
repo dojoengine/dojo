@@ -1,16 +1,17 @@
 use async_graphql::{ComplexObject, Context, Result, SimpleObject};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
+use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
 
-use super::system_call;
+use super::system_call::{system_calls_by_system, SystemCall};
 
 #[derive(SimpleObject, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[graphql(complex)]
 pub struct System {
     pub id: String,
-    pub name: Option<String>,
+    pub name: String,
     pub address: String,
     pub class_hash: String,
     pub transaction_hash: String,
@@ -19,15 +20,14 @@ pub struct System {
 
 #[ComplexObject]
 impl System {
-    async fn system_calls(&self, context: &Context<'_>) -> Result<Vec<system_call::SystemCall>> {
-        system_call::system_calls_by_system(context, self.id.clone()).await
+    async fn system_calls(&self, context: &Context<'_>) -> Result<Vec<SystemCall>> {
+        let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
+        system_calls_by_system(&mut conn, self.id.clone()).await
     }
 }
 
-pub async fn system(context: &Context<'_>, id: String) -> Result<System> {
-    let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
-
-    let system = sqlx::query_as!(
+pub async fn system_by_id(conn: &mut PoolConnection<Sqlite>, id: String) -> Result<System> {
+    sqlx::query_as!(
         System,
         r#"
             SELECT
@@ -41,16 +41,13 @@ pub async fn system(context: &Context<'_>, id: String) -> Result<System> {
         "#,
         id
     )
-    .fetch_one(&mut conn)
-    .await?;
-
-    Ok(system)
+    .fetch_one(conn)
+    .await
+    .map_err(|err| err.into())
 }
 
-pub async fn systems(context: &Context<'_>) -> Result<Vec<System>> {
-    let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
-
-    let systems = sqlx::query_as!(
+pub async fn systems(conn: &mut PoolConnection<Sqlite>) -> Result<Vec<System>> {
+    sqlx::query_as!(
         System,
         r#"
             SELECT
@@ -63,8 +60,7 @@ pub async fn systems(context: &Context<'_>) -> Result<Vec<System>> {
             FROM systems
         "#
     )
-    .fetch_all(&mut conn)
-    .await?;
-
-    Ok(systems)
+    .fetch_all(conn)
+    .await
+    .map_err(|err| err.into())
 }

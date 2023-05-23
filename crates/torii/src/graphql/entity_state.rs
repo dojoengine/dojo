@@ -1,9 +1,11 @@
 use async_graphql::{ComplexObject, Context, Result, SimpleObject};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
+use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
 
-use super::{component, entity};
+use super::component::{component_by_id, Component};
+use super::entity::{entity_by_id, Entity};
 
 #[derive(SimpleObject, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -18,22 +20,22 @@ pub struct EntityState {
 
 #[ComplexObject]
 impl EntityState {
-    async fn entity(&self, context: &Context<'_>) -> Result<entity::Entity> {
-        entity::entity(context, self.entity_id.clone()).await
+    async fn entity(&self, context: &Context<'_>) -> Result<Entity> {
+        let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
+        entity_by_id(&mut conn, self.entity_id.clone()).await
     }
 
-    async fn component(&self, context: &Context<'_>) -> Result<component::Component> {
-        component::component(context, self.component_id.clone()).await
+    async fn component(&self, context: &Context<'_>) -> Result<Component> {
+        let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
+        component_by_id(&mut conn, self.component_id.clone()).await
     }
 }
 
 pub async fn entity_states_by_entity(
-    context: &Context<'_>,
+    conn: &mut PoolConnection<Sqlite>,
     entity_id: String,
 ) -> Result<Vec<EntityState>> {
-    let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
-
-    let entity_states = sqlx::query_as!(
+    sqlx::query_as!(
         EntityState,
         r#"
             SELECT
@@ -46,19 +48,16 @@ pub async fn entity_states_by_entity(
         "#,
         entity_id
     )
-    .fetch_all(&mut conn)
-    .await?;
-
-    Ok(entity_states)
+    .fetch_all(conn)
+    .await
+    .map_err(|err| err.into())
 }
 
 pub async fn entity_states_by_component(
-    context: &Context<'_>,
+    conn: &mut PoolConnection<Sqlite>,
     component_id: String,
 ) -> Result<Vec<EntityState>> {
-    let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
-
-    let entity_states = sqlx::query_as!(
+    sqlx::query_as!(
         EntityState,
         r#"
             SELECT
@@ -71,8 +70,7 @@ pub async fn entity_states_by_component(
         "#,
         component_id
     )
-    .fetch_all(&mut conn)
-    .await?;
-
-    Ok(entity_states)
+    .fetch_all(conn)
+    .await
+    .map_err(|err| err.into())
 }
