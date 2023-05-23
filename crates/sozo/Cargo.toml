@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow.workspace = true
-async-trait = "0.1.68"
+async-trait.workspace = true
 camino.workspace = true
 clap.workspace = true
 dojo-lang = { path = "../dojo-lang" }
