@@ -12,10 +12,10 @@ mod Database {
     use dojo_core::interfaces::{IComponentLibraryDispatcher, IComponentDispatcherTrait};
 
     #[event]
-    fn StoreSetRecord(table_id: u250, keys: Span<u250>, value: Span<felt252>) {}
+    fn StoreSetRecord(tableId: u250, keys: Span<u250>, value: Span<felt252>) {}
 
     #[event]
-    fn StoreSetField(table_id: u250, keys: Span<u250>, offset: u8, value: Span<felt252>) {}
+    fn StoreSetField(tableId: u250, keys: Span<u250>, offset: u8, value: Span<felt252>) {}
 
     #[event]
     fn StoreDeleteRecord(tableId: u250, keys: Span<u250>) {}
