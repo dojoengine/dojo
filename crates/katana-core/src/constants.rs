@@ -1,18 +1,9 @@
-use blockifier::execution::contract_class::ContractClass;
+use blockifier::execution::contract_class::{ContractClass, ContractClassV0};
 use lazy_static::lazy_static;
 use starknet_api::hash::StarkFelt;
 use starknet_api::stark_felt;
 
-use crate::util::get_contract_class;
-
 pub const DEFAULT_GAS_PRICE: u128 = 100 * u128::pow(10, 9); // Given in units of wei.
-
-// Contract artifacts path
-
-pub const ERC20_CONTRACT_PATH: &str = "./contracts/compiled/erc20.json";
-pub const UDC_PATH: &str = "./contracts/compiled/universal_deployer.json";
-pub const DEFAULT_ACCOUNT_CONTRACT_PATH: &str = "./contracts/compiled/account.json";
-pub const TEST_ACCOUNT_CONTRACT_PATH: &str = "./contracts/compiled/account_without_validation.json";
 
 lazy_static! {
 
@@ -30,10 +21,14 @@ lazy_static! {
 
     // Predefined contract classes
 
-    pub static ref DEFAULT_ACCOUNT_CONTRACT: ContractClass = get_contract_class(DEFAULT_ACCOUNT_CONTRACT_PATH);
-    pub static ref TEST_ACCOUNT_CONTRACT: ContractClass = get_contract_class(TEST_ACCOUNT_CONTRACT_PATH);
-    pub static ref ERC20_CONTRACT: ContractClass = get_contract_class(ERC20_CONTRACT_PATH);
-    pub static ref UDC_CONTRACT: ContractClass = get_contract_class(UDC_PATH);
+    pub static ref ERC20_CONTRACT: ContractClass = get_contract_class(include_str!("../contracts/compiled/erc20.json"));
+    pub static ref UDC_CONTRACT: ContractClass = get_contract_class(include_str!("../contracts/compiled/universal_deployer.json"));
+    pub static ref DEFAULT_ACCOUNT_CONTRACT: ContractClass = get_contract_class(include_str!("../contracts/compiled/account.json"));
 
     pub static ref DEFAULT_PREFUNDED_ACCOUNT_BALANCE: StarkFelt = stark_felt!("0x3635c9adc5dea00000"); // 10^21
+}
+
+fn get_contract_class(contract_class_str: &str) -> ContractClass {
+    let legacy_contract_class: ContractClassV0 = serde_json::from_str(contract_class_str).unwrap();
+    ContractClass::V0(legacy_contract_class)
 }

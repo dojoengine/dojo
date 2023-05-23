@@ -1,9 +1,10 @@
 use async_graphql::{ComplexObject, Context, Result, SimpleObject};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
+use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
 
-use super::system;
+use super::system::{system_by_id, System};
 
 #[derive(SimpleObject, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -18,15 +19,14 @@ pub struct SystemCall {
 
 #[ComplexObject]
 impl SystemCall {
-    async fn system(&self, context: &Context<'_>) -> Result<system::System> {
-        system::system(context, self.system_id.clone()).await
+    async fn system(&self, context: &Context<'_>) -> Result<System> {
+        let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
+        system_by_id(&mut conn, self.system_id.clone()).await
     }
 }
 
-pub async fn system_call(context: &Context<'_>, id: i64) -> Result<SystemCall> {
-    let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
-
-    let system_call = sqlx::query_as!(
+pub async fn system_call_by_id(conn: &mut PoolConnection<Sqlite>, id: i64) -> Result<SystemCall> {
+    sqlx::query_as!(
         SystemCall,
         r#"
             SELECT
@@ -39,19 +39,16 @@ pub async fn system_call(context: &Context<'_>, id: i64) -> Result<SystemCall> {
         "#,
         id
     )
-    .fetch_one(&mut conn)
-    .await?;
-
-    Ok(system_call)
+    .fetch_one(conn)
+    .await
+    .map_err(|err| err.into())
 }
 
 pub async fn system_calls_by_system(
-    context: &Context<'_>,
+    conn: &mut PoolConnection<Sqlite>,
     system_id: String,
 ) -> Result<Vec<SystemCall>> {
-    let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
-
-    let system_calls = sqlx::query_as!(
+    sqlx::query_as!(
         SystemCall,
         r#"
             SELECT
@@ -64,8 +61,7 @@ pub async fn system_calls_by_system(
         "#,
         system_id
     )
-    .fetch_all(&mut conn)
-    .await?;
-
-    Ok(system_calls)
+    .fetch_all(conn)
+    .await
+    .map_err(|err| err.into())
 }

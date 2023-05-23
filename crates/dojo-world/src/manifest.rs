@@ -6,11 +6,10 @@ use anyhow::{anyhow, Result};
 use serde_with::serde_as;
 use smol_str::SmolStr;
 use starknet::core::serde::unsigned_field_element::{UfeHex, UfeHexOption};
-use starknet::core::types::{CallContractResult, CallFunction, FieldElement};
+use starknet::core::types::{BlockId, BlockTag, FieldElement, FunctionCall, StarknetError};
 use starknet::core::utils::{cairo_short_string_to_felt, CairoShortStringToFeltError};
-use starknet::providers::jsonrpc::models::{BlockId, BlockTag, ErrorCode};
-use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcClientError, JsonRpcTransport, RpcError};
-use starknet::providers::Provider;
+use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
+use starknet::providers::{Provider, ProviderError};
 use thiserror::Error;
 
 #[cfg(test)]
@@ -39,17 +38,15 @@ const SYSTEM_ENTRYPOINT: FieldElement = FieldElement::from_mont([
 ]);
 
 #[derive(Error, Debug)]
-pub enum ManifestError<T> {
-    #[error(transparent)]
-    ClientError(JsonRpcClientError<T>),
+pub enum ManifestError<E> {
     #[error("World not deployed.")]
     NotDeployed,
     #[error("Entry point name contains non-ASCII characters.")]
     InvalidEntryPointError,
     #[error(transparent)]
     InvalidNameError(CairoShortStringToFeltError),
-    #[error("Provider error.")]
-    ProviderError,
+    #[error(transparent)]
+    Provider(ProviderError<E>),
 }
 
 /// Component member.
@@ -126,30 +123,30 @@ impl Manifest {
             .map_err(|e| anyhow!("Problem in loading manifest from path: {e}"))
     }
 
-    pub async fn from_remote<P: JsonRpcTransport + Sync + Send>(
+    pub async fn from_remote<T: JsonRpcTransport + Sync + Send>(
         world_address: FieldElement,
-        provider: JsonRpcClient<P>,
+        provider: JsonRpcClient<T>,
         match_manifest: Option<Manifest>,
-    ) -> Result<Self, ManifestError<P::Error>> {
+    ) -> Result<Self, ManifestError<<JsonRpcClient<T> as Provider>::Error>> {
         let mut manifest = Manifest::default();
 
         let world_class_hash = provider
-            .get_class_hash_at(&BlockId::Tag(BlockTag::Pending), world_address)
+            .get_class_hash_at(BlockId::Tag(BlockTag::Pending), world_address)
             .await
             .map_err(|err| match err {
-                JsonRpcClientError::RpcError(RpcError::Code(ErrorCode::ContractNotFound)) => {
+                ProviderError::StarknetError(StarknetError::ContractNotFound) => {
                     ManifestError::NotDeployed
                 }
-                _ => ManifestError::ClientError(err),
+                _ => ManifestError::Provider(err),
             })?;
 
         let executor_address = provider
-            .get_storage_at(world_address, EXECUTOR_ADDRESS_SLOT, &BlockId::Tag(BlockTag::Pending))
+            .get_storage_at(world_address, EXECUTOR_ADDRESS_SLOT, BlockId::Tag(BlockTag::Pending))
             .await
-            .map_err(ManifestError::ClientError)?;
+            .map_err(ManifestError::Provider)?;
 
         let executor_class_hash = provider
-            .get_class_hash_at(&BlockId::Tag(BlockTag::Pending), executor_address)
+            .get_class_hash_at(BlockId::Tag(BlockTag::Pending), executor_address)
             .await
             .ok();
 
@@ -158,9 +155,9 @@ impl Manifest {
 
         if let Some(match_manifest) = match_manifest {
             for component in match_manifest.components {
-                let CallContractResult { result } = provider
-                    .call_contract(
-                        CallFunction {
+                let result = provider
+                    .call(
+                        FunctionCall {
                             contract_address: world_address,
                             calldata: vec![
                                 cairo_short_string_to_felt(&component.name)
@@ -168,10 +165,10 @@ impl Manifest {
                             ],
                             entry_point_selector: COMPONENT_ENTRYPOINT,
                         },
-                        starknet::core::types::BlockId::Pending,
+                        starknet::core::types::BlockId::Tag(BlockTag::Pending),
                     )
                     .await
-                    .map_err(|_| ManifestError::ProviderError)?;
+                    .map_err(ManifestError::Provider)?;
 
                 manifest.components.push(Component {
                     name: component.name.clone(),
@@ -181,9 +178,9 @@ impl Manifest {
             }
 
             for system in match_manifest.systems {
-                let CallContractResult { result } = provider
-                    .call_contract(
-                        CallFunction {
+                let result = provider
+                    .call(
+                        FunctionCall {
                             contract_address: world_address,
                             calldata: vec![
                                 cairo_short_string_to_felt(
@@ -195,10 +192,10 @@ impl Manifest {
                             ],
                             entry_point_selector: SYSTEM_ENTRYPOINT,
                         },
-                        starknet::core::types::BlockId::Pending,
+                        starknet::core::types::BlockId::Tag(BlockTag::Pending),
                     )
                     .await
-                    .map_err(|_| ManifestError::ProviderError)?;
+                    .map_err(ManifestError::Provider)?;
 
                 manifest.systems.push(System {
                     name: system.name.clone(),

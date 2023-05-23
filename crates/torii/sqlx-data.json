@@ -36,7 +36,7 @@
       ],
       "nullable": [
         false,
-        true,
+        false,
         false,
         false,
         false,
@@ -270,48 +270,6 @@
     },
     "query": "\n            SELECT \n                id,\n                system_call_id,\n                keys,\n                data,\n                created_at as \"created_at: _\"\n            FROM events \n            WHERE id = $1\n        "
   },
-  "64b635006c8ad0d40d38cbbf0c95ba3479df8bad79bd2ecb5770ffbb74035fea": {
-    "describe": {
-      "columns": [
-        {
-          "name": "id",
-          "ordinal": 0,
-          "type_info": "Text"
-        },
-        {
-          "name": "system_call_id",
-          "ordinal": 1,
-          "type_info": "Int64"
-        },
-        {
-          "name": "keys",
-          "ordinal": 2,
-          "type_info": "Text"
-        },
-        {
-          "name": "data",
-          "ordinal": 3,
-          "type_info": "Text"
-        },
-        {
-          "name": "created_at: _",
-          "ordinal": 4,
-          "type_info": "Datetime"
-        }
-      ],
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false
-      ],
-      "parameters": {
-        "Right": 1
-      }
-    },
-    "query": "\n            SELECT \n                id,\n                system_call_id,\n                keys,\n                data,\n                created_at as \"created_at: _\"\n            FROM events \n            WHERE keys LIKE ?\n        "
-  },
   "69c1c50aadab819df905c84012fb9da535c666139f39ccf53b417d354ac309d0": {
     "describe": {
       "columns": [
@@ -444,7 +402,7 @@
       ],
       "nullable": [
         false,
-        true,
+        false,
         false,
         false,
         false,

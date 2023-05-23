@@ -1,9 +1,10 @@
 use async_graphql::{ComplexObject, Context, Result, SimpleObject};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
+use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
 
-use super::entity_state;
+use super::entity_state::{entity_states_by_component, EntityState};
 
 #[derive(SimpleObject, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -20,15 +21,14 @@ pub struct Component {
 
 #[ComplexObject]
 impl Component {
-    async fn entity_states(&self, context: &Context<'_>) -> Result<Vec<entity_state::EntityState>> {
-        entity_state::entity_states_by_component(context, self.id.clone()).await
+    async fn entity_states(&self, context: &Context<'_>) -> Result<Vec<EntityState>> {
+        let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
+        entity_states_by_component(&mut conn, self.id.clone()).await
     }
 }
 
-pub async fn component(context: &Context<'_>, id: String) -> Result<Component> {
-    let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
-
-    let component = sqlx::query_as!(
+pub async fn component_by_id(conn: &mut PoolConnection<Sqlite>, id: String) -> Result<Component> {
+    sqlx::query_as!(
         Component,
         r#"
             SELECT 
@@ -43,16 +43,13 @@ pub async fn component(context: &Context<'_>, id: String) -> Result<Component> {
         "#,
         id
     )
-    .fetch_one(&mut conn)
-    .await?;
-
-    Ok(component)
+    .fetch_one(conn)
+    .await
+    .map_err(|err| err.into())
 }
 
-pub async fn components(context: &Context<'_>) -> Result<Vec<Component>> {
-    let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
-
-    let components = sqlx::query_as!(
+pub async fn components(conn: &mut PoolConnection<Sqlite>) -> Result<Vec<Component>> {
+    sqlx::query_as!(
         Component,
         r#"
             SELECT 
@@ -66,8 +63,7 @@ pub async fn components(context: &Context<'_>) -> Result<Vec<Component>> {
             FROM components
         "#
     )
-    .fetch_all(&mut conn)
-    .await?;
-
-    Ok(components)
+    .fetch_all(conn)
+    .await
+    .map_err(|err| err.into())
 }

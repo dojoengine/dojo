@@ -5,34 +5,43 @@
 
 ## Dojo
 
+[![discord](https://img.shields.io/badge/join-dojo-green?logo=discord&logoColor=white)](https://discord.gg/PwDa2mKhR4)
 ![Github Actions][gha-badge] [![Telegram Chat][tg-badge]][tg-url]
+
 
 [gha-badge]: https://img.shields.io/github/actions/workflow/status/dojoengine/dojo/ci.yml?branch=main
 [tg-badge]: https://img.shields.io/endpoint?color=neon&logo=telegram&label=chat&style=flat-square&url=https%3A%2F%2Ftg.sumanjay.workers.dev%2Fdojoengine
+
 [tg-url]: https://t.me/dojoengine
 
-**Dojo is a toolchain for building Autonomous Worlds in Cairo.**
+**Dojo is a community driven open-source, Provable Game Engine, providing a comprehensive toolkit for building verifiable games and autonomous worlds.**
 
-Dojo provides:
+Some of Dojo features:
 
-- Scalable composition through the Entity Component System pattern.
-- Permissionless expansion of autonomous worlds through the introduction of components and systems.
-- Concise macros for interacting with world state and functions.
-- Typed interface generation for client libraries (Coming soon)
+- Cairo 1.0 Entity Component System (ECS)
+- Sozu migration planner
+- [Torii](/crates/torii/README.md) networking & indexing stack
+- [Katana](/crates/katana/README.md) RPC development network
+- Typed SDKs for Client
+
 
 ## Installation
 
 See the [installation guide](https://book.dojoengine.org/getting-started/installation.html) in the book.
 
+## Built with Dojo 
+- [Roll Your Own](https://github.com/cartridge-gg/rollyourown)
+- [Realms Autonomous World](https://github.com/BibliothecaDAO/eternum)
+
 ## Overview
 
 ### Entity Component System
 
-Dojo implements the ECS pattern to enable modular and extensible autonomous worlds. Worlds can be permissionlessly expanded over time through the incorporation of components and systems.
+Dojo implements the ECS pattern to enable modular and extensible Autonomous Worlds. Worlds can be permissionlessly expanded over time through the incorporation of components and systems.
 
 #### World
 
-The `world` is the top-level concept in an onchain game, serving as a centralized registry, namespace, and event bus for all entities, components, systems, and resources.
+The `world` is the top-level concept in a Autonomous World, serving as a centralized registry, namespace, and event bus for all entities, components, systems, and resources.
 
 #### Components
 
@@ -109,47 +118,24 @@ mod MoveSystem {
 
 #### Entities
 
-An entity is addressed by a `felt252`. An entity represents a collection of component state.
+An entity is addressed by a `felt250`. An entity represents a collection of component state.
 
-## Development
 
-### Dev Container
+## Contributors ✨
 
-It is recommended to use the Dev Containers VSCode extension when building on Dojo as it contains everything needed to begin developing.
+Thanks goes to these wonderful people
+([emoji key](https://allcontributors.org/docs/en/emoji-key)):
 
-Make sure you update your Docker to the latest stable version, sometimes the Dev containers do not play nicely with old Docker versions.
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
 
-#### Restart VSCode for this to take effect
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
 
-##### Open and build container
+<!-- ALL-CONTRIBUTORS-LIST:END -->
 
-Command palette: `ctrl + shift + p`
 
-Then: `Dev Containers: Rebuild Without Cache And Reopen In Container`
-
-##### Setup the language server
-
-```bash
-cd cairo/vscode-cairo
-
-npm install --global @vscode/vsce
-npm install
-vsce package
-code --install-extension cairo1*.vsix
-
-cd /workspaces/dojo
-
-cargo build --bin dojo-language-server --release
-```
-
-### Development without container
-
-- Install [Rust](https://www.rust-lang.org/tools/install)
-
-```bash
-rustup override set stable && rustup update && cargo test
-```
-
-Then install the language like described above.
-
----
+This project follows the
+[all-contributors](https://github.com/all-contributors/all-contributors)
+specification. Contributions of any kind welcome!
