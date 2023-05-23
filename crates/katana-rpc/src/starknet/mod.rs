@@ -15,10 +15,11 @@ use starknet::core::types::{
     BroadcastedDeclareTransaction, BroadcastedDeployAccountTransaction,
     BroadcastedInvokeTransaction, BroadcastedTransaction, ContractClass, DeclareTransactionReceipt,
     DeclareTransactionResult, DeployAccountTransactionReceipt, DeployAccountTransactionResult,
-    EmittedEvent, Event, EventFilter, EventsPage, FeeEstimate, FieldElement, FlattenedSierraClass,
-    FunctionCall, InvokeTransactionReceipt, InvokeTransactionResult, MaybePendingBlockWithTxHashes,
-    MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, MsgToL1, PendingBlockWithTxHashes,
-    PendingBlockWithTxs, PendingDeclareTransactionReceipt, PendingDeployAccountTransactionReceipt,
+    DeployTransactionReceipt, EmittedEvent, Event, EventFilter, EventsPage, FeeEstimate,
+    FieldElement, FlattenedSierraClass, FunctionCall, InvokeTransactionReceipt,
+    InvokeTransactionResult, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
+    MaybePendingTransactionReceipt, MsgToL1, PendingBlockWithTxHashes, PendingBlockWithTxs,
+    PendingDeclareTransactionReceipt, PendingDeployAccountTransactionReceipt,
     PendingInvokeTransactionReceipt, PendingTransactionReceipt, StateUpdate, Transaction,
     TransactionReceipt, TransactionStatus,
 };
@@ -478,6 +479,44 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
                         },
                     ))
                 }
+
+                TransactionOutput::Deploy(output) => MaybePendingTransactionReceipt::Receipt(
+                    TransactionReceipt::Deploy(DeployTransactionReceipt {
+                        transaction_hash,
+                        actual_fee: FieldElement::from_str(&format!("{}", output.actual_fee.0))
+                            .unwrap(),
+                        messages_sent: output
+                            .messages_sent
+                            .iter()
+                            .map(|m| MsgToL1 {
+                                from_address: (*m.from_address.0.key()).into(),
+                                to_address: FieldElement::from_byte_slice_be(
+                                    m.to_address.0.as_bytes(),
+                                )
+                                .unwrap(),
+                                payload: m.payload.0.iter().map(|f| (*f).into()).collect(),
+                            })
+                            .collect(),
+                        events: output
+                            .events
+                            .into_iter()
+                            .map(|e| Event {
+                                from_address: (*e.from_address.0.key()).into(),
+                                keys: e.content.keys.into_iter().map(|k| k.0.into()).collect(),
+                                data: e.content.data.0.into_iter().map(|d| d.into()).collect(),
+                            })
+                            .collect(),
+                        block_hash: receipt.block_hash.0.into(),
+                        block_number: receipt.block_number.0,
+                        status: TransactionStatus::AcceptedOnL2,
+                        contract_address: match tx {
+                            InnerTransaction::Deploy(tx) => (*tx.contract_address.0.key()).into(),
+                            _ => {
+                                return Err(Error::from(StarknetApiError::InternalServerError));
+                            }
+                        },
+                    }),
+                ),
 
                 _ => return Err(Error::from(StarknetApiError::UnsupportedTransactionVersion)),
             },
