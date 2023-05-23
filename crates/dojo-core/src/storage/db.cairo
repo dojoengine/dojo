@@ -12,13 +12,13 @@ mod Database {
     use dojo_core::interfaces::{IComponentLibraryDispatcher, IComponentDispatcherTrait};
 
     #[event]
-    fn StoreSetRecord(tableId: u250, keys: Span<u250>, value: Span<felt252>) {}
+    fn StoreSetRecord(table_id: u250, keys: Span<u250>, value: Span<felt252>) {}
 
     #[event]
-    fn StoreSetField(tableId: u250, keys: Span<u250>, offset: u8, value: Span<felt252>) {}
+    fn StoreSetField(table_id: u250, keys: Span<u250>, offset: u8, value: Span<felt252>) {}
 
     #[event]
-    fn StoreDeleteRecord(tableId: u250, keys: Span<u250>) {}
+    fn StoreDeleteRecord(table_id: u250, keys: Span<u250>) {}
 
     fn get(
         class_hash: starknet::ClassHash, table: u250, query: Query, offset: u8, length: usize
