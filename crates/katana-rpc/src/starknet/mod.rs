@@ -72,7 +72,9 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
             .nonce_at(block_id, ContractAddress(patricia_key!(contract_address)))
             .map_err(|e| match e {
                 SequencerError::StateNotFound(_) => Error::from(StarknetApiError::BlockNotFound),
-                SequencerError::State(_) => Error::from(StarknetApiError::ContractNotFound),
+                SequencerError::ContractNotFound(_) => {
+                    Error::from(StarknetApiError::ContractNotFound)
+                }
                 _ => Error::from(StarknetApiError::InternalServerError),
             })?;
 
@@ -497,8 +499,8 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
             .await
             .class_hash_at(block_id, ContractAddress(patricia_key!(contract_address)))
             .map_err(|e| match e {
-                SequencerError::State(_) => StarknetApiError::ContractNotFound,
                 SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
+                SequencerError::ContractNotFound(_) => StarknetApiError::ContractNotFound,
                 _ => StarknetApiError::InternalServerError,
             })?;
 

@@ -11,7 +11,7 @@ use blockifier::transaction::errors::TransactionExecutionError;
 use blockifier::transaction::objects::{AccountTransactionContext, TransactionExecutionInfo};
 use blockifier::transaction::transaction_execution::Transaction;
 use blockifier::transaction::transactions::{DeclareTransaction, ExecutableTransaction};
-use starknet::core::types::{BlockId, BlockTag, FieldElement, StateUpdate, TransactionStatus};
+use starknet::core::types::{FieldElement, StateUpdate, TransactionStatus};
 use starknet_api::block::{BlockHash, BlockNumber, BlockTimestamp, GasPrice};
 use starknet_api::core::{ClassHash, ContractAddress, GlobalRoot, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};
@@ -85,28 +85,6 @@ impl StarknetWrapper {
             block_context,
             pending_state,
             predeployed_accounts,
-        }
-    }
-
-    pub fn state_from_block_id(&self, block_id: BlockId) -> Option<DictStateReader> {
-        match block_id {
-            BlockId::Tag(BlockTag::Latest) => Some(self.latest_state()),
-            BlockId::Tag(BlockTag::Pending) => Some(self.pending_state()),
-
-            id => self.block_number_from_block_id(id).and_then(|n| self.state(n)),
-        }
-    }
-
-    pub fn block_number_from_block_id(&self, block_id: BlockId) -> Option<BlockNumber> {
-        match block_id {
-            BlockId::Number(number) => Some(BlockNumber(number)),
-
-            BlockId::Hash(hash) => {
-                self.blocks.hash_to_num.get(&BlockHash(StarkFelt::from(hash))).cloned()
-            }
-
-            BlockId::Tag(BlockTag::Pending) => None,
-            BlockId::Tag(BlockTag::Latest) => self.blocks.current_block_number(),
         }
     }
 
