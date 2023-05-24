@@ -31,7 +31,7 @@ pub async fn start_indexer<T: JsonRpcTransport + Sync + Send>(
     let transaction_processors: Vec<Arc<dyn TransactionProcessor<T>>> = vec![];
     let event_processors: Vec<Arc<dyn EventProcessor<T>>> = vec![];
 
-    let mut current_block_number: u64 = 0;
+    let mut current_block_number = head(pool).await?;
 
     loop {
         let block_with_txs =
@@ -85,6 +85,19 @@ pub async fn start_indexer<T: JsonRpcTransport + Sync + Send>(
         current_block_number += 1;
         sleep(Duration::from_secs(15)).await;
     }
+}
+
+pub async fn head(conn: &Pool<Sqlite>) -> Result<u64, sqlx::Error> {
+    let indexer = sqlx::query!(
+        r#"
+            SELECT head
+            FROM indexer WHERE id = 0
+        "#
+    )
+    .fetch_one(conn)
+    .await?;
+
+    Ok(indexer.head.unwrap().try_into().expect("value too large for i64"))
 }
 
 async fn process_block<T: starknet::providers::jsonrpc::JsonRpcTransport>(
