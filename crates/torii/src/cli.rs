@@ -24,14 +24,11 @@ mod tests;
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// The world to index
-    #[arg(short, long)]
+    #[arg(short, long, default_value = "0x420")]
     world: String,
     /// The rpc endpoint to use
-    #[arg(long)]
+    #[arg(long, default_value = "http://localhost:8080")]
     rpc: String,
-    /// The Apibara node to use
-    #[arg(short, long)]
-    apibara: Option<String>,
     /// Database url
     #[arg(short, long, default_value = "sqlite::memory:")]
     database_url: String,
