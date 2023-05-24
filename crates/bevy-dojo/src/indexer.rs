@@ -1,3 +1,16 @@
+//! Apibara based Starknet indexer to query stream of on-chain data.
+//!
+//! ### Usage
+//!
+//! ```rust
+//! fn main() {
+//!     // Todo
+//! }
+//! ```
+//! More on [Apibara documentation](<https://www.apibara.com/docs>).
+//!
+//! ### Note
+//! It does not work in the browser. We need to find other way for wasm support.
 pub mod apibara {
     pub use {apibara_core as core, apibara_sdk as sdk};
 }

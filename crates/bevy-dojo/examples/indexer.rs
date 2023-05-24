@@ -7,6 +7,7 @@ use bevy_dojo::indexer::apibara::core::starknet::v1alpha2::{
     Block, FieldElement, Filter, HeaderFilter,
 };
 use bevy_dojo::indexer::apibara::sdk::{Configuration, DataMessage};
+use bevy_dojo::indexer::IndexerMessage;
 use bevy_dojo::prelude::*;
 use chrono::{DateTime, Utc};
 

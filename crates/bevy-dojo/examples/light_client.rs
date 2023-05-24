@@ -1,12 +1,14 @@
-use bevy::app::App;
+use bevy::log::LogPlugin;
+use bevy::prelude::*;
 use bevy_dojo::prelude::*;
 
 fn main() {
-    App::new().add_plugin(LightClientPlugin).set_runner(runner).run();
-}
-
-fn runner(mut app: App) {
-    loop {
-        app.update();
-    }
+    App::new()
+        .set_runner(|mut app| loop {
+            app.update()
+        })
+        .add_plugin(LogPlugin::default())
+        // Set up Starknet light client plugin.
+        .add_plugin(LightClientPlugin)
+        .run();
 }

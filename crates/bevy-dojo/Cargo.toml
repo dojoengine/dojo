@@ -7,6 +7,7 @@ edition = "2021"
 beerus-core = { git = "https://github.com/keep-starknet-strange/beerus", rev = "fbb39bd72fb283f653db4a5d279443e2f122153d" }
 bevy = { version = "0.10", default-features = false }
 
+# Those are for indexer mod.
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 apibara-core = { git = "https://github.com/apibara/dna", rev = "2c452070372e80e5d1a5302c1b8ae5defef7e9a4" }
 apibara-sdk = { git = "https://github.com/apibara/dna", rev = "2c452070372e80e5d1a5302c1b8ae5defef7e9a4" }
@@ -21,7 +22,7 @@ chrono = "0.4"
 
 [[example]]
 name = "indexer"
-path = "examples/indexer-simple.rs"
+path = "examples/indexer.rs"
 
 [[example]]
 name = "light-client"
