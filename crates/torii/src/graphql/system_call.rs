@@ -1,67 +1,68 @@
-use async_graphql::{ComplexObject, Context, Result, SimpleObject};
+use async_graphql::dynamic::{Field, FieldFuture, FieldValue, Object, TypeRef};
+use async_graphql::Value;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
-use sqlx::pool::PoolConnection;
-use sqlx::{Pool, Sqlite};
+use sqlx::{FromRow, Pool, Sqlite};
 
-use super::system::{system_by_id, System};
+use super::system::System;
+use super::ObjectTrait;
 
-#[derive(SimpleObject, Debug, Deserialize)]
+#[derive(FromRow, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[graphql(complex)]
 pub struct SystemCall {
     pub id: i64,
-    pub system_id: String,
     pub transaction_hash: String,
-    pub data: Option<String>,
+    pub data: String,
     pub created_at: DateTime<Utc>,
+    #[serde(skip_deserializing)]
+    pub system_id: String,
 }
 
-#[ComplexObject]
-impl SystemCall {
-    async fn system(&self, context: &Context<'_>) -> Result<System> {
-        let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
-        system_by_id(&mut conn, self.system_id.clone()).await
+impl ObjectTrait for SystemCall {
+    fn object() -> Object {
+        Object::new("SystemCall")
+            .description("")
+            .field(Field::new("id", TypeRef::named_nn(TypeRef::ID), |ctx| {
+                FieldFuture::new(async move {
+                    Ok(Some(Value::from(ctx.parent_value.try_downcast_ref::<SystemCall>()?.id)))
+                })
+            }))
+            .field(Field::new("data", TypeRef::named_nn(TypeRef::STRING), |ctx| {
+                FieldFuture::new(async move {
+                    Ok(Some(Value::from(
+                        ctx.parent_value.try_downcast_ref::<SystemCall>()?.data.clone(),
+                    )))
+                })
+            }))
+            .field(Field::new("transactionHash", TypeRef::named_nn("FieldElement"), |ctx| {
+                FieldFuture::new(async move {
+                    Ok(Some(Value::from(
+                        ctx.parent_value.try_downcast_ref::<SystemCall>()?.transaction_hash.clone(),
+                    )))
+                })
+            }))
+            .field(Field::new("createdAt", TypeRef::named_nn("DateTime"), |ctx| {
+                FieldFuture::new(async move {
+                    Ok(Some(Value::from(
+                        ctx.parent_value
+                            .try_downcast_ref::<SystemCall>()?
+                            .created_at
+                            .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                    )))
+                })
+            }))
+            .field(Field::new("system", TypeRef::named("System"), |ctx| {
+                FieldFuture::new(async move {
+                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                    let id = &ctx.parent_value.try_downcast_ref::<SystemCall>()?.system_id;
+
+                    let result: System = sqlx::query_as("SELECT * FROM systems WHERE id = ?")
+                        .bind(id)
+                        .fetch_one(&mut conn)
+                        .await?;
+
+                    Ok(Some(FieldValue::owned_any(result)))
+                })
+            }))
     }
-}
-
-pub async fn system_call_by_id(conn: &mut PoolConnection<Sqlite>, id: i64) -> Result<SystemCall> {
-    sqlx::query_as!(
-        SystemCall,
-        r#"
-            SELECT
-                id,
-                data,
-                transaction_hash,
-                system_id,
-                created_at as "created_at: _"
-            FROM system_calls WHERE id = $1
-        "#,
-        id
-    )
-    .fetch_one(conn)
-    .await
-    .map_err(|err| err.into())
-}
-
-pub async fn system_calls_by_system(
-    conn: &mut PoolConnection<Sqlite>,
-    system_id: String,
-) -> Result<Vec<SystemCall>> {
-    sqlx::query_as!(
-        SystemCall,
-        r#"
-            SELECT
-                id,
-                data,
-                transaction_hash,
-                system_id,
-                created_at as "created_at: _"
-            FROM system_calls WHERE system_id = $1
-        "#,
-        system_id
-    )
-    .fetch_all(conn)
-    .await
-    .map_err(|err| err.into())
 }

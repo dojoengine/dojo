@@ -1,0 +1,27 @@
+type Entity {
+  id: ID!
+  name: String!
+  partitionId: FieldElement!
+  keys: FieldElement
+  transactionHash: FieldElement!
+  createdAt: DateTime!
+}
+
+type Component {
+  id: ID!
+  name: String!
+  address: Address!
+  classHash: Address!
+  transactionHash: FieldElement!
+  gqlSchema: String!
+  createdAt: DateTime!
+}
+
+type System {
+  id: ID!
+  name: String!
+  address: Address!
+  classHash: Address!
+  transactionHash: FieldElement!
+  createdAt: DateTime!
+}

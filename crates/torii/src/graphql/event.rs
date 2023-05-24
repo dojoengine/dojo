@@ -1,114 +1,91 @@
-use async_graphql::connection::{query, Connection, Edge, OpaqueCursor};
-use async_graphql::{ComplexObject, Context, Error, Result, SimpleObject, ID};
-use chrono::{DateTime, SecondsFormat, Utc};
+use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, Object, TypeRef};
+use async_graphql::Value;
+use chrono::{DateTime, Utc};
 use serde::Deserialize;
-use sqlx::pool::PoolConnection;
-use sqlx::query_builder::QueryBuilder;
 use sqlx::{FromRow, Pool, Sqlite};
 
-use super::constants::DEFAULT_LIMIT;
-use super::system_call::{system_call_by_id, SystemCall};
+use super::system_call::SystemCall;
+use super::ObjectTrait;
 
-#[derive(FromRow, SimpleObject, Debug, Deserialize)]
+#[derive(FromRow, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[graphql(complex)]
 pub struct Event {
     pub id: String,
     pub keys: String,
     pub data: String,
-    pub system_call_id: i64,
     pub created_at: DateTime<Utc>,
+    #[serde(skip_deserializing)]
+    pub system_call_id: i64,
 }
 
-#[ComplexObject]
-impl Event {
-    async fn system_call(&self, context: &Context<'_>) -> Result<SystemCall> {
-        let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
-        system_call_by_id(&mut conn, self.system_call_id).await
+impl ObjectTrait for Event {
+    fn object() -> Object {
+        Object::new("Event")
+            .description("")
+            .field(Field::new("id", TypeRef::named_nn(TypeRef::ID), |ctx| {
+                FieldFuture::new(async move {
+                    Ok(Some(Value::from(ctx.parent_value.try_downcast_ref::<Event>()?.id.clone())))
+                })
+            }))
+            .field(Field::new("keys", TypeRef::named_nn(TypeRef::STRING), |ctx| {
+                FieldFuture::new(async move {
+                    Ok(Some(Value::from(
+                        ctx.parent_value.try_downcast_ref::<Event>()?.keys.clone(),
+                    )))
+                })
+            }))
+            .field(Field::new("data", TypeRef::named(TypeRef::STRING), |ctx| {
+                FieldFuture::new(async move {
+                    Ok(Some(Value::from(
+                        ctx.parent_value.try_downcast_ref::<Event>()?.data.clone(),
+                    )))
+                })
+            }))
+            .field(Field::new("createdAt", TypeRef::named_nn("DateTime"), |ctx| {
+                FieldFuture::new(async move {
+                    Ok(Some(Value::from(
+                        ctx.parent_value
+                            .try_downcast_ref::<Event>()?
+                            .created_at
+                            .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                    )))
+                })
+            }))
+            .field(Field::new("systemCall", TypeRef::named("SystemCall"), |ctx| {
+                FieldFuture::new(async move {
+                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                    let id = &ctx.parent_value.try_downcast_ref::<Event>()?.system_call_id;
+
+                    let result: SystemCall =
+                        sqlx::query_as("SELECT * FROM system_calls WHERE id = ?")
+                            .bind(id)
+                            .fetch_one(&mut conn)
+                            .await?;
+
+                    Ok(Some(FieldValue::owned_any(result)))
+                })
+            }))
     }
-}
 
-pub async fn events_by_keys(
-    conn: &mut PoolConnection<Sqlite>,
-    keys: &[String],
-    after: Option<String>,
-    before: Option<String>,
-    first: Option<i32>,
-    last: Option<i32>,
-) -> Result<Connection<OpaqueCursor<ID>, Event>> {
-    query(
-        after,
-        before,
-        first,
-        last,
-        | after: Option<OpaqueCursor<ID>>,
-            before: Option<OpaqueCursor<ID>>,
-            first,
-            last| async move {
+    fn resolvers() -> Vec<Field> {
+        let event_resolver = Field::new("event", TypeRef::named_nn("Event"), |ctx| {
+            FieldFuture::new(async move {
+                let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                let arg_id = ctx.args.get("id").expect("id not found");
+                let id = arg_id.string()?;
 
-        let keys_str = format!("{}%", keys.join(","));
+                let result: Event = sqlx::query_as("SELECT * FROM events WHERE id = ?")
+                    .bind(id)
+                    .fetch_one(&mut conn)
+                    .await?;
 
-        let mut builder: QueryBuilder<'_, Sqlite> = QueryBuilder::new("SELECT * FROM events");
-        builder.push(" WHERE keys LIKE ")
-            .push_bind(keys_str.as_str());
+                Ok(Some(FieldValue::owned_any(result)))
+            })
+        })
+        .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID)));
 
-        if let Some(after) = after {
-            let event = event_by_id(conn, after.0.to_string()).await?;
-            let created_at = event.created_at.to_rfc3339_opts(SecondsFormat::Secs, true);
-            builder.push(" AND created_at > ")
-                .push_bind(created_at);
-        }
+        // TODO: resolve events
 
-        if let Some(before) = before {
-            let event = event_by_id(conn, before.0.to_string()).await?;
-            let created_at = event.created_at.to_rfc3339_opts(SecondsFormat::Secs, true);
-            builder.push(" AND created_at < ")
-                .push_bind(created_at);
-        }
-
-        let order = match last {
-            Some(_) => "ASC",
-            None => "DESC",
-        };
-        builder.push(" ORDER BY created_at ").push(order);
-
-        let limit = match first.or(last) {
-            Some(limit) => limit,
-            None => DEFAULT_LIMIT,
-        };
-        builder.push(" LIMIT ").push(limit.to_string());
-
-        let events: Vec<Event> = builder.build_query_as().fetch_all(conn).await?;
-
-        // TODO: hasPreviousPage, hasNextPage
-        let mut connection = Connection::new(true, true);
-        for event in events {
-            connection.edges.push(
-                Edge::new(
-                    OpaqueCursor(ID(event.id.clone())),
-                    event
-                ));
-        }
-        Ok::<_, Error>(connection)
-    }).await
-}
-
-pub async fn event_by_id(conn: &mut PoolConnection<Sqlite>, id: String) -> Result<Event> {
-    sqlx::query_as!(
-        Event,
-        r#"
-            SELECT 
-                id,
-                system_call_id,
-                keys,
-                data,
-                created_at as "created_at: _"
-            FROM events 
-            WHERE id = $1
-        "#,
-        id
-    )
-    .fetch_one(conn)
-    .await
-    .map_err(|err| err.into())
+        vec![event_resolver]
+    }
 }

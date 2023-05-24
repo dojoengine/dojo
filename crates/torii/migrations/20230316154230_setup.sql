@@ -8,10 +8,10 @@ INSERT INTO indexer (head) VALUES (0);
 CREATE TABLE components (
     id TEXT NOT NULL PRIMARY KEY,
     name TEXT NOT NULL,
-    properties TEXT,
     address TEXT NOT NULL,
     class_hash TEXT NOT NULL,
     transaction_hash TEXT NOT NULL,
+    gql_schema TEXT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

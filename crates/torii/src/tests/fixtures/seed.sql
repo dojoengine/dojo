@@ -2,9 +2,12 @@
 INSERT INTO indexer (head) VALUES (0);
 
 /* register components and systems */ 
-INSERT INTO components (id, name, properties, address, class_hash, transaction_hash) VALUES ('component_1', 'Game', NULL, '0x0', '0x0', '0x0');
-INSERT INTO components (id, name, properties, address, class_hash, transaction_hash) VALUES ('component_2', 'Stats', NULL, '0x0', '0x0', '0x0');
-INSERT INTO components (id, name, properties, address, class_hash, transaction_hash) VALUES ('component_3', 'Cash', NULL, '0x0', '0x0', '0x0');
+INSERT INTO components (id, name, address, class_hash, transaction_hash, gql_schema) 
+VALUES ('component_1', 'Game', '0x0', '0x0', '0x0', '');
+INSERT INTO components (id, name, address, class_hash, transaction_hash, gql_schema) 
+VALUES ('component_2', 'Stats', '0x0', '0x0', '0x0', '');
+INSERT INTO components (id, name, address, class_hash, transaction_hash, gql_schema) 
+VALUES ('component_3', 'Cash', '0x0', '0x0', '0x0', '');
 INSERT INTO systems (id, name, address, class_hash, transaction_hash) VALUES ('system_1', 'SpawnGame', '0x0', '0x0', '0x0');
 INSERT INTO systems (id, name, address, class_hash, transaction_hash) VALUES ('system_2', 'SpawnPlayer', '0x0', '0x0', '0x0');
 INSERT INTO systems (id, name, address, class_hash, transaction_hash) VALUES ('system_3', 'SpawnPlayer', '0x0', '0x0', '0x0');
