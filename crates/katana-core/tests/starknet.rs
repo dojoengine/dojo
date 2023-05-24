@@ -5,6 +5,7 @@ use katana_core::constants::{DEFAULT_GAS_PRICE, FEE_TOKEN_ADDRESS};
 use katana_core::starknet::{StarknetConfig, StarknetWrapper};
 use starknet::core::types::TransactionStatus;
 use starknet_api::block::BlockNumber;
+use starknet_api::core::Nonce;
 use starknet_api::hash::StarkFelt;
 use starknet_api::transaction::{
     Calldata, InvokeTransaction, InvokeTransactionV1, TransactionHash,
@@ -89,6 +90,7 @@ fn test_add_transaction() {
             sender_address: a.account_address,
             calldata: execute_calldata,
             transaction_hash: TransactionHash(stark_felt!("0x6969")),
+            nonce: Nonce(1u8.into()),
             ..Default::default()
         }),
     )));
