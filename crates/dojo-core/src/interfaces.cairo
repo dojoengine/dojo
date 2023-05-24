@@ -1,30 +1,27 @@
-use dojo_core::integer::u250;
-use dojo_core::string::ShortString;
-use dojo_core::serde::SpanSerde;
-use dojo_core::storage::query::Query;
+use dojo_core::{integer::u250, string::ShortString, serde::SpanSerde, storage::query::Query, auth::systems::Route};
+use starknet::{ClassHash, ContractAddress};
 
 #[abi]
 trait IWorld {
-    fn component(name: ShortString) -> starknet::ClassHash;
-    fn register_component(class_hash: starknet::ClassHash);
-    fn system(name: ShortString) -> starknet::ClassHash;
-    fn register_system(class_hash: starknet::ClassHash);
+    fn initialize(routes: Array<Route>);
+    fn component(name: ShortString) -> ClassHash;
+    fn register_component(class_hash: ClassHash);
+    fn system(name: ShortString) -> ClassHash;
+    fn register_system(class_hash: ClassHash);
     fn uuid() -> usize;
     fn execute(name: ShortString, execute_calldata: Span<felt252>) -> Span<felt252>;
-    fn entity(
-        component: ShortString, key: Query, offset: u8, length: usize
-    ) -> Span<felt252>;
-    fn set_entity(
-        component: ShortString, key: Query, offset: u8, value: Span<felt252>
-    );
-    fn entities(component: ShortString, partition: u250) -> Array::<u250>;
-    fn set_executor(contract_address: starknet::ContractAddress);
+    fn entity(component: ShortString, key: Query, offset: u8, length: usize) -> Span<felt252>;
+    fn set_entity(component: ShortString, key: Query, offset: u8, value: Span<felt252>);
+    fn entities(component: ShortString, partition: u250) -> (Span<u250>, Span<Span<felt252>>);
+    fn set_executor(contract_address: ContractAddress);
+    fn is_authorized(system: ClassHash, component: ClassHash) -> bool;
+    fn is_account_admin() -> bool;
     fn delete_entity(component: ShortString, query: Query);
 }
 
 #[abi]
 trait IExecutor {
-    fn execute(class_hash: starknet::ClassHash, data: Span<felt252>) -> Span<felt252>;
+    fn execute(class_hash: ClassHash, data: Span<felt252>) -> Span<felt252>;
 }
 
 #[abi]
@@ -40,9 +37,16 @@ trait ISystem {
 
 #[abi]
 trait IWorldFactory {
-    fn set_world(class_hash: starknet::ClassHash);
-    fn set_executor(class_hash: starknet::ClassHash);
-    fn spawn(name: ShortString, components: Array::<starknet::ClassHash>, systems: Array::<starknet::ClassHash>);
-    fn world_class_hash() -> starknet::ClassHash;
-    fn executor_address() -> starknet::ContractAddress;
+    fn set_world(class_hash: ClassHash);
+    fn set_executor(class_hash: ClassHash);
+    fn spawn(
+        name: ShortString,
+        components: Array<ClassHash>,
+        systems: Array<ClassHash>,
+        routes: Array<Route>
+    );
+    fn world_class_hash() -> ClassHash;
+    fn executor_address() -> ContractAddress;
+    fn default_auth_components() -> Array<ClassHash>;
+    fn default_auth_systems() -> Array<ClassHash>;
 }

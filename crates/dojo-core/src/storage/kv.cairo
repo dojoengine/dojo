@@ -1,29 +1,22 @@
 mod KeyValueStore {
-    use array::ArrayTrait;
-    use array::SpanTrait;
+    use array::{ArrayTrait, SpanTrait};
     use traits::Into;
     use starknet::SyscallResultTrait;
     use option::OptionTrait;
 
-    use dojo_core::integer::u250;
-    use dojo_core::serde::SpanSerde;
+    use dojo_core::{integer::u250, serde::SpanSerde};
 
     fn address(table: u250, key: u250) -> starknet::StorageBaseAddress {
         starknet::storage_base_address_from_felt252(
-            hash::LegacyHash::<(u250, u250)>::hash(0x420, (table, key))
+            hash::LegacyHash::hash(0x420, (table, key))
         )
     }
 
     #[view]
-    fn get(
-        table: u250,
-        key: u250,
-        offset: u8,
-        length: usize
-    ) -> Span<felt252> {
-        let address_domain = 0_u32;
+    fn get(table: u250, key: u250, offset: u8, length: usize) -> Span<felt252> {
+        let address_domain = 0;
         let base = address(table, key);
-        let mut value = ArrayTrait::<felt252>::new();
+        let mut value = ArrayTrait::new();
         _get(address_domain, base, ref value, offset, length);
         value.span()
     }
@@ -45,17 +38,12 @@ mod KeyValueStore {
             ).unwrap_syscall()
         );
 
-        return _get(address_domain, base, ref value, offset + 1_u8, length);
+        return _get(address_domain, base, ref value, offset + 1, length);
     }
 
     #[external]
-    fn set(
-        table: u250,
-        query: u250,
-        offset: u8,
-        value: Span<felt252>
-    ) {
-        let address_domain = 0_u32;
+    fn set(table: u250, query: u250, offset: u8, value: Span<felt252>) {
+        let address_domain = 0;
         let base = address(table, query);
         _set(address_domain, base, value, offset: offset);
     }
@@ -66,13 +54,12 @@ mod KeyValueStore {
         mut value: Span<felt252>,
         offset: u8
     ) {
-        gas::withdraw_gas().expect('Out of gas');
         match value.pop_front() {
             Option::Some(v) => {
                 starknet::storage_write_syscall(
                     address_domain, starknet::storage_address_from_base_and_offset(base, offset), *v
                 );
-                _set(address_domain, base, value, offset + 1_u8);
+                _set(address_domain, base, value, offset + 1);
             },
             Option::None(_) => {},
         }

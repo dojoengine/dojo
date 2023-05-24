@@ -6,7 +6,7 @@ ExpandContractTestRunner
 //! > cairo_code
 use serde::Serde;
 
-#[derive(Component)]
+#[derive(Component, Copy, Drop, Serde)]
 struct Position {
     x: felt252,
     y: felt252
@@ -30,6 +30,16 @@ impl PositionImpl of PositionTrait {
     }
 }
 
+#[derive(Component, Serde)]
+struct Roles {
+    role_ids: Array<u8>
+}
+
+#[derive(Component, Copy, Drop, Serde)]
+struct Player {
+    name: felt252, 
+}
+
 //! > generated_cairo_code
 use serde::Serde;
 
@@ -51,7 +61,6 @@ impl PositionImpl of PositionTrait {
     }
 }
 
-#[derive(Copy, Drop, Serde)]
 struct Position {
     x: felt252,
     y: felt252
@@ -94,4 +103,83 @@ mod PositionComponent {
     }
 }
 
+struct Roles {
+    role_ids: Array<u8>
+}
+
+#[abi]
+trait IRoles {
+    fn name() -> felt252;
+    fn len() -> u8;
+}
+
+#[contract]
+mod RolesComponent {
+    use dojo_core::serde::SpanSerde;
+    use super::Roles;
+
+    #[view]
+    fn schema() -> Array<(felt252, felt252, u8)> {
+        let mut arr = array::ArrayTrait::new();
+        array::ArrayTrait::append(ref arr, ('role_ids', 'Array<u8>', 252));
+
+        arr
+    }
+
+
+    #[view]
+    fn name() -> felt252 {
+        'Roles'
+    }
+
+    #[view]
+    fn len() -> usize {
+        1_usize
+    }
+
+    #[view]
+    fn is_indexed() -> bool {
+        bool::False(())
+    }
+}
+
+struct Player {
+    name: felt252, 
+}
+
+#[abi]
+trait IPlayer {
+    fn name() -> felt252;
+    fn len() -> u8;
+}
+
+#[contract]
+mod PlayerComponent {
+    use dojo_core::serde::SpanSerde;
+    use super::Player;
+
+    #[view]
+    fn schema() -> Array<(felt252, felt252, u8)> {
+        let mut arr = array::ArrayTrait::new();
+        array::ArrayTrait::append(ref arr, ('name', 'felt252', 252));
+
+        arr
+    }
+
+
+    #[view]
+    fn name() -> felt252 {
+        'Player'
+    }
+
+    #[view]
+    fn len() -> usize {
+        1_usize
+    }
+
+    #[view]
+    fn is_indexed() -> bool {
+        bool::False(())
+    }
+}
 //! > expected_diagnostics

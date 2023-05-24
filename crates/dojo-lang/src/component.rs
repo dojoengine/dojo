@@ -6,13 +6,20 @@ use cairo_lang_semantic::plugin::DynPluginAuxData;
 use cairo_lang_syntax::attribute::structured::{
     AttributeArg, AttributeArgVariant, AttributeStructurize,
 };
+use cairo_lang_syntax::node::ast::ItemStruct;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 
 use crate::plugin::DojoAuxData;
 
-pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> PluginResult {
+/// A handler for Dojo code that modifies a component struct.
+/// Parameters:
+/// * db: The semantic database.
+/// * struct_ast: The AST of the component struct.
+/// Returns:
+/// * A PluginResult containing the generated code.
+pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> PluginResult {
     let mut body_nodes = vec![RewriteNode::interpolate_patched(
         "
             #[view]
@@ -79,7 +86,6 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
     let mut builder = PatchBuilder::new(db);
     builder.add_modified(RewriteNode::interpolate_patched(
         "
-            #[derive(Copy, Drop, Serde)]
             struct $type_name$ {
                 $members$
             }
@@ -131,7 +137,8 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct
     }
 }
 
-fn is_indexed(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> bool {
+/// Returns true if the component is indexed #[component(indexed: true)]
+fn is_indexed(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> bool {
     for attr in struct_ast.attributes(db).query_attr(db, "component") {
         let attr = attr.structurize(db);
 
