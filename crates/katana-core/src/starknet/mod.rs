@@ -4,8 +4,8 @@ use anyhow::Result;
 use blockifier::block_context::BlockContext;
 use blockifier::execution::entry_point::{CallEntryPoint, CallInfo, ExecutionContext};
 use blockifier::execution::errors::EntryPointExecutionError;
-use blockifier::state::cached_state::{CachedState, CommitmentStateDiff, MutRefState};
-use blockifier::state::state_api::State;
+use blockifier::state::cached_state::{CachedState, MutRefState};
+use blockifier::state::state_api::{State, StateReader};
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::errors::TransactionExecutionError;
 use blockifier::transaction::objects::{AccountTransactionContext, TransactionExecutionInfo};
@@ -90,7 +90,7 @@ impl StarknetWrapper {
 
     // Simulate a transaction without modifying the state
     pub fn simulate_transaction(
-        &self,
+        &mut self,
         transaction: AccountTransaction,
         state: Option<DictStateReader>,
     ) -> Result<TransactionExecutionInfo, TransactionExecutionError> {
@@ -200,7 +200,7 @@ impl StarknetWrapper {
                         .map(|last_block| last_block.header().state_root.0.into())
                         .unwrap()
                 },
-                state_diff: convert_state_diff_to_rpc_state_diff(pending_state_diff.clone()),
+                state_diff: convert_state_diff_to_rpc_state_diff(pending_state_diff),
             },
         );
 
@@ -210,7 +210,7 @@ impl StarknetWrapper {
         // TODO: Compute state root
         self.blocks.insert(new_block);
 
-        self.apply_state_diff_to_state(pending_state_diff);
+        self.update_latest_state();
 
         self.update_block_context();
     }
@@ -222,7 +222,7 @@ impl StarknetWrapper {
     }
 
     pub fn call(
-        &self,
+        &mut self,
         call: ExternalFunctionCall,
         state: Option<DictStateReader>,
     ) -> Result<CallInfo, EntryPointExecutionError> {
@@ -249,9 +249,9 @@ impl StarknetWrapper {
         self.blocks.get_state(&block_number).cloned()
     }
 
-    pub fn pending_state(&self) -> DictStateReader {
+    pub fn pending_state(&mut self) -> DictStateReader {
         let mut state = self.pending_state.state.clone();
-        apply_state_diff(&mut state, self.pending_state.to_state_diff());
+        apply_new_state(&mut state, &mut self.pending_state);
         state
     }
 
@@ -358,37 +358,39 @@ impl StarknetWrapper {
     }
 
     // apply the pending state diff to the state
-    fn apply_state_diff_to_state(&mut self, state_diff: CommitmentStateDiff) {
+    fn update_latest_state(&mut self) {
         let state = &mut self.state;
-        apply_state_diff(state, state_diff);
-
-        // Store the block state
+        apply_new_state(state, &mut self.pending_state);
         self.blocks.store_state(self.block_context.block_number, state.clone());
     }
 }
 
-fn apply_state_diff(state: &mut DictStateReader, state_diff: CommitmentStateDiff) {
+fn apply_new_state(old_state: &mut DictStateReader, new_state: &mut CachedState<DictStateReader>) {
+    let state_diff = new_state.to_state_diff();
+
     // update contract storages
     state_diff.storage_updates.into_iter().for_each(|(contract_address, storages)| {
         storages.into_iter().for_each(|(key, value)| {
-            state.storage_view.insert((contract_address, key), value);
+            old_state.storage_view.insert((contract_address, key), value);
         })
     });
 
     // update declared contracts
-    state_diff.class_hash_to_compiled_class_hash.into_iter().for_each(
-        |(class_hash, compiled_class_hash)| {
-            state.class_hash_to_compiled_class_hash.insert(class_hash, compiled_class_hash);
-        },
-    );
+    // apply newly declared classses
+    for (class_hash, compiled_class_hash) in &state_diff.class_hash_to_compiled_class_hash {
+        let contract_class =
+            new_state.get_compiled_contract_class(class_hash).expect("contract class should exist");
+        old_state.class_hash_to_compiled_class_hash.insert(*class_hash, *compiled_class_hash);
+        old_state.class_hash_to_class.insert(*class_hash, contract_class);
+    }
 
     // update deployed contracts
     state_diff.address_to_class_hash.into_iter().for_each(|(contract_address, class_hash)| {
-        state.address_to_class_hash.insert(contract_address, class_hash);
+        old_state.address_to_class_hash.insert(contract_address, class_hash);
     });
 
     // update accounts nonce
     state_diff.address_to_nonce.into_iter().for_each(|(contract_address, nonce)| {
-        state.address_to_nonce.insert(contract_address, nonce);
+        old_state.address_to_nonce.insert(contract_address, nonce);
     });
 }
