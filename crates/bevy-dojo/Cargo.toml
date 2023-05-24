@@ -19,6 +19,7 @@ tonic = { version = "0.8" }
 
 [dev-dependencies]
 chrono = "0.4"
+bevy = "0.10"
 
 [[example]]
 name = "indexer"
