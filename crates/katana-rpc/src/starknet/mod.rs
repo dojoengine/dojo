@@ -633,7 +633,7 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
 
         let res = self
             .sequencer
-            .read()
+            .write()
             .await
             .call(block_id, call)
             .map_err(|_| Error::from(StarknetApiError::ContractError))?;
@@ -785,8 +785,8 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
             };
 
             let fee_estimate =
-                self.sequencer.read().await.estimate_fee(transaction, block_id).map_err(
-                    |e| match e {
+                self.sequencer.write().await.estimate_fee(transaction, block_id).map_err(|e| {
+                    match e {
                         SequencerError::StateNotFound(_) => {
                             Error::from(StarknetApiError::BlockNotFound)
                         }
@@ -794,8 +794,8 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
                             Error::from(StarknetApiError::ContractError)
                         }
                         _ => Error::from(StarknetApiError::InternalServerError),
-                    },
-                )?;
+                    }
+                })?;
 
             res.push(FeeEstimate {
                 gas_price: fee_estimate.gas_price,
