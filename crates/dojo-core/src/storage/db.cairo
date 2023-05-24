@@ -18,7 +18,7 @@ mod Database {
     fn StoreSetField(table_id: u250, keys: Span<u250>, offset: u8, value: Span<felt252>) {}
 
     #[event]
-    fn StoreDeleteRecord(tableId: u250, keys: Span<u250>) {}
+    fn StoreDeleteRecord(table_id: u250, keys: Span<u250>) {}
 
     fn get(
         class_hash: starknet::ClassHash, table: u250, query: Query, offset: u8, length: usize
@@ -53,7 +53,7 @@ mod Database {
 
     fn del(class_hash: starknet::ClassHash, table: u250, query: Query) {
         Index::delete(table, query.into());
-        // TODO: emit delete event
+        StoreDeleteRecord(table, query.keys());
     }
 
     // returns a tuple of spans, first contains the entity IDs,

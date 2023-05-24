@@ -1,11 +1,7 @@
-use std::fs;
-use std::path::PathBuf;
 use std::time::{Duration, SystemTime};
 
 use anyhow::Result;
-use blockifier::execution::contract_class::{
-    ContractClass, ContractClassV0, ContractClassV1 as BlockifierContractClass,
-};
+use blockifier::execution::contract_class::ContractClassV1 as BlockifierContractClass;
 use blockifier::state::cached_state::CommitmentStateDiff;
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transaction_execution::Transaction as BlockifierTransaction;
@@ -28,13 +24,6 @@ pub fn get_current_timestamp() -> Duration {
     SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .expect("should get current UNIX timestamp")
-}
-
-pub fn get_contract_class(contract_path: &str) -> ContractClass {
-    let path: PathBuf = [env!("CARGO_MANIFEST_DIR"), contract_path].iter().collect();
-    let raw_contract_class = fs::read_to_string(path).unwrap();
-    let legacy_contract_class: ContractClassV0 = serde_json::from_str(&raw_contract_class).unwrap();
-    ContractClass::V0(legacy_contract_class)
 }
 
 pub fn convert_blockifier_tx_to_starknet_api_tx(

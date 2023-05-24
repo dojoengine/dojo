@@ -15,6 +15,8 @@ CREATE TABLE components (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE INDEX idx_components_created_at ON components (created_at);
+
 CREATE TABLE system_calls (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     data TEXT,
@@ -24,14 +26,18 @@ CREATE TABLE system_calls (
     FOREIGN KEY (system_id) REFERENCES systems(id)
 );  
 
+CREATE INDEX idx_system_calls_created_at ON system_calls (created_at);
+
 CREATE TABLE systems (
     id TEXT NOT NULL PRIMARY KEY,
-    name TEXT,
+    name TEXT NOT NULL,
     address TEXT NOT NULL,
     class_hash TEXT NOT NULL,
     transaction_hash TEXT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX idx_systems_created_at ON systems (created_at);
 
 CREATE TABLE entities (
     id TEXT NOT NULL PRIMARY KEY,
@@ -44,6 +50,7 @@ CREATE TABLE entities (
 
 CREATE INDEX idx_entities_partition_id ON entities (partition_id);
 CREATE INDEX idx_entities_keys ON entities (keys);
+CREATE INDEX idx_entities_keys_create_on ON entities (keys, created_at);
 
 CREATE TABLE entity_states (
     entity_id TEXT NOT NULL,
@@ -66,3 +73,4 @@ CREATE TABLE events (
 );
 
 CREATE INDEX idx_events_keys ON events (keys);
+CREATE INDEX idx_events_created_at ON events (created_at);

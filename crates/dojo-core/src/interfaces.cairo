@@ -16,6 +16,7 @@ trait IWorld {
     fn set_executor(contract_address: ContractAddress);
     fn is_authorized(system: ClassHash, component: ClassHash) -> bool;
     fn is_account_admin() -> bool;
+    fn delete_entity(component: ShortString, query: Query);
 }
 
 #[abi]

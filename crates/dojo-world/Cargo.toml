@@ -8,6 +8,7 @@ description = "Dojo world specification. For example, crates and flags used for 
 
 [dependencies]
 anyhow.workspace = true
+async-trait.workspace = true
 cairo-lang-starknet.workspace = true
 cairo-lang-project.workspace = true
 camino.workspace = true
@@ -21,7 +22,6 @@ serde_with = "2.3.1"
 smol_str.workspace = true
 starknet.workspace = true
 url = "2.2.2"
-async-trait = "0.1.68"
 tracing.workspace = true
 
 [dev-dependencies]
