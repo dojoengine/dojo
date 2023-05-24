@@ -599,7 +599,23 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
     }
 
     async fn pending_transactions(&self) -> Result<Vec<Transaction>, Error> {
-        Err(Error::from(StarknetApiError::InternalServerError))
+        let block = self.sequencer.read().await.block(BlockId::Tag(BlockTag::Pending));
+
+        match block {
+            Some(block) => {
+                let txs: anyhow::Result<_> =
+                    block.transactions().iter().try_fold(Vec::new(), |mut data, tx| {
+                        data.push(convert_inner_to_rpc_tx(tx.clone())?);
+                        Ok(data)
+                    });
+
+                match txs {
+                    Ok(txs) => Ok(txs),
+                    Err(_) => Err(Error::from(StarknetApiError::InternalServerError)),
+                }
+            }
+            None => Ok(vec![]),
+        }
     }
 
     async fn call(
