@@ -1,0 +1,299 @@
+#!/usr/bin/env bash
+set -e
+
+BASE_DIR=${XDG_CONFIG_HOME:-$HOME}
+DOJO_DIR=${DOJO_DIR-"$BASE_DIR/.dojo"}
+DOJO_BIN_DIR="$DOJO_DIR/bin"
+
+BINS=(katana sozo torii)
+
+export RUSTFLAGS="-C target-cpu=native"
+
+main() {
+  need_cmd git
+  need_cmd curl
+
+  while [[ $1 ]]; do
+    case $1 in
+      --)               shift; break;;
+
+      -r|--repo)        shift; DOJOUP_REPO=$1;;
+      -b|--branch)      shift; DOJOUP_BRANCH=$1;;
+      -v|--version)     shift; DOJOUP_VERSION=$1;;
+      -p|--path)        shift; DOJOUP_LOCAL_REPO=$1;;
+      -P|--pr)          shift; DOJOUP_PR=$1;;
+      -C|--commit)      shift; DOJOUP_COMMIT=$1;;
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      *)
+        warn "unknown option: $1"
+        usage
+        exit 1
+    esac; shift
+  done
+
+  # Print the banner after successfully parsing args
+  banner
+
+  if [ -n "$DOJOUP_PR" ]; then
+    if [ -z "$DOJOUP_BRANCH" ]; then
+      DOJOUP_BRANCH="refs/pull/$DOJOUP_PR/head"
+    else
+      err "can't use --pr and --branch at the same time"
+    fi
+  fi
+
+  # Installs dojo from a local repository if --path parameter is provided
+  if [[ -n "$DOJOUP_LOCAL_REPO" ]]; then
+    need_cmd cargo
+
+    # Ignore branches/versions as we do not want to modify local git state
+    if [ -n "$DOJOUP_REPO" ] || [ -n "$DOJOUP_BRANCH" ] || [ -n "$DOJOUP_VERSION" ]; then
+      warn "--branch, --version, and --repo arguments are ignored during local install"
+    fi
+
+    # Enter local repo and build
+    say "installing from $DOJOUP_LOCAL_REPO"
+    cd "$DOJOUP_LOCAL_REPO"
+    ensure cargo build --release # need 4 speed
+
+    for bin in "${BINS[@]}"; do
+      # Remove prior installations if they exist
+      rm -f "$DOJO_BIN_DIR/$bin"
+      # Symlink from local repo binaries to bin dir
+      ensure ln -s "$PWD/target/release/$bin" "$DOJO_BIN_DIR/$bin"
+    done
+
+    say "done"
+    exit 0
+  fi
+
+  DOJOUP_REPO=${DOJOUP_REPO-dojoengine/dojo}
+
+  # Install by downloading binaries
+  if [[ "$DOJOUP_REPO" == "dojoengine/dojo" && -z "$DOJOUP_BRANCH" && -z "$DOJOUP_COMMIT" ]]; then
+    DOJOUP_VERSION=${DOJOUP_VERSION-nightly}
+    DOJOUP_TAG=$DOJOUP_VERSION
+
+    # Normalize versions (handle channels, versions without v prefix
+    if [[ "$DOJOUP_VERSION" == "nightly" ]]; then
+      # Locate real nightly tag
+      SHA=$(ensure curl -sSf "https://api.github.com/repos/$DOJOUP_REPO/git/refs/tags/nightly" \
+        | grep -Eo '"sha"[^,]*' \
+        | grep -Eo '[^:]*$' \
+        | tr -d '"' \
+        | tr -d ' ' \
+        | cut -d ':' -f2 )
+      DOJOUP_TAG="nightly-${SHA}"
+    elif [[ "$DOJOUP_VERSION" == nightly* ]]; then
+      DOJOUP_VERSION="nightly"
+    elif [[ "$DOJOUP_VERSION" == [[:digit:]]* ]]; then
+      # Add v prefix
+      DOJOUP_VERSION="v${DOJOUP_VERSION}"
+      DOJOUP_TAG="${DOJOUP_VERSION}"
+    fi
+
+    say "installing dojo (version ${DOJOUP_VERSION}, tag ${DOJOUP_TAG})"
+
+    PLATFORM="$(uname -s)"
+    EXT="tar.gz"
+    case $PLATFORM in
+      Linux)
+        PLATFORM="linux"
+        ;;
+      Darwin)
+        PLATFORM="darwin"
+        ;;
+      MINGW*)
+        EXT="zip"
+        PLATFORM="win32"
+        ;;
+      *)
+        err "unsupported platform: $PLATFORM"
+        ;;
+    esac
+
+    ARCHITECTURE="$(uname -m)"
+    if [ "${ARCHITECTURE}" = "x86_64" ]; then
+      # Redirect stderr to /dev/null to avoid printing errors if non Rosetta.
+      if [ "$(sysctl -n sysctl.proc_translated 2>/dev/null)" = "1" ]; then
+        ARCHITECTURE="arm64" # Rosetta.
+      else
+        ARCHITECTURE="amd64" # Intel.
+      fi
+    elif [ "${ARCHITECTURE}" = "arm64" ] ||[ "${ARCHITECTURE}" = "aarch64" ] ; then
+      ARCHITECTURE="arm64" # Arm.
+    else
+      ARCHITECTURE="amd64" # Amd.
+    fi
+
+    # Compute the URL of the release tarball in the Dojo repository.
+    RELEASE_URL="https://github.com/${DOJOUP_REPO}/releases/download/${DOJOUP_TAG}/"
+    BIN_ARCHIVE_URL="${RELEASE_URL}dojo_${DOJOUP_VERSION}_${PLATFORM}_${ARCHITECTURE}.$EXT"
+
+    echo $BIN_ARCHIVE_URL
+
+    # Download and extract the binaries archive
+    say "downloading latest dojo"
+    if [ "$PLATFORM" = "win32" ]; then
+      tmp="$(mktemp -d 2>/dev/null || echo ".")/dojo.zip"
+      ensure download "$BIN_ARCHIVE_URL" "$tmp"
+      ensure unzip "$tmp" -d "$DOJO_BIN_DIR"
+      rm -f "$tmp"
+    else
+      ensure download "$BIN_ARCHIVE_URL" | ensure tar -xzC "$DOJO_BIN_DIR"
+    fi
+
+    for bin in "${BINS[@]}"; do
+      bin_path="$DOJO_BIN_DIR/$bin"
+
+      # Print installed msg
+      say "installed - $(ensure "$bin_path" --version)"
+
+      # Check if the default path of the binary is not in DOJO_BIN_DIR
+      which_path="$(which "$bin")"
+      if [ "$which_path" != "$bin_path" ]; then
+        warn ""
+        cat 1>&2 <<EOF
+There are multiple binaries with the name '$bin' present in your 'PATH'.
+This may be the result of installing '$bin' using another method,
+like Cargo or other package managers.
+You may need to run 'rm $which_path' or move '$DOJO_BIN_DIR'
+in your 'PATH' to allow the newly installed version to take precedence!
+
+EOF
+      fi
+    done
+
+    say "done!"
+
+  # Install by cloning the repo with the provided branch/tag
+  else
+    need_cmd cargo
+    DOJOUP_BRANCH=${DOJOUP_BRANCH-main}
+    REPO_PATH="$DOJO_DIR/$DOJOUP_REPO"
+
+    # If repo path does not exist, grab the author from the repo, make a directory in .dojo, cd to it and clone.
+    if [ ! -d "$REPO_PATH" ]; then
+      AUTHOR="$(echo "$DOJOUP_REPO" | cut -d'/' -f1 -)"
+      ensure mkdir -p "$DOJO_DIR/$AUTHOR"
+      cd "$DOJO_DIR/$AUTHOR"
+      ensure git clone "https://github.com/$DOJOUP_REPO"
+    fi
+
+    # Force checkout, discarding any local changes
+    cd "$REPO_PATH"
+    ensure git fetch origin "${DOJOUP_BRANCH}:remotes/origin/${DOJOUP_BRANCH}"
+    ensure git checkout "origin/${DOJOUP_BRANCH}"
+
+    # If set, checkout specific commit from branch
+    if [ -n "$DOJOUP_COMMIT" ]; then
+      say "installing at commit $DOJOUP_COMMIT"
+      ensure git checkout "$DOJOUP_COMMIT"
+    fi
+
+    # Build the repo and install the binaries locally to the .dojo bin directory.
+    # --root appends /bin to the directory it is given, so we pass DOJO_DIR.
+    ensure cargo install --path ./dojo --bin dojo --locked --force --root "$DOJO_DIR"
+
+    say "done"
+  fi
+}
+
+usage() {
+  cat 1>&2 <<EOF
+The installer for Dojo.
+
+Update or revert to a specific Dojo version with ease.
+
+USAGE:
+    dojoup <OPTIONS>
+
+OPTIONS:
+    -h, --help      Print help information
+    -v, --version   Install a specific version
+    -b, --branch    Install a specific branch
+    -P, --pr        Install a specific Pull Request
+    -C, --commit    Install a specific commit
+    -r, --repo      Install from a remote GitHub repo (uses default branch if no other options are set)
+    -p, --path      Install a local repository
+EOF
+}
+
+say() {
+  printf "dojoup: %s\n" "$1"
+}
+
+warn() {
+  say "warning: ${1}" >&2
+}
+
+err() {
+  say "$1" >&2
+  exit 1
+}
+
+need_cmd() {
+  if ! check_cmd "$1"; then
+    err "need '$1' (command not found)"
+  fi
+}
+
+check_cmd() {
+  command -v "$1" &>/dev/null
+}
+
+# Run a command that should never fail. If the command fails execution
+# will immediately terminate with an error showing the failing
+# command.
+ensure() {
+  if ! "$@"; then err "command failed: $*"; fi
+}
+
+# Downloads $1 into $2 or stdout
+download() {
+  if [ "$2" ]; then
+    # output into $2
+    if check_cmd curl; then
+      curl -#o "$2" -L "$1"
+    else
+      wget --show-progress -qO "$2" "$1"
+    fi
+  else
+    # output to stdout
+    if check_cmd curl; then
+      curl -#L "$1"
+    else
+      wget --show-progress -qO- "$1"
+    fi
+  fi
+}
+
+# Banner Function for Dojo 
+banner() {
+  printf '
+
+═════════════════════════════════════════════════════════════════════════
+ 
+
+                  ██████╗  ██████╗      ██╗ ██████╗ 
+                  ██╔══██╗██╔═══██╗     ██║██╔═══██╗
+                  ██║  ██║██║   ██║     ██║██║   ██║
+                  ██║  ██║██║   ██║██   ██║██║   ██║
+                  ██████╔╝╚██████╔╝╚█████╔╝╚██████╔╝
+                  ╚═════╝  ╚═════╝  ╚════╝  ╚═════╝ 
+
+
+              Repo : https://github.com/dojoengine/dojo
+              Book : https://book.dojoengine.org/                  
+              Chat : https://t.me/+DJxNYR3rsfJmZTg1                     
+
+═════════════════════════════════════════════════════════════════════════
+
+'
+}
+
+
+main "$@" || exit 1

@@ -12,11 +12,13 @@ fn test_u250_felt252_conv() {
     assert(a.is_some(), '1 try_into u250');
 
     // 250^2 - 1, max u250
-    let m: Option<u250> = 0x3ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff_felt252.try_into();
+    let m: Option<u250> =
+        0x3ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff_felt252.try_into();
     assert(m.is_some(), 'max try_into u250');
 
     // 250^2, max u250 + 1
-    let o: Option<u250> = 0x400000000000000000000000000000000000000000000000000000000000000_felt252.try_into();
+    let o: Option<u250> =
+        0x400000000000000000000000000000000000000000000000000000000000000_felt252.try_into();
     assert(o.is_none(), 'max + 1 try_into u250');
 }
 

@@ -28,7 +28,7 @@ async fn test_manifest_from_remote_throw_error_on_not_deployed() {
         ManifestError::NotDeployed => {
             // World not deployed.
         }
-        err => panic!("Unexpected error: {}", err),
+        err => panic!("Unexpected error: {err}"),
     }
 }
 

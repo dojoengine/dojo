@@ -33,12 +33,12 @@ impl Vec2Impl<T, impl TCopy: Copy<T>, impl TDrop: Drop<T>> of Vec2Trait<T> {
     /// Creates a new vector.
     #[inline(always)]
     fn new(x: T, y: T) -> Vec2<T> {
-        Vec2::<T> { x: x, y: y }
+        Vec2 { x: x, y: y }
     }
     /// Creates a vector with all elements set to `v`.
     #[inline(always)]
     fn splat(v: T) -> Vec2<T> {
-        Vec2::<T> { x: v, y: v }
+        Vec2 { x: v, y: v }
     }
 
     // Masks
@@ -50,7 +50,7 @@ impl Vec2Impl<T, impl TCopy: Copy<T>, impl TDrop: Drop<T>> of Vec2Trait<T> {
     /// `if_true`, and false uses the element from `if_false`.
     #[inline(always)]
     fn select(mask: Vec2<bool>, if_true: Vec2<T>, if_false: Vec2<T>) -> Vec2<T> {
-        Vec2::<T> {
+        Vec2 {
             x: if mask.x {
                 if_true.x
             } else {
@@ -74,29 +74,29 @@ impl Vec2Impl<T, impl TCopy: Copy<T>, impl TDrop: Drop<T>> of Vec2Trait<T> {
     /// Returns a vector where every component is the dot product
     /// of `self` and `rhs`.
     fn dot_into_vec<impl TMul: Mul<T>, impl TAdd: Add<T>>(self: Vec2<T>, rhs: Vec2<T>) -> Vec2<T> {
-        Vec2Trait::<T>::splat(Vec2Trait::<T>::dot(self, rhs))
+        Vec2Trait::splat(Vec2Trait::dot(self, rhs))
     }
 
     // Swizzles
     /// Vec2<T> -> Vec2<T>
     #[inline(always)]
     fn xx(self: Vec2<T>) -> Vec2<T> {
-        Vec2::<T> { x: self.x, y: self.x,  }
+        Vec2 { x: self.x, y: self.x,  }
     }
 
     #[inline(always)]
     fn xy(self: Vec2<T>) -> Vec2<T> {
-        Vec2::<T> { x: self.x, y: self.y,  }
+        Vec2 { x: self.x, y: self.y,  }
     }
 
     #[inline(always)]
     fn yx(self: Vec2<T>) -> Vec2<T> {
-        Vec2::<T> { x: self.y, y: self.x,  }
+        Vec2 { x: self.y, y: self.x,  }
     }
 
     #[inline(always)]
     fn yy(self: Vec2<T>) -> Vec2<T> {
-        Vec2::<T> { x: self.y, y: self.y,  }
+        Vec2 { x: self.y, y: self.y,  }
     }
 }
 
@@ -104,13 +104,13 @@ impl Vec2Impl<T, impl TCopy: Copy<T>, impl TDrop: Drop<T>> of Vec2Trait<T> {
 #[available_gas(2000000)]
 fn test_new() {
     let var1_pos = Fixed::new(ONE_u128, false);
-    let var2_neg = Fixed::new(2_u128 * ONE_u128, true);
+    let var2_neg = Fixed::new(2 * ONE_u128, true);
 
     // with FixedType
     let vec2 = Vec2Trait::new(var1_pos, var2_neg);
     assert(vec2.x.mag == ONE_u128, 'invalid x.mag');
     assert(vec2.x.sign == false, 'invalid x.sign');
-    assert(vec2.y.mag == 2_u128 * ONE_u128, 'invalid y.mag');
+    assert(vec2.y.mag == 2 * ONE_u128, 'invalid y.mag');
     assert(vec2.y.sign == true, 'invalid y.sign');
 
     // with bool
@@ -141,9 +141,9 @@ fn test_splat() {
 #[available_gas(2000000)]
 fn test_select() {
     let var1_pos = Fixed::new(ONE_u128, false);
-    let var2_neg = Fixed::new(2_u128 * ONE_u128, true);
-    let var3_neg = Fixed::new(3_u128 * ONE_u128, true);
-    let var4_pos = Fixed::new(4_u128 * ONE_u128, false);
+    let var2_neg = Fixed::new(2 * ONE_u128, true);
+    let var3_neg = Fixed::new(3 * ONE_u128, true);
+    let var4_pos = Fixed::new(4 * ONE_u128, false);
 
     let vec2a = Vec2Trait::new(var1_pos, var2_neg);
     let vec2b = Vec2Trait::new(var3_neg, var4_pos);
@@ -152,14 +152,14 @@ fn test_select() {
     let vec2 = Vec2Trait::select(mask, vec2a, vec2b);
     assert(vec2.x.mag == ONE_u128, 'invalid x.mag');
     assert(vec2.x.sign == false, 'invalid x.sign');
-    assert(vec2.y.mag == 4_u128 * ONE_u128, 'invalid y.mag');
+    assert(vec2.y.mag == 4 * ONE_u128, 'invalid y.mag');
     assert(vec2.y.sign == false, 'invalid y.sign');
 
     let mask = Vec2Trait::new(false, true);
     let vec2 = Vec2Trait::select(mask, vec2a, vec2b);
-    assert(vec2.x.mag == 3_u128 * ONE_u128, 'invalid x.mag');
+    assert(vec2.x.mag == 3 * ONE_u128, 'invalid x.mag');
     assert(vec2.x.sign == true, 'invalid x.sign');
-    assert(vec2.y.mag == 2_u128 * ONE_u128, 'invalid y.mag');
+    assert(vec2.y.mag == 2 * ONE_u128, 'invalid y.mag');
     assert(vec2.y.sign == true, 'invalid y.sign');
 }
 
@@ -167,19 +167,19 @@ fn test_select() {
 #[available_gas(2000000)]
 fn test_dot() {
     let var1_pos = Fixed::new(ONE_u128, false);
-    let var2_neg = Fixed::new(2_u128 * ONE_u128, true);
-    let var3_neg = Fixed::new(3_u128 * ONE_u128, true);
-    let var4_pos = Fixed::new(4_u128 * ONE_u128, false);
+    let var2_neg = Fixed::new(2 * ONE_u128, true);
+    let var3_neg = Fixed::new(3 * ONE_u128, true);
+    let var4_pos = Fixed::new(4 * ONE_u128, false);
 
     let vec2a = Vec2Trait::new(var1_pos, var2_neg);
     let vec2b = Vec2Trait::new(var3_neg, var4_pos);
 
     let a_dot_b = vec2a.dot(vec2b);
-    assert(a_dot_b.mag == 11_u128 * ONE_u128, 'invalid mag');
+    assert(a_dot_b.mag == 11 * ONE_u128, 'invalid mag');
     assert(a_dot_b.sign == true, 'invalid sign');
 
     let a_dot_b = Vec2Trait::dot(vec2a, vec2b); // alt syntax
-    assert(a_dot_b.mag == 11_u128 * ONE_u128, 'invalid mag');
+    assert(a_dot_b.mag == 11 * ONE_u128, 'invalid mag');
     assert(a_dot_b.sign == true, 'invalid sign');
 }
 
@@ -187,23 +187,23 @@ fn test_dot() {
 #[available_gas(2000000)]
 fn test_dot_into_vec() {
     let var1_pos = Fixed::new(ONE_u128, false);
-    let var2_neg = Fixed::new(2_u128 * ONE_u128, true);
-    let var3_neg = Fixed::new(3_u128 * ONE_u128, true);
-    let var4_pos = Fixed::new(4_u128 * ONE_u128, false);
+    let var2_neg = Fixed::new(2 * ONE_u128, true);
+    let var3_neg = Fixed::new(3 * ONE_u128, true);
+    let var4_pos = Fixed::new(4 * ONE_u128, false);
 
     let vec2a = Vec2Trait::new(var1_pos, var2_neg);
     let vec2b = Vec2Trait::new(var3_neg, var4_pos);
 
     let vec2 = vec2a.dot_into_vec(vec2b);
-    assert(vec2.x.mag == 11_u128 * ONE_u128, 'invalid x.mag');
+    assert(vec2.x.mag == 11 * ONE_u128, 'invalid x.mag');
     assert(vec2.x.sign == true, 'invalid x.sign');
-    assert(vec2.y.mag == 11_u128 * ONE_u128, 'invalid y.mag');
+    assert(vec2.y.mag == 11 * ONE_u128, 'invalid y.mag');
     assert(vec2.y.sign == true, 'invalid y.sign');
 
     let vec2 = Vec2Trait::dot_into_vec(vec2a, vec2b); // alt syntax
-    assert(vec2.x.mag == 11_u128 * ONE_u128, 'invalid x.mag');
+    assert(vec2.x.mag == 11 * ONE_u128, 'invalid x.mag');
     assert(vec2.x.sign == true, 'invalid x.sign');
-    assert(vec2.y.mag == 11_u128 * ONE_u128, 'invalid y.mag');
+    assert(vec2.y.mag == 11 * ONE_u128, 'invalid y.mag');
     assert(vec2.y.sign == true, 'invalid y.sign');
 }
 
@@ -211,7 +211,7 @@ fn test_dot_into_vec() {
 #[available_gas(2000000)]
 fn test_xx() {
     let var1_pos = Fixed::new(ONE_u128, false);
-    let var2_neg = Fixed::new(2_u128 * ONE_u128, true);
+    let var2_neg = Fixed::new(2 * ONE_u128, true);
     let vec2 = Vec2Trait::new(var1_pos, var2_neg);
 
     let vec2xx = vec2.xx();
@@ -225,13 +225,13 @@ fn test_xx() {
 #[available_gas(2000000)]
 fn test_xy() {
     let var1_pos = Fixed::new(ONE_u128, false);
-    let var2_neg = Fixed::new(2_u128 * ONE_u128, true);
+    let var2_neg = Fixed::new(2 * ONE_u128, true);
     let vec2 = Vec2Trait::new(var1_pos, var2_neg);
 
     let vec2xy = vec2.xy();
     assert(vec2xy.x.mag == ONE_u128, 'invalid x.mag');
     assert(vec2xy.x.sign == false, 'invalid x.sign');
-    assert(vec2xy.y.mag == 2_u128 * ONE_u128, 'invalid xy.mag');
+    assert(vec2xy.y.mag == 2 * ONE_u128, 'invalid xy.mag');
     assert(vec2xy.y.sign == true, 'invalid y.sign');
 }
 
@@ -239,11 +239,11 @@ fn test_xy() {
 #[available_gas(2000000)]
 fn test_yx() {
     let var1_pos = Fixed::new(ONE_u128, false);
-    let var2_neg = Fixed::new(2_u128 * ONE_u128, true);
+    let var2_neg = Fixed::new(2 * ONE_u128, true);
     let vec2 = Vec2Trait::new(var1_pos, var2_neg);
 
     let vec2yx = vec2.yx();
-    assert(vec2yx.x.mag == 2_u128 * ONE_u128, 'invalid x.mag');
+    assert(vec2yx.x.mag == 2 * ONE_u128, 'invalid x.mag');
     assert(vec2yx.x.sign == true, 'invalid x.sign');
     assert(vec2yx.y.mag == ONE_u128, 'invalid y.mag');
     assert(vec2yx.y.sign == false, 'invalid y.sign');
@@ -253,12 +253,12 @@ fn test_yx() {
 #[available_gas(2000000)]
 fn test_yy() {
     let var1_pos = Fixed::new(ONE_u128, false);
-    let var2_neg = Fixed::new(2_u128 * ONE_u128, true);
+    let var2_neg = Fixed::new(2 * ONE_u128, true);
     let vec2 = Vec2Trait::new(var1_pos, var2_neg);
 
     let vec2yy = vec2.yy();
-    assert(vec2yy.x.mag == 2_u128 * ONE_u128, 'invalid x.mag');
+    assert(vec2yy.x.mag == 2 * ONE_u128, 'invalid x.mag');
     assert(vec2yy.x.sign == true, 'invalid x.sign');
-    assert(vec2yy.y.mag == 2_u128 * ONE_u128, 'invalid y.mag');
+    assert(vec2yy.y.mag == 2 * ONE_u128, 'invalid y.mag');
     assert(vec2yy.y.sign == true, 'invalid y.sign');
 }

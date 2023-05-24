@@ -1,7 +1,6 @@
 #[contract]
 mod Executor {
-    use array::ArrayTrait;
-    use array::ArrayTCloneImpl;
+    use array::{ArrayTrait, ArrayTCloneImpl};
     use clone::Clone;
     use traits::Into;
     use starknet::contract_address::ContractAddressIntoFelt252;

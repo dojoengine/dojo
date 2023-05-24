@@ -3,20 +3,16 @@ use integer::BoundedInt;
 use option::OptionTrait;
 use traits::{Into, TryInto};
 
-use starknet::ContractAddress;
-use starknet::contract_address::ContractAddressIntoFelt252;
-use starknet::SyscallResult;
-use starknet::storage_access::StorageAccess;
-use starknet::storage_access::StorageBaseAddress;
+use starknet::{ContractAddress, SyscallResult, contract_address::ContractAddressIntoFelt252, storage_access::{StorageAccess, StorageBaseAddress}};
 
 // max value of u256's high part when u250::max is converted into u256
-const HIGH_BOUND: u128 = 0x3ffffffffffffffffffffffffffffff_u128;
+const HIGH_BOUND: u128 = 0x3ffffffffffffffffffffffffffffff;
 
 // temporary, until we (Scarb) catches up with Cairo
 // src: https://github.com/starkware-libs/cairo/pull/3055/
 impl U256TryIntoFelt252 of TryInto<u256, felt252> {
     fn try_into(self: u256) -> Option<felt252> {
-        let FELT252_PRIME_HIGH = 0x8000000000000110000000000000000_u128;
+        let FELT252_PRIME_HIGH = 0x8000000000000110000000000000000;
         if self.high > FELT252_PRIME_HIGH {
             return Option::None(());
         }
@@ -54,7 +50,7 @@ impl U250PartialEq of PartialEq<u250> {
     }
 
     fn ne(lhs: u250, rhs: u250) -> bool {
-        lhs.inner !=rhs.inner
+        lhs.inner != rhs.inner
     }
 }
 
@@ -107,14 +103,14 @@ impl LegacyHashU250 of LegacyHash<u250> {
 impl StorageAccessU250 of StorageAccess<u250> {
     fn read(address_domain: u32, base: StorageBaseAddress) -> SyscallResult<u250> {
         Result::Ok(
-            Felt252TryIntoU250::try_into(StorageAccess::<felt252>::read(
-                address_domain, base
-            )?).expect('StorageAccessU250 - non u250')
+            Felt252TryIntoU250::try_into(
+                StorageAccess::read(address_domain, base)?
+            ).expect('StorageAccessU250 - non u250')
         )
     }
     #[inline(always)]
     fn write(address_domain: u32, base: StorageBaseAddress, value: u250) -> SyscallResult<()> {
-        StorageAccess::<felt252>::write(address_domain, base, U250IntoFelt252::into(value))
+        StorageAccess::write(address_domain, base, U250IntoFelt252::into(value))
     }
 }
 

@@ -137,7 +137,7 @@ mod Move {
         calldata.append('name');
         commands::execute(SpawnSystem, calldata.span());
 
-        move_inner(@positions_query, 0_u32, positions_query.len());
+        // move_inner(@positions_query, 0_u32, positions_query.len());
 
         let err = commands::<>::entity(player_id.into());
 
@@ -478,27 +478,125 @@ mod MoveSystem {
 
     #[external]
     fn execute(player_id: felt252, world_address: starknet::ContractAddress) {
-        let positions_query = array::ArrayTrait::<usize>::new();
-        let __positions_query_position_ids = IWorldDispatcher {
+        let mut __positions_query_ids: Array<Span<dojo_core::integer::u250>> = ArrayTrait::new();
+        let mut __positions_query_entities_raw: Array<Span<Span<felt252>>> = ArrayTrait::new();
+
+        let (__positions_query_position_ids, __positions_query_position_raw) = IWorldDispatcher {
             contract_address: world_address
         }.entities(
             dojo_core::string::ShortStringTrait::new('Position'),
             dojo_core::integer::u250Trait::new(0)
         );
+        __positions_query_ids.append(__positions_query_position_ids);
+        __positions_query_entities_raw.append(__positions_query_position_raw);
 
-        let __positions_query_player_ids = IWorldDispatcher {
+        let (__positions_query_player_ids, __positions_query_player_raw) = IWorldDispatcher {
             contract_address: world_address
         }.entities(
             dojo_core::string::ShortStringTrait::new('Player'),
             dojo_core::integer::u250Trait::new(0)
         );
-        let players_query = array::ArrayTrait::<usize>::new();
-        let __players_query_player_ids = IWorldDispatcher {
+        __positions_query_ids.append(__positions_query_player_ids);
+        __positions_query_entities_raw.append(__positions_query_player_raw);
+
+        let mut __positions_query_matching_entities = dojo_core::storage::utils::find_matching(
+            __positions_query_ids.span(), __positions_query_entities_raw.span()
+        );
+
+        let __positions = match __positions_query_matching_entities.get(0) {
+            Option::Some(raw_entities) => {
+                let mut raw_entities = *box::BoxTrait::unbox(raw_entities);
+                let mut entities: Array<Position> = ArrayTrait::new();
+                loop {
+                    match raw_entities.pop_front() {
+                        Option::Some(raw) => {
+                            let mut raw = *raw;
+                            let e = serde::Serde::<Position>::deserialize(
+                                ref raw
+                            ).expect('Position failed to deserialize');
+                            entities.append(e);
+                        },
+                        Option::None(_) => {
+                            break ();
+                        }
+                    };
+                };
+                entities.span()
+            },
+            Option::None(_) => {
+                ArrayTrait::<Position>::new().span()
+            }
+        };
+
+        let __players = match __positions_query_matching_entities.get(1) {
+            Option::Some(raw_entities) => {
+                let mut raw_entities = *box::BoxTrait::unbox(raw_entities);
+                let mut entities: Array<Player> = ArrayTrait::new();
+                loop {
+                    match raw_entities.pop_front() {
+                        Option::Some(raw) => {
+                            let mut raw = *raw;
+                            let e = serde::Serde::<Player>::deserialize(
+                                ref raw
+                            ).expect('Player failed to deserialize');
+                            entities.append(e);
+                        },
+                        Option::None(_) => {
+                            break ();
+                        }
+                    };
+                };
+                entities.span()
+            },
+            Option::None(_) => {
+                ArrayTrait::<Player>::new().span()
+            }
+        };
+
+        let positions_query = (__positions, __players);
+
+        let mut __players_query_ids: Array<Span<dojo_core::integer::u250>> = ArrayTrait::new();
+        let mut __players_query_entities_raw: Array<Span<Span<felt252>>> = ArrayTrait::new();
+
+        let (__players_query_player_ids, __players_query_player_raw) = IWorldDispatcher {
             contract_address: world_address
         }.entities(
             dojo_core::string::ShortStringTrait::new('Player'),
             dojo_core::integer::u250Trait::new(0)
         );
+        __players_query_ids.append(__players_query_player_ids);
+        __players_query_entities_raw.append(__players_query_player_raw);
+
+        let mut __players_query_matching_entities = dojo_core::storage::utils::find_matching(
+            __players_query_ids.span(), __players_query_entities_raw.span()
+        );
+
+        let __players = match __players_query_matching_entities.get(0) {
+            Option::Some(raw_entities) => {
+                let mut raw_entities = *box::BoxTrait::unbox(raw_entities);
+                let mut entities: Array<Player> = ArrayTrait::new();
+                loop {
+                    match raw_entities.pop_front() {
+                        Option::Some(raw) => {
+                            let mut raw = *raw;
+                            let e = serde::Serde::<Player>::deserialize(
+                                ref raw
+                            ).expect('Player failed to deserialize');
+                            entities.append(e);
+                        },
+                        Option::None(_) => {
+                            break ();
+                        }
+                    };
+                };
+                entities.span()
+            },
+            Option::None(_) => {
+                ArrayTrait::<Player>::new().span()
+            }
+        };
+
+        let players_query = (__players);
 
         let mut __player_player_raw = IWorldDispatcher {
             contract_address: world_address
@@ -560,20 +658,87 @@ mod MoveSystem {
             ).expect('Player failed to deserialize');
             let player_position = (__player_position_position, __player_position_player);
             if foo.len() > 0_u32 {
-                let positions_query = array::ArrayTrait::<usize>::new();
-                let __positions_query_position_ids = IWorldDispatcher {
+                let mut __positions_query_ids: Array<Span<dojo_core::integer::u250>> =
+                    ArrayTrait::new();
+                let mut __positions_query_entities_raw: Array<Span<Span<felt252>>> =
+                    ArrayTrait::new();
+
+                let (__positions_query_position_ids, __positions_query_position_raw) =
+                    IWorldDispatcher {
                     contract_address: world_address
                 }.entities(
                     dojo_core::string::ShortStringTrait::new('Position'),
                     dojo_core::integer::u250Trait::new(0)
                 );
+                __positions_query_ids.append(__positions_query_position_ids);
+                __positions_query_entities_raw.append(__positions_query_position_raw);
 
-                let __positions_query_player_ids = IWorldDispatcher {
+                let (__positions_query_player_ids, __positions_query_player_raw) =
+                    IWorldDispatcher {
                     contract_address: world_address
                 }.entities(
                     dojo_core::string::ShortStringTrait::new('Player'),
                     dojo_core::integer::u250Trait::new(0)
                 );
+                __positions_query_ids.append(__positions_query_player_ids);
+                __positions_query_entities_raw.append(__positions_query_player_raw);
+
+                let mut __positions_query_matching_entities =
+                    dojo_core::storage::utils::find_matching(
+                    __positions_query_ids.span(), __positions_query_entities_raw.span()
+                );
+
+                let __positions = match __positions_query_matching_entities.get(0) {
+                    Option::Some(raw_entities) => {
+                        let mut raw_entities = *box::BoxTrait::unbox(raw_entities);
+                        let mut entities: Array<Position> = ArrayTrait::new();
+                        loop {
+                            match raw_entities.pop_front() {
+                                Option::Some(raw) => {
+                                    let mut raw = *raw;
+                                    let e = serde::Serde::<Position>::deserialize(
+                                        ref raw
+                                    ).expect('Position failed to deserialize');
+                                    entities.append(e);
+                                },
+                                Option::None(_) => {
+                                    break ();
+                                }
+                            };
+                        };
+                        entities.span()
+                    },
+                    Option::None(_) => {
+                        ArrayTrait::<Position>::new().span()
+                    }
+                };
+
+                let __players = match __positions_query_matching_entities.get(1) {
+                    Option::Some(raw_entities) => {
+                        let mut raw_entities = *box::BoxTrait::unbox(raw_entities);
+                        let mut entities: Array<Player> = ArrayTrait::new();
+                        loop {
+                            match raw_entities.pop_front() {
+                                Option::Some(raw) => {
+                                    let mut raw = *raw;
+                                    let e = serde::Serde::<Player>::deserialize(
+                                        ref raw
+                                    ).expect('Player failed to deserialize');
+                                    entities.append(e);
+                                },
+                                Option::None(_) => {
+                                    break ();
+                                }
+                            };
+                        };
+                        entities.span()
+                    },
+                    Option::None(_) => {
+                        ArrayTrait::<Player>::new().span()
+                    }
+                };
+
+                let positions_query = (__positions, __players);
             }
         } else if bar == 321 {
             let mut __maybe_player_player_raw = IWorldDispatcher {
@@ -733,20 +898,87 @@ mod MoveSystem {
                 ).expect('Player failed to deserialize');
                 let player_position = (__player_position_position, __player_position_player);
                 if bar == 123 {
-                    let positions_query = array::ArrayTrait::<usize>::new();
-                    let __positions_query_position_ids = IWorldDispatcher {
+                    let mut __positions_query_ids: Array<Span<dojo_core::integer::u250>> =
+                        ArrayTrait::new();
+                    let mut __positions_query_entities_raw: Array<Span<Span<felt252>>> =
+                        ArrayTrait::new();
+
+                    let (__positions_query_position_ids, __positions_query_position_raw) =
+                        IWorldDispatcher {
                         contract_address: world_address
                     }.entities(
                         dojo_core::string::ShortStringTrait::new('Position'),
                         dojo_core::integer::u250Trait::new(0)
                     );
+                    __positions_query_ids.append(__positions_query_position_ids);
+                    __positions_query_entities_raw.append(__positions_query_position_raw);
 
-                    let __positions_query_player_ids = IWorldDispatcher {
+                    let (__positions_query_player_ids, __positions_query_player_raw) =
+                        IWorldDispatcher {
                         contract_address: world_address
                     }.entities(
                         dojo_core::string::ShortStringTrait::new('Player'),
                         dojo_core::integer::u250Trait::new(0)
                     );
+                    __positions_query_ids.append(__positions_query_player_ids);
+                    __positions_query_entities_raw.append(__positions_query_player_raw);
+
+                    let mut __positions_query_matching_entities =
+                        dojo_core::storage::utils::find_matching(
+                        __positions_query_ids.span(), __positions_query_entities_raw.span()
+                    );
+
+                    let __positions = match __positions_query_matching_entities.get(0) {
+                        Option::Some(raw_entities) => {
+                            let mut raw_entities = *box::BoxTrait::unbox(raw_entities);
+                            let mut entities: Array<Position> = ArrayTrait::new();
+                            loop {
+                                match raw_entities.pop_front() {
+                                    Option::Some(raw) => {
+                                        let mut raw = *raw;
+                                        let e = serde::Serde::<Position>::deserialize(
+                                            ref raw
+                                        ).expect('Position failed to deserialize');
+                                        entities.append(e);
+                                    },
+                                    Option::None(_) => {
+                                        break ();
+                                    }
+                                };
+                            };
+                            entities.span()
+                        },
+                        Option::None(_) => {
+                            ArrayTrait::<Position>::new().span()
+                        }
+                    };
+
+                    let __players = match __positions_query_matching_entities.get(1) {
+                        Option::Some(raw_entities) => {
+                            let mut raw_entities = *box::BoxTrait::unbox(raw_entities);
+                            let mut entities: Array<Player> = ArrayTrait::new();
+                            loop {
+                                match raw_entities.pop_front() {
+                                    Option::Some(raw) => {
+                                        let mut raw = *raw;
+                                        let e = serde::Serde::<Player>::deserialize(
+                                            ref raw
+                                        ).expect('Player failed to deserialize');
+                                        entities.append(e);
+                                    },
+                                    Option::None(_) => {
+                                        break ();
+                                    }
+                                };
+                            };
+                            entities.span()
+                        },
+                        Option::None(_) => {
+                            ArrayTrait::<Player>::new().span()
+                        }
+                    };
+
+                    let positions_query = (__positions, __players);
                 }
             },
             Option::None(()) => {
@@ -790,8 +1022,6 @@ mod MoveSystem {
         IWorldDispatcher {
             contract_address: world_address
         }.execute(dojo_core::string::ShortStringTrait::new('SpawnSystem'), calldata.span());
-
-        move_inner(@positions_query, 0_u32, positions_query.len());
 
         let mut i = 0;
         loop {

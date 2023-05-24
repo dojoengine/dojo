@@ -1,9 +1,14 @@
 #[derive(Component, Copy, Drop, Serde)]
-struct Approval {
+struct Allowance {
     amount: felt252,
 }
 
 #[derive(Component, Copy, Drop, Serde)]
-struct Ownership {
-    balance: felt252,
+struct Balance {
+    amount: felt252,
+}
+
+#[derive(Component, Copy, Drop, Serde)]
+struct Supply {
+    amount: felt252
 }

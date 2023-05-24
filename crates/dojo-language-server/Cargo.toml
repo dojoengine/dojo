@@ -11,13 +11,13 @@ path = "src/bin/language_server.rs"
 [dependencies]
 anyhow.workspace = true
 dojo-lang = { path = "../dojo-lang" }
-cairo-lang-compiler = "1.0.0-rc0"
-cairo-lang-language-server = "1.0.0-rc0"
-cairo-lang-starknet = "1.0.0-rc0"
-cairo-lang-semantic = "1.0.0-rc0"
-cairo-lang-plugins = "1.0.0-rc0"
-cairo-lang-filesystem = "1.0.0-rc0"
-cairo-lang-utils = "1.0.0-rc0"
+cairo-lang-compiler.workspace = true
+cairo-lang-language-server.workspace = true
+cairo-lang-starknet.workspace = true
+cairo-lang-semantic.workspace = true
+cairo-lang-plugins.workspace = true
+cairo-lang-filesystem.workspace = true
+cairo-lang-utils.workspace = true
 log = "0.4.14"
 tokio = { version = "1.18.2", features = ["full", "sync"] }
 tower-lsp = "0.17.0"
