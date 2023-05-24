@@ -443,7 +443,7 @@ pub trait Sequencer {
     fn block(&self, block_id: BlockId) -> Option<StarknetBlock>;
 
     fn transaction(&self, hash: &TransactionHash)
-        -> Option<starknet_api::transaction::Transaction>;
+    -> Option<starknet_api::transaction::Transaction>;
 
     fn class_hash_at(
         &mut self,

@@ -200,7 +200,7 @@ impl StarknetWrapper {
                         .map(|last_block| last_block.header().state_root.0.into())
                         .unwrap()
                 },
-                state_diff: convert_state_diff_to_rpc_state_diff(pending_state_diff.clone()),
+                state_diff: convert_state_diff_to_rpc_state_diff(pending_state_diff),
             },
         );
 
