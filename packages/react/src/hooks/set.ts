@@ -7,7 +7,8 @@ import {
 
 // this could be moved to the core...
 
-// todo expose calls as an array to client so users can build a queue of calls
+// TODO: expose calls as an array to client so users can build a queue of calls
+// TODO: loading
 export function useSystem<T>({
     key,
 }: {

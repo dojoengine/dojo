@@ -20,6 +20,20 @@ const entities = [
     { id: 'D', src: 'nazi.png', position: { x: 2, y: 3 }, direction: -1 },
     { id: 'E', src: 'nazi.png', position: { x: 12, y: 33 }, direction: -1 },
     { id: 'F', src: 'nazi.png', position: { x: 4, y: 34 }, direction: -1 },
+    { id: 'G', src: 'player.png', position: { x: 10, y: 10 }, direction: -1 },
+    { id: 'H', src: 'player.png', position: { x: 20, y: 20 }, direction: -1 },
+    { id: 'I', src: 'player.png', position: { x: 30, y: 30 }, direction: -1 },
+    { id: 'G', src: 'nazi.png', position: { x: 2, y: 3 }, direction: -1 },
+    { id: 'K', src: 'nazi.png', position: { x: 12, y: 33 }, direction: -1 },
+    { id: 'L', src: 'nazi.png', position: { x: 4, y: 34 }, direction: -1 },
+    { id: 'M', src: 'player.png', position: { x: 10, y: 10 }, direction: -1 },
+    { id: 'N', src: 'player.png', position: { x: 20, y: 20 }, direction: -1 },
+    { id: 'O', src: 'player.png', position: { x: 30, y: 30 }, direction: -1 },
+    { id: 'P', src: 'nazi.png', position: { x: 2, y: 3 }, direction: -1 },
+    { id: 'Q', src: 'nazi.png', position: { x: 12, y: 33 }, direction: -1 },
+    { id: 'R', src: 'nazi.png', position: { x: 4, y: 34 }, direction: -1 },
+    { id: 'S', src: 'player.png', position: { x: 10, y: 10 }, direction: -1 },
+    { id: 'W', src: 'player.png', position: { x: 20, y: 20 }, direction: -1 }
 ];
 
 const GridComponent = () => {
@@ -93,7 +107,7 @@ const GridComponent = () => {
                         style={{ width: '20px', height: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
                         onClick={() => handleCellClick(cell)}
                     >
-                        {cell ? <Position entity_id={cell.id} src={cell.src} position={cell.position} direction={cell.direction} /> : null}
+                        {cell ? <Position entityId={cell.id} src={cell.src} position={cell.position} direction={cell.direction} /> : null}
                     </div>
                 ))
             )}
