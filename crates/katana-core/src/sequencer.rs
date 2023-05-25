@@ -72,7 +72,7 @@ impl KatanaSequencer {
         self.deploy_account(class_hash, contract_address_salt, constructor_calldata, signature)
     }
 
-    pub fn state_from_block_id(&self, block_id: BlockId) -> Option<DictStateReader> {
+    pub fn state_from_block_id(&mut self, block_id: BlockId) -> Option<DictStateReader> {
         match block_id {
             BlockId::Tag(BlockTag::Latest) => Some(self.starknet.latest_state()),
             BlockId::Tag(BlockTag::Pending) => Some(self.starknet.pending_state()),
@@ -155,7 +155,7 @@ impl Sequencer for KatanaSequencer {
     }
 
     fn estimate_fee(
-        &self,
+        &mut self,
         account_transaction: AccountTransaction,
         block_id: BlockId,
     ) -> SequencerResult<FeeEstimate> {
@@ -292,7 +292,7 @@ impl Sequencer for KatanaSequencer {
     }
 
     fn call(
-        &self,
+        &mut self,
         block_id: BlockId,
         function_call: ExternalFunctionCall,
     ) -> SequencerResult<Vec<StarkFelt>> {
@@ -473,7 +473,7 @@ pub trait Sequencer {
     fn block_hash_and_number(&self) -> Option<(BlockHash, BlockNumber)>;
 
     fn call(
-        &self,
+        &mut self,
         block_id: BlockId,
         function_call: ExternalFunctionCall,
     ) -> SequencerResult<Vec<StarkFelt>>;
@@ -496,7 +496,7 @@ pub trait Sequencer {
     fn add_account_transaction(&mut self, transaction: AccountTransaction);
 
     fn estimate_fee(
-        &self,
+        &mut self,
         account_transaction: AccountTransaction,
         block_id: BlockId,
     ) -> SequencerResult<FeeEstimate>;
