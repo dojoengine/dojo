@@ -18,7 +18,7 @@ cairo-lang-filesystem.workspace = true
 scarb.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-serde_with = "2.3.1"
+serde_with.workspace = true
 smol_str.workspace = true
 starknet.workspace = true
 url = "2.2.2"
@@ -27,4 +27,4 @@ tracing.workspace = true
 [dev-dependencies]
 indoc.workspace = true
 test-log.workspace = true
-tokio = { version = "1.28.0", features = ["full"] }
+tokio = { version = "1.28.0", features = [ "full" ] }

@@ -4,6 +4,12 @@
 </picture>
 
 ## Dojo
+<a href="https://twitter.com/dojostarknet">
+<img src="https://img.shields.io/twitter/follow/dojostarknet?style=social"/>
+</a>
+<a href="https://github.com/dojoengine/dojo">
+<img src="https://img.shields.io/github/stars/dojoengine/dojo?style=social"/>
+</a>
 
 [![discord](https://img.shields.io/badge/join-dojo-green?logo=discord&logoColor=white)](https://discord.gg/PwDa2mKhR4)
 ![Github Actions][gha-badge] [![Telegram Chat][tg-badge]][tg-url]
@@ -14,26 +20,48 @@
 
 [tg-url]: https://t.me/dojoengine
 
+
+
 **Dojo is a community driven open-source, Provable Game Engine, providing a comprehensive toolkit for building verifiable games and autonomous worlds.**
 
-Some of Dojo features:
+Dojo is still in its early stages of development, yet the dedicated contributors are propelling its progress at an impressive pace. The overarching aspiration for Dojo is to empower game developers to kick-start their projects, aiming to reduce the initial setup time from days to mere hours. Join the movement!
 
+## 🔑 Key Features
 - Cairo 1.0 Entity Component System (ECS)
 - Sozu migration planner
 - [Torii](/crates/torii/README.md) networking & indexing stack
 - [Katana](/crates/katana/README.md) RPC development network
-- Typed SDKs for Client
+- Typed SDKs
 
 
-## Installation
+## 🚀 Quick Start
 
-See the [installation guide](https://book.dojoengine.org/getting-started/installation.html) in the book.
+See the [installation guide](https://book.dojoengine.org/getting-started/installation.html) in the Dojo book.
 
-## Built with Dojo 
+## 🗒️ Documentation
+You can find more detailed documentation in the Dojo Book [here](https://book.dojoengine.org/).
+
+## ❓ Support
+If you encounter issues or have questions, you can [submit an issue on GitHub](https://github.com/dojoengine/dojo/issues). You can also join our [Discord](https://discord.gg/PwDa2mKhR4) for discussion and help.
+
+## 🏗️ Contributing
+We welcome contributions of all kinds from anyone. See our [Contribution Guide](/CONTRIBUTING.md) for more information on how to get involved.
+
+## ✏️ Enviroment
+See our [Enviroment setup](https://book.dojoengine.org/development/enviroment.html) for more information.
+
+## ⛩️ Built with Dojo 
 - [Roll Your Own](https://github.com/cartridge-gg/rollyourown)
 - [Realms Autonomous World](https://github.com/BibliothecaDAO/eternum)
 
-## Overview
+---
+
+## Dojo Core Overview
+
+- [ECS](#entity-component-system)
+- - [World](#world)
+- - [Components](#world)
+- - [Systems](#world)
 
 ### Entity Component System
 
