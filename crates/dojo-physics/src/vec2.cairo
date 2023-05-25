@@ -39,8 +39,8 @@ impl Vec2Impl<T, impl TCopy: Copy<T>, impl TDrop: Drop<T>> of Vec2Trait<T> {
     }
     /// Creates a vector with all elements set to `v`.
     #[inline(always)]
-    fn splat(v: T) -> Vec2<T> {
-        Vec2::<T> { x: v, y: v }
+    fn splat(self: T) -> Vec2<T> {
+        Vec2::<T> { x: self, y: self }
     }
 
     // Masks

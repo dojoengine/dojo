@@ -1,0 +1,7 @@
+[package]
+name = "projectile"
+version = "0.1.0"
+
+[dependencies]
+dojo_physics = { path = "../.."}
+cubit = { git = "https://github.com/influenceth/cubit" }

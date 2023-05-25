@@ -30,10 +30,10 @@ fn main() {
     let y_0_felt = 0;
 
     /// Convert inputs to signed fixed-point
-    let v_0_mag = Fixed::from_unscaled_felt252(v_0_mag_felt);
-    let theta_0_deg = Fixed::from_unscaled_felt252(theta_0_deg_felt);
-    let x_0 = Fixed::from_unscaled_felt252(x_0_felt);
-    let y_0 = Fixed::from_unscaled_felt252(y_0_felt);
+    let v_0_mag = Fixed::from_unscaled_felt(v_0_mag_felt);
+    let theta_0_deg = Fixed::from_unscaled_felt(theta_0_deg_felt);
+    let x_0 = Fixed::from_unscaled_felt(x_0_felt);
+    let y_0 = Fixed::from_unscaled_felt(y_0_felt);
 
     /// Convert theta_0_deg to radians
     let theta_0 = deg_to_rad(theta_0_deg);
@@ -42,10 +42,10 @@ fn main() {
     let g = Fixed::new(98 * ONE_u128 / 10, false); // 9.8
 
     // Plot parameters
-    let x_max = Fixed::from_unscaled_felt252(1000);
-    let x_min = Fixed::from_unscaled_felt252(-1000);
-    let y_max = Fixed::from_unscaled_felt252(500);
-    let y_min = Fixed::from_unscaled_felt252(-500);
+    let x_max = Fixed::from_unscaled_felt(1000);
+    let x_min = Fixed::from_unscaled_felt(-1000);
+    let y_max = Fixed::from_unscaled_felt(500);
+    let y_min = Fixed::from_unscaled_felt(-500);
 
     // Check that inputs are within required ranges
     assert(v_0_mag.mag <= 100, 'need v_0_felt <= 100');
@@ -63,7 +63,7 @@ fn main() {
     let v_0 = vec2_from_mag_theta(v_0_mag, theta_0);
 
     // Time interval between plotted points
-    let delta_t = Fixed::from_unscaled_felt252(2); // arbitrary value 2 chosen
+    let delta_t = Fixed::from_unscaled_felt(2); // arbitrary value 2 chosen
 
     // Tuples to pass to functions
     let plot_params = (x_max, x_min, y_max, y_min);
@@ -202,21 +202,21 @@ fn test_fill_position_s() {
     //     motion_params: (Vec2<FixedType>, Vec2<FixedType>, FixedType, FixedType)
     // ) -> Array::<Vec2<FixedType>> {
 
-    let v_0_mag = Fixed::from_unscaled_felt252(100);
-    let theta_0_deg = Fixed::from_unscaled_felt252(65);
+    let v_0_mag = Fixed::from_unscaled_felt(100);
+    let theta_0_deg = Fixed::from_unscaled_felt(65);
     let theta_0 = deg_to_rad(theta_0_deg);
-    let x_0 = Fixed::from_unscaled_felt252(0);
-    let y_0 = Fixed::from_unscaled_felt252(0);
+    let x_0 = Fixed::from_unscaled_felt(0);
+    let y_0 = Fixed::from_unscaled_felt(0);
 
-    let x_max = Fixed::from_unscaled_felt252(1000);
-    let x_min = Fixed::from_unscaled_felt252(-1000);
-    let y_max = Fixed::from_unscaled_felt252(500);
-    let y_min = Fixed::from_unscaled_felt252(-500);
+    let x_max = Fixed::from_unscaled_felt(1000);
+    let x_min = Fixed::from_unscaled_felt(-1000);
+    let y_max = Fixed::from_unscaled_felt(500);
+    let y_min = Fixed::from_unscaled_felt(-500);
 
     let r_0 = Vec2Trait::<FixedType>::new(x_0, y_0);
     let v_0 = vec2_from_mag_theta(v_0_mag, theta_0);
     let g = Fixed::new(98 * ONE_u128 / 10, false);
-    let delta_t = Fixed::from_unscaled_felt252(2);
+    let delta_t = Fixed::from_unscaled_felt(2);
 
     let plot_params = (x_max, x_min, y_max, y_min);
     let motion_params = (r_0, v_0, g, delta_t);
