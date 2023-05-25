@@ -115,14 +115,18 @@ impl EnvironmentConfig {
                 config.private_key = Some(pk);
             }
 
-            if let Some(path) =
-                env.get("keystore_path").and_then(|v| v.as_str().map(|s| s.to_string()))
+            if let Some(path) = env
+                .get("keystore_path")
+                .and_then(|v| v.as_str().map(|s| s.to_string()))
+                .or(std::env::var("DOJO_KEYSTORE_PATH").ok())
             {
                 config.keystore_path = Some(path);
             }
 
-            if let Some(password) =
-                env.get("keystore_password").and_then(|v| v.as_str().map(|s| s.to_string()))
+            if let Some(password) = env
+                .get("keystore_password")
+                .and_then(|v| v.as_str().map(|s| s.to_string()))
+                .or(std::env::var("DOJO_KEYSTORE_PASSWORD").ok())
             {
                 config.keystore_password = Some(password);
             }
