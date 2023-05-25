@@ -16,3 +16,11 @@ initializer_class_hash = "0xbeef"
 
 [tool.dojo.testnet]
 rpc = "https://rpc.testnet.starkware.co"
+
+[tool.dojo.env]
+rpc_url = "http://localhost:5050/"
+account_address = "0x123"
+private_key = "0x456"
+
+keystore_path = "../keystore.json"
+keystore_password = "password"
