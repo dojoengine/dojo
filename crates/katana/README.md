@@ -4,7 +4,7 @@
 
 ## Features
 
--   [Starknet JSON-RPC](https://github.com/starkware-libs/starknet-specs) support
+-   [Starknet JSON-RPC v0.3.0](https://github.com/starkware-libs/starknet-specs/tree/v0.3.0) support
 
 ## Installation
 
