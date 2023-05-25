@@ -76,8 +76,7 @@ impl Migration {
 
         let world_address = self
             .world
-            .contract
-            .address
+            .contract_address
             .unwrap_or_else(|| panic!("World contract address not found"));
 
         let calls = self
@@ -102,8 +101,7 @@ impl Migration {
 
         let world_address = self
             .world
-            .contract
-            .address
+            .contract_address
             .unwrap_or_else(|| panic!("World contract address not found"));
 
         let calls = self

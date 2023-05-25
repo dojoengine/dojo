@@ -23,7 +23,7 @@ async fn main() {
             init::run(args);
             Ok(())
         }
-        Commands::Migrate(args) => migrate::run(args),
+        Commands::Migrate(args) => migrate::run(args).await,
         Commands::Bind(..) => Ok(print!("Bind")),
         Commands::Inspect(..) => Ok(print!("Inspect")),
     };
