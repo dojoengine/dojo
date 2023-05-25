@@ -2,12 +2,14 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use config::RpcConfig;
+use hyper::Method;
 use jsonrpsee::core::Error;
-use jsonrpsee::server::{ServerBuilder, ServerHandle};
+use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
 use katana::api::KatanaApiServer;
 use katana::KatanaRpc;
 use katana_core::sequencer::Sequencer;
 use tokio::sync::RwLock;
+use tower_http::cors::{Any, CorsLayer};
 
 pub mod config;
 mod katana;
@@ -35,8 +37,18 @@ where
         let mut methods = KatanaRpc::new(self.sequencer.clone()).into_rpc();
         methods.merge(StarknetRpc::new(self.sequencer.clone()).into_rpc())?;
 
+        let cors = CorsLayer::new()
+            // Allow `POST` when accessing the resource
+            .allow_methods([Method::POST])
+            // Allow requests from any origin
+            .allow_origin(Any)
+            .allow_headers([hyper::header::CONTENT_TYPE]);
+        let middleware = tower::ServiceBuilder::new().layer(cors);
+
         let server = ServerBuilder::new()
             .set_logger(KatanaNodeRpcLogger)
+            .set_host_filtering(AllowHosts::Any)
+            .set_middleware(middleware)
             .build(format!("127.0.0.1:{}", self.config.port))
             .await
             .map_err(|_| Error::from(StarknetApiError::InternalServerError))?;
