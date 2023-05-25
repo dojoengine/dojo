@@ -1,6 +1,6 @@
 ![katana](../../.github/katana-mark.svg)
 
-`katana` is _a blazingly_ fast local Starknet node, designed to support local development with Dojo.
+`katana` is a _blazingly fast_ local Starknet node, designed to support local development with Dojo.
 
 ## Features
 
