@@ -1,18 +1,22 @@
 use clap::Parser;
 use futures::join;
 use graphql::server::start_graphql;
+use num::{BigUint, Num};
 use sqlx::sqlite::SqlitePoolOptions;
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::JsonRpcClient;
 // #[cfg(feature = "postgres")]
 // use sqlx::postgres::{PgPoolOptions};
 use tokio_util::sync::CancellationToken;
 use tracing_subscriber::fmt;
+use url::Url;
 
-// use crate::indexer::start_indexer;
+use crate::indexer::start_indexer;
 
-// mod processors;
+mod processors;
 
 mod graphql;
-// mod indexer;
+mod indexer;
 mod tests;
 
 /// Dojo World Indexer
@@ -20,14 +24,11 @@ mod tests;
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// The world to index
-    #[arg(short, long)]
+    #[arg(short, long, default_value = "0x420")]
     world: String,
     /// The rpc endpoint to use
-    #[arg(long)]
+    #[arg(long, default_value = "http://localhost:8080")]
     rpc: String,
-    /// The Apibara node to use
-    #[arg(short, long)]
-    apibara: Option<String>,
     /// Database url
     #[arg(short, long, default_value = "sqlite::memory:")]
     database_url: String,
@@ -54,22 +55,19 @@ async fn main() -> anyhow::Result<()> {
         }
     })?;
 
-    // let world = BigUint::from_str_radix(&args.world[2..], 16).unwrap_or_else(|error| {
-    //     panic!("Failed parsing world address: {error:?}");
-    // });
+    let world = BigUint::from_str_radix(&args.world[2..], 16).unwrap_or_else(|error| {
+        panic!("Failed parsing world address: {error:?}");
+    });
 
     let database_url = &args.database_url;
     #[cfg(feature = "sqlite")]
     let pool = SqlitePoolOptions::new().max_connections(5).connect(database_url).await?;
-    // #[cfg(feature = "postgres")]
-    // let pool = PgPoolOptions::new().max_connections(5).connect(database_url).await?;
-
-    // let provider = JsonRpcClient::new(HttpTransport::new(Url::parse(&args.rpc).unwrap()));
+    let provider = JsonRpcClient::new(HttpTransport::new(Url::parse(&args.rpc).unwrap()));
 
     let graphql = start_graphql(&pool);
-    // let indexer = start_indexer(cts.clone(), world, node_uri, &pool, &provider);
+    let indexer = start_indexer(cts.clone(), world, &pool, &provider);
 
-    let _ = join!(graphql); //, indexer);
+    let _ = join!(graphql, indexer);
 
     Ok(())
 }

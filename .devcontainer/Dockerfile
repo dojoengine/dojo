@@ -6,7 +6,7 @@ FROM mcr.microsoft.com/vscode/devcontainers/rust:0-${VARIANT}
 
 # Install additional packages
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-    && apt-get -y install --no-install-recommends protobuf-compiler libprotobuf-dev
+    && apt-get -y install --no-install-recommends protobuf-compiler libprotobuf-dev libclang-dev
 
 RUN apt install -y libgmp3-dev
 

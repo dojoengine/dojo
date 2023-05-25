@@ -1,12 +1,12 @@
 use anyhow::{Error, Result};
-use apibara_core::starknet::v1alpha2::{Block, EventWithTransaction, TransactionWithReceipt};
+use async_trait::async_trait;
 use sqlx::{Pool, Sqlite};
+use starknet::core::types::{BlockWithTxs, Event, TransactionReceipt};
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
-use tonic::async_trait;
 
-pub mod component_register;
-pub mod component_state_update;
-pub mod system_register;
+// pub mod component_register;
+// pub mod component_state_update;
+// pub mod system_register;
 
 #[async_trait]
 pub trait EventProcessor<S: JsonRpcTransport> {
@@ -15,7 +15,7 @@ pub trait EventProcessor<S: JsonRpcTransport> {
         &self,
         pool: &Pool<Sqlite>,
         provider: &JsonRpcClient<S>,
-        data: EventWithTransaction,
+        event: &Event,
     ) -> Result<(), Error>;
 }
 
@@ -26,7 +26,7 @@ pub trait BlockProcessor<S: JsonRpcTransport> {
         &self,
         pool: &Pool<Sqlite>,
         provider: &JsonRpcClient<S>,
-        data: Block,
+        block: &BlockWithTxs,
     ) -> Result<(), Error>;
 }
 
@@ -37,6 +37,6 @@ pub trait TransactionProcessor<S: JsonRpcTransport> {
         &self,
         pool: &Pool<Sqlite>,
         provider: &JsonRpcClient<S>,
-        data: TransactionWithReceipt,
+        transaction_receipt: &TransactionReceipt,
     ) -> Result<(), Error>;
 }

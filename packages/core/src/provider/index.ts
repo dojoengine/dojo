@@ -1,2 +1,3 @@
 import { RPCProvider } from "./RPCProvider";
-export { RPCProvider };
+import { WebSocketProvider } from "./WSProvider";
+export { RPCProvider, WebSocketProvider };

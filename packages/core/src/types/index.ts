@@ -10,21 +10,19 @@ export interface Query {
     keys: string[]
 }
 
-// TODO: add individual interfaces for each of the entrypoints
-export interface IWorld {
-    register_component?(string: string): void;
-    component?(name: bigint): Promise<string>;
-    register_system?(string: string): void;
-    system?(name: bigint): Promise<string>;
-    execute?(name: bigint, execute_calldata: Array<bigint>): Promise<Array<bigint>>;
-    uuid?(): Promise<bigint>;
-    set_entity?(component: bigint, query: Query, offset: number, value: Array<bigint>): void;
-    delete_entity?(component: bigint, query: Query): void;
+export interface ICommands {
+    // get singular component
     entity?(component: string, query: Query, offset: number, length: number): Promise<Array<bigint>>;
+    // composeEntity?(parameters: Array<{ component: string; query: Query; offset: number; length: number }>): Promise<{ [key: string]: Array<bigint> }>
+
+    // get many
     entities?(component: bigint, partition: bigint): Promise<Array<bigint>>;
-    set_executor?(string: string): void;
-    has_role?(role: bigint, account: string): Promise<boolean>;
-    grant_role?(role: bigint, account: string): void;
-    revoke_role?(role: bigint, account: string): void;
-    renounce_role?(role: bigint): void;
+    // composeEntities?(parameters: Array<{ component: string; query: Query; offset: number; length: number }>): Promise<{ [key: string]: Array<bigint> }>
+
+    // execute
+    execute?(name: bigint, execute_calldata: Array<bigint>): Promise<Array<bigint>>;
+
+    // add generic world commands
+    blocktime?(): Promise<bigint>;
+    worldAge?(): Promise<bigint>;
 }

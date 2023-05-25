@@ -3,7 +3,7 @@ use std::vec;
 
 use blockifier::transaction::errors::TransactionExecutionError;
 use blockifier::transaction::objects::TransactionExecutionInfo;
-use starknet::providers::jsonrpc::models::TransactionStatus;
+use starknet::core::types::TransactionStatus;
 use starknet_api::block::{BlockHash, BlockNumber};
 use starknet_api::core::{ContractAddress, EntryPointSelector};
 use starknet_api::hash::StarkFelt;

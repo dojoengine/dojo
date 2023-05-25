@@ -1,14 +1,21 @@
 use jsonrpsee::core::Error;
 use jsonrpsee::proc_macros::rpc;
 use jsonrpsee::types::error::{CallError, ErrorObject};
-use starknet::core::types::FieldElement;
-use starknet::providers::jsonrpc::models::{
+use serde::{Deserialize, Serialize};
+use serde_with::serde_as;
+use starknet::core::serde::unsigned_field_element::UfeHex;
+use starknet::core::types::{
     BlockHashAndNumber, BlockId, BroadcastedDeclareTransaction,
     BroadcastedDeployAccountTransaction, BroadcastedInvokeTransaction, BroadcastedTransaction,
     ContractClass, DeclareTransactionResult, DeployAccountTransactionResult, EventFilter,
-    EventsPage, FeeEstimate, FunctionCall, InvokeTransactionResult, MaybePendingBlockWithTxHashes,
-    MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, StateUpdate, Transaction,
+    EventsPage, FeeEstimate, FieldElement, FunctionCall, InvokeTransactionResult,
+    MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, MaybePendingTransactionReceipt,
+    StateUpdate, Transaction,
 };
+
+#[serde_as]
+#[derive(Serialize, Deserialize)]
+pub struct Felt(#[serde_as(as = "UfeHex")] pub FieldElement);
 
 #[derive(thiserror::Error, Clone, Copy, Debug)]
 pub enum StarknetApiError {
@@ -62,11 +69,8 @@ pub trait StarknetApi {
     async fn chain_id(&self) -> Result<String, Error>;
 
     #[method(name = "getNonce")]
-    async fn nonce(
-        &self,
-        block_id: BlockId,
-        contract_address: FieldElement,
-    ) -> Result<FieldElement, Error>;
+    async fn nonce(&self, block_id: BlockId, contract_address: FieldElement)
+    -> Result<Felt, Error>;
 
     #[method(name = "blockNumber")]
     async fn block_number(&self) -> Result<u64, Error>;
@@ -120,7 +124,7 @@ pub trait StarknetApi {
         &self,
         block_id: BlockId,
         contract_address: FieldElement,
-    ) -> Result<FieldElement, Error>;
+    ) -> Result<Felt, Error>;
 
     #[method(name = "getClass")]
     async fn class(
@@ -143,16 +147,12 @@ pub trait StarknetApi {
     #[method(name = "estimateFee")]
     async fn estimate_fee(
         &self,
-        request: BroadcastedTransaction,
+        request: Vec<BroadcastedTransaction>,
         block_id: BlockId,
-    ) -> Result<FeeEstimate, Error>;
+    ) -> Result<Vec<FeeEstimate>, Error>;
 
     #[method(name = "call")]
-    async fn call(
-        &self,
-        request: FunctionCall,
-        block_id: BlockId,
-    ) -> Result<Vec<FieldElement>, Error>;
+    async fn call(&self, request: FunctionCall, block_id: BlockId) -> Result<Vec<Felt>, Error>;
 
     #[method(name = "getStorageAt")]
     async fn storage_at(
@@ -160,7 +160,7 @@ pub trait StarknetApi {
         contract_address: FieldElement,
         key: FieldElement,
         block_id: BlockId,
-    ) -> Result<FieldElement, Error>;
+    ) -> Result<Felt, Error>;
 
     #[method(name = "addDeployAccountTransaction")]
     async fn add_deploy_account_transaction(

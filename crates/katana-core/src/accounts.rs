@@ -8,7 +8,9 @@ use blockifier::execution::contract_class::{ContractClass, ContractClassV0};
 use rand::rngs::SmallRng;
 use rand::{RngCore, SeedableRng};
 use starknet::signers::SigningKey;
-use starknet_api::core::{calculate_contract_address, ClassHash, ContractAddress, PatriciaKey};
+use starknet_api::core::{
+    calculate_contract_address, ClassHash, ContractAddress, Nonce, PatriciaKey,
+};
 use starknet_api::hash::{StarkFelt, StarkHash};
 use starknet_api::transaction::{Calldata, ContractAddressSalt};
 use starknet_api::{patricia_key, stark_felt};
@@ -67,6 +69,8 @@ impl Account {
             (self.account_address, get_storage_var_address("Account_public_key", &[]).unwrap()),
             self.public_key,
         );
+        // intialize the account nonce
+        state.address_to_nonce.insert(self.account_address, Nonce(1u8.into()));
     }
 
     fn declare(&self, state: &mut DictStateReader) {
