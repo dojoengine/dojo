@@ -40,7 +40,7 @@ use utils::transaction::{
     convert_inner_to_rpc_tx,
 };
 
-use self::api::{StarknetApiError, StarknetApiServer};
+use self::api::{Felt, StarknetApiError, StarknetApiServer};
 use crate::utils;
 
 pub mod api;
@@ -65,7 +65,7 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
         &self,
         block_id: BlockId,
         contract_address: FieldElement,
-    ) -> Result<FieldElement, Error> {
+    ) -> Result<Felt, Error> {
         let nonce = self
             .sequencer
             .write()
@@ -79,7 +79,7 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
                 _ => Error::from(StarknetApiError::InternalServerError),
             })?;
 
-        Ok(nonce.0.into())
+        Ok(Felt(nonce.0.into()))
     }
 
     async fn block_number(&self) -> Result<u64, Error> {
@@ -531,7 +531,7 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
         &self,
         block_id: BlockId,
         contract_address: FieldElement,
-    ) -> Result<FieldElement, Error> {
+    ) -> Result<Felt, Error> {
         let class_hash = self
             .sequencer
             .write()
@@ -543,7 +543,7 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
                 _ => StarknetApiError::InternalServerError,
             })?;
 
-        Ok(class_hash.0.into())
+        Ok(Felt(class_hash.0.into()))
     }
 
     async fn class(
@@ -618,11 +618,7 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
         }
     }
 
-    async fn call(
-        &self,
-        request: FunctionCall,
-        block_id: BlockId,
-    ) -> Result<Vec<FieldElement>, Error> {
+    async fn call(&self, request: FunctionCall, block_id: BlockId) -> Result<Vec<Felt>, Error> {
         let call = ExternalFunctionCall {
             contract_address: ContractAddress(patricia_key!(request.contract_address)),
             calldata: Calldata(Arc::new(
@@ -641,7 +637,7 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
         let mut values = vec![];
 
         for f in res.into_iter() {
-            values.push(f.into());
+            values.push(Felt(f.into()));
         }
 
         Ok(values)
@@ -652,7 +648,7 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
         contract_address: FieldElement,
         key: FieldElement,
         block_id: BlockId,
-    ) -> Result<FieldElement, Error> {
+    ) -> Result<Felt, Error> {
         let value = self
             .sequencer
             .write()
@@ -668,7 +664,7 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
                 _ => Error::from(StarknetApiError::InternalServerError),
             })?;
 
-        Ok(value.into())
+        Ok(Felt(value.into()))
     }
 
     async fn add_deploy_account_transaction(
