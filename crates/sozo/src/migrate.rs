@@ -24,7 +24,7 @@ pub struct MigrateArgs {
     profile_spec: ProfileSpec,
 }
 
-pub async fn run(args: MigrateArgs) -> Result<()> {
+pub fn run(args: MigrateArgs) -> Result<()> {
     dotenv().ok();
 
     let MigrateArgs { path, profile_spec, .. } = args;
@@ -60,9 +60,11 @@ pub async fn run(args: MigrateArgs) -> Result<()> {
     let world_config = WorldConfig::from_workspace(&ws).unwrap_or_default();
     let env_config = EnvironmentConfig::from_workspace(profile.as_str(), &ws)?;
 
-    let world = World::from_path(target_dir.clone(), world_config, env_config).await?;
-    let mut migration = world.prepare_for_migration(target_dir).await?;
-    migration.execute().await?;
+    ws.config().tokio_handle().block_on(async {
+        let world = World::from_path(target_dir.clone(), world_config, env_config).await?;
+        let mut migration = world.prepare_for_migration(target_dir).await?;
+        migration.execute().await
+    })?;
 
     Ok(())
 }
