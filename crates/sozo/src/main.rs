@@ -11,8 +11,8 @@ mod migrate;
 
 use cli::{App, Commands};
 
-#[tokio::main]
-async fn main() {
+// #[tokio::main]
+fn main() {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
 
     let cli = App::parse();
@@ -23,7 +23,7 @@ async fn main() {
             init::run(args);
             Ok(())
         }
-        Commands::Migrate(args) => migrate::run(args).await,
+        Commands::Migrate(args) => migrate::run(args),
         Commands::Bind(..) => Ok(print!("Bind")),
         Commands::Inspect(..) => Ok(print!("Inspect")),
     };
