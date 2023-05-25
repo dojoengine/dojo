@@ -10,6 +10,8 @@ pub mod execute;
 pub mod set;
 pub mod uuid;
 
+const CAIRO_ERR_MSG_LEN: usize = 31;
+
 pub trait CommandTrait {
     fn from_ast(
         db: &dyn SyntaxGroup,

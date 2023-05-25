@@ -2,12 +2,8 @@
 mod Buy {
     use traits::Into;
     use array::ArrayTrait;
-    use dojo_core::integer::u250;
-    use dojo_core::integer::ContractAddressIntoU250;
-    use dojo_defi::constant_product_market::components::Item;
-    use dojo_defi::constant_product_market::components::Cash;
-    use dojo_defi::constant_product_market::components::Market;
-    use dojo_defi::constant_product_market::components::MarketTrait;
+    use dojo_core::integer::{u250, ContractAddressIntoU250};
+    use dojo_defi::constant_product_market::components::{Item, Cash, Market, MarketTrait};
 
     fn execute(partition: u250, item_id: u250, quantity: usize) {
         let player: u250 = starknet::get_caller_address().into();
@@ -48,12 +44,8 @@ mod Buy {
 mod Sell {
     use traits::Into;
     use array::ArrayTrait;
-    use dojo_core::integer::u250;
-    use dojo_core::integer::ContractAddressIntoU250;
-    use dojo_defi::constant_product_market::components::Item;
-    use dojo_defi::constant_product_market::components::Cash;
-    use dojo_defi::constant_product_market::components::Market;
-    use dojo_defi::constant_product_market::components::MarketTrait;
+    use dojo_core::integer::{u250, ContractAddressIntoU250};
+    use dojo_defi::constant_product_market::components::{Item, Cash, Market, MarketTrait};
 
     fn execute(partition: u250, item_id: u250, quantity: usize) {
         let player: u250 = starknet::get_caller_address().into();
@@ -62,7 +54,7 @@ mod Sell {
         let maybe_item = commands::<Item>::try_entity(item_sk);
         let player_quantity = match maybe_item {
             Option::Some(item) => item.quantity,
-            Option::None(_) => 0_u32,
+            Option::None(_) => 0,
         };
         assert(player_quantity >= quantity, 'not enough items');
 
@@ -94,13 +86,8 @@ mod Sell {
 mod AddLiquidity {
     use traits::Into;
     use array::ArrayTrait;
-    use dojo_core::integer::u250;
-    use dojo_core::integer::ContractAddressIntoU250;
-    use dojo_defi::constant_product_market::components::Item;
-    use dojo_defi::constant_product_market::components::Cash;
-    use dojo_defi::constant_product_market::components::Market;
-    use dojo_defi::constant_product_market::components::Liquidity;
-    use dojo_defi::constant_product_market::components::MarketTrait;
+    use dojo_core::integer::{u250, ContractAddressIntoU250};
+    use dojo_defi::constant_product_market::components::{Item, Cash, Market, Liquidity, MarketTrait};
 
     use cubit::types::fixed::FixedType;
 
@@ -111,7 +98,7 @@ mod AddLiquidity {
         let maybe_item = commands::<Item>::try_entity(item_sk);
         let player_quantity = match maybe_item {
             Option::Some(item) => item.quantity,
-            Option::None(_) => 0_u32,
+            Option::None(_) => 0,
         };
         assert(player_quantity >= quantity, 'not enough items');
 
@@ -151,13 +138,8 @@ mod AddLiquidity {
 mod RemoveLiquidity {
     use traits::Into;
     use array::ArrayTrait;
-    use dojo_core::integer::u250;
-    use dojo_core::integer::ContractAddressIntoU250;
-    use dojo_defi::constant_product_market::components::Item;
-    use dojo_defi::constant_product_market::components::Cash;
-    use dojo_defi::constant_product_market::components::Market;
-    use dojo_defi::constant_product_market::components::Liquidity;
-    use dojo_defi::constant_product_market::components::MarketTrait;
+    use dojo_core::integer::{u250, ContractAddressIntoU250};
+    use dojo_defi::constant_product_market::components::{Item, Cash, Market, Liquidity, MarketTrait};
 
     use cubit::types::fixed::FixedType;
     use serde::Serde;
@@ -192,7 +174,7 @@ mod RemoveLiquidity {
         let maybe_item = commands::<Item>::try_entity(item_sk);
         let player_quantity = match maybe_item {
             Option::Some(item) => item.quantity,
-            Option::None(_) => 0_u32,
+            Option::None(_) => 0,
         };
         commands::set_entity(item_sk, (Item { quantity: player_quantity + payout_quantity }));
 
