@@ -1,14 +1,16 @@
+use std::sync::Arc;
+
 use camino::Utf8PathBuf;
 use katana_core::sequencer::KatanaSequencer;
 use katana_core::starknet::StarknetConfig;
 use katana_rpc::config::RpcConfig;
 use katana_rpc::KatanaNodeRpc;
 use starknet::core::types::FieldElement;
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use url::Url;
 
-use crate::{migration::world::World, EnvironmentConfig, WorldConfig};
+use crate::migration::world::World;
+use crate::{EnvironmentConfig, WorldConfig};
 
 #[tokio::test]
 async fn test_migration() {

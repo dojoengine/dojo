@@ -76,8 +76,7 @@ impl Migration {
 
         let world_address = self
             .world
-            .contract
-            .address
+            .contract_address
             .unwrap_or_else(|| panic!("World contract address not found"));
 
         let calls = self
@@ -102,8 +101,7 @@ impl Migration {
 
         let world_address = self
             .world
-            .contract
-            .address
+            .contract_address
             .unwrap_or_else(|| panic!("World contract address not found"));
 
         let calls = self
@@ -169,8 +167,8 @@ async fn declare(
         prepare_contract_declaration_params(artifact_path).unwrap();
 
     // TODO: Uncomment once supported by Katana
-    // if account.provider().get_class(&BlockId::Tag(BlockTag::Pending), casm_class_hash).await.is_ok()
-    // {
+    // if account.provider().get_class(&BlockId::Tag(BlockTag::Pending),
+    // casm_class_hash).await.is_ok() {
     //     println!("{name} class already declared");
     //     return;
     // }

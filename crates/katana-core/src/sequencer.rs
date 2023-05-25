@@ -1,5 +1,6 @@
 use anyhow::Result;
 use blockifier::abi::abi_utils::get_storage_var_address;
+use blockifier::execution::contract_class::ContractClass;
 use blockifier::fee::fee_utils::{calculate_l1_gas_by_vm_usage, extract_l1_gas_and_vm_usage};
 use blockifier::state::state_api::{State, StateReader};
 use blockifier::transaction::account_transaction::AccountTransaction;
@@ -217,6 +218,21 @@ impl Sequencer for KatanaSequencer {
             self.state_from_block_id(block_id).ok_or(SequencerError::StateNotFound(block_id))?;
 
         state.get_class_hash_at(contract_address).map_err(SequencerError::State)
+    }
+
+    fn class(
+        &mut self,
+        block_id: BlockId,
+        class_hash: ClassHash,
+    ) -> SequencerResult<ContractClass> {
+        if self.block(block_id).is_none() {
+            return Err(SequencerError::BlockNotFound(block_id));
+        }
+
+        let mut state =
+            self.state_from_block_id(block_id).ok_or(SequencerError::StateNotFound(block_id))?;
+
+        state.get_compiled_contract_class(&class_hash).map_err(SequencerError::State)
     }
 
     fn storage_at(
@@ -450,6 +466,9 @@ pub trait Sequencer {
         block_id: BlockId,
         contract_address: ContractAddress,
     ) -> SequencerResult<ClassHash>;
+
+    fn class(&mut self, block_id: BlockId, class_hash: ClassHash)
+    -> SequencerResult<ContractClass>;
 
     fn block_hash_and_number(&self) -> Option<(BlockHash, BlockNumber)>;
 
