@@ -1,5 +1,4 @@
 use clap::Parser;
-use futures::join;
 use graphql::server::start_graphql;
 use num::{BigUint, Num};
 use sqlx::sqlite::SqlitePoolOptions;
@@ -49,7 +48,7 @@ async fn main() -> anyhow::Result<()> {
     // Setup cancellation for graceful shutdown
     let cts = CancellationToken::new();
     ctrlc::set_handler({
-        let cts = cts.clone();
+        let cts: CancellationToken = cts.clone();
         move || {
             cts.cancel();
         }
@@ -67,9 +66,23 @@ async fn main() -> anyhow::Result<()> {
     let storage = SqlStorage::new(pool.clone())?;
     let indexer = start_indexer(cts.clone(), world, &storage, &provider);
 
-    let graphql = start_graphql(pool);
+    let graphql = start_graphql(&pool);
 
-    let _ = join!(graphql, indexer);
+    tokio::select! {
+        res = indexer => {
+            if let Err(e) = res {
+                tracing::error!("Indexer failed with error: {:?}", e);
+            }
+        }
+        res = graphql => {
+            if let Err(e) = res {
+                tracing::error!("GraphQL server failed with error: {:?}", e);
+            }
+        }
+        _ = tokio::signal::ctrl_c() => {
+            println!("Received Ctrl+C, shutting down");
+        }
+    }
 
     Ok(())
 }

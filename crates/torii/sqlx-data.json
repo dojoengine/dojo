@@ -414,24 +414,6 @@
     },
     "query": "\n            SELECT\n                id,\n                name,\n                address,\n                class_hash,\n                transaction_hash,\n                created_at as \"created_at: _\"\n            FROM systems\n        "
   },
-  "86da9bb2c020578e868d98cc62fefb4807f6290d669bf9daf5939b48dd8cde51": {
-    "describe": {
-      "columns": [
-        {
-          "name": "head",
-          "ordinal": 0,
-          "type_info": "Int64"
-        }
-      ],
-      "nullable": [
-        true
-      ],
-      "parameters": {
-        "Right": 0
-      }
-    },
-    "query": "\n            SELECT head\n            FROM indexer WHERE id = 0\n        "
-  },
   "afb85d9756ae0521332b11ada4482a57f2626e188dce043fd0a4cb456245821d": {
     "describe": {
       "columns": [

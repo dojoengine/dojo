@@ -18,7 +18,7 @@ async fn graphql_playground() -> impl IntoResponse {
     Html(playground_source(GraphQLPlaygroundConfig::new("/playground")))
 }
 
-pub async fn start_graphql(pool: Pool<Sqlite>) -> std::io::Result<()> {
+pub async fn start_graphql(pool: &Pool<Sqlite>) -> std::io::Result<()> {
     let schema = Schema::build(Query, EmptyMutation, EmptySubscription).data(pool.clone()).finish();
 
     let app = Route::new()

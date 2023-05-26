@@ -84,7 +84,7 @@ pub async fn start_indexer<S: Storage, T: JsonRpcTransport + Sync + Send>(
         }
 
         current_block_number += 1;
-        sleep(Duration::from_secs(15)).await;
+        sleep(Duration::from_secs(1)).await;
     }
 }
 
