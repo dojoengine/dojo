@@ -5,8 +5,7 @@ use num::{BigUint, Num};
 use sqlx::sqlite::SqlitePoolOptions;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-// #[cfg(feature = "postgres")]
-// use sqlx::postgres::{PgPoolOptions};
+use storage::sql::SqlStorage;
 use tokio_util::sync::CancellationToken;
 use tracing_subscriber::fmt;
 use url::Url;
@@ -17,6 +16,7 @@ mod processors;
 
 mod graphql;
 mod indexer;
+mod storage;
 mod tests;
 
 /// Dojo World Indexer
@@ -64,8 +64,10 @@ async fn main() -> anyhow::Result<()> {
     let pool = SqlitePoolOptions::new().max_connections(5).connect(database_url).await?;
     let provider = JsonRpcClient::new(HttpTransport::new(Url::parse(&args.rpc).unwrap()));
 
-    let graphql = start_graphql(&pool);
-    let indexer = start_indexer(cts.clone(), world, &pool, &provider);
+    let storage = SqlStorage::new(pool.clone())?;
+    let indexer = start_indexer(cts.clone(), world, &storage, &provider);
+
+    let graphql = start_graphql(pool);
 
     let _ = join!(graphql, indexer);
 
