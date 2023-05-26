@@ -18,6 +18,50 @@ cd dojo
 cargo install --path ./crates/katana --locked --force
 ```
 
+## StarkNet Features Compatibility
+
+### Transaction
+
+| Feature        | State              | Version |
+| -------------- | ------------------ | ------- |
+| invoke         | :white_check_mark: | V1      |
+| declare        | :white_check_mark: | V2      |
+| deploy_account | :white_check_mark: |         |
+
+### Supported RPC
+
+| Feature                                  | State              |
+| ---------------------------------------- | ------------------ |
+| **Read**                                 |
+| starknet_getBlockWithTxHashes            | :white_check_mark: |
+| starknet_getBlockWithTxs                 | :white_check_mark: |
+| starknet_getStateUpdate                  | :white_check_mark: |
+| starknet_getStorageAt                    | :white_check_mark: |
+| starknet_getTransactionByHash            | :white_check_mark: |
+| starknet_getTransactionByBlockIdAndIndex | :white_check_mark: |
+| starknet_getTransactionReceipt           | :white_check_mark: |
+| starknet_getClass                        | :construction:     |
+| starknet_getClassHashAt                  | :white_check_mark: |
+| starknet_getClassAt                      | :construction:     |
+| starknet_getBlockTransactionCount        | :white_check_mark: |
+| starknet_call                            | :white_check_mark: |
+| starknet_estimateFee                     | :white_check_mark: |
+| starknet_blockNumber                     | :white_check_mark: |
+| starknet_blockHashAndNumber              | :white_check_mark: |
+| starknet_chainId                         | :white_check_mark: |
+| starknet_pendingTransactions             | :white_check_mark: |
+| starknet_syncing                         | :construction:     |
+| starknet_getEvents                       | :construction:     |
+| starknet_getNonce                        | :white_check_mark: |
+| **Trace**                                |
+| starknet_traceTransaction                | :construction:     |
+| starknet_simulateTransaction             | :construction:     |
+| starknet_traceBlockTransactions          | :construction:     |
+| **Write**                                |
+| starknet_addInvokeTransaction            | :white_check_mark: |
+| starknet_addDeclareTransaction           | :white_check_mark: |
+| starknet_addDeployAccountTransaction     | :white_check_mark: |
+
 ## Getting started
 
 ```console
