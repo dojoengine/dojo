@@ -1,7 +1,7 @@
 githubRepoOwner: dojoengine
 githubRepoName: dojo
 githubHost: github.com
-requireChecks: true
+requireChecks: false
 requireApproval: false
 githubRemote: origin
 githubBranch: main
