@@ -8432,8 +8432,6 @@ dependencies = [
  "chrono",
  "clap",
  "ctrlc",
- "futures",
- "futures-util",
  "log",
  "num",
  "poem",

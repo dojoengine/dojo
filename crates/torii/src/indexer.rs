@@ -5,13 +5,13 @@ use std::time::Duration;
 use num::BigUint;
 use starknet::core::types::{
     BlockId, BlockWithTxs, Event, InvokeTransaction, MaybePendingBlockWithTxs,
-    MaybePendingTransactionReceipt, Transaction, TransactionReceipt,
+    MaybePendingTransactionReceipt, StarknetError, Transaction, TransactionReceipt,
 };
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
-use starknet::providers::Provider;
+use starknet::providers::{Provider, ProviderError};
 use tokio::time::sleep;
 use tokio_util::sync::CancellationToken;
-use tracing::info;
+use tracing::{error, info};
 
 // use crate::processors::component_register::ComponentRegistrationProcessor;
 // use crate::processors::component_state_update::ComponentStateUpdateProcessor;
@@ -34,12 +34,17 @@ pub async fn start_indexer<S: Storage, T: JsonRpcTransport + Sync + Send>(
     let mut current_block_number = storage.head().await?;
 
     loop {
+        sleep(Duration::from_secs(1)).await;
+
         let block_with_txs =
             match provider.get_block_with_txs(BlockId::Number(current_block_number)).await {
                 Ok(block_with_txs) => block_with_txs,
                 Err(e) => {
-                    eprintln!("Error while fetching block: {}", e);
-                    sleep(Duration::from_secs(60)).await; // If there's an error, wait longer before the next attempt.
+                    if let ProviderError::StarknetError(StarknetError::BlockNotFound) = e {
+                        continue;
+                    }
+
+                    error!("getting  block: {}", e);
                     continue;
                 }
             };
@@ -84,7 +89,6 @@ pub async fn start_indexer<S: Storage, T: JsonRpcTransport + Sync + Send>(
         }
 
         current_block_number += 1;
-        sleep(Duration::from_secs(1)).await;
     }
 }
 
