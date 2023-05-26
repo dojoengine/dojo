@@ -1,6 +1,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use sqlx::{pool::PoolConnection, Pool, Sqlite};
+use sqlx::pool::PoolConnection;
+use sqlx::{Pool, Sqlite};
 use starknet::core::types::FieldElement;
 
 use super::Storage;
@@ -20,7 +21,7 @@ impl Storage for SqlStorage {
     async fn head(&self) -> Result<u64> {
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
         let indexer: (i64,) =
-            sqlx::query_as("SELECT head FROM indexer WHERE id = 0").fetch_one(&mut conn).await?;
+            sqlx::query_as("SELECT head FROM indexer WHERE id = 1").fetch_one(&mut conn).await?;
 
         Ok(indexer.0.try_into().expect("doesnt fit in u64"))
     }

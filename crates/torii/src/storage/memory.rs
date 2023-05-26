@@ -1,8 +1,9 @@
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use starknet::core::types::FieldElement;
-use std::collections::HashMap;
-use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use super::Storage;
@@ -10,11 +11,13 @@ use super::Storage;
 type Partition = FieldElement;
 type Component = FieldElement;
 type Key = FieldElement;
+type Entities = HashMap<Partition, HashMap<Key, Vec<FieldElement>>>;
+type Components = HashMap<Component, Entities>;
 
 #[derive(Default)]
 pub struct MemoryStorage {
     head: u64,
-    data: Arc<RwLock<HashMap<Component, HashMap<Partition, HashMap<Key, Vec<FieldElement>>>>>>,
+    data: Arc<RwLock<Components>>,
 }
 
 #[async_trait]

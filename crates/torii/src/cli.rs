@@ -6,6 +6,7 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use storage::sql::SqlStorage;
 use tokio_util::sync::CancellationToken;
+use tracing::error;
 use tracing_subscriber::fmt;
 use url::Url;
 
@@ -26,7 +27,7 @@ struct Args {
     #[arg(short, long, default_value = "0x420")]
     world: String,
     /// The rpc endpoint to use
-    #[arg(long, default_value = "http://localhost:8080")]
+    #[arg(long, default_value = "http://localhost:5050")]
     rpc: String,
     /// Database url
     #[arg(short, long, default_value = "sqlite::memory:")]
@@ -71,12 +72,12 @@ async fn main() -> anyhow::Result<()> {
     tokio::select! {
         res = indexer => {
             if let Err(e) = res {
-                tracing::error!("Indexer failed with error: {:?}", e);
+                error!("Indexer failed with error: {:?}", e);
             }
         }
         res = graphql => {
             if let Err(e) = res {
-                tracing::error!("GraphQL server failed with error: {:?}", e);
+                error!("GraphQL server failed with error: {:?}", e);
             }
         }
         _ = tokio::signal::ctrl_c() => {
