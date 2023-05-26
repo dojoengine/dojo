@@ -17,7 +17,7 @@ num = "0.4.0"
 serde.workspace = true
 serde_json.workspace = true
 sqlx = { version = "0.6.2", features = [
-    "runtime-actix-native-tls",
+    "runtime-actix-rustls",
     "uuid",
     "chrono",
     "macros",
