@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
+use starknet::signers::{LocalWallet, SigningKey};
 use toml::Value;
 use tracing::warn;
 use url::Url;
@@ -74,6 +75,8 @@ pub struct EnvironmentConfig {
     pub chain_id: Option<FieldElement>,
     pub private_key: Option<FieldElement>,
     pub account_address: Option<FieldElement>,
+    pub keystore_path: Option<String>,
+    pub keystore_password: Option<String>,
 }
 
 impl EnvironmentConfig {
@@ -112,6 +115,22 @@ impl EnvironmentConfig {
                 config.private_key = Some(pk);
             }
 
+            if let Some(path) = env
+                .get("keystore_path")
+                .and_then(|v| v.as_str().map(|s| s.to_string()))
+                .or(std::env::var("DOJO_KEYSTORE_PATH").ok())
+            {
+                config.keystore_path = Some(path);
+            }
+
+            if let Some(password) = env
+                .get("keystore_password")
+                .and_then(|v| v.as_str().map(|s| s.to_string()))
+                .or(std::env::var("DOJO_KEYSTORE_PASSWORD").ok())
+            {
+                config.keystore_password = Some(password);
+            }
+
             if let Some(account_address) = env
                 .get("account_address")
                 .and_then(|v| v.as_str().map(|s| s.to_string()))
@@ -131,6 +150,24 @@ impl EnvironmentConfig {
         }
 
         Ok(config)
+    }
+
+    pub fn signer(&self) -> anyhow::Result<LocalWallet> {
+        if let Some(private_key) = &self.private_key {
+            Ok(LocalWallet::from_signing_key(SigningKey::from_secret_scalar(*private_key)))
+        } else if let Some(keystore_path) = &self.keystore_path {
+            let keystore_password = self
+                .keystore_password
+                .as_ref()
+                .ok_or_else(|| anyhow!("Missing `keystore_password` in the environment config"))?;
+
+            Ok(LocalWallet::from_signing_key(SigningKey::from_keystore(
+                keystore_path,
+                keystore_password,
+            )?))
+        } else {
+            Err(anyhow!("Missing `private_key` or `keystore_path` in the environment config"))
+        }
     }
 
     pub fn provider(&self) -> anyhow::Result<JsonRpcClient<HttpTransport>> {
