@@ -4,13 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-apibara-core = { git = "https://github.com/apibara/dna", rev = "2c452070372e80e5d1a5302c1b8ae5defef7e9a4", optional = true }
-apibara-sdk = { git = "https://github.com/apibara/dna", rev = "2c452070372e80e5d1a5302c1b8ae5defef7e9a4", optional = true }
+tokio.workspace = true
+apibara-core = { git = "https://github.com/apibara/dna", optional = true }
+apibara-sdk = { git = "https://github.com/apibara/dna", optional = true }
 bevy = { version = "0.10", default-features = false }
 bevy-tokio-tasks = "0.10"
-tokio = { version = "1.27", features = ["full", "sync"] }
 tokio-stream = "0.1"
-tonic = "0.8"
+tonic = "0.9.2"
 prost = "0.11"
 
 [dev-dependencies]
