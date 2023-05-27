@@ -1,5 +1,3 @@
-// pub mod instance;
-
 use std::collections::HashMap;
 
 use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
@@ -8,7 +6,7 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use sqlx::{FromRow, Pool, Sqlite};
 
-use super::{FieldTypeMapping, FieldValueMapping, ObjectTraitInstance, ObjectTraitStatic};
+use super::{ObjectTraitInstance, ObjectTraitStatic, TypeMapping, ValueMapping};
 
 #[derive(FromRow, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -18,31 +16,31 @@ pub struct Component {
     pub address: String,
     pub class_hash: String,
     pub transaction_hash: String,
-    pub gql_schema: String,
+    pub storage_schema: String,
     pub created_at: DateTime<Utc>,
 }
 
 pub struct ComponentObject {
-    pub field_type_mappings: FieldTypeMapping,
+    pub field_type_mapping: TypeMapping,
 }
 
 impl ObjectTraitStatic for ComponentObject {
     fn new() -> Self {
         Self {
-            field_type_mappings: HashMap::from([
+            field_type_mapping: HashMap::from([
                 (String::from("id"), String::from("ID")),
                 (String::from("name"), String::from("String")),
                 (String::from("address"), String::from("Address")),
                 (String::from("classHash"), String::from("FieldElement")),
                 (String::from("transactionHash"), String::from("FieldElement")),
-                (String::from("gqlSchema"), String::from("String")),
+                (String::from("storageSchema"), String::from("String")),
                 (String::from("createdAt"), String::from("DateTime")),
             ]),
         }
     }
 
-    fn from(field_type_mappings: FieldTypeMapping) -> Self {
-        Self { field_type_mappings }
+    fn from(field_type_mapping: TypeMapping) -> Self {
+        Self { field_type_mapping }
     }
 }
 
@@ -55,8 +53,8 @@ impl ObjectTraitInstance for ComponentObject {
         "Component"
     }
 
-    fn field_type_mappings(&self) -> &FieldTypeMapping {
-        &self.field_type_mappings
+    fn field_type_mapping(&self) -> &TypeMapping {
+        &self.field_type_mapping
     }
 
     fn field_resolvers(&self) -> Vec<Field> {
@@ -72,13 +70,13 @@ impl ObjectTraitInstance for ComponentObject {
                             .fetch_one(&mut conn)
                             .await?;
 
-                    let result: FieldValueMapping = HashMap::from([
+                    let result: ValueMapping = HashMap::from([
                         (String::from("id"), Value::from(component.id)),
                         (String::from("name"), Value::from(component.name)),
                         (String::from("address"), Value::from(component.address)),
                         (String::from("classHash"), Value::from(component.class_hash)),
                         (String::from("transactionHash"), Value::from(component.transaction_hash)),
-                        (String::from("gqlSchema"), Value::from(component.gql_schema)),
+                        (String::from("storageSchema"), Value::from(component.storage_schema)),
                         (
                             String::from("createdAt"),
                             Value::from(

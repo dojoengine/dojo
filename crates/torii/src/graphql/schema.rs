@@ -39,6 +39,7 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema, SchemaError> {
     //     .await
     //     .unwrap();
 
+    // base gql objects
     let objects: Vec<Box<dyn ObjectTraitInstance>> = vec![
         Box::new(EntityObject::new()),
         Box::new(ComponentObject::new()),
@@ -47,15 +48,12 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema, SchemaError> {
         Box::new(SystemCallObject::new()),
     ];
 
-    let fields = objects
-        .iter()
-        .fold(Vec::new(), |mut fields, object| {
-            fields.extend(object.field_resolvers());
-            fields
-        })
-        .into_iter()
-        .collect::<Vec<_>>();
+    let fields = objects.iter().fold(Vec::new(), |mut fields, object| {
+        fields.extend(object.field_resolvers());
+        fields
+    });
 
+    // add field resolvers to query root
     let query_root =
         fields.into_iter().fold(Object::new("Query"), |query_root, field| query_root.field(field));
 
@@ -74,7 +72,7 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema, SchemaError> {
     // register base gql objects
     objects
         .iter()
-        .fold(schema_builder, |schema_builder, object| schema_builder.register(object.object()))
+        .fold(schema_builder, |schema_builder, object| schema_builder.register(object.create()))
         .register(query_root)
         .data(pool.clone())
         .finish()

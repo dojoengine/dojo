@@ -18,6 +18,7 @@ type Entity {
   keys: FieldElement
   transactionHash: FieldElement!
   createdAt: DateTime!
+  components: [Component!]
 }
 
 type Component {
@@ -26,8 +27,18 @@ type Component {
   address: Address!
   classHash: Address!
   transactionHash: FieldElement!
-  gqlSchema: String!
+  storageSchema: String!
+  storageStates: [Storage_NAME_!]
   createdAt: DateTime!
+}
+
+type Storage_NAME_ {
+  id: ID!
+  entity: Entity!
+  component: Component!
+  createdAt: DateTime!
+  # dynamic fields
+  # ...
 }
 
 type System {
@@ -39,3 +50,18 @@ type System {
   createdAt: DateTime!
 }
 
+type SystemCall {
+  id: ID!
+  data: String!
+  transactionHash: FieldElement!
+  system: System!
+  createdAt: DateTime!
+}
+
+type Event {
+  id: ID!
+  keys: String!
+  data: String!
+  systemCall: SystemCall!
+  createdAt: DateTime!
+}

@@ -12,12 +12,13 @@ use std::collections::HashMap;
 use async_graphql::dynamic::{Field, FieldFuture, Object, TypeRef};
 use async_graphql::Value;
 
-pub type FieldTypeMapping = HashMap<String, String>;
-pub type FieldValueMapping = HashMap<String, Value>;
+pub type TypeMapping = HashMap<String, String>;
+pub type ValueMapping = HashMap<String, Value>;
 
 pub trait ObjectTraitStatic {
     fn new() -> Self;
-    fn from(field_type_mappings: FieldTypeMapping) -> Self;
+
+    fn from(field_type_mapping: TypeMapping) -> Self;
 }
 
 pub trait ObjectTraitInstance {
@@ -25,11 +26,13 @@ pub trait ObjectTraitInstance {
 
     fn type_name(&self) -> &str;
 
-    fn field_type_mappings(&self) -> &FieldTypeMapping;
+    fn field_type_mapping(&self) -> &TypeMapping;
+
+    fn field_resolvers(&self) -> Vec<Field>;
 
     // creates the graphql object based on the provided field type mapping
-    fn object(&self) -> Object {
-        (*self.field_type_mappings()).iter().fold(
+    fn create(&self) -> Object {
+        (*self.field_type_mapping()).iter().fold(
             Object::new(self.type_name()),
             |obj, (field_name, field_type)| {
                 let inner_name = field_name.clone();
@@ -38,7 +41,7 @@ pub trait ObjectTraitInstance {
                     let field_name = inner_name.clone();
 
                     FieldFuture::new(async move {
-                        let mapping = ctx.parent_value.try_downcast_ref::<FieldValueMapping>()?;
+                        let mapping = ctx.parent_value.try_downcast_ref::<ValueMapping>()?;
                         let value = mapping.get(field_name.as_str()).expect("field not found");
                         Ok(Some(value.clone()))
                     })
@@ -46,6 +49,4 @@ pub trait ObjectTraitInstance {
             },
         )
     }
-
-    fn field_resolvers(&self) -> Vec<Field>;
 }

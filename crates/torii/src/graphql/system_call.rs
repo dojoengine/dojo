@@ -7,7 +7,7 @@ use serde::Deserialize;
 use sqlx::{FromRow, Pool, Sqlite};
 
 // use super::system::System;
-use super::{FieldTypeMapping, FieldValueMapping, ObjectTraitInstance, ObjectTraitStatic};
+use super::{ObjectTraitInstance, ObjectTraitStatic, TypeMapping, ValueMapping};
 
 #[derive(FromRow, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -20,13 +20,13 @@ pub struct SystemCall {
     pub system_id: String,
 }
 pub struct SystemCallObject {
-    pub field_type_mappings: FieldTypeMapping,
+    pub field_type_mapping: TypeMapping,
 }
 
 impl ObjectTraitStatic for SystemCallObject {
     fn new() -> Self {
         Self {
-            field_type_mappings: HashMap::from([
+            field_type_mapping: HashMap::from([
                 (String::from("id"), String::from("ID")),
                 (String::from("transactionHash"), String::from("String")),
                 (String::from("data"), String::from("String")),
@@ -35,8 +35,8 @@ impl ObjectTraitStatic for SystemCallObject {
         }
     }
 
-    fn from(field_type_mappings: FieldTypeMapping) -> Self {
-        Self { field_type_mappings }
+    fn from(field_type_mapping: TypeMapping) -> Self {
+        Self { field_type_mapping }
     }
 }
 
@@ -49,8 +49,8 @@ impl ObjectTraitInstance for SystemCallObject {
         "SystemCall"
     }
 
-    fn field_type_mappings(&self) -> &FieldTypeMapping {
-        &self.field_type_mappings
+    fn field_type_mapping(&self) -> &TypeMapping {
+        &self.field_type_mapping
     }
 
     fn field_resolvers(&self) -> Vec<Field> {
@@ -66,7 +66,7 @@ impl ObjectTraitInstance for SystemCallObject {
                             .fetch_one(&mut conn)
                             .await?;
 
-                    let result: FieldValueMapping = HashMap::from([
+                    let result: ValueMapping = HashMap::from([
                         (String::from("id"), Value::from(system_call.id.to_string())),
                         (
                             String::from("transactionHash"),

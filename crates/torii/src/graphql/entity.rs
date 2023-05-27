@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use sqlx::{FromRow, Pool, Sqlite};
 
-use super::{FieldTypeMapping, FieldValueMapping, ObjectTraitInstance, ObjectTraitStatic};
+use super::{ObjectTraitInstance, ObjectTraitStatic, TypeMapping, ValueMapping};
 
 #[derive(FromRow, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -20,13 +20,13 @@ pub struct Entity {
 }
 
 pub struct EntityObject {
-    pub field_type_mappings: FieldTypeMapping,
+    pub field_type_mapping: TypeMapping,
 }
 
 impl ObjectTraitStatic for EntityObject {
     fn new() -> Self {
         Self {
-            field_type_mappings: HashMap::from([
+            field_type_mapping: HashMap::from([
                 (String::from("id"), String::from("ID")),
                 (String::from("name"), String::from("String")),
                 (String::from("partitionId"), String::from("FieldElement")),
@@ -36,8 +36,8 @@ impl ObjectTraitStatic for EntityObject {
             ]),
         }
     }
-    fn from(field_type_mappings: FieldTypeMapping) -> Self {
-        Self { field_type_mappings }
+    fn from(field_type_mapping: TypeMapping) -> Self {
+        Self { field_type_mapping }
     }
 }
 
@@ -50,8 +50,8 @@ impl ObjectTraitInstance for EntityObject {
         "Entity"
     }
 
-    fn field_type_mappings(&self) -> &FieldTypeMapping {
-        &self.field_type_mappings
+    fn field_type_mapping(&self) -> &TypeMapping {
+        &self.field_type_mapping
     }
 
     fn field_resolvers(&self) -> Vec<Field> {
@@ -66,7 +66,7 @@ impl ObjectTraitInstance for EntityObject {
                         .fetch_one(&mut conn)
                         .await?;
 
-                    let result: FieldValueMapping = HashMap::from([
+                    let result: ValueMapping = HashMap::from([
                         (String::from("id"), Value::from(entity.id)),
                         (String::from("name"), Value::from(entity.name)),
                         (String::from("partitionId"), Value::from(entity.partition_id)),
