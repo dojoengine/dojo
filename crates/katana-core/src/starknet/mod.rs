@@ -321,7 +321,7 @@ impl StarknetWrapper {
         self.generate_latest_block();
     }
 
-    fn create_empty_block(&self) -> StarknetBlock {
+    pub fn create_empty_block(&self) -> StarknetBlock {
         StarknetBlock::new(
             BlockHash::default(),
             BlockHash::default(),
