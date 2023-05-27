@@ -225,7 +225,7 @@ mod World {
     ) -> Span<felt252> {
         let class_hash = component_registry::read(component);
 
-        let query = QueryTrait::new(address_domain, partition, keys.span());
+        let query = QueryTrait::new(address_domain, partition, keys);
 
         match Database::get(class_hash, component.into(), query, offset, length) {
             Option::Some(res) => res,
