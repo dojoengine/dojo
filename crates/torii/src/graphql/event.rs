@@ -3,21 +3,11 @@ use std::collections::HashMap;
 use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
 use async_graphql::Value;
 use chrono::{DateTime, Utc};
-use lazy_static::lazy_static;
 use serde::Deserialize;
 use sqlx::{FromRow, Pool, Sqlite};
 
 // use super::system_call::SystemCall;
-use super::{FieldTypeMapping, FieldValueMapping, ObjectTrait};
-
-lazy_static! {
-    pub static ref EVENT_TYPE_MAPPING: FieldTypeMapping = HashMap::from([
-        (String::from("id"), String::from("ID")),
-        (String::from("keys"), String::from("String")),
-        (String::from("data"), String::from("String")),
-        (String::from("createdAt"), String::from("DateTime")),
-    ]);
-}
+use super::{FieldTypeMapping, FieldValueMapping, ObjectTraitInstance, ObjectTraitStatic};
 
 #[derive(FromRow, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -34,11 +24,24 @@ pub struct EventObject {
     pub field_type_mappings: FieldTypeMapping,
 }
 
-impl ObjectTrait for EventObject {
-    fn new(field_type_mappings: FieldTypeMapping) -> Self {
-        Self { field_type_mappings }
+impl ObjectTraitStatic for EventObject {
+    fn new() -> Self {
+        Self {
+            field_type_mappings: HashMap::from([
+                (String::from("id"), String::from("ID")),
+                (String::from("keys"), String::from("String")),
+                (String::from("data"), String::from("String")),
+                (String::from("createdAt"), String::from("DateTime")),
+            ]),
+        }
     }
 
+    fn from(field_type_mappings: FieldTypeMapping) -> Self {
+        Self { field_type_mappings }
+    }
+}
+
+impl ObjectTraitInstance for EventObject {
     fn name(&self) -> &str {
         "event"
     }

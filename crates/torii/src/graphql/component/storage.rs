@@ -4,25 +4,21 @@ use async_graphql::dynamic::{Field, FieldFuture, FieldValue, Object, TypeRef};
 use async_graphql::Value;
 use sqlx::{Pool, Sqlite};
 
-use super::{FieldTypeMapping, ObjectTrait};
+use super::{FieldTypeMapping, ObjectTraitInstance};
 
-pub struct ComponentInstance {
+pub struct ComponentStorage {
     pub name: String,
     pub type_name: String,
     pub field_type_mappings: FieldTypeMapping,
 }
 
-impl ComponentInstance {
-    pub fn new(name: String, type_name: String, field_type_mappings: FieldTypeMapping) -> Self {
+impl ComponentStorage {
+    pub fn from(name: String, type_name: String, field_type_mappings: FieldTypeMapping) -> Self {
         Self { name, type_name, field_type_mappings }
     }
 }
 
-impl ObjectTrait for ComponentInstance {
-    fn new(field_type_mappings: FieldTypeMapping) -> Self {
-        ComponentInstance { name: "".to_string(), type_name: "".to_string(), field_type_mappings }
-    }
-
+impl ObjectTraitInstance for ComponentStorage {
     fn name(&self) -> &str {
         &self.name
     }

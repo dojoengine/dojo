@@ -4,12 +4,12 @@ use async_graphql::dynamic::{Object, Scalar, Schema, SchemaBuilder, SchemaError}
 use lazy_static::lazy_static;
 use sqlx::SqlitePool;
 
-use super::component::{ComponentObject, COMPONENT_TYPE_MAPPING};
-use super::entity::{EntityObject, ENTITY_TYPE_MAPPING};
-use super::event::{EventObject, EVENT_TYPE_MAPPING};
-use super::system::{SystemObject, SYSTEM_TYPE_MAPPING};
-use super::system_call::{SystemCallObject, SYSTEM_CALL_TYPE_MAPPING};
-use super::ObjectTrait;
+use super::component::ComponentObject;
+use super::entity::EntityObject;
+use super::event::EventObject;
+use super::system::SystemObject;
+use super::system_call::SystemCallObject;
+use super::{ObjectTraitInstance, ObjectTraitStatic};
 
 lazy_static! {
     pub static ref SCALAR_TYPES: HashSet<&'static str> = HashSet::from([
@@ -39,23 +39,28 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema, SchemaError> {
     //     .await
     //     .unwrap();
 
-    let entity = EntityObject::new(ENTITY_TYPE_MAPPING.clone());
-    let component = ComponentObject::new(COMPONENT_TYPE_MAPPING.clone());
-    let system = SystemObject::new(SYSTEM_TYPE_MAPPING.clone());
-    let event = EventObject::new(EVENT_TYPE_MAPPING.clone());
-    let system_call = SystemCallObject::new(SYSTEM_CALL_TYPE_MAPPING.clone());
+    let objects: Vec<Box<dyn ObjectTraitInstance>> = vec![
+        Box::new(EntityObject::new()),
+        Box::new(ComponentObject::new()),
+        Box::new(SystemObject::new()),
+        Box::new(EventObject::new()),
+        Box::new(SystemCallObject::new()),
+    ];
 
-    let mut fields = entity.field_resolvers();
-    fields.extend(component.field_resolvers());
-    fields.extend(system.field_resolvers());
-    fields.extend(event.field_resolvers());
-    fields.extend(system_call.field_resolvers());
+    let fields = objects
+        .iter()
+        .fold(Vec::new(), |mut fields, object| {
+            fields.extend(object.field_resolvers());
+            fields
+        })
+        .into_iter()
+        .collect::<Vec<_>>();
 
     let query_root =
         fields.into_iter().fold(Object::new("Query"), |query_root, field| query_root.field(field));
 
     // register custom scalars
-    let mut schema_builder: SchemaBuilder = SCALAR_TYPES.iter().fold(
+    let schema_builder: SchemaBuilder = SCALAR_TYPES.iter().fold(
         Schema::build("Query", None, None),
         |schema_builder, scalar_type| {
             if *scalar_type == "Boolean" || *scalar_type == "ID" {
@@ -66,15 +71,11 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema, SchemaError> {
         },
     );
 
-    // register default gql objects
-    schema_builder = schema_builder
-        .register(entity.object())
-        .register(component.object())
-        .register(system.object())
-        .register(event.object())
-        .register(system_call.object())
+    // register base gql objects
+    objects
+        .iter()
+        .fold(schema_builder, |schema_builder, object| schema_builder.register(object.object()))
         .register(query_root)
-        .data(pool.clone());
-
-    schema_builder.finish()
+        .data(pool.clone())
+        .finish()
 }

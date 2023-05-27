@@ -15,9 +15,12 @@ use async_graphql::Value;
 pub type FieldTypeMapping = HashMap<String, String>;
 pub type FieldValueMapping = HashMap<String, Value>;
 
-pub trait ObjectTrait {
-    fn new(field_type_mappings: FieldTypeMapping) -> Self;
+pub trait ObjectTraitStatic {
+    fn new() -> Self;
+    fn from(field_type_mappings: FieldTypeMapping) -> Self;
+}
 
+pub trait ObjectTraitInstance {
     fn name(&self) -> &str;
 
     fn type_name(&self) -> &str;
