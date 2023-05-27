@@ -13,7 +13,13 @@ dojo_core = { path = "../crates/dojo-core" }
 [tool.dojo]
 initializer_class_hash = "0xbeef"
 
+[tool.dojo.testnet]
+rpc = "https://rpc.testnet.starkware.co"
+
 [tool.dojo.env]
-rpc_url = "http://localhost:5050"
-private_key = "0x0326b6d921c2d9c9b76bb641c433c94b030cf57d48803dc742729704ffdd0fc6"
-account_address = "0x04b352538f61697825af242c9c451df02a40cca99391a47054489dee82138008"
+rpc_url = "http://localhost:5050/"
+account_address = "0x123"
+private_key = "0x456"
+
+keystore_path = "../keystore.json"
+keystore_password = "password"

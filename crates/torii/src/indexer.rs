@@ -3,43 +3,48 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use num::BigUint;
-use sqlx::{Pool, Sqlite};
 use starknet::core::types::{
     BlockId, BlockWithTxs, Event, InvokeTransaction, MaybePendingBlockWithTxs,
-    MaybePendingTransactionReceipt, Transaction, TransactionReceipt,
+    MaybePendingTransactionReceipt, StarknetError, Transaction, TransactionReceipt,
 };
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
-use starknet::providers::Provider;
+use starknet::providers::{Provider, ProviderError};
 use tokio::time::sleep;
 use tokio_util::sync::CancellationToken;
-use tracing::info;
+use tracing::{error, info};
 
 // use crate::processors::component_register::ComponentRegistrationProcessor;
 // use crate::processors::component_state_update::ComponentStateUpdateProcessor;
 // use crate::processors::system_register::SystemRegistrationProcessor;
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
+use crate::storage::Storage;
 
-pub async fn start_indexer<T: JsonRpcTransport + Sync + Send>(
+pub async fn start_indexer<S: Storage, T: JsonRpcTransport + Sync + Send>(
     _ct: CancellationToken,
     _world: BigUint,
-    pool: &Pool<Sqlite>,
+    storage: &S,
     provider: &JsonRpcClient<T>,
 ) -> Result<(), Box<dyn Error>> {
     info!("starting indexer");
 
-    let block_processors: Vec<Arc<dyn BlockProcessor<T>>> = vec![];
-    let transaction_processors: Vec<Arc<dyn TransactionProcessor<T>>> = vec![];
-    let event_processors: Vec<Arc<dyn EventProcessor<T>>> = vec![];
+    let block_processors: Vec<Arc<dyn BlockProcessor<S, T>>> = vec![];
+    let transaction_processors: Vec<Arc<dyn TransactionProcessor<S, T>>> = vec![];
+    let event_processors: Vec<Arc<dyn EventProcessor<S, T>>> = vec![];
 
-    let mut current_block_number: u64 = 0;
+    let mut current_block_number = storage.head().await?;
 
     loop {
+        sleep(Duration::from_secs(1)).await;
+
         let block_with_txs =
             match provider.get_block_with_txs(BlockId::Number(current_block_number)).await {
                 Ok(block_with_txs) => block_with_txs,
                 Err(e) => {
-                    eprintln!("Error while fetching block: {}", e);
-                    sleep(Duration::from_secs(60)).await; // If there's an error, wait longer before the next attempt.
+                    if let ProviderError::StarknetError(StarknetError::BlockNotFound) = e {
+                        continue;
+                    }
+
+                    error!("getting  block: {}", e);
                     continue;
                 }
             };
@@ -49,7 +54,7 @@ pub async fn start_indexer<T: JsonRpcTransport + Sync + Send>(
             _ => continue,
         };
 
-        process_block(pool, provider, &block_processors, &block_with_txs).await?;
+        process_block(storage, provider, &block_processors, &block_with_txs).await?;
 
         for transaction in block_with_txs.transactions {
             let invoke_transaction = match &transaction {
@@ -73,54 +78,54 @@ pub async fn start_indexer<T: JsonRpcTransport + Sync + Send>(
                 _ => continue,
             };
 
-            process_transaction(pool, provider, &transaction_processors, &receipt.clone()).await?;
+            process_transaction(storage, provider, &transaction_processors, &receipt.clone())
+                .await?;
 
             if let TransactionReceipt::Invoke(invoke_receipt) = receipt.clone() {
                 for event in &invoke_receipt.events {
-                    process_event(pool, provider, &event_processors, &receipt, event).await?;
+                    process_event(storage, provider, &event_processors, &receipt, event).await?;
                 }
             }
         }
 
         current_block_number += 1;
-        sleep(Duration::from_secs(15)).await;
     }
 }
 
-async fn process_block<T: starknet::providers::jsonrpc::JsonRpcTransport>(
-    pool: &Pool<Sqlite>,
+async fn process_block<S: Storage, T: starknet::providers::jsonrpc::JsonRpcTransport>(
+    storage: &S,
     provider: &JsonRpcClient<T>,
-    processors: &[Arc<dyn BlockProcessor<T>>],
+    processors: &[Arc<dyn BlockProcessor<S, T>>],
     block: &BlockWithTxs,
 ) -> Result<(), Box<dyn Error>> {
     for processor in processors {
-        processor.process(pool, provider, block).await?;
+        processor.process(storage, provider, block).await?;
     }
     Ok(())
 }
 
-async fn process_transaction<T: starknet::providers::jsonrpc::JsonRpcTransport>(
-    pool: &Pool<Sqlite>,
+async fn process_transaction<S: Storage, T: starknet::providers::jsonrpc::JsonRpcTransport>(
+    storage: &S,
     provider: &JsonRpcClient<T>,
-    processors: &[Arc<dyn TransactionProcessor<T>>],
+    processors: &[Arc<dyn TransactionProcessor<S, T>>],
     receipt: &TransactionReceipt,
 ) -> Result<(), Box<dyn Error>> {
     for processor in processors {
-        processor.process(pool, provider, receipt).await?;
+        processor.process(storage, provider, receipt).await?;
     }
 
     Ok(())
 }
 
-async fn process_event<T: starknet::providers::jsonrpc::JsonRpcTransport>(
-    pool: &Pool<Sqlite>,
+async fn process_event<S: Storage, T: starknet::providers::jsonrpc::JsonRpcTransport>(
+    storage: &S,
     provider: &JsonRpcClient<T>,
-    processors: &[Arc<dyn EventProcessor<T>>],
+    processors: &[Arc<dyn EventProcessor<S, T>>],
     _receipt: &TransactionReceipt,
     event: &Event,
 ) -> Result<(), Box<dyn Error>> {
     for processor in processors {
-        processor.process(pool, provider, event).await?;
+        processor.process(storage, provider, event).await?;
     }
 
     Ok(())

@@ -7,8 +7,6 @@ use anyhow::{anyhow, Context, Result};
 use camino::Utf8PathBuf;
 use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::FieldElement;
-use starknet::providers::Provider;
-use starknet::signers::{LocalWallet, SigningKey};
 
 use super::{ClassMigration, ContractMigration, Migration};
 use crate::manifest::Manifest;
@@ -180,22 +178,14 @@ impl World {
             let provider = self.environment_config.provider()?;
             let chain_id = provider.chain_id().await?;
 
-            let private_key = self
-                .environment_config
-                .private_key
-                .ok_or(anyhow!("missing private key for migration."))?;
-
             let account_address = self
                 .environment_config
                 .account_address
                 .ok_or(anyhow!("missing account address for migration."))?;
 
-            SingleOwnerAccount::new(
-                provider,
-                LocalWallet::from_signing_key(SigningKey::from_secret_scalar(private_key)),
-                account_address,
-                chain_id,
-            )
+            let signer = self.environment_config.signer()?;
+
+            SingleOwnerAccount::new(provider, signer, account_address, chain_id)
         };
 
         Ok(Migration { world, executor, systems, components, migrator })

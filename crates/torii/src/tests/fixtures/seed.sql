@@ -1,4 +1,5 @@
 /* seed db with mock data, spawning a game and two players */ 
+INSERT INTO indexer (head) VALUES (0);
 
 /* register components and systems */ 
 INSERT INTO components (id, name, properties, address, class_hash, transaction_hash) VALUES ('component_1', 'Game', NULL, '0x0', '0x0', '0x0');
