@@ -1,3 +1,16 @@
+scalar U8
+scalar U16
+scalar U32
+scalar U64
+scalar U128
+scalar U250
+scalar U256
+scalar Cursor
+scalar Boolean
+scalar Address
+scalar DateTime
+scalar FieldElement
+
 type Entity {
   id: ID!
   name: String!
@@ -25,3 +38,4 @@ type System {
   transactionHash: FieldElement!
   createdAt: DateTime!
 }
+

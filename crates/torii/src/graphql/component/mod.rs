@@ -1,3 +1,5 @@
+// pub mod instance;
+
 use std::collections::HashMap;
 
 use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
@@ -7,43 +9,47 @@ use lazy_static::lazy_static;
 use serde::Deserialize;
 use sqlx::{FromRow, Pool, Sqlite};
 
-// use super::system::System;
 use super::{FieldTypeMapping, FieldValueMapping, ObjectTrait};
 
 lazy_static! {
-    pub static ref SYSTEM_CALL_TYPE_MAPPING: FieldTypeMapping = HashMap::from([
+    pub static ref COMPONENT_TYPE_MAPPING: FieldTypeMapping = HashMap::from([
         (String::from("id"), String::from("ID")),
-        (String::from("transactionHash"), String::from("String")),
-        (String::from("data"), String::from("String")),
+        (String::from("name"), String::from("String")),
+        (String::from("address"), String::from("Address")),
+        (String::from("classHash"), String::from("FieldElement")),
+        (String::from("transactionHash"), String::from("FieldElement")),
+        (String::from("gqlSchema"), String::from("String")),
         (String::from("createdAt"), String::from("DateTime")),
     ]);
 }
 
 #[derive(FromRow, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SystemCall {
-    pub id: i64,
+pub struct Component {
+    pub id: String,
+    pub name: String,
+    pub address: String,
+    pub class_hash: String,
     pub transaction_hash: String,
-    pub data: String,
+    pub gql_schema: String,
     pub created_at: DateTime<Utc>,
-    #[serde(skip_deserializing)]
-    pub system_id: String,
 }
-pub struct SystemCallObject {
+
+pub struct ComponentObject {
     pub field_type_mappings: FieldTypeMapping,
 }
 
-impl ObjectTrait for SystemCallObject {
+impl ObjectTrait for ComponentObject {
     fn new(field_type_mappings: FieldTypeMapping) -> Self {
         Self { field_type_mappings }
     }
 
     fn name(&self) -> &str {
-        "systemCall"
+        "component"
     }
 
     fn type_name(&self) -> &str {
-        "SystemCall"
+        "Component"
     }
 
     fn field_type_mappings(&self) -> &FieldTypeMapping {
@@ -57,23 +63,23 @@ impl ObjectTrait for SystemCallObject {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                     let id = ctx.args.get("id").expect("id not found");
 
-                    let system_call: SystemCall =
-                        sqlx::query_as("SELECT * FROM system_calls WHERE id = ?")
-                            .bind(id.i64()?)
+                    let component: Component =
+                        sqlx::query_as("SELECT * FROM components WHERE id = ?")
+                            .bind(id.string()?)
                             .fetch_one(&mut conn)
                             .await?;
 
                     let result: FieldValueMapping = HashMap::from([
-                        (String::from("id"), Value::from(system_call.id.to_string())),
-                        (
-                            String::from("transactionHash"),
-                            Value::from(system_call.transaction_hash),
-                        ),
-                        (String::from("data"), Value::from(system_call.data)),
+                        (String::from("id"), Value::from(component.id)),
+                        (String::from("name"), Value::from(component.name)),
+                        (String::from("address"), Value::from(component.address)),
+                        (String::from("classHash"), Value::from(component.class_hash)),
+                        (String::from("transactionHash"), Value::from(component.transaction_hash)),
+                        (String::from("gqlSchema"), Value::from(component.gql_schema)),
                         (
                             String::from("createdAt"),
                             Value::from(
-                                system_call
+                                component
                                     .created_at
                                     .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
                             ),

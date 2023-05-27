@@ -1,11 +1,24 @@
-use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, Object, TypeRef};
+use std::collections::HashMap;
+
+use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
 use async_graphql::Value;
 use chrono::{DateTime, Utc};
+use lazy_static::lazy_static;
 use serde::Deserialize;
 use sqlx::{FromRow, Pool, Sqlite};
 
-use super::entity_state::EntityState;
-use super::ObjectTrait;
+use super::{FieldTypeMapping, FieldValueMapping, ObjectTrait};
+
+lazy_static! {
+    pub static ref ENTITY_TYPE_MAPPING: FieldTypeMapping = HashMap::from([
+        (String::from("id"), String::from("ID")),
+        (String::from("name"), String::from("String")),
+        (String::from("partitionId"), String::from("FieldElement")),
+        (String::from("keys"), String::from("String")),
+        (String::from("transactionHash"), String::from("FieldElement")),
+        (String::from("createdAt"), String::from("DateTime")),
+    ]);
+}
 
 #[derive(FromRow, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -18,89 +31,59 @@ pub struct Entity {
     pub created_at: DateTime<Utc>,
 }
 
-impl ObjectTrait for Entity {
-    fn object() -> Object {
-        Object::new("Entity")
-            .description(
-                "An entity is a collection of components that shares the same storage key.",
-            )
-            .field(Field::new("id", TypeRef::named_nn(TypeRef::ID), |ctx| {
-                FieldFuture::new(async move {
-                    Ok(Some(Value::from(ctx.parent_value.try_downcast_ref::<Entity>()?.id.clone())))
-                })
-            }))
-            .field(Field::new("name", TypeRef::named_nn(TypeRef::STRING), |ctx| {
-                FieldFuture::new(async move {
-                    Ok(Some(Value::from(
-                        ctx.parent_value.try_downcast_ref::<Entity>()?.name.clone(),
-                    )))
-                })
-            }))
-            .field(Field::new("partitionId", TypeRef::named_nn("FieldElement"), |ctx| {
-                FieldFuture::new(async move {
-                    Ok(Some(Value::from(
-                        ctx.parent_value.try_downcast_ref::<Entity>()?.partition_id.clone(),
-                    )))
-                })
-            }))
-            .field(Field::new("keys", TypeRef::named(TypeRef::STRING), |ctx| {
-                FieldFuture::new(async move {
-                    let entity = ctx.parent_value.try_downcast_ref::<Entity>()?;
-                    Ok(entity.keys.clone().map(Value::from))
-                })
-            }))
-            .field(Field::new("transactionHash", TypeRef::named_nn("FieldElement"), |ctx| {
-                FieldFuture::new(async move {
-                    Ok(Some(Value::from(
-                        ctx.parent_value.try_downcast_ref::<Entity>()?.transaction_hash.clone(),
-                    )))
-                })
-            }))
-            .field(Field::new("createdAt", TypeRef::named_nn("DateTime"), |ctx| {
-                FieldFuture::new(async move {
-                    Ok(Some(Value::from(
-                        ctx.parent_value
-                            .try_downcast_ref::<Entity>()?
-                            .created_at
-                            .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
-                    )))
-                })
-            }))
-            .field(Field::new("entityStates", TypeRef::named_list("EntityState"), |ctx| {
-                FieldFuture::new(async move {
-                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let id = &ctx.parent_value.try_downcast_ref::<Entity>()?.id;
+pub struct EntityObject {
+    pub field_type_mappings: FieldTypeMapping,
+}
 
-                    let result: Vec<EntityState> =
-                        sqlx::query_as("SELECT * FROM entity_states WHERE entity_id = ?")
-                            .bind(id)
-                            .fetch_all(&mut conn)
-                            .await?;
-
-                    Ok(Some(FieldValue::list(result.into_iter().map(FieldValue::owned_any))))
-                })
-            }))
+impl ObjectTrait for EntityObject {
+    fn new(field_type_mappings: FieldTypeMapping) -> Self {
+        Self { field_type_mappings }
     }
 
-    fn resolvers() -> Vec<Field> {
-        let entity_resolver = Field::new("entity", TypeRef::named_nn("Entity"), |ctx| {
-            FieldFuture::new(async move {
-                let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                let arg_id = ctx.args.get("id").expect("id not found");
-                let id = arg_id.string()?;
+    fn name(&self) -> &str {
+        "entity"
+    }
 
-                let result: Entity = sqlx::query_as("SELECT * FROM entities WHERE id = ?")
-                    .bind(id)
-                    .fetch_one(&mut conn)
-                    .await?;
+    fn type_name(&self) -> &str {
+        "Entity"
+    }
 
-                Ok(Some(FieldValue::owned_any(result)))
+    fn field_type_mappings(&self) -> &FieldTypeMapping {
+        &self.field_type_mappings
+    }
+
+    fn field_resolvers(&self) -> Vec<Field> {
+        vec![
+            Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
+                FieldFuture::new(async move {
+                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                    let id = ctx.args.get("id").expect("id not found");
+
+                    let entity: Entity = sqlx::query_as("SELECT * FROM entities WHERE id = ?")
+                        .bind(id.string()?)
+                        .fetch_one(&mut conn)
+                        .await?;
+
+                    let result: FieldValueMapping = HashMap::from([
+                        (String::from("id"), Value::from(entity.id)),
+                        (String::from("name"), Value::from(entity.name)),
+                        (String::from("partitionId"), Value::from(entity.partition_id)),
+                        (String::from("keys"), Value::from(entity.keys.unwrap_or_default())),
+                        (String::from("transactionHash"), Value::from(entity.transaction_hash)),
+                        (
+                            String::from("createdAt"),
+                            Value::from(
+                                entity
+                                    .created_at
+                                    .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                            ),
+                        ),
+                    ]);
+
+                    Ok(Some(FieldValue::owned_any(result)))
+                })
             })
-        })
-        .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID)));
-
-        // TODO: entities resolver
-
-        vec![entity_resolver]
+            .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID))),
+        ]
     }
 }

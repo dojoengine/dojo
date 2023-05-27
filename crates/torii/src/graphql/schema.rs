@@ -1,25 +1,55 @@
-use std::collections::HashMap;
+use std::collections::HashSet;
 
-use async_graphql::dynamic::{
-    Field, FieldFuture, Object, Scalar, Schema, SchemaBuilder, SchemaError, TypeRef,
-};
-use async_graphql::Value;
+use async_graphql::dynamic::{Object, Scalar, Schema, SchemaBuilder, SchemaError};
+use lazy_static::lazy_static;
 use sqlx::SqlitePool;
 
-use super::component::Component;
-use super::entity::Entity;
-use super::entity_state::EntityState;
-use super::event::Event;
-use super::system::System;
-use super::system_call::SystemCall;
-use super::types::SCALAR_TYPES;
+use super::component::{ComponentObject, COMPONENT_TYPE_MAPPING};
+use super::entity::{EntityObject, ENTITY_TYPE_MAPPING};
+use super::event::{EventObject, EVENT_TYPE_MAPPING};
+use super::system::{SystemObject, SYSTEM_TYPE_MAPPING};
+use super::system_call::{SystemCallObject, SYSTEM_CALL_TYPE_MAPPING};
 use super::ObjectTrait;
 
-pub fn build_schema(pool: &SqlitePool) -> Result<Schema, SchemaError> {
-    let mut fields = Entity::resolvers();
-    fields.extend(Component::resolvers());
-    fields.extend(System::resolvers());
-    fields.extend(Event::resolvers());
+lazy_static! {
+    pub static ref SCALAR_TYPES: HashSet<&'static str> = HashSet::from([
+        "U8",
+        "U16",
+        "U32",
+        "U64",
+        "U128",
+        "U250",
+        "U256",
+        "Cursor",
+        "Boolean",
+        "Address",
+        "DateTime",
+        "FieldElement",
+    ]);
+    pub static ref NUMERIC_SCALAR_TYPES: HashSet<&'static str> =
+        HashSet::from(["U8", "U16", "U32", "U64", "U128", "U250", "U256",]);
+    pub static ref STRING_SCALAR_TYPES: HashSet<&'static str> =
+        HashSet::from(["Cursor", "Address", "DateTime", "FieldElement",]);
+}
+
+pub async fn build_schema(pool: &SqlitePool) -> Result<Schema, SchemaError> {
+    // // retrieve component schemas from database
+    // let components: Vec<Component> = sqlx::query_as("SELECT * FROM components")
+    //     .fetch_all(pool)
+    //     .await
+    //     .unwrap();
+
+    let entity = EntityObject::new(ENTITY_TYPE_MAPPING.clone());
+    let component = ComponentObject::new(COMPONENT_TYPE_MAPPING.clone());
+    let system = SystemObject::new(SYSTEM_TYPE_MAPPING.clone());
+    let event = EventObject::new(EVENT_TYPE_MAPPING.clone());
+    let system_call = SystemCallObject::new(SYSTEM_CALL_TYPE_MAPPING.clone());
+
+    let mut fields = entity.field_resolvers();
+    fields.extend(component.field_resolvers());
+    fields.extend(system.field_resolvers());
+    fields.extend(event.field_resolvers());
+    fields.extend(system_call.field_resolvers());
 
     let query_root =
         fields.into_iter().fold(Object::new("Query"), |query_root, field| query_root.field(field));
@@ -38,32 +68,13 @@ pub fn build_schema(pool: &SqlitePool) -> Result<Schema, SchemaError> {
 
     // register default gql objects
     schema_builder = schema_builder
-        .register(Entity::object())
-        .register(Component::object())
-        .register(System::object())
-        .register(Event::object())
-        .register(EntityState::object())
-        .register(SystemCall::object())
+        .register(entity.object())
+        .register(component.object())
+        .register(system.object())
+        .register(event.object())
+        .register(system_call.object())
         .register(query_root)
         .data(pool.clone());
 
-    // TODO: dynamically create component objects from schema table and register them
-
     schema_builder.finish()
-}
-
-fn _create_dynamic_object(
-    type_name: &'static str,
-    fields: &HashMap<&'static str, &'static str>,
-) -> Object {
-    let object = fields.iter().fold(Object::new(type_name), |object, (field_name, field_type)| {
-        let field = Field::new(*field_name, TypeRef::named_nn(*field_type), |ctx| {
-            let data = ctx.parent_value.try_downcast_ref::<HashMap<String, String>>().unwrap();
-            let field_value = data.get(*field_name).unwrap();
-            FieldFuture::new(async move { Ok(Some(Value::from(field_value.as_str()))) })
-        });
-        object.field(field)
-    });
-
-    object
 }
