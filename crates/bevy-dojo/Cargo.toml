@@ -4,14 +4,20 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+eyre = "0.6.8"
 beerus-core = { git = "https://github.com/keep-starknet-strange/beerus", rev = "fbb39bd72fb283f653db4a5d279443e2f122153d" }
 bevy = { version = "0.10", default-features = false }
+ethers = "2.0"
+# Should be match to the beerus dependency: https://github.com/keep-starknet-strange/beerus/blob/fbb39bd72fb283f653db4a5d279443e2f122153d/Cargo.toml#L19..L20
+helios = { git = "https://github.com/a16z/helios", rev = "f63e4142c8c8094cdf94cf8d1ef1cb637a7eac98" }
+starknet.workspace = true
 
 # Those are for indexer mod.
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 apibara-core = { git = "https://github.com/apibara/dna", rev = "2c452070372e80e5d1a5302c1b8ae5defef7e9a4" }
 apibara-sdk = { git = "https://github.com/apibara/dna", rev = "2c452070372e80e5d1a5302c1b8ae5defef7e9a4" }
 bevy-tokio-tasks = "0.10"
+ethabi = "18"
 prost = "0.11"
 tokio = { version = "1.27", features = ["sync"] }
 tokio-stream = "0.1"
@@ -20,6 +26,11 @@ tonic = { version = "0.8" }
 [dev-dependencies]
 chrono = "0.4"
 bevy = "0.10"
+
+[features]
+default = ["full"]
+full = ["light-client"]
+light-client = []
 
 [[example]]
 name = "indexer"

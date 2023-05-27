@@ -13,8 +13,13 @@
 //! - 🌐 [Website](https://bevyengine.org/)
 //! - 📝 [Unofficial Bevy Cheat Book](https://bevy-cheatbook.github.io/)
 
+use bevy::app::{PluginGroup, PluginGroupBuilder};
+use bevy_tokio_tasks::TokioTasksPlugin;
+use prelude::LightClientPlugin;
+
 #[cfg(not(target_arch = "wasm32"))]
 pub mod indexer;
+
 pub mod light_client;
 
 /// Sets of tools to bootstrap your `bevy_dojo` project.
@@ -33,4 +38,25 @@ pub mod prelude {
     #[cfg(not(target_arch = "wasm32"))]
     pub use crate::indexer::IndexerPlugin;
     pub use crate::light_client::prelude::*;
+}
+
+pub struct DojoPlugins;
+
+impl PluginGroup for DojoPlugins {
+    fn build(self) -> PluginGroupBuilder {
+        let mut group = PluginGroupBuilder::start::<Self>();
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            group = group.add(TokioTasksPlugin::default());
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(feature = "light-client")]
+        {
+            group = group.add(LightClientPlugin);
+        }
+
+        group
+    }
 }
