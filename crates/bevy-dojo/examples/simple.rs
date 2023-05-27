@@ -11,8 +11,8 @@ use chrono::{DateTime, Utc};
 fn main() {
     let config = Configuration::<Filter>::default()
         .with_finality(DataFinality::DataStatusAccepted)
-        .with_batch_size(10)
-        .with_filter(build_filter);
+        .with_batch_size(10);
+    // .with_filter(build_filter);
 
     App::new()
         .set_runner(runner)
@@ -25,19 +25,19 @@ fn main() {
         .run();
 }
 
-fn build_filter(f: Filter) -> Filter {
-    let eth_address = FieldElement::from_hex(
-        "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
-    )
-    .unwrap();
-    let transfer_key =
-        FieldElement::from_hex("0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9")
-            .unwrap();
+// fn build_filter(f: Filter) -> Filter {
+//     let eth_address = FieldElement::from_hex(
+//         "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+//     )
+//     .unwrap();
+//     let transfer_key =
+//         FieldElement::from_hex("0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9"
+// )             .unwrap();
 
-    f.with_header(HeaderFilter::weak()).add_event(|ev| {
-        ev.with_from_address(eth_address.clone()).with_keys(vec![transfer_key.clone()])
-    })
-}
+//     f.with_header(HeaderFilter::weak()).add_event(|ev| {
+//         ev.with_from_address(eth_address.clone()).with_keys(vec![transfer_key.clone()])
+//     })
+// }
 
 fn runner(mut app: App) {
     loop {
