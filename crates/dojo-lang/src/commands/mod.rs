@@ -8,6 +8,7 @@ pub mod entities;
 pub mod entity;
 pub mod execute;
 pub mod set;
+pub mod delete;
 pub mod uuid;
 
 const CAIRO_ERR_MSG_LEN: usize = 31;
@@ -67,6 +68,12 @@ impl Command {
             }
             "set_entity" => {
                 let sc = set::SetCommand::from_ast(db, let_pattern, command_ast);
+                command.rewrite_nodes.extend(sc.rewrite_nodes());
+                command.diagnostics.extend(sc.diagnostics());
+                command.component_deps.extend(sc.components);
+            }
+            "delete_entity" => {
+                let sc = delete::DeleteCommand::from_ast(db, let_pattern, command_ast);
                 command.rewrite_nodes.extend(sc.rewrite_nodes());
                 command.diagnostics.extend(sc.diagnostics());
                 command.component_deps.extend(sc.components);
