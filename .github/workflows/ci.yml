@@ -56,9 +56,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: dtolnay/rust-toolchain@master
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
           components: clippy
       
       - uses: Swatinem/rust-cache@v2
