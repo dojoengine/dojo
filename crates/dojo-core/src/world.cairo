@@ -5,12 +5,18 @@ mod World {
     use option::OptionTrait;
     use box::BoxTrait;
     use serde::Serde;
-    use starknet::{get_caller_address, get_contract_address, get_tx_info, contract_address::ContractAddressIntoFelt252, ClassHash, Zeroable, ContractAddress};
+    use starknet::{
+        get_caller_address, get_contract_address, get_tx_info,
+        contract_address::ContractAddressIntoFelt252, ClassHash, Zeroable, ContractAddress
+    };
 
     use dojo_core::storage::{db::Database, query::{Query, QueryTrait}};
     use dojo_core::integer::{u250, ContractAddressIntoU250};
     use dojo_core::{string::ShortString, auth::systems::Route};
-    use dojo_core::interfaces::{IComponentLibraryDispatcher, IComponentDispatcherTrait, IExecutorDispatcher, IExecutorDispatcherTrait, ISystemLibraryDispatcher, ISystemDispatcherTrait};
+    use dojo_core::interfaces::{
+        IComponentLibraryDispatcher, IComponentDispatcherTrait, IExecutorDispatcher,
+        IExecutorDispatcherTrait, ISystemLibraryDispatcher, ISystemDispatcherTrait
+    };
 
     #[event]
     fn WorldSpawned(address: ContractAddress, caller: ContractAddress, name: ShortString) {}
@@ -209,8 +215,18 @@ mod World {
     }
 
     #[view]
-    fn entity(component: ShortString, query: Query, offset: u8, length: usize) -> Span<felt252> {
+    fn entity(
+        component: ShortString,
+        address_domain: u32,
+        partition: u250,
+        keys: Span<u250>,
+        offset: u8,
+        length: usize
+    ) -> Span<felt252> {
         let class_hash = component_registry::read(component);
+
+        let query = QueryTrait::new(address_domain, partition, keys.span());
+
         match Database::get(class_hash, component.into(), query, offset, length) {
             Option::Some(res) => res,
             Option::None(_) => {
