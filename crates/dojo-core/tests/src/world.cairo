@@ -33,7 +33,7 @@ fn test_component() {
     data.append(1337);
     let id = World::uuid();
     World::set_entity(name, QueryTrait::new_from_id(id.into()), 0, data.span());
-    let stored = World::entity(name, QueryTrait::new_from_id(id.into()), 0, 1);
+    let stored = World::entity(name, 0, 0, 0, 0, 1);
     assert(*stored.snapshot.at(0) == 1337, 'data not stored');
 }
 
