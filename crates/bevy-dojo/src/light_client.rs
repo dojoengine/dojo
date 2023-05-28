@@ -95,7 +95,10 @@ fn start_light_client(runtime: ResMut<'_, TokioTasksRuntime>) -> Result<()> {
                         GetBlockWithTxHashes => {
                             StarknetRequest::get_block_with_tx_hashes(&client, ctx).await
                         }
-                        BlockNumber => StarknetRequest::block_number(&client, ctx).await,
+                        BlockNumber(e) => StarknetRequest::block_number(&client, ctx, e).await,
+                        _ => {
+                            unreachable!()
+                        }
                     }
                 }
                 LightClientRequest::Ethereum(ethereum_req) => {
@@ -128,7 +131,7 @@ impl LightClient {
         Self { tx }
     }
 
-    pub fn request(&self, req: LightClientRequest) -> Result<(), TrySendError<LightClientRequest>> {
+    pub fn send(&self, req: LightClientRequest) -> Result<(), TrySendError<LightClientRequest>> {
         self.tx.try_send(req)
     }
 }
