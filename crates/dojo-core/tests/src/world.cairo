@@ -7,11 +7,9 @@ use option::OptionTrait;
 use starknet::class_hash::Felt252TryIntoClassHash;
 use starknet::syscalls::deploy_syscall;
 
-use dojo_core::integer::u250;
-use dojo_core::integer::U32IntoU250;
+use dojo_core::integer::{u250, U32IntoU250};
 use dojo_core::storage::query::QueryTrait;
-use dojo_core::interfaces::IWorldDispatcher;
-use dojo_core::interfaces::IWorldDispatcherTrait;
+use dojo_core::interfaces::{IWorldDispatcher, IWorldDispatcherTrait};
 use dojo_core::executor::Executor;
 use dojo_core::world::World;
 use dojo_core::test_utils::mock_auth_components_systems;
@@ -33,7 +31,11 @@ fn test_component() {
     data.append(1337);
     let id = World::uuid();
     World::set_entity(name, QueryTrait::new_from_id(id.into()), 0, data.span());
-    let stored = World::entity(name, 0, 0, 0, 0, 1);
+
+    let mut keys = ArrayTrait::new();
+    keys.append(0.into());
+
+    let stored = World::entity(name, 0, 0.into(), keys.span(), 0, 1);
     assert(*stored.snapshot.at(0) == 1337, 'data not stored');
 }
 
