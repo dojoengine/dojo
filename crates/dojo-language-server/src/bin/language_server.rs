@@ -21,7 +21,7 @@ async fn main() {
 
     let db = RootDatabase::builder()
         .with_cfg(CfgSet::from_iter([Cfg::name("test")]))
-        .with_semantic_plugin(Arc::new(DojoPlugin::default()))
+        .with_semantic_plugin(Arc::new(DojoPlugin))
         .with_semantic_plugin(Arc::new(StarkNetPlugin::default()))
         .build()
         .unwrap_or_else(|error| {

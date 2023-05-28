@@ -8,7 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  NIGHTLY_RUST_VERSION: nightly-2022-11-03
+  NIGHTLY_RUST_VERSION: nightly-2023-05-28
 
 jobs:
   test:
@@ -56,16 +56,16 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
           components: clippy
       
       - uses: Swatinem/rust-cache@v2
       - uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: >
-          scripts/clippy.sh
+      - run: scripts/clippy.sh
 
   rustfmt:
     runs-on: ubuntu-latest
@@ -111,7 +111,7 @@ jobs:
           fi
           ~/.cargo-udeps-cache/cargo-udeps udeps
         env:
-          RUSTUP_TOOLCHAIN: nightly-2022-11-03
+          RUSTUP_TOOLCHAIN: ${{ env.NIGHTLY_RUST_VERSION }}
 
   docs:
     runs-on: ubuntu-latest
