@@ -51,7 +51,7 @@ impl Plugin for LightClientPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_plugin(EthereumClientPlugin)
             .add_plugin(StarknetClientPlugin)
-            .add_startup_system(start_light_client.pipe(handle_errors));
+            .add_startup_system(start_light_client.pipe(handle_light_client_error));
     }
 }
 
@@ -92,12 +92,82 @@ fn start_light_client(runtime: ResMut<'_, TokioTasksRuntime>) -> Result<()> {
                     use StarknetRequest::*;
 
                     match starknet_req {
-                        GetBlockWithTxHashes => {
-                            StarknetRequest::get_block_with_tx_hashes(&client, ctx).await
+                        GetBlockWithTxHashes(params) => {
+                            StarknetRequest::get_block_with_tx_hashes(&client, ctx, params).await
                         }
-                        BlockNumber(e) => StarknetRequest::block_number(&client, ctx, e).await,
-                        _ => {
-                            unreachable!()
+                        GetBlockWithTxs(params) => {
+                            StarknetRequest::get_block_with_txs(&client, ctx, params).await
+                        }
+                        GetStateUpdate(params) => {
+                            StarknetRequest::get_state_update(&client, ctx, params).await
+                        }
+                        GetStorageAt(params) => {
+                            StarknetRequest::get_storage_at(&client, ctx, params).await
+                        }
+                        GetTransactionByHash(params) => {
+                            StarknetRequest::get_transaction_by_hash(&client, ctx, params).await
+                        }
+                        GetTransactionByBlockIdAndIndex(params) => {
+                            StarknetRequest::get_transaction_by_block_id_and_index(
+                                &client, ctx, params,
+                            )
+                            .await
+                        }
+                        GetTransactionReceipt(params) => {
+                            StarknetRequest::get_transaction_receipt(&client, ctx, params).await
+                        }
+                        GetClass(params) => StarknetRequest::get_class(&client, ctx, params).await,
+                        GetClassHashAt(params) => {
+                            StarknetRequest::get_class_hash_at(&client, ctx, params).await
+                        }
+                        GetClassAt(params) => {
+                            StarknetRequest::get_class_at(&client, ctx, params).await
+                        }
+                        GetBlockTransactionCount(params) => {
+                            StarknetRequest::get_block_transaction_count(&client, ctx, params).await
+                        }
+                        Call(params) => StarknetRequest::get_call(&client, ctx, params).await,
+                        EstimateFee(params) => {
+                            StarknetRequest::estimate_fee(&client, ctx, params).await
+                        }
+                        BlockNumber => StarknetRequest::block_number(&client, ctx).await,
+                        BlockHashAndNumber => {
+                            StarknetRequest::block_hash_and_number(&client, ctx).await
+                        }
+                        ChainId => StarknetRequest::chain_id(&client, ctx).await,
+                        PendingTransactions => {
+                            StarknetRequest::pending_transactions(&client, ctx).await
+                        }
+                        Syncing => StarknetRequest::syncing(&client, ctx).await,
+                        GetEvents(params) => {
+                            StarknetRequest::get_events(&client, ctx, params).await
+                        }
+                        GetNonce(params) => StarknetRequest::get_nonce(&client, ctx, params).await,
+                        L1ToL2Messages(params) => {
+                            StarknetRequest::l1_to_l2_messages(&client, ctx, params).await
+                        }
+                        L1ToL2MessageNonce => {
+                            StarknetRequest::l1_to_l2_message_nonce(&client, ctx).await
+                        }
+                        L1ToL2MessageCancellations(params) => {
+                            StarknetRequest::l1_to_l2_message_cancellations(&client, ctx, params)
+                                .await
+                        }
+                        L2ToL1Messages(params) => {
+                            StarknetRequest::l2_to_l1_messages(&client, ctx, params).await
+                        }
+                        AddDeclareTransaction(params) => {
+                            StarknetRequest::add_declare_transaction(&client, ctx, params).await
+                        }
+                        AddDeployAccountTransaction(params) => {
+                            StarknetRequest::add_deploy_account_transaction(&client, ctx, params)
+                                .await
+                        }
+                        GetContractStorageProof(params) => {
+                            StarknetRequest::get_contract_storage_proof(&client, ctx, params).await
+                        }
+                        AddInvokeTransaction(params) => {
+                            StarknetRequest::add_invoke_transaction(&client, ctx, params).await
                         }
                     }
                 }
@@ -154,7 +224,13 @@ impl BlockNumber {
     }
 }
 
-fn handle_errors(In(result): In<Result<()>>) {
+fn handle_light_client_error(In(result): In<Result<()>>) {
+    if let Err(e) = result {
+        log::error!("{e}");
+    }
+}
+
+fn handle_request_error(In(result): In<Result<()>>) {
     if let Err(e) = result {
         log::error!("{e}");
     }

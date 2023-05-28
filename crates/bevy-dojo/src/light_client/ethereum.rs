@@ -11,8 +11,7 @@ use eyre::Result;
 use helios::types::CallOpts;
 use starknet::core::types::BlockTag;
 
-use super::handle_errors;
-use crate::light_client::{BlockNumber, LightClient, LightClientRequest};
+use crate::light_client::{handle_request_error, BlockNumber, LightClient, LightClientRequest};
 
 pub struct EthereumClientPlugin;
 
@@ -39,7 +38,7 @@ impl Plugin for EthereumClientPlugin {
             .add_event::<EthSyncing>()
             .add_event::<EthGetTransactionByHash>()
             .add_event::<EthGetBlockNumber>()
-            .add_system(get_block_number.pipe(handle_errors));
+            .add_system(get_block_number.pipe(handle_request_error));
     }
 }
 
@@ -145,7 +144,7 @@ fn get_block_number(
 ) -> Result<()> {
     events.iter().try_for_each(|_e| {
         let client = query.get_single()?;
-        client.request(LightClientRequest::ethereum_get_block_number())?;
+        client.send(LightClientRequest::ethereum_get_block_number())?;
 
         Ok(())
     })
