@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use indexmap::IndexMap;
 use async_graphql::dynamic::{Field, FieldFuture, FieldValue, Object, TypeRef};
 use async_graphql::Value;
 use sqlx::{Pool, Sqlite};

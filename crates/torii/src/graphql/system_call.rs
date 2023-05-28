@@ -1,8 +1,7 @@
-use std::collections::HashMap;
-
 use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
 use async_graphql::Value;
 use chrono::{DateTime, Utc};
+use indexmap::IndexMap;
 use serde::Deserialize;
 use sqlx::{FromRow, Pool, Sqlite};
 
@@ -26,7 +25,7 @@ pub struct SystemCallObject {
 impl ObjectTraitStatic for SystemCallObject {
     fn new() -> Self {
         Self {
-            field_type_mapping: HashMap::from([
+            field_type_mapping: IndexMap::from([
                 (String::from("id"), String::from("ID")),
                 (String::from("transactionHash"), String::from("String")),
                 (String::from("data"), String::from("String")),
@@ -66,7 +65,7 @@ impl ObjectTraitInstance for SystemCallObject {
                             .fetch_one(&mut conn)
                             .await?;
 
-                    let result: ValueMapping = HashMap::from([
+                    let result: ValueMapping = IndexMap::from([
                         (String::from("id"), Value::from(system_call.id.to_string())),
                         (
                             String::from("transactionHash"),

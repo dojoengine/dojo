@@ -7,13 +7,12 @@ pub mod server;
 pub mod system;
 pub mod system_call;
 
-use std::collections::HashMap;
-
 use async_graphql::dynamic::{Field, FieldFuture, Object, TypeRef};
 use async_graphql::Value;
+use indexmap::IndexMap;
 
-pub type TypeMapping = HashMap<String, String>;
-pub type ValueMapping = HashMap<String, Value>;
+pub type TypeMapping = IndexMap<String, String>;
+pub type ValueMapping = IndexMap<String, Value>;
 
 pub trait ObjectTraitStatic {
     fn new() -> Self;
