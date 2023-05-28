@@ -37,8 +37,7 @@ impl Plugin for EthereumClientPlugin {
             .add_event::<EthCoinbase>()
             .add_event::<EthSyncing>()
             .add_event::<EthGetTransactionByHash>()
-            .add_event::<EthGetBlockNumber>()
-            .add_system(get_block_number.pipe(handle_request_error));
+            .add_system(block_number.pipe(handle_request_error));
     }
 }
 
@@ -46,62 +45,77 @@ impl Plugin for EthereumClientPlugin {
 // Events
 ////////////////////////////////////////////////////////////////////////
 
+#[derive(Clone, Copy, Debug)]
 pub struct EthGetBalance {
     pub address: Address,
     pub block: BlockTag,
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct EthGetTransactionCount {
     pub address: Address,
     pub block: BlockTag,
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct EthGetCode {
     pub address: Address,
     pub block: BlockTag,
 }
 
+#[derive(Clone, Debug)]
 /// Not supported: https://github.com/keep-starknet-strange/beerus#endpoint-support
 pub struct EthCall {
     pub opts: CallOpts,
     pub block: BlockTag,
 }
 
+#[derive(Clone, Debug)]
 pub struct EthEstimateGas {
     pub opts: CallOpts,
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct EthGetChainId;
 
+#[derive(Clone, Copy, Debug)]
 pub struct EthGasPrice;
 
+#[derive(Clone, Copy, Debug)]
 pub struct EthMaxPriorityFeePerGas;
 
+#[derive(Clone, Copy, Debug)]
 pub struct EthBlockNumber;
 
+#[derive(Clone, Copy, Debug)]
 pub struct EthGetBlockByNumber {
     pub block: BlockTag,
     pub full_tx: bool,
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct EthGetBlockByHash {
     pub hash: &'static str,
     pub full_tx: bool,
 }
 
+#[derive(Clone, Copy, Debug)]
 /// Not supported: https://github.com/keep-starknet-strange/beerus#endpoint-support
 pub struct EthSendRawTransaction {
     pub bytes: &'static str,
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct EthGetTransactionReceipt {
     pub tx_hash: &'static str,
 }
 
+#[derive(Clone, Debug)]
 pub struct EthGetLogs {
     pub filter: Filter,
 }
 
+#[derive(Clone, Copy, Debug)]
 /// Not supported: https://github.com/keep-starknet-strange/beerus#endpoint-support
 pub struct EthGetStorageAt {
     pub address: Address,
@@ -109,42 +123,46 @@ pub struct EthGetStorageAt {
     pub block: BlockTag,
 }
 
+#[derive(Clone, Copy, Debug)]
 /// Not supported: https://github.com/keep-starknet-strange/beerus#endpoint-support
 pub struct EthGetBlockTransactionCountByHash {
     pub hash: &'static str,
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct EthGetBlockTransactionCountByNumber {
     pub block: BlockTag,
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct EthCoinbase;
 
+#[derive(Clone, Copy, Debug)]
 pub struct EthSyncing;
 
+#[derive(Clone, Copy, Debug)]
 pub struct EthGetTransactionByHash {
     pub tx_hash: &'static str,
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct EthGetTransactionByBlockHashAndIndex {
     pub hash: &'static str,
     pub index: usize,
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct EthGetBlockNumber;
 
 ////////////////////////////////////////////////////////////////////////
 // Systems
 ////////////////////////////////////////////////////////////////////////
 
-/// React to [EthGetBlockNumber] event
-fn get_block_number(
-    mut events: EventReader<EthGetBlockNumber>,
-    query: Query<&LightClient>,
-) -> Result<()> {
+/// React to [EthBlockNumber] event
+fn block_number(mut events: EventReader<EthBlockNumber>, query: Query<&LightClient>) -> Result<()> {
     events.iter().try_for_each(|_e| {
         let client = query.get_single()?;
-        client.send(LightClientRequest::ethereum_get_block_number())?;
+        client.send(LightClientRequest::ethereum_block_number())?;
 
         Ok(())
     })
@@ -156,14 +174,120 @@ fn get_block_number(
 
 use EthRequest::*;
 impl LightClientRequest {
-    pub fn ethereum_get_block_number() -> Self {
-        Self::Ethereum(GetBlockNumber)
+    pub fn ethereum_get_balance(params: EthGetBalance) -> Self {
+        Self::Ethereum(GetBalance(params))
+    }
+
+    pub fn ethereum_get_transaction_count(params: EthGetTransactionCount) -> Self {
+        Self::Ethereum(GetTransactionCount(params))
+    }
+
+    pub fn ethereum_get_get_code(params: EthGetCode) -> Self {
+        Self::Ethereum(GetCode(params))
+    }
+
+    pub fn ethereum_get_call(params: EthCall) -> Self {
+        Self::Ethereum(Call(params))
+    }
+
+    pub fn ethereum_estimate_gas(params: EthEstimateGas) -> Self {
+        Self::Ethereum(EstimateGas(params))
+    }
+
+    pub fn ethereum_get_chain_id() -> Self {
+        Self::Ethereum(GetChainId)
+    }
+
+    pub fn ethereum_gas_price() -> Self {
+        Self::Ethereum(GasPrice)
+    }
+
+    pub fn ethereum_max_priority_fee_per_gas() -> Self {
+        Self::Ethereum(MaxPriorityFeePerGas)
+    }
+
+    pub fn ethereum_ethereum_block_number() -> Self {
+        Self::Ethereum(BlockNumber)
+    }
+
+    pub fn ethereum_get_block_by_number(params: EthGetBlockByNumber) -> Self {
+        Self::Ethereum(GetBlockByNumber(params))
+    }
+
+    pub fn ethereum_get_block_by_hash(params: EthGetBlockByHash) -> Self {
+        Self::Ethereum(GetBlockByHash(params))
+    }
+
+    pub fn ethereum_send_raw_transaction(params: EthSendRawTransaction) -> Self {
+        Self::Ethereum(SendRawTransaction(params))
+    }
+
+    pub fn ethereum_get_transaction_receipt(params: EthGetTransactionReceipt) -> Self {
+        Self::Ethereum(GetTransactionReceipt(params))
+    }
+
+    pub fn ethereum_get_logs(params: EthGetLogs) -> Self {
+        Self::Ethereum(GetLogs(params))
+    }
+
+    pub fn ethereum_get_storage_at(params: EthGetStorageAt) -> Self {
+        Self::Ethereum(GetStorageAt(params))
+    }
+
+    pub fn ethereum_get_block_transaction_count_by_hash(
+        params: EthGetBlockTransactionCountByHash,
+    ) -> Self {
+        Self::Ethereum(GetBlockTransactionCountByHash(params))
+    }
+
+    pub fn ethereum_get_block_transaction_count_by_number(
+        params: EthGetBlockTransactionCountByNumber,
+    ) -> Self {
+        Self::Ethereum(GetBlockTransactionCountByNumber(params))
+    }
+
+    pub fn ethereum_coinbase() -> Self {
+        Self::Ethereum(Coinbase)
+    }
+
+    pub fn ethereum_syncing() -> Self {
+        Self::Ethereum(Syncing)
+    }
+
+    pub fn ethereum_get_transaction_by_hash(params: EthGetTransactionByHash) -> Self {
+        Self::Ethereum(GetTransactionByHash(params))
+    }
+
+    pub fn ethereum_get_transaction_by_block_hash_and_index(
+        params: EthGetTransactionByBlockHashAndIndex,
+    ) -> Self {
+        Self::Ethereum(GetTransactionByBlockHashAndIndex(params))
     }
 }
 
 #[derive(Debug)]
 pub enum EthRequest {
-    GetBlockNumber,
+    GetBalance(EthGetBalance),
+    GetTransactionCount(EthGetTransactionCount),
+    GetCode(EthGetCode),
+    Call(EthCall),
+    EstimateGas(EthEstimateGas),
+    GetChainId,
+    GasPrice,
+    MaxPriorityFeePerGas,
+    BlockNumber,
+    GetBlockByNumber(EthGetBlockByNumber),
+    GetBlockByHash(EthGetBlockByHash),
+    SendRawTransaction(EthSendRawTransaction),
+    GetTransactionReceipt(EthGetTransactionReceipt),
+    GetLogs(EthGetLogs),
+    GetStorageAt(EthGetStorageAt),
+    GetBlockTransactionCountByHash(EthGetBlockTransactionCountByHash),
+    GetBlockTransactionCountByNumber(EthGetBlockTransactionCountByNumber),
+    Coinbase,
+    Syncing,
+    GetTransactionByHash(EthGetTransactionByHash),
+    GetTransactionByBlockHashAndIndex(EthGetTransactionByBlockHashAndIndex),
 }
 
 impl EthRequest {
