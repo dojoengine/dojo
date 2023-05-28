@@ -11,7 +11,7 @@ on:
 env:
   IS_NIGHTLY: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
   CARGO_TERM_COLOR: always
-  NIGHTLY_RUST_VERSION: nightly-2022-11-03
+  NIGHTLY_RUST_VERSION: nightly-2023-05-28
 
 jobs:
   prepare:
