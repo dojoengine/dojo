@@ -24,12 +24,11 @@
 Dojo is still in its early stages of development, yet the dedicated contributors are propelling its progress at an impressive pace. The overarching aspiration for Dojo is to empower game developers to kick-start their projects, aiming to reduce the initial setup time from days to mere hours. Join the movement!
 
 ## 🔑 Key Features
-
--   Cairo 1.0 Entity Component System (ECS)
--   Sozu migration planner
--   [Torii](/crates/torii/README.md) networking & indexing stack
--   [Katana](/crates/katana/README.md) RPC development network
--   Typed SDKs
+- Entity Component System (ECS) written in [Cairo](https://github.com/starkware-libs/cairo)
+- Sozu migration planner
+- [Torii](/crates/torii/README.md) networking & indexing stack
+- [Katana](/crates/katana/README.md) RPC development network
+- Typed SDKs
 
 ## 🚀 Quick Start
 
