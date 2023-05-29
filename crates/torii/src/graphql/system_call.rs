@@ -57,7 +57,7 @@ impl ObjectTraitInstance for SystemCallObject {
             Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let id = ctx.args.get("id").expect("id not found");
+                    let id = ctx.args.try_get("id")?;
 
                     let system_call: SystemCall =
                         sqlx::query_as("SELECT * FROM system_calls WHERE id = ?")

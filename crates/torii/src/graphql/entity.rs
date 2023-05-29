@@ -58,7 +58,7 @@ impl ObjectTraitInstance for EntityObject {
             Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let id = ctx.args.get("id").expect("id not found");
+                    let id = ctx.args.try_get("id")?;
 
                     let entity: Entity = sqlx::query_as("SELECT * FROM entities WHERE id = ?")
                         .bind(id.string()?)
