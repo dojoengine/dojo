@@ -1,4 +1,4 @@
-use std::env::current_dir;
+use std::env::{current_dir, current_exe, var};
 use std::path::{Path, PathBuf};
 use std::{fs, io};
 
@@ -38,7 +38,14 @@ pub fn run(args: InitArgs) {
         None => current_dir().unwrap(),
     };
 
-    let template_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("sozo-template");
+    let template_dir = if let Ok(cargo_manifest_dir) = var("CARGO_MANIFEST_DIR") {
+        PathBuf::from(cargo_manifest_dir).join("sozo-template")
+    } else {
+        let mut binary_dir = current_exe().unwrap();
+        binary_dir.pop(); // Remove the binary name from the path
+        binary_dir.push("sozo-template");
+        binary_dir
+    };
 
     copy_dir_all(template_dir, target_dir).unwrap();
 
