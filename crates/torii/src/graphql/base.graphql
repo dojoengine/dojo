@@ -1,0 +1,67 @@
+scalar U8
+scalar U16
+scalar U32
+scalar U64
+scalar U128
+scalar U250
+scalar U256
+scalar Cursor
+scalar Boolean
+scalar Address
+scalar DateTime
+scalar FieldElement
+
+type Entity {
+  id: ID!
+  name: String!
+  partitionId: FieldElement!
+  keys: FieldElement
+  transactionHash: FieldElement!
+  createdAt: DateTime!
+  components: [Component!]
+}
+
+type Component {
+  id: ID!
+  name: String!
+  address: Address!
+  classHash: Address!
+  transactionHash: FieldElement!
+  storageSchema: String!
+  storageStates: [Storage_NAME_!]
+  createdAt: DateTime!
+}
+
+type Storage_NAME_ {
+  id: ID!
+  entity: Entity!
+  component: Component!
+  createdAt: DateTime!
+  # dynamic fields
+  # ...
+}
+
+type System {
+  id: ID!
+  name: String!
+  address: Address!
+  classHash: Address!
+  transactionHash: FieldElement!
+  createdAt: DateTime!
+}
+
+type SystemCall {
+  id: ID!
+  data: String!
+  transactionHash: FieldElement!
+  system: System!
+  createdAt: DateTime!
+}
+
+type Event {
+  id: ID!
+  keys: String!
+  data: String!
+  systemCall: SystemCall!
+  createdAt: DateTime!
+}

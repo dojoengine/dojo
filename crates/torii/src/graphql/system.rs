@@ -1,14 +1,15 @@
-use async_graphql::{ComplexObject, Context, Result, SimpleObject};
+use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
+use async_graphql::Value;
 use chrono::{DateTime, Utc};
+use indexmap::IndexMap;
 use serde::Deserialize;
-use sqlx::pool::PoolConnection;
-use sqlx::{Pool, Sqlite};
+use sqlx::{FromRow, Pool, Sqlite};
 
-use super::system_call::{system_calls_by_system, SystemCall};
+// use super::system_call::SystemCall;
+use super::{ObjectTraitInstance, ObjectTraitStatic, TypeMapping, ValueMapping};
 
-#[derive(SimpleObject, Debug, Deserialize)]
+#[derive(FromRow, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[graphql(complex)]
 pub struct System {
     pub id: String,
     pub name: String,
@@ -18,49 +19,74 @@ pub struct System {
     pub created_at: DateTime<Utc>,
 }
 
-#[ComplexObject]
-impl System {
-    async fn system_calls(&self, context: &Context<'_>) -> Result<Vec<SystemCall>> {
-        let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
-        system_calls_by_system(&mut conn, self.id.clone()).await
+pub struct SystemObject {
+    pub field_type_mapping: TypeMapping,
+}
+
+impl ObjectTraitStatic for SystemObject {
+    fn new() -> Self {
+        Self {
+            field_type_mapping: IndexMap::from([
+                (String::from("id"), String::from("ID")),
+                (String::from("name"), String::from("String")),
+                (String::from("address"), String::from("Address")),
+                (String::from("classHash"), String::from("FieldElement")),
+                (String::from("transactionHash"), String::from("FieldElement")),
+                (String::from("createdAt"), String::from("DateTime")),
+            ]),
+        }
+    }
+
+    fn from(field_type_mapping: TypeMapping) -> Self {
+        Self { field_type_mapping }
     }
 }
 
-pub async fn system_by_id(conn: &mut PoolConnection<Sqlite>, id: String) -> Result<System> {
-    sqlx::query_as!(
-        System,
-        r#"
-            SELECT
-                id,
-                name,
-                address,
-                class_hash,
-                transaction_hash,
-                created_at as "created_at: _"
-            FROM systems WHERE id = $1
-        "#,
-        id
-    )
-    .fetch_one(conn)
-    .await
-    .map_err(|err| err.into())
-}
+impl ObjectTraitInstance for SystemObject {
+    fn name(&self) -> &str {
+        "system"
+    }
 
-pub async fn systems(conn: &mut PoolConnection<Sqlite>) -> Result<Vec<System>> {
-    sqlx::query_as!(
-        System,
-        r#"
-            SELECT
-                id,
-                name,
-                address,
-                class_hash,
-                transaction_hash,
-                created_at as "created_at: _"
-            FROM systems
-        "#
-    )
-    .fetch_all(conn)
-    .await
-    .map_err(|err| err.into())
+    fn type_name(&self) -> &str {
+        "System"
+    }
+
+    fn field_type_mapping(&self) -> &TypeMapping {
+        &self.field_type_mapping
+    }
+
+    fn field_resolvers(&self) -> Vec<Field> {
+        vec![
+            Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
+                FieldFuture::new(async move {
+                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                    let id = ctx.args.try_get("id")?;
+
+                    let system: System = sqlx::query_as("SELECT * FROM systems WHERE id = ?")
+                        .bind(id.string()?)
+                        .fetch_one(&mut conn)
+                        .await?;
+
+                    let result: ValueMapping = IndexMap::from([
+                        (String::from("id"), Value::from(system.id)),
+                        (String::from("name"), Value::from(system.name)),
+                        (String::from("address"), Value::from(system.address)),
+                        (String::from("classHash"), Value::from(system.class_hash)),
+                        (String::from("transactionHash"), Value::from(system.transaction_hash)),
+                        (
+                            String::from("createdAt"),
+                            Value::from(
+                                system
+                                    .created_at
+                                    .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                            ),
+                        ),
+                    ]);
+
+                    Ok(Some(FieldValue::owned_any(result)))
+                })
+            })
+            .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID))),
+        ]
+    }
 }
