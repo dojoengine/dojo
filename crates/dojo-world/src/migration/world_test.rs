@@ -18,6 +18,7 @@ async fn test_migration() {
 
     let sequencer = Arc::new(RwLock::new(KatanaSequencer::new(StarknetConfig {
         total_accounts: 1,
+        allow_zero_max_fee: true,
         ..StarknetConfig::default()
     })));
     sequencer.write().await.start();
@@ -31,13 +32,13 @@ async fn test_migration() {
             rpc: Some(url),
             account_address: Some(
                 FieldElement::from_hex_be(
-                    "0x0002dd34561535562f1e4befd4e5a3214772554d15e44e2493ab1695e1f83dc4",
+                    "0x06f62894bfd81d2e396ce266b2ad0f21e0668d604e5bb1077337b6d570a54aea",
                 )
                 .unwrap(),
             ),
             private_key: Some(
                 FieldElement::from_hex_be(
-                    "0x0000001800000000300000180000000000030000000000003006001800006600",
+                    "0x07230b49615d175307d580c33d6fda61fc7b9aec91df0f5c1a5ebe3b8cbfee02",
                 )
                 .unwrap(),
             ),
