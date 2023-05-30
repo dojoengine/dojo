@@ -6,6 +6,7 @@ pub mod schema;
 pub mod server;
 pub mod system;
 pub mod system_call;
+pub mod utils;
 
 use async_graphql::dynamic::{Field, FieldFuture, Object, TypeRef};
 use async_graphql::{Name, Value};
@@ -61,7 +62,7 @@ fn create_field(name: &str, field_type: &str) -> Field {
 
             match mapping.get(inner_name.as_str()) {
                 Some(value) => Ok(Some(value.clone())),
-                None => Ok(Some(Value::Null)),
+                _ => Err("field not found".into()),
             }
         })
     })

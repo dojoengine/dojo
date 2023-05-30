@@ -60,8 +60,8 @@ impl ObjectTraitInstance for EntityObject {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                     let id = ctx.args.try_get("id")?.string()?.replace('\"', "");
-                    let entity = entity_by_id(&mut conn, &id).await?;
-                    Ok(Some(FieldValue::owned_any(entity)))
+                    let entity_values = entity_by_id(&mut conn, &id).await?;
+                    Ok(Some(FieldValue::owned_any(entity_values)))
                 })
             })
             .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID))),
@@ -100,11 +100,7 @@ fn value_mapping(entity: Entity) -> ValueMapping {
         (Name::new("transactionHash"), Value::from(entity.transaction_hash)),
         (
             Name::new("createdAt"),
-            Value::from(
-                entity
-                    .created_at
-                    .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
-            ),
+            Value::from(entity.created_at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)),
         ),
     ])
 }

@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
 use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
@@ -6,6 +8,8 @@ use serde::Deserialize;
 use sqlx::pool::PoolConnection;
 use sqlx::{FromRow, Pool, Result, Sqlite};
 
+use super::system_call::system_calls_by_system_id;
+use super::utils::value_accessor::ObjectAccessor;
 use super::{ObjectTraitInstance, ObjectTraitStatic, TypeMapping, ValueMapping};
 
 #[derive(FromRow, Deserialize)]
@@ -61,16 +65,31 @@ impl ObjectTraitInstance for SystemObject {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                     let id = ctx.args.try_get("id")?.string()?.replace('\"', "");
-                    let system = system_by_id(&mut conn, &id).await?;
-                    Ok(Some(FieldValue::owned_any(system)))
+                    let system_values = system_by_id(&mut conn, &id).await?;
+                    Ok(Some(FieldValue::owned_any(system_values)))
                 })
             })
             .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID))),
         ]
     }
+
+    fn related_fields(&self) -> Option<Vec<Field>> {
+        Some(vec![Field::new("systemCalls", TypeRef::named_nn_list_nn("SystemCall"), |ctx| {
+            FieldFuture::new(async move {
+                let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                let system_values = ctx.parent_value.try_downcast_ref::<ValueMapping>()?;
+
+                let accessor = ObjectAccessor(Cow::Borrowed(system_values));
+                let id = accessor.try_get("id")?;
+                let system_calls = system_calls_by_system_id(&mut conn, id.string()?).await?;
+
+                Ok(Some(FieldValue::list(system_calls.into_iter().map(FieldValue::owned_any))))
+            })
+        })])
+    }
 }
 
-async fn system_by_id(conn: &mut PoolConnection<Sqlite>, id: &str) -> Result<ValueMapping> {
+pub async fn system_by_id(conn: &mut PoolConnection<Sqlite>, id: &str) -> Result<ValueMapping> {
     let system = sqlx::query_as!(
         System,
         r#"
@@ -100,11 +119,7 @@ fn value_mapping(system: System) -> ValueMapping {
         (Name::new("transactionHash"), Value::from(system.transaction_hash)),
         (
             Name::new("createdAt"),
-            Value::from(
-                system
-                    .created_at
-                    .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
-            ),
+            Value::from(system.created_at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)),
         ),
     ])
 }

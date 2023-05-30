@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
 use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
@@ -7,6 +9,7 @@ use sqlx::pool::PoolConnection;
 use sqlx::{FromRow, Pool, Result, Sqlite};
 
 use super::system_call::system_call_by_id;
+use super::utils::value_accessor::ObjectAccessor;
 use super::{ObjectTraitInstance, ObjectTraitStatic, TypeMapping, ValueMapping};
 
 #[derive(FromRow, Deserialize)]
@@ -60,9 +63,9 @@ impl ObjectTraitInstance for EventObject {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                     let id = ctx.args.try_get("id")?.string()?.replace('\"', "");
-                    let event = event_by_id(&mut conn, &id).await?;
+                    let event_values = event_by_id(&mut conn, &id).await?;
 
-                    Ok(Some(FieldValue::owned_any(event)))
+                    Ok(Some(FieldValue::owned_any(event_values)))
                 })
             })
             .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID))),
@@ -70,18 +73,15 @@ impl ObjectTraitInstance for EventObject {
     }
 
     fn related_fields(&self) -> Option<Vec<Field>> {
-        Some(vec![Field::new("systemCall", TypeRef::named("SystemCall"), |ctx| {
+        Some(vec![Field::new("systemCall", TypeRef::named_nn("SystemCall"), |ctx| {
             FieldFuture::new(async move {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                let mapping = &ctx.parent_value.try_downcast_ref::<ValueMapping>()?;
+                let event_values = ctx.parent_value.try_downcast_ref::<ValueMapping>()?;
 
-                // extract value and convert to i64
-                let id = match mapping.get("system_call_id") {
-                    Some(Value::Number(id)) => id.as_i64().ok_or("invalid id")?,
-                    _ => return Ok(None),
-                };
+                let syscall_id =
+                    ObjectAccessor(Cow::Borrowed(event_values)).try_get("system_call_id")?.i64()?;
+                let system_call = system_call_by_id(&mut conn, syscall_id).await?;
 
-                let system_call = system_call_by_id(&mut conn, id).await?;
                 Ok(Some(FieldValue::owned_any(system_call)))
             })
         })])
@@ -114,15 +114,10 @@ fn value_mapping(event: Event) -> ValueMapping {
         (Name::new("id"), Value::from(event.id)),
         (Name::new("keys"), Value::from(event.keys)),
         (Name::new("data"), Value::from(event.data)),
-        (
-            Name::new("system_call_id"),
-            Value::from(event.system_call_id),
-        ),
+        (Name::new("system_call_id"), Value::from(event.system_call_id)),
         (
             Name::new("createdAt"),
-            Value::from(
-                event.created_at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
-            ),
+            Value::from(event.created_at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)),
         ),
     ])
 }

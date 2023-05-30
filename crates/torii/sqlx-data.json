@@ -48,6 +48,48 @@
     },
     "query": "\n            SELECT\n                id,\n                name,\n                address,\n                class_hash,\n                transaction_hash,\n                created_at as \"created_at: _\"\n            FROM systems WHERE id = $1\n        "
   },
+  "17b656fd8893b11234fb631d819e11a21acc26d2ee1e12c1c7338843e6c8a1d0": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int64"
+        },
+        {
+          "name": "data",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "transaction_hash",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "system_id",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "created_at: _",
+          "ordinal": 4,
+          "type_info": "Datetime"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Right": 1
+      }
+    },
+    "query": "\n            SELECT\n                id,\n                data,\n                transaction_hash,\n                system_id,\n                created_at as \"created_at: _\"\n            FROM system_calls WHERE system_id = $1\n        "
+  },
   "2327896fe4f909df1221a2ce203cded743b34566fbb94ad803c963c22b341a0c": {
     "describe": {
       "columns": [
