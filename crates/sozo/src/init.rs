@@ -1,8 +1,8 @@
-use std::env::{current_dir, current_exe, var};
-use std::path::{Path, PathBuf};
-use std::{fs, io};
-
 use clap::Args;
+use git2::Repository;
+use std::env::current_dir;
+use std::error::Error;
+use std::path::PathBuf;
 
 #[derive(Args, Debug)]
 pub struct InitArgs {
@@ -10,21 +10,7 @@ pub struct InitArgs {
     path: Option<PathBuf>,
 }
 
-fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> {
-    fs::create_dir_all(&dst)?;
-    for entry in fs::read_dir(src)? {
-        let entry = entry?;
-        let ty = entry.file_type()?;
-        if ty.is_dir() {
-            copy_dir_all(entry.path(), dst.as_ref().join(entry.file_name()))?;
-        } else {
-            fs::copy(entry.path(), dst.as_ref().join(entry.file_name()))?;
-        }
-    }
-    Ok(())
-}
-
-pub fn run(args: InitArgs) {
+pub fn run(args: InitArgs) -> Result<(), Box<dyn Error>> {
     let target_dir = match args.path {
         Some(path) => {
             if path.is_absolute() {
@@ -38,19 +24,19 @@ pub fn run(args: InitArgs) {
         None => current_dir().unwrap(),
     };
 
-    let template_dir = if let Ok(cargo_manifest_dir) = var("CARGO_MANIFEST_DIR") {
-        PathBuf::from(cargo_manifest_dir).join("sozo-template")
-    } else {
-        let mut binary_dir = current_exe().unwrap();
-        binary_dir.pop(); // Remove the binary name from the path
-        binary_dir.push("sozo-template");
-        binary_dir
-    };
-
-    copy_dir_all(template_dir, target_dir).unwrap();
+    let repo_url = "https://github.com/dojoengine/dojo-starter";
+    clone_repo(repo_url, target_dir)?;
 
     println!("🗄 Creating project directory tree");
     println!("⛩️ Dojo project ready!");
     println!();
     println!("Try running: `dojo-test .`");
+
+    Ok(())
+}
+
+fn clone_repo(url: &str, path: PathBuf) -> Result<(), Box<dyn Error>> {
+    let _repo = Repository::clone(url, path)?;
+
+    Ok(())
 }

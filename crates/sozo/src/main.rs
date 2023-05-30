@@ -20,7 +20,10 @@ async fn main() {
     let res = match cli.command {
         Commands::Build(args) => build::run(args),
         Commands::Init(args) => {
-            init::run(args);
+            match init::run(args) {
+                Ok(_) => (),
+                Err(e) => eprintln!("Error: {}", e),
+            };
             Ok(())
         }
         Commands::Migrate(args) => migrate::run(args),
