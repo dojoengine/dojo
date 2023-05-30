@@ -1,5 +1,14 @@
-use dojo_core::{integer::u250, string::ShortString, serde::SpanSerde, storage::query::Query, auth::systems::Route};
+use dojo_core::{
+    integer::u250, string::ShortString, serde::SpanSerde, storage::query::Query,
+    auth::systems::Route
+};
 use starknet::{ClassHash, ContractAddress};
+use serde::Serde;
+use array::{ArrayTrait, SpanTrait};
+use traits::{TryInto, Into};
+use option::OptionTrait;
+use starknet::contract_address::Felt252TryIntoContractAddress;
+
 
 #[abi]
 trait IWorld {
@@ -17,6 +26,18 @@ trait IWorld {
     fn is_authorized(system: ClassHash, component: ClassHash) -> bool;
     fn is_account_admin() -> bool;
     fn delete_entity(component: ShortString, query: Query);
+}
+
+// Remove once Serde is derivable for dispatchers
+impl IWorldDispatcherSerde of Serde<IWorldDispatcher> {
+    fn serialize(self: @IWorldDispatcher, ref output: Array<felt252>) {
+        output.append((*self.contract_address).into());
+    }
+    fn deserialize(ref serialized: Span<felt252>) -> Option<IWorldDispatcher> {
+        let contract_address: felt252 = *serialized.pop_front()?;
+        let contract_address: ContractAddress = contract_address.try_into().unwrap();
+        Option::Some(IWorldDispatcher { contract_address })
+    }
 }
 
 #[abi]
