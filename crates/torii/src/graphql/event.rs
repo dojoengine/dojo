@@ -33,7 +33,7 @@ impl ObjectTraitStatic for EventObject {
                 (Name::new("id"), "ID"),
                 (Name::new("keys"), "String"),
                 (Name::new("data"), "String"),
-                (Name::new("system_call_id"), TypeRef::INT),
+                (Name::new("systemCallId"), "Int"),
                 (Name::new("createdAt"), "DateTime"),
             ]),
         }
@@ -114,7 +114,7 @@ fn value_mapping(event: Event) -> ValueMapping {
         (Name::new("id"), Value::from(event.id)),
         (Name::new("keys"), Value::from(event.keys)),
         (Name::new("data"), Value::from(event.data)),
-        (Name::new("system_call_id"), Value::from(event.system_call_id)),
+        (Name::new("systemCallId"), Value::from(event.system_call_id)),
         (
             Name::new("createdAt"),
             Value::from(event.created_at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)),
