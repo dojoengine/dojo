@@ -34,8 +34,8 @@ impl Manifest {
             panic!("Executor contract not found. Did you include `dojo_core` as a dependency?");
         });
 
-        manifest.0.world = Some(*world);
-        manifest.0.executor = Some(*executor);
+        manifest.0.world = *world;
+        manifest.0.executor = *executor;
 
         for crate_id in crate_ids {
             let modules = db.crate_modules(*crate_id);
