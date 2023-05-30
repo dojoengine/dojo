@@ -1,5 +1,5 @@
 use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
-use async_graphql::Value;
+use async_graphql::{Value, Name};
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
 use serde::Deserialize;
@@ -26,12 +26,12 @@ impl ObjectTraitStatic for EntityObject {
     fn new() -> Self {
         Self {
             field_type_mapping: IndexMap::from([
-                (String::from("id"), String::from("ID")),
-                (String::from("name"), String::from("String")),
-                (String::from("partitionId"), String::from("FieldElement")),
-                (String::from("keys"), String::from("String")),
-                (String::from("transactionHash"), String::from("FieldElement")),
-                (String::from("createdAt"), String::from("DateTime")),
+                (Name::new("id"), "ID"),
+                (Name::new("name"), "String"),
+                (Name::new("partitionId"), "FieldElement"),
+                (Name::new("keys"), "String"),
+                (Name::new("transactionHash"), "FieldElement"),
+                (Name::new("createdAt"), "DateTime"),
             ]),
         }
     }
@@ -66,13 +66,13 @@ impl ObjectTraitInstance for EntityObject {
                         .await?;
 
                     let result: ValueMapping = IndexMap::from([
-                        (String::from("id"), Value::from(entity.id)),
-                        (String::from("name"), Value::from(entity.name)),
-                        (String::from("partitionId"), Value::from(entity.partition_id)),
-                        (String::from("keys"), Value::from(entity.keys.unwrap_or_default())),
-                        (String::from("transactionHash"), Value::from(entity.transaction_hash)),
+                        (Name::new("id"), Value::from(entity.id)),
+                        (Name::new("name"), Value::from(entity.name)),
+                        (Name::new("partitionId"), Value::from(entity.partition_id)),
+                        (Name::new("keys"), Value::from(entity.keys.unwrap_or_default())),
+                        (Name::new("transactionHash"), Value::from(entity.transaction_hash)),
                         (
-                            String::from("createdAt"),
+                            Name::new("createdAt"),
                             Value::from(
                                 entity
                                     .created_at

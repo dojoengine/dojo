@@ -8,12 +8,12 @@ pub mod system;
 pub mod system_call;
 
 use async_graphql::dynamic::{Field, FieldFuture, Object, TypeRef};
-use async_graphql::Value;
+use async_graphql::{Value, Name};
 use indexmap::IndexMap;
 
 // Type aliases for GraphQL fields
-pub type TypeMapping = IndexMap<String, String>;
-pub type ValueMapping = IndexMap<String, Value>;
+pub type TypeMapping = IndexMap<Name, &'static str>;
+pub type ValueMapping = IndexMap<Name, Value>;
 
 pub trait ObjectTraitStatic {
     fn new() -> Self;

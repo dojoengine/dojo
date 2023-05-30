@@ -1,5 +1,5 @@
 use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
-use async_graphql::Value;
+use async_graphql::{Value, Name};
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
 use serde::Deserialize;
@@ -27,10 +27,10 @@ impl ObjectTraitStatic for EventObject {
     fn new() -> Self {
         Self {
             field_type_mapping: IndexMap::from([
-                (String::from("id"), String::from("ID")),
-                (String::from("keys"), String::from("String")),
-                (String::from("data"), String::from("String")),
-                (String::from("createdAt"), String::from("DateTime")),
+                (Name::new("id"), "ID"),
+                (Name::new("keys"), "String"),
+                (Name::new("data"), "String"),
+                (Name::new("createdAt"), "DateTime"),
             ]),
         }
     }
@@ -66,11 +66,11 @@ impl ObjectTraitInstance for EventObject {
                         .await?;
 
                     let result: ValueMapping = IndexMap::from([
-                        (String::from("id"), Value::from(event.id)),
-                        (String::from("keys"), Value::from(event.keys)),
-                        (String::from("data"), Value::from(event.data)),
+                        (Name::new("id"), Value::from(event.id)),
+                        (Name::new("keys"), Value::from(event.keys)),
+                        (Name::new("data"), Value::from(event.data)),
                         (
-                            String::from("createdAt"),
+                            Name::new("createdAt"),
                             Value::from(
                                 event.created_at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
                             ),

@@ -1,5 +1,5 @@
 use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
-use async_graphql::Value;
+use async_graphql::{Value, Name};
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
 use serde::Deserialize;
@@ -26,10 +26,10 @@ impl ObjectTraitStatic for SystemCallObject {
     fn new() -> Self {
         Self {
             field_type_mapping: IndexMap::from([
-                (String::from("id"), String::from("ID")),
-                (String::from("transactionHash"), String::from("String")),
-                (String::from("data"), String::from("String")),
-                (String::from("createdAt"), String::from("DateTime")),
+                (Name::new("id"), "ID"),
+                (Name::new("transactionHash"), "String"),
+                (Name::new("data"), "String"),
+                (Name::new("createdAt"), "DateTime"),
             ]),
         }
     }
@@ -66,14 +66,11 @@ impl ObjectTraitInstance for SystemCallObject {
                             .await?;
 
                     let result: ValueMapping = IndexMap::from([
-                        (String::from("id"), Value::from(system_call.id.to_string())),
+                        (Name::new("id"), Value::from(system_call.id.to_string())),
+                        (Name::new("transactionHash"), Value::from(system_call.transaction_hash)),
+                        (Name::new("data"), Value::from(system_call.data)),
                         (
-                            String::from("transactionHash"),
-                            Value::from(system_call.transaction_hash),
-                        ),
-                        (String::from("data"), Value::from(system_call.data)),
-                        (
-                            String::from("createdAt"),
+                            Name::new("createdAt"),
                             Value::from(
                                 system_call
                                     .created_at
