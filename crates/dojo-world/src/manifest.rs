@@ -171,7 +171,7 @@ impl Manifest {
                             ],
                             entry_point_selector: COMPONENT_ENTRYPOINT,
                         },
-                        starknet::core::types::BlockId::Tag(BlockTag::Pending),
+                        BlockId::Tag(BlockTag::Pending),
                     )
                     .await
                     .map_err(ManifestError::Provider)?;
@@ -198,7 +198,7 @@ impl Manifest {
                             ],
                             entry_point_selector: SYSTEM_ENTRYPOINT,
                         },
-                        starknet::core::types::BlockId::Tag(BlockTag::Pending),
+                        BlockId::Tag(BlockTag::Pending),
                     )
                     .await
                     .map_err(ManifestError::Provider)?;
