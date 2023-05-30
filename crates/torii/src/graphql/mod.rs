@@ -8,7 +8,7 @@ pub mod system;
 pub mod system_call;
 
 use async_graphql::dynamic::{Field, FieldFuture, Object, TypeRef};
-use async_graphql::{Value, Name};
+use async_graphql::{Name, Value};
 use indexmap::IndexMap;
 
 // Type aliases for GraphQL fields
