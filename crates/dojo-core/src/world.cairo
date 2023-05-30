@@ -62,7 +62,7 @@ mod World {
             // Call RouteAuth system via executor with the serialized route
             IExecutorDispatcher {
                 contract_address: executor::read()
-            }.execute(route_auth_class_hash, calldata.span());
+            }.execute(route_auth_class_hash, 'Admin'.into(), calldata.span());
 
             index += 1;
         };
@@ -95,7 +95,7 @@ mod World {
                 // If the system is authorized, the result will be non-zero
                 let res = IExecutorDispatcher {
                     contract_address: executor::read()
-                }.execute(authorize_class_hash, calldata.span());
+                }.execute(authorize_class_hash, 'Admin'.into(), calldata.span());
                 (*res[0]).is_non_zero()
             }
         } else {
@@ -113,7 +113,7 @@ mod World {
         let mut calldata = ArrayTrait::new();
         let res = IExecutorDispatcher {
             contract_address: executor::read()
-        }.execute(admin_class_hash, calldata.span());
+        }.execute(admin_class_hash, 'Admin'.into(), calldata.span());
         (*res[0]).is_non_zero()
     }
 
@@ -158,13 +158,13 @@ mod World {
     }
 
     #[external]
-    fn execute(name: ShortString, execute_calldata: Span<felt252>) -> Span<felt252> {
+    fn execute(name: ShortString, role: u250, execute_calldata: Span<felt252>) -> Span<felt252> {
         let class_hash = system_registry::read(name);
         caller::write(class_hash);
 
         let res = IExecutorDispatcher {
             contract_address: executor::read()
-        }.execute(class_hash, execute_calldata);
+        }.execute(class_hash, role, execute_calldata);
 
         caller::write(starknet::class_hash_const::<0x0>());
         res

@@ -18,7 +18,7 @@ trait IWorld {
     fn system(name: ShortString) -> ClassHash;
     fn register_system(class_hash: ClassHash);
     fn uuid() -> usize;
-    fn execute(name: ShortString, execute_calldata: Span<felt252>) -> Span<felt252>;
+    fn execute(name: ShortString, role_id: u250, execute_calldata: Span<felt252>) -> Span<felt252>;
     fn entity(component: ShortString, key: Query, offset: u8, length: usize) -> Span<felt252>;
     fn set_entity(component: ShortString, key: Query, offset: u8, value: Span<felt252>);
     fn entities(component: ShortString, partition: u250) -> (Span<u250>, Span<Span<felt252>>);
@@ -42,7 +42,7 @@ impl IWorldDispatcherSerde of Serde<IWorldDispatcher> {
 
 #[abi]
 trait IExecutor {
-    fn execute(class_hash: ClassHash, data: Span<felt252>) -> Span<felt252>;
+    fn execute(class_hash: ClassHash, role_id: u250, data: Span<felt252>) -> Span<felt252>;
 }
 
 #[abi]
