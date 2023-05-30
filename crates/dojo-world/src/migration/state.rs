@@ -8,62 +8,36 @@ use camino::Utf8PathBuf;
 use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::FieldElement;
 
+use super::object::WorldContractMigration;
 use super::{ClassMigration, ContractMigration, Migration};
 use crate::config::{EnvironmentConfig, WorldConfig};
 use crate::manifest::Manifest;
 
+/// Represents differences between a local and remote contract.
 #[derive(Debug, Default, Clone)]
-pub struct Contract {
+pub struct ContractDiff {
     pub name: String,
+    pub local: FieldElement,
+    pub remote: Option<FieldElement>,
     pub address: Option<FieldElement>,
-    pub local: FieldElement,
-    pub remote: Option<FieldElement>,
 }
 
-impl Display for Contract {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "{}:", self.name)?;
-        if let Some(address) = self.address {
-            writeln!(f, "   Address: {address:#x}",)?;
-        }
-        writeln!(f, "   Local: {:#x}", self.local)?;
-
-        if let Some(remote) = self.remote {
-            writeln!(f, "   Remote: {remote:#x}")?;
-        }
-
-        Ok(())
-    }
-}
-
+/// Represents differences between a local and remote class.
 #[derive(Debug, Default, Clone)]
-pub struct Class {
-    // pub world: FieldElement,
+pub struct ClassDiff {
     pub name: String,
     pub local: FieldElement,
     pub remote: Option<FieldElement>,
 }
 
-impl Display for Class {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "{}:", self.name)?;
-        writeln!(f, "   Local: {:#x}", self.local)?;
-
-        if let Some(remote) = self.remote {
-            writeln!(f, "   Remote: {remote:#x}")?;
-        }
-
-        Ok(())
-    }
-}
-
-// keep tracks of the state diff between local and remote worlds
+/// Represents the state differences between the local and remote worlds.
+#[derive(Debug)]
 pub struct WorldDiff {
-    world: Contract,
-    executor: Contract,
-    contracts: Vec<Class>,
-    components: Vec<Class>,
-    systems: Vec<Class>,
+    world: ContractDiff,
+    executor: ContractDiff,
+    contracts: Vec<ClassDiff>,
+    components: Vec<ClassDiff>,
+    systems: Vec<ClassDiff>,
     environment_config: EnvironmentConfig,
 }
 
@@ -71,35 +45,32 @@ impl WorldDiff {
     pub async fn from_path(
         target_dir: Utf8PathBuf,
         world_config: WorldConfig,
-        env_config: EnvironmentConfig,
+        environment_config: EnvironmentConfig,
     ) -> Result<WorldDiff> {
         let local_manifest = Manifest::load_from_path(target_dir.join("manifest.json"))?;
 
         let remote_manifest = if let Some(world_address) = world_config.address {
-            let provider = env_config.provider()?;
-
-            Manifest::from_remote(world_address, provider, Some(local_manifest.clone()))
+            let provider = environment_config.provider()?;
+            Manifest::from_remote(provider, world_address, Some(local_manifest.clone()))
                 .await
-                .map_err(|e| anyhow!("Problem creating remote manifest: {e}"))?
+                .map(|m| Some(m))
+                .map_err(|e| anyhow!("Failed creating remote manifest: {e}"))?
         } else {
-            Manifest::default()
+            None
         };
 
         let systems = local_manifest
             .systems
             .iter()
             .map(|system| {
-                Class {
-                    world: world_config.address.unwrap(),
+                ClassDiff {
                     // because the name returns by the `name` method of a
                     // system contract is without the 'System' suffix
                     name: system.name.strip_suffix("System").unwrap_or(&system.name).to_string(),
                     local: system.class_hash,
-                    remote: remote_manifest
-                        .systems
-                        .iter()
-                        .find(|e| e.name == system.name)
-                        .map(|s| s.class_hash),
+                    remote: remote_manifest.as_ref().and_then(|m| {
+                        m.systems.iter().find(|e| e.name == system.name).map(|s| s.class_hash)
+                    }),
                 }
             })
             .collect::<Vec<_>>();
@@ -107,47 +78,40 @@ impl WorldDiff {
         let components = local_manifest
             .components
             .iter()
-            .map(|component| Class {
-                world: world_config.address.unwrap(),
+            .map(|component| ClassDiff {
                 name: component.name.to_string(),
                 local: component.class_hash,
-                remote: remote_manifest
-                    .components
-                    .iter()
-                    .find(|e| e.name == component.name)
-                    .map(|s| s.class_hash),
+                remote: remote_manifest.as_ref().and_then(|m| {
+                    m.components.iter().find(|e| e.name == component.name).map(|s| s.class_hash)
+                }),
             })
             .collect::<Vec<_>>();
 
         let contracts = local_manifest
             .contracts
             .iter()
-            .map(|contract| Class {
-                world: world_config.address.unwrap(),
+            .map(|contract| ClassDiff {
                 name: contract.name.to_string(),
                 local: contract.class_hash,
                 remote: None,
             })
             .collect::<Vec<_>>();
 
-        Ok(WorldDiff {
-            world: Contract {
-                name: "World".into(),
-                address: world_config.address,
-                local: local_manifest.world.unwrap(),
-                remote: remote_manifest.world,
-            },
-            executor: Contract {
-                name: "Executor".into(),
-                address: None,
-                local: local_manifest.executor.unwrap(),
-                remote: remote_manifest.executor,
-            },
-            systems,
-            contracts,
-            components,
-            environment_config: env_config,
-        })
+        let world = ContractDiff {
+            name: "World".into(),
+            address: world_config.address,
+            local: local_manifest.world,
+            remote: remote_manifest.as_ref().map(|m| m.world),
+        };
+
+        let executor = ContractDiff {
+            name: "Executor".into(),
+            address: None,
+            local: local_manifest.executor,
+            remote: remote_manifest.map(|m| m.executor),
+        };
+
+        Ok(WorldDiff { world, executor, systems, contracts, components, environment_config })
     }
 
     /// construct migration strategy
@@ -171,7 +135,8 @@ impl WorldDiff {
             artifact_paths.insert(name, entry.path());
         }
 
-        let world = evaluate_contract_for_migration(&self.world, &artifact_paths)?;
+        let world = evaluate_contract_for_migration(&self.world, &artifact_paths)?
+            .map(|c| WorldContractMigration(c));
         let executor = evaluate_contract_for_migration(&self.executor, &artifact_paths)?;
         let components = evaluate_components_to_be_declared(&self.components, &artifact_paths)?;
         let systems = evaluate_systems_to_be_declared(&self.systems, &artifact_paths)?;
@@ -220,7 +185,7 @@ impl Display for WorldDiff {
 }
 
 fn evaluate_systems_to_be_declared(
-    systems: &[Class],
+    systems: &[ClassDiff],
     artifact_paths: &HashMap<String, PathBuf>,
 ) -> Result<Vec<ClassMigration>> {
     let mut syst_to_migrate: Vec<ClassMigration> = vec![];
@@ -243,7 +208,7 @@ fn evaluate_systems_to_be_declared(
 }
 
 fn evaluate_components_to_be_declared(
-    components: &[Class],
+    components: &[ClassDiff],
     artifact_paths: &HashMap<String, PathBuf>,
 ) -> Result<Vec<ClassMigration>> {
     let mut comps_to_migrate: Vec<ClassMigration> = vec![];
@@ -267,24 +232,29 @@ fn evaluate_components_to_be_declared(
 
 // TODO: generate random salt if need to be redeployed
 fn evaluate_contract_for_migration(
-    contract: &Contract,
+    contract: &ContractDiff,
     artifact_paths: &HashMap<String, PathBuf>,
-) -> Result<ContractMigration> {
-    let should_deploy = if contract.address.is_none() {
-        true
+) -> Result<Option<ContractMigration>> {
+    // let should_migrate = if contract.address.is_none() {
+    //     true
+    // } else {
+    //     !matches!(contract.remote, Some(remote_hash) if remote_hash == contract.local)
+    // };
+
+    if contract.address.is_none()
+        || matches!(contract.remote, Some(remote_hash) if remote_hash != contract.local)
+    {
+        let path = find_artifact_path(&contract.name, artifact_paths)?;
+
+        Ok(Some(ContractMigration {
+            // deployed: !should_migrate,
+            contract_address: None,
+            contract: contract.clone(),
+            artifact_path: path.clone(),
+        }))
     } else {
-        !matches!(contract.remote, Some(remote_hash) if remote_hash == contract.local)
-    };
-
-    let path = find_artifact_path(&contract.name, artifact_paths)?;
-
-    Ok(ContractMigration {
-        deployed: !should_deploy,
-        contract: contract.clone(),
-        artifact_path: path.clone(),
-        contract_address: None,
-        salt: FieldElement::ZERO,
-    })
+        Ok(None)
+    }
 }
 
 fn find_artifact_path<'a>(
@@ -294,4 +264,33 @@ fn find_artifact_path<'a>(
     artifact_paths
         .get(contract_name)
         .with_context(|| anyhow!("missing contract artifact for `{}` contract", contract_name))
+}
+
+impl Display for ContractDiff {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "{}:", self.name)?;
+        if let Some(address) = self.address {
+            writeln!(f, "   Address: {address:#x}",)?;
+        }
+        writeln!(f, "   Local: {:#x}", self.local)?;
+
+        if let Some(remote) = self.remote {
+            writeln!(f, "   Remote: {remote:#x}")?;
+        }
+
+        Ok(())
+    }
+}
+
+impl Display for ClassDiff {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "{}:", self.name)?;
+        writeln!(f, "   Local: {:#x}", self.local)?;
+
+        if let Some(remote) = self.remote {
+            writeln!(f, "   Remote: {remote:#x}")?;
+        }
+
+        Ok(())
+    }
 }

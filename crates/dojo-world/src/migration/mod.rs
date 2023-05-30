@@ -1,30 +1,19 @@
 pub mod object;
 pub mod state;
 
-use std::fs::File;
-use std::path::PathBuf;
-use std::sync::Arc;
-
-use anyhow::{anyhow, Context, Result};
-use async_trait::async_trait;
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-use cairo_lang_starknet::contract_class::ContractClass;
-use starknet::accounts::{Account, Call, ConnectedAccount, SingleOwnerAccount};
-use starknet::core::types::contract::{CompiledClass, SierraClass};
-use starknet::core::types::{BlockId, BlockTag, FieldElement, FlattenedSierraClass};
-use starknet::core::utils::{get_contract_address, get_selector_from_name};
+use anyhow::Result;
+use starknet::accounts::{Account, Call, SingleOwnerAccount};
+use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
-use starknet::providers::Provider;
 use starknet::signers::LocalWallet;
 
 use self::object::{ClassMigration, ContractMigration, WorldContractMigration};
-use self::state::{Class, Contract};
 
 // TODO: migration error
 // should only be created by calling `World::prepare_for_migration`
 pub struct Migration {
-    world: WorldContractMigration,
-    executor: ContractMigration,
+    world: Option<WorldContractMigration>,
+    executor: Option<ContractMigration>,
 
     // system and component can be declared and registered in parallel
     systems: Vec<ClassMigration>,

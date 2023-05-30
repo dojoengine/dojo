@@ -25,7 +25,7 @@ async fn test_manifest_from_remote_throw_error_on_not_deployed() {
     let err = Manifest::from_remote(FieldElement::ONE, rpc, None).await.unwrap_err();
 
     match err {
-        ManifestError::NotDeployed => {
+        ManifestError::WorldNotDeployed => {
             // World not deployed.
         }
         err => panic!("Unexpected error: {err}"),

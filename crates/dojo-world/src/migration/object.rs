@@ -14,14 +14,14 @@ use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 use starknet::providers::{Provider, SequencerGatewayProvider};
 use starknet::signers::LocalWallet;
 
-use super::state::{Class, Contract};
+use super::state::{ClassDiff, ContractDiff};
 
 // TODO: evaluate the contract address when building the migration plan
 #[derive(Debug, Default)]
 pub struct ContractMigration {
-    pub deployed: bool,
+    // pub deployed: bool,
     // pub salt: FieldElement,
-    pub contract: Contract,
+    pub contract: ContractDiff,
     pub artifact_path: PathBuf,
     pub contract_address: Option<FieldElement>,
 }
@@ -29,7 +29,7 @@ pub struct ContractMigration {
 #[derive(Debug, Default)]
 pub struct ClassMigration {
     pub declared: bool,
-    pub class: Class,
+    pub class: ClassDiff,
     pub artifact_path: PathBuf,
 }
 
