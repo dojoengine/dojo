@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use async_graphql::dynamic::{Object, Scalar, Schema, SchemaBuilder, SchemaError};
+use async_graphql::dynamic::{Object, Scalar, Schema, SchemaError};
 use lazy_static::lazy_static;
 use sqlx::SqlitePool;
 
@@ -33,12 +33,6 @@ lazy_static! {
 }
 
 pub async fn build_schema(pool: &SqlitePool) -> Result<Schema, SchemaError> {
-    // // retrieve component schemas from database
-    // let components: Vec<Component> = sqlx::query_as("SELECT * FROM components")
-    //     .fetch_all(pool)
-    //     .await
-    //     .unwrap();
-
     // base gql objects
     let objects: Vec<Box<dyn ObjectTraitInstance>> = vec![
         Box::new(EntityObject::new()),
@@ -48,32 +42,30 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema, SchemaError> {
         Box::new(SystemCallObject::new()),
     ];
 
-    let fields = objects.iter().fold(Vec::new(), |mut fields, object| {
+    // collect field resolvers
+    let mut fields = Vec::new();
+    for object in &objects {
         fields.extend(object.field_resolvers());
-        fields
-    });
+    }
 
     // add field resolvers to query root
-    let query_root =
-        fields.into_iter().fold(Object::new("Query"), |query_root, field| query_root.field(field));
+    let mut query_root = Object::new("Query");
+    for field in fields {
+        query_root = query_root.field(field);
+    }
 
     // register custom scalars
-    let schema_builder: SchemaBuilder = SCALAR_TYPES.iter().fold(
-        Schema::build("Query", None, None),
-        |schema_builder, scalar_type| {
-            if *scalar_type == "Boolean" || *scalar_type == "ID" {
-                schema_builder
-            } else {
-                schema_builder.register(Scalar::new(*scalar_type))
-            }
-        },
-    );
+    let mut schema_builder = Schema::build("Query", None, None);
+    for scalar_type in SCALAR_TYPES.iter() {
+        if *scalar_type != "Boolean" && *scalar_type != "ID" {
+            schema_builder = schema_builder.register(Scalar::new(*scalar_type));
+        }
+    }
 
     // register base gql objects
-    objects
-        .iter()
-        .fold(schema_builder, |schema_builder, object| schema_builder.register(object.create()))
-        .register(query_root)
-        .data(pool.clone())
-        .finish()
+    for object in &objects {
+        schema_builder = schema_builder.register(object.create());
+    }
+
+    schema_builder.register(query_root).data(pool.clone()).finish()
 }
