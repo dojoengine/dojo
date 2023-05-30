@@ -2,12 +2,14 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use config::RpcConfig;
+use hyper::Method;
 use jsonrpsee::core::Error;
-use jsonrpsee::server::{ServerBuilder, ServerHandle};
+use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
 use katana::api::KatanaApiServer;
 use katana::KatanaRpc;
 use katana_core::sequencer::Sequencer;
 use tokio::sync::RwLock;
+use tower_http::cors::{Any, CorsLayer};
 
 pub mod config;
 mod katana;
