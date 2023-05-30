@@ -1,13 +1,10 @@
-use std::str::FromStr;
-
 use anyhow::anyhow;
 use scarb::core::Workspace;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
-use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
+use starknet::signers::{LocalWallet, SigningKey};
 use toml::Value;
-use tracing::warn;
 use url::Url;
 
 #[allow(clippy::enum_variant_names)]
@@ -64,10 +61,10 @@ impl WorldConfig {
 #[derive(Debug, Deserialize, Clone, Default)]
 pub struct EnvironmentConfig {
     pub rpc: Option<Url>,
-    pub network: Option<String>,
-    pub chain_id: Option<FieldElement>,
     pub private_key: Option<FieldElement>,
     pub account_address: Option<FieldElement>,
+    pub keystore_path: Option<String>,
+    pub keystore_password: Option<String>,
 }
 
 impl EnvironmentConfig {
@@ -90,12 +87,6 @@ impl EnvironmentConfig {
                 config.rpc = Some(url);
             }
 
-            if let Some(chain_id) = env.get("chain_id").and_then(|v| v.as_str()) {
-                let chain_id = FieldElement::from_str(chain_id)
-                    .map_err(|_| DeserializationError::ParsingFieldElement)?;
-                config.chain_id = Some(chain_id);
-            }
-
             if let Some(private_key) = env
                 .get("private_key")
                 .and_then(|v| v.as_str().map(|s| s.to_string()))
@@ -104,6 +95,22 @@ impl EnvironmentConfig {
                 let pk = FieldElement::from_hex_be(&private_key)
                     .map_err(|_| DeserializationError::ParsingFieldElement)?;
                 config.private_key = Some(pk);
+            }
+
+            if let Some(path) = env
+                .get("keystore_path")
+                .and_then(|v| v.as_str().map(|s| s.to_string()))
+                .or(std::env::var("DOJO_KEYSTORE_PATH").ok())
+            {
+                config.keystore_path = Some(path);
+            }
+
+            if let Some(password) = env
+                .get("keystore_password")
+                .and_then(|v| v.as_str().map(|s| s.to_string()))
+                .or(std::env::var("DOJO_KEYSTORE_PASSWORD").ok())
+            {
+                config.keystore_password = Some(password);
             }
 
             if let Some(account_address) = env
@@ -115,47 +122,38 @@ impl EnvironmentConfig {
                     .map_err(|_| DeserializationError::ParsingFieldElement)?;
                 config.account_address = Some(address);
             }
-
-            if let Some(network) = env.get("network").and_then(|v| v.as_str()) {
-                config.network = Some(network.into());
-                if config.chain_id.is_none() {
-                    config.chain_id = Some(cairo_short_string_to_felt(network)?);
-                }
-            }
         }
 
         Ok(config)
     }
 
-    pub fn provider(&self) -> anyhow::Result<JsonRpcClient<HttpTransport>> {
-        if self.rpc.is_none() && self.network.is_none() {
-            return Err(anyhow!("Missing `rpc_url` or `network` in the environment config"));
-        }
+    pub fn signer(&self) -> anyhow::Result<LocalWallet> {
+        if let Some(private_key) = &self.private_key {
+            Ok(LocalWallet::from_signing_key(SigningKey::from_secret_scalar(*private_key)))
+        } else if let Some(keystore_path) = &self.keystore_path {
+            let keystore_password = self
+                .keystore_password
+                .as_ref()
+                .ok_or_else(|| anyhow!("Missing `keystore_password` in the environment config"))?;
 
-        if self.rpc.is_some() && self.network.is_some() {
-            warn!("Both `rpc_url` and `network` are set but `rpc_url` will be used instead")
-        }
-
-        let provider = if let Some(url) = &self.rpc {
-            JsonRpcClient::new(HttpTransport::new(url.clone()))
+            Ok(LocalWallet::from_signing_key(SigningKey::from_keystore(
+                keystore_path,
+                keystore_password,
+            )?))
         } else {
-            match self.network.as_ref().unwrap().as_str() {
-                "mainnet" => JsonRpcClient::new(HttpTransport::new(
-                    Url::parse(
-                        "https://starknet-goerli.g.alchemy.com/v2/KE9ZWlO2zAaXFvpjbyb63gZIX1SozzON",
-                    )
-                    .unwrap(),
-                )),
-                "goerli" => JsonRpcClient::new(HttpTransport::new(
-                    Url::parse(
-                        "https://starknet-mainnet.g.alchemy.com/v2/qnYLy7taPFweUC6wad3qF7-bCb4YnQN4",
-                    )
-                    .unwrap(),
-                )),
-                n => return Err(anyhow!("Unsupported network: {n}")),
-            }
+            Err(anyhow!("Missing `private_key` or `keystore_path` in the environment config"))
+        }
+    }
+
+    pub fn provider(&self) -> anyhow::Result<JsonRpcClient<HttpTransport>> {
+        let Some(url) = &self.rpc else {
+            return Err(anyhow!("Missing `rpc_url` in the environment config"))
         };
 
-        Ok(provider)
+        Ok(JsonRpcClient::new(HttpTransport::new(url.clone())))
+    }
+
+    pub fn account_address(&self) -> anyhow::Result<FieldElement> {
+        self.account_address.ok_or(anyhow!("Missing `account_address` in the environment config"))
     }
 }

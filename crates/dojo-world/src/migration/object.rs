@@ -2,19 +2,19 @@ use std::fs::File;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass;
 use starknet::accounts::{Account, Call, ConnectedAccount, SingleOwnerAccount};
-use starknet::core::types::contract::{CompiledClass, FlattenedSierraClass, SierraClass};
-use starknet::core::types::{BlockId, FieldElement};
+use starknet::core::types::contract::{CompiledClass, SierraClass};
+use starknet::core::types::{BlockId, BlockTag, FieldElement, FlattenedSierraClass};
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 use starknet::providers::{Provider, SequencerGatewayProvider};
-use starknet::signers::LocalWallet;
+use starknet::signers::{LocalWallet, Signer};
 
-use super::state::{ClassDiff, ContractDiff};
+use super::world::{ClassDiff, ContractDiff};
 
 // TODO: evaluate the contract address when building the migration plan
 #[derive(Debug, Default)]
@@ -28,7 +28,7 @@ pub struct ContractMigration {
 
 #[derive(Debug, Default)]
 pub struct ClassMigration {
-    pub declared: bool,
+    // pub declared: bool,
     pub class: ClassDiff,
     pub artifact_path: PathBuf,
 }
@@ -37,47 +37,51 @@ pub struct WorldContractMigration(pub ContractMigration);
 
 #[async_trait]
 trait Declarable {
-    async fn declare(
-        &self,
-        account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
-    );
+    async fn declare<P, S>(&self, account: &SingleOwnerAccount<P, S>)
+    where
+        P: Provider + Send + Sync,
+        S: Signer + Send + Sync;
 }
 
 // TODO: Remove `mut` once we can calculate the contract address before sending the tx
 #[async_trait]
 trait Deployable: Declarable {
-    async fn deploy(
+    async fn deploy<P, S>(
         &mut self,
         constructor_params: Vec<FieldElement>,
-        account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
-    );
+        account: &SingleOwnerAccount<P, S>,
+    ) where
+        P: Provider + Send + Sync,
+        S: Signer + Send + Sync;
 }
 
 #[async_trait]
 impl Declarable for ClassMigration {
-    async fn declare(
-        &self,
-        account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
-    ) {
+    async fn declare<P, S>(&self, account: &SingleOwnerAccount<P, S>)
+    where
+        P: Provider + Send + Sync,
+        S: Signer + Send + Sync,
+    {
         declare(self.class.name.clone(), &self.artifact_path, account).await;
     }
 }
 
 #[async_trait]
 impl Declarable for ContractMigration {
-    async fn declare(
-        &self,
-        account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
-    ) {
+    async fn declare<P, S>(&self, account: &SingleOwnerAccount<P, S>)
+    where
+        P: Provider + Send + Sync,
+        S: Signer + Send + Sync,
+    {
         declare(self.contract.name.clone(), &self.artifact_path, account).await;
     }
 }
 
-async fn declare(
-    name: String,
-    artifact_path: &PathBuf,
-    account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
-) {
+async fn declare<P, S>(name: String, artifact_path: &PathBuf, account: &SingleOwnerAccount<P, S>)
+where
+    P: Provider + Send + Sync,
+    S: Signer + Send + Sync,
+{
     let (flattened_class, casm_class_hash) =
         prepare_contract_declaration_params(artifact_path).unwrap();
 
@@ -105,17 +109,20 @@ async fn declare(
 
 #[async_trait]
 impl Deployable for ContractMigration {
-    async fn deploy(
+    async fn deploy<P, S>(
         &mut self,
         constructor_calldata: Vec<FieldElement>,
-        account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
-    ) {
+        account: &SingleOwnerAccount<P, S>,
+    ) where
+        P: Provider + Send + Sync,
+        S: Signer + Send + Sync,
+    {
         self.declare(account).await;
 
         let calldata = [
             vec![
                 self.contract.local,                            // class hash
-                self.salt,                                      // salt
+                FieldElement::ZERO,                             // salt
                 FieldElement::ZERO,                             // unique
                 FieldElement::from(constructor_calldata.len()), // constructor calldata len
             ],
@@ -124,7 +131,7 @@ impl Deployable for ContractMigration {
         .concat();
 
         let contract_address = get_contract_address(
-            self.salt,
+            FieldElement::ZERO,
             self.contract.local,
             &constructor_calldata,
             FieldElement::ZERO,
@@ -138,7 +145,7 @@ impl Deployable for ContractMigration {
             .await
             .is_ok()
         {
-            self.deployed = true;
+            // self.deployed = true;
             println!("{} contract already deployed", self.contract.name);
             return;
         }
@@ -164,8 +171,6 @@ impl Deployable for ContractMigration {
             self.contract.name, res.transaction_hash
         );
         println!("`{} `Contract address: {contract_address:#x}", self.contract.name);
-
-        self.deployed = true;
     }
 }
 
@@ -174,7 +179,7 @@ impl WorldContractMigration {
         &mut self,
         executor: FieldElement,
         migrator: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
-    ) -> Result<()> {
+    ) {
         self.0.deploy(vec![executor], migrator).await
     }
 

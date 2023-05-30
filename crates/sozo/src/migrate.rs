@@ -3,7 +3,7 @@ use std::env::{self, current_dir};
 use anyhow::Result;
 use camino::Utf8PathBuf;
 use clap::Args;
-use dojo_world::migration::state::WorldDiff;
+use dojo_world::migration::world::WorldDiff;
 use dojo_world::{EnvironmentConfig, WorldConfig};
 use dotenv::dotenv;
 use scarb::core::Config;

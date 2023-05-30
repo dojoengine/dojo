@@ -16,7 +16,7 @@ use starknet::core::types::FieldElement;
 use tokio::sync::RwLock;
 use url::Url;
 
-use crate::migration::world::World;
+use crate::migration::world::WorldDiff;
 use crate::{EnvironmentConfig, WorldConfig};
 
 #[tokio::test]
@@ -59,7 +59,7 @@ async fn test_migration() {
     let (socket_addr, server_handle) =
         KatanaNodeRpc::new(sequencer.clone(), RpcConfig { port: 0 }).run().await.unwrap();
     let url = Url::parse(&format!("http://{}", socket_addr)).expect("Failed to parse URL");
-    let world = World::from_path(
+    let world = WorldDiff::from_path(
         target_dir.clone(),
         WorldConfig::default(),
         EnvironmentConfig {
