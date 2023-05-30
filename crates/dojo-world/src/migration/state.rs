@@ -9,8 +9,8 @@ use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::FieldElement;
 
 use super::{ClassMigration, ContractMigration, Migration};
+use crate::config::{EnvironmentConfig, WorldConfig};
 use crate::manifest::Manifest;
-use crate::{EnvironmentConfig, WorldConfig};
 
 #[derive(Debug, Default, Clone)]
 pub struct Contract {
@@ -38,7 +38,7 @@ impl Display for Contract {
 
 #[derive(Debug, Default, Clone)]
 pub struct Class {
-    pub world: FieldElement,
+    // pub world: FieldElement,
     pub name: String,
     pub local: FieldElement,
     pub remote: Option<FieldElement>,
@@ -57,7 +57,8 @@ impl Display for Class {
     }
 }
 
-pub struct World {
+// keep tracks of the state diff between local and remote worlds
+pub struct WorldDiff {
     world: Contract,
     executor: Contract,
     contracts: Vec<Class>,
@@ -66,12 +67,12 @@ pub struct World {
     environment_config: EnvironmentConfig,
 }
 
-impl World {
+impl WorldDiff {
     pub async fn from_path(
         target_dir: Utf8PathBuf,
         world_config: WorldConfig,
         env_config: EnvironmentConfig,
-    ) -> Result<World> {
+    ) -> Result<WorldDiff> {
         let local_manifest = Manifest::load_from_path(target_dir.join("manifest.json"))?;
 
         let remote_manifest = if let Some(world_address) = world_config.address {
@@ -129,7 +130,7 @@ impl World {
             })
             .collect::<Vec<_>>();
 
-        Ok(World {
+        Ok(WorldDiff {
             world: Contract {
                 name: "World".into(),
                 address: world_config.address,
@@ -149,6 +150,7 @@ impl World {
         })
     }
 
+    /// construct migration strategy
     /// evaluate which contracts/classes need to be (re)declared/deployed
     pub fn prepare_for_migration(&self, target_dir: Utf8PathBuf) -> Result<Migration> {
         let entries = fs::read_dir(target_dir).unwrap_or_else(|error| {
@@ -196,7 +198,7 @@ impl World {
     }
 }
 
-impl Display for World {
+impl Display for WorldDiff {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}", self.world)?;
         writeln!(f, "{}", self.executor)?;

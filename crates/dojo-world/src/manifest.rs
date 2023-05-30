@@ -105,10 +105,14 @@ pub struct Contract {
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Manifest {
-    #[serde_as(as = "UfeHexOption")]
-    pub world: Option<FieldElement>,
-    #[serde_as(as = "UfeHexOption")]
-    pub executor: Option<FieldElement>,
+    // #[serde_as(as = "UfeHexOption")]
+    // pub world: Option<FieldElement>,
+    // #[serde_as(as = "UfeHexOption")]
+    // pub executor: Option<FieldElement>,
+    #[serde_as(as = "UfeHex")]
+    pub world: FieldElement,
+    #[serde_as(as = "UfeHex")]
+    pub executor: FieldElement,
     pub components: Vec<Component>,
     pub systems: Vec<System>,
     pub contracts: Vec<Contract>,
@@ -148,9 +152,14 @@ impl Manifest {
         let executor_class_hash = provider
             .get_class_hash_at(BlockId::Tag(BlockTag::Pending), executor_address)
             .await
-            .ok();
+            .map_err(|err| match err {
+                JsonRpcClientError::RpcError(RpcError::Code(ErrorCode::ContractNotFound)) => {
+                    ManifestError::NotDeployed
+                }
+                _ => ManifestError::ClientError(err),
+            })?;
 
-        manifest.world = Some(world_class_hash);
+        manifest.world = world_class_hash;
         manifest.executor = executor_class_hash;
 
         if let Some(match_manifest) = match_manifest {
@@ -159,10 +168,8 @@ impl Manifest {
                     .call(
                         FunctionCall {
                             contract_address: world_address,
-                            calldata: vec![
-                                cairo_short_string_to_felt(&component.name)
-                                    .map_err(ManifestError::InvalidNameError)?,
-                            ],
+                            calldata: vec![cairo_short_string_to_felt(&component.name)
+                                .map_err(ManifestError::InvalidNameError)?],
                             entry_point_selector: COMPONENT_ENTRYPOINT,
                         },
                         starknet::core::types::BlockId::Tag(BlockTag::Pending),
@@ -182,14 +189,12 @@ impl Manifest {
                     .call(
                         FunctionCall {
                             contract_address: world_address,
-                            calldata: vec![
-                                cairo_short_string_to_felt(
-                                    // because the name returns by the `name` method of
-                                    // a system contract is without the 'System' suffix
-                                    system.name.strip_suffix("System").unwrap_or(&system.name),
-                                )
-                                .map_err(ManifestError::InvalidNameError)?,
-                            ],
+                            calldata: vec![cairo_short_string_to_felt(
+                                // because the name returns by the `name` method of
+                                // a system contract is without the 'System' suffix
+                                system.name.strip_suffix("System").unwrap_or(&system.name),
+                            )
+                            .map_err(ManifestError::InvalidNameError)?],
                             entry_point_selector: SYSTEM_ENTRYPOINT,
                         },
                         starknet::core::types::BlockId::Tag(BlockTag::Pending),
