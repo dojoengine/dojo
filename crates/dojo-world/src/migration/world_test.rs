@@ -25,7 +25,7 @@ async fn test_migration() {
         let mut compilers = CompilerRepository::empty();
         compilers.add(Box::new(DojoCompiler)).unwrap();
 
-        let cairo_plugins = CairoPluginRepository::new().unwrap();
+        let cairo_plugins = CairoPluginRepository::new();
 
         let cache_dir = TempDir::new().unwrap();
         let config_dir = TempDir::new().unwrap();

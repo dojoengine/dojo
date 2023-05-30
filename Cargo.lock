@@ -250,7 +250,7 @@ checksum = "9c7d0618f0e0b7e8ff11427422b64564d5fb0be1940354bfe2e0529b18a9d9b8"
 [[package]]
 name = "apibara-core"
 version = "0.1.0"
-source = "git+https://github.com/apibara/dna#5dd5dbe82ef8410595a07dfcb64f0f1937027ee5"
+source = "git+https://github.com/apibara/dna#1e877a9c33c37d17d58188df26113cf4804f9c2e"
 dependencies = [
  "anyhow",
  "hex",
@@ -270,7 +270,7 @@ dependencies = [
 [[package]]
 name = "apibara-sdk"
 version = "0.1.0"
-source = "git+https://github.com/apibara/dna#5dd5dbe82ef8410595a07dfcb64f0f1937027ee5"
+source = "git+https://github.com/apibara/dna#1e877a9c33c37d17d58188df26113cf4804f9c2e"
 dependencies = [
  "anyhow",
  "apibara-core",
@@ -453,9 +453,9 @@ checksum = "71938f30533e4d95a6d17aa530939da3842c2ab6f4f84b9dae68447e4129f74a"
 
 [[package]]
 name = "ash"
-version = "0.37.2+1.3.238"
+version = "0.37.3+1.3.251"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "28bf19c1f0a470be5fbf7522a308a05df06610252c5bcf5143e1b23f629a9a03"
+checksum = "39e9c3835d686b0a6084ab4234fcd1b07dbf6e4767dce60874b12356a25ecd4a"
 dependencies = [
  "libloading",
 ]
@@ -1458,7 +1458,7 @@ dependencies = [
  "cairo-lang-runner",
  "cairo-lang-starknet",
  "cairo-vm",
- "ctor 0.2.0",
+ "ctor 0.2.1",
  "derive_more",
  "indexmap",
  "itertools",
@@ -1733,7 +1733,7 @@ dependencies = [
  "log",
  "lsp-types",
  "salsa",
- "scarb-metadata",
+ "scarb-metadata 1.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_json",
  "smol_str",
@@ -2194,9 +2194,9 @@ checksum = "fd16c4719339c4530435d38e511904438d07cce7950afa3718a84ac36c10e89e"
 
 [[package]]
 name = "chrono"
-version = "0.4.25"
+version = "0.4.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fdbc37d37da9e5bce8173f3a41b71d9bf3c674deebbaceacd0ebdabde76efb03"
+checksum = "ec837a71355b28f6556dbd569b37b3f363091c0bd4b2e735674521b4c5fd9bc5"
 dependencies = [
  "android-tzdata",
  "iana-time-zone",
@@ -2451,7 +2451,7 @@ dependencies = [
 [[package]]
 name = "create-output-dir"
 version = "1.0.0"
-source = "git+https://github.com/software-mansion/scarb?rev=0bccfe6#0bccfe6754ee91e0365a0854a38df2e4e2f6ff77"
+source = "git+https://github.com/software-mansion/scarb?rev=0aa0f97b89a2e6f38f3b005cad2817dcaee7bf51#0aa0f97b89a2e6f38f3b005cad2817dcaee7bf51"
 dependencies = [
  "anyhow",
  "core-foundation",
@@ -2576,9 +2576,9 @@ dependencies = [
 
 [[package]]
 name = "ctor"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd4056f63fce3b82d852c3da92b08ea59959890813a7f4ce9c0ff85b10cf301b"
+checksum = "990a40740adf249724a6000c0fc4bd574712f50bb17c2d6f6cec837ae2f0ee75"
 dependencies = [
  "quote",
  "syn 2.0.18",
@@ -2595,9 +2595,9 @@ dependencies = [
 
 [[package]]
 name = "ctrlc"
-version = "3.3.1"
+version = "3.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7394a21d012ce5c850497fb774b167d81b99f060025fbf06ee92b9848bd97eb2"
+checksum = "2a011bbe2c35ce9c1f143b7af6f94f29a167beb4cd1d29e6740ce836f723120e"
 dependencies = [
  "nix",
  "windows-sys 0.48.0",
@@ -3339,9 +3339,9 @@ dependencies = [
 
 [[package]]
 name = "fs4"
-version = "0.6.4"
+version = "0.6.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7f5b6908aecca5812a4569056285e58c666588c9573ee59765bf1d3692699e2"
+checksum = "7672706608ecb74ab2e055c68327ffc25ae4cac1e12349204fd5fb0f3487cce2"
 dependencies = [
  "rustix",
  "windows-sys 0.48.0",
@@ -4180,9 +4180,9 @@ dependencies = [
 
 [[package]]
 name = "glow"
-version = "0.12.1"
+version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e007a07a24de5ecae94160f141029e9a347282cfe25d1d58d85d845cf3130f1"
+checksum = "807edf58b70c0b5b2181dd39fe1839dbdb3ba02645630dc5f753e23da307f762"
 dependencies = [
  "js-sys",
  "slotmap",
@@ -5421,9 +5421,9 @@ dependencies = [
 
 [[package]]
 name = "mio"
-version = "0.8.7"
+version = "0.8.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eebffdb73fe72e917997fad08bdbf31ac50b0fa91cec93e69a0662e4264d454c"
+checksum = "927a765cd3fc26206e66b296465fa9d3e5ab003e651c1b3c060e7956d96b19d2"
 dependencies = [
  "libc",
  "wasi 0.11.0+wasi-snapshot-preview1",
@@ -6239,9 +6239,9 @@ dependencies = [
 
 [[package]]
 name = "portable-atomic"
-version = "1.3.2"
+version = "1.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc59d1bcc64fc5d021d67521f818db868368028108d37f0e98d74e33f68297b5"
+checksum = "767eb9f07d4a5ebcb39bbf2d452058a93c011373abf6832e24194a1c3f004794"
 
 [[package]]
 name = "pp-rs"
@@ -6928,8 +6928,8 @@ dependencies = [
 
 [[package]]
 name = "scarb"
-version = "0.2.1"
-source = "git+https://github.com/software-mansion/scarb?rev=0bccfe6#0bccfe6754ee91e0365a0854a38df2e4e2f6ff77"
+version = "0.3.0"
+source = "git+https://github.com/software-mansion/scarb?rev=0aa0f97b89a2e6f38f3b005cad2817dcaee7bf51#0aa0f97b89a2e6f38f3b005cad2817dcaee7bf51"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6947,6 +6947,7 @@ dependencies = [
  "create-output-dir",
  "data-encoding",
  "deno_task_shell",
+ "derive_builder",
  "diffy",
  "directories",
  "dunce",
@@ -6961,7 +6962,7 @@ dependencies = [
  "once_cell",
  "pathdiff",
  "petgraph",
- "scarb-metadata",
+ "scarb-metadata 1.4.2 (git+https://github.com/software-mansion/scarb?rev=0aa0f97b89a2e6f38f3b005cad2817dcaee7bf51)",
  "semver 1.0.17",
  "serde",
  "serde_json",
@@ -6974,6 +6975,7 @@ dependencies = [
  "tracing-futures",
  "tracing-log",
  "tracing-subscriber",
+ "typed-builder",
  "url",
  "walkdir",
  "which",
@@ -6982,11 +6984,24 @@ dependencies = [
 
 [[package]]
 name = "scarb-metadata"
-version = "1.2.0"
+version = "1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "478420008c0406123360b14a4de30b51f37c62a51af20bd5c6fd8b5979f45ed9"
+checksum = "26ba10c59bd4ebde82de954e3a3d6d503eb17bd634106ef144af1356b28b8f0f"
 dependencies = [
  "camino",
+ "semver 1.0.17",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "scarb-metadata"
+version = "1.4.2"
+source = "git+https://github.com/software-mansion/scarb?rev=0aa0f97b89a2e6f38f3b005cad2817dcaee7bf51#0aa0f97b89a2e6f38f3b005cad2817dcaee7bf51"
+dependencies = [
+ "camino",
+ "clap",
  "derive_builder",
  "semver 1.0.17",
  "serde",
@@ -8629,6 +8644,17 @@ dependencies = [
  "thiserror",
  "url",
  "utf-8",
+]
+
+[[package]]
+name = "typed-builder"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "64cba322cb9b7bc6ca048de49e83918223f35e7a86311267013afff257004870"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
 ]
 
 [[package]]

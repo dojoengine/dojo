@@ -44,7 +44,7 @@ fn main() -> anyhow::Result<()> {
     let mut compilers = CompilerRepository::std();
     compilers.add(Box::new(DojoTestCompiler)).unwrap();
 
-    let cairo_plugins = CairoPluginRepository::new()?;
+    let cairo_plugins = CairoPluginRepository::new();
 
     let manifest_path = source_dir.join("Scarb.toml");
     let config = Config::builder(manifest_path)
