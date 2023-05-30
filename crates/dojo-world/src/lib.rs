@@ -5,7 +5,6 @@ use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 use starknet::signers::{LocalWallet, SigningKey};
 use toml::Value;
-use tracing::warn;
 use url::Url;
 
 pub mod manifest;
@@ -68,7 +67,6 @@ impl WorldConfig {
 #[derive(Debug, Deserialize, Clone, Default)]
 pub struct EnvironmentConfig {
     pub rpc: Option<Url>,
-    pub network: Option<String>,
     pub private_key: Option<FieldElement>,
     pub account_address: Option<FieldElement>,
     pub keystore_path: Option<String>,
@@ -154,34 +152,10 @@ impl EnvironmentConfig {
     }
 
     pub fn provider(&self) -> anyhow::Result<JsonRpcClient<HttpTransport>> {
-        if self.rpc.is_none() && self.network.is_none() {
-            return Err(anyhow!("Missing `rpc_url` or `network` in the environment config"));
-        }
-
-        if self.rpc.is_some() && self.network.is_some() {
-            warn!("Both `rpc_url` and `network` are set but `rpc_url` will be used instead")
-        }
-
-        let provider = if let Some(url) = &self.rpc {
-            JsonRpcClient::new(HttpTransport::new(url.clone()))
-        } else {
-            match self.network.as_ref().unwrap().as_str() {
-                "mainnet" => JsonRpcClient::new(HttpTransport::new(
-                    Url::parse(
-                        "https://starknet-goerli.g.alchemy.com/v2/KE9ZWlO2zAaXFvpjbyb63gZIX1SozzON",
-                    )
-                    .unwrap(),
-                )),
-                "goerli" => JsonRpcClient::new(HttpTransport::new(
-                    Url::parse(
-                        "https://starknet-mainnet.g.alchemy.com/v2/qnYLy7taPFweUC6wad3qF7-bCb4YnQN4",
-                    )
-                    .unwrap(),
-                )),
-                n => return Err(anyhow!("Unsupported network: {n}")),
-            }
+        let Some(url) = &self.rpc else {
+            return Err(anyhow!("Missing `rpc_url` in the environment config"))
         };
 
-        Ok(provider)
+        Ok(JsonRpcClient::new(HttpTransport::new(url.clone())))
     }
 }
