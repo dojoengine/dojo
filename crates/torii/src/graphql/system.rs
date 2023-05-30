@@ -1,5 +1,5 @@
 use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
-use async_graphql::Value;
+use async_graphql::{Value, Name};
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
 use serde::Deserialize;
@@ -27,12 +27,12 @@ impl ObjectTraitStatic for SystemObject {
     fn new() -> Self {
         Self {
             field_type_mapping: IndexMap::from([
-                (String::from("id"), String::from("ID")),
-                (String::from("name"), String::from("String")),
-                (String::from("address"), String::from("Address")),
-                (String::from("classHash"), String::from("FieldElement")),
-                (String::from("transactionHash"), String::from("FieldElement")),
-                (String::from("createdAt"), String::from("DateTime")),
+                (Name::new("id"), "ID"),
+                (Name::new("name"), "String"),
+                (Name::new("address"), "Address"),
+                (Name::new("classHash"), "FieldElement"),
+                (Name::new("transactionHash"), "FieldElement"),
+                (Name::new("createdAt"), "DateTime"),
             ]),
         }
     }
@@ -68,13 +68,13 @@ impl ObjectTraitInstance for SystemObject {
                         .await?;
 
                     let result: ValueMapping = IndexMap::from([
-                        (String::from("id"), Value::from(system.id)),
-                        (String::from("name"), Value::from(system.name)),
-                        (String::from("address"), Value::from(system.address)),
-                        (String::from("classHash"), Value::from(system.class_hash)),
-                        (String::from("transactionHash"), Value::from(system.transaction_hash)),
+                        (Name::new("id"), Value::from(system.id)),
+                        (Name::new("name"), Value::from(system.name)),
+                        (Name::new("address"), Value::from(system.address)),
+                        (Name::new("classHash"), Value::from(system.class_hash)),
+                        (Name::new("transactionHash"), Value::from(system.transaction_hash)),
                         (
-                            String::from("createdAt"),
+                            Name::new("createdAt"),
                             Value::from(
                                 system
                                     .created_at

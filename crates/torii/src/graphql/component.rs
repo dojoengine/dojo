@@ -1,5 +1,5 @@
 use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
-use async_graphql::Value;
+use async_graphql::{Value, Name};
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
 use serde::Deserialize;
@@ -27,13 +27,13 @@ impl ObjectTraitStatic for ComponentObject {
     fn new() -> Self {
         Self {
             field_type_mapping: IndexMap::from([
-                (String::from("id"), String::from("ID")),
-                (String::from("name"), String::from("String")),
-                (String::from("address"), String::from("Address")),
-                (String::from("classHash"), String::from("FieldElement")),
-                (String::from("transactionHash"), String::from("FieldElement")),
-                (String::from("storageSchema"), String::from("String")),
-                (String::from("createdAt"), String::from("DateTime")),
+                (Name::new("id"), "ID"),
+                (Name::new("name"), "String"),
+                (Name::new("address"), "Address"),
+                (Name::new("classHash"), "FieldElement"),
+                (Name::new("transactionHash"), "FieldElement"),
+                (Name::new("storageSchema"), "String"),
+                (Name::new("createdAt"), "DateTime"),
             ]),
         }
     }
@@ -70,14 +70,14 @@ impl ObjectTraitInstance for ComponentObject {
                             .await?;
 
                     let result: ValueMapping = IndexMap::from([
-                        (String::from("id"), Value::from(component.id)),
-                        (String::from("name"), Value::from(component.name)),
-                        (String::from("address"), Value::from(component.address)),
-                        (String::from("classHash"), Value::from(component.class_hash)),
-                        (String::from("transactionHash"), Value::from(component.transaction_hash)),
-                        (String::from("storageSchema"), Value::from(component.storage_schema)),
+                        (Name::new("id"), Value::from(component.id)),
+                        (Name::new("name"), Value::from(component.name)),
+                        (Name::new("address"), Value::from(component.address)),
+                        (Name::new("classHash"), Value::from(component.class_hash)),
+                        (Name::new("transactionHash"), Value::from(component.transaction_hash)),
+                        (Name::new("storageSchema"), Value::from(component.storage_schema)),
                         (
-                            String::from("createdAt"),
+                            Name::new("createdAt"),
                             Value::from(
                                 component
                                     .created_at
