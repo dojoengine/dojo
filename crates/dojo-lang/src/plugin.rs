@@ -17,6 +17,7 @@ use cairo_lang_syntax::attribute::structured::{
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal};
+use dojo_world::manifest::Member;
 use scarb::compiler::plugin::builtin::BuiltinSemanticCairoPlugin;
 use scarb::core::{PackageId, PackageName, SourceId};
 use semver::Version;
@@ -27,6 +28,12 @@ use crate::system::System;
 
 const SYSTEM_ATTR: &str = "system";
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct Component {
+    pub name: String,
+    pub members: Vec<Member>,
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct SystemAuxData {
     pub name: SmolStr,
@@ -34,13 +41,13 @@ pub struct SystemAuxData {
 }
 
 /// Dojo related auxiliary data of the Dojo plugin.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq)]
 pub struct DojoAuxData {
     /// Patches of code that need translation in case they have diagnostics.
     pub patches: Patches,
 
     /// A list of components that were processed by the plugin.
-    pub components: Vec<smol_str::SmolStr>,
+    pub components: Vec<Component>,
     /// A list of systems that were processed by the plugin and their component dependencies.
     pub systems: Vec<SystemAuxData>,
 }
