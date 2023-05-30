@@ -35,8 +35,18 @@ where
         let mut methods = KatanaRpc::new(self.sequencer.clone()).into_rpc();
         methods.merge(StarknetRpc::new(self.sequencer.clone()).into_rpc())?;
 
+        let cors = CorsLayer::new()
+            // Allow `POST` when accessing the resource
+            .allow_methods([Method::POST])
+            // Allow requests from any origin
+            .allow_origin(Any)
+            .allow_headers([hyper::header::CONTENT_TYPE]);
+        let middleware = tower::ServiceBuilder::new().layer(cors);
+
         let server = ServerBuilder::new()
             .set_logger(KatanaNodeRpcLogger)
+            .set_host_filtering(AllowHosts::Any)
+            .set_middleware(middleware)
             .build(format!("127.0.0.1:{}", self.config.port))
             .await
             .map_err(|_| Error::from(StarknetApiError::InternalServerError))?;
