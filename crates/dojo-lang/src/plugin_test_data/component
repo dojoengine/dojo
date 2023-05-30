@@ -182,4 +182,5 @@ mod PlayerComponent {
         bool::False(())
     }
 }
+
 //! > expected_diagnostics

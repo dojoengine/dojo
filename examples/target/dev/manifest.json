@@ -1,6 +1,6 @@
 {
-  "world": "0x00b8e288d0288ef984767e88050357c3cb11025de550b0f206f52865fea5aa3f",
-  "executor": "0x0412161d79a1b9520d20f0eaae47af93b5eb9854fc46e0ee7dabefccd4ba6525",
+  "world": "0x0580f68e198724bd8e7746aaf252d530504c12b0c3cab6707eb95f1d40cb8fad",
+  "executor": "0x0553701c58518a754ac7c08bb50778890e248181fab590d8a6ea377414686ead",
   "components": [
     {
       "name": "Moves",
@@ -10,7 +10,7 @@
           "type": "core::integer::u8"
         }
       ],
-      "class_hash": "0xbdc2144bd53e140231d5494f7b6f50081d8f23efd28ec338281426c1439f2f"
+      "class_hash": "0x7cf9de8c4de72bb334516f683982fad3200d6e8b39afa609609b2dbbbf315fa"
     },
     {
       "name": "Position",
@@ -24,27 +24,27 @@
           "type": "core::integer::u32"
         }
       ],
-      "class_hash": "0x202d8a933324170d142f4104e8fb4fc342e4b749ce755acc09f3317d72dc290"
+      "class_hash": "0x6341b892c94083ac9b8d5edf7fe282a0e2624e8cadfa4f41ffdb1eafedfaaf"
     },
     {
-      "name": "Status",
+      "name": "AuthStatus",
       "members": [
         {
           "name": "is_authorized",
           "type": "core::bool"
         }
       ],
-      "class_hash": "0x78f8cd12aa09037cfb67d1ff5ab51fe19c6e1d42313dcd95cd1659dbe8baa5f"
+      "class_hash": "0x68f685996e88cde511e9361006f36d109dd84f7a02b7d6366ed39eab041331c"
     },
     {
-      "name": "Role",
+      "name": "AuthRole",
       "members": [
         {
           "name": "id",
           "type": "dojo_core::integer::u250"
         }
       ],
-      "class_hash": "0x6a1fb12e13ebc63ebad84a1657e86cac695043cb93c0bedd6e2d16c1b8d3f66"
+      "class_hash": "0x774a0c68b7849b219c72fa7075c08198c1f17d20e792ab7840926908b3e55a"
     }
   ],
   "systems": [
@@ -52,7 +52,7 @@
       "name": "SpawnSystem",
       "inputs": [],
       "outputs": [],
-      "class_hash": "0x6a0f6a004b6473d6b260d31784c006a72cb72e2821d0f1ae78d271b434fe644",
+      "class_hash": "0x7137940fe93bf1aa7d6db1a154b6d02331d9e19a9271cce72b8aae66f770142",
       "dependencies": [
         "Moves",
         "Position"
@@ -63,11 +63,11 @@
       "inputs": [
         {
           "name": "direction",
-          "type": "core::felt252"
+          "type": "dojo_examples::systems::MoveSystem::Direction"
         }
       ],
       "outputs": [],
-      "class_hash": "0x4bb308da04505083a5946b4c7564cba1fcfd8092f6fba51134d37d0c151d2ac",
+      "class_hash": "0x3d5b5d09f1801bacfccfe19497709ff2b6504149fcb66cc9103004cfd9a863b",
       "dependencies": [
         "Moves",
         "Position"
@@ -77,19 +77,33 @@
       "name": "RouteAuthSystem",
       "inputs": [
         {
-          "name": "routing",
-          "type": "core::array::Array::<dojo_core::auth::systems::Route>"
+          "name": "route",
+          "type": "dojo_core::auth::systems::Route"
         }
       ],
       "outputs": [],
-      "class_hash": "0x7a0f6bce15caea8575a840518aaa731fd64ac533d98ee4a11dad715c3c170cc",
+      "class_hash": "0x357459d23bfdd10ccccaeb8a8c41ced54a53cfefe1d8f2c144b97735d9c230c",
+      "dependencies": [
+        "AuthRole",
+        "AuthStatus"
+      ]
+    },
+    {
+      "name": "IsAccountAdminSystem",
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "core::bool"
+        }
+      ],
+      "class_hash": "0x15adec9c857b1243bc52eb1b1fafd2e2ee7596aaf349f1d7dc5adac3c3c9438",
       "dependencies": []
     },
     {
-      "name": "AuthorizeSystem",
+      "name": "IsAuthorizedSystem",
       "inputs": [
         {
-          "name": "caller_id",
+          "name": "target_id",
           "type": "dojo_core::integer::u250"
         },
         {
@@ -97,12 +111,16 @@
           "type": "dojo_core::integer::u250"
         }
       ],
-      "outputs": [],
-      "class_hash": "0x175457a426725187ea9492690bb5764717f9bf4acd21c0332db72d3367e9853",
+      "outputs": [
+        {
+          "type": "core::bool"
+        }
+      ],
+      "class_hash": "0x6526c5decc696ead58640e0ca631b3f91b1e36549591ab98f84cc6c48e12bc",
       "dependencies": []
     },
     {
-      "name": "GrantRoleSystem",
+      "name": "GrantAuthRoleSystem",
       "inputs": [
         {
           "name": "target_id",
@@ -114,9 +132,31 @@
         }
       ],
       "outputs": [],
-      "class_hash": "0x2f738967f6bc23c4049228249022e3fca8d7896883f9ef3916ffa062148dbac",
+      "class_hash": "0x10bfb8bebbaf91197a79bfa635729f9530d5a4dd2ea1ac4a3b231609eb676af",
       "dependencies": [
-        "Role"
+        "AuthRole"
+      ]
+    },
+    {
+      "name": "GrantScopedAuthRoleSystem",
+      "inputs": [
+        {
+          "name": "target_id",
+          "type": "dojo_core::integer::u250"
+        },
+        {
+          "name": "role_id",
+          "type": "dojo_core::integer::u250"
+        },
+        {
+          "name": "resource_id",
+          "type": "dojo_core::integer::u250"
+        }
+      ],
+      "outputs": [],
+      "class_hash": "0x271225d1cb93295addc15dc7b5ed3766dba6875537600d7d5442c068aad747a",
+      "dependencies": [
+        "AuthRole"
       ]
     },
     {
@@ -132,11 +172,13 @@
         }
       ],
       "outputs": [],
-      "class_hash": "0x77435684429043303b1ad93ec44b1cb8b5a449f2a0b4b1811c2f6a0057c8ba1",
-      "dependencies": []
+      "class_hash": "0x7feb472bb8c668afb9542e3eaa8737bfbb8e4ab6eb1aa32a1e0468caedcac24",
+      "dependencies": [
+        "AuthStatus"
+      ]
     },
     {
-      "name": "RevokeRoleSystem",
+      "name": "RevokeAuthRoleSystem",
       "inputs": [
         {
           "name": "target_id",
@@ -144,9 +186,27 @@
         }
       ],
       "outputs": [],
-      "class_hash": "0x70de26ffddc8f70004d2cdbdff5396d1e461e0564f8508323a2e0e1af418555",
+      "class_hash": "0x686a172a952467ad8f5c8b56ea587a67728c8a86c9bf110529880b6db306de5",
       "dependencies": [
-        "Role"
+        "AuthRole"
+      ]
+    },
+    {
+      "name": "RevokeScopedAuthRoleSystem",
+      "inputs": [
+        {
+          "name": "target_id",
+          "type": "dojo_core::integer::u250"
+        },
+        {
+          "name": "resource_id",
+          "type": "dojo_core::integer::u250"
+        }
+      ],
+      "outputs": [],
+      "class_hash": "0x918f9ca2090711669b6a4b6e8acc2ffde93a8e81e620e2aa7bf1949c5a4d83",
+      "dependencies": [
+        "AuthRole"
       ]
     },
     {
@@ -162,8 +222,10 @@
         }
       ],
       "outputs": [],
-      "class_hash": "0x576494d7aeb128ce668bb1e4b309ddabb4ec79394f7739003a0304abf0f3f68",
-      "dependencies": []
+      "class_hash": "0x38796b9bd1f45c8c6868fcb31170bc2edcfbb0bb2b3a5e0ac907ecfe5ed71f1",
+      "dependencies": [
+        "AuthStatus"
+      ]
     }
   ],
   "contracts": []

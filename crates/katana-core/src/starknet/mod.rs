@@ -39,7 +39,7 @@ use crate::util::{
     get_current_timestamp,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct StarknetConfig {
     pub seed: [u8; 32],
     pub gas_price: u128,

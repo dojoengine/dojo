@@ -7,6 +7,7 @@ use anyhow::{anyhow, Context, Result};
 use camino::Utf8PathBuf;
 use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::FieldElement;
+use starknet::providers::Provider;
 
 use super::{ClassMigration, ContractMigration, Migration};
 use crate::manifest::Manifest;
