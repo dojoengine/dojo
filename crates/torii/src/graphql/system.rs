@@ -3,9 +3,9 @@ use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
 use serde::Deserialize;
-use sqlx::{FromRow, Pool, Sqlite};
+use sqlx::pool::PoolConnection;
+use sqlx::{FromRow, Pool, Result, Sqlite};
 
-// use super::system_call::SystemCall;
 use super::{ObjectTraitInstance, ObjectTraitStatic, TypeMapping, ValueMapping};
 
 #[derive(FromRow, Deserialize)]
@@ -60,33 +60,51 @@ impl ObjectTraitInstance for SystemObject {
             Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let id = ctx.args.try_get("id")?;
-
-                    let system: System = sqlx::query_as("SELECT * FROM systems WHERE id = ?")
-                        .bind(id.string()?)
-                        .fetch_one(&mut conn)
-                        .await?;
-
-                    let result: ValueMapping = IndexMap::from([
-                        (Name::new("id"), Value::from(system.id)),
-                        (Name::new("name"), Value::from(system.name)),
-                        (Name::new("address"), Value::from(system.address)),
-                        (Name::new("classHash"), Value::from(system.class_hash)),
-                        (Name::new("transactionHash"), Value::from(system.transaction_hash)),
-                        (
-                            Name::new("createdAt"),
-                            Value::from(
-                                system
-                                    .created_at
-                                    .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
-                            ),
-                        ),
-                    ]);
-
-                    Ok(Some(FieldValue::owned_any(result)))
+                    let id = ctx.args.try_get("id")?.string()?.replace('\"', "");
+                    let system = system_by_id(&mut conn, &id).await?;
+                    Ok(Some(FieldValue::owned_any(system)))
                 })
             })
             .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID))),
         ]
     }
+}
+
+async fn system_by_id(conn: &mut PoolConnection<Sqlite>, id: &str) -> Result<ValueMapping> {
+    let system = sqlx::query_as!(
+        System,
+        r#"
+            SELECT
+                id,
+                name,
+                address,
+                class_hash,
+                transaction_hash,
+                created_at as "created_at: _"
+            FROM systems WHERE id = $1
+        "#,
+        id
+    )
+    .fetch_one(conn)
+    .await?;
+
+    Ok(value_mapping(system))
+}
+
+fn value_mapping(system: System) -> ValueMapping {
+    IndexMap::from([
+        (Name::new("id"), Value::from(system.id)),
+        (Name::new("name"), Value::from(system.name)),
+        (Name::new("address"), Value::from(system.address)),
+        (Name::new("classHash"), Value::from(system.class_hash)),
+        (Name::new("transactionHash"), Value::from(system.transaction_hash)),
+        (
+            Name::new("createdAt"),
+            Value::from(
+                system
+                    .created_at
+                    .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+            ),
+        ),
+    ])
 }
