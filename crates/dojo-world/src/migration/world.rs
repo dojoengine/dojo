@@ -186,12 +186,7 @@ impl World {
 
             let signer = self.environment_config.signer()?;
 
-            SingleOwnerAccount::new(
-                provider,
-                signer,
-                account_address,
-                chain_id,
-            )
+            SingleOwnerAccount::new(provider, signer, account_address, chain_id)
         };
 
         Ok(Migration { world, executor, systems, components, migrator })
