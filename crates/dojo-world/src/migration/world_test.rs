@@ -1,10 +1,17 @@
 use std::sync::Arc;
 
-use camino::Utf8PathBuf;
+use assert_fs::TempDir;
+use camino::{Utf8Path, Utf8PathBuf};
+use dojo_lang::compiler::DojoCompiler;
+use dojo_lang::plugin::CairoPluginRepository;
 use katana_core::sequencer::KatanaSequencer;
 use katana_core::starknet::StarknetConfig;
 use katana_rpc::config::RpcConfig;
 use katana_rpc::KatanaNodeRpc;
+use scarb::compiler::CompilerRepository;
+use scarb::core::Config;
+use scarb::ops;
+use scarb::ui::Verbosity;
 use starknet::core::types::FieldElement;
 use tokio::sync::RwLock;
 use url::Url;
@@ -14,6 +21,33 @@ use crate::{EnvironmentConfig, WorldConfig};
 
 #[tokio::test]
 async fn test_migration() {
+    std::thread::spawn(move || {
+        let mut compilers = CompilerRepository::empty();
+        compilers.add(Box::new(DojoCompiler)).unwrap();
+
+        let cairo_plugins = CairoPluginRepository::new().unwrap();
+
+        let cache_dir = TempDir::new().unwrap();
+        let config_dir = TempDir::new().unwrap();
+
+        let path = Utf8PathBuf::from_path_buf("src/cairo_level_tests/Scarb.toml".into()).unwrap();
+        let config = Config::builder(path.canonicalize_utf8().unwrap())
+            .global_cache_dir_override(Some(Utf8Path::from_path(cache_dir.path()).unwrap()))
+            .global_config_dir_override(Some(Utf8Path::from_path(config_dir.path()).unwrap()))
+            .ui_verbosity(Verbosity::Verbose)
+            .log_filter_directive(Some("scarb=trace"))
+            .compilers(compilers)
+            .cairo_plugins(cairo_plugins.into())
+            .build()
+            .unwrap();
+
+        let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
+
+        ops::compile(&ws).unwrap();
+    })
+    .join()
+    .expect("Failed to run ops::compile in a new thread");
+
     let target_dir = Utf8PathBuf::from_path_buf("src/cairo_level_tests/target/dev".into()).unwrap();
 
     let sequencer = Arc::new(RwLock::new(KatanaSequencer::new(StarknetConfig {
