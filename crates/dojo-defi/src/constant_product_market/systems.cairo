@@ -89,7 +89,7 @@ mod AddLiquidity {
     use dojo_core::integer::{u250, ContractAddressIntoU250};
     use dojo_defi::constant_product_market::components::{Item, Cash, Market, Liquidity, MarketTrait};
 
-    use cubit::types::fixed::FixedType;
+    use cubit::types::fixed::Fixed;
 
     fn execute(partition: u250, item_id: u250, amount: u128, quantity: usize) {
         let player: u250 = starknet::get_caller_address().into();
@@ -141,10 +141,10 @@ mod RemoveLiquidity {
     use dojo_core::integer::{u250, ContractAddressIntoU250};
     use dojo_defi::constant_product_market::components::{Item, Cash, Market, Liquidity, MarketTrait};
 
-    use cubit::types::fixed::FixedType;
+    use cubit::types::fixed::Fixed;
     use serde::Serde;
 
-    fn execute(partition: u250, item_id: u250, shares: FixedType) {
+    fn execute(partition: u250, item_id: u250, shares: Fixed) {
         let player: u250 = starknet::get_caller_address().into();
 
         let liquidity_sk: Query = (partition, (player, item_id)).into_partitioned();
