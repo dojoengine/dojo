@@ -76,8 +76,7 @@ impl Migration {
 
         let world_address = self
             .world
-            .contract
-            .address
+            .contract_address
             .unwrap_or_else(|| panic!("World contract address not found"));
 
         let calls = self
@@ -102,8 +101,7 @@ impl Migration {
 
         let world_address = self
             .world
-            .contract
-            .address
+            .contract_address
             .unwrap_or_else(|| panic!("World contract address not found"));
 
         let calls = self
@@ -165,8 +163,10 @@ async fn declare(
     artifact_path: &PathBuf,
     account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
 ) {
-    let (flattened_class, casm_class_hash) =
-        prepare_contract_declaration_params(artifact_path).unwrap();
+    let (flattened_class, casm_class_hash) = prepare_contract_declaration_params(artifact_path)
+        .unwrap_or_else(|err| {
+            panic!("Preparing declaration for {name} class: {err}");
+        });
 
     if account.provider().get_class(BlockId::Tag(BlockTag::Pending), casm_class_hash).await.is_ok()
     {

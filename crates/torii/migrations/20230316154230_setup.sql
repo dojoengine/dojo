@@ -19,7 +19,7 @@ CREATE INDEX idx_components_created_at ON components (created_at);
 
 CREATE TABLE system_calls (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    data TEXT,
+    data TEXT NOT NULL,
     transaction_hash TEXT NOT NULL,
     system_id TEXT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
