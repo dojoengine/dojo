@@ -1,9 +1,10 @@
+use async_trait::async_trait;
 use beerus_core::lightclient::beerus::BeerusLightClient;
 use bevy::app::{App, Plugin};
 use bevy::ecs::component::Component;
-use bevy::ecs::event::EventReader;
-use bevy::ecs::system::{IntoPipeSystem, Query};
+use bevy::ecs::system::IntoPipeSystem;
 use bevy_tokio_tasks::TaskContext;
+use dojo_macros::LightClientSystem;
 use ethabi::ethereum_types::H256;
 use ethabi::Address;
 use ethers::types::Filter;
@@ -11,33 +12,55 @@ use eyre::Result;
 use helios::types::CallOpts;
 use starknet::core::types::BlockTag;
 
-use crate::light_client::{handle_request_error, BlockNumber, LightClient, LightClientRequest};
+use crate::light_client::{handle_request_error, BlockNumber, RequestSender};
 
 pub struct EthereumClientPlugin;
 
 impl Plugin for EthereumClientPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<EthGetBalance>()
-            .add_event::<EthGetTransactionCount>()
-            .add_event::<EthGetCode>()
-            .add_event::<EthCall>()
-            .add_event::<EthEstimateGas>()
-            .add_event::<EthGetChainId>()
-            .add_event::<EthGasPrice>()
-            .add_event::<EthMaxPriorityFeePerGas>()
-            .add_event::<EthBlockNumber>()
-            .add_event::<EthGetBlockByNumber>()
-            .add_event::<EthGetBlockByHash>()
-            .add_event::<EthSendRawTransaction>()
-            .add_event::<EthGetTransactionReceipt>()
-            .add_event::<EthGetLogs>()
-            .add_event::<EthGetStorageAt>()
-            .add_event::<EthGetBlockTransactionCountByHash>()
-            .add_event::<EthGetBlockTransactionCountByNumber>()
-            .add_event::<EthCoinbase>()
-            .add_event::<EthSyncing>()
-            .add_event::<EthGetTransactionByHash>()
-            .add_system(block_number.pipe(handle_request_error));
+        app.add_event::<EthereumGetBalance>()
+            .add_event::<EthereumGetTransactionCount>()
+            .add_event::<EthereumGetCode>()
+            .add_event::<EthereumCall>()
+            .add_event::<EthereumEstimateGas>()
+            .add_event::<EthereumGetChainId>()
+            .add_event::<EthereumGasPrice>()
+            .add_event::<EthereumMaxPriorityFeePerGas>()
+            .add_event::<EthereumBlockNumber>()
+            .add_event::<EthereumGetBlockByNumber>()
+            .add_event::<EthereumGetBlockByHash>()
+            .add_event::<EthereumSendRawTransaction>()
+            .add_event::<EthereumGetTransactionReceipt>()
+            .add_event::<EthereumGetLogs>()
+            .add_event::<EthereumGetStorageAt>()
+            .add_event::<EthereumGetBlockTransactionCountByHash>()
+            .add_event::<EthereumGetBlockTransactionCountByNumber>()
+            .add_event::<EthereumCoinbase>()
+            .add_event::<EthereumSyncing>()
+            .add_event::<EthereumGetTransactionByHash>()
+            .add_systems((
+                get_balance.pipe(handle_request_error),
+                get_transaction_count.pipe(handle_request_error),
+                get_code.pipe(handle_request_error),
+                call.pipe(handle_request_error),
+                estimate_gas.pipe(handle_request_error),
+                get_chain_id.pipe(handle_request_error),
+                gas_price.pipe(handle_request_error),
+                max_priority_fee_per_gas.pipe(handle_request_error),
+                block_number.pipe(handle_request_error),
+                get_block_by_hash.pipe(handle_request_error),
+                send_raw_transaction.pipe(handle_request_error),
+                get_logs.pipe(handle_request_error),
+                get_storage_at.pipe(handle_request_error),
+                get_block_transaction_count_by_hash.pipe(handle_request_error),
+                get_block_transaction_count_by_number.pipe(handle_request_error),
+            ))
+            .add_systems((
+                coinbase.pipe(handle_request_error),
+                syncing.pipe(handle_request_error),
+                get_transaction_by_hash.pipe(handle_request_error),
+                get_transaction_by_block_hash_and_index.pipe(handle_request_error),
+            ));
     }
 }
 
@@ -45,256 +68,235 @@ impl Plugin for EthereumClientPlugin {
 // Events
 ////////////////////////////////////////////////////////////////////////
 
-#[derive(Clone, Copy, Debug)]
-pub struct EthGetBalance {
+#[derive(Clone, Copy, Debug, LightClientSystem)]
+pub struct EthereumGetBalance {
     pub address: Address,
     pub block: BlockTag,
 }
 
-#[derive(Clone, Copy, Debug)]
-pub struct EthGetTransactionCount {
+#[derive(Clone, Copy, Debug, LightClientSystem)]
+pub struct EthereumGetTransactionCount {
     pub address: Address,
     pub block: BlockTag,
 }
 
-#[derive(Clone, Copy, Debug)]
-pub struct EthGetCode {
+#[derive(Clone, Copy, Debug, LightClientSystem)]
+pub struct EthereumGetCode {
     pub address: Address,
     pub block: BlockTag,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, LightClientSystem)]
 /// Not supported: https://github.com/keep-starknet-strange/beerus#endpoint-support
-pub struct EthCall {
+pub struct EthereumCall {
     pub opts: CallOpts,
     pub block: BlockTag,
 }
 
-#[derive(Clone, Debug)]
-pub struct EthEstimateGas {
+#[derive(Clone, Debug, LightClientSystem)]
+pub struct EthereumEstimateGas {
     pub opts: CallOpts,
 }
 
-#[derive(Clone, Copy, Debug)]
-pub struct EthGetChainId;
+#[derive(Clone, Copy, Debug, LightClientSystem)]
+pub struct EthereumGetChainId;
 
-#[derive(Clone, Copy, Debug)]
-pub struct EthGasPrice;
+#[derive(Clone, Copy, Debug, LightClientSystem)]
+pub struct EthereumGasPrice;
 
-#[derive(Clone, Copy, Debug)]
-pub struct EthMaxPriorityFeePerGas;
+#[derive(Clone, Copy, Debug, LightClientSystem)]
+pub struct EthereumMaxPriorityFeePerGas;
 
-#[derive(Clone, Copy, Debug)]
-pub struct EthBlockNumber;
+#[derive(Clone, Copy, Debug, LightClientSystem)]
+pub struct EthereumBlockNumber;
 
-#[derive(Clone, Copy, Debug)]
-pub struct EthGetBlockByNumber {
+#[derive(Clone, Copy, Debug, LightClientSystem)]
+pub struct EthereumGetBlockByNumber {
     pub block: BlockTag,
     pub full_tx: bool,
 }
 
-#[derive(Clone, Copy, Debug)]
-pub struct EthGetBlockByHash {
+#[derive(Clone, Copy, Debug, LightClientSystem)]
+pub struct EthereumGetBlockByHash {
     pub hash: &'static str,
     pub full_tx: bool,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, LightClientSystem)]
 /// Not supported: https://github.com/keep-starknet-strange/beerus#endpoint-support
-pub struct EthSendRawTransaction {
+pub struct EthereumSendRawTransaction {
     pub bytes: &'static str,
 }
 
-#[derive(Clone, Copy, Debug)]
-pub struct EthGetTransactionReceipt {
+#[derive(Clone, Copy, Debug, LightClientSystem)]
+pub struct EthereumGetTransactionReceipt {
     pub tx_hash: &'static str,
 }
 
-#[derive(Clone, Debug)]
-pub struct EthGetLogs {
+#[derive(Clone, Debug, LightClientSystem)]
+pub struct EthereumGetLogs {
     pub filter: Filter,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, LightClientSystem)]
 /// Not supported: https://github.com/keep-starknet-strange/beerus#endpoint-support
-pub struct EthGetStorageAt {
+pub struct EthereumGetStorageAt {
     pub address: Address,
     pub slot: H256,
     pub block: BlockTag,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, LightClientSystem)]
 /// Not supported: https://github.com/keep-starknet-strange/beerus#endpoint-support
-pub struct EthGetBlockTransactionCountByHash {
+pub struct EthereumGetBlockTransactionCountByHash {
     pub hash: &'static str,
 }
 
-#[derive(Clone, Copy, Debug)]
-pub struct EthGetBlockTransactionCountByNumber {
+#[derive(Clone, Copy, Debug, LightClientSystem)]
+pub struct EthereumGetBlockTransactionCountByNumber {
     pub block: BlockTag,
 }
 
-#[derive(Clone, Copy, Debug)]
-pub struct EthCoinbase;
+#[derive(Clone, Copy, Debug, LightClientSystem)]
+pub struct EthereumCoinbase;
 
-#[derive(Clone, Copy, Debug)]
-pub struct EthSyncing;
+#[derive(Clone, Copy, Debug, LightClientSystem)]
+pub struct EthereumSyncing;
 
-#[derive(Clone, Copy, Debug)]
-pub struct EthGetTransactionByHash {
+#[derive(Clone, Copy, Debug, LightClientSystem)]
+pub struct EthereumGetTransactionByHash {
     pub tx_hash: &'static str,
 }
 
-#[derive(Clone, Copy, Debug)]
-pub struct EthGetTransactionByBlockHashAndIndex {
+#[derive(Clone, Copy, Debug, LightClientSystem)]
+pub struct EthereumGetTransactionByBlockHashAndIndex {
     pub hash: &'static str,
     pub index: usize,
 }
 
-#[derive(Clone, Copy, Debug)]
-pub struct EthGetBlockNumber;
-
-////////////////////////////////////////////////////////////////////////
-// Systems
-////////////////////////////////////////////////////////////////////////
-
-/// React to [EthBlockNumber] event
-fn block_number(mut events: EventReader<EthBlockNumber>, query: Query<&LightClient>) -> Result<()> {
-    events.iter().try_for_each(|_e| {
-        let client = query.get_single()?;
-        client.send(LightClientRequest::ethereum_block_number())?;
-
-        Ok(())
-    })
-}
-
-////////////////////////////////////////////////////////////////////////
-// Utils
-////////////////////////////////////////////////////////////////////////
-
-use EthRequest::*;
-impl LightClientRequest {
-    pub fn ethereum_get_balance(params: EthGetBalance) -> Self {
-        Self::Ethereum(GetBalance(params))
-    }
-
-    pub fn ethereum_get_transaction_count(params: EthGetTransactionCount) -> Self {
-        Self::Ethereum(GetTransactionCount(params))
-    }
-
-    pub fn ethereum_get_get_code(params: EthGetCode) -> Self {
-        Self::Ethereum(GetCode(params))
-    }
-
-    pub fn ethereum_get_call(params: EthCall) -> Self {
-        Self::Ethereum(Call(params))
-    }
-
-    pub fn ethereum_estimate_gas(params: EthEstimateGas) -> Self {
-        Self::Ethereum(EstimateGas(params))
-    }
-
-    pub fn ethereum_get_chain_id() -> Self {
-        Self::Ethereum(GetChainId)
-    }
-
-    pub fn ethereum_gas_price() -> Self {
-        Self::Ethereum(GasPrice)
-    }
-
-    pub fn ethereum_max_priority_fee_per_gas() -> Self {
-        Self::Ethereum(MaxPriorityFeePerGas)
-    }
-
-    pub fn ethereum_ethereum_block_number() -> Self {
-        Self::Ethereum(BlockNumber)
-    }
-
-    pub fn ethereum_get_block_by_number(params: EthGetBlockByNumber) -> Self {
-        Self::Ethereum(GetBlockByNumber(params))
-    }
-
-    pub fn ethereum_get_block_by_hash(params: EthGetBlockByHash) -> Self {
-        Self::Ethereum(GetBlockByHash(params))
-    }
-
-    pub fn ethereum_send_raw_transaction(params: EthSendRawTransaction) -> Self {
-        Self::Ethereum(SendRawTransaction(params))
-    }
-
-    pub fn ethereum_get_transaction_receipt(params: EthGetTransactionReceipt) -> Self {
-        Self::Ethereum(GetTransactionReceipt(params))
-    }
-
-    pub fn ethereum_get_logs(params: EthGetLogs) -> Self {
-        Self::Ethereum(GetLogs(params))
-    }
-
-    pub fn ethereum_get_storage_at(params: EthGetStorageAt) -> Self {
-        Self::Ethereum(GetStorageAt(params))
-    }
-
-    pub fn ethereum_get_block_transaction_count_by_hash(
-        params: EthGetBlockTransactionCountByHash,
-    ) -> Self {
-        Self::Ethereum(GetBlockTransactionCountByHash(params))
-    }
-
-    pub fn ethereum_get_block_transaction_count_by_number(
-        params: EthGetBlockTransactionCountByNumber,
-    ) -> Self {
-        Self::Ethereum(GetBlockTransactionCountByNumber(params))
-    }
-
-    pub fn ethereum_coinbase() -> Self {
-        Self::Ethereum(Coinbase)
-    }
-
-    pub fn ethereum_syncing() -> Self {
-        Self::Ethereum(Syncing)
-    }
-
-    pub fn ethereum_get_transaction_by_hash(params: EthGetTransactionByHash) -> Self {
-        Self::Ethereum(GetTransactionByHash(params))
-    }
-
-    pub fn ethereum_get_transaction_by_block_hash_and_index(
-        params: EthGetTransactionByBlockHashAndIndex,
-    ) -> Self {
-        Self::Ethereum(GetTransactionByBlockHashAndIndex(params))
-    }
-}
-
 #[derive(Debug)]
-pub enum EthRequest {
-    GetBalance(EthGetBalance),
-    GetTransactionCount(EthGetTransactionCount),
-    GetCode(EthGetCode),
-    Call(EthCall),
-    EstimateGas(EthEstimateGas),
+pub enum EthereumRequest {
+    GetBalance(EthereumGetBalance),
+    GetTransactionCount(EthereumGetTransactionCount),
+    GetCode(EthereumGetCode),
+    Call(EthereumCall),
+    EstimateGas(EthereumEstimateGas),
     GetChainId,
     GasPrice,
     MaxPriorityFeePerGas,
     BlockNumber,
-    GetBlockByNumber(EthGetBlockByNumber),
-    GetBlockByHash(EthGetBlockByHash),
-    SendRawTransaction(EthSendRawTransaction),
-    GetTransactionReceipt(EthGetTransactionReceipt),
-    GetLogs(EthGetLogs),
-    GetStorageAt(EthGetStorageAt),
-    GetBlockTransactionCountByHash(EthGetBlockTransactionCountByHash),
-    GetBlockTransactionCountByNumber(EthGetBlockTransactionCountByNumber),
+    GetBlockByNumber(EthereumGetBlockByNumber),
+    GetBlockByHash(EthereumGetBlockByHash),
+    SendRawTransaction(EthereumSendRawTransaction),
+    GetTransactionReceipt(EthereumGetTransactionReceipt),
+    GetLogs(EthereumGetLogs),
+    GetStorageAt(EthereumGetStorageAt),
+    GetBlockTransactionCountByHash(EthereumGetBlockTransactionCountByHash),
+    GetBlockTransactionCountByNumber(EthereumGetBlockTransactionCountByNumber),
     Coinbase,
     Syncing,
-    GetTransactionByHash(EthGetTransactionByHash),
-    GetTransactionByBlockHashAndIndex(EthGetTransactionByBlockHashAndIndex),
+    GetTransactionByHash(EthereumGetTransactionByHash),
+    GetTransactionByBlockHashAndIndex(EthereumGetTransactionByBlockHashAndIndex),
 }
 
-impl EthRequest {
-    pub async fn get_block_number(
-        client: &BeerusLightClient,
-        mut ctx: TaskContext,
+#[async_trait]
+impl RequestSender for EthereumRequest {
+    async fn send(&self, client: &BeerusLightClient, ctx: TaskContext) -> Result<()> {
+        use EthereumRequest::*;
+
+        match self {
+            GetBalance(params) => Self::get_balance(&client, ctx, &params).await,
+            GetTransactionCount(params) => Self::get_transaction_count(&client, ctx, &params).await,
+            GetCode(params) => Self::get_code(&client, ctx, &params).await,
+            Call(params) => Self::call(&client, ctx, &params).await,
+            EstimateGas(params) => Self::estimate_gas(&client, ctx, &params).await,
+            GetChainId => Self::get_chain_id(&client, ctx).await,
+            GasPrice => Self::get_price(&client, ctx).await,
+            MaxPriorityFeePerGas => Self::max_priority_fee_per_gas(&client, ctx).await,
+            BlockNumber => Self::block_number(&client, ctx).await,
+            GetBlockByNumber(params) => Self::get_block_by_number(&client, ctx, &params).await,
+            GetBlockByHash(params) => Self::get_block_by_hash(&client, ctx, &params).await,
+            SendRawTransaction(params) => Self::send_raw_transaction(&client, ctx, &params).await,
+            GetTransactionReceipt(params) => {
+                Self::get_transaction_receipt(&client, ctx, &params).await
+            }
+            GetLogs(params) => Self::get_logs(&client, ctx, &params).await,
+            GetStorageAt(params) => Self::get_storage_at(&client, ctx, &params).await,
+            GetBlockTransactionCountByHash(params) => {
+                Self::get_block_transaction_count_by_hash(&client, ctx, &params).await
+            }
+            GetBlockTransactionCountByNumber(params) => {
+                Self::get_block_transaction_count_by_number(&client, ctx, &params).await
+            }
+            Coinbase => Self::coinbase(&client, ctx).await,
+            Syncing => Self::syncing(&client, ctx).await,
+            GetTransactionByHash(params) => {
+                Self::get_transaction_by_hash(&client, ctx, &params).await
+            }
+            GetTransactionByBlockHashAndIndex(params) => {
+                Self::get_transaction_by_block_hash_and_index(&client, ctx, &params).await
+            }
+        }
+    }
+}
+
+impl EthereumRequest {
+    async fn get_balance(
+        _client: &BeerusLightClient,
+        mut _ctx: TaskContext,
+        _param: &EthereumGetBalance,
     ) -> eyre::Result<()> {
+        todo!();
+    }
+
+    async fn get_transaction_count(
+        _client: &BeerusLightClient,
+        mut _ctx: TaskContext,
+        _params: &EthereumGetTransactionCount,
+    ) -> eyre::Result<()> {
+        todo!();
+    }
+
+    async fn get_code(
+        _client: &BeerusLightClient,
+        mut _ctx: TaskContext,
+        _params: &EthereumGetCode,
+    ) -> eyre::Result<()> {
+        todo!();
+    }
+
+    async fn call(
+        _client: &BeerusLightClient,
+        mut _ctx: TaskContext,
+        _params: &EthereumCall,
+    ) -> eyre::Result<()> {
+        todo!();
+    }
+
+    async fn estimate_gas(
+        _client: &BeerusLightClient,
+        mut _ctx: TaskContext,
+        _params: &EthereumEstimateGas,
+    ) -> eyre::Result<()> {
+        todo!();
+    }
+
+    async fn get_chain_id(_client: &BeerusLightClient, mut _ctx: TaskContext) -> eyre::Result<()> {
+        todo!();
+    }
+
+    async fn get_price(_client: &BeerusLightClient, mut _ctx: TaskContext) -> eyre::Result<()> {
+        todo!();
+    }
+
+    async fn max_priority_fee_per_gas(
+        _client: &BeerusLightClient,
+        mut _ctx: TaskContext,
+    ) -> eyre::Result<()> {
+        todo!();
+    }
+
+    async fn block_number(client: &BeerusLightClient, mut ctx: TaskContext) -> eyre::Result<()> {
         let block_number = client.ethereum_lightclient.lock().await.get_block_number().await?;
 
         ctx.run_on_main_thread(move |ctx| {
@@ -304,7 +306,99 @@ impl EthRequest {
 
         Ok(())
     }
+
+    async fn get_block_by_number(
+        _client: &BeerusLightClient,
+        mut _ctx: TaskContext,
+        _params: &EthereumGetBlockByNumber,
+    ) -> eyre::Result<()> {
+        todo!();
+    }
+
+    async fn get_block_by_hash(
+        _client: &BeerusLightClient,
+        mut _ctx: TaskContext,
+        _params: &EthereumGetBlockByHash,
+    ) -> eyre::Result<()> {
+        todo!();
+    }
+
+    async fn send_raw_transaction(
+        _client: &BeerusLightClient,
+        mut _ctx: TaskContext,
+        _params: &EthereumSendRawTransaction,
+    ) -> eyre::Result<()> {
+        todo!();
+    }
+
+    async fn get_transaction_receipt(
+        _client: &BeerusLightClient,
+        mut _ctx: TaskContext,
+        _params: &EthereumGetTransactionReceipt,
+    ) -> eyre::Result<()> {
+        todo!();
+    }
+
+    async fn get_logs(
+        _client: &BeerusLightClient,
+        mut _ctx: TaskContext,
+        _params: &EthereumGetLogs,
+    ) -> eyre::Result<()> {
+        todo!();
+    }
+
+    async fn get_storage_at(
+        _client: &BeerusLightClient,
+        mut _ctx: TaskContext,
+        _params: &EthereumGetStorageAt,
+    ) -> eyre::Result<()> {
+        todo!();
+    }
+
+    async fn get_block_transaction_count_by_hash(
+        _client: &BeerusLightClient,
+        mut _ctx: TaskContext,
+        _params: &EthereumGetBlockTransactionCountByHash,
+    ) -> eyre::Result<()> {
+        todo!();
+    }
+
+    async fn get_block_transaction_count_by_number(
+        _client: &BeerusLightClient,
+        mut _ctx: TaskContext,
+        _params: &EthereumGetBlockTransactionCountByNumber,
+    ) -> eyre::Result<()> {
+        todo!();
+    }
+
+    async fn coinbase(_client: &BeerusLightClient, mut _ctx: TaskContext) -> eyre::Result<()> {
+        todo!();
+    }
+
+    async fn syncing(_client: &BeerusLightClient, mut _ctx: TaskContext) -> eyre::Result<()> {
+        todo!();
+    }
+
+    async fn get_transaction_by_hash(
+        _client: &BeerusLightClient,
+        mut _ctx: TaskContext,
+        _params: &EthereumGetTransactionByHash,
+    ) -> eyre::Result<()> {
+        todo!();
+    }
+
+    async fn get_transaction_by_block_hash_and_index(
+        _client: &BeerusLightClient,
+        mut _ctx: TaskContext,
+        _params: &EthereumGetTransactionByBlockHashAndIndex,
+    ) -> eyre::Result<()> {
+        todo!();
+    }
 }
+
+////////////////////////////////////////////////////////////////////////
+// Components
+////////////////////////////////////////////////////////////////////////
 
 /// Labeling component for Ethereum related entity
 #[derive(Component)]

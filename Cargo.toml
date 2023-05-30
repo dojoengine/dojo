@@ -6,6 +6,7 @@ members = [
     "crates/bevy-dojo",
     "crates/dojo-lang",
     "crates/dojo-language-server",
+    "crates/dojo-macros",
     "crates/dojo-world",
     "crates/dojo-test-runner",
     "crates/dojo-signers",

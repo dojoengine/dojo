@@ -6,7 +6,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         // Set up Starknet light client plugin.
-        .add_plugin(LightClientPlugin)
+        .add_plugins(DojoPlugins)
         .add_startup_system(setup_ui)
         .add_systems((
             spawn_buttons,
@@ -201,12 +201,12 @@ fn on_click_starknet_block_number(
 /// Emit [EthGetBlockNumber] event when user clicks button
 fn on_click_eth_get_block_number(
     query: Query<&Interaction, (Changed<Interaction>, With<Button>, With<EthGetBlockNumberButton>)>,
-    mut event: EventWriter<EthGetBlockNumber>,
+    mut event: EventWriter<EthereumBlockNumber>,
 ) {
     query.for_each(|interaction| {
         match *interaction {
             Interaction::Clicked => {
-                event.send(EthGetBlockNumber);
+                event.send(EthereumBlockNumber);
             }
             _ => {}
         };

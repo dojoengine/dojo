@@ -38,6 +38,7 @@ pub mod prelude {
     #[cfg(not(target_arch = "wasm32"))]
     pub use crate::indexer::IndexerPlugin;
     pub use crate::light_client::prelude::*;
+    pub use crate::DojoPlugins;
 }
 
 pub struct DojoPlugins;

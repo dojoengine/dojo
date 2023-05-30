@@ -4,9 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+async-trait.workspace = true
 eyre = "0.6.8"
 beerus-core = { git = "https://github.com/keep-starknet-strange/beerus", rev = "fbb39bd72fb283f653db4a5d279443e2f122153d" }
 bevy = { version = "0.10", default-features = false }
+dojo-macros = { path = "../dojo-macros" }
 ethers = "2.0"
 # Should be match to the beerus dependency: https://github.com/keep-starknet-strange/beerus/blob/fbb39bd72fb283f653db4a5d279443e2f122153d/Cargo.toml#L19..L20
 helios = { git = "https://github.com/a16z/helios", rev = "f63e4142c8c8094cdf94cf8d1ef1cb637a7eac98" }
