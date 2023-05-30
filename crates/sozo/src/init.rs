@@ -1,8 +1,9 @@
-use clap::Args;
-use git2::Repository;
 use std::env::current_dir;
 use std::error::Error;
 use std::path::PathBuf;
+
+use clap::Args;
+use git2::Repository;
 
 #[derive(Args, Debug)]
 pub struct InitArgs {
