@@ -1,16 +1,14 @@
-use async_graphql::connection::{query, Connection, Edge, OpaqueCursor};
-use async_graphql::{ComplexObject, Context, Error, Result, SimpleObject, ID};
-use chrono::{DateTime, SecondsFormat, Utc};
+use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
+use async_graphql::Value;
+use chrono::{DateTime, Utc};
+use indexmap::IndexMap;
 use serde::Deserialize;
-use sqlx::pool::PoolConnection;
-use sqlx::{FromRow, Pool, QueryBuilder, Sqlite};
+use sqlx::{FromRow, Pool, Sqlite};
 
-use super::constants::DEFAULT_LIMIT;
-use super::entity_state::{entity_states_by_entity, EntityState};
+use super::{ObjectTraitInstance, ObjectTraitStatic, TypeMapping, ValueMapping};
 
-#[derive(SimpleObject, Debug, Deserialize, FromRow)]
+#[derive(FromRow, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[graphql(complex)]
 pub struct Entity {
     pub id: String,
     pub name: String,
@@ -20,152 +18,73 @@ pub struct Entity {
     pub created_at: DateTime<Utc>,
 }
 
-#[ComplexObject]
-impl Entity {
-    async fn states(&self, context: &Context<'_>) -> Result<Vec<EntityState>> {
-        let mut conn = context.data::<Pool<Sqlite>>()?.acquire().await?;
-        entity_states_by_entity(&mut conn, self.id.clone()).await
+pub struct EntityObject {
+    pub field_type_mapping: TypeMapping,
+}
+
+impl ObjectTraitStatic for EntityObject {
+    fn new() -> Self {
+        Self {
+            field_type_mapping: IndexMap::from([
+                (String::from("id"), String::from("ID")),
+                (String::from("name"), String::from("String")),
+                (String::from("partitionId"), String::from("FieldElement")),
+                (String::from("keys"), String::from("String")),
+                (String::from("transactionHash"), String::from("FieldElement")),
+                (String::from("createdAt"), String::from("DateTime")),
+            ]),
+        }
+    }
+    fn from(field_type_mapping: TypeMapping) -> Self {
+        Self { field_type_mapping }
     }
 }
 
-pub async fn entities_by_pk(
-    conn: &mut PoolConnection<Sqlite>,
-    partition_id: String,
-    keys: Option<Vec<String>>,
-    after: Option<String>,
-    before: Option<String>,
-    first: Option<i32>,
-    last: Option<i32>,
-) -> Result<Connection<OpaqueCursor<ID>, Entity>> {
-    query(
-        after,
-        before,
-        first,
-        last,
-        | after: Option<OpaqueCursor<ID>>,
-            before: Option<OpaqueCursor<ID>>,
-            first,
-            last| async move {
+impl ObjectTraitInstance for EntityObject {
+    fn name(&self) -> &str {
+        "entity"
+    }
 
-        let mut builder: QueryBuilder<'_, Sqlite>  = QueryBuilder::new("SELECT * FROM entities");
-        builder.push(" WHERE partition_id = ")
-            .push_bind(partition_id);
+    fn type_name(&self) -> &str {
+        "Entity"
+    }
 
-        if let Some(keys) = keys {
-            let keys_str = format!("{}%", keys.join(","));
-            builder.push(" AND keys LIKE ")
-                .push_bind(keys_str);
-        }
+    fn field_type_mapping(&self) -> &TypeMapping {
+        &self.field_type_mapping
+    }
 
-        if let Some(after) = after {
-            let entity = entity_by_id(conn, after.0.to_string()).await?;
-            let created_at = entity.created_at.to_rfc3339_opts(SecondsFormat::Secs, true);
-            builder.push(" AND created_at > ")
-                .push_bind(created_at);
-        }
+    fn field_resolvers(&self) -> Vec<Field> {
+        vec![
+            Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
+                FieldFuture::new(async move {
+                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                    let id = ctx.args.try_get("id")?;
 
-        if let Some(before) = before {
-            let entity = entity_by_id(conn, before.0.to_string()).await?;
-            let created_at = entity.created_at.to_rfc3339_opts(SecondsFormat::Secs, true);
-            builder.push(" AND created_at < ")
-                .push_bind(created_at);
-        }
+                    let entity: Entity = sqlx::query_as("SELECT * FROM entities WHERE id = ?")
+                        .bind(id.string()?)
+                        .fetch_one(&mut conn)
+                        .await?;
 
-        let order = match last {
-            Some(_) => "ASC",
-            None => "DESC",
-        };
-        builder.push(" ORDER BY created_at ").push(order);
+                    let result: ValueMapping = IndexMap::from([
+                        (String::from("id"), Value::from(entity.id)),
+                        (String::from("name"), Value::from(entity.name)),
+                        (String::from("partitionId"), Value::from(entity.partition_id)),
+                        (String::from("keys"), Value::from(entity.keys.unwrap_or_default())),
+                        (String::from("transactionHash"), Value::from(entity.transaction_hash)),
+                        (
+                            String::from("createdAt"),
+                            Value::from(
+                                entity
+                                    .created_at
+                                    .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                            ),
+                        ),
+                    ]);
 
-        let limit = match first.or(last) {
-            Some(limit) => limit,
-            None => DEFAULT_LIMIT,
-        };
-        builder.push(" LIMIT ").push(limit.to_string());
-
-        let entities: Vec<Entity> = builder.build_query_as().fetch_all(conn).await?;
-
-        // TODO: hasPreviousPage, hasNextPage
-        let mut connection = Connection::new(true, true);
-        for entity in entities {
-            connection.edges.push(
-                Edge::new(
-                    OpaqueCursor(ID(entity.id.clone())),
-                    entity
-                )
-            );
-        }
-        Ok::<_, Error>(connection)
-    }).await
-}
-
-pub async fn entity_by_id(conn: &mut PoolConnection<Sqlite>, id: String) -> Result<Entity> {
-    // timestamp workaround: https://github.com/launchbadge/sqlx/issues/598
-    sqlx::query_as!(
-        Entity,
-        r#"
-            SELECT 
-                id,
-                name,
-                partition_id,
-                keys,
-                transaction_hash,
-                created_at as "created_at: _"
-            FROM entities 
-            WHERE id = $1
-        "#,
-        id,
-    )
-    .fetch_one(conn)
-    .await
-    .map_err(|err| err.into())
-}
-
-async fn _entities_by_keys(
-    conn: &mut PoolConnection<Sqlite>,
-    partition_id: String,
-    keys: &[String],
-) -> Result<Vec<Entity>> {
-    let keys_str = format!("{}%", keys.join(","));
-    sqlx::query_as!(
-        Entity,
-        r#"
-            SELECT                 
-                id,
-                name,
-                partition_id,
-                keys,
-                transaction_hash,
-                created_at as "created_at: _"
-            FROM entities where partition_id = $1 AND keys LIKE $2
-        "#,
-        partition_id,
-        keys_str
-    )
-    .fetch_all(conn)
-    .await
-    .map_err(|err| err.into())
-}
-
-async fn _entities_by_partition(
-    conn: &mut PoolConnection<Sqlite>,
-    partition_id: String,
-) -> Result<Vec<Entity>> {
-    sqlx::query_as!(
-        Entity,
-        r#"
-            SELECT 
-                id,
-                name,
-                partition_id,
-                keys,
-                transaction_hash,
-                created_at as "created_at: _"
-            FROM entities where partition_id = $1
-        "#,
-        partition_id,
-    )
-    .fetch_all(conn)
-    .await
-    .map_err(|err| err.into())
+                    Ok(Some(FieldValue::owned_any(result)))
+                })
+            })
+            .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID))),
+        ]
+    }
 }

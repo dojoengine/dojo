@@ -8,10 +8,10 @@ INSERT INTO indexer (head) VALUES (0);
 CREATE TABLE components (
     id TEXT NOT NULL PRIMARY KEY,
     name TEXT NOT NULL,
-    properties TEXT,
     address TEXT NOT NULL,
     class_hash TEXT NOT NULL,
     transaction_hash TEXT NOT NULL,
+    storage_schema TEXT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -51,17 +51,6 @@ CREATE TABLE entities (
 CREATE INDEX idx_entities_partition_id ON entities (partition_id);
 CREATE INDEX idx_entities_keys ON entities (keys);
 CREATE INDEX idx_entities_keys_create_on ON entities (keys, created_at);
-
-CREATE TABLE entity_states (
-    entity_id TEXT NOT NULL,
-    component_id TEXT NOT NULL,
-    data TEXT,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (entity_id) REFERENCES entities(id),
-    FOREIGN KEY (component_id) REFERENCES components(id),
-    UNIQUE (entity_id, component_id)
-);
 
 CREATE TABLE events (
     id TEXT NOT NULL PRIMARY KEY,
