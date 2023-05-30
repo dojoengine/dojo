@@ -13,9 +13,6 @@ dojo_core = { path = "../crates/dojo-core" }
 [tool.dojo]
 initializer_class_hash = "0xbeef"
 
-[tool.dojo.testnet]
-rpc = "https://rpc.testnet.starkware.co"
-
 [tool.dojo.env]
 rpc_url = "http://localhost:5050/"
 account_address = "0x123"
