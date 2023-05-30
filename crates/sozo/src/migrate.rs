@@ -62,7 +62,7 @@ pub fn run(args: MigrateArgs) -> Result<()> {
 
     ws.config().tokio_handle().block_on(async {
         let world = WorldDiff::from_path(target_dir.clone(), world_config, env_config).await?;
-        let mut migration = world.prepare_for_migration(target_dir)?;
+        let mut migration = world.prepare_for_migration(target_dir).await?;
         migration.execute().await
     })?;
 
