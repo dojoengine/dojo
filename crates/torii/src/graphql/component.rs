@@ -3,7 +3,8 @@ use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
 use serde::Deserialize;
-use sqlx::{FromRow, Pool, Sqlite};
+use sqlx::pool::PoolConnection;
+use sqlx::{FromRow, Pool, Result, Sqlite};
 
 use super::{ObjectTraitInstance, ObjectTraitStatic, TypeMapping, ValueMapping};
 
@@ -61,35 +62,49 @@ impl ObjectTraitInstance for ComponentObject {
             Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let id = ctx.args.try_get("id")?;
-
-                    let component: Component =
-                        sqlx::query_as("SELECT * FROM components WHERE id = ?")
-                            .bind(id.string()?)
-                            .fetch_one(&mut conn)
-                            .await?;
-
-                    let result: ValueMapping = IndexMap::from([
-                        (Name::new("id"), Value::from(component.id)),
-                        (Name::new("name"), Value::from(component.name)),
-                        (Name::new("address"), Value::from(component.address)),
-                        (Name::new("classHash"), Value::from(component.class_hash)),
-                        (Name::new("transactionHash"), Value::from(component.transaction_hash)),
-                        (Name::new("storageSchema"), Value::from(component.storage_schema)),
-                        (
-                            Name::new("createdAt"),
-                            Value::from(
-                                component
-                                    .created_at
-                                    .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
-                            ),
-                        ),
-                    ]);
-
-                    Ok(Some(FieldValue::owned_any(result)))
+                    let id = ctx.args.try_get("id")?.string()?.replace('\"', "");
+                    let component_values = component_by_id(&mut conn, &id).await?;
+                    Ok(Some(FieldValue::owned_any(component_values)))
                 })
             })
             .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID))),
         ]
     }
+}
+
+async fn component_by_id(conn: &mut PoolConnection<Sqlite>, id: &str) -> Result<ValueMapping> {
+    let component = sqlx::query_as!(
+        Component,
+        r#"
+            SELECT 
+                id,
+                name,
+                address,
+                class_hash,
+                transaction_hash,
+                storage_schema,
+                created_at as "created_at: _"
+            FROM components WHERE id = $1
+        "#,
+        id
+    )
+    .fetch_one(conn)
+    .await?;
+
+    Ok(value_mapping(component))
+}
+
+fn value_mapping(component: Component) -> ValueMapping {
+    IndexMap::from([
+        (Name::new("id"), Value::from(component.id)),
+        (Name::new("name"), Value::from(component.name)),
+        (Name::new("address"), Value::from(component.address)),
+        (Name::new("classHash"), Value::from(component.class_hash)),
+        (Name::new("transactionHash"), Value::from(component.transaction_hash)),
+        (Name::new("storageSchema"), Value::from(component.storage_schema)),
+        (
+            Name::new("createdAt"),
+            Value::from(component.created_at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)),
+        ),
+    ])
 }

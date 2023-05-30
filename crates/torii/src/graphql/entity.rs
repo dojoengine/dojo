@@ -3,7 +3,8 @@ use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
 use serde::Deserialize;
-use sqlx::{FromRow, Pool, Sqlite};
+use sqlx::pool::PoolConnection;
+use sqlx::{FromRow, Pool, Result, Sqlite};
 
 use super::{ObjectTraitInstance, ObjectTraitStatic, TypeMapping, ValueMapping};
 
@@ -58,33 +59,48 @@ impl ObjectTraitInstance for EntityObject {
             Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let id = ctx.args.try_get("id")?;
-
-                    let entity: Entity = sqlx::query_as("SELECT * FROM entities WHERE id = ?")
-                        .bind(id.string()?)
-                        .fetch_one(&mut conn)
-                        .await?;
-
-                    let result: ValueMapping = IndexMap::from([
-                        (Name::new("id"), Value::from(entity.id)),
-                        (Name::new("name"), Value::from(entity.name)),
-                        (Name::new("partitionId"), Value::from(entity.partition_id)),
-                        (Name::new("keys"), Value::from(entity.keys.unwrap_or_default())),
-                        (Name::new("transactionHash"), Value::from(entity.transaction_hash)),
-                        (
-                            Name::new("createdAt"),
-                            Value::from(
-                                entity
-                                    .created_at
-                                    .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
-                            ),
-                        ),
-                    ]);
-
-                    Ok(Some(FieldValue::owned_any(result)))
+                    let id = ctx.args.try_get("id")?.string()?.replace('\"', "");
+                    let entity_values = entity_by_id(&mut conn, &id).await?;
+                    Ok(Some(FieldValue::owned_any(entity_values)))
                 })
             })
             .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID))),
         ]
     }
+}
+
+async fn entity_by_id(conn: &mut PoolConnection<Sqlite>, id: &str) -> Result<ValueMapping> {
+    let entity = sqlx::query_as!(
+        Entity,
+        r#"
+            SELECT 
+                id,
+                name,
+                partition_id,
+                keys,
+                transaction_hash,
+                created_at as "created_at: _"
+            FROM entities 
+            WHERE id = $1
+        "#,
+        id,
+    )
+    .fetch_one(conn)
+    .await?;
+
+    Ok(value_mapping(entity))
+}
+
+fn value_mapping(entity: Entity) -> ValueMapping {
+    IndexMap::from([
+        (Name::new("id"), Value::from(entity.id)),
+        (Name::new("name"), Value::from(entity.name)),
+        (Name::new("partitionId"), Value::from(entity.partition_id)),
+        (Name::new("keys"), Value::from(entity.keys.unwrap_or_default())),
+        (Name::new("transactionHash"), Value::from(entity.transaction_hash)),
+        (
+            Name::new("createdAt"),
+            Value::from(entity.created_at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)),
+        ),
+    ])
 }

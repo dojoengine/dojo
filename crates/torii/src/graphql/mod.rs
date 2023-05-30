@@ -6,6 +6,7 @@ pub mod schema;
 pub mod server;
 pub mod system;
 pub mod system_call;
+pub mod utils;
 
 use async_graphql::dynamic::{Field, FieldFuture, Object, TypeRef};
 use async_graphql::{Name, Value};
@@ -25,15 +26,27 @@ pub trait ObjectTraitInstance {
     fn type_name(&self) -> &str;
     fn field_type_mapping(&self) -> &TypeMapping;
     fn field_resolvers(&self) -> Vec<Field>;
+    fn related_fields(&self) -> Option<Vec<Field>> {
+        None
+    }
 
     // Create a new GraphQL object
     fn create(&self) -> Object {
         let mut object = Object::new(self.type_name());
 
+        // Add fields (ie id, createdAt, etc)
         for (field_name, field_type) in self.field_type_mapping() {
             let field = create_field(field_name, field_type);
             object = object.field(field);
         }
+
+        // Add related fields (ie event, system)
+        if let Some(related_fields) = self.related_fields() {
+            for field in related_fields {
+                object = object.field(field);
+            }
+        }
+
         object
     }
 }
@@ -49,7 +62,7 @@ fn create_field(name: &str, field_type: &str) -> Field {
 
             match mapping.get(inner_name.as_str()) {
                 Some(value) => Ok(Some(value.clone())),
-                None => Ok(Some(Value::Null)),
+                _ => Err("field not found".into()),
             }
         })
     })

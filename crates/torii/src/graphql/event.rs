@@ -1,11 +1,15 @@
+use std::borrow::Cow;
+
 use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
 use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
 use serde::Deserialize;
-use sqlx::{FromRow, Pool, Sqlite};
+use sqlx::pool::PoolConnection;
+use sqlx::{FromRow, Pool, Result, Sqlite};
 
-// use super::system_call::SystemCall;
+use super::system_call::system_call_by_id;
+use super::utils::value_accessor::ObjectAccessor;
 use super::{ObjectTraitInstance, ObjectTraitStatic, TypeMapping, ValueMapping};
 
 #[derive(FromRow, Deserialize)]
@@ -15,7 +19,6 @@ pub struct Event {
     pub keys: String,
     pub data: String,
     pub created_at: DateTime<Utc>,
-    #[serde(skip_deserializing)]
     pub system_call_id: i64,
 }
 
@@ -30,6 +33,7 @@ impl ObjectTraitStatic for EventObject {
                 (Name::new("id"), "ID"),
                 (Name::new("keys"), "String"),
                 (Name::new("data"), "String"),
+                (Name::new("systemCallId"), "Int"),
                 (Name::new("createdAt"), "DateTime"),
             ]),
         }
@@ -58,29 +62,62 @@ impl ObjectTraitInstance for EventObject {
             Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let id = ctx.args.try_get("id")?;
+                    let id = ctx.args.try_get("id")?.string()?.replace('\"', "");
+                    let event_values = event_by_id(&mut conn, &id).await?;
 
-                    let event: Event = sqlx::query_as("SELECT * FROM events WHERE id = ?")
-                        .bind(id.string()?)
-                        .fetch_one(&mut conn)
-                        .await?;
-
-                    let result: ValueMapping = IndexMap::from([
-                        (Name::new("id"), Value::from(event.id)),
-                        (Name::new("keys"), Value::from(event.keys)),
-                        (Name::new("data"), Value::from(event.data)),
-                        (
-                            Name::new("createdAt"),
-                            Value::from(
-                                event.created_at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
-                            ),
-                        ),
-                    ]);
-
-                    Ok(Some(FieldValue::owned_any(result)))
+                    Ok(Some(FieldValue::owned_any(event_values)))
                 })
             })
             .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID))),
         ]
     }
+
+    fn related_fields(&self) -> Option<Vec<Field>> {
+        Some(vec![Field::new("systemCall", TypeRef::named_nn("SystemCall"), |ctx| {
+            FieldFuture::new(async move {
+                let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                let event_values = ctx.parent_value.try_downcast_ref::<ValueMapping>()?;
+
+                let syscall_id =
+                    ObjectAccessor(Cow::Borrowed(event_values)).try_get("system_call_id")?.i64()?;
+                let system_call = system_call_by_id(&mut conn, syscall_id).await?;
+
+                Ok(Some(FieldValue::owned_any(system_call)))
+            })
+        })])
+    }
+}
+
+async fn event_by_id(conn: &mut PoolConnection<Sqlite>, id: &str) -> Result<ValueMapping> {
+    let event = sqlx::query_as!(
+        Event,
+        r#"
+            SELECT 
+                id,
+                system_call_id,
+                keys,
+                data,
+                created_at as "created_at: _"
+            FROM events 
+            WHERE id = $1
+        "#,
+        id
+    )
+    .fetch_one(conn)
+    .await?;
+
+    Ok(value_mapping(event))
+}
+
+fn value_mapping(event: Event) -> ValueMapping {
+    IndexMap::from([
+        (Name::new("id"), Value::from(event.id)),
+        (Name::new("keys"), Value::from(event.keys)),
+        (Name::new("data"), Value::from(event.data)),
+        (Name::new("systemCallId"), Value::from(event.system_call_id)),
+        (
+            Name::new("createdAt"),
+            Value::from(event.created_at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)),
+        ),
+    ])
 }
