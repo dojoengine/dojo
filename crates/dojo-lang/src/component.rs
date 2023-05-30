@@ -10,8 +10,9 @@ use cairo_lang_syntax::node::ast::ItemStruct;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
+use dojo_world::manifest::Member;
 
-use crate::plugin::DojoAuxData;
+use crate::plugin::{Component, DojoAuxData};
 
 /// A handler for Dojo code that modifies a component struct.
 /// Parameters:
@@ -66,21 +67,12 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> 
     // Add the is_indexed function to the body
     body_nodes.push(is_indexed_fn);
 
-    let mut schema = vec![];
-
-    let binding = struct_ast.members(db).elements(db);
-    binding.iter().for_each(|member| {
-        schema.push(RewriteNode::interpolate_patched(
-            "array::ArrayTrait::append(ref arr, ('$name$' , '$type_clause$' , 252));\n",
-            HashMap::from([
-                ("name".to_string(), RewriteNode::new_trimmed(member.name(db).as_syntax_node())),
-                (
-                    "type_clause".to_string(),
-                    RewriteNode::new_trimmed(member.type_clause(db).ty(db).as_syntax_node()),
-                ),
-            ]),
-        ));
-    });
+    let schema: Vec<_> = struct_ast
+        .members(db)
+        .elements(db)
+        .iter()
+        .map(|member| (member.name(db).text(db), member.type_clause(db).ty(db), 252))
+        .collect::<_>();
 
     let name = struct_ast.name(db).text(db);
     let mut builder = PatchBuilder::new(db);
@@ -118,7 +110,27 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> 
             ),
             ("members".to_string(), RewriteNode::Copied(struct_ast.members(db).as_syntax_node())),
             ("body".to_string(), RewriteNode::new_modified(body_nodes)),
-            ("schemas".to_string(), RewriteNode::new_modified(schema)),
+            (
+                "schemas".to_string(),
+                RewriteNode::new_modified(
+                    schema
+                        .iter()
+                        .map(|item| {
+                            RewriteNode::interpolate_patched(
+                                "array::ArrayTrait::append(ref arr, ('$name$', '$type_clause$', \
+                                 252));\n",
+                                HashMap::from([
+                                    ("name".to_string(), RewriteNode::Text(item.0.to_string())),
+                                    (
+                                        "type_clause".to_string(),
+                                        RewriteNode::new_trimmed(item.1.as_syntax_node()),
+                                    ),
+                                ]),
+                            )
+                        })
+                        .collect(),
+                ),
+            ),
         ]),
     ));
 
@@ -128,7 +140,19 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> 
             content: builder.code,
             aux_data: DynGeneratedFileAuxData::new(DynPluginAuxData::new(DojoAuxData {
                 patches: builder.patches,
-                components: vec![name],
+                components: vec![Component {
+                    name: name.to_string(),
+                    members: schema
+                        .iter()
+                        .enumerate()
+                        .map(|(slot, (name, ty, _size))| Member {
+                            name: name.to_string(),
+                            ty: ty.as_syntax_node().get_text(db).trim().to_string(),
+                            slot,
+                            offset: 0,
+                        })
+                        .collect(),
+                }],
                 systems: vec![],
             })),
         }),
