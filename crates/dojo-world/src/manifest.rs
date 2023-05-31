@@ -54,6 +54,8 @@ pub struct Member {
     pub name: String,
     #[serde(rename = "type")]
     pub ty: String,
+    pub slot: usize,
+    pub offset: u8,
 }
 
 /// Represents a declaration of a component.

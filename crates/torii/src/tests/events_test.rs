@@ -9,7 +9,7 @@ mod tests {
     async fn test_event(pool: SqlitePool) {
         let _ = pool.acquire().await;
 
-        let query = "{ event(id: \"event_1\") { id keys data createdAt } }";
+        let query = "{ event(id: \"event_1\") { id keys data systemCallId createdAt } }";
         let value = run_graphql_query(&pool, query).await;
 
         let event = value.get("event").ok_or("no event found").unwrap();

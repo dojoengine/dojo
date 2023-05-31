@@ -20,6 +20,9 @@ serde_with.workspace = true
 starknet.workspace = true
 starknet_api.workspace = true
 thiserror.workspace = true
+hyper = "0.14.20"
+tower-http = { version = "0.4.0", features = ["full"] }
+tower = { version = "0.4.13", features = ["full"] }
 
 [dev-dependencies]
 assert_matches = "1.5.0"

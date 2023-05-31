@@ -1,10 +1,12 @@
 use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
-use async_graphql::Value;
+use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
 use serde::Deserialize;
-use sqlx::{FromRow, Pool, Sqlite};
+use sqlx::pool::PoolConnection;
+use sqlx::{FromRow, Pool, Result, Sqlite};
 
+use super::types::ScalarType;
 use super::{ObjectTraitInstance, ObjectTraitStatic, TypeMapping, ValueMapping};
 
 #[derive(FromRow, Deserialize)]
@@ -27,13 +29,13 @@ impl ObjectTraitStatic for ComponentObject {
     fn new() -> Self {
         Self {
             field_type_mapping: IndexMap::from([
-                (String::from("id"), String::from("ID")),
-                (String::from("name"), String::from("String")),
-                (String::from("address"), String::from("Address")),
-                (String::from("classHash"), String::from("FieldElement")),
-                (String::from("transactionHash"), String::from("FieldElement")),
-                (String::from("storageSchema"), String::from("String")),
-                (String::from("createdAt"), String::from("DateTime")),
+                (Name::new("id"), TypeRef::ID),
+                (Name::new("name"), TypeRef::STRING),
+                (Name::new("address"), ScalarType::ADDRESS),
+                (Name::new("classHash"), ScalarType::FELT),
+                (Name::new("transactionHash"), ScalarType::FELT),
+                (Name::new("storageSchema"), TypeRef::STRING),
+                (Name::new("createdAt"), ScalarType::DATE_TIME),
             ]),
         }
     }
@@ -61,35 +63,49 @@ impl ObjectTraitInstance for ComponentObject {
             Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let id = ctx.args.try_get("id")?;
-
-                    let component: Component =
-                        sqlx::query_as("SELECT * FROM components WHERE id = ?")
-                            .bind(id.string()?)
-                            .fetch_one(&mut conn)
-                            .await?;
-
-                    let result: ValueMapping = IndexMap::from([
-                        (String::from("id"), Value::from(component.id)),
-                        (String::from("name"), Value::from(component.name)),
-                        (String::from("address"), Value::from(component.address)),
-                        (String::from("classHash"), Value::from(component.class_hash)),
-                        (String::from("transactionHash"), Value::from(component.transaction_hash)),
-                        (String::from("storageSchema"), Value::from(component.storage_schema)),
-                        (
-                            String::from("createdAt"),
-                            Value::from(
-                                component
-                                    .created_at
-                                    .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
-                            ),
-                        ),
-                    ]);
-
-                    Ok(Some(FieldValue::owned_any(result)))
+                    let id = ctx.args.try_get("id")?.string()?.replace('\"', "");
+                    let component_values = component_by_id(&mut conn, &id).await?;
+                    Ok(Some(FieldValue::owned_any(component_values)))
                 })
             })
             .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID))),
         ]
     }
+}
+
+async fn component_by_id(conn: &mut PoolConnection<Sqlite>, id: &str) -> Result<ValueMapping> {
+    let component = sqlx::query_as!(
+        Component,
+        r#"
+            SELECT 
+                id,
+                name,
+                address,
+                class_hash,
+                transaction_hash,
+                storage_schema,
+                created_at as "created_at: _"
+            FROM components WHERE id = $1
+        "#,
+        id
+    )
+    .fetch_one(conn)
+    .await?;
+
+    Ok(value_mapping(component))
+}
+
+fn value_mapping(component: Component) -> ValueMapping {
+    IndexMap::from([
+        (Name::new("id"), Value::from(component.id)),
+        (Name::new("name"), Value::from(component.name)),
+        (Name::new("address"), Value::from(component.address)),
+        (Name::new("classHash"), Value::from(component.class_hash)),
+        (Name::new("transactionHash"), Value::from(component.transaction_hash)),
+        (Name::new("storageSchema"), Value::from(component.storage_schema)),
+        (
+            Name::new("createdAt"),
+            Value::from(component.created_at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)),
+        ),
+    ])
 }
