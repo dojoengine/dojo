@@ -7,7 +7,7 @@ mod Database {
     use poseidon::poseidon_hash_span;
 
     use dojo_core::serde::SpanSerde;
-    use dojo_core::storage::{index::Index, kv::KeyValueStore, query::{Query, QueryTrait, QueryIntoFelt252}};
+    use dojo_core::storage::{index::Index, kv::KeyValueStore, query::{Query, QueryTrait}};
     use dojo_core::integer::{u250, Felt252IntoU250};
     use dojo_core::interfaces::{IComponentLibraryDispatcher, IComponentDispatcherTrait};
 
@@ -28,7 +28,7 @@ mod Database {
             length = IComponentLibraryDispatcher { class_hash: class_hash }.len();
         }
 
-        let id = query.id();
+        let id = query.hash();
         match Index::exists(table, id) {
             bool::False(()) => Option::None(()),
             bool::True(()) => Option::Some(KeyValueStore::get(table, id, offset, length))
@@ -39,7 +39,7 @@ mod Database {
         class_hash: starknet::ClassHash, table: u250, query: Query, offset: u8, value: Span<felt252>
     ) {
         let keys = query.keys();
-        let id = query.id();
+        let id = query.hash();
 
         let length = IComponentLibraryDispatcher { class_hash: class_hash }.len();
         assert(value.len() <= length, 'Value too long');
@@ -52,7 +52,7 @@ mod Database {
     }
 
     fn del(class_hash: starknet::ClassHash, table: u250, query: Query) {
-        Index::delete(table, query.into());
+        Index::delete(table, query.hash());
         StoreDeleteRecord(table, query.keys());
     }
 
