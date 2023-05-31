@@ -1,35 +1,32 @@
 use anyhow::Result;
 use starknet::accounts::{Account, Call, SingleOwnerAccount};
 use starknet::core::utils::get_selector_from_name;
-use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
-use starknet::signers::LocalWallet;
+use starknet::providers::Provider;
+use starknet::signers::Signer;
+use thiserror::Error;
 
 use super::object::{ClassMigration, ContractMigration, WorldContractMigration};
 
+#[derive(Debug, Error)]
+pub enum MigrationError {}
+
 // TODO: migration error
 // should only be created by calling `World::prepare_for_migration`
-pub struct MigrationStrategy {
+pub struct MigrationStrategy<P, S> {
     world: Option<WorldContractMigration>,
     executor: Option<ContractMigration>,
 
-    // system and component can be declared and registered in parallel
     systems: Vec<ClassMigration>,
     components: Vec<ClassMigration>,
 
-    // use generic `Provider`
-    migrator: SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
+    migrator: SingleOwnerAccount<P, S>,
 }
 
-// MIGRATION UI
-// top level load bar : shows progress for the overall migration (how many contracts left to be
-// deployed etc) individual loader: each contract types will have their own loader to display their
-// migration progress
-
-// MIGRATION CONFIRMATION LOGIC
-// problem: how do we make sure that all contracts are successfully declared/deployed/registered ??
-// need to keep track of all sent transaction hashes
-
-impl MigrationStrategy {
+impl<P, S> MigrationStrategy<P, S>
+where
+    P: Provider + Send,
+    S: Signer + Send,
+{
     pub async fn execute(&mut self) -> Result<()> {
         if self.world.deployed {
             unimplemented!("migrate: branch -> if world is deployed")
