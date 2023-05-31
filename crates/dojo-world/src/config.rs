@@ -1,8 +1,10 @@
-use anyhow::anyhow;
+use anyhow::{anyhow, Result};
 use scarb::core::Workspace;
 use serde::{Deserialize, Serialize};
+use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
+use starknet::providers::Provider;
 use starknet::signers::{LocalWallet, SigningKey};
 use toml::Value;
 use url::Url;
@@ -68,7 +70,7 @@ pub struct EnvironmentConfig {
 }
 
 impl EnvironmentConfig {
-    pub fn from_workspace<T: AsRef<str>>(profile: T, ws: &Workspace<'_>) -> anyhow::Result<Self> {
+    pub fn from_workspace<T: AsRef<str>>(profile: T, ws: &Workspace<'_>) -> Result<Self> {
         let mut config = EnvironmentConfig::default();
 
         let mut env_metadata = dojo_metadata_from_workspace(ws)
@@ -127,7 +129,7 @@ impl EnvironmentConfig {
         Ok(config)
     }
 
-    pub fn signer(&self) -> anyhow::Result<LocalWallet> {
+    pub fn signer(&self) -> Result<LocalWallet> {
         if let Some(private_key) = &self.private_key {
             Ok(LocalWallet::from_signing_key(SigningKey::from_secret_scalar(*private_key)))
         } else if let Some(keystore_path) = &self.keystore_path {
@@ -145,7 +147,7 @@ impl EnvironmentConfig {
         }
     }
 
-    pub fn provider(&self) -> anyhow::Result<JsonRpcClient<HttpTransport>> {
+    pub fn provider(&self) -> Result<JsonRpcClient<HttpTransport>> {
         let Some(url) = &self.rpc else {
             return Err(anyhow!("Missing `rpc_url` in the environment config"))
         };
@@ -153,7 +155,19 @@ impl EnvironmentConfig {
         Ok(JsonRpcClient::new(HttpTransport::new(url.clone())))
     }
 
-    pub fn account_address(&self) -> anyhow::Result<FieldElement> {
+    pub fn account_address(&self) -> Result<FieldElement> {
         self.account_address.ok_or(anyhow!("Missing `account_address` in the environment config"))
+    }
+
+    pub async fn migrator(
+        &self,
+    ) -> Result<SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>> {
+        let signer = self.signer()?;
+        let account_address = self.account_address()?;
+
+        let provider = self.provider()?;
+        let chain_id = provider.chain_id().await?;
+
+        Ok(SingleOwnerAccount::new(provider, signer, account_address, chain_id))
     }
 }
