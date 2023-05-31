@@ -22,8 +22,8 @@ use dojo_core::storage::query::QueryTrait;
 fn test_query_id() {
     let mut keys = ArrayTrait::new();
     keys.append(420.into());
-    let query: u250 = QueryTrait::new(0, 0.into(), keys.span()).into();
-    assert(query == 420.into(), 'Incorrect hash');
+    let hash = QueryTrait::new(0, 0.into(), keys.span()).hash();
+    assert(hash == 420.into(), 'Incorrect hash');
 }
 
 #[test]
