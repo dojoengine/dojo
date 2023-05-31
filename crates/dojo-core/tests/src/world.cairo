@@ -62,7 +62,7 @@ fn test_system() {
     data.append(1337);
     data.append(1337);
     let id = world.uuid();
-    world.execute('Bar'.into(), data.span());
+    world.execute('Bar'.into(), 'TestRole'.into(), data.span());
 }
 
 #[test]
@@ -148,7 +148,7 @@ fn test_set_entity_authorized() {
     let mut data = ArrayTrait::new();
     data.append(420);
     data.append(1337);
-    world.execute('Bar'.into(), data.span());
+    world.execute('Bar'.into(), role_id, data.span());
 
     // Assert that the data is stored
     // Caller here is the world contract via the executor
@@ -177,13 +177,13 @@ fn test_set_entity_admin() {
     let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
     grant_role_calldata.append('Bar'); // target_id
     grant_role_calldata.append('Admin'); // role_id
-    world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
+    world.execute('GrantAuthRole'.into(), 'Admin'.into(), grant_role_calldata.span());
 
     // Call Bar system
     let mut data = ArrayTrait::new();
     data.append(420);
     data.append(1337);
-    world.execute('Bar'.into(), data.span());
+    world.execute('Bar'.into(), 'Admin'.into(), data.span());
 
     // Assert that the data is stored
     // Caller here is the world contract via the executor
@@ -213,7 +213,7 @@ fn test_set_entity_unauthorized() {
     let mut data = ArrayTrait::new();
     data.append(420);
     data.append(1337);
-    world.execute('Bar'.into(), data.span());
+    world.execute('Bar'.into(), 'TestRole'.into(), data.span());
 }
 
 #[test]
@@ -264,7 +264,7 @@ fn test_grant_role() {
     let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
     grant_role_calldata.append('Bar'); // target_id
     grant_role_calldata.append('FooWriter'); // role_id
-    world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
+    world.execute('GrantAuthRole'.into(), 'Admin'.into(), grant_role_calldata.span());
 
     // Assert that the role is set
     let role = world.entity('AuthRole'.into(), 'Bar'.into(), 0, 0);
@@ -290,7 +290,7 @@ fn test_revoke_role() {
     let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
     grant_role_calldata.append('Bar'); // target_id
     grant_role_calldata.append('FooWriter'); // role_id
-    world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
+    world.execute('GrantAuthRole'.into(), 'Admin'.into(), grant_role_calldata.span());
 
     // Assert that the role is set
     let role = world.entity('AuthRole'.into(), 'Bar'.into(), 0, 0);
@@ -299,7 +299,7 @@ fn test_revoke_role() {
     // Admin revokes role of Bar system
     let mut revoke_role_calldata: Array<felt252> = ArrayTrait::new();
     revoke_role_calldata.append('Bar'); // target_id
-    world.execute('RevokeAuthRole'.into(), revoke_role_calldata.span());
+    world.execute('RevokeAuthRole'.into(), 'Admin'.into(), revoke_role_calldata.span());
 
     // Assert that the role is not set
     let role = world.entity('AuthRole'.into(), 'Bar'.into(), 0, 0);
@@ -326,7 +326,7 @@ fn test_grant_scoped_role() {
     grant_role_calldata.append('Bar'); // target_id
     grant_role_calldata.append('FooWriter'); // role_id
     grant_role_calldata.append('Foo'); // resource_id
-    world.execute('GrantScopedAuthRole'.into(), grant_role_calldata.span());
+    world.execute('GrantScopedAuthRole'.into(), 'Admin'.into(), grant_role_calldata.span());
 
     // Assert that the role is set
     let role = world.entity('AuthRole'.into(), ('Bar', 'Foo').into(), 0, 0);
@@ -353,7 +353,7 @@ fn test_revoke_scoped_role() {
     grant_role_calldata.append('Bar'); // target_id
     grant_role_calldata.append('FooWriter'); // role_id
     grant_role_calldata.append('Foo'); // resource_id
-    world.execute('GrantScopedAuthRole'.into(), grant_role_calldata.span());
+    world.execute('GrantScopedAuthRole'.into(), 'Admin'.into(), grant_role_calldata.span());
 
     // Assert that the role is set
     let role = world.entity('AuthRole'.into(), ('Bar', 'Foo').into(), 0, 0);
@@ -363,7 +363,7 @@ fn test_revoke_scoped_role() {
     let mut revoke_role_calldata: Array<felt252> = ArrayTrait::new();
     revoke_role_calldata.append('Bar'); // target_id
     revoke_role_calldata.append('Foo'); // resource_id
-    world.execute('RevokeScopedAuthRole'.into(), revoke_role_calldata.span());
+    world.execute('RevokeScopedAuthRole'.into(), 'Admin'.into(), revoke_role_calldata.span());
 
     // Assert that the role is revoked
     let role = world.entity('AuthRole'.into(), ('Bar', 'Foo').into(), 0, 0);
@@ -389,7 +389,7 @@ fn test_grant_resource() {
     let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
     grant_role_calldata.append('FooWriter'); // role_id
     grant_role_calldata.append('Foo'); // resource_id
-    world.execute('GrantResource'.into(), grant_role_calldata.span());
+    world.execute('GrantResource'.into(), 'Admin'.into(), grant_role_calldata.span());
 
     // Assert that the access is set
     let status = world.entity('AuthStatus'.into(), ('FooWriter', 'Foo').into(), 0, 0);
@@ -415,7 +415,7 @@ fn test_revoke_resource() {
     let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
     grant_role_calldata.append('FooWriter'); // role_id
     grant_role_calldata.append('Foo'); // resource_id
-    world.execute('GrantResource'.into(), grant_role_calldata.span());
+    world.execute('GrantResource'.into(), 'Admin'.into(), grant_role_calldata.span());
 
     // Assert that the access is set
     let status = world.entity('AuthStatus'.into(), ('FooWriter', 'Foo').into(), 0, 0);
@@ -425,7 +425,7 @@ fn test_revoke_resource() {
     let mut revoke_role_calldata: Array<felt252> = ArrayTrait::new();
     revoke_role_calldata.append('FooWriter'); // role_id
     revoke_role_calldata.append('Foo'); // resource_id
-    world.execute('RevokeResource'.into(), revoke_role_calldata.span());
+    world.execute('RevokeResource'.into(), 'Admin'.into(), revoke_role_calldata.span());
 
     // Assert that the access is revoked
     let status = world.entity('AuthStatus'.into(), ('FooWriter', 'Foo').into(), 0, 0);
@@ -478,7 +478,7 @@ fn spawn_empty_world() -> IWorldDispatcher {
 
     grant_role_calldata.append(caller.into()); // target_id
     grant_role_calldata.append('Admin'); // role_id
-    world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
+    world.execute('GrantAuthRole'.into(), 'Admin'.into(), grant_role_calldata.span());
 
     world
 }
