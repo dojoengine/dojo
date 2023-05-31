@@ -24,14 +24,18 @@ pub fn run(args: InitArgs) -> Result<(), Box<dyn Error>> {
         }
         None => current_dir().unwrap(),
     };
+    println!("\n\n⛩️ ====== STARTING ======\n");
+
+    println!("Setting up project directory tree...");
 
     let repo_url = "https://github.com/dojoengine/dojo-starter";
     clone_repo(repo_url, target_dir)?;
 
-    println!("🗄 Creating project directory tree");
-    println!("⛩️ Dojo project ready!");
-    println!();
-    println!("Try running: `dojo-test .`");
+    println!("[✅ Project directory tree created successfully!");
+
+    println!("\n\n====== SETUP COMPLETE! ======\n\nTo start using your new Dojo project, try running: \n\n\t`sozo build`\n");
+
+    println!("🎉🎉🎉 SUCCESS! Your project is now ready. Enjoy working with Dojo! 🎉🎉🎉");
 
     Ok(())
 }
