@@ -23,6 +23,7 @@ mod Executor {
     /// # Arguments
     ///
     /// * `class_hash` - The class hash of the System to execute.
+    /// * `role_id` - The role ID for System to assume during the execution.
     /// * `calldata` - The calldata to pass to the System.
     ///
     /// # Returns
