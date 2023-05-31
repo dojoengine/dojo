@@ -26,9 +26,7 @@ tracing.workspace = true
 
 [dev-dependencies]
 assert_fs = "1.0.9"
-dojo-lang = { path = "../dojo-lang" }
-indoc.workspace = true
+dojo-lang = { path = "../dojo-lang", features = ["testing"] }
 katana-core = { path = "../katana-core" }
 katana-rpc = { path = "../katana-rpc" }
-test-log.workspace = true
-tokio = { version = "1.28.0", features = [ "full" ] }
+tokio = { version = "1.28.0", features = ["full"] }

@@ -6,10 +6,12 @@ repository.workspace = true
 license-file.workspace = true
 description = "Dojo capabilities and utilities on top of Starknet."
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+testing = []
 
 [dependencies]
 anyhow.workspace = true
+assert_fs = "1.0.9"
 camino.workspace = true
 cairo-lang-compiler.workspace = true
 cairo-lang-defs.workspace = true
@@ -40,12 +42,9 @@ starknet.workspace = true
 url = "2.2.2"
 
 [dev-dependencies]
-assert_fs = "1.0.9"
 cairo-lang-formatter.workspace = true
 cairo-lang-semantic.workspace = true
 cairo-lang-test-utils.workspace = true
 env_logger = "0.10.0"
 pretty_assertions.workspace = true
-test-case = "2.2.2"
-test-case-macros = "2.2.2"
 test-log.workspace = true

@@ -16,7 +16,7 @@ use crate::compiler::DojoCompiler;
 use crate::db::DojoRootDatabaseBuilderEx;
 use crate::plugin::CairoPluginRepository;
 
-pub fn build_test_config() -> anyhow::Result<Config> {
+pub fn build_test_config(path: &str) -> anyhow::Result<Config> {
     let mut compilers = CompilerRepository::empty();
     compilers.add(Box::new(DojoCompiler)).unwrap();
 
@@ -25,7 +25,7 @@ pub fn build_test_config() -> anyhow::Result<Config> {
     let cache_dir = TempDir::new().unwrap();
     let config_dir = TempDir::new().unwrap();
 
-    let path = Utf8PathBuf::from_path_buf("src/cairo_level_tests/Scarb.toml".into()).unwrap();
+    let path = Utf8PathBuf::from_path_buf(path.into()).unwrap();
     Config::builder(path.canonicalize_utf8().unwrap())
         .global_cache_dir_override(Some(Utf8Path::from_path(cache_dir.path()).unwrap()))
         .global_config_dir_override(Some(Utf8Path::from_path(config_dir.path()).unwrap()))

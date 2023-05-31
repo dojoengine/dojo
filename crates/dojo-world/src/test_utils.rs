@@ -25,6 +25,12 @@ impl MockJsonRpcTransport {
     }
 }
 
+impl Default for MockJsonRpcTransport {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Debug, Error)]
 pub struct MockError {
     msg: String,
@@ -51,6 +57,7 @@ impl JsonRpcTransport for MockJsonRpcTransport {
     {
         let method = serde_json::to_string(&method).unwrap();
         let params = serde_json::to_string(&params).unwrap();
+
         match self.responses.get(&(method.clone(), params.clone())) {
             Some(res) => serde_json::from_str(res).map_err(|e| MockError { msg: e.to_string() }),
             None => {

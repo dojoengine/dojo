@@ -67,7 +67,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> 
     // Add the is_indexed function to the body
     body_nodes.push(is_indexed_fn);
 
-    let schema: Vec<_> = struct_ast
+    let members: Vec<_> = struct_ast
         .members(db)
         .elements(db)
         .iter()
@@ -96,7 +96,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> 
                 #[view]
                 fn schema() -> Array<(felt252, felt252, u8)> {
                     let mut arr = array::ArrayTrait::new();
-                    $schemas$
+                    $schema_members$
                     arr
                 }
 
@@ -111,9 +111,9 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> 
             ("members".to_string(), RewriteNode::Copied(struct_ast.members(db).as_syntax_node())),
             ("body".to_string(), RewriteNode::new_modified(body_nodes)),
             (
-                "schemas".to_string(),
+                "schema_members".to_string(),
                 RewriteNode::new_modified(
-                    schema
+                    members
                         .iter()
                         .map(|item| {
                             RewriteNode::interpolate_patched(
@@ -142,7 +142,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> 
                 patches: builder.patches,
                 components: vec![Component {
                     name: name.to_string(),
-                    members: schema
+                    members: members
                         .iter()
                         .enumerate()
                         .map(|(slot, (name, ty, _size))| Member {

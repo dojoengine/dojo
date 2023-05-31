@@ -1591,7 +1591,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "609d537551d96f322307b63863025e939ea87463dc3bb216a9d12dfb6bb4ceea"
 dependencies = [
  "cairo-lang-utils",
- "indoc 2.0.1",
+ "indoc",
  "num-bigint",
  "num-traits 0.2.15",
  "serde",
@@ -1729,7 +1729,7 @@ dependencies = [
  "cairo-lang-starknet",
  "cairo-lang-syntax",
  "cairo-lang-utils",
- "indoc 2.0.1",
+ "indoc",
  "log",
  "lsp-types",
  "salsa",
@@ -1800,7 +1800,7 @@ dependencies = [
  "cairo-lang-semantic",
  "cairo-lang-syntax",
  "cairo-lang-utils",
- "indoc 2.0.1",
+ "indoc",
  "itertools",
  "salsa",
  "smol_str",
@@ -1978,7 +1978,7 @@ dependencies = [
  "cairo-lang-sierra-gas",
  "cairo-lang-utils",
  "clap",
- "indoc 2.0.1",
+ "indoc",
  "itertools",
  "log",
  "num-bigint",
@@ -2013,7 +2013,7 @@ dependencies = [
  "clap",
  "convert_case 0.6.0",
  "genco",
- "indoc 2.0.1",
+ "indoc",
  "itertools",
  "log",
  "num-bigint",
@@ -2904,8 +2904,6 @@ dependencies = [
  "serde_with",
  "smol_str",
  "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?branch=dev/jsonrpc_0_3_0)",
- "test-case",
- "test-case-macros",
  "test-log",
  "thiserror",
  "tracing",
@@ -2966,7 +2964,6 @@ dependencies = [
  "cairo-lang-starknet",
  "camino",
  "dojo-lang",
- "indoc 1.0.9",
  "katana-core",
  "katana-rpc",
  "scarb",
@@ -2975,7 +2972,6 @@ dependencies = [
  "serde_with",
  "smol_str",
  "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?branch=dev/jsonrpc_0_3_0)",
- "test-log",
  "thiserror",
  "tokio",
  "toml 0.7.4",
@@ -4760,12 +4756,6 @@ dependencies = [
  "portable-atomic",
  "unicode-width",
 ]
-
-[[package]]
-name = "indoc"
-version = "1.0.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfa799dd5ed20a7e349f3b4639aa80d74549c81716d9ec4f994c9b5815598306"
 
 [[package]]
 name = "indoc"
@@ -6957,7 +6947,7 @@ dependencies = [
  "ignore",
  "include_dir",
  "indicatif",
- "indoc 2.0.1",
+ "indoc",
  "itertools",
  "once_cell",
  "pathdiff",
@@ -8077,28 +8067,6 @@ name = "termtree"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3369f5ac52d5eb6ab48c6b4ffdc8efbcad6b89c765749064ba298f2c68a16a76"
-
-[[package]]
-name = "test-case"
-version = "2.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21d6cf5a7dffb3f9dceec8e6b8ca528d9bd71d36c9f074defb548ce161f598c0"
-dependencies = [
- "test-case-macros",
-]
-
-[[package]]
-name = "test-case-macros"
-version = "2.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e45b7bf6e19353ddd832745c8fcf77a17a93171df7151187f26623f2b75b5b26"
-dependencies = [
- "cfg-if",
- "proc-macro-error",
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
 
 [[package]]
 name = "test-log"
