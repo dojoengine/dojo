@@ -23,11 +23,8 @@ impl DeleteCommand {
                 self.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
                     "
                     {
-                        let mut calldata = array::ArrayTrait::new();
-                        serde::Serde::serialize(@$ctor$, ref calldata);
                         IWorldDispatcher { contract_address: world_address \
-                     }.delete_entity(dojo_core::string::ShortStringTrait::new('$component$'), \
-                     $query$, 0_u8, array::ArrayTrait::span(@calldata));
+                     }.delete_entity(dojo_core::string::ShortStringTrait::new('$component$'), $query$);
                     }
                     ",
                     HashMap::from([
@@ -51,9 +48,9 @@ impl CommandTrait for DeleteCommand {
 
         let elements = command_ast.arguments(db).args(db).elements(db);
 
-        if elements.len() != 2 {
+        if elements.len() != 1 {
             command.data.diagnostics.push(PluginDiagnostic {
-                message: "Invalid arguments. Expected \"(query, (components,))\"".to_string(),
+                message: "Invalid arguments. Expected \"(query)\"".to_string(),
                 stable_ptr: command_ast.arguments(db).as_syntax_node().stable_ptr(),
             });
             return command;
