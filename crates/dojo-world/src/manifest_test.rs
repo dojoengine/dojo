@@ -33,11 +33,11 @@ async fn test_manifest_from_remote_throw_error_on_not_deployed() {
 }
 
 #[tokio::test]
-async fn test_manifest_loads_empty_world_from_remote() {
+async fn test_manifest_loads_empty_world_from_mock_remote() {
     let world_address = FieldElement::ONE;
     let world_class_hash = FieldElement::TWO;
     let executor_address = FieldElement::THREE;
-    let executor_class_hash = FieldElement::from_hex_be("0x4").unwrap();
+    let executor_class_hash: FieldElement = FieldElement::from_hex_be("0x4").unwrap();
 
     let mut mock_transport = MockJsonRpcTransport::new();
     mock_transport.set_response(

@@ -101,9 +101,9 @@ pub fn collect_main_crate_ids(unit: &CompilationUnit, db: &RootDatabase) -> Vec<
 fn test_compiler() {
     use scarb::ops;
 
-    use crate::testing::build_test_config;
+    use crate::test_utils::build_test_config;
 
-    let config = build_test_config().unwrap();
+    let config = build_test_config("src/cairo_level_tests/Scarb.toml").unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
     ops::compile(&ws).unwrap_or_else(|op| panic!("Error compiling: {op:?}"))

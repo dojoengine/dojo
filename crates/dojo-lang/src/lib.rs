@@ -11,5 +11,5 @@ mod manifest;
 pub mod plugin;
 pub mod system;
 
-#[cfg(test)]
-mod testing;
+#[cfg(any(feature = "testing", test))]
+pub mod test_utils;
