@@ -32,8 +32,6 @@ export class RPCProvider extends Provider {
 
     public async entity(component: string, query: Query, offset: number, length: number): Promise<Array<bigint>> {
 
-        const poseidon: any = microstarknet.poseidonHashMany(query.keys)
-
         const call: Call = {
             entrypoint: WorldEntryPoints.get, // "entity"
             contractAddress: this.getWorldAddress(),
@@ -42,8 +40,7 @@ export class RPCProvider extends Provider {
                 query.address_domain,
                 query.partition,
                 query.keys.length,
-                ...query.keys,
-                poseidon,
+                ...query.keys as any,
                 offset,
                 length
             ]
