@@ -1,17 +1,17 @@
-use clap::Args;
 use std::env::{current_dir, set_current_dir};
 use std::error::Error;
-use std::fs;
-use std::io;
 use std::path::PathBuf;
 use std::process::Command;
+use std::{fs, io};
+
+use clap::Args;
 
 #[derive(Args, Debug)]
 pub struct InitArgs {
     #[clap(help = "Target directory")]
     path: Option<PathBuf>,
 
-    #[clap(help = "Template url", default_value = "dojoengine/dojo-starter")]
+    #[clap(help = "Parse a full git url or a url path", default_value = "dojoengine/dojo-starter")]
     template: String,
 }
 
