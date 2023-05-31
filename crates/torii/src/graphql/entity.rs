@@ -6,6 +6,7 @@ use serde::Deserialize;
 use sqlx::pool::PoolConnection;
 use sqlx::{FromRow, Pool, Result, Sqlite};
 
+use super::types::ScalarType;
 use super::{ObjectTraitInstance, ObjectTraitStatic, TypeMapping, ValueMapping};
 
 #[derive(FromRow, Deserialize)]
@@ -27,12 +28,12 @@ impl ObjectTraitStatic for EntityObject {
     fn new() -> Self {
         Self {
             field_type_mapping: IndexMap::from([
-                (Name::new("id"), "ID"),
-                (Name::new("name"), "String"),
-                (Name::new("partitionId"), "FieldElement"),
-                (Name::new("keys"), "String"),
-                (Name::new("transactionHash"), "FieldElement"),
-                (Name::new("createdAt"), "DateTime"),
+                (Name::new("id"), TypeRef::ID),
+                (Name::new("name"), TypeRef::STRING),
+                (Name::new("partitionId"), ScalarType::FELT),
+                (Name::new("keys"), TypeRef::STRING),
+                (Name::new("transactionHash"), ScalarType::FELT),
+                (Name::new("createdAt"), ScalarType::DATE_TIME),
             ]),
         }
     }

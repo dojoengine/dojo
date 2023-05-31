@@ -6,6 +6,7 @@ pub mod schema;
 pub mod server;
 pub mod system;
 pub mod system_call;
+pub mod types;
 pub mod utils;
 
 use async_graphql::dynamic::{Field, FieldFuture, Object, TypeRef};

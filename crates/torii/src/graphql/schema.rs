@@ -1,7 +1,4 @@
-use std::collections::HashSet;
-
 use async_graphql::dynamic::{Object, Scalar, Schema, SchemaError};
-use lazy_static::lazy_static;
 use sqlx::SqlitePool;
 
 use super::component::ComponentObject;
@@ -9,28 +6,8 @@ use super::entity::EntityObject;
 use super::event::EventObject;
 use super::system::SystemObject;
 use super::system_call::SystemCallObject;
+use super::types::ScalarType;
 use super::{ObjectTraitInstance, ObjectTraitStatic};
-
-lazy_static! {
-    pub static ref SCALAR_TYPES: HashSet<&'static str> = HashSet::from([
-        "U8",
-        "U16",
-        "U32",
-        "U64",
-        "U128",
-        "U250",
-        "U256",
-        "Cursor",
-        "Boolean",
-        "Address",
-        "DateTime",
-        "FieldElement",
-    ]);
-    pub static ref NUMERIC_SCALAR_TYPES: HashSet<&'static str> =
-        HashSet::from(["U8", "U16", "U32", "U64", "U128", "U250", "U256",]);
-    pub static ref STRING_SCALAR_TYPES: HashSet<&'static str> =
-        HashSet::from(["Cursor", "Address", "DateTime", "FieldElement",]);
-}
 
 pub async fn build_schema(pool: &SqlitePool) -> Result<Schema, SchemaError> {
     // base gql objects
@@ -56,10 +33,8 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema, SchemaError> {
 
     // register custom scalars
     let mut schema_builder = Schema::build("Query", None, None);
-    for scalar_type in SCALAR_TYPES.iter() {
-        if *scalar_type != "Boolean" && *scalar_type != "ID" {
-            schema_builder = schema_builder.register(Scalar::new(*scalar_type));
-        }
+    for scalar_type in ScalarType::types().iter() {
+        schema_builder = schema_builder.register(Scalar::new(*scalar_type));
     }
 
     // register base gql objects

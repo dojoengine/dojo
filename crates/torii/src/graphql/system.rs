@@ -9,6 +9,7 @@ use sqlx::pool::PoolConnection;
 use sqlx::{FromRow, Pool, Result, Sqlite};
 
 use super::system_call::system_calls_by_system_id;
+use super::types::ScalarType;
 use super::utils::value_accessor::ObjectAccessor;
 use super::{ObjectTraitInstance, ObjectTraitStatic, TypeMapping, ValueMapping};
 
@@ -31,12 +32,12 @@ impl ObjectTraitStatic for SystemObject {
     fn new() -> Self {
         Self {
             field_type_mapping: IndexMap::from([
-                (Name::new("id"), "ID"),
-                (Name::new("name"), "String"),
-                (Name::new("address"), "Address"),
-                (Name::new("classHash"), "FieldElement"),
-                (Name::new("transactionHash"), "FieldElement"),
-                (Name::new("createdAt"), "DateTime"),
+                (Name::new("id"), TypeRef::ID),
+                (Name::new("name"), TypeRef::STRING),
+                (Name::new("address"), ScalarType::ADDRESS),
+                (Name::new("classHash"), ScalarType::FELT),
+                (Name::new("transactionHash"), ScalarType::FELT),
+                (Name::new("createdAt"), ScalarType::DATE_TIME),
             ]),
         }
     }
