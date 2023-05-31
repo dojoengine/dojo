@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { useDojo } from "@dojoengine/react"
 import { PositionParser as parser } from "../parsers";
+import { Account, ec, Provider, stark, number } from "starknet";
+
 
 // TODO: add types for component
 interface Props {
@@ -14,14 +16,14 @@ interface Props {
 }
 
 const componentStruct = {
-  id: "Position",
+  id: "0x48470d2bdb97afe267b7d7fd4fb485568e7a9151dcea3d02eeedcc4ed3d36c3",
   offset: 0,
   length: 0,
 }
 
 // takes directional input
 const system = {
-  name: "Movement"
+  name: "0x7463417c058526917303293d161f7c2bd6bb0e3f69aa521206b7db03fc56784"
 }
 
 export const Position = ({ entityId, src, position, direction }: Props) => {
@@ -42,21 +44,21 @@ export const Position = ({ entityId, src, position, direction }: Props) => {
   } = useDojo(params);
 
   useEffect(() => {
-    console.log("Moving ", entityId, " to ", position.x, position.y)
+    console.log("component", component)
     execute(
-      [BigInt(1), BigInt(direction)],
+      [number.toBN(1), number.toBN(direction)],
       system.name
     )
 
-    if (stream) console.log(stream)
+    // if (stream) console.log(stream)
 
   }, [position, entityId, execute]);
 
 
   useEffect(() => {
-    fetch(entityId,
+    fetch(componentStruct.id,
       {
-        partition: componentStruct.id,
+        partition: "0x06f62894bfd81d2e396ce266b2ad0f21e0668d604e5bb1077337b6d570a54aea",
         keys: [""]
       }
     );
@@ -64,14 +66,12 @@ export const Position = ({ entityId, src, position, direction }: Props) => {
 
   return (
     <div>
-
       <img
         src={src}
         alt={entityId}
         style={{ width: '100%', height: '100%', objectFit: 'contain' }}
       />
     </div>
-
   );
 };
 

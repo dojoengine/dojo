@@ -1,15 +1,15 @@
-import { DojoConfig, WorldProvider } from "@dojoengine/react"
-import { Position } from "./components/Position";
+import { WorldProvider } from "@dojoengine/react"
 // import manifest from "../../../../examples/target/release/manifest.json"
 import { Connect } from "./components/Connect";
 import ControllerConnector from "@cartridge/connector";
 import { InjectedConnector } from "@starknet-react/core";
 import GridComponent from "./components/Grid";
 
-const worldAddress = "0x0248cacaeac64c45be0c19ee8727e0bb86623ca7fa3f0d431a6c55e200697e5a";
-const rpcUrl = "https://starknet-goerli.cartridge.gg/";
+const worldAddress = "0x2a79e6863214cfb96bdcb42b70eb39cdb74dd7787d2b1e792b673600892eeb2";
+const rpcUrl = "http://127.0.0.1:5050";
 const ws = "ws://localhost:9001"
-// might need to pass this in as a prop
+
+
 const controllerConnector = new ControllerConnector([
   {
     target: worldAddress,

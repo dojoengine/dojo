@@ -1,6 +1,6 @@
 {
   "name": "@dojoengine/core",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Dojo engine core providers and types",
   "scripts": {
     "build": "tsc",
@@ -20,9 +20,8 @@
     "starknet": "^4.22.0",
     "ts-jest": "^29.1.0",
     "typescript": "^5.0.3",
-    "zustand": "^4.3.7"
-  },
-  "dependencies": {
+    "zustand": "^4.3.7",
+    "micro-starknet": "^0.2.3",
     "winston": "^3.8.2"
   }
 }

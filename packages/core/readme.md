@@ -1,10 +1,28 @@
-# Dojo Core
+# Dojo Core SDK
 
-This package interfaces directly with a Dojo world.
-
-It can be used to build:
+Dojo core package to interact with Dojo worlds. It exposes World interface commands to allow the creation of:
 
 - World explorers
 - World deployers
 - Dojo games
 - Anaylitics 
+
+### Get started
+
+```
+yarn add @dojoengine/core
+```
+
+### Account
+
+Starknet.js Account wrapper for quick testing
+
+### Providers
+
+Providers that clients can use to connect to and interact with Dojo worlds seamlessly.
+
+#### RPC Provider
+
+#### Websocker Providers
+
+#### 

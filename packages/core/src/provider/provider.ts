@@ -11,14 +11,9 @@ export abstract class Provider extends EventEmitter implements ICommands {
 
     public abstract entity(component: string, query: Query, offset: number, length: number): Promise<Array<bigint>>;
 
+    public abstract entities(component: string, partition: string): Promise<Array<bigint>>;
+
     public getWorldAddress(): string {
         return this.worldAddress;
     }
-
-    // TODO: Global systems, any function needed to interact with a Dojo world should exist here
-
-    // TODO: get all worlds components
-
-    // TODO: get all worlds systems
-
 }

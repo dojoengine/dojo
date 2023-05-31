@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useDojoContext } from '../provider';
+import { useDojoContext, useRPCContext } from '../provider';
 import { Query } from '@dojoengine/core/dist/types';
 
 // key should be from world setup, and should be an optional trigger to rerender
@@ -12,7 +12,7 @@ export function useComponent<T>({
   parser: (data: any) => T | undefined;
   store: any;
 }) {
-  const { rpcProvider } = useDojoContext();
+  const { rpcProvider } = useRPCContext();
 
 
   const getComponentCallback = useCallback(
@@ -32,7 +32,7 @@ export function useComponent<T>({
     [rpcProvider, key, parser]
   );
 
-  console.log("useComponent: ", store.getState())
+  // console.log("useComponent: ", store.getState())
 
   return {
     component: parser(store.getState().value),
@@ -49,14 +49,16 @@ export async function getComponent<T>(
   offset: number = 0,
   length: number = 0
 ) {
-  if (rpcProvider) {
-    const componentState = await rpcProvider.entity(
-      component,
-      query,
-      offset,
-      length
-    );
-    store.setState({ value: componentState });
-  }
+  // if (rpcProvider) {
+  const componentState = await rpcProvider.entity(
+    component,
+    query,
+    offset,
+    length
+  );
+
+  console.log("componentState", componentState)
+  store.setState({ value: componentState });
+  // }
 }
 
