@@ -5,9 +5,7 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, Context, Result};
 use camino::Utf8PathBuf;
-use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::FieldElement;
-use starknet::providers::Provider;
 
 use super::object::{ClassMigration, ContractMigration, WorldContractMigration};
 use super::MigrationStrategy;
@@ -43,7 +41,7 @@ pub struct WorldDiff {
     contracts: Vec<ClassDiff>,
     components: Vec<ClassDiff>,
     systems: Vec<ClassDiff>,
-    environment_config: EnvironmentConfig,
+    // environment_config: EnvironmentConfig,
 }
 
 impl WorldDiff {
@@ -116,18 +114,17 @@ impl WorldDiff {
             remote: remote_manifest.map(|m| m.executor),
         };
 
-        Ok(WorldDiff { world, executor, systems, contracts, components, environment_config })
+        Ok(WorldDiff { world, executor, systems, contracts, components })
     }
 
     /// construct migration strategy
     /// evaluate which contracts/classes need to be declared/deployed
-    pub async fn prepare_for_migration(
+    pub async fn prepare_for_migration<P, S>(
         &self,
         target_dir: Utf8PathBuf,
     ) -> Result<MigrationStrategy> {
-        let entries = fs::read_dir(target_dir).unwrap_or_else(|error| {
-            panic!("Problem reading source directory: {error}");
-        });
+        let entries = fs::read_dir(target_dir)
+            .map_err(|err| anyhow!("Failed reading source directory: {err}"))?;
 
         let mut artifact_paths = HashMap::new();
         for entry in entries.flatten() {
@@ -143,23 +140,20 @@ impl WorldDiff {
             artifact_paths.insert(name, entry.path());
         }
 
-        let world = evaluate_contract_for_migration(&self.world, &artifact_paths)?
+        // We don't need to care if a contract has already been declared or not, because
+        // the migration strategy will take care of that.
+
+        // If the world contract needs to be migrated, then all contracts need to be migrated
+        // else we need to evaluate which contracts need to be migrated.
+        let world = evaluate_contract_to_migrate(&self.world, &artifact_paths, false)?
             .map(|c| WorldContractMigration(c));
-        let executor = evaluate_contract_for_migration(&self.executor, &artifact_paths)?;
-        let components = evaluate_components_to_be_declared(&self.components, &artifact_paths)?;
-        let systems = evaluate_systems_to_be_declared(&self.systems, &artifact_paths)?;
+        let executor =
+            evaluate_contract_to_migrate(&self.executor, &artifact_paths, world.is_some())?;
+        let components =
+            evaluate_components_to_migrate(&self.components, &artifact_paths, world.is_some())?;
+        let systems = evaluate_systems_to_migrate(&self.systems, &artifact_paths, world.is_some())?;
 
-        let migrator = {
-            let signer = self.environment_config.signer()?;
-            let account_address = self.environment_config.account_address()?;
-
-            let provider = self.environment_config.provider()?;
-            let chain_id = provider.chain_id().await?;
-
-            SingleOwnerAccount::new(provider, signer, account_address, chain_id)
-        };
-
-        Ok(MigrationStrategy { world, executor, systems, components, migrator })
+        Ok(MigrationStrategy { world, executor, systems, components })
     }
 }
 
@@ -213,15 +207,16 @@ impl Display for WorldDiff {
     }
 }
 
-fn evaluate_systems_to_be_declared(
+fn evaluate_systems_to_migrate(
     systems: &[ClassDiff],
     artifact_paths: &HashMap<String, PathBuf>,
+    world_contract_will_migrate: bool,
 ) -> Result<Vec<ClassMigration>> {
     let mut syst_to_migrate = vec![];
 
     for s in systems {
         match s.remote {
-            Some(remote) if remote == s.local => continue,
+            Some(remote) if remote == s.local && !world_contract_will_migrate => continue,
             _ => {
                 let path = find_artifact_path(&format!("{}System", s.name), artifact_paths)?;
                 syst_to_migrate.push(ClassMigration {
@@ -236,15 +231,16 @@ fn evaluate_systems_to_be_declared(
     Ok(syst_to_migrate)
 }
 
-fn evaluate_components_to_be_declared(
+fn evaluate_components_to_migrate(
     components: &[ClassDiff],
     artifact_paths: &HashMap<String, PathBuf>,
+    world_contract_will_migrate: bool,
 ) -> Result<Vec<ClassMigration>> {
     let mut comps_to_migrate = vec![];
 
     for c in components {
         match c.remote {
-            Some(remote) if remote == c.local => continue,
+            Some(remote) if remote == c.local && !world_contract_will_migrate => continue,
             _ => {
                 let path = find_artifact_path(&format!("{}Component", c.name), artifact_paths)?;
                 comps_to_migrate.push(ClassMigration {
@@ -260,26 +256,21 @@ fn evaluate_components_to_be_declared(
 }
 
 // TODO: generate random salt if need to be redeployed
-fn evaluate_contract_for_migration(
+fn evaluate_contract_to_migrate(
     contract: &ContractDiff,
     artifact_paths: &HashMap<String, PathBuf>,
+    world_contract_will_migrate: bool,
 ) -> Result<Option<ContractMigration>> {
-    // let should_migrate = if contract.address.is_none() {
-    //     true
-    // } else {
-    //     !matches!(contract.remote, Some(remote_hash) if remote_hash == contract.local)
-    // };
-
-    if contract.address.is_none()
+    if world_contract_will_migrate
+        || contract.address.is_none()
         || matches!(contract.remote, Some(remote_hash) if remote_hash != contract.local)
     {
         let path = find_artifact_path(&contract.name, artifact_paths)?;
 
         Ok(Some(ContractMigration {
-            // deployed: !should_migrate,
-            contract_address: None,
             contract: contract.clone(),
             artifact_path: path.clone(),
+            contract_address: contract.address,
         }))
     } else {
         Ok(None)

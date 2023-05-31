@@ -12,14 +12,11 @@ pub enum MigrationError {}
 
 // TODO: migration error
 // should only be created by calling `World::prepare_for_migration`
-pub struct MigrationStrategy<P, S> {
+pub struct MigrationStrategy {
     world: Option<WorldContractMigration>,
     executor: Option<ContractMigration>,
-
     systems: Vec<ClassMigration>,
     components: Vec<ClassMigration>,
-
-    migrator: SingleOwnerAccount<P, S>,
 }
 
 impl<P, S> MigrationStrategy<P, S>
