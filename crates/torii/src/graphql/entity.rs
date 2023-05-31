@@ -7,6 +7,7 @@ use sqlx::pool::PoolConnection;
 use sqlx::{FromRow, Pool, Result, Sqlite};
 
 use super::types::ScalarType;
+use super::utils::remove_quotes;
 use super::{ObjectTraitInstance, ObjectTraitStatic, TypeMapping, ValueMapping};
 
 #[derive(FromRow, Deserialize)]
@@ -28,12 +29,12 @@ impl ObjectTraitStatic for EntityObject {
     fn new() -> Self {
         Self {
             field_type_mapping: IndexMap::from([
-                (Name::new("id"), TypeRef::ID),
-                (Name::new("name"), TypeRef::STRING),
-                (Name::new("partitionId"), ScalarType::FELT),
-                (Name::new("keys"), TypeRef::STRING),
-                (Name::new("transactionHash"), ScalarType::FELT),
-                (Name::new("createdAt"), ScalarType::DATE_TIME),
+                (Name::new("id"), TypeRef::ID.to_string()),
+                (Name::new("name"), TypeRef::STRING.to_string()),
+                (Name::new("partitionId"), ScalarType::FELT.to_string()),
+                (Name::new("keys"), TypeRef::STRING.to_string()),
+                (Name::new("transactionHash"), ScalarType::FELT.to_string()),
+                (Name::new("createdAt"), ScalarType::DATE_TIME.to_string()),
             ]),
         }
     }
@@ -60,7 +61,7 @@ impl ObjectTraitInstance for EntityObject {
             Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let id = ctx.args.try_get("id")?.string()?.replace('\"', "");
+                    let id = remove_quotes(ctx.args.try_get("id")?.string()?);
                     let entity_values = entity_by_id(&mut conn, &id).await?;
                     Ok(Some(FieldValue::owned_any(entity_values)))
                 })

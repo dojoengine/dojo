@@ -7,6 +7,7 @@ use sqlx::pool::PoolConnection;
 use sqlx::{FromRow, Pool, Result, Sqlite};
 
 use super::types::ScalarType;
+use super::utils::remove_quotes;
 use super::{ObjectTraitInstance, ObjectTraitStatic, TypeMapping, ValueMapping};
 
 #[derive(FromRow, Deserialize)]
@@ -17,7 +18,7 @@ pub struct Component {
     pub address: String,
     pub class_hash: String,
     pub transaction_hash: String,
-    pub storage_schema: String,
+    pub storage_definition: String,
     pub created_at: DateTime<Utc>,
 }
 
@@ -29,13 +30,13 @@ impl ObjectTraitStatic for ComponentObject {
     fn new() -> Self {
         Self {
             field_type_mapping: IndexMap::from([
-                (Name::new("id"), TypeRef::ID),
-                (Name::new("name"), TypeRef::STRING),
-                (Name::new("address"), ScalarType::ADDRESS),
-                (Name::new("classHash"), ScalarType::FELT),
-                (Name::new("transactionHash"), ScalarType::FELT),
-                (Name::new("storageSchema"), TypeRef::STRING),
-                (Name::new("createdAt"), ScalarType::DATE_TIME),
+                (Name::new("id"), TypeRef::ID.to_string()),
+                (Name::new("name"), TypeRef::STRING.to_string()),
+                (Name::new("address"), ScalarType::ADDRESS.to_string()),
+                (Name::new("classHash"), ScalarType::FELT.to_string()),
+                (Name::new("transactionHash"), ScalarType::FELT.to_string()),
+                (Name::new("storageDefinition"), TypeRef::STRING.to_string()),
+                (Name::new("createdAt"), ScalarType::DATE_TIME.to_string()),
             ]),
         }
     }
@@ -63,7 +64,7 @@ impl ObjectTraitInstance for ComponentObject {
             Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let id = ctx.args.try_get("id")?.string()?.replace('\"', "");
+                    let id = remove_quotes(ctx.args.try_get("id")?.string()?);
                     let component_values = component_by_id(&mut conn, &id).await?;
                     Ok(Some(FieldValue::owned_any(component_values)))
                 })
@@ -83,7 +84,7 @@ async fn component_by_id(conn: &mut PoolConnection<Sqlite>, id: &str) -> Result<
                 address,
                 class_hash,
                 transaction_hash,
-                storage_schema,
+                storage_definition,
                 created_at as "created_at: _"
             FROM components WHERE id = $1
         "#,
@@ -95,6 +96,28 @@ async fn component_by_id(conn: &mut PoolConnection<Sqlite>, id: &str) -> Result<
     Ok(value_mapping(component))
 }
 
+#[allow(dead_code)]
+pub async fn components(conn: &mut PoolConnection<Sqlite>) -> Result<Vec<ValueMapping>> {
+    let components = sqlx::query_as!(
+        Component,
+        r#"
+            SELECT 
+                id,
+                name,
+                address,
+                class_hash,
+                transaction_hash,
+                storage_definition,
+                created_at as "created_at: _"
+            FROM components
+        "#
+    )
+    .fetch_all(conn)
+    .await?;
+
+    Ok(components.into_iter().map(value_mapping).collect())
+}
+
 fn value_mapping(component: Component) -> ValueMapping {
     IndexMap::from([
         (Name::new("id"), Value::from(component.id)),
@@ -102,7 +125,7 @@ fn value_mapping(component: Component) -> ValueMapping {
         (Name::new("address"), Value::from(component.address)),
         (Name::new("classHash"), Value::from(component.class_hash)),
         (Name::new("transactionHash"), Value::from(component.transaction_hash)),
-        (Name::new("storageSchema"), Value::from(component.storage_schema)),
+        (Name::new("storageDefinition"), Value::from(component.storage_definition)),
         (
             Name::new("createdAt"),
             Value::from(component.created_at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)),

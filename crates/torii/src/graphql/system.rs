@@ -10,6 +10,7 @@ use sqlx::{FromRow, Pool, Result, Sqlite};
 
 use super::system_call::system_calls_by_system_id;
 use super::types::ScalarType;
+use super::utils::remove_quotes;
 use super::utils::value_accessor::ObjectAccessor;
 use super::{ObjectTraitInstance, ObjectTraitStatic, TypeMapping, ValueMapping};
 
@@ -32,12 +33,12 @@ impl ObjectTraitStatic for SystemObject {
     fn new() -> Self {
         Self {
             field_type_mapping: IndexMap::from([
-                (Name::new("id"), TypeRef::ID),
-                (Name::new("name"), TypeRef::STRING),
-                (Name::new("address"), ScalarType::ADDRESS),
-                (Name::new("classHash"), ScalarType::FELT),
-                (Name::new("transactionHash"), ScalarType::FELT),
-                (Name::new("createdAt"), ScalarType::DATE_TIME),
+                (Name::new("id"), TypeRef::ID.to_string()),
+                (Name::new("name"), TypeRef::STRING.to_string()),
+                (Name::new("address"), ScalarType::ADDRESS.to_string()),
+                (Name::new("classHash"), ScalarType::FELT.to_string()),
+                (Name::new("transactionHash"), ScalarType::FELT.to_string()),
+                (Name::new("createdAt"), ScalarType::DATE_TIME.to_string()),
             ]),
         }
     }
@@ -65,7 +66,7 @@ impl ObjectTraitInstance for SystemObject {
             Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let id = ctx.args.try_get("id")?.string()?.replace('\"', "");
+                    let id = remove_quotes(ctx.args.try_get("id")?.string()?);
                     let system_values = system_by_id(&mut conn, &id).await?;
                     Ok(Some(FieldValue::owned_any(system_values)))
                 })

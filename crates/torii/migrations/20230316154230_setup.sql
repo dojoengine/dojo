@@ -11,7 +11,7 @@ CREATE TABLE components (
     address TEXT NOT NULL,
     class_hash TEXT NOT NULL,
     transaction_hash TEXT NOT NULL,
-    storage_schema TEXT NOT NULL,
+    storage_definition TEXT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

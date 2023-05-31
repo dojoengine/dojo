@@ -2,15 +2,15 @@
 INSERT INTO indexer (head) VALUES (0);
 
 /* register components and systems */ 
-INSERT INTO components (id, name, address, class_hash, transaction_hash, storage_schema)
+INSERT INTO components (id, name, address, class_hash, transaction_hash, storage_definition)
 VALUES ('component_1', 'Game', '0x0', '0x0', '0x0', 
-    'type GameComponent { isFinished: Boolean! entity: Entity! component: Component! createdAt: DateTime! }');
-INSERT INTO components (id, name, address, class_hash, transaction_hash, storage_schema)
+    '[{"name":"is_finished","type":"Boolean","slot":0,"offset":0}]');
+INSERT INTO components (id, name, address, class_hash, transaction_hash, storage_definition)
 VALUES ('component_2', 'Stats', '0x0', '0x0', '0x0', 
-    'type StatsComponent { health: U8! entity: Entity! component: Component! createdAt: DateTime! }');
-INSERT INTO components (id, name, address, class_hash, transaction_hash, storage_schema)
+    '[{"name":"health","type":"u8","slot":0,"offset":0},{"name":"mana","type":"u8","slot":0,"offset":0}]');
+INSERT INTO components (id, name, address, class_hash, transaction_hash, storage_definition)
 VALUES ('component_3', 'Cash', '0x0', '0x0', '0x0', 
-    'type CashComponent { amount: U32! entity: Entity! component: Component! createdAt: DateTime! }');
+    '[{"name":"amount","type":"u32","slot":0,"offset":0}]');
 INSERT INTO systems (id, name, address, class_hash, transaction_hash) VALUES ('system_1', 'SpawnGame', '0x0', '0x0', '0x0');
 INSERT INTO systems (id, name, address, class_hash, transaction_hash) VALUES ('system_2', 'SpawnPlayer', '0x0', '0x0', '0x0');
 INSERT INTO systems (id, name, address, class_hash, transaction_hash) VALUES ('system_3', 'SpawnPlayer', '0x0', '0x0', '0x0');

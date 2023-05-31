@@ -1,9 +1,9 @@
-use indexmap::IndexMap;
 use async_graphql::dynamic::{Field, FieldFuture, FieldValue, Object, TypeRef};
-use async_graphql::Value;
+use async_graphql::{Name, Value};
+use indexmap::IndexMap;
 use sqlx::{Pool, Sqlite};
 
-use super::{TypeMapping, ObjectTraitInstance};
+use super::{ObjectTraitInstance, TypeMapping};
 
 pub struct StorageObject {
     pub name: String,
@@ -12,7 +12,7 @@ pub struct StorageObject {
 }
 
 impl StorageObject {
-    pub fn from(name: String, type_name: String, field_type_mapping: TypeMapping) -> Self {
+    pub fn new(name: String, type_name: String, field_type_mapping: TypeMapping) -> Self {
         Self { name, type_name, field_type_mapping }
     }
 }

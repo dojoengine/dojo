@@ -31,11 +31,11 @@ impl ObjectTraitStatic for SystemCallObject {
     fn new() -> Self {
         Self {
             field_type_mapping: IndexMap::from([
-                (Name::new("id"), TypeRef::ID),
-                (Name::new("transactionHash"), TypeRef::STRING),
-                (Name::new("data"), TypeRef::STRING),
-                (Name::new("system_id"), TypeRef::ID),
-                (Name::new("createdAt"), ScalarType::DATE_TIME),
+                (Name::new("id"), TypeRef::ID.to_string()),
+                (Name::new("transactionHash"), TypeRef::STRING.to_string()),
+                (Name::new("data"), TypeRef::STRING.to_string()),
+                (Name::new("system_id"), TypeRef::ID.to_string()),
+                (Name::new("createdAt"), ScalarType::DATE_TIME.to_string()),
             ]),
         }
     }

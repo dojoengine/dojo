@@ -8403,12 +8403,12 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-graphql",
- "async-graphql-parser",
  "async-graphql-poem",
  "async-trait",
  "chrono",
  "clap",
  "ctrlc",
+ "dojo-world",
  "indexmap",
  "log",
  "num",

@@ -180,7 +180,7 @@
     },
     "query": "\n            SELECT \n                id,\n                system_call_id,\n                keys,\n                data,\n                created_at as \"created_at: _\"\n            FROM events \n            WHERE id = $1\n        "
   },
-  "9874396c6908c9499799e95a31b482c2dedcde7ea856419370b8e83a75636583": {
+  "95646f5a8581a9330638f0349f6e87d5b91f2cb10f035433387940088ba71645": {
     "describe": {
       "columns": [
         {
@@ -209,7 +209,7 @@
           "type_info": "Text"
         },
         {
-          "name": "storage_schema",
+          "name": "storage_definition",
           "ordinal": 5,
           "type_info": "Text"
         },
@@ -232,7 +232,61 @@
         "Right": 1
       }
     },
-    "query": "\n            SELECT \n                id,\n                name,\n                address,\n                class_hash,\n                transaction_hash,\n                storage_schema,\n                created_at as \"created_at: _\"\n            FROM components WHERE id = $1\n        "
+    "query": "\n            SELECT \n                id,\n                name,\n                address,\n                class_hash,\n                transaction_hash,\n                storage_definition,\n                created_at as \"created_at: _\"\n            FROM components WHERE id = $1\n        "
+  },
+  "e5416ef9872003721a294f66ea015f882c30045203682f30bd825697c762f959": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Text"
+        },
+        {
+          "name": "name",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "address",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "class_hash",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "transaction_hash",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "storage_definition",
+          "ordinal": 5,
+          "type_info": "Text"
+        },
+        {
+          "name": "created_at: _",
+          "ordinal": 6,
+          "type_info": "Datetime"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Right": 0
+      }
+    },
+    "query": "\n            SELECT \n                id,\n                name,\n                address,\n                class_hash,\n                transaction_hash,\n                storage_definition,\n                created_at as \"created_at: _\"\n            FROM components\n        "
   },
   "f7b294431f97b0186f93a660ff986788f94febd42c44ebcceee2db9fa10a854f": {
     "describe": {
