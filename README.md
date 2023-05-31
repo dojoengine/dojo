@@ -48,7 +48,7 @@ We welcome contributions of all kinds from anyone. See our [Contribution Guide](
 
 ## ✏️ Enviroment
 
-See our [Enviroment setup](https://book.dojoengine.org/development/enviroment.html) for more information.
+See our [Enviroment setup](https://book.dojoengine.org/development/setup.html) for more information.
 
 ## ⛩️ Built with Dojo
 
