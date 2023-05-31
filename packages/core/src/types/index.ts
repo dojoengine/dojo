@@ -35,3 +35,51 @@ export interface ICommands {
     blocktime?(): Promise<bigint>;
     worldAge?(): Promise<bigint>;
 }
+
+// examples types - TODO: Export in bindings
+export type ComponentNames = "" | "Moves" | "Position" | "AuthStatus" | "AuthRole";
+export type SystemNames = "" | "SpawnSystem" | "MoveSystem" | "RouteAuthSystem" | "IsAccountAdminSystem" | "IsAuthorizedSystem" | "GrantAuthRoleSystem" | "GrantScopedAuthRoleSystem" | "GrantResourceSystem" | "RevokeAuthRoleSystem" | "RevokeScopedAuthRoleSystem" | "RevokeResourceSystem";
+
+
+export interface Members {
+    name: string;
+    type: string;
+    slot: number;
+    offset: number;
+}
+
+export interface Component {
+    name: ComponentNames;
+    members: Members[];
+    class_hash: string;
+}
+
+export interface InputOutput {
+    name?: string;
+    type: string;
+}
+
+export interface System {
+    name: SystemNames;
+    inputs: InputOutput[];
+    outputs: InputOutput[];
+    class_hash: string;
+    dependencies: string[];
+}
+
+export interface Contract { } // Add fields as per your Contract object's structure
+
+export interface Manifest {
+    world: string;
+    executor: string;
+    components: Component[];
+    systems: System[];
+    contracts: Contract[];
+}
+
+export interface World {
+    world: string;
+    executor: string;
+}
+
+

@@ -1,0 +1,242 @@
+{
+  "world": "0x037fa6d0ee6fb5098cfd62ec03f3881c60114e501bf716f88ff8b3048b8dff26",
+  "executor": "0x0553701c58518a754ac7c08bb50778890e248181fab590d8a6ea377414686ead",
+  "components": [
+    {
+      "name": "Moves",
+      "members": [
+        {
+          "name": "remaining",
+          "type": "u8",
+          "slot": 0,
+          "offset": 0
+        }
+      ],
+      "class_hash": "0x7cf9de8c4de72bb334516f683982fad3200d6e8b39afa609609b2dbbbf315fa"
+    },
+    {
+      "name": "Position",
+      "members": [
+        {
+          "name": "x",
+          "type": "u32",
+          "slot": 0,
+          "offset": 0
+        },
+        {
+          "name": "y",
+          "type": "u32",
+          "slot": 1,
+          "offset": 0
+        }
+      ],
+      "class_hash": "0x6341b892c94083ac9b8d5edf7fe282a0e2624e8cadfa4f41ffdb1eafedfaaf"
+    },
+    {
+      "name": "AuthStatus",
+      "members": [
+        {
+          "name": "is_authorized",
+          "type": "bool",
+          "slot": 0,
+          "offset": 0
+        }
+      ],
+      "class_hash": "0x68f685996e88cde511e9361006f36d109dd84f7a02b7d6366ed39eab041331c"
+    },
+    {
+      "name": "AuthRole",
+      "members": [
+        {
+          "name": "id",
+          "type": "u250",
+          "slot": 0,
+          "offset": 0
+        }
+      ],
+      "class_hash": "0x774a0c68b7849b219c72fa7075c08198c1f17d20e792ab7840926908b3e55a"
+    }
+  ],
+  "systems": [
+    {
+      "name": "SpawnSystem",
+      "inputs": [],
+      "outputs": [],
+      "class_hash": "0x7b7dcd290f420ecb9064f3c123c7a9d22f37e5529d06a5e15f73879110a5ce5",
+      "dependencies": [
+        "Moves",
+        "Position"
+      ]
+    },
+    {
+      "name": "MoveSystem",
+      "inputs": [
+        {
+          "name": "direction",
+          "type": "dojo_examples::systems::MoveSystem::Direction"
+        }
+      ],
+      "outputs": [],
+      "class_hash": "0x6e6fcfb9d45adb7a4f1dcec2ded7439d06fc31451ec88e5bcecd9468a57fc73",
+      "dependencies": [
+        "Moves",
+        "Position"
+      ]
+    },
+    {
+      "name": "RouteAuthSystem",
+      "inputs": [
+        {
+          "name": "route",
+          "type": "dojo_core::auth::systems::Route"
+        }
+      ],
+      "outputs": [],
+      "class_hash": "0x2cfa610f9a576b22616f1a15ba6fc665bce1275078e64e4b3d2d2235491e2c",
+      "dependencies": [
+        "AuthRole",
+        "AuthStatus"
+      ]
+    },
+    {
+      "name": "IsAccountAdminSystem",
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "core::bool"
+        }
+      ],
+      "class_hash": "0x2e75a04258a02786ead5f65b929450f77b044ab874a681e85de7e3fdf1e1f75",
+      "dependencies": []
+    },
+    {
+      "name": "IsAuthorizedSystem",
+      "inputs": [
+        {
+          "name": "target_id",
+          "type": "dojo_core::integer::u250"
+        },
+        {
+          "name": "resource_id",
+          "type": "dojo_core::integer::u250"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "core::bool"
+        }
+      ],
+      "class_hash": "0x39e818d7c2c79d01dbf1b8e2c907a4bda76cb083cd37be7d02710531bab15b8",
+      "dependencies": []
+    },
+    {
+      "name": "GrantAuthRoleSystem",
+      "inputs": [
+        {
+          "name": "target_id",
+          "type": "dojo_core::integer::u250"
+        },
+        {
+          "name": "role_id",
+          "type": "dojo_core::integer::u250"
+        }
+      ],
+      "outputs": [],
+      "class_hash": "0x3cbd827d44009cd4e554a552d270073f57e9175385ca5a30d753f3fb117af08",
+      "dependencies": [
+        "AuthRole"
+      ]
+    },
+    {
+      "name": "GrantScopedAuthRoleSystem",
+      "inputs": [
+        {
+          "name": "target_id",
+          "type": "dojo_core::integer::u250"
+        },
+        {
+          "name": "role_id",
+          "type": "dojo_core::integer::u250"
+        },
+        {
+          "name": "resource_id",
+          "type": "dojo_core::integer::u250"
+        }
+      ],
+      "outputs": [],
+      "class_hash": "0x6e1614d25382b10d16f8c984ea8148974a0c5609698dc6830eb909d3f8d7979",
+      "dependencies": [
+        "AuthRole"
+      ]
+    },
+    {
+      "name": "GrantResourceSystem",
+      "inputs": [
+        {
+          "name": "role_id",
+          "type": "dojo_core::integer::u250"
+        },
+        {
+          "name": "resource_id",
+          "type": "dojo_core::integer::u250"
+        }
+      ],
+      "outputs": [],
+      "class_hash": "0x5e3a06515a1d5247dbbf680af0ca54735a94f3dbd6a15c32d3dac29d37a1367",
+      "dependencies": [
+        "AuthStatus"
+      ]
+    },
+    {
+      "name": "RevokeAuthRoleSystem",
+      "inputs": [
+        {
+          "name": "target_id",
+          "type": "dojo_core::integer::u250"
+        }
+      ],
+      "outputs": [],
+      "class_hash": "0x3618d26507de1ee56aaccc800e99286568bf5e0504f278c600b3074efd06580",
+      "dependencies": [
+        "AuthRole"
+      ]
+    },
+    {
+      "name": "RevokeScopedAuthRoleSystem",
+      "inputs": [
+        {
+          "name": "target_id",
+          "type": "dojo_core::integer::u250"
+        },
+        {
+          "name": "resource_id",
+          "type": "dojo_core::integer::u250"
+        }
+      ],
+      "outputs": [],
+      "class_hash": "0x161b85d35fdffe0ea3346ad9f1abe0b421bb2fe24a35ac853b021049df3a139",
+      "dependencies": [
+        "AuthRole"
+      ]
+    },
+    {
+      "name": "RevokeResourceSystem",
+      "inputs": [
+        {
+          "name": "role_id",
+          "type": "dojo_core::integer::u250"
+        },
+        {
+          "name": "resource_id",
+          "type": "dojo_core::integer::u250"
+        }
+      ],
+      "outputs": [],
+      "class_hash": "0x6b43285cd2e78fbccbe2aba5d3165eacae863e1ffb87ff5a66ae59fac42b09a",
+      "dependencies": [
+        "AuthStatus"
+      ]
+    }
+  ],
+  "contracts": []
+}
