@@ -32,7 +32,6 @@ thiserror.workspace = true
 tokio = { version = "1.15.0", features = ["full"] }
 toml.workspace = true
 url = "2.2.2"
-git2 = "0.17.2"
 
 [dev-dependencies]
 assert_fs = "1.0.10"
