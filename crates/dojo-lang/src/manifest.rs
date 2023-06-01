@@ -12,10 +12,6 @@ use starknet::core::types::FieldElement;
 
 use crate::plugin::{DojoAuxData, SystemAuxData};
 
-#[cfg(test)]
-#[path = "manifest_test.rs"]
-mod test;
-
 #[derive(Default, Debug, Serialize)]
 pub(crate) struct Manifest(dojo_world::manifest::Manifest);
 

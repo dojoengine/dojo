@@ -250,7 +250,7 @@ checksum = "9c7d0618f0e0b7e8ff11427422b64564d5fb0be1940354bfe2e0529b18a9d9b8"
 [[package]]
 name = "apibara-core"
 version = "0.1.0"
-source = "git+https://github.com/apibara/dna#1e877a9c33c37d17d58188df26113cf4804f9c2e"
+source = "git+https://github.com/apibara/dna#66ec5d7c9b5a62ef9ff08fb9f992f70ccfb998e0"
 dependencies = [
  "anyhow",
  "hex",
@@ -270,7 +270,7 @@ dependencies = [
 [[package]]
 name = "apibara-sdk"
 version = "0.1.0"
-source = "git+https://github.com/apibara/dna#1e877a9c33c37d17d58188df26113cf4804f9c2e"
+source = "git+https://github.com/apibara/dna#66ec5d7c9b5a62ef9ff08fb9f992f70ccfb998e0"
 dependencies = [
  "anyhow",
  "apibara-core",
@@ -283,6 +283,7 @@ dependencies = [
  "hyper",
  "pin-project",
  "prost",
+ "serde",
  "thiserror",
  "tokio",
  "tokio-stream",
@@ -1458,7 +1459,7 @@ dependencies = [
  "cairo-lang-runner",
  "cairo-lang-starknet",
  "cairo-vm",
- "ctor 0.2.1",
+ "ctor 0.2.2",
  "derive_more",
  "indexmap",
  "itertools",
@@ -2576,9 +2577,9 @@ dependencies = [
 
 [[package]]
 name = "ctor"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "990a40740adf249724a6000c0fc4bd574712f50bb17c2d6f6cec837ae2f0ee75"
+checksum = "1586fa608b1dab41f667475b4a41faec5ba680aee428bfa5de4ea520fdc6e901"
 dependencies = [
  "quote",
  "syn 2.0.18",
@@ -2891,6 +2892,7 @@ dependencies = [
  "cairo-lang-test-utils",
  "cairo-lang-utils",
  "camino",
+ "dojo-test-utils",
  "dojo-world",
  "env_logger 0.10.0",
  "itertools",
@@ -2953,6 +2955,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "dojo-test-utils"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "assert_fs",
+ "async-trait",
+ "cairo-lang-compiler",
+ "cairo-lang-filesystem",
+ "cairo-lang-project",
+ "cairo-lang-starknet",
+ "camino",
+ "dojo-lang",
+ "scarb",
+ "serde",
+ "serde_json",
+ "serde_with",
+ "smol_str",
+ "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?branch=dev/jsonrpc_0_3_0)",
+ "thiserror",
+ "toml 0.7.4",
+ "tracing",
+ "url",
+]
+
+[[package]]
 name = "dojo-world"
 version = "0.1.0"
 dependencies = [
@@ -2963,7 +2990,7 @@ dependencies = [
  "cairo-lang-project",
  "cairo-lang-starknet",
  "camino",
- "dojo-lang",
+ "dojo-test-utils",
  "katana-core",
  "katana-rpc",
  "scarb",

@@ -1,17 +1,19 @@
 [package]
-name = "dojo-world"
+name = "dojo-test-utils"
 version.workspace = true
 edition.workspace = true
 repository.workspace = true
 license-file.workspace = true
-description = "Dojo world specification. For example, crates and flags used for compilation."
 
 [dependencies]
 anyhow.workspace = true
+assert_fs = "1.0.9"
 async-trait.workspace = true
+cairo-lang-compiler.workspace = true
 cairo-lang-starknet.workspace = true
 cairo-lang-project.workspace = true
 camino.workspace = true
+dojo-lang = { path = "../dojo-lang" }
 thiserror.workspace = true
 toml = "0.7.1"
 cairo-lang-filesystem.workspace = true
@@ -24,9 +26,8 @@ starknet.workspace = true
 url = "2.2.2"
 tracing.workspace = true
 
-[dev-dependencies]
+[build-dependencies]
 assert_fs = "1.0.9"
-dojo-test-utils = { path = "../dojo-test-utils" }
-katana-core = { path = "../katana-core" }
-katana-rpc = { path = "../katana-rpc" }
-tokio = { version = "1.28.0", features = ["full"] }
+camino.workspace = true
+dojo-lang = { path = "../dojo-lang" }
+scarb.workspace = true

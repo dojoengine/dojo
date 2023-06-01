@@ -1,12 +1,10 @@
 use std::sync::Arc;
 
 use camino::Utf8PathBuf;
-use dojo_lang::test_utils::build_test_config;
 use katana_core::sequencer::KatanaSequencer;
 use katana_core::starknet::StarknetConfig;
 use katana_rpc::config::RpcConfig;
 use katana_rpc::KatanaNodeRpc;
-use scarb::ops;
 use starknet::core::types::FieldElement;
 use tokio::sync::RwLock;
 use url::Url;
@@ -16,15 +14,7 @@ use crate::{EnvironmentConfig, WorldConfig};
 
 #[tokio::test]
 async fn test_migration() {
-    std::thread::spawn(move || {
-        let config = build_test_config("src/cairo_level_tests/Scarb.toml").unwrap();
-        let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
-        ops::compile(&ws).unwrap();
-    })
-    .join()
-    .expect("Failed to run ops::compile in a new thread");
-
-    let target_dir = Utf8PathBuf::from_path_buf("src/cairo_level_tests/target/dev".into()).unwrap();
+    let target_dir = Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap();
 
     let sequencer = Arc::new(RwLock::new(KatanaSequencer::new(StarknetConfig {
         total_accounts: 1,

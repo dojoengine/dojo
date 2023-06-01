@@ -8,6 +8,7 @@ members = [
     "crates/dojo-language-server",
     "crates/dojo-world",
     "crates/dojo-test-runner",
+    "crates/dojo-test-utils",
     "crates/dojo-signers",
     "crates/katana",
     "crates/katana-core",

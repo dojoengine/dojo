@@ -10,6 +10,3 @@ pub mod db;
 mod manifest;
 pub mod plugin;
 pub mod system;
-
-#[cfg(any(feature = "testing", test))]
-pub mod test_utils;
