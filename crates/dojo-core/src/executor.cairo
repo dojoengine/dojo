@@ -23,15 +23,15 @@ mod Executor {
     /// # Arguments
     ///
     /// * `class_hash` - The class hash of the System to execute.
-    /// * `role_id` - The role ID for System to assume during the execution.
-    /// * `calldata` - The calldata to pass to the System.
+    /// * `execution_role` - The execution role to be assumed by the System.
+    /// * `execute_calldata` - The calldata to pass to the System.
     ///
     /// # Returns
     ///
     /// The return value of the System's execute entrypoint.
     #[external]
     fn execute(
-        class_hash: starknet::ClassHash, role_id: u250, calldata: Span<felt252>
+        class_hash: starknet::ClassHash, execution_role: AuthRole, execute_calldata: Span<felt252>
     ) -> Span<felt252> {
         // Get the world address and instantiate the world dispatcher.
         let world_address = get_caller_address();
@@ -44,12 +44,10 @@ mod Executor {
         let caller_system = ISystemLibraryDispatcher { class_hash }.name();
 
         // Instantiate the execution context
-        let mut ctx = Context {
-            world, caller_account, caller_system, caller_role: AuthRole { id: role_id }, 
-        };
+        let mut ctx = Context { world, caller_account, caller_system, execution_role,  };
 
         // Serialize the context and append to the calldata
-        let mut calldata_arr = calldata.snapshot.clone();
+        let mut calldata_arr = execute_calldata.snapshot.clone();
         ctx.serialize(ref calldata_arr);
 
         let res = starknet::syscalls::library_call_syscall(

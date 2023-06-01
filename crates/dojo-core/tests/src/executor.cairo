@@ -8,6 +8,7 @@ use starknet::syscalls::deploy_syscall;
 use starknet::class_hash::Felt252TryIntoClassHash;
 use dojo_core::interfaces::IExecutorDispatcher;
 use dojo_core::interfaces::IExecutorDispatcherTrait;
+use dojo_core::auth::components::AuthRole;
 use dojo_core::executor::Executor;
 
 #[derive(Component, Copy, Drop, Serde)]
@@ -26,7 +27,7 @@ mod Bar {
 }
 
 #[test]
-#[available_gas(30000000)]
+#[available_gas(40000000)]
 fn test_executor() {
     let constructor_calldata = array::ArrayTrait::new();
     let (executor_address, _) = deploy_syscall(
@@ -42,7 +43,7 @@ fn test_executor() {
     let res = executor
         .execute(
             BarSystem::TEST_CLASS_HASH.try_into().unwrap(),
-            'TestRole'.into(),
+            AuthRole { id: 'TestRole'.into() },
             system_calldata.span()
         );
 }

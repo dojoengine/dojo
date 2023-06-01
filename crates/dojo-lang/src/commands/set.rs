@@ -27,7 +27,7 @@ impl SetCommand {
                         serde::Serde::serialize(@$ctor$, ref calldata);
                         \
                      ctx.world.set_entity(dojo_core::string::ShortStringTrait::new('$component$'), \
-                     $query$, 0_u8, array::ArrayTrait::span(@calldata));
+                     $query$, 0_u8, array::ArrayTrait::span(@calldata), ctx);
                     }
                     ",
                     HashMap::from([

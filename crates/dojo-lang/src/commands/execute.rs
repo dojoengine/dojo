@@ -21,30 +21,27 @@ impl CommandTrait for ExecuteCommand {
 
         let elements = command_ast.arguments(db).args(db).elements(db);
         let system = elements.first().unwrap();
-        let role_id = elements.get(1).unwrap();
         let calldata = elements.last().unwrap();
 
         if let Some(var_name) = let_pattern {
             command.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
                 "let $var_name$ = \
                  ctx.world.execute(dojo_core::string::ShortStringTrait::new('$system$'), \
-                 $role_id$, $calldata$);
+                 $calldata$);
                 ",
                 HashMap::from([
                     ("var_name".to_string(), RewriteNode::new_trimmed(var_name.as_syntax_node())),
                     ("system".to_string(), RewriteNode::new_trimmed(system.as_syntax_node())),
-                    ("role_id".to_string(), RewriteNode::new_trimmed(role_id.as_syntax_node())),
                     ("calldata".to_string(), RewriteNode::new_trimmed(calldata.as_syntax_node())),
                 ]),
             ));
         } else {
             command.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
                 "ctx.world.execute(dojo_core::string::ShortStringTrait::new('$system$'), \
-                 $role_id$, $calldata$);
+                 $calldata$);
                 ",
                 HashMap::from([
                     ("system".to_string(), RewriteNode::new_trimmed(system.as_syntax_node())),
-                    ("role_id".to_string(), RewriteNode::new_trimmed(role_id.as_syntax_node())),
                     ("calldata".to_string(), RewriteNode::new_trimmed(calldata.as_syntax_node())),
                 ]),
             ));

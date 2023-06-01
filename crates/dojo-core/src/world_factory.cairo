@@ -88,7 +88,7 @@ mod WorldFactory {
 
         grant_role_calldata.append(caller.into()); // target_id
         grant_role_calldata.append('Admin'); // role_id
-        world.execute('GrantAuthRole'.into(), 'Admin'.into(), grant_role_calldata.span());
+        world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
 
         // register components
         let components_len = components.len();
