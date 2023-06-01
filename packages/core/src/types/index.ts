@@ -83,3 +83,7 @@ export interface World {
 }
 
 
+export interface CallData {
+    componentName: string;
+    call_data: Array<bigint>;
+}

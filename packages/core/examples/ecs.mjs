@@ -1,7 +1,19 @@
 import Store from '../dist/store/index.js';
+import { RPCProvider } from '../dist/provider/RPCProvider.js';
 import Manifest from './manifest.json' assert { type: 'json' };
+import { HotAccount } from '../dist/account/index.js'
+
+const WorldContractAddress = '0x3f4b4b87bb1c2e6ce758ab610fa2b73cbd1afe554d1d70701b1545b1f29220c';
+const address = "0x06f62894bfd81d2e396ce266b2ad0f21e0668d604e5bb1077337b6d570a54aea"
+const privateKey = "0x07230b49615d175307d580c33d6fda61fc7b9aec91df0f5c1a5ebe3b8cbfee02"
+
+const url = 'http://127.0.0.1:5050';
 
 const main = async () => {
+
+    const rpcProvider = new RPCProvider(WorldContractAddress, url);
+
+    const account = new HotAccount(rpcProvider.sequencerProvider, address, privateKey)
 
     Store.registerWorld(Manifest);
 
@@ -44,12 +56,20 @@ const main = async () => {
     Store.registerEntity(newEntity);
 
     // update state
-    Store.updateComponent(1, 'position', { x: 10, y: 20 });
+    Store.updateComponent(newEntity.id, 'Position', { x: 10, y: 20 });
 
     const entity1 = Store.useEntityStore.getState();
     console.log('Entities:', entity1);
 
+    console.log(newEntity.id, Store.getEntityComponent(newEntity.id, 'Position'))
 
+    try {
+        await Store.execute(account.account, rpcProvider, 'Spawn', { x: 30, y: 40 }, [], newEntity.id, true);
+    } catch (error) {
+        console.error('An error occurred:', error);
+    }
+
+    console.log(newEntity.id, Store.getEntityComponent(newEntity.id, 'Position'))
 
 };
 

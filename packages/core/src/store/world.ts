@@ -1,7 +1,11 @@
 import { createStore } from 'zustand/vanilla'
 import { ComponentsStore } from './components';
-import { World, Manifest } from '../types';
+import { World, Manifest, CallData } from '../types';
 import { SystemsStore } from './system';
+import { RPCProvider } from '../provider';
+import { Account, number } from 'starknet';
+import { getEntityComponent, updateComponent, useEntityStore } from './entity';
+
 
 export const WorldStore = createStore<World>(() => ({
     world: '',
@@ -34,4 +38,35 @@ export const registerWorld = (manifest: Manifest) => {
 */
 export const getWorld = () => {
     return WorldStore.getState()
+}
+
+// TODO: clean params
+export async function execute(
+    account: Account,
+    provider: RPCProvider,
+    system: string,
+    component_data: any,
+    call_data: number.BigNumberish[],
+    entity_id: number,
+    optimistic: boolean = false
+) {
+
+    // TODO: check system registered
+
+    // get current entity by component
+    const entity = getEntityComponent(entity_id, 'Position');
+
+    // set component Store for Optimistic UI
+    if (optimistic) updateComponent(entity_id, 'Position', component_data);
+
+    // execute RPC call in background -> if fail, revert component store
+    try {
+        const result = await provider.execute(account, system, call_data);
+        return result;
+    } catch (error) {
+
+        if (optimistic) updateComponent(entity_id, system, entity?.data);
+
+        throw error;
+    }
 }

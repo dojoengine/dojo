@@ -4,7 +4,7 @@ import { createStore } from 'zustand/vanilla'
 // ability to update entity by component state
 // return full entity state
 
-interface Component {
+export interface Component {
     name: string;
     data: any;
 }
@@ -34,8 +34,6 @@ export const registerEntity = (entity: Entity) => {
 
 export const updateComponent = (entityId: number, componentName: string, componentData: any) => {
 
-    // where we call RPC to update state in background
-
     useEntityStore.setState(state => {
         const entity = state.entities[entityId];
         if (!entity) {
@@ -60,4 +58,23 @@ export const updateComponent = (entityId: number, componentName: string, compone
             }
         }
     })
+}
+
+export const getEntityComponent = (entityId: number, componentName: string): Component | undefined => {
+    const state = useEntityStore.getState();
+    const entity = state.entities[entityId];
+
+    if (!entity) {
+        console.error(`Entity with ID ${entityId} not found.`);
+        return undefined;
+    }
+
+    const component = entity.components[componentName];
+
+    if (!component) {
+        console.error(`Component with name ${componentName} not found in entity ${entityId}.`);
+        return undefined;
+    }
+
+    return component;
 }
