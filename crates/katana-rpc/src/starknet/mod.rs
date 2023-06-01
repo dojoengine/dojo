@@ -15,7 +15,7 @@ use starknet::core::types::{
     BroadcastedDeclareTransaction, BroadcastedDeployAccountTransaction,
     BroadcastedInvokeTransaction, BroadcastedTransaction, ContractClass, DeclareTransactionReceipt,
     DeclareTransactionResult, DeployAccountTransactionReceipt, DeployAccountTransactionResult,
-    DeployTransactionReceipt, EmittedEvent, Event, EventFilter, EventsPage, FeeEstimate,
+    DeployTransactionReceipt, EmittedEvent, Event, EventFilterWithPage, EventsPage, FeeEstimate,
     FieldElement, FlattenedSierraClass, FunctionCall, InvokeTransactionReceipt,
     InvokeTransactionResult, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
     MaybePendingTransactionReceipt, MsgToL1, PendingBlockWithTxHashes, PendingBlockWithTxs,
@@ -554,14 +554,9 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
         Err(Error::from(StarknetApiError::InternalServerError))
     }
 
-    async fn events(
-        &self,
-        filter: EventFilter,
-        continuation_token: Option<String>,
-        chunk_size: u64,
-    ) -> Result<EventsPage, Error> {
-        let from_block = filter.from_block.unwrap_or(BlockId::Number(0));
-        let to_block = filter.to_block.unwrap_or(BlockId::Tag(BlockTag::Latest));
+    async fn events(&self, filter: EventFilterWithPage) -> Result<EventsPage, Error> {
+        let from_block = filter.event_filter.from_block.unwrap_or(BlockId::Number(0));
+        let to_block = filter.event_filter.to_block.unwrap_or(BlockId::Tag(BlockTag::Latest));
 
         let events = self
             .sequencer
@@ -570,12 +565,12 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
             .events(
                 from_block,
                 to_block,
-                filter.address.map(StarkFelt::from),
-                filter.keys.map(|keys| {
+                filter.event_filter.address.map(StarkFelt::from),
+                filter.event_filter.keys.map(|keys| {
                     keys.iter().map(|key| key.iter().map(|key| (*key).into()).collect()).collect()
                 }),
-                continuation_token,
-                chunk_size,
+                filter.result_page_request.continuation_token,
+                filter.result_page_request.chunk_size,
             )
             .map_err(|e| match e {
                 SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
