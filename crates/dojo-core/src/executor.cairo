@@ -8,7 +8,7 @@ mod Executor {
     use traits::Into;
     use dojo_core::execution_context::Context;
     use dojo_core::integer::u250;
-    use dojo_core::interfaces::IWorldDispatcher;
+    use dojo_core::interfaces::{IWorldDispatcher, ISystemLibraryDispatcher, ISystemDispatcherTrait};
     use dojo_core::auth::components::AuthRole;
     use starknet::contract_address::ContractAddressIntoFelt252;
     use starknet::{get_caller_address, get_tx_info};
@@ -40,9 +40,12 @@ mod Executor {
         // Get the caller account address
         let caller_account = get_tx_info().unbox().account_contract_address;
 
+        // Get system name
+        let caller_system = ISystemLibraryDispatcher { class_hash }.name();
+
         // Instantiate the execution context
         let mut ctx = Context {
-            world, caller_account, caller_system: class_hash, caller_role: AuthRole { id: role_id }, 
+            world, caller_account, caller_system, caller_role: AuthRole { id: role_id }, 
         };
 
         // Serialize the context and append to the calldata
