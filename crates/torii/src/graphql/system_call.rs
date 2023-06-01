@@ -89,21 +89,8 @@ impl ObjectTraitInstance for SystemCallObject {
 }
 
 pub async fn system_call_by_id(conn: &mut PoolConnection<Sqlite>, id: i64) -> Result<ValueMapping> {
-    let system_call = sqlx::query_as!(
-        SystemCall,
-        r#"
-            SELECT
-                id,
-                data,
-                transaction_hash,
-                system_id,
-                created_at as "created_at: _"
-            FROM system_calls WHERE id = $1
-        "#,
-        id
-    )
-    .fetch_one(conn)
-    .await?;
+    let system_call: SystemCall =
+        sqlx::query_as("SELECT * FROM system_calls WHERE id = $1").bind(id).fetch_one(conn).await?;
 
     Ok(value_mapping(system_call))
 }
@@ -112,21 +99,11 @@ pub async fn system_calls_by_system_id(
     conn: &mut PoolConnection<Sqlite>,
     id: &str,
 ) -> Result<Vec<ValueMapping>> {
-    let system_calls = sqlx::query_as!(
-        SystemCall,
-        r#"
-            SELECT
-                id,
-                data,
-                transaction_hash,
-                system_id,
-                created_at as "created_at: _"
-            FROM system_calls WHERE system_id = $1
-        "#,
-        id
-    )
-    .fetch_all(conn)
-    .await?;
+    let system_calls: Vec<SystemCall> =
+        sqlx::query_as("SELECT * FROM system_calls WHERE system_id = $1")
+            .bind(id)
+            .fetch_all(conn)
+            .await?;
 
     Ok(system_calls.into_iter().map(value_mapping).collect())
 }

@@ -72,23 +72,8 @@ impl ObjectTraitInstance for EntityObject {
 }
 
 async fn entity_by_id(conn: &mut PoolConnection<Sqlite>, id: &str) -> Result<ValueMapping> {
-    let entity = sqlx::query_as!(
-        Entity,
-        r#"
-            SELECT 
-                id,
-                name,
-                partition_id,
-                keys,
-                transaction_hash,
-                created_at as "created_at: _"
-            FROM entities 
-            WHERE id = $1
-        "#,
-        id,
-    )
-    .fetch_one(conn)
-    .await?;
+    let entity: Entity =
+        sqlx::query_as("SELECT * FROM entities WHERE id = $1").bind(id).fetch_one(conn).await?;
 
     Ok(value_mapping(entity))
 }

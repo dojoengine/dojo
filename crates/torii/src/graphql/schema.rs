@@ -15,7 +15,9 @@ use super::utils::format_name;
 use super::{ObjectTraitInstance, ObjectTraitStatic, TypeMapping};
 
 pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
-    // base objects + component instances (storage objects)
+    let mut schema_builder = Schema::build("Query", None, None);
+
+    // base objects + storage objects (component instances)
     let mut objects = base_objects();
     objects.extend(storage_objects(pool).await?);
 
@@ -32,7 +34,6 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     }
 
     // register custom scalars
-    let mut schema_builder = Schema::build("Query", None, None);
     for scalar_type in ScalarType::types().iter() {
         schema_builder = schema_builder.register(Scalar::new(*scalar_type));
     }
@@ -74,15 +75,11 @@ async fn storage_objects(pool: &SqlitePool) -> Result<Vec<Box<dyn ObjectTraitIns
 fn process_component(component: Component) -> Result<Box<dyn ObjectTraitInstance>> {
     let members: Vec<Member> = serde_json::from_str(&component.storage_definition)?;
 
-    let field_type_mapping =
-        members.iter().try_fold(TypeMapping::new(), |mut mapping, member| {
-            if ScalarType::is_valid(member.ty.as_str()) {
-                mapping.insert(Name::new(&member.name), member.ty.to_string());
-                Ok(mapping)
-            } else {
-                Err(anyhow!("Unsupported type '{}' in '{}'", member.ty, component.name))
-            }
-        })?;
+    let field_type_mapping = members.iter().fold(TypeMapping::new(), |mut mapping, member| {
+        // TODO: check if member type exists in scalar types
+        mapping.insert(Name::new(&member.name), member.ty.to_string());
+        mapping
+    });
 
     let (name, type_name) = format_name(component.name.as_str());
 

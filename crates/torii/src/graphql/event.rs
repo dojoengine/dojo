@@ -91,22 +91,8 @@ impl ObjectTraitInstance for EventObject {
 }
 
 async fn event_by_id(conn: &mut PoolConnection<Sqlite>, id: &str) -> Result<ValueMapping> {
-    let event = sqlx::query_as!(
-        Event,
-        r#"
-            SELECT 
-                id,
-                system_call_id,
-                keys,
-                data,
-                created_at as "created_at: _"
-            FROM events 
-            WHERE id = $1
-        "#,
-        id
-    )
-    .fetch_one(conn)
-    .await?;
+    let event: Event =
+        sqlx::query_as("SELECT * FROM events WHERE id = $1").bind(id).fetch_one(conn).await?;
 
     Ok(value_mapping(event))
 }

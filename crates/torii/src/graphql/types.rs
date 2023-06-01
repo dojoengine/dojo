@@ -16,13 +16,6 @@ impl ScalarType {
     pub const DATE_TIME: &'static str = "DateTime";
     pub const FELT: &'static str = "FieldElement";
 
-    // NOTE: default types from async_graphql
-    // TypeRef::ID
-    // TypeRef::INT
-    // TypeRef::FLOAT
-    // TypeRef::STRING
-    // TypeRef::BOOLEAN
-
     pub fn types() -> HashSet<&'static str> {
         HashSet::from([
             ScalarType::U8,
@@ -37,9 +30,5 @@ impl ScalarType {
             ScalarType::DATE_TIME,
             ScalarType::FELT,
         ])
-    }
-
-    pub fn is_valid(t: &str) -> bool {
-        ScalarType::types().contains(t)
     }
 }

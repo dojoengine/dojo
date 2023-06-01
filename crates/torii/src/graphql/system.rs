@@ -92,22 +92,8 @@ impl ObjectTraitInstance for SystemObject {
 }
 
 pub async fn system_by_id(conn: &mut PoolConnection<Sqlite>, id: &str) -> Result<ValueMapping> {
-    let system = sqlx::query_as!(
-        System,
-        r#"
-            SELECT
-                id,
-                name,
-                address,
-                class_hash,
-                transaction_hash,
-                created_at as "created_at: _"
-            FROM systems WHERE id = $1
-        "#,
-        id
-    )
-    .fetch_one(conn)
-    .await?;
+    let system: System =
+        sqlx::query_as("SELECT * FROM systems WHERE id = $1").bind(id).fetch_one(conn).await?;
 
     Ok(value_mapping(system))
 }

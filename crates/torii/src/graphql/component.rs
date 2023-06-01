@@ -75,45 +75,16 @@ impl ObjectTraitInstance for ComponentObject {
 }
 
 async fn component_by_id(conn: &mut PoolConnection<Sqlite>, id: &str) -> Result<ValueMapping> {
-    let component = sqlx::query_as!(
-        Component,
-        r#"
-            SELECT 
-                id,
-                name,
-                address,
-                class_hash,
-                transaction_hash,
-                storage_definition,
-                created_at as "created_at: _"
-            FROM components WHERE id = $1
-        "#,
-        id
-    )
-    .fetch_one(conn)
-    .await?;
+    let component: Component =
+        sqlx::query_as("SELECT * FROM components WHERE id = $1").bind(id).fetch_one(conn).await?;
 
     Ok(value_mapping(component))
 }
 
 #[allow(dead_code)]
 pub async fn components(conn: &mut PoolConnection<Sqlite>) -> Result<Vec<ValueMapping>> {
-    let components = sqlx::query_as!(
-        Component,
-        r#"
-            SELECT 
-                id,
-                name,
-                address,
-                class_hash,
-                transaction_hash,
-                storage_definition,
-                created_at as "created_at: _"
-            FROM components
-        "#
-    )
-    .fetch_all(conn)
-    .await?;
+    let components: Vec<Component> =
+        sqlx::query_as("SELECT * FROM components").fetch_all(conn).await?;
 
     Ok(components.into_iter().map(value_mapping).collect())
 }
