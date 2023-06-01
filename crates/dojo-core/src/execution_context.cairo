@@ -8,5 +8,5 @@ struct Context {
     world: IWorldDispatcher, // Dispatcher to the world contract
     caller_account: ContractAddress, // Address of the origin
     caller_system: ShortString, // Name of the calling system
-    caller_role: AuthRole, // Authorization role used for this call
+    execution_role: AuthRole, // Authorization role used for this call
 }

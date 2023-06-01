@@ -6,6 +6,7 @@ use traits::TryInto;
 use option::OptionTrait;
 use starknet::class_hash::Felt252TryIntoClassHash;
 use starknet::syscalls::deploy_syscall;
+use starknet::contract_address_const;
 
 use dojo_core::integer::u250;
 use dojo_core::integer::U32IntoU250;
@@ -13,6 +14,8 @@ use dojo_core::storage::query::QueryTrait;
 use dojo_core::interfaces::IWorldDispatcher;
 use dojo_core::interfaces::IWorldDispatcherTrait;
 use dojo_core::executor::Executor;
+use dojo_core::execution_context::Context;
+use dojo_core::auth::components::AuthRole;
 use dojo_core::world::World;
 use dojo_core::test_utils::mock_auth_components_systems;
 use dojo_core::auth::systems::Route;
@@ -32,7 +35,16 @@ fn test_component() {
     let mut data = ArrayTrait::new();
     data.append(1337);
     let id = World::uuid();
-    World::set_entity(name, QueryTrait::new_from_id(id.into()), 0, data.span());
+    let world = IWorldDispatcher { contract_address: contract_address_const::<0x1337>() };
+    let ctx = Context {
+        world,
+        caller_account: contract_address_const::<0x1337>(),
+        caller_system: 'Bar'.into(),
+        execution_role: AuthRole {
+            id: 'FooWriter'.into()
+        },
+    };
+    World::set_entity(name, QueryTrait::new_from_id(id.into()), 0, data.span(), ctx);
     let stored = World::entity(name, QueryTrait::new_from_id(id.into()), 0, 1);
     assert(*stored.snapshot.at(0) == 1337, 'data not stored');
 }
@@ -62,7 +74,7 @@ fn test_system() {
     data.append(1337);
     data.append(1337);
     let id = world.uuid();
-    world.execute('Bar'.into(), 'TestRole'.into(), data.span());
+    world.execute('Bar'.into(), data.span());
 }
 
 #[test]
@@ -98,11 +110,7 @@ fn test_initialize() {
     let status = world.entity('AuthStatus'.into(), (role_id, resource_id).into(), 0, 0);
     assert(*status[0] == 1, 'status not stored');
 
-    let is_authorized = world
-        .is_authorized(
-            Bar::TEST_CLASS_HASH.try_into().unwrap(),
-            FooComponent::TEST_CLASS_HASH.try_into().unwrap()
-        );
+    let is_authorized = world.is_authorized('Bar'.into(), 'Foo'.into(), AuthRole { id: role_id });
     assert(is_authorized, 'auth route not set');
 }
 
@@ -125,7 +133,7 @@ fn test_initialize_not_more_than_once() {
 }
 
 #[test]
-#[available_gas(9000000)]
+#[available_gas(10000000)]
 fn test_set_entity_authorized() {
     // Spawn empty world
     let world = spawn_empty_world();
@@ -148,7 +156,7 @@ fn test_set_entity_authorized() {
     let mut data = ArrayTrait::new();
     data.append(420);
     data.append(1337);
-    world.execute('Bar'.into(), role_id, data.span());
+    world.execute('Bar'.into(), data.span());
 
     // Assert that the data is stored
     // Caller here is the world contract via the executor
@@ -177,13 +185,13 @@ fn test_set_entity_admin() {
     let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
     grant_role_calldata.append('Bar'); // target_id
     grant_role_calldata.append('Admin'); // role_id
-    world.execute('GrantAuthRole'.into(), 'Admin'.into(), grant_role_calldata.span());
+    world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
 
     // Call Bar system
     let mut data = ArrayTrait::new();
     data.append(420);
     data.append(1337);
-    world.execute('Bar'.into(), 'Admin'.into(), data.span());
+    world.execute('Bar'.into(), data.span());
 
     // Assert that the data is stored
     // Caller here is the world contract via the executor
@@ -213,7 +221,7 @@ fn test_set_entity_unauthorized() {
     let mut data = ArrayTrait::new();
     data.append(420);
     data.append(1337);
-    world.execute('Bar'.into(), 'TestRole'.into(), data.span());
+    world.execute('Bar'.into(), data.span());
 }
 
 #[test]
@@ -237,12 +245,22 @@ fn test_set_entity_directly() {
     // Initialize world
     world.initialize(route);
 
+    // Test context
+    let ctx = Context {
+        world,
+        caller_account: contract_address_const::<0x1337>(),
+        caller_system: 'Bar'.into(),
+        execution_role: AuthRole {
+            id: 'FooWriter'.into()
+        },
+    };
+
     // Change Foo component directly
     let id = world.uuid();
     let mut data = ArrayTrait::new();
     data.append(420);
     data.append(1337);
-    world.set_entity('Foo'.into(), QueryTrait::new_from_id(id.into()), 0, data.span());
+    world.set_entity('Foo'.into(), QueryTrait::new_from_id(id.into()), 0, data.span(), ctx);
 }
 
 #[test]
@@ -264,7 +282,7 @@ fn test_grant_role() {
     let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
     grant_role_calldata.append('Bar'); // target_id
     grant_role_calldata.append('FooWriter'); // role_id
-    world.execute('GrantAuthRole'.into(), 'Admin'.into(), grant_role_calldata.span());
+    world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
 
     // Assert that the role is set
     let role = world.entity('AuthRole'.into(), 'Bar'.into(), 0, 0);
@@ -290,7 +308,7 @@ fn test_revoke_role() {
     let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
     grant_role_calldata.append('Bar'); // target_id
     grant_role_calldata.append('FooWriter'); // role_id
-    world.execute('GrantAuthRole'.into(), 'Admin'.into(), grant_role_calldata.span());
+    world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
 
     // Assert that the role is set
     let role = world.entity('AuthRole'.into(), 'Bar'.into(), 0, 0);
@@ -299,7 +317,7 @@ fn test_revoke_role() {
     // Admin revokes role of Bar system
     let mut revoke_role_calldata: Array<felt252> = ArrayTrait::new();
     revoke_role_calldata.append('Bar'); // target_id
-    world.execute('RevokeAuthRole'.into(), 'Admin'.into(), revoke_role_calldata.span());
+    world.execute('RevokeAuthRole'.into(), revoke_role_calldata.span());
 
     // Assert that the role is not set
     let role = world.entity('AuthRole'.into(), 'Bar'.into(), 0, 0);
@@ -326,7 +344,7 @@ fn test_grant_scoped_role() {
     grant_role_calldata.append('Bar'); // target_id
     grant_role_calldata.append('FooWriter'); // role_id
     grant_role_calldata.append('Foo'); // resource_id
-    world.execute('GrantScopedAuthRole'.into(), 'Admin'.into(), grant_role_calldata.span());
+    world.execute('GrantScopedAuthRole'.into(), grant_role_calldata.span());
 
     // Assert that the role is set
     let role = world.entity('AuthRole'.into(), ('Bar', 'Foo').into(), 0, 0);
@@ -353,7 +371,7 @@ fn test_revoke_scoped_role() {
     grant_role_calldata.append('Bar'); // target_id
     grant_role_calldata.append('FooWriter'); // role_id
     grant_role_calldata.append('Foo'); // resource_id
-    world.execute('GrantScopedAuthRole'.into(), 'Admin'.into(), grant_role_calldata.span());
+    world.execute('GrantScopedAuthRole'.into(), grant_role_calldata.span());
 
     // Assert that the role is set
     let role = world.entity('AuthRole'.into(), ('Bar', 'Foo').into(), 0, 0);
@@ -363,7 +381,7 @@ fn test_revoke_scoped_role() {
     let mut revoke_role_calldata: Array<felt252> = ArrayTrait::new();
     revoke_role_calldata.append('Bar'); // target_id
     revoke_role_calldata.append('Foo'); // resource_id
-    world.execute('RevokeScopedAuthRole'.into(), 'Admin'.into(), revoke_role_calldata.span());
+    world.execute('RevokeScopedAuthRole'.into(), revoke_role_calldata.span());
 
     // Assert that the role is revoked
     let role = world.entity('AuthRole'.into(), ('Bar', 'Foo').into(), 0, 0);
@@ -389,7 +407,7 @@ fn test_grant_resource() {
     let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
     grant_role_calldata.append('FooWriter'); // role_id
     grant_role_calldata.append('Foo'); // resource_id
-    world.execute('GrantResource'.into(), 'Admin'.into(), grant_role_calldata.span());
+    world.execute('GrantResource'.into(), grant_role_calldata.span());
 
     // Assert that the access is set
     let status = world.entity('AuthStatus'.into(), ('FooWriter', 'Foo').into(), 0, 0);
@@ -415,7 +433,7 @@ fn test_revoke_resource() {
     let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
     grant_role_calldata.append('FooWriter'); // role_id
     grant_role_calldata.append('Foo'); // resource_id
-    world.execute('GrantResource'.into(), 'Admin'.into(), grant_role_calldata.span());
+    world.execute('GrantResource'.into(), grant_role_calldata.span());
 
     // Assert that the access is set
     let status = world.entity('AuthStatus'.into(), ('FooWriter', 'Foo').into(), 0, 0);
@@ -425,7 +443,7 @@ fn test_revoke_resource() {
     let mut revoke_role_calldata: Array<felt252> = ArrayTrait::new();
     revoke_role_calldata.append('FooWriter'); // role_id
     revoke_role_calldata.append('Foo'); // resource_id
-    world.execute('RevokeResource'.into(), 'Admin'.into(), revoke_role_calldata.span());
+    world.execute('RevokeResource'.into(), revoke_role_calldata.span());
 
     // Assert that the access is revoked
     let status = world.entity('AuthStatus'.into(), ('FooWriter', 'Foo').into(), 0, 0);
@@ -478,7 +496,7 @@ fn spawn_empty_world() -> IWorldDispatcher {
 
     grant_role_calldata.append(caller.into()); // target_id
     grant_role_calldata.append('Admin'); // role_id
-    world.execute('GrantAuthRole'.into(), 'Admin'.into(), grant_role_calldata.span());
+    world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
 
     world
 }

@@ -294,7 +294,8 @@ mod Spawn {
                     dojo_core::string::ShortStringTrait::new('Player'),
                     (420, (69, uuid)).into_partitioned(),
                     0_u8,
-                    array::ArrayTrait::span(@calldata)
+                    array::ArrayTrait::span(@calldata),
+                    ctx
                 );
         }
 
@@ -307,7 +308,8 @@ mod Spawn {
                     dojo_core::string::ShortStringTrait::new('Position'),
                     (420, (69, uuid)).into_partitioned(),
                     0_u8,
-                    array::ArrayTrait::span(@calldata)
+                    array::ArrayTrait::span(@calldata),
+                    ctx
                 );
         }
 
@@ -320,7 +322,8 @@ mod Spawn {
                     dojo_core::string::ShortStringTrait::new('Player'),
                     420.into(),
                     0_u8,
-                    array::ArrayTrait::span(@calldata)
+                    array::ArrayTrait::span(@calldata),
+                    ctx
                 );
         }
 
@@ -333,7 +336,8 @@ mod Spawn {
                     dojo_core::string::ShortStringTrait::new('Position'),
                     420.into(),
                     0_u8,
-                    array::ArrayTrait::span(@calldata)
+                    array::ArrayTrait::span(@calldata),
+                    ctx
                 );
         }
 
@@ -346,7 +350,8 @@ mod Spawn {
                     dojo_core::string::ShortStringTrait::new('Player'),
                     120.into(),
                     0_u8,
-                    array::ArrayTrait::span(@calldata)
+                    array::ArrayTrait::span(@calldata),
+                    ctx
                 );
         }
 
@@ -359,7 +364,8 @@ mod Spawn {
                     dojo_core::string::ShortStringTrait::new('Position'),
                     120.into(),
                     0_u8,
-                    array::ArrayTrait::span(@calldata)
+                    array::ArrayTrait::span(@calldata),
+                    ctx
                 );
         }
 
@@ -374,7 +380,8 @@ mod Spawn {
                     dojo_core::string::ShortStringTrait::new('Player'),
                     player_id.into(),
                     0_u8,
-                    array::ArrayTrait::span(@calldata)
+                    array::ArrayTrait::span(@calldata),
+                    ctx
                 );
         }
 
@@ -387,7 +394,8 @@ mod Spawn {
                     dojo_core::string::ShortStringTrait::new('Position'),
                     player_id.into(),
                     0_u8,
-                    array::ArrayTrait::span(@calldata)
+                    array::ArrayTrait::span(@calldata),
+                    ctx
                 );
         }
 
@@ -400,7 +408,8 @@ mod Spawn {
                     dojo_core::string::ShortStringTrait::new('Player'),
                     (0, 0, 0, 0, 0),
                     0_u8,
-                    array::ArrayTrait::span(@calldata)
+                    array::ArrayTrait::span(@calldata),
+                    ctx
                 );
         }
 
@@ -413,7 +422,8 @@ mod Spawn {
                     dojo_core::string::ShortStringTrait::new('Position'),
                     (0, 0, 0, 0, 0),
                     0_u8,
-                    array::ArrayTrait::span(@calldata)
+                    array::ArrayTrait::span(@calldata),
+                    ctx
                 );
         }
 
@@ -426,7 +436,8 @@ mod Spawn {
                     dojo_core::string::ShortStringTrait::new('Player'),
                     1337.into(),
                     0_u8,
-                    array::ArrayTrait::span(@calldata)
+                    array::ArrayTrait::span(@calldata),
+                    ctx
                 );
         }
 
@@ -439,7 +450,8 @@ mod Spawn {
                     dojo_core::string::ShortStringTrait::new('Position'),
                     1337.into(),
                     0_u8,
-                    array::ArrayTrait::span(@calldata)
+                    array::ArrayTrait::span(@calldata),
+                    ctx
                 );
         }
         return ();
@@ -1036,13 +1048,7 @@ mod Move {
 
         let mut calldata = ArrayTrait::new();
         calldata.append('name');
-        ctx
-            .world
-            .execute(
-                dojo_core::string::ShortStringTrait::new('SpawnSystem'),
-                'PositionPlayerWriter'.into(),
-                calldata.span()
-            );
+        ctx.world.execute(dojo_core::string::ShortStringTrait::new('SpawnSystem'), calldata.span());
 
         let mut i = 0;
         loop {
@@ -1132,10 +1138,10 @@ error: Plugin diagnostic: Component types cannot be empty
 
 error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::query::Query", found: "(?89, ?90, ?91, ?92, ?93)".
  --> Spawn:86:98
-                        ctx.world.set_entity(dojo_core::string::ShortStringTrait::new('Player'), (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
+                        ctx.world.set_entity(dojo_core::string::ShortStringTrait::new('Player'), (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata), ctx);
                                                                                                  ^*************^
 
 error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::query::Query", found: "(?101, ?102, ?103, ?104, ?105)".
  --> Spawn:92:100
-                        ctx.world.set_entity(dojo_core::string::ShortStringTrait::new('Position'), (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
+                        ctx.world.set_entity(dojo_core::string::ShortStringTrait::new('Position'), (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata), ctx);
                                                                                                    ^*************^
