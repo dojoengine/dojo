@@ -41,7 +41,7 @@ pub struct WorldDiff {
     contracts: Vec<ClassDiff>,
     components: Vec<ClassDiff>,
     systems: Vec<ClassDiff>,
-    // environment_config: EnvironmentConfig,
+    world_config: WorldConfig,
 }
 
 impl WorldDiff {
@@ -114,12 +114,12 @@ impl WorldDiff {
             remote: remote_manifest.map(|m| m.executor),
         };
 
-        Ok(WorldDiff { world, executor, systems, contracts, components })
+        Ok(WorldDiff { world, executor, systems, contracts, components, world_config })
     }
 
     /// construct migration strategy
     /// evaluate which contracts/classes need to be declared/deployed
-    pub async fn prepare_for_migration<P, S>(
+    pub async fn prepare_for_migration(
         &self,
         target_dir: Utf8PathBuf,
     ) -> Result<MigrationStrategy> {
@@ -153,7 +153,13 @@ impl WorldDiff {
             evaluate_components_to_migrate(&self.components, &artifact_paths, world.is_some())?;
         let systems = evaluate_systems_to_migrate(&self.systems, &artifact_paths, world.is_some())?;
 
-        Ok(MigrationStrategy { world, executor, systems, components })
+        Ok(MigrationStrategy {
+            world,
+            executor,
+            systems,
+            components,
+            world_config: self.world_config,
+        })
     }
 }
 
@@ -244,9 +250,9 @@ fn evaluate_components_to_migrate(
             _ => {
                 let path = find_artifact_path(&format!("{}Component", c.name), artifact_paths)?;
                 comps_to_migrate.push(ClassMigration {
-                    // declared: false,
                     class: c.clone(),
                     artifact_path: path.clone(),
+                    ..Default::default()
                 });
             }
         }
@@ -255,7 +261,6 @@ fn evaluate_components_to_migrate(
     Ok(comps_to_migrate)
 }
 
-// TODO: generate random salt if need to be redeployed
 fn evaluate_contract_to_migrate(
     contract: &ContractDiff,
     artifact_paths: &HashMap<String, PathBuf>,
@@ -267,10 +272,11 @@ fn evaluate_contract_to_migrate(
     {
         let path = find_artifact_path(&contract.name, artifact_paths)?;
 
+        // TODO: generate random salt
         Ok(Some(ContractMigration {
             contract: contract.clone(),
             artifact_path: path.clone(),
-            contract_address: contract.address,
+            ..Default::default()
         }))
     } else {
         Ok(None)
