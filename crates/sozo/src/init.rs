@@ -34,7 +34,7 @@ pub fn run(args: InitArgs) -> Result<(), Box<dyn Error>> {
 
     let template = args.template;
     let repo_url = if template.starts_with("https://") {
-        template.to_string()
+        template
     } else {
         "https://github.com/".to_string() + &template
     };
@@ -62,7 +62,7 @@ pub fn run(args: InitArgs) -> Result<(), Box<dyn Error>> {
 
     println!(
         "\n\n====== SETUP COMPLETE! ======\n\nTo start using your new Dojo project, try running: \
-        \n\n`sozo build`\n"
+         \n\n`sozo build`\n"
     );
 
     println!("🎉🎉🎉 SUCCESS! Your project is now ready. Start building with ⛩️ Dojo! 🎉🎉🎉");
@@ -81,7 +81,7 @@ fn clone_repo(url: &str, path: &PathBuf) -> Result<(), Box<dyn Error>> {
         }
     }
 
-    Command::new("git").args(&["clone", "--recursive", url, path.to_str().unwrap()]).output()?;
+    Command::new("git").args(["clone", "--recursive", url, path.to_str().unwrap()]).output()?;
 
     Ok(())
 }
