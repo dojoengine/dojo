@@ -3,7 +3,10 @@ use integer::BoundedInt;
 use option::OptionTrait;
 use traits::{Into, TryInto};
 
-use starknet::{ContractAddress, SyscallResult, contract_address::ContractAddressIntoFelt252, storage_access::{StorageAccess, StorageBaseAddress}};
+use starknet::{
+    ContractAddress, SyscallResult, contract_address::ContractAddressIntoFelt252,
+    storage_access::{StorageAccess, StorageBaseAddress}
+};
 
 // max value of u256's high part when u250::max is converted into u256
 const HIGH_BOUND: u128 = 0x3ffffffffffffffffffffffffffffff;
@@ -77,9 +80,8 @@ impl LegacyHashU250 of LegacyHash<u250> {
 impl StorageAccessU250 of StorageAccess<u250> {
     fn read(address_domain: u32, base: StorageBaseAddress) -> SyscallResult<u250> {
         Result::Ok(
-            Felt252TryIntoU250::try_into(
-                StorageAccess::read(address_domain, base)?
-            ).expect('StorageAccessU250 - non u250')
+            Felt252TryIntoU250::try_into(StorageAccess::read(address_domain, base)?)
+                .expect('StorageAccessU250 - non u250')
         )
     }
     #[inline(always)]

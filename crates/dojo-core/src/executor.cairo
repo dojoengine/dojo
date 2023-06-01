@@ -1,6 +1,8 @@
+use core::serde::Serde;
 #[contract]
 mod Executor {
     use array::{ArrayTrait, ArrayTCloneImpl};
+    use serde::Serde;
     use clone::Clone;
     use box::BoxTrait;
     use traits::Into;
@@ -39,14 +41,12 @@ mod Executor {
 
         // Instantiate the execution context
         let mut ctx = Context {
-            world,
-            caller_account,
-            caller_system: class_hash,
-            caller_role: AuthRole { id: role_id },
+            world, caller_account, caller_system: class_hash, caller_role: AuthRole { id: role_id }, 
         };
 
+        // Serialize the context and append to the calldata
         let mut calldata_arr = calldata.snapshot.clone();
-        calldata_arr.append(world_address.into());
+        ctx.serialize(ref calldata_arr);
 
         let res = starknet::syscalls::library_call_syscall(
             class_hash, EXECUTE_ENTRYPOINT, calldata_arr.span()
