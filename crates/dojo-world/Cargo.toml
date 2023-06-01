@@ -27,6 +27,4 @@ tracing.workspace = true
 [dev-dependencies]
 assert_fs = "1.0.9"
 dojo-test-utils = { path = "../dojo-test-utils" }
-katana-core = { path = "../katana-core" }
-katana-rpc = { path = "../katana-rpc" }
 tokio = { version = "1.28.0", features = ["full"] }
