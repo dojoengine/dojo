@@ -1,16 +1,27 @@
-use anyhow::{bail, Result};
-use starknet::accounts::{Account, Call, SingleOwnerAccount};
+use anyhow::Result;
+use starknet::accounts::{Call, ConnectedAccount};
 use starknet::core::types::FieldElement;
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
-use starknet::signers::Signer;
 
 use super::object::{
-    ClassMigration, ContractMigration, Declarable, Deployable, WorldContractMigration,
+    ClassMigration, ContractMigration, Declarable, DeclareOutput, DeployOutput, Deployable,
+    WorldContractMigration,
 };
 use crate::config::WorldConfig;
 use crate::migration::object::MigrationError;
 
+pub type MigrationResult<S, P> = Result<MigrationOutput, MigrationError<S, P>>;
+
+#[derive(Debug)]
+pub struct MigrationOutput {
+    pub world: Option<DeployOutput>,
+    pub executor: Option<DeployOutput>,
+    pub systems: Vec<DeclareOutput>,
+    pub components: Vec<DeclareOutput>,
+}
+
+#[derive(Debug)]
 pub struct MigrationStrategy {
     pub world: Option<WorldContractMigration>,
     pub executor: Option<ContractMigration>,
@@ -20,40 +31,29 @@ pub struct MigrationStrategy {
 }
 
 impl MigrationStrategy {
-    fn world_address(&self) -> Result<FieldElement> {
-        if self.world.is_none() && self.world_config.address.is_none() {
-            bail!(MigrationError::WorldAddressNotFound)
+    fn world_address(&self) -> Option<FieldElement> {
+        match &self.world {
+            Some(WorldContractMigration(c)) => c.contract_address,
+            None => self.world_config.address,
         }
-
-        Ok(match &self.world {
-            // Right now we optimistically assume that if the World contract is to be migrated,
-            // then the world address should exists because it would be deployed
-            // first before this function is used.
-            Some(WorldContractMigration(c)) if c.contract_address.is_some() => {
-                c.contract_address.unwrap()
-            }
-            _ => self.world_config.address.unwrap(),
-        })
     }
 }
 
 impl MigrationStrategy {
-    pub async fn execute<P, S>(&mut self, migrator: SingleOwnerAccount<P, S>) -> Result<()>
+    pub async fn execute<A>(
+        &mut self,
+        migrator: A,
+    ) -> MigrationResult<A::SignError, <A::Provider as Provider>::Error>
     where
-        P: Provider + Send + Sync,
-        S: Signer + Send + Sync,
+        A: ConnectedAccount + Sync,
     {
         if let Some(executor) = &mut self.executor {
-            executor.deploy(vec![], &migrator).await;
+            let res = executor.deploy(vec![], &migrator).await?;
         }
 
         if let Some(world) = &mut self.world {
             world
-                .deploy(
-                    "my world",
-                    self.executor.as_ref().unwrap().contract_address.unwrap(),
-                    &migrator,
-                )
+                .deploy(&migrator, self.executor.as_ref().unwrap().contract_address.unwrap())
                 .await;
         }
 
@@ -63,16 +63,15 @@ impl MigrationStrategy {
         Ok(())
     }
 
-    async fn register_components<P, S>(&self, migrator: &SingleOwnerAccount<P, S>) -> Result<()>
+    async fn register_components<A>(&self, migrator: &A) -> Result<()>
     where
-        P: Provider + Send + Sync,
-        S: Signer + Send + Sync,
+        A: ConnectedAccount + Sync,
     {
         for component in &self.components {
             component.declare(migrator).await;
         }
 
-        let world_address = self.world_address()?;
+        let world_address = self.world_address().unwrap();
 
         let calls = self
             .components
@@ -93,16 +92,15 @@ impl MigrationStrategy {
         Ok(())
     }
 
-    async fn register_systems<P, S>(&self, migrator: &SingleOwnerAccount<P, S>) -> Result<()>
+    async fn register_systems<A>(&self, migrator: &A) -> Result<()>
     where
-        P: Provider + Send + Sync,
-        S: Signer + Send + Sync,
+        A: ConnectedAccount + Sync,
     {
         for system in &self.systems {
             system.declare(migrator).await;
         }
 
-        let world_address = self.world_address()?;
+        let world_address = self.world_address().unwrap();
 
         let calls = self
             .systems
