@@ -5,12 +5,18 @@ mod World {
     use option::OptionTrait;
     use box::BoxTrait;
     use serde::Serde;
-    use starknet::{get_caller_address, get_contract_address, get_tx_info, contract_address::ContractAddressIntoFelt252, ClassHash, Zeroable, ContractAddress};
+    use starknet::{
+        get_caller_address, get_contract_address, get_tx_info,
+        contract_address::ContractAddressIntoFelt252, ClassHash, Zeroable, ContractAddress
+    };
 
     use dojo_core::storage::{db::Database, query::{Query, QueryTrait}};
     use dojo_core::integer::{u250, ContractAddressIntoU250};
     use dojo_core::{string::ShortString, auth::systems::Route};
-    use dojo_core::interfaces::{IComponentLibraryDispatcher, IComponentDispatcherTrait, IExecutorDispatcher, IExecutorDispatcherTrait, ISystemLibraryDispatcher, ISystemDispatcherTrait};
+    use dojo_core::interfaces::{
+        IComponentLibraryDispatcher, IComponentDispatcherTrait, IExecutorDispatcher,
+        IExecutorDispatcherTrait, ISystemLibraryDispatcher, ISystemDispatcherTrait
+    };
 
     #[event]
     fn WorldSpawned(address: ContractAddress, caller: ContractAddress, name: ShortString) {}
@@ -123,9 +129,7 @@ mod World {
     fn register_component(class_hash: ClassHash) {
         let name = IComponentLibraryDispatcher { class_hash: class_hash }.name();
         // If component is already registered, validate permission to update.
-        if component_registry::read(
-            name
-        ).is_non_zero() {
+        if component_registry::read(name).is_non_zero() {
             assert(is_account_admin(), 'only admin can update');
         }
         component_registry::write(name, class_hash);
@@ -143,9 +147,7 @@ mod World {
     fn register_system(class_hash: ClassHash) {
         let name = ISystemLibraryDispatcher { class_hash: class_hash }.name();
         // If system is already registered, validate permission to update.
-        if system_registry::read(
-            name
-        ).is_non_zero() {
+        if system_registry::read(name).is_non_zero() {
             assert(is_account_admin(), 'only admin can update');
         }
         system_registry::write(name, class_hash);

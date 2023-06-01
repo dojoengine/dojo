@@ -58,7 +58,8 @@ impl System {
                     use dojo_core::storage::query::TupleSize3IntoQuery;
                     use dojo_core::storage::query::IntoPartitioned;
                     use dojo_core::storage::query::IntoPartitionedQuery;
-
+                    use dojo_core::execution_context::Context;
+                    
                     #[view]
                     fn name() -> dojo_core::string::ShortString {
                         dojo_core::string::ShortStringTrait::new('$name$')
@@ -122,8 +123,7 @@ impl System {
         rewrite_nodes.push(RewriteNode::interpolate_patched(
             "
                 #[external]
-                fn execute($parameters$$separator$world_address: starknet::ContractAddress) \
-             $ret_clause$ {
+                fn execute($parameters$$separator$ctx: Context) $ret_clause$ {
                     $body$
                 }
             ",

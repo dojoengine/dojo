@@ -137,7 +137,7 @@ mod tests {
         world.execute('Spawn'.into(), 'PositionWriter'.into(), spawn_call_data.span());
 
         let mut move_calldata = array::ArrayTrait::new();
-        move_calldata.append(MoveSystem::Direction::Right(()).into());
+        move_calldata.append(Move::Direction::Right(()).into());
         world.execute('Move'.into(), 'MovesWriter'.into(), move_calldata.span());
 
         let world_address = world.contract_address;

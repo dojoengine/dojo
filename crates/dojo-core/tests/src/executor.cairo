@@ -39,5 +39,6 @@ fn test_executor() {
     let mut system_calldata = ArrayTrait::new();
     system_calldata.append(42);
     system_calldata.append(53);
-    let res = executor.execute(Bar::TEST_CLASS_HASH.try_into().unwrap(), system_calldata.span());
+    let res = executor
+        .execute(BarSystem::TEST_CLASS_HASH.try_into().unwrap(), system_calldata.span());
 }

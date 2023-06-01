@@ -34,8 +34,7 @@ mod RouteAuth {
 
         // Set status
         commands::set_entity(
-            (route.role_id, route.resource_id).into(),
-            (AuthStatus { is_authorized: true })
+            (route.role_id, route.resource_id).into(), (AuthStatus { is_authorized: true })
         );
     }
 }
@@ -121,9 +120,7 @@ mod GrantResource {
     use dojo_core::{auth::components::AuthStatus, integer::u250};
 
     fn execute(role_id: u250, resource_id: u250) {
-        commands::set_entity(
-            (role_id, resource_id).into(), (AuthStatus { is_authorized: true })
-        );
+        commands::set_entity((role_id, resource_id).into(), (AuthStatus { is_authorized: true }));
     }
 }
 
@@ -155,8 +152,6 @@ mod RevokeResource {
     use dojo_core::{auth::components::AuthStatus, integer::u250};
 
     fn execute(role_id: u250, resource_id: u250) {
-        commands::set_entity(
-            (role_id, resource_id).into(), (AuthStatus { is_authorized: false })
-        );
+        commands::set_entity((role_id, resource_id).into(), (AuthStatus { is_authorized: false }));
     }
 }

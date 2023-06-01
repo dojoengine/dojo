@@ -6,7 +6,9 @@ use traits::Into;
 use zeroable::IsZeroResult;
 use starknet::ClassHashIntoFelt252;
 use poseidon::poseidon_hash_span;
-use dojo_core::{string::ShortString, serde::SpanSerde, integer::{u250, Felt252IntoU250, U250IntoFelt252}};
+use dojo_core::{
+    string::ShortString, serde::SpanSerde, integer::{u250, Felt252IntoU250, U250IntoFelt252}
+};
 
 #[derive(Copy, Drop, Serde)]
 struct Query {
@@ -71,9 +73,9 @@ impl LiteralIntoQuery<E0, impl E0Into: Into<E0, u250>, impl E0Drop: Drop<E0>> of
     }
 }
 
-impl TupleSize1IntoQuery<E0,
-impl E0Into: Into<E0, u250>,
-impl E0Drop: Drop<E0>> of Into<(E0, ), Query> {
+impl TupleSize1IntoQuery<
+    E0, impl E0Into: Into<E0, u250>, impl E0Drop: Drop<E0>
+> of Into<(E0, ), Query> {
     fn into(self: (E0, )) -> Query {
         let (first) = self;
         let mut keys = ArrayTrait::new();
@@ -82,12 +84,13 @@ impl E0Drop: Drop<E0>> of Into<(E0, ), Query> {
     }
 }
 
-impl TupleSize2IntoQuery<E0,
-E1,
-impl E0Into: Into<E0, u250>,
-impl E0Drop: Drop<E0>,
-impl E1Into: Into<E1, u250>,
-impl E1Drop: Drop<E1>,
+impl TupleSize2IntoQuery<
+    E0,
+    E1,
+    impl E0Into: Into<E0, u250>,
+    impl E0Drop: Drop<E0>,
+    impl E1Into: Into<E1, u250>,
+    impl E1Drop: Drop<E1>,
 > of Into<(E0, E1), Query> {
     fn into(self: (E0, E1)) -> Query {
         let (first, second) = self;
@@ -98,15 +101,16 @@ impl E1Drop: Drop<E1>,
     }
 }
 
-impl TupleSize3IntoQuery<E0,
-E1,
-E2,
-impl E0Into: Into<E0, u250>,
-impl E0Drop: Drop<E0>,
-impl E1Into: Into<E1, u250>,
-impl E1Drop: Drop<E1>,
-impl E2Into: Into<E2, u250>,
-impl E2Drop: Drop<E2>,
+impl TupleSize3IntoQuery<
+    E0,
+    E1,
+    E2,
+    impl E0Into: Into<E0, u250>,
+    impl E0Drop: Drop<E0>,
+    impl E1Into: Into<E1, u250>,
+    impl E1Drop: Drop<E1>,
+    impl E2Into: Into<E2, u250>,
+    impl E2Drop: Drop<E2>,
 > of Into<(E0, E1, E2), Query> {
     fn into(self: (E0, E1, E2)) -> Query {
         let (first, second, third) = self;
@@ -122,12 +126,13 @@ trait IntoPartitioned<T, Query> {
     fn into_partitioned(self: T) -> Query;
 }
 
-impl IntoPartitionedQuery<E0,
-E1,
-impl E0Into: Into<E0, u250>,
-impl E0Drop: Drop<E0>,
-impl E1Into: Into<E1, Query>,
-impl E1Drop: Drop<E1>,
+impl IntoPartitionedQuery<
+    E0,
+    E1,
+    impl E0Into: Into<E0, u250>,
+    impl E0Drop: Drop<E0>,
+    impl E1Into: Into<E1, Query>,
+    impl E1Drop: Drop<E1>,
 > of IntoPartitioned<(E0, E1), Query> {
     fn into_partitioned(self: (E0, E1)) -> Query {
         let (partition, keys) = self;

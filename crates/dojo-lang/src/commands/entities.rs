@@ -48,9 +48,8 @@ impl CommandTrait for EntitiesCommand {
                     RewriteNode::interpolate_patched(
                         "
                         let (__$query_id$_$query_subtype$_ids, __$query_id$_$query_subtype$_raw) = \
-                         IWorldDispatcher { contract_address: world_address
-                        }.entities(dojo_core::string::ShortStringTrait::new('$component$'), \
-                         dojo_core::integer::u250Trait::new($partition$));
+                         ctx.world.entities(dojo_core::string::ShortStringTrait::new('$component$'\
+                         ), dojo_core::integer::u250Trait::new($partition$));
                         __$query_id$_ids.append(__$query_id$_$query_subtype$_ids);
                         __$query_id$_entities_raw.append(__$query_id$_$query_subtype$_raw);
                         ",
