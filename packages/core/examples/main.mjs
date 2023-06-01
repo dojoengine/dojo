@@ -13,11 +13,11 @@ const main = async () => {
 
     const account = new HotAccount(rpcProvider.sequencerProvider, address, privateKey)
 
-    const keys = [BigInt(WorldContractAddress)]
+    const keys = [BigInt(address)]
 
     const query = { address_domain: 0, partition: 0, keys: keys };
     const offset = 0;
-    const length = 2;
+    const length = 0;
 
     // Spawn
     try {
@@ -29,7 +29,7 @@ const main = async () => {
 
     // Position
     try {
-        const response = await rpcProvider.entity('Position', query, offset, length);
+        const response = await rpcProvider.entity('Moves', query, offset, length);
         console.log('Response:', response);
     } catch (error) {
         console.error('An error occurred:', error);

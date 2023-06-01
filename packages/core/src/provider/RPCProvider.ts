@@ -1,9 +1,7 @@
 import { RpcProvider, Provider as StarknetProvider, Account, stark, number, Call } from "starknet";
 import { Provider } from "./provider";
 import { Query, WorldEntryPoints } from "../types";
-import * as microstarknet from 'micro-starknet';
 import { strToShortStringFelt } from '../utils'
-import BN__default from 'bn.js';
 
 export class RPCProvider extends Provider {
     public provider: RpcProvider;
