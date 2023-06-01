@@ -1,61 +1,78 @@
-use anyhow::Result;
+use anyhow::{bail, Result};
 use starknet::accounts::{Account, Call, SingleOwnerAccount};
+use starknet::core::types::FieldElement;
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use starknet::signers::Signer;
-use thiserror::Error;
 
-use super::object::{ClassMigration, ContractMigration, WorldContractMigration};
+use super::object::{
+    ClassMigration, ContractMigration, Declarable, Deployable, WorldContractMigration,
+};
+use crate::config::WorldConfig;
+use crate::migration::object::MigrationError;
 
-#[derive(Debug, Error)]
-pub enum MigrationError {}
-
-// TODO: migration error
-// should only be created by calling `World::prepare_for_migration`
 pub struct MigrationStrategy {
-    world: Option<WorldContractMigration>,
-    executor: Option<ContractMigration>,
-    systems: Vec<ClassMigration>,
-    components: Vec<ClassMigration>,
+    pub world: Option<WorldContractMigration>,
+    pub executor: Option<ContractMigration>,
+    pub systems: Vec<ClassMigration>,
+    pub components: Vec<ClassMigration>,
+    pub world_config: WorldConfig,
 }
 
-impl<P, S> MigrationStrategy<P, S>
-where
-    P: Provider + Send,
-    S: Signer + Send,
-{
-    pub async fn execute(&mut self) -> Result<()> {
-        if self.world.deployed {
-            unimplemented!("migrate: branch -> if world is deployed")
-        } else {
-            self.migrate_full_world().await?;
+impl MigrationStrategy {
+    fn world_address(&self) -> Result<FieldElement> {
+        if self.world.is_none() && self.world_config.address.is_none() {
+            bail!(MigrationError::WorldAddressNotFound)
         }
+
+        Ok(match &self.world {
+            // Right now we optimistically assume that if the World contract is to be migrated,
+            // then the world address should exists because it would be deployed
+            // first before this function is used.
+            Some(WorldContractMigration(c)) if c.contract_address.is_some() => {
+                c.contract_address.unwrap()
+            }
+            _ => self.world_config.address.unwrap(),
+        })
+    }
+}
+
+impl MigrationStrategy {
+    pub async fn execute<P, S>(&mut self, migrator: SingleOwnerAccount<P, S>) -> Result<()>
+    where
+        P: Provider + Send + Sync,
+        S: Signer + Send + Sync,
+    {
+        if let Some(executor) = &mut self.executor {
+            executor.deploy(vec![], &migrator).await;
+        }
+
+        if let Some(world) = &mut self.world {
+            world
+                .deploy(
+                    "my world",
+                    self.executor.as_ref().unwrap().contract_address.unwrap(),
+                    &migrator,
+                )
+                .await;
+        }
+
+        self.register_systems(&migrator).await?;
+        self.register_components(&migrator).await?;
 
         Ok(())
     }
 
-    async fn migrate_full_world(&mut self) -> Result<()> {
-        if !self.executor.deployed {
-            self.executor.deploy(vec![], &self.migrator).await;
-        }
-
-        self.world.deploy(vec![self.executor.contract_address.unwrap()], &self.migrator).await;
-
-        self.register_components().await?;
-        self.register_systems().await?;
-
-        Ok(())
-    }
-
-    async fn register_components(&self) -> Result<()> {
+    async fn register_components<P, S>(&self, migrator: &SingleOwnerAccount<P, S>) -> Result<()>
+    where
+        P: Provider + Send + Sync,
+        S: Signer + Send + Sync,
+    {
         for component in &self.components {
-            component.declare(&self.migrator).await;
+            component.declare(migrator).await;
         }
 
-        let world_address = self
-            .world
-            .contract_address
-            .unwrap_or_else(|| panic!("World contract address not found"));
+        let world_address = self.world_address()?;
 
         let calls = self
             .components
@@ -67,20 +84,25 @@ where
             })
             .collect::<Vec<_>>();
 
-        self.migrator.execute(calls).send().await?;
+        migrator
+            .execute(calls)
+            .send()
+            .await
+            .unwrap_or_else(|err| panic!("problem registering components: {err}"));
 
         Ok(())
     }
 
-    async fn register_systems(&self) -> Result<()> {
+    async fn register_systems<P, S>(&self, migrator: &SingleOwnerAccount<P, S>) -> Result<()>
+    where
+        P: Provider + Send + Sync,
+        S: Signer + Send + Sync,
+    {
         for system in &self.systems {
-            system.declare(&self.migrator).await;
+            system.declare(migrator).await;
         }
 
-        let world_address = self
-            .world
-            .contract_address
-            .unwrap_or_else(|| panic!("World contract address not found"));
+        let world_address = self.world_address()?;
 
         let calls = self
             .systems
@@ -92,7 +114,11 @@ where
             })
             .collect::<Vec<_>>();
 
-        self.migrator.execute(calls).send().await?;
+        migrator
+            .execute(calls)
+            .send()
+            .await
+            .unwrap_or_else(|err| panic!("problem registering systems: {err}"));
 
         Ok(())
     }

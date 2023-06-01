@@ -9,18 +9,28 @@ use cairo_lang_starknet::contract_class::ContractClass;
 use starknet::accounts::{Account, Call, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{BlockId, BlockTag, FieldElement, FlattenedSierraClass};
-use starknet::core::utils::{get_contract_address, get_selector_from_name};
-use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
-use starknet::providers::{Provider, SequencerGatewayProvider};
-use starknet::signers::{LocalWallet, Signer};
+use starknet::core::utils::{
+    cairo_short_string_to_felt, get_contract_address, get_selector_from_name,
+    CairoShortStringToFeltError,
+};
+use starknet::providers::Provider;
+use starknet::signers::Signer;
+use thiserror::Error;
 
 use super::world::{ClassDiff, ContractDiff};
+
+#[derive(Debug, Error)]
+pub enum MigrationError {
+    #[error("World contract address not found.")]
+    WorldAddressNotFound,
+    #[error(transparent)]
+    CairoShortStringToFeltError(#[from] CairoShortStringToFeltError),
+}
 
 // TODO: evaluate the contract address when building the migration plan
 #[derive(Debug, Default)]
 pub struct ContractMigration {
-    // pub deployed: bool,
-    // pub salt: FieldElement,
+    pub salt: FieldElement,
     pub contract: ContractDiff,
     pub artifact_path: PathBuf,
     pub contract_address: Option<FieldElement>,
@@ -28,7 +38,6 @@ pub struct ContractMigration {
 
 #[derive(Debug, Default)]
 pub struct ClassMigration {
-    // pub declared: bool,
     pub class: ClassDiff,
     pub artifact_path: PathBuf,
 }
@@ -36,7 +45,7 @@ pub struct ClassMigration {
 pub struct WorldContractMigration(pub ContractMigration);
 
 #[async_trait]
-trait Declarable {
+pub trait Declarable {
     async fn declare<P, S>(&self, account: &SingleOwnerAccount<P, S>)
     where
         P: Provider + Send + Sync,
@@ -45,7 +54,7 @@ trait Declarable {
 
 // TODO: Remove `mut` once we can calculate the contract address before sending the tx
 #[async_trait]
-trait Deployable: Declarable {
+pub trait Deployable: Declarable {
     async fn deploy<P, S>(
         &mut self,
         constructor_params: Vec<FieldElement>,
@@ -175,35 +184,50 @@ impl Deployable for ContractMigration {
 }
 
 impl WorldContractMigration {
-    pub async fn deploy(
+    pub async fn deploy<P, S>(
         &mut self,
+        name: impl AsRef<str>,
         executor: FieldElement,
-        migrator: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
-    ) {
-        self.0.deploy(vec![executor], migrator).await
+        migrator: &SingleOwnerAccount<P, S>,
+    ) where
+        P: Provider + Send + Sync,
+        S: Signer + Send + Sync,
+    {
+        self.0
+            .deploy(vec![cairo_short_string_to_felt(name.as_ref()).unwrap(), executor], migrator)
+            .await
     }
 
-    pub async fn set_executor(
+    pub async fn set_executor<P, S>(
         &self,
         executor: FieldElement,
-        account: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
-    ) -> Result<()> {
-        account
+        migrator: &SingleOwnerAccount<P, S>,
+    ) -> Result<()>
+    where
+        P: Provider + Send + Sync,
+        S: Signer + Send + Sync,
+    {
+        migrator
             .execute(vec![Call {
                 calldata: vec![executor],
                 to: self.0.contract_address.unwrap(),
                 selector: get_selector_from_name("set_executor").unwrap(),
             }])
             .send()
-            .await?;
+            .await
+            .unwrap_or_else(|err| panic!("problem setting executor: {err}"));
         Ok(())
     }
 
-    pub async fn register_component(
+    pub async fn register_component<P, S>(
         &self,
         components: &[ClassMigration],
-        migrator: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
-    ) -> Result<()> {
+        migrator: &SingleOwnerAccount<P, S>,
+    ) -> Result<()>
+    where
+        P: Provider + Send + Sync,
+        S: Signer + Send + Sync,
+    {
         let calls = components
             .iter()
             .map(|c| Call {
@@ -213,16 +237,24 @@ impl WorldContractMigration {
             })
             .collect::<Vec<_>>();
 
-        migrator.execute(calls).send().await?;
+        migrator
+            .execute(calls)
+            .send()
+            .await
+            .unwrap_or_else(|err| panic!("problem registering components: {err}"));
 
         Ok(())
     }
 
-    pub async fn register_system(
+    pub async fn register_system<P, S>(
         &self,
         systems: &[ClassMigration],
-        migrator: &SingleOwnerAccount<SequencerGatewayProvider, LocalWallet>,
-    ) -> Result<()> {
+        migrator: &SingleOwnerAccount<P, S>,
+    ) -> Result<()>
+    where
+        P: Provider + Send + Sync,
+        S: Signer + Send + Sync,
+    {
         let calls = systems
             .iter()
             .map(|s| Call {
@@ -232,7 +264,11 @@ impl WorldContractMigration {
             })
             .collect::<Vec<_>>();
 
-        migrator.execute(calls).send().await?;
+        migrator
+            .execute(calls)
+            .send()
+            .await
+            .unwrap_or_else(|err| panic!("problem registering systems: {err}"));
 
         Ok(())
     }
