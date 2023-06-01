@@ -60,7 +60,10 @@ pub fn run(args: InitArgs) -> Result<(), Box<dyn Error>> {
     // Navigate back.
     set_current_dir(initial_dir)?;
 
-    println!("\n\n====== SETUP COMPLETE! ======\n\nTo start using your new Dojo project, try running: \n\n`sozo build`\n");
+    println!(
+        "\n\n====== SETUP COMPLETE! ======\n\nTo start using your new Dojo project, try running: \
+        \n\n`sozo build`\n"
+    );
 
     println!("🎉🎉🎉 SUCCESS! Your project is now ready. Start building with ⛩️ Dojo! 🎉🎉🎉");
 
