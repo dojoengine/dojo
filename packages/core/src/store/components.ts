@@ -1,38 +1,22 @@
-import { createStore } from 'zustand/vanilla'
-import { Component, ComponentNames } from '../types'
+import { RegisteredComponent } from '../types'
+import { world } from './world'
 
-export const ComponentsStore = createStore<Component[]>(() => ([{
-    name: '',
-    members: [],
-    class_hash: ''
-}]))
-
-/**
- * 
- * @param name array of component names
- */
-export const registerComponent = (components: Component) => {
-    ComponentsStore.setState(state => ([
+export const registerComponent = (components: RegisteredComponent) => {
+    world.setState(state => ({
         ...state,
-        components
-    ]))
+        components: [
+            ...state.components,
+            components
+        ]
+    }))
 }
 
-// remove components
-
-/**
- *  @returns array of component names
-*/
 export const getComponents = () => {
-    return ComponentsStore.getState()
+    return world.getState().components;
 }
 
-/**
- * @param {ComponentNames} name
- * @returns {Object} component
- */
 export const getComponent = (name: string) => {
-    const components = ComponentsStore.getState();
+    const components = world.getState().components;
 
     for (let key in components) {
         if (components[key].name === name) {

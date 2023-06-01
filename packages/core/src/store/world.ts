@@ -1,15 +1,16 @@
 import { createStore } from 'zustand/vanilla'
-import { ComponentsStore } from './components';
-import { World, Manifest, CallData } from '../types';
-import { SystemsStore } from './system';
+import { World, Manifest } from '../types';
 import { RPCProvider } from '../provider';
 import { Account, number } from 'starknet';
-import { getEntityComponent, updateComponent, useEntityStore } from './entity';
+import { getEntityComponent, updateComponent } from './entity';
 
 
-export const WorldStore = createStore<World>(() => ({
+export const world = createStore<World>(() => ({
     world: '',
-    executor: ''
+    executor: '',
+    systems: [],
+    components: [],
+    entities: {},
 }))
 
 /**
@@ -17,27 +18,19 @@ export const WorldStore = createStore<World>(() => ({
  * @returns
 */
 export const registerWorld = (manifest: Manifest) => {
-    WorldStore.setState(state => ({
+    world.setState(state => ({
         world: manifest.world,
-        executor: manifest.executor
-    }))
-
-    ComponentsStore.setState(state => ({
-        ...state,
-        ...manifest.components
-    }))
-
-    SystemsStore.setState(state => ({
-        ...state,
-        ...manifest.systems
+        executor: manifest.executor,
+        components: manifest.components,
+        systems: manifest.systems,
     }))
 }
 
 /**
- *  @returns world address  
+ *  @returns world  
 */
 export const getWorld = () => {
-    return WorldStore.getState()
+    return world.getState()
 }
 
 // TODO: clean params
@@ -59,7 +52,6 @@ export async function execute(
     // set component Store for Optimistic UI
     if (optimistic) updateComponent(entity_id, 'Position', component_data);
 
-
     try {
         const result = await provider.execute(account, system, call_data);
 
@@ -71,3 +63,4 @@ export async function execute(
         throw error;
     }
 }
+

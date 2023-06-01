@@ -1,4 +1,5 @@
-import { createStore } from 'zustand/vanilla'
+import { world } from './world'
+import { Entity } from '../types';
 
 // store state of entity by their components
 // ability to update entity by component state
@@ -9,21 +10,8 @@ export interface Component {
     data: any;
 }
 
-interface Entity {
-    id: number;
-    components: Record<string, Component>;
-}
-
-interface EntityState {
-    entities: Record<number, Entity>;
-}
-
-export const useEntityStore = createStore<EntityState>(() => ({
-    entities: {}
-}))
-
 export const registerEntity = (entity: Entity) => {
-    useEntityStore.setState(state => ({
+    world.setState(state => ({
         ...state,
         entities: {
             ...state.entities,
@@ -33,8 +21,7 @@ export const registerEntity = (entity: Entity) => {
 }
 
 export const updateComponent = (entityId: number, componentName: string, componentData: any) => {
-
-    useEntityStore.setState(state => {
+    world.setState(state => {
         const entity = state.entities[entityId];
         if (!entity) {
             console.error(`Entity with ID ${entityId} not found.`);
@@ -61,7 +48,7 @@ export const updateComponent = (entityId: number, componentName: string, compone
 }
 
 export const getEntityComponent = (entityId: number, componentName: string): Component | undefined => {
-    const state = useEntityStore.getState();
+    const state = world.getState();
     const entity = state.entities[entityId];
 
     if (!entity) {

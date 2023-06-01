@@ -27,11 +27,11 @@ const main = async () => {
     const initialEntity = {
         id: 213123121,
         components: {
-            position: {
+            Position: {
                 name: 'Position',
                 data: { x: 0, y: 0 }
             },
-            velocity: {
+            Velocity: {
                 name: 'Velocity',
                 data: { x: 1, y: 1 }
             }
@@ -40,11 +40,11 @@ const main = async () => {
     const newEntity = {
         id: 42312312,
         components: {
-            position: {
+            Position: {
                 name: 'Position',
-                data: { x: 0, y: 0 }
+                data: { x: 2, y: 0 }
             },
-            velocity: {
+            Velocity: {
                 name: 'Velocity',
                 data: { x: 1, y: 1 }
             }
@@ -55,10 +55,12 @@ const main = async () => {
 
     Store.registerEntity(newEntity);
 
-    // update state
+    console.log(Store.getWorld());
+
+    // // update state
     Store.updateComponent(newEntity.id, 'Position', { x: 10, y: 20 });
 
-    const entity1 = Store.useEntityStore.getState();
+    const entity1 = Store.getWorld().entities[initialEntity.id];
     console.log('Entities:', entity1);
 
     console.log(newEntity.id, Store.getEntityComponent(newEntity.id, 'Position'))

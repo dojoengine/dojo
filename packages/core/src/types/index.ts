@@ -48,7 +48,7 @@ export interface Members {
     offset: number;
 }
 
-export interface Component {
+export interface RegisteredComponent {
     name: ComponentNames;
     members: Members[];
     class_hash: string;
@@ -59,7 +59,7 @@ export interface InputOutput {
     type: string;
 }
 
-export interface System {
+export interface RegisteredSystem {
     name: SystemNames;
     inputs: InputOutput[];
     outputs: InputOutput[];
@@ -67,23 +67,36 @@ export interface System {
     dependencies: string[];
 }
 
-export interface Contract { } // Add fields as per your Contract object's structure
+export interface Contract { }
 
 export interface Manifest {
     world: string;
     executor: string;
-    components: Component[];
-    systems: System[];
+    components: RegisteredComponent[];
+    systems: RegisteredSystem[];
     contracts: Contract[];
 }
 
 export interface World {
     world: string;
     executor: string;
+    components: RegisteredComponent[];
+    systems: RegisteredSystem[];
+    entities: Record<number, Entity>;
 }
 
 
 export interface CallData {
     componentName: string;
     call_data: Array<bigint>;
+}
+
+export interface Component {
+    name: string;
+    data: any;
+}
+
+export interface Entity {
+    id: number;
+    components: Record<string, Component>;
 }
