@@ -59,13 +59,14 @@ export async function execute(
     // set component Store for Optimistic UI
     if (optimistic) updateComponent(entity_id, 'Position', component_data);
 
-    // execute RPC call in background -> if fail, revert component store
+
     try {
         const result = await provider.execute(account, system, call_data);
+
         return result;
     } catch (error) {
-
-        if (optimistic) updateComponent(entity_id, system, entity?.data);
+        // revert state if optimistic
+        if (optimistic && entity) updateComponent(entity_id, system, entity.data);
 
         throw error;
     }
