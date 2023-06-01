@@ -6,25 +6,42 @@ use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass;
-use starknet::accounts::{Account, Call, ConnectedAccount, SingleOwnerAccount};
+use starknet::accounts::{AccountError, Call, ConnectedAccount};
 use starknet::core::types::contract::{CompiledClass, SierraClass};
-use starknet::core::types::{BlockId, BlockTag, FieldElement, FlattenedSierraClass};
+use starknet::core::types::{
+    BlockId, BlockTag, DeclareTransactionResult, FieldElement, FlattenedSierraClass,
+    InvokeTransactionResult,
+};
 use starknet::core::utils::{
-    cairo_short_string_to_felt, get_contract_address, get_selector_from_name,
-    CairoShortStringToFeltError,
+    get_contract_address, get_selector_from_name, CairoShortStringToFeltError,
 };
 use starknet::providers::Provider;
-use starknet::signers::Signer;
 use thiserror::Error;
 
 use super::world::{ClassDiff, ContractDiff};
 
+pub type RegisterResult = InvokeTransactionResult;
+pub type DeclareResult = DeclareTransactionResult;
+
+#[derive(Debug)]
+pub struct DeployResult {
+    pub transaction_hash: FieldElement,
+    pub contract_address: FieldElement,
+    pub declare_res: DeclareResult,
+}
+
 #[derive(Debug, Error)]
-pub enum MigrationError {
+pub enum MigrationError<S, P> {
+    #[error("Class already declared.")]
+    ClassAlreadyDeclared,
+    #[error("Contract already deployed.")]
+    ContractAlreadyDeployed,
     #[error("World contract address not found.")]
     WorldAddressNotFound,
     #[error(transparent)]
-    CairoShortStringToFeltError(#[from] CairoShortStringToFeltError),
+    Migrator(#[from] AccountError<S, P>),
+    #[error(transparent)]
+    CairoShortStringToFelt(#[from] CairoShortStringToFeltError),
 }
 
 // TODO: evaluate the contract address when building the migration plan
@@ -42,95 +59,56 @@ pub struct ClassMigration {
     pub artifact_path: PathBuf,
 }
 
+#[derive(Debug)]
 pub struct WorldContractMigration(pub ContractMigration);
 
 #[async_trait]
 pub trait Declarable {
-    async fn declare<P, S>(&self, account: &SingleOwnerAccount<P, S>)
+    async fn declare<A>(
+        &self,
+        account: &A,
+    ) -> Result<DeclareResult, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
     where
-        P: Provider + Send + Sync,
-        S: Signer + Send + Sync;
+        A: ConnectedAccount + Sync,
+    {
+        let (flattened_class, casm_class_hash) =
+            prepare_contract_declaration_params(self.artifact_path()).unwrap();
+
+        if account
+            .provider()
+            .get_class(&BlockId::Tag(BlockTag::Pending), casm_class_hash)
+            .await
+            .is_ok()
+        {
+            return Err(MigrationError::ClassAlreadyDeclared);
+        }
+
+        account
+            .declare(Arc::new(flattened_class), casm_class_hash)
+            .send()
+            .await
+            .map_err(MigrationError::Migrator)
+    }
+
+    fn artifact_path(&self) -> &PathBuf;
 }
 
 // TODO: Remove `mut` once we can calculate the contract address before sending the tx
 #[async_trait]
-pub trait Deployable: Declarable {
-    async fn deploy<P, S>(
-        &mut self,
-        constructor_params: Vec<FieldElement>,
-        account: &SingleOwnerAccount<P, S>,
-    ) where
-        P: Provider + Send + Sync,
-        S: Signer + Send + Sync;
-}
-
-#[async_trait]
-impl Declarable for ClassMigration {
-    async fn declare<P, S>(&self, account: &SingleOwnerAccount<P, S>)
-    where
-        P: Provider + Send + Sync,
-        S: Signer + Send + Sync,
-    {
-        declare(self.class.name.clone(), &self.artifact_path, account).await;
-    }
-}
-
-#[async_trait]
-impl Declarable for ContractMigration {
-    async fn declare<P, S>(&self, account: &SingleOwnerAccount<P, S>)
-    where
-        P: Provider + Send + Sync,
-        S: Signer + Send + Sync,
-    {
-        declare(self.contract.name.clone(), &self.artifact_path, account).await;
-    }
-}
-
-async fn declare<P, S>(name: String, artifact_path: &PathBuf, account: &SingleOwnerAccount<P, S>)
-where
-    P: Provider + Send + Sync,
-    S: Signer + Send + Sync,
-{
-    let (flattened_class, casm_class_hash) =
-        prepare_contract_declaration_params(artifact_path).unwrap();
-
-    if account.provider().get_class(&BlockId::Tag(BlockTag::Pending), casm_class_hash).await.is_ok()
-    {
-        println!("{name} class already declared");
-        return;
-    }
-
-    let result = account.declare(Arc::new(flattened_class), casm_class_hash).send().await;
-
-    match result {
-        Ok(result) => {
-            println!("Declared `{}` class at transaction: {:#x}", name, result.transaction_hash);
-        }
-        Err(error) => {
-            if error.to_string().contains("already declared") {
-                println!("{name} class already declared")
-            } else {
-                panic!("Problem declaring {name} class: {error}");
-            }
-        }
-    }
-}
-
-#[async_trait]
-impl Deployable for ContractMigration {
-    async fn deploy<P, S>(
+pub trait Deployable: Declarable + Sync {
+    async fn deploy<A>(
         &mut self,
         constructor_calldata: Vec<FieldElement>,
-        account: &SingleOwnerAccount<P, S>,
-    ) where
-        P: Provider + Send + Sync,
-        S: Signer + Send + Sync,
+        account: &A,
+    ) -> Result<DeployResult, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
+    where
+        A: ConnectedAccount + Sync,
     {
-        self.declare(account).await;
+        let declare_res = self.declare(account).await?;
 
         let calldata = [
             vec![
-                self.contract.local,                            // class hash
+                declare_res.class_hash,                         // class hash
                 FieldElement::ZERO,                             // salt
                 FieldElement::ZERO,                             // unique
                 FieldElement::from(constructor_calldata.len()), // constructor calldata len
@@ -141,12 +119,12 @@ impl Deployable for ContractMigration {
 
         let contract_address = get_contract_address(
             FieldElement::ZERO,
-            self.contract.local,
+            declare_res.class_hash,
             &constructor_calldata,
             FieldElement::ZERO,
         );
 
-        self.contract_address = Some(contract_address);
+        self.set_contract_address(contract_address);
 
         if account
             .provider()
@@ -154,14 +132,10 @@ impl Deployable for ContractMigration {
             .await
             .is_ok()
         {
-            // self.deployed = true;
-            println!("{} contract already deployed", self.contract.name);
-            return;
+            return Err(MigrationError::ContractAlreadyDeployed);
         }
 
-        println!("Deploying `{}` contract", self.contract.name);
-
-        let res = account
+        let InvokeTransactionResult { transaction_hash } = account
             .execute(vec![Call {
                 calldata,
                 // devnet UDC address
@@ -173,39 +147,55 @@ impl Deployable for ContractMigration {
             }])
             .send()
             .await
-            .unwrap_or_else(|e| panic!("problem deploying `{}` contract: {e}", self.contract.name));
+            .map_err(MigrationError::Migrator)?;
 
-        println!(
-            "Deployed `{}` contract at transaction: {:#x}",
-            self.contract.name, res.transaction_hash
-        );
-        println!("`{} `Contract address: {contract_address:#x}", self.contract.name);
+        Ok(DeployResult { transaction_hash, contract_address, declare_res })
+    }
+
+    // TEMP: Remove once we can calculate the contract address before sending the tx
+    fn set_contract_address(&mut self, contract_address: FieldElement);
+}
+
+#[async_trait]
+impl Declarable for ClassMigration {
+    fn artifact_path(&self) -> &PathBuf {
+        &self.artifact_path
+    }
+}
+
+#[async_trait]
+impl Declarable for ContractMigration {
+    fn artifact_path(&self) -> &PathBuf {
+        &self.artifact_path
+    }
+}
+
+#[async_trait]
+impl Deployable for ContractMigration {
+    fn set_contract_address(&mut self, contract_address: FieldElement) {
+        self.contract_address = Some(contract_address);
     }
 }
 
 impl WorldContractMigration {
-    pub async fn deploy<P, S>(
+    pub async fn deploy<A>(
         &mut self,
-        name: impl AsRef<str>,
+        migrator: &A,
         executor: FieldElement,
-        migrator: &SingleOwnerAccount<P, S>,
-    ) where
-        P: Provider + Send + Sync,
-        S: Signer + Send + Sync,
+    ) -> Result<DeployResult, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
+    where
+        A: ConnectedAccount + Sync,
     {
-        self.0
-            .deploy(vec![cairo_short_string_to_felt(name.as_ref()).unwrap(), executor], migrator)
-            .await
+        Deployable::deploy(self, vec![executor], migrator).await
     }
 
-    pub async fn set_executor<P, S>(
+    pub async fn set_executor<A>(
         &self,
         executor: FieldElement,
-        migrator: &SingleOwnerAccount<P, S>,
-    ) -> Result<()>
+        migrator: &A,
+    ) -> Result<RegisterResult, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
     where
-        P: Provider + Send + Sync,
-        S: Signer + Send + Sync,
+        A: ConnectedAccount + Sync,
     {
         migrator
             .execute(vec![Call {
@@ -215,18 +205,16 @@ impl WorldContractMigration {
             }])
             .send()
             .await
-            .unwrap_or_else(|err| panic!("problem setting executor: {err}"));
-        Ok(())
+            .map_err(MigrationError::Migrator)
     }
 
-    pub async fn register_component<P, S>(
+    pub async fn register_component<A>(
         &self,
+        migrator: &A,
         components: &[ClassMigration],
-        migrator: &SingleOwnerAccount<P, S>,
-    ) -> Result<()>
+    ) -> Result<RegisterResult, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
     where
-        P: Provider + Send + Sync,
-        S: Signer + Send + Sync,
+        A: ConnectedAccount + Sync,
     {
         let calls = components
             .iter()
@@ -237,23 +225,16 @@ impl WorldContractMigration {
             })
             .collect::<Vec<_>>();
 
-        migrator
-            .execute(calls)
-            .send()
-            .await
-            .unwrap_or_else(|err| panic!("problem registering components: {err}"));
-
-        Ok(())
+        migrator.execute(calls).send().await.map_err(MigrationError::Migrator)
     }
 
-    pub async fn register_system<P, S>(
+    pub async fn register_system<A>(
         &self,
+        migrator: &A,
         systems: &[ClassMigration],
-        migrator: &SingleOwnerAccount<P, S>,
-    ) -> Result<()>
+    ) -> Result<RegisterResult, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
     where
-        P: Provider + Send + Sync,
-        S: Signer + Send + Sync,
+        A: ConnectedAccount + Sync,
     {
         let calls = systems
             .iter()
@@ -264,13 +245,19 @@ impl WorldContractMigration {
             })
             .collect::<Vec<_>>();
 
-        migrator
-            .execute(calls)
-            .send()
-            .await
-            .unwrap_or_else(|err| panic!("problem registering systems: {err}"));
+        migrator.execute(calls).send().await.map_err(MigrationError::Migrator)
+    }
+}
 
-        Ok(())
+impl Declarable for WorldContractMigration {
+    fn artifact_path(&self) -> &PathBuf {
+        &self.0.artifact_path
+    }
+}
+
+impl Deployable for WorldContractMigration {
+    fn set_contract_address(&mut self, contract_address: FieldElement) {
+        self.0.contract_address = Some(contract_address);
     }
 }
 
