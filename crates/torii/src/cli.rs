@@ -1,13 +1,12 @@
 use clap::Parser;
-use futures::join;
 use graphql::server::start_graphql;
 use num::{BigUint, Num};
 use sqlx::sqlite::SqlitePoolOptions;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-// #[cfg(feature = "postgres")]
-// use sqlx::postgres::{PgPoolOptions};
+use storage::sql::SqlStorage;
 use tokio_util::sync::CancellationToken;
+use tracing::error;
 use tracing_subscriber::fmt;
 use url::Url;
 
@@ -17,6 +16,7 @@ mod processors;
 
 mod graphql;
 mod indexer;
+mod storage;
 mod tests;
 
 /// Dojo World Indexer
@@ -27,7 +27,7 @@ struct Args {
     #[arg(short, long, default_value = "0x420")]
     world: String,
     /// The rpc endpoint to use
-    #[arg(long, default_value = "http://localhost:8080")]
+    #[arg(long, default_value = "http://localhost:5050")]
     rpc: String,
     /// Database url
     #[arg(short, long, default_value = "sqlite::memory:")]
@@ -49,7 +49,7 @@ async fn main() -> anyhow::Result<()> {
     // Setup cancellation for graceful shutdown
     let cts = CancellationToken::new();
     ctrlc::set_handler({
-        let cts = cts.clone();
+        let cts: CancellationToken = cts.clone();
         move || {
             cts.cancel();
         }
@@ -64,10 +64,26 @@ async fn main() -> anyhow::Result<()> {
     let pool = SqlitePoolOptions::new().max_connections(5).connect(database_url).await?;
     let provider = JsonRpcClient::new(HttpTransport::new(Url::parse(&args.rpc).unwrap()));
 
-    let graphql = start_graphql(&pool);
-    let indexer = start_indexer(cts.clone(), world, &pool, &provider);
+    let storage = SqlStorage::new(pool.clone())?;
+    let indexer = start_indexer(cts.clone(), world, &storage, &provider);
 
-    let _ = join!(graphql, indexer);
+    let graphql = start_graphql(&pool);
+
+    tokio::select! {
+        res = indexer => {
+            if let Err(e) = res {
+                error!("Indexer failed with error: {:?}", e);
+            }
+        }
+        res = graphql => {
+            if let Err(e) = res {
+                error!("GraphQL server failed with error: {:?}", e);
+            }
+        }
+        _ = tokio::signal::ctrl_c() => {
+            println!("Received Ctrl+C, shutting down");
+        }
+    }
 
     Ok(())
 }

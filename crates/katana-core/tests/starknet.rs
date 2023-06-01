@@ -18,7 +18,7 @@ fn create_test_starknet() -> StarknetWrapper {
             .iter()
             .collect();
 
-    StarknetWrapper::new(StarknetConfig {
+    let mut starknet = StarknetWrapper::new(StarknetConfig {
         seed: [0u8; 32],
         total_accounts: 2,
         blocks_on_demand: false,
@@ -26,42 +26,34 @@ fn create_test_starknet() -> StarknetWrapper {
         gas_price: DEFAULT_GAS_PRICE,
         chain_id: String::from("KATANA"),
         account_path: Some(test_account_path),
-    })
+    });
+
+    starknet.generate_genesis_block();
+    starknet
 }
 
 #[test]
 fn test_creating_blocks() {
     let mut starknet = create_test_starknet();
     starknet.generate_pending_block();
+    starknet.generate_latest_block();
 
-    assert_eq!(starknet.blocks.total_blocks(), 0, "pending block should not be added to the chain");
-
+    assert_eq!(starknet.blocks.hash_to_num.len(), 2);
+    assert_eq!(starknet.blocks.num_to_block.len(), 2);
     assert_eq!(
         starknet.block_context.block_number,
-        BlockNumber(0),
-        "pending block should not increment block context number"
-    );
-
-    starknet.generate_latest_block();
-    starknet.generate_latest_block();
-    starknet.generate_latest_block();
-
-    assert_eq!(starknet.blocks.hash_to_num.len(), 3);
-    assert_eq!(starknet.blocks.num_to_block.len(), 3);
-    assert_eq!(
-        starknet.block_context.block_number,
-        BlockNumber(3),
-        "current block context number should be 3"
+        BlockNumber(1),
+        "block context should only be updated on new pending block"
     );
 
     let block0 = starknet.blocks.by_number(BlockNumber(0)).unwrap();
     let block1 = starknet.blocks.by_number(BlockNumber(1)).unwrap();
     let last_block = starknet.blocks.latest().unwrap();
 
-    assert_eq!(block0.transactions(), &[]);
+    assert_eq!(block0.transactions().len(), 4, "genesis block should have 4 transactions");
     assert_eq!(block0.block_number(), BlockNumber(0));
     assert_eq!(block1.block_number(), BlockNumber(1));
-    assert_eq!(last_block.block_number(), BlockNumber(2));
+    assert_eq!(last_block.block_number(), BlockNumber(1));
 }
 
 #[test]
@@ -100,18 +92,16 @@ fn test_add_transaction() {
 
     let tx = starknet.transactions.transactions.get(&TransactionHash(stark_felt!("0x6969")));
 
-    let block = starknet.blocks.by_number(BlockNumber(0)).unwrap();
+    let block = starknet.blocks.by_number(BlockNumber(1)).unwrap();
 
     assert!(tx.is_some(), "transaction must be stored");
-    assert_eq!(tx.unwrap().block_number, Some(BlockNumber(0)));
-    assert_eq!(starknet.blocks.total_blocks(), 1);
+    assert_eq!(tx.unwrap().block_number, Some(BlockNumber(1)));
     assert!(block.transaction_by_index(0).is_some(), "transaction must be included in the block");
     assert_eq!(
         block.transaction_by_index(0).unwrap().transaction_hash(),
         TransactionHash(stark_felt!("0x6969"))
     );
     assert_eq!(tx.unwrap().status, TransactionStatus::AcceptedOnL2);
-    assert_eq!(starknet.block_context.block_number, BlockNumber(1));
 
     // CHECK THAT THE BALANCE IS UPDATED
     //
@@ -147,18 +137,17 @@ fn test_add_reverted_transaction() {
 
     assert_eq!(
         starknet.transactions.transactions.len(),
-        1,
+        5,
         "transaction must be stored even if execution fail"
     );
     assert_eq!(tx.unwrap().block_hash, None);
     assert_eq!(tx.unwrap().block_number, None);
     assert_eq!(tx.unwrap().status, TransactionStatus::Rejected);
     assert_eq!(
-        starknet.block_context.block_number,
-        BlockNumber(0),
-        "block height must not increase"
+        starknet.blocks.num_to_block.len(),
+        1,
+        "no new block should be created if tx failed"
     );
-    assert_eq!(starknet.blocks.num_to_block.len(), 0, "no blocks added");
 }
 
 // #[test]

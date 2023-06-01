@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use anyhow::Result;
 use cairo_lang_defs::plugin::{GeneratedFileAuxData, MacroPlugin, PluginDiagnostic, PluginResult};
 use cairo_lang_diagnostics::DiagnosticEntry;
 use cairo_lang_semantic::db::SemanticGroup;
@@ -17,6 +16,8 @@ use cairo_lang_syntax::attribute::structured::{
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal};
+use camino::Utf8Path;
+use dojo_world::manifest::Member;
 use scarb::compiler::plugin::builtin::BuiltinSemanticCairoPlugin;
 use scarb::core::{PackageId, PackageName, SourceId};
 use semver::Version;
@@ -27,6 +28,12 @@ use crate::system::System;
 
 const SYSTEM_ATTR: &str = "system";
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct Component {
+    pub name: String,
+    pub members: Vec<Member>,
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct SystemAuxData {
     pub name: SmolStr,
@@ -34,13 +41,13 @@ pub struct SystemAuxData {
 }
 
 /// Dojo related auxiliary data of the Dojo plugin.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq)]
 pub struct DojoAuxData {
     /// Patches of code that need translation in case they have diagnostics.
     pub patches: Patches,
 
     /// A list of components that were processed by the plugin.
-    pub components: Vec<smol_str::SmolStr>,
+    pub components: Vec<Component>,
     /// A list of systems that were processed by the plugin and their component dependencies.
     pub systems: Vec<SystemAuxData>,
 }
@@ -165,22 +172,35 @@ impl SemanticPlugin for DojoPlugin {}
 pub struct CairoPluginRepository(scarb::compiler::plugin::CairoPluginRepository);
 
 impl CairoPluginRepository {
-    pub fn new() -> Result<Self> {
+    pub fn new() -> Self {
         let mut repo = scarb::compiler::plugin::CairoPluginRepository::empty();
         let dojo_package_id = PackageId::new(
-            PackageName::new("dojo_core"),
+            PackageName::new("dojo_plugin"),
             Version::parse("0.1.0").unwrap(),
             SourceId::for_std(),
         );
-        repo.add(Box::new(BuiltinSemanticCairoPlugin::<DojoPlugin>::new(dojo_package_id)))?;
+        repo.add(Box::new(BuiltinSemanticCairoPlugin::<DojoPlugin>::new(dojo_package_id))).unwrap();
+        let dojo_local_package_id = PackageId::new(
+            PackageName::new("dojo_plugin"),
+            Version::parse("0.1.0").unwrap(),
+            SourceId::for_path(Utf8Path::new(env!("CARGO_MANIFEST_DIR"))).unwrap(),
+        );
+        repo.add(Box::new(BuiltinSemanticCairoPlugin::<DojoPlugin>::new(dojo_local_package_id)))
+            .unwrap();
         let starknet_package_id = PackageId::new(
             PackageName::STARKNET,
-            Version::parse("0.1.0").unwrap(),
+            Version::parse("1.1.0").unwrap(),
             SourceId::for_std(),
         );
         repo.add(Box::new(BuiltinSemanticCairoPlugin::<StarkNetPlugin>::new(starknet_package_id)))
             .unwrap();
-        Ok(Self(repo))
+        Self(repo)
+    }
+}
+
+impl Default for CairoPluginRepository {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

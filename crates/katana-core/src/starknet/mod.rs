@@ -39,7 +39,7 @@ use crate::util::{
     get_current_timestamp,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct StarknetConfig {
     pub seed: [u8; 32],
     pub gas_price: u128,
@@ -162,9 +162,7 @@ impl StarknetWrapper {
             self.create_empty_block()
         };
 
-        new_block.inner.header.block_number = self.block_context.block_number;
-        let block_hash = new_block.compute_block_hash();
-        new_block.inner.header.block_hash = block_hash;
+        new_block.inner.header.block_hash = new_block.compute_block_hash();
 
         for pending_tx in new_block.transactions() {
             let tx_hash = pending_tx.transaction_hash();
@@ -172,7 +170,7 @@ impl StarknetWrapper {
             // Update the tx block hash and number in the tx store //
 
             if let Some(tx) = self.transactions.transactions.get_mut(&tx_hash) {
-                tx.block_hash = Some(block_hash);
+                tx.block_hash = Some(new_block.block_hash());
                 tx.status = TransactionStatus::AcceptedOnL2;
                 tx.block_number = Some(new_block.block_number());
             }
@@ -184,13 +182,12 @@ impl StarknetWrapper {
             new_block.block_number()
         );
 
-        // apply state diff
         let pending_state_diff = self.pending_state.to_state_diff();
 
         self.blocks.num_to_state_update.insert(
             new_block.block_number(),
             StateUpdate {
-                block_hash: block_hash.0.into(),
+                block_hash: new_block.block_hash().0.into(),
                 new_root: new_block.header().state_root.0.into(),
                 old_root: if new_block.block_number() == BlockNumber(0) {
                     FieldElement::ZERO
@@ -204,20 +201,14 @@ impl StarknetWrapper {
             },
         );
 
-        // reset the pending block
         self.blocks.pending_block = None;
-
-        // TODO: Compute state root
         self.blocks.insert(new_block);
-
         self.update_latest_state();
-
-        self.update_block_context();
     }
 
     pub fn generate_pending_block(&mut self) {
+        self.update_block_context();
         self.blocks.pending_block = Some(self.create_empty_block());
-        // Update the pending state to the latest committed state
         self.pending_state = CachedState::new(self.state.clone());
     }
 
@@ -278,7 +269,8 @@ impl StarknetWrapper {
     /// Generate the genesis block and append it to the chain.
     /// This block should include transactions which set the initial state of the chain.
     pub fn generate_genesis_block(&mut self) {
-        self.generate_pending_block();
+        self.blocks.pending_block = Some(self.create_empty_block());
+        self.pending_state = CachedState::new(self.state.clone());
 
         let mut transactions = vec![];
         let deploy_data =
@@ -329,15 +321,15 @@ impl StarknetWrapper {
         self.generate_latest_block();
     }
 
-    fn create_empty_block(&self) -> StarknetBlock {
+    pub fn create_empty_block(&self) -> StarknetBlock {
         StarknetBlock::new(
             BlockHash::default(),
             BlockHash::default(),
-            BlockNumber::default(),
+            self.block_context.block_number,
             GasPrice(self.block_context.gas_price),
             GlobalRoot::default(),
             self.block_context.sequencer_address,
-            BlockTimestamp(get_current_timestamp().as_secs()),
+            self.block_context.block_timestamp,
             Vec::default(),
             Vec::default(),
             None,

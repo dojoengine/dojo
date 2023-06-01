@@ -7,24 +7,24 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in library 'dojo-lang'",
+            "name": "Debug unit tests in library 'dojo-world'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
                     "--lib",
-                    "--package=dojo-lang"
+                    "--package=dojo-world"
                 ],
                 "filter": {
-                    "name": "dojo-lang",
+                    "name": "dojo-world",
                     "kind": "lib"
                 }
             },
             "args": [],
             "env": {
-                "CARGO_MANIFEST_DIR": "${workspaceFolder}/crates/dojo-lang"
+                "CARGO_MANIFEST_DIR": "${workspaceFolder}/crates/dojo-world"
             },
-            "cwd": "${workspaceFolder}/crates/dojo-lang"
+            "cwd": "${workspaceFolder}/crates/dojo-world"
         },
         {
             "type": "lldb",

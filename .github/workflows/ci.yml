@@ -6,16 +6,20 @@ on:
       - main
   pull_request:
 
+env:
+  CARGO_TERM_COLOR: always
+  NIGHTLY_RUST_VERSION: nightly-2023-05-28
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
+
+      - uses: dtolnay/rust-toolchain@master
         with:
-          components: rustfmt
-          toolchain: nightly-2022-11-03
-      - uses: dtolnay/rust-toolchain@stable
+          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
+
       - uses: Swatinem/rust-cache@v2
       - uses: arduino/setup-protoc@v1
         with:
@@ -39,10 +43,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
+      
+      - uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
-          toolchain: nightly-2022-11-03
+          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
+
       - uses: Swatinem/rust-cache@v2
       - run: scripts/cairo_test.sh
 
@@ -50,26 +55,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
+
+      - uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
           components: clippy
-          toolchain: nightly-2022-11-03
+      
       - uses: Swatinem/rust-cache@v2
       - uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: >
-          scripts/clippy.sh
+      - run: scripts/clippy.sh
 
   rustfmt:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
+
+      - uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
+          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
           components: rustfmt
-          toolchain: nightly-2022-11-03
+      
       - uses: Swatinem/rust-cache@v2
       - uses: arduino/setup-protoc@v1
         with:
@@ -81,11 +88,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        name: "Rust Toolchain Setup"
+
+      - uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
-          toolchain: nightly-2022-11-03
+          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
+      
       - uses: Swatinem/rust-cache@v2
       - uses: arduino/setup-protoc@v1
         with:
@@ -102,17 +109,19 @@ jobs:
             mkdir -p ~/.cargo-udeps-cache
             mv cargo-udeps-*/cargo-udeps ~/.cargo-udeps-cache/cargo-udeps
           fi
-          ~/.cargo-udeps-cache/cargo-udeps udeps
+          ~/.cargo-udeps-cache/cargo-udeps udeps --all-targets
         env:
-          RUSTUP_TOOLCHAIN: nightly-2022-11-03
+          RUSTUP_TOOLCHAIN: ${{ env.NIGHTLY_RUST_VERSION }}
 
   docs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
+
+      - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2022-11-03
+          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
+
       - uses: Swatinem/rust-cache@v2
       - uses: arduino/setup-protoc@v1
         with:
@@ -128,11 +137,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        name: "Rust Toolchain Setup"
+
+      - uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
-          toolchain: nightly-2022-11-03
+          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
+      
       - uses: Swatinem/rust-cache@v2
       - name: Install Hurl
         run: |

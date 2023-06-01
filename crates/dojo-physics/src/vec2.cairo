@@ -1,6 +1,6 @@
-use cubit::core::Fixed;
-use cubit::core::FixedType;
-use cubit::core::ONE_u128;
+use cubit::types::fixed::Fixed as FixedTrait;
+use cubit::types::fixed::Fixed as Fixed;
+use cubit::types::fixed::ONE_u128;
 
 struct Vec2<T> {
     x: T,
@@ -37,7 +37,7 @@ impl Vec2Impl<T, impl TCopy: Copy<T>, impl TDrop: Drop<T>> of Vec2Trait<T> {
     /// Creates a vector with all elements set to `v`.
     #[inline(always)]
     fn splat(self: T) -> Vec2<T> {
-        Vec2::<T> { x: self, y: self }
+        Vec2 { x: self, y: self }
     }
 
     // Masks
@@ -102,10 +102,10 @@ impl Vec2Impl<T, impl TCopy: Copy<T>, impl TDrop: Drop<T>> of Vec2Trait<T> {
 #[test]
 #[available_gas(2000000)]
 fn test_new() {
-    let var1_pos = Fixed::new(ONE_u128, false);
-    let var2_neg = Fixed::new(2 * ONE_u128, true);
+    let var1_pos = FixedTrait::new(ONE_u128, false);
+    let var2_neg = FixedTrait::new(2 * ONE_u128, true);
 
-    // with FixedType
+    // with Fixed type
     let vec2 = Vec2Trait::new(var1_pos, var2_neg);
     assert(vec2.x.mag == ONE_u128, 'invalid x.mag');
     assert(vec2.x.sign == false, 'invalid x.sign');
@@ -121,9 +121,9 @@ fn test_new() {
 #[test]
 #[available_gas(2000000)]
 fn test_splat() {
-    let var = Fixed::new(ONE_u128, false);
+    let var = FixedTrait::new(ONE_u128, false);
 
-    // with FixedType
+    // with Fixed type
     let vec2 = Vec2Trait::splat(var);
     assert(vec2.x.mag == ONE_u128, 'invalid x.mag');
     assert(vec2.x.sign == false, 'invalid x.sign');
@@ -139,10 +139,10 @@ fn test_splat() {
 #[test]
 #[available_gas(2000000)]
 fn test_select() {
-    let var1_pos = Fixed::new(ONE_u128, false);
-    let var2_neg = Fixed::new(2 * ONE_u128, true);
-    let var3_neg = Fixed::new(3 * ONE_u128, true);
-    let var4_pos = Fixed::new(4 * ONE_u128, false);
+    let var1_pos = FixedTrait::new(ONE_u128, false);
+    let var2_neg = FixedTrait::new(2 * ONE_u128, true);
+    let var3_neg = FixedTrait::new(3 * ONE_u128, true);
+    let var4_pos = FixedTrait::new(4 * ONE_u128, false);
 
     let vec2a = Vec2Trait::new(var1_pos, var2_neg);
     let vec2b = Vec2Trait::new(var3_neg, var4_pos);
@@ -165,10 +165,10 @@ fn test_select() {
 #[test]
 #[available_gas(2000000)]
 fn test_dot() {
-    let var1_pos = Fixed::new(ONE_u128, false);
-    let var2_neg = Fixed::new(2 * ONE_u128, true);
-    let var3_neg = Fixed::new(3 * ONE_u128, true);
-    let var4_pos = Fixed::new(4 * ONE_u128, false);
+    let var1_pos = FixedTrait::new(ONE_u128, false);
+    let var2_neg = FixedTrait::new(2 * ONE_u128, true);
+    let var3_neg = FixedTrait::new(3 * ONE_u128, true);
+    let var4_pos = FixedTrait::new(4 * ONE_u128, false);
 
     let vec2a = Vec2Trait::new(var1_pos, var2_neg);
     let vec2b = Vec2Trait::new(var3_neg, var4_pos);
@@ -185,10 +185,10 @@ fn test_dot() {
 #[test]
 #[available_gas(2000000)]
 fn test_dot_into_vec() {
-    let var1_pos = Fixed::new(ONE_u128, false);
-    let var2_neg = Fixed::new(2 * ONE_u128, true);
-    let var3_neg = Fixed::new(3 * ONE_u128, true);
-    let var4_pos = Fixed::new(4 * ONE_u128, false);
+    let var1_pos = FixedTrait::new(ONE_u128, false);
+    let var2_neg = FixedTrait::new(2 * ONE_u128, true);
+    let var3_neg = FixedTrait::new(3 * ONE_u128, true);
+    let var4_pos = FixedTrait::new(4 * ONE_u128, false);
 
     let vec2a = Vec2Trait::new(var1_pos, var2_neg);
     let vec2b = Vec2Trait::new(var3_neg, var4_pos);
@@ -209,8 +209,8 @@ fn test_dot_into_vec() {
 #[test]
 #[available_gas(2000000)]
 fn test_xx() {
-    let var1_pos = Fixed::new(ONE_u128, false);
-    let var2_neg = Fixed::new(2 * ONE_u128, true);
+    let var1_pos = FixedTrait::new(ONE_u128, false);
+    let var2_neg = FixedTrait::new(2 * ONE_u128, true);
     let vec2 = Vec2Trait::new(var1_pos, var2_neg);
 
     let vec2xx = vec2.xx();
@@ -223,8 +223,8 @@ fn test_xx() {
 #[test]
 #[available_gas(2000000)]
 fn test_xy() {
-    let var1_pos = Fixed::new(ONE_u128, false);
-    let var2_neg = Fixed::new(2 * ONE_u128, true);
+    let var1_pos = FixedTrait::new(ONE_u128, false);
+    let var2_neg = FixedTrait::new(2 * ONE_u128, true);
     let vec2 = Vec2Trait::new(var1_pos, var2_neg);
 
     let vec2xy = vec2.xy();
@@ -237,8 +237,8 @@ fn test_xy() {
 #[test]
 #[available_gas(2000000)]
 fn test_yx() {
-    let var1_pos = Fixed::new(ONE_u128, false);
-    let var2_neg = Fixed::new(2 * ONE_u128, true);
+    let var1_pos = FixedTrait::new(ONE_u128, false);
+    let var2_neg = FixedTrait::new(2 * ONE_u128, true);
     let vec2 = Vec2Trait::new(var1_pos, var2_neg);
 
     let vec2yx = vec2.yx();
@@ -251,8 +251,8 @@ fn test_yx() {
 #[test]
 #[available_gas(2000000)]
 fn test_yy() {
-    let var1_pos = Fixed::new(ONE_u128, false);
-    let var2_neg = Fixed::new(2 * ONE_u128, true);
+    let var1_pos = FixedTrait::new(ONE_u128, false);
+    let var2_neg = FixedTrait::new(2 * ONE_u128, true);
     let vec2 = Vec2Trait::new(var1_pos, var2_neg);
 
     let vec2yy = vec2.yy();

@@ -11,16 +11,19 @@ mod migrate;
 
 use cli::{App, Commands};
 
-#[tokio::main]
-async fn main() {
-    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+// #[tokio::main]
+fn main() {
+    env_logger::Builder::from_env(Env::default().default_filter_or("sozo=info")).init();
 
     let cli = App::parse();
 
     let res = match cli.command {
         Commands::Build(args) => build::run(args),
         Commands::Init(args) => {
-            init::run(args);
+            match init::run(args) {
+                Ok(_) => (),
+                Err(e) => eprintln!("Error: {}", e),
+            };
             Ok(())
         }
         Commands::Migrate(args) => migrate::run(args),

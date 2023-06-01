@@ -1,83 +1,70 @@
 pub mod component;
 pub mod constants;
 pub mod entity;
-pub mod entity_state;
 pub mod event;
+pub mod schema;
 pub mod server;
 pub mod system;
 pub mod system_call;
+pub mod types;
+pub mod utils;
 
-use async_graphql::connection::{Connection, OpaqueCursor};
-use async_graphql::{Context, Object, Result, ID};
-use component::{component_by_id, Component};
-use entity::{entities_by_pk, entity_by_id, Entity};
-use event::{event_by_id, events_by_keys, Event};
-use sqlx::{Pool, Sqlite};
-use system::{system_by_id, System};
+use async_graphql::dynamic::{Field, FieldFuture, Object, TypeRef};
+use async_graphql::{Name, Value};
+use indexmap::IndexMap;
 
-pub struct Query;
+// Type aliases for GraphQL fields
+pub type TypeMapping = IndexMap<Name, &'static str>;
+pub type ValueMapping = IndexMap<Name, Value>;
 
-#[Object]
-impl Query {
-    async fn component(&self, ctx: &Context<'_>, id: ID) -> Result<Component> {
-        let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-        component_by_id(&mut conn, id.0.to_string()).await
+pub trait ObjectTraitStatic {
+    fn new() -> Self;
+    fn from(field_type_mapping: TypeMapping) -> Self;
+}
+
+pub trait ObjectTraitInstance {
+    fn name(&self) -> &str;
+    fn type_name(&self) -> &str;
+    fn field_type_mapping(&self) -> &TypeMapping;
+    fn field_resolvers(&self) -> Vec<Field>;
+    fn related_fields(&self) -> Option<Vec<Field>> {
+        None
     }
 
-    async fn components(&self, ctx: &Context<'_>) -> Result<Vec<Component>> {
-        let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+    // Create a new GraphQL object
+    fn create(&self) -> Object {
+        let mut object = Object::new(self.type_name());
 
-        // TODO: handle pagination
-        component::components(&mut conn).await
+        // Add fields (ie id, createdAt, etc)
+        for (field_name, field_type) in self.field_type_mapping() {
+            let field = create_field(field_name, field_type);
+            object = object.field(field);
+        }
+
+        // Add related fields (ie event, system)
+        if let Some(related_fields) = self.related_fields() {
+            for field in related_fields {
+                object = object.field(field);
+            }
+        }
+
+        object
     }
+}
 
-    async fn system(&self, ctx: &Context<'_>, id: ID) -> Result<System> {
-        let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-        system_by_id(&mut conn, id.0.to_string()).await
-    }
+fn create_field(name: &str, field_type: &str) -> Field {
+    let outer_name = name.to_owned();
 
-    async fn systems(&self, ctx: &Context<'_>) -> Result<Vec<System>> {
-        let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+    Field::new(name, TypeRef::named_nn(field_type), move |ctx| {
+        let inner_name = outer_name.to_owned();
 
-        // TODO: handle pagination
-        system::systems(&mut conn).await
-    }
+        FieldFuture::new(async move {
+            let mapping = ctx.parent_value.try_downcast_ref::<ValueMapping>()?;
 
-    async fn entity(&self, ctx: &Context<'_>, id: ID) -> Result<Entity> {
-        let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-        entity_by_id(&mut conn, id.0.to_string()).await
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    async fn entities(
-        &self,
-        ctx: &Context<'_>,
-        partition_id: String,
-        keys: Option<Vec<String>>,
-        after: Option<String>,
-        before: Option<String>,
-        first: Option<i32>,
-        last: Option<i32>,
-    ) -> Result<Connection<OpaqueCursor<ID>, Entity>> {
-        let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-        entities_by_pk(&mut conn, partition_id, keys, after, before, first, last).await
-    }
-
-    async fn event(&self, ctx: &Context<'_>, id: ID) -> Result<Event> {
-        let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-        event_by_id(&mut conn, id.0.to_string()).await
-    }
-
-    async fn events(
-        &self,
-        ctx: &Context<'_>,
-        keys: Vec<String>,
-        after: Option<String>,
-        before: Option<String>,
-        first: Option<i32>,
-        last: Option<i32>,
-    ) -> Result<Connection<OpaqueCursor<ID>, Event>> {
-        let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-        events_by_keys(&mut conn, &keys, after, before, first, last).await
-    }
+            match mapping.get(inner_name.as_str()) {
+                Some(value) => Ok(Some(value.clone())),
+                _ => Err("field not found".into()),
+            }
+        })
+    })
 }

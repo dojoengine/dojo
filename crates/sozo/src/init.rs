@@ -1,5 +1,7 @@
-use std::env::current_dir;
-use std::path::{Path, PathBuf};
+use std::env::{current_dir, set_current_dir};
+use std::error::Error;
+use std::path::PathBuf;
+use std::process::Command;
 use std::{fs, io};
 
 use clap::Args;
@@ -8,23 +10,12 @@ use clap::Args;
 pub struct InitArgs {
     #[clap(help = "Target directory")]
     path: Option<PathBuf>,
+
+    #[clap(help = "Parse a full git url or a url path", default_value = "dojoengine/dojo-starter")]
+    template: String,
 }
 
-fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> {
-    fs::create_dir_all(&dst)?;
-    for entry in fs::read_dir(src)? {
-        let entry = entry?;
-        let ty = entry.file_type()?;
-        if ty.is_dir() {
-            copy_dir_all(entry.path(), dst.as_ref().join(entry.file_name()))?;
-        } else {
-            fs::copy(entry.path(), dst.as_ref().join(entry.file_name()))?;
-        }
-    }
-    Ok(())
-}
-
-pub fn run(args: InitArgs) {
+pub fn run(args: InitArgs) -> Result<(), Box<dyn Error>> {
     let target_dir = match args.path {
         Some(path) => {
             if path.is_absolute() {
@@ -37,13 +28,60 @@ pub fn run(args: InitArgs) {
         }
         None => current_dir().unwrap(),
     };
+    println!("\n\n ⛩️ ====== STARTING ====== ⛩️ \n");
 
-    let template_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("sozo-template");
+    println!("Setting up project directory tree...");
 
-    copy_dir_all(template_dir, target_dir).unwrap();
+    let template = args.template;
+    let repo_url = if template.starts_with("https://") {
+        template
+    } else {
+        "https://github.com/".to_string() + &template
+    };
 
-    println!("🗄 Creating project directory tree");
-    println!("⛩️ Dojo project ready!");
-    println!();
-    println!("Try running: `dojo-test .`");
+    clone_repo(&repo_url, &target_dir)?;
+
+    println!("✅ Project directory tree created successfully!");
+
+    // Navigate to the newly cloned repo.
+    let initial_dir = current_dir()?;
+    set_current_dir(&target_dir)?;
+
+    // Modify the git history.
+    let git_output = Command::new("git").args(["rev-parse", "--short", "HEAD"]).output()?.stdout;
+    let commit_hash = String::from_utf8(git_output)?;
+    fs::remove_dir_all(".git")?;
+    Command::new("git").arg("init").output()?;
+    Command::new("git").args(["add", "--all"]).output()?;
+
+    let commit_msg = format!("chore: init from {} at {}", repo_url, commit_hash.trim());
+    Command::new("git").args(["commit", "-m", &commit_msg]).output()?;
+
+    // Navigate back.
+    set_current_dir(initial_dir)?;
+
+    println!(
+        "\n\n====== SETUP COMPLETE! ======\n\nTo start using your new Dojo project, try running: \
+         \n\n`sozo build`\n"
+    );
+
+    println!("🎉🎉🎉 SUCCESS! Your project is now ready. Start building with ⛩️ Dojo! 🎉🎉🎉");
+
+    Ok(())
+}
+
+fn clone_repo(url: &str, path: &PathBuf) -> Result<(), Box<dyn Error>> {
+    if path.exists() {
+        let entries = fs::read_dir(path)?.count();
+        if entries > 0 {
+            return Err(Box::new(io::Error::new(
+                io::ErrorKind::Other,
+                "Target directory is not empty",
+            )));
+        }
+    }
+
+    Command::new("git").args(["clone", "--recursive", url, path.to_str().unwrap()]).output()?;
+
+    Ok(())
 }

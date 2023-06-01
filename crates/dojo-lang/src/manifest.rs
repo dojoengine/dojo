@@ -5,16 +5,12 @@ use cairo_lang_defs::ids::{ModuleId, ModuleItemId};
 use cairo_lang_filesystem::ids::CrateId;
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::plugin::DynPluginAuxData;
-use dojo_world::manifest::{Component, Input, Member, Output, System};
+use dojo_world::manifest::{Input, Output, System};
 use serde::Serialize;
 use smol_str::SmolStr;
 use starknet::core::types::FieldElement;
 
 use crate::plugin::{DojoAuxData, SystemAuxData};
-
-#[cfg(test)]
-#[path = "manifest_test.rs"]
-mod test;
 
 #[derive(Default, Debug, Serialize)]
 pub(crate) struct Manifest(dojo_world::manifest::Manifest);
@@ -68,20 +64,12 @@ impl Manifest {
         module_id: ModuleId,
         compiled_classes: &HashMap<SmolStr, FieldElement>,
     ) {
-        for name in &aux_data.components {
-            if let Ok(Some(ModuleItemId::Struct(struct_id))) =
+        for component in &aux_data.components {
+            let component = component.clone();
+            let name: SmolStr = component.name.clone().into();
+            if let Ok(Some(ModuleItemId::Struct(_))) =
                 db.module_item_by_name(module_id, name.clone())
             {
-                let members = db
-                    .struct_members(struct_id)
-                    .unwrap()
-                    .iter()
-                    .map(|(component_name, member)| Member {
-                        name: component_name.to_string(),
-                        ty: member.ty.format(db),
-                    })
-                    .collect();
-
                 // It needs the `Component` suffix because we are
                 // searching from the compiled contracts.
                 let class_hash = compiled_classes
@@ -89,9 +77,9 @@ impl Manifest {
                     .with_context(|| format!("Contract {name} not found in target."))
                     .unwrap();
 
-                self.0.components.push(Component {
-                    members,
-                    name: name.to_string(),
+                self.0.components.push(dojo_world::manifest::Component {
+                    name: component.name,
+                    members: component.members,
                     class_hash: *class_hash,
                 });
             }

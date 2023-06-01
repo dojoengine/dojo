@@ -23,7 +23,7 @@ const EXECUTOR_ADDRESS_SLOT: FieldElement = FieldElement::from_mont([
     440859966107478631,
 ]);
 
-const COMPONENT_ENTRYPOINT: FieldElement = FieldElement::from_mont([
+pub(crate) const COMPONENT_ENTRYPOINT: FieldElement = FieldElement::from_mont([
     2012748018737461584,
     17346441013657197760,
     13481606495872588402,
@@ -55,6 +55,8 @@ pub struct Member {
     pub name: String,
     #[serde(rename = "type")]
     pub ty: String,
+    pub slot: usize,
+    pub offset: u8,
 }
 
 /// Represents a declaration of a component.

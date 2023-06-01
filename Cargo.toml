@@ -8,6 +8,7 @@ members = [
     "crates/dojo-language-server",
     "crates/dojo-world",
     "crates/dojo-test-runner",
+    "crates/dojo-test-utils",
     "crates/dojo-signers",
     "crates/katana",
     "crates/katana-core",
@@ -27,31 +28,30 @@ license-file = "LICENSE"
 anyhow = "1.0.66"
 async-trait = "0.1.68"
 blockifier = { git = "https://github.com/starkware-libs/blockifier" }
-cairo-vm = { git = "https://github.com/lambdaclass/cairo-rs.git", rev = "eaea41fe" }
-cairo-lang-casm = "1.0.0"
-cairo-lang-compiler = "1.0.0"
-cairo-lang-debug = "1.0.0"
-cairo-lang-defs = "1.0.0"
-cairo-lang-diagnostics = "1.0.0"
-cairo-lang-filesystem = "1.0.0"
-cairo-lang-formatter = "1.0.0"
-cairo-lang-language-server = "1.0.0"
-cairo-lang-lowering = "1.0.0"
-cairo-lang-parser = "1.0.0"
-cairo-lang-plugins = "1.0.0"
-cairo-lang-project = "1.0.0"
-cairo-lang-semantic = { version = "1.0.0", features = [ "testing" ] }
-cairo-lang-sierra-generator = "1.0.0"
-cairo-lang-sierra = "1.0.0"
-cairo-lang-sierra-to-casm = "1.0.0"
-cairo-lang-starknet = "1.0.0"
-cairo-lang-syntax = "1.0.0"
-cairo-lang-test-utils = "1.0.0"
-cairo-lang-test-runner = "1.0.0"
-cairo-lang-utils = "1.0.0"
-camino = { version = "1.1.2", features = [ "serde1" ] }
-chrono = { version = "0.4.24", features = [ "serde" ] }
-clap = { version = "4.2", features = [ "derive" ] }
+cairo-lang-casm = "1.1.0"
+cairo-lang-compiler = "1.1.0"
+cairo-lang-debug = "1.1.0"
+cairo-lang-defs = "1.1.0"
+cairo-lang-diagnostics = "1.1.0"
+cairo-lang-filesystem = "1.1.0"
+cairo-lang-formatter = "1.1.0"
+cairo-lang-language-server = "1.1.0"
+cairo-lang-lowering = "1.1.0"
+cairo-lang-parser = "1.1.0"
+cairo-lang-plugins = "1.1.0"
+cairo-lang-project = "1.1.0"
+cairo-lang-semantic = { version = "1.1.0", features = ["testing"] }
+cairo-lang-sierra-generator = "1.1.0"
+cairo-lang-sierra = "1.1.0"
+cairo-lang-sierra-to-casm = "1.1.0"
+cairo-lang-starknet = "1.1.0"
+cairo-lang-syntax = "1.1.0"
+cairo-lang-test-utils = "1.1.0"
+cairo-lang-test-runner = "1.1.0"
+cairo-lang-utils = "1.1.0"
+camino = { version = "1.1.2", features = ["serde1"] }
+chrono = { version = "0.4.24", features = ["serde"] }
+clap = { version = "4.2", features = ["derive"] }
 colored = "2"
 env_logger = "0.10.0"
 indoc = "1.0.7"
@@ -61,17 +61,17 @@ num-bigint = "0.4"
 pretty_assertions = "1.2.1"
 rayon = "0.9.0"
 salsa = "0.16.1"
-scarb = { git = "https://github.com/software-mansion/scarb", version = "0.2.1" }
+scarb = { git = "https://github.com/software-mansion/scarb", rev = "0aa0f97b89a2e6f38f3b005cad2817dcaee7bf51" }
 semver = "1.0.5"
-serde = { version = "1.0.156", features = [ "derive" ] }
+serde = { version = "1.0.156", features = ["derive"] }
 serde_json = "1.0"
 serde_with = "2.3.1"
-smol_str = { version = "0.2.0", features = [ "serde" ] }
+smol_str = { version = "0.2.0", features = ["serde"] }
 starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", branch = "dev/jsonrpc_0_3_0" }
 starknet_api = { git = "https://github.com/starkware-libs/starknet-api" }
 test-log = "0.2.11"
 thiserror = "1.0.32"
-tokio = { version = "1.16", features = [ "full" ] }
+tokio = { version = "1.16", features = ["full"] }
 toml = "0.4.2"
 tracing = "0.1"
 tracing-subscriber = "0.3.16"

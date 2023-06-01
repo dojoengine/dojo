@@ -11,6 +11,7 @@ on:
 env:
   IS_NIGHTLY: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
   CARGO_TERM_COLOR: always
+  NIGHTLY_RUST_VERSION: nightly-2023-05-28
 
 jobs:
   prepare:
@@ -79,7 +80,6 @@ jobs:
             platform: linux
             target: x86_64-unknown-linux-gnu
             arch: amd64
-            svm_target_platform: linux-amd64
           # - os: ubuntu-20.04
           #   platform: linux
           #   target: aarch64-unknown-linux-gnu
@@ -89,27 +89,23 @@ jobs:
             platform: darwin
             target: x86_64-apple-darwin
             arch: amd64
-            svm_target_platform: macosx-amd64
           - os: macos-latest
             platform: darwin
             target: aarch64-apple-darwin
             arch: arm64
-            svm_target_platform: macosx-aarch64
           - os: windows-latest
             platform: win32
             target: x86_64-pc-windows-msvc
             arch: amd64
-            svm_target_platform: windows-amd64
 
     steps:
       - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
+
+      - uses: dtolnay/rust-toolchain@master
         name: Rust Toolchain Setup
         with:
-          profile: minimal
-          toolchain: nightly-2022-11-03
-          target: ${{ matrix.job.target }}
-          override: true
+          targets: ${{ matrix.job.target }}
+          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
 
       - uses: Swatinem/rust-cache@v1
         with:
@@ -129,13 +125,8 @@ jobs:
           echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
 
       - name: Build binaries
-        uses: actions-rs/cargo@v1
-        env:
-          SVM_TARGET_PLATFORM: ${{ matrix.job.svm_target_platform }}
-        with:
-          command: build
-          args: --release --bins --target ${{ matrix.job.target }}
-
+        run: cargo build --release --bins --target ${{ matrix.job.target }}
+        
       - name: Archive binaries
         id: artifacts
         env:

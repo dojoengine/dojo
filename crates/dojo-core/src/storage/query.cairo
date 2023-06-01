@@ -13,45 +13,39 @@ struct Query {
     address_domain: u32,
     partition: u250,
     keys: Span<u250>,
-    hash: u250,
 }
 
 trait QueryTrait {
     fn new(address_domain: u32, partition: u250, keys: Span<u250>) -> Query;
     fn new_from_id(id: u250) -> Query;
-    fn id(self: @Query) -> u250;
+    fn hash(self: @Query) -> u250;
     fn table(self: @Query, component: ShortString) -> u250;
     fn keys(self: @Query) -> Span<u250>;
 }
 
 impl QueryImpl of QueryTrait {
     fn new(address_domain: u32, partition: u250, keys: Span<u250>) -> Query {
-        if keys.len() == 1 {
-            if partition == 0.into() {
-                let hash = *keys.at(0);
-                return Query { address_domain, keys, partition, hash };
-            }
-
-            gas::withdraw_gas_all(get_builtin_costs()).expect('Out of gas');
-
-            let hash = LegacyHash::hash(0, (partition, *keys.at(0)));
-            return Query { address_domain, keys, partition, hash: hash.into() };
-        }
-
-        let mut serialized = ArrayTrait::new();
-        partition.serialize(ref serialized);
-        keys.serialize(ref serialized);
-        let hash = poseidon_hash_span(serialized.span());
-        Query { address_domain, keys, partition, hash: hash.into() }
+        Query { address_domain, keys, partition }
     }
+
     fn new_from_id(id: u250) -> Query {
         let mut keys = ArrayTrait::new();
         keys.append(id);
         QueryTrait::new(0, 0.into(), keys.span())
     }
-    fn id(self: @Query) -> u250 {
-        *self.hash
+
+    fn hash(self: @Query) -> u250 {
+        let keys = *self.keys;
+        if keys.len() == 1 & *self.partition == 0.into() {
+            return *keys.at(0);
+        }
+
+        let mut serialized = ArrayTrait::new();
+        self.partition.serialize(ref serialized);
+        self.keys.serialize(ref serialized);
+        poseidon_hash_span(serialized.span()).into()
     }
+
     fn table(self: @Query, component: ShortString) -> u250 {
         if *self.partition == 0.into() {
             return component.into();
@@ -63,14 +57,9 @@ impl QueryImpl of QueryTrait {
         let hash = poseidon_hash_span(serialized.span());
         hash.into()
     }
+
     fn keys(self: @Query) -> Span<u250> {
         *self.keys
-    }
-}
-
-impl QueryIntoFelt252 of Into<Query, u250> {
-    fn into(self: Query) -> u250 {
-        self.hash
     }
 }
 
