@@ -10,13 +10,17 @@ anyhow.workspace = true
 assert_fs = "1.0.9"
 async-trait.workspace = true
 cairo-lang-compiler.workspace = true
+cairo-lang-filesystem.workspace = true
 cairo-lang-starknet.workspace = true
 cairo-lang-project.workspace = true
 camino.workspace = true
 dojo-lang = { path = "../dojo-lang" }
+jsonrpsee = { version = "0.16.2", features = [ "server" ] }
+katana-core = { path = "../katana-core" }
+katana-rpc = { path = "../katana-rpc" }
+tokio = { version = "1.28.0", features = ["full"] }
 thiserror.workspace = true
 toml = "0.7.1"
-cairo-lang-filesystem.workspace = true
 scarb.workspace = true
 serde.workspace = true
 serde_json.workspace = true
