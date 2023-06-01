@@ -12,7 +12,7 @@ use super::system_call::system_call_by_id;
 use super::types::ScalarType;
 use super::utils::remove_quotes;
 use super::utils::value_accessor::ObjectAccessor;
-use super::{ObjectTraitInstance, ObjectTraitStatic, TypeMapping, ValueMapping};
+use super::{ObjectTrait, TypeMapping, ValueMapping};
 
 #[derive(FromRow, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -28,8 +28,8 @@ pub struct EventObject {
     pub field_type_mapping: TypeMapping,
 }
 
-impl ObjectTraitStatic for EventObject {
-    fn new() -> Self {
+impl EventObject {
+    pub fn new() -> Self {
         Self {
             field_type_mapping: IndexMap::from([
                 (Name::new("id"), TypeRef::ID.to_string()),
@@ -40,13 +40,9 @@ impl ObjectTraitStatic for EventObject {
             ]),
         }
     }
-
-    fn from(field_type_mapping: TypeMapping) -> Self {
-        Self { field_type_mapping }
-    }
 }
 
-impl ObjectTraitInstance for EventObject {
+impl ObjectTrait for EventObject {
     fn name(&self) -> &str {
         "event"
     }

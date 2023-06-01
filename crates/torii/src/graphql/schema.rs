@@ -12,7 +12,7 @@ use super::system::SystemObject;
 use super::system_call::SystemCallObject;
 use super::types::ScalarType;
 use super::utils::format_name;
-use super::{ObjectTraitInstance, ObjectTraitStatic, TypeMapping};
+use super::{ObjectTrait, TypeMapping};
 
 pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     let mut schema_builder = Schema::build("Query", None, None);
@@ -47,7 +47,7 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
 }
 
 // predefined base objects
-fn base_objects() -> Vec<Box<dyn ObjectTraitInstance>> {
+fn base_objects() -> Vec<Box<dyn ObjectTrait>> {
     vec![
         Box::new(EntityObject::new()),
         Box::new(ComponentObject::new()),
@@ -57,7 +57,7 @@ fn base_objects() -> Vec<Box<dyn ObjectTraitInstance>> {
     ]
 }
 
-async fn storage_objects(pool: &SqlitePool) -> Result<Vec<Box<dyn ObjectTraitInstance>>> {
+async fn storage_objects(pool: &SqlitePool) -> Result<Vec<Box<dyn ObjectTrait>>> {
     let mut conn = pool.acquire().await?;
     let mut objects = Vec::new();
 
@@ -72,7 +72,7 @@ async fn storage_objects(pool: &SqlitePool) -> Result<Vec<Box<dyn ObjectTraitIns
     Ok(objects)
 }
 
-fn process_component(component: Component) -> Result<Box<dyn ObjectTraitInstance>> {
+fn process_component(component: Component) -> Result<Box<dyn ObjectTrait>> {
     let members: Vec<Member> = serde_json::from_str(&component.storage_definition)?;
 
     let field_type_mapping = members.iter().fold(TypeMapping::new(), |mut mapping, member| {

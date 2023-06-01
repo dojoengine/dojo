@@ -8,7 +8,7 @@ use sqlx::{FromRow, Pool, Result, Sqlite};
 
 use super::types::ScalarType;
 use super::utils::remove_quotes;
-use super::{ObjectTraitInstance, ObjectTraitStatic, TypeMapping, ValueMapping};
+use super::{ObjectTrait, TypeMapping, ValueMapping};
 
 #[derive(FromRow, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -23,11 +23,11 @@ pub struct Component {
 }
 
 pub struct ComponentObject {
-    pub field_type_mapping: TypeMapping,
+    pub field_type_mapping: TypeMapping
 }
 
-impl ObjectTraitStatic for ComponentObject {
-    fn new() -> Self {
+impl ComponentObject {
+    pub fn new() -> Self {
         Self {
             field_type_mapping: IndexMap::from([
                 (Name::new("id"), TypeRef::ID.to_string()),
@@ -40,13 +40,9 @@ impl ObjectTraitStatic for ComponentObject {
             ]),
         }
     }
-
-    fn from(field_type_mapping: TypeMapping) -> Self {
-        Self { field_type_mapping }
-    }
 }
 
-impl ObjectTraitInstance for ComponentObject {
+impl ObjectTrait for ComponentObject {
     fn name(&self) -> &str {
         "component"
     }

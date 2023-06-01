@@ -3,7 +3,7 @@ use async_graphql::{Name, Value};
 use indexmap::IndexMap;
 use sqlx::{Pool, Sqlite};
 
-use super::{ObjectTraitInstance, TypeMapping};
+use super::{ObjectTrait, TypeMapping};
 
 pub struct StorageObject {
     pub name: String,
@@ -17,7 +17,7 @@ impl StorageObject {
     }
 }
 
-impl ObjectTraitInstance for StorageObject {
+impl ObjectTrait for StorageObject {
     fn name(&self) -> &str {
         &self.name
     }

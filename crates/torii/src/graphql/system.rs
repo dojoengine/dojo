@@ -12,7 +12,7 @@ use super::system_call::system_calls_by_system_id;
 use super::types::ScalarType;
 use super::utils::remove_quotes;
 use super::utils::value_accessor::ObjectAccessor;
-use super::{ObjectTraitInstance, ObjectTraitStatic, TypeMapping, ValueMapping};
+use super::{ObjectTrait, TypeMapping, ValueMapping};
 
 #[derive(FromRow, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -29,8 +29,8 @@ pub struct SystemObject {
     pub field_type_mapping: TypeMapping,
 }
 
-impl ObjectTraitStatic for SystemObject {
-    fn new() -> Self {
+impl SystemObject {
+    pub fn new() -> Self {
         Self {
             field_type_mapping: IndexMap::from([
                 (Name::new("id"), TypeRef::ID.to_string()),
@@ -42,13 +42,9 @@ impl ObjectTraitStatic for SystemObject {
             ]),
         }
     }
-
-    fn from(field_type_mapping: TypeMapping) -> Self {
-        Self { field_type_mapping }
-    }
 }
 
-impl ObjectTraitInstance for SystemObject {
+impl ObjectTrait for SystemObject {
     fn name(&self) -> &str {
         "system"
     }

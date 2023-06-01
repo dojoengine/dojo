@@ -19,12 +19,7 @@ use indexmap::IndexMap;
 pub type TypeMapping = IndexMap<Name, String>;
 pub type ValueMapping = IndexMap<Name, Value>;
 
-pub trait ObjectTraitStatic {
-    fn new() -> Self;
-    fn from(field_type_mapping: TypeMapping) -> Self;
-}
-
-pub trait ObjectTraitInstance {
+pub trait ObjectTrait {
     fn name(&self) -> &str;
     fn type_name(&self) -> &str;
     fn field_type_mapping(&self) -> &TypeMapping;

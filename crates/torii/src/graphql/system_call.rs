@@ -12,7 +12,7 @@ use sqlx::{FromRow, Pool, Result, Sqlite};
 use super::system::system_by_id;
 use super::types::ScalarType;
 use super::utils::value_accessor::ObjectAccessor;
-use super::{ObjectTraitInstance, ObjectTraitStatic, TypeMapping, ValueMapping};
+use super::{ObjectTrait, TypeMapping, ValueMapping};
 
 #[derive(FromRow, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -27,8 +27,8 @@ pub struct SystemCallObject {
     pub field_type_mapping: TypeMapping,
 }
 
-impl ObjectTraitStatic for SystemCallObject {
-    fn new() -> Self {
+impl SystemCallObject {
+    pub fn new() -> Self {
         Self {
             field_type_mapping: IndexMap::from([
                 (Name::new("id"), TypeRef::ID.to_string()),
@@ -39,13 +39,9 @@ impl ObjectTraitStatic for SystemCallObject {
             ]),
         }
     }
-
-    fn from(field_type_mapping: TypeMapping) -> Self {
-        Self { field_type_mapping }
-    }
 }
 
-impl ObjectTraitInstance for SystemCallObject {
+impl ObjectTrait for SystemCallObject {
     fn name(&self) -> &str {
         "systemCall"
     }
