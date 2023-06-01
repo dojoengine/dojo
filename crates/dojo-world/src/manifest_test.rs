@@ -1,10 +1,10 @@
+use dojo_test_utils::rpc::MockJsonRpcTransport;
 use serde_json::json;
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcMethod};
 
 use super::Manifest;
 use crate::manifest::{ManifestError, EXECUTOR_ADDRESS_SLOT};
-use crate::test_utils::MockJsonRpcTransport;
 
 #[tokio::test]
 async fn test_manifest_from_remote_throw_error_on_not_deployed() {

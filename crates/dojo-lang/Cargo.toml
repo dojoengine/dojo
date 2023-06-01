@@ -48,3 +48,4 @@ cairo-lang-test-utils.workspace = true
 env_logger = "0.10.0"
 pretty_assertions.workspace = true
 test-log.workspace = true
+dojo-test-utils = { path = "../dojo-test-utils" }

@@ -10,9 +10,6 @@ use url::Url;
 pub mod manifest;
 pub mod migration;
 
-#[cfg(any(feature = "testing", test))]
-pub mod test_utils;
-
 #[allow(clippy::enum_variant_names)]
 #[derive(thiserror::Error, Debug)]
 pub enum DeserializationError {

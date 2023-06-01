@@ -36,7 +36,7 @@ impl DojoRootDatabaseBuilderEx for RootDatabaseBuilder {
     }
 
     fn with_dojo(&mut self) -> &mut Self {
-        self.with_semantic_plugin(Arc::new(DojoPlugin {}));
+        self.with_semantic_plugin(Arc::new(DojoPlugin));
         self.with_semantic_plugin(Arc::new(StarkNetPlugin::default()));
         self
     }

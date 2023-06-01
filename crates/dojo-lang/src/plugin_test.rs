@@ -17,10 +17,10 @@ use cairo_lang_syntax::node::TypedSyntaxNode;
 use cairo_lang_test_utils::parse_test_file::TestFileRunner;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
 use cairo_lang_utils::Upcast;
+use dojo_test_utils::compiler::{build_test_config, build_test_db};
 use scarb::ops;
 
 use crate::plugin::DojoPlugin;
-use crate::test_utils::{build_test_config, build_test_db};
 
 #[salsa::database(SyntaxDatabase, FilesDatabase)]
 #[derive(Default)]
@@ -42,7 +42,7 @@ struct ExpandContractTestRunner {
 impl Default for ExpandContractTestRunner {
     fn default() -> Self {
         let parser_db = SimpleParserDatabase::default();
-        let config = build_test_config("src/cairo_level_tests/Scarb.toml").unwrap();
+        let config = build_test_config("src/manifest_test_crate/Scarb.toml").unwrap();
         let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
         Self { db: build_test_db(&ws).unwrap(), parser_db }
     }

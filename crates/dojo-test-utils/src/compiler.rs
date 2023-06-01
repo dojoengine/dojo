@@ -6,15 +6,14 @@ use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_filesystem::ids::Directory;
 use cairo_lang_project::{ProjectConfig, ProjectConfigContent};
 use camino::{Utf8Path, Utf8PathBuf};
+use dojo_lang::compiler::DojoCompiler;
+use dojo_lang::db::DojoRootDatabaseBuilderEx;
+use dojo_lang::plugin::CairoPluginRepository;
 use scarb::compiler::{CompilationUnit, CompilerRepository};
 use scarb::core::{Config, Workspace};
 use scarb::ops;
 use scarb::ui::Verbosity;
 use tracing::trace;
-
-use crate::compiler::DojoCompiler;
-use crate::db::DojoRootDatabaseBuilderEx;
-use crate::plugin::CairoPluginRepository;
 
 pub fn build_test_config(path: &str) -> anyhow::Result<Config> {
     let mut compilers = CompilerRepository::empty();
