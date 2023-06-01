@@ -20,14 +20,14 @@ use thiserror::Error;
 
 use super::world::{ClassDiff, ContractDiff};
 
-pub type RegisterResult = InvokeTransactionResult;
-pub type DeclareResult = DeclareTransactionResult;
+pub type RegisterOutput = InvokeTransactionResult;
+pub type DeclareOutput = DeclareTransactionResult;
 
 #[derive(Debug)]
-pub struct DeployResult {
+pub struct DeployOutput {
     pub transaction_hash: FieldElement,
     pub contract_address: FieldElement,
-    pub declare_res: DeclareResult,
+    pub declare_res: DeclareOutput,
 }
 
 #[derive(Debug, Error)]
@@ -67,7 +67,7 @@ pub trait Declarable {
     async fn declare<A>(
         &self,
         account: &A,
-    ) -> Result<DeclareResult, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
+    ) -> Result<DeclareOutput, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
     where
         A: ConnectedAccount + Sync,
     {
@@ -100,7 +100,7 @@ pub trait Deployable: Declarable + Sync {
         &mut self,
         constructor_calldata: Vec<FieldElement>,
         account: &A,
-    ) -> Result<DeployResult, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
+    ) -> Result<DeployOutput, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
     where
         A: ConnectedAccount + Sync,
     {
@@ -149,7 +149,7 @@ pub trait Deployable: Declarable + Sync {
             .await
             .map_err(MigrationError::Migrator)?;
 
-        Ok(DeployResult { transaction_hash, contract_address, declare_res })
+        Ok(DeployOutput { transaction_hash, contract_address, declare_res })
     }
 
     // TEMP: Remove once we can calculate the contract address before sending the tx
@@ -182,7 +182,7 @@ impl WorldContractMigration {
         &mut self,
         migrator: &A,
         executor: FieldElement,
-    ) -> Result<DeployResult, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
+    ) -> Result<DeployOutput, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
     where
         A: ConnectedAccount + Sync,
     {
@@ -193,7 +193,7 @@ impl WorldContractMigration {
         &self,
         executor: FieldElement,
         migrator: &A,
-    ) -> Result<RegisterResult, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
+    ) -> Result<RegisterOutput, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
     where
         A: ConnectedAccount + Sync,
     {
@@ -212,7 +212,7 @@ impl WorldContractMigration {
         &self,
         migrator: &A,
         components: &[ClassMigration],
-    ) -> Result<RegisterResult, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
+    ) -> Result<RegisterOutput, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
     where
         A: ConnectedAccount + Sync,
     {
@@ -232,7 +232,7 @@ impl WorldContractMigration {
         &self,
         migrator: &A,
         systems: &[ClassMigration],
-    ) -> Result<RegisterResult, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
+    ) -> Result<RegisterOutput, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
     where
         A: ConnectedAccount + Sync,
     {
