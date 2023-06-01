@@ -3,8 +3,8 @@ use std::env::{self, current_dir};
 use anyhow::Result;
 use camino::Utf8PathBuf;
 use clap::Args;
+use dojo_world::config::{EnvironmentConfig, WorldConfig};
 use dojo_world::migration::world::WorldDiff;
-use dojo_world::{EnvironmentConfig, WorldConfig};
 use dotenv::dotenv;
 use scarb::core::Config;
 use scarb::ops;
@@ -61,9 +61,10 @@ pub fn run(args: MigrateArgs) -> Result<()> {
     let env_config = EnvironmentConfig::from_workspace(profile.as_str(), &ws)?;
 
     ws.config().tokio_handle().block_on(async {
+        let migrator = env_config.migrator().await?;
         let world = WorldDiff::from_path(target_dir.clone(), world_config, env_config).await?;
         let mut migration = world.prepare_for_migration(target_dir).await?;
-        migration.execute().await
+        migration.execute(migrator).await
     })?;
 
     Ok(())
