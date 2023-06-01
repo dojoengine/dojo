@@ -7,7 +7,7 @@ use sqlx::pool::PoolConnection;
 use sqlx::{FromRow, Pool, Result, Sqlite};
 
 use super::types::ScalarType;
-use super::utils::remove_quotes;
+use super::utils::{format_name, remove_quotes};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 
 #[derive(FromRow, Deserialize)]
@@ -23,11 +23,14 @@ pub struct Component {
 }
 
 pub struct ComponentObject {
-    pub field_type_mapping: TypeMapping
+    pub field_type_mapping: TypeMapping,
+    pub storage_names: Vec<String>,
 }
 
 impl ComponentObject {
-    pub fn new() -> Self {
+    // component objects needs the storage names passed
+    // in on new because it builds the related fields dynamically
+    pub fn new(storage_names: Vec<String>) -> Self {
         Self {
             field_type_mapping: IndexMap::from([
                 (Name::new("id"), TypeRef::ID.to_string()),
@@ -38,6 +41,7 @@ impl ComponentObject {
                 (Name::new("storageDefinition"), TypeRef::STRING.to_string()),
                 (Name::new("createdAt"), ScalarType::DATE_TIME.to_string()),
             ]),
+            storage_names,
         }
     }
 }
@@ -67,6 +71,23 @@ impl ObjectTrait for ComponentObject {
             })
             .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID))),
         ]
+    }
+
+    fn related_fields(&self) -> Option<Vec<Field>> {
+        Some(
+            self.storage_names
+                .iter()
+                .map(|storage| {
+                    let (name, type_name) = format_name(storage);
+                    Field::new(name, TypeRef::named(type_name), |_| {
+                        FieldFuture::new(async move {
+                            // TODO: implement
+                            Ok(Some(Value::Null))
+                        })
+                    })
+                })
+                .collect(),
+        )
     }
 }
 

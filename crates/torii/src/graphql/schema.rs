@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use async_graphql::dynamic::{Object, Scalar, Schema};
 use async_graphql::Name;
 use dojo_world::manifest::Member;
@@ -17,9 +17,9 @@ use super::{ObjectTrait, TypeMapping};
 pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     let mut schema_builder = Schema::build("Query", None, None);
 
-    // base objects + storage objects (component instances)
-    let mut objects = base_objects();
-    objects.extend(storage_objects(pool).await?);
+    // static objects + dynamic objects (component + storage objects)
+    let mut objects = static_objects();
+    objects.extend(dynamic_objects(pool).await?);
 
     // collect field resolvers
     let mut fields = Vec::new();
@@ -47,27 +47,32 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
 }
 
 // predefined base objects
-fn base_objects() -> Vec<Box<dyn ObjectTrait>> {
+fn static_objects() -> Vec<Box<dyn ObjectTrait>> {
     vec![
         Box::new(EntityObject::new()),
-        Box::new(ComponentObject::new()),
         Box::new(SystemObject::new()),
         Box::new(EventObject::new()),
         Box::new(SystemCallObject::new()),
     ]
 }
 
-async fn storage_objects(pool: &SqlitePool) -> Result<Vec<Box<dyn ObjectTrait>>> {
+async fn dynamic_objects(pool: &SqlitePool) -> Result<Vec<Box<dyn ObjectTrait>>> {
     let mut conn = pool.acquire().await?;
     let mut objects = Vec::new();
 
+    // storage objects
     let components: Vec<Component> =
         sqlx::query_as("SELECT * FROM components").fetch_all(&mut conn).await?;
-
     for component in components {
         let storage_object = process_component(component)?;
         objects.push(storage_object);
     }
+
+    let storage_names: Vec<String> = objects.iter().map(|obj| obj.name().to_string()).collect();
+
+    // component object
+    let component = ComponentObject::new(storage_names);
+    objects.push(Box::new(component));
 
     Ok(objects)
 }

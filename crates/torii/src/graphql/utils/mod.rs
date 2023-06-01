@@ -5,8 +5,8 @@ pub fn remove_quotes(s: &str) -> String {
 }
 
 pub fn format_name(input: &str) -> (String, String) {
-    let type_name = input.to_lowercase();
-    let name = input
+    let name = input.to_lowercase();
+    let type_name = input
         .chars()
         .enumerate()
         .map(|(i, c)| {

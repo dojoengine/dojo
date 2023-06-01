@@ -53,7 +53,8 @@ CREATE TABLE storage_game (
 );
 CREATE TABLE storage_stats (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    health STRING NOT NULL,
+    health INTEGER NOT NULL,
+    mana INTEGER NOT NULL,
     version TEXT NOT NULL,
     entity_id TEXT NOT NULL,
     component_id TEXT NOT NULL,
@@ -74,11 +75,11 @@ CREATE TABLE storage_cash (
 
 INSERT INTO storage_game (id, is_finished, version, entity_id, component_id, created_at)
 VALUES (1, 0, '0.0.0', 'entity_1', 'component_1', '2023-05-19T21:04:04Z');
-INSERT INTO storage_stats (id, health, version, entity_id, component_id, created_at)
-VALUES (1, '100', '0.0.0', 'entity_2', 'component_2', '2023-05-19T21:05:44Z');
-INSERT INTO storage_stats (id, health, version, entity_id, component_id, created_at)
-VALUES (2, '100', '0.0.0', 'entity_3', 'component_2', '2023-05-19T21:08:12Z');
+INSERT INTO storage_stats (id, health, mana, version, entity_id, component_id, created_at)
+VALUES (1, 100, 100, '0.0.0', 'entity_2', 'component_2', '2023-05-19T21:05:44Z');
+INSERT INTO storage_stats (id, health, mana, version, entity_id, component_id, created_at)
+VALUES (2, 50, 50, '0.0.0', 'entity_3', 'component_2', '2023-05-19T21:08:12Z');
 INSERT INTO storage_cash (id, amount, version, entity_id, component_id, created_at)
-VALUES (1, 50, '0.0.0', 'entity_2', 'component_3', '2023-05-19T21:05:44Z');
+VALUES (1, 77, '0.0.0', 'entity_2', 'component_3', '2023-05-19T21:05:44Z');
 INSERT INTO storage_cash (id, amount, version, entity_id, component_id, created_at)
-VALUES (2, 50, '0.0.0', 'entity_3', 'component_3', '2023-05-19T21:08:12Z');
+VALUES (2, 88, '0.0.0', 'entity_3', 'component_3', '2023-05-19T21:08:12Z');
