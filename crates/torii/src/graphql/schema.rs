@@ -1,18 +1,16 @@
 use anyhow::Result;
 use async_graphql::dynamic::{Object, Scalar, Schema};
-use async_graphql::Name;
-use dojo_world::manifest::Member;
 use sqlx::SqlitePool;
 
 use super::component::{Component, ComponentObject};
 use super::entity::EntityObject;
 use super::event::EventObject;
-use super::storage::StorageObject;
+use super::storage::{type_mapping_from_definition, StorageObject};
 use super::system::SystemObject;
 use super::system_call::SystemCallObject;
 use super::types::ScalarType;
 use super::utils::format_name;
-use super::{ObjectTrait, TypeMapping};
+use super::ObjectTrait;
 
 pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     let mut schema_builder = Schema::build("Query", None, None);
@@ -83,18 +81,7 @@ async fn dynamic_objects(pool: &SqlitePool) -> Result<Vec<Box<dyn ObjectTrait>>>
 }
 
 fn process_component(component: Component) -> Result<Box<dyn ObjectTrait>> {
-    let field_type_mapping = storage_def_to_type_mapping(&component.storage_definition)?;
+    let field_type_mapping = type_mapping_from_definition(&component.storage_definition)?;
     let (name, type_name) = format_name(component.name.as_str());
     Ok(Box::new(StorageObject::new(name, type_name, field_type_mapping)))
-}
-
-pub fn storage_def_to_type_mapping(storage_def: &str) -> Result<TypeMapping> {
-    let members: Vec<Member> = serde_json::from_str(storage_def)?;
-    let field_type_mapping: TypeMapping =
-        members.iter().fold(TypeMapping::new(), |mut mapping, member| {
-            // TODO: check if member type exists in scalar types
-            mapping.insert(Name::new(&member.name), member.ty.to_string());
-            mapping
-        });
-    Ok(field_type_mapping)
 }

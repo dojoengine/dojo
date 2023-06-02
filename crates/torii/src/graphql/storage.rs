@@ -1,5 +1,6 @@
 use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
-use async_graphql::Value;
+use async_graphql::{Name, Value};
+use dojo_world::manifest::Member;
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Error, Pool, Result, Row, Sqlite};
@@ -117,4 +118,16 @@ fn value_mapping_from_row(row: &SqliteRow, fields: &TypeMapping) -> Result<Value
     }
 
     Ok(value_mapping)
+}
+
+pub fn type_mapping_from_definition(storage_def: &str) -> Result<TypeMapping> {
+    let members: Vec<Member> =
+        serde_json::from_str(storage_def).map_err(|e| Error::Decode(e.into()))?;
+    let field_type_mapping: TypeMapping =
+        members.iter().fold(TypeMapping::new(), |mut mapping, member| {
+            // TODO: check if member type exists in scalar types
+            mapping.insert(Name::new(&member.name), member.ty.to_string());
+            mapping
+        });
+    Ok(field_type_mapping)
 }

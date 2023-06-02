@@ -6,8 +6,7 @@ use serde::Deserialize;
 use sqlx::pool::PoolConnection;
 use sqlx::{FromRow, Pool, Result, Sqlite};
 
-use super::schema::storage_def_to_type_mapping;
-use super::storage::{storage_by_column, ColumnName};
+use super::storage::{storage_by_column, type_mapping_from_definition, ColumnName};
 use super::types::ScalarType;
 use super::utils::extract_value::extract;
 use super::utils::{format_name, remove_quotes};
@@ -79,7 +78,7 @@ impl ObjectTrait for ComponentObject {
                 let defintion = extract::<String>(component_values, "storageDefinition")?;
                 let type_name = extract::<String>(component_values, "name")?;
 
-                let field_type_mapping = storage_def_to_type_mapping(&defintion)?;
+                let field_type_mapping = type_mapping_from_definition(&defintion)?;
                 let storage_values = storage_by_column(
                     &mut conn,
                     ColumnName::ComponentId,
