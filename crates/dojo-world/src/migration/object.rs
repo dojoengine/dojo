@@ -64,9 +64,6 @@ pub struct ClassMigration {
     pub artifact_path: PathBuf,
 }
 
-#[derive(Debug)]
-pub struct WorldContractMigration(pub ContractMigration);
-
 #[async_trait]
 pub trait Declarable {
     async fn declare<A>(
@@ -182,96 +179,81 @@ impl Deployable for ContractMigration {
     }
 }
 
-impl WorldContractMigration {
-    pub async fn deploy<A>(
-        &mut self,
-        migrator: &A,
-        executor: FieldElement,
-    ) -> Result<DeployOutput, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
-    where
-        A: ConnectedAccount + Sync,
-    {
-        Deployable::deploy(self, vec![executor], migrator).await
+#[derive(Debug)]
+pub struct WorldContract<'a, A> {
+    pub address: FieldElement,
+    pub account: &'a A,
+}
+
+impl<'a, A> WorldContract<'a, A>
+where
+    A: ConnectedAccount + Sync,
+{
+    pub fn new(address: FieldElement, account: &'a A) -> Self {
+        Self { address, account }
     }
 
-    pub async fn set_executor<A>(
+    pub async fn set_executor(
         &self,
         executor: FieldElement,
-        migrator: &A,
-    ) -> Result<
-        InvokeTransactionResult,
-        MigrationError<A::SignError, <A::Provider as Provider>::Error>,
-    >
-    where
-        A: ConnectedAccount + Sync,
+    ) -> Result<InvokeTransactionResult, AccountError<A::SignError, <A::Provider as Provider>::Error>>
     {
-        migrator
+        self.account
             .execute(vec![Call {
                 calldata: vec![executor],
-                to: self.0.contract_address.unwrap(),
+                to: self.address,
                 selector: get_selector_from_name("set_executor").unwrap(),
             }])
             .send()
             .await
-            .map_err(MigrationError::Migrator)
     }
 
-    pub async fn register_component<A>(
+    pub async fn register_components(
         &self,
-        migrator: &A,
-        components: &[ClassMigration],
-    ) -> Result<
-        InvokeTransactionResult,
-        MigrationError<A::SignError, <A::Provider as Provider>::Error>,
-    >
-    where
-        A: ConnectedAccount + Sync,
+        components: &[FieldElement],
+    ) -> Result<InvokeTransactionResult, AccountError<A::SignError, <A::Provider as Provider>::Error>>
     {
         let calls = components
             .iter()
             .map(|c| Call {
-                to: self.0.contract_address.unwrap(),
-                selector: get_selector_from_name("register_component").unwrap(),
-                calldata: vec![c.class.local],
+                to: self.address,
+                // function selector: "register_component"
+                selector: FieldElement::from_mont([
+                    11981012454229264524,
+                    8784065169116922201,
+                    15056747385353365869,
+                    456849768949735353,
+                ]),
+                calldata: vec![*c],
             })
             .collect::<Vec<_>>();
 
-        migrator.execute(calls).send().await.map_err(MigrationError::Migrator)
+        self.account.execute(calls).send().await
     }
 
-    pub async fn register_system<A>(
+    pub async fn register_systems(
         &self,
-        migrator: &A,
-        systems: &[ClassMigration],
-    ) -> Result<
-        InvokeTransactionResult,
-        MigrationError<A::SignError, <A::Provider as Provider>::Error>,
-    >
+        systems: &[FieldElement],
+    ) -> Result<InvokeTransactionResult, AccountError<A::SignError, <A::Provider as Provider>::Error>>
     where
         A: ConnectedAccount + Sync,
     {
         let calls = systems
             .iter()
             .map(|s| Call {
-                to: self.0.contract_address.unwrap(),
-                selector: get_selector_from_name("register_system").unwrap(),
-                calldata: vec![s.class.local],
+                to: self.address,
+                // function selector: "register_system"
+                selector: FieldElement::from_mont([
+                    6581716859078500959,
+                    16871126355047595269,
+                    14219012428168968926,
+                    473332093618875024,
+                ]),
+                calldata: vec![*s],
             })
             .collect::<Vec<_>>();
 
-        migrator.execute(calls).send().await.map_err(MigrationError::Migrator)
-    }
-}
-
-impl Declarable for WorldContractMigration {
-    fn artifact_path(&self) -> &PathBuf {
-        &self.0.artifact_path
-    }
-}
-
-impl Deployable for WorldContractMigration {
-    fn set_contract_address(&mut self, contract_address: FieldElement) {
-        self.0.contract_address = Some(contract_address);
+        self.account.execute(calls).send().await
     }
 }
 
