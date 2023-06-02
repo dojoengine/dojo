@@ -20,7 +20,6 @@ use thiserror::Error;
 
 use super::world::{ClassDiff, ContractDiff};
 
-pub type RegisterOutput = InvokeTransactionResult;
 pub type DeclareOutput = DeclareTransactionResult;
 
 #[derive(Debug)]
@@ -28,6 +27,12 @@ pub struct DeployOutput {
     pub transaction_hash: FieldElement,
     pub contract_address: FieldElement,
     pub declare_res: DeclareOutput,
+}
+
+#[derive(Debug)]
+pub struct RegisterOutput {
+    pub transaction_hash: FieldElement,
+    pub declare_output: Vec<DeclareOutput>,
 }
 
 #[derive(Debug, Error)]
@@ -193,7 +198,10 @@ impl WorldContractMigration {
         &self,
         executor: FieldElement,
         migrator: &A,
-    ) -> Result<RegisterOutput, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
+    ) -> Result<
+        InvokeTransactionResult,
+        MigrationError<A::SignError, <A::Provider as Provider>::Error>,
+    >
     where
         A: ConnectedAccount + Sync,
     {
@@ -212,7 +220,10 @@ impl WorldContractMigration {
         &self,
         migrator: &A,
         components: &[ClassMigration],
-    ) -> Result<RegisterOutput, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
+    ) -> Result<
+        InvokeTransactionResult,
+        MigrationError<A::SignError, <A::Provider as Provider>::Error>,
+    >
     where
         A: ConnectedAccount + Sync,
     {
@@ -232,7 +243,10 @@ impl WorldContractMigration {
         &self,
         migrator: &A,
         systems: &[ClassMigration],
-    ) -> Result<RegisterOutput, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
+    ) -> Result<
+        InvokeTransactionResult,
+        MigrationError<A::SignError, <A::Provider as Provider>::Error>,
+    >
     where
         A: ConnectedAccount + Sync,
     {
