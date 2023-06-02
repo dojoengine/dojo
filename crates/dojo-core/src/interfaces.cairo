@@ -32,7 +32,7 @@ trait IWorld {
     fn execution_role(system: ShortString) -> u250;
 }
 
-// Remove once Serde is derivable for dispatchers
+// TODO: Remove once Serde is derivable for dispatchers
 impl IWorldDispatcherSerde of Serde<IWorldDispatcher> {
     fn serialize(self: @IWorldDispatcher, ref output: Array<felt252>) {
         output.append((*self.contract_address).into());
