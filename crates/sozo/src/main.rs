@@ -1,15 +1,12 @@
 use std::process::exit;
 
 use clap::Parser;
-use commands::{build, init, migrate};
 use env_logger::Env;
 use log::error;
 
-mod cli;
 mod commands;
-mod ops;
 
-use cli::{App, Commands};
+use self::commands::{build, init, migrate, App, Commands};
 
 fn main() {
     env_logger::Builder::from_env(Env::default().default_filter_or("sozo=info")).init();
