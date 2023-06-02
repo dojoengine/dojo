@@ -265,7 +265,7 @@ mod World {
     /// * `context` - The execution context of the system call
     #[external]
     fn set_entity(
-        component: ShortString, query: Query, offset: u8, value: Span<felt252>, context: Context
+        context: Context, component: ShortString, query: Query, offset: u8, value: Span<felt252>
     ) {
         // Assert can only be called through the executor
         // This is to prevent system from writing to storage directly
@@ -294,7 +294,7 @@ mod World {
     /// * `query` - The query to be used to find the entity
     /// * `context` - The execution context of the system call
     #[external]
-    fn delete_entity(component: ShortString, query: Query, context: Context) {
+    fn delete_entity(context: Context, component: ShortString, query: Query) {
         // Assert can only be called through the executor
         // This is to prevent system from writing to storage directly
         assert(get_caller_address() == executor::read(), 'must be called thru executor');

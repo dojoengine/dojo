@@ -21,13 +21,13 @@ trait IWorld {
     fn execute(name: ShortString, execute_calldata: Span<felt252>) -> Span<felt252>;
     fn entity(component: ShortString, key: Query, offset: u8, length: usize) -> Span<felt252>;
     fn set_entity(
-        component: ShortString, key: Query, offset: u8, value: Span<felt252>, ctx: Context
+        context: Context, component: ShortString, key: Query, offset: u8, value: Span<felt252>
     );
     fn entities(component: ShortString, partition: u250) -> (Span<u250>, Span<Span<felt252>>);
     fn set_executor(contract_address: ContractAddress);
     fn is_authorized(system: ShortString, component: ShortString, execution_role: AuthRole) -> bool;
     fn is_account_admin() -> bool;
-    fn delete_entity(component: ShortString, query: Query, ctx: Context);
+    fn delete_entity(context: Context, component: ShortString, query: Query);
     fn set_execution_role(system: ShortString, role_id: u250);
     fn execution_role(system: ShortString) -> u250;
 }

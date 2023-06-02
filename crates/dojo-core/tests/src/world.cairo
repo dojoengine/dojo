@@ -44,7 +44,7 @@ fn test_component() {
             id: 'FooWriter'.into()
         },
     };
-    World::set_entity(name, QueryTrait::new_from_id(id.into()), 0, data.span(), ctx);
+    World::set_entity(ctx, name, QueryTrait::new_from_id(id.into()), 0, data.span());
     let stored = World::entity(name, QueryTrait::new_from_id(id.into()), 0, 1);
     assert(*stored.snapshot.at(0) == 1337, 'data not stored');
 }
@@ -260,7 +260,7 @@ fn test_set_entity_directly() {
     let mut data = ArrayTrait::new();
     data.append(420);
     data.append(1337);
-    world.set_entity('Foo'.into(), QueryTrait::new_from_id(id.into()), 0, data.span(), ctx);
+    world.set_entity(ctx, 'Foo'.into(), QueryTrait::new_from_id(id.into()), 0, data.span());
 }
 
 #[test]
