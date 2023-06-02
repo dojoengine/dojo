@@ -34,7 +34,7 @@ impl ObjectTrait for StorageObject {
         &self.field_type_mapping
     }
 
-    fn field_resolvers(&self) -> Vec<Field> {
+    fn resolvers(&self) -> Vec<Field> {
         let name = self.name.clone();
         let type_mapping = self.field_type_mapping.clone();
         vec![
@@ -44,9 +44,15 @@ impl ObjectTrait for StorageObject {
 
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let id = ctx.args.try_get("id")?.i64()?;
-                    let storage_values =
-                        storage_by_id(&mut conn, &inner_name, &inner_type_mapping, id).await?;
+                    let id = ctx.args.try_get("id")?.i64()?.to_string();
+                    let storage_values = storage_by_column(
+                        &mut conn,
+                        ColumnName::Id,
+                        id.as_str(),
+                        &inner_name,
+                        &inner_type_mapping,
+                    )
+                    .await?;
                     Ok(Some(FieldValue::owned_any(storage_values)))
                 })
             })
@@ -55,13 +61,31 @@ impl ObjectTrait for StorageObject {
     }
 }
 
-async fn storage_by_id(
+#[allow(dead_code)]
+pub enum ColumnName {
+    Id,
+    ComponentId,
+    EntityId,
+}
+
+impl ColumnName {
+    pub fn as_str(&self) -> &str {
+        match self {
+            ColumnName::Id => "id",
+            ColumnName::ComponentId => "component_id",
+            ColumnName::EntityId => "entity_id",
+        }
+    }
+}
+
+pub async fn storage_by_column(
     conn: &mut PoolConnection<Sqlite>,
+    column_name: ColumnName,
+    id: &str,
     name: &str,
     fields: &TypeMapping,
-    id: i64,
 ) -> Result<ValueMapping> {
-    let query = format!("SELECT * FROM storage_{} WHERE id = ?", name);
+    let query = format!("SELECT * FROM storage_{} WHERE {} = ?", name, column_name.as_str());
     let storage = sqlx::query(&query).bind(id).fetch_one(conn).await?;
     let result = value_mapping_from_row(&storage, fields)?;
     Ok(result)

@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
 use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
@@ -11,7 +9,7 @@ use sqlx::{FromRow, Pool, Result, Sqlite};
 // use super::system::System;
 use super::system::system_by_id;
 use super::types::ScalarType;
-use super::utils::value_accessor::ObjectAccessor;
+use super::utils::extract_value::extract;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 
 #[derive(FromRow, Deserialize)]
@@ -54,7 +52,7 @@ impl ObjectTrait for SystemCallObject {
         &self.field_type_mapping
     }
 
-    fn field_resolvers(&self) -> Vec<Field> {
+    fn resolvers(&self) -> Vec<Field> {
         vec![
             Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
                 FieldFuture::new(async move {
@@ -68,15 +66,14 @@ impl ObjectTrait for SystemCallObject {
         ]
     }
 
-    fn related_fields(&self) -> Option<Vec<Field>> {
+    fn nested_fields(&self) -> Option<Vec<Field>> {
         Some(vec![Field::new("system", TypeRef::named_nn("System"), |ctx| {
             FieldFuture::new(async move {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                 let syscall_values = ctx.parent_value.try_downcast_ref::<ValueMapping>()?;
 
-                let accessor = ObjectAccessor(Cow::Borrowed(syscall_values));
-                let system_id = accessor.try_get("system_id")?;
-                let system_call = system_by_id(&mut conn, system_id.string()?).await?;
+                let system_id = extract::<String>(syscall_values, "system_id")?;
+                let system_call = system_by_id(&mut conn, &system_id).await?;
 
                 Ok(Some(FieldValue::owned_any(system_call)))
             })

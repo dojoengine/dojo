@@ -24,7 +24,7 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     // collect field resolvers
     let mut fields = Vec::new();
     for object in &objects {
-        fields.extend(object.field_resolvers());
+        fields.extend(object.resolvers());
     }
 
     // add field resolvers to query root
@@ -38,9 +38,14 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
         schema_builder = schema_builder.register(Scalar::new(*scalar_type));
     }
 
-    // register gql objects
+    // register gql objects and union
     for object in &objects {
-        schema_builder = schema_builder.register(object.create());
+        schema_builder = schema_builder.register(object.object());
+        if let Some(unions) = object.unions() {
+            for union in unions {
+                schema_builder = schema_builder.register(union);
+            }
+        }
     }
 
     schema_builder.register(query_root).data(pool.clone()).finish().map_err(|e| e.into())
@@ -78,15 +83,18 @@ async fn dynamic_objects(pool: &SqlitePool) -> Result<Vec<Box<dyn ObjectTrait>>>
 }
 
 fn process_component(component: Component) -> Result<Box<dyn ObjectTrait>> {
-    let members: Vec<Member> = serde_json::from_str(&component.storage_definition)?;
-
-    let field_type_mapping = members.iter().fold(TypeMapping::new(), |mut mapping, member| {
-        // TODO: check if member type exists in scalar types
-        mapping.insert(Name::new(&member.name), member.ty.to_string());
-        mapping
-    });
-
+    let field_type_mapping = storage_def_to_type_mapping(&component.storage_definition)?;
     let (name, type_name) = format_name(component.name.as_str());
-
     Ok(Box::new(StorageObject::new(name, type_name, field_type_mapping)))
+}
+
+pub fn storage_def_to_type_mapping(storage_def: &str) -> Result<TypeMapping> {
+    let members: Vec<Member> = serde_json::from_str(storage_def)?;
+    let field_type_mapping: TypeMapping =
+        members.iter().fold(TypeMapping::new(), |mut mapping, member| {
+            // TODO: check if member type exists in scalar types
+            mapping.insert(Name::new(&member.name), member.ty.to_string());
+            mapping
+        });
+    Ok(field_type_mapping)
 }
