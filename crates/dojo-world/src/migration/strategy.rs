@@ -1,12 +1,10 @@
 use anyhow::Result;
 use starknet::accounts::{Call, ConnectedAccount};
-use starknet::core::types::FieldElement;
-use starknet::core::utils::get_selector_from_name;
+use starknet::core::types::{FieldElement, InvokeTransactionResult};
 use starknet::providers::Provider;
 
 use super::object::{
-    ClassMigration, ContractMigration, Declarable, DeclareOutput, DeployOutput, Deployable,
-    WorldContractMigration,
+    ClassMigration, ContractMigration, Declarable, DeployOutput, Deployable, RegisterOutput,
 };
 use crate::config::WorldConfig;
 use crate::migration::object::MigrationError;
@@ -17,13 +15,13 @@ pub type MigrationResult<S, P> = Result<MigrationOutput, MigrationError<S, P>>;
 pub struct MigrationOutput {
     pub world: Option<DeployOutput>,
     pub executor: Option<DeployOutput>,
-    pub systems: Vec<DeclareOutput>,
-    pub components: Vec<DeclareOutput>,
+    pub systems: RegisterOutput,
+    pub components: RegisterOutput,
 }
 
 #[derive(Debug)]
 pub struct MigrationStrategy {
-    pub world: Option<WorldContractMigration>,
+    pub world: Option<ContractMigration>,
     pub executor: Option<ContractMigration>,
     pub systems: Vec<ClassMigration>,
     pub components: Vec<ClassMigration>,
@@ -33,7 +31,7 @@ pub struct MigrationStrategy {
 impl MigrationStrategy {
     fn world_address(&self) -> Option<FieldElement> {
         match &self.world {
-            Some(WorldContractMigration(c)) => c.contract_address,
+            Some(c) => c.contract_address,
             None => self.world_config.address,
         }
     }
@@ -47,77 +45,97 @@ impl MigrationStrategy {
     where
         A: ConnectedAccount + Sync,
     {
-        if let Some(executor) = &mut self.executor {
-            let res = executor.deploy(vec![], &migrator).await?;
-        }
+        let executor_output = match &mut self.executor {
+            Some(executor) => executor.deploy(vec![], &migrator).await.map(|o| Some(o))?,
+            None => None,
+        };
 
-        if let Some(world) = &mut self.world {
-            world
-                .deploy(&migrator, self.executor.as_ref().unwrap().contract_address.unwrap())
-                .await;
-        }
+        let world_output = match &mut self.world {
+            Some(world) => world
+                .deploy(vec![self.executor.as_ref().unwrap().contract_address.unwrap()], &migrator)
+                .await
+                .map(|o| Some(o))?,
+            None => None,
+        };
 
-        self.register_systems(&migrator).await?;
-        self.register_components(&migrator).await?;
+        let components_output = self.register_systems(&migrator).await?;
+        let systems_output = self.register_components(&migrator).await?;
 
-        Ok(())
+        Ok(MigrationOutput {
+            world: world_output,
+            executor: executor_output,
+            systems: systems_output,
+            components: components_output,
+        })
     }
 
-    async fn register_components<A>(&self, migrator: &A) -> Result<()>
+    async fn register_components<A>(
+        &self,
+        migrator: &A,
+    ) -> Result<RegisterOutput, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
     where
         A: ConnectedAccount + Sync,
     {
+        let mut declare_output = vec![];
         for component in &self.components {
-            component.declare(migrator).await;
+            declare_output.push(component.declare(migrator).await?);
         }
 
-        let world_address = self.world_address().unwrap();
+        let world_address = self.world_address().ok_or(MigrationError::WorldAddressNotFound)?;
 
         let calls = self
             .components
             .iter()
             .map(|c| Call {
                 to: world_address,
-                selector: get_selector_from_name("register_component").unwrap(),
+                // function selector: "register_component"
+                selector: FieldElement::from_mont([
+                    11981012454229264524,
+                    8784065169116922201,
+                    15056747385353365869,
+                    456849768949735353,
+                ]),
                 calldata: vec![c.class.local],
             })
             .collect::<Vec<_>>();
 
-        migrator
-            .execute(calls)
-            .send()
-            .await
-            .unwrap_or_else(|err| panic!("problem registering components: {err}"));
+        let InvokeTransactionResult { transaction_hash } = migrator.execute(calls).send().await?;
 
-        Ok(())
+        Ok(RegisterOutput { transaction_hash, declare_output })
     }
 
-    async fn register_systems<A>(&self, migrator: &A) -> Result<()>
+    async fn register_systems<A>(
+        &self,
+        migrator: &A,
+    ) -> Result<RegisterOutput, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
     where
         A: ConnectedAccount + Sync,
     {
+        let mut declare_output = vec![];
         for system in &self.systems {
-            system.declare(migrator).await;
+            declare_output.push(system.declare(migrator).await?);
         }
 
-        let world_address = self.world_address().unwrap();
+        let world_address = self.world_address().ok_or(MigrationError::WorldAddressNotFound)?;
 
         let calls = self
             .systems
             .iter()
             .map(|s| Call {
                 to: world_address,
-                selector: get_selector_from_name("register_system").unwrap(),
+                // function selector: "register_system"
+                selector: FieldElement::from_mont([
+                    6581716859078500959,
+                    16871126355047595269,
+                    14219012428168968926,
+                    473332093618875024,
+                ]),
                 calldata: vec![s.class.local],
             })
             .collect::<Vec<_>>();
 
-        migrator
-            .execute(calls)
-            .send()
-            .await
-            .unwrap_or_else(|err| panic!("problem registering systems: {err}"));
+        let InvokeTransactionResult { transaction_hash } = migrator.execute(calls).send().await?;
 
-        Ok(())
+        Ok(RegisterOutput { transaction_hash, declare_output })
     }
 }
