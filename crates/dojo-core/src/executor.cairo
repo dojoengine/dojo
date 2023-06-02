@@ -1,7 +1,7 @@
 use core::serde::Serde;
 #[contract]
 mod Executor {
-    use array::{ArrayTrait, ArrayTCloneImpl};
+    use array::{ArrayTrait, ArrayTCloneImpl, SpanTrait};
     use serde::Serde;
     use clone::Clone;
     use box::BoxTrait;
@@ -31,7 +31,9 @@ mod Executor {
     /// The return value of the System's execute entrypoint.
     #[external]
     fn execute(
-        class_hash: starknet::ClassHash, execution_role: AuthRole, execute_calldata: Span<felt252>
+        class_hash: starknet::ClassHash,
+        execution_role: AuthRole,
+        mut execute_calldata: Span<felt252>
     ) -> Span<felt252> {
         // Get the world address and instantiate the world dispatcher.
         let world_address = get_caller_address();
@@ -46,10 +48,23 @@ mod Executor {
         // Instantiate the execution context
         let mut ctx = Context { world, caller_account, caller_system, execution_role,  };
 
-        // Serialize the context and append to the calldata
-        let mut calldata_arr = execute_calldata.snapshot.clone();
+        // Serialize the context
+        let mut calldata_arr = ArrayTrait::new();
         ctx.serialize(ref calldata_arr);
 
+        // Append the execute_calldata
+        loop {
+            match execute_calldata.pop_front() {
+                Option::Some(val) => {
+                    calldata_arr.append(*val);
+                },
+                Option::None(_) => {
+                    break ();
+                }
+            };
+        };
+
+        // Call the system
         let res = starknet::syscalls::library_call_syscall(
             class_hash, EXECUTE_ENTRYPOINT, calldata_arr.span()
         )

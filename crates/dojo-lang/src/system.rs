@@ -123,7 +123,7 @@ impl System {
         rewrite_nodes.push(RewriteNode::interpolate_patched(
             "
                 #[external]
-                fn execute($parameters$$separator$ctx: Context) $ret_clause$ {
+                fn execute(ctx: Context, $parameters$$separator$) $ret_clause$ {
                     $body$
                 }
             ",
