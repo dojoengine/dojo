@@ -282,7 +282,7 @@ mod Spawn {
     use super::Player;
 
     #[external]
-    fn execute(ctx: Context, name: felt252, ) {
+    fn execute(ctx: Context, name: felt252) {
         let uuid = ctx.world.uuid();
 
         {
@@ -491,7 +491,7 @@ mod Move {
     }
 
     #[external]
-    fn execute(ctx: Context, player_id: felt252, ) {
+    fn execute(ctx: Context, player_id: felt252) {
         let mut __positions_query_ids: Array<Span<dojo_core::integer::u250>> = ArrayTrait::new();
         let mut __positions_query_entities_raw: Array<Span<Span<felt252>>> = ArrayTrait::new();
 
@@ -1120,7 +1120,7 @@ mod Proxy {
 
 
     #[external]
-    fn execute(ctx: Context, value: felt252, ) -> felt252 {
+    fn execute(ctx: Context, value: felt252) -> felt252 {
         value
     }
 }
