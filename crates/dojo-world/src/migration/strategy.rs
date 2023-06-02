@@ -1,10 +1,11 @@
 use anyhow::Result;
-use starknet::accounts::{Call, ConnectedAccount};
+use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{FieldElement, InvokeTransactionResult};
 use starknet::providers::Provider;
 
 use super::object::{
     ClassMigration, ContractMigration, Declarable, DeployOutput, Deployable, RegisterOutput,
+    WorldContract,
 };
 use crate::config::WorldConfig;
 use crate::migration::object::MigrationError;
@@ -92,23 +93,12 @@ impl MigrationStrategy {
 
         let world_address = self.world_address().ok_or(MigrationError::WorldAddressNotFound)?;
 
-        let calls = self
-            .components
-            .iter()
-            .map(|c| Call {
-                to: world_address,
-                // function selector: "register_component"
-                selector: FieldElement::from_mont([
-                    11981012454229264524,
-                    8784065169116922201,
-                    15056747385353365869,
-                    456849768949735353,
-                ]),
-                calldata: vec![c.class.local],
-            })
-            .collect::<Vec<_>>();
-
-        let InvokeTransactionResult { transaction_hash } = migrator.execute(calls).send().await?;
+        let InvokeTransactionResult { transaction_hash } =
+            WorldContract::new(world_address, migrator)
+                .register_components(
+                    &declare_output.iter().map(|o| o.class_hash).collect::<Vec<_>>(),
+                )
+                .await?;
 
         Ok(RegisterOutput { transaction_hash, declare_output })
     }
@@ -127,23 +117,12 @@ impl MigrationStrategy {
 
         let world_address = self.world_address().ok_or(MigrationError::WorldAddressNotFound)?;
 
-        let calls = self
-            .systems
-            .iter()
-            .map(|s| Call {
-                to: world_address,
-                // function selector: "register_system"
-                selector: FieldElement::from_mont([
-                    6581716859078500959,
-                    16871126355047595269,
-                    14219012428168968926,
-                    473332093618875024,
-                ]),
-                calldata: vec![s.class.local],
-            })
-            .collect::<Vec<_>>();
-
-        let InvokeTransactionResult { transaction_hash } = migrator.execute(calls).send().await?;
+        let InvokeTransactionResult { transaction_hash } =
+            WorldContract::new(world_address, migrator)
+                .register_components(
+                    &declare_output.iter().map(|o| o.class_hash).collect::<Vec<_>>(),
+                )
+                .await?;
 
         Ok(RegisterOutput { transaction_hash, declare_output })
     }
