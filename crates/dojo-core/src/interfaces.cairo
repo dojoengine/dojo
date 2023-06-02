@@ -29,7 +29,7 @@ trait IWorld {
     fn is_account_admin() -> bool;
     fn delete_entity(component: ShortString, query: Query, ctx: Context);
     fn set_execution_role(system: ShortString, role_id: u250);
-    fn get_execution_role(system: ShortString) -> u250;
+    fn execution_role(system: ShortString) -> u250;
 }
 
 // Remove once Serde is derivable for dispatchers

@@ -33,7 +33,7 @@ mod World {
         executor: ContractAddress,
         component_registry: LegacyMap::<ShortString, ClassHash>,
         system_registry: LegacyMap::<ShortString, ClassHash>,
-        execution_role: LegacyMap::<ShortString, u250>,
+        _execution_role: LegacyMap::<ShortString, u250>,
         initialized: bool,
         nonce: usize,
     }
@@ -232,7 +232,7 @@ mod World {
         let class_hash = system_registry::read(name);
 
         // Get execution role
-        let role = execution_role::read(name);
+        let role = _execution_role::read(name);
 
         // Call the system via executor
         let res = IExecutorDispatcher {
@@ -272,7 +272,7 @@ mod World {
         assert(get_caller_address() == executor::read(), 'must be called thru executor');
 
         // Get execution role
-        let role = execution_role::read(component);
+        let role = _execution_role::read(component);
 
         // Validate the calling system has permission to write to the component
         assert(
@@ -300,7 +300,7 @@ mod World {
         assert(get_caller_address() == executor::read(), 'must be called thru executor');
 
         // Get execution role
-        let role = execution_role::read(component);
+        let role = _execution_role::read(component);
 
         // Validate the calling system has permission to write to the component
         assert(
@@ -377,7 +377,7 @@ mod World {
         if role_id == 'Admin'.into() {
             assert(is_account_admin(), 'only admin can set Admin role');
         }
-        execution_role::write(system, role_id);
+        _execution_role::write(system, role_id);
     }
 
     /// Get the execution role for a system
@@ -390,7 +390,7 @@ mod World {
     ///
     /// * `u250` - The role id of the system
     #[view]
-    fn get_execution_role(system: ShortString) -> u250 {
-        execution_role::read(system)
+    fn execution_role(system: ShortString) -> u250 {
+        _execution_role::read(system)
     }
 }
