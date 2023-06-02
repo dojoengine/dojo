@@ -1,6 +1,5 @@
 use camino::Utf8PathBuf;
 use dojo_test_utils::sequencer::Sequencer;
-
 use dojo_world::config::{EnvironmentConfig, WorldConfig};
 use dojo_world::migration::world::WorldDiff;
 
