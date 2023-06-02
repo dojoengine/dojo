@@ -4,22 +4,13 @@ use debug::PrintTrait;
 use array::ArrayTCloneImpl;
 use array::SpanTrait;
 use clone::Clone;
-// use gas::withdraw_gas;
 use traits::PartialOrd;
 
 use cubit::test::helpers::assert_precise;
-
-use cubit::types::fixed::Fixed as FixedTrait;
-use cubit::types::fixed::FixedPartialOrd;
-use cubit::types::fixed::FixedPrint;
-use cubit::types::fixed::FixedType as Fixed;
-use cubit::types::fixed::ONE;
-use cubit::types::fixed::ONE_u128;
-
+use cubit::types::fixed::{Fixed, FixedPartialOrd, FixedTrait, ONE_u128};
 use cubit::math::trig;
 
-use dojo_physics::vec2::Vec2;
-use dojo_physics::vec2::Vec2Trait;
+use dojo_physics::vec2::{Vec2, Vec2Trait};
 
 fn main() -> (usize, Array::<Fixed>, Array::<Fixed>) {
     // to be inputs for #[view] function
