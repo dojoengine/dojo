@@ -54,6 +54,14 @@ impl MigrationStrategy {
             Some(executor) => {
                 let res = executor.deploy(vec![], &migrator).await?;
 
+                println!(
+                    r"- Executor contract:
+    Declared at tx: {:#x}
+    Deployed at tx: {:#x}
+",
+                    res.declare_res.transaction_hash, res.contract_address
+                );
+
                 if self.world.is_none() {
                     let addr = self.world_address().ok_or(MigrationError::WorldAddressNotFound)?;
                     WorldContract::new(addr, &migrator).set_executor(res.contract_address).await?;
@@ -65,15 +73,34 @@ impl MigrationStrategy {
         };
 
         let world_output = match &mut self.world {
-            Some(world) => world
-                .deploy(vec![self.executor.as_ref().unwrap().contract_address.unwrap()], &migrator)
-                .await
-                .map(|o| Some(o))?,
+            Some(world) => {
+                let res = world
+                    .deploy(
+                        vec![self.executor.as_ref().unwrap().contract_address.unwrap()],
+                        &migrator,
+                    )
+                    .await?;
+
+                println!(
+                    r"- World contract:
+    Declared at tx: {:#x}
+    Deployed at tx: {:#x}
+",
+                    res.declare_res.transaction_hash, res.contract_address
+                );
+
+                Some(res)
+            }
             None => None,
         };
 
+        println!("- Registering components...");
         let components_output = self.register_systems(&migrator).await?;
+        println!("Systems registered at tx: {:#x}", components_output.transaction_hash);
+
+        println!("\n- Registering systems...");
         let systems_output = self.register_components(&migrator).await?;
+        println!("Components registered at tx: {:#x}", systems_output.transaction_hash);
 
         Ok(MigrationOutput {
             world: world_output,
@@ -92,7 +119,11 @@ impl MigrationStrategy {
     {
         let mut declare_output = vec![];
         for component in &self.components {
-            declare_output.push(component.declare(migrator).await?);
+            let res = component.declare(migrator).await?;
+
+            println!("{} declared at tx: {:#x}", component.class.name, res.transaction_hash);
+
+            declare_output.push(res);
         }
 
         let world_address = self.world_address().ok_or(MigrationError::WorldAddressNotFound)?;
@@ -116,7 +147,11 @@ impl MigrationStrategy {
     {
         let mut declare_output = vec![];
         for system in &self.systems {
-            declare_output.push(system.declare(migrator).await?);
+            let res = system.declare(migrator).await?;
+
+            println!("{} declared at tx: {:#x}", system.class.name, res.transaction_hash);
+
+            declare_output.push(res);
         }
 
         let world_address = self.world_address().ok_or(MigrationError::WorldAddressNotFound)?;

@@ -1,6 +1,6 @@
 use std::env::{self, current_dir};
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use camino::Utf8PathBuf;
 use clap::Args;
 use dojo_world::config::{EnvironmentConfig, WorldConfig};
@@ -11,6 +11,7 @@ use scarb::ops;
 use scarb::ui::Verbosity;
 
 use super::build::{self, BuildArgs, ProfileSpec};
+use crate::ops::migrate::prepare_for_migration;
 
 #[derive(Args)]
 pub struct MigrateArgs {
@@ -63,7 +64,7 @@ pub fn run(args: MigrateArgs) -> Result<()> {
     ws.config().tokio_handle().block_on(async {
         let migrator = env_config.migrator().await?;
         let diff = WorldDiff::from_path(target_dir.clone(), &world_config, &env_config).await?;
-        let mut migration = prepare_for_migration(target_dir, diff, world_config).await?;
+        let mut migration = prepare_for_migration(target_dir, diff, world_config)?;
         migration
             .execute(migrator)
             .await
