@@ -115,7 +115,7 @@ fn test_initialize() {
 }
 
 #[test]
-#[available_gas(4000000)]
+#[available_gas(5000000)]
 #[should_panic]
 fn test_initialize_not_more_than_once() {
     // Spawn empty world
