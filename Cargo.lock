@@ -5111,6 +5111,7 @@ dependencies = [
  "anyhow",
  "blockifier",
  "cairo-lang-starknet",
+ "flate2",
  "futures",
  "lazy_static",
  "rand",
