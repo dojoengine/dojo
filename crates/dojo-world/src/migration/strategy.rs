@@ -67,11 +67,6 @@ impl MigrationStrategy {
                     res.declare_res.transaction_hash, res.contract_address
                 );
 
-                if self.world.is_none() {
-                    let addr = self.world_address().ok_or(MigrationError::WorldAddressNotFound)?;
-                    WorldContract::new(addr, &migrator).set_executor(res.contract_address).await?;
-                }
-
                 Some(res)
             }
             None => None,

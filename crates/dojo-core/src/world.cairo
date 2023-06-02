@@ -13,7 +13,7 @@ mod World {
     use dojo_core::interfaces::{IComponentLibraryDispatcher, IComponentDispatcherTrait, IExecutorDispatcher, IExecutorDispatcherTrait, ISystemLibraryDispatcher, ISystemDispatcherTrait};
 
     #[event]
-    fn WorldSpawned(address: ContractAddress, caller: ContractAddress, name: ShortString) {}
+    fn WorldSpawned(address: ContractAddress, caller: ContractAddress) {}
 
     #[event]
     fn ComponentRegistered(name: ShortString, class_hash: ClassHash) {}
@@ -23,7 +23,7 @@ mod World {
 
     struct Storage {
         caller: ClassHash,
-        executor: ContractAddress,
+        executor_dispatcher: IExecutorDispatcher,
         component_registry: LegacyMap::<ShortString, ClassHash>,
         system_registry: LegacyMap::<ShortString, ClassHash>,
         initialized: bool,
@@ -31,10 +31,12 @@ mod World {
     }
 
     #[constructor]
-    fn constructor(name: ShortString, executor_: ContractAddress) {
-        executor::write(executor_);
+    fn constructor(executor: ContractAddress) {
+        executor_dispatcher::write(IExecutorDispatcher {
+            contract_address: executor
+        });
 
-        WorldSpawned(get_contract_address(), get_tx_info().unbox().account_contract_address, name);
+        WorldSpawned(get_contract_address(), get_tx_info().unbox().account_contract_address);
     }
 
     // Initialize the world with the routes that specify
@@ -60,9 +62,7 @@ mod World {
             r.serialize(ref calldata);
 
             // Call RouteAuth system via executor with the serialized route
-            IExecutorDispatcher {
-                contract_address: executor::read()
-            }.execute(route_auth_class_hash, calldata.span());
+            executor_dispatcher::read().execute(route_auth_class_hash, calldata.span());
 
             index += 1;
         };
@@ -93,9 +93,7 @@ mod World {
 
                 // Call IsAuthorized system via executor with serialized system and component
                 // If the system is authorized, the result will be non-zero
-                let res = IExecutorDispatcher {
-                    contract_address: executor::read()
-                }.execute(authorize_class_hash, calldata.span());
+                let res = executor_dispatcher::read().execute(authorize_class_hash, calldata.span());
                 (*res[0]).is_non_zero()
             }
         } else {
@@ -111,9 +109,7 @@ mod World {
         let admin_class_hash = system_registry::read('IsAccountAdmin'.into());
         // Call IsAccountAdmin system via executor
         let mut calldata = ArrayTrait::new();
-        let res = IExecutorDispatcher {
-            contract_address: executor::read()
-        }.execute(admin_class_hash, calldata.span());
+        let res = executor_dispatcher::read().execute(admin_class_hash, calldata.span());
         (*res[0]).is_non_zero()
     }
 
@@ -162,9 +158,7 @@ mod World {
         let class_hash = system_registry::read(name);
         caller::write(class_hash);
 
-        let res = IExecutorDispatcher {
-            contract_address: executor::read()
-        }.execute(class_hash, execute_calldata);
+        let res = executor_dispatcher::read().execute(class_hash, execute_calldata);
 
         caller::write(starknet::class_hash_const::<0x0>());
         res
@@ -182,7 +176,7 @@ mod World {
     fn set_entity(component: ShortString, query: Query, offset: u8, value: Span<felt252>) {
         // Assert can only be called through the executor
         // This is to prevent system from writing to storage directly
-        assert(get_caller_address() == executor::read(), 'must be called thru executor');
+        assert(get_caller_address() == executor_dispatcher::read().contract_address, 'must be called thru executor');
 
         let system_class_hash = caller::read();
         let table = query.table(component);
@@ -197,7 +191,7 @@ mod World {
     fn delete_entity(component: ShortString, query: Query) {
         // Assert can only be called through the executor
         // This is to prevent system from writing to storage directly
-        assert(get_caller_address() == executor::read(), 'must be called thru executor');
+        assert(get_caller_address() == executor_dispatcher::read().contract_address, 'must be called thru executor');
 
         let system_class_hash = caller::read();
         let table = query.table(component);
@@ -228,6 +222,13 @@ mod World {
 
     #[external]
     fn set_executor(contract_address: ContractAddress) {
-        executor::write(contract_address);
+        executor_dispatcher::write(IExecutorDispatcher {
+            contract_address: contract_address
+        });
+    }
+
+    #[view]
+    fn executor() -> ContractAddress {
+        executor_dispatcher::read().contract_address
     }
 }

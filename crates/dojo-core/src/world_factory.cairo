@@ -59,14 +59,12 @@ mod WorldFactory {
 
     #[external]
     fn spawn(
-        name: ShortString,
         components: Array<ClassHash>,
         systems: Array<ClassHash>,
         routes: Array<Route>,
     ) -> ContractAddress {
         // deploy world
         let mut world_constructor_calldata: Array<felt252> = ArrayTrait::new();
-        world_constructor_calldata.append(name.into());
         world_constructor_calldata.append(executor_address::read().into());
         let world_class_hash = world_class_hash::read();
         let result = deploy_syscall(world_class_hash, 0, world_constructor_calldata.span(), true);

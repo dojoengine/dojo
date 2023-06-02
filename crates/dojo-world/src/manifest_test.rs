@@ -1,10 +1,15 @@
+use camino::Utf8PathBuf;
 use dojo_test_utils::rpc::MockJsonRpcTransport;
+use dojo_test_utils::sequencer::Sequencer;
 use serde_json::json;
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcMethod};
 
 use super::Manifest;
-use crate::manifest::{ManifestError, EXECUTOR_ADDRESS_SLOT};
+use crate::config::{EnvironmentConfig, WorldConfig};
+use crate::manifest::ManifestError;
+use crate::migration::strategy::prepare_for_migration;
+use crate::migration::world::WorldDiff;
 
 #[tokio::test]
 async fn test_manifest_from_remote_throw_error_on_not_deployed() {
@@ -33,45 +38,32 @@ async fn test_manifest_from_remote_throw_error_on_not_deployed() {
 }
 
 #[tokio::test]
-async fn test_manifest_loads_empty_world_from_mock_remote() {
-    let world_address = FieldElement::ONE;
-    let world_class_hash = FieldElement::TWO;
-    let executor_address = FieldElement::THREE;
-    let executor_class_hash: FieldElement = FieldElement::from_hex_be("0x4").unwrap();
+async fn test_migration_from_remote() {
+    let target_dir = Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap();
 
-    let mut mock_transport = MockJsonRpcTransport::new();
-    mock_transport.set_response(
-        JsonRpcMethod::GetClassHashAt,
-        json!(["pending", format!("{world_address:#x}")]),
-        json!({
-            "id": 1,
-            "result": format!("{world_class_hash:#x}")
-        }),
-    );
+    let sequencer = Sequencer::start().await;
+    let account = sequencer.account();
+    let world_config = WorldConfig::default();
+    let env_config = EnvironmentConfig {
+        rpc: Some(sequencer.url()),
+        account_address: Some(account.address),
+        private_key: Some(account.private_key),
+        ..EnvironmentConfig::default()
+    };
 
-    mock_transport.set_response(
-        JsonRpcMethod::GetStorageAt,
-        json!(["0x1", format!("{EXECUTOR_ADDRESS_SLOT:#x}"), "pending"]),
-        json!({
-            "id": 1,
-            "result": format!("{executor_address:#x}")
-        }),
-    );
+    let migrator = env_config.migrator().await.unwrap();
+    let diff = WorldDiff::from_path(target_dir.clone(), &world_config, &env_config).await.unwrap();
+    let mut migration = prepare_for_migration(target_dir.clone(), diff, world_config).unwrap();
+    let migration_result = migration.execute(migrator).await.unwrap();
 
-    mock_transport.set_response(
-        JsonRpcMethod::GetClassHashAt,
-        json!(["pending", format!("{executor_address:#x}")]),
-        json!({
-            "id": 1,
-            "result": format!("{executor_class_hash:#x}")
-        }),
-    );
-
-    let rpc = JsonRpcClient::new(mock_transport);
-    let manifest = Manifest::from_remote(rpc, FieldElement::ONE, None).await.unwrap();
-
-    assert_eq!(
-        manifest,
-        Manifest { world: world_class_hash, executor: executor_class_hash, ..Manifest::default() }
+    let _local_manifest = Manifest::load_from_path(target_dir.join("manifest.json")).unwrap();
+    let _remote_manifest = Manifest::from_remote(
+        env_config.provider().unwrap(),
+        migration_result.world.unwrap().contract_address,
+        None,
     )
+    .await
+    .unwrap();
+
+    sequencer.stop().unwrap();
 }

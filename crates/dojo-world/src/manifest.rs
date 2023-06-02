@@ -7,34 +7,15 @@ use serde_with::serde_as;
 use smol_str::SmolStr;
 use starknet::core::serde::unsigned_field_element::UfeHex;
 use starknet::core::types::{BlockId, BlockTag, FieldElement, FunctionCall, StarknetError};
-use starknet::core::utils::{cairo_short_string_to_felt, CairoShortStringToFeltError};
+use starknet::core::utils::{
+    cairo_short_string_to_felt, get_selector_from_name, CairoShortStringToFeltError,
+};
 use starknet::providers::{Provider, ProviderError};
 use thiserror::Error;
 
 #[cfg(test)]
 #[path = "manifest_test.rs"]
 mod test;
-
-const EXECUTOR_ADDRESS_SLOT: FieldElement = FieldElement::from_mont([
-    7467091854009816808,
-    5217539096067869628,
-    17301706476858600182,
-    440859966107478631,
-]);
-
-pub(crate) const COMPONENT_ENTRYPOINT: FieldElement = FieldElement::from_mont([
-    2012748018737461584,
-    17346441013657197760,
-    13481606495872588402,
-    416862702099901043,
-]);
-
-const SYSTEM_ENTRYPOINT: FieldElement = FieldElement::from_mont([
-    5274299164659238291,
-    8011946809036665273,
-    17510334645946118431,
-    553330538481721971,
-]);
 
 #[derive(Error, Debug)]
 pub enum ManifestError<E> {
@@ -144,16 +125,19 @@ impl Manifest {
 
         let executor_class_hash = {
             let executor_address = provider
-                .get_storage_at(
-                    world_address,
-                    EXECUTOR_ADDRESS_SLOT,
+                .call(
+                    FunctionCall {
+                        contract_address: world_address,
+                        calldata: vec![],
+                        entry_point_selector: get_selector_from_name("executor").unwrap(),
+                    },
                     BlockId::Tag(BlockTag::Pending),
                 )
                 .await
                 .map_err(ManifestError::Provider)?;
 
             provider
-                .get_class_hash_at(BlockId::Tag(BlockTag::Pending), executor_address)
+                .get_class_hash_at(BlockId::Tag(BlockTag::Pending), executor_address[0])
                 .await
                 .map_err(ManifestError::Provider)?
         };
@@ -171,7 +155,7 @@ impl Manifest {
                                 cairo_short_string_to_felt(&component.name)
                                     .map_err(ManifestError::InvalidNameError)?,
                             ],
-                            entry_point_selector: COMPONENT_ENTRYPOINT,
+                            entry_point_selector: get_selector_from_name("component").unwrap(),
                         },
                         BlockId::Tag(BlockTag::Pending),
                     )
@@ -198,7 +182,7 @@ impl Manifest {
                                 )
                                 .map_err(ManifestError::InvalidNameError)?,
                             ],
-                            entry_point_selector: SYSTEM_ENTRYPOINT,
+                            entry_point_selector: get_selector_from_name("system").unwrap(),
                         },
                         BlockId::Tag(BlockTag::Pending),
                     )

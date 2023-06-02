@@ -738,12 +738,15 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
                         )),
                     };
 
-                    AccountTransaction::Declare(DeclareTransaction {
-                        tx: starknet_api::transaction::DeclareTransaction::V2(transaction),
-                        contract_class: blockifier::execution::contract_class::ContractClass::V1(
-                            contract_class,
-                        ),
-                    })
+                    AccountTransaction::Declare(
+                        DeclareTransaction::new(
+                            starknet_api::transaction::DeclareTransaction::V2(transaction),
+                            blockifier::execution::contract_class::ContractClass::V1(
+                                contract_class,
+                            ),
+                        )
+                        .map_err(|_| Error::from(StarknetApiError::FailedToReceiveTxn))?,
+                    )
                 }
 
                 BroadcastedTransaction::Invoke(BroadcastedInvokeTransaction::V1(transaction)) => {
@@ -844,12 +847,15 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
                 (
                     transaction_hash,
                     class_hash,
-                    AccountTransaction::Declare(DeclareTransaction {
-                        tx: starknet_api::transaction::DeclareTransaction::V2(transaction),
-                        contract_class: blockifier::execution::contract_class::ContractClass::V1(
-                            contract_class,
-                        ),
-                    }),
+                    AccountTransaction::Declare(
+                        DeclareTransaction::new(
+                            starknet_api::transaction::DeclareTransaction::V2(transaction),
+                            blockifier::execution::contract_class::ContractClass::V1(
+                                contract_class,
+                            ),
+                        )
+                        .map_err(|_| Error::from(StarknetApiError::FailedToReceiveTxn))?,
+                    ),
                 )
             }
         };

@@ -94,7 +94,7 @@ fn test_spawn_world() {
     routes.append(RouteTrait::new('Bar'.into(), 'FooWriter'.into(), 'Foo'.into(), ));
 
     // Spawn World from WorldFactory
-    let world_address = WorldFactory::spawn('TestWorld'.into(), components, systems, routes);
+    let world_address = WorldFactory::spawn(components, systems, routes);
     let world = IWorldDispatcher { contract_address: world_address };
 
     // Check Admin role is set

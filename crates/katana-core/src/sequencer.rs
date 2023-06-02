@@ -165,7 +165,7 @@ impl Sequencer for KatanaSequencer {
 
         let sender = match &account_transaction {
             AccountTransaction::Invoke(tx) => tx.sender_address(),
-            AccountTransaction::Declare(tx) => tx.tx.sender_address(),
+            AccountTransaction::Declare(tx) => tx.tx().sender_address(),
             AccountTransaction::DeployAccount(tx) => tx.contract_address,
         };
 
