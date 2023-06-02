@@ -1,17 +1,16 @@
 use std::process::exit;
 
 use clap::Parser;
+use commands::{build, init, migrate};
 use env_logger::Env;
 use log::error;
 
-mod build;
 mod cli;
-mod init;
-mod migrate;
+mod commands;
+mod ops;
 
 use cli::{App, Commands};
 
-// #[tokio::main]
 fn main() {
     env_logger::Builder::from_env(Env::default().default_filter_or("sozo=info")).init();
 

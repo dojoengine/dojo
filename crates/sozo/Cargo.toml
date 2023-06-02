@@ -29,13 +29,17 @@ serde_json.workspace = true
 smol_str.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
-tokio = { version = "1.15.0", features = ["full"] }
+tokio = { version = "1.15.0", features = [ "full" ] }
 toml.workspace = true
 url = "2.2.2"
 
 [dev-dependencies]
 assert_fs = "1.0.10"
 snapbox = "0.4.6"
+katana-core = { path = "../katana-core" }
+katana-rpc = { path = "../katana-rpc" }
+dojo-test-utils = { path = "../dojo-test-utils" }
+tokio = { version = "1.28.0", features = [ "full" ] }
 
 [[bin]]
 name = "sozo"

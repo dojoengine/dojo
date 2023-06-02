@@ -27,4 +27,5 @@ tracing.workspace = true
 [dev-dependencies]
 assert_fs = "1.0.9"
 dojo-test-utils = { path = "../dojo-test-utils" }
-tokio = { version = "1.28.0", features = ["full"] }
+dojo-lang = { path = "../dojo-lang" }
+tokio = { version = "1.28.0", features = [ "full" ] }

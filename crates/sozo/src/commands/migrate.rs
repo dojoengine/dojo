@@ -1,16 +1,17 @@
 use std::env::{self, current_dir};
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use camino::Utf8PathBuf;
 use clap::Args;
-use dojo_world::migration::world::World;
-use dojo_world::{EnvironmentConfig, WorldConfig};
+use dojo_world::config::{EnvironmentConfig, WorldConfig};
+use dojo_world::migration::world::WorldDiff;
 use dotenv::dotenv;
 use scarb::core::Config;
 use scarb::ops;
 use scarb::ui::Verbosity;
 
-use crate::build::{self, BuildArgs, ProfileSpec};
+use super::build::{self, BuildArgs, ProfileSpec};
+use crate::ops::migrate::prepare_for_migration;
 
 #[derive(Args)]
 pub struct MigrateArgs {
@@ -61,9 +62,13 @@ pub fn run(args: MigrateArgs) -> Result<()> {
     let env_config = EnvironmentConfig::from_workspace(profile.as_str(), &ws)?;
 
     ws.config().tokio_handle().block_on(async {
-        let world = World::from_path(target_dir.clone(), world_config, env_config).await?;
-        let mut migration = world.prepare_for_migration(target_dir).await?;
-        migration.execute().await
+        let migrator = env_config.migrator().await?;
+        let diff = WorldDiff::from_path(target_dir.clone(), &world_config, &env_config).await?;
+        let mut migration = prepare_for_migration(target_dir, diff, world_config)?;
+        migration
+            .execute(migrator)
+            .await
+            .map_err(|e| anyhow!("Problem when tyring to migrate: {e}"))
     })?;
 
     Ok(())
