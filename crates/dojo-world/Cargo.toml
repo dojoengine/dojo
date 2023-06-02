@@ -28,6 +28,4 @@ tracing.workspace = true
 assert_fs = "1.0.9"
 dojo-test-utils = { path = "../dojo-test-utils" }
 dojo-lang = { path = "../dojo-lang" }
-indoc.workspace = true
-test-log.workspace = true
 tokio = { version = "1.28.0", features = [ "full" ] }
