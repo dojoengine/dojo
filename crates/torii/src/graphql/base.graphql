@@ -27,7 +27,7 @@ type Component {
   address: Address!
   classHash: Address!
   transactionHash: FieldElement!
-  storageSchema: String!
+  storageDefinition: String!
   storageStates: [Storage_NAME_!]
   createdAt: DateTime!
 }
