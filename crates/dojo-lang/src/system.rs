@@ -113,6 +113,26 @@ impl System {
             .collect();
 
         let parameters = signature.parameters(db);
+
+        // Collect all the parameters in a Vec
+        let param_nodes: Vec<_> = parameters.elements(db);
+
+        // Check if there is a parameter 'ctx: Context'
+        // If yes, make sure it's the first one.
+        // If not, add it as the first parameter.
+        let mut context = RewriteNode::Text("".to_string());
+        match param_nodes
+            .iter()
+            .position(|p| p.as_syntax_node().get_text(db).trim() == "ctx: Context")
+        {
+            Some(0) => { /* 'ctx: Context' is already the first parameter, do nothing */ }
+            Some(_) => panic!("The first parameter must be 'ctx: Context'"),
+            None => {
+                // 'ctx: Context' is not found at all, add it as the first parameter
+                context = RewriteNode::Text("ctx: Context,".to_string());
+            }
+        };
+
         let separator = if parameters.elements(db).is_empty() { "" } else { ", " };
         let ret_clause = if let ReturnTypeClause(clause) = signature.ret_ty(db) {
             RewriteNode::new_trimmed(clause.as_syntax_node())
@@ -123,13 +143,14 @@ impl System {
         rewrite_nodes.push(RewriteNode::interpolate_patched(
             "
                 #[external]
-                fn execute(ctx: Context, $parameters$$separator$) $ret_clause$ {
+                fn execute($context$$parameters$) $ret_clause$ {
                     $body$
                 }
             ",
             HashMap::from([
-                ("parameters".to_string(), RewriteNode::new_trimmed(parameters.as_syntax_node())),
+                ("context".to_string(), context),
                 ("separator".to_string(), RewriteNode::Text(separator.to_string())),
+                ("parameters".to_string(), RewriteNode::new_trimmed(parameters.as_syntax_node())),
                 ("body".to_string(), RewriteNode::new_modified(body_nodes)),
                 ("ret_clause".to_string(), ret_clause),
             ]),

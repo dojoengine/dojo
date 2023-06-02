@@ -45,7 +45,7 @@ mod IsAccountAdmin {
     use box::BoxTrait;
     use dojo_core::{auth::components::{AuthStatus, AuthRole}, integer::u250};
 
-    fn execute() -> bool {
+    fn execute(ctx: Context) -> bool {
         // Get calling account contract address
         let caller = ctx.caller_account;
         let role = commands::<AuthRole>::entity(caller.into());
@@ -60,7 +60,7 @@ mod IsAuthorized {
     use dojo_core::{auth::components::{AuthStatus, AuthRole}, integer::u250};
 
 
-    fn execute(target_id: u250, resource_id: u250) -> bool {
+    fn execute(ctx: Context, target_id: u250, resource_id: u250) -> bool {
         // Check if execution role is not set
         let scoped_role = if ctx.execution_role.id == 0.into() {
             // Use default component-scoped role
