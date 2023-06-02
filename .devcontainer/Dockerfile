@@ -10,8 +10,7 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 
 RUN apt install -y libgmp3-dev
 
-RUN rustup toolchain install nightly-2022-11-03 \
-    && rustup default nightly-2022-11-03 && rustup component add clippy && rustup component add rustfmt
+RUN rustup component add clippy && rustup component add rustfmt
 
 # Install Python
 ARG PYTHON_PATH=/usr/local/python
@@ -30,8 +29,8 @@ RUN apt-get update && bash /tmp/library-scripts/node-debian.sh "${NVM_DIR}"
 
 RUN pip install starknet-devnet==v0.5.0a2 
 
-# Install protostar
+# Install protostar for vscode user
+USER vscode
 RUN curl -L https://raw.githubusercontent.com/software-mansion/protostar/master/install.sh | bash
-RUN protostar -v
 
 ENV PATH=${PATH}:/workspaces/dojo/target/release
