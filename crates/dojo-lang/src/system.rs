@@ -133,7 +133,6 @@ impl System {
             }
         };
 
-        let separator = if parameters.elements(db).is_empty() { "" } else { ", " };
         let ret_clause = if let ReturnTypeClause(clause) = signature.ret_ty(db) {
             RewriteNode::new_trimmed(clause.as_syntax_node())
         } else {
@@ -149,7 +148,6 @@ impl System {
             ",
             HashMap::from([
                 ("context".to_string(), context),
-                ("separator".to_string(), RewriteNode::Text(separator.to_string())),
                 ("parameters".to_string(), RewriteNode::new_trimmed(parameters.as_syntax_node())),
                 ("body".to_string(), RewriteNode::new_modified(body_nodes)),
                 ("ret_clause".to_string(), ret_clause),
