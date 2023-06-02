@@ -3,7 +3,7 @@ use clap::{Args, Parser, Subcommand};
 use init::InitArgs;
 use migrate::MigrateArgs;
 
-use crate::{build, init, migrate};
+use crate::commands::{build, init, migrate};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
