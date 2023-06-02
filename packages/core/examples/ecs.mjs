@@ -1,4 +1,4 @@
-import Store from '../dist/store/index.js';
+import { World } from '../dist/store/index.js';
 import { RPCProvider } from '../dist/provider/RPCProvider.js';
 import Manifest from './manifest.json' assert { type: 'json' };
 import { HotAccount } from '../dist/account/index.js'
@@ -15,14 +15,7 @@ const main = async () => {
 
     const account = new HotAccount(rpcProvider.sequencerProvider, address, privateKey)
 
-    Store.registerWorld(Manifest);
-
-    console.log(Store.getWorld());
-
-    const position = Store.getComponent('Position');
-
-
-    console.log(position);
+    const world = new World(Manifest);
 
     const initialEntity = {
         id: 213123121,
@@ -37,41 +30,26 @@ const main = async () => {
             }
         }
     }
-    const newEntity = {
-        id: 42312312,
-        components: {
-            Position: {
-                name: 'Position',
-                data: { x: 2, y: 0 }
-            },
-            Velocity: {
-                name: 'Velocity',
-                data: { x: 1, y: 1 }
-            }
-        }
+
+    world.registerEntity(initialEntity)
+
+    console.log(world);
+
+    const componentName = 'Position';
+    const componentData = { x: 10, y: 20 };
+
+    const id = world.prepareOptimisticUpdate(initialEntity.id, componentName, componentData);
+
+    // loop to 100
+    for (let i = 0; i < 100; i++) {
+        world.execute(account.account, rpcProvider, 'Spawn', [], id)
     }
 
-    Store.registerEntity(initialEntity);
+    setTimeout(() => {
+        console.log(world.getCallStatus(id));  // 'done' or 'error'
+    }, 10);
 
-    Store.registerEntity(newEntity);
-
-    console.log(Store.getWorld());
-
-    // // update state
-    Store.updateComponent(newEntity.id, 'Position', { x: 10, y: 20 });
-
-    const entity1 = Store.getWorld().entities[initialEntity.id];
-    console.log('Entities:', entity1);
-
-    console.log(newEntity.id, Store.getEntityComponent(newEntity.id, 'Position'))
-
-    try {
-        await Store.execute(account.account, rpcProvider, 'Spawn', { x: 30, y: 40 }, [], newEntity.id, true);
-    } catch (error) {
-        console.error('An error occurred:', error);
-    }
-
-    console.log(newEntity.id, Store.getEntityComponent(newEntity.id, 'Position'))
+    console.log(initialEntity.id, world.getEntityComponent(initialEntity.id, 'Position'))
 
 };
 

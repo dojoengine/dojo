@@ -1,4 +1,4 @@
-import { world } from './world'
+import { worldStore } from './world'
 import { Entity } from '../types';
 
 // store state of entity by their components
@@ -11,7 +11,7 @@ export interface Component {
 }
 
 export const registerEntity = (entity: Entity) => {
-    world.setState(state => ({
+    worldStore.setState(state => ({
         ...state,
         entities: {
             ...state.entities,
@@ -21,7 +21,7 @@ export const registerEntity = (entity: Entity) => {
 }
 
 export const updateComponent = (entityId: number, componentName: string, componentData: any) => {
-    world.setState(state => {
+    worldStore.setState(state => {
         const entity = state.entities[entityId];
         if (!entity) {
             console.error(`Entity with ID ${entityId} not found.`);
@@ -48,7 +48,7 @@ export const updateComponent = (entityId: number, componentName: string, compone
 }
 
 export const getEntityComponent = (entityId: number, componentName: string): Component | undefined => {
-    const state = world.getState();
+    const state = worldStore.getState();
     const entity = state.entities[entityId];
 
     if (!entity) {

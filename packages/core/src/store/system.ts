@@ -1,8 +1,8 @@
-import { world } from './world'
+import { worldStore } from './world'
 import { RegisteredSystem } from '../types'
 
 export const registerSystem = (systems: RegisteredSystem) => {
-    world.setState(state => ({
+    worldStore.setState(state => ({
         ...state,
         systems: [
             ...state.systems,
@@ -12,11 +12,11 @@ export const registerSystem = (systems: RegisteredSystem) => {
 }
 
 export const getSystems = () => {
-    return world.getState().systems;
+    return worldStore.getState().systems;
 }
 
 export const getSystem = (name: string) => {
-    const systems = world.getState().systems;
+    const systems = worldStore.getState().systems;
 
     for (let key in systems) {
         if (systems[key].name === name) {

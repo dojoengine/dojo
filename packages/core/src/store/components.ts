@@ -1,8 +1,8 @@
 import { RegisteredComponent } from '../types'
-import { world } from './world'
+import { worldStore } from './world'
 
 export const registerComponent = (components: RegisteredComponent) => {
-    world.setState(state => ({
+    worldStore.setState(state => ({
         ...state,
         components: [
             ...state.components,
@@ -12,11 +12,11 @@ export const registerComponent = (components: RegisteredComponent) => {
 }
 
 export const getComponents = () => {
-    return world.getState().components;
+    return worldStore.getState().components;
 }
 
 export const getComponent = (name: string) => {
-    const components = world.getState().components;
+    const components = worldStore.getState().components;
 
     for (let key in components) {
         if (components[key].name === name) {
