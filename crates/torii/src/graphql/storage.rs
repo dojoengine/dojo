@@ -1,5 +1,6 @@
 use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
-use async_graphql::Value;
+use async_graphql::{Name, Value};
+use dojo_world::manifest::Member;
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Error, Pool, Result, Row, Sqlite};
@@ -34,7 +35,7 @@ impl ObjectTrait for StorageObject {
         &self.field_type_mapping
     }
 
-    fn field_resolvers(&self) -> Vec<Field> {
+    fn resolvers(&self) -> Vec<Field> {
         let name = self.name.clone();
         let type_mapping = self.field_type_mapping.clone();
         vec![
@@ -44,9 +45,15 @@ impl ObjectTrait for StorageObject {
 
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let id = ctx.args.try_get("id")?.i64()?;
-                    let storage_values =
-                        storage_by_id(&mut conn, &inner_name, &inner_type_mapping, id).await?;
+                    let id = ctx.args.try_get("id")?.i64()?.to_string();
+                    let storage_values = storage_by_column(
+                        &mut conn,
+                        ColumnName::Id,
+                        id.as_str(),
+                        &inner_name,
+                        &inner_type_mapping,
+                    )
+                    .await?;
                     Ok(Some(FieldValue::owned_any(storage_values)))
                 })
             })
@@ -55,13 +62,31 @@ impl ObjectTrait for StorageObject {
     }
 }
 
-async fn storage_by_id(
+#[allow(dead_code)]
+pub enum ColumnName {
+    Id,
+    ComponentId,
+    EntityId,
+}
+
+impl ColumnName {
+    pub fn as_str(&self) -> &str {
+        match self {
+            ColumnName::Id => "id",
+            ColumnName::ComponentId => "component_id",
+            ColumnName::EntityId => "entity_id",
+        }
+    }
+}
+
+pub async fn storage_by_column(
     conn: &mut PoolConnection<Sqlite>,
+    column_name: ColumnName,
+    id: &str,
     name: &str,
     fields: &TypeMapping,
-    id: i64,
 ) -> Result<ValueMapping> {
-    let query = format!("SELECT * FROM storage_{} WHERE id = ?", name);
+    let query = format!("SELECT * FROM storage_{} WHERE {} = ?", name, column_name.as_str());
     let storage = sqlx::query(&query).bind(id).fetch_one(conn).await?;
     let result = value_mapping_from_row(&storage, fields)?;
     Ok(result)
@@ -93,4 +118,16 @@ fn value_mapping_from_row(row: &SqliteRow, fields: &TypeMapping) -> Result<Value
     }
 
     Ok(value_mapping)
+}
+
+pub fn type_mapping_from_definition(storage_def: &str) -> Result<TypeMapping> {
+    let members: Vec<Member> =
+        serde_json::from_str(storage_def).map_err(|e| Error::Decode(e.into()))?;
+    let field_type_mapping: TypeMapping =
+        members.iter().fold(TypeMapping::new(), |mut mapping, member| {
+            // TODO: check if member type exists in scalar types
+            mapping.insert(Name::new(&member.name), member.ty.to_string());
+            mapping
+        });
+    Ok(field_type_mapping)
 }

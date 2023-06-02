@@ -1,4 +1,4 @@
-use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
+use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef, Union};
 use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
@@ -6,7 +6,9 @@ use serde::Deserialize;
 use sqlx::pool::PoolConnection;
 use sqlx::{FromRow, Pool, Result, Sqlite};
 
+use super::storage::{storage_by_column, type_mapping_from_definition, ColumnName};
 use super::types::ScalarType;
+use super::utils::extract_value::extract;
 use super::utils::{format_name, remove_quotes};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 
@@ -59,7 +61,39 @@ impl ObjectTrait for ComponentObject {
         &self.field_type_mapping
     }
 
-    fn field_resolvers(&self) -> Vec<Field> {
+    fn unions(&self) -> Option<Vec<Union>> {
+        Some(vec![self.storage_names.iter().fold(Union::new("Storage"), |union, storage| {
+            let (_, type_name) = format_name(storage);
+            union.possible_type(type_name)
+        })])
+    }
+
+    fn nested_fields(&self) -> Option<Vec<Field>> {
+        Some(vec![Field::new("storage", TypeRef::named("Storage"), |ctx| {
+            FieldFuture::new(async move {
+                let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                let component_values = ctx.parent_value.try_downcast_ref::<ValueMapping>()?;
+
+                let id = extract::<String>(component_values, "id")?;
+                let defintion = extract::<String>(component_values, "storageDefinition")?;
+                let type_name = extract::<String>(component_values, "name")?;
+
+                let field_type_mapping = type_mapping_from_definition(&defintion)?;
+                let storage_values = storage_by_column(
+                    &mut conn,
+                    ColumnName::ComponentId,
+                    &id,
+                    &type_name,
+                    &field_type_mapping,
+                )
+                .await?;
+
+                Ok(Some(FieldValue::with_type(FieldValue::owned_any(storage_values), type_name)))
+            })
+        })])
+    }
+
+    fn resolvers(&self) -> Vec<Field> {
         vec![
             Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
                 FieldFuture::new(async move {
@@ -71,23 +105,6 @@ impl ObjectTrait for ComponentObject {
             })
             .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID))),
         ]
-    }
-
-    fn related_fields(&self) -> Option<Vec<Field>> {
-        Some(
-            self.storage_names
-                .iter()
-                .map(|storage| {
-                    let (name, type_name) = format_name(storage);
-                    Field::new(name, TypeRef::named(type_name), |_| {
-                        FieldFuture::new(async move {
-                            // TODO: implement
-                            Ok(Some(Value::Null))
-                        })
-                    })
-                })
-                .collect(),
-        )
     }
 }
 

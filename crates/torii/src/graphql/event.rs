@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
 use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
@@ -10,8 +8,8 @@ use sqlx::{FromRow, Pool, Result, Sqlite};
 
 use super::system_call::system_call_by_id;
 use super::types::ScalarType;
+use super::utils::extract_value::extract;
 use super::utils::remove_quotes;
-use super::utils::value_accessor::ObjectAccessor;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 
 #[derive(FromRow, Deserialize)]
@@ -55,7 +53,7 @@ impl ObjectTrait for EventObject {
         &self.field_type_mapping
     }
 
-    fn field_resolvers(&self) -> Vec<Field> {
+    fn resolvers(&self) -> Vec<Field> {
         vec![
             Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
                 FieldFuture::new(async move {
@@ -70,14 +68,12 @@ impl ObjectTrait for EventObject {
         ]
     }
 
-    fn related_fields(&self) -> Option<Vec<Field>> {
+    fn nested_fields(&self) -> Option<Vec<Field>> {
         Some(vec![Field::new("systemCall", TypeRef::named_nn("SystemCall"), |ctx| {
             FieldFuture::new(async move {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                 let event_values = ctx.parent_value.try_downcast_ref::<ValueMapping>()?;
-
-                let syscall_id =
-                    ObjectAccessor(Cow::Borrowed(event_values)).try_get("system_call_id")?.i64()?;
+                let syscall_id = extract::<i64>(event_values, "system_call_id")?;
                 let system_call = system_call_by_id(&mut conn, syscall_id).await?;
 
                 Ok(Some(FieldValue::owned_any(system_call)))

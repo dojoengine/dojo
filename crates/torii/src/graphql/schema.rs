@@ -1,18 +1,16 @@
 use anyhow::Result;
 use async_graphql::dynamic::{Object, Scalar, Schema};
-use async_graphql::Name;
-use dojo_world::manifest::Member;
 use sqlx::SqlitePool;
 
 use super::component::{Component, ComponentObject};
 use super::entity::EntityObject;
 use super::event::EventObject;
-use super::storage::StorageObject;
+use super::storage::{type_mapping_from_definition, StorageObject};
 use super::system::SystemObject;
 use super::system_call::SystemCallObject;
 use super::types::ScalarType;
 use super::utils::format_name;
-use super::{ObjectTrait, TypeMapping};
+use super::ObjectTrait;
 
 pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     let mut schema_builder = Schema::build("Query", None, None);
@@ -24,7 +22,7 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     // collect field resolvers
     let mut fields = Vec::new();
     for object in &objects {
-        fields.extend(object.field_resolvers());
+        fields.extend(object.resolvers());
     }
 
     // add field resolvers to query root
@@ -38,9 +36,14 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
         schema_builder = schema_builder.register(Scalar::new(*scalar_type));
     }
 
-    // register gql objects
+    // register gql objects and union
     for object in &objects {
-        schema_builder = schema_builder.register(object.create());
+        schema_builder = schema_builder.register(object.object());
+        if let Some(unions) = object.unions() {
+            for union in unions {
+                schema_builder = schema_builder.register(union);
+            }
+        }
     }
 
     schema_builder.register(query_root).data(pool.clone()).finish().map_err(|e| e.into())
@@ -78,15 +81,7 @@ async fn dynamic_objects(pool: &SqlitePool) -> Result<Vec<Box<dyn ObjectTrait>>>
 }
 
 fn process_component(component: Component) -> Result<Box<dyn ObjectTrait>> {
-    let members: Vec<Member> = serde_json::from_str(&component.storage_definition)?;
-
-    let field_type_mapping = members.iter().fold(TypeMapping::new(), |mut mapping, member| {
-        // TODO: check if member type exists in scalar types
-        mapping.insert(Name::new(&member.name), member.ty.to_string());
-        mapping
-    });
-
+    let field_type_mapping = type_mapping_from_definition(&component.storage_definition)?;
     let (name, type_name) = format_name(component.name.as_str());
-
     Ok(Box::new(StorageObject::new(name, type_name, field_type_mapping)))
 }

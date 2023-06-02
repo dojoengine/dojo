@@ -11,7 +11,7 @@ pub mod system_call;
 mod types;
 mod utils;
 
-use async_graphql::dynamic::{Field, FieldFuture, Object, TypeRef};
+use async_graphql::dynamic::{Field, FieldFuture, Object, TypeRef, Union};
 use async_graphql::{Name, Value};
 use indexmap::IndexMap;
 
@@ -23,13 +23,16 @@ pub trait ObjectTrait {
     fn name(&self) -> &str;
     fn type_name(&self) -> &str;
     fn field_type_mapping(&self) -> &TypeMapping;
-    fn field_resolvers(&self) -> Vec<Field>;
-    fn related_fields(&self) -> Option<Vec<Field>> {
+    fn resolvers(&self) -> Vec<Field>;
+    fn nested_fields(&self) -> Option<Vec<Field>> {
+        None
+    }
+    fn unions(&self) -> Option<Vec<Union>> {
         None
     }
 
     // Create a new GraphQL object
-    fn create(&self) -> Object {
+    fn object(&self) -> Object {
         let mut object = Object::new(self.type_name());
 
         // Add fields (ie id, createdAt, etc)
@@ -39,8 +42,8 @@ pub trait ObjectTrait {
         }
 
         // Add related fields (ie event, system)
-        if let Some(related_fields) = self.related_fields() {
-            for field in related_fields {
+        if let Some(nested_fields) = self.nested_fields() {
+            for field in nested_fields {
                 object = object.field(field);
             }
         }
