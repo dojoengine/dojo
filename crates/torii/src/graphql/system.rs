@@ -10,8 +10,9 @@ use sqlx::{FromRow, Pool, Result, Sqlite};
 
 use super::system_call::system_calls_by_system_id;
 use super::types::ScalarType;
+use super::utils::remove_quotes;
 use super::utils::value_accessor::ObjectAccessor;
-use super::{ObjectTraitInstance, ObjectTraitStatic, TypeMapping, ValueMapping};
+use super::{ObjectTrait, TypeMapping, ValueMapping};
 
 #[derive(FromRow, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -28,26 +29,22 @@ pub struct SystemObject {
     pub field_type_mapping: TypeMapping,
 }
 
-impl ObjectTraitStatic for SystemObject {
-    fn new() -> Self {
+impl SystemObject {
+    pub fn new() -> Self {
         Self {
             field_type_mapping: IndexMap::from([
-                (Name::new("id"), TypeRef::ID),
-                (Name::new("name"), TypeRef::STRING),
-                (Name::new("address"), ScalarType::ADDRESS),
-                (Name::new("classHash"), ScalarType::FELT),
-                (Name::new("transactionHash"), ScalarType::FELT),
-                (Name::new("createdAt"), ScalarType::DATE_TIME),
+                (Name::new("id"), TypeRef::ID.to_string()),
+                (Name::new("name"), TypeRef::STRING.to_string()),
+                (Name::new("address"), ScalarType::ADDRESS.to_string()),
+                (Name::new("classHash"), ScalarType::FELT.to_string()),
+                (Name::new("transactionHash"), ScalarType::FELT.to_string()),
+                (Name::new("createdAt"), ScalarType::DATE_TIME.to_string()),
             ]),
         }
     }
-
-    fn from(field_type_mapping: TypeMapping) -> Self {
-        Self { field_type_mapping }
-    }
 }
 
-impl ObjectTraitInstance for SystemObject {
+impl ObjectTrait for SystemObject {
     fn name(&self) -> &str {
         "system"
     }
@@ -65,7 +62,7 @@ impl ObjectTraitInstance for SystemObject {
             Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let id = ctx.args.try_get("id")?.string()?.replace('\"', "");
+                    let id = remove_quotes(ctx.args.try_get("id")?.string()?);
                     let system_values = system_by_id(&mut conn, &id).await?;
                     Ok(Some(FieldValue::owned_any(system_values)))
                 })
@@ -91,22 +88,8 @@ impl ObjectTraitInstance for SystemObject {
 }
 
 pub async fn system_by_id(conn: &mut PoolConnection<Sqlite>, id: &str) -> Result<ValueMapping> {
-    let system = sqlx::query_as!(
-        System,
-        r#"
-            SELECT
-                id,
-                name,
-                address,
-                class_hash,
-                transaction_hash,
-                created_at as "created_at: _"
-            FROM systems WHERE id = $1
-        "#,
-        id
-    )
-    .fetch_one(conn)
-    .await?;
+    let system: System =
+        sqlx::query_as("SELECT * FROM systems WHERE id = $1").bind(id).fetch_one(conn).await?;
 
     Ok(value_mapping(system))
 }

@@ -1,4 +1,9 @@
 [package]
 name = "dojo_core"
 version = "0.1.0"
+cairo-version = "1.1.0"
 description = "The Dojo Core library for autonomous worlds."
+
+[dependencies]
+dojo_plugin = { path = "../dojo-lang" }
+starknet = ">=1.0.0"

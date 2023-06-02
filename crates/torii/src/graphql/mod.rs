@@ -4,25 +4,22 @@ pub mod entity;
 pub mod event;
 pub mod schema;
 pub mod server;
+pub mod storage;
 pub mod system;
 pub mod system_call;
-pub mod types;
-pub mod utils;
+
+mod types;
+mod utils;
 
 use async_graphql::dynamic::{Field, FieldFuture, Object, TypeRef};
 use async_graphql::{Name, Value};
 use indexmap::IndexMap;
 
 // Type aliases for GraphQL fields
-pub type TypeMapping = IndexMap<Name, &'static str>;
+pub type TypeMapping = IndexMap<Name, String>;
 pub type ValueMapping = IndexMap<Name, Value>;
 
-pub trait ObjectTraitStatic {
-    fn new() -> Self;
-    fn from(field_type_mapping: TypeMapping) -> Self;
-}
-
-pub trait ObjectTraitInstance {
+pub trait ObjectTrait {
     fn name(&self) -> &str;
     fn type_name(&self) -> &str;
     fn field_type_mapping(&self) -> &TypeMapping;

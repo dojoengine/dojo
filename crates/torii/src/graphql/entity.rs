@@ -7,7 +7,8 @@ use sqlx::pool::PoolConnection;
 use sqlx::{FromRow, Pool, Result, Sqlite};
 
 use super::types::ScalarType;
-use super::{ObjectTraitInstance, ObjectTraitStatic, TypeMapping, ValueMapping};
+use super::utils::remove_quotes;
+use super::{ObjectTrait, TypeMapping, ValueMapping};
 
 #[derive(FromRow, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -24,25 +25,22 @@ pub struct EntityObject {
     pub field_type_mapping: TypeMapping,
 }
 
-impl ObjectTraitStatic for EntityObject {
-    fn new() -> Self {
+impl EntityObject {
+    pub fn new() -> Self {
         Self {
             field_type_mapping: IndexMap::from([
-                (Name::new("id"), TypeRef::ID),
-                (Name::new("name"), TypeRef::STRING),
-                (Name::new("partitionId"), ScalarType::FELT),
-                (Name::new("keys"), TypeRef::STRING),
-                (Name::new("transactionHash"), ScalarType::FELT),
-                (Name::new("createdAt"), ScalarType::DATE_TIME),
+                (Name::new("id"), TypeRef::ID.to_string()),
+                (Name::new("name"), TypeRef::STRING.to_string()),
+                (Name::new("partitionId"), ScalarType::FELT.to_string()),
+                (Name::new("keys"), TypeRef::STRING.to_string()),
+                (Name::new("transactionHash"), ScalarType::FELT.to_string()),
+                (Name::new("createdAt"), ScalarType::DATE_TIME.to_string()),
             ]),
         }
     }
-    fn from(field_type_mapping: TypeMapping) -> Self {
-        Self { field_type_mapping }
-    }
 }
 
-impl ObjectTraitInstance for EntityObject {
+impl ObjectTrait for EntityObject {
     fn name(&self) -> &str {
         "entity"
     }
@@ -60,7 +58,7 @@ impl ObjectTraitInstance for EntityObject {
             Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let id = ctx.args.try_get("id")?.string()?.replace('\"', "");
+                    let id = remove_quotes(ctx.args.try_get("id")?.string()?);
                     let entity_values = entity_by_id(&mut conn, &id).await?;
                     Ok(Some(FieldValue::owned_any(entity_values)))
                 })
@@ -71,23 +69,8 @@ impl ObjectTraitInstance for EntityObject {
 }
 
 async fn entity_by_id(conn: &mut PoolConnection<Sqlite>, id: &str) -> Result<ValueMapping> {
-    let entity = sqlx::query_as!(
-        Entity,
-        r#"
-            SELECT 
-                id,
-                name,
-                partition_id,
-                keys,
-                transaction_hash,
-                created_at as "created_at: _"
-            FROM entities 
-            WHERE id = $1
-        "#,
-        id,
-    )
-    .fetch_one(conn)
-    .await?;
+    let entity: Entity =
+        sqlx::query_as("SELECT * FROM entities WHERE id = $1").bind(id).fetch_one(conn).await?;
 
     Ok(value_mapping(entity))
 }

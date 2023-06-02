@@ -109,7 +109,7 @@ jobs:
             mkdir -p ~/.cargo-udeps-cache
             mv cargo-udeps-*/cargo-udeps ~/.cargo-udeps-cache/cargo-udeps
           fi
-          ~/.cargo-udeps-cache/cargo-udeps udeps
+          ~/.cargo-udeps-cache/cargo-udeps udeps --all-targets
         env:
           RUSTUP_TOOLCHAIN: ${{ env.NIGHTLY_RUST_VERSION }}
 

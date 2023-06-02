@@ -10,8 +10,9 @@ use sqlx::{FromRow, Pool, Result, Sqlite};
 
 use super::system_call::system_call_by_id;
 use super::types::ScalarType;
+use super::utils::remove_quotes;
 use super::utils::value_accessor::ObjectAccessor;
-use super::{ObjectTraitInstance, ObjectTraitStatic, TypeMapping, ValueMapping};
+use super::{ObjectTrait, TypeMapping, ValueMapping};
 
 #[derive(FromRow, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -27,25 +28,21 @@ pub struct EventObject {
     pub field_type_mapping: TypeMapping,
 }
 
-impl ObjectTraitStatic for EventObject {
-    fn new() -> Self {
+impl EventObject {
+    pub fn new() -> Self {
         Self {
             field_type_mapping: IndexMap::from([
-                (Name::new("id"), TypeRef::ID),
-                (Name::new("keys"), TypeRef::STRING),
-                (Name::new("data"), TypeRef::STRING),
-                (Name::new("systemCallId"), TypeRef::INT),
-                (Name::new("createdAt"), ScalarType::DATE_TIME),
+                (Name::new("id"), TypeRef::ID.to_string()),
+                (Name::new("keys"), TypeRef::STRING.to_string()),
+                (Name::new("data"), TypeRef::STRING.to_string()),
+                (Name::new("systemCallId"), TypeRef::INT.to_string()),
+                (Name::new("createdAt"), ScalarType::DATE_TIME.to_string()),
             ]),
         }
     }
-
-    fn from(field_type_mapping: TypeMapping) -> Self {
-        Self { field_type_mapping }
-    }
 }
 
-impl ObjectTraitInstance for EventObject {
+impl ObjectTrait for EventObject {
     fn name(&self) -> &str {
         "event"
     }
@@ -63,7 +60,7 @@ impl ObjectTraitInstance for EventObject {
             Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let id = ctx.args.try_get("id")?.string()?.replace('\"', "");
+                    let id = remove_quotes(ctx.args.try_get("id")?.string()?);
                     let event_values = event_by_id(&mut conn, &id).await?;
 
                     Ok(Some(FieldValue::owned_any(event_values)))
@@ -90,22 +87,8 @@ impl ObjectTraitInstance for EventObject {
 }
 
 async fn event_by_id(conn: &mut PoolConnection<Sqlite>, id: &str) -> Result<ValueMapping> {
-    let event = sqlx::query_as!(
-        Event,
-        r#"
-            SELECT 
-                id,
-                system_call_id,
-                keys,
-                data,
-                created_at as "created_at: _"
-            FROM events 
-            WHERE id = $1
-        "#,
-        id
-    )
-    .fetch_one(conn)
-    .await?;
+    let event: Event =
+        sqlx::query_as("SELECT * FROM events WHERE id = $1").bind(id).fetch_one(conn).await?;
 
     Ok(value_mapping(event))
 }
