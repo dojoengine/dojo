@@ -16,6 +16,10 @@ use starknet::providers::Provider;
 
 pub type MigrationResult<S, P> = Result<MigrationOutput, MigrationError<S, P>>;
 
+#[cfg(test)]
+#[path = "migrate_test.rs"]
+mod test;
+
 #[derive(Debug)]
 pub struct MigrationOutput {
     pub world: Option<DeployOutput>,
@@ -240,11 +244,8 @@ fn evaluate_components_to_migrate(
             Some(remote) if remote == c.local && !world_contract_will_migrate => continue,
             _ => {
                 let path = find_artifact_path(&format!("{}Component", c.name), artifact_paths)?;
-                comps_to_migrate.push(ClassMigration {
-                    class: c.clone(),
-                    artifact_path: path.clone(),
-                    ..Default::default()
-                });
+                comps_to_migrate
+                    .push(ClassMigration { class: c.clone(), artifact_path: path.clone() });
             }
         }
     }

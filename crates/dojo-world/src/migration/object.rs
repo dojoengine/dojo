@@ -78,7 +78,7 @@ pub trait Declarable {
 
         if account
             .provider()
-            .get_class(&BlockId::Tag(BlockTag::Pending), casm_class_hash)
+            .get_class(BlockId::Tag(BlockTag::Pending), casm_class_hash)
             .await
             .is_ok()
         {
@@ -130,7 +130,7 @@ pub trait Deployable: Declarable + Sync {
 
         if account
             .provider()
-            .get_class_hash_at(&BlockId::Tag(BlockTag::Pending), contract_address)
+            .get_class_hash_at(BlockId::Tag(BlockTag::Pending), contract_address)
             .await
             .is_ok()
         {

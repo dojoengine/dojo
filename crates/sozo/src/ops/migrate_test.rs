@@ -4,6 +4,8 @@ use assert_fs::TempDir;
 use camino::{Utf8Path, Utf8PathBuf};
 use dojo_lang::compiler::DojoCompiler;
 use dojo_lang::plugin::CairoPluginRepository;
+use dojo_world::config::{EnvironmentConfig, WorldConfig};
+use dojo_world::migration::world::WorldDiff;
 use katana_core::sequencer::KatanaSequencer;
 use katana_core::starknet::StarknetConfig;
 use katana_rpc::config::RpcConfig;
@@ -16,8 +18,7 @@ use starknet::core::types::FieldElement;
 use tokio::sync::RwLock;
 use url::Url;
 
-use crate::config::{EnvironmentConfig, WorldConfig};
-use crate::migration::world::WorldDiff;
+use crate::ops::migrate::prepare_for_migration;
 
 #[tokio::test]
 async fn test_migration() {
@@ -77,12 +78,11 @@ async fn test_migration() {
         ..EnvironmentConfig::default()
     };
 
-    let world =
-        WorldDiff::from_path(target_dir.clone(), WorldConfig::default(), env_config.clone())
-            .await
-            .unwrap();
+    let world = WorldDiff::from_path(target_dir.clone(), &WorldConfig::default(), &env_config)
+        .await
+        .unwrap();
 
-    let mut migration = world.prepare_for_migration(target_dir).await.unwrap();
+    let mut migration = prepare_for_migration(target_dir, world, WorldConfig::default()).unwrap();
     migration.execute(env_config.migrator().await.unwrap()).await.unwrap();
 
     server_handle.stop().unwrap();

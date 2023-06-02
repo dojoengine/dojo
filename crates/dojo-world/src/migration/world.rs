@@ -7,10 +7,6 @@ use starknet::core::types::FieldElement;
 use crate::config::{EnvironmentConfig, WorldConfig};
 use crate::manifest::Manifest;
 
-#[cfg(test)]
-#[path = "world_test.rs"]
-mod test;
-
 /// Represents differences between a local and remote contract.
 #[derive(Debug, Default, Clone)]
 pub struct ContractDiff {
@@ -50,7 +46,7 @@ impl WorldDiff {
             let provider = environment_config.provider()?;
             Manifest::from_remote(provider, world_address, Some(local_manifest.clone()))
                 .await
-                .map(|m| Some(m))
+                .map(Some)
                 .map_err(|e| anyhow!("Failed creating remote manifest: {e}"))?
         } else {
             None
