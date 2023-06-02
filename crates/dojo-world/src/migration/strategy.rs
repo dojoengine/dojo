@@ -4,20 +4,21 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, Context, Result};
 use camino::Utf8PathBuf;
-use dojo_world::config::WorldConfig;
-use dojo_world::migration::object::{
-    ClassMigration, ContractMigration, Declarable, DeployOutput, Deployable, MigrationError,
-    RegisterOutput, WorldContract,
-};
-use dojo_world::migration::world::{ClassDiff, ContractDiff, WorldDiff};
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{FieldElement, InvokeTransactionResult};
 use starknet::providers::Provider;
 
+use crate::config::WorldConfig;
+use crate::migration::object::{
+    ClassMigration, ContractMigration, Declarable, DeployOutput, Deployable, MigrationError,
+    RegisterOutput, WorldContract,
+};
+use crate::migration::world::{ClassDiff, ContractDiff, WorldDiff};
+
 pub type MigrationResult<S, P> = Result<MigrationOutput, MigrationError<S, P>>;
 
 #[cfg(test)]
-#[path = "migrate_test.rs"]
+#[path = "strategy_test.rs"]
 mod test;
 
 #[derive(Debug)]
