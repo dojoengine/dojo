@@ -22,7 +22,7 @@ async fn test_manifest_from_remote_throw_error_on_not_deployed() {
     );
 
     let rpc = JsonRpcClient::new(mock_transport);
-    let err = Manifest::from_remote(FieldElement::ONE, rpc, None).await.unwrap_err();
+    let err = Manifest::from_remote(rpc, FieldElement::ONE, None).await.unwrap_err();
 
     match err {
         ManifestError::WorldNotDeployed => {
@@ -68,14 +68,10 @@ async fn test_manifest_loads_empty_world_from_remote() {
     );
 
     let rpc = JsonRpcClient::new(mock_transport);
-    let manifest = Manifest::from_remote(FieldElement::ONE, rpc, None).await.unwrap();
+    let manifest = Manifest::from_remote(rpc, FieldElement::ONE, None).await.unwrap();
 
     assert_eq!(
         manifest,
-        Manifest {
-            world: Some(world_class_hash),
-            executor: Some(executor_class_hash),
-            ..Manifest::default()
-        }
+        Manifest { world: world_class_hash, executor: executor_class_hash, ..Manifest::default() }
     )
 }

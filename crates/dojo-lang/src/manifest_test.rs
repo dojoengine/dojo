@@ -65,8 +65,8 @@ fn test_manifest_generation() {
 
     assert_eq!(manifest.0.components.len(), 1);
     assert_eq!(manifest.0.systems.len(), 1);
-    assert_eq!(manifest.0.world.unwrap(), class_hash);
-    assert_eq!(manifest.0.executor.unwrap(), class_hash);
+    assert_eq!(manifest.0.world, class_hash);
+    assert_eq!(manifest.0.executor, class_hash);
     assert_eq!(
         manifest.0.components.iter().find(|c| &c.name == "Position").unwrap().class_hash,
         FieldElement::from_hex_be("0x420").unwrap()
