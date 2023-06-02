@@ -28,8 +28,8 @@ pub struct ComponentObject {
 }
 
 impl ComponentObject {
-    // component objects needs the storage names passed
-    // in on new because it builds the related fields dynamically
+    // Storage names are passed in on new because
+    // it builds the related fields dynamically
     pub fn new(storage_names: Vec<String>) -> Self {
         Self {
             field_type_mapping: IndexMap::from([
