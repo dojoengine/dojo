@@ -28,8 +28,8 @@ trait IWorld {
     fn is_authorized(system: ShortString, component: ShortString, execution_role: AuthRole) -> bool;
     fn is_account_admin() -> bool;
     fn delete_entity(context: Context, component: ShortString, query: Query);
-    fn set_execution_role(system: ShortString, role_id: u250);
-    fn execution_role(system: ShortString) -> u250;
+    fn set_execution_role(role_id: u250);
+    fn execution_role() -> u250;
 }
 
 // TODO: Remove once Serde is derivable for dispatchers

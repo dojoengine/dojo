@@ -33,7 +33,7 @@ mod World {
         executor: ContractAddress,
         component_registry: LegacyMap::<ShortString, ClassHash>,
         system_registry: LegacyMap::<ShortString, ClassHash>,
-        _execution_role: LegacyMap::<ShortString, u250>,
+        _execution_role: LegacyMap::<ContractAddress, u250>,
         initialized: bool,
         nonce: usize,
     }
@@ -232,7 +232,7 @@ mod World {
         let class_hash = system_registry::read(name);
 
         // Get execution role
-        let role = _execution_role::read(name);
+        let role = execution_role();
 
         // Call the system via executor
         let res = IExecutorDispatcher {
@@ -272,7 +272,7 @@ mod World {
         assert(get_caller_address() == executor::read(), 'must be called thru executor');
 
         // Get execution role
-        let role = _execution_role::read(component);
+        let role = execution_role();
 
         // Validate the calling system has permission to write to the component
         assert(
@@ -300,7 +300,7 @@ mod World {
         assert(get_caller_address() == executor::read(), 'must be called thru executor');
 
         // Get execution role
-        let role = _execution_role::read(component);
+        let role = execution_role();
 
         // Validate the calling system has permission to write to the component
         assert(
@@ -365,32 +365,31 @@ mod World {
         executor::write(contract_address);
     }
 
-    /// Set the execution role for a system
+    /// Set the execution role to be assumed
     ///
     /// # Arguments
     ///
-    /// * `system` - The name of the system
-    /// * `role_id` - The role id of the system
+    /// * `role_id` - The role id to be assumed
     #[external]
-    fn set_execution_role(system: ShortString, role_id: u250) {
+    fn set_execution_role(role_id: u250) {
         // Only Admin can set Admin role 
         if role_id == 'Admin'.into() {
             assert(is_account_admin(), 'only admin can set Admin role');
         }
-        _execution_role::write(system, role_id);
+        let caller = get_tx_info().unbox().account_contract_address;
+        _execution_role::write(caller, role_id);
     }
 
-    /// Get the execution role for a system
+    /// Get the assumed execution role
     ///
     /// # Arguments
-    ///
-    /// * `system` - The name of the system
     ///
     /// # Returns
     ///
     /// * `u250` - The role id of the system
     #[view]
-    fn execution_role(system: ShortString) -> u250 {
-        _execution_role::read(system)
+    fn execution_role() -> u250 {
+        let caller = get_tx_info().unbox().account_contract_address;
+        _execution_role::read(caller)
     }
 }
