@@ -46,7 +46,16 @@ impl MigrationStrategy {
         A: ConnectedAccount + Sync,
     {
         let executor_output = match &mut self.executor {
-            Some(executor) => executor.deploy(vec![], &migrator).await.map(|o| Some(o))?,
+            Some(executor) => {
+                let res = executor.deploy(vec![], &migrator).await?;
+
+                if self.world.is_none() {
+                    let addr = self.world_address().ok_or(MigrationError::WorldAddressNotFound)?;
+                    WorldContract::new(addr, &migrator).set_executor(res.contract_address).await?;
+                }
+
+                Some(res)
+            }
             None => None,
         };
 
