@@ -711,6 +711,43 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
 
         for r in request {
             let transaction = match r {
+                BroadcastedTransaction::Declare(BroadcastedDeclareTransaction::V1(tx)) => {
+                    let raw_class_str = serde_json::to_string(&tx.contract_class)
+                        .map_err(|_| Error::from(StarknetApiError::InvalidContractClass))?;
+                    let flattened = flattened_legacy_contract_from_compressed(&raw_class_str)?;
+
+                    let legacy_contract_class: LegacyContractClass =
+                        ::serde_json::from_str(&flattened)?;
+                    let class_hash = legacy_contract_class.class_hash().unwrap();
+
+                    let contract_class = serde_json::from_str::<ContractClassV0>(&flattened)?;
+
+                    let transaction_hash = compute_declare_v1_transaction_hash(
+                        tx.sender_address,
+                        class_hash,
+                        tx.max_fee,
+                        chain_id,
+                        tx.nonce,
+                    );
+
+                    let transaction = DeclareTransactionV0V1 {
+                        transaction_hash: TransactionHash(StarkFelt::from(transaction_hash)),
+                        class_hash: ClassHash(StarkFelt::from(class_hash)),
+                        sender_address: ContractAddress(patricia_key!(tx.sender_address)),
+                        nonce: Nonce(StarkFelt::from(tx.nonce)),
+                        max_fee: Fee(starkfelt_to_u128(StarkFelt::from(tx.max_fee))
+                            .map_err(|_| Error::from(StarknetApiError::InternalServerError))?),
+                        signature: TransactionSignature(
+                            tx.signature.into_iter().map(StarkFelt::from).collect(),
+                        ),
+                    };
+                    AccountTransaction::Declare(DeclareTransaction {
+                        tx: starknet_api::transaction::DeclareTransaction::V1(transaction),
+                        contract_class: blockifier::execution::contract_class::ContractClass::V0(
+                            contract_class,
+                        ),
+                    })
+                }
                 BroadcastedTransaction::Declare(BroadcastedDeclareTransaction::V2(tx)) => {
                     let raw_class_str = serde_json::to_string(&tx.contract_class)?;
                     let class_hash = serde_json::from_str::<FlattenedSierraClass>(&raw_class_str)
