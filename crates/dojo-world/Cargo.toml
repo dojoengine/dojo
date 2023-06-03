@@ -21,7 +21,6 @@ serde_with.workspace = true
 smol_str.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
-toml = "0.7.1"
 tracing.workspace = true
 url = "2.2.2"
 
@@ -29,4 +28,4 @@ url = "2.2.2"
 assert_fs = "1.0.9"
 dojo-test-utils = { path = "../dojo-test-utils" }
 dojo-lang = { path = "../dojo-lang" }
-tokio = { version = "1.28.0", features = ["full"] }
+tokio = { version = "1.28.0", features = [ "full" ] }

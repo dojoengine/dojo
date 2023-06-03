@@ -3005,7 +3005,6 @@ dependencies = [
  "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?branch=dev/jsonrpc_0_3_0)",
  "thiserror",
  "tokio",
- "toml 0.7.4",
  "tracing",
  "url",
 ]
@@ -7502,6 +7501,7 @@ dependencies = [
  "dojo-world",
  "dotenv",
  "env_logger 0.10.0",
+ "indicatif",
  "log",
  "scarb",
  "semver 1.0.17",
@@ -7512,7 +7512,7 @@ dependencies = [
  "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?branch=dev/jsonrpc_0_3_0)",
  "thiserror",
  "tokio",
- "toml 0.4.10",
+ "toml 0.7.4",
  "url",
 ]
 
