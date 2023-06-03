@@ -6,9 +6,9 @@ use serde::Deserialize;
 use sqlx::pool::PoolConnection;
 use sqlx::{FromRow, Pool, Result, Sqlite};
 
-use super::types::ScalarType;
-use super::utils::remove_quotes;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
+use crate::graphql::types::ScalarType;
+use crate::graphql::utils::remove_quotes;
 
 #[derive(FromRow, Deserialize)]
 #[serde(rename_all = "camelCase")]

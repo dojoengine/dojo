@@ -2,15 +2,15 @@ use anyhow::Result;
 use async_graphql::dynamic::{Object, Scalar, Schema};
 use sqlx::SqlitePool;
 
-use super::component::{Component, ComponentObject};
-use super::entity::EntityObject;
-use super::event::EventObject;
-use super::storage::{type_mapping_from_definition, StorageObject};
-use super::system::SystemObject;
-use super::system_call::SystemCallObject;
+use super::object::component::{Component, ComponentObject};
+use super::object::entity::EntityObject;
+use super::object::event::EventObject;
+use super::object::storage::{type_mapping_from_definition, StorageObject};
+use super::object::system::SystemObject;
+use super::object::system_call::SystemCallObject;
+use super::object::ObjectTrait;
 use super::types::ScalarType;
 use super::utils::format_name;
-use super::ObjectTrait;
 
 pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     let mut schema_builder = Schema::build("Query", None, None);

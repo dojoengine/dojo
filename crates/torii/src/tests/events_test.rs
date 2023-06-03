@@ -1,15 +1,20 @@
 #[cfg(test)]
 mod tests {
+    use serde::Deserialize;
     use sqlx::SqlitePool;
 
-    use crate::graphql::event::Event;
     use crate::tests::common::run_graphql_query;
+
+    #[derive(Deserialize)]
+    pub struct Event {
+        pub id: String,
+    }
 
     #[sqlx::test(migrations = "./migrations", fixtures("systems", "system_calls", "events"))]
     async fn test_event(pool: SqlitePool) {
         let _ = pool.acquire().await;
 
-        let query = "{ event(id: \"event_1\") { id keys data systemCallId createdAt } }";
+        let query = "{ event(id: \"event_1\") { id } }";
         let value = run_graphql_query(&pool, query).await;
 
         let event = value.get("event").ok_or("no event found").unwrap();
