@@ -4,7 +4,6 @@ use std::sync::Arc;
 use blockifier::execution::contract_class::ContractClassV0;
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transactions::DeclareTransaction;
-
 use jsonrpsee::core::{async_trait, Error};
 use jsonrpsee::types::error::CallError;
 use katana_core::constants::SEQUENCER_ADDRESS;
