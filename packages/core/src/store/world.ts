@@ -1,9 +1,10 @@
 import { createStore } from 'zustand/vanilla'
-import { ComponentNames, Entity, World as IWorld, Manifest, Query, SystemNames } from '../types';
+import { ComponentNames, Entity, ExecuteState, World as IWorld, Manifest, Query, SystemNames } from '../types';
 import { RPCProvider } from '../provider';
 import { Account, number } from 'starknet';
 import { getEntityComponent, updateComponent, registerEntity } from './entity';
 import { HotAccount } from '../account';
+import { KATANA_ACCOUNT_1_ADDRESS, KATANA_ACCOUNT_1_PRIVATEKEY, LOCAL_TORII } from '../constants';
 
 export const worldStore = createStore<IWorld>(() => ({
     world: '',
@@ -13,11 +14,6 @@ export const worldStore = createStore<IWorld>(() => ({
     entities: {},
 }))
 
-const address = "0x06f62894bfd81d2e396ce266b2ad0f21e0668d604e5bb1077337b6d570a54aea"
-const privateKey = "0x07230b49615d175307d580c33d6fda61fc7b9aec91df0f5c1a5ebe3b8cbfee02"
-
-const localHost = 'http://127.0.0.1:5050';
-
 export class World {
     public provider: RPCProvider;
     public account: Account;
@@ -25,7 +21,7 @@ export class World {
     private previousComponentData: Map<symbol, any>;
     private optimisticUpdateInfo: Map<symbol, { entityId: number, componentName: string, componentData: any }>;
     private queue: Promise<any>;
-    private statuses: Map<symbol, 'idle' | 'loading' | 'done' | 'error'>;
+    private statuses: Map<symbol, ExecuteState>;
 
     constructor(manifest: Manifest, account?: Account, provider?: RPCProvider) {
         worldStore.setState(state => ({
@@ -40,8 +36,8 @@ export class World {
         this.queue = Promise.resolve();  // Start the queue
         this.statuses = new Map();
 
-        this.provider = provider || new RPCProvider(manifest.world, localHost);
-        this.account = account || new HotAccount(this.provider.sequencerProvider, address, privateKey).account
+        this.provider = provider || new RPCProvider(manifest.world, LOCAL_TORII);
+        this.account = account || new HotAccount(this.provider.sequencerProvider, KATANA_ACCOUNT_1_ADDRESS, KATANA_ACCOUNT_1_PRIVATEKEY).account
 
     }
 
@@ -82,7 +78,7 @@ export class World {
         return id
     }
 
-    public getCallStatus(id: symbol): 'idle' | 'loading' | 'done' | 'error' {
+    public getCallStatus(id: symbol): ExecuteState {
         return this.statuses.get(id) || 'idle';
     }
 
