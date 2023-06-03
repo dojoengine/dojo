@@ -1,6 +1,6 @@
 import { RpcProvider, Provider as StarknetProvider, Account, stark, number, Call } from "starknet";
 import { Provider } from "./provider";
-import { Query, WorldEntryPoints } from "../types";
+import { ComponentNames, Query, WorldEntryPoints } from "../types";
 import { strToShortStringFelt } from '../utils'
 
 export class RPCProvider extends Provider {
@@ -28,7 +28,7 @@ export class RPCProvider extends Provider {
         this.loggingEnabled = loggingEnabled;
     }
 
-    public async entity(component: string, query: Query, offset: number, length: number): Promise<Array<bigint>> {
+    public async entity(component: ComponentNames, query: Query, offset: number, length: number): Promise<Array<bigint>> {
 
         const call: Call = {
             entrypoint: WorldEntryPoints.get, // "entity"

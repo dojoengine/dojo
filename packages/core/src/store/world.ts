@@ -1,5 +1,5 @@
 import { createStore } from 'zustand/vanilla'
-import { Entity, World as IWorld, Manifest, Query } from '../types';
+import { ComponentNames, Entity, World as IWorld, Manifest, Query, SystemNames } from '../types';
 import { RPCProvider } from '../provider';
 import { Account, number } from 'starknet';
 import { getEntityComponent, updateComponent, registerEntity } from './entity';
@@ -65,7 +65,7 @@ export class World {
         return getEntityComponent(entityId, componentName);
     }
 
-    getComponentValue(component: string, query: Query, offset: number, length: number) {
+    getComponentValue(component: ComponentNames, query: Query, offset: number = 0, length: number = 0) {
         return this.provider.entity(component, query, offset, length);
     }
 
@@ -87,7 +87,7 @@ export class World {
     }
 
     public execute(
-        system: string,
+        system: SystemNames,
         call_data: number.BigNumberish[],
         id: symbol = Symbol()
     ): symbol {
@@ -141,6 +141,4 @@ export class World {
             throw error;
         }
     }
-
-
 }

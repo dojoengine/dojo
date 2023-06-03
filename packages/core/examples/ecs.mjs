@@ -25,16 +25,9 @@ const main = async () => {
 
     console.log(world);
 
-    const keys = [BigInt(world.account.address)]
+    const keys = [BigInt(world.getWorldAddress())]
 
     const query = { address_domain: 0, partition: 0, keys: keys };
-    const offset = 0;
-    const length = 0;
-
-
-    const movesValue = await world.getComponentValue('Moves', query, offset, length)
-
-    console.log(movesValue)
 
     const componentName = 'Position';
     const componentData = { x: 10, y: 20 };
@@ -42,15 +35,21 @@ const main = async () => {
     const id = world.prepareOptimisticUpdate(initialEntity.id, componentName, componentData);
 
     // loop to 100
-    for (let i = 0; i < 100; i++) {
-        await world.execute('Spawn', [], id)
-    }
+    // for (let i = 0; i < 100; i++) {
+    await world.execute('Spawn', [], id)
+    // }
 
     setTimeout(() => {
         console.log(world.getCallStatus(id));  // 'done' or 'error'
     }, 10);
 
     console.log(initialEntity.id, world.getEntityComponent(initialEntity.id, componentName))
+
+    const movesValue = await world.getComponentValue(componentName, query)
+
+    console.log(movesValue)
+
+
 
 };
 

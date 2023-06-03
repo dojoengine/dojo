@@ -13,6 +13,10 @@ Dojo core package to interact with Dojo worlds. It exposes World interface comma
 yarn add @dojoengine/core
 ```
 
+### ECS Store
+
+Core comes with a built in store powered by zustand for optimal performance.
+
 ### Account
 
 Starknet.js Account wrapper for quick testing
