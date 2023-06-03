@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
+use std::time::Duration;
 
 use anyhow::{anyhow, Context, Result};
 use camino::Utf8PathBuf;
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{FieldElement, InvokeTransactionResult};
 use starknet::providers::Provider;
@@ -55,17 +57,19 @@ impl MigrationStrategy {
     where
         A: ConnectedAccount + Sync,
     {
+        let multi_progress = MultiProgress::new();
+
         let executor_output = match &mut self.executor {
             Some(executor) => {
-                let res = executor.deploy(vec![], &migrator).await?;
+                let eb = ProgressBar::new_spinner()
+                    .with_style(ProgressStyle::with_template("{spinner} executor: {msg}").unwrap());
+                eb.enable_steady_tick(Duration::from_millis(100));
 
-                println!(
-                    r"- Executor contract:
-    Declared at tx: {:#x}
-    Deployed at tx: {:#x}
-",
-                    res.declare_res.transaction_hash, res.contract_address
-                );
+                multi_progress.add(eb.clone());
+
+                eb.set_message("deploying contract");
+                let res = executor.deploy(vec![], &migrator).await?;
+                eb.finish_with_message("deployed");
 
                 if self.world.is_none() {
                     let addr = self.world_address().ok_or(MigrationError::WorldAddressNotFound)?;
@@ -79,6 +83,13 @@ impl MigrationStrategy {
 
         let world_output = match &mut self.world {
             Some(world) => {
+                let wb = ProgressBar::new_spinner()
+                    .with_style(ProgressStyle::with_template("{spinner} world: {msg}").unwrap());
+                wb.enable_steady_tick(Duration::from_millis(100));
+                multi_progress.add(wb.clone());
+
+                wb.set_message("deploying contract");
+
                 let res = world
                     .deploy(
                         vec![self.executor.as_ref().unwrap().contract_address.unwrap()],
@@ -86,26 +97,17 @@ impl MigrationStrategy {
                     )
                     .await?;
 
-                println!(
-                    r"- World contract:
-    Declared at tx: {:#x}
-    Deployed at tx: {:#x}
-",
-                    res.declare_res.transaction_hash, res.contract_address
-                );
+                wb.finish_with_message("deployed");
 
                 Some(res)
             }
             None => None,
         };
 
-        println!("- Registering components...");
-        let components_output = self.register_systems(&migrator).await?;
-        println!("Systems registered at tx: {:#x}", components_output.transaction_hash);
+        let components_output = self.register_components(&migrator, &multi_progress).await?;
+        let systems_output = self.register_systems(&migrator, &multi_progress).await?;
 
-        println!("\n- Registering systems...");
-        let systems_output = self.register_components(&migrator).await?;
-        println!("Components registered at tx: {:#x}", systems_output.transaction_hash);
+        multi_progress.clear().expect("should be able to clear progress bar");
 
         Ok(MigrationOutput {
             world: world_output,
@@ -118,21 +120,29 @@ impl MigrationStrategy {
     async fn register_components<A>(
         &self,
         migrator: &A,
+        multi_progress: &MultiProgress,
     ) -> Result<RegisterOutput, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
     where
         A: ConnectedAccount + Sync,
     {
+        let cb = ProgressBar::new_spinner()
+            .with_style(ProgressStyle::with_template("{spinner} components: {msg}").unwrap());
+        cb.enable_steady_tick(Duration::from_millis(100));
+
+        multi_progress.add(cb.clone());
+
+        let total = self.components.len();
         let mut declare_output = vec![];
-        for component in &self.components {
+
+        for (i, component) in self.components.iter().enumerate() {
+            cb.set_message(format!("({i}/{total}) declaring {} class", component.class.name));
             let res = component.declare(migrator).await?;
-
-            println!("{} declared at tx: {:#x}", component.class.name, res.transaction_hash);
-
             declare_output.push(res);
         }
 
         let world_address = self.world_address().ok_or(MigrationError::WorldAddressNotFound)?;
 
+        cb.set_message(format!("registering components to world"));
         let InvokeTransactionResult { transaction_hash } =
             WorldContract::new(world_address, migrator)
                 .register_components(
@@ -140,31 +150,45 @@ impl MigrationStrategy {
                 )
                 .await?;
 
+        cb.set_message("registered");
+        cb.finish();
+
         Ok(RegisterOutput { transaction_hash, declare_output })
     }
 
     async fn register_systems<A>(
         &self,
         migrator: &A,
+        multi_progress: &MultiProgress,
     ) -> Result<RegisterOutput, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
     where
         A: ConnectedAccount + Sync,
     {
+        let sb = ProgressBar::new_spinner()
+            .with_style(ProgressStyle::with_template("{spinner} systems: {msg}").unwrap());
+        sb.enable_steady_tick(Duration::from_millis(100));
+
+        multi_progress.add(sb.clone());
+
+        let total = self.systems.len();
         let mut declare_output = vec![];
-        for system in &self.systems {
+
+        for (i, system) in self.systems.iter().enumerate() {
+            sb.set_message(format!("({i}/{total}) declaring {} class", system.class.name));
             let res = system.declare(migrator).await?;
-
-            println!("{} declared at tx: {:#x}", system.class.name, res.transaction_hash);
-
             declare_output.push(res);
         }
 
         let world_address = self.world_address().ok_or(MigrationError::WorldAddressNotFound)?;
 
+        sb.set_message("registering systems to world...");
+
         let InvokeTransactionResult { transaction_hash } =
             WorldContract::new(world_address, migrator)
                 .register_systems(&declare_output.iter().map(|o| o.class_hash).collect::<Vec<_>>())
                 .await?;
+
+        sb.finish_with_message("registered");
 
         Ok(RegisterOutput { transaction_hash, declare_output })
     }
@@ -219,11 +243,8 @@ fn evaluate_systems_to_migrate(
             Some(remote) if remote == s.local && !world_contract_will_migrate => continue,
             _ => {
                 let path = find_artifact_path(&format!("{}System", s.name), artifact_paths)?;
-                syst_to_migrate.push(ClassMigration {
-                    // declared: false,
-                    class: s.clone(),
-                    artifact_path: path.clone(),
-                });
+                syst_to_migrate
+                    .push(ClassMigration { class: s.clone(), artifact_path: path.clone() });
             }
         }
     }
