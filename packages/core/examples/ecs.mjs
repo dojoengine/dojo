@@ -41,9 +41,9 @@ const main = async () => {
     const id = world.prepareOptimisticUpdate(initialEntity.id, componentName, componentData);
 
     // loop to 100
-    for (let i = 0; i < 100; i++) {
-        world.execute(account.account, rpcProvider, 'Spawn', [], id)
-    }
+    // for (let i = 0; i < 100; i++) {
+    world.execute('Spawn', [], id)
+    // }
 
     setTimeout(() => {
         console.log(world.getCallStatus(id));  // 'done' or 'error'

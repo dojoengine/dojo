@@ -1,8 +1,9 @@
 import { createStore } from 'zustand/vanilla'
 import { Entity, World as IWorld, Manifest } from '../types';
 import { RPCProvider } from '../provider';
-import { Account, number } from 'starknet';
+import { Account, number, ec } from 'starknet';
 import { getEntityComponent, updateComponent, registerEntity } from './entity';
+import { HotAccount } from '../account';
 
 export const worldStore = createStore<IWorld>(() => ({
     world: '',
@@ -12,49 +13,21 @@ export const worldStore = createStore<IWorld>(() => ({
     entities: {},
 }))
 
-// TODO: clean params
-export async function execute(
-    account: Account,
-    provider: RPCProvider,
-    system: string,
-    component_data: any,
-    call_data: number.BigNumberish[],
-    entity_id: number,
-    optimistic: boolean = false
-) {
+const address = "0x06f62894bfd81d2e396ce266b2ad0f21e0668d604e5bb1077337b6d570a54aea"
+const privateKey = "0x07230b49615d175307d580c33d6fda61fc7b9aec91df0f5c1a5ebe3b8cbfee02"
 
-    // TODO: check system registered
-
-    // get current entity by component
-    const entity = getEntityComponent(entity_id, 'Position');
-
-    // set component Store for Optimistic UI
-    if (optimistic) updateComponent(entity_id, 'Position', component_data);
-
-    try {
-        const result = await provider.execute(account, system, call_data);
-
-        return result;
-    } catch (error) {
-        // revert state if optimistic
-        if (optimistic && entity) updateComponent(entity_id, system, entity.data);
-
-        throw error;
-    }
-}
+const localHost = 'http://127.0.0.1:5050';
 
 export class World {
-    // world
+    public provider: RPCProvider;
+    public account: Account;
     public world: IWorld;
     private previousComponentData: Map<symbol, any>;
     private optimisticUpdateInfo: Map<symbol, { entityId: number, componentName: string, componentData: any }>;
     private queue: Promise<any>;
     private statuses: Map<symbol, 'idle' | 'loading' | 'done' | 'error'>;
 
-    // public systemCalls: SystemCalls;
-    // systems
-
-    constructor(manifest: Manifest) {
+    constructor(manifest: Manifest, account?: Account, provider?: RPCProvider) {
         worldStore.setState(state => ({
             world: manifest.world,
             executor: manifest.executor,
@@ -66,7 +39,10 @@ export class World {
         this.optimisticUpdateInfo = new Map();
         this.queue = Promise.resolve();  // Start the queue
         this.statuses = new Map();
-        // this.systemCalls = systemCalls;
+
+        this.provider = provider || new RPCProvider(manifest.world, localHost);
+        this.account = account || new HotAccount(this.provider.sequencerProvider, address, privateKey).account
+
     }
 
     getWorld() {
@@ -107,8 +83,6 @@ export class World {
     }
 
     public execute(
-        account: Account,
-        provider: RPCProvider,
         system: string,
         call_data: number.BigNumberish[],
         id: symbol = Symbol()
@@ -119,7 +93,7 @@ export class World {
 
         // Add this execution to the queue.
         this.queue = this.queue.then(() => {
-            return this._execute(account, provider, system, call_data, id);
+            return this._execute(this.account, this.provider, system, call_data, id);
         });
 
         // Return the unique identifier for the call.
