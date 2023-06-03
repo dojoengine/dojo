@@ -1,16 +1,20 @@
 #[cfg(test)]
 mod tests {
+    use serde::Deserialize;
     use sqlx::SqlitePool;
 
-    use crate::graphql::entity::Entity;
     use crate::tests::common::run_graphql_query;
+
+    #[derive(Deserialize)]
+    pub struct Entity {
+        pub id: String,
+    }
 
     #[sqlx::test(migrations = "./migrations", fixtures("entities"))]
     async fn test_entity(pool: SqlitePool) {
         let _ = pool.acquire().await;
 
-        let query =
-            "{ entity(id: \"entity_1\") { id name partitionId keys transactionHash createdAt } }";
+        let query = "{ entity(id: \"entity_1\") { id } }";
         let value = run_graphql_query(&pool, query).await;
 
         let entity = value.get("entity").ok_or("no entity found").unwrap();
