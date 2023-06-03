@@ -1,7 +1,7 @@
 import { createStore } from 'zustand/vanilla'
-import { Entity, World as IWorld, Manifest } from '../types';
+import { Entity, World as IWorld, Manifest, Query } from '../types';
 import { RPCProvider } from '../provider';
-import { Account, number, ec } from 'starknet';
+import { Account, number } from 'starknet';
 import { getEntityComponent, updateComponent, registerEntity } from './entity';
 import { HotAccount } from '../account';
 
@@ -65,6 +65,10 @@ export class World {
         return getEntityComponent(entityId, componentName);
     }
 
+    getComponentValue(component: string, query: Query, offset: number, length: number) {
+        return this.provider.entity(component, query, offset, length);
+    }
+
     public prepareOptimisticUpdate(entityId: number, componentName: string, componentData: any): symbol {
 
         const id = Symbol();
@@ -96,7 +100,6 @@ export class World {
             return this._execute(this.account, this.provider, system, call_data, id);
         });
 
-        // Return the unique identifier for the call.
         return id;
     }
 
