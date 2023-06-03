@@ -12,10 +12,10 @@ use url::Url;
 
 use crate::indexer::start_indexer;
 
-mod processors;
-
+mod engine;
 mod graphql;
 mod indexer;
+mod processors;
 mod storage;
 mod tests;
 
