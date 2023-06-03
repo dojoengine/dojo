@@ -6,7 +6,7 @@ use log::error;
 
 mod commands;
 
-use self::commands::{build, init, migrate, App, Commands};
+use self::commands::{build, init, migrate, test, App, Commands};
 
 fn main() {
     env_logger::Builder::from_env(Env::default().default_filter_or("sozo=info")).init();
@@ -23,8 +23,7 @@ fn main() {
             Ok(())
         }
         Commands::Migrate(args) => migrate::run(args),
-        Commands::Bind(..) => Ok(print!("Bind")),
-        Commands::Inspect(..) => Ok(print!("Inspect")),
+        Commands::Test(args) => test::run(args),
     };
 
     if let Err(err) = res {
