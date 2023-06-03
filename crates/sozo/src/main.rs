@@ -5,6 +5,7 @@ use env_logger::Env;
 use log::error;
 
 mod commands;
+mod ops;
 
 use self::commands::{build, init, migrate, App, Commands};
 

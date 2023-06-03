@@ -2,10 +2,10 @@ use std::fmt::Display;
 
 use anyhow::{anyhow, Result};
 use camino::Utf8PathBuf;
+use dojo_world::manifest::Manifest;
 use starknet::core::types::FieldElement;
 
-use crate::config::{EnvironmentConfig, WorldConfig};
-use crate::manifest::Manifest;
+use crate::ops::migration::config::{EnvironmentConfig, WorldConfig};
 
 /// Represents differences between a local and remote contract.
 #[derive(Debug, Default, Clone)]

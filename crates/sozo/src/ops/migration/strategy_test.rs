@@ -1,9 +1,9 @@
 use camino::Utf8PathBuf;
 use dojo_test_utils::sequencer::Sequencer;
 
-use crate::config::{EnvironmentConfig, WorldConfig};
-use crate::migration::strategy::prepare_for_migration;
-use crate::migration::world::WorldDiff;
+use crate::ops::migration::config::{EnvironmentConfig, WorldConfig};
+use crate::ops::migration::strategy::prepare_for_migration;
+use crate::ops::migration::world::WorldDiff;
 
 #[tokio::test]
 async fn test_migration() {

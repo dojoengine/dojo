@@ -8,12 +8,12 @@ use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{FieldElement, InvokeTransactionResult};
 use starknet::providers::Provider;
 
-use crate::config::WorldConfig;
-use crate::migration::object::{
+use super::config::WorldConfig;
+use super::object::{
     ClassMigration, ContractMigration, Declarable, DeployOutput, Deployable, MigrationError,
     RegisterOutput, WorldContract,
 };
-use crate::migration::world::{ClassDiff, ContractDiff, WorldDiff};
+use super::world::{ClassDiff, ContractDiff, WorldDiff};
 
 pub type MigrationResult<S, P> = Result<MigrationOutput, MigrationError<S, P>>;
 
@@ -163,9 +163,7 @@ impl MigrationStrategy {
 
         let InvokeTransactionResult { transaction_hash } =
             WorldContract::new(world_address, migrator)
-                .register_components(
-                    &declare_output.iter().map(|o| o.class_hash).collect::<Vec<_>>(),
-                )
+                .register_systems(&declare_output.iter().map(|o| o.class_hash).collect::<Vec<_>>())
                 .await?;
 
         Ok(RegisterOutput { transaction_hash, declare_output })

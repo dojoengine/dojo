@@ -3,15 +3,15 @@ use std::env::{self, current_dir};
 use anyhow::{anyhow, Result};
 use camino::Utf8PathBuf;
 use clap::Args;
-use dojo_world::config::{EnvironmentConfig, WorldConfig};
-use dojo_world::migration::strategy::prepare_for_migration;
-use dojo_world::migration::world::WorldDiff;
 use dotenv::dotenv;
 use scarb::core::Config;
 use scarb::ops;
 use scarb::ui::Verbosity;
 
 use super::build::{self, BuildArgs, ProfileSpec};
+use crate::ops::migration::config::{EnvironmentConfig, WorldConfig};
+use crate::ops::migration::strategy::prepare_for_migration;
+use crate::ops::migration::world::WorldDiff;
 
 #[derive(Args)]
 pub struct MigrateArgs {
