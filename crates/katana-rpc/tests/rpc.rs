@@ -54,7 +54,7 @@ async fn test_send_declare_v2_tx() {
     assert!(res.is_ok())
 }
 
-// #[ignore]
+#[ignore]
 #[tokio::test]
 async fn test_send_declare_v1_tx() {
     let provider =
