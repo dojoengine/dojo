@@ -5,6 +5,7 @@ import { Entity } from '../types';
 // ability to update entity by component state
 // return full entity state
 
+// TODO: Currently two types of components - world registered, then component data for entities
 export interface Component {
     name: string;
     data: any;

@@ -36,11 +36,13 @@ export interface ICommands {
     worldAge?(): Promise<bigint>;
 }
 
-export type ExecuteState = 'idle' | 'loading' | 'done' | 'error'
-// examples types - TODO: Codegen this somehow
+
+// examples types - TODO: These should be codegen'd from the manifest
 export type ComponentNames = "" | "Moves" | "Position" | "AuthStatus" | "AuthRole";
 export type SystemNames = "" | "SpawnSystem" | "MoveSystem" | "RouteAuthSystem" | "IsAccountAdminSystem" | "IsAuthorizedSystem" | "GrantAuthRoleSystem" | "GrantScopedAuthRoleSystem" | "GrantResourceSystem" | "RevokeAuthRoleSystem" | "RevokeScopedAuthRoleSystem" | "RevokeResourceSystem";
 
+
+export type ExecuteState = 'idle' | 'loading' | 'done' | 'error'
 
 export interface Members {
     name: string;

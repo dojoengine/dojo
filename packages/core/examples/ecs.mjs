@@ -20,9 +20,21 @@ const main = async () => {
             }
         }
     }
-
-    world.registerEntity(initialEntity)
-
+    for (let i = 0; i < 100; i++) {
+        world.registerEntity({
+            id: 213123121 + i,
+            components: {
+                Position: {
+                    name: 'Position',
+                    data: { x: 0, y: 0 }
+                },
+                Velocity: {
+                    name: 'Velocity',
+                    data: { x: 1, y: 1 }
+                }
+            }
+        })
+    }
     console.log(world);
 
     const keys = [BigInt(world.getWorldAddress())]
@@ -30,14 +42,15 @@ const main = async () => {
     const query = { address_domain: 0, partition: 0, keys: keys };
 
     const componentName = 'Position';
+
     const componentData = { x: 10, y: 20 };
 
     const id = world.prepareOptimisticUpdate(initialEntity.id, componentName, componentData);
 
     // loop to 100
-    // for (let i = 0; i < 100; i++) {
-    await world.execute('Spawn', [], id)
-    // }
+    for (let i = 0; i < 100; i++) {
+        await world.execute('Spawn', [], id)
+    }
 
     setTimeout(() => {
         console.log(world.getCallStatus(id));  // 'done' or 'error'

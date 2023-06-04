@@ -10,12 +10,12 @@ Dojo core package to interact with Dojo worlds. It exposes World interface comma
 ### Get started
 
 ```
-yarn add @dojoengine/core
+pnpm install @dojoengine/core
 ```
 
 ### ECS Store
 
-Core comes with a built in store powered by zustand for optimal performance.
+Simple ECS Scaffolding to use in any project. Uses Zustand for efficient Store.
 
 ### Account
 
