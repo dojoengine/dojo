@@ -13,7 +13,7 @@ use starknet::providers::{Provider, ProviderError};
 
 use super::build::{self, BuildArgs, ProfileSpec};
 use crate::ops::migration::config::{EnvironmentConfig, WorldConfig};
-use crate::ops::migration::strategy::prepare_for_migration;
+use crate::ops::migration::strategy::{execute_migration, prepare_for_migration};
 use crate::ops::migration::world::WorldDiff;
 
 #[derive(Args)]
@@ -90,8 +90,7 @@ pub fn run(args: MigrateArgs) -> Result<()> {
 
         config.ui().print("🌎 Migrating world...");
 
-        migration
-            .execute(migrator)
+        execute_migration(&mut migration, migrator)
             .await
             .map_err(|e| anyhow!(e))
             .with_context(|| "Failed to migrate")

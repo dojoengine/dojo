@@ -2,7 +2,7 @@ use camino::Utf8PathBuf;
 use dojo_test_utils::sequencer::Sequencer;
 
 use crate::ops::migration::config::{EnvironmentConfig, WorldConfig};
-use crate::ops::migration::strategy::prepare_for_migration;
+use crate::ops::migration::strategy::{execute_migration, prepare_for_migration};
 use crate::ops::migration::world::WorldDiff;
 
 #[tokio::test]
@@ -23,7 +23,7 @@ async fn test_migration() {
         .unwrap();
 
     let mut migration = prepare_for_migration(target_dir, world, WorldConfig::default()).unwrap();
-    migration.execute(env_config.migrator().await.unwrap()).await.unwrap();
+    execute_migration(&mut migration, env_config.migrator().await.unwrap()).await.unwrap();
 
     sequencer.stop().unwrap();
 }
