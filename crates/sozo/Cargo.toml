@@ -13,7 +13,6 @@ clap.workspace = true
 dojo-lang = { path = "../dojo-lang" }
 dojo-world = { path = "../dojo-world" }
 dotenv = "0.15.0"
-env_logger.workspace = true
 log.workspace = true
 cairo-lang-compiler.workspace = true
 cairo-lang-filesystem.workspace = true
