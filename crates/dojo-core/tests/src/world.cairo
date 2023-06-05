@@ -56,7 +56,7 @@ fn test_system() {
     // Spawn empty world
     let world = spawn_empty_world();
 
-    world.register_system(BarSystem::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
     let mut data = ArrayTrait::new();
     data.append(1337);
@@ -78,7 +78,7 @@ fn test_initialize() {
     // Spawn empty world
     let world = spawn_empty_world();
 
-    world.register_system(BarSystem::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
     let mut route = ArrayTrait::new();
     let target_id = 'Bar'.into();
@@ -98,10 +98,11 @@ fn test_initialize() {
     let status = world.entity('AuthStatus'.into(), (role_id, resource_id).into(), 0, 0);
     assert(*status[0] == 1, 'status not stored');
 
-    let is_authorized = world.is_authorized(
-        BarSystem::TEST_CLASS_HASH.try_into().unwrap(),
-        FooComponent::TEST_CLASS_HASH.try_into().unwrap()
-    );
+    let is_authorized = world
+        .is_authorized(
+            Bar::TEST_CLASS_HASH.try_into().unwrap(),
+            FooComponent::TEST_CLASS_HASH.try_into().unwrap()
+        );
     assert(is_authorized, 'auth route not set');
 }
 
@@ -129,7 +130,7 @@ fn test_set_entity_authorized() {
     // Spawn empty world
     let world = spawn_empty_world();
 
-    world.register_system(BarSystem::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
 
     // Prepare route
@@ -163,7 +164,7 @@ fn test_set_entity_admin() {
     // Spawn empty world
     let world = spawn_empty_world();
 
-    world.register_system(BarSystem::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
 
     // No Auth route
@@ -199,7 +200,7 @@ fn test_set_entity_unauthorized() {
     // Spawn empty world
     let world = spawn_empty_world();
 
-    world.register_system(BarSystem::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
 
     // No Auth route
@@ -222,7 +223,7 @@ fn test_set_entity_directly() {
     // Spawn empty world
     let world = spawn_empty_world();
 
-    world.register_system(BarSystem::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
 
     // Prepare init data
@@ -250,7 +251,7 @@ fn test_grant_role() {
     // Spawn empty world
     let world = spawn_empty_world();
 
-    world.register_system(BarSystem::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
 
     // No Auth route
@@ -276,7 +277,7 @@ fn test_revoke_role() {
     // Spawn empty world
     let world = spawn_empty_world();
 
-    world.register_system(BarSystem::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
 
     // No Auth route
@@ -311,7 +312,7 @@ fn test_grant_scoped_role() {
     // Spawn empty world
     let world = spawn_empty_world();
 
-    world.register_system(BarSystem::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
 
     // No Auth route
@@ -338,7 +339,7 @@ fn test_revoke_scoped_role() {
     // Spawn empty world
     let world = spawn_empty_world();
 
-    world.register_system(BarSystem::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
 
     // No Auth route
@@ -375,7 +376,7 @@ fn test_grant_resource() {
     // Spawn empty world
     let world = spawn_empty_world();
 
-    world.register_system(BarSystem::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
 
     // No Auth route
@@ -401,7 +402,7 @@ fn test_revoke_resource() {
     // Spawn empty world
     let world = spawn_empty_world();
 
-    world.register_system(BarSystem::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
 
     // No Auth route
@@ -439,7 +440,8 @@ fn spawn_empty_world() -> IWorldDispatcher {
         0,
         executor_constructor_calldata.span(),
         false
-    ).unwrap();
+    )
+        .unwrap();
 
     // Deploy world contract
     let mut constructor_calldata = array::ArrayTrait::new();
@@ -447,7 +449,8 @@ fn spawn_empty_world() -> IWorldDispatcher {
     constructor_calldata.append(executor_address.into());
     let (world_address, _) = deploy_syscall(
         World::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
-    ).unwrap();
+    )
+        .unwrap();
     let world = IWorldDispatcher { contract_address: world_address };
 
     // Install default auth components and systems

@@ -81,7 +81,7 @@ impl System {
                         patches: builder.patches,
                         components: vec![],
                         systems: vec![SystemAuxData {
-                            name: name.clone(),
+                            name,
                             dependencies: system.dependencies.clone(),
                         }],
                     })),

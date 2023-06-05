@@ -135,7 +135,7 @@ mod Move {
 
         let mut calldata = ArrayTrait::new();
         calldata.append('name');
-        commands::execute(SpawnSystem, calldata.span());
+        commands::execute(Spawn, calldata.span());
 
         // move_inner(@positions_query, 0_u32, positions_query.len());
 
@@ -255,7 +255,7 @@ mod PlayerComponent {
 }
 
 #[contract]
-mod SpawnSystem {
+mod Spawn {
     use option::OptionTrait;
     use array::SpanTrait;
 
@@ -458,7 +458,7 @@ mod SpawnSystem {
 }
 
 #[contract]
-mod MoveSystem {
+mod Move {
     use option::OptionTrait;
     use array::SpanTrait;
 
@@ -1075,7 +1075,7 @@ mod MoveSystem {
         calldata.append('name');
         IWorldDispatcher {
             contract_address: world_address
-        }.execute(dojo_core::string::ShortStringTrait::new('SpawnSystem'), calldata.span());
+        }.execute(dojo_core::string::ShortStringTrait::new('Spawn'), calldata.span());
 
         let mut i = 0;
         loop {
@@ -1125,7 +1125,7 @@ mod MoveSystem {
 }
 
 #[contract]
-mod ProxySystem {
+mod Proxy {
     use option::OptionTrait;
     use array::SpanTrait;
 
