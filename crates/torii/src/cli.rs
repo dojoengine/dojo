@@ -1,22 +1,24 @@
 use clap::Parser;
+use dojo_world::manifest::Manifest;
 use graphql::server::start_graphql;
-use num::{BigUint, Num};
 use sqlx::sqlite::SqlitePoolOptions;
+use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use storage::sql::SqlStorage;
+use state::sql::Sql;
 use tokio_util::sync::CancellationToken;
 use tracing::error;
 use tracing_subscriber::fmt;
 use url::Url;
 
-use crate::indexer::start_indexer;
+use crate::engine::Processors;
+use crate::indexer::Indexer;
 
 mod engine;
 mod graphql;
 mod indexer;
 mod processors;
-mod storage;
+mod state;
 mod tests;
 
 /// Dojo World Indexer
@@ -25,7 +27,7 @@ mod tests;
 struct Args {
     /// The world to index
     #[arg(short, long, default_value = "0x420")]
-    world: String,
+    world_address: FieldElement,
     /// The rpc endpoint to use
     #[arg(long, default_value = "http://localhost:5050")]
     rpc: String,
@@ -55,22 +57,18 @@ async fn main() -> anyhow::Result<()> {
         }
     })?;
 
-    let world = BigUint::from_str_radix(&args.world[2..], 16).unwrap_or_else(|error| {
-        panic!("Failed parsing world address: {error:?}");
-    });
-
     let database_url = &args.database_url;
     #[cfg(feature = "sqlite")]
     let pool = SqlitePoolOptions::new().max_connections(5).connect(database_url).await?;
     let provider = JsonRpcClient::new(HttpTransport::new(Url::parse(&args.rpc).unwrap()));
 
-    let storage = SqlStorage::new(pool.clone())?;
-    let indexer = start_indexer(cts.clone(), world, &storage, &provider);
-
+    let state = Sql::new(pool.clone())?;
+    let manifest = Manifest::default();
+    let indexer = Indexer::new(&state, &provider, Processors::default(), manifest);
     let graphql = start_graphql(&pool);
 
     tokio::select! {
-        res = indexer => {
+        res = indexer.start() => {
             if let Err(e) = res {
                 error!("Indexer failed with error: {:?}", e);
             }
