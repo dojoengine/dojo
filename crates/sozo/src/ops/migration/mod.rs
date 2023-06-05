@@ -66,7 +66,7 @@ where
         .with_context(|| "Failed to migrate")?;
 
     ws_config.ui().print(format!(
-        "\n✨ Successfully migrated world at address {:#x}",
+        "\n✨ Successfully migrated World at address {:#x}",
         output
             .world
             .as_ref()
