@@ -6,6 +6,7 @@ use cairo_lang_filesystem::ids::CrateId;
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::plugin::DynPluginAuxData;
 use dojo_world::manifest::{Contract, Input, Output, System};
+use itertools::Itertools;
 use serde::Serialize;
 use smol_str::SmolStr;
 use starknet::core::types::FieldElement;
@@ -140,6 +141,7 @@ impl Manifest {
                         dependencies: dependencies
                             .iter()
                             .map(|s| s.to_string())
+                            .sorted_by(|a, b| a.cmp(b))
                             .collect::<Vec<_>>(),
                     });
                 }
