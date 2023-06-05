@@ -45,7 +45,7 @@ pub fn run(args: MigrateArgs) -> Result<()> {
 
     let manifest_path = source_dir.join("Scarb.toml");
     let config = Config::builder(manifest_path)
-        .ui_verbosity(Verbosity::Normal)
+        .ui_verbosity(Verbosity::Verbose)
         .log_filter_directive(env::var_os("SCARB_LOG"))
         .build()
         .unwrap();
@@ -65,6 +65,7 @@ pub fn run(args: MigrateArgs) -> Result<()> {
     ws.config().tokio_handle().block_on(migration::execute(
         world_config,
         env_config,
+        target_dir,
         &ws.config(),
     ))?;
 

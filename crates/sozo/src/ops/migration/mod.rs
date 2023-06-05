@@ -1,9 +1,7 @@
-use std::time::Duration;
+use std::path::Path;
 
 use anyhow::{anyhow, Context, Result};
-use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use scarb::core::Config;
-use scarb::ui::Ui;
 use starknet::accounts::Account;
 use starknet::core::types::{BlockId, BlockTag, StarknetError};
 use starknet::providers::{Provider, ProviderError};
@@ -18,18 +16,23 @@ pub mod world;
 #[path = "migration_test.rs"]
 mod migration_test;
 
-use object::{Declarable, Deployable, MigrationError, RegisterOutput, WorldContract};
-use strategy::{MigrationOutput, MigrationResult, MigrationStrategy};
+use object::{Declarable, Deployable, RegisterOutput, WorldContract};
+use strategy::{MigrationOutput, MigrationStrategy};
+use yansi::Paint;
 
 use self::config::{EnvironmentConfig, WorldConfig};
 use self::strategy::prepare_for_migration;
 use self::world::WorldDiff;
 
-pub async fn execute(
+pub async fn execute<P>(
     world_config: WorldConfig,
     environment_config: EnvironmentConfig,
+    target_dir: P,
     ws_config: &Config,
-) -> Result<()> {
+) -> Result<()>
+where
+    P: AsRef<Path>,
+{
     let migrator = environment_config
         .migrator()
         .await
@@ -46,14 +49,16 @@ pub async fn execute(
             _ => anyhow!(e),
         })?;
 
-    ws_config.ui().print("🔍 Building world state...");
+    ws_config.ui().print("🌏 Building World state...");
 
-    let target_dir = ws_config.target_dir().path_existent()?.to_path_buf();
+    let diff =
+        WorldDiff::from_path(&target_dir, &world_config, &environment_config, ws_config).await?;
 
-    let diff = WorldDiff::from_path(target_dir.clone(), &world_config, &environment_config).await?;
+    ws_config.ui().print("🧰 Evaluating World diff...");
+
     let mut migration = prepare_for_migration(target_dir, diff, world_config)?;
 
-    ws_config.ui().print("🌎 Migrating world...");
+    ws_config.ui().print("📦 Migrating world...");
 
     let output = execute_strategy(&mut migration, migrator, &ws_config)
         .await
@@ -77,28 +82,45 @@ async fn execute_strategy<A>(
     strategy: &mut MigrationStrategy,
     migrator: A,
     ws_config: &Config,
-) -> MigrationResult<A::SignError, <A::Provider as Provider>::Error>
+) -> Result<MigrationOutput>
 where
-    A: ConnectedAccount + Sync,
+    A: ConnectedAccount + Sync + 'static,
 {
-    let multi_progress = MultiProgress::new();
-
     let executor_output = match &mut strategy.executor {
         Some(executor) => {
-            let eb = ProgressBar::new_spinner()
-                .with_style(ProgressStyle::with_template("{spinner} executor: {msg}").unwrap());
-            eb.enable_steady_tick(Duration::from_millis(100));
+            ws_config.ui().print("\n# Executor: ");
 
-            multi_progress.add(eb.clone());
+            let res = executor
+                .deploy(vec![], &migrator)
+                .await
+                .with_context(|| "Problem when tying to migrate executor")?;
 
-            eb.set_message("deploying contract");
-            let res = executor.deploy(vec![], &migrator).await?;
-            eb.finish_with_message("deployed");
+            ws_config.ui().verbose(
+                Paint::new(format!(
+                    "  > declare transaction: {:#x}\n  > deploy transaction: {:#x}",
+                    res.declare_res.transaction_hash, res.transaction_hash
+                ))
+                .dimmed()
+                .to_string(),
+            );
 
             if strategy.world.is_none() {
-                let addr = strategy.world_address().ok_or(MigrationError::WorldAddressNotFound)?;
-                WorldContract::new(addr, &migrator).set_executor(res.contract_address).await?;
+                let addr = strategy.world_address()?;
+                let InvokeTransactionResult { transaction_hash } =
+                    WorldContract::new(addr, &migrator).set_executor(res.contract_address).await?;
+
+                ws_config.ui().verbose(
+                    Paint::new(format!("  > updated at: {:#x}", transaction_hash))
+                        .dimmed()
+                        .to_string(),
+                );
             }
+
+            ws_config.ui().print(
+                Paint::new(format!("  > contract address: {:#x}", res.contract_address))
+                    .dimmed()
+                    .to_string(),
+            );
 
             Some(res)
         }
@@ -107,31 +129,38 @@ where
 
     let world_output = match &mut strategy.world {
         Some(world) => {
-            let wb = ProgressBar::new_spinner()
-                .with_style(ProgressStyle::with_template("{spinner} world: {msg}").unwrap());
-            wb.enable_steady_tick(Duration::from_millis(100));
-            multi_progress.add(wb.clone());
-
-            wb.set_message("deploying contract");
+            ws_config.ui().print("# World:");
 
             let res = world
                 .deploy(
                     vec![strategy.executor.as_ref().unwrap().contract_address.unwrap()],
                     &migrator,
                 )
-                .await?;
+                .await
+                .map_err(|e| anyhow!(e))?;
 
-            wb.finish_with_message("deployed");
+            ws_config.ui().verbose(
+                Paint::new(format!(
+                    "  > declare transaction: {:#x}\n  > deploy transaction: {:#x}",
+                    res.declare_res.transaction_hash, res.transaction_hash
+                ))
+                .dimmed()
+                .to_string(),
+            );
+
+            ws_config.ui().print(
+                Paint::new(format!("  > contract address: {:#x}", res.contract_address))
+                    .dimmed()
+                    .to_string(),
+            );
 
             Some(res)
         }
         None => None,
     };
 
-    let components_output = register_components(&strategy, &migrator, &multi_progress).await?;
-    let systems_output = register_systems(&strategy, &migrator, &multi_progress).await?;
-
-    multi_progress.clear().expect("should be able to clear progress bar");
+    let components_output = register_components(&strategy, &migrator, ws_config).await?;
+    let systems_output = register_systems(&strategy, &migrator, ws_config).await?;
 
     Ok(MigrationOutput {
         world: world_output,
@@ -144,35 +173,47 @@ where
 async fn register_components<A>(
     strategy: &MigrationStrategy,
     migrator: &A,
-    multi_progress: &MultiProgress,
-) -> Result<RegisterOutput, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
+    ws_config: &Config,
+) -> Result<RegisterOutput>
 where
-    A: ConnectedAccount + Sync,
+    A: ConnectedAccount + Sync + 'static,
 {
-    let cb = ProgressBar::new_spinner()
-        .with_style(ProgressStyle::with_template("{spinner} components: {msg}").unwrap());
-    cb.enable_steady_tick(Duration::from_millis(100));
+    ws_config.ui().print(format!("# Components ({}):", strategy.components.len()));
 
-    multi_progress.add(cb.clone());
-
-    let total = strategy.components.len();
     let mut declare_output = vec![];
 
-    for (i, component) in strategy.components.iter().enumerate() {
-        cb.set_message(format!("({i}/{total}) declaring {} class", component.class.name));
-        let res = component.declare(migrator).await?;
+    for component in strategy.components.iter() {
+        ws_config.ui().print(format!("  {}", Paint::new(&component.class.name).italic()));
+
+        let res = component.declare(migrator).await.with_context(|| {
+            format!("Problem when declaring component {}", component.class.name)
+        })?;
+
+        ws_config.ui().verbose(
+            Paint::new(format!("  > declare transaction: {:#x}", res.transaction_hash))
+                .dimmed()
+                .to_string(),
+        );
+
+        ws_config.ui().print(
+            Paint::new(format!("  > class hash: {:#x}", res.class_hash)).dimmed().to_string(),
+        );
+
         declare_output.push(res);
     }
 
-    let world_address = strategy.world_address().ok_or(MigrationError::WorldAddressNotFound)?;
+    let world_address = strategy.world_address()?;
 
-    cb.set_message(format!("registering components to world"));
     let InvokeTransactionResult { transaction_hash } = WorldContract::new(world_address, migrator)
         .register_components(&declare_output.iter().map(|o| o.class_hash).collect::<Vec<_>>())
-        .await?;
+        .await
+        .with_context(|| {
+            format!("Problem when registering components to World at {:#x}", world_address)
+        })?;
 
-    cb.set_message("registered");
-    cb.finish();
+    ws_config.ui().verbose(
+        Paint::new(format!("  > registered at: {:#x}", transaction_hash)).dimmed().to_string(),
+    );
 
     Ok(RegisterOutput { transaction_hash, declare_output })
 }
@@ -180,35 +221,48 @@ where
 async fn register_systems<A>(
     strategy: &MigrationStrategy,
     migrator: &A,
-    multi_progress: &MultiProgress,
-) -> Result<RegisterOutput, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
+    ws_config: &Config,
+) -> Result<RegisterOutput>
 where
-    A: ConnectedAccount + Sync,
+    A: ConnectedAccount + Sync + 'static,
 {
-    let sb = ProgressBar::new_spinner()
-        .with_style(ProgressStyle::with_template("{spinner} systems: {msg}").unwrap());
-    sb.enable_steady_tick(Duration::from_millis(100));
+    ws_config.ui().print(format!("# Systems ({}):", strategy.systems.len()));
 
-    multi_progress.add(sb.clone());
-
-    let total = strategy.systems.len();
     let mut declare_output = vec![];
 
-    for (i, system) in strategy.systems.iter().enumerate() {
-        sb.set_message(format!("({i}/{total}) declaring {} class", system.class.name));
-        let res = system.declare(migrator).await?;
+    for system in strategy.systems.iter() {
+        ws_config.ui().print(format!("  {}", Paint::new(&system.class.name).italic()));
+
+        let res = system
+            .declare(migrator)
+            .await
+            .with_context(|| format!("Problem when declaring system {}", system.class.name))?;
+
+        ws_config.ui().verbose(
+            Paint::new(format!("  > declare transaction: {:#x}", res.transaction_hash))
+                .dimmed()
+                .to_string(),
+        );
+
+        ws_config.ui().print(
+            Paint::new(format!("  > class hash: {:#x}", res.class_hash)).dimmed().to_string(),
+        );
+
         declare_output.push(res);
     }
 
-    let world_address = strategy.world_address().ok_or(MigrationError::WorldAddressNotFound)?;
-
-    sb.set_message("registering systems to world...");
+    let world_address = strategy.world_address()?;
 
     let InvokeTransactionResult { transaction_hash } = WorldContract::new(world_address, migrator)
         .register_systems(&declare_output.iter().map(|o| o.class_hash).collect::<Vec<_>>())
-        .await?;
+        .await
+        .with_context(|| {
+            format!("Problem when registering systems to World at {:#x}", world_address)
+        })?;
 
-    sb.finish_with_message("registered");
+    ws_config.ui().verbose(
+        Paint::new(format!("  > registered at: {:#x}", transaction_hash)).dimmed().to_string(),
+    );
 
     Ok(RegisterOutput { transaction_hash, declare_output })
 }

@@ -34,6 +34,7 @@ toml.workspace = true
 url = "2.2.2"
 indicatif = "0.17.4"
 clap-verbosity-flag = "2.0.1"
+yansi.workspace = true
 
 [dev-dependencies]
 assert_fs = "1.0.10"

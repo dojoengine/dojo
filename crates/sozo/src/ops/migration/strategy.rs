@@ -1,17 +1,14 @@
 use std::collections::HashMap;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context, Result};
-use camino::Utf8PathBuf;
 use starknet::core::types::FieldElement;
 
 use super::config::WorldConfig;
+use super::object::RegisterOutput;
 use super::object::{ClassMigration, ContractMigration, DeployOutput};
-use super::object::{MigrationError, RegisterOutput};
 use super::world::{ClassDiff, ContractDiff, WorldDiff};
-
-pub type MigrationResult<S, P> = Result<MigrationOutput, MigrationError<S, P>>;
 
 #[derive(Debug)]
 pub struct MigrationOutput {
@@ -31,21 +28,26 @@ pub struct MigrationStrategy {
 }
 
 impl MigrationStrategy {
-    pub fn world_address(&self) -> Option<FieldElement> {
-        match &self.world {
+    pub fn world_address(&self) -> Result<FieldElement> {
+        let addr = match &self.world {
             Some(c) => c.contract_address,
             None => self.world_config.address,
-        }
+        };
+
+        addr.ok_or_else(|| anyhow!("World address not found"))
     }
 }
 
 /// construct migration strategy
 /// evaluate which contracts/classes need to be declared/deployed
-pub fn prepare_for_migration(
-    target_dir: Utf8PathBuf,
+pub fn prepare_for_migration<P>(
+    target_dir: P,
     diff: WorldDiff,
     world_config: WorldConfig,
-) -> Result<MigrationStrategy> {
+) -> Result<MigrationStrategy>
+where
+    P: AsRef<Path>,
+{
     let entries = fs::read_dir(target_dir)
         .map_err(|err| anyhow!("Failed reading source directory: {err}"))?;
 
