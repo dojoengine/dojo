@@ -5,7 +5,7 @@ use cairo_lang_defs::ids::{ModuleId, ModuleItemId};
 use cairo_lang_filesystem::ids::CrateId;
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::plugin::DynPluginAuxData;
-use dojo_world::manifest::{Input, Output, System};
+use dojo_world::manifest::{Contract, Input, Output, System};
 use serde::Serialize;
 use smol_str::SmolStr;
 use starknet::core::types::FieldElement;
@@ -30,8 +30,9 @@ impl Manifest {
             panic!("Executor contract not found. Did you include `dojo_core` as a dependency?");
         });
 
-        manifest.0.world = *world;
-        manifest.0.executor = *executor;
+        manifest.0.world = Contract { name: "World".into(), address: None, class_hash: *world };
+        manifest.0.executor =
+            Contract { name: "Excecutor".into(), address: None, class_hash: *executor };
 
         for crate_id in crate_ids {
             let modules = db.crate_modules(*crate_id);

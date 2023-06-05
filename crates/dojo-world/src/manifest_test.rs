@@ -4,7 +4,7 @@ use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcMethod};
 
 use super::Manifest;
-use crate::manifest::{ManifestError, EXECUTOR_ADDRESS_SLOT};
+use crate::manifest::{Contract, ManifestError, EXECUTOR_ADDRESS_SLOT};
 
 #[tokio::test]
 async fn test_manifest_from_remote_throw_error_on_not_deployed() {
@@ -72,6 +72,18 @@ async fn test_manifest_loads_empty_world_from_mock_remote() {
 
     assert_eq!(
         manifest,
-        Manifest { world: world_class_hash, executor: executor_class_hash, ..Manifest::default() }
+        Manifest {
+            world: Contract {
+                name: "World".into(),
+                class_hash: world_class_hash,
+                address: Some(world_address)
+            },
+            executor: Contract {
+                name: "Executor".into(),
+                class_hash: executor_class_hash,
+                address: Some(executor_address)
+            },
+            ..Manifest::default()
+        }
     )
 }
