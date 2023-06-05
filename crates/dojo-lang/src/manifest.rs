@@ -128,8 +128,11 @@ impl Manifest {
                         .with_context(|| format!("Contract {name} not found in target."))
                         .unwrap();
 
+                    // Remove the `System` suffix from the name to push in System struct.
+                    let name_temp: String = name.clone().into();
+
                     self.0.systems.push(System {
-                        name: name.clone(),
+                        name: name_temp.strip_suffix("System").unwrap_or(&name_temp).into(),
                         inputs,
                         outputs,
                         class_hash: *class_hash,
