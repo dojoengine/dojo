@@ -70,7 +70,7 @@ pub fn run(args: MigrateArgs) -> Result<()> {
         world_config,
         env_config,
         target_dir,
-        &ws.config(),
+        ws.config(),
     ))?;
 
     Ok(())

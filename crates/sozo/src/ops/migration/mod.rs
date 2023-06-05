@@ -51,7 +51,7 @@ where
 
     ws_config.ui().print(format!("{} 📦 Migrating world...", Paint::new("[3/3]").dimmed()));
 
-    let output = execute_strategy(&mut migration, migrator, &ws_config)
+    let output = execute_strategy(&mut migration, migrator, ws_config)
         .await
         .map_err(|e| anyhow!(e))
         .with_context(|| "Problem trying to migrate.")?;
@@ -170,8 +170,8 @@ where
         None => None,
     };
 
-    let components_output = register_components(&strategy, &migrator, ws_config).await?;
-    let systems_output = register_systems(&strategy, &migrator, ws_config).await?;
+    let components_output = register_components(strategy, &migrator, ws_config).await?;
+    let systems_output = register_systems(strategy, &migrator, ws_config).await?;
 
     Ok(MigrationOutput {
         world: world_output,
