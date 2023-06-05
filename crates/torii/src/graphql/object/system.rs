@@ -3,11 +3,12 @@ use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
 use serde::Deserialize;
-use sqlx::pool::PoolConnection;
-use sqlx::{FromRow, Pool, Result, Sqlite};
+use sqlx::{FromRow, Pool, Sqlite};
 
+use super::query::{query_all, query_by_id, ID};
 use super::system_call::system_calls_by_system_id;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
+use crate::graphql::constants::DEFAULT_LIMIT;
 use crate::graphql::types::ScalarType;
 use crate::graphql::utils::extract_value::extract;
 use crate::graphql::utils::remove_quotes;
@@ -40,6 +41,20 @@ impl SystemObject {
             ]),
         }
     }
+
+    pub fn value_mapping(system: System) -> ValueMapping {
+        IndexMap::from([
+            (Name::new("id"), Value::from(system.id)),
+            (Name::new("name"), Value::from(system.name)),
+            (Name::new("address"), Value::from(system.address)),
+            (Name::new("classHash"), Value::from(system.class_hash)),
+            (Name::new("transactionHash"), Value::from(system.transaction_hash)),
+            (
+                Name::new("createdAt"),
+                Value::from(system.created_at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)),
+            ),
+        ])
+    }
 }
 
 impl ObjectTrait for SystemObject {
@@ -61,11 +76,32 @@ impl ObjectTrait for SystemObject {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                     let id = remove_quotes(ctx.args.try_get("id")?.string()?);
-                    let system_values = system_by_id(&mut conn, &id).await?;
-                    Ok(Some(FieldValue::owned_any(system_values)))
+                    let system = query_by_id(&mut conn, "systems", ID::Str(id)).await?;
+                    let result = SystemObject::value_mapping(system);
+                    Ok(Some(FieldValue::owned_any(result)))
                 })
             })
             .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID))),
+            Field::new("systems", TypeRef::named_list(self.type_name()), |ctx| {
+                FieldFuture::new(async move {
+                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                    let limit = ctx
+                        .args
+                        .try_get("limit")
+                        .and_then(|limit| limit.u64())
+                        .unwrap_or(DEFAULT_LIMIT);
+
+                    let systems: Vec<System> = query_all(&mut conn, "systems", limit).await?;
+                    let result: Vec<FieldValue<'_>> = systems
+                        .into_iter()
+                        .map(SystemObject::value_mapping)
+                        .map(FieldValue::owned_any)
+                        .collect();
+
+                    Ok(Some(FieldValue::list(result)))
+                })
+            })
+            .argument(InputValue::new("limit", TypeRef::named(TypeRef::INT))),
         ]
     }
 
@@ -82,25 +118,4 @@ impl ObjectTrait for SystemObject {
             })
         })])
     }
-}
-
-pub async fn system_by_id(conn: &mut PoolConnection<Sqlite>, id: &str) -> Result<ValueMapping> {
-    let system: System =
-        sqlx::query_as("SELECT * FROM systems WHERE id = $1").bind(id).fetch_one(conn).await?;
-
-    Ok(value_mapping(system))
-}
-
-fn value_mapping(system: System) -> ValueMapping {
-    IndexMap::from([
-        (Name::new("id"), Value::from(system.id)),
-        (Name::new("name"), Value::from(system.name)),
-        (Name::new("address"), Value::from(system.address)),
-        (Name::new("classHash"), Value::from(system.class_hash)),
-        (Name::new("transactionHash"), Value::from(system.transaction_hash)),
-        (
-            Name::new("createdAt"),
-            Value::from(system.created_at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)),
-        ),
-    ])
 }
