@@ -1,3 +1,4 @@
+use std::io::Read;
 use std::time::{Duration, SystemTime};
 
 use anyhow::Result;
@@ -6,10 +7,12 @@ use blockifier::state::cached_state::CommitmentStateDiff;
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transaction_execution::Transaction as BlockifierTransaction;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-use starknet::core::types::contract::legacy::LegacyContractClass;
+use flate2::bufread::GzDecoder;
+use serde_json::json;
+use starknet::core::types::contract::legacy::{LegacyContractClass, LegacyProgram};
 use starknet::core::types::{
-    ContractStorageDiffItem, DeclaredClassItem, DeployedContractItem, FieldElement, NonceUpdate,
-    StateDiff, StorageEntry,
+    CompressedLegacyContractClass, ContractStorageDiffItem, DeclaredClassItem,
+    DeployedContractItem, FieldElement, NonceUpdate, StateDiff, StorageEntry,
 };
 use starknet_api::core::ClassHash;
 use starknet_api::hash::StarkFelt;
@@ -194,5 +197,25 @@ pub fn convert_state_diff_to_rpc_state_diff(state_diff: CommitmentStateDiff) -> 
                 nonce: nonce.0.into(),
             })
             .collect(),
+    }
+}
+
+pub fn flattened_legacy_contract_from_compressed(raw_compressed_contract: &str) -> Result<String> {
+    let compressed_legacy_contract: CompressedLegacyContractClass =
+        serde_json::from_str(raw_compressed_contract)?;
+    let mut gz = GzDecoder::new(&compressed_legacy_contract.program[..]);
+    let mut legacy_program_json = String::new();
+    gz.read_to_string(&mut legacy_program_json)?;
+    let legacy_program: LegacyProgram = serde_json::from_str(&legacy_program_json)?;
+
+    let value = json!({
+        "program": legacy_program,
+        "entry_points_by_type": compressed_legacy_contract.entry_points_by_type,
+        "abi": compressed_legacy_contract.abi,
+    });
+    let flattened = serde_json::to_string(&value);
+    match flattened {
+        Ok(flattened) => Ok(flattened),
+        Err(err) => Err(anyhow::Error::msg(format!("{err}"))),
     }
 }

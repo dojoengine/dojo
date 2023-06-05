@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
 use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
@@ -9,10 +7,10 @@ use sqlx::pool::PoolConnection;
 use sqlx::{FromRow, Pool, Result, Sqlite};
 
 use super::system_call::system_calls_by_system_id;
-use super::types::ScalarType;
-use super::utils::remove_quotes;
-use super::utils::value_accessor::ObjectAccessor;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
+use crate::graphql::types::ScalarType;
+use crate::graphql::utils::extract_value::extract;
+use crate::graphql::utils::remove_quotes;
 
 #[derive(FromRow, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -57,7 +55,7 @@ impl ObjectTrait for SystemObject {
         &self.field_type_mapping
     }
 
-    fn field_resolvers(&self) -> Vec<Field> {
+    fn resolvers(&self) -> Vec<Field> {
         vec![
             Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
                 FieldFuture::new(async move {
@@ -71,15 +69,14 @@ impl ObjectTrait for SystemObject {
         ]
     }
 
-    fn related_fields(&self) -> Option<Vec<Field>> {
+    fn nested_fields(&self) -> Option<Vec<Field>> {
         Some(vec![Field::new("systemCalls", TypeRef::named_nn_list_nn("SystemCall"), |ctx| {
             FieldFuture::new(async move {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                 let system_values = ctx.parent_value.try_downcast_ref::<ValueMapping>()?;
 
-                let accessor = ObjectAccessor(Cow::Borrowed(system_values));
-                let id = accessor.try_get("id")?;
-                let system_calls = system_calls_by_system_id(&mut conn, id.string()?).await?;
+                let id = extract::<String>(system_values, "id")?;
+                let system_calls = system_calls_by_system_id(&mut conn, &id).await?;
 
                 Ok(Some(FieldValue::list(system_calls.into_iter().map(FieldValue::owned_any))))
             })

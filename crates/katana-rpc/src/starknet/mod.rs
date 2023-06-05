@@ -1,6 +1,7 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
+use blockifier::execution::contract_class::ContractClassV0;
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transactions::DeclareTransaction;
 use jsonrpsee::core::{async_trait, Error};
@@ -9,7 +10,11 @@ use katana_core::constants::SEQUENCER_ADDRESS;
 use katana_core::sequencer::Sequencer;
 use katana_core::sequencer_error::SequencerError;
 use katana_core::starknet::transaction::ExternalFunctionCall;
-use katana_core::util::{blockifier_contract_class_from_flattened_sierra_class, starkfelt_to_u128};
+use katana_core::util::{
+    blockifier_contract_class_from_flattened_sierra_class,
+    flattened_legacy_contract_from_compressed, starkfelt_to_u128,
+};
+use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::{
     BlockHashAndNumber, BlockId, BlockStatus, BlockTag, BlockWithTxHashes, BlockWithTxs,
     BroadcastedDeclareTransaction, BroadcastedDeployAccountTransaction,
@@ -30,14 +35,14 @@ use starknet_api::hash::{StarkFelt, StarkHash};
 use starknet_api::patricia_key;
 use starknet_api::state::StorageKey;
 use starknet_api::transaction::{
-    Calldata, ContractAddressSalt, DeclareTransactionV2, Fee, InvokeTransaction,
-    InvokeTransactionV1, Transaction as InnerTransaction, TransactionHash, TransactionOutput,
-    TransactionSignature,
+    Calldata, ContractAddressSalt, DeclareTransactionV0V1, DeclareTransactionV2, Fee,
+    InvokeTransaction, InvokeTransactionV1, Transaction as InnerTransaction, TransactionHash,
+    TransactionOutput, TransactionSignature,
 };
 use tokio::sync::RwLock;
 use utils::transaction::{
-    compute_declare_v2_transaction_hash, compute_invoke_v1_transaction_hash,
-    convert_inner_to_rpc_tx,
+    compute_declare_v1_transaction_hash, compute_declare_v2_transaction_hash,
+    compute_invoke_v1_transaction_hash, convert_inner_to_rpc_tx,
 };
 
 use self::api::{Felt, StarknetApiError, StarknetApiServer};
@@ -705,6 +710,43 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
 
         for r in request {
             let transaction = match r {
+                BroadcastedTransaction::Declare(BroadcastedDeclareTransaction::V1(tx)) => {
+                    let raw_class_str = serde_json::to_string(&tx.contract_class)
+                        .map_err(|_| Error::from(StarknetApiError::InvalidContractClass))?;
+                    let flattened = flattened_legacy_contract_from_compressed(&raw_class_str)?;
+
+                    let legacy_contract_class: LegacyContractClass =
+                        ::serde_json::from_str(&flattened)?;
+                    let class_hash = legacy_contract_class.class_hash().unwrap();
+
+                    let contract_class = serde_json::from_str::<ContractClassV0>(&flattened)?;
+
+                    let transaction_hash = compute_declare_v1_transaction_hash(
+                        tx.sender_address,
+                        class_hash,
+                        tx.max_fee,
+                        chain_id,
+                        tx.nonce,
+                    );
+
+                    let transaction = DeclareTransactionV0V1 {
+                        transaction_hash: TransactionHash(StarkFelt::from(transaction_hash)),
+                        class_hash: ClassHash(StarkFelt::from(class_hash)),
+                        sender_address: ContractAddress(patricia_key!(tx.sender_address)),
+                        nonce: Nonce(StarkFelt::from(tx.nonce)),
+                        max_fee: Fee(starkfelt_to_u128(StarkFelt::from(tx.max_fee))
+                            .map_err(|_| Error::from(StarknetApiError::InternalServerError))?),
+                        signature: TransactionSignature(
+                            tx.signature.into_iter().map(StarkFelt::from).collect(),
+                        ),
+                    };
+                    AccountTransaction::Declare(DeclareTransaction {
+                        tx: starknet_api::transaction::DeclareTransaction::V1(transaction),
+                        contract_class: blockifier::execution::contract_class::ContractClass::V0(
+                            contract_class,
+                        ),
+                    })
+                }
                 BroadcastedTransaction::Declare(BroadcastedDeclareTransaction::V2(tx)) => {
                     let raw_class_str = serde_json::to_string(&tx.contract_class)?;
                     let class_hash = serde_json::from_str::<FlattenedSierraClass>(&raw_class_str)
@@ -807,10 +849,47 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
     ) -> Result<DeclareTransactionResult, Error> {
         let chain_id = FieldElement::from_hex_be(&self.sequencer.read().await.chain_id().as_hex())
             .map_err(|_| Error::from(StarknetApiError::InternalServerError))?;
-
         let (transaction_hash, class_hash, transaction) = match transaction {
-            BroadcastedDeclareTransaction::V1(_) => {
-                return Err(Error::from(StarknetApiError::UnsupportedTransactionVersion));
+            BroadcastedDeclareTransaction::V1(tx) => {
+                let raw_class_str = serde_json::to_string(&tx.contract_class)
+                    .map_err(|_| Error::from(StarknetApiError::InvalidContractClass))?;
+                let flattened = flattened_legacy_contract_from_compressed(&raw_class_str)?;
+
+                let legacy_contract_class: LegacyContractClass =
+                    ::serde_json::from_str(&flattened)?;
+                let class_hash = legacy_contract_class.class_hash().unwrap();
+
+                let contract_class = serde_json::from_str::<ContractClassV0>(&flattened)?;
+
+                let transaction_hash = compute_declare_v1_transaction_hash(
+                    tx.sender_address,
+                    class_hash,
+                    tx.max_fee,
+                    chain_id,
+                    tx.nonce,
+                );
+
+                let transaction = DeclareTransactionV0V1 {
+                    transaction_hash: TransactionHash(StarkFelt::from(transaction_hash)),
+                    class_hash: ClassHash(StarkFelt::from(class_hash)),
+                    sender_address: ContractAddress(patricia_key!(tx.sender_address)),
+                    nonce: Nonce(StarkFelt::from(tx.nonce)),
+                    max_fee: Fee(starkfelt_to_u128(StarkFelt::from(tx.max_fee))
+                        .map_err(|_| Error::from(StarknetApiError::InternalServerError))?),
+                    signature: TransactionSignature(
+                        tx.signature.into_iter().map(StarkFelt::from).collect(),
+                    ),
+                };
+                (
+                    transaction_hash,
+                    class_hash,
+                    AccountTransaction::Declare(DeclareTransaction {
+                        tx: starknet_api::transaction::DeclareTransaction::V1(transaction),
+                        contract_class: blockifier::execution::contract_class::ContractClass::V0(
+                            contract_class,
+                        ),
+                    }),
+                )
             }
             BroadcastedDeclareTransaction::V2(tx) => {
                 let raw_class_str = serde_json::to_string(&tx.contract_class)

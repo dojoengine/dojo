@@ -6,9 +6,9 @@ use serde::Deserialize;
 use sqlx::pool::PoolConnection;
 use sqlx::{FromRow, Pool, Result, Sqlite};
 
-use super::types::ScalarType;
-use super::utils::remove_quotes;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
+use crate::graphql::types::ScalarType;
+use crate::graphql::utils::remove_quotes;
 
 #[derive(FromRow, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -53,7 +53,7 @@ impl ObjectTrait for EntityObject {
         &self.field_type_mapping
     }
 
-    fn field_resolvers(&self) -> Vec<Field> {
+    fn resolvers(&self) -> Vec<Field> {
         vec![
             Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
                 FieldFuture::new(async move {

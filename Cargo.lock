@@ -2942,20 +2942,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dojo-test-runner"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "cairo-lang-compiler",
- "cairo-lang-test-runner",
- "camino",
- "clap",
- "dojo-lang",
- "scarb",
- "semver 1.0.17",
-]
-
-[[package]]
 name = "dojo-test-utils"
 version = "0.1.0"
 dependencies = [
@@ -5126,6 +5112,7 @@ dependencies = [
  "anyhow",
  "blockifier",
  "cairo-lang-starknet",
+ "flate2",
  "futures",
  "lazy_static",
  "rand",
@@ -7497,6 +7484,7 @@ dependencies = [
  "cairo-lang-sierra",
  "cairo-lang-sierra-to-casm",
  "cairo-lang-starknet",
+ "cairo-lang-test-runner",
  "camino",
  "clap",
  "dojo-lang",
