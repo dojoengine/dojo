@@ -8459,6 +8459,7 @@ dependencies = [
  "async-graphql",
  "async-graphql-poem",
  "async-trait",
+ "camino",
  "chrono",
  "clap",
  "ctrlc",

@@ -1,103 +1,113 @@
 #[cfg(test)]
 mod tests {
+    use camino::Utf8PathBuf;
     use serde::Deserialize;
     use sqlx::SqlitePool;
 
+    use crate::state::sql::Sql;
+    use crate::state::State;
     use crate::tests::common::run_graphql_query;
 
     #[derive(Deserialize)]
-    struct Game {
+    struct Moves {
         __typename: String,
-        name: String,
-        is_finished: bool,
+        remaining: i64,
     }
 
     #[derive(Deserialize)]
-    struct Stats {
+    struct Position {
         __typename: String,
-        health: i64,
-        mana: i64,
+        x: i64,
+        y: i64,
     }
 
     #[derive(Deserialize)]
-    struct ComponentGame {
+    struct ComponentMoves {
         name: String,
-        storage: Game,
+        storage: Moves,
     }
 
     #[derive(Deserialize)]
-    struct ComponentStats {
+    struct ComponentPosition {
         name: String,
-        storage: Stats,
+        storage: Position,
     }
 
-    #[sqlx::test(migrations = "./migrations", fixtures("entities", "components"))]
+    #[sqlx::test(migrations = "./migrations", fixtures("entities"))]
     async fn test_storage_components(pool: SqlitePool) {
         let _ = pool.acquire().await;
 
         let query = r#"
                 { 
-                    game(id: 1) { 
+                    moves(id: 1) { 
                         __typename
-                        name 
-                        is_finished 
+                        remaining 
                     } 
-                    stats(id: 1) { 
+                    position(id: 1) { 
                         __typename
-                        health 
-                        mana 
-                    } 
+                        x 
+                        y 
+                    }
                 }
             "#;
         let value = run_graphql_query(&pool, query).await;
 
-        let game = value.get("game").ok_or("no game found").unwrap();
-        let game: Game = serde_json::from_value(game.clone()).unwrap();
-        let stats = value.get("stats").ok_or("no stats found").unwrap();
-        let stats: Stats = serde_json::from_value(stats.clone()).unwrap();
+        let moves = value.get("moves").ok_or("no moves found").unwrap();
+        let moves: Moves = serde_json::from_value(moves.clone()).unwrap();
+        let position = value.get("position").ok_or("no position found").unwrap();
+        let position: Position = serde_json::from_value(position.clone()).unwrap();
 
-        assert!(!game.is_finished);
-        assert_eq!(game.name, "0x594F4C4F");
-        assert_eq!(stats.health, 42);
-        assert_eq!(stats.mana, 69);
+        assert_eq!(moves.remaining, 10);
+        assert_eq!(position.x, 42);
+        assert_eq!(position.y, 69);
     }
 
-    #[sqlx::test(migrations = "./migrations", fixtures("entities", "components"))]
+    #[sqlx::test(migrations = "./migrations", fixtures("entities"))]
     async fn test_storage_union(pool: SqlitePool) {
+        let manifest = dojo_world::manifest::Manifest::load_from_path(
+            Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev/manifest.json".into())
+                .unwrap(),
+        )
+        .unwrap();
+
+        let mut state = Sql::new(pool.clone()).unwrap();
+        state.load_from_manifest(manifest).await.unwrap();
+
         let _ = pool.acquire().await;
 
         let query = r#"
                 { 
-                    component_game: component(id: "component_1") {
+                    component_moves: component(id: "component_1") {
                         name
                         storage {
                             __typename
-                            ... on Game {
-                                name
-                                is_finished
+                            ... on Moves {
+                                remaining
                             }
                         }
                     }
-                    component_stats: component(id: "component_2") {
+                    component_position: component(id: "component_2") {
                         name
                         storage {
                             __typename
-                            ... on Stats {
-                                health
-                                mana
+                            ... on Position {
+                                x
+                                y
                             }
                         }
                     }
                 }
             "#;
         let value = run_graphql_query(&pool, query).await;
-        let component_game = value.get("component_game").ok_or("no component found").unwrap();
-        let component_game: ComponentGame = serde_json::from_value(component_game.clone()).unwrap();
-        let component_stats = value.get("component_stats").ok_or("no component found").unwrap();
-        let component_stats: ComponentStats =
-            serde_json::from_value(component_stats.clone()).unwrap();
+        let component_moves = value.get("component_moves").ok_or("no component found").unwrap();
+        let component_moves: ComponentMoves =
+            serde_json::from_value(component_moves.clone()).unwrap();
+        let component_position =
+            value.get("component_position").ok_or("no component found").unwrap();
+        let component_position: ComponentPosition =
+            serde_json::from_value(component_position.clone()).unwrap();
 
-        assert_eq!(component_game.name, component_game.storage.__typename);
-        assert_eq!(component_stats.name, component_stats.storage.__typename);
+        assert_eq!(component_moves.name, component_moves.storage.__typename);
+        assert_eq!(component_position.name, component_position.storage.__typename);
     }
 }
