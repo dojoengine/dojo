@@ -4,20 +4,20 @@ use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
 use starknet::core::types::FieldElement;
 
-use super::Storage;
+use super::State;
 
-pub struct SqlStorage {
+pub struct Sql {
     pool: Pool<Sqlite>,
 }
 
-impl SqlStorage {
+impl Sql {
     pub fn new(pool: Pool<Sqlite>) -> Result<Self> {
         Ok(Self { pool })
     }
 }
 
 #[async_trait]
-impl Storage for SqlStorage {
+impl State for Sql {
     async fn head(&self) -> Result<u64> {
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
         let indexer: (i64,) =
