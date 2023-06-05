@@ -277,6 +277,15 @@ mod Spawn {
         dojo_core::string::ShortStringTrait::new('Spawn')
     }
 
+    #[view]
+    fn dependencies() -> Array<dojo_core::string::ShortString> {
+        let mut arr = array::ArrayTrait::new();
+        array::ArrayTrait::append(ref arr, 'Player'.into());
+        array::ArrayTrait::append(ref arr, 'Position'.into());
+
+        arr
+    }
+
     use traits::Into;
     use super::Position;
     use super::Player;
@@ -479,6 +488,13 @@ mod Move {
     #[view]
     fn name() -> dojo_core::string::ShortString {
         dojo_core::string::ShortStringTrait::new('Move')
+    }
+
+    #[view]
+    fn dependencies() -> Array<dojo_core::string::ShortString> {
+        let mut arr = array::ArrayTrait::new();
+
+        arr
     }
 
     use traits::Into;
@@ -1118,6 +1134,13 @@ mod Proxy {
         dojo_core::string::ShortStringTrait::new('Proxy')
     }
 
+    #[view]
+    fn dependencies() -> Array<dojo_core::string::ShortString> {
+        let mut arr = array::ArrayTrait::new();
+
+        arr
+    }
+
 
     #[external]
     fn execute(ctx: Context, value: felt252) -> felt252 {
@@ -1137,11 +1160,11 @@ error: Plugin diagnostic: Component types cannot be empty
                   ^************************************^
 
 error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::query::Query", found: "(?89, ?90, ?91, ?92, ?93)".
- --> Spawn:86:103
+ --> Spawn:95:103
                         ctx.world.set_entity(ctx, dojo_core::string::ShortStringTrait::new('Player'), (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
                                                                                                       ^*************^
 
 error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::storage::query::Query", found: "(?101, ?102, ?103, ?104, ?105)".
- --> Spawn:92:105
+ --> Spawn:101:105
                         ctx.world.set_entity(ctx, dojo_core::string::ShortStringTrait::new('Position'), (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
                                                                                                         ^*************^

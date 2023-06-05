@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use cairo_lang_defs::plugin::{
     DynGeneratedFileAuxData, PluginDiagnostic, PluginGeneratedFile, PluginResult,
@@ -9,19 +9,20 @@ use cairo_lang_syntax::node::ast::MaybeModuleBody;
 use cairo_lang_syntax::node::ast::OptionReturnTypeClause::ReturnTypeClause;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
+use itertools::Itertools;
 
 use crate::commands::Command;
 use crate::plugin::{DojoAuxData, SystemAuxData};
 
 pub struct System {
     diagnostics: Vec<PluginDiagnostic>,
-    dependencies: Vec<smol_str::SmolStr>,
+    dependencies: HashSet<smol_str::SmolStr>,
 }
 
 impl System {
     pub fn from_module(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult {
         let name = module_ast.name(db).text(db);
-        let mut system = System { diagnostics: vec![], dependencies: vec![] };
+        let mut system = System { diagnostics: vec![], dependencies: HashSet::new() };
 
         if let MaybeModuleBody::Some(body) = module_ast.body(db) {
             let body_nodes = body
@@ -65,12 +66,38 @@ impl System {
                         dojo_core::string::ShortStringTrait::new('$name$')
                     }
 
+                    #[view]
+                    fn dependencies() -> Array<dojo_core::string::ShortString> {
+                        let mut arr = array::ArrayTrait::new();
+                        $dependencies$
+                        arr
+                    }
+
                     $body$
                 }
                 ",
                 HashMap::from([
                     ("name".to_string(), RewriteNode::Text(name.to_string())),
                     ("body".to_string(), RewriteNode::new_modified(body_nodes)),
+                    (
+                        "dependencies".to_string(),
+                        RewriteNode::new_modified(
+                            system
+                                .dependencies
+                                .iter()
+                                .sorted_by(|a, b| a.cmp(b))
+                                .map(|name| {
+                                    RewriteNode::interpolate_patched(
+                                        "array::ArrayTrait::append(ref arr, '$name$'.into());\n",
+                                        HashMap::from([(
+                                            "name".to_string(),
+                                            RewriteNode::Text(name.to_string()),
+                                        )]),
+                                    )
+                                })
+                                .collect(),
+                        ),
+                    ),
                 ]),
             ));
 
@@ -83,7 +110,7 @@ impl System {
                         components: vec![],
                         systems: vec![SystemAuxData {
                             name,
-                            dependencies: system.dependencies.clone(),
+                            dependencies: system.dependencies.iter().cloned().collect(),
                         }],
                     })),
                 }),
