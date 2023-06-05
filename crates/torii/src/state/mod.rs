@@ -6,7 +6,7 @@ pub mod memory;
 pub mod sql;
 
 #[async_trait]
-pub trait Storage {
+pub trait State {
     async fn head(&self) -> Result<u64>;
     async fn set_head(&mut self, head: u64) -> Result<()>;
     async fn create_component(&self, name: FieldElement, columns: Vec<FieldElement>) -> Result<()>;

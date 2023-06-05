@@ -12,27 +12,27 @@ use tokio::time::sleep;
 use tracing::error;
 
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
-use crate::storage::Storage;
+use crate::state::State;
 
-pub struct Processors<S: Storage, T: JsonRpcTransport + Sync + Send> {
+pub struct Processors<S: State, T: JsonRpcTransport + Sync + Send> {
     block: Vec<Arc<dyn BlockProcessor<S, T>>>,
     transaction: Vec<Arc<dyn TransactionProcessor<S, T>>>,
     event: Vec<Arc<dyn EventProcessor<S, T>>>,
 }
 
-impl<S: Storage, T: JsonRpcTransport + Sync + Send> Default for Processors<S, T> {
+impl<S: State, T: JsonRpcTransport + Sync + Send> Default for Processors<S, T> {
     fn default() -> Self {
         Self { block: vec![], transaction: vec![], event: vec![] }
     }
 }
 
-pub struct Engine<'a, S: Storage, T: JsonRpcTransport + Sync + Send> {
+pub struct Engine<'a, S: State, T: JsonRpcTransport + Sync + Send> {
     storage: &'a S,
     provider: &'a JsonRpcClient<T>,
     processors: Processors<S, T>,
 }
 
-impl<'a, S: Storage, T: JsonRpcTransport + Sync + Send> Engine<'a, S, T> {
+impl<'a, S: State, T: JsonRpcTransport + Sync + Send> Engine<'a, S, T> {
     pub fn new(
         storage: &'a S,
         provider: &'a JsonRpcClient<T>,
@@ -121,7 +121,7 @@ impl<'a, S: Storage, T: JsonRpcTransport + Sync + Send> Engine<'a, S, T> {
     }
 }
 
-async fn process_block<S: Storage, T: starknet::providers::jsonrpc::JsonRpcTransport>(
+async fn process_block<S: State, T: starknet::providers::jsonrpc::JsonRpcTransport>(
     storage: &S,
     provider: &JsonRpcClient<T>,
     processors: &[Arc<dyn BlockProcessor<S, T>>],
@@ -133,7 +133,7 @@ async fn process_block<S: Storage, T: starknet::providers::jsonrpc::JsonRpcTrans
     Ok(())
 }
 
-async fn process_transaction<S: Storage, T: starknet::providers::jsonrpc::JsonRpcTransport>(
+async fn process_transaction<S: State, T: starknet::providers::jsonrpc::JsonRpcTransport>(
     storage: &S,
     provider: &JsonRpcClient<T>,
     processors: &[Arc<dyn TransactionProcessor<S, T>>],
@@ -146,7 +146,7 @@ async fn process_transaction<S: Storage, T: starknet::providers::jsonrpc::JsonRp
     Ok(())
 }
 
-async fn process_event<S: Storage, T: starknet::providers::jsonrpc::JsonRpcTransport>(
+async fn process_event<S: State, T: starknet::providers::jsonrpc::JsonRpcTransport>(
     storage: &S,
     provider: &JsonRpcClient<T>,
     processors: &[Arc<dyn EventProcessor<S, T>>],
