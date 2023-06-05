@@ -43,7 +43,7 @@ impl System {
             builder.add_modified(RewriteNode::interpolate_patched(
                 "
                 #[contract]
-                mod $name$System {
+                mod $name$ {
                     use option::OptionTrait;
                     use array::SpanTrait;
 
@@ -81,7 +81,7 @@ impl System {
                         patches: builder.patches,
                         components: vec![],
                         systems: vec![SystemAuxData {
-                            name: format!("{name}System").into(),
+                            name: name.clone(),
                             dependencies: system.dependencies.clone(),
                         }],
                     })),
