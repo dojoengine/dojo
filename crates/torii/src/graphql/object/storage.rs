@@ -114,7 +114,8 @@ fn value_mapping_from_row(row: &SqliteRow, fields: &TypeMapping) -> Result<Value
             }
             _ => return Err(Error::TypeNotFound { type_name: field_type.clone() }),
         };
-        value_mapping.insert(field_name.clone(), value);
+
+        value_mapping.insert(Name::new(field_name), value);
     }
 
     Ok(value_mapping)

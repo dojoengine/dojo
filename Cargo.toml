@@ -2,7 +2,7 @@
 
 resolver = "2"
 
-members = [ "crates/bevy-dojo", "crates/dojo-lang", "crates/dojo-language-server", "crates/dojo-world", "crates/dojo-test-runner", "crates/dojo-test-utils", "crates/dojo-signers", "crates/katana", "crates/katana-core", "crates/katana-rpc", "crates/sozo", "crates/torii" ]
+members = [ "crates/bevy-dojo", "crates/dojo-lang", "crates/dojo-language-server", "crates/dojo-world", "crates/dojo-test-utils", "crates/dojo-signers", "crates/katana", "crates/katana-core", "crates/katana-rpc", "crates/sozo", "crates/torii" ]
 
 [workspace.package]
 version = "0.1.0"

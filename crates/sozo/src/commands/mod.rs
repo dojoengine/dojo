@@ -1,4 +1,4 @@
-use clap::{Args, Parser, Subcommand};
+use clap::{Parser, Subcommand};
 use scarb::ui;
 use tracing::level_filters::LevelFilter;
 use tracing_log::AsTrace;
@@ -6,26 +6,24 @@ use tracing_log::AsTrace;
 use self::build::BuildArgs;
 use self::init::InitArgs;
 use self::migrate::MigrateArgs;
+use self::test::TestArgs;
 
 pub(crate) mod build;
 pub(crate) mod init;
 pub(crate) mod migrate;
+pub(crate) mod test;
 
 #[derive(Subcommand)]
 pub enum Commands {
-    #[command(
-        about = "Build the project's ECS, outputting smart contracts artifacts for deployment"
-    )]
+    #[command(about = "Build the world, generating the necessary artifacts for deployment")]
     Build(BuildArgs),
     #[command(about = "Initialize a new project")]
     Init(InitArgs),
     #[command(about = "Run a migration, declaring and deploying contracts as necessary to \
                        update the world")]
     Migrate(MigrateArgs),
-    #[command(about = "Generate rust contract bindings")]
-    Bind(BindArgs),
-    #[command(about = "Retrieve an entity's state by entity ID")]
-    Inspect(InspectArgs),
+    #[command(about = "Test the project's smart contracts")]
+    Test(TestArgs),
 }
 
 #[derive(Parser)]
@@ -34,17 +32,6 @@ pub enum Commands {
 pub struct App {
     #[command(subcommand)]
     pub command: Commands,
-}
-
-#[derive(Args)]
-pub struct BindArgs {}
-
-#[derive(Args)]
-pub struct InspectArgs {
-    #[clap(short, long, help = "Entity ID to retrieve state for")]
-    id: String,
-    #[clap(short, long, help = "World address to retrieve entity state from")]
-    world_address: String,
 }
 
 pub(crate) fn ui_verbosity_from_flag(verbose: clap_verbosity_flag::Verbosity) -> ui::Verbosity {
