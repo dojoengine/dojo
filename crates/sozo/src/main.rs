@@ -1,16 +1,14 @@
 use std::process::exit;
 
 use clap::Parser;
-use env_logger::Env;
-use log::error;
+use scarb::ui::{OutputFormat, Ui, Verbosity};
 
 mod commands;
+mod ops;
 
 use self::commands::{build, init, migrate, test, App, Commands};
 
 fn main() {
-    env_logger::Builder::from_env(Env::default().default_filter_or("sozo=info")).init();
-
     let cli = App::parse();
 
     let res = match cli.command {
@@ -27,7 +25,7 @@ fn main() {
     };
 
     if let Err(err) = res {
-        error! {"{}", err};
+        Ui::new(Verbosity::Normal, OutputFormat::Text).anyhow(&err);
         exit(1);
     }
 }

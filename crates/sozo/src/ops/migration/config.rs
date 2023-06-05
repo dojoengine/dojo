@@ -23,10 +23,6 @@ pub struct WorldConfig {
     pub address: Option<FieldElement>,
 }
 
-pub struct DeploymentConfig {
-    pub rpc: Option<String>,
-}
-
 #[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Deployments {
     pub testnet: Option<Deployment>,

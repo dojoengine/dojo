@@ -41,8 +41,6 @@ pub enum MigrationError<S, P> {
     ClassAlreadyDeclared,
     #[error("Contract already deployed.")]
     ContractAlreadyDeployed,
-    #[error("World contract address not found.")]
-    WorldAddressNotFound,
     #[error(transparent)]
     Migrator(#[from] AccountError<S, P>),
     #[error(transparent)]

@@ -1,11 +1,13 @@
 use std::fmt::Display;
+use std::path::Path;
 
 use anyhow::{anyhow, Result};
-use camino::Utf8PathBuf;
+use dojo_world::manifest::Manifest;
+use scarb::core::Config;
 use starknet::core::types::FieldElement;
+use yansi::Paint;
 
-use crate::config::{EnvironmentConfig, WorldConfig};
-use crate::manifest::Manifest;
+use crate::ops::migration::config::{EnvironmentConfig, WorldConfig};
 
 /// Represents differences between a local and remote contract.
 #[derive(Debug, Default, Clone)]
@@ -35,19 +37,31 @@ pub struct WorldDiff {
 }
 
 impl WorldDiff {
-    pub async fn from_path(
-        target_dir: Utf8PathBuf,
+    pub async fn from_path<P>(
+        target_dir: P,
         world_config: &WorldConfig,
         environment_config: &EnvironmentConfig,
-    ) -> Result<WorldDiff> {
-        let local_manifest = Manifest::load_from_path(target_dir.join("manifest.json"))?;
+        ws_config: &Config,
+    ) -> Result<WorldDiff>
+    where
+        P: AsRef<Path>,
+    {
+        let local_manifest = Manifest::load_from_path(target_dir.as_ref().join("manifest.json"))?;
 
         let remote_manifest = if let Some(world_address) = world_config.address {
+            ws_config.ui().print(
+                Paint::new(format!(
+                    "   > Found remote World: {world_address:#x}\n   > Fetching remote World state"
+                ))
+                .dimmed()
+                .to_string(),
+            );
+
             let provider = environment_config.provider()?;
             Manifest::from_remote(provider, world_address, Some(local_manifest.clone()))
                 .await
                 .map(Some)
-                .map_err(|e| anyhow!("Failed creating remote manifest: {e}"))?
+                .map_err(|e| anyhow!("Failed creating remote World manifest: {e}"))?
         } else {
             None
         };
