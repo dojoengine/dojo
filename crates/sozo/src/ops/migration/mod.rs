@@ -2,9 +2,10 @@ use std::path::Path;
 
 use anyhow::{anyhow, Context, Result};
 use scarb::core::Config;
-use starknet::accounts::{Account, ConnectedAccount};
+use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag, InvokeTransactionResult, StarknetError};
-use starknet::providers::{Provider, ProviderError};
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::{JsonRpcClient, Provider, ProviderError};
 
 pub mod config;
 pub mod object;
@@ -16,6 +17,7 @@ pub mod world;
 mod migration_test;
 
 use object::{Declarable, Deployable, RegisterOutput, WorldContract};
+use starknet::signers::LocalWallet;
 use strategy::{MigrationOutput, MigrationStrategy};
 use yansi::Paint;
 
@@ -32,37 +34,27 @@ pub async fn execute<P>(
 where
     P: AsRef<Path>,
 {
-    let migrator = environment_config
-        .migrator()
+    let migrator = get_migrator_from_config(&environment_config)
         .await
-        .with_context(|| "Failed to initialize migrator account")?;
+        .with_context(|| "Problem initializing migrator account.")?;
 
-    migrator
-        .provider()
-        .get_class_hash_at(BlockId::Tag(BlockTag::Pending), migrator.address())
+    ws_config.ui().print(format!("{} 🌏 Building World state...", Paint::new("[1/3]").dimmed()));
+
+    let diff = WorldDiff::from_path(&target_dir, &world_config, &environment_config, ws_config)
         .await
-        .map_err(|e| match e {
-            ProviderError::StarknetError(StarknetError::ContractNotFound) => {
-                anyhow!("Migrator account doesn't exist: {:#x}", migrator.address())
-            }
-            _ => anyhow!(e),
-        })?;
+        .with_context(|| "Problem building World state.")?;
 
-    ws_config.ui().print("🌏 Building World state...");
+    ws_config.ui().print(format!("{} 🧰 Evaluating World diff...", Paint::new("[2/3]").dimmed()));
 
-    let diff =
-        WorldDiff::from_path(&target_dir, &world_config, &environment_config, ws_config).await?;
+    let mut migration = prepare_for_migration(target_dir, diff, world_config)
+        .with_context(|| "Problem preparing for migration.")?;
 
-    ws_config.ui().print("🧰 Evaluating World diff...");
-
-    let mut migration = prepare_for_migration(target_dir, diff, world_config)?;
-
-    ws_config.ui().print("📦 Migrating world...");
+    ws_config.ui().print(format!("{} 📦 Migrating world...", Paint::new("[3/3]").dimmed()));
 
     let output = execute_strategy(&mut migration, migrator, &ws_config)
         .await
         .map_err(|e| anyhow!(e))
-        .with_context(|| "Failed to migrate")?;
+        .with_context(|| "Problem trying to migrate.")?;
 
     ws_config.ui().print(format!(
         "\n✨ Successfully migrated World at address {:#x}",
@@ -77,6 +69,26 @@ where
     Ok(())
 }
 
+async fn get_migrator_from_config(
+    environment_config: &EnvironmentConfig,
+) -> Result<SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>> {
+    let account = environment_config.migrator().await?;
+
+    account
+        .provider()
+        .get_class_hash_at(BlockId::Tag(BlockTag::Pending), account.address())
+        .await
+        .map_err(|e| match e {
+            ProviderError::StarknetError(StarknetError::ContractNotFound) => {
+                anyhow!("Account doesn't exist: {:#x}", account.address())
+            }
+            _ => anyhow!(e),
+        })?;
+
+    Ok(account)
+}
+
+// TODO: display migration type (either new or update)
 async fn execute_strategy<A>(
     strategy: &mut MigrationStrategy,
     migrator: A,
@@ -87,12 +99,12 @@ where
 {
     let executor_output = match &mut strategy.executor {
         Some(executor) => {
-            ws_config.ui().print("\n# Executor: ");
+            ws_config.ui().print(format!("\n{}", Paint::new("# Executor").bold()));
 
             let res = executor
                 .deploy(vec![], &migrator)
                 .await
-                .with_context(|| "Problem when tying to migrate executor")?;
+                .map_err(|e| anyhow!("Failed to migrate executor: {e}"))?;
 
             ws_config.ui().verbose(
                 Paint::new(format!(
@@ -128,7 +140,7 @@ where
 
     let world_output = match &mut strategy.world {
         Some(world) => {
-            ws_config.ui().print("# World:");
+            ws_config.ui().print(Paint::new("# World").bold().to_string());
 
             let res = world
                 .deploy(
@@ -177,16 +189,19 @@ async fn register_components<A>(
 where
     A: ConnectedAccount + Sync + 'static,
 {
-    ws_config.ui().print(format!("# Components ({}):", strategy.components.len()));
+    ws_config.ui().print(
+        Paint::new(format!("# Components ({})", strategy.components.len())).bold().to_string(),
+    );
 
     let mut declare_output = vec![];
 
     for component in strategy.components.iter() {
         ws_config.ui().print(format!("  {}", Paint::new(&component.class.name).italic()));
 
-        let res = component.declare(migrator).await.with_context(|| {
-            format!("Problem when declaring component {}", component.class.name)
-        })?;
+        let res = component
+            .declare(migrator)
+            .await
+            .map_err(|e| anyhow!("Failed to declare component {}: {e}", component.class.name))?;
 
         ws_config.ui().verbose(
             Paint::new(format!("  > declare transaction: {:#x}", res.transaction_hash))
@@ -206,9 +221,7 @@ where
     let InvokeTransactionResult { transaction_hash } = WorldContract::new(world_address, migrator)
         .register_components(&declare_output.iter().map(|o| o.class_hash).collect::<Vec<_>>())
         .await
-        .with_context(|| {
-            format!("Problem when registering components to World at {:#x}", world_address)
-        })?;
+        .map_err(|e| anyhow!("Failed to register components to World {world_address:#x}: {e}"))?;
 
     ws_config.ui().verbose(
         Paint::new(format!("  > registered at: {:#x}", transaction_hash)).dimmed().to_string(),
@@ -225,7 +238,9 @@ async fn register_systems<A>(
 where
     A: ConnectedAccount + Sync + 'static,
 {
-    ws_config.ui().print(format!("# Systems ({}):", strategy.systems.len()));
+    ws_config
+        .ui()
+        .print(Paint::new(format!("# Systems ({})", strategy.systems.len())).bold().to_string());
 
     let mut declare_output = vec![];
 
@@ -235,7 +250,7 @@ where
         let res = system
             .declare(migrator)
             .await
-            .with_context(|| format!("Problem when declaring system {}", system.class.name))?;
+            .map_err(|e| anyhow!("Failed to declare system {}: {e}", system.class.name))?;
 
         ws_config.ui().verbose(
             Paint::new(format!("  > declare transaction: {:#x}", res.transaction_hash))
@@ -255,9 +270,7 @@ where
     let InvokeTransactionResult { transaction_hash } = WorldContract::new(world_address, migrator)
         .register_systems(&declare_output.iter().map(|o| o.class_hash).collect::<Vec<_>>())
         .await
-        .with_context(|| {
-            format!("Problem when registering systems to World at {:#x}", world_address)
-        })?;
+        .map_err(|e| anyhow!("Failed to register systems to World {world_address:#x}: {e}"))?;
 
     ws_config.ui().verbose(
         Paint::new(format!("  > registered at: {:#x}", transaction_hash)).dimmed().to_string(),

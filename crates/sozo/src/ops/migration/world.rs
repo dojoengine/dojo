@@ -61,7 +61,7 @@ impl WorldDiff {
             Manifest::from_remote(provider, world_address, Some(local_manifest.clone()))
                 .await
                 .map(Some)
-                .map_err(|e| anyhow!("Failed creating remote manifest: {e}"))?
+                .map_err(|e| anyhow!("Failed creating remote World manifest: {e}"))?
         } else {
             None
         };
