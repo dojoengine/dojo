@@ -56,13 +56,21 @@ const main = async () => {
         console.log(world.getCallStatus(id));  // 'done' or 'error'
     }, 10);
 
-    console.log(initialEntity.id, world.getEntityComponent(initialEntity.id, componentName))
+    // console.log(initialEntity.id, world.getEntityComponent(initialEntity.id, componentName))
 
     const movesValue = await world.getComponentValue(componentName, query)
 
-    console.log(movesValue)
+    // console.log(movesValue)
 
+    const componentsWithPosition = world.getEntitiesByComponent('Position', 'Velocity');
 
+    // console.log(componentsWithPosition)
+
+    const entitiesWithSpecificValues = world.getEntitiesByComponentValue(
+        { name: 'Position', dataValues: { x: 10, y: 20 } }
+    );
+
+    console.log("entitiesWithSpecificValues", entitiesWithSpecificValues)
 
 };
 

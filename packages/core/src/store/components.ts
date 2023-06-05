@@ -1,6 +1,10 @@
 import { RegisteredComponent } from '../types'
 import { worldStore } from './world'
 
+
+// This just registers World components. They are not tied to any entities. 
+// TODO: Incomplete
+
 export const registerComponent = (components: RegisteredComponent) => {
     worldStore.setState(state => ({
         ...state,

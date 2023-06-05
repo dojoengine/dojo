@@ -103,3 +103,9 @@ export interface Entity {
     id: number;
     components: Record<string, Component>;
 }
+
+
+export interface ComponentQuery {
+    name: string;
+    dataValues?: { [key: string]: any };
+}

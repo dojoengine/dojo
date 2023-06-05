@@ -1,18 +1,21 @@
 import { createStore } from 'zustand/vanilla'
-import { ComponentNames, Entity, ExecuteState, World as IWorld, Manifest, Query, SystemNames } from '../types';
+import { subscribeWithSelector } from 'zustand/middleware'
+import { ComponentNames, ComponentQuery, Entity, ExecuteState, World as IWorld, Manifest, Query, SystemNames } from '../types';
 import { RPCProvider } from '../provider';
 import { Account, number } from 'starknet';
-import { getEntityComponent, updateComponent, registerEntity } from './entity';
+import { getEntityComponent, updateComponent, registerEntity, queryEntities, queryEntitiesByValues, removeComponent, deleteEntity } from './entity';
 import { HotAccount } from '../account';
 import { KATANA_ACCOUNT_1_ADDRESS, KATANA_ACCOUNT_1_PRIVATEKEY, LOCAL_TORII } from '../constants';
 
-export const worldStore = createStore<IWorld>(() => ({
+export const worldStore = createStore(subscribeWithSelector<IWorld>(() => ({
     world: '',
     executor: '',
     systems: [],
     components: [],
     entities: {},
-}))
+})))
+
+// TODO: Get entity entity
 
 export class World {
     public provider: RPCProvider;
@@ -53,6 +56,10 @@ export class World {
         return registerEntity(entity);
     }
 
+    deleteEntity(entityId: number) {
+        return deleteEntity(entityId);
+    }
+
     updateComponent(entityId: number, componentName: string, componentData: any) {
         return updateComponent(entityId, componentName, componentData);
     }
@@ -65,7 +72,19 @@ export class World {
         return this.provider.entity(component, query, offset, length);
     }
 
-    public prepareOptimisticUpdate(entityId: number, componentName: string, componentData: any): symbol {
+    getEntitiesByComponent(...components: ComponentNames[]) {
+        return queryEntities(...components)
+    }
+
+    getEntitiesByComponentValue(...componentQueries: ComponentQuery[]) {
+        return queryEntitiesByValues(...componentQueries);
+    }
+
+    removeComponent(entityId: number, componentName: string) {
+        return removeComponent(entityId, componentName);
+    }
+
+    prepareOptimisticUpdate(entityId: number, componentName: string, componentData: any): symbol {
 
         const id = Symbol();
         // Save the previous component data and update information for optimistic update.
@@ -78,11 +97,11 @@ export class World {
         return id
     }
 
-    public getCallStatus(id: symbol): ExecuteState {
+    getCallStatus(id: symbol): ExecuteState {
         return this.statuses.get(id) || 'idle';
     }
 
-    public execute(
+    execute(
         system: SystemNames,
         call_data: number.BigNumberish[],
         id: symbol = Symbol()
