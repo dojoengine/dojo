@@ -2,10 +2,9 @@ use std::path::Path;
 
 use anyhow::{anyhow, Context, Result};
 use scarb::core::Config;
-use starknet::accounts::Account;
-use starknet::core::types::{BlockId, BlockTag, StarknetError};
+use starknet::accounts::{Account, ConnectedAccount};
+use starknet::core::types::{BlockId, BlockTag, InvokeTransactionResult, StarknetError};
 use starknet::providers::{Provider, ProviderError};
-use starknet::{accounts::ConnectedAccount, core::types::InvokeTransactionResult};
 
 pub mod config;
 pub mod object;

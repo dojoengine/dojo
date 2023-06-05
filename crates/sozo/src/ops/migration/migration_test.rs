@@ -21,14 +21,15 @@ async fn test_migration() {
         ..EnvironmentConfig::default()
     };
 
-    let world = WorldDiff::from_path(target_dir.clone(), &WorldConfig::default(), &env_config)
-        .await
-        .unwrap();
-
     let config = Config::builder(Utf8PathBuf::from_path_buf("../../examples/ecs/".into()).unwrap())
         .ui_verbosity(Verbosity::Normal)
         .build()
         .unwrap();
+
+    let world =
+        WorldDiff::from_path(target_dir.clone(), &WorldConfig::default(), &env_config, &config)
+            .await
+            .unwrap();
 
     let mut migration = prepare_for_migration(target_dir, world, WorldConfig::default()).unwrap();
     execute_strategy(&mut migration, env_config.migrator().await.unwrap(), &config).await.unwrap();

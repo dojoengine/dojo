@@ -7,11 +7,10 @@ use dotenv::dotenv;
 use scarb::core::Config;
 use scarb::ops;
 
+use super::ui_verbosity_from_flag;
 use crate::commands::build::{self, BuildArgs, ProfileSpec};
 use crate::ops::migration;
 use crate::ops::migration::config::{EnvironmentConfig, WorldConfig};
-
-use super::ui_verbosity_from_flag;
 
 #[derive(Args)]
 pub struct MigrateArgs {

@@ -6,8 +6,7 @@ use anyhow::{anyhow, Context, Result};
 use starknet::core::types::FieldElement;
 
 use super::config::WorldConfig;
-use super::object::RegisterOutput;
-use super::object::{ClassMigration, ContractMigration, DeployOutput};
+use super::object::{ClassMigration, ContractMigration, DeployOutput, RegisterOutput};
 use super::world::{ClassDiff, ContractDiff, WorldDiff};
 
 #[derive(Debug)]
