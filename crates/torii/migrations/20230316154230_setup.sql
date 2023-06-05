@@ -1,6 +1,10 @@
 CREATE TABLE indexer (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    head BIGINT NOT NULL DEFAULT 0
+    head BIGINT NOT NULL DEFAULT 0,
+    world_address TEXT,
+    world_class_hash TEXT,
+    executor_address TEXT,
+    executor_class_hash TEXT
 );
 
 INSERT INTO indexer (head) VALUES (0);
@@ -8,14 +12,23 @@ INSERT INTO indexer (head) VALUES (0);
 CREATE TABLE components (
     id TEXT NOT NULL PRIMARY KEY,
     name TEXT NOT NULL,
-    address TEXT NOT NULL,
     class_hash TEXT NOT NULL,
-    transaction_hash TEXT NOT NULL,
-    storage_definition TEXT NOT NULL,
+    transaction_hash TEXT,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_components_created_at ON components (created_at);
+
+CREATE TABLE component_members(
+    component_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    slot INTEGER NOT NULL,
+    offset INTEGER NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (component_id, name),
+    FOREIGN KEY (component_id) REFERENCES components(id)
+);
 
 CREATE TABLE system_calls (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -31,9 +44,8 @@ CREATE INDEX idx_system_calls_created_at ON system_calls (created_at);
 CREATE TABLE systems (
     id TEXT NOT NULL PRIMARY KEY,
     name TEXT NOT NULL,
-    address TEXT NOT NULL,
     class_hash TEXT NOT NULL,
-    transaction_hash TEXT NOT NULL,
+    transaction_hash TEXT,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

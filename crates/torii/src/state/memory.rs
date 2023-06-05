@@ -1,27 +1,30 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use dojo_world::manifest::{Component, Manifest, System};
 use starknet::core::types::FieldElement;
-use tokio::sync::RwLock;
 
 use super::State;
 
 type Partition = FieldElement;
-type Component = FieldElement;
 type Key = FieldElement;
 type Entities = HashMap<Partition, HashMap<Key, Vec<FieldElement>>>;
-type Components = HashMap<Component, Entities>;
 
 #[derive(Default)]
 pub struct InMemory {
     head: u64,
-    data: Arc<RwLock<Components>>,
+    components: Vec<Component>,
+    systems: Vec<System>,
+    components_to_entites: HashMap<FieldElement, Entities>,
 }
 
 #[async_trait]
 impl State for InMemory {
+    async fn load_from_manifest(&mut self, _manifest: Manifest) -> Result<()> {
+        Ok(())
+    }
+
     async fn head(&self) -> Result<u64> {
         Ok(self.head)
     }
@@ -31,25 +34,24 @@ impl State for InMemory {
         Ok(())
     }
 
-    async fn create_component(
-        &self,
-        name: FieldElement,
-        _columns: Vec<FieldElement>,
-    ) -> Result<()> {
-        let mut data = self.data.write().await;
-        data.entry(name).or_insert_with(HashMap::new);
+    async fn register_component(&mut self, component: Component) -> Result<()> {
+        self.components.push(component);
+        Ok(())
+    }
+
+    async fn register_system(&mut self, system: System) -> Result<()> {
+        self.systems.push(system);
         Ok(())
     }
 
     async fn set_entity(
-        &self,
+        &mut self,
         component: FieldElement,
         partition: FieldElement,
         key: FieldElement,
         values: Vec<FieldElement>,
     ) -> Result<()> {
-        let mut data = self.data.write().await;
-        if let Some(component_data) = data.get_mut(&component) {
+        if let Some(component_data) = self.components_to_entites.get_mut(&component) {
             let partition_data = component_data.entry(partition).or_insert_with(HashMap::new);
             partition_data.insert(key, values);
         }
@@ -57,13 +59,12 @@ impl State for InMemory {
     }
 
     async fn delete_entity(
-        &self,
+        &mut self,
         component: FieldElement,
         partition: FieldElement,
         key: FieldElement,
     ) -> Result<()> {
-        let mut data = self.data.write().await;
-        if let Some(component_data) = data.get_mut(&component) {
+        if let Some(component_data) = self.components_to_entites.get_mut(&component) {
             if let Some(partition_data) = component_data.get_mut(&partition) {
                 partition_data.remove(&key);
             }
@@ -77,8 +78,7 @@ impl State for InMemory {
         partition: FieldElement,
         key: FieldElement,
     ) -> Result<Vec<FieldElement>> {
-        let data = self.data.read().await;
-        if let Some(component_data) = data.get(&component) {
+        if let Some(component_data) = self.components_to_entites.get(&component) {
             if let Some(partition_data) = component_data.get(&partition) {
                 if let Some(entity) = partition_data.get(&key) {
                     return Ok(entity.clone());
@@ -94,8 +94,7 @@ impl State for InMemory {
         partition: FieldElement,
     ) -> Result<Vec<Vec<FieldElement>>> {
         let mut result = Vec::new();
-        let data = self.data.read().await;
-        if let Some(component_data) = data.get(&component) {
+        if let Some(component_data) = self.components_to_entites.get(&component) {
             if let Some(partition_data) = component_data.get(&partition) {
                 for entity in partition_data.values() {
                     result.push(entity.clone());

@@ -17,10 +17,8 @@ use crate::graphql::utils::{format_name, remove_quotes};
 pub struct Component {
     pub id: String,
     pub name: String,
-    pub address: String,
     pub class_hash: String,
     pub transaction_hash: String,
-    pub storage_definition: String,
     pub created_at: DateTime<Utc>,
 }
 
@@ -37,10 +35,8 @@ impl ComponentObject {
             field_type_mapping: IndexMap::from([
                 (Name::new("id"), TypeRef::ID.to_string()),
                 (Name::new("name"), TypeRef::STRING.to_string()),
-                (Name::new("address"), ScalarType::ADDRESS.to_string()),
                 (Name::new("classHash"), ScalarType::FELT.to_string()),
                 (Name::new("transactionHash"), ScalarType::FELT.to_string()),
-                (Name::new("storageDefinition"), TypeRef::STRING.to_string()),
                 (Name::new("createdAt"), ScalarType::DATE_TIME.to_string()),
             ]),
             storage_names,
@@ -75,20 +71,19 @@ impl ObjectTrait for ComponentObject {
                 let component_values = ctx.parent_value.try_downcast_ref::<ValueMapping>()?;
 
                 let id = extract::<String>(component_values, "id")?;
-                let defintion = extract::<String>(component_values, "storageDefinition")?;
                 let type_name = extract::<String>(component_values, "name")?;
 
-                let field_type_mapping = type_mapping_from_definition(&defintion)?;
-                let storage_values = storage_by_column(
-                    &mut conn,
-                    ColumnName::ComponentId,
-                    &id,
-                    &type_name,
-                    &field_type_mapping,
-                )
-                .await?;
+                // let field_type_mapping = type_mapping_from_definition(&defintion)?;
+                // let storage_values = storage_by_column(
+                //     &mut conn,
+                //     ColumnName::ComponentId,
+                //     &id,
+                //     &type_name,
+                //     &field_type_mapping,
+                // )
+                // .await?;
 
-                Ok(Some(FieldValue::with_type(FieldValue::owned_any(storage_values), type_name)))
+                Ok(Some(Value::Null)) //with_type(FieldValue::owned_any(storage_values), type_name)))
             })
         })])
     }
@@ -127,10 +122,8 @@ fn value_mapping(component: Component) -> ValueMapping {
     IndexMap::from([
         (Name::new("id"), Value::from(component.id)),
         (Name::new("name"), Value::from(component.name)),
-        (Name::new("address"), Value::from(component.address)),
         (Name::new("classHash"), Value::from(component.class_hash)),
         (Name::new("transactionHash"), Value::from(component.transaction_hash)),
-        (Name::new("storageDefinition"), Value::from(component.storage_definition)),
         (
             Name::new("createdAt"),
             Value::from(component.created_at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)),
