@@ -4,9 +4,11 @@ use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
 use serde::Deserialize;
 use sqlx::pool::PoolConnection;
-use sqlx::{FromRow, Pool, Result, Sqlite};
+use sqlx::{FromRow, Pool, QueryBuilder, Result, Sqlite};
 
+use super::query::{query_by_id, ID};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
+use crate::graphql::constants::DEFAULT_LIMIT;
 use crate::graphql::types::ScalarType;
 use crate::graphql::utils::remove_quotes;
 
@@ -38,6 +40,20 @@ impl EntityObject {
             ]),
         }
     }
+
+    pub fn value_mapping(entity: Entity) -> ValueMapping {
+        IndexMap::from([
+            (Name::new("id"), Value::from(entity.id)),
+            (Name::new("name"), Value::from(entity.name)),
+            (Name::new("partitionId"), Value::from(entity.partition_id)),
+            (Name::new("keys"), Value::from(entity.keys.unwrap_or_default())),
+            (Name::new("transactionHash"), Value::from(entity.transaction_hash)),
+            (
+                Name::new("createdAt"),
+                Value::from(entity.created_at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)),
+            ),
+        ])
+    }
 }
 
 impl ObjectTrait for EntityObject {
@@ -59,32 +75,62 @@ impl ObjectTrait for EntityObject {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                     let id = remove_quotes(ctx.args.try_get("id")?.string()?);
-                    let entity_values = entity_by_id(&mut conn, &id).await?;
-                    Ok(Some(FieldValue::owned_any(entity_values)))
+                    let entity = query_by_id(&mut conn, "entities", ID::Str(id)).await?;
+                    let result = EntityObject::value_mapping(entity);
+                    Ok(Some(FieldValue::owned_any(result)))
                 })
             })
             .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID))),
+            Field::new("entities", TypeRef::named_nn_list_nn(self.type_name()), |ctx| {
+                FieldFuture::new(async move {
+                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                    let parition_id = remove_quotes(ctx.args.try_get("partitionId")?.string()?);
+
+                    // handle optional keys argument
+                    let maybe_keys = ctx.args.try_get("keys").ok();
+                    let keys_arr = if let Some(keys_val) = maybe_keys {
+                        keys_val
+                            .list()?
+                            .iter()
+                            .map(|val| val.string().ok().map(remove_quotes))
+                            .collect()
+                    } else {
+                        None
+                    };
+
+                    let limit = ctx
+                        .args
+                        .try_get("limit")
+                        .and_then(|limit| limit.u64())
+                        .unwrap_or(DEFAULT_LIMIT);
+
+                    let entities = entities_by_sk(&mut conn, &parition_id, keys_arr, limit).await?;
+                    Ok(Some(FieldValue::list(entities.into_iter().map(FieldValue::owned_any))))
+                })
+            })
+            .argument(InputValue::new("partitionId", TypeRef::named_nn(ScalarType::FELT)))
+            .argument(InputValue::new("keys", TypeRef::named_list(TypeRef::STRING)))
+            .argument(InputValue::new("limit", TypeRef::named(TypeRef::INT))),
         ]
     }
 }
 
-async fn entity_by_id(conn: &mut PoolConnection<Sqlite>, id: &str) -> Result<ValueMapping> {
-    let entity: Entity =
-        sqlx::query_as("SELECT * FROM entities WHERE id = $1").bind(id).fetch_one(conn).await?;
+async fn entities_by_sk(
+    conn: &mut PoolConnection<Sqlite>,
+    partition_id: &str,
+    keys: Option<Vec<String>>,
+    limit: u64,
+) -> Result<Vec<ValueMapping>> {
+    let mut builder: QueryBuilder<'_, Sqlite> = QueryBuilder::new("SELECT * FROM entities");
+    builder.push(" WHERE partition_id = ").push_bind(partition_id);
 
-    Ok(value_mapping(entity))
-}
+    if let Some(keys) = keys {
+        let keys_str = format!("{}%", keys.join("/"));
+        builder.push(" AND keys LIKE ").push_bind(keys_str);
+    }
 
-fn value_mapping(entity: Entity) -> ValueMapping {
-    IndexMap::from([
-        (Name::new("id"), Value::from(entity.id)),
-        (Name::new("name"), Value::from(entity.name)),
-        (Name::new("partitionId"), Value::from(entity.partition_id)),
-        (Name::new("keys"), Value::from(entity.keys.unwrap_or_default())),
-        (Name::new("transactionHash"), Value::from(entity.transaction_hash)),
-        (
-            Name::new("createdAt"),
-            Value::from(entity.created_at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)),
-        ),
-    ])
+    builder.push(" ORDER BY created_at DESC LIMIT ").push(limit);
+
+    let entities: Vec<Entity> = builder.build_query_as().fetch_all(conn).await?;
+    Ok(entities.into_iter().map(EntityObject::value_mapping).collect())
 }
