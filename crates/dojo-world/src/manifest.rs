@@ -101,6 +101,8 @@ pub struct System {
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Contract {
     pub name: SmolStr,
+    #[serde_as(as = "Option<UfeHex>")]
+    pub address: Option<FieldElement>,
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
 }
@@ -108,10 +110,8 @@ pub struct Contract {
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Manifest {
-    #[serde_as(as = "UfeHex")]
-    pub world: FieldElement,
-    #[serde_as(as = "UfeHex")]
-    pub executor: FieldElement,
+    pub world: Contract,
+    pub executor: Contract,
     pub systems: Vec<System>,
     pub contracts: Vec<Contract>,
     pub components: Vec<Component>,
@@ -144,26 +144,20 @@ impl Manifest {
                 _ => ManifestError::Provider(err),
             })?;
 
-        let executor_class_hash = {
-            let executor_address = provider
-                .get_storage_at(
-                    world_address,
-                    EXECUTOR_ADDRESS_SLOT,
-                    BlockId::Tag(BlockTag::Pending),
-                )
-                .await
-                .map_err(ManifestError::Provider)?;
+        let executor_address = provider
+            .get_storage_at(world_address, EXECUTOR_ADDRESS_SLOT, BlockId::Tag(BlockTag::Pending))
+            .await
+            .map_err(ManifestError::Provider)?;
 
-            provider
-                .get_class_hash_at(BlockId::Tag(BlockTag::Pending), executor_address)
-                .await
-                .map_err(|err| match err {
-                    ProviderError::StarknetError(StarknetError::ContractNotFound) => {
-                        ManifestError::ExecutorNotFound
-                    }
-                    _ => ManifestError::Provider(err),
-                })?
-        };
+        let executor_class_hash = provider
+            .get_class_hash_at(BlockId::Tag(BlockTag::Pending), executor_address)
+            .await
+            .map_err(|err| match err {
+                ProviderError::StarknetError(StarknetError::ContractNotFound) => {
+                    ManifestError::ExecutorNotFound
+                }
+                _ => ManifestError::Provider(err),
+            })?;
 
         let mut systems = vec![];
         let mut components = vec![];
@@ -224,8 +218,16 @@ impl Manifest {
             systems,
             components,
             contracts: vec![],
-            world: world_class_hash,
-            executor: executor_class_hash,
+            world: Contract {
+                name: "World".into(),
+                class_hash: world_class_hash,
+                address: Some(world_address),
+            },
+            executor: Contract {
+                name: "Executor".into(),
+                address: Some(executor_address),
+                class_hash: executor_class_hash,
+            },
         })
     }
 }

@@ -107,15 +107,15 @@ impl WorldDiff {
         let world = ContractDiff {
             name: "World".into(),
             address: world_config.address,
-            local: local_manifest.world,
-            remote: remote_manifest.as_ref().map(|m| m.world),
+            local: local_manifest.world.class_hash,
+            remote: remote_manifest.as_ref().map(|m| m.world.class_hash),
         };
 
         let executor = ContractDiff {
             name: "Executor".into(),
             address: None,
-            local: local_manifest.executor,
-            remote: remote_manifest.map(|m| m.executor),
+            local: local_manifest.executor.class_hash,
+            remote: remote_manifest.map(|m| m.executor.class_hash),
         };
 
         Ok(WorldDiff { world, executor, systems, contracts, components })
