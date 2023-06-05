@@ -31,14 +31,13 @@ fn test_executor() {
     let constructor_calldata = array::ArrayTrait::new();
     let (executor_address, _) = deploy_syscall(
         Executor::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
-    ).unwrap();
+    )
+        .unwrap();
 
     let executor = IExecutorDispatcher { contract_address: executor_address };
 
     let mut system_calldata = ArrayTrait::new();
     system_calldata.append(42);
     system_calldata.append(53);
-    let res = executor.execute(
-        BarSystem::TEST_CLASS_HASH.try_into().unwrap(), system_calldata.span()
-    );
+    let res = executor.execute(Bar::TEST_CLASS_HASH.try_into().unwrap(), system_calldata.span());
 }
