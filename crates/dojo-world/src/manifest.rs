@@ -19,8 +19,10 @@ mod test;
 
 #[derive(Error, Debug)]
 pub enum ManifestError<E> {
-    #[error("World contract is not deployed.")]
-    WorldNotDeployed,
+    #[error("World contract not found.")]
+    WorldNotFound,
+    #[error("Executor contract not found.")]
+    ExecutorNotFound,
     #[error("Entry point name contains non-ASCII characters.")]
     InvalidEntryPointError,
     #[error(transparent)]
@@ -118,7 +120,7 @@ impl Manifest {
             .await
             .map_err(|err| match err {
                 ProviderError::StarknetError(StarknetError::ContractNotFound) => {
-                    ManifestError::WorldNotDeployed
+                    ManifestError::WorldNotFound
                 }
                 _ => ManifestError::Provider(err),
             })?;
@@ -139,7 +141,12 @@ impl Manifest {
             provider
                 .get_class_hash_at(BlockId::Tag(BlockTag::Pending), executor_address[0])
                 .await
-                .map_err(ManifestError::Provider)?
+                .map_err(|err| match err {
+                    ProviderError::StarknetError(StarknetError::ContractNotFound) => {
+                        ManifestError::ExecutorNotFound
+                    }
+                    _ => ManifestError::Provider(err),
+                })?
         };
 
         let mut systems = vec![];

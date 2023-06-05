@@ -1,28 +1,32 @@
 use std::env::{self, current_dir};
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use camino::Utf8PathBuf;
 use clap::Args;
-use dojo_world::config::{EnvironmentConfig, WorldConfig};
-use dojo_world::migration::strategy::prepare_for_migration;
-use dojo_world::migration::world::WorldDiff;
 use dotenv::dotenv;
 use scarb::core::Config;
 use scarb::ops;
-use scarb::ui::Verbosity;
 
-use super::build::{self, BuildArgs, ProfileSpec};
+use super::ui_verbosity_from_flag;
+use crate::commands::build::{self, BuildArgs, ProfileSpec};
+use crate::ops::migration;
+use crate::ops::migration::config::{EnvironmentConfig, WorldConfig};
 
 #[derive(Args)]
 pub struct MigrateArgs {
     #[clap(help = "Source directory")]
     path: Option<Utf8PathBuf>,
 
-    #[clap(short, long, help = "Perform a dry run and outputs the plan to be executed")]
+    #[clap(short, long)]
+    #[clap(help = "Perform a dry run and outputs the plan to be executed")]
     plan: bool,
 
     #[command(flatten)]
     profile_spec: ProfileSpec,
+
+    #[clap(help = "Logging verbosity.")]
+    #[command(flatten)]
+    pub verbose: clap_verbosity_flag::Verbosity,
 }
 
 pub fn run(args: MigrateArgs) -> Result<()> {
@@ -45,10 +49,11 @@ pub fn run(args: MigrateArgs) -> Result<()> {
 
     let manifest_path = source_dir.join("Scarb.toml");
     let config = Config::builder(manifest_path)
-        .ui_verbosity(Verbosity::Verbose)
+        .ui_verbosity(ui_verbosity_from_flag(args.verbose))
         .log_filter_directive(env::var_os("SCARB_LOG"))
         .build()
         .unwrap();
+
     let ws = ops::read_workspace(config.manifest_path(), &config)?;
 
     let profile = profile_spec.determine()?;
@@ -61,15 +66,12 @@ pub fn run(args: MigrateArgs) -> Result<()> {
     let world_config = WorldConfig::from_workspace(&ws).unwrap_or_default();
     let env_config = EnvironmentConfig::from_workspace(profile.as_str(), &ws)?;
 
-    ws.config().tokio_handle().block_on(async {
-        let migrator = env_config.migrator().await?;
-        let diff = WorldDiff::from_path(target_dir.clone(), &world_config, &env_config).await?;
-        let mut migration = prepare_for_migration(target_dir, diff, world_config)?;
-        migration
-            .execute(migrator)
-            .await
-            .map_err(|e| anyhow!("Problem when tyring to migrate: {e}"))
-    })?;
+    ws.config().tokio_handle().block_on(migration::execute(
+        world_config,
+        env_config,
+        target_dir,
+        ws.config(),
+    ))?;
 
     Ok(())
 }

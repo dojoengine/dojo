@@ -1,4 +1,7 @@
 use clap::{Parser, Subcommand};
+use scarb::ui;
+use tracing::level_filters::LevelFilter;
+use tracing_log::AsTrace;
 
 use self::build::BuildArgs;
 use self::init::InitArgs;
@@ -29,4 +32,15 @@ pub enum Commands {
 pub struct App {
     #[command(subcommand)]
     pub command: Commands,
+}
+
+pub(crate) fn ui_verbosity_from_flag(verbose: clap_verbosity_flag::Verbosity) -> ui::Verbosity {
+    let filter = verbose.log_level_filter().as_trace();
+    if filter >= LevelFilter::WARN {
+        ui::Verbosity::Verbose
+    } else if filter > LevelFilter::OFF {
+        ui::Verbosity::Normal
+    } else {
+        ui::Verbosity::Quiet
+    }
 }
