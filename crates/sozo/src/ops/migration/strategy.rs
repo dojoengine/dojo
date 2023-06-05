@@ -88,7 +88,7 @@ fn evaluate_systems_to_migrate(
         match s.remote {
             Some(remote) if remote == s.local && !world_contract_will_migrate => continue,
             _ => {
-                let path = find_artifact_path(&format!("{}", s.name), artifact_paths)?;
+                let path = find_artifact_path(&s.name, artifact_paths)?;
                 syst_to_migrate
                     .push(ClassMigration { class: s.clone(), artifact_path: path.clone() });
             }
