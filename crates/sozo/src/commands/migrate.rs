@@ -6,11 +6,12 @@ use clap::Args;
 use dotenv::dotenv;
 use scarb::core::Config;
 use scarb::ops;
-use scarb::ui::Verbosity;
 
 use crate::commands::build::{self, BuildArgs, ProfileSpec};
 use crate::ops::migration;
 use crate::ops::migration::config::{EnvironmentConfig, WorldConfig};
+
+use super::ui_verbosity_from_flag;
 
 #[derive(Args)]
 pub struct MigrateArgs {
@@ -23,6 +24,10 @@ pub struct MigrateArgs {
 
     #[command(flatten)]
     profile_spec: ProfileSpec,
+
+    #[clap(help = "Logging verbosity.")]
+    #[command(flatten)]
+    pub verbose: clap_verbosity_flag::Verbosity,
 }
 
 pub fn run(args: MigrateArgs) -> Result<()> {
@@ -45,7 +50,7 @@ pub fn run(args: MigrateArgs) -> Result<()> {
 
     let manifest_path = source_dir.join("Scarb.toml");
     let config = Config::builder(manifest_path)
-        .ui_verbosity(Verbosity::Verbose)
+        .ui_verbosity(ui_verbosity_from_flag(args.verbose))
         .log_filter_directive(env::var_os("SCARB_LOG"))
         .build()
         .unwrap();
