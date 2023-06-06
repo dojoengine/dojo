@@ -27,7 +27,6 @@ fn spawn_test_world(
 
     // deploy world
     let mut world_constructor_calldata = array::ArrayTrait::new();
-    world_constructor_calldata.append('World');
     world_constructor_calldata.append(executor_address.into());
     let (world_address, _) = deploy_syscall(
         World::TEST_CLASS_HASH.try_into().unwrap(), 0, world_constructor_calldata.span(), false
