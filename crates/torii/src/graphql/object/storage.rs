@@ -1,8 +1,8 @@
-use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
+use async_graphql::dynamic::{Field, FieldFuture, FieldValue, TypeRef};
 use async_graphql::{Name, Value};
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
-use sqlx::{Error, Pool, QueryBuilder, Result, Row, Sqlite};
+use sqlx::{Error, Pool, Result, Row, Sqlite};
 
 use super::component::ComponentMembers;
 use super::{ObjectTrait, TypeMapping, ValueMapping};

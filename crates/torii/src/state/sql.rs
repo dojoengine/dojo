@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use dojo_world::manifest::{Component, Manifest, Member, System};
+use dojo_world::manifest::{Component, Manifest, System};
 use sqlx::pool::PoolConnection;
-use sqlx::{Execute, Executor, Pool, QueryBuilder, Row, Sqlite};
+use sqlx::{Executor, Pool, QueryBuilder, Sqlite};
 use starknet::core::types::FieldElement;
 
 use super::State;
@@ -129,7 +129,7 @@ impl State for Sql {
         values: HashMap<String, FieldElement>,
     ) -> Result<()> {
         let mut conn = self.pool.acquire().await?;
-        let mut builder: QueryBuilder<Sqlite> =
+        let mut builder: QueryBuilder<'_, Sqlite> =
             QueryBuilder::new(format!("INSERT INTO {} (", component));
 
         let mut separated = builder.separated(", ");
