@@ -1,5 +1,8 @@
+use anyhow::Result;
 use clap::{Parser, Subcommand};
+use scarb::compiler::Profile;
 use scarb::ui;
+use smol_str::SmolStr;
 use tracing::level_filters::LevelFilter;
 use tracing_log::AsTrace;
 
@@ -32,6 +35,34 @@ pub enum Commands {
 pub struct App {
     #[command(subcommand)]
     pub command: Commands,
+}
+
+/// Profile specifier.
+#[derive(Parser, Clone, Debug)]
+#[group(multiple = false)]
+pub struct ProfileSpec {
+    #[arg(short = 'P', long)]
+    #[arg(help = "Specify profile to use by name.")]
+    pub profile: Option<SmolStr>,
+
+    #[arg(long, hide_short_help = true)]
+    #[arg(help = "Use release profile.")]
+    pub release: bool,
+
+    #[arg(long, hide_short_help = true)]
+    #[arg(help = "Use dev profile.")]
+    pub dev: bool,
+}
+
+impl ProfileSpec {
+    pub fn determine(&self) -> Result<Profile> {
+        Ok(match &self {
+            Self { release: true, .. } => Profile::RELEASE,
+            Self { dev: true, .. } => Profile::DEV,
+            Self { profile: Some(profile), .. } => Profile::new(profile.clone())?,
+            _ => Profile::default(),
+        })
+    }
 }
 
 pub(crate) fn ui_verbosity_from_flag(verbose: clap_verbosity_flag::Verbosity) -> ui::Verbosity {

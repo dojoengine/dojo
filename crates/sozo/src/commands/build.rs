@@ -1,52 +1,27 @@
 use std::env::{self, current_dir};
 
-use anyhow::Result;
 use camino::Utf8PathBuf;
-use clap::{Args, Parser};
+use clap::Args;
 use dojo_lang::compiler::DojoCompiler;
 use dojo_lang::plugin::CairoPluginRepository;
-use scarb::compiler::{CompilerRepository, Profile};
+use scarb::compiler::CompilerRepository;
 use scarb::core::Config;
 use scarb::ops;
-use scarb::ui::Verbosity;
-use smol_str::SmolStr;
+
+use super::{ui_verbosity_from_flag, ProfileSpec};
 
 #[derive(Args, Debug)]
 pub struct BuildArgs {
     #[clap(help = "Source directory")]
     pub path: Option<Utf8PathBuf>,
 
-    /// Specify the profile to use.
+    #[clap(help = "Specify the profile to use.")]
     #[command(flatten)]
     pub profile_spec: ProfileSpec,
-}
 
-/// Profile specifier.
-#[derive(Parser, Clone, Debug)]
-#[group(multiple = false)]
-pub struct ProfileSpec {
-    #[arg(short = 'P', long)]
-    #[arg(help = "Specify profile to use by name.")]
-    pub profile: Option<SmolStr>,
-
-    #[arg(long, hide_short_help = true)]
-    #[arg(help = "Use release profile.")]
-    pub release: bool,
-
-    #[arg(long, hide_short_help = true)]
-    #[arg(help = "Use dev profile.")]
-    pub dev: bool,
-}
-
-impl ProfileSpec {
-    pub fn determine(&self) -> Result<Profile> {
-        Ok(match &self {
-            Self { release: true, .. } => Profile::RELEASE,
-            Self { dev: true, .. } => Profile::DEV,
-            Self { profile: Some(profile), .. } => Profile::new(profile.clone())?,
-            _ => Profile::default(),
-        })
-    }
+    #[clap(help = "Logging verbosity.")]
+    #[command(flatten)]
+    pub verbose: clap_verbosity_flag::Verbosity,
 }
 
 pub fn run(args: BuildArgs) -> anyhow::Result<()> {
@@ -70,7 +45,7 @@ pub fn run(args: BuildArgs) -> anyhow::Result<()> {
 
     let manifest_path = source_dir.join("Scarb.toml");
     let config = Config::builder(manifest_path)
-        .ui_verbosity(Verbosity::Verbose)
+        .ui_verbosity(ui_verbosity_from_flag(args.verbose))
         .log_filter_directive(env::var_os("SCARB_LOG"))
         .compilers(compilers)
         .cairo_plugins(cairo_plugins.into())
