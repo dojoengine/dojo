@@ -108,10 +108,10 @@ pub trait Deployable: Declarable + Sync {
 
         let calldata = [
             vec![
-                declare_res.class_hash,                             // class hash
-                FieldElement::ZERO,                                 // salt
-                FieldElement::ZERO,                                 // unique
-                FieldElement::from(constructor_calldata.len() + 1), // constructor calldata len
+                declare_res.class_hash,                         // class hash
+                FieldElement::ZERO,                             // salt
+                FieldElement::ZERO,                             // unique
+                FieldElement::from(constructor_calldata.len()), // constructor calldata len
             ],
             constructor_calldata.clone(),
         ]

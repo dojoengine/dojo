@@ -104,7 +104,7 @@ where
             let res = executor
                 .deploy(vec![], &migrator)
                 .await
-                .map_err(|e| anyhow!("Failed to migrate executor: {e}"))?;
+                .map_err(|e| anyhow!("Failed to deploy Executor: {e}"))?;
 
             ws_config.ui().verbose(
                 Paint::new(format!(
@@ -148,7 +148,7 @@ where
                     &migrator,
                 )
                 .await
-                .map_err(|e| anyhow!(e))?;
+                .map_err(|e| anyhow!("Failed to deploy World: {e}"))?;
 
             ws_config.ui().verbose(
                 Paint::new(format!(
