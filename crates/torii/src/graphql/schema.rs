@@ -1,16 +1,14 @@
 use anyhow::Result;
 use async_graphql::dynamic::{Object, Scalar, Schema};
-use async_graphql::Name;
-use sqlx::pool::PoolConnection;
-use sqlx::{Sqlite, SqlitePool};
+use sqlx::SqlitePool;
 
-use super::object::component::{Component, ComponentMembers, ComponentObject};
+use super::object::component::{Component, ComponentObject};
 use super::object::entity::EntityObject;
 use super::object::event::EventObject;
 use super::object::storage::{type_mapping_from, StorageObject};
 use super::object::system::SystemObject;
 use super::object::system_call::SystemCallObject;
-use super::object::{ObjectTrait, TypeMapping};
+use super::object::ObjectTrait;
 use super::types::ScalarType;
 use super::utils::format_name;
 

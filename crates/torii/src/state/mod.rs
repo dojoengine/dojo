@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use dojo_world::manifest::{Component, Manifest, System};
 use starknet::core::types::FieldElement;
 
-pub mod memory;
+// pub mod memory;
 pub mod sql;
 
 #[async_trait]
