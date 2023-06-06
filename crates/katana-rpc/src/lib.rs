@@ -8,7 +8,6 @@ use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
 use katana::api::KatanaApiServer;
 use katana::KatanaRpc;
 use katana_core::sequencer::Sequencer;
-use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};
 
 pub mod config;
@@ -22,14 +21,14 @@ use self::starknet::StarknetRpc;
 #[derive(Debug, Clone)]
 pub struct KatanaNodeRpc<S> {
     pub config: RpcConfig,
-    pub sequencer: Arc<RwLock<S>>,
+    pub sequencer: Arc<S>,
 }
 
 impl<S> KatanaNodeRpc<S>
 where
     S: Sequencer + Send + Sync + 'static,
 {
-    pub fn new(sequencer: Arc<RwLock<S>>, config: RpcConfig) -> Self {
+    pub fn new(sequencer: Arc<S>, config: RpcConfig) -> Self {
         Self { config, sequencer }
     }
 

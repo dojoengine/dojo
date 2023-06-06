@@ -1,4 +1,7 @@
+use std::sync::Arc;
+
 use anyhow::Result;
+use async_trait::async_trait;
 use blockifier::abi::abi_utils::get_storage_var_address;
 use blockifier::execution::contract_class::ContractClass;
 use blockifier::fee::fee_utils::{calculate_l1_gas_by_vm_usage, extract_l1_gas_and_vm_usage};
@@ -16,6 +19,7 @@ use starknet_api::transaction::{
     Calldata, ContractAddressSalt, DeployAccountTransaction, Fee,
     Transaction as StarknetApiTransaction, TransactionHash, TransactionSignature,
 };
+use tokio::sync::RwLock;
 
 use crate::sequencer_error::SequencerError;
 use crate::starknet::block::StarknetBlock;
@@ -28,23 +32,23 @@ use crate::util::starkfelt_to_u128;
 type SequencerResult<T> = Result<T, SequencerError>;
 
 pub struct KatanaSequencer {
-    pub starknet: StarknetWrapper,
+    pub starknet: Arc<RwLock<StarknetWrapper>>,
 }
 
 impl KatanaSequencer {
     pub fn new(config: StarknetConfig) -> Self {
-        Self { starknet: StarknetWrapper::new(config) }
+        Self { starknet: Arc::new(RwLock::new(StarknetWrapper::new(config))) }
     }
 
     // The starting point of the sequencer
     // Once we add support periodic block generation, the logic should be here.
-    pub fn start(&mut self) {
-        self.starknet.generate_genesis_block();
-        self.starknet.generate_pending_block();
+    pub async fn start(&self) {
+        self.starknet.write().await.generate_genesis_block();
+        self.starknet.write().await.generate_pending_block();
     }
 
-    pub fn drip_and_deploy_account(
-        &mut self,
+    pub async fn drip_and_deploy_account(
+        &self,
         class_hash: ClassHash,
         contract_address_salt: ContractAddressSalt,
         constructor_calldata: Calldata,
@@ -63,44 +67,59 @@ impl KatanaSequencer {
             get_storage_var_address("ERC20_balances", &[*contract_address.0.key()])
                 .map_err(SequencerError::StarknetApi)?;
 
-        self.starknet.pending_state.set_storage_at(
-            self.starknet.block_context.fee_token_address,
+        self.starknet.write().await.pending_state.set_storage_at(
+            self.starknet.read().await.block_context.fee_token_address,
             deployed_account_balance_key,
             stark_felt!(balance),
         );
 
         self.deploy_account(class_hash, contract_address_salt, constructor_calldata, signature)
+            .await
     }
 
-    pub fn state_from_block_id(&mut self, block_id: BlockId) -> Option<DictStateReader> {
+    pub async fn state_from_block_id(&self, block_id: BlockId) -> Option<DictStateReader> {
         match block_id {
-            BlockId::Tag(BlockTag::Latest) => Some(self.starknet.latest_state()),
-            BlockId::Tag(BlockTag::Pending) => Some(self.starknet.pending_state()),
-            _ => self.block_number_from_block_id(block_id).and_then(|n| self.starknet.state(n)),
+            BlockId::Tag(BlockTag::Latest) => Some(self.starknet.write().await.latest_state()),
+            BlockId::Tag(BlockTag::Pending) => Some(self.starknet.write().await.pending_state()),
+            _ => {
+                if let Some(number) = self.block_number_from_block_id(block_id).await {
+                    self.starknet.read().await.state(number)
+                } else {
+                    None
+                }
+            }
         }
     }
 
-    pub fn block_number_from_block_id(&self, block_id: BlockId) -> Option<BlockNumber> {
+    pub async fn block_number_from_block_id(&self, block_id: BlockId) -> Option<BlockNumber> {
         match block_id {
             BlockId::Number(number) => Some(BlockNumber(number)),
 
-            BlockId::Hash(hash) => {
-                self.starknet.blocks.hash_to_num.get(&BlockHash(StarkFelt::from(hash))).cloned()
-            }
+            BlockId::Hash(hash) => self
+                .starknet
+                .read()
+                .await
+                .blocks
+                .hash_to_num
+                .get(&BlockHash(StarkFelt::from(hash)))
+                .cloned(),
 
             BlockId::Tag(BlockTag::Pending) => None,
-            BlockId::Tag(BlockTag::Latest) => self.starknet.blocks.current_block_number(),
+            BlockId::Tag(BlockTag::Latest) => {
+                self.starknet.write().await.blocks.current_block_number()
+            }
         }
     }
 
-    pub(self) fn verify_contract_exists(&self, contract_address: &ContractAddress) -> bool {
-        self.starknet.state.address_to_class_hash.contains_key(contract_address)
+    pub(self) async fn verify_contract_exists(&self, contract_address: &ContractAddress) -> bool {
+        self.starknet.write().await.state.address_to_class_hash.contains_key(contract_address)
     }
 }
 
+#[async_trait]
 impl Sequencer for KatanaSequencer {
-    fn deploy_account(
-        &mut self,
+    async fn deploy_account(
+        &self,
         class_hash: ClassHash,
         contract_address_salt: ContractAddressSalt,
         constructor_calldata: Calldata,
@@ -120,8 +139,13 @@ impl Sequencer for KatanaSequencer {
 
         let max_fee = {
             self.starknet
+                .write()
+                .await
                 .state
-                .get_storage_at(self.starknet.block_context.fee_token_address, account_balance_key)
+                .get_storage_at(
+                    self.starknet.read().await.block_context.fee_token_address,
+                    account_balance_key,
+                )
                 .map_err(SequencerError::State)?
         };
         // TODO: Compute txn hash
@@ -144,22 +168,28 @@ impl Sequencer for KatanaSequencer {
             })?),
         });
 
-        tx.execute(&mut self.starknet.pending_state, &self.starknet.block_context)
-            .map_err(SequencerError::TransactionExecution)?;
+        tx.execute(
+            &mut self.starknet.write().await.pending_state,
+            &self.starknet.read().await.block_context,
+        )
+        .map_err(SequencerError::TransactionExecution)?;
 
         Ok((tx_hash, contract_address))
     }
 
-    fn add_account_transaction(&mut self, transaction: AccountTransaction) {
-        self.starknet.handle_transaction(Transaction::AccountTransaction(transaction));
+    async fn add_account_transaction(&self, transaction: AccountTransaction) {
+        self.starknet
+            .write()
+            .await
+            .handle_transaction(Transaction::AccountTransaction(transaction));
     }
 
-    fn estimate_fee(
-        &mut self,
+    async fn estimate_fee(
+        &self,
         account_transaction: AccountTransaction,
         block_id: BlockId,
     ) -> SequencerResult<FeeEstimate> {
-        if self.block(block_id).is_none() {
+        if self.block(block_id).await.is_none() {
             return Err(SequencerError::BlockNotFound(block_id));
         }
 
@@ -169,169 +199,191 @@ impl Sequencer for KatanaSequencer {
             AccountTransaction::DeployAccount(tx) => tx.contract_address,
         };
 
-        if !self.verify_contract_exists(&sender) {
+        if !self.verify_contract_exists(&sender).await {
             return Err(SequencerError::ContractNotFound(sender));
         }
 
-        let state =
-            self.state_from_block_id(block_id).ok_or(SequencerError::StateNotFound(block_id))?;
+        let state = self
+            .state_from_block_id(block_id)
+            .await
+            .ok_or(SequencerError::StateNotFound(block_id))?;
 
         let exec_info = self
             .starknet
+            .write()
+            .await
             .simulate_transaction(account_transaction, Some(state))
             .map_err(SequencerError::TransactionExecution)?;
 
         let (l1_gas_usage, vm_resources) = extract_l1_gas_and_vm_usage(&exec_info.actual_resources);
         let l1_gas_by_vm_usage =
-            calculate_l1_gas_by_vm_usage(&self.starknet.block_context, &vm_resources)
+            calculate_l1_gas_by_vm_usage(&self.starknet.read().await.block_context, &vm_resources)
                 .map_err(SequencerError::TransactionExecution)?;
 
         let total_l1_gas_usage = l1_gas_usage as f64 + l1_gas_by_vm_usage;
 
         Ok(FeeEstimate {
             overall_fee: total_l1_gas_usage.ceil() as u64
-                * self.starknet.block_context.gas_price as u64,
+                * self.starknet.read().await.block_context.gas_price as u64,
             gas_consumed: total_l1_gas_usage.ceil() as u64,
-            gas_price: self.starknet.block_context.gas_price as u64,
+            gas_price: self.starknet.read().await.block_context.gas_price as u64,
         })
     }
 
-    fn block_hash_and_number(&self) -> Option<(BlockHash, BlockNumber)> {
-        let block = self.starknet.blocks.latest()?;
+    async fn block_hash_and_number(&self) -> Option<(BlockHash, BlockNumber)> {
+        let block = self.starknet.read().await.blocks.latest()?;
         Some((block.block_hash(), block.block_number()))
     }
 
-    fn class_hash_at(
-        &mut self,
+    async fn class_hash_at(
+        &self,
         block_id: BlockId,
         contract_address: ContractAddress,
     ) -> SequencerResult<ClassHash> {
-        if self.block(block_id).is_none() {
+        if self.block(block_id).await.is_none() {
             return Err(SequencerError::BlockNotFound(block_id));
         }
 
-        if !self.verify_contract_exists(&contract_address) {
+        if !self.verify_contract_exists(&contract_address).await {
             return Err(SequencerError::ContractNotFound(contract_address));
         }
 
-        let mut state =
-            self.state_from_block_id(block_id).ok_or(SequencerError::StateNotFound(block_id))?;
+        let mut state = self
+            .state_from_block_id(block_id)
+            .await
+            .ok_or(SequencerError::StateNotFound(block_id))?;
 
         state.get_class_hash_at(contract_address).map_err(SequencerError::State)
     }
 
-    fn class(
-        &mut self,
+    async fn class(
+        &self,
         block_id: BlockId,
         class_hash: ClassHash,
     ) -> SequencerResult<ContractClass> {
-        if self.block(block_id).is_none() {
+        if self.block(block_id).await.is_none() {
             return Err(SequencerError::BlockNotFound(block_id));
         }
 
-        let mut state =
-            self.state_from_block_id(block_id).ok_or(SequencerError::StateNotFound(block_id))?;
+        let mut state = self
+            .state_from_block_id(block_id)
+            .await
+            .ok_or(SequencerError::StateNotFound(block_id))?;
 
         state.get_compiled_contract_class(&class_hash).map_err(SequencerError::State)
     }
 
-    fn storage_at(
-        &mut self,
+    async fn storage_at(
+        &self,
         contract_address: ContractAddress,
         storage_key: StorageKey,
         block_id: BlockId,
     ) -> SequencerResult<StarkFelt> {
-        if self.block(block_id).is_none() {
+        if self.block(block_id).await.is_none() {
             return Err(SequencerError::BlockNotFound(block_id));
         }
 
-        if !self.verify_contract_exists(&contract_address) {
+        if !self.verify_contract_exists(&contract_address).await {
             return Err(SequencerError::ContractNotFound(contract_address));
         }
 
-        let mut state =
-            self.state_from_block_id(block_id).ok_or(SequencerError::StateNotFound(block_id))?;
+        let mut state = self
+            .state_from_block_id(block_id)
+            .await
+            .ok_or(SequencerError::StateNotFound(block_id))?;
 
         state.get_storage_at(contract_address, storage_key).map_err(SequencerError::State)
     }
 
-    fn chain_id(&self) -> ChainId {
-        self.starknet.block_context.chain_id.clone()
+    async fn chain_id(&self) -> ChainId {
+        self.starknet.read().await.block_context.chain_id.clone()
     }
 
-    fn block_number(&self) -> BlockNumber {
-        self.starknet.block_context.block_number
+    async fn block_number(&self) -> BlockNumber {
+        self.starknet.read().await.block_context.block_number
     }
 
-    fn block(&self, block_id: BlockId) -> Option<StarknetBlock> {
+    async fn block(&self, block_id: BlockId) -> Option<StarknetBlock> {
         match block_id {
-            BlockId::Tag(BlockTag::Pending) => self.starknet.blocks.pending_block.clone(),
-            _ => self
-                .block_number_from_block_id(block_id)
-                .and_then(|n| self.starknet.blocks.by_number(n)),
+            BlockId::Tag(BlockTag::Pending) => {
+                self.starknet.read().await.blocks.pending_block.clone()
+            }
+            _ => {
+                if let Some(number) = self.block_number_from_block_id(block_id).await {
+                    self.starknet.read().await.blocks.by_number(number)
+                } else {
+                    None
+                }
+            }
         }
     }
 
-    fn nonce_at(
-        &mut self,
+    async fn nonce_at(
+        &self,
         block_id: BlockId,
         contract_address: ContractAddress,
     ) -> SequencerResult<Nonce> {
-        if self.block(block_id).is_none() {
+        if self.block(block_id).await.is_none() {
             return Err(SequencerError::BlockNotFound(block_id));
         }
 
-        if !self.verify_contract_exists(&contract_address) {
+        if !self.verify_contract_exists(&contract_address).await {
             return Err(SequencerError::ContractNotFound(contract_address));
         }
 
-        let mut state =
-            self.state_from_block_id(block_id).ok_or(SequencerError::StateNotFound(block_id))?;
+        let mut state = self
+            .state_from_block_id(block_id)
+            .await
+            .ok_or(SequencerError::StateNotFound(block_id))?;
 
         state.get_nonce_at(contract_address).map_err(SequencerError::State)
     }
 
-    fn call(
-        &mut self,
+    async fn call(
+        &self,
         block_id: BlockId,
         function_call: ExternalFunctionCall,
     ) -> SequencerResult<Vec<StarkFelt>> {
-        if self.block(block_id).is_none() {
+        if self.block(block_id).await.is_none() {
             return Err(SequencerError::BlockNotFound(block_id));
         }
 
-        if !self.verify_contract_exists(&function_call.contract_address) {
+        if !self.verify_contract_exists(&function_call.contract_address).await {
             return Err(SequencerError::ContractNotFound(function_call.contract_address));
         }
 
-        let state =
-            self.state_from_block_id(block_id).ok_or(SequencerError::StateNotFound(block_id))?;
+        let state = self
+            .state_from_block_id(block_id)
+            .await
+            .ok_or(SequencerError::StateNotFound(block_id))?;
 
         self.starknet
+            .write()
+            .await
             .call(function_call, Some(state))
             .map_err(SequencerError::EntryPointExecution)
             .map(|execution_info| execution_info.execution.retdata.0)
     }
 
-    fn transaction_status(&self, hash: &TransactionHash) -> Option<TransactionStatus> {
-        self.starknet.transactions.by_hash(hash).map(|tx| tx.status)
+    async fn transaction_status(&self, hash: &TransactionHash) -> Option<TransactionStatus> {
+        self.starknet.read().await.transactions.by_hash(hash).map(|tx| tx.status)
     }
 
-    fn transaction_receipt(
+    async fn transaction_receipt(
         &self,
         hash: &TransactionHash,
     ) -> Option<starknet_api::transaction::TransactionReceipt> {
-        self.starknet.transactions.by_hash(hash).map(|tx| tx.receipt())
+        self.starknet.read().await.transactions.by_hash(hash).map(|tx| tx.receipt())
     }
 
-    fn transaction(
+    async fn transaction(
         &self,
         hash: &TransactionHash,
     ) -> Option<starknet_api::transaction::Transaction> {
-        self.starknet.transactions.by_hash(hash).map(|tx| tx.inner.clone())
+        self.starknet.read().await.transactions.by_hash(hash).map(|tx| tx.inner.clone())
     }
 
-    fn events(
+    async fn events(
         &self,
         from_block: BlockId,
         to_block: BlockId,
@@ -342,16 +394,20 @@ impl Sequencer for KatanaSequencer {
     ) -> SequencerResult<Vec<EmittedEvent>> {
         let from_block = self
             .block_number_from_block_id(from_block)
+            .await
             .ok_or(SequencerError::BlockNotFound(from_block))?;
 
         let to_block = self
             .block_number_from_block_id(to_block)
+            .await
             .ok_or(SequencerError::BlockNotFound(to_block))?;
 
         let mut events = Vec::new();
         for i in from_block.0..to_block.0 {
             let block = self
                 .starknet
+                .read()
+                .await
                 .blocks
                 .by_number(BlockNumber(i))
                 .ok_or(SequencerError::BlockNotFound(BlockId::Number(i)))?;
@@ -362,8 +418,8 @@ impl Sequencer for KatanaSequencer {
                     _ => continue,
                 }
 
-                let sn_tx = self
-                    .starknet
+                let sn = self.starknet.read().await;
+                let sn_tx = sn
                     .transactions
                     .transactions
                     .get(&tx.transaction_hash())
@@ -419,89 +475,98 @@ impl Sequencer for KatanaSequencer {
         Ok(events)
     }
 
-    fn state_update(&self, block_id: BlockId) -> SequencerResult<StateUpdate> {
+    async fn state_update(&self, block_id: BlockId) -> SequencerResult<StateUpdate> {
         let block_number = self
             .block_number_from_block_id(block_id)
+            .await
             .ok_or(SequencerError::BlockNotFound(block_id))?;
 
         self.starknet
+            .read()
+            .await
             .blocks
             .get_state_update(block_number)
             .ok_or(SequencerError::StateUpdateNotFound(block_id))
     }
 
-    fn generate_new_block(&mut self) {
-        self.starknet.generate_latest_block();
-        self.starknet.generate_pending_block();
+    async fn generate_new_block(&self) {
+        self.starknet.write().await.generate_latest_block();
+        self.starknet.write().await.generate_pending_block();
     }
 }
 
+#[async_trait]
 pub trait Sequencer {
-    fn chain_id(&self) -> ChainId;
+    async fn chain_id(&self) -> ChainId;
 
-    fn generate_new_block(&mut self);
+    async fn generate_new_block(&self);
 
-    fn transaction_receipt(
+    async fn transaction_receipt(
         &self,
         hash: &TransactionHash,
     ) -> Option<starknet_api::transaction::TransactionReceipt>;
 
-    fn transaction_status(&self, hash: &TransactionHash) -> Option<TransactionStatus>;
+    async fn transaction_status(&self, hash: &TransactionHash) -> Option<TransactionStatus>;
 
-    fn nonce_at(
-        &mut self,
+    async fn nonce_at(
+        &self,
         block_id: BlockId,
         contract_address: ContractAddress,
     ) -> SequencerResult<Nonce>;
 
-    fn block_number(&self) -> BlockNumber;
+    async fn block_number(&self) -> BlockNumber;
 
-    fn block(&self, block_id: BlockId) -> Option<StarknetBlock>;
+    async fn block(&self, block_id: BlockId) -> Option<StarknetBlock>;
 
-    fn transaction(&self, hash: &TransactionHash)
-    -> Option<starknet_api::transaction::Transaction>;
+    async fn transaction(
+        &self,
+        hash: &TransactionHash,
+    ) -> Option<starknet_api::transaction::Transaction>;
 
-    fn class_hash_at(
-        &mut self,
+    async fn class_hash_at(
+        &self,
         block_id: BlockId,
         contract_address: ContractAddress,
     ) -> SequencerResult<ClassHash>;
 
-    fn class(&mut self, block_id: BlockId, class_hash: ClassHash)
-    -> SequencerResult<ContractClass>;
+    async fn class(
+        &self,
+        block_id: BlockId,
+        class_hash: ClassHash,
+    ) -> SequencerResult<ContractClass>;
 
-    fn block_hash_and_number(&self) -> Option<(BlockHash, BlockNumber)>;
+    async fn block_hash_and_number(&self) -> Option<(BlockHash, BlockNumber)>;
 
-    fn call(
-        &mut self,
+    async fn call(
+        &self,
         block_id: BlockId,
         function_call: ExternalFunctionCall,
     ) -> SequencerResult<Vec<StarkFelt>>;
 
-    fn storage_at(
-        &mut self,
+    async fn storage_at(
+        &self,
         contract_address: ContractAddress,
         storage_key: StorageKey,
         block_id: BlockId,
     ) -> SequencerResult<StarkFelt>;
 
-    fn deploy_account(
-        &mut self,
+    async fn deploy_account(
+        &self,
         class_hash: ClassHash,
         contract_address_salt: ContractAddressSalt,
         constructor_calldata: Calldata,
         signature: TransactionSignature,
     ) -> SequencerResult<(TransactionHash, ContractAddress)>;
 
-    fn add_account_transaction(&mut self, transaction: AccountTransaction);
+    async fn add_account_transaction(&self, transaction: AccountTransaction);
 
-    fn estimate_fee(
-        &mut self,
+    async fn estimate_fee(
+        &self,
         account_transaction: AccountTransaction,
         block_id: BlockId,
     ) -> SequencerResult<FeeEstimate>;
 
-    fn events(
+    async fn events(
         &self,
         from_block: BlockId,
         to_block: BlockId,
@@ -511,5 +576,5 @@ pub trait Sequencer {
         _chunk_size: u64,
     ) -> SequencerResult<Vec<EmittedEvent>>;
 
-    fn state_update(&self, block_id: BlockId) -> SequencerResult<StateUpdate>;
+    async fn state_update(&self, block_id: BlockId) -> SequencerResult<StateUpdate>;
 }
