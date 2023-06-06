@@ -740,13 +740,17 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
                             tx.signature.into_iter().map(StarkFelt::from).collect(),
                         ),
                     };
-                    AccountTransaction::Declare(DeclareTransaction {
-                        tx: starknet_api::transaction::DeclareTransaction::V1(transaction),
-                        contract_class: blockifier::execution::contract_class::ContractClass::V0(
-                            contract_class,
-                        ),
-                    })
+                    AccountTransaction::Declare(
+                        DeclareTransaction::new(
+                            starknet_api::transaction::DeclareTransaction::V1(transaction),
+                            blockifier::execution::contract_class::ContractClass::V0(
+                                contract_class,
+                            ),
+                        )
+                        .map_err(|_| Error::from(StarknetApiError::InvalidContractClass))?,
+                    )
                 }
+
                 BroadcastedTransaction::Declare(BroadcastedDeclareTransaction::V2(tx)) => {
                     let raw_class_str = serde_json::to_string(&tx.contract_class)?;
                     let class_hash = serde_json::from_str::<FlattenedSierraClass>(&raw_class_str)
@@ -787,7 +791,7 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
                                 contract_class,
                             ),
                         )
-                        .map_err(|_| Error::from(StarknetApiError::FailedToReceiveTxn))?,
+                        .map_err(|_| Error::from(StarknetApiError::InvalidContractClass))?,
                     )
                 }
 
@@ -883,12 +887,15 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
                 (
                     transaction_hash,
                     class_hash,
-                    AccountTransaction::Declare(DeclareTransaction {
-                        tx: starknet_api::transaction::DeclareTransaction::V1(transaction),
-                        contract_class: blockifier::execution::contract_class::ContractClass::V0(
-                            contract_class,
-                        ),
-                    }),
+                    AccountTransaction::Declare(
+                        DeclareTransaction::new(
+                            starknet_api::transaction::DeclareTransaction::V1(transaction),
+                            blockifier::execution::contract_class::ContractClass::V0(
+                                contract_class,
+                            ),
+                        )
+                        .map_err(|_| Error::from(StarknetApiError::InvalidContractClass))?,
+                    ),
                 )
             }
             BroadcastedDeclareTransaction::V2(tx) => {
