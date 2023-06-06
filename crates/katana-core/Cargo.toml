@@ -8,6 +8,7 @@ description = "Katana core implementation."
 
 [dependencies]
 anyhow.workspace = true
+async-trait.workspace = true
 blockifier.workspace = true
 futures = "0.3"
 tokio.workspace = true
