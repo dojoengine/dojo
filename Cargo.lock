@@ -2981,7 +2981,6 @@ dependencies = [
  "cairo-lang-project",
  "cairo-lang-starknet",
  "camino",
- "dojo-lang",
  "dojo-test-utils",
  "reqwest",
  "scarb",
