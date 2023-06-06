@@ -85,6 +85,13 @@ pub struct Output {
     pub ty: String,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct Dependency {
+    pub name: SmolStr,
+    pub read: bool,
+    pub write: bool,
+}
+
 /// Represents a declaration of a system.
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
@@ -94,7 +101,7 @@ pub struct System {
     pub outputs: Vec<Output>,
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
-    pub dependencies: Vec<String>,
+    pub dependencies: Vec<Dependency>,
 }
 
 #[serde_as]

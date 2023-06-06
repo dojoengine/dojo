@@ -278,10 +278,10 @@ mod Spawn {
     }
 
     #[view]
-    fn dependencies() -> Array<dojo_core::string::ShortString> {
+    fn dependencies() -> Array<(dojo_core::string::ShortString, bool)> {
         let mut arr = array::ArrayTrait::new();
-        array::ArrayTrait::append(ref arr, 'Player'.into());
-        array::ArrayTrait::append(ref arr, 'Position'.into());
+        array::ArrayTrait::append(ref arr, ('Player'.into(), true));
+        array::ArrayTrait::append(ref arr, ('Position'.into(), true));
 
         arr
     }
@@ -491,8 +491,10 @@ mod Move {
     }
 
     #[view]
-    fn dependencies() -> Array<dojo_core::string::ShortString> {
+    fn dependencies() -> Array<(dojo_core::string::ShortString, bool)> {
         let mut arr = array::ArrayTrait::new();
+        array::ArrayTrait::append(ref arr, ('Player'.into(), false));
+        array::ArrayTrait::append(ref arr, ('Position'.into(), false));
 
         arr
     }
@@ -1135,7 +1137,7 @@ mod Proxy {
     }
 
     #[view]
-    fn dependencies() -> Array<dojo_core::string::ShortString> {
+    fn dependencies() -> Array<(dojo_core::string::ShortString, bool)> {
         let mut arr = array::ArrayTrait::new();
 
         arr

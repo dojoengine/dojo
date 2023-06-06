@@ -130,18 +130,15 @@ impl Manifest {
                         .with_context(|| format!("Contract {name} not found in target."))
                         .unwrap();
 
-                    // Remove the `System` suffix from the name to push in System struct.
-                    let name_temp: String = name.clone().into();
-
                     self.0.systems.push(System {
-                        name: name_temp.strip_suffix("System").unwrap_or(&name_temp).into(),
+                        name: name.clone(),
                         inputs,
                         outputs,
                         class_hash: *class_hash,
                         dependencies: dependencies
                             .iter()
-                            .map(|s| s.to_string())
-                            .sorted_by(|a, b| a.cmp(b))
+                            .sorted_by(|a, b| a.name.cmp(&b.name))
+                            .cloned()
                             .collect::<Vec<_>>(),
                     });
                 }

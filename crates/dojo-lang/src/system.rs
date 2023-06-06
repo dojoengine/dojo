@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use cairo_lang_defs::plugin::{
     DynGeneratedFileAuxData, PluginDiagnostic, PluginGeneratedFile, PluginResult,
@@ -9,6 +9,7 @@ use cairo_lang_syntax::node::ast::MaybeModuleBody;
 use cairo_lang_syntax::node::ast::OptionReturnTypeClause::ReturnTypeClause;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
+use dojo_world::manifest::Dependency;
 use itertools::Itertools;
 
 use crate::commands::Command;
@@ -16,13 +17,13 @@ use crate::plugin::{DojoAuxData, SystemAuxData};
 
 pub struct System {
     diagnostics: Vec<PluginDiagnostic>,
-    dependencies: HashSet<smol_str::SmolStr>,
+    dependencies: HashMap<smol_str::SmolStr, Dependency>,
 }
 
 impl System {
     pub fn from_module(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult {
         let name = module_ast.name(db).text(db);
-        let mut system = System { diagnostics: vec![], dependencies: HashSet::new() };
+        let mut system = System { diagnostics: vec![], dependencies: HashMap::new() };
 
         if let MaybeModuleBody::Some(body) = module_ast.body(db) {
             let body_nodes = body
@@ -67,7 +68,7 @@ impl System {
                     }
 
                     #[view]
-                    fn dependencies() -> Array<dojo_core::string::ShortString> {
+                    fn dependencies() -> Array<(dojo_core::string::ShortString, bool)> {
                         let mut arr = array::ArrayTrait::new();
                         $dependencies$
                         arr
@@ -85,14 +86,24 @@ impl System {
                             system
                                 .dependencies
                                 .iter()
-                                .sorted_by(|a, b| a.cmp(b))
-                                .map(|name| {
+                                .sorted_by(|a, b| a.0.cmp(b.0))
+                                .map(|(_, dep): (&smol_str::SmolStr, &Dependency)| {
                                     RewriteNode::interpolate_patched(
-                                        "array::ArrayTrait::append(ref arr, '$name$'.into());\n",
-                                        HashMap::from([(
-                                            "name".to_string(),
-                                            RewriteNode::Text(name.to_string()),
-                                        )]),
+                                        "array::ArrayTrait::append(ref arr, ('$name$'.into(), \
+                                         $write$));\n",
+                                        HashMap::from([
+                                            (
+                                                "name".to_string(),
+                                                RewriteNode::Text(dep.name.to_string()),
+                                            ),
+                                            (
+                                                "write".to_string(),
+                                                RewriteNode::Text(
+                                                    if dep.write { "true" } else { "false" }
+                                                        .to_string(),
+                                                ),
+                                            ),
+                                        ]),
                                     )
                                 })
                                 .collect(),
@@ -110,7 +121,7 @@ impl System {
                         components: vec![],
                         systems: vec![SystemAuxData {
                             name,
-                            dependencies: system.dependencies.iter().cloned().collect(),
+                            dependencies: system.dependencies.values().cloned().collect(),
                         }],
                     })),
                 }),
@@ -344,7 +355,7 @@ impl System {
                 if segment_genric.ident(db).text(db).as_str() == "commands" {
                     let command = Command::from_ast(db, var_name, expr_fn);
                     self.diagnostics.extend(command.diagnostics);
-                    self.dependencies.extend(command.component_deps);
+                    self.update_deps(command.component_deps);
                     return Some(command.rewrite_nodes);
                 }
             }
@@ -352,7 +363,7 @@ impl System {
                 if segment_simple.ident(db).text(db).as_str() == "commands" {
                     let command = Command::from_ast(db, var_name, expr_fn);
                     self.diagnostics.extend(command.diagnostics);
-                    self.dependencies.extend(command.component_deps);
+                    self.update_deps(command.component_deps);
                     return Some(command.rewrite_nodes);
                 }
             }
@@ -360,4 +371,19 @@ impl System {
 
         None
     }
+
+    fn update_deps(&mut self, deps: Vec<Dependency>) {
+        for dep in deps.iter() {
+            if let Some(existing) = self.dependencies.get(&dep.name) {
+                self.dependencies
+                    .insert(dep.name.clone(), merge_deps(dep.clone(), existing.clone()));
+            } else {
+                self.dependencies.insert(dep.name.clone(), dep.clone());
+            }
+        }
+    }
+}
+
+fn merge_deps(a: Dependency, b: Dependency) -> Dependency {
+    Dependency { name: a.name, read: a.read || b.read, write: a.write || b.write }
 }
