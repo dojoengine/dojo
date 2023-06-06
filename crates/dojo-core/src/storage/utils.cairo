@@ -6,7 +6,7 @@ use traits::{Into, TryInto};
 use dojo_core::integer::u250;
 
 // big enough number used to construct a compound key in `find_matching`
-const OFFSET: felt252 = 0x10000000000000000000000000000000000; 
+const OFFSET: felt252 = 0x10000000000000000000000000000000000;
 
 // finds only those entities that have same IDs across all provided entities and 
 // returns these entities, obeying the order of IDs of the first ID array
@@ -27,8 +27,7 @@ const OFFSET: felt252 = 0x10000000000000000000000000000000000;
 // for all entities and the function respects the ID order from the first ID array,
 // hence 4 and 3 in this case
 fn find_matching(
-    mut ids: Span<Span<u250>>,
-    mut entities: Span<Span<Span<felt252>>> 
+    mut ids: Span<Span<u250>>, mut entities: Span<Span<Span<felt252>>>
 ) -> Span<Span<Span<felt252>>> {
     assert(ids.len() == entities.len(), 'lengths dont match');
 
@@ -49,7 +48,7 @@ fn find_matching(
     // how many ID arrays have we looped over so far; ultimately
     // this number is the same as ids.len() and we use only those
     // IDs from ids_match where the value is the same as match_count
-    
+
     // we want to keep the ordering from the first entity IDs
     let mut ids1: Span<u250> = *(ids.pop_front().unwrap());
 
@@ -69,12 +68,13 @@ fn find_matching(
                     match entity_ids.pop_front() {
                         Option::Some(id) => {
                             // keep track how many times we've encountered a particular ID
-                            let c = ids_match[*id.inner];                            
+                            let c = ids_match[*id.inner];
                             ids_match.insert(*id.inner, c + 1);
                             // keep track of the index of the particular entity in an
                             // entity type array, i.e. at which index is the entity
                             // with `id` at, using the compound key
-                            id_to_idx.insert(OFFSET * entity_type_counter.into() + *id.inner, index);
+                            id_to_idx
+                                .insert(OFFSET * entity_type_counter.into() + *id.inner, index);
                             index += 1;
                         },
                         Option::None(_) => {
@@ -82,7 +82,7 @@ fn find_matching(
                         }
                     };
                 };
-                
+
                 entity_type_counter += 1;
             },
             Option::None(_) => {
@@ -139,7 +139,7 @@ fn find_matching(
     let mut entities_with_matching_ids = entities_with_matching_ids.span();
     // calculate how many common IDs across all entities we found
     // guaranteed to be a round number
-    let matches = entities_with_matching_ids.len() / entity_types_count; 
+    let matches = entities_with_matching_ids.len() / entity_types_count;
     let mut result: Array<Span<Span<felt252>>> = ArrayTrait::new();
     let mut i = 0;
 

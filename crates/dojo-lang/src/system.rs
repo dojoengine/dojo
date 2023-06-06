@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use cairo_lang_defs::plugin::{
     DynGeneratedFileAuxData, PluginDiagnostic, PluginGeneratedFile, PluginResult,
@@ -9,19 +9,20 @@ use cairo_lang_syntax::node::ast::MaybeModuleBody;
 use cairo_lang_syntax::node::ast::OptionReturnTypeClause::ReturnTypeClause;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
+use itertools::Itertools;
 
 use crate::commands::Command;
 use crate::plugin::{DojoAuxData, SystemAuxData};
 
 pub struct System {
     diagnostics: Vec<PluginDiagnostic>,
-    dependencies: Vec<smol_str::SmolStr>,
+    dependencies: HashSet<smol_str::SmolStr>,
 }
 
 impl System {
     pub fn from_module(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult {
         let name = module_ast.name(db).text(db);
-        let mut system = System { diagnostics: vec![], dependencies: vec![] };
+        let mut system = System { diagnostics: vec![], dependencies: HashSet::new() };
 
         if let MaybeModuleBody::Some(body) = module_ast.body(db) {
             let body_nodes = body
@@ -43,7 +44,7 @@ impl System {
             builder.add_modified(RewriteNode::interpolate_patched(
                 "
                 #[contract]
-                mod $name$System {
+                mod $name$ {
                     use option::OptionTrait;
                     use array::SpanTrait;
 
@@ -58,10 +59,18 @@ impl System {
                     use dojo_core::storage::query::TupleSize3IntoQuery;
                     use dojo_core::storage::query::IntoPartitioned;
                     use dojo_core::storage::query::IntoPartitionedQuery;
-
+                    use dojo_core::execution_context::Context;
+                    
                     #[view]
                     fn name() -> dojo_core::string::ShortString {
                         dojo_core::string::ShortStringTrait::new('$name$')
+                    }
+
+                    #[view]
+                    fn dependencies() -> Array<dojo_core::string::ShortString> {
+                        let mut arr = array::ArrayTrait::new();
+                        $dependencies$
+                        arr
                     }
 
                     $body$
@@ -70,6 +79,25 @@ impl System {
                 HashMap::from([
                     ("name".to_string(), RewriteNode::Text(name.to_string())),
                     ("body".to_string(), RewriteNode::new_modified(body_nodes)),
+                    (
+                        "dependencies".to_string(),
+                        RewriteNode::new_modified(
+                            system
+                                .dependencies
+                                .iter()
+                                .sorted_by(|a, b| a.cmp(b))
+                                .map(|name| {
+                                    RewriteNode::interpolate_patched(
+                                        "array::ArrayTrait::append(ref arr, '$name$'.into());\n",
+                                        HashMap::from([(
+                                            "name".to_string(),
+                                            RewriteNode::Text(name.to_string()),
+                                        )]),
+                                    )
+                                })
+                                .collect(),
+                        ),
+                    ),
                 ]),
             ));
 
@@ -81,8 +109,8 @@ impl System {
                         patches: builder.patches,
                         components: vec![],
                         systems: vec![SystemAuxData {
-                            name: format!("{name}System").into(),
-                            dependencies: system.dependencies.clone(),
+                            name,
+                            dependencies: system.dependencies.iter().cloned().collect(),
                         }],
                     })),
                 }),
@@ -112,7 +140,26 @@ impl System {
             .collect();
 
         let parameters = signature.parameters(db);
-        let separator = if parameters.elements(db).is_empty() { "" } else { ", " };
+
+        // Collect all the parameters in a Vec
+        let param_nodes: Vec<_> = parameters.elements(db);
+
+        // Check if there is a parameter 'ctx: Context'
+        // If yes, make sure it's the first one.
+        // If not, add it as the first parameter.
+        let mut context = RewriteNode::Text("".to_string());
+        match param_nodes
+            .iter()
+            .position(|p| p.as_syntax_node().get_text(db).trim() == "ctx: Context")
+        {
+            Some(0) => { /* 'ctx: Context' is already the first parameter, do nothing */ }
+            Some(_) => panic!("The first parameter must be 'ctx: Context'"),
+            None => {
+                // 'ctx: Context' is not found at all, add it as the first parameter
+                context = RewriteNode::Text("ctx: Context,".to_string());
+            }
+        };
+
         let ret_clause = if let ReturnTypeClause(clause) = signature.ret_ty(db) {
             RewriteNode::new_trimmed(clause.as_syntax_node())
         } else {
@@ -122,14 +169,13 @@ impl System {
         rewrite_nodes.push(RewriteNode::interpolate_patched(
             "
                 #[external]
-                fn execute($parameters$$separator$world_address: starknet::ContractAddress) \
-             $ret_clause$ {
+                fn execute($context$$parameters$) $ret_clause$ {
                     $body$
                 }
             ",
             HashMap::from([
+                ("context".to_string(), context),
                 ("parameters".to_string(), RewriteNode::new_trimmed(parameters.as_syntax_node())),
-                ("separator".to_string(), RewriteNode::Text(separator.to_string())),
                 ("body".to_string(), RewriteNode::new_modified(body_nodes)),
                 ("ret_clause".to_string(), ret_clause),
             ]),

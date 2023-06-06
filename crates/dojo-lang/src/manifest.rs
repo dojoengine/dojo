@@ -5,7 +5,8 @@ use cairo_lang_defs::ids::{ModuleId, ModuleItemId};
 use cairo_lang_filesystem::ids::CrateId;
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::plugin::DynPluginAuxData;
-use dojo_world::manifest::{Input, Output, System};
+use dojo_world::manifest::{Contract, Input, Output, System};
+use itertools::Itertools;
 use serde::Serialize;
 use smol_str::SmolStr;
 use starknet::core::types::FieldElement;
@@ -30,8 +31,9 @@ impl Manifest {
             panic!("Executor contract not found. Did you include `dojo_core` as a dependency?");
         });
 
-        manifest.0.world = *world;
-        manifest.0.executor = *executor;
+        manifest.0.world = Contract { name: "World".into(), address: None, class_hash: *world };
+        manifest.0.executor =
+            Contract { name: "Excecutor".into(), address: None, class_hash: *executor };
 
         for crate_id in crate_ids {
             let modules = db.crate_modules(*crate_id);
@@ -128,14 +130,18 @@ impl Manifest {
                         .with_context(|| format!("Contract {name} not found in target."))
                         .unwrap();
 
+                    // Remove the `System` suffix from the name to push in System struct.
+                    let name_temp: String = name.clone().into();
+
                     self.0.systems.push(System {
-                        name: name.clone(),
+                        name: name_temp.strip_suffix("System").unwrap_or(&name_temp).into(),
                         inputs,
                         outputs,
                         class_hash: *class_hash,
                         dependencies: dependencies
                             .iter()
                             .map(|s| s.to_string())
+                            .sorted_by(|a, b| a.cmp(b))
                             .collect::<Vec<_>>(),
                     });
                 }

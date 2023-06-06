@@ -6,7 +6,10 @@ mod WorldFactory {
     use option::OptionTrait;
     use traits::Into;
 
-    use starknet::{ClassHash, ContractAddress, contract_address::ContractAddressIntoFelt252, syscalls::deploy_syscall, get_caller_address};
+    use starknet::{
+        ClassHash, ContractAddress, contract_address::ContractAddressIntoFelt252,
+        syscalls::deploy_syscall, get_caller_address
+    };
 
     use dojo_core::interfaces::{IWorldDispatcher, IWorldDispatcherTrait};
     use dojo_core::{string::ShortString, auth::systems::Route};

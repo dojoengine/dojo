@@ -19,7 +19,7 @@ use dojo_core::world::World;
 use dojo_core::world_factory::WorldFactory;
 
 use dojo_core::auth::components::AuthRoleComponent;
-use dojo_core::auth::systems::{Route, RouteTrait, GrantAuthRoleSystem};
+use dojo_core::auth::systems::{Route, RouteTrait, GrantAuthRole};
 use dojo_core::test_utils::mock_auth_components_systems;
 
 #[derive(Component, Copy, Drop, Serde)]
@@ -69,7 +69,8 @@ fn test_spawn_world() {
     let constructor_calldata = array::ArrayTrait::new();
     let (executor_address, _) = deploy_syscall(
         Executor::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
-    ).unwrap();
+    )
+        .unwrap();
 
     // WorldFactory constructor
     let (auth_components, auth_systems) = mock_auth_components_systems();
@@ -85,7 +86,7 @@ fn test_spawn_world() {
 
     // Prepare components and systems and routes
     let mut systems = array::ArrayTrait::new();
-    systems.append(BarSystem::TEST_CLASS_HASH.try_into().unwrap());
+    systems.append(Bar::TEST_CLASS_HASH.try_into().unwrap());
 
     let mut components = array::ArrayTrait::new();
     components.append(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
@@ -111,7 +112,7 @@ fn test_spawn_world() {
 
     let grant_role_hash = world.system('GrantAuthRole'.into());
     assert(
-        grant_role_hash == GrantAuthRoleSystem::TEST_CLASS_HASH.try_into().unwrap(),
+        grant_role_hash == GrantAuthRole::TEST_CLASS_HASH.try_into().unwrap(),
         'system not registered'
     );
 
@@ -122,7 +123,7 @@ fn test_spawn_world() {
     );
 
     let bar_hash = world.system('Bar'.into());
-    assert(bar_hash == BarSystem::TEST_CLASS_HASH.try_into().unwrap(), 'system not registered');
+    assert(bar_hash == Bar::TEST_CLASS_HASH.try_into().unwrap(), 'system not registered');
 
     // Check that the auth routes are registered
     let role = world.entity('AuthRole'.into(), ('Bar', 'Foo').into(), 0, 0);

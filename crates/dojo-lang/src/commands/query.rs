@@ -74,9 +74,7 @@ impl Query {
         for component in self.components.iter() {
             self.rewrite_nodes.push(RewriteNode::interpolate_patched(
                 "
-                let mut __$query_id$_$query_subtype$_raw = IWorldDispatcher {
-                    contract_address: world_address
-                }.read('$component$', $query$, 0_u8, 0_usize);
+                let mut __$query_id$_$query_subtype$_raw = ctx.world.read('$component$', $query$, 0_u8, 0_usize);
                 let __$query_id$_$query_subtype$ = serde::Serde::<$component$>::deserialize(
                     ref __$query_id$_$query_subtype$_raw
                 );

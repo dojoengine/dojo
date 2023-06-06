@@ -34,8 +34,7 @@ mod RouteAuth {
 
         // Set status
         commands::set_entity(
-            (route.role_id, route.resource_id).into(),
-            (AuthStatus { is_authorized: true })
+            (route.role_id, route.resource_id).into(), (AuthStatus { is_authorized: true })
         );
     }
 }
@@ -43,13 +42,12 @@ mod RouteAuth {
 #[system]
 mod IsAccountAdmin {
     use traits::Into;
-    use starknet::get_tx_info;
     use box::BoxTrait;
     use dojo_core::{auth::components::{AuthStatus, AuthRole}, integer::u250};
 
-    fn execute() -> bool {
+    fn execute(ctx: Context) -> bool {
         // Get calling account contract address
-        let caller = get_tx_info().unbox().account_contract_address; // tx origin
+        let caller = ctx.caller_account;
         let role = commands::<AuthRole>::entity(caller.into());
         // Authorize if role is Admin
         role.id.into() == 'Admin'
@@ -62,12 +60,22 @@ mod IsAuthorized {
     use dojo_core::{auth::components::{AuthStatus, AuthRole}, integer::u250};
 
 
-    fn execute(target_id: u250, resource_id: u250) -> bool {
-        // Get component-scoped role
-        let maybe_scoped_role = commands::<AuthRole>::try_entity((target_id, resource_id).into());
-        let scoped_role = match maybe_scoped_role {
-            Option::Some(scoped_role) => scoped_role.id.into(),
-            Option::None(_) => 0,
+    fn execute(ctx: Context, target_id: u250, resource_id: u250) -> bool {
+        // Check if execution role is not set
+        let scoped_role = if ctx.execution_role.id == 0.into() {
+            // Use default component-scoped role
+            // TODO: use commands once parsing is fixed
+            let mut role = ctx
+                .world
+                .entity('AuthRole'.into(), (target_id, resource_id).into(), 0, 0);
+            let scoped_role = serde::Serde::<AuthRole>::deserialize(ref role);
+            match scoped_role {
+                Option::Some(scoped_role) => scoped_role.id,
+                Option::None(_) => 0.into(),
+            }
+        } else {
+            // Use the set execution role
+            ctx.execution_role.id
         };
 
         // Get authorization status for scoped role
@@ -121,9 +129,7 @@ mod GrantResource {
     use dojo_core::{auth::components::AuthStatus, integer::u250};
 
     fn execute(role_id: u250, resource_id: u250) {
-        commands::set_entity(
-            (role_id, resource_id).into(), (AuthStatus { is_authorized: true })
-        );
+        commands::set_entity((role_id, resource_id).into(), (AuthStatus { is_authorized: true }));
     }
 }
 
@@ -155,8 +161,6 @@ mod RevokeResource {
     use dojo_core::{auth::components::AuthStatus, integer::u250};
 
     fn execute(role_id: u250, resource_id: u250) {
-        commands::set_entity(
-            (role_id, resource_id).into(), (AuthStatus { is_authorized: false })
-        );
+        commands::set_entity((role_id, resource_id).into(), (AuthStatus { is_authorized: false }));
     }
 }

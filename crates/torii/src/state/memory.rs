@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use starknet::core::types::FieldElement;
 use tokio::sync::RwLock;
 
-use super::Storage;
+use super::State;
 
 type Partition = FieldElement;
 type Component = FieldElement;
@@ -15,13 +15,13 @@ type Entities = HashMap<Partition, HashMap<Key, Vec<FieldElement>>>;
 type Components = HashMap<Component, Entities>;
 
 #[derive(Default)]
-pub struct MemoryStorage {
+pub struct InMemory {
     head: u64,
     data: Arc<RwLock<Components>>,
 }
 
 #[async_trait]
-impl Storage for MemoryStorage {
+impl State for InMemory {
     async fn head(&self) -> Result<u64> {
         Ok(self.head)
     }

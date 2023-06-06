@@ -58,7 +58,9 @@ mod Database {
 
     // returns a tuple of spans, first contains the entity IDs,
     // second the deserialized entities themselves
-    fn all(class_hash: starknet::ClassHash, component: u250, partition: u250) -> (Span<u250>, Span<Span<felt252>>) {
+    fn all(
+        class_hash: starknet::ClassHash, component: u250, partition: u250
+    ) -> (Span<u250>, Span<Span<felt252>>) {
         let table = {
             if partition == 0.into() {
                 component
