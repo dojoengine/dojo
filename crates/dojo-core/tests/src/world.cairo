@@ -81,7 +81,7 @@ fn test_system() {
 #[available_gas(2000000)]
 fn test_constructor() {
     starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
-    World::constructor('World'.into(), starknet::contract_address_const::<0x1337>(), );
+    World::constructor(starknet::contract_address_const::<0x1337>(), );
 }
 
 #[test]
@@ -463,7 +463,6 @@ fn spawn_empty_world() -> IWorldDispatcher {
 
     // Deploy world contract
     let mut constructor_calldata = array::ArrayTrait::new();
-    constructor_calldata.append('World');
     constructor_calldata.append(executor_address.into());
     let (world_address, _) = deploy_syscall(
         World::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false

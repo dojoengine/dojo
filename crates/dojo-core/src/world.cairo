@@ -21,7 +21,7 @@ mod World {
     };
 
     #[event]
-    fn WorldSpawned(address: ContractAddress, caller: ContractAddress, name: ShortString) {}
+    fn WorldSpawned(address: ContractAddress, caller: ContractAddress) {}
 
     #[event]
     fn ComponentRegistered(name: ShortString, class_hash: ClassHash) {}
@@ -30,7 +30,7 @@ mod World {
     fn SystemRegistered(name: ShortString, class_hash: ClassHash) {}
 
     struct Storage {
-        executor: ContractAddress,
+        executor_dispatcher: IExecutorDispatcher,
         component_registry: LegacyMap::<ShortString, ClassHash>,
         system_registry: LegacyMap::<ShortString, ClassHash>,
         _execution_role: LegacyMap::<ContractAddress, u250>,
@@ -39,10 +39,12 @@ mod World {
     }
 
     #[constructor]
-    fn constructor(name: ShortString, executor_: ContractAddress) {
-        executor::write(executor_);
+    fn constructor(executor: ContractAddress) {
+        executor_dispatcher::write(IExecutorDispatcher {
+            contract_address: executor
+        });
 
-        WorldSpawned(get_contract_address(), get_tx_info().unbox().account_contract_address, name);
+        WorldSpawned(get_contract_address(), get_tx_info().unbox().account_contract_address);
     }
 
 
@@ -84,9 +86,7 @@ mod World {
             r.serialize(ref calldata);
 
             // Call RouteAuth system via executor with the serialized route
-            IExecutorDispatcher {
-                contract_address: executor::read()
-            }.execute(route_auth_class_hash, AuthRole { id: 'Admin'.into() }, calldata.span());
+            executor_dispatcher::read().execute(route_auth_class_hash, AuthRole { id: 'Admin'.into() }, calldata.span());
 
             index += 1;
         };
@@ -126,9 +126,7 @@ mod World {
 
                 // Call IsAuthorized system via executor with serialized system and component
                 // If the system is authorized, the result will be non-zero
-                let res = IExecutorDispatcher {
-                    contract_address: executor::read()
-                }.execute(is_authorized_class_hash, execution_role, calldata.span());
+                let res = executor_dispatcher::read().execute(is_authorized_class_hash, execution_role, calldata.span());
                 (*res[0]).is_non_zero()
             }
         } else {
@@ -148,9 +146,7 @@ mod World {
         let is_account_admin_class_hash = system_registry::read('IsAccountAdmin'.into());
         // Call IsAccountAdmin system via executor
         let mut calldata = ArrayTrait::new();
-        let res = IExecutorDispatcher {
-            contract_address: executor::read()
-        }.execute(is_account_admin_class_hash, AuthRole { id: 'Admin'.into() }, calldata.span());
+        let res = executor_dispatcher::read().execute(is_account_admin_class_hash, AuthRole { id: 'Admin'.into() }, calldata.span());
         (*res[0]).is_non_zero()
     }
 
@@ -235,9 +231,7 @@ mod World {
         let role = execution_role();
 
         // Call the system via executor
-        let res = IExecutorDispatcher {
-            contract_address: executor::read()
-        }.execute(class_hash, AuthRole { id: role }, execute_calldata);
+        let res = executor_dispatcher::read().execute(class_hash, AuthRole { id: role }, execute_calldata);
 
         res
     }
@@ -269,7 +263,7 @@ mod World {
     ) {
         // Assert can only be called through the executor
         // This is to prevent system from writing to storage directly
-        assert(get_caller_address() == executor::read(), 'must be called thru executor');
+        assert(get_caller_address() == executor_dispatcher::read().contract_address, 'must be called thru executor');
 
         // Get execution role
         let role = execution_role();
@@ -297,7 +291,7 @@ mod World {
     fn delete_entity(context: Context, component: ShortString, query: Query) {
         // Assert can only be called through the executor
         // This is to prevent system from writing to storage directly
-        assert(get_caller_address() == executor::read(), 'must be called thru executor');
+        assert(get_caller_address() == executor_dispatcher::read().contract_address, 'must be called thru executor');
 
         // Get execution role
         let role = execution_role();
@@ -362,8 +356,16 @@ mod World {
     fn set_executor(contract_address: ContractAddress) {
         // Only Admin can set executor
         assert(is_account_admin(), 'only admin can set executor');
-        executor::write(contract_address);
+        executor_dispatcher::write(IExecutorDispatcher {
+            contract_address: contract_address
+        });
     }
+
+    #[view]
+    fn executor() -> ContractAddress {
+        executor_dispatcher::read().contract_address
+    }
+
 
     /// Set the execution role to be assumed
     ///

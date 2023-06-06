@@ -22,7 +22,7 @@ async fn test_migration() {
     };
 
     let config = Config::builder(Utf8PathBuf::from_path_buf("../../examples/ecs/".into()).unwrap())
-        .ui_verbosity(Verbosity::Normal)
+        .ui_verbosity(Verbosity::Quiet)
         .build()
         .unwrap();
 
