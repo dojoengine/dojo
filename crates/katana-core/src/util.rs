@@ -6,7 +6,6 @@ use blockifier::execution::contract_class::ContractClassV1 as BlockifierContract
 use blockifier::state::cached_state::CommitmentStateDiff;
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transaction_execution::Transaction as BlockifierTransaction;
-use blockifier::transaction::transactions::DeclareTransaction;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use flate2::bufread::GzDecoder;
 use serde_json::json;
@@ -57,7 +56,7 @@ pub fn convert_blockifier_tx_to_starknet_api_tx(
                     constructor_calldata: tx.constructor_calldata.clone(),
                 })
             }
-            AccountTransaction::Declare(DeclareTransaction { tx, .. }) => match tx {
+            AccountTransaction::Declare(tx) => match tx.tx() {
                 starknet_api::transaction::DeclareTransaction::V0(tx) => {
                     Transaction::Declare(starknet_api::transaction::DeclareTransaction::V0(
                         starknet_api::transaction::DeclareTransactionV0V1 {

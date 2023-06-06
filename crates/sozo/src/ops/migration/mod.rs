@@ -4,6 +4,7 @@ use anyhow::{anyhow, Context, Result};
 use scarb::core::Config;
 use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag, InvokeTransactionResult, StarknetError};
+use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider, ProviderError};
 
@@ -144,7 +145,10 @@ where
 
             let res = world
                 .deploy(
-                    vec![strategy.executor.as_ref().unwrap().contract_address.unwrap()],
+                    vec![
+                        cairo_short_string_to_felt("placeholder").unwrap(),
+                        strategy.executor.as_ref().unwrap().contract_address.unwrap(),
+                    ],
                     &migrator,
                 )
                 .await
