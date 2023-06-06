@@ -42,7 +42,7 @@ fn test_executor() {
     system_calldata.append(53);
     let res = executor
         .execute(
-            BarSystem::TEST_CLASS_HASH.try_into().unwrap(),
+            Bar::TEST_CLASS_HASH.try_into().unwrap(),
             AuthRole { id: 'TestRole'.into() },
             system_calldata.span()
         );
