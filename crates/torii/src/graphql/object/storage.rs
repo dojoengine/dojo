@@ -1,10 +1,10 @@
 use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
 use async_graphql::{Name, Value};
-use dojo_world::manifest::Member;
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Error, Pool, Result, Row, Sqlite};
 
+use super::component::ComponentMembers;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::graphql::types::ScalarType;
 
@@ -38,56 +38,27 @@ impl ObjectTrait for StorageObject {
     fn resolvers(&self) -> Vec<Field> {
         let name = self.name.clone();
         let type_mapping = self.field_type_mapping.clone();
-        vec![
-            Field::new(self.name(), TypeRef::named_nn(self.type_name()), move |ctx| {
-                let inner_name = name.clone();
-                let inner_type_mapping = type_mapping.clone();
+        vec![Field::new(self.name(), TypeRef::named_nn(self.type_name()), move |ctx| {
+            let inner_name = name.clone();
+            let inner_type_mapping = type_mapping.clone();
 
-                FieldFuture::new(async move {
-                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let id = ctx.args.try_get("id")?.i64()?.to_string();
-                    let storage_values = storage_by_column(
-                        &mut conn,
-                        ColumnName::Id,
-                        id.as_str(),
-                        &inner_name,
-                        &inner_type_mapping,
-                    )
-                    .await?;
-                    Ok(Some(FieldValue::owned_any(storage_values)))
-                })
+            FieldFuture::new(async move {
+                let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                let storage_values =
+                    storage_by_name(&mut conn, &inner_name, &inner_type_mapping).await?;
+                Ok(Some(FieldValue::owned_any(storage_values)))
             })
-            .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::INT))),
-        ]
+        })]
     }
 }
 
-#[allow(dead_code)]
-pub enum ColumnName {
-    Id,
-    ComponentId,
-    EntityId,
-}
-
-impl ColumnName {
-    pub fn as_str(&self) -> &str {
-        match self {
-            ColumnName::Id => "id",
-            ColumnName::ComponentId => "component_id",
-            ColumnName::EntityId => "entity_id",
-        }
-    }
-}
-
-pub async fn storage_by_column(
+pub async fn storage_by_name(
     conn: &mut PoolConnection<Sqlite>,
-    column_name: ColumnName,
-    id: &str,
     name: &str,
     fields: &TypeMapping,
 ) -> Result<ValueMapping> {
-    let query = format!("SELECT * FROM storage_{} WHERE {} = ?", name, column_name.as_str());
-    let storage = sqlx::query(&query).bind(id).fetch_one(conn).await?;
+    let query = format!("SELECT * FROM {}", name);
+    let storage = sqlx::query(&query).fetch_one(conn).await?;
     let result = value_mapping_from_row(&storage, fields)?;
     Ok(result)
 }
@@ -121,14 +92,32 @@ fn value_mapping_from_row(row: &SqliteRow, fields: &TypeMapping) -> Result<Value
     Ok(value_mapping)
 }
 
-pub fn type_mapping_from_definition(storage_def: &str) -> Result<TypeMapping> {
-    let members: Vec<Member> =
-        serde_json::from_str(storage_def).map_err(|e| Error::Decode(e.into()))?;
-    let field_type_mapping: TypeMapping =
-        members.iter().fold(TypeMapping::new(), |mut mapping, member| {
-            // TODO: check if member type exists in scalar types
-            mapping.insert(Name::new(&member.name), member.ty.to_string());
-            mapping
+pub async fn type_mapping_from(
+    conn: &mut PoolConnection<Sqlite>,
+    component_id: &str,
+) -> Result<TypeMapping> {
+    let component_members: Vec<ComponentMembers> = sqlx::query_as(
+        r#"
+                SELECT 
+                    component_id,
+                    name,
+                    type AS ty,
+                    slot,
+                    offset,
+                    created_at
+                FROM component_members WHERE component_id = ?
+            "#,
+    )
+    .bind(component_id)
+    .fetch_all(conn)
+    .await?;
+
+    // TODO: check if type exists in scalar types
+    let field_type_mapping =
+        component_members.iter().fold(TypeMapping::new(), |mut acc, member| {
+            acc.insert(Name::new(member.name.clone()), member.ty.clone());
+            acc
         });
+
     Ok(field_type_mapping)
 }

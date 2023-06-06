@@ -11,6 +11,7 @@ impl ScalarType {
     pub const U128: &'static str = "u128";
     pub const U250: &'static str = "u250";
     pub const U256: &'static str = "u256";
+    pub const BOOL: &'static str = "bool";
     pub const CURSOR: &'static str = "Cursor";
     pub const ADDRESS: &'static str = "Address";
     pub const DATE_TIME: &'static str = "DateTime";
@@ -25,6 +26,7 @@ impl ScalarType {
             ScalarType::U128,
             ScalarType::U250,
             ScalarType::U256,
+            ScalarType::BOOL,
             ScalarType::CURSOR,
             ScalarType::ADDRESS,
             ScalarType::DATE_TIME,

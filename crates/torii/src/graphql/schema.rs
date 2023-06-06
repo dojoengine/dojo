@@ -1,14 +1,16 @@
 use anyhow::Result;
 use async_graphql::dynamic::{Object, Scalar, Schema};
-use sqlx::SqlitePool;
+use async_graphql::Name;
+use sqlx::pool::PoolConnection;
+use sqlx::{Sqlite, SqlitePool};
 
-use super::object::component::{Component, ComponentObject};
+use super::object::component::{Component, ComponentMembers, ComponentObject};
 use super::object::entity::EntityObject;
 use super::object::event::EventObject;
-use super::object::storage::{type_mapping_from_definition, StorageObject};
+use super::object::storage::{type_mapping_from, StorageObject};
 use super::object::system::SystemObject;
 use super::object::system_call::SystemCallObject;
-use super::object::ObjectTrait;
+use super::object::{ObjectTrait, TypeMapping};
 use super::types::ScalarType;
 use super::utils::format_name;
 
@@ -61,27 +63,26 @@ fn static_objects() -> Vec<Box<dyn ObjectTrait>> {
 
 async fn dynamic_objects(pool: &SqlitePool) -> Result<Vec<Box<dyn ObjectTrait>>> {
     let mut conn = pool.acquire().await?;
-    let mut objects = Vec::new();
+    let mut objects: Vec<Box<dyn ObjectTrait>> = Vec::new();
+    let mut storage_names: Vec<String> = Vec::new();
 
     // storage objects
     let components: Vec<Component> =
         sqlx::query_as("SELECT * FROM components").fetch_all(&mut conn).await?;
     for component in components {
-        let storage_object = process_component(component)?;
+        let field_type_mapping = type_mapping_from(&mut conn, &component.id).await?;
+        let (name, type_name) = format_name(&component.name);
+
+        let storage_object =
+            Box::new(StorageObject::new(name.clone(), type_name, field_type_mapping));
+
+        storage_names.push(name);
         objects.push(storage_object);
     }
-
-    let storage_names: Vec<String> = objects.iter().map(|obj| obj.name().to_string()).collect();
 
     // component object
     let component = ComponentObject::new(storage_names);
     objects.push(Box::new(component));
 
     Ok(objects)
-}
-
-fn process_component(component: Component) -> Result<Box<dyn ObjectTrait>> {
-    let field_type_mapping = type_mapping_from_definition(&component.storage_definition)?;
-    let (name, type_name) = format_name(component.name.as_str());
-    Ok(Box::new(StorageObject::new(name, type_name, field_type_mapping)))
 }

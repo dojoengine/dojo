@@ -6,7 +6,7 @@ use serde::Deserialize;
 use sqlx::pool::PoolConnection;
 use sqlx::{FromRow, Pool, Result, Sqlite};
 
-use super::storage::{storage_by_column, type_mapping_from_definition, ColumnName};
+use super::storage::{storage_by_name, type_mapping_from};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::graphql::types::ScalarType;
 use crate::graphql::utils::extract_value::extract;
@@ -22,6 +22,16 @@ pub struct Component {
     pub created_at: DateTime<Utc>,
 }
 
+#[derive(FromRow, Deserialize)]
+pub struct ComponentMembers {
+    pub component_id: String,
+    pub name: String,
+    #[serde(rename = "type")]
+    pub ty: String,
+    pub slot: i64,
+    pub offset: i64,
+    pub created_at: DateTime<Utc>,
+}
 pub struct ComponentObject {
     pub field_type_mapping: TypeMapping,
     pub storage_names: Vec<String>,
@@ -71,19 +81,12 @@ impl ObjectTrait for ComponentObject {
                 let component_values = ctx.parent_value.try_downcast_ref::<ValueMapping>()?;
 
                 let id = extract::<String>(component_values, "id")?;
-                let type_name = extract::<String>(component_values, "name")?;
+                let name = extract::<String>(component_values, "name")?;
+                let (name, type_name) = format_name(&name);
+                let field_type_mapping = type_mapping_from(&mut conn, &id).await?;
+                let storage_values = storage_by_name(&mut conn, &name, &field_type_mapping).await?;
 
-                // let field_type_mapping = type_mapping_from_definition(&defintion)?;
-                // let storage_values = storage_by_column(
-                //     &mut conn,
-                //     ColumnName::ComponentId,
-                //     &id,
-                //     &type_name,
-                //     &field_type_mapping,
-                // )
-                // .await?;
-
-                Ok(Some(Value::Null)) //with_type(FieldValue::owned_any(storage_values), type_name)))
+                Ok(Some(FieldValue::with_type(FieldValue::owned_any(storage_values), type_name)))
             })
         })])
     }
@@ -92,6 +95,7 @@ impl ObjectTrait for ComponentObject {
         vec![
             Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
                 FieldFuture::new(async move {
+                    println!("component resolver");
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                     let id = remove_quotes(ctx.args.try_get("id")?.string()?);
                     let component_values = component_by_id(&mut conn, &id).await?;
