@@ -740,12 +740,15 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
                             tx.signature.into_iter().map(StarkFelt::from).collect(),
                         ),
                     };
-                    AccountTransaction::Declare(DeclareTransaction {
-                        tx: starknet_api::transaction::DeclareTransaction::V1(transaction),
-                        contract_class: blockifier::execution::contract_class::ContractClass::V0(
-                            contract_class,
-                        ),
-                    })
+                    AccountTransaction::Declare(
+                        DeclareTransaction::new(
+                            starknet_api::transaction::DeclareTransaction::V1(transaction),
+                            blockifier::execution::contract_class::ContractClass::V0(
+                                contract_class,
+                            ),
+                        )
+                        .map_err(|_| Error::from(StarknetApiError::InternalServerError))?,
+                    )
                 }
                 BroadcastedTransaction::Declare(BroadcastedDeclareTransaction::V2(tx)) => {
                     let raw_class_str = serde_json::to_string(&tx.contract_class)?;
@@ -780,12 +783,15 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
                         )),
                     };
 
-                    AccountTransaction::Declare(DeclareTransaction {
-                        tx: starknet_api::transaction::DeclareTransaction::V2(transaction),
-                        contract_class: blockifier::execution::contract_class::ContractClass::V1(
-                            contract_class,
-                        ),
-                    })
+                    AccountTransaction::Declare(
+                        DeclareTransaction::new(
+                            starknet_api::transaction::DeclareTransaction::V2(transaction),
+                            blockifier::execution::contract_class::ContractClass::V1(
+                                contract_class,
+                            ),
+                        )
+                        .map_err(|_| Error::from(StarknetApiError::InternalServerError))?,
+                    )
                 }
 
                 BroadcastedTransaction::Invoke(BroadcastedInvokeTransaction::V1(transaction)) => {
@@ -880,12 +886,15 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
                 (
                     transaction_hash,
                     class_hash,
-                    AccountTransaction::Declare(DeclareTransaction {
-                        tx: starknet_api::transaction::DeclareTransaction::V1(transaction),
-                        contract_class: blockifier::execution::contract_class::ContractClass::V0(
-                            contract_class,
-                        ),
-                    }),
+                    AccountTransaction::Declare(
+                        DeclareTransaction::new(
+                            starknet_api::transaction::DeclareTransaction::V1(transaction),
+                            blockifier::execution::contract_class::ContractClass::V0(
+                                contract_class,
+                            ),
+                        )
+                        .map_err(|_| Error::from(StarknetApiError::InternalServerError))?,
+                    ),
                 )
             }
             BroadcastedDeclareTransaction::V2(tx) => {
@@ -923,12 +932,15 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
                 (
                     transaction_hash,
                     class_hash,
-                    AccountTransaction::Declare(DeclareTransaction {
-                        tx: starknet_api::transaction::DeclareTransaction::V2(transaction),
-                        contract_class: blockifier::execution::contract_class::ContractClass::V1(
-                            contract_class,
-                        ),
-                    }),
+                    AccountTransaction::Declare(
+                        DeclareTransaction::new(
+                            starknet_api::transaction::DeclareTransaction::V2(transaction),
+                            blockifier::execution::contract_class::ContractClass::V1(
+                                contract_class,
+                            ),
+                        )
+                        .map_err(|_| Error::from(StarknetApiError::InternalServerError))?,
+                    ),
                 )
             }
         };
