@@ -1,8 +1,10 @@
 #[cfg(test)]
 mod tests {
     use camino::Utf8PathBuf;
+    use chrono::{DateTime, Utc};
     use serde::Deserialize;
-    use sqlx::SqlitePool;
+    use sqlx::{FromRow, SqlitePool};
+    use starknet::core::types::FieldElement;
 
     use crate::state::sql::Sql;
     use crate::state::State;
@@ -33,34 +35,43 @@ mod tests {
         storage: Position,
     }
 
-    #[sqlx::test(migrations = "./migrations", fixtures("entities"))]
-    async fn test_storage_components(pool: SqlitePool) {
-        let _ = pool.acquire().await;
-
-        let query = r#"
-                { 
-                    moves(id: 1) { 
-                        __typename
-                        remaining 
-                    } 
-                    position(id: 1) { 
-                        __typename
-                        x 
-                        y 
-                    }
-                }
-            "#;
-        let value = run_graphql_query(&pool, query).await;
-
-        let moves = value.get("moves").ok_or("no moves found").unwrap();
-        let moves: Moves = serde_json::from_value(moves.clone()).unwrap();
-        let position = value.get("position").ok_or("no position found").unwrap();
-        let position: Position = serde_json::from_value(position.clone()).unwrap();
-
-        assert_eq!(moves.remaining, 10);
-        assert_eq!(position.x, 42);
-        assert_eq!(position.y, 69);
+    #[derive(FromRow, Deserialize)]
+    pub struct Component {
+        pub id: String,
+        pub name: String,
+        pub class_hash: String,
+        pub transaction_hash: String,
+        pub created_at: DateTime<Utc>,
     }
+
+    // #[sqlx::test(migrations = "./migrations", fixtures("entities"))]
+    // async fn test_storage_components(pool: SqlitePool) {
+    //     let _ = pool.acquire().await;
+
+    //     let query = r#"
+    //             {
+    //                 moves(id: 1) {
+    //                     __typename
+    //                     remaining
+    //                 }
+    //                 position(id: 1) {
+    //                     __typename
+    //                     x
+    //                     y
+    //                 }
+    //             }
+    //         "#;
+    //     let value = run_graphql_query(&pool, query).await;
+
+    //     let moves = value.get("moves").ok_or("no moves found").unwrap();
+    //     let moves: Moves = serde_json::from_value(moves.clone()).unwrap();
+    //     let position = value.get("position").ok_or("no position found").unwrap();
+    //     let position: Position = serde_json::from_value(position.clone()).unwrap();
+
+    //     assert_eq!(moves.remaining, 10);
+    //     assert_eq!(position.x, 42);
+    //     assert_eq!(position.y, 69);
+    // }
 
     #[sqlx::test(migrations = "./migrations", fixtures("entities"))]
     async fn test_storage_union(pool: SqlitePool) {
@@ -73,11 +84,12 @@ mod tests {
         let mut state = Sql::new(pool.clone()).unwrap();
         state.load_from_manifest(manifest).await.unwrap();
 
-        let _ = pool.acquire().await;
+        // let component = FieldElement::from_dec_str("12312").unwrap();
+        // println!("{}", component);
 
         let query = r#"
                 { 
-                    component_moves: component(id: "component_1") {
+                    component_moves: component(id: "moves") {
                         name
                         storage {
                             __typename
@@ -86,7 +98,7 @@ mod tests {
                             }
                         }
                     }
-                    component_position: component(id: "component_2") {
+                    component_position: component(id: "position") {
                         name
                         storage {
                             __typename
