@@ -16,7 +16,7 @@ pub struct InMemory {
     head: u64,
     components: Vec<Component>,
     systems: Vec<System>,
-    components_to_entites: HashMap<FieldElement, Entities>,
+    components_to_entites: HashMap<String, Entities>,
 }
 
 #[async_trait]
@@ -46,21 +46,21 @@ impl State for InMemory {
 
     async fn set_entity(
         &mut self,
-        component: FieldElement,
+        component: String,
         partition: FieldElement,
         key: FieldElement,
-        values: Vec<FieldElement>,
+        values: HashMap<String, FieldElement>,
     ) -> Result<()> {
-        if let Some(component_data) = self.components_to_entites.get_mut(&component) {
-            let partition_data = component_data.entry(partition).or_insert_with(HashMap::new);
-            partition_data.insert(key, values);
-        }
+        // if let Some(component_data) = self.components_to_entites.get_mut(&component) {
+        //     let partition_data = component_data.entry(partition).or_insert_with(HashMap::new);
+        //     partition_data.insert(key, values);
+        // }
         Ok(())
     }
 
     async fn delete_entity(
         &mut self,
-        component: FieldElement,
+        component: String,
         partition: FieldElement,
         key: FieldElement,
     ) -> Result<()> {
@@ -74,7 +74,7 @@ impl State for InMemory {
 
     async fn entity(
         &self,
-        component: FieldElement,
+        component: String,
         partition: FieldElement,
         key: FieldElement,
     ) -> Result<Vec<FieldElement>> {
@@ -90,7 +90,7 @@ impl State for InMemory {
 
     async fn entities(
         &self,
-        component: FieldElement,
+        component: String,
         partition: FieldElement,
     ) -> Result<Vec<Vec<FieldElement>>> {
         let mut result = Vec::new();

@@ -1,8 +1,10 @@
+use std::collections::HashMap;
+
 use anyhow::Result;
 use async_trait::async_trait;
-use dojo_world::manifest::{Component, Manifest, System};
+use dojo_world::manifest::{Component, Manifest, Member, System};
 use sqlx::pool::PoolConnection;
-use sqlx::{Executor, Pool, Sqlite};
+use sqlx::{Execute, Executor, Pool, QueryBuilder, Row, Sqlite};
 use starknet::core::types::FieldElement;
 
 use super::State;
@@ -121,28 +123,41 @@ impl State for Sql {
 
     async fn set_entity(
         &mut self,
-        component: FieldElement,
+        component: String,
         partition: FieldElement,
         key: FieldElement,
-        values: Vec<FieldElement>,
+        values: HashMap<String, FieldElement>,
     ) -> Result<()> {
-        let mut query = format!("INSERT INTO {} (id, partition", component);
-        for i in 0..values.len() {
-            query.push_str(&format!(", column{}", i + 1));
-        }
-        query.push_str(&format!(") VALUES ({key}, {partition}"));
-        for value in values.iter() {
-            query.push_str(&format!(", {value}"));
-        }
-        query.push_str(");");
         let mut conn = self.pool.acquire().await?;
-        sqlx::query(&query).execute(&mut conn).await?;
+        let mut builder: QueryBuilder<Sqlite> =
+            QueryBuilder::new(format!("INSERT INTO {} (", component));
+
+        let mut separated = builder.separated(", ");
+        separated.push("id");
+        separated.push("partition");
+
+        values.iter().for_each(|v| {
+            separated.push(format!("external_{}", v.0));
+        });
+        separated.push_unseparated(") VALUES (");
+
+        let mut separated = builder.separated(", ");
+        separated.push_bind(key.to_string());
+        separated.push_bind(partition.to_string());
+
+        values.iter().for_each(|v| {
+            separated.push_bind(v.1.to_string());
+        });
+        separated.push_unseparated(") ");
+
+        let query = builder.build();
+        query.execute(&mut conn).await?;
         Ok(())
     }
 
     async fn delete_entity(
         &mut self,
-        component: FieldElement,
+        component: String,
         partition: FieldElement,
         key: FieldElement,
     ) -> Result<()> {
@@ -154,7 +169,7 @@ impl State for Sql {
 
     async fn entity(
         &self,
-        component: FieldElement,
+        component: String,
         partition: FieldElement,
         key: FieldElement,
     ) -> Result<Vec<FieldElement>> {
@@ -167,7 +182,7 @@ impl State for Sql {
 
     async fn entities(
         &self,
-        component: FieldElement,
+        component: String,
         partition: FieldElement,
     ) -> Result<Vec<Vec<FieldElement>>> {
         let query = format!("SELECT * FROM {component} WHERE partition = {partition}");
