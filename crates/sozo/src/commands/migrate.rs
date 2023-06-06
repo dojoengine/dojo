@@ -7,8 +7,8 @@ use dotenv::dotenv;
 use scarb::core::Config;
 use scarb::ops;
 
-use super::ui_verbosity_from_flag;
-use crate::commands::build::{self, BuildArgs, ProfileSpec};
+use super::{ui_verbosity_from_flag, ProfileSpec};
+use crate::commands::build::{self, BuildArgs};
 use crate::ops::migration;
 use crate::ops::migration::config::{EnvironmentConfig, WorldConfig};
 
@@ -21,18 +21,19 @@ pub struct MigrateArgs {
     #[clap(help = "Perform a dry run and outputs the plan to be executed")]
     plan: bool,
 
+    #[clap(help = "Specify the profile to use.")]
     #[command(flatten)]
     profile_spec: ProfileSpec,
 
     #[clap(help = "Logging verbosity.")]
     #[command(flatten)]
-    pub verbose: clap_verbosity_flag::Verbosity,
+    verbose: clap_verbosity_flag::Verbosity,
 }
 
 pub fn run(args: MigrateArgs) -> Result<()> {
     dotenv().ok();
 
-    let MigrateArgs { path, profile_spec, .. } = args;
+    let MigrateArgs { path, profile_spec, verbose, .. } = args;
 
     let source_dir = match path {
         Some(path) => {
@@ -49,7 +50,7 @@ pub fn run(args: MigrateArgs) -> Result<()> {
 
     let manifest_path = source_dir.join("Scarb.toml");
     let config = Config::builder(manifest_path)
-        .ui_verbosity(ui_verbosity_from_flag(args.verbose))
+        .ui_verbosity(ui_verbosity_from_flag(verbose.clone()))
         .log_filter_directive(env::var_os("SCARB_LOG"))
         .build()
         .unwrap();
@@ -60,7 +61,7 @@ pub fn run(args: MigrateArgs) -> Result<()> {
     let target_dir = source_dir.join(format!("target/{}", profile.as_str()));
 
     if !target_dir.join("manifest.json").exists() {
-        build::run(BuildArgs { path: Some(source_dir), profile_spec })?;
+        build::run(BuildArgs { path: Some(source_dir), profile_spec, verbose })?;
     }
 
     let world_config = WorldConfig::from_workspace(&ws).unwrap_or_default();
