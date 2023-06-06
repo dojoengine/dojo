@@ -1452,7 +1452,7 @@ dependencies = [
 [[package]]
 name = "blockifier"
 version = "0.1.0"
-source = "git+https://github.com/dojoengine/blockifier?branch=dev#71d101e7e367d15497480f18a54e524b16394392"
+source = "git+https://github.com/dojoengine/blockifier?branch=dev#9b3651b08321248784f1eba992ea2ed79513dc0a"
 dependencies = [
  "cairo-felt",
  "cairo-lang-casm",
@@ -1471,6 +1471,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha3 0.10.8",
+ "starknet-crypto 0.5.1",
  "starknet_api",
  "strum",
  "strum_macros",
