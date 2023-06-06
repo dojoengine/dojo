@@ -17,7 +17,7 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal};
 use camino::Utf8Path;
-use dojo_world::manifest::Member;
+use dojo_world::manifest::{Dependency, Member};
 use scarb::compiler::plugin::builtin::BuiltinSemanticCairoPlugin;
 use scarb::core::{PackageId, PackageName, SourceId};
 use semver::Version;
@@ -37,7 +37,7 @@ pub struct Component {
 #[derive(Debug, PartialEq, Eq)]
 pub struct SystemAuxData {
     pub name: SmolStr,
-    pub dependencies: Vec<SmolStr>,
+    pub dependencies: Vec<Dependency>,
 }
 
 /// Dojo related auxiliary data of the Dojo plugin.

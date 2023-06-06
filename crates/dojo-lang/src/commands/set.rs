@@ -4,22 +4,27 @@ use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_semantic::patcher::RewriteNode;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
+use dojo_world::manifest::Dependency;
 
 use super::{CommandData, CommandTrait};
 
 #[derive(Clone)]
 pub struct SetCommand {
     data: CommandData,
-    pub components: Vec<smol_str::SmolStr>,
+    pub components: Vec<Dependency>,
 }
 
 impl SetCommand {
     fn handle_struct(&mut self, db: &dyn SyntaxGroup, query: ast::Arg, expr: ast::Expr) {
         if let ast::Expr::StructCtorCall(ctor) = expr {
             if let Some(ast::PathSegment::Simple(segment)) = ctor.path(db).elements(db).last() {
-                let component = segment.ident(db).text(db);
+                let component_name = segment.ident(db).text(db);
 
-                self.components.push(component.clone());
+                self.components.push(Dependency {
+                    name: component_name.clone(),
+                    write: true,
+                    read: false,
+                });
                 self.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
                     "
                     {
@@ -31,7 +36,7 @@ impl SetCommand {
                     }
                     ",
                     HashMap::from([
-                        ("component".to_string(), RewriteNode::Text(component.to_string())),
+                        ("component".to_string(), RewriteNode::Text(component_name.to_string())),
                         ("ctor".to_string(), RewriteNode::new_trimmed(ctor.as_syntax_node())),
                         ("query".to_string(), RewriteNode::new_trimmed(query.as_syntax_node())),
                     ]),

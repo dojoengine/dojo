@@ -5,6 +5,7 @@ use cairo_lang_semantic::patcher::RewriteNode;
 use cairo_lang_syntax::node::ast::Arg;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
+use dojo_world::manifest::Dependency;
 use itertools::Itertools;
 use sanitizer::StringSanitizer;
 use smol_str::SmolStr;
@@ -16,6 +17,7 @@ pub struct EntityCommand {
     query_id: String,
     query_pattern: String,
     data: CommandData,
+    pub components: Vec<Dependency>,
 }
 
 impl CommandTrait for EntityCommand {
@@ -32,6 +34,7 @@ impl CommandTrait for EntityCommand {
             query_id: query_id.get(),
             query_pattern: var_name.as_syntax_node().get_text(db),
             data: CommandData::new(),
+            components: vec![],
         };
 
         let elements = command_ast.arguments(db).args(db).elements(db);
@@ -45,6 +48,11 @@ impl CommandTrait for EntityCommand {
             });
             return command;
         }
+
+        command.components = components
+            .iter()
+            .map(|c| Dependency { name: c.clone(), read: true, write: false })
+            .collect();
 
         let part_names = components
             .iter()
