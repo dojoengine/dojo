@@ -32,15 +32,15 @@ pub struct TestArgs {
 
 pub fn run(args: TestArgs) -> anyhow::Result<()> {
     let source_dir = if args.path.is_absolute() {
-        args.path
+        args.path.clone()
     } else {
         let mut current_path = current_dir().unwrap();
-        current_path.push(args.path);
+        current_path.push(args.path.clone());
         Utf8PathBuf::from_path_buf(current_path).unwrap()
     };
 
     let mut compilers = CompilerRepository::std();
-    compilers.add(Box::new(DojoTestCompiler)).unwrap();
+    compilers.add(Box::new(DojoTestCompiler { args })).unwrap();
 
     let cairo_plugins = CairoPluginRepository::new();
 
@@ -61,7 +61,9 @@ pub fn run(args: TestArgs) -> anyhow::Result<()> {
     ops::compile(&ws)
 }
 
-pub struct DojoTestCompiler;
+pub struct DojoTestCompiler {
+    args: TestArgs,
+}
 
 impl Compiler for DojoTestCompiler {
     fn target_kind(&self) -> &str {
@@ -83,10 +85,9 @@ impl Compiler for DojoTestCompiler {
         let runner = TestRunner {
             db: db.snapshot(),
             main_crate_ids,
-            // TODO: Pass these in
-            filter: "".to_string(),
-            include_ignored: false,
-            ignored: false,
+            filter: self.args.filter.clone(),
+            include_ignored: self.args.include_ignored,
+            ignored: self.args.ignored,
             starknet: true,
         };
 
