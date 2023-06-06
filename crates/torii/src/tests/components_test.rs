@@ -1,5 +1,7 @@
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use camino::Utf8PathBuf;
     use chrono::{DateTime, Utc};
     use serde::Deserialize;
@@ -13,14 +15,14 @@ mod tests {
     #[derive(Deserialize)]
     struct Moves {
         __typename: String,
-        remaining: i64,
+        remaining: String,
     }
 
     #[derive(Deserialize)]
     struct Position {
         __typename: String,
-        x: i64,
-        y: i64,
+        x: String,
+        y: String,
     }
 
     #[derive(Deserialize)]
@@ -44,48 +46,38 @@ mod tests {
         pub created_at: DateTime<Utc>,
     }
 
-    // #[sqlx::test(migrations = "./migrations", fixtures("entities"))]
-    // async fn test_storage_components(pool: SqlitePool) {
-    //     let _ = pool.acquire().await;
+    #[sqlx::test(migrations = "./migrations", fixtures("entities"))]
+    async fn test_storage_components(pool: SqlitePool) {
+        component_fixtures(&pool).await;
 
-    //     let query = r#"
-    //             {
-    //                 moves(id: 1) {
-    //                     __typename
-    //                     remaining
-    //                 }
-    //                 position(id: 1) {
-    //                     __typename
-    //                     x
-    //                     y
-    //                 }
-    //             }
-    //         "#;
-    //     let value = run_graphql_query(&pool, query).await;
+        let query = r#"
+                {
+                    moves {
+                        __typename
+                        remaining
+                    }
+                    position {
+                        __typename
+                        x
+                        y
+                    }
+                }
+            "#;
+        let value = run_graphql_query(&pool, query).await;
 
-    //     let moves = value.get("moves").ok_or("no moves found").unwrap();
-    //     let moves: Moves = serde_json::from_value(moves.clone()).unwrap();
-    //     let position = value.get("position").ok_or("no position found").unwrap();
-    //     let position: Position = serde_json::from_value(position.clone()).unwrap();
+        let moves = value.get("moves").ok_or("no moves found").unwrap();
+        let moves: Moves = serde_json::from_value(moves.clone()).unwrap();
+        let position = value.get("position").ok_or("no position found").unwrap();
+        let position: Position = serde_json::from_value(position.clone()).unwrap();
 
-    //     assert_eq!(moves.remaining, 10);
-    //     assert_eq!(position.x, 42);
-    //     assert_eq!(position.y, 69);
-    // }
+        assert_eq!(moves.remaining, "10");
+        assert_eq!(position.x, "42");
+        assert_eq!(position.y, "69");
+    }
 
     #[sqlx::test(migrations = "./migrations", fixtures("entities"))]
     async fn test_storage_union(pool: SqlitePool) {
-        let manifest = dojo_world::manifest::Manifest::load_from_path(
-            Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev/manifest.json".into())
-                .unwrap(),
-        )
-        .unwrap();
-
-        let mut state = Sql::new(pool.clone()).unwrap();
-        state.load_from_manifest(manifest).await.unwrap();
-
-        // let component = FieldElement::from_dec_str("12312").unwrap();
-        // println!("{}", component);
+        component_fixtures(&pool).await;
 
         let query = r#"
                 { 
@@ -121,5 +113,32 @@ mod tests {
 
         assert_eq!(component_moves.name, component_moves.storage.__typename);
         assert_eq!(component_position.name, component_position.storage.__typename);
+    }
+
+    async fn component_fixtures(pool: &SqlitePool) {
+        let manifest = dojo_world::manifest::Manifest::load_from_path(
+            Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev/manifest.json".into())
+                .unwrap(),
+        )
+        .unwrap();
+
+        let mut state = Sql::new(pool.clone()).unwrap();
+        state.load_from_manifest(manifest).await.unwrap();
+
+        // Set moves entity
+        let key = FieldElement::ONE;
+        let partition = FieldElement::from_hex_be("0xdead").unwrap();
+        let values =
+            HashMap::from([(String::from("remaining"), FieldElement::from_dec_str("10").unwrap())]);
+        state.set_entity("moves".to_string(), partition, key, values).await.unwrap();
+
+        // Set position entity
+        let key = FieldElement::TWO;
+        let partition = FieldElement::from_hex_be("0xbeef").unwrap();
+        let values = HashMap::from([
+            (String::from("x"), FieldElement::from_dec_str("42").unwrap()),
+            (String::from("y"), FieldElement::from_dec_str("69").unwrap()),
+        ]);
+        state.set_entity("position".to_string(), partition, key, values).await.unwrap();
     }
 }

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use dojo_world::manifest::{Component, Manifest, System};
@@ -15,26 +17,26 @@ pub trait State {
     async fn register_system(&mut self, system: System) -> Result<()>;
     async fn set_entity(
         &mut self,
-        component: FieldElement,
+        component: String,
         partition: FieldElement,
         key: FieldElement,
-        values: Vec<FieldElement>,
+        values: HashMap<String, FieldElement>,
     ) -> Result<()>;
     async fn delete_entity(
         &mut self,
-        component: FieldElement,
+        component: String,
         partition: FieldElement,
         key: FieldElement,
     ) -> Result<()>;
     async fn entity(
         &self,
-        component: FieldElement,
+        component: String,
         partition: FieldElement,
         key: FieldElement,
     ) -> Result<Vec<FieldElement>>;
     async fn entities(
         &self,
-        component: FieldElement,
+        component: String,
         partition: FieldElement,
     ) -> Result<Vec<Vec<FieldElement>>>;
 }

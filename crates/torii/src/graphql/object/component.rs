@@ -95,7 +95,6 @@ impl ObjectTrait for ComponentObject {
         vec![
             Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
                 FieldFuture::new(async move {
-                    println!("component resolver");
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                     let id = remove_quotes(ctx.args.try_get("id")?.string()?);
                     let component_values = component_by_id(&mut conn, &id).await?;

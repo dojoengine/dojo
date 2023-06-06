@@ -14,12 +14,12 @@ mod tests {
     async fn test_entity(pool: SqlitePool) {
         let _ = pool.acquire().await;
 
-        let query = "{ entity(id: \"entity_1\") { id } }";
+        let query = "{ entity(id: \"1\") { id } }";
         let value = run_graphql_query(&pool, query).await;
 
         let entity = value.get("entity").ok_or("no entity found").unwrap();
         let entity: Entity = serde_json::from_value(entity.clone()).unwrap();
-        assert_eq!(entity.id, "entity_1".to_string());
+        assert_eq!(entity.id, "1".to_string());
     }
 
     // #[sqlx::test(migrations = "./migrations", fixtures("entities"))]
