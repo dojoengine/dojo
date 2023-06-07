@@ -17,7 +17,7 @@ async fn test_migration() {
     let account = sequencer.account();
     let env_config = EnvironmentConfig {
         rpc: Some(sequencer.url()),
-        account_address: Some(account.address),
+        account_address: Some(account.address()),
         private_key: Some(account.private_key),
         ..EnvironmentConfig::default()
     };
@@ -46,7 +46,7 @@ async fn test_migration_from_remote() {
     let account = sequencer.account();
     let env_config = EnvironmentConfig {
         rpc: Some(sequencer.url()),
-        account_address: Some(account.address),
+        account_address: Some(account.address()),
         private_key: Some(account.private_key),
         ..EnvironmentConfig::default()
     };

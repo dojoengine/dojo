@@ -4,6 +4,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{Ok, Result};
+use dojo_test_utils::sequencer::Sequencer;
 use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::contract::SierraClass;
 use starknet::core::types::{
@@ -19,15 +20,13 @@ fn get_flattened_sierra_class(raw_contract_class: &str) -> Result<FlattenedSierr
     Ok(contract_artifact.flatten()?)
 }
 
-#[ignore]
 #[tokio::test]
 async fn test_send_declare_v2_tx() {
-    let provider =
-        JsonRpcClient::new(HttpTransport::new(Url::parse("http://localhost:5050").unwrap()));
+    let sequencer = Sequencer::start().await;
 
-    let path: PathBuf =
-        [env!("CARGO_MANIFEST_DIR"), "tests/test_data/cairo1_contract.json"].iter().collect();
+    let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
 
+    let path: PathBuf = PathBuf::from("src/starknet/test_data/cairo1_contract.json");
     let raw_contract_str = fs::read_to_string(path).unwrap();
     let contract_class = Arc::new(get_flattened_sierra_class(&raw_contract_str).unwrap());
 
@@ -36,10 +35,7 @@ async fn test_send_declare_v2_tx() {
             BroadcastedDeclareTransactionV2 {
                 max_fee: FieldElement::ZERO,
                 nonce: FieldElement::ZERO,
-                sender_address: FieldElement::from_str(
-                    "0x03819aca4f147e3b589807dd81257c02c4d616328f8b6bdc097b4ae517130a97",
-                )
-                .unwrap(),
+                sender_address: sequencer.account().address,
                 signature: vec![],
                 compiled_class_hash: FieldElement::from_hex_be(
                     "0x3e8c2b461e33e7711995014afdd012b94e533cdee94ef951cf27f2489b62055",
@@ -60,8 +56,7 @@ async fn test_send_declare_v1_tx() {
     let provider =
         JsonRpcClient::new(HttpTransport::new(Url::parse("http://localhost:5050").unwrap()));
 
-    let path: PathBuf =
-        [env!("CARGO_MANIFEST_DIR"), "tests/test_data/cairo0_contract.json"].iter().collect();
+    let path = PathBuf::from("src/starknet/tests/test_data/cairo0_contract.json");
 
     let legacy_contract: LegacyContractClass =
         serde_json::from_reader(fs::File::open(path).unwrap()).unwrap();
@@ -84,3 +79,17 @@ async fn test_send_declare_v1_tx() {
     println!("{res:?}");
     assert!(res.is_ok());
 }
+
+// let events = provider
+// .get_events(
+//     EventFilter {
+//         from_block: Some(BlockId::Number(0)),
+//         to_block: Some(BlockId::Tag(BlockTag::Pending)),
+//         address: None, // Some(world_address),
+//         keys: None,
+//     },
+//     None,
+//     100,
+// )
+// .await
+// .map_err(ManifestError::Provider)?;

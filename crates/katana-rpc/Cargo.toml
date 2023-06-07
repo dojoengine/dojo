@@ -12,7 +12,7 @@ blockifier.workspace = true
 cairo-lang-starknet.workspace = true
 tokio.workspace = true
 hex = { version = "0.4.3", default-features = false }
-jsonrpsee = { version = "0.16.2", features = [ "full" ] }
+jsonrpsee = { version = "0.16.2", features = ["full"] }
 katana-core = { path = "../katana-core" }
 serde.workspace = true
 serde_json.workspace = true
@@ -26,5 +26,6 @@ tower = { version = "0.4.13", features = ["full"] }
 
 [dev-dependencies]
 assert_matches = "1.5.0"
+dojo-test-utils = { path = "../dojo-test-utils" }
 tokio.workspace = true
 url = "2.3.1"

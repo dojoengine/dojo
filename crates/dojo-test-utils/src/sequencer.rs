@@ -6,7 +6,10 @@ use katana_core::sequencer::KatanaSequencer;
 use katana_core::starknet::StarknetConfig;
 use katana_rpc::config::RpcConfig;
 use katana_rpc::KatanaNodeRpc;
+use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::FieldElement;
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::JsonRpcClient;
 use url::Url;
 
 const ACCOUNT_ADDRESS: FieldElement = FieldElement::from_mont([
@@ -31,6 +34,7 @@ pub struct Account {
 pub struct Sequencer {
     url: Url,
     handle: ServerHandle,
+    provider: JsonRpcClient,
 }
 
 impl Sequencer {
@@ -44,16 +48,17 @@ impl Sequencer {
         let (socket_addr, handle) =
             KatanaNodeRpc::new(sequencer.clone(), RpcConfig { port: 0 }).run().await.unwrap();
         let url = Url::parse(&format!("http://{}", socket_addr)).expect("Failed to parse URL");
-
-        Sequencer { url, handle }
+        let provider = JsonRpcClient::new(HttpTransport::new(url));
+        Sequencer { url, handle, provider }
     }
 
     pub fn url(&self) -> Url {
         self.url.clone()
     }
 
-    pub fn account(&self) -> Account {
-        Account { address: ACCOUNT_ADDRESS, private_key: ACCOUNT_PK }
+    pub fn account(&self) -> SingleOwnerAccount {
+        let signer = LocalWallet::from(SigningKey::from_secret_scalar(ACCOUNT_PK));
+        SingleOwnerAccount::new(self.provider, signer, ACCOUNT_ADDRESS, chain_id::TESTNET)
     }
 
     pub fn stop(&self) -> Result<(), Error> {
