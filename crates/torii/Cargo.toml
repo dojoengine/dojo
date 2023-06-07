@@ -24,7 +24,7 @@ sqlx = { version = "0.6.2", features = [
 starknet.workspace = true
 tokio = { version = "1.20.1", features = ["full"] }
 tokio-stream = "0.1.11"
-tokio-util = "0.7.7"
+tokio-util.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 url = "2.2.2"

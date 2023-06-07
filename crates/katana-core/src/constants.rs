@@ -32,3 +32,5 @@ fn get_contract_class(contract_class_str: &str) -> ContractClass {
     let legacy_contract_class: ContractClassV0 = serde_json::from_str(contract_class_str).unwrap();
     ContractClass::V0(legacy_contract_class)
 }
+
+pub const DUMP_INTERVAL: u64 = 10; // In seconds.

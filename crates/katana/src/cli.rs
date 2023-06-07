@@ -60,6 +60,21 @@ pub struct StarknetOptions {
     #[command(flatten)]
     #[command(next_help_heading = "Environment options")]
     pub environment: EnvironmentOptions,
+
+    #[arg(long = "dump")]
+    #[arg(
+        help = "The path to the file where the chain state will be dumped at a regular interval."
+    )]
+    pub dump_path: Option<PathBuf>,
+
+    #[arg(long = "state")]
+    #[arg(help = "The path to the chain's persistent state file.")]
+    pub state_path: Option<PathBuf>,
+
+    #[arg(long = "dump-interval")]
+    #[arg(default_value = "10")]
+    #[arg(help = "The interval in seconds between state dumps.")]
+    pub dump_interval: u64,
 }
 
 #[derive(Debug, Args, Clone)]
@@ -89,6 +104,18 @@ impl App {
             allow_zero_max_fee: self.starknet.allow_zero_max_fee,
             chain_id: self.starknet.environment.chain_id.clone(),
         }
+    }
+
+    pub fn dump_path(&self) -> Option<PathBuf> {
+        self.starknet.dump_path.clone()
+    }
+
+    pub fn state_path(&self) -> Option<PathBuf> {
+        self.starknet.state_path.clone()
+    }
+
+    pub fn dump_interval(&self) -> u64 {
+        self.starknet.dump_interval.clone()
     }
 }
 

@@ -8,3 +8,7 @@ dojo.iml
 .DS_Store
 .env
 data
+
+# Files that are linked with dumped devnet state
+dump.bin
+.katana/

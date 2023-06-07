@@ -22,3 +22,5 @@ cairo-lang-starknet.workspace = true
 rand = { version = "0.8.5", features = ["small_rng"] }
 lazy_static = "1.4.0"
 flate2 = "1.0.26"
+bincode = "1.3.3"
+serde_with.workspace = true

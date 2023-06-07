@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -24,6 +25,7 @@ use tokio::sync::RwLock;
 use crate::sequencer_error::SequencerError;
 use crate::starknet::block::StarknetBlock;
 use crate::starknet::event::EmittedEvent;
+use crate::starknet::serializable::SerializableState;
 use crate::starknet::transaction::ExternalFunctionCall;
 use crate::starknet::{StarknetConfig, StarknetWrapper};
 use crate::state::DictStateReader;
@@ -38,6 +40,12 @@ pub struct KatanaSequencer {
 impl KatanaSequencer {
     pub fn new(config: StarknetConfig) -> Self {
         Self { starknet: Arc::new(RwLock::new(StarknetWrapper::new(config))) }
+    }
+
+    pub fn new_from_dump(config: StarknetConfig, path: &PathBuf) -> Result<Self> {
+        let mut starknet = StarknetWrapper::new(config);
+        starknet.load_state(path)?;
+        Ok(Self { starknet: Arc::new(RwLock::new(starknet)) })
     }
 
     // The starting point of the sequencer

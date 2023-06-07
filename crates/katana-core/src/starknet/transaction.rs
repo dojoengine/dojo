@@ -3,6 +3,7 @@ use std::vec;
 
 use blockifier::transaction::errors::TransactionExecutionError;
 use blockifier::transaction::objects::TransactionExecutionInfo;
+use serde::{Deserialize, Serialize};
 use starknet::core::types::TransactionStatus;
 use starknet_api::block::{BlockHash, BlockNumber};
 use starknet_api::core::{ContractAddress, EntryPointSelector};
@@ -20,13 +21,14 @@ pub struct ExternalFunctionCall {
     pub entry_point_selector: EntryPointSelector,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct StarknetTransaction {
     pub inner: Transaction,
     pub status: TransactionStatus,
     pub block_hash: Option<BlockHash>,
     pub block_number: Option<BlockNumber>,
     pub execution_info: Option<TransactionExecutionInfo>,
+    #[serde(skip)]
     pub execution_error: Option<TransactionExecutionError>,
 }
 
@@ -166,7 +168,7 @@ impl StarknetTransaction {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct StarknetTransactions {
     pub transactions: HashMap<TransactionHash, StarknetTransaction>,
 }

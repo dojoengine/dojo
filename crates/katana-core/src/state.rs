@@ -1,20 +1,20 @@
-use std::collections::HashMap;
-
 use blockifier::execution::contract_class::ContractClass;
 use blockifier::state::cached_state::ContractStorageKey;
 use blockifier::state::errors::StateError;
 use blockifier::state::state_api::{StateReader, StateResult};
+use serde::{Deserialize, Serialize};
 use starknet_api::core::{ClassHash, CompiledClassHash, ContractAddress, Nonce, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};
 use starknet_api::patricia_key;
 use starknet_api::state::StorageKey;
+use std::collections::HashMap;
 
 use crate::constants::{
     ERC20_CONTRACT, ERC20_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS, UDC_ADDRESS, UDC_CLASS_HASH,
     UDC_CONTRACT,
 };
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DictStateReader {
     pub storage_view: HashMap<ContractStorageKey, StarkFelt>,
     pub address_to_nonce: HashMap<ContractAddress, Nonce>,

@@ -11,6 +11,7 @@ use blockifier::transaction::errors::TransactionExecutionError;
 use blockifier::transaction::objects::{AccountTransactionContext, TransactionExecutionInfo};
 use blockifier::transaction::transaction_execution::Transaction;
 use blockifier::transaction::transactions::ExecutableTransaction;
+use serde::{Deserialize, Serialize};
 use starknet::core::types::{FieldElement, StateUpdate, TransactionStatus};
 use starknet_api::block::{BlockHash, BlockNumber, BlockTimestamp, GasPrice};
 use starknet_api::core::{ClassHash, ContractAddress, GlobalRoot, PatriciaKey};
@@ -21,6 +22,7 @@ use tracing::info;
 
 pub mod block;
 pub mod event;
+pub mod serializable;
 pub mod transaction;
 
 use block::{StarknetBlock, StarknetBlocks};
@@ -39,7 +41,7 @@ use crate::util::{
     get_current_timestamp,
 };
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct StarknetConfig {
     pub seed: [u8; 32],
     pub gas_price: u128,
@@ -50,6 +52,7 @@ pub struct StarknetConfig {
     pub account_path: Option<PathBuf>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct StarknetWrapper {
     pub config: StarknetConfig,
     pub blocks: StarknetBlocks,

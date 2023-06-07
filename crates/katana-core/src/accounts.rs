@@ -7,6 +7,7 @@ use blockifier::abi::abi_utils::get_storage_var_address;
 use blockifier::execution::contract_class::{ContractClass, ContractClassV0};
 use rand::rngs::SmallRng;
 use rand::{RngCore, SeedableRng};
+use serde::{Deserialize, Serialize};
 use starknet::signers::SigningKey;
 use starknet_api::core::{
     calculate_contract_address, ClassHash, ContractAddress, Nonce, PatriciaKey,
@@ -21,7 +22,7 @@ use crate::constants::{
 use crate::state::DictStateReader;
 use crate::util::compute_legacy_class_hash;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Account {
     pub balance: StarkFelt,
     pub class_hash: ClassHash,
@@ -78,7 +79,7 @@ impl Account {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PredeployedAccounts {
     pub seed: [u8; 32],
     pub accounts: Vec<Account>,
