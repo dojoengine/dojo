@@ -23,10 +23,10 @@ mod tests {
     }
 
     // #[sqlx::test(migrations = "./migrations", fixtures("entities"))]
-    // async fn test_entities_partition_id(pool: SqlitePool) {
+    // async fn test_entities_partition(pool: SqlitePool) {
     //     let _ = pool.acquire().await;
 
-    //     let query = "{ entities (partitionId: \"420\") { edges { node { id name partitionId keys
+    //     let query = "{ entities (partition: \"420\") { edges { node { id name partition keys
     // \                  transactionHash createdAt } } } }";
     //     let value = run_graphql_query(&pool, query).await;
 
@@ -37,11 +37,11 @@ mod tests {
     // }
 
     // #[sqlx::test(migrations = "./migrations", fixtures("entities"))]
-    // async fn test_entities_partition_id_keys(pool: SqlitePool) {
+    // async fn test_entities_partition_keys(pool: SqlitePool) {
     //     let _ = pool.acquire().await;
 
-    //     let query = "{ entities (partitionId: \"69\", keys: [\"420\"]) { edges { node { id name \
-    //                  partitionId keys transactionHash createdAt } } } }";
+    //     let query = "{ entities (partition: \"69\", keys: [\"420\"]) { edges { node { id name \
+    //                  partition keys transactionHash createdAt } } } }";
     //     let value = run_graphql_query(&pool, query).await;
 
     //     let entities = value.get("entities").ok_or("incorrect entities").unwrap();

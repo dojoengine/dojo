@@ -57,7 +57,7 @@ pub async fn storage_by_name(
     name: &str,
     fields: &TypeMapping,
 ) -> Result<ValueMapping> {
-    let query = format!("SELECT * FROM {} ORDER BY created_at DESC LIMIT 1", name);
+    let query = format!("SELECT * FROM external_{} ORDER BY created_at DESC LIMIT 1", name);
     let storage = sqlx::query(&query).fetch_one(conn).await?;
     let result = value_mapping_from_row(&storage, fields)?;
     Ok(result)
