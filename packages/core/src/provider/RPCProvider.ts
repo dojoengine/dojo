@@ -1,14 +1,15 @@
-import { RpcProvider, Provider as StarknetProvider, Account, stark, number, Call } from "starknet";
+import { RpcProvider, Provider as StarknetProvider, Account, stark, number, Call, InvokeFunctionResponse } from "starknet";
 import { Provider } from "./provider";
 import { ComponentNames, Query, WorldEntryPoints } from "../types";
 import { strToShortStringFelt } from '../utils'
+import { LOCAL_TORII } from '../constants';
 
 export class RPCProvider extends Provider {
     public provider: RpcProvider;
     public sequencerProvider: StarknetProvider;
     private loggingEnabled: boolean;
 
-    constructor(world_address: string, url: string, loggingEnabled = false) {
+    constructor(world_address: string, url: string = LOCAL_TORII, loggingEnabled = false) {
         super(world_address);
         this.provider = new RpcProvider({
             nodeUrl: url,
@@ -91,7 +92,7 @@ export class RPCProvider extends Provider {
         }
     }
 
-    public async execute(account: Account, system: string, call_data: number.BigNumberish[]): Promise<Array<bigint>> {
+    public async execute(account: Account, system: string, call_data: number.BigNumberish[]): Promise<InvokeFunctionResponse> {
 
         let call_data_obj = call_data.reduce((obj: any, item, index) => {
             obj[index] = item;
@@ -115,7 +116,7 @@ export class RPCProvider extends Provider {
                     maxFee: 0 // TODO: Update
                 }
             );
-            return call as unknown as Array<bigint>;
+            return call;
         } catch (error) {
             throw error;
         }

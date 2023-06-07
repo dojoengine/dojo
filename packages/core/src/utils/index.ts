@@ -1,5 +1,6 @@
 export function strToShortStringFelt(str: string): string {
-  const strB = Buffer.from(str)
+  const encoder = new TextEncoder();
+  const strB = encoder.encode(str);
   return BigInt(
     strB.reduce((memo, byte) => {
       memo += byte.toString(16)
