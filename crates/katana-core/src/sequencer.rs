@@ -31,13 +31,19 @@ use crate::util::starkfelt_to_u128;
 
 type SequencerResult<T> = Result<T, SequencerError>;
 
+#[derive(Debug, Default)]
+pub struct SequencerConfig {
+    pub block_time: Option<u64>,
+}
+
 pub struct KatanaSequencer {
+    pub config: SequencerConfig,
     pub starknet: Arc<RwLock<StarknetWrapper>>,
 }
 
 impl KatanaSequencer {
-    pub fn new(config: StarknetConfig) -> Self {
-        Self { starknet: Arc::new(RwLock::new(StarknetWrapper::new(config))) }
+    pub fn new(config: SequencerConfig, starknet_config: StarknetConfig) -> Self {
+        Self { config, starknet: Arc::new(RwLock::new(StarknetWrapper::new(starknet_config))) }
     }
 
     // The starting point of the sequencer

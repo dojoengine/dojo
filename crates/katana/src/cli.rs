@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use clap::{Args, Parser};
 use katana_core::constants::DEFAULT_GAS_PRICE;
+use katana_core::sequencer::SequencerConfig;
 use katana_core::starknet::StarknetConfig;
 use katana_rpc::config::RpcConfig;
 
@@ -28,6 +29,11 @@ pub struct RpcOptions {
     #[arg(default_value = "5050")]
     #[arg(help = "Port number to listen on.")]
     pub port: u16,
+
+    #[arg(short, long)]
+    #[arg(value_name = "SECONDS")]
+    #[arg(help = "Block time in seconds for interval mining.")]
+    pub block_time: Option<u64>,
 }
 
 #[derive(Debug, Args, Clone)]
@@ -75,6 +81,10 @@ pub struct EnvironmentOptions {
 }
 
 impl App {
+    pub fn sequencer_config(&self) -> SequencerConfig {
+        SequencerConfig { block_time: self.rpc.block_time }
+    }
+
     pub fn rpc_config(&self) -> RpcConfig {
         RpcConfig { port: self.rpc.port }
     }
