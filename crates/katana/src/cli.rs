@@ -28,6 +28,11 @@ pub struct RpcOptions {
     #[arg(default_value = "5050")]
     #[arg(help = "Port number to listen on.")]
     pub port: u16,
+    
+    #[arg(short, long)]
+    #[arg(default_value = "0.0.0.0")]
+    #[arg(help = "Host address to listen on.")]
+    pub listening_host: String,
 }
 
 #[derive(Debug, Args, Clone)]
@@ -76,7 +81,7 @@ pub struct EnvironmentOptions {
 
 impl App {
     pub fn rpc_config(&self) -> RpcConfig {
-        RpcConfig { port: self.rpc.port }
+        RpcConfig { port: self.rpc.port, host: self.rpc.listening_host.clone() }
     }
 
     pub fn starknet_config(&self) -> StarknetConfig {

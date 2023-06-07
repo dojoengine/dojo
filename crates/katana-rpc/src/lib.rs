@@ -48,7 +48,7 @@ where
             .set_logger(KatanaNodeRpcLogger)
             .set_host_filtering(AllowHosts::Any)
             .set_middleware(middleware)
-            .build(format!("127.0.0.1:{}", self.config.port))
+            .build(format!("{}:{}", self.config.host.clone(), self.config.port))
             .await
             .map_err(|_| Error::from(StarknetApiError::InternalServerError))?;
 
