@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use jsonrpsee::core::Error;
 use jsonrpsee::server::ServerHandle;
-use katana_core::sequencer::KatanaSequencer;
+use katana_core::sequencer::{KatanaSequencer, SequencerConfig};
 use katana_core::starknet::StarknetConfig;
 use katana_rpc::config::RpcConfig;
 use katana_rpc::KatanaNodeRpc;
@@ -35,11 +35,14 @@ pub struct Sequencer {
 
 impl Sequencer {
     pub async fn start() -> Sequencer {
-        let sequencer = Arc::new(KatanaSequencer::new(StarknetConfig {
-            total_accounts: 1,
-            allow_zero_max_fee: true,
-            ..StarknetConfig::default()
-        }));
+        let sequencer = Arc::new(KatanaSequencer::new(
+            SequencerConfig::default(),
+            StarknetConfig {
+                total_accounts: 1,
+                allow_zero_max_fee: true,
+                ..StarknetConfig::default()
+            },
+        ));
         sequencer.start().await;
         let (socket_addr, handle) =
             KatanaNodeRpc::new(sequencer.clone(), RpcConfig { port: 0 }).run().await.unwrap();

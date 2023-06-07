@@ -20,6 +20,7 @@ use starknet_api::transaction::{
     Transaction as StarknetApiTransaction, TransactionHash, TransactionSignature,
 };
 use tokio::sync::RwLock;
+use tokio::time;
 
 use crate::sequencer_error::SequencerError;
 use crate::starknet::block::StarknetBlock;
@@ -31,20 +32,36 @@ use crate::util::starkfelt_to_u128;
 
 type SequencerResult<T> = Result<T, SequencerError>;
 
+#[derive(Debug, Default)]
+pub struct SequencerConfig {
+    pub block_time: Option<u64>,
+}
+
 pub struct KatanaSequencer {
+    pub config: SequencerConfig,
     pub starknet: Arc<RwLock<StarknetWrapper>>,
 }
 
 impl KatanaSequencer {
-    pub fn new(config: StarknetConfig) -> Self {
-        Self { starknet: Arc::new(RwLock::new(StarknetWrapper::new(config))) }
+    pub fn new(config: SequencerConfig, starknet_config: StarknetConfig) -> Self {
+        Self { config, starknet: Arc::new(RwLock::new(StarknetWrapper::new(starknet_config))) }
     }
 
-    // The starting point of the sequencer
-    // Once we add support periodic block generation, the logic should be here.
     pub async fn start(&self) {
         self.starknet.write().await.generate_genesis_block();
-        self.starknet.write().await.generate_pending_block();
+
+        if let Some(block_time) = self.config.block_time {
+            let starknet = self.starknet.clone();
+            tokio::spawn(async move {
+                loop {
+                    starknet.write().await.generate_pending_block();
+                    time::sleep(time::Duration::from_secs(block_time)).await;
+                    starknet.write().await.generate_latest_block();
+                }
+            });
+        } else {
+            self.starknet.write().await.generate_pending_block();
+        }
     }
 
     pub async fn drip_and_deploy_account(
