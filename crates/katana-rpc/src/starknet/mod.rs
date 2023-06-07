@@ -561,15 +561,30 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
         let from_block = filter.event_filter.from_block.unwrap_or(BlockId::Number(0));
         let to_block = filter.event_filter.to_block.unwrap_or(BlockId::Tag(BlockTag::Latest));
 
+        let keys = filter.event_filter.keys;
+        let keys = {
+            if let Some(keys) = keys {
+                if keys.len() == 1 && keys.is_empty() {
+                    None
+                } else {
+                    Some(
+                        keys.iter()
+                            .map(|key| key.iter().map(|key| (*key).into()).collect())
+                            .collect(),
+                    )
+                }
+            } else {
+                None
+            }
+        };
+
         let events = self
             .sequencer
             .events(
                 from_block,
                 to_block,
                 filter.event_filter.address.map(StarkFelt::from),
-                filter.event_filter.keys.map(|keys| {
-                    keys.iter().map(|key| key.iter().map(|key| (*key).into()).collect()).collect()
-                }),
+                keys,
                 filter.result_page_request.continuation_token,
                 filter.result_page_request.chunk_size,
             )
