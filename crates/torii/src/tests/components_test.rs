@@ -46,7 +46,7 @@ mod tests {
         pub created_at: DateTime<Utc>,
     }
 
-    #[sqlx::test(migrations = "./migrations", fixtures("entities"))]
+    #[sqlx::test(migrations = "./migrations")]
     async fn test_storage_components(pool: SqlitePool) {
         component_fixtures(&pool).await;
 
@@ -70,12 +70,12 @@ mod tests {
         let position = value.get("position").ok_or("no position found").unwrap();
         let position: Position = serde_json::from_value(position.clone()).unwrap();
 
-        assert_eq!(moves.remaining, "10");
-        assert_eq!(position.x, "42");
-        assert_eq!(position.y, "69");
+        assert_eq!(moves.remaining, "0xa");
+        assert_eq!(position.x, "0x2a");
+        assert_eq!(position.y, "0x45");
     }
 
-    #[sqlx::test(migrations = "./migrations", fixtures("entities"))]
+    #[sqlx::test(migrations = "./migrations")]
     async fn test_storage_union(pool: SqlitePool) {
         component_fixtures(&pool).await;
 
@@ -122,22 +122,22 @@ mod tests {
         )
         .unwrap();
 
-        let mut state = Sql::new(pool.clone()).unwrap();
+        let mut state = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
         state.load_from_manifest(manifest).await.unwrap();
 
         // Set moves entity
         let key = FieldElement::ONE;
         let partition = FieldElement::from_hex_be("0xdead").unwrap();
         let values =
-            HashMap::from([(String::from("remaining"), FieldElement::from_dec_str("10").unwrap())]);
+            HashMap::from([(String::from("remaining"), FieldElement::from_hex_be("0xa").unwrap())]);
         state.set_entity("moves".to_string(), partition, key, values).await.unwrap();
 
         // Set position entity
         let key = FieldElement::TWO;
         let partition = FieldElement::from_hex_be("0xbeef").unwrap();
         let values = HashMap::from([
-            (String::from("x"), FieldElement::from_dec_str("42").unwrap()),
-            (String::from("y"), FieldElement::from_dec_str("69").unwrap()),
+            (String::from("x"), FieldElement::from_hex_be("0x2a").unwrap()),
+            (String::from("y"), FieldElement::from_hex_be("0x45").unwrap()),
         ]);
         state.set_entity("position".to_string(), partition, key, values).await.unwrap();
     }
