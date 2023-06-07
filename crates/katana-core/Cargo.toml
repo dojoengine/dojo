@@ -24,3 +24,5 @@ lazy_static = "1.4.0"
 flate2 = "1.0.26"
 bincode = "1.3.3"
 serde_with.workspace = true
+cairo-lang-casm.workspace = true
+cairo-vm = "0.3.0-rc1"
