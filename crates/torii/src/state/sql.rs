@@ -4,22 +4,54 @@ use anyhow::Result;
 use async_trait::async_trait;
 use dojo_world::manifest::{Component, Manifest, System};
 use sqlx::pool::PoolConnection;
-use sqlx::{Executor, Pool, QueryBuilder, Sqlite};
+use sqlx::{Executor, Pool, Sqlite};
 use starknet::core::types::FieldElement;
 
-use super::State;
+use super::{State, World};
 
 #[cfg(test)]
 #[path = "sql_test.rs"]
 mod test;
 
 pub struct Sql {
+    world_address: FieldElement,
     pool: Pool<Sqlite>,
 }
 
 impl Sql {
-    pub fn new(pool: Pool<Sqlite>) -> Result<Self> {
-        Ok(Self { pool })
+    pub async fn new(pool: Pool<Sqlite>, world_address: FieldElement) -> Result<Self> {
+        let queries = vec![
+            format!(
+                "INSERT OR IGNORE INTO indexers (id, head) VALUES ('{:#x}', '{}')",
+                world_address, 0
+            ),
+            format!(
+                "INSERT OR IGNORE INTO worlds (id, world_address) VALUES ('{:#x}', '{:#x}')",
+                world_address, world_address
+            ),
+        ];
+
+        let mut tx = pool.begin().await?;
+
+        for query in queries {
+            tx.execute(sqlx::query(&query)).await?;
+        }
+
+        tx.commit().await?;
+
+        Ok(Self { pool, world_address })
+    }
+
+    async fn execute(&self, queries: Vec<String>) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+
+        for query in queries {
+            tx.execute(sqlx::query(&query)).await?;
+        }
+
+        tx.commit().await?;
+
+        Ok(())
     }
 }
 
@@ -27,13 +59,10 @@ impl Sql {
 impl State for Sql {
     async fn load_from_manifest(&mut self, manifest: Manifest) -> Result<()> {
         let mut updates = vec![
+            format!("world_address = '{:#x}'", self.world_address),
             format!("world_class_hash = '{:#x}'", manifest.world.class_hash),
             format!("executor_class_hash = '{:#x}'", manifest.executor.class_hash),
         ];
-
-        if let Some(world_address) = manifest.world.address {
-            updates.push(format!("world_address = '{:#x}'", world_address));
-        }
 
         if let Some(executor_address) = manifest.executor.address {
             updates.push(format!("executor_address = '{:#x}'", executor_address));
@@ -41,7 +70,11 @@ impl State for Sql {
 
         let mut queries = vec![];
 
-        queries.push(format!("UPDATE indexer SET {} WHERE id = 0", updates.join(",")));
+        queries.push(format!(
+            "UPDATE worlds SET {} WHERE id = '{:#x}'",
+            updates.join(","),
+            self.world_address
+        ));
 
         for component in manifest.components {
             let component_id = component.name.to_lowercase();
@@ -73,38 +106,66 @@ impl State for Sql {
             ));
         }
 
-        let mut tx = self.pool.begin().await?;
-
-        for query in queries {
-            tx.execute(sqlx::query(&query)).await?;
-        }
-
-        tx.commit().await?;
-
-        Ok(())
+        self.execute(queries).await
     }
 
     async fn head(&self) -> Result<u64> {
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
-        let indexer: (i64,) =
-            sqlx::query_as("SELECT head FROM indexer WHERE id = 1").fetch_one(&mut conn).await?;
-
+        let indexer: (i64,) = sqlx::query_as(&format!(
+            "SELECT head FROM indexers WHERE id = '{:#x}'",
+            self.world_address
+        ))
+        .fetch_one(&mut conn)
+        .await?;
         Ok(indexer.0.try_into().expect("doesnt fit in u64"))
     }
 
     async fn set_head(&mut self, head: u64) -> Result<()> {
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
-        sqlx::query(&format!("INSERT INTO indexer (head) VALUES ({head}) WHERE id = 0"))
-            .execute(&mut conn)
-            .await?;
+        sqlx::query(&format!(
+            "UPDATE indexers SET head = {head} WHERE id = '{:#x}'",
+            self.world_address
+        ))
+        .execute(&mut conn)
+        .await?;
+        Ok(())
+    }
+
+    async fn world(&self) -> Result<World> {
+        let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
+        let meta: World =
+            sqlx::query_as(&format!("SELECT * FROM worlds WHERE id = '{:#x}'", self.world_address))
+                .fetch_one(&mut conn)
+                .await?;
+
+        Ok(meta)
+    }
+
+    async fn set_world(&mut self, world: World) -> Result<()> {
+        let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
+        sqlx::query(&format!(
+            "UPDATE worlds SET world_address='{:#x}', world_class_hash='{:#x}', \
+             executor_address='{:#x}', executor_class_hash='{:#x}' WHERE id = '{:#x}'",
+            world.world_address,
+            world.world_class_hash,
+            world.executor_address,
+            world.executor_class_hash,
+            world.world_address,
+        ))
+        .execute(&mut conn)
+        .await?;
         Ok(())
     }
 
     async fn register_component(&mut self, component: Component) -> Result<()> {
-        let query = build_component_table_create(component);
-        let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
-        sqlx::query(&query).execute(&mut conn).await?;
-        Ok(())
+        let mut queries = vec![build_component_table_create(component.clone())];
+        let component_id = component.name.to_lowercase();
+        queries.push(format!(
+            "INSERT INTO components (id, name, class_hash) VALUES ('{}', '{}', '{:#x}') ON \
+             CONFLICT(id) DO UPDATE SET class_hash='{:#x}'",
+            component_id, component.name, component.class_hash, component.class_hash
+        ));
+        self.execute(queries).await
     }
 
     async fn register_system(&mut self, system: System) -> Result<()> {
@@ -126,33 +187,30 @@ impl State for Sql {
         component: String,
         partition: FieldElement,
         key: FieldElement,
-        values: HashMap<String, FieldElement>,
+        members: HashMap<String, FieldElement>,
     ) -> Result<()> {
-        let mut conn = self.pool.acquire().await?;
-        let mut builder: QueryBuilder<'_, Sqlite> =
-            QueryBuilder::new(format!("INSERT INTO {} (", component));
+        let mut columns = vec![];
+        let mut values = vec![];
+        for (key, value) in members {
+            columns.push(format!("external_{}", key));
+            values.push(format!("'{value:#x}'"));
+        }
+        let columns = columns.join(", ");
+        let values = values.join(", ");
 
-        let mut separated = builder.separated(", ");
-        separated.push("id");
-        separated.push("partition");
+        let queries = vec![
+            format!(
+                "INSERT INTO entities (id, partition, keys) VALUES ('{:#x}', '{:#x}', '{}')",
+                key, partition, "todo",
+            ),
+            format!(
+                "INSERT INTO external_{} (id, partition, {columns}) VALUES ('{key:#x}', \
+                 '{partition:#x}', {values})",
+                component.to_lowercase()
+            ),
+        ];
 
-        values.iter().for_each(|v| {
-            separated.push(format!("external_{}", v.0));
-        });
-        separated.push_unseparated(") VALUES (");
-
-        let mut separated = builder.separated(", ");
-        separated.push_bind(key.to_string());
-        separated.push_bind(partition.to_string());
-
-        values.iter().for_each(|v| {
-            separated.push_bind(v.1.to_string());
-        });
-        separated.push_unseparated(") ");
-
-        let query = builder.build();
-        query.execute(&mut conn).await?;
-        Ok(())
+        self.execute(queries).await
     }
 
     async fn delete_entity(
@@ -195,7 +253,8 @@ impl State for Sql {
 
 fn build_component_table_create(component: Component) -> String {
     let mut query = format!(
-        "CREATE TABLE IF NOT EXISTS {} (id TEXT NOT NULL PRIMARY KEY, partition TEXT NOT NULL, ",
+        "CREATE TABLE IF NOT EXISTS external_{} (id TEXT NOT NULL PRIMARY KEY, partition TEXT NOT \
+         NULL, ",
         component.name.to_lowercase()
     );
 

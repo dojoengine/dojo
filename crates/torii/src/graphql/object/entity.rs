@@ -16,8 +16,7 @@ use crate::graphql::utils::remove_quotes;
 #[serde(rename_all = "camelCase")]
 pub struct Entity {
     pub id: String,
-    pub name: String,
-    pub partition_id: String,
+    pub partition: String,
     pub keys: Option<String>,
     pub transaction_hash: String,
     pub created_at: DateTime<Utc>,
@@ -32,8 +31,7 @@ impl EntityObject {
         Self {
             field_type_mapping: IndexMap::from([
                 (Name::new("id"), TypeRef::ID.to_string()),
-                (Name::new("name"), TypeRef::STRING.to_string()),
-                (Name::new("partitionId"), ScalarType::FELT.to_string()),
+                (Name::new("partition"), ScalarType::FELT.to_string()),
                 (Name::new("keys"), TypeRef::STRING.to_string()),
                 (Name::new("transactionHash"), ScalarType::FELT.to_string()),
                 (Name::new("createdAt"), ScalarType::DATE_TIME.to_string()),
@@ -44,8 +42,7 @@ impl EntityObject {
     pub fn value_mapping(entity: Entity) -> ValueMapping {
         IndexMap::from([
             (Name::new("id"), Value::from(entity.id)),
-            (Name::new("name"), Value::from(entity.name)),
-            (Name::new("partitionId"), Value::from(entity.partition_id)),
+            (Name::new("partition"), Value::from(entity.partition)),
             (Name::new("keys"), Value::from(entity.keys.unwrap_or_default())),
             (Name::new("transactionHash"), Value::from(entity.transaction_hash)),
             (
@@ -84,7 +81,7 @@ impl ObjectTrait for EntityObject {
             Field::new("entities", TypeRef::named_nn_list_nn(self.type_name()), |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let parition_id = remove_quotes(ctx.args.try_get("partitionId")?.string()?);
+                    let parition = remove_quotes(ctx.args.try_get("partition")?.string()?);
 
                     // handle optional keys argument
                     let maybe_keys = ctx.args.try_get("keys").ok();
@@ -104,11 +101,11 @@ impl ObjectTrait for EntityObject {
                         .and_then(|limit| limit.u64())
                         .unwrap_or(DEFAULT_LIMIT);
 
-                    let entities = entities_by_sk(&mut conn, &parition_id, keys_arr, limit).await?;
+                    let entities = entities_by_sk(&mut conn, &parition, keys_arr, limit).await?;
                     Ok(Some(FieldValue::list(entities.into_iter().map(FieldValue::owned_any))))
                 })
             })
-            .argument(InputValue::new("partitionId", TypeRef::named_nn(ScalarType::FELT)))
+            .argument(InputValue::new("partition", TypeRef::named_nn(ScalarType::FELT)))
             .argument(InputValue::new("keys", TypeRef::named_list(TypeRef::STRING)))
             .argument(InputValue::new("limit", TypeRef::named(TypeRef::INT))),
         ]
@@ -117,12 +114,12 @@ impl ObjectTrait for EntityObject {
 
 async fn entities_by_sk(
     conn: &mut PoolConnection<Sqlite>,
-    partition_id: &str,
+    partition: &str,
     keys: Option<Vec<String>>,
     limit: u64,
 ) -> Result<Vec<ValueMapping>> {
     let mut builder: QueryBuilder<'_, Sqlite> = QueryBuilder::new("SELECT * FROM entities");
-    builder.push(" WHERE partition_id = ").push_bind(partition_id);
+    builder.push(" WHERE partition = ").push_bind(partition);
 
     if let Some(keys) = keys {
         let keys_str = format!("{}%", keys.join("/"));

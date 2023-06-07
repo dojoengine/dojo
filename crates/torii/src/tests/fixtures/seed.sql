@@ -30,11 +30,11 @@ INSERT INTO events (id, system_call_id, keys, data, created_at)
 VALUES ('event_5', 5, 'LocationSpawned', '{\"location_id\": \"location_2\"}', '2023-05-19T21:10:33Z');
 INSERT INTO events (id, system_call_id, keys, data, created_at) 
 VALUES ('event_6', 6, 'LocationSpawned', '{\"location_id\": \"location_3\"}', '2023-05-19T21:11:28Z');
-INSERT INTO entities (id, name, partition_id, keys, transaction_hash, created_at ) 
+INSERT INTO entities (id, name, partition, keys, transaction_hash, created_at ) 
 VALUES ( 'entity_1', 'Game', 'game_1', '', '0x0', '2023-05-19T21:04:04Z');
-INSERT INTO entities (id, name, partition_id, keys, transaction_hash, created_at ) 
+INSERT INTO entities (id, name, partition, keys, transaction_hash, created_at ) 
 VALUES ( 'entity_2', 'Player', 'game_1', 'player_1', '0x0', '2023-05-19T21:05:44Z');
-INSERT INTO entities (id, name, partition_id, keys, transaction_hash, created_at ) 
+INSERT INTO entities (id, name, partition, keys, transaction_hash, created_at ) 
 VALUES ( 'entity_3', 'Player', 'game_1', 'player_2', '0x0', '2023-05-19T21:08:12Z');
 
 /* tables for component storage, created at runtime by processor */

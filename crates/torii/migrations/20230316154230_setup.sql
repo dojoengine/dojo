@@ -1,13 +1,17 @@
-CREATE TABLE indexer (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+CREATE TABLE indexers (
+    id TEXT PRIMARY KEY NOT NULL,
     head BIGINT NOT NULL DEFAULT 0,
-    world_address TEXT,
-    world_class_hash TEXT,
-    executor_address TEXT,
-    executor_class_hash TEXT
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT INTO indexer (head) VALUES (0);
+CREATE TABLE worlds (
+    id TEXT PRIMARY KEY NOT NULL,
+    world_address TEXT NOT NULL,
+    world_class_hash TEXT,
+    executor_address TEXT,
+    executor_class_hash TEXT,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 
 CREATE TABLE components (
     id TEXT NOT NULL PRIMARY KEY,
@@ -53,14 +57,13 @@ CREATE INDEX idx_systems_created_at ON systems (created_at);
 
 CREATE TABLE entities (
     id TEXT NOT NULL PRIMARY KEY,
-    name TEXT NOT NULL,
-    transaction_hash TEXT NOT NULL,
-    partition_id TEXT NOT NULL,
+    transaction_hash TEXT,
+    partition TEXT NOT NULL,
     keys TEXT,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_entities_partition_id ON entities (partition_id);
+CREATE INDEX idx_entities_partition ON entities (partition);
 CREATE INDEX idx_entities_keys ON entities (keys);
 CREATE INDEX idx_entities_keys_create_on ON entities (keys, created_at);
 
