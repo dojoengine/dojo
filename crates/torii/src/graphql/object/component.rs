@@ -3,11 +3,12 @@ use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
 use serde::Deserialize;
-use sqlx::pool::PoolConnection;
-use sqlx::{FromRow, Pool, Result, Sqlite};
+use sqlx::{FromRow, Pool, Sqlite};
 
+use super::query::{query_all, query_by_id, ID};
 use super::storage::{storage_by_name, type_mapping_from};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
+use crate::graphql::constants::DEFAULT_LIMIT;
 use crate::graphql::types::ScalarType;
 use crate::graphql::utils::extract_value::extract;
 use crate::graphql::utils::{format_name, remove_quotes};
@@ -52,6 +53,21 @@ impl ComponentObject {
             storage_names,
         }
     }
+
+    pub fn value_mapping(component: Component) -> ValueMapping {
+        IndexMap::from([
+            (Name::new("id"), Value::from(component.id)),
+            (Name::new("name"), Value::from(component.name)),
+            (Name::new("classHash"), Value::from(component.class_hash)),
+            (Name::new("transactionHash"), Value::from(component.transaction_hash)),
+            (
+                Name::new("createdAt"),
+                Value::from(
+                    component.created_at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                ),
+            ),
+        ])
+    }
 }
 
 impl ObjectTrait for ComponentObject {
@@ -75,7 +91,7 @@ impl ObjectTrait for ComponentObject {
     }
 
     fn nested_fields(&self) -> Option<Vec<Field>> {
-        Some(vec![Field::new("storage", TypeRef::named("Storage"), |ctx| {
+        Some(vec![Field::new("storage", TypeRef::named("Storage"), move |ctx| {
             FieldFuture::new(async move {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                 let component_values = ctx.parent_value.try_downcast_ref::<ValueMapping>()?;
@@ -97,39 +113,33 @@ impl ObjectTrait for ComponentObject {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                     let id = remove_quotes(ctx.args.try_get("id")?.string()?);
-                    let component_values = component_by_id(&mut conn, &id).await?;
-                    Ok(Some(FieldValue::owned_any(component_values)))
+                    let component = query_by_id(&mut conn, "components", ID::Str(id)).await?;
+                    let result = ComponentObject::value_mapping(component);
+                    Ok(Some(FieldValue::owned_any(result)))
                 })
             })
             .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID))),
+            Field::new("components", TypeRef::named_list(self.type_name()), |ctx| {
+                FieldFuture::new(async move {
+                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                    let limit = ctx
+                        .args
+                        .try_get("limit")
+                        .and_then(|limit| limit.u64())
+                        .unwrap_or(DEFAULT_LIMIT);
+
+                    let components: Vec<Component> =
+                        query_all(&mut conn, "components", limit).await?;
+                    let result: Vec<FieldValue<'_>> = components
+                        .into_iter()
+                        .map(ComponentObject::value_mapping)
+                        .map(FieldValue::owned_any)
+                        .collect();
+
+                    Ok(Some(FieldValue::list(result)))
+                })
+            })
+            .argument(InputValue::new("limit", TypeRef::named(TypeRef::INT))),
         ]
     }
-}
-
-async fn component_by_id(conn: &mut PoolConnection<Sqlite>, id: &str) -> Result<ValueMapping> {
-    let component: Component =
-        sqlx::query_as("SELECT * FROM components WHERE id = $1").bind(id).fetch_one(conn).await?;
-
-    Ok(value_mapping(component))
-}
-
-#[allow(dead_code)]
-pub async fn components(conn: &mut PoolConnection<Sqlite>) -> Result<Vec<ValueMapping>> {
-    let components: Vec<Component> =
-        sqlx::query_as("SELECT * FROM components").fetch_all(conn).await?;
-
-    Ok(components.into_iter().map(value_mapping).collect())
-}
-
-fn value_mapping(component: Component) -> ValueMapping {
-    IndexMap::from([
-        (Name::new("id"), Value::from(component.id)),
-        (Name::new("name"), Value::from(component.name)),
-        (Name::new("classHash"), Value::from(component.class_hash)),
-        (Name::new("transactionHash"), Value::from(component.transaction_hash)),
-        (
-            Name::new("createdAt"),
-            Value::from(component.created_at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)),
-        ),
-    ])
 }

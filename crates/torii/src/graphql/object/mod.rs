@@ -1,6 +1,7 @@
 pub mod component;
 pub mod entity;
 pub mod event;
+mod query;
 pub mod storage;
 pub mod system;
 pub mod system_call;

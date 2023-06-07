@@ -2,18 +2,15 @@
 INSERT INTO indexer (head) VALUES (0);
 
 /* register components and systems */ 
-INSERT INTO components (id, name, address, class_hash, transaction_hash, storage_definition)
-VALUES ('component_1', 'Game', '0x0', '0x0', '0x0', 
-    '[{"name":"name","type":"FieldElement","slot":0,"offset":0},{"name":"is_finished","type":"Boolean","slot":0,"offset":0}]');
-INSERT INTO components (id, name, address, class_hash, transaction_hash, storage_definition)
-VALUES ('component_2', 'Stats', '0x0', '0x0', '0x0', 
-    '[{"name":"health","type":"u8","slot":0,"offset":0},{"name":"mana","type":"u8","slot":0,"offset":0}]');
-INSERT INTO components (id, name, address, class_hash, transaction_hash, storage_definition)
-VALUES ('component_3', 'Cash', '0x0', '0x0', '0x0', 
-    '[{"name":"amount","type":"u32","slot":0,"offset":0}]');
-INSERT INTO systems (id, name, address, class_hash, transaction_hash) VALUES ('system_1', 'SpawnGame', '0x0', '0x0', '0x0');
-INSERT INTO systems (id, name, address, class_hash, transaction_hash) VALUES ('system_2', 'SpawnPlayer', '0x0', '0x0', '0x0');
-INSERT INTO systems (id, name, address, class_hash, transaction_hash) VALUES ('system_3', 'SpawnPlayer', '0x0', '0x0', '0x0');
+INSERT INTO components (id, name, class_hash, transaction_hash)
+VALUES ('component_1', 'Game', '0x0', '0x0');
+INSERT INTO components (id, name, class_hash, transaction_hash)
+VALUES ('component_2', 'Stats', '0x0', '0x0');
+INSERT INTO components (id, name, class_hash, transaction_hash)
+VALUES ('component_3', 'Cash', '0x0', '0x0');
+INSERT INTO systems (id, name, class_hash, transaction_hash) VALUES ('system_1', 'SpawnGame', '0x0', '0x0');
+INSERT INTO systems (id, name, class_hash, transaction_hash) VALUES ('system_2', 'SpawnPlayer', '0x0', '0x0');
+INSERT INTO systems (id, name, class_hash, transaction_hash) VALUES ('system_3', 'SpawnPlayer', '0x0', '0x0');
 
 /* system calls to spawn game and player */
 INSERT INTO system_calls (id, system_id, transaction_hash, data) VALUES (1, 'system_1', '0x0', 'game_data');
@@ -41,46 +38,33 @@ INSERT INTO entities (id, name, partition_id, keys, transaction_hash, created_at
 VALUES ( 'entity_3', 'Player', 'game_1', 'player_2', '0x0', '2023-05-19T21:08:12Z');
 
 /* tables for component storage, created at runtime by processor */
-CREATE TABLE storage_game (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
+CREATE TABLE game (
+    id TEXT NOT NULL,
+    partition TEXT NOT NULL,
     is_finished BOOLEAN NOT NULL,
-    version TEXT NOT NULL,
-    entity_id TEXT NOT NULL,
-    component_id TEXT NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (entity_id) REFERENCES entities(id),
-    FOREIGN KEY (component_id) REFERENCES components(id)
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE TABLE storage_stats (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+CREATE TABLE stats (
+    id TEXT NOT NULL,
+    partition TEXT NOT NULL,
     health INTEGER NOT NULL,
     mana INTEGER NOT NULL,
-    version TEXT NOT NULL,
-    entity_id TEXT NOT NULL,
-    component_id TEXT NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (entity_id) REFERENCES entities(id),
-    FOREIGN KEY (component_id) REFERENCES components(id)
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE TABLE storage_cash (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+CREATE TABLE cash (
+    id TEXT NOT NULL,
+    partition TEXT NOT NULL,
     amount INTEGER NOT NULL,
-    version TEXT NOT NULL,
-    entity_id TEXT NOT NULL,
-    component_id TEXT NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (entity_id) REFERENCES entities(id),
-    FOREIGN KEY (component_id) REFERENCES components(id)
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT INTO storage_game (id, name, is_finished, version, entity_id, component_id, created_at)
-VALUES (1, '0x594F4C4F', 0, '0.0.0', 'entity_1', 'component_1', '2023-05-19T21:04:04Z');
-INSERT INTO storage_stats (id, health, mana, version, entity_id, component_id, created_at)
-VALUES (1, 100, 100, '0.0.0', 'entity_2', 'component_2', '2023-05-19T21:05:44Z');
-INSERT INTO storage_stats (id, health, mana, version, entity_id, component_id, created_at)
-VALUES (2, 50, 50, '0.0.0', 'entity_3', 'component_2', '2023-05-19T21:08:12Z');
-INSERT INTO storage_cash (id, amount, version, entity_id, component_id, created_at)
-VALUES (1, 77, '0.0.0', 'entity_2', 'component_3', '2023-05-19T21:05:44Z');
-INSERT INTO storage_cash (id, amount, version, entity_id, component_id, created_at)
-VALUES (2, 88, '0.0.0', 'entity_3', 'component_3', '2023-05-19T21:08:12Z');
+INSERT INTO game (id, partition, is_finished, created_at)
+VALUES ('1', 'game_partition', 0, '2023-05-19T21:04:04Z');
+INSERT INTO stats (id, partition, health, mana, created_at)
+VALUES ('2', 'game_partition', '69', '42', '2023-05-19T21:05:44Z');
+INSERT INTO stats (id, partition, health, mana, created_at)
+VALUES ('3', 'game_partition', '42', '69', '2023-05-19T21:08:12Z');
+INSERT INTO cash (id, partition, amount, created_at)
+VALUES ('2', 'game_partition', '88', '2023-05-19T21:05:44Z');
+INSERT INTO cash (id, partition, amount, created_at)
+VALUES ('3', 'game_partition', '66', '2023-05-19T21:08:12Z');
