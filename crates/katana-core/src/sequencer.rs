@@ -20,6 +20,7 @@ use starknet_api::transaction::{
     Transaction as StarknetApiTransaction, TransactionHash, TransactionSignature,
 };
 use tokio::sync::RwLock;
+use tokio::time;
 
 use crate::sequencer_error::SequencerError;
 use crate::starknet::block::StarknetBlock;
@@ -46,11 +47,21 @@ impl KatanaSequencer {
         Self { config, starknet: Arc::new(RwLock::new(StarknetWrapper::new(starknet_config))) }
     }
 
-    // The starting point of the sequencer
-    // Once we add support periodic block generation, the logic should be here.
     pub async fn start(&self) {
         self.starknet.write().await.generate_genesis_block();
-        self.starknet.write().await.generate_pending_block();
+
+        if let Some(block_time) = self.config.block_time {
+            let starknet = self.starknet.clone();
+            tokio::spawn(async move {
+                loop {
+                    starknet.write().await.generate_pending_block();
+                    time::sleep(time::Duration::from_secs(block_time)).await;
+                    starknet.write().await.generate_latest_block();
+                }
+            });
+        } else {
+            self.starknet.write().await.generate_pending_block();
+        }
     }
 
     pub async fn drip_and_deploy_account(

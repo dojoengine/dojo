@@ -98,6 +98,7 @@ impl App {
             account_path: self.starknet.account_path.clone(),
             allow_zero_max_fee: self.starknet.allow_zero_max_fee,
             chain_id: self.starknet.environment.chain_id.clone(),
+            auto_mine: self.rpc.block_time.is_some(),
         }
     }
 }

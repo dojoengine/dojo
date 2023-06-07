@@ -42,6 +42,7 @@ use crate::util::{
 #[derive(Debug, Default)]
 pub struct StarknetConfig {
     pub seed: [u8; 32],
+    pub auto_mine: bool,
     pub gas_price: u128,
     pub chain_id: String,
     pub total_accounts: u8,
@@ -132,7 +133,7 @@ impl StarknetWrapper {
 
                 self.store_transaction(starknet_tx);
 
-                if !self.config.blocks_on_demand {
+                if !self.config.auto_mine && !self.config.blocks_on_demand {
                     self.generate_latest_block();
                     self.generate_pending_block();
                 }
