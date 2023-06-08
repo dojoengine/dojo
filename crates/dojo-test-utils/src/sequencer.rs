@@ -7,9 +7,11 @@ use katana_core::starknet::StarknetConfig;
 use katana_rpc::config::RpcConfig;
 use katana_rpc::KatanaNodeRpc;
 use starknet::accounts::SingleOwnerAccount;
+use starknet::core::chain_id;
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
+use starknet::signers::{LocalWallet, SigningKey};
 use url::Url;
 
 const ACCOUNT_ADDRESS: FieldElement = FieldElement::from_mont([
@@ -26,42 +28,46 @@ const ACCOUNT_PK: FieldElement = FieldElement::from_mont([
     165462628152687232,
 ]);
 
-pub struct Account {
-    pub private_key: FieldElement,
-    pub address: FieldElement,
-}
-
-pub struct Sequencer {
-    url: Url,
+pub struct TestSequencer {
     handle: ServerHandle,
-    provider: JsonRpcClient,
+    sequencer: Arc<KatanaSequencer>,
+    account: SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
 }
 
-impl Sequencer {
-    pub async fn start() -> Sequencer {
+impl TestSequencer {
+    pub async fn start() -> Self {
         let sequencer = Arc::new(KatanaSequencer::new(StarknetConfig {
             total_accounts: 1,
             allow_zero_max_fee: true,
-            ..StarknetConfig::default()
+            chain_id: "SN_GOERLI".into(),
+            ..Default::default()
         }));
+
         sequencer.start().await;
-        let (socket_addr, handle) =
-            KatanaNodeRpc::new(sequencer.clone(), RpcConfig { port: 0 }).run().await.unwrap();
+
+        let server = KatanaNodeRpc::new(sequencer.clone(), RpcConfig { port: 0 });
+        let (socket_addr, handle) = server.run().await.unwrap();
+
         let url = Url::parse(&format!("http://{}", socket_addr)).expect("Failed to parse URL");
-        let provider = JsonRpcClient::new(HttpTransport::new(url));
-        Sequencer { url, handle, provider }
+
+        let account = sequencer.starknet.read().await.predeployed_accounts.accounts[0].clone();
+        let account = SingleOwnerAccount::new(
+            JsonRpcClient::new(HttpTransport::new(url)),
+            LocalWallet::from_signing_key(SigningKey::from_secret_scalar(FieldElement::from(
+                account.private_key,
+            ))),
+            FieldElement::from(*account.account_address.0.key()),
+            chain_id::TESTNET,
+        );
+
+        TestSequencer { sequencer, account, handle }
     }
 
-    pub fn url(&self) -> Url {
-        self.url.clone()
+    pub fn account(&self) -> &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet> {
+        &self.account
     }
 
-    pub fn account(&self) -> SingleOwnerAccount {
-        let signer = LocalWallet::from(SigningKey::from_secret_scalar(ACCOUNT_PK));
-        SingleOwnerAccount::new(self.provider, signer, ACCOUNT_ADDRESS, chain_id::TESTNET)
-    }
-
-    pub fn stop(&self) -> Result<(), Error> {
+    pub fn stop(self) -> Result<(), Error> {
         self.handle.stop()
     }
 }
