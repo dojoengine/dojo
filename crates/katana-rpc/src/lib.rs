@@ -62,7 +62,7 @@ where
 use std::time::Instant;
 
 use jsonrpsee::server::logger::{Logger, MethodKind, TransportProtocol};
-use jsonrpsee::tracing::info;
+use jsonrpsee::tracing::debug;
 use jsonrpsee::types::Params;
 
 #[derive(Debug, Clone)]
@@ -90,7 +90,7 @@ impl Logger for KatanaNodeRpcLogger {
         _kind: MethodKind,
         _transport: TransportProtocol,
     ) {
-        info!("method: '{}'", method_name);
+        debug!(target: "server", method = ?method_name);
     }
 
     fn on_result(
