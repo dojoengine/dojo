@@ -17,10 +17,12 @@ async fn main() {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
 
     let config = App::parse();
+
     let rpc_config = config.rpc_config();
+    let sequencer_config = config.sequencer_config();
     let starknet_config = config.starknet_config();
 
-    let sequencer = Arc::new(KatanaSequencer::new(starknet_config));
+    let sequencer = Arc::new(KatanaSequencer::new(sequencer_config, starknet_config));
 
     let predeployed_accounts = if config.hide_predeployed_accounts {
         None

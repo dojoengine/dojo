@@ -20,6 +20,7 @@ fn create_test_starknet() -> StarknetWrapper {
 
     let mut starknet = StarknetWrapper::new(StarknetConfig {
         seed: [0u8; 32],
+        auto_mine: false,
         total_accounts: 2,
         blocks_on_demand: false,
         allow_zero_max_fee: true,

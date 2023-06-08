@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use jsonrpsee::core::Error;
 use jsonrpsee::server::ServerHandle;
-use katana_core::sequencer::KatanaSequencer;
+use katana_core::sequencer::{KatanaSequencer, SequencerConfig};
 use katana_core::starknet::StarknetConfig;
 use katana_rpc::config::RpcConfig;
 use katana_rpc::KatanaNodeRpc;
