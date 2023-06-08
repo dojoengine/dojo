@@ -14,20 +14,6 @@ use starknet::providers::JsonRpcClient;
 use starknet::signers::{LocalWallet, SigningKey};
 use url::Url;
 
-const ACCOUNT_ADDRESS: FieldElement = FieldElement::from_mont([
-    17796827018638541424,
-    17823930040347334339,
-    3831215415084348690,
-    569269283564471682,
-]);
-
-const ACCOUNT_PK: FieldElement = FieldElement::from_mont([
-    1113403281716850492,
-    5176054014765279300,
-    6075185975736318605,
-    165462628152687232,
-]);
-
 pub struct TestAccount {
     pub private_key: FieldElement,
     pub account_address: FieldElement,
@@ -85,5 +71,9 @@ impl TestSequencer {
 
     pub fn stop(self) -> Result<(), Error> {
         self.handle.stop()
+    }
+
+    pub fn url(&self) -> Url {
+        self.url.clone()
     }
 }
