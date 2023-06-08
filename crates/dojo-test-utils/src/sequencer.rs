@@ -19,6 +19,7 @@ pub struct TestAccount {
     pub account_address: FieldElement,
 }
 
+#[allow(unused)]
 pub struct TestSequencer {
     url: Url,
     handle: ServerHandle,
@@ -57,10 +58,8 @@ impl TestSequencer {
     pub fn account(&self) -> SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet> {
         SingleOwnerAccount::new(
             JsonRpcClient::new(HttpTransport::new(self.url.clone())),
-            LocalWallet::from_signing_key(SigningKey::from_secret_scalar(FieldElement::from(
-                self.account.private_key,
-            ))),
-            FieldElement::from(self.account.account_address),
+            LocalWallet::from_signing_key(SigningKey::from_secret_scalar(self.account.private_key)),
+            self.account.account_address,
             chain_id::TESTNET,
         )
     }
