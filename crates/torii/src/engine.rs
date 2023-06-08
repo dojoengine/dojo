@@ -1,5 +1,4 @@
 use std::error::Error;
-use std::sync::Arc;
 use std::time::Duration;
 
 use starknet::core::types::{
@@ -9,15 +8,16 @@ use starknet::core::types::{
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
 use starknet::providers::Provider;
 use tokio::time::sleep;
-use tracing::error;
+use tracing::{error, info};
 
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
+use crate::state::sql::Executable;
 use crate::state::State;
 
 pub struct Processors<S: State, T: JsonRpcTransport + Sync + Send> {
-    block: Vec<Arc<dyn BlockProcessor<S, T>>>,
-    transaction: Vec<Arc<dyn TransactionProcessor<S, T>>>,
-    event: Vec<Arc<dyn EventProcessor<S, T>>>,
+    pub block: Vec<Box<dyn BlockProcessor<S, T>>>,
+    pub transaction: Vec<Box<dyn TransactionProcessor<S, T>>>,
+    pub event: Vec<Box<dyn EventProcessor<S, T>>>,
 }
 
 impl<S: State, T: JsonRpcTransport + Sync + Send> Default for Processors<S, T> {
@@ -37,14 +37,14 @@ impl Default for EngineConfig {
     }
 }
 
-pub struct Engine<'a, S: State, T: JsonRpcTransport + Sync + Send> {
+pub struct Engine<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> {
     storage: &'a S,
     provider: &'a JsonRpcClient<T>,
     processors: Processors<S, T>,
     config: EngineConfig,
 }
 
-impl<'a, S: State, T: JsonRpcTransport + Sync + Send> Engine<'a, S, T> {
+impl<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> Engine<'a, S, T> {
     pub fn new(
         storage: &'a S,
         provider: &'a JsonRpcClient<T>,
@@ -55,7 +55,7 @@ impl<'a, S: State, T: JsonRpcTransport + Sync + Send> Engine<'a, S, T> {
     }
 
     pub async fn start(&self) -> Result<(), Box<dyn Error>> {
-        let mut current_block_number = self.storage.head().await?;
+        let mut current_block_number = self.storage.head().await? + 1;
 
         loop {
             sleep(self.config.block_time).await;
@@ -93,23 +93,21 @@ impl<'a, S: State, T: JsonRpcTransport + Sync + Send> Engine<'a, S, T> {
                 self.process(block_with_txs).await?;
 
                 self.storage.set_head(current_block_number).await?;
+                self.storage.execute().await?;
                 current_block_number += 1;
             }
         }
     }
 
-    async fn process(
-        &self,
-        block_with_txs: MaybePendingBlockWithTxs,
-    ) -> Result<(), Box<dyn Error>> {
-        let block_with_txs: BlockWithTxs = match block_with_txs {
-            MaybePendingBlockWithTxs::Block(block_with_txs) => block_with_txs,
+    async fn process(&self, block: MaybePendingBlockWithTxs) -> Result<(), Box<dyn Error>> {
+        let block: BlockWithTxs = match block {
+            MaybePendingBlockWithTxs::Block(block) => block,
             _ => return Ok(()),
         };
 
-        process_block(self.storage, self.provider, &self.processors.block, &block_with_txs).await?;
+        process_block(self.storage, self.provider, &self.processors.block, &block).await?;
 
-        for transaction in block_with_txs.transactions {
+        for transaction in block.clone().transactions {
             let invoke_transaction = match &transaction {
                 Transaction::Invoke(invoke_transaction) => invoke_transaction,
                 _ => continue,
@@ -138,6 +136,7 @@ impl<'a, S: State, T: JsonRpcTransport + Sync + Send> Engine<'a, S, T> {
                 self.storage,
                 self.provider,
                 &self.processors.transaction,
+                &block,
                 &receipt.clone(),
             )
             .await?;
@@ -148,6 +147,7 @@ impl<'a, S: State, T: JsonRpcTransport + Sync + Send> Engine<'a, S, T> {
                         self.storage,
                         self.provider,
                         &self.processors.event,
+                        &block,
                         &receipt,
                         event,
                     )
@@ -156,6 +156,8 @@ impl<'a, S: State, T: JsonRpcTransport + Sync + Send> Engine<'a, S, T> {
             }
         }
 
+        info!("processed block: {}", block.block_number);
+
         Ok(())
     }
 }
@@ -163,7 +165,7 @@ impl<'a, S: State, T: JsonRpcTransport + Sync + Send> Engine<'a, S, T> {
 async fn process_block<S: State, T: starknet::providers::jsonrpc::JsonRpcTransport>(
     storage: &S,
     provider: &JsonRpcClient<T>,
-    processors: &[Arc<dyn BlockProcessor<S, T>>],
+    processors: &[Box<dyn BlockProcessor<S, T>>],
     block: &BlockWithTxs,
 ) -> Result<(), Box<dyn Error>> {
     for processor in processors {
@@ -175,11 +177,12 @@ async fn process_block<S: State, T: starknet::providers::jsonrpc::JsonRpcTranspo
 async fn process_transaction<S: State, T: starknet::providers::jsonrpc::JsonRpcTransport>(
     storage: &S,
     provider: &JsonRpcClient<T>,
-    processors: &[Arc<dyn TransactionProcessor<S, T>>],
+    processors: &[Box<dyn TransactionProcessor<S, T>>],
+    block: &BlockWithTxs,
     receipt: &TransactionReceipt,
 ) -> Result<(), Box<dyn Error>> {
     for processor in processors {
-        processor.process(storage, provider, receipt).await?;
+        processor.process(storage, provider, block, receipt).await?;
     }
 
     Ok(())
@@ -188,12 +191,13 @@ async fn process_transaction<S: State, T: starknet::providers::jsonrpc::JsonRpcT
 async fn process_event<S: State, T: starknet::providers::jsonrpc::JsonRpcTransport>(
     storage: &S,
     provider: &JsonRpcClient<T>,
-    processors: &[Arc<dyn EventProcessor<S, T>>],
-    _receipt: &TransactionReceipt,
+    processors: &[Box<dyn EventProcessor<S, T>>],
+    block: &BlockWithTxs,
+    receipt: &TransactionReceipt,
     event: &Event,
 ) -> Result<(), Box<dyn Error>> {
     for processor in processors {
-        processor.process(storage, provider, event).await?;
+        processor.process(storage, provider, block, receipt, event).await?;
     }
 
     Ok(())
