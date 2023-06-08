@@ -2,12 +2,11 @@ use std::sync::Arc;
 
 use jsonrpsee::core::Error;
 use jsonrpsee::server::ServerHandle;
-use katana_core::sequencer::KatanaSequencer;
+use katana_core::sequencer::{KatanaSequencer, SequencerConfig};
 use katana_core::starknet::StarknetConfig;
 use katana_rpc::config::RpcConfig;
 use katana_rpc::KatanaNodeRpc;
 use starknet::core::types::FieldElement;
-use tokio::sync::RwLock;
 use url::Url;
 
 const ACCOUNT_ADDRESS: FieldElement = FieldElement::from_mont([
@@ -36,12 +35,15 @@ pub struct Sequencer {
 
 impl Sequencer {
     pub async fn start() -> Sequencer {
-        let sequencer = Arc::new(RwLock::new(KatanaSequencer::new(StarknetConfig {
-            total_accounts: 1,
-            allow_zero_max_fee: true,
-            ..StarknetConfig::default()
-        })));
-        sequencer.write().await.start();
+        let sequencer = Arc::new(KatanaSequencer::new(
+            SequencerConfig::default(),
+            StarknetConfig {
+                total_accounts: 1,
+                allow_zero_max_fee: true,
+                ..StarknetConfig::default()
+            },
+        ));
+        sequencer.start().await;
         let (socket_addr, handle) =
             KatanaNodeRpc::new(sequencer.clone(), RpcConfig { port: 0 }).run().await.unwrap();
         let url = Url::parse(&format!("http://{}", socket_addr)).expect("Failed to parse URL");

@@ -1,15 +1,18 @@
-use starknet::{ClassHash, syscalls::deploy_syscall, class_hash::Felt252TryIntoClassHash, get_caller_address};
+use starknet::{
+    ClassHash, syscalls::deploy_syscall, class_hash::Felt252TryIntoClassHash, get_caller_address
+};
 use array::ArrayTrait;
 use traits::TryInto;
 use option::OptionTrait;
 use core::{result::ResultTrait, traits::Into};
 
-use dojo_core::{executor::Executor, world::World, interfaces::{IWorldDispatcher, IWorldDispatcherTrait}};
+use dojo_core::{
+    executor::Executor, world::World, interfaces::{IWorldDispatcher, IWorldDispatcherTrait}
+};
 use dojo_core::auth::components::{AuthRoleComponent, AuthStatusComponent};
 use dojo_core::auth::systems::{
-    Route, RouteAuthSystem, IsAuthorizedSystem, IsAccountAdminSystem, GrantAuthRoleSystem,
-    RevokeAuthRoleSystem, GrantResourceSystem, RevokeResourceSystem, GrantScopedAuthRoleSystem,
-    RevokeScopedAuthRoleSystem
+    Route, RouteAuth, IsAuthorized, IsAccountAdmin, GrantAuthRole, RevokeAuthRole, GrantResource,
+    RevokeResource, GrantScopedAuthRole, RevokeScopedAuthRole
 };
 
 fn spawn_test_world(
@@ -19,15 +22,16 @@ fn spawn_test_world(
     let constructor_calldata = array::ArrayTrait::new();
     let (executor_address, _) = deploy_syscall(
         Executor::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
-    ).unwrap();
+    )
+        .unwrap();
 
     // deploy world
     let mut world_constructor_calldata = array::ArrayTrait::new();
-    world_constructor_calldata.append('World');
     world_constructor_calldata.append(executor_address.into());
     let (world_address, _) = deploy_syscall(
         World::TEST_CLASS_HASH.try_into().unwrap(), 0, world_constructor_calldata.span(), false
-    ).unwrap();
+    )
+        .unwrap();
     let world = IWorldDispatcher { contract_address: world_address };
 
     // register auth components and systems
@@ -93,15 +97,15 @@ fn mock_auth_components_systems() -> (Array<ClassHash>, Array<ClassHash>) {
 
     // Auth systems
     let mut systems = array::ArrayTrait::new();
-    systems.append(RouteAuthSystem::TEST_CLASS_HASH.try_into().unwrap());
-    systems.append(IsAuthorizedSystem::TEST_CLASS_HASH.try_into().unwrap());
-    systems.append(IsAccountAdminSystem::TEST_CLASS_HASH.try_into().unwrap());
-    systems.append(GrantAuthRoleSystem::TEST_CLASS_HASH.try_into().unwrap());
-    systems.append(RevokeAuthRoleSystem::TEST_CLASS_HASH.try_into().unwrap());
-    systems.append(GrantResourceSystem::TEST_CLASS_HASH.try_into().unwrap());
-    systems.append(RevokeResourceSystem::TEST_CLASS_HASH.try_into().unwrap());
-    systems.append(GrantScopedAuthRoleSystem::TEST_CLASS_HASH.try_into().unwrap());
-    systems.append(RevokeScopedAuthRoleSystem::TEST_CLASS_HASH.try_into().unwrap());
+    systems.append(RouteAuth::TEST_CLASS_HASH.try_into().unwrap());
+    systems.append(IsAuthorized::TEST_CLASS_HASH.try_into().unwrap());
+    systems.append(IsAccountAdmin::TEST_CLASS_HASH.try_into().unwrap());
+    systems.append(GrantAuthRole::TEST_CLASS_HASH.try_into().unwrap());
+    systems.append(RevokeAuthRole::TEST_CLASS_HASH.try_into().unwrap());
+    systems.append(GrantResource::TEST_CLASS_HASH.try_into().unwrap());
+    systems.append(RevokeResource::TEST_CLASS_HASH.try_into().unwrap());
+    systems.append(GrantScopedAuthRole::TEST_CLASS_HASH.try_into().unwrap());
+    systems.append(RevokeScopedAuthRole::TEST_CLASS_HASH.try_into().unwrap());
 
     (components, systems)
 }

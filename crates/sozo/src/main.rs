@@ -1,20 +1,14 @@
 use std::process::exit;
 
 use clap::Parser;
-use env_logger::Env;
-use log::error;
+use scarb::ui::{OutputFormat, Ui, Verbosity};
 
-mod build;
-mod cli;
-mod init;
-mod migrate;
+mod commands;
+mod ops;
 
-use cli::{App, Commands};
+use self::commands::{build, init, migrate, test, App, Commands};
 
-// #[tokio::main]
 fn main() {
-    env_logger::Builder::from_env(Env::default().default_filter_or("sozo=info")).init();
-
     let cli = App::parse();
 
     let res = match cli.command {
@@ -27,12 +21,11 @@ fn main() {
             Ok(())
         }
         Commands::Migrate(args) => migrate::run(args),
-        Commands::Bind(..) => Ok(print!("Bind")),
-        Commands::Inspect(..) => Ok(print!("Inspect")),
+        Commands::Test(args) => test::run(args),
     };
 
     if let Err(err) = res {
-        error! {"{}", err};
+        Ui::new(Verbosity::Normal, OutputFormat::Text).anyhow(&err);
         exit(1);
     }
 }

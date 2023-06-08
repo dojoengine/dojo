@@ -54,7 +54,7 @@ mod Index {
             if idx == table_len {
                 break ();
             }
-            
+
             res.append(tables::read((table, idx)));
             idx += 1;
         };

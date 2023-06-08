@@ -4,6 +4,7 @@ use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_semantic::patcher::RewriteNode;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
+use dojo_world::manifest::Dependency;
 use sanitizer::StringSanitizer;
 use smol_str::SmolStr;
 
@@ -12,6 +13,7 @@ use super::{CommandData, CommandTrait, CAIRO_ERR_MSG_LEN};
 pub struct EntitiesCommand {
     query_id: String,
     data: CommandData,
+    pub components: Vec<Dependency>,
 }
 
 impl CommandTrait for EntitiesCommand {
@@ -23,7 +25,11 @@ impl CommandTrait for EntitiesCommand {
         let mut query_id =
             StringSanitizer::from(let_pattern.unwrap().as_syntax_node().get_text(db));
         query_id.to_snake_case();
-        let mut command = EntitiesCommand { query_id: query_id.get(), data: CommandData::new() };
+        let mut command = EntitiesCommand {
+            query_id: query_id.get(),
+            data: CommandData::new(),
+            components: vec![],
+        };
 
         let partition =
             if let Some(partition) = command_ast.arguments(db).args(db).elements(db).first() {
@@ -41,16 +47,17 @@ impl CommandTrait for EntitiesCommand {
             HashMap::from([("query_id".to_string(), RewriteNode::Text(command.query_id.clone()))]),
         ));
 
+        let components = find_components(db, &command_ast);
+
         command.data.rewrite_nodes.extend(
-            find_components(db, &command_ast)
+            components
                 .iter()
                 .map(|component| {
                     RewriteNode::interpolate_patched(
                         "
                         let (__$query_id$_$query_subtype$_ids, __$query_id$_$query_subtype$_raw) = \
-                         IWorldDispatcher { contract_address: world_address
-                        }.entities(dojo_core::string::ShortStringTrait::new('$component$'), \
-                         dojo_core::integer::u250Trait::new($partition$));
+                         ctx.world.entities(dojo_core::string::ShortStringTrait::new('$component$'\
+                         ), dojo_core::integer::u250Trait::new($partition$));
                         __$query_id$_ids.append(__$query_id$_$query_subtype$_ids);
                         __$query_id$_entities_raw.append(__$query_id$_$query_subtype$_raw);
                         ",
@@ -67,6 +74,11 @@ impl CommandTrait for EntitiesCommand {
                 })
                 .collect::<Vec<_>>(),
         );
+
+        command.components = components
+            .iter()
+            .map(|c| Dependency { name: c.clone(), read: true, write: false })
+            .collect();
 
         command.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
             "

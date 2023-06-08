@@ -9,22 +9,23 @@ description = "Dojo world specification. For example, crates and flags used for 
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
-cairo-lang-starknet.workspace = true
-cairo-lang-project.workspace = true
-camino.workspace = true
-thiserror.workspace = true
-toml = "0.7.1"
 cairo-lang-filesystem.workspace = true
+cairo-lang-project.workspace = true
+cairo-lang-starknet.workspace = true
+camino.workspace = true
+reqwest = "0.11.18"
 scarb.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
 smol_str.workspace = true
 starknet.workspace = true
-url = "2.2.2"
+thiserror.workspace = true
 tracing.workspace = true
+url = "2.2.2"
 
 [dev-dependencies]
 assert_fs = "1.0.9"
 dojo-test-utils = { path = "../dojo-test-utils" }
-tokio = { version = "1.28.0", features = ["full"] }
+dojo-lang = { path = "../dojo-lang" }
+tokio = { version = "1.28.0", features = [ "full" ] }

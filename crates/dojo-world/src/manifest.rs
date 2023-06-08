@@ -5,10 +5,11 @@ use ::serde::{Deserialize, Serialize};
 use anyhow::{anyhow, Result};
 use serde_with::serde_as;
 use smol_str::SmolStr;
-use starknet::core::serde::unsigned_field_element::{UfeHex, UfeHexOption};
+use starknet::core::serde::unsigned_field_element::UfeHex;
 use starknet::core::types::{BlockId, BlockTag, FieldElement, FunctionCall, StarknetError};
-use starknet::core::utils::{cairo_short_string_to_felt, CairoShortStringToFeltError};
-use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
+use starknet::core::utils::{
+    cairo_short_string_to_felt, get_selector_from_name, CairoShortStringToFeltError,
+};
 use starknet::providers::{Provider, ProviderError};
 use thiserror::Error;
 
@@ -16,31 +17,12 @@ use thiserror::Error;
 #[path = "manifest_test.rs"]
 mod test;
 
-const EXECUTOR_ADDRESS_SLOT: FieldElement = FieldElement::from_mont([
-    7467091854009816808,
-    5217539096067869628,
-    17301706476858600182,
-    440859966107478631,
-]);
-
-pub(crate) const COMPONENT_ENTRYPOINT: FieldElement = FieldElement::from_mont([
-    2012748018737461584,
-    17346441013657197760,
-    13481606495872588402,
-    416862702099901043,
-]);
-
-const SYSTEM_ENTRYPOINT: FieldElement = FieldElement::from_mont([
-    5274299164659238291,
-    8011946809036665273,
-    17510334645946118431,
-    553330538481721971,
-]);
-
 #[derive(Error, Debug)]
 pub enum ManifestError<E> {
-    #[error("World not deployed.")]
-    NotDeployed,
+    #[error("World contract not found.")]
+    WorldNotFound,
+    #[error("Executor contract not found.")]
+    ExecutorNotFound,
     #[error("Entry point name contains non-ASCII characters.")]
     InvalidEntryPointError,
     #[error(transparent)]
@@ -84,6 +66,13 @@ pub struct Output {
     pub ty: String,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct Dependency {
+    pub name: SmolStr,
+    pub read: bool,
+    pub write: bool,
+}
+
 /// Represents a declaration of a system.
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
@@ -93,13 +82,15 @@ pub struct System {
     pub outputs: Vec<Output>,
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
-    pub dependencies: Vec<String>,
+    pub dependencies: Vec<Dependency>,
 }
 
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Contract {
     pub name: SmolStr,
+    #[serde_as(as = "Option<UfeHex>")]
+    pub address: Option<FieldElement>,
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
 }
@@ -107,13 +98,11 @@ pub struct Contract {
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Manifest {
-    #[serde_as(as = "UfeHexOption")]
-    pub world: Option<FieldElement>,
-    #[serde_as(as = "UfeHexOption")]
-    pub executor: Option<FieldElement>,
-    pub components: Vec<Component>,
+    pub world: Contract,
+    pub executor: Contract,
     pub systems: Vec<System>,
     pub contracts: Vec<Contract>,
+    pub components: Vec<Component>,
 }
 
 impl Manifest {
@@ -122,38 +111,51 @@ impl Manifest {
         P: AsRef<Path>,
     {
         serde_json::from_reader(fs::File::open(manifest_path)?)
-            .map_err(|e| anyhow!("Problem in loading manifest from path: {e}"))
+            .map_err(|e| anyhow!("Failed to load World manifest from path: {e}"))
     }
 
-    pub async fn from_remote<T: JsonRpcTransport + Sync + Send>(
+    pub async fn from_remote<P>(
+        provider: P,
         world_address: FieldElement,
-        provider: JsonRpcClient<T>,
         match_manifest: Option<Manifest>,
-    ) -> Result<Self, ManifestError<<JsonRpcClient<T> as Provider>::Error>> {
-        let mut manifest = Manifest::default();
-
+    ) -> Result<Self, ManifestError<<P as Provider>::Error>>
+    where
+        P: Provider + Send,
+    {
         let world_class_hash = provider
             .get_class_hash_at(BlockId::Tag(BlockTag::Pending), world_address)
             .await
             .map_err(|err| match err {
                 ProviderError::StarknetError(StarknetError::ContractNotFound) => {
-                    ManifestError::NotDeployed
+                    ManifestError::WorldNotFound
                 }
                 _ => ManifestError::Provider(err),
             })?;
 
         let executor_address = provider
-            .get_storage_at(world_address, EXECUTOR_ADDRESS_SLOT, BlockId::Tag(BlockTag::Pending))
+            .call(
+                FunctionCall {
+                    contract_address: world_address,
+                    calldata: vec![],
+                    entry_point_selector: get_selector_from_name("executor").unwrap(),
+                },
+                BlockId::Tag(BlockTag::Pending),
+            )
             .await
-            .map_err(ManifestError::Provider)?;
+            .map_err(ManifestError::Provider)?[0];
 
         let executor_class_hash = provider
             .get_class_hash_at(BlockId::Tag(BlockTag::Pending), executor_address)
             .await
-            .ok();
+            .map_err(|err| match err {
+                ProviderError::StarknetError(StarknetError::ContractNotFound) => {
+                    ManifestError::ExecutorNotFound
+                }
+                _ => ManifestError::Provider(err),
+            })?;
 
-        manifest.world = Some(world_class_hash);
-        manifest.executor = executor_class_hash;
+        let mut systems = vec![];
+        let mut components = vec![];
 
         if let Some(match_manifest) = match_manifest {
             for component in match_manifest.components {
@@ -165,14 +167,14 @@ impl Manifest {
                                 cairo_short_string_to_felt(&component.name)
                                     .map_err(ManifestError::InvalidNameError)?,
                             ],
-                            entry_point_selector: COMPONENT_ENTRYPOINT,
+                            entry_point_selector: get_selector_from_name("component").unwrap(),
                         },
-                        starknet::core::types::BlockId::Tag(BlockTag::Pending),
+                        BlockId::Tag(BlockTag::Pending),
                     )
                     .await
                     .map_err(ManifestError::Provider)?;
 
-                manifest.components.push(Component {
+                components.push(Component {
                     name: component.name.clone(),
                     class_hash: result[0],
                     ..Default::default()
@@ -192,14 +194,14 @@ impl Manifest {
                                 )
                                 .map_err(ManifestError::InvalidNameError)?,
                             ],
-                            entry_point_selector: SYSTEM_ENTRYPOINT,
+                            entry_point_selector: get_selector_from_name("system").unwrap(),
                         },
-                        starknet::core::types::BlockId::Tag(BlockTag::Pending),
+                        BlockId::Tag(BlockTag::Pending),
                     )
                     .await
                     .map_err(ManifestError::Provider)?;
 
-                manifest.systems.push(System {
+                systems.push(System {
                     name: system.name.clone(),
                     class_hash: result[0],
                     ..Default::default()
@@ -207,6 +209,20 @@ impl Manifest {
             }
         }
 
-        Ok(manifest)
+        Ok(Manifest {
+            systems,
+            components,
+            contracts: vec![],
+            world: Contract {
+                name: "World".into(),
+                class_hash: world_class_hash,
+                address: Some(world_address),
+            },
+            executor: Contract {
+                name: "Executor".into(),
+                address: Some(executor_address),
+                class_hash: executor_class_hash,
+            },
+        })
     }
 }

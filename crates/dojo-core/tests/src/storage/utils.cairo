@@ -27,20 +27,20 @@ fn test_find_matching() {
     let mut ids2: Array<u250> = ArrayTrait::new();
     let mut ids3: Array<u250> = ArrayTrait::new();
 
-    ids1.append(u250 { inner: 1 } );
-    ids1.append(u250 { inner: 3 } );
-    ids1.append(u250 { inner: 6 } );
-    ids1.append(u250 { inner: 5 } );
+    ids1.append(u250 { inner: 1 });
+    ids1.append(u250 { inner: 3 });
+    ids1.append(u250 { inner: 6 });
+    ids1.append(u250 { inner: 5 });
 
-    ids2.append(u250 { inner: 4} );
-    ids2.append(u250 { inner: 5} );
-    ids2.append(u250 { inner: 3} );
+    ids2.append(u250 { inner: 4 });
+    ids2.append(u250 { inner: 5 });
+    ids2.append(u250 { inner: 3 });
 
-    ids3.append(u250 { inner: 3} );
-    ids3.append(u250 { inner: 2} );
-    ids3.append(u250 { inner: 1} );
-    ids3.append(u250 { inner: 7} );
-    ids3.append(u250 { inner: 5} );
+    ids3.append(u250 { inner: 3 });
+    ids3.append(u250 { inner: 2 });
+    ids3.append(u250 { inner: 1 });
+    ids3.append(u250 { inner: 7 });
+    ids3.append(u250 { inner: 5 });
 
     let mut ids: Array<Span<u250>> = ArrayTrait::new();
     ids.append(ids1.span());
@@ -106,14 +106,14 @@ fn test_find_matching_wrong_arg_len() {
     let mut ids2: Array<u250> = ArrayTrait::new();
     let mut ids3: Array<u250> = ArrayTrait::new();
 
-    ids1.append(u250 { inner: 1 } );
-    ids1.append(u250 { inner: 3 } );
-    ids1.append(u250 { inner: 6 } );
-    ids1.append(u250 { inner: 5 } );
+    ids1.append(u250 { inner: 1 });
+    ids1.append(u250 { inner: 3 });
+    ids1.append(u250 { inner: 6 });
+    ids1.append(u250 { inner: 5 });
 
-    ids2.append(u250 { inner: 4} );
-    ids2.append(u250 { inner: 5} );
-    ids2.append(u250 { inner: 3} );
+    ids2.append(u250 { inner: 4 });
+    ids2.append(u250 { inner: 5 });
+    ids2.append(u250 { inner: 3 });
 
     let mut ids: Array<Span<u250>> = ArrayTrait::new();
     ids.append(ids1.span());

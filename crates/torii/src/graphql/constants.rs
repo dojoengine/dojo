@@ -1,1 +1,1 @@
-pub const _DEFAULT_LIMIT: usize = 10;
+pub const DEFAULT_LIMIT: u64 = 10;

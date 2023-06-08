@@ -1,23 +1,22 @@
-//! Compiles and runs a Dojo project.
+//! Compiles and runs tests for a Dojo project.
 
 use std::env::{self, current_dir};
 
+use anyhow::{bail, Result};
+use cairo_lang_compiler::db::RootDatabase;
+use cairo_lang_compiler::diagnostics::DiagnosticsReporter;
+use cairo_lang_test_runner::TestRunner;
 use camino::Utf8PathBuf;
-use clap::Parser;
-use compiler::DojoTestCompiler;
+use clap::Args;
+use dojo_lang::compiler::collect_main_crate_ids;
 use dojo_lang::plugin::CairoPluginRepository;
-use scarb::compiler::CompilerRepository;
-use scarb::core::Config;
+use scarb::compiler::{CompilationUnit, Compiler, CompilerRepository};
+use scarb::core::{Config, Workspace};
 use scarb::ops;
 use scarb::ui::Verbosity;
 
-mod compiler;
-
-/// Command line args parser.
-/// Exits with 0/1 if the input is formatted correctly/incorrectly.
-#[derive(Parser, Debug)]
-#[clap(version, verbatim_doc_comment)]
-struct Args {
+#[derive(Args)]
+pub struct TestArgs {
     /// The path to compile and run its tests.
     path: Utf8PathBuf,
     /// The filter for the tests, running only tests containing the filter string.
@@ -31,18 +30,17 @@ struct Args {
     ignored: bool,
 }
 
-fn main() -> anyhow::Result<()> {
-    let args = Args::parse();
+pub fn run(args: TestArgs) -> anyhow::Result<()> {
     let source_dir = if args.path.is_absolute() {
-        args.path
+        args.path.clone()
     } else {
         let mut current_path = current_dir().unwrap();
-        current_path.push(args.path);
+        current_path.push(args.path.clone());
         Utf8PathBuf::from_path_buf(current_path).unwrap()
     };
 
     let mut compilers = CompilerRepository::std();
-    compilers.add(Box::new(DojoTestCompiler)).unwrap();
+    compilers.add(Box::new(DojoTestCompiler { args })).unwrap();
 
     let cairo_plugins = CairoPluginRepository::new();
 
@@ -61,4 +59,40 @@ fn main() -> anyhow::Result<()> {
     });
 
     ops::compile(&ws)
+}
+
+pub struct DojoTestCompiler {
+    args: TestArgs,
+}
+
+impl Compiler for DojoTestCompiler {
+    fn target_kind(&self) -> &str {
+        "dojo"
+    }
+
+    fn compile(
+        &self,
+        unit: CompilationUnit,
+        db: &mut RootDatabase,
+        _: &Workspace<'_>,
+    ) -> Result<()> {
+        let main_crate_ids = collect_main_crate_ids(&unit, db);
+
+        if DiagnosticsReporter::stderr().check(db) {
+            bail!("failed to compile");
+        }
+
+        let runner = TestRunner {
+            db: db.snapshot(),
+            main_crate_ids,
+            filter: self.args.filter.clone(),
+            include_ignored: self.args.include_ignored,
+            ignored: self.args.ignored,
+            starknet: true,
+        };
+
+        runner.run()?;
+
+        Ok(())
+    }
 }

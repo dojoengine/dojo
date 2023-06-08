@@ -2,20 +2,7 @@
 
 resolver = "2"
 
-members = [
-    "crates/bevy-dojo",
-    "crates/dojo-lang",
-    "crates/dojo-language-server",
-    "crates/dojo-world",
-    "crates/dojo-test-runner",
-    "crates/dojo-test-utils",
-    "crates/dojo-signers",
-    "crates/katana",
-    "crates/katana-core",
-    "crates/katana-rpc",
-    "crates/sozo",
-    "crates/torii",
-]
+members = [ "crates/bevy-dojo", "crates/dojo-lang", "crates/dojo-language-server", "crates/dojo-world", "crates/dojo-test-utils", "crates/dojo-signers", "crates/katana", "crates/katana-core", "crates/katana-rpc", "crates/sozo", "crates/torii" ]
 
 [workspace.package]
 version = "0.1.0"
@@ -40,7 +27,7 @@ cairo-lang-lowering = "1.1.0"
 cairo-lang-parser = "1.1.0"
 cairo-lang-plugins = "1.1.0"
 cairo-lang-project = "1.1.0"
-cairo-lang-semantic = { version = "1.1.0", features = ["testing"] }
+cairo-lang-semantic = { version = "1.1.0", features = [ "testing" ] }
 cairo-lang-sierra-generator = "1.1.0"
 cairo-lang-sierra = "1.1.0"
 cairo-lang-sierra-to-casm = "1.1.0"
@@ -49,9 +36,9 @@ cairo-lang-syntax = "1.1.0"
 cairo-lang-test-utils = "1.1.0"
 cairo-lang-test-runner = "1.1.0"
 cairo-lang-utils = "1.1.0"
-camino = { version = "1.1.2", features = ["serde1"] }
-chrono = { version = "0.4.24", features = ["serde"] }
-clap = { version = "4.2", features = ["derive"] }
+camino = { version = "1.1.2", features = [ "serde1" ] }
+chrono = { version = "0.4.24", features = [ "serde" ] }
+clap = { version = "4.2", features = [ "derive" ] }
 colored = "2"
 env_logger = "0.10.0"
 indoc = "1.0.7"
@@ -63,16 +50,16 @@ rayon = "0.9.0"
 salsa = "0.16.1"
 scarb = { git = "https://github.com/software-mansion/scarb", rev = "0aa0f97b89a2e6f38f3b005cad2817dcaee7bf51" }
 semver = "1.0.5"
-serde = { version = "1.0.156", features = ["derive"] }
+serde = { version = "1.0.156", features = [ "derive" ] }
 serde_json = "1.0"
 serde_with = "2.3.1"
-smol_str = { version = "0.2.0", features = ["serde"] }
+smol_str = { version = "0.2.0", features = [ "serde" ] }
 starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", branch = "dev/jsonrpc_0_3_0" }
 starknet_api = { git = "https://github.com/starkware-libs/starknet-api" }
 test-log = "0.2.11"
 thiserror = "1.0.32"
-tokio = { version = "1.16", features = ["full"] }
-toml = "0.4.2"
+tokio = { version = "1.16", features = [ "full" ] }
+toml = "0.7.4"
 tracing = "0.1"
 tracing-subscriber = "0.3.16"
 yansi = "0.5.1"
