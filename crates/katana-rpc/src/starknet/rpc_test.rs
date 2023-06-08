@@ -1,95 +1,95 @@
-use std::fs;
+use std::fs::{self, File};
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::{Ok, Result};
-use dojo_test_utils::sequencer::Sequencer;
+use anyhow::{anyhow, Result};
+use cairo_lang_starknet::casm_contract_class::CasmContractClass;
+use cairo_lang_starknet::contract_class::ContractClass;
+use dojo_test_utils::sequencer::TestSequencer;
+use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::contract::legacy::LegacyContractClass;
-use starknet::core::types::contract::SierraClass;
+use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
     BroadcastedDeclareTransaction, BroadcastedDeclareTransactionV1,
-    BroadcastedDeclareTransactionV2, FieldElement, FlattenedSierraClass,
+    BroadcastedDeclareTransactionV2, DeclareTransactionReceipt, FieldElement, FlattenedSierraClass,
+    MaybePendingTransactionReceipt, TransactionReceipt, TransactionStatus,
 };
-use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
+use starknet::providers::jsonrpc::JsonRpcClient;
 use starknet::providers::Provider;
 use url::Url;
 
-fn get_flattened_sierra_class(raw_contract_class: &str) -> Result<FlattenedSierraClass> {
-    let contract_artifact: SierraClass = serde_json::from_str(raw_contract_class)?;
-    Ok(contract_artifact.flatten()?)
-}
-
 #[tokio::test]
 async fn test_send_declare_v2_tx() {
-    let sequencer = Sequencer::start().await;
-
-    let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
+    let sequencer = TestSequencer::start().await;
+    let account = sequencer.account();
 
     let path: PathBuf = PathBuf::from("src/starknet/test_data/cairo1_contract.json");
-    let raw_contract_str = fs::read_to_string(path).unwrap();
-    let contract_class = Arc::new(get_flattened_sierra_class(&raw_contract_str).unwrap());
+    let (contract, class_hash) = prepare_contract_declaration_params(&path).unwrap();
 
-    let res = provider
-        .add_declare_transaction(&BroadcastedDeclareTransaction::V2(
-            BroadcastedDeclareTransactionV2 {
-                max_fee: FieldElement::ZERO,
-                nonce: FieldElement::ZERO,
-                sender_address: sequencer.account().address,
-                signature: vec![],
-                compiled_class_hash: FieldElement::from_hex_be(
-                    "0x3e8c2b461e33e7711995014afdd012b94e533cdee94ef951cf27f2489b62055",
-                )
-                .unwrap(),
-                contract_class,
-            },
-        ))
-        .await;
+    let res = account.declare(Arc::new(contract), class_hash).send().await.unwrap();
+    let receipt = account.provider().get_transaction_receipt(res.transaction_hash).await.unwrap();
 
-    println!("{res:?}");
-    assert!(res.is_ok())
+    sequencer.stop().expect("failed to stop sequencer");
+
+    match receipt {
+        MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Declare(
+            DeclareTransactionReceipt { status, .. },
+        )) => {
+            assert_eq!(status, TransactionStatus::AcceptedOnL2);
+        }
+        _ => panic!("invalid tx receipt"),
+    }
 }
 
-#[ignore]
 #[tokio::test]
 async fn test_send_declare_v1_tx() {
-    let provider =
-        JsonRpcClient::new(HttpTransport::new(Url::parse("http://localhost:5050").unwrap()));
+    let sequencer = TestSequencer::start().await;
+    let account = sequencer.account();
 
-    let path = PathBuf::from("src/starknet/tests/test_data/cairo0_contract.json");
+    let path = PathBuf::from("src/starknet/test_data/cairo0_contract.json");
 
     let legacy_contract: LegacyContractClass =
         serde_json::from_reader(fs::File::open(path).unwrap()).unwrap();
-    let contract_class = Arc::new(legacy_contract.compress().unwrap());
-    let res = provider
-        .add_declare_transaction(&BroadcastedDeclareTransaction::V1(
-            BroadcastedDeclareTransactionV1 {
-                max_fee: FieldElement::ZERO,
-                nonce: FieldElement::ZERO,
-                sender_address: FieldElement::from_str(
-                    "0x03819aca4f147e3b589807dd81257c02c4d616328f8b6bdc097b4ae517130a97",
-                )
-                .unwrap(),
-                signature: vec![],
-                contract_class,
-            },
-        ))
-        .await;
+    let contract_class = Arc::new(legacy_contract);
 
-    println!("{res:?}");
-    assert!(res.is_ok());
+    let res = account.declare_legacy(contract_class).send().await.unwrap();
+    let receipt = account.provider().get_transaction_receipt(res.transaction_hash).await.unwrap();
+
+    sequencer.stop().expect("failed to stop sequencer");
+
+    match receipt {
+        MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Declare(
+            DeclareTransactionReceipt { status, .. },
+        )) => {
+            assert_eq!(status, TransactionStatus::AcceptedOnL2);
+        }
+        _ => panic!("invalid tx receipt"),
+    }
 }
 
-// let events = provider
-// .get_events(
-//     EventFilter {
-//         from_block: Some(BlockId::Number(0)),
-//         to_block: Some(BlockId::Tag(BlockTag::Pending)),
-//         address: None, // Some(world_address),
-//         keys: None,
-//     },
-//     None,
-//     100,
-// )
-// .await
-// .map_err(ManifestError::Provider)?;
+fn prepare_contract_declaration_params(
+    artifact_path: &PathBuf,
+) -> Result<(FlattenedSierraClass, FieldElement)> {
+    let flattened_class = get_flattened_class(artifact_path)
+        .map_err(|e| anyhow!("error flattening the contract class: {e}"))?;
+    let compiled_class_hash = get_compiled_class_hash(artifact_path)
+        .map_err(|e| anyhow!("error computing compiled class hash: {e}"))?;
+    Ok((flattened_class, compiled_class_hash))
+}
+
+fn get_flattened_class(artifact_path: &PathBuf) -> Result<FlattenedSierraClass> {
+    let file = File::open(artifact_path)?;
+    let contract_artifact: SierraClass = serde_json::from_reader(&file)?;
+    Ok(contract_artifact.flatten()?)
+}
+
+fn get_compiled_class_hash(artifact_path: &PathBuf) -> Result<FieldElement> {
+    let file = File::open(artifact_path)?;
+    let casm_contract_class: ContractClass = serde_json::from_reader(file)?;
+    let casm_contract = CasmContractClass::from_contract_class(casm_contract_class, true)
+        .map_err(|e| anyhow!("CasmContractClass from ContractClass error: {e}"))?;
+    let res = serde_json::to_string_pretty(&casm_contract)?;
+    let compiled_class: CompiledClass = serde_json::from_str(&res)?;
+    Ok(compiled_class.class_hash()?)
+}
