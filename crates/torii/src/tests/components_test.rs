@@ -122,7 +122,7 @@ mod tests {
         )
         .unwrap();
 
-        let mut state = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
+        let state = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
         state.load_from_manifest(manifest).await.unwrap();
 
         // Set moves entity
