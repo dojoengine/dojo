@@ -3,11 +3,11 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use starknet::core::types::{
-    BlockId, BlockWithTxs, Event, InvokeTransaction, MaybePendingBlockWithTxs,
-    MaybePendingTransactionReceipt, StarknetError, Transaction, TransactionReceipt,
+    BlockId, BlockTag, BlockWithTxs, Event, InvokeTransaction, MaybePendingBlockWithTxs,
+    MaybePendingTransactionReceipt, Transaction, TransactionReceipt,
 };
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
-use starknet::providers::{Provider, ProviderError};
+use starknet::providers::Provider;
 use tokio::time::sleep;
 use tracing::error;
 
@@ -26,10 +26,22 @@ impl<S: State, T: JsonRpcTransport + Sync + Send> Default for Processors<S, T> {
     }
 }
 
+#[derive(Debug)]
+pub struct EngineConfig {
+    pub block_time: Duration,
+}
+
+impl Default for EngineConfig {
+    fn default() -> Self {
+        Self { block_time: Duration::from_secs(1) }
+    }
+}
+
 pub struct Engine<'a, S: State, T: JsonRpcTransport + Sync + Send> {
     storage: &'a S,
     provider: &'a JsonRpcClient<T>,
     processors: Processors<S, T>,
+    config: EngineConfig,
 }
 
 impl<'a, S: State, T: JsonRpcTransport + Sync + Send> Engine<'a, S, T> {
@@ -37,87 +49,114 @@ impl<'a, S: State, T: JsonRpcTransport + Sync + Send> Engine<'a, S, T> {
         storage: &'a S,
         provider: &'a JsonRpcClient<T>,
         processors: Processors<S, T>,
+        config: EngineConfig,
     ) -> Self {
-        Self { storage, provider, processors }
+        Self { storage, provider, processors, config }
     }
 
     pub async fn start(&self) -> Result<(), Box<dyn Error>> {
         let mut current_block_number = self.storage.head().await?;
 
         loop {
-            sleep(Duration::from_secs(1)).await;
+            sleep(self.config.block_time).await;
 
-            let block_with_txs =
-                match self.provider.get_block_with_txs(BlockId::Number(current_block_number)).await
-                {
+            let latest_block_with_txs =
+                match self.provider.get_block_with_txs(BlockId::Tag(BlockTag::Latest)).await {
                     Ok(block_with_txs) => block_with_txs,
                     Err(e) => {
-                        if let ProviderError::StarknetError(StarknetError::BlockNotFound) = e {
-                            continue;
-                        }
-
                         error!("getting  block: {}", e);
                         continue;
                     }
                 };
 
-            let block_with_txs = match block_with_txs {
-                MaybePendingBlockWithTxs::Block(block_with_txs) => block_with_txs,
+            let latest_block_number = match latest_block_with_txs {
+                MaybePendingBlockWithTxs::Block(latest_block_with_txs) => {
+                    latest_block_with_txs.block_number
+                }
                 _ => continue,
             };
 
-            process_block(self.storage, self.provider, &self.processors.block, &block_with_txs)
-                .await?;
-
-            for transaction in block_with_txs.transactions {
-                let invoke_transaction = match &transaction {
-                    Transaction::Invoke(invoke_transaction) => invoke_transaction,
-                    _ => continue,
-                };
-
-                let invoke_transaction = match invoke_transaction {
-                    InvokeTransaction::V1(invoke_transaction) => invoke_transaction,
-                    _ => continue,
-                };
-
-                let receipt = match self
+            // Process all blocks from current to latest.
+            while current_block_number <= latest_block_number {
+                let block_with_txs = match self
                     .provider
-                    .get_transaction_receipt(invoke_transaction.transaction_hash)
+                    .get_block_with_txs(BlockId::Number(current_block_number))
                     .await
                 {
-                    Ok(receipt) => receipt,
-                    _ => continue,
-                };
-
-                let receipt = match receipt {
-                    MaybePendingTransactionReceipt::Receipt(receipt) => receipt,
-                    _ => continue,
-                };
-
-                process_transaction(
-                    self.storage,
-                    self.provider,
-                    &self.processors.transaction,
-                    &receipt.clone(),
-                )
-                .await?;
-
-                if let TransactionReceipt::Invoke(invoke_receipt) = receipt.clone() {
-                    for event in &invoke_receipt.events {
-                        process_event(
-                            self.storage,
-                            self.provider,
-                            &self.processors.event,
-                            &receipt,
-                            event,
-                        )
-                        .await?;
+                    Ok(block_with_txs) => block_with_txs,
+                    Err(e) => {
+                        error!("getting block: {}", e);
+                        continue;
                     }
+                };
+
+                self.process(block_with_txs).await?;
+
+                self.storage.set_head(current_block_number).await?;
+                current_block_number += 1;
+            }
+        }
+    }
+
+    async fn process(
+        &self,
+        block_with_txs: MaybePendingBlockWithTxs,
+    ) -> Result<(), Box<dyn Error>> {
+        let block_with_txs: BlockWithTxs = match block_with_txs {
+            MaybePendingBlockWithTxs::Block(block_with_txs) => block_with_txs,
+            _ => return Ok(()),
+        };
+
+        process_block(self.storage, self.provider, &self.processors.block, &block_with_txs).await?;
+
+        for transaction in block_with_txs.transactions {
+            let invoke_transaction = match &transaction {
+                Transaction::Invoke(invoke_transaction) => invoke_transaction,
+                _ => continue,
+            };
+
+            let invoke_transaction = match invoke_transaction {
+                InvokeTransaction::V1(invoke_transaction) => invoke_transaction,
+                _ => continue,
+            };
+
+            let receipt = match self
+                .provider
+                .get_transaction_receipt(invoke_transaction.transaction_hash)
+                .await
+            {
+                Ok(receipt) => receipt,
+                _ => continue,
+            };
+
+            let receipt = match receipt {
+                MaybePendingTransactionReceipt::Receipt(receipt) => receipt,
+                _ => continue,
+            };
+
+            process_transaction(
+                self.storage,
+                self.provider,
+                &self.processors.transaction,
+                &receipt.clone(),
+            )
+            .await?;
+
+            if let TransactionReceipt::Invoke(invoke_receipt) = receipt.clone() {
+                for event in &invoke_receipt.events {
+                    process_event(
+                        self.storage,
+                        self.provider,
+                        &self.processors.event,
+                        &receipt,
+                        event,
+                    )
+                    .await?;
                 }
             }
-
-            current_block_number += 1;
         }
+
+        Ok(())
     }
 }
 
