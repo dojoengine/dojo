@@ -28,20 +28,29 @@ const ACCOUNT_PK: FieldElement = FieldElement::from_mont([
     165462628152687232,
 ]);
 
+pub struct TestAccount {
+    pub private_key: FieldElement,
+    pub account_address: FieldElement,
+}
+
 pub struct TestSequencer {
+    url: Url,
     handle: ServerHandle,
+    account: TestAccount,
     sequencer: Arc<KatanaSequencer>,
-    account: SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
 }
 
 impl TestSequencer {
     pub async fn start() -> Self {
-        let sequencer = Arc::new(KatanaSequencer::new(StarknetConfig {
-            total_accounts: 1,
-            allow_zero_max_fee: true,
-            chain_id: "SN_GOERLI".into(),
-            ..Default::default()
-        }));
+        let sequencer = Arc::new(KatanaSequencer::new(
+            SequencerConfig::default(),
+            StarknetConfig {
+                total_accounts: 1,
+                allow_zero_max_fee: true,
+                chain_id: "SN_GOERLI".into(),
+                ..Default::default()
+            },
+        ));
 
         sequencer.start().await;
 
@@ -51,19 +60,26 @@ impl TestSequencer {
         let url = Url::parse(&format!("http://{}", socket_addr)).expect("Failed to parse URL");
 
         let account = sequencer.starknet.read().await.predeployed_accounts.accounts[0].clone();
-        let account = SingleOwnerAccount::new(
-            JsonRpcClient::new(HttpTransport::new(url)),
-            LocalWallet::from_signing_key(SigningKey::from_secret_scalar(FieldElement::from(
-                account.private_key,
-            ))),
-            FieldElement::from(*account.account_address.0.key()),
-            chain_id::TESTNET,
-        );
+        let account = TestAccount {
+            private_key: FieldElement::from(account.private_key),
+            account_address: FieldElement::from(*account.account_address.0.key()),
+        };
 
-        TestSequencer { sequencer, account, handle }
+        TestSequencer { sequencer, account, handle, url }
     }
 
-    pub fn account(&self) -> &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet> {
+    pub fn account(&self) -> SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet> {
+        SingleOwnerAccount::new(
+            JsonRpcClient::new(HttpTransport::new(self.url.clone())),
+            LocalWallet::from_signing_key(SigningKey::from_secret_scalar(FieldElement::from(
+                self.account.private_key,
+            ))),
+            FieldElement::from(self.account.account_address),
+            chain_id::TESTNET,
+        )
+    }
+
+    pub fn raw_account(&self) -> &TestAccount {
         &self.account
     }
 
