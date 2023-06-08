@@ -26,22 +26,22 @@ pub struct World {
 
 #[async_trait]
 pub trait State {
-    async fn load_from_manifest(&mut self, manifest: Manifest) -> Result<()>;
+    async fn load_from_manifest(&self, manifest: Manifest) -> Result<()>;
     async fn head(&self) -> Result<u64>;
-    async fn set_head(&mut self, head: u64) -> Result<()>;
+    async fn set_head(&self, head: u64) -> Result<()>;
     async fn world(&self) -> Result<World>;
-    async fn set_world(&mut self, world: World) -> Result<()>;
-    async fn register_component(&mut self, component: Component) -> Result<()>;
-    async fn register_system(&mut self, system: System) -> Result<()>;
+    async fn set_world(&self, world: World) -> Result<()>;
+    async fn register_component(&self, component: Component) -> Result<()>;
+    async fn register_system(&self, system: System) -> Result<()>;
     async fn set_entity(
-        &mut self,
+        &self,
         component: String,
         partition: FieldElement,
         key: FieldElement,
         values: HashMap<String, FieldElement>,
     ) -> Result<()>;
     async fn delete_entity(
-        &mut self,
+        &self,
         component: String,
         partition: FieldElement,
         key: FieldElement,

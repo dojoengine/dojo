@@ -5,7 +5,7 @@ use dojo_world::manifest::{Component, Member, System};
 use sqlx::sqlite::SqlitePool;
 use starknet::core::types::FieldElement;
 
-use crate::state::sql::Sql;
+use crate::state::sql::{Executable, Sql};
 use crate::state::State;
 
 #[sqlx::test(migrations = "./migrations")]
@@ -15,7 +15,7 @@ async fn test_load_from_manifest(pool: SqlitePool) {
     )
     .unwrap();
 
-    let mut state = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
+    let state = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
     state.load_from_manifest(manifest.clone()).await.unwrap();
 
     let components = sqlx::query("SELECT * FROM components").fetch_all(&pool).await.unwrap();
@@ -26,7 +26,7 @@ async fn test_load_from_manifest(pool: SqlitePool) {
     assert_eq!(moves_components.len(), 0);
 
     let systems = sqlx::query("SELECT * FROM systems").fetch_all(&pool).await.unwrap();
-    assert_eq!(systems.len(), 11);
+    assert_eq!(systems.len(), 12);
 
     let mut world = state.world().await.unwrap();
 
@@ -37,6 +37,7 @@ async fn test_load_from_manifest(pool: SqlitePool) {
 
     world.executor_address.0 = FieldElement::ONE;
     state.set_world(world).await.unwrap();
+    state.execute().await.unwrap();
 
     let world = state.world().await.unwrap();
     assert_eq!(world.executor_address.0, FieldElement::ONE);
@@ -45,6 +46,8 @@ async fn test_load_from_manifest(pool: SqlitePool) {
     assert_eq!(head, 0);
 
     state.set_head(1).await.unwrap();
+    state.execute().await.unwrap();
+
     let head = state.head().await.unwrap();
     assert_eq!(head, 1);
 
@@ -56,6 +59,7 @@ async fn test_load_from_manifest(pool: SqlitePool) {
         })
         .await
         .unwrap();
+    state.execute().await.unwrap();
 
     let (id, name, class_hash): (String, String, String) =
         sqlx::query_as("SELECT id, name, class_hash FROM components WHERE id = 'test'")
@@ -81,6 +85,7 @@ async fn test_load_from_manifest(pool: SqlitePool) {
         })
         .await
         .unwrap();
+    state.execute().await.unwrap();
 
     let (id, name, class_hash): (String, String, String) =
         sqlx::query_as("SELECT id, name, class_hash FROM systems WHERE id = 'test'")
@@ -104,4 +109,5 @@ async fn test_load_from_manifest(pool: SqlitePool) {
         )
         .await
         .unwrap();
+    state.execute().await.unwrap();
 }

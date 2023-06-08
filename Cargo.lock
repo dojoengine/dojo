@@ -5133,6 +5133,7 @@ dependencies = [
  "assert_matches",
  "blockifier",
  "cairo-lang-starknet",
+ "dojo-test-utils",
  "hex",
  "hyper",
  "jsonrpsee",

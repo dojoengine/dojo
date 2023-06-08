@@ -8,7 +8,7 @@ mod tests {
     use sqlx::{FromRow, SqlitePool};
     use starknet::core::types::FieldElement;
 
-    use crate::state::sql::Sql;
+    use crate::state::sql::{Executable, Sql};
     use crate::state::State;
     use crate::tests::common::run_graphql_query;
 
@@ -122,7 +122,7 @@ mod tests {
         )
         .unwrap();
 
-        let mut state = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
+        let state = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
         state.load_from_manifest(manifest).await.unwrap();
 
         // Set moves entity
@@ -140,5 +140,6 @@ mod tests {
             (String::from("y"), FieldElement::from_hex_be("0x45").unwrap()),
         ]);
         state.set_entity("position".to_string(), partition, key, values).await.unwrap();
+        state.execute().await.unwrap();
     }
 }

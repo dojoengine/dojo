@@ -17,7 +17,7 @@ use starknet_api::core::{ClassHash, ContractAddress, GlobalRoot, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};
 use starknet_api::transaction::{DeclareTransactionV0V1, DeployTransaction, TransactionHash};
 use starknet_api::{patricia_key, stark_felt};
-use tracing::info;
+use tracing::{info, warn};
 
 pub mod block;
 pub mod event;
@@ -103,7 +103,7 @@ impl StarknetWrapper {
     pub fn handle_transaction(&mut self, transaction: Transaction) {
         let api_tx = convert_blockifier_tx_to_starknet_api_tx(&transaction);
 
-        info!("Transaction received | Transaction hash: {}", api_tx.transaction_hash());
+        info!("Transaction received | Hash: {}", api_tx.transaction_hash());
 
         let res = match transaction {
             Transaction::AccountTransaction(tx) => {
@@ -140,6 +140,8 @@ impl StarknetWrapper {
             }
 
             Err(exec_err) => {
+                warn!("Transaction execution error: {exec_err}");
+
                 let tx = StarknetTransaction::new(
                     api_tx,
                     TransactionStatus::Rejected,
@@ -178,7 +180,7 @@ impl StarknetWrapper {
         }
 
         info!(
-            "⛏️ New block generated | Block hash: {} | Block number: {}",
+            "⛏️ New block generated | Hash: {} | Number: {}",
             new_block.block_hash(),
             new_block.block_number()
         );

@@ -21,10 +21,11 @@ starknet.workspace = true
 starknet_api.workspace = true
 thiserror.workspace = true
 hyper = "0.14.20"
-tower-http = { version = "0.4.0", features = ["full"] }
-tower = { version = "0.4.13", features = ["full"] }
+tower-http = { version = "0.4.0", features = [ "full" ] }
+tower = { version = "0.4.13", features = [ "full" ] }
 
 [dev-dependencies]
 assert_matches = "1.5.0"
-tokio.workspace = true
+dojo-test-utils = { path = "../dojo-test-utils" }
+starknet.workspace = true
 url = "2.3.1"

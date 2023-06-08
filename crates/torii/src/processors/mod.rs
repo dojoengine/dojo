@@ -5,7 +5,7 @@ use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
 
 use crate::state::State;
 
-// pub mod component_register;
+pub mod component_register;
 // pub mod component_state_update;
 // pub mod system_register;
 
@@ -16,6 +16,8 @@ pub trait EventProcessor<S: State, T: JsonRpcTransport> {
         &self,
         storage: &S,
         provider: &JsonRpcClient<T>,
+        block: &BlockWithTxs,
+        transaction_receipt: &TransactionReceipt,
         event: &Event,
     ) -> Result<(), Error>;
 }
@@ -38,6 +40,7 @@ pub trait TransactionProcessor<S: State, T: JsonRpcTransport> {
         &self,
         storage: &S,
         provider: &JsonRpcClient<T>,
+        block: &BlockWithTxs,
         transaction_receipt: &TransactionReceipt,
     ) -> Result<(), Error>;
 }
