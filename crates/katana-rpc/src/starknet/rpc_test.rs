@@ -1,6 +1,5 @@
 use std::fs::{self, File};
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
@@ -11,13 +10,10 @@ use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
-    BroadcastedDeclareTransaction, BroadcastedDeclareTransactionV1,
-    BroadcastedDeclareTransactionV2, DeclareTransactionReceipt, FieldElement, FlattenedSierraClass,
-    MaybePendingTransactionReceipt, TransactionReceipt, TransactionStatus,
+    DeclareTransactionReceipt, FieldElement, FlattenedSierraClass, MaybePendingTransactionReceipt,
+    TransactionReceipt, TransactionStatus,
 };
-use starknet::providers::jsonrpc::JsonRpcClient;
 use starknet::providers::Provider;
-use url::Url;
 
 #[tokio::test]
 async fn test_send_declare_v2_tx() {
