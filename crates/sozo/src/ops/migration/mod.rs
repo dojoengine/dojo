@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use anyhow::{anyhow, Context, Result};
+use dojo_world::world::WorldContractWriter;
 use scarb::core::Config;
 use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag, InvokeTransactionResult, StarknetError};
@@ -16,7 +17,7 @@ pub mod world;
 #[path = "migration_test.rs"]
 mod migration_test;
 
-use object::{Declarable, Deployable, RegisterOutput, WorldContract};
+use object::{Declarable, Deployable, RegisterOutput};
 use starknet::signers::LocalWallet;
 use strategy::{MigrationOutput, MigrationStrategy};
 use yansi::Paint;
@@ -118,7 +119,9 @@ where
             if strategy.world.is_none() {
                 let addr = strategy.world_address()?;
                 let InvokeTransactionResult { transaction_hash } =
-                    WorldContract::new(addr, &migrator).set_executor(res.contract_address).await?;
+                    WorldContractWriter::new(addr, &migrator)
+                        .set_executor(res.contract_address)
+                        .await?;
 
                 ws_config.ui().verbose(
                     Paint::new(format!("  > updated at: {:#x}", transaction_hash))
@@ -218,10 +221,13 @@ where
 
     let world_address = strategy.world_address()?;
 
-    let InvokeTransactionResult { transaction_hash } = WorldContract::new(world_address, migrator)
-        .register_components(&declare_output.iter().map(|o| o.class_hash).collect::<Vec<_>>())
-        .await
-        .map_err(|e| anyhow!("Failed to register components to World {world_address:#x}: {e}"))?;
+    let InvokeTransactionResult { transaction_hash } =
+        WorldContractWriter::new(world_address, migrator)
+            .register_components(&declare_output.iter().map(|o| o.class_hash).collect::<Vec<_>>())
+            .await
+            .map_err(|e| {
+                anyhow!("Failed to register components to World {world_address:#x}: {e}")
+            })?;
 
     ws_config.ui().verbose(
         Paint::new(format!("  > registered at: {:#x}", transaction_hash)).dimmed().to_string(),
@@ -267,10 +273,11 @@ where
 
     let world_address = strategy.world_address()?;
 
-    let InvokeTransactionResult { transaction_hash } = WorldContract::new(world_address, migrator)
-        .register_systems(&declare_output.iter().map(|o| o.class_hash).collect::<Vec<_>>())
-        .await
-        .map_err(|e| anyhow!("Failed to register systems to World {world_address:#x}: {e}"))?;
+    let InvokeTransactionResult { transaction_hash } =
+        WorldContractWriter::new(world_address, migrator)
+            .register_systems(&declare_output.iter().map(|o| o.class_hash).collect::<Vec<_>>())
+            .await
+            .map_err(|e| anyhow!("Failed to register systems to World {world_address:#x}: {e}"))?;
 
     ws_config.ui().verbose(
         Paint::new(format!("  > registered at: {:#x}", transaction_hash)).dimmed().to_string(),

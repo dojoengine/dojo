@@ -26,7 +26,7 @@ async fn test_load_from_manifest(pool: SqlitePool) {
     assert_eq!(moves_components.len(), 0);
 
     let systems = sqlx::query("SELECT * FROM systems").fetch_all(&pool).await.unwrap();
-    assert_eq!(systems.len(), 11);
+    assert_eq!(systems.len(), 12);
 
     let mut world = state.world().await.unwrap();
 
