@@ -16,7 +16,7 @@ mod starknet;
 mod utils;
 
 use self::starknet::api::{StarknetApiError, StarknetApiServer};
-use self::starknet::StarknetRpc;
+use self::starknet::rpc::StarknetRpc;
 
 #[derive(Debug, Clone)]
 pub struct KatanaNodeRpc<S> {

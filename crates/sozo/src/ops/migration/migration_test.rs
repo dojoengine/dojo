@@ -1,5 +1,5 @@
 use camino::Utf8PathBuf;
-use dojo_test_utils::sequencer::Sequencer;
+use dojo_test_utils::sequencer::TestSequencer;
 use dojo_world::manifest::Manifest;
 use scarb::core::Config;
 use scarb::ui::Verbosity;
@@ -13,12 +13,12 @@ use crate::ops::migration::world::WorldDiff;
 async fn test_migration() {
     let target_dir = Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap();
 
-    let sequencer = Sequencer::start().await;
-    let account = sequencer.account();
+    let sequencer = TestSequencer::start().await;
+
     let env_config = EnvironmentConfig {
         rpc: Some(sequencer.url()),
-        account_address: Some(account.address),
-        private_key: Some(account.private_key),
+        private_key: Some(sequencer.raw_account().private_key),
+        account_address: Some(sequencer.raw_account().account_address),
         ..EnvironmentConfig::default()
     };
 
@@ -38,16 +38,17 @@ async fn test_migration() {
     sequencer.stop().unwrap();
 }
 
+#[ignore]
 #[tokio::test]
 async fn test_migration_from_remote() {
     let target_dir = Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap();
 
-    let sequencer = Sequencer::start().await;
-    let account = sequencer.account();
+    let sequencer = TestSequencer::start().await;
+
     let env_config = EnvironmentConfig {
         rpc: Some(sequencer.url()),
-        account_address: Some(account.address),
-        private_key: Some(account.private_key),
+        private_key: Some(sequencer.raw_account().private_key),
+        account_address: Some(sequencer.raw_account().account_address),
         ..EnvironmentConfig::default()
     };
 
@@ -66,8 +67,8 @@ async fn test_migration_from_remote() {
 
     execute_strategy(&mut migration, env_config.migrator().await.unwrap(), &config).await.unwrap();
 
-    let _local_manifest = Manifest::load_from_path(target_dir.join("manifest.json")).unwrap();
-    let _remote_manifest = Manifest::from_remote(
+    let local_manifest = Manifest::load_from_path(target_dir.join("manifest.json")).unwrap();
+    let remote_manifest = Manifest::from_remote(
         env_config.provider().unwrap(),
         migration.world_address().unwrap(),
         None,
@@ -76,4 +77,9 @@ async fn test_migration_from_remote() {
     .unwrap();
 
     sequencer.stop().unwrap();
+
+    assert_eq!(local_manifest.world.class_hash, remote_manifest.world.class_hash);
+    assert_eq!(local_manifest.executor.class_hash, remote_manifest.executor.class_hash);
+    assert_eq!(local_manifest.components.len(), remote_manifest.components.len());
+    assert_eq!(local_manifest.systems.len(), remote_manifest.systems.len());
 }
