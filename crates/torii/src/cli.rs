@@ -65,8 +65,8 @@ async fn main() -> anyhow::Result<()> {
     let pool = SqlitePoolOptions::new().max_connections(5).connect(database_url).await?;
     let provider = JsonRpcClient::new(HttpTransport::new(Url::parse(&args.rpc).unwrap()));
 
-    let state = Sql::new(pool.clone(), args.world_address).await?;
     let manifest = Manifest::default();
+    let state = Sql::new(pool.clone(), args.world_address).await?;
     let indexer = Indexer::new(&state, &provider, Processors::default(), manifest);
     let graphql = start_graphql(&pool);
 

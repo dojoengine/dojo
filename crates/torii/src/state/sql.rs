@@ -57,7 +57,7 @@ impl Sql {
 
 #[async_trait]
 impl State for Sql {
-    async fn load_from_manifest(&mut self, manifest: Manifest) -> Result<()> {
+    async fn load_from_manifest(&self, manifest: Manifest) -> Result<()> {
         let mut updates = vec![
             format!("world_address = '{:#x}'", self.world_address),
             format!("world_class_hash = '{:#x}'", manifest.world.class_hash),
@@ -120,7 +120,7 @@ impl State for Sql {
         Ok(indexer.0.try_into().expect("doesnt fit in u64"))
     }
 
-    async fn set_head(&mut self, head: u64) -> Result<()> {
+    async fn set_head(&self, head: u64) -> Result<()> {
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
         sqlx::query(&format!(
             "UPDATE indexers SET head = {head} WHERE id = '{:#x}'",
@@ -141,7 +141,7 @@ impl State for Sql {
         Ok(meta)
     }
 
-    async fn set_world(&mut self, world: World) -> Result<()> {
+    async fn set_world(&self, world: World) -> Result<()> {
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
         sqlx::query(&format!(
             "UPDATE worlds SET world_address='{:#x}', world_class_hash='{:#x}', \
@@ -157,7 +157,7 @@ impl State for Sql {
         Ok(())
     }
 
-    async fn register_component(&mut self, component: Component) -> Result<()> {
+    async fn register_component(&self, component: Component) -> Result<()> {
         let mut queries = vec![build_component_table_create(component.clone())];
         let component_id = component.name.to_lowercase();
         queries.push(format!(
@@ -168,7 +168,7 @@ impl State for Sql {
         self.execute(queries).await
     }
 
-    async fn register_system(&mut self, system: System) -> Result<()> {
+    async fn register_system(&self, system: System) -> Result<()> {
         let query = format!(
             "INSERT INTO systems (id, name, class_hash) VALUES ('{}', '{}', '{:#x}') ON \
              CONFLICT(id) DO UPDATE SET class_hash='{:#x}'",
@@ -183,7 +183,7 @@ impl State for Sql {
     }
 
     async fn set_entity(
-        &mut self,
+        &self,
         component: String,
         partition: FieldElement,
         key: FieldElement,
@@ -214,7 +214,7 @@ impl State for Sql {
     }
 
     async fn delete_entity(
-        &mut self,
+        &self,
         component: String,
         partition: FieldElement,
         key: FieldElement,
