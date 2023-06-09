@@ -189,10 +189,10 @@ mod PositionComponent {
     use super::Position;
 
     #[view]
-    fn schema() -> Array<(felt252, felt252, u8)> {
+    fn schema() -> Array<(felt252, felt252, usize, u8)> {
         let mut arr = array::ArrayTrait::new();
-        array::ArrayTrait::append(ref arr, ('x', 'felt252', 252));
-        array::ArrayTrait::append(ref arr, ('y', 'felt252', 252));
+        array::ArrayTrait::append(ref arr, ('x', 'felt252', 0, 0));
+        array::ArrayTrait::append(ref arr, ('y', 'felt252', 1, 0));
 
         arr
     }
@@ -230,9 +230,9 @@ mod PlayerComponent {
     use super::Player;
 
     #[view]
-    fn schema() -> Array<(felt252, felt252, u8)> {
+    fn schema() -> Array<(felt252, felt252, usize, u8)> {
         let mut arr = array::ArrayTrait::new();
-        array::ArrayTrait::append(ref arr, ('name', 'felt252', 252));
+        array::ArrayTrait::append(ref arr, ('name', 'felt252', 0, 0));
 
         arr
     }
