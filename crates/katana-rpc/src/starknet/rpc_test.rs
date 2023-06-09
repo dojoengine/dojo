@@ -7,8 +7,7 @@ use blockifier::state::state_api::StateReader;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass;
 use dojo_test_utils::sequencer::TestSequencer;
-use starknet::accounts::Call;
-use starknet::accounts::{Account, ConnectedAccount};
+use starknet::accounts::{Account, Call, ConnectedAccount};
 use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
@@ -19,11 +18,8 @@ use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::providers::Provider;
 use starknet_api::block::BlockNumber;
 use starknet_api::core::{ClassHash, ContractAddress, PatriciaKey};
-use starknet_api::patricia_key;
-use starknet_api::{
-    hash::{StarkFelt, StarkHash},
-    stark_felt,
-};
+use starknet_api::hash::{StarkFelt, StarkHash};
+use starknet_api::{patricia_key, stark_felt};
 
 #[tokio::test]
 async fn test_send_declare_and_deploy_contract() {
