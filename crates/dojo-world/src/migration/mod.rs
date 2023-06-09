@@ -20,6 +20,7 @@ use thiserror::Error;
 
 pub mod class;
 pub mod contract;
+pub mod strategy;
 pub mod world;
 
 pub type DeclareOutput = DeclareTransactionResult;

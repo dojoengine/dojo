@@ -2,6 +2,7 @@ use std::path::Path;
 
 use anyhow::{anyhow, Context, Result};
 use dojo_world::manifest::Manifest;
+use dojo_world::migration::strategy::{prepare_for_migration, MigrationOutput, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{Declarable, Deployable, RegisterOutput};
 use dojo_world::world::WorldContractWriter;
@@ -12,18 +13,15 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider, ProviderError};
 
 pub mod config;
-pub mod strategy;
 
 #[cfg(test)]
 #[path = "migration_test.rs"]
 mod migration_test;
 
 use starknet::signers::LocalWallet;
-use strategy::{MigrationOutput, MigrationStrategy};
 use yansi::Paint;
 
 use self::config::{EnvironmentConfig, WorldConfig};
-use self::strategy::prepare_for_migration;
 
 pub async fn execute<P>(
     world_config: WorldConfig,
@@ -66,7 +64,7 @@ where
 
     ws_config.ui().print(format!("{} 🧰 Evaluating World diff...", Paint::new("[2/3]").dimmed()));
 
-    let mut migration = prepare_for_migration(target_dir, diff, world_config)
+    let mut migration = prepare_for_migration(world_config.address, target_dir, diff)
         .with_context(|| "Problem preparing for migration.")?;
 
     ws_config.ui().print(format!("{} 📦 Migrating world...", Paint::new("[3/3]").dimmed()));
