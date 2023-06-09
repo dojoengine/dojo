@@ -28,4 +28,5 @@ url = "2.2.2"
 assert_fs = "1.0.9"
 dojo-test-utils = { path = "../dojo-test-utils" }
 dojo-lang = { path = "../dojo-lang" }
-tokio = { version = "1.28.0", features = [ "full" ] }
+sozo = { path = "../sozo" }
+tokio = { version = "1.28.0", features = ["full"] }

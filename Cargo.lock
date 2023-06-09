@@ -2989,6 +2989,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "smol_str",
+ "sozo",
  "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?branch=dev/jsonrpc_0_3_0)",
  "thiserror",
  "tokio",
