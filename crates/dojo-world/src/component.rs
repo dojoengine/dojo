@@ -1,9 +1,29 @@
 use starknet::core::types::{BlockId, FieldElement, FunctionCall};
-use starknet::core::utils::get_selector_from_name;
+use starknet::core::utils::{
+    get_selector_from_name, parse_cairo_short_string, ParseCairoShortStringError,
+};
 use starknet::providers::{Provider, ProviderError};
 
 use crate::manifest::Member;
-use crate::world::WorldContractReader;
+use crate::world::{ContractReaderError, WorldContractReader};
+
+#[cfg(test)]
+#[path = "component_test.rs"]
+mod test;
+
+#[derive(Debug, thiserror::Error)]
+pub enum ComponentError<P> {
+    #[error(transparent)]
+    ProviderError(ProviderError<P>),
+    #[error("Invalid schema length")]
+    InvalidSchemaLength,
+    #[error(transparent)]
+    ParseCairoShortStringError(ParseCairoShortStringError),
+    #[error("Converting felt")]
+    ConvertingFelt,
+    #[error(transparent)]
+    ContractReaderError(ContractReaderError<P>),
+}
 
 pub struct ComponentClass<'a, P: Provider + Sync> {
     world: &'a WorldContractReader<'a, P>,
@@ -35,16 +55,35 @@ impl<'a, P: Provider + Sync> ComponentClass<'a, P> {
         self.hash
     }
 
-    pub async fn schema(&self, block_id: BlockId) -> Result<Vec<Member>, ProviderError<P::Error>> {
+    pub async fn schema(&self, block_id: BlockId) -> Result<Vec<Member>, ComponentError<P::Error>> {
+        let entrypoint = get_selector_from_name("schema").unwrap();
+
         let res = self
             .world
             .call(
-                get_selector_from_name("LibraryCall").unwrap(),
-                vec![self.hash, get_selector_from_name("schema").unwrap()],
+                "LibraryCall",
+                vec![FieldElement::THREE, self.hash, entrypoint, FieldElement::ZERO],
                 block_id,
             )
-            .await?;
+            .await
+            .map_err(ComponentError::ContractReaderError)?;
 
-        Ok(res.iter().map(|_x| Member::default()).collect())
+        let mut members = vec![];
+        for chunk in res[3..].chunks(4) {
+            if chunk.len() != 4 {
+                return Err(ComponentError::InvalidSchemaLength);
+            }
+
+            members.push(Member {
+                name: parse_cairo_short_string(&chunk[0])
+                    .map_err(ComponentError::ParseCairoShortStringError)?,
+                ty: parse_cairo_short_string(&chunk[1])
+                    .map_err(ComponentError::ParseCairoShortStringError)?,
+                slot: chunk[2].try_into().map_err(|_| ComponentError::ConvertingFelt)?,
+                offset: chunk[3].try_into().map_err(|_| ComponentError::ConvertingFelt)?,
+            });
+        }
+
+        Ok(members)
     }
 }

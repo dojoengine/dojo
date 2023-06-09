@@ -3,14 +3,16 @@ use starknet::accounts::{AccountError, Call, ConnectedAccount};
 use starknet::core::types::{
     BlockId, BlockTag, FieldElement, FunctionCall, InvokeTransactionResult,
 };
-use starknet::core::utils::get_selector_from_name;
+use starknet::core::utils::{
+    cairo_short_string_to_felt, get_selector_from_name, CairoShortStringToFeltError,
+};
 use starknet::providers::{Provider, ProviderError};
 
 use crate::component::ComponentClass;
 
 #[cfg(test)]
 #[path = "world_test.rs"]
-mod test;
+pub(crate) mod test;
 
 #[derive(Debug)]
 pub struct WorldContractWriter<'a, A: ConnectedAccount + Sync> {
@@ -102,6 +104,14 @@ impl<'a, A: ConnectedAccount + Sync> WorldContractWriter<'a, A> {
     }
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum ContractReaderError<P> {
+    #[error(transparent)]
+    ProviderError(ProviderError<P>),
+    #[error(transparent)]
+    CairoShortStringToFeltError(CairoShortStringToFeltError),
+}
+
 #[derive(Debug)]
 pub struct WorldContractReader<'a, P: Provider + Sync> {
     pub address: FieldElement,
@@ -116,7 +126,7 @@ impl<'a, P: Provider + Sync> WorldContractReader<'a, P> {
     pub async fn executor(
         &self,
         block_id: BlockId,
-    ) -> Result<FieldElement, ProviderError<<P as starknet::providers::Provider>::Error>> {
+    ) -> Result<FieldElement, ContractReaderError<P::Error>> {
         let res = self
             .provider
             .call(
@@ -127,18 +137,23 @@ impl<'a, P: Provider + Sync> WorldContractReader<'a, P> {
                 },
                 block_id,
             )
-            .await?;
+            .await
+            .map_err(ContractReaderError::ProviderError)?;
 
         Ok(res[0])
     }
 
     pub async fn call(
         &self,
-        name: FieldElement,
+        system: &str,
         mut calldata: Vec<FieldElement>,
         block_id: BlockId,
-    ) -> Result<Vec<FieldElement>, ProviderError<<P as starknet::providers::Provider>::Error>> {
-        calldata.insert(0, name);
+    ) -> Result<Vec<FieldElement>, ContractReaderError<P::Error>> {
+        calldata.insert(
+            0,
+            cairo_short_string_to_felt(system)
+                .map_err(ContractReaderError::CairoShortStringToFeltError)?,
+        );
         self.provider
             .call(
                 FunctionCall {
@@ -149,29 +164,41 @@ impl<'a, P: Provider + Sync> WorldContractReader<'a, P> {
                 block_id,
             )
             .await
+            .map_err(ContractReaderError::ProviderError)
     }
 
     pub async fn component(
         &'a self,
-        name: FieldElement,
+        name: &str,
         block_id: BlockId,
-    ) -> Result<ComponentClass<'a, P>, ProviderError<P::Error>> {
-        ComponentClass::new(self, name, block_id).await
+    ) -> Result<ComponentClass<'a, P>, ContractReaderError<P::Error>> {
+        ComponentClass::new(
+            self,
+            cairo_short_string_to_felt(name)
+                .map_err(ContractReaderError::CairoShortStringToFeltError)?,
+            block_id,
+        )
+        .await
+        .map_err(ContractReaderError::ProviderError)
     }
 
     pub async fn system(
         &self,
-        name: FieldElement,
-    ) -> Result<Vec<FieldElement>, ProviderError<P::Error>> {
+        name: &str,
+    ) -> Result<Vec<FieldElement>, ContractReaderError<P::Error>> {
         self.provider
             .call(
                 FunctionCall {
                     contract_address: self.address,
-                    calldata: vec![name],
+                    calldata: vec![
+                        cairo_short_string_to_felt(name)
+                            .map_err(ContractReaderError::CairoShortStringToFeltError)?,
+                    ],
                     entry_point_selector: get_selector_from_name("system").unwrap(),
                 },
                 BlockId::Tag(BlockTag::Pending),
             )
             .await
+            .map_err(ContractReaderError::ProviderError)
     }
 }

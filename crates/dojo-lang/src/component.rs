@@ -72,7 +72,9 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> 
         .elements(db)
         .iter()
         .enumerate()
-        .map(|(slot, member)| (member.name(db).text(db), member.type_clause(db).ty(db), slot, 0))
+        .map(|(slot, member)| {
+            (member.name(db).text(db), member.type_clause(db).ty(db), slot as u64, 0)
+        })
         .collect::<_>();
 
     let name = struct_ast.name(db).text(db);

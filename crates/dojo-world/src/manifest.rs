@@ -37,7 +37,7 @@ pub struct Member {
     pub name: String,
     #[serde(rename = "type")]
     pub ty: String,
-    pub slot: usize,
+    pub slot: u64,
     pub offset: u8,
 }
 
