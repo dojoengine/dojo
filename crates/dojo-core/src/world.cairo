@@ -38,6 +38,8 @@ mod World {
         nonce: usize,
     }
 
+    const ADMIN: felt252 = 'Admin';
+
     #[constructor]
     fn constructor(executor: ContractAddress) {
         executor_dispatcher::write(IExecutorDispatcher { contract_address: executor });
@@ -85,7 +87,7 @@ mod World {
 
             // Call RouteAuth system via executor with the serialized route
             executor_dispatcher::read()
-                .execute(route_auth_class_hash, AuthRole { id: 'Admin'.into() }, calldata.span());
+                .execute(route_auth_class_hash, AuthRole { id: ADMIN.into() }, calldata.span());
 
             index += 1;
         };
@@ -147,7 +149,7 @@ mod World {
         // Call IsAccountAdmin system via executor
         let mut calldata = ArrayTrait::new();
         let res = executor_dispatcher::read()
-            .execute(is_account_admin_class_hash, AuthRole { id: 'Admin'.into() }, calldata.span());
+            .execute(is_account_admin_class_hash, AuthRole { id: ADMIN.into() }, calldata.span());
         (*res[0]).is_non_zero()
     }
 
@@ -382,7 +384,7 @@ mod World {
     #[external]
     fn assume_role(role_id: u250, components: Array<ShortString>) {
         // Only Admin can set Admin role 
-        if role_id == 'Admin'.into() {
+        if role_id == ADMIN.into() {
             assert(is_account_admin(), 'only admin can set Admin role');
         } else {
 
@@ -433,10 +435,10 @@ mod World {
         let is_authorized_class_hash = system_registry::read('IsAuthorized'.into());
 
         let mut calldata = ArrayTrait::<felt252>::new();
-        calldata.append(0); // target_id
+        calldata.append(role_id.into()); // target_id
         calldata.append(component.into()); // resource_id
         let res = executor_dispatcher::read()
-            .execute(is_authorized_class_hash, AuthRole { id: role_id }, calldata.span());
+            .execute(is_authorized_class_hash, AuthRole { id: ADMIN.into() }, calldata.span());
         (*res[0]).is_non_zero()
     }
 }

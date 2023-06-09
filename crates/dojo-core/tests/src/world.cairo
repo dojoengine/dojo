@@ -185,7 +185,7 @@ fn test_set_entity_admin() {
     // Admin caller grants Admin role to Bar system
     let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
     grant_role_calldata.append('Bar'); // target_id
-    grant_role_calldata.append('Admin'); // role_id
+    grant_role_calldata.append(World::ADMIN); // role_id
     world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
 
     // Call Bar system
@@ -495,7 +495,7 @@ fn spawn_empty_world() -> IWorldDispatcher {
     let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
 
     grant_role_calldata.append(caller.into()); // target_id
-    grant_role_calldata.append('Admin'); // role_id
+    grant_role_calldata.append(World::ADMIN); // role_id
     world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
 
     world
