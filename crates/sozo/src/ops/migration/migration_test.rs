@@ -1,13 +1,13 @@
 use camino::Utf8PathBuf;
 use dojo_test_utils::sequencer::TestSequencer;
 use dojo_world::manifest::Manifest;
+use dojo_world::migration::world::WorldDiff;
 use scarb::core::Config;
 use scarb::ui::Verbosity;
 
 use crate::ops::migration::config::{EnvironmentConfig, WorldConfig};
 use crate::ops::migration::execute_strategy;
 use crate::ops::migration::strategy::prepare_for_migration;
-use crate::ops::migration::world::WorldDiff;
 
 #[tokio::test]
 async fn test_migration() {
@@ -27,10 +27,8 @@ async fn test_migration() {
         .build()
         .unwrap();
 
-    let world =
-        WorldDiff::from_path(target_dir.clone(), &WorldConfig::default(), &env_config, &config)
-            .await
-            .unwrap();
+    let manifest = Manifest::load_from_path(target_dir.join("manifest.json")).unwrap();
+    let world = WorldDiff::compute(manifest, None);
 
     let mut migration = prepare_for_migration(target_dir, world, WorldConfig::default()).unwrap();
     execute_strategy(&mut migration, env_config.migrator().await.unwrap(), &config).await.unwrap();
@@ -57,10 +55,8 @@ async fn test_migration_from_remote() {
         .build()
         .unwrap();
 
-    let world =
-        WorldDiff::from_path(target_dir.clone(), &WorldConfig::default(), &env_config, &config)
-            .await
-            .unwrap();
+    let manifest = Manifest::load_from_path(target_dir.clone()).unwrap();
+    let world = WorldDiff::compute(manifest, None);
 
     let mut migration =
         prepare_for_migration(target_dir.clone(), world, WorldConfig::default()).unwrap();

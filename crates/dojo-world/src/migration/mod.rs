@@ -18,7 +18,9 @@ use starknet::core::utils::{
 use starknet::providers::Provider;
 use thiserror::Error;
 
-use super::world::{ClassDiff, ContractDiff};
+pub mod class;
+pub mod contract;
+pub mod world;
 
 pub type DeclareOutput = DeclareTransactionResult;
 
@@ -45,21 +47,6 @@ pub enum MigrationError<S, P> {
     Migrator(#[from] AccountError<S, P>),
     #[error(transparent)]
     CairoShortStringToFelt(#[from] CairoShortStringToFeltError),
-}
-
-// TODO: evaluate the contract address when building the migration plan
-#[derive(Debug, Default)]
-pub struct ContractMigration {
-    pub salt: FieldElement,
-    pub contract: ContractDiff,
-    pub artifact_path: PathBuf,
-    pub contract_address: Option<FieldElement>,
-}
-
-#[derive(Debug, Default)]
-pub struct ClassMigration {
-    pub class: ClassDiff,
-    pub artifact_path: PathBuf,
 }
 
 #[async_trait]
@@ -154,27 +141,6 @@ pub trait Deployable: Declarable + Sync {
 
     // TEMP: Remove once we can calculate the contract address before sending the tx
     fn set_contract_address(&mut self, contract_address: FieldElement);
-}
-
-#[async_trait]
-impl Declarable for ClassMigration {
-    fn artifact_path(&self) -> &PathBuf {
-        &self.artifact_path
-    }
-}
-
-#[async_trait]
-impl Declarable for ContractMigration {
-    fn artifact_path(&self) -> &PathBuf {
-        &self.artifact_path
-    }
-}
-
-#[async_trait]
-impl Deployable for ContractMigration {
-    fn set_contract_address(&mut self, contract_address: FieldElement) {
-        self.contract_address = Some(contract_address);
-    }
 }
 
 fn prepare_contract_declaration_params(

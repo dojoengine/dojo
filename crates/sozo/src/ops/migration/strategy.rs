@@ -3,11 +3,13 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context, Result};
+use dojo_world::migration::class::{ClassDiff, ClassMigration};
+use dojo_world::migration::contract::{ContractDiff, ContractMigration};
+use dojo_world::migration::world::WorldDiff;
+use dojo_world::migration::{DeployOutput, RegisterOutput};
 use starknet::core::types::FieldElement;
 
 use super::config::WorldConfig;
-use super::object::{ClassMigration, ContractMigration, DeployOutput, RegisterOutput};
-use super::world::{ClassDiff, ContractDiff, WorldDiff};
 
 #[derive(Debug)]
 pub struct MigrationOutput {

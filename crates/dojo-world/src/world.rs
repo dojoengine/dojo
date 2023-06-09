@@ -6,6 +6,8 @@ use starknet::core::types::{
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::{Provider, ProviderError};
 
+use crate::component::ComponentClass;
+
 #[derive(Debug)]
 pub struct WorldContractWriter<'a, A: ConnectedAccount + Sync> {
     pub address: FieldElement,
@@ -111,6 +113,7 @@ impl<'a, P: Provider + Sync> WorldContractReader<'a, P> {
         &self,
         name: FieldElement,
         mut calldata: Vec<FieldElement>,
+        block_id: BlockId,
     ) -> Result<Vec<FieldElement>, ProviderError<<P as starknet::providers::Provider>::Error>> {
         calldata.insert(0, name);
         self.provider
@@ -120,31 +123,23 @@ impl<'a, P: Provider + Sync> WorldContractReader<'a, P> {
                     calldata,
                     entry_point_selector: get_selector_from_name("execute").unwrap(),
                 },
-                BlockId::Tag(BlockTag::Pending),
+                block_id,
             )
             .await
     }
 
     pub async fn component(
-        &self,
+        &'a self,
         name: FieldElement,
-    ) -> Result<Vec<FieldElement>, ProviderError<<P as starknet::providers::Provider>::Error>> {
-        self.provider
-            .call(
-                FunctionCall {
-                    contract_address: self.address,
-                    calldata: vec![name],
-                    entry_point_selector: get_selector_from_name("component").unwrap(),
-                },
-                BlockId::Tag(BlockTag::Pending),
-            )
-            .await
+        block_id: BlockId,
+    ) -> Result<ComponentClass<'a, P>, ProviderError<P::Error>> {
+        ComponentClass::new(self, name, block_id).await
     }
 
     pub async fn system(
         &self,
         name: FieldElement,
-    ) -> Result<Vec<FieldElement>, ProviderError<<P as starknet::providers::Provider>::Error>> {
+    ) -> Result<Vec<FieldElement>, ProviderError<P::Error>> {
         self.provider
             .call(
                 FunctionCall {
