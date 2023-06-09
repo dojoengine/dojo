@@ -8,6 +8,10 @@ use starknet::providers::{Provider, ProviderError};
 
 use crate::component::ComponentClass;
 
+#[cfg(test)]
+#[path = "world_test.rs"]
+mod test;
+
 #[derive(Debug)]
 pub struct WorldContractWriter<'a, A: ConnectedAccount + Sync> {
     pub address: FieldElement,
@@ -107,6 +111,25 @@ pub struct WorldContractReader<'a, P: Provider + Sync> {
 impl<'a, P: Provider + Sync> WorldContractReader<'a, P> {
     pub fn new(address: FieldElement, provider: &'a P) -> Self {
         Self { address, provider }
+    }
+
+    pub async fn executor(
+        &self,
+        block_id: BlockId,
+    ) -> Result<FieldElement, ProviderError<<P as starknet::providers::Provider>::Error>> {
+        let res = self
+            .provider
+            .call(
+                FunctionCall {
+                    contract_address: self.address,
+                    calldata: vec![],
+                    entry_point_selector: get_selector_from_name("executor").unwrap(),
+                },
+                block_id,
+            )
+            .await?;
+
+        Ok(res[0])
     }
 
     pub async fn call(

@@ -3,13 +3,12 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context, Result};
-use dojo_world::migration::class::{ClassDiff, ClassMigration};
-use dojo_world::migration::contract::{ContractDiff, ContractMigration};
-use dojo_world::migration::world::WorldDiff;
-use dojo_world::migration::{DeployOutput, RegisterOutput};
 use starknet::core::types::FieldElement;
 
-use super::config::WorldConfig;
+use super::class::{ClassDiff, ClassMigration};
+use super::contract::{ContractDiff, ContractMigration};
+use super::world::WorldDiff;
+use super::{DeployOutput, RegisterOutput};
 
 #[derive(Debug)]
 pub struct MigrationOutput {
@@ -21,18 +20,18 @@ pub struct MigrationOutput {
 
 #[derive(Debug)]
 pub struct MigrationStrategy {
+    pub world_address: Option<FieldElement>,
     pub world: Option<ContractMigration>,
     pub executor: Option<ContractMigration>,
     pub systems: Vec<ClassMigration>,
     pub components: Vec<ClassMigration>,
-    pub world_config: WorldConfig,
 }
 
 impl MigrationStrategy {
     pub fn world_address(&self) -> Result<FieldElement> {
         let addr = match &self.world {
             Some(c) => c.contract_address,
-            None => self.world_config.address,
+            None => self.world_address,
         };
 
         addr.ok_or_else(|| anyhow!("World address not found"))
@@ -42,9 +41,9 @@ impl MigrationStrategy {
 /// construct migration strategy
 /// evaluate which contracts/classes need to be declared/deployed
 pub fn prepare_for_migration<P>(
+    world_address: Option<FieldElement>,
     target_dir: P,
     diff: WorldDiff,
-    world_config: WorldConfig,
 ) -> Result<MigrationStrategy>
 where
     P: AsRef<Path>,
@@ -76,7 +75,7 @@ where
         evaluate_components_to_migrate(&diff.components, &artifact_paths, world.is_some())?;
     let systems = evaluate_systems_to_migrate(&diff.systems, &artifact_paths, world.is_some())?;
 
-    Ok(MigrationStrategy { world, executor, systems, components, world_config })
+    Ok(MigrationStrategy { world_address, world, executor, systems, components })
 }
 
 fn evaluate_systems_to_migrate(

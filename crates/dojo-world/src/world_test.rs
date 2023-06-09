@@ -1,0 +1,72 @@
+use camino::Utf8PathBuf;
+use dojo_test_utils::sequencer::TestSequencer;
+use starknet::accounts::ConnectedAccount;
+use starknet::core::types::{BlockId, BlockTag, FieldElement};
+
+use super::WorldContractWriter;
+use crate::manifest::Manifest;
+use crate::migration::strategy::prepare_for_migration;
+use crate::migration::world::WorldDiff;
+use crate::migration::{Declarable, Deployable};
+use crate::world::WorldContractReader;
+
+#[tokio::test]
+async fn test_world_contract_reader() {
+    let sequencer = TestSequencer::start().await;
+    let account = sequencer.account();
+    let provider = account.provider();
+    let (world_address, executor_address) = deploy_world(
+        &sequencer,
+        Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap(),
+    )
+    .await;
+
+    let world = WorldContractReader::new(world_address, provider);
+    let executor = world.executor(BlockId::Tag(BlockTag::Latest)).await.unwrap();
+
+    assert_eq!(executor, executor_address);
+}
+
+pub async fn deploy_world(
+    sequencer: &TestSequencer,
+    path: Utf8PathBuf,
+) -> (FieldElement, FieldElement) {
+    let manifest = Manifest::load_from_path(path.join("manifest.json")).unwrap();
+    let world = WorldDiff::compute(manifest, None);
+    let account = sequencer.account();
+
+    let strategy = prepare_for_migration(None, path, world).unwrap();
+    let executor_address =
+        strategy.executor.unwrap().deploy(vec![], &account).await.unwrap().contract_address;
+    let world_address = strategy
+        .world
+        .unwrap()
+        .deploy(vec![executor_address], &account)
+        .await
+        .unwrap()
+        .contract_address;
+
+    let mut declare_output = vec![];
+    for component in strategy.components {
+        let res = component.declare(&account).await.unwrap();
+        declare_output.push(res);
+    }
+
+    let _ = WorldContractWriter::new(world_address, &account)
+        .register_components(&declare_output.iter().map(|o| o.class_hash).collect::<Vec<_>>())
+        .await
+        .unwrap();
+
+    let mut declare_output = vec![];
+    for system in strategy.systems {
+        let res = system.declare(&account).await.unwrap();
+        declare_output.push(res);
+    }
+
+    let _ = WorldContractWriter::new(world_address, &account)
+        .register_systems(&declare_output.iter().map(|o| o.class_hash).collect::<Vec<_>>())
+        .await
+        .unwrap();
+
+    (world_address, executor_address)
+}
