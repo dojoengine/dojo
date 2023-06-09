@@ -24,7 +24,7 @@ pub struct TestSequencer {
     url: Url,
     handle: ServerHandle,
     account: TestAccount,
-    sequencer: Arc<KatanaSequencer>,
+    pub sequencer: Arc<KatanaSequencer>,
 }
 
 impl TestSequencer {
