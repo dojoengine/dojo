@@ -25,12 +25,9 @@ impl<S: State + Sync, T: JsonRpcTransport> EventProcessor<S, T> for ComponentReg
         _transaction_receipt: &TransactionReceipt,
         event: &Event,
     ) -> Result<(), Error> {
+        let name = parse_cairo_short_string(&event.data[0])?;
         storage
-            .register_component(Component {
-                name: parse_cairo_short_string(&event.data[0])?,
-                class_hash: event.data[1],
-                ..Default::default()
-            })
+            .register_component(Component { name, class_hash: event.data[1], ..Default::default() })
             .await?;
         Ok(())
     }

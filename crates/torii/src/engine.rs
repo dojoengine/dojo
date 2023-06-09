@@ -5,6 +5,7 @@ use starknet::core::types::{
     BlockId, BlockTag, BlockWithTxs, Event, InvokeTransaction, MaybePendingBlockWithTxs,
     MaybePendingTransactionReceipt, Transaction, TransactionReceipt,
 };
+use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
 use starknet::providers::Provider;
 use tokio::time::sleep;
@@ -197,7 +198,9 @@ async fn process_event<S: State, T: starknet::providers::jsonrpc::JsonRpcTranspo
     event: &Event,
 ) -> Result<(), Box<dyn Error>> {
     for processor in processors {
-        processor.process(storage, provider, block, receipt, event).await?;
+        if get_selector_from_name(&processor.event_key())? == event.keys[0] {
+            processor.process(storage, provider, block, receipt, event).await?;
+        }
     }
 
     Ok(())
