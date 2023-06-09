@@ -91,6 +91,10 @@ impl ObjectTrait for ComponentObject {
     }
 
     fn nested_fields(&self) -> Option<Vec<Field>> {
+        if self.storage_names.is_empty() {
+            return None;
+        }
+
         Some(vec![Field::new("storage", TypeRef::named("Storage"), move |ctx| {
             FieldFuture::new(async move {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
