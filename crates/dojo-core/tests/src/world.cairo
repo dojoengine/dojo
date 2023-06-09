@@ -17,6 +17,7 @@ use dojo_core::executor::Executor;
 use dojo_core::execution_context::Context;
 use dojo_core::auth::components::AuthRole;
 use dojo_core::world::World;
+use dojo_core::world::LibraryCall;
 use dojo_core::test_utils::mock_auth_components_systems;
 use dojo_core::auth::systems::Route;
 use starknet::get_caller_address;
@@ -498,4 +499,18 @@ fn spawn_empty_world() -> IWorldDispatcher {
     world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
 
     world
+}
+
+#[test]
+#[available_gas(6000000)]
+fn test_library_call_system() {
+    // Spawn empty world
+    let world = spawn_empty_world();
+
+    world.register_system(LibraryCall::TEST_CLASS_HASH.try_into().unwrap());
+    let mut calldata = ArrayTrait::new();
+    calldata.append(FooComponent::TEST_CLASS_HASH);
+    calldata.append(0x011efd13169e3bceace525b23b7f968b3cc611248271e35f04c5c917311fc7f7);
+    calldata.append(0);
+    world.execute('LibraryCall'.into(), calldata.span());
 }

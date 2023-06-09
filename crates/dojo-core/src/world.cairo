@@ -397,8 +397,6 @@ mod World {
 
 #[system]
 mod LibraryCall {
-    use array::ArrayTrait;
-    use traits::Into;
     use dojo_core::serde::SpanSerde;
 
     fn execute(class_hash: starknet::ClassHash, entrypoint: felt252, calladata: Span<felt252>) -> Span<felt252> {
