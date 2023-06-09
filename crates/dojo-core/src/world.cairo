@@ -275,11 +275,15 @@ mod World {
         // Get execution role
         let role = execution_role();
 
-        // Validate the calling system has permission to write to the component
-        assert(
-            is_authorized(context.caller_system, component, AuthRole { id: role }),
-            'system not authorized'
-        );
+        // Validate authorization if role is not set
+        // Otherwise, proceed with the write
+        if role.into() == 0 {
+            // Validate the calling system has permission to write to the component
+            assert(
+                is_authorized(context.caller_system, component, AuthRole { id: role }),
+                'system not authorized'
+            );
+        };
 
         // Set the entity
         let table = query.table(component);
@@ -306,11 +310,15 @@ mod World {
         // Get execution role
         let role = execution_role();
 
-        // Validate the calling system has permission to write to the component
-        assert(
-            is_authorized(context.caller_system, component, AuthRole { id: role }),
-            'system not authorized'
-        );
+        // Validate authorization if role is not set
+        // Otherwise, proceed with the write
+        if role.into() == 0 {
+            // Validate the calling system has permission to write to the component
+            assert(
+                is_authorized(context.caller_system, component, AuthRole { id: role }),
+                'system not authorized'
+            );
+        };
 
         // Delete the entity
         let table = query.table(component);
@@ -387,7 +395,6 @@ mod World {
         if role_id == ADMIN.into() {
             assert(is_account_admin(), 'only admin can set Admin role');
         } else {
-
             let mut index = 0;
             let len = components.len();
 
@@ -435,10 +442,11 @@ mod World {
         let is_authorized_class_hash = system_registry::read('IsAuthorized'.into());
 
         let mut calldata = ArrayTrait::<felt252>::new();
-        calldata.append(role_id.into()); // target_id
+        let caller = get_tx_info().unbox().account_contract_address;
+        calldata.append(caller.into()); // target_id
         calldata.append(component.into()); // resource_id
         let res = executor_dispatcher::read()
-            .execute(is_authorized_class_hash, AuthRole { id: ADMIN.into() }, calldata.span());
+            .execute(is_authorized_class_hash, AuthRole { id: role_id.into() }, calldata.span());
         (*res[0]).is_non_zero()
     }
 }

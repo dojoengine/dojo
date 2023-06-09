@@ -9,8 +9,9 @@ use starknet::syscalls::deploy_syscall;
 use starknet::contract_address_const;
 
 use dojo_core::integer::u250;
-use dojo_core::integer::U32IntoU250;
+use dojo_core::integer::{U32IntoU250, Felt252IntoU250};
 use dojo_core::storage::query::QueryTrait;
+use dojo_core::string::ShortString;
 use dojo_core::interfaces::IWorldDispatcher;
 use dojo_core::interfaces::IWorldDispatcherTrait;
 use dojo_core::executor::Executor;
@@ -135,7 +136,46 @@ fn test_initialize_not_more_than_once() {
 
 #[test]
 #[available_gas(10000000)]
-fn test_set_entity_authorized() {
+fn test_set_entity_authorized_with_assumed_role() {
+    // Spawn empty world
+    let world = spawn_empty_world();
+
+    world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
+
+    // Prepare route
+    let mut route = ArrayTrait::new();
+    let target_id = 'Bar'.into();
+    let role_id = 'FooWriter'.into();
+    let resource_id = 'Foo'.into();
+    let r = Route { target_id, role_id, resource_id,  };
+    route.append(r);
+
+    // Initialize world
+    world.initialize(route);
+
+    // Assume FooWriter role
+    let mut components = ArrayTrait::new();
+    components.append('Foo'.into());
+    world.assume_role('FooWriter'.into(), components);
+
+    // Call Bar system
+    let mut data = ArrayTrait::new();
+    data.append(420);
+    data.append(1337);
+    world.execute('Bar'.into(), data.span());
+
+    // Assert that the data is stored
+    // Caller here is the world contract via the executor
+    let world_address = world.contract_address;
+    let foo = world.entity('Foo'.into(), world_address.into(), 0, 0);
+    assert(*foo[0] == 420, 'data not stored');
+    assert(*foo[1] == 1337, 'data not stored');
+}
+
+#[test]
+#[available_gas(10000000)]
+fn test_set_entity_authorized_no_assumed_role() {
     // Spawn empty world
     let world = spawn_empty_world();
 
@@ -157,6 +197,8 @@ fn test_set_entity_authorized() {
     let mut data = ArrayTrait::new();
     data.append(420);
     data.append(1337);
+    // No assumed role
+    // Should pass since default scoped role is authorized (FooWriter)
     world.execute('Bar'.into(), data.span());
 
     // Assert that the data is stored
@@ -192,6 +234,10 @@ fn test_set_entity_admin() {
     let mut data = ArrayTrait::new();
     data.append(420);
     data.append(1337);
+
+    // Assume Admin role
+    let mut components = ArrayTrait::<ShortString>::new();
+    world.assume_role(World::ADMIN.into(), components);
     world.execute('Bar'.into(), data.span());
 
     // Assert that the data is stored
@@ -200,6 +246,39 @@ fn test_set_entity_admin() {
     let foo = world.entity('Foo'.into(), world_address.into(), 0, 0);
     assert(*foo[0] == 420, 'data not stored');
     assert(*foo[1] == 1337, 'data not stored');
+}
+
+#[test]
+#[available_gas(9000000)]
+#[should_panic]
+#[ignore] // TODO:: Remove once set_caller_address is working properly
+fn test_admin_system_but_non_admin_caller() {
+    // Spawn empty world
+    let world = spawn_empty_world();
+
+    world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
+
+    // No Auth route
+    let mut route = ArrayTrait::new();
+
+    // Initialize world
+    world.initialize(route);
+
+    // Admin caller grants Admin role to Bar system
+    let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
+    grant_role_calldata.append('Bar'); // target_id
+    grant_role_calldata.append('Admin'); // role_id
+    world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
+
+    // Call Bar system
+    let mut data = ArrayTrait::new();
+    data.append(420);
+    data.append(1337);
+
+    // Non-admin tries to call Admin Bar system
+    starknet::testing::set_caller_address(contract_address_const::<0x1337>());
+    world.execute('Bar'.into(), data.span());
 }
 
 #[test]
@@ -305,6 +384,11 @@ fn test_revoke_role() {
     // Initialize world
     world.initialize(route);
 
+    // Assume Admin role
+    let mut components = ArrayTrait::<ShortString>::new();
+    components.append('Foo'.into());
+    world.assume_role(World::ADMIN.into(), components);
+
     // Admin caller grants FooWriter role to Bar system
     let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
     grant_role_calldata.append('Bar'); // target_id
@@ -314,6 +398,11 @@ fn test_revoke_role() {
     // Assert that the role is set
     let role = world.entity('AuthRole'.into(), 'Bar'.into(), 0, 0);
     assert(*role[0] == 'FooWriter', 'role not granted');
+
+    // Assume Admin role
+    let mut components = ArrayTrait::<ShortString>::new();
+    components.append('Foo'.into());
+    world.assume_role(World::ADMIN.into(), components);
 
     // Admin revokes role of Bar system
     let mut revoke_role_calldata: Array<felt252> = ArrayTrait::new();
@@ -366,6 +455,11 @@ fn test_revoke_scoped_role() {
 
     // Initialize world
     world.initialize(route);
+
+    // Assume FooWriter role
+    let mut components = ArrayTrait::<ShortString>::new();
+    components.append('Foo'.into());
+    world.assume_role(World::ADMIN.into(), components);
 
     // Admin caller grants FooWriter role for Foo to Bar system
     let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
@@ -449,6 +543,49 @@ fn test_revoke_resource() {
     // Assert that the access is revoked
     let status = world.entity('AuthStatus'.into(), ('FooWriter', 'Foo').into(), 0, 0);
     assert(*status[0] == 0, 'access not revoked');
+}
+
+#[test]
+#[available_gas(9000000)]
+fn test_assume_admin_role_by_admin() {
+    // Spawn empty world
+    let world = spawn_empty_world();
+
+    // No Auth route
+    let mut route = ArrayTrait::new();
+
+    // Initialize world
+    world.initialize(route);
+
+    // Assume Admin role by Admin
+    let mut components = ArrayTrait::<ShortString>::new();
+    world.assume_role(World::ADMIN.into(), components);
+
+    // Check that role is assumed
+    assert(world.execution_role() == World::ADMIN.into(), 'role not assumed');
+}
+
+#[test]
+#[available_gas(9000000)]
+#[should_panic]
+#[ignore] // TODO:: Remove once set_caller_address is working properly
+fn test_assume_admin_role_by_non_admin() {
+    // Spawn empty world
+    let world = spawn_empty_world();
+
+    // No Auth route
+    let mut route = ArrayTrait::new();
+
+    // Initialize world
+    world.initialize(route);
+
+    // Assume Admin role by Non-admin
+    let mut components = ArrayTrait::<ShortString>::new();
+    starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
+    world.assume_role(World::ADMIN.into(), components);
+
+    // Check that role is assumed
+    assert(world.execution_role() == World::ADMIN.into(), 'role not assumed');
 }
 
 fn spawn_empty_world() -> IWorldDispatcher {
