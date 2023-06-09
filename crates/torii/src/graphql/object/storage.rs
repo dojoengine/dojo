@@ -85,7 +85,7 @@ fn value_mapping_from_row(row: &SqliteRow, fields: &TypeMapping) -> Result<Value
                 let result = row.try_get::<String, &str>(&column_name);
                 Value::from(result?)
             }
-            TypeRef::BOOLEAN => {
+            ScalarType::BOOL => {
                 // sqlite stores booleans as 0 or 1
                 let result = row.try_get::<i64, &str>(&column_name);
                 Value::from(matches!(result?, BOOLEAN_TRUE))
