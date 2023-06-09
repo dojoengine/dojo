@@ -1,6 +1,9 @@
 use std::path::Path;
 
 use anyhow::{anyhow, Context, Result};
+use dojo_world::manifest::Manifest;
+use dojo_world::migration::world::WorldDiff;
+use dojo_world::migration::{Declarable, Deployable, RegisterOutput};
 use dojo_world::world::WorldContractWriter;
 use scarb::core::Config;
 use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
@@ -9,22 +12,18 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider, ProviderError};
 
 pub mod config;
-pub mod object;
 pub mod strategy;
-pub mod world;
 
 #[cfg(test)]
 #[path = "migration_test.rs"]
 mod migration_test;
 
-use object::{Declarable, Deployable, RegisterOutput};
 use starknet::signers::LocalWallet;
 use strategy::{MigrationOutput, MigrationStrategy};
 use yansi::Paint;
 
 use self::config::{EnvironmentConfig, WorldConfig};
 use self::strategy::prepare_for_migration;
-use self::world::WorldDiff;
 
 pub async fn execute<P>(
     world_config: WorldConfig,
@@ -41,9 +40,29 @@ where
 
     ws_config.ui().print(format!("{} 🌏 Building World state...", Paint::new("[1/3]").dimmed()));
 
-    let diff = WorldDiff::from_path(&target_dir, &world_config, &environment_config, ws_config)
-        .await
-        .with_context(|| "Problem building World state.")?;
+    if let Some(world_address) = world_config.address {
+        ws_config.ui().print(
+            Paint::new(format!(
+                "   > Found remote World: {world_address:#x}\n   > Fetching remote World state"
+            ))
+            .dimmed()
+            .to_string(),
+        );
+    }
+
+    let local_manifest = Manifest::load_from_path(target_dir.as_ref().join("manifest.json"))?;
+
+    let remote_manifest = if let Some(world_address) = world_config.address {
+        let provider = environment_config.provider()?;
+        Manifest::from_remote(provider, world_address, Some(local_manifest.clone()))
+            .await
+            .map(Some)
+            .map_err(|e| anyhow!("Failed creating remote World manifest: {e}"))?
+    } else {
+        None
+    };
+
+    let diff = WorldDiff::compute(local_manifest, remote_manifest);
 
     ws_config.ui().print(format!("{} 🧰 Evaluating World diff...", Paint::new("[2/3]").dimmed()));
 
