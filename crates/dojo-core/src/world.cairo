@@ -40,9 +40,7 @@ mod World {
 
     #[constructor]
     fn constructor(executor: ContractAddress) {
-        executor_dispatcher::write(IExecutorDispatcher {
-            contract_address: executor
-        });
+        executor_dispatcher::write(IExecutorDispatcher { contract_address: executor });
 
         WorldSpawned(get_contract_address(), get_tx_info().unbox().account_contract_address);
     }
@@ -86,7 +84,8 @@ mod World {
             r.serialize(ref calldata);
 
             // Call RouteAuth system via executor with the serialized route
-            executor_dispatcher::read().execute(route_auth_class_hash, AuthRole { id: 'Admin'.into() }, calldata.span());
+            executor_dispatcher::read()
+                .execute(route_auth_class_hash, AuthRole { id: 'Admin'.into() }, calldata.span());
 
             index += 1;
         };
@@ -126,7 +125,8 @@ mod World {
 
                 // Call IsAuthorized system via executor with serialized system and component
                 // If the system is authorized, the result will be non-zero
-                let res = executor_dispatcher::read().execute(is_authorized_class_hash, execution_role, calldata.span());
+                let res = executor_dispatcher::read()
+                    .execute(is_authorized_class_hash, execution_role, calldata.span());
                 (*res[0]).is_non_zero()
             }
         } else {
@@ -146,7 +146,8 @@ mod World {
         let is_account_admin_class_hash = system_registry::read('IsAccountAdmin'.into());
         // Call IsAccountAdmin system via executor
         let mut calldata = ArrayTrait::new();
-        let res = executor_dispatcher::read().execute(is_account_admin_class_hash, AuthRole { id: 'Admin'.into() }, calldata.span());
+        let res = executor_dispatcher::read()
+            .execute(is_account_admin_class_hash, AuthRole { id: 'Admin'.into() }, calldata.span());
         (*res[0]).is_non_zero()
     }
 
@@ -231,7 +232,8 @@ mod World {
         let role = execution_role();
 
         // Call the system via executor
-        let res = executor_dispatcher::read().execute(class_hash, AuthRole { id: role }, execute_calldata);
+        let res = executor_dispatcher::read()
+            .execute(class_hash, AuthRole { id: role }, execute_calldata);
 
         res
     }
@@ -263,7 +265,10 @@ mod World {
     ) {
         // Assert can only be called through the executor
         // This is to prevent system from writing to storage directly
-        assert(get_caller_address() == executor_dispatcher::read().contract_address, 'must be called thru executor');
+        assert(
+            get_caller_address() == executor_dispatcher::read().contract_address,
+            'must be called thru executor'
+        );
 
         // Get execution role
         let role = execution_role();
@@ -291,7 +296,10 @@ mod World {
     fn delete_entity(context: Context, component: ShortString, query: Query) {
         // Assert can only be called through the executor
         // This is to prevent system from writing to storage directly
-        assert(get_caller_address() == executor_dispatcher::read().contract_address, 'must be called thru executor');
+        assert(
+            get_caller_address() == executor_dispatcher::read().contract_address,
+            'must be called thru executor'
+        );
 
         // Get execution role
         let role = execution_role();
@@ -356,9 +364,7 @@ mod World {
     fn set_executor(contract_address: ContractAddress) {
         // Only Admin can set executor
         assert(is_account_admin(), 'only admin can set executor');
-        executor_dispatcher::write(IExecutorDispatcher {
-            contract_address: contract_address
-        });
+        executor_dispatcher::write(IExecutorDispatcher { contract_address: contract_address });
     }
 
     #[view]
@@ -366,17 +372,34 @@ mod World {
         executor_dispatcher::read().contract_address
     }
 
-    /// Set the execution role to be assumed
-    ///
+    /// Validate that the role to be assumed has the required permissions
+    /// then set the execution role
+    /// 
     /// # Arguments
     ///
     /// * `role_id` - The role id to be assumed
+    /// * `components` - The components to be validated
     #[external]
-    fn set_execution_role(role_id: u250) {
+    fn assume_role(role_id: u250, components: Array<ShortString>) {
         // Only Admin can set Admin role 
         if role_id == 'Admin'.into() {
             assert(is_account_admin(), 'only admin can set Admin role');
-        }
+        } else {
+
+            let mut index = 0;
+            let len = components.len();
+
+            // Loop through the components
+            loop {
+                if index == len {
+                    break ();
+                }
+                // Validate that the role to be assumed has the required permissions
+                assert(is_role_authorized(role_id, *components[index]), 'role not authorized');
+                index += 1;
+            };
+        };
+        // Set the execution role
         let caller = get_tx_info().unbox().account_contract_address;
         _execution_role::write(caller, role_id);
     }
@@ -393,15 +416,38 @@ mod World {
         let caller = get_tx_info().unbox().account_contract_address;
         _execution_role::read(caller)
     }
+
+    /// Check if the role to be assumed has the required permissions
+    ///
+    /// # Arguments
+    ///
+    /// * `role_id` - The role id to be assumed
+    /// * `component` - The component which the role is to be validated against
+    ///
+    /// # Returns
+    ///
+    /// * `bool` - True if the role has the required permissions
+    #[view]
+    fn is_role_authorized(role_id: u250, component: ShortString) -> bool {
+        // Check that the role to be assumed has the required permissions
+        let is_authorized_class_hash = system_registry::read('IsAuthorized'.into());
+
+        let mut calldata = ArrayTrait::<felt252>::new();
+        calldata.append(0); // target_id
+        calldata.append(component.into()); // resource_id
+        let res = executor_dispatcher::read()
+            .execute(is_authorized_class_hash, AuthRole { id: role_id }, calldata.span());
+        (*res[0]).is_non_zero()
+    }
 }
 
 #[system]
 mod LibraryCall {
     use dojo_core::serde::SpanSerde;
 
-    fn execute(class_hash: starknet::ClassHash, entrypoint: felt252, calladata: Span<felt252>) -> Span<felt252> {
-        starknet::syscalls::library_call_syscall(
-            class_hash, entrypoint, calladata
-        ).unwrap_syscall()
+    fn execute(
+        class_hash: starknet::ClassHash, entrypoint: felt252, calladata: Span<felt252>
+    ) -> Span<felt252> {
+        starknet::syscalls::library_call_syscall(class_hash, entrypoint, calladata).unwrap_syscall()
     }
 }
