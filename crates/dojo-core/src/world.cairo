@@ -366,7 +366,6 @@ mod World {
         executor_dispatcher::read().contract_address
     }
 
-
     /// Set the execution role to be assumed
     ///
     /// # Arguments
@@ -393,5 +392,18 @@ mod World {
     fn execution_role() -> u250 {
         let caller = get_tx_info().unbox().account_contract_address;
         _execution_role::read(caller)
+    }
+}
+
+#[system]
+mod LibraryCall {
+    use array::ArrayTrait;
+    use traits::Into;
+    use dojo_core::serde::SpanSerde;
+
+    fn execute(class_hash: starknet::ClassHash, entrypoint: felt252, calladata: Span<felt252>) -> Span<felt252> {
+        starknet::syscalls::library_call_syscall(
+            class_hash, entrypoint, calladata
+        ).unwrap_syscall()
     }
 }
