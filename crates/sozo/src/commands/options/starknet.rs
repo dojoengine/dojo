@@ -6,10 +6,11 @@ use toml::Value;
 use url::Url;
 
 #[derive(Debug, Args)]
+#[command(next_help_heading = "Starknet options")]
 pub struct StarknetOptions {
     #[arg(long)]
     #[arg(value_name = "URL")]
-    #[arg(help = "The RPC endpoint")]
+    #[arg(help = "The Starknet RPC endpoint.")]
     pub rpc_url: Option<Url>,
 }
 
