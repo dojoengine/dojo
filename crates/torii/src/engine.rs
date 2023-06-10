@@ -56,7 +56,7 @@ impl<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> Engine<'a, S,
     }
 
     pub async fn start(&self) -> Result<(), Box<dyn Error>> {
-        let mut current_block_number = self.storage.head().await? + 1;
+        let mut current_block_number = self.storage.head().await?;
 
         loop {
             sleep(self.config.block_time).await;
