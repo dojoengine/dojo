@@ -20,7 +20,7 @@ fn main() {
             };
             Ok(())
         }
-        Commands::Migrate(args) => migrate::run(args),
+        Commands::Migrate(args) => migrate::run(*args),
         Commands::Test(args) => test::run(args),
     };
 

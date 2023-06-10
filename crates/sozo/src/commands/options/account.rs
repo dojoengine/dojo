@@ -2,12 +2,10 @@ use std::str::FromStr;
 
 use anyhow::{anyhow, Result};
 use clap::Args;
-use starknet::{
-    accounts::SingleOwnerAccount,
-    core::types::FieldElement,
-    providers::Provider,
-    signers::{LocalWallet, SigningKey},
-};
+use starknet::accounts::SingleOwnerAccount;
+use starknet::core::types::FieldElement;
+use starknet::providers::Provider;
+use starknet::signers::{LocalWallet, SigningKey};
 use toml::Value;
 
 #[derive(Debug, Args)]
@@ -53,7 +51,7 @@ impl AccountOptions {
             .or(std::env::var("DOJO_PRIVATE_KEY").ok().as_deref())
         {
             return Ok(LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
-                FieldElement::from_str(&private_key)?,
+                FieldElement::from_str(private_key)?,
             )));
         }
 
@@ -68,14 +66,17 @@ impl AccountOptions {
                 .or(std::env::var("DOJO_KEYSTORE_PASSWORD").ok().as_deref())
             {
                 return Ok(LocalWallet::from_signing_key(SigningKey::from_keystore(
-                    path, &password,
+                    path, password,
                 )?));
             } else {
                 return Err(anyhow!("Keystore path is specified but password is not."));
             }
         }
 
-        Err(anyhow!("Could not find private key. Please specify the private key or path to the keystore file."))
+        Err(anyhow!(
+            "Could not find private key. Please specify the private key or path to the keystore \
+             file."
+        ))
     }
 
     fn account_address(&self, env_metadata: Option<&Value>) -> Result<FieldElement> {
@@ -88,7 +89,10 @@ impl AccountOptions {
         }) {
             Ok(FieldElement::from_str(&address)?)
         } else {
-            Err(anyhow!("Could not find account address. Please specify it with --account-address or in the environment config."))
+            Err(anyhow!(
+                "Could not find account address. Please specify it with --account-address or in \
+                 the environment config."
+            ))
         }
     }
 }

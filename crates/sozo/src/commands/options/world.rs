@@ -19,13 +19,11 @@ impl WorldOptions {
     pub fn address(&self, ws: &Workspace<'_>) -> Result<FieldElement> {
         if let Some(world_address) = self.world_address {
             return Ok(world_address);
-        } else {
-            if let Some(dojo_metadata) = dojo_metadata_from_workspace(ws) {
-                if let Some(world_address) = dojo_metadata.get("world_address") {
-                    if let Some(world_address) = world_address.as_str() {
-                        let world_address = FieldElement::from_str(world_address)?;
-                        return Ok(world_address);
-                    }
+        } else if let Some(dojo_metadata) = dojo_metadata_from_workspace(ws) {
+            if let Some(world_address) = dojo_metadata.get("world_address") {
+                if let Some(world_address) = world_address.as_str() {
+                    let world_address = FieldElement::from_str(world_address)?;
+                    return Ok(world_address);
                 }
             }
         }

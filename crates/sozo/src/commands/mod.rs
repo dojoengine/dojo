@@ -25,7 +25,7 @@ pub enum Commands {
     Init(InitArgs),
     #[command(about = "Run a migration, declaring and deploying contracts as necessary to \
                        update the world")]
-    Migrate(MigrateArgs),
+    Migrate(Box<MigrateArgs>),
     #[command(about = "Test the project's smart contracts")]
     Test(TestArgs),
 }

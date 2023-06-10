@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use clap::Args;
-use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::JsonRpcClient;
 use toml::Value;
 use url::Url;
 
@@ -28,7 +29,10 @@ impl StarknetOptions {
         if let Some(url) = url {
             Ok(JsonRpcClient::new(HttpTransport::new(url)))
         } else {
-            Err(anyhow!("Could not find Starknet RPC endpoint. Please specify it with --rpc-url or in the environment config."))
+            Err(anyhow!(
+                "Could not find Starknet RPC endpoint. Please specify it with --rpc-url or in the \
+                 environment config."
+            ))
         }
     }
 }
