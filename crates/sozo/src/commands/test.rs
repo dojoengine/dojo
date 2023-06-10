@@ -1,7 +1,5 @@
 //! Compiles and runs tests for a Dojo project.
 
-use std::env::{self, current_dir};
-
 use anyhow::{bail, Result};
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_compiler::diagnostics::DiagnosticsReporter;
@@ -9,13 +7,11 @@ use cairo_lang_test_runner::TestRunner;
 use camino::Utf8PathBuf;
 use clap::Args;
 use dojo_lang::compiler::collect_main_crate_ids;
-use dojo_lang::plugin::CairoPluginRepository;
-use scarb::compiler::{CompilationUnit, Compiler, CompilerRepository};
+use scarb::compiler::{CompilationUnit, Compiler};
 use scarb::core::{Config, Workspace};
 use scarb::ops;
-use scarb::ui::Verbosity;
 
-#[derive(Args)]
+#[derive(Args, Clone)]
 pub struct TestArgs {
     /// The path to compile and run its tests.
     path: Utf8PathBuf,
@@ -31,30 +27,8 @@ pub struct TestArgs {
 }
 
 impl TestArgs {
-    pub fn run(self) -> anyhow::Result<()> {
-        let source_dir = if self.path.is_absolute() {
-            self.path.clone()
-        } else {
-            let mut current_path = current_dir().unwrap();
-            current_path.push(self.path.clone());
-            Utf8PathBuf::from_path_buf(current_path).unwrap()
-        };
-
-        let mut compilers = CompilerRepository::std();
-        compilers.add(Box::new(DojoTestCompiler { args: self })).unwrap();
-
-        let cairo_plugins = CairoPluginRepository::new();
-
-        let manifest_path = source_dir.join("Scarb.toml");
-        let config = Config::builder(manifest_path)
-            .ui_verbosity(Verbosity::Verbose)
-            .log_filter_directive(env::var_os("SCARB_LOG"))
-            .compilers(compilers)
-            .cairo_plugins(cairo_plugins.into())
-            .build()
-            .unwrap();
-
-        let ws = ops::read_workspace(config.manifest_path(), &config).unwrap_or_else(|err| {
+    pub fn run(self, config: &Config) -> anyhow::Result<()> {
+        let ws = ops::read_workspace(config.manifest_path(), config).unwrap_or_else(|err| {
             eprintln!("error: {err}");
             std::process::exit(1);
         });
@@ -65,6 +39,12 @@ impl TestArgs {
 
 pub struct DojoTestCompiler {
     args: TestArgs,
+}
+
+impl DojoTestCompiler {
+    pub fn new(args: TestArgs) -> Self {
+        Self { args }
+    }
 }
 
 impl Compiler for DojoTestCompiler {

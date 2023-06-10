@@ -3,19 +3,21 @@ use std::process::exit;
 
 use anyhow::Result;
 use clap::Parser;
+use commands::test::DojoTestCompiler;
 use dojo_lang::compiler::DojoCompiler;
 use dojo_lang::plugin::CairoPluginRepository;
 use scarb::compiler::CompilerRepository;
 use scarb::core::Config;
 use scarb::ui::{OutputFormat, Ui};
 
+mod args;
 mod commands;
 mod ops;
 
-use commands::{App, Commands};
+use args::{Commands, SozoArgs};
 
 fn main() {
-    let args = App::parse();
+    let args = SozoArgs::parse();
 
     let ui = Ui::new(args.ui_verbosity(), OutputFormat::Text);
 
@@ -25,10 +27,15 @@ fn main() {
     }
 }
 
-fn cli_main(args: App) -> Result<()> {
+fn cli_main(args: SozoArgs) -> Result<()> {
     let mut compilers = CompilerRepository::std();
-    compilers.add(Box::new(DojoCompiler)).unwrap();
     let cairo_plugins = CairoPluginRepository::new();
+
+    if let Commands::Test(args) = &args.command {
+        compilers.add(Box::new(DojoTestCompiler::new(args.clone()))).unwrap();
+    } else if let Commands::Build(_) = &args.command {
+        compilers.add(Box::new(DojoCompiler)).unwrap();
+    }
 
     let manifest_path = scarb::ops::find_manifest_path(args.manifest_path.as_deref())?;
 
@@ -38,15 +45,7 @@ fn cli_main(args: App) -> Result<()> {
         .cairo_plugins(cairo_plugins.into())
         .ui_verbosity(args.ui_verbosity())
         .compilers(compilers)
-        .build()
-        .unwrap();
+        .build()?;
 
-    let ws = scarb::ops::read_workspace(config.manifest_path(), &config)?;
-
-    match args.command {
-        Commands::Init(args) => args.run(),
-        Commands::Test(args) => args.run(),
-        Commands::Build(args) => args.run(&ws),
-        Commands::Migrate(args) => args.run(&ws),
-    }
+    commands::run(args.command, &config)
 }
