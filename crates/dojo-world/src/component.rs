@@ -1,6 +1,7 @@
 use starknet::core::types::{BlockId, FieldElement, FunctionCall};
 use starknet::core::utils::{
-    get_selector_from_name, parse_cairo_short_string, ParseCairoShortStringError,
+    cairo_short_string_to_felt, get_selector_from_name, parse_cairo_short_string,
+    CairoShortStringToFeltError, ParseCairoShortStringError,
 };
 use starknet::providers::{Provider, ProviderError};
 
@@ -19,40 +20,46 @@ pub enum ComponentError<P> {
     InvalidSchemaLength,
     #[error(transparent)]
     ParseCairoShortStringError(ParseCairoShortStringError),
+    #[error(transparent)]
+    CairoShortStringToFeltError(CairoShortStringToFeltError),
     #[error("Converting felt")]
     ConvertingFelt,
     #[error(transparent)]
     ContractReaderError(ContractReaderError<P>),
 }
 
-pub struct ComponentClass<'a, P: Provider + Sync> {
+pub struct ComponentReader<'a, P: Provider + Sync> {
     world: &'a WorldContractReader<'a, P>,
-    hash: FieldElement,
+    class_hash: FieldElement,
 }
 
-impl<'a, P: Provider + Sync> ComponentClass<'a, P> {
+impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
     pub async fn new(
         world: &'a WorldContractReader<'a, P>,
-        name: FieldElement,
+        name: String,
         block_id: BlockId,
-    ) -> Result<ComponentClass<'a, P>, ProviderError<P::Error>> {
+    ) -> Result<ComponentReader<'a, P>, ComponentError<P::Error>> {
         let res = world
             .provider
             .call(
                 FunctionCall {
                     contract_address: world.address,
-                    calldata: vec![name],
+                    calldata: vec![
+                        cairo_short_string_to_felt(&name)
+                            .map_err(ComponentError::CairoShortStringToFeltError)?,
+                    ],
                     entry_point_selector: get_selector_from_name("component").unwrap(),
                 },
                 block_id,
             )
-            .await?;
+            .await
+            .map_err(ComponentError::ProviderError)?;
 
-        Ok(Self { world, hash: res[0] })
+        Ok(Self { world, class_hash: res[0] })
     }
 
-    pub fn hash(&self) -> FieldElement {
-        self.hash
+    pub fn class_hash(&self) -> FieldElement {
+        self.class_hash
     }
 
     pub async fn schema(&self, block_id: BlockId) -> Result<Vec<Member>, ComponentError<P::Error>> {
@@ -62,7 +69,7 @@ impl<'a, P: Provider + Sync> ComponentClass<'a, P> {
             .world
             .call(
                 "LibraryCall",
-                vec![FieldElement::THREE, self.hash, entrypoint, FieldElement::ZERO],
+                vec![FieldElement::THREE, self.class_hash, entrypoint, FieldElement::ZERO],
                 block_id,
             )
             .await
