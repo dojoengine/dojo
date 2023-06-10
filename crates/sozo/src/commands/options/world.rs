@@ -8,10 +8,10 @@ use starknet::core::types::FieldElement;
 use super::dojo_metadata_from_workspace;
 
 #[derive(Debug, Args)]
+#[command(next_help_heading = "World options")]
 pub struct WorldOptions {
     #[arg(long = "world")]
-    #[arg(help = "The address of the World contract")]
-    #[arg(long_help = "")]
+    #[arg(help = "The address of the World contract.")]
     pub world_address: Option<FieldElement>,
 }
 

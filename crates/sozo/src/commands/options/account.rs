@@ -9,18 +9,29 @@ use starknet::signers::{LocalWallet, SigningKey};
 use toml::Value;
 
 #[derive(Debug, Args)]
+#[command(next_help_heading = "Account options")]
 pub struct AccountOptions {
-    #[arg(long)]
-    #[arg(conflicts_with = "keystore_path")]
-    pub private_key: Option<String>,
-
     #[arg(long)]
     pub account_address: Option<FieldElement>,
 
     #[arg(long)]
+    #[arg(requires = "account_address")]
+    #[arg(conflicts_with = "keystore_path")]
+    #[arg(help_heading = "Signer options - RAW")]
+    #[arg(help = "The raw private key associated with the account contract.")]
+    pub private_key: Option<String>,
+
+    #[arg(long = "keystore")]
+    #[arg(value_name = "PATH")]
+    #[arg(help_heading = "Signer options - KEYSTORE")]
+    #[arg(help = "Use the keystore in the given folder or file.")]
     pub keystore_path: Option<String>,
 
-    #[arg(long)]
+    #[arg(long = "password")]
+    #[arg(value_name = "PASSWORD")]
+    #[arg(requires = "keystore_path")]
+    #[arg(help_heading = "Signer options - KEYSTORE")]
+    #[arg(help = "The keystore password. Used with --keystore.")]
     pub keystore_password: Option<String>,
 }
 
