@@ -1,6 +1,6 @@
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
-use dojo_world::manifest::Component;
+use dojo_world::manifest::System;
 use starknet::core::types::{BlockWithTxs, Event, TransactionReceipt};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
@@ -10,12 +10,12 @@ use super::EventProcessor;
 use crate::state::State;
 
 #[derive(Default)]
-pub struct ComponentRegistrationProcessor;
+pub struct RegisterSystemProcessor;
 
 #[async_trait]
-impl<S: State + Sync, T: JsonRpcTransport> EventProcessor<S, T> for ComponentRegistrationProcessor {
+impl<S: State + Sync, T: JsonRpcTransport> EventProcessor<S, T> for RegisterSystemProcessor {
     fn event_key(&self) -> String {
-        "ComponentRegistered".to_string()
+        "SystemRegistered".to_string()
     }
 
     async fn process(
@@ -28,11 +28,16 @@ impl<S: State + Sync, T: JsonRpcTransport> EventProcessor<S, T> for ComponentReg
     ) -> Result<(), Error> {
         let name = parse_cairo_short_string(&event.data[0])?;
 
-        info!("registered component: {}", name);
+        info!("registered system: {}", name);
 
         storage
-            .register_component(Component { name, class_hash: event.data[1], ..Default::default() })
+            .register_system(System {
+                name: name.into(),
+                class_hash: event.data[1],
+                ..System::default()
+            })
             .await?;
+
         Ok(())
     }
 }

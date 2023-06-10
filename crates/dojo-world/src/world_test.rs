@@ -3,7 +3,7 @@ use dojo_test_utils::sequencer::TestSequencer;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag, FieldElement};
 
-use super::WorldContractWriter;
+use super::WorldContract;
 use crate::manifest::Manifest;
 use crate::migration::strategy::prepare_for_migration;
 use crate::migration::world::WorldDiff;
@@ -52,7 +52,7 @@ pub async fn deploy_world(
         declare_output.push(res);
     }
 
-    let _ = WorldContractWriter::new(world_address, &account)
+    let _ = WorldContract::new(world_address, &account)
         .register_components(&declare_output.iter().map(|o| o.class_hash).collect::<Vec<_>>())
         .await
         .unwrap();
@@ -63,7 +63,7 @@ pub async fn deploy_world(
         declare_output.push(res);
     }
 
-    let _ = WorldContractWriter::new(world_address, &account)
+    let _ = WorldContract::new(world_address, &account)
         .register_systems(&declare_output.iter().map(|o| o.class_hash).collect::<Vec<_>>())
         .await
         .unwrap();

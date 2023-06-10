@@ -5,7 +5,8 @@ use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
 
 use crate::state::State;
 
-pub mod component_register;
+pub mod register_component;
+pub mod register_system;
 // pub mod component_state_update;
 // pub mod system_register;
 

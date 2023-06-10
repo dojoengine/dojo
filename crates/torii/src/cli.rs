@@ -14,7 +14,7 @@ use url::Url;
 
 use crate::engine::Processors;
 use crate::indexer::Indexer;
-use crate::processors::component_register::ComponentRegistrationProcessor;
+use crate::processors::register_component::RegisterComponentProcessor;
 use crate::state::State;
 
 mod engine;
@@ -81,10 +81,8 @@ async fn main() -> anyhow::Result<()> {
 
     let state = Sql::new(pool.clone(), args.world_address).await?;
     state.load_from_manifest(manifest.clone()).await?;
-    let processors = Processors {
-        event: vec![Box::new(ComponentRegistrationProcessor)],
-        ..Processors::default()
-    };
+    let processors =
+        Processors { event: vec![Box::new(RegisterComponentProcessor)], ..Processors::default() };
 
     let indexer = Indexer::new(&state, &provider, processors, manifest);
     let graphql = start_graphql(&pool);

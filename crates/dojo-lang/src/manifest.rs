@@ -113,10 +113,13 @@ impl Manifest {
                     // Last arg is always the `world_address` which is provided by the executor.
                     params.pop();
                     for param in params.into_iter() {
-                        inputs.push(Input {
-                            name: param.id.name(db.upcast()).into(),
-                            ty: param.ty.format(db),
-                        });
+                        let ty = param.ty.format(db);
+                        // Context is injected by the executor contract.
+                        if ty == "dojo_core::execution_context::Context" {
+                            continue;
+                        }
+
+                        inputs.push(Input { name: param.id.name(db.upcast()).into(), ty });
                     }
 
                     let outputs = if signature.return_type.is_unit(db) {

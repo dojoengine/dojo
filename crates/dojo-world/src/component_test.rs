@@ -23,7 +23,7 @@ async fn test_component() {
     let component = world.component("Position", block_id).await.unwrap();
 
     assert_eq!(
-        component.hash(),
+        component.class_hash(),
         FieldElement::from_hex_be(
             "0x4117714e639fd215c1b99b0b9e9b28485bcd557628b90960e1c4652c2e6a0c3"
         )
