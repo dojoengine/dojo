@@ -4,7 +4,6 @@ use anyhow::{bail, Result};
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_compiler::diagnostics::DiagnosticsReporter;
 use cairo_lang_test_runner::TestRunner;
-use camino::Utf8PathBuf;
 use clap::Args;
 use dojo_lang::compiler::collect_main_crate_ids;
 use scarb::compiler::{CompilationUnit, Compiler};
@@ -13,8 +12,6 @@ use scarb::ops;
 
 #[derive(Args, Clone)]
 pub struct TestArgs {
-    /// The path to compile and run its tests.
-    path: Utf8PathBuf,
     /// The filter for the tests, running only tests containing the filter string.
     #[arg(short, long, default_value_t = String::default())]
     filter: String,
