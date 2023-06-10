@@ -104,9 +104,18 @@ impl ObjectTrait for ComponentObject {
                 let name = extract::<String>(component_values, "name")?;
                 let (name, type_name) = format_name(&name);
                 let field_type_mapping = type_mapping_from(&mut conn, &id).await?;
-                let storage_values = storage_by_name(&mut conn, &name, &field_type_mapping).await?;
+                let storage_values =
+                    storage_by_name(&mut conn, &name, &field_type_mapping, 1).await?;
 
-                Ok(Some(FieldValue::with_type(FieldValue::owned_any(storage_values), type_name)))
+                let result = storage_values.get(0).cloned();
+                if let Some(value) = result {
+                    return Ok(Some(FieldValue::with_type(
+                        FieldValue::owned_any(value),
+                        type_name,
+                    )));
+                }
+
+                Ok(None)
             })
         })])
     }

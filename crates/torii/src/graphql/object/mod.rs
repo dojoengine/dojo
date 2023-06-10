@@ -58,7 +58,7 @@ fn create_field(name: &str, field_type: &str) -> Field {
 
             match mapping.get(inner_name.as_str()) {
                 Some(value) => Ok(Some(value.clone())),
-                _ => Err("field not found".into()),
+                _ => Err(format!("{} field not found", inner_name).into()),
             }
         })
     })
