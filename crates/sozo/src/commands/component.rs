@@ -2,11 +2,10 @@ use anyhow::Result;
 use clap::{Args, Subcommand};
 use scarb::core::Config;
 
-use crate::ops::component;
-
 use super::options::dojo_metadata_from_workspace;
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
+use crate::ops::component;
 
 #[derive(Debug, Args)]
 pub struct ComponentArgs {
