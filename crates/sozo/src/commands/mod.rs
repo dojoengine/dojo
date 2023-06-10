@@ -14,6 +14,7 @@ use self::test::TestArgs;
 pub(crate) mod build;
 pub(crate) mod init;
 pub(crate) mod migrate;
+pub(crate) mod options;
 pub(crate) mod test;
 
 #[derive(Subcommand)]
@@ -24,7 +25,7 @@ pub enum Commands {
     Init(InitArgs),
     #[command(about = "Run a migration, declaring and deploying contracts as necessary to \
                        update the world")]
-    Migrate(MigrateArgs),
+    Migrate(Box<MigrateArgs>),
     #[command(about = "Test the project's smart contracts")]
     Test(TestArgs),
 }

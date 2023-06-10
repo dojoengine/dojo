@@ -1,16 +1,19 @@
 use std::env::{self, current_dir};
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use camino::Utf8PathBuf;
 use clap::Args;
 use dotenv::dotenv;
 use scarb::core::Config;
 use scarb::ops;
 
+use super::options::account::AccountOptions;
+use super::options::dojo_metadata_from_workspace;
+use super::options::starknet::StarknetOptions;
+use super::options::world::WorldOptions;
 use super::{ui_verbosity_from_flag, ProfileSpec};
 use crate::commands::build::{self, BuildArgs};
 use crate::ops::migration;
-use crate::ops::migration::config::{EnvironmentConfig, WorldConfig};
 
 #[derive(Args)]
 pub struct MigrateArgs {
@@ -28,6 +31,15 @@ pub struct MigrateArgs {
     #[clap(help = "Logging verbosity.")]
     #[command(flatten)]
     verbose: clap_verbosity_flag::Verbosity,
+
+    #[command(flatten)]
+    world: WorldOptions,
+
+    #[command(flatten)]
+    starknet: StarknetOptions,
+
+    #[command(flatten)]
+    account: AccountOptions,
 }
 
 pub fn run(args: MigrateArgs) -> Result<()> {
@@ -64,15 +76,28 @@ pub fn run(args: MigrateArgs) -> Result<()> {
         build::run(BuildArgs { path: Some(source_dir), profile_spec, verbose })?;
     }
 
-    let world_config = WorldConfig::from_workspace(&ws).unwrap_or_default();
-    let env_config = EnvironmentConfig::from_workspace(profile.as_str(), &ws)?;
+    let mut env_metadata = dojo_metadata_from_workspace(&ws)
+        .and_then(|dojo_metadata| dojo_metadata.get("env").cloned());
 
-    ws.config().tokio_handle().block_on(migration::execute(
-        world_config,
-        env_config,
-        target_dir,
-        ws.config(),
-    ))?;
+    // If there is an environment-specific metadata, use that, otherwise use the
+    // workspace's default environment metadata.
+    env_metadata = env_metadata
+        .as_ref()
+        .and_then(|env_metadata| env_metadata.get(ws.config().profile().as_str()).cloned())
+        .or(env_metadata);
+
+    ws.config().tokio_handle().block_on(async {
+        let world_address = args.world.address(&ws).ok();
+        let provider = args.starknet.provider(env_metadata.as_ref())?;
+
+        let account = args
+            .account
+            .account(provider, env_metadata.as_ref())
+            .await
+            .with_context(|| "Problem initializing account for migration.")?;
+
+        migration::execute(world_address, account, target_dir, ws.config()).await
+    })?;
 
     Ok(())
 }
