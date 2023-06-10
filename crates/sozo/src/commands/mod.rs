@@ -14,6 +14,7 @@ use self::test::TestArgs;
 pub(crate) mod build;
 pub(crate) mod init;
 pub(crate) mod migrate;
+pub(crate) mod options;
 pub(crate) mod test;
 
 #[derive(Subcommand)]

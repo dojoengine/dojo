@@ -11,8 +11,6 @@ use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{FieldElement, InvokeTransactionResult};
 use yansi::Paint;
 
-pub mod config;
-
 #[cfg(test)]
 #[path = "migration_test.rs"]
 mod migration_test;
