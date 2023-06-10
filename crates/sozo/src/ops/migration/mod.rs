@@ -7,10 +7,9 @@ use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{Declarable, Deployable, RegisterOutput};
 use dojo_world::world::WorldContract;
 use scarb::core::Config;
-use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
-use starknet::core::types::{BlockId, BlockTag, InvokeTransactionResult, StarknetError};
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, Provider, ProviderError};
+use starknet::accounts::ConnectedAccount;
+use starknet::core::types::{FieldElement, InvokeTransactionResult};
+use yansi::Paint;
 
 pub mod config;
 
@@ -18,27 +17,21 @@ pub mod config;
 #[path = "migration_test.rs"]
 mod migration_test;
 
-use starknet::signers::LocalWallet;
-use yansi::Paint;
-
-use self::config::{EnvironmentConfig, WorldConfig};
-
-pub async fn execute<P>(
-    world_config: WorldConfig,
-    environment_config: EnvironmentConfig,
+pub async fn execute<P, A>(
+    world_address: Option<FieldElement>,
+    migrator: A,
     target_dir: P,
     ws_config: &Config,
 ) -> Result<()>
 where
     P: AsRef<Path>,
+    A: ConnectedAccount + Sync + 'static,
 {
-    let migrator = get_migrator_from_config(&environment_config)
-        .await
-        .with_context(|| "Problem initializing migrator account.")?;
-
     ws_config.ui().print(format!("{} 🌏 Building World state...", Paint::new("[1/3]").dimmed()));
 
-    if let Some(world_address) = world_config.address {
+    let local_manifest = Manifest::load_from_path(target_dir.as_ref().join("manifest.json"))?;
+
+    let remote_manifest = if let Some(world_address) = world_address {
         ws_config.ui().print(
             Paint::new(format!(
                 "   > Found remote World: {world_address:#x}\n   > Fetching remote World state"
@@ -46,13 +39,8 @@ where
             .dimmed()
             .to_string(),
         );
-    }
 
-    let local_manifest = Manifest::load_from_path(target_dir.as_ref().join("manifest.json"))?;
-
-    let remote_manifest = if let Some(world_address) = world_config.address {
-        let provider = environment_config.provider()?;
-        Manifest::from_remote(provider, world_address, Some(local_manifest.clone()))
+        Manifest::from_remote(migrator.provider(), world_address, Some(local_manifest.clone()))
             .await
             .map(Some)
             .map_err(|e| anyhow!("Failed creating remote World manifest: {e}"))?
@@ -64,7 +52,7 @@ where
 
     ws_config.ui().print(format!("{} 🧰 Evaluating World diff...", Paint::new("[2/3]").dimmed()));
 
-    let mut migration = prepare_for_migration(world_config.address, target_dir, diff)
+    let mut migration = prepare_for_migration(world_address, target_dir, diff)
         .with_context(|| "Problem preparing for migration.")?;
 
     ws_config.ui().print(format!("{} 📦 Migrating world...", Paint::new("[3/3]").dimmed()));
@@ -80,30 +68,11 @@ where
             .world
             .as_ref()
             .map(|o| o.contract_address)
-            .or(world_config.address)
+            .or(world_address)
             .expect("world address must exist"),
     ));
 
     Ok(())
-}
-
-async fn get_migrator_from_config(
-    environment_config: &EnvironmentConfig,
-) -> Result<SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>> {
-    let account = environment_config.migrator().await?;
-
-    account
-        .provider()
-        .get_class_hash_at(BlockId::Tag(BlockTag::Pending), account.address())
-        .await
-        .map_err(|e| match e {
-            ProviderError::StarknetError(StarknetError::ContractNotFound) => {
-                anyhow!("Account doesn't exist: {:#x}", account.address())
-            }
-            _ => anyhow!(e),
-        })?;
-
-    Ok(account)
 }
 
 // TODO: display migration type (either new or update)
