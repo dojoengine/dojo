@@ -4,6 +4,7 @@ use dojo_world::manifest::Component;
 use starknet::core::types::{BlockWithTxs, Event, TransactionReceipt};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
+use tracing::info;
 
 use super::EventProcessor;
 use crate::state::State;
@@ -26,6 +27,9 @@ impl<S: State + Sync, T: JsonRpcTransport> EventProcessor<S, T> for ComponentReg
         event: &Event,
     ) -> Result<(), Error> {
         let name = parse_cairo_short_string(&event.data[0])?;
+
+        info!("registered component: {}", name);
+
         storage
             .register_component(Component { name, class_hash: event.data[1], ..Default::default() })
             .await?;

@@ -69,6 +69,8 @@ async fn main() -> anyhow::Result<()> {
     let database_url = &args.database_url;
     #[cfg(feature = "sqlite")]
     let pool = SqlitePoolOptions::new().max_connections(5).connect(database_url).await?;
+    sqlx::migrate!().run(&pool).await?;
+
     let provider = JsonRpcClient::new(HttpTransport::new(Url::parse(&args.rpc).unwrap()));
 
     let manifest = if let Some(manifest_path) = args.manifest {
