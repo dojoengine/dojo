@@ -46,7 +46,7 @@ impl MigrateArgs {
             .or(env_metadata);
 
         ws.config().tokio_handle().block_on(async {
-            let world_address = self.world.address(&ws).ok();
+            let world_address = self.world.address(env_metadata.as_ref()).ok();
             let provider = self.starknet.provider(env_metadata.as_ref())?;
 
             let account = self
