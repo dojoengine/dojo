@@ -1,4 +1,5 @@
 use anyhow::Result;
+use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand};
 use scarb::compiler::Profile;
 use scarb::ui;
@@ -34,8 +35,35 @@ pub enum Commands {
 #[command(author, version, about, long_about = None)]
 #[command(propagate_version = true)]
 pub struct App {
+    #[arg(long)]
+    #[arg(hide_short_help = true)]
+    #[arg(env = "DOJO_MANIFEST_PATH")]
+    #[arg(help = "Override path to a directory containing a Scarb.toml file.")]
+    pub manifest_path: Option<Utf8PathBuf>,
+
+    #[clap(help = "Specify the profile to use.")]
+    #[command(flatten)]
+    pub profile_spec: ProfileSpec,
+
+    #[clap(help = "Logging verbosity.")]
+    #[command(flatten)]
+    pub verbose: clap_verbosity_flag::Verbosity,
+
     #[command(subcommand)]
     pub command: Commands,
+}
+
+impl App {
+    pub fn ui_verbosity(&self) -> ui::Verbosity {
+        let filter = self.verbose.log_level_filter().as_trace();
+        if filter >= LevelFilter::WARN {
+            ui::Verbosity::Verbose
+        } else if filter > LevelFilter::OFF {
+            ui::Verbosity::Normal
+        } else {
+            ui::Verbosity::Quiet
+        }
+    }
 }
 
 /// Profile specifier.
@@ -63,16 +91,5 @@ impl ProfileSpec {
             Self { profile: Some(profile), .. } => Profile::new(profile.clone())?,
             _ => Profile::default(),
         })
-    }
-}
-
-pub(crate) fn ui_verbosity_from_flag(verbose: clap_verbosity_flag::Verbosity) -> ui::Verbosity {
-    let filter = verbose.log_level_filter().as_trace();
-    if filter >= LevelFilter::WARN {
-        ui::Verbosity::Verbose
-    } else if filter > LevelFilter::OFF {
-        ui::Verbosity::Normal
-    } else {
-        ui::Verbosity::Quiet
     }
 }

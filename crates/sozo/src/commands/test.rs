@@ -30,35 +30,37 @@ pub struct TestArgs {
     ignored: bool,
 }
 
-pub fn run(args: TestArgs) -> anyhow::Result<()> {
-    let source_dir = if args.path.is_absolute() {
-        args.path.clone()
-    } else {
-        let mut current_path = current_dir().unwrap();
-        current_path.push(args.path.clone());
-        Utf8PathBuf::from_path_buf(current_path).unwrap()
-    };
+impl TestArgs {
+    pub fn run(self) -> anyhow::Result<()> {
+        let source_dir = if self.path.is_absolute() {
+            self.path.clone()
+        } else {
+            let mut current_path = current_dir().unwrap();
+            current_path.push(self.path.clone());
+            Utf8PathBuf::from_path_buf(current_path).unwrap()
+        };
 
-    let mut compilers = CompilerRepository::std();
-    compilers.add(Box::new(DojoTestCompiler { args })).unwrap();
+        let mut compilers = CompilerRepository::std();
+        compilers.add(Box::new(DojoTestCompiler { args: self })).unwrap();
 
-    let cairo_plugins = CairoPluginRepository::new();
+        let cairo_plugins = CairoPluginRepository::new();
 
-    let manifest_path = source_dir.join("Scarb.toml");
-    let config = Config::builder(manifest_path)
-        .ui_verbosity(Verbosity::Verbose)
-        .log_filter_directive(env::var_os("SCARB_LOG"))
-        .compilers(compilers)
-        .cairo_plugins(cairo_plugins.into())
-        .build()
-        .unwrap();
+        let manifest_path = source_dir.join("Scarb.toml");
+        let config = Config::builder(manifest_path)
+            .ui_verbosity(Verbosity::Verbose)
+            .log_filter_directive(env::var_os("SCARB_LOG"))
+            .compilers(compilers)
+            .cairo_plugins(cairo_plugins.into())
+            .build()
+            .unwrap();
 
-    let ws = ops::read_workspace(config.manifest_path(), &config).unwrap_or_else(|err| {
-        eprintln!("error: {err}");
-        std::process::exit(1);
-    });
+        let ws = ops::read_workspace(config.manifest_path(), &config).unwrap_or_else(|err| {
+            eprintln!("error: {err}");
+            std::process::exit(1);
+        });
 
-    ops::compile(&ws)
+        ops::compile(&ws)
+    }
 }
 
 pub struct DojoTestCompiler {
