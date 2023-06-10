@@ -2,10 +2,8 @@ use std::str::FromStr;
 
 use anyhow::{anyhow, Result};
 use clap::Args;
-use scarb::core::Workspace;
 use starknet::core::types::FieldElement;
-
-use super::dojo_metadata_from_workspace;
+use toml::Value;
 
 #[derive(Debug, Args)]
 #[command(next_help_heading = "World options")]
@@ -16,10 +14,10 @@ pub struct WorldOptions {
 }
 
 impl WorldOptions {
-    pub fn address(&self, ws: &Workspace<'_>) -> Result<FieldElement> {
+    pub fn address(&self, env_metadata: Option<&Value>) -> Result<FieldElement> {
         if let Some(world_address) = self.world_address {
             return Ok(world_address);
-        } else if let Some(dojo_metadata) = dojo_metadata_from_workspace(ws) {
+        } else if let Some(dojo_metadata) = env_metadata {
             if let Some(world_address) = dojo_metadata.get("world_address") {
                 if let Some(world_address) = world_address.as_str() {
                     let world_address = FieldElement::from_str(world_address)?;
