@@ -1,9 +1,13 @@
+use std::vec;
+
+use starknet::core::crypto::pedersen_hash;
 use starknet::core::types::{BlockId, FieldElement, FunctionCall};
 use starknet::core::utils::{
     cairo_short_string_to_felt, get_selector_from_name, parse_cairo_short_string,
     CairoShortStringToFeltError, ParseCairoShortStringError,
 };
 use starknet::providers::{Provider, ProviderError};
+use starknet_crypto::{poseidon_hash, poseidon_hash_many};
 
 use crate::manifest::Member;
 use crate::world::{ContractReaderError, WorldContractReader};
@@ -31,6 +35,7 @@ pub enum ComponentError<P> {
 pub struct ComponentReader<'a, P: Provider + Sync> {
     world: &'a WorldContractReader<'a, P>,
     class_hash: FieldElement,
+    name: FieldElement,
 }
 
 impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
@@ -39,15 +44,14 @@ impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
         name: String,
         block_id: BlockId,
     ) -> Result<ComponentReader<'a, P>, ComponentError<P::Error>> {
+        let name = cairo_short_string_to_felt(&name)
+            .map_err(ComponentError::CairoShortStringToFeltError)?;
         let res = world
             .provider
             .call(
                 FunctionCall {
                     contract_address: world.address,
-                    calldata: vec![
-                        cairo_short_string_to_felt(&name)
-                            .map_err(ComponentError::CairoShortStringToFeltError)?,
-                    ],
+                    calldata: vec![name],
                     entry_point_selector: get_selector_from_name("component").unwrap(),
                 },
                 block_id,
@@ -55,7 +59,7 @@ impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
             .await
             .map_err(ComponentError::ProviderError)?;
 
-        Ok(Self { world, class_hash: res[0] })
+        Ok(Self { world, class_hash: res[0], name })
     }
 
     pub fn class_hash(&self) -> FieldElement {
@@ -92,5 +96,36 @@ impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
         }
 
         Ok(members)
+    }
+
+    pub async fn entity(
+        &self,
+        partition_id: FieldElement,
+        keys: Vec<FieldElement>,
+        block_id: BlockId,
+    ) -> Result<Vec<FieldElement>, ComponentError<P::Error>> {
+        let members = self.schema(block_id).await?;
+
+        let table = if partition_id == FieldElement::ZERO {
+            self.name
+        } else {
+            poseidon_hash(self.name, partition_id)
+        };
+        let keys_hash = if keys.len() == 1 { keys[0] } else { poseidon_hash_many(&keys) };
+        let key = pedersen_hash(&table, &keys_hash);
+
+        let mut values = vec![];
+        for member in members {
+            let value = self
+                .world
+                .provider
+                .get_storage_at(self.world.address, key + member.slot.into(), block_id)
+                .await
+                .map_err(ComponentError::ProviderError)?;
+
+            values.push(value);
+        }
+
+        Ok(values)
     }
 }

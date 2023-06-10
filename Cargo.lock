@@ -2990,6 +2990,7 @@ dependencies = [
  "serde_with",
  "smol_str",
  "starknet 0.2.0 (git+https://github.com/xJonathanLEI/starknet-rs?branch=dev/jsonrpc_0_3_0)",
+ "starknet-crypto 0.5.1",
  "thiserror",
  "tokio",
  "tracing",
