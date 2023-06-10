@@ -59,8 +59,32 @@ impl ContractAddressIntoU250 of Into<ContractAddress, u250> {
     }
 }
 
+impl U8IntoU250 of Into<u8, u250> {
+    fn into(self: u8) -> u250 {
+        u250 { inner: self.into() }
+    }
+}
+
+impl U16IntoU250 of Into<u16, u250> {
+    fn into(self: u16) -> u250 {
+        u250 { inner: self.into() }
+    }
+}
+
 impl U32IntoU250 of Into<u32, u250> {
     fn into(self: u32) -> u250 {
+        u250 { inner: self.into() }
+    }
+}
+
+impl U64IntoU250 of Into<u64, u250> {
+    fn into(self: u64) -> u250 {
+        u250 { inner: self.into() }
+    }
+}
+
+impl U128IntoU250 of Into<u128, u250> {
+    fn into(self: u128) -> u250 {
         u250 { inner: self.into() }
     }
 }
