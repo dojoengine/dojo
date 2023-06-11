@@ -15,7 +15,6 @@ dojo_core = { path = "../../crates/dojo-core" }
 initializer_class_hash = "0xbeef"
 
 [tool.dojo.env]
-# world_address = "0xeb752067993e3e1903ba501267664b4ef2f1e40f629a17a0180367e4f68428"
 rpc_url = "http://localhost:5050/"
 
 # Default account for katana with seed = 0

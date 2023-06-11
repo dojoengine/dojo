@@ -72,11 +72,9 @@ impl<'a, A: ConnectedAccount + Sync> System<'a, A> {
 
     pub async fn execute(
         &self,
-        mut calldata: Vec<FieldElement>,
+        calldata: Vec<FieldElement>,
     ) -> Result<InvokeTransactionResult, SystemError<A::SignError, <A::Provider as Provider>::Error>>
     {
-        calldata.insert(0, (calldata.len() as u64).into());
-
         let res =
             self.world.execute(&self.name, calldata).await.map_err(SystemError::WorldError)?;
 

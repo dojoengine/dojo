@@ -106,6 +106,7 @@ impl<'a, A: ConnectedAccount + Sync> WorldContract<'a, A> {
         InvokeTransactionResult,
         WorldContractError<A::SignError, <A::Provider as Provider>::Error>,
     > {
+        calldata.insert(0, (calldata.len() as u64).into());
         calldata.insert(
             0,
             cairo_short_string_to_felt(name)
