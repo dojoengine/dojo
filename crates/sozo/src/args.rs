@@ -9,6 +9,7 @@ use tracing_log::AsTrace;
 
 use crate::commands::build::BuildArgs;
 use crate::commands::component::ComponentArgs;
+use crate::commands::execute::ExecuteArgs;
 use crate::commands::init::InitArgs;
 use crate::commands::migrate::MigrateArgs;
 use crate::commands::register::RegisterArgs;
@@ -49,6 +50,7 @@ pub enum Commands {
     #[command(about = "Test the project's smart contracts")]
     Test(TestArgs),
 
+    Execute(ExecuteArgs),
     Component(ComponentArgs),
     System(SystemArgs),
     Register(RegisterArgs),
