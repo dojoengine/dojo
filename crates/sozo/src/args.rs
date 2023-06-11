@@ -49,10 +49,13 @@ pub enum Commands {
     Migrate(Box<MigrateArgs>),
     #[command(about = "Test the project's smart contracts")]
     Test(TestArgs),
-
+    #[command(about = "Execute a world's system")]
     Execute(ExecuteArgs),
+    #[command(about = "Interact with a worlds components")]
     Component(ComponentArgs),
+    #[command(about = "Interact with a worlds systems")]
     System(SystemArgs),
+    #[command(about = "Register new systems and components")]
     Register(RegisterArgs),
 }
 
