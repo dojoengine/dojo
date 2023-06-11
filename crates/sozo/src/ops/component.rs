@@ -44,8 +44,20 @@ pub async fn execute(command: ComponentCommands, env_metadata: Option<Value>) ->
             }
         }
 
-        ComponentCommands::Entity { .. } => {
-            unimplemented!("compoennt entity")
+        ComponentCommands::Entity { name, partition_id, keys, starknet, world, .. } => {
+            let world_address = world.address(env_metadata.as_ref())?;
+            let provider = starknet.provider(env_metadata.as_ref())?;
+
+            let world = WorldContractReader::new(world_address, &provider);
+            let component = world.component(&name, BlockId::Tag(BlockTag::Pending)).await?;
+
+            let entity =
+                component.entity(partition_id, keys, BlockId::Tag(BlockTag::Pending)).await?;
+
+            println!(
+                "{}",
+                entity.iter().map(|f| format!("{f:#x}")).collect::<Vec<String>>().join(" ")
+            )
         }
     }
 
