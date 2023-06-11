@@ -3,12 +3,11 @@ use clap::{Args, Subcommand};
 use scarb::core::Config;
 use starknet::core::types::FieldElement;
 
+use super::options::account::AccountOptions;
+use super::options::dojo_metadata_from_workspace;
+use super::options::starknet::StarknetOptions;
+use super::options::world::WorldOptions;
 use crate::ops::register;
-
-use super::options::{
-    account::AccountOptions, dojo_metadata_from_workspace, starknet::StarknetOptions,
-    world::WorldOptions,
-};
 
 #[derive(Debug, Args)]
 pub struct RegisterArgs {
