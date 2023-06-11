@@ -11,6 +11,7 @@ use crate::commands::build::BuildArgs;
 use crate::commands::component::ComponentArgs;
 use crate::commands::init::InitArgs;
 use crate::commands::migrate::MigrateArgs;
+use crate::commands::system::SystemArgs;
 use crate::commands::test::TestArgs;
 
 #[derive(Parser)]
@@ -48,6 +49,8 @@ pub enum Commands {
     Test(TestArgs),
 
     Component(ComponentArgs),
+
+    System(SystemArgs),
 }
 
 impl SozoArgs {
