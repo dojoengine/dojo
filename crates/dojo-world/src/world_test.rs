@@ -33,16 +33,21 @@ pub async fn deploy_world(
     path: Utf8PathBuf,
 ) -> (FieldElement, FieldElement) {
     let manifest = Manifest::load_from_path(path.join("manifest.json")).unwrap();
-    let world = WorldDiff::compute(manifest, None);
+    let world = WorldDiff::compute(manifest.clone(), None);
     let account = sequencer.account();
 
     let strategy = prepare_for_migration(None, path, world).unwrap();
-    let executor_address =
-        strategy.executor.unwrap().deploy(vec![], &account).await.unwrap().contract_address;
+    let executor_address = strategy
+        .executor
+        .unwrap()
+        .deploy(manifest.clone().executor.class_hash, vec![], &account)
+        .await
+        .unwrap()
+        .contract_address;
     let world_address = strategy
         .world
         .unwrap()
-        .deploy(vec![executor_address], &account)
+        .deploy(manifest.clone().world.class_hash, vec![executor_address], &account)
         .await
         .unwrap()
         .contract_address;

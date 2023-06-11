@@ -8,7 +8,8 @@ use dojo_world::migration::{Declarable, Deployable, RegisterOutput};
 use dojo_world::world::WorldContract;
 use scarb::core::Config;
 use starknet::accounts::ConnectedAccount;
-use starknet::core::types::{FieldElement, InvokeTransactionResult};
+use starknet::core::types::{BlockId, BlockTag, FieldElement, InvokeTransactionResult};
+use starknet::core::utils::cairo_short_string_to_felt;
 use yansi::Paint;
 
 #[cfg(test)]
@@ -87,17 +88,22 @@ where
             ws_config.ui().print(format!("\n{}", Paint::new("# Executor").bold()));
 
             let res = executor
-                .deploy(vec![], &migrator)
+                .deploy(executor.contract.local, vec![], &migrator)
                 .await
                 .map_err(|e| anyhow!("Failed to migrate executor: {e}"))?;
 
+            if let Some(declare) = res.clone().declare {
+                ws_config.ui().verbose(
+                    Paint::new(format!("  > declare transaction: {:#x}", declare.transaction_hash))
+                        .dimmed()
+                        .to_string(),
+                );
+            }
+
             ws_config.ui().verbose(
-                Paint::new(format!(
-                    "  > declare transaction: {:#x}\n  > deploy transaction: {:#x}",
-                    res.declare_res.transaction_hash, res.transaction_hash
-                ))
-                .dimmed()
-                .to_string(),
+                Paint::new(format!("  > deploy transaction: {:#x}", res.transaction_hash))
+                    .dimmed()
+                    .to_string(),
             );
 
             if strategy.world.is_none() {
@@ -129,19 +135,25 @@ where
 
             let res = world
                 .deploy(
+                    world.contract.local,
                     vec![strategy.executor.as_ref().unwrap().contract_address.unwrap()],
                     &migrator,
                 )
                 .await
                 .map_err(|e| anyhow!(e))?;
 
+            if let Some(declare) = res.clone().declare {
+                ws_config.ui().verbose(
+                    Paint::new(format!("  > declare transaction: {:#x}", declare.transaction_hash))
+                        .dimmed()
+                        .to_string(),
+                );
+            }
+
             ws_config.ui().verbose(
-                Paint::new(format!(
-                    "  > declare transaction: {:#x}\n  > deploy transaction: {:#x}",
-                    res.declare_res.transaction_hash, res.transaction_hash
-                ))
-                .dimmed()
-                .to_string(),
+                Paint::new(format!("  > deploy transaction: {:#x}", res.transaction_hash))
+                    .dimmed()
+                    .to_string(),
             );
 
             ws_config.ui().print(
@@ -158,12 +170,43 @@ where
     let components_output = register_components(strategy, &migrator, ws_config).await?;
     let systems_output = register_systems(strategy, &migrator, ws_config).await?;
 
+    if world_output.is_some() {
+        configure_admin(strategy, &migrator, ws_config).await?;
+    }
+
     Ok(MigrationOutput {
         world: world_output,
         executor: executor_output,
         systems: systems_output,
         components: components_output,
     })
+}
+
+async fn configure_admin<A>(
+    strategy: &MigrationStrategy,
+    migrator: &A,
+    ws_config: &Config,
+) -> Result<()>
+where
+    A: ConnectedAccount + Sync + 'static,
+{
+    ws_config.ui().print(Paint::new(format!("# Initialization")).bold().to_string());
+
+    ws_config.ui().verbose(format!("  Configuring Admin role for {:#x}", &migrator.address()));
+
+    let world_address = strategy.world_address()?;
+    let res = WorldContract::new(world_address, migrator)
+        .system("GrantAuthRole", BlockId::Tag(BlockTag::Latest))
+        .await?
+        .execute(vec![migrator.address(), cairo_short_string_to_felt("Admin")?])
+        .await
+        .unwrap();
+
+    ws_config.ui().verbose(
+        Paint::new(format!("  > transaction: {:#x}", res.transaction_hash)).dimmed().to_string(),
+    );
+
+    Ok(())
 }
 
 async fn register_components<A>(
