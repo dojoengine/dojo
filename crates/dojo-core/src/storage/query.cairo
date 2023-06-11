@@ -38,12 +38,11 @@ impl QueryImpl of QueryTrait {
 
     fn hash(self: @Query) -> u250 {
         let keys = *self.keys;
-        if keys.len() == 1 & *self.partition == 0.into() {
+        if keys.len() == 1 {
             return *keys.at(0);
         }
 
         let mut serialized = ArrayTrait::new();
-        self.partition.serialize(ref serialized);
         self.keys.serialize(ref serialized);
         poseidon_hash_span(serialized.span()).into()
     }
