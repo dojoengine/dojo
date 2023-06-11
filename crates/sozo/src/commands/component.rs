@@ -1,6 +1,7 @@
 use anyhow::Result;
 use clap::{Args, Subcommand};
 use scarb::core::Config;
+use starknet::core::types::FieldElement;
 
 use super::options::dojo_metadata_from_workspace;
 use super::options::starknet::StarknetOptions;
@@ -48,8 +49,13 @@ pub enum ComponentCommands {
         #[arg(help = "The name of the component")]
         name: String,
 
-        #[arg(value_name = "ENTITY_ID")]
-        entity: String,
+        #[arg(value_name = "PARTITION_ID")]
+        partition_id: FieldElement,
+
+        #[arg(short, long)]
+        #[arg(value_delimiter = ',')]
+        #[arg(help = "Comma seperated values e.g., 0x12345,0x69420,...")]
+        keys: Vec<FieldElement>,
 
         #[command(flatten)]
         world: WorldOptions,
