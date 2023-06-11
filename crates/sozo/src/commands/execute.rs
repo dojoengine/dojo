@@ -3,12 +3,11 @@ use clap::Args;
 use scarb::core::Config;
 use starknet::core::types::FieldElement;
 
+use super::options::account::AccountOptions;
+use super::options::dojo_metadata_from_workspace;
+use super::options::starknet::StarknetOptions;
+use super::options::world::WorldOptions;
 use crate::ops::execute;
-
-use super::options::{
-    account::AccountOptions, dojo_metadata_from_workspace, starknet::StarknetOptions,
-    world::WorldOptions,
-};
 
 #[derive(Debug, Args)]
 #[command(about = "Execute a system with the given calldata.")]
@@ -18,8 +17,8 @@ pub struct ExecuteArgs {
 
     #[arg(short, long)]
     #[arg(value_delimiter = ',')]
-    #[arg(help = "The calldata to be passed to the system. \
-    Comma seperated values e.g., 0x12345,0x69420.")]
+    #[arg(help = "The calldata to be passed to the system. Comma seperated values e.g., \
+                  0x12345,0x69420.")]
     pub calldata: Vec<FieldElement>,
 
     #[command(flatten)]
