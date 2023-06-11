@@ -8,6 +8,7 @@ use tracing::level_filters::LevelFilter;
 use tracing_log::AsTrace;
 
 use crate::commands::build::BuildArgs;
+use crate::commands::component::ComponentArgs;
 use crate::commands::init::InitArgs;
 use crate::commands::migrate::MigrateArgs;
 use crate::commands::test::TestArgs;
@@ -45,6 +46,8 @@ pub enum Commands {
     Migrate(Box<MigrateArgs>),
     #[command(about = "Test the project's smart contracts")]
     Test(TestArgs),
+
+    Component(ComponentArgs),
 }
 
 impl SozoArgs {
