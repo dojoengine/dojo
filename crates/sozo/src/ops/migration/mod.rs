@@ -190,7 +190,7 @@ async fn configure_admin<A>(
 where
     A: ConnectedAccount + Sync + 'static,
 {
-    ws_config.ui().print(Paint::new(format!("# Initialization")).bold().to_string());
+    ws_config.ui().print(Paint::new("# Initialization").bold().to_string());
 
     ws_config.ui().verbose(format!("  Configuring Admin role for {:#x}", &migrator.address()));
 
