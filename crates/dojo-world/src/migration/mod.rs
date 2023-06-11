@@ -10,12 +10,12 @@ use starknet::accounts::{AccountError, Call, ConnectedAccount};
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
     BlockId, BlockTag, DeclareTransactionResult, FieldElement, FlattenedSierraClass,
-    InvokeTransactionResult,
+    InvokeTransactionResult, StarknetError,
 };
 use starknet::core::utils::{
     get_contract_address, get_selector_from_name, CairoShortStringToFeltError,
 };
-use starknet::providers::Provider;
+use starknet::providers::{Provider, ProviderError};
 use thiserror::Error;
 
 pub mod class;
@@ -25,11 +25,11 @@ pub mod world;
 
 pub type DeclareOutput = DeclareTransactionResult;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct DeployOutput {
     pub transaction_hash: FieldElement,
     pub contract_address: FieldElement,
-    pub declare_res: DeclareOutput,
+    pub declare: Option<DeclareOutput>,
 }
 
 #[derive(Debug)]
@@ -48,6 +48,8 @@ pub enum MigrationError<S, P> {
     Migrator(#[from] AccountError<S, P>),
     #[error(transparent)]
     CairoShortStringToFelt(#[from] CairoShortStringToFeltError),
+    #[error(transparent)]
+    Provider(#[from] ProviderError<P>),
 }
 
 #[async_trait]
@@ -86,17 +88,39 @@ pub trait Declarable {
 pub trait Deployable: Declarable + Sync {
     async fn deploy<A>(
         &mut self,
+        class_hash: FieldElement,
         constructor_calldata: Vec<FieldElement>,
         account: &A,
     ) -> Result<DeployOutput, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
     where
         A: ConnectedAccount + Sync,
     {
-        let declare_res = self.declare(account).await?;
+        let declare = match self.declare(account).await {
+            Ok(res) => Some(res),
+            Err(MigrationError::Migrator(AccountError::Provider(
+                ProviderError::StarknetError(StarknetError::ContractError),
+            ))) => None,
+            Err(err) => return Err(err),
+        };
+
+        // TODO: Replace above block with below once `get_class` is supported
+        // by Katana. The current check is naive and will proceed if the declare fails
+        // for any contract error.
+        // let declare = if let Err(err) =
+        //     account.provider().get_class(BlockId::Tag(BlockTag::Latest), class_hash).await
+        // {
+        //     if let ProviderError::StarknetError(StarknetError::ClassHashNotFound) = err {
+        //         Some(self.declare(account).await?)
+        //     } else {
+        //         return Err(MigrationError::Provider(err));
+        //     }
+        // } else {
+        //     None
+        // };
 
         let calldata = [
             vec![
-                declare_res.class_hash,                         // class hash
+                class_hash,                                     // class hash
                 FieldElement::ZERO,                             // salt
                 FieldElement::ZERO,                             // unique
                 FieldElement::from(constructor_calldata.len()), // constructor calldata len
@@ -107,7 +131,7 @@ pub trait Deployable: Declarable + Sync {
 
         let contract_address = get_contract_address(
             FieldElement::ZERO,
-            declare_res.class_hash,
+            class_hash,
             &constructor_calldata,
             FieldElement::ZERO,
         );
@@ -137,7 +161,7 @@ pub trait Deployable: Declarable + Sync {
             .await
             .map_err(MigrationError::Migrator)?;
 
-        Ok(DeployOutput { transaction_hash, contract_address, declare_res })
+        Ok(DeployOutput { transaction_hash, contract_address, declare })
     }
 
     // TEMP: Remove once we can calculate the contract address before sending the tx

@@ -49,13 +49,14 @@ pub enum ComponentCommands {
         #[arg(help = "The name of the component")]
         name: String,
 
-        #[arg(value_name = "PARTITION_ID")]
-        partition_id: FieldElement,
-
-        #[arg(short, long)]
+        #[arg(value_name = "KEYS")]
         #[arg(value_delimiter = ',')]
         #[arg(help = "Comma seperated values e.g., 0x12345,0x69420,...")]
         keys: Vec<FieldElement>,
+
+        #[arg(long = "parition_id", default_value = "0x0")]
+        #[arg(help = "Entity query parition id.")]
+        partition_id: FieldElement,
 
         #[command(flatten)]
         world: WorldOptions,
