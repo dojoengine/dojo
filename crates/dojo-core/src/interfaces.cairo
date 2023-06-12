@@ -1,5 +1,5 @@
 use dojo_core::{
-    integer::u250, string::ShortString, serde::SpanSerde, storage::query::Query,
+    serde::SpanSerde, storage::key::Key,
     auth::systems::Route, auth::components::AuthRole, execution_context::Context
 };
 use starknet::{ClassHash, ContractAddress};
@@ -13,26 +13,26 @@ use starknet::contract_address::Felt252TryIntoContractAddress;
 #[abi]
 trait IWorld {
     fn initialize(routes: Array<Route>);
-    fn component(name: ShortString) -> ClassHash;
+    fn component(name: felt252) -> ClassHash;
     fn register_component(class_hash: ClassHash);
-    fn system(name: ShortString) -> ClassHash;
+    fn system(name: felt252) -> ClassHash;
     fn register_system(class_hash: ClassHash);
     fn uuid() -> usize;
-    fn execute(name: ShortString, execute_calldata: Span<felt252>) -> Span<felt252>;
-    fn entity(component: ShortString, key: Query, offset: u8, length: usize) -> Span<felt252>;
+    fn execute(name: felt252, execute_calldata: Span<felt252>) -> Span<felt252>;
+    fn entity(component: felt252, key: Key, offset: u8, length: usize) -> Span<felt252>;
     fn set_entity(
-        context: Context, component: ShortString, key: Query, offset: u8, value: Span<felt252>
+        context: Context, component: felt252, key: Key, offset: u8, value: Span<felt252>
     );
-    fn entities(component: ShortString, partition: u250) -> (Span<u250>, Span<Span<felt252>>);
+    fn entities(component: felt252, index: u256) -> (Span<felt252>, Span<Span<felt252>>);
     fn set_executor(contract_address: ContractAddress);
-    fn is_authorized(system: ShortString, component: ShortString, execution_role: AuthRole) -> bool;
+    fn is_authorized(system: felt252, component: felt252, execution_role: AuthRole) -> bool;
     fn is_account_admin() -> bool;
-    fn is_system_for_execution(system: ShortString) -> bool;
-    fn delete_entity(context: Context, component: ShortString, query: Query);
-    fn assume_role(role_id: u250, systems: Array<ShortString>);
-    fn clear_role(systems: Array<ShortString>);
-    fn execution_role() -> u250;
-    fn system_components(system: ShortString) -> Array<(ShortString, bool)>;
+    fn is_system_for_execution(system: felt252) -> bool;
+    fn delete_entity(context: Context, component: felt252, key: Key);
+    fn assume_role(role_id: felt252, systems: Array<felt252>);
+    fn clear_role(systems: Array<felt252>);
+    fn execution_role() -> felt252;
+    fn system_components(system: felt252) -> Array<(felt252, bool)>;
 }
 
 // TODO: Remove once Serde is derivable for dispatchers
@@ -56,14 +56,14 @@ trait IExecutor {
 
 #[abi]
 trait IComponent {
-    fn name() -> ShortString;
+    fn name() -> felt252;
     fn len() -> usize;
 }
 
 #[abi]
 trait ISystem {
-    fn name() -> ShortString;
-    fn dependencies() -> Array<(ShortString, bool)>;
+    fn name() -> felt252;
+    fn dependencies() -> Array<(felt252, bool)>;
 }
 
 #[abi]
@@ -71,7 +71,7 @@ trait IWorldFactory {
     fn set_world(class_hash: ClassHash);
     fn set_executor(class_hash: ClassHash);
     fn spawn(
-        name: ShortString,
+        name: felt252,
         components: Array<ClassHash>,
         systems: Array<ClassHash>,
         routes: Array<Route>

@@ -47,7 +47,7 @@ pub enum MigrationError<S, P> {
     #[error(transparent)]
     Migrator(#[from] AccountError<S, P>),
     #[error(transparent)]
-    CairoShortStringToFelt(#[from] CairoShortStringToFeltError),
+    Cairofelt252ToFelt(#[from] CairoShortStringToFeltError),
     #[error(transparent)]
     Provider(#[from] ProviderError<P>),
 }

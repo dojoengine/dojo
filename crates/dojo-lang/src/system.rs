@@ -52,23 +52,21 @@ impl System {
                     use dojo_core::world;
                     use dojo_core::interfaces::IWorldDispatcher;
                     use dojo_core::interfaces::IWorldDispatcherTrait;
-                    use dojo_core::storage::query::Query;
-                    use dojo_core::storage::query::QueryTrait;
-                    use dojo_core::storage::query::LiteralIntoQuery;
-                    use dojo_core::storage::query::TupleSize1IntoQuery;
-                    use dojo_core::storage::query::TupleSize2IntoQuery;
-                    use dojo_core::storage::query::TupleSize3IntoQuery;
-                    use dojo_core::storage::query::IntoPartitioned;
-                    use dojo_core::storage::query::IntoPartitionedQuery;
+                    use dojo_core::storage::key::Key;
+                    use dojo_core::storage::key::KeyTrait;
+                    use dojo_core::storage::key::LiteralIntoKey;
+                    use dojo_core::storage::key::TupleSize1IntoKey;
+                    use dojo_core::storage::key::TupleSize2IntoKey;
+                    use dojo_core::storage::key::TupleSize3IntoKey;
                     use dojo_core::execution_context::Context;
-                    
+
                     #[view]
-                    fn name() -> dojo_core::string::ShortString {
-                        dojo_core::string::ShortStringTrait::new('$name$')
+                    fn name() -> felt252 {
+                        '$name$'
                     }
 
                     #[view]
-                    fn dependencies() -> Array<(dojo_core::string::ShortString, bool)> {
+                    fn dependencies() -> Array<(felt252, bool)> {
                         let mut arr = array::ArrayTrait::new();
                         $dependencies$
                         arr
@@ -89,7 +87,7 @@ impl System {
                                 .sorted_by(|a, b| a.0.cmp(b.0))
                                 .map(|(_, dep): (&smol_str::SmolStr, &Dependency)| {
                                     RewriteNode::interpolate_patched(
-                                        "array::ArrayTrait::append(ref arr, ('$name$'.into(), \
+                                        "array::ArrayTrait::append(ref arr, ('$name$', \
                                          $write$));\n",
                                         HashMap::from([
                                             (

@@ -4,31 +4,28 @@ mod Database {
     use traits::{Into, TryInto};
     use serde::Serde;
     use hash::LegacyHash;
+    use option::OptionTrait;
     use poseidon::poseidon_hash_span;
 
     use dojo_core::serde::SpanSerde;
-    use dojo_core::storage::{index::Index, kv::KeyValueStore, query::{Query, QueryTrait}};
-    use dojo_core::integer::{u250, Felt252IntoU250};
+    use dojo_core::storage::{index::Index, kv::KeyValueStore, key::{Column, Key, KeyTrait}};
     use dojo_core::interfaces::{IComponentLibraryDispatcher, IComponentDispatcherTrait};
 
     #[event]
-    fn StoreSetRecord(table_id: u250, keys: Span<u250>, value: Span<felt252>) {}
+    fn StoreSetRecord(table_id: felt252, columns: Span<Column>, offset: u8, value: Span<felt252>) {}
 
     #[event]
-    fn StoreSetField(table_id: u250, keys: Span<u250>, offset: u8, value: Span<felt252>) {}
-
-    #[event]
-    fn StoreDeleteRecord(table_id: u250, keys: Span<u250>) {}
+    fn StoreDeleteRecord(table_id: felt252, columns: Span<Column>) {}
 
     fn get(
-        class_hash: starknet::ClassHash, table: u250, query: Query, offset: u8, length: usize
+        class_hash: starknet::ClassHash, table: felt252, key: Key, offset: u8, length: usize
     ) -> Option<Span<felt252>> {
         let mut length = length;
         if length == 0 {
             length = IComponentLibraryDispatcher { class_hash: class_hash }.len();
         }
 
-        let id = query.hash();
+        let id = key.hash();
         match Index::exists(table, id) {
             bool::False(()) => Option::None(()),
             bool::True(()) => Option::Some(KeyValueStore::get(table, id, offset, length))
@@ -36,10 +33,10 @@ mod Database {
     }
 
     fn set(
-        class_hash: starknet::ClassHash, table: u250, query: Query, offset: u8, value: Span<felt252>
+        class_hash: starknet::ClassHash, table: felt252, key: Key, offset: u8, value: Span<felt252>
     ) {
-        let keys = query.keys();
-        let id = query.hash();
+        let columns = key.columns();
+        let id = key.hash();
 
         let length = IComponentLibraryDispatcher { class_hash: class_hash }.len();
         assert(value.len() <= length, 'Value too long');
@@ -47,33 +44,20 @@ mod Database {
         Index::create(table, id);
         KeyValueStore::set(table, id, offset, value);
 
-        StoreSetRecord(table, keys, value);
-        StoreSetField(table, keys, offset, value);
+        StoreSetRecord(table, columns, offset, value);
     }
 
-    fn del(class_hash: starknet::ClassHash, table: u250, query: Query) {
-        Index::delete(table, query.hash());
-        StoreDeleteRecord(table, query.keys());
+    fn del(class_hash: starknet::ClassHash, table: felt252, key: Key) {
+        Index::delete(table, key.hash());
+        StoreDeleteRecord(table, key.columns());
     }
 
     // returns a tuple of spans, first contains the entity IDs,
     // second the deserialized entities themselves
     fn all(
-        class_hash: starknet::ClassHash, component: u250, partition: u250
-    ) -> (Span<u250>, Span<Span<felt252>>) {
-        let table = {
-            if partition == 0.into() {
-                component
-            } else {
-                let mut serialized = ArrayTrait::new();
-                component.serialize(ref serialized);
-                partition.serialize(ref serialized);
-                let hash = poseidon_hash_span(serialized.span());
-                hash.into()
-            }
-        };
-
-        let all_ids = Index::query(table);
+        class_hash: starknet::ClassHash, table: felt252, index: felt252
+    ) -> (Span<felt252>, Span<Span<felt252>>) {
+        let all_ids = Index::query(index);
         let length = IComponentLibraryDispatcher { class_hash: class_hash }.len();
 
         let mut ids = all_ids.span();

@@ -60,7 +60,7 @@ fn spawn_test_world(
 
     grant_role_calldata.append(caller.into()); // target_id
     grant_role_calldata.append(World::ADMIN); // role_id
-    world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
+    world.execute('GrantAuthRole', grant_role_calldata.span());
 
     // register components
     let mut index = 0;

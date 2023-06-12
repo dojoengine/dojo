@@ -2,7 +2,6 @@ use array::{ArrayTrait, SpanTrait};
 use option::OptionTrait;
 use traits::Into;
 
-use dojo_core::integer::u250;
 use dojo_core::storage::utils::find_matching;
 
 fn build_fake_entity(v: felt252) -> Span<felt252> {
@@ -23,26 +22,26 @@ fn assert_entity(entity: Span<felt252>, v: felt252) {
 #[test]
 #[available_gas(1000000000)]
 fn test_find_matching() {
-    let mut ids1: Array<u250> = ArrayTrait::new();
-    let mut ids2: Array<u250> = ArrayTrait::new();
-    let mut ids3: Array<u250> = ArrayTrait::new();
+    let mut ids1: Array<felt252> = ArrayTrait::new();
+    let mut ids2: Array<felt252> = ArrayTrait::new();
+    let mut ids3: Array<felt252> = ArrayTrait::new();
 
-    ids1.append(u250 { inner: 1 });
-    ids1.append(u250 { inner: 3 });
-    ids1.append(u250 { inner: 6 });
-    ids1.append(u250 { inner: 5 });
+    ids1.append(1);
+    ids1.append(3);
+    ids1.append(6);
+    ids1.append(5);
 
-    ids2.append(u250 { inner: 4 });
-    ids2.append(u250 { inner: 5 });
-    ids2.append(u250 { inner: 3 });
+    ids2.append(4);
+    ids2.append(5);
+    ids2.append(3);
 
-    ids3.append(u250 { inner: 3 });
-    ids3.append(u250 { inner: 2 });
-    ids3.append(u250 { inner: 1 });
-    ids3.append(u250 { inner: 7 });
-    ids3.append(u250 { inner: 5 });
+    ids3.append(3);
+    ids3.append(2);
+    ids3.append(1);
+    ids3.append(7);
+    ids3.append(5);
 
-    let mut ids: Array<Span<u250>> = ArrayTrait::new();
+    let mut ids: Array<Span<felt252>> = ArrayTrait::new();
     ids.append(ids1.span());
     ids.append(ids2.span());
     ids.append(ids3.span());
@@ -102,20 +101,20 @@ fn test_find_matching() {
 #[available_gas(1000000000)]
 #[should_panic(expected: ('lengths dont match', ))]
 fn test_find_matching_wrong_arg_len() {
-    let mut ids1: Array<u250> = ArrayTrait::new();
-    let mut ids2: Array<u250> = ArrayTrait::new();
-    let mut ids3: Array<u250> = ArrayTrait::new();
+    let mut ids1: Array<felt252> = ArrayTrait::new();
+    let mut ids2: Array<felt252> = ArrayTrait::new();
+    let mut ids3: Array<felt252> = ArrayTrait::new();
 
-    ids1.append(u250 { inner: 1 });
-    ids1.append(u250 { inner: 3 });
-    ids1.append(u250 { inner: 6 });
-    ids1.append(u250 { inner: 5 });
+    ids1.append(1);
+    ids1.append(3);
+    ids1.append(6);
+    ids1.append(5);
 
-    ids2.append(u250 { inner: 4 });
-    ids2.append(u250 { inner: 5 });
-    ids2.append(u250 { inner: 3 });
+    ids2.append(4);
+    ids2.append(5);
+    ids2.append(3);
 
-    let mut ids: Array<Span<u250>> = ArrayTrait::new();
+    let mut ids: Array<Span<felt252>> = ArrayTrait::new();
     ids.append(ids1.span());
     ids.append(ids2.span());
 

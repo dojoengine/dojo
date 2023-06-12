@@ -6,7 +6,7 @@ ExpandContractTestRunner
 //! > cairo_code
 use serde::Serde;
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Component, KeySchema, Copy, Drop, Serde)]
 struct Position {
     x: felt252,
     y: felt252

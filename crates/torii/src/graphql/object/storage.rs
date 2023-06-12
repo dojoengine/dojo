@@ -117,10 +117,9 @@ fn value_mapping_from_row(row: &SqliteRow, fields: &TypeMapping) -> Result<Value
             | ScalarType::U32
             | ScalarType::U64
             | ScalarType::U128
-            | ScalarType::U250
             | ScalarType::U256
             | ScalarType::USIZE
-            | ScalarType::FELT => {
+            | ScalarType::FELT252 => {
                 let result = row.try_get::<String, &str>(&column_name);
                 Value::from(result?)
             }

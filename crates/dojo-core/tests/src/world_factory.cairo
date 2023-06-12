@@ -92,7 +92,7 @@ fn test_spawn_world() {
     components.append(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
 
     let mut routes = array::ArrayTrait::new();
-    routes.append(RouteTrait::new('Bar'.into(), 'FooWriter'.into(), 'Foo'.into(), ));
+    routes.append(RouteTrait::new('Bar', 'FooWriter', 'Foo', ));
 
     // Spawn World from WorldFactory
     let world_address = WorldFactory::spawn(components, systems, routes);
@@ -100,35 +100,35 @@ fn test_spawn_world() {
 
     // Check Admin role is set
     let caller = get_caller_address();
-    let role = world.entity('AuthRole'.into(), caller.into(), 0, 0);
+    let role = world.entity('AuthRole', caller.into(), 0, 0);
     assert(*role[0] == World::ADMIN, 'admin role not set');
 
     // Check AuthRole component and GrantAuthRole system are registered
-    let role_hash = world.component('AuthRole'.into());
+    let role_hash = world.component('AuthRole');
     assert(
         role_hash == AuthRoleComponent::TEST_CLASS_HASH.try_into().unwrap(),
         'component not registered'
     );
 
-    let grant_role_hash = world.system('GrantAuthRole'.into());
+    let grant_role_hash = world.system('GrantAuthRole');
     assert(
         grant_role_hash == GrantAuthRole::TEST_CLASS_HASH.try_into().unwrap(),
         'system not registered'
     );
 
     // Check Foo component and Bar system are registered
-    let foo_hash = world.component('Foo'.into());
+    let foo_hash = world.component('Foo');
     assert(
         foo_hash == FooComponent::TEST_CLASS_HASH.try_into().unwrap(), 'component not registered'
     );
 
-    let bar_hash = world.system('Bar'.into());
+    let bar_hash = world.system('Bar');
     assert(bar_hash == Bar::TEST_CLASS_HASH.try_into().unwrap(), 'system not registered');
 
     // Check that the auth routes are registered
-    let role = world.entity('AuthRole'.into(), ('Bar', 'Foo').into(), 0, 0);
+    let role = world.entity('AuthRole', ('Bar', 'Foo').into(), 0, 0);
     assert(*role[0] == 'FooWriter', 'role not set');
 
-    let status = world.entity('AuthStatus'.into(), (*role[0], 'Foo').into(), 0, 0);
+    let status = world.entity('AuthStatus', (*role[0], 'Foo').into(), 0, 0);
     assert(*status[0] == 1, 'role not set');
 }

@@ -4,7 +4,7 @@ mod ERC20Approve {
     use dojo_erc::erc20::components::Allowance;
 
     fn execute(token: felt252, owner: felt252, spender: felt252, amount: felt252) {
-        commands::set_entity((token, (owner, spender)).into_partitioned(), (
+        commands::set_entity(((token,), (owner, spender)).into(), (
             Allowance { amount }
         ))
     }
@@ -26,23 +26,23 @@ mod ERC20TransferFrom {
         let caller: felt252 = get_caller_address().into();
         if spender != caller {
             // decrease allowance if it's not owner doing the transfer
-            let allowance = commands::<Allowance>::entity((token, (caller, spender)).into_partitioned());
+            let allowance = commands::<Allowance>::entity(((token,), (caller, spender)).into());
             if !is_unlimited_allowance(allowance) {
-                commands::set_entity((token, (caller, spender)).into_partitioned(), (
+                commands::set_entity(((token,), (caller, spender)).into(), (
                     Allowance { amount: allowance.amount - amount }
                 ));
             }
         }
 
         // decrease spender's balance
-        let balance = commands::<Balance>::entity((token, (spender)).into_partitioned());
-        commands::set_entity((token, (spender)).into_partitioned(), (
+        let balance = commands::<Balance>::entity(((token,), (spender,)).into());
+        commands::set_entity(((token,), (spender,)).into(), (
             Balance { amount: balance.amount - amount }
         ));
 
         // increase recipient's balance
-        let balance = commands::<Balance>::entity((token, (recipient)).into_partitioned());
-        commands::set_entity((token, (recipient)).into_partitioned(), (
+        let balance = commands::<Balance>::entity(((token,), (recipient,)).into());
+        commands::set_entity(((token,), (recipient,)).into(), (
             Balance { amount: balance.amount + amount }
         ));
     }
@@ -68,8 +68,8 @@ mod ERC20Mint {
         ));
 
         // increase balance of recipient
-        let balance = commands::<Balance>::entity((token, (recipient)).into_partitioned());
-        commands::set_entity((token, (recipient)).into(), (
+        let balance = commands::<Balance>::entity(((token,), (recipient,)).into());
+        commands::set_entity(((token,), (recipient)).into(), (
             Balance { amount: balance.amount + amount }
         ));
     }
@@ -91,8 +91,8 @@ mod ERC20Burn {
         ));
 
         // decrease balance of owner
-        let balance = commands::<Balance>::entity((token, (owner)).into_partitioned());
-        commands::set_entity((token, (owner)).into_partitioned(), (
+        let balance = commands::<Balance>::entity(((token,), (owner,)).into());
+        commands::set_entity(((token,), (owner,)).into(), (
             Balance { amount: balance.amount - amount }
         ));
     }

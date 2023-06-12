@@ -3,8 +3,7 @@ mod Spawn {
     use array::ArrayTrait;
     use traits::Into;
 
-    use dojo_examples::components::Position;
-    use dojo_examples::components::Moves;
+    use dojo_examples::components::{Position, Moves};
 
     fn execute(ctx: Context) {
         let player = commands::set_entity(
@@ -19,8 +18,7 @@ mod Move {
     use array::ArrayTrait;
     use traits::Into;
 
-    use dojo_examples::components::Position;
-    use dojo_examples::components::Moves;
+    use dojo_examples::components::{Position, Moves};
 
     #[derive(Serde, Drop)]
     enum Direction {
@@ -101,33 +99,33 @@ mod tests {
         routes
             .append(
                 RouteTrait::new(
-                    'Move'.into(), // target_id
-                    'MovesWriter'.into(), // role_id
-                    'Moves'.into(), // resource_id
+                    'Move', // target_id
+                    'MovesWriter', // role_id
+                    'Moves', // resource_id
                 )
             );
         routes
             .append(
                 RouteTrait::new(
-                    'Move'.into(), // target_id
-                    'PositionWriter'.into(), // role_id
-                    'Position'.into(), // resource_id
+                    'Move', // target_id
+                    'PositionWriter', // role_id
+                    'Position', // resource_id
                 )
             );
         routes
             .append(
                 RouteTrait::new(
-                    'Spawn'.into(), // target_id
-                    'MovesWriter'.into(), // role_id
-                    'Moves'.into(), // resource_id
+                    'Spawn', // target_id
+                    'MovesWriter', // role_id
+                    'Moves', // resource_id
                 )
             );
         routes
             .append(
                 RouteTrait::new(
-                    'Spawn'.into(), // target_id
-                    'PositionWriter'.into(), // role_id
-                    'Position'.into(), // resource_id
+                    'Spawn', // target_id
+                    'PositionWriter', // role_id
+                    'Position', // resource_id
                 )
             );
 
@@ -135,16 +133,16 @@ mod tests {
         let world = spawn_test_world(components, systems, routes);
 
         let spawn_call_data = array::ArrayTrait::new();
-        world.execute('Spawn'.into(), spawn_call_data.span());
+        world.execute('Spawn', spawn_call_data.span());
 
         let mut move_calldata = array::ArrayTrait::new();
         move_calldata.append(Move::Direction::Right(()).into());
-        world.execute('Move'.into(), move_calldata.span());
+        world.execute('Move', move_calldata.span());
 
-        let moves = world.entity('Moves'.into(), caller.into(), 0, 0);
+        let moves = world.entity('Moves', caller.into(), 0, 0);
         assert(*moves[0] == 9, 'moves is wrong');
 
-        // let new_position = world.entity('Position'.into(), caller.into(), 0, 0);
+        // let new_position = world.entity('Position', caller.into(), 0, 0);
         // assert(*new_position[0] == 1, 'position x is wrong');
         // assert(*new_position[1] == 0, 'position y is wrong');
     }

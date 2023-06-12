@@ -1,7 +1,6 @@
 use array::ArrayTrait;
 use traits::Into;
 
-use dojo_core::integer::u250;
 use dojo_core::storage::index::Index;
 
 #[test]
