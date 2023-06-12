@@ -95,8 +95,13 @@ mod IsAuthorized {
         // If system is not authorized, get World level role
         let role = commands::<AuthRole>::entity(target_id.into());
 
-        // Check if system's role is Admin
-        role.id.into() == 'Admin'
+        // Check if system's role is Admin and executed by an Admin
+        if role.id.into() == 'Admin' {
+            assert(ctx.execution_role.id.into() == 'Admin', 'Unauthorized Admin call');
+            true
+        } else {
+            false
+        }
     }
 }
 

@@ -381,9 +381,8 @@ fn test_set_entity_admin() {
 }
 
 #[test]
-#[available_gas(9000000)]
+#[available_gas(11000000)]
 #[should_panic]
-#[ignore] // TODO:: Remove once set_caller_address is working properly
 fn test_admin_system_but_non_admin_caller() {
     // Spawn empty world
     let world = spawn_empty_world();
@@ -405,13 +404,22 @@ fn test_admin_system_but_non_admin_caller() {
     world.assume_role('Admin'.into(), systems);
     world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
 
-    // Call Bar system
+    // Admin revokes its Admin role
+    let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
+    let caller: felt252 = get_caller_address().into();
+    grant_role_calldata.append(caller); // target_id
+    world.execute('RevokeAuthRole'.into(), grant_role_calldata.span());
+    let role = world.entity('AuthRole'.into(), QueryTrait::new_from_id(caller.into()), 0, 0);
+    assert(*role[0] == 0, 'role not revoked');
+
+    // Clear execution role
+    let systems = ArrayTrait::new();
+    world.clear_role(systems);
+
+    // Non-admin calls an admin system
     let mut data = ArrayTrait::new();
     data.append(420);
     data.append(1337);
-
-    // Non-admin tries to call Admin Bar system
-    starknet::testing::set_caller_address(contract_address_const::<0x1337>());
     world.execute('Bar'.into(), data.span());
 }
 
@@ -736,7 +744,6 @@ fn test_assume_admin_role_by_admin() {
 #[test]
 #[available_gas(5000000)]
 #[should_panic]
-#[ignore] // TODO:: Remove once set_caller_address is working properly
 fn test_assume_admin_role_by_non_admin() {
     // Spawn empty world
     let world = spawn_empty_world();
@@ -747,13 +754,18 @@ fn test_assume_admin_role_by_non_admin() {
     // Initialize world
     world.initialize(route);
 
-    // Assume Admin role by Non-admin
-    let mut systems = ArrayTrait::<ShortString>::new();
-    starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
-    world.assume_role(World::ADMIN.into(), systems);
+    // Admin revokes its Admin role
+    let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
+    let caller: felt252 = get_caller_address().into();
+    grant_role_calldata.append(caller); // target_id
+    world.execute('RevokeAuthRole'.into(), grant_role_calldata.span());
+    let role = world.entity('AuthRole'.into(), QueryTrait::new_from_id(caller.into()), 0, 0);
+    assert(*role[0] == 0, 'role not revoked');
 
-    // Check that role is assumed
-    assert(world.execution_role() == World::ADMIN.into(), 'role not assumed');
+    // Non-admin assume Bar system that has Admin role
+    // Should panic since caller is not admin anymore
+    let mut systems = ArrayTrait::<ShortString>::new();
+    world.assume_role('Bar'.into(), systems);
 }
 
 // Utils
