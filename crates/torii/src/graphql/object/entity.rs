@@ -31,9 +31,9 @@ impl EntityObject {
         Self {
             field_type_mapping: IndexMap::from([
                 (Name::new("id"), TypeRef::ID.to_string()),
-                (Name::new("partition"), ScalarType::FELT.to_string()),
+                (Name::new("partition"), ScalarType::FELT252.to_string()),
                 (Name::new("keys"), TypeRef::STRING.to_string()),
-                (Name::new("transactionHash"), ScalarType::FELT.to_string()),
+                (Name::new("transactionHash"), ScalarType::FELT252.to_string()),
                 (Name::new("createdAt"), ScalarType::DATE_TIME.to_string()),
             ]),
         }
@@ -105,7 +105,7 @@ impl ObjectTrait for EntityObject {
                     Ok(Some(FieldValue::list(entities.into_iter().map(FieldValue::owned_any))))
                 })
             })
-            .argument(InputValue::new("partition", TypeRef::named_nn(ScalarType::FELT)))
+            .argument(InputValue::new("partition", TypeRef::named_nn(ScalarType::FELT252)))
             .argument(InputValue::new("keys", TypeRef::named_list(TypeRef::STRING)))
             .argument(InputValue::new("limit", TypeRef::named(TypeRef::INT))),
         ]

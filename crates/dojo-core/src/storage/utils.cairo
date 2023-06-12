@@ -3,8 +3,6 @@ use dict::Felt252DictTrait;
 use option::OptionTrait;
 use traits::{Into, TryInto};
 
-use dojo_core::integer::u250;
-
 // big enough number used to construct a compound key in `find_matching`
 const OFFSET: felt252 = 0x10000000000000000000000000000000000;
 
@@ -27,7 +25,7 @@ const OFFSET: felt252 = 0x10000000000000000000000000000000000;
 // for all entities and the function respects the ID order from the first ID array,
 // hence 4 and 3 in this case
 fn find_matching(
-    mut ids: Span<Span<u250>>, mut entities: Span<Span<Span<felt252>>>
+    mut ids: Span<Span<felt252>>, mut entities: Span<Span<Span<felt252>>>
 ) -> Span<Span<Span<felt252>>> {
     assert(ids.len() == entities.len(), 'lengths dont match');
 
@@ -50,7 +48,7 @@ fn find_matching(
     // IDs from ids_match where the value is the same as match_count
 
     // we want to keep the ordering from the first entity IDs
-    let mut ids1: Span<u250> = *(ids.pop_front().unwrap());
+    let mut ids1: Span<felt252> = *(ids.pop_front().unwrap());
 
     // counts how many ID arrays and hence entity types we've looped over
     // starts at 1 because we skip the first element to keep ordering (see above)
@@ -68,13 +66,13 @@ fn find_matching(
                     match entity_ids.pop_front() {
                         Option::Some(id) => {
                             // keep track how many times we've encountered a particular ID
-                            let c = ids_match[*id.inner];
-                            ids_match.insert(*id.inner, c + 1);
+                            let c = ids_match[*id];
+                            ids_match.insert(*id, c + 1);
                             // keep track of the index of the particular entity in an
                             // entity type array, i.e. at which index is the entity
                             // with `id` at, using the compound key
                             id_to_idx
-                                .insert(OFFSET * entity_type_counter.into() + *id.inner, index);
+                                .insert(OFFSET * entity_type_counter.into() + *id, index);
                             index += 1;
                         },
                         Option::None(_) => {
@@ -105,8 +103,7 @@ fn find_matching(
     loop {
         match ids1.pop_front() {
             Option::Some(id) => {
-                let id = *id.inner;
-                if ids_match[id] == found_in_all {
+                if ids_match[*id] == found_in_all {
                     // id was found in every entity_ids array
 
                     // append the matching entity to the array
@@ -118,7 +115,7 @@ fn find_matching(
                         if entity_types_idx == entity_types_count {
                             break ();
                         }
-                        let idx_for_matching_id = id_to_idx[OFFSET * entity_types_idx.into() + id];
+                        let idx_for_matching_id = id_to_idx[OFFSET * entity_types_idx.into() + *id];
                         let same_type_entities = entities[entity_types_idx];
                         entities_with_matching_ids.append(*same_type_entities[idx_for_matching_id]);
 

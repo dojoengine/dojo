@@ -15,7 +15,7 @@ pub struct StoreSetRecordProcessor;
 #[async_trait]
 impl<S: State + Sync, T: JsonRpcTransport> EventProcessor<S, T> for StoreSetRecordProcessor {
     fn event_key(&self) -> String {
-        "SystemRegistered".to_string()
+        "StoreSetRecord".to_string()
     }
 
     async fn process(

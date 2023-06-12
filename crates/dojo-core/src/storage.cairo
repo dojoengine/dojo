@@ -1,5 +1,5 @@
 mod index;
-mod query;
+mod key;
 mod kv;
 mod db;
 mod utils;

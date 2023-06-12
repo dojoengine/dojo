@@ -10,11 +10,10 @@ mod World {
         contract_address::ContractAddressIntoFelt252, ClassHash, Zeroable, ContractAddress
     };
 
-    use dojo_core::storage::{db::Database, query::{Query, QueryTrait}};
+    use dojo_core::storage::{db::Database, key::{Key, KeyTrait}};
     use dojo_core::execution_context::Context;
     use dojo_core::auth::components::AuthRole;
-    use dojo_core::integer::{u250, ContractAddressIntoU250};
-    use dojo_core::{string::ShortString, auth::systems::Route};
+    use dojo_core::auth::systems::Route;
     use dojo_core::interfaces::{
         IComponentLibraryDispatcher, IComponentDispatcherTrait, IExecutorDispatcher,
         IExecutorDispatcherTrait, ISystemLibraryDispatcher, ISystemDispatcherTrait
@@ -24,17 +23,17 @@ mod World {
     fn WorldSpawned(address: ContractAddress, caller: ContractAddress) {}
 
     #[event]
-    fn ComponentRegistered(name: ShortString, class_hash: ClassHash) {}
+    fn ComponentRegistered(name: felt252, class_hash: ClassHash) {}
 
     #[event]
-    fn SystemRegistered(name: ShortString, class_hash: ClassHash) {}
+    fn SystemRegistered(name: felt252, class_hash: ClassHash) {}
 
     struct Storage {
         executor_dispatcher: IExecutorDispatcher,
-        component_registry: LegacyMap::<ShortString, ClassHash>,
-        system_registry: LegacyMap::<ShortString, ClassHash>,
-        _execution_role: LegacyMap::<ContractAddress, u250>,
-        systems_for_execution: LegacyMap::<(ContractAddress, ShortString), bool>,
+        component_registry: LegacyMap::<felt252, ClassHash>,
+        system_registry: LegacyMap::<felt252, ClassHash>,
+        _execution_role: LegacyMap::<ContractAddress, felt252>,
+        systems_for_execution: LegacyMap::<(ContractAddress, felt252), bool>,
         initialized: bool,
         nonce: usize,
     }
@@ -61,9 +60,9 @@ mod World {
     ///
     /// ```
     /// let mut route = ArrayTrait::new();
-    /// let target_id = 'Bar'.into();
-    /// let role_id = 'FooWriter'.into();
-    /// let resource_id = 'Foo'.into();
+    /// let target_id = 'Bar';
+    /// let role_id = 'FooWriter';
+    /// let resource_id = 'Foo';
     /// let r = Route { target_id, role_id, resource_id,  };
     #[external]
     fn initialize(routes: Array<Route>) {
@@ -71,7 +70,7 @@ mod World {
         assert(!initialized::read(), 'already initialized');
 
         // Get the RouteAuth system class hash
-        let route_auth_class_hash = system_registry::read('RouteAuth'.into());
+        let route_auth_class_hash = system_registry::read('RouteAuth');
 
         // Loop through each route and handle the auth.
         // This grants the system the permission to specific components.
@@ -110,15 +109,15 @@ mod World {
     /// * `bool` - True if the system is authorized to write to the component, false otherwise
     #[view]
     fn is_authorized(
-        system: ShortString, component: ShortString, execution_role: AuthRole
+        system: felt252, component: felt252, execution_role: AuthRole
     ) -> bool {
-        let is_authorized_class_hash = system_registry::read('IsAuthorized'.into());
+        let is_authorized_class_hash = system_registry::read('IsAuthorized');
 
         // If the world has been initialized, check the authorization.
         // World is initialized when WorldFactory::spawn is called
         if initialized::read() {
             // If component to be updated is AuthStatus or AuthRole, check if the caller account is Admin
-            if component == 'AuthStatus'.into() | component == 'AuthRole'.into() {
+            if component == 'AuthStatus' | component == 'AuthRole' {
                 is_account_admin()
             } else {
                 // Check if the system is authorized to write to the component
@@ -146,7 +145,7 @@ mod World {
     /// * `bool` - True if the calling account has Admin role, false otherwise
     #[view]
     fn is_account_admin() -> bool {
-        let is_account_admin_class_hash = system_registry::read('IsAccountAdmin'.into());
+        let is_account_admin_class_hash = system_registry::read('IsAccountAdmin');
         // Call IsAccountAdmin system via executor
         let mut calldata = ArrayTrait::new();
         let res = executor_dispatcher::read()
@@ -181,7 +180,7 @@ mod World {
     ///
     /// * `ClassHash` - The class hash of the component
     #[view]
-    fn component(name: ShortString) -> ClassHash {
+    fn component(name: felt252) -> ClassHash {
         component_registry::read(name)
     }
 
@@ -212,7 +211,7 @@ mod World {
     ///
     /// * `ClassHash` - The class hash of the system
     #[view]
-    fn system(name: ShortString) -> ClassHash {
+    fn system(name: felt252) -> ClassHash {
         system_registry::read(name)
     }
 
@@ -227,7 +226,7 @@ mod World {
     ///
     /// * `Span<felt252>` - The result of the system execution
     #[external]
-    fn execute(name: ShortString, execute_calldata: Span<felt252>) -> Span<felt252> {
+    fn execute(name: felt252, execute_calldata: Span<felt252>) -> Span<felt252> {
         // Get the class hash of the system to be executed
         let class_hash = system_registry::read(name);
 
@@ -264,7 +263,7 @@ mod World {
     /// * `context` - The execution context of the system call
     #[external]
     fn set_entity(
-        context: Context, component: ShortString, query: Query, offset: u8, value: Span<felt252>
+        context: Context, component: felt252, query: Key, offset: u8, value: Span<felt252>
     ) {
         // Assert can only be called through the executor
         // This is to prevent system from writing to storage directly
@@ -277,9 +276,8 @@ mod World {
         fallback_authorization_check(context.caller_account, context.caller_system, component);
 
         // Set the entity
-        let table = query.table(component);
         let component_class_hash = component_registry::read(component);
-        Database::set(component_class_hash, table, query, offset, value)
+        Database::set(component_class_hash, component, query, offset, value)
     }
 
     /// Delete a component from an entity
@@ -290,7 +288,7 @@ mod World {
     /// * `query` - The query to be used to find the entity
     /// * `context` - The execution context of the system call
     #[external]
-    fn delete_entity(context: Context, component: ShortString, query: Query) {
+    fn delete_entity(context: Context, component: felt252, query: Key) {
         // Assert can only be called through the executor
         // This is to prevent system from writing to storage directly
         assert(
@@ -302,9 +300,8 @@ mod World {
         fallback_authorization_check(context.caller_account, context.caller_system, component);
 
         // Delete the entity
-        let table = query.table(component);
         let component_class_hash = component_registry::read(component);
-        let res = Database::del(component_class_hash, component.into(), query);
+        let res = Database::del(component_class_hash, component, query);
     }
 
     /// Get the component value for an entity
@@ -319,10 +316,9 @@ mod World {
     ///
     /// * `Span<felt252>` - The value of the component
     #[view]
-    fn entity(component: ShortString, query: Query, offset: u8, length: usize) -> Span<felt252> {
+    fn entity(component: felt252, query: Key, offset: u8, length: usize) -> Span<felt252> {
         let class_hash = component_registry::read(component);
-        let table = query.table(component);
-        match Database::get(class_hash, table, query, offset, length) {
+        match Database::get(class_hash, component, query, offset, length) {
             Option::Some(res) => res,
             Option::None(_) => {
                 ArrayTrait::new().span()
@@ -335,16 +331,16 @@ mod World {
     /// # Arguments
     ///
     /// * `component` - The name of the component to be retrieved
-    /// * `partition` - The partition to be retrieved
+    /// * `index` - The index to be retrieved
     ///
     /// # Returns
     ///
-    /// * `Span<u250>` - The entity IDs
+    /// * `Span<felt252>` - The entity IDs
     /// * `Span<Span<felt252>>` - The entities
     #[view]
-    fn entities(component: ShortString, partition: u250) -> (Span<u250>, Span<Span<felt252>>) {
+    fn entities(component: felt252, index: felt252) -> (Span<felt252>, Span<Span<felt252>>) {
         let class_hash = component_registry::read(component);
-        Database::all(class_hash, component.into(), partition)
+        Database::all(class_hash, component, index)
     }
 
     /// Set the executor contract address
@@ -372,7 +368,7 @@ mod World {
     /// * `role_id` - The role id to be assumed
     /// * `systems` - The systems to be validated
     #[external]
-    fn assume_role(role_id: u250, systems: Array<ShortString>) {
+    fn assume_role(role_id: felt252, systems: Array<felt252>) {
         // Only Admin can set Admin role 
         let caller = get_tx_info().unbox().account_contract_address;
         if role_id == ADMIN.into() {
@@ -424,7 +420,7 @@ mod World {
     ///
     /// * `systems` - The systems to be cleared
     #[external]
-    fn clear_role(systems: Array<ShortString>) {
+    fn clear_role(systems: Array<felt252>) {
         // Clear the execution role
         let caller = get_tx_info().unbox().account_contract_address;
         _execution_role::write(caller, 0.into());
@@ -448,9 +444,9 @@ mod World {
     ///
     /// # Returns
     ///
-    /// * `u250` - The role id of the system
+    /// * `felt252` - The role id of the system
     #[view]
-    fn execution_role() -> u250 {
+    fn execution_role() -> felt252 {
         let caller = get_tx_info().unbox().account_contract_address;
         _execution_role::read(caller)
     }
@@ -463,10 +459,10 @@ mod World {
     ///
     /// # Returns
     ///
-    /// * `Array<(ShortString, bool)>` - The component dependencies of the system
+    /// * `Array<(felt252, bool)>` - The component dependencies of the system
     /// bool is true if the system is writing to the component
     #[view]
-    fn system_components(system: ShortString) -> Array<(ShortString, bool)> {
+    fn system_components(system: felt252) -> Array<(felt252, bool)> {
         let class_hash = system_registry::read(system);
         ISystemLibraryDispatcher { class_hash }.dependencies()
     }
@@ -481,7 +477,7 @@ mod World {
     ///
     /// * `bool` - True if the system is part of the systems for execution
     #[view]
-    fn is_system_for_execution(system: ShortString) -> bool {
+    fn is_system_for_execution(system: felt252) -> bool {
         let caller = get_tx_info().unbox().account_contract_address;
         systems_for_execution::read((caller, system))
     }
@@ -496,7 +492,7 @@ mod World {
     /// * `system` - The system to be retrieved
     /// * `component` - The component to be retrieved
     fn fallback_authorization_check(
-        caller: ContractAddress, system: ShortString, component: ShortString
+        caller: ContractAddress, system: felt252, component: felt252
     ) {
         // Get execution role
         let role = execution_role();

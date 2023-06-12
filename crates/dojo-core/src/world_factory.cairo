@@ -12,7 +12,7 @@ mod WorldFactory {
     };
 
     use dojo_core::interfaces::{IWorldDispatcher, IWorldDispatcherTrait};
-    use dojo_core::{string::ShortString, auth::systems::Route};
+    use dojo_core::auth::systems::Route;
 
     struct Storage {
         world_class_hash: ClassHash,
@@ -84,7 +84,7 @@ mod WorldFactory {
 
         grant_role_calldata.append(caller.into()); // target_id
         grant_role_calldata.append(dojo_core::world::World::ADMIN); // role_id
-        world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
+        world.execute('GrantAuthRole', grant_role_calldata.span());
 
         // register components
         let components_len = components.len();

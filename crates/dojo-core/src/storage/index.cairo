@@ -4,18 +4,16 @@ mod Index {
     use traits::Into;
     use option::OptionTrait;
 
-    use dojo_core::integer::u250;
-
     struct Storage {
         // Maps id to its position in the table.
         // NOTE: ids is 1-indexed to allow for 0
         // to be used as a sentinel value.
-        ids: LegacyMap::<(u250, u250), usize>,
-        table_lens: LegacyMap::<u250, usize>,
-        tables: LegacyMap::<(u250, usize), u250>,
+        ids: LegacyMap::<(felt252, felt252), usize>,
+        table_lens: LegacyMap::<felt252, usize>,
+        tables: LegacyMap::<(felt252, usize), felt252>,
     }
 
-    fn create(table: u250, id: u250) {
+    fn create(table: felt252, id: felt252) {
         if exists(table, id) {
             return ();
         }
@@ -26,7 +24,7 @@ mod Index {
         tables::write((table, table_len), id);
     }
 
-    fn delete(table: u250, id: u250) {
+    fn delete(table: felt252, id: felt252) {
         if !exists(table, id) {
             return ();
         }
@@ -41,11 +39,11 @@ mod Index {
         tables::write((table, table_idx), tables::read((table, table_len - 1)));
     }
 
-    fn exists(table: u250, id: u250) -> bool {
+    fn exists(table: felt252, id: felt252) -> bool {
         ids::read((table, id)) != 0
     }
 
-    fn query(table: u250) -> Array<u250> {
+    fn query(table: felt252) -> Array<felt252> {
         let mut res = ArrayTrait::new();
         let table_len = table_lens::read(table);
         let mut idx: usize = 0;

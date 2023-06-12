@@ -4,14 +4,14 @@ mod KeyValueStore {
     use starknet::SyscallResultTrait;
     use option::OptionTrait;
 
-    use dojo_core::{integer::u250, serde::SpanSerde};
+    use dojo_core::serde::SpanSerde;
 
-    fn address(table: u250, key: u250) -> starknet::StorageBaseAddress {
+    fn address(table: felt252, key: felt252) -> starknet::StorageBaseAddress {
         starknet::storage_base_address_from_felt252(hash::LegacyHash::hash(table.into(), key))
     }
 
     #[view]
-    fn get(table: u250, key: u250, offset: u8, length: usize) -> Span<felt252> {
+    fn get(table: felt252, key: felt252, offset: u8, length: usize) -> Span<felt252> {
         let address_domain = 0;
         let base = address(table, key);
         let mut value = ArrayTrait::new();
@@ -42,7 +42,7 @@ mod KeyValueStore {
     }
 
     #[external]
-    fn set(table: u250, query: u250, offset: u8, value: Span<felt252>) {
+    fn set(table: felt252, query: felt252, offset: u8, value: Span<felt252>) {
         let address_domain = 0;
         let base = address(table, query);
         _set(address_domain, base, value, offset: offset);

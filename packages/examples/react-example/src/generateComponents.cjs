@@ -38,7 +38,7 @@ fs.readFile(jsonFilePath, 'utf8', (err, jsonString) => {
             component.members.forEach((member) => {
                 // Convert member types to a JS equivalent
                 let memberType = 'RecsType.Unknown';
-                if (member.type === 'u8' || member.type === 'u32' || member.type === 'u250') {
+                if (member.type === 'u8' || member.type === 'u32') {
                     memberType = 'RecsType.Number';
                 } else if (member.type === 'bool') {
                     memberType = 'RecsType.Boolean';

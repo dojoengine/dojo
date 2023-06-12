@@ -19,11 +19,9 @@ mod ERC20 {
         LiteralIntoQuery,
         TupleSize1IntoQuery,
         TupleSize2IntoQuery,
-        IntoPartitioned,
-        IntoPartitionedQuery
     };
     
-    use dojo_core::{integer::u250, string::ShortString, interfaces::{IWorldDispatcher, IWorldDispatcherTrait}};
+    use dojo_core::interfaces::{IWorldDispatcher, IWorldDispatcherTrait};
     use dojo_erc::erc20::components::{Allowance, Balance, Supply};
 
     struct Storage {
@@ -60,7 +58,7 @@ mod ERC20 {
             calldata.append(token.into());
             calldata.append(recipient.into());
             calldata.append(initial_supply);
-            world().execute('ERC20Mint'.into(), calldata.span());
+            world().execute('ERC20Mint', calldata.span());
             Transfer(Zeroable::zero(), recipient, initial_supply.into());
         }
     }
@@ -83,7 +81,7 @@ mod ERC20 {
     #[view]
     fn total_supply() -> u256 {
         let query: Query = get_contract_address().into();
-        let mut supply_raw = world().entity('Supply'.into(), query, 0, 0);
+        let mut supply_raw = world().entity('Supply', query, 0, 0);
         let supply = serde::Serde::<Supply>::deserialize(ref supply_raw).unwrap();
         supply.amount.into()
     }
@@ -92,7 +90,7 @@ mod ERC20 {
     fn balance_of(account: ContractAddress) -> u256 {
         let token = get_contract_address();
         let query: Query = (token, (account,)).into_partitioned();        
-        let mut balance_raw = world().entity('Balance'.into(), query, 0, 0);
+        let mut balance_raw = world().entity('Balance', query, 0, 0);
         let balance = serde::Serde::<Balance>::deserialize(ref balance_raw).unwrap();
         balance.amount.into()
     }
@@ -101,7 +99,7 @@ mod ERC20 {
     fn allowance(owner: ContractAddress, spender: ContractAddress) -> u256 {
         let token = get_contract_address();
         let query: Query = (token, (owner, spender)).into_partitioned();
-        let mut allowance_raw = world().entity('Allowance'.into(), query, 0, 0);
+        let mut allowance_raw = world().entity('Allowance', query, 0, 0);
         let allowance = serde::Serde::<Allowance>::deserialize(ref allowance_raw).unwrap();
         allowance.amount.into()
     }
@@ -117,7 +115,7 @@ mod ERC20 {
         calldata.append(owner.into());
         calldata.append(spender.into());
         calldata.append(u256_as_allowance(amount));
-        world().execute('ERC20Approve'.into(), calldata.span());
+        world().execute('ERC20Approve', calldata.span());
 
         Approval(owner, spender, amount);
 
@@ -155,7 +153,7 @@ mod ERC20 {
         calldata.append(recipient.into());
         calldata.append(u256_into_felt252(amount));
 
-        world().execute('ERC20TransferFrom'.into(), calldata.span());
+        world().execute('ERC20TransferFrom', calldata.span());
 
         Transfer(spender, recipient, amount);
     }

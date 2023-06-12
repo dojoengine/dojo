@@ -1,18 +1,16 @@
-use dojo_core::integer::u250;
-
 #[derive(Drop, Serde)]
 struct Route {
-    target_id: u250,
-    role_id: u250,
-    resource_id: u250,
+    target_id: felt252,
+    role_id: felt252,
+    resource_id: felt252,
 }
 
 trait RouteTrait {
-    fn new(target_id: u250, role_id: u250, resource_id: u250) -> Route;
+    fn new(target_id: felt252, role_id: felt252, resource_id: felt252) -> Route;
 }
 
 impl RouteImpl of RouteTrait {
-    fn new(target_id: u250, role_id: u250, resource_id: u250) -> Route {
+    fn new(target_id: felt252, role_id: felt252, resource_id: felt252) -> Route {
         Route { target_id, role_id, resource_id,  }
     }
 }
@@ -43,7 +41,7 @@ mod RouteAuth {
 mod IsAccountAdmin {
     use traits::Into;
     use box::BoxTrait;
-    use dojo_core::{auth::components::{AuthStatus, AuthRole}, integer::u250};
+    use dojo_core::auth::components::{AuthStatus, AuthRole};
     use dojo_core::world::World;
 
     fn execute(ctx: Context) -> bool {
@@ -58,17 +56,17 @@ mod IsAccountAdmin {
 #[system]
 mod IsAuthorized {
     use traits::Into;
-    use dojo_core::{auth::components::{AuthStatus, AuthRole}, integer::u250};
+    use dojo_core::auth::components::{AuthStatus, AuthRole};
     use dojo_core::world::World;
 
-    fn execute(ctx: Context, target_id: u250, resource_id: u250) -> bool {
+    fn execute(ctx: Context, target_id: felt252, resource_id: felt252) -> bool {
         // Check if execution role is not set
         let scoped_role = if ctx.execution_role.id == 0.into() {
             // Use default component-scoped role
             // TODO: use commands once parsing is fixed
             let mut role = ctx
                 .world
-                .entity('AuthRole'.into(), (target_id, resource_id).into(), 0, 0);
+                .entity('AuthRole', (target_id, resource_id).into(), 0, 0);
             let scoped_role = serde::Serde::<AuthRole>::deserialize(ref role);
             match scoped_role {
                 Option::Some(scoped_role) => scoped_role.id,
@@ -110,9 +108,9 @@ mod IsAuthorized {
 mod GrantAuthRole {
     use traits::Into;
     use array::ArrayTrait;
-    use dojo_core::{auth::components::AuthRole, integer::u250};
+    use dojo_core::auth::components::AuthRole;
 
-    fn execute(target_id: u250, role_id: u250) {
+    fn execute(target_id: felt252, role_id: felt252) {
         commands::set_entity(target_id.into(), (AuthRole { id: role_id }));
     }
 }
@@ -121,10 +119,10 @@ mod GrantAuthRole {
 mod GrantScopedAuthRole {
     use traits::Into;
     use array::ArrayTrait;
-    use dojo_core::{auth::components::AuthRole, integer::u250};
+    use dojo_core::auth::components::AuthRole;
 
 
-    fn execute(target_id: u250, role_id: u250, resource_id: u250) {
+    fn execute(target_id: felt252, role_id: felt252, resource_id: felt252) {
         commands::set_entity((target_id, resource_id).into(), (AuthRole { id: role_id }));
     }
 }
@@ -132,9 +130,9 @@ mod GrantScopedAuthRole {
 #[system]
 mod GrantResource {
     use traits::Into;
-    use dojo_core::{auth::components::AuthStatus, integer::u250};
+    use dojo_core::auth::components::AuthStatus;
 
-    fn execute(role_id: u250, resource_id: u250) {
+    fn execute(role_id: felt252, resource_id: felt252) {
         commands::set_entity((role_id, resource_id).into(), (AuthStatus { is_authorized: true }));
     }
 }
@@ -143,9 +141,9 @@ mod GrantResource {
 mod RevokeAuthRole {
     use traits::Into;
     use array::ArrayTrait;
-    use dojo_core::{auth::components::AuthRole, integer::u250};
+    use dojo_core::auth::components::AuthRole;
 
-    fn execute(target_id: u250) {
+    fn execute(target_id: felt252) {
         commands::set_entity(target_id.into(), (AuthRole { id: 0.into() }));
     }
 }
@@ -154,9 +152,9 @@ mod RevokeAuthRole {
 mod RevokeScopedAuthRole {
     use traits::Into;
     use array::ArrayTrait;
-    use dojo_core::{auth::components::AuthRole, integer::u250};
+    use dojo_core::auth::components::AuthRole;
 
-    fn execute(target_id: u250, resource_id: u250) {
+    fn execute(target_id: felt252, resource_id: felt252) {
         commands::set_entity((target_id, resource_id).into(), (AuthRole { id: 0.into() }));
     }
 }
@@ -164,9 +162,9 @@ mod RevokeScopedAuthRole {
 #[system]
 mod RevokeResource {
     use traits::Into;
-    use dojo_core::{auth::components::AuthStatus, integer::u250};
+    use dojo_core::auth::components::AuthStatus;
 
-    fn execute(role_id: u250, resource_id: u250) {
+    fn execute(role_id: felt252, resource_id: felt252) {
         commands::set_entity((role_id, resource_id).into(), (AuthStatus { is_authorized: false }));
     }
 }
