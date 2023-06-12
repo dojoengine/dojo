@@ -62,9 +62,7 @@ mod WorldFactory {
 
     #[external]
     fn spawn(
-        components: Array<ClassHash>,
-        systems: Array<ClassHash>,
-        routes: Array<Route>,
+        components: Array<ClassHash>, systems: Array<ClassHash>, routes: Array<Route>, 
     ) -> ContractAddress {
         // deploy world
         let mut world_constructor_calldata: Array<felt252> = ArrayTrait::new();
@@ -85,7 +83,7 @@ mod WorldFactory {
         let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
 
         grant_role_calldata.append(caller.into()); // target_id
-        grant_role_calldata.append('Admin'); // role_id
+        grant_role_calldata.append(dojo_core::world::World::ADMIN); // role_id
         world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
 
         // register components

@@ -63,7 +63,7 @@ fn test_constructor() {
 }
 
 #[test]
-#[available_gas(100000000)]
+#[available_gas(90000000)]
 fn test_spawn_world() {
     // Deploy Executor
     let constructor_calldata = array::ArrayTrait::new();
@@ -101,7 +101,7 @@ fn test_spawn_world() {
     // Check Admin role is set
     let caller = get_caller_address();
     let role = world.entity('AuthRole'.into(), caller.into(), 0, 0);
-    assert(*role[0] == 'Admin', 'admin role not set');
+    assert(*role[0] == World::ADMIN, 'admin role not set');
 
     // Check AuthRole component and GrantAuthRole system are registered
     let role_hash = world.component('AuthRole'.into());
