@@ -169,7 +169,7 @@ fn test_assume_role() {
     // Admin assumes Admin role
     let mut systems = ArrayTrait::new();
     systems.append('Bar'.into());
-    world.assume_role('Admin'.into(), systems);
+    world.assume_role(World::ADMIN.into(), systems);
 }
 
 #[test]
@@ -399,9 +399,9 @@ fn test_admin_system_but_non_admin_caller() {
     // Admin caller grants Admin role to Bar system
     let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
     grant_role_calldata.append('Bar'); // target_id
-    grant_role_calldata.append('Admin'); // role_id
+    grant_role_calldata.append(World::ADMIN); // role_id
     let systems = ArrayTrait::new();
-    world.assume_role('Admin'.into(), systems);
+    world.assume_role(World::ADMIN.into(), systems);
     world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
 
     // Admin revokes its Admin role

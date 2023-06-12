@@ -44,13 +44,14 @@ mod IsAccountAdmin {
     use traits::Into;
     use box::BoxTrait;
     use dojo_core::{auth::components::{AuthStatus, AuthRole}, integer::u250};
+    use dojo_core::world::World;
 
     fn execute(ctx: Context) -> bool {
         // Get calling account contract address
         let caller = ctx.caller_account;
         let role = commands::<AuthRole>::entity(caller.into());
         // Authorize if role is Admin
-        role.id.into() == 'Admin'
+        role.id.into() == World::ADMIN
     }
 }
 
@@ -58,7 +59,7 @@ mod IsAccountAdmin {
 mod IsAuthorized {
     use traits::Into;
     use dojo_core::{auth::components::{AuthStatus, AuthRole}, integer::u250};
-
+    use dojo_core::world::World;
 
     fn execute(ctx: Context, target_id: u250, resource_id: u250) -> bool {
         // Check if execution role is not set
@@ -96,8 +97,8 @@ mod IsAuthorized {
         let role = commands::<AuthRole>::entity(target_id.into());
 
         // Check if system's role is Admin and executed by an Admin
-        if role.id.into() == 'Admin' {
-            assert(ctx.execution_role.id.into() == 'Admin', 'Unauthorized Admin call');
+        if role.id.into() == World::ADMIN {
+            assert(ctx.execution_role.id.into() == World::ADMIN, 'Unauthorized Admin call');
             true
         } else {
             false

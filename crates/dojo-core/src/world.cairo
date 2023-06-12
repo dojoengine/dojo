@@ -39,7 +39,7 @@ mod World {
         nonce: usize,
     }
 
-    const ADMIN: felt252 = 'Admin';
+    const ADMIN: felt252 = 'Demiurge';
 
     #[constructor]
     fn constructor(executor: ContractAddress) {
