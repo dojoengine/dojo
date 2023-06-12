@@ -1,8 +1,9 @@
 {
   "compilerOptions": {
-    "target": "ES2018",
-    "module": "commonjs",
+    "target": "ES2020",
+    "module": "ESNext",
     "declaration": true,
+    "moduleResolution": "bundler",
     "outDir": "./dist",
     "strict": true,
     "types": [
@@ -13,6 +14,7 @@
   "include": [
     "src/**/*.ts"
   ],
+  "skipLibCheck": true,
   "exclude": [
     "node_modules",
     "dist",
