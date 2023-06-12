@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use clap::Args;
 use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::FieldElement;
@@ -44,10 +44,11 @@ impl AccountOptions {
     where
         P: Provider + Send + Sync + 'static,
     {
-        let signer = self.signer(env_metadata)?;
         let account_address = self.account_address(env_metadata)?;
+        let signer = self.signer(env_metadata)?;
 
-        let chain_id = provider.chain_id().await?;
+        let chain_id =
+            provider.chain_id().await.with_context(|| "Failed to retrieve network chain id.")?;
 
         Ok(SingleOwnerAccount::new(provider, signer, account_address, chain_id))
     }

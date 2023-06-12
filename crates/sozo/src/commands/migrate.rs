@@ -1,6 +1,9 @@
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use clap::Args;
 use scarb::core::Config;
+use starknet::accounts::{Account, ConnectedAccount};
+use starknet::core::types::{BlockId, BlockTag, StarknetError};
+use starknet::providers::{Provider, ProviderError};
 
 use super::options::account::AccountOptions;
 use super::options::dojo_metadata_from_workspace;
@@ -47,13 +50,27 @@ impl MigrateArgs {
 
         ws.config().tokio_handle().block_on(async {
             let world_address = self.world.address(env_metadata.as_ref()).ok();
-            let provider = self.starknet.provider(env_metadata.as_ref())?;
 
-            let account = self
-                .account
-                .account(provider, env_metadata.as_ref())
-                .await
-                .with_context(|| "Problem initializing account for migration.")?;
+            let account = {
+                let provider = self.starknet.provider(env_metadata.as_ref())?;
+                let account = self.account.account(provider, env_metadata.as_ref()).await?;
+                let address = account.address();
+
+                config.ui().print(format!("\nMigration account: {address:#x}\n"));
+
+                match account
+                    .provider()
+                    .get_class_hash_at(BlockId::Tag(BlockTag::Pending), address)
+                    .await
+                {
+                    Ok(_) => Ok(account),
+                    Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
+                        Err(anyhow!("Account with address {:#x} doesn't exist.", account.address()))
+                    }
+                    Err(e) => Err(e.into()),
+                }
+            }
+            .with_context(|| "Problem initializing account for migration.")?;
 
             migration::execute(world_address, account, target_dir, ws.config()).await
         })?;
