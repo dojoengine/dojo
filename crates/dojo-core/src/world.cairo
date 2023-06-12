@@ -9,7 +9,7 @@ mod World {
         get_caller_address, get_contract_address, get_tx_info,
         contract_address::ContractAddressIntoFelt252, ClassHash, Zeroable, ContractAddress
     };
-    use debug::PrintTrait;
+
     use dojo_core::storage::{db::Database, query::{Query, QueryTrait}};
     use dojo_core::execution_context::Context;
     use dojo_core::auth::components::AuthRole;
