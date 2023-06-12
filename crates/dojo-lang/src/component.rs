@@ -67,11 +67,14 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> 
     // Add the is_indexed function to the body
     body_nodes.push(is_indexed_fn);
 
-    let schema: Vec<_> = struct_ast
+    let members: Vec<_> = struct_ast
         .members(db)
         .elements(db)
         .iter()
-        .map(|member| (member.name(db).text(db), member.type_clause(db).ty(db), 252))
+        .enumerate()
+        .map(|(slot, member)| {
+            (member.name(db).text(db), member.type_clause(db).ty(db), slot as u64, 0)
+        })
         .collect::<_>();
 
     let name = struct_ast.name(db).text(db);
@@ -94,9 +97,9 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> 
                 use super::$type_name$;
 
                 #[view]
-                fn schema() -> Array<(felt252, felt252, u8)> {
+                fn schema() -> Array<(felt252, felt252, usize, u8)> {
                     let mut arr = array::ArrayTrait::new();
-                    $schemas$
+                    $schema_members$
                     arr
                 }
 
@@ -111,20 +114,22 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> 
             ("members".to_string(), RewriteNode::Copied(struct_ast.members(db).as_syntax_node())),
             ("body".to_string(), RewriteNode::new_modified(body_nodes)),
             (
-                "schemas".to_string(),
+                "schema_members".to_string(),
                 RewriteNode::new_modified(
-                    schema
+                    members
                         .iter()
                         .map(|item| {
                             RewriteNode::interpolate_patched(
                                 "array::ArrayTrait::append(ref arr, ('$name$', '$type_clause$', \
-                                 252));\n",
+                                 $slot$, $offset$));\n",
                                 HashMap::from([
                                     ("name".to_string(), RewriteNode::Text(item.0.to_string())),
                                     (
                                         "type_clause".to_string(),
                                         RewriteNode::new_trimmed(item.1.as_syntax_node()),
                                     ),
+                                    ("slot".to_string(), RewriteNode::Text(item.2.to_string())),
+                                    ("offset".to_string(), RewriteNode::Text(item.3.to_string())),
                                 ]),
                             )
                         })
@@ -142,14 +147,13 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> 
                 patches: builder.patches,
                 components: vec![Component {
                     name: name.to_string(),
-                    members: schema
+                    members: members
                         .iter()
-                        .enumerate()
-                        .map(|(slot, (name, ty, _size))| Member {
+                        .map(|(name, ty, slot, offset)| Member {
                             name: name.to_string(),
                             ty: ty.as_syntax_node().get_text(db).trim().to_string(),
-                            slot,
-                            offset: 0,
+                            slot: *slot,
+                            offset: *offset,
                         })
                         .collect(),
                 }],

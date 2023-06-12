@@ -6,7 +6,6 @@ use env_logger::Env;
 use katana_core::sequencer::KatanaSequencer;
 use katana_rpc::KatanaNodeRpc;
 use log::error;
-use tokio::sync::RwLock;
 use yansi::Paint;
 
 mod cli;
@@ -15,18 +14,23 @@ use cli::App;
 
 #[tokio::main]
 async fn main() {
-    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+    env_logger::Builder::from_env(
+        Env::default().default_filter_or("info,server=debug,blockifier=off,jsonrpsee_server=off"),
+    )
+    .init();
 
     let config = App::parse();
+
     let rpc_config = config.rpc_config();
+    let sequencer_config = config.sequencer_config();
     let starknet_config = config.starknet_config();
 
-    let sequencer = Arc::new(RwLock::new(KatanaSequencer::new(starknet_config)));
+    let sequencer = Arc::new(KatanaSequencer::new(sequencer_config, starknet_config));
 
     let predeployed_accounts = if config.hide_predeployed_accounts {
         None
     } else {
-        Some(sequencer.read().await.starknet.predeployed_accounts.display())
+        Some(sequencer.starknet.read().await.predeployed_accounts.display())
     };
 
     match KatanaNodeRpc::new(sequencer.clone(), rpc_config).run().await {
@@ -37,7 +41,7 @@ async fn main() {
                 format!("🚀 JSON-RPC server started: {}", Paint::red(format!("http://{addr}"))),
             );
 
-            sequencer.write().await.start();
+            sequencer.start().await;
             server_handle.stopped().await;
         }
         Err(err) => {

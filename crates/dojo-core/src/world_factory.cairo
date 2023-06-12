@@ -6,7 +6,10 @@ mod WorldFactory {
     use option::OptionTrait;
     use traits::Into;
 
-    use starknet::{ClassHash, ContractAddress, contract_address::ContractAddressIntoFelt252, syscalls::deploy_syscall, get_caller_address};
+    use starknet::{
+        ClassHash, ContractAddress, contract_address::ContractAddressIntoFelt252,
+        syscalls::deploy_syscall, get_caller_address
+    };
 
     use dojo_core::interfaces::{IWorldDispatcher, IWorldDispatcherTrait};
     use dojo_core::{string::ShortString, auth::systems::Route};
@@ -59,14 +62,10 @@ mod WorldFactory {
 
     #[external]
     fn spawn(
-        name: ShortString,
-        components: Array<ClassHash>,
-        systems: Array<ClassHash>,
-        routes: Array<Route>,
+        components: Array<ClassHash>, systems: Array<ClassHash>, routes: Array<Route>, 
     ) -> ContractAddress {
         // deploy world
         let mut world_constructor_calldata: Array<felt252> = ArrayTrait::new();
-        world_constructor_calldata.append(name.into());
         world_constructor_calldata.append(executor_address::read().into());
         let world_class_hash = world_class_hash::read();
         let result = deploy_syscall(world_class_hash, 0, world_constructor_calldata.span(), true);
@@ -84,7 +83,7 @@ mod WorldFactory {
         let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
 
         grant_role_calldata.append(caller.into()); // target_id
-        grant_role_calldata.append('Admin'); // role_id
+        grant_role_calldata.append(dojo_core::world::World::ADMIN); // role_id
         world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
 
         // register components

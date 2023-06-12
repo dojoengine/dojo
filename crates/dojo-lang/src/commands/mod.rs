@@ -2,6 +2,7 @@ use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_semantic::patcher::RewriteNode;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal};
+use dojo_world::manifest::Dependency;
 use smol_str::SmolStr;
 
 pub mod entities;
@@ -37,7 +38,7 @@ impl CommandData {
 pub struct Command {
     pub rewrite_nodes: Vec<RewriteNode>,
     pub diagnostics: Vec<PluginDiagnostic>,
-    pub component_deps: Vec<SmolStr>,
+    pub component_deps: Vec<Dependency>,
 }
 
 impl Command {
@@ -59,11 +60,13 @@ impl Command {
                 let sc = entity::EntityCommand::from_ast(db, let_pattern, command_ast);
                 command.rewrite_nodes.extend(sc.rewrite_nodes());
                 command.diagnostics.extend(sc.diagnostics());
+                command.component_deps.extend(sc.components);
             }
             "try_entity" => {
                 let sc = entity::EntityCommand::from_ast(db, let_pattern, command_ast);
                 command.rewrite_nodes.extend(sc.rewrite_nodes());
                 command.diagnostics.extend(sc.diagnostics());
+                command.component_deps.extend(sc.components);
             }
             "set_entity" => {
                 let sc = set::SetCommand::from_ast(db, let_pattern, command_ast);
@@ -75,6 +78,7 @@ impl Command {
                 let sc = entities::EntitiesCommand::from_ast(db, let_pattern, command_ast);
                 command.rewrite_nodes.extend(sc.rewrite_nodes());
                 command.diagnostics.extend(sc.diagnostics());
+                command.component_deps.extend(sc.components);
             }
             "execute" => {
                 let sc = execute::ExecuteCommand::from_ast(db, let_pattern, command_ast);

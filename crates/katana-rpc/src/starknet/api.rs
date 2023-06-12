@@ -7,7 +7,7 @@ use starknet::core::serde::unsigned_field_element::UfeHex;
 use starknet::core::types::{
     BlockHashAndNumber, BlockId, BroadcastedDeclareTransaction,
     BroadcastedDeployAccountTransaction, BroadcastedInvokeTransaction, BroadcastedTransaction,
-    ContractClass, DeclareTransactionResult, DeployAccountTransactionResult, EventFilter,
+    ContractClass, DeclareTransactionResult, DeployAccountTransactionResult, EventFilterWithPage,
     EventsPage, FeeEstimate, FieldElement, FunctionCall, InvokeTransactionResult,
     MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, MaybePendingTransactionReceipt,
     StateUpdate, Transaction,
@@ -134,12 +134,7 @@ pub trait StarknetApi {
     ) -> Result<ContractClass, Error>;
 
     #[method(name = "getEvents")]
-    async fn events(
-        &self,
-        filter: EventFilter,
-        continuation_token: Option<String>,
-        chunk_size: u64,
-    ) -> Result<EventsPage, Error>;
+    async fn events(&self, filter: EventFilterWithPage) -> Result<EventsPage, Error>;
 
     #[method(name = "pendingTransactions")]
     async fn pending_transactions(&self) -> Result<Vec<Transaction>, Error>;
@@ -171,7 +166,7 @@ pub trait StarknetApi {
     #[method(name = "addDeclareTransaction")]
     async fn add_declare_transaction(
         &self,
-        transaction: BroadcastedDeclareTransaction,
+        declare_transaction: BroadcastedDeclareTransaction,
     ) -> Result<DeclareTransactionResult, Error>;
 
     #[method(name = "addInvokeTransaction")]

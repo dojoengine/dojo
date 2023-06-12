@@ -7,9 +7,7 @@ mod KeyValueStore {
     use dojo_core::{integer::u250, serde::SpanSerde};
 
     fn address(table: u250, key: u250) -> starknet::StorageBaseAddress {
-        starknet::storage_base_address_from_felt252(
-            hash::LegacyHash::hash(0x420, (table, key))
-        )
+        starknet::storage_base_address_from_felt252(hash::LegacyHash::hash(table.into(), key))
     }
 
     #[view]
@@ -32,11 +30,13 @@ mod KeyValueStore {
             return ();
         }
 
-        value.append(
-            starknet::storage_read_syscall(
-                address_domain, starknet::storage_address_from_base_and_offset(base, offset)
-            ).unwrap_syscall()
-        );
+        value
+            .append(
+                starknet::storage_read_syscall(
+                    address_domain, starknet::storage_address_from_base_and_offset(base, offset)
+                )
+                    .unwrap_syscall()
+            );
 
         return _get(address_domain, base, ref value, offset + 1, length);
     }

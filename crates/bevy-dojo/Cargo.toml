@@ -20,7 +20,3 @@ chrono = "0.4"
 default = ["indexer"]
 indexer = ["apibara-core", "apibara-sdk"]
 
-[[example]]
-name = "simple"
-path = "examples/simple.rs"
-required-features = ["indexer"]

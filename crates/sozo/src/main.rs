@@ -1,35 +1,51 @@
+use std::env;
 use std::process::exit;
 
+use anyhow::Result;
 use clap::Parser;
-use env_logger::Env;
-use log::error;
+use commands::test::DojoTestCompiler;
+use dojo_lang::compiler::DojoCompiler;
+use dojo_lang::plugin::CairoPluginRepository;
+use scarb::compiler::CompilerRepository;
+use scarb::core::Config;
+use scarb::ui::{OutputFormat, Ui};
 
-mod build;
-mod cli;
-mod init;
-mod migrate;
+mod args;
+mod commands;
+mod ops;
 
-use cli::{App, Commands};
+use args::{Commands, SozoArgs};
 
-// #[tokio::main]
 fn main() {
-    env_logger::Builder::from_env(Env::default().default_filter_or("sozo=info")).init();
+    let args = SozoArgs::parse();
 
-    let cli = App::parse();
+    let ui = Ui::new(args.ui_verbosity(), OutputFormat::Text);
 
-    let res = match cli.command {
-        Commands::Build(args) => build::run(args),
-        Commands::Init(args) => {
-            init::run(args);
-            Ok(())
-        }
-        Commands::Migrate(args) => migrate::run(args),
-        Commands::Bind(..) => Ok(print!("Bind")),
-        Commands::Inspect(..) => Ok(print!("Inspect")),
-    };
-
-    if let Err(err) = res {
-        error! {"{}", err};
+    if let Err(err) = cli_main(args) {
+        ui.anyhow(&err);
         exit(1);
     }
+}
+
+fn cli_main(args: SozoArgs) -> Result<()> {
+    let mut compilers = CompilerRepository::std();
+    let cairo_plugins = CairoPluginRepository::new();
+
+    if let Commands::Test(args) = &args.command {
+        compilers.add(Box::new(DojoTestCompiler::new(args.clone()))).unwrap();
+    } else if let Commands::Build(_) = &args.command {
+        compilers.add(Box::new(DojoCompiler)).unwrap();
+    }
+
+    let manifest_path = scarb::ops::find_manifest_path(args.manifest_path.as_deref())?;
+
+    let config = Config::builder(manifest_path)
+        .log_filter_directive(env::var_os("SCARB_LOG"))
+        .profile(args.profile_spec.determine()?)
+        .cairo_plugins(cairo_plugins.into())
+        .ui_verbosity(args.ui_verbosity())
+        .compilers(compilers)
+        .build()?;
+
+    commands::run(args.command, &config)
 }

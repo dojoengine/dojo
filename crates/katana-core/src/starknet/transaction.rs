@@ -71,25 +71,46 @@ impl StarknetTransaction {
             return events;
         };
 
-        if let Some(ref info) = execution_info.validate_call_info {
-            events.extend(info.execution.events.iter().map(|e| Event {
+        if let Some(ref call) = execution_info.validate_call_info {
+            events.extend(call.execution.events.iter().map(|e| Event {
                 content: e.event.clone(),
-                from_address: info.call.caller_address,
-            }))
+                from_address: call.call.storage_address,
+            }));
+
+            call.inner_calls.iter().for_each(|call| {
+                events.extend(call.execution.events.iter().map(|e| Event {
+                    content: e.event.clone(),
+                    from_address: call.call.storage_address,
+                }))
+            });
         }
 
-        if let Some(ref info) = execution_info.execute_call_info {
-            events.extend(info.execution.events.iter().map(|e| Event {
+        if let Some(ref call) = execution_info.execute_call_info {
+            events.extend(call.execution.events.iter().map(|e| Event {
                 content: e.event.clone(),
-                from_address: info.call.caller_address,
-            }))
+                from_address: call.call.storage_address,
+            }));
+
+            call.inner_calls.iter().for_each(|call| {
+                events.extend(call.execution.events.iter().map(|e| Event {
+                    content: e.event.clone(),
+                    from_address: call.call.storage_address,
+                }))
+            });
         }
 
-        if let Some(ref info) = execution_info.fee_transfer_call_info {
-            events.extend(info.execution.events.iter().map(|e| Event {
+        if let Some(ref call) = execution_info.fee_transfer_call_info {
+            events.extend(call.execution.events.iter().map(|e| Event {
                 content: e.event.clone(),
-                from_address: info.call.caller_address,
-            }))
+                from_address: call.call.storage_address,
+            }));
+
+            call.inner_calls.iter().for_each(|call| {
+                events.extend(call.execution.events.iter().map(|e| Event {
+                    content: e.event.clone(),
+                    from_address: call.call.storage_address,
+                }))
+            });
         }
 
         events

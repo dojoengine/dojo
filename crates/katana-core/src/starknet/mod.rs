@@ -10,14 +10,14 @@ use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::errors::TransactionExecutionError;
 use blockifier::transaction::objects::{AccountTransactionContext, TransactionExecutionInfo};
 use blockifier::transaction::transaction_execution::Transaction;
-use blockifier::transaction::transactions::{DeclareTransaction, ExecutableTransaction};
+use blockifier::transaction::transactions::ExecutableTransaction;
 use starknet::core::types::{FieldElement, StateUpdate, TransactionStatus};
 use starknet_api::block::{BlockHash, BlockNumber, BlockTimestamp, GasPrice};
 use starknet_api::core::{ClassHash, ContractAddress, GlobalRoot, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};
 use starknet_api::transaction::{DeclareTransactionV0V1, DeployTransaction, TransactionHash};
 use starknet_api::{patricia_key, stark_felt};
-use tracing::info;
+use tracing::{info, warn};
 
 pub mod block;
 pub mod event;
@@ -42,6 +42,7 @@ use crate::util::{
 #[derive(Debug, Default)]
 pub struct StarknetConfig {
     pub seed: [u8; 32],
+    pub auto_mine: bool,
     pub gas_price: u128,
     pub chain_id: String,
     pub total_accounts: u8,
@@ -102,7 +103,7 @@ impl StarknetWrapper {
     pub fn handle_transaction(&mut self, transaction: Transaction) {
         let api_tx = convert_blockifier_tx_to_starknet_api_tx(&transaction);
 
-        info!("Transaction received | Transaction hash: {}", api_tx.transaction_hash());
+        info!("Transaction received | Hash: {}", api_tx.transaction_hash());
 
         let res = match transaction {
             Transaction::AccountTransaction(tx) => {
@@ -132,13 +133,15 @@ impl StarknetWrapper {
 
                 self.store_transaction(starknet_tx);
 
-                if !self.config.blocks_on_demand {
+                if !self.config.auto_mine && !self.config.blocks_on_demand {
                     self.generate_latest_block();
                     self.generate_pending_block();
                 }
             }
 
             Err(exec_err) => {
+                warn!("Transaction execution error: {exec_err}");
+
                 let tx = StarknetTransaction::new(
                     api_tx,
                     TransactionStatus::Rejected,
@@ -177,7 +180,7 @@ impl StarknetWrapper {
         }
 
         info!(
-            "⛏️ New block generated | Block hash: {} | Block number: {}",
+            "⛏️ New block generated | Hash: {} | Number: {}",
             new_block.block_hash(),
             new_block.block_number()
         );
@@ -254,7 +257,7 @@ impl StarknetWrapper {
         let max_fee = match transaction {
             AccountTransaction::Invoke(tx) => tx.max_fee(),
             AccountTransaction::DeployAccount(tx) => tx.max_fee,
-            AccountTransaction::Declare(DeclareTransaction { tx, .. }) => match tx {
+            AccountTransaction::Declare(tx) => match tx.tx() {
                 starknet_api::transaction::DeclareTransaction::V0(tx) => tx.max_fee,
                 starknet_api::transaction::DeclareTransaction::V1(tx) => tx.max_fee,
                 starknet_api::transaction::DeclareTransaction::V2(tx) => tx.max_fee,

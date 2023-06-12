@@ -24,8 +24,8 @@ cargo install --path ./crates/katana --locked --force
 
 | Feature        | State              | Version |
 | -------------- | ------------------ | ------- |
-| invoke         | :white_check_mark: | V1      |
-| declare        | :white_check_mark: | V2      |
+| invoke         | :white_check_mark: | 1       |
+| declare        | :white_check_mark: | 1, 2    |
 | deploy_account | :white_check_mark: |         |
 
 ### Supported RPC

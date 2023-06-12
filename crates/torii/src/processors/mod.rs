@@ -3,25 +3,28 @@ use async_trait::async_trait;
 use starknet::core::types::{BlockWithTxs, Event, TransactionReceipt};
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
 
-use crate::storage::Storage;
+use crate::state::State;
 
-// pub mod component_register;
+pub mod register_component;
+pub mod register_system;
 // pub mod component_state_update;
 // pub mod system_register;
 
 #[async_trait]
-pub trait EventProcessor<S: Storage, T: JsonRpcTransport> {
+pub trait EventProcessor<S: State, T: JsonRpcTransport> {
     fn event_key(&self) -> String;
     async fn process(
         &self,
         storage: &S,
         provider: &JsonRpcClient<T>,
+        block: &BlockWithTxs,
+        transaction_receipt: &TransactionReceipt,
         event: &Event,
     ) -> Result<(), Error>;
 }
 
 #[async_trait]
-pub trait BlockProcessor<S: Storage, T: JsonRpcTransport> {
+pub trait BlockProcessor<S: State, T: JsonRpcTransport> {
     fn get_block_number(&self) -> String;
     async fn process(
         &self,
@@ -32,12 +35,13 @@ pub trait BlockProcessor<S: Storage, T: JsonRpcTransport> {
 }
 
 #[async_trait]
-pub trait TransactionProcessor<S: Storage, T: JsonRpcTransport> {
+pub trait TransactionProcessor<S: State, T: JsonRpcTransport> {
     fn get_transaction_hash(&self) -> String;
     async fn process(
         &self,
         storage: &S,
         provider: &JsonRpcClient<T>,
+        block: &BlockWithTxs,
         transaction_receipt: &TransactionReceipt,
     ) -> Result<(), Error>;
 }

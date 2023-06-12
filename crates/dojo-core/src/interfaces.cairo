@@ -1,5 +1,14 @@
-use dojo_core::{integer::u250, string::ShortString, serde::SpanSerde, storage::query::Query, auth::systems::Route};
+use dojo_core::{
+    integer::u250, string::ShortString, serde::SpanSerde, storage::query::Query,
+    auth::systems::Route, auth::components::AuthRole, execution_context::Context
+};
 use starknet::{ClassHash, ContractAddress};
+use serde::Serde;
+use array::{ArrayTrait, SpanTrait};
+use traits::{TryInto, Into};
+use option::OptionTrait;
+use starknet::contract_address::Felt252TryIntoContractAddress;
+
 
 #[abi]
 trait IWorld {
@@ -11,17 +20,38 @@ trait IWorld {
     fn uuid() -> usize;
     fn execute(name: ShortString, execute_calldata: Span<felt252>) -> Span<felt252>;
     fn entity(component: ShortString, key: Query, offset: u8, length: usize) -> Span<felt252>;
-    fn set_entity(component: ShortString, key: Query, offset: u8, value: Span<felt252>);
+    fn set_entity(
+        context: Context, component: ShortString, key: Query, offset: u8, value: Span<felt252>
+    );
     fn entities(component: ShortString, partition: u250) -> (Span<u250>, Span<Span<felt252>>);
     fn set_executor(contract_address: ContractAddress);
-    fn is_authorized(system: ClassHash, component: ClassHash) -> bool;
+    fn is_authorized(system: ShortString, component: ShortString, execution_role: AuthRole) -> bool;
     fn is_account_admin() -> bool;
-    fn delete_entity(component: ShortString, query: Query);
+    fn is_system_for_execution(system: ShortString) -> bool;
+    fn delete_entity(context: Context, component: ShortString, query: Query);
+    fn assume_role(role_id: u250, systems: Array<ShortString>);
+    fn clear_role(systems: Array<ShortString>);
+    fn execution_role() -> u250;
+    fn system_components(system: ShortString) -> Array<(ShortString, bool)>;
+}
+
+// TODO: Remove once Serde is derivable for dispatchers
+impl IWorldDispatcherSerde of Serde<IWorldDispatcher> {
+    fn serialize(self: @IWorldDispatcher, ref output: Array<felt252>) {
+        output.append((*self.contract_address).into());
+    }
+    fn deserialize(ref serialized: Span<felt252>) -> Option<IWorldDispatcher> {
+        let contract_address: felt252 = *serialized.pop_front()?;
+        let contract_address: ContractAddress = contract_address.try_into().unwrap();
+        Option::Some(IWorldDispatcher { contract_address })
+    }
 }
 
 #[abi]
 trait IExecutor {
-    fn execute(class_hash: ClassHash, data: Span<felt252>) -> Span<felt252>;
+    fn execute(
+        class_hash: ClassHash, execution_role: AuthRole, execute_calldata: Span<felt252>
+    ) -> Span<felt252>;
 }
 
 #[abi]
@@ -33,6 +63,7 @@ trait IComponent {
 #[abi]
 trait ISystem {
     fn name() -> ShortString;
+    fn dependencies() -> Array<(ShortString, bool)>;
 }
 
 #[abi]

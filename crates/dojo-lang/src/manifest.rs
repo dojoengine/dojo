@@ -5,16 +5,13 @@ use cairo_lang_defs::ids::{ModuleId, ModuleItemId};
 use cairo_lang_filesystem::ids::CrateId;
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::plugin::DynPluginAuxData;
-use dojo_world::manifest::{Input, Output, System};
+use dojo_world::manifest::{Contract, Input, Output, System};
+use itertools::Itertools;
 use serde::Serialize;
 use smol_str::SmolStr;
 use starknet::core::types::FieldElement;
 
 use crate::plugin::{DojoAuxData, SystemAuxData};
-
-#[cfg(test)]
-#[path = "manifest_test.rs"]
-mod test;
 
 #[derive(Default, Debug, Serialize)]
 pub(crate) struct Manifest(dojo_world::manifest::Manifest);
@@ -34,8 +31,9 @@ impl Manifest {
             panic!("Executor contract not found. Did you include `dojo_core` as a dependency?");
         });
 
-        manifest.0.world = Some(*world);
-        manifest.0.executor = Some(*executor);
+        manifest.0.world = Contract { name: "World".into(), address: None, class_hash: *world };
+        manifest.0.executor =
+            Contract { name: "Excecutor".into(), address: None, class_hash: *executor };
 
         for crate_id in crate_ids {
             let modules = db.crate_modules(*crate_id);
@@ -115,10 +113,13 @@ impl Manifest {
                     // Last arg is always the `world_address` which is provided by the executor.
                     params.pop();
                     for param in params.into_iter() {
-                        inputs.push(Input {
-                            name: param.id.name(db.upcast()).into(),
-                            ty: param.ty.format(db),
-                        });
+                        let ty = param.ty.format(db);
+                        // Context is injected by the executor contract.
+                        if ty == "dojo_core::execution_context::Context" {
+                            continue;
+                        }
+
+                        inputs.push(Input { name: param.id.name(db.upcast()).into(), ty });
                     }
 
                     let outputs = if signature.return_type.is_unit(db) {
@@ -139,7 +140,8 @@ impl Manifest {
                         class_hash: *class_hash,
                         dependencies: dependencies
                             .iter()
-                            .map(|s| s.to_string())
+                            .sorted_by(|a, b| a.name.cmp(&b.name))
+                            .cloned()
                             .collect::<Vec<_>>(),
                     });
                 }

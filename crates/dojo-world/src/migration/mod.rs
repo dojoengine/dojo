@@ -1,5 +1,3 @@
-pub mod world;
-
 use std::fs::File;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -8,201 +6,122 @@ use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass;
-use starknet::accounts::{Account, Call, ConnectedAccount, SingleOwnerAccount};
+use starknet::accounts::{AccountError, Call, ConnectedAccount};
 use starknet::core::types::contract::{CompiledClass, SierraClass};
-use starknet::core::types::{BlockId, BlockTag, FieldElement, FlattenedSierraClass};
-use starknet::core::utils::{get_contract_address, get_selector_from_name};
-use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
-use starknet::providers::Provider;
-use starknet::signers::LocalWallet;
+use starknet::core::types::{
+    BlockId, BlockTag, DeclareTransactionResult, FieldElement, FlattenedSierraClass,
+    InvokeTransactionResult, StarknetError,
+};
+use starknet::core::utils::{
+    get_contract_address, get_selector_from_name, CairoShortStringToFeltError,
+};
+use starknet::providers::{Provider, ProviderError};
+use thiserror::Error;
 
-use self::world::{Class, Contract};
+pub mod class;
+pub mod contract;
+pub mod strategy;
+pub mod world;
 
-// TODO: evaluate the contract address when building the migration plan
-#[derive(Debug, Default)]
-pub struct ContractMigration {
-    pub deployed: bool,
-    pub salt: FieldElement,
-    pub contract: Contract,
-    pub artifact_path: PathBuf,
-    pub contract_address: Option<FieldElement>,
+pub type DeclareOutput = DeclareTransactionResult;
+
+#[derive(Clone, Debug)]
+pub struct DeployOutput {
+    pub transaction_hash: FieldElement,
+    pub contract_address: FieldElement,
+    pub declare: Option<DeclareOutput>,
 }
 
-#[derive(Debug, Default)]
-pub struct ClassMigration {
-    pub declared: bool,
-    pub class: Class,
-    pub artifact_path: PathBuf,
+#[derive(Debug)]
+pub struct RegisterOutput {
+    pub transaction_hash: FieldElement,
+    pub declare_output: Vec<DeclareOutput>,
 }
 
-// TODO: migration error
-// should only be created by calling `World::prepare_for_migration`
-pub struct Migration {
-    world: ContractMigration,
-    executor: ContractMigration,
-    systems: Vec<ClassMigration>,
-    components: Vec<ClassMigration>,
-    migrator: SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
-}
-
-impl Migration {
-    pub async fn execute(&mut self) -> Result<()> {
-        if self.world.deployed {
-            unimplemented!("migrate: branch -> if world is deployed")
-        } else {
-            self.migrate_full_world().await?;
-        }
-
-        Ok(())
-    }
-
-    async fn migrate_full_world(&mut self) -> Result<()> {
-        if !self.executor.deployed {
-            self.executor.deploy(vec![], &self.migrator).await;
-        }
-
-        self.world.deploy(vec![self.executor.contract_address.unwrap()], &self.migrator).await;
-
-        self.register_components().await?;
-        self.register_systems().await?;
-
-        Ok(())
-    }
-
-    async fn register_components(&self) -> Result<()> {
-        for component in &self.components {
-            component.declare(&self.migrator).await;
-        }
-
-        let world_address = self
-            .world
-            .contract_address
-            .unwrap_or_else(|| panic!("World contract address not found"));
-
-        let calls = self
-            .components
-            .iter()
-            .map(|c| Call {
-                to: world_address,
-                selector: get_selector_from_name("register_component").unwrap(),
-                calldata: vec![c.class.local],
-            })
-            .collect::<Vec<_>>();
-
-        self.migrator.execute(calls).send().await?;
-
-        Ok(())
-    }
-
-    async fn register_systems(&self) -> Result<()> {
-        for system in &self.systems {
-            system.declare(&self.migrator).await;
-        }
-
-        let world_address = self
-            .world
-            .contract_address
-            .unwrap_or_else(|| panic!("World contract address not found"));
-
-        let calls = self
-            .systems
-            .iter()
-            .map(|s| Call {
-                to: world_address,
-                selector: get_selector_from_name("register_system").unwrap(),
-                calldata: vec![s.class.local],
-            })
-            .collect::<Vec<_>>();
-
-        self.migrator.execute(calls).send().await?;
-
-        Ok(())
-    }
+#[derive(Debug, Error)]
+pub enum MigrationError<S, P> {
+    #[error("Class already declared.")]
+    ClassAlreadyDeclared,
+    #[error("Contract already deployed.")]
+    ContractAlreadyDeployed,
+    #[error(transparent)]
+    Migrator(#[from] AccountError<S, P>),
+    #[error(transparent)]
+    CairoShortStringToFelt(#[from] CairoShortStringToFeltError),
+    #[error(transparent)]
+    Provider(#[from] ProviderError<P>),
 }
 
 #[async_trait]
-trait Declarable {
-    async fn declare(
+pub trait Declarable {
+    async fn declare<A>(
         &self,
-        account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
-    );
+        account: &A,
+    ) -> Result<DeclareOutput, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
+    where
+        A: ConnectedAccount + Sync,
+    {
+        let (flattened_class, casm_class_hash) =
+            prepare_contract_declaration_params(self.artifact_path()).unwrap();
+
+        if account
+            .provider()
+            .get_class(BlockId::Tag(BlockTag::Pending), casm_class_hash)
+            .await
+            .is_ok()
+        {
+            return Err(MigrationError::ClassAlreadyDeclared);
+        }
+
+        account
+            .declare(Arc::new(flattened_class), casm_class_hash)
+            .send()
+            .await
+            .map_err(MigrationError::Migrator)
+    }
+
+    fn artifact_path(&self) -> &PathBuf;
 }
 
 // TODO: Remove `mut` once we can calculate the contract address before sending the tx
 #[async_trait]
-trait Deployable: Declarable {
-    async fn deploy(
+pub trait Deployable: Declarable + Sync {
+    async fn deploy<A>(
         &mut self,
-        constructor_params: Vec<FieldElement>,
-        account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
-    );
-}
-
-#[async_trait]
-impl Declarable for ClassMigration {
-    async fn declare(
-        &self,
-        account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
-    ) {
-        declare(self.class.name.clone(), &self.artifact_path, account).await;
-    }
-}
-
-#[async_trait]
-impl Declarable for ContractMigration {
-    async fn declare(
-        &self,
-        account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
-    ) {
-        declare(self.contract.name.clone(), &self.artifact_path, account).await;
-    }
-}
-
-async fn declare(
-    name: String,
-    artifact_path: &PathBuf,
-    account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
-) {
-    let (flattened_class, casm_class_hash) = prepare_contract_declaration_params(artifact_path)
-        .unwrap_or_else(|err| {
-            panic!("Preparing declaration for {name} class: {err}");
-        });
-
-    if account.provider().get_class(BlockId::Tag(BlockTag::Pending), casm_class_hash).await.is_ok()
-    {
-        println!("{name} class already declared");
-        return;
-    }
-
-    let result = account.declare(Arc::new(flattened_class), casm_class_hash).send().await;
-
-    match result {
-        Ok(result) => {
-            println!("Declared `{}` class at transaction: {:#x}", name, result.transaction_hash);
-        }
-        Err(error) => {
-            if error.to_string().contains("already declared") {
-                println!("{name} class already declared")
-            } else {
-                panic!("Problem declaring {name} class: {error}");
-            }
-        }
-    }
-}
-
-#[async_trait]
-impl Deployable for ContractMigration {
-    async fn deploy(
-        &mut self,
+        class_hash: FieldElement,
         constructor_calldata: Vec<FieldElement>,
-        account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
-    ) {
-        self.declare(account).await;
+        account: &A,
+    ) -> Result<DeployOutput, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
+    where
+        A: ConnectedAccount + Sync,
+    {
+        let declare = match self.declare(account).await {
+            Ok(res) => Some(res),
+            Err(MigrationError::Migrator(AccountError::Provider(
+                ProviderError::StarknetError(StarknetError::ContractError),
+            ))) => None,
+            Err(err) => return Err(err),
+        };
+
+        // TODO: Replace above block with below once `get_class` is supported
+        // by Katana. The current check is naive and will proceed if the declare fails
+        // for any contract error.
+        // let declare = if let Err(err) =
+        //     account.provider().get_class(BlockId::Tag(BlockTag::Latest), class_hash).await
+        // {
+        //     if let ProviderError::StarknetError(StarknetError::ClassHashNotFound) = err {
+        //         Some(self.declare(account).await?)
+        //     } else {
+        //         return Err(MigrationError::Provider(err));
+        //     }
+        // } else {
+        //     None
+        // };
 
         let calldata = [
             vec![
-                self.contract.local,                            // class hash
-                self.salt,                                      // salt
+                class_hash,                                     // class hash
+                FieldElement::ZERO,                             // salt
                 FieldElement::ZERO,                             // unique
                 FieldElement::from(constructor_calldata.len()), // constructor calldata len
             ],
@@ -211,13 +130,13 @@ impl Deployable for ContractMigration {
         .concat();
 
         let contract_address = get_contract_address(
-            self.salt,
-            self.contract.local,
+            FieldElement::ZERO,
+            class_hash,
             &constructor_calldata,
             FieldElement::ZERO,
         );
 
-        self.contract_address = Some(contract_address);
+        self.set_contract_address(contract_address);
 
         if account
             .provider()
@@ -225,14 +144,10 @@ impl Deployable for ContractMigration {
             .await
             .is_ok()
         {
-            self.deployed = true;
-            println!("{} contract already deployed", self.contract.name);
-            return;
+            return Err(MigrationError::ContractAlreadyDeployed);
         }
 
-        println!("Deploying `{}` contract", self.contract.name);
-
-        let res = account
+        let InvokeTransactionResult { transaction_hash } = account
             .execute(vec![Call {
                 calldata,
                 // devnet UDC address
@@ -244,16 +159,13 @@ impl Deployable for ContractMigration {
             }])
             .send()
             .await
-            .unwrap_or_else(|e| panic!("problem deploying `{}` contract: {e}", self.contract.name));
+            .map_err(MigrationError::Migrator)?;
 
-        println!(
-            "Deployed `{}` contract at transaction: {:#x}",
-            self.contract.name, res.transaction_hash
-        );
-        println!("`{} `Contract address: {contract_address:#x}", self.contract.name);
-
-        self.deployed = true;
+        Ok(DeployOutput { transaction_hash, contract_address, declare })
     }
+
+    // TEMP: Remove once we can calculate the contract address before sending the tx
+    fn set_contract_address(&mut self, contract_address: FieldElement);
 }
 
 fn prepare_contract_declaration_params(

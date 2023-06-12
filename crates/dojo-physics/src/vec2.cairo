@@ -1,5 +1,5 @@
 use cubit::types::fixed::Fixed as FixedTrait;
-use cubit::types::fixed::FixedType as Fixed;
+use cubit::types::fixed::Fixed as Fixed;
 use cubit::types::fixed::ONE_u128;
 
 struct Vec2<T> {

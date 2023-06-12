@@ -21,7 +21,7 @@ impl CommandTrait for UUIDCommand {
         let mut command = UUIDCommand { data: CommandData::new() };
 
         command.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
-            "let $var_name$ = IWorldDispatcher { contract_address: world_address }.uuid();
+            "let $var_name$ = ctx.world.uuid();
                     ",
             HashMap::from([(
                 "var_name".to_string(),

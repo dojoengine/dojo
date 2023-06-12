@@ -3,30 +3,13 @@ use integer::BoundedInt;
 use option::OptionTrait;
 use traits::{Into, TryInto};
 
-use starknet::{ContractAddress, SyscallResult, contract_address::ContractAddressIntoFelt252, storage_access::{StorageAccess, StorageBaseAddress}};
+use starknet::{
+    ContractAddress, SyscallResult, contract_address::ContractAddressIntoFelt252,
+    storage_access::{StorageAccess, StorageBaseAddress}
+};
 
 // max value of u256's high part when u250::max is converted into u256
 const HIGH_BOUND: u128 = 0x3ffffffffffffffffffffffffffffff;
-
-// temporary, until we (Scarb) catches up with Cairo
-// src: https://github.com/starkware-libs/cairo/pull/3055/
-impl U256TryIntoFelt252 of TryInto<u256, felt252> {
-    fn try_into(self: u256) -> Option<felt252> {
-        let FELT252_PRIME_HIGH = 0x8000000000000110000000000000000;
-        if self.high > FELT252_PRIME_HIGH {
-            return Option::None(());
-        }
-        if self.high == FELT252_PRIME_HIGH {
-            // since FELT252_PRIME_LOW is 1.
-            if self.low != 0 {
-                return Option::None(());
-            }
-        }
-        Option::Some(
-            self.high.into() * 0x100000000000000000000000000000000_felt252 + self.low.into()
-        )
-    }
-}
 
 #[derive(Copy, Drop, Serde)]
 struct u250 {
@@ -60,12 +43,6 @@ impl Felt252IntoU250 of Into<felt252, u250> {
     }
 }
 
-impl U250IntoU250 of Into<u250, u250> {
-    fn into(self: u250) -> u250 {
-        self
-    }
-}
-
 impl Felt252TryIntoU250 of TryInto<felt252, u250> {
     fn try_into(self: felt252) -> Option<u250> {
         let v: u256 = self.into();
@@ -82,8 +59,32 @@ impl ContractAddressIntoU250 of Into<ContractAddress, u250> {
     }
 }
 
+impl U8IntoU250 of Into<u8, u250> {
+    fn into(self: u8) -> u250 {
+        u250 { inner: self.into() }
+    }
+}
+
+impl U16IntoU250 of Into<u16, u250> {
+    fn into(self: u16) -> u250 {
+        u250 { inner: self.into() }
+    }
+}
+
 impl U32IntoU250 of Into<u32, u250> {
     fn into(self: u32) -> u250 {
+        u250 { inner: self.into() }
+    }
+}
+
+impl U64IntoU250 of Into<u64, u250> {
+    fn into(self: u64) -> u250 {
+        u250 { inner: self.into() }
+    }
+}
+
+impl U128IntoU250 of Into<u128, u250> {
+    fn into(self: u128) -> u250 {
         u250 { inner: self.into() }
     }
 }
@@ -103,9 +104,8 @@ impl LegacyHashU250 of LegacyHash<u250> {
 impl StorageAccessU250 of StorageAccess<u250> {
     fn read(address_domain: u32, base: StorageBaseAddress) -> SyscallResult<u250> {
         Result::Ok(
-            Felt252TryIntoU250::try_into(
-                StorageAccess::read(address_domain, base)?
-            ).expect('StorageAccessU250 - non u250')
+            Felt252TryIntoU250::try_into(StorageAccess::read(address_domain, base)?)
+                .expect('StorageAccessU250 - non u250')
         )
     }
     #[inline(always)]

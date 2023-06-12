@@ -8,7 +8,6 @@ use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
 use katana::api::KatanaApiServer;
 use katana::KatanaRpc;
 use katana_core::sequencer::Sequencer;
-use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};
 
 pub mod config;
@@ -17,19 +16,19 @@ mod starknet;
 mod utils;
 
 use self::starknet::api::{StarknetApiError, StarknetApiServer};
-use self::starknet::StarknetRpc;
+use self::starknet::rpc::StarknetRpc;
 
 #[derive(Debug, Clone)]
 pub struct KatanaNodeRpc<S> {
     pub config: RpcConfig,
-    pub sequencer: Arc<RwLock<S>>,
+    pub sequencer: Arc<S>,
 }
 
 impl<S> KatanaNodeRpc<S>
 where
     S: Sequencer + Send + Sync + 'static,
 {
-    pub fn new(sequencer: Arc<RwLock<S>>, config: RpcConfig) -> Self {
+    pub fn new(sequencer: Arc<S>, config: RpcConfig) -> Self {
         Self { config, sequencer }
     }
 
@@ -63,7 +62,7 @@ where
 use std::time::Instant;
 
 use jsonrpsee::server::logger::{Logger, MethodKind, TransportProtocol};
-use jsonrpsee::tracing::info;
+use jsonrpsee::tracing::debug;
 use jsonrpsee::types::Params;
 
 #[derive(Debug, Clone)]
@@ -91,7 +90,7 @@ impl Logger for KatanaNodeRpcLogger {
         _kind: MethodKind,
         _transport: TransportProtocol,
     ) {
-        info!("method: '{}'", method_name);
+        debug!(target: "server", method = ?method_name);
     }
 
     fn on_result(
