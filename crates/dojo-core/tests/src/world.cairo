@@ -174,6 +174,28 @@ fn test_assume_role() {
 
 #[test]
 #[available_gas(9000000)]
+#[should_panic]
+fn test_assume_unauthorized_role() {
+    // Spawn empty world
+    let world = spawn_empty_world();
+
+    world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
+
+    // No route
+    let mut route = ArrayTrait::new();
+
+    // Initialize world
+    world.initialize(route);
+
+    // Assume FooWriter role
+    let mut systems = ArrayTrait::new();
+    systems.append('Bar'.into());
+    world.assume_role('FooWriter'.into(), systems);
+}
+
+#[test]
+#[available_gas(9000000)]
 fn test_clear_role() {
     // Spawn empty world
     let world = spawn_empty_world();
