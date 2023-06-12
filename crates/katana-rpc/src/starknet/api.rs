@@ -166,7 +166,7 @@ pub trait StarknetApi {
     #[method(name = "addDeclareTransaction")]
     async fn add_declare_transaction(
         &self,
-        transaction: BroadcastedDeclareTransaction,
+        declare_transaction: BroadcastedDeclareTransaction,
     ) -> Result<DeclareTransactionResult, Error>;
 
     #[method(name = "addInvokeTransaction")]
