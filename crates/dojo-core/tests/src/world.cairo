@@ -282,8 +282,8 @@ fn test_set_entity_admin() {
     data.append(1337);
 
     // Assume Admin role
-    let mut components = ArrayTrait::<ShortString>::new();
-    world.assume_role(World::ADMIN.into(), components);
+    let mut systems = ArrayTrait::<ShortString>::new();
+    world.assume_role(World::ADMIN.into(), systems);
     world.execute('Bar'.into(), data.span());
 
     // Assert that the data is stored
@@ -350,6 +350,40 @@ fn test_set_entity_unauthorized() {
     data.append(420);
     data.append(1337);
     world.execute('Bar'.into(), data.span());
+}
+
+#[test]
+#[available_gas(10000000)]
+#[should_panic]
+fn test_set_entity_assumed_role_execute_another_system() {
+    // Spawn empty world
+    let world = spawn_empty_world();
+
+    world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_system(Buzz::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
+
+    // Prepare route
+    let mut route = ArrayTrait::new();
+    let target_id = 'Bar'.into();
+    let role_id = 'FooWriter'.into();
+    let resource_id = 'Foo'.into();
+    let r = Route { target_id, role_id, resource_id,  };
+    route.append(r);
+
+    // Initialize world
+    world.initialize(route);
+
+    // Assume FooWriter role
+    let mut systems = ArrayTrait::new();
+    systems.append('Bar'.into());
+    world.assume_role('FooWriter'.into(), systems);
+
+    // Call Buzz system, different from the one when doing assumed role
+    let mut data = ArrayTrait::new();
+    data.append(420);
+    data.append(1337);
+    world.execute('Buzz'.into(), data.span());
 }
 
 #[test]
@@ -606,8 +640,8 @@ fn test_assume_admin_role_by_admin() {
     world.initialize(route);
 
     // Assume Admin role by Admin
-    let mut components = ArrayTrait::<ShortString>::new();
-    world.assume_role(World::ADMIN.into(), components);
+    let mut systems = ArrayTrait::<ShortString>::new();
+    world.assume_role(World::ADMIN.into(), systems);
 
     // Check that role is assumed
     assert(world.execution_role() == World::ADMIN.into(), 'role not assumed');
