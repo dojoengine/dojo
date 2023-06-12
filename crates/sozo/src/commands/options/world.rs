@@ -25,8 +25,9 @@ impl WorldOptions {
             Ok(FieldElement::from_str(&world_address)?)
         } else {
             Err(anyhow!(
-            "Could not find World address. Please specify it with --world or in the world config."
-        ))
+                "Could not find World address. Please specify it with --world or in the world \
+                 config."
+            ))
         }
     }
 }
