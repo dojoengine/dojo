@@ -23,11 +23,47 @@ use dojo_core::test_utils::mock_auth_components_systems;
 use dojo_core::auth::systems::Route;
 use starknet::get_caller_address;
 
+// Components and Systems
+
 #[derive(Component, Copy, Drop, Serde)]
 struct Foo {
     a: felt252,
     b: u128,
 }
+
+#[derive(Component, Copy, Drop, Serde)]
+struct Fizz {
+    a: felt252
+}
+
+#[system]
+mod Bar {
+    use super::Foo;
+    use traits::Into;
+    use starknet::get_caller_address;
+    use dojo_core::integer::u250;
+
+    fn execute(a: felt252, b: u128) {
+        let caller = get_caller_address();
+        commands::set_entity(caller.into(), (Foo { a, b }));
+    }
+}
+
+#[system]
+mod Buzz {
+    use super::{Foo, Fizz};
+    use traits::Into;
+    use starknet::get_caller_address;
+    use dojo_core::integer::u250;
+
+    fn execute(a: felt252, b: u128) {
+        let caller = get_caller_address();
+        commands::set_entity(caller.into(), (Foo { a, b }));
+        let fizz = commands::<Fizz>::try_entity(caller.into());
+    }
+}
+
+// Tests
 
 #[test]
 #[available_gas(2000000)]
@@ -51,19 +87,6 @@ fn test_component() {
     assert(*stored.snapshot.at(0) == 1337, 'data not stored');
 }
 
-#[system]
-mod Bar {
-    use super::Foo;
-    use traits::Into;
-    use starknet::get_caller_address;
-    use dojo_core::integer::u250;
-
-    fn execute(a: felt252, b: u128) {
-        let caller = get_caller_address();
-        commands::set_entity(caller.into(), (Foo { a, b }));
-    }
-}
-
 #[test]
 #[available_gas(6000000)]
 fn test_system() {
@@ -84,6 +107,29 @@ fn test_system() {
 fn test_constructor() {
     starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
     World::constructor(starknet::contract_address_const::<0x1337>(), );
+}
+
+#[test]
+#[available_gas(1000000)]
+fn test_system_components() {
+    // Register components and systems
+    World::register_system(Buzz::TEST_CLASS_HASH.try_into().unwrap());
+    World::register_component(FizzComponent::TEST_CLASS_HASH.try_into().unwrap());
+    World::register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
+
+    // Get system components
+    let components = World::system_components('Buzz'.into());
+    let mut index = 0;
+    let len = components.len();
+
+    // Sorted alphabetically
+    let (fizz, write_fizz) = *components[0];
+    assert(fizz == 'Fizz'.into(), 'Fizz not found');
+    assert(write_fizz == false, 'Buzz should not write Fizz');
+
+    let (foo, write_foo) = *components[1];
+    assert(foo == 'Foo'.into(), 'Foo not found');
+    assert(write_foo == true, 'Buzz should write Foo');
 }
 
 #[test]
@@ -155,9 +201,9 @@ fn test_set_entity_authorized_with_assumed_role() {
     world.initialize(route);
 
     // Assume FooWriter role
-    let mut components = ArrayTrait::new();
-    components.append('Foo'.into());
-    world.assume_role('FooWriter'.into(), components);
+    let mut systems = ArrayTrait::new();
+    systems.append('Bar'.into());
+    world.assume_role('FooWriter'.into(), systems);
 
     // Call Bar system
     let mut data = ArrayTrait::new();
@@ -269,6 +315,8 @@ fn test_admin_system_but_non_admin_caller() {
     let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
     grant_role_calldata.append('Bar'); // target_id
     grant_role_calldata.append('Admin'); // role_id
+    let systems = ArrayTrait::new();
+    world.assume_role('Admin'.into(), systems);
     world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
 
     // Call Bar system
@@ -385,9 +433,9 @@ fn test_revoke_role() {
     world.initialize(route);
 
     // Assume Admin role
-    let mut components = ArrayTrait::<ShortString>::new();
-    components.append('Foo'.into());
-    world.assume_role(World::ADMIN.into(), components);
+    let mut systems = ArrayTrait::<ShortString>::new();
+    systems.append('Bar'.into());
+    world.assume_role(World::ADMIN.into(), systems);
 
     // Admin caller grants FooWriter role to Bar system
     let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
@@ -400,9 +448,9 @@ fn test_revoke_role() {
     assert(*role[0] == 'FooWriter', 'role not granted');
 
     // Assume Admin role
-    let mut components = ArrayTrait::<ShortString>::new();
-    components.append('Foo'.into());
-    world.assume_role(World::ADMIN.into(), components);
+    let mut systems = ArrayTrait::<ShortString>::new();
+    systems.append('Bar'.into());
+    world.assume_role(World::ADMIN.into(), systems);
 
     // Admin revokes role of Bar system
     let mut revoke_role_calldata: Array<felt252> = ArrayTrait::new();
@@ -457,9 +505,9 @@ fn test_revoke_scoped_role() {
     world.initialize(route);
 
     // Assume FooWriter role
-    let mut components = ArrayTrait::<ShortString>::new();
-    components.append('Foo'.into());
-    world.assume_role(World::ADMIN.into(), components);
+    let mut systems = ArrayTrait::<ShortString>::new();
+    systems.append('Bar'.into());
+    world.assume_role(World::ADMIN.into(), systems);
 
     // Admin caller grants FooWriter role for Foo to Bar system
     let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
@@ -546,7 +594,7 @@ fn test_revoke_resource() {
 }
 
 #[test]
-#[available_gas(9000000)]
+#[available_gas(5000000)]
 fn test_assume_admin_role_by_admin() {
     // Spawn empty world
     let world = spawn_empty_world();
@@ -566,7 +614,7 @@ fn test_assume_admin_role_by_admin() {
 }
 
 #[test]
-#[available_gas(9000000)]
+#[available_gas(5000000)]
 #[should_panic]
 #[ignore] // TODO:: Remove once set_caller_address is working properly
 fn test_assume_admin_role_by_non_admin() {
@@ -580,14 +628,15 @@ fn test_assume_admin_role_by_non_admin() {
     world.initialize(route);
 
     // Assume Admin role by Non-admin
-    let mut components = ArrayTrait::<ShortString>::new();
+    let mut systems = ArrayTrait::<ShortString>::new();
     starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
-    world.assume_role(World::ADMIN.into(), components);
+    world.assume_role(World::ADMIN.into(), systems);
 
     // Check that role is assumed
     assert(world.execution_role() == World::ADMIN.into(), 'role not assumed');
 }
 
+// Utils
 fn spawn_empty_world() -> IWorldDispatcher {
     // Deploy executor contract
     let executor_constructor_calldata = array::ArrayTrait::new();

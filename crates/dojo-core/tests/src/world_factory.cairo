@@ -63,7 +63,7 @@ fn test_constructor() {
 }
 
 #[test]
-#[available_gas(100000000)]
+#[available_gas(90000000)]
 fn test_spawn_world() {
     // Deploy Executor
     let constructor_calldata = array::ArrayTrait::new();

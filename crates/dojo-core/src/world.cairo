@@ -388,23 +388,43 @@ mod World {
     /// # Arguments
     ///
     /// * `role_id` - The role id to be assumed
-    /// * `components` - The components to be validated
+    /// * `systems` - The systems to be validated
     #[external]
-    fn assume_role(role_id: u250, components: Array<ShortString>) {
+    fn assume_role(role_id: u250, systems: Array<ShortString>) {
         // Only Admin can set Admin role 
         if role_id == ADMIN.into() {
             assert(is_account_admin(), 'only admin can set Admin role');
         } else {
             let mut index = 0;
-            let len = components.len();
+            let len = systems.len();
 
-            // Loop through the components
+            // Loop through the systems to be validated
             loop {
                 if index == len {
                     break ();
                 }
-                // Validate that the role to be assumed has the required permissions
-                assert(is_role_authorized(role_id, *components[index]), 'role not authorized');
+
+                // Get the system's components
+                let system = *systems[index];
+                let components = system_components(system);
+
+                let mut index_inner = 0;
+                let len_inner = components.len();
+
+                // Loop through each component
+                loop {
+                    if index_inner == len_inner {
+                        break ();
+                    }
+                    let (component, write) = *components[index_inner];
+                    if write {
+                        // Validate that the role to be assumed has the required permissions
+                        assert(
+                            is_role_authorized(role_id, system, component), 'role not authorized'
+                        );
+                    }
+                    index_inner += 1;
+                };
                 index += 1;
             };
         };
@@ -431,23 +451,40 @@ mod World {
     /// # Arguments
     ///
     /// * `role_id` - The role id to be assumed
+    /// * `system` - The system which the role is to be validated against
     /// * `component` - The component which the role is to be validated against
     ///
     /// # Returns
     ///
     /// * `bool` - True if the role has the required permissions
     #[view]
-    fn is_role_authorized(role_id: u250, component: ShortString) -> bool {
+    fn is_role_authorized(role_id: u250, system: ShortString, component: ShortString) -> bool {
         // Check that the role to be assumed has the required permissions
         let is_authorized_class_hash = system_registry::read('IsAuthorized'.into());
 
         let mut calldata = ArrayTrait::<felt252>::new();
-        let caller = get_tx_info().unbox().account_contract_address;
-        calldata.append(caller.into()); // target_id
+
+        calldata.append(system.into()); // target_id
         calldata.append(component.into()); // resource_id
         let res = executor_dispatcher::read()
             .execute(is_authorized_class_hash, AuthRole { id: role_id.into() }, calldata.span());
         (*res[0]).is_non_zero()
+    }
+
+    /// Get the component dependencies of a system
+    ///
+    /// # Arguments
+    ///
+    /// * `system` - The system to be retrieved
+    ///
+    /// # Returns
+    ///
+    /// * `Array<(ShortString, bool)>` - The component dependencies of the system
+    /// bool is true if the system is writing to the component
+    #[view]
+    fn system_components(system: ShortString) -> Array<(ShortString, bool)> {
+        let class_hash = system_registry::read(system);
+        ISystemLibraryDispatcher { class_hash }.dependencies()
     }
 }
 
