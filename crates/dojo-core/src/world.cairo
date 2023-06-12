@@ -272,18 +272,8 @@ mod World {
             'must be called thru executor'
         );
 
-        // Get execution role
-        let role = execution_role();
-
-        // Validate authorization if role is not set
-        // Otherwise, proceed with the write
-        if role.into() == 0 {
-            // Validate the calling system has permission to write to the component
-            assert(
-                is_authorized(context.caller_system, component, AuthRole { id: role }),
-                'system not authorized'
-            );
-        };
+        // Fallback to default scoped authorization check if role is not set
+        fallback_authorization_check(context.caller_system, component);
 
         // Set the entity
         let table = query.table(component);
@@ -307,18 +297,8 @@ mod World {
             'must be called thru executor'
         );
 
-        // Get execution role
-        let role = execution_role();
-
-        // Validate authorization if role is not set
-        // Otherwise, proceed with the write
-        if role.into() == 0 {
-            // Validate the calling system has permission to write to the component
-            assert(
-                is_authorized(context.caller_system, component, AuthRole { id: role }),
-                'system not authorized'
-            );
-        };
+        // Fallback to default scoped authorization check if role is not set
+        fallback_authorization_check(context.caller_system, component);
 
         // Delete the entity
         let table = query.table(component);
@@ -420,7 +400,8 @@ mod World {
                     if write {
                         // Validate that the role to be assumed has the required permissions
                         assert(
-                            is_role_authorized(role_id, system, component), 'role not authorized'
+                            is_authorized(system, component, AuthRole { id: role_id }),
+                            'role not authorized'
                         );
                     }
                     index_inner += 1;
@@ -446,31 +427,6 @@ mod World {
         _execution_role::read(caller)
     }
 
-    /// Check if the role to be assumed has the required permissions
-    ///
-    /// # Arguments
-    ///
-    /// * `role_id` - The role id to be assumed
-    /// * `system` - The system which the role is to be validated against
-    /// * `component` - The component which the role is to be validated against
-    ///
-    /// # Returns
-    ///
-    /// * `bool` - True if the role has the required permissions
-    #[view]
-    fn is_role_authorized(role_id: u250, system: ShortString, component: ShortString) -> bool {
-        // Check that the role to be assumed has the required permissions
-        let is_authorized_class_hash = system_registry::read('IsAuthorized'.into());
-
-        let mut calldata = ArrayTrait::<felt252>::new();
-
-        calldata.append(system.into()); // target_id
-        calldata.append(component.into()); // resource_id
-        let res = executor_dispatcher::read()
-            .execute(is_authorized_class_hash, AuthRole { id: role_id.into() }, calldata.span());
-        (*res[0]).is_non_zero()
-    }
-
     /// Get the component dependencies of a system
     ///
     /// # Arguments
@@ -485,6 +441,28 @@ mod World {
     fn system_components(system: ShortString) -> Array<(ShortString, bool)> {
         let class_hash = system_registry::read(system);
         ISystemLibraryDispatcher { class_hash }.dependencies()
+    }
+
+    /// Internals
+
+    /// If no role is set, check if the system's default scoped permission to write to the component is authorized
+    ///
+    /// # Arguments
+    ///
+    /// * `system` - The system to be retrieved
+    /// * `component` - The component to be retrieved
+    fn fallback_authorization_check(system: ShortString, component: ShortString) {
+        // Get execution role
+        let role = execution_role();
+
+        // Validate authorization if role is not set
+        // Otherwise, proceed with the write
+        if role.into() == 0 {
+            // Validate the calling system has permission to write to the component
+            assert(
+                is_authorized(system, component, AuthRole { id: role }), 'system not authorized'
+            );
+        };
     }
 }
 

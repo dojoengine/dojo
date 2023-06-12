@@ -29,7 +29,6 @@ trait IWorld {
     fn is_account_admin() -> bool;
     fn delete_entity(context: Context, component: ShortString, query: Query);
     fn assume_role(role_id: u250, systems: Array<ShortString>);
-    fn is_role_authorized(role_id: u250, component: ShortString) -> bool;
     fn execution_role() -> u250;
     fn system_components(system: ShortString) -> Array<(ShortString, bool)>;
 }
