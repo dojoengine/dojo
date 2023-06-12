@@ -27,8 +27,10 @@ trait IWorld {
     fn set_executor(contract_address: ContractAddress);
     fn is_authorized(system: ShortString, component: ShortString, execution_role: AuthRole) -> bool;
     fn is_account_admin() -> bool;
+    fn is_system_for_execution(system: ShortString) -> bool;
     fn delete_entity(context: Context, component: ShortString, query: Query);
     fn assume_role(role_id: u250, systems: Array<ShortString>);
+    fn clear_role(systems: Array<ShortString>);
     fn execution_role() -> u250;
     fn system_components(system: ShortString) -> Array<(ShortString, bool)>;
 }

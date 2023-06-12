@@ -417,6 +417,30 @@ mod World {
         _execution_role::write(caller, role_id);
     }
 
+    /// Clear the execution role and systems for execution
+    ///
+    /// # Arguments
+    ///
+    /// * `systems` - The systems to be cleared
+    #[external]
+    fn clear_role(systems: Array<ShortString>) {
+        // Clear the execution role
+        let caller = get_tx_info().unbox().account_contract_address;
+        _execution_role::write(caller, 0.into());
+
+        // Clear systems for execution
+        let mut index = 0;
+        let len = systems.len();
+        loop {
+            if index == len {
+                break ();
+            }
+            let system = *systems[index];
+            systems_for_execution::write((caller, system), false);
+            index += 1;
+        };
+    }
+
     /// Get the assumed execution role
     ///
     /// # Arguments
@@ -444,6 +468,21 @@ mod World {
     fn system_components(system: ShortString) -> Array<(ShortString, bool)> {
         let class_hash = system_registry::read(system);
         ISystemLibraryDispatcher { class_hash }.dependencies()
+    }
+
+    /// Check if the system is part of the systems for execution
+    ///
+    /// # Arguments
+    ///
+    /// * `system` - The system to be retrieved
+    ///
+    /// # Returns
+    ///
+    /// * `bool` - True if the system is part of the systems for execution
+    #[view]
+    fn is_system_for_execution(system: ShortString) -> bool {
+        let caller = get_tx_info().unbox().account_contract_address;
+        systems_for_execution::read((caller, system))
     }
 
     /// Internals

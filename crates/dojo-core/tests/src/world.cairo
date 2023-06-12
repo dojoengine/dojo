@@ -1,5 +1,6 @@
 use array::ArrayTrait;
 use array::SpanTrait;
+use clone::Clone;
 use core::result::ResultTrait;
 use traits::Into;
 use traits::TryInto;
@@ -130,6 +131,91 @@ fn test_system_components() {
     let (foo, write_foo) = *components[1];
     assert(foo == 'Foo'.into(), 'Foo not found');
     assert(write_foo == true, 'Buzz should write Foo');
+}
+
+#[test]
+#[available_gas(9000000)]
+fn test_assume_role() {
+    // Spawn empty world
+    let world = spawn_empty_world();
+
+    world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
+
+    // Prepare route
+    let mut route = ArrayTrait::new();
+    let target_id = 'Bar'.into();
+    let role_id = 'FooWriter'.into();
+    let resource_id = 'Foo'.into();
+    let r = Route { target_id, role_id, resource_id,  };
+    route.append(r);
+
+    // Initialize world
+    world.initialize(route);
+
+    // Assume FooWriter role
+    let mut systems = ArrayTrait::new();
+    systems.append('Bar'.into());
+    world.assume_role('FooWriter'.into(), systems);
+
+    // Get execution role
+    let role = world.execution_role();
+    assert(role == 'FooWriter'.into(), 'role not assumed');
+
+    // Get systems for execution
+    let is_system_for_execution = world.is_system_for_execution('Bar'.into());
+    assert(is_system_for_execution == true, 'system not for execution');
+
+    // Admin assumes Admin role
+    let mut systems = ArrayTrait::new();
+    systems.append('Bar'.into());
+    world.assume_role('Admin'.into(), systems);
+}
+
+#[test]
+#[available_gas(9000000)]
+fn test_clear_role() {
+    // Spawn empty world
+    let world = spawn_empty_world();
+
+    world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
+
+    // Prepare route
+    let mut route = ArrayTrait::new();
+    let target_id = 'Bar'.into();
+    let role_id = 'FooWriter'.into();
+    let resource_id = 'Foo'.into();
+    let r = Route { target_id, role_id, resource_id,  };
+    route.append(r);
+
+    // Initialize world
+    world.initialize(route);
+
+    // Assume FooWriter role
+    let mut systems = ArrayTrait::new();
+    systems.append('Bar'.into());
+    let cloned_systems = systems.clone();
+    world.assume_role('FooWriter'.into(), systems);
+
+    // Get execution role
+    let role = world.execution_role();
+    assert(role == 'FooWriter'.into(), 'role not assumed');
+
+    // Get systems for execution
+    let is_system_for_execution = world.is_system_for_execution('Bar'.into());
+    assert(is_system_for_execution == true, 'system not for execution');
+
+    // Clear role
+    world.clear_role(cloned_systems);
+
+    // Get execution role
+    let role = world.execution_role();
+    assert(role == 0.into(), 'role not cleared');
+
+    // Get systems for execution
+    let is_system_for_execution = world.is_system_for_execution('Bar'.into());
+    assert(is_system_for_execution == false, 'system still for execution');
 }
 
 #[test]
