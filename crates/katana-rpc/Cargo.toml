@@ -22,6 +22,7 @@ starknet.workspace = true
 starknet_api.workspace = true
 thiserror.workspace = true
 hyper = "0.14.20"
+tracing.workspace = true
 tower-http = { version = "0.4.0", features = [ "full" ] }
 tower = { version = "0.4.13", features = [ "full" ] }
 

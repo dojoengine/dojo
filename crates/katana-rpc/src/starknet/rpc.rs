@@ -33,6 +33,7 @@ use starknet_api::transaction::{
     InvokeTransaction, InvokeTransactionV1, Transaction as InnerTransaction, TransactionHash,
     TransactionOutput, TransactionSignature,
 };
+use tracing::warn;
 use utils::transaction::{
     compute_declare_v1_transaction_hash, compute_declare_v2_transaction_hash,
     compute_invoke_v1_transaction_hash, convert_inner_to_rpc_tx,
@@ -636,11 +637,10 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
             entry_point_selector: EntryPointSelector(StarkFelt::from(request.entry_point_selector)),
         };
 
-        let res = self
-            .sequencer
-            .call(block_id, call)
-            .await
-            .map_err(|_| Error::from(StarknetApiError::ContractError))?;
+        let res = self.sequencer.call(block_id, call).await.map_err(|e| {
+            warn!("Call error: {e:?}");
+            Error::from(StarknetApiError::ContractError)
+        })?;
 
         let mut values = vec![];
 
@@ -812,14 +812,17 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
             };
 
             let fee_estimate =
-                self.sequencer.estimate_fee(transaction, block_id).await.map_err(|e| match e {
-                    SequencerError::StateNotFound(_) => {
-                        Error::from(StarknetApiError::BlockNotFound)
+                self.sequencer.estimate_fee(transaction, block_id).await.map_err(|e| {
+                    warn!("Estimate fee error: {e:?}");
+                    match e {
+                        SequencerError::StateNotFound(_) => {
+                            Error::from(StarknetApiError::BlockNotFound)
+                        }
+                        SequencerError::TransactionExecution(e) => {
+                            Error::from(StarknetApiError::ContractError)
+                        }
+                        e => Error::from(StarknetApiError::InternalServerError),
                     }
-                    SequencerError::TransactionExecution(_) => {
-                        Error::from(StarknetApiError::ContractError)
-                    }
-                    _ => Error::from(StarknetApiError::InternalServerError),
                 })?;
 
             res.push(FeeEstimate {
