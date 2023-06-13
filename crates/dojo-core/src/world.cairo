@@ -321,7 +321,8 @@ mod World {
     #[view]
     fn entity(component: ShortString, query: Query, offset: u8, length: usize) -> Span<felt252> {
         let class_hash = component_registry::read(component);
-        match Database::get(class_hash, component.into(), query, offset, length) {
+        let table = query.table(component);
+        match Database::get(class_hash, table, query, offset, length) {
             Option::Some(res) => res,
             Option::None(_) => {
                 ArrayTrait::new().span()

@@ -89,6 +89,31 @@ fn test_component() {
 }
 
 #[test]
+#[available_gas(2000000)]
+fn test_component_with_partition() {
+    let name = 'Foo'.into();
+    World::register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
+    let mut data = ArrayTrait::new();
+    data.append(1337);
+    let id = World::uuid();
+    let world = IWorldDispatcher { contract_address: contract_address_const::<0x1337>() };
+    let ctx = Context {
+        world,
+        caller_account: contract_address_const::<0x1337>(),
+        caller_system: 'Bar'.into(),
+        execution_role: AuthRole {
+            id: 'FooWriter'.into()
+        },
+    };
+
+    let mut keys = ArrayTrait::new();
+    keys.append(1337.into());
+    World::set_entity(ctx, name, QueryTrait::new(0, 1.into(), keys.span()), 0, data.span());
+    let stored = World::entity(name, QueryTrait::new(0, 1.into(), keys.span()), 0, 1);
+    assert(*stored.snapshot.at(0) == 1337, 'data not stored');
+}
+
+#[test]
 #[available_gas(6000000)]
 fn test_system() {
     // Spawn empty world
