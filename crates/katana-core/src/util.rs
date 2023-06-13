@@ -4,7 +4,6 @@ use anyhow::Result;
 use blockifier::state::cached_state::CommitmentStateDiff;
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transaction_execution::Transaction as BlockifierTransaction;
-
 use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::{
     ContractStorageDiffItem, DeclaredClassItem, DeployedContractItem, FieldElement, NonceUpdate,
