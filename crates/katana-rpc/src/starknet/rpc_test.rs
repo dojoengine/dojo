@@ -41,8 +41,11 @@ async fn test_send_declare_and_deploy_contract() {
         _ => panic!("invalid tx receipt"),
     }
 
-    let state = sequencer.sequencer.starknet.write().await.state(BlockNumber(1)).unwrap();
-    assert!(state.class_hash_to_class.get(&ClassHash(stark_felt!(res.class_hash))).is_some());
+    let mut state = sequencer.sequencer.starknet.write().await.state(BlockNumber(1)).unwrap();
+    assert!(
+        state.get_compiled_contract_class(&ClassHash(stark_felt!(res.class_hash))).is_ok(),
+        "class is not declared"
+    );
 
     let constructor_calldata = vec![];
 

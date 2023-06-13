@@ -1,18 +1,13 @@
-use std::io::Read;
 use std::time::{Duration, SystemTime};
 
 use anyhow::Result;
-use blockifier::execution::contract_class::ContractClassV1 as BlockifierContractClass;
 use blockifier::state::cached_state::CommitmentStateDiff;
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transaction_execution::Transaction as BlockifierTransaction;
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-use flate2::bufread::GzDecoder;
-use serde_json::json;
-use starknet::core::types::contract::legacy::{LegacyContractClass, LegacyProgram};
+use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::{
-    CompressedLegacyContractClass, ContractStorageDiffItem, DeclaredClassItem,
-    DeployedContractItem, FieldElement, NonceUpdate, StateDiff, StorageEntry,
+    ContractStorageDiffItem, DeclaredClassItem, DeployedContractItem, FieldElement, NonceUpdate,
+    StateDiff, StorageEntry,
 };
 use starknet_api::core::ClassHash;
 use starknet_api::hash::StarkFelt;
@@ -134,25 +129,6 @@ pub fn starkfelt_to_u128(felt: StarkFelt) -> Result<u128, StarknetApiError> {
     }
 }
 
-pub fn blockifier_contract_class_from_flattened_sierra_class(
-    raw_contract_class: &str,
-) -> Result<BlockifierContractClass> {
-    let value = serde_json::from_str::<serde_json::Value>(raw_contract_class)?;
-    let contract_class = cairo_lang_starknet::contract_class::ContractClass {
-        abi: serde_json::from_value(value["abi"].clone()).ok(),
-        sierra_program: serde_json::from_value(value["sierra_program"].clone())?,
-        entry_points_by_type: serde_json::from_value(value["entry_points_by_type"].clone())?,
-        contract_class_version: serde_json::from_value(value["contract_class_version"].clone())?,
-        sierra_program_debug_info: serde_json::from_value(
-            value["sierra_program_debug_info"].clone(),
-        )
-        .ok(),
-    };
-
-    let casm_contract = CasmContractClass::from_contract_class(contract_class, true)?;
-    Ok(casm_contract.try_into()?)
-}
-
 pub fn convert_state_diff_to_rpc_state_diff(state_diff: CommitmentStateDiff) -> StateDiff {
     StateDiff {
         storage_diffs: state_diff
@@ -197,25 +173,5 @@ pub fn convert_state_diff_to_rpc_state_diff(state_diff: CommitmentStateDiff) -> 
                 nonce: nonce.0.into(),
             })
             .collect(),
-    }
-}
-
-pub fn flattened_legacy_contract_from_compressed(raw_compressed_contract: &str) -> Result<String> {
-    let compressed_legacy_contract: CompressedLegacyContractClass =
-        serde_json::from_str(raw_compressed_contract)?;
-    let mut gz = GzDecoder::new(&compressed_legacy_contract.program[..]);
-    let mut legacy_program_json = String::new();
-    gz.read_to_string(&mut legacy_program_json)?;
-    let legacy_program: LegacyProgram = serde_json::from_str(&legacy_program_json)?;
-
-    let value = json!({
-        "program": legacy_program,
-        "entry_points_by_type": compressed_legacy_contract.entry_points_by_type,
-        "abi": compressed_legacy_contract.abi,
-    });
-    let flattened = serde_json::to_string(&value);
-    match flattened {
-        Ok(flattened) => Ok(flattened),
-        Err(err) => Err(anyhow::Error::msg(format!("{err}"))),
     }
 }
