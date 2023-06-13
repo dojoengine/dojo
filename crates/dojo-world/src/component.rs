@@ -111,7 +111,13 @@ impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
         } else {
             poseidon_hash(self.name, partition_id)
         };
-        let keys_hash = if keys.len() == 1 { keys[0] } else { poseidon_hash_many(&keys) };
+        let keys_hash = if keys.len() == 1 {
+            keys[0]
+        } else {
+            let mut keys = keys;
+            keys.insert(0, keys.len().into());
+            poseidon_hash_many(&keys)
+        };
         let key = pedersen_hash(&table, &keys_hash);
 
         let mut values = vec![];
