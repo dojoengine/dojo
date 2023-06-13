@@ -834,11 +834,11 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
 
     async fn add_declare_transaction(
         &self,
-        transaction: BroadcastedDeclareTransaction,
+        declare_transaction: BroadcastedDeclareTransaction,
     ) -> Result<DeclareTransactionResult, Error> {
         let chain_id = FieldElement::from_hex_be(&self.sequencer.chain_id().await.as_hex())
             .map_err(|_| Error::from(StarknetApiError::InternalServerError))?;
-        let (transaction_hash, class_hash, transaction) = match transaction {
+        let (transaction_hash, class_hash, transaction) = match declare_transaction {
             BroadcastedDeclareTransaction::V1(tx) => {
                 let (class_hash, contract) = legacy_rpc_to_inner_class(&tx.contract_class)?;
 

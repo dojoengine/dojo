@@ -16,18 +16,18 @@ pub struct WorldOptions {
 impl WorldOptions {
     pub fn address(&self, env_metadata: Option<&Value>) -> Result<FieldElement> {
         if let Some(world_address) = self.world_address {
-            return Ok(world_address);
-        } else if let Some(dojo_metadata) = env_metadata {
-            if let Some(world_address) = dojo_metadata.get("world_address") {
-                if let Some(world_address) = world_address.as_str() {
-                    let world_address = FieldElement::from_str(world_address)?;
-                    return Ok(world_address);
-                }
-            }
+            Ok(world_address)
+        } else if let Some(world_address) = env_metadata.and_then(|env| {
+            env.get("world_address")
+                .and_then(|v| v.as_str().map(|s| s.to_string()))
+                .or(std::env::var("DOJO_WORLD_ADDRESS").ok())
+        }) {
+            Ok(FieldElement::from_str(&world_address)?)
+        } else {
+            Err(anyhow!(
+                "Could not find World address. Please specify it with --world or in the world \
+                 config."
+            ))
         }
-
-        Err(anyhow!(
-            "Could not find World address. Please specify it with --world or in the world config."
-        ))
     }
 }

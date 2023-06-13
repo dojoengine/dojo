@@ -59,7 +59,7 @@ fn spawn_test_world(
     let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
 
     grant_role_calldata.append(caller.into()); // target_id
-    grant_role_calldata.append('Admin'); // role_id
+    grant_role_calldata.append(World::ADMIN); // role_id
     world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
 
     // register components

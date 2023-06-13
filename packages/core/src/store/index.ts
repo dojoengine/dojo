@@ -1,1 +1,0 @@
-export { ComponentStore } from './component';

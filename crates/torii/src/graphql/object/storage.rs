@@ -1,4 +1,4 @@
-use async_graphql::dynamic::{Field, FieldFuture, FieldValue, TypeRef};
+use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
 use async_graphql::{Name, Value};
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
@@ -6,6 +6,7 @@ use sqlx::{Error, Pool, Result, Row, Sqlite};
 
 use super::component::ComponentMembers;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
+use crate::graphql::constants::DEFAULT_LIMIT;
 use crate::graphql::types::ScalarType;
 
 const BOOLEAN_TRUE: i64 = 1;
@@ -36,38 +37,75 @@ impl ObjectTrait for StorageObject {
     }
 
     fn resolvers(&self) -> Vec<Field> {
-        let name = self.name.clone();
-        let type_mapping = self.field_type_mapping.clone();
-        vec![Field::new(self.name(), TypeRef::named_nn(self.type_name()), move |ctx| {
-            let inner_name = name.clone();
-            let inner_type_mapping = type_mapping.clone();
-
-            FieldFuture::new(async move {
-                let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                let storage_values =
-                    storage_by_name(&mut conn, &inner_name, &inner_type_mapping).await?;
-                Ok(Some(FieldValue::owned_any(storage_values)))
-            })
-        })]
+        vec![
+            resolve_one(&self.name, &self.type_name, &self.field_type_mapping),
+            resolve_many(&self.name, &self.type_name, &self.field_type_mapping),
+        ]
     }
+}
+
+fn resolve_one(name: &str, type_name: &str, field_type_mapping: &TypeMapping) -> Field {
+    let name = name.clone().to_string();
+    let field_type_mapping = field_type_mapping.clone();
+
+    Field::new(name.clone(), TypeRef::named(type_name), move |ctx| {
+        let field_type_mapping = field_type_mapping.clone();
+        let name = name.clone();
+
+        FieldFuture::new(async move {
+            let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+            let storage_values = storage_by_name(&mut conn, &name, &field_type_mapping, 1).await?;
+
+            let result = storage_values.get(0).cloned();
+            if let Some(value) = result {
+                return Ok(Some(FieldValue::owned_any(value)));
+            }
+
+            Ok(None)
+        })
+    })
+}
+
+fn resolve_many(name: &str, type_name: &str, field_type_mapping: &TypeMapping) -> Field {
+    let name = name.clone().to_string();
+    let many_name = format!("{}List", name);
+    let field_type_mapping = field_type_mapping.clone();
+
+    Field::new(many_name, TypeRef::named_list(type_name), move |ctx| {
+        let field_type_mapping = field_type_mapping.clone();
+        let name = name.clone();
+
+        FieldFuture::new(async move {
+            let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+            let limit =
+                ctx.args.try_get("limit").and_then(|limit| limit.u64()).unwrap_or(DEFAULT_LIMIT);
+
+            let storage_values =
+                storage_by_name(&mut conn, &name, &field_type_mapping, limit).await?;
+            let result: Vec<FieldValue<'_>> =
+                storage_values.into_iter().map(FieldValue::owned_any).collect();
+
+            Ok(Some(FieldValue::list(result)))
+        })
+    })
+    .argument(InputValue::new("limit", TypeRef::named(TypeRef::INT)))
 }
 
 pub async fn storage_by_name(
     conn: &mut PoolConnection<Sqlite>,
     name: &str,
     fields: &TypeMapping,
-) -> Result<ValueMapping> {
-    let query = format!("SELECT * FROM external_{} ORDER BY created_at DESC LIMIT 1", name);
-    let storage = sqlx::query(&query).fetch_one(conn).await?;
-    let result = value_mapping_from_row(&storage, fields)?;
-    Ok(result)
+    limit: u64,
+) -> Result<Vec<ValueMapping>> {
+    let query = format!("SELECT * FROM external_{} ORDER BY created_at DESC LIMIT {}", name, limit);
+    let storages = sqlx::query(&query).fetch_all(conn).await?;
+
+    storages.iter().map(|row| value_mapping_from_row(row, fields)).collect()
 }
 
 fn value_mapping_from_row(row: &SqliteRow, fields: &TypeMapping) -> Result<ValueMapping> {
     let mut value_mapping = ValueMapping::new();
 
-    // Cairo's data types are stored as either int or str in sqlite db,
-    // int's max size is 64bit so we retrieve all types above u64 as str
     for (field_name, field_type) in fields {
         // Column names are prefixed to avoid conflicts with sqlite keywords
         let column_name = format!("external_{}", field_name);

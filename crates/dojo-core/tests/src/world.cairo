@@ -1,5 +1,6 @@
 use array::ArrayTrait;
 use array::SpanTrait;
+use clone::Clone;
 use core::result::ResultTrait;
 use traits::Into;
 use traits::TryInto;
@@ -9,8 +10,9 @@ use starknet::syscalls::deploy_syscall;
 use starknet::contract_address_const;
 
 use dojo_core::integer::u250;
-use dojo_core::integer::U32IntoU250;
+use dojo_core::integer::{U32IntoU250, Felt252IntoU250};
 use dojo_core::storage::query::QueryTrait;
+use dojo_core::string::ShortString;
 use dojo_core::interfaces::IWorldDispatcher;
 use dojo_core::interfaces::IWorldDispatcherTrait;
 use dojo_core::executor::Executor;
@@ -22,11 +24,47 @@ use dojo_core::test_utils::mock_auth_components_systems;
 use dojo_core::auth::systems::Route;
 use starknet::get_caller_address;
 
+// Components and Systems
+
 #[derive(Component, Copy, Drop, Serde)]
 struct Foo {
     a: felt252,
     b: u128,
 }
+
+#[derive(Component, Copy, Drop, Serde)]
+struct Fizz {
+    a: felt252
+}
+
+#[system]
+mod Bar {
+    use super::Foo;
+    use traits::Into;
+    use starknet::get_caller_address;
+    use dojo_core::integer::u250;
+
+    fn execute(a: felt252, b: u128) {
+        let caller = get_caller_address();
+        commands::set_entity(caller.into(), (Foo { a, b }));
+    }
+}
+
+#[system]
+mod Buzz {
+    use super::{Foo, Fizz};
+    use traits::Into;
+    use starknet::get_caller_address;
+    use dojo_core::integer::u250;
+
+    fn execute(a: felt252, b: u128) {
+        let caller = get_caller_address();
+        commands::set_entity(caller.into(), (Foo { a, b }));
+        let fizz = commands::<Fizz>::try_entity(caller.into());
+    }
+}
+
+// Tests
 
 #[test]
 #[available_gas(2000000)]
@@ -50,17 +88,29 @@ fn test_component() {
     assert(*stored.snapshot.at(0) == 1337, 'data not stored');
 }
 
-#[system]
-mod Bar {
-    use super::Foo;
-    use traits::Into;
-    use starknet::get_caller_address;
-    use dojo_core::integer::u250;
+#[test]
+#[available_gas(2000000)]
+fn test_component_with_partition() {
+    let name = 'Foo'.into();
+    World::register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
+    let mut data = ArrayTrait::new();
+    data.append(1337);
+    let id = World::uuid();
+    let world = IWorldDispatcher { contract_address: contract_address_const::<0x1337>() };
+    let ctx = Context {
+        world,
+        caller_account: contract_address_const::<0x1337>(),
+        caller_system: 'Bar'.into(),
+        execution_role: AuthRole {
+            id: 'FooWriter'.into()
+        },
+    };
 
-    fn execute(a: felt252, b: u128) {
-        let caller = get_caller_address();
-        commands::set_entity(caller.into(), (Foo { a, b }));
-    }
+    let mut keys = ArrayTrait::new();
+    keys.append(1337.into());
+    World::set_entity(ctx, name, QueryTrait::new(0, 1.into(), keys.span()), 0, data.span());
+    let stored = World::entity(name, QueryTrait::new(0, 1.into(), keys.span()), 0, 1);
+    assert(*stored.snapshot.at(0) == 1337, 'data not stored');
 }
 
 #[test]
@@ -83,6 +133,136 @@ fn test_system() {
 fn test_constructor() {
     starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
     World::constructor(starknet::contract_address_const::<0x1337>(), );
+}
+
+#[test]
+#[available_gas(1000000)]
+fn test_system_components() {
+    // Register components and systems
+    World::register_system(Buzz::TEST_CLASS_HASH.try_into().unwrap());
+    World::register_component(FizzComponent::TEST_CLASS_HASH.try_into().unwrap());
+    World::register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
+
+    // Get system components
+    let components = World::system_components('Buzz'.into());
+    let mut index = 0;
+    let len = components.len();
+
+    // Sorted alphabetically
+    let (fizz, write_fizz) = *components[0];
+    assert(fizz == 'Fizz'.into(), 'Fizz not found');
+    assert(write_fizz == false, 'Buzz should not write Fizz');
+
+    let (foo, write_foo) = *components[1];
+    assert(foo == 'Foo'.into(), 'Foo not found');
+    assert(write_foo == true, 'Buzz should write Foo');
+}
+
+#[test]
+#[available_gas(9000000)]
+fn test_assume_role() {
+    // Spawn empty world
+    let world = spawn_empty_world();
+
+    world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
+
+    // Prepare route
+    let mut route = ArrayTrait::new();
+    let target_id = 'Bar'.into();
+    let role_id = 'FooWriter'.into();
+    let resource_id = 'Foo'.into();
+    let r = Route { target_id, role_id, resource_id,  };
+    route.append(r);
+
+    // Initialize world
+    world.initialize(route);
+
+    // Assume FooWriter role
+    let mut systems = ArrayTrait::new();
+    systems.append('Bar'.into());
+    world.assume_role('FooWriter'.into(), systems);
+
+    // Get execution role
+    let role = world.execution_role();
+    assert(role == 'FooWriter'.into(), 'role not assumed');
+
+    // Get systems for execution
+    let is_system_for_execution = world.is_system_for_execution('Bar'.into());
+    assert(is_system_for_execution == true, 'system not for execution');
+
+    // Admin assumes Admin role
+    let mut systems = ArrayTrait::new();
+    systems.append('Bar'.into());
+    world.assume_role(World::ADMIN.into(), systems);
+}
+
+#[test]
+#[available_gas(9000000)]
+#[should_panic]
+fn test_assume_unauthorized_role() {
+    // Spawn empty world
+    let world = spawn_empty_world();
+
+    world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
+
+    // No route
+    let mut route = ArrayTrait::new();
+
+    // Initialize world
+    world.initialize(route);
+
+    // Assume FooWriter role
+    let mut systems = ArrayTrait::new();
+    systems.append('Bar'.into());
+    world.assume_role('FooWriter'.into(), systems);
+}
+
+#[test]
+#[available_gas(9000000)]
+fn test_clear_role() {
+    // Spawn empty world
+    let world = spawn_empty_world();
+
+    world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
+
+    // Prepare route
+    let mut route = ArrayTrait::new();
+    let target_id = 'Bar'.into();
+    let role_id = 'FooWriter'.into();
+    let resource_id = 'Foo'.into();
+    let r = Route { target_id, role_id, resource_id,  };
+    route.append(r);
+
+    // Initialize world
+    world.initialize(route);
+
+    // Assume FooWriter role
+    let mut systems = ArrayTrait::new();
+    systems.append('Bar'.into());
+    let cloned_systems = systems.clone();
+    world.assume_role('FooWriter'.into(), systems);
+
+    // Get execution role
+    let role = world.execution_role();
+    assert(role == 'FooWriter'.into(), 'role not assumed');
+
+    // Get systems for execution
+    let is_system_for_execution = world.is_system_for_execution('Bar'.into());
+    assert(is_system_for_execution == true, 'system not for execution');
+
+    // Clear role
+    world.clear_role(cloned_systems);
+
+    // Get execution role
+    let role = world.execution_role();
+    assert(role == 0.into(), 'role not cleared');
+
+    // Get systems for execution
+    let is_system_for_execution = world.is_system_for_execution('Bar'.into());
+    assert(is_system_for_execution == false, 'system still for execution');
 }
 
 #[test]
@@ -135,7 +315,46 @@ fn test_initialize_not_more_than_once() {
 
 #[test]
 #[available_gas(10000000)]
-fn test_set_entity_authorized() {
+fn test_set_entity_authorized_with_assumed_role() {
+    // Spawn empty world
+    let world = spawn_empty_world();
+
+    world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
+
+    // Prepare route
+    let mut route = ArrayTrait::new();
+    let target_id = 'Bar'.into();
+    let role_id = 'FooWriter'.into();
+    let resource_id = 'Foo'.into();
+    let r = Route { target_id, role_id, resource_id,  };
+    route.append(r);
+
+    // Initialize world
+    world.initialize(route);
+
+    // Assume FooWriter role
+    let mut systems = ArrayTrait::new();
+    systems.append('Bar'.into());
+    world.assume_role('FooWriter'.into(), systems);
+
+    // Call Bar system
+    let mut data = ArrayTrait::new();
+    data.append(420);
+    data.append(1337);
+    world.execute('Bar'.into(), data.span());
+
+    // Assert that the data is stored
+    // Caller here is the world contract via the executor
+    let world_address = world.contract_address;
+    let foo = world.entity('Foo'.into(), world_address.into(), 0, 0);
+    assert(*foo[0] == 420, 'data not stored');
+    assert(*foo[1] == 1337, 'data not stored');
+}
+
+#[test]
+#[available_gas(10000000)]
+fn test_set_entity_authorized_no_assumed_role() {
     // Spawn empty world
     let world = spawn_empty_world();
 
@@ -157,6 +376,8 @@ fn test_set_entity_authorized() {
     let mut data = ArrayTrait::new();
     data.append(420);
     data.append(1337);
+    // No assumed role
+    // Should pass since default scoped role is authorized (FooWriter)
     world.execute('Bar'.into(), data.span());
 
     // Assert that the data is stored
@@ -185,13 +406,17 @@ fn test_set_entity_admin() {
     // Admin caller grants Admin role to Bar system
     let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
     grant_role_calldata.append('Bar'); // target_id
-    grant_role_calldata.append('Admin'); // role_id
+    grant_role_calldata.append(World::ADMIN); // role_id
     world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
 
     // Call Bar system
     let mut data = ArrayTrait::new();
     data.append(420);
     data.append(1337);
+
+    // Assume Admin role
+    let mut systems = ArrayTrait::<ShortString>::new();
+    world.assume_role(World::ADMIN.into(), systems);
     world.execute('Bar'.into(), data.span());
 
     // Assert that the data is stored
@@ -200,6 +425,49 @@ fn test_set_entity_admin() {
     let foo = world.entity('Foo'.into(), world_address.into(), 0, 0);
     assert(*foo[0] == 420, 'data not stored');
     assert(*foo[1] == 1337, 'data not stored');
+}
+
+#[test]
+#[available_gas(11000000)]
+#[should_panic]
+fn test_admin_system_but_non_admin_caller() {
+    // Spawn empty world
+    let world = spawn_empty_world();
+
+    world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
+
+    // No Auth route
+    let mut route = ArrayTrait::new();
+
+    // Initialize world
+    world.initialize(route);
+
+    // Admin caller grants Admin role to Bar system
+    let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
+    grant_role_calldata.append('Bar'); // target_id
+    grant_role_calldata.append(World::ADMIN); // role_id
+    let systems = ArrayTrait::new();
+    world.assume_role(World::ADMIN.into(), systems);
+    world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
+
+    // Admin revokes its Admin role
+    let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
+    let caller: felt252 = get_caller_address().into();
+    grant_role_calldata.append(caller); // target_id
+    world.execute('RevokeAuthRole'.into(), grant_role_calldata.span());
+    let role = world.entity('AuthRole'.into(), QueryTrait::new_from_id(caller.into()), 0, 0);
+    assert(*role[0] == 0, 'role not revoked');
+
+    // Clear execution role
+    let systems = ArrayTrait::new();
+    world.clear_role(systems);
+
+    // Non-admin calls an admin system
+    let mut data = ArrayTrait::new();
+    data.append(420);
+    data.append(1337);
+    world.execute('Bar'.into(), data.span());
 }
 
 #[test]
@@ -223,6 +491,40 @@ fn test_set_entity_unauthorized() {
     data.append(420);
     data.append(1337);
     world.execute('Bar'.into(), data.span());
+}
+
+#[test]
+#[available_gas(10000000)]
+#[should_panic]
+fn test_set_entity_assumed_role_execute_another_system() {
+    // Spawn empty world
+    let world = spawn_empty_world();
+
+    world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_system(Buzz::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
+
+    // Prepare route
+    let mut route = ArrayTrait::new();
+    let target_id = 'Bar'.into();
+    let role_id = 'FooWriter'.into();
+    let resource_id = 'Foo'.into();
+    let r = Route { target_id, role_id, resource_id,  };
+    route.append(r);
+
+    // Initialize world
+    world.initialize(route);
+
+    // Assume FooWriter role
+    let mut systems = ArrayTrait::new();
+    systems.append('Bar'.into());
+    world.assume_role('FooWriter'.into(), systems);
+
+    // Call Buzz system, different from the one when doing assumed role
+    let mut data = ArrayTrait::new();
+    data.append(420);
+    data.append(1337);
+    world.execute('Buzz'.into(), data.span());
 }
 
 #[test]
@@ -305,6 +607,11 @@ fn test_revoke_role() {
     // Initialize world
     world.initialize(route);
 
+    // Assume Admin role
+    let mut systems = ArrayTrait::<ShortString>::new();
+    systems.append('Bar'.into());
+    world.assume_role(World::ADMIN.into(), systems);
+
     // Admin caller grants FooWriter role to Bar system
     let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
     grant_role_calldata.append('Bar'); // target_id
@@ -314,6 +621,11 @@ fn test_revoke_role() {
     // Assert that the role is set
     let role = world.entity('AuthRole'.into(), 'Bar'.into(), 0, 0);
     assert(*role[0] == 'FooWriter', 'role not granted');
+
+    // Assume Admin role
+    let mut systems = ArrayTrait::<ShortString>::new();
+    systems.append('Bar'.into());
+    world.assume_role(World::ADMIN.into(), systems);
 
     // Admin revokes role of Bar system
     let mut revoke_role_calldata: Array<felt252> = ArrayTrait::new();
@@ -366,6 +678,11 @@ fn test_revoke_scoped_role() {
 
     // Initialize world
     world.initialize(route);
+
+    // Assume FooWriter role
+    let mut systems = ArrayTrait::<ShortString>::new();
+    systems.append('Bar'.into());
+    world.assume_role(World::ADMIN.into(), systems);
 
     // Admin caller grants FooWriter role for Foo to Bar system
     let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
@@ -451,6 +768,54 @@ fn test_revoke_resource() {
     assert(*status[0] == 0, 'access not revoked');
 }
 
+#[test]
+#[available_gas(5000000)]
+fn test_assume_admin_role_by_admin() {
+    // Spawn empty world
+    let world = spawn_empty_world();
+
+    // No Auth route
+    let mut route = ArrayTrait::new();
+
+    // Initialize world
+    world.initialize(route);
+
+    // Assume Admin role by Admin
+    let mut systems = ArrayTrait::<ShortString>::new();
+    world.assume_role(World::ADMIN.into(), systems);
+
+    // Check that role is assumed
+    assert(world.execution_role() == World::ADMIN.into(), 'role not assumed');
+}
+
+#[test]
+#[available_gas(5000000)]
+#[should_panic]
+fn test_assume_admin_role_by_non_admin() {
+    // Spawn empty world
+    let world = spawn_empty_world();
+
+    // No Auth route
+    let mut route = ArrayTrait::new();
+
+    // Initialize world
+    world.initialize(route);
+
+    // Admin revokes its Admin role
+    let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
+    let caller: felt252 = get_caller_address().into();
+    grant_role_calldata.append(caller); // target_id
+    world.execute('RevokeAuthRole'.into(), grant_role_calldata.span());
+    let role = world.entity('AuthRole'.into(), QueryTrait::new_from_id(caller.into()), 0, 0);
+    assert(*role[0] == 0, 'role not revoked');
+
+    // Non-admin assume Bar system that has Admin role
+    // Should panic since caller is not admin anymore
+    let mut systems = ArrayTrait::<ShortString>::new();
+    world.assume_role('Bar'.into(), systems);
+}
+
+// Utils
 fn spawn_empty_world() -> IWorldDispatcher {
     // Deploy executor contract
     let executor_constructor_calldata = array::ArrayTrait::new();
@@ -495,7 +860,7 @@ fn spawn_empty_world() -> IWorldDispatcher {
     let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
 
     grant_role_calldata.append(caller.into()); // target_id
-    grant_role_calldata.append('Admin'); // role_id
+    grant_role_calldata.append(World::ADMIN); // role_id
     world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
 
     world
