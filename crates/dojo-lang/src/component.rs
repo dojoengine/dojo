@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 
-use cairo_lang_defs::plugin::{DynGeneratedFileAuxData, PluginGeneratedFile, PluginResult};
-use cairo_lang_semantic::patcher::{PatchBuilder, RewriteNode};
-use cairo_lang_semantic::plugin::DynPluginAuxData;
+use cairo_lang_semantic::patcher::RewriteNode;
 use cairo_lang_syntax::attribute::structured::{
     AttributeArg, AttributeArgVariant, AttributeStructurize,
 };
@@ -19,8 +17,12 @@ use crate::plugin::{Component, DojoAuxData};
 /// * db: The semantic database.
 /// * struct_ast: The AST of the component struct.
 /// Returns:
-/// * A PluginResult containing the generated code.
-pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> PluginResult {
+/// * A RewriteNode containing the generated code.
+pub fn handle_component_struct(
+    db: &dyn SyntaxGroup,
+    aux_data: &mut DojoAuxData,
+    struct_ast: ItemStruct,
+) -> RewriteNode {
     let mut body_nodes = vec![RewriteNode::interpolate_patched(
         "
             #[view]
@@ -78,8 +80,20 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> 
         .collect::<_>();
 
     let name = struct_ast.name(db).text(db);
-    let mut builder = PatchBuilder::new(db);
-    builder.add_modified(RewriteNode::interpolate_patched(
+    aux_data.components.push(Component {
+        name: name.to_string(),
+        members: members
+            .iter()
+            .map(|(name, ty, slot, offset)| Member {
+                name: name.to_string(),
+                ty: ty.as_syntax_node().get_text(db).trim().to_string(),
+                slot: *slot,
+                offset: *offset,
+            })
+            .collect(),
+    });
+
+    RewriteNode::interpolate_patched(
         "
             struct $type_name$ {
                 $members$
@@ -137,32 +151,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> 
                 ),
             ),
         ]),
-    ));
-
-    PluginResult {
-        code: Some(PluginGeneratedFile {
-            name: name.clone(),
-            content: builder.code,
-            aux_data: DynGeneratedFileAuxData::new(DynPluginAuxData::new(DojoAuxData {
-                patches: builder.patches,
-                components: vec![Component {
-                    name: name.to_string(),
-                    members: members
-                        .iter()
-                        .map(|(name, ty, slot, offset)| Member {
-                            name: name.to_string(),
-                            ty: ty.as_syntax_node().get_text(db).trim().to_string(),
-                            slot: *slot,
-                            offset: *offset,
-                        })
-                        .collect(),
-                }],
-                systems: vec![],
-            })),
-        }),
-        diagnostics: vec![],
-        remove_original_item: true,
-    }
+    )
 }
 
 /// Returns true if the component is indexed #[component(indexed: true)]
