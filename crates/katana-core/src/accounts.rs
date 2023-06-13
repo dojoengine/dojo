@@ -7,6 +7,7 @@ use blockifier::abi::abi_utils::get_storage_var_address;
 use blockifier::execution::contract_class::{ContractClass, ContractClassV0};
 use rand::rngs::SmallRng;
 use rand::{RngCore, SeedableRng};
+use serde::{Deserialize, Serialize};
 use starknet::signers::SigningKey;
 use starknet_api::core::{
     calculate_contract_address, ClassHash, ContractAddress, Nonce, PatriciaKey,
@@ -75,6 +76,37 @@ impl Account {
 
     fn declare(&self, state: &mut DictStateReader) {
         state.class_hash_to_class.insert(self.class_hash, self.contract_class.clone());
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct AccountInformation {
+    pub public_key: StarkFelt,
+    pub private_key: StarkFelt,
+    #[serde(rename(serialize = "address"))]
+    pub account_address: ContractAddress,
+    pub balance: StarkFelt,
+}
+
+impl From<Account> for AccountInformation {
+    fn from(account: Account) -> Self {
+        AccountInformation {
+            public_key: account.public_key,
+            private_key: account.private_key,
+            account_address: account.account_address,
+            balance: account.balance,
+        }
+    }
+}
+
+impl From<&Account> for AccountInformation {
+    fn from(account: &Account) -> Self {
+        AccountInformation {
+            public_key: account.public_key,
+            private_key: account.private_key,
+            account_address: account.account_address,
+            balance: account.balance,
+        }
     }
 }
 

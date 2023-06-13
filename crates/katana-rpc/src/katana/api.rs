@@ -2,6 +2,7 @@ use jsonrpsee::core::Error;
 use jsonrpsee::proc_macros::rpc;
 use jsonrpsee::types::error::CallError;
 use jsonrpsee::types::ErrorObject;
+use katana_core::accounts::AccountInformation;
 
 #[derive(thiserror::Error, Clone, Copy, Debug)]
 pub enum KatanaApiError {}
@@ -16,4 +17,7 @@ impl From<KatanaApiError> for Error {
 pub trait KatanaApi {
     #[method(name = "generateBlock")]
     async fn generate_block(&self) -> Result<(), Error>;
+
+    #[method(name = "predeployedAccounts")]
+    async fn predeployed_accounts(&self) -> Result<Vec<AccountInformation>, Error>;
 }

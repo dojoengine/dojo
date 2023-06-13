@@ -22,6 +22,7 @@ use starknet_api::transaction::{
 use tokio::sync::RwLock;
 use tokio::time;
 
+use crate::accounts::Account;
 use crate::sequencer_error::SequencerError;
 use crate::starknet::block::StarknetBlock;
 use crate::starknet::event::EmittedEvent;
@@ -510,6 +511,10 @@ impl Sequencer for KatanaSequencer {
         self.starknet.write().await.generate_latest_block();
         self.starknet.write().await.generate_pending_block();
     }
+
+    async fn predeployed_accounts(&self) -> Vec<Account> {
+        self.starknet.read().await.predeployed_accounts.accounts.clone()
+    }
 }
 
 #[async_trait]
@@ -517,6 +522,8 @@ pub trait Sequencer {
     async fn chain_id(&self) -> ChainId;
 
     async fn generate_new_block(&self);
+
+    async fn predeployed_accounts(&self) -> Vec<Account>;
 
     async fn transaction_receipt(
         &self,
