@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use cairo_lang_semantic::patcher::RewriteNode;
 use cairo_lang_syntax::attribute::structured::{
     AttributeArg, AttributeArgVariant, AttributeStructurize,
@@ -8,6 +6,7 @@ use cairo_lang_syntax::node::ast::ItemStruct;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
+use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_world::manifest::Member;
 
 use crate::plugin::{Component, DojoAuxData};
@@ -26,16 +25,16 @@ pub fn handle_component_struct(
     let mut body_nodes = vec![RewriteNode::interpolate_patched(
         "
             #[view]
-            fn name() -> felt252 {
+            fn name(self: @ContractState) -> felt252 {
                 '$type_name$'
             }
 
             #[view]
-            fn len() -> usize {
+            fn len(self: @ContractState) -> usize {
                 $len$_usize
             }
         ",
-        HashMap::from([
+        UnorderedHashMap::from([
             (
                 "type_name".to_string(),
                 RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
@@ -58,11 +57,11 @@ pub fn handle_component_struct(
         RewriteNode::interpolate_patched(
             "
                 #[view]
-                fn is_indexed() -> bool {
+                fn is_indexed(self: @ContractState) -> bool {
                     bool::$retval$(())
                 }
             ",
-            HashMap::from([("retval".to_string(), RewriteNode::Text(retval_str))]),
+            UnorderedHashMap::from([("retval".to_string(), RewriteNode::Text(retval_str))]),
         )
     };
 
@@ -99,19 +98,21 @@ pub fn handle_component_struct(
                 $members$
             }
 
-            #[abi]
-            trait I$type_name$ {
-                fn name() -> felt252;
-                fn len() -> u8;
+            #[starknet::interface]
+            trait I$type_name$<T> {
+                fn name(self: @T) -> felt252;
+                fn len(self: @T) -> u8;
             }
 
-            #[contract]
+            #[starknet::contract]
             mod $type_name$Component {
-                use dojo_core::serde::SpanSerde;
                 use super::$type_name$;
 
+                #[storage]
+                struct Storage {}
+
                 #[view]
-                fn schema() -> Array<(felt252, felt252, usize, u8)> {
+                fn schema(self: @ContractState) -> Array<(felt252, felt252, usize, u8)> {
                     let mut arr = array::ArrayTrait::new();
                     $schema_members$
                     arr
@@ -120,7 +121,7 @@ pub fn handle_component_struct(
                 $body$
             }
         ",
-        HashMap::from([
+        UnorderedHashMap::from([
             (
                 "type_name".to_string(),
                 RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
@@ -136,7 +137,7 @@ pub fn handle_component_struct(
                             RewriteNode::interpolate_patched(
                                 "array::ArrayTrait::append(ref arr, ('$name$', '$type_clause$', \
                                  $slot$, $offset$));\n",
-                                HashMap::from([
+                                UnorderedHashMap::from([
                                     ("name".to_string(), RewriteNode::Text(item.0.to_string())),
                                     (
                                         "type_clause".to_string(),

@@ -26,7 +26,7 @@ impl PositionImpl of PositionTrait {
     }
 
     fn is_equal(self: Position, b: Position) -> bool {
-        self.x == b.x & self.y == b.y
+        self.x == b.x && self.y == b.y
     }
 }
 

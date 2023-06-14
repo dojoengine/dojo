@@ -3,7 +3,7 @@
 //    * use inline commands (currently available only in systems)
 //    * use ufelt when available
 
-#[contract]
+#[starknet::contract]
 mod ERC20 {
     // max(felt252)
     const UNLIMITED_ALLOWANCE: felt252 = 3618502788666131213697322783095070105623107215331596699973092056135872020480;

@@ -185,7 +185,6 @@ trait IPosition {
 
 #[contract]
 mod PositionComponent {
-    use dojo_core::serde::SpanSerde;
     use super::Position;
 
     #[view]
@@ -226,7 +225,6 @@ trait IPlayer {
 
 #[contract]
 mod PlayerComponent {
-    use dojo_core::serde::SpanSerde;
     use super::Player;
 
     #[view]

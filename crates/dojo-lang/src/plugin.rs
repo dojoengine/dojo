@@ -126,7 +126,6 @@ impl MacroPlugin for DojoPlugin {
                         let AttributeArg{
                             variant: AttributeArgVariant::Unnamed {
                                 value: ast::Expr::Path(path),
-                                value_stable_ptr,
                                 ..
                             },
                             ..
@@ -140,10 +139,6 @@ impl MacroPlugin for DojoPlugin {
 
                         // Check if the path has a single segment
                         let [ast::PathSegment::Simple(segment)] = &path.elements(db)[..] else {
-                            diagnostics.push(PluginDiagnostic {
-                                stable_ptr: value_stable_ptr.untyped(),
-                                message: "Expected a single segment.".into(),
-                            });
                             continue;
                         };
 
@@ -212,7 +207,7 @@ impl CairoPluginRepository {
         repo.add(Box::new(BuiltinSemanticCairoPlugin::<DojoPlugin>::new(dojo_package_id))).unwrap();
         let starknet_package_id = PackageId::new(
             PackageName::STARKNET,
-            Version::parse("1.1.0").unwrap(),
+            Version::parse("2.0.0-rc1").unwrap(),
             SourceId::for_std(),
         );
         repo.add(Box::new(BuiltinSemanticCairoPlugin::<StarkNetPlugin>::new(starknet_package_id)))

@@ -69,6 +69,7 @@ mod Move {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use core::traits::Into;
     use array::ArrayTrait;

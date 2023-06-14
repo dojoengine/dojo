@@ -7,7 +7,6 @@ use traits::Into;
 use zeroable::IsZeroResult;
 use starknet::ClassHashIntoFelt252;
 use poseidon::poseidon_hash_span;
-use dojo_core::serde::SpanSerde;
 use dojo_core::storage::query::IntoPartitioned;
 use dojo_core::storage::query::TupleSize2IntoQuery;
 use dojo_core::storage::query::TupleSize3IntoQuery;

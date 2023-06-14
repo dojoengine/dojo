@@ -1,6 +1,6 @@
 use array::ArrayTrait;
 
-#[contract]
+#[starknet::contract]
 mod WorldFactory {
     use array::ArrayTrait;
     use option::OptionTrait;
@@ -14,6 +14,7 @@ mod WorldFactory {
     use dojo_core::interfaces::{IWorldDispatcher, IWorldDispatcherTrait};
     use dojo_core::auth::systems::Route;
 
+    #[storage]
     struct Storage {
         world_class_hash: ClassHash,
         executor_address: ContractAddress,
@@ -28,13 +29,14 @@ mod WorldFactory {
 
     #[constructor]
     fn constructor(
+        ref self: ContractState,
         world_class_hash_: ClassHash,
         executor_address_: ContractAddress,
         auth_components_: Array<ClassHash>,
         auth_systems_: Array<ClassHash>
     ) {
-        world_class_hash::write(world_class_hash_);
-        executor_address::write(executor_address_);
+        self.world_class_hash.write(world_class_hash_);
+        self.executor_address.write(executor_address_);
         // Write auth components to storage through mapping
         let mut index = 0;
         let len = auth_components_.len();
@@ -42,10 +44,10 @@ mod WorldFactory {
             if index == len {
                 break ();
             }
-            auth_components::write(index, *auth_components_.at(index));
+            self.auth_components.write(index, *auth_components_.at(index));
             index += 1;
         };
-        auth_components_len::write(len);
+        self.auth_components_len.write(len);
 
         // Write auth systems to storage through mapping
         let mut index = 0;
@@ -54,20 +56,20 @@ mod WorldFactory {
             if index == len {
                 break ();
             }
-            auth_systems::write(index, *auth_systems_.at(index));
+            self.auth_systems.write(index, *auth_systems_.at(index));
             index += 1;
         };
-        auth_systems_len::write(len);
+        self.auth_systems_len.write(len);
     }
 
     #[external]
     fn spawn(
-        components: Array<ClassHash>, systems: Array<ClassHash>, routes: Array<Route>, 
+        ref self: ContractState, components: Array<ClassHash>, systems: Array<ClassHash>, routes: Array<Route>, 
     ) -> ContractAddress {
         // deploy world
         let mut world_constructor_calldata: Array<felt252> = ArrayTrait::new();
-        world_constructor_calldata.append(executor_address::read().into());
-        let world_class_hash = world_class_hash::read();
+        world_constructor_calldata.append(self.executor_address.read().into());
+        let world_class_hash = self.world_class_hash.read();
         let result = deploy_syscall(world_class_hash, 0, world_constructor_calldata.span(), true);
         let (world_address, _) = result.unwrap_syscall();
         let world = IWorldDispatcher { contract_address: world_address };
@@ -76,7 +78,7 @@ mod WorldFactory {
         WorldSpawned(world_address);
 
         // register default auth components and systems
-        register_auth(world_address);
+        register_auth(@self, world_address);
 
         // give deployer the Admin role
         let caller = get_caller_address();
@@ -88,11 +90,11 @@ mod WorldFactory {
 
         // register components
         let components_len = components.len();
-        register_components(components, components_len, 0, world_address);
+        register_components(@self, components, components_len, 0, world_address);
 
         // register systems
         let systems_len = systems.len();
-        register_systems(systems, systems_len, 0, world_address);
+        register_systems(@self, systems, systems_len, 0, world_address);
 
         // initialize world by setting the auth routes
         world.initialize(routes);
@@ -101,56 +103,57 @@ mod WorldFactory {
     }
 
     #[external]
-    fn set_executor(executor_address_: ContractAddress) {
-        executor_address::write(executor_address_);
+    fn set_executor(ref self: ContractState, executor_address_: ContractAddress) {
+        self.executor_address.write(executor_address_);
     }
 
     #[external]
-    fn set_world(class_hash: ClassHash) {
-        world_class_hash::write(class_hash);
+    fn set_world(ref self: ContractState, class_hash: ClassHash) {
+        self.world_class_hash.write(class_hash);
     }
 
     #[view]
-    fn executor() -> ContractAddress {
-        return executor_address::read();
+    fn executor(self: @ContractState) -> ContractAddress {
+        return self.executor_address.read();
     }
 
     #[view]
-    fn world() -> ClassHash {
-        return world_class_hash::read();
+    fn world(self: @ContractState) -> ClassHash {
+        return self.world_class_hash.read();
     }
 
     #[view]
-    fn default_auth_components() -> Array<ClassHash> {
+    fn default_auth_components(self: @ContractState) -> Array<ClassHash> {
         let mut result: Array<ClassHash> = ArrayTrait::new();
-        let len = auth_components_len::read();
+        let len = self.auth_components_len.read();
         let mut index = 0;
         loop {
             if index == len {
                 break ();
             }
-            result.append(auth_components::read(index));
+            result.append(self.auth_components.read(index));
             index += 1;
         };
         result
     }
 
     #[view]
-    fn default_auth_systems() -> Array<ClassHash> {
+    fn default_auth_systems(self: @ContractState) -> Array<ClassHash> {
         let mut result: Array<ClassHash> = ArrayTrait::new();
-        let len = auth_systems_len::read();
+        let len = self.auth_systems_len.read();
         let mut index = 0;
         loop {
             if index == len {
                 break ();
             }
-            result.append(auth_systems::read(index));
+            result.append(self.auth_systems.read(index));
             index += 1;
         };
         result
     }
 
     fn register_components(
+        self: @ContractState,
         components: Array<ClassHash>,
         components_len: usize,
         index: usize,
@@ -162,22 +165,22 @@ mod WorldFactory {
         IWorldDispatcher {
             contract_address: world_address
         }.register_component(*components.at(index));
-        return register_components(components, components_len, index + 1, world_address);
+        return register_components(self, components, components_len, index + 1, world_address);
     }
 
     fn register_systems(
-        systems: Array<ClassHash>, systems_len: usize, index: usize, world_address: ContractAddress
+        self: @ContractState, systems: Array<ClassHash>, systems_len: usize, index: usize, world_address: ContractAddress
     ) {
         if (index == systems_len) {
             return ();
         }
         IWorldDispatcher { contract_address: world_address }.register_system(*systems.at(index));
-        return register_systems(systems, systems_len, index + 1, world_address);
+        return register_systems(self, systems, systems_len, index + 1, world_address);
     }
 
-    fn register_auth(world_address: ContractAddress) {
+    fn register_auth(self: @ContractState, world_address: ContractAddress) {
         // Register auth components
-        let auth_components = default_auth_components();
+        let auth_components = default_auth_components(self);
         let mut index = 0;
         loop {
             if index == auth_components.len() {
@@ -190,7 +193,7 @@ mod WorldFactory {
         };
 
         // Register auth systems
-        let auth_systems = default_auth_systems();
+        let auth_systems = default_auth_systems(self);
         let mut index = 0;
         loop {
             if index == auth_systems.len() {
