@@ -1,5 +1,5 @@
 use dojo_core::{
-    integer::u250, serde::SpanSerde, storage::query::Query,
+    serde::SpanSerde, storage::query::Query,
     auth::systems::Route, auth::components::AuthRole, execution_context::Context
 };
 use starknet::{ClassHash, ContractAddress};
@@ -23,15 +23,15 @@ trait IWorld {
     fn set_entity(
         context: Context, component: felt252, key: Query, offset: u8, value: Span<felt252>
     );
-    fn entities(component: felt252, partition: u250) -> (Span<u250>, Span<Span<felt252>>);
+    fn entities(component: felt252, partition: felt252) -> (Span<felt252>, Span<Span<felt252>>);
     fn set_executor(contract_address: ContractAddress);
     fn is_authorized(system: felt252, component: felt252, execution_role: AuthRole) -> bool;
     fn is_account_admin() -> bool;
     fn is_system_for_execution(system: felt252) -> bool;
     fn delete_entity(context: Context, component: felt252, query: Query);
-    fn assume_role(role_id: u250, systems: Array<felt252>);
+    fn assume_role(role_id: felt252, systems: Array<felt252>);
     fn clear_role(systems: Array<felt252>);
-    fn execution_role() -> u250;
+    fn execution_role() -> felt252;
     fn system_components(system: felt252) -> Array<(felt252, bool)>;
 }
 

@@ -40,7 +40,7 @@ impl CommandTrait for EntitiesCommand {
 
         command.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
             "
-            let mut __$query_id$_ids: Array<Span<dojo_core::integer::u250>> = ArrayTrait::new();
+            let mut __$query_id$_ids: Array<Span<felt252>> = ArrayTrait::new();
             let mut __$query_id$_entities_raw: Array<Span<Span<felt252>>> = ArrayTrait::new();
 
             ",
@@ -56,8 +56,7 @@ impl CommandTrait for EntitiesCommand {
                     RewriteNode::interpolate_patched(
                         "
                         let (__$query_id$_$query_subtype$_ids, __$query_id$_$query_subtype$_raw) = \
-                         ctx.world.entities('$component$', \
-                         dojo_core::integer::u250Trait::new($partition$));
+                         ctx.world.entities('$component$', $partition$);
                         __$query_id$_ids.append(__$query_id$_$query_subtype$_ids);
                         __$query_id$_entities_raw.append(__$query_id$_$query_subtype$_raw);
                         ",

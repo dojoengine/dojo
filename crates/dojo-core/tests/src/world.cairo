@@ -9,8 +9,6 @@ use starknet::class_hash::Felt252TryIntoClassHash;
 use starknet::syscalls::deploy_syscall;
 use starknet::contract_address_const;
 
-use dojo_core::integer::u250;
-use dojo_core::integer::{U32IntoU250, Felt252IntoU250};
 use dojo_core::storage::query::QueryTrait;
 use dojo_core::interfaces::IWorldDispatcher;
 use dojo_core::interfaces::IWorldDispatcherTrait;
@@ -41,7 +39,6 @@ mod Bar {
     use super::Foo;
     use traits::Into;
     use starknet::get_caller_address;
-    use dojo_core::integer::u250;
 
     fn execute(a: felt252, b: u128) {
         let caller = get_caller_address();
@@ -54,7 +51,6 @@ mod Buzz {
     use super::{Foo, Fizz};
     use traits::Into;
     use starknet::get_caller_address;
-    use dojo_core::integer::u250;
 
     fn execute(a: felt252, b: u128) {
         let caller = get_caller_address();

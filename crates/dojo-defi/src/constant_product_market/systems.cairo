@@ -2,11 +2,10 @@
 mod Buy {
     use traits::Into;
     use array::ArrayTrait;
-    use dojo_core::integer::{u250, ContractAddressIntoU250};
     use dojo_defi::constant_product_market::components::{Item, Cash, Market, MarketTrait};
 
-    fn execute(partition: u250, item_id: u250, quantity: usize) {
-        let player: u250 = starknet::get_caller_address().into();
+    fn execute(partition: felt252, item_id: felt252, quantity: usize) {
+        let player: felt252 = starknet::get_caller_address().into();
 
         let cash_sk: Query = (partition, (player)).into_partitioned();
         let player_cash = commands::<Cash>::entity(cash_sk);
@@ -44,11 +43,10 @@ mod Buy {
 mod Sell {
     use traits::Into;
     use array::ArrayTrait;
-    use dojo_core::integer::{u250, ContractAddressIntoU250};
     use dojo_defi::constant_product_market::components::{Item, Cash, Market, MarketTrait};
 
-    fn execute(partition: u250, item_id: u250, quantity: usize) {
-        let player: u250 = starknet::get_caller_address().into();
+    fn execute(partition: felt252, item_id: felt252, quantity: usize) {
+        let player: felt252 = starknet::get_caller_address().into();
 
         let item_sk: Query = (partition, (player, item_id)).into_partitioned();
         let maybe_item = commands::<Item>::try_entity(item_sk);
@@ -86,13 +84,12 @@ mod Sell {
 mod AddLiquidity {
     use traits::Into;
     use array::ArrayTrait;
-    use dojo_core::integer::{u250, ContractAddressIntoU250};
     use dojo_defi::constant_product_market::components::{Item, Cash, Market, Liquidity, MarketTrait};
 
     use cubit::types::fixed::Fixed;
 
-    fn execute(partition: u250, item_id: u250, amount: u128, quantity: usize) {
-        let player: u250 = starknet::get_caller_address().into();
+    fn execute(partition: felt252, item_id: felt252, amount: u128, quantity: usize) {
+        let player: felt252 = starknet::get_caller_address().into();
 
         let item_sk: Query = (partition, (player, item_id)).into_partitioned();
         let maybe_item = commands::<Item>::try_entity(item_sk);
@@ -138,14 +135,13 @@ mod AddLiquidity {
 mod RemoveLiquidity {
     use traits::Into;
     use array::ArrayTrait;
-    use dojo_core::integer::{u250, ContractAddressIntoU250};
     use dojo_defi::constant_product_market::components::{Item, Cash, Market, Liquidity, MarketTrait};
 
     use cubit::types::fixed::Fixed;
     use serde::Serde;
 
-    fn execute(partition: u250, item_id: u250, shares: Fixed) {
-        let player: u250 = starknet::get_caller_address().into();
+    fn execute(partition: felt252, item_id: felt252, shares: Fixed) {
+        let player: felt252 = starknet::get_caller_address().into();
 
         let liquidity_sk: Query = (partition, (player, item_id)).into_partitioned();
         let player_liquidity = commands::<Liquidity>::entity(liquidity_sk);

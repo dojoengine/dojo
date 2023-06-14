@@ -458,18 +458,18 @@ mod Move {
 
     #[external]
     fn execute(ctx: Context, player_id: felt252) {
-        let mut __positions_query_ids: Array<Span<dojo_core::integer::u250>> = ArrayTrait::new();
+        let mut __positions_query_ids: Array<Span<felt252>> = ArrayTrait::new();
         let mut __positions_query_entities_raw: Array<Span<Span<felt252>>> = ArrayTrait::new();
 
         let (__positions_query_position_ids, __positions_query_position_raw) = ctx
             .world
-            .entities('Position', dojo_core::integer::u250Trait::new(0));
+            .entities('Position', 0);
         __positions_query_ids.append(__positions_query_position_ids);
         __positions_query_entities_raw.append(__positions_query_position_raw);
 
         let (__positions_query_player_ids, __positions_query_player_raw) = ctx
             .world
-            .entities('Player', dojo_core::integer::u250Trait::new(0));
+            .entities('Player', 0);
         __positions_query_ids.append(__positions_query_player_ids);
         __positions_query_entities_raw.append(__positions_query_player_raw);
 
@@ -527,12 +527,12 @@ mod Move {
 
         let positions_query = (__positions, __players);
 
-        let mut __players_query_ids: Array<Span<dojo_core::integer::u250>> = ArrayTrait::new();
+        let mut __players_query_ids: Array<Span<felt252>> = ArrayTrait::new();
         let mut __players_query_entities_raw: Array<Span<Span<felt252>>> = ArrayTrait::new();
 
         let (__players_query_player_ids, __players_query_player_raw) = ctx
             .world
-            .entities('Player', dojo_core::integer::u250Trait::new(0));
+            .entities('Player', 0);
         __players_query_ids.append(__players_query_player_ids);
         __players_query_entities_raw.append(__players_query_player_raw);
 
@@ -614,20 +614,19 @@ mod Move {
                 .expect('Player failed to deserialize');
             let player_position = (__player_position_position, __player_position_player);
             if foo.len() > 0_u32 {
-                let mut __positions_query_ids: Array<Span<dojo_core::integer::u250>> =
-                    ArrayTrait::new();
+                let mut __positions_query_ids: Array<Span<felt252>> = ArrayTrait::new();
                 let mut __positions_query_entities_raw: Array<Span<Span<felt252>>> =
                     ArrayTrait::new();
 
                 let (__positions_query_position_ids, __positions_query_position_raw) = ctx
                     .world
-                    .entities('Position', dojo_core::integer::u250Trait::new(0));
+                    .entities('Position', 0);
                 __positions_query_ids.append(__positions_query_position_ids);
                 __positions_query_entities_raw.append(__positions_query_position_raw);
 
                 let (__positions_query_player_ids, __positions_query_player_raw) = ctx
                     .world
-                    .entities('Player', dojo_core::integer::u250Trait::new(0));
+                    .entities('Player', 0);
                 __positions_query_ids.append(__positions_query_player_ids);
                 __positions_query_entities_raw.append(__positions_query_player_raw);
 
@@ -814,20 +813,19 @@ mod Move {
                     .expect('Player failed to deserialize');
                 let player_position = (__player_position_position, __player_position_player);
                 if bar == 123 {
-                    let mut __positions_query_ids: Array<Span<dojo_core::integer::u250>> =
-                        ArrayTrait::new();
+                    let mut __positions_query_ids: Array<Span<felt252>> = ArrayTrait::new();
                     let mut __positions_query_entities_raw: Array<Span<Span<felt252>>> =
                         ArrayTrait::new();
 
                     let (__positions_query_position_ids, __positions_query_position_raw) = ctx
                         .world
-                        .entities('Position', dojo_core::integer::u250Trait::new(0));
+                        .entities('Position', 0);
                     __positions_query_ids.append(__positions_query_position_ids);
                     __positions_query_entities_raw.append(__positions_query_position_raw);
 
                     let (__positions_query_player_ids, __positions_query_player_raw) = ctx
                         .world
-                        .entities('Player', dojo_core::integer::u250Trait::new(0));
+                        .entities('Player', 0);
                     __positions_query_ids.append(__positions_query_player_ids);
                     __positions_query_entities_raw.append(__positions_query_player_raw);
 
