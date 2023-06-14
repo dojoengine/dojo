@@ -34,6 +34,11 @@ pub struct RpcOptions {
     #[arg(value_name = "SECONDS")]
     #[arg(help = "Block time in seconds for interval mining.")]
     pub block_time: Option<u64>,
+    
+    #[arg(short, long)]
+    #[arg(default_value = "0.0.0.0")]
+    #[arg(help = "Host address to listen on.")]
+    pub listening_host: String,
 }
 
 #[derive(Debug, Args, Clone)]
@@ -86,7 +91,7 @@ impl App {
     }
 
     pub fn rpc_config(&self) -> RpcConfig {
-        RpcConfig { port: self.rpc.port }
+        RpcConfig { port: self.rpc.port, host: self.rpc.listening_host.clone() }
     }
 
     pub fn starknet_config(&self) -> StarknetConfig {
