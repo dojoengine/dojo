@@ -1,9 +1,9 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+use anyhow::Result;
 use config::RpcConfig;
 use hyper::Method;
-use jsonrpsee::core::Error;
 use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
 use katana::api::KatanaApiServer;
 use katana::KatanaRpc;
@@ -15,7 +15,7 @@ mod katana;
 mod starknet;
 mod utils;
 
-use self::starknet::api::{StarknetApiError, StarknetApiServer};
+use self::starknet::api::StarknetApiServer;
 use self::starknet::rpc::StarknetRpc;
 
 #[derive(Debug, Clone)]
@@ -32,7 +32,7 @@ where
         Self { config, sequencer }
     }
 
-    pub async fn run(self) -> Result<(SocketAddr, ServerHandle), Error> {
+    pub async fn run(self) -> Result<(SocketAddr, ServerHandle)> {
         let mut methods = KatanaRpc::new(self.sequencer.clone()).into_rpc();
         methods.merge(StarknetRpc::new(self.sequencer.clone()).into_rpc())?;
 
@@ -49,8 +49,7 @@ where
             .set_host_filtering(AllowHosts::Any)
             .set_middleware(middleware)
             .build(format!("127.0.0.1:{}", self.config.port))
-            .await
-            .map_err(|_| Error::from(StarknetApiError::InternalServerError))?;
+            .await?;
 
         let addr = server.local_addr()?;
         let handle = server.start(methods)?;
