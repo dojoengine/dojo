@@ -1,7 +1,6 @@
 mod auth;
 mod executor;
 mod execution_context;
-mod integer;
 mod interfaces;
 mod serde;
 mod storage;

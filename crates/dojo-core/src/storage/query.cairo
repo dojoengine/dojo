@@ -6,37 +6,35 @@ use traits::Into;
 use zeroable::IsZeroResult;
 use starknet::ClassHashIntoFelt252;
 use poseidon::poseidon_hash_span;
-use dojo_core::{
-    serde::SpanSerde, integer::{u250, Felt252IntoU250, U250IntoFelt252}
-};
+use dojo_core::serde::SpanSerde;
 
 #[derive(Copy, Drop, Serde)]
 struct Query {
     address_domain: u32,
-    partition: u250,
-    keys: Span<u250>,
+    partition: felt252,
+    keys: Span<felt252>,
 }
 
 trait QueryTrait {
-    fn new(address_domain: u32, partition: u250, keys: Span<u250>) -> Query;
-    fn new_from_id(id: u250) -> Query;
-    fn hash(self: @Query) -> u250;
-    fn table(self: @Query, component: felt252) -> u250;
-    fn keys(self: @Query) -> Span<u250>;
+    fn new(address_domain: u32, partition: felt252, keys: Span<felt252>) -> Query;
+    fn new_from_id(id: felt252) -> Query;
+    fn hash(self: @Query) -> felt252;
+    fn table(self: @Query, component: felt252) -> felt252;
+    fn keys(self: @Query) -> Span<felt252>;
 }
 
 impl QueryImpl of QueryTrait {
-    fn new(address_domain: u32, partition: u250, keys: Span<u250>) -> Query {
+    fn new(address_domain: u32, partition: felt252, keys: Span<felt252>) -> Query {
         Query { address_domain, keys, partition }
     }
 
-    fn new_from_id(id: u250) -> Query {
+    fn new_from_id(id: felt252) -> Query {
         let mut keys = ArrayTrait::new();
         keys.append(id);
         QueryTrait::new(0, 0.into(), keys.span())
     }
 
-    fn hash(self: @Query) -> u250 {
+    fn hash(self: @Query) -> felt252 {
         let keys = *self.keys;
         if keys.len() == 1 {
             return *keys.at(0);
@@ -47,7 +45,7 @@ impl QueryImpl of QueryTrait {
         poseidon_hash_span(serialized.span()).into()
     }
 
-    fn table(self: @Query, component: felt252) -> u250 {
+    fn table(self: @Query, component: felt252) -> felt252 {
         if *self.partition == 0.into() {
             return component.into();
         }
@@ -59,12 +57,12 @@ impl QueryImpl of QueryTrait {
         hash.into()
     }
 
-    fn keys(self: @Query) -> Span<u250> {
+    fn keys(self: @Query) -> Span<felt252> {
         *self.keys
     }
 }
 
-impl LiteralIntoQuery<E0, impl E0Into: Into<E0, u250>, impl E0Drop: Drop<E0>> of Into<E0, Query> {
+impl LiteralIntoQuery<E0, impl E0Into: Into<E0, felt252>, impl E0Drop: Drop<E0>> of Into<E0, Query> {
     fn into(self: E0) -> Query {
         let mut keys = ArrayTrait::new();
         keys.append(E0Into::into(self));
@@ -73,7 +71,7 @@ impl LiteralIntoQuery<E0, impl E0Into: Into<E0, u250>, impl E0Drop: Drop<E0>> of
 }
 
 impl TupleSize1IntoQuery<
-    E0, impl E0Into: Into<E0, u250>, impl E0Drop: Drop<E0>
+    E0, impl E0Into: Into<E0, felt252>, impl E0Drop: Drop<E0>
 > of Into<(E0, ), Query> {
     fn into(self: (E0, )) -> Query {
         let (first) = self;
@@ -86,9 +84,9 @@ impl TupleSize1IntoQuery<
 impl TupleSize2IntoQuery<
     E0,
     E1,
-    impl E0Into: Into<E0, u250>,
+    impl E0Into: Into<E0, felt252>,
     impl E0Drop: Drop<E0>,
-    impl E1Into: Into<E1, u250>,
+    impl E1Into: Into<E1, felt252>,
     impl E1Drop: Drop<E1>,
 > of Into<(E0, E1), Query> {
     fn into(self: (E0, E1)) -> Query {
@@ -104,11 +102,11 @@ impl TupleSize3IntoQuery<
     E0,
     E1,
     E2,
-    impl E0Into: Into<E0, u250>,
+    impl E0Into: Into<E0, felt252>,
     impl E0Drop: Drop<E0>,
-    impl E1Into: Into<E1, u250>,
+    impl E1Into: Into<E1, felt252>,
     impl E1Drop: Drop<E1>,
-    impl E2Into: Into<E2, u250>,
+    impl E2Into: Into<E2, felt252>,
     impl E2Drop: Drop<E2>,
 > of Into<(E0, E1, E2), Query> {
     fn into(self: (E0, E1, E2)) -> Query {
@@ -128,7 +126,7 @@ trait IntoPartitioned<T, Query> {
 impl IntoPartitionedQuery<
     E0,
     E1,
-    impl E0Into: Into<E0, u250>,
+    impl E0Into: Into<E0, felt252>,
     impl E0Drop: Drop<E0>,
     impl E1Into: Into<E1, Query>,
     impl E1Drop: Drop<E1>,

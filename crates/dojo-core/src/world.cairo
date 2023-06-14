@@ -13,7 +13,6 @@ mod World {
     use dojo_core::storage::{db::Database, query::{Query, QueryTrait}};
     use dojo_core::execution_context::Context;
     use dojo_core::auth::components::AuthRole;
-    use dojo_core::integer::{u250, ContractAddressIntoU250};
     use dojo_core::auth::systems::Route;
     use dojo_core::interfaces::{
         IComponentLibraryDispatcher, IComponentDispatcherTrait, IExecutorDispatcher,
@@ -33,7 +32,7 @@ mod World {
         executor_dispatcher: IExecutorDispatcher,
         component_registry: LegacyMap::<felt252, ClassHash>,
         system_registry: LegacyMap::<felt252, ClassHash>,
-        _execution_role: LegacyMap::<ContractAddress, u250>,
+        _execution_role: LegacyMap::<ContractAddress, felt252>,
         systems_for_execution: LegacyMap::<(ContractAddress, felt252), bool>,
         initialized: bool,
         nonce: usize,
@@ -339,10 +338,10 @@ mod World {
     ///
     /// # Returns
     ///
-    /// * `Span<u250>` - The entity IDs
+    /// * `Span<felt252>` - The entity IDs
     /// * `Span<Span<felt252>>` - The entities
     #[view]
-    fn entities(component: felt252, partition: u250) -> (Span<u250>, Span<Span<felt252>>) {
+    fn entities(component: felt252, partition: felt252) -> (Span<felt252>, Span<Span<felt252>>) {
         let class_hash = component_registry::read(component);
         Database::all(class_hash, component.into(), partition)
     }
@@ -372,7 +371,7 @@ mod World {
     /// * `role_id` - The role id to be assumed
     /// * `systems` - The systems to be validated
     #[external]
-    fn assume_role(role_id: u250, systems: Array<felt252>) {
+    fn assume_role(role_id: felt252, systems: Array<felt252>) {
         // Only Admin can set Admin role 
         let caller = get_tx_info().unbox().account_contract_address;
         if role_id == ADMIN.into() {
@@ -448,9 +447,9 @@ mod World {
     ///
     /// # Returns
     ///
-    /// * `u250` - The role id of the system
+    /// * `felt252` - The role id of the system
     #[view]
-    fn execution_role() -> u250 {
+    fn execution_role() -> felt252 {
         let caller = get_tx_info().unbox().account_contract_address;
         _execution_role::read(caller)
     }

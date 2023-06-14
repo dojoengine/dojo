@@ -7,7 +7,6 @@ mod Executor {
     use box::BoxTrait;
     use traits::Into;
     use dojo_core::execution_context::Context;
-    use dojo_core::integer::u250;
     use dojo_core::interfaces::{IWorldDispatcher, ISystemLibraryDispatcher, ISystemDispatcherTrait};
     use dojo_core::auth::components::AuthRole;
     use starknet::contract_address::ContractAddressIntoFelt252;
