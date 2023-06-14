@@ -46,8 +46,8 @@ impl ComponentObject {
             field_type_mapping: IndexMap::from([
                 (Name::new("id"), TypeRef::ID.to_string()),
                 (Name::new("name"), TypeRef::STRING.to_string()),
-                (Name::new("classHash"), ScalarType::FELT.to_string()),
-                (Name::new("transactionHash"), ScalarType::FELT.to_string()),
+                (Name::new("classHash"), ScalarType::FELT252.to_string()),
+                (Name::new("transactionHash"), ScalarType::FELT252.to_string()),
                 (Name::new("createdAt"), ScalarType::DATE_TIME.to_string()),
             ]),
             storage_names,
