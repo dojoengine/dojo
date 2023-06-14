@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use jsonrpsee::core::{async_trait, Error};
-use katana_core::accounts::AccountInformation;
+use katana_core::accounts::Account;
 use katana_core::sequencer::Sequencer;
 
 use self::api::KatanaApiServer;
@@ -25,9 +25,8 @@ impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
         Ok(())
     }
 
-    async fn predeployed_accounts(&self) -> Result<Vec<AccountInformation>, Error> {
-        let accounts: Vec<AccountInformation> =
-            self.sequencer.predeployed_accounts().await.iter().map(|a| a.into()).collect();
+    async fn predeployed_accounts(&self) -> Result<Vec<Account>, Error> {
+        let accounts: Vec<Account> = self.sequencer.predeployed_accounts().await;
         Ok(accounts)
     }
 }
