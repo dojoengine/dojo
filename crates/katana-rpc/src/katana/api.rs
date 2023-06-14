@@ -4,7 +4,10 @@ use jsonrpsee::types::error::CallError;
 use jsonrpsee::types::ErrorObject;
 
 #[derive(thiserror::Error, Clone, Copy, Debug)]
-pub enum KatanaApiError {}
+pub enum KatanaApiError {
+    #[error("Failed to change next block timestamp")]
+    FailedToChangeNextBlockTimestamp = 1,
+}
 
 impl From<KatanaApiError> for Error {
     fn from(err: KatanaApiError) -> Self {
@@ -16,4 +19,13 @@ impl From<KatanaApiError> for Error {
 pub trait KatanaApi {
     #[method(name = "generateBlock")]
     async fn generate_block(&self) -> Result<(), Error>;
+
+    #[method(name = "blockTimestamp")]
+    async fn block_timestamp(&self) -> Result<u64, Error>;
+
+    #[method(name = "setNextBlockTimestamp")]
+    async fn set_next_block_timestamp(&self, timestamp: u64) -> Result<(), Error>;
+
+    #[method(name = "increaseNextBlockTimestamp")]
+    async fn increase_next_block_timestamp(&self, timestamp: u64) -> Result<(), Error>;
 }

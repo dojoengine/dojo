@@ -28,4 +28,6 @@ pub enum SequencerError {
     StarknetApi(#[from] StarknetApiError),
     #[error(transparent)]
     EntryPointExecution(#[from] EntryPointExecutionError),
+    #[error("Wait for pending transactions")]
+    PendingTransactions,
 }
