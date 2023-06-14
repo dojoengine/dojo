@@ -15,7 +15,7 @@ impl ScalarType {
     pub const CURSOR: &'static str = "Cursor";
     pub const ADDRESS: &'static str = "Address";
     pub const DATE_TIME: &'static str = "DateTime";
-    pub const FELT: &'static str = "FieldElement";
+    pub const FELT252: &'static str = "felt252";
 
     pub fn types() -> HashSet<&'static str> {
         HashSet::from([
@@ -30,7 +30,7 @@ impl ScalarType {
             ScalarType::CURSOR,
             ScalarType::ADDRESS,
             ScalarType::DATE_TIME,
-            ScalarType::FELT,
+            ScalarType::FELT252,
         ])
     }
 }
