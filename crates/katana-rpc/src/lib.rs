@@ -48,9 +48,9 @@ where
             .set_logger(KatanaNodeRpcLogger)
             .set_host_filtering(AllowHosts::Any)
             .set_middleware(middleware)
-            .build(format!("{}:{}", self.config.host.clone(), self.config.port))
-            .await
-            .map_err(|_| Error::from(StarknetApiError::InternalServerError))?;
+            .build(format!("0.0.0.0:{}", self.config.port))
+            .await?;
+            //.map_err(|_| Error::from(StarknetApiError::InternalServerError))?;
 
         let addr = server.local_addr()?;
         let handle = server.start(methods)?;

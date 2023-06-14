@@ -91,7 +91,7 @@ impl App {
     }
 
     pub fn rpc_config(&self) -> RpcConfig {
-        RpcConfig { port: self.rpc.port, host: self.rpc.listening_host.clone() }
+        RpcConfig { port: self.rpc.port }
     }
 
     pub fn starknet_config(&self) -> StarknetConfig {
