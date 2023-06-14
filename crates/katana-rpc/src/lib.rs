@@ -90,7 +90,7 @@ impl Logger for KatanaNodeRpcLogger {
         _kind: MethodKind,
         _transport: TransportProtocol,
     ) {
-        debug!(target: "server", method = ?method_name);
+        debug!(method = ?method_name);
     }
 
     fn on_result(
