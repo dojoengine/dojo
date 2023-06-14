@@ -67,7 +67,7 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: scripts/clippy.sh
 
-  rustfmt:
+  fmt:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -82,6 +82,9 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: scripts/rust_fmt.sh --check
+      - run: 
+          cargo install taplo-cli
+          taplo format 
 
   # Check for unnecessary dependencies.
   udeps:
