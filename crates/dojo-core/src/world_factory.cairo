@@ -12,7 +12,7 @@ mod WorldFactory {
     };
 
     use dojo_core::interfaces::{IWorldDispatcher, IWorldDispatcherTrait};
-    use dojo_core::{string::ShortString, auth::systems::Route};
+    use dojo_core::auth::systems::Route;
 
     struct Storage {
         world_class_hash: ClassHash,

@@ -7,7 +7,7 @@ use zeroable::IsZeroResult;
 use starknet::ClassHashIntoFelt252;
 use poseidon::poseidon_hash_span;
 use dojo_core::{
-    string::ShortString, serde::SpanSerde, integer::{u250, Felt252IntoU250, U250IntoFelt252}
+    serde::SpanSerde, integer::{u250, Felt252IntoU250, U250IntoFelt252}
 };
 
 #[derive(Copy, Drop, Serde)]
@@ -21,7 +21,7 @@ trait QueryTrait {
     fn new(address_domain: u32, partition: u250, keys: Span<u250>) -> Query;
     fn new_from_id(id: u250) -> Query;
     fn hash(self: @Query) -> u250;
-    fn table(self: @Query, component: ShortString) -> u250;
+    fn table(self: @Query, component: felt252) -> u250;
     fn keys(self: @Query) -> Span<u250>;
 }
 
@@ -47,7 +47,7 @@ impl QueryImpl of QueryTrait {
         poseidon_hash_span(serialized.span()).into()
     }
 
-    fn table(self: @Query, component: ShortString) -> u250 {
+    fn table(self: @Query, component: felt252) -> u250 {
         if *self.partition == 0.into() {
             return component.into();
         }

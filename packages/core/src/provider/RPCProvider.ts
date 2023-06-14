@@ -1,7 +1,7 @@
 import { RpcProvider, Provider as StarknetProvider, Account, stark, number, Call, InvokeFunctionResponse } from "starknet";
 import { Provider } from "./provider";
 import { Query, WorldEntryPoints } from "../types";
-import { strToShortStringFelt } from '../utils'
+import { strTofelt252Felt } from '../utils'
 import { LOCAL_TORII } from '../constants';
 
 export class RPCProvider extends Provider {
@@ -35,7 +35,7 @@ export class RPCProvider extends Provider {
             entrypoint: WorldEntryPoints.get, // "entity"
             contractAddress: this.getWorldAddress(),
             calldata: [
-                strToShortStringFelt(component),
+                strTofelt252Felt(component),
                 query.address_domain,
                 query.partition,
                 query.keys.length,
@@ -61,7 +61,7 @@ export class RPCProvider extends Provider {
         const call: Call = {
             entrypoint: WorldEntryPoints.entities,
             contractAddress: this.getWorldAddress(),
-            calldata: [strToShortStringFelt(component), partition]
+            calldata: [strTofelt252Felt(component), partition]
         }
 
         console.log(call)
@@ -80,7 +80,7 @@ export class RPCProvider extends Provider {
         const call: Call = {
             entrypoint: WorldEntryPoints.component,
             contractAddress: this.getWorldAddress(),
-            calldata: [strToShortStringFelt(name)]
+            calldata: [strTofelt252Felt(name)]
         }
 
         try {
@@ -106,7 +106,7 @@ export class RPCProvider extends Provider {
                     contractAddress: this.getWorldAddress() || "",
                     entrypoint: WorldEntryPoints.execute,
                     calldata: stark.compileCalldata({
-                        name: strToShortStringFelt(system),
+                        name: strTofelt252Felt(system),
                         ...call_data_obj
                     })
                 },
