@@ -26,6 +26,7 @@ tower = { version = "0.4.13", features = [ "full" ] }
 tower-http = { version = "0.4.0", features = [ "full" ] }
 tracing.workspace = true
 
+
 [dev-dependencies]
 assert_matches = "1.5.0"
 dojo-test-utils = { path = "../dojo-test-utils" }

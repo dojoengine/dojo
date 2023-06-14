@@ -7,7 +7,7 @@ use starknet::core::utils::{
     CairoShortStringToFeltError, ParseCairoShortStringError,
 };
 use starknet::providers::{Provider, ProviderError};
-use starknet_crypto::{poseidon_hash, poseidon_hash_many};
+use starknet_crypto::poseidon_hash_many;
 
 use crate::manifest::Member;
 use crate::world::{ContractReaderError, WorldContractReader};
@@ -109,7 +109,7 @@ impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
         let table = if partition_id == FieldElement::ZERO {
             self.name
         } else {
-            poseidon_hash(self.name, partition_id)
+            poseidon_hash_many(&[self.name, partition_id])
         };
         let keys_hash = if keys.len() == 1 {
             keys[0]
