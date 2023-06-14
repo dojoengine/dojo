@@ -12,7 +12,6 @@ use starknet::contract_address_const;
 use dojo_core::integer::u250;
 use dojo_core::integer::{U32IntoU250, Felt252IntoU250};
 use dojo_core::storage::query::QueryTrait;
-use dojo_core::string::ShortString;
 use dojo_core::interfaces::IWorldDispatcher;
 use dojo_core::interfaces::IWorldDispatcherTrait;
 use dojo_core::executor::Executor;
@@ -415,7 +414,7 @@ fn test_set_entity_admin() {
     data.append(1337);
 
     // Assume Admin role
-    let mut systems = ArrayTrait::<ShortString>::new();
+    let mut systems = ArrayTrait::<felt252>::new();
     world.assume_role(World::ADMIN.into(), systems);
     world.execute('Bar'.into(), data.span());
 
@@ -608,7 +607,7 @@ fn test_revoke_role() {
     world.initialize(route);
 
     // Assume Admin role
-    let mut systems = ArrayTrait::<ShortString>::new();
+    let mut systems = ArrayTrait::<felt252>::new();
     systems.append('Bar'.into());
     world.assume_role(World::ADMIN.into(), systems);
 
@@ -623,7 +622,7 @@ fn test_revoke_role() {
     assert(*role[0] == 'FooWriter', 'role not granted');
 
     // Assume Admin role
-    let mut systems = ArrayTrait::<ShortString>::new();
+    let mut systems = ArrayTrait::<felt252>::new();
     systems.append('Bar'.into());
     world.assume_role(World::ADMIN.into(), systems);
 
@@ -680,7 +679,7 @@ fn test_revoke_scoped_role() {
     world.initialize(route);
 
     // Assume FooWriter role
-    let mut systems = ArrayTrait::<ShortString>::new();
+    let mut systems = ArrayTrait::<felt252>::new();
     systems.append('Bar'.into());
     world.assume_role(World::ADMIN.into(), systems);
 
@@ -781,7 +780,7 @@ fn test_assume_admin_role_by_admin() {
     world.initialize(route);
 
     // Assume Admin role by Admin
-    let mut systems = ArrayTrait::<ShortString>::new();
+    let mut systems = ArrayTrait::<felt252>::new();
     world.assume_role(World::ADMIN.into(), systems);
 
     // Check that role is assumed
@@ -811,7 +810,7 @@ fn test_assume_admin_role_by_non_admin() {
 
     // Non-admin assume Bar system that has Admin role
     // Should panic since caller is not admin anymore
-    let mut systems = ArrayTrait::<ShortString>::new();
+    let mut systems = ArrayTrait::<felt252>::new();
     world.assume_role('Bar'.into(), systems);
 }
 

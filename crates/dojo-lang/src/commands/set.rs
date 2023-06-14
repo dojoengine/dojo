@@ -30,8 +30,7 @@ impl SetCommand {
                     {
                         let mut calldata = array::ArrayTrait::new();
                         serde::Serde::serialize(@$ctor$, ref calldata);
-                        ctx.world.set_entity(ctx, \
-                     dojo_core::string::ShortStringTrait::new('$component$'), $query$, 0_u8, \
+                        ctx.world.set_entity(ctx, '$component$', $query$, 0_u8, \
                      array::ArrayTrait::span(@calldata));
                     }
                     ",
