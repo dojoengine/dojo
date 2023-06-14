@@ -56,7 +56,7 @@ pub async fn execute(command: ComponentCommands, env_metadata: Option<Value>) ->
 
             println!(
                 "{}",
-                entity.iter().map(|f| format!("{f:#x}")).collect::<Vec<String>>().join(" ")
+                entity.iter().map(|f| format!("{f:#x}")).collect::<Vec<String>>().join("\n")
             )
         }
     }
