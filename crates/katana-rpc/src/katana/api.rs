@@ -16,4 +16,7 @@ impl From<KatanaApiError> for Error {
 pub trait KatanaApi {
     #[method(name = "generateBlock")]
     async fn generate_block(&self) -> Result<(), Error>;
+
+    #[method(name = "is_alive")]
+    async fn is_alive(&self) -> Result<(), Error>;
 }

@@ -23,4 +23,8 @@ impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
         self.sequencer.generate_new_block().await;
         Ok(())
     }
+
+    async fn is_alive(&self) -> Result<(), Error> {
+        Ok(())
+    }
 }
