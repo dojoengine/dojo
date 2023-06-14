@@ -353,17 +353,19 @@ impl StarknetWrapper {
 
     fn update_block_context(&mut self) {
         self.block_context.block_number = self.block_context.block_number.next();
+
+        let current_timestamp_secs = get_current_timestamp().as_secs() as i64;
+
         if self.block_context_generator.next_block_start_time == 0 {
-            self.block_context.block_timestamp = BlockTimestamp(
-                get_current_timestamp().as_secs()
-                    + self.block_context_generator.block_timestamp_offset,
-            );
+            let block_timestamp =
+                current_timestamp_secs + self.block_context_generator.block_timestamp_offset;
+            self.block_context.block_timestamp = BlockTimestamp(block_timestamp as u64);
         } else {
             let block_timestamp = self.block_context_generator.next_block_start_time;
             self.block_context_generator.block_timestamp_offset =
-                block_timestamp - get_current_timestamp().as_secs();
-            self.block_context_generator.next_block_start_time = 0;
+                block_timestamp as i64 - current_timestamp_secs;
             self.block_context.block_timestamp = BlockTimestamp(block_timestamp);
+            self.block_context_generator.next_block_start_time = 0;
         }
     }
 
@@ -386,7 +388,7 @@ impl StarknetWrapper {
         if has_pending_transactions(self) {
             return Err(SequencerError::PendingTransactions);
         }
-        self.block_context_generator.block_timestamp_offset += timestamp;
+        self.block_context_generator.block_timestamp_offset += timestamp as i64;
         Ok(())
     }
 }
