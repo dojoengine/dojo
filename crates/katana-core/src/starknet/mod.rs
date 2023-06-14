@@ -144,7 +144,7 @@ impl StarknetWrapper {
             }
 
             Err(exec_err) => {
-                warn!("Transaction execution error: {exec_err}");
+                warn!("Transaction execution error: {exec_err:?}");
 
                 let tx = StarknetTransaction::new(
                     api_tx,

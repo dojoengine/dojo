@@ -11,6 +11,7 @@ anyhow = "1.0.40"
 blockifier.workspace = true
 cairo-lang-starknet.workspace = true
 tokio.workspace = true
+flate2.workspace = true
 hex = { version = "0.4.3", default-features = false }
 jsonrpsee = { version = "0.16.2", features = [ "full" ] }
 katana-core = { path = "../katana-core" }
@@ -21,6 +22,7 @@ starknet.workspace = true
 starknet_api.workspace = true
 thiserror.workspace = true
 hyper = "0.14.20"
+tracing.workspace = true
 tower-http = { version = "0.4.0", features = [ "full" ] }
 tower = { version = "0.4.13", features = [ "full" ] }
 

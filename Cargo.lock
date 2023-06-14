@@ -5145,6 +5145,7 @@ dependencies = [
  "blockifier",
  "cairo-lang-starknet",
  "dojo-test-utils",
+ "flate2",
  "hex",
  "hyper",
  "jsonrpsee",
@@ -5158,6 +5159,7 @@ dependencies = [
  "tokio",
  "tower",
  "tower-http",
+ "tracing",
  "url",
 ]
 
