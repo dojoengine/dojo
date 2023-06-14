@@ -56,14 +56,14 @@ impl WorldDiff {
 
         let world = ContractDiff {
             name: "World".into(),
-            address: local.world.address,
+            address: remote.as_ref().and_then(|m| m.world.address),
             local: local.world.class_hash,
             remote: remote.as_ref().map(|m| m.world.class_hash),
         };
 
         let executor = ContractDiff {
             name: "Executor".into(),
-            address: local.executor.address,
+            address: remote.as_ref().and_then(|m| m.executor.address),
             local: local.executor.class_hash,
             remote: remote.map(|m| m.executor.class_hash),
         };
