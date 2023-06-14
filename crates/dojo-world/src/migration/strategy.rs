@@ -14,8 +14,8 @@ use super::{DeployOutput, RegisterOutput};
 pub struct MigrationOutput {
     pub world: Option<DeployOutput>,
     pub executor: Option<DeployOutput>,
-    pub systems: RegisterOutput,
-    pub components: RegisterOutput,
+    pub systems: Option<RegisterOutput>,
+    pub components: Option<RegisterOutput>,
 }
 
 #[derive(Debug)]

@@ -47,9 +47,9 @@ where
         None
     };
 
-    let diff = WorldDiff::compute(local_manifest, remote_manifest);
-
     ws_config.ui().print(format!("{} 🧰 Evaluating World diff...", Paint::new("[2/3]").dimmed()));
+
+    let diff = WorldDiff::compute(local_manifest, remote_manifest);
 
     let mut migration = prepare_for_migration(world_address, target_dir, diff)
         .with_context(|| "Problem preparing for migration.")?;
@@ -213,10 +213,14 @@ async fn register_components<A>(
     strategy: &MigrationStrategy,
     migrator: &A,
     ws_config: &Config,
-) -> Result<RegisterOutput>
+) -> Result<Option<RegisterOutput>>
 where
     A: ConnectedAccount + Sync + 'static,
 {
+    if strategy.components.is_empty() {
+        return Ok(None);
+    }
+
     ws_config.ui().print(
         Paint::new(format!("# Components ({})", strategy.components.len())).bold().to_string(),
     );
@@ -255,17 +259,21 @@ where
         Paint::new(format!("  > registered at: {:#x}", transaction_hash)).dimmed().to_string(),
     );
 
-    Ok(RegisterOutput { transaction_hash, declare_output })
+    Ok(Some(RegisterOutput { transaction_hash, declare_output }))
 }
 
 async fn register_systems<A>(
     strategy: &MigrationStrategy,
     migrator: &A,
     ws_config: &Config,
-) -> Result<RegisterOutput>
+) -> Result<Option<RegisterOutput>>
 where
     A: ConnectedAccount + Sync + 'static,
 {
+    if strategy.systems.is_empty() {
+        return Ok(None);
+    }
+
     ws_config
         .ui()
         .print(Paint::new(format!("# Systems ({})", strategy.systems.len())).bold().to_string());
@@ -304,5 +312,5 @@ where
         Paint::new(format!("  > registered at: {:#x}", transaction_hash)).dimmed().to_string(),
     );
 
-    Ok(RegisterOutput { transaction_hash, declare_output })
+    Ok(Some(RegisterOutput { transaction_hash, declare_output }))
 }
