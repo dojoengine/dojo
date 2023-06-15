@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use super::class::ClassDiff;
 use super::contract::ContractDiff;
+use super::StateDiff;
 use crate::manifest::Manifest;
 
 /// Represents the state differences between the local and remote worlds.
@@ -69,6 +70,23 @@ impl WorldDiff {
         };
 
         WorldDiff { world, executor, systems, contracts, components }
+    }
+
+    pub fn count_diffs(&self) -> usize {
+        let mut count = 0;
+
+        if !self.world.is_same() {
+            count += 1;
+        }
+
+        if !self.executor.is_same() {
+            count += 1;
+        }
+
+        count += self.systems.iter().filter(|s| !s.is_same()).count();
+        count += self.components.iter().filter(|s| !s.is_same()).count();
+        count += self.contracts.iter().filter(|s| !s.is_same()).count();
+        count
     }
 }
 

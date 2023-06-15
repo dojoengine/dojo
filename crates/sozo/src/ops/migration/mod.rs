@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use anyhow::{anyhow, Context, Result};
-use dojo_world::manifest::Manifest;
+use dojo_world::manifest::{Manifest, ManifestError};
 use dojo_world::migration::strategy::{prepare_for_migration, MigrationOutput, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{Declarable, Deployable, RegisterOutput};
@@ -26,14 +26,14 @@ where
     P: AsRef<Path>,
     A: ConnectedAccount + Sync + 'static,
 {
-    ws_config.ui().print(format!("{} 🌏 Building World state...", Paint::new("[1/3]").dimmed()));
+    ws_config.ui().print(format!("{} 🌏 Building World state...", Paint::new("[1]").dimmed()));
 
     let local_manifest = Manifest::load_from_path(target_dir.as_ref().join("manifest.json"))?;
 
     let remote_manifest = if let Some(world_address) = world_address {
         ws_config.ui().print(
             Paint::new(format!(
-                "   > Found remote World: {world_address:#x}\n   > Fetching remote World state"
+                "   > Found remote World: {world_address:#x}\n   > Fetching remote state"
             ))
             .dimmed()
             .to_string(),
@@ -42,34 +42,62 @@ where
         Manifest::from_remote(migrator.provider(), world_address, Some(local_manifest.clone()))
             .await
             .map(Some)
-            .map_err(|e| anyhow!("Failed creating remote World manifest: {e}"))?
+            .map_err(|e| match e {
+                ManifestError::RemoteWorldNotFound => {
+                    anyhow!(
+                        "Unable to find remote World at address {world_address:#x}. \
+                    Make sure the World address is correct and that it is already deployed!"
+                    )
+                }
+                _ => anyhow!(e),
+            })
+            .with_context(|| "Failed to build remote World state.")?
     } else {
         None
     };
 
-    ws_config.ui().print(format!("{} 🧰 Evaluating World diff...", Paint::new("[2/3]").dimmed()));
+    ws_config.ui().print(format!("{} 🧰 Evaluating Worlds diff...", Paint::new("[2]").dimmed()));
 
     let diff = WorldDiff::compute(local_manifest, remote_manifest);
+    let total_diffs = diff.count_diffs();
 
-    let mut migration = prepare_for_migration(world_address, target_dir, diff)
-        .with_context(|| "Problem preparing for migration.")?;
+    ws_config
+        .ui()
+        .print(Paint::new(format!("   > Total diffs found: {}", total_diffs)).dimmed().to_string());
 
-    ws_config.ui().print(format!("{} 📦 Migrating world...", Paint::new("[3/3]").dimmed()));
+    if total_diffs == 0 {
+        ws_config.ui().print("\n✨ No changes to be made. Remote World is already up to date!")
+    } else {
+        ws_config
+            .ui()
+            .print(Paint::new(format!("   > Building migration strategy")).dimmed().to_string());
 
-    let output = execute_strategy(&mut migration, migrator, ws_config)
-        .await
-        .map_err(|e| anyhow!(e))
-        .with_context(|| "Problem trying to migrate.")?;
+        let mut migration = prepare_for_migration(world_address, target_dir, diff)
+            .with_context(|| "Problem preparing for migration.")?;
 
-    ws_config.ui().print(format!(
-        "\n✨ Successfully migrated World at address {:#x}",
-        output
-            .world
-            .as_ref()
-            .map(|o| o.contract_address)
-            .or(world_address)
-            .expect("world address must exist"),
-    ));
+        ws_config.ui().print(format!("{} 📦 Migrating world...", Paint::new("[3]").dimmed()));
+        let info = migration.info();
+        ws_config.ui().print(
+            Paint::new(format!(
+                "   > Total items to be migrated ({}): New {} Update {}",
+                info.new + info.update,
+                info.new,
+                info.update
+            ))
+            .dimmed()
+            .to_string(),
+        );
+
+        execute_strategy(&mut migration, migrator, ws_config)
+            .await
+            .map_err(|e| anyhow!(e))
+            .with_context(|| "Problem trying to migrate.")?;
+
+        ws_config.ui().print(format!(
+            "\n🎉 Successfully migrated World at address {:#x}",
+            migration.world_address().expect("world address must exist"),
+        ));
+    }
 
     Ok(())
 }
@@ -88,7 +116,7 @@ where
             ws_config.ui().print(format!("\n{}", Paint::new("# Executor").bold()));
 
             let res = executor
-                .deploy(executor.contract.local, vec![], &migrator)
+                .deploy(executor.diff.local, vec![], &migrator)
                 .await
                 .map_err(|e| anyhow!("Failed to migrate executor: {e}"))?;
 
@@ -135,7 +163,7 @@ where
 
             let res = world
                 .deploy(
-                    world.contract.local,
+                    world.diff.local,
                     vec![strategy.executor.as_ref().unwrap().contract_address.unwrap()],
                     &migrator,
                 )
@@ -228,12 +256,12 @@ where
     let mut declare_output = vec![];
 
     for component in strategy.components.iter() {
-        ws_config.ui().print(format!("  {}", Paint::new(&component.class.name).italic()));
+        ws_config.ui().print(format!("  {}", Paint::new(&component.diff.name).italic()));
 
         let res = component
             .declare(migrator)
             .await
-            .map_err(|e| anyhow!("Failed to declare component {}: {e}", component.class.name))?;
+            .map_err(|e| anyhow!("Failed to declare component {}: {e}", component.diff.name))?;
 
         ws_config.ui().verbose(
             Paint::new(format!("  > declare transaction: {:#x}", res.transaction_hash))
@@ -281,12 +309,12 @@ where
     let mut declare_output = vec![];
 
     for system in strategy.systems.iter() {
-        ws_config.ui().print(format!("  {}", Paint::new(&system.class.name).italic()));
+        ws_config.ui().print(format!("  {}", Paint::new(&system.diff.name).italic()));
 
         let res = system
             .declare(migrator)
             .await
-            .map_err(|e| anyhow!("Failed to declare system {}: {e}", system.class.name))?;
+            .map_err(|e| anyhow!("Failed to declare system {}: {e}", system.diff.name))?;
 
         ws_config.ui().verbose(
             Paint::new(format!("  > declare transaction: {:#x}", res.transaction_hash))

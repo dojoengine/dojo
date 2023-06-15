@@ -4,7 +4,8 @@ use std::path::PathBuf;
 use async_trait::async_trait;
 use starknet::core::types::{DeclareTransactionResult, FieldElement};
 
-use super::{Declarable, Deployable};
+use super::{Declarable, Deployable, MigrationType, StateDiff};
+
 pub type DeclareOutput = DeclareTransactionResult;
 
 /// Represents differences between a local and remote contract.
@@ -14,6 +15,16 @@ pub struct ContractDiff {
     pub local: FieldElement,
     pub remote: Option<FieldElement>,
     pub address: Option<FieldElement>,
+}
+
+impl StateDiff for ContractDiff {
+    fn is_same(&self) -> bool {
+        if let Some(remote) = self.remote {
+            self.local == remote
+        } else {
+            false
+        }
+    }
 }
 
 impl Display for ContractDiff {
@@ -33,12 +44,26 @@ impl Display for ContractDiff {
 }
 
 // TODO: evaluate the contract address when building the migration plan
+// Represents a contract that needs to be migrated to the remote state
 #[derive(Debug, Default)]
 pub struct ContractMigration {
     pub salt: FieldElement,
-    pub contract: ContractDiff,
+    pub diff: ContractDiff,
     pub artifact_path: PathBuf,
     pub contract_address: Option<FieldElement>,
+}
+
+impl ContractMigration {
+    pub fn migration_type(&self) -> MigrationType {
+        let Some(remote ) = self.diff.remote else {
+            return MigrationType::New;
+        };
+
+        match self.diff.local == remote {
+            true => MigrationType::New,
+            false => MigrationType::Update,
+        }
+    }
 }
 
 #[async_trait]
