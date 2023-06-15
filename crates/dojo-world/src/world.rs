@@ -176,6 +176,56 @@ impl<'a, P: Provider + Sync> WorldContractReader<'a, P> {
         Self { address, provider }
     }
 
+    pub async fn is_authorized(
+        &self,
+        system: &str,
+        component: &str,
+        execution_role: &str,
+        block_id: BlockId,
+    ) -> Result<bool, ContractReaderError<P::Error>> {
+        let res = self
+            .provider
+            .call(
+                FunctionCall {
+                    contract_address: self.address,
+                    calldata: vec![
+                        cairo_short_string_to_felt(system)
+                            .map_err(ContractReaderError::CairoShortStringToFeltError)?,
+                        cairo_short_string_to_felt(component)
+                            .map_err(ContractReaderError::CairoShortStringToFeltError)?,
+                        cairo_short_string_to_felt(execution_role)
+                            .map_err(ContractReaderError::CairoShortStringToFeltError)?,
+                    ],
+                    entry_point_selector: get_selector_from_name("is_authorized").unwrap(),
+                },
+                block_id,
+            )
+            .await
+            .map_err(ContractReaderError::ProviderError)?;
+
+        Ok(res[0] == FieldElement::ONE)
+    }
+
+    pub async fn is_account_admin(
+        &self,
+        block_id: BlockId,
+    ) -> Result<bool, ContractReaderError<P::Error>> {
+        let res = self
+            .provider
+            .call(
+                FunctionCall {
+                    contract_address: self.address,
+                    calldata: vec![],
+                    entry_point_selector: get_selector_from_name("is_account_admin").unwrap(),
+                },
+                block_id,
+            )
+            .await
+            .map_err(ContractReaderError::ProviderError)?;
+
+        Ok(res[0] == FieldElement::ONE)
+    }
+
     pub async fn executor(
         &self,
         block_id: BlockId,
