@@ -320,7 +320,7 @@ impl Sequencer for KatanaSequencer {
         self.starknet.read().await.block_context.block_number
     }
 
-    async fn block_timestamp(&self) -> BlockTimestamp {
+    async fn next_block_timestamp(&self) -> BlockTimestamp {
         self.starknet.read().await.block_context.block_timestamp
     }
 
@@ -545,7 +545,7 @@ pub trait Sequencer {
 
     async fn block_number(&self) -> BlockNumber;
 
-    async fn block_timestamp(&self) -> BlockTimestamp;
+    async fn next_block_timestamp(&self) -> BlockTimestamp;
 
     async fn block(&self, block_id: BlockId) -> Option<StarknetBlock>;
 

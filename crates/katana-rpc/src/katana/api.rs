@@ -20,8 +20,8 @@ pub trait KatanaApi {
     #[method(name = "generateBlock")]
     async fn generate_block(&self) -> Result<(), Error>;
 
-    #[method(name = "blockTimestamp")]
-    async fn block_timestamp(&self) -> Result<u64, Error>;
+    #[method(name = "nextBlockTimestamp")]
+    async fn next_block_timestamp(&self) -> Result<u64, Error>;
 
     #[method(name = "setNextBlockTimestamp")]
     async fn set_next_block_timestamp(&self, timestamp: u64) -> Result<(), Error>;

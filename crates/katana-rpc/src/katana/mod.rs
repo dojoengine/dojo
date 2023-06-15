@@ -24,8 +24,8 @@ impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
         Ok(())
     }
 
-    async fn block_timestamp(&self) -> Result<u64, Error> {
-        Ok(self.sequencer.block_timestamp().await.0)
+    async fn next_block_timestamp(&self) -> Result<u64, Error> {
+        Ok(self.sequencer.next_block_timestamp().await.0)
     }
 
     async fn set_next_block_timestamp(&self, timestamp: u64) -> Result<(), Error> {
