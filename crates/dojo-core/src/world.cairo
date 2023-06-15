@@ -145,11 +145,11 @@ mod World {
     /// * `bool` - True if the calling account has Admin role, false otherwise
     #[view]
     fn is_account_admin() -> bool {
-        let is_account_admin_class_hash = system_registry::read('IsAccountAdmin'.into());
+        let is_account_admin_class_hash = system_registry::read('IsAccountAdmin');
         // Call IsAccountAdmin system via executor
         let mut calldata = ArrayTrait::new();
         let res = executor_dispatcher::read()
-            .execute(is_account_admin_class_hash, AuthRole { id: ADMIN.into() }, calldata.span());
+            .execute(is_account_admin_class_hash, AuthRole { id: ADMIN }, calldata.span());
         (*res[0]).is_non_zero()
     }
 
@@ -374,7 +374,7 @@ mod World {
     fn assume_role(role_id: felt252, systems: Array<felt252>) {
         // Only Admin can set Admin role 
         let caller = get_tx_info().unbox().account_contract_address;
-        if role_id == ADMIN.into() {
+        if role_id == ADMIN {
             assert(is_account_admin(), 'only admin can set Admin role');
         } else {
             let mut index = 0;

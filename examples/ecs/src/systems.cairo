@@ -84,9 +84,8 @@ mod tests {
 
     #[test]
     #[available_gas(30000000)]
-    fn test_move() {
-        let caller = starknet::contract_address_const::<0x1337>();
-        starknet::testing::set_account_contract_address(caller);
+    fn test_move_with_routes() {
+        let caller = starknet::contract_address_const::<0x0>();
 
         // components
         let mut components = array::ArrayTrait::new();
@@ -101,33 +100,33 @@ mod tests {
         routes
             .append(
                 RouteTrait::new(
-                    'Move'.into(), // target_id
-                    'MovesWriter'.into(), // role_id
-                    'Moves'.into(), // resource_id
+                    'Move', // target_id
+                    'MovesWriter', // role_id
+                    'Moves', // resource_id
                 )
             );
         routes
             .append(
                 RouteTrait::new(
-                    'Move'.into(), // target_id
-                    'PositionWriter'.into(), // role_id
-                    'Position'.into(), // resource_id
+                    'Move', // target_id
+                    'PositionWriter', // role_id
+                    'Position', // resource_id
                 )
             );
         routes
             .append(
                 RouteTrait::new(
-                    'Spawn'.into(), // target_id
-                    'MovesWriter'.into(), // role_id
-                    'Moves'.into(), // resource_id
+                    'Spawn', // target_id
+                    'MovesWriter', // role_id
+                    'Moves', // resource_id
                 )
             );
         routes
             .append(
                 RouteTrait::new(
-                    'Spawn'.into(), // target_id
-                    'PositionWriter'.into(), // role_id
-                    'Position'.into(), // resource_id
+                    'Spawn', // target_id
+                    'PositionWriter', // role_id
+                    'Position', // resource_id
                 )
             );
 
@@ -135,16 +134,55 @@ mod tests {
         let world = spawn_test_world(components, systems, routes);
 
         let spawn_call_data = array::ArrayTrait::new();
-        world.execute('Spawn'.into(), spawn_call_data.span());
+        world.execute('Spawn', spawn_call_data.span());
 
         let mut move_calldata = array::ArrayTrait::new();
         move_calldata.append(Move::Direction::Right(()).into());
-        world.execute('Move'.into(), move_calldata.span());
+        world.execute('Move', move_calldata.span());
 
-        let moves = world.entity('Moves'.into(), caller.into(), 0, 0);
+        let moves = world.entity('Moves', caller.into(), 0, 0);
         assert(*moves[0] == 9, 'moves is wrong');
 
-        // let new_position = world.entity('Position'.into(), caller.into(), 0, 0);
+        // let new_position = world.entity('Position', caller.into(), 0, 0);
+        // assert(*new_position[0] == 1, 'position x is wrong');
+        // assert(*new_position[1] == 0, 'position y is wrong');
+    }
+
+    #[test]
+    #[available_gas(30000000)]
+    fn test_move_with_admin() {
+        let caller = starknet::contract_address_const::<0x0>();
+
+        // components
+        let mut components = array::ArrayTrait::new();
+        components.append(PositionComponent::TEST_CLASS_HASH);
+        components.append(MovesComponent::TEST_CLASS_HASH);
+        // systems
+        let mut systems = array::ArrayTrait::new();
+        systems.append(Spawn::TEST_CLASS_HASH);
+        systems.append(Move::TEST_CLASS_HASH);
+        // routes
+        let mut routes = array::ArrayTrait::new();
+
+        // deploy executor, world and register components/systems
+        let world = spawn_test_world(components, systems, routes);
+
+        let mut systems = array::ArrayTrait::new();
+        systems.append('Spawn');
+        systems.append('Move');
+        world.assume_role('sudo', systems);
+
+        let spawn_call_data = array::ArrayTrait::new();
+        world.execute('Spawn', spawn_call_data.span());
+
+        let mut move_calldata = array::ArrayTrait::new();
+        move_calldata.append(Move::Direction::Right(()).into());
+        world.execute('Move', move_calldata.span());
+
+        let moves = world.entity('Moves', caller.into(), 0, 0);
+        assert(*moves[0] == 9, 'moves is wrong');
+
+        // let new_position = world.entity('Position', caller.into(), 0, 0);
         // assert(*new_position[0] == 1, 'position x is wrong');
         // assert(*new_position[1] == 0, 'position y is wrong');
     }

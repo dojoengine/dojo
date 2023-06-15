@@ -78,7 +78,7 @@ pub async fn deploy_world(
     let block_id = BlockId::Tag(BlockTag::Latest);
     let grant_auth_role = world.system("GrantAuthRole", block_id).await.unwrap();
     grant_auth_role
-        .execute(vec![executor_address, cairo_short_string_to_felt("Admin").unwrap()])
+        .execute(vec![executor_address, cairo_short_string_to_felt("sudo").unwrap()])
         .await
         .unwrap();
 

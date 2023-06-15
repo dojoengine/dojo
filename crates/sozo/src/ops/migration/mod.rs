@@ -198,7 +198,7 @@ where
     let res = WorldContract::new(world_address, migrator)
         .system("GrantAuthRole", BlockId::Tag(BlockTag::Latest))
         .await?
-        .execute(vec![migrator.address(), cairo_short_string_to_felt("Admin")?])
+        .execute(vec![migrator.address(), cairo_short_string_to_felt("sudo")?])
         .await
         .unwrap();
 

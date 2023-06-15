@@ -66,7 +66,7 @@ mod IsAuthorized {
             // TODO: use commands once parsing is fixed
             let mut role = ctx
                 .world
-                .entity('AuthRole'.into(), (target_id, resource_id).into(), 0, 0);
+                .entity('AuthRole', (target_id, resource_id).into(), 0, 0);
             let scoped_role = serde::Serde::<AuthRole>::deserialize(ref role);
             match scoped_role {
                 Option::Some(scoped_role) => scoped_role.id,
