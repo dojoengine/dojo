@@ -7,6 +7,7 @@ use blockifier::abi::abi_utils::get_storage_var_address;
 use blockifier::execution::contract_class::{ContractClass, ContractClassV0};
 use rand::rngs::SmallRng;
 use rand::{RngCore, SeedableRng};
+use serde::{Deserialize, Serialize};
 use starknet::signers::SigningKey;
 use starknet_api::core::{
     calculate_contract_address, ClassHash, ContractAddress, Nonce, PatriciaKey,
@@ -21,13 +22,13 @@ use crate::constants::{
 use crate::state::DictStateReader;
 use crate::util::compute_legacy_class_hash;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Account {
     pub balance: StarkFelt,
     pub class_hash: ClassHash,
     pub public_key: StarkFelt,
     pub private_key: StarkFelt,
-    pub contract_class: ContractClass,
+    #[serde(rename(serialize = "address"))]
     pub account_address: ContractAddress,
 }
 
@@ -37,7 +38,6 @@ impl Account {
         public_key: StarkFelt,
         private_key: StarkFelt,
         class_hash: ClassHash,
-        contract_class: ContractClass,
     ) -> Self {
         let account_address = calculate_contract_address(
             ContractAddressSalt(stark_felt!(666_u128)),
@@ -47,11 +47,11 @@ impl Account {
         )
         .expect("should calculate contract address");
 
-        Self { balance, public_key, private_key, class_hash, contract_class, account_address }
+        Self { balance, public_key, private_key, class_hash, account_address }
     }
 
-    pub fn deploy(&self, state: &mut DictStateReader) {
-        self.declare(state);
+    pub fn deploy(&self, contract_class: &ContractClass, state: &mut DictStateReader) {
+        self.declare(contract_class, state);
 
         // set the contract
         state.address_to_class_hash.insert(self.account_address, self.class_hash);
@@ -73,8 +73,8 @@ impl Account {
         state.address_to_nonce.insert(self.account_address, Nonce(1u8.into()));
     }
 
-    fn declare(&self, state: &mut DictStateReader) {
-        state.class_hash_to_class.insert(self.class_hash, self.contract_class.clone());
+    fn declare(&self, contract_class: &ContractClass, state: &mut DictStateReader) {
+        state.class_hash_to_class.insert(self.class_hash, contract_class.clone());
     }
 }
 
@@ -105,20 +105,14 @@ impl PredeployedAccounts {
             Self::default_account_class()
         };
 
-        let accounts = Self::generate_accounts(
-            total,
-            seed,
-            initial_balance,
-            class_hash,
-            contract_class.clone(),
-        );
+        let accounts = Self::generate_accounts(total, seed, initial_balance, class_hash);
 
         Ok(Self { seed, accounts, contract_class, initial_balance })
     }
 
     pub fn deploy_accounts(&self, state: &mut DictStateReader) {
         for account in &self.accounts {
-            account.deploy(state);
+            account.deploy(&self.contract_class, state);
         }
     }
 
@@ -143,7 +137,6 @@ impl PredeployedAccounts {
         seed: [u8; 32],
         balance: StarkFelt,
         class_hash: ClassHash,
-        contract_class: ContractClass,
     ) -> Vec<Account> {
         let mut seed = seed;
         let mut accounts = vec![];
@@ -164,7 +157,6 @@ impl PredeployedAccounts {
                 compute_public_key_from_private_key(private_key),
                 private_key,
                 class_hash,
-                contract_class.clone(),
             ));
         }
 
