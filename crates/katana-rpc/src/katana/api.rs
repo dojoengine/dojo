@@ -2,6 +2,7 @@ use jsonrpsee::core::Error;
 use jsonrpsee::proc_macros::rpc;
 use jsonrpsee::types::error::CallError;
 use jsonrpsee::types::ErrorObject;
+use katana_core::accounts::Account;
 
 #[derive(thiserror::Error, Clone, Copy, Debug)]
 pub enum KatanaApiError {
@@ -28,4 +29,7 @@ pub trait KatanaApi {
 
     #[method(name = "increaseNextBlockTimestamp")]
     async fn increase_next_block_timestamp(&self, timestamp: u64) -> Result<(), Error>;
+
+    #[method(name = "predeployedAccounts")]
+    async fn predeployed_accounts(&self) -> Result<Vec<Account>, Error>;
 }

@@ -63,12 +63,12 @@ impl System {
                     use dojo_core::execution_context::Context;
                     
                     #[view]
-                    fn name() -> dojo_core::string::ShortString {
-                        dojo_core::string::ShortStringTrait::new('$name$')
+                    fn name() -> felt252 {
+                        '$name$'
                     }
 
                     #[view]
-                    fn dependencies() -> Array<(dojo_core::string::ShortString, bool)> {
+                    fn dependencies() -> Array<(felt252, bool)> {
                         let mut arr = array::ArrayTrait::new();
                         $dependencies$
                         arr

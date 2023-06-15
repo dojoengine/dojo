@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use jsonrpsee::core::{async_trait, Error};
+use katana_core::accounts::Account;
 use katana_core::sequencer::Sequencer;
 
 use self::api::{KatanaApiError, KatanaApiServer};
@@ -40,5 +41,9 @@ impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
             .increase_next_block_timestamp(timestamp)
             .await
             .map_err(|_| Error::from(KatanaApiError::FailedToChangeNextBlockTimestamp))
+
+    async fn predeployed_accounts(&self) -> Result<Vec<Account>, Error> {
+        let accounts: Vec<Account> = self.sequencer.predeployed_accounts().await;
+        Ok(accounts)
     }
 }

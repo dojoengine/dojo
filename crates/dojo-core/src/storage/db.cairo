@@ -8,20 +8,19 @@ mod Database {
 
     use dojo_core::serde::SpanSerde;
     use dojo_core::storage::{index::Index, kv::KeyValueStore, query::{Query, QueryTrait}};
-    use dojo_core::integer::{u250, Felt252IntoU250};
     use dojo_core::interfaces::{IComponentLibraryDispatcher, IComponentDispatcherTrait};
 
     #[event]
-    fn StoreSetRecord(table_id: u250, keys: Span<u250>, value: Span<felt252>) {}
+    fn StoreSetRecord(table_id: felt252, keys: Span<felt252>, value: Span<felt252>) {}
 
     #[event]
-    fn StoreSetField(table_id: u250, keys: Span<u250>, offset: u8, value: Span<felt252>) {}
+    fn StoreSetField(table_id: felt252, keys: Span<felt252>, offset: u8, value: Span<felt252>) {}
 
     #[event]
-    fn StoreDeleteRecord(table_id: u250, keys: Span<u250>) {}
+    fn StoreDeleteRecord(table_id: felt252, keys: Span<felt252>) {}
 
     fn get(
-        class_hash: starknet::ClassHash, table: u250, query: Query, offset: u8, length: usize
+        class_hash: starknet::ClassHash, table: felt252, query: Query, offset: u8, length: usize
     ) -> Option<Span<felt252>> {
         let mut length = length;
         if length == 0 {
@@ -36,7 +35,7 @@ mod Database {
     }
 
     fn set(
-        class_hash: starknet::ClassHash, table: u250, query: Query, offset: u8, value: Span<felt252>
+        class_hash: starknet::ClassHash, table: felt252, query: Query, offset: u8, value: Span<felt252>
     ) {
         let keys = query.keys();
         let id = query.hash();
@@ -51,7 +50,7 @@ mod Database {
         StoreSetField(table, keys, offset, value);
     }
 
-    fn del(class_hash: starknet::ClassHash, table: u250, query: Query) {
+    fn del(class_hash: starknet::ClassHash, table: felt252, query: Query) {
         Index::delete(table, query.hash());
         StoreDeleteRecord(table, query.keys());
     }
@@ -59,8 +58,8 @@ mod Database {
     // returns a tuple of spans, first contains the entity IDs,
     // second the deserialized entities themselves
     fn all(
-        class_hash: starknet::ClassHash, component: u250, partition: u250
-    ) -> (Span<u250>, Span<Span<felt252>>) {
+        class_hash: starknet::ClassHash, component: felt252, partition: felt252
+    ) -> (Span<felt252>, Span<Span<felt252>>) {
         let table = {
             if partition == 0.into() {
                 component

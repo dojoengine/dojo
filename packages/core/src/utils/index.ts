@@ -1,4 +1,4 @@
-export function strToShortStringFelt(str: string): string {
+export function strTofelt252Felt(str: string): string {
   const encoder = new TextEncoder();
   const strB = encoder.encode(str);
   return BigInt(
@@ -14,7 +14,7 @@ export function getAllComponentNames(manifest: any): any {
 }
 
 export function getAllComponentNamesAsFelt(manifest: any): any {
-  return manifest.components.map((component: any) => strToShortStringFelt(component.name));
+  return manifest.components.map((component: any) => strTofelt252Felt(component.name));
 }
 
 export function getAllSystemNames(manifest: any): any {
@@ -22,5 +22,5 @@ export function getAllSystemNames(manifest: any): any {
 }
 
 export function getAllSystemNamesAsFelt(manifest: any): any {
-  return manifest.systems.map((system: any) => strToShortStringFelt(system.name));
+  return manifest.systems.map((system: any) => strTofelt252Felt(system.name));
 }

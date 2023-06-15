@@ -19,8 +19,8 @@ mod test;
 
 #[derive(Error, Debug)]
 pub enum ManifestError<E> {
-    #[error("World contract not found.")]
-    WorldNotFound,
+    #[error("Remote World not found.")]
+    RemoteWorldNotFound,
     #[error("Executor contract not found.")]
     ExecutorNotFound,
     #[error("Entry point name contains non-ASCII characters.")]
@@ -127,7 +127,7 @@ impl Manifest {
             .await
             .map_err(|err| match err {
                 ProviderError::StarknetError(StarknetError::ContractNotFound) => {
-                    ManifestError::WorldNotFound
+                    ManifestError::RemoteWorldNotFound
                 }
                 _ => ManifestError::Provider(err),
             })?;
