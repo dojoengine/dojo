@@ -17,7 +17,7 @@ impl MigrationUi for Ui {
     }
 
     fn print_header(&self, message: impl AsRef<str>) {
-        self.print(bold_message(format!("{}", message.as_ref())).to_string())
+        self.print(bold_message(message.as_ref()).to_string())
     }
 
     fn print_sub(&self, message: impl AsRef<str>) {
