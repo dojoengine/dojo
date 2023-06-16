@@ -249,43 +249,55 @@ async fn register_components<A>(
 where
     A: ConnectedAccount + Sync + 'static,
 {
-    if strategy.components.is_empty() {
+    let components = &strategy.components;
+
+    if components.is_empty() {
         return Ok(None);
     }
 
-    ws_config.ui().print(
-        Paint::new(format!("# Components ({})", strategy.components.len())).bold().to_string(),
-    );
+    ws_config
+        .ui()
+        .print(Paint::new(format!("# Components ({})", components.len())).bold().to_string());
 
     let mut declare_output = vec![];
 
-    for component in strategy.components.iter() {
-        ws_config.ui().print(format!("  {}", Paint::new(&component.diff.name).italic()));
+    for c in components.iter() {
+        ws_config.ui().print(format!("  {}", Paint::new(&c.diff.name).italic()));
 
-        let res = component
-            .declare(migrator)
-            .await
-            .map_err(|e| anyhow!("Failed to declare component {}: {e}", component.diff.name))?;
+        let res = c.declare(migrator).await;
+        match res {
+            Ok(output) => {
+                ws_config.ui().verbose(
+                    Paint::new(format!("  > declare transaction: {:#x}", output.transaction_hash))
+                        .dimmed()
+                        .to_string(),
+                );
 
-        ws_config.ui().verbose(
-            Paint::new(format!("  > declare transaction: {:#x}", res.transaction_hash))
-                .dimmed()
-                .to_string(),
-        );
+                declare_output.push(output);
+            }
 
-        ws_config.ui().print(
-            Paint::new(format!("  > class hash: {:#x}", res.class_hash)).dimmed().to_string(),
-        );
+            // Continue if component is already declared
+            Err(MigrationError::ClassAlreadyDeclared) => {
+                ws_config
+                    .ui()
+                    .verbose(Paint::new(format!("  > already declared")).dimmed().to_string());
 
-        declare_output.push(res);
+                continue;
+            }
+            Err(e) => bail!("Failed to declare component {}: {e}", c.diff.name),
+        }
+
+        ws_config
+            .ui()
+            .print(Paint::new(format!("  > class hash: {:#x}", c.diff.local)).dimmed().to_string());
     }
 
     let world_address = strategy.world_address()?;
 
     let InvokeTransactionResult { transaction_hash } = WorldContract::new(world_address, migrator)
-        .register_components(&declare_output.iter().map(|o| o.class_hash).collect::<Vec<_>>())
+        .register_components(&components.iter().map(|c| c.diff.local).collect::<Vec<_>>())
         .await
-        .map_err(|e| anyhow!("Failed to register components to World {world_address:#x}: {e}"))?;
+        .map_err(|e| anyhow!("Failed to register components to World: {e}"))?;
 
     ws_config.ui().verbose(
         Paint::new(format!("  > registered at: {:#x}", transaction_hash)).dimmed().to_string(),
@@ -302,43 +314,53 @@ async fn register_systems<A>(
 where
     A: ConnectedAccount + Sync + 'static,
 {
-    if strategy.systems.is_empty() {
+    let systems = &strategy.systems;
+
+    if systems.is_empty() {
         return Ok(None);
     }
 
-    ws_config
-        .ui()
-        .print(Paint::new(format!("# Systems ({})", strategy.systems.len())).bold().to_string());
+    ws_config.ui().print(Paint::new(format!("# Systems ({})", systems.len())).bold().to_string());
 
     let mut declare_output = vec![];
 
-    for system in strategy.systems.iter() {
-        ws_config.ui().print(format!("  {}", Paint::new(&system.diff.name).italic()));
+    for s in strategy.systems.iter() {
+        ws_config.ui().print(format!("  {}", Paint::new(&s.diff.name).italic()));
 
-        let res = system
-            .declare(migrator)
-            .await
-            .map_err(|e| anyhow!("Failed to declare system {}: {e}", system.diff.name))?;
+        let res = s.declare(migrator).await;
+        match res {
+            Ok(output) => {
+                ws_config.ui().verbose(
+                    Paint::new(format!("  > declare transaction: {:#x}", output.transaction_hash))
+                        .dimmed()
+                        .to_string(),
+                );
 
-        ws_config.ui().verbose(
-            Paint::new(format!("  > declare transaction: {:#x}", res.transaction_hash))
-                .dimmed()
-                .to_string(),
-        );
+                declare_output.push(output);
+            }
 
-        ws_config.ui().print(
-            Paint::new(format!("  > class hash: {:#x}", res.class_hash)).dimmed().to_string(),
-        );
+            // Continue if system is already declared
+            Err(MigrationError::ClassAlreadyDeclared) => {
+                ws_config
+                    .ui()
+                    .verbose(Paint::new(format!("  > already declared")).dimmed().to_string());
 
-        declare_output.push(res);
+                continue;
+            }
+            Err(e) => bail!("Failed to declare system {}: {e}", s.diff.name),
+        }
+
+        ws_config
+            .ui()
+            .print(Paint::new(format!("  > class hash: {:#x}", s.diff.local)).dimmed().to_string());
     }
 
     let world_address = strategy.world_address()?;
 
     let InvokeTransactionResult { transaction_hash } = WorldContract::new(world_address, migrator)
-        .register_systems(&declare_output.iter().map(|o| o.class_hash).collect::<Vec<_>>())
+        .register_systems(&systems.iter().map(|s| s.diff.local).collect::<Vec<_>>())
         .await
-        .map_err(|e| anyhow!("Failed to register systems to World {world_address:#x}: {e}"))?;
+        .map_err(|e| anyhow!("Failed to register systems to World: {e}"))?;
 
     ws_config.ui().verbose(
         Paint::new(format!("  > registered at: {:#x}", transaction_hash)).dimmed().to_string(),
