@@ -81,6 +81,8 @@ where
             info.update
         ));
 
+        println!("");
+
         execute_strategy(&mut migration, migrator, ws_config)
             .await
             .map_err(|e| anyhow!(e))
@@ -109,7 +111,7 @@ where
 {
     let executor_output = match &mut strategy.executor {
         Some(executor) => {
-            ws_config.ui().print_header("\n# Executor");
+            ws_config.ui().print_header("# Executor");
 
             let res = executor
                 .deploy(executor.diff.local, vec![], &migrator)
