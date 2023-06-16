@@ -45,8 +45,8 @@ where
             .map_err(|e| match e {
                 ManifestError::RemoteWorldNotFound => {
                     anyhow!(
-                        "Unable to find remote World at address {world_address:#x}. \
-                    Make sure the World address is correct and that it is already deployed!"
+                        "Unable to find remote World at address {world_address:#x}. Make sure the \
+                         World address is correct and that it is already deployed!"
                     )
                 }
                 _ => anyhow!(e),
