@@ -1,10 +1,10 @@
 use std::path::Path;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use dojo_world::manifest::{Manifest, ManifestError};
 use dojo_world::migration::strategy::{prepare_for_migration, MigrationOutput, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
-use dojo_world::migration::{Declarable, Deployable, RegisterOutput};
+use dojo_world::migration::{Declarable, Deployable, MigrationError, RegisterOutput};
 use dojo_world::world::WorldContract;
 use scarb::core::Config;
 use starknet::accounts::ConnectedAccount;
@@ -53,12 +53,20 @@ where
             })
             .with_context(|| "Failed to build remote World state.")?
     } else {
+        ws_config
+            .ui()
+            .print(Paint::new(format!("   > No remote World found")).dimmed().to_string());
+        ws_config.ui().print(
+            Paint::new(format!("   > Attempting to deploy a new instance")).dimmed().to_string(),
+        );
+
         None
     };
 
     ws_config.ui().print(format!("{} 🧰 Evaluating Worlds diff...", Paint::new("[2]").dimmed()));
 
     let diff = WorldDiff::compute(local_manifest, remote_manifest);
+
     let total_diffs = diff.count_diffs();
 
     ws_config
@@ -68,10 +76,6 @@ where
     if total_diffs == 0 {
         ws_config.ui().print("\n✨ No changes to be made. Remote World is already up to date!")
     } else {
-        ws_config
-            .ui()
-            .print(Paint::new(format!("   > Building migration strategy")).dimmed().to_string());
-
         let mut migration = prepare_for_migration(world_address, target_dir, diff)
             .with_context(|| "Problem preparing for migration.")?;
 
@@ -226,7 +230,7 @@ where
     let res = WorldContract::new(world_address, migrator)
         .system("GrantAuthRole", BlockId::Tag(BlockTag::Latest))
         .await?
-        .execute(vec![migrator.address(), cairo_short_string_to_felt("Admin")?])
+        .execute(vec![migrator.address(), cairo_short_string_to_felt("sudo")?])
         .await
         .unwrap();
 
