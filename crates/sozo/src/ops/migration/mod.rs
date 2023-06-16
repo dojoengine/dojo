@@ -81,7 +81,7 @@ where
             info.update
         ));
 
-        println!("");
+        println!("  ");
 
         execute_strategy(&mut migration, migrator, ws_config)
             .await
