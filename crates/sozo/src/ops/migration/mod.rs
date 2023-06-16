@@ -55,9 +55,9 @@ where
     } else {
         ws_config
             .ui()
-            .print(Paint::new(format!("   > No remote World found")).dimmed().to_string());
+            .print(Paint::new("   > No remote World found".to_string()).dimmed().to_string());
         ws_config.ui().print(
-            Paint::new(format!("   > Attempting to deploy a new instance")).dimmed().to_string(),
+            Paint::new("   > Attempting to deploy a new instance".to_string()).dimmed().to_string(),
         );
 
         None
@@ -280,7 +280,7 @@ where
             Err(MigrationError::ClassAlreadyDeclared) => {
                 ws_config
                     .ui()
-                    .verbose(Paint::new(format!("  > already declared")).dimmed().to_string());
+                    .verbose(Paint::new("  > already declared".to_string()).dimmed().to_string());
 
                 continue;
             }
@@ -343,7 +343,7 @@ where
             Err(MigrationError::ClassAlreadyDeclared) => {
                 ws_config
                     .ui()
-                    .verbose(Paint::new(format!("  > already declared")).dimmed().to_string());
+                    .verbose(Paint::new("  > already declared".to_string()).dimmed().to_string());
 
                 continue;
             }
