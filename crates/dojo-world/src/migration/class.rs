@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use async_trait::async_trait;
 use starknet::core::types::FieldElement;
 
-use super::Declarable;
+use super::{Declarable, MigrationType, StateDiff};
 
 /// Represents differences between a local and remote class.
 #[derive(Debug, Default, Clone)]
@@ -12,6 +12,12 @@ pub struct ClassDiff {
     pub name: String,
     pub local: FieldElement,
     pub remote: Option<FieldElement>,
+}
+
+impl StateDiff for ClassDiff {
+    fn is_same(&self) -> bool {
+        if let Some(remote) = self.remote { self.local == remote } else { false }
+    }
 }
 
 impl Display for ClassDiff {
@@ -29,8 +35,21 @@ impl Display for ClassDiff {
 
 #[derive(Debug, Default)]
 pub struct ClassMigration {
-    pub class: ClassDiff,
+    pub diff: ClassDiff,
     pub artifact_path: PathBuf,
+}
+
+impl ClassMigration {
+    pub fn migration_type(&self) -> MigrationType {
+        let Some(remote ) = self.diff.remote else {
+            return MigrationType::New;
+        };
+
+        match self.diff.local == remote {
+            true => MigrationType::New,
+            false => MigrationType::Update,
+        }
+    }
 }
 
 #[async_trait]
