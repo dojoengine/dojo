@@ -24,6 +24,7 @@ cairo-lang-test-runner.workspace = true
 scarb.workspace = true
 semver.workspace = true
 serde.workspace = true
+console.workspace = true
 serde_json.workspace = true
 smol_str.workspace = true
 starknet.workspace = true

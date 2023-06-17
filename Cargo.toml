@@ -46,6 +46,7 @@ cairo-lang-starknet = "1.1.0"
 cairo-lang-syntax = "1.1.0"
 cairo-lang-test-runner = "1.1.0"
 cairo-lang-test-utils = "1.1.0"
+console = "0.15.7"
 cairo-lang-utils = "1.1.0"
 cairo-vm = "0.5.1"
 camino = { version = "1.1.2", features = ["serde1"] }

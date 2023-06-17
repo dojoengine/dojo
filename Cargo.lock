@@ -7465,6 +7465,7 @@ dependencies = [
  "camino",
  "clap",
  "clap-verbosity-flag",
+ "console",
  "dojo-lang",
  "dojo-test-utils",
  "dojo-world",
