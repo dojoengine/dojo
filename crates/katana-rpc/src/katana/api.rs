@@ -5,6 +5,7 @@ use jsonrpsee::types::ErrorObject;
 use katana_core::accounts::Account;
 
 #[derive(thiserror::Error, Clone, Copy, Debug)]
+#[allow(clippy::enum_variant_names)]
 pub enum KatanaApiError {
     #[error("Failed to change next block timestamp")]
     FailedToChangeNextBlockTimestamp = 1,

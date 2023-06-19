@@ -522,6 +522,7 @@ impl Sequencer for KatanaSequencer {
 
     async fn increase_next_block_timestamp(&self, timestamp: u64) -> SequencerResult<()> {
         self.starknet.write().await.increase_next_block_timestamp(timestamp)
+    }
 
     async fn predeployed_accounts(&self) -> Vec<Account> {
         self.starknet.read().await.predeployed_accounts.accounts.clone()
