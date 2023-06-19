@@ -11,8 +11,8 @@ use katana_rpc::config::RpcConfig;
 #[command(propagate_version = true)]
 pub struct App {
     #[arg(long)]
-    #[arg(help = "Hide the predeployed accounts details.")]
-    pub hide_predeployed_accounts: bool,
+    #[arg(help = "Don't print anything on startup.")]
+    pub silent: bool,
 
     #[command(flatten)]
     #[command(next_help_heading = "Server options")]
