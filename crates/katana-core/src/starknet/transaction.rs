@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::vec;
 
+use blockifier::execution::entry_point::CallInfo;
 use blockifier::transaction::errors::TransactionExecutionError;
 use blockifier::transaction::objects::TransactionExecutionInfo;
 use starknet::core::types::TransactionStatus;
@@ -67,50 +68,35 @@ impl StarknetTransaction {
     pub fn emitted_events(&self) -> Vec<Event> {
         let mut events: Vec<Event> = vec![];
 
+        fn get_events_recursively(call_info: &CallInfo) -> Vec<Event> {
+            let mut events: Vec<Event> = vec![];
+
+            events.extend(call_info.execution.events.iter().map(|e| Event {
+                content: e.event.clone(),
+                from_address: call_info.call.storage_address,
+            }));
+
+            call_info.inner_calls.iter().for_each(|call| {
+                events.extend(get_events_recursively(call));
+            });
+
+            events
+        }
+
         let Some(ref execution_info) = self.execution_info else {
             return events;
         };
 
         if let Some(ref call) = execution_info.validate_call_info {
-            events.extend(call.execution.events.iter().map(|e| Event {
-                content: e.event.clone(),
-                from_address: call.call.storage_address,
-            }));
-
-            call.inner_calls.iter().for_each(|call| {
-                events.extend(call.execution.events.iter().map(|e| Event {
-                    content: e.event.clone(),
-                    from_address: call.call.storage_address,
-                }))
-            });
+            events.extend(get_events_recursively(call));
         }
 
         if let Some(ref call) = execution_info.execute_call_info {
-            events.extend(call.execution.events.iter().map(|e| Event {
-                content: e.event.clone(),
-                from_address: call.call.storage_address,
-            }));
-
-            call.inner_calls.iter().for_each(|call| {
-                events.extend(call.execution.events.iter().map(|e| Event {
-                    content: e.event.clone(),
-                    from_address: call.call.storage_address,
-                }))
-            });
+            events.extend(get_events_recursively(call));
         }
 
         if let Some(ref call) = execution_info.fee_transfer_call_info {
-            events.extend(call.execution.events.iter().map(|e| Event {
-                content: e.event.clone(),
-                from_address: call.call.storage_address,
-            }));
-
-            call.inner_calls.iter().for_each(|call| {
-                events.extend(call.execution.events.iter().map(|e| Event {
-                    content: e.event.clone(),
-                    from_address: call.call.storage_address,
-                }))
-            });
+            events.extend(get_events_recursively(call));
         }
 
         events
