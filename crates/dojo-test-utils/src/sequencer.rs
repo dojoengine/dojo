@@ -32,6 +32,7 @@ impl TestSequencer {
         let sequencer = Arc::new(KatanaSequencer::new(
             SequencerConfig::default(),
             StarknetConfig {
+                auto_mine: true,
                 total_accounts: 1,
                 allow_zero_max_fee: true,
                 chain_id: "SN_GOERLI".into(),
