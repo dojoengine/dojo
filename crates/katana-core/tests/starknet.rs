@@ -20,9 +20,8 @@ fn create_test_starknet() -> StarknetWrapper {
 
     let mut starknet = StarknetWrapper::new(StarknetConfig {
         seed: [0u8; 32],
-        auto_mine: false,
+        auto_mine: true,
         total_accounts: 2,
-        blocks_on_demand: false,
         allow_zero_max_fee: true,
         gas_price: DEFAULT_GAS_PRICE,
         chain_id: String::from("KATANA"),

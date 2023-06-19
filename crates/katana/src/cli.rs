@@ -14,6 +14,16 @@ pub struct App {
     #[arg(help = "Don't print anything on startup.")]
     pub silent: bool,
 
+    #[arg(long)]
+    #[arg(conflicts_with = "block_time")]
+    #[arg(help = " Disable auto and interval mining, and mine on demand instead.")]
+    pub no_mining: bool,
+
+    #[arg(short, long)]
+    #[arg(value_name = "SECONDS")]
+    #[arg(help = "Block time in seconds for interval mining.")]
+    pub block_time: Option<u64>,
+
     #[command(flatten)]
     #[command(next_help_heading = "Server options")]
     pub rpc: RpcOptions,
@@ -29,11 +39,6 @@ pub struct RpcOptions {
     #[arg(default_value = "5050")]
     #[arg(help = "Port number to listen on.")]
     pub port: u16,
-
-    #[arg(short, long)]
-    #[arg(value_name = "SECONDS")]
-    #[arg(help = "Block time in seconds for interval mining.")]
-    pub block_time: Option<u64>,
 }
 
 #[derive(Debug, Args, Clone)]
@@ -54,10 +59,6 @@ pub struct StarknetOptions {
     #[arg(long_help = "Specify the account implementation to be used for the predeployed \
                        accounts; should be a path to the compiled JSON artifact.")]
     pub account_path: Option<PathBuf>,
-
-    #[arg(long)]
-    #[arg(help = "Block generation on demand via an endpoint.")]
-    pub blocks_on_demand: bool,
 
     #[arg(long)]
     #[arg(help = "Allow transaction max fee to be zero.")]
@@ -82,7 +83,7 @@ pub struct EnvironmentOptions {
 
 impl App {
     pub fn sequencer_config(&self) -> SequencerConfig {
-        SequencerConfig { block_time: self.rpc.block_time }
+        SequencerConfig { block_time: self.block_time }
     }
 
     pub fn rpc_config(&self) -> RpcConfig {
@@ -94,11 +95,10 @@ impl App {
             total_accounts: self.starknet.total_accounts,
             seed: parse_seed(self.starknet.seed.clone()),
             gas_price: self.starknet.environment.gas_price.unwrap_or(DEFAULT_GAS_PRICE),
-            blocks_on_demand: self.starknet.blocks_on_demand,
             account_path: self.starknet.account_path.clone(),
             allow_zero_max_fee: self.starknet.allow_zero_max_fee,
             chain_id: self.starknet.environment.chain_id.clone(),
-            auto_mine: self.rpc.block_time.is_some(),
+            auto_mine: self.block_time.is_none() && !self.no_mining,
         }
     }
 }

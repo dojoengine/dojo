@@ -47,7 +47,6 @@ pub struct StarknetConfig {
     pub gas_price: u128,
     pub chain_id: String,
     pub total_accounts: u8,
-    pub blocks_on_demand: bool,
     pub allow_zero_max_fee: bool,
     pub account_path: Option<PathBuf>,
 }
@@ -137,7 +136,7 @@ impl StarknetWrapper {
 
                 self.store_transaction(starknet_tx);
 
-                if !self.config.auto_mine && !self.config.blocks_on_demand {
+                if self.config.auto_mine {
                     self.generate_latest_block();
                     self.generate_pending_block();
                 }
