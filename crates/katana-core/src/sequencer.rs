@@ -10,7 +10,7 @@ use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transaction_execution::Transaction;
 use blockifier::transaction::transactions::ExecutableTransaction;
 use starknet::core::types::{BlockId, BlockTag, FeeEstimate, StateUpdate, TransactionStatus};
-use starknet_api::block::{BlockHash, BlockNumber};
+use starknet_api::block::{BlockHash, BlockNumber, BlockTimestamp};
 use starknet_api::core::{calculate_contract_address, ChainId, ClassHash, ContractAddress, Nonce};
 use starknet_api::hash::StarkFelt;
 use starknet_api::stark_felt;
@@ -321,6 +321,10 @@ impl Sequencer for KatanaSequencer {
         self.starknet.read().await.block_context.block_number
     }
 
+    async fn next_block_timestamp(&self) -> BlockTimestamp {
+        self.starknet.read().await.block_context.block_timestamp
+    }
+
     async fn block(&self, block_id: BlockId) -> Option<StarknetBlock> {
         match block_id {
             BlockId::Tag(BlockTag::Pending) => {
@@ -512,6 +516,14 @@ impl Sequencer for KatanaSequencer {
         self.starknet.write().await.generate_pending_block();
     }
 
+    async fn set_next_block_timestamp(&self, timestamp: u64) -> SequencerResult<()> {
+        self.starknet.write().await.set_next_block_timestamp(timestamp)
+    }
+
+    async fn increase_next_block_timestamp(&self, timestamp: u64) -> SequencerResult<()> {
+        self.starknet.write().await.increase_next_block_timestamp(timestamp)
+    }
+
     async fn predeployed_accounts(&self) -> Vec<Account> {
         self.starknet.read().await.predeployed_accounts.accounts.clone()
     }
@@ -539,6 +551,8 @@ pub trait Sequencer {
     ) -> SequencerResult<Nonce>;
 
     async fn block_number(&self) -> BlockNumber;
+
+    async fn next_block_timestamp(&self) -> BlockTimestamp;
 
     async fn block(&self, block_id: BlockId) -> Option<StarknetBlock>;
 
@@ -601,4 +615,8 @@ pub trait Sequencer {
     ) -> SequencerResult<Vec<EmittedEvent>>;
 
     async fn state_update(&self, block_id: BlockId) -> SequencerResult<StateUpdate>;
+
+    async fn set_next_block_timestamp(&self, timestamp: u64) -> SequencerResult<()>;
+
+    async fn increase_next_block_timestamp(&self, timestamp: u64) -> SequencerResult<()>;
 }

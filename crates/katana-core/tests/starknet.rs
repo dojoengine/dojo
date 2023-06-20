@@ -34,6 +34,48 @@ fn create_test_starknet() -> StarknetWrapper {
 }
 
 #[test]
+fn test_next_block_timestamp_in_past() {
+    let mut starknet = create_test_starknet();
+    starknet.generate_pending_block();
+
+    let timestamp = starknet.block_context.block_timestamp;
+    starknet.set_next_block_timestamp(timestamp.0 - 1000).unwrap();
+
+    starknet.generate_pending_block();
+    let new_timestamp = starknet.block_context.block_timestamp;
+
+    assert_eq!(new_timestamp.0, timestamp.0 - 1000, "timestamp should be updated");
+}
+
+#[test]
+fn test_set_next_block_timestamp_in_future() {
+    let mut starknet = create_test_starknet();
+    starknet.generate_pending_block();
+
+    let timestamp = starknet.block_context.block_timestamp;
+    starknet.set_next_block_timestamp(timestamp.0 + 1000).unwrap();
+
+    starknet.generate_pending_block();
+    let new_timestamp = starknet.block_context.block_timestamp;
+
+    assert_eq!(new_timestamp.0, timestamp.0 + 1000, "timestamp should be updated");
+}
+
+#[test]
+fn test_increase_next_block_timestamp() {
+    let mut starknet = create_test_starknet();
+    starknet.generate_pending_block();
+
+    let timestamp = starknet.block_context.block_timestamp;
+    starknet.increase_next_block_timestamp(1000).unwrap();
+
+    starknet.generate_pending_block();
+    let new_timestamp = starknet.block_context.block_timestamp;
+
+    assert_eq!(new_timestamp.0, timestamp.0 + 1000, "timestamp should be updated");
+}
+
+#[test]
 fn test_creating_blocks() {
     let mut starknet = create_test_starknet();
     starknet.generate_pending_block();

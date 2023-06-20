@@ -28,11 +28,12 @@ use transaction::{StarknetTransaction, StarknetTransactions};
 
 use self::transaction::ExternalFunctionCall;
 use crate::accounts::PredeployedAccounts;
-use crate::block_context::block_context_from_config;
+use crate::block_context::{block_context_from_config, BlockContextGenerator};
 use crate::constants::{
     DEFAULT_PREFUNDED_ACCOUNT_BALANCE, ERC20_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS, UDC_ADDRESS,
     UDC_CLASS_HASH,
 };
+use crate::sequencer_error::SequencerError;
 use crate::state::DictStateReader;
 use crate::util::{
     convert_blockifier_tx_to_starknet_api_tx, convert_state_diff_to_rpc_state_diff,
@@ -55,6 +56,7 @@ pub struct StarknetWrapper {
     pub config: StarknetConfig,
     pub blocks: StarknetBlocks,
     pub block_context: BlockContext,
+    pub block_context_generator: BlockContextGenerator,
     pub transactions: StarknetTransactions,
     pub state: DictStateReader,
     pub predeployed_accounts: PredeployedAccounts,
@@ -65,6 +67,7 @@ impl StarknetWrapper {
     pub fn new(config: StarknetConfig) -> Self {
         let blocks = StarknetBlocks::default();
         let block_context = block_context_from_config(&config);
+        let block_context_generator = BlockContextGenerator::default();
         let transactions = StarknetTransactions::default();
         let mut state = DictStateReader::default();
         let pending_state = CachedState::new(state.clone());
@@ -84,6 +87,7 @@ impl StarknetWrapper {
             blocks,
             transactions,
             block_context,
+            block_context_generator,
             pending_state,
             predeployed_accounts,
         }
@@ -349,7 +353,20 @@ impl StarknetWrapper {
 
     fn update_block_context(&mut self) {
         self.block_context.block_number = self.block_context.block_number.next();
-        self.block_context.block_timestamp = BlockTimestamp(get_current_timestamp().as_secs());
+
+        let current_timestamp_secs = get_current_timestamp().as_secs() as i64;
+
+        if self.block_context_generator.next_block_start_time == 0 {
+            let block_timestamp =
+                current_timestamp_secs + self.block_context_generator.block_timestamp_offset;
+            self.block_context.block_timestamp = BlockTimestamp(block_timestamp as u64);
+        } else {
+            let block_timestamp = self.block_context_generator.next_block_start_time;
+            self.block_context_generator.block_timestamp_offset =
+                block_timestamp as i64 - current_timestamp_secs;
+            self.block_context.block_timestamp = BlockTimestamp(block_timestamp);
+            self.block_context_generator.next_block_start_time = 0;
+        }
     }
 
     // apply the pending state diff to the state
@@ -357,6 +374,29 @@ impl StarknetWrapper {
         let state = &mut self.state;
         apply_new_state(state, &mut self.pending_state);
         self.blocks.store_state(self.block_context.block_number, state.clone());
+    }
+
+    pub fn set_next_block_timestamp(&mut self, timestamp: u64) -> Result<(), SequencerError> {
+        if has_pending_transactions(self) {
+            return Err(SequencerError::PendingTransactions);
+        }
+        self.block_context_generator.next_block_start_time = timestamp;
+        Ok(())
+    }
+
+    pub fn increase_next_block_timestamp(&mut self, timestamp: u64) -> Result<(), SequencerError> {
+        if has_pending_transactions(self) {
+            return Err(SequencerError::PendingTransactions);
+        }
+        self.block_context_generator.block_timestamp_offset += timestamp as i64;
+        Ok(())
+    }
+}
+
+fn has_pending_transactions(starknet: &StarknetWrapper) -> bool {
+    match starknet.blocks.pending_block {
+        Some(ref pending_block) => !pending_block.inner.body.transactions.is_empty(),
+        None => false,
     }
 }
 
