@@ -57,15 +57,15 @@ impl InitArgs {
         // Modify the git history.
         modify_git_history(&repo_url)?;
 
-        config
-            .ui()
-            .print(format!("\n🎉 Successfully created a new project at {}", target_dir.display()));
+        config.ui().print("\n🎉 Successfully created a new ⛩️ Dojo project!");
 
         // Navigate back.
         set_current_dir(initial_dir)?;
 
-        config.ui().print("\n====== SETUP COMPLETE! ======\n\n");
-        config.ui().print("To start using your new ⛩️ Dojo project, try running: `sozo build`");
+        config.ui().print(
+            "\n====== SETUP COMPLETE! ======\n\n\nTo start using your new project, try running: \
+             `sozo build`",
+        );
 
         Ok(())
     }
