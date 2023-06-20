@@ -18,7 +18,7 @@ pub struct InitArgs {
 
 impl InitArgs {
     pub fn run(self, config: &Config) -> Result<()> {
-        let ref target_dir = match self.path {
+        let target_dir = match self.path {
             Some(path) => {
                 if path.is_absolute() {
                     path
@@ -33,7 +33,7 @@ impl InitArgs {
 
         if target_dir.exists() {
             ensure!(
-                fs::read_dir(target_dir)?.next().is_none(),
+                fs::read_dir(&target_dir)?.next().is_none(),
                 io::Error::new(io::ErrorKind::Other, "Target directory is not empty",)
             );
         }
@@ -48,11 +48,11 @@ impl InitArgs {
             "https://github.com/".to_string() + &template
         };
 
-        clone_repo(&repo_url, target_dir, config)?;
+        clone_repo(&repo_url, &target_dir, config)?;
 
         // Navigate to the newly cloned repo.
         let initial_dir = current_dir()?;
-        set_current_dir(target_dir)?;
+        set_current_dir(&target_dir)?;
 
         // Modify the git history.
         modify_git_history(&repo_url)?;
