@@ -4,7 +4,7 @@ use clap::{Args, Parser};
 use katana_core::constants::DEFAULT_GAS_PRICE;
 use katana_core::sequencer::SequencerConfig;
 use katana_core::starknet::StarknetConfig;
-use katana_rpc::config::RpcConfig;
+use katana_rpc::config::ServerConfig;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -26,7 +26,7 @@ pub struct App {
 
     #[command(flatten)]
     #[command(next_help_heading = "Server options")]
-    pub rpc: RpcOptions,
+    pub server: ServerOptions,
 
     #[command(flatten)]
     #[command(next_help_heading = "Starknet options")]
@@ -34,11 +34,15 @@ pub struct App {
 }
 
 #[derive(Debug, Args, Clone)]
-pub struct RpcOptions {
+pub struct ServerOptions {
     #[arg(short, long)]
     #[arg(default_value = "5050")]
     #[arg(help = "Port number to listen on.")]
     pub port: u16,
+
+    #[arg(long)]
+    #[arg(help = "The IP address the server will listen on.")]
+    pub host: Option<String>,
 }
 
 #[derive(Debug, Args, Clone)]
@@ -86,8 +90,11 @@ impl App {
         SequencerConfig { block_time: self.block_time }
     }
 
-    pub fn rpc_config(&self) -> RpcConfig {
-        RpcConfig { port: self.rpc.port }
+    pub fn server_config(&self) -> ServerConfig {
+        ServerConfig {
+            port: self.server.port,
+            host: self.server.host.clone().unwrap_or("0.0.0.0".into()),
+        }
     }
 
     pub fn starknet_config(&self) -> StarknetConfig {

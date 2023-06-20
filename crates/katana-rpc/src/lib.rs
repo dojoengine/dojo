@@ -2,7 +2,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use anyhow::Result;
-use config::RpcConfig;
+use config::ServerConfig;
 use hyper::Method;
 use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
 use katana::api::KatanaApiServer;
@@ -20,7 +20,7 @@ use self::starknet::rpc::StarknetRpc;
 
 #[derive(Debug, Clone)]
 pub struct KatanaNodeRpc<S> {
-    pub config: RpcConfig,
+    pub config: ServerConfig,
     pub sequencer: Arc<S>,
 }
 
@@ -28,7 +28,7 @@ impl<S> KatanaNodeRpc<S>
 where
     S: Sequencer + Send + Sync + 'static,
 {
-    pub fn new(sequencer: Arc<S>, config: RpcConfig) -> Self {
+    pub fn new(sequencer: Arc<S>, config: ServerConfig) -> Self {
         Self { config, sequencer }
     }
 
@@ -48,7 +48,7 @@ where
             .set_logger(KatanaNodeRpcLogger)
             .set_host_filtering(AllowHosts::Any)
             .set_middleware(middleware)
-            .build(format!("0.0.0.0:{}", self.config.port))
+            .build(self.config.addr())
             .await?;
 
         let addr = server.local_addr()?;
