@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use anyhow::Result;
 use async_trait::async_trait;
 use dojo_world::manifest::{Component, Manifest, System};
@@ -37,8 +35,8 @@ pub trait State {
         &self,
         component: String,
         partition: FieldElement,
-        key: FieldElement,
-        values: HashMap<String, FieldElement>,
+        keys: Vec<FieldElement>,
+        values: Vec<FieldElement>,
     ) -> Result<()>;
     async fn delete_entity(
         &self,
