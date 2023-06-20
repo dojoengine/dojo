@@ -21,6 +21,7 @@ use crate::commands::test::TestArgs;
 #[command(propagate_version = true)]
 pub struct SozoArgs {
     #[arg(long)]
+    #[arg(global = true)]
     #[arg(hide_short_help = true)]
     #[arg(env = "DOJO_MANIFEST_PATH")]
     #[arg(help = "Override path to a directory containing a Scarb.toml file.")]
