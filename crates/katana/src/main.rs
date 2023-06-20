@@ -21,13 +21,13 @@ async fn main() {
 
     let config = App::parse();
 
-    let rpc_config = config.rpc_config();
+    let server_config = config.server_config();
     let sequencer_config = config.sequencer_config();
     let starknet_config = config.starknet_config();
 
     let sequencer = Arc::new(KatanaSequencer::new(sequencer_config, starknet_config));
 
-    match KatanaNodeRpc::new(sequencer.clone(), rpc_config).run().await {
+    match KatanaNodeRpc::new(sequencer.clone(), server_config).run().await {
         Ok((addr, server_handle)) => {
             if !config.silent {
                 let accounts = sequencer.starknet.read().await.predeployed_accounts.display();
