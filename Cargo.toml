@@ -9,8 +9,8 @@ members = [
   "crates/dojo-test-utils",
   "crates/dojo-world",
   "crates/katana",
-  "crates/katana-core",
-  "crates/katana-rpc",
+  "crates/katana/core",
+  "crates/katana/rpc",
   "crates/sozo",
   "crates/torii",
 ]
