@@ -15,7 +15,7 @@ pub(crate) mod test;
 
 pub fn run(command: Commands, config: &Config) -> Result<()> {
     match command {
-        Commands::Init(args) => args.run(),
+        Commands::Init(args) => args.run(config),
         Commands::Test(args) => args.run(config),
         Commands::Build(args) => args.run(config),
         Commands::Migrate(args) => args.run(config),
