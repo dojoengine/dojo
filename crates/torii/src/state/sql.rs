@@ -8,6 +8,7 @@ use starknet_crypto::poseidon_hash_many;
 use tokio::sync::Mutex;
 
 use super::{State, World};
+use crate::graphql::types::ScalarType;
 
 #[cfg(test)]
 #[path = "sql_test.rs"]
@@ -166,9 +167,9 @@ impl State for Sql {
             component.name.to_lowercase()
         );
 
-        // TODO: Set type based on member type
         for member in component.clone().members {
-            component_table_query.push_str(&format!("external_{} TEXT, ", member.name));
+            let sql_type = ScalarType::from_str(member.ty).map(|t| t.as_sql_type())?;
+            component_table_query.push_str(&format!("external_{} {}, ", member.name, sql_type));
         }
 
         component_table_query.push_str(
@@ -215,34 +216,46 @@ impl State for Sql {
                 .fetch_all(&self.pool)
                 .await?;
 
-        let columns = results
+        let names: Result<Vec<String>> = results
             .iter()
             .map(|row| {
-                let name = row.try_get::<String, &str>("name").expect("no name column");
-                format!("external_{}", name)
+                let name = row.try_get::<String, &str>("name")?;
+                Ok(format!("external_{}", name))
             })
-            .collect::<Vec<String>>()
-            .join(", ");
+            .collect();
 
-        let values =
-            values.iter().map(|v| format!("'{:#x}'", v)).collect::<Vec<String>>().join(", ");
+        let types: Result<Vec<String>> =
+            results.iter().map(|row| Ok(row.try_get::<String, &str>("type")?)).collect();
+
+        // format according to type
+        let values: Result<Vec<String>> = values
+            .iter()
+            .zip(types?.iter())
+            .map(|(value, ty)| {
+                if ScalarType::from_str(ty)?.is_numeric_type() {
+                    Ok(format!("'{}'", value))
+                } else {
+                    Ok(format!("'{:#x}'", value))
+                }
+            })
+            .collect();
+
         let entity_id = poseidon_hash_many(&keys);
         let keys_str = keys.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join(",");
 
-        let queries = vec![
-            format!(
-                "INSERT OR REPLACE INTO entities (id, partition, keys) VALUES ('{:#x}', '{:#x}', \
-                 '{}')",
-                entity_id, partition, keys_str,
-            ),
-            format!(
-                "INSERT OR REPLACE INTO external_{} (id, partition, {columns}) VALUES \
-                 ('{entity_id:#x}', '{partition:#x}', {values})",
-                component.to_lowercase()
-            ),
-        ];
+        let insert_entities = format!(
+            "INSERT OR REPLACE INTO entities (id, partition, keys) VALUES ('{:#x}', '{:#x}', '{}')",
+            entity_id, partition, keys_str,
+        );
+        let insert_components = format!(
+            "INSERT OR REPLACE INTO external_{} (id, partition, {}) VALUES ('{entity_id:#x}', \
+             '{partition:#x}', {})",
+            component.to_lowercase(),
+            names?.join(", "),
+            values?.join(", ")
+        );
 
-        self.queue(queries).await;
+        self.queue(vec![insert_entities, insert_components]).await;
         Ok(())
     }
 
