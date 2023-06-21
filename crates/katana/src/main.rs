@@ -8,9 +8,9 @@ use katana_rpc::KatanaNodeRpc;
 use log::error;
 use yansi::Paint;
 
-mod cli;
+mod args;
 
-use cli::App;
+use args::KatanaArgs;
 
 #[tokio::main]
 async fn main() {
@@ -19,7 +19,7 @@ async fn main() {
     ))
     .init();
 
-    let config = App::parse();
+    let config = KatanaArgs::parse();
 
     let server_config = config.server_config();
     let sequencer_config = config.sequencer_config();
