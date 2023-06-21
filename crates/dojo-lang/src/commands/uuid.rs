@@ -38,3 +38,24 @@ impl CommandTrait for UUIDCommand {
         self.data.diagnostics.clone()
     }
 }
+
+impl UUIDCommand {
+    pub fn from_macro_ast(
+        _db: &dyn SyntaxGroup,
+        let_pattern: Option<ast::Pattern>,
+        _command_ast: ast::ExprInlineMacro,
+    ) -> Self {
+        let mut command = UUIDCommand { data: CommandData::new() };
+
+        command.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
+            "let $var_name$ = ctx.world.uuid();
+                    ",
+            HashMap::from([(
+                "var_name".to_string(),
+                RewriteNode::new_trimmed(let_pattern.unwrap().as_syntax_node()),
+            )]),
+        ));
+
+        command
+    }
+}

@@ -13,7 +13,7 @@ use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_world::manifest::Dependency;
 use itertools::Itertools;
 
-use crate::commands::Command;
+use crate::commands::{uuid, Command, CommandTrait};
 use crate::plugin::{DojoAuxData, SystemAuxData};
 
 pub struct System {
@@ -205,15 +205,23 @@ impl System {
         statement_ast: ast::Statement,
     ) -> Vec<RewriteNode> {
         match statement_ast.clone() {
-            ast::Statement::Let(statement_let) => {
-                if let ast::Expr::FunctionCall(expr_fn) = statement_let.rhs(db) {
+            ast::Statement::Let(statement_let) => match statement_let.rhs(db) {
+                ast::Expr::FunctionCall(expr_fn) => {
                     if let Some(rewrite_nodes) =
                         self.handle_fn_call(db, Some(statement_let.pattern(db)), expr_fn)
                     {
                         return rewrite_nodes;
                     }
                 }
-            }
+                ast::Expr::InlineMacro(expr_macro) => {
+                    if let Some(rewrite_nodes) =
+                        self.handle_inline_macro(db, Some(statement_let.pattern(db)), expr_macro)
+                    {
+                        return rewrite_nodes;
+                    }
+                }
+                _ => {}
+            },
             ast::Statement::Expr(expr) => {
                 if let Some(rewrite_nodes) = self.handle_expr(db, expr.expr(db)) {
                     return rewrite_nodes;
@@ -232,8 +240,32 @@ impl System {
             ast::Expr::Block(expr_block) => Some(self.handle_block(db, expr_block)),
             ast::Expr::Match(expr_match) => Some(self.handle_match(db, expr_match)),
             ast::Expr::Loop(expr_loop) => Some(self.handle_loop(db, expr_loop)),
+            ast::Expr::InlineMacro(expr_macro) => self.handle_inline_macro(db, None, expr_macro),
             _ => None,
         }
+    }
+
+    fn handle_inline_macro(
+        &mut self,
+        db: &dyn SyntaxGroup,
+        var_name: Option<ast::Pattern>,
+        expr_macro: ast::ExprInlineMacro,
+    ) -> Option<Vec<RewriteNode>> {
+        let elements = expr_macro.path(db).elements(db);
+        let segment = elements.first().unwrap();
+        if let ast::PathSegment::Simple(segment_simple) = segment {
+            if segment_simple.ident(db).text(db).as_str() == "uuid_test" {
+                let mut command =
+                    Command { rewrite_nodes: vec![], diagnostics: vec![], component_deps: vec![] };
+                let sc = uuid::UUIDCommand::from_macro_ast(db, var_name, expr_macro);
+                command.rewrite_nodes.extend(sc.rewrite_nodes());
+                command.diagnostics.extend(sc.diagnostics());
+                self.diagnostics.extend(command.diagnostics);
+                self.update_deps(command.component_deps);
+                return Some(command.rewrite_nodes);
+            };
+        }
+        None
     }
 
     fn handle_if(
