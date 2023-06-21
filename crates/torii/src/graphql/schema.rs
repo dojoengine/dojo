@@ -33,7 +33,7 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
 
     // register custom scalars
     for scalar_type in ScalarType::types().iter() {
-        schema_builder = schema_builder.register(Scalar::new(*scalar_type));
+        schema_builder = schema_builder.register(Scalar::new(scalar_type.to_string()));
     }
 
     // register gql objects and union

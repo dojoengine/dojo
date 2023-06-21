@@ -13,14 +13,14 @@ mod tests {
     #[derive(Deserialize)]
     struct Moves {
         __typename: String,
-        remaining: String,
+        remaining: u32,
     }
 
     #[derive(Deserialize)]
     struct Position {
         __typename: String,
-        x: String,
-        y: String,
+        x: u32,
+        y: u32,
     }
 
     #[derive(Deserialize)]
@@ -68,9 +68,9 @@ mod tests {
         let position = value.get("position").ok_or("no position found").unwrap();
         let position: Position = serde_json::from_value(position.clone()).unwrap();
 
-        assert_eq!(moves.remaining, "0xa");
-        assert_eq!(position.x, "0x2a");
-        assert_eq!(position.y, "0x45");
+        assert_eq!(moves.remaining, 10);
+        assert_eq!(position.x, 42);
+        assert_eq!(position.y, 69);
     }
 
     #[sqlx::test(migrations = "./migrations")]
