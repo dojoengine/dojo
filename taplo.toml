@@ -10,4 +10,5 @@ compactArrays = false
 indentEntries = false
 inlineTableExpand = false
 reorderKeys = true
+allowed_blank_lines = 1
 reorder_arrays = true
