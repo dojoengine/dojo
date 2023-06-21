@@ -23,6 +23,7 @@ sqlx = { version = "0.6.2", features = [
   "uuid",
 ] }
 starknet.workspace = true
+starknet-crypto.workspace = true
 tokio = { version = "1.20.1", features = ["full"] }
 tokio-stream = "0.1.11"
 tokio-util = "0.7.7"

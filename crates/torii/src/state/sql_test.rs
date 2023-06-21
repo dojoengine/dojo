@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use camino::Utf8PathBuf;
 use dojo_world::manifest::{Component, Member, System};
 use sqlx::sqlite::SqlitePool;
@@ -101,11 +99,11 @@ async fn test_load_from_manifest(pool: SqlitePool) {
         .set_entity(
             "Position".to_string(),
             FieldElement::ZERO,
-            FieldElement::ONE,
-            HashMap::from([
-                (String::from("x"), FieldElement::from_dec_str("42").unwrap()),
-                (String::from("y"), FieldElement::from_dec_str("69").unwrap()),
-            ]),
+            vec![FieldElement::ONE],
+            vec![
+                FieldElement::from_dec_str("42").unwrap(),
+                FieldElement::from_dec_str("69").unwrap(),
+            ],
         )
         .await
         .unwrap();

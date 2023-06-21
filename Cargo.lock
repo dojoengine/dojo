@@ -8465,6 +8465,7 @@ dependencies = [
  "serde_json",
  "sqlx",
  "starknet 0.3.0",
+ "starknet-crypto 0.5.1",
  "tokio",
  "tokio-stream",
  "tokio-util",

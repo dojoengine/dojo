@@ -1,7 +1,5 @@
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use camino::Utf8PathBuf;
     use chrono::{DateTime, Utc};
     use serde::Deserialize;
@@ -126,19 +124,18 @@ mod tests {
         state.load_from_manifest(manifest).await.unwrap();
 
         // Set moves entity
-        let key = FieldElement::ONE;
+        let key = vec![FieldElement::ONE];
         let partition = FieldElement::from_hex_be("0xdead").unwrap();
-        let values =
-            HashMap::from([(String::from("remaining"), FieldElement::from_hex_be("0xa").unwrap())]);
+        let values = vec![FieldElement::from_hex_be("0xa").unwrap()];
         state.set_entity("moves".to_string(), partition, key, values).await.unwrap();
 
         // Set position entity
-        let key = FieldElement::TWO;
+        let key = vec![FieldElement::TWO];
         let partition = FieldElement::from_hex_be("0xbeef").unwrap();
-        let values = HashMap::from([
-            (String::from("x"), FieldElement::from_hex_be("0x2a").unwrap()),
-            (String::from("y"), FieldElement::from_hex_be("0x45").unwrap()),
-        ]);
+        let values = vec![
+            FieldElement::from_hex_be("0x2a").unwrap(),
+            FieldElement::from_hex_be("0x45").unwrap(),
+        ];
         state.set_entity("position".to_string(), partition, key, values).await.unwrap();
         state.execute().await.unwrap();
     }
