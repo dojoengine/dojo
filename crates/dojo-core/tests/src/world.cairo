@@ -9,7 +9,7 @@ use starknet::class_hash::Felt252TryIntoClassHash;
 use starknet::syscalls::deploy_syscall;
 use starknet::contract_address_const;
 
-use dojo_core::storage::query::QueryTrait;
+use dojo_core::database::query::QueryTrait;
 use dojo_core::interfaces::IWorldDispatcher;
 use dojo_core::interfaces::IWorldDispatcherTrait;
 use dojo_core::executor::Executor;

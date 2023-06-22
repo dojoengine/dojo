@@ -1,11 +1,11 @@
 use std::vec;
 
-use starknet::core::crypto::pedersen_hash;
 use starknet::core::types::{BlockId, FieldElement, FunctionCall};
 use starknet::core::utils::{
     cairo_short_string_to_felt, get_selector_from_name, parse_cairo_short_string,
     CairoShortStringToFeltError, ParseCairoShortStringError,
 };
+use starknet::macros::short_string;
 use starknet::providers::{Provider, ProviderError};
 use starknet_crypto::poseidon_hash_many;
 
@@ -111,14 +111,16 @@ impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
         } else {
             poseidon_hash_many(&[self.name, partition_id])
         };
-        let keys_hash = if keys.len() == 1 {
+
+        let id = if keys.len() == 1 {
             keys[0]
         } else {
             let mut keys = keys;
             keys.insert(0, keys.len().into());
             poseidon_hash_many(&keys)
         };
-        let key = pedersen_hash(&table, &keys_hash);
+
+        let key = poseidon_hash_many(&[short_string!("dojo_storage"), table, id]);
 
         let mut values = vec![];
         for member in members {
