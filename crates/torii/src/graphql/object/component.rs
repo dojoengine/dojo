@@ -6,9 +6,10 @@ use serde::Deserialize;
 use sqlx::{FromRow, Pool, Sqlite};
 
 use super::query::{query_all, query_by_id, ID};
-use super::storage::{storage_by_name, type_mapping_from};
+use super::storage::{storages_query, type_mapping_from};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::graphql::constants::DEFAULT_LIMIT;
+use crate::graphql::object::storage::StorageFilters;
 use crate::graphql::types::ScalarType;
 use crate::graphql::utils::extract_value::extract;
 use crate::graphql::utils::{format_name, remove_quotes};
@@ -104,8 +105,14 @@ impl ObjectTrait for ComponentObject {
                 let name = extract::<String>(component_values, "name")?;
                 let (name, type_name) = format_name(&name);
                 let field_type_mapping = type_mapping_from(&mut conn, &id).await?;
-                let storage_values =
-                    storage_by_name(&mut conn, &name, &field_type_mapping, 1).await?;
+                let storage_values = storages_query(
+                    &mut conn,
+                    &name,
+                    &StorageFilters::new(),
+                    1,
+                    &field_type_mapping,
+                )
+                .await?;
 
                 let result = storage_values.get(0).cloned();
                 if let Some(value) = result {
