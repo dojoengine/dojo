@@ -1,0 +1,296 @@
+{
+  "world": {
+    "name": "World",
+    "address": null,
+    "class_hash": "0x7c82a3dd2d5ec6ddaa3b634121a03477e5d0df3d7aad026b750780727137b92"
+  },
+  "executor": {
+    "name": "Excecutor",
+    "address": null,
+    "class_hash": "0x2939c2759b92890519f3a16e3594a313c8d27a91ad716f466560d06ef60fc08"
+  },
+  "systems": [
+    {
+      "name": "Spawn",
+      "inputs": [],
+      "outputs": [],
+      "class_hash": "0x59354bbe98799a2a8a7be02258188399e39ee9dab1e16acdd6bcc6246ce15cb",
+      "dependencies": [
+        {
+          "name": "Moves",
+          "read": false,
+          "write": true
+        },
+        {
+          "name": "Position",
+          "read": false,
+          "write": true
+        }
+      ]
+    },
+    {
+      "name": "Move",
+      "inputs": [],
+      "outputs": [],
+      "class_hash": "0x7d8f4c80bb60f872b354274980d60dd5ee51fd6fad5bf2595f490885ba9cfb3",
+      "dependencies": [
+        {
+          "name": "Moves",
+          "read": true,
+          "write": true
+        },
+        {
+          "name": "Position",
+          "read": true,
+          "write": true
+        }
+      ]
+    },
+    {
+      "name": "RouteAuth",
+      "inputs": [],
+      "outputs": [],
+      "class_hash": "0x6f66fba7952d2047c094ab718dead01d09b401ed789afd7968676526f385f99",
+      "dependencies": [
+        {
+          "name": "AuthRole",
+          "read": false,
+          "write": true
+        },
+        {
+          "name": "AuthStatus",
+          "read": false,
+          "write": true
+        }
+      ]
+    },
+    {
+      "name": "IsAccountAdmin",
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "core::bool"
+        }
+      ],
+      "class_hash": "0x1919179f808e887e361456fb6a3b5aa827bfc9ee1c2760020535e148256cbfb",
+      "dependencies": [
+        {
+          "name": "AuthRole",
+          "read": true,
+          "write": false
+        }
+      ]
+    },
+    {
+      "name": "IsAuthorized",
+      "inputs": [
+        {
+          "name": "target_id",
+          "type": "core::felt252"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "core::bool"
+        }
+      ],
+      "class_hash": "0x14c487a638728633225397e78281a01fef0826b24a97269173580a04451d450",
+      "dependencies": [
+        {
+          "name": "AuthRole",
+          "read": true,
+          "write": false
+        },
+        {
+          "name": "AuthStatus",
+          "read": true,
+          "write": false
+        }
+      ]
+    },
+    {
+      "name": "GrantAuthRole",
+      "inputs": [
+        {
+          "name": "target_id",
+          "type": "core::felt252"
+        }
+      ],
+      "outputs": [],
+      "class_hash": "0x768beb31333d6781dbeaa70c1a5d3221ae4ed17eb6b17a1fa19d96c3e025946",
+      "dependencies": [
+        {
+          "name": "AuthRole",
+          "read": false,
+          "write": true
+        }
+      ]
+    },
+    {
+      "name": "GrantScopedAuthRole",
+      "inputs": [
+        {
+          "name": "target_id",
+          "type": "core::felt252"
+        },
+        {
+          "name": "role_id",
+          "type": "core::felt252"
+        }
+      ],
+      "outputs": [],
+      "class_hash": "0x537235143cdb5fe8ec0bdb2b3e97d27eef6e536446654779a4935634bdb57e9",
+      "dependencies": [
+        {
+          "name": "AuthRole",
+          "read": false,
+          "write": true
+        }
+      ]
+    },
+    {
+      "name": "GrantResource",
+      "inputs": [
+        {
+          "name": "role_id",
+          "type": "core::felt252"
+        }
+      ],
+      "outputs": [],
+      "class_hash": "0x272736ada8dccacb138f76af01973f980f6807a65de4f2598d821cfb9c771a3",
+      "dependencies": [
+        {
+          "name": "AuthStatus",
+          "read": false,
+          "write": true
+        }
+      ]
+    },
+    {
+      "name": "RevokeAuthRole",
+      "inputs": [],
+      "outputs": [],
+      "class_hash": "0xf1d8ab7371b9da5bf50d2d4905fa380b712de471bd0575e6130900987fdc1c",
+      "dependencies": [
+        {
+          "name": "AuthRole",
+          "read": false,
+          "write": true
+        }
+      ]
+    },
+    {
+      "name": "RevokeScopedAuthRole",
+      "inputs": [
+        {
+          "name": "target_id",
+          "type": "core::felt252"
+        }
+      ],
+      "outputs": [],
+      "class_hash": "0x421aa25eb22cc52ce9180a81e1008d83842ddc0ff38278a2f1dfc8597551fb3",
+      "dependencies": [
+        {
+          "name": "AuthRole",
+          "read": false,
+          "write": true
+        }
+      ]
+    },
+    {
+      "name": "RevokeResource",
+      "inputs": [
+        {
+          "name": "role_id",
+          "type": "core::felt252"
+        }
+      ],
+      "outputs": [],
+      "class_hash": "0x24d00372ab29264599822b09a43e651d82f941aaefd86fe2232e48ebabcde15",
+      "dependencies": [
+        {
+          "name": "AuthStatus",
+          "read": false,
+          "write": true
+        }
+      ]
+    },
+    {
+      "name": "LibraryCall",
+      "inputs": [
+        {
+          "name": "class_hash",
+          "type": "core::starknet::class_hash::ClassHash"
+        },
+        {
+          "name": "entrypoint",
+          "type": "core::felt252"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "core::array::Span::<core::felt252>"
+        }
+      ],
+      "class_hash": "0x912b21a6d10657808535a4f7ef5f3cbbb594df8082925b9694159ff0dab2f",
+      "dependencies": []
+    }
+  ],
+  "contracts": [],
+  "components": [
+    {
+      "name": "Moves",
+      "members": [
+        {
+          "name": "remaining",
+          "type": "u8",
+          "slot": 0,
+          "offset": 0
+        }
+      ],
+      "class_hash": "0x2b97f0b24be59ecf4504a27ac2301179be7df44c4c7d9482cd7b36137bc0fa4"
+    },
+    {
+      "name": "Position",
+      "members": [
+        {
+          "name": "x",
+          "type": "u32",
+          "slot": 0,
+          "offset": 0
+        },
+        {
+          "name": "y",
+          "type": "u32",
+          "slot": 1,
+          "offset": 0
+        }
+      ],
+      "class_hash": "0x4117714e639fd215c1b99b0b9e9b28485bcd557628b90960e1c4652c2e6a0c3"
+    },
+    {
+      "name": "AuthStatus",
+      "members": [
+        {
+          "name": "is_authorized",
+          "type": "bool",
+          "slot": 0,
+          "offset": 0
+        }
+      ],
+      "class_hash": "0x3e0b3ffb3e7cd8a661a7ac6b935bad3de651462ea1fb005cd4fff6550ac5337"
+    },
+    {
+      "name": "AuthRole",
+      "members": [
+        {
+          "name": "id",
+          "type": "felt252",
+          "slot": 0,
+          "offset": 0
+        }
+      ],
+      "class_hash": "0x2b61fb54b7be43094bca77ffe3c7da3d1aa1d8ca5ff3aef303d0672cce3c555"
+    }
+  ]
+}
