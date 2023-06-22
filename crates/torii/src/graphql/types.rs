@@ -95,6 +95,7 @@ impl ScalarType {
             "u32" => Ok(ScalarType::U32),
             "u64" => Ok(ScalarType::U64),
             "u128" => Ok(ScalarType::U128),
+            "u256" => Ok(ScalarType::U256),
             "usize" => Ok(ScalarType::USize),
             "bool" => Ok(ScalarType::Bool),
             "Cursor" => Ok(ScalarType::Cursor),
