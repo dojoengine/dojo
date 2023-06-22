@@ -13,7 +13,7 @@ use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_world::manifest::Dependency;
 use itertools::Itertools;
 
-use crate::commands::{uuid, Command, CommandTrait};
+use crate::commands::{uuid, Command, set, CommandMacroTrait};
 use crate::plugin::{DojoAuxData, SystemAuxData};
 
 pub struct System {
@@ -254,16 +254,16 @@ impl System {
         let elements = expr_macro.path(db).elements(db);
         let segment = elements.first().unwrap();
         if let ast::PathSegment::Simple(segment_simple) = segment {
-            if segment_simple.ident(db).text(db).as_str() == "uuid_test" {
-                let mut command =
-                    Command { rewrite_nodes: vec![], diagnostics: vec![], component_deps: vec![] };
-                let sc = uuid::UUIDCommand::from_macro_ast(db, var_name, expr_macro);
-                command.rewrite_nodes.extend(sc.rewrite_nodes());
-                command.diagnostics.extend(sc.diagnostics());
-                self.diagnostics.extend(command.diagnostics);
-                self.update_deps(command.component_deps);
-                return Some(command.rewrite_nodes);
+            let command: Option<Command> = match segment_simple.ident(db).text(db).as_str() {
+                "uuid" => Some(uuid::UUIDCommand::from_ast(db, var_name, expr_macro).into()),
+                "set_entity" => Some(set::SetCommand::from_ast(db, var_name, expr_macro).into()),
+                _ => None
             };
+            return command.map_or(None, |c| {
+                self.diagnostics.extend(c.diagnostics);
+                self.update_deps(c.component_deps);
+                Some(c.rewrite_nodes)
+            });   
         }
         None
     }

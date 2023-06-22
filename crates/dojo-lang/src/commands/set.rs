@@ -1,25 +1,27 @@
 use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_semantic::patcher::RewriteNode;
+use cairo_lang_syntax::node::ast::PathSegmentSimple;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_world::manifest::Dependency;
 
-use super::{CommandData, CommandTrait};
+use super::{CommandData, CommandMacroTrait, Command};
 
 #[derive(Clone)]
 pub struct SetCommand {
     data: CommandData,
-    pub components: Vec<Dependency>,
+    component_deps: Vec<Dependency>,
 }
 
 impl SetCommand {
-    fn handle_struct(&mut self, db: &dyn SyntaxGroup, query: ast::Arg, expr: ast::Expr) {
+    fn handle_struct(&mut self, db: &dyn SyntaxGroup, context: &ast::Arg, query: ast::Arg, expr: ast::Expr) {
         if let ast::Expr::StructCtorCall(ctor) = expr {
             if let Some(ast::PathSegment::Simple(segment)) = ctor.path(db).elements(db).last() {
                 let component_name = segment.ident(db).text(db);
+                let context_name = arg_to_path_segment_simple(db, context).expect("Context must be a simple literal!").ident(db).text(db);
 
-                self.components.push(Dependency {
+                self.component_deps.push(Dependency {
                     name: component_name.clone(),
                     write: true,
                     read: false,
@@ -29,11 +31,12 @@ impl SetCommand {
                     {
                         let mut calldata = array::ArrayTrait::new();
                         serde::Serde::serialize(@$ctor$, ref calldata);
-                        ctx.world.set_entity(ctx, '$component$', $query$, 0_u8, \
+                        $context$.world.set_entity($context$, '$component$', $query$, 0_u8, \
                      array::ArrayTrait::span(@calldata));
                     }
                     ",
                     UnorderedHashMap::from([
+                        ("context".to_string(), RewriteNode::Text(context_name.to_string())),
                         ("component".to_string(), RewriteNode::Text(component_name.to_string())),
                         ("ctor".to_string(), RewriteNode::new_trimmed(ctor.as_syntax_node())),
                         ("query".to_string(), RewriteNode::new_trimmed(query.as_syntax_node())),
@@ -44,34 +47,46 @@ impl SetCommand {
     }
 }
 
-impl CommandTrait for SetCommand {
+fn arg_to_path_segment_simple(db: &dyn SyntaxGroup, arg: &ast::Arg) -> Option<PathSegmentSimple> {
+    if let ast::ArgClause::Unnamed(clause) = arg.arg_clause(db) {
+        if let ast::Expr::Path(path) = clause.value(db) {
+            if let Some(ast::PathSegment::Simple(segment)) = path.elements(db).last(){
+                return Some(segment.clone());
+            }
+        }
+    }
+    None
+}
+
+impl CommandMacroTrait for SetCommand {
     fn from_ast(
         db: &dyn SyntaxGroup,
         _let_pattern: Option<ast::Pattern>,
-        command_ast: ast::ExprFunctionCall,
+        command_ast: ast::ExprInlineMacro,
     ) -> Self {
-        let mut command = SetCommand { data: CommandData::new(), components: vec![] };
+        let mut command = SetCommand { data: CommandData::new(), component_deps: vec![] };
 
         let elements = command_ast.arguments(db).args(db).elements(db);
 
-        if elements.len() != 2 {
+        if elements.len() != 3 {
             command.data.diagnostics.push(PluginDiagnostic {
-                message: "Invalid arguments. Expected \"(query, (components,))\"".to_string(),
+                message: "Invalid arguments. Expected \"(context, query, (components,))\"".to_string(),
                 stable_ptr: command_ast.arguments(db).as_syntax_node().stable_ptr(),
             });
             return command;
         }
 
-        let query = elements.first().unwrap().clone();
-        let bundle = elements.last().unwrap();
+        let context = &elements[0];
+        let query = elements[1].clone();
+        let bundle = &elements[2];
         if let ast::ArgClause::Unnamed(clause) = bundle.arg_clause(db) {
             match clause.value(db) {
                 ast::Expr::Parenthesized(bundle) => {
-                    command.handle_struct(db, query, bundle.expr(db));
+                    command.handle_struct(db, context, query, bundle.expr(db));
                 }
                 ast::Expr::Tuple(tuple) => {
                     for expr in tuple.expressions(db).elements(db) {
-                        command.handle_struct(db, query.clone(), expr);
+                        command.handle_struct(db, context, query.clone(), expr);
                     }
                 }
                 _ => {
@@ -85,12 +100,10 @@ impl CommandTrait for SetCommand {
 
         command
     }
+}
 
-    fn rewrite_nodes(&self) -> Vec<RewriteNode> {
-        self.data.rewrite_nodes.clone()
-    }
-
-    fn diagnostics(&self) -> Vec<PluginDiagnostic> {
-        self.data.diagnostics.clone()
+impl Into<Command> for SetCommand {
+    fn into(self) -> Command {
+        Command::with_cmp_deps(self.data, self.component_deps)
     }
 }

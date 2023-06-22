@@ -26,39 +26,39 @@ mod Spawn {
     use super::Player;
 
     fn execute(name: felt252) {
-        let uuid = uuid_test!();
-        commands::set_entity((420, (69, uuid)).into_partitioned(), (
+        let uuid = uuid!();
+        set_entity!(ctx, (420, (69, uuid)).into_partitioned(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
-        commands::set_entity(420.into(), (
+        set_entity!(ctx, 420.into(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
-        commands::set_entity(120.into(), (
+        set_entity!(ctx, 120.into(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
         let player_id = starknet::get_caller_address();
-        commands::set_entity(player_id.into(), (
+        set_entity!(ctx, player_id.into(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
-        commands::set_entity((
+        set_entity!(ctx, (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
-        commands::set_entity((0, 0, 0, 0, 0), (
+        set_entity!(ctx, (0, 0, 0, 0, 0), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
-        commands::set_entity(1337.into(), (
+        set_entity!(ctx, 1337.into(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
@@ -1003,10 +1003,10 @@ mod Proxy {
 }
 
 //! > expected_diagnostics
-error: Plugin diagnostic: Invalid arguments. Expected "(query, (components,))"
- --> lib.cairo:45:29
-        commands::set_entity((
-                            ^^
+error: Plugin diagnostic: Invalid arguments. Expected "(context, query, (components,))"
+ --> lib.cairo:45:20
+        set_entity!(ctx, (
+                   ^*****^
 
 error: Plugin diagnostic: Component types cannot be empty
  --> lib.cairo:136:19

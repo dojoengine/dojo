@@ -24,6 +24,14 @@ pub trait CommandTrait {
     fn diagnostics(&self) -> Vec<PluginDiagnostic>;
 }
 
+pub trait CommandMacroTrait: Into<Command> {
+    fn from_ast(
+        db: &dyn SyntaxGroup,
+        let_pattern: Option<ast::Pattern>,
+        command_ast: ast::ExprInlineMacro,
+    ) -> Self;
+}
+
 #[derive(Clone)]
 pub struct CommandData {
     rewrite_nodes: Vec<RewriteNode>,
@@ -42,6 +50,23 @@ pub struct Command {
 }
 
 impl Command {
+    pub fn with_data(data: CommandData) -> Self {
+        Command { 
+            rewrite_nodes: data.rewrite_nodes, 
+            diagnostics: data.diagnostics, 
+            component_deps: vec![] 
+        }
+    }
+
+    ///With component dependencies
+    pub fn with_cmp_deps(data: CommandData, component_deps: Vec<Dependency>) -> Self {
+        Command { 
+            rewrite_nodes: data.rewrite_nodes, 
+            diagnostics: data.diagnostics, 
+            component_deps: component_deps
+        }
+    }
+
     pub fn from_ast(
         db: &dyn SyntaxGroup,
         let_pattern: Option<ast::Pattern>,
@@ -51,11 +76,6 @@ impl Command {
             Command { rewrite_nodes: vec![], diagnostics: vec![], component_deps: vec![] };
 
         match command_name(db, command_ast.clone()).as_str() {
-            "uuid" => {
-                let sc = uuid::UUIDCommand::from_ast(db, let_pattern, command_ast);
-                command.rewrite_nodes.extend(sc.rewrite_nodes());
-                command.diagnostics.extend(sc.diagnostics());
-            }
             "entity" => {
                 let sc = entity::EntityCommand::from_ast(db, let_pattern, command_ast);
                 command.rewrite_nodes.extend(sc.rewrite_nodes());
@@ -64,12 +84,6 @@ impl Command {
             }
             "try_entity" => {
                 let sc = entity::EntityCommand::from_ast(db, let_pattern, command_ast);
-                command.rewrite_nodes.extend(sc.rewrite_nodes());
-                command.diagnostics.extend(sc.diagnostics());
-                command.component_deps.extend(sc.components);
-            }
-            "set_entity" => {
-                let sc = set::SetCommand::from_ast(db, let_pattern, command_ast);
                 command.rewrite_nodes.extend(sc.rewrite_nodes());
                 command.diagnostics.extend(sc.diagnostics());
                 command.component_deps.extend(sc.components);
