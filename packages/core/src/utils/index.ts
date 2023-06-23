@@ -67,6 +67,8 @@ export function setComponentFromEntitiesQuery(component: Component, entities: bi
 
       const entityIndex = parseInt(entityIds[i].toString()) as EntityIndex;
       setComponent(component, entityIndex, componentValues)
+      
+      index += numValues;
     }
 }
 
