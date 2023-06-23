@@ -2,7 +2,7 @@ use array::{ArrayTrait, SpanTrait};
 use option::OptionTrait;
 use traits::Into;
 
-use dojo_core::storage::utils::find_matching;
+use dojo_core::database::utils::find_matching;
 
 fn build_fake_entity(v: felt252) -> Span<felt252> {
     let mut e = ArrayTrait::new();

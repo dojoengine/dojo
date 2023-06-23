@@ -110,23 +110,20 @@ fn value_mapping_from_row(row: &SqliteRow, fields: &TypeMapping) -> Result<Value
         // Column names are prefixed to avoid conflicts with sqlite keywords
         let column_name = format!("external_{}", field_name);
 
-        // Treating everything as text for now, possilbe to have u8 - u64 as int
-        let value = match field_type.as_str() {
-            ScalarType::U8
-            | ScalarType::U16
-            | ScalarType::U32
-            | ScalarType::U64
-            | ScalarType::U128
-            | ScalarType::U256
-            | ScalarType::USIZE
-            | ScalarType::FELT252 => {
-                let result = row.try_get::<String, &str>(&column_name);
-                Value::from(result?)
-            }
-            ScalarType::BOOL => {
+        let value = match ScalarType::from_str(field_type) {
+            Ok(ScalarType::Bool) => {
                 // sqlite stores booleans as 0 or 1
                 let result = row.try_get::<i64, &str>(&column_name);
                 Value::from(matches!(result?, BOOLEAN_TRUE))
+            }
+            Ok(ty) => {
+                if ty.is_numeric_type() {
+                    let result = row.try_get::<i64, &str>(&column_name);
+                    Value::from(result?)
+                } else {
+                    let result = row.try_get::<String, &str>(&column_name);
+                    Value::from(result?)
+                }
             }
             _ => return Err(Error::TypeNotFound { type_name: field_type.clone() }),
         };
