@@ -6,11 +6,9 @@ use serde::Deserialize;
 use sqlx::{FromRow, Pool, Sqlite};
 
 use super::query::{query_all, query_by_id, ID};
-use super::storage::{storage_by_name, type_mapping_from};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::graphql::constants::DEFAULT_LIMIT;
 use crate::graphql::types::ScalarType;
-use crate::graphql::utils::extract_value::extract;
 use crate::graphql::utils::{format_name, remove_quotes};
 
 #[derive(FromRow, Deserialize)]
@@ -87,36 +85,6 @@ impl ObjectTrait for ComponentObject {
         Some(vec![self.storage_names.iter().fold(Union::new("Storage"), |union, storage| {
             let (_, type_name) = format_name(storage);
             union.possible_type(type_name)
-        })])
-    }
-
-    fn nested_fields(&self) -> Option<Vec<Field>> {
-        if self.storage_names.is_empty() {
-            return None;
-        }
-
-        Some(vec![Field::new("storage", TypeRef::named("Storage"), move |ctx| {
-            FieldFuture::new(async move {
-                let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                let component_values = ctx.parent_value.try_downcast_ref::<ValueMapping>()?;
-
-                let id = extract::<String>(component_values, "id")?;
-                let name = extract::<String>(component_values, "name")?;
-                let (name, type_name) = format_name(&name);
-                let field_type_mapping = type_mapping_from(&mut conn, &id).await?;
-                let storage_values =
-                    storage_by_name(&mut conn, &name, &field_type_mapping, 1).await?;
-
-                let result = storage_values.get(0).cloned();
-                if let Some(value) = result {
-                    return Ok(Some(FieldValue::with_type(
-                        FieldValue::owned_any(value),
-                        type_name,
-                    )));
-                }
-
-                Ok(None)
-            })
         })])
     }
 
