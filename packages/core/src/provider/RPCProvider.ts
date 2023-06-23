@@ -94,10 +94,7 @@ export class RPCProvider extends Provider {
 
     public async execute(account: Account, system: string, call_data: number.BigNumberish[]): Promise<InvokeFunctionResponse> {
 
-        let call_data_obj = call_data.reduce((obj: any, item, index) => {
-            obj[index] = item;
-            return obj;
-        }, {});
+        let execute_calldata = call_data.map((c) => c.toString());
 
         try {
             const nonce = await account?.getNonce()
@@ -107,7 +104,7 @@ export class RPCProvider extends Provider {
                     entrypoint: WorldEntryPoints.execute,
                     calldata: stark.compileCalldata({
                         name: strTofelt252Felt(system),
-                        ...call_data_obj
+                        execute_calldata
                     })
                 },
                 undefined,
