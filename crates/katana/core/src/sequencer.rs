@@ -19,7 +19,7 @@ use starknet_api::transaction::{
     Calldata, ContractAddressSalt, DeployAccountTransaction, Fee,
     Transaction as StarknetApiTransaction, TransactionHash, TransactionSignature,
 };
-use tokio::sync::RwLock;
+use tokio::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use tokio::time;
 
 use crate::accounts::Account;
@@ -122,6 +122,14 @@ impl KatanaSequencer {
 
 #[async_trait]
 impl Sequencer for KatanaSequencer {
+    async fn starknet(&self) -> RwLockReadGuard<'_, StarknetWrapper> {
+        self.starknet.read().await
+    }
+
+    async fn mut_starknet(&self) -> RwLockWriteGuard<'_, StarknetWrapper> {
+        self.starknet.write().await
+    }
+
     async fn state(&self, block_id: &BlockId) -> SequencerResult<DictStateReader> {
         match block_id {
             BlockId::Tag(BlockTag::Latest) => Ok(self.starknet.write().await.latest_state()),
@@ -513,6 +521,10 @@ impl Sequencer for KatanaSequencer {
 
 #[async_trait]
 pub trait Sequencer {
+    async fn starknet(&self) -> RwLockReadGuard<'_, StarknetWrapper>;
+
+    async fn mut_starknet(&self) -> RwLockWriteGuard<'_, StarknetWrapper>;
+
     async fn state(&self, block_id: &BlockId) -> SequencerResult<DictStateReader>;
 
     async fn chain_id(&self) -> ChainId;
