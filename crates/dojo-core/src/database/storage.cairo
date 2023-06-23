@@ -4,7 +4,6 @@ use starknet::SyscallResultTrait;
 use traits::Into;
 use poseidon::poseidon_hash_span;
 use serde::Serde;
-use dojo_core::serde::SpanSerde;
 
 fn get(address_domain: u32, keys: Span<felt252>) -> felt252 {
     let base = starknet::storage_base_address_from_felt252(poseidon_hash_span(keys));

@@ -26,6 +26,7 @@ mod ERC20 {
     use dojo_core::interfaces::{IWorldDispatcher, IWorldDispatcherTrait};
     use dojo_erc::erc20::components::{Allowance, Balance, Supply};
 
+    #[storage]
     struct Storage {
         world_address: ContractAddress,
         token_name: felt252,

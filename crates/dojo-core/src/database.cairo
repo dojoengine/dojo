@@ -11,7 +11,6 @@ mod utils;
 
 use dojo_core::database::{query::{Query, QueryTrait}};
 use dojo_core::interfaces::{IComponentLibraryDispatcher, IComponentDispatcherTrait};
-use dojo_core::serde::SpanSerde;
 
 fn get(
     class_hash: starknet::ClassHash, table: felt252, query: Query, offset: u8, length: usize
