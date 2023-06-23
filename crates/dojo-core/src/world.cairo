@@ -29,6 +29,12 @@ mod World {
     #[event]
     fn SystemRegistered(name: felt252, class_hash: ClassHash) {}
 
+    #[event]
+    fn StoreSetRecord(table_id: felt252, keys: Span<felt252>, offset: u8, value: Span<felt252>) {}
+
+    #[event]
+    fn StoreDelRecord(table_id: felt252, keys: Span<felt252>) {}
+
     struct Storage {
         executor_dispatcher: IExecutorDispatcher,
         component_registry: LegacyMap::<felt252, ClassHash>,
@@ -279,7 +285,9 @@ mod World {
         // Set the entity
         let table = query.table(component);
         let component_class_hash = component_registry::read(component);
-        database::set(component_class_hash, table, query, offset, value)
+        database::set(component_class_hash, table, query, offset, value);
+
+        StoreSetRecord(table, query.keys(), offset, value);
     }
 
     /// Delete a component from an entity
@@ -304,7 +312,9 @@ mod World {
         // Delete the entity
         let table = query.table(component);
         let component_class_hash = component_registry::read(component);
-        let res = database::del(component_class_hash, component.into(), query);
+        database::del(component_class_hash, component.into(), query);
+
+        // StoreDelRecord(table, query.keys());
     }
 
     /// Get the component value for an entity
