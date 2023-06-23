@@ -347,9 +347,7 @@ mod World {
     ///
     /// * `Span<felt252>` - The value of the component
     #[external]
-    fn entity(
-        self: @ContractState, component: felt252, query: Query, offset: u8, length: usize
-    ) -> Span<felt252> {
+    fn entity(self: @ContractState, component: felt252, query: Query, offset: u8, length: usize) -> Span<felt252> {
         let class_hash = self.component_registry.read(component);
         let table = query.table(component);
         match database::get(class_hash, table, query, offset, length) {
@@ -372,9 +370,7 @@ mod World {
     /// * `Span<felt252>` - The entity IDs
     /// * `Span<Span<felt252>>` - The entities
     #[external]
-    fn entities(
-        self: @ContractState, component: felt252, partition: felt252
-    ) -> (Span<felt252>, Span<Span<felt252>>) {
+    fn entities(self: @ContractState, component: felt252, partition: felt252) -> (Span<felt252>, Span<Span<felt252>>) {
         let class_hash = self.component_registry.read(component);
         database::all(class_hash, component.into(), partition)
     }

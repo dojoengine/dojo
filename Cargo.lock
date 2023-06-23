@@ -1512,7 +1512,7 @@ dependencies = [
 [[package]]
 name = "blockifier"
 version = "0.1.0"
-source = "git+https://github.com/dojoengine/blockifier?branch=katana-200#b82d20d1ada0b06ac385e2491699990c106f5814"
+source = "git+https://github.com/dojoengine/blockifier?branch=devc2#76eb93d902d28926467f2fef1f117b3e15a49ad7"
 dependencies = [
  "cairo-felt 0.6.0",
  "cairo-lang-casm",
