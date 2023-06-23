@@ -79,7 +79,7 @@ mod PositionComponent {
     #[storage]
     struct Storage {}
 
-    #[view]
+    #[external]
     fn schema(self: @ContractState) -> Array<(felt252, felt252, usize, u8)> {
         let mut arr = array::ArrayTrait::new();
         array::ArrayTrait::append(ref arr, ('x', 'felt252', 0, 0));
@@ -89,17 +89,17 @@ mod PositionComponent {
     }
 
 
-    #[view]
+    #[external]
     fn name(self: @ContractState) -> felt252 {
         'Position'
     }
 
-    #[view]
+    #[external]
     fn len(self: @ContractState) -> usize {
         2_usize
     }
 
-    #[view]
+    #[external]
     fn is_indexed(self: @ContractState) -> bool {
         bool::False(())
     }
@@ -122,7 +122,7 @@ mod RolesComponent {
     #[storage]
     struct Storage {}
 
-    #[view]
+    #[external]
     fn schema(self: @ContractState) -> Array<(felt252, felt252, usize, u8)> {
         let mut arr = array::ArrayTrait::new();
         array::ArrayTrait::append(ref arr, ('role_ids', 'Array<u8>', 0, 0));
@@ -131,17 +131,17 @@ mod RolesComponent {
     }
 
 
-    #[view]
+    #[external]
     fn name(self: @ContractState) -> felt252 {
         'Roles'
     }
 
-    #[view]
+    #[external]
     fn len(self: @ContractState) -> usize {
         1_usize
     }
 
-    #[view]
+    #[external]
     fn is_indexed(self: @ContractState) -> bool {
         bool::False(())
     }
@@ -164,7 +164,7 @@ mod PlayerComponent {
     #[storage]
     struct Storage {}
 
-    #[view]
+    #[external]
     fn schema(self: @ContractState) -> Array<(felt252, felt252, usize, u8)> {
         let mut arr = array::ArrayTrait::new();
         array::ArrayTrait::append(ref arr, ('name', 'felt252', 0, 0));
@@ -173,17 +173,17 @@ mod PlayerComponent {
     }
 
 
-    #[view]
+    #[external]
     fn name(self: @ContractState) -> felt252 {
         'Player'
     }
 
-    #[view]
+    #[external]
     fn len(self: @ContractState) -> usize {
         1_usize
     }
 
-    #[view]
+    #[external]
     fn is_indexed(self: @ContractState) -> bool {
         bool::False(())
     }

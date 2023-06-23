@@ -82,3 +82,7 @@ yansi = "0.5.1"
 
 [patch."https://github.com/starkware-libs/blockifier"]
 blockifier = { git = "https://github.com/dojoengine/blockifier", branch = "katana-200" }
+
+[patch.crates-io]
+starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", branch = "dev/cairo_2_abi" }
+starknet-crypto = { git = "https://github.com/xJonathanLEI/starknet-rs", branch = "dev/cairo_2_abi" }

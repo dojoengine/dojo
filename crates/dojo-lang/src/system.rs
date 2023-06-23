@@ -66,12 +66,12 @@ impl System {
                     #[storage]
                     struct Storage {}
 
-                    #[view]
+                    #[external]
                     fn name(self: @ContractState) -> felt252 {
                         '$name$'
                     }
 
-                    #[view]
+                    #[external]
                     fn dependencies(self: @ContractState) -> Array<(felt252, bool)> {
                         let mut arr = array::ArrayTrait::new();
                         $dependencies$

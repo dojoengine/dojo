@@ -17,15 +17,15 @@ trait World {
     fn SystemRegistered(name: felt252, class_hash: ClassHash) {}
 
     // Returns a globally unique identifier.
-    #[view]
+    #[external]
     fn uuid() -> felt252;
 
     // Returns a globally unique identifier.
-    #[view]
+    #[external]
     fn get(component: felt252, query: Query, offset: u8, length: usize) -> Span<felt252>;
 
     // Returns all entities that contain the component.
-    #[view]
+    #[external]
     fn entities(component: felt252, partition: felt252) -> Array<Query>;
 
     // Sets a components value.

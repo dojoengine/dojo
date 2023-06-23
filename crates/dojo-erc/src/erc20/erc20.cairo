@@ -66,22 +66,22 @@ mod ERC20 {
         }
     }
 
-    #[view]
+    #[external]
     fn name() -> felt252 {
         token_name::read()
     }
 
-    #[view]
+    #[external]
     fn symbol() -> felt252 {
         token_symbol::read()
     }
 
-    #[view]
+    #[external]
     fn decimals() -> u8 {
         token_decimals::read()
     }
 
-    #[view]
+    #[external]
     fn total_supply() -> u256 {
         let query: Query = get_contract_address().into();
         let mut supply_raw = world().entity('Supply'.into(), query, 0, 0);
@@ -89,7 +89,7 @@ mod ERC20 {
         supply.amount.into()
     }
 
-    #[view]
+    #[external]
     fn balance_of(account: ContractAddress) -> u256 {
         let token = get_contract_address();
         let query: Query = (token, (account,)).into_partitioned();        
@@ -98,7 +98,7 @@ mod ERC20 {
         balance.amount.into()
     }
 
-    #[view]
+    #[external]
     fn allowance(owner: ContractAddress, spender: ContractAddress) -> u256 {
         let token = get_contract_address();
         let query: Query = (token, (owner, spender)).into_partitioned();

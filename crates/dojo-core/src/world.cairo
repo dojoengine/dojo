@@ -109,7 +109,7 @@ mod World {
     /// # Returns
     ///
     /// * `bool` - True if the system is authorized to write to the component, false otherwise
-    #[view]
+    #[external]
     fn is_authorized(
         self: @ContractState, system: felt252, component: felt252, execution_role: AuthRole
     ) -> bool {
@@ -145,7 +145,7 @@ mod World {
     /// # Returns
     ///
     /// * `bool` - True if the calling account has Admin role, false otherwise
-    #[view]
+    #[external]
     fn is_account_admin(self: @ContractState) -> bool {
         let is_account_admin_class_hash = self.system_registry.read('IsAccountAdmin'.into());
         // Call IsAccountAdmin system via executor
@@ -181,7 +181,7 @@ mod World {
     /// # Returns
     ///
     /// * `ClassHash` - The class hash of the component
-    #[view]
+    #[external]
     fn component(self: @ContractState, name: felt252) -> ClassHash {
         self.component_registry.read(name)
     }
@@ -212,7 +212,7 @@ mod World {
     /// # Returns
     ///
     /// * `ClassHash` - The class hash of the system
-    #[view]
+    #[external]
     fn system(self: @ContractState, name: felt252) -> ClassHash {
         self.system_registry.read(name)
     }
@@ -319,7 +319,7 @@ mod World {
     /// # Returns
     ///
     /// * `Span<felt252>` - The value of the component
-    #[view]
+    #[external]
     fn entity(self: @ContractState, component: felt252, query: Query, offset: u8, length: usize) -> Span<felt252> {
         let class_hash = self.component_registry.read(component);
         let table = query.table(component);
@@ -342,7 +342,7 @@ mod World {
     ///
     /// * `Span<felt252>` - The entity IDs
     /// * `Span<Span<felt252>>` - The entities
-    #[view]
+    #[external]
     fn entities(self: @ContractState, component: felt252, partition: felt252) -> (Span<felt252>, Span<Span<felt252>>) {
         let class_hash = self.component_registry.read(component);
         database::all(class_hash, component.into(), partition)
@@ -360,7 +360,7 @@ mod World {
         self.executor_dispatcher.write(IExecutorDispatcher { contract_address: contract_address });
     }
 
-    #[view]
+    #[external]
     fn executor(self: @ContractState) -> ContractAddress {
         self.executor_dispatcher.read().contract_address
     }
@@ -451,7 +451,7 @@ mod World {
     /// # Returns
     ///
     /// * `felt252` - The role id of the system
-    #[view]
+    #[external]
     fn execution_role(self: @ContractState) -> felt252 {
         let caller = get_tx_info().unbox().account_contract_address;
         self._execution_role.read(caller)
@@ -467,7 +467,7 @@ mod World {
     ///
     /// * `Array<(felt252, bool)>` - The component dependencies of the system
     /// bool is true if the system is writing to the component
-    #[view]
+    #[external]
     fn system_components(self: @ContractState, system: felt252) -> Array<(felt252, bool)> {
         let class_hash = self.system_registry.read(system);
         ISystemLibraryDispatcher { class_hash }.dependencies()
@@ -482,7 +482,7 @@ mod World {
     /// # Returns
     ///
     /// * `bool` - True if the system is part of the systems for execution
-    #[view]
+    #[external]
     fn is_system_for_execution(self: @ContractState, system: felt252) -> bool {
         let caller = get_tx_info().unbox().account_contract_address;
         self.systems_for_execution.read((caller, system))

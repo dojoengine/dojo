@@ -112,17 +112,17 @@ mod WorldFactory {
         self.world_class_hash.write(class_hash);
     }
 
-    #[view]
+    #[external]
     fn executor(self: @ContractState) -> ContractAddress {
         return self.executor_address.read();
     }
 
-    #[view]
+    #[external]
     fn world(self: @ContractState) -> ClassHash {
         return self.world_class_hash.read();
     }
 
-    #[view]
+    #[external]
     fn default_auth_components(self: @ContractState) -> Array<ClassHash> {
         let mut result: Array<ClassHash> = ArrayTrait::new();
         let len = self.auth_components_len.read();
@@ -137,7 +137,7 @@ mod WorldFactory {
         result
     }
 
-    #[view]
+    #[external]
     fn default_auth_systems(self: @ContractState) -> Array<ClassHash> {
         let mut result: Array<ClassHash> = ArrayTrait::new();
         let len = self.auth_systems_len.read();
