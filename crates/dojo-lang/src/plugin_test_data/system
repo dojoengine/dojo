@@ -177,18 +177,21 @@ struct Position {
     y: felt252,
 }
 
-#[abi]
-trait IPosition {
-    fn name() -> felt252;
-    fn len() -> u8;
+#[starknet::interface]
+trait IPosition<T> {
+    fn name(self: @T) -> felt252;
+    fn len(self: @T) -> u8;
 }
 
-#[contract]
+#[starknet::contract]
 mod PositionComponent {
     use super::Position;
 
+    #[storage]
+    struct Storage {}
+
     #[view]
-    fn schema() -> Array<(felt252, felt252, usize, u8)> {
+    fn schema(self: @ContractState) -> Array<(felt252, felt252, usize, u8)> {
         let mut arr = array::ArrayTrait::new();
         array::ArrayTrait::append(ref arr, ('x', 'felt252', 0, 0));
         array::ArrayTrait::append(ref arr, ('y', 'felt252', 1, 0));
@@ -198,17 +201,17 @@ mod PositionComponent {
 
 
     #[view]
-    fn name() -> felt252 {
+    fn name(self: @ContractState) -> felt252 {
         'Position'
     }
 
     #[view]
-    fn len() -> usize {
+    fn len(self: @ContractState) -> usize {
         2_usize
     }
 
     #[view]
-    fn is_indexed() -> bool {
+    fn is_indexed(self: @ContractState) -> bool {
         bool::False(())
     }
 }
@@ -217,18 +220,21 @@ struct Player {
     name: felt252, 
 }
 
-#[abi]
-trait IPlayer {
-    fn name() -> felt252;
-    fn len() -> u8;
+#[starknet::interface]
+trait IPlayer<T> {
+    fn name(self: @T) -> felt252;
+    fn len(self: @T) -> u8;
 }
 
-#[contract]
+#[starknet::contract]
 mod PlayerComponent {
     use super::Player;
 
+    #[storage]
+    struct Storage {}
+
     #[view]
-    fn schema() -> Array<(felt252, felt252, usize, u8)> {
+    fn schema(self: @ContractState) -> Array<(felt252, felt252, usize, u8)> {
         let mut arr = array::ArrayTrait::new();
         array::ArrayTrait::append(ref arr, ('name', 'felt252', 0, 0));
 
@@ -237,22 +243,22 @@ mod PlayerComponent {
 
 
     #[view]
-    fn name() -> felt252 {
+    fn name(self: @ContractState) -> felt252 {
         'Player'
     }
 
     #[view]
-    fn len() -> usize {
+    fn len(self: @ContractState) -> usize {
         1_usize
     }
 
     #[view]
-    fn is_indexed() -> bool {
+    fn is_indexed(self: @ContractState) -> bool {
         bool::True(())
     }
 }
 
-#[contract]
+#[starknet::contract]
 mod Spawn {
     use option::OptionTrait;
     use array::SpanTrait;
@@ -270,13 +276,16 @@ mod Spawn {
     use dojo_core::database::query::IntoPartitionedQuery;
     use dojo_core::execution_context::Context;
 
+    #[storage]
+    struct Storage {}
+
     #[view]
-    fn name() -> felt252 {
+    fn name(self: @ContractState) -> felt252 {
         'Spawn'
     }
 
     #[view]
-    fn dependencies() -> Array<(felt252, bool)> {
+    fn dependencies(self: @ContractState) -> Array<(felt252, bool)> {
         let mut arr = array::ArrayTrait::new();
         array::ArrayTrait::append(ref arr, ('Player'.into(), true));
         array::ArrayTrait::append(ref arr, ('Position'.into(), true));
@@ -289,7 +298,7 @@ mod Spawn {
     use super::Player;
 
     #[external]
-    fn execute(ctx: Context, name: felt252) {
+    fn execute(self: @ContractState, ctx: Context, name: felt252) {
         let uuid = ctx.world.uuid();
 
         {
@@ -413,7 +422,7 @@ mod Spawn {
     }
 }
 
-#[contract]
+#[starknet::contract]
 mod Move {
     use option::OptionTrait;
     use array::SpanTrait;
@@ -431,13 +440,16 @@ mod Move {
     use dojo_core::database::query::IntoPartitionedQuery;
     use dojo_core::execution_context::Context;
 
+    #[storage]
+    struct Storage {}
+
     #[view]
-    fn name() -> felt252 {
+    fn name(self: @ContractState) -> felt252 {
         'Move'
     }
 
     #[view]
-    fn dependencies() -> Array<(felt252, bool)> {
+    fn dependencies(self: @ContractState) -> Array<(felt252, bool)> {
         let mut arr = array::ArrayTrait::new();
         array::ArrayTrait::append(ref arr, ('Player'.into(), false));
         array::ArrayTrait::append(ref arr, ('Position'.into(), false));
@@ -455,7 +467,7 @@ mod Move {
     }
 
     #[external]
-    fn execute(ctx: Context, player_id: felt252) {
+    fn execute(self: @ContractState, ctx: Context, player_id: felt252) {
         let mut __positions_query_ids: Array<Span<felt252>> = ArrayTrait::new();
         let mut __positions_query_entities_raw: Array<Span<Span<felt252>>> = ArrayTrait::new();
 
@@ -950,7 +962,7 @@ mod Move {
     }
 }
 
-#[contract]
+#[starknet::contract]
 mod Proxy {
     use option::OptionTrait;
     use array::SpanTrait;
@@ -968,13 +980,16 @@ mod Proxy {
     use dojo_core::database::query::IntoPartitionedQuery;
     use dojo_core::execution_context::Context;
 
+    #[storage]
+    struct Storage {}
+
     #[view]
-    fn name() -> felt252 {
+    fn name(self: @ContractState) -> felt252 {
         'Proxy'
     }
 
     #[view]
-    fn dependencies() -> Array<(felt252, bool)> {
+    fn dependencies(self: @ContractState) -> Array<(felt252, bool)> {
         let mut arr = array::ArrayTrait::new();
 
         arr
@@ -982,7 +997,7 @@ mod Proxy {
 
 
     #[external]
-    fn execute(ctx: Context, value: felt252) -> felt252 {
+    fn execute(self: @ContractState, ctx: Context, value: felt252) -> felt252 {
         value
     }
 }
@@ -998,12 +1013,12 @@ error: Plugin diagnostic: Component types cannot be empty
         let err = commands::<>::entity(player_id.into());
                   ^************************************^
 
-error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::database::query::Query", found: "(?89, ?90, ?91, ?92, ?93)".
- --> Spawn:95:61
-                        ctx.world.set_entity(ctx, 'Player', (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
-                                                            ^*************^
+error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::database::query::Query", found: "(?77, ?78, ?79, ?80, ?81)".
+ --> lib.cairo:50:30
+        commands::set_entity((0, 0, 0, 0, 0), (
+                             ^*************^
 
-error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::database::query::Query", found: "(?101, ?102, ?103, ?104, ?105)".
- --> Spawn:101:63
-                        ctx.world.set_entity(ctx, 'Position', (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
-                                                              ^*************^
+error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::database::query::Query", found: "(?89, ?90, ?91, ?92, ?93)".
+ --> lib.cairo:50:30
+        commands::set_entity((0, 0, 0, 0, 0), (
+                             ^*************^

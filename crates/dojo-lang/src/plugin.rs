@@ -19,6 +19,7 @@ use cairo_lang_syntax::attribute::structured::{
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal};
+use camino::Utf8Path;
 use dojo_world::manifest::{Dependency, Member};
 use scarb::compiler::plugin::builtin::BuiltinSemanticCairoPlugin;
 use scarb::core::{PackageId, PackageName, SourceId};
@@ -59,11 +60,7 @@ impl GeneratedFileAuxData for DojoAuxData {
         self
     }
     fn eq(&self, other: &dyn GeneratedFileAuxData) -> bool {
-        if let Some(other) = other.as_any().downcast_ref::<Self>() {
-            self == other
-        } else {
-            false
-        }
+        if let Some(other) = other.as_any().downcast_ref::<Self>() { self == other } else { false }
     }
 }
 impl AsDynGeneratedFileAuxData for DojoAuxData {
@@ -203,12 +200,19 @@ impl CairoPluginRepository {
     pub fn new() -> Self {
         let mut repo = scarb::compiler::plugin::CairoPluginRepository::empty();
         let url = Url::parse("https://github.com/dojoengine/dojo").unwrap();
-        let dojo_package_id = PackageId::new(
+        // let dojo_package_id = PackageId::new(
+        //     PackageName::new("dojo_plugin"),
+        //     Version::parse("0.1.0").unwrap(),
+        //     SourceId::for_git(&url, &scarb::core::GitReference::DefaultBranch).unwrap(),
+        // );
+        // repo.add(Box::new(BuiltinSemanticCairoPlugin::<DojoPlugin>::new(dojo_package_id))).unwrap();
+        let dojo_local_package_id = PackageId::new(
             PackageName::new("dojo_plugin"),
             Version::parse("0.1.0").unwrap(),
-            SourceId::for_git(&url, &scarb::core::GitReference::DefaultBranch).unwrap(),
+            SourceId::for_path(Utf8Path::new(env!("CARGO_MANIFEST_DIR"))).unwrap(),
         );
-        repo.add(Box::new(BuiltinSemanticCairoPlugin::<DojoPlugin>::new(dojo_package_id))).unwrap();
+        repo.add(Box::new(BuiltinSemanticCairoPlugin::<DojoPlugin>::new(dojo_local_package_id)))
+            .unwrap();
         let starknet_package_id = PackageId::new(
             PackageName::STARKNET,
             Version::parse("2.0.0-rc4").unwrap(),
