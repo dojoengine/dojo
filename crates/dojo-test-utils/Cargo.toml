@@ -16,8 +16,8 @@ cairo-lang-project.workspace = true
 camino.workspace = true
 dojo-lang = { path = "../dojo-lang" }
 jsonrpsee = { version = "0.16.2", features = ["server"] }
-katana-core = { path = "../katana-core" }
-katana-rpc = { path = "../katana-rpc" }
+katana-core = { path = "../katana/core" }
+katana-rpc = { path = "../katana/rpc" }
 tokio = { version = "1.28.0", features = ["full"] }
 thiserror.workspace = true
 toml = "0.7.1"

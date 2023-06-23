@@ -9,7 +9,7 @@ use katana_rpc::config::ServerConfig;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 #[command(propagate_version = true)]
-pub struct App {
+pub struct KatanaArgs {
     #[arg(long)]
     #[arg(help = "Don't print anything on startup.")]
     pub silent: bool,
@@ -85,7 +85,7 @@ pub struct EnvironmentOptions {
     pub gas_price: Option<u128>,
 }
 
-impl App {
+impl KatanaArgs {
     pub fn sequencer_config(&self) -> SequencerConfig {
         SequencerConfig { block_time: self.block_time }
     }

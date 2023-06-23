@@ -11,8 +11,8 @@ clap.workspace = true
 env_logger.workspace = true
 log.workspace = true
 tokio.workspace = true
-katana-core = { path = "../katana-core" }
-katana-rpc = { path = "../katana-rpc" }
+katana-core = { path = "core" }
+katana-rpc = { path = "rpc" }
 starknet_api.workspace = true
 yansi.workspace = true
 

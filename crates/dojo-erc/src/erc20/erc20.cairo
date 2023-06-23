@@ -14,7 +14,7 @@ mod ERC20 {
     use traits::Into;
     use zeroable::Zeroable;
 
-    use dojo_core::storage::query::{
+    use dojo_core::database::query::{
         Query,
         LiteralIntoQuery,
         TupleSize1IntoQuery,

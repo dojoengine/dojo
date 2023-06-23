@@ -35,7 +35,7 @@ impl EventObject {
                 (Name::new("keys"), TypeRef::STRING.to_string()),
                 (Name::new("data"), TypeRef::STRING.to_string()),
                 (Name::new("systemCallId"), TypeRef::INT.to_string()),
-                (Name::new("createdAt"), ScalarType::DATE_TIME.to_string()),
+                (Name::new("createdAt"), ScalarType::DateTime.to_string()),
             ]),
         }
     }

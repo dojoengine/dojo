@@ -34,7 +34,7 @@ impl SystemCallObject {
                 (Name::new("transactionHash"), TypeRef::STRING.to_string()),
                 (Name::new("data"), TypeRef::STRING.to_string()),
                 (Name::new("systemId"), TypeRef::ID.to_string()),
-                (Name::new("createdAt"), ScalarType::DATE_TIME.to_string()),
+                (Name::new("createdAt"), ScalarType::DateTime.to_string()),
             ]),
         }
     }

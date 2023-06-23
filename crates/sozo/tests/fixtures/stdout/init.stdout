@@ -3,13 +3,11 @@
  ⛩️ ====== STARTING ====== ⛩️ 
 
 Setting up project directory tree...
-✅ Project directory tree created successfully!
+Cloning project template from https://github.com/dojoengine/dojo-starter...
 
+🎉 Successfully created a new ⛩️ Dojo project!
 
 ====== SETUP COMPLETE! ======
 
-To start using your new Dojo project, try running: 
 
-`sozo build`
-
-🎉🎉🎉 SUCCESS! Your project is now ready. Start building with ⛩️ Dojo! 🎉🎉🎉
+To start using your new project, try running: `sozo build`
