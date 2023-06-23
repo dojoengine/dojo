@@ -10,7 +10,7 @@ use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transaction_execution::Transaction;
 use blockifier::transaction::transactions::ExecutableTransaction;
 use starknet::core::types::{BlockId, BlockTag, FeeEstimate, StateUpdate, TransactionStatus};
-use starknet_api::block::{BlockHash, BlockNumber, BlockTimestamp};
+use starknet_api::block::{BlockHash, BlockNumber};
 use starknet_api::core::{calculate_contract_address, ChainId, ClassHash, ContractAddress, Nonce};
 use starknet_api::hash::StarkFelt;
 use starknet_api::stark_felt;
@@ -22,7 +22,6 @@ use starknet_api::transaction::{
 use tokio::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use tokio::time;
 
-use crate::accounts::Account;
 use crate::sequencer_error::SequencerError;
 use crate::starknet::block::StarknetBlock;
 use crate::starknet::event::EmittedEvent;
@@ -318,10 +317,6 @@ impl Sequencer for KatanaSequencer {
         self.starknet.read().await.block_context.block_number
     }
 
-    async fn next_block_timestamp(&self) -> BlockTimestamp {
-        self.starknet.read().await.block_context.block_timestamp
-    }
-
     async fn block(&self, block_id: BlockId) -> Option<StarknetBlock> {
         match block_id {
             BlockId::Tag(BlockTag::Pending) => {
@@ -500,23 +495,6 @@ impl Sequencer for KatanaSequencer {
             .get_state_update(block_number)
             .ok_or(SequencerError::StateUpdateNotFound(block_id))
     }
-
-    async fn generate_new_block(&self) {
-        self.starknet.write().await.generate_latest_block();
-        self.starknet.write().await.generate_pending_block();
-    }
-
-    async fn set_next_block_timestamp(&self, timestamp: u64) -> SequencerResult<()> {
-        self.starknet.write().await.set_next_block_timestamp(timestamp)
-    }
-
-    async fn increase_next_block_timestamp(&self, timestamp: u64) -> SequencerResult<()> {
-        self.starknet.write().await.increase_next_block_timestamp(timestamp)
-    }
-
-    async fn predeployed_accounts(&self) -> Vec<Account> {
-        self.starknet.read().await.predeployed_accounts.accounts.clone()
-    }
 }
 
 #[async_trait]
@@ -528,10 +506,6 @@ pub trait Sequencer {
     async fn state(&self, block_id: &BlockId) -> SequencerResult<DictStateReader>;
 
     async fn chain_id(&self) -> ChainId;
-
-    async fn generate_new_block(&self);
-
-    async fn predeployed_accounts(&self) -> Vec<Account>;
 
     async fn transaction_receipt(
         &self,
@@ -547,8 +521,6 @@ pub trait Sequencer {
     ) -> SequencerResult<Nonce>;
 
     async fn block_number(&self) -> BlockNumber;
-
-    async fn next_block_timestamp(&self) -> BlockTimestamp;
 
     async fn block(&self, block_id: BlockId) -> Option<StarknetBlock>;
 
@@ -611,8 +583,4 @@ pub trait Sequencer {
     ) -> SequencerResult<Vec<EmittedEvent>>;
 
     async fn state_update(&self, block_id: BlockId) -> SequencerResult<StateUpdate>;
-
-    async fn set_next_block_timestamp(&self, timestamp: u64) -> SequencerResult<()>;
-
-    async fn increase_next_block_timestamp(&self, timestamp: u64) -> SequencerResult<()>;
 }
