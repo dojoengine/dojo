@@ -52,6 +52,22 @@ pub enum MigrationError<S, P> {
     Provider(#[from] ProviderError<P>),
 }
 
+/// Represents the type of migration that should be performed.
+#[derive(Debug)]
+pub enum MigrationType {
+    /// When the remote class/contract already exists and has
+    /// to be updated to match the local state.
+    Update,
+    /// When the class/contract does not exist on the remote state or
+    /// when a new World is to be deployed.
+    New,
+}
+
+pub trait StateDiff {
+    /// Returns `true` if the local and remote states are equivalent.
+    fn is_same(&self) -> bool;
+}
+
 #[async_trait]
 pub trait Declarable {
     async fn declare<A>(

@@ -4,7 +4,7 @@ use jsonrpsee::core::Error;
 use jsonrpsee::server::ServerHandle;
 use katana_core::sequencer::{KatanaSequencer, SequencerConfig};
 use katana_core::starknet::StarknetConfig;
-use katana_rpc::config::RpcConfig;
+use katana_rpc::config::ServerConfig;
 use katana_rpc::KatanaNodeRpc;
 use starknet::accounts::SingleOwnerAccount;
 use starknet::core::chain_id;
@@ -32,6 +32,7 @@ impl TestSequencer {
         let sequencer = Arc::new(KatanaSequencer::new(
             SequencerConfig::default(),
             StarknetConfig {
+                auto_mine: true,
                 total_accounts: 1,
                 allow_zero_max_fee: true,
                 chain_id: "SN_GOERLI".into(),
@@ -41,7 +42,10 @@ impl TestSequencer {
 
         sequencer.start().await;
 
-        let server = KatanaNodeRpc::new(sequencer.clone(), RpcConfig { port: 0 });
+        let server = KatanaNodeRpc::new(
+            sequencer.clone(),
+            ServerConfig { port: 0, host: "localhost".into() },
+        );
         let (socket_addr, handle) = server.run().await.unwrap();
 
         let url = Url::parse(&format!("http://{}", socket_addr)).expect("Failed to parse URL");

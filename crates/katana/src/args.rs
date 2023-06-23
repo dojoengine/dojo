@@ -4,19 +4,29 @@ use clap::{Args, Parser};
 use katana_core::constants::DEFAULT_GAS_PRICE;
 use katana_core::sequencer::SequencerConfig;
 use katana_core::starknet::StarknetConfig;
-use katana_rpc::config::RpcConfig;
+use katana_rpc::config::ServerConfig;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 #[command(propagate_version = true)]
-pub struct App {
+pub struct KatanaArgs {
     #[arg(long)]
-    #[arg(help = "Hide the predeployed accounts details.")]
-    pub hide_predeployed_accounts: bool,
+    #[arg(help = "Don't print anything on startup.")]
+    pub silent: bool,
+
+    #[arg(long)]
+    #[arg(conflicts_with = "block_time")]
+    #[arg(help = " Disable auto and interval mining, and mine on demand instead.")]
+    pub no_mining: bool,
+
+    #[arg(short, long)]
+    #[arg(value_name = "SECONDS")]
+    #[arg(help = "Block time in seconds for interval mining.")]
+    pub block_time: Option<u64>,
 
     #[command(flatten)]
     #[command(next_help_heading = "Server options")]
-    pub rpc: RpcOptions,
+    pub server: ServerOptions,
 
     #[command(flatten)]
     #[command(next_help_heading = "Starknet options")]
@@ -24,16 +34,15 @@ pub struct App {
 }
 
 #[derive(Debug, Args, Clone)]
-pub struct RpcOptions {
+pub struct ServerOptions {
     #[arg(short, long)]
     #[arg(default_value = "5050")]
     #[arg(help = "Port number to listen on.")]
     pub port: u16,
 
-    #[arg(short, long)]
-    #[arg(value_name = "SECONDS")]
-    #[arg(help = "Block time in seconds for interval mining.")]
-    pub block_time: Option<u64>,
+    #[arg(long)]
+    #[arg(help = "The IP address the server will listen on.")]
+    pub host: Option<String>,
 }
 
 #[derive(Debug, Args, Clone)]
@@ -56,10 +65,6 @@ pub struct StarknetOptions {
     pub account_path: Option<PathBuf>,
 
     #[arg(long)]
-    #[arg(help = "Block generation on demand via an endpoint.")]
-    pub blocks_on_demand: bool,
-
-    #[arg(long)]
     #[arg(help = "Allow transaction max fee to be zero.")]
     pub allow_zero_max_fee: bool,
 
@@ -80,13 +85,16 @@ pub struct EnvironmentOptions {
     pub gas_price: Option<u128>,
 }
 
-impl App {
+impl KatanaArgs {
     pub fn sequencer_config(&self) -> SequencerConfig {
-        SequencerConfig { block_time: self.rpc.block_time }
+        SequencerConfig { block_time: self.block_time }
     }
 
-    pub fn rpc_config(&self) -> RpcConfig {
-        RpcConfig { port: self.rpc.port }
+    pub fn server_config(&self) -> ServerConfig {
+        ServerConfig {
+            port: self.server.port,
+            host: self.server.host.clone().unwrap_or("0.0.0.0".into()),
+        }
     }
 
     pub fn starknet_config(&self) -> StarknetConfig {
@@ -94,11 +102,10 @@ impl App {
             total_accounts: self.starknet.total_accounts,
             seed: parse_seed(self.starknet.seed.clone()),
             gas_price: self.starknet.environment.gas_price.unwrap_or(DEFAULT_GAS_PRICE),
-            blocks_on_demand: self.starknet.blocks_on_demand,
             account_path: self.starknet.account_path.clone(),
             allow_zero_max_fee: self.starknet.allow_zero_max_fee,
             chain_id: self.starknet.environment.chain_id.clone(),
-            auto_mine: self.rpc.block_time.is_some(),
+            auto_mine: self.block_time.is_none() && !self.no_mining,
         }
     }
 }

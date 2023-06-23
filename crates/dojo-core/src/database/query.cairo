@@ -30,7 +30,7 @@ impl QueryImpl of QueryTrait {
     fn new_from_id(id: felt252) -> Query {
         let mut keys = ArrayTrait::new();
         keys.append(id);
-        QueryTrait::new(0, 0.into(), keys.span())
+        QueryTrait::new(0, 0, keys.span())
     }
 
     fn hash(self: @Query) -> felt252 {
@@ -41,19 +41,19 @@ impl QueryImpl of QueryTrait {
 
         let mut serialized = ArrayTrait::new();
         self.keys.serialize(ref serialized);
-        poseidon_hash_span(serialized.span()).into()
+        poseidon_hash_span(serialized.span())
     }
 
     fn table(self: @Query, component: felt252) -> felt252 {
-        if *self.partition == 0.into() {
-            return component.into();
+        if *self.partition == 0 {
+            return component;
         }
 
         let mut serialized = ArrayTrait::new();
         component.serialize(ref serialized);
         (*self.partition).serialize(ref serialized);
         let hash = poseidon_hash_span(serialized.span());
-        hash.into()
+        hash
     }
 
     fn keys(self: @Query) -> Span<felt252> {
@@ -65,7 +65,7 @@ impl LiteralIntoQuery<E0, impl E0Into: Into<E0, felt252>, impl E0Drop: Drop<E0>>
     fn into(self: E0) -> Query {
         let mut keys = ArrayTrait::new();
         keys.append(E0Into::into(self));
-        QueryTrait::new(0, 0.into(), keys.span())
+        QueryTrait::new(0, 0, keys.span())
     }
 }
 
@@ -76,7 +76,7 @@ impl TupleSize1IntoQuery<
         let (first) = self;
         let mut keys = ArrayTrait::new();
         keys.append(E0Into::into(first));
-        QueryTrait::new(0, 0.into(), keys.span())
+        QueryTrait::new(0, 0, keys.span())
     }
 }
 
@@ -93,7 +93,7 @@ impl TupleSize2IntoQuery<
         let mut keys = ArrayTrait::new();
         keys.append(E0Into::into(first));
         keys.append(E1Into::into(second));
-        QueryTrait::new(0, 0.into(), keys.span())
+        QueryTrait::new(0, 0, keys.span())
     }
 }
 
@@ -114,7 +114,7 @@ impl TupleSize3IntoQuery<
         keys.append(E0Into::into(first));
         keys.append(E1Into::into(second));
         keys.append(E2Into::into(third));
-        QueryTrait::new(0, 0.into(), keys.span())
+        QueryTrait::new(0, 0, keys.span())
     }
 }
 

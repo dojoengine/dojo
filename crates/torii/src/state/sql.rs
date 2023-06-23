@@ -1,14 +1,14 @@
-use std::collections::HashMap;
-
 use anyhow::Result;
 use async_trait::async_trait;
 use dojo_world::manifest::{Component, Manifest, System};
 use sqlx::pool::PoolConnection;
-use sqlx::{Executor, Pool, Sqlite};
+use sqlx::{Executor, Pool, Row, Sqlite};
 use starknet::core::types::FieldElement;
+use starknet_crypto::poseidon_hash_many;
 use tokio::sync::Mutex;
 
 use super::{State, World};
+use crate::graphql::types::ScalarType;
 
 #[cfg(test)]
 #[path = "sql_test.rs"]
@@ -167,14 +167,13 @@ impl State for Sql {
             component.name.to_lowercase()
         );
 
-        // TODO: Set type based on member type
         for member in component.clone().members {
-            component_table_query.push_str(&format!("external_{} TEXT, ", member.name));
+            let sql_type = ScalarType::from_str(member.ty).map(|t| t.as_sql_type())?;
+            component_table_query.push_str(&format!("external_{} {}, ", member.name, sql_type));
         }
 
         component_table_query.push_str(
-            "
-        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (id) REFERENCES entities(id));",
         );
         queries.push(component_table_query);
@@ -208,31 +207,55 @@ impl State for Sql {
         &self,
         component: String,
         partition: FieldElement,
-        key: FieldElement,
-        members: HashMap<String, FieldElement>,
+        keys: Vec<FieldElement>,
+        values: Vec<FieldElement>,
     ) -> Result<()> {
-        let mut columns = vec![];
-        let mut values = vec![];
-        for (key, value) in members {
-            columns.push(format!("external_{}", key));
-            values.push(format!("'{value:#x}'"));
-        }
-        let columns = columns.join(", ");
-        let values = values.join(", ");
+        let results =
+            sqlx::query("SELECT * FROM component_members WHERE component_id = ? ORDER BY slot")
+                .bind(component.to_lowercase())
+                .fetch_all(&self.pool)
+                .await?;
 
-        let queries = vec![
-            format!(
-                "INSERT INTO entities (id, partition, keys) VALUES ('{:#x}', '{:#x}', '{}')",
-                key, partition, "todo",
-            ),
-            format!(
-                "INSERT INTO external_{} (id, partition, {columns}) VALUES ('{key:#x}', \
-                 '{partition:#x}', {values})",
-                component.to_lowercase()
-            ),
-        ];
+        let names: Result<Vec<String>> = results
+            .iter()
+            .map(|row| {
+                let name = row.try_get::<String, &str>("name")?;
+                Ok(format!("external_{}", name))
+            })
+            .collect();
 
-        self.queue(queries).await;
+        let types: Result<Vec<String>> =
+            results.iter().map(|row| Ok(row.try_get::<String, &str>("type")?)).collect();
+
+        // format according to type
+        let values: Result<Vec<String>> = values
+            .iter()
+            .zip(types?.iter())
+            .map(|(value, ty)| {
+                if ScalarType::from_str(ty)?.is_numeric_type() {
+                    Ok(format!("'{}'", value))
+                } else {
+                    Ok(format!("'{:#x}'", value))
+                }
+            })
+            .collect();
+
+        let entity_id = poseidon_hash_many(&keys);
+        let keys_str = keys.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join(",");
+
+        let insert_entities = format!(
+            "INSERT OR REPLACE INTO entities (id, partition, keys) VALUES ('{:#x}', '{:#x}', '{}')",
+            entity_id, partition, keys_str,
+        );
+        let insert_components = format!(
+            "INSERT OR REPLACE INTO external_{} (id, partition, {}) VALUES ('{entity_id:#x}', \
+             '{partition:#x}', {})",
+            component.to_lowercase(),
+            names?.join(", "),
+            values?.join(", ")
+        );
+
+        self.queue(vec![insert_entities, insert_components]).await;
         Ok(())
     }
 

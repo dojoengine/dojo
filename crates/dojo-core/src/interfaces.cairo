@@ -1,5 +1,5 @@
 use dojo_core::{
-    storage::query::Query,
+    database::query::Query,
     auth::systems::Route, auth::components::AuthRole, execution_context::Context
 };
 use starknet::{ClassHash, ContractAddress};

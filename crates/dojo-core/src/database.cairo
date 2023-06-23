@@ -4,9 +4,14 @@ use serde::Serde;
 use hash::LegacyHash;
 use poseidon::poseidon_hash_span;
 
-use dojo_core::storage;
-use dojo_core::storage::{index, query::{Query, QueryTrait}};
+mod index;
+mod query;
+mod storage;
+mod utils;
+
+use dojo_core::database::{query::{Query, QueryTrait}};
 use dojo_core::interfaces::{IComponentLibraryDispatcher, IComponentDispatcherTrait};
+use dojo_core::serde::SpanSerde;
 
 fn get(
     class_hash: starknet::ClassHash, table: felt252, query: Query, offset: u8, length: usize
@@ -18,6 +23,7 @@ fn get(
 
     let id = query.hash();
     let mut keys = ArrayTrait::new();
+    keys.append('dojo_storage');
     keys.append(table);
     keys.append(id);
     match index::exists(0, table, id) {
@@ -29,7 +35,6 @@ fn get(
 fn set(
     class_hash: starknet::ClassHash, table: felt252, query: Query, offset: u8, value: Span<felt252>
 ) {
-    let keys = query.keys();
     let id = query.hash();
 
     let length = IComponentLibraryDispatcher { class_hash: class_hash }.len();
@@ -38,6 +43,7 @@ fn set(
     index::create(0, table, id);
 
     let mut keys = ArrayTrait::new();
+    keys.append('dojo_storage');
     keys.append(table);
     keys.append(id);
     storage::set_many(0, keys.span(), offset, value);
@@ -64,7 +70,7 @@ fn all(
         }
     };
 
-    let all_ids = index::query(0, table);
+    let all_ids = index::get(0, table);
     let length = IComponentLibraryDispatcher { class_hash: class_hash }.len();
 
     let mut ids = all_ids.span();
@@ -73,6 +79,7 @@ fn all(
         match ids.pop_front() {
             Option::Some(id) => {
                 let mut keys = ArrayTrait::new();
+                keys.append('dojo_storage');
                 keys.append(table);
                 keys.append(*id);
                 let value: Span<felt252> = storage::get_many(0, keys.span(), 0_u8, length);

@@ -8,9 +8,9 @@ use katana_rpc::KatanaNodeRpc;
 use log::error;
 use yansi::Paint;
 
-mod cli;
+mod args;
 
-use cli::App;
+use args::KatanaArgs;
 
 #[tokio::main]
 async fn main() {
@@ -19,27 +19,25 @@ async fn main() {
     ))
     .init();
 
-    let config = App::parse();
+    let config = KatanaArgs::parse();
 
-    let rpc_config = config.rpc_config();
+    let server_config = config.server_config();
     let sequencer_config = config.sequencer_config();
     let starknet_config = config.starknet_config();
 
     let sequencer = Arc::new(KatanaSequencer::new(sequencer_config, starknet_config));
 
-    let predeployed_accounts = if config.hide_predeployed_accounts {
-        None
-    } else {
-        Some(sequencer.starknet.read().await.predeployed_accounts.display())
-    };
-
-    match KatanaNodeRpc::new(sequencer.clone(), rpc_config).run().await {
+    match KatanaNodeRpc::new(sequencer.clone(), server_config).run().await {
         Ok((addr, server_handle)) => {
-            print_intro(
-                predeployed_accounts,
-                config.starknet.seed,
-                format!("🚀 JSON-RPC server started: {}", Paint::red(format!("http://{addr}"))),
-            );
+            if !config.silent {
+                let accounts = sequencer.starknet.read().await.predeployed_accounts.display();
+
+                print_intro(
+                    accounts,
+                    config.starknet.seed,
+                    format!("🚀 JSON-RPC server started: {}", Paint::red(format!("http://{addr}"))),
+                );
+            }
 
             sequencer.start().await;
             server_handle.stopped().await;
@@ -51,7 +49,7 @@ async fn main() {
     };
 }
 
-fn print_intro(accounts: Option<String>, seed: Option<String>, address: String) {
+fn print_intro(accounts: String, seed: Option<String>, address: String) {
     println!(
         "{}",
         Paint::red(
@@ -69,15 +67,13 @@ fn print_intro(accounts: Option<String>, seed: Option<String>, address: String) 
         )
     );
 
-    if let Some(accounts) = accounts {
-        println!(
-            r"        
+    println!(
+        r"        
 PREFUNDED ACCOUNTS
 ==================
 {accounts}
     "
-        );
-    }
+    );
 
     if let Some(seed) = seed {
         println!(

@@ -20,9 +20,8 @@ fn create_test_starknet() -> StarknetWrapper {
 
     let mut starknet = StarknetWrapper::new(StarknetConfig {
         seed: [0u8; 32],
-        auto_mine: false,
+        auto_mine: true,
         total_accounts: 2,
-        blocks_on_demand: false,
         allow_zero_max_fee: true,
         gas_price: DEFAULT_GAS_PRICE,
         chain_id: String::from("KATANA"),
@@ -31,6 +30,48 @@ fn create_test_starknet() -> StarknetWrapper {
 
     starknet.generate_genesis_block();
     starknet
+}
+
+#[test]
+fn test_next_block_timestamp_in_past() {
+    let mut starknet = create_test_starknet();
+    starknet.generate_pending_block();
+
+    let timestamp = starknet.block_context.block_timestamp;
+    starknet.set_next_block_timestamp(timestamp.0 - 1000).unwrap();
+
+    starknet.generate_pending_block();
+    let new_timestamp = starknet.block_context.block_timestamp;
+
+    assert_eq!(new_timestamp.0, timestamp.0 - 1000, "timestamp should be updated");
+}
+
+#[test]
+fn test_set_next_block_timestamp_in_future() {
+    let mut starknet = create_test_starknet();
+    starknet.generate_pending_block();
+
+    let timestamp = starknet.block_context.block_timestamp;
+    starknet.set_next_block_timestamp(timestamp.0 + 1000).unwrap();
+
+    starknet.generate_pending_block();
+    let new_timestamp = starknet.block_context.block_timestamp;
+
+    assert_eq!(new_timestamp.0, timestamp.0 + 1000, "timestamp should be updated");
+}
+
+#[test]
+fn test_increase_next_block_timestamp() {
+    let mut starknet = create_test_starknet();
+    starknet.generate_pending_block();
+
+    let timestamp = starknet.block_context.block_timestamp;
+    starknet.increase_next_block_timestamp(1000).unwrap();
+
+    starknet.generate_pending_block();
+    let new_timestamp = starknet.block_context.block_timestamp;
+
+    assert_eq!(new_timestamp.0, timestamp.0 + 1000, "timestamp should be updated");
 }
 
 #[test]

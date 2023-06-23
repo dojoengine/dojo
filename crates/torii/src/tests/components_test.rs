@@ -1,7 +1,5 @@
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use camino::Utf8PathBuf;
     use chrono::{DateTime, Utc};
     use serde::Deserialize;
@@ -15,14 +13,14 @@ mod tests {
     #[derive(Deserialize)]
     struct Moves {
         __typename: String,
-        remaining: String,
+        remaining: u32,
     }
 
     #[derive(Deserialize)]
     struct Position {
         __typename: String,
-        x: String,
-        y: String,
+        x: u32,
+        y: u32,
     }
 
     #[derive(Deserialize)]
@@ -70,9 +68,9 @@ mod tests {
         let position = value.get("position").ok_or("no position found").unwrap();
         let position: Position = serde_json::from_value(position.clone()).unwrap();
 
-        assert_eq!(moves.remaining, "0xa");
-        assert_eq!(position.x, "0x2a");
-        assert_eq!(position.y, "0x45");
+        assert_eq!(moves.remaining, 10);
+        assert_eq!(position.x, 42);
+        assert_eq!(position.y, 69);
     }
 
     #[sqlx::test(migrations = "./migrations")]
@@ -126,19 +124,18 @@ mod tests {
         state.load_from_manifest(manifest).await.unwrap();
 
         // Set moves entity
-        let key = FieldElement::ONE;
+        let key = vec![FieldElement::ONE];
         let partition = FieldElement::from_hex_be("0xdead").unwrap();
-        let values =
-            HashMap::from([(String::from("remaining"), FieldElement::from_hex_be("0xa").unwrap())]);
+        let values = vec![FieldElement::from_hex_be("0xa").unwrap()];
         state.set_entity("moves".to_string(), partition, key, values).await.unwrap();
 
         // Set position entity
-        let key = FieldElement::TWO;
+        let key = vec![FieldElement::TWO];
         let partition = FieldElement::from_hex_be("0xbeef").unwrap();
-        let values = HashMap::from([
-            (String::from("x"), FieldElement::from_hex_be("0x2a").unwrap()),
-            (String::from("y"), FieldElement::from_hex_be("0x45").unwrap()),
-        ]);
+        let values = vec![
+            FieldElement::from_hex_be("0x2a").unwrap(),
+            FieldElement::from_hex_be("0x45").unwrap(),
+        ];
         state.set_entity("position".to_string(), partition, key, values).await.unwrap();
         state.execute().await.unwrap();
     }

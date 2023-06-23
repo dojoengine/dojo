@@ -2,7 +2,19 @@
 
 resolver = "2"
 
-members = [ "crates/bevy-dojo", "crates/dojo-lang", "crates/dojo-language-server", "crates/dojo-world", "crates/dojo-test-utils", "crates/dojo-signers", "crates/katana", "crates/katana-core", "crates/katana-rpc", "crates/sozo", "crates/torii" ]
+members = [
+  "crates/bevy-dojo",
+  "crates/dojo-lang",
+  "crates/dojo-language-server",
+  "crates/dojo-signers",
+  "crates/dojo-test-utils",
+  "crates/dojo-world",
+  "crates/katana",
+  "crates/katana/core",
+  "crates/katana/rpc",
+  "crates/sozo",
+  "crates/torii",
+]
 
 [workspace.package]
 version = "0.1.0"
@@ -39,6 +51,8 @@ cairo-lang-utils = "2.0.0-rc4"
 camino = { version = "1.1.2", features = [ "serde1" ] }
 chrono = { version = "0.4.24", features = [ "serde" ] }
 clap = { version = "4.2", features = [ "derive" ] }
+console = "0.15.7"
+cairo-vm = "0.3.0-rc1"
 colored = "2"
 env_logger = "0.10.0"
 indoc = "1.0.7"

@@ -60,3 +60,9 @@ pub fn block_context_from_config(config: &StarknetConfig) -> BlockContext {
         invoke_tx_max_n_steps: 1_000_000,
     }
 }
+
+#[derive(Default)]
+pub struct BlockContextGenerator {
+    pub block_timestamp_offset: i64,
+    pub next_block_start_time: u64,
+}

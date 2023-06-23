@@ -10,7 +10,8 @@ mod World {
         contract_address::ContractAddressIntoFelt252, ClassHash, Zeroable, ContractAddress
     };
 
-    use dojo_core::storage::{database, query::{Query, QueryTrait}};
+    use dojo_core::database;
+    use dojo_core::database::{query::{Query, QueryTrait}};
     use dojo_core::execution_context::Context;
     use dojo_core::auth::components::AuthRole;
     use dojo_core::auth::systems::Route;

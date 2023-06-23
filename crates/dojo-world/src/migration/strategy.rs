@@ -8,7 +8,7 @@ use starknet::core::types::FieldElement;
 use super::class::{ClassDiff, ClassMigration};
 use super::contract::{ContractDiff, ContractMigration};
 use super::world::WorldDiff;
-use super::{DeployOutput, RegisterOutput};
+use super::{DeployOutput, MigrationType, RegisterOutput};
 
 #[derive(Debug)]
 pub struct MigrationOutput {
@@ -27,6 +27,12 @@ pub struct MigrationStrategy {
     pub components: Vec<ClassMigration>,
 }
 
+#[derive(Debug)]
+pub struct MigrationItemsInfo {
+    pub new: usize,
+    pub update: usize,
+}
+
 impl MigrationStrategy {
     pub fn world_address(&self) -> Result<FieldElement> {
         let addr = match &self.world {
@@ -35,6 +41,37 @@ impl MigrationStrategy {
         };
 
         addr.ok_or_else(|| anyhow!("World address not found"))
+    }
+
+    pub fn info(&self) -> MigrationItemsInfo {
+        let mut new = 0;
+        let mut update = 0;
+
+        if let Some(item) = &self.world {
+            match item.migration_type() {
+                MigrationType::New => new += 1,
+                MigrationType::Update => update += 1,
+            }
+        }
+
+        if let Some(item) = &self.executor {
+            match item.migration_type() {
+                MigrationType::New => new += 1,
+                MigrationType::Update => update += 1,
+            }
+        }
+
+        self.systems.iter().for_each(|item| match item.migration_type() {
+            MigrationType::New => new += 1,
+            MigrationType::Update => update += 1,
+        });
+
+        self.components.iter().for_each(|item| match item.migration_type() {
+            MigrationType::New => new += 1,
+            MigrationType::Update => update += 1,
+        });
+
+        MigrationItemsInfo { new, update }
     }
 }
 
@@ -91,7 +128,7 @@ fn evaluate_systems_to_migrate(
             _ => {
                 let path = find_artifact_path(&s.name, artifact_paths)?;
                 syst_to_migrate
-                    .push(ClassMigration { class: s.clone(), artifact_path: path.clone() });
+                    .push(ClassMigration { diff: s.clone(), artifact_path: path.clone() });
             }
         }
     }
@@ -112,7 +149,7 @@ fn evaluate_components_to_migrate(
             _ => {
                 let path = find_artifact_path(&format!("{}Component", c.name), artifact_paths)?;
                 comps_to_migrate
-                    .push(ClassMigration { class: c.clone(), artifact_path: path.clone() });
+                    .push(ClassMigration { diff: c.clone(), artifact_path: path.clone() });
             }
         }
     }
@@ -133,7 +170,7 @@ fn evaluate_contract_to_migrate(
 
         // TODO: generate random salt
         Ok(Some(ContractMigration {
-            contract: contract.clone(),
+            diff: contract.clone(),
             artifact_path: path.clone(),
             ..Default::default()
         }))
