@@ -95,23 +95,9 @@ impl KatanaSequencer {
             .await
     }
 
-    pub async fn state_from_block_id(&self, block_id: BlockId) -> Option<DictStateReader> {
+    pub async fn block_number_from_block_id(&self, block_id: &BlockId) -> Option<BlockNumber> {
         match block_id {
-            BlockId::Tag(BlockTag::Latest) => Some(self.starknet.write().await.latest_state()),
-            BlockId::Tag(BlockTag::Pending) => Some(self.starknet.write().await.pending_state()),
-            _ => {
-                if let Some(number) = self.block_number_from_block_id(block_id).await {
-                    self.starknet.read().await.state(number)
-                } else {
-                    None
-                }
-            }
-        }
-    }
-
-    pub async fn block_number_from_block_id(&self, block_id: BlockId) -> Option<BlockNumber> {
-        match block_id {
-            BlockId::Number(number) => Some(BlockNumber(number)),
+            BlockId::Number(number) => Some(BlockNumber(*number)),
 
             BlockId::Hash(hash) => self
                 .starknet
@@ -119,7 +105,7 @@ impl KatanaSequencer {
                 .await
                 .blocks
                 .hash_to_num
-                .get(&BlockHash(StarkFelt::from(hash)))
+                .get(&BlockHash(StarkFelt::from(*hash)))
                 .cloned(),
 
             BlockId::Tag(BlockTag::Pending) => None,
@@ -136,6 +122,24 @@ impl KatanaSequencer {
 
 #[async_trait]
 impl Sequencer for KatanaSequencer {
+    async fn state(&self, block_id: &BlockId) -> SequencerResult<DictStateReader> {
+        match block_id {
+            BlockId::Tag(BlockTag::Latest) => Ok(self.starknet.write().await.latest_state()),
+            BlockId::Tag(BlockTag::Pending) => Ok(self.starknet.write().await.pending_state()),
+            _ => {
+                if let Some(number) = self.block_number_from_block_id(block_id).await {
+                    self.starknet
+                        .read()
+                        .await
+                        .state(number)
+                        .ok_or(SequencerError::StateNotFound(*block_id))
+                } else {
+                    Err(SequencerError::BlockNotFound(*block_id))
+                }
+            }
+        }
+    }
+
     async fn deploy_account(
         &self,
         class_hash: ClassHash,
@@ -221,10 +225,7 @@ impl Sequencer for KatanaSequencer {
             return Err(SequencerError::ContractNotFound(sender));
         }
 
-        let state = self
-            .state_from_block_id(block_id)
-            .await
-            .ok_or(SequencerError::StateNotFound(block_id))?;
+        let state = self.state(&block_id).await?;
 
         let exec_info = self
             .starknet
@@ -266,11 +267,7 @@ impl Sequencer for KatanaSequencer {
             return Err(SequencerError::ContractNotFound(contract_address));
         }
 
-        let mut state = self
-            .state_from_block_id(block_id)
-            .await
-            .ok_or(SequencerError::StateNotFound(block_id))?;
-
+        let mut state = self.state(&block_id).await?;
         state.get_class_hash_at(contract_address).map_err(SequencerError::State)
     }
 
@@ -283,11 +280,7 @@ impl Sequencer for KatanaSequencer {
             return Err(SequencerError::BlockNotFound(block_id));
         }
 
-        let mut state = self
-            .state_from_block_id(block_id)
-            .await
-            .ok_or(SequencerError::StateNotFound(block_id))?;
-
+        let mut state = self.state(&block_id).await?;
         state.get_compiled_contract_class(&class_hash).map_err(SequencerError::State)
     }
 
@@ -305,11 +298,7 @@ impl Sequencer for KatanaSequencer {
             return Err(SequencerError::ContractNotFound(contract_address));
         }
 
-        let mut state = self
-            .state_from_block_id(block_id)
-            .await
-            .ok_or(SequencerError::StateNotFound(block_id))?;
-
+        let mut state = self.state(&block_id).await?;
         state.get_storage_at(contract_address, storage_key).map_err(SequencerError::State)
     }
 
@@ -331,7 +320,7 @@ impl Sequencer for KatanaSequencer {
                 self.starknet.read().await.blocks.pending_block.clone()
             }
             _ => {
-                if let Some(number) = self.block_number_from_block_id(block_id).await {
+                if let Some(number) = self.block_number_from_block_id(&block_id).await {
                     self.starknet.read().await.blocks.by_number(number)
                 } else {
                     None
@@ -353,11 +342,7 @@ impl Sequencer for KatanaSequencer {
             return Err(SequencerError::ContractNotFound(contract_address));
         }
 
-        let mut state = self
-            .state_from_block_id(block_id)
-            .await
-            .ok_or(SequencerError::StateNotFound(block_id))?;
-
+        let mut state = self.state(&block_id).await?;
         state.get_nonce_at(contract_address).map_err(SequencerError::State)
     }
 
@@ -374,10 +359,7 @@ impl Sequencer for KatanaSequencer {
             return Err(SequencerError::ContractNotFound(function_call.contract_address));
         }
 
-        let state = self
-            .state_from_block_id(block_id)
-            .await
-            .ok_or(SequencerError::StateNotFound(block_id))?;
+        let state = self.state(&block_id).await?;
 
         self.starknet
             .write()
@@ -415,12 +397,12 @@ impl Sequencer for KatanaSequencer {
         _chunk_size: u64,
     ) -> SequencerResult<Vec<EmittedEvent>> {
         let from_block = self
-            .block_number_from_block_id(from_block)
+            .block_number_from_block_id(&from_block)
             .await
             .ok_or(SequencerError::BlockNotFound(from_block))?;
 
         let to_block = self
-            .block_number_from_block_id(to_block)
+            .block_number_from_block_id(&to_block)
             .await
             .ok_or(SequencerError::BlockNotFound(to_block))?;
 
@@ -499,7 +481,7 @@ impl Sequencer for KatanaSequencer {
 
     async fn state_update(&self, block_id: BlockId) -> SequencerResult<StateUpdate> {
         let block_number = self
-            .block_number_from_block_id(block_id)
+            .block_number_from_block_id(&block_id)
             .await
             .ok_or(SequencerError::BlockNotFound(block_id))?;
 
@@ -531,6 +513,8 @@ impl Sequencer for KatanaSequencer {
 
 #[async_trait]
 pub trait Sequencer {
+    async fn state(&self, block_id: &BlockId) -> SequencerResult<DictStateReader>;
+
     async fn chain_id(&self) -> ChainId;
 
     async fn generate_new_block(&self);
