@@ -10,7 +10,7 @@ use starknet::accounts::{AccountError, Call, ConnectedAccount};
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
     BlockId, BlockTag, DeclareTransactionResult, FieldElement, FlattenedSierraClass,
-    InvokeTransactionResult, StarknetError,
+    InvokeTransactionResult,
 };
 use starknet::core::utils::{
     get_contract_address, get_selector_from_name, CairoShortStringToFeltError,
@@ -82,7 +82,7 @@ pub trait Declarable {
 
         if account
             .provider()
-            .get_class(BlockId::Tag(BlockTag::Pending), casm_class_hash)
+            .get_class(BlockId::Tag(BlockTag::Pending), flattened_class.class_hash())
             .await
             .is_ok()
         {
@@ -113,26 +113,10 @@ pub trait Deployable: Declarable + Sync {
     {
         let declare = match self.declare(account).await {
             Ok(res) => Some(res),
-            Err(MigrationError::Migrator(AccountError::Provider(
-                ProviderError::StarknetError(StarknetError::ContractError),
-            ))) => None,
-            Err(err) => return Err(err),
-        };
 
-        // TODO: Replace above block with below once `get_class` is supported
-        // by Katana. The current check is naive and will proceed if the declare fails
-        // for any contract error.
-        // let declare = if let Err(err) =
-        //     account.provider().get_class(BlockId::Tag(BlockTag::Latest), class_hash).await
-        // {
-        //     if let ProviderError::StarknetError(StarknetError::ClassHashNotFound) = err {
-        //         Some(self.declare(account).await?)
-        //     } else {
-        //         return Err(MigrationError::Provider(err));
-        //     }
-        // } else {
-        //     None
-        // };
+            Err(MigrationError::ClassAlreadyDeclared) => None,
+            Err(e) => return Err(e),
+        };
 
         let calldata = [
             vec![
