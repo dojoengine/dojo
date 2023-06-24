@@ -10,7 +10,7 @@ use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transaction_execution::Transaction;
 use blockifier::transaction::transactions::ExecutableTransaction;
 use starknet::core::types::{BlockId, BlockTag, FeeEstimate, StateUpdate, TransactionStatus};
-use starknet_api::block::{BlockHash, BlockNumber, BlockTimestamp};
+use starknet_api::block::{BlockHash, BlockNumber};
 use starknet_api::core::{calculate_contract_address, ChainId, ClassHash, ContractAddress, Nonce};
 use starknet_api::hash::StarkFelt;
 use starknet_api::stark_felt;
@@ -19,10 +19,9 @@ use starknet_api::transaction::{
     Calldata, ContractAddressSalt, DeployAccountTransaction, Fee,
     Transaction as StarknetApiTransaction, TransactionHash, TransactionSignature,
 };
-use tokio::sync::RwLock;
+use tokio::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use tokio::time;
 
-use crate::accounts::Account;
 use crate::sequencer_error::SequencerError;
 use crate::starknet::block::StarknetBlock;
 use crate::starknet::event::EmittedEvent;
@@ -95,23 +94,9 @@ impl KatanaSequencer {
             .await
     }
 
-    pub async fn state_from_block_id(&self, block_id: BlockId) -> Option<DictStateReader> {
+    pub async fn block_number_from_block_id(&self, block_id: &BlockId) -> Option<BlockNumber> {
         match block_id {
-            BlockId::Tag(BlockTag::Latest) => Some(self.starknet.write().await.latest_state()),
-            BlockId::Tag(BlockTag::Pending) => Some(self.starknet.write().await.pending_state()),
-            _ => {
-                if let Some(number) = self.block_number_from_block_id(block_id).await {
-                    self.starknet.read().await.state(number)
-                } else {
-                    None
-                }
-            }
-        }
-    }
-
-    pub async fn block_number_from_block_id(&self, block_id: BlockId) -> Option<BlockNumber> {
-        match block_id {
-            BlockId::Number(number) => Some(BlockNumber(number)),
+            BlockId::Number(number) => Some(BlockNumber(*number)),
 
             BlockId::Hash(hash) => self
                 .starknet
@@ -119,7 +104,7 @@ impl KatanaSequencer {
                 .await
                 .blocks
                 .hash_to_num
-                .get(&BlockHash(StarkFelt::from(hash)))
+                .get(&BlockHash(StarkFelt::from(*hash)))
                 .cloned(),
 
             BlockId::Tag(BlockTag::Pending) => None,
@@ -136,6 +121,32 @@ impl KatanaSequencer {
 
 #[async_trait]
 impl Sequencer for KatanaSequencer {
+    async fn starknet(&self) -> RwLockReadGuard<'_, StarknetWrapper> {
+        self.starknet.read().await
+    }
+
+    async fn mut_starknet(&self) -> RwLockWriteGuard<'_, StarknetWrapper> {
+        self.starknet.write().await
+    }
+
+    async fn state(&self, block_id: &BlockId) -> SequencerResult<DictStateReader> {
+        match block_id {
+            BlockId::Tag(BlockTag::Latest) => Ok(self.starknet.write().await.latest_state()),
+            BlockId::Tag(BlockTag::Pending) => Ok(self.starknet.write().await.pending_state()),
+            _ => {
+                if let Some(number) = self.block_number_from_block_id(block_id).await {
+                    self.starknet
+                        .read()
+                        .await
+                        .state(number)
+                        .ok_or(SequencerError::StateNotFound(*block_id))
+                } else {
+                    Err(SequencerError::BlockNotFound(*block_id))
+                }
+            }
+        }
+    }
+
     async fn deploy_account(
         &self,
         class_hash: ClassHash,
@@ -221,10 +232,7 @@ impl Sequencer for KatanaSequencer {
             return Err(SequencerError::ContractNotFound(sender));
         }
 
-        let state = self
-            .state_from_block_id(block_id)
-            .await
-            .ok_or(SequencerError::StateNotFound(block_id))?;
+        let state = self.state(&block_id).await?;
 
         let exec_info = self
             .starknet
@@ -266,11 +274,7 @@ impl Sequencer for KatanaSequencer {
             return Err(SequencerError::ContractNotFound(contract_address));
         }
 
-        let mut state = self
-            .state_from_block_id(block_id)
-            .await
-            .ok_or(SequencerError::StateNotFound(block_id))?;
-
+        let mut state = self.state(&block_id).await?;
         state.get_class_hash_at(contract_address).map_err(SequencerError::State)
     }
 
@@ -283,11 +287,7 @@ impl Sequencer for KatanaSequencer {
             return Err(SequencerError::BlockNotFound(block_id));
         }
 
-        let mut state = self
-            .state_from_block_id(block_id)
-            .await
-            .ok_or(SequencerError::StateNotFound(block_id))?;
-
+        let mut state = self.state(&block_id).await?;
         state.get_compiled_contract_class(&class_hash).map_err(SequencerError::State)
     }
 
@@ -305,11 +305,7 @@ impl Sequencer for KatanaSequencer {
             return Err(SequencerError::ContractNotFound(contract_address));
         }
 
-        let mut state = self
-            .state_from_block_id(block_id)
-            .await
-            .ok_or(SequencerError::StateNotFound(block_id))?;
-
+        let mut state = self.state(&block_id).await?;
         state.get_storage_at(contract_address, storage_key).map_err(SequencerError::State)
     }
 
@@ -321,17 +317,13 @@ impl Sequencer for KatanaSequencer {
         self.starknet.read().await.block_context.block_number
     }
 
-    async fn next_block_timestamp(&self) -> BlockTimestamp {
-        self.starknet.read().await.block_context.block_timestamp
-    }
-
     async fn block(&self, block_id: BlockId) -> Option<StarknetBlock> {
         match block_id {
             BlockId::Tag(BlockTag::Pending) => {
                 self.starknet.read().await.blocks.pending_block.clone()
             }
             _ => {
-                if let Some(number) = self.block_number_from_block_id(block_id).await {
+                if let Some(number) = self.block_number_from_block_id(&block_id).await {
                     self.starknet.read().await.blocks.by_number(number)
                 } else {
                     None
@@ -353,11 +345,7 @@ impl Sequencer for KatanaSequencer {
             return Err(SequencerError::ContractNotFound(contract_address));
         }
 
-        let mut state = self
-            .state_from_block_id(block_id)
-            .await
-            .ok_or(SequencerError::StateNotFound(block_id))?;
-
+        let mut state = self.state(&block_id).await?;
         state.get_nonce_at(contract_address).map_err(SequencerError::State)
     }
 
@@ -374,10 +362,7 @@ impl Sequencer for KatanaSequencer {
             return Err(SequencerError::ContractNotFound(function_call.contract_address));
         }
 
-        let state = self
-            .state_from_block_id(block_id)
-            .await
-            .ok_or(SequencerError::StateNotFound(block_id))?;
+        let state = self.state(&block_id).await?;
 
         self.starknet
             .write()
@@ -415,12 +400,12 @@ impl Sequencer for KatanaSequencer {
         _chunk_size: u64,
     ) -> SequencerResult<Vec<EmittedEvent>> {
         let from_block = self
-            .block_number_from_block_id(from_block)
+            .block_number_from_block_id(&from_block)
             .await
             .ok_or(SequencerError::BlockNotFound(from_block))?;
 
         let to_block = self
-            .block_number_from_block_id(to_block)
+            .block_number_from_block_id(&to_block)
             .await
             .ok_or(SequencerError::BlockNotFound(to_block))?;
 
@@ -499,7 +484,7 @@ impl Sequencer for KatanaSequencer {
 
     async fn state_update(&self, block_id: BlockId) -> SequencerResult<StateUpdate> {
         let block_number = self
-            .block_number_from_block_id(block_id)
+            .block_number_from_block_id(&block_id)
             .await
             .ok_or(SequencerError::BlockNotFound(block_id))?;
 
@@ -510,32 +495,17 @@ impl Sequencer for KatanaSequencer {
             .get_state_update(block_number)
             .ok_or(SequencerError::StateUpdateNotFound(block_id))
     }
-
-    async fn generate_new_block(&self) {
-        self.starknet.write().await.generate_latest_block();
-        self.starknet.write().await.generate_pending_block();
-    }
-
-    async fn set_next_block_timestamp(&self, timestamp: u64) -> SequencerResult<()> {
-        self.starknet.write().await.set_next_block_timestamp(timestamp)
-    }
-
-    async fn increase_next_block_timestamp(&self, timestamp: u64) -> SequencerResult<()> {
-        self.starknet.write().await.increase_next_block_timestamp(timestamp)
-    }
-
-    async fn predeployed_accounts(&self) -> Vec<Account> {
-        self.starknet.read().await.predeployed_accounts.accounts.clone()
-    }
 }
 
 #[async_trait]
 pub trait Sequencer {
+    async fn starknet(&self) -> RwLockReadGuard<'_, StarknetWrapper>;
+
+    async fn mut_starknet(&self) -> RwLockWriteGuard<'_, StarknetWrapper>;
+
+    async fn state(&self, block_id: &BlockId) -> SequencerResult<DictStateReader>;
+
     async fn chain_id(&self) -> ChainId;
-
-    async fn generate_new_block(&self);
-
-    async fn predeployed_accounts(&self) -> Vec<Account>;
 
     async fn transaction_receipt(
         &self,
@@ -551,8 +521,6 @@ pub trait Sequencer {
     ) -> SequencerResult<Nonce>;
 
     async fn block_number(&self) -> BlockNumber;
-
-    async fn next_block_timestamp(&self) -> BlockTimestamp;
 
     async fn block(&self, block_id: BlockId) -> Option<StarknetBlock>;
 
@@ -615,8 +583,4 @@ pub trait Sequencer {
     ) -> SequencerResult<Vec<EmittedEvent>>;
 
     async fn state_update(&self, block_id: BlockId) -> SequencerResult<StateUpdate>;
-
-    async fn set_next_block_timestamp(&self, timestamp: u64) -> SequencerResult<()>;
-
-    async fn increase_next_block_timestamp(&self, timestamp: u64) -> SequencerResult<()>;
 }

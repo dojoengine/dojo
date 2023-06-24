@@ -13,7 +13,9 @@ cairo-lang-filesystem.workspace = true
 cairo-lang-project.workspace = true
 cairo-lang-starknet.workspace = true
 camino.workspace = true
-reqwest = "0.11.18"
+reqwest = { version = "0.11.18", default-features = false, features = [
+    "rustls-tls",
+] }
 scarb.workspace = true
 serde.workspace = true
 serde_json.workspace = true

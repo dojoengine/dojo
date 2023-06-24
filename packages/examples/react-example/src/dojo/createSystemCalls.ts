@@ -1,29 +1,30 @@
-import { getComponentValue } from "@latticexyz/recs";
-import { awaitStreamValue } from "@latticexyz/utils";
-import { ClientComponents } from "./createClientComponents";
 import { SetupNetworkResult } from "./setupNetwork";
 
 export type SystemCalls = ReturnType<typeof createSystemCalls>;
 
+export enum Direction {
+    Left = 1,
+    Right = 2,
+    Up = 3,
+    Down = 4,
+}
+
 export function createSystemCalls(
-    { execute }: SetupNetworkResult,
-    { Moves, Position }: ClientComponents
+    { execute, syncWorker }: SetupNetworkResult,
 ) {
     const spawn = async () => {
-
         const tx = await execute("Spawn", []);
         // await awaitStreamValue(txReduced$, (txHash) => txHash === tx.transaction_hash);
-        return getComponentValue(Moves, 1 as any);
+        syncWorker.sync(tx.transaction_hash);
+        
     };
 
-    const move = async () => {
-
+    const move = async (direction: Direction) => {
         // execute from core
-
-        const tx = await execute("Move", [0, 0]);
-        // await awaitStreamValue(txReduced$, (txHash) => txHash === tx.transaction_hash);
-        return getComponentValue(Position, 1 as any);
-    };
+        const tx = await execute("Move", [direction]);
+        // awaitStreamValue(txReduced$, (txHash) => txHash === tx.transaction_hash);
+        syncWorker.sync(tx.transaction_hash);
+      };
 
 
     return {

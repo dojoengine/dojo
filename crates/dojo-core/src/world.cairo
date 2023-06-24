@@ -29,6 +29,12 @@ mod World {
     #[event]
     fn SystemRegistered(name: felt252, class_hash: ClassHash) {}
 
+    #[event]
+    fn StoreSetRecord(table_id: felt252, keys: Span<felt252>, offset: u8, value: Span<felt252>) {}
+
+    #[event]
+    fn StoreDelRecord(table_id: felt252, keys: Span<felt252>) {}
+
     #[storage]
     struct Storage {
         executor_dispatcher: IExecutorDispatcher,
@@ -88,7 +94,9 @@ mod World {
             r.serialize(ref calldata);
 
             // Call RouteAuth system via executor with the serialized route
-            self.executor_dispatcher.read()
+            self
+                .executor_dispatcher
+                .read()
                 .execute(route_auth_class_hash, AuthRole { id: ADMIN.into() }, calldata.span());
 
             index += 1;
@@ -129,7 +137,9 @@ mod World {
 
                 // Call IsAuthorized system via executor with serialized system and component
                 // If the system is authorized, the result will be non-zero
-                let res = self.executor_dispatcher.read()
+                let res = self
+                    .executor_dispatcher
+                    .read()
                     .execute(is_authorized_class_hash, execution_role, calldata.span());
                 (*res[0]).is_non_zero()
             }
@@ -150,7 +160,9 @@ mod World {
         let is_account_admin_class_hash = self.system_registry.read('IsAccountAdmin'.into());
         // Call IsAccountAdmin system via executor
         let mut calldata = ArrayTrait::new();
-        let res = self.executor_dispatcher.read()
+        let res = self
+            .executor_dispatcher
+            .read()
             .execute(is_account_admin_class_hash, AuthRole { id: ADMIN.into() }, calldata.span());
         (*res[0]).is_non_zero()
     }
@@ -228,7 +240,9 @@ mod World {
     ///
     /// * `Span<felt252>` - The result of the system execution
     #[external]
-    fn execute(self: @ContractState, name: felt252, execute_calldata: Span<felt252>) -> Span<felt252> {
+    fn execute(
+        self: @ContractState, name: felt252, execute_calldata: Span<felt252>
+    ) -> Span<felt252> {
         // Get the class hash of the system to be executed
         let class_hash = self.system_registry.read(name);
 
@@ -236,7 +250,9 @@ mod World {
         let role = execution_role(self);
 
         // Call the system via executor
-        let res = self.executor_dispatcher.read()
+        let res = self
+            .executor_dispatcher
+            .read()
             .execute(class_hash, AuthRole { id: role }, execute_calldata);
 
         res
@@ -265,7 +281,12 @@ mod World {
     /// * `context` - The execution context of the system call
     #[external]
     fn set_entity(
-        self: @ContractState, context: Context, component: felt252, query: Query, offset: u8, value: Span<felt252>
+        self: @ContractState,
+        context: Context,
+        component: felt252,
+        query: Query,
+        offset: u8,
+        value: Span<felt252>
     ) {
         // Assert can only be called through the executor
         // This is to prevent system from writing to storage directly
@@ -275,12 +296,16 @@ mod World {
         );
 
         // Fallback to default scoped authorization check if role is not set
-        fallback_authorization_check(self, context.caller_account, context.caller_system, component);
+        fallback_authorization_check(
+            self, context.caller_account, context.caller_system, component
+        );
 
         // Set the entity
         let table = query.table(component);
         let component_class_hash = self.component_registry.read(component);
-        database::set(component_class_hash, table, query, offset, value)
+        database::set(component_class_hash, table, query, offset, value);
+
+        StoreSetRecord(table, query.keys(), offset, value);
     }
 
     /// Delete a component from an entity
@@ -300,7 +325,9 @@ mod World {
         );
 
         // Fallback to default scoped authorization check if role is not set
-        fallback_authorization_check(self, context.caller_account, context.caller_system, component);
+        fallback_authorization_check(
+            self, context.caller_account, context.caller_system, component
+        );
 
         // Delete the entity
         let table = query.table(component);
@@ -320,7 +347,9 @@ mod World {
     ///
     /// * `Span<felt252>` - The value of the component
     #[external]
-    fn entity(self: @ContractState, component: felt252, query: Query, offset: u8, length: usize) -> Span<felt252> {
+    fn entity(
+        self: @ContractState, component: felt252, query: Query, offset: u8, length: usize
+    ) -> Span<felt252> {
         let class_hash = self.component_registry.read(component);
         let table = query.table(component);
         match database::get(class_hash, table, query, offset, length) {
@@ -343,7 +372,9 @@ mod World {
     /// * `Span<felt252>` - The entity IDs
     /// * `Span<Span<felt252>>` - The entities
     #[external]
-    fn entities(self: @ContractState, component: felt252, partition: felt252) -> (Span<felt252>, Span<Span<felt252>>) {
+    fn entities(
+        self: @ContractState, component: felt252, partition: felt252
+    ) -> (Span<felt252>, Span<Span<felt252>>) {
         let class_hash = self.component_registry.read(component);
         database::all(class_hash, component.into(), partition)
     }
@@ -405,7 +436,9 @@ mod World {
                     if write {
                         // Validate that the role to be assumed has the required permissions
                         assert(
-                            is_authorized(self_snapshot, system, component, AuthRole { id: role_id }),
+                            is_authorized(
+                                self_snapshot, system, component, AuthRole { id: role_id }
+                            ),
                             'role not authorized'
                         );
                     }
@@ -508,7 +541,8 @@ mod World {
         if role == 0 {
             // Validate the calling system has permission to write to the component
             assert(
-                is_authorized(self, system, component, AuthRole { id: role }), 'system not authorized'
+                is_authorized(self, system, component, AuthRole { id: role }),
+                'system not authorized'
             );
         } else if role != ADMIN {
             assert(self.systems_for_execution.read((caller, system)), 'system not for execution');
