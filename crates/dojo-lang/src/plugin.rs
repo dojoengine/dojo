@@ -25,7 +25,6 @@ use scarb::compiler::plugin::builtin::BuiltinSemanticCairoPlugin;
 use scarb::core::{PackageId, PackageName, SourceId};
 use semver::Version;
 use smol_str::SmolStr;
-use url::Url;
 
 use crate::component::handle_component_struct;
 use crate::system::System;
@@ -60,7 +59,11 @@ impl GeneratedFileAuxData for DojoAuxData {
         self
     }
     fn eq(&self, other: &dyn GeneratedFileAuxData) -> bool {
-        if let Some(other) = other.as_any().downcast_ref::<Self>() { self == other } else { false }
+        if let Some(other) = other.as_any().downcast_ref::<Self>() {
+            self == other
+        } else {
+            false
+        }
     }
 }
 impl AsDynGeneratedFileAuxData for DojoAuxData {
@@ -199,13 +202,6 @@ pub struct CairoPluginRepository(scarb::compiler::plugin::CairoPluginRepository)
 impl CairoPluginRepository {
     pub fn new() -> Self {
         let mut repo = scarb::compiler::plugin::CairoPluginRepository::empty();
-        let url = Url::parse("https://github.com/dojoengine/dojo").unwrap();
-        // let dojo_package_id = PackageId::new(
-        //     PackageName::new("dojo_plugin"),
-        //     Version::parse("0.1.0").unwrap(),
-        //     SourceId::for_git(&url, &scarb::core::GitReference::DefaultBranch).unwrap(),
-        // );
-        // repo.add(Box::new(BuiltinSemanticCairoPlugin::<DojoPlugin>::new(dojo_package_id))).unwrap();
         let dojo_local_package_id = PackageId::new(
             PackageName::new("dojo_plugin"),
             Version::parse("0.1.0").unwrap(),
