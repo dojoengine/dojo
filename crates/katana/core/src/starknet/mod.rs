@@ -232,6 +232,7 @@ impl StarknetWrapper {
             calldata: call.calldata,
             storage_address: call.contract_address,
             entry_point_selector: call.entry_point_selector,
+            initial_gas: 1000000000_u128.into(),
             ..Default::default()
         };
 
@@ -241,7 +242,7 @@ impl StarknetWrapper {
             &mut EntryPointExecutionContext::new(
                 self.block_context.clone(),
                 AccountTransactionContext::default(),
-                100000000,
+                1000000000,
             ),
         )
     }
