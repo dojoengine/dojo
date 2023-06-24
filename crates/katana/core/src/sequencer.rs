@@ -8,15 +8,17 @@ use blockifier::fee::fee_utils::{calculate_l1_gas_by_vm_usage, extract_l1_gas_an
 use blockifier::state::state_api::{State, StateReader};
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transaction_execution::Transaction;
-use blockifier::transaction::transactions::ExecutableTransaction;
-use starknet::core::types::{BlockId, BlockTag, FeeEstimate, StateUpdate, TransactionStatus};
+use blockifier::transaction::transactions::{DeclareTransaction, ExecutableTransaction};
+use starknet::core::types::{
+    BlockId, BlockTag, FeeEstimate, FlattenedSierraClass, StateUpdate, TransactionStatus,
+};
 use starknet_api::block::{BlockHash, BlockNumber};
 use starknet_api::core::{calculate_contract_address, ChainId, ClassHash, ContractAddress, Nonce};
 use starknet_api::hash::StarkFelt;
 use starknet_api::stark_felt;
 use starknet_api::state::StorageKey;
 use starknet_api::transaction::{
-    Calldata, ContractAddressSalt, DeployAccountTransaction, Fee,
+    Calldata, ContractAddressSalt, DeployAccountTransaction, Fee, InvokeTransaction,
     Transaction as StarknetApiTransaction, TransactionHash, TransactionSignature,
 };
 use tokio::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
@@ -206,11 +208,29 @@ impl Sequencer for KatanaSequencer {
         Ok((tx_hash, contract_address))
     }
 
-    async fn add_account_transaction(&self, transaction: AccountTransaction) {
-        self.starknet
-            .write()
-            .await
-            .handle_transaction(Transaction::AccountTransaction(transaction));
+    async fn add_declare_transaction(
+        &self,
+        transaction: DeclareTransaction,
+        sierra_class: Option<FlattenedSierraClass>,
+    ) {
+        if let Some(sierra_class) = sierra_class {
+            self.starknet
+                .write()
+                .await
+                .state
+                .class_hash_to_sierra_class
+                .insert(transaction.tx().class_hash(), sierra_class);
+        }
+
+        self.starknet.write().await.handle_transaction(Transaction::AccountTransaction(
+            AccountTransaction::Declare(transaction),
+        ));
+    }
+
+    async fn add_invoke_transaction(&self, transaction: InvokeTransaction) {
+        self.starknet.write().await.handle_transaction(Transaction::AccountTransaction(
+            AccountTransaction::Invoke(transaction),
+        ));
     }
 
     async fn estimate_fee(
@@ -564,7 +584,13 @@ pub trait Sequencer {
         signature: TransactionSignature,
     ) -> SequencerResult<(TransactionHash, ContractAddress)>;
 
-    async fn add_account_transaction(&self, transaction: AccountTransaction);
+    async fn add_declare_transaction(
+        &self,
+        transaction: DeclareTransaction,
+        sierra_class: Option<FlattenedSierraClass>,
+    );
+
+    async fn add_invoke_transaction(&self, transaction: InvokeTransaction);
 
     async fn estimate_fee(
         &self,
