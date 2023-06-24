@@ -1,6 +1,7 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
+use blockifier::state::errors::StateError;
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transactions::DeclareTransaction;
 use jsonrpsee::core::{async_trait, Error};
@@ -8,6 +9,7 @@ use jsonrpsee::types::error::CallError;
 use katana_core::constants::SEQUENCER_ADDRESS;
 use katana_core::sequencer::Sequencer;
 use katana_core::sequencer_error::SequencerError;
+use katana_core::starknet::contract::StarknetContract;
 use katana_core::starknet::transaction::ExternalFunctionCall;
 use katana_core::util::starkfelt_to_u128;
 use starknet::core::types::{
@@ -41,7 +43,9 @@ use utils::transaction::{
 
 use crate::starknet::api::{Felt, StarknetApiError, StarknetApiServer};
 use crate::utils;
-use crate::utils::contract::{legacy_rpc_to_inner_class, rpc_to_inner_class};
+use crate::utils::contract::{
+    legacy_inner_to_rpc_class, legacy_rpc_to_inner_class, rpc_to_inner_class,
+};
 
 #[cfg(test)]
 #[path = "rpc_test.rs"]
@@ -552,7 +556,24 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
         block_id: BlockId,
         class_hash: FieldElement,
     ) -> Result<ContractClass, Error> {
-        Err(Error::from(StarknetApiError::InternalServerError))
+        let contract = self.sequencer.class(block_id, ClassHash(class_hash.into())).await.map_err(
+            |e| match e {
+                SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
+                SequencerError::State(StateError::UndeclaredClassHash(_)) => {
+                    StarknetApiError::ClassHashNotFound
+                }
+                _ => StarknetApiError::InternalServerError,
+            },
+        )?;
+
+        match contract {
+            StarknetContract::Legacy(c) => {
+                let contract = legacy_inner_to_rpc_class(c)
+                    .map_err(|_| StarknetApiError::InternalServerError)?;
+                Ok(contract)
+            }
+            StarknetContract::Sierra(c) => Ok(ContractClass::Sierra(c)),
+        }
     }
 
     async fn events(&self, filter: EventFilterWithPage) -> Result<EventsPage, Error> {

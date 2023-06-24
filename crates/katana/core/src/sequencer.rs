@@ -26,6 +26,7 @@ use tokio::time;
 
 use crate::sequencer_error::SequencerError;
 use crate::starknet::block::StarknetBlock;
+use crate::starknet::contract::StarknetContract;
 use crate::starknet::event::EmittedEvent;
 use crate::starknet::transaction::ExternalFunctionCall;
 use crate::starknet::{StarknetConfig, StarknetWrapper};
@@ -302,13 +303,20 @@ impl Sequencer for KatanaSequencer {
         &self,
         block_id: BlockId,
         class_hash: ClassHash,
-    ) -> SequencerResult<ContractClass> {
+    ) -> SequencerResult<StarknetContract> {
         if self.block(block_id).await.is_none() {
             return Err(SequencerError::BlockNotFound(block_id));
         }
 
         let mut state = self.state(&block_id).await?;
-        state.get_compiled_contract_class(&class_hash).map_err(SequencerError::State)
+
+        match state.get_compiled_contract_class(&class_hash).map_err(SequencerError::State)? {
+            ContractClass::V0(c) => Ok(StarknetContract::Legacy(c)),
+            ContractClass::V1(_) => state
+                .get_sierra_class(&class_hash)
+                .map(|c| StarknetContract::Sierra(c))
+                .map_err(SequencerError::State),
+        }
     }
 
     async fn storage_at(
@@ -559,7 +567,7 @@ pub trait Sequencer {
         &self,
         block_id: BlockId,
         class_hash: ClassHash,
-    ) -> SequencerResult<ContractClass>;
+    ) -> SequencerResult<StarknetContract>;
 
     async fn block_hash_and_number(&self) -> Option<(BlockHash, BlockNumber)>;
 
