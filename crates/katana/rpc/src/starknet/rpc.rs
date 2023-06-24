@@ -123,7 +123,7 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
         block_id: BlockId,
         contract_address: FieldElement,
     ) -> Result<ContractClass, Error> {
-        let class_hash = self.class_hash_at(block_id.clone(), contract_address.clone()).await?;
+        let class_hash = self.class_hash_at(block_id, contract_address).await?;
         self.class(block_id, class_hash.0).await
     }
 

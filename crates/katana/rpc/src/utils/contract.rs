@@ -2,15 +2,17 @@ use std::collections::HashMap;
 use std::io::Read;
 
 use anyhow::{anyhow, Ok, Result};
-use blockifier::execution::contract_class::ContractClass as InnerContractClass;
-use blockifier::execution::contract_class::ContractClassV0 as InnerContractClassV0;
+use blockifier::execution::contract_class::{
+    ContractClass as InnerContractClass, ContractClassV0 as InnerContractClassV0,
+};
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::serde::deserialize_program::parse_program;
 use serde_json::json;
 use starknet::core::types::contract::legacy::{LegacyContractClass, LegacyProgram};
-use starknet::core::types::ContractClass;
-use starknet::core::types::{CompressedLegacyContractClass, FieldElement, FlattenedSierraClass};
-use starknet::core::types::{LegacyContractEntryPoint, LegacyEntryPointsByType};
+use starknet::core::types::{
+    CompressedLegacyContractClass, ContractClass, FieldElement, FlattenedSierraClass,
+    LegacyContractEntryPoint, LegacyEntryPointsByType,
+};
 use starknet_api::deprecated_contract_class::{EntryPoint, EntryPointType};
 
 pub fn legacy_inner_to_rpc_class(

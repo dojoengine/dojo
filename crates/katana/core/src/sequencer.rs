@@ -314,7 +314,7 @@ impl Sequencer for KatanaSequencer {
             ContractClass::V0(c) => Ok(StarknetContract::Legacy(c)),
             ContractClass::V1(_) => state
                 .get_sierra_class(&class_hash)
-                .map(|c| StarknetContract::Sierra(c))
+                .map(StarknetContract::Sierra)
                 .map_err(SequencerError::State),
         }
     }
