@@ -7,7 +7,7 @@ mod Spawn {
     use dojo_examples::components::Moves;
 
     fn execute(ctx: Context) {
-        let player = commands::set_entity(
+        let player = set_entity!(ctx, 
             ctx.caller_account.into(), (Moves { remaining: 10 }, Position { x: 0, y: 0 }, )
         );
         return ();
@@ -44,7 +44,7 @@ mod Move {
     fn execute(ctx: Context, direction: Direction) {
         let (position, moves) = commands::<Position, Moves>::entity(ctx.caller_account.into());
         let next = next_position(position, direction);
-        let uh = commands::set_entity(
+        let uh = set_entity!(ctx, 
             ctx.caller_account.into(),
             (Moves { remaining: moves.remaining - 1 }, Position { x: next.x, y: next.y }, )
         );
