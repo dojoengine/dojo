@@ -5216,6 +5216,7 @@ dependencies = [
  "blockifier",
  "cairo-lang-casm",
  "cairo-lang-starknet",
+ "cairo-vm 0.6.0",
  "flate2",
  "futures",
  "lazy_static",
