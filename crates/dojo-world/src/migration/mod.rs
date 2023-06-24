@@ -10,7 +10,7 @@ use starknet::accounts::{AccountError, Call, ConnectedAccount};
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
     BlockId, BlockTag, DeclareTransactionResult, FieldElement, FlattenedSierraClass,
-    InvokeTransactionResult,
+    InvokeTransactionResult, StarknetError,
 };
 use starknet::core::utils::{
     get_contract_address, get_selector_from_name, CairoShortStringToFeltError,
@@ -80,13 +80,15 @@ pub trait Declarable {
         let (flattened_class, casm_class_hash) =
             prepare_contract_declaration_params(self.artifact_path()).unwrap();
 
-        if account
+        match account
             .provider()
             .get_class(BlockId::Tag(BlockTag::Pending), flattened_class.class_hash())
             .await
-            .is_ok()
         {
-            return Err(MigrationError::ClassAlreadyDeclared);
+            Err(ProviderError::StarknetError(StarknetError::ClassHashNotFound)) => {}
+
+            Ok(_) => return Err(MigrationError::ClassAlreadyDeclared),
+            Err(e) => return Err(MigrationError::Provider(e)),
         }
 
         account
@@ -138,13 +140,15 @@ pub trait Deployable: Declarable + Sync {
 
         self.set_contract_address(contract_address);
 
-        if account
+        match account
             .provider()
             .get_class_hash_at(BlockId::Tag(BlockTag::Pending), contract_address)
             .await
-            .is_ok()
         {
-            return Err(MigrationError::ContractAlreadyDeployed);
+            Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {}
+
+            Ok(_) => return Err(MigrationError::ContractAlreadyDeployed),
+            Err(e) => return Err(MigrationError::Provider(e)),
         }
 
         let InvokeTransactionResult { transaction_hash } = account
