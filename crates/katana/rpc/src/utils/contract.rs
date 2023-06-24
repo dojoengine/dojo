@@ -1,41 +1,42 @@
+use std::collections::HashMap;
 use std::io::Read;
 
-use anyhow::{Context, Ok, Result};
-use blockifier::execution::contract_class::{ContractClass, ContractClassV0};
+use anyhow::{anyhow, Ok, Result};
+use blockifier::execution::contract_class::{
+    ContractClass as InnerContractClass, ContractClassV0 as InnerContractClassV0,
+};
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
+use cairo_vm::serde::deserialize_program::parse_program;
 use serde_json::json;
 use starknet::core::types::contract::legacy::{LegacyContractClass, LegacyProgram};
-use starknet::core::types::contract::{CompiledClass, SierraClass};
-use starknet::core::types::{CompressedLegacyContractClass, FieldElement, FlattenedSierraClass};
+use starknet::core::types::{
+    CompressedLegacyContractClass, ContractClass, FieldElement, FlattenedSierraClass,
+    LegacyContractEntryPoint, LegacyEntryPointsByType,
+};
+use starknet_api::deprecated_contract_class::{EntryPoint, EntryPointType};
 
-#[allow(unused)]
-pub fn get_casm_class_hash(raw_contract_class: &str) -> Result<FieldElement> {
-    let casm_contract_class: cairo_lang_starknet::contract_class::ContractClass =
-        serde_json::from_str(raw_contract_class)
-            .with_context(|| "unable to deserialize contract")?;
-    let casm_contract = CasmContractClass::from_contract_class(casm_contract_class, true)
-        .with_context(|| "unable to convert as CasmContractClass")?;
-    let res = serde_json::to_string(&casm_contract)?;
-    let compiled_class: CompiledClass =
-        serde_json::from_str(&res).with_context(|| "unable to parse as CompiledClass")?;
-    Ok(compiled_class.class_hash()?)
-}
+pub fn legacy_inner_to_rpc_class(
+    legacy_contract_class: InnerContractClassV0,
+) -> Result<ContractClass> {
+    let entry_points_by_type =
+        to_rpc_legacy_entry_points_by_type(&legacy_contract_class.entry_points_by_type)
+            .expect("Failed to convert entry points");
 
-#[allow(unused)]
-pub fn get_sierra_class_hash(raw_contract_class: &str) -> Result<FieldElement> {
-    let sierra_class: SierraClass = serde_json::from_str(raw_contract_class)?;
-    Ok(sierra_class.class_hash()?)
-}
+    let program = {
+        let program = parse_program(legacy_contract_class.program.clone());
+        compress(&serde_json::to_vec(&program)?)?
+    };
 
-#[allow(unused)]
-pub fn get_legacy_contract_class_hash(raw_contract_class: &str) -> Result<FieldElement> {
-    let legacy_contract_class: LegacyContractClass = serde_json::from_str(raw_contract_class)?;
-    Ok(legacy_contract_class.class_hash()?)
+    Ok(ContractClass::Legacy(CompressedLegacyContractClass {
+        program,
+        entry_points_by_type,
+        abi: None,
+    }))
 }
 
 pub fn rpc_to_inner_class(
     contract_class: &FlattenedSierraClass,
-) -> Result<(FieldElement, ContractClass)> {
+) -> Result<(FieldElement, InnerContractClass)> {
     let class_hash = contract_class.class_hash();
 
     let value = serde_json::to_value(contract_class)?;
@@ -51,12 +52,12 @@ pub fn rpc_to_inner_class(
     };
 
     let casm_contract = CasmContractClass::from_contract_class(contract_class, true)?;
-    Ok((class_hash, ContractClass::V1(casm_contract.try_into()?)))
+    Ok((class_hash, InnerContractClass::V1(casm_contract.try_into()?)))
 }
 
 pub fn legacy_rpc_to_inner_class(
     compressed_legacy_contract: &CompressedLegacyContractClass,
-) -> Result<(FieldElement, ContractClass)> {
+) -> Result<(FieldElement, InnerContractClass)> {
     let legacy_program_json = decompress(&compressed_legacy_contract.program)?;
     let legacy_program: LegacyProgram = serde_json::from_str(&legacy_program_json)?;
 
@@ -68,9 +69,42 @@ pub fn legacy_rpc_to_inner_class(
 
     let legacy_contract_class: LegacyContractClass = serde_json::from_value(flattened.clone())?;
     let class_hash = legacy_contract_class.class_hash()?;
-    let contract_class = serde_json::from_value::<ContractClassV0>(flattened)?;
+    let contract_class = serde_json::from_value::<InnerContractClassV0>(flattened)?;
 
-    Ok((class_hash, ContractClass::V0(contract_class)))
+    Ok((class_hash, InnerContractClass::V0(contract_class)))
+}
+
+/// Returns a [LegacyEntryPointsByType] (RPC type) from a [EntryPointType] (blockifier type)
+fn to_rpc_legacy_entry_points_by_type(
+    entries: &HashMap<EntryPointType, Vec<EntryPoint>>,
+) -> Result<LegacyEntryPointsByType> {
+    fn collect_entry_points(
+        entries: &HashMap<EntryPointType, Vec<EntryPoint>>,
+        entry_point_type: &EntryPointType,
+    ) -> Result<Vec<LegacyContractEntryPoint>> {
+        Ok(entries
+            .get(entry_point_type)
+            .ok_or(anyhow!("Missing {:?} entry point", entry_point_type))?
+            .iter()
+            .map(|e| LegacyContractEntryPoint {
+                offset: e.offset.0 as u64,
+                selector: FieldElement::from(e.selector.0),
+            })
+            .collect::<Vec<_>>())
+    }
+
+    let constructor = collect_entry_points(entries, &EntryPointType::Constructor)?;
+    let external = collect_entry_points(entries, &EntryPointType::External)?;
+    let l1_handler = collect_entry_points(entries, &EntryPointType::L1Handler)?;
+
+    Ok(LegacyEntryPointsByType { constructor, external, l1_handler })
+}
+
+/// Returns a compressed vector of bytes
+fn compress(data: &[u8]) -> Result<Vec<u8>> {
+    let mut gzip_encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::fast());
+    serde_json::to_writer(&mut gzip_encoder, data)?;
+    Ok(gzip_encoder.finish()?)
 }
 
 fn decompress(data: &[u8]) -> Result<String> {
