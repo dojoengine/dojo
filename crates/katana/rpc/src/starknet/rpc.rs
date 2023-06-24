@@ -56,7 +56,6 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetRpc<S> {
         Self { sequencer }
     }
 }
-#[allow(unused)]
 #[async_trait]
 impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> {
     async fn chain_id(&self) -> Result<String, Error> {
@@ -679,12 +678,11 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
         deploy_account_transaction: BroadcastedDeployAccountTransaction,
     ) -> Result<DeployAccountTransactionResult, Error> {
         let BroadcastedDeployAccountTransaction {
-            max_fee,
             signature,
-            nonce,
             contract_address_salt,
             constructor_calldata,
             class_hash,
+            ..
         } = deploy_account_transaction;
 
         let (transaction_hash, contract_address) = self
@@ -818,10 +816,10 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
                         SequencerError::StateNotFound(_) => {
                             Error::from(StarknetApiError::BlockNotFound)
                         }
-                        SequencerError::TransactionExecution(e) => {
+                        SequencerError::TransactionExecution(_) => {
                             Error::from(StarknetApiError::ContractError)
                         }
-                        e => Error::from(StarknetApiError::InternalServerError),
+                        _ => Error::from(StarknetApiError::InternalServerError),
                     }
                 })?;
 
