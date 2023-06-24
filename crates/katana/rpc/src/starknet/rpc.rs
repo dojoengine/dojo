@@ -123,7 +123,8 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
         block_id: BlockId,
         contract_address: FieldElement,
     ) -> Result<ContractClass, Error> {
-        Err(Error::from(StarknetApiError::InternalServerError))
+        let class_hash = self.class_hash_at(block_id.clone(), contract_address.clone()).await?;
+        self.class(block_id, class_hash.0).await
     }
 
     async fn block_hash_and_number(&self) -> Result<BlockHashAndNumber, Error> {
