@@ -53,7 +53,9 @@ impl MigrateArgs {
 
             let account = {
                 let provider = self.starknet.provider(env_metadata.as_ref())?;
-                let account = self.account.account(provider, env_metadata.as_ref()).await?;
+                let mut account = self.account.account(provider, env_metadata.as_ref()).await?;
+                account.set_block_id(BlockId::Tag(BlockTag::Pending));
+
                 let address = account.address();
 
                 config.ui().print(format!("\nMigration account: {address:#x}\n"));
