@@ -1,6 +1,7 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
+use blockifier::state::errors::StateError;
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transactions::DeclareTransaction;
 use jsonrpsee::core::{async_trait, Error};
@@ -8,6 +9,7 @@ use jsonrpsee::types::error::CallError;
 use katana_core::constants::SEQUENCER_ADDRESS;
 use katana_core::sequencer::Sequencer;
 use katana_core::sequencer_error::SequencerError;
+use katana_core::starknet::contract::StarknetContract;
 use katana_core::starknet::transaction::ExternalFunctionCall;
 use katana_core::util::starkfelt_to_u128;
 use starknet::core::types::{
@@ -41,7 +43,9 @@ use utils::transaction::{
 
 use crate::starknet::api::{Felt, StarknetApiError, StarknetApiServer};
 use crate::utils;
-use crate::utils::contract::{legacy_rpc_to_inner_class, rpc_to_inner_class};
+use crate::utils::contract::{
+    legacy_inner_to_rpc_class, legacy_rpc_to_inner_class, rpc_to_inner_class,
+};
 
 #[cfg(test)]
 #[path = "rpc_test.rs"]
@@ -56,7 +60,6 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetRpc<S> {
         Self { sequencer }
     }
 }
-#[allow(unused)]
 #[async_trait]
 impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> {
     async fn chain_id(&self) -> Result<String, Error> {
@@ -119,7 +122,8 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
         block_id: BlockId,
         contract_address: FieldElement,
     ) -> Result<ContractClass, Error> {
-        Err(Error::from(StarknetApiError::InternalServerError))
+        let class_hash = self.class_hash_at(block_id, contract_address).await?;
+        self.class(block_id, class_hash.0).await
     }
 
     async fn block_hash_and_number(&self) -> Result<BlockHashAndNumber, Error> {
@@ -552,7 +556,24 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
         block_id: BlockId,
         class_hash: FieldElement,
     ) -> Result<ContractClass, Error> {
-        Err(Error::from(StarknetApiError::InternalServerError))
+        let contract = self.sequencer.class(block_id, ClassHash(class_hash.into())).await.map_err(
+            |e| match e {
+                SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
+                SequencerError::State(StateError::UndeclaredClassHash(_)) => {
+                    StarknetApiError::ClassHashNotFound
+                }
+                _ => StarknetApiError::InternalServerError,
+            },
+        )?;
+
+        match contract {
+            StarknetContract::Legacy(c) => {
+                let contract = legacy_inner_to_rpc_class(c)
+                    .map_err(|_| StarknetApiError::InternalServerError)?;
+                Ok(contract)
+            }
+            StarknetContract::Sierra(c) => Ok(ContractClass::Sierra(c)),
+        }
     }
 
     async fn events(&self, filter: EventFilterWithPage) -> Result<EventsPage, Error> {
@@ -679,12 +700,11 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
         deploy_account_transaction: BroadcastedDeployAccountTransaction,
     ) -> Result<DeployAccountTransactionResult, Error> {
         let BroadcastedDeployAccountTransaction {
-            max_fee,
             signature,
-            nonce,
             contract_address_salt,
             constructor_calldata,
             class_hash,
+            ..
         } = deploy_account_transaction;
 
         let (transaction_hash, contract_address) = self
@@ -818,10 +838,10 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
                         SequencerError::StateNotFound(_) => {
                             Error::from(StarknetApiError::BlockNotFound)
                         }
-                        SequencerError::TransactionExecution(e) => {
+                        SequencerError::TransactionExecution(_) => {
                             Error::from(StarknetApiError::ContractError)
                         }
-                        e => Error::from(StarknetApiError::InternalServerError),
+                        _ => Error::from(StarknetApiError::InternalServerError),
                     }
                 })?;
 
@@ -841,7 +861,7 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
     ) -> Result<DeclareTransactionResult, Error> {
         let chain_id = FieldElement::from_hex_be(&self.sequencer.chain_id().await.as_hex())
             .map_err(|_| Error::from(StarknetApiError::InternalServerError))?;
-        let (transaction_hash, class_hash, transaction) = match declare_transaction {
+        let (transaction_hash, class_hash, transaction, sierra_class) = match declare_transaction {
             BroadcastedDeclareTransaction::V1(tx) => {
                 let (class_hash, contract) = legacy_rpc_to_inner_class(&tx.contract_class)?;
 
@@ -868,13 +888,12 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
                 (
                     transaction_hash,
                     class_hash,
-                    AccountTransaction::Declare(
-                        DeclareTransaction::new(
-                            starknet_api::transaction::DeclareTransaction::V1(transaction),
-                            contract,
-                        )
-                        .map_err(|_| Error::from(StarknetApiError::InternalServerError))?,
-                    ),
+                    DeclareTransaction::new(
+                        starknet_api::transaction::DeclareTransaction::V1(transaction),
+                        contract,
+                    )
+                    .map_err(|_| Error::from(StarknetApiError::InternalServerError))?,
+                    None,
                 )
             }
             BroadcastedDeclareTransaction::V2(tx) => {
@@ -906,18 +925,17 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
                 (
                     transaction_hash,
                     class_hash,
-                    AccountTransaction::Declare(
-                        DeclareTransaction::new(
-                            starknet_api::transaction::DeclareTransaction::V2(transaction),
-                            contract_class,
-                        )
-                        .map_err(|_| Error::from(StarknetApiError::InternalServerError))?,
-                    ),
+                    DeclareTransaction::new(
+                        starknet_api::transaction::DeclareTransaction::V2(transaction),
+                        contract_class,
+                    )
+                    .map_err(|_| Error::from(StarknetApiError::InternalServerError))?,
+                    Some(tx.contract_class.as_ref().clone()),
                 )
             }
         };
 
-        self.sequencer.add_account_transaction(transaction).await;
+        self.sequencer.add_declare_transaction(transaction, sierra_class).await;
 
         Ok(DeclareTransactionResult { transaction_hash, class_hash })
     }
@@ -953,11 +971,7 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
                     ),
                 };
 
-                self.sequencer
-                    .add_account_transaction(AccountTransaction::Invoke(InvokeTransaction::V1(
-                        transaction,
-                    )))
-                    .await;
+                self.sequencer.add_invoke_transaction(InvokeTransaction::V1(transaction)).await;
 
                 Ok(InvokeTransactionResult { transaction_hash })
             }

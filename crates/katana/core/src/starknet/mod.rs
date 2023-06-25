@@ -22,6 +22,7 @@ use starknet_api::{patricia_key, stark_felt};
 use tracing::{info, warn};
 
 pub mod block;
+pub mod contract;
 pub mod event;
 pub mod transaction;
 

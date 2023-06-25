@@ -4,6 +4,7 @@ use blockifier::execution::contract_class::ContractClass;
 use blockifier::state::cached_state::ContractStorageKey;
 use blockifier::state::errors::StateError;
 use blockifier::state::state_api::{StateReader, StateResult};
+use starknet::core::types::FlattenedSierraClass;
 use starknet_api::core::{ClassHash, CompiledClassHash, ContractAddress, Nonce, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};
 use starknet_api::patricia_key;
@@ -20,6 +21,7 @@ pub struct DictStateReader {
     pub address_to_nonce: HashMap<ContractAddress, Nonce>,
     pub address_to_class_hash: HashMap<ContractAddress, ClassHash>,
     pub class_hash_to_class: HashMap<ClassHash, ContractClass>,
+    pub class_hash_to_sierra_class: HashMap<ClassHash, FlattenedSierraClass>,
     pub class_hash_to_compiled_class_hash: HashMap<ClassHash, CompiledClassHash>,
 }
 
@@ -30,11 +32,37 @@ impl Default for DictStateReader {
             address_to_nonce: HashMap::new(),
             address_to_class_hash: HashMap::new(),
             class_hash_to_class: HashMap::new(),
+            class_hash_to_sierra_class: HashMap::new(),
             class_hash_to_compiled_class_hash: HashMap::new(),
         };
         deploy_fee_contract(&mut state);
         deploy_universal_deployer_contract(&mut state);
         state
+    }
+}
+
+impl DictStateReader {
+    pub fn get_sierra_class(
+        &mut self,
+        class_hash: &ClassHash,
+    ) -> StateResult<FlattenedSierraClass> {
+        if let ContractClass::V0(_) = self.get_compiled_contract_class(class_hash)? {
+            return Err(StateError::StateReadError("Class hash is not a Sierra class".to_string()));
+        };
+
+        self.class_hash_to_sierra_class
+            .get(class_hash)
+            .cloned()
+            .ok_or(StateError::StateReadError("Missing Sierra class".to_string()))
+    }
+
+    pub fn set_sierra_class(
+        &mut self,
+        class_hash: ClassHash,
+        sierra_class: FlattenedSierraClass,
+    ) -> StateResult<()> {
+        self.class_hash_to_sierra_class.insert(class_hash, sierra_class);
+        Ok(())
     }
 }
 
