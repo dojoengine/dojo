@@ -4,15 +4,14 @@ mod ERC20Approve {
     use dojo_erc::erc20::components::Allowance;
 
     fn execute(token: felt252, owner: felt252, spender: felt252, amount: felt252) {
-        commands::set_entity((token, (owner, spender)).into_partitioned(), (
-            Allowance { amount }
-        ))
+        commands::set_entity((token, (owner, spender)).into_partitioned(), (Allowance { amount }))
     }
 }
 
 #[system]
 mod ERC20TransferFrom {
-    const UNLIMITED_ALLOWANCE: felt252 = 3618502788666131213697322783095070105623107215331596699973092056135872020480;
+    const UNLIMITED_ALLOWANCE: felt252 =
+        3618502788666131213697322783095070105623107215331596699973092056135872020480;
 
     use starknet::get_caller_address;
     use traits::Into;
@@ -26,25 +25,28 @@ mod ERC20TransferFrom {
         let caller: felt252 = get_caller_address().into();
         if spender != caller {
             // decrease allowance if it's not owner doing the transfer
-            let allowance = commands::<Allowance>::entity((token, (caller, spender)).into_partitioned());
+            let allowance = commands::<Allowance>::entity(
+                (token, (caller, spender)).into_partitioned()
+            );
             if !is_unlimited_allowance(allowance) {
-                commands::set_entity((token, (caller, spender)).into_partitioned(), (
-                    Allowance { amount: allowance.amount - amount }
-                ));
+                commands::set_entity(
+                    (token, (caller, spender)).into_partitioned(),
+                    (Allowance { amount: allowance.amount - amount })
+                );
             }
         }
 
         // decrease spender's balance
         let balance = commands::<Balance>::entity((token, (spender)).into_partitioned());
-        commands::set_entity((token, (spender)).into_partitioned(), (
-            Balance { amount: balance.amount - amount }
-        ));
+        commands::set_entity(
+            (token, (spender)).into_partitioned(), (Balance { amount: balance.amount - amount })
+        );
 
         // increase recipient's balance
         let balance = commands::<Balance>::entity((token, (recipient)).into_partitioned());
-        commands::set_entity((token, (recipient)).into_partitioned(), (
-            Balance { amount: balance.amount + amount }
-        ));
+        commands::set_entity(
+            (token, (recipient)).into_partitioned(), (Balance { amount: balance.amount + amount })
+        );
     }
 
     fn is_unlimited_allowance(allowance: Allowance) -> bool {
@@ -63,22 +65,20 @@ mod ERC20Mint {
 
         // increase token supply
         let supply = commands::<Supply>::entity(token.into());
-        commands::set_entity(token.into(), (
-            Supply { amount: supply.amount + amount }
-        ));
+        commands::set_entity(token.into(), (Supply { amount: supply.amount + amount }));
 
         // increase balance of recipient
         let balance = commands::<Balance>::entity((token, (recipient)).into_partitioned());
-        commands::set_entity((token, (recipient)).into(), (
-            Balance { amount: balance.amount + amount }
-        ));
+        commands::set_entity(
+            (token, (recipient)).into(), (Balance { amount: balance.amount + amount })
+        );
     }
 }
 
 #[system]
 mod ERC20Burn {
     use traits::Into;
-    use zeroable::Zeroable;        
+    use zeroable::Zeroable;
     use dojo_erc::erc20::components::{Balance, Supply};
 
     fn execute(token: felt252, owner: felt252, amount: felt252) {
@@ -86,14 +86,12 @@ mod ERC20Burn {
 
         // decrease token supply
         let supply = commands::<Supply>::entity(token.into());
-        commands::set_entity(token.into(), (
-            Supply { amount: supply.amount - amount }
-        ));
+        commands::set_entity(token.into(), (Supply { amount: supply.amount - amount }));
 
         // decrease balance of owner
         let balance = commands::<Balance>::entity((token, (owner)).into_partitioned());
-        commands::set_entity((token, (owner)).into_partitioned(), (
-            Balance { amount: balance.amount - amount }
-        ));
+        commands::set_entity(
+            (token, (owner)).into_partitioned(), (Balance { amount: balance.amount - amount })
+        );
     }
 }

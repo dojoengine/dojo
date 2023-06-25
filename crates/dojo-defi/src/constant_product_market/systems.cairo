@@ -84,7 +84,9 @@ mod Sell {
 mod AddLiquidity {
     use traits::Into;
     use array::ArrayTrait;
-    use dojo_defi::constant_product_market::components::{Item, Cash, Market, Liquidity, MarketTrait};
+    use dojo_defi::constant_product_market::components::{
+        Item, Cash, Market, Liquidity, MarketTrait
+    };
 
     use cubit::types::fixed::Fixed;
 
@@ -135,7 +137,9 @@ mod AddLiquidity {
 mod RemoveLiquidity {
     use traits::Into;
     use array::ArrayTrait;
-    use dojo_defi::constant_product_market::components::{Item, Cash, Market, Liquidity, MarketTrait};
+    use dojo_defi::constant_product_market::components::{
+        Item, Cash, Market, Liquidity, MarketTrait
+    };
 
     use cubit::types::fixed::Fixed;
     use serde::Serde;

@@ -7,8 +7,8 @@ mod Spawn {
     use dojo_examples::components::Moves;
 
     fn execute(ctx: Context) {
-        let player = set_entity!(ctx, 
-            ctx.caller_account.into(), (Moves { remaining: 10 }, Position { x: 0, y: 0 }, )
+        let player = set_entity !(
+            ctx, ctx.caller_account.into(), (Moves { remaining: 10 }, Position { x: 0, y: 0 }, )
         );
         return ();
     }
@@ -44,7 +44,8 @@ mod Move {
     fn execute(ctx: Context, direction: Direction) {
         let (position, moves) = commands::<Position, Moves>::entity(ctx.caller_account.into());
         let next = next_position(position, direction);
-        let uh = set_entity!(ctx, 
+        let uh = set_entity !(
+            ctx,
             ctx.caller_account.into(),
             (Moves { remaining: moves.remaining - 1 }, Position { x: next.x, y: next.y }, )
         );
@@ -145,9 +146,8 @@ mod tests {
 
         let moves = world.entity('Moves'.into(), caller.into(), 0, 0);
         assert(*moves[0] == 9, 'moves is wrong');
-
-        // let new_position = world.entity('Position'.into(), caller.into(), 0, 0);
-        // assert(*new_position[0] == 1, 'position x is wrong');
-        // assert(*new_position[1] == 0, 'position y is wrong');
+    // let new_position = world.entity('Position'.into(), caller.into(), 0, 0);
+    // assert(*new_position[0] == 1, 'position x is wrong');
+    // assert(*new_position[1] == 0, 'position y is wrong');
     }
 }

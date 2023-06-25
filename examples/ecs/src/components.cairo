@@ -39,9 +39,6 @@ fn test_position_is_zero() {
 #[available_gas(100000)]
 fn test_position_is_equal() {
     assert(
-        PositionTrait::is_equal(
-            Position { x: 420, y: 0 }, Position { x: 420, y: 0 }
-        ),
-        'not equal'
+        PositionTrait::is_equal(Position { x: 420, y: 0 }, Position { x: 420, y: 0 }), 'not equal'
     );
 }

@@ -71,8 +71,7 @@ fn find_matching(
                             // keep track of the index of the particular entity in an
                             // entity type array, i.e. at which index is the entity
                             // with `id` at, using the compound key
-                            id_to_idx
-                                .insert(OFFSET * entity_type_counter.into() + *id, index);
+                            id_to_idx.insert(OFFSET * entity_type_counter.into() + *id, index);
                             index += 1;
                         },
                         Option::None(_) => {
