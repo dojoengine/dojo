@@ -43,7 +43,7 @@ mod Bar {
 
     fn execute(ctx: Context, a: felt252, b: u128) {
         let caller = get_caller_address();
-        set_entity !(ctx, caller.into(), (Foo { a, b }));
+        set !(ctx, caller.into(), (Foo { a, b }));
     }
 }
 
@@ -55,7 +55,7 @@ mod Buzz {
 
     fn execute(ctx: Context, a: felt252, b: u128) {
         let caller = get_caller_address();
-        set_entity !(ctx, caller.into(), (Foo { a, b }));
+        set !(ctx, caller.into(), (Foo { a, b }));
         let fizz = commands::<Fizz>::try_entity(caller.into());
     }
 }

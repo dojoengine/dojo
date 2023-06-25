@@ -256,7 +256,7 @@ impl System {
         if let ast::PathSegment::Simple(segment_simple) = segment {
             let command: Option<Command> = match segment_simple.ident(db).text(db).as_str() {
                 "uuid" => Some(uuid::UUIDCommand::from_ast(db, var_name, expr_macro).into()),
-                "set_entity" => Some(set::SetCommand::from_ast(db, var_name, expr_macro).into()),
+                "set" => Some(set::SetCommand::from_ast(db, var_name, expr_macro).into()),
                 _ => None,
             };
             return command.map(|c| {

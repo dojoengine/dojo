@@ -26,12 +26,12 @@ mod RouteAuth {
 
     fn execute(ctx: Context, route: Route) {
         // Set scoped role
-        set_entity !(
+        set !(
             ctx, (route.target_id, route.resource_id).into(), (AuthRole { id: route.role_id })
         );
 
         // Set status
-        set_entity !(
+        set !(
             ctx, (route.role_id, route.resource_id).into(), (AuthStatus { is_authorized: true })
         );
     }
@@ -111,7 +111,7 @@ mod GrantAuthRole {
     use dojo_core::auth::components::AuthRole;
 
     fn execute(ctx: Context, target_id: felt252, role_id: felt252) {
-        set_entity !(ctx, target_id.into(), (AuthRole { id: role_id }));
+        set !(ctx, target_id.into(), (AuthRole { id: role_id }));
     }
 }
 
@@ -123,7 +123,7 @@ mod GrantScopedAuthRole {
 
 
     fn execute(ctx: Context, target_id: felt252, role_id: felt252, resource_id: felt252) {
-        set_entity !(ctx, (target_id, resource_id).into(), (AuthRole { id: role_id }));
+        set !(ctx, (target_id, resource_id).into(), (AuthRole { id: role_id }));
     }
 }
 
@@ -133,7 +133,7 @@ mod GrantResource {
     use dojo_core::auth::components::AuthStatus;
 
     fn execute(ctx: Context, role_id: felt252, resource_id: felt252) {
-        set_entity !(ctx, (role_id, resource_id).into(), (AuthStatus { is_authorized: true }));
+        set !(ctx, (role_id, resource_id).into(), (AuthStatus { is_authorized: true }));
     }
 }
 
@@ -144,7 +144,7 @@ mod RevokeAuthRole {
     use dojo_core::auth::components::AuthRole;
 
     fn execute(ctx: Context, target_id: felt252) {
-        set_entity !(ctx, target_id.into(), (AuthRole { id: 0.into() }));
+        set !(ctx, target_id.into(), (AuthRole { id: 0.into() }));
     }
 }
 
@@ -155,7 +155,7 @@ mod RevokeScopedAuthRole {
     use dojo_core::auth::components::AuthRole;
 
     fn execute(ctx: Context, target_id: felt252, resource_id: felt252) {
-        set_entity !(ctx, (target_id, resource_id).into(), (AuthRole { id: 0.into() }));
+        set !(ctx, (target_id, resource_id).into(), (AuthRole { id: 0.into() }));
     }
 }
 
@@ -165,6 +165,6 @@ mod RevokeResource {
     use dojo_core::auth::components::AuthStatus;
 
     fn execute(ctx: Context, role_id: felt252, resource_id: felt252) {
-        set_entity !(ctx, (role_id, resource_id).into(), (AuthStatus { is_authorized: false }));
+        set !(ctx, (role_id, resource_id).into(), (AuthStatus { is_authorized: false }));
     }
 }
