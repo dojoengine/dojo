@@ -63,7 +63,7 @@ impl Command {
         Command { 
             rewrite_nodes: data.rewrite_nodes, 
             diagnostics: data.diagnostics, 
-            component_deps: component_deps
+            component_deps
         }
     }
 

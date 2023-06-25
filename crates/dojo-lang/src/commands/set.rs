@@ -102,8 +102,8 @@ impl CommandMacroTrait for SetCommand {
     }
 }
 
-impl Into<Command> for SetCommand {
-    fn into(self) -> Command {
-        Command::with_cmp_deps(self.data, self.component_deps)
+impl From<SetCommand> for Command {
+    fn from(val: SetCommand) -> Self {
+        Command::with_cmp_deps(val.data, val.component_deps)
     }
 }

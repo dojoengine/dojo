@@ -259,10 +259,10 @@ impl System {
                 "set_entity" => Some(set::SetCommand::from_ast(db, var_name, expr_macro).into()),
                 _ => None
             };
-            return command.map_or(None, |c| {
+            return command.map(|c| {
                 self.diagnostics.extend(c.diagnostics);
                 self.update_deps(c.component_deps);
-                Some(c.rewrite_nodes)
+                c.rewrite_nodes
             });   
         }
         None

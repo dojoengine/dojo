@@ -31,8 +31,8 @@ impl CommandMacroTrait for UUIDCommand {
     }
 }
 
-impl Into<Command> for UUIDCommand {
-    fn into(self) -> Command {
-        Command::with_data(self.data)
+impl From<UUIDCommand> for Command {
+    fn from(val: UUIDCommand) -> Self {
+        Command::with_data(val.data)
     }
 }
