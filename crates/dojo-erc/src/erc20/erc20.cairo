@@ -66,22 +66,22 @@ mod ERC20 {
         }
     }
 
-    #[external]
+    #[external(v0)]
     fn name() -> felt252 {
         token_name::read()
     }
 
-    #[external]
+    #[external(v0)]
     fn symbol() -> felt252 {
         token_symbol::read()
     }
 
-    #[external]
+    #[external(v0)]
     fn decimals() -> u8 {
         token_decimals::read()
     }
 
-    #[external]
+    #[external(v0)]
     fn total_supply() -> u256 {
         let query: Query = get_contract_address().into();
         let mut supply_raw = world().entity('Supply'.into(), query, 0, 0);
@@ -89,7 +89,7 @@ mod ERC20 {
         supply.amount.into()
     }
 
-    #[external]
+    #[external(v0)]
     fn balance_of(account: ContractAddress) -> u256 {
         let token = get_contract_address();
         let query: Query = (token, (account,)).into_partitioned();        
@@ -98,7 +98,7 @@ mod ERC20 {
         balance.amount.into()
     }
 
-    #[external]
+    #[external(v0)]
     fn allowance(owner: ContractAddress, spender: ContractAddress) -> u256 {
         let token = get_contract_address();
         let query: Query = (token, (owner, spender)).into_partitioned();
@@ -107,7 +107,7 @@ mod ERC20 {
         allowance.amount.into()
     }
 
-    #[external]
+    #[external(v0)]
     fn approve(spender: ContractAddress, amount: u256) -> bool {
         assert(spender.is_non_zero(), 'ERC20: approve to 0');
 
@@ -125,13 +125,13 @@ mod ERC20 {
         true
     }
 
-    #[external]
+    #[external(v0)]
     fn transfer(recipient: ContractAddress, amount: u256) -> bool {
         transfer_internal(get_caller_address(), recipient, amount);
         true
     }
 
-    #[external]
+    #[external(v0)]
     fn transfer_from(spender: ContractAddress, recipient: ContractAddress, amount: u256) -> bool {
         transfer_internal(spender, recipient, amount);
         true

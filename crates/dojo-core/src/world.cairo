@@ -55,7 +55,6 @@ mod World {
         WorldSpawned(get_contract_address(), get_tx_info().unbox().account_contract_address);
     }
 
-
     /// Initialize the world with the routes that specify
     /// the permissions for each system to access components.
     /// ** This function can only be called once. **
@@ -72,7 +71,7 @@ mod World {
     /// let role_id = 'FooWriter'.into();
     /// let resource_id = 'Foo'.into();
     /// let r = Route { target_id, role_id, resource_id,  };
-    #[external]
+    #[external(v0)]
     fn initialize(ref self: ContractState, routes: Array<Route>) {
         // Assert that the world has not been initialized
         assert(!self.initialized.read(), 'already initialized');
@@ -117,7 +116,7 @@ mod World {
     /// # Returns
     ///
     /// * `bool` - True if the system is authorized to write to the component, false otherwise
-    #[external]
+    #[external(v0)]
     fn is_authorized(
         self: @ContractState, system: felt252, component: felt252, execution_role: AuthRole
     ) -> bool {
@@ -155,7 +154,7 @@ mod World {
     /// # Returns
     ///
     /// * `bool` - True if the calling account has Admin role, false otherwise
-    #[external]
+    #[external(v0)]
     fn is_account_admin(self: @ContractState) -> bool {
         let is_account_admin_class_hash = self.system_registry.read('IsAccountAdmin'.into());
         // Call IsAccountAdmin system via executor
@@ -173,7 +172,7 @@ mod World {
     /// # Arguments
     ///
     /// * `class_hash` - The class hash of the component to be registered
-    #[external]
+    #[external(v0)]
     fn register_component(ref self: ContractState, class_hash: ClassHash) {
         let name = IComponentLibraryDispatcher { class_hash: class_hash }.name();
         // If component is already registered, validate permission to update.
@@ -193,7 +192,7 @@ mod World {
     /// # Returns
     ///
     /// * `ClassHash` - The class hash of the component
-    #[external]
+    #[external(v0)]
     fn component(self: @ContractState, name: felt252) -> ClassHash {
         self.component_registry.read(name)
     }
@@ -204,7 +203,7 @@ mod World {
     /// # Arguments
     ///
     /// * `class_hash` - The class hash of the system to be registered
-    #[external]
+    #[external(v0)]
     fn register_system(ref self: ContractState, class_hash: ClassHash) {
         let name = ISystemLibraryDispatcher { class_hash: class_hash }.name();
         // If system is already registered, validate permission to update.
@@ -224,7 +223,7 @@ mod World {
     /// # Returns
     ///
     /// * `ClassHash` - The class hash of the system
-    #[external]
+    #[external(v0)]
     fn system(self: @ContractState, name: felt252) -> ClassHash {
         self.system_registry.read(name)
     }
@@ -239,7 +238,7 @@ mod World {
     /// # Returns
     ///
     /// * `Span<felt252>` - The result of the system execution
-    #[external]
+    #[external(v0)]
     fn execute(
         self: @ContractState, name: felt252, execute_calldata: Span<felt252>
     ) -> Span<felt252> {
@@ -263,7 +262,7 @@ mod World {
     /// # Returns
     ///
     /// * `usize` - The autoincremented id
-    #[external]
+    #[external(v0)]
     fn uuid(ref self: ContractState) -> usize {
         let current = self.nonce.read();
         self.nonce.write(current + 1);
@@ -279,7 +278,7 @@ mod World {
     /// * `offset` - The offset of the component in the entity
     /// * `value` - The value to be set
     /// * `context` - The execution context of the system call
-    #[external]
+    #[external(v0)]
     fn set_entity(
         self: @ContractState,
         context: Context,
@@ -315,7 +314,7 @@ mod World {
     /// * `component` - The name of the component to be deleted
     /// * `query` - The query to be used to find the entity
     /// * `context` - The execution context of the system call
-    #[external]
+    #[external(v0)]
     fn delete_entity(self: @ContractState, context: Context, component: felt252, query: Query) {
         // Assert can only be called through the executor
         // This is to prevent system from writing to storage directly
@@ -346,7 +345,7 @@ mod World {
     /// # Returns
     ///
     /// * `Span<felt252>` - The value of the component
-    #[external]
+    #[external(v0)]
     fn entity(self: @ContractState, component: felt252, query: Query, offset: u8, length: usize) -> Span<felt252> {
         let class_hash = self.component_registry.read(component);
         let table = query.table(component);
@@ -369,7 +368,7 @@ mod World {
     ///
     /// * `Span<felt252>` - The entity IDs
     /// * `Span<Span<felt252>>` - The entities
-    #[external]
+    #[external(v0)]
     fn entities(self: @ContractState, component: felt252, partition: felt252) -> (Span<felt252>, Span<Span<felt252>>) {
         let class_hash = self.component_registry.read(component);
         database::all(class_hash, component.into(), partition)
@@ -380,14 +379,14 @@ mod World {
     /// # Arguments
     ///
     /// * `contract_address` - The contract address of the executor
-    #[external]
+    #[external(v0)]
     fn set_executor(ref self: ContractState, contract_address: ContractAddress) {
         // Only Admin can set executor
         assert(is_account_admin(@self), 'only admin can set executor');
         self.executor_dispatcher.write(IExecutorDispatcher { contract_address: contract_address });
     }
 
-    #[external]
+    #[external(v0)]
     fn executor(self: @ContractState) -> ContractAddress {
         self.executor_dispatcher.read().contract_address
     }
@@ -399,7 +398,7 @@ mod World {
     ///
     /// * `role_id` - The role id to be assumed
     /// * `systems` - The systems to be validated
-    #[external]
+    #[external(v0)]
     fn assume_role(ref self: ContractState, role_id: felt252, systems: Array<felt252>) {
         let self_snapshot = @self;
         // Only Admin can set Admin role 
@@ -454,7 +453,7 @@ mod World {
     /// # Arguments
     ///
     /// * `systems` - The systems to be cleared
-    #[external]
+    #[external(v0)]
     fn clear_role(ref self: ContractState, systems: Array<felt252>) {
         // Clear the execution role
         let caller = get_tx_info().unbox().account_contract_address;
@@ -480,7 +479,7 @@ mod World {
     /// # Returns
     ///
     /// * `felt252` - The role id of the system
-    #[external]
+    #[external(v0)]
     fn execution_role(self: @ContractState) -> felt252 {
         let caller = get_tx_info().unbox().account_contract_address;
         self._execution_role.read(caller)
@@ -496,7 +495,7 @@ mod World {
     ///
     /// * `Array<(felt252, bool)>` - The component dependencies of the system
     /// bool is true if the system is writing to the component
-    #[external]
+    #[external(v0)]
     fn system_components(self: @ContractState, system: felt252) -> Array<(felt252, bool)> {
         let class_hash = self.system_registry.read(system);
         ISystemLibraryDispatcher { class_hash }.dependencies()
@@ -511,7 +510,7 @@ mod World {
     /// # Returns
     ///
     /// * `bool` - True if the system is part of the systems for execution
-    #[external]
+    #[external(v0)]
     fn is_system_for_execution(self: @ContractState, system: felt252) -> bool {
         let caller = get_tx_info().unbox().account_contract_address;
         self.systems_for_execution.read((caller, system))

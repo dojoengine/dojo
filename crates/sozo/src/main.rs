@@ -3,7 +3,6 @@ use std::process::exit;
 
 use anyhow::Result;
 use clap::Parser;
-use commands::test::DojoTestCompiler;
 use dojo_lang::compiler::DojoCompiler;
 use dojo_lang::plugin::CairoPluginRepository;
 use scarb::compiler::CompilerRepository;
@@ -31,9 +30,7 @@ fn cli_main(args: SozoArgs) -> Result<()> {
     let mut compilers = CompilerRepository::std();
     let cairo_plugins = CairoPluginRepository::new();
 
-    if let Commands::Test(args) = &args.command {
-        compilers.add(Box::new(DojoTestCompiler::new(args.clone()))).unwrap();
-    } else if let Commands::Build(_) = &args.command {
+    if let Commands::Build(_) = &args.command {
         compilers.add(Box::new(DojoCompiler)).unwrap();
     }
 

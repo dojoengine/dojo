@@ -76,6 +76,7 @@ mod tests {
 
     use dojo_core::auth::systems::{Route, RouteTrait};
     use dojo_core::interfaces::IWorldDispatcherTrait;
+
     use dojo_core::test_utils::spawn_test_world;
 
     use dojo_examples::components::PositionComponent;

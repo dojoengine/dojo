@@ -28,7 +28,7 @@ mod Executor {
     /// # Returns
     ///
     /// The return value of the System's execute entrypoint.
-    #[external]
+    #[external(v0)]
     fn execute(
         self: @ContractState,
         class_hash: starknet::ClassHash,

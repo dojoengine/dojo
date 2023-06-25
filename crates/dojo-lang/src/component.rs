@@ -24,12 +24,12 @@ pub fn handle_component_struct(
 ) -> RewriteNode {
     let mut body_nodes = vec![RewriteNode::interpolate_patched(
         "
-            #[external]
+            #[external(v0)]
             fn name(self: @ContractState) -> felt252 {
                 '$type_name$'
             }
 
-            #[external]
+            #[external(v0)]
             fn len(self: @ContractState) -> usize {
                 $len$_usize
             }
@@ -56,7 +56,7 @@ pub fn handle_component_struct(
 
         RewriteNode::interpolate_patched(
             "
-                #[external]
+                #[external(v0)]
                 fn is_indexed(self: @ContractState) -> bool {
                     bool::$retval$(())
                 }
@@ -111,7 +111,7 @@ pub fn handle_component_struct(
                 #[storage]
                 struct Storage {}
 
-                #[external]
+                #[external(v0)]
                 fn schema(self: @ContractState) -> Array<(felt252, felt252, usize, u8)> {
                     let mut arr = array::ArrayTrait::new();
                     $schema_members$

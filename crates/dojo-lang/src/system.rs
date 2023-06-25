@@ -66,12 +66,12 @@ impl System {
                     #[storage]
                     struct Storage {}
 
-                    #[external]
+                    #[external(v0)]
                     fn name(self: @ContractState) -> felt252 {
                         '$name$'
                     }
 
-                    #[external]
+                    #[external(v0)]
                     fn dependencies(self: @ContractState) -> Array<(felt252, bool)> {
                         let mut arr = array::ArrayTrait::new();
                         $dependencies$
@@ -183,7 +183,7 @@ impl System {
 
         rewrite_nodes.push(RewriteNode::interpolate_patched(
             "
-                #[external]
+                #[external(v0)]
                 fn execute(self: @ContractState, $context$$parameters$) $ret_clause$ {
                     $body$
                 }

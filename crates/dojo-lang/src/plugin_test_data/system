@@ -190,7 +190,7 @@ mod PositionComponent {
     #[storage]
     struct Storage {}
 
-    #[external]
+    #[external(v0)]
     fn schema(self: @ContractState) -> Array<(felt252, felt252, usize, u8)> {
         let mut arr = array::ArrayTrait::new();
         array::ArrayTrait::append(ref arr, ('x', 'felt252', 0, 0));
@@ -200,17 +200,17 @@ mod PositionComponent {
     }
 
 
-    #[external]
+    #[external(v0)]
     fn name(self: @ContractState) -> felt252 {
         'Position'
     }
 
-    #[external]
+    #[external(v0)]
     fn len(self: @ContractState) -> usize {
         2_usize
     }
 
-    #[external]
+    #[external(v0)]
     fn is_indexed(self: @ContractState) -> bool {
         bool::False(())
     }
@@ -233,7 +233,7 @@ mod PlayerComponent {
     #[storage]
     struct Storage {}
 
-    #[external]
+    #[external(v0)]
     fn schema(self: @ContractState) -> Array<(felt252, felt252, usize, u8)> {
         let mut arr = array::ArrayTrait::new();
         array::ArrayTrait::append(ref arr, ('name', 'felt252', 0, 0));
@@ -242,17 +242,17 @@ mod PlayerComponent {
     }
 
 
-    #[external]
+    #[external(v0)]
     fn name(self: @ContractState) -> felt252 {
         'Player'
     }
 
-    #[external]
+    #[external(v0)]
     fn len(self: @ContractState) -> usize {
         1_usize
     }
 
-    #[external]
+    #[external(v0)]
     fn is_indexed(self: @ContractState) -> bool {
         bool::True(())
     }
@@ -279,12 +279,12 @@ mod Spawn {
     #[storage]
     struct Storage {}
 
-    #[external]
+    #[external(v0)]
     fn name(self: @ContractState) -> felt252 {
         'Spawn'
     }
 
-    #[external]
+    #[external(v0)]
     fn dependencies(self: @ContractState) -> Array<(felt252, bool)> {
         let mut arr = array::ArrayTrait::new();
         array::ArrayTrait::append(ref arr, ('Player'.into(), true));
@@ -297,7 +297,7 @@ mod Spawn {
     use super::Position;
     use super::Player;
 
-    #[external]
+    #[external(v0)]
     fn execute(self: @ContractState, ctx: Context, name: felt252) {
         let uuid = ctx.world.uuid();
 
@@ -443,12 +443,12 @@ mod Move {
     #[storage]
     struct Storage {}
 
-    #[external]
+    #[external(v0)]
     fn name(self: @ContractState) -> felt252 {
         'Move'
     }
 
-    #[external]
+    #[external(v0)]
     fn dependencies(self: @ContractState) -> Array<(felt252, bool)> {
         let mut arr = array::ArrayTrait::new();
         array::ArrayTrait::append(ref arr, ('Player'.into(), false));
@@ -466,7 +466,7 @@ mod Move {
         return move_inner(positions, index + 1_u32, count - 1_u32);
     }
 
-    #[external]
+    #[external(v0)]
     fn execute(self: @ContractState, ctx: Context, player_id: felt252) {
         let mut __positions_query_ids: Array<Span<felt252>> = ArrayTrait::new();
         let mut __positions_query_entities_raw: Array<Span<Span<felt252>>> = ArrayTrait::new();
@@ -983,12 +983,12 @@ mod Proxy {
     #[storage]
     struct Storage {}
 
-    #[external]
+    #[external(v0)]
     fn name(self: @ContractState) -> felt252 {
         'Proxy'
     }
 
-    #[external]
+    #[external(v0)]
     fn dependencies(self: @ContractState) -> Array<(felt252, bool)> {
         let mut arr = array::ArrayTrait::new();
 
@@ -996,7 +996,7 @@ mod Proxy {
     }
 
 
-    #[external]
+    #[external(v0)]
     fn execute(self: @ContractState, ctx: Context, value: felt252) -> felt252 {
         value
     }

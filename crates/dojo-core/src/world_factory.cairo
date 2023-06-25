@@ -62,7 +62,7 @@ mod WorldFactory {
         self.auth_systems_len.write(len);
     }
 
-    #[external]
+    #[external(v0)]
     fn spawn(
         ref self: ContractState, components: Array<ClassHash>, systems: Array<ClassHash>, routes: Array<Route>, 
     ) -> ContractAddress {
@@ -102,27 +102,27 @@ mod WorldFactory {
         return world_address;
     }
 
-    #[external]
+    #[external(v0)]
     fn set_executor(ref self: ContractState, executor_address_: ContractAddress) {
         self.executor_address.write(executor_address_);
     }
 
-    #[external]
+    #[external(v0)]
     fn set_world(ref self: ContractState, class_hash: ClassHash) {
         self.world_class_hash.write(class_hash);
     }
 
-    #[external]
+    #[external(v0)]
     fn executor(self: @ContractState) -> ContractAddress {
         return self.executor_address.read();
     }
 
-    #[external]
+    #[external(v0)]
     fn world(self: @ContractState) -> ClassHash {
         return self.world_class_hash.read();
     }
 
-    #[external]
+    #[external(v0)]
     fn default_auth_components(self: @ContractState) -> Array<ClassHash> {
         let mut result: Array<ClassHash> = ArrayTrait::new();
         let len = self.auth_components_len.read();
@@ -137,7 +137,7 @@ mod WorldFactory {
         result
     }
 
-    #[external]
+    #[external(v0)]
     fn default_auth_systems(self: @ContractState) -> Array<ClassHash> {
         let mut result: Array<ClassHash> = ArrayTrait::new();
         let len = self.auth_systems_len.read();
