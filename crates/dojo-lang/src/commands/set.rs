@@ -6,7 +6,7 @@ use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_world::manifest::Dependency;
 
-use super::{CommandData, CommandMacroTrait, Command};
+use super::{Command, CommandData, CommandMacroTrait};
 
 #[derive(Clone)]
 pub struct SetCommand {
@@ -15,11 +15,20 @@ pub struct SetCommand {
 }
 
 impl SetCommand {
-    fn handle_struct(&mut self, db: &dyn SyntaxGroup, context: &ast::Arg, query: ast::Arg, expr: ast::Expr) {
+    fn handle_struct(
+        &mut self,
+        db: &dyn SyntaxGroup,
+        context: &ast::Arg,
+        query: ast::Arg,
+        expr: ast::Expr,
+    ) {
         if let ast::Expr::StructCtorCall(ctor) = expr {
             if let Some(ast::PathSegment::Simple(segment)) = ctor.path(db).elements(db).last() {
                 let component_name = segment.ident(db).text(db);
-                let context_name = arg_to_path_segment_simple(db, context).expect("Context must be a simple literal!").ident(db).text(db);
+                let context_name = arg_to_path_segment_simple(db, context)
+                    .expect("Context must be a simple literal!")
+                    .ident(db)
+                    .text(db);
 
                 self.component_deps.push(Dependency {
                     name: component_name.clone(),
@@ -50,7 +59,7 @@ impl SetCommand {
 fn arg_to_path_segment_simple(db: &dyn SyntaxGroup, arg: &ast::Arg) -> Option<PathSegmentSimple> {
     if let ast::ArgClause::Unnamed(clause) = arg.arg_clause(db) {
         if let ast::Expr::Path(path) = clause.value(db) {
-            if let Some(ast::PathSegment::Simple(segment)) = path.elements(db).last(){
+            if let Some(ast::PathSegment::Simple(segment)) = path.elements(db).last() {
                 return Some(segment.clone());
             }
         }
@@ -70,7 +79,8 @@ impl CommandMacroTrait for SetCommand {
 
         if elements.len() != 3 {
             command.data.diagnostics.push(PluginDiagnostic {
-                message: "Invalid arguments. Expected \"(context, query, (components,))\"".to_string(),
+                message: "Invalid arguments. Expected \"(context, query, (components,))\""
+                    .to_string(),
                 stable_ptr: command_ast.arguments(db).as_syntax_node().stable_ptr(),
             });
             return command;

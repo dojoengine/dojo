@@ -51,20 +51,16 @@ pub struct Command {
 
 impl Command {
     pub fn with_data(data: CommandData) -> Self {
-        Command { 
-            rewrite_nodes: data.rewrite_nodes, 
-            diagnostics: data.diagnostics, 
-            component_deps: vec![] 
+        Command {
+            rewrite_nodes: data.rewrite_nodes,
+            diagnostics: data.diagnostics,
+            component_deps: vec![],
         }
     }
 
-    ///With component dependencies
+    /// With component dependencies
     pub fn with_cmp_deps(data: CommandData, component_deps: Vec<Dependency>) -> Self {
-        Command { 
-            rewrite_nodes: data.rewrite_nodes, 
-            diagnostics: data.diagnostics, 
-            component_deps
-        }
+        Command { rewrite_nodes: data.rewrite_nodes, diagnostics: data.diagnostics, component_deps }
     }
 
     pub fn from_ast(

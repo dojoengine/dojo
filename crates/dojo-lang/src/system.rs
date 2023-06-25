@@ -13,7 +13,7 @@ use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_world::manifest::Dependency;
 use itertools::Itertools;
 
-use crate::commands::{uuid, Command, set, CommandMacroTrait};
+use crate::commands::{set, uuid, Command, CommandMacroTrait};
 use crate::plugin::{DojoAuxData, SystemAuxData};
 
 pub struct System {
@@ -257,13 +257,13 @@ impl System {
             let command: Option<Command> = match segment_simple.ident(db).text(db).as_str() {
                 "uuid" => Some(uuid::UUIDCommand::from_ast(db, var_name, expr_macro).into()),
                 "set_entity" => Some(set::SetCommand::from_ast(db, var_name, expr_macro).into()),
-                _ => None
+                _ => None,
             };
             return command.map(|c| {
                 self.diagnostics.extend(c.diagnostics);
                 self.update_deps(c.component_deps);
                 c.rewrite_nodes
-            });   
+            });
         }
         None
     }
