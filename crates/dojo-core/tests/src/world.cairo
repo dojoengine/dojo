@@ -41,9 +41,9 @@ mod Bar {
     use traits::Into;
     use starknet::get_caller_address;
 
-    fn execute(a: felt252, b: u128) {
+    fn execute(ctx: Context, a: felt252, b: u128) {
         let caller = get_caller_address();
-        commands::set_entity(caller.into(), (Foo { a, b }));
+        set_entity!(ctx, caller.into(), (Foo { a, b }));
     }
 }
 
@@ -53,9 +53,9 @@ mod Buzz {
     use traits::Into;
     use starknet::get_caller_address;
 
-    fn execute(a: felt252, b: u128) {
+    fn execute(ctx: Context, a: felt252, b: u128) {
         let caller = get_caller_address();
-        commands::set_entity(caller.into(), (Foo { a, b }));
+        set_entity!(ctx, caller.into(), (Foo { a, b }));
         let fizz = commands::<Fizz>::try_entity(caller.into());
     }
 }

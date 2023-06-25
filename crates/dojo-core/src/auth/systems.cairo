@@ -24,15 +24,15 @@ mod RouteAuth {
 
     use starknet::ContractAddress;
 
-    fn execute(route: Route) {
+    fn execute(ctx: Context, route: Route) {
         // Set scoped role
-        commands::set_entity(
-            (route.target_id, route.resource_id).into(), (AuthRole { id: route.role_id })
+        set_entity!(
+            ctx, (route.target_id, route.resource_id).into(), (AuthRole { id: route.role_id })
         );
 
         // Set status
-        commands::set_entity(
-            (route.role_id, route.resource_id).into(), (AuthStatus { is_authorized: true })
+        set_entity!(
+            ctx, (route.role_id, route.resource_id).into(), (AuthStatus { is_authorized: true })
         );
     }
 }
@@ -110,8 +110,8 @@ mod GrantAuthRole {
     use array::ArrayTrait;
     use dojo_core::auth::components::AuthRole;
 
-    fn execute(target_id: felt252, role_id: felt252) {
-        commands::set_entity(target_id.into(), (AuthRole { id: role_id }));
+    fn execute(ctx: Context, target_id: felt252, role_id: felt252) {
+        set_entity!(ctx, target_id.into(), (AuthRole { id: role_id }));
     }
 }
 
@@ -122,8 +122,8 @@ mod GrantScopedAuthRole {
     use dojo_core::auth::components::AuthRole;
 
 
-    fn execute(target_id: felt252, role_id: felt252, resource_id: felt252) {
-        commands::set_entity((target_id, resource_id).into(), (AuthRole { id: role_id }));
+    fn execute(ctx: Context, target_id: felt252, role_id: felt252, resource_id: felt252) {
+        set_entity!(ctx, (target_id, resource_id).into(), (AuthRole { id: role_id }));
     }
 }
 
@@ -132,8 +132,8 @@ mod GrantResource {
     use traits::Into;
     use dojo_core::auth::components::AuthStatus;
 
-    fn execute(role_id: felt252, resource_id: felt252) {
-        commands::set_entity((role_id, resource_id).into(), (AuthStatus { is_authorized: true }));
+    fn execute(ctx: Context, role_id: felt252, resource_id: felt252) {
+        set_entity!(ctx, (role_id, resource_id).into(), (AuthStatus { is_authorized: true }));
     }
 }
 
@@ -143,8 +143,8 @@ mod RevokeAuthRole {
     use array::ArrayTrait;
     use dojo_core::auth::components::AuthRole;
 
-    fn execute(target_id: felt252) {
-        commands::set_entity(target_id.into(), (AuthRole { id: 0.into() }));
+    fn execute(ctx: Context, target_id: felt252) {
+        set_entity!(ctx, target_id.into(), (AuthRole { id: 0.into() }));
     }
 }
 
@@ -154,8 +154,8 @@ mod RevokeScopedAuthRole {
     use array::ArrayTrait;
     use dojo_core::auth::components::AuthRole;
 
-    fn execute(target_id: felt252, resource_id: felt252) {
-        commands::set_entity((target_id, resource_id).into(), (AuthRole { id: 0.into() }));
+    fn execute(ctx: Context, target_id: felt252, resource_id: felt252) {
+        set_entity!(ctx, (target_id, resource_id).into(), (AuthRole { id: 0.into() }));
     }
 }
 
@@ -164,7 +164,7 @@ mod RevokeResource {
     use traits::Into;
     use dojo_core::auth::components::AuthStatus;
 
-    fn execute(role_id: felt252, resource_id: felt252) {
-        commands::set_entity((role_id, resource_id).into(), (AuthStatus { is_authorized: false }));
+    fn execute(ctx: Context, role_id: felt252, resource_id: felt252) {
+        set_entity!(ctx, (role_id, resource_id).into(), (AuthStatus { is_authorized: false }));
     }
 }
