@@ -26,14 +26,10 @@ mod RouteAuth {
 
     fn execute(ctx: Context, route: Route) {
         // Set scoped role
-        set !(
-            ctx, (route.target_id, route.resource_id).into(), (AuthRole { id: route.role_id })
-        );
+        set !(ctx, (route.target_id, route.resource_id).into(), (AuthRole { id: route.role_id }));
 
         // Set status
-        set !(
-            ctx, (route.role_id, route.resource_id).into(), (AuthStatus { is_authorized: true })
-        );
+        set !(ctx, (route.role_id, route.resource_id).into(), (AuthStatus { is_authorized: true }));
     }
 }
 
