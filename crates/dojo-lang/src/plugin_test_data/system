@@ -80,24 +80,24 @@ mod Move {
     fn execute(player_id: felt252) {
         let positions_query = commands::<(Position, Player)>::entities();
         let players_query = commands::<Player>::entities();
-        let player = commands::<Player>::entity(player_id.into());
-        let player_position = commands::<(Position, Player)>::entity(player_id.into());
+        let player = entity!(ctx, player_id.into(), Player);
+        let player_position = entity!(ctx, player_id.into(), (Position, Player));
 
         let mut bar = 123;
         let mut foo = ArrayTrait::<felt252>::new();
         foo.append(bar);
 
         if bar == 123 {
-            let player_position = commands::<(Position, Player)>::entity(player_id.into());
+            let player_position = entity!(ctx, player_id.into(), (Position, Player));
             if foo.len() > 0_u32 {
                 let positions_query = commands::<(Position, Player)>::entities();
             }
         } else if bar == 321 {
-            let maybe_player = commands::<Player>::try_entity(player_id.into());
+            let maybe_player = try_entity!(ctx, player_id.into(), Player);
             let player = maybe_player.expect('not_found');
             let name = player.name;
 
-            let positions_query = commands::<(Position, Player)>::try_entity(player_id.into());
+            let positions_query = try_entity!(ctx, player_id.into(), (Position, Player));
             match positions_query {
                 Option::Some((position, player)) => {
                     // do nothing
@@ -107,24 +107,24 @@ mod Move {
                 }
             }
         } else {
-            let player_position = commands::<(Position, Player)>::entity(player_id.into());
+            let player_position = entity!(ctx, player_id.into(), (Position, Player));
         }
 
         {
-            let player_position = commands::<(Position, Player)>::entity(player_id.into());
+            let player_position = entity!(ctx, player_id.into(), (Position, Player));
         }
 
         let foo_bar = Option::Some(1);
         match foo_bar {
             Option::Some(x) => {
                 let bar = x;
-                let player_position = commands::<(Position, Player)>::entity(player_id.into());
+                let player_position = entity!(ctx, player_id.into(), (Position, Player));
                 if bar == 123 {
                     let positions_query = commands::<(Position, Player)>::entities();
                 }
             },
             Option::None(()) => {
-                let player_position = commands::<(Position, Player)>::entity(player_id.into());
+                let player_position = entity!(ctx, player_id.into(), (Position, Player));
             }
         }
 
@@ -139,14 +139,14 @@ mod Move {
 
         // move_inner(@positions_query, 0_u32, positions_query.len());
 
-        let err = commands::<>::entity(player_id.into());
+        let err = entity!(ctx, player_id.into(), ());
 
         let mut i = 0;
         loop {
             if i == 3 {
                 break ();
             }
-            let player_position = commands::<(Position, Player)>::entity(player_id.into());
+            let player_position = entity!(ctx, player_id.into(), (Position, Player));
             i+=0;
         };
 
@@ -1010,8 +1010,8 @@ error: Plugin diagnostic: Invalid arguments. Expected "(context, query, (compone
 
 error: Plugin diagnostic: Component types cannot be empty
  --> lib.cairo:136:19
-        let err = commands::<>::entity(player_id.into());
-                  ^************************************^
+        let err = entity!(ctx, player_id.into(), ());
+                  ^********************************^
 
 error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::database::query::Query", found: "(?77, ?78, ?79, ?80, ?81)".
  --> lib.cairo:50:30

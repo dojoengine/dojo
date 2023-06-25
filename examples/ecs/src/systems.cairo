@@ -42,7 +42,7 @@ mod Move {
     }
 
     fn execute(ctx: Context, direction: Direction) {
-        let (position, moves) = commands::<Position, Moves>::entity(ctx.caller_account.into());
+        let (position, moves) = entity !(ctx, ctx.caller_account.into(), (Position, Moves));
         let next = next_position(position, direction);
         let uh = set !(
             ctx,

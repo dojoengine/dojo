@@ -8,10 +8,10 @@ mod Buy {
         let player: felt252 = starknet::get_caller_address().into();
 
         let cash_sk: Query = (partition, (player)).into_partitioned();
-        let player_cash = commands::<Cash>::entity(cash_sk);
+        let player_cash = entity!(ctx, cash_sk, Cash);
 
         let market_sk: Query = (partition, (item_id)).into_partitioned();
-        let market = commands::<Market>::entity(market_sk);
+        let market = entity!(ctx, market_sk, Market);
 
         let cost = market.buy(quantity);
         assert(cost <= player_cash.amount, 'not enough cash');
@@ -30,7 +30,7 @@ mod Buy {
 
         // update player item
         let item_sk: Query = (partition, (player, item_id)).into_partitioned();
-        let maybe_item = commands::<Item>::try_entity(item_sk);
+        let maybe_item = try_entity!(ctx, item_sk, Item);
         let player_quantity = match maybe_item {
             Option::Some(item) => item.quantity + quantity,
             Option::None(_) => quantity,
@@ -49,7 +49,7 @@ mod Sell {
         let player: felt252 = starknet::get_caller_address().into();
 
         let item_sk: Query = (partition, (player, item_id)).into_partitioned();
-        let maybe_item = commands::<Item>::try_entity(item_sk);
+        let maybe_item = try_entity!(ctx, item_sk, Item);
         let player_quantity = match maybe_item {
             Option::Some(item) => item.quantity,
             Option::None(_) => 0,
@@ -57,10 +57,10 @@ mod Sell {
         assert(player_quantity >= quantity, 'not enough items');
 
         let cash_sk: Query = (partition, (player)).into_partitioned();
-        let player_cash = commands::<Cash>::entity(cash_sk);
+        let player_cash = entity!(ctx, cash_sk, Cash);
 
         let market_sk: Query = (partition, (item_id)).into_partitioned();
-        let market = commands::<Market>::entity(market_sk);
+        let market = entity!(ctx, market_sk, Market);
         let payout = market.sell(quantity);
 
         // update market
@@ -94,7 +94,7 @@ mod AddLiquidity {
         let player: felt252 = starknet::get_caller_address().into();
 
         let item_sk: Query = (partition, (player, item_id)).into_partitioned();
-        let maybe_item = commands::<Item>::try_entity(item_sk);
+        let maybe_item = try_entity!(ctx, item_sk, Item);
         let player_quantity = match maybe_item {
             Option::Some(item) => item.quantity,
             Option::None(_) => 0,
@@ -102,11 +102,11 @@ mod AddLiquidity {
         assert(player_quantity >= quantity, 'not enough items');
 
         let cash_sk: Query = (partition, (player)).into_partitioned();
-        let player_cash = commands::<Cash>::entity(cash_sk);
+        let player_cash = entity!(ctx, cash_sk, Cash);
         assert(amount <= player_cash.amount, 'not enough cash');
 
         let market_sk: Query = (partition, (item_id)).into_partitioned();
-        let market = commands::<Market>::entity(market_sk);
+        let market = entity!(ctx, market_sk, Market);
         let (cost_cash, cost_quantity, liquidity_shares) = market.add_liquidity(amount, quantity);
 
         // update market
@@ -126,7 +126,7 @@ mod AddLiquidity {
 
         // update player liquidity
         let liquidity_sk: Query = (partition, (player, item_id)).into_partitioned();
-        let player_liquidity = commands::<Liquidity>::entity(liquidity_sk);
+        let player_liquidity = entity!(ctx, liquidity_sk, Liquidity);
         commands::set_entity(
             liquidity_sk, (Liquidity { shares: player_liquidity.shares + liquidity_shares })
         );
@@ -148,11 +148,11 @@ mod RemoveLiquidity {
         let player: felt252 = starknet::get_caller_address().into();
 
         let liquidity_sk: Query = (partition, (player, item_id)).into_partitioned();
-        let player_liquidity = commands::<Liquidity>::entity(liquidity_sk);
+        let player_liquidity = entity!(ctx, liquidity_sk, Liquidity);
         assert(player_liquidity.shares >= shares, 'not enough shares');
 
         let market_sk: Query = (partition, (item_id)).into_partitioned();
-        let market = commands::<Market>::entity(market_sk);
+        let market = entity!(ctx, market_sk, Market);
         let (payout_cash, payout_quantity) = market.remove_liquidity(shares);
 
         // update market
@@ -166,12 +166,12 @@ mod RemoveLiquidity {
 
         // update player cash
         let cash_sk: Query = (partition, (player)).into_partitioned();
-        let player_cash = commands::<Cash>::entity(cash_sk);
+        let player_cash = entity!(ctx, cash_sk, Cash);
         commands::set_entity(cash_sk, (Cash { amount: player_cash.amount + payout_cash }));
 
         // update player item
         let item_sk: Query = (partition, (player, item_id)).into_partitioned();
-        let maybe_item = commands::<Item>::try_entity(item_sk);
+        let maybe_item = try_entity!(ctx, item_sk, Item);
         let player_quantity = match maybe_item {
             Option::Some(item) => item.quantity,
             Option::None(_) => 0,
@@ -180,7 +180,7 @@ mod RemoveLiquidity {
 
         // update player liquidity
         let liquidity_sk: Query = (partition, (player, item_id)).into_partitioned();
-        let player_liquidity = commands::<Liquidity>::entity(liquidity_sk);
+        let player_liquidity = commands::<Liquidity>entity!(ctx, liquidity_sk);
         commands::set_entity(
             liquidity_sk, (Liquidity { shares: player_liquidity.shares - shares })
         );

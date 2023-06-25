@@ -1,12 +1,11 @@
 use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_semantic::patcher::RewriteNode;
-use cairo_lang_syntax::node::ast::PathSegmentSimple;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_world::manifest::Dependency;
 
-use super::{Command, CommandData, CommandMacroTrait};
+use super::{context_arg_as_path_segment_simple_or_panic, Command, CommandData, CommandMacroTrait};
 
 #[derive(Clone)]
 pub struct SetCommand {
@@ -25,10 +24,8 @@ impl SetCommand {
         if let ast::Expr::StructCtorCall(ctor) = expr {
             if let Some(ast::PathSegment::Simple(segment)) = ctor.path(db).elements(db).last() {
                 let component_name = segment.ident(db).text(db);
-                let context_name = arg_to_path_segment_simple(db, context)
-                    .expect("Context must be a simple literal!")
-                    .ident(db)
-                    .text(db);
+                let context_name =
+                    context_arg_as_path_segment_simple_or_panic(db, context).ident(db).text(db);
 
                 self.component_deps.push(Dependency {
                     name: component_name.clone(),
@@ -54,17 +51,6 @@ impl SetCommand {
             }
         }
     }
-}
-
-fn arg_to_path_segment_simple(db: &dyn SyntaxGroup, arg: &ast::Arg) -> Option<PathSegmentSimple> {
-    if let ast::ArgClause::Unnamed(clause) = arg.arg_clause(db) {
-        if let ast::Expr::Path(path) = clause.value(db) {
-            if let Some(ast::PathSegment::Simple(segment)) = path.elements(db).last() {
-                return Some(segment.clone());
-            }
-        }
-    }
-    None
 }
 
 impl CommandMacroTrait for SetCommand {

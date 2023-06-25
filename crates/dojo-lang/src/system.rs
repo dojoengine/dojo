@@ -13,7 +13,7 @@ use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_world::manifest::Dependency;
 use itertools::Itertools;
 
-use crate::commands::{set, uuid, Command, CommandMacroTrait};
+use crate::commands::{entity, set, uuid, Command, CommandMacroTrait};
 use crate::plugin::{DojoAuxData, SystemAuxData};
 
 pub struct System {
@@ -252,11 +252,14 @@ impl System {
         expr_macro: ast::ExprInlineMacro,
     ) -> Option<Vec<RewriteNode>> {
         let elements = expr_macro.path(db).elements(db);
-        let segment = elements.first().unwrap();
+        let segment = elements.last().unwrap();
         if let ast::PathSegment::Simple(segment_simple) = segment {
             let command: Option<Command> = match segment_simple.ident(db).text(db).as_str() {
                 "uuid" => Some(uuid::UUIDCommand::from_ast(db, var_name, expr_macro).into()),
                 "set" => Some(set::SetCommand::from_ast(db, var_name, expr_macro).into()),
+                "entity" | "try_entity" => {
+                    Some(entity::EntityCommand::from_ast(db, var_name, expr_macro).into())
+                }
                 _ => None,
             };
             return command.map(|c| {

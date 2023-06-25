@@ -1,5 +1,6 @@
 use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_semantic::patcher::RewriteNode;
+use cairo_lang_syntax::node::ast::PathSegmentSimple;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal};
 use dojo_world::manifest::Dependency;
@@ -72,18 +73,6 @@ impl Command {
             Command { rewrite_nodes: vec![], diagnostics: vec![], component_deps: vec![] };
 
         match command_name(db, command_ast.clone()).as_str() {
-            "entity" => {
-                let sc = entity::EntityCommand::from_ast(db, let_pattern, command_ast);
-                command.rewrite_nodes.extend(sc.rewrite_nodes());
-                command.diagnostics.extend(sc.diagnostics());
-                command.component_deps.extend(sc.components);
-            }
-            "try_entity" => {
-                let sc = entity::EntityCommand::from_ast(db, let_pattern, command_ast);
-                command.rewrite_nodes.extend(sc.rewrite_nodes());
-                command.diagnostics.extend(sc.diagnostics());
-                command.component_deps.extend(sc.components);
-            }
             "entities" => {
                 let sc = entities::EntitiesCommand::from_ast(db, let_pattern, command_ast);
                 command.rewrite_nodes.extend(sc.rewrite_nodes());
@@ -112,4 +101,42 @@ pub fn command_name(db: &dyn SyntaxGroup, command_ast: ast::ExprFunctionCall) ->
     } else {
         SmolStr::new("")
     }
+}
+
+pub fn macro_name(db: &dyn SyntaxGroup, macro_ast: ast::ExprInlineMacro) -> SmolStr {
+    let elements = macro_ast.path(db).elements(db);
+    let segment = elements.last().unwrap();
+    match segment {
+        ast::PathSegment::Simple(method) => method.ident(db).text(db),
+        _ => panic!("Macro's name must be a simple identifier!"),
+    }
+}
+
+pub fn ast_arg_to_expr(db: &dyn SyntaxGroup, arg: &ast::Arg) -> Option<ast::Expr> {
+    match arg.arg_clause(db) {
+        ast::ArgClause::Unnamed(clause) => Some(clause.value(db)),
+        _ => None,
+    }
+}
+
+fn ast_arg_to_path_segment_simple(
+    db: &dyn SyntaxGroup,
+    arg: &ast::Arg,
+) -> Option<PathSegmentSimple> {
+    if let Some(ast::Expr::Path(path)) = ast_arg_to_expr(db, arg) {
+        if path.elements(db).len() != 1 {
+            return None;
+        }
+        if let Some(ast::PathSegment::Simple(segment)) = path.elements(db).last() {
+            return Some(segment.clone());
+        }
+    }
+    None
+}
+
+pub fn context_arg_as_path_segment_simple_or_panic(
+    db: &dyn SyntaxGroup,
+    context: &ast::Arg,
+) -> PathSegmentSimple {
+    ast_arg_to_path_segment_simple(db, context).expect("Context must be a simple literal!")
 }

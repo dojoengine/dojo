@@ -56,7 +56,7 @@ mod Buzz {
     fn execute(ctx: Context, a: felt252, b: u128) {
         let caller = get_caller_address();
         set !(ctx, caller.into(), (Foo { a, b }));
-        let fizz = commands::<Fizz>::try_entity(caller.into());
+        let fizz = try_entity !(ctx, ctx.caller_account.into(), Fizz);
     }
 }
 

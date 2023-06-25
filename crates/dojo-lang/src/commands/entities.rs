@@ -186,7 +186,7 @@ pub fn find_components(db: &dyn SyntaxGroup, command_ast: &ast::ExprFunctionCall
     components
 }
 
-fn find_components_inner(db: &dyn SyntaxGroup, expression: ast::Expr) -> Vec<SmolStr> {
+pub fn find_components_inner(db: &dyn SyntaxGroup, expression: ast::Expr) -> Vec<SmolStr> {
     let mut components = vec![];
     match expression {
         ast::Expr::Tuple(tuple) => {
