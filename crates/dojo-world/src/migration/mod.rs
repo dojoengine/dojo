@@ -80,13 +80,15 @@ pub trait Declarable {
         let (flattened_class, casm_class_hash) =
             prepare_contract_declaration_params(self.artifact_path()).unwrap();
 
-        if account
+        match account
             .provider()
-            .get_class(BlockId::Tag(BlockTag::Pending), casm_class_hash)
+            .get_class(BlockId::Tag(BlockTag::Pending), flattened_class.class_hash())
             .await
-            .is_ok()
         {
-            return Err(MigrationError::ClassAlreadyDeclared);
+            Err(ProviderError::StarknetError(StarknetError::ClassHashNotFound)) => {}
+
+            Ok(_) => return Err(MigrationError::ClassAlreadyDeclared),
+            Err(e) => return Err(MigrationError::Provider(e)),
         }
 
         account
@@ -113,26 +115,10 @@ pub trait Deployable: Declarable + Sync {
     {
         let declare = match self.declare(account).await {
             Ok(res) => Some(res),
-            Err(MigrationError::Migrator(AccountError::Provider(
-                ProviderError::StarknetError(StarknetError::ContractError),
-            ))) => None,
-            Err(err) => return Err(err),
-        };
 
-        // TODO: Replace above block with below once `get_class` is supported
-        // by Katana. The current check is naive and will proceed if the declare fails
-        // for any contract error.
-        // let declare = if let Err(err) =
-        //     account.provider().get_class(BlockId::Tag(BlockTag::Latest), class_hash).await
-        // {
-        //     if let ProviderError::StarknetError(StarknetError::ClassHashNotFound) = err {
-        //         Some(self.declare(account).await?)
-        //     } else {
-        //         return Err(MigrationError::Provider(err));
-        //     }
-        // } else {
-        //     None
-        // };
+            Err(MigrationError::ClassAlreadyDeclared) => None,
+            Err(e) => return Err(e),
+        };
 
         let calldata = [
             vec![
@@ -154,13 +140,15 @@ pub trait Deployable: Declarable + Sync {
 
         self.set_contract_address(contract_address);
 
-        if account
+        match account
             .provider()
             .get_class_hash_at(BlockId::Tag(BlockTag::Pending), contract_address)
             .await
-            .is_ok()
         {
-            return Err(MigrationError::ContractAlreadyDeployed);
+            Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {}
+
+            Ok(_) => return Err(MigrationError::ContractAlreadyDeployed),
+            Err(e) => return Err(MigrationError::Provider(e)),
         }
 
         let InvokeTransactionResult { transaction_hash } = account
