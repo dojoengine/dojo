@@ -1,20 +1,19 @@
-use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_semantic::patcher::RewriteNode;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 
-use super::{CommandData, CommandTrait};
+use super::{Command, CommandData, CommandMacroTrait};
 
 pub struct UUIDCommand {
     data: CommandData,
 }
 
-impl CommandTrait for UUIDCommand {
+impl CommandMacroTrait for UUIDCommand {
     fn from_ast(
         _db: &dyn SyntaxGroup,
         let_pattern: Option<ast::Pattern>,
-        _command_ast: ast::ExprFunctionCall,
+        _command_ast: ast::ExprInlineMacro,
     ) -> Self {
         let mut command = UUIDCommand { data: CommandData::new() };
 
@@ -29,12 +28,10 @@ impl CommandTrait for UUIDCommand {
 
         command
     }
+}
 
-    fn rewrite_nodes(&self) -> Vec<RewriteNode> {
-        self.data.rewrite_nodes.clone()
-    }
-
-    fn diagnostics(&self) -> Vec<PluginDiagnostic> {
-        self.data.diagnostics.clone()
+impl From<UUIDCommand> for Command {
+    fn from(val: UUIDCommand) -> Self {
+        Command::with_data(val.data)
     }
 }

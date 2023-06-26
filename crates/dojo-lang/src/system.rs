@@ -205,15 +205,23 @@ impl System {
         statement_ast: ast::Statement,
     ) -> Vec<RewriteNode> {
         match statement_ast.clone() {
-            ast::Statement::Let(statement_let) => {
-                if let ast::Expr::FunctionCall(expr_fn) = statement_let.rhs(db) {
+            ast::Statement::Let(statement_let) => match statement_let.rhs(db) {
+                ast::Expr::FunctionCall(expr_fn) => {
                     if let Some(rewrite_nodes) =
                         self.handle_fn_call(db, Some(statement_let.pattern(db)), expr_fn)
                     {
                         return rewrite_nodes;
                     }
                 }
-            }
+                ast::Expr::InlineMacro(expr_macro) => {
+                    if let Some(rewrite_nodes) =
+                        self.handle_inline_macro(db, Some(statement_let.pattern(db)), expr_macro)
+                    {
+                        return rewrite_nodes;
+                    }
+                }
+                _ => {}
+            },
             ast::Statement::Expr(expr) => {
                 if let Some(rewrite_nodes) = self.handle_expr(db, expr.expr(db)) {
                     return rewrite_nodes;
@@ -232,7 +240,26 @@ impl System {
             ast::Expr::Block(expr_block) => Some(self.handle_block(db, expr_block)),
             ast::Expr::Match(expr_match) => Some(self.handle_match(db, expr_match)),
             ast::Expr::Loop(expr_loop) => Some(self.handle_loop(db, expr_loop)),
+            ast::Expr::InlineMacro(expr_macro) => self.handle_inline_macro(db, None, expr_macro),
             _ => None,
+        }
+    }
+
+    fn handle_inline_macro(
+        &mut self,
+        db: &dyn SyntaxGroup,
+        var_name: Option<ast::Pattern>,
+        expr_macro: ast::ExprInlineMacro,
+    ) -> Option<Vec<RewriteNode>> {
+        let command = Command::try_from_ast(db, var_name, expr_macro);
+
+        match command {
+            Some(c) => {
+                self.diagnostics.extend(c.diagnostics);
+                self.update_deps(c.component_deps);
+                Some(c.rewrite_nodes)
+            }
+            None => None,
         }
     }
 
@@ -348,31 +375,10 @@ impl System {
 
     fn handle_fn_call(
         &mut self,
-        db: &dyn SyntaxGroup,
-        var_name: Option<ast::Pattern>,
-        expr_fn: ast::ExprFunctionCall,
+        _db: &dyn SyntaxGroup,
+        _var_name: Option<ast::Pattern>,
+        _expr_fn: ast::ExprFunctionCall,
     ) -> Option<Vec<RewriteNode>> {
-        let elements = expr_fn.path(db).elements(db);
-        let segment = elements.first().unwrap();
-        match segment {
-            ast::PathSegment::WithGenericArgs(segment_genric) => {
-                if segment_genric.ident(db).text(db).as_str() == "commands" {
-                    let command = Command::from_ast(db, var_name, expr_fn);
-                    self.diagnostics.extend(command.diagnostics);
-                    self.update_deps(command.component_deps);
-                    return Some(command.rewrite_nodes);
-                }
-            }
-            ast::PathSegment::Simple(segment_simple) => {
-                if segment_simple.ident(db).text(db).as_str() == "commands" {
-                    let command = Command::from_ast(db, var_name, expr_fn);
-                    self.diagnostics.extend(command.diagnostics);
-                    self.update_deps(command.component_deps);
-                    return Some(command.rewrite_nodes);
-                }
-            }
-        }
-
         None
     }
 

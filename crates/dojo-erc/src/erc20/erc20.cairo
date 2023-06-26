@@ -6,7 +6,8 @@
 #[starknet::contract]
 mod ERC20 {
     // max(felt252)
-    const UNLIMITED_ALLOWANCE: felt252 = 3618502788666131213697322783095070105623107215331596699973092056135872020480;
+    const UNLIMITED_ALLOWANCE: felt252 =
+        3618502788666131213697322783095070105623107215331596699973092056135872020480;
 
     use array::ArrayTrait;
     use option::OptionTrait;
@@ -15,14 +16,10 @@ mod ERC20 {
     use zeroable::Zeroable;
 
     use dojo_core::database::query::{
-        Query,
-        LiteralIntoQuery,
-        TupleSize1IntoQuery,
-        TupleSize2IntoQuery,
-        IntoPartitioned,
+        Query, LiteralIntoQuery, TupleSize1IntoQuery, TupleSize2IntoQuery, IntoPartitioned,
         IntoPartitionedQuery
     };
-    
+
     use dojo_core::interfaces::{IWorldDispatcher, IWorldDispatcherTrait};
     use dojo_erc::erc20::components::{Allowance, Balance, Supply};
 

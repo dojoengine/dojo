@@ -331,7 +331,8 @@ mod World {
         // Delete the entity
         let table = query.table(component);
         let component_class_hash = self.component_registry.read(component);
-        let res = database::del(component_class_hash, component.into(), query);
+        database::del(component_class_hash, component.into(), query);
+        // StoreDelRecord(table, query.keys())
     }
 
     /// Get the component value for an entity

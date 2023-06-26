@@ -3,25 +3,28 @@ use cairo_lang_semantic::patcher::RewriteNode;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal};
 use dojo_world::manifest::Dependency;
-use smol_str::SmolStr;
 
-pub mod entities;
-pub mod entity;
+use self::execute::ExecuteCommand;
+use self::find::FindCommand;
+use self::get::GetCommand;
+use self::set::SetCommand;
+use self::uuid::UUIDCommand;
+
 pub mod execute;
+pub mod find;
+pub mod get;
+mod helpers;
 pub mod set;
 pub mod uuid;
 
 const CAIRO_ERR_MSG_LEN: usize = 31;
 
-pub trait CommandTrait {
+pub trait CommandMacroTrait: Into<Command> {
     fn from_ast(
         db: &dyn SyntaxGroup,
         let_pattern: Option<ast::Pattern>,
-        command_ast: ast::ExprFunctionCall,
+        macro_ast: ast::ExprInlineMacro,
     ) -> Self;
-
-    fn rewrite_nodes(&self) -> Vec<RewriteNode>;
-    fn diagnostics(&self) -> Vec<PluginDiagnostic>;
 }
 
 #[derive(Clone)]
@@ -42,64 +45,40 @@ pub struct Command {
 }
 
 impl Command {
-    pub fn from_ast(
+    pub fn with_data(data: CommandData) -> Self {
+        Command {
+            rewrite_nodes: data.rewrite_nodes,
+            diagnostics: data.diagnostics,
+            component_deps: vec![],
+        }
+    }
+
+    /// With component dependencies
+    pub fn with_cmp_deps(data: CommandData, component_deps: Vec<Dependency>) -> Self {
+        Command { rewrite_nodes: data.rewrite_nodes, diagnostics: data.diagnostics, component_deps }
+    }
+
+    pub fn try_from_ast(
         db: &dyn SyntaxGroup,
         let_pattern: Option<ast::Pattern>,
-        command_ast: ast::ExprFunctionCall,
-    ) -> Self {
-        let mut command =
-            Command { rewrite_nodes: vec![], diagnostics: vec![], component_deps: vec![] };
-
-        match command_name(db, command_ast.clone()).as_str() {
-            "uuid" => {
-                let sc = uuid::UUIDCommand::from_ast(db, let_pattern, command_ast);
-                command.rewrite_nodes.extend(sc.rewrite_nodes());
-                command.diagnostics.extend(sc.diagnostics());
+        macro_ast: ast::ExprInlineMacro,
+    ) -> Option<Self> {
+        let elements = macro_ast.path(db).elements(db);
+        let segment = elements.last().unwrap();
+        match segment {
+            ast::PathSegment::Simple(segment_simple) => {
+                match segment_simple.ident(db).text(db).as_str() {
+                    "uuid" => Some(UUIDCommand::from_ast(db, let_pattern, macro_ast).into()),
+                    "set" => Some(SetCommand::from_ast(db, let_pattern, macro_ast).into()),
+                    "get" | "try_get" => {
+                        Some(GetCommand::from_ast(db, let_pattern, macro_ast).into())
+                    }
+                    "find" => Some(FindCommand::from_ast(db, let_pattern, macro_ast).into()),
+                    "execute" => Some(ExecuteCommand::from_ast(db, let_pattern, macro_ast).into()),
+                    _ => None,
+                }
             }
-            "entity" => {
-                let sc = entity::EntityCommand::from_ast(db, let_pattern, command_ast);
-                command.rewrite_nodes.extend(sc.rewrite_nodes());
-                command.diagnostics.extend(sc.diagnostics());
-                command.component_deps.extend(sc.components);
-            }
-            "try_entity" => {
-                let sc = entity::EntityCommand::from_ast(db, let_pattern, command_ast);
-                command.rewrite_nodes.extend(sc.rewrite_nodes());
-                command.diagnostics.extend(sc.diagnostics());
-                command.component_deps.extend(sc.components);
-            }
-            "set_entity" => {
-                let sc = set::SetCommand::from_ast(db, let_pattern, command_ast);
-                command.rewrite_nodes.extend(sc.rewrite_nodes());
-                command.diagnostics.extend(sc.diagnostics());
-                command.component_deps.extend(sc.components);
-            }
-            "entities" => {
-                let sc = entities::EntitiesCommand::from_ast(db, let_pattern, command_ast);
-                command.rewrite_nodes.extend(sc.rewrite_nodes());
-                command.diagnostics.extend(sc.diagnostics());
-                command.component_deps.extend(sc.components);
-            }
-            "execute" => {
-                let sc = execute::ExecuteCommand::from_ast(db, let_pattern, command_ast);
-                command.rewrite_nodes.extend(sc.rewrite_nodes());
-                command.diagnostics.extend(sc.diagnostics());
-            }
-            _ => {}
+            _ => None,
         }
-
-        command
-    }
-}
-
-pub fn command_name(db: &dyn SyntaxGroup, command_ast: ast::ExprFunctionCall) -> SmolStr {
-    let elements = command_ast.path(db).elements(db);
-    let segment = elements.last().unwrap();
-    if let ast::PathSegment::Simple(method) = segment {
-        method.ident(db).text(db)
-    } else if let ast::PathSegment::WithGenericArgs(generic) = segment {
-        generic.ident(db).text(db)
-    } else {
-        SmolStr::new("")
     }
 }
