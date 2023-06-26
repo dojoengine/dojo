@@ -1,8 +1,8 @@
 use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_semantic::patcher::RewriteNode;
 use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
+use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 
 use super::helpers::context_arg_as_path_segment_simple_or_panic;
 use super::{Command, CommandData, CommandMacroTrait};
