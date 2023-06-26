@@ -1014,11 +1014,11 @@ error: Plugin diagnostic: Component types cannot be empty
                   ^*****************************^
 
 error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::database::query::Query", found: "(?77, ?78, ?79, ?80, ?81)".
- --> lib.cairo:50:30
-        commands::set_entity((0, 0, 0, 0, 0), (
-                             ^*************^
+ --> lib.cairo:50:20
+        set !(ctx, (0, 0, 0, 0, 0), (
+                   ^*************^
 
 error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::database::query::Query", found: "(?89, ?90, ?91, ?92, ?93)".
- --> lib.cairo:50:30
-        commands::set_entity((0, 0, 0, 0, 0), (
-                             ^*************^
+ --> lib.cairo:50:20
+        set !(ctx, (0, 0, 0, 0, 0), (
+                   ^*************^
