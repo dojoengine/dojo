@@ -13,14 +13,14 @@ use super::entities::find_components;
 use super::helpers::{ast_arg_to_expr, context_arg_as_path_segment_simple_or_panic, macro_name};
 use super::{Command, CommandData, CommandMacroTrait, CAIRO_ERR_MSG_LEN};
 
-pub struct EntityCommand {
+pub struct GetCommand {
     query_id: String,
     query_pattern: String,
     data: CommandData,
     component_deps: Vec<Dependency>,
 }
 
-impl CommandMacroTrait for EntityCommand {
+impl CommandMacroTrait for GetCommand {
     fn from_ast(
         db: &dyn SyntaxGroup,
         let_pattern: Option<ast::Pattern>,
@@ -30,7 +30,7 @@ impl CommandMacroTrait for EntityCommand {
         let var_name = let_pattern.unwrap();
         let mut query_id = StringSanitizer::from(var_name.as_syntax_node().get_text(db));
         query_id.to_snake_case();
-        let mut command = EntityCommand {
+        let mut command = GetCommand {
             query_id: query_id.get(),
             query_pattern: var_name.as_syntax_node().get_text(db),
             data: CommandData::new(),
@@ -81,24 +81,24 @@ impl CommandMacroTrait for EntityCommand {
             })
             .collect();
 
-        if macro_name == "entity" {
-            command.handle_entity(components, context_name, query, part_names);
+        if macro_name == "get" {
+            command.handle_get(components, context_name, query, part_names);
         } else {
-            command.handle_try_entity(components, context_name, query, part_names);
+            command.handle_try_get(components, context_name, query, part_names);
         }
 
         command
     }
 }
 
-impl From<EntityCommand> for Command {
-    fn from(val: EntityCommand) -> Self {
+impl From<GetCommand> for Command {
+    fn from(val: GetCommand) -> Self {
         Command::with_cmp_deps(val.data, val.component_deps)
     }
 }
 
-impl EntityCommand {
-    fn handle_entity(
+impl GetCommand {
+    fn handle_get(
         &mut self,
         components: Vec<SmolStr>,
         context: SmolStr,
@@ -151,7 +151,7 @@ impl EntityCommand {
         ));
     }
 
-    fn handle_try_entity(
+    fn handle_try_get(
         &mut self,
         components: Vec<SmolStr>,
         context: SmolStr,

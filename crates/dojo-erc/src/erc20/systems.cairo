@@ -27,7 +27,7 @@ mod ERC20TransferFrom {
         let caller: felt252 = get_caller_address().into();
         if spender != caller {
             // decrease allowance if it's not owner doing the transfer
-            let allowance = entity !(ctx, (token, (caller, spender)).into_partitioned(), Allowance);
+            let allowance = get !(ctx, (token, (caller, spender)).into_partitioned(), Allowance);
             if !is_unlimited_allowance(allowance) {
                 set !(
                     ctx,
@@ -38,7 +38,7 @@ mod ERC20TransferFrom {
         }
 
         // decrease spender's balance
-        let balance = entity !(ctx, (token, (spender)).into_partitioned(), Balance);
+        let balance = get !(ctx, (token, (spender)).into_partitioned(), Balance);
         set !(
             ctx,
             (token, (spender)).into_partitioned(),
@@ -46,7 +46,7 @@ mod ERC20TransferFrom {
         );
 
         // increase recipient's balance
-        let balance = entity !(ctx, (token, (recipient)).into_partitioned(), Balance);
+        let balance = get !(ctx, (token, (recipient)).into_partitioned(), Balance);
         set !(
             ctx,
             (token, (recipient)).into_partitioned(),
@@ -69,11 +69,11 @@ mod ERC20Mint {
         assert(recipient.is_non_zero(), 'ERC20: mint to 0');
 
         // increase token supply
-        let supply = entity !(ctx, token.into(), Supply);
+        let supply = get !(ctx, token.into(), Supply);
         set !(ctx, token.into(), (Supply { amount: supply.amount + amount }));
 
         // increase balance of recipient
-        let balance = entity !(ctx, (token, (recipient)).into_partitioned(), Balance);
+        let balance = get !(ctx, (token, (recipient)).into_partitioned(), Balance);
         set !(ctx, (token, (recipient)).into(), (Balance { amount: balance.amount + amount }));
     }
 }
@@ -88,11 +88,11 @@ mod ERC20Burn {
         assert(owner.is_non_zero(), 'ERC20: burn from 0');
 
         // decrease token supply
-        let supply = entity !(ctx, token.into(), Supply);
+        let supply = get !(ctx, token.into(), Supply);
         set !(ctx, token.into(), (Supply { amount: supply.amount - amount }));
 
         // decrease balance of owner
-        let balance = entity !(ctx, (token, (owner)).into_partitioned(), Balance);
+        let balance = get !(ctx, (token, (owner)).into_partitioned(), Balance);
         set !(
             ctx, (token, (owner)).into_partitioned(), (Balance { amount: balance.amount - amount })
         );

@@ -5,14 +5,14 @@ use cairo_lang_syntax::node::{ast, Terminal};
 use dojo_world::manifest::Dependency;
 
 use self::entities::EntitiesCommand;
-use self::entity::EntityCommand;
 use self::execute::ExecuteCommand;
+use self::get::GetCommand;
 use self::set::SetCommand;
 use self::uuid::UUIDCommand;
 
 pub mod entities;
-pub mod entity;
 pub mod execute;
+pub mod get;
 mod helpers;
 pub mod set;
 pub mod uuid;
@@ -70,8 +70,8 @@ impl Command {
                 match segment_simple.ident(db).text(db).as_str() {
                     "uuid" => Some(UUIDCommand::from_ast(db, let_pattern, macro_ast).into()),
                     "set" => Some(SetCommand::from_ast(db, let_pattern, macro_ast).into()),
-                    "entity" | "try_entity" => {
-                        Some(EntityCommand::from_ast(db, let_pattern, macro_ast).into())
+                    "get" | "try_get" => {
+                        Some(GetCommand::from_ast(db, let_pattern, macro_ast).into())
                     }
                     "entities" => {
                         Some(EntitiesCommand::from_ast(db, let_pattern, macro_ast).into())

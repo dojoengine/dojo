@@ -43,7 +43,7 @@ mod IsAccountAdmin {
     fn execute(ctx: Context) -> bool {
         // Get calling account contract address
         let caller = ctx.caller_account;
-        let role = entity !(ctx, caller.into(), AuthRole);
+        let role = get !(ctx, caller.into(), AuthRole);
         // Authorize if role is Admin
         role.id.into() == World::ADMIN
     }
@@ -74,7 +74,7 @@ mod IsAuthorized {
         };
 
         // Get authorization status for scoped role
-        let maybe_authorization_status = try_entity !(
+        let maybe_authorization_status = try_get !(
             ctx, (scoped_role, resource_id).into(), AuthStatus
         );
         let authorization_status = match maybe_authorization_status {
@@ -88,7 +88,7 @@ mod IsAuthorized {
         }
 
         // If system is not authorized, get World level role
-        let role = entity !(ctx, target_id.into(), AuthRole);
+        let role = get !(ctx, target_id.into(), AuthRole);
 
         // Check if system's role is Admin and executed by an Admin
         if role.id.into() == World::ADMIN {
