@@ -6,7 +6,6 @@ use traits::Into;
 use zeroable::IsZeroResult;
 use starknet::ClassHashIntoFelt252;
 use poseidon::poseidon_hash_span;
-use dojo_core::serde::SpanSerde;
 
 #[derive(Copy, Drop, Serde)]
 struct Query {

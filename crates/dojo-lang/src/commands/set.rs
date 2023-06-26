@@ -1,9 +1,8 @@
-use std::collections::HashMap;
-
 use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_semantic::patcher::RewriteNode;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
+use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_world::manifest::Dependency;
 
 use super::{CommandData, CommandTrait};
@@ -34,7 +33,7 @@ impl SetCommand {
                      array::ArrayTrait::span(@calldata));
                     }
                     ",
-                    HashMap::from([
+                    UnorderedHashMap::from([
                         ("component".to_string(), RewriteNode::Text(component_name.to_string())),
                         ("ctor".to_string(), RewriteNode::new_trimmed(ctor.as_syntax_node())),
                         ("query".to_string(), RewriteNode::new_trimmed(query.as_syntax_node())),

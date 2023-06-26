@@ -1,9 +1,8 @@
-use std::collections::HashMap;
-
 use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_semantic::patcher::RewriteNode;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
+use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 
 use super::{CommandData, CommandTrait};
 
@@ -27,7 +26,7 @@ impl CommandTrait for ExecuteCommand {
             command.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
                 "let $var_name$ = ctx.world.execute('$system$', $calldata$);
                 ",
-                HashMap::from([
+                UnorderedHashMap::from([
                     ("var_name".to_string(), RewriteNode::new_trimmed(var_name.as_syntax_node())),
                     ("system".to_string(), RewriteNode::new_trimmed(system.as_syntax_node())),
                     ("calldata".to_string(), RewriteNode::new_trimmed(calldata.as_syntax_node())),
@@ -37,7 +36,7 @@ impl CommandTrait for ExecuteCommand {
             command.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
                 "ctx.world.execute('$system$', $calldata$);
                 ",
-                HashMap::from([
+                UnorderedHashMap::from([
                     ("system".to_string(), RewriteNode::new_trimmed(system.as_syntax_node())),
                     ("calldata".to_string(), RewriteNode::new_trimmed(calldata.as_syntax_node())),
                 ]),

@@ -1,5 +1,5 @@
 use dojo_core::{
-    serde::SpanSerde, database::query::Query,
+    database::query::Query,
     auth::systems::Route, auth::components::AuthRole, execution_context::Context
 };
 use starknet::{ClassHash, ContractAddress};
@@ -9,75 +9,63 @@ use traits::{TryInto, Into};
 use option::OptionTrait;
 use starknet::contract_address::Felt252TryIntoContractAddress;
 
-
-#[abi]
-trait IWorld {
-    fn initialize(routes: Array<Route>);
-    fn component(name: felt252) -> ClassHash;
-    fn register_component(class_hash: ClassHash);
-    fn system(name: felt252) -> ClassHash;
-    fn register_system(class_hash: ClassHash);
-    fn uuid() -> usize;
-    fn execute(name: felt252, execute_calldata: Span<felt252>) -> Span<felt252>;
-    fn entity(component: felt252, key: Query, offset: u8, length: usize) -> Span<felt252>;
+#[starknet::interface]
+trait IWorld<T> {
+    fn initialize(ref self: T, routes: Array<Route>);
+    fn component(self: @T, name: felt252) -> ClassHash;
+    fn register_component(ref self: T, class_hash: ClassHash);
+    fn system(self: @T, name: felt252) -> ClassHash;
+    fn register_system(ref self: T, class_hash: ClassHash);
+    fn uuid(self: @T) -> usize;
+    fn execute(ref self: T, name: felt252, execute_calldata: Span<felt252>) -> Span<felt252>;
+    fn entity(self: @T, component: felt252, key: Query, offset: u8, length: usize) -> Span<felt252>;
     fn set_entity(
-        context: Context, component: felt252, key: Query, offset: u8, value: Span<felt252>
+        ref self: T, context: Context, component: felt252, key: Query, offset: u8, value: Span<felt252>
     );
-    fn entities(component: felt252, partition: felt252) -> (Span<felt252>, Span<Span<felt252>>);
-    fn set_executor(contract_address: ContractAddress);
-    fn is_authorized(system: felt252, component: felt252, execution_role: AuthRole) -> bool;
-    fn is_account_admin() -> bool;
-    fn is_system_for_execution(system: felt252) -> bool;
-    fn delete_entity(context: Context, component: felt252, query: Query);
-    fn assume_role(role_id: felt252, systems: Array<felt252>);
-    fn clear_role(systems: Array<felt252>);
-    fn execution_role() -> felt252;
-    fn system_components(system: felt252) -> Array<(felt252, bool)>;
+    fn entities(self: @T, component: felt252, partition: felt252) -> (Span<felt252>, Span<Span<felt252>>);
+    fn set_executor(ref self: T, contract_address: ContractAddress);
+    fn executor(self: @T) -> ContractAddress;
+    fn is_authorized(self: @T, system: felt252, component: felt252, execution_role: AuthRole) -> bool;
+    fn is_account_admin(self: @T) -> bool;
+    fn is_system_for_execution(self: @T, system: felt252) -> bool;
+    fn delete_entity(ref self: T, context: Context, component: felt252, query: Query);
+    fn assume_role(ref self: T, role_id: felt252, systems: Array<felt252>);
+    fn clear_role(ref self: T, systems: Array<felt252>);
+    fn execution_role(self: @T) -> felt252;
+    fn system_components(self: @T, system: felt252) -> Array<(felt252, bool)>;
 }
 
-// TODO: Remove once Serde is derivable for dispatchers
-impl IWorldDispatcherSerde of Serde<IWorldDispatcher> {
-    fn serialize(self: @IWorldDispatcher, ref output: Array<felt252>) {
-        output.append((*self.contract_address).into());
-    }
-    fn deserialize(ref serialized: Span<felt252>) -> Option<IWorldDispatcher> {
-        let contract_address: felt252 = *serialized.pop_front()?;
-        let contract_address: ContractAddress = contract_address.try_into().unwrap();
-        Option::Some(IWorldDispatcher { contract_address })
-    }
-}
-
-#[abi]
-trait IExecutor {
+#[starknet::interface]
+trait IExecutor<T> {
     fn execute(
-        class_hash: ClassHash, execution_role: AuthRole, execute_calldata: Span<felt252>
+        self: @T, class_hash: ClassHash, execution_role: AuthRole, execute_calldata: Span<felt252>
     ) -> Span<felt252>;
 }
 
-#[abi]
-trait IComponent {
-    fn name() -> felt252;
-    fn len() -> usize;
+#[starknet::interface]
+trait IComponent<T> {
+    fn name(self: @T) -> felt252;
+    fn len(self: @T) -> usize;
 }
 
-#[abi]
-trait ISystem {
-    fn name() -> felt252;
-    fn dependencies() -> Array<(felt252, bool)>;
+#[starknet::interface]
+trait ISystem<T> {
+    fn name(self: @T) -> felt252;
+    fn dependencies(self: @T) -> Array<(felt252, bool)>;
 }
 
-#[abi]
-trait IWorldFactory {
-    fn set_world(class_hash: ClassHash);
-    fn set_executor(class_hash: ClassHash);
+#[starknet::interface]
+trait IWorldFactory<T> {
+    fn set_world(ref self: T, class_hash: ClassHash);
+    fn set_executor(ref self: T, class_hash: ClassHash);
     fn spawn(
-        name: felt252,
+        self: @T,
         components: Array<ClassHash>,
         systems: Array<ClassHash>,
         routes: Array<Route>
-    );
-    fn world_class_hash() -> ClassHash;
-    fn executor_address() -> ContractAddress;
-    fn default_auth_components() -> Array<ClassHash>;
-    fn default_auth_systems() -> Array<ClassHash>;
+    ) -> ContractAddress;
+    fn world(self: @T) -> ClassHash;
+    fn executor(self: @T) -> ContractAddress;
+    fn default_auth_components(self: @T) -> Array<ClassHash>;
+    fn default_auth_systems(self: @T) -> Array<ClassHash>;
 }

@@ -1,9 +1,8 @@
-use std::collections::HashMap;
-
 use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_semantic::patcher::RewriteNode;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
+use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_world::manifest::Dependency;
 use sanitizer::StringSanitizer;
 use smol_str::SmolStr;
@@ -44,7 +43,10 @@ impl CommandTrait for EntitiesCommand {
             let mut __$query_id$_entities_raw: Array<Span<Span<felt252>>> = ArrayTrait::new();
 
             ",
-            HashMap::from([("query_id".to_string(), RewriteNode::Text(command.query_id.clone()))]),
+            UnorderedHashMap::from([(
+                "query_id".to_string(),
+                RewriteNode::Text(command.query_id.clone()),
+            )]),
         ));
 
         let components = find_components(db, &command_ast);
@@ -60,7 +62,7 @@ impl CommandTrait for EntitiesCommand {
                         __$query_id$_ids.append(__$query_id$_$query_subtype$_ids);
                         __$query_id$_entities_raw.append(__$query_id$_$query_subtype$_raw);
                         ",
-                        HashMap::from([
+                        UnorderedHashMap::from([
                             ("query_id".to_string(), RewriteNode::Text(command.query_id.clone())),
                             (
                                 "query_subtype".to_string(),
@@ -86,7 +88,10 @@ impl CommandTrait for EntitiesCommand {
             );
 
             ",
-            HashMap::from([("query_id".to_string(), RewriteNode::Text(command.query_id.clone()))]),
+            UnorderedHashMap::from([(
+                "query_id".to_string(),
+                RewriteNode::Text(command.query_id.clone()),
+            )]),
         ));
 
         command.data.rewrite_nodes.extend(
@@ -124,7 +129,7 @@ impl CommandTrait for EntitiesCommand {
                             }
                         };
                         ",
-                        HashMap::from([
+                        UnorderedHashMap::from([
                             ("query_id".to_string(), RewriteNode::Text(command.query_id.clone())),
                             (
                                 "query_subtype".to_string(),
@@ -149,7 +154,7 @@ impl CommandTrait for EntitiesCommand {
             "
             let $query_id$ = ($desered_entities$);
             ",
-            HashMap::from([
+            UnorderedHashMap::from([
                 ("query_id".to_string(), RewriteNode::Text(command.query_id.clone())),
                 ("desered_entities".to_string(), RewriteNode::Text(desered_entities)),
             ]),

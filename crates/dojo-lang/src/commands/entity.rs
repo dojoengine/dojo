@@ -1,10 +1,9 @@
-use std::collections::HashMap;
-
 use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_semantic::patcher::RewriteNode;
 use cairo_lang_syntax::node::ast::Arg;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
+use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_world::manifest::Dependency;
 use itertools::Itertools;
 use sanitizer::StringSanitizer;
@@ -100,7 +99,7 @@ impl EntityCommand {
                         ref __$query_id$_$query_subtype$_raw
                     ).expect('$deser_err_msg$');
                     ",
-                HashMap::from([
+                UnorderedHashMap::from([
                     ("component".to_string(), RewriteNode::Text(component.to_string())),
                     (
                         "query_subtype".to_string(),
@@ -123,7 +122,7 @@ impl EntityCommand {
         self.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
             "let $query_pattern$ = $part_names$;
                     ",
-            HashMap::from([
+            UnorderedHashMap::from([
                 ("query_pattern".to_string(), RewriteNode::Text(self.query_pattern.clone())),
                 ("part_names".to_string(), RewriteNode::Text(part_names_str)),
             ]),
@@ -156,7 +155,7 @@ impl EntityCommand {
                         }
                     };
                     ",
-                HashMap::from([
+                UnorderedHashMap::from([
                     ("component".to_string(), RewriteNode::Text(component.to_string())),
                     (
                         "query_subtype".to_string(),
@@ -184,7 +183,7 @@ impl EntityCommand {
                     Option::None(())
                 };
             ",
-            HashMap::from([
+            UnorderedHashMap::from([
                 ("query_pattern".to_string(), RewriteNode::Text(self.query_pattern.clone())),
                 ("part_names_condition".to_string(), RewriteNode::Text(part_names_condition_str)),
                 ("part_names".to_string(), RewriteNode::Text(part_names_str)),

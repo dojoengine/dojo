@@ -9,6 +9,7 @@ use cairo_lang_syntax::node::ast::MaybeModuleBody;
 use cairo_lang_syntax::node::ast::OptionReturnTypeClause::ReturnTypeClause;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
+use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_world::manifest::Dependency;
 use itertools::Itertools;
 
@@ -44,7 +45,7 @@ impl System {
             let mut builder = PatchBuilder::new(db);
             builder.add_modified(RewriteNode::interpolate_patched(
                 "
-                #[contract]
+                #[starknet::contract]
                 mod $name$ {
                     use option::OptionTrait;
                     use array::SpanTrait;
@@ -62,13 +63,16 @@ impl System {
                     use dojo_core::database::query::IntoPartitionedQuery;
                     use dojo_core::execution_context::Context;
 
-                    #[view]
-                    fn name() -> felt252 {
+                    #[storage]
+                    struct Storage {}
+
+                    #[external(v0)]
+                    fn name(self: @ContractState) -> felt252 {
                         '$name$'
                     }
 
-                    #[view]
-                    fn dependencies() -> Array<(felt252, bool)> {
+                    #[external(v0)]
+                    fn dependencies(self: @ContractState) -> Array<(felt252, bool)> {
                         let mut arr = array::ArrayTrait::new();
                         $dependencies$
                         arr
@@ -77,7 +81,7 @@ impl System {
                     $body$
                 }
                 ",
-                HashMap::from([
+                UnorderedHashMap::from([
                     ("name".to_string(), RewriteNode::Text(name.to_string())),
                     ("body".to_string(), RewriteNode::new_modified(body_nodes)),
                     (
@@ -91,7 +95,7 @@ impl System {
                                     RewriteNode::interpolate_patched(
                                         "array::ArrayTrait::append(ref arr, ('$name$'.into(), \
                                          $write$));\n",
-                                        HashMap::from([
+                                        UnorderedHashMap::from([
                                             (
                                                 "name".to_string(),
                                                 RewriteNode::Text(dep.name.to_string()),
@@ -179,12 +183,12 @@ impl System {
 
         rewrite_nodes.push(RewriteNode::interpolate_patched(
             "
-                #[external]
-                fn execute($context$$parameters$) $ret_clause$ {
+                #[external(v0)]
+                fn execute(self: @ContractState, $context$$parameters$) $ret_clause$ {
                     $body$
                 }
             ",
-            HashMap::from([
+            UnorderedHashMap::from([
                 ("context".to_string(), context),
                 ("parameters".to_string(), RewriteNode::new_trimmed(parameters.as_syntax_node())),
                 ("body".to_string(), RewriteNode::new_modified(body_nodes)),
@@ -244,7 +248,7 @@ impl System {
         let code = format!("{else_prefix}if $condition$ $block$");
         let if_rewrite = RewriteNode::interpolate_patched(
             &code,
-            HashMap::from([
+            UnorderedHashMap::from([
                 (
                     "condition".to_string(),
                     RewriteNode::Copied(expr_if.condition(db).as_syntax_node()),
@@ -260,7 +264,7 @@ impl System {
                     let else_block = self.handle_block(db, expr_else_block);
                     let else_rewrite = RewriteNode::interpolate_patched(
                         "else $block$",
-                        HashMap::from([(
+                        UnorderedHashMap::from([(
                             "block".to_string(),
                             RewriteNode::new_modified(else_block),
                         )]),
@@ -281,7 +285,7 @@ impl System {
         let loop_nodes: Vec<RewriteNode> = self.handle_block(db, expr_loop.body(db));
         let loop_rewrite = RewriteNode::interpolate_patched(
             "loop $block$;",
-            HashMap::from([("block".to_string(), RewriteNode::new_modified(loop_nodes))]),
+            UnorderedHashMap::from([("block".to_string(), RewriteNode::new_modified(loop_nodes))]),
         );
         vec![loop_rewrite]
     }
@@ -300,7 +304,7 @@ impl System {
 
         let block_rewrite = RewriteNode::interpolate_patched(
             "{ $nodes$ }",
-            HashMap::from([("nodes".to_string(), RewriteNode::new_modified(block_nodes))]),
+            UnorderedHashMap::from([("nodes".to_string(), RewriteNode::new_modified(block_nodes))]),
         );
         vec![block_rewrite]
     }
@@ -320,7 +324,7 @@ impl System {
                     let arm_block = self.handle_block(db, arm_block);
                     let arm_rewrite = RewriteNode::interpolate_patched(
                         "$pattern$ => $block$,",
-                        HashMap::from([
+                        UnorderedHashMap::from([
                             ("pattern".to_string(), RewriteNode::Copied(arm_pat.as_syntax_node())),
                             ("block".to_string(), RewriteNode::new_modified(arm_block)),
                         ]),
@@ -334,7 +338,7 @@ impl System {
 
         let match_rewrite = RewriteNode::interpolate_patched(
             "match $expr$ { $arms$ }",
-            HashMap::from([
+            UnorderedHashMap::from([
                 ("expr".to_string(), RewriteNode::Copied(expr_match.expr(db).as_syntax_node())),
                 ("arms".to_string(), RewriteNode::new_modified(match_nodes)),
             ]),
