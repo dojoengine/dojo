@@ -9,11 +9,9 @@ use itertools::Itertools;
 use sanitizer::StringSanitizer;
 use smol_str::SmolStr;
 
-use super::entities::find_components_inner;
-use super::{
-    ast_arg_to_expr, context_arg_as_path_segment_simple_or_panic, macro_name, Command, CommandData,
-    CommandMacroTrait, CAIRO_ERR_MSG_LEN,
-};
+use super::entities::find_components;
+use super::helpers::{ast_arg_to_expr, context_arg_as_path_segment_simple_or_panic, macro_name};
+use super::{Command, CommandData, CommandMacroTrait, CAIRO_ERR_MSG_LEN};
 
 pub struct EntityCommand {
     query_id: String,
@@ -26,9 +24,9 @@ impl CommandMacroTrait for EntityCommand {
     fn from_ast(
         db: &dyn SyntaxGroup,
         let_pattern: Option<ast::Pattern>,
-        command_ast: ast::ExprInlineMacro,
+        macro_ast: ast::ExprInlineMacro,
     ) -> Self {
-        let macro_name = macro_name(db, command_ast.clone());
+        let macro_name = macro_name(db, macro_ast.clone());
         let var_name = let_pattern.unwrap();
         let mut query_id = StringSanitizer::from(var_name.as_syntax_node().get_text(db));
         query_id.to_snake_case();
@@ -39,7 +37,17 @@ impl CommandMacroTrait for EntityCommand {
             component_deps: vec![],
         };
 
-        let elements = command_ast.arguments(db).args(db).elements(db);
+        let elements = macro_ast.arguments(db).args(db).elements(db);
+
+        if elements.len() != 3 {
+            command.data.diagnostics.push(PluginDiagnostic {
+                message: "Invalid arguments. Expected \"(context, query, (components,))\""
+                    .to_string(),
+                stable_ptr: macro_ast.arguments(db).as_syntax_node().stable_ptr(),
+            });
+            return command;
+        }
+
         let context = &elements[0];
         let query = &elements[1];
         let types = &elements[2];
@@ -47,12 +55,12 @@ impl CommandMacroTrait for EntityCommand {
         let context_name =
             context_arg_as_path_segment_simple_or_panic(db, context).ident(db).text(db);
 
-        let components = find_components_inner(db, ast_arg_to_expr(db, types).unwrap());
+        let components = find_components(db, ast_arg_to_expr(db, types).unwrap());
 
         if components.is_empty() {
             command.data.diagnostics.push(PluginDiagnostic {
                 message: "Component types cannot be empty".to_string(),
-                stable_ptr: command_ast.stable_ptr().untyped(),
+                stable_ptr: macro_ast.stable_ptr().untyped(),
             });
             return command;
         }

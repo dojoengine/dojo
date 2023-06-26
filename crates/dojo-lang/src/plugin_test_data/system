@@ -78,8 +78,8 @@ mod Move {
     }
 
     fn execute(player_id: felt252) {
-        let positions_query = commands::<(Position, Player)>::entities();
-        let players_query = commands::<Player>::entities();
+        let positions_query = commands:: entities!(ctx, 0x0, (Position, Player));
+        let players_query = entities!(ctx, 0x0, Player);
         let player = entity!(ctx, player_id.into(), Player);
         let player_position = entity!(ctx, player_id.into(), (Position, Player));
 
@@ -90,7 +90,7 @@ mod Move {
         if bar == 123 {
             let player_position = entity!(ctx, player_id.into(), (Position, Player));
             if foo.len() > 0_u32 {
-                let positions_query = commands::<(Position, Player)>::entities();
+                let positions_query = entities!(ctx, 0x0, (Position, Player));
             }
         } else if bar == 321 {
             let maybe_player = try_entity!(ctx, player_id.into(), Player);
@@ -120,7 +120,7 @@ mod Move {
                 let bar = x;
                 let player_position = entity!(ctx, player_id.into(), (Position, Player));
                 if bar == 123 {
-                    let positions_query = commands::<(Position, Player)>::entities();
+                    let positions_query = entities!(ctx, 0x0, (Position, Player));
                 }
             },
             Option::None(()) => {
@@ -135,7 +135,7 @@ mod Move {
 
         let mut calldata = ArrayTrait::new();
         calldata.append('name');
-        commands::execute(SpawnSystem, 'PositionPlayerWriter'.into(), calldata.span());
+        execute!(ctx, SpawnSystem, 'PositionPlayerWriter'.into(), calldata.span());
 
         // move_inner(@positions_query, 0_u32, positions_query.len());
 
@@ -473,13 +473,13 @@ mod Move {
 
         let (__positions_query_position_ids, __positions_query_position_raw) = ctx
             .world
-            .entities('Position', 0);
+            .entities('Position', 0x0);
         __positions_query_ids.append(__positions_query_position_ids);
         __positions_query_entities_raw.append(__positions_query_position_raw);
 
         let (__positions_query_player_ids, __positions_query_player_raw) = ctx
             .world
-            .entities('Player', 0);
+            .entities('Player', 0x0);
         __positions_query_ids.append(__positions_query_player_ids);
         __positions_query_entities_raw.append(__positions_query_player_raw);
 
@@ -542,7 +542,7 @@ mod Move {
 
         let (__players_query_player_ids, __players_query_player_raw) = ctx
             .world
-            .entities('Player', 0);
+            .entities('Player', 0x0);
         __players_query_ids.append(__players_query_player_ids);
         __players_query_entities_raw.append(__players_query_player_raw);
 
@@ -630,13 +630,13 @@ mod Move {
 
                 let (__positions_query_position_ids, __positions_query_position_raw) = ctx
                     .world
-                    .entities('Position', 0);
+                    .entities('Position', 0x0);
                 __positions_query_ids.append(__positions_query_position_ids);
                 __positions_query_entities_raw.append(__positions_query_position_raw);
 
                 let (__positions_query_player_ids, __positions_query_player_raw) = ctx
                     .world
-                    .entities('Player', 0);
+                    .entities('Player', 0x0);
                 __positions_query_ids.append(__positions_query_player_ids);
                 __positions_query_entities_raw.append(__positions_query_player_raw);
 
@@ -829,13 +829,13 @@ mod Move {
 
                     let (__positions_query_position_ids, __positions_query_position_raw) = ctx
                         .world
-                        .entities('Position', 0);
+                        .entities('Position', 0x0);
                     __positions_query_ids.append(__positions_query_position_ids);
                     __positions_query_entities_raw.append(__positions_query_position_raw);
 
                     let (__positions_query_player_ids, __positions_query_player_raw) = ctx
                         .world
-                        .entities('Player', 0);
+                        .entities('Player', 0x0);
                     __positions_query_ids.append(__positions_query_player_ids);
                     __positions_query_entities_raw.append(__positions_query_player_raw);
 

@@ -5,7 +5,8 @@ use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_world::manifest::Dependency;
 
-use super::{context_arg_as_path_segment_simple_or_panic, Command, CommandData, CommandMacroTrait};
+use super::helpers::context_arg_as_path_segment_simple_or_panic;
+use super::{Command, CommandData, CommandMacroTrait};
 
 #[derive(Clone)]
 pub struct SetCommand {

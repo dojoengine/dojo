@@ -13,7 +13,7 @@ use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_world::manifest::Dependency;
 use itertools::Itertools;
 
-use crate::commands::{entity, set, uuid, Command, CommandMacroTrait};
+use crate::commands::Command;
 use crate::plugin::{DojoAuxData, SystemAuxData};
 
 pub struct System {
@@ -251,24 +251,16 @@ impl System {
         var_name: Option<ast::Pattern>,
         expr_macro: ast::ExprInlineMacro,
     ) -> Option<Vec<RewriteNode>> {
-        let elements = expr_macro.path(db).elements(db);
-        let segment = elements.last().unwrap();
-        if let ast::PathSegment::Simple(segment_simple) = segment {
-            let command: Option<Command> = match segment_simple.ident(db).text(db).as_str() {
-                "uuid" => Some(uuid::UUIDCommand::from_ast(db, var_name, expr_macro).into()),
-                "set" => Some(set::SetCommand::from_ast(db, var_name, expr_macro).into()),
-                "entity" | "try_entity" => {
-                    Some(entity::EntityCommand::from_ast(db, var_name, expr_macro).into())
-                }
-                _ => None,
-            };
-            return command.map(|c| {
+        let command = Command::try_from_ast(db, var_name, expr_macro);
+
+        match command {
+            Some(c) => {
                 self.diagnostics.extend(c.diagnostics);
                 self.update_deps(c.component_deps);
-                c.rewrite_nodes
-            });
+                Some(c.rewrite_nodes)
+            }
+            None => None,
         }
-        None
     }
 
     fn handle_if(
@@ -383,31 +375,10 @@ impl System {
 
     fn handle_fn_call(
         &mut self,
-        db: &dyn SyntaxGroup,
-        var_name: Option<ast::Pattern>,
-        expr_fn: ast::ExprFunctionCall,
+        _db: &dyn SyntaxGroup,
+        _var_name: Option<ast::Pattern>,
+        _expr_fn: ast::ExprFunctionCall,
     ) -> Option<Vec<RewriteNode>> {
-        let elements = expr_fn.path(db).elements(db);
-        let segment = elements.first().unwrap();
-        match segment {
-            ast::PathSegment::WithGenericArgs(segment_genric) => {
-                if segment_genric.ident(db).text(db).as_str() == "commands" {
-                    let command = Command::from_ast(db, var_name, expr_fn);
-                    self.diagnostics.extend(command.diagnostics);
-                    self.update_deps(command.component_deps);
-                    return Some(command.rewrite_nodes);
-                }
-            }
-            ast::PathSegment::Simple(segment_simple) => {
-                if segment_simple.ident(db).text(db).as_str() == "commands" {
-                    let command = Command::from_ast(db, var_name, expr_fn);
-                    self.diagnostics.extend(command.diagnostics);
-                    self.update_deps(command.component_deps);
-                    return Some(command.rewrite_nodes);
-                }
-            }
-        }
-
         None
     }
 

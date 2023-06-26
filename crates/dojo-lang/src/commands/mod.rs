@@ -1,35 +1,29 @@
 use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_semantic::patcher::RewriteNode;
-use cairo_lang_syntax::node::ast::PathSegmentSimple;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal};
 use dojo_world::manifest::Dependency;
-use smol_str::SmolStr;
+
+use self::entities::EntitiesCommand;
+use self::entity::EntityCommand;
+use self::execute::ExecuteCommand;
+use self::set::SetCommand;
+use self::uuid::UUIDCommand;
 
 pub mod entities;
 pub mod entity;
 pub mod execute;
+mod helpers;
 pub mod set;
 pub mod uuid;
 
 const CAIRO_ERR_MSG_LEN: usize = 31;
 
-pub trait CommandTrait {
-    fn from_ast(
-        db: &dyn SyntaxGroup,
-        let_pattern: Option<ast::Pattern>,
-        command_ast: ast::ExprFunctionCall,
-    ) -> Self;
-
-    fn rewrite_nodes(&self) -> Vec<RewriteNode>;
-    fn diagnostics(&self) -> Vec<PluginDiagnostic>;
-}
-
 pub trait CommandMacroTrait: Into<Command> {
     fn from_ast(
         db: &dyn SyntaxGroup,
         let_pattern: Option<ast::Pattern>,
-        command_ast: ast::ExprInlineMacro,
+        macro_ast: ast::ExprInlineMacro,
     ) -> Self;
 }
 
@@ -64,79 +58,29 @@ impl Command {
         Command { rewrite_nodes: data.rewrite_nodes, diagnostics: data.diagnostics, component_deps }
     }
 
-    pub fn from_ast(
+    pub fn try_from_ast(
         db: &dyn SyntaxGroup,
         let_pattern: Option<ast::Pattern>,
-        command_ast: ast::ExprFunctionCall,
-    ) -> Self {
-        let mut command =
-            Command { rewrite_nodes: vec![], diagnostics: vec![], component_deps: vec![] };
-
-        match command_name(db, command_ast.clone()).as_str() {
-            "entities" => {
-                let sc = entities::EntitiesCommand::from_ast(db, let_pattern, command_ast);
-                command.rewrite_nodes.extend(sc.rewrite_nodes());
-                command.diagnostics.extend(sc.diagnostics());
-                command.component_deps.extend(sc.components);
+        macro_ast: ast::ExprInlineMacro,
+    ) -> Option<Self> {
+        let elements = macro_ast.path(db).elements(db);
+        let segment = elements.last().unwrap();
+        match segment {
+            ast::PathSegment::Simple(segment_simple) => {
+                match segment_simple.ident(db).text(db).as_str() {
+                    "uuid" => Some(UUIDCommand::from_ast(db, let_pattern, macro_ast).into()),
+                    "set" => Some(SetCommand::from_ast(db, let_pattern, macro_ast).into()),
+                    "entity" | "try_entity" => {
+                        Some(EntityCommand::from_ast(db, let_pattern, macro_ast).into())
+                    }
+                    "entities" => {
+                        Some(EntitiesCommand::from_ast(db, let_pattern, macro_ast).into())
+                    }
+                    "execute" => Some(ExecuteCommand::from_ast(db, let_pattern, macro_ast).into()),
+                    _ => None,
+                }
             }
-            "execute" => {
-                let sc = execute::ExecuteCommand::from_ast(db, let_pattern, command_ast);
-                command.rewrite_nodes.extend(sc.rewrite_nodes());
-                command.diagnostics.extend(sc.diagnostics());
-            }
-            _ => {}
-        }
-
-        command
-    }
-}
-
-pub fn command_name(db: &dyn SyntaxGroup, command_ast: ast::ExprFunctionCall) -> SmolStr {
-    let elements = command_ast.path(db).elements(db);
-    let segment = elements.last().unwrap();
-    if let ast::PathSegment::Simple(method) = segment {
-        method.ident(db).text(db)
-    } else if let ast::PathSegment::WithGenericArgs(generic) = segment {
-        generic.ident(db).text(db)
-    } else {
-        SmolStr::new("")
-    }
-}
-
-pub fn macro_name(db: &dyn SyntaxGroup, macro_ast: ast::ExprInlineMacro) -> SmolStr {
-    let elements = macro_ast.path(db).elements(db);
-    let segment = elements.last().unwrap();
-    match segment {
-        ast::PathSegment::Simple(method) => method.ident(db).text(db),
-        _ => panic!("Macro's name must be a simple identifier!"),
-    }
-}
-
-pub fn ast_arg_to_expr(db: &dyn SyntaxGroup, arg: &ast::Arg) -> Option<ast::Expr> {
-    match arg.arg_clause(db) {
-        ast::ArgClause::Unnamed(clause) => Some(clause.value(db)),
-        _ => None,
-    }
-}
-
-fn ast_arg_to_path_segment_simple(
-    db: &dyn SyntaxGroup,
-    arg: &ast::Arg,
-) -> Option<PathSegmentSimple> {
-    if let Some(ast::Expr::Path(path)) = ast_arg_to_expr(db, arg) {
-        if path.elements(db).len() != 1 {
-            return None;
-        }
-        if let Some(ast::PathSegment::Simple(segment)) = path.elements(db).last() {
-            return Some(segment.clone());
+            _ => None,
         }
     }
-    None
-}
-
-pub fn context_arg_as_path_segment_simple_or_panic(
-    db: &dyn SyntaxGroup,
-    context: &ast::Arg,
-) -> PathSegmentSimple {
-    ast_arg_to_path_segment_simple(db, context).expect("Context must be a simple literal!")
 }
