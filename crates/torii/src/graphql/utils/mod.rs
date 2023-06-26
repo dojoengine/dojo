@@ -20,3 +20,7 @@ pub fn format_name(input: &str) -> (String, String) {
         .collect::<String>();
     (name, type_name)
 }
+
+pub fn csv_to_vec(csv: &str) -> Vec<String> {
+    csv.split(',').map(|s| s.trim().to_string()).collect()
+}

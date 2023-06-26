@@ -5,7 +5,6 @@ mod tests {
     use serde::Deserialize;
     use sqlx::{FromRow, SqlitePool};
     use starknet::core::types::FieldElement;
-    use starknet_crypto::poseidon_hash_many;
 
     use crate::state::sql::{Executable, Sql};
     use crate::state::State;
@@ -34,41 +33,37 @@ mod tests {
     }
 
     #[sqlx::test(migrations = "./migrations")]
-    async fn test_storage_by_key(pool: SqlitePool) {
+    async fn test_component_states(pool: SqlitePool) {
         entity_fixtures(&pool).await;
 
-        let moves_key = poseidon_hash_many(&[FieldElement::ONE]);
-        let position_key = poseidon_hash_many(&[FieldElement::TWO]);
-        let query = format!(
-            r#"
-                {{
-                    moves (key: "{:#x}") {{
+        let query = r#"
+                {
+                    movesList {
                         __typename
                         remaining
-                    }}
-                    position (key: "{:#x}") {{
+                    }
+                    positionList {
                         __typename
                         x
                         y
-                    }}
-                }}
-            "#,
-            moves_key, position_key
-        );
-        let value = run_graphql_query(&pool, query.as_str()).await;
+                    }
+                }
+            "#;
 
-        let moves = value.get("moves").ok_or("no moves found").unwrap();
-        let moves: Moves = serde_json::from_value(moves.clone()).unwrap();
-        let position = value.get("position").ok_or("no position found").unwrap();
-        let position: Position = serde_json::from_value(position.clone()).unwrap();
+        let value = run_graphql_query(&pool, query).await;
 
-        assert_eq!(moves.remaining, 10);
-        assert_eq!(position.x, 42);
-        assert_eq!(position.y, 69);
+        let moves_list = value.get("movesList").ok_or("no moves found").unwrap();
+        let moves_list: Vec<Moves> = serde_json::from_value(moves_list.clone()).unwrap();
+        let position_list = value.get("positionList").ok_or("no position found").unwrap();
+        let position_list: Vec<Position> = serde_json::from_value(position_list.clone()).unwrap();
+
+        assert_eq!(moves_list[0].remaining, 10);
+        assert_eq!(position_list[0].x, 42);
+        assert_eq!(position_list[0].y, 69);
     }
 
     #[sqlx::test(migrations = "./migrations")]
-    async fn test_storage_filter(pool: SqlitePool) {
+    async fn test_component_filter(pool: SqlitePool) {
         entity_fixtures(&pool).await;
 
         let query = r#"
@@ -89,11 +84,8 @@ mod tests {
         assert_eq!(positions[0].y, 69);
     }
 
-    // TODO: relationship between component and storage needs to be rethought,
-    // storage (component instance) should be really nested under entity
-
     // #[sqlx::test(migrations = "./migrations")]
-    // async fn test_storage_union(pool: SqlitePool) {
+    // async fn test_component_union(pool: SqlitePool) {
     //     component_fixtures(&pool).await;
 
     //     let query = r#"
