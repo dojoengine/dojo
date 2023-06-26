@@ -10,13 +10,13 @@ use smol_str::SmolStr;
 use super::helpers::{ast_arg_to_expr, context_arg_as_path_segment_simple_or_panic};
 use super::{Command, CommandData, CommandMacroTrait, CAIRO_ERR_MSG_LEN};
 
-pub struct EntitiesCommand {
+pub struct FindCommand {
     query_id: String,
     data: CommandData,
     pub component_deps: Vec<Dependency>,
 }
 
-impl CommandMacroTrait for EntitiesCommand {
+impl CommandMacroTrait for FindCommand {
     fn from_ast(
         db: &dyn SyntaxGroup,
         let_pattern: Option<ast::Pattern>,
@@ -25,7 +25,7 @@ impl CommandMacroTrait for EntitiesCommand {
         let mut query_id =
             StringSanitizer::from(let_pattern.unwrap().as_syntax_node().get_text(db));
         query_id.to_snake_case();
-        let mut command = EntitiesCommand {
+        let mut command = FindCommand {
             query_id: query_id.get(),
             data: CommandData::new(),
             component_deps: vec![],
@@ -180,8 +180,8 @@ impl CommandMacroTrait for EntitiesCommand {
     }
 }
 
-impl From<EntitiesCommand> for Command {
-    fn from(val: EntitiesCommand) -> Self {
+impl From<FindCommand> for Command {
+    fn from(val: FindCommand) -> Self {
         Command::with_cmp_deps(val.data, val.component_deps)
     }
 }

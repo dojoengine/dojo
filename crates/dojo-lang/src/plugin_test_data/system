@@ -78,8 +78,8 @@ mod Move {
     }
 
     fn execute(player_id: felt252) {
-        let positions_query = commands:: entities!(ctx, 0x0, (Position, Player));
-        let players_query = entities!(ctx, 0x0, Player);
+        let positions_query = find!(ctx, 0x0, (Position, Player));
+        let players_query = find!(ctx, 0x0, Player);
         let player = get!(ctx, player_id.into(), Player);
         let player_position = get!(ctx, player_id.into(), (Position, Player));
 
@@ -90,7 +90,7 @@ mod Move {
         if bar == 123 {
             let player_position = get!(ctx, player_id.into(), (Position, Player));
             if foo.len() > 0_u32 {
-                let positions_query = entities!(ctx, 0x0, (Position, Player));
+                let positions_query = find!(ctx, 0x0, (Position, Player));
             }
         } else if bar == 321 {
             let maybe_player = try_get!(ctx, player_id.into(), Player);
@@ -120,7 +120,7 @@ mod Move {
                 let bar = x;
                 let player_position = get!(ctx, player_id.into(), (Position, Player));
                 if bar == 123 {
-                    let positions_query = entities!(ctx, 0x0, (Position, Player));
+                    let positions_query = find!(ctx, 0x0, (Position, Player));
                 }
             },
             Option::None(()) => {

@@ -9,7 +9,7 @@ use itertools::Itertools;
 use sanitizer::StringSanitizer;
 use smol_str::SmolStr;
 
-use super::entities::find_components;
+use super::find::find_components;
 use super::helpers::{ast_arg_to_expr, context_arg_as_path_segment_simple_or_panic, macro_name};
 use super::{Command, CommandData, CommandMacroTrait, CAIRO_ERR_MSG_LEN};
 

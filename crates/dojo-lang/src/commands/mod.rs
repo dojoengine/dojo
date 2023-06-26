@@ -4,14 +4,14 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal};
 use dojo_world::manifest::Dependency;
 
-use self::entities::EntitiesCommand;
 use self::execute::ExecuteCommand;
+use self::find::FindCommand;
 use self::get::GetCommand;
 use self::set::SetCommand;
 use self::uuid::UUIDCommand;
 
-pub mod entities;
 pub mod execute;
+pub mod find;
 pub mod get;
 mod helpers;
 pub mod set;
@@ -73,9 +73,7 @@ impl Command {
                     "get" | "try_get" => {
                         Some(GetCommand::from_ast(db, let_pattern, macro_ast).into())
                     }
-                    "entities" => {
-                        Some(EntitiesCommand::from_ast(db, let_pattern, macro_ast).into())
-                    }
+                    "find" => Some(FindCommand::from_ast(db, let_pattern, macro_ast).into()),
                     "execute" => Some(ExecuteCommand::from_ast(db, let_pattern, macro_ast).into()),
                     _ => None,
                 }
