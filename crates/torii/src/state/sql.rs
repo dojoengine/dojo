@@ -225,7 +225,8 @@ impl State for Sql {
                 .await?;
 
         let (names_str, values_str) = format_values(member_results, values)?;
-        let keys_str = keys.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join(",");
+        // TODO: map keys to individual columns
+        let keys_str = keys.iter().map(|k| format!("{:#x},", k)).collect::<Vec<String>>().join("");
 
         let insert_entities = format!(
             "INSERT INTO entities (id, partition, keys, component_names) VALUES ('{}', '{:#x}', \
