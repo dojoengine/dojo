@@ -8,14 +8,12 @@ use self::execute::ExecuteCommand;
 use self::find::FindCommand;
 use self::get::GetCommand;
 use self::set::SetCommand;
-use self::uuid::UUIDCommand;
 
 pub mod execute;
 pub mod find;
 pub mod get;
 mod helpers;
 pub mod set;
-pub mod uuid;
 
 const CAIRO_ERR_MSG_LEN: usize = 31;
 
@@ -38,6 +36,7 @@ impl CommandData {
         CommandData { rewrite_nodes: vec![], diagnostics: vec![] }
     }
 }
+
 pub struct Command {
     pub rewrite_nodes: Vec<RewriteNode>,
     pub diagnostics: Vec<PluginDiagnostic>,
@@ -68,7 +67,6 @@ impl Command {
         match segment {
             ast::PathSegment::Simple(segment_simple) => {
                 match segment_simple.ident(db).text(db).as_str() {
-                    "uuid" => Some(UUIDCommand::from_ast(db, let_pattern, macro_ast).into()),
                     "set" => Some(SetCommand::from_ast(db, let_pattern, macro_ast).into()),
                     "get" | "try_get" => {
                         Some(GetCommand::from_ast(db, let_pattern, macro_ast).into())

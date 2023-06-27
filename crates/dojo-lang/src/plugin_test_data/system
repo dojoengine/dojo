@@ -25,9 +25,8 @@ mod Spawn {
     use super::Position;
     use super::Player;
 
-    fn execute(name: felt252) {
-        let uuid = uuid!();
-        set !(ctx, (420, (69, uuid)).into_partitioned(), (
+    fn execute(ctx: Context, name: felt252) {
+        set !(ctx, (420, (69, ctx.world.uuid())).into_partitioned(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
@@ -299,8 +298,6 @@ mod Spawn {
 
     #[external(v0)]
     fn execute(self: @ContractState, ctx: Context, name: felt252) {
-        let uuid = ctx.world.uuid();
-
         {
             let mut calldata = array::ArrayTrait::new();
             serde::Serde::serialize(@Player { name: name }, ref calldata);
@@ -309,7 +306,7 @@ mod Spawn {
                 .set_entity(
                     ctx,
                     'Player',
-                    (420, (69, uuid)).into_partitioned(),
+                    (420, (69, ctx.world.uuid())).into_partitioned(),
                     0_u8,
                     array::ArrayTrait::span(@calldata)
                 );
@@ -323,7 +320,7 @@ mod Spawn {
                 .set_entity(
                     ctx,
                     'Position',
-                    (420, (69, uuid)).into_partitioned(),
+                    (420, (69, ctx.world.uuid())).into_partitioned(),
                     0_u8,
                     array::ArrayTrait::span(@calldata)
                 );
@@ -1004,21 +1001,21 @@ mod Proxy {
 
 //! > expected_diagnostics
 error: Plugin diagnostic: Invalid arguments. Expected "(context, query, (components,))"
- --> lib.cairo:45:14
+ --> lib.cairo:44:14
         set !(ctx, (
              ^*****^
 
 error: Plugin diagnostic: Component types cannot be empty
- --> lib.cairo:136:19
+ --> lib.cairo:135:19
         let err = get!(ctx, player_id.into(), ());
                   ^*****************************^
 
-error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::database::query::Query", found: "(?77, ?78, ?79, ?80, ?81)".
- --> lib.cairo:50:20
+error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::database::query::Query", found: "(?78, ?79, ?80, ?81, ?82)".
+ --> lib.cairo:49:20
         set !(ctx, (0, 0, 0, 0, 0), (
                    ^*************^
 
-error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::database::query::Query", found: "(?89, ?90, ?91, ?92, ?93)".
- --> lib.cairo:50:20
+error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::database::query::Query", found: "(?90, ?91, ?92, ?93, ?94)".
+ --> lib.cairo:49:20
         set !(ctx, (0, 0, 0, 0, 0), (
                    ^*************^
