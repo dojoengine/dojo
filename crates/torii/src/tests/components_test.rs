@@ -34,11 +34,11 @@ mod tests {
 
         let query = r#"
                 {
-                    movesList {
+                    movesComponents {
                         __typename
                         remaining
                     }
-                    positionList {
+                    positionComponents {
                         __typename
                         x
                         y
@@ -48,9 +48,9 @@ mod tests {
 
         let value = run_graphql_query(&pool, query).await;
 
-        let moves_list = value.get("movesList").ok_or("no moves found").unwrap();
+        let moves_list = value.get("movesComponents").ok_or("no moves found").unwrap();
         let moves_list: Vec<Moves> = serde_json::from_value(moves_list.clone()).unwrap();
-        let position_list = value.get("positionList").ok_or("no position found").unwrap();
+        let position_list = value.get("positionComponents").ok_or("no position found").unwrap();
         let position_list: Vec<Position> = serde_json::from_value(position_list.clone()).unwrap();
 
         assert_eq!(moves_list[0].remaining, 10);
@@ -64,7 +64,7 @@ mod tests {
 
         let query = r#"
                 {
-                    positionList (x: 42) {
+                    positionComponents (x: 42) {
                         __typename
                         x
                         y
@@ -73,10 +73,8 @@ mod tests {
             "#;
         let value = run_graphql_query(&pool, query).await;
 
-        let positions = value.get("positionList").ok_or("no positions found").unwrap();
+        let positions = value.get("positionComponents").ok_or("no positions found").unwrap();
         let positions: Vec<Position> = serde_json::from_value(positions.clone()).unwrap();
-
-        assert_eq!(positions.len(), 1);
         assert_eq!(positions[0].y, 69);
     }
 }

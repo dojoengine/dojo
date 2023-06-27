@@ -16,8 +16,9 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     let mut schema_builder = Schema::build("Query", None, None);
 
     // static objects + dynamic objects
-    let (mut objects, component_union) = dynamic_objects(pool).await?;
-    objects.extend(static_objects());
+    let mut objects = static_objects();
+    let (dynamic_objects, component_union) = dynamic_objects(pool).await?;
+    objects.extend(dynamic_objects);
 
     // collect field resolvers
     let mut fields = Vec::new();

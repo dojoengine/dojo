@@ -66,27 +66,28 @@ impl ObjectTrait for ComponentStateObject {
 fn resolve_many(name: String, type_name: String, field_type_mapping: TypeMapping) -> Field {
     let ftm_clone = field_type_mapping.clone();
 
-    let field = Field::new(format!("{}List", &name), TypeRef::named_list(type_name), move |ctx| {
-        // FIX: field_type_mapping and name needs to be passed down to the doubly
-        // nested async closures, thus the cloning. could handle this better
-        let field_type_mapping = field_type_mapping.clone();
-        let name = name.clone();
+    let field =
+        Field::new(format!("{}Components", &name), TypeRef::named_list(type_name), move |ctx| {
+            // FIX: field_type_mapping and name needs to be passed down to the doubly
+            // nested async closures, thus the cloning. could handle this better
+            let field_type_mapping = field_type_mapping.clone();
+            let name = name.clone();
 
-        FieldFuture::new(async move {
-            // parse optional input query params
-            let (filters, limit) = parse_inputs(&ctx, &field_type_mapping)?;
+            FieldFuture::new(async move {
+                // parse optional input query params
+                let (filters, limit) = parse_inputs(&ctx, &field_type_mapping)?;
 
-            let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-            let state_values =
-                component_states_query(&mut conn, &name, &filters, limit, &field_type_mapping)
-                    .await?;
+                let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                let state_values =
+                    component_states_query(&mut conn, &name, &filters, limit, &field_type_mapping)
+                        .await?;
 
-            let result: Vec<FieldValue<'_>> =
-                state_values.into_iter().map(FieldValue::owned_any).collect();
+                let result: Vec<FieldValue<'_>> =
+                    state_values.into_iter().map(FieldValue::owned_any).collect();
 
-            Ok(Some(FieldValue::list(result)))
-        })
-    });
+                Ok(Some(FieldValue::list(result)))
+            })
+        });
 
     add_arguments(field, ftm_clone)
 }

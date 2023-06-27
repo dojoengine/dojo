@@ -25,19 +25,29 @@ pub async fn entity_fixtures(pool: &SqlitePool) {
     let state = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
     state.load_from_manifest(manifest).await.unwrap();
 
-    // Set moves entity
+    // Set entity with one moves component
     let key = vec![FieldElement::ONE];
-    let partition = FieldElement::from_hex_be("0xdead").unwrap();
-    let values = vec![FieldElement::from_hex_be("0xa").unwrap()];
-    state.set_entity("moves".to_string(), partition, key, values).await.unwrap();
+    let partition = FieldElement::from_hex_be("0x0").unwrap();
+    let moves_values = vec![FieldElement::from_hex_be("0xa").unwrap()];
+    state.set_entity("Moves".to_string(), partition, key, moves_values.clone()).await.unwrap();
 
-    // Set position entity
+    // Set entity with one position component
     let key = vec![FieldElement::TWO];
-    let partition = FieldElement::from_hex_be("0xbeef").unwrap();
-    let values = vec![
+    let partition = FieldElement::from_hex_be("0x0").unwrap();
+    let position_values = vec![
         FieldElement::from_hex_be("0x2a").unwrap(),
         FieldElement::from_hex_be("0x45").unwrap(),
     ];
-    state.set_entity("position".to_string(), partition, key, values).await.unwrap();
+    state
+        .set_entity("Position".to_string(), partition, key, position_values.clone())
+        .await
+        .unwrap();
+
+    // Set an entity with both moves and position components
+    let key = vec![FieldElement::THREE];
+    let partition = FieldElement::from_hex_be("0x0").unwrap();
+    state.set_entity("Moves".to_string(), partition, key.clone(), moves_values).await.unwrap();
+    state.set_entity("Position".to_string(), partition, key, position_values).await.unwrap();
+
     state.execute().await.unwrap();
 }

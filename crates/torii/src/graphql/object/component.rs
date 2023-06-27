@@ -26,6 +26,7 @@ pub struct ComponentObject {
 }
 
 impl ComponentObject {
+    // Not used currently, eventually used for component metadata
     pub fn _new() -> Self {
         Self {
             field_type_mapping: IndexMap::from([

@@ -2,92 +2,85 @@
 mod tests {
     use serde::Deserialize;
     use sqlx::SqlitePool;
+    use starknet_crypto::{poseidon_hash_many, FieldElement};
 
-    use crate::tests::common::run_graphql_query;
+    use crate::tests::common::{entity_fixtures, run_graphql_query};
 
     #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase")]
     pub struct Entity {
-        pub id: String,
+        pub component_names: String,
+    }
+
+    #[derive(Deserialize)]
+    struct Moves {
+        __typename: String,
+        remaining: u32,
+    }
+
+    #[derive(Deserialize)]
+    struct Position {
+        __typename: String,
+        x: u32,
+        y: u32,
     }
 
     #[sqlx::test(migrations = "./migrations")]
     async fn test_entity(pool: SqlitePool) {
-        // let _ = pool.acquire().await;
+        entity_fixtures(&pool).await;
+        let entity_id = poseidon_hash_many(&[FieldElement::ONE]);
+        let query = format!(
+            r#"
+            {{
+                entity(id: "{:#x}") {{
+                    componentNames
+                }}
+            }}
+        "#,
+            entity_id
+        );
+        let value = run_graphql_query(&pool, &query).await;
 
-        // let query = "{ entity(id: \"1\") { id } }";
-        // let value = run_graphql_query(&pool, query).await;
-
-        // let entity = value.get("entity").ok_or("no entity found").unwrap();
-        // let entity: Entity = serde_json::from_value(entity.clone()).unwrap();
-        // assert_eq!(entity.id, "1".to_string());
+        let entity = value.get("entity").ok_or("no entity found").unwrap();
+        let entity: Entity = serde_json::from_value(entity.clone()).unwrap();
+        assert_eq!(entity.component_names, "Moves".to_string());
     }
 
-    // #[sqlx::test(migrations = "./migrations", fixtures("entities"))]
-    // async fn test_entities_partition(pool: SqlitePool) {
-    //     let _ = pool.acquire().await;
+    #[sqlx::test(migrations = "./migrations")]
+    async fn test_entity_components(pool: SqlitePool) {
+        entity_fixtures(&pool).await;
 
-    //     let query = "{ entities (partition: \"420\") { edges { node { id name partition keys
-    // \                  transactionHash createdAt } } } }";
-    //     let value = run_graphql_query(&pool, query).await;
+        let entity_id = poseidon_hash_many(&[FieldElement::THREE]);
+        let query = format!(
+            r#"
+                {{
+                    entity (id: "{:#x}") {{
+                        components {{
+                            __typename
+                            ... on Moves {{
+                                remaining
+                            }}
+                            ... on Position {{
+                                x
+                                y
+                            }}
+                        }}
+                    }}
+                }}
+            "#,
+            entity_id
+        );
+        let value = run_graphql_query(&pool, &query).await;
 
-    //     let entities = value.get("entities").ok_or("incorrect entities").unwrap();
-    //     let edges = entities.get("edges").ok_or("incorrect edges").unwrap();
-    //     let edges: Vec<serde_json::Value> = serde_json::from_value(edges.clone()).unwrap();
-    //     assert_eq!(edges.len(), 2);
-    // }
+        let entity = value.get("entity").ok_or("no entity found").unwrap();
+        let components = entity.get("components").ok_or("no components found").unwrap();
+        let component_moves: Moves = serde_json::from_value(components[0].clone()).unwrap();
+        let component_position: Position = serde_json::from_value(components[1].clone()).unwrap();
 
-    // #[sqlx::test(migrations = "./migrations", fixtures("entities"))]
-    // async fn test_entities_partition_keys(pool: SqlitePool) {
-    //     let _ = pool.acquire().await;
-
-    //     let query = "{ entities (partition: \"69\", keys: [\"420\"]) { edges { node { id name \
-    //                  partition keys transactionHash createdAt } } } }";
-    //     let value = run_graphql_query(&pool, query).await;
-
-    //     let entities = value.get("entities").ok_or("incorrect entities").unwrap();
-    //     let edges = entities.get("edges").ok_or("incorrect edges").unwrap();
-    //     let node = edges[0].get("node").ok_or("incorrect node").unwrap();
-    //     let entity: Entity = serde_json::from_value(node.clone()).unwrap();
-    //     assert_eq!(entity.id, "entity_3".to_string());
-    // }
-
-    // #[sqlx::test(migrations = "./migrations")]
-    // async fn test_component_union(pool: SqlitePool) {
-    //     component_fixtures(&pool).await;
-
-    //     let query = r#"
-    //             {
-    //                 component_moves: component(id: "moves") {
-    //                     name
-    //                     storage {
-    //                         __typename
-    //                         ... on Moves {
-    //                             remaining
-    //                         }
-    //                     }
-    //                 }
-    //                 component_position: component(id: "position") {
-    //                     name
-    //                     storage {
-    //                         __typename
-    //                         ... on Position {
-    //                             x
-    //                             y
-    //                         }
-    //                     }
-    //                 }
-    //             }
-    //         "#;
-    //     let value = run_graphql_query(&pool, query).await;
-    //     let component_moves = value.get("component_moves").ok_or("no component found").unwrap();
-    //     let component_moves: ComponentMoves =
-    //         serde_json::from_value(component_moves.clone()).unwrap();
-    //     let component_position =
-    //         value.get("component_position").ok_or("no component found").unwrap();
-    //     let component_position: ComponentPosition =
-    //         serde_json::from_value(component_position.clone()).unwrap();
-
-    //     assert_eq!(component_moves.name, component_moves.storage.__typename);
-    //     assert_eq!(component_position.name, component_position.storage.__typename);
-    // }
+        assert_eq!(component_moves.__typename, "Moves");
+        assert_eq!(component_moves.remaining, 10);
+        assert_eq!(component_position.__typename, "Position");
+        assert_eq!(component_position.x, 42);
+        assert_eq!(component_position.y, 69);
+    }
 }
