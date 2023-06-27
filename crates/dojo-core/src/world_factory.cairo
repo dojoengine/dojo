@@ -11,8 +11,8 @@ mod WorldFactory {
         syscalls::deploy_syscall, get_caller_address
     };
 
-    use dojo_core::interfaces::{IWorldDispatcher, IWorldDispatcherTrait};
-    use dojo_core::auth::systems::Route;
+    use dojo::interfaces::{IWorldDispatcher, IWorldDispatcherTrait};
+    use dojo::auth::systems::Route;
 
     #[storage]
     struct Storage {
@@ -85,7 +85,7 @@ mod WorldFactory {
         let mut grant_role_calldata: Array<felt252> = ArrayTrait::new();
 
         grant_role_calldata.append(caller.into()); // target_id
-        grant_role_calldata.append(dojo_core::world::World::ADMIN); // role_id
+        grant_role_calldata.append(dojo::world::World::ADMIN); // role_id
         world.execute('GrantAuthRole'.into(), grant_role_calldata.span());
 
         // register components

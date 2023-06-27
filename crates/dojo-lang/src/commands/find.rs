@@ -99,7 +99,7 @@ impl CommandMacroTrait for FindCommand {
 
         command.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
             "
-            let mut __$query_id$_matching_entities = dojo_core::database::utils::find_matching(
+            let mut __$query_id$_matching_entities = dojo::database::utils::find_matching(
                 __$query_id$_ids.span(), __$query_id$_entities_raw.span()
             );
 

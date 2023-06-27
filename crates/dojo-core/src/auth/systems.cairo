@@ -19,7 +19,7 @@ impl RouteImpl of RouteTrait {
 mod RouteAuth {
     use traits::Into;
 
-    use dojo_core::auth::components::{AuthStatus, AuthRole};
+    use dojo::auth::components::{AuthStatus, AuthRole};
     use super::Route;
 
     use starknet::ContractAddress;
@@ -37,8 +37,8 @@ mod RouteAuth {
 mod IsAccountAdmin {
     use traits::Into;
     use box::BoxTrait;
-    use dojo_core::auth::components::{AuthStatus, AuthRole};
-    use dojo_core::world::World;
+    use dojo::auth::components::{AuthStatus, AuthRole};
+    use dojo::world::World;
 
     fn execute(ctx: Context) -> bool {
         // Get calling account contract address
@@ -52,8 +52,8 @@ mod IsAccountAdmin {
 #[system]
 mod IsAuthorized {
     use traits::Into;
-    use dojo_core::auth::components::{AuthStatus, AuthRole};
-    use dojo_core::world::World;
+    use dojo::auth::components::{AuthStatus, AuthRole};
+    use dojo::world::World;
 
     fn execute(ctx: Context, target_id: felt252, resource_id: felt252) -> bool {
         // Check if execution role is not set
@@ -104,7 +104,7 @@ mod IsAuthorized {
 mod GrantAuthRole {
     use traits::Into;
     use array::ArrayTrait;
-    use dojo_core::auth::components::AuthRole;
+    use dojo::auth::components::AuthRole;
 
     fn execute(ctx: Context, target_id: felt252, role_id: felt252) {
         set !(ctx, target_id.into(), (AuthRole { id: role_id }));
@@ -115,7 +115,7 @@ mod GrantAuthRole {
 mod GrantScopedAuthRole {
     use traits::Into;
     use array::ArrayTrait;
-    use dojo_core::auth::components::AuthRole;
+    use dojo::auth::components::AuthRole;
 
 
     fn execute(ctx: Context, target_id: felt252, role_id: felt252, resource_id: felt252) {
@@ -126,7 +126,7 @@ mod GrantScopedAuthRole {
 #[system]
 mod GrantResource {
     use traits::Into;
-    use dojo_core::auth::components::AuthStatus;
+    use dojo::auth::components::AuthStatus;
 
     fn execute(ctx: Context, role_id: felt252, resource_id: felt252) {
         set !(ctx, (role_id, resource_id).into(), (AuthStatus { is_authorized: true }));
@@ -137,7 +137,7 @@ mod GrantResource {
 mod RevokeAuthRole {
     use traits::Into;
     use array::ArrayTrait;
-    use dojo_core::auth::components::AuthRole;
+    use dojo::auth::components::AuthRole;
 
     fn execute(ctx: Context, target_id: felt252) {
         set !(ctx, target_id.into(), (AuthRole { id: 0.into() }));
@@ -148,7 +148,7 @@ mod RevokeAuthRole {
 mod RevokeScopedAuthRole {
     use traits::Into;
     use array::ArrayTrait;
-    use dojo_core::auth::components::AuthRole;
+    use dojo::auth::components::AuthRole;
 
     fn execute(ctx: Context, target_id: felt252, resource_id: felt252) {
         set !(ctx, (target_id, resource_id).into(), (AuthRole { id: 0.into() }));
@@ -158,7 +158,7 @@ mod RevokeScopedAuthRole {
 #[system]
 mod RevokeResource {
     use traits::Into;
-    use dojo_core::auth::components::AuthStatus;
+    use dojo::auth::components::AuthStatus;
 
     fn execute(ctx: Context, role_id: felt252, resource_id: felt252) {
         set !(ctx, (role_id, resource_id).into(), (AuthStatus { is_authorized: false }));

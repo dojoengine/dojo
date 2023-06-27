@@ -5,9 +5,9 @@ mod Executor {
     use clone::Clone;
     use box::BoxTrait;
     use traits::Into;
-    use dojo_core::execution_context::Context;
-    use dojo_core::interfaces::{IWorldDispatcher, ISystemLibraryDispatcher, ISystemDispatcherTrait};
-    use dojo_core::auth::components::AuthRole;
+    use dojo::execution_context::Context;
+    use dojo::interfaces::{IWorldDispatcher, ISystemLibraryDispatcher, ISystemDispatcherTrait};
+    use dojo::auth::components::AuthRole;
     use starknet::contract_address::ContractAddressIntoFelt252;
     use starknet::{get_caller_address, get_tx_info};
 

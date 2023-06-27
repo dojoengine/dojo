@@ -10,17 +10,17 @@ use starknet::syscalls::deploy_syscall;
 use starknet::get_caller_address;
 use starknet::class_hash::ClassHash;
 use starknet::class_hash::Felt252TryIntoClassHash;
-use dojo_core::interfaces::IWorldFactoryDispatcher;
-use dojo_core::interfaces::IWorldFactoryDispatcherTrait;
-use dojo_core::interfaces::IWorldDispatcher;
-use dojo_core::interfaces::IWorldDispatcherTrait;
-use dojo_core::executor::Executor;
-use dojo_core::world::World;
-use dojo_core::world_factory::WorldFactory;
+use dojo::interfaces::IWorldFactoryDispatcher;
+use dojo::interfaces::IWorldFactoryDispatcherTrait;
+use dojo::interfaces::IWorldDispatcher;
+use dojo::interfaces::IWorldDispatcherTrait;
+use dojo::executor::Executor;
+use dojo::world::World;
+use dojo::world_factory::WorldFactory;
 
-use dojo_core::auth::components::AuthRoleComponent;
-use dojo_core::auth::systems::{Route, RouteTrait, GrantAuthRole};
-use dojo_core::test_utils::{build_world_factory_calldata, mock_auth_components_systems};
+use dojo::auth::components::AuthRoleComponent;
+use dojo::auth::systems::{Route, RouteTrait, GrantAuthRole};
+use dojo::test_utils::{build_world_factory_calldata, mock_auth_components_systems};
 
 #[derive(Component, Copy, Drop, Serde)]
 struct Foo {
