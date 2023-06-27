@@ -19,12 +19,12 @@ use cairo_lang_syntax::attribute::structured::{
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal};
-use camino::Utf8Path;
 use dojo_world::manifest::{Dependency, Member};
 use scarb::compiler::plugin::builtin::BuiltinSemanticCairoPlugin;
 use scarb::core::{PackageId, PackageName, SourceId};
 use semver::Version;
 use smol_str::SmolStr;
+use url::Url;
 
 use crate::component::handle_component_struct;
 use crate::system::System;
@@ -198,13 +198,13 @@ pub struct CairoPluginRepository(scarb::compiler::plugin::CairoPluginRepository)
 impl CairoPluginRepository {
     pub fn new() -> Self {
         let mut repo = scarb::compiler::plugin::CairoPluginRepository::empty();
-        let dojo_local_package_id = PackageId::new(
+        let url = Url::parse("https://github.com/dojoengine/dojo").unwrap();
+        let dojo_package_id = PackageId::new(
             PackageName::new("dojo_plugin"),
             Version::parse("0.1.0").unwrap(),
-            SourceId::for_path(Utf8Path::new(env!("CARGO_MANIFEST_DIR"))).unwrap(),
+            SourceId::for_git(&url, &scarb::core::GitReference::DefaultBranch).unwrap(),
         );
-        repo.add(Box::new(BuiltinSemanticCairoPlugin::<DojoPlugin>::new(dojo_local_package_id)))
-            .unwrap();
+        repo.add(Box::new(BuiltinSemanticCairoPlugin::<DojoPlugin>::new(dojo_package_id))).unwrap();
         let starknet_package_id = PackageId::new(
             PackageName::STARKNET,
             Version::parse("2.0.0-rc4").unwrap(),
