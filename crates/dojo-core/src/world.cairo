@@ -79,13 +79,10 @@ mod World {
     fn constructor(ref self: ContractState, executor: ContractAddress) {
         self.executor_dispatcher.write(IExecutorDispatcher { contract_address: executor });
         self.emit(
-            Event::WorldSpawned(
-                WorldSpawned
-                {
-                    address: get_contract_address(), 
-                    caller: get_tx_info().unbox().account_contract_address
-                }
-            )
+            WorldSpawned {
+                address: get_contract_address(), 
+                caller: get_tx_info().unbox().account_contract_address
+            }
         );
     }
 
@@ -214,14 +211,7 @@ mod World {
             assert(is_account_admin(@self), 'only admin can update');
         }
         self.component_registry.write(name, class_hash);
-        self.emit(
-            Event::ComponentRegistered(
-                ComponentRegistered {
-                    name, 
-                    class_hash
-                }
-            )
-        );
+        self.emit(ComponentRegistered{ name, class_hash });
     }
 
     /// Get the class hash of a registered component
@@ -252,14 +242,7 @@ mod World {
             assert(is_account_admin(@self), 'only admin can update');
         }
         self.system_registry.write(name, class_hash);
-        self.emit(
-            Event::SystemRegistered(
-                SystemRegistered {
-                    name, 
-                    class_hash
-                }
-            )
-        );
+        self.emit(SystemRegistered{ name, class_hash });
     }
 
     /// Get the class hash of a registered system
@@ -353,16 +336,7 @@ mod World {
         let component_class_hash = self.component_registry.read(component);
         database::set(component_class_hash, table_id, query, offset, value);
 
-        self.emit(
-            Event::StoreSetRecord(
-                StoreSetRecord {
-                    table_id, 
-                    keys, 
-                    offset, 
-                    value
-                }
-            )
-        );
+        self.emit(StoreSetRecord{ table_id, keys, offset, value });
     }
 
     /// Delete a component from an entity
@@ -391,14 +365,7 @@ mod World {
         let keys = query.keys();
         let component_class_hash = self.component_registry.read(component);
         database::del(component_class_hash, component.into(), query);
-        self.emit(
-            Event::StoreDelRecord(
-                StoreDelRecord {
-                    table_id, 
-                    keys
-                }
-            )
-        );
+        self.emit(StoreDelRecord{ table_id, keys });
     }
 
     /// Get the component value for an entity
