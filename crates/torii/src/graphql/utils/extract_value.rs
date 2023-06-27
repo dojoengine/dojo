@@ -22,8 +22,20 @@ impl ExtractValue for String {
     }
 }
 
+impl ExtractValue for Vec<String> {
+    fn extract(value_accessor: ValueAccessor<'_>) -> Result<Vec<String>> {
+        let str_array = value_accessor.list()?;
+        let mut strings = Vec::new();
+        for s in str_array.iter() {
+            let string = s.string()?.to_string();
+            strings.push(string);
+        }
+        Ok(strings)
+    }
+}
+
 pub fn extract<T: ExtractValue>(values: &ValueMapping, key: &str) -> Result<T> {
     let accessor = ObjectAccessor(Cow::Borrowed(values));
-    let str = accessor.try_get(key)?;
-    T::extract(str)
+    let value = accessor.try_get(key)?;
+    T::extract(value)
 }

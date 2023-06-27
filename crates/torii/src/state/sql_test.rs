@@ -98,7 +98,6 @@ async fn test_load_from_manifest(pool: SqlitePool) {
     state
         .set_entity(
             "Position".to_string(),
-            FieldElement::ZERO,
             vec![FieldElement::ONE],
             vec![
                 FieldElement::from_dec_str("42").unwrap(),

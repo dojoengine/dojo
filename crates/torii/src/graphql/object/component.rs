@@ -1,4 +1,4 @@
-use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef, Union};
+use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
 use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
@@ -9,7 +9,7 @@ use super::query::{query_all, query_by_id, ID};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::graphql::constants::DEFAULT_LIMIT;
 use crate::graphql::types::ScalarType;
-use crate::graphql::utils::{format_name, remove_quotes};
+use crate::graphql::utils::remove_quotes;
 
 #[derive(FromRow, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -21,25 +21,13 @@ pub struct Component {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(FromRow, Deserialize)]
-pub struct ComponentMembers {
-    pub component_id: String,
-    pub name: String,
-    #[serde(rename = "type")]
-    pub ty: String,
-    pub slot: i64,
-    pub offset: i64,
-    pub created_at: DateTime<Utc>,
-}
 pub struct ComponentObject {
     pub field_type_mapping: TypeMapping,
-    pub storage_names: Vec<String>,
 }
 
 impl ComponentObject {
-    // Storage names are passed in on new because
-    // it builds the related fields dynamically
-    pub fn new(storage_names: Vec<String>) -> Self {
+    // Not used currently, eventually used for component metadata
+    pub fn _new() -> Self {
         Self {
             field_type_mapping: IndexMap::from([
                 (Name::new("id"), TypeRef::ID.to_string()),
@@ -48,7 +36,6 @@ impl ComponentObject {
                 (Name::new("transactionHash"), ScalarType::Felt252.to_string()),
                 (Name::new("createdAt"), ScalarType::DateTime.to_string()),
             ]),
-            storage_names,
         }
     }
 
@@ -79,13 +66,6 @@ impl ObjectTrait for ComponentObject {
 
     fn field_type_mapping(&self) -> &TypeMapping {
         &self.field_type_mapping
-    }
-
-    fn unions(&self) -> Option<Vec<Union>> {
-        Some(vec![self.storage_names.iter().fold(Union::new("Storage"), |union, storage| {
-            let (_, type_name) = format_name(storage);
-            union.possible_type(type_name)
-        })])
     }
 
     fn resolvers(&self) -> Vec<Field> {
