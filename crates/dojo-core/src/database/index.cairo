@@ -5,7 +5,6 @@ use poseidon::poseidon_hash_span;
 use serde::Serde;
 
 use dojo_core::database::storage;
-use dojo_core::serde::SpanSerde;
 
 fn create(address_domain: u32, index: felt252, id: felt252) {
     if exists(address_domain, index, id) {

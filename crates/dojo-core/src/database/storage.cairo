@@ -4,13 +4,11 @@ use starknet::SyscallResultTrait;
 use traits::Into;
 use poseidon::poseidon_hash_span;
 use serde::Serde;
-use dojo_core::serde::SpanSerde;
 
 fn get(address_domain: u32, keys: Span<felt252>) -> felt252 {
     let base = starknet::storage_base_address_from_felt252(poseidon_hash_span(keys));
-    starknet::storage_read_syscall(
-        address_domain, starknet::storage_address_from_base(base)
-    ).unwrap_syscall()
+    starknet::storage_read_syscall(address_domain, starknet::storage_address_from_base(base))
+        .unwrap_syscall()
 }
 
 fn get_many(address_domain: u32, keys: Span<felt252>, offset: u8, length: usize) -> Span<felt252> {
@@ -27,7 +25,8 @@ fn get_many(address_domain: u32, keys: Span<felt252>, offset: u8, length: usize)
             .append(
                 starknet::storage_read_syscall(
                     address_domain, starknet::storage_address_from_base_and_offset(base, offset)
-                ).unwrap_syscall()
+                )
+                    .unwrap_syscall()
             );
 
         offset += 1;

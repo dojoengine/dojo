@@ -1,7 +1,7 @@
 use array::{ArrayTrait, SpanTrait};
-use dict::Felt252DictTrait;
 use option::OptionTrait;
-use traits::{Into, TryInto};
+use traits::{Default, Into, TryInto};
+use dict::Felt252DictTrait;
 
 // big enough number used to construct a compound key in `find_matching`
 const OFFSET: felt252 = 0x10000000000000000000000000000000000;
@@ -35,13 +35,13 @@ fn find_matching(
     }
 
     // keeps track of how many times has an ID been encountered
-    let mut ids_match: Felt252Dict<u8> = Felt252DictTrait::new();
+    let mut ids_match: Felt252Dict<u8> = Default::default();
 
     // keeps track of indexes where a particular entity with ID is in
     // each entity array; to do so, we're using a compound key or 2 parts
     // first part is the entity *type* (calculated as OFFSET * entity_type_counter)
     // second part is the entity ID itself
-    let mut id_to_idx: Felt252Dict<usize> = Felt252DictTrait::new();
+    let mut id_to_idx: Felt252Dict<usize> = Default::default();
 
     // how many ID arrays have we looped over so far; ultimately
     // this number is the same as ids.len() and we use only those
@@ -71,8 +71,7 @@ fn find_matching(
                             // keep track of the index of the particular entity in an
                             // entity type array, i.e. at which index is the entity
                             // with `id` at, using the compound key
-                            id_to_idx
-                                .insert(OFFSET * entity_type_counter.into() + *id, index);
+                            id_to_idx.insert(OFFSET * entity_type_counter.into() + *id, index);
                             index += 1;
                         },
                         Option::None(_) => {

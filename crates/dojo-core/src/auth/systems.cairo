@@ -24,16 +24,12 @@ mod RouteAuth {
 
     use starknet::ContractAddress;
 
-    fn execute(route: Route) {
+    fn execute(ctx: Context, route: Route) {
         // Set scoped role
-        commands::set_entity(
-            (route.target_id, route.resource_id).into(), (AuthRole { id: route.role_id })
-        );
+        set !(ctx, (route.target_id, route.resource_id).into(), (AuthRole { id: route.role_id }));
 
         // Set status
-        commands::set_entity(
-            (route.role_id, route.resource_id).into(), (AuthStatus { is_authorized: true })
-        );
+        set !(ctx, (route.role_id, route.resource_id).into(), (AuthStatus { is_authorized: true }));
     }
 }
 
@@ -47,7 +43,7 @@ mod IsAccountAdmin {
     fn execute(ctx: Context) -> bool {
         // Get calling account contract address
         let caller = ctx.caller_account;
-        let role = commands::<AuthRole>::entity(caller.into());
+        let role = get !(ctx, caller.into(), AuthRole);
         // Authorize if role is Admin
         role.id.into() == World::ADMIN
     }
@@ -78,8 +74,8 @@ mod IsAuthorized {
         };
 
         // Get authorization status for scoped role
-        let maybe_authorization_status = commands::<AuthStatus>::try_entity(
-            (scoped_role, resource_id).into()
+        let maybe_authorization_status = try_get !(
+            ctx, (scoped_role, resource_id).into(), AuthStatus
         );
         let authorization_status = match maybe_authorization_status {
             Option::Some(authorization_status) => authorization_status.is_authorized,
@@ -92,7 +88,7 @@ mod IsAuthorized {
         }
 
         // If system is not authorized, get World level role
-        let role = commands::<AuthRole>::entity(target_id.into());
+        let role = get !(ctx, target_id.into(), AuthRole);
 
         // Check if system's role is Admin and executed by an Admin
         if role.id.into() == World::ADMIN {
@@ -110,8 +106,8 @@ mod GrantAuthRole {
     use array::ArrayTrait;
     use dojo_core::auth::components::AuthRole;
 
-    fn execute(target_id: felt252, role_id: felt252) {
-        commands::set_entity(target_id.into(), (AuthRole { id: role_id }));
+    fn execute(ctx: Context, target_id: felt252, role_id: felt252) {
+        set !(ctx, target_id.into(), (AuthRole { id: role_id }));
     }
 }
 
@@ -122,8 +118,8 @@ mod GrantScopedAuthRole {
     use dojo_core::auth::components::AuthRole;
 
 
-    fn execute(target_id: felt252, role_id: felt252, resource_id: felt252) {
-        commands::set_entity((target_id, resource_id).into(), (AuthRole { id: role_id }));
+    fn execute(ctx: Context, target_id: felt252, role_id: felt252, resource_id: felt252) {
+        set !(ctx, (target_id, resource_id).into(), (AuthRole { id: role_id }));
     }
 }
 
@@ -132,8 +128,8 @@ mod GrantResource {
     use traits::Into;
     use dojo_core::auth::components::AuthStatus;
 
-    fn execute(role_id: felt252, resource_id: felt252) {
-        commands::set_entity((role_id, resource_id).into(), (AuthStatus { is_authorized: true }));
+    fn execute(ctx: Context, role_id: felt252, resource_id: felt252) {
+        set !(ctx, (role_id, resource_id).into(), (AuthStatus { is_authorized: true }));
     }
 }
 
@@ -143,8 +139,8 @@ mod RevokeAuthRole {
     use array::ArrayTrait;
     use dojo_core::auth::components::AuthRole;
 
-    fn execute(target_id: felt252) {
-        commands::set_entity(target_id.into(), (AuthRole { id: 0.into() }));
+    fn execute(ctx: Context, target_id: felt252) {
+        set !(ctx, target_id.into(), (AuthRole { id: 0.into() }));
     }
 }
 
@@ -154,8 +150,8 @@ mod RevokeScopedAuthRole {
     use array::ArrayTrait;
     use dojo_core::auth::components::AuthRole;
 
-    fn execute(target_id: felt252, resource_id: felt252) {
-        commands::set_entity((target_id, resource_id).into(), (AuthRole { id: 0.into() }));
+    fn execute(ctx: Context, target_id: felt252, resource_id: felt252) {
+        set !(ctx, (target_id, resource_id).into(), (AuthRole { id: 0.into() }));
     }
 }
 
@@ -164,7 +160,7 @@ mod RevokeResource {
     use traits::Into;
     use dojo_core::auth::components::AuthStatus;
 
-    fn execute(role_id: felt252, resource_id: felt252) {
-        commands::set_entity((role_id, resource_id).into(), (AuthStatus { is_authorized: false }));
+    fn execute(ctx: Context, role_id: felt252, resource_id: felt252) {
+        set !(ctx, (role_id, resource_id).into(), (AuthStatus { is_authorized: false }));
     }
 }

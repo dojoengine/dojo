@@ -189,7 +189,8 @@ impl MarketImpl of MarketTrait {
         // If there is no liquidity, then mint total shares
         if !self.has_liquidity() {
             let quantity: u128 = quantity.into() * SCALING_FACTOR;
-            (FixedTrait::new_unscaled(amount, false) * FixedTrait::new_unscaled(quantity, false)).sqrt()
+            (FixedTrait::new_unscaled(amount, false) * FixedTrait::new_unscaled(quantity, false))
+                .sqrt()
         } else {
             // Convert amount to fixed point
             let amount = FixedTrait::new_unscaled(amount, false);

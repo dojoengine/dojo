@@ -12,6 +12,7 @@ async-trait.workspace = true
 blockifier.workspace = true
 cairo-lang-casm.workspace = true
 cairo-lang-starknet.workspace = true
+cairo-vm = "0.6"
 flate2 = "1.0.26"
 futures = "0.3"
 lazy_static = "1.4.0"

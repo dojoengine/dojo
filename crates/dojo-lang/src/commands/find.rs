@@ -1,42 +1,53 @@
-use std::collections::HashMap;
-
 use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_semantic::patcher::RewriteNode;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
+use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_world::manifest::Dependency;
 use sanitizer::StringSanitizer;
 use smol_str::SmolStr;
 
-use super::{CommandData, CommandTrait, CAIRO_ERR_MSG_LEN};
+use super::helpers::{ast_arg_to_expr, context_arg_as_path_segment_simple_or_panic};
+use super::{Command, CommandData, CommandMacroTrait, CAIRO_ERR_MSG_LEN};
 
-pub struct EntitiesCommand {
+pub struct FindCommand {
     query_id: String,
     data: CommandData,
-    pub components: Vec<Dependency>,
+    pub component_deps: Vec<Dependency>,
 }
 
-impl CommandTrait for EntitiesCommand {
+impl CommandMacroTrait for FindCommand {
     fn from_ast(
         db: &dyn SyntaxGroup,
         let_pattern: Option<ast::Pattern>,
-        command_ast: ast::ExprFunctionCall,
+        macro_ast: ast::ExprInlineMacro,
     ) -> Self {
         let mut query_id =
             StringSanitizer::from(let_pattern.unwrap().as_syntax_node().get_text(db));
         query_id.to_snake_case();
-        let mut command = EntitiesCommand {
+        let mut command = FindCommand {
             query_id: query_id.get(),
             data: CommandData::new(),
-            components: vec![],
+            component_deps: vec![],
         };
 
-        let partition =
-            if let Some(partition) = command_ast.arguments(db).args(db).elements(db).first() {
-                RewriteNode::new_trimmed(partition.as_syntax_node())
-            } else {
-                RewriteNode::Text("0".to_string())
-            };
+        let elements = macro_ast.arguments(db).args(db).elements(db);
+
+        if elements.len() != 3 {
+            command.data.diagnostics.push(PluginDiagnostic {
+                message: "Invalid arguments. Expected \"(context, query, (components,))\""
+                    .to_string(),
+                stable_ptr: macro_ast.arguments(db).as_syntax_node().stable_ptr(),
+            });
+            return command;
+        }
+
+        let context = &elements[0];
+        let partition = &elements[1];
+        let types = &elements[2];
+
+        let context_name =
+            context_arg_as_path_segment_simple_or_panic(db, context).ident(db).text(db);
 
         command.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
             "
@@ -44,10 +55,13 @@ impl CommandTrait for EntitiesCommand {
             let mut __$query_id$_entities_raw: Array<Span<Span<felt252>>> = ArrayTrait::new();
 
             ",
-            HashMap::from([("query_id".to_string(), RewriteNode::Text(command.query_id.clone()))]),
+            UnorderedHashMap::from([(
+                "query_id".to_string(),
+                RewriteNode::Text(command.query_id.clone()),
+            )]),
         ));
 
-        let components = find_components(db, &command_ast);
+        let components = find_components(db, ast_arg_to_expr(db, types).unwrap());
 
         command.data.rewrite_nodes.extend(
             components
@@ -56,17 +70,21 @@ impl CommandTrait for EntitiesCommand {
                     RewriteNode::interpolate_patched(
                         "
                         let (__$query_id$_$query_subtype$_ids, __$query_id$_$query_subtype$_raw) = \
-                         ctx.world.entities('$component$', $partition$);
+                         $context$.world.entities('$component$', $partition$);
                         __$query_id$_ids.append(__$query_id$_$query_subtype$_ids);
                         __$query_id$_entities_raw.append(__$query_id$_$query_subtype$_raw);
                         ",
-                        HashMap::from([
+                        UnorderedHashMap::from([
+                            ("context".to_string(), RewriteNode::Text(context_name.to_string())),
                             ("query_id".to_string(), RewriteNode::Text(command.query_id.clone())),
                             (
                                 "query_subtype".to_string(),
                                 RewriteNode::Text(component.to_string().to_ascii_lowercase()),
                             ),
-                            ("partition".to_string(), partition.clone()),
+                            (
+                                "partition".to_string(),
+                                RewriteNode::new_trimmed(partition.as_syntax_node()),
+                            ),
                             ("component".to_string(), RewriteNode::Text(component.to_string())),
                         ]),
                     )
@@ -74,7 +92,7 @@ impl CommandTrait for EntitiesCommand {
                 .collect::<Vec<_>>(),
         );
 
-        command.components = components
+        command.component_deps = components
             .iter()
             .map(|c| Dependency { name: c.clone(), read: true, write: false })
             .collect();
@@ -86,11 +104,14 @@ impl CommandTrait for EntitiesCommand {
             );
 
             ",
-            HashMap::from([("query_id".to_string(), RewriteNode::Text(command.query_id.clone()))]),
+            UnorderedHashMap::from([(
+                "query_id".to_string(),
+                RewriteNode::Text(command.query_id.clone()),
+            )]),
         ));
 
         command.data.rewrite_nodes.extend(
-            find_components(db, &command_ast)
+            components
                 .iter()
                 .enumerate()
                 .map(|(idx, component)| {
@@ -124,7 +145,7 @@ impl CommandTrait for EntitiesCommand {
                             }
                         };
                         ",
-                        HashMap::from([
+                        UnorderedHashMap::from([
                             ("query_id".to_string(), RewriteNode::Text(command.query_id.clone())),
                             (
                                 "query_subtype".to_string(),
@@ -139,7 +160,7 @@ impl CommandTrait for EntitiesCommand {
                 .collect::<Vec<_>>(),
         );
 
-        let desered_entities: String = find_components(db, &command_ast)
+        let desered_entities: String = components
             .iter()
             .map(|component| format!("__{}s", component.to_string().to_ascii_lowercase()))
             .collect::<Vec<String>>()
@@ -149,7 +170,7 @@ impl CommandTrait for EntitiesCommand {
             "
             let $query_id$ = ($desered_entities$);
             ",
-            HashMap::from([
+            UnorderedHashMap::from([
                 ("query_id".to_string(), RewriteNode::Text(command.query_id.clone())),
                 ("desered_entities".to_string(), RewriteNode::Text(desered_entities)),
             ]),
@@ -157,40 +178,24 @@ impl CommandTrait for EntitiesCommand {
 
         command
     }
+}
 
-    fn rewrite_nodes(&self) -> Vec<RewriteNode> {
-        self.data.rewrite_nodes.clone()
-    }
-
-    fn diagnostics(&self) -> Vec<PluginDiagnostic> {
-        self.data.diagnostics.clone()
+impl From<FindCommand> for Command {
+    fn from(val: FindCommand) -> Self {
+        Command::with_cmp_deps(val.data, val.component_deps)
     }
 }
 
-pub fn find_components(db: &dyn SyntaxGroup, command_ast: &ast::ExprFunctionCall) -> Vec<SmolStr> {
-    let mut components = vec![];
-    if let ast::PathSegment::WithGenericArgs(generic) =
-        command_ast.path(db).elements(db).first().unwrap()
-    {
-        for arg in generic.generic_args(db).generic_args(db).elements(db) {
-            if let ast::GenericArg::Expr(expr) = arg {
-                components.extend(find_components_inner(db, expr.value(db)));
-            }
-        }
-    }
-    components
-}
-
-fn find_components_inner(db: &dyn SyntaxGroup, expression: ast::Expr) -> Vec<SmolStr> {
+pub fn find_components(db: &dyn SyntaxGroup, expression: ast::Expr) -> Vec<SmolStr> {
     let mut components = vec![];
     match expression {
         ast::Expr::Tuple(tuple) => {
             for element in tuple.expressions(db).elements(db) {
-                components.extend(find_components_inner(db, element));
+                components.extend(find_components(db, element));
             }
         }
         ast::Expr::Parenthesized(parenthesized) => {
-            components.extend(find_components_inner(db, parenthesized.expr(db)));
+            components.extend(find_components(db, parenthesized.expr(db)));
         }
         ast::Expr::Path(path) => match path.elements(db).last().unwrap() {
             ast::PathSegment::WithGenericArgs(segment) => {
@@ -198,7 +203,7 @@ fn find_components_inner(db: &dyn SyntaxGroup, expression: ast::Expr) -> Vec<Smo
 
                 for param in generic.generic_args(db).elements(db) {
                     if let ast::GenericArg::Expr(expr) = param {
-                        components.extend(find_components_inner(db, expr.value(db)));
+                        components.extend(find_components(db, expr.value(db)));
                     }
                 }
             }

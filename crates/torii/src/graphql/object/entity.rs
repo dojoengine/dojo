@@ -148,7 +148,7 @@ async fn entities_by_sk(
     limit: u64,
 ) -> Result<Vec<ValueMapping>> {
     let mut builder: QueryBuilder<'_, Sqlite> = QueryBuilder::new("SELECT * FROM entities");
-    let keys_str = format!("{}%", keys.join(","));
+    let keys_str = format!("{},%", keys.join(","));
     builder.push(" WHERE keys LIKE ").push_bind(keys_str);
     builder.push(" ORDER BY created_at DESC LIMIT ").push(limit);
 

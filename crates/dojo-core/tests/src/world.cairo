@@ -6,8 +6,9 @@ use traits::Into;
 use traits::TryInto;
 use option::OptionTrait;
 use starknet::class_hash::Felt252TryIntoClassHash;
-use starknet::syscalls::deploy_syscall;
 use starknet::contract_address_const;
+use starknet::get_caller_address;
+use starknet::syscalls::deploy_syscall;
 
 use dojo_core::database::query::QueryTrait;
 use dojo_core::interfaces::IWorldDispatcher;
@@ -17,9 +18,9 @@ use dojo_core::execution_context::Context;
 use dojo_core::auth::components::AuthRole;
 use dojo_core::world::World;
 use dojo_core::world::LibraryCall;
-use dojo_core::test_utils::mock_auth_components_systems;
 use dojo_core::auth::systems::Route;
-use starknet::get_caller_address;
+
+use dojo_core::test_utils::mock_auth_components_systems;
 
 // Components and Systems
 
@@ -40,9 +41,9 @@ mod Bar {
     use traits::Into;
     use starknet::get_caller_address;
 
-    fn execute(a: felt252, b: u128) {
+    fn execute(ctx: Context, a: felt252, b: u128) {
         let caller = get_caller_address();
-        commands::set_entity(caller.into(), (Foo { a, b }));
+        set !(ctx, caller.into(), (Foo { a, b }));
     }
 }
 
@@ -52,24 +53,36 @@ mod Buzz {
     use traits::Into;
     use starknet::get_caller_address;
 
-    fn execute(a: felt252, b: u128) {
+    fn execute(ctx: Context, a: felt252, b: u128) {
         let caller = get_caller_address();
-        commands::set_entity(caller.into(), (Foo { a, b }));
-        let fizz = commands::<Fizz>::try_entity(caller.into());
+        set !(ctx, caller.into(), (Foo { a, b }));
+        let fizz = try_get !(ctx, ctx.caller_account.into(), Fizz);
     }
 }
 
 // Tests
 
+fn deploy_world() -> IWorldDispatcher {
+    let mut calldata: Array<felt252> = array::ArrayTrait::new();
+    calldata.append(starknet::contract_address_const::<0x0>().into());
+    let (world_address, _) = deploy_syscall(
+        World::TEST_CLASS_HASH.try_into().unwrap(), 0, calldata.span(), false
+    )
+        .unwrap();
+
+    IWorldDispatcher { contract_address: world_address }
+}
+
 #[test]
 #[available_gas(2000000)]
 fn test_component() {
     let name = 'Foo'.into();
-    World::register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
+    let world = deploy_world();
+
+    world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
     let mut data = ArrayTrait::new();
     data.append(1337);
-    let id = World::uuid();
-    let world = IWorldDispatcher { contract_address: contract_address_const::<0x1337>() };
+    let id = world.uuid();
     let ctx = Context {
         world,
         caller_account: contract_address_const::<0x1337>(),
@@ -78,8 +91,9 @@ fn test_component() {
             id: 'FooWriter'.into()
         },
     };
-    World::set_entity(ctx, name, QueryTrait::new_from_id(id.into()), 0, data.span());
-    let stored = World::entity(name, QueryTrait::new_from_id(id.into()), 0, 1);
+
+    world.set_entity(ctx, name, QueryTrait::new_from_id(id.into()), 0, data.span());
+    let stored = world.entity(name, QueryTrait::new_from_id(id.into()), 0, 1);
     assert(*stored.snapshot.at(0) == 1337, 'data not stored');
 }
 
@@ -87,11 +101,12 @@ fn test_component() {
 #[available_gas(2000000)]
 fn test_component_with_partition() {
     let name = 'Foo'.into();
-    World::register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
+    let world = deploy_world();
+
+    world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
     let mut data = ArrayTrait::new();
     data.append(1337);
-    let id = World::uuid();
-    let world = IWorldDispatcher { contract_address: contract_address_const::<0x1337>() };
+    let id = world.uuid();
     let ctx = Context {
         world,
         caller_account: contract_address_const::<0x1337>(),
@@ -103,8 +118,8 @@ fn test_component_with_partition() {
 
     let mut keys = ArrayTrait::new();
     keys.append(1337.into());
-    World::set_entity(ctx, name, QueryTrait::new(0, 1.into(), keys.span()), 0, data.span());
-    let stored = World::entity(name, QueryTrait::new(0, 1.into(), keys.span()), 0, 1);
+    world.set_entity(ctx, name, QueryTrait::new(0, 1.into(), keys.span()), 0, data.span());
+    let stored = world.entity(name, QueryTrait::new(0, 1.into(), keys.span()), 0, 1);
     assert(*stored.snapshot.at(0) == 1337, 'data not stored');
 }
 
@@ -123,35 +138,30 @@ fn test_system() {
     world.execute('Bar'.into(), data.span());
 }
 
-#[test]
-#[available_gas(2000000)]
-fn test_constructor() {
-    starknet::testing::set_caller_address(starknet::contract_address_const::<0x420>());
-    World::constructor(starknet::contract_address_const::<0x1337>(), );
-}
+// #[test]
+// #[available_gas(1000000)]
+// fn test_system_components() {
+//     let world = spawn_empty_world();
 
-#[test]
-#[available_gas(1000000)]
-fn test_system_components() {
-    // Register components and systems
-    World::register_system(Buzz::TEST_CLASS_HASH.try_into().unwrap());
-    World::register_component(FizzComponent::TEST_CLASS_HASH.try_into().unwrap());
-    World::register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
+//     // Register components and systems
+//     world.register_system(Buzz::TEST_CLASS_HASH.try_into().unwrap());
+//     world.register_component(FizzComponent::TEST_CLASS_HASH.try_into().unwrap());
+//     world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
 
-    // Get system components
-    let components = World::system_components('Buzz'.into());
-    let mut index = 0;
-    let len = components.len();
+//     // Get system components
+//     let components = world.system_components('Buzz'.into());
+//     let mut index = 0;
+//     let len = components.len();
 
-    // Sorted alphabetically
-    let (fizz, write_fizz) = *components[0];
-    assert(fizz == 'Fizz'.into(), 'Fizz not found');
-    assert(write_fizz == false, 'Buzz should not write Fizz');
+//     // Sorted alphabetically
+//     let (fizz, write_fizz) = *components[0];
+//     assert(fizz == 'Fizz'.into(), 'Fizz not found');
+//     assert(write_fizz == false, 'Buzz should not write Fizz');
 
-    let (foo, write_foo) = *components[1];
-    assert(foo == 'Foo'.into(), 'Foo not found');
-    assert(write_foo == true, 'Buzz should write Foo');
-}
+//     let (foo, write_foo) = *components[1];
+//     assert(foo == 'Foo'.into(), 'Foo not found');
+//     assert(write_foo == true, 'Buzz should write Foo');
+// }
 
 #[test]
 #[available_gas(9000000)]

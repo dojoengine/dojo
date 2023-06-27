@@ -6,7 +6,6 @@ use traits::Into;
 use zeroable::IsZeroResult;
 use starknet::ClassHashIntoFelt252;
 use poseidon::poseidon_hash_span;
-use dojo_core::serde::SpanSerde;
 
 #[derive(Copy, Drop, Serde)]
 struct Query {
@@ -62,7 +61,9 @@ impl QueryImpl of QueryTrait {
     }
 }
 
-impl LiteralIntoQuery<E0, impl E0Into: Into<E0, felt252>, impl E0Drop: Drop<E0>> of Into<E0, Query> {
+impl LiteralIntoQuery<
+    E0, impl E0Into: Into<E0, felt252>, impl E0Drop: Drop<E0>
+> of Into<E0, Query> {
     fn into(self: E0) -> Query {
         let mut keys = ArrayTrait::new();
         keys.append(E0Into::into(self));

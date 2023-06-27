@@ -25,40 +25,39 @@ mod Spawn {
     use super::Position;
     use super::Player;
 
-    fn execute(name: felt252) {
-        let uuid = commands::uuid();
-        commands::set_entity((420, (69, uuid)).into_partitioned(), (
+    fn execute(ctx: Context, name: felt252) {
+        set !(ctx, (420, (69, ctx.world.uuid())).into_partitioned(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
-        commands::set_entity(420.into(), (
+        set !(ctx, 420.into(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
-        commands::set_entity(120.into(), (
+        set !(ctx, 120.into(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
         let player_id = starknet::get_caller_address();
-        commands::set_entity(player_id.into(), (
+        set !(ctx, player_id.into(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
-        commands::set_entity((
+        set !(ctx, (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
-        commands::set_entity((0, 0, 0, 0, 0), (
+        set !(ctx, (0, 0, 0, 0, 0), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
-        commands::set_entity(1337.into(), (
+        set !(ctx, 1337.into(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
@@ -78,26 +77,26 @@ mod Move {
     }
 
     fn execute(player_id: felt252) {
-        let positions_query = commands::<(Position, Player)>::entities();
-        let players_query = commands::<Player>::entities();
-        let player = commands::<Player>::entity(player_id.into());
-        let player_position = commands::<(Position, Player)>::entity(player_id.into());
+        let positions_query = find!(ctx, 0x0, (Position, Player));
+        let players_query = find!(ctx, 0x0, Player);
+        let player = get!(ctx, player_id.into(), Player);
+        let player_position = get!(ctx, player_id.into(), (Position, Player));
 
         let mut bar = 123;
         let mut foo = ArrayTrait::<felt252>::new();
         foo.append(bar);
 
         if bar == 123 {
-            let player_position = commands::<(Position, Player)>::entity(player_id.into());
+            let player_position = get!(ctx, player_id.into(), (Position, Player));
             if foo.len() > 0_u32 {
-                let positions_query = commands::<(Position, Player)>::entities();
+                let positions_query = find!(ctx, 0x0, (Position, Player));
             }
         } else if bar == 321 {
-            let maybe_player = commands::<Player>::try_entity(player_id.into());
+            let maybe_player = try_get!(ctx, player_id.into(), Player);
             let player = maybe_player.expect('not_found');
             let name = player.name;
 
-            let positions_query = commands::<(Position, Player)>::try_entity(player_id.into());
+            let positions_query = try_get!(ctx, player_id.into(), (Position, Player));
             match positions_query {
                 Option::Some((position, player)) => {
                     // do nothing
@@ -107,24 +106,24 @@ mod Move {
                 }
             }
         } else {
-            let player_position = commands::<(Position, Player)>::entity(player_id.into());
+            let player_position = get!(ctx, player_id.into(), (Position, Player));
         }
 
         {
-            let player_position = commands::<(Position, Player)>::entity(player_id.into());
+            let player_position = get!(ctx, player_id.into(), (Position, Player));
         }
 
         let foo_bar = Option::Some(1);
         match foo_bar {
             Option::Some(x) => {
                 let bar = x;
-                let player_position = commands::<(Position, Player)>::entity(player_id.into());
+                let player_position = get!(ctx, player_id.into(), (Position, Player));
                 if bar == 123 {
-                    let positions_query = commands::<(Position, Player)>::entities();
+                    let positions_query = find!(ctx, 0x0, (Position, Player));
                 }
             },
             Option::None(()) => {
-                let player_position = commands::<(Position, Player)>::entity(player_id.into());
+                let player_position = get!(ctx, player_id.into(), (Position, Player));
             }
         }
 
@@ -135,18 +134,18 @@ mod Move {
 
         let mut calldata = ArrayTrait::new();
         calldata.append('name');
-        commands::execute(SpawnSystem, 'PositionPlayerWriter'.into(), calldata.span());
+        execute!(ctx, SpawnSystem, 'PositionPlayerWriter'.into(), calldata.span());
 
         // move_inner(@positions_query, 0_u32, positions_query.len());
 
-        let err = commands::<>::entity(player_id.into());
+        let err = get!(ctx, player_id.into(), ());
 
         let mut i = 0;
         loop {
             if i == 3 {
                 break ();
             }
-            let player_position = commands::<(Position, Player)>::entity(player_id.into());
+            let player_position = get!(ctx, player_id.into(), (Position, Player));
             i+=0;
         };
 
@@ -177,19 +176,21 @@ struct Position {
     y: felt252,
 }
 
-#[abi]
-trait IPosition {
-    fn name() -> felt252;
-    fn len() -> u8;
+#[starknet::interface]
+trait IPosition<T> {
+    fn name(self: @T) -> felt252;
+    fn len(self: @T) -> u8;
 }
 
-#[contract]
+#[starknet::contract]
 mod PositionComponent {
-    use dojo_core::serde::SpanSerde;
     use super::Position;
 
-    #[view]
-    fn schema() -> Array<(felt252, felt252, usize, u8)> {
+    #[storage]
+    struct Storage {}
+
+    #[external(v0)]
+    fn schema(self: @ContractState) -> Array<(felt252, felt252, usize, u8)> {
         let mut arr = array::ArrayTrait::new();
         array::ArrayTrait::append(ref arr, ('x', 'felt252', 0, 0));
         array::ArrayTrait::append(ref arr, ('y', 'felt252', 1, 0));
@@ -198,18 +199,18 @@ mod PositionComponent {
     }
 
 
-    #[view]
-    fn name() -> felt252 {
+    #[external(v0)]
+    fn name(self: @ContractState) -> felt252 {
         'Position'
     }
 
-    #[view]
-    fn len() -> usize {
+    #[external(v0)]
+    fn len(self: @ContractState) -> usize {
         2_usize
     }
 
-    #[view]
-    fn is_indexed() -> bool {
+    #[external(v0)]
+    fn is_indexed(self: @ContractState) -> bool {
         bool::False(())
     }
 }
@@ -218,19 +219,21 @@ struct Player {
     name: felt252, 
 }
 
-#[abi]
-trait IPlayer {
-    fn name() -> felt252;
-    fn len() -> u8;
+#[starknet::interface]
+trait IPlayer<T> {
+    fn name(self: @T) -> felt252;
+    fn len(self: @T) -> u8;
 }
 
-#[contract]
+#[starknet::contract]
 mod PlayerComponent {
-    use dojo_core::serde::SpanSerde;
     use super::Player;
 
-    #[view]
-    fn schema() -> Array<(felt252, felt252, usize, u8)> {
+    #[storage]
+    struct Storage {}
+
+    #[external(v0)]
+    fn schema(self: @ContractState) -> Array<(felt252, felt252, usize, u8)> {
         let mut arr = array::ArrayTrait::new();
         array::ArrayTrait::append(ref arr, ('name', 'felt252', 0, 0));
 
@@ -238,23 +241,23 @@ mod PlayerComponent {
     }
 
 
-    #[view]
-    fn name() -> felt252 {
+    #[external(v0)]
+    fn name(self: @ContractState) -> felt252 {
         'Player'
     }
 
-    #[view]
-    fn len() -> usize {
+    #[external(v0)]
+    fn len(self: @ContractState) -> usize {
         1_usize
     }
 
-    #[view]
-    fn is_indexed() -> bool {
+    #[external(v0)]
+    fn is_indexed(self: @ContractState) -> bool {
         bool::True(())
     }
 }
 
-#[contract]
+#[starknet::contract]
 mod Spawn {
     use option::OptionTrait;
     use array::SpanTrait;
@@ -272,13 +275,16 @@ mod Spawn {
     use dojo_core::database::query::IntoPartitionedQuery;
     use dojo_core::execution_context::Context;
 
-    #[view]
-    fn name() -> felt252 {
+    #[storage]
+    struct Storage {}
+
+    #[external(v0)]
+    fn name(self: @ContractState) -> felt252 {
         'Spawn'
     }
 
-    #[view]
-    fn dependencies() -> Array<(felt252, bool)> {
+    #[external(v0)]
+    fn dependencies(self: @ContractState) -> Array<(felt252, bool)> {
         let mut arr = array::ArrayTrait::new();
         array::ArrayTrait::append(ref arr, ('Player'.into(), true));
         array::ArrayTrait::append(ref arr, ('Position'.into(), true));
@@ -290,10 +296,8 @@ mod Spawn {
     use super::Position;
     use super::Player;
 
-    #[external]
-    fn execute(ctx: Context, name: felt252) {
-        let uuid = ctx.world.uuid();
-
+    #[external(v0)]
+    fn execute(self: @ContractState, ctx: Context, name: felt252) {
         {
             let mut calldata = array::ArrayTrait::new();
             serde::Serde::serialize(@Player { name: name }, ref calldata);
@@ -302,7 +306,7 @@ mod Spawn {
                 .set_entity(
                     ctx,
                     'Player',
-                    (420, (69, uuid)).into_partitioned(),
+                    (420, (69, ctx.world.uuid())).into_partitioned(),
                     0_u8,
                     array::ArrayTrait::span(@calldata)
                 );
@@ -316,7 +320,7 @@ mod Spawn {
                 .set_entity(
                     ctx,
                     'Position',
-                    (420, (69, uuid)).into_partitioned(),
+                    (420, (69, ctx.world.uuid())).into_partitioned(),
                     0_u8,
                     array::ArrayTrait::span(@calldata)
                 );
@@ -415,7 +419,7 @@ mod Spawn {
     }
 }
 
-#[contract]
+#[starknet::contract]
 mod Move {
     use option::OptionTrait;
     use array::SpanTrait;
@@ -433,13 +437,16 @@ mod Move {
     use dojo_core::database::query::IntoPartitionedQuery;
     use dojo_core::execution_context::Context;
 
-    #[view]
-    fn name() -> felt252 {
+    #[storage]
+    struct Storage {}
+
+    #[external(v0)]
+    fn name(self: @ContractState) -> felt252 {
         'Move'
     }
 
-    #[view]
-    fn dependencies() -> Array<(felt252, bool)> {
+    #[external(v0)]
+    fn dependencies(self: @ContractState) -> Array<(felt252, bool)> {
         let mut arr = array::ArrayTrait::new();
         array::ArrayTrait::append(ref arr, ('Player'.into(), false));
         array::ArrayTrait::append(ref arr, ('Position'.into(), false));
@@ -456,20 +463,20 @@ mod Move {
         return move_inner(positions, index + 1_u32, count - 1_u32);
     }
 
-    #[external]
-    fn execute(ctx: Context, player_id: felt252) {
+    #[external(v0)]
+    fn execute(self: @ContractState, ctx: Context, player_id: felt252) {
         let mut __positions_query_ids: Array<Span<felt252>> = ArrayTrait::new();
         let mut __positions_query_entities_raw: Array<Span<Span<felt252>>> = ArrayTrait::new();
 
         let (__positions_query_position_ids, __positions_query_position_raw) = ctx
             .world
-            .entities('Position', 0);
+            .entities('Position', 0x0);
         __positions_query_ids.append(__positions_query_position_ids);
         __positions_query_entities_raw.append(__positions_query_position_raw);
 
         let (__positions_query_player_ids, __positions_query_player_raw) = ctx
             .world
-            .entities('Player', 0);
+            .entities('Player', 0x0);
         __positions_query_ids.append(__positions_query_player_ids);
         __positions_query_entities_raw.append(__positions_query_player_raw);
 
@@ -532,7 +539,7 @@ mod Move {
 
         let (__players_query_player_ids, __players_query_player_raw) = ctx
             .world
-            .entities('Player', 0);
+            .entities('Player', 0x0);
         __players_query_ids.append(__players_query_player_ids);
         __players_query_entities_raw.append(__players_query_player_raw);
 
@@ -620,13 +627,13 @@ mod Move {
 
                 let (__positions_query_position_ids, __positions_query_position_raw) = ctx
                     .world
-                    .entities('Position', 0);
+                    .entities('Position', 0x0);
                 __positions_query_ids.append(__positions_query_position_ids);
                 __positions_query_entities_raw.append(__positions_query_position_raw);
 
                 let (__positions_query_player_ids, __positions_query_player_raw) = ctx
                     .world
-                    .entities('Player', 0);
+                    .entities('Player', 0x0);
                 __positions_query_ids.append(__positions_query_player_ids);
                 __positions_query_entities_raw.append(__positions_query_player_raw);
 
@@ -819,13 +826,13 @@ mod Move {
 
                     let (__positions_query_position_ids, __positions_query_position_raw) = ctx
                         .world
-                        .entities('Position', 0);
+                        .entities('Position', 0x0);
                     __positions_query_ids.append(__positions_query_position_ids);
                     __positions_query_entities_raw.append(__positions_query_position_raw);
 
                     let (__positions_query_player_ids, __positions_query_player_raw) = ctx
                         .world
-                        .entities('Player', 0);
+                        .entities('Player', 0x0);
                     __positions_query_ids.append(__positions_query_player_ids);
                     __positions_query_entities_raw.append(__positions_query_player_raw);
 
@@ -952,7 +959,7 @@ mod Move {
     }
 }
 
-#[contract]
+#[starknet::contract]
 mod Proxy {
     use option::OptionTrait;
     use array::SpanTrait;
@@ -970,42 +977,45 @@ mod Proxy {
     use dojo_core::database::query::IntoPartitionedQuery;
     use dojo_core::execution_context::Context;
 
-    #[view]
-    fn name() -> felt252 {
+    #[storage]
+    struct Storage {}
+
+    #[external(v0)]
+    fn name(self: @ContractState) -> felt252 {
         'Proxy'
     }
 
-    #[view]
-    fn dependencies() -> Array<(felt252, bool)> {
+    #[external(v0)]
+    fn dependencies(self: @ContractState) -> Array<(felt252, bool)> {
         let mut arr = array::ArrayTrait::new();
 
         arr
     }
 
 
-    #[external]
-    fn execute(ctx: Context, value: felt252) -> felt252 {
+    #[external(v0)]
+    fn execute(self: @ContractState, ctx: Context, value: felt252) -> felt252 {
         value
     }
 }
 
 //! > expected_diagnostics
-error: Plugin diagnostic: Invalid arguments. Expected "(query, (components,))"
- --> lib.cairo:45:29
-        commands::set_entity((
-                            ^^
+error: Plugin diagnostic: Invalid arguments. Expected "(context, query, (components,))"
+ --> lib.cairo:44:14
+        set !(ctx, (
+             ^*****^
 
 error: Plugin diagnostic: Component types cannot be empty
- --> lib.cairo:136:19
-        let err = commands::<>::entity(player_id.into());
-                  ^************************************^
+ --> lib.cairo:135:19
+        let err = get!(ctx, player_id.into(), ());
+                  ^*****************************^
 
-error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::database::query::Query", found: "(?89, ?90, ?91, ?92, ?93)".
- --> Spawn:95:61
-                        ctx.world.set_entity(ctx, 'Player', (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
-                                                            ^*************^
+error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::database::query::Query", found: "(?78, ?79, ?80, ?81, ?82)".
+ --> lib.cairo:49:20
+        set !(ctx, (0, 0, 0, 0, 0), (
+                   ^*************^
 
-error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::database::query::Query", found: "(?101, ?102, ?103, ?104, ?105)".
- --> Spawn:101:63
-                        ctx.world.set_entity(ctx, 'Position', (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
-                                                              ^*************^
+error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::database::query::Query", found: "(?90, ?91, ?92, ?93, ?94)".
+ --> lib.cairo:49:20
+        set !(ctx, (0, 0, 0, 0, 0), (
+                   ^*************^

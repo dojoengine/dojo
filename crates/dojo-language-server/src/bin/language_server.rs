@@ -28,7 +28,7 @@ async fn main() {
             panic!("Problem creating language database: {error:?}");
         });
 
-    let (service, socket) = LspService::build(|client| Backend::new(client, db.into()))
+    let (service, socket) = LspService::build(|client| Backend::new(client, db))
         .custom_method("vfs/provide", Backend::vfs_provide)
         .finish();
     Server::new(stdin, stdout, socket).serve(service).await;

@@ -1,6 +1,11 @@
 use std::collections::HashMap;
 
 use blockifier::block_context::BlockContext;
+use cairo_vm::vm::runners::builtin_runner::{
+    BITWISE_BUILTIN_NAME, EC_OP_BUILTIN_NAME, HASH_BUILTIN_NAME, KECCAK_BUILTIN_NAME,
+    OUTPUT_BUILTIN_NAME, POSEIDON_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME,
+    SEGMENT_ARENA_BUILTIN_NAME, SIGNATURE_BUILTIN_NAME,
+};
 use starknet_api::block::{BlockNumber, BlockTimestamp};
 use starknet_api::core::{ChainId, ContractAddress, PatriciaKey};
 use starknet_api::hash::StarkHash;
@@ -23,13 +28,15 @@ impl Base for BlockContext {
             fee_token_address: ContractAddress(patricia_key!(*FEE_TOKEN_ADDRESS)),
             vm_resource_fee_cost: HashMap::from([
                 (String::from("n_steps"), 1_f64),
-                (String::from("pedersen"), 1_f64),
-                (String::from("range_check"), 1_f64),
-                (String::from("ecdsa"), 1_f64),
-                (String::from("bitwise"), 1_f64),
-                (String::from("poseidon"), 1_f64),
-                (String::from("output"), 1_f64),
-                (String::from("ec_op"), 1_f64),
+                (HASH_BUILTIN_NAME.to_string(), 1_f64),
+                (RANGE_CHECK_BUILTIN_NAME.to_string(), 1_f64),
+                (SIGNATURE_BUILTIN_NAME.to_string(), 1_f64),
+                (BITWISE_BUILTIN_NAME.to_string(), 1_f64),
+                (POSEIDON_BUILTIN_NAME.to_string(), 1_f64),
+                (OUTPUT_BUILTIN_NAME.to_string(), 1_f64),
+                (EC_OP_BUILTIN_NAME.to_string(), 1_f64),
+                (KECCAK_BUILTIN_NAME.to_string(), 1_f64),
+                (SEGMENT_ARENA_BUILTIN_NAME.to_string(), 1_f64),
             ]),
             gas_price: DEFAULT_GAS_PRICE,
             invoke_tx_max_n_steps: 1_000_000,
@@ -47,13 +54,15 @@ pub fn block_context_from_config(config: &StarknetConfig) -> BlockContext {
         fee_token_address: ContractAddress(patricia_key!(*FEE_TOKEN_ADDRESS)),
         vm_resource_fee_cost: HashMap::from([
             (String::from("n_steps"), 1_f64),
-            (String::from("pedersen"), 1_f64),
-            (String::from("range_check"), 1_f64),
-            (String::from("ecdsa"), 1_f64),
-            (String::from("bitwise"), 1_f64),
-            (String::from("poseidon"), 1_f64),
-            (String::from("output"), 1_f64),
-            (String::from("ec_op"), 1_f64),
+            (HASH_BUILTIN_NAME.to_string(), 1_f64),
+            (RANGE_CHECK_BUILTIN_NAME.to_string(), 1_f64),
+            (SIGNATURE_BUILTIN_NAME.to_string(), 1_f64),
+            (BITWISE_BUILTIN_NAME.to_string(), 1_f64),
+            (POSEIDON_BUILTIN_NAME.to_string(), 1_f64),
+            (OUTPUT_BUILTIN_NAME.to_string(), 1_f64),
+            (EC_OP_BUILTIN_NAME.to_string(), 1_f64),
+            (KECCAK_BUILTIN_NAME.to_string(), 1_f64),
+            (SEGMENT_ARENA_BUILTIN_NAME.to_string(), 1_f64),
         ]),
         gas_price: config.gas_price,
         validate_max_n_steps: 1_000_000,

@@ -1,7 +1,7 @@
 use starknet::{
-    ClassHash, syscalls::deploy_syscall, class_hash::Felt252TryIntoClassHash, get_caller_address
+    ClassHash, ContractAddress, syscalls::deploy_syscall, class_hash::Felt252TryIntoClassHash, get_caller_address
 };
-use array::ArrayTrait;
+use array::{ArrayTrait, SpanTrait};
 use traits::TryInto;
 use option::OptionTrait;
 use core::{result::ResultTrait, traits::Into};
@@ -108,4 +108,36 @@ fn mock_auth_components_systems() -> (Array<ClassHash>, Array<ClassHash>) {
     systems.append(RevokeScopedAuthRole::TEST_CLASS_HASH.try_into().unwrap());
 
     (components, systems)
+}
+
+fn build_world_factory_calldata(world: ClassHash, executor: ContractAddress, auth_components: Span<ClassHash>, auth_systems: Span<ClassHash>) -> Span<felt252> {
+    let mut calldata: Array<felt252> = array::ArrayTrait::new();
+    calldata.append(world.into());
+    calldata.append(executor.into());
+
+    calldata.append(auth_components.len().into());
+    let mut i = 0;
+    loop {
+        if i == auth_components.len() {
+            break ();
+        };
+    
+        calldata.append((*auth_components.at(i)).into());
+
+        i += 1;
+    };
+
+    calldata.append(auth_systems.len().into());
+    let mut i = 0;
+    loop {
+        if i == auth_systems.len() {
+            break ();
+        };
+    
+        calldata.append((*auth_systems.at(i)).into());
+
+        i += 1;
+    };
+
+    calldata.span()
 }

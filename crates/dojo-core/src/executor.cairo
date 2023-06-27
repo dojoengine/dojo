@@ -1,5 +1,4 @@
-use core::serde::Serde;
-#[contract]
+#[starknet::contract]
 mod Executor {
     use array::{ArrayTrait, ArrayTCloneImpl, SpanTrait};
     use serde::Serde;
@@ -12,10 +11,11 @@ mod Executor {
     use starknet::contract_address::ContractAddressIntoFelt252;
     use starknet::{get_caller_address, get_tx_info};
 
-    use dojo_core::serde::SpanSerde;
-
     const EXECUTE_ENTRYPOINT: felt252 =
         0x0240060cdb34fcc260f41eac7474ee1d7c80b7e3607daff9ac67c7ea2ebb1c44;
+
+    #[storage]
+    struct Storage {}
 
     /// Executes a System by calling its execute entrypoint.
     ///
@@ -28,8 +28,9 @@ mod Executor {
     /// # Returns
     ///
     /// The return value of the System's execute entrypoint.
-    #[external]
+    #[external(v0)]
     fn execute(
+        self: @ContractState,
         class_hash: starknet::ClassHash,
         execution_role: AuthRole,
         mut execute_calldata: Span<felt252>
