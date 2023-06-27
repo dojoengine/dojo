@@ -4,32 +4,44 @@ use async_graphql::dynamic::{
     Field, FieldFuture, FieldValue, InputValue, ResolverContext, TypeRef,
 };
 use async_graphql::{Name, Value};
+use chrono::{DateTime, Utc};
+use serde::Deserialize;
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
-use sqlx::{Pool, QueryBuilder, Row, Sqlite};
+use sqlx::{FromRow, Pool, QueryBuilder, Row, Sqlite};
 
-use super::component::ComponentMembers;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::graphql::constants::DEFAULT_LIMIT;
 use crate::graphql::types::ScalarType;
 
 const BOOLEAN_TRUE: i64 = 1;
 
-pub type StorageFilters = HashMap<String, String>;
+pub type ComponentFilters = HashMap<String, String>;
 
-pub struct StorageObject {
+#[derive(FromRow, Deserialize)]
+pub struct ComponentMembers {
+    pub component_id: String,
+    pub name: String,
+    #[serde(rename = "type")]
+    pub ty: String,
+    pub slot: i64,
+    pub offset: i64,
+    pub created_at: DateTime<Utc>,
+}
+
+pub struct ComponentStateObject {
     pub name: String,
     pub type_name: String,
     pub field_type_mapping: TypeMapping,
 }
 
-impl StorageObject {
+impl ComponentStateObject {
     pub fn new(name: String, type_name: String, field_type_mapping: TypeMapping) -> Self {
         Self { name, type_name, field_type_mapping }
     }
 }
 
-impl ObjectTrait for StorageObject {
+impl ObjectTrait for ComponentStateObject {
     fn name(&self) -> &str {
         &self.name
     }
@@ -43,60 +55,39 @@ impl ObjectTrait for StorageObject {
     }
 
     fn resolvers(&self) -> Vec<Field> {
-        vec![
-            resolve_one(
-                self.name.to_string(),
-                self.type_name.to_string(),
-                self.field_type_mapping.clone(),
-            ),
-            resolve_many(
-                self.name.to_string(),
-                self.type_name.to_string(),
-                self.field_type_mapping.clone(),
-            ),
-        ]
+        vec![resolve_many(
+            self.name.to_string(),
+            self.type_name.to_string(),
+            self.field_type_mapping.clone(),
+        )]
     }
-}
-
-fn resolve_one(name: String, type_name: String, field_type_mapping: TypeMapping) -> Field {
-    Field::new(name.clone(), TypeRef::named_nn(type_name), move |ctx| {
-        // FIX: field_type_mapping and name needs to be passed down to the doubly
-        // nested async closures, thus the cloning. could handle this better
-        let field_type_mapping = field_type_mapping.clone();
-        let name = name.clone();
-
-        FieldFuture::new(async move {
-            let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-            let key = ctx.args.try_get("key")?.string()?.to_string();
-            let result = storage_by_key(&mut conn, &name, &key, &field_type_mapping).await?;
-
-            Ok(Some(FieldValue::owned_any(result)))
-        })
-    })
-    .argument(InputValue::new("key", TypeRef::named_nn(ScalarType::Felt252.to_string())))
 }
 
 fn resolve_many(name: String, type_name: String, field_type_mapping: TypeMapping) -> Field {
     let ftm_clone = field_type_mapping.clone();
 
-    let field = Field::new(format!("{}List", &name), TypeRef::named_list(type_name), move |ctx| {
-        let field_type_mapping = field_type_mapping.clone();
-        let name = name.clone();
+    let field =
+        Field::new(format!("{}Components", &name), TypeRef::named_list(type_name), move |ctx| {
+            // FIX: field_type_mapping and name needs to be passed down to the doubly
+            // nested async closures, thus the cloning. could handle this better
+            let field_type_mapping = field_type_mapping.clone();
+            let name = name.clone();
 
-        FieldFuture::new(async move {
-            // parse optional input query params
-            let (filters, limit) = parse_inputs(&ctx, &field_type_mapping)?;
+            FieldFuture::new(async move {
+                // parse optional input query params
+                let (filters, limit) = parse_inputs(&ctx, &field_type_mapping)?;
 
-            let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-            let storage_values =
-                storages_query(&mut conn, &name, &filters, limit, &field_type_mapping).await?;
+                let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                let state_values =
+                    component_states_query(&mut conn, &name, &filters, limit, &field_type_mapping)
+                        .await?;
 
-            let result: Vec<FieldValue<'_>> =
-                storage_values.into_iter().map(FieldValue::owned_any).collect();
+                let result: Vec<FieldValue<'_>> =
+                    state_values.into_iter().map(FieldValue::owned_any).collect();
 
-            Ok(Some(FieldValue::list(result)))
-        })
-    });
+                Ok(Some(FieldValue::list(result)))
+            })
+        });
 
     add_arguments(field, ftm_clone)
 }
@@ -113,8 +104,8 @@ fn add_arguments(field: Field, field_type_mapping: TypeMapping) -> Field {
 fn parse_inputs(
     ctx: &ResolverContext<'_>,
     field_type_mapping: &TypeMapping,
-) -> async_graphql::Result<(StorageFilters, u64), async_graphql::Error> {
-    let mut inputs: StorageFilters = StorageFilters::new();
+) -> async_graphql::Result<(ComponentFilters, u64), async_graphql::Error> {
+    let mut inputs: ComponentFilters = ComponentFilters::new();
 
     for (name, ty) in field_type_mapping.iter() {
         let maybe_input = ctx.args.try_get(name.as_str()).ok();
@@ -134,24 +125,23 @@ fn parse_inputs(
     Ok((inputs, limit))
 }
 
-pub async fn storage_by_key(
+pub async fn component_state_by_id(
     conn: &mut PoolConnection<Sqlite>,
     name: &str,
-    key: &str,
+    id: &str,
     fields: &TypeMapping,
 ) -> sqlx::Result<ValueMapping> {
     let table_name = format!("external_{}", name);
     let mut builder: QueryBuilder<'_, Sqlite> = QueryBuilder::new("SELECT * FROM ");
-    builder.push(table_name).push(" WHERE id = ").push_bind(key);
-
+    builder.push(table_name).push(" WHERE id = ").push_bind(id);
     let row = builder.build().fetch_one(conn).await?;
     value_mapping_from_row(&row, fields)
 }
 
-pub async fn storages_query(
+pub async fn component_states_query(
     conn: &mut PoolConnection<Sqlite>,
     name: &str,
-    filters: &StorageFilters,
+    filters: &ComponentFilters,
     limit: u64,
     fields: &TypeMapping,
 ) -> sqlx::Result<Vec<ValueMapping>> {
@@ -165,12 +155,11 @@ pub async fn storages_query(
         for (name, value) in filters.iter() {
             separated.push(format!("external_{} = '{}'", name, value));
         }
-        separated.push_unseparated(" ");
     }
-    builder.push("ORDER BY created_at DESC LIMIT ").push_bind(limit.to_string());
+    builder.push(" ORDER BY created_at DESC LIMIT ").push_bind(limit.to_string());
 
-    let storages = builder.build().fetch_all(conn).await?;
-    storages.iter().map(|row| value_mapping_from_row(row, fields)).collect()
+    let compoent_states = builder.build().fetch_all(conn).await?;
+    compoent_states.iter().map(|row| value_mapping_from_row(row, fields)).collect()
 }
 
 fn value_mapping_from_row(row: &SqliteRow, fields: &TypeMapping) -> sqlx::Result<ValueMapping> {

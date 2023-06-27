@@ -2,6 +2,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use dojo_world::manifest::{Component, Manifest, System};
 use sqlx::pool::PoolConnection;
+use sqlx::sqlite::SqliteRow;
 use sqlx::{Executor, Pool, Row, Sqlite};
 use starknet::core::types::FieldElement;
 use starknet_crypto::poseidon_hash_many;
@@ -210,52 +211,42 @@ impl State for Sql {
         keys: Vec<FieldElement>,
         values: Vec<FieldElement>,
     ) -> Result<()> {
-        let results =
+        let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
+        let entity_result = sqlx::query("SELECT * FROM entities WHERE id = ?")
+            .bind(&entity_id)
+            .fetch_optional(&self.pool)
+            .await?;
+        let component_names = component_names(entity_result, &component)?;
+
+        let member_results =
             sqlx::query("SELECT * FROM component_members WHERE component_id = ? ORDER BY slot")
                 .bind(component.to_lowercase())
                 .fetch_all(&self.pool)
                 .await?;
 
-        let names: Result<Vec<String>> = results
-            .iter()
-            .map(|row| {
-                let name = row.try_get::<String, &str>("name")?;
-                Ok(format!("external_{}", name))
-            })
-            .collect();
-
-        let types: Result<Vec<String>> =
-            results.iter().map(|row| Ok(row.try_get::<String, &str>("type")?)).collect();
-
-        // format according to type
-        let values: Result<Vec<String>> = values
-            .iter()
-            .zip(types?.iter())
-            .map(|(value, ty)| {
-                if ScalarType::from_str(ty)?.is_numeric_type() {
-                    Ok(format!("'{}'", value))
-                } else {
-                    Ok(format!("'{:#x}'", value))
-                }
-            })
-            .collect();
-
-        let entity_id = poseidon_hash_many(&keys);
-        let keys_str = keys.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join(",");
+        let (names_str, values_str) = format_values(member_results, values)?;
+        // TODO: map keys to individual columns
+        let keys_str = keys.iter().map(|k| format!("{:#x},", k)).collect::<Vec<String>>().join("");
 
         let insert_entities = format!(
-            "INSERT OR REPLACE INTO entities (id, partition, keys) VALUES ('{:#x}', '{:#x}', '{}')",
-            entity_id, partition, keys_str,
+            "INSERT INTO entities (id, partition, keys, component_names) VALUES ('{}', '{:#x}', \
+             '{}', '{}') ON CONFLICT(id) DO UPDATE SET
+             component_names=excluded.component_names, 
+             updated_at=CURRENT_TIMESTAMP",
+            entity_id, partition, keys_str, component_names
         );
         let insert_components = format!(
-            "INSERT OR REPLACE INTO external_{} (id, partition, {}) VALUES ('{entity_id:#x}', \
-             '{partition:#x}', {})",
+            "INSERT OR REPLACE INTO external_{} (id, partition, {}) VALUES ('{}', '{:#x}', {})",
             component.to_lowercase(),
-            names?.join(", "),
-            values?.join(", ")
+            names_str,
+            entity_id,
+            partition,
+            values_str
         );
 
+        // tx commit required
         self.queue(vec![insert_entities, insert_components]).await;
+        self.execute().await?;
         Ok(())
     }
 
@@ -294,4 +285,51 @@ impl State for Sql {
             sqlx::query_as::<_, (i32, String, String)>(&query).fetch_all(&mut conn).await?;
         Ok(rows.drain(..).map(|row| serde_json::from_str(&row.2).unwrap()).collect())
     }
+}
+
+fn component_names(entity_result: Option<SqliteRow>, new_component: &str) -> Result<String> {
+    let component_names = match entity_result {
+        Some(entity) => {
+            let existing = entity.try_get::<String, &str>("component_names")?;
+            if existing.contains(new_component) {
+                existing
+            } else {
+                format!("{},{}", existing, new_component)
+            }
+        }
+        None => new_component.to_string(),
+    };
+
+    Ok(component_names)
+}
+
+fn format_values(
+    member_results: Vec<SqliteRow>,
+    values: Vec<FieldElement>,
+) -> Result<(String, String)> {
+    let names: Result<Vec<String>> = member_results
+        .iter()
+        .map(|row| {
+            let name = row.try_get::<String, &str>("name")?;
+            Ok(format!("external_{}", name))
+        })
+        .collect();
+
+    let types: Result<Vec<String>> =
+        member_results.iter().map(|row| Ok(row.try_get::<String, &str>("type")?)).collect();
+
+    // format according to type
+    let values: Result<Vec<String>> = values
+        .iter()
+        .zip(types?.iter())
+        .map(|(value, ty)| {
+            if ScalarType::from_str(ty)?.is_numeric_type() {
+                Ok(format!("'{}'", value))
+            } else {
+                Ok(format!("'{:#x}'", value))
+            }
+        })
+        .collect();
+
+    Ok((names?.join(", "), values?.join(", ")))
 }

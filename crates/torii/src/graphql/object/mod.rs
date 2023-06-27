@@ -1,12 +1,12 @@
 pub mod component;
+pub mod component_state;
 pub mod entity;
 pub mod event;
 mod query;
-pub mod storage;
 pub mod system;
 pub mod system_call;
 
-use async_graphql::dynamic::{Field, FieldFuture, Object, TypeRef, Union};
+use async_graphql::dynamic::{Field, FieldFuture, Object, TypeRef};
 use async_graphql::{Name, Value};
 use indexmap::IndexMap;
 
@@ -20,9 +20,6 @@ pub trait ObjectTrait {
     fn field_type_mapping(&self) -> &TypeMapping;
     fn resolvers(&self) -> Vec<Field>;
     fn nested_fields(&self) -> Option<Vec<Field>> {
-        None
-    }
-    fn unions(&self) -> Option<Vec<Union>> {
         None
     }
 
