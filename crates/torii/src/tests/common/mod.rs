@@ -1,12 +1,11 @@
+use camino::Utf8PathBuf;
 use serde_json::Value;
 use sqlx::SqlitePool;
-use camino::Utf8PathBuf;
 use starknet::core::types::FieldElement;
 
+use crate::graphql::schema::build_schema;
 use crate::state::sql::{Executable, Sql};
 use crate::state::State;
-
-use crate::graphql::schema::build_schema;
 
 #[allow(dead_code)]
 pub async fn run_graphql_query(pool: &SqlitePool, query: &str) -> Value {
@@ -19,8 +18,7 @@ pub async fn run_graphql_query(pool: &SqlitePool, query: &str) -> Value {
 
 pub async fn entity_fixtures(pool: &SqlitePool) {
     let manifest = dojo_world::manifest::Manifest::load_from_path(
-        Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev/manifest.json".into())
-            .unwrap(),
+        Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev/manifest.json".into()).unwrap(),
     )
     .unwrap();
 

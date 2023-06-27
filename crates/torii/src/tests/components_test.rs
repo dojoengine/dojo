@@ -4,7 +4,7 @@ mod tests {
     use serde::Deserialize;
     use sqlx::{FromRow, SqlitePool};
 
-    use crate::tests::common::{run_graphql_query, entity_fixtures};
+    use crate::tests::common::{entity_fixtures, run_graphql_query};
 
     #[derive(Deserialize)]
     struct Moves {

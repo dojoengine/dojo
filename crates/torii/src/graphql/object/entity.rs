@@ -123,17 +123,14 @@ fn resolve_many(name: &str, type_name: &str) -> Field {
         FieldFuture::new(async move {
             let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
 
-            // handle optional keys argument
-            let maybe_keys = ctx.args.try_get("keys").ok();
-            let keys = if let Some(keys_val) = maybe_keys {
-                keys_val
-                    .list()?
-                    .iter()
-                    .map(|val| val.string().ok().map(|v| v.to_string()))
-                    .collect()
-            } else {
-                None
-            };
+            let keys_value = ctx.args.try_get("keys")?;
+            let keys = keys_value
+                .list()?
+                .iter()
+                .map(
+                    |val| val.string().unwrap().to_string(), // safe unwrap
+                )
+                .collect();
 
             let limit =
                 ctx.args.try_get("limit").and_then(|limit| limit.u64()).unwrap_or(DEFAULT_LIMIT);
@@ -148,17 +145,14 @@ fn resolve_many(name: &str, type_name: &str) -> Field {
 
 async fn entities_by_sk(
     conn: &mut PoolConnection<Sqlite>,
-    keys: Option<Vec<String>>,
+    keys: Vec<String>,
     limit: u64,
 ) -> Result<Vec<ValueMapping>> {
     let mut builder: QueryBuilder<'_, Sqlite> = QueryBuilder::new("SELECT * FROM entities");
-
-    if let Some(keys) = keys {
-        let keys_str = format!("{}%", keys.join(","));
-        builder.push(" WHERE keys LIKE ").push_bind(keys_str);
-    }
-
+    let keys_str = format!("{}%", keys.join(","));
+    builder.push(" WHERE keys LIKE ").push_bind(keys_str);
     builder.push(" ORDER BY created_at DESC LIMIT ").push(limit);
+
     let entities: Vec<Entity> = builder.build_query_as().fetch_all(conn).await?;
     Ok(entities.into_iter().map(EntityObject::value_mapping).collect())
 }

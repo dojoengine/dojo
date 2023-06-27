@@ -51,7 +51,7 @@ mod tests {
     //     assert_eq!(entity.id, "entity_3".to_string());
     // }
 
-        // #[sqlx::test(migrations = "./migrations")]
+    // #[sqlx::test(migrations = "./migrations")]
     // async fn test_component_union(pool: SqlitePool) {
     //     component_fixtures(&pool).await;
 
