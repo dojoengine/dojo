@@ -7,7 +7,8 @@ mod World {
     use serde::Serde;
     use starknet::{
         get_caller_address, get_contract_address, get_tx_info,
-        contract_address::ContractAddressIntoFelt252, ClassHash, Zeroable, ContractAddress
+        contract_address::ContractAddressIntoFelt252, ClassHash, Zeroable,
+        ContractAddress, syscalls::emit_event_syscall
     };
 
     use dojo::database;
@@ -298,6 +299,24 @@ mod World {
         let current = self.nonce.read();
         self.nonce.write(current + 1);
         current
+    }
+
+    /// Emits a custom event
+    ///  
+    /// # Arguments
+    ///
+    /// * `keys` - The keys of the event 
+    /// * `values` - The data to be logged by the event
+    #[external(v0)]
+    fn emit(self: @ContractState, keys: Span<felt252>, values: Span<felt252>) {
+        // Assert can only be called through the executor
+        // This is to prevent system from writing to storage directly
+        assert(
+            get_caller_address() == self.executor_dispatcher.read().contract_address,
+            'must be called thru executor'
+        );
+
+        emit_event_syscall(keys, values).unwrap_syscall();
     }
 
     /// Set the component value for an entity
