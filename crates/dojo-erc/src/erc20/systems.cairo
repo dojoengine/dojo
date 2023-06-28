@@ -1,6 +1,7 @@
 #[system]
 mod ERC20Approve {
     use traits::Into;
+    use dojo::world::Context;
     use dojo_erc::erc20::components::Allowance;
 
     fn execute(ctx: Context, token: felt252, owner: felt252, spender: felt252, amount: felt252) {
@@ -16,6 +17,7 @@ mod ERC20TransferFrom {
     use starknet::get_caller_address;
     use traits::Into;
     use zeroable::Zeroable;
+    use dojo::world::Context;
     use dojo_erc::erc20::components::{Allowance, Balance};
 
     fn execute(
@@ -63,6 +65,7 @@ mod ERC20TransferFrom {
 mod ERC20Mint {
     use traits::Into;
     use zeroable::Zeroable;
+    use dojo::world::Context;
     use dojo_erc::erc20::components::{Balance, Supply};
 
     fn execute(ctx: Context, token: felt252, recipient: felt252, amount: felt252) {
@@ -82,6 +85,7 @@ mod ERC20Mint {
 mod ERC20Burn {
     use traits::Into;
     use zeroable::Zeroable;
+    use dojo::world::Context;
     use dojo_erc::erc20::components::{Balance, Supply};
 
     fn execute(ctx: Context, token: felt252, owner: felt252, amount: felt252) {

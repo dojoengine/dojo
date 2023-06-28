@@ -61,7 +61,6 @@ impl System {
                     use dojo::database::query::TupleSize3IntoQuery;
                     use dojo::database::query::IntoPartitioned;
                     use dojo::database::query::IntoPartitionedQuery;
-                    use dojo::execution_context::Context;
 
                     #[storage]
                     struct Storage {}
@@ -171,7 +170,7 @@ impl System {
             Some(_) => panic!("The first parameter must be 'ctx: Context'"),
             None => {
                 // 'ctx: Context' is not found at all, add it as the first parameter
-                context = RewriteNode::Text("ctx: Context,".to_string());
+                context = RewriteNode::Text("_ctx: dojo::world::Context,".to_string());
             }
         };
 

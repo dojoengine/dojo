@@ -8,8 +8,9 @@ use starknet::syscalls::deploy_syscall;
 use starknet::class_hash::Felt252TryIntoClassHash;
 use dojo::interfaces::IExecutorDispatcher;
 use dojo::interfaces::IExecutorDispatcherTrait;
-use dojo::auth::components::AuthRole;
+use dojo::interfaces::IWorldDispatcher;
 use dojo::executor::Executor;
+use dojo::world::Context;
 
 #[derive(Component, Copy, Drop, Serde)]
 struct Foo {
@@ -42,8 +43,12 @@ fn test_executor() {
     system_calldata.append(53);
     let res = executor
         .execute(
-            Bar::TEST_CLASS_HASH.try_into().unwrap(),
-            AuthRole { id: 'TestRole'.into() },
+            Context {
+                world: IWorldDispatcher { contract_address: starknet::contract_address_const::<0x1337>() },
+                origin: starknet::contract_address_const::<0x1337>(),
+                system: 'Bar',
+                system_class_hash: Bar::TEST_CLASS_HASH.try_into().unwrap(),
+            },
             system_calldata.span()
         );
 }

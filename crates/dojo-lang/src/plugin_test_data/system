@@ -22,6 +22,7 @@ struct Player {
 #[system]
 mod Spawn {
     use traits::Into;
+    use dojo::world::Context;
     use super::Position;
     use super::Player;
 
@@ -69,6 +70,7 @@ mod Spawn {
 mod Move {
     use traits::Into;
     use array::ArrayTrait;
+    use dojo::world::Context;
     use super::Position;
     use super::Player;
 
@@ -76,7 +78,7 @@ mod Move {
         return move_inner(positions, index + 1_u32, count - 1_u32);
     }
 
-    fn execute(player_id: felt252) {
+    fn execute(ctx: Context, player_id: felt252) {
         let positions_query = find!(ctx, 0x0, (Position, Player));
         let players_query = find!(ctx, 0x0, Player);
         let player = get!(ctx, player_id.into(), Player);
@@ -273,7 +275,6 @@ mod Spawn {
     use dojo::database::query::TupleSize3IntoQuery;
     use dojo::database::query::IntoPartitioned;
     use dojo::database::query::IntoPartitionedQuery;
-    use dojo::execution_context::Context;
 
     #[storage]
     struct Storage {}
@@ -293,6 +294,7 @@ mod Spawn {
     }
 
     use traits::Into;
+    use dojo::world::Context;
     use super::Position;
     use super::Player;
 
@@ -304,7 +306,6 @@ mod Spawn {
             ctx
                 .world
                 .set_entity(
-                    ctx,
                     'Player',
                     (420, (69, ctx.world.uuid())).into_partitioned(),
                     0_u8,
@@ -318,7 +319,6 @@ mod Spawn {
             ctx
                 .world
                 .set_entity(
-                    ctx,
                     'Position',
                     (420, (69, ctx.world.uuid())).into_partitioned(),
                     0_u8,
@@ -329,33 +329,25 @@ mod Spawn {
         {
             let mut calldata = array::ArrayTrait::new();
             serde::Serde::serialize(@Player { name: name }, ref calldata);
-            ctx
-                .world
-                .set_entity(ctx, 'Player', 420.into(), 0_u8, array::ArrayTrait::span(@calldata));
+            ctx.world.set_entity('Player', 420.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
             let mut calldata = array::ArrayTrait::new();
             serde::Serde::serialize(@Position { x: 0, y: 0 }, ref calldata);
-            ctx
-                .world
-                .set_entity(ctx, 'Position', 420.into(), 0_u8, array::ArrayTrait::span(@calldata));
+            ctx.world.set_entity('Position', 420.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
             let mut calldata = array::ArrayTrait::new();
             serde::Serde::serialize(@Player { name: name }, ref calldata);
-            ctx
-                .world
-                .set_entity(ctx, 'Player', 120.into(), 0_u8, array::ArrayTrait::span(@calldata));
+            ctx.world.set_entity('Player', 120.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
             let mut calldata = array::ArrayTrait::new();
             serde::Serde::serialize(@Position { x: 0, y: 0 }, ref calldata);
-            ctx
-                .world
-                .set_entity(ctx, 'Position', 120.into(), 0_u8, array::ArrayTrait::span(@calldata));
+            ctx.world.set_entity('Position', 120.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         let player_id = starknet::get_caller_address();
@@ -365,9 +357,7 @@ mod Spawn {
             serde::Serde::serialize(@Player { name: name }, ref calldata);
             ctx
                 .world
-                .set_entity(
-                    ctx, 'Player', player_id.into(), 0_u8, array::ArrayTrait::span(@calldata)
-                );
+                .set_entity('Player', player_id.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
@@ -375,9 +365,7 @@ mod Spawn {
             serde::Serde::serialize(@Position { x: 0, y: 0 }, ref calldata);
             ctx
                 .world
-                .set_entity(
-                    ctx, 'Position', player_id.into(), 0_u8, array::ArrayTrait::span(@calldata)
-                );
+                .set_entity('Position', player_id.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
@@ -385,9 +373,7 @@ mod Spawn {
             serde::Serde::serialize(@Player { name: name }, ref calldata);
             ctx
                 .world
-                .set_entity(
-                    ctx, 'Player', (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata)
-                );
+                .set_entity('Player', (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
@@ -395,25 +381,19 @@ mod Spawn {
             serde::Serde::serialize(@Position { x: 0, y: 0 }, ref calldata);
             ctx
                 .world
-                .set_entity(
-                    ctx, 'Position', (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata)
-                );
+                .set_entity('Position', (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
             let mut calldata = array::ArrayTrait::new();
             serde::Serde::serialize(@Player { name: name }, ref calldata);
-            ctx
-                .world
-                .set_entity(ctx, 'Player', 1337.into(), 0_u8, array::ArrayTrait::span(@calldata));
+            ctx.world.set_entity('Player', 1337.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
             let mut calldata = array::ArrayTrait::new();
             serde::Serde::serialize(@Position { x: 0, y: 0 }, ref calldata);
-            ctx
-                .world
-                .set_entity(ctx, 'Position', 1337.into(), 0_u8, array::ArrayTrait::span(@calldata));
+            ctx.world.set_entity('Position', 1337.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
         return ();
     }
@@ -435,7 +415,6 @@ mod Move {
     use dojo::database::query::TupleSize3IntoQuery;
     use dojo::database::query::IntoPartitioned;
     use dojo::database::query::IntoPartitionedQuery;
-    use dojo::execution_context::Context;
 
     #[storage]
     struct Storage {}
@@ -456,6 +435,7 @@ mod Move {
 
     use traits::Into;
     use array::ArrayTrait;
+    use dojo::world::Context;
     use super::Position;
     use super::Player;
 
@@ -974,7 +954,6 @@ mod Proxy {
     use dojo::database::query::TupleSize3IntoQuery;
     use dojo::database::query::IntoPartitioned;
     use dojo::database::query::IntoPartitionedQuery;
-    use dojo::execution_context::Context;
 
     #[storage]
     struct Storage {}
@@ -993,28 +972,28 @@ mod Proxy {
 
 
     #[external(v0)]
-    fn execute(self: @ContractState, ctx: Context, value: felt252) -> felt252 {
+    fn execute(self: @ContractState, _ctx: dojo::world::Context, value: felt252) -> felt252 {
         value
     }
 }
 
 //! > expected_diagnostics
 error: Plugin diagnostic: Invalid arguments. Expected "(context, query, (components,))"
- --> lib.cairo:44:14
+ --> lib.cairo:45:14
         set !(ctx, (
              ^*****^
 
 error: Plugin diagnostic: Component types cannot be empty
- --> lib.cairo:135:19
+ --> lib.cairo:137:19
         let err = get!(ctx, player_id.into(), ());
                   ^*****************************^
 
 error: Plugin diagnostic: Unexpected argument type. Expected: "dojo::database::query::Query", found: "(?78, ?79, ?80, ?81, ?82)".
- --> lib.cairo:49:20
+ --> lib.cairo:50:20
         set !(ctx, (0, 0, 0, 0, 0), (
                    ^*************^
 
 error: Plugin diagnostic: Unexpected argument type. Expected: "dojo::database::query::Query", found: "(?90, ?91, ?92, ?93, ?94)".
- --> lib.cairo:49:20
+ --> lib.cairo:50:20
         set !(ctx, (0, 0, 0, 0, 0), (
                    ^*************^

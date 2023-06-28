@@ -115,7 +115,7 @@ impl Manifest {
                     for param in params.into_iter() {
                         let ty = param.ty.format(db);
                         // Context is injected by the executor contract.
-                        if ty == "dojo::execution_context::Context" {
+                        if ty == "dojo::world::Context" {
                             continue;
                         }
 
