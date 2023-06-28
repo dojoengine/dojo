@@ -5,6 +5,6 @@ cairo-version = "2.0.0-rc4"
 description = "Implementations of ERC standards for the Dojo framework"
 
 [dependencies]
-dojo_core = { path = "../dojo-core" }
+dojo = { path = "../dojo-core" }
 
 [[target.dojo]]

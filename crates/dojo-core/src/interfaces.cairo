@@ -1,4 +1,4 @@
-use dojo_core::{
+use dojo::{
     database::query::Query,
     auth::systems::Route, auth::components::AuthRole, execution_context::Context
 };

@@ -50,18 +50,18 @@ impl System {
                     use option::OptionTrait;
                     use array::SpanTrait;
 
-                    use dojo_core::world;
-                    use dojo_core::interfaces::IWorldDispatcher;
-                    use dojo_core::interfaces::IWorldDispatcherTrait;
-                    use dojo_core::database::query::Query;
-                    use dojo_core::database::query::QueryTrait;
-                    use dojo_core::database::query::LiteralIntoQuery;
-                    use dojo_core::database::query::TupleSize1IntoQuery;
-                    use dojo_core::database::query::TupleSize2IntoQuery;
-                    use dojo_core::database::query::TupleSize3IntoQuery;
-                    use dojo_core::database::query::IntoPartitioned;
-                    use dojo_core::database::query::IntoPartitionedQuery;
-                    use dojo_core::execution_context::Context;
+                    use dojo::world;
+                    use dojo::interfaces::IWorldDispatcher;
+                    use dojo::interfaces::IWorldDispatcherTrait;
+                    use dojo::database::query::Query;
+                    use dojo::database::query::QueryTrait;
+                    use dojo::database::query::LiteralIntoQuery;
+                    use dojo::database::query::TupleSize1IntoQuery;
+                    use dojo::database::query::TupleSize2IntoQuery;
+                    use dojo::database::query::TupleSize3IntoQuery;
+                    use dojo::database::query::IntoPartitioned;
+                    use dojo::database::query::IntoPartitionedQuery;
+                    use dojo::execution_context::Context;
 
                     #[storage]
                     struct Storage {}

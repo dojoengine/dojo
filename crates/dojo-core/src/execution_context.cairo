@@ -1,5 +1,5 @@
-use dojo_core::interfaces::IWorldDispatcher;
-use dojo_core::auth::components::AuthRole;
+use dojo::interfaces::IWorldDispatcher;
+use dojo::auth::components::AuthRole;
 use starknet::{ContractAddress, ClassHash};
 
 #[derive(Copy, Drop, Serde)]

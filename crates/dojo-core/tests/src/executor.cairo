@@ -6,10 +6,10 @@ use traits::TryInto;
 
 use starknet::syscalls::deploy_syscall;
 use starknet::class_hash::Felt252TryIntoClassHash;
-use dojo_core::interfaces::IExecutorDispatcher;
-use dojo_core::interfaces::IExecutorDispatcherTrait;
-use dojo_core::auth::components::AuthRole;
-use dojo_core::executor::Executor;
+use dojo::interfaces::IExecutorDispatcher;
+use dojo::interfaces::IExecutorDispatcherTrait;
+use dojo::auth::components::AuthRole;
+use dojo::executor::Executor;
 
 #[derive(Component, Copy, Drop, Serde)]
 struct Foo {

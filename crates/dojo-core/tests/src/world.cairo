@@ -10,17 +10,17 @@ use starknet::contract_address_const;
 use starknet::get_caller_address;
 use starknet::syscalls::deploy_syscall;
 
-use dojo_core::database::query::QueryTrait;
-use dojo_core::interfaces::IWorldDispatcher;
-use dojo_core::interfaces::IWorldDispatcherTrait;
-use dojo_core::executor::Executor;
-use dojo_core::execution_context::Context;
-use dojo_core::auth::components::AuthRole;
-use dojo_core::world::World;
-use dojo_core::world::LibraryCall;
-use dojo_core::auth::systems::Route;
+use dojo::database::query::QueryTrait;
+use dojo::interfaces::IWorldDispatcher;
+use dojo::interfaces::IWorldDispatcherTrait;
+use dojo::executor::Executor;
+use dojo::execution_context::Context;
+use dojo::auth::components::AuthRole;
+use dojo::world::World;
+use dojo::world::LibraryCall;
+use dojo::auth::systems::Route;
 
-use dojo_core::test_utils::mock_auth_components_systems;
+use dojo::test_utils::mock_auth_components_systems;
 
 // Components and Systems
 

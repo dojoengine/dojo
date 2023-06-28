@@ -75,10 +75,10 @@ mod tests {
     use core::traits::Into;
     use array::ArrayTrait;
 
-    use dojo_core::auth::systems::{Route, RouteTrait};
-    use dojo_core::interfaces::IWorldDispatcherTrait;
+    use dojo::auth::systems::{Route, RouteTrait};
+    use dojo::interfaces::IWorldDispatcherTrait;
 
-    use dojo_core::test_utils::spawn_test_world;
+    use dojo::test_utils::spawn_test_world;
 
     use dojo_examples::components::PositionComponent;
     use dojo_examples::components::MovesComponent;

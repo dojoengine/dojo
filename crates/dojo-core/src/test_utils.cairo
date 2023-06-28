@@ -6,11 +6,11 @@ use traits::TryInto;
 use option::OptionTrait;
 use core::{result::ResultTrait, traits::Into};
 
-use dojo_core::{
+use dojo::{
     executor::Executor, world::World, interfaces::{IWorldDispatcher, IWorldDispatcherTrait}
 };
-use dojo_core::auth::components::{AuthRoleComponent, AuthStatusComponent};
-use dojo_core::auth::systems::{
+use dojo::auth::components::{AuthRoleComponent, AuthStatusComponent};
+use dojo::auth::systems::{
     Route, RouteAuth, IsAuthorized, IsAccountAdmin, GrantAuthRole, RevokeAuthRole, GrantResource,
     RevokeResource, GrantScopedAuthRole, RevokeScopedAuthRole
 };

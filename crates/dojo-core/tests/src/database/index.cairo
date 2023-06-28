@@ -1,7 +1,7 @@
 use array::ArrayTrait;
 use traits::Into;
 
-use dojo_core::database::index;
+use dojo::database::index;
 
 #[test]
 #[available_gas(2000000)]
