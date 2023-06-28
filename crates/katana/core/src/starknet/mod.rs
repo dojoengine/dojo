@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use anyhow::Result;
 use blockifier::block_context::BlockContext;
 use blockifier::execution::entry_point::{
@@ -22,16 +20,17 @@ use starknet_api::{patricia_key, stark_felt};
 use tracing::{info, warn};
 
 pub mod block;
+pub mod config;
 pub mod contract;
 pub mod event;
 pub mod transaction;
 
 use block::{StarknetBlock, StarknetBlocks};
-use transaction::{StarknetTransaction, StarknetTransactions};
+use config::StarknetConfig;
+use transaction::{ExternalFunctionCall, StarknetTransaction, StarknetTransactions};
 
-use self::transaction::ExternalFunctionCall;
 use crate::accounts::PredeployedAccounts;
-use crate::block_context::{block_context_from_config, BlockContextGenerator};
+use crate::block_context::BlockContextGenerator;
 use crate::constants::{
     DEFAULT_PREFUNDED_ACCOUNT_BALANCE, ERC20_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS, UDC_ADDRESS,
     UDC_CLASS_HASH,
@@ -42,17 +41,6 @@ use crate::util::{
     convert_blockifier_tx_to_starknet_api_tx, convert_state_diff_to_rpc_state_diff,
     get_current_timestamp,
 };
-
-#[derive(Debug, Default)]
-pub struct StarknetConfig {
-    pub seed: [u8; 32],
-    pub auto_mine: bool,
-    pub gas_price: u128,
-    pub chain_id: String,
-    pub total_accounts: u8,
-    pub allow_zero_max_fee: bool,
-    pub account_path: Option<PathBuf>,
-}
 
 pub struct StarknetWrapper {
     pub config: StarknetConfig,
@@ -68,9 +56,11 @@ pub struct StarknetWrapper {
 impl StarknetWrapper {
     pub fn new(config: StarknetConfig) -> Self {
         let blocks = StarknetBlocks::default();
-        let block_context = block_context_from_config(&config);
-        let block_context_generator = BlockContextGenerator::default();
         let transactions = StarknetTransactions::default();
+
+        let block_context = config.block_context();
+        let block_context_generator = config.block_context_generator();
+
         let mut state = DictStateReader::default();
         let pending_state = CachedState::new(state.clone());
 

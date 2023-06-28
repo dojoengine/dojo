@@ -12,7 +12,6 @@ use starknet_api::hash::StarkHash;
 use starknet_api::patricia_key;
 
 use crate::constants::{DEFAULT_GAS_PRICE, FEE_TOKEN_ADDRESS, SEQUENCER_ADDRESS};
-use crate::starknet::StarknetConfig;
 
 pub trait Base {
     fn base() -> Self;
@@ -26,18 +25,7 @@ impl Base for BlockContext {
             block_timestamp: BlockTimestamp::default(),
             sequencer_address: ContractAddress(patricia_key!(*SEQUENCER_ADDRESS)),
             fee_token_address: ContractAddress(patricia_key!(*FEE_TOKEN_ADDRESS)),
-            vm_resource_fee_cost: HashMap::from([
-                (String::from("n_steps"), 1_f64),
-                (HASH_BUILTIN_NAME.to_string(), 1_f64),
-                (RANGE_CHECK_BUILTIN_NAME.to_string(), 1_f64),
-                (SIGNATURE_BUILTIN_NAME.to_string(), 1_f64),
-                (BITWISE_BUILTIN_NAME.to_string(), 1_f64),
-                (POSEIDON_BUILTIN_NAME.to_string(), 1_f64),
-                (OUTPUT_BUILTIN_NAME.to_string(), 1_f64),
-                (EC_OP_BUILTIN_NAME.to_string(), 1_f64),
-                (KECCAK_BUILTIN_NAME.to_string(), 1_f64),
-                (SEGMENT_ARENA_BUILTIN_NAME.to_string(), 1_f64),
-            ]),
+            vm_resource_fee_cost: get_default_vm_resource_fee_cost(),
             gas_price: DEFAULT_GAS_PRICE,
             invoke_tx_max_n_steps: 1_000_000,
             validate_max_n_steps: 1_000_000,
@@ -45,29 +33,19 @@ impl Base for BlockContext {
     }
 }
 
-pub fn block_context_from_config(config: &StarknetConfig) -> BlockContext {
-    BlockContext {
-        block_number: BlockNumber::default(),
-        chain_id: ChainId(config.chain_id.clone()),
-        block_timestamp: BlockTimestamp::default(),
-        sequencer_address: ContractAddress(patricia_key!(*SEQUENCER_ADDRESS)),
-        fee_token_address: ContractAddress(patricia_key!(*FEE_TOKEN_ADDRESS)),
-        vm_resource_fee_cost: HashMap::from([
-            (String::from("n_steps"), 1_f64),
-            (HASH_BUILTIN_NAME.to_string(), 1_f64),
-            (RANGE_CHECK_BUILTIN_NAME.to_string(), 1_f64),
-            (SIGNATURE_BUILTIN_NAME.to_string(), 1_f64),
-            (BITWISE_BUILTIN_NAME.to_string(), 1_f64),
-            (POSEIDON_BUILTIN_NAME.to_string(), 1_f64),
-            (OUTPUT_BUILTIN_NAME.to_string(), 1_f64),
-            (EC_OP_BUILTIN_NAME.to_string(), 1_f64),
-            (KECCAK_BUILTIN_NAME.to_string(), 1_f64),
-            (SEGMENT_ARENA_BUILTIN_NAME.to_string(), 1_f64),
-        ]),
-        gas_price: config.gas_price,
-        validate_max_n_steps: 1_000_000,
-        invoke_tx_max_n_steps: 1_000_000,
-    }
+pub fn get_default_vm_resource_fee_cost() -> HashMap<String, f64> {
+    HashMap::from([
+        (String::from("n_steps"), 1_f64),
+        (HASH_BUILTIN_NAME.to_string(), 1_f64),
+        (RANGE_CHECK_BUILTIN_NAME.to_string(), 1_f64),
+        (SIGNATURE_BUILTIN_NAME.to_string(), 1_f64),
+        (BITWISE_BUILTIN_NAME.to_string(), 1_f64),
+        (POSEIDON_BUILTIN_NAME.to_string(), 1_f64),
+        (OUTPUT_BUILTIN_NAME.to_string(), 1_f64),
+        (EC_OP_BUILTIN_NAME.to_string(), 1_f64),
+        (KECCAK_BUILTIN_NAME.to_string(), 1_f64),
+        (SEGMENT_ARENA_BUILTIN_NAME.to_string(), 1_f64),
+    ])
 }
 
 #[derive(Default)]

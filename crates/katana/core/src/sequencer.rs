@@ -26,10 +26,11 @@ use tokio::time;
 
 use crate::sequencer_error::SequencerError;
 use crate::starknet::block::StarknetBlock;
+use crate::starknet::config::StarknetConfig;
 use crate::starknet::contract::StarknetContract;
 use crate::starknet::event::EmittedEvent;
 use crate::starknet::transaction::ExternalFunctionCall;
-use crate::starknet::{StarknetConfig, StarknetWrapper};
+use crate::starknet::StarknetWrapper;
 use crate::state::DictStateReader;
 use crate::util::starkfelt_to_u128;
 
