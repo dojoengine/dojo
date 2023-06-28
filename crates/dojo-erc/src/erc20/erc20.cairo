@@ -32,10 +32,26 @@ mod ERC20 {
     }
 
     #[event]
-    fn Transfer(from: ContractAddress, to: ContractAddress, value: u256) {}
+    #[derive(Drop, starknet::Event)]
+    enum Event {
+        Transfer: Transfer,
+        Approval: Approval
+    }
 
-    #[event]
-    fn Approval(owner: ContractAddress, spender: ContractAddress, value: u256) {}
+
+    #[derive(Drop, starknet::Event)]
+    struct Transfer {
+        from: ContractAddress,
+        to: ContractAddress,
+        value: u256
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct Approval {
+        owner: ContractAddress,
+        spender: ContractAddress,
+        value: u256
+    }
 
     #[constructor]
     fn constructor(
@@ -60,7 +76,10 @@ mod ERC20 {
             calldata.append(recipient.into());
             calldata.append(initial_supply);
             world(@self).execute('ERC20Mint'.into(), calldata.span());
-            Transfer(Zeroable::zero(), recipient, initial_supply.into());
+
+            self.emit(Transfer { 
+                from: Zeroable::zero(), to: recipient, value: initial_supply.into()
+            });
         }
     }
 
@@ -106,7 +125,7 @@ mod ERC20 {
     }
 
     #[external(v0)]
-    fn approve(self: @ContractState, spender: ContractAddress, amount: u256) -> bool {
+    fn approve(ref self: ContractState, spender: ContractAddress, amount: u256) -> bool {
         assert(spender.is_non_zero(), 'ERC20: approve to 0');
 
         let token = get_contract_address();
@@ -116,22 +135,22 @@ mod ERC20 {
         calldata.append(owner.into());
         calldata.append(spender.into());
         calldata.append(u256_as_allowance(amount));
-        world(self).execute('ERC20Approve'.into(), calldata.span());
+        world(@self).execute('ERC20Approve'.into(), calldata.span());
 
-        Approval(owner, spender, amount);
+        self.emit(Approval {owner, spender, value: amount});
 
         true
     }
 
     #[external(v0)]
-    fn transfer(self: @ContractState, recipient: ContractAddress, amount: u256) -> bool {
-        transfer_internal(self, get_caller_address(), recipient, amount);
+    fn transfer(ref self: ContractState, recipient: ContractAddress, amount: u256) -> bool {
+        transfer_internal(ref self, get_caller_address(), recipient, amount);
         true
     }
 
     #[external(v0)]
-    fn transfer_from(self: @ContractState, spender: ContractAddress, recipient: ContractAddress, amount: u256) -> bool {
-        transfer_internal(self, spender, recipient, amount);
+    fn transfer_from(ref self: ContractState, spender: ContractAddress, recipient: ContractAddress, amount: u256) -> bool {
+        transfer_internal(ref self, spender, recipient, amount);
         true
     }
 
@@ -144,7 +163,7 @@ mod ERC20 {
         IWorldDispatcher { contract_address: self.world_address.read() }
     }
 
-    fn transfer_internal(self: @ContractState, spender: ContractAddress, recipient: ContractAddress, amount: u256) {
+    fn transfer_internal(ref self: ContractState, spender: ContractAddress, recipient: ContractAddress, amount: u256) {
         assert(recipient.is_non_zero(), 'ERC20: transfer to 0');
 
         let token = get_contract_address();
@@ -154,9 +173,11 @@ mod ERC20 {
         calldata.append(recipient.into());
         calldata.append(u256_into_felt252(amount));
 
-        world(self).execute('ERC20TransferFrom'.into(), calldata.span());
+        world(@self).execute('ERC20TransferFrom'.into(), calldata.span());
 
-        Transfer(spender, recipient, amount);
+        self.emit(Transfer { 
+            from: Zeroable::zero(), to: recipient, value: amount
+        });
     }
 
     fn u256_as_allowance(val: u256) -> felt252 {

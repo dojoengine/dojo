@@ -21,19 +21,46 @@ mod World {
     };
 
     #[event]
-    fn WorldSpawned(address: ContractAddress, caller: ContractAddress) {}
+    #[derive(Drop, starknet::Event)]
+    enum Event {
+        WorldSpawned: WorldSpawned,
+        ComponentRegistered: ComponentRegistered,
+        SystemRegistered: SystemRegistered,
+        StoreSetRecord: StoreSetRecord,
+        StoreDelRecord: StoreDelRecord
+    }
 
-    #[event]
-    fn ComponentRegistered(name: felt252, class_hash: ClassHash) {}
+    #[derive(Drop, starknet::Event)]
+    struct WorldSpawned {
+        address: ContractAddress,
+        caller: ContractAddress
+    }
 
-    #[event]
-    fn SystemRegistered(name: felt252, class_hash: ClassHash) {}
+    #[derive(Drop, starknet::Event)]
+    struct ComponentRegistered {
+        name: felt252,
+        class_hash: ClassHash
+    }
 
-    #[event]
-    fn StoreSetRecord(table_id: felt252, keys: Span<felt252>, offset: u8, value: Span<felt252>) {}
+    #[derive(Drop, starknet::Event)]
+    struct SystemRegistered {
+        name: felt252,
+        class_hash: ClassHash
+    }
 
-    #[event]
-    fn StoreDelRecord(table_id: felt252, keys: Span<felt252>) {}
+    #[derive(Drop, starknet::Event)]
+    struct StoreSetRecord {
+        table_id: felt252,
+        keys: Span<felt252>,
+        offset: u8,
+        value: Span<felt252>,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct StoreDelRecord {
+        table_id: felt252,
+        keys: Span<felt252>,
+    }
 
     #[storage]
     struct Storage {
@@ -51,8 +78,12 @@ mod World {
     #[constructor]
     fn constructor(ref self: ContractState, executor: ContractAddress) {
         self.executor_dispatcher.write(IExecutorDispatcher { contract_address: executor });
-
-        WorldSpawned(get_contract_address(), get_tx_info().unbox().account_contract_address);
+        self.emit(
+            WorldSpawned {
+                address: get_contract_address(), 
+                caller: get_tx_info().unbox().account_contract_address
+            }
+        );
     }
 
     /// Initialize the world with the routes that specify
@@ -180,7 +211,7 @@ mod World {
             assert(is_account_admin(@self), 'only admin can update');
         }
         self.component_registry.write(name, class_hash);
-        ComponentRegistered(name, class_hash);
+        self.emit(ComponentRegistered{ name, class_hash });
     }
 
     /// Get the class hash of a registered component
@@ -211,7 +242,7 @@ mod World {
             assert(is_account_admin(@self), 'only admin can update');
         }
         self.system_registry.write(name, class_hash);
-        SystemRegistered(name, class_hash);
+        self.emit(SystemRegistered{ name, class_hash });
     }
 
     /// Get the class hash of a registered system
@@ -280,7 +311,7 @@ mod World {
     /// * `context` - The execution context of the system call
     #[external(v0)]
     fn set_entity(
-        self: @ContractState,
+        ref self: ContractState,
         context: Context,
         component: felt252,
         query: Query,
@@ -296,15 +327,16 @@ mod World {
 
         // Fallback to default scoped authorization check if role is not set
         fallback_authorization_check(
-            self, context.caller_account, context.caller_system, component
+            @self, context.caller_account, context.caller_system, component
         );
 
         // Set the entity
-        let table = query.table(component);
+        let table_id = query.table(component);
+        let keys = query.keys();
         let component_class_hash = self.component_registry.read(component);
-        database::set(component_class_hash, table, query, offset, value);
+        database::set(component_class_hash, table_id, query, offset, value);
 
-        StoreSetRecord(table, query.keys(), offset, value);
+        self.emit(StoreSetRecord{ table_id, keys, offset, value });
     }
 
     /// Delete a component from an entity
@@ -315,7 +347,7 @@ mod World {
     /// * `query` - The query to be used to find the entity
     /// * `context` - The execution context of the system call
     #[external(v0)]
-    fn delete_entity(self: @ContractState, context: Context, component: felt252, query: Query) {
+    fn delete_entity(ref self: ContractState, context: Context, component: felt252, query: Query) {
         // Assert can only be called through the executor
         // This is to prevent system from writing to storage directly
         assert(
@@ -325,14 +357,15 @@ mod World {
 
         // Fallback to default scoped authorization check if role is not set
         fallback_authorization_check(
-            self, context.caller_account, context.caller_system, component
+            @self, context.caller_account, context.caller_system, component
         );
 
         // Delete the entity
-        let table = query.table(component);
+        let table_id = query.table(component);
+        let keys = query.keys();
         let component_class_hash = self.component_registry.read(component);
         database::del(component_class_hash, component.into(), query);
-        // StoreDelRecord(table, query.keys())
+        self.emit(StoreDelRecord{ table_id, keys });
     }
 
     /// Get the component value for an entity

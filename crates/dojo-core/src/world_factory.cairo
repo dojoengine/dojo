@@ -25,7 +25,15 @@ mod WorldFactory {
     }
 
     #[event]
-    fn WorldSpawned(address: ContractAddress) {}
+    #[derive(Drop, starknet::Event)]
+    enum Event {
+        WorldSpawned: WorldSpawned
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct WorldSpawned {
+        address: ContractAddress
+    }
 
     #[constructor]
     fn constructor(
@@ -75,7 +83,7 @@ mod WorldFactory {
         let world = IWorldDispatcher { contract_address: world_address };
 
         // events
-        WorldSpawned(world_address);
+        self.emit(WorldSpawned { address: world_address });
 
         // register default auth components and systems
         register_auth(@self, world_address);
