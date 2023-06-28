@@ -80,11 +80,11 @@ tracing-subscriber = "0.3.16"
 yansi = "0.5.1"
 
 [patch."https://github.com/starkware-libs/blockifier"]
-blockifier = { git = "https://github.com/dojoengine/blockifier", branch = "main" }
+blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "acd7577" }
 
 [patch.crates-io]
-cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", branch = "main" }
-cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", branch = "main" }
+cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "9edddbc" }
+cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "9edddbc" }
 
 starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", branch = "dev/cairo_2_abi" }
 starknet-crypto = { git = "https://github.com/xJonathanLEI/starknet-rs", branch = "dev/cairo_2_abi" }

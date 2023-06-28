@@ -658,7 +658,7 @@ dependencies = [
 [[package]]
 name = "blockifier"
 version = "0.1.0"
-source = "git+https://github.com/dojoengine/blockifier?branch=main#acd75779f344c9abc6dda5bf0a36bffa7351b931"
+source = "git+https://github.com/dojoengine/blockifier?rev=acd7577#acd75779f344c9abc6dda5bf0a36bffa7351b931"
 dependencies = [
  "cairo-felt",
  "cairo-lang-casm",
@@ -762,7 +762,7 @@ checksum = "38fcc2979eff34a4b84e1cf9a1e3da42a7d44b3b690a40cdcb23e3d556cfb2e5"
 [[package]]
 name = "cairo-felt"
 version = "0.6.1"
-source = "git+https://github.com/dojoengine/cairo-rs.git?branch=main#9edddbc68868b0391fd02140b744c56ba6a1f4cb"
+source = "git+https://github.com/dojoengine/cairo-rs.git?rev=9edddbc#9edddbc68868b0391fd02140b744c56ba6a1f4cb"
 dependencies = [
  "lazy_static",
  "num-bigint",
@@ -1312,7 +1312,7 @@ dependencies = [
 [[package]]
 name = "cairo-take_until_unbalanced"
 version = "0.30.0"
-source = "git+https://github.com/dojoengine/cairo-rs.git?branch=main#9edddbc68868b0391fd02140b744c56ba6a1f4cb"
+source = "git+https://github.com/dojoengine/cairo-rs.git?rev=9edddbc#9edddbc68868b0391fd02140b744c56ba6a1f4cb"
 dependencies = [
  "nom",
 ]
@@ -1320,7 +1320,7 @@ dependencies = [
 [[package]]
 name = "cairo-vm"
 version = "0.6.1"
-source = "git+https://github.com/dojoengine/cairo-rs.git?branch=main#9edddbc68868b0391fd02140b744c56ba6a1f4cb"
+source = "git+https://github.com/dojoengine/cairo-rs.git?rev=9edddbc#9edddbc68868b0391fd02140b744c56ba6a1f4cb"
 dependencies = [
  "anyhow",
  "bincode 2.0.0-rc.2",
