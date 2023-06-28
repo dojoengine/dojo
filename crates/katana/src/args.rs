@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use clap::{Args, Parser};
 use katana_core::constants::DEFAULT_GAS_PRICE;
 use katana_core::sequencer::SequencerConfig;
-use katana_core::starknet::StarknetConfig;
+use katana_core::starknet::config::{Environment, StarknetConfig};
 use katana_rpc::config::ServerConfig;
 
 #[derive(Parser, Debug)]
@@ -16,7 +16,7 @@ pub struct KatanaArgs {
 
     #[arg(long)]
     #[arg(conflicts_with = "block_time")]
-    #[arg(help = " Disable auto and interval mining, and mine on demand instead.")]
+    #[arg(help = "Disable auto and interval mining, and mine on demand instead.")]
     pub no_mining: bool,
 
     #[arg(short, long)]
@@ -101,11 +101,13 @@ impl KatanaArgs {
         StarknetConfig {
             total_accounts: self.starknet.total_accounts,
             seed: parse_seed(self.starknet.seed.clone()),
-            gas_price: self.starknet.environment.gas_price.unwrap_or(DEFAULT_GAS_PRICE),
             account_path: self.starknet.account_path.clone(),
             allow_zero_max_fee: self.starknet.allow_zero_max_fee,
-            chain_id: self.starknet.environment.chain_id.clone(),
             auto_mine: self.block_time.is_none() && !self.no_mining,
+            env: Environment {
+                chain_id: self.starknet.environment.chain_id.clone(),
+                gas_price: self.starknet.environment.gas_price.unwrap_or(DEFAULT_GAS_PRICE),
+            },
         }
     }
 }
@@ -123,4 +125,26 @@ fn parse_seed(seed: Option<String>) -> [u8; 32] {
         }
     })
     .unwrap_or_default()
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn default_block_context_from_args() {
+        let args = KatanaArgs::parse_from(["katana"]);
+        let block_context = args.starknet_config().block_context();
+        assert_eq!(block_context.gas_price, DEFAULT_GAS_PRICE);
+        assert_eq!(block_context.chain_id.0, "KATANA".to_string());
+    }
+
+    #[test]
+    fn custom_block_context_from_args() {
+        let args =
+            KatanaArgs::parse_from(["katana", "--gas-price", "10", "--chain-id", "SN_GOERLI"]);
+        let block_context = args.starknet_config().block_context();
+        assert_eq!(block_context.gas_price, 10);
+        assert_eq!(block_context.chain_id.0, "SN_GOERLI".to_string());
+    }
 }

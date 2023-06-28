@@ -1,8 +1,9 @@
 use blockifier::abi::abi_utils::{get_storage_var_address, selector_from_name};
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transaction_execution::Transaction;
-use katana_core::constants::{DEFAULT_GAS_PRICE, FEE_TOKEN_ADDRESS};
-use katana_core::starknet::{StarknetConfig, StarknetWrapper};
+use katana_core::constants::FEE_TOKEN_ADDRESS;
+use katana_core::starknet::config::{Environment, StarknetConfig};
+use katana_core::starknet::StarknetWrapper;
 use starknet::core::types::TransactionStatus;
 use starknet_api::block::BlockNumber;
 use starknet_api::core::Nonce;
@@ -23,9 +24,8 @@ fn create_test_starknet() -> StarknetWrapper {
         auto_mine: true,
         total_accounts: 2,
         allow_zero_max_fee: true,
-        gas_price: DEFAULT_GAS_PRICE,
-        chain_id: String::from("KATANA"),
         account_path: Some(test_account_path),
+        env: Environment::default(),
     });
 
     starknet.generate_genesis_block();
