@@ -139,9 +139,10 @@ fn test_system() {
 }
 
 #[test]
-#[available_gas(6000000)]
+#[available_gas(8000000)]
 fn test_emit() {
-    let world = spawn_empty_world();
+    let world = deploy_world();
+    world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
 
     let mut keys = ArrayTrait::new();
     keys.append('MyEvent');
