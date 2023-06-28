@@ -138,6 +138,19 @@ fn test_system() {
     world.execute('Bar'.into(), data.span());
 }
 
+#[test]
+#[available_gas(6000000)]
+fn test_emit() {
+    let world = spawn_empty_world();
+
+    let mut keys = ArrayTrait::new();
+    keys.append('MyEvent');
+    let mut values = ArrayTrait::new();
+    values.append(1);
+    values.append(2);
+    world.emit(keys.span(), values.span());
+}
+
 // #[test]
 // #[available_gas(1000000)]
 // fn test_system_components() {
