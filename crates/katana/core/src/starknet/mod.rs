@@ -113,10 +113,20 @@ impl StarknetWrapper {
 
         match res {
             Ok(exec_info) => {
+                let status = if let Some(err) = &exec_info.revert_error {
+                    warn!("Transaction reverted: {err:?}");
+                    // TODO: change the status to `Reverted` status once the variant is implemented.
+                    TransactionStatus::Rejected
+                } else {
+                    TransactionStatus::AcceptedOnL2
+                };
+
                 let starknet_tx = StarknetTransaction::new(
                     api_tx.clone(),
-                    TransactionStatus::Pending,
+                    status,
                     Some(exec_info),
+                    // TODO: if transaction is `Reverted`, then the `revert_error` should be stored.
+                    // but right now `revert_error` is not of type `TransactionExecutionError`, so we store `None` instead.
                     None,
                 );
 
@@ -136,7 +146,7 @@ impl StarknetWrapper {
             }
 
             Err(exec_err) => {
-                warn!("Transaction execution error: {exec_err:?}");
+                warn!("Transaction validation error: {exec_err:?}");
 
                 let tx = StarknetTransaction::new(
                     api_tx,
