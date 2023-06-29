@@ -1978,6 +1978,7 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 name = "dojo-client"
 version = "0.1.0"
 dependencies = [
+ "dojo-world",
  "starknet",
 ]
 
@@ -2094,7 +2095,6 @@ dependencies = [
  "dojo-lang",
  "dojo-test-utils",
  "reqwest",
- "scarb",
  "serde",
  "serde_json",
  "serde_with",

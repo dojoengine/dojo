@@ -16,7 +16,6 @@ camino.workspace = true
 reqwest = { version = "0.11.18", default-features = false, features = [
     "rustls-tls",
 ] }
-scarb.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
