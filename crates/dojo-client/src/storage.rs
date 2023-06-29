@@ -1,6 +1,9 @@
 use dojo_world::manifest::{Component, Dependency, System};
 use starknet::core::types::FieldElement;
 
+/// Resposible for storage operations where the World's state persistence is managed.
+///
+/// [`Storage`] defines a mutable interface to the storage.
 pub trait Storage {
     type Error;
 
@@ -31,6 +34,7 @@ pub trait Storage {
     ) -> Result<(), Self::Error>;
 }
 
+/// [`StorageReader`] defines a immutable interface or a reference to the storage.
 pub trait StorageReader {
     type Error;
 
