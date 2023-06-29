@@ -143,8 +143,9 @@ impl StarknetWrapper {
                     api_tx.clone(),
                     status,
                     Some(exec_info),
-                    // TODO: if transaction is `Reverted`, then the `revert_error` should be stored.
-                    // but right now `revert_error` is not of type `TransactionExecutionError`, so we store `None` instead.
+                    // TODO: if transaction is `Reverted`, then the `revert_error` should be
+                    // stored. but right now `revert_error` is not of type
+                    // `TransactionExecutionError`, so we store `None` instead.
                     None,
                 );
 
