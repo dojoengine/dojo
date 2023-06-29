@@ -5,7 +5,7 @@ mod ERC20Approve {
     use dojo_erc::erc20::components::Allowance;
 
     fn execute(ctx: Context, token: felt252, owner: felt252, spender: felt252, amount: felt252) {
-        set !(ctx, (token, (owner, spender)).into_partitioned(), (Allowance { amount }))
+        set !(ctx.world, (token, (owner, spender)).into_partitioned(), (Allowance { amount }))
     }
 }
 
@@ -29,10 +29,10 @@ mod ERC20TransferFrom {
         let caller: felt252 = get_caller_address().into();
         if spender != caller {
             // decrease allowance if it's not owner doing the transfer
-            let allowance = get !(ctx, (token, (caller, spender)).into_partitioned(), Allowance);
+            let allowance = get !(ctx.world, (token, (caller, spender)).into_partitioned(), Allowance);
             if !is_unlimited_allowance(allowance) {
                 set !(
-                    ctx,
+                    ctx.world,
                     (token, (caller, spender)).into_partitioned(),
                     (Allowance { amount: allowance.amount - amount })
                 );
@@ -40,17 +40,17 @@ mod ERC20TransferFrom {
         }
 
         // decrease spender's balance
-        let balance = get !(ctx, (token, (spender)).into_partitioned(), Balance);
+        let balance = get !(ctx.world, (token, (spender)).into_partitioned(), Balance);
         set !(
-            ctx,
+            ctx.world,
             (token, (spender)).into_partitioned(),
             (Balance { amount: balance.amount - amount })
         );
 
         // increase recipient's balance
-        let balance = get !(ctx, (token, (recipient)).into_partitioned(), Balance);
+        let balance = get !(ctx.world, (token, (recipient)).into_partitioned(), Balance);
         set !(
-            ctx,
+            ctx.world,
             (token, (recipient)).into_partitioned(),
             (Balance { amount: balance.amount + amount })
         );
@@ -72,12 +72,12 @@ mod ERC20Mint {
         assert(recipient.is_non_zero(), 'ERC20: mint to 0');
 
         // increase token supply
-        let supply = get !(ctx, token.into(), Supply);
-        set !(ctx, token.into(), (Supply { amount: supply.amount + amount }));
+        let supply = get !(ctx.world, token.into(), Supply);
+        set !(ctx.world, token.into(), (Supply { amount: supply.amount + amount }));
 
         // increase balance of recipient
-        let balance = get !(ctx, (token, (recipient)).into_partitioned(), Balance);
-        set !(ctx, (token, (recipient)).into(), (Balance { amount: balance.amount + amount }));
+        let balance = get !(ctx.world, (token, (recipient)).into_partitioned(), Balance);
+        set !(ctx.world, (token, (recipient)).into(), (Balance { amount: balance.amount + amount }));
     }
 }
 
@@ -92,13 +92,13 @@ mod ERC20Burn {
         assert(owner.is_non_zero(), 'ERC20: burn from 0');
 
         // decrease token supply
-        let supply = get !(ctx, token.into(), Supply);
-        set !(ctx, token.into(), (Supply { amount: supply.amount - amount }));
+        let supply = get !(ctx.world, token.into(), Supply);
+        set !(ctx.world, token.into(), (Supply { amount: supply.amount - amount }));
 
         // decrease balance of owner
-        let balance = get !(ctx, (token, (owner)).into_partitioned(), Balance);
+        let balance = get !(ctx.world, (token, (owner)).into_partitioned(), Balance);
         set !(
-            ctx, (token, (owner)).into_partitioned(), (Balance { amount: balance.amount - amount })
+            ctx.world, (token, (owner)).into_partitioned(), (Balance { amount: balance.amount - amount })
         );
     }
 }
