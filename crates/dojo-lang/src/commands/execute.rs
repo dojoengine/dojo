@@ -23,7 +23,7 @@ impl CommandMacroTrait for ExecuteCommand {
 
         if elements.len() != 4 {
             command.data.diagnostics.push(PluginDiagnostic {
-                message: "Invalid arguments. Expected \"(context, system, query, calldata)\""
+                message: "Invalid arguments. Expected \"(world, system, query, calldata)\""
                     .to_string(),
                 stable_ptr: macro_ast.arguments(db).as_syntax_node().stable_ptr(),
             });

@@ -17,14 +17,14 @@ async fn test_load_from_manifest(pool: SqlitePool) {
     state.load_from_manifest(manifest.clone()).await.unwrap();
 
     let components = sqlx::query("SELECT * FROM components").fetch_all(&pool).await.unwrap();
-    assert_eq!(components.len(), 4);
+    assert_eq!(components.len(), 2);
 
     let moves_components =
         sqlx::query("SELECT * FROM external_moves").fetch_all(&pool).await.unwrap();
     assert_eq!(moves_components.len(), 0);
 
     let systems = sqlx::query("SELECT * FROM systems").fetch_all(&pool).await.unwrap();
-    assert_eq!(systems.len(), 12);
+    assert_eq!(systems.len(), 3);
 
     let mut world = state.world().await.unwrap();
 
