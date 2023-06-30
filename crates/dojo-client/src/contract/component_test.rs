@@ -4,7 +4,8 @@ use dojo_world::manifest::Member;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag, FieldElement};
 
-use crate::contract::world::{test::deploy_world, WorldContractReader};
+use crate::contract::world::test::deploy_world;
+use crate::contract::world::WorldContractReader;
 
 #[tokio::test]
 async fn test_component() {

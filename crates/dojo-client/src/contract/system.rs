@@ -7,8 +7,9 @@ use starknet::core::utils::{
 };
 use starknet::providers::{Provider, ProviderError};
 
-use crate::contract::world::{ContractReaderError, WorldContract};
-use crate::contract::world::{WorldContractError, WorldContractReader};
+use crate::contract::world::{
+    ContractReaderError, WorldContract, WorldContractError, WorldContractReader,
+};
 
 #[cfg(test)]
 #[path = "system_test.rs"]
@@ -114,8 +115,10 @@ impl<'a, P: Provider + Sync> SystemReader<'a, P> {
             .call(
                 FunctionCall {
                     contract_address: world.address,
-                    calldata: vec![cairo_short_string_to_felt(&name)
-                        .map_err(SystemReaderError::CairoShortStringToFeltError)?],
+                    calldata: vec![
+                        cairo_short_string_to_felt(&name)
+                            .map_err(SystemReaderError::CairoShortStringToFeltError)?,
+                    ],
                     entry_point_selector: get_selector_from_name("system").unwrap(),
                 },
                 block_id,

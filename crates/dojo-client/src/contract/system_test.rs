@@ -5,7 +5,8 @@ use starknet::accounts::Account;
 use starknet::core::types::{BlockId, BlockTag};
 use starknet_crypto::FieldElement;
 
-use crate::contract::world::{test::deploy_world, WorldContract};
+use crate::contract::world::test::deploy_world;
+use crate::contract::world::WorldContract;
 
 #[tokio::test]
 async fn test_system() {
