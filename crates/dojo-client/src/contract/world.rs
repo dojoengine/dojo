@@ -1,4 +1,5 @@
-use anyhow::Result;
+use std::result::Result;
+
 use starknet::accounts::{AccountError, Call, ConnectedAccount};
 use starknet::core::types::{BlockId, FieldElement, FunctionCall, InvokeTransactionResult};
 use starknet::core::utils::{
@@ -6,8 +7,8 @@ use starknet::core::utils::{
 };
 use starknet::providers::{Provider, ProviderError};
 
-use crate::component::{ComponentError, ComponentReader};
-use crate::system::{System, SystemError, SystemReader, SystemReaderError};
+use crate::contract::component::{ComponentError, ComponentReader};
+use crate::contract::system::{System, SystemError, SystemReader, SystemReaderError};
 
 #[cfg(test)]
 #[path = "world_test.rs"]

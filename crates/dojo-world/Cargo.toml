@@ -21,7 +21,6 @@ serde_json.workspace = true
 serde_with.workspace = true
 smol_str.workspace = true
 starknet.workspace = true
-starknet-crypto.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 url = "2.2.2"

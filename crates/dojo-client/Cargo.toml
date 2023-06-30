@@ -8,5 +8,11 @@ version = "0.1.0"
 [dependencies]
 async-trait.workspace = true
 dojo-world = { path = "../dojo-world" }
+starknet-crypto.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
+
+[dev-dependencies]
+camino.workspace = true
+dojo-test-utils = { path = "../dojo-test-utils" }
+tokio = { version = "1.28.0", features = [ "full" ] }
