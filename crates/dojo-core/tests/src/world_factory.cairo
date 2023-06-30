@@ -76,9 +76,7 @@ fn test_spawn_world() {
     let factory = IWorldFactoryDispatcher { contract_address: factory_address };
 
     assert(factory.executor() == executor_address, 'wrong executor address');
-    assert(
-        factory.world() == World::TEST_CLASS_HASH.try_into().unwrap(), 'wrong world class hash'
-    );
+    assert(factory.world() == World::TEST_CLASS_HASH.try_into().unwrap(), 'wrong world class hash');
 
     // Prepare components and systems
     let mut systems: Array<ClassHash> = array::ArrayTrait::new();

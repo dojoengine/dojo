@@ -204,23 +204,15 @@ impl System {
         statement_ast: ast::Statement,
     ) -> Vec<RewriteNode> {
         match statement_ast.clone() {
-            ast::Statement::Let(statement_let) => match statement_let.rhs(db) {
-                ast::Expr::FunctionCall(expr_fn) => {
-                    if let Some(rewrite_nodes) =
-                        self.handle_fn_call(db, Some(statement_let.pattern(db)), expr_fn)
-                    {
-                        return rewrite_nodes;
-                    }
-                }
-                ast::Expr::InlineMacro(expr_macro) => {
+            ast::Statement::Let(statement_let) => {
+                if let ast::Expr::InlineMacro(expr_macro) = statement_let.rhs(db) {
                     if let Some(rewrite_nodes) =
                         self.handle_inline_macro(db, Some(statement_let.pattern(db)), expr_macro)
                     {
                         return rewrite_nodes;
                     }
                 }
-                _ => {}
-            },
+            }
             ast::Statement::Expr(expr) => {
                 if let Some(rewrite_nodes) = self.handle_expr(db, expr.expr(db)) {
                     return rewrite_nodes;
@@ -234,7 +226,6 @@ impl System {
 
     fn handle_expr(&mut self, db: &dyn SyntaxGroup, expr: ast::Expr) -> Option<Vec<RewriteNode>> {
         match expr {
-            ast::Expr::FunctionCall(expr_fn) => self.handle_fn_call(db, None, expr_fn),
             ast::Expr::If(expr_if) => Some(self.handle_if(db, expr_if, false)),
             ast::Expr::Block(expr_block) => Some(self.handle_block(db, expr_block)),
             ast::Expr::Match(expr_match) => Some(self.handle_match(db, expr_match)),
@@ -370,15 +361,6 @@ impl System {
             ]),
         );
         vec![match_rewrite]
-    }
-
-    fn handle_fn_call(
-        &mut self,
-        _db: &dyn SyntaxGroup,
-        _var_name: Option<ast::Pattern>,
-        _expr_fn: ast::ExprFunctionCall,
-    ) -> Option<Vec<RewriteNode>> {
-        None
     }
 
     fn update_deps(&mut self, deps: Vec<Dependency>) {

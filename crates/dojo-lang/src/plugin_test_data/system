@@ -901,7 +901,7 @@ mod Move {
 
         let mut calldata = ArrayTrait::new();
         calldata.append('name');
-        ctx.world.world.execute('SpawnSystem', calldata.span());
+        ctx.world.execute('SpawnSystem', calldata.span());
 
         let mut i = 0;
         loop {
@@ -997,13 +997,3 @@ error: Plugin diagnostic: Unexpected argument type. Expected: "dojo::database::q
  --> lib.cairo:50:26
         set !(ctx.world, (0, 0, 0, 0, 0), (
                          ^*************^
-
-error: Struct "dojo::interfaces::IWorldDispatcher" has no member "world"
- --> Move:429:11
-ctx.world.world.execute('SpawnSystem', calldata.span());
-          ^***^
-
-error: Trait `dojo::interfaces::IWorldDispatcherTrait::<<missing>>` has multiple implementations, in: dojo::interfaces::IWorldDispatcherImpl, dojo::interfaces::IWorldLibraryDispatcherImpl
- --> Move:429:17
-ctx.world.world.execute('SpawnSystem', calldata.span());
-                ^*****^

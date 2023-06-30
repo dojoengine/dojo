@@ -233,13 +233,13 @@ fn test_owner() {
 
     let alice = starknet::contract_address_const::<0x1337>();
     let bob = starknet::contract_address_const::<0x1338>();
-    
+
     assert(!world.is_owner(alice, 0), 'should not be owner');
     assert(!world.is_owner(bob, 42), 'should not be owner');
 
     world.grant_owner(alice, 0);
     assert(world.is_owner(alice, 0), 'should be owner');
-    
+
     world.grant_owner(bob, 42);
     assert(world.is_owner(bob, 42), 'should be owner');
 
