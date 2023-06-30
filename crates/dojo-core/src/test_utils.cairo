@@ -1,18 +1,15 @@
 use starknet::{
-    ClassHash, ContractAddress, syscalls::deploy_syscall, class_hash::Felt252TryIntoClassHash, get_caller_address
+    ClassHash, ContractAddress, syscalls::deploy_syscall, class_hash::Felt252TryIntoClassHash,
+    get_caller_address
 };
 use array::{ArrayTrait, SpanTrait};
 use traits::TryInto;
 use option::OptionTrait;
 use core::{result::ResultTrait, traits::Into};
 
-use dojo::{
-    executor::Executor, world::World, interfaces::{IWorldDispatcher, IWorldDispatcherTrait}
-};
+use dojo::{executor::Executor, world::World, interfaces::{IWorldDispatcher, IWorldDispatcherTrait}};
 
-fn spawn_test_world(
-    components: Array<felt252>, systems: Array<felt252>
-) -> IWorldDispatcher {
+fn spawn_test_world(components: Array<felt252>, systems: Array<felt252>) -> IWorldDispatcher {
     // deploy executor
     let constructor_calldata = array::ArrayTrait::new();
     let (executor_address, _) = deploy_syscall(
