@@ -47,7 +47,7 @@ async fn test_send_declare_and_deploy_contract() {
         "class is not declared"
     );
 
-    let constructor_calldata = vec![];
+    let constructor_calldata = vec![FieldElement::from(1_u32), FieldElement::from(2_u32)];
 
     let calldata = [
         vec![
@@ -56,14 +56,14 @@ async fn test_send_declare_and_deploy_contract() {
             FieldElement::ZERO,                             // unique
             FieldElement::from(constructor_calldata.len()), // constructor calldata len
         ],
-        vec![],
+        constructor_calldata.clone(),
     ]
     .concat();
 
     let contract_address = get_contract_address(
         FieldElement::ZERO,
         res.class_hash,
-        &constructor_calldata.clone(),
+        &constructor_calldata,
         FieldElement::ZERO,
     );
 
