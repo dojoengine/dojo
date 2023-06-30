@@ -7,7 +7,7 @@ use dojo_world::manifest::Dependency;
 use sanitizer::StringSanitizer;
 use smol_str::SmolStr;
 
-use super::helpers::{ast_arg_to_expr, context_arg_as_path_segment_simple_or_panic};
+use super::helpers::ast_arg_to_expr;
 use super::{Command, CommandData, CommandMacroTrait, CAIRO_ERR_MSG_LEN};
 
 pub struct FindCommand {
@@ -35,19 +35,16 @@ impl CommandMacroTrait for FindCommand {
 
         if elements.len() != 3 {
             command.data.diagnostics.push(PluginDiagnostic {
-                message: "Invalid arguments. Expected \"(context, query, (components,))\""
+                message: "Invalid arguments. Expected \"(world, query, (components,))\""
                     .to_string(),
                 stable_ptr: macro_ast.arguments(db).as_syntax_node().stable_ptr(),
             });
             return command;
         }
 
-        let context = &elements[0];
+        let world = &elements[0];
         let partition = &elements[1];
         let types = &elements[2];
-
-        let context_name =
-            context_arg_as_path_segment_simple_or_panic(db, context).ident(db).text(db);
 
         command.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
             "
@@ -70,12 +67,12 @@ impl CommandMacroTrait for FindCommand {
                     RewriteNode::interpolate_patched(
                         "
                         let (__$query_id$_$query_subtype$_ids, __$query_id$_$query_subtype$_raw) = \
-                         $context$.world.entities('$component$', $partition$);
+                         $world$.entities('$component$', $partition$);
                         __$query_id$_ids.append(__$query_id$_$query_subtype$_ids);
                         __$query_id$_entities_raw.append(__$query_id$_$query_subtype$_raw);
                         ",
                         UnorderedHashMap::from([
-                            ("context".to_string(), RewriteNode::Text(context_name.to_string())),
+                            ("world".to_string(), RewriteNode::new_trimmed(world.as_syntax_node())),
                             ("query_id".to_string(), RewriteNode::Text(command.query_id.clone())),
                             (
                                 "query_subtype".to_string(),
@@ -99,7 +96,7 @@ impl CommandMacroTrait for FindCommand {
 
         command.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
             "
-            let mut __$query_id$_matching_entities = dojo_core::database::utils::find_matching(
+            let mut __$query_id$_matching_entities = dojo::database::utils::find_matching(
                 __$query_id$_ids.span(), __$query_id$_entities_raw.span()
             );
 

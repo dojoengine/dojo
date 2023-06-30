@@ -22,42 +22,43 @@ struct Player {
 #[system]
 mod Spawn {
     use traits::Into;
+    use dojo::world::Context;
     use super::Position;
     use super::Player;
 
     fn execute(ctx: Context, name: felt252) {
-        set !(ctx, (420, (69, ctx.world.uuid())).into_partitioned(), (
+        set !(ctx.world, (420, (69, ctx.world.uuid())).into_partitioned(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
-        set !(ctx, 420.into(), (
+        set !(ctx.world, 420.into(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
-        set !(ctx, 120.into(), (
+        set !(ctx.world, 120.into(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
         let player_id = starknet::get_caller_address();
-        set !(ctx, player_id.into(), (
+        set !(ctx.world, player_id.into(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
-        set !(ctx, (
+        set !(ctx.world, (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
-        set !(ctx, (0, 0, 0, 0, 0), (
+        set !(ctx.world, (0, 0, 0, 0, 0), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
 
-        set !(ctx, 1337.into(), (
+        set !(ctx.world, 1337.into(), (
             Player { name: name },
             Position { x: 0, y: 0 },
         ));
@@ -69,6 +70,7 @@ mod Spawn {
 mod Move {
     use traits::Into;
     use array::ArrayTrait;
+    use dojo::world::Context;
     use super::Position;
     use super::Player;
 
@@ -76,27 +78,27 @@ mod Move {
         return move_inner(positions, index + 1_u32, count - 1_u32);
     }
 
-    fn execute(player_id: felt252) {
-        let positions_query = find!(ctx, 0x0, (Position, Player));
-        let players_query = find!(ctx, 0x0, Player);
-        let player = get!(ctx, player_id.into(), Player);
-        let player_position = get!(ctx, player_id.into(), (Position, Player));
+    fn execute(ctx: Context, player_id: felt252) {
+        let positions_query = find!(ctx.world, 0x0, (Position, Player));
+        let players_query = find!(ctx.world, 0x0, Player);
+        let player = get!(ctx.world, player_id.into(), Player);
+        let player_position = get!(ctx.world, player_id.into(), (Position, Player));
 
         let mut bar = 123;
         let mut foo = ArrayTrait::<felt252>::new();
         foo.append(bar);
 
         if bar == 123 {
-            let player_position = get!(ctx, player_id.into(), (Position, Player));
+            let player_position = get!(ctx.world, player_id.into(), (Position, Player));
             if foo.len() > 0_u32 {
-                let positions_query = find!(ctx, 0x0, (Position, Player));
+                let positions_query = find!(ctx.world, 0x0, (Position, Player));
             }
         } else if bar == 321 {
-            let maybe_player = try_get!(ctx, player_id.into(), Player);
+            let maybe_player = try_get!(ctx.world, player_id.into(), Player);
             let player = maybe_player.expect('not_found');
             let name = player.name;
 
-            let positions_query = try_get!(ctx, player_id.into(), (Position, Player));
+            let positions_query = try_get!(ctx.world, player_id.into(), (Position, Player));
             match positions_query {
                 Option::Some((position, player)) => {
                     // do nothing
@@ -106,24 +108,24 @@ mod Move {
                 }
             }
         } else {
-            let player_position = get!(ctx, player_id.into(), (Position, Player));
+            let player_position = get!(ctx.world, player_id.into(), (Position, Player));
         }
 
         {
-            let player_position = get!(ctx, player_id.into(), (Position, Player));
+            let player_position = get!(ctx.world, player_id.into(), (Position, Player));
         }
 
         let foo_bar = Option::Some(1);
         match foo_bar {
             Option::Some(x) => {
                 let bar = x;
-                let player_position = get!(ctx, player_id.into(), (Position, Player));
+                let player_position = get!(ctx.world, player_id.into(), (Position, Player));
                 if bar == 123 {
-                    let positions_query = find!(ctx, 0x0, (Position, Player));
+                    let positions_query = find!(ctx.world, 0x0, (Position, Player));
                 }
             },
             Option::None(()) => {
-                let player_position = get!(ctx, player_id.into(), (Position, Player));
+                let player_position = get!(ctx.world, player_id.into(), (Position, Player));
             }
         }
 
@@ -134,18 +136,18 @@ mod Move {
 
         let mut calldata = ArrayTrait::new();
         calldata.append('name');
-        execute!(ctx, SpawnSystem, 'PositionPlayerWriter'.into(), calldata.span());
+        execute!(ctx.world, SpawnSystem, 'PositionPlayerWriter'.into(), calldata.span());
 
         // move_inner(@positions_query, 0_u32, positions_query.len());
 
-        let err = get!(ctx, player_id.into(), ());
+        let err = get!(ctx.world, player_id.into(), ());
 
         let mut i = 0;
         loop {
             if i == 3 {
                 break ();
             }
-            let player_position = get!(ctx, player_id.into(), (Position, Player));
+            let player_position = get!(ctx.world, player_id.into(), (Position, Player));
             i+=0;
         };
 
@@ -262,18 +264,17 @@ mod Spawn {
     use option::OptionTrait;
     use array::SpanTrait;
 
-    use dojo_core::world;
-    use dojo_core::interfaces::IWorldDispatcher;
-    use dojo_core::interfaces::IWorldDispatcherTrait;
-    use dojo_core::database::query::Query;
-    use dojo_core::database::query::QueryTrait;
-    use dojo_core::database::query::LiteralIntoQuery;
-    use dojo_core::database::query::TupleSize1IntoQuery;
-    use dojo_core::database::query::TupleSize2IntoQuery;
-    use dojo_core::database::query::TupleSize3IntoQuery;
-    use dojo_core::database::query::IntoPartitioned;
-    use dojo_core::database::query::IntoPartitionedQuery;
-    use dojo_core::execution_context::Context;
+    use dojo::world;
+    use dojo::interfaces::IWorldDispatcher;
+    use dojo::interfaces::IWorldDispatcherTrait;
+    use dojo::database::query::Query;
+    use dojo::database::query::QueryTrait;
+    use dojo::database::query::LiteralIntoQuery;
+    use dojo::database::query::TupleSize1IntoQuery;
+    use dojo::database::query::TupleSize2IntoQuery;
+    use dojo::database::query::TupleSize3IntoQuery;
+    use dojo::database::query::IntoPartitioned;
+    use dojo::database::query::IntoPartitionedQuery;
 
     #[storage]
     struct Storage {}
@@ -293,6 +294,7 @@ mod Spawn {
     }
 
     use traits::Into;
+    use dojo::world::Context;
     use super::Position;
     use super::Player;
 
@@ -304,7 +306,6 @@ mod Spawn {
             ctx
                 .world
                 .set_entity(
-                    ctx,
                     'Player',
                     (420, (69, ctx.world.uuid())).into_partitioned(),
                     0_u8,
@@ -318,7 +319,6 @@ mod Spawn {
             ctx
                 .world
                 .set_entity(
-                    ctx,
                     'Position',
                     (420, (69, ctx.world.uuid())).into_partitioned(),
                     0_u8,
@@ -329,33 +329,25 @@ mod Spawn {
         {
             let mut calldata = array::ArrayTrait::new();
             serde::Serde::serialize(@Player { name: name }, ref calldata);
-            ctx
-                .world
-                .set_entity(ctx, 'Player', 420.into(), 0_u8, array::ArrayTrait::span(@calldata));
+            ctx.world.set_entity('Player', 420.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
             let mut calldata = array::ArrayTrait::new();
             serde::Serde::serialize(@Position { x: 0, y: 0 }, ref calldata);
-            ctx
-                .world
-                .set_entity(ctx, 'Position', 420.into(), 0_u8, array::ArrayTrait::span(@calldata));
+            ctx.world.set_entity('Position', 420.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
             let mut calldata = array::ArrayTrait::new();
             serde::Serde::serialize(@Player { name: name }, ref calldata);
-            ctx
-                .world
-                .set_entity(ctx, 'Player', 120.into(), 0_u8, array::ArrayTrait::span(@calldata));
+            ctx.world.set_entity('Player', 120.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
             let mut calldata = array::ArrayTrait::new();
             serde::Serde::serialize(@Position { x: 0, y: 0 }, ref calldata);
-            ctx
-                .world
-                .set_entity(ctx, 'Position', 120.into(), 0_u8, array::ArrayTrait::span(@calldata));
+            ctx.world.set_entity('Position', 120.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         let player_id = starknet::get_caller_address();
@@ -365,9 +357,7 @@ mod Spawn {
             serde::Serde::serialize(@Player { name: name }, ref calldata);
             ctx
                 .world
-                .set_entity(
-                    ctx, 'Player', player_id.into(), 0_u8, array::ArrayTrait::span(@calldata)
-                );
+                .set_entity('Player', player_id.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
@@ -375,9 +365,7 @@ mod Spawn {
             serde::Serde::serialize(@Position { x: 0, y: 0 }, ref calldata);
             ctx
                 .world
-                .set_entity(
-                    ctx, 'Position', player_id.into(), 0_u8, array::ArrayTrait::span(@calldata)
-                );
+                .set_entity('Position', player_id.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
@@ -385,9 +373,7 @@ mod Spawn {
             serde::Serde::serialize(@Player { name: name }, ref calldata);
             ctx
                 .world
-                .set_entity(
-                    ctx, 'Player', (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata)
-                );
+                .set_entity('Player', (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
@@ -395,25 +381,19 @@ mod Spawn {
             serde::Serde::serialize(@Position { x: 0, y: 0 }, ref calldata);
             ctx
                 .world
-                .set_entity(
-                    ctx, 'Position', (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata)
-                );
+                .set_entity('Position', (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
             let mut calldata = array::ArrayTrait::new();
             serde::Serde::serialize(@Player { name: name }, ref calldata);
-            ctx
-                .world
-                .set_entity(ctx, 'Player', 1337.into(), 0_u8, array::ArrayTrait::span(@calldata));
+            ctx.world.set_entity('Player', 1337.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
             let mut calldata = array::ArrayTrait::new();
             serde::Serde::serialize(@Position { x: 0, y: 0 }, ref calldata);
-            ctx
-                .world
-                .set_entity(ctx, 'Position', 1337.into(), 0_u8, array::ArrayTrait::span(@calldata));
+            ctx.world.set_entity('Position', 1337.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
         return ();
     }
@@ -424,18 +404,17 @@ mod Move {
     use option::OptionTrait;
     use array::SpanTrait;
 
-    use dojo_core::world;
-    use dojo_core::interfaces::IWorldDispatcher;
-    use dojo_core::interfaces::IWorldDispatcherTrait;
-    use dojo_core::database::query::Query;
-    use dojo_core::database::query::QueryTrait;
-    use dojo_core::database::query::LiteralIntoQuery;
-    use dojo_core::database::query::TupleSize1IntoQuery;
-    use dojo_core::database::query::TupleSize2IntoQuery;
-    use dojo_core::database::query::TupleSize3IntoQuery;
-    use dojo_core::database::query::IntoPartitioned;
-    use dojo_core::database::query::IntoPartitionedQuery;
-    use dojo_core::execution_context::Context;
+    use dojo::world;
+    use dojo::interfaces::IWorldDispatcher;
+    use dojo::interfaces::IWorldDispatcherTrait;
+    use dojo::database::query::Query;
+    use dojo::database::query::QueryTrait;
+    use dojo::database::query::LiteralIntoQuery;
+    use dojo::database::query::TupleSize1IntoQuery;
+    use dojo::database::query::TupleSize2IntoQuery;
+    use dojo::database::query::TupleSize3IntoQuery;
+    use dojo::database::query::IntoPartitioned;
+    use dojo::database::query::IntoPartitionedQuery;
 
     #[storage]
     struct Storage {}
@@ -456,6 +435,7 @@ mod Move {
 
     use traits::Into;
     use array::ArrayTrait;
+    use dojo::world::Context;
     use super::Position;
     use super::Player;
 
@@ -480,7 +460,7 @@ mod Move {
         __positions_query_ids.append(__positions_query_player_ids);
         __positions_query_entities_raw.append(__positions_query_player_raw);
 
-        let mut __positions_query_matching_entities = dojo_core::database::utils::find_matching(
+        let mut __positions_query_matching_entities = dojo::database::utils::find_matching(
             __positions_query_ids.span(), __positions_query_entities_raw.span()
         );
 
@@ -543,7 +523,7 @@ mod Move {
         __players_query_ids.append(__players_query_player_ids);
         __players_query_entities_raw.append(__players_query_player_raw);
 
-        let mut __players_query_matching_entities = dojo_core::database::utils::find_matching(
+        let mut __players_query_matching_entities = dojo::database::utils::find_matching(
             __players_query_ids.span(), __players_query_entities_raw.span()
         );
 
@@ -637,8 +617,7 @@ mod Move {
                 __positions_query_ids.append(__positions_query_player_ids);
                 __positions_query_entities_raw.append(__positions_query_player_raw);
 
-                let mut __positions_query_matching_entities =
-                    dojo_core::database::utils::find_matching(
+                let mut __positions_query_matching_entities = dojo::database::utils::find_matching(
                     __positions_query_ids.span(), __positions_query_entities_raw.span()
                 );
 
@@ -837,7 +816,7 @@ mod Move {
                     __positions_query_entities_raw.append(__positions_query_player_raw);
 
                     let mut __positions_query_matching_entities =
-                        dojo_core::database::utils::find_matching(
+                        dojo::database::utils::find_matching(
                         __positions_query_ids.span(), __positions_query_entities_raw.span()
                     );
 
@@ -922,7 +901,7 @@ mod Move {
 
         let mut calldata = ArrayTrait::new();
         calldata.append('name');
-        ctx.world.execute('SpawnSystem', calldata.span());
+        ctx.world.world.execute('SpawnSystem', calldata.span());
 
         let mut i = 0;
         loop {
@@ -964,18 +943,17 @@ mod Proxy {
     use option::OptionTrait;
     use array::SpanTrait;
 
-    use dojo_core::world;
-    use dojo_core::interfaces::IWorldDispatcher;
-    use dojo_core::interfaces::IWorldDispatcherTrait;
-    use dojo_core::database::query::Query;
-    use dojo_core::database::query::QueryTrait;
-    use dojo_core::database::query::LiteralIntoQuery;
-    use dojo_core::database::query::TupleSize1IntoQuery;
-    use dojo_core::database::query::TupleSize2IntoQuery;
-    use dojo_core::database::query::TupleSize3IntoQuery;
-    use dojo_core::database::query::IntoPartitioned;
-    use dojo_core::database::query::IntoPartitionedQuery;
-    use dojo_core::execution_context::Context;
+    use dojo::world;
+    use dojo::interfaces::IWorldDispatcher;
+    use dojo::interfaces::IWorldDispatcherTrait;
+    use dojo::database::query::Query;
+    use dojo::database::query::QueryTrait;
+    use dojo::database::query::LiteralIntoQuery;
+    use dojo::database::query::TupleSize1IntoQuery;
+    use dojo::database::query::TupleSize2IntoQuery;
+    use dojo::database::query::TupleSize3IntoQuery;
+    use dojo::database::query::IntoPartitioned;
+    use dojo::database::query::IntoPartitionedQuery;
 
     #[storage]
     struct Storage {}
@@ -994,28 +972,38 @@ mod Proxy {
 
 
     #[external(v0)]
-    fn execute(self: @ContractState, ctx: Context, value: felt252) -> felt252 {
+    fn execute(self: @ContractState, _ctx: dojo::world::Context, value: felt252) -> felt252 {
         value
     }
 }
 
 //! > expected_diagnostics
-error: Plugin diagnostic: Invalid arguments. Expected "(context, query, (components,))"
- --> lib.cairo:44:14
-        set !(ctx, (
-             ^*****^
+error: Plugin diagnostic: Invalid arguments. Expected "(world, query, (components,))"
+ --> lib.cairo:45:14
+        set !(ctx.world, (
+             ^***********^
 
 error: Plugin diagnostic: Component types cannot be empty
- --> lib.cairo:135:19
-        let err = get!(ctx, player_id.into(), ());
-                  ^*****************************^
+ --> lib.cairo:137:19
+        let err = get!(ctx.world, player_id.into(), ());
+                  ^***********************************^
 
-error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::database::query::Query", found: "(?78, ?79, ?80, ?81, ?82)".
- --> lib.cairo:49:20
-        set !(ctx, (0, 0, 0, 0, 0), (
-                   ^*************^
+error: Plugin diagnostic: Unexpected argument type. Expected: "dojo::database::query::Query", found: "(?78, ?79, ?80, ?81, ?82)".
+ --> lib.cairo:50:26
+        set !(ctx.world, (0, 0, 0, 0, 0), (
+                         ^*************^
 
-error: Plugin diagnostic: Unexpected argument type. Expected: "dojo_core::database::query::Query", found: "(?90, ?91, ?92, ?93, ?94)".
- --> lib.cairo:49:20
-        set !(ctx, (0, 0, 0, 0, 0), (
-                   ^*************^
+error: Plugin diagnostic: Unexpected argument type. Expected: "dojo::database::query::Query", found: "(?90, ?91, ?92, ?93, ?94)".
+ --> lib.cairo:50:26
+        set !(ctx.world, (0, 0, 0, 0, 0), (
+                         ^*************^
+
+error: Struct "dojo::interfaces::IWorldDispatcher" has no member "world"
+ --> Move:429:11
+ctx.world.world.execute('SpawnSystem', calldata.span());
+          ^***^
+
+error: Trait `dojo::interfaces::IWorldDispatcherTrait::<<missing>>` has multiple implementations, in: dojo::interfaces::IWorldDispatcherImpl, dojo::interfaces::IWorldLibraryDispatcherImpl
+ --> Move:429:17
+ctx.world.world.execute('SpawnSystem', calldata.span());
+                ^*****^

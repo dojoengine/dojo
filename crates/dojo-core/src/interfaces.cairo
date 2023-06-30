@@ -1,44 +1,45 @@
-use dojo_core::{
-    database::query::Query,
-    auth::systems::Route, auth::components::AuthRole, execution_context::Context
-};
-use starknet::{ClassHash, ContractAddress};
 use serde::Serde;
 use array::{ArrayTrait, SpanTrait};
 use traits::{TryInto, Into};
 use option::OptionTrait;
+
+use starknet::{ClassHash, ContractAddress};
 use starknet::contract_address::Felt252TryIntoContractAddress;
+
+use dojo::database::query::Query;
+use dojo::world::Context;
 
 #[starknet::interface]
 trait IWorld<T> {
-    fn initialize(ref self: T, routes: Array<Route>);
     fn component(self: @T, name: felt252) -> ClassHash;
     fn register_component(ref self: T, class_hash: ClassHash);
     fn system(self: @T, name: felt252) -> ClassHash;
     fn register_system(ref self: T, class_hash: ClassHash);
     fn uuid(self: @T) -> usize;
-    fn execute(ref self: T, name: felt252, execute_calldata: Span<felt252>) -> Span<felt252>;
+    fn emit(self: @T, keys: Span<felt252>, values: Span<felt252>);
+    fn execute(ref self: T, name: felt252, calldata: Span<felt252>) -> Span<felt252>;
     fn entity(self: @T, component: felt252, key: Query, offset: u8, length: usize) -> Span<felt252>;
     fn set_entity(
-        ref self: T, context: Context, component: felt252, key: Query, offset: u8, value: Span<felt252>
+        ref self: T, component: felt252, key: Query, offset: u8, value: Span<felt252>
     );
     fn entities(self: @T, component: felt252, partition: felt252) -> (Span<felt252>, Span<Span<felt252>>);
     fn set_executor(ref self: T, contract_address: ContractAddress);
     fn executor(self: @T) -> ContractAddress;
-    fn is_authorized(self: @T, system: felt252, component: felt252, execution_role: AuthRole) -> bool;
-    fn is_account_admin(self: @T) -> bool;
-    fn is_system_for_execution(self: @T, system: felt252) -> bool;
-    fn delete_entity(ref self: T, context: Context, component: felt252, query: Query);
-    fn assume_role(ref self: T, role_id: felt252, systems: Array<felt252>);
-    fn clear_role(ref self: T, systems: Array<felt252>);
-    fn execution_role(self: @T) -> felt252;
-    fn system_components(self: @T, system: felt252) -> Array<(felt252, bool)>;
+    fn delete_entity(ref self: T, component: felt252, query: Query);
+
+    fn is_owner(self: @T, account: ContractAddress, target: felt252) -> bool;
+    fn grant_owner(ref self: T, account: ContractAddress, target: felt252);
+    fn revoke_owner(ref self: T, account: ContractAddress, target: felt252);
+
+    fn is_writer(self: @T, component: felt252, system: felt252) -> bool;
+    fn grant_writer(ref self: T, component: felt252, system: felt252);
+    fn revoke_writer(ref self: T, component: felt252, system: felt252);
 }
 
 #[starknet::interface]
 trait IExecutor<T> {
     fn execute(
-        self: @T, class_hash: ClassHash, execution_role: AuthRole, execute_calldata: Span<felt252>
+        self: @T, ctx: Context, calldata: Span<felt252>
     ) -> Span<felt252>;
 }
 
@@ -62,7 +63,6 @@ trait IWorldFactory<T> {
         self: @T,
         components: Array<ClassHash>,
         systems: Array<ClassHash>,
-        routes: Array<Route>
     ) -> ContractAddress;
     fn world(self: @T) -> ClassHash;
     fn executor(self: @T) -> ContractAddress;

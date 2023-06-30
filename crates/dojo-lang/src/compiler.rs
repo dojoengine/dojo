@@ -91,8 +91,8 @@ fn compute_class_hash_of_contract_class(class: ContractClass) -> Result<FieldEle
 
 pub fn collect_main_crate_ids(unit: &CompilationUnit, db: &RootDatabase) -> Vec<CrateId> {
     let mut main_crate_ids = scarb::compiler::helpers::collect_main_crate_ids(unit, db);
-    if unit.main_component().cairo_package_name() != "dojo_core" {
-        main_crate_ids.push(db.intern_crate(CrateLongId("dojo_core".into())));
+    if unit.main_component().cairo_package_name() != "dojo" {
+        main_crate_ids.push(db.intern_crate(CrateLongId("dojo".into())));
     }
     main_crate_ids
 }

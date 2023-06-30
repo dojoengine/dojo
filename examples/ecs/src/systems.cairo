@@ -1,14 +1,16 @@
 #[system]
 mod Spawn {
     use array::ArrayTrait;
+    use box::BoxTrait;
     use traits::Into;
+    use dojo::world::Context;
 
     use dojo_examples::components::Position;
     use dojo_examples::components::Moves;
 
     fn execute(ctx: Context) {
-        let player = set !(
-            ctx, ctx.caller_account.into(), (Moves { remaining: 10 }, Position { x: 0, y: 0 }, )
+        set !(
+            ctx.world, ctx.origin.into(), (Moves { remaining: 10 }, Position { x: 0, y: 0 }, )
         );
         return ();
     }
@@ -17,7 +19,9 @@ mod Spawn {
 #[system]
 mod Move {
     use array::ArrayTrait;
+    use box::BoxTrait;
     use traits::Into;
+    use dojo::world::Context;
 
     use dojo_examples::components::Position;
     use dojo_examples::components::Moves;
@@ -42,11 +46,11 @@ mod Move {
     }
 
     fn execute(ctx: Context, direction: Direction) {
-        let (position, moves) = get !(ctx, ctx.caller_account.into(), (Position, Moves));
+        let (position, moves) = get !(ctx.world, ctx.origin.into(), (Position, Moves));
         let next = next_position(position, direction);
-        let uh = set !(
-            ctx,
-            ctx.caller_account.into(),
+        set !(
+            ctx.world,
+            ctx.origin.into(),
             (Moves { remaining: moves.remaining - 1 }, Position { x: next.x, y: next.y }, )
         );
         return ();
@@ -75,10 +79,9 @@ mod tests {
     use core::traits::Into;
     use array::ArrayTrait;
 
-    use dojo_core::auth::systems::{Route, RouteTrait};
-    use dojo_core::interfaces::IWorldDispatcherTrait;
+    use dojo::interfaces::IWorldDispatcherTrait;
 
-    use dojo_core::test_utils::spawn_test_world;
+    use dojo::test_utils::spawn_test_world;
 
     use dojo_examples::components::PositionComponent;
     use dojo_examples::components::MovesComponent;
@@ -88,8 +91,7 @@ mod tests {
     #[test]
     #[available_gas(30000000)]
     fn test_move() {
-        let caller = starknet::contract_address_const::<0x1337>();
-        starknet::testing::set_account_contract_address(caller);
+        let caller = starknet::contract_address_const::<0x0>();
 
         // components
         let mut components = array::ArrayTrait::new();
@@ -99,43 +101,9 @@ mod tests {
         let mut systems = array::ArrayTrait::new();
         systems.append(Spawn::TEST_CLASS_HASH);
         systems.append(Move::TEST_CLASS_HASH);
-        // routes
-        let mut routes = array::ArrayTrait::new();
-        routes
-            .append(
-                RouteTrait::new(
-                    'Move'.into(), // target_id
-                    'MovesWriter'.into(), // role_id
-                    'Moves'.into(), // resource_id
-                )
-            );
-        routes
-            .append(
-                RouteTrait::new(
-                    'Move'.into(), // target_id
-                    'PositionWriter'.into(), // role_id
-                    'Position'.into(), // resource_id
-                )
-            );
-        routes
-            .append(
-                RouteTrait::new(
-                    'Spawn'.into(), // target_id
-                    'MovesWriter'.into(), // role_id
-                    'Moves'.into(), // resource_id
-                )
-            );
-        routes
-            .append(
-                RouteTrait::new(
-                    'Spawn'.into(), // target_id
-                    'PositionWriter'.into(), // role_id
-                    'Position'.into(), // resource_id
-                )
-            );
 
         // deploy executor, world and register components/systems
-        let world = spawn_test_world(components, systems, routes);
+        let world = spawn_test_world(components, systems);
 
         let spawn_call_data = array::ArrayTrait::new();
         world.execute('Spawn'.into(), spawn_call_data.span());

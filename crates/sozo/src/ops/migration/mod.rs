@@ -8,8 +8,7 @@ use dojo_world::migration::{Declarable, Deployable, MigrationError, RegisterOutp
 use dojo_world::world::WorldContract;
 use scarb::core::Config;
 use starknet::accounts::ConnectedAccount;
-use starknet::core::types::{BlockId, BlockTag, FieldElement, InvokeTransactionResult};
-use starknet::core::utils::cairo_short_string_to_felt;
+use starknet::core::types::{FieldElement, InvokeTransactionResult};
 
 #[cfg(test)]
 #[path = "migration_test.rs"]
@@ -178,39 +177,12 @@ where
     let components_output = register_components(strategy, &migrator, ws_config).await?;
     let systems_output = register_systems(strategy, &migrator, ws_config).await?;
 
-    if world_output.is_some() || executor_output.is_some() {
-        ws_config.ui().print_header("\nConfiguration:");
-        configure_admin(strategy, &migrator, ws_config).await?;
-    }
-
     Ok(MigrationOutput {
         world: world_output,
         executor: executor_output,
         systems: systems_output,
         components: components_output,
     })
-}
-
-async fn configure_admin<A>(
-    strategy: &MigrationStrategy,
-    migrator: &A,
-    ws_config: &Config,
-) -> Result<()>
-where
-    A: ConnectedAccount + Sync + 'static,
-{
-    let world_address = strategy.world_address()?;
-    let res = WorldContract::new(world_address, migrator)
-        .system("GrantAuthRole", BlockId::Tag(BlockTag::Latest))
-        .await?
-        .execute(vec![migrator.address(), cairo_short_string_to_felt("sudo")?])
-        .await
-        .unwrap();
-
-    ws_config.ui().print_sub(format!("Admin role for account {:#x}", &migrator.address()));
-    ws_config.ui().print_hidden_sub(format!("transaction: {:#x}", res.transaction_hash));
-
-    Ok(())
 }
 
 async fn register_components<A>(

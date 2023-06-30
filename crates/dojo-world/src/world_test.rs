@@ -2,7 +2,6 @@ use camino::Utf8PathBuf;
 use dojo_test_utils::sequencer::TestSequencer;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag, FieldElement};
-use starknet::core::utils::cairo_short_string_to_felt;
 
 use super::WorldContract;
 use crate::manifest::Manifest;
@@ -72,13 +71,6 @@ pub async fn deploy_world(
     let world = WorldContract::new(world_address, &account);
     let _ = world
         .register_systems(&declare_output.iter().map(|o| o.class_hash).collect::<Vec<_>>())
-        .await
-        .unwrap();
-
-    let block_id = BlockId::Tag(BlockTag::Latest);
-    let grant_auth_role = world.system("GrantAuthRole", block_id).await.unwrap();
-    grant_auth_role
-        .execute(vec![executor_address, cairo_short_string_to_felt("Admin").unwrap()])
         .await
         .unwrap();
 

@@ -2,7 +2,7 @@ use array::ArrayTrait;
 use array::SpanTrait;
 use traits::Into;
 
-use dojo_core::database::storage;
+use dojo::database::storage;
 
 #[test]
 #[available_gas(2000000)]

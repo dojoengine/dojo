@@ -50,18 +50,17 @@ impl System {
                     use option::OptionTrait;
                     use array::SpanTrait;
 
-                    use dojo_core::world;
-                    use dojo_core::interfaces::IWorldDispatcher;
-                    use dojo_core::interfaces::IWorldDispatcherTrait;
-                    use dojo_core::database::query::Query;
-                    use dojo_core::database::query::QueryTrait;
-                    use dojo_core::database::query::LiteralIntoQuery;
-                    use dojo_core::database::query::TupleSize1IntoQuery;
-                    use dojo_core::database::query::TupleSize2IntoQuery;
-                    use dojo_core::database::query::TupleSize3IntoQuery;
-                    use dojo_core::database::query::IntoPartitioned;
-                    use dojo_core::database::query::IntoPartitionedQuery;
-                    use dojo_core::execution_context::Context;
+                    use dojo::world;
+                    use dojo::interfaces::IWorldDispatcher;
+                    use dojo::interfaces::IWorldDispatcherTrait;
+                    use dojo::database::query::Query;
+                    use dojo::database::query::QueryTrait;
+                    use dojo::database::query::LiteralIntoQuery;
+                    use dojo::database::query::TupleSize1IntoQuery;
+                    use dojo::database::query::TupleSize2IntoQuery;
+                    use dojo::database::query::TupleSize3IntoQuery;
+                    use dojo::database::query::IntoPartitioned;
+                    use dojo::database::query::IntoPartitionedQuery;
 
                     #[storage]
                     struct Storage {}
@@ -171,7 +170,7 @@ impl System {
             Some(_) => panic!("The first parameter must be 'ctx: Context'"),
             None => {
                 // 'ctx: Context' is not found at all, add it as the first parameter
-                context = RewriteNode::Text("ctx: Context,".to_string());
+                context = RewriteNode::Text("_ctx: dojo::world::Context,".to_string());
             }
         };
 
@@ -205,23 +204,15 @@ impl System {
         statement_ast: ast::Statement,
     ) -> Vec<RewriteNode> {
         match statement_ast.clone() {
-            ast::Statement::Let(statement_let) => match statement_let.rhs(db) {
-                ast::Expr::FunctionCall(expr_fn) => {
-                    if let Some(rewrite_nodes) =
-                        self.handle_fn_call(db, Some(statement_let.pattern(db)), expr_fn)
-                    {
-                        return rewrite_nodes;
-                    }
-                }
-                ast::Expr::InlineMacro(expr_macro) => {
+            ast::Statement::Let(statement_let) => {
+                if let ast::Expr::InlineMacro(expr_macro) = statement_let.rhs(db) {
                     if let Some(rewrite_nodes) =
                         self.handle_inline_macro(db, Some(statement_let.pattern(db)), expr_macro)
                     {
                         return rewrite_nodes;
                     }
                 }
-                _ => {}
-            },
+            }
             ast::Statement::Expr(expr) => {
                 if let Some(rewrite_nodes) = self.handle_expr(db, expr.expr(db)) {
                     return rewrite_nodes;
@@ -235,7 +226,6 @@ impl System {
 
     fn handle_expr(&mut self, db: &dyn SyntaxGroup, expr: ast::Expr) -> Option<Vec<RewriteNode>> {
         match expr {
-            ast::Expr::FunctionCall(expr_fn) => self.handle_fn_call(db, None, expr_fn),
             ast::Expr::If(expr_if) => Some(self.handle_if(db, expr_if, false)),
             ast::Expr::Block(expr_block) => Some(self.handle_block(db, expr_block)),
             ast::Expr::Match(expr_match) => Some(self.handle_match(db, expr_match)),
@@ -371,15 +361,6 @@ impl System {
             ]),
         );
         vec![match_rewrite]
-    }
-
-    fn handle_fn_call(
-        &mut self,
-        _db: &dyn SyntaxGroup,
-        _var_name: Option<ast::Pattern>,
-        _expr_fn: ast::ExprFunctionCall,
-    ) -> Option<Vec<RewriteNode>> {
-        None
     }
 
     fn update_deps(&mut self, deps: Vec<Dependency>) {

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use jsonrpsee::core::Error;
 use jsonrpsee::server::ServerHandle;
 use katana_core::sequencer::{KatanaSequencer, SequencerConfig};
-use katana_core::starknet::StarknetConfig;
+use katana_core::starknet::config::{Environment, StarknetConfig};
 use katana_rpc::config::ServerConfig;
 use katana_rpc::KatanaNodeRpc;
 use starknet::accounts::SingleOwnerAccount;
@@ -32,10 +32,8 @@ impl TestSequencer {
         let sequencer = Arc::new(KatanaSequencer::new(
             SequencerConfig::default(),
             StarknetConfig {
-                auto_mine: true,
-                total_accounts: 1,
                 allow_zero_max_fee: true,
-                chain_id: "SN_GOERLI".into(),
+                env: Environment { chain_id: "SN_GOERLI".into(), ..Default::default() },
                 ..Default::default()
             },
         ));

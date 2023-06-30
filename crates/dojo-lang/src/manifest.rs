@@ -25,10 +25,10 @@ impl Manifest {
         let mut manifest = Manifest(dojo_world::manifest::Manifest::default());
 
         let world = compiled_classes.get("World").unwrap_or_else(|| {
-            panic!("World contract not found. Did you include `dojo_core` as a dependency?");
+            panic!("World contract not found. Did you include `dojo` as a dependency?");
         });
         let executor = compiled_classes.get("Executor").unwrap_or_else(|| {
-            panic!("Executor contract not found. Did you include `dojo_core` as a dependency?");
+            panic!("Executor contract not found. Did you include `dojo` as a dependency?");
         });
 
         manifest.0.world = Contract { name: "World".into(), address: None, class_hash: *world };
@@ -115,7 +115,7 @@ impl Manifest {
                     for param in params.into_iter() {
                         let ty = param.ty.format(db);
                         // Context is injected by the executor contract.
-                        if ty == "dojo_core::execution_context::Context" {
+                        if ty == "dojo::world::Context" {
                             continue;
                         }
 

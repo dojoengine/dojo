@@ -2,7 +2,7 @@ use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_semantic::patcher::RewriteNode;
 use cairo_lang_syntax::node::ast::Arg;
 use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
+use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_world::manifest::Dependency;
 use itertools::Itertools;
@@ -10,7 +10,7 @@ use sanitizer::StringSanitizer;
 use smol_str::SmolStr;
 
 use super::find::find_components;
-use super::helpers::{ast_arg_to_expr, context_arg_as_path_segment_simple_or_panic, macro_name};
+use super::helpers::{ast_arg_to_expr, macro_name};
 use super::{Command, CommandData, CommandMacroTrait, CAIRO_ERR_MSG_LEN};
 
 pub struct GetCommand {
@@ -41,19 +41,16 @@ impl CommandMacroTrait for GetCommand {
 
         if elements.len() != 3 {
             command.data.diagnostics.push(PluginDiagnostic {
-                message: "Invalid arguments. Expected \"(context, query, (components,))\""
+                message: "Invalid arguments. Expected \"(world, query, (components,))\""
                     .to_string(),
                 stable_ptr: macro_ast.arguments(db).as_syntax_node().stable_ptr(),
             });
             return command;
         }
 
-        let context = &elements[0];
+        let world = &elements[0];
         let query = &elements[1];
         let types = &elements[2];
-
-        let context_name =
-            context_arg_as_path_segment_simple_or_panic(db, context).ident(db).text(db);
 
         let components = find_components(db, ast_arg_to_expr(db, types).unwrap());
 
@@ -82,9 +79,9 @@ impl CommandMacroTrait for GetCommand {
             .collect();
 
         if macro_name == "get" {
-            command.handle_get(components, context_name, query, part_names);
+            command.handle_get(components, world, query, part_names);
         } else {
-            command.handle_try_get(components, context_name, query, part_names);
+            command.handle_try_get(components, world, query, part_names);
         }
 
         command
@@ -101,7 +98,7 @@ impl GetCommand {
     fn handle_get(
         &mut self,
         components: Vec<SmolStr>,
-        context: SmolStr,
+        world: &Arg,
         query: &Arg,
         part_names: Vec<String>,
     ) {
@@ -113,15 +110,15 @@ impl GetCommand {
 
             self.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
                 "
-                    let mut __$query_id$_$query_subtype$_raw = \
-                 $context$.world.entity('$component$', $query$, 0_u8, 0_usize);
+                    let mut __$query_id$_$query_subtype$_raw = $world$.entity('$component$', \
+                 $query$, 0_u8, 0_usize);
                     assert(__$query_id$_$query_subtype$_raw.len() > 0_usize, '$lookup_err_msg$');
                     let __$query_id$_$query_subtype$ = serde::Serde::<$component$>::deserialize(
                         ref __$query_id$_$query_subtype$_raw
                     ).expect('$deser_err_msg$');
                     ",
                 UnorderedHashMap::from([
-                    ("context".to_string(), RewriteNode::Text(context.to_string())),
+                    ("world".to_string(), RewriteNode::new_trimmed(world.as_syntax_node())),
                     ("component".to_string(), RewriteNode::Text(component.to_string())),
                     (
                         "query_subtype".to_string(),
@@ -154,7 +151,7 @@ impl GetCommand {
     fn handle_try_get(
         &mut self,
         components: Vec<SmolStr>,
-        context: SmolStr,
+        world: &Arg,
         query: &Arg,
         part_names: Vec<String>,
     ) {
@@ -164,8 +161,8 @@ impl GetCommand {
 
             self.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
                 "
-                    let mut __$query_id$_$query_subtype$_raw = \
-                 $context$.world.entity('$component$', $query$, 0_u8, 0_usize);
+                    let mut __$query_id$_$query_subtype$_raw = $world$.entity('$component$', \
+                 $query$, 0_u8, 0_usize);
                     let __$query_id$_$query_subtype$ = match \
                  __$query_id$_$query_subtype$_raw.len() > 0_usize {
                         bool::False(()) => {
@@ -179,7 +176,7 @@ impl GetCommand {
                     };
                     ",
                 UnorderedHashMap::from([
-                    ("context".to_string(), RewriteNode::Text(context.to_string())),
+                    ("world".to_string(), RewriteNode::new_trimmed(world.as_syntax_node())),
                     ("component".to_string(), RewriteNode::Text(component.to_string())),
                     (
                         "query_subtype".to_string(),
