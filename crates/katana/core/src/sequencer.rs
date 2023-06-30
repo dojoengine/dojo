@@ -4,7 +4,6 @@ use anyhow::Result;
 use async_trait::async_trait;
 use blockifier::abi::abi_utils::get_storage_var_address;
 use blockifier::execution::contract_class::ContractClass;
-use blockifier::fee::fee_utils::{calculate_l1_gas_by_vm_usage, extract_l1_gas_and_vm_usage};
 use blockifier::state::state_api::{State, StateReader};
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transaction_execution::Transaction;
@@ -88,7 +87,7 @@ impl KatanaSequencer {
             get_storage_var_address("ERC20_balances", &[*contract_address.0.key()])
                 .map_err(SequencerError::StarknetApi)?;
 
-        self.starknet.write().await.pending_state.set_storage_at(
+        self.starknet.write().await.pending_cached_state.set_storage_at(
             self.starknet.read().await.block_context.fee_token_address,
             deployed_account_balance_key,
             stark_felt!(balance),
@@ -202,7 +201,7 @@ impl Sequencer for KatanaSequencer {
         });
 
         tx.execute(
-            &mut self.starknet.write().await.pending_state,
+            &mut self.starknet.write().await.pending_cached_state,
             &self.starknet.read().await.block_context,
         )
         .map_err(SequencerError::TransactionExecution)?;
@@ -256,26 +255,11 @@ impl Sequencer for KatanaSequencer {
 
         let state = self.state(&block_id).await?;
 
-        let exec_info = self
-            .starknet
+        self.starknet
             .write()
             .await
-            .simulate_transaction(account_transaction, Some(state))
-            .map_err(SequencerError::TransactionExecution)?;
-
-        let (l1_gas_usage, vm_resources) = extract_l1_gas_and_vm_usage(&exec_info.actual_resources);
-        let l1_gas_by_vm_usage =
-            calculate_l1_gas_by_vm_usage(&self.starknet.read().await.block_context, &vm_resources)
-                .map_err(SequencerError::TransactionExecution)?;
-
-        let total_l1_gas_usage = l1_gas_usage as f64 + l1_gas_by_vm_usage;
-
-        Ok(FeeEstimate {
-            overall_fee: total_l1_gas_usage.ceil() as u64
-                * self.starknet.read().await.block_context.gas_price as u64,
-            gas_consumed: total_l1_gas_usage.ceil() as u64,
-            gas_price: self.starknet.read().await.block_context.gas_price as u64,
-        })
+            .estimate_fee(account_transaction, Some(state))
+            .map_err(SequencerError::TransactionExecution)
     }
 
     async fn block_hash_and_number(&self) -> Option<(BlockHash, BlockNumber)> {

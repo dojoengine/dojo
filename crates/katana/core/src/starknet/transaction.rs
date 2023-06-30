@@ -38,9 +38,12 @@ impl StarknetTransaction {
         execution_info: Option<TransactionExecutionInfo>,
         execution_error: Option<TransactionExecutionError>,
     ) -> Self {
-        if status == TransactionStatus::Rejected && execution_error.is_none() {
-            panic!("rejected transaction must have an execution error");
-        };
+        // TODO: uncomment this once `Reverted` transaction error type is
+        // `TransactionExecutionError`.
+        //
+        // if status == TransactionStatus::Rejected && execution_error.is_none() {
+        //     panic!("rejected transaction must have an execution error");
+        // };
 
         Self {
             inner,
