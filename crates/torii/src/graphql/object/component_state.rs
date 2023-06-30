@@ -67,7 +67,7 @@ impl ObjectTrait for ComponentStateObject {
 fn resolve_many(name: String, type_name: String, field_type_mapping: TypeMapping) -> Field {
     let ftm_clone = field_type_mapping.clone();
 
-    let field = Field::new(name.to_case(Case::Snake), TypeRef::named_list(type_name), move |ctx| {
+    let field = Field::new(format!("{}Components", name.to_case(Case::Camel)), TypeRef::named_list(type_name), move |ctx| {
         // FIX: field_type_mapping and name needs to be passed down to the doubly
         // nested async closures, thus the cloning. could handle this better
         let field_type_mapping = field_type_mapping.clone();
