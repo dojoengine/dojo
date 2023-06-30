@@ -7,7 +7,9 @@ mod Executor {
     use traits::Into;
     use starknet::{get_caller_address, get_tx_info};
 
-    use dojo::interfaces::{IWorldDispatcher, ISystemLibraryDispatcher, ISystemDispatcherTrait, IExecutor};
+    use dojo::interfaces::{
+        IWorldDispatcher, ISystemLibraryDispatcher, ISystemDispatcherTrait, IExecutor
+    };
     use dojo::world::Context;
 
     const EXECUTE_ENTRYPOINT: felt252 =
@@ -29,9 +31,7 @@ mod Executor {
         ///
         /// The return value of the System's execute entrypoint.
         fn execute(
-            self: @ContractState,
-            ctx: Context,
-            mut calldata: Span<felt252>
+            self: @ContractState, ctx: Context, mut calldata: Span<felt252>
         ) -> Span<felt252> {
             // Get the world address and instantiate the world dispatcher.
             let world_address = get_caller_address();
@@ -61,6 +61,5 @@ mod Executor {
 
             res
         }
-
     }
 }

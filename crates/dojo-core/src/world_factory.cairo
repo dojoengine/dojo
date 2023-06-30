@@ -32,9 +32,7 @@ mod WorldFactory {
 
     #[constructor]
     fn constructor(
-        ref self: ContractState,
-        world_class_hash_: ClassHash,
-        executor_address_: ContractAddress,
+        ref self: ContractState, world_class_hash_: ClassHash, executor_address_: ContractAddress, 
     ) {
         self.world_class_hash.write(world_class_hash_);
         self.executor_address.write(executor_address_);
@@ -53,15 +51,15 @@ mod WorldFactory {
         ///
         /// The address of the deployed world.
         fn spawn(
-            ref self: ContractState,
-            components: Array<ClassHash>,
-            systems: Array<ClassHash>, 
+            ref self: ContractState, components: Array<ClassHash>, systems: Array<ClassHash>, 
         ) -> ContractAddress {
             // deploy world
             let mut world_constructor_calldata: Array<felt252> = ArrayTrait::new();
             world_constructor_calldata.append(self.executor_address.read().into());
             let world_class_hash = self.world_class_hash.read();
-            let result = deploy_syscall(world_class_hash, 0, world_constructor_calldata.span(), true);
+            let result = deploy_syscall(
+                world_class_hash, 0, world_constructor_calldata.span(), true
+            );
             let (world_address, _) = result.unwrap_syscall();
             let world = IWorldDispatcher { contract_address: world_address };
 
@@ -114,7 +112,6 @@ mod WorldFactory {
         fn world(self: @ContractState) -> ClassHash {
             return self.world_class_hash.read();
         }
-
     }
 
     /// Registers all the given components in the world at the given address.
