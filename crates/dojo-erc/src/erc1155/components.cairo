@@ -1,14 +1,30 @@
-#[derive(Component, Copy, Drop, Serde)]
+use starknet::ContractAddress;
+
+#[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct OperatorApproval {
-    value: bool
+    #[key]
+    token: ContractAddress,
+    #[key]
+    owner: ContractAddress,
+    #[key]
+    operator: ContractAddress,
+    approved: bool
 }
 
-#[derive(Component, Copy, Drop, Serde)]
-struct Balance {
-    amount: felt252
-}
-
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Uri {
+    #[key]
+    token: ContractAddress,
     uri: felt252
+}
+
+#[derive(Component, Copy, Drop, Serde, SerdeLen)]
+struct Balance {
+    #[key]
+    token: ContractAddress,
+    #[key]
+    token_id: felt252,
+    #[key]
+    account: ContractAddress,
+    amount: felt252,
 }

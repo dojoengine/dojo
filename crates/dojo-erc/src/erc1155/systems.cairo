@@ -1,12 +1,16 @@
 #[system]
 mod ERC1155SetApprovalForAll {
     use traits::Into;
+    use dojo::world::Context;
     use dojo_erc::erc1155::components::OperatorApproval;
 
-    fn execute(token: felt252, owner: felt252, operator: felt252, approved: bool) {
-        commands::set_entity((token, (owner, operator)).into_partitioned(), (
-            OperatorApproval { value: approved }
-        ))
+    fn execute(ctx: Context, token: felt252, owner: felt252, operator: felt252, approved: bool) {
+        let mut operator_approval = get !(ctx.world, (token, owner, operator), OperatorApproval);
+        operator_approval.approved = approved;
+        set !(
+            ctx.world,
+            (operator_approval),
+        )
     }
 }
 
@@ -14,12 +18,13 @@ mod ERC1155SetApprovalForAll {
 #[system]
 mod ERC1155SetUri {
     use traits::Into;
+    use dojo::world::Context;
     use dojo_erc::erc1155::components::Uri;
 
-    fn execute(token: felt252, uri: felt252) {
-        commands::set_entity(token.into(), (
-            Uri { uri }
-        ))
+    fn execute(ctx: Context, token: felt252, uri: felt252) {
+        let mut _uri = get !(ctx.world, (token), Uri);
+        _uri.uri = uri;
+        set !(ctx.world, (_uri))
     }
 }
 
@@ -28,9 +33,11 @@ mod ERC1155Update {
     use traits::Into;
     use dojo_erc::erc1155::components::Balance;
     use array::ArrayTrait;
+    use dojo::world::Context;
     use zeroable::Zeroable;
 
     fn execute(
+        ctx: Context,
         token: felt252,
         operator: felt252,
         from: felt252,
@@ -48,23 +55,25 @@ mod ERC1155Update {
             let amount = *amounts.at(index);
 
             if (from.is_non_zero()) {
-                let from_balance = commands::<Balance>::entity((token, (id, from)).into_partitioned());
+                let mut from_balance = get !(ctx.world, (token, id, from), Balance);
+                from_balance.amount = from_balance.amount - amount;
                 let amount256: u256 = amount.into(); 
                 assert(from_balance.amount.into() >= amount256, 'ERC1155: insufficient balance');
-                commands::set_entity(
-                    (token, (id, from)).into_partitioned(),
-                    (Balance { amount: from_balance.amount - amount })
+                set !(
+                    ctx.world,
+                    (from_balance)
                 );
             }
 
             if (to.is_non_zero()) {
-                let to_balance = commands::<Balance>::entity((token, (id, from)).into_partitioned());   
-                commands::set_entity(
-                    (token, (id, to)).into_partitioned(),
-                    (Balance { amount: to_balance.amount + amount })
+                let mut to_balance = get !(ctx.world, (token, id, to), Balance);
+                to_balance.amount = to_balance.amount + amount;
+                set !(
+                    ctx.world,
+                    (to_balance)
                 );
             }
             index += 1;
         };
     }
-}
+} 
