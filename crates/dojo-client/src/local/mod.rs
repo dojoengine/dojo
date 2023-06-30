@@ -1,8 +1,11 @@
 use dojo_world::manifest::{Component, System};
 use starknet::core::types::FieldElement;
 
-use crate::source::Source;
-use crate::storage::{Storage, StorageReader};
+pub mod source;
+pub mod storage;
+
+use source::Source;
+use storage::{Storage, StorageReader};
 
 pub enum LocalWorldError {}
 

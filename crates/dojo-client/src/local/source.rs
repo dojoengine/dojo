@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use starknet::core::types::FieldElement;
 
+use crate::local::storage::Storage;
 use crate::provider::Provider;
-use crate::storage::Storage;
 
 /// Represents a source of which the state of a World can be loaded from.
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
