@@ -478,3 +478,12 @@ mod World {
         );
     }
 }
+
+#[system]
+mod LibraryCall {
+    fn execute(
+        class_hash: starknet::ClassHash, entrypoint: felt252, calladata: Span<felt252>
+    ) -> Span<felt252> {
+        starknet::syscalls::library_call_syscall(class_hash, entrypoint, calladata).unwrap_syscall()
+    }
+}
