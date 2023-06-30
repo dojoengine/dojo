@@ -3,7 +3,6 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
-use blockifier::state::state_api::StateReader;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass;
 use dojo_test_utils::sequencer::TestSequencer;
@@ -11,15 +10,11 @@ use starknet::accounts::{Account, Call, ConnectedAccount};
 use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
-    DeclareTransactionReceipt, FieldElement, FlattenedSierraClass, MaybePendingTransactionReceipt,
-    TransactionReceipt, TransactionStatus,
+    BlockId, BlockTag, DeclareTransactionReceipt, FieldElement, FlattenedSierraClass,
+    MaybePendingTransactionReceipt, TransactionReceipt, TransactionStatus,
 };
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::providers::Provider;
-use starknet_api::block::BlockNumber;
-use starknet_api::core::{ClassHash, ContractAddress, PatriciaKey};
-use starknet_api::hash::{StarkFelt, StarkHash};
-use starknet_api::{patricia_key, stark_felt};
 
 #[tokio::test]
 async fn test_send_declare_and_deploy_contract() {
@@ -27,9 +22,10 @@ async fn test_send_declare_and_deploy_contract() {
     let account = sequencer.account();
 
     let path: PathBuf = PathBuf::from("src/starknet/test_data/cairo1_contract.json");
-    let (contract, class_hash) = prepare_contract_declaration_params(&path).unwrap();
+    let (contract, compiled_class_hash) = prepare_contract_declaration_params(&path).unwrap();
 
-    let res = account.declare(Arc::new(contract), class_hash).send().await.unwrap();
+    let class_hash = contract.class_hash();
+    let res = account.declare(Arc::new(contract), compiled_class_hash).send().await.unwrap();
     let receipt = account.provider().get_transaction_receipt(res.transaction_hash).await.unwrap();
 
     match receipt {
@@ -41,11 +37,7 @@ async fn test_send_declare_and_deploy_contract() {
         _ => panic!("invalid tx receipt"),
     }
 
-    let mut state = sequencer.sequencer.starknet.write().await.state(BlockNumber(1)).unwrap();
-    assert!(
-        state.get_compiled_contract_class(&ClassHash(stark_felt!(res.class_hash))).is_ok(),
-        "class is not declared"
-    );
+    assert!(account.provider().get_class(BlockId::Tag(BlockTag::Latest), class_hash).await.is_ok());
 
     let constructor_calldata = vec![FieldElement::from(1_u32), FieldElement::from(2_u32)];
 
@@ -81,10 +73,13 @@ async fn test_send_declare_and_deploy_contract() {
         .await
         .unwrap();
 
-    let mut state = sequencer.sequencer.starknet.write().await.state(BlockNumber(1)).unwrap();
-    assert!(
-        state.get_class_hash_at(ContractAddress(patricia_key!(contract_address))).is_ok(),
-        "contract is not deployed"
+    assert_eq!(
+        account
+            .provider()
+            .get_class_hash_at(BlockId::Tag(BlockTag::Latest), contract_address)
+            .await
+            .unwrap(),
+        class_hash
     );
 
     sequencer.stop().expect("failed to stop sequencer");
@@ -101,6 +96,7 @@ async fn test_send_declare_and_deploy_legcay_contract() {
         serde_json::from_reader(fs::File::open(path).unwrap()).unwrap();
     let contract_class = Arc::new(legacy_contract);
 
+    let class_hash = contract_class.class_hash().unwrap();
     let res = account.declare_legacy(contract_class).send().await.unwrap();
     let receipt = account.provider().get_transaction_receipt(res.transaction_hash).await.unwrap();
 
@@ -113,11 +109,7 @@ async fn test_send_declare_and_deploy_legcay_contract() {
         _ => panic!("invalid tx receipt"),
     }
 
-    let mut state = sequencer.sequencer.starknet.write().await.state(BlockNumber(1)).unwrap();
-    assert!(
-        state.get_compiled_contract_class(&ClassHash(stark_felt!(res.class_hash))).is_ok(),
-        "class is not declared"
-    );
+    assert!(account.provider().get_class(BlockId::Tag(BlockTag::Latest), class_hash).await.is_ok());
 
     let constructor_calldata = vec![FieldElement::ONE];
 
@@ -153,10 +145,13 @@ async fn test_send_declare_and_deploy_legcay_contract() {
         .await
         .unwrap();
 
-    let mut state = sequencer.sequencer.starknet.write().await.state(BlockNumber(1)).unwrap();
-    assert!(
-        state.get_class_hash_at(ContractAddress(patricia_key!(contract_address))).is_ok(),
-        "contract is not deployed"
+    assert_eq!(
+        account
+            .provider()
+            .get_class_hash_at(BlockId::Tag(BlockTag::Latest), contract_address)
+            .await
+            .unwrap(),
+        class_hash
     );
 
     sequencer.stop().expect("failed to stop sequencer");
