@@ -17,6 +17,9 @@ use thiserror::Error;
 #[path = "manifest_test.rs"]
 mod test;
 
+pub const WORLD_CONTRACT_NAME: &str = "world";
+pub const EXECUTOR_CONTRACT_NAME: &str = "executor";
+
 #[derive(Error, Debug)]
 pub enum ManifestError<E> {
     #[error("Remote World not found.")]
@@ -214,12 +217,12 @@ impl Manifest {
             components,
             contracts: vec![],
             world: Contract {
-                name: "World".into(),
+                name: WORLD_CONTRACT_NAME.into(),
                 class_hash: world_class_hash,
                 address: Some(world_address),
             },
             executor: Contract {
-                name: "Executor".into(),
+                name: EXECUTOR_CONTRACT_NAME.into(),
                 address: Some(executor_address),
                 class_hash: executor_class_hash,
             },

@@ -1,16 +1,25 @@
+use dojo::world::Context;
+
+#[starknet::interface]
+trait IExecutor<T> {
+    fn execute(self: @T, ctx: Context, calldata: Span<felt252>) -> Span<felt252>;
+}
+
 #[starknet::contract]
-mod Executor {
+mod executor {
     use array::{ArrayTrait, ArrayTCloneImpl, SpanTrait};
     use serde::Serde;
     use clone::Clone;
     use box::BoxTrait;
-    use traits::Into;
+    use traits::{TryInto, Into};
+    use option::OptionTrait;
     use starknet::{get_caller_address, get_tx_info};
 
-    use dojo::interfaces::{
-        IWorldDispatcher, ISystemLibraryDispatcher, ISystemDispatcherTrait, IExecutor
-    };
+    use dojo::world::IWorldDispatcher;
+    use dojo::interfaces::{ISystemLibraryDispatcher, ISystemDispatcherTrait};
     use dojo::world::Context;
+
+    use super::IExecutor;
 
     const EXECUTE_ENTRYPOINT: felt252 =
         0x0240060cdb34fcc260f41eac7474ee1d7c80b7e3607daff9ac67c7ea2ebb1c44;

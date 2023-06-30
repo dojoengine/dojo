@@ -6,7 +6,7 @@ use cairo_lang_filesystem::ids::CrateId;
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::plugin::DynPluginAuxData;
 use convert_case::{Case, Casing};
-use dojo_world::manifest::{Contract, Input, Output, System};
+use dojo_world::manifest::{Contract, Input, Output, System, EXECUTOR_CONTRACT_NAME, WORLD_CONTRACT_NAME};
 use itertools::Itertools;
 use serde::Serialize;
 use smol_str::SmolStr;
@@ -25,16 +25,16 @@ impl Manifest {
     ) -> Self {
         let mut manifest = Manifest(dojo_world::manifest::Manifest::default());
 
-        let world = compiled_classes.get("World").unwrap_or_else(|| {
-            panic!("World contract not found. Did you include `dojo` as a dependency?");
+        let world = compiled_classes.get(WORLD_CONTRACT_NAME).unwrap_or_else(|| {
+            panic!("{}", format!("Contract `{}` not found. Did you include `dojo` as a dependency?", WORLD_CONTRACT_NAME));
         });
-        let executor = compiled_classes.get("Executor").unwrap_or_else(|| {
-            panic!("Executor contract not found. Did you include `dojo` as a dependency?");
+        let executor = compiled_classes.get(EXECUTOR_CONTRACT_NAME).unwrap_or_else(|| {
+            panic!("{}", format!("Contract `{}` not found. Did you include `dojo` as a dependency?", EXECUTOR_CONTRACT_NAME));
         });
 
-        manifest.0.world = Contract { name: "World".into(), address: None, class_hash: *world };
+        manifest.0.world = Contract { name: WORLD_CONTRACT_NAME.into(), address: None, class_hash: *world };
         manifest.0.executor =
-            Contract { name: "Excecutor".into(), address: None, class_hash: *executor };
+            Contract { name: EXECUTOR_CONTRACT_NAME.into(), address: None, class_hash: *executor };
 
         for crate_id in crate_ids {
             let modules = db.crate_modules(*crate_id);
