@@ -99,13 +99,13 @@ mod World {
             .owners
             .write((0, starknet::get_tx_info().unbox().account_contract_address), bool::True(()));
 
-        self
-            .emit(
-                WorldSpawned {
-                    address: get_contract_address(),
-                    caller: get_tx_info().unbox().account_contract_address
-                }
-            );
+        EventEmitter::emit(
+            ref self,
+            WorldSpawned {
+                address: get_contract_address(),
+                caller: get_tx_info().unbox().account_contract_address
+            }
+        );
     }
 
     #[external(v0)]
@@ -220,7 +220,7 @@ mod World {
             }
 
             self.components.write(name, class_hash);
-            self.emit(ComponentRegistered { name, class_hash });
+            EventEmitter::emit(ref self, ComponentRegistered { name, class_hash });
         }
 
         /// Gets the class hash of a registered component.
@@ -253,7 +253,7 @@ mod World {
             }
 
             self.systems.write(name, class_hash);
-            self.emit(SystemRegistered { name, class_hash });
+            EventEmitter::emit(ref self, SystemRegistered { name, class_hash });
         }
 
         /// Gets the class hash of a registered system.
@@ -331,7 +331,7 @@ mod World {
         ///
         /// * `keys` - The keys of the event.
         /// * `values` - The data to be logged by the event.
-        fn emit_event(self: @ContractState, keys: Span<felt252>, values: Span<felt252>) {
+        fn emit(self: @ContractState, keys: Span<felt252>, values: Span<felt252>) {
             // Assert can only be called through the executor
             // This is to prevent system from writing to storage directly
             assert(
@@ -364,7 +364,7 @@ mod World {
             let component_class_hash = self.components.read(component);
             database::set(component_class_hash, table_id, query, offset, value);
 
-            self.emit(StoreSetRecord { table_id, keys, offset, value });
+            EventEmitter::emit(ref self, StoreSetRecord { table_id, keys, offset, value });
         }
 
         /// Deletes a component from an entity.
@@ -381,7 +381,7 @@ mod World {
             let component_class_hash = self.components.read(component);
             database::del(component_class_hash, component.into(), query);
 
-            self.emit(StoreDelRecord { table_id, keys });
+            EventEmitter::emit(ref self, StoreDelRecord { table_id, keys });
         }
 
         /// Gets the component value for an entity.

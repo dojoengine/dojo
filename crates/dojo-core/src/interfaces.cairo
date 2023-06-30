@@ -16,7 +16,7 @@ trait IWorld<T> {
     fn system(self: @T, name: felt252) -> ClassHash;
     fn register_system(ref self: T, class_hash: ClassHash);
     fn uuid(ref self: T) -> usize;
-    fn emit_event(self: @T, keys: Span<felt252>, values: Span<felt252>);
+    fn emit(self: @T, keys: Span<felt252>, values: Span<felt252>);
     fn execute(ref self: T, system: felt252, calldata: Span<felt252>) -> Span<felt252>;
     fn entity(
         self: @T, component: felt252, query: Query, offset: u8, length: usize
