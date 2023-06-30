@@ -15,12 +15,12 @@ trait IWorld<T> {
     fn register_component(ref self: T, class_hash: ClassHash);
     fn system(self: @T, name: felt252) -> ClassHash;
     fn register_system(ref self: T, class_hash: ClassHash);
-    fn uuid(self: @T) -> usize;
-    fn emit(self: @T, keys: Span<felt252>, values: Span<felt252>);
-    fn execute(ref self: T, name: felt252, calldata: Span<felt252>) -> Span<felt252>;
-    fn entity(self: @T, component: felt252, key: Query, offset: u8, length: usize) -> Span<felt252>;
+    fn uuid(ref self: T) -> usize;
+    fn emit_event(self: @T, keys: Span<felt252>, values: Span<felt252>);
+    fn execute(ref self: T, system: felt252, calldata: Span<felt252>) -> Span<felt252>;
+    fn entity(self: @T, component: felt252, query: Query, offset: u8, length: usize) -> Span<felt252>;
     fn set_entity(
-        ref self: T, component: felt252, key: Query, offset: u8, value: Span<felt252>
+        ref self: T, component: felt252, query: Query, offset: u8, value: Span<felt252>
     );
     fn entities(self: @T, component: felt252, partition: felt252) -> (Span<felt252>, Span<Span<felt252>>);
     fn set_executor(ref self: T, contract_address: ContractAddress);
@@ -58,14 +58,12 @@ trait ISystem<T> {
 #[starknet::interface]
 trait IWorldFactory<T> {
     fn set_world(ref self: T, class_hash: ClassHash);
-    fn set_executor(ref self: T, class_hash: ClassHash);
+    fn set_executor(ref self: T, executor_address: ContractAddress);
     fn spawn(
-        self: @T,
+        ref self: T,
         components: Array<ClassHash>,
         systems: Array<ClassHash>,
     ) -> ContractAddress;
     fn world(self: @T) -> ClassHash;
     fn executor(self: @T) -> ContractAddress;
-    fn default_auth_components(self: @T) -> Array<ClassHash>;
-    fn default_auth_systems(self: @T) -> Array<ClassHash>;
 }
