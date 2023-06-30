@@ -29,7 +29,7 @@ sozo component entity --world 0xeb752067993e3e1903ba501267664b4ef2f1e40f629a17a0
 
 # The returned value is 0 since we haven't spawned yet. Let's spawn
 # a player for the caller
-sozo execute --world 0xeb752067993e3e1903ba501267664b4ef2f1e40f629a17a0180367e4f68428 Spawn
+sozo execute --world 0xeb752067993e3e1903ba501267664b4ef2f1e40f629a17a0180367e4f68428 spawn
 
 # Fetch the updated entity
 sozo component entity --world 0xeb752067993e3e1903ba501267664b4ef2f1e40f629a17a0180367e4f68428 Moves 0x3ee9e18edc71a6df30ac3aca2e0b02a198fbce19b7480a63a0d71cbd76652e0

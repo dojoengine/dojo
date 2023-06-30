@@ -11,6 +11,7 @@ dojo-world = { path = "../dojo-world" }
 async-trait.workspace = true
 anyhow.workspace = true
 clap.workspace = true
+convert_case.workspace = true
 ctrlc = "3.2.5"
 log = "0.4.17"
 serde.workspace = true

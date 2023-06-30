@@ -61,7 +61,7 @@ impl Compiler for DojoCompiler {
         for (decl, class) in zip(contracts, classes) {
             let target_name = &unit.target().name;
             let contract_name = decl.submodule_id.name(db.upcast_mut());
-            let file_name = format!("{target_name}_{contract_name}.json");
+            let file_name = format!("{target_name}-{contract_name}.json");
 
             let mut file = target_dir.open_rw(file_name.clone(), "output file", ws.config())?;
             serde_json::to_writer_pretty(file.deref_mut(), &class)

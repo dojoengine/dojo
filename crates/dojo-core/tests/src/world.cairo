@@ -15,7 +15,7 @@ use dojo::interfaces::IWorldDispatcher;
 use dojo::interfaces::IWorldDispatcherTrait;
 use dojo::executor::Executor;
 use dojo::world::World;
-use dojo::world::LibraryCall;
+use dojo::world::library_call;
 
 // Components and Systems
 
@@ -74,7 +74,7 @@ fn test_component() {
     let name = 'Foo'.into();
     let world = deploy_world();
 
-    world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
     let mut data = ArrayTrait::new();
     data.append(1337);
     let id = world.uuid();
@@ -89,7 +89,7 @@ fn test_component_with_partition() {
     let name = 'Foo'.into();
     let world = deploy_world();
 
-    world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
     let mut data = ArrayTrait::new();
     data.append(1337);
     let id = world.uuid();
@@ -107,7 +107,7 @@ fn test_system() {
     let world = spawn_empty_world();
 
     world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
-    world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
     let mut data = ArrayTrait::new();
     data.append(1337);
     data.append(1337);
@@ -135,7 +135,7 @@ fn test_set_entity_admin() {
     let world = spawn_empty_world();
 
     world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
-    world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
 
     let alice = starknet::contract_address_const::<0x1337>();
     starknet::testing::set_contract_address(alice);
@@ -158,7 +158,7 @@ fn test_set_entity_unauthorized() {
     let world = spawn_empty_world();
 
     world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
-    world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
 
     let caller = starknet::contract_address_const::<0x1337>();
     starknet::testing::set_account_contract_address(caller);
@@ -178,7 +178,7 @@ fn test_set_entity_directly() {
     let world = spawn_empty_world();
 
     world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
-    world.register_component(FooComponent::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
 
     // Change Foo component directly
     let id = world.uuid();
@@ -218,12 +218,12 @@ fn test_library_call_system() {
     // Spawn empty world
     let world = spawn_empty_world();
 
-    world.register_system(LibraryCall::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_system(library_call::TEST_CLASS_HASH.try_into().unwrap());
     let mut calldata = ArrayTrait::new();
-    calldata.append(FooComponent::TEST_CLASS_HASH);
+    calldata.append(foo::TEST_CLASS_HASH);
     calldata.append(0x011efd13169e3bceace525b23b7f968b3cc611248271e35f04c5c917311fc7f7);
     calldata.append(0);
-    world.execute('LibraryCall'.into(), calldata.span());
+    world.execute('library_call'.into(), calldata.span());
 }
 
 #[test]

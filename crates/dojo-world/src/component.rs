@@ -72,7 +72,7 @@ impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
         let res = self
             .world
             .call(
-                "LibraryCall",
+                "library_call",
                 vec![FieldElement::THREE, self.class_hash, entrypoint, FieldElement::ZERO],
                 block_id,
             )

@@ -73,7 +73,7 @@ trait IPosition<T> {
 }
 
 #[starknet::contract]
-mod PositionComponent {
+mod position {
     use super::Position;
 
     #[storage]
@@ -116,7 +116,7 @@ trait IRoles<T> {
 }
 
 #[starknet::contract]
-mod RolesComponent {
+mod roles {
     use super::Roles;
 
     #[storage]
@@ -158,7 +158,7 @@ trait IPlayer<T> {
 }
 
 #[starknet::contract]
-mod PlayerComponent {
+mod player {
     use super::Player;
 
     #[storage]
