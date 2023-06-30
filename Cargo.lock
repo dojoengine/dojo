@@ -682,8 +682,10 @@ dependencies = [
 [[package]]
 name = "blockifier"
 version = "0.1.0"
-source = "git+https://github.com/dojoengine/blockifier?rev=acd7577#acd75779f344c9abc6dda5bf0a36bffa7351b931"
+source = "git+https://github.com/dojoengine/blockifier?rev=f5b684d#f5b684df4f3ead90aecf3fe3e98f20e7919d615e"
 dependencies = [
+ "ark-ff",
+ "ark-secp256k1",
  "cairo-felt",
  "cairo-lang-casm",
  "cairo-lang-runner",
@@ -693,6 +695,7 @@ dependencies = [
  "derive_more",
  "indexmap 1.9.3",
  "itertools 0.10.5",
+ "keccak",
  "log",
  "num-bigint",
  "num-integer",
