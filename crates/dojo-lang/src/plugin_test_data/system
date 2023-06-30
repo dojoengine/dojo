@@ -20,7 +20,7 @@ struct Player {
 }
 
 #[system]
-mod Spawn {
+mod spawn {
     use traits::Into;
     use dojo::world::Context;
     use super::Position;
@@ -67,7 +67,7 @@ mod Spawn {
 }
 
 #[system]
-mod Move {
+mod move {
     use traits::Into;
     use array::ArrayTrait;
     use dojo::world::Context;
@@ -136,7 +136,7 @@ mod Move {
 
         let mut calldata = ArrayTrait::new();
         calldata.append('name');
-        execute!(ctx.world, SpawnSystem, 'PositionPlayerWriter'.into(), calldata.span());
+        execute!(ctx.world, spawn, 'PositionPlayerWriter'.into(), calldata.span());
 
         // move_inner(@positions_query, 0_u32, positions_query.len());
 
@@ -162,7 +162,7 @@ mod Move {
 }
 
 #[system]
-mod Proxy {
+mod proxy {
     fn execute(value: felt252) -> felt252 {
         value
     }
@@ -185,7 +185,7 @@ trait IPosition<T> {
 }
 
 #[starknet::contract]
-mod PositionComponent {
+mod position {
     use super::Position;
 
     #[storage]
@@ -228,7 +228,7 @@ trait IPlayer<T> {
 }
 
 #[starknet::contract]
-mod PlayerComponent {
+mod player {
     use super::Player;
 
     #[storage]
@@ -260,7 +260,7 @@ mod PlayerComponent {
 }
 
 #[starknet::contract]
-mod Spawn {
+mod spawn {
     use option::OptionTrait;
     use array::SpanTrait;
 
@@ -281,7 +281,7 @@ mod Spawn {
 
     #[external(v0)]
     fn name(self: @ContractState) -> felt252 {
-        'Spawn'
+        'spawn'
     }
 
     #[external(v0)]
@@ -400,7 +400,7 @@ mod Spawn {
 }
 
 #[starknet::contract]
-mod Move {
+mod move {
     use option::OptionTrait;
     use array::SpanTrait;
 
@@ -421,7 +421,7 @@ mod Move {
 
     #[external(v0)]
     fn name(self: @ContractState) -> felt252 {
-        'Move'
+        'move'
     }
 
     #[external(v0)]
@@ -901,7 +901,7 @@ mod Move {
 
         let mut calldata = ArrayTrait::new();
         calldata.append('name');
-        ctx.world.execute('SpawnSystem', calldata.span());
+        ctx.world.execute('spawn', calldata.span());
 
         let mut i = 0;
         loop {
@@ -939,7 +939,7 @@ mod Move {
 }
 
 #[starknet::contract]
-mod Proxy {
+mod proxy {
     use option::OptionTrait;
     use array::SpanTrait;
 
@@ -960,7 +960,7 @@ mod Proxy {
 
     #[external(v0)]
     fn name(self: @ContractState) -> felt252 {
-        'Proxy'
+        'proxy'
     }
 
     #[external(v0)]

@@ -13,6 +13,7 @@ cairo-lang-filesystem.workspace = true
 cairo-lang-project.workspace = true
 cairo-lang-starknet.workspace = true
 camino.workspace = true
+convert_case.workspace = true
 reqwest = { version = "0.11.18", default-features = false, features = [
     "rustls-tls",
 ] }

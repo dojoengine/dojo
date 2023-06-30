@@ -39,7 +39,7 @@ export interface ICommands {
 
 // examples types - TODO: These should be codegen'd from the manifest
 export type ComponentNames = "" | "Moves" | "Position" | "AuthStatus" | "AuthRole";
-export type SystemNames = "" | "SpawnSystem" | "MoveSystem" | "RouteAuthSystem" | "IsAccountAdminSystem" | "IsAuthorizedSystem" | "GrantAuthRoleSystem" | "GrantScopedAuthRoleSystem" | "GrantResourceSystem" | "RevokeAuthRoleSystem" | "RevokeScopedAuthRoleSystem" | "RevokeResourceSystem";
+export type SystemNames = "" | "spawn" | "move";
 
 
 export type ExecuteState = 'idle' | 'loading' | 'done' | 'error'

@@ -1,5 +1,5 @@
 #[system]
-mod Spawn {
+mod spawn {
     use array::ArrayTrait;
     use box::BoxTrait;
     use traits::Into;
@@ -17,7 +17,7 @@ mod Spawn {
 }
 
 #[system]
-mod Move {
+mod move {
     use array::ArrayTrait;
     use box::BoxTrait;
     use traits::Into;
@@ -83,10 +83,10 @@ mod tests {
 
     use dojo::test_utils::spawn_test_world;
 
-    use dojo_examples::components::PositionComponent;
-    use dojo_examples::components::MovesComponent;
-    use dojo_examples::systems::Spawn;
-    use dojo_examples::systems::Move;
+    use dojo_examples::components::position;
+    use dojo_examples::components::moves;
+    use dojo_examples::systems::spawn;
+    use dojo_examples::systems::move;
 
     #[test]
     #[available_gas(30000000)]
@@ -95,27 +95,27 @@ mod tests {
 
         // components
         let mut components = array::ArrayTrait::new();
-        components.append(PositionComponent::TEST_CLASS_HASH);
-        components.append(MovesComponent::TEST_CLASS_HASH);
+        components.append(position::TEST_CLASS_HASH);
+        components.append(moves::TEST_CLASS_HASH);
         // systems
         let mut systems = array::ArrayTrait::new();
-        systems.append(Spawn::TEST_CLASS_HASH);
-        systems.append(Move::TEST_CLASS_HASH);
+        systems.append(spawn::TEST_CLASS_HASH);
+        systems.append(move::TEST_CLASS_HASH);
 
         // deploy executor, world and register components/systems
         let world = spawn_test_world(components, systems);
 
         let spawn_call_data = array::ArrayTrait::new();
-        world.execute('Spawn'.into(), spawn_call_data.span());
+        world.execute('spawn'.into(), spawn_call_data.span());
 
         let mut move_calldata = array::ArrayTrait::new();
-        move_calldata.append(Move::Direction::Right(()).into());
-        world.execute('Move'.into(), move_calldata.span());
+        move_calldata.append(move::Direction::Right(()).into());
+        world.execute('move'.into(), move_calldata.span());
 
         let moves = world.entity('Moves'.into(), caller.into(), 0, 0);
         assert(*moves[0] == 9, 'moves is wrong');
-    // let new_position = world.entity('Position'.into(), caller.into(), 0, 0);
-    // assert(*new_position[0] == 1, 'position x is wrong');
-    // assert(*new_position[1] == 0, 'position y is wrong');
+        let new_position = world.entity('Position'.into(), caller.into(), 0, 0);
+        assert(*new_position[0] == 1, 'position x is wrong');
+        assert(*new_position[1] == 0, 'position y is wrong');
     }
 }

@@ -480,7 +480,7 @@ mod World {
 }
 
 #[system]
-mod LibraryCall {
+mod library_call {
     fn execute(
         class_hash: starknet::ClassHash, entrypoint: felt252, calladata: Span<felt252>
     ) -> Span<felt252> {
