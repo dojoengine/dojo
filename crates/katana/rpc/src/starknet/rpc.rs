@@ -24,6 +24,7 @@ use starknet::core::types::{
     PendingDeployAccountTransactionReceipt, PendingInvokeTransactionReceipt,
     PendingTransactionReceipt, StateUpdate, Transaction, TransactionReceipt, TransactionStatus,
 };
+use starknet::core::utils::get_contract_address;
 use starknet_api::core::{
     ClassHash, CompiledClassHash, ContractAddress, EntryPointSelector, Nonce, PatriciaKey,
 };
@@ -33,12 +34,12 @@ use starknet_api::state::StorageKey;
 use starknet_api::transaction::{
     Calldata, ContractAddressSalt, DeclareTransactionV0V1, DeclareTransactionV2, Fee,
     InvokeTransaction, InvokeTransactionV1, Transaction as InnerTransaction, TransactionHash,
-    TransactionOutput, TransactionSignature,
+    TransactionOutput, TransactionSignature, DeployAccountTransaction, TransactionVersion
 };
 use tracing::warn;
 use utils::transaction::{
     compute_declare_v1_transaction_hash, compute_declare_v2_transaction_hash,
-    compute_invoke_v1_transaction_hash, convert_inner_to_rpc_tx,
+    compute_invoke_v1_transaction_hash, convert_inner_to_rpc_tx, compute_deploy_account_transaction_hash
 };
 
 use crate::starknet::api::{Felt, StarknetApiError, StarknetApiServer};
@@ -826,6 +827,52 @@ impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> 
                     };
 
                     AccountTransaction::Invoke(InvokeTransaction::V1(transaction))
+                }
+
+                BroadcastedTransaction::DeployAccount(
+                    BroadcastedDeployAccountTransaction {
+                        max_fee, 
+                        signature, 
+                        nonce, 
+                        contract_address_salt, 
+                        constructor_calldata, 
+                        class_hash
+                    }) => {
+                        let account_address = get_contract_address(
+                            contract_address_salt,
+                            class_hash,
+                            &constructor_calldata,
+                            FieldElement::ZERO  // deployer_address
+                        );
+
+                        let transaction_hash  = compute_deploy_account_transaction_hash(
+                            account_address, 
+                            &constructor_calldata, 
+                            class_hash,
+                            contract_address_salt,
+                            max_fee, 
+                            chain_id, 
+                            nonce
+                        );
+
+                        let transaction = DeployAccountTransaction {
+                            transaction_hash: TransactionHash(StarkFelt::from(transaction_hash)),
+                            max_fee: Fee(starkfelt_to_u128(StarkFelt::from(max_fee))
+                                .map_err(|_| Error::from(StarknetApiError::InternalServerError))?),
+                            nonce: Nonce(StarkFelt::from(nonce)),
+                            constructor_calldata: Calldata(Arc::new(
+                                constructor_calldata.into_iter().map(StarkFelt::from).collect(),
+                            )),
+                            class_hash: ClassHash(class_hash.into()),
+                            contract_address: ContractAddress(patricia_key!(account_address)),
+                            contract_address_salt: ContractAddressSalt(StarkFelt::from(contract_address_salt)),
+                            version: TransactionVersion(StarkFelt::from(FieldElement::ONE)),
+                            signature: TransactionSignature(
+                                signature.into_iter().map(StarkFelt::from).collect()
+                            ),
+                        };
+
+                    AccountTransaction::DeployAccount(transaction)
                 }
 
                 _ => return Err(Error::from(StarknetApiError::UnsupportedTransactionVersion)),

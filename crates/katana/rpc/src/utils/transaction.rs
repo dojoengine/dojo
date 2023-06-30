@@ -30,6 +30,14 @@ const PREFIX_DECLARE: FieldElement = FieldElement::from_mont([
     191557713328401194,
 ]);
 
+/// Cairo string for "deploy_account"
+const PREFIX_DEPLOY_ACCOUNT: FieldElement = FieldElement::from_mont([
+    3350261884043292318,
+    18443211694809419988,
+    18446744073709551615,
+    461298303000467581,
+]);
+
 pub fn compute_declare_v1_transaction_hash(
     sender_address: FieldElement,
     class_hash: FieldElement,
@@ -83,6 +91,31 @@ pub fn compute_invoke_v1_transaction_hash(
         sender_address,
         FieldElement::ZERO, // entry_point_selector
         compute_hash_on_elements(calldata),
+        max_fee,
+        chain_id,
+        nonce,
+    ])
+}
+
+pub fn compute_deploy_account_transaction_hash(
+    contract_address: FieldElement,
+    calldata: &[FieldElement],
+    class_hash: FieldElement,
+    contract_address_salt: FieldElement,
+    max_fee: FieldElement,
+    chain_id: FieldElement,
+    nonce: FieldElement,
+) -> FieldElement {
+    let mut inner_vec = calldata.to_vec(); 
+    inner_vec.push(class_hash);
+    inner_vec.push(contract_address_salt);
+
+    compute_hash_on_elements(&[
+        PREFIX_DEPLOY_ACCOUNT,
+        FieldElement::ONE, // version
+        contract_address,
+        FieldElement::ZERO,
+        compute_hash_on_elements(&inner_vec),
         max_fee,
         chain_id,
         nonce,
