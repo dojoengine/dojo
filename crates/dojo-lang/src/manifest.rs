@@ -5,6 +5,7 @@ use cairo_lang_defs::ids::{ModuleId, ModuleItemId};
 use cairo_lang_filesystem::ids::CrateId;
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::plugin::DynPluginAuxData;
+use convert_case::{Case, Casing};
 use dojo_world::manifest::{Contract, Input, Output, System};
 use itertools::Itertools;
 use serde::Serialize;
@@ -75,8 +76,8 @@ impl Manifest {
                 // It needs the `Component` suffix because we are
                 // searching from the compiled contracts.
                 let class_hash = compiled_classes
-                    .get(format!("{name}Component").as_str())
-                    .with_context(|| format!("Contract {name} not found in target."))
+                    .get(name.to_case(Case::Snake).as_str())
+                    .with_context(|| format!("Component {name} not found in target."))
                     .unwrap();
 
                 self.0.components.push(dojo_world::manifest::Component {
@@ -130,7 +131,7 @@ impl Manifest {
 
                     let class_hash = compiled_classes
                         .get(name.as_str())
-                        .with_context(|| format!("Contract {name} not found in target."))
+                        .with_context(|| format!("System {name} not found in target."))
                         .unwrap();
 
                     self.0.systems.push(System {

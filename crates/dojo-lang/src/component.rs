@@ -7,6 +7,7 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
+use convert_case::{Case, Casing};
 use dojo_world::manifest::Member;
 
 use crate::plugin::{Component, DojoAuxData};
@@ -105,7 +106,7 @@ pub fn handle_component_struct(
             }
 
             #[starknet::contract]
-            mod $type_name$Component {
+            mod $contract_name$ {
                 use super::$type_name$;
 
                 #[storage]
@@ -122,6 +123,7 @@ pub fn handle_component_struct(
             }
         ",
         UnorderedHashMap::from([
+            ("contract_name".to_string(), RewriteNode::Text(name.to_case(Case::Snake))),
             (
                 "type_name".to_string(),
                 RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
