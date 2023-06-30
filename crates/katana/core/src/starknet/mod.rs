@@ -252,7 +252,7 @@ impl StarknetWrapper {
             calldata: call.calldata,
             storage_address: call.contract_address,
             entry_point_selector: call.entry_point_selector,
-            initial_gas: 1000000000_u128.into(),
+            initial_gas: 1000000000,
             ..Default::default()
         };
 

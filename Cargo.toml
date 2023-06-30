@@ -80,7 +80,7 @@ tracing-subscriber = "0.3.16"
 yansi = "0.5.1"
 
 [patch."https://github.com/starkware-libs/blockifier"]
-blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "acd7577" }
+blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "f5b684d" }
 
 [patch.crates-io]
 cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "9edddbc" }

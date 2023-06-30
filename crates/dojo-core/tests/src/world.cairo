@@ -38,7 +38,7 @@ mod Bar {
     use dojo::world::Context;
 
     fn execute(ctx: Context, a: felt252, b: u128) {
-        set !(ctx, ctx.origin.into(), (Foo { a, b }));
+        set !(ctx.world, ctx.origin.into(), (Foo { a, b }));
     }
 }
 
@@ -50,8 +50,8 @@ mod Buzz {
     use dojo::world::Context;
 
     fn execute(ctx: Context, a: felt252, b: u128) {
-        set !(ctx, ctx.origin.into(), (Foo { a, b }));
-        let fizz = try_get !(ctx, ctx.origin.into(), Fizz);
+        set !(ctx.world, ctx.origin.into(), (Foo { a, b }));
+        let fizz = try_get !(ctx.world, ctx.origin.into(), Fizz);
     }
 }
 
