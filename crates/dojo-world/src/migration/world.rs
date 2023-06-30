@@ -3,7 +3,7 @@ use std::fmt::Display;
 use super::class::ClassDiff;
 use super::contract::ContractDiff;
 use super::StateDiff;
-use crate::manifest::{Manifest, WORLD_CONTRACT_NAME, EXECUTOR_CONTRACT_NAME};
+use crate::manifest::{Manifest, EXECUTOR_CONTRACT_NAME, WORLD_CONTRACT_NAME};
 
 /// Represents the state differences between the local and remote worlds.
 #[derive(Debug)]
