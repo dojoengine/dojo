@@ -79,7 +79,7 @@ mod tests {
     use core::traits::Into;
     use array::ArrayTrait;
 
-    use dojo::interfaces::IWorldDispatcherTrait;
+    use dojo::world::IWorldDispatcherTrait;
 
     use dojo::test_utils::spawn_test_world;
 

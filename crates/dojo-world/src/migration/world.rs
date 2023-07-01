@@ -3,7 +3,7 @@ use std::fmt::Display;
 use super::class::ClassDiff;
 use super::contract::ContractDiff;
 use super::StateDiff;
-use crate::manifest::Manifest;
+use crate::manifest::{Manifest, EXECUTOR_CONTRACT_NAME, WORLD_CONTRACT_NAME};
 
 /// Represents the state differences between the local and remote worlds.
 #[derive(Debug)]
@@ -56,14 +56,14 @@ impl WorldDiff {
             .collect::<Vec<_>>();
 
         let world = ContractDiff {
-            name: "World".into(),
+            name: WORLD_CONTRACT_NAME.into(),
             address: remote.as_ref().and_then(|m| m.world.address),
             local: local.world.class_hash,
             remote: remote.as_ref().map(|m| m.world.class_hash),
         };
 
         let executor = ContractDiff {
-            name: "Executor".into(),
+            name: EXECUTOR_CONTRACT_NAME.into(),
             address: remote.as_ref().and_then(|m| m.executor.address),
             local: local.executor.class_hash,
             remote: remote.map(|m| m.executor.class_hash),

@@ -1,7 +1,20 @@
 use array::ArrayTrait;
 
+use starknet::{ClassHash, ContractAddress};
+
+#[starknet::interface]
+trait IWorldFactory<T> {
+    fn set_world(ref self: T, class_hash: ClassHash);
+    fn set_executor(ref self: T, executor_address: ContractAddress);
+    fn spawn(
+        ref self: T, components: Array<ClassHash>, systems: Array<ClassHash>,
+    ) -> ContractAddress;
+    fn world(self: @T) -> ClassHash;
+    fn executor(self: @T) -> ContractAddress;
+}
+
 #[starknet::contract]
-mod WorldFactory {
+mod world_factory {
     use array::ArrayTrait;
     use option::OptionTrait;
     use traits::Into;
@@ -11,7 +24,9 @@ mod WorldFactory {
         syscalls::deploy_syscall, get_caller_address
     };
 
-    use dojo::interfaces::{IWorldDispatcher, IWorldDispatcherTrait, IWorldFactory};
+    use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
+
+    use super::IWorldFactory;
 
     #[storage]
     struct Storage {
@@ -32,7 +47,7 @@ mod WorldFactory {
 
     #[constructor]
     fn constructor(
-        ref self: ContractState, world_class_hash_: ClassHash, executor_address_: ContractAddress, 
+        ref self: ContractState, world_class_hash_: ClassHash, executor_address_: ContractAddress,
     ) {
         self.world_class_hash.write(world_class_hash_);
         self.executor_address.write(executor_address_);
@@ -44,14 +59,14 @@ mod WorldFactory {
         ///
         /// # Arguments
         ///
-        /// * `components` - The components to be registered. 
-        /// * `systems` - The systems to be registered. 
+        /// * `components` - The components to be registered.
+        /// * `systems` - The systems to be registered.
         ///
         /// # Returns
         ///
         /// The address of the deployed world.
         fn spawn(
-            ref self: ContractState, components: Array<ClassHash>, systems: Array<ClassHash>, 
+            ref self: ContractState, components: Array<ClassHash>, systems: Array<ClassHash>,
         ) -> ContractAddress {
             // deploy world
             let mut world_constructor_calldata: Array<felt252> = ArrayTrait::new();
@@ -81,7 +96,7 @@ mod WorldFactory {
         ///
         /// # Arguments
         ///
-        /// * `executor_address` - The address of the executor. 
+        /// * `executor_address` - The address of the executor.
         fn set_executor(ref self: ContractState, executor_address: ContractAddress) {
             self.executor_address.write(executor_address);
         }
@@ -90,7 +105,7 @@ mod WorldFactory {
         ///
         /// # Arguments
         ///
-        /// * `class_hash` - The class hash of world. 
+        /// * `class_hash` - The class hash of world.
         fn set_world(ref self: ContractState, class_hash: ClassHash) {
             self.world_class_hash.write(class_hash);
         }

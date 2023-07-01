@@ -20,7 +20,7 @@ mod ERC20 {
         IntoPartitionedQuery
     };
 
-    use dojo::interfaces::{IWorldDispatcher, IWorldDispatcherTrait};
+    use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
     use dojo_erc::erc20::components::{Allowance, Balance, Supply};
 
     #[storage]

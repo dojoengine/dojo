@@ -11,11 +11,8 @@ use starknet::get_caller_address;
 use starknet::syscalls::deploy_syscall;
 
 use dojo::database::query::QueryTrait;
-use dojo::interfaces::IWorldDispatcher;
-use dojo::interfaces::IWorldDispatcherTrait;
-use dojo::executor::Executor;
-use dojo::world::World;
-use dojo::world::library_call;
+use dojo::executor::executor;
+use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, library_call, world};
 
 // Components and Systems
 
@@ -61,7 +58,7 @@ fn deploy_world() -> IWorldDispatcher {
     let mut calldata: Array<felt252> = array::ArrayTrait::new();
     calldata.append(starknet::contract_address_const::<0x0>().into());
     let (world_address, _) = deploy_syscall(
-        World::TEST_CLASS_HASH.try_into().unwrap(), 0, calldata.span(), false
+        world::TEST_CLASS_HASH.try_into().unwrap(), 0, calldata.span(), false
     )
         .unwrap();
 
@@ -193,7 +190,7 @@ fn spawn_empty_world() -> IWorldDispatcher {
     // Deploy executor contract
     let executor_constructor_calldata = array::ArrayTrait::new();
     let (executor_address, _) = deploy_syscall(
-        Executor::TEST_CLASS_HASH.try_into().unwrap(),
+        executor::TEST_CLASS_HASH.try_into().unwrap(),
         0,
         executor_constructor_calldata.span(),
         false
@@ -204,7 +201,7 @@ fn spawn_empty_world() -> IWorldDispatcher {
     let mut constructor_calldata = array::ArrayTrait::new();
     constructor_calldata.append(executor_address.into());
     let (world_address, _) = deploy_syscall(
-        World::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
+        world::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
     )
         .unwrap();
     let world = IWorldDispatcher { contract_address: world_address };
