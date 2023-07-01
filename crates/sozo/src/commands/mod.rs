@@ -5,6 +5,7 @@ use crate::args::Commands;
 
 pub(crate) mod build;
 pub(crate) mod component;
+pub(crate) mod events;
 pub(crate) mod execute;
 pub(crate) mod init;
 pub(crate) mod migrate;
@@ -24,5 +25,6 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
         Commands::Component(args) => args.run(config),
         Commands::System(args) => args.run(config),
         Commands::Register(args) => args.run(config),
+        Commands::Events(args) => args.run(config),
     }
 }
