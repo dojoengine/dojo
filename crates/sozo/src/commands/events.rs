@@ -1,6 +1,8 @@
 use crate::ops::events;
 
-use super::options::{dojo_metadata_from_workspace, starknet::StarknetOptions};
+use super::options::{
+    dojo_metadata_from_workspace, starknet::StarknetOptions, world::WorldOptions,
+};
 use anyhow::Result;
 use clap::Args;
 use scarb::core::Config;
@@ -10,6 +12,21 @@ pub struct EventsArgs {
     #[clap(short, long)]
     #[clap(help = "idk yet")]
     pub chunk_size: u64,
+
+    #[clap(short, long)]
+    #[clap(help = "Block number from where to look for events")]
+    pub from_block: Option<u64>,
+
+    #[clap(short, long)]
+    #[clap(help = "Block number until where to look for events")]
+    pub to_block: Option<u64>,
+
+    #[clap(short, long)]
+    #[clap(help = "List of specific events to be filtered")]
+    pub events: Option<Vec<String>>,
+
+    #[command(flatten)]
+    pub world: WorldOptions,
 
     #[command(flatten)]
     pub starknet: StarknetOptions,
