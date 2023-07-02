@@ -24,8 +24,9 @@ pub async fn execute(args: EventsArgs, env_metadata: Option<Value>) -> Result<()
     let provider = starknet.provider(env_metadata.as_ref())?;
     let event_filter = EventFilter { from_block, to_block, address: world.world_address, keys };
 
-    let res = provider.get_events(event_filter, None, chunk_size).await;
+    let res = provider.get_events(event_filter, None, chunk_size).await?;
 
-    println!("{res:#?}");
+    let value = serde_json::to_value(res)?;
+    println!("{}", serde_json::to_string_pretty(&value)?);
     Ok(())
 }
