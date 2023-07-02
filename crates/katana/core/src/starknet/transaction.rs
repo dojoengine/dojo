@@ -143,7 +143,6 @@ impl StarknetTransaction {
         messages
     }
 
-
     pub(crate) fn output(&self) -> TransactionOutput {
         let actual_fee = self.actual_fee();
         let events = self.emitted_events();
