@@ -108,38 +108,42 @@ impl StarknetTransaction {
     pub fn l2_to_l1_messages(&self) -> Vec<MessageToL1> {
         let mut messages: Vec<MessageToL1> = vec![];
 
+        fn get_messages_recursively(info: &CallInfo) -> Vec<MessageToL1> {
+            let mut messages: Vec<MessageToL1> = vec![];
+
+            messages.extend(info.execution.l2_to_l1_messages.iter().map(|m| MessageToL1 {
+                to_address: m.message.to_address,
+                payload: m.message.payload.clone(),
+                from_address: info.call.caller_address,
+            }));
+
+            info.inner_calls.iter().for_each(|call| {
+                messages.extend(get_messages_recursively(call));
+            });
+
+            messages
+        }
+
         let Some(ref execution_info) = self.execution_info else {
             return messages;
         };
 
         if let Some(ref info) = execution_info.validate_call_info {
-            messages.extend(info.execution.l2_to_l1_messages.iter().map(|m| MessageToL1 {
-                to_address: m.message.to_address,
-                payload: m.message.payload.clone(),
-                from_address: info.call.caller_address,
-            }))
+            messages.extend(get_messages_recursively(info));
         }
 
         if let Some(ref info) = execution_info.execute_call_info {
-            messages.extend(info.execution.l2_to_l1_messages.iter().map(|m| MessageToL1 {
-                to_address: m.message.to_address,
-                payload: m.message.payload.clone(),
-                from_address: info.call.caller_address,
-            }))
+            messages.extend(get_messages_recursively(info));
         }
 
         if let Some(ref info) = execution_info.fee_transfer_call_info {
-            messages.extend(info.execution.l2_to_l1_messages.iter().map(|m| MessageToL1 {
-                to_address: m.message.to_address,
-                payload: m.message.payload.clone(),
-                from_address: info.call.caller_address,
-            }))
+            messages.extend(get_messages_recursively(info));
         }
 
         messages
     }
 
-    fn output(&self) -> TransactionOutput {
+    pub(crate) fn output(&self) -> TransactionOutput {
         let actual_fee = self.actual_fee();
         let events = self.emitted_events();
         let messages_sent = self.l2_to_l1_messages();

@@ -60,6 +60,10 @@ impl StarknetBlock {
         self.inner.body.transactions.push(transaction);
     }
 
+    pub fn insert_transaction_output(&mut self, output: TransactionOutput) {
+        self.inner.body.transaction_outputs.push(output);
+    }
+
     pub fn transactions(&self) -> &[Transaction] {
         &self.inner.body.transactions
     }
