@@ -149,12 +149,14 @@ impl StarknetWrapper {
                     None,
                 );
 
-                //  append successful tx to pending block
-                self.blocks
+                let pending_block = self.blocks
                     .pending_block
                     .as_mut()
-                    .expect("no pending block")
-                    .insert_transaction(api_tx);
+                    .expect("no pending block");
+
+                // Append successful tx and it's output to pending block.
+                pending_block.insert_transaction(api_tx);
+                pending_block.insert_transaction_output(starknet_tx.output());
 
                 self.store_transaction(starknet_tx);
 
