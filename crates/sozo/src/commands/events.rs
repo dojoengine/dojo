@@ -1,29 +1,29 @@
-use crate::ops::events;
-
-use super::options::{
-    dojo_metadata_from_workspace, starknet::StarknetOptions, world::WorldOptions,
-};
 use anyhow::Result;
-use clap::Args;
+use clap::Parser;
 use scarb::core::Config;
 
-#[derive(Args, Debug)]
-pub struct EventsArgs {
-    #[clap(short, long)]
-    #[clap(help = "idk yet")]
-    pub chunk_size: u64,
+use super::options::dojo_metadata_from_workspace;
+use super::options::starknet::StarknetOptions;
+use super::options::world::WorldOptions;
+use crate::ops::events;
 
-    #[clap(short, long)]
-    #[clap(help = "Block number from where to look for events")]
+#[derive(Parser, Debug)]
+pub struct EventsArgs {
+    #[arg(help = "List of specific events to be filtered")]
+    #[arg(value_delimiter = ',')]
+    pub events: Option<Vec<String>>,
+
+    #[arg(short, long)]
+    #[arg(help = "Block number from where to look for events")]
     pub from_block: Option<u64>,
 
-    #[clap(short, long)]
-    #[clap(help = "Block number until where to look for events")]
+    #[arg(short, long)]
+    #[arg(help = "Block number until where to look for events")]
     pub to_block: Option<u64>,
 
-    #[clap(short, long)]
-    #[clap(help = "List of specific events to be filtered")]
-    pub events: Option<Vec<String>>,
+    #[arg(short, long)]
+    #[arg(help = "Number of events to return per page")]
+    pub chunk_size: u64,
 
     #[command(flatten)]
     pub world: WorldOptions,
@@ -47,5 +47,18 @@ impl EventsArgs {
             None
         };
         config.tokio_handle().block_on(events::execute(self, env_metadata))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn events_are_parsed_correctly() {
+        let arg = EventsArgs::parse_from(["event", "Event1,Event2", "--chunk-size", "1"]);
+        assert!(arg.events.unwrap().len() == 2);
+        assert!(arg.from_block.is_none());
+        assert!(arg.to_block.is_none());
+        assert!(arg.chunk_size == 1);
     }
 }

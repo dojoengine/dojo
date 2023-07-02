@@ -1,25 +1,20 @@
-use starknet::{
-    core::types::{BlockId, EventFilter},
-    core::utils::starknet_keccak,
-    providers::Provider,
-};
+use anyhow::Result;
+use starknet::core::types::{BlockId, EventFilter};
+use starknet::core::utils::starknet_keccak;
+use starknet::providers::Provider;
 use toml::Value;
 
 use crate::commands::events::EventsArgs;
-use anyhow::Result;
 
 pub async fn execute(args: EventsArgs, env_metadata: Option<Value>) -> Result<()> {
     let EventsArgs { chunk_size, starknet, world, from_block, to_block, events } = args;
 
-    let from_block = from_block.map(|num| BlockId::Number(num));
-    let to_block = to_block.map(|num| BlockId::Number(num));
-    let keys = events.map(|e| {
-        let mut ret = vec![];
-        for event in e {
-            ret.push(vec![starknet_keccak(event.as_bytes())]);
-        }
-        ret
-    });
+    let from_block = from_block.map(BlockId::Number);
+    let to_block = to_block.map(BlockId::Number);
+    // Currently dojo doesn't use custom keys for events. In future if custom keys are used this
+    // needs to be updated for granular queries.
+    let keys =
+        events.map(|e| vec![e.iter().map(|event| starknet_keccak(event.as_bytes())).collect()]);
 
     let provider = starknet.provider(env_metadata.as_ref())?;
     let event_filter = EventFilter { from_block, to_block, address: world.world_address, keys };
