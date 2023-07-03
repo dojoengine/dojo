@@ -302,7 +302,7 @@ mod spawn {
     fn execute(self: @ContractState, ctx: Context, name: felt252) {
         {
             let mut calldata = array::ArrayTrait::new();
-            serde::Serde::serialize(@Player { name: name }, ref calldata);
+            dojo::Packable::pack(@Player { name: name }, ref calldata);
             ctx
                 .world
                 .set_entity(
@@ -315,7 +315,7 @@ mod spawn {
 
         {
             let mut calldata = array::ArrayTrait::new();
-            serde::Serde::serialize(@Position { x: 0, y: 0 }, ref calldata);
+            dojo::Packable::pack(@Position { x: 0, y: 0 }, ref calldata);
             ctx
                 .world
                 .set_entity(
@@ -328,25 +328,25 @@ mod spawn {
 
         {
             let mut calldata = array::ArrayTrait::new();
-            serde::Serde::serialize(@Player { name: name }, ref calldata);
+            dojo::Packable::pack(@Player { name: name }, ref calldata);
             ctx.world.set_entity('Player', 420.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
             let mut calldata = array::ArrayTrait::new();
-            serde::Serde::serialize(@Position { x: 0, y: 0 }, ref calldata);
+            dojo::Packable::pack(@Position { x: 0, y: 0 }, ref calldata);
             ctx.world.set_entity('Position', 420.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
             let mut calldata = array::ArrayTrait::new();
-            serde::Serde::serialize(@Player { name: name }, ref calldata);
+            dojo::Packable::pack(@Player { name: name }, ref calldata);
             ctx.world.set_entity('Player', 120.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
             let mut calldata = array::ArrayTrait::new();
-            serde::Serde::serialize(@Position { x: 0, y: 0 }, ref calldata);
+            dojo::Packable::pack(@Position { x: 0, y: 0 }, ref calldata);
             ctx.world.set_entity('Position', 120.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
@@ -354,7 +354,7 @@ mod spawn {
 
         {
             let mut calldata = array::ArrayTrait::new();
-            serde::Serde::serialize(@Player { name: name }, ref calldata);
+            dojo::Packable::pack(@Player { name: name }, ref calldata);
             ctx
                 .world
                 .set_entity('Player', player_id.into(), 0_u8, array::ArrayTrait::span(@calldata));
@@ -362,7 +362,7 @@ mod spawn {
 
         {
             let mut calldata = array::ArrayTrait::new();
-            serde::Serde::serialize(@Position { x: 0, y: 0 }, ref calldata);
+            dojo::Packable::pack(@Position { x: 0, y: 0 }, ref calldata);
             ctx
                 .world
                 .set_entity('Position', player_id.into(), 0_u8, array::ArrayTrait::span(@calldata));
@@ -370,7 +370,7 @@ mod spawn {
 
         {
             let mut calldata = array::ArrayTrait::new();
-            serde::Serde::serialize(@Player { name: name }, ref calldata);
+            dojo::Packable::pack(@Player { name: name }, ref calldata);
             ctx
                 .world
                 .set_entity('Player', (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
@@ -378,7 +378,7 @@ mod spawn {
 
         {
             let mut calldata = array::ArrayTrait::new();
-            serde::Serde::serialize(@Position { x: 0, y: 0 }, ref calldata);
+            dojo::Packable::pack(@Position { x: 0, y: 0 }, ref calldata);
             ctx
                 .world
                 .set_entity('Position', (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
@@ -386,13 +386,13 @@ mod spawn {
 
         {
             let mut calldata = array::ArrayTrait::new();
-            serde::Serde::serialize(@Player { name: name }, ref calldata);
+            dojo::Packable::pack(@Player { name: name }, ref calldata);
             ctx.world.set_entity('Player', 1337.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
             let mut calldata = array::ArrayTrait::new();
-            serde::Serde::serialize(@Position { x: 0, y: 0 }, ref calldata);
+            dojo::Packable::pack(@Position { x: 0, y: 0 }, ref calldata);
             ctx.world.set_entity('Position', 1337.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
         return ();
@@ -472,7 +472,7 @@ mod move {
                     match raw_entities.pop_front() {
                         Option::Some(raw) => {
                             let mut raw = *raw;
-                            let e = serde::Serde::<Position>::deserialize(ref raw)
+                            let e = dojo::Packable::<Position>::unpack(ref raw)
                                 .expect('Position failed to deserialize');
                             entities.append(e);
                         },
@@ -496,7 +496,7 @@ mod move {
                     match raw_entities.pop_front() {
                         Option::Some(raw) => {
                             let mut raw = *raw;
-                            let e = serde::Serde::<Player>::deserialize(ref raw)
+                            let e = dojo::Packable::<Player>::unpack(ref raw)
                                 .expect('Player failed to deserialize');
                             entities.append(e);
                         },
@@ -535,7 +535,7 @@ mod move {
                     match raw_entities.pop_front() {
                         Option::Some(raw) => {
                             let mut raw = *raw;
-                            let e = serde::Serde::<Player>::deserialize(ref raw)
+                            let e = dojo::Packable::<Player>::unpack(ref raw)
                                 .expect('Player failed to deserialize');
                             entities.append(e);
                         },
@@ -555,7 +555,7 @@ mod move {
 
         let mut __player_player_raw = ctx.world.entity('Player', player_id.into(), 0_u8, 0_usize);
         assert(__player_player_raw.len() > 0_usize, 'Player not found');
-        let __player_player = serde::Serde::<Player>::deserialize(ref __player_player_raw)
+        let __player_player = dojo::Packable::<Player>::unpack(ref __player_player_raw)
             .expect('Player failed to deserialize');
         let player = __player_player;
 
@@ -563,7 +563,7 @@ mod move {
             .world
             .entity('Position', player_id.into(), 0_u8, 0_usize);
         assert(__player_position_position_raw.len() > 0_usize, 'Position not found');
-        let __player_position_position = serde::Serde::<Position>::deserialize(
+        let __player_position_position = dojo::Packable::<Position>::unpack(
             ref __player_position_position_raw
         )
             .expect('Position failed to deserialize');
@@ -572,7 +572,7 @@ mod move {
             .world
             .entity('Player', player_id.into(), 0_u8, 0_usize);
         assert(__player_position_player_raw.len() > 0_usize, 'Player not found');
-        let __player_position_player = serde::Serde::<Player>::deserialize(
+        let __player_position_player = dojo::Packable::<Player>::unpack(
             ref __player_position_player_raw
         )
             .expect('Player failed to deserialize');
@@ -586,7 +586,7 @@ mod move {
                 .world
                 .entity('Position', player_id.into(), 0_u8, 0_usize);
             assert(__player_position_position_raw.len() > 0_usize, 'Position not found');
-            let __player_position_position = serde::Serde::<Position>::deserialize(
+            let __player_position_position = dojo::Packable::<Position>::unpack(
                 ref __player_position_position_raw
             )
                 .expect('Position failed to deserialize');
@@ -595,7 +595,7 @@ mod move {
                 .world
                 .entity('Player', player_id.into(), 0_u8, 0_usize);
             assert(__player_position_player_raw.len() > 0_usize, 'Player not found');
-            let __player_position_player = serde::Serde::<Player>::deserialize(
+            let __player_position_player = dojo::Packable::<Player>::unpack(
                 ref __player_position_player_raw
             )
                 .expect('Player failed to deserialize');
@@ -629,7 +629,7 @@ mod move {
                             match raw_entities.pop_front() {
                                 Option::Some(raw) => {
                                     let mut raw = *raw;
-                                    let e = serde::Serde::<Position>::deserialize(ref raw)
+                                    let e = dojo::Packable::<Position>::unpack(ref raw)
                                         .expect('Position failed to deserialize');
                                     entities.append(e);
                                 },
@@ -653,7 +653,7 @@ mod move {
                             match raw_entities.pop_front() {
                                 Option::Some(raw) => {
                                     let mut raw = *raw;
-                                    let e = serde::Serde::<Player>::deserialize(ref raw)
+                                    let e = dojo::Packable::<Player>::unpack(ref raw)
                                         .expect('Player failed to deserialize');
                                     entities.append(e);
                                 },
@@ -681,8 +681,8 @@ mod move {
                 },
                 bool::True(()) => {
                     Option::Some(
-                        serde::Serde::<Player>::deserialize(ref __maybe_player_player_raw)
-                            .expect('Player failed to deserialize')
+                        dojo::Packable::<Player>::unpack(ref __maybe_player_player_raw)
+                            .expect('Player failed to unpack')
                     )
                 }
             };
@@ -703,8 +703,8 @@ mod move {
                 },
                 bool::True(()) => {
                     Option::Some(
-                        serde::Serde::<Position>::deserialize(ref __positions_query_position_raw)
-                            .expect('Position failed to deserialize')
+                        dojo::Packable::<Position>::unpack(ref __positions_query_position_raw)
+                            .expect('Position failed to unpack')
                     )
                 }
             };
@@ -718,8 +718,8 @@ mod move {
                 },
                 bool::True(()) => {
                     Option::Some(
-                        serde::Serde::<Player>::deserialize(ref __positions_query_player_raw)
-                            .expect('Player failed to deserialize')
+                        dojo::Packable::<Player>::unpack(ref __positions_query_player_raw)
+                            .expect('Player failed to unpack')
                     )
                 }
             };
@@ -740,7 +740,7 @@ mod move {
                 .world
                 .entity('Position', player_id.into(), 0_u8, 0_usize);
             assert(__player_position_position_raw.len() > 0_usize, 'Position not found');
-            let __player_position_position = serde::Serde::<Position>::deserialize(
+            let __player_position_position = dojo::Packable::<Position>::unpack(
                 ref __player_position_position_raw
             )
                 .expect('Position failed to deserialize');
@@ -749,7 +749,7 @@ mod move {
                 .world
                 .entity('Player', player_id.into(), 0_u8, 0_usize);
             assert(__player_position_player_raw.len() > 0_usize, 'Player not found');
-            let __player_position_player = serde::Serde::<Player>::deserialize(
+            let __player_position_player = dojo::Packable::<Player>::unpack(
                 ref __player_position_player_raw
             )
                 .expect('Player failed to deserialize');
@@ -760,7 +760,7 @@ mod move {
                 .world
                 .entity('Position', player_id.into(), 0_u8, 0_usize);
             assert(__player_position_position_raw.len() > 0_usize, 'Position not found');
-            let __player_position_position = serde::Serde::<Position>::deserialize(
+            let __player_position_position = dojo::Packable::<Position>::unpack(
                 ref __player_position_position_raw
             )
                 .expect('Position failed to deserialize');
@@ -769,7 +769,7 @@ mod move {
                 .world
                 .entity('Player', player_id.into(), 0_u8, 0_usize);
             assert(__player_position_player_raw.len() > 0_usize, 'Player not found');
-            let __player_position_player = serde::Serde::<Player>::deserialize(
+            let __player_position_player = dojo::Packable::<Player>::unpack(
                 ref __player_position_player_raw
             )
                 .expect('Player failed to deserialize');
@@ -784,7 +784,7 @@ mod move {
                     .world
                     .entity('Position', player_id.into(), 0_u8, 0_usize);
                 assert(__player_position_position_raw.len() > 0_usize, 'Position not found');
-                let __player_position_position = serde::Serde::<Position>::deserialize(
+                let __player_position_position = dojo::Packable::<Position>::unpack(
                     ref __player_position_position_raw
                 )
                     .expect('Position failed to deserialize');
@@ -793,7 +793,7 @@ mod move {
                     .world
                     .entity('Player', player_id.into(), 0_u8, 0_usize);
                 assert(__player_position_player_raw.len() > 0_usize, 'Player not found');
-                let __player_position_player = serde::Serde::<Player>::deserialize(
+                let __player_position_player = dojo::Packable::<Player>::unpack(
                     ref __player_position_player_raw
                 )
                     .expect('Player failed to deserialize');
@@ -828,7 +828,7 @@ mod move {
                                 match raw_entities.pop_front() {
                                     Option::Some(raw) => {
                                         let mut raw = *raw;
-                                        let e = serde::Serde::<Position>::deserialize(ref raw)
+                                        let e = dojo::Packable::<Position>::unpack(ref raw)
                                             .expect('Position failed to deserialize');
                                         entities.append(e);
                                     },
@@ -852,7 +852,7 @@ mod move {
                                 match raw_entities.pop_front() {
                                     Option::Some(raw) => {
                                         let mut raw = *raw;
-                                        let e = serde::Serde::<Player>::deserialize(ref raw)
+                                        let e = dojo::Packable::<Player>::unpack(ref raw)
                                             .expect('Player failed to deserialize');
                                         entities.append(e);
                                     },
@@ -876,7 +876,7 @@ mod move {
                     .world
                     .entity('Position', player_id.into(), 0_u8, 0_usize);
                 assert(__player_position_position_raw.len() > 0_usize, 'Position not found');
-                let __player_position_position = serde::Serde::<Position>::deserialize(
+                let __player_position_position = dojo::Packable::<Position>::unpack(
                     ref __player_position_position_raw
                 )
                     .expect('Position failed to deserialize');
@@ -885,7 +885,7 @@ mod move {
                     .world
                     .entity('Player', player_id.into(), 0_u8, 0_usize);
                 assert(__player_position_player_raw.len() > 0_usize, 'Player not found');
-                let __player_position_player = serde::Serde::<Player>::deserialize(
+                let __player_position_player = dojo::Packable::<Player>::unpack(
                     ref __player_position_player_raw
                 )
                     .expect('Player failed to deserialize');
@@ -912,7 +912,7 @@ mod move {
                 .world
                 .entity('Position', player_id.into(), 0_u8, 0_usize);
             assert(__player_position_position_raw.len() > 0_usize, 'Position not found');
-            let __player_position_position = serde::Serde::<Position>::deserialize(
+            let __player_position_position = dojo::Packable::<Position>::unpack(
                 ref __player_position_position_raw
             )
                 .expect('Position failed to deserialize');
@@ -921,7 +921,7 @@ mod move {
                 .world
                 .entity('Player', player_id.into(), 0_u8, 0_usize);
             assert(__player_position_player_raw.len() > 0_usize, 'Player not found');
-            let __player_position_player = serde::Serde::<Player>::deserialize(
+            let __player_position_player = dojo::Packable::<Player>::unpack(
                 ref __player_position_player_raw
             )
                 .expect('Player failed to deserialize');
