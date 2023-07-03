@@ -120,7 +120,11 @@ impl StarknetBlocks {
 
     pub fn current_block_number(&self) -> Option<BlockNumber> {
         let block_len = self.total_blocks();
-        if block_len == 0 { None } else { Some(BlockNumber(block_len as u64 - 1)) }
+        if block_len == 0 {
+            None
+        } else {
+            Some(BlockNumber(block_len as u64 - 1))
+        }
     }
 
     pub fn latest(&self) -> Option<StarknetBlock> {
