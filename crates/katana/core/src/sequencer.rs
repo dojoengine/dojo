@@ -423,7 +423,7 @@ impl Sequencer for KatanaSequencer {
             .ok_or(SequencerError::BlockNotFound(to_block))?;
 
         let mut events = Vec::new();
-        for i in from_block.0..to_block.0 {
+        for i in from_block.0..to_block.0 + 1 {
             let block = self
                 .starknet
                 .read()
