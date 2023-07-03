@@ -46,17 +46,17 @@ use crate::utils::contract::{
     legacy_inner_to_rpc_class, legacy_rpc_to_inner_class, rpc_to_inner_class,
 };
 
-pub struct StarknetRpc<S> {
+pub struct StarknetApi<S> {
     sequencer: Arc<S>,
 }
 
-impl<S: Sequencer + Send + Sync + 'static> StarknetRpc<S> {
+impl<S: Sequencer + Send + Sync + 'static> StarknetApi<S> {
     pub fn new(sequencer: Arc<S>) -> Self {
         Self { sequencer }
     }
 }
 #[async_trait]
-impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> {
+impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetApi<S> {
     async fn chain_id(&self) -> Result<String, Error> {
         Ok(self.sequencer.chain_id().await.as_hex())
     }
