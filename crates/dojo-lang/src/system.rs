@@ -10,8 +10,9 @@ use cairo_lang_syntax::node::ast::OptionReturnTypeClause::ReturnTypeClause;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
-use dojo_world::manifest::Dependency;
+use dojo_types::system::Dependency;
 use itertools::Itertools;
+use smol_str::SmolStr;
 
 use crate::commands::Command;
 use crate::plugin::{DojoAuxData, SystemAuxData};
@@ -364,12 +365,12 @@ impl System {
     }
 
     fn update_deps(&mut self, deps: Vec<Dependency>) {
-        for dep in deps.iter() {
-            if let Some(existing) = self.dependencies.get(&dep.name) {
+        for dep in deps {
+            if let Some(existing) = self.dependencies.get(&SmolStr::from(dep.name.as_str())) {
                 self.dependencies
-                    .insert(dep.name.clone(), merge_deps(dep.clone(), existing.clone()));
+                    .insert(dep.name.clone().into(), merge_deps(dep.clone(), existing.clone()));
             } else {
-                self.dependencies.insert(dep.name.clone(), dep.clone());
+                self.dependencies.insert(dep.name.clone().into(), dep.clone());
             }
         }
     }

@@ -1,6 +1,6 @@
 use camino::Utf8PathBuf;
 use dojo_test_utils::sequencer::TestSequencer;
-use dojo_world::manifest::Member;
+use dojo_types::component::Member;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag, FieldElement};
 

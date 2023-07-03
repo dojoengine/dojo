@@ -4,7 +4,7 @@ use cairo_lang_syntax::node::ast::Arg;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
-use dojo_world::manifest::Dependency;
+use dojo_types::system::Dependency;
 use itertools::Itertools;
 use sanitizer::StringSanitizer;
 use smol_str::SmolStr;
@@ -64,7 +64,7 @@ impl CommandMacroTrait for GetCommand {
 
         command.component_deps = components
             .iter()
-            .map(|c| Dependency { name: c.clone(), read: true, write: false })
+            .map(|c| Dependency { name: c.to_string(), read: true, write: false })
             .collect();
 
         let part_names = components
