@@ -3,7 +3,7 @@ use cairo_lang_semantic::patcher::RewriteNode;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
-use dojo_world::manifest::Dependency;
+use dojo_types::system::Dependency;
 
 use super::{Command, CommandData, CommandMacroTrait};
 
@@ -26,7 +26,7 @@ impl SetCommand {
                 let component_name = segment.ident(db).text(db);
 
                 self.component_deps.push(Dependency {
-                    name: component_name.clone(),
+                    name: component_name.to_string(),
                     write: true,
                     read: false,
                 });

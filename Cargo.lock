@@ -2007,6 +2007,7 @@ version = "0.1.0"
 dependencies = [
  "camino",
  "dojo-test-utils",
+ "dojo-types",
  "dojo-world",
  "starknet",
  "starknet-crypto 0.5.1",
@@ -2038,6 +2039,7 @@ dependencies = [
  "camino",
  "convert_case 0.6.0",
  "dojo-test-utils",
+ "dojo-types",
  "dojo-world",
  "env_logger 0.10.0",
  "itertools 0.10.5",
@@ -2115,6 +2117,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "dojo-types"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "starknet",
+]
+
+[[package]]
 name = "dojo-world"
 version = "0.1.0"
 dependencies = [
@@ -2128,6 +2138,7 @@ dependencies = [
  "convert_case 0.6.0",
  "dojo-lang",
  "dojo-test-utils",
+ "dojo-types",
  "reqwest",
  "serde",
  "serde_json",
@@ -6683,6 +6694,7 @@ dependencies = [
  "chrono",
  "clap",
  "ctrlc",
+ "dojo-types",
  "dojo-world",
  "indexmap 1.9.3",
  "log",

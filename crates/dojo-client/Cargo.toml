@@ -6,6 +6,7 @@ version = "0.1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+dojo-types = { path = "../dojo-types" }
 dojo-world = { path = "../dojo-world" }
 starknet-crypto.workspace = true
 starknet.workspace = true

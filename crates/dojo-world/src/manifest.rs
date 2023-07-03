@@ -3,6 +3,8 @@ use std::path::Path;
 
 use ::serde::{Deserialize, Serialize};
 use anyhow::{anyhow, Result};
+use dojo_types::component::Member;
+use dojo_types::system::Dependency;
 use serde_with::serde_as;
 use smol_str::SmolStr;
 use starknet::core::serde::unsigned_field_element::UfeHex;
@@ -34,16 +36,6 @@ pub enum ManifestError<E> {
     Provider(ProviderError<E>),
 }
 
-/// Component member.
-#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
-pub struct Member {
-    pub name: String,
-    #[serde(rename = "type")]
-    pub ty: String,
-    pub slot: u64,
-    pub offset: u8,
-}
-
 /// Represents a declaration of a component.
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
@@ -67,13 +59,6 @@ pub struct Input {
 pub struct Output {
     #[serde(rename = "type")]
     pub ty: String,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct Dependency {
-    pub name: SmolStr,
-    pub read: bool,
-    pub write: bool,
 }
 
 /// Represents a declaration of a system.
