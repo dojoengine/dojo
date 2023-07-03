@@ -3861,6 +3861,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "auto_impl 1.1.0",
  "blockifier",
  "cairo-lang-casm",
  "cairo-lang-starknet",

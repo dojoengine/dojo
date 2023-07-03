@@ -47,16 +47,22 @@ use crate::utils::contract::{
 };
 
 pub struct StarknetApi<S> {
-    sequencer: Arc<S>,
+    sequencer: S,
 }
 
-impl<S: Sequencer + Send + Sync + 'static> StarknetApi<S> {
-    pub fn new(sequencer: Arc<S>) -> Self {
+impl<S> StarknetApi<S>
+where
+    S: Sequencer + Send + Sync + 'static,
+{
+    pub fn new(sequencer: S) -> Self {
         Self { sequencer }
     }
 }
 #[async_trait]
-impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetApi<S> {
+impl<S> StarknetApiServer for StarknetApi<S>
+where
+    S: Sequencer + Send + Sync + 'static,
+{
     async fn chain_id(&self) -> Result<String, Error> {
         Ok(self.sequencer.chain_id().await.as_hex())
     }
