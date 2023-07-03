@@ -6,18 +6,18 @@ use katana_core::sequencer::Sequencer;
 
 use crate::api::katana::{KatanaApiError, KatanaApiServer};
 
-pub struct KatanaRpc<S> {
+pub struct KatanaApi<S> {
     sequencer: Arc<S>,
 }
 
-impl<S: Sequencer + Send + Sync + 'static> KatanaRpc<S> {
+impl<S: Sequencer + Send + Sync + 'static> KatanaApi<S> {
     pub fn new(sequencer: Arc<S>) -> Self {
         Self { sequencer }
     }
 }
 
 #[async_trait]
-impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
+impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaApi<S> {
     async fn generate_block(&self) -> Result<(), Error> {
         let mut starknet = self.sequencer.mut_starknet().await;
         starknet.generate_latest_block();

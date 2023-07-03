@@ -16,8 +16,8 @@ use tower_http::cors::{Any, CorsLayer};
 
 use crate::api::katana::KatanaApiServer;
 use crate::api::starknet::StarknetApiServer;
-use crate::katana::KatanaRpc;
-use crate::starknet::StarknetRpc;
+use crate::katana::KatanaApi;
+use crate::starknet::StarknetApi;
 
 #[derive(Debug, Clone)]
 pub struct KatanaNodeRpc<S> {
@@ -34,8 +34,8 @@ where
     }
 
     pub async fn run(self) -> Result<(SocketAddr, ServerHandle)> {
-        let mut methods = KatanaRpc::new(self.sequencer.clone()).into_rpc();
-        methods.merge(StarknetRpc::new(self.sequencer.clone()).into_rpc())?;
+        let mut methods = KatanaApi::new(self.sequencer.clone()).into_rpc();
+        methods.merge(StarknetApi::new(self.sequencer.clone()).into_rpc())?;
 
         let cors = CorsLayer::new()
             // Allow `POST` when accessing the resource
