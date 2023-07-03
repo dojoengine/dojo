@@ -17,7 +17,7 @@ impl From<KatanaApiError> for Error {
     }
 }
 
-#[rpc(server, client, namespace = "katana")]
+#[rpc(server, namespace = "katana")]
 pub trait KatanaApi {
     #[method(name = "generateBlock")]
     async fn generate_block(&self) -> Result<(), Error>;
