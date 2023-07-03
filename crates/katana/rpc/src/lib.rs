@@ -1,3 +1,9 @@
+mod api;
+pub mod config;
+mod katana;
+mod starknet;
+mod utils;
+
 use std::net::SocketAddr;
 use std::sync::Arc;
 
@@ -5,18 +11,13 @@ use anyhow::Result;
 use config::ServerConfig;
 use hyper::Method;
 use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
-use katana::api::KatanaApiServer;
-use katana::KatanaRpc;
 use katana_core::sequencer::Sequencer;
 use tower_http::cors::{Any, CorsLayer};
 
-pub mod config;
-mod katana;
-mod starknet;
-mod utils;
-
-use self::starknet::api::StarknetApiServer;
-use self::starknet::rpc::StarknetRpc;
+use crate::api::katana::KatanaApiServer;
+use crate::api::starknet::StarknetApiServer;
+use crate::katana::KatanaRpc;
+use crate::starknet::StarknetRpc;
 
 #[derive(Debug, Clone)]
 pub struct KatanaNodeRpc<S> {
