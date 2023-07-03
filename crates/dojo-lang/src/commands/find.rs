@@ -126,7 +126,7 @@ impl CommandMacroTrait for FindCommand {
                                     match raw_entities.pop_front() {
                                         Option::Some(raw) => {
                                             let mut raw = *raw;
-                                            let e = serde::Serde::<$component$>::deserialize(ref \
+                                            let e = dojo::Packable::<$component$>::unpack(ref \
                          raw).expect('$deser_err_msg$');
                                             entities.append(e);
                                         },

@@ -113,7 +113,7 @@ impl GetCommand {
                     let mut __$query_id$_$query_subtype$_raw = $world$.entity('$component$', \
                  $query$, 0_u8, 0_usize);
                     assert(__$query_id$_$query_subtype$_raw.len() > 0_usize, '$lookup_err_msg$');
-                    let __$query_id$_$query_subtype$ = serde::Serde::<$component$>::deserialize(
+                    let __$query_id$_$query_subtype$ = dojo::Packable::<$component$>::unpack(
                         ref __$query_id$_$query_subtype$_raw
                     ).expect('$deser_err_msg$');
                     ",
@@ -156,7 +156,7 @@ impl GetCommand {
         part_names: Vec<String>,
     ) {
         for component in components.iter() {
-            let mut deser_err_msg = format!("{} failed to deserialize", component.to_string());
+            let mut deser_err_msg = format!("{} failed to unpack", component.to_string());
             deser_err_msg.truncate(CAIRO_ERR_MSG_LEN);
 
             self.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
@@ -169,7 +169,7 @@ impl GetCommand {
                             Option::None(())
                         },
                         bool::True(()) => {
-                            Option::Some(serde::Serde::<$component$>::deserialize(
+                            Option::Some(dojo::Packable::<$component$>::unpack(
                                 ref __$query_id$_$query_subtype$_raw
                             ).expect('$deser_err_msg$'))
                         }
