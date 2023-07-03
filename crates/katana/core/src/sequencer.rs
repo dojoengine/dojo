@@ -452,7 +452,7 @@ impl Sequencer for KatanaSequencer {
                         .filter(|event| {
                             // Check the address condition
                             let address_condition = match &address {
-                                Some(a) => a != event.from_address.0.key(),
+                                Some(a) => a == event.from_address.0.key(),
                                 None => true,
                             };
 
