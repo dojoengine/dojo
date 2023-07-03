@@ -40,15 +40,11 @@ use utils::transaction::{
     compute_invoke_v1_transaction_hash, convert_inner_to_rpc_tx,
 };
 
-use crate::starknet::api::{Felt, StarknetApiError, StarknetApiServer};
+use crate::api::starknet::{Felt, StarknetApiError, StarknetApiServer};
 use crate::utils;
 use crate::utils::contract::{
     legacy_inner_to_rpc_class, legacy_rpc_to_inner_class, rpc_to_inner_class,
 };
-
-#[cfg(test)]
-#[path = "rpc_test.rs"]
-mod test;
 
 pub struct StarknetRpc<S> {
     sequencer: Arc<S>,

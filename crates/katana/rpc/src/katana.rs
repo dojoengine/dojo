@@ -4,9 +4,7 @@ use jsonrpsee::core::{async_trait, Error};
 use katana_core::accounts::Account;
 use katana_core::sequencer::Sequencer;
 
-use self::api::{KatanaApiError, KatanaApiServer};
-
-pub mod api;
+use crate::api::katana::{KatanaApiError, KatanaApiServer};
 
 pub struct KatanaRpc<S> {
     sequencer: Arc<S>,
