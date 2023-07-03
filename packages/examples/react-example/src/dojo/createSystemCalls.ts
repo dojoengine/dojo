@@ -13,7 +13,7 @@ export function createSystemCalls(
     { execute, syncWorker }: SetupNetworkResult,
 ) {
     const spawn = async () => {
-        const tx = await execute("Spawn", []);
+        const tx = await execute("spawn", []);
         // await awaitStreamValue(txReduced$, (txHash) => txHash === tx.transaction_hash);
         syncWorker.sync(tx.transaction_hash);
         
@@ -21,7 +21,7 @@ export function createSystemCalls(
 
     const move = async (direction: Direction) => {
         // execute from core
-        const tx = await execute("Move", [direction]);
+        const tx = await execute("move", [direction]);
         // awaitStreamValue(txReduced$, (txHash) => txHash === tx.transaction_hash);
         syncWorker.sync(tx.transaction_hash);
       };

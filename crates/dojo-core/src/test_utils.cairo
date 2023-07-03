@@ -1,22 +1,20 @@
 use starknet::{
-    ClassHash, ContractAddress, syscalls::deploy_syscall, class_hash::Felt252TryIntoClassHash, get_caller_address
+    ClassHash, ContractAddress, syscalls::deploy_syscall, class_hash::Felt252TryIntoClassHash,
+    get_caller_address
 };
 use array::{ArrayTrait, SpanTrait};
 use traits::TryInto;
 use option::OptionTrait;
 use core::{result::ResultTrait, traits::Into};
 
-use dojo::{
-    executor::Executor, world::World, interfaces::{IWorldDispatcher, IWorldDispatcherTrait}
-};
+use dojo::executor::executor;
+use dojo::world::{world, IWorldDispatcher, IWorldDispatcherTrait};
 
-fn spawn_test_world(
-    components: Array<felt252>, systems: Array<felt252>
-) -> IWorldDispatcher {
+fn spawn_test_world(components: Array<felt252>, systems: Array<felt252>) -> IWorldDispatcher {
     // deploy executor
     let constructor_calldata = array::ArrayTrait::new();
     let (executor_address, _) = deploy_syscall(
-        Executor::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
+        executor::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
     )
         .unwrap();
 
@@ -24,7 +22,7 @@ fn spawn_test_world(
     let mut world_constructor_calldata = array::ArrayTrait::new();
     world_constructor_calldata.append(executor_address.into());
     let (world_address, _) = deploy_syscall(
-        World::TEST_CLASS_HASH.try_into().unwrap(), 0, world_constructor_calldata.span(), false
+        world::TEST_CLASS_HASH.try_into().unwrap(), 0, world_constructor_calldata.span(), false
     )
         .unwrap();
     let world = IWorldDispatcher { contract_address: world_address };

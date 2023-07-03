@@ -20,7 +20,7 @@ async fn test_system() {
 
     let block_id: BlockId = BlockId::Tag(BlockTag::Latest);
     let world = WorldContract::new(world_address, &account);
-    let spawn = world.system("Spawn", block_id).await.unwrap();
+    let spawn = world.system("spawn", block_id).await.unwrap();
     let dependencies = spawn.dependencies(block_id).await.unwrap();
     assert_eq!(
         dependencies,
@@ -38,7 +38,7 @@ async fn test_system() {
 
     assert_eq!(moves, vec![10_u8.into()]);
 
-    let move_system = world.system("Move", block_id).await.unwrap();
+    let move_system = world.system("move", block_id).await.unwrap();
 
     let _ = move_system.execute(vec![FieldElement::ONE]).await.unwrap();
     let _ = move_system.execute(vec![FieldElement::THREE]).await.unwrap();

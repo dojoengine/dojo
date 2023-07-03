@@ -6,11 +6,8 @@ use traits::TryInto;
 
 use starknet::syscalls::deploy_syscall;
 use starknet::class_hash::Felt252TryIntoClassHash;
-use dojo::interfaces::IExecutorDispatcher;
-use dojo::interfaces::IExecutorDispatcherTrait;
-use dojo::interfaces::IWorldDispatcher;
-use dojo::executor::Executor;
-use dojo::world::Context;
+use dojo::executor::{executor, IExecutorDispatcher, IExecutorDispatcherTrait};
+use dojo::world::{Context, IWorldDispatcher};
 
 #[derive(Component, Copy, Drop, Serde)]
 struct Foo {
@@ -32,7 +29,7 @@ mod Bar {
 fn test_executor() {
     let constructor_calldata = array::ArrayTrait::new();
     let (executor_address, _) = deploy_syscall(
-        Executor::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
+        executor::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
     )
         .unwrap();
 
@@ -44,7 +41,9 @@ fn test_executor() {
     let res = executor
         .execute(
             Context {
-                world: IWorldDispatcher { contract_address: starknet::contract_address_const::<0x1337>() },
+                world: IWorldDispatcher {
+                    contract_address: starknet::contract_address_const::<0x1337>()
+                },
                 origin: starknet::contract_address_const::<0x1337>(),
                 system: 'Bar',
                 system_class_hash: Bar::TEST_CLASS_HASH.try_into().unwrap(),

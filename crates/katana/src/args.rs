@@ -48,8 +48,9 @@ pub struct ServerOptions {
 #[derive(Debug, Args, Clone)]
 pub struct StarknetOptions {
     #[arg(long)]
+    #[arg(default_value = "0")]
     #[arg(help = "Specify the seed for randomness of accounts to be predeployed.")]
-    pub seed: Option<String>,
+    pub seed: String,
 
     #[arg(long = "accounts")]
     #[arg(value_name = "NUM")]
@@ -100,7 +101,7 @@ impl KatanaArgs {
     pub fn starknet_config(&self) -> StarknetConfig {
         StarknetConfig {
             total_accounts: self.starknet.total_accounts,
-            seed: parse_seed(self.starknet.seed.clone()),
+            seed: parse_seed(&self.starknet.seed),
             account_path: self.starknet.account_path.clone(),
             allow_zero_max_fee: self.starknet.allow_zero_max_fee,
             auto_mine: self.block_time.is_none() && !self.no_mining,
@@ -112,19 +113,16 @@ impl KatanaArgs {
     }
 }
 
-fn parse_seed(seed: Option<String>) -> [u8; 32] {
-    seed.map(|seed| {
-        let seed = seed.as_bytes();
+fn parse_seed(seed: &str) -> [u8; 32] {
+    let seed = seed.as_bytes();
 
-        if seed.len() >= 32 {
-            unsafe { *(seed[..32].as_ptr() as *const [u8; 32]) }
-        } else {
-            let mut actual_seed = [0u8; 32];
-            seed.iter().enumerate().for_each(|(i, b)| actual_seed[i] = *b);
-            actual_seed
-        }
-    })
-    .unwrap_or_default()
+    if seed.len() >= 32 {
+        unsafe { *(seed[..32].as_ptr() as *const [u8; 32]) }
+    } else {
+        let mut actual_seed = [0u8; 32];
+        seed.iter().enumerate().for_each(|(i, b)| actual_seed[i] = *b);
+        actual_seed
+    }
 }
 
 #[cfg(test)]

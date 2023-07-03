@@ -46,7 +46,7 @@ impl CommandMacroTrait for ExecuteCommand {
             ));
         } else {
             command.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
-                "$world$.world.execute('$system$', $calldata$);
+                "$world$.execute('$system$', $calldata$);
                 ",
                 UnorderedHashMap::from([
                     ("world".to_string(), RewriteNode::new_trimmed(world.as_syntax_node())),

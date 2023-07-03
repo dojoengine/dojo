@@ -5,7 +5,10 @@ use cairo_lang_defs::ids::{ModuleId, ModuleItemId};
 use cairo_lang_filesystem::ids::CrateId;
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::plugin::DynPluginAuxData;
-use dojo_world::manifest::{Contract, Input, Output, System};
+use convert_case::{Case, Casing};
+use dojo_world::manifest::{
+    Contract, Input, Output, System, EXECUTOR_CONTRACT_NAME, WORLD_CONTRACT_NAME,
+};
 use itertools::Itertools;
 use serde::Serialize;
 use smol_str::SmolStr;
@@ -24,16 +27,29 @@ impl Manifest {
     ) -> Self {
         let mut manifest = Manifest(dojo_world::manifest::Manifest::default());
 
-        let world = compiled_classes.get("World").unwrap_or_else(|| {
-            panic!("World contract not found. Did you include `dojo` as a dependency?");
+        let world = compiled_classes.get(WORLD_CONTRACT_NAME).unwrap_or_else(|| {
+            panic!(
+                "{}",
+                format!(
+                    "Contract `{}` not found. Did you include `dojo` as a dependency?",
+                    WORLD_CONTRACT_NAME
+                )
+            );
         });
-        let executor = compiled_classes.get("Executor").unwrap_or_else(|| {
-            panic!("Executor contract not found. Did you include `dojo` as a dependency?");
+        let executor = compiled_classes.get(EXECUTOR_CONTRACT_NAME).unwrap_or_else(|| {
+            panic!(
+                "{}",
+                format!(
+                    "Contract `{}` not found. Did you include `dojo` as a dependency?",
+                    EXECUTOR_CONTRACT_NAME
+                )
+            );
         });
 
-        manifest.0.world = Contract { name: "World".into(), address: None, class_hash: *world };
+        manifest.0.world =
+            Contract { name: WORLD_CONTRACT_NAME.into(), address: None, class_hash: *world };
         manifest.0.executor =
-            Contract { name: "Excecutor".into(), address: None, class_hash: *executor };
+            Contract { name: EXECUTOR_CONTRACT_NAME.into(), address: None, class_hash: *executor };
 
         for crate_id in crate_ids {
             let modules = db.crate_modules(*crate_id);
@@ -75,8 +91,8 @@ impl Manifest {
                 // It needs the `Component` suffix because we are
                 // searching from the compiled contracts.
                 let class_hash = compiled_classes
-                    .get(format!("{name}Component").as_str())
-                    .with_context(|| format!("Contract {name} not found in target."))
+                    .get(name.to_case(Case::Snake).as_str())
+                    .with_context(|| format!("Component {name} not found in target."))
                     .unwrap();
 
                 self.0.components.push(dojo_world::manifest::Component {
@@ -130,7 +146,7 @@ impl Manifest {
 
                     let class_hash = compiled_classes
                         .get(name.as_str())
-                        .with_context(|| format!("Contract {name} not found in target."))
+                        .with_context(|| format!("System {name} not found in target."))
                         .unwrap();
 
                     self.0.systems.push(System {

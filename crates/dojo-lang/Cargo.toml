@@ -26,6 +26,7 @@ cairo-lang-sierra-generator.workspace = true
 cairo-lang-syntax.workspace = true
 cairo-lang-starknet.workspace = true
 cairo-lang-utils.workspace = true
+convert_case.workspace = true
 dojo-world = { path = "../dojo-world" }
 itertools.workspace = true
 scarb.workspace = true

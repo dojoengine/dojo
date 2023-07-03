@@ -49,7 +49,7 @@ async fn main() {
     };
 }
 
-fn print_intro(accounts: String, seed: Option<String>, address: String) {
+fn print_intro(accounts: String, seed: String, address: String) {
     println!(
         "{}",
         Paint::red(
@@ -75,15 +75,13 @@ PREFUNDED ACCOUNTS
     "
     );
 
-    if let Some(seed) = seed {
-        println!(
-            r"
+    println!(
+        r"
 ACCOUNTS SEED
 =============
 {seed}
     "
-        );
-    }
+    );
 
     println!("\n{address}\n\n");
 }

@@ -51,8 +51,8 @@ impl System {
                     use array::SpanTrait;
 
                     use dojo::world;
-                    use dojo::interfaces::IWorldDispatcher;
-                    use dojo::interfaces::IWorldDispatcherTrait;
+                    use dojo::world::IWorldDispatcher;
+                    use dojo::world::IWorldDispatcherTrait;
                     use dojo::database::query::Query;
                     use dojo::database::query::QueryTrait;
                     use dojo::database::query::LiteralIntoQuery;
