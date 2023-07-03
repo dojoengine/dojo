@@ -1,14 +1,13 @@
 use camino::Utf8PathBuf;
 use dojo_test_utils::sequencer::TestSequencer;
+use dojo_world::manifest::Manifest;
+use dojo_world::migration::strategy::prepare_for_migration;
+use dojo_world::migration::world::WorldDiff;
+use dojo_world::migration::{Declarable, Deployable};
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag, FieldElement};
 
-use super::WorldContract;
-use crate::manifest::Manifest;
-use crate::migration::strategy::prepare_for_migration;
-use crate::migration::world::WorldDiff;
-use crate::migration::{Declarable, Deployable};
-use crate::world::WorldContractReader;
+use super::{WorldContract, WorldContractReader};
 
 #[tokio::test]
 async fn test_world_contract_reader() {

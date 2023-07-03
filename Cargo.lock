@@ -2002,6 +2002,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
+name = "dojo-client"
+version = "0.1.0"
+dependencies = [
+ "camino",
+ "dojo-test-utils",
+ "dojo-world",
+ "starknet",
+ "starknet-crypto",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "dojo-lang"
 version = "0.1.0"
 dependencies = [
@@ -2116,13 +2129,11 @@ dependencies = [
  "dojo-lang",
  "dojo-test-utils",
  "reqwest",
- "scarb",
  "serde",
  "serde_json",
  "serde_with",
  "smol_str",
  "starknet",
- "starknet-crypto",
  "thiserror",
  "tokio",
  "tracing",
@@ -5908,6 +5919,7 @@ dependencies = [
  "clap",
  "clap-verbosity-flag",
  "console",
+ "dojo-client",
  "dojo-lang",
  "dojo-test-utils",
  "dojo-world",

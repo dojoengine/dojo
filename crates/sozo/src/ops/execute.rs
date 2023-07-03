@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use dojo_world::world::WorldContract;
+use dojo_client::contract::world::WorldContract;
 use toml::Value;
 
 use crate::commands::execute::ExecuteArgs;

@@ -1,11 +1,11 @@
 use camino::Utf8PathBuf;
 use dojo_test_utils::sequencer::TestSequencer;
+use dojo_world::manifest::Member;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag, FieldElement};
 
-use crate::manifest::Member;
-use crate::world::test::deploy_world;
-use crate::world::WorldContractReader;
+use crate::contract::world::test::deploy_world;
+use crate::contract::world::WorldContractReader;
 
 #[tokio::test]
 async fn test_component() {

@@ -68,7 +68,8 @@ pub trait StateDiff {
     fn is_same(&self) -> bool;
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait Declarable {
     async fn declare<A>(
         &self,
@@ -102,7 +103,8 @@ pub trait Declarable {
 }
 
 // TODO: Remove `mut` once we can calculate the contract address before sending the tx
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait Deployable: Declarable + Sync {
     async fn deploy<A>(
         &mut self,

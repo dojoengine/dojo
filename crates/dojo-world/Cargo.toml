@@ -17,13 +17,11 @@ convert_case.workspace = true
 reqwest = { version = "0.11.18", default-features = false, features = [
     "rustls-tls",
 ] }
-scarb.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
 smol_str.workspace = true
 starknet.workspace = true
-starknet-crypto.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 url = "2.2.2"

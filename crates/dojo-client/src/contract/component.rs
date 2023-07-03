@@ -1,5 +1,6 @@
 use std::vec;
 
+use dojo_world::manifest::Member;
 use starknet::core::types::{BlockId, FieldElement, FunctionCall};
 use starknet::core::utils::{
     cairo_short_string_to_felt, get_selector_from_name, parse_cairo_short_string,
@@ -9,8 +10,7 @@ use starknet::macros::short_string;
 use starknet::providers::{Provider, ProviderError};
 use starknet_crypto::poseidon_hash_many;
 
-use crate::manifest::Member;
-use crate::world::{ContractReaderError, WorldContractReader};
+use crate::contract::world::{ContractReaderError, WorldContractReader};
 
 #[cfg(test)]
 #[path = "component_test.rs"]
