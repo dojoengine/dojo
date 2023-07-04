@@ -1,5 +1,5 @@
 use anyhow::Result;
-use dojo_world::world::WorldContractReader;
+use dojo_client::contract::world::WorldContractReader;
 use starknet::core::types::{BlockId, BlockTag};
 use toml::Value;
 

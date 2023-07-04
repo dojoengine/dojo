@@ -13,8 +13,8 @@ use crate::ops::migration;
 
 #[derive(Args)]
 pub struct MigrateArgs {
-    #[clap(short, long)]
-    #[clap(help = "Perform a dry run and outputs the plan to be executed")]
+    #[arg(short, long)]
+    #[arg(help = "Perform a dry run and outputs the plan to be executed")]
     plan: bool,
 
     #[command(flatten)]

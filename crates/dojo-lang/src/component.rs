@@ -8,7 +8,7 @@ use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use convert_case::{Case, Casing};
-use dojo_world::manifest::Member;
+use dojo_types::component::Member;
 
 use crate::plugin::{Component, DojoAuxData};
 

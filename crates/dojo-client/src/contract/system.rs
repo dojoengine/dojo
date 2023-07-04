@@ -1,3 +1,4 @@
+use dojo_types::system::Dependency;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, FieldElement, FunctionCall, InvokeTransactionResult};
 use starknet::core::utils::{
@@ -6,8 +7,9 @@ use starknet::core::utils::{
 };
 use starknet::providers::{Provider, ProviderError};
 
-use crate::manifest::Dependency;
-use crate::world::{ContractReaderError, WorldContract, WorldContractError, WorldContractReader};
+use crate::contract::world::{
+    ContractReaderError, WorldContract, WorldContractError, WorldContractReader,
+};
 
 #[cfg(test)]
 #[path = "system_test.rs"]
@@ -171,8 +173,7 @@ impl<'a, P: Provider + Sync> SystemReader<'a, P> {
 
             dependencies.push(Dependency {
                 name: parse_cairo_short_string(&chunk[0])
-                    .map_err(SystemReaderError::ParseCairoShortStringError)?
-                    .into(),
+                    .map_err(SystemReaderError::ParseCairoShortStringError)?,
                 read: !is_write,
                 write: is_write,
             });

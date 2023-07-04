@@ -19,7 +19,8 @@ use cairo_lang_syntax::attribute::structured::{
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal};
-use dojo_world::manifest::{Dependency, Member};
+use dojo_types::component::Member;
+use dojo_types::system::Dependency;
 use scarb::compiler::plugin::builtin::BuiltinSemanticCairoPlugin;
 use scarb::core::{PackageId, PackageName, SourceId};
 use semver::Version;
@@ -211,7 +212,7 @@ impl CairoPluginRepository {
         repo.add(Box::new(BuiltinSemanticCairoPlugin::<DojoPlugin>::new(dojo_package_id))).unwrap();
         let starknet_package_id = PackageId::new(
             PackageName::STARKNET,
-            Version::parse("2.0.0-rc6").unwrap(),
+            Version::parse("2.0.0").unwrap(),
             SourceId::for_std(),
         );
         repo.add(Box::new(BuiltinSemanticCairoPlugin::<StarkNetPlugin>::new(starknet_package_id)))

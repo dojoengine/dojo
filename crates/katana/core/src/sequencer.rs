@@ -423,7 +423,7 @@ impl Sequencer for KatanaSequencer {
             .ok_or(SequencerError::BlockNotFound(to_block))?;
 
         let mut events = Vec::new();
-        for i in from_block.0..to_block.0 {
+        for i in from_block.0..=to_block.0 {
             let block = self
                 .starknet
                 .read()
@@ -452,7 +452,7 @@ impl Sequencer for KatanaSequencer {
                         .filter(|event| {
                             // Check the address condition
                             let address_condition = match &address {
-                                Some(a) => a != event.from_address.0.key(),
+                                Some(a) => a == event.from_address.0.key(),
                                 None => true,
                             };
 

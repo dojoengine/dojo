@@ -9,6 +9,7 @@ use tracing_log::AsTrace;
 
 use crate::commands::build::BuildArgs;
 use crate::commands::component::ComponentArgs;
+use crate::commands::events::EventsArgs;
 use crate::commands::execute::ExecuteArgs;
 use crate::commands::init::InitArgs;
 use crate::commands::migrate::MigrateArgs;
@@ -58,6 +59,8 @@ pub enum Commands {
     System(SystemArgs),
     #[command(about = "Register new systems and components")]
     Register(RegisterArgs),
+    #[command(about = "Queries world events")]
+    Events(EventsArgs),
 }
 
 impl SozoArgs {

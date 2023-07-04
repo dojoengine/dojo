@@ -1,11 +1,11 @@
 use std::path::Path;
 
 use anyhow::{anyhow, bail, Context, Result};
+use dojo_client::contract::world::WorldContract;
 use dojo_world::manifest::{Manifest, ManifestError};
 use dojo_world::migration::strategy::{prepare_for_migration, MigrationOutput, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{Declarable, Deployable, MigrationError, RegisterOutput};
-use dojo_world::world::WorldContract;
 use scarb::core::Config;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{FieldElement, InvokeTransactionResult};
