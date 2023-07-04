@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use jsonrpsee::core::Error;
 use jsonrpsee::server::ServerHandle;
+use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::sequencer::{KatanaSequencer, SequencerConfig};
-use katana_core::starknet::config::{Environment, StarknetConfig};
 use katana_rpc::config::ServerConfig;
 use katana_rpc::KatanaNodeRpc;
 use starknet::accounts::SingleOwnerAccount;
