@@ -86,5 +86,5 @@ yansi = "0.5.1"
 blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "f5b684d" }
 
 [patch.crates-io]
-cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "9edddbc" }
-cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "9edddbc" }
+cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "b1a3683fe20bb668e4ab72cd9f99b8a0a33515a8" }
+cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "b1a3683fe20bb668e4ab72cd9f99b8a0a33515a8" }

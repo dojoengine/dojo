@@ -6,7 +6,7 @@ use blockifier::execution::contract_class::{
     ContractClass as InnerContractClass, ContractClassV0 as InnerContractClassV0,
 };
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-use cairo_vm::serde::deserialize_program::parse_program;
+use cairo_vm::serde::deserialize_program::ProgramJson;
 use serde_json::json;
 use starknet::core::types::contract::legacy::{LegacyContractClass, LegacyProgram};
 use starknet::core::types::{
@@ -23,7 +23,7 @@ pub fn legacy_inner_to_rpc_class(
             .expect("Failed to convert entry points");
 
     let program = {
-        let program = parse_program(legacy_contract_class.program.clone());
+        let program: ProgramJson = legacy_contract_class.program.clone().into();
         compress(&serde_json::to_vec(&program)?)?
     };
 
