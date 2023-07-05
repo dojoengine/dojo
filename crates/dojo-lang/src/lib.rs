@@ -7,7 +7,6 @@ mod commands;
 pub mod compiler;
 pub mod component;
 pub mod db;
-pub mod library;
 mod manifest;
 pub mod plugin;
 pub mod system;
