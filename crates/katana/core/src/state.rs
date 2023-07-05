@@ -225,3 +225,50 @@ fn deploy_universal_deployer_contract(state: &mut MemDb) {
         StorageRecord { class_hash: hash, nonce: Nonce(1_u128.into()), storage: HashMap::new() },
     );
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn insert_new_storage_record() {
+        let mut state = MemDb { classes: HashMap::new(), state: HashMap::new() };
+
+        let contract_address = ContractAddress(patricia_key!(0x1234_u32));
+        let key = StorageKey(patricia_key!(0x5678_u32));
+        let value = StarkFelt::from(0x9abc_u32);
+
+        state.set_storage_at(contract_address, key, value);
+        let actual = state.get_storage_at(contract_address, key).unwrap();
+
+        assert_eq!(actual, value);
+    }
+
+    #[test]
+    fn set_new_storage_should_overwrite_old_value() {
+        let mut state = MemDb { classes: HashMap::new(), state: HashMap::new() };
+
+        let contract_address = ContractAddress(patricia_key!(0x1234_u32));
+        let key = StorageKey(patricia_key!(0x5678_u32));
+        let value = StarkFelt::from(0x9abc_u32);
+
+        state.set_storage_at(contract_address, key, value);
+        let actual = state.get_storage_at(contract_address, key).unwrap();
+
+        assert_eq!(actual, value);
+
+        let new_value = StarkFelt::from(0xdef0_u32);
+        state.set_storage_at(contract_address, key, new_value);
+        let actual = state.get_storage_at(contract_address, key).unwrap();
+
+        assert_eq!(actual, new_value);
+    }
+
+    #[test]
+    fn set_compiled_hash_for_undeclared_class_hash_should_fail() {
+        let mut state = MemDb { classes: HashMap::new(), state: HashMap::new() };
+        let class_hash = ClassHash(*UDC_CLASS_HASH);
+        let compiled_class_hash = CompiledClassHash(*UDC_CLASS_HASH);
+        assert!(state.set_compiled_class_hash(class_hash, compiled_class_hash).is_err());
+    }
+}
