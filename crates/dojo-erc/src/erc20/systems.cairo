@@ -29,7 +29,9 @@ mod ERC20TransferFrom {
         let caller: felt252 = get_caller_address().into();
         if spender != caller {
             // decrease allowance if it's not owner doing the transfer
-            let allowance = get !(ctx.world, (token, (caller, spender)).into_partitioned(), Allowance);
+            let allowance = get !(
+                ctx.world, (token, (caller, spender)).into_partitioned(), Allowance
+            );
             if !is_unlimited_allowance(allowance) {
                 set !(
                     ctx.world,
@@ -77,7 +79,9 @@ mod ERC20Mint {
 
         // increase balance of recipient
         let balance = get !(ctx.world, (token, (recipient)).into_partitioned(), Balance);
-        set !(ctx.world, (token, (recipient)).into(), (Balance { amount: balance.amount + amount }));
+        set !(
+            ctx.world, (token, (recipient)).into(), (Balance { amount: balance.amount + amount })
+        );
     }
 }
 
@@ -98,7 +102,9 @@ mod ERC20Burn {
         // decrease balance of owner
         let balance = get !(ctx.world, (token, (owner)).into_partitioned(), Balance);
         set !(
-            ctx.world, (token, (owner)).into_partitioned(), (Balance { amount: balance.amount - amount })
+            ctx.world,
+            (token, (owner)).into_partitioned(),
+            (Balance { amount: balance.amount - amount })
         );
     }
 }
