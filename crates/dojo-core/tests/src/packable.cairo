@@ -1,4 +1,5 @@
 use array::{ArrayTrait, SpanTrait};
+use starknet::{ClassHash, ContractAddress, Felt252TryIntoContractAddress, Felt252TryIntoClassHash};
 use dojo::packable::{
     Packable, 
     PackableU8, 
@@ -143,6 +144,12 @@ fn test_pack_unpack_types() {
     53_u128.pack(ref packing, ref offset, ref packed);   
     58_felt252.pack(ref packing, ref offset, ref packed); 
     false.pack(ref packing, ref offset, ref packed);  
+    
+    let contract_address = Felt252TryIntoContractAddress::try_into(0).unwrap();
+    contract_address.pack(ref packing, ref offset, ref packed);  
+    let class_hash = Felt252TryIntoClassHash::try_into(0).unwrap();
+    class_hash.pack(ref packing, ref offset, ref packed);  
+    
     packed.append(packing);
 
     let mut unpacking: felt252 = packed.pop_front().unwrap();
@@ -183,5 +190,15 @@ fn test_pack_unpack_types() {
         Packable::<bool>::unpack(ref packed_span, ref unpacking, ref un_offset).unwrap() 
         == false, 
         'Types bool'
+    );
+    assert(
+        Packable::<ContractAddress>::unpack(ref packed_span, ref unpacking, ref un_offset).unwrap() 
+        == contract_address, 
+        'Types ContractAddress'
+    );
+    assert(
+        Packable::<ClassHash>::unpack(ref packed_span, ref unpacking, ref un_offset).unwrap() 
+        == class_hash, 
+        'Types ClassHash'
     );
 }
