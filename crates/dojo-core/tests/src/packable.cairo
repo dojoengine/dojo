@@ -145,9 +145,9 @@ fn test_pack_unpack_types() {
     58_felt252.pack(ref packing, ref offset, ref packed); 
     false.pack(ref packing, ref offset, ref packed);  
     
-    let contract_address = Felt252TryIntoContractAddress::try_into(0).unwrap();
+    let contract_address = Felt252TryIntoContractAddress::try_into(3).unwrap();
     contract_address.pack(ref packing, ref offset, ref packed);  
-    let class_hash = Felt252TryIntoClassHash::try_into(0).unwrap();
+    let class_hash = Felt252TryIntoClassHash::try_into(1337).unwrap();
     class_hash.pack(ref packing, ref offset, ref packed);  
     
     packed.append(packing);
