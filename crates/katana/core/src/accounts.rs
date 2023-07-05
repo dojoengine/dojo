@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -10,7 +11,7 @@ use rand::{RngCore, SeedableRng};
 use serde::{Deserialize, Serialize};
 use starknet::signers::SigningKey;
 use starknet_api::core::{
-    calculate_contract_address, ClassHash, ContractAddress, Nonce, PatriciaKey,
+    calculate_contract_address, ClassHash, CompiledClassHash, ContractAddress, Nonce, PatriciaKey,
 };
 use starknet_api::hash::{StarkFelt, StarkHash};
 use starknet_api::transaction::{Calldata, ContractAddressSalt};
@@ -19,7 +20,7 @@ use starknet_api::{patricia_key, stark_felt};
 use crate::constants::{
     DEFAULT_ACCOUNT_CONTRACT, DEFAULT_ACCOUNT_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS,
 };
-use crate::state::DictStateReader;
+use crate::state::{ClassRecord, MemDb, StorageRecord};
 use crate::util::compute_legacy_class_hash;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -50,31 +51,42 @@ impl Account {
         Self { balance, public_key, private_key, class_hash, account_address }
     }
 
-    pub fn deploy(&self, contract_class: &ContractClass, state: &mut DictStateReader) {
+    pub fn deploy(&self, contract_class: &ContractClass, state: &mut MemDb) {
         self.declare(contract_class, state);
 
-        // set the contract
-        state.address_to_class_hash.insert(self.account_address, self.class_hash);
+        state.state.insert(
+            self.account_address,
+            StorageRecord {
+                // intialize the account nonce
+                nonce: Nonce(1u8.into()),
+                // set the contract
+                class_hash: self.class_hash,
+                storage: HashMap::from_iter([
+                    // set the public key in the account contract
+                    (get_storage_var_address("Account_public_key", &[]).unwrap(), self.public_key),
+                ]),
+            },
+        );
+
         // set the balance in the FEE CONTRACT
-        state.storage_view.insert(
-            (
-                ContractAddress(patricia_key!(*FEE_TOKEN_ADDRESS)),
+        state.state.entry(ContractAddress(patricia_key!(*FEE_TOKEN_ADDRESS))).and_modify(|r| {
+            r.storage.insert(
                 get_storage_var_address("ERC20_balances", &[*self.account_address.0.key()])
                     .unwrap(),
-            ),
-            self.balance,
-        );
-        // set the public key in the account contract
-        state.storage_view.insert(
-            (self.account_address, get_storage_var_address("Account_public_key", &[]).unwrap()),
-            self.public_key,
-        );
-        // intialize the account nonce
-        state.address_to_nonce.insert(self.account_address, Nonce(1u8.into()));
+                self.balance,
+            );
+        });
     }
 
-    fn declare(&self, contract_class: &ContractClass, state: &mut DictStateReader) {
-        state.class_hash_to_class.insert(self.class_hash, contract_class.clone());
+    fn declare(&self, contract_class: &ContractClass, state: &mut MemDb) {
+        state.classes.insert(
+            self.class_hash,
+            ClassRecord {
+                class: contract_class.clone(),
+                compiled_hash: CompiledClassHash(self.class_hash.0),
+                sierra_class: None,
+            },
+        );
     }
 }
 
@@ -110,7 +122,7 @@ impl PredeployedAccounts {
         Ok(Self { seed, accounts, contract_class, initial_balance })
     }
 
-    pub fn deploy_accounts(&self, state: &mut DictStateReader) {
+    pub fn deploy_accounts(&self, state: &mut MemDb) {
         for account in &self.accounts {
             account.deploy(&self.contract_class, state);
         }

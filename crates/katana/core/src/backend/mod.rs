@@ -37,7 +37,7 @@ use crate::constants::{
     UDC_CLASS_HASH,
 };
 use crate::sequencer_error::SequencerError;
-use crate::state::DictStateReader;
+use crate::state::{ClassRecord, MemDb, StorageRecord};
 use crate::util::{
     convert_blockifier_tx_to_starknet_api_tx, convert_state_diff_to_rpc_state_diff,
     get_current_timestamp,
@@ -49,9 +49,9 @@ pub struct StarknetWrapper {
     pub block_context: BlockContext,
     pub block_context_generator: BlockContextGenerator,
     pub transactions: StarknetTransactions,
-    pub state: DictStateReader,
+    pub state: MemDb,
     pub predeployed_accounts: PredeployedAccounts,
-    pub pending_cached_state: CachedState<DictStateReader>,
+    pub pending_cached_state: CachedState<MemDb>,
 }
 
 impl StarknetWrapper {
@@ -62,7 +62,7 @@ impl StarknetWrapper {
         let block_context = config.block_context();
         let block_context_generator = config.block_context_generator();
 
-        let mut state = DictStateReader::default();
+        let mut state = MemDb::default();
         let pending_state = CachedState::new(state.clone());
 
         let predeployed_accounts = PredeployedAccounts::initialize(
@@ -89,7 +89,7 @@ impl StarknetWrapper {
     pub fn estimate_fee(
         &mut self,
         transaction: AccountTransaction,
-        state: Option<DictStateReader>,
+        state: Option<MemDb>,
     ) -> Result<FeeEstimate, TransactionExecutionError> {
         let mut state = CachedState::new(state.unwrap_or(self.pending_state()));
 
@@ -242,7 +242,7 @@ impl StarknetWrapper {
     pub fn call(
         &mut self,
         call: ExternalFunctionCall,
-        state: Option<DictStateReader>,
+        state: Option<MemDb>,
     ) -> Result<CallInfo, EntryPointExecutionError> {
         let mut state = CachedState::new(state.unwrap_or(self.pending_state()));
         let mut state = CachedState::new(MutRefState::new(&mut state));
@@ -272,17 +272,17 @@ impl StarknetWrapper {
         res
     }
 
-    pub fn state(&self, block_number: BlockNumber) -> Option<DictStateReader> {
+    pub fn state(&self, block_number: BlockNumber) -> Option<MemDb> {
         self.blocks.get_state(&block_number).cloned()
     }
 
-    pub fn pending_state(&mut self) -> DictStateReader {
+    pub fn pending_state(&mut self) -> MemDb {
         let mut state = self.pending_cached_state.state.clone();
         apply_new_state(&mut state, &mut self.pending_cached_state);
         state
     }
 
-    pub fn latest_state(&self) -> DictStateReader {
+    pub fn latest_state(&self) -> MemDb {
         self.state.clone()
     }
 
@@ -453,13 +453,13 @@ fn has_pending_transactions(starknet: &StarknetWrapper) -> bool {
     }
 }
 
-fn apply_new_state(old_state: &mut DictStateReader, new_state: &mut CachedState<DictStateReader>) {
+fn apply_new_state(old_state: &mut MemDb, new_state: &mut CachedState<MemDb>) {
     let state_diff = new_state.to_state_diff();
 
     // update contract storages
     state_diff.storage_updates.into_iter().for_each(|(contract_address, storages)| {
         storages.into_iter().for_each(|(key, value)| {
-            old_state.storage_view.insert((contract_address, key), value);
+            old_state.set_storage_at(contract_address, key, value);
         })
     });
 
@@ -468,17 +468,28 @@ fn apply_new_state(old_state: &mut DictStateReader, new_state: &mut CachedState<
     for (class_hash, compiled_class_hash) in &state_diff.class_hash_to_compiled_class_hash {
         let contract_class =
             new_state.get_compiled_contract_class(class_hash).expect("contract class should exist");
-        old_state.class_hash_to_compiled_class_hash.insert(*class_hash, *compiled_class_hash);
-        old_state.class_hash_to_class.insert(*class_hash, contract_class);
+        old_state.classes.insert(
+            *class_hash,
+            ClassRecord {
+                sierra_class: None,
+                class: contract_class,
+                compiled_hash: *compiled_class_hash,
+            },
+        );
     }
 
     // update deployed contracts
     state_diff.address_to_class_hash.into_iter().for_each(|(contract_address, class_hash)| {
-        old_state.address_to_class_hash.insert(contract_address, class_hash);
+        old_state
+            .state
+            .insert(contract_address, StorageRecord { class_hash, ..Default::default() });
     });
 
     // update accounts nonce
     state_diff.address_to_nonce.into_iter().for_each(|(contract_address, nonce)| {
-        old_state.address_to_nonce.insert(contract_address, nonce);
+        old_state.state.get_mut(&contract_address).and_then(|r| {
+            r.nonce = nonce;
+            Some(())
+        });
     });
 }
