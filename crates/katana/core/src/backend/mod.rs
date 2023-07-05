@@ -468,21 +468,13 @@ fn apply_new_state(old_state: &mut MemDb, new_state: &mut CachedState<MemDb>) {
     for (class_hash, compiled_class_hash) in &state_diff.class_hash_to_compiled_class_hash {
         let contract_class =
             new_state.get_compiled_contract_class(class_hash).expect("contract class should exist");
-        old_state.classes.insert(
-            *class_hash,
-            ClassRecord {
-                sierra_class: None,
-                class: contract_class,
-                compiled_hash: *compiled_class_hash,
-            },
-        );
+        old_state.set_contract_class(class_hash, contract_class).unwrap();
+        old_state.set_compiled_class_hash(*class_hash, *compiled_class_hash).unwrap();
     }
 
     // update deployed contracts
     state_diff.address_to_class_hash.into_iter().for_each(|(contract_address, class_hash)| {
-        old_state
-            .state
-            .insert(contract_address, StorageRecord { class_hash, ..Default::default() });
+        old_state.set_class_hash_at(contract_address, class_hash).unwrap()
     });
 
     // update accounts nonce
