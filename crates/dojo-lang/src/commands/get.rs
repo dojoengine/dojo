@@ -111,12 +111,19 @@ impl GetCommand {
             self.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
                 "
                     let mut __$query_id$_$query_subtype$_raw = $world$.entity('$component$', \
-                 $query$, 0_u8, 0_usize);
+                        $query$, 0_u8, 0_usize);
+
                     assert(__$query_id$_$query_subtype$_raw.len() > 0_usize, '$lookup_err_msg$');
+
+                    let mut unpacking: felt252 = 0;
+                    let mut offset = 0;
+
                     let __$query_id$_$query_subtype$ = dojo::Packable::<$component$>::unpack(
-                        ref __$query_id$_$query_subtype$_raw
+                        ref __$query_id$_$query_subtype$_raw,
+                        ref unpacking,
+                        ref offset
                     ).expect('$deser_err_msg$');
-                    ",
+                ",
                 UnorderedHashMap::from([
                     ("world".to_string(), RewriteNode::new_trimmed(world.as_syntax_node())),
                     ("component".to_string(), RewriteNode::Text(component.to_string())),

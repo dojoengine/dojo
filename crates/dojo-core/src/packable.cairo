@@ -1,12 +1,12 @@
 use starknet::{ClassHash, ContractAddress};
-use array::ArrayTrait;
+use array::{ArrayTrait, SpanTrait};
 use traits::{Into, TryInto};
 use integer::{U256BitAnd, U256BitOr, U256BitXor, upcast, downcast, BoundedInt};
 use option::OptionTrait;
 
 
 /// Pack the proposal fields into a single felt252.
-fn pack_util(self: @felt252, size: u8, ref packing: felt252, mut packing_offset: u8, ref packed: Array<felt252>) {
+fn pack_util(self: @felt252, size: u8, ref packing: felt252, ref packing_offset: u8, ref packed: Array<felt252>) {
     // Easier to work on u256 rather than felt252.
     let self_256: u256 = (*self).into();
 
@@ -36,9 +36,41 @@ fn pack_util(self: @felt252, size: u8, ref packing: felt252, mut packing_offset:
     }
 }
 
+fn unpack_util(size: u8, ref packed: Span<felt252>, ref unpacking: felt252, ref unpacking_offset: u8) -> Option<felt252> {
+    let remaining_bits: u8 = (251 - unpacking_offset).into();
+
+    let mut unpacking_256: u256 = unpacking.into();
+
+    if remaining_bits < size {
+        match packed.pop_front() {
+            Option::Some(val) => {
+                let val_256: u256 = (*val).into();
+                // Get the first part
+                let first_part = shr(unpacking_256, unpacking_offset);
+                // Size of the remaining part
+                let second_size = size - remaining_bits;
+                let second_part = val_256 & (shl(1, second_size) - 1);
+                // Move the second part so it fits alongside the first part
+                let result = first_part | shl(second_part, remaining_bits);
+
+                unpacking = *val;
+                unpacking_offset = second_size;
+                return Option::Some(result.try_into().unwrap());
+            },
+            Option::None(()) => {
+                return Option::None(());
+            },
+        }
+    } else {
+        let result = shr(unpacking_256, unpacking_offset);
+        unpacking_offset = unpacking_offset + size;
+        return Option::Some(result.try_into().unwrap());
+    }
+}
+
 trait Packable<T> {
-    fn pack(self: @T, ref packing: felt252, packing_offset: u8, ref packed: Array<felt252>);
-    fn unpack(ref packed: Span<felt252>, ref unpacking: felt252, unpacking_offset: u8, ref unpacked: Array<T>);
+    fn pack(self: @T, ref packing: felt252, ref packing_offset: u8, ref packed: Array<felt252>);
+    fn unpack(ref packed: Span<felt252>, ref unpacking: felt252, ref unpacking_offset: u8) -> Option<T>;
     fn size() -> usize;
 }
 
@@ -56,12 +88,12 @@ trait Packable<T> {
 
 impl PackableFelt252 of Packable<felt252> {
     #[inline(always)]
-    fn pack(self: @felt252, ref packing: felt252, packing_offset: u8, ref packed: Array<felt252>) {
-        
+    fn pack(self: @felt252, ref packing: felt252, ref packing_offset: u8, ref packed: Array<felt252>) {
+        pack_util(self, Packable::<felt252>::size().try_into().unwrap(), ref packing, ref packing_offset, ref packed)
     }
     #[inline(always)]
-    fn unpack(ref packed: Span<felt252>, ref unpacking: felt252, unpacking_offset: u8, ref unpacked: Array<felt252>) {
-
+    fn unpack(ref packed: Span<felt252>, ref unpacking: felt252, ref unpacking_offset: u8) -> Option<felt252> {
+        unpack_util(Packable::<felt252>::size().try_into().unwrap(), ref packed, ref unpacking, ref unpacking_offset)
     }
     #[inline(always)]
     fn size() -> usize {
@@ -69,29 +101,32 @@ impl PackableFelt252 of Packable<felt252> {
     }
 }
 
-impl PackableBool of Packable<bool> {
-    #[inline(always)]
-    fn pack(self: @bool, ref packing: felt252, packing_offset: u8, ref packed: Array<felt252>) {
+// impl PackableBool of Packable<bool> {
+//     #[inline(always)]
+//     fn pack(self: @bool, ref packing: felt252, ref packing_offset: u8, ref packed: Array<felt252>) {
         
-    }
-    #[inline(always)]
-    fn unpack(ref packed: Span<felt252>, ref unpacking: felt252, unpacking_offset: u8, ref unpacked: Array<bool>) {
+//     }
+//     #[inline(always)]
+//     fn unpack(ref packed: Span<felt252>, ref unpacking: felt252, unpacking_offset: u8) -> Option<Self> {
 
-    }
-    #[inline(always)]
-    fn size() -> usize {
-        1
-    }
-}
+//     }
+//     #[inline(always)]
+//     fn size() -> usize {
+//         1
+//     }
+// }
 
 impl PackableU8 of Packable<u8> {
     #[inline(always)]
-    fn pack(self: @u8, ref packing: felt252, packing_offset: u8, ref packed: Array<felt252>) {
-        
+    fn pack(self: @u8, ref packing: felt252, ref packing_offset: u8, ref packed: Array<felt252>) {
+        pack_util(@(*self).into(), Packable::<u8>::size().try_into().unwrap(), ref packing, ref packing_offset, ref packed)
     }
     #[inline(always)]
-    fn unpack(ref packed: Span<felt252>, ref unpacking: felt252, unpacking_offset: u8, ref unpacked: Array<u8>) {
-
+    fn unpack(ref packed: Span<felt252>, ref unpacking: felt252, ref unpacking_offset: u8) -> Option<u8> {
+        match unpack_util(Packable::<u8>::size().try_into().unwrap(), ref packed, ref unpacking, ref unpacking_offset){
+            Option::Some(val) => Option::Some(val.try_into().unwrap()),
+            Option::None(()) => Option::None(()),
+        }
     }
     #[inline(always)]
     fn size() -> usize {
@@ -99,29 +134,32 @@ impl PackableU8 of Packable<u8> {
     }
 }
 
-impl PackableU16 of Packable<u16> {
-    #[inline(always)]
-    fn pack(self: @u16, ref packing: felt252, packing_offset: u8, ref packed: Array<felt252>) {
+// impl PackableU16 of Packable<u16> {
+//     #[inline(always)]
+//     fn pack(self: @u16, ref packing: felt252, ref packing_offset: u8, ref packed: Array<felt252>) {
         
-    }
-    #[inline(always)]
-    fn unpack(ref packed: Span<felt252>, ref unpacking: felt252, unpacking_offset: u8, ref unpacked: Array<u16>) {
+//     }
+//     #[inline(always)]
+//     fn unpack(ref packed: Span<felt252>, ref unpacking: felt252, unpacking_offset: u8) -> Option<Self> {
 
-    }
-    #[inline(always)]
-    fn size() -> usize {
-        16
-    }
-}
+//     }
+//     #[inline(always)]
+//     fn size() -> usize {
+//         16
+//     }
+// }
 
 impl PackableU32 of Packable<u32> {
     #[inline(always)]
-    fn pack(self: @u32, ref packing: felt252, packing_offset: u8, ref packed: Array<felt252>) {
-        
+    fn pack(self: @u32, ref packing: felt252, ref packing_offset: u8, ref packed: Array<felt252>) {
+        pack_util(@(*self).into(), Packable::<u32>::size().try_into().unwrap(), ref packing, ref packing_offset, ref packed)
     }
     #[inline(always)]
-    fn unpack(ref packed: Span<felt252>, ref unpacking: felt252, unpacking_offset: u8, ref unpacked: Array<u32>) {
-
+    fn unpack(ref packed: Span<felt252>, ref unpacking: felt252, ref unpacking_offset: u8) -> Option<u32> {
+        match unpack_util(Packable::<u32>::size().try_into().unwrap(), ref packed, ref unpacking, ref unpacking_offset) {
+            Option::Some(val) => Option::Some(val.try_into().unwrap()),
+            Option::None(()) => Option::None(()),
+        }
     }
     #[inline(always)]
     fn size() -> usize {
@@ -129,65 +167,65 @@ impl PackableU32 of Packable<u32> {
     }
 }
 
-impl PackableU64 of Packable<u64> {
-    #[inline(always)]
-    fn pack(self: @u64, ref packing: felt252, packing_offset: u8, ref packed: Array<felt252>) {
+// impl PackableU64 of Packable<u64> {
+//     #[inline(always)]
+//     fn pack(self: @u64, ref packing: felt252, ref packing_offset: u8, ref packed: Array<felt252>) {
         
-    }
-    #[inline(always)]
-    fn unpack(ref packed: Span<felt252>, ref unpacking: felt252, unpacking_offset: u8, ref unpacked: Array<u64>) {
+//     }
+//     #[inline(always)]
+//     fn unpack(ref packed: Span<felt252>, ref unpacking: felt252, unpacking_offset: u8) -> Option<Self> {
 
-    }
-    #[inline(always)]
-    fn size() -> usize {
-        64
-    }
-}
+//     }
+//     #[inline(always)]
+//     fn size() -> usize {
+//         64
+//     }
+// }
 
-impl PackableU128 of Packable<u128> {
-    #[inline(always)]
-    fn pack(self: @u128, ref packing: felt252, packing_offset: u8, ref packed: Array<felt252>) {
+// impl PackableU128 of Packable<u128> {
+//     #[inline(always)]
+//     fn pack(self: @u128, ref packing: felt252, ref packing_offset: u8, ref packed: Array<felt252>) {
         
-    }
-    #[inline(always)]
-    fn unpack(ref packed: Span<felt252>, ref unpacking: felt252, unpacking_offset: u8, ref unpacked: Array<u128>) {
+//     }
+//     #[inline(always)]
+//     fn unpack(ref packed: Span<felt252>, ref unpacking: felt252, unpacking_offset: u8) -> Option<Self> {
 
-    }
-    #[inline(always)]
-    fn size() -> usize {
-        128
-    }
-}
+//     }
+//     #[inline(always)]
+//     fn size() -> usize {
+//         128
+//     }
+// }
 
-impl PackableContractAddress of Packable<ContractAddress> {
-    #[inline(always)]
-    fn pack(self: @ContractAddress, ref packing: felt252, packing_offset: u8, ref packed: Array<felt252>) {
+// impl PackableContractAddress of Packable<ContractAddress> {
+//     #[inline(always)]
+//     fn pack(self: @ContractAddress, ref packing: felt252, ref packing_offset: u8, ref packed: Array<felt252>) {
         
-    }
-    #[inline(always)]
-    fn unpack(ref packed: Span<felt252>, ref unpacking: felt252, unpacking_offset: u8, ref unpacked: Array<ContractAddress>) {
+//     }
+//     #[inline(always)]
+//     fn unpack(ref packed: Span<felt252>, ref unpacking: felt252, unpacking_offset: u8) -> Option<Self> {
 
-    }
-    #[inline(always)]
-    fn size() -> usize {
-        252
-    }
-}
+//     }
+//     #[inline(always)]
+//     fn size() -> usize {
+//         252
+//     }
+// }
 
-impl PackableClassHash of Packable<ClassHash> {
-    #[inline(always)]
-    fn pack(self: @ClassHash, ref packing: felt252, packing_offset: u8, ref packed: Array<felt252>) {
+// impl PackableClassHash of Packable<ClassHash> {
+//     #[inline(always)]
+//     fn pack(self: @ClassHash, ref packing: felt252, ref packing_offset: u8, ref packed: Array<felt252>) {
         
-    }
-    #[inline(always)]
-    fn unpack(ref packed: Span<felt252>, ref unpacking: felt252, unpacking_offset: u8, ref unpacked: Array<ClassHash>) {
+//     }
+//     #[inline(always)]
+//     fn unpack(ref packed: Span<felt252>, ref unpacking: felt252, unpacking_offset: u8) -> Option<Self> {
 
-    }
-    #[inline(always)]
-    fn size() -> usize {
-        252
-    }
-}
+//     }
+//     #[inline(always)]
+//     fn size() -> usize {
+//         252
+//     }
+// }
 
 //Could be done faster
 fn fpow(x: u256, n: u8) -> u256 {
