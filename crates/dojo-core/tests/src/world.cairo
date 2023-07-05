@@ -13,6 +13,9 @@ use starknet::syscalls::deploy_syscall;
 use dojo::database::query::QueryTrait;
 use dojo::executor::executor;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, library_call, world};
+use dojo::packable::{Packable, PackableU128, PackableFelt252};
+
+use debug::PrintTrait;
 
 // Components and Systems
 
@@ -22,9 +25,45 @@ struct Foo {
     b: u128,
 }
 
+impl PackableFoo of Packable<Foo> {
+    #[inline(always)]
+    fn pack(self: @Foo, ref packing: felt252, ref packing_offset: u8, ref packed: Array<felt252>) {
+        self.a.pack(ref packing, ref packing_offset, ref packed);
+        self.b.pack(ref packing, ref packing_offset, ref packed)
+    }
+    #[inline(always)]
+    fn unpack(ref packed: Span<felt252>, ref unpacking: felt252, ref unpacking_offset: u8) -> Option<Foo> {
+        Option::Some(Foo { 
+            a: Packable::<felt252>::unpack(ref packed, ref unpacking, ref unpacking_offset).unwrap(),
+            b: Packable::<u128>::unpack(ref packed, ref unpacking, ref unpacking_offset).unwrap()
+        })
+    }
+    #[inline(always)]
+    fn size() -> usize {
+        Packable::<felt252>::size() + Packable::<u128>::size()
+    }
+}
+
 #[derive(Component, Copy, Drop, Serde)]
 struct Fizz {
     a: felt252
+}
+
+impl PackableFizz of Packable<Fizz> {
+    #[inline(always)]
+    fn pack(self: @Fizz, ref packing: felt252, ref packing_offset: u8, ref packed: Array<felt252>) {
+        self.a.pack(ref packing, ref packing_offset, ref packed);
+    }
+    #[inline(always)]
+    fn unpack(ref packed: Span<felt252>, ref unpacking: felt252, ref unpacking_offset: u8) -> Option<Fizz> {
+        Option::Some(Fizz { 
+            a: Packable::<felt252>::unpack(ref packed, ref unpacking, ref unpacking_offset).unwrap()
+        })
+    }
+    #[inline(always)]
+    fn size() -> usize {
+        Packable::<felt252>::size()
+    }
 }
 
 #[system]
@@ -35,7 +74,7 @@ mod bar {
     use dojo::world::Context;
 
     fn execute(ctx: Context, a: felt252, b: u128) {
-        set !(ctx.world, ctx.origin.into(), (Foo { a, b }));
+        set!(ctx.world, ctx.origin.into(), (Foo { a, b }))
     }
 }
 
@@ -47,8 +86,8 @@ mod Buzz {
     use dojo::world::Context;
 
     fn execute(ctx: Context, a: felt252, b: u128) {
-        set !(ctx.world, ctx.origin.into(), (Foo { a, b }));
-        let fizz = try_get !(ctx.world, ctx.origin.into(), Fizz);
+        set!(ctx.world, ctx.origin.into(), (Foo { a, b }));
+        let fizz = try_get!(ctx.world, ctx.origin.into(), Fizz);
     }
 }
 

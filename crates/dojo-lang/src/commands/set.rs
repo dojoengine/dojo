@@ -37,6 +37,7 @@ impl SetCommand {
                         let mut packing: felt252 = 0;
                         let mut offset = 0;
                         dojo::Packable::pack(@$ctor$, ref packing, ref offset, ref calldata);
+                        array::ArrayTrait::append(ref calldata, packing);
                         $world$.set_entity('$component$', $query$, 0_u8, \
                             array::ArrayTrait::span(@calldata));
                     }

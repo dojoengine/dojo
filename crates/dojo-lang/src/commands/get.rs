@@ -169,15 +169,20 @@ impl GetCommand {
             self.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
                 "
                     let mut __$query_id$_$query_subtype$_raw = $world$.entity('$component$', \
-                 $query$, 0_u8, 0_usize);
+                        $query$, 0_u8, 0_usize);
                     let __$query_id$_$query_subtype$ = match \
-                 __$query_id$_$query_subtype$_raw.len() > 0_usize {
+                        __$query_id$_$query_subtype$_raw.len() > 0_usize {
                         bool::False(()) => {
                             Option::None(())
                         },
                         bool::True(()) => {
+                            let mut unpacking: felt252 = 0;
+                            let mut offset = 0;
+
                             Option::Some(dojo::Packable::<$component$>::unpack(
-                                ref __$query_id$_$query_subtype$_raw
+                                ref __$query_id$_$query_subtype$_raw,
+                                ref unpacking,
+                                ref offset
                             ).expect('$deser_err_msg$'))
                         }
                     };
