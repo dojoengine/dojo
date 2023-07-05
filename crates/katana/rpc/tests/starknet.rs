@@ -21,7 +21,7 @@ async fn test_send_declare_and_deploy_contract() {
     let sequencer = TestSequencer::start().await;
     let account = sequencer.account();
 
-    let path: PathBuf = PathBuf::from("src/starknet/test_data/cairo1_contract.json");
+    let path: PathBuf = PathBuf::from("tests/test_data/cairo1_contract.json");
     let (contract, compiled_class_hash) = prepare_contract_declaration_params(&path).unwrap();
 
     let class_hash = contract.class_hash();
@@ -90,7 +90,7 @@ async fn test_send_declare_and_deploy_legcay_contract() {
     let sequencer = TestSequencer::start().await;
     let account = sequencer.account();
 
-    let path = PathBuf::from("src/starknet/test_data/cairo0_contract.json");
+    let path = PathBuf::from("tests/test_data/cairo0_contract.json");
 
     let legacy_contract: LegacyContractClass =
         serde_json::from_reader(fs::File::open(path).unwrap()).unwrap();

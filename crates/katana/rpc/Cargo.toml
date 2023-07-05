@@ -14,7 +14,7 @@ cairo-vm.workspace = true
 flate2.workspace = true
 hex = { version = "0.4.3", default-features = false }
 hyper = "0.14.20"
-jsonrpsee = { version = "0.16.2", features = ["full"] }
+jsonrpsee = { version = "0.16.2", features = ["server", "macros"] }
 katana-core = { path = "../core" }
 serde.workspace = true
 serde_json.workspace = true

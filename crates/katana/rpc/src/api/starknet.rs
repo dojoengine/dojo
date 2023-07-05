@@ -63,7 +63,7 @@ impl From<StarknetApiError> for Error {
     }
 }
 
-#[rpc(server, client, namespace = "starknet")]
+#[rpc(server, namespace = "starknet")]
 pub trait StarknetApi {
     #[method(name = "chainId")]
     async fn chain_id(&self) -> Result<String, Error>;

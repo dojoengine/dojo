@@ -1,25 +1,27 @@
-use std::sync::Arc;
-
 use jsonrpsee::core::{async_trait, Error};
 use katana_core::accounts::Account;
 use katana_core::sequencer::Sequencer;
 
-use self::api::{KatanaApiError, KatanaApiServer};
+use crate::api::katana::{KatanaApiError, KatanaApiServer};
 
-pub mod api;
-
-pub struct KatanaRpc<S> {
-    sequencer: Arc<S>,
+pub struct KatanaApi<S> {
+    sequencer: S,
 }
 
-impl<S: Sequencer + Send + Sync + 'static> KatanaRpc<S> {
-    pub fn new(sequencer: Arc<S>) -> Self {
+impl<S> KatanaApi<S>
+where
+    S: Sequencer + Send + 'static,
+{
+    pub fn new(sequencer: S) -> Self {
         Self { sequencer }
     }
 }
 
 #[async_trait]
-impl<S: Sequencer + Send + Sync + 'static> KatanaApiServer for KatanaRpc<S> {
+impl<S> KatanaApiServer for KatanaApi<S>
+where
+    S: Sequencer + Send + Sync + 'static,
+{
     async fn generate_block(&self) -> Result<(), Error> {
         let mut starknet = self.sequencer.mut_starknet().await;
         starknet.generate_latest_block();
