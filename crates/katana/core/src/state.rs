@@ -226,49 +226,137 @@ fn deploy_universal_deployer_contract(state: &mut MemDb) {
     );
 }
 
+/// Unit tests ported from `blockifier`.
 #[cfg(test)]
 mod tests {
+    use assert_matches::assert_matches;
+    use blockifier::state::cached_state::CachedState;
+    use starknet_api::stark_felt;
+
     use super::*;
 
     #[test]
-    fn insert_new_storage_record() {
-        let mut state = MemDb { classes: HashMap::new(), state: HashMap::new() };
-
-        let contract_address = ContractAddress(patricia_key!(0x1234_u32));
-        let key = StorageKey(patricia_key!(0x5678_u32));
-        let value = StarkFelt::from(0x9abc_u32);
-
-        state.set_storage_at(contract_address, key, value);
-        let actual = state.get_storage_at(contract_address, key).unwrap();
-
-        assert_eq!(actual, value);
+    fn get_uninitialized_storage_value() {
+        let mut state = CachedState::new(MemDb { classes: HashMap::new(), state: HashMap::new() });
+        let contract_address = ContractAddress(patricia_key!("0x1"));
+        let key = StorageKey(patricia_key!("0x10"));
+        assert_eq!(state.get_storage_at(contract_address, key).unwrap(), StarkFelt::default());
     }
 
     #[test]
-    fn set_new_storage_should_overwrite_old_value() {
-        let mut state = MemDb { classes: HashMap::new(), state: HashMap::new() };
+    fn get_and_set_storage_value() {
+        let contract_address0 = ContractAddress(patricia_key!("0x100"));
+        let contract_address1 = ContractAddress(patricia_key!("0x200"));
+        let key0 = StorageKey(patricia_key!("0x10"));
+        let key1 = StorageKey(patricia_key!("0x20"));
+        let storage_val0 = stark_felt!("0x1");
+        let storage_val1 = stark_felt!("0x5");
 
-        let contract_address = ContractAddress(patricia_key!(0x1234_u32));
-        let key = StorageKey(patricia_key!(0x5678_u32));
-        let value = StarkFelt::from(0x9abc_u32);
+        let mut state = CachedState::new(MemDb {
+            state: HashMap::from([
+                (
+                    contract_address0,
+                    StorageRecord {
+                        class_hash: ClassHash(0_u32.into()),
+                        nonce: Nonce(0_u32.into()),
+                        storage: HashMap::from([(key0, storage_val0)]),
+                    },
+                ),
+                (
+                    contract_address1,
+                    StorageRecord {
+                        class_hash: ClassHash(0_u32.into()),
+                        nonce: Nonce(0_u32.into()),
+                        storage: HashMap::from([(key1, storage_val1)]),
+                    },
+                ),
+            ]),
+            classes: HashMap::new(),
+        });
 
-        state.set_storage_at(contract_address, key, value);
-        let actual = state.get_storage_at(contract_address, key).unwrap();
+        assert_eq!(state.get_storage_at(contract_address0, key0).unwrap(), storage_val0);
+        assert_eq!(state.get_storage_at(contract_address1, key1).unwrap(), storage_val1);
 
-        assert_eq!(actual, value);
+        let modified_storage_value0 = stark_felt!("0xA");
+        state.set_storage_at(contract_address0, key0, modified_storage_value0);
+        assert_eq!(state.get_storage_at(contract_address0, key0).unwrap(), modified_storage_value0);
+        assert_eq!(state.get_storage_at(contract_address1, key1).unwrap(), storage_val1);
 
-        let new_value = StarkFelt::from(0xdef0_u32);
-        state.set_storage_at(contract_address, key, new_value);
-        let actual = state.get_storage_at(contract_address, key).unwrap();
-
-        assert_eq!(actual, new_value);
+        let modified_storage_value1 = stark_felt!("0x7");
+        state.set_storage_at(contract_address1, key1, modified_storage_value1);
+        assert_eq!(state.get_storage_at(contract_address0, key0).unwrap(), modified_storage_value0);
+        assert_eq!(state.get_storage_at(contract_address1, key1).unwrap(), modified_storage_value1);
     }
 
     #[test]
-    fn set_compiled_hash_for_undeclared_class_hash_should_fail() {
-        let mut state = MemDb { classes: HashMap::new(), state: HashMap::new() };
-        let class_hash = ClassHash(*UDC_CLASS_HASH);
-        let compiled_class_hash = CompiledClassHash(*UDC_CLASS_HASH);
-        assert!(state.set_compiled_class_hash(class_hash, compiled_class_hash).is_err());
+    fn get_uninitialized_value() {
+        let mut state = CachedState::new(MemDb { classes: HashMap::new(), state: HashMap::new() });
+        let contract_address = ContractAddress(patricia_key!("0x1"));
+        assert_eq!(state.get_nonce_at(contract_address).unwrap(), Nonce::default());
+    }
+
+    #[test]
+    fn get_uninitialized_class_hash_value() {
+        let mut state = CachedState::new(MemDb { classes: HashMap::new(), state: HashMap::new() });
+        let valid_contract_address = ContractAddress(patricia_key!("0x1"));
+        assert_eq!(state.get_class_hash_at(valid_contract_address).unwrap(), ClassHash::default());
+    }
+
+    #[test]
+    fn cannot_set_class_hash_to_uninitialized_contract() {
+        let mut state = CachedState::new(MemDb { classes: HashMap::new(), state: HashMap::new() });
+        let uninitialized_contract_address = ContractAddress::default();
+        let class_hash = ClassHash(stark_felt!("0x100"));
+        assert_matches!(
+            state.set_class_hash_at(uninitialized_contract_address, class_hash).unwrap_err(),
+            StateError::OutOfRangeContractAddress
+        );
+    }
+
+    #[test]
+    fn get_and_increment_nonce() {
+        let contract_address1 = ContractAddress(patricia_key!("0x100"));
+        let contract_address2 = ContractAddress(patricia_key!("0x200"));
+        let initial_nonce = Nonce(stark_felt!("0x1"));
+
+        let mut state = CachedState::new(MemDb {
+            state: HashMap::from([
+                (
+                    contract_address1,
+                    StorageRecord {
+                        class_hash: ClassHash(0_u32.into()),
+                        nonce: initial_nonce,
+                        storage: HashMap::new(),
+                    },
+                ),
+                (
+                    contract_address2,
+                    StorageRecord {
+                        class_hash: ClassHash(0_u32.into()),
+                        nonce: initial_nonce,
+                        storage: HashMap::new(),
+                    },
+                ),
+            ]),
+            classes: HashMap::new(),
+        });
+
+        assert_eq!(state.get_nonce_at(contract_address1).unwrap(), initial_nonce);
+        assert_eq!(state.get_nonce_at(contract_address2).unwrap(), initial_nonce);
+
+        assert!(state.increment_nonce(contract_address1).is_ok());
+        let nonce1_plus_one = Nonce(stark_felt!("0x2"));
+        assert_eq!(state.get_nonce_at(contract_address1).unwrap(), nonce1_plus_one);
+        assert_eq!(state.get_nonce_at(contract_address2).unwrap(), initial_nonce);
+
+        assert!(state.increment_nonce(contract_address1).is_ok());
+        let nonce1_plus_two = Nonce(stark_felt!("0x3"));
+        assert_eq!(state.get_nonce_at(contract_address1).unwrap(), nonce1_plus_two);
+        assert_eq!(state.get_nonce_at(contract_address2).unwrap(), initial_nonce);
+
+        assert!(state.increment_nonce(contract_address2).is_ok());
+        let nonce2_plus_one = Nonce(stark_felt!("0x2"));
+        assert_eq!(state.get_nonce_at(contract_address1).unwrap(), nonce1_plus_two);
+        assert_eq!(state.get_nonce_at(contract_address2).unwrap(), nonce2_plus_one);
     }
 }

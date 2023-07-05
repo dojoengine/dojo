@@ -3860,6 +3860,7 @@ name = "katana-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "assert_matches",
  "async-trait",
  "auto_impl 1.1.0",
  "blockifier",
