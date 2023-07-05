@@ -28,7 +28,7 @@ struct Fizz {
 }
 
 #[system]
-mod Bar {
+mod bar {
     use super::Foo;
     use traits::Into;
     use starknet::get_caller_address;
@@ -103,13 +103,13 @@ fn test_system() {
     // Spawn empty world
     let world = spawn_empty_world();
 
-    world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
     let mut data = ArrayTrait::new();
     data.append(1337);
     data.append(1337);
     let id = world.uuid();
-    world.execute('Bar'.into(), data.span());
+    world.execute('bar'.into(), data.span());
 }
 
 #[test]
@@ -131,7 +131,7 @@ fn test_set_entity_admin() {
     // Spawn empty world
     let world = spawn_empty_world();
 
-    world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
 
     let alice = starknet::contract_address_const::<0x1337>();
@@ -140,7 +140,7 @@ fn test_set_entity_admin() {
     let mut data = ArrayTrait::new();
     data.append(420);
     data.append(1337);
-    world.execute('Bar'.into(), data.span());
+    world.execute('bar'.into(), data.span());
 
     let foo = world.entity('Foo'.into(), alice.into(), 0, 0);
     assert(*foo[0] == 420, 'data not stored');
@@ -154,17 +154,17 @@ fn test_set_entity_unauthorized() {
     // Spawn empty world
     let world = spawn_empty_world();
 
-    world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
 
     let caller = starknet::contract_address_const::<0x1337>();
     starknet::testing::set_account_contract_address(caller);
 
-    // Call Bar system, should panic as it's not authorized
+    // Call bar system, should panic as it's not authorized
     let mut data = ArrayTrait::new();
     data.append(420);
     data.append(1337);
-    world.execute('Bar'.into(), data.span());
+    world.execute('bar'.into(), data.span());
 }
 
 #[test]
@@ -174,7 +174,7 @@ fn test_set_entity_directly() {
     // Spawn empty world
     let world = spawn_empty_world();
 
-    world.register_system(Bar::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
 
     // Change Foo component directly
@@ -288,4 +288,45 @@ fn test_set_writer_fails_for_non_owner() {
     assert(!world.is_owner(alice, 0), 'should not be owner');
 
     world.grant_writer(42, 69);
+}
+
+#[system]
+mod origin {
+    use dojo::world::Context;
+
+    fn execute(ctx: Context) {
+        assert(ctx.origin == starknet::contract_address_const::<0x1337>(), 'should be equal');
+    }
+}
+
+#[system]
+mod origin_wrapper {
+    use traits::Into;
+    use array::ArrayTrait;
+    use dojo::world::Context;
+
+    fn execute(ctx: Context) {
+        let data = ArrayTrait::new();
+        assert(ctx.origin == starknet::contract_address_const::<0x1337>(), 'should be equal');
+        ctx.world.execute('origin'.into(), data.span());
+        assert(ctx.origin == starknet::contract_address_const::<0x1337>(), 'should be equal');
+    }
+}
+
+#[test]
+#[available_gas(6000000)]
+fn test_execute_origin() {
+    // Spawn empty world
+    let world = spawn_empty_world();
+
+    world.register_system(origin::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_system(origin_wrapper::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
+    let data = ArrayTrait::new();
+
+    let alice = starknet::contract_address_const::<0x1337>();
+    starknet::testing::set_contract_address(alice);
+    assert(world.origin() == starknet::contract_address_const::<0x0>(), 'should be equal');
+    world.execute('origin_wrapper'.into(), data.span());
+    assert(world.origin() == starknet::contract_address_const::<0x0>(), 'should be equal');
 }

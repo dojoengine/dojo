@@ -40,27 +40,29 @@ use utils::transaction::{
     compute_invoke_v1_transaction_hash, convert_inner_to_rpc_tx,
 };
 
-use crate::starknet::api::{Felt, StarknetApiError, StarknetApiServer};
+use crate::api::starknet::{Felt, StarknetApiError, StarknetApiServer};
 use crate::utils;
 use crate::utils::contract::{
     legacy_inner_to_rpc_class, legacy_rpc_to_inner_class, rpc_to_inner_class,
 };
 
-#[cfg(test)]
-#[path = "rpc_test.rs"]
-mod test;
-
-pub struct StarknetRpc<S> {
-    sequencer: Arc<S>,
+pub struct StarknetApi<S> {
+    sequencer: S,
 }
 
-impl<S: Sequencer + Send + Sync + 'static> StarknetRpc<S> {
-    pub fn new(sequencer: Arc<S>) -> Self {
+impl<S> StarknetApi<S>
+where
+    S: Sequencer + Send + Sync + 'static,
+{
+    pub fn new(sequencer: S) -> Self {
         Self { sequencer }
     }
 }
 #[async_trait]
-impl<S: Sequencer + Send + Sync + 'static> StarknetApiServer for StarknetRpc<S> {
+impl<S> StarknetApiServer for StarknetApi<S>
+where
+    S: Sequencer + Send + Sync + 'static,
+{
     async fn chain_id(&self) -> Result<String, Error> {
         Ok(self.sequencer.chain_id().await.as_hex())
     }

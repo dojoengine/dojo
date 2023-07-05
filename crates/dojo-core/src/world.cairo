@@ -31,6 +31,7 @@ trait IWorld<T> {
     fn set_executor(ref self: T, contract_address: ContractAddress);
     fn executor(self: @T) -> ContractAddress;
     fn delete_entity(ref self: T, component: felt252, query: Query);
+    fn origin(self: @T) -> ContractAddress;
 
     fn is_owner(self: @T, account: ContractAddress, target: felt252) -> bool;
     fn grant_owner(ref self: T, account: ContractAddress, target: felt252);
@@ -116,7 +117,7 @@ mod world {
         owners: LegacyMap::<(felt252, ContractAddress), bool>,
         writers: LegacyMap::<(felt252, felt252), bool>,
         // Tracks the origin executor.
-        origin: ContractAddress,
+        call_origin: ContractAddress,
         // Tracks the calling systems name for auth purposes.
         call_stack_len: felt252,
         call_stack: LegacyMap::<felt252, felt252>,
@@ -319,10 +320,11 @@ mod world {
             // Get the class hash of the system to be executed
             let system_class_hash = self.systems.read(system);
 
-            let mut origin = self.origin.read();
-            if origin.is_zero() {
-                origin = get_caller_address();
-                self.origin.write(origin);
+            // If this is the initial call, set the origin to the caller
+            let mut call_origin = self.call_origin.read();
+            if stack_len.is_zero() {
+                call_origin = get_caller_address();
+                self.call_origin.write(call_origin);
             }
 
             // Call the system via executor
@@ -333,13 +335,20 @@ mod world {
                     Context {
                         world: IWorldDispatcher {
                             contract_address: get_contract_address()
-                        }, origin: self.origin.read(), system, system_class_hash,
+                        }, origin: self.call_origin.read(), system, system_class_hash,
                     },
                     calldata
                 );
 
+            // Reset the current call stack frame
             self.call_stack.write(stack_len, 0);
+            // Decrement the call stack pointer
             self.call_stack_len.write(stack_len);
+
+            // If this is the initial call, reset the origin on exit
+            if stack_len.is_zero() {
+                self.call_origin.write(starknet::contract_address_const::<0x0>());
+            }
 
             res
         }
@@ -477,6 +486,15 @@ mod world {
         /// * `ContractAddress` - The address of the executor contract.
         fn executor(self: @ContractState) -> ContractAddress {
             self.executor_dispatcher.read().contract_address
+        }
+
+        /// Gets the origin caller.
+        ///
+        /// # Returns
+        ///
+        /// * `felt252` - The origin caller.
+        fn origin(self: @ContractState) -> ContractAddress {
+            self.call_origin.read()
         }
     }
 
