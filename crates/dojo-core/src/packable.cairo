@@ -1,5 +1,40 @@
 use starknet::{ClassHash, ContractAddress};
 use array::ArrayTrait;
+use traits::{Into, TryInto};
+use integer::{U256BitAnd, U256BitOr, U256BitXor, upcast, downcast, BoundedInt};
+use option::OptionTrait;
+
+
+/// Pack the proposal fields into a single felt252.
+fn pack_util(self: @felt252, size: u8, ref packing: felt252, mut packing_offset: u8, ref packed: Array<felt252>) {
+    // Easier to work on u256 rather than felt252.
+    let self_256: u256 = (*self).into();
+
+    // Cannot use all 252 bits becouse some bit arrangements (eg. 11111...11111) are not valid felt252 values. 
+    // Thus only 251 bits are used.                               ^-252 times-^
+    // One could optimize by some conditional alligment mechanism, but it would be an at most 1/252 space-wise improvement.
+    let remaining_bits: u8 = (251 - packing_offset).into();
+
+    let mut packing_256: u256 = packing.into();
+
+    if remaining_bits < size {
+        let first_part = self_256 & (shl(1, remaining_bits) - 1);
+        let second_part = shr(self_256, remaining_bits);
+
+        // Pack the first part into the current felt
+        packing_256 = packing_256 | shl(first_part, packing_offset);
+        packed.append(packing_256.try_into().unwrap());
+
+        // Start a new felt and pack the second part into it
+        packing = second_part.try_into().unwrap();
+        packing_offset = size - remaining_bits;
+    } else {
+        // Pack the data into the current felt
+        packing_256 = packing_256 | shl(self_256, packing_offset);
+        packing = packing_256.try_into().unwrap();
+        packing_offset = packing_offset + size;
+    }
+}
 
 trait Packable<T> {
     fn pack(self: @T, ref packing: felt252, packing_offset: u8, ref packed: Array<felt252>);
@@ -154,26 +189,21 @@ impl PackableClassHash of Packable<ClassHash> {
     }
 }
 
-/// Pack the proposal fields into a single felt252.
-fn pack(self: @felt252, size: u8, ref packing: felt252, mut packing_offset: u8, ref packed: Array<felt252>) -> u8 {
-    let remaining_bits = 252 - packing_offset;
-
-    if remaining_bits < size {
-        let first_part = self & ((1 << remaining_bits) - 1);
-        let second_part = self >> remaining_bits;
-
-        // Pack the first part into the current felt
-        packing = packing | (first_part << packing_offset);
-        packed.append(packing);
-
-        // Start a new felt and pack the second part into it
-        packing = second_part;
-        packing_offset = size - remaining_bits;
+//Could be done faster
+fn fpow(x: u256, n: u8) -> u256 {
+    if n == 0 {
+        1
+    } else if (n % 2) == 1 {
+        x * fpow(x * x, n / 2)
     } else {
-        // Pack the data into the current felt
-        packing = packing | (self << packing_offset);
-        packing_offset = packing_offset + size;
+        fpow(x * x, n / 2)
     }
+}
 
-    packing_offset
+fn shl(x: u256, n: u8) -> u256 {
+    x * fpow(2, n)
+}
+
+fn shr(x: u256, n: u8) -> u256 {
+    x / fpow(2, n)
 }

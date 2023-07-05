@@ -34,9 +34,10 @@ impl SetCommand {
                     "
                     {
                         let mut calldata = array::ArrayTrait::new();
-                        dojo::Packable::pack(@$ctor$, ref calldata);
+                        let mut packing: felt252 = 0;
+                        dojo::Packable::pack(@$ctor$, ref packing, 0, ref calldata);
                         $world$.set_entity('$component$', $query$, 0_u8, \
-                     array::ArrayTrait::span(@calldata));
+                            array::ArrayTrait::span(@calldata));
                     }
                     ",
                     UnorderedHashMap::from([
