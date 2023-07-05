@@ -4,7 +4,7 @@ use std::sync::Arc;
 use clap::Parser;
 use env_logger::Env;
 use katana_core::sequencer::KatanaSequencer;
-use katana_rpc::KatanaNodeRpc;
+use katana_rpc::{spawn, KatanaApi, NodeHandle, StarknetApi};
 use log::error;
 use yansi::Paint;
 
@@ -26,9 +26,11 @@ async fn main() {
     let starknet_config = config.starknet_config();
 
     let sequencer = Arc::new(KatanaSequencer::new(sequencer_config, starknet_config));
+    let starknet_api = StarknetApi::new(sequencer.clone());
+    let katana_api = KatanaApi::new(sequencer.clone());
 
-    match KatanaNodeRpc::new(sequencer.clone(), server_config).run().await {
-        Ok((addr, server_handle)) => {
+    match spawn(katana_api, starknet_api, server_config).await {
+        Ok(NodeHandle { addr, handle, .. }) => {
             if !config.silent {
                 let accounts = sequencer.starknet.read().await.predeployed_accounts.display();
 
@@ -40,7 +42,7 @@ async fn main() {
             }
 
             sequencer.start().await;
-            server_handle.stopped().await;
+            handle.stopped().await;
         }
         Err(err) => {
             error! {"{}", err};

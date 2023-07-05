@@ -63,14 +63,14 @@ impl From<StarknetApiError> for Error {
     }
 }
 
-#[rpc(server, client, namespace = "starknet")]
+#[rpc(server, namespace = "starknet")]
 pub trait StarknetApi {
     #[method(name = "chainId")]
     async fn chain_id(&self) -> Result<String, Error>;
 
     #[method(name = "getNonce")]
     async fn nonce(&self, block_id: BlockId, contract_address: FieldElement)
-    -> Result<Felt, Error>;
+        -> Result<Felt, Error>;
 
     #[method(name = "blockNumber")]
     async fn block_number(&self) -> Result<u64, Error>;

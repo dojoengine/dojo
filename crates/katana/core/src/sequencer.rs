@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use auto_impl::auto_impl;
 use blockifier::abi::abi_utils::get_storage_var_address;
 use blockifier::execution::contract_class::ContractClass;
 use blockifier::state::state_api::{State, StateReader};
@@ -511,6 +512,7 @@ impl Sequencer for KatanaSequencer {
 }
 
 #[async_trait]
+#[auto_impl(Arc)]
 pub trait Sequencer {
     async fn starknet(&self) -> RwLockReadGuard<'_, StarknetWrapper>;
 
