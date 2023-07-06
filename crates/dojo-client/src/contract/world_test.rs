@@ -1,5 +1,5 @@
 use camino::Utf8PathBuf;
-use dojo_test_utils::sequencer::TestSequencer;
+use dojo_test_utils::sequencer::{SequencerConfig, TestSequencer};
 use dojo_world::manifest::Manifest;
 use dojo_world::migration::strategy::prepare_for_migration;
 use dojo_world::migration::world::WorldDiff;
@@ -11,7 +11,7 @@ use super::{WorldContract, WorldContractReader};
 
 #[tokio::test]
 async fn test_world_contract_reader() {
-    let sequencer = TestSequencer::start().await;
+    let sequencer = TestSequencer::start(SequencerConfig::default()).await;
     let account = sequencer.account();
     let provider = account.provider();
     let (world_address, executor_address) = deploy_world(
