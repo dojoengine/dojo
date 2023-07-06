@@ -28,19 +28,6 @@ pub enum TransactionWaitingError<E> {
 /// for every `interval` miliseconds. If the transaction does not achieved `status` status within
 /// `timeout` miliseconds, an error will be returned. An error is also returned if the transaction
 /// is rejected ( i.e., the transaction returns a `REJECTED` status ).
-///
-///  # Examples
-///
-/// ```no_run
-/// use dojo_world::utils::TransactionWaiter;
-/// use starknet::core::types::FieldElement;
-/// use starknet::providers::jsonrpc::HttpTransport;
-/// use starknet::providers::JsonRpcClient;
-///
-/// let provider = JsonRpcClient::new(HttpTransport::new("http://localhost:5000").unwrap());
-/// let tx_hash = FieldElement::from_hex_str("0x1234").unwrap();
-/// TransactionWaiter::new(tx_hash, provider).await;
-/// ```
 pub struct TransactionWaiter<'a, P>
 where
     P: Provider,
