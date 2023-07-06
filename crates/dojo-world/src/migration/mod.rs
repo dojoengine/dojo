@@ -18,6 +18,8 @@ use starknet::core::utils::{
 use starknet::providers::{Provider, ProviderError};
 use thiserror::Error;
 
+use crate::utils::{TransactionWaiter, TransactionWaitingError};
+
 pub mod class;
 pub mod contract;
 pub mod strategy;
@@ -50,6 +52,8 @@ pub enum MigrationError<S, P> {
     CairoShortStringToFelt(#[from] CairoShortStringToFeltError),
     #[error(transparent)]
     Provider(#[from] ProviderError<P>),
+    #[error(transparent)]
+    WaitingError(#[from] TransactionWaitingError<P>),
 }
 
 /// Represents the type of migration that should be performed.
@@ -92,11 +96,19 @@ pub trait Declarable {
             Err(e) => return Err(MigrationError::Provider(e)),
         }
 
-        account
+        let DeclareTransactionResult { transaction_hash, class_hash } = account
             .declare(Arc::new(flattened_class), casm_class_hash)
             .send()
             .await
-            .map_err(MigrationError::Migrator)
+            .map_err(MigrationError::Migrator)?;
+
+        let receipt = TransactionWaiter::new(transaction_hash, account.provider())
+            .await
+            .map_err(MigrationError::WaitingError)?;
+
+        println!("receipt for {transaction_hash:#x} : {:?}", receipt);
+
+        return Ok(DeclareOutput { transaction_hash, class_hash });
     }
 
     fn artifact_path(&self) -> &PathBuf;
@@ -166,6 +178,12 @@ pub trait Deployable: Declarable + Sync {
             .send()
             .await
             .map_err(MigrationError::Migrator)?;
+
+        let receipt = TransactionWaiter::new(transaction_hash, account.provider())
+            .await
+            .map_err(MigrationError::WaitingError)?;
+
+        println!("receipt for {transaction_hash:#x} : {:?}", receipt);
 
         Ok(DeployOutput { transaction_hash, contract_address, declare })
     }

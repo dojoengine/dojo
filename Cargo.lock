@@ -2129,6 +2129,7 @@ dependencies = [
  "dojo-lang",
  "dojo-test-utils",
  "dojo-types",
+ "futures",
  "reqwest",
  "serde",
  "serde_json",

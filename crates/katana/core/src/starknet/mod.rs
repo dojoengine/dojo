@@ -136,7 +136,7 @@ impl StarknetWrapper {
                     // TODO: change the status to `Reverted` status once the variant is implemented.
                     TransactionStatus::Rejected
                 } else {
-                    TransactionStatus::AcceptedOnL2
+                    TransactionStatus::Pending
                 };
 
                 let starknet_tx = StarknetTransaction::new(
