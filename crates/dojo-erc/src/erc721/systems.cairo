@@ -26,6 +26,7 @@ mod erc721_set_approval_for_all {
     use dojo_erc::erc721::components::OperatorApprovals;
 
     fn execute(ctx: Context, owner: felt252, operator: felt252, _approved: felt252) {
+        assert(owner != operator, 'ERC721: self approval');
         set !(
             ctx.world,
             (owner, operator).into_partitioned(),
