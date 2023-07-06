@@ -1,13 +1,12 @@
 use std::future::Future;
-use std::marker::PhantomData;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use std::thread;
 use std::time::Duration;
 
 use futures::FutureExt;
 use starknet::core::types::{
-    FieldElement, MaybePendingTransactionReceipt, TransactionReceipt, TransactionStatus,
+    FieldElement, MaybePendingTransactionReceipt, StarknetError, TransactionReceipt,
+    TransactionStatus,
 };
 use starknet::providers::{Provider, ProviderError};
 use tokio::time::{Instant, Interval};
@@ -55,24 +54,28 @@ where
     interval: Interval,
     timeout: Duration,
     provider: &'a P,
-    /// The future that polls for the transaction receipt.
+    /// The future that get the transaction receipt.
     future: Option<
         Pin<
             Box<
-                dyn Future<Output = Result<bool, TransactionWaitingError<<P as Provider>::Error>>>
+                dyn Future<
+                        Output = Result<
+                            MaybePendingTransactionReceipt,
+                            ProviderError<<P as Provider>::Error>,
+                        >,
+                    > + Send
                     + 'a,
             >,
         >,
     >,
-    phantom: PhantomData<&'a P>,
 }
 
 impl<'a, P> TransactionWaiter<'a, P>
 where
-    P: Provider + 'a,
+    P: Provider + Send,
 {
     const DEFAULT_TIMEOUT: Duration = Duration::from_secs(60);
-    const DEFAULT_INTERVAL: Duration = Duration::from_millis(100);
+    const DEFAULT_INTERVAL: Duration = Duration::from_millis(200);
     const DEFAULT_STATUS: TransactionStatus = TransactionStatus::AcceptedOnL2;
 
     pub fn new(tx: FieldElement, provider: &'a P) -> Self {
@@ -86,7 +89,6 @@ where
                 Instant::now() + Self::DEFAULT_INTERVAL,
                 Self::DEFAULT_INTERVAL,
             ),
-            phantom: PhantomData,
         }
     }
 
@@ -100,40 +102,11 @@ where
         self.status = status;
         self
     }
-
-    async fn check_transaction_status(
-        transaction_hash: FieldElement,
-        expected_status: TransactionStatus,
-        provider: &'a P,
-    ) -> Result<bool, TransactionWaitingError<P::Error>> {
-        match provider
-            .get_transaction_receipt(transaction_hash)
-            .await
-            .map_err(TransactionWaitingError::Provider)?
-        {
-            MaybePendingTransactionReceipt::Receipt(receipt) => {
-                match transaction_status_from_receipt(&receipt) {
-                    TransactionStatus::Rejected => {
-                        Err(TransactionWaitingError::TransactionRejected)
-                    }
-
-                    status if status == expected_status => Ok(true),
-
-                    // TODO: handle case where the status is 'higher' than the one we are
-                    // waiting for.
-                    _ => Ok(false),
-                }
-            }
-
-            // Transaction is still pending.
-            _ => Ok(false),
-        }
-    }
 }
 
 impl<'a, P> Future for TransactionWaiter<'a, P>
 where
-    P: Provider + Unpin + 'a,
+    P: Provider + Send,
 {
     type Output = Result<TransactionReceipt, TransactionWaitingError<P::Error>>;
 
@@ -142,36 +115,50 @@ where
         let elapsed = Instant::now();
 
         loop {
-            println!("polling");
-
             if elapsed.elapsed() > this.timeout {
                 return Poll::Ready(Err(TransactionWaitingError::Timeout));
             }
 
-            loop {
-                if let Some(mut flush) = this.future.take() {
-                    match flush.poll_unpin(cx) {
-                        Poll::Ready(_) => {
-                            this.interval.reset();
+            if let Some(mut flush) = this.future.take() {
+                match flush.poll_unpin(cx) {
+                    Poll::Ready(res) => match res {
+                        Ok(MaybePendingTransactionReceipt::Receipt(receipt)) => {
+                            match transaction_status_from_receipt(&receipt) {
+                                TransactionStatus::Rejected => {
+                                    return Poll::Ready(Err(
+                                        TransactionWaitingError::TransactionRejected,
+                                    ))
+                                }
+
+                                status if status == this.status => return Poll::Ready(Ok(receipt)),
+
+                                _ => {}
+                            }
                         }
-                        Poll::Pending => {
-                            this.future = Some(flush);
-                            return Poll::Pending;
-                        }
+
+                        Ok(MaybePendingTransactionReceipt::PendingReceipt(_))
+                        | Err(ProviderError::StarknetError(
+                            StarknetError::TransactionHashNotFound,
+                        )) => {}
+
+                        Err(e) => return Poll::Ready(Err(TransactionWaitingError::Provider(e))),
+                    },
+
+                    Poll::Pending => {
+                        this.future = Some(flush);
+                        return Poll::Pending;
                     }
                 }
+            }
 
-                if this.interval.poll_tick(cx).is_ready() {
-                    this.future = Some(Box::pin(TransactionWaiter::check_transaction_status(
-                        this.tx_hash,
-                        this.status,
-                        this.provider,
-                    )));
-                } else {
-                    break;
-                }
+            if this.interval.poll_tick(cx).is_ready() {
+                this.future = Some(Box::pin(this.provider.get_transaction_receipt(this.tx_hash)));
+            } else {
+                break;
             }
         }
+
+        Poll::Pending
     }
 }
 
