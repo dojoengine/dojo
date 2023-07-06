@@ -11,6 +11,9 @@ use starknet::core::types::{
 use starknet::providers::{Provider, ProviderError};
 use tokio::time::{Instant, Interval};
 
+type GetReceiptResult<E> = Result<MaybePendingTransactionReceipt, ProviderError<E>>;
+type GetReceiptFuture<'a, E> = Pin<Box<dyn Future<Output = GetReceiptResult<E>> + Send + 'a>>;
+
 #[derive(Debug, thiserror::Error)]
 pub enum TransactionWaitingError<E> {
     #[error("request timed out")]
@@ -26,18 +29,6 @@ pub enum TransactionWaitingError<E> {
 /// `timeout` miliseconds, an error will be returned. An error is also returned if the transaction
 /// is rejected ( i.e., the transaction returns a `REJECTED` status ).
 ///
-///
-/// # Arguments
-///
-/// * `tx_hash` - The hash of the transaction to wait for.
-/// * `status` - The status to wait for. Defaults to `TransactionStatus::AcceptedOnL2`.
-/// * `interval` - Poll the transaction every `interval` miliseconds. Miliseconds are used so that
-///   we can be more precise with the polling interval. Defaults to 250ms.
-/// * `timeout` - The maximum amount of time to wait for the transaction to achieve `status` status.
-///   Defaults to 60 seconds.
-/// * `provider` - The provider to use for polling the transaction.
-///
-///
 ///  # Examples
 ///
 /// ```
@@ -49,25 +40,20 @@ pub struct TransactionWaiter<'a, P>
 where
     P: Provider,
 {
+    /// The hash of the transaction to wait for.
     tx_hash: FieldElement,
+    /// The status to wait for. Defaults to `TransactionStatus::AcceptedOnL2`.
     status: TransactionStatus,
+    /// Poll the transaction every `interval` miliseconds. Miliseconds are used so that
+    /// we can be more precise with the polling interval. Defaults to 250ms.
     interval: Interval,
+    /// The maximum amount of time to wait for the transaction to achieve `status` status.
+    /// Defaults to 60 seconds.
     timeout: Duration,
+    /// The provider to use for polling the transaction.
     provider: &'a P,
     /// The future that get the transaction receipt.
-    future: Option<
-        Pin<
-            Box<
-                dyn Future<
-                        Output = Result<
-                            MaybePendingTransactionReceipt,
-                            ProviderError<<P as Provider>::Error>,
-                        >,
-                    > + Send
-                    + 'a,
-            >,
-        >,
-    >,
+    future: Option<GetReceiptFuture<'a, <P as Provider>::Error>>,
 }
 
 impl<'a, P> TransactionWaiter<'a, P>
@@ -127,7 +113,7 @@ where
                                 TransactionStatus::Rejected => {
                                     return Poll::Ready(Err(
                                         TransactionWaitingError::TransactionRejected,
-                                    ))
+                                    ));
                                 }
 
                                 status if status == this.status => return Poll::Ready(Ok(receipt)),
