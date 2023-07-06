@@ -53,9 +53,7 @@ mod erc721_transfer_from {
             owner.address == from || felt252_into_bool(is_approved_for_all.approve),
             'ERC721: unauthorized caller'
         );
-        assert(from == owner, 'ERC721: wrong sender');
         assert(!to.is_zero(), 'ERC721: invalid receiver');
-        let owner = get !(ctx.world, token_id.into(), Owners);
         assert(from == owner.address, 'ERC721: wrong sender');
         set !(ctx.world, (token_id).into(), (TokenApprovals { address: Zeroable::zero() }))
         let from_balance = get !(ctx.world, from.into(), Balances);
