@@ -178,13 +178,13 @@ fn transaction_status_from_receipt(receipt: &TransactionReceipt) -> TransactionS
 
 #[cfg(test)]
 mod tests {
-    use super::{Duration, TransactionWaiter};
-
     use assert_matches::assert_matches;
     use dojo_test_utils::sequencer::{SequencerConfig, TestSequencer};
     use starknet::core::types::FieldElement;
     use starknet::providers::jsonrpc::HttpTransport;
     use starknet::providers::JsonRpcClient;
+
+    use super::{Duration, TransactionWaiter};
 
     #[tokio::test]
     async fn should_timeout_on_nonexistant_transaction() {
