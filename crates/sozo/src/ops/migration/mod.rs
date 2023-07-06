@@ -6,6 +6,7 @@ use dojo_world::manifest::{Manifest, ManifestError};
 use dojo_world::migration::strategy::{prepare_for_migration, MigrationOutput, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{Declarable, Deployable, MigrationError, RegisterOutput};
+use dojo_world::utils::TransactionWaiter;
 use scarb::core::Config;
 use starknet::accounts::{ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::{FieldElement, InvokeTransactionResult};
@@ -137,6 +138,10 @@ where
                 let InvokeTransactionResult { transaction_hash } =
                     WorldContract::new(addr, &migrator).set_executor(res.contract_address).await?;
 
+                let _ = TransactionWaiter::new(transaction_hash, migrator.provider())
+                    .await
+                    .map_err(MigrationError::<S, <P as Provider>::Error>::WaitingError);
+
                 ws_config.ui().print_hidden_sub(format!("updated at: {transaction_hash:#x}"));
             }
 
@@ -240,6 +245,10 @@ where
         .await
         .map_err(|e| anyhow!("Failed to register components to World: {e}"))?;
 
+    let _ = TransactionWaiter::new(transaction_hash, migrator.provider())
+        .await
+        .map_err(MigrationError::<S, <P as Provider>::Error>::WaitingError);
+
     ws_config.ui().print_hidden_sub(format!("registered at: {transaction_hash:#x}"));
 
     Ok(Some(RegisterOutput { transaction_hash, declare_output }))
@@ -295,6 +304,10 @@ where
         .register_systems(&systems.iter().map(|s| s.diff.local).collect::<Vec<_>>())
         .await
         .map_err(|e| anyhow!("Failed to register systems to World: {e}"))?;
+
+    let _ = TransactionWaiter::new(transaction_hash, migrator.provider())
+        .await
+        .map_err(MigrationError::<S, <P as Provider>::Error>::WaitingError);
 
     ws_config.ui().print_hidden_sub(format!("registered at: {transaction_hash:#x}"));
 
