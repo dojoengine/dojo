@@ -31,7 +31,12 @@ pub enum TransactionWaitingError<E> {
 ///
 ///  # Examples
 ///
-/// ```
+/// ```no_run
+/// use starknet::providers::JsonRpcClient;
+/// use starknet::providers::jsonrpc::HttpTransport;
+/// use starknet::core::types::FieldElement;
+/// use dojo_world::utils::TransactionWaiter;
+///
 /// let provider = JsonRpcClient::new(HttpTransport::new("http://localhost:5000").unwrap());
 /// let tx_hash = FieldElement::from_hex_str("0x1234").unwrap();
 /// TransactionWaiter::new(tx_hash, provider).await;
