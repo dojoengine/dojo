@@ -7,7 +7,7 @@ use dojo_world::migration::strategy::{prepare_for_migration, MigrationOutput, Mi
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{Declarable, Deployable, MigrationError, RegisterOutput};
 use scarb::core::Config;
-use starknet::accounts::ConnectedAccount;
+use starknet::accounts::{ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::{FieldElement, InvokeTransactionResult};
 
 #[cfg(test)]
@@ -15,19 +15,22 @@ use starknet::core::types::{FieldElement, InvokeTransactionResult};
 mod migration_test;
 mod ui;
 
+use starknet::providers::Provider;
+use starknet::signers::Signer;
 use ui::MigrationUi;
 
 use self::ui::{bold_message, italic_message};
 
-pub async fn execute<P, A>(
+pub async fn execute<U, P, S>(
     world_address: Option<FieldElement>,
-    migrator: A,
-    target_dir: P,
+    migrator: SingleOwnerAccount<P, S>,
+    target_dir: U,
     ws_config: &Config,
 ) -> Result<()>
 where
-    P: AsRef<Path>,
-    A: ConnectedAccount + Sync + 'static,
+    U: AsRef<Path>,
+    P: Provider + Sync + Send + 'static,
+    S: Signer + Sync + Send + 'static,
 {
     ws_config.ui().print_step(1, "🌎", "Building World state...");
 
@@ -100,13 +103,14 @@ where
 }
 
 // TODO: display migration type (either new or update)
-async fn execute_strategy<A>(
+async fn execute_strategy<P, S>(
     strategy: &mut MigrationStrategy,
-    migrator: A,
+    migrator: SingleOwnerAccount<P, S>,
     ws_config: &Config,
 ) -> Result<MigrationOutput>
 where
-    A: ConnectedAccount + Sync + 'static,
+    P: Provider + Sync + Send + 'static,
+    S: Signer + Sync + Send + 'static,
 {
     let executor_output = match &mut strategy.executor {
         Some(executor) => {
@@ -185,13 +189,14 @@ where
     })
 }
 
-async fn register_components<A>(
+async fn register_components<P, S>(
     strategy: &MigrationStrategy,
-    migrator: &A,
+    migrator: &SingleOwnerAccount<P, S>,
     ws_config: &Config,
 ) -> Result<Option<RegisterOutput>>
 where
-    A: ConnectedAccount + Sync + 'static,
+    P: Provider + Sync + Send + 'static,
+    S: Signer + Sync + Send + 'static,
 {
     let components = &strategy.components;
 
@@ -240,13 +245,14 @@ where
     Ok(Some(RegisterOutput { transaction_hash, declare_output }))
 }
 
-async fn register_systems<A>(
+async fn register_systems<P, S>(
     strategy: &MigrationStrategy,
-    migrator: &A,
+    migrator: &SingleOwnerAccount<P, S>,
     ws_config: &Config,
 ) -> Result<Option<RegisterOutput>>
 where
-    A: ConnectedAccount + Sync + 'static,
+    P: Provider + Sync + Send + 'static,
+    S: Signer + Sync + Send + 'static,
 {
     let systems = &strategy.systems;
 

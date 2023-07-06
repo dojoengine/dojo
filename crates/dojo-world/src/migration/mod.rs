@@ -6,7 +6,8 @@ use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass;
-use starknet::accounts::{AccountError, Call, ConnectedAccount};
+use starknet::accounts::Account;
+use starknet::accounts::{AccountError, Call, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
     BlockId, BlockTag, DeclareTransactionResult, FieldElement, FlattenedSierraClass,
@@ -16,6 +17,7 @@ use starknet::core::utils::{
     get_contract_address, get_selector_from_name, CairoShortStringToFeltError,
 };
 use starknet::providers::{Provider, ProviderError};
+use starknet::signers::Signer;
 use thiserror::Error;
 
 use crate::utils::{TransactionWaiter, TransactionWaitingError};
@@ -75,12 +77,16 @@ pub trait StateDiff {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait Declarable {
-    async fn declare<A>(
+    async fn declare<P, S>(
         &self,
-        account: &A,
-    ) -> Result<DeclareOutput, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
+        account: &SingleOwnerAccount<P, S>,
+    ) -> Result<
+        DeclareOutput,
+        MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError, <P as Provider>::Error>,
+    >
     where
-        A: ConnectedAccount + Sync,
+        P: Provider + Sync + Send,
+        S: Signer + Sync + Send,
     {
         let (flattened_class, casm_class_hash) =
             prepare_contract_declaration_params(self.artifact_path()).unwrap();
@@ -102,11 +108,7 @@ pub trait Declarable {
             .await
             .map_err(MigrationError::Migrator)?;
 
-        let receipt = TransactionWaiter::new(transaction_hash, account.provider())
-            .await
-            .map_err(MigrationError::WaitingError)?;
-
-        println!("receipt for {transaction_hash:#x} : {:?}", receipt);
+        let _ = TransactionWaiter::new(transaction_hash, account.provider()).await.unwrap();
 
         return Ok(DeclareOutput { transaction_hash, class_hash });
     }
@@ -118,14 +120,18 @@ pub trait Declarable {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait Deployable: Declarable + Sync {
-    async fn deploy<A>(
+    async fn deploy<P, S>(
         &mut self,
         class_hash: FieldElement,
         constructor_calldata: Vec<FieldElement>,
-        account: &A,
-    ) -> Result<DeployOutput, MigrationError<A::SignError, <A::Provider as Provider>::Error>>
+        account: &SingleOwnerAccount<P, S>,
+    ) -> Result<
+        DeployOutput,
+        MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError, <P as Provider>::Error>,
+    >
     where
-        A: ConnectedAccount + Sync,
+        P: Provider + Sync + Send,
+        S: Signer + Sync + Send,
     {
         let declare = match self.declare(account).await {
             Ok(res) => Some(res),
@@ -179,11 +185,9 @@ pub trait Deployable: Declarable + Sync {
             .await
             .map_err(MigrationError::Migrator)?;
 
-        let receipt = TransactionWaiter::new(transaction_hash, account.provider())
+        let _ = TransactionWaiter::new(transaction_hash, account.provider())
             .await
             .map_err(MigrationError::WaitingError)?;
-
-        println!("receipt for {transaction_hash:#x} : {:?}", receipt);
 
         Ok(DeployOutput { transaction_hash, contract_address, declare })
     }
