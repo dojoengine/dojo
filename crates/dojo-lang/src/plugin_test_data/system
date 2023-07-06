@@ -302,7 +302,10 @@ mod spawn {
     fn execute(self: @ContractState, ctx: Context, name: felt252) {
         {
             let mut calldata = array::ArrayTrait::new();
-            dojo::Packable::pack(@Player { name: name }, ref calldata);
+            let mut packing: felt252 = 0;
+            let mut offset = 0;
+            dojo::Packable::pack(@Player { name: name }, ref packing, ref offset, ref calldata);
+            array::ArrayTrait::append(ref calldata, packing);
             ctx
                 .world
                 .set_entity(
@@ -315,7 +318,10 @@ mod spawn {
 
         {
             let mut calldata = array::ArrayTrait::new();
-            dojo::Packable::pack(@Position { x: 0, y: 0 }, ref calldata);
+            let mut packing: felt252 = 0;
+            let mut offset = 0;
+            dojo::Packable::pack(@Position { x: 0, y: 0 }, ref packing, ref offset, ref calldata);
+            array::ArrayTrait::append(ref calldata, packing);
             ctx
                 .world
                 .set_entity(
@@ -328,25 +334,37 @@ mod spawn {
 
         {
             let mut calldata = array::ArrayTrait::new();
-            dojo::Packable::pack(@Player { name: name }, ref calldata);
+            let mut packing: felt252 = 0;
+            let mut offset = 0;
+            dojo::Packable::pack(@Player { name: name }, ref packing, ref offset, ref calldata);
+            array::ArrayTrait::append(ref calldata, packing);
             ctx.world.set_entity('Player', 420.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
             let mut calldata = array::ArrayTrait::new();
-            dojo::Packable::pack(@Position { x: 0, y: 0 }, ref calldata);
+            let mut packing: felt252 = 0;
+            let mut offset = 0;
+            dojo::Packable::pack(@Position { x: 0, y: 0 }, ref packing, ref offset, ref calldata);
+            array::ArrayTrait::append(ref calldata, packing);
             ctx.world.set_entity('Position', 420.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
             let mut calldata = array::ArrayTrait::new();
-            dojo::Packable::pack(@Player { name: name }, ref calldata);
+            let mut packing: felt252 = 0;
+            let mut offset = 0;
+            dojo::Packable::pack(@Player { name: name }, ref packing, ref offset, ref calldata);
+            array::ArrayTrait::append(ref calldata, packing);
             ctx.world.set_entity('Player', 120.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
             let mut calldata = array::ArrayTrait::new();
-            dojo::Packable::pack(@Position { x: 0, y: 0 }, ref calldata);
+            let mut packing: felt252 = 0;
+            let mut offset = 0;
+            dojo::Packable::pack(@Position { x: 0, y: 0 }, ref packing, ref offset, ref calldata);
+            array::ArrayTrait::append(ref calldata, packing);
             ctx.world.set_entity('Position', 120.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
@@ -354,7 +372,10 @@ mod spawn {
 
         {
             let mut calldata = array::ArrayTrait::new();
-            dojo::Packable::pack(@Player { name: name }, ref calldata);
+            let mut packing: felt252 = 0;
+            let mut offset = 0;
+            dojo::Packable::pack(@Player { name: name }, ref packing, ref offset, ref calldata);
+            array::ArrayTrait::append(ref calldata, packing);
             ctx
                 .world
                 .set_entity('Player', player_id.into(), 0_u8, array::ArrayTrait::span(@calldata));
@@ -362,7 +383,10 @@ mod spawn {
 
         {
             let mut calldata = array::ArrayTrait::new();
-            dojo::Packable::pack(@Position { x: 0, y: 0 }, ref calldata);
+            let mut packing: felt252 = 0;
+            let mut offset = 0;
+            dojo::Packable::pack(@Position { x: 0, y: 0 }, ref packing, ref offset, ref calldata);
+            array::ArrayTrait::append(ref calldata, packing);
             ctx
                 .world
                 .set_entity('Position', player_id.into(), 0_u8, array::ArrayTrait::span(@calldata));
@@ -370,7 +394,10 @@ mod spawn {
 
         {
             let mut calldata = array::ArrayTrait::new();
-            dojo::Packable::pack(@Player { name: name }, ref calldata);
+            let mut packing: felt252 = 0;
+            let mut offset = 0;
+            dojo::Packable::pack(@Player { name: name }, ref packing, ref offset, ref calldata);
+            array::ArrayTrait::append(ref calldata, packing);
             ctx
                 .world
                 .set_entity('Player', (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
@@ -378,7 +405,10 @@ mod spawn {
 
         {
             let mut calldata = array::ArrayTrait::new();
-            dojo::Packable::pack(@Position { x: 0, y: 0 }, ref calldata);
+            let mut packing: felt252 = 0;
+            let mut offset = 0;
+            dojo::Packable::pack(@Position { x: 0, y: 0 }, ref packing, ref offset, ref calldata);
+            array::ArrayTrait::append(ref calldata, packing);
             ctx
                 .world
                 .set_entity('Position', (0, 0, 0, 0, 0), 0_u8, array::ArrayTrait::span(@calldata));
@@ -386,13 +416,19 @@ mod spawn {
 
         {
             let mut calldata = array::ArrayTrait::new();
-            dojo::Packable::pack(@Player { name: name }, ref calldata);
+            let mut packing: felt252 = 0;
+            let mut offset = 0;
+            dojo::Packable::pack(@Player { name: name }, ref packing, ref offset, ref calldata);
+            array::ArrayTrait::append(ref calldata, packing);
             ctx.world.set_entity('Player', 1337.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
 
         {
             let mut calldata = array::ArrayTrait::new();
-            dojo::Packable::pack(@Position { x: 0, y: 0 }, ref calldata);
+            let mut packing: felt252 = 0;
+            let mut offset = 0;
+            dojo::Packable::pack(@Position { x: 0, y: 0 }, ref packing, ref offset, ref calldata);
+            array::ArrayTrait::append(ref calldata, packing);
             ctx.world.set_entity('Position', 1337.into(), 0_u8, array::ArrayTrait::span(@calldata));
         }
         return ();
@@ -471,8 +507,12 @@ mod move {
                 loop {
                     match raw_entities.pop_front() {
                         Option::Some(raw) => {
+                            let mut unpacking: felt252 = 0;
+                            let mut offset = 0;
                             let mut raw = *raw;
-                            let e = dojo::Packable::<Position>::unpack(ref raw)
+                            let e = dojo::Packable::<Position>::unpack(
+                                ref raw, ref unpacking, ref offset
+                            )
                                 .expect('Position failed to deserialize');
                             entities.append(e);
                         },
@@ -495,8 +535,12 @@ mod move {
                 loop {
                     match raw_entities.pop_front() {
                         Option::Some(raw) => {
+                            let mut unpacking: felt252 = 0;
+                            let mut offset = 0;
                             let mut raw = *raw;
-                            let e = dojo::Packable::<Player>::unpack(ref raw)
+                            let e = dojo::Packable::<Player>::unpack(
+                                ref raw, ref unpacking, ref offset
+                            )
                                 .expect('Player failed to deserialize');
                             entities.append(e);
                         },
@@ -534,8 +578,12 @@ mod move {
                 loop {
                     match raw_entities.pop_front() {
                         Option::Some(raw) => {
+                            let mut unpacking: felt252 = 0;
+                            let mut offset = 0;
                             let mut raw = *raw;
-                            let e = dojo::Packable::<Player>::unpack(ref raw)
+                            let e = dojo::Packable::<Player>::unpack(
+                                ref raw, ref unpacking, ref offset
+                            )
                                 .expect('Player failed to deserialize');
                             entities.append(e);
                         },
@@ -554,26 +602,43 @@ mod move {
         let players_query = (__players);
 
         let mut __player_player_raw = ctx.world.entity('Player', player_id.into(), 0_u8, 0_usize);
+
         assert(__player_player_raw.len() > 0_usize, 'Player not found');
-        let __player_player = dojo::Packable::<Player>::unpack(ref __player_player_raw)
+
+        let mut unpacking: felt252 = 0;
+        let mut offset = 0;
+
+        let __player_player = dojo::Packable::<Player>::unpack(
+            ref __player_player_raw, ref unpacking, ref offset
+        )
             .expect('Player failed to deserialize');
         let player = __player_player;
 
         let mut __player_position_position_raw = ctx
             .world
             .entity('Position', player_id.into(), 0_u8, 0_usize);
+
         assert(__player_position_position_raw.len() > 0_usize, 'Position not found');
+
+        let mut unpacking: felt252 = 0;
+        let mut offset = 0;
+
         let __player_position_position = dojo::Packable::<Position>::unpack(
-            ref __player_position_position_raw
+            ref __player_position_position_raw, ref unpacking, ref offset
         )
             .expect('Position failed to deserialize');
 
         let mut __player_position_player_raw = ctx
             .world
             .entity('Player', player_id.into(), 0_u8, 0_usize);
+
         assert(__player_position_player_raw.len() > 0_usize, 'Player not found');
+
+        let mut unpacking: felt252 = 0;
+        let mut offset = 0;
+
         let __player_position_player = dojo::Packable::<Player>::unpack(
-            ref __player_position_player_raw
+            ref __player_position_player_raw, ref unpacking, ref offset
         )
             .expect('Player failed to deserialize');
         let player_position = (__player_position_position, __player_position_player);
@@ -585,18 +650,28 @@ mod move {
             let mut __player_position_position_raw = ctx
                 .world
                 .entity('Position', player_id.into(), 0_u8, 0_usize);
+
             assert(__player_position_position_raw.len() > 0_usize, 'Position not found');
+
+            let mut unpacking: felt252 = 0;
+            let mut offset = 0;
+
             let __player_position_position = dojo::Packable::<Position>::unpack(
-                ref __player_position_position_raw
+                ref __player_position_position_raw, ref unpacking, ref offset
             )
                 .expect('Position failed to deserialize');
 
             let mut __player_position_player_raw = ctx
                 .world
                 .entity('Player', player_id.into(), 0_u8, 0_usize);
+
             assert(__player_position_player_raw.len() > 0_usize, 'Player not found');
+
+            let mut unpacking: felt252 = 0;
+            let mut offset = 0;
+
             let __player_position_player = dojo::Packable::<Player>::unpack(
-                ref __player_position_player_raw
+                ref __player_position_player_raw, ref unpacking, ref offset
             )
                 .expect('Player failed to deserialize');
             let player_position = (__player_position_position, __player_position_player);
@@ -628,8 +703,12 @@ mod move {
                         loop {
                             match raw_entities.pop_front() {
                                 Option::Some(raw) => {
+                                    let mut unpacking: felt252 = 0;
+                                    let mut offset = 0;
                                     let mut raw = *raw;
-                                    let e = dojo::Packable::<Position>::unpack(ref raw)
+                                    let e = dojo::Packable::<Position>::unpack(
+                                        ref raw, ref unpacking, ref offset
+                                    )
                                         .expect('Position failed to deserialize');
                                     entities.append(e);
                                 },
@@ -652,8 +731,12 @@ mod move {
                         loop {
                             match raw_entities.pop_front() {
                                 Option::Some(raw) => {
+                                    let mut unpacking: felt252 = 0;
+                                    let mut offset = 0;
                                     let mut raw = *raw;
-                                    let e = dojo::Packable::<Player>::unpack(ref raw)
+                                    let e = dojo::Packable::<Player>::unpack(
+                                        ref raw, ref unpacking, ref offset
+                                    )
                                         .expect('Player failed to deserialize');
                                     entities.append(e);
                                 },
@@ -680,8 +763,13 @@ mod move {
                     Option::None(())
                 },
                 bool::True(()) => {
+                    let mut unpacking: felt252 = 0;
+                    let mut offset = 0;
+
                     Option::Some(
-                        dojo::Packable::<Player>::unpack(ref __maybe_player_player_raw)
+                        dojo::Packable::<Player>::unpack(
+                            ref __maybe_player_player_raw, ref unpacking, ref offset
+                        )
                             .expect('Player failed to unpack')
                     )
                 }
@@ -702,8 +790,13 @@ mod move {
                     Option::None(())
                 },
                 bool::True(()) => {
+                    let mut unpacking: felt252 = 0;
+                    let mut offset = 0;
+
                     Option::Some(
-                        dojo::Packable::<Position>::unpack(ref __positions_query_position_raw)
+                        dojo::Packable::<Position>::unpack(
+                            ref __positions_query_position_raw, ref unpacking, ref offset
+                        )
                             .expect('Position failed to unpack')
                     )
                 }
@@ -717,8 +810,13 @@ mod move {
                     Option::None(())
                 },
                 bool::True(()) => {
+                    let mut unpacking: felt252 = 0;
+                    let mut offset = 0;
+
                     Option::Some(
-                        dojo::Packable::<Player>::unpack(ref __positions_query_player_raw)
+                        dojo::Packable::<Player>::unpack(
+                            ref __positions_query_player_raw, ref unpacking, ref offset
+                        )
                             .expect('Player failed to unpack')
                     )
                 }
@@ -739,18 +837,28 @@ mod move {
             let mut __player_position_position_raw = ctx
                 .world
                 .entity('Position', player_id.into(), 0_u8, 0_usize);
+
             assert(__player_position_position_raw.len() > 0_usize, 'Position not found');
+
+            let mut unpacking: felt252 = 0;
+            let mut offset = 0;
+
             let __player_position_position = dojo::Packable::<Position>::unpack(
-                ref __player_position_position_raw
+                ref __player_position_position_raw, ref unpacking, ref offset
             )
                 .expect('Position failed to deserialize');
 
             let mut __player_position_player_raw = ctx
                 .world
                 .entity('Player', player_id.into(), 0_u8, 0_usize);
+
             assert(__player_position_player_raw.len() > 0_usize, 'Player not found');
+
+            let mut unpacking: felt252 = 0;
+            let mut offset = 0;
+
             let __player_position_player = dojo::Packable::<Player>::unpack(
-                ref __player_position_player_raw
+                ref __player_position_player_raw, ref unpacking, ref offset
             )
                 .expect('Player failed to deserialize');
             let player_position = (__player_position_position, __player_position_player);
@@ -759,18 +867,28 @@ mod move {
             let mut __player_position_position_raw = ctx
                 .world
                 .entity('Position', player_id.into(), 0_u8, 0_usize);
+
             assert(__player_position_position_raw.len() > 0_usize, 'Position not found');
+
+            let mut unpacking: felt252 = 0;
+            let mut offset = 0;
+
             let __player_position_position = dojo::Packable::<Position>::unpack(
-                ref __player_position_position_raw
+                ref __player_position_position_raw, ref unpacking, ref offset
             )
                 .expect('Position failed to deserialize');
 
             let mut __player_position_player_raw = ctx
                 .world
                 .entity('Player', player_id.into(), 0_u8, 0_usize);
+
             assert(__player_position_player_raw.len() > 0_usize, 'Player not found');
+
+            let mut unpacking: felt252 = 0;
+            let mut offset = 0;
+
             let __player_position_player = dojo::Packable::<Player>::unpack(
-                ref __player_position_player_raw
+                ref __player_position_player_raw, ref unpacking, ref offset
             )
                 .expect('Player failed to deserialize');
             let player_position = (__player_position_position, __player_position_player);
@@ -783,18 +901,28 @@ mod move {
                 let mut __player_position_position_raw = ctx
                     .world
                     .entity('Position', player_id.into(), 0_u8, 0_usize);
+
                 assert(__player_position_position_raw.len() > 0_usize, 'Position not found');
+
+                let mut unpacking: felt252 = 0;
+                let mut offset = 0;
+
                 let __player_position_position = dojo::Packable::<Position>::unpack(
-                    ref __player_position_position_raw
+                    ref __player_position_position_raw, ref unpacking, ref offset
                 )
                     .expect('Position failed to deserialize');
 
                 let mut __player_position_player_raw = ctx
                     .world
                     .entity('Player', player_id.into(), 0_u8, 0_usize);
+
                 assert(__player_position_player_raw.len() > 0_usize, 'Player not found');
+
+                let mut unpacking: felt252 = 0;
+                let mut offset = 0;
+
                 let __player_position_player = dojo::Packable::<Player>::unpack(
-                    ref __player_position_player_raw
+                    ref __player_position_player_raw, ref unpacking, ref offset
                 )
                     .expect('Player failed to deserialize');
                 let player_position = (__player_position_position, __player_position_player);
@@ -827,8 +955,12 @@ mod move {
                             loop {
                                 match raw_entities.pop_front() {
                                     Option::Some(raw) => {
+                                        let mut unpacking: felt252 = 0;
+                                        let mut offset = 0;
                                         let mut raw = *raw;
-                                        let e = dojo::Packable::<Position>::unpack(ref raw)
+                                        let e = dojo::Packable::<Position>::unpack(
+                                            ref raw, ref unpacking, ref offset
+                                        )
                                             .expect('Position failed to deserialize');
                                         entities.append(e);
                                     },
@@ -851,8 +983,12 @@ mod move {
                             loop {
                                 match raw_entities.pop_front() {
                                     Option::Some(raw) => {
+                                        let mut unpacking: felt252 = 0;
+                                        let mut offset = 0;
                                         let mut raw = *raw;
-                                        let e = dojo::Packable::<Player>::unpack(ref raw)
+                                        let e = dojo::Packable::<Player>::unpack(
+                                            ref raw, ref unpacking, ref offset
+                                        )
                                             .expect('Player failed to deserialize');
                                         entities.append(e);
                                     },
@@ -875,18 +1011,28 @@ mod move {
                 let mut __player_position_position_raw = ctx
                     .world
                     .entity('Position', player_id.into(), 0_u8, 0_usize);
+
                 assert(__player_position_position_raw.len() > 0_usize, 'Position not found');
+
+                let mut unpacking: felt252 = 0;
+                let mut offset = 0;
+
                 let __player_position_position = dojo::Packable::<Position>::unpack(
-                    ref __player_position_position_raw
+                    ref __player_position_position_raw, ref unpacking, ref offset
                 )
                     .expect('Position failed to deserialize');
 
                 let mut __player_position_player_raw = ctx
                     .world
                     .entity('Player', player_id.into(), 0_u8, 0_usize);
+
                 assert(__player_position_player_raw.len() > 0_usize, 'Player not found');
+
+                let mut unpacking: felt252 = 0;
+                let mut offset = 0;
+
                 let __player_position_player = dojo::Packable::<Player>::unpack(
-                    ref __player_position_player_raw
+                    ref __player_position_player_raw, ref unpacking, ref offset
                 )
                     .expect('Player failed to deserialize');
                 let player_position = (__player_position_position, __player_position_player);
@@ -911,18 +1057,28 @@ mod move {
             let mut __player_position_position_raw = ctx
                 .world
                 .entity('Position', player_id.into(), 0_u8, 0_usize);
+
             assert(__player_position_position_raw.len() > 0_usize, 'Position not found');
+
+            let mut unpacking: felt252 = 0;
+            let mut offset = 0;
+
             let __player_position_position = dojo::Packable::<Position>::unpack(
-                ref __player_position_position_raw
+                ref __player_position_position_raw, ref unpacking, ref offset
             )
                 .expect('Position failed to deserialize');
 
             let mut __player_position_player_raw = ctx
                 .world
                 .entity('Player', player_id.into(), 0_u8, 0_usize);
+
             assert(__player_position_player_raw.len() > 0_usize, 'Player not found');
+
+            let mut unpacking: felt252 = 0;
+            let mut offset = 0;
+
             let __player_position_player = dojo::Packable::<Player>::unpack(
-                ref __player_position_player_raw
+                ref __player_position_player_raw, ref unpacking, ref offset
             )
                 .expect('Player failed to deserialize');
             let player_position = (__player_position_position, __player_position_player);
@@ -988,12 +1144,22 @@ error: Plugin diagnostic: Component types cannot be empty
         let err = get!(ctx.world, player_id.into(), ());
                   ^***********************************^
 
-error: Plugin diagnostic: Unexpected argument type. Expected: "dojo::database::query::Query", found: "(?78, ?79, ?80, ?81, ?82)".
+error: Plugin diagnostic: Unexpected argument type. Expected: "dojo::database::query::Query", found: "(?105, ?106, ?107, ?108, ?109)".
  --> lib.cairo:50:26
         set !(ctx.world, (0, 0, 0, 0, 0), (
                          ^*************^
 
-error: Plugin diagnostic: Unexpected argument type. Expected: "dojo::database::query::Query", found: "(?90, ?91, ?92, ?93, ?94)".
+error: Plugin diagnostic: Unexpected argument type. Expected: "dojo::database::query::Query", found: "(?120, ?121, ?122, ?123, ?124)".
  --> lib.cairo:50:26
         set !(ctx.world, (0, 0, 0, 0, 0), (
                          ^*************^
+
+error: Trait has no implementation in context: dojo::packable::Packable::<test::Player>
+ --> spawn:48:41
+                        dojo::Packable::pack(@Player { name: name }, ref packing, ref offset, ref calldata);
+                                        ^**^
+
+error: Trait has no implementation in context: dojo::packable::Packable::<test::Position>
+ --> move:76:81
+                                            let e = dojo::Packable::<Position>::unpack(ref raw, ref unpacking, ref offset).expect('Position failed to deserialize');
+                                                                                ^****^

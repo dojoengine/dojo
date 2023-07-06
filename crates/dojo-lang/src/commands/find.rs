@@ -125,9 +125,11 @@ impl CommandMacroTrait for FindCommand {
                                 loop {
                                     match raw_entities.pop_front() {
                                         Option::Some(raw) => {
+                                            let mut unpacking: felt252 = 0;
+                                            let mut offset = 0;
                                             let mut raw = *raw;
-                                            let e = dojo::Packable::<$component$>::unpack(ref \
-                         raw).expect('$deser_err_msg$');
+                                            let e = dojo::Packable::<$component$>::unpack(ref raw, \
+                         ref unpacking, ref offset).expect('$deser_err_msg$');
                                             entities.append(e);
                                         },
                                         Option::None(_) => {
