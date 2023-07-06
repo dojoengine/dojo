@@ -1,7 +1,5 @@
 #[system]
 mod spawn {
-    use array::ArrayTrait;
-    use box::BoxTrait;
     use traits::Into;
     use dojo::world::Context;
 
@@ -18,8 +16,6 @@ mod spawn {
 
 #[system]
 mod move {
-    use array::ArrayTrait;
-    use box::BoxTrait;
     use traits::Into;
     use dojo::world::Context;
 
