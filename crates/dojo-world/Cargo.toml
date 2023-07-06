@@ -15,6 +15,7 @@ cairo-lang-starknet.workspace = true
 camino.workspace = true
 convert_case.workspace = true
 dojo-types = { path = "../dojo-types" }
+futures = "0.3.28"
 reqwest = { version = "0.11.18", default-features = false, features = [
     "rustls-tls",
 ] }
@@ -25,10 +26,13 @@ smol_str.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
+tokio.workspace = true
 url = "2.2.2"
 
 [dev-dependencies]
 assert_fs = "1.0.9"
+assert_matches = "1.5.0"
 dojo-test-utils = { path = "../dojo-test-utils" }
 dojo-lang = { path = "../dojo-lang" }
 tokio = { version = "1.28.0", features = ["full"] }
+

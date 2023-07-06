@@ -6,8 +6,9 @@ use dojo_world::manifest::{Manifest, ManifestError};
 use dojo_world::migration::strategy::{prepare_for_migration, MigrationOutput, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{Declarable, Deployable, MigrationError, RegisterOutput};
+use dojo_world::utils::TransactionWaiter;
 use scarb::core::Config;
-use starknet::accounts::ConnectedAccount;
+use starknet::accounts::{ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::{FieldElement, InvokeTransactionResult};
 
 #[cfg(test)]
@@ -15,19 +16,22 @@ use starknet::core::types::{FieldElement, InvokeTransactionResult};
 mod migration_test;
 mod ui;
 
+use starknet::providers::Provider;
+use starknet::signers::Signer;
 use ui::MigrationUi;
 
 use self::ui::{bold_message, italic_message};
 
-pub async fn execute<P, A>(
+pub async fn execute<U, P, S>(
     world_address: Option<FieldElement>,
-    migrator: A,
-    target_dir: P,
+    migrator: SingleOwnerAccount<P, S>,
+    target_dir: U,
     ws_config: &Config,
 ) -> Result<()>
 where
-    P: AsRef<Path>,
-    A: ConnectedAccount + Sync + 'static,
+    U: AsRef<Path>,
+    P: Provider + Sync + Send + 'static,
+    S: Signer + Sync + Send + 'static,
 {
     ws_config.ui().print_step(1, "🌎", "Building World state...");
 
@@ -100,13 +104,14 @@ where
 }
 
 // TODO: display migration type (either new or update)
-async fn execute_strategy<A>(
+async fn execute_strategy<P, S>(
     strategy: &mut MigrationStrategy,
-    migrator: A,
+    migrator: SingleOwnerAccount<P, S>,
     ws_config: &Config,
 ) -> Result<MigrationOutput>
 where
-    A: ConnectedAccount + Sync + 'static,
+    P: Provider + Sync + Send + 'static,
+    S: Signer + Sync + Send + 'static,
 {
     let executor_output = match &mut strategy.executor {
         Some(executor) => {
@@ -132,6 +137,10 @@ where
                 let addr = strategy.world_address()?;
                 let InvokeTransactionResult { transaction_hash } =
                     WorldContract::new(addr, &migrator).set_executor(res.contract_address).await?;
+
+                let _ = TransactionWaiter::new(transaction_hash, migrator.provider())
+                    .await
+                    .map_err(MigrationError::<S, <P as Provider>::Error>::WaitingError);
 
                 ws_config.ui().print_hidden_sub(format!("updated at: {transaction_hash:#x}"));
             }
@@ -185,13 +194,14 @@ where
     })
 }
 
-async fn register_components<A>(
+async fn register_components<P, S>(
     strategy: &MigrationStrategy,
-    migrator: &A,
+    migrator: &SingleOwnerAccount<P, S>,
     ws_config: &Config,
 ) -> Result<Option<RegisterOutput>>
 where
-    A: ConnectedAccount + Sync + 'static,
+    P: Provider + Sync + Send + 'static,
+    S: Signer + Sync + Send + 'static,
 {
     let components = &strategy.components;
 
@@ -235,18 +245,23 @@ where
         .await
         .map_err(|e| anyhow!("Failed to register components to World: {e}"))?;
 
+    let _ = TransactionWaiter::new(transaction_hash, migrator.provider())
+        .await
+        .map_err(MigrationError::<S, <P as Provider>::Error>::WaitingError);
+
     ws_config.ui().print_hidden_sub(format!("registered at: {transaction_hash:#x}"));
 
     Ok(Some(RegisterOutput { transaction_hash, declare_output }))
 }
 
-async fn register_systems<A>(
+async fn register_systems<P, S>(
     strategy: &MigrationStrategy,
-    migrator: &A,
+    migrator: &SingleOwnerAccount<P, S>,
     ws_config: &Config,
 ) -> Result<Option<RegisterOutput>>
 where
-    A: ConnectedAccount + Sync + 'static,
+    P: Provider + Sync + Send + 'static,
+    S: Signer + Sync + Send + 'static,
 {
     let systems = &strategy.systems;
 
@@ -289,6 +304,10 @@ where
         .register_systems(&systems.iter().map(|s| s.diff.local).collect::<Vec<_>>())
         .await
         .map_err(|e| anyhow!("Failed to register systems to World: {e}"))?;
+
+    let _ = TransactionWaiter::new(transaction_hash, migrator.provider())
+        .await
+        .map_err(MigrationError::<S, <P as Provider>::Error>::WaitingError);
 
     ws_config.ui().print_hidden_sub(format!("registered at: {transaction_hash:#x}"));
 
