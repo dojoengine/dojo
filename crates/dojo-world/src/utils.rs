@@ -59,6 +59,8 @@ where
     provider: &'a P,
     /// The future that get the transaction receipt.
     future: Option<GetReceiptFuture<'a, <P as Provider>::Error>>,
+    /// The time when the transaction waiter was polled.
+    started_at: Option<Instant>,
 }
 
 impl<'a, P> TransactionWaiter<'a, P>
@@ -74,6 +76,7 @@ where
             provider,
             tx_hash: tx,
             future: None,
+            started_at: None,
             status: Self::DEFAULT_STATUS,
             timeout: Self::DEFAULT_TIMEOUT,
             interval: tokio::time::interval_at(
@@ -93,6 +96,11 @@ where
         self.status = status;
         self
     }
+
+    pub fn with_timeout(mut self, timeout: Duration) -> Self {
+        self.timeout = timeout;
+        self
+    }
 }
 
 impl<'a, P> Future for TransactionWaiter<'a, P>
@@ -103,11 +111,16 @@ where
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.get_mut();
-        let elapsed = Instant::now();
+
+        if this.started_at.is_none() {
+            this.started_at = Some(Instant::now());
+        }
 
         loop {
-            if elapsed.elapsed() > this.timeout {
-                return Poll::Ready(Err(TransactionWaitingError::Timeout));
+            if let Some(started_at) = this.started_at {
+                if started_at.elapsed() > this.timeout {
+                    return Poll::Ready(Err(TransactionWaitingError::Timeout));
+                }
             }
 
             if let Some(mut flush) = this.future.take() {
@@ -160,5 +173,28 @@ fn transaction_status_from_receipt(receipt: &TransactionReceipt) -> TransactionS
         TransactionReceipt::Declare(receipt) => receipt.status,
         TransactionReceipt::L1Handler(receipt) => receipt.status,
         TransactionReceipt::DeployAccount(receipt) => receipt.status,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Duration, TransactionWaiter};
+
+    use assert_matches::assert_matches;
+    use dojo_test_utils::sequencer::{SequencerConfig, TestSequencer};
+    use starknet::core::types::FieldElement;
+    use starknet::providers::jsonrpc::HttpTransport;
+    use starknet::providers::JsonRpcClient;
+
+    #[tokio::test]
+    async fn should_timeout_on_nonexistant_transaction() {
+        let sequencer = TestSequencer::start(SequencerConfig::default()).await;
+        let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
+        assert_matches!(
+            TransactionWaiter::new(FieldElement::from_hex_be("0x1234").unwrap(), &provider)
+                .with_timeout(Duration::from_secs(1))
+                .await,
+            Err(super::TransactionWaitingError::Timeout)
+        );
     }
 }

@@ -2120,6 +2120,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "assert_fs",
+ "assert_matches",
  "async-trait",
  "cairo-lang-filesystem",
  "cairo-lang-project",
