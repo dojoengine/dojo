@@ -32,7 +32,7 @@ pub enum TransactionWaitingError<E> {
 /// * `tx_hash` - The hash of the transaction to wait for.
 /// * `status` - The status to wait for. Defaults to `TransactionStatus::AcceptedOnL2`.
 /// * `interval` - Poll the transaction every `interval` miliseconds. Miliseconds are used so that
-///   we can be more precise with the polling interval. Defaults to 1 second.
+///   we can be more precise with the polling interval. Defaults to 250ms.
 /// * `timeout` - The maximum amount of time to wait for the transaction to achieve `status` status.
 ///   Defaults to 60 seconds.
 /// * `provider` - The provider to use for polling the transaction.
@@ -75,7 +75,7 @@ where
     P: Provider + Send,
 {
     const DEFAULT_TIMEOUT: Duration = Duration::from_secs(60);
-    const DEFAULT_INTERVAL: Duration = Duration::from_millis(200);
+    const DEFAULT_INTERVAL: Duration = Duration::from_millis(250);
     const DEFAULT_STATUS: TransactionStatus = TransactionStatus::AcceptedOnL2;
 
     pub fn new(tx: FieldElement, provider: &'a P) -> Self {
