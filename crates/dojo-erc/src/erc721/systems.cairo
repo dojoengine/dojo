@@ -4,15 +4,21 @@ mod erc721_approve {
     use traits::Into;
     use dojo::world::Context;
     use dojo_erc::erc721::components::{Owners, TokenApprovals};
+    use dojo_erc::erc721::erc721::ERC721;
 
     fn execute(ctx: Context, token_id: felt252, operator: felt252) {
         let owner = get !(ctx.world, token_id.into(), Owners);
+        let is_approved_for_all = get !(
+            ctx.world, (owner.address, operator).into_partitioned(), OperatorApprovals
+        );
         assert(
-            owner.address == ctx.orign | is_approved_for_all(owner, caller),
+            owner.address == operator || ERC721::felt252_into_bool(is_approved_for_all.approved),
             'ERC721: unauthorized caller'
         );
         set !(
-            ctx.world, (token, operator).into_partitioned(), (TokenApprovals { address: operator })
+            ctx.world,
+            (token_id, operator).into_partitioned(),
+            (TokenApprovals { address: operator })
         )
     }
 }
@@ -50,7 +56,7 @@ mod erc721_transfer_from {
             ctx.world, (owner.address, from).into_partitioned(), OperatorApprovals
         );
         assert(
-            owner.address == from || felt252_into_bool(is_approved_for_all.approved),
+            owner.address == from || ERC721::felt252_into_bool(is_approved_for_all.approved),
             'ERC721: unauthorized caller'
         );
         assert(!to.is_zero(), 'ERC721: invalid receiver');
