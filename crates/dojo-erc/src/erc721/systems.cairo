@@ -3,9 +3,14 @@ mod erc721_approve {
     use starknet::{ContractAddress, get_caller_address};
     use traits::Into;
     use dojo::world::Context;
-    use dojo_erc::erc721::components::TokenApprovals;
+    use dojo_erc::erc721::components::{Owners, TokenApprovals};
 
     fn execute(ctx: Context, token: felt252, operator: felt252) {
+        let owner = get !(ctx.world, token.into(), Owners);
+        assert(
+            owner.address == ctx.orign | is_approved_for_all(owner, caller),
+            'ERC721: unauthorized caller'
+        );
         set !(
             ctx.world, (token, operator).into_partitioned(), (TokenApprovals { address: operator })
         )
