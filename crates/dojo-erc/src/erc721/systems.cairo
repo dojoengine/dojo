@@ -50,7 +50,7 @@ mod erc721_transfer_from {
             ctx.world, (owner.address, from).into_partitioned(), OperatorApprovals
         );
         assert(
-            owner.address == from || felt252_into_bool(is_approved_for_all.approve),
+            owner.address == from || felt252_into_bool(is_approved_for_all.approved),
             'ERC721: unauthorized caller'
         );
         assert(!to.is_zero(), 'ERC721: invalid receiver');
