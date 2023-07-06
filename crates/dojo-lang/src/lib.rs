@@ -8,5 +8,6 @@ pub mod compiler;
 pub mod component;
 pub mod db;
 mod manifest;
+mod packable;
 pub mod plugin;
 pub mod system;

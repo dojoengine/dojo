@@ -39,8 +39,8 @@ impl PackableFoo of Packable<Foo> {
         })
     }
     #[inline(always)]
-    fn size() -> usize {
-        Packable::<felt252>::size() + Packable::<u128>::size()
+    fn size(self: @Foo) -> usize {
+        Packable::<felt252>::size(self.a) + Packable::<u128>::size(self.b)
     }
 }
 
@@ -61,8 +61,8 @@ impl PackableFizz of Packable<Fizz> {
         })
     }
     #[inline(always)]
-    fn size() -> usize {
-        Packable::<felt252>::size()
+    fn size(self: @Fizz) -> usize {
+        Packable::<felt252>::size(self.a)
     }
 }
 

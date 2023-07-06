@@ -7,13 +7,13 @@ ExpandContractTestRunner
 use array::ArrayTrait;
 use serde::Serde;
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Component, Copy, Drop, Serde, Packable)]
 struct Position {
     x: felt252,
     y: felt252,
 }
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Component, Copy, Drop, Serde, Packable)]
 #[component(indexed: true)]
 struct Player {
     name: felt252, 
@@ -217,6 +217,39 @@ mod position {
     }
 }
 
+impl PackablePosition of dojo::Packable<Position> {
+    #[inline(always)]
+    fn pack(
+        self: @Position, ref packing: felt252, ref packing_offset: u8, ref packed: Array<felt252>
+    ) {
+        dojo::Packable::pack(self.x, ref packing, ref packing_offset, ref packed);
+        dojo::Packable::pack(self.y, ref packing, ref packing_offset, ref packed);
+    }
+    #[inline(always)]
+    fn unpack(
+        ref packed: Span<felt252>, ref unpacking: felt252, ref unpacking_offset: u8
+    ) -> Option<Position> {
+        option::Option::Some(
+            Position {
+                x: option::OptionTrait::unwrap(
+                    dojo::Packable::<felt252>::unpack(
+                        ref packed, ref unpacking, ref unpacking_offset
+                    )
+                ),
+                y: option::OptionTrait::unwrap(
+                    dojo::Packable::<felt252>::unpack(
+                        ref packed, ref unpacking, ref unpacking_offset
+                    )
+                ),
+            }
+        )
+    }
+    #[inline(always)]
+    fn size(self: @Position) -> usize {
+        dojo::Packable::size(self.x) + dojo::Packable::size(self.y)
+    }
+}
+
 struct Player {
     name: felt252, 
 }
@@ -256,6 +289,33 @@ mod player {
     #[external(v0)]
     fn is_indexed(self: @ContractState) -> bool {
         bool::True(())
+    }
+}
+
+impl PackablePlayer of dojo::Packable<Player> {
+    #[inline(always)]
+    fn pack(
+        self: @Player, ref packing: felt252, ref packing_offset: u8, ref packed: Array<felt252>
+    ) {
+        dojo::Packable::pack(self.name, ref packing, ref packing_offset, ref packed);
+    }
+    #[inline(always)]
+    fn unpack(
+        ref packed: Span<felt252>, ref unpacking: felt252, ref unpacking_offset: u8
+    ) -> Option<Player> {
+        option::Option::Some(
+            Player {
+                name: option::OptionTrait::unwrap(
+                    dojo::Packable::<felt252>::unpack(
+                        ref packed, ref unpacking, ref unpacking_offset
+                    )
+                ),
+            }
+        )
+    }
+    #[inline(always)]
+    fn size(self: @Player) -> usize {
+        dojo::Packable::size(self.name)
     }
 }
 
@@ -1153,13 +1213,3 @@ error: Plugin diagnostic: Unexpected argument type. Expected: "dojo::database::q
  --> lib.cairo:50:26
         set !(ctx.world, (0, 0, 0, 0, 0), (
                          ^*************^
-
-error: Trait has no implementation in context: dojo::packable::Packable::<test::Player>
- --> spawn:48:41
-                        dojo::Packable::pack(@Player { name: name }, ref packing, ref offset, ref calldata);
-                                        ^**^
-
-error: Trait has no implementation in context: dojo::packable::Packable::<test::Position>
- --> move:76:81
-                                            let e = dojo::Packable::<Position>::unpack(ref raw, ref unpacking, ref offset).expect('Position failed to deserialize');
-                                                                                ^****^

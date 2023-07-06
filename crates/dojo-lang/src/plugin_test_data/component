@@ -6,7 +6,7 @@ ExpandContractTestRunner
 //! > cairo_code
 use serde::Serde;
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Component, Copy, Drop, Serde, Packable)]
 struct Position {
     x: felt252,
     y: felt252
@@ -30,12 +30,7 @@ impl PositionImpl of PositionTrait {
     }
 }
 
-#[derive(Component, Serde)]
-struct Roles {
-    role_ids: Array<u8>
-}
-
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Component, Copy, Drop, Serde, Packable)]
 struct Player {
     name: felt252, 
 }
@@ -105,45 +100,36 @@ mod position {
     }
 }
 
-struct Roles {
-    role_ids: Array<u8>
-}
-
-#[starknet::interface]
-trait IRoles<T> {
-    fn name(self: @T) -> felt252;
-    fn len(self: @T) -> u8;
-}
-
-#[starknet::contract]
-mod roles {
-    use super::Roles;
-
-    #[storage]
-    struct Storage {}
-
-    #[external(v0)]
-    fn schema(self: @ContractState) -> Array<(felt252, felt252, usize, u8)> {
-        let mut arr = array::ArrayTrait::new();
-        array::ArrayTrait::append(ref arr, ('role_ids', 'Array<u8>', 0, 0));
-
-        arr
+impl PackablePosition of dojo::Packable<Position> {
+    #[inline(always)]
+    fn pack(
+        self: @Position, ref packing: felt252, ref packing_offset: u8, ref packed: Array<felt252>
+    ) {
+        dojo::Packable::pack(self.x, ref packing, ref packing_offset, ref packed);
+        dojo::Packable::pack(self.y, ref packing, ref packing_offset, ref packed);
     }
-
-
-    #[external(v0)]
-    fn name(self: @ContractState) -> felt252 {
-        'Roles'
+    #[inline(always)]
+    fn unpack(
+        ref packed: Span<felt252>, ref unpacking: felt252, ref unpacking_offset: u8
+    ) -> Option<Position> {
+        option::Option::Some(
+            Position {
+                x: option::OptionTrait::unwrap(
+                    dojo::Packable::<felt252>::unpack(
+                        ref packed, ref unpacking, ref unpacking_offset
+                    )
+                ),
+                y: option::OptionTrait::unwrap(
+                    dojo::Packable::<felt252>::unpack(
+                        ref packed, ref unpacking, ref unpacking_offset
+                    )
+                ),
+            }
+        )
     }
-
-    #[external(v0)]
-    fn len(self: @ContractState) -> usize {
-        1_usize
-    }
-
-    #[external(v0)]
-    fn is_indexed(self: @ContractState) -> bool {
-        bool::False(())
+    #[inline(always)]
+    fn size(self: @Position) -> usize {
+        dojo::Packable::size(self.x) + dojo::Packable::size(self.y)
     }
 }
 
@@ -186,6 +172,33 @@ mod player {
     #[external(v0)]
     fn is_indexed(self: @ContractState) -> bool {
         bool::False(())
+    }
+}
+
+impl PackablePlayer of dojo::Packable<Player> {
+    #[inline(always)]
+    fn pack(
+        self: @Player, ref packing: felt252, ref packing_offset: u8, ref packed: Array<felt252>
+    ) {
+        dojo::Packable::pack(self.name, ref packing, ref packing_offset, ref packed);
+    }
+    #[inline(always)]
+    fn unpack(
+        ref packed: Span<felt252>, ref unpacking: felt252, ref unpacking_offset: u8
+    ) -> Option<Player> {
+        option::Option::Some(
+            Player {
+                name: option::OptionTrait::unwrap(
+                    dojo::Packable::<felt252>::unpack(
+                        ref packed, ref unpacking, ref unpacking_offset
+                    )
+                ),
+            }
+        )
+    }
+    #[inline(always)]
+    fn size(self: @Player) -> usize {
+        dojo::Packable::size(self.name)
     }
 }
 
