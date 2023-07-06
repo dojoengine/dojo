@@ -146,17 +146,12 @@ mod ERC721 {
         ref self: ContractState, from: ContractAddress, to: ContractAddress, token_id: u256
     ) {
         let owner = owner_of(@self, token_id);
-        assert(
-            owner == from || is_approved_for_all(@self, owner, get_caller_address()),
-            'ERC721: unauthorized caller'
-        );
-        assert(!to.is_zero(), 'ERC721: invalid receiver');
-        assert(from == owner, 'ERC721: wrong sender');
         let mut calldata = ArrayTrait::new();
         calldata.append(from.into());
         calldata.append(to.into());
         calldata.append(u256_into_felt252(token_id));
         world(@self).execute('erc721_transfer_from'.into(), calldata.span());
+        self.emit(Transfer { from, to, token_id });
     }
 
     // NOTE: temporary, until we have inline commands outside of systems
