@@ -89,9 +89,9 @@ impl PackableFelt252 of Packable<felt252> {
     fn pack(
         self: @felt252, ref packing: felt252, ref packing_offset: u8, ref packed: Array<felt252>
     ) {
-        if packing_offset == 0 {
-            return packed.append(*self);
-        }
+        // if packing_offset == 0 {
+        //     return packed.append(*self);
+        // }
 
         return pack(self, 252, ref packing, ref packing_offset, ref packed);
     }
@@ -99,9 +99,9 @@ impl PackableFelt252 of Packable<felt252> {
     fn unpack(
         ref packed: Span<felt252>, ref unpacking: felt252, ref unpacking_offset: u8
     ) -> Option<felt252> {
-        if unpacking_offset == 0 {
-            return Option::Some(*packed.pop_front()?);
-        }
+        // if unpacking_offset == 0 {
+        //     return Option::Some(*packed.pop_front()?);
+        // }
 
         return unpack(252, ref packed, ref unpacking, ref unpacking_offset);
     }

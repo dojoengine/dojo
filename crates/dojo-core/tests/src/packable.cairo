@@ -55,6 +55,33 @@ fn test_pack_unpack_single() {
     assert(result == 18_u8, 'Unpacked equals packed');
 }
 
+
+#[test]
+#[available_gas(9000000)]
+fn test_pack_unpack_felt252_u128() {
+    let mut packed = array::ArrayTrait::new();
+    let mut packing: felt252 = 0;
+    let mut offset = 0;
+    420_felt252.pack(ref packing, ref offset, ref packed);
+    1337_u128.pack(ref packing, ref offset, ref packed);
+    packed.append(packing);
+
+    let mut unpacking: felt252 = packed.pop_front().unwrap();
+    let mut un_offset = 0;
+    let mut packed_span = packed.span();
+
+    assert(
+        Packable::<felt252>::unpack(ref packed_span, ref unpacking, ref un_offset).unwrap() 
+        == 420_felt252, 
+        'Types u8'
+    );
+    assert(
+        Packable::<u128>::unpack(ref packed_span, ref unpacking, ref un_offset).unwrap() 
+        == 1337_u128, 
+        'Types u8'
+    );
+}
+
 #[test]
 #[available_gas(100000000)]
 fn test_pack_multiple() {

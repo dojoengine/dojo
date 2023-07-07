@@ -182,6 +182,8 @@ fn test_set_entity_admin() {
     world.execute('bar'.into(), data.span());
 
     let foo = world.entity('Foo'.into(), alice.into(), 0, 0);
+    (*foo[0]).print();
+    (*foo[1]).print();
     assert(*foo[0] == 420, 'data not stored');
     assert(*foo[1] == 1337, 'data not stored');
 }
