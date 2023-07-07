@@ -29,7 +29,7 @@ impl PackableFoo of Packable<Foo> {
     #[inline(always)]
     fn pack(self: @Foo, ref packing: felt252, ref packing_offset: u8, ref packed: Array<felt252>) {
         self.a.pack(ref packing, ref packing_offset, ref packed);
-        self.b.pack(ref packing, ref packing_offset, ref packed)
+        self.b.pack(ref packing, ref packing_offset, ref packed);
     }
     #[inline(always)]
     fn unpack(ref packed: Span<felt252>, ref unpacking: felt252, ref unpacking_offset: u8) -> Option<Foo> {
