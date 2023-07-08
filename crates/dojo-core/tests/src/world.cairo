@@ -181,11 +181,12 @@ fn test_set_entity_admin() {
     data.append(1337);
     world.execute('bar'.into(), data.span());
 
-    let foo = world.entity('Foo'.into(), alice.into(), 0, 0);
-    (*foo[0]).print();
-    (*foo[1]).print();
-    assert(*foo[0] == 420, 'data not stored');
-    assert(*foo[1] == 1337, 'data not stored');
+    let mut packed_span = world.entity('Foo'.into(), alice.into(), 0, 0);
+    let mut unpacking: felt252 = *packed_span.pop_front().unwrap();
+    let mut un_offset = 0;
+    let foo = Packable::<Foo>::unpack(ref packed_span, ref unpacking, ref un_offset).unwrap();
+    assert(foo.a == 420, 'data not stored');
+    assert(foo.b == 1337, 'data not stored');
 }
 
 #[test]
