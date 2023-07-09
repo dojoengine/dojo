@@ -3867,6 +3867,7 @@ dependencies = [
  "cairo-lang-casm",
  "cairo-lang-starknet",
  "cairo-vm",
+ "convert_case 0.6.0",
  "flate2",
  "futures",
  "lazy_static",
