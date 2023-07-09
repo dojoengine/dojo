@@ -9,16 +9,19 @@ use blockifier::state::cached_state::{CachedState, MutRefState};
 use blockifier::state::state_api::{State, StateReader};
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::errors::TransactionExecutionError;
-use blockifier::transaction::objects::{AccountTransactionContext, TransactionExecutionInfo};
+use blockifier::transaction::objects::{
+    AccountTransactionContext, ResourcesMapping, TransactionExecutionInfo,
+};
 use blockifier::transaction::transaction_execution::Transaction;
 use blockifier::transaction::transactions::ExecutableTransaction;
+use convert_case::{Case, Casing};
 use starknet::core::types::{FeeEstimate, FieldElement, StateUpdate, TransactionStatus};
 use starknet_api::block::{BlockHash, BlockNumber, BlockTimestamp, GasPrice};
 use starknet_api::core::{ClassHash, ContractAddress, GlobalRoot, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};
 use starknet_api::transaction::{DeclareTransactionV0V1, DeployTransaction, TransactionHash};
 use starknet_api::{patricia_key, stark_felt};
-use tracing::{info, warn};
+use tracing::{info, trace, warn};
 
 pub mod block;
 pub mod config;
@@ -132,6 +135,11 @@ impl StarknetWrapper {
 
         match res {
             Ok(exec_info) => {
+                trace!(
+                    "Transaction resource usage: {}",
+                    pretty_print_resources(&exec_info.actual_resources)
+                );
+
                 let status = if exec_info.revert_error.is_some() {
                     // TODO: change the status to `Reverted` status once the variant is implemented.
                     TransactionStatus::Rejected
@@ -481,4 +489,31 @@ fn apply_new_state(old_state: &mut DictStateReader, new_state: &mut CachedState<
     state_diff.address_to_nonce.into_iter().for_each(|(contract_address, nonce)| {
         old_state.address_to_nonce.insert(contract_address, nonce);
     });
+}
+
+fn pretty_print_resources(resources: &ResourcesMapping) -> String {
+    let mut mapped_strings: Vec<_> = resources
+        .0
+        .iter()
+        .map(|(k, v)| match k.as_str() {
+            "l1_gas_usage" => format!("L1 Gas: {}", v),
+            "range_check_builtin" => format!("Range Checks: {}", v),
+            "ecdsa_builtin" => format!("ECDSA: {}", v),
+            "n_steps" => format!("Steps: {}", v),
+            "pedersen_builtin" => format!("Pedersen: {}", v),
+            "bitwise_builtin" => format!("Bitwise: {}", v),
+            "keccak_builtin" => format!("Keccak: {}", v),
+            _ => format!("{}: {}", k.to_case(Case::Title), v),
+        })
+        .collect::<Vec<String>>();
+
+    // Sort the strings alphabetically
+    mapped_strings.sort();
+
+    // Prepend "Steps" if it exists, so it is always first
+    if let Some(steps) = resources.0.get("n_steps") {
+        mapped_strings.insert(0, format!("Steps: {}", steps));
+    }
+
+    mapped_strings.join(" | ")
 }

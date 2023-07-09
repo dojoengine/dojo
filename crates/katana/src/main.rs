@@ -15,7 +15,7 @@ use args::KatanaArgs;
 #[tokio::main]
 async fn main() {
     env_logger::Builder::from_env(Env::default().default_filter_or(
-        "info,katana_rpc=debug,katana_core=debug,blockifier=off,jsonrpsee_server=off,hyper=off",
+        "info,katana_rpc=debug,katana_core=trace,blockifier=off,jsonrpsee_server=off,hyper=off",
     ))
     .init();
 
