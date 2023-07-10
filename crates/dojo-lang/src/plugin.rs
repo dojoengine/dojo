@@ -28,6 +28,7 @@ use smol_str::SmolStr;
 use url::Url;
 
 use crate::component::handle_component_struct;
+use crate::serde::handle_serde_len_struct;
 use crate::system::System;
 
 const SYSTEM_ATTR: &str = "system";
@@ -153,6 +154,9 @@ impl MacroPlugin for DojoPlugin {
                                     &mut aux_data,
                                     struct_ast.clone(),
                                 ));
+                            }
+                            "SerdeLen" => {
+                                rewrite_nodes.push(handle_serde_len_struct(db, struct_ast.clone()));
                             }
                             _ => continue,
                         }

@@ -67,7 +67,8 @@ impl CommandMacroTrait for FindCommand {
                     RewriteNode::interpolate_patched(
                         "
                         let (__$query_id$_$query_subtype$_ids, __$query_id$_$query_subtype$_raw) = \
-                         $world$.entities('$component$', $partition$);
+                         $world$.entities('$component$', $partition$, \
+                         dojo::SerdeLen::<$component$>::len());
                         __$query_id$_ids.append(__$query_id$_$query_subtype$_ids);
                         __$query_id$_entities_raw.append(__$query_id$_$query_subtype$_raw);
                         ",

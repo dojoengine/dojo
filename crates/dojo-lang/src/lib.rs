@@ -9,4 +9,5 @@ pub mod component;
 pub mod db;
 mod manifest;
 pub mod plugin;
+mod serde;
 pub mod system;

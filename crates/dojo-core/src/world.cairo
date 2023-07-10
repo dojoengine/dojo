@@ -26,7 +26,7 @@ trait IWorld<T> {
     ) -> Span<felt252>;
     fn set_entity(ref self: T, component: felt252, query: Query, offset: u8, value: Span<felt252>);
     fn entities(
-        self: @T, component: felt252, partition: felt252
+        self: @T, component: felt252, partition: felt252, length: usize
     ) -> (Span<felt252>, Span<Span<felt252>>);
     fn set_executor(ref self: T, contract_address: ContractAddress);
     fn executor(self: @T) -> ContractAddress;
@@ -460,10 +460,10 @@ mod world {
         /// * `Span<felt252>` - The entity IDs.
         /// * `Span<Span<felt252>>` - The entities.
         fn entities(
-            self: @ContractState, component: felt252, partition: felt252
+            self: @ContractState, component: felt252, partition: felt252, length: usize
         ) -> (Span<felt252>, Span<Span<felt252>>) {
             let class_hash = self.components.read(component);
-            database::all(class_hash, component.into(), partition)
+            database::all(class_hash, component.into(), partition, length)
         }
 
         /// Sets the executor contract address.

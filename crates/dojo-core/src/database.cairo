@@ -15,11 +15,6 @@ use dojo::interfaces::{IComponentLibraryDispatcher, IComponentDispatcherTrait};
 fn get(
     class_hash: starknet::ClassHash, table: felt252, query: Query, offset: u8, length: usize
 ) -> Option<Span<felt252>> {
-    let mut length = length;
-    if length == 0 {
-        length = IComponentLibraryDispatcher { class_hash: class_hash }.len();
-    }
-
     let id = query.hash();
     let mut keys = ArrayTrait::new();
     keys.append('dojo_storage');
@@ -35,10 +30,6 @@ fn set(
     class_hash: starknet::ClassHash, table: felt252, query: Query, offset: u8, value: Span<felt252>
 ) {
     let id = query.hash();
-
-    let length = IComponentLibraryDispatcher { class_hash: class_hash }.len();
-    assert(value.len() <= length, 'Value too long');
-
     index::create(0, table, id);
 
     let mut keys = ArrayTrait::new();
@@ -55,7 +46,7 @@ fn del(class_hash: starknet::ClassHash, table: felt252, query: Query) {
 // returns a tuple of spans, first contains the entity IDs,
 // second the deserialized entities themselves
 fn all(
-    class_hash: starknet::ClassHash, component: felt252, partition: felt252
+    class_hash: starknet::ClassHash, component: felt252, partition: felt252, length: usize
 ) -> (Span<felt252>, Span<Span<felt252>>) {
     let table = {
         if partition == 0.into() {
@@ -70,8 +61,6 @@ fn all(
     };
 
     let all_ids = index::get(0, table);
-    let length = IComponentLibraryDispatcher { class_hash: class_hash }.len();
-
     let mut ids = all_ids.span();
     let mut entities: Array<Span<felt252>> = ArrayTrait::new();
     loop {
