@@ -84,7 +84,9 @@ mod tests {
     use dojo::test_utils::spawn_test_world;
 
     use dojo_examples::components::position;
+    use dojo_examples::components::Position;
     use dojo_examples::components::moves;
+    use dojo_examples::components::Moves;
     use dojo_examples::systems::spawn;
     use dojo_examples::systems::move;
 
@@ -112,9 +114,9 @@ mod tests {
         move_calldata.append(move::Direction::Right(()).into());
         world.execute('move'.into(), move_calldata.span());
 
-        let moves = world.entity('Moves'.into(), caller.into(), 0, 0);
+        let moves = world.entity('Moves'.into(), caller.into(), 0, dojo::SerdeLen::<Moves>::len());
         assert(*moves[0] == 9, 'moves is wrong');
-        let new_position = world.entity('Position'.into(), caller.into(), 0, 0);
+        let new_position = world.entity('Position'.into(), caller.into(), 0, dojo::SerdeLen::<Position>::len());
         assert(*new_position[0] == 1, 'position x is wrong');
         assert(*new_position[1] == 0, 'position y is wrong');
     }
