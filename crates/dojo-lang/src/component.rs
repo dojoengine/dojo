@@ -29,11 +29,6 @@ pub fn handle_component_struct(
             fn name(self: @ContractState) -> felt252 {
                 '$type_name$'
             }
-
-            #[external(v0)]
-            fn len(self: @ContractState) -> usize {
-                $len$_usize
-            }
         ",
         UnorderedHashMap::from([
             (
@@ -41,10 +36,6 @@ pub fn handle_component_struct(
                 RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
             ),
             ("members".to_string(), RewriteNode::Copied(struct_ast.members(db).as_syntax_node())),
-            (
-                "len".to_string(),
-                RewriteNode::Text(struct_ast.members(db).elements(db).len().to_string()),
-            ),
         ]),
     )];
 
@@ -102,7 +93,6 @@ pub fn handle_component_struct(
             #[starknet::interface]
             trait I$type_name$<T> {
                 fn name(self: @T) -> felt252;
-                fn len(self: @T) -> u8;
             }
 
             #[starknet::contract]

@@ -16,13 +16,13 @@ use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, library_call, world};
 
 // Components and Systems
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Foo {
     a: felt252,
     b: u128,
 }
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Fizz {
     a: felt252
 }
@@ -76,7 +76,8 @@ fn test_component() {
     data.append(1337);
     let id = world.uuid();
     world.set_entity(name, QueryTrait::new_from_id(id.into()), 0, data.span());
-    let stored = world.entity(name, QueryTrait::new_from_id(id.into()), 0, 1);
+    let stored = world
+        .entity(name, QueryTrait::new_from_id(id.into()), 0, dojo::SerdeLen::<Foo>::len());
     assert(*stored.snapshot.at(0) == 1337, 'data not stored');
 }
 
@@ -93,7 +94,8 @@ fn test_component_with_partition() {
     let mut keys = ArrayTrait::new();
     keys.append(1337.into());
     world.set_entity(name, QueryTrait::new(0, 1.into(), keys.span()), 0, data.span());
-    let stored = world.entity(name, QueryTrait::new(0, 1.into(), keys.span()), 0, 1);
+    let stored = world
+        .entity(name, QueryTrait::new(0, 1.into(), keys.span()), 0, dojo::SerdeLen::<Foo>::len());
     assert(*stored.snapshot.at(0) == 1337, 'data not stored');
 }
 
@@ -142,7 +144,7 @@ fn test_set_entity_admin() {
     data.append(1337);
     world.execute('bar'.into(), data.span());
 
-    let foo = world.entity('Foo'.into(), alice.into(), 0, 0);
+    let foo = world.entity('Foo'.into(), alice.into(), 0, dojo::SerdeLen::<Foo>::len());
     assert(*foo[0] == 420, 'data not stored');
     assert(*foo[1] == 1337, 'data not stored');
 }

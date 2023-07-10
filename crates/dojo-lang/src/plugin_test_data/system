@@ -7,13 +7,13 @@ ExpandContractTestRunner
 use array::ArrayTrait;
 use serde::Serde;
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Position {
     x: felt252,
     y: felt252,
 }
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Component, Copy, Drop, Serde, SerdeLen)]
 #[component(indexed: true)]
 struct Player {
     name: felt252, 
@@ -181,7 +181,6 @@ struct Position {
 #[starknet::interface]
 trait IPosition<T> {
     fn name(self: @T) -> felt252;
-    fn len(self: @T) -> u8;
 }
 
 #[starknet::contract]
@@ -207,13 +206,15 @@ mod position {
     }
 
     #[external(v0)]
-    fn len(self: @ContractState) -> usize {
-        2_usize
-    }
-
-    #[external(v0)]
     fn is_indexed(self: @ContractState) -> bool {
         bool::False(())
+    }
+}
+
+impl SerdeLenPosition of dojo::SerdeLen<Position> {
+    #[inline(always)]
+    fn len() -> usize {
+        dojo::SerdeLen::<felt252>::len() + dojo::SerdeLen::<felt252>::len()
     }
 }
 
@@ -224,7 +225,6 @@ struct Player {
 #[starknet::interface]
 trait IPlayer<T> {
     fn name(self: @T) -> felt252;
-    fn len(self: @T) -> u8;
 }
 
 #[starknet::contract]
@@ -249,13 +249,15 @@ mod player {
     }
 
     #[external(v0)]
-    fn len(self: @ContractState) -> usize {
-        1_usize
-    }
-
-    #[external(v0)]
     fn is_indexed(self: @ContractState) -> bool {
         bool::True(())
+    }
+}
+
+impl SerdeLenPlayer of dojo::SerdeLen<Player> {
+    #[inline(always)]
+    fn len() -> usize {
+        dojo::SerdeLen::<felt252>::len()
     }
 }
 
@@ -450,13 +452,13 @@ mod move {
 
         let (__positions_query_position_ids, __positions_query_position_raw) = ctx
             .world
-            .entities('Position', 0x0);
+            .entities('Position', 0x0, dojo::SerdeLen::<Position>::len());
         __positions_query_ids.append(__positions_query_position_ids);
         __positions_query_entities_raw.append(__positions_query_position_raw);
 
         let (__positions_query_player_ids, __positions_query_player_raw) = ctx
             .world
-            .entities('Player', 0x0);
+            .entities('Player', 0x0, dojo::SerdeLen::<Player>::len());
         __positions_query_ids.append(__positions_query_player_ids);
         __positions_query_entities_raw.append(__positions_query_player_raw);
 
@@ -519,7 +521,7 @@ mod move {
 
         let (__players_query_player_ids, __players_query_player_raw) = ctx
             .world
-            .entities('Player', 0x0);
+            .entities('Player', 0x0, dojo::SerdeLen::<Player>::len());
         __players_query_ids.append(__players_query_player_ids);
         __players_query_entities_raw.append(__players_query_player_raw);
 
@@ -553,7 +555,9 @@ mod move {
 
         let players_query = (__players);
 
-        let mut __player_player_raw = ctx.world.entity('Player', player_id.into(), 0_u8, 0_usize);
+        let mut __player_player_raw = ctx
+            .world
+            .entity('Player', player_id.into(), 0_u8, dojo::SerdeLen::<Player>::len());
         assert(__player_player_raw.len() > 0_usize, 'Player not found');
         let __player_player = serde::Serde::<Player>::deserialize(ref __player_player_raw)
             .expect('Player failed to deserialize');
@@ -561,7 +565,7 @@ mod move {
 
         let mut __player_position_position_raw = ctx
             .world
-            .entity('Position', player_id.into(), 0_u8, 0_usize);
+            .entity('Position', player_id.into(), 0_u8, dojo::SerdeLen::<Position>::len());
         assert(__player_position_position_raw.len() > 0_usize, 'Position not found');
         let __player_position_position = serde::Serde::<Position>::deserialize(
             ref __player_position_position_raw
@@ -570,7 +574,7 @@ mod move {
 
         let mut __player_position_player_raw = ctx
             .world
-            .entity('Player', player_id.into(), 0_u8, 0_usize);
+            .entity('Player', player_id.into(), 0_u8, dojo::SerdeLen::<Player>::len());
         assert(__player_position_player_raw.len() > 0_usize, 'Player not found');
         let __player_position_player = serde::Serde::<Player>::deserialize(
             ref __player_position_player_raw
@@ -584,7 +588,7 @@ mod move {
         if bar == 123 {
             let mut __player_position_position_raw = ctx
                 .world
-                .entity('Position', player_id.into(), 0_u8, 0_usize);
+                .entity('Position', player_id.into(), 0_u8, dojo::SerdeLen::<Position>::len());
             assert(__player_position_position_raw.len() > 0_usize, 'Position not found');
             let __player_position_position = serde::Serde::<Position>::deserialize(
                 ref __player_position_position_raw
@@ -593,7 +597,7 @@ mod move {
 
             let mut __player_position_player_raw = ctx
                 .world
-                .entity('Player', player_id.into(), 0_u8, 0_usize);
+                .entity('Player', player_id.into(), 0_u8, dojo::SerdeLen::<Player>::len());
             assert(__player_position_player_raw.len() > 0_usize, 'Player not found');
             let __player_position_player = serde::Serde::<Player>::deserialize(
                 ref __player_position_player_raw
@@ -607,13 +611,13 @@ mod move {
 
                 let (__positions_query_position_ids, __positions_query_position_raw) = ctx
                     .world
-                    .entities('Position', 0x0);
+                    .entities('Position', 0x0, dojo::SerdeLen::<Position>::len());
                 __positions_query_ids.append(__positions_query_position_ids);
                 __positions_query_entities_raw.append(__positions_query_position_raw);
 
                 let (__positions_query_player_ids, __positions_query_player_raw) = ctx
                     .world
-                    .entities('Player', 0x0);
+                    .entities('Player', 0x0, dojo::SerdeLen::<Player>::len());
                 __positions_query_ids.append(__positions_query_player_ids);
                 __positions_query_entities_raw.append(__positions_query_player_raw);
 
@@ -674,7 +678,7 @@ mod move {
         } else if bar == 321 {
             let mut __maybe_player_player_raw = ctx
                 .world
-                .entity('Player', player_id.into(), 0_u8, 0_usize);
+                .entity('Player', player_id.into(), 0_u8, dojo::SerdeLen::<Player>::len());
             let __maybe_player_player = match __maybe_player_player_raw.len() > 0_usize {
                 bool::False(()) => {
                     Option::None(())
@@ -696,7 +700,7 @@ mod move {
 
             let mut __positions_query_position_raw = ctx
                 .world
-                .entity('Position', player_id.into(), 0_u8, 0_usize);
+                .entity('Position', player_id.into(), 0_u8, dojo::SerdeLen::<Position>::len());
             let __positions_query_position = match __positions_query_position_raw.len() > 0_usize {
                 bool::False(()) => {
                     Option::None(())
@@ -711,7 +715,7 @@ mod move {
 
             let mut __positions_query_player_raw = ctx
                 .world
-                .entity('Player', player_id.into(), 0_u8, 0_usize);
+                .entity('Player', player_id.into(), 0_u8, dojo::SerdeLen::<Player>::len());
             let __positions_query_player = match __positions_query_player_raw.len() > 0_usize {
                 bool::False(()) => {
                     Option::None(())
@@ -738,7 +742,7 @@ mod move {
         } else {
             let mut __player_position_position_raw = ctx
                 .world
-                .entity('Position', player_id.into(), 0_u8, 0_usize);
+                .entity('Position', player_id.into(), 0_u8, dojo::SerdeLen::<Position>::len());
             assert(__player_position_position_raw.len() > 0_usize, 'Position not found');
             let __player_position_position = serde::Serde::<Position>::deserialize(
                 ref __player_position_position_raw
@@ -747,7 +751,7 @@ mod move {
 
             let mut __player_position_player_raw = ctx
                 .world
-                .entity('Player', player_id.into(), 0_u8, 0_usize);
+                .entity('Player', player_id.into(), 0_u8, dojo::SerdeLen::<Player>::len());
             assert(__player_position_player_raw.len() > 0_usize, 'Player not found');
             let __player_position_player = serde::Serde::<Player>::deserialize(
                 ref __player_position_player_raw
@@ -758,7 +762,7 @@ mod move {
         {
             let mut __player_position_position_raw = ctx
                 .world
-                .entity('Position', player_id.into(), 0_u8, 0_usize);
+                .entity('Position', player_id.into(), 0_u8, dojo::SerdeLen::<Position>::len());
             assert(__player_position_position_raw.len() > 0_usize, 'Position not found');
             let __player_position_position = serde::Serde::<Position>::deserialize(
                 ref __player_position_position_raw
@@ -767,7 +771,7 @@ mod move {
 
             let mut __player_position_player_raw = ctx
                 .world
-                .entity('Player', player_id.into(), 0_u8, 0_usize);
+                .entity('Player', player_id.into(), 0_u8, dojo::SerdeLen::<Player>::len());
             assert(__player_position_player_raw.len() > 0_usize, 'Player not found');
             let __player_position_player = serde::Serde::<Player>::deserialize(
                 ref __player_position_player_raw
@@ -782,7 +786,7 @@ mod move {
 
                 let mut __player_position_position_raw = ctx
                     .world
-                    .entity('Position', player_id.into(), 0_u8, 0_usize);
+                    .entity('Position', player_id.into(), 0_u8, dojo::SerdeLen::<Position>::len());
                 assert(__player_position_position_raw.len() > 0_usize, 'Position not found');
                 let __player_position_position = serde::Serde::<Position>::deserialize(
                     ref __player_position_position_raw
@@ -791,7 +795,7 @@ mod move {
 
                 let mut __player_position_player_raw = ctx
                     .world
-                    .entity('Player', player_id.into(), 0_u8, 0_usize);
+                    .entity('Player', player_id.into(), 0_u8, dojo::SerdeLen::<Player>::len());
                 assert(__player_position_player_raw.len() > 0_usize, 'Player not found');
                 let __player_position_player = serde::Serde::<Player>::deserialize(
                     ref __player_position_player_raw
@@ -805,13 +809,13 @@ mod move {
 
                     let (__positions_query_position_ids, __positions_query_position_raw) = ctx
                         .world
-                        .entities('Position', 0x0);
+                        .entities('Position', 0x0, dojo::SerdeLen::<Position>::len());
                     __positions_query_ids.append(__positions_query_position_ids);
                     __positions_query_entities_raw.append(__positions_query_position_raw);
 
                     let (__positions_query_player_ids, __positions_query_player_raw) = ctx
                         .world
-                        .entities('Player', 0x0);
+                        .entities('Player', 0x0, dojo::SerdeLen::<Player>::len());
                     __positions_query_ids.append(__positions_query_player_ids);
                     __positions_query_entities_raw.append(__positions_query_player_raw);
 
@@ -874,7 +878,7 @@ mod move {
             Option::None(()) => {
                 let mut __player_position_position_raw = ctx
                     .world
-                    .entity('Position', player_id.into(), 0_u8, 0_usize);
+                    .entity('Position', player_id.into(), 0_u8, dojo::SerdeLen::<Position>::len());
                 assert(__player_position_position_raw.len() > 0_usize, 'Position not found');
                 let __player_position_position = serde::Serde::<Position>::deserialize(
                     ref __player_position_position_raw
@@ -883,7 +887,7 @@ mod move {
 
                 let mut __player_position_player_raw = ctx
                     .world
-                    .entity('Player', player_id.into(), 0_u8, 0_usize);
+                    .entity('Player', player_id.into(), 0_u8, dojo::SerdeLen::<Player>::len());
                 assert(__player_position_player_raw.len() > 0_usize, 'Player not found');
                 let __player_position_player = serde::Serde::<Player>::deserialize(
                     ref __player_position_player_raw
@@ -910,7 +914,7 @@ mod move {
             }
             let mut __player_position_position_raw = ctx
                 .world
-                .entity('Position', player_id.into(), 0_u8, 0_usize);
+                .entity('Position', player_id.into(), 0_u8, dojo::SerdeLen::<Position>::len());
             assert(__player_position_position_raw.len() > 0_usize, 'Position not found');
             let __player_position_position = serde::Serde::<Position>::deserialize(
                 ref __player_position_position_raw
@@ -919,7 +923,7 @@ mod move {
 
             let mut __player_position_player_raw = ctx
                 .world
-                .entity('Player', player_id.into(), 0_u8, 0_usize);
+                .entity('Player', player_id.into(), 0_u8, dojo::SerdeLen::<Player>::len());
             assert(__player_position_player_raw.len() > 0_usize, 'Player not found');
             let __player_position_player = serde::Serde::<Player>::deserialize(
                 ref __player_position_player_raw
