@@ -443,7 +443,8 @@ fn execute_transaction<S: StateReader>(
     match res {
         Ok(exec_info) => {
             if let Some(err) = &exec_info.revert_error {
-                warn!("Transaction execution error: {err:?}");
+                let formatted_err = format!("{:?}", err).replace("\\n", "\n");
+                warn!("Transaction execution error: {formatted_err}");
             }
             Ok(exec_info)
         }
