@@ -225,7 +225,7 @@ jobs:
         with:
           push: true
           file: Dockerfile
-          tags: ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:${{ needs.prepare.outputs.release_name }}
+          tags: ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:${{ needs.prepare.outputs.tag_name }}
           build-args: |
             VARIANT=bullseye
           platforms: linux/amd64,linux/arm64
