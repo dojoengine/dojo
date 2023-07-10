@@ -34,7 +34,7 @@ jobs:
         id: release_info
         run: |
           if [[ $IS_NIGHTLY ]]; then
-            echo "::set-output name=tag_name::nightly-${GITHUB_SHA}"
+            echo "::set-output name=tag_name::nightly-${GITHUB_SHA::7}"
             echo "::set-output name=release_name::Nightly ($(date '+%Y-%m-%d'))"
           else
             echo "::set-output name=tag_name::${GITHUB_REF_NAME}"
