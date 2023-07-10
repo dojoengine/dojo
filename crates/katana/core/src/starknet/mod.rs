@@ -495,15 +495,15 @@ fn pretty_print_resources(resources: &ResourcesMapping) -> String {
     let mut mapped_strings: Vec<_> = resources
         .0
         .iter()
-        .map(|(k, v)| match k.as_str() {
-            "l1_gas_usage" => format!("L1 Gas: {}", v),
-            "range_check_builtin" => format!("Range Checks: {}", v),
-            "ecdsa_builtin" => format!("ECDSA: {}", v),
-            "n_steps" => format!("Steps: {}", v),
-            "pedersen_builtin" => format!("Pedersen: {}", v),
-            "bitwise_builtin" => format!("Bitwise: {}", v),
-            "keccak_builtin" => format!("Keccak: {}", v),
-            _ => format!("{}: {}", k.to_case(Case::Title), v),
+        .filter_map(|(k, v)| match k.as_str() {
+            "l1_gas_usage" => Some(format!("L1 Gas: {}", v)),
+            "range_check_builtin" => Some(format!("Range Checks: {}", v)),
+            "ecdsa_builtin" => Some(format!("ECDSA: {}", v)),
+            "n_steps" => None,
+            "pedersen_builtin" => Some(format!("Pedersen: {}", v)),
+            "bitwise_builtin" => Some(format!("Bitwise: {}", v)),
+            "keccak_builtin" => Some(format!("Keccak: {}", v)),
+            _ => Some(format!("{}: {}", k.to_case(Case::Title), v)),
         })
         .collect::<Vec<String>>();
 
