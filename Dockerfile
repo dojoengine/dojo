@@ -17,6 +17,6 @@ LABEL description="Dojo is a provable game engine and toolchain for building onc
     source="https://github.com/dojoengine/dojo" \
     documentation="https://book.dojoengine.org/"
 
-COPY --from=builder /dojo/target/release/katana /katana
-COPY --from=builder /dojo/target/release/sozo /sozo
-COPY --from=builder /dojo/target/release/torii /torii
+COPY --from=builder /dojo/target/release/katana /usr/local/bin/katana
+COPY --from=builder /dojo/target/release/sozo /usr/local/bin/sozo
+COPY --from=builder /dojo/target/release/torii /usr/local/bin/torii
