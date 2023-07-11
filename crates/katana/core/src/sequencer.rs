@@ -113,7 +113,7 @@ impl KatanaSequencer {
 
             BlockId::Tag(BlockTag::Pending) => None,
             BlockId::Tag(BlockTag::Latest) => {
-                self.starknet.write().await.blocks.current_block_number()
+                Some(self.starknet.write().await.blocks.current_block_number())
             }
         }
     }
@@ -328,7 +328,7 @@ impl Sequencer for KatanaSequencer {
     }
 
     async fn block_number(&self) -> BlockNumber {
-        self.starknet.read().await.block_context.block_number
+        self.starknet.read().await.blocks.current_block_number()
     }
 
     async fn block(&self, block_id: BlockId) -> Option<StarknetBlock> {
