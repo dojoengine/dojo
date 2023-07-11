@@ -1,5 +1,7 @@
 use camino::Utf8PathBuf;
-use dojo_test_utils::sequencer::{SequencerConfig, TestSequencer};
+use dojo_test_utils::sequencer::{
+    get_default_test_starknet_config, SequencerConfig, TestSequencer,
+};
 use dojo_world::manifest::Manifest;
 use dojo_world::migration::strategy::prepare_for_migration;
 use dojo_world::migration::world::WorldDiff;
@@ -17,7 +19,8 @@ use crate::ops::migration::execute_strategy;
 async fn test_migration_with_auto_mine() {
     let target_dir = Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap();
 
-    let sequencer = TestSequencer::start(SequencerConfig::default()).await;
+    let sequencer =
+        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
 
     let account = SingleOwnerAccount::new(
         JsonRpcClient::new(HttpTransport::new(sequencer.url())),
@@ -46,7 +49,11 @@ async fn test_migration_with_auto_mine() {
 async fn test_migration_with_block_time() {
     let target_dir = Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap();
 
-    let sequencer = TestSequencer::start(SequencerConfig { block_time: Some(1) }).await;
+    let sequencer = TestSequencer::start(
+        SequencerConfig { block_time: Some(1) },
+        get_default_test_starknet_config(),
+    )
+    .await;
 
     let account = SingleOwnerAccount::new(
         JsonRpcClient::new(HttpTransport::new(sequencer.url())),
@@ -76,7 +83,8 @@ async fn test_migration_with_block_time() {
 async fn test_migration_from_remote() {
     let target_dir = Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap();
 
-    let sequencer = TestSequencer::start(SequencerConfig::default()).await;
+    let sequencer =
+        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
 
     let account = SingleOwnerAccount::new(
         JsonRpcClient::new(HttpTransport::new(sequencer.url())),

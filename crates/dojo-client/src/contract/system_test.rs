@@ -1,5 +1,7 @@
 use camino::Utf8PathBuf;
-use dojo_test_utils::sequencer::{SequencerConfig, TestSequencer};
+use dojo_test_utils::sequencer::{
+    get_default_test_starknet_config, SequencerConfig, TestSequencer,
+};
 use dojo_types::system::Dependency;
 use starknet::accounts::Account;
 use starknet::core::types::{BlockId, BlockTag};
@@ -10,7 +12,8 @@ use crate::contract::world::WorldContract;
 
 #[tokio::test]
 async fn test_system() {
-    let sequencer = TestSequencer::start(SequencerConfig::default()).await;
+    let sequencer =
+        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
     let account = sequencer.account();
     let (world_address, _) = deploy_world(
         &sequencer,

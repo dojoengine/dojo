@@ -1,5 +1,7 @@
 use camino::Utf8PathBuf;
-use dojo_test_utils::sequencer::{SequencerConfig, TestSequencer};
+use dojo_test_utils::sequencer::{
+    get_default_test_starknet_config, SequencerConfig, TestSequencer,
+};
 use dojo_types::component::Member;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag, FieldElement};
@@ -9,7 +11,8 @@ use crate::contract::world::WorldContractReader;
 
 #[tokio::test]
 async fn test_component() {
-    let sequencer = TestSequencer::start(SequencerConfig::default()).await;
+    let sequencer =
+        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
     let account = sequencer.account();
     let provider = account.provider();
     let (world_address, _) = deploy_world(
