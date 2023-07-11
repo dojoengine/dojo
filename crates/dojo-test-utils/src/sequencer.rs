@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use jsonrpsee::core::Error;
-use katana_core::backend::config::{Environment, StarknetConfig};
+pub use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::sequencer::KatanaSequencer;
 pub use katana_core::sequencer::SequencerConfig;
 use katana_rpc::config::ServerConfig;
