@@ -1,9 +1,9 @@
 use blockifier::abi::abi_utils::{get_storage_var_address, selector_from_name};
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transaction_execution::Transaction;
+use katana_core::backend::config::{Environment, StarknetConfig};
+use katana_core::backend::StarknetWrapper;
 use katana_core::constants::FEE_TOKEN_ADDRESS;
-use katana_core::starknet::config::{Environment, StarknetConfig};
-use katana_core::starknet::StarknetWrapper;
 use starknet::core::types::TransactionStatus;
 use starknet_api::block::BlockNumber;
 use starknet_api::core::Nonce;

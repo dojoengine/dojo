@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
 use clap::{Args, Parser};
+use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::constants::DEFAULT_GAS_PRICE;
 use katana_core::sequencer::SequencerConfig;
-use katana_core::starknet::config::{Environment, StarknetConfig};
 use katana_rpc::config::ServerConfig;
 
 #[derive(Parser, Debug)]

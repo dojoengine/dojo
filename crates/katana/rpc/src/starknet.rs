@@ -6,11 +6,11 @@ use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transactions::DeclareTransaction;
 use jsonrpsee::core::{async_trait, Error};
 use jsonrpsee::types::error::CallError;
+use katana_core::backend::contract::StarknetContract;
+use katana_core::backend::transaction::ExternalFunctionCall;
 use katana_core::constants::SEQUENCER_ADDRESS;
 use katana_core::sequencer::Sequencer;
 use katana_core::sequencer_error::SequencerError;
-use katana_core::starknet::contract::StarknetContract;
-use katana_core::starknet::transaction::ExternalFunctionCall;
 use katana_core::util::starkfelt_to_u128;
 use starknet::core::types::{
     BlockHashAndNumber, BlockId, BlockStatus, BlockTag, BlockWithTxHashes, BlockWithTxs,
