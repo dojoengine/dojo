@@ -11,6 +11,7 @@ mod utils;
 
 use dojo::database::{query::{Query, QueryTrait}};
 use dojo::interfaces::{IComponentLibraryDispatcher, IComponentDispatcherTrait};
+use super::layout::{StorageLayoutTrait, unpack, layout_length};
 
 fn get(
     class_hash: starknet::ClassHash, table: felt252, query: Query, offset: u8, length: usize
@@ -28,6 +29,23 @@ fn get(
     match index::exists(0, table, id) {
         bool::False(()) => Option::None(()),
         bool::True(()) => Option::Some(storage::get_many(0, keys.span(), offset, length)),
+    }
+}
+
+fn get_t<T, impl TStorage: StorageLayoutTrait<T>>(table: felt252, query: Query) -> Option<T> {
+    let id = query.hash();
+    let mut keys = ArrayTrait::new();
+    keys.append('dojo_storage');
+    keys.append(table);
+    keys.append(id);
+    match index::exists(0, table, id) {
+        bool::False(()) => Option::None(()),
+        bool::True(()) => {
+            let mut layout = TStorage::get_layout();
+            let packed = storage::get_many(0, keys.span(), 0, layout_length(ref layout));
+            let unpacked = unpack(packed, TStorage::get_layout());
+            Option::Some(TStorage::from_unpacked(unpacked))
+        }
     }
 }
 
