@@ -118,9 +118,11 @@ impl StarknetBlocks {
         self.num_to_block.insert(block_number, block);
     }
 
-    pub fn current_block_number(&self) -> Option<BlockNumber> {
+    pub fn current_block_number(&self) -> BlockNumber {
         let block_len = self.total_blocks();
-        if block_len == 0 { None } else { Some(BlockNumber(block_len as u64 - 1)) }
+        // Safe to do unchecked subtraction ( if `block_len` == 0 )
+        // because we always have at least one block (genesis)..
+        BlockNumber(block_len as u64 - 1)
     }
 
     pub fn latest(&self) -> Option<StarknetBlock> {
