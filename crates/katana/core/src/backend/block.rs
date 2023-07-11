@@ -9,7 +9,7 @@ use starknet_api::hash::{pedersen_hash_array, StarkFelt};
 use starknet_api::stark_felt;
 use starknet_api::transaction::{Transaction, TransactionOutput};
 
-use crate::state::MemDb;
+use crate::backend::state::MemDb;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct StarknetBlock {

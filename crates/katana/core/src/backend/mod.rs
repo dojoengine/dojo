@@ -27,6 +27,7 @@ pub mod block;
 pub mod config;
 pub mod contract;
 pub mod event;
+pub mod state;
 pub mod transaction;
 
 use block::{StarknetBlock, StarknetBlocks};
@@ -34,13 +35,13 @@ use config::StarknetConfig;
 use transaction::{ExternalFunctionCall, StarknetTransaction, StarknetTransactions};
 
 use crate::accounts::PredeployedAccounts;
+use crate::backend::state::{MemDb, StateExt};
 use crate::block_context::BlockContextGenerator;
 use crate::constants::{
     DEFAULT_PREFUNDED_ACCOUNT_BALANCE, ERC20_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS, UDC_ADDRESS,
     UDC_CLASS_HASH,
 };
 use crate::sequencer_error::SequencerError;
-use crate::state::{MemDb, StateExt};
 use crate::util::{
     convert_blockifier_tx_to_starknet_api_tx, convert_state_diff_to_rpc_state_diff,
     get_current_timestamp,

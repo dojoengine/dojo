@@ -28,10 +28,10 @@ use crate::backend::block::StarknetBlock;
 use crate::backend::config::StarknetConfig;
 use crate::backend::contract::StarknetContract;
 use crate::backend::event::EmittedEvent;
+use crate::backend::state::{MemDb, StateExt};
 use crate::backend::transaction::ExternalFunctionCall;
 use crate::backend::StarknetWrapper;
 use crate::sequencer_error::SequencerError;
-use crate::state::{MemDb, StateExt};
 use crate::util::starkfelt_to_u128;
 
 type SequencerResult<T> = Result<T, SequencerError>;
