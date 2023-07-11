@@ -11,7 +11,7 @@ mod utils;
 
 use dojo::database::{query::{Query, QueryTrait}};
 use dojo::interfaces::{IComponentLibraryDispatcher, IComponentDispatcherTrait};
-use super::layout::{StorageLayoutTrait, unpack, layout_length};
+use super::layout::{StorageLayoutTrait, pack, unpack, layout_length};
 
 fn get(
     class_hash: starknet::ClassHash, table: felt252, query: Query, offset: u8, length: usize
@@ -41,10 +41,17 @@ fn get_t<T, impl TStorage: StorageLayoutTrait<T>>(table: felt252, query: Query) 
     match index::exists(0, table, id) {
         bool::False(()) => Option::None(()),
         bool::True(()) => {
-            let mut layout = TStorage::get_layout();
-            let packed = storage::get_many(0, keys.span(), 0, layout_length(ref layout));
-            let unpacked = unpack(packed, TStorage::get_layout());
-            Option::Some(TStorage::from_unpacked(unpacked))
+            let mut layout1 = TStorage::get_layout();
+            let mut layout2 = TStorage::get_layout();
+            let mut packed = storage::get_many(0, keys.span(), 0, layout_length(ref layout1));
+            match unpack(ref packed, ref layout2) {
+                Option::Some(u) => {
+                    Option::Some(TStorage::from_unpacked(u))
+                },
+                Option::None(_) => {
+                    Option::None(())
+                }
+            }
         }
     }
 }
@@ -64,6 +71,21 @@ fn set(
     keys.append(table);
     keys.append(id);
     storage::set_many(0, keys.span(), offset, value);
+}
+
+fn set_t<T, impl TStorage: StorageLayoutTrait<T>, impl TDrop: Drop<T>>(
+    table: felt252, query: Query, value: T
+) {
+    let id = query.hash();
+    index::create(0, table, id);
+
+    let mut keys = ArrayTrait::new();
+    keys.append('dojo_storage');
+    keys.append(table);
+    keys.append(id);
+    let mut unpacked = value.to_unpacked();
+    let packed = pack(ref unpacked);
+    storage::set_many(0, keys.span(), 0, packed);
 }
 
 fn del(class_hash: starknet::ClassHash, table: felt252, query: Query) {
