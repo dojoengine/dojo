@@ -7,7 +7,10 @@ use starknet_api::hash::StarkHash;
 use starknet_api::patricia_key;
 
 use crate::block_context::{get_default_vm_resource_fee_cost, BlockContextGenerator};
-use crate::constants::{DEFAULT_GAS_PRICE, FEE_TOKEN_ADDRESS, SEQUENCER_ADDRESS};
+use crate::constants::{
+    DEFAULT_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_VALIDATE_MAX_STEPS, FEE_TOKEN_ADDRESS,
+    SEQUENCER_ADDRESS,
+};
 
 #[derive(Debug)]
 pub struct StarknetConfig {
@@ -29,8 +32,8 @@ impl StarknetConfig {
             fee_token_address: ContractAddress(patricia_key!(*FEE_TOKEN_ADDRESS)),
             vm_resource_fee_cost: get_default_vm_resource_fee_cost(),
             gas_price: self.env.gas_price,
-            validate_max_n_steps: 1_000_000,
-            invoke_tx_max_n_steps: 1_000_000,
+            validate_max_n_steps: self.env.validate_max_steps,
+            invoke_tx_max_n_steps: self.env.invoke_max_steps,
         }
     }
 
@@ -56,10 +59,17 @@ impl Default for StarknetConfig {
 pub struct Environment {
     pub chain_id: String,
     pub gas_price: u128,
+    pub invoke_max_steps: u32,
+    pub validate_max_steps: u32,
 }
 
 impl Default for Environment {
     fn default() -> Self {
-        Self { chain_id: "KATANA".to_string(), gas_price: DEFAULT_GAS_PRICE }
+        Self {
+            gas_price: DEFAULT_GAS_PRICE,
+            chain_id: "KATANA".to_string(),
+            invoke_max_steps: DEFAULT_INVOKE_MAX_STEPS,
+            validate_max_steps: DEFAULT_VALIDATE_MAX_STEPS,
+        }
     }
 }

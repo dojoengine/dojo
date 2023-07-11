@@ -2,7 +2,9 @@ use std::path::PathBuf;
 
 use clap::{Args, Parser};
 use katana_core::backend::config::{Environment, StarknetConfig};
-use katana_core::constants::DEFAULT_GAS_PRICE;
+use katana_core::constants::{
+    DEFAULT_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_VALIDATE_MAX_STEPS,
+};
 use katana_core::sequencer::SequencerConfig;
 use katana_rpc::config::ServerConfig;
 
@@ -84,6 +86,14 @@ pub struct EnvironmentOptions {
     #[arg(long)]
     #[arg(help = "The gas price.")]
     pub gas_price: Option<u128>,
+
+    #[arg(long)]
+    #[arg(help = "The maximum number of steps available for the account validation logic.")]
+    pub validate_max_steps: Option<u32>,
+
+    #[arg(long)]
+    #[arg(help = "The maximum number of steps available for the account execution logic.")]
+    pub invoke_max_steps: Option<u32>,
 }
 
 impl KatanaArgs {
@@ -108,6 +118,16 @@ impl KatanaArgs {
             env: Environment {
                 chain_id: self.starknet.environment.chain_id.clone(),
                 gas_price: self.starknet.environment.gas_price.unwrap_or(DEFAULT_GAS_PRICE),
+                invoke_max_steps: self
+                    .starknet
+                    .environment
+                    .invoke_max_steps
+                    .unwrap_or(DEFAULT_INVOKE_MAX_STEPS),
+                validate_max_steps: self
+                    .starknet
+                    .environment
+                    .validate_max_steps
+                    .unwrap_or(DEFAULT_VALIDATE_MAX_STEPS),
             },
         }
     }
@@ -135,14 +155,29 @@ mod test {
         let block_context = args.starknet_config().block_context();
         assert_eq!(block_context.gas_price, DEFAULT_GAS_PRICE);
         assert_eq!(block_context.chain_id.0, "KATANA".to_string());
+        assert_eq!(block_context.validate_max_n_steps, DEFAULT_VALIDATE_MAX_STEPS);
+        assert_eq!(block_context.invoke_tx_max_n_steps, DEFAULT_INVOKE_MAX_STEPS);
     }
 
     #[test]
     fn custom_block_context_from_args() {
-        let args =
-            KatanaArgs::parse_from(["katana", "--gas-price", "10", "--chain-id", "SN_GOERLI"]);
+        let args = KatanaArgs::parse_from([
+            "katana",
+            "--gas-price",
+            "10",
+            "--chain-id",
+            "SN_GOERLI",
+            "--validate-max-steps",
+            "100",
+            "--invoke-max-steps",
+            "200",
+        ]);
+
         let block_context = args.starknet_config().block_context();
+
         assert_eq!(block_context.gas_price, 10);
         assert_eq!(block_context.chain_id.0, "SN_GOERLI".to_string());
+        assert_eq!(block_context.validate_max_n_steps, 100);
+        assert_eq!(block_context.invoke_tx_max_n_steps, 200);
     }
 }
