@@ -11,8 +11,8 @@ use starknet_api::hash::StarkHash;
 use starknet_api::patricia_key;
 use starknet_api::state::StorageKey;
 
+use crate::backend::state::StateExt;
 use crate::db::contract::SerializableContractClass;
-use crate::state::StateExt;
 
 pub trait Db: State + StateReader + StateExt {
     fn set_nonce(&mut self, addr: ContractAddress, nonce: Nonce);
