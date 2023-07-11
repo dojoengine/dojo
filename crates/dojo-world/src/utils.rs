@@ -166,7 +166,9 @@ fn transaction_status_from_receipt(receipt: &TransactionReceipt) -> TransactionS
 #[cfg(test)]
 mod tests {
     use assert_matches::assert_matches;
-    use dojo_test_utils::sequencer::{SequencerConfig, TestSequencer};
+    use dojo_test_utils::sequencer::{
+        get_default_test_starknet_config, SequencerConfig, TestSequencer,
+    };
     use starknet::core::types::FieldElement;
     use starknet::providers::jsonrpc::HttpTransport;
     use starknet::providers::JsonRpcClient;
@@ -175,7 +177,9 @@ mod tests {
 
     #[tokio::test]
     async fn should_timeout_on_nonexistant_transaction() {
-        let sequencer = TestSequencer::start(SequencerConfig::default()).await;
+        let sequencer =
+            TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config())
+                .await;
         let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
         assert_matches!(
             TransactionWaiter::new(FieldElement::from_hex_be("0x1234").unwrap(), &provider)

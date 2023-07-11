@@ -5,7 +5,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, Result};
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass;
-use dojo_test_utils::sequencer::TestSequencer;
+use dojo_test_utils::sequencer::{get_default_test_starknet_config, TestSequencer};
 use katana_core::sequencer::SequencerConfig;
 use starknet::accounts::{Account, Call, ConnectedAccount};
 use starknet::core::types::contract::legacy::LegacyContractClass;
@@ -19,7 +19,8 @@ use starknet::providers::Provider;
 
 #[tokio::test]
 async fn test_send_declare_and_deploy_contract() {
-    let sequencer = TestSequencer::start(SequencerConfig::default()).await;
+    let sequencer =
+        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
     let account = sequencer.account();
 
     let path: PathBuf = PathBuf::from("tests/test_data/cairo1_contract.json");
@@ -88,7 +89,8 @@ async fn test_send_declare_and_deploy_contract() {
 
 #[tokio::test]
 async fn test_send_declare_and_deploy_legcay_contract() {
-    let sequencer = TestSequencer::start(SequencerConfig::default()).await;
+    let sequencer =
+        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
     let account = sequencer.account();
 
     let path = PathBuf::from("tests/test_data/cairo0_contract.json");

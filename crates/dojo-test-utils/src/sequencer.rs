@@ -28,15 +28,8 @@ pub struct TestSequencer {
 }
 
 impl TestSequencer {
-    pub async fn start(config: SequencerConfig) -> Self {
-        let sequencer = Arc::new(KatanaSequencer::new(
-            config,
-            StarknetConfig {
-                allow_zero_max_fee: true,
-                env: Environment { chain_id: "SN_GOERLI".into(), ..Default::default() },
-                ..Default::default()
-            },
-        ));
+    pub async fn start(config: SequencerConfig, starknet_config: StarknetConfig) -> Self {
+        let sequencer = Arc::new(KatanaSequencer::new(config, starknet_config));
 
         sequencer.start().await;
 
@@ -78,5 +71,13 @@ impl TestSequencer {
 
     pub fn url(&self) -> Url {
         self.url.clone()
+    }
+}
+
+pub fn get_default_test_starknet_config() -> StarknetConfig {
+    StarknetConfig {
+        allow_zero_max_fee: true,
+        env: Environment { chain_id: "SN_GOERLI".into(), ..Default::default() },
+        ..Default::default()
     }
 }
