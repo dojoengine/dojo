@@ -9,7 +9,7 @@ use starknet_api::hash::{pedersen_hash_array, StarkFelt};
 use starknet_api::stark_felt;
 use starknet_api::transaction::{Transaction, TransactionOutput};
 
-use crate::state::DictStateReader;
+use crate::state::MemDb;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct StarknetBlock {
@@ -107,7 +107,7 @@ pub struct StarknetBlocks {
     pub hash_to_num: HashMap<BlockHash, BlockNumber>,
     pub num_to_block: HashMap<BlockNumber, StarknetBlock>,
     pub pending_block: Option<StarknetBlock>,
-    pub state_archive: HashMap<BlockNumber, DictStateReader>,
+    pub state_archive: HashMap<BlockNumber, MemDb>,
     pub num_to_state_update: HashMap<BlockNumber, StateUpdate>,
 }
 
@@ -155,11 +155,11 @@ impl StarknetBlocks {
         self.num_to_state_update.get(&block_number).cloned()
     }
 
-    pub fn get_state(&self, block_number: &BlockNumber) -> Option<&DictStateReader> {
+    pub fn get_state(&self, block_number: &BlockNumber) -> Option<&MemDb> {
         self.state_archive.get(block_number)
     }
 
-    pub fn store_state(&mut self, block_number: BlockNumber, state: DictStateReader) {
+    pub fn store_state(&mut self, block_number: BlockNumber, state: MemDb) {
         self.state_archive.insert(block_number, state);
     }
 }

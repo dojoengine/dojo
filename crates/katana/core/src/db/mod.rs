@@ -3,7 +3,7 @@ pub mod contract;
 use std::collections::BTreeMap;
 
 use anyhow::Result;
-use blockifier::state::state_api::{State, StateReader, StateResult};
+use blockifier::state::state_api::{State, StateReader};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::{FieldElement, FlattenedSierraClass};
 use starknet_api::core::{ClassHash, CompiledClassHash, ContractAddress, Nonce, PatriciaKey};
@@ -12,16 +12,7 @@ use starknet_api::patricia_key;
 use starknet_api::state::StorageKey;
 
 use crate::db::contract::SerializableContractClass;
-
-pub trait StateExt {
-    fn set_sierra_class(
-        &mut self,
-        class_hash: ClassHash,
-        sierra_class: FlattenedSierraClass,
-    ) -> StateResult<()>;
-
-    fn get_sierra_class(&mut self, class_hash: &ClassHash) -> StateResult<FlattenedSierraClass>;
-}
+use crate::state::StateExt;
 
 pub trait Db: State + StateReader + StateExt {
     fn set_nonce(&mut self, addr: ContractAddress, nonce: Nonce);
