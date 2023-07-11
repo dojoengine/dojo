@@ -203,7 +203,7 @@ jobs:
 
   docker-build-and-push:
     name: Build and push Docker image
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest-32-cores
     needs: prepare
 
     steps:
