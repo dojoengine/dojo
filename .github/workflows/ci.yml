@@ -12,7 +12,7 @@ env:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-32-cores
     steps:
       - name: Frees Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@v1.2.0
@@ -31,7 +31,7 @@ jobs:
           cargo test
 
   # cairofmt:
-  #   runs-on: ubuntu-latest
+  #   runs-on: ubuntu-latest-32-cores
   #   steps:
   #     - uses: actions/checkout@v3
   #     - uses: actions-rs/toolchain@v1
@@ -43,7 +43,7 @@ jobs:
   #     - run: scripts/cairo_fmt.sh --check
 
   cairotest:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-32-cores
     steps:
       - uses: actions/checkout@v3
       
@@ -55,7 +55,7 @@ jobs:
       - run: scripts/cairo_test.sh
 
   clippy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-32-cores
     steps:
       - uses: actions/checkout@v3
 
@@ -71,7 +71,7 @@ jobs:
       - run: scripts/clippy.sh
 
   fmt:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-32-cores
     steps:
       - uses: actions/checkout@v3
 
@@ -90,7 +90,7 @@ jobs:
 
   # Check for unnecessary dependencies.
   # udeps:
-  #   runs-on: ubuntu-latest
+  #   runs-on: ubuntu-latest-32-cores
   #   steps:
   #     - uses: actions/checkout@v3
 
@@ -119,7 +119,7 @@ jobs:
   #         RUSTUP_TOOLCHAIN: ${{ env.NIGHTLY_RUST_VERSION }}
 
   docs:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-32-cores
     steps:
       - uses: actions/checkout@v3
 
@@ -135,7 +135,7 @@ jobs:
           scripts/docs.sh
 
   test-hurl:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-32-cores
     permissions:
       pull-requests: write
 
