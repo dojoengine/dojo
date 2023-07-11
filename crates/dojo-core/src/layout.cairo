@@ -11,9 +11,22 @@ struct LayoutItem {
     size: u8
 }
 
+// The chain of transformations would be as folows:
+// struct -to_unpacked()-> 
+// unpacked array -pack()-> 
+// packed array -storage::set()-> 
+// syscall saved -storage::get()->
+// packed array -unpack()-> 
+// unpacked array -get_layout() & from_unpacked()-> struct
 trait StorageLayoutTrait<T> {
+    // This definition, although not explicitly recursive is recursive in practice.
+    // Individual implementations of particular structs would recursively call to_unpacked()
+    // This way a layout array can be constructed
+    // Called when setting
     fn to_layout(self: @T) -> Array<LayoutItem>;
     fn to_unpacked(self: @T) -> Array<LayoutItem>;
+
+    // Called when getting
     fn get_layout() -> Span<u8>;
     fn from_unpacked(items: Span<felt252>) -> T;
 }
