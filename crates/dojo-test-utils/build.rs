@@ -9,6 +9,12 @@ use scarb::ops;
 use scarb::ui::Verbosity;
 
 fn main() {
+
+     #[cfg(feature = "skip-build")]
+    {
+        return;
+    }
+    
     let mut compilers = CompilerRepository::empty();
     compilers.add(Box::new(DojoCompiler)).unwrap();
 
