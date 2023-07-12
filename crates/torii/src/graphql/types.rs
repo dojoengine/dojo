@@ -29,7 +29,7 @@ impl fmt::Display for ScalarType {
             ScalarType::USize => write!(f, "usize"),
             ScalarType::Bool => write!(f, "bool"),
             ScalarType::Cursor => write!(f, "Cursor"),
-            ScalarType::Address => write!(f, "Address"),
+            ScalarType::Address => write!(f, "ContractAddress"),
             ScalarType::DateTime => write!(f, "DateTime"),
             ScalarType::Felt252 => write!(f, "felt252"),
         }
@@ -99,7 +99,7 @@ impl ScalarType {
             "usize" => Ok(ScalarType::USize),
             "bool" => Ok(ScalarType::Bool),
             "Cursor" => Ok(ScalarType::Cursor),
-            "Address" => Ok(ScalarType::Address),
+            "ContractAddress" => Ok(ScalarType::Address),
             "DateTime" => Ok(ScalarType::DateTime),
             "felt252" => Ok(ScalarType::Felt252),
             _ => Err(anyhow::anyhow!("Unknown type {}", s.as_ref().to_string())),
