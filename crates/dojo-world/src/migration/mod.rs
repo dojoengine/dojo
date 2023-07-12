@@ -120,7 +120,7 @@ pub trait Declarable {
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait Deployable: Declarable + Sync {
     async fn deploy<P, S>(
-        &mut self,
+        &self,
         class_hash: FieldElement,
         constructor_calldata: Vec<FieldElement>,
         account: &SingleOwnerAccount<P, S>,
@@ -157,8 +157,6 @@ pub trait Deployable: Declarable + Sync {
             FieldElement::ZERO,
         );
 
-        self.set_contract_address(contract_address);
-
         match account
             .provider()
             .get_class_hash_at(BlockId::Tag(BlockTag::Pending), contract_address)
@@ -190,9 +188,6 @@ pub trait Deployable: Declarable + Sync {
 
         Ok(DeployOutput { transaction_hash, contract_address, declare })
     }
-
-    // TEMP: Remove once we can calculate the contract address before sending the tx
-    fn set_contract_address(&mut self, contract_address: FieldElement);
 }
 
 fn prepare_contract_declaration_params(

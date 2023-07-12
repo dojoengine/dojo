@@ -36,12 +36,10 @@ pub struct MigrationItemsInfo {
 
 impl MigrationStrategy {
     pub fn world_address(&self) -> Result<FieldElement> {
-        let addr = match &self.world {
-            Some(c) => c.contract_address,
-            None => self.world_address,
-        };
-
-        addr.ok_or_else(|| anyhow!("World address not found"))
+        match &self.world {
+            Some(c) => Ok(c.contract_address),
+            None => self.world_address.ok_or(anyhow!("World address not found")),
+        }
     }
 
     pub fn info(&self) -> MigrationItemsInfo {
@@ -165,7 +163,7 @@ fn evaluate_contract_to_migrate(
     world_contract_will_migrate: bool,
 ) -> Result<Option<ContractMigration>> {
     if world_contract_will_migrate
-        || contract.address.is_none()
+        || contract.remote.is_none()
         || matches!(contract.remote, Some(remote_hash) if remote_hash != contract.local)
     {
         let path = find_artifact_path(&contract.name, artifact_paths)?;
@@ -174,6 +172,7 @@ fn evaluate_contract_to_migrate(
         Ok(Some(ContractMigration {
             diff: contract.clone(),
             artifact_path: path.clone(),
+            contract_address: contract.address,
             ..Default::default()
         }))
     } else {
