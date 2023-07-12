@@ -35,3 +35,6 @@ assert_fs = "1.0.9"
 camino.workspace = true
 dojo-lang = { path = "../dojo-lang" }
 scarb.workspace = true
+
+[features]
+skip-build = []
