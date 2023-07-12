@@ -135,10 +135,8 @@ fn resolve_many(name: &str, type_name: &str) -> Field {
             let limit =
                 ctx.args.try_get("limit").and_then(|limit| limit.u64()).unwrap_or(DEFAULT_LIMIT);
 
-            let component_name = ctx.args.try_get("componentName")? // Add the component name argument
-                .string()
-                .ok()
-                .map(|name| name.to_lowercase());
+            let component_name = ctx.args.try_get("componentName") // Add the component name argument
+                .and_then(|name| name.string().map(|s| s.to_lowercase())).ok();
 
             let entities = entities_by_sk(&mut conn, keys, component_name, limit).await?;
             Ok(Some(FieldValue::list(entities.into_iter().map(FieldValue::owned_any))))

@@ -10,6 +10,7 @@ mod tests {
     #[serde(rename_all = "camelCase")]
     pub struct Entity {
         pub component_names: String,
+        pub keys: Option<String>,
     }
 
     #[derive(Deserialize)]
@@ -82,5 +83,38 @@ mod tests {
         assert_eq!(component_position.__typename, "Position");
         assert_eq!(component_position.x, 42);
         assert_eq!(component_position.y, 69);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    async fn test_entities_components(pool: SqlitePool) {
+        entity_fixtures(&pool).await;
+
+        let query = format!(
+            "
+                {{
+                    entities (keys: [\"%%\"], componentName:\"Moves\") {{
+                        id
+                        keys
+                        componentNames
+                        components {{
+                            __typename
+                            ... on Moves {{
+                                remaining
+                            }}
+                            ... on Position {{
+                                x
+                                y
+                            }}
+                        }}
+                    }}
+                }}
+            ",
+        );
+        let value = run_graphql_query(&pool, &query).await;
+
+        let entities = value.get("entities").ok_or("entities not found").unwrap();
+        let entities: Vec<Entity> = serde_json::from_value(entities.clone()).unwrap();
+        assert_eq!(entities[0].keys.clone().unwrap(), "0x1,");
+        assert_eq!(entities[1].keys.clone().unwrap(), "0x3,");
     }
 }
