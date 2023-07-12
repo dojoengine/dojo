@@ -3,7 +3,7 @@ use std::path::Path;
 use anyhow::{anyhow, bail, Context, Result};
 use dojo_client::contract::world::WorldContract;
 use dojo_world::manifest::{Manifest, ManifestError};
-use dojo_world::migration::strategy::{prepare_for_migration, MigrationOutput, MigrationStrategy};
+use dojo_world::migration::strategy::{prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{Declarable, Deployable, MigrationError, RegisterOutput};
 use dojo_world::utils::TransactionWaiter;
@@ -108,90 +108,94 @@ async fn execute_strategy<P, S>(
     strategy: &mut MigrationStrategy,
     migrator: SingleOwnerAccount<P, S>,
     ws_config: &Config,
-) -> Result<MigrationOutput>
+) -> Result<()>
 where
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
 {
-    let executor_output = match &mut strategy.executor {
+    match &strategy.executor {
         Some(executor) => {
             ws_config.ui().print_header("# Executor");
 
-            let res = executor
-                .deploy(executor.diff.local, vec![], &migrator)
-                .await
-                .map_err(|e| anyhow!("Failed to migrate executor: {e}"))?;
+            match executor.deploy(executor.diff.local, vec![], &migrator).await {
+                Ok(val) => {
+                    if let Some(declare) = val.clone().declare {
+                        ws_config.ui().print_hidden_sub(format!(
+                            "Declare transaction: {:#x}",
+                            declare.transaction_hash
+                        ));
+                    }
 
-            if let Some(declare) = res.clone().declare {
-                ws_config.ui().print_hidden_sub(format!(
-                    "declare transaction: {:#x}",
-                    declare.transaction_hash
-                ));
-            }
+                    ws_config.ui().print_hidden_sub(format!(
+                        "Deploy transaction: {:#x}",
+                        val.transaction_hash
+                    ));
 
-            ws_config
-                .ui()
-                .print_hidden_sub(format!("deploy transaction: {:#x}", res.transaction_hash));
+                    Ok(())
+                }
+                Err(MigrationError::ContractAlreadyDeployed) => Ok(()),
+                Err(e) => Err(anyhow!("Failed to migrate executor: {:?}", e)),
+            }?;
 
             if strategy.world.is_none() {
                 let addr = strategy.world_address()?;
                 let InvokeTransactionResult { transaction_hash } =
-                    WorldContract::new(addr, &migrator).set_executor(res.contract_address).await?;
+                    WorldContract::new(addr, &migrator)
+                        .set_executor(executor.contract_address)
+                        .await?;
 
                 let _ = TransactionWaiter::new(transaction_hash, migrator.provider())
                     .await
                     .map_err(MigrationError::<S, <P as Provider>::Error>::WaitingError);
 
-                ws_config.ui().print_hidden_sub(format!("updated at: {transaction_hash:#x}"));
+                ws_config.ui().print_hidden_sub(format!("Updated at: {transaction_hash:#x}"));
             }
 
-            ws_config.ui().print_sub(format!("contract address: {:#x}", res.contract_address));
-
-            Some(res)
+            ws_config.ui().print_sub(format!("Contract address: {:#x}", executor.contract_address));
         }
-        None => None,
+        None => {}
     };
 
-    let world_output = match &mut strategy.world {
+    match &mut strategy.world {
         Some(world) => {
             ws_config.ui().print_header("# World");
 
-            let res = world
+            match world
                 .deploy(
                     world.diff.local,
-                    vec![strategy.executor.as_ref().unwrap().contract_address.unwrap()],
+                    vec![strategy.executor.as_ref().unwrap().contract_address],
                     &migrator,
                 )
                 .await
-                .map_err(|e| anyhow!(e))?;
+            {
+                Ok(val) => {
+                    if let Some(declare) = val.clone().declare {
+                        ws_config.ui().print_hidden_sub(format!(
+                            "declare transaction: {:#x}",
+                            declare.transaction_hash
+                        ));
+                    }
 
-            if let Some(declare) = res.clone().declare {
-                ws_config.ui().print_hidden_sub(format!(
-                    "declare transaction: {:#x}",
-                    declare.transaction_hash
-                ));
-            }
+                    ws_config.ui().print_hidden_sub(format!(
+                        "Deploy transaction: {:#x}",
+                        val.transaction_hash
+                    ));
 
-            ws_config
-                .ui()
-                .print_hidden_sub(format!("deploy transaction: {:#x}", res.transaction_hash));
+                    Ok(())
+                }
+                Err(MigrationError::ContractAlreadyDeployed) => Ok(()),
+                Err(e) => Err(anyhow!("Failed to migrate world: {:?}", e)),
+            }?;
 
-            ws_config.ui().print_sub(format!("contract address: {:#x}", res.contract_address));
-
-            Some(res)
+            ws_config.ui().print_sub(format!("Contract address: {:#x}", world.contract_address));
         }
-        None => None,
+        None => {}
     };
 
-    let components_output = register_components(strategy, &migrator, ws_config).await?;
-    let systems_output = register_systems(strategy, &migrator, ws_config).await?;
+    register_components(strategy, &migrator, ws_config).await?;
+    register_systems(strategy, &migrator, ws_config).await?;
 
-    Ok(MigrationOutput {
-        world: world_output,
-        executor: executor_output,
-        systems: systems_output,
-        components: components_output,
-    })
+    Ok(())
 }
 
 async fn register_components<P, S>(
@@ -229,7 +233,7 @@ where
 
             // Continue if component is already declared
             Err(MigrationError::ClassAlreadyDeclared) => {
-                ws_config.ui().print_sub("already declared");
+                ws_config.ui().print_sub("Already declared");
                 continue;
             }
             Err(e) => bail!("Failed to declare component {}: {e}", c.diff.name),
@@ -280,7 +284,7 @@ where
         match res {
             Ok(output) => {
                 ws_config.ui().print_hidden_sub(format!(
-                    "declare transaction: {:#x}",
+                    "Declare transaction: {:#x}",
                     output.transaction_hash
                 ));
 
@@ -289,7 +293,7 @@ where
 
             // Continue if system is already declared
             Err(MigrationError::ClassAlreadyDeclared) => {
-                ws_config.ui().print_sub("already declared");
+                ws_config.ui().print_sub("Already declared");
                 continue;
             }
             Err(e) => bail!("Failed to declare system {}: {e}", s.diff.name),

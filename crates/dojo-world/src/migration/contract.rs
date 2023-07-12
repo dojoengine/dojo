@@ -14,7 +14,7 @@ pub struct ContractDiff {
     pub name: String,
     pub local: FieldElement,
     pub remote: Option<FieldElement>,
-    pub address: Option<FieldElement>,
+    pub address: FieldElement,
 }
 
 impl StateDiff for ContractDiff {
@@ -26,9 +26,7 @@ impl StateDiff for ContractDiff {
 impl Display for ContractDiff {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}:", self.name)?;
-        if let Some(address) = self.address {
-            writeln!(f, "   Address: {address:#x}",)?;
-        }
+        writeln!(f, "   Address: {:#x}", self.address)?;
         writeln!(f, "   Local: {:#x}", self.local)?;
 
         if let Some(remote) = self.remote {
@@ -46,7 +44,7 @@ pub struct ContractMigration {
     pub salt: FieldElement,
     pub diff: ContractDiff,
     pub artifact_path: PathBuf,
-    pub contract_address: Option<FieldElement>,
+    pub contract_address: FieldElement,
 }
 
 impl ContractMigration {
@@ -70,8 +68,4 @@ impl Declarable for ContractMigration {
 }
 
 #[async_trait]
-impl Deployable for ContractMigration {
-    fn set_contract_address(&mut self, contract_address: FieldElement) {
-        self.contract_address = Some(contract_address);
-    }
-}
+impl Deployable for ContractMigration {}
