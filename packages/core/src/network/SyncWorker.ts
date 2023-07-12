@@ -22,7 +22,7 @@ export class SyncWorker<C extends Components> {
         const component = this.components[key];
         if (component.metadata && component.metadata.name) {
             // call provider.entities for each component to get all entities linked to that component
-            const entities = await this.provider.entities(component.metadata.name as string, "0");
+            const entities = await this.provider.entities(component.metadata.name as string, "0", Object.keys(component.schema).length);
             setComponentFromEntitiesQuery(component, entities);
             }
         }

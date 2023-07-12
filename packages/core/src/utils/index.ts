@@ -81,7 +81,7 @@ export function setComponentFromEvent(components: Components, eventData: string[
 
     // get keys
     const keysNumber = parseInt(eventData[1]);
-    let index = 2 + keysNumber;
+    let index = 2 + keysNumber + 1;
 
     const keys = eventData.slice(2, 2 + keysNumber).map((key) => BigInt(key));
 

@@ -18,7 +18,7 @@ export interface Query {
 export interface ICommands {
 
     entity?(component: string, query: Query, offset: number, length: number): Promise<Array<bigint>>;
-    entities?(component: string, partition: string): Promise<Array<bigint>>;
+    entities?(component: string, partition: string, length: number): Promise<Array<bigint>>;
     execute?(name: bigint, execute_calldata: Array<bigint>): Promise<Array<bigint>>;
 
     register_component?(class_hash: string): Promise<bigint>;
