@@ -119,12 +119,10 @@ impl KatanaSequencer {
     }
 
     pub(self) async fn verify_contract_exists(&self, contract_address: &ContractAddress) -> bool {
-        self.starknet
-            .write()
-            .await
-            .state
-            .get_class_hash_at(*contract_address)
-            .is_ok_and(|c| c != ClassHash::default())
+        match self.starknet.write().await.state.get_class_hash_at(*contract_address) {
+            Ok(c) => c != ClassHash::default(),
+            Err(_) => false,
+        }
     }
 }
 
