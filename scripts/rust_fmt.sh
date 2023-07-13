@@ -1,3 +1,3 @@
 #!/bin/bash
 
-cargo +nightly-2023-05-28 fmt --all -- "$@"
+cargo +1.70.0 fmt --all -- "$@"
