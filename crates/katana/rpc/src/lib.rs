@@ -5,12 +5,13 @@ mod starknet;
 mod utils;
 
 use std::net::SocketAddr;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use config::ServerConfig;
 use hyper::Method;
 use jsonrpsee::server::logger::{Logger, MethodKind, TransportProtocol};
+use jsonrpsee::server::middleware::proxy_get_request::ProxyGetRequestLayer;
 use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
 use jsonrpsee::tracing::debug;
 use jsonrpsee::types::Params;
@@ -34,14 +35,18 @@ where
     let mut methods = RpcModule::new(());
     methods.merge(starknet_api.into_rpc())?;
     methods.merge(katana_api.into_rpc())?;
+    methods.register_method("health", |_, _| Ok(serde_json::json!({ "health": true })))?;
 
     let cors = CorsLayer::new()
             // Allow `POST` when accessing the resource
-            .allow_methods([Method::POST])
+            .allow_methods([Method::POST, Method::GET])
             // Allow requests from any origin
             .allow_origin(Any)
             .allow_headers([hyper::header::CONTENT_TYPE]);
-    let middleware = tower::ServiceBuilder::new().layer(cors);
+    let middleware = tower::ServiceBuilder::new()
+        .layer(cors)
+        .layer(ProxyGetRequestLayer::new("/", "health")?)
+        .timeout(Duration::from_secs(2));
 
     let server = ServerBuilder::new()
         .set_logger(RpcLogger)
