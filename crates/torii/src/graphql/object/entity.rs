@@ -136,7 +136,7 @@ fn resolve_many(name: &str, type_name: &str) -> Field {
                 ctx.args.try_get("limit").and_then(|limit| limit.u64()).unwrap_or(DEFAULT_LIMIT);
 
             let component_name = ctx.args.try_get("componentName") // Add the component name argument
-                .and_then(|name| name.string().map(|s| s.to_lowercase())).ok();
+                .and_then(|name| name.string().map(|s| s.to_string())).ok();
 
             let entities = entities_by_sk(&mut conn, keys, component_name, limit).await?;
             Ok(Some(FieldValue::list(entities.into_iter().map(FieldValue::owned_any))))
@@ -158,8 +158,20 @@ async fn entities_by_sk(
     builder.push(" WHERE keys LIKE ").push_bind(keys_str);
 
     if let Some(name) = component_name {
-        let name_str = format!("%{}%", name);
-        builder.push(" AND component_names LIKE ").push_bind(name_str);
+        builder
+            .push(" AND (")
+            .push("component_names = ")
+            .push_bind(name.clone())
+            .push(" OR ")
+            .push("component_names LIKE ")
+            .push_bind(format!("{},%", name.clone()))
+            .push(" OR ")
+            .push("component_names LIKE ")
+            .push_bind(format!("%,{}", name))
+            .push(" OR ")
+            .push("component_names LIKE ")
+            .push_bind(format!("%,{},%", name))
+            .push(")");
     }
 
     builder.push(" ORDER BY created_at DESC LIMIT ").push(limit);
