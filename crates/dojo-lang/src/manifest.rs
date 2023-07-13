@@ -58,11 +58,17 @@ impl Manifest {
                     db.module_generated_file_infos(*module_id).unwrap_or_default();
 
                 for generated_file_info in generated_file_infos.iter().skip(1) {
-                    let Some(generated_file_info) = generated_file_info else { continue; };
-                    let Some(mapper) = generated_file_info.aux_data.0.as_any(
-                ).downcast_ref::<DynPluginAuxData>() else { continue; };
-                    let Some(aux_data) = mapper.0.as_any(
-                ).downcast_ref::<DojoAuxData>() else { continue; };
+                    let Some(generated_file_info) = generated_file_info else {
+                        continue;
+                    };
+                    let Some(mapper) =
+                        generated_file_info.aux_data.0.as_any().downcast_ref::<DynPluginAuxData>()
+                    else {
+                        continue;
+                    };
+                    let Some(aux_data) = mapper.0.as_any().downcast_ref::<DojoAuxData>() else {
+                        continue;
+                    };
 
                     manifest.find_components(db, aux_data, *module_id, &compiled_classes);
                     manifest.find_systems(db, aux_data, *module_id, &compiled_classes).unwrap();

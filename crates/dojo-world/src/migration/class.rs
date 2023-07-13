@@ -16,7 +16,11 @@ pub struct ClassDiff {
 
 impl StateDiff for ClassDiff {
     fn is_same(&self) -> bool {
-        if let Some(remote) = self.remote { self.local == remote } else { false }
+        if let Some(remote) = self.remote {
+            self.local == remote
+        } else {
+            false
+        }
     }
 }
 
@@ -41,7 +45,7 @@ pub struct ClassMigration {
 
 impl ClassMigration {
     pub fn migration_type(&self) -> MigrationType {
-        let Some(remote ) = self.diff.remote else {
+        let Some(remote) = self.diff.remote else {
             return MigrationType::New;
         };
 

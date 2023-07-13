@@ -154,13 +154,10 @@ fn is_indexed(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> bool {
 
         for arg in attr.args {
             let AttributeArg {
-                variant: AttributeArgVariant::Named {
-                    value: ast::Expr::True(_),
-                    name,
-                    ..
-                },
+                variant: AttributeArgVariant::Named { value: ast::Expr::True(_), name, .. },
                 ..
-            } = arg else {
+            } = arg
+            else {
                 continue;
             };
 
