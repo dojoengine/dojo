@@ -164,7 +164,7 @@ async fn entities_by_sk(
             .push_bind(name.clone())
             .push(" OR ")
             .push("component_names LIKE ")
-            .push_bind(format!("{},%", name.clone()))
+            .push_bind(format!("{},%", name))
             .push(" OR ")
             .push("component_names LIKE ")
             .push_bind(format!("%,{}", name))

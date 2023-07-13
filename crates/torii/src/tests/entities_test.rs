@@ -89,16 +89,15 @@ mod tests {
     async fn test_entities_without_component_filters(pool: SqlitePool) {
         entity_fixtures(&pool).await;
 
-        let query = format!(
-            "
-                {{
-                    entities (keys: [\"%%\"]) {{
-                        keys
-                    }}
-                }}
-            ",
-        );
-        let value = run_graphql_query(&pool, &query).await;
+        let query = "
+        {
+            entities (keys: [\"%%\"]) {
+                keys
+                componentNames
+            }
+        }
+        ";
+        let value = run_graphql_query(&pool, query).await;
 
         let entities = value.get("entities").ok_or("entities not found").unwrap();
         let entities: Vec<Entity> = serde_json::from_value(entities.clone()).unwrap();
@@ -111,16 +110,15 @@ mod tests {
     async fn test_entities_with_component_filters(pool: SqlitePool) {
         entity_fixtures(&pool).await;
 
-        let query = format!(
-            "
-                {{
-                    entities (keys: [\"%%\"], componentName:\"Moves\") {{
-                        keys
-                    }}
-                }}
-            ",
-        );
-        let value = run_graphql_query(&pool, &query).await;
+        let query = "
+        {
+            entities (keys: [\"%%\"], componentName:\"Moves\") {
+                keys
+                componentNames
+            }
+        }
+        ";
+        let value = run_graphql_query(&pool, query).await;
 
         let entities = value.get("entities").ok_or("entities not found").unwrap();
         let entities: Vec<Entity> = serde_json::from_value(entities.clone()).unwrap();
