@@ -8,40 +8,140 @@ use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{Declarable, Deployable, MigrationError, RegisterOutput};
 use dojo_world::utils::TransactionWaiter;
 use scarb::core::Config;
-use starknet::accounts::{ConnectedAccount, SingleOwnerAccount};
-use starknet::core::types::{FieldElement, InvokeTransactionResult};
+use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
+use starknet::core::types::{
+    BlockId, BlockTag, FieldElement, InvokeTransactionResult, StarknetError,
+};
+use starknet::providers::jsonrpc::HttpTransport;
+use toml::Value;
 
 #[cfg(test)]
 #[path = "migration_test.rs"]
 mod migration_test;
 mod ui;
 
-use starknet::providers::Provider;
-use starknet::signers::Signer;
+use starknet::providers::{JsonRpcClient, Provider, ProviderError};
+use starknet::signers::{LocalWallet, Signer};
 use ui::MigrationUi;
+
+use crate::commands::migrate::MigrateArgs;
+use crate::commands::options::account::AccountOptions;
+use crate::commands::options::starknet::StarknetOptions;
+use crate::commands::options::world::WorldOptions;
 
 use self::ui::{bold_message, italic_message};
 
-pub async fn execute<U, P, S>(
-    world_address: Option<FieldElement>,
-    migrator: SingleOwnerAccount<P, S>,
+pub async fn execute<U>(
+    args: MigrateArgs,
+    env_metadata: Option<Value>,
     target_dir: U,
-    ws_config: &Config,
+    config: &Config,
 ) -> Result<()>
+where
+    U: AsRef<Path>,
+{
+    let MigrateArgs { account, starknet, world, .. } = args;
+
+    let (world_address, account) =
+        setup_env(account, starknet, world, env_metadata, config).await?;
+
+    let (local_manifest, remote_manifest) =
+        load_world_manifests(&target_dir, world_address, &account, config).await?;
+
+    config.ui().print_step(2, "🧰", "Evaluating Worlds diff...");
+
+    let diff = WorldDiff::compute(local_manifest, remote_manifest);
+    let total_diffs = diff.count_diffs();
+
+    config.ui().print_sub(format!("Total diffs found: {total_diffs}"));
+
+    if total_diffs == 0 {
+        config.ui().print("\n✨ No changes to be made. Remote World is already up to date!")
+    } else {
+        config.ui().print_step(3, "📦", "Preparing for migration...");
+
+        let mut migration = prepare_for_migration(world_address, target_dir, diff)
+            .with_context(|| "Problem preparing for migration.")?;
+
+        let info = migration.info();
+
+        config.ui().print_sub(format!(
+            "Total items to be migrated ({}): New {} Update {}",
+            info.new + info.update,
+            info.new,
+            info.update
+        ));
+
+        println!("  ");
+
+        execute_strategy(&mut migration, account, config)
+            .await
+            .map_err(|e| anyhow!(e))
+            .with_context(|| "Problem trying to migrate.")?;
+
+        config.ui().print(format!(
+            "\n🎉 Successfully migrated World at address {}",
+            bold_message(format!(
+                "{:#x}",
+                migration.world_address().expect("world address must exist")
+            ))
+        ));
+    }
+
+    Ok(())
+}
+
+async fn setup_env(
+    account: AccountOptions,
+    starknet: StarknetOptions,
+    world: WorldOptions,
+    env_metadata: Option<Value>,
+    config: &Config,
+) -> Result<(Option<FieldElement>, SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>)> {
+    let world_address = world.address(env_metadata.as_ref()).ok();
+
+    let account = {
+        let provider = starknet.provider(env_metadata.as_ref())?;
+        let mut account = account.account(provider, env_metadata.as_ref()).await?;
+        account.set_block_id(BlockId::Tag(BlockTag::Pending));
+
+        let address = account.address();
+
+        config.ui().print(format!("\nMigration account: {address:#x}\n"));
+
+        match account.provider().get_class_hash_at(BlockId::Tag(BlockTag::Pending), address).await {
+            Ok(_) => Ok(account),
+            Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
+                Err(anyhow!("Account with address {:#x} doesn't exist.", account.address()))
+            }
+            Err(e) => Err(e.into()),
+        }
+    }
+    .with_context(|| "Problem initializing account for migration.")?;
+
+    Ok((world_address, account))
+}
+
+async fn load_world_manifests<U, P, S>(
+    target_dir: U,
+    world_address: Option<FieldElement>,
+    account: &SingleOwnerAccount<P, S>,
+    config: &Config,
+) -> Result<(Manifest, Option<Manifest>)>
 where
     U: AsRef<Path>,
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
 {
-    ws_config.ui().print_step(1, "🌎", "Building World state...");
+    config.ui().print_step(1, "🌎", "Building World state...");
 
     let local_manifest = Manifest::load_from_path(target_dir.as_ref().join("manifest.json"))?;
 
     let remote_manifest = if let Some(world_address) = world_address {
-        ws_config.ui().print_sub(format!("Found remote World: {world_address:#x}"));
-        ws_config.ui().print_sub("Fetching remote state");
+        config.ui().print_sub(format!("Found remote World: {world_address:#x}"));
+        config.ui().print_sub("Fetching remote state");
 
-        Manifest::from_remote(migrator.provider(), world_address, Some(local_manifest.clone()))
+        Manifest::from_remote(account.provider(), world_address, Some(local_manifest.clone()))
             .await
             .map(Some)
             .map_err(|e| match e {
@@ -55,52 +155,11 @@ where
             })
             .with_context(|| "Failed to build remote World state.")?
     } else {
-        ws_config.ui().print_sub("No remote World found");
+        config.ui().print_sub("No remote World found");
         None
     };
 
-    ws_config.ui().print_step(2, "🧰", "Evaluating Worlds diff...");
-
-    let diff = WorldDiff::compute(local_manifest, remote_manifest);
-
-    let total_diffs = diff.count_diffs();
-
-    ws_config.ui().print_sub(format!("Total diffs found: {total_diffs}"));
-
-    if total_diffs == 0 {
-        ws_config.ui().print("\n✨ No changes to be made. Remote World is already up to date!")
-    } else {
-        ws_config.ui().print_step(3, "📦", "Preparing for migration...");
-
-        let mut migration = prepare_for_migration(world_address, target_dir, diff)
-            .with_context(|| "Problem preparing for migration.")?;
-
-        let info = migration.info();
-
-        ws_config.ui().print_sub(format!(
-            "Total items to be migrated ({}): New {} Update {}",
-            info.new + info.update,
-            info.new,
-            info.update
-        ));
-
-        println!("  ");
-
-        execute_strategy(&mut migration, migrator, ws_config)
-            .await
-            .map_err(|e| anyhow!(e))
-            .with_context(|| "Problem trying to migrate.")?;
-
-        ws_config.ui().print(format!(
-            "\n🎉 Successfully migrated World at address {}",
-            bold_message(format!(
-                "{:#x}",
-                migration.world_address().expect("world address must exist")
-            ))
-        ));
-    }
-
-    Ok(())
+    Ok((local_manifest, remote_manifest))
 }
 
 // TODO: display migration type (either new or update)
