@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use chrono::{DateTime, Utc};
     use serde::Deserialize;
-    use sqlx::{FromRow, SqlitePool};
+    use sqlx::SqlitePool;
+    use starknet_crypto::{poseidon_hash_many, FieldElement};
 
     use crate::tests::common::{entity_fixtures, run_graphql_query};
 
@@ -19,13 +19,9 @@ mod tests {
         y: u32,
     }
 
-    #[derive(FromRow, Deserialize)]
-    pub struct Component {
-        pub id: String,
-        pub name: String,
-        pub class_hash: String,
-        pub transaction_hash: String,
-        pub created_at: DateTime<Utc>,
+    #[derive(Deserialize)]
+    struct PositionEntityId {
+        entity_id: String,
     }
 
     #[sqlx::test(migrations = "./migrations")]
@@ -76,5 +72,24 @@ mod tests {
         let positions = value.get("positionComponents").ok_or("no positions found").unwrap();
         let positions: Vec<Position> = serde_json::from_value(positions.clone()).unwrap();
         assert_eq!(positions[0].y, 69);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    async fn test_component_entity_id(pool: SqlitePool) {
+        entity_fixtures(&pool).await;
+
+        let query = r#"
+                {
+                    positionComponents  {
+                        entity_id
+                    }
+                }
+            "#;
+        let value = run_graphql_query(&pool, query).await;
+
+        let positions = value.get("positionComponents").ok_or("no positions found").unwrap();
+        let positions: Vec<PositionEntityId> = serde_json::from_value(positions.clone()).unwrap();
+        let entity_id = poseidon_hash_many(&[FieldElement::TWO]);
+        assert_eq!(positions[0].entity_id, format!("{:#x}", entity_id));
     }
 }

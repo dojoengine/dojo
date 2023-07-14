@@ -15,6 +15,7 @@ use crate::graphql::constants::DEFAULT_LIMIT;
 use crate::graphql::types::ScalarType;
 
 const BOOLEAN_TRUE: i64 = 1;
+const ENTITY_ID: &str = "entity_id";
 
 pub type ComponentFilters = HashMap<String, String>;
 
@@ -96,7 +97,12 @@ fn add_arguments(field: Field, field_type_mapping: TypeMapping) -> Field {
     field_type_mapping
         .into_iter()
         .fold(field, |field, (name, ty)| {
-            field.argument(InputValue::new(name.as_str(), TypeRef::named(ty)))
+
+            // omit entity id as argument
+            match name.as_str() {
+                ENTITY_ID => field,
+                _ => field.argument(InputValue::new(name.as_str(), TypeRef::named(ty))),
+            }
         })
         .argument(InputValue::new("limit", TypeRef::named(TypeRef::INT)))
 }
@@ -105,27 +111,28 @@ fn parse_inputs(
     ctx: &ResolverContext<'_>,
     field_type_mapping: &TypeMapping,
 ) -> async_graphql::Result<(ComponentFilters, u64), async_graphql::Error> {
-    let mut inputs: ComponentFilters = ComponentFilters::new();
+    let mut filters: ComponentFilters = ComponentFilters::new();
 
+    // parse inputs based on field type mapping
     for (name, ty) in field_type_mapping.iter() {
-        let maybe_input = ctx.args.try_get(name.as_str()).ok();
-        if let Some(input) = maybe_input {
-            let input_str = if ScalarType::from_str(ty)?.is_numeric_type() {
-                input.u64()?.to_string()
-            } else {
-                input.string()?.to_string()
+        let input_option = ctx.args.try_get(name.as_str());
+
+        if let Ok(input) = input_option {
+            let input_str = match ScalarType::from_str(ty)? {
+                scalar if scalar.is_numeric_type() => input.u64()?.to_string(),
+                _ => input.string()?.to_string(),
             };
 
-            inputs.insert(name.to_string(), input_str);
+            filters.insert(name.to_string(), input_str);
         }
     }
 
     let limit = ctx.args.try_get("limit").and_then(|limit| limit.u64()).unwrap_or(DEFAULT_LIMIT);
 
-    Ok((inputs, limit))
+    Ok((filters, limit))
 }
 
-pub async fn component_state_by_id(
+pub async fn component_state_by_entity_id(
     conn: &mut PoolConnection<Sqlite>,
     name: &str,
     id: &str,
@@ -133,7 +140,7 @@ pub async fn component_state_by_id(
 ) -> sqlx::Result<ValueMapping> {
     let table_name = format!("external_{}", name);
     let mut builder: QueryBuilder<'_, Sqlite> = QueryBuilder::new("SELECT * FROM ");
-    builder.push(table_name).push(" WHERE id = ").push_bind(id);
+    builder.push(table_name).push(" WHERE entity_id = ").push_bind(id);
     let row = builder.build().fetch_one(conn).await?;
     value_mapping_from_row(&row, fields)
 }
@@ -158,38 +165,46 @@ pub async fn component_states_query(
     }
     builder.push(" ORDER BY created_at DESC LIMIT ").push_bind(limit.to_string());
 
-    let compoent_states = builder.build().fetch_all(conn).await?;
-    compoent_states.iter().map(|row| value_mapping_from_row(row, fields)).collect()
+    let component_states = builder.build().fetch_all(conn).await?;
+    component_states.iter().map(|row| value_mapping_from_row(row, fields)).collect()
 }
 
 fn value_mapping_from_row(row: &SqliteRow, fields: &TypeMapping) -> sqlx::Result<ValueMapping> {
-    let mut value_mapping = ValueMapping::new();
+    fields
+        .iter()
+        .map(|(name, ty)| {
 
-    for (field_name, field_type) in fields {
-        // Column names are prefixed to avoid conflicts with sqlite keywords
-        let column_name = format!("external_{}", field_name);
+            // handle entity_id separately since it's not a component member
+            match name.as_str() {
+                ENTITY_ID => Ok((Name::new(name), fetch_string(row, name)?)),
+                _ => Ok((Name::new(name), fetch_value(row, name, ty)?)),
+            }
+        })
+        .collect::<sqlx::Result<ValueMapping>>()
+}
 
-        let value = match ScalarType::from_str(field_type) {
-            Ok(ScalarType::Bool) => {
-                // sqlite stores booleans as 0 or 1
-                let result = row.try_get::<i64, &str>(&column_name);
-                Value::from(matches!(result?, BOOLEAN_TRUE))
-            }
-            Ok(ty) => {
-                if ty.is_numeric_type() {
-                    let result = row.try_get::<i64, &str>(&column_name);
-                    Value::from(result?)
-                } else {
-                    let result = row.try_get::<String, &str>(&column_name);
-                    Value::from(result?)
-                }
-            }
-            _ => return Err(sqlx::Error::TypeNotFound { type_name: field_type.clone() }),
-        };
-        value_mapping.insert(Name::new(field_name), value);
+fn fetch_value(row: &SqliteRow, field_name: &str, field_type: &str) -> sqlx::Result<Value> {
+    let column_name = format!("external_{}", field_name);
+
+    match ScalarType::from_str(field_type) {
+        Ok(ScalarType::Bool) => fetch_boolean(row, &column_name),
+        Ok(ty) if ty.is_numeric_type() => fetch_numeric(row, &column_name),
+        Ok(_) => fetch_string(row, &column_name),
+        _ => Err(sqlx::Error::TypeNotFound { type_name: field_type.to_string() }),
     }
+}
 
-    Ok(value_mapping)
+fn fetch_string(row: &SqliteRow, column_name: &str) -> sqlx::Result<Value> {
+    row.try_get::<String, &str>(column_name).map(Value::from)
+}
+
+fn fetch_numeric(row: &SqliteRow, column_name: &str) -> sqlx::Result<Value> {
+    row.try_get::<i64, &str>(column_name).map(Value::from)
+}
+
+fn fetch_boolean(row: &SqliteRow, column_name: &str) -> sqlx::Result<Value> {
+    let result = row.try_get::<i64, &str>(column_name);
+    Ok(Value::from(matches!(result?, BOOLEAN_TRUE)))
 }
 
 pub async fn type_mapping_from(
@@ -212,12 +227,14 @@ pub async fn type_mapping_from(
     .fetch_all(conn)
     .await?;
 
-    // TODO: check if type exists in scalar types
-    let field_type_mapping =
-        component_members.iter().fold(TypeMapping::new(), |mut acc, member| {
-            acc.insert(Name::new(member.name.clone()), member.ty.clone());
-            acc
-        });
+    // field type mapping is 1:1 to component members, but entity_id
+    // is not a member so we need to add it manually
+    let mut field_type_mapping = TypeMapping::new();
+    field_type_mapping.insert(Name::new(ENTITY_ID), TypeRef::ID.to_string());
+
+    for member in component_members {
+        field_type_mapping.insert(Name::new(member.name), member.ty);
+    }
 
     Ok(field_type_mapping)
 }
