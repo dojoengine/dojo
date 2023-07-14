@@ -199,6 +199,11 @@ mod position {
         arr
     }
 
+    #[external(v0)]
+    fn length(self: @ContractState) -> usize {
+        dojo::SerdeLen::<Position>::len()
+    }
+
 
     #[external(v0)]
     fn name(self: @ContractState) -> felt252 {
@@ -240,6 +245,11 @@ mod player {
         array::ArrayTrait::append(ref arr, ('name', 'felt252', 0, 0));
 
         arr
+    }
+
+    #[external(v0)]
+    fn length(self: @ContractState) -> usize {
+        dojo::SerdeLen::<Player>::len()
     }
 
 
