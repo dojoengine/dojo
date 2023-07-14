@@ -28,7 +28,7 @@ async fn test_component() {
     assert_eq!(
         component.class_hash(),
         FieldElement::from_hex_be(
-            "0x01d4884a1cc3240531a79cc460b3c688fab1b0ed482e6f50d64199fcd7446ff4"
+            "0x042e9aac8d3d6e6185815f891a5fa3b442e86e2bef3bca3ac620744309af7fe7"
         )
         .unwrap()
     );

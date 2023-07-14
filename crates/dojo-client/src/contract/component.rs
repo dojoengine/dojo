@@ -98,13 +98,32 @@ impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
         Ok(members)
     }
 
+    pub async fn length(
+        &self,
+        block_id: BlockId,
+    ) -> Result<FieldElement, ComponentError<P::Error>> {
+        let entrypoint = get_selector_from_name("length").unwrap();
+
+        let res = self
+            .world
+            .call(
+                "library_call",
+                vec![FieldElement::THREE, self.class_hash, entrypoint, FieldElement::ZERO],
+                block_id,
+            )
+            .await
+            .map_err(ComponentError::ContractReaderError)?;
+
+        Ok(res[2])
+    }
+
     pub async fn entity(
         &self,
         partition_id: FieldElement,
         keys: Vec<FieldElement>,
         block_id: BlockId,
     ) -> Result<Vec<FieldElement>, ComponentError<P::Error>> {
-        let members = self.schema(block_id).await?;
+        let length: u8 = self.length(block_id).await?.try_into().unwrap();
 
         let table = if partition_id == FieldElement::ZERO {
             self.name
@@ -123,11 +142,11 @@ impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
         let key = poseidon_hash_many(&[short_string!("dojo_storage"), table, id]);
 
         let mut values = vec![];
-        for member in members {
+        for slot in 0..length {
             let value = self
                 .world
                 .provider
-                .get_storage_at(self.world.address, key + member.slot.into(), block_id)
+                .get_storage_at(self.world.address, key + slot.into(), block_id)
                 .await
                 .map_err(ComponentError::ProviderError)?;
 
