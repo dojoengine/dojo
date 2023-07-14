@@ -8,18 +8,18 @@ use blockifier::execution::contract_class::ContractClass;
 use blockifier::state::state_api::{State, StateReader};
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transaction_execution::Transaction;
-use blockifier::transaction::transactions::{DeclareTransaction, ExecutableTransaction};
+use blockifier::transaction::transactions::DeclareTransaction;
 use starknet::core::types::{
     BlockId, BlockTag, FeeEstimate, FlattenedSierraClass, StateUpdate, TransactionStatus,
 };
 use starknet_api::block::{BlockHash, BlockNumber};
-use starknet_api::core::{calculate_contract_address, ChainId, ClassHash, ContractAddress, Nonce};
+use starknet_api::core::{ChainId, ClassHash, ContractAddress, Nonce};
 use starknet_api::hash::StarkFelt;
 use starknet_api::stark_felt;
 use starknet_api::state::StorageKey;
 use starknet_api::transaction::{
-    Calldata, ContractAddressSalt, DeployAccountTransaction, Fee, InvokeTransaction,
-    Transaction as StarknetApiTransaction, TransactionHash, TransactionSignature,
+    DeployAccountTransaction, InvokeTransaction, Transaction as StarknetApiTransaction,
+    TransactionHash,
 };
 use tokio::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use tokio::time;
@@ -32,7 +32,6 @@ use crate::backend::state::{MemDb, StateExt};
 use crate::backend::transaction::ExternalFunctionCall;
 use crate::backend::StarknetWrapper;
 use crate::sequencer_error::SequencerError;
-use crate::util::starkfelt_to_u128;
 
 type SequencerResult<T> = Result<T, SequencerError>;
 
@@ -70,19 +69,11 @@ impl KatanaSequencer {
 
     pub async fn drip_and_deploy_account(
         &self,
-        class_hash: ClassHash,
-        contract_address_salt: ContractAddressSalt,
-        constructor_calldata: Calldata,
-        signature: TransactionSignature,
+        transaction: DeployAccountTransaction,
         balance: u64,
     ) -> SequencerResult<(TransactionHash, ContractAddress)> {
-        let contract_address = calculate_contract_address(
-            contract_address_salt,
-            class_hash,
-            &constructor_calldata,
-            ContractAddress::default(),
-        )
-        .map_err(SequencerError::StarknetApi)?;
+        let (transaction_hash, contract_address) =
+            self.add_deploy_account_transaction(transaction).await;
 
         let deployed_account_balance_key =
             get_storage_var_address("ERC20_balances", &[*contract_address.0.key()])
@@ -94,8 +85,7 @@ impl KatanaSequencer {
             stark_felt!(balance),
         );
 
-        self.deploy_account(class_hash, contract_address_salt, constructor_calldata, signature)
-            .await
+        Ok((transaction_hash, contract_address))
     }
 
     pub async fn block_number_from_block_id(&self, block_id: &BlockId) -> Option<BlockNumber> {
@@ -156,63 +146,18 @@ impl Sequencer for KatanaSequencer {
         }
     }
 
-    async fn deploy_account(
+    async fn add_deploy_account_transaction(
         &self,
-        class_hash: ClassHash,
-        contract_address_salt: ContractAddressSalt,
-        constructor_calldata: Calldata,
-        signature: TransactionSignature,
-    ) -> SequencerResult<(TransactionHash, ContractAddress)> {
-        let contract_address = calculate_contract_address(
-            contract_address_salt,
-            class_hash,
-            &constructor_calldata,
-            ContractAddress::default(),
-        )
-        .map_err(SequencerError::StarknetApi)?;
+        transaction: DeployAccountTransaction,
+    ) -> (TransactionHash, ContractAddress) {
+        let transaction_hash = transaction.transaction_hash;
+        let contract_address = transaction.contract_address;
 
-        let account_balance_key =
-            get_storage_var_address("ERC20_balances", &[*contract_address.0.key()])
-                .map_err(SequencerError::StarknetApi)?;
+        self.starknet.write().await.handle_transaction(Transaction::AccountTransaction(
+            AccountTransaction::DeployAccount(transaction),
+        ));
 
-        let max_fee = {
-            self.starknet
-                .write()
-                .await
-                .state
-                .get_storage_at(
-                    self.starknet.read().await.block_context.fee_token_address,
-                    account_balance_key,
-                )
-                .map_err(SequencerError::State)?
-        };
-        // TODO: Compute txn hash
-        let tx_hash = TransactionHash::default();
-        let tx = AccountTransaction::DeployAccount(DeployAccountTransaction {
-            class_hash,
-            contract_address,
-            contract_address_salt,
-            constructor_calldata,
-            version: Default::default(),
-            nonce: Nonce(stark_felt!(0_u8)),
-            signature,
-            transaction_hash: tx_hash,
-            max_fee: Fee(starkfelt_to_u128(max_fee).map_err(|e| {
-                SequencerError::ConversionError {
-                    message: e.to_string(),
-                    to: "u128".to_string(),
-                    from: "StarkFelt".to_string(),
-                }
-            })?),
-        });
-
-        tx.execute(
-            &mut self.starknet.write().await.pending_cached_state,
-            &self.starknet.read().await.block_context,
-        )
-        .map_err(SequencerError::TransactionExecution)?;
-
-        Ok((tx_hash, contract_address))
+        (transaction_hash, contract_address)
     }
 
     async fn add_declare_transaction(
@@ -252,15 +197,11 @@ impl Sequencer for KatanaSequencer {
             return Err(SequencerError::BlockNotFound(block_id));
         }
 
-        let sender = match &account_transaction {
+        match &account_transaction {
             AccountTransaction::Invoke(tx) => tx.sender_address(),
             AccountTransaction::Declare(tx) => tx.tx().sender_address(),
             AccountTransaction::DeployAccount(tx) => tx.contract_address,
         };
-
-        if !self.verify_contract_exists(&sender).await {
-            return Err(SequencerError::ContractNotFound(sender));
-        }
 
         let state = self.state(&block_id).await?;
 
@@ -579,13 +520,10 @@ pub trait Sequencer {
         block_id: BlockId,
     ) -> SequencerResult<StarkFelt>;
 
-    async fn deploy_account(
+    async fn add_deploy_account_transaction(
         &self,
-        class_hash: ClassHash,
-        contract_address_salt: ContractAddressSalt,
-        constructor_calldata: Calldata,
-        signature: TransactionSignature,
-    ) -> SequencerResult<(TransactionHash, ContractAddress)>;
+        transaction: DeployAccountTransaction,
+    ) -> (TransactionHash, ContractAddress);
 
     async fn add_declare_transaction(
         &self,
