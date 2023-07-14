@@ -61,7 +61,11 @@ impl GeneratedFileAuxData for DojoAuxData {
         self
     }
     fn eq(&self, other: &dyn GeneratedFileAuxData) -> bool {
-        if let Some(other) = other.as_any().downcast_ref::<Self>() { self == other } else { false }
+        if let Some(other) = other.as_any().downcast_ref::<Self>() {
+            self == other
+        } else {
+            false
+        }
     }
 }
 impl AsDynGeneratedFileAuxData for DojoAuxData {
@@ -75,7 +79,9 @@ impl PluginAuxData for DojoAuxData {
         db: &(dyn SemanticGroup + 'static),
         diag: &dyn std::any::Any,
     ) -> Option<PluginMappedDiagnostic> {
-        let Some(diag) = diag.downcast_ref::<SemanticDiagnostic>() else {return None;};
+        let Some(diag) = diag.downcast_ref::<SemanticDiagnostic>() else {
+            return None;
+        };
         let span = self
             .patches
             .translate(db.upcast(), diag.stable_location.diagnostic_location(db.upcast()).span)?;
@@ -125,13 +131,12 @@ impl MacroPlugin for DojoPlugin {
                     // Iterate over all the arguments of the derive attribute
                     for arg in attr.args {
                         // Check if the argument is a path then set it to arg
-                        let AttributeArg{
-                            variant: AttributeArgVariant::Unnamed {
-                                value: ast::Expr::Path(path),
-                                ..
-                            },
+                        let AttributeArg {
+                            variant:
+                                AttributeArgVariant::Unnamed { value: ast::Expr::Path(path), .. },
                             ..
-                        } = arg else {
+                        } = arg
+                        else {
                             diagnostics.push(PluginDiagnostic {
                                 stable_ptr: arg.arg_stable_ptr.untyped(),
                                 message: "Expected path.".into(),

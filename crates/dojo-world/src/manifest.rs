@@ -151,10 +151,8 @@ impl Manifest {
                     .call(
                         FunctionCall {
                             contract_address: world_address,
-                            calldata: vec![
-                                cairo_short_string_to_felt(&component.name)
-                                    .map_err(ManifestError::InvalidNameError)?,
-                            ],
+                            calldata: vec![cairo_short_string_to_felt(&component.name)
+                                .map_err(ManifestError::InvalidNameError)?],
                             entry_point_selector: get_selector_from_name("component").unwrap(),
                         },
                         BlockId::Tag(BlockTag::Pending),
@@ -174,14 +172,12 @@ impl Manifest {
                     .call(
                         FunctionCall {
                             contract_address: world_address,
-                            calldata: vec![
-                                cairo_short_string_to_felt(
-                                    // because the name returns by the `name` method of
-                                    // a system contract is without the 'System' suffix
-                                    system.name.strip_suffix("System").unwrap_or(&system.name),
-                                )
-                                .map_err(ManifestError::InvalidNameError)?,
-                            ],
+                            calldata: vec![cairo_short_string_to_felt(
+                                // because the name returns by the `name` method of
+                                // a system contract is without the 'System' suffix
+                                system.name.strip_suffix("System").unwrap_or(&system.name),
+                            )
+                            .map_err(ManifestError::InvalidNameError)?],
                             entry_point_selector: get_selector_from_name("system").unwrap(),
                         },
                         BlockId::Tag(BlockTag::Pending),

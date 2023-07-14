@@ -8,7 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  NIGHTLY_RUST_VERSION: nightly-2023-05-28
+  RUST_VERSION: 1.70.0
 
 jobs:
   test:
@@ -18,7 +18,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
+          toolchain: ${{ env.RUST_VERSION }}
 
       - uses: Swatinem/rust-cache@v2
       - uses: arduino/setup-protoc@v1
@@ -46,7 +46,7 @@ jobs:
       
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
+          toolchain: ${{ env.RUST_VERSION }}
 
       - uses: Swatinem/rust-cache@v2
       - run: scripts/cairo_test.sh
@@ -58,7 +58,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
+          toolchain: ${{ env.RUST_VERSION }}
           components: clippy
       
       - uses: Swatinem/rust-cache@v2
@@ -74,7 +74,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
+          toolchain: ${{ env.RUST_VERSION }}
           components: rustfmt
       
       - uses: Swatinem/rust-cache@v2
@@ -93,7 +93,7 @@ jobs:
 
   #     - uses: dtolnay/rust-toolchain@master
   #       with:
-  #         toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
+  #         toolchain: ${{ env.RUST_VERSION }}
       
   #     - uses: Swatinem/rust-cache@v2
   #     - uses: arduino/setup-protoc@v1
@@ -113,7 +113,7 @@ jobs:
   #         fi
   #         ~/.cargo-udeps-cache/cargo-udeps udeps --all-targets
   #       env:
-  #         RUSTUP_TOOLCHAIN: ${{ env.NIGHTLY_RUST_VERSION }}
+  #         RUSTUP_TOOLCHAIN: ${{ env.RUST_VERSION }}
 
   docs:
     runs-on: ubuntu-latest-32-cores
@@ -122,7 +122,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
+          toolchain: ${{ env.RUST_VERSION }}
 
       - uses: Swatinem/rust-cache@v2
       - uses: arduino/setup-protoc@v1
@@ -142,7 +142,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
+          toolchain: ${{ env.RUST_VERSION }}
       
       - uses: Swatinem/rust-cache@v2
       - name: Install Hurl

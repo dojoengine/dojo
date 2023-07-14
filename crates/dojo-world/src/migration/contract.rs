@@ -19,7 +19,11 @@ pub struct ContractDiff {
 
 impl StateDiff for ContractDiff {
     fn is_same(&self) -> bool {
-        if let Some(remote) = self.remote { self.local == remote } else { false }
+        if let Some(remote) = self.remote {
+            self.local == remote
+        } else {
+            false
+        }
     }
 }
 
@@ -49,7 +53,7 @@ pub struct ContractMigration {
 
 impl ContractMigration {
     pub fn migration_type(&self) -> MigrationType {
-        let Some(remote ) = self.diff.remote else {
+        let Some(remote) = self.diff.remote else {
             return MigrationType::New;
         };
 

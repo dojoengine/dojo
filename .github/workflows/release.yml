@@ -11,7 +11,7 @@ on:
 env:
   IS_NIGHTLY: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
   CARGO_TERM_COLOR: always
-  NIGHTLY_RUST_VERSION: nightly-2023-05-28
+  RUST_VERSION: 1.70.0
   REGISTRY_IMAGE: ghcr.io/${{ github.repository }}
 
 jobs:
@@ -106,7 +106,7 @@ jobs:
         name: Rust Toolchain Setup
         with:
           targets: ${{ matrix.job.target }}
-          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
+          toolchain: ${{ env.RUST_VERSION }}
 
       - uses: Swatinem/rust-cache@v1
         with:
