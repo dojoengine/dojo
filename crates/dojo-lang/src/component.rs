@@ -109,6 +109,11 @@ pub fn handle_component_struct(
                     arr
                 }
 
+                #[external(v0)]
+                fn length(self: @ContractState) -> usize {
+                    dojo::SerdeLen::<$type_name$>::len()
+                }
+
                 $body$
             }
         ",
