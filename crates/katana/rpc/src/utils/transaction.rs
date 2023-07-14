@@ -30,6 +30,37 @@ const PREFIX_DECLARE: FieldElement = FieldElement::from_mont([
     191557713328401194,
 ]);
 
+/// Cairo string for "deploy_account"
+const PREFIX_DEPLOY_ACCOUNT: FieldElement = FieldElement::from_mont([
+    3350261884043292318,
+    18443211694809419988,
+    18446744073709551615,
+    461298303000467581,
+]);
+
+pub fn compute_deploy_account_v1_transaction_hash(
+    contract_address: FieldElement,
+    constructor_calldata: &[FieldElement],
+    class_hash: FieldElement,
+    salt: FieldElement,
+    max_fee: FieldElement,
+    chain_id: FieldElement,
+    nonce: FieldElement,
+) -> FieldElement {
+    let calldata_to_hash = [&[class_hash, salt], constructor_calldata].concat();
+
+    compute_hash_on_elements(&[
+        PREFIX_DEPLOY_ACCOUNT,
+        FieldElement::ONE, // version
+        contract_address,
+        FieldElement::ZERO, // entry_point_selector
+        compute_hash_on_elements(&calldata_to_hash),
+        max_fee,
+        chain_id,
+        nonce,
+    ])
+}
+
 pub fn compute_declare_v1_transaction_hash(
     sender_address: FieldElement,
     class_hash: FieldElement,
@@ -192,4 +223,64 @@ fn convert_declare_to_rpc_tx(transaction: InnerDeclareTransaction) -> Result<Dec
             signature: convert_stark_felt_array_to_field_element_array(&tx.signature.0)?,
         }),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use starknet::core::chain_id;
+
+    use super::*;
+
+    #[test]
+    fn test_compute_deploy_account_v1_transaction_hash() {
+        let contract_address = FieldElement::from_hex_be(
+            "0x0617e350ebed9897037bdef9a09af65049b85ed2e4c9604b640f34bffa152149",
+        )
+        .unwrap();
+        let constructor_calldata = vec![
+            FieldElement::from_hex_be(
+                "0x33434ad846cdd5f23eb73ff09fe6fddd568284a0fb7d1be20ee482f044dabe2",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0x79dc0da7c54b95f10aa182ad0a46400db63156920adb65eca2654c0945a463",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be("0x2").unwrap(),
+            FieldElement::from_hex_be(
+                "0x43a8fbe19d5ace41a2328bb870143241831180eb3c3c48096642d63709c3096",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be("0x0").unwrap(),
+        ];
+        let class_hash = FieldElement::from_hex_be(
+            "0x025ec026985a3bf9d0cc1fe17326b245dfdc3ff89b8fde106542a3ea56c5a918",
+        )
+        .unwrap();
+        let salt = FieldElement::from_hex_be(
+            "0x43a8fbe19d5ace41a2328bb870143241831180eb3c3c48096642d63709c3096",
+        )
+        .unwrap();
+        let max_fee = FieldElement::from_hex_be("0x38d7ea4c68000").unwrap();
+        let chain_id = chain_id::MAINNET;
+        let nonce = FieldElement::ZERO;
+
+        let hash = compute_deploy_account_v1_transaction_hash(
+            contract_address,
+            &constructor_calldata,
+            class_hash,
+            salt,
+            max_fee,
+            chain_id,
+            nonce,
+        );
+
+        assert_eq!(
+            hash,
+            FieldElement::from_hex_be(
+                "0x3d013d17c20a5db05d5c2e06c948a4e0bf5ea5b851b15137316533ec4788b6b"
+            )
+            .unwrap()
+        );
+    }
 }
