@@ -10,6 +10,7 @@ mod tests {
     #[serde(rename_all = "camelCase")]
     pub struct Entity {
         pub component_names: String,
+        pub keys: Option<String>,
     }
 
     #[derive(Deserialize)]
@@ -82,5 +83,46 @@ mod tests {
         assert_eq!(component_position.__typename, "Position");
         assert_eq!(component_position.x, 42);
         assert_eq!(component_position.y, 69);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    async fn test_entities_without_component_filters(pool: SqlitePool) {
+        entity_fixtures(&pool).await;
+
+        let query = "
+        {
+            entities (keys: [\"%%\"]) {
+                keys
+                componentNames
+            }
+        }
+        ";
+        let value = run_graphql_query(&pool, query).await;
+
+        let entities = value.get("entities").ok_or("entities not found").unwrap();
+        let entities: Vec<Entity> = serde_json::from_value(entities.clone()).unwrap();
+        assert_eq!(entities[0].keys.clone().unwrap(), "0x1,");
+        assert_eq!(entities[1].keys.clone().unwrap(), "0x2,");
+        assert_eq!(entities[2].keys.clone().unwrap(), "0x3,");
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    async fn test_entities_with_component_filters(pool: SqlitePool) {
+        entity_fixtures(&pool).await;
+
+        let query = "
+        {
+            entities (keys: [\"%%\"], componentName:\"Moves\") {
+                keys
+                componentNames
+            }
+        }
+        ";
+        let value = run_graphql_query(&pool, query).await;
+
+        let entities = value.get("entities").ok_or("entities not found").unwrap();
+        let entities: Vec<Entity> = serde_json::from_value(entities.clone()).unwrap();
+        assert_eq!(entities[0].keys.clone().unwrap(), "0x1,");
+        assert_eq!(entities[1].keys.clone().unwrap(), "0x3,");
     }
 }

@@ -135,22 +135,45 @@ fn resolve_many(name: &str, type_name: &str) -> Field {
             let limit =
                 ctx.args.try_get("limit").and_then(|limit| limit.u64()).unwrap_or(DEFAULT_LIMIT);
 
-            let entities = entities_by_sk(&mut conn, keys, limit).await?;
+            let component_name = ctx.args.try_get("componentName") // Add the component name argument
+                .and_then(|name| name.string().map(|s| s.to_string())).ok();
+
+            let entities = entities_by_sk(&mut conn, keys, component_name, limit).await?;
             Ok(Some(FieldValue::list(entities.into_iter().map(FieldValue::owned_any))))
         })
     })
     .argument(InputValue::new("keys", TypeRef::named_nn_list_nn(TypeRef::STRING)))
     .argument(InputValue::new("limit", TypeRef::named(TypeRef::INT)))
+    .argument(InputValue::new("componentName", TypeRef::named(TypeRef::STRING)))
 }
 
 async fn entities_by_sk(
     conn: &mut PoolConnection<Sqlite>,
     keys: Vec<String>,
+    component_name: Option<String>, // Add the filter parameter
     limit: u64,
 ) -> Result<Vec<ValueMapping>> {
     let mut builder: QueryBuilder<'_, Sqlite> = QueryBuilder::new("SELECT * FROM entities");
     let keys_str = format!("{},%", keys.join(","));
     builder.push(" WHERE keys LIKE ").push_bind(keys_str);
+
+    if let Some(name) = component_name {
+        builder
+            .push(" AND (")
+            .push("component_names = ")
+            .push_bind(name.clone())
+            .push(" OR ")
+            .push("component_names LIKE ")
+            .push_bind(format!("{},%", name))
+            .push(" OR ")
+            .push("component_names LIKE ")
+            .push_bind(format!("%,{}", name))
+            .push(" OR ")
+            .push("component_names LIKE ")
+            .push_bind(format!("%,{},%", name))
+            .push(")");
+    }
+
     builder.push(" ORDER BY created_at DESC LIMIT ").push(limit);
 
     let entities: Vec<Entity> = builder.build_query_as().fetch_all(conn).await?;
