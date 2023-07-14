@@ -8,6 +8,10 @@ use super::contract::ContractDiff;
 use super::StateDiff;
 use crate::manifest::{Manifest, EXECUTOR_CONTRACT_NAME, WORLD_CONTRACT_NAME};
 
+#[cfg(test)]
+#[path = "world_test.rs"]
+mod tests;
+
 /// Represents the state differences between the local and remote worlds.
 #[derive(Debug)]
 pub struct WorldDiff {
