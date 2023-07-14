@@ -97,7 +97,6 @@ fn add_arguments(field: Field, field_type_mapping: TypeMapping) -> Field {
     field_type_mapping
         .into_iter()
         .fold(field, |field, (name, ty)| {
-
             // omit entity id as argument
             match name.as_str() {
                 ENTITY_ID => field,
@@ -173,7 +172,6 @@ fn value_mapping_from_row(row: &SqliteRow, fields: &TypeMapping) -> sqlx::Result
     fields
         .iter()
         .map(|(name, ty)| {
-
             // handle entity_id separately since it's not a component member
             match name.as_str() {
                 ENTITY_ID => Ok((Name::new(name), fetch_string(row, name)?)),
