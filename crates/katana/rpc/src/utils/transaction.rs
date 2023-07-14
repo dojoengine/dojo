@@ -232,7 +232,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_compute_deploy_account_v1_ransaction_hash() {
+    fn test_compute_deploy_account_v1_transaction_hash() {
         let contract_address = FieldElement::from_hex_be(
             "0x0617e350ebed9897037bdef9a09af65049b85ed2e4c9604b640f34bffa152149",
         )
