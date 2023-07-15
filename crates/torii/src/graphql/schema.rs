@@ -27,7 +27,7 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     let (component_objects, component_union) = component_objects(pool).await?;
     objects.extend(component_objects);
     schema_builder = schema_builder.register(component_union);
-        
+
     // collect field resolvers
     let mut fields = Vec::new();
     for object in &objects {
@@ -66,7 +66,6 @@ async fn component_objects(pool: &SqlitePool) -> Result<(Vec<Box<dyn ObjectTrait
     // component state objects
     for component_metadata in components {
         let field_type_mapping = type_mapping_from(&mut conn, &component_metadata.id).await?;
-        
         if !field_type_mapping.is_empty() {
             let (name, type_name) = format_name(&component_metadata.name);
             let state_object = Box::new(ComponentStateObject::new(
@@ -74,7 +73,7 @@ async fn component_objects(pool: &SqlitePool) -> Result<(Vec<Box<dyn ObjectTrait
                 type_name.clone(),
                 field_type_mapping,
             ));
-    
+
             component_union = component_union.possible_type(&type_name);
             objects.push(state_object);
         }
