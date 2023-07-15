@@ -37,7 +37,7 @@ pub async fn deploy_world(
     let world = WorldDiff::compute(manifest.clone(), None);
     let account = sequencer.account();
 
-    let strategy = prepare_for_migration(None, path, world).unwrap();
+    let strategy = prepare_for_migration(None, Some("seed".into()), path, world).unwrap();
     let executor_address = strategy
         .executor
         .unwrap()
