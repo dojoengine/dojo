@@ -42,6 +42,7 @@ pub struct Engine<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> 
     storage: &'a S,
     provider: &'a JsonRpcClient<T>,
     processors: Processors<S, T>,
+    start_block: Option<u64>,
     config: EngineConfig,
 }
 
@@ -50,13 +51,15 @@ impl<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> Engine<'a, S,
         storage: &'a S,
         provider: &'a JsonRpcClient<T>,
         processors: Processors<S, T>,
+        start_block: Option<u64>,
         config: EngineConfig,
     ) -> Self {
-        Self { storage, provider, processors, config }
+        Self { storage, provider, processors, start_block, config }
     }
 
     pub async fn start(&self) -> Result<(), Box<dyn Error>> {
-        let mut current_block_number = self.storage.head().await?;
+        let mut current_block_number =
+            if let Some(head) = self.start_block { head } else { self.storage.head().await? };
 
         loop {
             sleep(self.config.block_time).await;
