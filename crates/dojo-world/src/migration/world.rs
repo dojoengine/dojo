@@ -1,8 +1,5 @@
 use std::fmt::Display;
 
-use starknet::core::types::FieldElement;
-use starknet::core::utils::get_contract_address;
-
 use super::class::ClassDiff;
 use super::contract::ContractDiff;
 use super::StateDiff;
@@ -13,7 +10,7 @@ use crate::manifest::{Manifest, EXECUTOR_CONTRACT_NAME, WORLD_CONTRACT_NAME};
 mod tests;
 
 /// Represents the state differences between the local and remote worlds.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct WorldDiff {
     pub world: ContractDiff,
     pub executor: ContractDiff,
@@ -62,34 +59,14 @@ impl WorldDiff {
             })
             .collect::<Vec<_>>();
 
-        let local_executor_contract_address = get_contract_address(
-            FieldElement::ZERO,
-            local.executor.class_hash,
-            &[],
-            FieldElement::ZERO,
-        );
         let executor = ContractDiff {
             name: EXECUTOR_CONTRACT_NAME.into(),
-            address: remote
-                .as_ref()
-                .and_then(|m| m.executor.address)
-                .unwrap_or(local_executor_contract_address),
             local: local.executor.class_hash,
             remote: remote.as_ref().map(|m| m.executor.class_hash),
         };
 
-        let local_world_contract_address = get_contract_address(
-            FieldElement::ZERO,
-            local.world.class_hash,
-            &[executor.address],
-            FieldElement::ZERO,
-        );
         let world = ContractDiff {
             name: WORLD_CONTRACT_NAME.into(),
-            address: remote
-                .as_ref()
-                .and_then(|m| m.world.address)
-                .unwrap_or(local_world_contract_address),
             local: local.world.class_hash,
             remote: remote.map(|m| m.world.class_hash),
         };

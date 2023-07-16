@@ -11,8 +11,15 @@ use crate::ops::migration;
 #[derive(Args)]
 pub struct MigrateArgs {
     #[arg(short, long)]
-    #[arg(help = "Perform a dry run and outputs the plan to be executed")]
+    #[arg(help = "Perform a dry run and outputs the plan to be executed.")]
     pub plan: bool,
+
+    #[arg(long)]
+    #[arg(help = "Name of the World.")]
+    #[arg(
+        long_help = "Name of the World. It will be used as the salt when deploying the contract to avoid address conflicts."
+    )]
+    pub name: Option<String>,
 
     #[command(flatten)]
     pub world: WorldOptions,
@@ -45,9 +52,12 @@ impl MigrateArgs {
             .and_then(|env_metadata| env_metadata.get(ws.config().profile().as_str()).cloned())
             .or(env_metadata);
 
-        ws.config().tokio_handle().block_on(async {
-            migration::execute(self, env_metadata, target_dir, ws.config()).await
-        })?;
+        ws.config().tokio_handle().block_on(migration::execute(
+            self,
+            env_metadata,
+            target_dir,
+            ws.config(),
+        ))?;
 
         Ok(())
     }

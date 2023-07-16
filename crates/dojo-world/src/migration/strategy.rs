@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{anyhow, Context, Result};
 use convert_case::{Case, Casing};
 use starknet::core::types::FieldElement;
+use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
 
 use super::class::{ClassDiff, ClassMigration};
 use super::contract::{ContractDiff, ContractMigration};
@@ -78,6 +79,7 @@ impl MigrationStrategy {
 /// evaluate which contracts/classes need to be declared/deployed
 pub fn prepare_for_migration<P>(
     world_address: Option<FieldElement>,
+    seed: Option<String>,
     target_dir: P,
     diff: WorldDiff,
 ) -> Result<MigrationStrategy>
@@ -105,11 +107,32 @@ where
 
     // If the world contract needs to be migrated, then all contracts need to be migrated
     // else we need to evaluate which contracts need to be migrated.
-    let world = evaluate_contract_to_migrate(&diff.world, &artifact_paths, false)?;
-    let executor = evaluate_contract_to_migrate(&diff.executor, &artifact_paths, world.is_some())?;
+    let mut world = evaluate_contract_to_migrate(&diff.world, &artifact_paths, false)?;
+    let mut executor =
+        evaluate_contract_to_migrate(&diff.executor, &artifact_paths, world.is_some())?;
     let components =
         evaluate_components_to_migrate(&diff.components, &artifact_paths, world.is_some())?;
     let systems = evaluate_systems_to_migrate(&diff.systems, &artifact_paths, world.is_some())?;
+
+    if let Some(executor) = &mut executor {
+        executor.contract_address =
+            get_contract_address(FieldElement::ZERO, diff.executor.local, &[], FieldElement::ZERO);
+    }
+
+    // If world needs to be migrated, then we expect the `seed` to be provided.
+    if let Some(world) = &mut world {
+        let salt = cairo_short_string_to_felt(
+            &seed.ok_or(anyhow!("Missing seed for World deployment."))?,
+        )?;
+
+        world.salt = salt;
+        world.contract_address = get_contract_address(
+            salt,
+            diff.world.local,
+            &[executor.as_ref().unwrap().contract_address],
+            FieldElement::ZERO,
+        );
+    }
 
     Ok(MigrationStrategy { world_address, world, executor, systems, components })
 }
@@ -168,11 +191,9 @@ fn evaluate_contract_to_migrate(
     {
         let path = find_artifact_path(&contract.name, artifact_paths)?;
 
-        // TODO: generate random salt
         Ok(Some(ContractMigration {
             diff: contract.clone(),
             artifact_path: path.clone(),
-            contract_address: contract.address,
             ..Default::default()
         }))
     } else {
