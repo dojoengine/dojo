@@ -12,7 +12,10 @@ use sqlx::{FromRow, Pool, QueryBuilder, Row, Sqlite};
 
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::graphql::constants::DEFAULT_LIMIT;
+use crate::graphql::object::entity::{Entity, EntityObject};
+use crate::graphql::object::query::{query_by_id, ID};
 use crate::graphql::types::ScalarType;
+use crate::graphql::utils::extract_value::extract;
 
 const BOOLEAN_TRUE: i64 = 1;
 const ENTITY_ID: &str = "entity_id";
@@ -55,6 +58,10 @@ impl ObjectTrait for ComponentStateObject {
         &self.field_type_mapping
     }
 
+    fn nested_fields(&self) -> Option<Vec<Field>> {
+        Some(vec![entity_field()])
+    }
+
     fn resolvers(&self) -> Vec<Field> {
         vec![resolve_many(
             self.name.to_string(),
@@ -62,6 +69,20 @@ impl ObjectTrait for ComponentStateObject {
             self.field_type_mapping.clone(),
         )]
     }
+}
+
+fn entity_field() -> Field {
+    Field::new("entity", TypeRef::named("Entity"), |ctx| {
+        FieldFuture::new(async move {
+            let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+            let mapping = ctx.parent_value.try_downcast_ref::<ValueMapping>()?;
+            let id = extract::<String>(mapping, ENTITY_ID)?;
+            let entity: Entity = query_by_id(&mut conn, "entities", ID::Str(id)).await?;
+            let result = EntityObject::value_mapping(entity);
+
+            Ok(Some(FieldValue::owned_any(result)))
+        })
+    })
 }
 
 fn resolve_many(name: String, type_name: String, field_type_mapping: TypeMapping) -> Field {
