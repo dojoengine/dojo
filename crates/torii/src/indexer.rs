@@ -22,8 +22,10 @@ impl<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> Indexer<'a, S
         provider: &'a JsonRpcClient<T>,
         processors: Processors<S, T>,
         manifest: Manifest,
+        start_block: Option<u64>,
     ) -> Self {
-        let engine = Engine::new(storage, provider, processors, EngineConfig::default());
+        let engine =
+            Engine::new(storage, provider, processors, start_block, EngineConfig::default());
         Self { storage, provider, engine, manifest }
     }
 

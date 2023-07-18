@@ -45,6 +45,9 @@ struct Args {
     /// Specify a local manifest to intiailize from
     #[arg(short, long)]
     manifest: Option<Utf8PathBuf>,
+    /// Specify a block to start indexing from, ignored if stored head exists
+    #[arg(short, long)]
+    start_block: Option<u64>,
 }
 
 #[tokio::main]
@@ -92,7 +95,7 @@ async fn main() -> anyhow::Result<()> {
         ..Processors::default()
     };
 
-    let indexer = Indexer::new(&state, &provider, processors, manifest);
+    let indexer = Indexer::new(&state, &provider, processors, manifest, args.start_block);
     let graphql = start_graphql(&pool);
 
     tokio::select! {
