@@ -53,6 +53,30 @@ impl<'a, A: ConnectedAccount + Sync> WorldContract<'a, A> {
             .await
     }
 
+    pub async fn grant_writer(
+        &self,
+        component: &str,
+        system: &str,
+    ) -> Result<
+        InvokeTransactionResult,
+        WorldContractError<A::SignError, <A::Provider as Provider>::Error>,
+    > {
+        let component = cairo_short_string_to_felt(component)
+            .map_err(WorldContractError::CairoShortStringToFeltError)?;
+        let system = cairo_short_string_to_felt(system)
+            .map_err(WorldContractError::CairoShortStringToFeltError)?;
+
+        self.account
+            .execute(vec![Call {
+                calldata: vec![component, system],
+                to: self.address,
+                selector: get_selector_from_name("grant_writer").unwrap(),
+            }])
+            .send()
+            .await
+            .map_err(WorldContractError::AccountError)
+    }
+
     pub async fn register_components(
         &self,
         components: &[FieldElement],
