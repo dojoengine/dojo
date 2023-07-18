@@ -58,14 +58,16 @@ impl<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> Engine<'a, S,
     }
 
     pub async fn start(&self) -> Result<(), Box<dyn Error>> {
-        let mut current_block_number = self.storage.head().await?;
+        let storage_head = self.storage.head().await?;
 
-        if let Some(requested) = self.start_block {
-            if requested > current_block_number {
-                warn!("requested start block is greater than latest block in db");
-                current_block_number = requested;
+        let mut current_block_number = match (storage_head, self.start_block) {
+            (0, Some(start_block)) => start_block,
+            (_, Some(_)) => {
+                warn!("start block ignored, stored head exists and will be used instead");
+                storage_head
             }
-        }
+            (_, None) => storage_head,
+        };
 
         loop {
             sleep(self.config.block_time).await;

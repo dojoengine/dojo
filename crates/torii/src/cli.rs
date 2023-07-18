@@ -45,7 +45,7 @@ struct Args {
     /// Specify a local manifest to intiailize from
     #[arg(short, long)]
     manifest: Option<Utf8PathBuf>,
-    /// Specify a block to start indexing from
+    /// Specify a block to start indexing from, ignored if stored head exists
     #[arg(short, long)]
     start_block: Option<u64>,
 }
