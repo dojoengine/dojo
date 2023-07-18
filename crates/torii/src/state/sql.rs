@@ -1,3 +1,5 @@
+use super::{State, World};
+use crate::graphql::types::ScalarType;
 use anyhow::Result;
 use async_trait::async_trait;
 use dojo_world::manifest::{Component, Manifest, System};
@@ -7,9 +9,6 @@ use sqlx::{Executor, Pool, Row, Sqlite};
 use starknet::core::types::FieldElement;
 use starknet_crypto::poseidon_hash_many;
 use tokio::sync::Mutex;
-
-use super::{State, World};
-use crate::graphql::types::ScalarType;
 
 #[cfg(test)]
 #[path = "sql_test.rs"]

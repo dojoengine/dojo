@@ -9,7 +9,7 @@ use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
 use starknet::providers::Provider;
 use tokio::time::sleep;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
 use crate::state::sql::Executable;
@@ -58,8 +58,14 @@ impl<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> Engine<'a, S,
     }
 
     pub async fn start(&self) -> Result<(), Box<dyn Error>> {
-        let mut current_block_number =
-            if let Some(head) = self.start_block { head } else { self.storage.head().await? };
+        let mut current_block_number = self.storage.head().await?;
+
+        if let Some(requested) = self.start_block {
+            if requested > current_block_number {
+                warn!("requested start block is greater than latest block in db");
+                current_block_number = requested;
+            }
+        }
 
         loop {
             sleep(self.config.block_time).await;
