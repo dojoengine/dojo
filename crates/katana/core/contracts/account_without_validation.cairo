@@ -1,67 +1,142 @@
-// A dummy account contract without any validations.
+// SPDX-License-Identifier: MIT
+// OpenZeppelin Contracts for Cairo v0.6.1 (account/presets/Account.cairo)
 
 %lang starknet
 
-from starkware.cairo.common.bool import FALSE
-from starkware.cairo.common.cairo_builtins import HashBuiltin
-from starkware.starknet.common.syscalls import (
-    call_contract,
-    deploy,
-    get_caller_address,
-    get_contract_address,
-)
+from starkware.cairo.common.bool import TRUE
+
+from starkware.cairo.common.cairo_builtins import HashBuiltin, SignatureBuiltin, BitwiseBuiltin
+from starkware.starknet.common.syscalls import get_tx_info
+
+from openzeppelin.account.library import Account, AccountCallArray
+
+
+//
+// Constructor
+//
+
+@constructor
+func constructor{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+}(publicKey: felt) {
+    Account.initializer(publicKey);
+    return ();
+}
+
+//
+// Getters
+//
 
 @view
-func assert_only_self{syscall_ptr: felt*}() {
-    let (self) = get_contract_address();
-    let (caller) = get_caller_address();
-    assert self = caller;
+func getPublicKey{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+} () -> (publicKey: felt) {
+    let (publicKey: felt) = Account.get_public_key();
+    return (publicKey=publicKey);
+}
+
+@view
+func supportsInterface{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+} (interfaceId: felt) -> (success: felt) {
+    return Account.supports_interface(interfaceId);
+}
+
+//
+// Setters
+//
+
+@external
+func setPublicKey{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+} (newPublicKey: felt) {
+    Account.set_public_key(newPublicKey);
+    return ();
+}
+
+//
+// Business logic
+//
+
+@view
+func isValidSignature{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    ecdsa_ptr: SignatureBuiltin*,
+    range_check_ptr
+}(
+    hash: felt,
+    signature_len: felt,
+    signature: felt*
+) -> (isValid: felt) {
+    return (isValid=TRUE);
+}
+
+@external
+func __validate__{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    ecdsa_ptr: SignatureBuiltin*,
+    range_check_ptr
+}(
+    call_array_len: felt,
+    call_array: AccountCallArray*,
+    calldata_len: felt,
+    calldata: felt*
+) {
     return ();
 }
 
 @external
-func __validate_declare__(class_hash: felt) {
+func __validate_declare__{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    ecdsa_ptr: SignatureBuiltin*,
+    range_check_ptr
+} (class_hash: felt) {
     return ();
 }
 
 @external
-func __validate_deploy__(class_hash: felt, contract_address_salt: felt) {
-    return ();
-}
-
-@external
-func __validate__(contract_address, selector: felt, calldata_len: felt, calldata: felt*) {
-    return ();
-}
-
-@external
-@raw_output
-func __execute__{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-    contract_address, selector: felt, calldata_len: felt, calldata: felt*
-) -> (retdata_size: felt, retdata: felt*) {
-    let (retdata_size: felt, retdata: felt*) = call_contract(
-        contract_address=contract_address,
-        function_selector=selector,
-        calldata_size=calldata_len,
-        calldata=calldata,
-    );
-    return (retdata_size=retdata_size, retdata=retdata);
-}
-
-@external
-func deploy_contract{syscall_ptr: felt*}(
+func __validate_deploy__{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    ecdsa_ptr: SignatureBuiltin*,
+    range_check_ptr
+} (
     class_hash: felt,
-    contract_address_salt: felt,
-    constructor_calldata_len: felt,
-    constructor_calldata: felt*,
-) -> (contract_address: felt) {
-    assert_only_self();
-    let (contract_address) = deploy(
-        class_hash=class_hash,
-        contract_address_salt=contract_address_salt,
-        constructor_calldata_size=constructor_calldata_len,
-        constructor_calldata=constructor_calldata,
-        deploy_from_zero=FALSE,
+    salt: felt,
+    publicKey: felt
+) {
+    return ();
+}
+
+@external
+func __execute__{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    ecdsa_ptr: SignatureBuiltin*,
+    bitwise_ptr: BitwiseBuiltin*,
+    range_check_ptr,
+}(
+    call_array_len: felt,
+    call_array: AccountCallArray*,
+    calldata_len: felt,
+    calldata: felt*
+) -> (
+    response_len: felt,
+    response: felt*
+) {
+    let (response_len, response) = Account.execute(
+        call_array_len, call_array, calldata_len, calldata
     );
-    return (contract_address=contract_address);
+    return (response_len, response);
 }

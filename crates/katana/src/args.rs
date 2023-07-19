@@ -74,6 +74,10 @@ pub struct StarknetOptions {
     #[command(flatten)]
     #[command(next_help_heading = "Environment options")]
     pub environment: EnvironmentOptions,
+
+    #[arg(short, long, requires="block_time")]
+    #[arg(help = "Enable ticking chain feature.")]
+    pub ticking: bool,
 }
 
 #[derive(Debug, Args, Clone)]
@@ -129,6 +133,7 @@ impl KatanaArgs {
                     .validate_max_steps
                     .unwrap_or(DEFAULT_VALIDATE_MAX_STEPS),
             },
+            ticking: self.starknet.ticking,
         }
     }
 }

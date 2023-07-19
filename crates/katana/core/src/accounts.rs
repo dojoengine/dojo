@@ -19,6 +19,7 @@ use starknet_api::{patricia_key, stark_felt};
 
 use crate::backend::state::{ClassRecord, MemDb, StorageRecord};
 use crate::constants::{
+    ACCOUNT_WITHOUT_VALIDATION_CONTRACT, ACCOUNT_WITHOUT_VALIDATION_CONTRACT_CLASS_HASH,
     DEFAULT_ACCOUNT_CONTRACT, DEFAULT_ACCOUNT_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS,
 };
 use crate::util::compute_legacy_class_hash;
@@ -88,6 +89,18 @@ impl Account {
             },
         );
     }
+
+    pub fn display(&self) -> String {
+        format!(
+            r"
+| Account address |  {}
+| Private key     |  {}
+| Public key      |  {}",
+            self.account_address.0.key(),
+            self.private_key,
+            self.public_key
+        )
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -104,6 +117,7 @@ impl PredeployedAccounts {
         seed: [u8; 32],
         initial_balance: StarkFelt,
         contract_class_path: Option<PathBuf>,
+        contract_class_hash_validation: Option<bool>,
     ) -> Result<Self> {
         let (class_hash, contract_class) = if let Some(path) = contract_class_path {
             let contract_class_str = fs::read_to_string(path)?;
@@ -114,7 +128,17 @@ impl PredeployedAccounts {
 
             (class_hash, ContractClass::V0(contract_class))
         } else {
-            Self::default_account_class()
+            // If there's no contract class path, use the default account contract.
+            // We check for the contract class hash validation flag to determine which default contract to use.
+            if let Some(validation) = contract_class_hash_validation {
+                if validation {
+                    Self::default_account_class()
+                } else {
+                    Self::default_account_class_without_validation()
+                }
+            } else {
+                Self::default_account_class()
+            }
         };
 
         let accounts = Self::generate_accounts(total, seed, initial_balance, class_hash);
@@ -129,19 +153,7 @@ impl PredeployedAccounts {
     }
 
     pub fn display(&self) -> String {
-        fn print_account(account: &Account) -> String {
-            format!(
-                r"
-| Account address |  {} 
-| Private key     |  {}
-| Public key      |  {}",
-                account.account_address.0.key(),
-                account.private_key,
-                account.public_key
-            )
-        }
-
-        self.accounts.iter().map(print_account).collect::<Vec<String>>().join("\n")
+        self.accounts.iter().map(|a| a.display()).collect::<Vec<String>>().join("\n")
     }
 
     fn generate_accounts(
@@ -177,6 +189,13 @@ impl PredeployedAccounts {
 
     pub fn default_account_class() -> (ClassHash, ContractClass) {
         (ClassHash(*DEFAULT_ACCOUNT_CONTRACT_CLASS_HASH), (*DEFAULT_ACCOUNT_CONTRACT).clone())
+    }
+
+    pub fn default_account_class_without_validation() -> (ClassHash, ContractClass) {
+        (
+            ClassHash(*ACCOUNT_WITHOUT_VALIDATION_CONTRACT_CLASS_HASH),
+            (*ACCOUNT_WITHOUT_VALIDATION_CONTRACT).clone(),
+        )
     }
 }
 

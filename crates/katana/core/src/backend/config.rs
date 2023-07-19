@@ -20,6 +20,7 @@ pub struct StarknetConfig {
     pub allow_zero_max_fee: bool,
     pub account_path: Option<PathBuf>,
     pub env: Environment,
+    pub ticking: bool,
 }
 
 impl StarknetConfig {
@@ -51,6 +52,7 @@ impl Default for StarknetConfig {
             account_path: None,
             allow_zero_max_fee: false,
             env: Environment::default(),
+            ticking: false,
         }
     }
 }

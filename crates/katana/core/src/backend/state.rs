@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use blockifier::abi::abi_utils::get_storage_var_address;
+
 use blockifier::execution::contract_class::ContractClass;
 use blockifier::state::cached_state::CommitmentStateDiff;
 use blockifier::state::errors::StateError;
@@ -11,8 +13,8 @@ use starknet_api::patricia_key;
 use starknet_api::state::StorageKey;
 
 use crate::constants::{
-    ERC20_CONTRACT, ERC20_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS, UDC_ADDRESS, UDC_CLASS_HASH,
-    UDC_CONTRACT,
+    ERC20_CONTRACT, ERC20_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS, TICKER_CONTRACT,
+    TICKER_CONTRACT_ADDRESS, TICKER_CONTRACT_CLASS_HASH, UDC_ADDRESS, UDC_CLASS_HASH, UDC_CONTRACT,
 };
 
 pub trait StateExt {
@@ -27,6 +29,18 @@ pub trait StateExt {
     fn apply_state<S>(&mut self, state: &mut S)
     where
         S: State + StateReader;
+}
+
+pub trait TickerExt {
+    fn set_ticker_depositor(
+        &mut self,
+        depositor: ContractAddress,
+    ) -> StateResult<()>;
+
+    fn set_ticker_operator(
+        &mut self,
+        operator: ContractAddress,
+    ) -> StateResult<()>;
 }
 
 #[derive(Clone, Debug, Default)]
@@ -60,6 +74,7 @@ impl Default for MemDb {
         let mut state = MemDb { storage: HashMap::new(), classes: HashMap::new() };
         deploy_fee_contract(&mut state);
         deploy_universal_deployer_contract(&mut state);
+        deploy_ticker_contract(&mut state);
         state
     }
 }
@@ -240,6 +255,36 @@ impl StateReader for MemDb {
     }
 }
 
+impl TickerExt for MemDb {
+    fn set_ticker_depositor(
+            &mut self,
+            depositor: ContractAddress,
+        ) -> StateResult<()> {
+        self.storage.entry(ContractAddress(patricia_key!(*TICKER_CONTRACT_ADDRESS))).and_modify(|r| {
+            r.storage.insert(
+                get_storage_var_address("depositor", &[])
+                    .unwrap(),
+                depositor.0.key().clone(),
+            );
+        });
+        Ok(())
+    }
+
+    fn set_ticker_operator(
+        &mut self,
+        operator: ContractAddress,
+    ) -> StateResult<()> {
+        self.storage.entry(ContractAddress(patricia_key!(*TICKER_CONTRACT_ADDRESS))).and_modify(|r| {
+            r.storage.insert(
+                get_storage_var_address("operator", &[])
+                .unwrap(),
+                operator.0.key().clone(),
+            );
+        });
+        Ok(())
+    }
+}
+
 fn deploy_fee_contract(state: &mut MemDb) {
     let address = ContractAddress(patricia_key!(*FEE_TOKEN_ADDRESS));
     let hash = ClassHash(*ERC20_CONTRACT_CLASS_HASH);
@@ -264,6 +309,22 @@ fn deploy_universal_deployer_contract(state: &mut MemDb) {
     state.classes.insert(
         hash,
         ClassRecord { sierra_class: None, class: (*UDC_CONTRACT).clone(), compiled_hash },
+    );
+
+    state.storage.insert(
+        address,
+        StorageRecord { class_hash: hash, nonce: Nonce(1_u128.into()), storage: HashMap::new() },
+    );
+}
+
+fn deploy_ticker_contract(state: &mut MemDb) {
+    let address = ContractAddress(patricia_key!(*TICKER_CONTRACT_ADDRESS));
+    let hash = ClassHash(*TICKER_CONTRACT_CLASS_HASH);
+    let compiled_hash = CompiledClassHash(*TICKER_CONTRACT_CLASS_HASH);
+
+    state.classes.insert(
+        hash,
+        ClassRecord { sierra_class: None, class: (*TICKER_CONTRACT).clone(), compiled_hash },
     );
 
     state.storage.insert(

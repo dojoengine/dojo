@@ -24,6 +24,7 @@ async fn main() {
     let server_config = config.server_config();
     let sequencer_config = config.sequencer_config();
     let starknet_config = config.starknet_config();
+    let is_tick = starknet_config.ticking;
 
     let sequencer = Arc::new(KatanaSequencer::new(sequencer_config, starknet_config));
     let starknet_api = StarknetApi::new(sequencer.clone());
@@ -32,8 +33,15 @@ async fn main() {
     match spawn(katana_api, starknet_api, server_config).await {
         Ok(NodeHandle { addr, handle, .. }) => {
             if !config.silent {
-                let accounts = sequencer.starknet.read().await.predeployed_accounts.display();
+                let mut accounts = sequencer.starknet.read().await.predeployed_accounts.display();
 
+                if is_tick {
+                    accounts.push_str(&format!(
+                        "\n\nTICKER DEPOSITOR\n================\n{}\n\nTICKER OPERATOR (PREFUNDED ACCOUNTS 0)\n================\n{}",
+                        sequencer.starknet.read().await.ticker_context.runner.display(),
+                        sequencer.starknet.read().await.predeployed_accounts.accounts[0].display()
+                    ));
+                }
                 print_intro(
                     accounts,
                     config.starknet.seed,
