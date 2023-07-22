@@ -527,7 +527,7 @@ impl Sequencer for KatanaSequencer {
                 );
 
                 filtered_events.extend(new_filtered_events.iter().map(|e| EmittedEvent {
-                    from_address: e.from_address.0.key().clone().into(),
+                    from_address: (*e.from_address.0.key()).into(),
                     keys: e.content.keys.clone().into_iter().map(|key| key.0.into()).collect(),
                     data: e.content.data.0.clone().into_iter().map(|data| data.into()).collect(),
                     block_hash,
@@ -576,7 +576,7 @@ impl Sequencer for KatanaSequencer {
 }
 
 fn filter_events_by_params(
-    events: Skip<Iter<Event>>,
+    events: Skip<Iter<'_, Event>>,
     address: Option<StarkFelt>,
     keys: Option<Vec<Vec<StarkFelt>>>,
     max_results: Option<usize>,
@@ -587,8 +587,7 @@ fn filter_events_by_params(
     // Iterate on block events.
     for event in events {
         index += 1;
-        let match_from_address =
-            address.map_or(true, |addr| addr == event.from_address.0.key().clone());
+        let match_from_address = address.map_or(true, |addr| addr == *event.from_address.0.key());
 
         let match_keys = match keys {
             Some(ref keys) => keys.iter().enumerate().all(|(i, keys)| {

@@ -213,7 +213,7 @@ impl ContinuationToken {
 }
 
 impl fmt::Display for ContinuationToken {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:x},{:x},{:x}", self.block_n, self.txn_n, self.event_n)
     }
 }
