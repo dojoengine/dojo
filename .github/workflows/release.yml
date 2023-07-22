@@ -17,7 +17,7 @@ env:
 jobs:
   prepare:
     name: Prepare release
-    runs-on: ubuntu-latest-32-cores
+    runs-on: ubuntu-latest
 
     outputs:
       tag_name: ${{ steps.release_info.outputs.tag_name }}
