@@ -40,6 +40,98 @@ pub struct SequencerConfig {
     pub block_time: Option<u64>,
 }
 
+#[async_trait]
+#[auto_impl(Arc)]
+pub trait Sequencer {
+    async fn starknet(&self) -> RwLockReadGuard<'_, StarknetWrapper>;
+
+    async fn mut_starknet(&self) -> RwLockWriteGuard<'_, StarknetWrapper>;
+
+    async fn state(&self, block_id: &BlockId) -> SequencerResult<MemDb>;
+
+    async fn chain_id(&self) -> ChainId;
+
+    async fn transaction_receipt(
+        &self,
+        hash: &TransactionHash,
+    ) -> Option<starknet_api::transaction::TransactionReceipt>;
+
+    async fn transaction_status(&self, hash: &TransactionHash) -> Option<TransactionStatus>;
+
+    async fn nonce_at(
+        &self,
+        block_id: BlockId,
+        contract_address: ContractAddress,
+    ) -> SequencerResult<Nonce>;
+
+    async fn block_number(&self) -> BlockNumber;
+
+    async fn block(&self, block_id: BlockId) -> Option<StarknetBlock>;
+
+    async fn transaction(
+        &self,
+        hash: &TransactionHash,
+    ) -> Option<starknet_api::transaction::Transaction>;
+
+    async fn class_hash_at(
+        &self,
+        block_id: BlockId,
+        contract_address: ContractAddress,
+    ) -> SequencerResult<ClassHash>;
+
+    async fn class(
+        &self,
+        block_id: BlockId,
+        class_hash: ClassHash,
+    ) -> SequencerResult<StarknetContract>;
+
+    async fn block_hash_and_number(&self) -> Option<(BlockHash, BlockNumber)>;
+
+    async fn call(
+        &self,
+        block_id: BlockId,
+        function_call: ExternalFunctionCall,
+    ) -> SequencerResult<Vec<StarkFelt>>;
+
+    async fn storage_at(
+        &self,
+        contract_address: ContractAddress,
+        storage_key: StorageKey,
+        block_id: BlockId,
+    ) -> SequencerResult<StarkFelt>;
+
+    async fn add_deploy_account_transaction(
+        &self,
+        transaction: DeployAccountTransaction,
+    ) -> (TransactionHash, ContractAddress);
+
+    async fn add_declare_transaction(
+        &self,
+        transaction: DeclareTransaction,
+        sierra_class: Option<FlattenedSierraClass>,
+    );
+
+    async fn add_invoke_transaction(&self, transaction: InvokeTransaction);
+
+    async fn estimate_fee(
+        &self,
+        account_transaction: AccountTransaction,
+        block_id: BlockId,
+    ) -> SequencerResult<FeeEstimate>;
+
+    async fn events(
+        &self,
+        from_block: BlockId,
+        to_block: BlockId,
+        address: Option<StarkFelt>,
+        keys: Option<Vec<Vec<StarkFelt>>>,
+        _continuation_token: Option<String>,
+        _chunk_size: u64,
+    ) -> SequencerResult<Vec<EmittedEvent>>;
+
+    async fn state_update(&self, block_id: BlockId) -> SequencerResult<StateUpdate>;
+}
+
 pub struct KatanaSequencer {
     pub config: SequencerConfig,
     pub starknet: Arc<RwLock<StarknetWrapper>>,
@@ -458,96 +550,4 @@ impl Sequencer for KatanaSequencer {
             .get_state_update(block_number)
             .ok_or(SequencerError::StateUpdateNotFound(block_id))
     }
-}
-
-#[async_trait]
-#[auto_impl(Arc)]
-pub trait Sequencer {
-    async fn starknet(&self) -> RwLockReadGuard<'_, StarknetWrapper>;
-
-    async fn mut_starknet(&self) -> RwLockWriteGuard<'_, StarknetWrapper>;
-
-    async fn state(&self, block_id: &BlockId) -> SequencerResult<MemDb>;
-
-    async fn chain_id(&self) -> ChainId;
-
-    async fn transaction_receipt(
-        &self,
-        hash: &TransactionHash,
-    ) -> Option<starknet_api::transaction::TransactionReceipt>;
-
-    async fn transaction_status(&self, hash: &TransactionHash) -> Option<TransactionStatus>;
-
-    async fn nonce_at(
-        &self,
-        block_id: BlockId,
-        contract_address: ContractAddress,
-    ) -> SequencerResult<Nonce>;
-
-    async fn block_number(&self) -> BlockNumber;
-
-    async fn block(&self, block_id: BlockId) -> Option<StarknetBlock>;
-
-    async fn transaction(
-        &self,
-        hash: &TransactionHash,
-    ) -> Option<starknet_api::transaction::Transaction>;
-
-    async fn class_hash_at(
-        &self,
-        block_id: BlockId,
-        contract_address: ContractAddress,
-    ) -> SequencerResult<ClassHash>;
-
-    async fn class(
-        &self,
-        block_id: BlockId,
-        class_hash: ClassHash,
-    ) -> SequencerResult<StarknetContract>;
-
-    async fn block_hash_and_number(&self) -> Option<(BlockHash, BlockNumber)>;
-
-    async fn call(
-        &self,
-        block_id: BlockId,
-        function_call: ExternalFunctionCall,
-    ) -> SequencerResult<Vec<StarkFelt>>;
-
-    async fn storage_at(
-        &self,
-        contract_address: ContractAddress,
-        storage_key: StorageKey,
-        block_id: BlockId,
-    ) -> SequencerResult<StarkFelt>;
-
-    async fn add_deploy_account_transaction(
-        &self,
-        transaction: DeployAccountTransaction,
-    ) -> (TransactionHash, ContractAddress);
-
-    async fn add_declare_transaction(
-        &self,
-        transaction: DeclareTransaction,
-        sierra_class: Option<FlattenedSierraClass>,
-    );
-
-    async fn add_invoke_transaction(&self, transaction: InvokeTransaction);
-
-    async fn estimate_fee(
-        &self,
-        account_transaction: AccountTransaction,
-        block_id: BlockId,
-    ) -> SequencerResult<FeeEstimate>;
-
-    async fn events(
-        &self,
-        from_block: BlockId,
-        to_block: BlockId,
-        address: Option<StarkFelt>,
-        keys: Option<Vec<Vec<StarkFelt>>>,
-        _continuation_token: Option<String>,
-        _chunk_size: u64,
-    ) -> SequencerResult<Vec<EmittedEvent>>;
-
-    async fn state_update(&self, block_id: BlockId) -> SequencerResult<StateUpdate>;
 }
