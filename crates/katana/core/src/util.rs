@@ -1,3 +1,5 @@
+use core::fmt;
+use std::num::ParseIntError;
 use std::time::{Duration, SystemTime};
 
 use anyhow::Result;
@@ -16,6 +18,7 @@ use starknet_api::transaction::{
     Transaction,
 };
 use starknet_api::StarknetApiError;
+use thiserror::Error;
 
 pub fn get_current_timestamp() -> Duration {
     SystemTime::now()
@@ -173,5 +176,44 @@ pub fn convert_state_diff_to_rpc_state_diff(state_diff: CommitmentStateDiff) -> 
                 nonce: nonce.0.into(),
             })
             .collect(),
+    }
+}
+
+#[derive(PartialEq, Eq, Debug, Default)]
+pub struct ContinuationToken {
+    pub block_n: u64,
+    pub txn_n: u64,
+    pub event_n: u64,
+}
+
+#[derive(PartialEq, Eq, Debug, Error)]
+pub enum ContinuationTokenError {
+    #[error("Invalid data")]
+    InvalidToken,
+    #[error("Invalid format: {0}")]
+    ParseFailed(ParseIntError),
+}
+
+impl ContinuationToken {
+    pub fn parse(token: Option<String>) -> Result<Self, ContinuationTokenError> {
+        let Some(token) = token else { return Ok(Self::default()) };
+        let arr: Vec<&str> = token.split(',').collect();
+        if arr.len() != 3 {
+            return Err(ContinuationTokenError::InvalidToken);
+        }
+        let block_n =
+            u64::from_str_radix(arr[0], 16).map_err(ContinuationTokenError::ParseFailed)?;
+        let receipt_n =
+            u64::from_str_radix(arr[1], 16).map_err(ContinuationTokenError::ParseFailed)?;
+        let event_n =
+            u64::from_str_radix(arr[2], 16).map_err(ContinuationTokenError::ParseFailed)?;
+
+        Ok(ContinuationToken { block_n, txn_n: receipt_n, event_n })
+    }
+}
+
+impl fmt::Display for ContinuationToken {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:x},{:x},{:x}", self.block_n, self.txn_n, self.event_n)
     }
 }

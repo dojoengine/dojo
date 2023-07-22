@@ -68,6 +68,10 @@ impl StarknetBlock {
         &self.inner.body.transactions
     }
 
+    pub fn transaction_outputs(&self) -> &[TransactionOutput] {
+        &self.inner.body.transaction_outputs
+    }
+
     pub fn transaction_by_index(&self, transaction_id: usize) -> Option<Transaction> {
         self.inner.body.transactions.get(transaction_id).cloned()
     }
