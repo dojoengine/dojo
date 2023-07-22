@@ -215,7 +215,17 @@ impl State for Sql {
             .bind(&entity_id)
             .fetch_optional(&self.pool)
             .await?;
+
+        // TODO: map keys to individual columns
+        let keys_str = keys.iter().map(|k| format!("{:#x},", k)).collect::<Vec<String>>().join("");
         let component_names = component_names(entity_result, &component)?;
+        let insert_entities = format!(
+            "INSERT INTO entities (id, partition, keys, component_names) VALUES ('{}', '{:#x}', \
+             '{}', '{}') ON CONFLICT(id) DO UPDATE SET
+             component_names=excluded.component_names, 
+             updated_at=CURRENT_TIMESTAMP",
+            entity_id, partition, keys_str, component_names
+        );
 
         let member_results =
             sqlx::query("SELECT * FROM component_members WHERE component_id = ? ORDER BY slot")
@@ -224,18 +234,8 @@ impl State for Sql {
                 .await?;
 
         let (names_str, values_str) = format_values(member_results, values)?;
-        // TODO: map keys to individual columns
-        let keys_str = keys.iter().map(|k| format!("{:#x},", k)).collect::<Vec<String>>().join("");
-
-        let insert_entities = format!(
-            "INSERT INTO entities (id, partition, keys, component_names) VALUES ('{}', '{:#x}', \
-             '{}', '{}') ON CONFLICT(id) DO UPDATE SET
-             component_names=excluded.component_names, 
-             updated_at=CURRENT_TIMESTAMP",
-            entity_id, partition, keys_str, component_names
-        );
         let insert_components = format!(
-            "INSERT OR REPLACE INTO external_{} (id, partition, {}) VALUES ('{}', '{:#x}', {})",
+            "INSERT OR REPLACE INTO external_{} (id, partition {}) VALUES ('{}', '{:#x}' {})",
             component.to_lowercase(),
             names_str,
             entity_id,
@@ -310,7 +310,7 @@ fn format_values(
         .iter()
         .map(|row| {
             let name = row.try_get::<String, &str>("name")?;
-            Ok(format!("external_{}", name))
+            Ok(format!(",external_{}", name))
         })
         .collect();
 
@@ -323,12 +323,12 @@ fn format_values(
         .zip(types?.iter())
         .map(|(value, ty)| {
             if ScalarType::from_str(ty)?.is_numeric_type() {
-                Ok(format!("'{}'", value))
+                Ok(format!(",'{}'", value))
             } else {
-                Ok(format!("'{:#x}'", value))
+                Ok(format!(",'{:#x}'", value))
             }
         })
         .collect();
 
-    Ok((names?.join(", "), values?.join(", ")))
+    Ok((names?.join(""), values?.join("")))
 }
