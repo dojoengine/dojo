@@ -5,9 +5,9 @@ use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
 
 use crate::state::State;
 
-pub mod component_register;
-// pub mod component_state_update;
-// pub mod system_register;
+pub mod register_component;
+pub mod register_system;
+pub mod store_set_record;
 
 #[async_trait]
 pub trait EventProcessor<S: State, T: JsonRpcTransport> {

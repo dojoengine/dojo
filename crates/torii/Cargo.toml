@@ -6,6 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+camino.workspace = true
+dojo-types = { path = "../dojo-types" }
 dojo-world = { path = "../dojo-world" }
 async-trait.workspace = true
 anyhow.workspace = true
@@ -15,13 +17,14 @@ log = "0.4.17"
 serde.workspace = true
 serde_json.workspace = true
 sqlx = { version = "0.6.2", features = [
-    "runtime-actix-rustls",
-    "uuid",
-    "chrono",
-    "macros",
-    "offline",
+  "chrono",
+  "macros",
+  "offline",
+  "runtime-actix-rustls",
+  "uuid",
 ] }
 starknet.workspace = true
+starknet-crypto.workspace = true
 tokio = { version = "1.20.1", features = ["full"] }
 tokio-stream = "0.1.11"
 tokio-util = "0.7.7"

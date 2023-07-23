@@ -1,17 +1,73 @@
-use array::{ArrayTrait, SpanTrait};
-use option::OptionTrait;
-use serde::{Serde, serialize_array_helper, deserialize_array_helper};
+trait SerdeLen<T> {
+    fn len() -> usize;
+}
 
-impl SpanSerde<
-    T, impl TSerde: Serde<T>, impl TCopy: Copy<T>, impl TDrop: Drop<T>
-> of Serde<Span<T>> {
-    fn serialize(self: @Span<T>, ref output: Array<felt252>) {
-        (*self).len().serialize(ref output);
-        serialize_array_helper(*self, ref output);
+impl SerdeLenFelt252 of SerdeLen<felt252> {
+    #[inline(always)]
+    fn len() -> usize {
+        1
     }
-    fn deserialize(ref serialized: Span<felt252>) -> Option<Span<T>> {
-        let length = *serialized.pop_front()?;
-        let mut arr = ArrayTrait::new();
-        Option::Some(deserialize_array_helper(ref serialized, arr, length)?.span())
+}
+
+impl SerdeLenBool of SerdeLen<bool> {
+    #[inline(always)]
+    fn len() -> usize {
+        1
+    }
+}
+
+impl SerdeLenU8 of SerdeLen<u8> {
+    #[inline(always)]
+    fn len() -> usize {
+        1
+    }
+}
+
+impl SerdeLenU16 of SerdeLen<u16> {
+    #[inline(always)]
+    fn len() -> usize {
+        1
+    }
+}
+
+impl SerdeLenU32 of SerdeLen<u32> {
+    #[inline(always)]
+    fn len() -> usize {
+        1
+    }
+}
+
+impl SerdeLenU64 of SerdeLen<u64> {
+    #[inline(always)]
+    fn len() -> usize {
+        1
+    }
+}
+
+impl SerdeLenU128 of SerdeLen<u128> {
+    #[inline(always)]
+    fn len() -> usize {
+        1
+    }
+}
+
+impl SerdeLenU256 of SerdeLen<u256> {
+    #[inline(always)]
+    fn len() -> usize {
+        2
+    }
+}
+
+impl SerdeLenContractAddress of SerdeLen<starknet::ContractAddress> {
+    #[inline(always)]
+    fn len() -> usize {
+        1
+    }
+}
+
+impl SerdeLenClassHash of SerdeLen<starknet::ClassHash> {
+    #[inline(always)]
+    fn len() -> usize {
+        1
     }
 }

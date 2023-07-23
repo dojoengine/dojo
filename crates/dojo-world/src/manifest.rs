@@ -3,6 +3,8 @@ use std::path::Path;
 
 use ::serde::{Deserialize, Serialize};
 use anyhow::{anyhow, Result};
+use dojo_types::component::Member;
+use dojo_types::system::Dependency;
 use serde_with::serde_as;
 use smol_str::SmolStr;
 use starknet::core::serde::unsigned_field_element::UfeHex;
@@ -17,10 +19,13 @@ use thiserror::Error;
 #[path = "manifest_test.rs"]
 mod test;
 
+pub const WORLD_CONTRACT_NAME: &str = "world";
+pub const EXECUTOR_CONTRACT_NAME: &str = "executor";
+
 #[derive(Error, Debug)]
 pub enum ManifestError<E> {
-    #[error("World contract not found.")]
-    WorldNotFound,
+    #[error("Remote World not found.")]
+    RemoteWorldNotFound,
     #[error("Executor contract not found.")]
     ExecutorNotFound,
     #[error("Entry point name contains non-ASCII characters.")]
@@ -29,16 +34,6 @@ pub enum ManifestError<E> {
     InvalidNameError(CairoShortStringToFeltError),
     #[error(transparent)]
     Provider(ProviderError<E>),
-}
-
-/// Component member.
-#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
-pub struct Member {
-    pub name: String,
-    #[serde(rename = "type")]
-    pub ty: String,
-    pub slot: usize,
-    pub offset: u8,
 }
 
 /// Represents a declaration of a component.
@@ -64,13 +59,6 @@ pub struct Input {
 pub struct Output {
     #[serde(rename = "type")]
     pub ty: String,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct Dependency {
-    pub name: SmolStr,
-    pub read: bool,
-    pub write: bool,
 }
 
 /// Represents a declaration of a system.
@@ -127,7 +115,7 @@ impl Manifest {
             .await
             .map_err(|err| match err {
                 ProviderError::StarknetError(StarknetError::ContractNotFound) => {
-                    ManifestError::WorldNotFound
+                    ManifestError::RemoteWorldNotFound
                 }
                 _ => ManifestError::Provider(err),
             })?;
@@ -163,10 +151,8 @@ impl Manifest {
                     .call(
                         FunctionCall {
                             contract_address: world_address,
-                            calldata: vec![
-                                cairo_short_string_to_felt(&component.name)
-                                    .map_err(ManifestError::InvalidNameError)?,
-                            ],
+                            calldata: vec![cairo_short_string_to_felt(&component.name)
+                                .map_err(ManifestError::InvalidNameError)?],
                             entry_point_selector: get_selector_from_name("component").unwrap(),
                         },
                         BlockId::Tag(BlockTag::Pending),
@@ -186,14 +172,12 @@ impl Manifest {
                     .call(
                         FunctionCall {
                             contract_address: world_address,
-                            calldata: vec![
-                                cairo_short_string_to_felt(
-                                    // because the name returns by the `name` method of
-                                    // a system contract is without the 'System' suffix
-                                    system.name.strip_suffix("System").unwrap_or(&system.name),
-                                )
-                                .map_err(ManifestError::InvalidNameError)?,
-                            ],
+                            calldata: vec![cairo_short_string_to_felt(
+                                // because the name returns by the `name` method of
+                                // a system contract is without the 'System' suffix
+                                system.name.strip_suffix("System").unwrap_or(&system.name),
+                            )
+                            .map_err(ManifestError::InvalidNameError)?],
                             entry_point_selector: get_selector_from_name("system").unwrap(),
                         },
                         BlockId::Tag(BlockTag::Pending),
@@ -214,12 +198,12 @@ impl Manifest {
             components,
             contracts: vec![],
             world: Contract {
-                name: "World".into(),
+                name: WORLD_CONTRACT_NAME.into(),
                 class_hash: world_class_hash,
                 address: Some(world_address),
             },
             executor: Contract {
-                name: "Executor".into(),
+                name: EXECUTOR_CONTRACT_NAME.into(),
                 address: Some(executor_address),
                 class_hash: executor_class_hash,
             },

@@ -9,8 +9,10 @@ use cairo_lang_syntax::node::ast::MaybeModuleBody;
 use cairo_lang_syntax::node::ast::OptionReturnTypeClause::ReturnTypeClause;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
-use dojo_world::manifest::Dependency;
+use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
+use dojo_types::system::Dependency;
 use itertools::Itertools;
+use smol_str::SmolStr;
 
 use crate::commands::Command;
 use crate::plugin::{DojoAuxData, SystemAuxData};
@@ -44,31 +46,33 @@ impl System {
             let mut builder = PatchBuilder::new(db);
             builder.add_modified(RewriteNode::interpolate_patched(
                 "
-                #[contract]
+                #[starknet::contract]
                 mod $name$ {
                     use option::OptionTrait;
                     use array::SpanTrait;
 
-                    use dojo_core::world;
-                    use dojo_core::interfaces::IWorldDispatcher;
-                    use dojo_core::interfaces::IWorldDispatcherTrait;
-                    use dojo_core::storage::query::Query;
-                    use dojo_core::storage::query::QueryTrait;
-                    use dojo_core::storage::query::LiteralIntoQuery;
-                    use dojo_core::storage::query::TupleSize1IntoQuery;
-                    use dojo_core::storage::query::TupleSize2IntoQuery;
-                    use dojo_core::storage::query::TupleSize3IntoQuery;
-                    use dojo_core::storage::query::IntoPartitioned;
-                    use dojo_core::storage::query::IntoPartitionedQuery;
-                    use dojo_core::execution_context::Context;
-                    
-                    #[view]
-                    fn name() -> dojo_core::string::ShortString {
-                        dojo_core::string::ShortStringTrait::new('$name$')
+                    use dojo::world;
+                    use dojo::world::IWorldDispatcher;
+                    use dojo::world::IWorldDispatcherTrait;
+                    use dojo::database::query::Query;
+                    use dojo::database::query::QueryTrait;
+                    use dojo::database::query::LiteralIntoQuery;
+                    use dojo::database::query::TupleSize1IntoQuery;
+                    use dojo::database::query::TupleSize2IntoQuery;
+                    use dojo::database::query::TupleSize3IntoQuery;
+                    use dojo::database::query::IntoPartitioned;
+                    use dojo::database::query::IntoPartitionedQuery;
+
+                    #[storage]
+                    struct Storage {}
+
+                    #[external(v0)]
+                    fn name(self: @ContractState) -> felt252 {
+                        '$name$'
                     }
 
-                    #[view]
-                    fn dependencies() -> Array<(dojo_core::string::ShortString, bool)> {
+                    #[external(v0)]
+                    fn dependencies(self: @ContractState) -> Array<(felt252, bool)> {
                         let mut arr = array::ArrayTrait::new();
                         $dependencies$
                         arr
@@ -77,7 +81,7 @@ impl System {
                     $body$
                 }
                 ",
-                HashMap::from([
+                UnorderedHashMap::from([
                     ("name".to_string(), RewriteNode::Text(name.to_string())),
                     ("body".to_string(), RewriteNode::new_modified(body_nodes)),
                     (
@@ -91,7 +95,7 @@ impl System {
                                     RewriteNode::interpolate_patched(
                                         "array::ArrayTrait::append(ref arr, ('$name$'.into(), \
                                          $write$));\n",
-                                        HashMap::from([
+                                        UnorderedHashMap::from([
                                             (
                                                 "name".to_string(),
                                                 RewriteNode::Text(dep.name.to_string()),
@@ -167,7 +171,7 @@ impl System {
             Some(_) => panic!("The first parameter must be 'ctx: Context'"),
             None => {
                 // 'ctx: Context' is not found at all, add it as the first parameter
-                context = RewriteNode::Text("ctx: Context,".to_string());
+                context = RewriteNode::Text("_ctx: dojo::world::Context,".to_string());
             }
         };
 
@@ -179,12 +183,12 @@ impl System {
 
         rewrite_nodes.push(RewriteNode::interpolate_patched(
             "
-                #[external]
-                fn execute($context$$parameters$) $ret_clause$ {
+                #[external(v0)]
+                fn execute(self: @ContractState, $context$$parameters$) $ret_clause$ {
                     $body$
                 }
             ",
-            HashMap::from([
+            UnorderedHashMap::from([
                 ("context".to_string(), context),
                 ("parameters".to_string(), RewriteNode::new_trimmed(parameters.as_syntax_node())),
                 ("body".to_string(), RewriteNode::new_modified(body_nodes)),
@@ -202,9 +206,9 @@ impl System {
     ) -> Vec<RewriteNode> {
         match statement_ast.clone() {
             ast::Statement::Let(statement_let) => {
-                if let ast::Expr::FunctionCall(expr_fn) = statement_let.rhs(db) {
+                if let ast::Expr::InlineMacro(expr_macro) = statement_let.rhs(db) {
                     if let Some(rewrite_nodes) =
-                        self.handle_fn_call(db, Some(statement_let.pattern(db)), expr_fn)
+                        self.handle_inline_macro(db, Some(statement_let.pattern(db)), expr_macro)
                     {
                         return rewrite_nodes;
                     }
@@ -223,12 +227,30 @@ impl System {
 
     fn handle_expr(&mut self, db: &dyn SyntaxGroup, expr: ast::Expr) -> Option<Vec<RewriteNode>> {
         match expr {
-            ast::Expr::FunctionCall(expr_fn) => self.handle_fn_call(db, None, expr_fn),
             ast::Expr::If(expr_if) => Some(self.handle_if(db, expr_if, false)),
             ast::Expr::Block(expr_block) => Some(self.handle_block(db, expr_block)),
             ast::Expr::Match(expr_match) => Some(self.handle_match(db, expr_match)),
             ast::Expr::Loop(expr_loop) => Some(self.handle_loop(db, expr_loop)),
+            ast::Expr::InlineMacro(expr_macro) => self.handle_inline_macro(db, None, expr_macro),
             _ => None,
+        }
+    }
+
+    fn handle_inline_macro(
+        &mut self,
+        db: &dyn SyntaxGroup,
+        var_name: Option<ast::Pattern>,
+        expr_macro: ast::ExprInlineMacro,
+    ) -> Option<Vec<RewriteNode>> {
+        let command = Command::try_from_ast(db, var_name, expr_macro);
+
+        match command {
+            Some(c) => {
+                self.diagnostics.extend(c.diagnostics);
+                self.update_deps(c.component_deps);
+                Some(c.rewrite_nodes)
+            }
+            None => None,
         }
     }
 
@@ -244,7 +266,7 @@ impl System {
         let code = format!("{else_prefix}if $condition$ $block$");
         let if_rewrite = RewriteNode::interpolate_patched(
             &code,
-            HashMap::from([
+            UnorderedHashMap::from([
                 (
                     "condition".to_string(),
                     RewriteNode::Copied(expr_if.condition(db).as_syntax_node()),
@@ -260,7 +282,7 @@ impl System {
                     let else_block = self.handle_block(db, expr_else_block);
                     let else_rewrite = RewriteNode::interpolate_patched(
                         "else $block$",
-                        HashMap::from([(
+                        UnorderedHashMap::from([(
                             "block".to_string(),
                             RewriteNode::new_modified(else_block),
                         )]),
@@ -281,7 +303,7 @@ impl System {
         let loop_nodes: Vec<RewriteNode> = self.handle_block(db, expr_loop.body(db));
         let loop_rewrite = RewriteNode::interpolate_patched(
             "loop $block$;",
-            HashMap::from([("block".to_string(), RewriteNode::new_modified(loop_nodes))]),
+            UnorderedHashMap::from([("block".to_string(), RewriteNode::new_modified(loop_nodes))]),
         );
         vec![loop_rewrite]
     }
@@ -300,7 +322,7 @@ impl System {
 
         let block_rewrite = RewriteNode::interpolate_patched(
             "{ $nodes$ }",
-            HashMap::from([("nodes".to_string(), RewriteNode::new_modified(block_nodes))]),
+            UnorderedHashMap::from([("nodes".to_string(), RewriteNode::new_modified(block_nodes))]),
         );
         vec![block_rewrite]
     }
@@ -320,7 +342,7 @@ impl System {
                     let arm_block = self.handle_block(db, arm_block);
                     let arm_rewrite = RewriteNode::interpolate_patched(
                         "$pattern$ => $block$,",
-                        HashMap::from([
+                        UnorderedHashMap::from([
                             ("pattern".to_string(), RewriteNode::Copied(arm_pat.as_syntax_node())),
                             ("block".to_string(), RewriteNode::new_modified(arm_block)),
                         ]),
@@ -334,7 +356,7 @@ impl System {
 
         let match_rewrite = RewriteNode::interpolate_patched(
             "match $expr$ { $arms$ }",
-            HashMap::from([
+            UnorderedHashMap::from([
                 ("expr".to_string(), RewriteNode::Copied(expr_match.expr(db).as_syntax_node())),
                 ("arms".to_string(), RewriteNode::new_modified(match_nodes)),
             ]),
@@ -342,43 +364,13 @@ impl System {
         vec![match_rewrite]
     }
 
-    fn handle_fn_call(
-        &mut self,
-        db: &dyn SyntaxGroup,
-        var_name: Option<ast::Pattern>,
-        expr_fn: ast::ExprFunctionCall,
-    ) -> Option<Vec<RewriteNode>> {
-        let elements = expr_fn.path(db).elements(db);
-        let segment = elements.first().unwrap();
-        match segment {
-            ast::PathSegment::WithGenericArgs(segment_genric) => {
-                if segment_genric.ident(db).text(db).as_str() == "commands" {
-                    let command = Command::from_ast(db, var_name, expr_fn);
-                    self.diagnostics.extend(command.diagnostics);
-                    self.update_deps(command.component_deps);
-                    return Some(command.rewrite_nodes);
-                }
-            }
-            ast::PathSegment::Simple(segment_simple) => {
-                if segment_simple.ident(db).text(db).as_str() == "commands" {
-                    let command = Command::from_ast(db, var_name, expr_fn);
-                    self.diagnostics.extend(command.diagnostics);
-                    self.update_deps(command.component_deps);
-                    return Some(command.rewrite_nodes);
-                }
-            }
-        }
-
-        None
-    }
-
     fn update_deps(&mut self, deps: Vec<Dependency>) {
-        for dep in deps.iter() {
-            if let Some(existing) = self.dependencies.get(&dep.name) {
+        for dep in deps {
+            if let Some(existing) = self.dependencies.get(&SmolStr::from(dep.name.as_str())) {
                 self.dependencies
-                    .insert(dep.name.clone(), merge_deps(dep.clone(), existing.clone()));
+                    .insert(dep.name.clone().into(), merge_deps(dep.clone(), existing.clone()));
             } else {
-                self.dependencies.insert(dep.name.clone(), dep.clone());
+                self.dependencies.insert(dep.name.clone().into(), dep.clone());
             }
         }
     }

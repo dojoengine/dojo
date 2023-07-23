@@ -1,8 +1,4 @@
-use std::collections::HashMap;
-
-use cairo_lang_defs::plugin::{DynGeneratedFileAuxData, PluginGeneratedFile, PluginResult};
-use cairo_lang_semantic::patcher::{PatchBuilder, RewriteNode};
-use cairo_lang_semantic::plugin::DynPluginAuxData;
+use cairo_lang_semantic::patcher::RewriteNode;
 use cairo_lang_syntax::attribute::structured::{
     AttributeArg, AttributeArgVariant, AttributeStructurize,
 };
@@ -10,7 +6,9 @@ use cairo_lang_syntax::node::ast::ItemStruct;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
-use dojo_world::manifest::Member;
+use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
+use convert_case::{Case, Casing};
+use dojo_types::component::Member;
 
 use crate::plugin::{Component, DojoAuxData};
 
@@ -19,30 +17,25 @@ use crate::plugin::{Component, DojoAuxData};
 /// * db: The semantic database.
 /// * struct_ast: The AST of the component struct.
 /// Returns:
-/// * A PluginResult containing the generated code.
-pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> PluginResult {
+/// * A RewriteNode containing the generated code.
+pub fn handle_component_struct(
+    db: &dyn SyntaxGroup,
+    aux_data: &mut DojoAuxData,
+    struct_ast: ItemStruct,
+) -> RewriteNode {
     let mut body_nodes = vec![RewriteNode::interpolate_patched(
         "
-            #[view]
-            fn name() -> felt252 {
+            #[external(v0)]
+            fn name(self: @ContractState) -> felt252 {
                 '$type_name$'
             }
-
-            #[view]
-            fn len() -> usize {
-                $len$_usize
-            }
         ",
-        HashMap::from([
+        UnorderedHashMap::from([
             (
                 "type_name".to_string(),
                 RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
             ),
             ("members".to_string(), RewriteNode::Copied(struct_ast.members(db).as_syntax_node())),
-            (
-                "len".to_string(),
-                RewriteNode::Text(struct_ast.members(db).elements(db).len().to_string()),
-            ),
         ]),
     )];
 
@@ -55,12 +48,12 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> 
 
         RewriteNode::interpolate_patched(
             "
-                #[view]
-                fn is_indexed() -> bool {
+                #[external(v0)]
+                fn is_indexed(self: @ContractState) -> bool {
                     bool::$retval$(())
                 }
             ",
-            HashMap::from([("retval".to_string(), RewriteNode::Text(retval_str))]),
+            UnorderedHashMap::from([("retval".to_string(), RewriteNode::Text(retval_str))]),
         )
     };
 
@@ -71,39 +64,61 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> 
         .members(db)
         .elements(db)
         .iter()
-        .map(|member| (member.name(db).text(db), member.type_clause(db).ty(db), 252))
+        .enumerate()
+        .map(|(slot, member)| {
+            (member.name(db).text(db), member.type_clause(db).ty(db), slot as u64, 0)
+        })
         .collect::<_>();
 
     let name = struct_ast.name(db).text(db);
-    let mut builder = PatchBuilder::new(db);
-    builder.add_modified(RewriteNode::interpolate_patched(
+    aux_data.components.push(Component {
+        name: name.to_string(),
+        members: members
+            .iter()
+            .map(|(name, ty, slot, offset)| Member {
+                name: name.to_string(),
+                ty: ty.as_syntax_node().get_text(db).trim().to_string(),
+                slot: *slot,
+                offset: *offset,
+            })
+            .collect(),
+    });
+
+    RewriteNode::interpolate_patched(
         "
             struct $type_name$ {
                 $members$
             }
 
-            #[abi]
-            trait I$type_name$ {
-                fn name() -> felt252;
-                fn len() -> u8;
+            #[starknet::interface]
+            trait I$type_name$<T> {
+                fn name(self: @T) -> felt252;
             }
 
-            #[contract]
-            mod $type_name$Component {
-                use dojo_core::serde::SpanSerde;
+            #[starknet::contract]
+            mod $contract_name$ {
                 use super::$type_name$;
 
-                #[view]
-                fn schema() -> Array<(felt252, felt252, u8)> {
+                #[storage]
+                struct Storage {}
+
+                #[external(v0)]
+                fn schema(self: @ContractState) -> Array<(felt252, felt252, usize, u8)> {
                     let mut arr = array::ArrayTrait::new();
                     $schema_members$
                     arr
                 }
 
+                #[external(v0)]
+                fn length(self: @ContractState) -> usize {
+                    dojo::SerdeLen::<$type_name$>::len()
+                }
+
                 $body$
             }
         ",
-        HashMap::from([
+        UnorderedHashMap::from([
+            ("contract_name".to_string(), RewriteNode::Text(name.to_case(Case::Snake))),
             (
                 "type_name".to_string(),
                 RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
@@ -118,13 +133,15 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> 
                         .map(|item| {
                             RewriteNode::interpolate_patched(
                                 "array::ArrayTrait::append(ref arr, ('$name$', '$type_clause$', \
-                                 252));\n",
-                                HashMap::from([
+                                 $slot$, $offset$));\n",
+                                UnorderedHashMap::from([
                                     ("name".to_string(), RewriteNode::Text(item.0.to_string())),
                                     (
                                         "type_clause".to_string(),
                                         RewriteNode::new_trimmed(item.1.as_syntax_node()),
                                     ),
+                                    ("slot".to_string(), RewriteNode::Text(item.2.to_string())),
+                                    ("offset".to_string(), RewriteNode::Text(item.3.to_string())),
                                 ]),
                             )
                         })
@@ -132,33 +149,7 @@ pub fn handle_component_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> 
                 ),
             ),
         ]),
-    ));
-
-    PluginResult {
-        code: Some(PluginGeneratedFile {
-            name: name.clone(),
-            content: builder.code,
-            aux_data: DynGeneratedFileAuxData::new(DynPluginAuxData::new(DojoAuxData {
-                patches: builder.patches,
-                components: vec![Component {
-                    name: name.to_string(),
-                    members: members
-                        .iter()
-                        .enumerate()
-                        .map(|(slot, (name, ty, _size))| Member {
-                            name: name.to_string(),
-                            ty: ty.as_syntax_node().get_text(db).trim().to_string(),
-                            slot,
-                            offset: 0,
-                        })
-                        .collect(),
-                }],
-                systems: vec![],
-            })),
-        }),
-        diagnostics: vec![],
-        remove_original_item: true,
-    }
+    )
 }
 
 /// Returns true if the component is indexed #[component(indexed: true)]
@@ -168,13 +159,10 @@ fn is_indexed(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> bool {
 
         for arg in attr.args {
             let AttributeArg {
-                variant: AttributeArgVariant::Named {
-                    value: ast::Expr::True(_),
-                    name,
-                    ..
-                },
+                variant: AttributeArgVariant::Named { value: ast::Expr::True(_), name, .. },
                 ..
-            } = arg else {
+            } = arg
+            else {
                 continue;
             };
 

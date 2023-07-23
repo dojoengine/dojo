@@ -1,39 +1,79 @@
 use camino::Utf8PathBuf;
-use dojo_test_utils::sequencer::TestSequencer;
+use dojo_test_utils::sequencer::{
+    get_default_test_starknet_config, SequencerConfig, TestSequencer,
+};
 use dojo_world::manifest::Manifest;
+use dojo_world::migration::strategy::prepare_for_migration;
+use dojo_world::migration::world::WorldDiff;
 use scarb::core::Config;
 use scarb::ui::Verbosity;
+use starknet::accounts::SingleOwnerAccount;
+use starknet::core::chain_id;
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::JsonRpcClient;
+use starknet::signers::{LocalWallet, SigningKey};
 
-use crate::ops::migration::config::{EnvironmentConfig, WorldConfig};
 use crate::ops::migration::execute_strategy;
-use crate::ops::migration::strategy::prepare_for_migration;
-use crate::ops::migration::world::WorldDiff;
 
 #[tokio::test]
-async fn test_migration() {
+async fn test_migration_with_auto_mine() {
     let target_dir = Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap();
 
-    let sequencer = TestSequencer::start().await;
+    let sequencer =
+        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
 
-    let env_config = EnvironmentConfig {
-        rpc: Some(sequencer.url()),
-        private_key: Some(sequencer.raw_account().private_key),
-        account_address: Some(sequencer.raw_account().account_address),
-        ..EnvironmentConfig::default()
-    };
+    let account = SingleOwnerAccount::new(
+        JsonRpcClient::new(HttpTransport::new(sequencer.url())),
+        LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
+            sequencer.raw_account().private_key,
+        )),
+        sequencer.raw_account().account_address,
+        chain_id::TESTNET,
+    );
 
     let config = Config::builder(Utf8PathBuf::from_path_buf("../../examples/ecs/".into()).unwrap())
         .ui_verbosity(Verbosity::Quiet)
         .build()
         .unwrap();
 
-    let world =
-        WorldDiff::from_path(target_dir.clone(), &WorldConfig::default(), &env_config, &config)
-            .await
-            .unwrap();
+    let manifest = Manifest::load_from_path(target_dir.join("manifest.json")).unwrap();
+    let world = WorldDiff::compute(manifest, None);
 
-    let mut migration = prepare_for_migration(target_dir, world, WorldConfig::default()).unwrap();
-    execute_strategy(&mut migration, env_config.migrator().await.unwrap(), &config).await.unwrap();
+    let mut migration = prepare_for_migration(None, target_dir, world).unwrap();
+    execute_strategy(&mut migration, account, &config).await.unwrap();
+
+    sequencer.stop().unwrap();
+}
+
+#[tokio::test]
+async fn test_migration_with_block_time() {
+    let target_dir = Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap();
+
+    let sequencer = TestSequencer::start(
+        SequencerConfig { block_time: Some(1) },
+        get_default_test_starknet_config(),
+    )
+    .await;
+
+    let account = SingleOwnerAccount::new(
+        JsonRpcClient::new(HttpTransport::new(sequencer.url())),
+        LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
+            sequencer.raw_account().private_key,
+        )),
+        sequencer.raw_account().account_address,
+        chain_id::TESTNET,
+    );
+
+    let config = Config::builder(Utf8PathBuf::from_path_buf("../../examples/ecs/".into()).unwrap())
+        .ui_verbosity(Verbosity::Quiet)
+        .build()
+        .unwrap();
+
+    let manifest = Manifest::load_from_path(target_dir.join("manifest.json")).unwrap();
+    let world = WorldDiff::compute(manifest, None);
+
+    let mut migration = prepare_for_migration(None, target_dir, world).unwrap();
+    execute_strategy(&mut migration, account, &config).await.unwrap();
 
     sequencer.stop().unwrap();
 }
@@ -43,33 +83,33 @@ async fn test_migration() {
 async fn test_migration_from_remote() {
     let target_dir = Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap();
 
-    let sequencer = TestSequencer::start().await;
+    let sequencer =
+        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
 
-    let env_config = EnvironmentConfig {
-        rpc: Some(sequencer.url()),
-        private_key: Some(sequencer.raw_account().private_key),
-        account_address: Some(sequencer.raw_account().account_address),
-        ..EnvironmentConfig::default()
-    };
+    let account = SingleOwnerAccount::new(
+        JsonRpcClient::new(HttpTransport::new(sequencer.url())),
+        LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
+            sequencer.raw_account().private_key,
+        )),
+        sequencer.raw_account().account_address,
+        chain_id::TESTNET,
+    );
 
     let config = Config::builder(Utf8PathBuf::from_path_buf("../../examples/ecs/".into()).unwrap())
         .ui_verbosity(Verbosity::Quiet)
         .build()
         .unwrap();
 
-    let world =
-        WorldDiff::from_path(target_dir.clone(), &WorldConfig::default(), &env_config, &config)
-            .await
-            .unwrap();
+    let manifest = Manifest::load_from_path(target_dir.clone()).unwrap();
+    let world = WorldDiff::compute(manifest, None);
 
-    let mut migration =
-        prepare_for_migration(target_dir.clone(), world, WorldConfig::default()).unwrap();
+    let mut migration = prepare_for_migration(None, target_dir.clone(), world).unwrap();
 
-    execute_strategy(&mut migration, env_config.migrator().await.unwrap(), &config).await.unwrap();
+    execute_strategy(&mut migration, account, &config).await.unwrap();
 
     let local_manifest = Manifest::load_from_path(target_dir.join("manifest.json")).unwrap();
     let remote_manifest = Manifest::from_remote(
-        env_config.provider().unwrap(),
+        JsonRpcClient::new(HttpTransport::new(sequencer.url())),
         migration.world_address().unwrap(),
         None,
     )

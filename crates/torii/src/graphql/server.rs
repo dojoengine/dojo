@@ -1,29 +1,23 @@
-use async_graphql::http::{playground_source, GraphQLPlaygroundConfig, GraphiQLSource};
+use async_graphql::http::GraphiQLSource;
 use async_graphql_poem::GraphQL;
 use poem::listener::TcpListener;
+use poem::middleware::Cors;
 use poem::web::Html;
-use poem::{get, handler, IntoResponse, Route, Server};
+use poem::{get, handler, EndpointExt, IntoResponse, Route, Server};
 use sqlx::{Pool, Sqlite};
 
 use super::schema::build_schema;
 
 #[handler]
 async fn graphiql() -> impl IntoResponse {
-    Html(GraphiQLSource::build().endpoint("/query").finish())
-}
-
-#[handler]
-async fn graphql_playground() -> impl IntoResponse {
-    Html(playground_source(GraphQLPlaygroundConfig::new("/playground")))
+    Html(GraphiQLSource::build().endpoint("/").finish())
 }
 
 pub async fn start_graphql(pool: &Pool<Sqlite>) -> anyhow::Result<()> {
     let schema = build_schema(pool).await?;
 
-    let app = Route::new()
-        .at("/query", get(graphiql).post(GraphQL::new(schema.clone())))
-        .at("/playground", get(graphql_playground).post(GraphQL::new(schema.clone())));
-    Server::new(TcpListener::bind("127.0.0.1:8080")).run(app).await?;
+    let app = Route::new().at("/", get(graphiql).post(GraphQL::new(schema))).with(Cors::new());
+    Server::new(TcpListener::bind("0.0.0.0:8080")).run(app).await?;
 
     Ok(())
 }

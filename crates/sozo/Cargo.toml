@@ -10,9 +10,9 @@ anyhow.workspace = true
 async-trait.workspace = true
 camino.workspace = true
 clap.workspace = true
+dojo-client = { path = "../dojo-client" }
 dojo-lang = { path = "../dojo-lang" }
 dojo-world = { path = "../dojo-world" }
-dotenv = "0.15.0"
 log.workspace = true
 cairo-lang-compiler.workspace = true
 cairo-lang-filesystem.workspace = true
@@ -25,11 +25,12 @@ cairo-lang-test-runner.workspace = true
 scarb.workspace = true
 semver.workspace = true
 serde.workspace = true
+console.workspace = true
 serde_json.workspace = true
 smol_str.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
-tokio = { version = "1.15.0", features = [ "full" ] }
+tokio = { version = "1.15.0", features = ["full"] }
 toml.workspace = true
 url = "2.2.2"
 clap-verbosity-flag = "2.0.1"
@@ -41,7 +42,7 @@ tracing-log = "0.1.3"
 assert_fs = "1.0.10"
 dojo-test-utils = { path = "../dojo-test-utils" }
 snapbox = "0.4.6"
-tokio = { version = "1.28.0", features = [ "full" ] }
+tokio = { version = "1.28.0", features = ["full"] }
 
 [[bin]]
 name = "sozo"

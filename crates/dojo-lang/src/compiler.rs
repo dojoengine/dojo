@@ -61,7 +61,7 @@ impl Compiler for DojoCompiler {
         for (decl, class) in zip(contracts, classes) {
             let target_name = &unit.target().name;
             let contract_name = decl.submodule_id.name(db.upcast_mut());
-            let file_name = format!("{target_name}_{contract_name}.json");
+            let file_name = format!("{target_name}-{contract_name}.json");
 
             let mut file = target_dir.open_rw(file_name.clone(), "output file", ws.config())?;
             serde_json::to_writer_pretty(file.deref_mut(), &class)
@@ -91,8 +91,8 @@ fn compute_class_hash_of_contract_class(class: ContractClass) -> Result<FieldEle
 
 pub fn collect_main_crate_ids(unit: &CompilationUnit, db: &RootDatabase) -> Vec<CrateId> {
     let mut main_crate_ids = scarb::compiler::helpers::collect_main_crate_ids(unit, db);
-    if unit.main_component().cairo_package_name() != "dojo_core" {
-        main_crate_ids.push(db.intern_crate(CrateLongId("dojo_core".into())));
+    if unit.main_component().cairo_package_name() != "dojo" {
+        main_crate_ids.push(db.intern_crate(CrateLongId("dojo".into())));
     }
     main_crate_ids
 }

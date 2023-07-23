@@ -8,17 +8,17 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  NIGHTLY_RUST_VERSION: nightly-2023-05-28
+  RUST_VERSION: 1.70.0
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-32-cores
     steps:
       - uses: actions/checkout@v3
 
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
+          toolchain: ${{ env.RUST_VERSION }}
 
       - uses: Swatinem/rust-cache@v2
       - uses: arduino/setup-protoc@v1
@@ -28,7 +28,7 @@ jobs:
           cargo test
 
   # cairofmt:
-  #   runs-on: ubuntu-latest
+  #   runs-on: ubuntu-latest-32-cores
   #   steps:
   #     - uses: actions/checkout@v3
   #     - uses: actions-rs/toolchain@v1
@@ -40,13 +40,13 @@ jobs:
   #     - run: scripts/cairo_fmt.sh --check
 
   cairotest:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-32-cores
     steps:
       - uses: actions/checkout@v3
       
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
+          toolchain: ${{ env.RUST_VERSION }}
 
       - uses: Swatinem/rust-cache@v2
       - run: scripts/cairo_test.sh
@@ -58,7 +58,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
+          toolchain: ${{ env.RUST_VERSION }}
           components: clippy
       
       - uses: Swatinem/rust-cache@v2
@@ -67,14 +67,14 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: scripts/clippy.sh
 
-  rustfmt:
+  fmt:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
+          toolchain: ${{ env.RUST_VERSION }}
           components: rustfmt
       
       - uses: Swatinem/rust-cache@v2
@@ -82,45 +82,47 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: scripts/rust_fmt.sh --check
+      - name: "Format TOML files"
+        run: cargo install taplo-cli && taplo format 
 
   # Check for unnecessary dependencies.
-  udeps:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
+  # udeps:
+  #   runs-on: ubuntu-latest-32-cores
+  #   steps:
+  #     - uses: actions/checkout@v3
 
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
+  #     - uses: dtolnay/rust-toolchain@master
+  #       with:
+  #         toolchain: ${{ env.RUST_VERSION }}
       
-      - uses: Swatinem/rust-cache@v2
-      - uses: arduino/setup-protoc@v1
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - id: cache-cargo-udeps
-        uses: actions/cache@v2
-        with:
-          path: ~/.cargo-udeps-cache
-          key: cargo-udeps-v0.1.35-${{ runner.os }}
-      - name: "Download and run cargo-udeps"
-        run: |
-          if [ ! -f ~/.cargo-udeps-cache/cargo-udeps ]; then
-            wget -O - -c https://github.com/est31/cargo-udeps/releases/download/v0.1.35/cargo-udeps-v0.1.35-x86_64-unknown-linux-gnu.tar.gz | tar -xz
-            mkdir -p ~/.cargo-udeps-cache
-            mv cargo-udeps-*/cargo-udeps ~/.cargo-udeps-cache/cargo-udeps
-          fi
-          ~/.cargo-udeps-cache/cargo-udeps udeps --all-targets
-        env:
-          RUSTUP_TOOLCHAIN: ${{ env.NIGHTLY_RUST_VERSION }}
+  #     - uses: Swatinem/rust-cache@v2
+  #     - uses: arduino/setup-protoc@v1
+  #       with:
+  #         repo-token: ${{ secrets.GITHUB_TOKEN }}
+  #     - id: cache-cargo-udeps
+  #       uses: actions/cache@v2
+  #       with:
+  #         path: ~/.cargo-udeps-cache
+  #         key: cargo-udeps-v0.1.40-${{ runner.os }}
+  #     - name: "Download and run cargo-udeps"
+  #       run: |
+  #         if [ ! -f ~/.cargo-udeps-cache/cargo-udeps ]; then
+  #           wget -O - -c https://github.com/est31/cargo-udeps/releases/download/v0.1.40/cargo-udeps-v0.1.40-x86_64-unknown-linux-gnu.tar.gz | tar -xz
+  #           mkdir -p ~/.cargo-udeps-cache
+  #           mv cargo-udeps-*/cargo-udeps ~/.cargo-udeps-cache/cargo-udeps
+  #         fi
+  #         ~/.cargo-udeps-cache/cargo-udeps udeps --all-targets
+  #       env:
+  #         RUSTUP_TOOLCHAIN: ${{ env.RUST_VERSION }}
 
   docs:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-32-cores
     steps:
       - uses: actions/checkout@v3
 
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
+          toolchain: ${{ env.RUST_VERSION }}
 
       - uses: Swatinem/rust-cache@v2
       - uses: arduino/setup-protoc@v1
@@ -130,7 +132,7 @@ jobs:
           scripts/docs.sh
 
   test-hurl:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-32-cores
     permissions:
       pull-requests: write
 
@@ -140,7 +142,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
+          toolchain: ${{ env.RUST_VERSION }}
       
       - uses: Swatinem/rust-cache@v2
       - name: Install Hurl
@@ -150,6 +152,6 @@ jobs:
       - name: Build and start Katana node
         run: |
           cargo build --bin katana
-          nohup target/debug/katana --accounts 2 --account-class crates/katana-core/contracts/compiled/account_without_validation.json --allow-zero-max-fee &
+          nohup target/debug/katana --accounts 2 --account-class crates/katana/core/contracts/compiled/account_without_validation.json --allow-zero-max-fee &
       - name: Execute Hurl Scripts
         run: hurl --test examples/rpc/**/*.hurl

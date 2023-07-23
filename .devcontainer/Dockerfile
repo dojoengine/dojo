@@ -10,8 +10,8 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 
 RUN apt install -y libgmp3-dev
 
-RUN rustup toolchain install nightly-2023-05-28 && \
-	rustup default nightly-2023-05-28 && rustup component add clippy && rustup component add rustfmt
+RUN rustup toolchain install 1.70.0 && \
+	rustup default 1.70.0 && rustup component add clippy && rustup component add rustfmt
 
 # Install Python
 ARG PYTHON_PATH=/usr/local/python

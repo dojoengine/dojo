@@ -59,7 +59,7 @@ impl TestFileRunner for ExpandContractTestRunner {
         let mut current_path = current_dir().unwrap();
         current_path.push("../dojo-core/src");
 
-        let crate_id = self.db.intern_crate(CrateLongId("dojo_core".into()));
+        let crate_id = self.db.intern_crate(CrateLongId("dojo".into()));
         let root = Directory(current_path);
         self.db.set_crate_root(crate_id, Some(root));
 

@@ -1,78 +1,82 @@
-use std::env::{self, current_dir};
-
-use anyhow::Result;
-use camino::Utf8PathBuf;
+use anyhow::{anyhow, Context, Result};
 use clap::Args;
-use dotenv::dotenv;
 use scarb::core::Config;
-use scarb::ops;
+use starknet::accounts::{Account, ConnectedAccount};
+use starknet::core::types::{BlockId, BlockTag, StarknetError};
+use starknet::providers::{Provider, ProviderError};
 
-use super::{ui_verbosity_from_flag, ProfileSpec};
-use crate::commands::build::{self, BuildArgs};
+use super::options::account::AccountOptions;
+use super::options::dojo_metadata_from_workspace;
+use super::options::starknet::StarknetOptions;
+use super::options::world::WorldOptions;
 use crate::ops::migration;
-use crate::ops::migration::config::{EnvironmentConfig, WorldConfig};
 
 #[derive(Args)]
 pub struct MigrateArgs {
-    #[clap(help = "Source directory")]
-    path: Option<Utf8PathBuf>,
-
-    #[clap(short, long)]
-    #[clap(help = "Perform a dry run and outputs the plan to be executed")]
+    #[arg(short, long)]
+    #[arg(help = "Perform a dry run and outputs the plan to be executed")]
     plan: bool,
 
-    #[clap(help = "Specify the profile to use.")]
     #[command(flatten)]
-    profile_spec: ProfileSpec,
+    world: WorldOptions,
 
-    #[clap(help = "Logging verbosity.")]
     #[command(flatten)]
-    verbose: clap_verbosity_flag::Verbosity,
+    starknet: StarknetOptions,
+
+    #[command(flatten)]
+    account: AccountOptions,
 }
 
-pub fn run(args: MigrateArgs) -> Result<()> {
-    dotenv().ok();
+impl MigrateArgs {
+    pub fn run(self, config: &Config) -> Result<()> {
+        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
 
-    let MigrateArgs { path, profile_spec, verbose, .. } = args;
+        let target_dir = ws.target_dir().path_existent().unwrap();
+        let target_dir = target_dir.join(ws.config().profile().as_str());
 
-    let source_dir = match path {
-        Some(path) => {
-            if path.is_absolute() {
-                path
-            } else {
-                let mut current_path = current_dir().unwrap();
-                current_path.push(path);
-                Utf8PathBuf::from_path_buf(current_path).unwrap()
-            }
+        if !target_dir.join("manifest.json").exists() {
+            scarb::ops::compile(&ws)?;
         }
-        None => Utf8PathBuf::from_path_buf(current_dir().unwrap()).unwrap(),
-    };
 
-    let manifest_path = source_dir.join("Scarb.toml");
-    let config = Config::builder(manifest_path)
-        .ui_verbosity(ui_verbosity_from_flag(verbose.clone()))
-        .log_filter_directive(env::var_os("SCARB_LOG"))
-        .build()
-        .unwrap();
+        let mut env_metadata = dojo_metadata_from_workspace(&ws)
+            .and_then(|dojo_metadata| dojo_metadata.get("env").cloned());
 
-    let ws = ops::read_workspace(config.manifest_path(), &config)?;
+        // If there is an environment-specific metadata, use that, otherwise use the
+        // workspace's default environment metadata.
+        env_metadata = env_metadata
+            .as_ref()
+            .and_then(|env_metadata| env_metadata.get(ws.config().profile().as_str()).cloned())
+            .or(env_metadata);
 
-    let profile = profile_spec.determine()?;
-    let target_dir = source_dir.join(format!("target/{}", profile.as_str()));
+        ws.config().tokio_handle().block_on(async {
+            let world_address = self.world.address(env_metadata.as_ref()).ok();
 
-    if !target_dir.join("manifest.json").exists() {
-        build::run(BuildArgs { path: Some(source_dir), profile_spec, verbose })?;
+            let account = {
+                let provider = self.starknet.provider(env_metadata.as_ref())?;
+                let mut account = self.account.account(provider, env_metadata.as_ref()).await?;
+                account.set_block_id(BlockId::Tag(BlockTag::Pending));
+
+                let address = account.address();
+
+                config.ui().print(format!("\nMigration account: {address:#x}\n"));
+
+                match account
+                    .provider()
+                    .get_class_hash_at(BlockId::Tag(BlockTag::Pending), address)
+                    .await
+                {
+                    Ok(_) => Ok(account),
+                    Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
+                        Err(anyhow!("Account with address {:#x} doesn't exist.", account.address()))
+                    }
+                    Err(e) => Err(e.into()),
+                }
+            }
+            .with_context(|| "Problem initializing account for migration.")?;
+
+            migration::execute(world_address, account, target_dir, ws.config()).await
+        })?;
+
+        Ok(())
     }
-
-    let world_config = WorldConfig::from_workspace(&ws).unwrap_or_default();
-    let env_config = EnvironmentConfig::from_workspace(profile.as_str(), &ws)?;
-
-    ws.config().tokio_handle().block_on(migration::execute(
-        world_config,
-        env_config,
-        target_dir,
-        ws.config(),
-    ))?;
-
-    Ok(())
 }

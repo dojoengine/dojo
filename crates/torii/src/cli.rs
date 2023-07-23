@@ -1,3 +1,4 @@
+use camino::Utf8PathBuf;
 use clap::Parser;
 use dojo_world::manifest::Manifest;
 use graphql::server::start_graphql;
@@ -13,7 +14,10 @@ use url::Url;
 
 use crate::engine::Processors;
 use crate::indexer::Indexer;
-use crate::processors::component_register::ComponentRegistrationProcessor;
+use crate::processors::register_component::RegisterComponentProcessor;
+use crate::processors::register_system::RegisterSystemProcessor;
+use crate::processors::store_set_record::StoreSetRecordProcessor;
+use crate::state::State;
 
 mod engine;
 mod graphql;
@@ -38,6 +42,12 @@ struct Args {
     /// Database url
     #[arg(short, long, default_value = "sqlite::memory:")]
     database_url: String,
+    /// Specify a local manifest to intiailize from
+    #[arg(short, long)]
+    manifest: Option<Utf8PathBuf>,
+    /// Specify a block to start indexing from, ignored if stored head exists
+    #[arg(short, long)]
+    start_block: Option<u64>,
 }
 
 #[tokio::main]
@@ -64,16 +74,28 @@ async fn main() -> anyhow::Result<()> {
     let database_url = &args.database_url;
     #[cfg(feature = "sqlite")]
     let pool = SqlitePoolOptions::new().max_connections(5).connect(database_url).await?;
+    sqlx::migrate!().run(&pool).await?;
+
     let provider = JsonRpcClient::new(HttpTransport::new(Url::parse(&args.rpc).unwrap()));
 
-    let manifest = Manifest::default();
+    let manifest = if let Some(manifest_path) = args.manifest {
+        Manifest::load_from_path(manifest_path).expect("Failed to load manifest")
+    } else {
+        Manifest::default()
+    };
+
     let state = Sql::new(pool.clone(), args.world_address).await?;
+    state.load_from_manifest(manifest.clone()).await?;
     let processors = Processors {
-        event: vec![Box::new(ComponentRegistrationProcessor)],
+        event: vec![
+            Box::new(RegisterComponentProcessor),
+            Box::new(RegisterSystemProcessor),
+            Box::new(StoreSetRecordProcessor),
+        ],
         ..Processors::default()
     };
 
-    let indexer = Indexer::new(&state, &provider, processors, manifest);
+    let indexer = Indexer::new(&state, &provider, processors, manifest, args.start_block);
     let graphql = start_graphql(&pool);
 
     tokio::select! {

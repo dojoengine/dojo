@@ -8,7 +8,12 @@ use scarb::core::Config;
 use scarb::ops;
 use scarb::ui::Verbosity;
 
+#[allow(unreachable_code)]
 fn main() {
+    #[cfg(feature = "skip-build")]
+    {
+        return;
+    }
     let mut compilers = CompilerRepository::empty();
     compilers.add(Box::new(DojoCompiler)).unwrap();
 

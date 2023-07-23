@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
 use jsonrpsee::core::Error;
-use jsonrpsee::server::ServerHandle;
-use katana_core::sequencer::{KatanaSequencer, SequencerConfig};
-use katana_core::starknet::StarknetConfig;
-use katana_rpc::config::RpcConfig;
-use katana_rpc::KatanaNodeRpc;
+pub use katana_core::backend::config::{Environment, StarknetConfig};
+use katana_core::sequencer::KatanaSequencer;
+pub use katana_core::sequencer::SequencerConfig;
+use katana_rpc::config::ServerConfig;
+use katana_rpc::{spawn, KatanaApi, NodeHandle, StarknetApi};
 use starknet::accounts::SingleOwnerAccount;
 use starknet::core::chain_id;
 use starknet::core::types::FieldElement;
@@ -22,29 +22,26 @@ pub struct TestAccount {
 #[allow(unused)]
 pub struct TestSequencer {
     url: Url,
-    handle: ServerHandle,
+    handle: NodeHandle,
     account: TestAccount,
-    sequencer: Arc<KatanaSequencer>,
+    pub sequencer: Arc<KatanaSequencer>,
 }
 
 impl TestSequencer {
-    pub async fn start() -> Self {
-        let sequencer = Arc::new(KatanaSequencer::new(
-            SequencerConfig::default(),
-            StarknetConfig {
-                total_accounts: 1,
-                allow_zero_max_fee: true,
-                chain_id: "SN_GOERLI".into(),
-                ..Default::default()
-            },
-        ));
+    pub async fn start(config: SequencerConfig, starknet_config: StarknetConfig) -> Self {
+        let sequencer = Arc::new(KatanaSequencer::new(config, starknet_config));
 
         sequencer.start().await;
 
-        let server = KatanaNodeRpc::new(sequencer.clone(), RpcConfig { port: 0 });
-        let (socket_addr, handle) = server.run().await.unwrap();
+        let starknet_api = StarknetApi::new(sequencer.clone());
+        let katana_api = KatanaApi::new(sequencer.clone());
 
-        let url = Url::parse(&format!("http://{}", socket_addr)).expect("Failed to parse URL");
+        let handle =
+            spawn(katana_api, starknet_api, ServerConfig { port: 0, host: "localhost".into() })
+                .await
+                .expect("Unable to spawn server");
+
+        let url = Url::parse(&format!("http://{}", handle.addr)).expect("Failed to parse URL");
 
         let account = sequencer.starknet.read().await.predeployed_accounts.accounts[0].clone();
         let account = TestAccount {
@@ -69,10 +66,18 @@ impl TestSequencer {
     }
 
     pub fn stop(self) -> Result<(), Error> {
-        self.handle.stop()
+        self.handle.handle.stop()
     }
 
     pub fn url(&self) -> Url {
         self.url.clone()
+    }
+}
+
+pub fn get_default_test_starknet_config() -> StarknetConfig {
+    StarknetConfig {
+        allow_zero_max_fee: true,
+        env: Environment { chain_id: "SN_GOERLI".into(), ..Default::default() },
+        ..Default::default()
     }
 }

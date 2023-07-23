@@ -1,12 +1,11 @@
 use array::ArrayTrait;
 
-#[derive(Component, Copy, Drop, Serde)]
-#[component(indexed = true)]
+#[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Moves {
     remaining: u8, 
 }
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Position {
     x: u32,
     y: u32
@@ -26,7 +25,7 @@ impl PositionImpl of PositionTrait {
     }
 
     fn is_equal(self: Position, b: Position) -> bool {
-        self.x == b.x & self.y == b.y
+        self.x == b.x && self.y == b.y
     }
 }
 
@@ -40,9 +39,6 @@ fn test_position_is_zero() {
 #[available_gas(100000)]
 fn test_position_is_equal() {
     assert(
-        PositionTrait::is_equal(
-            Position { x: 420, y: 0 }, Position { x: 420, y: 0 }
-        ),
-        'not equal'
+        PositionTrait::is_equal(Position { x: 420, y: 0 }, Position { x: 420, y: 0 }), 'not equal'
     );
 }
