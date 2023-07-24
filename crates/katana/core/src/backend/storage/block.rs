@@ -1,4 +1,7 @@
-use starknet::core::types::{BlockStatus, FieldElement};
+use starknet::core::{
+    crypto::compute_hash_on_elements,
+    types::{BlockStatus, FieldElement},
+};
 
 use super::transaction::{IncludedTransaction, TransactionOutput};
 
@@ -35,7 +38,17 @@ impl Header {
     }
 
     pub fn hash(&self) -> FieldElement {
-        unimplemented!("compute the block hash from its header")
+        compute_hash_on_elements(&vec![
+            self.number.into(),     // block number
+            self.state_root,        // state root
+            self.sequencer_address, // sequencer address
+            self.timestamp.into(),  // block timestamp
+            FieldElement::ZERO,     // transaction commitment
+            FieldElement::ZERO,     // event commitment
+            FieldElement::ZERO,     // protocol version
+            FieldElement::ZERO,     // extra data
+            self.parent_hash,       // parent hash
+        ])
     }
 }
 
