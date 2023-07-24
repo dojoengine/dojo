@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 env:
-  IS_NIGHTLY: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+  IS_NIGHTLY: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'true' || 'false' }}
   CARGO_TERM_COLOR: always
   RUST_VERSION: 1.70.0
   REGISTRY_IMAGE: ghcr.io/${{ github.repository }}
@@ -33,7 +33,7 @@ jobs:
       - name: Compute release name and tag
         id: release_info
         run: |
-          if [[ $IS_NIGHTLY ]]; then
+          if [[ $IS_NIGHTLY == "true" ]]; then
             echo "tag_name=nightly-${GITHUB_SHA}" >> $GITHUB_STATE
             echo "release_name=Nightly ($(date '+%Y-%m-%d'))" >> $GITHUB_STATE
           else
@@ -46,7 +46,7 @@ jobs:
       # which allows users to roll back. It is also used to build
       # the changelog.
       - name: Create build-specific nightly tag
-        if: ${{ env.IS_NIGHTLY }}
+        if: ${{ env.IS_NIGHTLY == 'true' }}
         uses: actions/github-script@v5
         env:
           TAG_NAME: ${{ steps.release_info.outputs.tag_name }}
@@ -60,7 +60,7 @@ jobs:
         uses: mikepenz/release-changelog-builder-action@v2
         with:
           configuration: "./.github/changelog.json"
-          fromTag: ${{ env.IS_NIGHTLY && 'nightly' || '' }}
+          fromTag: ${{ env.IS_NIGHTLY == 'true' && 'nightly' || '' }}
           toTag: ${{ steps.release_info.outputs.tag_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -134,7 +134,7 @@ jobs:
           PLATFORM_NAME: ${{ matrix.job.platform }}
           TARGET: ${{ matrix.job.target }}
           ARCH: ${{ matrix.job.arch }}
-          VERSION_NAME: ${{ (env.IS_NIGHTLY && 'nightly') || needs.prepare.outputs.tag_name }}
+          VERSION_NAME: ${{ (env.IS_NIGHTLY == 'true' && 'nightly') || needs.prepare.outputs.tag_name }}
         run: |
           if [ "$PLATFORM_NAME" == "linux" ]; then
             tar -czvf "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C ./target/${TARGET}/release katana sozo torii
@@ -158,7 +158,7 @@ jobs:
         with:
           name: ${{ needs.prepare.outputs.release_name }}
           tag_name: ${{ needs.prepare.outputs.tag_name }}
-          prerelease: ${{ env.IS_NIGHTLY }}
+          prerelease: ${{ env.IS_NIGHTLY == 'true' }}
           body: ${{ needs.prepare.outputs.changelog }}
           files: |
             ${{ steps.artifacts.outputs.file_name }}
@@ -166,7 +166,7 @@ jobs:
       # If this is a nightly release, it also updates the release
       # tagged `nightly` for compatibility with `dojoup`
       - name: Update nightly release
-        if: ${{ env.IS_NIGHTLY }}
+        if: ${{ env.IS_NIGHTLY == 'true' }}
         uses: softprops/action-gh-release@v1
         with:
           name: "Nightly"
@@ -187,7 +187,7 @@ jobs:
 
       # Moves the `nightly` tag to `HEAD`
       - name: Move nightly tag
-        if: ${{ env.IS_NIGHTLY }}
+        if: ${{ env.IS_NIGHTLY == 'true' }}
         uses: actions/github-script@v5
         with:
           script: |
