@@ -740,7 +740,6 @@ where
                 constructor_calldata.into_iter().map(|d| d.into()).collect(),
             )),
             class_hash: ClassHash(class_hash.into()),
-            contract_address: ContractAddress(patricia_key!(contract_address)),
             max_fee: Fee(starkfelt_to_u128(max_fee.into())
                 .map_err(|_| Error::from(StarknetApiError::InternalServerError))?),
             nonce: Nonce(nonce.into()),
@@ -893,7 +892,7 @@ where
                             constructor_calldata.into_iter().map(|d| d.into()).collect(),
                         )),
                         class_hash: ClassHash(class_hash.into()),
-                        contract_address: ContractAddress(patricia_key!(contract_address)),
+                        // contract_address: ContractAddress(patricia_key!(contract_address)),
                         max_fee: Fee(starkfelt_to_u128(max_fee.into())
                             .map_err(|_| Error::from(StarknetApiError::InternalServerError))?),
                         nonce: Nonce(nonce.into()),

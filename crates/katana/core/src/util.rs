@@ -9,14 +9,13 @@ use starknet::core::types::{
     ContractStorageDiffItem, DeclaredClassItem, DeployedContractItem, FieldElement, NonceUpdate,
     StateDiff, StorageEntry,
 };
-use starknet_api::core::ClassHash;
-use starknet_api::hash::StarkFelt;
+use starknet_api::core::{ClassHash, ContractAddress, Nonce, PatriciaKey};
+use starknet_api::hash::{StarkFelt, StarkHash};
 use starknet_api::transaction::{
     DeployAccountTransaction, InvokeTransaction, InvokeTransactionV1, L1HandlerTransaction,
     Transaction,
 };
-use starknet_api::StarknetApiError;
-
+use starknet_api::{patricia_key, StarknetApiError};
 pub fn get_current_timestamp() -> Duration {
     SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
@@ -30,25 +29,26 @@ pub fn convert_blockifier_tx_to_starknet_api_tx(
         BlockifierTransaction::AccountTransaction(tx) => match tx {
             AccountTransaction::Invoke(tx) => {
                 Transaction::Invoke(InvokeTransaction::V1(InvokeTransactionV1 {
-                    nonce: tx.nonce(),
+                    // TODO: Set nonce
+                    nonce: Nonce(0_u8.into()),
                     max_fee: tx.max_fee(),
                     calldata: tx.calldata(),
                     signature: tx.signature(),
-                    sender_address: tx.sender_address(),
+                    // TODO: Set sender address
+                    sender_address: ContractAddress(patricia_key!("0x0")),
                     transaction_hash: tx.transaction_hash(),
                 }))
             }
             AccountTransaction::DeployAccount(tx) => {
                 Transaction::DeployAccount(DeployAccountTransaction {
-                    nonce: tx.nonce,
-                    max_fee: tx.max_fee,
-                    version: tx.version,
-                    class_hash: tx.class_hash,
-                    signature: tx.signature.clone(),
-                    transaction_hash: tx.transaction_hash,
-                    contract_address: tx.contract_address,
-                    contract_address_salt: tx.contract_address_salt,
-                    constructor_calldata: tx.constructor_calldata.clone(),
+                    nonce: tx.nonce(),
+                    max_fee: tx.max_fee(),
+                    version: tx.version(),
+                    class_hash: tx.class_hash(),
+                    signature: tx.signature(),
+                    transaction_hash: tx.transaction_hash(),
+                    contract_address_salt: tx.contract_address_salt(),
+                    constructor_calldata: tx.constructor_calldata(),
                 })
             }
             AccountTransaction::Declare(tx) => match tx.tx() {

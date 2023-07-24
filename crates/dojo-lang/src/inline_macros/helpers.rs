@@ -11,10 +11,3 @@ pub fn macro_name(db: &dyn SyntaxGroup, macro_ast: ast::ExprInlineMacro) -> Smol
         _ => panic!("Macro's name must be a simple identifier!"),
     }
 }
-
-pub fn ast_arg_to_expr(db: &dyn SyntaxGroup, arg: &ast::Arg) -> Option<ast::Expr> {
-    match arg.arg_clause(db) {
-        ast::ArgClause::Unnamed(clause) => Some(clause.value(db)),
-        _ => None,
-    }
-}

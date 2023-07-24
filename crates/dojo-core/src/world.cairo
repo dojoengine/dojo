@@ -1,4 +1,4 @@
-use starknet::{ContractAddress, ClassHash, StorageAccess, StorageBaseAddress, SyscallResult};
+use starknet::{ContractAddress, ClassHash, StorageBaseAddress, SyscallResult};
 use traits::{Into, TryInto};
 use option::OptionTrait;
 

@@ -1,6 +1,6 @@
 use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_semantic::patcher::RewriteNode;
-use cairo_lang_syntax::node::ast::Arg;
+use cairo_lang_syntax::node::ast::Expr;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
@@ -10,7 +10,7 @@ use sanitizer::StringSanitizer;
 use smol_str::SmolStr;
 
 use super::find::find_components;
-use super::helpers::{ast_arg_to_expr, macro_name};
+use super::helpers::macro_name;
 use super::{Command, CommandData, CommandMacroTrait, CAIRO_ERR_MSG_LEN};
 
 pub struct GetCommand {
@@ -37,22 +37,35 @@ impl CommandMacroTrait for GetCommand {
             component_deps: vec![],
         };
 
-        let elements = macro_ast.arguments(db).args(db).elements(db);
+        let wrapped_args = macro_ast.arguments(db);
+        let exprs = match wrapped_args {
+            ast::WrappedExprList::ParenthesizedExprList(args_list) => {
+                args_list.expressions(db).elements(db)
+            }
+            _ => {
+                command.data.diagnostics.push(PluginDiagnostic {
+                    message: "Invalid macro. Expected \"get!(world, query, (components,))\""
+                        .to_string(),
+                    stable_ptr: macro_ast.arguments(db).as_syntax_node().stable_ptr(),
+                });
+                return command;
+            }
+        };
 
-        if elements.len() != 3 {
+        if exprs.len() != 3 {
             command.data.diagnostics.push(PluginDiagnostic {
-                message: "Invalid arguments. Expected \"(world, query, (components,))\""
+                message: "Invalid arguments. Expected \"get!(world, query, (components,))\""
                     .to_string(),
                 stable_ptr: macro_ast.arguments(db).as_syntax_node().stable_ptr(),
             });
             return command;
         }
 
-        let world = &elements[0];
-        let query = &elements[1];
-        let types = &elements[2];
+        let world = &exprs[0];
+        let query = &exprs[1];
+        let types = &exprs[2];
 
-        let components = find_components(db, ast_arg_to_expr(db, types).unwrap());
+        let components = find_components(db, types);
 
         if components.is_empty() {
             command.data.diagnostics.push(PluginDiagnostic {
@@ -98,8 +111,8 @@ impl GetCommand {
     fn handle_get(
         &mut self,
         components: Vec<SmolStr>,
-        world: &Arg,
-        query: &Arg,
+        world: &Expr,
+        query: &Expr,
         part_names: Vec<String>,
     ) {
         for component in components.iter() {
@@ -151,8 +164,8 @@ impl GetCommand {
     fn handle_try_get(
         &mut self,
         components: Vec<SmolStr>,
-        world: &Arg,
-        query: &Arg,
+        world: &Expr,
+        query: &Expr,
         part_names: Vec<String>,
     ) {
         for component in components.iter() {

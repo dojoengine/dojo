@@ -7,7 +7,6 @@ use dojo_types::system::Dependency;
 use sanitizer::StringSanitizer;
 use smol_str::SmolStr;
 
-use super::helpers::ast_arg_to_expr;
 use super::{Command, CommandData, CommandMacroTrait, CAIRO_ERR_MSG_LEN};
 
 pub struct FindCommand {
@@ -31,9 +30,22 @@ impl CommandMacroTrait for FindCommand {
             component_deps: vec![],
         };
 
-        let elements = macro_ast.arguments(db).args(db).elements(db);
+        let wrapped_args = macro_ast.arguments(db);
+        let exprs = match wrapped_args {
+            ast::WrappedExprList::ParenthesizedExprList(args_list) => {
+                args_list.expressions(db).elements(db)
+            }
+            _ => {
+                command.data.diagnostics.push(PluginDiagnostic {
+                    message: "Invalid macro. Expected \"find!(world, query, (components,))\""
+                        .to_string(),
+                    stable_ptr: macro_ast.arguments(db).as_syntax_node().stable_ptr(),
+                });
+                return command;
+            }
+        };
 
-        if elements.len() != 3 {
+        if exprs.len() != 3 {
             command.data.diagnostics.push(PluginDiagnostic {
                 message: "Invalid arguments. Expected \"(world, query, (components,))\""
                     .to_string(),
@@ -42,9 +54,9 @@ impl CommandMacroTrait for FindCommand {
             return command;
         }
 
-        let world = &elements[0];
-        let partition = &elements[1];
-        let types = &elements[2];
+        let world = &exprs[0];
+        let partition = &exprs[1];
+        let types = &exprs[2];
 
         command.data.rewrite_nodes.push(RewriteNode::interpolate_patched(
             "
@@ -58,7 +70,7 @@ impl CommandMacroTrait for FindCommand {
             )]),
         ));
 
-        let components = find_components(db, ast_arg_to_expr(db, types).unwrap());
+        let components = find_components(db, types);
 
         command.data.rewrite_nodes.extend(
             components
@@ -184,16 +196,16 @@ impl From<FindCommand> for Command {
     }
 }
 
-pub fn find_components(db: &dyn SyntaxGroup, expression: ast::Expr) -> Vec<SmolStr> {
+pub fn find_components(db: &dyn SyntaxGroup, expression: &ast::Expr) -> Vec<SmolStr> {
     let mut components = vec![];
     match expression {
         ast::Expr::Tuple(tuple) => {
             for element in tuple.expressions(db).elements(db) {
-                components.extend(find_components(db, element));
+                components.extend(find_components(db, &element));
             }
         }
         ast::Expr::Parenthesized(parenthesized) => {
-            components.extend(find_components(db, parenthesized.expr(db)));
+            components.extend(find_components(db, &parenthesized.expr(db)));
         }
         ast::Expr::Path(path) => match path.elements(db).last().unwrap() {
             ast::PathSegment::WithGenericArgs(segment) => {
@@ -201,7 +213,7 @@ pub fn find_components(db: &dyn SyntaxGroup, expression: ast::Expr) -> Vec<SmolS
 
                 for param in generic.generic_args(db).elements(db) {
                     if let ast::GenericArg::Expr(expr) = param {
-                        components.extend(find_components(db, expr.value(db)));
+                        components.extend(find_components(db, &expr.value(db)));
                     }
                 }
             }

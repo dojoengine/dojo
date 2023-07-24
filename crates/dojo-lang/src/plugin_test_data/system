@@ -296,15 +296,6 @@ mod spawn {
         'spawn'
     }
 
-    #[external(v0)]
-    fn dependencies(self: @ContractState) -> Array<(felt252, bool)> {
-        let mut arr = array::ArrayTrait::new();
-        array::ArrayTrait::append(ref arr, ('Player'.into(), true));
-        array::ArrayTrait::append(ref arr, ('Position'.into(), true));
-
-        arr
-    }
-
     use traits::Into;
     use dojo::world::Context;
     use super::Position;
@@ -434,15 +425,6 @@ mod move {
     #[external(v0)]
     fn name(self: @ContractState) -> felt252 {
         'move'
-    }
-
-    #[external(v0)]
-    fn dependencies(self: @ContractState) -> Array<(felt252, bool)> {
-        let mut arr = array::ArrayTrait::new();
-        array::ArrayTrait::append(ref arr, ('Player'.into(), false));
-        array::ArrayTrait::append(ref arr, ('Position'.into(), false));
-
-        arr
     }
 
     use traits::Into;
@@ -975,13 +957,6 @@ mod proxy {
     #[external(v0)]
     fn name(self: @ContractState) -> felt252 {
         'proxy'
-    }
-
-    #[external(v0)]
-    fn dependencies(self: @ContractState) -> Array<(felt252, bool)> {
-        let mut arr = array::ArrayTrait::new();
-
-        arr
     }
 
 

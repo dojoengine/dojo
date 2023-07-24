@@ -18,20 +18,33 @@ impl CommandMacroTrait for ExecuteCommand {
     ) -> Self {
         let mut command = ExecuteCommand { data: CommandData::new() };
 
-        let elements = macro_ast.arguments(db).args(db).elements(db);
+        let wrapped_args = macro_ast.arguments(db);
+        let exprs = match wrapped_args {
+            ast::WrappedExprList::ParenthesizedExprList(args_list) => {
+                args_list.expressions(db).elements(db)
+            }
+            _ => {
+                command.data.diagnostics.push(PluginDiagnostic {
+                    message: "Invalid macro. Expected \"execute!(world, system, query, calldata)\""
+                        .to_string(),
+                    stable_ptr: macro_ast.arguments(db).as_syntax_node().stable_ptr(),
+                });
+                return command;
+            }
+        };
 
-        if elements.len() != 4 {
+        if exprs.len() != 4 {
             command.data.diagnostics.push(PluginDiagnostic {
-                message: "Invalid arguments. Expected \"(world, system, query, calldata)\""
+                message: "Invalid arguments. Expected \"execute!(world, system, query, calldata)\""
                     .to_string(),
                 stable_ptr: macro_ast.arguments(db).as_syntax_node().stable_ptr(),
             });
             return command;
         }
 
-        let world = &elements[0];
-        let system = &elements[1];
-        let calldata = &elements[3];
+        let world = &exprs[0];
+        let system = &exprs[1];
+        let calldata = &exprs[3];
 
         if let Some(var_name) = let_pattern {
             command.data.rewrite_nodes.push(RewriteNode::interpolate_patched(

@@ -6,14 +6,14 @@ use blockifier::transaction::errors::TransactionExecutionError;
 use blockifier::transaction::objects::TransactionExecutionInfo;
 use starknet::core::types::TransactionStatus;
 use starknet_api::block::{BlockHash, BlockNumber};
-use starknet_api::core::{ContractAddress, EntryPointSelector};
-use starknet_api::hash::StarkFelt;
-use starknet_api::stark_felt;
+use starknet_api::core::{ContractAddress, EntryPointSelector, PatriciaKey};
+use starknet_api::hash::{StarkFelt, StarkHash};
 use starknet_api::transaction::{
     Calldata, DeclareTransactionOutput, DeployAccountTransactionOutput, DeployTransactionOutput,
     Event, Fee, InvokeTransactionOutput, L1HandlerTransactionOutput, MessageToL1, Transaction,
     TransactionHash, TransactionOutput, TransactionReceipt,
 };
+use starknet_api::{patricia_key, stark_felt};
 
 pub struct ExternalFunctionCall {
     pub calldata: Calldata,
@@ -161,6 +161,8 @@ impl StarknetTransaction {
             }),
             Transaction::DeployAccount(_) => {
                 TransactionOutput::DeployAccount(DeployAccountTransactionOutput {
+                    // TODO: Set contract address
+                    contract_address: ContractAddress(patricia_key!("0x0")),
                     events,
                     actual_fee,
                     messages_sent,
@@ -172,6 +174,8 @@ impl StarknetTransaction {
                 messages_sent,
             }),
             Transaction::Deploy(_) => TransactionOutput::Deploy(DeployTransactionOutput {
+                // TODO: Set contract address
+                contract_address: ContractAddress(patricia_key!("0x0")),
                 events,
                 actual_fee,
                 messages_sent,

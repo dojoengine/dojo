@@ -13,14 +13,14 @@ use starknet::core::types::{
     BlockId, BlockTag, FeeEstimate, FlattenedSierraClass, StateUpdate, TransactionStatus,
 };
 use starknet_api::block::{BlockHash, BlockNumber};
-use starknet_api::core::{ChainId, ClassHash, ContractAddress, Nonce};
-use starknet_api::hash::StarkFelt;
-use starknet_api::stark_felt;
+use starknet_api::core::{ChainId, ClassHash, ContractAddress, Nonce, PatriciaKey};
+use starknet_api::hash::{StarkFelt, StarkHash};
 use starknet_api::state::StorageKey;
 use starknet_api::transaction::{
     DeployAccountTransaction, InvokeTransaction, Transaction as StarknetApiTransaction,
     TransactionHash,
 };
+use starknet_api::{patricia_key, stark_felt};
 use tokio::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use tokio::time;
 
@@ -151,10 +151,16 @@ impl Sequencer for KatanaSequencer {
         transaction: DeployAccountTransaction,
     ) -> (TransactionHash, ContractAddress) {
         let transaction_hash = transaction.transaction_hash;
-        let contract_address = transaction.contract_address;
+        // TODO: Set contract address
+        let contract_address = ContractAddress(patricia_key!("0x0"));
 
         self.starknet.write().await.handle_transaction(Transaction::AccountTransaction(
-            AccountTransaction::DeployAccount(transaction),
+            AccountTransaction::DeployAccount(
+                blockifier::transaction::transactions::DeployAccountTransaction {
+                    tx: transaction,
+                    contract_address,
+                },
+            ),
         ));
 
         (transaction_hash, contract_address)
@@ -198,9 +204,10 @@ impl Sequencer for KatanaSequencer {
         }
 
         match &account_transaction {
-            AccountTransaction::Invoke(tx) => tx.sender_address(),
+            AccountTransaction::Invoke(InvokeTransaction::V1(tx)) => tx.sender_address,
             AccountTransaction::Declare(tx) => tx.tx().sender_address(),
             AccountTransaction::DeployAccount(tx) => tx.contract_address,
+            _ => return Err(SequencerError::UnsupportedTransaction),
         };
 
         let state = self.state(&block_id).await?;

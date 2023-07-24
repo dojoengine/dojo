@@ -17,10 +17,10 @@ use blockifier::transaction::transactions::ExecutableTransaction;
 use convert_case::{Case, Casing};
 use starknet::core::types::{FeeEstimate, FieldElement, StateUpdate, TransactionStatus};
 use starknet_api::block::{BlockHash, BlockNumber, BlockTimestamp, GasPrice};
-use starknet_api::core::{ClassHash, ContractAddress, GlobalRoot, PatriciaKey};
-use starknet_api::hash::{StarkFelt, StarkHash};
+use starknet_api::core::{ClassHash, GlobalRoot};
+use starknet_api::hash::StarkFelt;
+use starknet_api::stark_felt;
 use starknet_api::transaction::{DeclareTransactionV0V1, DeployTransaction, TransactionHash};
-use starknet_api::{patricia_key, stark_felt};
 use tracing::{info, trace, warn};
 
 pub mod block;
@@ -298,7 +298,7 @@ impl StarknetWrapper {
     fn check_tx_fee(&self, transaction: &AccountTransaction) {
         let max_fee = match transaction {
             AccountTransaction::Invoke(tx) => tx.max_fee(),
-            AccountTransaction::DeployAccount(tx) => tx.max_fee,
+            AccountTransaction::DeployAccount(tx) => tx.max_fee(),
             AccountTransaction::Declare(tx) => match tx.tx() {
                 starknet_api::transaction::DeclareTransaction::V0(tx) => tx.max_fee,
                 starknet_api::transaction::DeclareTransaction::V1(tx) => tx.max_fee,
@@ -344,7 +344,6 @@ impl StarknetWrapper {
             let deploy_tx = starknet_api::transaction::Transaction::Deploy(DeployTransaction {
                 class_hash: ClassHash(class_hash),
                 transaction_hash: TransactionHash(stark_felt!(self.transactions.total() as u32)),
-                contract_address: ContractAddress(patricia_key!(address)),
                 ..Default::default()
             });
 
@@ -436,8 +435,8 @@ fn execute_transaction<S: StateReader>(
     block_context: &BlockContext,
 ) -> Result<TransactionExecutionInfo, TransactionExecutionError> {
     let res = match transaction {
-        Transaction::AccountTransaction(tx) => tx.execute(state, block_context),
-        Transaction::L1HandlerTransaction(tx) => tx.execute(state, block_context),
+        Transaction::AccountTransaction(tx) => tx.execute(state, block_context, true),
+        Transaction::L1HandlerTransaction(tx) => tx.execute(state, block_context, true),
     };
 
     match res {

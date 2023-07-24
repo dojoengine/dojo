@@ -9,7 +9,7 @@ mod spawn {
     use dojo_examples::components::Moves;
 
     fn execute(ctx: Context) {
-        set !(
+        set!(
             ctx.world, ctx.origin.into(), (Moves { remaining: 10 }, Position { x: 0, y: 0 }, )
         );
         return ();
@@ -46,9 +46,9 @@ mod move {
     }
 
     fn execute(ctx: Context, direction: Direction) {
-        let (position, moves) = get !(ctx.world, ctx.origin.into(), (Position, Moves));
+        let (position, moves) = get!(ctx.world, ctx.origin.into(), (Position, Moves));
         let next = next_position(position, direction);
-        set !(
+        set!(
             ctx.world,
             ctx.origin.into(),
             (Moves { remaining: moves.remaining - 1 }, Position { x: next.x, y: next.y }, )

@@ -30,10 +30,11 @@ impl StarknetConfig {
             block_timestamp: BlockTimestamp::default(),
             sequencer_address: ContractAddress(patricia_key!(*SEQUENCER_ADDRESS)),
             fee_token_address: ContractAddress(patricia_key!(*FEE_TOKEN_ADDRESS)),
-            vm_resource_fee_cost: get_default_vm_resource_fee_cost(),
+            vm_resource_fee_cost: get_default_vm_resource_fee_cost().into(),
             gas_price: self.env.gas_price,
             validate_max_n_steps: self.env.validate_max_steps,
             invoke_tx_max_n_steps: self.env.invoke_max_steps,
+            max_recursion_depth: 1000,
         }
     }
 

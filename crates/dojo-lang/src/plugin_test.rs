@@ -42,9 +42,7 @@ struct ExpandContractTestRunner {
 impl Default for ExpandContractTestRunner {
     fn default() -> Self {
         let parser_db = SimpleParserDatabase::default();
-        let config = build_test_config("src/manifest_test_crate/Scarb.toml").unwrap();
-        let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
-        Self { db: build_test_db(&ws).unwrap(), parser_db }
+        Self { db: build_test_db("src/manifest_test_crate/Scarb.toml").unwrap(), parser_db }
     }
 }
 
@@ -55,13 +53,6 @@ impl TestFileRunner for ExpandContractTestRunner {
 
         let file_id = self.db.module_main_file(test_module.module_id).unwrap();
         let syntax_file = self.db.file_syntax(file_id).unwrap();
-
-        let mut current_path = current_dir().unwrap();
-        current_path.push("../dojo-core/src");
-
-        let crate_id = self.db.intern_crate(CrateLongId("dojo".into()));
-        let root = Directory(current_path);
-        self.db.set_crate_root(crate_id, Some(root));
 
         let plugin = DojoPlugin {};
         let mut generated_items: Vec<String> = Vec::new();
