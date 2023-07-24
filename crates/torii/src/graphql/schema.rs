@@ -15,10 +15,18 @@ use super::utils::format_name;
 pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     let mut schema_builder = Schema::build("Query", None, None);
 
-    // static objects + dynamic objects
-    let mut objects = static_objects();
-    let (dynamic_objects, component_union) = dynamic_objects(pool).await?;
-    objects.extend(dynamic_objects);
+    // predefined objects
+    let mut objects: Vec<Box<dyn ObjectTrait>> = vec![
+        Box::new(EntityObject::new()),
+        Box::new(SystemObject::new()),
+        Box::new(EventObject::new()),
+        Box::new(SystemCallObject::new()),
+    ];
+
+    // register dynamic component objects
+    let (component_objects, component_union) = component_objects(pool).await?;
+    objects.extend(component_objects);
+    schema_builder = schema_builder.register(component_union);
 
     // collect field resolvers
     let mut fields = Vec::new();
@@ -42,23 +50,10 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
         schema_builder = schema_builder.register(object.object());
     }
 
-    // component union
-    schema_builder = schema_builder.register(component_union);
-
     schema_builder.register(query_root).data(pool.clone()).finish().map_err(|e| e.into())
 }
 
-// predefined base objects
-fn static_objects() -> Vec<Box<dyn ObjectTrait>> {
-    vec![
-        Box::new(EntityObject::new()),
-        Box::new(SystemObject::new()),
-        Box::new(EventObject::new()),
-        Box::new(SystemCallObject::new()),
-    ]
-}
-
-async fn dynamic_objects(pool: &SqlitePool) -> Result<(Vec<Box<dyn ObjectTrait>>, Union)> {
+async fn component_objects(pool: &SqlitePool) -> Result<(Vec<Box<dyn ObjectTrait>>, Union)> {
     let mut conn = pool.acquire().await?;
     let mut objects: Vec<Box<dyn ObjectTrait>> = Vec::new();
 
@@ -71,16 +66,17 @@ async fn dynamic_objects(pool: &SqlitePool) -> Result<(Vec<Box<dyn ObjectTrait>>
     // component state objects
     for component_metadata in components {
         let field_type_mapping = type_mapping_from(&mut conn, &component_metadata.id).await?;
-        let (name, type_name) = format_name(&component_metadata.name);
+        if !field_type_mapping.is_empty() {
+            let (name, type_name) = format_name(&component_metadata.name);
+            let state_object = Box::new(ComponentStateObject::new(
+                name.clone(),
+                type_name.clone(),
+                field_type_mapping,
+            ));
 
-        let state_object = Box::new(ComponentStateObject::new(
-            name.clone(),
-            type_name.clone(),
-            field_type_mapping,
-        ));
-
-        component_union = component_union.possible_type(&type_name);
-        objects.push(state_object);
+            component_union = component_union.possible_type(&type_name);
+            objects.push(state_object);
+        }
     }
 
     Ok((objects, component_union))

@@ -9,7 +9,7 @@ use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
 use starknet::providers::Provider;
 use tokio::time::sleep;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
 use crate::state::sql::Executable;
@@ -42,6 +42,7 @@ pub struct Engine<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> 
     storage: &'a S,
     provider: &'a JsonRpcClient<T>,
     processors: Processors<S, T>,
+    start_block: Option<u64>,
     config: EngineConfig,
 }
 
@@ -50,13 +51,23 @@ impl<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> Engine<'a, S,
         storage: &'a S,
         provider: &'a JsonRpcClient<T>,
         processors: Processors<S, T>,
+        start_block: Option<u64>,
         config: EngineConfig,
     ) -> Self {
-        Self { storage, provider, processors, config }
+        Self { storage, provider, processors, start_block, config }
     }
 
     pub async fn start(&self) -> Result<(), Box<dyn Error>> {
-        let mut current_block_number = self.storage.head().await?;
+        let storage_head = self.storage.head().await?;
+
+        let mut current_block_number = match (storage_head, self.start_block) {
+            (0, Some(start_block)) => start_block,
+            (_, Some(_)) => {
+                warn!("start block ignored, stored head exists and will be used instead");
+                storage_head
+            }
+            (_, None) => storage_head,
+        };
 
         loop {
             sleep(self.config.block_time).await;

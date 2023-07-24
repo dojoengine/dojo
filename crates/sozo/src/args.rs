@@ -7,6 +7,7 @@ use smol_str::SmolStr;
 use tracing::level_filters::LevelFilter;
 use tracing_log::AsTrace;
 
+use crate::commands::auth::AuthArgs;
 use crate::commands::build::BuildArgs;
 use crate::commands::component::ComponentArgs;
 use crate::commands::events::EventsArgs;
@@ -61,6 +62,8 @@ pub enum Commands {
     Register(RegisterArgs),
     #[command(about = "Queries world events")]
     Events(EventsArgs),
+    #[command(about = "Manage world authorization")]
+    Auth(AuthArgs),
 }
 
 impl SozoArgs {

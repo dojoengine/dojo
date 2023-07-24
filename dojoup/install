@@ -49,10 +49,5 @@ if [[ ":$PATH:" != *":${DOJO_BIN_DIR}:"* ]]; then
     echo >> $PROFILE && echo "export PATH=\"\$PATH:$DOJO_BIN_DIR\"" >> $PROFILE
 fi
 
-# Warn MacOS users that they may need to manually install libusb via Homebrew:
-if [[ "$OSTYPE" =~ ^darwin ]] && [[ ! -f /usr/local/opt/libusb/lib/libusb-1.0.0.dylib && ! -f /opt/homebrew/opt/libusb/lib/libusb-1.0.0.dylib ]]; then
-    echo && echo "warning: libusb not found. You may need to install it manually on MacOS via Homebrew (brew install libusb)."
-fi
-
 echo && echo "Detected your preferred shell is ${PREF_SHELL} and added dojoup to PATH. Run 'source ${PROFILE}' or start a new terminal session to use dojoup."
 echo "Then, simply run 'dojoup' to install Dojo."

@@ -37,4 +37,4 @@ dojo-lang = { path = "../dojo-lang" }
 scarb.workspace = true
 
 [features]
-skip-build = []
+build-examples = []
