@@ -162,8 +162,8 @@ impl State for Sql {
         )];
 
         let mut component_table_query = format!(
-            "CREATE TABLE IF NOT EXISTS external_{} (id TEXT NOT NULL PRIMARY KEY, partition TEXT \
-             NOT NULL, ",
+            "CREATE TABLE IF NOT EXISTS external_{} (entity_id TEXT NOT NULL PRIMARY KEY, \
+             partition TEXT NOT NULL, ",
             component.name.to_lowercase()
         );
 
@@ -174,7 +174,7 @@ impl State for Sql {
 
         component_table_query.push_str(
             "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (id) REFERENCES entities(id));",
+        FOREIGN KEY (entity_id) REFERENCES entities(id));",
         );
         queries.push(component_table_query);
 
@@ -235,7 +235,7 @@ impl State for Sql {
 
         let (names_str, values_str) = format_values(member_results, values)?;
         let insert_components = format!(
-            "INSERT OR REPLACE INTO external_{} (id, partition {}) VALUES ('{}', '{:#x}' {})",
+            "INSERT OR REPLACE INTO external_{} (entity_id, partition {}) VALUES ('{}', '{:#x}' {})",
             component.to_lowercase(),
             names_str,
             entity_id,
