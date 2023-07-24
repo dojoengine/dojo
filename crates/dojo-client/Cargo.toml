@@ -14,5 +14,5 @@ thiserror.workspace = true
 
 [dev-dependencies]
 camino.workspace = true
-dojo-test-utils = { path = "../dojo-test-utils" }
+dojo-test-utils = { path = "../dojo-test-utils", features = ["build-examples"] }
 tokio.workspace = true
