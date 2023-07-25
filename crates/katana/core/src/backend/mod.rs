@@ -19,7 +19,9 @@ use starknet::core::types::{FeeEstimate, FieldElement, StateUpdate, TransactionS
 use starknet_api::block::{BlockHash, BlockNumber, BlockTimestamp, GasPrice};
 use starknet_api::core::{ClassHash, ContractAddress, GlobalRoot, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};
-use starknet_api::transaction::{DeclareTransactionV0V1, DeployTransaction, TransactionHash};
+use starknet_api::transaction::{
+    DeclareTransactionV0V1, DeployTransaction, Event, TransactionHash,
+};
 use starknet_api::{patricia_key, stark_felt};
 use tracing::{info, trace, warn};
 
@@ -157,6 +159,8 @@ impl StarknetWrapper {
                     // `TransactionExecutionError`, so we store `None` instead.
                     None,
                 );
+
+                trace_events(&starknet_tx.emitted_events());
 
                 let pending_block = self.blocks.pending_block.as_mut().expect("no pending block");
 
@@ -487,4 +491,8 @@ fn pretty_print_resources(resources: &ResourcesMapping) -> String {
     }
 
     mapped_strings.join(" | ")
+}
+
+fn trace_events(events: &Vec<Event>) {
+    events.iter().for_each(|e| trace!("Event emitted: {:#?}", e));
 }
