@@ -2,7 +2,7 @@ mod api;
 pub mod config;
 mod katana;
 mod starknet;
-mod utils;
+pub mod utils;
 
 use std::net::SocketAddr;
 use std::time::{Duration, Instant};
