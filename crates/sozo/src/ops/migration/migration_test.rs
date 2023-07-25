@@ -9,6 +9,7 @@ use scarb::core::Config;
 use scarb::ui::Verbosity;
 use starknet::accounts::SingleOwnerAccount;
 use starknet::core::chain_id;
+use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet::signers::{LocalWallet, SigningKey};
@@ -39,7 +40,13 @@ async fn migrate_with_auto_mine() {
     let manifest = Manifest::load_from_path(target_dir.join("manifest.json")).unwrap();
     let world = WorldDiff::compute(manifest, None);
 
-    let migration = prepare_for_migration(None, Some("seed".into()), target_dir, world).unwrap();
+    let migration = prepare_for_migration(
+        None,
+        Some(FieldElement::from_hex_be("0x12345").unwrap()),
+        target_dir,
+        world,
+    )
+    .unwrap();
     execute_strategy(&migration, &account, &config).await.unwrap();
 
     sequencer.stop().unwrap();
@@ -72,7 +79,13 @@ async fn migrate_with_block_time() {
     let manifest = Manifest::load_from_path(target_dir.join("manifest.json")).unwrap();
     let world = WorldDiff::compute(manifest, None);
 
-    let migration = prepare_for_migration(None, Some("seed".into()), target_dir, world).unwrap();
+    let migration = prepare_for_migration(
+        None,
+        Some(FieldElement::from_hex_be("0x12345").unwrap()),
+        target_dir,
+        world,
+    )
+    .unwrap();
     execute_strategy(&migration, &account, &config).await.unwrap();
 
     sequencer.stop().unwrap();
@@ -104,13 +117,26 @@ async fn migrate_with_same_seed_will_fail() {
 
     // migrate 1st world with `seed` seed
 
-    let migration =
-        prepare_for_migration(None, Some("seed".into()), target_dir.clone(), world.clone())
-            .unwrap();
+    let migration = prepare_for_migration(
+        None,
+        Some(FieldElement::from_hex_be("0x12345").unwrap()),
+        target_dir.clone(),
+        world.clone(),
+    )
+    .unwrap();
     execute_strategy(&migration, &account, &config).await.unwrap();
-    // migrate 2nd world with `seed` seed should fail because the world contract address will be the same
+    // migrate 2nd world with `0x12345` seed should fail because the world contract address will be the same
     assert!(execute_strategy(&migration, &account, &config).await.is_err());
     sequencer.stop().unwrap();
+}
+
+#[test]
+fn migrate_world_without_seed_will_fail() {
+    let target_dir = Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap();
+    let manifest = Manifest::load_from_path(target_dir.join("manifest.json")).unwrap();
+    let world = WorldDiff::compute(manifest, None);
+    let res = prepare_for_migration(None, None, target_dir, world);
+    assert!(res.is_err_and(|e| e.to_string().contains("Missing seed for World deployment.")))
 }
 
 #[ignore]
@@ -138,8 +164,13 @@ async fn migration_from_remote() {
     let manifest = Manifest::load_from_path(target_dir.clone()).unwrap();
     let world = WorldDiff::compute(manifest, None);
 
-    let migration =
-        prepare_for_migration(None, Some("seed".into()), target_dir.clone(), world).unwrap();
+    let migration = prepare_for_migration(
+        None,
+        Some(FieldElement::from_hex_be("0x12345").unwrap()),
+        target_dir.clone(),
+        world,
+    )
+    .unwrap();
 
     execute_strategy(&migration, &account, &config).await.unwrap();
 

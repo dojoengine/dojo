@@ -2137,6 +2137,7 @@ dependencies = [
  "serde_with",
  "smol_str",
  "starknet",
+ "starknet-crypto 0.5.1",
  "thiserror",
  "tokio",
  "tracing",

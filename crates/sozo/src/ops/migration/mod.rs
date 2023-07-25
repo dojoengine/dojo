@@ -12,6 +12,7 @@ use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::{
     BlockId, BlockTag, FieldElement, InvokeTransactionResult, StarknetError,
 };
+use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use toml::Value;
 
@@ -63,10 +64,6 @@ where
         config.ui().print("\n✨ No changes to be made. Remote World is already up to date!")
     } else {
         // Prepare migration strategy based on the diff.
-
-        if name.is_none() && !diff.world.is_same() {
-            bail!("World name is required when attempting to migrate the World contract. Please provide it using the `--name`.");
-        }
 
         let strategy = prepare_migration(target_dir, diff, name, world_address, config)?;
 
@@ -163,7 +160,7 @@ where
 fn prepare_migration<U>(
     target_dir: U,
     diff: WorldDiff,
-    seed: Option<String>,
+    name: Option<String>,
     world_address: Option<FieldElement>,
     config: &Config,
 ) -> Result<MigrationStrategy>
@@ -172,7 +169,17 @@ where
 {
     config.ui().print_step(3, "📦", "Preparing for migration...");
 
-    let migration = prepare_for_migration(world_address, seed, target_dir, diff)
+    if name.is_none() && !diff.world.is_same() {
+        bail!("World name is required when attempting to migrate the World contract. Please provide it using `--name`.");
+    }
+
+    let name = if let Some(name) = name {
+        Some(cairo_short_string_to_felt(&name).with_context(|| "Failed to parse World name.")?)
+    } else {
+        None
+    };
+
+    let migration = prepare_for_migration(world_address, name, target_dir, diff)
         .with_context(|| "Problem preparing for migration.")?;
 
     let info = migration.info();

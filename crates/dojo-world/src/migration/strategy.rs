@@ -5,7 +5,8 @@ use std::path::{Path, PathBuf};
 use anyhow::{anyhow, Context, Result};
 use convert_case::{Case, Casing};
 use starknet::core::types::FieldElement;
-use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
+use starknet::core::utils::get_contract_address;
+use starknet_crypto::poseidon_hash_single;
 
 use super::class::{ClassDiff, ClassMigration};
 use super::contract::{ContractDiff, ContractMigration};
@@ -79,7 +80,7 @@ impl MigrationStrategy {
 /// evaluate which contracts/classes need to be declared/deployed
 pub fn prepare_for_migration<P>(
     world_address: Option<FieldElement>,
-    seed: Option<String>,
+    seed: Option<FieldElement>,
     target_dir: P,
     diff: WorldDiff,
 ) -> Result<MigrationStrategy>
@@ -121,9 +122,8 @@ where
 
     // If world needs to be migrated, then we expect the `seed` to be provided.
     if let Some(world) = &mut world {
-        let salt = cairo_short_string_to_felt(
-            &seed.ok_or(anyhow!("Missing seed for World deployment."))?,
-        )?;
+        let salt =
+            seed.map(poseidon_hash_single).ok_or(anyhow!("Missing seed for World deployment."))?;
 
         world.salt = salt;
         world.contract_address = get_contract_address(
