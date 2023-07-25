@@ -20,6 +20,8 @@ pub struct StarknetConfig {
     pub allow_zero_max_fee: bool,
     pub account_path: Option<PathBuf>,
     pub env: Environment,
+    pub dump_path: Option<PathBuf>,
+    pub load_path: Option<PathBuf>,
 }
 
 impl StarknetConfig {
@@ -45,6 +47,8 @@ impl StarknetConfig {
 impl Default for StarknetConfig {
     fn default() -> Self {
         Self {
+            dump_path: None,
+            load_path: None,
             seed: [0; 32],
             auto_mine: true,
             total_accounts: 10,

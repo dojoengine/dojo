@@ -16,7 +16,6 @@ cairo-lang-casm.workspace = true
 cairo-lang-starknet.workspace = true
 cairo-vm.workspace = true
 convert_case.workspace = true
-flate2 = "1.0.26"
 futures = "0.3"
 lazy_static = "1.4.0"
 rand = { version = "0.8.5", features = [ "small_rng" ] }

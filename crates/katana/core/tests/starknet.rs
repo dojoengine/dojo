@@ -26,6 +26,7 @@ fn create_test_starknet() -> StarknetWrapper {
         allow_zero_max_fee: true,
         account_path: Some(test_account_path),
         env: Environment::default(),
+        ..Default::default()
     });
 
     starknet.generate_genesis_block();

@@ -7,8 +7,10 @@ use katana_core::accounts::Account;
 #[derive(thiserror::Error, Clone, Copy, Debug)]
 #[allow(clippy::enum_variant_names)]
 pub enum KatanaApiError {
-    #[error("Failed to change next block timestamp")]
+    #[error("Failed to change next block timestamp.")]
     FailedToChangeNextBlockTimestamp = 1,
+    #[error("Failed to dump state.")]
+    FailedToDumpState = 2,
 }
 
 impl From<KatanaApiError> for Error {
@@ -33,4 +35,7 @@ pub trait KatanaApi {
 
     #[method(name = "predeployedAccounts")]
     async fn predeployed_accounts(&self) -> Result<Vec<Account>, Error>;
+
+    #[method(name = "dumpState")]
+    async fn dump_state(&self) -> Result<(), Error>;
 }

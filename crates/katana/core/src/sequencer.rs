@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::iter::Skip;
 use std::slice::Iter;
+use std::fs;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -26,6 +27,7 @@ use starknet_api::transaction::{
 };
 use tokio::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use tokio::time;
+use tracing::trace;
 
 use crate::backend::block::StarknetBlock;
 use crate::backend::config::StarknetConfig;
@@ -49,6 +51,8 @@ pub trait Sequencer {
     async fn starknet(&self) -> RwLockReadGuard<'_, StarknetWrapper>;
 
     async fn mut_starknet(&self) -> RwLockWriteGuard<'_, StarknetWrapper>;
+
+    async fn dump_state(&self) -> Result<(), SequencerError>;
 
     async fn state(&self, block_id: &BlockId) -> SequencerResult<MemDb>;
 
@@ -239,6 +243,21 @@ impl Sequencer for KatanaSequencer {
                 }
             }
         }
+    }
+
+    async fn dump_state(&self) -> Result<(), SequencerError> {
+        if let Some(mut path) = self.starknet.read().await.config.dump_path.clone() {
+            if path.is_dir() {
+                path = path.join("state.bin");
+            }
+            trace!("Dumping state at path: {}", path.display());
+            let serializable_state = self.starknet.read().await.serialize_state();
+            fs::write(path, serializable_state).map_err(|_| SequencerError::DataUnavailable)?;
+            trace!("State dumped successfully.")
+        } else {
+            trace!("Unable to dump state: dump path not configured");
+        }
+        Ok(())
     }
 
     async fn add_deploy_account_transaction(

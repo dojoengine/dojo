@@ -1,6 +1,7 @@
 use jsonrpsee::core::{async_trait, Error};
 use katana_core::accounts::Account;
 use katana_core::sequencer::Sequencer;
+use tracing::error;
 
 use crate::api::katana::{KatanaApiError, KatanaApiServer};
 
@@ -51,5 +52,12 @@ where
 
     async fn predeployed_accounts(&self) -> Result<Vec<Account>, Error> {
         Ok(self.sequencer.starknet().await.predeployed_accounts.accounts.clone())
+    }
+
+    async fn dump_state(&self) -> Result<(), Error> {
+        self.sequencer.dump_state().await.map_err(|e| {
+            error!("Dumping state error: {e}");
+            Error::from(KatanaApiError::FailedToDumpState)
+        })
     }
 }

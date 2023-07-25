@@ -26,6 +26,18 @@ pub struct KatanaArgs {
     #[arg(help = "Block time in seconds for interval mining.")]
     pub block_time: Option<u64>,
 
+    #[arg(long)]
+    #[arg(value_name = "PATH")]
+    #[arg(help = "Dump the state of chain on exit to the given file.")]
+    #[arg(long_help = "Dump the state of chain on exit to the given file. \
+                       If the value is a directory, the state will be written to `<PATH>/state.bin`.")]
+    pub dump_state: Option<PathBuf>,
+
+    #[arg(long)]
+    #[arg(value_name = "PATH")]
+    #[arg(help = "Initialize the chain from a previously saved state snapshot.")]
+    pub load_state: Option<PathBuf>,
+
     #[command(flatten)]
     #[command(next_help_heading = "Server options")]
     pub server: ServerOptions,
@@ -115,6 +127,8 @@ impl KatanaArgs {
             account_path: self.starknet.account_path.clone(),
             allow_zero_max_fee: self.starknet.allow_zero_max_fee,
             auto_mine: self.block_time.is_none() && !self.no_mining,
+            dump_path: self.dump_state.clone(),
+            load_path: self.load_state.clone(),
             env: Environment {
                 chain_id: self.starknet.environment.chain_id.clone(),
                 gas_price: self.starknet.environment.gas_price.unwrap_or(DEFAULT_GAS_PRICE),
