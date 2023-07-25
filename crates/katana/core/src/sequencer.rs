@@ -578,7 +578,7 @@ impl Sequencer for KatanaSequencer {
 fn filter_events_by_params(
     events: Skip<Iter<'_, Event>>,
     address: Option<StarkFelt>,
-    keys: Option<Vec<Vec<StarkFelt>>>,
+    filter_keys: Option<Vec<Vec<StarkFelt>>>,
     max_results: Option<usize>,
 ) -> (Vec<Event>, usize) {
     let mut filtered_events = vec![];
@@ -587,16 +587,29 @@ fn filter_events_by_params(
     // Iterate on block events.
     for event in events {
         index += 1;
+        // if address is passed in filter check from_address field in event, else true
         let match_from_address = address.map_or(true, |addr| addr == *event.from_address.0.key());
 
-        let match_keys = match keys {
-            Some(ref keys) => keys.iter().enumerate().all(|(i, keys)| {
-                event.content.keys.len() > i
-                    && (keys.is_empty() || keys.contains(&event.content.keys[i].0))
+        let match_keys = match filter_keys {
+            // From starknet-api spec:
+            // Per key (by position), designate the possible values to be matched for events to be returned. Empty array designates 'any' value"
+            Some(ref filter_keys) => filter_keys.iter().enumerate().all(|(i, keys)| {
+                // Lets say we want to filter events which are either named `Event1` or `Event2` and custom key `0x1` or `0x2`
+                // Filter: [[sn_keccack("Event1"), sn_keccack("Event2")], ["0x1", "0x2"]]
+
+                // This checks: number of keys in event >= number of keys in filter (we check > i and not >= i because i is zero indexed)
+                // because otherwise this event doesn't contain all the keys we requested
+                event.content.keys.len() > i &&
+                    // This checks: Empty array desginates 'any' value
+                    (keys.is_empty()
+                    ||
+                    // This checks: If this events i'th value is one of the requested value in filter_keys[i]
+                    keys.contains(&event.content.keys[i].0))
             }),
             None => true,
         };
 
+        // add event to output list if both conditions are true
         if match_from_address && match_keys {
             filtered_events.push(event.clone());
             if let Some(max_results) = max_results {
