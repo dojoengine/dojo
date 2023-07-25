@@ -65,7 +65,7 @@ num-bigint = "0.4"
 pretty_assertions = "1.2.1"
 rayon = "0.9.0"
 salsa = "0.16.1"
-scarb = { git="https://github.com/software-mansion/scarb", version="0.5.1" }
+scarb = { git = "https://github.com/software-mansion/scarb", tag = "v0.5.1" }
 semver = "1.0.5"
 serde = { version = "1.0.156", features = [ "derive" ] }
 serde_json = "1.0"
@@ -83,8 +83,8 @@ tracing-subscriber = "0.3.16"
 yansi = "0.5.1"
 
 [patch."https://github.com/starkware-libs/blockifier"]
-blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "f5b684d" }
+blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "a31892d" }
 
 [patch.crates-io]
-cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "b1a3683fe20bb668e4ab72cd9f99b8a0a33515a8" }
-cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "b1a3683fe20bb668e4ab72cd9f99b8a0a33515a8" }
+cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "51a35b2b405f29786e48a94f364d64d373d79eea" }
+cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "51a35b2b405f29786e48a94f364d64d373d79eea" }
