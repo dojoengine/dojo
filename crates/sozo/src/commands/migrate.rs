@@ -17,7 +17,7 @@ pub struct MigrateArgs {
     #[arg(long)]
     #[arg(help = "Name of the World.")]
     #[arg(
-        long_help = "Name of the World. It will be used as the salt when deploying the contract to avoid address conflicts."
+        long_help = "Name of the World. It's hash will be used as a salt when deploying the contract to avoid address conflicts."
     )]
     pub name: Option<String>,
 
