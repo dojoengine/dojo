@@ -468,7 +468,11 @@ impl Sequencer for KatanaSequencer {
             .await
             .ok_or(SequencerError::BlockNotFound(to_block))?;
 
-        let mut continuation_token = ContinuationToken::parse(continuation_token)?;
+        let mut continuation_token = match continuation_token {
+            Some(token) => ContinuationToken::parse(token)?,
+            None => ContinuationToken::default(),
+        };
+
         // skip blocks that have been already read
         from_block.0 += continuation_token.block_n;
 
