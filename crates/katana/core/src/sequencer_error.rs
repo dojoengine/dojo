@@ -6,6 +6,8 @@ use starknet_api::core::ContractAddress;
 use starknet_api::transaction::TransactionHash;
 use starknet_api::StarknetApiError;
 
+use crate::util::ContinuationTokenError;
+
 #[derive(Debug, thiserror::Error)]
 pub enum SequencerError {
     #[error("Block {0:?} not found.")]
@@ -30,4 +32,6 @@ pub enum SequencerError {
     EntryPointExecution(#[from] EntryPointExecutionError),
     #[error("Wait for pending transactions")]
     PendingTransactions,
+    #[error(transparent)]
+    ContinuationToken(#[from] ContinuationTokenError),
 }

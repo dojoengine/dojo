@@ -16,12 +16,12 @@ use starknet::core::types::{
     BroadcastedDeclareTransaction, BroadcastedDeployAccountTransaction,
     BroadcastedInvokeTransaction, BroadcastedTransaction, ContractClass, DeclareTransactionReceipt,
     DeclareTransactionResult, DeployAccountTransactionReceipt, DeployAccountTransactionResult,
-    DeployTransactionReceipt, EmittedEvent, Event, EventFilterWithPage, EventsPage, FeeEstimate,
-    FieldElement, FunctionCall, InvokeTransactionReceipt, InvokeTransactionResult,
-    MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, MaybePendingTransactionReceipt,
-    MsgToL1, PendingBlockWithTxHashes, PendingBlockWithTxs, PendingDeclareTransactionReceipt,
-    PendingDeployAccountTransactionReceipt, PendingInvokeTransactionReceipt,
-    PendingTransactionReceipt, StateUpdate, Transaction, TransactionReceipt, TransactionStatus,
+    DeployTransactionReceipt, Event, EventFilterWithPage, EventsPage, FeeEstimate, FieldElement,
+    FunctionCall, InvokeTransactionReceipt, InvokeTransactionResult, MaybePendingBlockWithTxHashes,
+    MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, MsgToL1, PendingBlockWithTxHashes,
+    PendingBlockWithTxs, PendingDeclareTransactionReceipt, PendingDeployAccountTransactionReceipt,
+    PendingInvokeTransactionReceipt, PendingTransactionReceipt, StateUpdate, Transaction,
+    TransactionReceipt, TransactionStatus,
 };
 use starknet::core::utils::get_contract_address;
 use starknet_api::core::{
@@ -616,20 +616,7 @@ where
                 _ => StarknetApiError::InternalServerError,
             })?;
 
-        Ok(EventsPage {
-            events: events
-                .iter()
-                .map(|e| EmittedEvent {
-                    block_number: e.block_number.0,
-                    block_hash: (e.block_hash.0).into(),
-                    transaction_hash: (e.transaction_hash.0).into(),
-                    from_address: (*e.inner.from_address.0.key()).into(),
-                    keys: e.inner.content.keys.iter().map(|key| (key.0).into()).collect(),
-                    data: e.inner.content.data.0.iter().map(|fe| (*fe).into()).collect(),
-                })
-                .collect(),
-            continuation_token: None,
-        })
+        Ok(events)
     }
 
     async fn pending_transactions(&self) -> Result<Vec<Transaction>, Error> {
