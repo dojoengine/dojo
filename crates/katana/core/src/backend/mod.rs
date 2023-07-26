@@ -101,6 +101,7 @@ impl StarknetWrapper {
             Transaction::AccountTransaction(transaction),
             &mut state,
             &self.block_context,
+            true,
         )?;
 
         if exec_info.revert_error.is_some() {
@@ -127,12 +128,12 @@ impl StarknetWrapper {
 
         info!("Transaction received | Hash: {}", api_tx.transaction_hash());
 
-        if let Transaction::AccountTransaction(tx) = &transaction {
-            self.check_tx_fee(tx);
-        }
-
-        let res =
-            execute_transaction(transaction, &mut self.pending_cached_state, &self.block_context);
+        let res = execute_transaction(
+            transaction,
+            &mut self.pending_cached_state,
+            &self.block_context,
+            !self.config.allow_zero_max_fee,
+        );
 
         match res {
             Ok(exec_info) => {
@@ -295,22 +296,6 @@ impl StarknetWrapper {
         self.state.clone()
     }
 
-    fn check_tx_fee(&self, transaction: &AccountTransaction) {
-        let max_fee = match transaction {
-            AccountTransaction::Invoke(tx) => tx.max_fee(),
-            AccountTransaction::DeployAccount(tx) => tx.max_fee(),
-            AccountTransaction::Declare(tx) => match tx.tx() {
-                starknet_api::transaction::DeclareTransaction::V0(tx) => tx.max_fee,
-                starknet_api::transaction::DeclareTransaction::V1(tx) => tx.max_fee,
-                starknet_api::transaction::DeclareTransaction::V2(tx) => tx.max_fee,
-            },
-        };
-
-        if !self.config.allow_zero_max_fee && max_fee.0 == 0 {
-            panic!("max fee == 0 is not supported")
-        }
-    }
-
     /// Generate the genesis block and append it to the chain.
     /// This block should include transactions which set the initial state of the chain.
     pub fn generate_genesis_block(&mut self) {
@@ -321,7 +306,7 @@ impl StarknetWrapper {
         let deploy_data =
             vec![(*UDC_CLASS_HASH, *UDC_ADDRESS), (*ERC20_CONTRACT_CLASS_HASH, *FEE_TOKEN_ADDRESS)];
 
-        deploy_data.into_iter().for_each(|(class_hash, address)| {
+        deploy_data.into_iter().for_each(|(class_hash, _)| {
             let declare_tx = starknet_api::transaction::Transaction::Declare(
                 starknet_api::transaction::DeclareTransaction::V1(DeclareTransactionV0V1 {
                     class_hash: ClassHash(class_hash),
@@ -433,10 +418,11 @@ fn execute_transaction<S: StateReader>(
     transaction: Transaction,
     state: &mut CachedState<S>,
     block_context: &BlockContext,
+    charge_fee: bool,
 ) -> Result<TransactionExecutionInfo, TransactionExecutionError> {
     let res = match transaction {
-        Transaction::AccountTransaction(tx) => tx.execute(state, block_context, true),
-        Transaction::L1HandlerTransaction(tx) => tx.execute(state, block_context, true),
+        Transaction::AccountTransaction(tx) => tx.execute(state, block_context, charge_fee),
+        Transaction::L1HandlerTransaction(tx) => tx.execute(state, block_context, charge_fee),
     };
 
     match res {

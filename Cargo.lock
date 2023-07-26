@@ -560,15 +560,6 @@ dependencies = [
 [[package]]
 name = "bincode"
 version = "2.0.0-rc.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f11ea1a0346b94ef188834a65c068a03aec181c94896d481d7a0a40d85b0ce95"
-dependencies = [
- "serde",
-]
-
-[[package]]
-name = "bincode"
-version = "2.0.0-rc.3"
 source = "git+https://github.com/bincode-org/bincode.git?tag=v2.0.0-rc.3#aada4bb4cb457677a4b8e47572ae7ca8dd44927c"
 dependencies = [
  "serde",
@@ -634,15 +625,15 @@ dependencies = [
 [[package]]
 name = "blockifier"
 version = "0.1.0-rc0"
-source = "git+https://github.com/dojoengine/blockifier?rev=007a4aafad49acd751e408b4e37d963d72a26792#007a4aafad49acd751e408b4e37d963d72a26792"
+source = "git+https://github.com/dojoengine/blockifier?rev=0ccfcc94b1de8bb2d97c7820e8f9d198ee7790be#0ccfcc94b1de8bb2d97c7820e8f9d198ee7790be"
 dependencies = [
  "ark-ff",
  "ark-secp256k1",
- "cairo-felt 0.8.2",
+ "cairo-felt",
  "cairo-lang-casm",
  "cairo-lang-runner",
  "cairo-lang-starknet",
- "cairo-vm 0.8.2",
+ "cairo-vm",
  "ctor",
  "derive_more",
  "indexmap 1.9.3",
@@ -739,21 +730,8 @@ checksum = "38fcc2979eff34a4b84e1cf9a1e3da42a7d44b3b690a40cdcb23e3d556cfb2e5"
 
 [[package]]
 name = "cairo-felt"
-version = "0.6.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eec837cac4e5e5a7f7abd6fb26c1d91cf0a588cf394367a7111a9549cabaa0b9"
-dependencies = [
- "lazy_static",
- "num-bigint",
- "num-integer",
- "num-traits 0.2.16",
- "serde",
-]
-
-[[package]]
-name = "cairo-felt"
 version = "0.8.2"
-source = "git+https://github.com/dojoengine/cairo-rs.git?rev=69f30bcd1acf99631645bcc4efc434553e2f146e#69f30bcd1acf99631645bcc4efc434553e2f146e"
+source = "git+https://github.com/dojoengine/cairo-rs.git?rev=262b7eb4b11ab165a2a936a5f914e78aa732d4a2#262b7eb4b11ab165a2a936a5f914e78aa732d4a2"
 dependencies = [
  "lazy_static",
  "num-bigint",
@@ -1026,7 +1004,7 @@ dependencies = [
  "ark-secp256k1",
  "ark-secp256r1",
  "ark-std",
- "cairo-felt 0.8.2",
+ "cairo-felt",
  "cairo-lang-casm",
  "cairo-lang-compiler",
  "cairo-lang-defs",
@@ -1042,7 +1020,7 @@ dependencies = [
  "cairo-lang-sierra-type-size",
  "cairo-lang-starknet",
  "cairo-lang-utils",
- "cairo-vm 0.8.2",
+ "cairo-vm",
  "itertools 0.11.0",
  "keccak",
  "num-bigint",
@@ -1159,7 +1137,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32af568d896f497bc7154b6b38cf3a63634cd1a49625e788132b897b206aa117"
 dependencies = [
  "assert_matches",
- "cairo-felt 0.8.2",
+ "cairo-felt",
  "cairo-lang-casm",
  "cairo-lang-sierra",
  "cairo-lang-sierra-ap-change",
@@ -1191,7 +1169,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3fc16911988deeaa242f3b9111d27a07033c09c720af10970ea30c3091a7cfe7"
 dependencies = [
  "anyhow",
- "cairo-felt 0.8.2",
+ "cairo-felt",
  "cairo-lang-casm",
  "cairo-lang-compiler",
  "cairo-lang-defs",
@@ -1259,7 +1237,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3aa955b81083d714b6430e4ac7e1e7ebe7b2039bec8fe7d581ffa4852cbfb5b6"
 dependencies = [
  "anyhow",
- "cairo-felt 0.8.2",
+ "cairo-felt",
  "cairo-lang-casm",
  "cairo-lang-compiler",
  "cairo-lang-debug",
@@ -1277,7 +1255,7 @@ dependencies = [
  "cairo-lang-starknet",
  "cairo-lang-syntax",
  "cairo-lang-utils",
- "cairo-vm 0.8.2",
+ "cairo-vm",
  "colored",
  "itertools 0.11.0",
  "num-bigint",
@@ -1318,57 +1296,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "cairo-take_until_unbalanced"
-version = "0.30.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32c366b2a52b63db19fcc20a761ea37aa9f5fdce1723016c458e3990ef4fdf2c"
-dependencies = [
- "nom",
-]
-
-[[package]]
-name = "cairo-vm"
-version = "0.6.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52f62944d2694a457cad49099504efbc6b91fa583cfc690e626d9db05bd925b1"
-dependencies = [
- "anyhow",
- "bincode 2.0.0-rc.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "bitvec",
- "cairo-felt 0.6.2",
- "cairo-take_until_unbalanced",
- "generic-array",
- "hashbrown 0.13.2",
- "hex",
- "keccak",
- "lazy_static",
- "mimalloc",
- "nom",
- "num-bigint",
- "num-integer",
- "num-prime",
- "num-traits 0.2.16",
- "rand",
- "rand_core",
- "serde",
- "serde_bytes",
- "serde_json",
- "sha2",
- "sha3",
- "starknet-crypto 0.5.1",
- "thiserror",
- "thiserror-no-std",
-]
-
-[[package]]
 name = "cairo-vm"
 version = "0.8.2"
-source = "git+https://github.com/dojoengine/cairo-rs.git?rev=69f30bcd1acf99631645bcc4efc434553e2f146e#69f30bcd1acf99631645bcc4efc434553e2f146e"
+source = "git+https://github.com/dojoengine/cairo-rs.git?rev=262b7eb4b11ab165a2a936a5f914e78aa732d4a2#262b7eb4b11ab165a2a936a5f914e78aa732d4a2"
 dependencies = [
  "anyhow",
- "bincode 2.0.0-rc.3 (git+https://github.com/bincode-org/bincode.git?tag=v2.0.0-rc.3)",
+ "bincode 2.0.0-rc.3",
  "bitvec",
- "cairo-felt 0.8.2",
+ "cairo-felt",
  "generic-array",
  "hashbrown 0.14.0",
  "hex",
@@ -3274,7 +3209,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "43a3c133739dddd0d2990f9a4bdf8eb4b21ef50e4851ca85ab661199821d510e"
 dependencies = [
  "ahash 0.8.3",
- "serde",
 ]
 
 [[package]]
@@ -3873,7 +3807,7 @@ dependencies = [
  "blockifier",
  "cairo-lang-casm",
  "cairo-lang-starknet",
- "cairo-vm 0.8.2",
+ "cairo-vm",
  "convert_case 0.6.0",
  "flate2",
  "futures",
@@ -3896,7 +3830,7 @@ dependencies = [
  "assert_matches",
  "blockifier",
  "cairo-lang-starknet",
- "cairo-vm 0.6.2",
+ "cairo-vm",
  "dojo-test-utils",
  "flate2",
  "hex",
@@ -5441,15 +5375,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5d25439cd7397d044e2748a6fe2432b5e85db703d6d097bd014b3c0ad1ebff0b"
 dependencies = [
  "serde_derive",
-]
-
-[[package]]
-name = "serde_bytes"
-version = "0.11.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab33ec92f677585af6d88c65593ae2375adde54efdbf16d597f2cbc7a6d368ff"
-dependencies = [
- "serde",
 ]
 
 [[package]]

@@ -8,19 +8,18 @@ use blockifier::execution::contract_class::ContractClass;
 use blockifier::state::state_api::{State, StateReader};
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transaction_execution::Transaction;
-use blockifier::transaction::transactions::DeclareTransaction;
+use blockifier::transaction::transactions::{DeclareTransaction, DeployAccountTransaction};
 use starknet::core::types::{
     BlockId, BlockTag, FeeEstimate, FlattenedSierraClass, StateUpdate, TransactionStatus,
 };
 use starknet_api::block::{BlockHash, BlockNumber};
-use starknet_api::core::{ChainId, ClassHash, ContractAddress, Nonce, PatriciaKey};
-use starknet_api::hash::{StarkFelt, StarkHash};
+use starknet_api::core::{ChainId, ClassHash, ContractAddress, Nonce};
+use starknet_api::hash::StarkFelt;
+use starknet_api::stark_felt;
 use starknet_api::state::StorageKey;
 use starknet_api::transaction::{
-    DeployAccountTransaction, InvokeTransaction, Transaction as StarknetApiTransaction,
-    TransactionHash,
+    InvokeTransaction, Transaction as StarknetApiTransaction, TransactionHash,
 };
-use starknet_api::{patricia_key, stark_felt};
 use tokio::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use tokio::time;
 
@@ -150,17 +149,11 @@ impl Sequencer for KatanaSequencer {
         &self,
         transaction: DeployAccountTransaction,
     ) -> (TransactionHash, ContractAddress) {
-        let transaction_hash = transaction.transaction_hash;
-        // TODO: Set contract address
-        let contract_address = ContractAddress(patricia_key!("0x0"));
+        let transaction_hash = transaction.tx.transaction_hash;
+        let contract_address = transaction.contract_address;
 
         self.starknet.write().await.handle_transaction(Transaction::AccountTransaction(
-            AccountTransaction::DeployAccount(
-                blockifier::transaction::transactions::DeployAccountTransaction {
-                    tx: transaction,
-                    contract_address,
-                },
-            ),
+            AccountTransaction::DeployAccount(transaction),
         ));
 
         (transaction_hash, contract_address)
