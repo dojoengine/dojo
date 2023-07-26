@@ -587,8 +587,9 @@ fn filter_events_by_params(
     // Iterate on block events.
     for event in events {
         index += 1;
-        // if address is passed in filter check from_address field in event, else true
-        let match_from_address = address.map_or(true, |addr| addr == *event.from_address.0.key());
+        if !address.map_or(true, |addr| addr == *event.from_address.0.key()) {
+            continue;
+        }
 
         let match_keys = match filter_keys {
             // From starknet-api spec:
@@ -609,8 +610,7 @@ fn filter_events_by_params(
             None => true,
         };
 
-        // add event to output list if both conditions are true
-        if match_from_address && match_keys {
+        if match_keys {
             filtered_events.push(event.clone());
             if let Some(max_results) = max_results {
                 if filtered_events.len() >= max_results {
