@@ -82,7 +82,7 @@
 
         .content-wrapper {
             display: flex;
-            max-width: 800px;
+            max-width: 860px;
             margin: 0 auto;
             position: fixed;
             top: 108px;
@@ -103,17 +103,24 @@
             background-color: #071E3F;
             padding: 22px;
             line-height: 1.4em;
+            box-sizing: border-box;
         }
 
         .social-buttons a {
             background: #3C5D8A;
             border-radius: 20px;
-            width: 40px;
+            min-width: 40px;
             height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
             margin-left: 18px;
+            text-decoration: none;
+            color:#071E3F !important;
+        }
+
+        .social-buttons a h3 {
+            padding: 0 1rem;
         }
 
         .social-buttons a svg {
@@ -126,9 +133,11 @@
 
         .install {
             margin-top: 48px;
+            max-width: 420px;
         }
 
         .script {
+            position: relative;
             height: 42px;
             font-weight: 700;
             line-height: 18px;
@@ -138,7 +147,9 @@
             color: #071E3F;
             display: flex;
             align-items: center;
-            justify-content: center;
+            padding:0 1rem;
+            font-size: 14px;
+            /* justify-content: center; */
 
             > button {
                 margin-left: 10px;
@@ -147,6 +158,8 @@
                 border: none;
                 margin-bottom: -4px;
                 cursor: pointer;
+                position: absolute;
+                right: 10px;
 
                 > svg {
                     fill: #071E3F;
@@ -155,6 +168,23 @@
                 > svg:hover {
                     fill: black;
                 }
+            }
+
+            #copied {
+                position:absolute;
+                top:0;
+                left: 0;
+                height: 100%;
+                width:100%;
+                display:flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.2rem;
+                background-color: #84ADE5;
+                pointer-events: none;
+                border-radius: 6px;
+                opacity: 0;
+                transition: opacity 0.1s;
             }
         }
 
@@ -172,7 +202,9 @@
             }
 
             .content {
-                padding: 0 36px;
+                padding: 0 20px;
+                box-sizing: border-box;
+                width: 100%;
             }
 
             .content-wrapper {
@@ -191,6 +223,20 @@
                 margin-top: 60px;
                 margin-bottom: 36px;
             }
+
+            .social-buttons a {
+                margin-left: 12px;
+            }
+
+            .script {
+                font-size: 11px;
+            }
+
+            .install {
+                max-width: 330px;
+                margin-left: auto;
+                margin-right: auto;
+            }
         }
     </style>
   </head>
@@ -203,6 +249,9 @@
         </svg>
       </div>
       <div class="social-buttons">
+        <a href="https://book.dojoengine.org" target="_blank">
+           <h3>DOCS</h3>             
+        </a>
         <a href="https://github.com/dojoengine/dojo" target="_blank">
             <svg width="24" height="25" viewBox="0 0 24 25" xmlns="http://www.w3.org/2000/svg">
                 <path d="M10.091 14.7759C10.091 15.5161 9.705 16.7274 8.79125 16.7274C7.8775 16.7274 7.49146 15.5161 7.49146 14.7759C7.49146 14.0357 7.8775 12.8245 8.79125 12.8245C9.705 12.8245 10.091 14.0357 10.091 14.7759ZM20.5 12.9874C20.5 14.1172 20.3867 15.3143 19.8802 16.352C18.5379 19.0649 14.8475 19.0011 12.2054 19.0011C9.52083 19.0011 5.61083 19.0968 4.21542 16.352C3.69833 15.3249 3.5 14.1172 3.5 12.9874C3.5 11.5034 3.99229 10.1009 4.96979 8.96406C4.78562 8.40447 4.69708 7.81656 4.69708 7.23572C4.69708 6.47426 4.87063 6.09176 5.21417 5.40114C6.81854 5.40114 7.84562 5.71989 9.0675 6.67614C10.0946 6.43176 11.15 6.32197 12.209 6.32197C13.1652 6.32197 14.1285 6.42468 15.0565 6.6478C16.2606 5.70218 17.2877 5.40114 18.8744 5.40114C19.2215 6.09176 19.3915 6.47426 19.3915 7.23572C19.3915 7.81656 19.2994 8.39385 19.1187 8.9428C20.0927 10.0903 20.5 11.5034 20.5 12.9874ZM18.2227 14.7759C18.2227 13.2211 17.2771 11.8505 15.6196 11.8505C14.9502 11.8505 14.3092 11.9709 13.6363 12.063C13.1085 12.1445 12.5808 12.1763 12.039 12.1763C11.5006 12.1763 10.9729 12.1445 10.4417 12.063C9.77937 11.9709 9.13125 11.8505 8.45833 11.8505C6.80083 11.8505 5.85521 13.2211 5.85521 14.7759C5.85521 17.8855 8.70271 18.3636 11.1819 18.3636H12.889C15.3788 18.3636 18.2227 17.8891 18.2227 14.7759ZM15.2973 12.8245C14.3835 12.8245 13.9975 14.0357 13.9975 14.7759C13.9975 15.5161 14.3835 16.7274 15.2973 16.7274C16.211 16.7274 16.5971 15.5161 16.5971 14.7759C16.5971 14.0357 16.211 12.8245 15.2973 12.8245Z" />
@@ -232,13 +281,12 @@
             </svg>                
         </div>
         <div class="content">
-            <p><b>Dojo</b> is an verifiable game engine and toolchain for building onchain games and autonomous worlds with Cairo 1.0.</p>
+            <p><b>DOJO</b> is a verifiable game engine and toolchain for building onchain games and autonomous worlds with Cairo.</p>
             <div class="install">
-                <pre><code class="script">curl -L https://install.dojoengine.org | bash<button onclick="(function() {
-                  navigator.clipboard.writeText('curl -L https://install.dojoengine.org | bash')  
-                })()"><svg width="19" height="19" viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <pre><code class="script" ><span>curl -L https://install.dojoengine.org | bash</span><button id="copy_button"><svg width="19" height="19" viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path opacity="0.5" d="M5 14.3164H10.25C10.6648 14.3164 11 13.9812 11 13.5664V12.4414C11 12.2352 11.1687 12.0664 11.375 12.0664C11.5813 12.0664 11.75 12.2352 11.75 12.4414V13.5664C11.75 14.3938 11.0773 15.0664 10.25 15.0664H5C4.17148 15.0664 3.5 14.3938 3.5 13.5664V8.31641C3.5 7.48906 4.17148 6.81641 5 6.81641H6.125C6.33125 6.81641 6.5 6.98516 6.5 7.19141C6.5 7.39766 6.33125 7.56641 6.125 7.56641H5C4.58586 7.56641 4.25 7.90156 4.25 8.31641V13.5664C4.25 13.9812 4.58586 14.3164 5 14.3164ZM7.25 4.56641C7.25 3.73789 7.92266 3.06641 8.75 3.06641H14C14.8273 3.06641 15.5 3.73789 15.5 4.56641V9.81641C15.5 10.6438 14.8273 11.3164 14 11.3164H8.75C7.92266 11.3164 7.25 10.6438 7.25 9.81641V4.56641ZM8.75 10.5664H14C14.4148 10.5664 14.75 10.2312 14.75 9.81641V4.56641C14.75 4.15227 14.4148 3.81641 14 3.81641H8.75C8.33516 3.81641 8 4.15227 8 4.56641V9.81641C8 10.2312 8.33516 10.5664 8.75 10.5664Z" fill="#071E3F"/>
                     </svg></button>
+                    <div id="copied">Copied to Clipboard!</div>
                 </code></pre>
             </div>
         </div>
@@ -257,5 +305,19 @@
             <rect width="100%" height="100%" fill="url(#bg)"/>      
         </svg>
     </div>
+
+    <script type="text/javascript">
+        let copy_button = document.getElementById("copy_button");
+        let copied = document.getElementById("copied");
+
+        copy_button.onclick = function() {
+            navigator.clipboard.writeText('curl -L https://install.dojoengine.org | bash');
+            copied.style.opacity = 1;
+            setTimeout(()=> { copied.style.opacity = 0; },750);
+        }
+
+
+    </script>
+
   </body>
 </html>
