@@ -7,7 +7,6 @@ use dojo_types::system::Dependency;
 use self::execute::ExecuteCommand;
 use self::find::FindCommand;
 use self::get::GetCommand;
-use self::set::SetCommand;
 
 pub mod execute;
 pub mod find;
@@ -67,7 +66,6 @@ impl Command {
         match segment {
             ast::PathSegment::Simple(segment_simple) => {
                 match segment_simple.ident(db).text(db).as_str() {
-                    "set" => Some(SetCommand::from_ast(db, let_pattern, macro_ast).into()),
                     "get" | "try_get" => {
                         Some(GetCommand::from_ast(db, let_pattern, macro_ast).into())
                     }

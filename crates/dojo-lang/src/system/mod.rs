@@ -14,7 +14,6 @@ use dojo_types::system::Dependency;
 use smol_str::SmolStr;
 
 // mod deps;
-
 use crate::plugin::{DojoAuxData, SystemAuxData};
 
 pub struct System {
@@ -154,19 +153,4 @@ impl System {
 
         rewrite_nodes
     }
-
-    fn update_deps(&mut self, deps: Vec<Dependency>) {
-        for dep in deps {
-            if let Some(existing) = self.dependencies.get(&SmolStr::from(dep.name.as_str())) {
-                self.dependencies
-                    .insert(dep.name.clone().into(), merge_deps(dep.clone(), existing.clone()));
-            } else {
-                self.dependencies.insert(dep.name.clone().into(), dep.clone());
-            }
-        }
-    }
-}
-
-fn merge_deps(a: Dependency, b: Dependency) -> Dependency {
-    Dependency { name: a.name, read: a.read || b.read, write: a.write || b.write }
 }
