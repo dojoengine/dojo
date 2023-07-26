@@ -9,9 +9,7 @@ mod spawn {
     use dojo_examples::components::Moves;
 
     fn execute(ctx: Context) {
-        set!(
-            ctx.world, ctx.origin.into(), (Moves { remaining: 10 }, Position { x: 0, y: 0 }, )
-        );
+        set !(ctx.world, ctx.origin.into(), (Moves { remaining: 10 }, Position { x: 0, y: 0 }, ));
         return ();
     }
 }
@@ -46,13 +44,13 @@ mod move {
     }
 
     fn execute(ctx: Context, direction: Direction) {
-        let (position, moves) = get!(ctx.world, ctx.origin.into(), (Position, Moves));
-        let next = next_position(position, direction);
-        set!(
-            ctx.world,
-            ctx.origin.into(),
-            (Moves { remaining: moves.remaining - 1 }, Position { x: next.x, y: next.y }, )
-        );
+        // let (position, moves) = get!(ctx.world, ctx.origin.into(), (Position, Moves));
+        // let next = next_position(position, direction);
+        // set!(
+        //     ctx.world,
+        //     ctx.origin.into(),
+        //     (Moves { remaining: moves.remaining - 1 }, Position { x: next.x, y: next.y }, )
+        // );
         return ();
     }
 
@@ -116,7 +114,8 @@ mod tests {
 
         let moves = world.entity('Moves'.into(), caller.into(), 0, dojo::SerdeLen::<Moves>::len());
         assert(*moves[0] == 9, 'moves is wrong');
-        let new_position = world.entity('Position'.into(), caller.into(), 0, dojo::SerdeLen::<Position>::len());
+        let new_position = world
+            .entity('Position'.into(), caller.into(), 0, dojo::SerdeLen::<Position>::len());
         assert(*new_position[0] == 1, 'position x is wrong');
         assert(*new_position[1] == 0, 'position y is wrong');
     }

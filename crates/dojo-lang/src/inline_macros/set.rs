@@ -1,9 +1,5 @@
 use cairo_lang_defs::plugin::PluginDiagnostic;
-use cairo_lang_semantic::patcher::RewriteNode;
-use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
-use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
-use dojo_types::system::Dependency;
+use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 
 use crate::inline_macro_plugin::{InlineMacro, InlineMacroExpanderData};
 
@@ -15,6 +11,7 @@ impl InlineMacro for SetMacro {
         db: &dyn cairo_lang_syntax::node::db::SyntaxGroup,
         macro_arguments: &cairo_lang_syntax::node::ast::ExprList,
     ) {
+        println!("set macro");
         let args = macro_arguments.elements(db);
 
         if args.len() != 3 {
@@ -58,10 +55,10 @@ impl InlineMacro for SetMacro {
         for entity in bundle {
             expanded_code.push_str(&format!(
                 "\n            let mut __set_macro_calldata__ = ArrayTrait::new();
-                serde::Serde::serialize(@{}, ref __set_macro_calldata__);
-                {}.set_entity({}.name(), query, 0_u8, \
+                let __set_macro__value__ = {};
+                serde::Serde::serialize(@__set_macro__value__, ref __set_macro_calldata__);
+                {}.set_entity(dojo::traits::Component::name(@__set_macro__value__), query, 0_u8, \
                  array::ArrayTrait::span(@__set_macro_calldata__));",
-                entity,
                 entity,
                 world.as_syntax_node().get_text(db),
             ));

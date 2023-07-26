@@ -1,0 +1,66 @@
+//! > Test set! macro.
+
+//! > test_runner_name
+test_expand_plugin
+
+//! > cairo_code
+struct Player {
+    name: felt252
+}
+
+struct Position {
+    x: felt252,
+    y: felt252
+}
+
+const world: felt252 = 0xbeef;
+const player: Player = Player { name: 'name' };
+
+const _HACK_FOR_TEST_: felt252 = set!(world, 420, (
+    player,
+    Position { x: 0, y: 0 },
+));
+
+//! > generated_cairo_code
+struct Player {
+    name: felt252
+}
+
+
+struct Position {
+    x: felt252,
+    y: felt252
+}
+
+
+const world: felt252 = 0xbeef;
+
+const player: Player = Player { name: 'name' };
+
+const ah: felt252 =
+    {
+        let query = 420;
+
+        let mut __set_macro_calldata__ = ArrayTrait::new();
+        let __set_macro__value__ = Player { name: 'name' };
+        serde::Serde::serialize(@__set_macro__value__, ref __set_macro_calldata__);
+        world
+            .set_entity(
+                dojo::traits::Component::name(@__set_macro__value__),
+                query,
+                0_u8,
+                array::ArrayTrait::span(@__set_macro_calldata__)
+            );
+        let mut __set_macro_calldata__ = ArrayTrait::new();
+        let __set_macro__value__ = Position { x: 0, y: 0 };
+        serde::Serde::serialize(@__set_macro__value__, ref __set_macro_calldata__);
+        world
+            .set_entity(
+                dojo::traits::Component::name(@__set_macro__value__),
+                query,
+                0_u8,
+                array::ArrayTrait::span(@__set_macro_calldata__)
+            );
+    };
+
+//! > expected_diagnostics

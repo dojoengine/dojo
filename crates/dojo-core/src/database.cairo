@@ -9,8 +9,7 @@ mod query;
 mod storage;
 mod utils;
 
-use dojo::database::{query::{Query, QueryTrait}};
-use dojo::interfaces::{IComponentLibraryDispatcher, IComponentDispatcherTrait};
+use dojo::database::query::{Query, QueryTrait};
 
 fn get(
     class_hash: starknet::ClassHash, table: felt252, query: Query, offset: u8, length: usize

@@ -11,7 +11,6 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::system::Dependency;
-use smol_str::SmolStr;
 
 // mod deps;
 use crate::plugin::{DojoAuxData, SystemAuxData};
@@ -139,14 +138,15 @@ impl System {
         rewrite_nodes.push(RewriteNode::interpolate_patched(
             "
                 #[external(v0)]
-                fn execute(self: @ContractState, $context$$parameters$) $ret_clause$ {
-                    $body$
-                }
+                fn execute(self: @ContractState, $context$$parameters$) $ret_clause$ $body$
             ",
             UnorderedHashMap::from([
                 ("context".to_string(), context),
                 ("parameters".to_string(), RewriteNode::new_trimmed(parameters.as_syntax_node())),
-                ("body".to_string(), RewriteNode::new_trimmed(function_ast.as_syntax_node())),
+                (
+                    "body".to_string(),
+                    RewriteNode::new_trimmed(function_ast.body(db).as_syntax_node()),
+                ),
                 ("ret_clause".to_string(), ret_clause),
             ]),
         ));

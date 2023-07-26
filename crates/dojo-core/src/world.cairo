@@ -58,7 +58,7 @@ mod world {
     use dojo::database;
     use dojo::database::query::{Query, QueryTrait};
     use dojo::executor::{IExecutorDispatcher, IExecutorDispatcherTrait};
-    use dojo::interfaces::{
+    use dojo::traits::{
         IComponentLibraryDispatcher, IComponentDispatcherTrait, ISystemLibraryDispatcher,
         ISystemDispatcherTrait
     };

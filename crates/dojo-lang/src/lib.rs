@@ -7,7 +7,7 @@ pub mod compiler;
 pub mod component;
 pub mod db;
 mod inline_macros;
-mod inline_macro_plugin;
+pub mod inline_macro_plugin;
 mod manifest;
 pub mod plugin;
 mod serde;

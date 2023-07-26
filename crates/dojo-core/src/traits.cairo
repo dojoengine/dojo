@@ -1,4 +1,6 @@
-use array::ArrayTrait;
+trait Component<T> {
+    fn name(self: @T) -> felt252;
+}
 
 #[starknet::interface]
 trait IComponent<T> {
