@@ -13,13 +13,13 @@ use starknet_api::transaction::{
 };
 use starknet_api::{calldata, stark_felt};
 
-fn create_test_starknet() -> Backend {
+async fn create_test_starknet() -> Backend {
     let test_account_path =
         [env!("CARGO_MANIFEST_DIR"), "./contracts/compiled/account_without_validation.json"]
             .iter()
             .collect();
 
-    let mut starknet = Backend::new(StarknetConfig {
+    let starknet = Backend::new(StarknetConfig {
         seed: [0u8; 32],
         auto_mine: true,
         total_accounts: 2,
@@ -28,69 +28,69 @@ fn create_test_starknet() -> Backend {
         env: Environment::default(),
     });
 
-    starknet.generate_genesis_block();
+    starknet.generate_genesis_block().await;
     starknet
 }
 
-#[test]
-fn test_next_block_timestamp_in_past() {
-    let mut starknet = create_test_starknet();
-    starknet.generate_pending_block();
+#[tokio::test]
+async fn test_next_block_timestamp_in_past() {
+    let starknet = create_test_starknet().await;
+    starknet.generate_pending_block().await;
 
-    let timestamp = starknet.block_context.block_timestamp;
-    starknet.set_next_block_timestamp(timestamp.0 - 1000).unwrap();
+    let timestamp = starknet.block_context.read().block_timestamp;
+    starknet.set_next_block_timestamp(timestamp.0 - 1000).await.unwrap();
 
-    starknet.generate_pending_block();
-    let new_timestamp = starknet.block_context.block_timestamp;
+    starknet.generate_pending_block().await;
+    let new_timestamp = starknet.block_context.read().block_timestamp;
 
     assert_eq!(new_timestamp.0, timestamp.0 - 1000, "timestamp should be updated");
 }
 
-#[test]
-fn test_set_next_block_timestamp_in_future() {
-    let mut starknet = create_test_starknet();
-    starknet.generate_pending_block();
+#[tokio::test]
+async fn test_set_next_block_timestamp_in_future() {
+    let starknet = create_test_starknet().await;
+    starknet.generate_pending_block().await;
 
-    let timestamp = starknet.block_context.block_timestamp;
-    starknet.set_next_block_timestamp(timestamp.0 + 1000).unwrap();
+    let timestamp = starknet.block_context.read().block_timestamp;
+    starknet.set_next_block_timestamp(timestamp.0 + 1000).await.unwrap();
 
-    starknet.generate_pending_block();
-    let new_timestamp = starknet.block_context.block_timestamp;
-
-    assert_eq!(new_timestamp.0, timestamp.0 + 1000, "timestamp should be updated");
-}
-
-#[test]
-fn test_increase_next_block_timestamp() {
-    let mut starknet = create_test_starknet();
-    starknet.generate_pending_block();
-
-    let timestamp = starknet.block_context.block_timestamp;
-    starknet.increase_next_block_timestamp(1000).unwrap();
-
-    starknet.generate_pending_block();
-    let new_timestamp = starknet.block_context.block_timestamp;
+    starknet.generate_pending_block().await;
+    let new_timestamp = starknet.block_context.read().block_timestamp;
 
     assert_eq!(new_timestamp.0, timestamp.0 + 1000, "timestamp should be updated");
 }
 
-#[test]
-fn test_creating_blocks() {
-    let mut starknet = create_test_starknet();
-    starknet.generate_pending_block();
-    starknet.generate_latest_block();
+#[tokio::test]
+async fn test_increase_next_block_timestamp() {
+    let starknet = create_test_starknet().await;
+    starknet.generate_pending_block().await;
 
-    assert_eq!(starknet.blocks.hash_to_num.len(), 2);
-    assert_eq!(starknet.blocks.num_to_block.len(), 2);
+    let timestamp = starknet.block_context.read().block_timestamp;
+    starknet.increase_next_block_timestamp(1000).await.unwrap();
+
+    starknet.generate_pending_block().await;
+    let new_timestamp = starknet.block_context.read().block_timestamp;
+
+    assert_eq!(new_timestamp.0, timestamp.0 + 1000, "timestamp should be updated");
+}
+
+#[tokio::test]
+async fn test_creating_blocks() {
+    let starknet = create_test_starknet().await;
+    starknet.generate_pending_block().await;
+    starknet.generate_latest_block().await;
+
+    assert_eq!(starknet.blocks.read().await.hash_to_num.len(), 2);
+    assert_eq!(starknet.blocks.read().await.num_to_block.len(), 2);
     assert_eq!(
-        starknet.block_context.block_number,
+        starknet.block_context.read().block_number,
         BlockNumber(1),
         "block context should only be updated on new pending block"
     );
 
-    let block0 = starknet.blocks.by_number(BlockNumber(0)).unwrap();
-    let block1 = starknet.blocks.by_number(BlockNumber(1)).unwrap();
-    let last_block = starknet.blocks.latest().unwrap();
+    let block0 = starknet.blocks.read().await.by_number(BlockNumber(0)).unwrap();
+    let block1 = starknet.blocks.read().await.by_number(BlockNumber(1)).unwrap();
+    let last_block = starknet.blocks.read().await.latest().unwrap();
 
     assert_eq!(block0.transactions().len(), 4, "genesis block should have 4 transactions");
     assert_eq!(block0.block_number(), BlockNumber(0));
@@ -98,10 +98,10 @@ fn test_creating_blocks() {
     assert_eq!(last_block.block_number(), BlockNumber(1));
 }
 
-#[test]
-fn test_add_transaction() {
-    let mut starknet = create_test_starknet();
-    starknet.generate_pending_block();
+#[tokio::test]
+async fn test_add_transaction() {
+    let starknet = create_test_starknet().await;
+    starknet.generate_pending_block().await;
 
     let a = starknet.predeployed_accounts.accounts[0].clone();
     let b = starknet.predeployed_accounts.accounts[1].clone();
@@ -119,22 +119,25 @@ fn test_add_transaction() {
         stark_felt!(0_u8)           // Calldata: num.
     ];
 
-    starknet.handle_transaction(Transaction::AccountTransaction(AccountTransaction::Invoke(
-        InvokeTransaction::V1(InvokeTransactionV1 {
-            sender_address: a.account_address,
-            calldata: execute_calldata,
-            transaction_hash: TransactionHash(stark_felt!("0x6969")),
-            nonce: Nonce(1u8.into()),
-            ..Default::default()
-        }),
-    )));
+    starknet
+        .handle_transaction(Transaction::AccountTransaction(AccountTransaction::Invoke(
+            InvokeTransaction::V1(InvokeTransactionV1 {
+                sender_address: a.account_address,
+                calldata: execute_calldata,
+                transaction_hash: TransactionHash(stark_felt!("0x6969")),
+                nonce: Nonce(1u8.into()),
+                ..Default::default()
+            }),
+        )))
+        .await;
 
     // SEND INVOKE TRANSACTION
     //
 
-    let tx = starknet.transactions.transactions.get(&TransactionHash(stark_felt!("0x6969")));
+    let transactions = starknet.transactions.read().await;
+    let tx = transactions.transactions.get(&TransactionHash(stark_felt!("0x6969")));
 
-    let block = starknet.blocks.by_number(BlockNumber(1)).unwrap();
+    let block = starknet.blocks.read().await.by_number(BlockNumber(1)).unwrap();
 
     assert!(tx.is_some(), "transaction must be stored");
     assert_eq!(tx.unwrap().block_number, Some(BlockNumber(1)));
@@ -163,22 +166,23 @@ fn test_add_transaction() {
     // );
 }
 
-#[test]
-fn test_add_reverted_transaction() {
-    let mut starknet = create_test_starknet();
-    starknet.generate_pending_block();
+#[tokio::test]
+async fn test_add_reverted_transaction() {
+    let starknet = create_test_starknet().await;
+    starknet.generate_pending_block().await;
 
     let transaction_hash = TransactionHash(stark_felt!("0x1234"));
     let transaction = Transaction::AccountTransaction(AccountTransaction::Invoke(
         InvokeTransaction::V1(InvokeTransactionV1 { transaction_hash, ..Default::default() }),
     ));
 
-    starknet.handle_transaction(transaction);
+    starknet.handle_transaction(transaction).await;
 
-    let tx = starknet.transactions.transactions.get(&transaction_hash);
+    let transactions = starknet.transactions.read().await;
+    let tx = transactions.transactions.get(&transaction_hash);
 
     assert_eq!(
-        starknet.transactions.transactions.len(),
+        starknet.transactions.read().await.transactions.len(),
         5,
         "transaction must be stored even if execution fail"
     );
@@ -186,7 +190,7 @@ fn test_add_reverted_transaction() {
     assert_eq!(tx.unwrap().block_number, None);
     assert_eq!(tx.unwrap().status, TransactionStatus::Rejected);
     assert_eq!(
-        starknet.blocks.num_to_block.len(),
+        starknet.blocks.read().await.num_to_block.len(),
         1,
         "no new block should be created if tx failed"
     );
