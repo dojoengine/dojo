@@ -16,10 +16,12 @@ struct Position {
 const world: felt252 = 0xbeef;
 const player: Player = Player { name: 'name' };
 
-const _HACK_FOR_TEST_: felt252 = set!(world, 420, (
-    player,
-    Position { x: 0, y: 0 },
-));
+fn foo() {
+    set!(world, 420, (
+        player,
+        Position { x: 0, y: 0 },
+    ));
+}
 
 //! > generated_cairo_code
 struct Player {
@@ -37,17 +39,17 @@ const world: felt252 = 0xbeef;
 
 const player: Player = Player { name: 'name' };
 
-const ah: felt252 =
+fn foo() {
     {
-        let query = 420;
+        let __set_macro_query__ = 420;
 
         let mut __set_macro_calldata__ = ArrayTrait::new();
-        let __set_macro__value__ = Player { name: 'name' };
+        let __set_macro__value__ = player;
         serde::Serde::serialize(@__set_macro__value__, ref __set_macro_calldata__);
         world
             .set_entity(
                 dojo::traits::Component::name(@__set_macro__value__),
-                query,
+                __set_macro_query__,
                 0_u8,
                 array::ArrayTrait::span(@__set_macro_calldata__)
             );
@@ -57,10 +59,44 @@ const ah: felt252 =
         world
             .set_entity(
                 dojo::traits::Component::name(@__set_macro__value__),
-                query,
+                __set_macro_query__,
                 0_u8,
                 array::ArrayTrait::span(@__set_macro_calldata__)
             );
     };
+}
+
+//! > expected_diagnostics
+
+//! > ==========================================================================
+
+//! > Test get! macro.
+
+//! > test_runner_name
+test_expand_plugin
+
+//! > cairo_code
+fn foo() {
+    let (position, moves) = get!(world, 0x420, (Position, Moves));
+}
+
+//! > generated_cairo_code
+fn foo() {
+    let (position, moves) = {
+        let __get_macro_query__ = 0x420;
+
+        let mut __Position_raw = world
+            .entity('Position', __get_macro_query__, 0_u8, dojo::SerdeLen::<Position>::len());
+        assert(__Position_raw.len() > 0_usize, 'Position not found');
+        let __Position = serde::Serde::<Position>::deserialize(ref __Position_raw)
+            .expect('Position failed to deserialize');
+        let mut __Moves_raw = world
+            .entity('Moves', __get_macro_query__, 0_u8, dojo::SerdeLen::<Moves>::len());
+        assert(__Moves_raw.len() > 0_usize, 'Moves not found');
+        let __Moves = serde::Serde::<Moves>::deserialize(ref __Moves_raw)
+            .expect('Moves failed to deserialize');
+        (__Position, __Moves)
+    };
+}
 
 //! > expected_diagnostics

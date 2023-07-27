@@ -11,7 +11,6 @@ impl InlineMacro for SetMacro {
         db: &dyn cairo_lang_syntax::node::db::SyntaxGroup,
         macro_arguments: &cairo_lang_syntax::node::ast::ExprList,
     ) {
-        println!("set macro");
         let args = macro_arguments.elements(db);
 
         if args.len() != 3 {
@@ -47,23 +46,22 @@ impl InlineMacro for SetMacro {
 
         let mut expanded_code = format!(
             "{{
-            let query = {};
+            let __set_macro_query__ = {};
             ",
             query.as_syntax_node().get_text(db)
-        )
-        .to_string();
+        );
         for entity in bundle {
             expanded_code.push_str(&format!(
                 "\n            let mut __set_macro_calldata__ = ArrayTrait::new();
                 let __set_macro__value__ = {};
                 serde::Serde::serialize(@__set_macro__value__, ref __set_macro_calldata__);
-                {}.set_entity(dojo::traits::Component::name(@__set_macro__value__), query, 0_u8, \
-                 array::ArrayTrait::span(@__set_macro_calldata__));",
+                {}.set_entity(dojo::traits::Component::name(@__set_macro__value__), \
+                 __set_macro_query__, 0_u8, array::ArrayTrait::span(@__set_macro_calldata__));",
                 entity,
                 world.as_syntax_node().get_text(db),
             ));
         }
-        expanded_code.push_str("}");
+        expanded_code.push('}');
         macro_expander_data.result_code.push_str(&expanded_code);
         macro_expander_data.code_changed = true;
     }
