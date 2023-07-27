@@ -20,7 +20,7 @@ LABEL description="Dojo is a provable game engine and toolchain for building onc
     source="https://github.com/dojoengine/dojo" \
     documentation="https://book.dojoengine.org/"
 
-HEALTHCHECK --interval=10s --timeout=30s --start-period=10s --retries=10 \
+HEALTHCHECK --interval=3s --timeout=5s --start-period=1s --retries=5 \
   CMD curl --request POST \
     --header "Content-Type: application/json" \
     --data '{"jsonrpc": "2.0","method": "starknet_chainId","id":1}' http://localhost:${HEALTH_CHECK_PORT} || exit 1
