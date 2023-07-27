@@ -11,11 +11,19 @@ WORKDIR /dojo
 COPY . .
 RUN cargo build --release --config net.git-fetch-with-cli=true
 
+# Set an environment variable for the port
+ENV HEALTH_CHECK_PORT=5050
+
 FROM debian:buster-slim
 LABEL description="Dojo is a provable game engine and toolchain for building onchain games and autonomous worlds with Cairo" \
     authors="tarrence <tarrence@cartridge.gg>" \
     source="https://github.com/dojoengine/dojo" \
     documentation="https://book.dojoengine.org/"
+
+HEALTHCHECK --interval=3s --timeout=5s --start-period=1s --retries=5 \
+  CMD curl --request POST \
+    --header "Content-Type: application/json" \
+    --data '{"jsonrpc": "2.0","method": "starknet_chainId","id":1}' http://localhost:${HEALTH_CHECK_PORT} || exit 1
 
 COPY --from=builder /dojo/target/release/katana /usr/local/bin/katana
 COPY --from=builder /dojo/target/release/sozo /usr/local/bin/sozo
