@@ -1,9 +1,13 @@
+use std::sync::Arc;
+
 use starknet::core::{
     crypto::compute_hash_on_elements,
     types::{BlockStatus, FieldElement},
 };
 
-use super::transaction::{IncludedTransaction, TransactionOutput};
+use crate::backend::pending::ExecutedTransaction;
+
+use super::transaction::TransactionOutput;
 
 /// Header of a pending block
 #[derive(Debug)]
@@ -56,14 +60,14 @@ impl Header {
 pub struct Block {
     pub header: Header,
     pub status: BlockStatus,
-    pub transactions: Vec<IncludedTransaction>,
+    pub transactions: Vec<Arc<ExecutedTransaction>>,
     pub outputs: Vec<TransactionOutput>,
 }
 
 impl Block {
     pub fn new(
         partial_header: PartialHeader,
-        transactions: Vec<IncludedTransaction>,
+        transactions: Vec<Arc<ExecutedTransaction>>,
         outputs: Vec<TransactionOutput>,
     ) -> Self {
         // TODO: compute state root
