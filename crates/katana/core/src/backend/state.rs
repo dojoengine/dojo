@@ -509,9 +509,6 @@ mod tests {
 
         let dump = state.dump_state().expect("should dump state");
 
-        let bytes = bincode::serialize(&dump).expect("able to serialize into bytes");
-        let dump: SerializableState = bincode::deserialize(&bytes).expect("able to deserialize");
-
         let mut new_state = MemDb { classes: HashMap::new(), storage: HashMap::new() };
         new_state.load_state(dump).expect("should load state");
 

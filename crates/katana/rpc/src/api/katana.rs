@@ -35,7 +35,4 @@ pub trait KatanaApi {
 
     #[method(name = "predeployedAccounts")]
     async fn predeployed_accounts(&self) -> Result<Vec<Account>, Error>;
-
-    #[method(name = "dumpState")]
-    async fn dump_state(&self) -> Result<(), Error>;
 }

@@ -196,9 +196,9 @@ mod tests {
         let serializable_contract: SerializableContractClass = original_contract.clone().into();
         assert!(matches!(serializable_contract, SerializableContractClass::V0(_)));
 
-        let bytes = bincode::serialize(&serializable_contract).unwrap();
+        let bytes = serde_json::to_vec(&serializable_contract).unwrap();
         let serializable_contract: SerializableContractClass =
-            bincode::deserialize(&bytes).unwrap();
+            serde_json::from_slice(&bytes).unwrap();
 
         let contract: ContractClass = serializable_contract.try_into().expect("should deserialize");
         assert_eq!(contract, original_contract);
@@ -219,9 +219,9 @@ mod tests {
         let serializable_contract: SerializableContractClass = original_contract.clone().into();
         assert!(matches!(serializable_contract, SerializableContractClass::V1(_)));
 
-        let bytes = bincode::serialize(&serializable_contract).unwrap();
+        let bytes = serde_json::to_vec(&serializable_contract).unwrap();
         let serializable_contract: SerializableContractClass =
-            bincode::deserialize(&bytes).unwrap();
+            serde_json::from_slice(&bytes).unwrap();
 
         let contract: ContractClass = serializable_contract.try_into().expect("should deserialize");
         assert_eq!(contract, original_contract);

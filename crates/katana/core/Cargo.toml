@@ -10,12 +10,12 @@ version.workspace = true
 anyhow.workspace = true
 async-trait.workspace = true
 auto_impl = "1.1.0"
-bincode = "1.3.3"
 blockifier.workspace = true
 cairo-lang-casm.workspace = true
 cairo-lang-starknet.workspace = true
 cairo-vm.workspace = true
 convert_case.workspace = true
+flate2.workspace = true
 futures = "0.3"
 lazy_static = "1.4.0"
 rand = { version = "0.8.5", features = [ "small_rng" ] }

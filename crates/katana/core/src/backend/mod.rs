@@ -1,5 +1,3 @@
-use std::fs;
-
 use anyhow::Result;
 use blockifier::block_context::BlockContext;
 use blockifier::execution::entry_point::{
@@ -42,8 +40,6 @@ use crate::constants::{
     DEFAULT_PREFUNDED_ACCOUNT_BALANCE, ERC20_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS, UDC_ADDRESS,
     UDC_CLASS_HASH,
 };
-use crate::db::serde::state::SerializableState;
-use crate::db::Db;
 use crate::sequencer_error::SequencerError;
 use crate::util::{
     convert_blockifier_tx_to_starknet_api_tx, convert_state_diff_to_rpc_state_diff,
@@ -71,13 +67,6 @@ impl StarknetWrapper {
 
         let mut state = MemDb::default();
 
-        if let Some(ref load_path) = config.load_path {
-            let content = fs::read(load_path).expect("should read file");
-            let serializable_state: SerializableState =
-                bincode::deserialize(&content[..]).expect("should deserialize state");
-            state.load_state(serializable_state).expect("should load state");
-        }
-
         let pending_state = CachedState::new(state.clone());
 
         let predeployed_accounts = PredeployedAccounts::initialize(
@@ -99,11 +88,6 @@ impl StarknetWrapper {
             pending_cached_state: pending_state,
             predeployed_accounts,
         }
-    }
-
-    pub fn serialize_state(&self) -> Vec<u8> {
-        let serializable_state = self.state.dump_state().unwrap();
-        bincode::serialize(&serializable_state).expect("should serialize state")
     }
 
     pub fn estimate_fee(

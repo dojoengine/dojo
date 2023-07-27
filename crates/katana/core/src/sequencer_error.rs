@@ -38,4 +38,6 @@ pub enum SequencerError {
     StateSerialization,
     #[error("Required data unavailable")]
     DataUnavailable,
+    #[error("Failed to decode state")]
+    FailedToDecodeStateDump,
 }
