@@ -3873,6 +3873,7 @@ dependencies = [
  "flate2",
  "futures",
  "lazy_static",
+ "parking_lot 0.12.1",
  "rand",
  "serde",
  "serde_json",
