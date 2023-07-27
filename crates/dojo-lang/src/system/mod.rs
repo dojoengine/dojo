@@ -12,7 +12,6 @@ use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::system::Dependency;
 
-// mod deps;
 use crate::plugin::{DojoAuxData, SystemAuxData};
 
 pub struct System {
