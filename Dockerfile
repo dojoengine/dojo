@@ -17,6 +17,11 @@ LABEL description="Dojo is a provable game engine and toolchain for building onc
     source="https://github.com/dojoengine/dojo" \
     documentation="https://book.dojoengine.org/"
 
+HEALTHCHECK --interval=10s --timeout=30s --start-period=10s --retries=10 \
+  CMD curl --request POST \
+    --header "Content-Type: application/json" \
+    --data '{"jsonrpc": "2.0","method": "starknet_chainId","id":1}' http://localhost:5050 || exit 1
+
 COPY --from=builder /dojo/target/release/katana /usr/local/bin/katana
 COPY --from=builder /dojo/target/release/sozo /usr/local/bin/sozo
 COPY --from=builder /dojo/target/release/torii /usr/local/bin/torii
