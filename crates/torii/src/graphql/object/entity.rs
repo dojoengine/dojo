@@ -6,7 +6,7 @@ use serde::Deserialize;
 use sqlx::pool::PoolConnection;
 use sqlx::{FromRow, Pool, QueryBuilder, Result, Sqlite};
 
-use super::component_state::{component_state_by_id, type_mapping_from};
+use super::component_state::{component_state_by_entity_id, type_mapping_from};
 use super::query::{query_by_id, ID};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::graphql::constants::DEFAULT_LIMIT;
@@ -85,9 +85,13 @@ impl ObjectTrait for EntityObject {
                 for component_name in components {
                     let table_name = component_name.to_lowercase();
                     let field_type_mapping = type_mapping_from(&mut conn, &table_name).await?;
-                    let state =
-                        component_state_by_id(&mut conn, &table_name, &id, &field_type_mapping)
-                            .await?;
+                    let state = component_state_by_entity_id(
+                        &mut conn,
+                        &table_name,
+                        &id,
+                        &field_type_mapping,
+                    )
+                    .await?;
                     results
                         .push(FieldValue::with_type(FieldValue::owned_any(state), component_name));
                 }

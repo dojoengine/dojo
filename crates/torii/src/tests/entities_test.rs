@@ -1,30 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use serde::Deserialize;
     use sqlx::SqlitePool;
     use starknet_crypto::{poseidon_hash_many, FieldElement};
 
-    use crate::tests::common::{entity_fixtures, run_graphql_query};
-
-    #[derive(Deserialize)]
-    #[serde(rename_all = "camelCase")]
-    pub struct Entity {
-        pub component_names: String,
-        pub keys: Option<String>,
-    }
-
-    #[derive(Deserialize)]
-    struct Moves {
-        __typename: String,
-        remaining: u32,
-    }
-
-    #[derive(Deserialize)]
-    struct Position {
-        __typename: String,
-        x: u32,
-        y: u32,
-    }
+    use crate::tests::common::{entity_fixtures, run_graphql_query, Entity, Moves, Position};
 
     #[sqlx::test(migrations = "./migrations")]
     async fn test_entity(pool: SqlitePool) {

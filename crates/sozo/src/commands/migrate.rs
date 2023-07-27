@@ -1,9 +1,6 @@
-use anyhow::{anyhow, Context, Result};
+use anyhow::Result;
 use clap::Args;
 use scarb::core::Config;
-use starknet::accounts::{Account, ConnectedAccount};
-use starknet::core::types::{BlockId, BlockTag, StarknetError};
-use starknet::providers::{Provider, ProviderError};
 
 use super::options::account::AccountOptions;
 use super::options::dojo_metadata_from_workspace;
@@ -14,17 +11,24 @@ use crate::ops::migration;
 #[derive(Args)]
 pub struct MigrateArgs {
     #[arg(short, long)]
-    #[arg(help = "Perform a dry run and outputs the plan to be executed")]
-    plan: bool,
+    #[arg(help = "Perform a dry run and outputs the plan to be executed.")]
+    pub plan: bool,
+
+    #[arg(long)]
+    #[arg(help = "Name of the World.")]
+    #[arg(
+        long_help = "Name of the World. It's hash will be used as a salt when deploying the contract to avoid address conflicts."
+    )]
+    pub name: Option<String>,
 
     #[command(flatten)]
-    world: WorldOptions,
+    pub world: WorldOptions,
 
     #[command(flatten)]
-    starknet: StarknetOptions,
+    pub starknet: StarknetOptions,
 
     #[command(flatten)]
-    account: AccountOptions,
+    pub account: AccountOptions,
 }
 
 impl MigrateArgs {
@@ -48,34 +52,12 @@ impl MigrateArgs {
             .and_then(|env_metadata| env_metadata.get(ws.config().profile().as_str()).cloned())
             .or(env_metadata);
 
-        ws.config().tokio_handle().block_on(async {
-            let world_address = self.world.address(env_metadata.as_ref()).ok();
-
-            let account = {
-                let provider = self.starknet.provider(env_metadata.as_ref())?;
-                let mut account = self.account.account(provider, env_metadata.as_ref()).await?;
-                account.set_block_id(BlockId::Tag(BlockTag::Pending));
-
-                let address = account.address();
-
-                config.ui().print(format!("\nMigration account: {address:#x}\n"));
-
-                match account
-                    .provider()
-                    .get_class_hash_at(BlockId::Tag(BlockTag::Pending), address)
-                    .await
-                {
-                    Ok(_) => Ok(account),
-                    Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
-                        Err(anyhow!("Account with address {:#x} doesn't exist.", account.address()))
-                    }
-                    Err(e) => Err(e.into()),
-                }
-            }
-            .with_context(|| "Problem initializing account for migration.")?;
-
-            migration::execute(world_address, account, target_dir, ws.config()).await
-        })?;
+        ws.config().tokio_handle().block_on(migration::execute(
+            self,
+            env_metadata,
+            target_dir,
+            ws.config(),
+        ))?;
 
         Ok(())
     }

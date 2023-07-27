@@ -1,3 +1,6 @@
+use std::cmp::Ordering;
+use std::iter::Skip;
+use std::slice::Iter;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -10,7 +13,8 @@ use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transaction_execution::Transaction;
 use blockifier::transaction::transactions::{DeclareTransaction, DeployAccountTransaction};
 use starknet::core::types::{
-    BlockId, BlockTag, FeeEstimate, FlattenedSierraClass, StateUpdate, TransactionStatus,
+    BlockId, BlockTag, EmittedEvent, EventsPage, FeeEstimate, FlattenedSierraClass, StateUpdate,
+    TransactionStatus,
 };
 use starknet_api::block::{BlockHash, BlockNumber};
 use starknet_api::core::{ChainId, ClassHash, ContractAddress, Nonce};
@@ -18,7 +22,7 @@ use starknet_api::hash::StarkFelt;
 use starknet_api::stark_felt;
 use starknet_api::state::StorageKey;
 use starknet_api::transaction::{
-    InvokeTransaction, Transaction as StarknetApiTransaction, TransactionHash,
+    Event, InvokeTransaction, TransactionHash,
 };
 use tokio::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use tokio::time;
@@ -26,17 +30,109 @@ use tokio::time;
 use crate::backend::block::StarknetBlock;
 use crate::backend::config::StarknetConfig;
 use crate::backend::contract::StarknetContract;
-use crate::backend::event::EmittedEvent;
 use crate::backend::state::{MemDb, StateExt};
 use crate::backend::transaction::ExternalFunctionCall;
 use crate::backend::StarknetWrapper;
 use crate::sequencer_error::SequencerError;
+use crate::util::{ContinuationToken, ContinuationTokenError};
 
 type SequencerResult<T> = Result<T, SequencerError>;
 
 #[derive(Debug, Default)]
 pub struct SequencerConfig {
     pub block_time: Option<u64>,
+}
+
+#[async_trait]
+#[auto_impl(Arc)]
+pub trait Sequencer {
+    async fn starknet(&self) -> RwLockReadGuard<'_, StarknetWrapper>;
+
+    async fn mut_starknet(&self) -> RwLockWriteGuard<'_, StarknetWrapper>;
+
+    async fn state(&self, block_id: &BlockId) -> SequencerResult<MemDb>;
+
+    async fn chain_id(&self) -> ChainId;
+
+    async fn transaction_receipt(
+        &self,
+        hash: &TransactionHash,
+    ) -> Option<starknet_api::transaction::TransactionReceipt>;
+
+    async fn transaction_status(&self, hash: &TransactionHash) -> Option<TransactionStatus>;
+
+    async fn nonce_at(
+        &self,
+        block_id: BlockId,
+        contract_address: ContractAddress,
+    ) -> SequencerResult<Nonce>;
+
+    async fn block_number(&self) -> BlockNumber;
+
+    async fn block(&self, block_id: BlockId) -> Option<StarknetBlock>;
+
+    async fn transaction(
+        &self,
+        hash: &TransactionHash,
+    ) -> Option<starknet_api::transaction::Transaction>;
+
+    async fn class_hash_at(
+        &self,
+        block_id: BlockId,
+        contract_address: ContractAddress,
+    ) -> SequencerResult<ClassHash>;
+
+    async fn class(
+        &self,
+        block_id: BlockId,
+        class_hash: ClassHash,
+    ) -> SequencerResult<StarknetContract>;
+
+    async fn block_hash_and_number(&self) -> Option<(BlockHash, BlockNumber)>;
+
+    async fn call(
+        &self,
+        block_id: BlockId,
+        function_call: ExternalFunctionCall,
+    ) -> SequencerResult<Vec<StarkFelt>>;
+
+    async fn storage_at(
+        &self,
+        contract_address: ContractAddress,
+        storage_key: StorageKey,
+        block_id: BlockId,
+    ) -> SequencerResult<StarkFelt>;
+
+    async fn add_deploy_account_transaction(
+        &self,
+        transaction: DeployAccountTransaction,
+    ) -> (TransactionHash, ContractAddress);
+
+    async fn add_declare_transaction(
+        &self,
+        transaction: DeclareTransaction,
+        sierra_class: Option<FlattenedSierraClass>,
+    );
+
+    async fn add_invoke_transaction(&self, transaction: InvokeTransaction);
+
+    async fn estimate_fee(
+        &self,
+        account_transaction: AccountTransaction,
+        block_id: BlockId,
+    ) -> SequencerResult<FeeEstimate>;
+
+    async fn events(
+        &self,
+        from_block: BlockId,
+        to_block: BlockId,
+        address: Option<StarkFelt>,
+        keys: Option<Vec<Vec<StarkFelt>>>,
+        _continuation_token: Option<String>,
+        _chunk_size: u64,
+    ) -> SequencerResult<EventsPage>;
+
+    async fn state_update(&self, block_id: BlockId) -> SequencerResult<StateUpdate>;
 }
 
 pub struct KatanaSequencer {
@@ -359,10 +455,11 @@ impl Sequencer for KatanaSequencer {
         to_block: BlockId,
         address: Option<StarkFelt>,
         keys: Option<Vec<Vec<StarkFelt>>>,
-        _continuation_token: Option<String>,
-        _chunk_size: u64,
-    ) -> SequencerResult<Vec<EmittedEvent>> {
-        let from_block = self
+        continuation_token: Option<String>,
+        chunk_size: u64,
+    ) -> SequencerResult<EventsPage> {
+        let mut current_block = 0;
+        let mut from_block = self
             .block_number_from_block_id(&from_block)
             .await
             .ok_or(SequencerError::BlockNotFound(from_block))?;
@@ -372,7 +469,16 @@ impl Sequencer for KatanaSequencer {
             .await
             .ok_or(SequencerError::BlockNotFound(to_block))?;
 
-        let mut events = Vec::new();
+        let mut continuation_token = match continuation_token {
+            Some(token) => ContinuationToken::parse(token)?,
+            None => ContinuationToken::default(),
+        };
+
+        // skip blocks that have been already read
+        from_block.0 += continuation_token.block_n;
+
+        let mut filtered_events = Vec::with_capacity(chunk_size as usize);
+
         for i in from_block.0..=to_block.0 {
             let block = self
                 .starknet
@@ -381,68 +487,82 @@ impl Sequencer for KatanaSequencer {
                 .blocks
                 .by_number(BlockNumber(i))
                 .ok_or(SequencerError::BlockNotFound(BlockId::Number(i)))?;
+            let block_hash = block.block_hash().0.into();
+            let block_number = i;
 
-            for tx in block.transactions() {
-                match tx {
-                    StarknetApiTransaction::Invoke(_) | StarknetApiTransaction::L1Handler(_) => {}
-                    _ => continue,
+            let txn_n = block.transactions().len();
+            if (txn_n as u64) < continuation_token.txn_n {
+                return Err(SequencerError::ContinuationToken(
+                    ContinuationTokenError::InvalidToken,
+                ));
+            }
+
+            for (txn_output, txn) in block
+                .transaction_outputs()
+                .iter()
+                .zip(block.transactions())
+                .skip(continuation_token.txn_n as usize)
+            {
+                let txn_events_len: usize = txn_output.events().len();
+
+                // check if continuation_token.event_n is correct
+                match (txn_events_len as u64).cmp(&continuation_token.event_n) {
+                    Ordering::Greater => (),
+                    Ordering::Less => {
+                        return Err(SequencerError::ContinuationToken(
+                            ContinuationTokenError::InvalidToken,
+                        ));
+                    }
+                    Ordering::Equal => {
+                        continuation_token.txn_n += 1;
+                        continuation_token.event_n = 0;
+                        continue;
+                    }
                 }
 
-                let sn = self.starknet.read().await;
-                let sn_tx = sn
-                    .transactions
-                    .transactions
-                    .get(&tx.transaction_hash())
-                    .ok_or(SequencerError::TxnNotFound(tx.transaction_hash()))?;
+                // skip events
+                let txn_events =
+                    txn_output.events().iter().skip(continuation_token.event_n as usize);
 
-                events.extend(
-                    sn_tx
-                        .emitted_events()
-                        .iter()
-                        .filter(|event| {
-                            // Check the address condition
-                            let address_condition = match &address {
-                                Some(a) => a == event.from_address.0.key(),
-                                None => true,
-                            };
-
-                            // If the address condition is false, no need to check the keys
-                            if !address_condition {
-                                return false;
-                            }
-
-                            // Check the keys condition
-                            match &keys {
-                                Some(keys) => {
-                                    // "Per key (by position), designate the possible values to be
-                                    // matched for events to be
-                                    // returned. Empty array designates 'any' value"
-                                    let keys_to_check =
-                                        std::cmp::min(keys.len(), event.content.keys.len());
-
-                                    event
-                                        .content
-                                        .keys
-                                        .iter()
-                                        .zip(keys.iter())
-                                        .take(keys_to_check)
-                                        .all(|(key, filter)| filter.contains(&key.0))
-                                }
-                                None => true,
-                            }
-                        })
-                        .map(|event| EmittedEvent {
-                            inner: event.clone(),
-                            block_hash: block.block_hash(),
-                            block_number: block.block_number(),
-                            transaction_hash: tx.transaction_hash(),
-                        })
-                        .collect::<Vec<_>>(),
+                let (new_filtered_events, continuation_index) = filter_events_by_params(
+                    txn_events,
+                    address,
+                    keys.clone(),
+                    Some((chunk_size as usize) - filtered_events.len()),
                 );
+
+                filtered_events.extend(new_filtered_events.iter().map(|e| EmittedEvent {
+                    from_address: (*e.from_address.0.key()).into(),
+                    keys: e.content.keys.clone().into_iter().map(|key| key.0.into()).collect(),
+                    data: e.content.data.0.clone().into_iter().map(|data| data.into()).collect(),
+                    block_hash,
+                    block_number,
+                    transaction_hash: txn.transaction_hash().0.into(),
+                }));
+
+                if filtered_events.len() >= chunk_size as usize {
+                    let token = if current_block < to_block.0
+                        || continuation_token.txn_n < txn_n as u64 - 1
+                        || continuation_index < txn_events_len
+                    {
+                        continuation_token.event_n = continuation_index as u64;
+                        Some(continuation_token.to_string())
+                    } else {
+                        None
+                    };
+                    return Ok(EventsPage { events: filtered_events, continuation_token: token });
+                }
+
+                continuation_token.txn_n += 1;
+                continuation_token.event_n = 0;
             }
+
+            current_block += 1;
+            continuation_token.block_n += 1;
+            continuation_token.txn_n = 0;
         }
 
-        Ok(events)
+        Ok(EventsPage { events: filtered_events, continuation_token: None })
     }
 
     async fn state_update(&self, block_id: BlockId) -> SequencerResult<StateUpdate> {
@@ -460,94 +580,52 @@ impl Sequencer for KatanaSequencer {
     }
 }
 
-#[async_trait]
-#[auto_impl(Arc)]
-pub trait Sequencer {
-    async fn starknet(&self) -> RwLockReadGuard<'_, StarknetWrapper>;
+fn filter_events_by_params(
+    events: Skip<Iter<'_, Event>>,
+    address: Option<StarkFelt>,
+    filter_keys: Option<Vec<Vec<StarkFelt>>>,
+    max_results: Option<usize>,
+) -> (Vec<Event>, usize) {
+    let mut filtered_events = vec![];
+    let mut index = 0;
 
-    async fn mut_starknet(&self) -> RwLockWriteGuard<'_, StarknetWrapper>;
+    // Iterate on block events.
+    for event in events {
+        index += 1;
+        if !address.map_or(true, |addr| addr == *event.from_address.0.key()) {
+            continue;
+        }
 
-    async fn state(&self, block_id: &BlockId) -> SequencerResult<MemDb>;
+        let match_keys = match filter_keys {
+            // From starknet-api spec:
+            // Per key (by position), designate the possible values to be matched for events to be
+            // returned. Empty array designates 'any' value"
+            Some(ref filter_keys) => filter_keys.iter().enumerate().all(|(i, keys)| {
+                // Lets say we want to filter events which are either named `Event1` or `Event2` and
+                // custom key `0x1` or `0x2` Filter: [[sn_keccack("Event1"),
+                // sn_keccack("Event2")], ["0x1", "0x2"]]
 
-    async fn chain_id(&self) -> ChainId;
+                // This checks: number of keys in event >= number of keys in filter (we check > i
+                // and not >= i because i is zero indexed) because otherwise this
+                // event doesn't contain all the keys we requested
+                event.content.keys.len() > i &&
+                    // This checks: Empty array desginates 'any' value
+                    (keys.is_empty()
+                    ||
+                    // This checks: If this events i'th value is one of the requested value in filter_keys[i]
+                    keys.contains(&event.content.keys[i].0))
+            }),
+            None => true,
+        };
 
-    async fn transaction_receipt(
-        &self,
-        hash: &TransactionHash,
-    ) -> Option<starknet_api::transaction::TransactionReceipt>;
-
-    async fn transaction_status(&self, hash: &TransactionHash) -> Option<TransactionStatus>;
-
-    async fn nonce_at(
-        &self,
-        block_id: BlockId,
-        contract_address: ContractAddress,
-    ) -> SequencerResult<Nonce>;
-
-    async fn block_number(&self) -> BlockNumber;
-
-    async fn block(&self, block_id: BlockId) -> Option<StarknetBlock>;
-
-    async fn transaction(
-        &self,
-        hash: &TransactionHash,
-    ) -> Option<starknet_api::transaction::Transaction>;
-
-    async fn class_hash_at(
-        &self,
-        block_id: BlockId,
-        contract_address: ContractAddress,
-    ) -> SequencerResult<ClassHash>;
-
-    async fn class(
-        &self,
-        block_id: BlockId,
-        class_hash: ClassHash,
-    ) -> SequencerResult<StarknetContract>;
-
-    async fn block_hash_and_number(&self) -> Option<(BlockHash, BlockNumber)>;
-
-    async fn call(
-        &self,
-        block_id: BlockId,
-        function_call: ExternalFunctionCall,
-    ) -> SequencerResult<Vec<StarkFelt>>;
-
-    async fn storage_at(
-        &self,
-        contract_address: ContractAddress,
-        storage_key: StorageKey,
-        block_id: BlockId,
-    ) -> SequencerResult<StarkFelt>;
-
-    async fn add_deploy_account_transaction(
-        &self,
-        transaction: DeployAccountTransaction,
-    ) -> (TransactionHash, ContractAddress);
-
-    async fn add_declare_transaction(
-        &self,
-        transaction: DeclareTransaction,
-        sierra_class: Option<FlattenedSierraClass>,
-    );
-
-    async fn add_invoke_transaction(&self, transaction: InvokeTransaction);
-
-    async fn estimate_fee(
-        &self,
-        account_transaction: AccountTransaction,
-        block_id: BlockId,
-    ) -> SequencerResult<FeeEstimate>;
-
-    async fn events(
-        &self,
-        from_block: BlockId,
-        to_block: BlockId,
-        address: Option<StarkFelt>,
-        keys: Option<Vec<Vec<StarkFelt>>>,
-        _continuation_token: Option<String>,
-        _chunk_size: u64,
-    ) -> SequencerResult<Vec<EmittedEvent>>;
-
-    async fn state_update(&self, block_id: BlockId) -> SequencerResult<StateUpdate>;
+        if match_keys {
+            filtered_events.push(event.clone());
+            if let Some(max_results) = max_results {
+                if filtered_events.len() >= max_results {
+                    break;
+                }
+            }
+        }
+    }
+    (filtered_events, index)
 }

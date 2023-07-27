@@ -84,6 +84,7 @@ main() {
         | jq -r '.[] | select(.prerelease==false) | .tag_name' \
         | grep -v '-' \
         | head -n 1)
+      DOJOUP_VERSION=$DOJOUP_TAG
     elif [[ "$DOJOUP_VERSION" == nightly* ]]; then
       DOJOUP_VERSION="nightly"
     elif [[ "$DOJOUP_VERSION" == [[:digit:]]* ]]; then
