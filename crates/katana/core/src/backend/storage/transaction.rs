@@ -1,11 +1,10 @@
-use blockifier::transaction::{
-    errors::TransactionExecutionError, objects::TransactionExecutionInfo,
-};
-use starknet::core::types::{FieldElement, TransactionReceipt};
-use starknet_api::transaction::{
-    DeclareTransactionOutput, DeployAccountTransactionOutput, InvokeTransactionOutput,
-    L1HandlerTransactionOutput, Transaction,
-};
+use std::sync::Arc;
+
+use blockifier::transaction::errors::TransactionExecutionError;
+use starknet::core::types::{Event, FieldElement, MsgToL1};
+use starknet_api::transaction::Transaction;
+
+use crate::backend::pending::ExecutedTransaction;
 
 /// The status of the included transactions.
 #[derive(Debug)]
@@ -23,9 +22,13 @@ pub enum IncludedTransactionStatus {
 /// Represents all transactions that are known to the sequencer.
 #[derive(Debug)]
 pub enum KnownTransaction {
+    Pending(PendingTransaction),
     Included(IncludedTransaction),
     Rejected(RejectedTransaction),
 }
+
+#[derive(Debug)]
+pub struct PendingTransaction(pub Arc<ExecutedTransaction>);
 
 /// A transaction that is known to be included in a block. Which also includes
 /// reverted transactions and transactions that are currently in the `pending` block.
@@ -33,10 +36,11 @@ pub enum KnownTransaction {
 pub struct IncludedTransaction {
     pub block_number: u64,
     pub block_hash: FieldElement,
-    pub transaction: Transaction,
-    pub receipt: TransactionReceipt,
+    // pub transaction: Transaction,
+    // pub output: TransactionOutput,
+    // pub execution_info: TransactionExecutionInfo,
+    pub transaction: Arc<ExecutedTransaction>,
     pub status: IncludedTransactionStatus,
-    pub execution_info: TransactionExecutionInfo,
 }
 
 /// A transaction that is known to be rejected by the sequencer i.e.,
@@ -47,10 +51,9 @@ pub struct RejectedTransaction {
     pub execution_error: TransactionExecutionError,
 }
 
-#[derive(Debug)]
-pub enum TransactionOutput {
-    Invoke(InvokeTransactionOutput),
-    Declare(DeclareTransactionOutput),
-    L1Handler(L1HandlerTransactionOutput),
-    DeployAccount(DeployAccountTransactionOutput),
+#[derive(Debug, Clone)]
+pub struct TransactionOutput {
+    pub actual_fee: u128,
+    pub events: Vec<Event>,
+    pub messages_sent: Vec<MsgToL1>,
 }

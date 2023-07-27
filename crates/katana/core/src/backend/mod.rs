@@ -26,6 +26,7 @@ use tracing::{info, trace, warn};
 pub mod block;
 pub mod config;
 pub mod contract;
+pub mod pending;
 pub mod state;
 pub mod storage;
 pub mod transaction;
