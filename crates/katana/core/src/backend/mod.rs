@@ -47,7 +47,7 @@ use crate::util::{
     get_current_timestamp,
 };
 
-pub struct StarknetWrapper {
+pub struct Backend {
     pub config: StarknetConfig,
     pub blocks: StarknetBlocks,
     pub block_context: BlockContext,
@@ -58,7 +58,7 @@ pub struct StarknetWrapper {
     pub pending_cached_state: CachedState<MemDb>,
 }
 
-impl StarknetWrapper {
+impl Backend {
     pub fn new(config: StarknetConfig) -> Self {
         let blocks = StarknetBlocks::default();
         let transactions = StarknetTransactions::default();
@@ -455,7 +455,7 @@ fn execute_transaction<S: StateReader>(
     }
 }
 
-fn has_pending_transactions(starknet: &StarknetWrapper) -> bool {
+fn has_pending_transactions(starknet: &Backend) -> bool {
     match starknet.blocks.pending_block {
         Some(ref pending_block) => !pending_block.inner.body.transactions.is_empty(),
         None => false,
