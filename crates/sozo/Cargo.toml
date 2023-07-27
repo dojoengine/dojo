@@ -36,6 +36,8 @@ torii-client = { path = "../torii/client" }
 tracing-log = "0.1.3"
 tracing.workspace = true
 url = "2.2.2"
+yansi.workspace = true
+notify = "6.0.1"
 
 [dev-dependencies]
 assert_fs = "1.0.10"

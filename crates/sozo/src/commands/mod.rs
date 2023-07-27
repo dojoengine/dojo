@@ -7,6 +7,7 @@ pub(crate) mod auth;
 pub(crate) mod build;
 pub(crate) mod completions;
 pub(crate) mod component;
+pub(crate) mod dev;
 pub(crate) mod events;
 pub(crate) mod execute;
 pub(crate) mod init;
@@ -22,7 +23,7 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
         Commands::Test(args) => args.run(config),
         Commands::Build(args) => args.run(config),
         Commands::Migrate(args) => args.run(config),
-
+        Commands::Dev(args) => args.run(config),
         Commands::Auth(args) => args.run(config),
         Commands::Execute(args) => args.run(config),
         Commands::Component(args) => args.run(config),

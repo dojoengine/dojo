@@ -11,6 +11,7 @@ use crate::commands::auth::AuthArgs;
 use crate::commands::build::BuildArgs;
 use crate::commands::completions::CompletionsArgs;
 use crate::commands::component::ComponentArgs;
+use crate::commands::dev::DevArgs;
 use crate::commands::events::EventsArgs;
 use crate::commands::execute::ExecuteArgs;
 use crate::commands::init::InitArgs;
@@ -57,6 +58,8 @@ pub enum Commands {
     #[command(about = "Run a migration, declaring and deploying contracts as necessary to \
                        update the world")]
     Migrate(Box<MigrateArgs>),
+    #[command(about = "Developer mode: watcher for building and migration")]
+    Dev(DevArgs),
     #[command(about = "Test the project's smart contracts")]
     Test(TestArgs),
     #[command(about = "Execute a world's system")]
