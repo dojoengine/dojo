@@ -32,7 +32,7 @@ use crate::backend::config::StarknetConfig;
 use crate::backend::contract::StarknetContract;
 use crate::backend::state::{MemDb, StateExt};
 use crate::backend::transaction::ExternalFunctionCall;
-use crate::backend::StarknetWrapper;
+use crate::backend::Backend;
 use crate::sequencer_error::SequencerError;
 use crate::util::{ContinuationToken, ContinuationTokenError};
 
@@ -46,9 +46,9 @@ pub struct SequencerConfig {
 #[async_trait]
 #[auto_impl(Arc)]
 pub trait Sequencer {
-    async fn starknet(&self) -> RwLockReadGuard<'_, StarknetWrapper>;
+    async fn starknet(&self) -> RwLockReadGuard<'_, Backend>;
 
-    async fn mut_starknet(&self) -> RwLockWriteGuard<'_, StarknetWrapper>;
+    async fn mut_starknet(&self) -> RwLockWriteGuard<'_, Backend>;
 
     async fn state(&self, block_id: &BlockId) -> SequencerResult<MemDb>;
 
@@ -137,12 +137,12 @@ pub trait Sequencer {
 
 pub struct KatanaSequencer {
     pub config: SequencerConfig,
-    pub starknet: Arc<RwLock<StarknetWrapper>>,
+    pub starknet: Arc<RwLock<Backend>>,
 }
 
 impl KatanaSequencer {
     pub fn new(config: SequencerConfig, starknet_config: StarknetConfig) -> Self {
-        Self { config, starknet: Arc::new(RwLock::new(StarknetWrapper::new(starknet_config))) }
+        Self { config, starknet: Arc::new(RwLock::new(Backend::new(starknet_config))) }
     }
 
     pub async fn start(&self) {
@@ -215,11 +215,11 @@ impl KatanaSequencer {
 
 #[async_trait]
 impl Sequencer for KatanaSequencer {
-    async fn starknet(&self) -> RwLockReadGuard<'_, StarknetWrapper> {
+    async fn starknet(&self) -> RwLockReadGuard<'_, Backend> {
         self.starknet.read().await
     }
 
-    async fn mut_starknet(&self) -> RwLockWriteGuard<'_, StarknetWrapper> {
+    async fn mut_starknet(&self) -> RwLockWriteGuard<'_, Backend> {
         self.starknet.write().await
     }
 
