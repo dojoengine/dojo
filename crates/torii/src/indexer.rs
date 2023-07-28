@@ -2,6 +2,7 @@ use std::error::Error;
 
 use dojo_world::manifest::Manifest;
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
+use starknet_crypto::FieldElement;
 use tracing::info;
 
 use crate::engine::{Engine, EngineConfig, Processors};
@@ -22,10 +23,17 @@ impl<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> Indexer<'a, S
         provider: &'a JsonRpcClient<T>,
         processors: Processors<S, T>,
         manifest: Manifest,
+        world_address: FieldElement,
         start_block: Option<u64>,
     ) -> Self {
-        let engine =
-            Engine::new(storage, provider, processors, start_block, EngineConfig::default());
+        let engine = Engine::new(
+            storage,
+            provider,
+            processors,
+            world_address,
+            start_block,
+            EngineConfig::default(),
+        );
         Self { storage, provider, engine, manifest }
     }
 

@@ -8,6 +8,7 @@ use starknet::core::types::{
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
 use starknet::providers::Provider;
+use starknet_crypto::FieldElement;
 use tokio::time::sleep;
 use tracing::{error, info, warn};
 
@@ -42,6 +43,7 @@ pub struct Engine<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> 
     storage: &'a S,
     provider: &'a JsonRpcClient<T>,
     processors: Processors<S, T>,
+    world_address: FieldElement,
     start_block: Option<u64>,
     config: EngineConfig,
 }
@@ -51,10 +53,11 @@ impl<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> Engine<'a, S,
         storage: &'a S,
         provider: &'a JsonRpcClient<T>,
         processors: Processors<S, T>,
+        world_address: FieldElement,
         start_block: Option<u64>,
         config: EngineConfig,
     ) -> Self {
-        Self { storage, provider, processors, start_block, config }
+        Self { storage, provider, processors, world_address, start_block, config }
     }
 
     pub async fn start(&self) -> Result<(), Box<dyn Error>> {
@@ -155,6 +158,11 @@ impl<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> Engine<'a, S,
 
             if let TransactionReceipt::Invoke(invoke_receipt) = receipt.clone() {
                 for event in &invoke_receipt.events {
+                    if event.from_address != self.world_address {
+                        info!("event not from world address, skipping");
+                        continue;
+                    }
+
                     process_event(
                         self.storage,
                         self.provider,
