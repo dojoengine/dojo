@@ -1,7 +1,7 @@
 use std::collections::{HashMap, VecDeque};
 
 use blockifier::block_context::BlockContext;
-use starknet::core::types::{BlockId, BlockTag, FieldElement};
+use starknet::core::types::{BlockId, BlockTag, FieldElement, StateDiff, StateUpdate};
 
 use self::{block::Block, transaction::KnownTransaction};
 use super::state::MemDb;
@@ -9,6 +9,9 @@ use crate::backend::storage::block::PartialHeader;
 
 pub mod block;
 pub mod transaction;
+
+const DEFAULT_HISTORY_LIMIT: usize = 500;
+const MIN_HISTORY_LIMIT: usize = 10;
 
 /// Represents the complete state of a single block
 pub struct InMemoryBlockStates {
@@ -27,9 +30,14 @@ impl InMemoryBlockStates {
         Self {
             states: Default::default(),
             in_memory_limit: limit,
-            min_in_memory_limit: limit.min(10),
+            min_in_memory_limit: limit.min(MIN_HISTORY_LIMIT),
             present: Default::default(),
         }
+    }
+
+    /// Returns the state for the given `hash` if present
+    pub fn get(&mut self, hash: &FieldElement) -> Option<&MemDb> {
+        self.states.get(hash)
     }
 
     /// Inserts a new (hash -> state) pair
@@ -64,6 +72,13 @@ impl InMemoryBlockStates {
     }
 }
 
+impl Default for InMemoryBlockStates {
+    fn default() -> Self {
+        // enough in memory to store `DEFAULT_HISTORY_LIMIT` blocks in memory
+        Self::new(DEFAULT_HISTORY_LIMIT)
+    }
+}
+
 // TODO: can we wrap all the fields in a `RwLock` to prevent read blocking?
 #[derive(Debug, Default)]
 pub struct BlockchainStorage {
@@ -71,6 +86,8 @@ pub struct BlockchainStorage {
     pub blocks: HashMap<FieldElement, Block>,
     /// Mapping from block number -> block hash
     pub hashes: HashMap<u64, FieldElement>,
+    /// Mapping from block number -> state update
+    pub state_update: HashMap<FieldElement, StateUpdate>,
     /// The latest block hash
     pub latest_hash: FieldElement,
     /// The latest block number
@@ -100,8 +117,31 @@ impl BlockchainStorage {
             hashes: HashMap::from([(genesis_number, genesis_hash)]),
             latest_hash: genesis_hash,
             latest_number: genesis_number,
+            state_update: HashMap::default(),
             transactions: HashMap::default(),
         }
+    }
+
+    /// Appends a new block to the chain and store the state diff.
+    pub fn append_block(&self, hash: FieldElement, block: Block, state_diff: StateDiff) {
+        let number = block.header.number;
+
+        assert_eq!(self.latest_number + 1, number);
+
+        let old_root = self.blocks.get(&self.latest_hash).map(|b| b.header.state_root);
+
+        let state_update = StateUpdate {
+            block_hash: hash,
+            new_root: block.header.state_root,
+            old_root: if number == 0 { FieldElement::ZERO } else { old_root.unwrap() },
+            state_diff,
+        };
+
+        self.latest_hash = hash;
+        self.latest_number = number;
+        self.blocks.insert(hash, block);
+        self.hashes.insert(number, hash);
+        self.state_update.insert(hash, state_update);
     }
 
     pub fn total_blocks(&self) -> usize {
