@@ -26,6 +26,7 @@
     "winston": "^3.8.2",
     "@latticexyz/recs": "^1.43.0",
     "@latticexyz/utils": "^1.36.1\n",
+    "graphql-tag": "^2.12.6",
     "mobx": "^6.9.0",
     "rxjs": "^7.8.1",
     "type-fest": "^3.12.0"
