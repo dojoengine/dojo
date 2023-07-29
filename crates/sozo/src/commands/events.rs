@@ -25,6 +25,10 @@ pub struct EventsArgs {
     #[arg(help = "Number of events to return per page")]
     pub chunk_size: u64,
 
+    #[arg(long)]
+    #[arg(help = "Continuation string to be passed for rpc request")]
+    pub continuation_token: Option<String>,
+
     #[command(flatten)]
     pub world: WorldOptions,
 
