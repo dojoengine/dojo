@@ -46,8 +46,8 @@ struct Args {
     #[arg(short, long)]
     manifest: Option<Utf8PathBuf>,
     /// Specify a block to start indexing from, ignored if stored head exists
-    #[arg(short, long)]
-    start_block: Option<u64>,
+    #[arg(short, long, default_value = "0")]
+    start_block: u64,
 }
 
 #[tokio::main]

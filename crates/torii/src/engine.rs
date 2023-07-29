@@ -31,11 +31,17 @@ impl<S: State, T: JsonRpcTransport + Sync + Send> Default for Processors<S, T> {
 #[derive(Debug)]
 pub struct EngineConfig {
     pub block_time: Duration,
+    pub world_address: FieldElement,
+    pub start_block: u64,
 }
 
 impl Default for EngineConfig {
     fn default() -> Self {
-        Self { block_time: Duration::from_secs(1) }
+        Self {
+            block_time: Duration::from_secs(1),
+            world_address: FieldElement::ZERO,
+            start_block: 0,
+        }
     }
 }
 
@@ -43,8 +49,6 @@ pub struct Engine<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> 
     storage: &'a S,
     provider: &'a JsonRpcClient<T>,
     processors: Processors<S, T>,
-    world_address: FieldElement,
-    start_block: Option<u64>,
     config: EngineConfig,
 }
 
@@ -53,23 +57,22 @@ impl<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> Engine<'a, S,
         storage: &'a S,
         provider: &'a JsonRpcClient<T>,
         processors: Processors<S, T>,
-        world_address: FieldElement,
-        start_block: Option<u64>,
         config: EngineConfig,
     ) -> Self {
-        Self { storage, provider, processors, world_address, start_block, config }
+        Self { storage, provider, processors, config }
     }
 
     pub async fn start(&self) -> Result<(), Box<dyn Error>> {
         let storage_head = self.storage.head().await?;
 
-        let mut current_block_number = match (storage_head, self.start_block) {
-            (0, Some(start_block)) => start_block,
-            (_, Some(_)) => {
-                warn!("start block ignored, stored head exists and will be used instead");
+        let mut current_block_number = match storage_head {
+            0 => self.config.start_block,
+            _ => {
+                if self.config.start_block != 0 {
+                    warn!("start block ignored, stored head exists and will be used instead");
+                }
                 storage_head
             }
-            (_, None) => storage_head,
         };
 
         loop {
@@ -158,7 +161,7 @@ impl<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> Engine<'a, S,
 
             if let TransactionReceipt::Invoke(invoke_receipt) = receipt.clone() {
                 for event in &invoke_receipt.events {
-                    if event.from_address != self.world_address {
+                    if event.from_address != self.config.world_address {
                         info!("event not from world address, skipping");
                         continue;
                     }

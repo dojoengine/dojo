@@ -24,15 +24,13 @@ impl<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> Indexer<'a, S
         processors: Processors<S, T>,
         manifest: Manifest,
         world_address: FieldElement,
-        start_block: Option<u64>,
+        start_block: u64,
     ) -> Self {
         let engine = Engine::new(
             storage,
             provider,
             processors,
-            world_address,
-            start_block,
-            EngineConfig::default(),
+            EngineConfig { world_address, start_block, ..Default::default() },
         );
         Self { storage, provider, engine, manifest }
     }
