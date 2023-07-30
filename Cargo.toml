@@ -40,7 +40,7 @@ cairo-lang-lowering = "2.0.1"
 cairo-lang-parser = "2.0.1"
 cairo-lang-plugins = "2.0.1"
 cairo-lang-project = "2.0.1"
-cairo-lang-semantic = { version = "2.0.1", features = [ "testing" ] }
+cairo-lang-semantic = { version = "2.0.1", features = ["testing"] }
 cairo-lang-sierra = "2.0.1"
 cairo-lang-sierra-generator = "2.0.1"
 cairo-lang-sierra-to-casm = "2.0.1"
@@ -50,12 +50,13 @@ cairo-lang-test-runner = "2.0.1"
 cairo-lang-test-utils = "2.0.1"
 cairo-lang-utils = "2.0.1"
 cairo-vm = "0.6.0"
-camino = { version = "1.1.2", features = [ "serde1" ] }
-chrono = { version = "0.4.24", features = [ "serde" ] }
-clap = { version = "4.2", features = [ "derive" ] }
+camino = { version = "1.1.2", features = ["serde1"] }
+chrono = { version = "0.4.24", features = ["serde"] }
+clap = { version = "4.2", features = ["derive"] }
 colored = "2"
 console = "0.15.7"
 convert_case = "0.6.0"
+bitvec = "1.0.1"
 env_logger = "0.10.0"
 flate2 = "1.0.24"
 indoc = "1.0.7"
@@ -67,16 +68,16 @@ rayon = "0.9.0"
 salsa = "0.16.1"
 scarb = { git = "https://github.com/software-mansion/scarb", tag = "v0.5.1" }
 semver = "1.0.5"
-serde = { version = "1.0.156", features = [ "derive" ] }
+serde = { version = "1.0.156", features = ["derive"] }
 serde_json = "1.0"
 serde_with = "2.3.1"
-smol_str = { version = "0.2.0", features = [ "serde" ] }
+smol_str = { version = "0.2.0", features = ["serde"] }
 starknet = "0.4.0"
 starknet-crypto = "0.5.1"
 starknet_api = { git = "https://github.com/starkware-libs/starknet-api", rev = "a4c78ff" }
 test-log = "0.2.11"
 thiserror = "1.0.32"
-tokio = { version = "1.16", features = [ "full" ] }
+tokio = { version = "1.16", features = ["full"] }
 toml = "0.7.4"
 tracing = "0.1"
 tracing-subscriber = "0.3.16"
