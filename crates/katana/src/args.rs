@@ -5,6 +5,7 @@ use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::constants::{
     DEFAULT_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_VALIDATE_MAX_STEPS,
 };
+use katana_core::db::serde::state::SerializableState;
 use katana_core::sequencer::SequencerConfig;
 use katana_rpc::config::ServerConfig;
 
@@ -35,8 +36,9 @@ pub struct KatanaArgs {
 
     #[arg(long)]
     #[arg(value_name = "PATH")]
+    #[arg(value_parser = SerializableState::parse)]
     #[arg(help = "Initialize the chain from a previously saved state snapshot.")]
-    pub load_state: Option<PathBuf>,
+    pub load_state: Option<SerializableState>,
 
     #[command(flatten)]
     #[command(next_help_heading = "Server options")]
@@ -127,8 +129,7 @@ impl KatanaArgs {
             account_path: self.starknet.account_path.clone(),
             allow_zero_max_fee: self.starknet.allow_zero_max_fee,
             auto_mine: self.block_time.is_none() && !self.no_mining,
-            dump_path: self.dump_state.clone(),
-            load_path: self.load_state.clone(),
+            init_state: self.load_state.clone(),
             env: Environment {
                 chain_id: self.starknet.environment.chain_id.clone(),
                 gas_price: self.starknet.environment.gas_price.unwrap_or(DEFAULT_GAS_PRICE),

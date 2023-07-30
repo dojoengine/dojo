@@ -40,6 +40,7 @@ use crate::constants::{
     DEFAULT_PREFUNDED_ACCOUNT_BALANCE, ERC20_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS, UDC_ADDRESS,
     UDC_CLASS_HASH,
 };
+use crate::db::Db;
 use crate::sequencer_error::SequencerError;
 use crate::util::{
     convert_blockifier_tx_to_starknet_api_tx, convert_state_diff_to_rpc_state_diff,
@@ -68,6 +69,11 @@ impl StarknetWrapper {
         let mut state = MemDb::default();
 
         let pending_state = CachedState::new(state.clone());
+
+        if let Some(ref init_state) = config.init_state {
+            state.load_state(init_state.clone()).expect("failed to load initial state");
+            info!("Successfully loaded initial state");
+        }
 
         let predeployed_accounts = PredeployedAccounts::initialize(
             config.total_accounts,
