@@ -16,19 +16,16 @@ use blockifier::transaction::transaction_execution::Transaction;
 use parking_lot::RwLock;
 use starknet::core::types::{FeeEstimate, FieldElement};
 use starknet_api::block::BlockTimestamp;
+use starknet_api::core::{ContractAddress, EntryPointSelector};
+use starknet_api::transaction::Calldata;
 use tokio::sync::RwLock as AsyncRwLock;
 use tracing::{error, info, warn};
 
-pub mod block;
 pub mod config;
 pub mod contract;
 pub mod executor;
 pub mod state;
 pub mod storage;
-pub mod transaction;
-
-use config::StarknetConfig;
-use transaction::ExternalFunctionCall;
 
 use crate::accounts::PredeployedAccounts;
 use crate::backend::state::{MemDb, StateExt};
@@ -38,10 +35,17 @@ use crate::sequencer_error::SequencerError;
 use crate::utils::transaction::convert_blockifier_to_api_tx;
 use crate::utils::{convert_state_diff_to_rpc_state_diff, get_current_timestamp};
 
+use self::config::StarknetConfig;
 use self::executor::{execute_transaction, PendingBlockExecutor};
 use self::storage::block::{Block, PartialHeader};
 use self::storage::transaction::{IncludedTransaction, KnownTransaction, TransactionStatus};
 use self::storage::{BlockchainStorage, InMemoryBlockStates};
+
+pub struct ExternalFunctionCall {
+    pub calldata: Calldata,
+    pub contract_address: ContractAddress,
+    pub entry_point_selector: EntryPointSelector,
+}
 
 pub struct Backend {
     pub config: RwLock<StarknetConfig>,

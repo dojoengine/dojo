@@ -6,7 +6,7 @@ use blockifier::transaction::transactions::DeclareTransaction;
 use jsonrpsee::core::{async_trait, Error};
 use katana_core::backend::contract::StarknetContract;
 use katana_core::backend::storage::transaction::{KnownTransaction, PendingTransaction};
-use katana_core::backend::transaction::ExternalFunctionCall;
+use katana_core::backend::ExternalFunctionCall;
 use katana_core::sequencer::Sequencer;
 use katana_core::sequencer_error::SequencerError;
 use katana_core::utils::contract::{

@@ -28,8 +28,7 @@ use crate::backend::storage::block::ExecutedBlock;
 use crate::backend::storage::transaction::{
     KnownTransaction, PendingTransaction, TransactionStatus,
 };
-use crate::backend::transaction::ExternalFunctionCall;
-use crate::backend::Backend;
+use crate::backend::{Backend, ExternalFunctionCall};
 use crate::sequencer_error::SequencerError;
 use crate::utils::event::{ContinuationToken, ContinuationTokenError};
 
