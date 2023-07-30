@@ -39,10 +39,10 @@ use self::storage::transaction::{IncludedTransaction, KnownTransaction, Transact
 use self::storage::{BlockchainStorage, InMemoryBlockStates};
 use crate::accounts::PredeployedAccounts;
 use crate::backend::state::{MemDb, StateExt};
-use crate::block_context::BlockContextGenerator;
 use crate::constants::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
 use crate::db::serde::state::SerializableState;
 use crate::db::Db;
+use crate::env::BlockContextGenerator;
 use crate::sequencer_error::SequencerError;
 use crate::utils::transaction::convert_blockifier_to_api_tx;
 use crate::utils::{convert_state_diff_to_rpc_state_diff, get_current_timestamp};

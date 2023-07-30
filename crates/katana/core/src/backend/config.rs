@@ -6,12 +6,12 @@ use starknet_api::core::{ChainId, ContractAddress, PatriciaKey};
 use starknet_api::hash::StarkHash;
 use starknet_api::patricia_key;
 
-use crate::block_context::{get_default_vm_resource_fee_cost, BlockContextGenerator};
 use crate::constants::{
     DEFAULT_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_VALIDATE_MAX_STEPS, FEE_TOKEN_ADDRESS,
     SEQUENCER_ADDRESS,
 };
 use crate::db::serde::state::SerializableState;
+use crate::env::{get_default_vm_resource_fee_cost, BlockContextGenerator};
 
 #[derive(Debug)]
 pub struct StarknetConfig {
