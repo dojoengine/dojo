@@ -32,17 +32,14 @@ async fn main() {
     match spawn(katana_api, starknet_api, server_config).await {
         Ok(NodeHandle { addr, handle, .. }) => {
             if !config.silent {
-                let accounts = sequencer.starknet.predeployed_accounts.display();
+                let accounts = sequencer.backend.predeployed_accounts.display();
 
                 print_intro(
                     accounts,
                     config.starknet.seed,
                     format!("🚀 JSON-RPC server started: {}", Paint::red(format!("http://{addr}"))),
                 );
-                println!("print this hit");
             }
-
-            println!("bruh");
 
             sequencer.start().await;
             handle.stopped().await;

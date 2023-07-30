@@ -36,7 +36,7 @@ impl InMemoryBlockStates {
     }
 
     /// Returns the state for the given `hash` if present
-    pub fn get(&mut self, hash: &FieldElement) -> Option<&MemDb> {
+    pub fn get(&self, hash: &FieldElement) -> Option<&MemDb> {
         self.states.get(hash)
     }
 
@@ -123,7 +123,7 @@ impl BlockchainStorage {
     }
 
     /// Appends a new block to the chain and store the state diff.
-    pub fn append_block(&self, hash: FieldElement, block: Block, state_diff: StateDiff) {
+    pub fn append_block(&mut self, hash: FieldElement, block: Block, state_diff: StateDiff) {
         let number = block.header.number;
 
         assert_eq!(self.latest_number + 1, number);
@@ -149,13 +149,17 @@ impl BlockchainStorage {
     }
 
     /// Returns the block hash based on the block id
-    pub fn hash(&self, block: BlockId) -> Option<FieldElement> {
+    pub fn block_hash(&self, block: BlockId) -> Option<FieldElement> {
         match block {
             BlockId::Tag(BlockTag::Pending) => None,
             BlockId::Tag(BlockTag::Latest) => Some(self.latest_hash),
             BlockId::Hash(hash) => Some(hash),
             BlockId::Number(num) => self.hashes.get(&num).copied(),
         }
+    }
+
+    pub fn block_by_number(&self, number: u64) -> Option<&Block> {
+        self.hashes.get(&number).and_then(|hash| self.blocks.get(hash))
     }
 }
 
