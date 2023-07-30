@@ -1,45 +1,51 @@
 use std::sync::Arc;
 
 use blockifier::execution::entry_point::CallInfo;
+use blockifier::state::state_api::StateReader;
 use blockifier::transaction::errors::TransactionExecutionError;
-use blockifier::transaction::objects::TransactionExecutionInfo;
+use blockifier::transaction::objects::{ResourcesMapping, TransactionExecutionInfo};
 use blockifier::transaction::transaction_execution::Transaction as ExecutionTransaction;
 use blockifier::transaction::transactions::ExecutableTransaction;
 use blockifier::{block_context::BlockContext, state::cached_state::CachedState};
+use convert_case::{Case, Casing};
+use parking_lot::RwLock;
 use starknet::core::types::{Event, FieldElement, MsgToL1};
 use starknet_api::transaction::Transaction;
-use tokio::sync::RwLock;
-use tracing::warn;
+use tokio::sync::RwLock as AsyncRwLock;
+use tracing::{trace, warn};
 
-use crate::util::convert_blockifier_tx_to_starknet_api_tx;
+use crate::backend::storage::transaction::KnownTransaction;
+use crate::utils::transaction::convert_blockifier_to_api_tx;
 
-use super::storage::block::{Block, PartialHeader};
-use super::storage::transaction::{
-    KnownTransaction, PendingTransaction, RejectedTransaction, TransactionOutput,
-};
-use super::{state::MemDb, storage::BlockchainStorage};
+use super::state::MemDb;
+use super::storage::block::{Block, PartialBlock, PartialHeader};
+use super::storage::transaction::{RejectedTransaction, TransactionOutput};
+use super::storage::BlockchainStorage;
 
 #[derive(Debug)]
-pub struct PendingBlock<'a> {
+pub struct PendingBlockExecutor {
+    pub parent_hash: FieldElement,
     /// The state of the pending block. It is the state that the
     /// transaction included in the pending block will be executed on.
     /// The changes made after the execution of a transaction will be
     /// persisted for the next included transaction.
     pub state: CachedState<MemDb>,
-    pub block_context: &'a BlockContext,
-    pub storage: &'a RwLock<BlockchainStorage>,
+    pub storage: Arc<AsyncRwLock<BlockchainStorage>>,
+    pub block_context: Arc<RwLock<BlockContext>>,
     pub transactions: Vec<Arc<ExecutedTransaction>>,
     pub outputs: Vec<TransactionOutput>,
 }
 
-impl<'a> PendingBlock<'a> {
+impl PendingBlockExecutor {
     pub fn new(
+        parent_hash: FieldElement,
         state: MemDb,
-        block_context: &'a BlockContext,
-        storage: &'a RwLock<BlockchainStorage>,
+        block_context: Arc<RwLock<BlockContext>>,
+        storage: Arc<AsyncRwLock<BlockchainStorage>>,
     ) -> Self {
         Self {
             storage,
+            parent_hash,
             block_context,
             outputs: Vec::new(),
             transactions: Vec::new(),
@@ -47,57 +53,74 @@ impl<'a> PendingBlock<'a> {
         }
     }
 
+    pub fn as_block(&self) -> PartialBlock {
+        let block_context = self.block_context.read();
+
+        let header = PartialHeader {
+            parent_hash: self.parent_hash,
+            gas_price: block_context.gas_price,
+            number: block_context.block_number.0,
+            timestamp: block_context.block_timestamp.0,
+            sequencer_address: (*block_context.sequencer_address.0.key()).into(),
+        };
+
+        PartialBlock {
+            header,
+            outputs: self.outputs.clone(),
+            transactions: self.transactions.clone(),
+        }
+    }
+
     /// Generate a new valid block which will be included to the blockchain.
-    pub async fn generate_block(&self) -> Block {
-        let parent_hash = self.storage.read().await.latest_hash;
+    pub async fn to_block(&self) -> Block {
         let partial_header = PartialHeader {
-            // use the current latest hash as the parent hash for this new block
-            parent_hash,
-            gas_price: self.block_context.gas_price,
-            number: self.block_context.block_number.0,
-            timestamp: self.block_context.block_timestamp.0,
-            sequencer_address: (*self.block_context.sequencer_address.0.key()).into(),
+            parent_hash: self.parent_hash,
+            gas_price: self.block_context.read().gas_price,
+            number: self.block_context.read().block_number.0,
+            timestamp: self.block_context.read().block_timestamp.0,
+            sequencer_address: (*self.block_context.read().sequencer_address.0.key()).into(),
         };
 
         Block::new(partial_header, self.transactions.clone(), self.outputs.clone())
     }
 
-    /// Reset the pending block. This will clear all the transactions and
-    /// the state of the pending block.
-    pub fn reset(&mut self, state: MemDb) {
-        self.state = CachedState::new(state);
-        self.transactions.clear();
-        self.outputs.clear();
-    }
-
-    // Add a transaction to the pending block. The transaction will be executed
+    // Add a transaction to the executor. The transaction will be executed
     // on the pending state. The transaction will be added to the pending block
     // if it passes the validation logic. Otherwise, the transaction will be
     // rejected. On both cases, the transaction will still be stored in the
     // storage.
-    pub async fn add_transaction(&mut self, transaction: ExecutionTransaction) {
-        let api_tx = convert_blockifier_tx_to_starknet_api_tx(&transaction);
-        let res = execute_transaction(transaction, &mut self.state, self.block_context);
-
+    pub async fn add_transaction(&mut self, transaction: ExecutionTransaction) -> bool {
+        let api_tx = convert_blockifier_to_api_tx(&transaction);
         let hash: FieldElement = api_tx.transaction_hash().0.into();
+        let res = execute_transaction(transaction, &mut self.state, &self.block_context.read());
 
-        let tx = match res {
+        match res {
             Ok(execution_info) => {
+                trace!(
+                    "Transaction resource usage: {}",
+                    pretty_print_resources(&execution_info.actual_resources)
+                );
+
                 let executed_tx = Arc::new(ExecutedTransaction::new(api_tx, execution_info));
 
-                self.transactions.push(executed_tx.clone());
                 self.outputs.push(executed_tx.output.clone());
+                self.transactions.push(executed_tx);
 
-                KnownTransaction::Pending(PendingTransaction(executed_tx))
+                true
             }
 
-            Err(execution_error) => KnownTransaction::Rejected(RejectedTransaction {
-                execution_error,
-                transaction: api_tx,
-            }),
-        };
+            Err(err) => {
+                self.storage.write().await.transactions.insert(
+                    hash,
+                    KnownTransaction::Rejected(Box::new(RejectedTransaction {
+                        transaction: api_tx,
+                        execution_error: err.to_string(),
+                    })),
+                );
 
-        self.storage.write().await.transactions.insert(hash, tx);
+                false
+            }
+        }
     }
 }
 
@@ -119,6 +142,10 @@ impl ExecutedTransaction {
             execution_info,
             output: TransactionOutput { actual_fee, events, messages_sent },
         }
+    }
+
+    pub fn hash(&self) -> FieldElement {
+        self.transaction.transaction_hash().0.into()
     }
 
     fn events(execution_info: &TransactionExecutionInfo) -> Vec<Event> {
@@ -191,9 +218,9 @@ impl ExecutedTransaction {
     }
 }
 
-fn execute_transaction(
+pub fn execute_transaction<S: StateReader>(
     transaction: ExecutionTransaction,
-    pending_state: &mut CachedState<MemDb>,
+    pending_state: &mut CachedState<S>,
     block_context: &BlockContext,
 ) -> Result<TransactionExecutionInfo, TransactionExecutionError> {
     let res = match transaction {
@@ -214,4 +241,31 @@ fn execute_transaction(
             Err(err)
         }
     }
+}
+
+pub fn pretty_print_resources(resources: &ResourcesMapping) -> String {
+    let mut mapped_strings: Vec<_> = resources
+        .0
+        .iter()
+        .filter_map(|(k, v)| match k.as_str() {
+            "l1_gas_usage" => Some(format!("L1 Gas: {}", v)),
+            "range_check_builtin" => Some(format!("Range Checks: {}", v)),
+            "ecdsa_builtin" => Some(format!("ECDSA: {}", v)),
+            "n_steps" => None,
+            "pedersen_builtin" => Some(format!("Pedersen: {}", v)),
+            "bitwise_builtin" => Some(format!("Bitwise: {}", v)),
+            "keccak_builtin" => Some(format!("Keccak: {}", v)),
+            _ => Some(format!("{}: {}", k.to_case(Case::Title), v)),
+        })
+        .collect::<Vec<String>>();
+
+    // Sort the strings alphabetically
+    mapped_strings.sort();
+
+    // Prepend "Steps" if it exists, so it is always first
+    if let Some(steps) = resources.0.get("n_steps") {
+        mapped_strings.insert(0, format!("Steps: {}", steps));
+    }
+
+    mapped_strings.join(" | ")
 }

@@ -2,15 +2,25 @@ use std::sync::Arc;
 
 use starknet::core::{
     crypto::compute_hash_on_elements,
-    types::{BlockStatus, FieldElement},
+    types::{
+        BlockStatus as RpcBlockStatus, FieldElement, MaybePendingBlockWithTxs,
+        PendingBlockWithTxHashes, PendingBlockWithTxs,
+    },
+    types::{BlockWithTxHashes, BlockWithTxs, MaybePendingBlockWithTxHashes},
 };
 
-use crate::backend::pending::ExecutedTransaction;
+use crate::{backend::executor::ExecutedTransaction, utils::transaction::convert_api_to_rpc_tx};
 
 use super::transaction::TransactionOutput;
 
-/// Header of a pending block
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
+pub enum BlockStatus {
+    Rejected,
+    AcceptedOnL2,
+    AcceptedOnL1,
+}
+
+#[derive(Debug, Clone)]
 pub struct PartialHeader {
     pub parent_hash: FieldElement,
     pub number: u64,
@@ -56,7 +66,36 @@ impl Header {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+pub enum ExecutedBlock {
+    Pending(PartialBlock),
+    Included(Block),
+}
+
+impl ExecutedBlock {
+    pub fn transaction_count(&self) -> usize {
+        match self {
+            Self::Pending(block) => block.transactions.len(),
+            Self::Included(block) => block.transactions.len(),
+        }
+    }
+
+    pub fn transactions(&self) -> &[Arc<ExecutedTransaction>] {
+        match self {
+            Self::Pending(block) => &block.transactions,
+            Self::Included(block) => &block.transactions,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct PartialBlock {
+    pub header: PartialHeader,
+    pub transactions: Vec<Arc<ExecutedTransaction>>,
+    pub outputs: Vec<TransactionOutput>,
+}
+
+#[derive(Debug, Clone)]
 pub struct Block {
     pub header: Header,
     pub status: BlockStatus,
@@ -78,6 +117,115 @@ impl Block {
             status: BlockStatus::AcceptedOnL2,
             transactions,
             outputs,
+        }
+    }
+}
+
+impl From<PartialBlock> for ExecutedBlock {
+    fn from(value: PartialBlock) -> Self {
+        Self::Pending(value)
+    }
+}
+
+impl From<Block> for ExecutedBlock {
+    fn from(value: Block) -> Self {
+        Self::Included(value)
+    }
+}
+
+impl From<BlockStatus> for RpcBlockStatus {
+    fn from(value: BlockStatus) -> Self {
+        match value {
+            BlockStatus::Rejected => Self::Rejected,
+            BlockStatus::AcceptedOnL2 => Self::AcceptedOnL2,
+            BlockStatus::AcceptedOnL1 => Self::AcceptedOnL1,
+        }
+    }
+}
+
+impl From<Block> for BlockWithTxs {
+    fn from(value: Block) -> Self {
+        Self {
+            status: value.status.into(),
+            block_hash: value.header.hash(),
+            block_number: value.header.number,
+            new_root: value.header.state_root,
+            timestamp: value.header.timestamp,
+            parent_hash: value.header.parent_hash,
+            sequencer_address: value.header.sequencer_address,
+            transactions: value
+                .transactions
+                .into_iter()
+                .map(|t| convert_api_to_rpc_tx(t.transaction.clone()))
+                .collect(),
+        }
+    }
+}
+
+impl From<ExecutedBlock> for MaybePendingBlockWithTxs {
+    fn from(value: ExecutedBlock) -> Self {
+        match value {
+            ExecutedBlock::Included(block) => MaybePendingBlockWithTxs::Block(BlockWithTxs {
+                status: block.status.into(),
+                block_hash: block.header.hash(),
+                block_number: block.header.number,
+                new_root: block.header.state_root,
+                timestamp: block.header.timestamp,
+                parent_hash: block.header.parent_hash,
+                sequencer_address: block.header.sequencer_address,
+                transactions: block
+                    .transactions
+                    .into_iter()
+                    .map(|t| convert_api_to_rpc_tx(t.transaction.clone()))
+                    .collect(),
+            }),
+            ExecutedBlock::Pending(block) => {
+                MaybePendingBlockWithTxs::PendingBlock(PendingBlockWithTxs {
+                    timestamp: block.header.timestamp,
+                    parent_hash: block.header.parent_hash,
+                    sequencer_address: block.header.sequencer_address,
+                    transactions: block
+                        .transactions
+                        .into_iter()
+                        .map(|t| convert_api_to_rpc_tx(t.transaction.clone()))
+                        .collect(),
+                })
+            }
+        }
+    }
+}
+
+impl From<ExecutedBlock> for MaybePendingBlockWithTxHashes {
+    fn from(value: ExecutedBlock) -> Self {
+        match value {
+            ExecutedBlock::Included(block) => {
+                MaybePendingBlockWithTxHashes::Block(BlockWithTxHashes {
+                    status: block.status.into(),
+                    block_hash: block.header.hash(),
+                    block_number: block.header.number,
+                    new_root: block.header.state_root,
+                    timestamp: block.header.timestamp,
+                    parent_hash: block.header.parent_hash,
+                    sequencer_address: block.header.sequencer_address,
+                    transactions: block
+                        .transactions
+                        .into_iter()
+                        .map(|t| t.transaction.transaction_hash().0.into())
+                        .collect(),
+                })
+            }
+            ExecutedBlock::Pending(block) => {
+                MaybePendingBlockWithTxHashes::PendingBlock(PendingBlockWithTxHashes {
+                    timestamp: block.header.timestamp,
+                    parent_hash: block.header.parent_hash,
+                    sequencer_address: block.header.sequencer_address,
+                    transactions: block
+                        .transactions
+                        .into_iter()
+                        .map(|t| t.transaction.transaction_hash().0.into())
+                        .collect(),
+                })
+            }
         }
     }
 }
