@@ -423,7 +423,8 @@ mod world {
             EventEmitter::emit(ref self, StoreDelRecord { table_id, keys });
         }
 
-        /// Gets the component value for an entity.
+        /// Gets the component value for an entity. Returns a zero initialized
+        /// component value if the entity has not been set.
         ///
         /// # Arguments
         ///
@@ -434,18 +435,13 @@ mod world {
         ///
         /// # Returns
         ///
-        /// * `Span<felt252>` - The value of the component.
+        /// * `Span<felt252>` - The value of the component, zero initialized if not set.
         fn entity(
             self: @ContractState, component: felt252, query: Query, offset: u8, length: usize
         ) -> Span<felt252> {
             let class_hash = self.components.read(component);
             let table = query.table(component);
-            match database::get(class_hash, table, query, offset, length) {
-                Option::Some(res) => res,
-                Option::None(_) => {
-                    ArrayTrait::new().span()
-                }
-            }
+            database::get(class_hash, table, query, offset, length)
         }
 
         /// Returns entity IDs and entities that contain the component state.

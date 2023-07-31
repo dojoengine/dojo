@@ -13,16 +13,13 @@ use dojo::database::query::{Query, QueryTrait};
 
 fn get(
     class_hash: starknet::ClassHash, table: felt252, query: Query, offset: u8, length: usize
-) -> Option<Span<felt252>> {
+) -> Span<felt252> {
     let id = query.hash();
     let mut keys = ArrayTrait::new();
     keys.append('dojo_storage');
     keys.append(table);
     keys.append(id);
-    match index::exists(0, table, id) {
-        bool::False(()) => Option::None(()),
-        bool::True(()) => Option::Some(storage::get_many(0, keys.span(), offset, length)),
-    }
+    storage::get_many(0, keys.span(), offset, length)
 }
 
 fn set(

@@ -48,7 +48,7 @@ mod Buzz {
 
     fn execute(ctx: Context, a: felt252, b: u128) {
         set !(ctx.world, ctx.origin.into(), (Foo { a, b }));
-        let fizz = try_get !(ctx.world, ctx.origin.into(), Fizz);
+        let fizz = get !(ctx.world, ctx.origin.into(), Fizz);
     }
 }
 
