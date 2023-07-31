@@ -29,6 +29,7 @@ cairo-lang-utils.workspace = true
 convert_case.workspace = true
 dojo-types = { path = "../dojo-types" }
 dojo-world = { path = "../dojo-world" }
+indoc.workspace = true
 itertools.workspace = true
 scarb.workspace = true
 semver.workspace = true
@@ -51,3 +52,6 @@ env_logger = "0.10.0"
 pretty_assertions.workspace = true
 test-log.workspace = true
 dojo-test-utils = { path = "../dojo-test-utils" }
+
+[build-dependencies]
+cargo_metadata = "0.15.4"

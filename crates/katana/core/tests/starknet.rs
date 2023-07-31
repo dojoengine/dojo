@@ -23,7 +23,7 @@ async fn create_test_starknet() -> Backend {
         seed: [0u8; 32],
         auto_mine: true,
         total_accounts: 2,
-        allow_zero_max_fee: true,
+        disable_fee: true,
         account_path: Some(test_account_path),
         env: Environment::default(),
     })

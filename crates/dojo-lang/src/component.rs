@@ -90,6 +90,12 @@ pub fn handle_component_struct(
                 $members$
             }
 
+            impl $type_name$Component of dojo::traits::Component<$type_name$> {
+                fn name(self: @$type_name$) -> felt252 {
+                    '$type_name$'
+                }
+            }
+
             #[starknet::interface]
             trait I$type_name$<T> {
                 fn name(self: @T) -> felt252;

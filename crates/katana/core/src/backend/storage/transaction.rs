@@ -113,7 +113,8 @@ impl IncludedTransaction {
                     block_number: self.block_number,
                     events: self.transaction.output.events.clone(),
                     transaction_hash: tx.transaction_hash.0.into(),
-                    contract_address: (*tx.contract_address.0.key()).into(),
+                    // TODO: store contract address in the storage or compute it everytime?
+                    contract_address: FieldElement::ZERO,
                     messages_sent: self.transaction.output.messages_sent.clone(),
                     actual_fee: self.transaction.execution_info.actual_fee.0.into(),
                 })
@@ -137,7 +138,8 @@ impl IncludedTransaction {
                 block_number: self.block_number,
                 events: self.transaction.output.events.clone(),
                 transaction_hash: tx.transaction_hash.0.into(),
-                contract_address: (*tx.contract_address.0.key()).into(),
+                // TODO: store contract address in the storage or compute it everytime?
+                contract_address: FieldElement::ZERO,
                 messages_sent: self.transaction.output.messages_sent.clone(),
                 actual_fee: self.transaction.execution_info.actual_fee.0.into(),
             }),
@@ -190,7 +192,8 @@ impl PendingTransaction {
                     transaction_hash: tx.transaction_hash.0.into(),
                     messages_sent: self.0.output.messages_sent.clone(),
                     actual_fee: self.0.execution_info.actual_fee.0.into(),
-                    contract_address: (*tx.contract_address.0.key()).into(),
+                    // TODO: store contract address in the storage or compute it everytime?
+                    contract_address: FieldElement::ZERO,
                 })
             }
         }

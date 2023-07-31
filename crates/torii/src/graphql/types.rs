@@ -107,10 +107,6 @@ impl ScalarType {
     }
 
     pub fn as_sql_type(&self) -> &'static str {
-        if self.is_numeric_type() {
-            "INTEGER"
-        } else {
-            "TEXT"
-        }
+        if self.is_numeric_type() { "INTEGER" } else { "TEXT" }
     }
 }

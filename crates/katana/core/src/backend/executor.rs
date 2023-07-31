@@ -89,10 +89,19 @@ impl PendingBlockExecutor {
     // if it passes the validation logic. Otherwise, the transaction will be
     // rejected. On both cases, the transaction will still be stored in the
     // storage.
-    pub async fn add_transaction(&mut self, transaction: ExecutionTransaction) -> bool {
+    pub async fn add_transaction(
+        &mut self,
+        transaction: ExecutionTransaction,
+        charge_fee: bool,
+    ) -> bool {
         let api_tx = convert_blockifier_to_api_tx(&transaction);
         let hash: FieldElement = api_tx.transaction_hash().0.into();
-        let res = execute_transaction(transaction, &mut self.state, &self.block_context.read());
+        let res = execute_transaction(
+            transaction,
+            &mut self.state,
+            &self.block_context.read(),
+            charge_fee,
+        );
 
         match res {
             Ok(execution_info) => {
@@ -222,10 +231,15 @@ pub fn execute_transaction<S: StateReader>(
     transaction: ExecutionTransaction,
     pending_state: &mut CachedState<S>,
     block_context: &BlockContext,
+    charge_fee: bool,
 ) -> Result<TransactionExecutionInfo, TransactionExecutionError> {
     let res = match transaction {
-        ExecutionTransaction::AccountTransaction(tx) => tx.execute(pending_state, block_context),
-        ExecutionTransaction::L1HandlerTransaction(tx) => tx.execute(pending_state, block_context),
+        ExecutionTransaction::AccountTransaction(tx) => {
+            tx.execute(pending_state, block_context, charge_fee)
+        }
+        ExecutionTransaction::L1HandlerTransaction(tx) => {
+            tx.execute(pending_state, block_context, charge_fee)
+        }
     };
 
     match res {

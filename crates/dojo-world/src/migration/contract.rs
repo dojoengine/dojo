@@ -18,11 +18,7 @@ pub struct ContractDiff {
 
 impl StateDiff for ContractDiff {
     fn is_same(&self) -> bool {
-        if let Some(remote) = self.remote {
-            self.local == remote
-        } else {
-            false
-        }
+        if let Some(remote) = self.remote { self.local == remote } else { false }
     }
 }
 

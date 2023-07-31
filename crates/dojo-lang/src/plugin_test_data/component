@@ -1,7 +1,7 @@
 //! > Test expansion of the component contract.
 
 //! > test_runner_name
-ExpandContractTestRunner
+test_expand_plugin
 
 //! > cairo_code
 use serde::Serde;
@@ -50,34 +50,15 @@ struct Player {
 //! > generated_cairo_code
 use serde::Serde;
 
-trait PositionTrait {
-    fn is_zero(self: Position) -> bool;
-    fn is_equal(self: Position, b: Position) -> bool;
-}
-
-impl PositionImpl of PositionTrait {
-    fn is_zero(self: Position) -> bool {
-        match self.x - self.y {
-            0 => bool::True(()),
-            _ => bool::False(()),
-        }
-    }
-
-    fn is_equal(self: Position, b: Position) -> bool {
-        self.x == b.x && self.y == b.y
-    }
-}
-
-impl RolesSerdeLen of dojo::SerdeLen<Roles> {
-    #[inline(always)]
-    fn len() -> usize {
-        5
-    }
-}
-
 struct Position {
     x: felt252,
     y: felt252
+}
+
+impl PositionComponent of dojo::traits::Component<Position> {
+    fn name(self: @Position) -> felt252 {
+        'Position'
+    }
 }
 
 #[starknet::interface]
@@ -125,8 +106,35 @@ impl SerdeLenPosition of dojo::SerdeLen<Position> {
     }
 }
 
+
+
+trait PositionTrait {
+    fn is_zero(self: Position) -> bool;
+    fn is_equal(self: Position, b: Position) -> bool;
+}
+
+
+impl PositionImpl of PositionTrait {
+    fn is_zero(self: Position) -> bool {
+        match self.x - self.y {
+            0 => bool::True(()),
+            _ => bool::False(()),
+        }
+    }
+
+    fn is_equal(self: Position, b: Position) -> bool {
+        self.x == b.x && self.y == b.y
+    }
+}
+
 struct Roles {
     role_ids: Array<u8>
+}
+
+impl RolesComponent of dojo::traits::Component<Roles> {
+    fn name(self: @Roles) -> felt252 {
+        'Roles'
+    }
 }
 
 #[starknet::interface]
@@ -166,8 +174,23 @@ mod roles {
     }
 }
 
+
+
+impl RolesSerdeLen of dojo::SerdeLen<Roles> {
+    #[inline(always)]
+    fn len() -> usize {
+        5
+    }
+}
+
 struct Player {
     name: felt252, 
+}
+
+impl PlayerComponent of dojo::traits::Component<Player> {
+    fn name(self: @Player) -> felt252 {
+        'Player'
+    }
 }
 
 #[starknet::interface]
