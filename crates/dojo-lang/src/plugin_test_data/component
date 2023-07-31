@@ -8,6 +8,9 @@ use serde::Serde;
 
 #[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Position {
+    #[key]
+    key: felt252,
+
     x: felt252,
     y: felt252
 }
@@ -44,6 +47,12 @@ impl RolesSerdeLen of dojo::SerdeLen<Roles> {
 
 #[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Player {
+    #[key]
+    game: felt252,
+
+    #[key]
+    player: felt252,
+
     name: felt252, 
 }
 
@@ -51,6 +60,8 @@ struct Player {
 use serde::Serde;
 
 struct Position {
+    #[key]
+    key: felt252,
     x: felt252,
     y: felt252
 }
@@ -58,6 +69,12 @@ struct Position {
 impl PositionComponent of dojo::traits::Component<Position> {
     fn name(self: @Position) -> felt252 {
         'Position'
+    }
+
+    fn key(self: @Position) -> felt252 {
+        let mut serialized = ArrayTrait::new();
+        self.key.serialize(ref serialized);
+        poseidon::poseidon_hash_span(serialized.span())
     }
 }
 
@@ -74,35 +91,22 @@ mod position {
     struct Storage {}
 
     #[external(v0)]
-    fn schema(self: @ContractState) -> Array<(felt252, felt252, usize, u8)> {
-        let mut arr = array::ArrayTrait::new();
-        array::ArrayTrait::append(ref arr, ('x', 'felt252', 0, 0));
-        array::ArrayTrait::append(ref arr, ('y', 'felt252', 1, 0));
-
-        arr
-    }
-
-    #[external(v0)]
-    fn length(self: @ContractState) -> usize {
-        dojo::SerdeLen::<Position>::len()
-    }
-
-
-    #[external(v0)]
     fn name(self: @ContractState) -> felt252 {
         'Position'
     }
 
     #[external(v0)]
-    fn is_indexed(self: @ContractState) -> bool {
-        bool::False(())
+    fn size(self: @ContractState) -> usize {
+        dojo::SerdeLen::<Position>::len()
     }
 }
 
 impl SerdeLenPosition of dojo::SerdeLen<Position> {
     #[inline(always)]
     fn len() -> usize {
-        dojo::SerdeLen::<felt252>::len() + dojo::SerdeLen::<felt252>::len()
+        dojo::SerdeLen::<felt252>::len()
+            + dojo::SerdeLen::<felt252>::len()
+            + dojo::SerdeLen::<felt252>::len()
     }
 }
 
@@ -135,6 +139,12 @@ impl RolesComponent of dojo::traits::Component<Roles> {
     fn name(self: @Roles) -> felt252 {
         'Roles'
     }
+
+    fn key(self: @Roles) -> felt252 {
+        let mut serialized = ArrayTrait::new();
+
+        poseidon::poseidon_hash_span(serialized.span())
+    }
 }
 
 #[starknet::interface]
@@ -150,27 +160,13 @@ mod roles {
     struct Storage {}
 
     #[external(v0)]
-    fn schema(self: @ContractState) -> Array<(felt252, felt252, usize, u8)> {
-        let mut arr = array::ArrayTrait::new();
-        array::ArrayTrait::append(ref arr, ('role_ids', 'Array<u8>', 0, 0));
-
-        arr
-    }
-
-    #[external(v0)]
-    fn length(self: @ContractState) -> usize {
-        dojo::SerdeLen::<Roles>::len()
-    }
-
-
-    #[external(v0)]
     fn name(self: @ContractState) -> felt252 {
         'Roles'
     }
 
     #[external(v0)]
-    fn is_indexed(self: @ContractState) -> bool {
-        bool::False(())
+    fn size(self: @ContractState) -> usize {
+        dojo::SerdeLen::<Roles>::len()
     }
 }
 
@@ -184,12 +180,23 @@ impl RolesSerdeLen of dojo::SerdeLen<Roles> {
 }
 
 struct Player {
-    name: felt252, 
+    #[key]
+    game: felt252,
+    #[key]
+    player: felt252,
+    name: felt252,
 }
 
 impl PlayerComponent of dojo::traits::Component<Player> {
     fn name(self: @Player) -> felt252 {
         'Player'
+    }
+
+    fn key(self: @Player) -> felt252 {
+        let mut serialized = ArrayTrait::new();
+        self.game.serialize(ref serialized);
+        self.player.serialize(ref serialized);
+        poseidon::poseidon_hash_span(serialized.span())
     }
 }
 
@@ -206,27 +213,13 @@ mod player {
     struct Storage {}
 
     #[external(v0)]
-    fn schema(self: @ContractState) -> Array<(felt252, felt252, usize, u8)> {
-        let mut arr = array::ArrayTrait::new();
-        array::ArrayTrait::append(ref arr, ('name', 'felt252', 0, 0));
-
-        arr
-    }
-
-    #[external(v0)]
-    fn length(self: @ContractState) -> usize {
-        dojo::SerdeLen::<Player>::len()
-    }
-
-
-    #[external(v0)]
     fn name(self: @ContractState) -> felt252 {
         'Player'
     }
 
     #[external(v0)]
-    fn is_indexed(self: @ContractState) -> bool {
-        bool::False(())
+    fn size(self: @ContractState) -> usize {
+        dojo::SerdeLen::<Player>::len()
     }
 }
 
@@ -234,7 +227,13 @@ impl SerdeLenPlayer of dojo::SerdeLen<Player> {
     #[inline(always)]
     fn len() -> usize {
         dojo::SerdeLen::<felt252>::len()
+            + dojo::SerdeLen::<felt252>::len()
+            + dojo::SerdeLen::<felt252>::len()
     }
 }
 
 //! > expected_diagnostics
+error: Component must define atleast one #[key] attribute
+ --> dummy_file.cairo:31:8
+struct Roles {
+       ^***^

@@ -1,11 +1,9 @@
+use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_semantic::patcher::RewriteNode;
-use cairo_lang_syntax::attribute::structured::{
-    AttributeArg, AttributeArgVariant, AttributeStructurize,
-};
 use cairo_lang_syntax::node::ast::ItemStruct;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
-use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
+use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use convert_case::{Case, Casing};
 use dojo_types::component::Member;
@@ -22,43 +20,8 @@ pub fn handle_component_struct(
     db: &dyn SyntaxGroup,
     aux_data: &mut DojoAuxData,
     struct_ast: ItemStruct,
-) -> RewriteNode {
-    let mut body_nodes = vec![RewriteNode::interpolate_patched(
-        "
-            #[external(v0)]
-            fn name(self: @ContractState) -> felt252 {
-                '$type_name$'
-            }
-        ",
-        UnorderedHashMap::from([
-            (
-                "type_name".to_string(),
-                RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
-            ),
-            ("members".to_string(), RewriteNode::Copied(struct_ast.members(db).as_syntax_node())),
-        ]),
-    )];
-
-    let is_indexed_fn = {
-        let retval_str = if is_indexed(db, struct_ast.clone()) {
-            "True".to_string()
-        } else {
-            "False".to_string()
-        };
-
-        RewriteNode::interpolate_patched(
-            "
-                #[external(v0)]
-                fn is_indexed(self: @ContractState) -> bool {
-                    bool::$retval$(())
-                }
-            ",
-            UnorderedHashMap::from([("retval".to_string(), RewriteNode::Text(retval_str))]),
-        )
-    };
-
-    // Add the is_indexed function to the body
-    body_nodes.push(is_indexed_fn);
+) -> (RewriteNode, Vec<PluginDiagnostic>) {
+    let mut diagnostics = vec![];
 
     let members: Vec<_> = struct_ast
         .members(db)
@@ -69,6 +32,29 @@ pub fn handle_component_struct(
             (member.name(db).text(db), member.type_clause(db).ty(db), slot as u64, 0)
         })
         .collect::<_>();
+
+    let serialized_keys: Vec<_> = struct_ast
+        .members(db)
+        .elements(db)
+        .iter()
+        .filter_map(|e| {
+            if e.has_attr(db, "key") {
+                return Some(RewriteNode::Text(format!(
+                    "self.{}.serialize(ref serialized);",
+                    e.name(db).text(db)
+                )));
+            }
+
+            None
+        })
+        .collect::<_>();
+
+    if serialized_keys.len() == 0 {
+        diagnostics.push(PluginDiagnostic {
+            message: "Component must define atleast one #[key] attribute".into(),
+            stable_ptr: struct_ast.name(db).stable_ptr().untyped(),
+        });
+    }
 
     let name = struct_ast.name(db).text(db);
     aux_data.components.push(Component {
@@ -84,8 +70,9 @@ pub fn handle_component_struct(
             .collect(),
     });
 
-    RewriteNode::interpolate_patched(
-        "
+    (
+        RewriteNode::interpolate_patched(
+            "
             struct $type_name$ {
                 $members$
             }
@@ -93,6 +80,12 @@ pub fn handle_component_struct(
             impl $type_name$Component of dojo::traits::Component<$type_name$> {
                 fn name(self: @$type_name$) -> felt252 {
                     '$type_name$'
+                }
+
+                fn key(self: @$type_name$) -> felt252 {
+                    let mut serialized = ArrayTrait::new();
+                    $serialized_keys$
+                    poseidon::poseidon_hash_span(serialized.span())
                 }
             }
 
@@ -109,73 +102,29 @@ pub fn handle_component_struct(
                 struct Storage {}
 
                 #[external(v0)]
-                fn schema(self: @ContractState) -> Array<(felt252, felt252, usize, u8)> {
-                    let mut arr = array::ArrayTrait::new();
-                    $schema_members$
-                    arr
+                fn name(self: @ContractState) -> felt252 {
+                    '$type_name$'
                 }
 
                 #[external(v0)]
-                fn length(self: @ContractState) -> usize {
+                fn size(self: @ContractState) -> usize {
                     dojo::SerdeLen::<$type_name$>::len()
                 }
-
-                $body$
             }
         ",
-        UnorderedHashMap::from([
-            ("contract_name".to_string(), RewriteNode::Text(name.to_case(Case::Snake))),
-            (
-                "type_name".to_string(),
-                RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
-            ),
-            ("members".to_string(), RewriteNode::Copied(struct_ast.members(db).as_syntax_node())),
-            ("body".to_string(), RewriteNode::new_modified(body_nodes)),
-            (
-                "schema_members".to_string(),
-                RewriteNode::new_modified(
-                    members
-                        .iter()
-                        .map(|item| {
-                            RewriteNode::interpolate_patched(
-                                "array::ArrayTrait::append(ref arr, ('$name$', '$type_clause$', \
-                                 $slot$, $offset$));\n",
-                                UnorderedHashMap::from([
-                                    ("name".to_string(), RewriteNode::Text(item.0.to_string())),
-                                    (
-                                        "type_clause".to_string(),
-                                        RewriteNode::new_trimmed(item.1.as_syntax_node()),
-                                    ),
-                                    ("slot".to_string(), RewriteNode::Text(item.2.to_string())),
-                                    ("offset".to_string(), RewriteNode::Text(item.3.to_string())),
-                                ]),
-                            )
-                        })
-                        .collect(),
+            UnorderedHashMap::from([
+                ("contract_name".to_string(), RewriteNode::Text(name.to_case(Case::Snake))),
+                (
+                    "type_name".to_string(),
+                    RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
                 ),
-            ),
-        ]),
+                (
+                    "members".to_string(),
+                    RewriteNode::Copied(struct_ast.members(db).as_syntax_node()),
+                ),
+                ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
+            ]),
+        ),
+        diagnostics,
     )
-}
-
-/// Returns true if the component is indexed #[component(indexed: true)]
-fn is_indexed(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> bool {
-    for attr in struct_ast.attributes(db).query_attr(db, "component") {
-        let attr = attr.structurize(db);
-
-        for arg in attr.args {
-            let AttributeArg {
-                variant: AttributeArgVariant::Named { value: ast::Expr::True(_), name, .. },
-                ..
-            } = arg
-            else {
-                continue;
-            };
-
-            if name == "indexed" {
-                return true;
-            }
-        }
-    }
-    false
 }

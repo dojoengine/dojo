@@ -165,11 +165,10 @@ impl MacroPlugin for DojoPlugin {
 
                         match derived.as_str() {
                             "Component" => {
-                                rewrite_nodes.push(handle_component_struct(
-                                    db,
-                                    &mut aux_data,
-                                    struct_ast.clone(),
-                                ));
+                                let (component_rewrite_nodes, component_diagnostics) =
+                                    handle_component_struct(db, &mut aux_data, struct_ast.clone());
+                                rewrite_nodes.push(component_rewrite_nodes);
+                                diagnostics.extend(component_diagnostics);
                             }
                             "SerdeLen" => {
                                 rewrite_nodes.push(handle_serde_len_struct(db, struct_ast.clone()));
@@ -195,7 +194,7 @@ impl MacroPlugin for DojoPlugin {
                         content: builder.code,
                         aux_data: DynGeneratedFileAuxData::new(DynPluginAuxData::new(aux_data)),
                     }),
-                    diagnostics: vec![],
+                    diagnostics,
                     remove_original_item: true,
                 }
             }
