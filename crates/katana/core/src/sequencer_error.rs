@@ -6,7 +6,7 @@ use starknet_api::core::ContractAddress;
 use starknet_api::transaction::TransactionHash;
 use starknet_api::StarknetApiError;
 
-use crate::util::ContinuationTokenError;
+use crate::utils::event::ContinuationTokenError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SequencerError {

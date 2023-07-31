@@ -23,33 +23,32 @@ where
     S: Sequencer + Send + Sync + 'static,
 {
     async fn generate_block(&self) -> Result<(), Error> {
-        let mut starknet = self.sequencer.mut_starknet().await;
-        starknet.generate_latest_block();
-        starknet.generate_pending_block();
+        self.sequencer.backend().generate_latest_block().await;
+        self.sequencer.backend().generate_pending_block().await;
         Ok(())
     }
 
     async fn next_block_timestamp(&self) -> Result<u64, Error> {
-        Ok(self.sequencer.starknet().await.block_context.block_timestamp.0)
+        Ok(self.sequencer.backend().block_context.read().block_timestamp.0)
     }
 
     async fn set_next_block_timestamp(&self, timestamp: u64) -> Result<(), Error> {
         self.sequencer
-            .mut_starknet()
-            .await
+            .backend()
             .set_next_block_timestamp(timestamp)
+            .await
             .map_err(|_| Error::from(KatanaApiError::FailedToChangeNextBlockTimestamp))
     }
 
     async fn increase_next_block_timestamp(&self, timestamp: u64) -> Result<(), Error> {
         self.sequencer
-            .mut_starknet()
-            .await
+            .backend()
             .increase_next_block_timestamp(timestamp)
+            .await
             .map_err(|_| Error::from(KatanaApiError::FailedToChangeNextBlockTimestamp))
     }
 
     async fn predeployed_accounts(&self) -> Result<Vec<Account>, Error> {
-        Ok(self.sequencer.starknet().await.predeployed_accounts.accounts.clone())
+        Ok(self.sequencer.backend().predeployed_accounts.accounts.clone())
     }
 }
