@@ -36,12 +36,12 @@ pub struct ComponentMembers {
 pub struct ComponentStateObject {
     pub name: String,
     pub type_name: String,
-    pub field_type_mapping: TypeMapping,
+    pub type_mapping: TypeMapping,
 }
 
 impl ComponentStateObject {
-    pub fn new(name: String, type_name: String, field_type_mapping: TypeMapping) -> Self {
-        Self { name, type_name, field_type_mapping }
+    pub fn new(name: String, type_name: String, type_mapping: TypeMapping) -> Self {
+        Self { name, type_name, type_mapping }
     }
 }
 
@@ -54,8 +54,8 @@ impl ObjectTrait for ComponentStateObject {
         &self.type_name
     }
 
-    fn field_type_mapping(&self) -> &TypeMapping {
-        &self.field_type_mapping
+    fn type_mapping(&self) -> &TypeMapping {
+        &self.type_mapping
     }
 
     fn nested_fields(&self) -> Option<Vec<Field>> {
@@ -66,7 +66,7 @@ impl ObjectTrait for ComponentStateObject {
         vec![resolve_many(
             self.name.to_string(),
             self.type_name.to_string(),
-            self.field_type_mapping.clone(),
+            self.type_mapping.clone(),
         )]
     }
 }
@@ -85,23 +85,23 @@ fn entity_field() -> Field {
     })
 }
 
-fn resolve_many(name: String, type_name: String, field_type_mapping: TypeMapping) -> Field {
-    let ftm_clone = field_type_mapping.clone();
+fn resolve_many(name: String, type_name: String, type_mapping: TypeMapping) -> Field {
+    let ftm_clone = type_mapping.clone();
 
     let field =
         Field::new(format!("{}Components", &name), TypeRef::named_list(type_name), move |ctx| {
-            // FIX: field_type_mapping and name needs to be passed down to the doubly
+            // FIX: type_mapping and name needs to be passed down to the doubly
             // nested async closures, thus the cloning. could handle this better
-            let field_type_mapping = field_type_mapping.clone();
+            let type_mapping = type_mapping.clone();
             let name = name.clone();
 
             FieldFuture::new(async move {
                 // parse optional input query params
-                let (filters, limit) = parse_inputs(&ctx, &field_type_mapping)?;
+                let (filters, limit) = parse_inputs(&ctx, &type_mapping)?;
 
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                 let state_values =
-                    component_states_query(&mut conn, &name, &filters, limit, &field_type_mapping)
+                    component_states_query(&mut conn, &name, &filters, limit, &type_mapping)
                         .await?;
 
                 let result: Vec<FieldValue<'_>> =
@@ -114,8 +114,8 @@ fn resolve_many(name: String, type_name: String, field_type_mapping: TypeMapping
     add_arguments(field, ftm_clone)
 }
 
-fn add_arguments(field: Field, field_type_mapping: TypeMapping) -> Field {
-    field_type_mapping
+fn add_arguments(field: Field, type_mapping: TypeMapping) -> Field {
+    type_mapping
         .into_iter()
         .fold(field, |field, (name, ty)| {
             // omit entity id as argument
@@ -129,12 +129,12 @@ fn add_arguments(field: Field, field_type_mapping: TypeMapping) -> Field {
 
 fn parse_inputs(
     ctx: &ResolverContext<'_>,
-    field_type_mapping: &TypeMapping,
+    type_mapping: &TypeMapping,
 ) -> async_graphql::Result<(ComponentFilters, u64), async_graphql::Error> {
     let mut filters: ComponentFilters = ComponentFilters::new();
 
     // parse inputs based on field type mapping
-    for (name, ty) in field_type_mapping.iter() {
+    for (name, ty) in type_mapping.iter() {
         let input_option = ctx.args.try_get(name.as_str());
 
         if let Ok(input) = input_option {
@@ -248,12 +248,12 @@ pub async fn type_mapping_from(
 
     // field type mapping is 1:1 to component members, but entity_id
     // is not a member so we need to add it manually
-    let mut field_type_mapping = TypeMapping::new();
-    field_type_mapping.insert(Name::new(ENTITY_ID), TypeRef::ID.to_string());
+    let mut type_mapping = TypeMapping::new();
+    type_mapping.insert(Name::new(ENTITY_ID), TypeRef::ID.to_string());
 
     for member in component_members {
-        field_type_mapping.insert(Name::new(member.name), member.ty);
+        type_mapping.insert(Name::new(member.name), member.ty);
     }
 
-    Ok(field_type_mapping)
+    Ok(type_mapping)
 }

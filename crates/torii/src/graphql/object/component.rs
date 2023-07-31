@@ -22,14 +22,14 @@ pub struct Component {
 }
 
 pub struct ComponentObject {
-    pub field_type_mapping: TypeMapping,
+    pub type_mapping: TypeMapping,
 }
 
 impl ComponentObject {
     // Not used currently, eventually used for component metadata
     pub fn _new() -> Self {
         Self {
-            field_type_mapping: IndexMap::from([
+            type_mapping: IndexMap::from([
                 (Name::new("id"), TypeRef::ID.to_string()),
                 (Name::new("name"), TypeRef::STRING.to_string()),
                 (Name::new("classHash"), ScalarType::Felt252.to_string()),
@@ -64,8 +64,8 @@ impl ObjectTrait for ComponentObject {
         "Component"
     }
 
-    fn field_type_mapping(&self) -> &TypeMapping {
-        &self.field_type_mapping
+    fn type_mapping(&self) -> &TypeMapping {
+        &self.type_mapping
     }
 
     fn resolvers(&self) -> Vec<Field> {

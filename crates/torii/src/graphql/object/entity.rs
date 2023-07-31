@@ -26,13 +26,13 @@ pub struct Entity {
 }
 
 pub struct EntityObject {
-    pub field_type_mapping: TypeMapping,
+    pub type_mapping: TypeMapping,
 }
 
 impl EntityObject {
     pub fn new() -> Self {
         Self {
-            field_type_mapping: IndexMap::from([
+            type_mapping: IndexMap::from([
                 (Name::new("id"), TypeRef::ID.to_string()),
                 (Name::new("keys"), TypeRef::STRING.to_string()),
                 (Name::new("componentNames"), TypeRef::STRING.to_string()),
@@ -68,8 +68,8 @@ impl ObjectTrait for EntityObject {
         "Entity"
     }
 
-    fn field_type_mapping(&self) -> &TypeMapping {
-        &self.field_type_mapping
+    fn type_mapping(&self) -> &TypeMapping {
+        &self.type_mapping
     }
 
     fn nested_fields(&self) -> Option<Vec<Field>> {
@@ -84,12 +84,12 @@ impl ObjectTrait for EntityObject {
                 let mut results: Vec<FieldValue<'_>> = Vec::new();
                 for component_name in components {
                     let table_name = component_name.to_lowercase();
-                    let field_type_mapping = type_mapping_from(&mut conn, &table_name).await?;
+                    let type_mapping = type_mapping_from(&mut conn, &table_name).await?;
                     let state = component_state_by_entity_id(
                         &mut conn,
                         &table_name,
                         &id,
-                        &field_type_mapping,
+                        &type_mapping,
                     )
                     .await?;
                     results

@@ -24,13 +24,13 @@ pub struct Event {
 }
 
 pub struct EventObject {
-    pub field_type_mapping: TypeMapping,
+    pub type_mapping: TypeMapping,
 }
 
 impl EventObject {
     pub fn new() -> Self {
         Self {
-            field_type_mapping: IndexMap::from([
+            type_mapping: IndexMap::from([
                 (Name::new("id"), TypeRef::ID.to_string()),
                 (Name::new("keys"), TypeRef::STRING.to_string()),
                 (Name::new("data"), TypeRef::STRING.to_string()),
@@ -63,8 +63,8 @@ impl ObjectTrait for EventObject {
         "Event"
     }
 
-    fn field_type_mapping(&self) -> &TypeMapping {
-        &self.field_type_mapping
+    fn type_mapping(&self) -> &TypeMapping {
+        &self.type_mapping
     }
 
     fn resolvers(&self) -> Vec<Field> {

@@ -17,7 +17,7 @@ pub type ValueMapping = IndexMap<Name, Value>;
 pub trait ObjectTrait {
     fn name(&self) -> &str;
     fn type_name(&self) -> &str;
-    fn field_type_mapping(&self) -> &TypeMapping;
+    fn type_mapping(&self) -> &TypeMapping;
     fn resolvers(&self) -> Vec<Field>;
     fn nested_fields(&self) -> Option<Vec<Field>> {
         None
@@ -28,7 +28,7 @@ pub trait ObjectTrait {
         let mut object = Object::new(self.type_name());
 
         // Add fields (ie id, createdAt, etc)
-        for (field_name, field_type) in self.field_type_mapping() {
+        for (field_name, field_type) in self.type_mapping() {
             let field = create_field(field_name, field_type);
             object = object.field(field);
         }

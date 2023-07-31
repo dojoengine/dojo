@@ -23,13 +23,13 @@ pub struct SystemCall {
     pub system_id: String,
 }
 pub struct SystemCallObject {
-    pub field_type_mapping: TypeMapping,
+    pub type_mapping: TypeMapping,
 }
 
 impl SystemCallObject {
     pub fn new() -> Self {
         Self {
-            field_type_mapping: IndexMap::from([
+            type_mapping: IndexMap::from([
                 (Name::new("id"), TypeRef::ID.to_string()),
                 (Name::new("transactionHash"), TypeRef::STRING.to_string()),
                 (Name::new("data"), TypeRef::STRING.to_string()),
@@ -64,8 +64,8 @@ impl ObjectTrait for SystemCallObject {
         "SystemCall"
     }
 
-    fn field_type_mapping(&self) -> &TypeMapping {
-        &self.field_type_mapping
+    fn type_mapping(&self) -> &TypeMapping {
+        &self.type_mapping
     }
 
     fn resolvers(&self) -> Vec<Field> {
