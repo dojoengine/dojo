@@ -4,12 +4,14 @@ use blockifier::transaction::transaction_execution::Transaction;
 use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::backend::Backend;
 use katana_core::constants::FEE_TOKEN_ADDRESS;
+use katana_core::db::Db;
+use katana_core::utils::contract::get_contract_class;
 use starknet::core::types::FieldElement;
 use starknet_api::block::BlockNumber;
 use starknet_api::core::Nonce;
 use starknet_api::hash::StarkFelt;
 use starknet_api::transaction::{
-    Calldata, InvokeTransaction, InvokeTransactionV1, TransactionHash,
+    Calldata, DeclareTransaction, InvokeTransaction, InvokeTransactionV1, TransactionHash,
 };
 use starknet_api::{calldata, stark_felt};
 
@@ -28,6 +30,11 @@ async fn create_test_starknet() -> Backend {
         env: Environment::default(),
         ..Default::default()
     })
+}
+
+fn create_declare_transaction() -> DeclareTransaction {
+    let test_contract_class = get_contract_class("../contracts/compiled/test_contract.json");
+    DeclareTransaction::new(DeclareTransaction {}, test_contract_class)
 }
 
 #[tokio::test]
@@ -169,4 +176,17 @@ async fn test_add_reverted_transaction() {
         1,
         "no new block should be created if tx failed"
     );
+}
+
+#[tokio::test]
+async fn dump_and_load_state() {
+    let starknet = create_test_starknet().await;
+    starknet.generate_pending_block().await;
+
+    // let mut starknet = create_test_starknet().await;
+    // starknet.state.write().await.load_state(state_path).await.unwrap();
+
+    // let block2 = starknet.storage.read().await.block_by_number(1).cloned().unwrap();
+
+    // assert_eq!(block, block2);
 }

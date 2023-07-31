@@ -191,12 +191,7 @@ impl KatanaSequencer {
 
     /// Get the current state.
     pub async fn serialize_state(&self) -> Result<SerializableState, SequencerError> {
-        self.starknet
-            .read()
-            .await
-            .state
-            .dump_state()
-            .map_err(|_| SequencerError::StateSerialization)
+        self.backend.state.read().await.dump_state().map_err(|_| SequencerError::StateSerialization)
     }
 
     pub async fn dump_state(&self) -> Result<Vec<u8>, SequencerError> {
@@ -225,7 +220,7 @@ impl KatanaSequencer {
         })
         .map_err(|_| SequencerError::FailedToDecodeStateDump)?;
 
-        Ok(self.starknet.write().await.state.load_state(state).is_ok())
+        Ok(self.backend.state.write().await.load_state(state).is_ok())
     }
 }
 

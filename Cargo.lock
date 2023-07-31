@@ -3872,7 +3872,6 @@ dependencies = [
  "convert_case 0.6.0",
  "flate2",
  "futures",
- "katana-rpc",
  "lazy_static",
  "parking_lot 0.12.1",
  "rand",

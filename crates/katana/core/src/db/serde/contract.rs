@@ -182,8 +182,8 @@ impl From<blockifier::execution::contract_class::ContractClass> for Serializable
 
 #[cfg(test)]
 mod tests {
+    use crate::utils::contract::rpc_to_inner_class;
     use blockifier::execution::contract_class::ContractClass;
-    use katana_rpc::utils::contract::rpc_to_inner_class;
     use starknet::core::types::contract::SierraClass;
 
     use super::*;

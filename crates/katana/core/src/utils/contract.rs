@@ -16,6 +16,12 @@ use starknet::core::types::{
 use starknet_api::core::ClassHash;
 use starknet_api::deprecated_contract_class::{EntryPoint, EntryPointType};
 
+pub fn get_contract_class(contract_class_str: &str) -> InnerContractClass {
+    let legacy_contract_class: InnerContractClassV0 =
+        serde_json::from_str(contract_class_str).unwrap();
+    InnerContractClass::V0(legacy_contract_class)
+}
+
 pub fn compute_legacy_class_hash(contract_class_str: &str) -> Result<ClassHash> {
     let contract_class: LegacyContractClass = ::serde_json::from_str(contract_class_str)?;
     let seirra_class_hash = contract_class.class_hash()?;
