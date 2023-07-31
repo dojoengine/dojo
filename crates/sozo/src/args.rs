@@ -9,6 +9,7 @@ use tracing_log::AsTrace;
 
 use crate::commands::auth::AuthArgs;
 use crate::commands::build::BuildArgs;
+use crate::commands::completions::CompletionsArgs;
 use crate::commands::component::ComponentArgs;
 use crate::commands::events::EventsArgs;
 use crate::commands::execute::ExecuteArgs;
@@ -64,6 +65,8 @@ pub enum Commands {
     Events(EventsArgs),
     #[command(about = "Manage world authorization")]
     Auth(AuthArgs),
+    #[command(about = "Generate shell completion file for specified shell")]
+    Completions(CompletionsArgs),
 }
 
 impl SozoArgs {
