@@ -17,7 +17,7 @@ pub struct StarknetConfig {
     pub seed: [u8; 32],
     pub auto_mine: bool,
     pub total_accounts: u8,
-    pub allow_zero_max_fee: bool,
+    pub disable_fee: bool,
     pub account_path: Option<PathBuf>,
     pub env: Environment,
 }
@@ -50,7 +50,7 @@ impl Default for StarknetConfig {
             auto_mine: true,
             total_accounts: 10,
             account_path: None,
-            allow_zero_max_fee: false,
+            disable_fee: false,
             env: Environment::default(),
         }
     }

@@ -4,6 +4,6 @@ pub mod block_context;
 pub mod constants;
 // pub mod db;
 pub mod sequencer;
-pub mod util;
+pub mod utils;
 
 pub mod sequencer_error;

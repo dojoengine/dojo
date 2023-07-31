@@ -43,7 +43,7 @@ impl TestSequencer {
 
         let url = Url::parse(&format!("http://{}", handle.addr)).expect("Failed to parse URL");
 
-        let account = sequencer.starknet.read().await.predeployed_accounts.accounts[0].clone();
+        let account = sequencer.backend.predeployed_accounts.accounts[0].clone();
         let account = TestAccount {
             private_key: FieldElement::from(account.private_key),
             account_address: FieldElement::from(*account.account_address.0.key()),
@@ -76,7 +76,7 @@ impl TestSequencer {
 
 pub fn get_default_test_starknet_config() -> StarknetConfig {
     StarknetConfig {
-        allow_zero_max_fee: true,
+        disable_fee: true,
         env: Environment { chain_id: "SN_GOERLI".into(), ..Default::default() },
         ..Default::default()
     }

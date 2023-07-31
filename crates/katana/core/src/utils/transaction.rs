@@ -1,18 +1,17 @@
-use std::str::FromStr;
-
-use anyhow::{Ok, Result};
+use blockifier::transaction::account_transaction::AccountTransaction;
+use blockifier::transaction::transaction_execution::Transaction as ExecutionTransaction;
 use starknet::core::crypto::compute_hash_on_elements;
 use starknet::core::types::{
     DeclareTransaction, DeclareTransactionV1, DeclareTransactionV2, DeployAccountTransaction,
-    DeployTransaction, FieldElement, InvokeTransaction, InvokeTransactionV1, L1HandlerTransaction,
-    Transaction,
+    DeployTransaction, FieldElement, InvokeTransaction, InvokeTransactionV0, InvokeTransactionV1,
+    L1HandlerTransaction, Transaction as RpcTransaction,
 };
 use starknet_api::hash::StarkFelt;
 use starknet_api::transaction::{
-    DeclareTransaction as InnerDeclareTransaction,
-    DeployAccountTransaction as InnerDeployAccountTransaction,
-    DeployTransaction as InnerDeployTransaction, InvokeTransaction as InnerInvokeTransaction,
-    L1HandlerTransaction as InnerL1HandlerTransaction, Transaction as InnerTransaction,
+    DeclareTransaction as ApiDeclareTransaction,
+    DeployAccountTransaction as ApiDeployAccountTransaction,
+    DeployTransaction as ApiDeployTransaction, InvokeTransaction as ApiInvokeTransaction,
+    L1HandlerTransaction as ApiL1HandlerTransaction, Transaction as ApiTransaction,
 };
 
 const PREFIX_INVOKE: FieldElement = FieldElement::from_mont([
@@ -120,109 +119,127 @@ pub fn compute_invoke_v1_transaction_hash(
     ])
 }
 
-pub fn convert_stark_felt_array_to_field_element_array(
-    calldata: &[StarkFelt],
-) -> Result<Vec<FieldElement>> {
-    calldata.iter().try_fold(Vec::new(), |mut data, &felt| {
-        data.push(felt.into());
-        Ok(data)
-    })
+#[inline]
+pub fn stark_felt_to_field_element_array(arr: &[StarkFelt]) -> Vec<FieldElement> {
+    arr.iter().map(|e| (*e).into()).collect()
 }
 
-pub fn convert_inner_to_rpc_tx(transaction: InnerTransaction) -> Result<Transaction> {
-    let tx = match transaction {
-        InnerTransaction::Invoke(invoke) => Transaction::Invoke(convert_invoke_to_rpc_tx(invoke)?),
-        InnerTransaction::Declare(declare) => {
-            Transaction::Declare(convert_declare_to_rpc_tx(declare)?)
+pub fn convert_api_to_rpc_tx(transaction: ApiTransaction) -> RpcTransaction {
+    match transaction {
+        ApiTransaction::Invoke(invoke) => RpcTransaction::Invoke(convert_invoke_to_rpc_tx(invoke)),
+        ApiTransaction::Declare(declare) => {
+            RpcTransaction::Declare(convert_declare_to_rpc_tx(declare))
         }
-        InnerTransaction::DeployAccount(deploy) => {
-            Transaction::DeployAccount(convert_deploy_account_to_rpc_tx(deploy)?)
+        ApiTransaction::DeployAccount(deploy) => {
+            RpcTransaction::DeployAccount(convert_deploy_account_to_rpc_tx(deploy))
         }
-        InnerTransaction::L1Handler(l1handler) => {
-            Transaction::L1Handler(convert_l1_handle_to_rpc(l1handler)?)
+        ApiTransaction::L1Handler(l1handler) => {
+            RpcTransaction::L1Handler(convert_l1_handle_to_rpc(l1handler))
         }
-        InnerTransaction::Deploy(deploy) => Transaction::Deploy(convert_deploy_to_rpc(deploy)?),
-    };
-    Ok(tx)
+        ApiTransaction::Deploy(deploy) => RpcTransaction::Deploy(convert_deploy_to_rpc(deploy)),
+    }
 }
 
-fn convert_l1_handle_to_rpc(
-    transaction: InnerL1HandlerTransaction,
-) -> Result<L1HandlerTransaction> {
-    Ok(L1HandlerTransaction {
+fn convert_l1_handle_to_rpc(transaction: ApiL1HandlerTransaction) -> L1HandlerTransaction {
+    L1HandlerTransaction {
         transaction_hash: transaction.transaction_hash.0.into(),
         contract_address: (*transaction.contract_address.0.key()).into(),
-        nonce: <StarkFelt as Into<FieldElement>>::into(transaction.nonce.0).try_into().unwrap(),
-        version: <StarkFelt as Into<FieldElement>>::into(transaction.version.0).try_into().unwrap(),
+        nonce: <StarkFelt as Into<FieldElement>>::into(transaction.nonce.0)
+            .try_into()
+            .expect("able to convert starkfelt to u64"),
+        version: <StarkFelt as Into<FieldElement>>::into(transaction.version.0)
+            .try_into()
+            .expect("able to convert starkfelt to u64"),
         entry_point_selector: transaction.entry_point_selector.0.into(),
-        calldata: convert_stark_felt_array_to_field_element_array(&transaction.calldata.0)?,
-    })
+        calldata: stark_felt_to_field_element_array(&transaction.calldata.0),
+    }
 }
 
-fn convert_deploy_to_rpc(transaction: InnerDeployTransaction) -> Result<DeployTransaction> {
-    Ok(DeployTransaction {
+fn convert_deploy_to_rpc(transaction: ApiDeployTransaction) -> DeployTransaction {
+    DeployTransaction {
         transaction_hash: transaction.transaction_hash.0.into(),
-        version: <StarkFelt as Into<FieldElement>>::into(transaction.version.0).try_into()?,
+        version: <StarkFelt as Into<FieldElement>>::into(transaction.version.0)
+            .try_into()
+            .expect("able to convert starkfelt to u64"),
         class_hash: transaction.class_hash.0.into(),
         contract_address_salt: transaction.contract_address_salt.0.into(),
-        constructor_calldata: convert_stark_felt_array_to_field_element_array(
+        constructor_calldata: stark_felt_to_field_element_array(
             &transaction.constructor_calldata.0,
-        )?,
-    })
+        ),
+    }
 }
 
 fn convert_deploy_account_to_rpc_tx(
-    transaction: InnerDeployAccountTransaction,
-) -> Result<DeployAccountTransaction> {
-    Ok(DeployAccountTransaction {
-        transaction_hash: transaction.transaction_hash.0.into(),
-        class_hash: transaction.class_hash.0.into(),
-        contract_address_salt: transaction.contract_address_salt.0.into(),
+    transaction: ApiDeployAccountTransaction,
+) -> DeployAccountTransaction {
+    DeployAccountTransaction {
         nonce: transaction.nonce.0.into(),
-        constructor_calldata: convert_stark_felt_array_to_field_element_array(
+        max_fee: transaction.max_fee.0.into(),
+        class_hash: transaction.class_hash.0.into(),
+        transaction_hash: transaction.transaction_hash.0.into(),
+        contract_address_salt: transaction.contract_address_salt.0.into(),
+        constructor_calldata: stark_felt_to_field_element_array(
             &transaction.constructor_calldata.0,
-        )?,
-        signature: convert_stark_felt_array_to_field_element_array(&transaction.signature.0)?,
-        max_fee: FieldElement::from_str(&transaction.max_fee.0.to_string())?,
-    })
+        ),
+        signature: stark_felt_to_field_element_array(&transaction.signature.0),
+    }
 }
 
-fn convert_invoke_to_rpc_tx(transaction: InnerInvokeTransaction) -> Result<InvokeTransaction> {
-    Ok(match transaction {
-        InnerInvokeTransaction::V1(tx) => InvokeTransaction::V1(InvokeTransactionV1 {
+fn convert_invoke_to_rpc_tx(transaction: ApiInvokeTransaction) -> InvokeTransaction {
+    match transaction {
+        ApiInvokeTransaction::V0(tx) => InvokeTransaction::V0(InvokeTransactionV0 {
+            nonce: FieldElement::ZERO,
+            max_fee: tx.max_fee.0.into(),
+            transaction_hash: tx.transaction_hash.0.into(),
+            contract_address: (*tx.contract_address.0.key()).into(),
+            entry_point_selector: tx.entry_point_selector.0.into(),
+            calldata: stark_felt_to_field_element_array(&tx.calldata.0),
+            signature: stark_felt_to_field_element_array(&tx.signature.0),
+        }),
+        ApiInvokeTransaction::V1(tx) => InvokeTransaction::V1(InvokeTransactionV1 {
+            nonce: tx.nonce.0.into(),
+            max_fee: tx.max_fee.0.into(),
             transaction_hash: tx.transaction_hash.0.into(),
             sender_address: (*tx.sender_address.0.key()).into(),
-            nonce: tx.nonce.0.into(),
-            calldata: convert_stark_felt_array_to_field_element_array(&tx.calldata.0)?,
-            signature: convert_stark_felt_array_to_field_element_array(&tx.signature.0)?,
-            max_fee: FieldElement::from_str(&tx.max_fee.0.to_string())?,
+            calldata: stark_felt_to_field_element_array(&tx.calldata.0),
+            signature: stark_felt_to_field_element_array(&tx.signature.0),
         }),
-        _ => unimplemented!("invoke v0 not supported"),
-    })
+    }
 }
 
-fn convert_declare_to_rpc_tx(transaction: InnerDeclareTransaction) -> Result<DeclareTransaction> {
-    Ok(match transaction {
-        InnerDeclareTransaction::V0(tx) | InnerDeclareTransaction::V1(tx) => {
+fn convert_declare_to_rpc_tx(transaction: ApiDeclareTransaction) -> DeclareTransaction {
+    match transaction {
+        ApiDeclareTransaction::V0(tx) | ApiDeclareTransaction::V1(tx) => {
             DeclareTransaction::V1(DeclareTransactionV1 {
                 nonce: tx.nonce.0.into(),
-                max_fee: FieldElement::from_str(&tx.max_fee.0.to_string())?,
+                max_fee: tx.max_fee.0.into(),
                 class_hash: tx.class_hash.0.into(),
                 transaction_hash: tx.transaction_hash.0.into(),
                 sender_address: (*tx.sender_address.0.key()).into(),
-                signature: convert_stark_felt_array_to_field_element_array(&tx.signature.0)?,
+                signature: stark_felt_to_field_element_array(&tx.signature.0),
             })
         }
-        InnerDeclareTransaction::V2(tx) => DeclareTransaction::V2(DeclareTransactionV2 {
+        ApiDeclareTransaction::V2(tx) => DeclareTransaction::V2(DeclareTransactionV2 {
             nonce: tx.nonce.0.into(),
+            max_fee: tx.max_fee.0.into(),
             class_hash: tx.class_hash.0.into(),
             transaction_hash: tx.transaction_hash.0.into(),
             sender_address: (*tx.sender_address.0.key()).into(),
             compiled_class_hash: tx.compiled_class_hash.0.into(),
-            max_fee: FieldElement::from_str(&tx.max_fee.0.to_string())?,
-            signature: convert_stark_felt_array_to_field_element_array(&tx.signature.0)?,
+            signature: stark_felt_to_field_element_array(&tx.signature.0),
         }),
-    })
+    }
+}
+
+pub fn convert_blockifier_to_api_tx(transaction: &ExecutionTransaction) -> ApiTransaction {
+    match transaction {
+        ExecutionTransaction::AccountTransaction(tx) => match tx {
+            AccountTransaction::Invoke(tx) => ApiTransaction::Invoke(tx.clone()),
+            AccountTransaction::Declare(tx) => ApiTransaction::Declare(tx.tx().clone()),
+            AccountTransaction::DeployAccount(tx) => ApiTransaction::DeployAccount(tx.tx.clone()),
+        },
+        ExecutionTransaction::L1HandlerTransaction(tx) => ApiTransaction::L1Handler(tx.tx.clone()),
+    }
 }
 
 #[cfg(test)]

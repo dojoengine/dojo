@@ -68,8 +68,8 @@ pub struct StarknetOptions {
     pub account_path: Option<PathBuf>,
 
     #[arg(long)]
-    #[arg(help = "Allow transaction max fee to be zero.")]
-    pub allow_zero_max_fee: bool,
+    #[arg(help = "Disable charging fee for transactions.")]
+    pub disable_fee: bool,
 
     #[command(flatten)]
     #[command(next_help_heading = "Environment options")]
@@ -113,7 +113,7 @@ impl KatanaArgs {
             total_accounts: self.starknet.total_accounts,
             seed: parse_seed(&self.starknet.seed),
             account_path: self.starknet.account_path.clone(),
-            allow_zero_max_fee: self.starknet.allow_zero_max_fee,
+            disable_fee: self.starknet.disable_fee,
             auto_mine: self.block_time.is_none() && !self.no_mining,
             env: Environment {
                 chain_id: self.starknet.environment.chain_id.clone(),
