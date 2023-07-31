@@ -236,7 +236,8 @@ impl State for Sql {
 
         let (names_str, values_str) = format_values(member_results, values)?;
         let insert_components = format!(
-            "INSERT OR REPLACE INTO external_{} (entity_id, partition {}) VALUES ('{}', '{:#x}' {})",
+            "INSERT OR REPLACE INTO external_{} (entity_id, partition {}) VALUES ('{}', '{:#x}' \
+             {})",
             component.to_lowercase(),
             names_str,
             entity_id,

@@ -30,6 +30,11 @@ pub mod executor;
 pub mod state;
 pub mod storage;
 
+use self::config::StarknetConfig;
+use self::executor::{execute_transaction, PendingBlockExecutor};
+use self::storage::block::{Block, PartialHeader};
+use self::storage::transaction::{IncludedTransaction, KnownTransaction, TransactionStatus};
+use self::storage::{BlockchainStorage, InMemoryBlockStates};
 use crate::accounts::PredeployedAccounts;
 use crate::backend::state::{MemDb, StateExt};
 use crate::block_context::BlockContextGenerator;
@@ -39,12 +44,6 @@ use crate::db::Db;
 use crate::sequencer_error::SequencerError;
 use crate::utils::transaction::convert_blockifier_to_api_tx;
 use crate::utils::{convert_state_diff_to_rpc_state_diff, get_current_timestamp};
-
-use self::config::StarknetConfig;
-use self::executor::{execute_transaction, PendingBlockExecutor};
-use self::storage::block::{Block, PartialHeader};
-use self::storage::transaction::{IncludedTransaction, KnownTransaction, TransactionStatus};
-use self::storage::{BlockchainStorage, InMemoryBlockStates};
 
 pub struct ExternalFunctionCall {
     pub calldata: Calldata,

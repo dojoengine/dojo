@@ -6,10 +6,8 @@ use starknet::core::types::{
     PendingDeclareTransactionReceipt, PendingDeployAccountTransactionReceipt,
     PendingDeployTransactionReceipt, PendingInvokeTransactionReceipt,
     PendingL1HandlerTransactionReceipt, PendingTransactionReceipt as RpcPendingTransactionReceipt,
-    TransactionStatus as RpcTransactionStatus,
-};
-use starknet::core::types::{
     Transaction as RpcTransaction, TransactionReceipt as RpcTransactionReceipt,
+    TransactionStatus as RpcTransactionStatus,
 };
 use starknet_api::transaction::Transaction as ApiTransaction;
 

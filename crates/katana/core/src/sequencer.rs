@@ -634,8 +634,9 @@ fn filter_events_by_params(
                 // custom key `0x1` or `0x2` Filter: [[sn_keccack("Event1"),
                 // sn_keccack("Event2")], ["0x1", "0x2"]]
 
-                // This checks: number of keys in event >= number of keys in filter (we check > i and not >= i because i is zero indexed)
-                // because otherwise this event doesn't contain all the keys we requested
+                // This checks: number of keys in event >= number of keys in filter (we check > i
+                // and not >= i because i is zero indexed) because otherwise this
+                // event doesn't contain all the keys we requested
                 event.keys.len() > i &&
                     // This checks: Empty array desginates 'any' value
                     (keys.is_empty()

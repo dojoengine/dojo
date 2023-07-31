@@ -1,12 +1,13 @@
 use std::sync::Arc;
 
+use blockifier::block_context::BlockContext;
 use blockifier::execution::entry_point::CallInfo;
+use blockifier::state::cached_state::CachedState;
 use blockifier::state::state_api::StateReader;
 use blockifier::transaction::errors::TransactionExecutionError;
 use blockifier::transaction::objects::{ResourcesMapping, TransactionExecutionInfo};
 use blockifier::transaction::transaction_execution::Transaction as ExecutionTransaction;
 use blockifier::transaction::transactions::ExecutableTransaction;
-use blockifier::{block_context::BlockContext, state::cached_state::CachedState};
 use convert_case::{Case, Casing};
 use parking_lot::RwLock;
 use starknet::core::types::{Event, FieldElement, MsgToL1};
@@ -14,13 +15,12 @@ use starknet_api::transaction::Transaction;
 use tokio::sync::RwLock as AsyncRwLock;
 use tracing::{trace, warn};
 
-use crate::backend::storage::transaction::KnownTransaction;
-use crate::utils::transaction::convert_blockifier_to_api_tx;
-
 use super::state::MemDb;
 use super::storage::block::{Block, PartialBlock, PartialHeader};
 use super::storage::transaction::{RejectedTransaction, TransactionOutput};
 use super::storage::BlockchainStorage;
+use crate::backend::storage::transaction::KnownTransaction;
+use crate::utils::transaction::convert_blockifier_to_api_tx;
 
 #[derive(Debug)]
 pub struct PendingBlockExecutor {

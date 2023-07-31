@@ -13,10 +13,9 @@ use katana_core::utils::contract::{
     legacy_inner_to_rpc_class, legacy_rpc_to_inner_class, rpc_to_inner_class,
 };
 use katana_core::utils::starkfelt_to_u128;
-use katana_core::utils::transaction::compute_deploy_account_v1_transaction_hash;
 use katana_core::utils::transaction::{
     compute_declare_v1_transaction_hash, compute_declare_v2_transaction_hash,
-    compute_invoke_v1_transaction_hash,
+    compute_deploy_account_v1_transaction_hash, compute_invoke_v1_transaction_hash,
 };
 use starknet::core::types::{
     BlockHashAndNumber, BlockId, BlockTag, BroadcastedDeclareTransaction,
