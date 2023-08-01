@@ -10,7 +10,6 @@ use starknet::contract_address_const;
 use starknet::get_caller_address;
 use starknet::syscalls::deploy_syscall;
 
-use dojo::database::query::QueryTrait;
 use dojo::executor::executor;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, library_call, world};
 
@@ -18,12 +17,16 @@ use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, library_call, world};
 
 #[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Foo {
+    #[key]
+    caller: ContractAddress,
     a: felt252,
     b: u128,
 }
 
 #[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Fizz {
+    #[key]
+    caller: ContractAddress,
     a: felt252
 }
 

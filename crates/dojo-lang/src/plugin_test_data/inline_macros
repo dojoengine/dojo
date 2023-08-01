@@ -5,31 +5,39 @@ test_expand_plugin
 
 //! > cairo_code
 struct Player {
+    #[key]
+    key: felt252,
     name: felt252
 }
 
 struct Position {
+    #[key]
+    key: felt252,
     x: felt252,
     y: felt252
 }
 
 const world: felt252 = 0xbeef;
-const player: Player = Player { name: 'name' };
+const player: Player = Player { key: 'key', name: 'name' };
 
 fn foo() {
-    set!(world, 420, (
+    set!(world, (
         player,
-        Position { x: 0, y: 0 },
+        Position { key: 'key', x: 0, y: 0 },
     ));
 }
 
 //! > generated_cairo_code
 struct Player {
+    #[key]
+    key: felt252,
     name: felt252
 }
 
 
 struct Position {
+    #[key]
+    key: felt252,
     x: felt252,
     y: felt252
 }
@@ -37,31 +45,17 @@ struct Position {
 
 const world: felt252 = 0xbeef;
 
-const player: Player = Player { name: 'name' };
+const player: Player = Player { key: 'key', name: 'name' };
 
 fn foo() {
     {
-        let __set_macro_query__ = 420;
-
-        let mut __set_macro_calldata__ = ArrayTrait::new();
-        let __set_macro__value__ = player;
-        serde::Serde::serialize(@__set_macro__value__, ref __set_macro_calldata__);
+        world.set_entity(player.name(), player.keys(), 0_u8, player.values());
         world
             .set_entity(
-                dojo::traits::Component::name(@__set_macro__value__),
-                __set_macro_query__,
+                Position { key: 'key', x: 0, y: 0 }.name(),
+                Position { key: 'key', x: 0, y: 0 }.keys(),
                 0_u8,
-                array::ArrayTrait::span(@__set_macro_calldata__)
-            );
-        let mut __set_macro_calldata__ = ArrayTrait::new();
-        let __set_macro__value__ = Position { x: 0, y: 0 };
-        serde::Serde::serialize(@__set_macro__value__, ref __set_macro_calldata__);
-        world
-            .set_entity(
-                dojo::traits::Component::name(@__set_macro__value__),
-                __set_macro_query__,
-                0_u8,
-                array::ArrayTrait::span(@__set_macro_calldata__)
+                Position { key: 'key', x: 0, y: 0 }.values()
             );
     };
 }

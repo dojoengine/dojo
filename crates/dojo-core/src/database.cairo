@@ -5,37 +5,30 @@ use hash::LegacyHash;
 use poseidon::poseidon_hash_span;
 
 mod index;
-mod query;
 mod storage;
 mod utils;
 
-use dojo::database::query::{Query, QueryTrait};
-
 fn get(
-    class_hash: starknet::ClassHash, table: felt252, query: Query, offset: u8, length: usize
+    class_hash: starknet::ClassHash, table: felt252, key: felt252, offset: u8, length: usize
 ) -> Span<felt252> {
-    let id = query.hash();
     let mut keys = ArrayTrait::new();
     keys.append('dojo_storage');
     keys.append(table);
-    keys.append(id);
+    keys.append(key);
     storage::get_many(0, keys.span(), offset, length)
 }
 
 fn set(
-    class_hash: starknet::ClassHash, table: felt252, query: Query, offset: u8, value: Span<felt252>
+    class_hash: starknet::ClassHash, table: felt252, key: felt252, offset: u8, value: Span<felt252>
 ) {
-    let id = query.hash();
-    index::create(0, table, id);
-
     let mut keys = ArrayTrait::new();
     keys.append('dojo_storage');
     keys.append(table);
-    keys.append(id);
+    keys.append(key);
     storage::set_many(0, keys.span(), offset, value);
 }
 
-fn del(class_hash: starknet::ClassHash, table: felt252, query: Query) {
+fn del(class_hash: starknet::ClassHash, table: felt252, key: felt252) {
     index::delete(0, table, query.hash());
 }
 

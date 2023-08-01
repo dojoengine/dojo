@@ -13,20 +13,18 @@ impl InlineMacro for SetMacro {
     ) {
         let args = macro_arguments.elements(db);
 
-        if args.len() != 3 {
+        if args.len() != 2 {
             macro_expander_data.diagnostics.push(PluginDiagnostic {
-                message: "Invalid arguments. Expected \"(world, query, (components,))\""
-                    .to_string(),
+                message: "Invalid arguments. Expected \"(world, (components,))\"".to_string(),
                 stable_ptr: macro_arguments.as_syntax_node().stable_ptr(),
             });
             return;
         }
 
         let world = &args[0];
-        let query = &args[1].clone();
         let mut bundle = vec![];
 
-        match &args[2] {
+        match &args[1] {
             ast::Expr::Parenthesized(parens) => {
                 bundle.push(parens.expr(db).as_syntax_node().get_text(db))
             }
@@ -44,21 +42,14 @@ impl InlineMacro for SetMacro {
             }
         }
 
-        let mut expanded_code = format!(
-            "{{
-            let __set_macro_query__ = {};
-            ",
-            query.as_syntax_node().get_text(db)
-        );
+        let mut expanded_code = "{".to_string();
         for entity in bundle {
             expanded_code.push_str(&format!(
-                "\n            let mut __set_macro_calldata__ = ArrayTrait::new();
-                let __set_macro__value__ = {};
-                serde::Serde::serialize(@__set_macro__value__, ref __set_macro_calldata__);
-                {}.set_entity(dojo::traits::Component::name(@__set_macro__value__), \
-                 __set_macro_query__, 0_u8, array::ArrayTrait::span(@__set_macro_calldata__));",
-                entity,
+                "\n            {}.set_entity({}.name(), {}.keys(), 0_u8, {}.values());",
                 world.as_syntax_node().get_text(db),
+                entity,
+                entity,
+                entity,
             ));
         }
         expanded_code.push('}');

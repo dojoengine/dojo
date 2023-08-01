@@ -5,7 +5,8 @@ trait Component<T> {
 #[starknet::interface]
 trait IComponent<T> {
     fn name(self: @T) -> felt252;
-    fn key(self: @T) -> felt252;
+    fn keys(self: @T) -> Span<felt252>;
+    fn values(self: @T) -> Span<felt252>;
 }
 
 #[starknet::interface]
