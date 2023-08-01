@@ -85,13 +85,9 @@ impl ObjectTrait for EntityObject {
                 for component_name in components {
                     let table_name = component_name.to_lowercase();
                     let type_mapping = type_mapping_from(&mut conn, &table_name).await?;
-                    let state = component_state_by_entity_id(
-                        &mut conn,
-                        &table_name,
-                        &id,
-                        &type_mapping,
-                    )
-                    .await?;
+                    let state =
+                        component_state_by_entity_id(&mut conn, &table_name, &id, &type_mapping)
+                            .await?;
                     results
                         .push(FieldValue::with_type(FieldValue::owned_any(state), component_name));
                 }
@@ -101,54 +97,54 @@ impl ObjectTrait for EntityObject {
         })])
     }
 
-    fn resolvers(&self) -> Vec<Field> {
-        vec![
-            resolve_one(self.name(), self.type_name()), // one
-            resolve_many("entities", self.type_name()), // many
-        ]
+    fn resolve_one(&self) -> Option<Field> {
+        Some(
+            Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
+                FieldFuture::new(async move {
+                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                    let id = ctx.args.try_get("id")?.string()?.to_string();
+                    let entity = query_by_id(&mut conn, "entities", ID::Str(id)).await?;
+                    let result = EntityObject::value_mapping(entity);
+                    Ok(Some(FieldValue::owned_any(result)))
+                })
+            })
+            .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID))),
+        )
     }
-}
 
-fn resolve_one(name: &str, type_name: &str) -> Field {
-    Field::new(name, TypeRef::named_nn(type_name), |ctx| {
-        FieldFuture::new(async move {
-            let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-            let id = ctx.args.try_get("id")?.string()?.to_string();
-            let entity = query_by_id(&mut conn, "entities", ID::Str(id)).await?;
-            let result = EntityObject::value_mapping(entity);
-            Ok(Some(FieldValue::owned_any(result)))
-        })
-    })
-    .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID)))
-}
+    fn resolve_many(&self) -> Option<Field> {
+        Some(
+            Field::new("entities", TypeRef::named_list(self.type_name()), |ctx| {
+                FieldFuture::new(async move {
+                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
 
-fn resolve_many(name: &str, type_name: &str) -> Field {
-    Field::new(name, TypeRef::named_list(type_name), |ctx| {
-        FieldFuture::new(async move {
-            let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                    let keys_value = ctx.args.try_get("keys")?;
+                    let keys = keys_value
+                        .list()?
+                        .iter()
+                        .map(
+                            |val| val.string().unwrap().to_string(), // safe unwrap
+                        )
+                        .collect();
 
-            let keys_value = ctx.args.try_get("keys")?;
-            let keys = keys_value
-                .list()?
-                .iter()
-                .map(
-                    |val| val.string().unwrap().to_string(), // safe unwrap
-                )
-                .collect();
+                    let limit = ctx
+                        .args
+                        .try_get("limit")
+                        .and_then(|limit| limit.u64())
+                        .unwrap_or(DEFAULT_LIMIT);
 
-            let limit =
-                ctx.args.try_get("limit").and_then(|limit| limit.u64()).unwrap_or(DEFAULT_LIMIT);
+                    let component_name = ctx.args.try_get("componentName") // Add the component name argument
+                    .and_then(|name| name.string().map(|s| s.to_string())).ok();
 
-            let component_name = ctx.args.try_get("componentName") // Add the component name argument
-                .and_then(|name| name.string().map(|s| s.to_string())).ok();
-
-            let entities = entities_by_sk(&mut conn, keys, component_name, limit).await?;
-            Ok(Some(FieldValue::list(entities.into_iter().map(FieldValue::owned_any))))
-        })
-    })
-    .argument(InputValue::new("keys", TypeRef::named_nn_list_nn(TypeRef::STRING)))
-    .argument(InputValue::new("limit", TypeRef::named(TypeRef::INT)))
-    .argument(InputValue::new("componentName", TypeRef::named(TypeRef::STRING)))
+                    let entities = entities_by_sk(&mut conn, keys, component_name, limit).await?;
+                    Ok(Some(FieldValue::list(entities.into_iter().map(FieldValue::owned_any))))
+                })
+            })
+            .argument(InputValue::new("keys", TypeRef::named_nn_list_nn(TypeRef::STRING)))
+            .argument(InputValue::new("limit", TypeRef::named(TypeRef::INT)))
+            .argument(InputValue::new("componentName", TypeRef::named(TypeRef::STRING))),
+        )
+    }
 }
 
 async fn entities_by_sk(

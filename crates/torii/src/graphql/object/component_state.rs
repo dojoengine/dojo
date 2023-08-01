@@ -54,20 +54,60 @@ impl ObjectTrait for ComponentStateObject {
         &self.type_name
     }
 
+    // Type mapping contains all component members and their corresponding type
     fn type_mapping(&self) -> &TypeMapping {
         &self.type_mapping
     }
 
+    // Associate component to its parent entity
     fn nested_fields(&self) -> Option<Vec<Field>> {
         Some(vec![entity_field()])
     }
 
-    fn resolvers(&self) -> Vec<Field> {
-        vec![resolve_many(
-            self.name.to_string(),
-            self.type_name.to_string(),
-            self.type_mapping.clone(),
-        )]
+    fn resolve_many(&self) -> Option<Field> {
+        let type_mapping = self.type_mapping.clone();
+        let name = self.name.clone();
+
+        let mut field = Field::new(
+            format!("{}Components", self.name()),
+            TypeRef::named_list(self.type_name()),
+            move |ctx| {
+                let type_mapping = type_mapping.clone();
+                let name = name.clone();
+
+                FieldFuture::new(async move {
+                    // parse optional input query params
+                    let (filters, limit) = parse_inputs(&ctx, &type_mapping)?;
+
+                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                    let state_values =
+                        component_states_query(&mut conn, &name, &filters, limit, &type_mapping)
+                            .await?;
+
+                    let result: Vec<FieldValue<'_>> =
+                        state_values.into_iter().map(FieldValue::owned_any).collect();
+
+                    Ok(Some(FieldValue::list(result)))
+                })
+            },
+        );
+
+        // Add all objects fields as filter parameters, currently only
+        // equality is supported
+        field = self
+            .type_mapping()
+            .into_iter()
+            .fold(field, |field, (name, ty)| {
+                // we want to be able to return entity_id in component queries
+                // but don't need this as a filter parameter
+                match name.as_str() {
+                    ENTITY_ID => field,
+                    _ => field.argument(InputValue::new(name.as_str(), TypeRef::named(ty))),
+                }
+            })
+            .argument(InputValue::new("limit", TypeRef::named(TypeRef::INT)));
+
+        Some(field)
     }
 }
 
@@ -83,48 +123,6 @@ fn entity_field() -> Field {
             Ok(Some(FieldValue::owned_any(result)))
         })
     })
-}
-
-fn resolve_many(name: String, type_name: String, type_mapping: TypeMapping) -> Field {
-    let ftm_clone = type_mapping.clone();
-
-    let field =
-        Field::new(format!("{}Components", &name), TypeRef::named_list(type_name), move |ctx| {
-            // FIX: type_mapping and name needs to be passed down to the doubly
-            // nested async closures, thus the cloning. could handle this better
-            let type_mapping = type_mapping.clone();
-            let name = name.clone();
-
-            FieldFuture::new(async move {
-                // parse optional input query params
-                let (filters, limit) = parse_inputs(&ctx, &type_mapping)?;
-
-                let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                let state_values =
-                    component_states_query(&mut conn, &name, &filters, limit, &type_mapping)
-                        .await?;
-
-                let result: Vec<FieldValue<'_>> =
-                    state_values.into_iter().map(FieldValue::owned_any).collect();
-
-                Ok(Some(FieldValue::list(result)))
-            })
-        });
-
-    add_arguments(field, ftm_clone)
-}
-
-fn add_arguments(field: Field, type_mapping: TypeMapping) -> Field {
-    type_mapping
-        .into_iter()
-        .fold(field, |field, (name, ty)| {
-            // omit entity id as argument
-            match name.as_str() {
-                ENTITY_ID => field,
-                _ => field.argument(InputValue::new(name.as_str(), TypeRef::named(ty))),
-            }
-        })
-        .argument(InputValue::new("limit", TypeRef::named(TypeRef::INT)))
 }
 
 fn parse_inputs(

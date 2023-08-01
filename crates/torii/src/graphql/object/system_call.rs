@@ -68,8 +68,8 @@ impl ObjectTrait for SystemCallObject {
         &self.type_mapping
     }
 
-    fn resolvers(&self) -> Vec<Field> {
-        vec![
+    fn resolve_one(&self) -> Option<Field> {
+        Some(
             Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
@@ -80,27 +80,30 @@ impl ObjectTrait for SystemCallObject {
                 })
             })
             .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::INT))),
-            Field::new("systemCalls", TypeRef::named_list(self.type_name()), |ctx| {
-                FieldFuture::new(async move {
-                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let limit = ctx
-                        .args
-                        .try_get("limit")
-                        .and_then(|limit| limit.u64())
-                        .unwrap_or(DEFAULT_LIMIT);
+        )
+    }
 
-                    let system_calls: Vec<SystemCall> =
-                        query_all(&mut conn, "system_calls", limit).await?;
-                    let result: Vec<FieldValue<'_>> = system_calls
-                        .into_iter()
-                        .map(SystemCallObject::value_mapping)
-                        .map(FieldValue::owned_any)
-                        .collect();
+    fn resolve_many(&self) -> Option<Field> {
+        Some(Field::new("systemCalls", TypeRef::named_list(self.type_name()), |ctx| {
+            FieldFuture::new(async move {
+                let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                let limit = ctx
+                    .args
+                    .try_get("limit")
+                    .and_then(|limit| limit.u64())
+                    .unwrap_or(DEFAULT_LIMIT);
 
-                    Ok(Some(FieldValue::list(result)))
-                })
-            }),
-        ]
+                let system_calls: Vec<SystemCall> =
+                    query_all(&mut conn, "system_calls", limit).await?;
+                let result: Vec<FieldValue<'_>> = system_calls
+                    .into_iter()
+                    .map(SystemCallObject::value_mapping)
+                    .map(FieldValue::owned_any)
+                    .collect();
+
+                Ok(Some(FieldValue::list(result)))
+            })
+        }))
     }
 
     fn nested_fields(&self) -> Option<Vec<Field>> {

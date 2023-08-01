@@ -1,5 +1,5 @@
 use anyhow::Result;
-use async_graphql::dynamic::{Object, Scalar, Schema, Union};
+use async_graphql::dynamic::{Field, Object, Scalar, Schema, Union};
 use sqlx::SqlitePool;
 
 use super::object::component::Component;
@@ -28,10 +28,15 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     objects.extend(component_objects);
     schema_builder = schema_builder.register(component_union);
 
-    // collect field resolvers
-    let mut fields = Vec::new();
+    // collect resolvers for one and many queries
+    let mut fields: Vec<Field> = Vec::new();
     for object in &objects {
-        fields.extend(object.resolvers());
+        if let Some(resolve_one) = object.resolve_one() {
+            fields.push(resolve_one);
+        }
+        if let Some(resolve_many) = object.resolve_many() {
+            fields.push(resolve_many);
+        }
     }
 
     // add field resolvers to query root
@@ -47,7 +52,7 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
 
     // register gql objects
     for object in &objects {
-        schema_builder = schema_builder.register(object.object());
+        schema_builder = schema_builder.register(object.create());
     }
 
     schema_builder.register(query_root).data(pool.clone()).finish().map_err(|e| e.into())

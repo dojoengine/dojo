@@ -70,8 +70,8 @@ impl ObjectTrait for SystemObject {
         &self.type_mapping
     }
 
-    fn resolvers(&self) -> Vec<Field> {
-        vec![
+    fn resolve_one(&self) -> Option<Field> {
+        Some(
             Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
@@ -82,6 +82,11 @@ impl ObjectTrait for SystemObject {
                 })
             })
             .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID))),
+        )
+    }
+
+    fn resolve_many(&self) -> Option<Field> {
+        Some(
             Field::new("systems", TypeRef::named_list(self.type_name()), |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
@@ -102,7 +107,7 @@ impl ObjectTrait for SystemObject {
                 })
             })
             .argument(InputValue::new("limit", TypeRef::named(TypeRef::INT))),
-        ]
+        )
     }
 
     fn nested_fields(&self) -> Option<Vec<Field>> {
