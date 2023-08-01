@@ -8,6 +8,7 @@ description = "A fast and lightweight local Starknet development sequencer."
 
 [dependencies]
 clap.workspace = true
+clap_complete.workspace = true
 env_logger.workspace = true
 log.workspace = true
 tokio.workspace = true
@@ -15,7 +16,6 @@ katana-core = { path = "core" }
 katana-rpc = { path = "rpc" }
 starknet_api.workspace = true
 yansi.workspace = true
-clap_complete = "4.3.2"
 
 [dev-dependencies]
 assert_matches = "1.5.0"
