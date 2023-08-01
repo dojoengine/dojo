@@ -198,6 +198,15 @@
       "contributions": [
         "code"
       ]
+    },
+    {
+      "login": "coostendorp",
+      "name": "Caspar Oostendorp",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4388195?v=4",
+      "profile": "https://github.com/coostendorp",
+      "contributions": [
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
