@@ -93,6 +93,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
     </tr>
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/coostendorp"><img src="https://avatars.githubusercontent.com/u/4388195?v=4?s=100" width="100px;" alt="Caspar Oostendorp"/><br /><sub><b>Caspar Oostendorp</b></sub></a><br /><a href="https://github.com/dojoengine/dojo/commits?author=coostendorp" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/xJonathanLEI"><img src="https://avatars.githubusercontent.com/u/19556359?v=4?s=100" width="100px;" alt="Jonathan LEI"/><br /><sub><b>Jonathan LEI</b></sub></a><br /><a href="https://github.com/dojoengine/dojo/commits?author=xJonathanLEI" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>
