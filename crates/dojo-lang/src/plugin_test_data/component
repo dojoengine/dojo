@@ -66,14 +66,15 @@ struct Position {
 }
 
 trait PositionKeysTrait {
-    fn serialize_keys(id: felt252) -> Span<felt252>;
+    fn serialize_keys(keys: (felt252)) -> Span<felt252>;
 }
 
 impl PositionKeysImpl of PositionKeysTrait {
     #[inline(always)]
-    fn serialize_keys(id: felt252) -> Span<felt252> {
+    fn serialize_keys(keys: (felt252)) -> Span<felt252> {
+        let (id): (felt252) = keys;
         let mut serialized = ArrayTrait::new();
-        self.id.serialize(ref serialized);
+        id.serialize(ref serialized);
         serialized.span()
     }
 }
@@ -155,12 +156,13 @@ struct Roles {
 }
 
 trait RolesKeysTrait {
-    fn serialize_keys() -> Span<felt252>;
+    fn serialize_keys(keys: ()) -> Span<felt252>;
 }
 
 impl RolesKeysImpl of RolesKeysTrait {
     #[inline(always)]
-    fn serialize_keys() -> Span<felt252> {
+    fn serialize_keys(keys: ()) -> Span<felt252> {
+        let (): () = keys;
         let mut serialized = ArrayTrait::new();
 
         serialized.span()
@@ -226,15 +228,16 @@ struct Player {
 }
 
 trait PlayerKeysTrait {
-    fn serialize_keys(game: felt252, player: felt252) -> Span<felt252>;
+    fn serialize_keys(keys: (felt252, felt252)) -> Span<felt252>;
 }
 
 impl PlayerKeysImpl of PlayerKeysTrait {
     #[inline(always)]
-    fn serialize_keys(game: felt252, player: felt252) -> Span<felt252> {
+    fn serialize_keys(keys: (felt252, felt252)) -> Span<felt252> {
+        let (game, player): (felt252, felt252) = keys;
         let mut serialized = ArrayTrait::new();
-        self.game.serialize(ref serialized);
-        self.player.serialize(ref serialized);
+        game.serialize(ref serialized);
+        player.serialize(ref serialized);
         serialized.span()
     }
 }

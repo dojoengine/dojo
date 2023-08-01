@@ -117,6 +117,12 @@ impl MacroPlugin for DojoPlugin {
                 diagnostics: expander_data.diagnostics,
                 remove_original_item: true,
             };
+        } else if !expander_data.diagnostics.is_empty() {
+            return PluginResult {
+                code: None,
+                diagnostics: expander_data.diagnostics,
+                remove_original_item: true,
+            };
         }
 
         match item_ast {

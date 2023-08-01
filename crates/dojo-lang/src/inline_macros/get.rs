@@ -1,4 +1,5 @@
 use cairo_lang_defs::plugin::PluginDiagnostic;
+use cairo_lang_syntax::node::ast::Expr;
 use cairo_lang_syntax::node::TypedSyntaxNode;
 use itertools::Itertools;
 
@@ -17,7 +18,7 @@ impl InlineMacro for GetMacro {
 
         if args.len() != 3 {
             macro_expander_data.diagnostics.push(PluginDiagnostic {
-                message: "Invalid arguments. Expected \"get!(world, query, (components,))\""
+                message: "Invalid arguments. Expected \"get!(world, keys, (components,))\""
                     .to_string(),
                 stable_ptr: macro_arguments.as_syntax_node().stable_ptr(),
             });
@@ -25,7 +26,7 @@ impl InlineMacro for GetMacro {
         }
 
         let world = &args[0];
-        let query = &args[1].clone();
+        let keys = &args[1];
         let components = extract_components(db, &args[2]);
 
         if components.is_empty() {
@@ -36,12 +37,21 @@ impl InlineMacro for GetMacro {
             return;
         }
 
-        let mut expanded_code = format!(
-            "{{
-            let __get_macro_query__ = {};
-            ",
-            query.as_syntax_node().get_text(db)
-        );
+        let args = match keys {
+            Expr::Parenthesized(_) => keys.as_syntax_node().get_text(db),
+            Expr::Tuple(_) => keys.as_syntax_node().get_text(db),
+            Expr::Path(path) => path.as_syntax_node().get_text(db),
+            Expr::Literal(literal) => format!("({})", literal.as_syntax_node().get_text(db)),
+            _ => {
+                macro_expander_data.diagnostics.push(PluginDiagnostic {
+                    message: "Keys must be literal, arg, or tuple".to_string(),
+                    stable_ptr: macro_arguments.as_syntax_node().stable_ptr(),
+                });
+                return;
+            }
+        };
+
+        let mut expanded_code = "{".to_string();
 
         for component in &components {
             let mut lookup_err_msg = format!("{} not found", component.to_string());
@@ -51,8 +61,8 @@ impl InlineMacro for GetMacro {
 
             expanded_code.push_str(&format!(
                 "\n            let mut __{component}_raw = {}.entity('{component}', \
-                 __get_macro_query__, 0_u8, dojo::SerdeLen::<{component}>::len());
-                   assert(__{component}_raw.len() > 0_usize, '{lookup_err_msg}');
+                 {component}KeysTrait::serialize_keys({args}), 0_u8, \
+                 dojo::SerdeLen::<{component}>::len());
                    let __{component} = serde::Serde::<{component}>::deserialize(
                        ref __{component}_raw
                    ).expect('{deser_err_msg}');",

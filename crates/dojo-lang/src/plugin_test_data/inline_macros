@@ -25,6 +25,9 @@ fn foo() {
         player,
         Position { key: 'key', x: 0, y: 0 },
     ));
+
+    set!();
+    set!(world, ());
 }
 
 //! > generated_cairo_code
@@ -49,18 +52,35 @@ const player: Player = Player { key: 'key', name: 'name' };
 
 fn foo() {
     {
-        world.set_entity(player.name(), player.keys(), 0_u8, player.values());
+        let __set_macro_value__ = player;
         world
             .set_entity(
-                Position { key: 'key', x: 0, y: 0 }.name(),
-                Position { key: 'key', x: 0, y: 0 }.keys(),
+                __set_macro_value__.name(),
+                __set_macro_value__.keys(),
                 0_u8,
-                Position { key: 'key', x: 0, y: 0 }.values()
+                __set_macro_value__.values()
+            );
+        let __set_macro_value__ = Position { key: 'key', x: 0, y: 0 };
+        world
+            .set_entity(
+                __set_macro_value__.name(),
+                __set_macro_value__.keys(),
+                0_u8,
+                __set_macro_value__.values()
             );
     };
-}
+; ; }
 
 //! > expected_diagnostics
+error: Invalid arguments. Expected "(world, (components,))"
+ --> dummy_file.cairo:23:10
+    set!();
+         ^
+
+error: Invalid arguments: No components provided.
+ --> dummy_file.cairo:24:10
+    set!(world, ());
+         ^*******^
 
 //! > ==========================================================================
 
@@ -72,24 +92,60 @@ test_expand_plugin
 //! > cairo_code
 fn foo() {
     let (position, moves) = get!(world, 0x420, (Position, Moves));
+    let position = get!(world, (0x420, 0x1337), Position);
+
+    let id = (0x420, 0x1337);
+    let position = get!(world, id, Position);
 }
 
 //! > generated_cairo_code
 fn foo() {
     let (position, moves) = {
-        let __get_macro_query__ = 0x420;
-
         let mut __Position_raw = world
-            .entity('Position', __get_macro_query__, 0_u8, dojo::SerdeLen::<Position>::len());
-        assert(__Position_raw.len() > 0_usize, 'Position not found');
+            .entity(
+                'Position',
+                PositionKeysTrait::serialize_keys((0x420)),
+                0_u8,
+                dojo::SerdeLen::<Position>::len()
+            );
         let __Position = serde::Serde::<Position>::deserialize(ref __Position_raw)
             .expect('Position failed to deserialize');
         let mut __Moves_raw = world
-            .entity('Moves', __get_macro_query__, 0_u8, dojo::SerdeLen::<Moves>::len());
-        assert(__Moves_raw.len() > 0_usize, 'Moves not found');
+            .entity(
+                'Moves',
+                MovesKeysTrait::serialize_keys((0x420)),
+                0_u8,
+                dojo::SerdeLen::<Moves>::len()
+            );
         let __Moves = serde::Serde::<Moves>::deserialize(ref __Moves_raw)
             .expect('Moves failed to deserialize');
         (__Position, __Moves)
+    };
+    let position = {
+        let mut __Position_raw = world
+            .entity(
+                'Position',
+                PositionKeysTrait::serialize_keys((0x420, 0x1337)),
+                0_u8,
+                dojo::SerdeLen::<Position>::len()
+            );
+        let __Position = serde::Serde::<Position>::deserialize(ref __Position_raw)
+            .expect('Position failed to deserialize');
+        (__Position)
+    };
+
+    let id = (0x420, 0x1337);
+    let position = {
+        let mut __Position_raw = world
+            .entity(
+                'Position',
+                PositionKeysTrait::serialize_keys(id),
+                0_u8,
+                dojo::SerdeLen::<Position>::len()
+            );
+        let __Position = serde::Serde::<Position>::deserialize(ref __Position_raw)
+            .expect('Position failed to deserialize');
+        (__Position)
     };
 }
 

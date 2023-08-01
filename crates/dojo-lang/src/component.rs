@@ -53,25 +53,24 @@ pub fn handle_component_struct(
         });
     }
 
-    let key_args = keys
-        .iter()
-        .map(|e| {
-            format!(
-                "{}: {}",
-                e.name(db).text(db),
-                e.type_clause(db).ty(db).as_syntax_node().get_text(db)
-            )
-        })
-        .join(", ");
+    let key_names = keys.iter().map(|e| e.name(db).text(db)).join(", ");
+
+    let key_types =
+        keys.iter().map(|e| e.type_clause(db).ty(db).as_syntax_node().get_text(db)).join(", ");
 
     let serialized_keys: Vec<_> = keys
+        .iter()
+        .map(|e| RewriteNode::Text(format!("{}.serialize(ref serialized);", e.name(db).text(db))))
+        .collect::<_>();
+
+    let component_serialized_keys: Vec<_> = keys
         .iter()
         .map(|e| {
             RewriteNode::Text(format!("self.{}.serialize(ref serialized);", e.name(db).text(db)))
         })
         .collect::<_>();
 
-    let serialized_values: Vec<_> = elements
+    let component_serialized_values: Vec<_> = elements
         .iter()
         .filter_map(|e| {
             if !e.has_attr(db, "key") {
@@ -107,12 +106,13 @@ pub fn handle_component_struct(
             }
 
             trait $type_name$KeysTrait {
-                fn serialize_keys($key_args$) -> Span<felt252>;
+                fn serialize_keys(keys: ($key_types$)) -> Span<felt252>;
             }
 
             impl $type_name$KeysImpl of $type_name$KeysTrait {
                 #[inline(always)]
-                fn serialize_keys($key_args$) -> Span<felt252> {
+                fn serialize_keys(keys: ($key_types$)) -> Span<felt252> {
+                    let ($key_names$): ($key_types$) = keys;
                     let mut serialized = ArrayTrait::new();
                     $serialized_keys$
                     serialized.span()
@@ -120,19 +120,22 @@ pub fn handle_component_struct(
             }
 
             impl $type_name$Component of dojo::traits::Component<$type_name$> {
+                #[inline(always)]
                 fn name(self: @$type_name$) -> felt252 {
                     '$type_name$'
                 }
 
+                #[inline(always)]
                 fn keys(self: @$type_name$) -> Span<felt252> {
                     let mut serialized = ArrayTrait::new();
-                    $serialized_keys$
+                    $component_serialized_keys$
                     serialized.span()
                 }
-                
+
+                #[inline(always)]
                 fn values(self: @$type_name$) -> Span<felt252> {
                     let mut serialized = ArrayTrait::new();
-                    $serialized_values$
+                    $component_serialized_values$
                     serialized.span()
                 }
             }
@@ -170,9 +173,17 @@ pub fn handle_component_struct(
                     "members".to_string(),
                     RewriteNode::Copied(struct_ast.members(db).as_syntax_node()),
                 ),
-                ("key_args".to_string(), RewriteNode::Text(key_args)),
+                ("key_names".to_string(), RewriteNode::Text(key_names)),
+                ("key_types".to_string(), RewriteNode::Text(key_types)),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
-                ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
+                (
+                    "component_serialized_keys".to_string(),
+                    RewriteNode::new_modified(component_serialized_keys),
+                ),
+                (
+                    "component_serialized_values".to_string(),
+                    RewriteNode::new_modified(component_serialized_values),
+                ),
             ]),
         ),
         diagnostics,

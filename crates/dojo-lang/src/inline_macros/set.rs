@@ -34,7 +34,7 @@ impl InlineMacro for SetMacro {
             ast::Expr::StructCtorCall(ctor) => bundle.push(ctor.as_syntax_node().get_text(db)),
             _ => {
                 macro_expander_data.diagnostics.push(PluginDiagnostic {
-                    message: "Invalid arguments. Expected \"(world, query, (components,))\""
+                    message: "Invalid arguments. Expected \"(world, (components,))\""
                         .to_string(),
                     stable_ptr: macro_arguments.as_syntax_node().stable_ptr(),
                 });
@@ -42,14 +42,23 @@ impl InlineMacro for SetMacro {
             }
         }
 
+        if bundle.len() == 0 {
+            macro_expander_data.diagnostics.push(PluginDiagnostic {
+                message: "Invalid arguments: No components provided."
+                    .to_string(),
+                stable_ptr: macro_arguments.as_syntax_node().stable_ptr(),
+            });
+            return;
+        }
+
         let mut expanded_code = "{".to_string();
         for entity in bundle {
             expanded_code.push_str(&format!(
-                "\n            {}.set_entity({}.name(), {}.keys(), 0_u8, {}.values());",
+                "\n            let __set_macro_value__ = {};
+                {}.set_entity(__set_macro_value__.name(), __set_macro_value__.keys(), 0_u8, \
+                 __set_macro_value__.values());",
+                entity,
                 world.as_syntax_node().get_text(db),
-                entity,
-                entity,
-                entity,
             ));
         }
         expanded_code.push('}');
