@@ -28,6 +28,7 @@ pub struct KatanaArgs {
     pub block_time: Option<u64>,
 
     #[arg(long)]
+    #[arg(hide = true)]
     #[arg(value_name = "PATH")]
     #[arg(help = "Dump the state of chain on exit to the given file.")]
     #[arg(long_help = "Dump the state of chain on exit to the given file. \
@@ -35,6 +36,7 @@ pub struct KatanaArgs {
     pub dump_state: Option<PathBuf>,
 
     #[arg(long)]
+    #[arg(hide = true)]
     #[arg(value_name = "PATH")]
     #[arg(value_parser = SerializableState::parse)]
     #[arg(help = "Initialize the chain from a previously saved state snapshot.")]
