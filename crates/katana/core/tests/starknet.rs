@@ -1,6 +1,7 @@
 use blockifier::abi::abi_utils::selector_from_name;
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transaction_execution::Transaction;
+use blockifier::transaction::transactions::DeclareTransaction;
 use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::backend::Backend;
 use katana_core::constants::FEE_TOKEN_ADDRESS;
@@ -8,20 +9,21 @@ use katana_core::db::Db;
 use katana_core::utils::contract::get_contract_class;
 use starknet::core::types::FieldElement;
 use starknet_api::block::BlockNumber;
-use starknet_api::core::Nonce;
+use starknet_api::core::{ClassHash, ContractAddress, Nonce};
 use starknet_api::hash::StarkFelt;
+use starknet_api::transaction::DeclareTransaction as DeclareApiTransaction;
 use starknet_api::transaction::{
-    Calldata, DeclareTransaction, InvokeTransaction, InvokeTransactionV1, TransactionHash,
+    Calldata, DeclareTransactionV0V1, InvokeTransaction, InvokeTransactionV1, TransactionHash,
 };
 use starknet_api::{calldata, stark_felt};
 
-async fn create_test_starknet() -> Backend {
+fn create_test_starknet_config() -> StarknetConfig {
     let test_account_path =
         [env!("CARGO_MANIFEST_DIR"), "./contracts/compiled/account_without_validation.json"]
             .iter()
             .collect();
 
-    Backend::new(StarknetConfig {
+    StarknetConfig {
         seed: [0u8; 32],
         auto_mine: true,
         total_accounts: 2,
@@ -29,17 +31,32 @@ async fn create_test_starknet() -> Backend {
         account_path: Some(test_account_path),
         env: Environment::default(),
         ..Default::default()
-    })
+    }
 }
 
-fn create_declare_transaction() -> DeclareTransaction {
-    let test_contract_class = get_contract_class("../contracts/compiled/test_contract.json");
-    DeclareTransaction::new(DeclareTransaction {}, test_contract_class)
+fn create_test_starknet() -> Backend {
+    Backend::new(create_test_starknet_config())
+}
+
+fn create_declare_transaction(sender_address: ContractAddress) -> DeclareTransaction {
+    let test_contract_class =
+        get_contract_class(include_str!("../contracts/compiled/test_contract.json"));
+    DeclareTransaction::new(
+        DeclareApiTransaction::V0(DeclareTransactionV0V1 {
+            class_hash: ClassHash(stark_felt!("0x1234")),
+            nonce: Nonce(1u8.into()),
+            sender_address,
+            transaction_hash: TransactionHash(stark_felt!("0x6969")),
+            ..Default::default()
+        }),
+        test_contract_class,
+    )
+    .unwrap()
 }
 
 #[tokio::test]
 async fn test_next_block_timestamp_in_past() {
-    let starknet = create_test_starknet().await;
+    let starknet = create_test_starknet();
     starknet.generate_pending_block().await;
 
     let timestamp = starknet.block_context.read().block_timestamp;
@@ -53,7 +70,7 @@ async fn test_next_block_timestamp_in_past() {
 
 #[tokio::test]
 async fn test_set_next_block_timestamp_in_future() {
-    let starknet = create_test_starknet().await;
+    let starknet = create_test_starknet();
     starknet.generate_pending_block().await;
 
     let timestamp = starknet.block_context.read().block_timestamp;
@@ -67,7 +84,7 @@ async fn test_set_next_block_timestamp_in_future() {
 
 #[tokio::test]
 async fn test_increase_next_block_timestamp() {
-    let starknet = create_test_starknet().await;
+    let starknet = create_test_starknet();
     starknet.generate_pending_block().await;
 
     let timestamp = starknet.block_context.read().block_timestamp;
@@ -81,7 +98,7 @@ async fn test_increase_next_block_timestamp() {
 
 #[tokio::test]
 async fn test_creating_blocks() {
-    let starknet = create_test_starknet().await;
+    let starknet = create_test_starknet();
     starknet.generate_pending_block().await;
     starknet.generate_latest_block().await;
 
@@ -102,7 +119,7 @@ async fn test_creating_blocks() {
 
 #[tokio::test]
 async fn test_add_transaction() {
-    let starknet = create_test_starknet().await;
+    let starknet = create_test_starknet();
     starknet.generate_pending_block().await;
 
     let a = starknet.predeployed_accounts.accounts[0].clone();
@@ -156,7 +173,7 @@ async fn test_add_transaction() {
 
 #[tokio::test]
 async fn test_add_reverted_transaction() {
-    let starknet = create_test_starknet().await;
+    let starknet = create_test_starknet();
     starknet.generate_pending_block().await;
 
     let transaction_hash = TransactionHash(stark_felt!("0x1234"));
@@ -180,13 +197,44 @@ async fn test_add_reverted_transaction() {
 
 #[tokio::test]
 async fn dump_and_load_state() {
-    let starknet = create_test_starknet().await;
-    starknet.generate_pending_block().await;
+    let backend_old = create_test_starknet();
+    backend_old.generate_pending_block().await;
 
-    // let mut starknet = create_test_starknet().await;
-    // starknet.state.write().await.load_state(state_path).await.unwrap();
+    let declare_tx =
+        create_declare_transaction(backend_old.predeployed_accounts.accounts[0].account_address);
 
-    // let block2 = starknet.storage.read().await.block_by_number(1).cloned().unwrap();
+    backend_old
+        .handle_transaction(Transaction::AccountTransaction(AccountTransaction::Declare(
+            declare_tx,
+        )))
+        .await;
 
-    // assert_eq!(block, block2);
+    let serializable_state =
+        backend_old.state.read().await.dump_state().expect("must be able to serialize state");
+
+    let mut starknet_config = create_test_starknet_config();
+    starknet_config.init_state = Some(serializable_state);
+    let backend_new = Backend::new(starknet_config);
+
+    let old_contract = backend_old
+        .state
+        .write()
+        .await
+        .classes
+        .get(&ClassHash(stark_felt!("0x1234")))
+        .cloned()
+        .unwrap()
+        .class;
+
+    let new_contract = backend_new
+        .state
+        .write()
+        .await
+        .classes
+        .get(&ClassHash(stark_felt!("0x1234")))
+        .cloned()
+        .unwrap()
+        .class;
+
+    assert_eq!(old_contract, new_contract,);
 }

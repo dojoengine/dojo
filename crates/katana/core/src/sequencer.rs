@@ -1,5 +1,4 @@
 use std::cmp::Ordering;
-use std::io::{Read, Write};
 use std::iter::Skip;
 use std::slice::Iter;
 use std::sync::Arc;
@@ -12,9 +11,6 @@ use blockifier::state::state_api::StateReader;
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transaction_execution::Transaction;
 use blockifier::transaction::transactions::DeclareTransaction;
-use flate2::read::GzDecoder;
-use flate2::write::GzEncoder;
-use flate2::Compression;
 use starknet::core::types::{
     BlockId, BlockTag, EmittedEvent, Event, EventsPage, FeeEstimate, FieldElement,
     FlattenedSierraClass, MaybePendingTransactionReceipt, StateUpdate,
@@ -33,8 +29,6 @@ use crate::backend::storage::transaction::{
     KnownTransaction, PendingTransaction, TransactionStatus,
 };
 use crate::backend::{Backend, ExternalFunctionCall};
-use crate::db::serde::state::SerializableState;
-use crate::db::Db;
 use crate::sequencer_error::SequencerError;
 use crate::utils::event::{ContinuationToken, ContinuationTokenError};
 
@@ -187,40 +181,6 @@ impl KatanaSequencer {
             .await
             .get_class_hash_at(*contract_address)
             .is_ok_and(|c| c != ClassHash::default())
-    }
-
-    /// Get the current state.
-    pub async fn serialize_state(&self) -> Result<SerializableState, SequencerError> {
-        self.backend.state.read().await.dump_state().map_err(|_| SequencerError::StateSerialization)
-    }
-
-    pub async fn dump_state(&self) -> Result<Vec<u8>, SequencerError> {
-        let serializable_state = self.serialize_state().await?;
-
-        let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-        encoder
-            .write_all(&serde_json::to_vec(&serializable_state).unwrap_or_default())
-            .map_err(|_| SequencerError::DataUnavailable)?;
-
-        Ok(encoder.finish().unwrap_or_default())
-    }
-
-    pub async fn load_state(&self, buf: Vec<u8>) -> Result<bool, SequencerError> {
-        let orig_buf = &buf[..];
-        let mut decoder = GzDecoder::new(orig_buf);
-        let mut decoded_data: Vec<u8> = Vec::new();
-
-        let state: SerializableState = serde_json::from_slice(if decoder.header().is_some() {
-            decoder
-                .read_to_end(decoded_data.as_mut())
-                .map_err(|_| SequencerError::FailedToDecodeStateDump)?;
-            &decoded_data
-        } else {
-            &buf
-        })
-        .map_err(|_| SequencerError::FailedToDecodeStateDump)?;
-
-        Ok(self.backend.state.write().await.load_state(state).is_ok())
     }
 }
 
