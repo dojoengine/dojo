@@ -1,7 +1,8 @@
-use std::process::exit;
 use std::sync::Arc;
+use std::{io, process::exit};
 
-use clap::Parser;
+use clap::{CommandFactory, Parser};
+use clap_complete::{generate, Shell};
 use env_logger::Env;
 use katana_core::sequencer::KatanaSequencer;
 use katana_rpc::{spawn, KatanaApi, NodeHandle, StarknetApi};
@@ -10,7 +11,7 @@ use yansi::Paint;
 
 mod args;
 
-use args::KatanaArgs;
+use args::{Commands::Completions, KatanaArgs};
 
 #[tokio::main]
 async fn main() {
@@ -20,6 +21,14 @@ async fn main() {
     .init();
 
     let config = KatanaArgs::parse();
+    if let Some(command) = config.command {
+        match command {
+            Completions { shell } => {
+                print_completion(shell);
+                return;
+            }
+        }
+    }
 
     let server_config = config.server_config();
     let sequencer_config = config.sequencer_config();
@@ -49,6 +58,12 @@ async fn main() {
             exit(1);
         }
     };
+}
+
+fn print_completion(shell: Shell) {
+    let mut command = KatanaArgs::command();
+    let name = command.get_name().to_string();
+    generate(shell, &mut command, name, &mut io::stdout());
 }
 
 fn print_intro(accounts: String, seed: String, address: String) {
