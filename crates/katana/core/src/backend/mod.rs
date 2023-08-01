@@ -1,3 +1,4 @@
+use std::io::Write;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -13,6 +14,8 @@ use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::errors::TransactionExecutionError;
 use blockifier::transaction::objects::AccountTransactionContext;
 use blockifier::transaction::transaction_execution::Transaction;
+use flate2::write::GzEncoder;
+use flate2::Compression;
 use parking_lot::RwLock;
 use starknet::core::types::{FeeEstimate, FieldElement};
 use starknet_api::block::BlockTimestamp;
@@ -31,6 +34,8 @@ use crate::accounts::PredeployedAccounts;
 use crate::backend::state::{MemDb, StateExt};
 use crate::block_context::BlockContextGenerator;
 use crate::constants::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
+use crate::db::serde::state::SerializableState;
+use crate::db::Db;
 use crate::sequencer_error::SequencerError;
 use crate::utils::transaction::convert_blockifier_to_api_tx;
 use crate::utils::{convert_state_diff_to_rpc_state_diff, get_current_timestamp};
@@ -67,8 +72,14 @@ impl Backend {
         let block_context_generator = config.block_context_generator();
 
         let mut state = MemDb::default();
+
         let storage = BlockchainStorage::new(&block_context.read());
         let states = InMemoryBlockStates::default();
+
+        if let Some(ref init_state) = config.init_state {
+            state.load_state(init_state.clone()).expect("failed to load initial state");
+            info!("Successfully loaded initial state");
+        }
 
         let predeployed_accounts = PredeployedAccounts::initialize(
             config.total_accounts,
@@ -89,6 +100,22 @@ impl Backend {
             pending_block: AsyncRwLock::new(None),
             predeployed_accounts,
         }
+    }
+
+    /// Get the current state.
+    pub async fn serialize_state(&self) -> Result<SerializableState, SequencerError> {
+        self.state.read().await.dump_state().map_err(|_| SequencerError::StateSerialization)
+    }
+
+    pub async fn dump_state(&self) -> Result<Vec<u8>, SequencerError> {
+        let serializable_state = self.serialize_state().await?;
+
+        let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+        encoder
+            .write_all(&serde_json::to_vec(&serializable_state).unwrap_or_default())
+            .map_err(|_| SequencerError::DataUnavailable)?;
+
+        Ok(encoder.finish().unwrap_or_default())
     }
 
     pub fn estimate_fee(

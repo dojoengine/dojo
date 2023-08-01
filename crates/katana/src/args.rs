@@ -5,6 +5,7 @@ use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::constants::{
     DEFAULT_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_VALIDATE_MAX_STEPS,
 };
+use katana_core::db::serde::state::SerializableState;
 use katana_core::sequencer::SequencerConfig;
 use katana_rpc::config::ServerConfig;
 
@@ -25,6 +26,21 @@ pub struct KatanaArgs {
     #[arg(value_name = "SECONDS")]
     #[arg(help = "Block time in seconds for interval mining.")]
     pub block_time: Option<u64>,
+
+    #[arg(long)]
+    #[arg(hide = true)]
+    #[arg(value_name = "PATH")]
+    #[arg(help = "Dump the state of chain on exit to the given file.")]
+    #[arg(long_help = "Dump the state of chain on exit to the given file. \
+                       If the value is a directory, the state will be written to `<PATH>/state.bin`.")]
+    pub dump_state: Option<PathBuf>,
+
+    #[arg(long)]
+    #[arg(hide = true)]
+    #[arg(value_name = "PATH")]
+    #[arg(value_parser = SerializableState::parse)]
+    #[arg(help = "Initialize the chain from a previously saved state snapshot.")]
+    pub load_state: Option<SerializableState>,
 
     #[command(flatten)]
     #[command(next_help_heading = "Server options")]
@@ -115,6 +131,7 @@ impl KatanaArgs {
             account_path: self.starknet.account_path.clone(),
             allow_zero_max_fee: self.starknet.allow_zero_max_fee,
             auto_mine: self.block_time.is_none() && !self.no_mining,
+            init_state: self.load_state.clone(),
             env: Environment {
                 chain_id: self.starknet.environment.chain_id.clone(),
                 gas_price: self.starknet.environment.gas_price.unwrap_or(DEFAULT_GAS_PRICE),

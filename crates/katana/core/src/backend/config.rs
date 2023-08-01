@@ -11,6 +11,7 @@ use crate::constants::{
     DEFAULT_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_VALIDATE_MAX_STEPS, FEE_TOKEN_ADDRESS,
     SEQUENCER_ADDRESS,
 };
+use crate::db::serde::state::SerializableState;
 
 #[derive(Debug)]
 pub struct StarknetConfig {
@@ -20,6 +21,7 @@ pub struct StarknetConfig {
     pub allow_zero_max_fee: bool,
     pub account_path: Option<PathBuf>,
     pub env: Environment,
+    pub init_state: Option<SerializableState>,
 }
 
 impl StarknetConfig {
@@ -45,6 +47,7 @@ impl StarknetConfig {
 impl Default for StarknetConfig {
     fn default() -> Self {
         Self {
+            init_state: None,
             seed: [0; 32],
             auto_mine: true,
             total_accounts: 10,

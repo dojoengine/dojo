@@ -1,5 +1,6 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
+use anyhow::Result;
 use blockifier::execution::contract_class::ContractClass;
 use blockifier::state::cached_state::CommitmentStateDiff;
 use blockifier::state::errors::StateError;
@@ -14,6 +15,10 @@ use crate::constants::{
     ERC20_CONTRACT, ERC20_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS, UDC_ADDRESS, UDC_CLASS_HASH,
     UDC_CONTRACT,
 };
+use crate::db::serde::state::{
+    SerializableClassRecord, SerializableState, SerializableStorageRecord,
+};
+use crate::db::Db;
 
 pub trait StateExt {
     fn set_sierra_class(
@@ -240,6 +245,44 @@ impl StateReader for MemDb {
     }
 }
 
+impl Db for MemDb {
+    fn dump_state(&self) -> Result<SerializableState> {
+        let mut serializable =
+            SerializableState { storage: BTreeMap::new(), classes: BTreeMap::new() };
+
+        self.storage.iter().for_each(|(addr, storage)| {
+            let mut record = SerializableStorageRecord {
+                storage: BTreeMap::new(),
+                nonce: storage.nonce.0.into(),
+                class_hash: storage.class_hash.0.into(),
+            };
+
+            storage.storage.iter().for_each(|(key, value)| {
+                record.storage.insert((*key.0.key()).into(), (*value).into());
+            });
+
+            serializable.storage.insert((*addr.0.key()).into(), record);
+        });
+
+        self.classes.iter().for_each(|(class_hash, class_record)| {
+            serializable.classes.insert(
+                class_hash.0.into(),
+                SerializableClassRecord {
+                    class: class_record.class.clone().into(),
+                    sierra_class: class_record.sierra_class.clone(),
+                    compiled_hash: class_record.compiled_hash.0.into(),
+                },
+            );
+        });
+
+        Ok(serializable)
+    }
+
+    fn set_nonce(&mut self, addr: ContractAddress, nonce: Nonce) {
+        self.storage.entry(addr).or_default().nonce = nonce;
+    }
+}
+
 fn deploy_fee_contract(state: &mut MemDb) {
     let address = ContractAddress(patricia_key!(*FEE_TOKEN_ADDRESS));
     let hash = ClassHash(*ERC20_CONTRACT_CLASS_HASH);
@@ -446,5 +489,32 @@ mod tests {
         assert_eq!(old_state.get_compiled_class_hash(class_hash).unwrap(), compiled_hash);
         assert_eq!(old_state.get_class_hash_at(address).unwrap(), class_hash);
         assert_eq!(old_state.get_storage_at(address, storage_key).unwrap(), storage_val);
+    }
+
+    #[test]
+    fn dump_and_load_state() {
+        let mut state = MemDb { classes: HashMap::new(), storage: HashMap::new() };
+
+        let class_hash = ClassHash(stark_felt!("0x1"));
+        let address = ContractAddress(patricia_key!("0x1"));
+        let storage_key = StorageKey(patricia_key!("0x77"));
+        let storage_val = stark_felt!("0x66");
+        let contract = (*UDC_CONTRACT).clone();
+        let compiled_hash = CompiledClassHash(class_hash.0);
+
+        state.set_contract_class(&class_hash, (*UDC_CONTRACT).clone()).unwrap();
+        state.set_compiled_class_hash(class_hash, CompiledClassHash(class_hash.0)).unwrap();
+        state.set_class_hash_at(address, class_hash).unwrap();
+        state.set_storage_at(address, storage_key, storage_val);
+
+        let dump = state.dump_state().expect("should dump state");
+
+        let mut new_state = MemDb { classes: HashMap::new(), storage: HashMap::new() };
+        new_state.load_state(dump).expect("should load state");
+
+        assert_eq!(new_state.get_compiled_contract_class(&class_hash).unwrap(), contract);
+        assert_eq!(new_state.get_compiled_class_hash(class_hash).unwrap(), compiled_hash);
+        assert_eq!(new_state.get_class_hash_at(address).unwrap(), class_hash);
+        assert_eq!(new_state.get_storage_at(address, storage_key).unwrap(), storage_val);
     }
 }
