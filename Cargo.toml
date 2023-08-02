@@ -82,6 +82,8 @@ tracing = "0.1"
 tracing-subscriber = "0.3.16"
 yansi = "0.5.1"
 
+[patch."https://github.com/foundry-rs/starknet-foundry"]
+test-collector = { path = "crates/starknet-foundry/test-collector"}
 
 [patch.crates-io]
 cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "51a35b2b405f29786e48a94f364d64d373d79eea" }

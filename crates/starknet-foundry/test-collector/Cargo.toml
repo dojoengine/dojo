@@ -1,0 +1,49 @@
+[package]
+name = "test-collector"
+version = "1.0.0"
+edition = "2021"
+
+[features]
+testing = []
+
+[dependencies]
+# rayon.workspace = true
+rayon = "1.7"
+
+cairo-lang-casm = { git = "https://github.com/starkware-libs/cairo", rev = "f9e7b41" }
+cairo-lang-compiler = { git = "https://github.com/starkware-libs/cairo", rev = "f9e7b41" }
+cairo-lang-debug = { git = "https://github.com/starkware-libs/cairo", rev = "f9e7b41" }
+cairo-lang-defs = { git = "https://github.com/starkware-libs/cairo", rev = "f9e7b41" }
+cairo-lang-diagnostics = { git = "https://github.com/starkware-libs/cairo", rev = "f9e7b41" }
+cairo-lang-filesystem = { git = "https://github.com/starkware-libs/cairo", rev = "f9e7b41" }
+cairo-lang-lowering = { git = "https://github.com/starkware-libs/cairo", rev = "f9e7b41" }
+cairo-lang-test-runner = { git = "https://github.com/starkware-libs/cairo", rev = "f9e7b41" }
+cairo-lang-plugins = { git = "https://github.com/starkware-libs/cairo", rev = "f9e7b41" }
+cairo-lang-project = { git = "https://github.com/starkware-libs/cairo", rev = "f9e7b41" }
+cairo-lang-sierra-ap-change = { git = "https://github.com/starkware-libs/cairo", rev = "f9e7b41" }
+cairo-lang-sierra-gas = { git = "https://github.com/starkware-libs/cairo", rev = "f9e7b41" }
+cairo-lang-runner = { git = "https://github.com/starkware-libs/cairo", rev = "f9e7b41" }
+cairo-lang-semantic = { git = "https://github.com/starkware-libs/cairo", rev = "f9e7b41" }
+cairo-lang-sierra = { git = "https://github.com/starkware-libs/cairo", rev = "f9e7b41" }
+cairo-lang-sierra-generator = { git = "https://github.com/starkware-libs/cairo", rev = "f9e7b41" }
+cairo-lang-sierra-to-casm = { git = "https://github.com/starkware-libs/cairo", rev = "f9e7b41" }
+cairo-lang-starknet = { git = "https://github.com/starkware-libs/cairo", rev = "f9e7b41" }
+cairo-lang-syntax = { git = "https://github.com/starkware-libs/cairo", rev = "f9e7b41" }
+cairo-lang-utils = { git = "https://github.com/starkware-libs/cairo", rev = "f9e7b41" }
+dojo-lang = { path = "../../dojo-lang" }
+
+anyhow.workspace = true
+smol_str = { version = "0.2.0", features = ["serde"] }
+itertools = "0.10.3"
+cairo-vm = "0.5.2"
+cairo-felt = "0.5.2"
+num-bigint = "0.4"
+num-integer = "0.1"
+num-traits = "0.2"
+serde = { version = "1.0.130", features = ["derive"] }
+thiserror = "1.0.32"
+serde_json = "1.0"
+
+
+[lib]
+name = "test_collector"
