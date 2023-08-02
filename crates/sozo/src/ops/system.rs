@@ -1,7 +1,7 @@
 use anyhow::Result;
+use console::Style;
 use dojo_client::contract::world::WorldContractReader;
 use starknet::core::types::{BlockId, BlockTag};
-use yansi::Paint;
 
 use crate::commands::options::Environment;
 use crate::commands::system::SystemCommands;
@@ -51,9 +51,9 @@ pub async fn execute(command: SystemCommands, env_metadata: Option<Environment>)
 {}
 {}
 {}",
-                    Paint::new("Read:").bold().underline(),
+                    Style::from_dotted_str("bold.underlined").apply_to("Read:"),
                     read.join("\n"),
-                    Paint::new("Write:").bold().underline(),
+                    Style::from_dotted_str("bold.underlined").apply_to("Write:"),
                     write.join("\n"),
                 );
 

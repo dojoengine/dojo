@@ -9,13 +9,13 @@ version.workspace = true
 [dependencies]
 clap.workspace = true
 clap_complete.workspace = true
+console.workspace = true
 env_logger.workspace = true
 katana-core = { path = "core" }
 katana-rpc = { path = "rpc" }
 log.workspace = true
 starknet_api.workspace = true
 tokio.workspace = true
-yansi.workspace = true
 
 [dev-dependencies]
 assert_matches = "1.5.0"
