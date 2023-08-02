@@ -168,22 +168,23 @@ impl Backend {
         };
 
         if is_valid && self.config.read().auto_mine {
-            self.generate_latest_block().await;
+            self.mine_block().await;
             self.generate_pending_block().await;
         }
     }
 
-    // Creates a new block that contains all the pending txs
-    // Will update the txs status to accepted
-    // Append the block to the chain
-    // Update the block context
-    pub async fn generate_latest_block(&self) {
-        let block = match self.pending_block.read().await.as_ref().map(|p| {
-            let partial_block = p.as_block();
+    // Generates a new block from the pending block and stores it in the storage.
+    pub async fn mine_block(&self) {
+        let pending = self.pending_block.write().await.take();
+
+        let Some(mut pending) = pending else {
+            warn!("No pending block to mine");
+            return;
+        };
+
+        let block = {
+            let partial_block = pending.as_block();
             Block::new(partial_block.header, partial_block.transactions, partial_block.outputs)
-        }) {
-            Some(block) => block,
-            None => self.create_empty_block().await,
         };
 
         let pending_txs = block.transactions.clone();
@@ -191,48 +192,35 @@ impl Backend {
         let block_hash = block.header.hash();
         let block_number = block.header.number;
 
-        // Store state diffs
-        if let Some(pending_block) = self.pending_block.read().await.as_ref() {
-            let state_diff =
-                convert_state_diff_to_rpc_state_diff(pending_block.state.to_state_diff());
-            self.storage.write().await.append_block(block_hash, block, state_diff);
-        }
+        info!("⛏️ Block {block_number} mined with {} transactions", pending_txs.len());
 
-        info!("⛏️ New block generated | Hash: {block_hash:#x} | Number: {block_number}");
+        // get state diffs
+        let pending_state_diff = pending.state.to_state_diff();
+        let state_diff = convert_state_diff_to_rpc_state_diff(pending_state_diff);
 
-        // Stores the pending transaction in the storage
+        // store block and the state diff
+        self.storage.write().await.append_block(block_hash, block, state_diff);
 
-        {
-            for pending_tx in pending_txs.into_iter() {
-                let hash: FieldElement = pending_tx.transaction.transaction_hash().0.into();
-                self.storage.write().await.transactions.insert(
-                    hash,
-                    KnownTransaction::Included(IncludedTransaction {
-                        block_number,
-                        block_hash,
-                        transaction: pending_tx.clone(),
-                        status: TransactionStatus::AcceptedOnL2,
-                    }),
-                );
-            }
-        }
+        // apply the pending state to the current state
+        self.state.write().await.apply_state(&mut pending.state);
 
-        self.apply_pending_state().await;
-    }
-
-    // apply the pending state diff to the state
-    async fn apply_pending_state(&self) {
-        let Some(ref mut pending_block) = *self.pending_block.write().await else {
-            panic!("failed to apply pending state: no pending block")
-        };
-
-        // Apply the pending state to the current state
-        self.state.write().await.apply_state(&mut pending_block.state);
-
-        // Store the current state snapshot
+        // store the current state
         let state = self.state.read().await.clone();
-        let hash = self.storage.read().await.latest_hash;
-        self.states.write().await.insert(hash, state);
+        self.states.write().await.insert(block_hash, state);
+
+        // Stores the pending transaction in storage
+        for tx in pending_txs {
+            let hash: FieldElement = tx.transaction.transaction_hash().0.into();
+            self.storage.write().await.transactions.insert(
+                hash,
+                KnownTransaction::Included(IncludedTransaction {
+                    block_number,
+                    block_hash,
+                    transaction: tx.clone(),
+                    status: TransactionStatus::AcceptedOnL2,
+                }),
+            );
+        }
     }
 
     pub async fn generate_pending_block(&self) {
