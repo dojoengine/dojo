@@ -145,7 +145,7 @@ impl KatanaSequencer {
                 loop {
                     starknet.generate_pending_block().await;
                     time::sleep(time::Duration::from_secs(block_time)).await;
-                    starknet.generate_latest_block().await;
+                    starknet.mine_block().await;
                 }
             });
         } else {

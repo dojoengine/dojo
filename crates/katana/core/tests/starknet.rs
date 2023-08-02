@@ -102,7 +102,7 @@ async fn test_increase_next_block_timestamp() {
 async fn test_creating_blocks() {
     let starknet = create_test_starknet();
     starknet.generate_pending_block().await;
-    starknet.generate_latest_block().await;
+    starknet.mine_block().await;
 
     assert_eq!(starknet.storage.read().await.blocks.len(), 2);
     assert_eq!(starknet.storage.read().await.latest_number, 1);
@@ -265,7 +265,7 @@ async fn test_set_storage_at() {
         }
     }
 
-    starknet.generate_latest_block().await;
+    starknet.mine_block().await;
 
     {
         let mut state = starknet.state.write().await;
