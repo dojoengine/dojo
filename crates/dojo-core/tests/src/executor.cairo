@@ -38,6 +38,7 @@ fn test_executor() {
     let executor = IExecutorDispatcher { contract_address: executor_address };
 
     let mut system_calldata = ArrayTrait::new();
+    system_calldata.append(1);
     system_calldata.append(42);
     system_calldata.append(53);
     let res = executor

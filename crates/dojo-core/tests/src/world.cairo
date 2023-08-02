@@ -52,7 +52,7 @@ mod Buzz {
 
     fn execute(ctx: Context, a: felt252, b: u128) {
         set !(ctx.world, (Foo { caller: ctx.origin, a, b }));
-        // let fizz = get !(ctx.world, ctx.origin, Fizz);
+    // let fizz = get !(ctx.world, ctx.origin, Fizz);
     }
 }
 
@@ -147,10 +147,9 @@ fn test_set_entity_admin() {
     data.append(420);
     data.append(1337);
     world.execute('bar'.into(), data.span());
-
-    // let foo = world.entity('Foo'.into(), alice, 0, dojo::SerdeLen::<Foo>::len());
-    // assert(*foo[0] == 420, 'data not stored');
-    // assert(*foo[1] == 1337, 'data not stored');
+// let foo = world.entity('Foo'.into(), alice, 0, dojo::SerdeLen::<Foo>::len());
+// assert(*foo[0] == 420, 'data not stored');
+// assert(*foo[1] == 1337, 'data not stored');
 }
 
 #[test]
@@ -183,12 +182,7 @@ fn test_set_entity_directly() {
     world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
 
-    // Change Foo component directly
-    let id = world.uuid();
-    let mut data = ArrayTrait::new();
-    data.append(420);
-    data.append(1337);
-// world.set_entity('Foo'.into(), QueryTrait::new_from_id(id.into()), 0, data.span());
+    set !(world, Foo { caller: starknet::contract_address_const::<0x1337>(), a: 420, b: 1337 });
 }
 
 // Utils
