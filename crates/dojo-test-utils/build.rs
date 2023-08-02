@@ -30,7 +30,7 @@ fn main() {
         .unwrap();
 
     let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
-    ops::compile(&ws).unwrap();
+    ops::compile(vec![], &ws).unwrap();
 }
 
 #[cfg(not(feature = "build-examples"))]

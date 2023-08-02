@@ -45,12 +45,14 @@ impl RolesSerdeLen of dojo::SerdeLen<Roles> {
     }
 }
 
+use starknet::ContractAddress;
+
 #[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Player {
     #[key]
     game: felt252,
     #[key]
-    player: felt252,
+    player: ContractAddress,
 
     name: felt252, 
 }
@@ -66,30 +68,33 @@ struct Position {
 }
 
 trait PositionKeysTrait {
-    fn serialize_keys(keys: (felt252)) -> Span<felt252>;
+    fn serialize_keys(keys: (felt252, )) -> Span<felt252>;
 }
 
 impl PositionKeysImpl of PositionKeysTrait {
     #[inline(always)]
-    fn serialize_keys(keys: (felt252)) -> Span<felt252> {
-        let (id): (felt252) = keys;
+    fn serialize_keys(keys: (felt252, )) -> Span<felt252> {
+        let (id, ): (felt252, ) = keys;
         let mut serialized = ArrayTrait::new();
-        id.serialize(ref serialized);
+        serialized.append(*id);
         serialized.span()
     }
 }
 
 impl PositionComponent of dojo::traits::Component<Position> {
+    #[inline(always)]
     fn name(self: @Position) -> felt252 {
         'Position'
     }
 
+    #[inline(always)]
     fn keys(self: @Position) -> Span<felt252> {
         let mut serialized = ArrayTrait::new();
-        self.id.serialize(ref serialized);
+        serialized.append(*self.id);
         serialized.span()
     }
 
+    #[inline(always)]
     fn values(self: @Position) -> Span<felt252> {
         let mut serialized = ArrayTrait::new();
         self.x.serialize(ref serialized);
@@ -156,13 +161,13 @@ struct Roles {
 }
 
 trait RolesKeysTrait {
-    fn serialize_keys(keys: ()) -> Span<felt252>;
+    fn serialize_keys(keys: (,)) -> Span<felt252>;
 }
 
 impl RolesKeysImpl of RolesKeysTrait {
     #[inline(always)]
-    fn serialize_keys(keys: ()) -> Span<felt252> {
-        let (): () = keys;
+    fn serialize_keys(keys: (,)) -> Span<felt252> {
+        let (,): (,) = keys;
         let mut serialized = ArrayTrait::new();
 
         serialized.span()
@@ -170,16 +175,19 @@ impl RolesKeysImpl of RolesKeysTrait {
 }
 
 impl RolesComponent of dojo::traits::Component<Roles> {
+    #[inline(always)]
     fn name(self: @Roles) -> felt252 {
         'Roles'
     }
 
+    #[inline(always)]
     fn keys(self: @Roles) -> Span<felt252> {
         let mut serialized = ArrayTrait::new();
 
         serialized.span()
     }
 
+    #[inline(always)]
     fn values(self: @Roles) -> Span<felt252> {
         let mut serialized = ArrayTrait::new();
         self.role_ids.serialize(ref serialized);
@@ -228,32 +236,35 @@ struct Player {
 }
 
 trait PlayerKeysTrait {
-    fn serialize_keys(keys: (felt252, felt252)) -> Span<felt252>;
+    fn serialize_keys(keys: (felt252, felt252, )) -> Span<felt252>;
 }
 
 impl PlayerKeysImpl of PlayerKeysTrait {
     #[inline(always)]
-    fn serialize_keys(keys: (felt252, felt252)) -> Span<felt252> {
-        let (game, player): (felt252, felt252) = keys;
+    fn serialize_keys(keys: (felt252, felt252, )) -> Span<felt252> {
+        let (game, player, ): (felt252, felt252, ) = keys;
         let mut serialized = ArrayTrait::new();
-        game.serialize(ref serialized);
-        player.serialize(ref serialized);
+        serialized.append(*game);
+        serialized.append(*player);
         serialized.span()
     }
 }
 
 impl PlayerComponent of dojo::traits::Component<Player> {
+    #[inline(always)]
     fn name(self: @Player) -> felt252 {
         'Player'
     }
 
+    #[inline(always)]
     fn keys(self: @Player) -> Span<felt252> {
         let mut serialized = ArrayTrait::new();
-        self.game.serialize(ref serialized);
-        self.player.serialize(ref serialized);
+        serialized.append(*self.game);
+        serialized.append(*self.player);
         serialized.span()
     }
 
+    #[inline(always)]
     fn values(self: @Player) -> Span<felt252> {
         let mut serialized = ArrayTrait::new();
         self.name.serialize(ref serialized);

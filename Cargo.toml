@@ -28,31 +28,31 @@ version = "0.1.0"
 anyhow = "1.0.66"
 async-trait = "0.1.68"
 blockifier = { git = "https://github.com/starkware-libs/blockifier" }
-cairo-lang-casm = "2.1.0-rc1"
-cairo-lang-compiler = "2.1.0-rc1"
-cairo-lang-debug = "2.1.0-rc1"
-cairo-lang-defs = "2.1.0-rc1"
-cairo-lang-diagnostics = "2.1.0-rc1"
-cairo-lang-filesystem = "2.1.0-rc1"
-cairo-lang-formatter = "2.1.0-rc1"
-cairo-lang-language-server = "2.1.0-rc1"
-cairo-lang-lowering = "2.1.0-rc1"
-cairo-lang-parser = "2.1.0-rc1"
-cairo-lang-plugins = "2.1.0-rc1"
-cairo-lang-project = "2.1.0-rc1"
-cairo-lang-semantic = { version = "2.1.0-rc1", features = [ "testing" ] }
-cairo-lang-sierra = "2.1.0-rc1"
-cairo-lang-sierra-generator = "2.1.0-rc1"
-cairo-lang-sierra-to-casm = "2.1.0-rc1"
-cairo-lang-starknet = "2.1.0-rc1"
-cairo-lang-syntax = "2.1.0-rc1"
-cairo-lang-test-runner = "2.1.0-rc1"
-cairo-lang-test-utils = "2.1.0-rc1"
-cairo-lang-utils = "2.1.0-rc1"
+cairo-lang-casm = "2.1.0-rc4"
+cairo-lang-compiler = "2.1.0-rc4"
+cairo-lang-debug = "2.1.0-rc4"
+cairo-lang-defs = "2.1.0-rc4"
+cairo-lang-diagnostics = "2.1.0-rc4"
+cairo-lang-filesystem = "2.1.0-rc4"
+cairo-lang-formatter = "2.1.0-rc4"
+cairo-lang-language-server = "2.1.0-rc4"
+cairo-lang-lowering = "2.1.0-rc4"
+cairo-lang-parser = "2.1.0-rc4"
+cairo-lang-plugins = "2.1.0-rc4"
+cairo-lang-project = "2.1.0-rc4"
+cairo-lang-semantic = { version = "2.1.0-rc4", features = ["testing"] }
+cairo-lang-sierra = "2.1.0-rc4"
+cairo-lang-sierra-generator = "2.1.0-rc4"
+cairo-lang-sierra-to-casm = "2.1.0-rc4"
+cairo-lang-starknet = "2.1.0-rc4"
+cairo-lang-syntax = "2.1.0-rc4"
+cairo-lang-test-runner = "2.1.0-rc4"
+cairo-lang-test-utils = "2.1.0-rc4"
+cairo-lang-utils = "2.1.0-rc4"
 cairo-vm = "0.8.2"
-camino = { version = "1.1.2", features = [ "serde1" ] }
-chrono = { version = "0.4.24", features = [ "serde" ] }
-clap = { version = "4.2", features = [ "derive" ] }
+camino = { version = "1.1.2", features = ["serde1"] }
+chrono = { version = "0.4.24", features = ["serde"] }
+clap = { version = "4.2", features = ["derive"] }
 colored = "2"
 console = "0.15.7"
 convert_case = "0.6.0"
@@ -65,7 +65,7 @@ num-bigint = "0.4"
 pretty_assertions = "1.2.1"
 rayon = "0.9.0"
 salsa = "0.16.1"
-scarb = { git = "https://github.com/software-mansion/scarb", rev = "c7b2e34" }
+scarb = { git = "https://github.com/software-mansion/scarb", rev = "a3e7b16" }
 semver = "1.0.5"
 serde = { version = "1.0.156", features = ["derive"] }
 serde_json = "1.0"
@@ -83,7 +83,7 @@ tracing-subscriber = "0.3.16"
 yansi = "0.5.1"
 
 [patch."https://github.com/starkware-libs/blockifier"]
-blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "0ccfcc94b1de8bb2d97c7820e8f9d198ee7790be" }
+blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "c794d1b" }
 
 [patch.crates-io]
 cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "262b7eb4b11ab165a2a936a5f914e78aa732d4a2" }

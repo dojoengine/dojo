@@ -105,5 +105,5 @@ fn test_compiler() {
     let config = build_test_config("../../examples/ecs/Scarb.toml").unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
-    ops::compile(&ws).unwrap_or_else(|op| panic!("Error compiling: {op:?}"))
+    ops::compile(vec![], &ws).unwrap_or_else(|op| panic!("Error compiling: {op:?}"))
 }

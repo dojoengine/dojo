@@ -34,8 +34,7 @@ impl InlineMacro for SetMacro {
             ast::Expr::StructCtorCall(ctor) => bundle.push(ctor.as_syntax_node().get_text(db)),
             _ => {
                 macro_expander_data.diagnostics.push(PluginDiagnostic {
-                    message: "Invalid arguments. Expected \"(world, (components,))\""
-                        .to_string(),
+                    message: "Invalid arguments. Expected \"(world, (components,))\"".to_string(),
                     stable_ptr: macro_arguments.as_syntax_node().stable_ptr(),
                 });
                 return;
@@ -44,8 +43,7 @@ impl InlineMacro for SetMacro {
 
         if bundle.len() == 0 {
             macro_expander_data.diagnostics.push(PluginDiagnostic {
-                message: "Invalid arguments: No components provided."
-                    .to_string(),
+                message: "Invalid arguments: No components provided.".to_string(),
                 stable_ptr: macro_arguments.as_syntax_node().stable_ptr(),
             });
             return;
@@ -55,8 +53,9 @@ impl InlineMacro for SetMacro {
         for entity in bundle {
             expanded_code.push_str(&format!(
                 "\n            let __set_macro_value__ = {};
-                {}.set_entity(__set_macro_value__.name(), __set_macro_value__.keys(), 0_u8, \
-                 __set_macro_value__.values());",
+                {}.set_entity(dojo::traits::Component::name(@__set_macro_value__), \
+                 dojo::traits::Component::keys(@__set_macro_value__), 0_u8, \
+                 dojo::traits::Component::values(@__set_macro_value__));",
                 entity,
                 world.as_syntax_node().get_text(db),
             ));

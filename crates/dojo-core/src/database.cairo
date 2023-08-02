@@ -29,7 +29,7 @@ fn set(
 }
 
 fn del(class_hash: starknet::ClassHash, table: felt252, key: felt252) {
-    index::delete(0, table, query.hash());
+    index::delete(0, table, key);
 }
 
 // returns a tuple of spans, first contains the entity IDs,

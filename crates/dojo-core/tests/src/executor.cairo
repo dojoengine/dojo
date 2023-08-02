@@ -11,6 +11,8 @@ use dojo::world::{Context, IWorldDispatcher};
 
 #[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Foo {
+    #[key]
+    id: felt252,
     a: felt252,
     b: u128,
 }

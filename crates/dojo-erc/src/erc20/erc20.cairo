@@ -15,11 +15,6 @@ mod ERC20 {
     use traits::Into;
     use zeroable::Zeroable;
 
-    use dojo::database::query::{
-        Query, LiteralIntoQuery, TupleSize1IntoQuery, TupleSize2IntoQuery, IntoPartitioned,
-        IntoPartitionedQuery
-    };
-
     use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
     use dojo_erc::erc20::components::{Allowance, Balance, Supply};
 

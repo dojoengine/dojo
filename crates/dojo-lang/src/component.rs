@@ -60,13 +60,32 @@ pub fn handle_component_struct(
 
     let serialized_keys: Vec<_> = keys
         .iter()
-        .map(|e| RewriteNode::Text(format!("{}.serialize(ref serialized);", e.name(db).text(db))))
+        .map(|e| {
+            if e.type_clause(db).ty(db).as_syntax_node().get_text(db) == "felt252" {
+                return RewriteNode::Text(format!("serialized.append({});\n", e.name(db).text(db)));
+            }
+
+            RewriteNode::Text(format!(
+                "serde::Serde::serialize(@{}, ref serialized);\n",
+                e.name(db).text(db)
+            ))
+        })
         .collect::<_>();
 
     let component_serialized_keys: Vec<_> = keys
         .iter()
         .map(|e| {
-            RewriteNode::Text(format!("self.{}.serialize(ref serialized);", e.name(db).text(db)))
+            if e.type_clause(db).ty(db).as_syntax_node().get_text(db) == "felt252" {
+                return RewriteNode::Text(format!(
+                    "serialized.append(*self.{});\n",
+                    e.name(db).text(db)
+                ));
+            }
+
+            RewriteNode::Text(format!(
+                "serde::Serde::serialize(self.{}, ref serialized);\n",
+                e.name(db).text(db)
+            ))
         })
         .collect::<_>();
 
@@ -74,8 +93,15 @@ pub fn handle_component_struct(
         .iter()
         .filter_map(|e| {
             if !e.has_attr(db, "key") {
+                if e.type_clause(db).ty(db).as_syntax_node().get_text(db) == "felt252" {
+                    return Some(RewriteNode::Text(format!(
+                        "serialized.append(*self.{});\n",
+                        e.name(db).text(db)
+                    )));
+                }
+
                 return Some(RewriteNode::Text(format!(
-                    "self.{}.serialize(ref serialized);",
+                    "serde::Serde::serialize(self.{}, ref serialized);",
                     e.name(db).text(db)
                 )));
             }
@@ -106,13 +132,13 @@ pub fn handle_component_struct(
             }
 
             trait $type_name$KeysTrait {
-                fn serialize_keys(keys: ($key_types$)) -> Span<felt252>;
+                fn serialize_keys(keys: ($key_types$, )) -> Span<felt252>;
             }
 
             impl $type_name$KeysImpl of $type_name$KeysTrait {
                 #[inline(always)]
-                fn serialize_keys(keys: ($key_types$)) -> Span<felt252> {
-                    let ($key_names$): ($key_types$) = keys;
+                fn serialize_keys(keys: ($key_types$, )) -> Span<felt252> {
+                    let ($key_names$, ): ($key_types$, ) = keys;
                     let mut serialized = ArrayTrait::new();
                     $serialized_keys$
                     serialized.span()

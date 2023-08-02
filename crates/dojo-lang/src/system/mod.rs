@@ -51,14 +51,6 @@ impl System {
                     use dojo::world;
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;
-                    use dojo::database::query::Query;
-                    use dojo::database::query::QueryTrait;
-                    use dojo::database::query::LiteralIntoQuery;
-                    use dojo::database::query::TupleSize1IntoQuery;
-                    use dojo::database::query::TupleSize2IntoQuery;
-                    use dojo::database::query::TupleSize3IntoQuery;
-                    use dojo::database::query::IntoPartitioned;
-                    use dojo::database::query::IntoPartitionedQuery;
 
                     #[storage]
                     struct Storage {}

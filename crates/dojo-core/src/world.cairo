@@ -26,7 +26,7 @@ trait IWorld<T> {
         ref self: T, component: felt252, keys: Span<felt252>, offset: u8, value: Span<felt252>
     );
     fn entities(
-        self: @T, component: felt252, partition: felt252, length: usize
+        self: @T, component: felt252, index: felt252, length: usize
     ) -> (Span<felt252>, Span<Span<felt252>>);
     fn set_executor(ref self: T, contract_address: ContractAddress);
     fn executor(self: @T) -> ContractAddress;
@@ -95,7 +95,7 @@ mod world {
 
     #[derive(Drop, starknet::Event)]
     struct StoreSetRecord {
-        table_id: felt252,
+        table: felt252,
         keys: Span<felt252>,
         offset: u8,
         value: Span<felt252>,
@@ -103,7 +103,7 @@ mod world {
 
     #[derive(Drop, starknet::Event)]
     struct StoreDelRecord {
-        table_id: felt252,
+        table: felt252,
         keys: Span<felt252>,
     }
 
@@ -401,7 +401,7 @@ mod world {
             let component_class_hash = self.components.read(component);
             database::set(component_class_hash, component, key, offset, value);
 
-            EventEmitter::emit(ref self, StoreSetRecord { component, keys, offset, value });
+            EventEmitter::emit(ref self, StoreSetRecord { table: component, keys, offset, value });
         }
 
         /// Deletes a component from an entity.
@@ -410,14 +410,14 @@ mod world {
         ///
         /// * `component` - The name of the component to be deleted.
         /// * `query` - The query to be used to find the entity.
-        fn delete_entity(ref self: ContractState, component: felt252, key: felt252) {
+        fn delete_entity(ref self: ContractState, component: felt252, keys: Span<felt252>) {
             assert_can_write(@self, component);
 
             let key = poseidon::poseidon_hash_span(keys);
             let component_class_hash = self.components.read(component);
             database::del(component_class_hash, component, key);
 
-            EventEmitter::emit(ref self, StoreDelRecord { component, keys });
+            EventEmitter::emit(ref self, StoreDelRecord { table: component, keys });
         }
 
         /// Gets the component value for an entity. Returns a zero initialized
