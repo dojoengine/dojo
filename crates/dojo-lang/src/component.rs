@@ -62,7 +62,10 @@ pub fn handle_component_struct(
         .iter()
         .map(|e| {
             if e.type_clause(db).ty(db).as_syntax_node().get_text(db) == "felt252" {
-                return RewriteNode::Text(format!("serialized.append({});\n", e.name(db).text(db)));
+                return RewriteNode::Text(format!(
+                    "array::ArrayTrait::append(ref serialized, {});\n",
+                    e.name(db).text(db)
+                ));
             }
 
             RewriteNode::Text(format!(
@@ -77,7 +80,7 @@ pub fn handle_component_struct(
         .map(|e| {
             if e.type_clause(db).ty(db).as_syntax_node().get_text(db) == "felt252" {
                 return RewriteNode::Text(format!(
-                    "serialized.append(*self.{});\n",
+                    "array::ArrayTrait::append(ref serialized, *self.{});\n",
                     e.name(db).text(db)
                 ));
             }
@@ -95,7 +98,7 @@ pub fn handle_component_struct(
             if !e.has_attr(db, "key") {
                 if e.type_clause(db).ty(db).as_syntax_node().get_text(db) == "felt252" {
                     return Some(RewriteNode::Text(format!(
-                        "serialized.append(*self.{});\n",
+                        "array::ArrayTrait::append(ref serialized, *self.{});\n",
                         e.name(db).text(db)
                     )));
                 }
@@ -141,7 +144,7 @@ pub fn handle_component_struct(
                     let ($key_names$, ): ($key_types$, ) = keys;
                     let mut serialized = ArrayTrait::new();
                     $serialized_keys$
-                    serialized.span()
+                    array::ArrayTrait::span(@serialized)
                 }
             }
 
@@ -155,14 +158,14 @@ pub fn handle_component_struct(
                 fn keys(self: @$type_name$) -> Span<felt252> {
                     let mut serialized = ArrayTrait::new();
                     $component_serialized_keys$
-                    serialized.span()
+                    array::ArrayTrait::span(@serialized)
                 }
 
                 #[inline(always)]
                 fn values(self: @$type_name$) -> Span<felt252> {
                     let mut serialized = ArrayTrait::new();
                     $component_serialized_values$
-                    serialized.span()
+                    array::ArrayTrait::span(@serialized)
                 }
             }
 

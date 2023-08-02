@@ -76,31 +76,14 @@ fn test_component() {
     let world = deploy_world();
 
     world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
-    let mut data = ArrayTrait::new();
-    data.append(1337);
-    let id = world.uuid();
-// world.set_entity(name, array![id], 0, data.span());
-// let stored = world
-//     .entity(name, array![id], 0, dojo::SerdeLen::<Foo>::len());
-// assert(*stored.snapshot.at(0) == 1337, 'data not stored');
-}
-
-#[test]
-#[available_gas(2000000)]
-fn test_component_with_partition() {
-    let name = 'Foo';
-    let world = deploy_world();
-
-    world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
-    let mut data = ArrayTrait::new();
-    data.append(1337);
-    let id = world.uuid();
     let mut keys = ArrayTrait::new();
-    keys.append(1337);
-// world.set_entity(name, QueryTrait::new(0, 1.into(), keys.span()), 0, data.span());
-// let stored = world
-//     .entity(name, QueryTrait::new(0, 1.into(), keys.span()), 0, dojo::SerdeLen::<Foo>::len());
-// assert(*stored.snapshot.at(0) == 1337, 'data not stored');
+    keys.append(420);
+    let mut data = ArrayTrait::new();
+    data.append(1337);
+
+    world.set_entity(name, keys.span(), 0, data.span());
+    let stored = world.entity(name, keys.span(), 0, dojo::SerdeLen::<Foo>::len());
+    assert(*stored.snapshot.at(0) == 1337, 'data not stored');
 }
 
 #[test]
@@ -143,13 +126,16 @@ fn test_set_entity_admin() {
     let alice = starknet::contract_address_const::<0x1337>();
     starknet::testing::set_contract_address(alice);
 
+    let mut keys = array::ArrayTrait::new();
+    keys.append(alice.into());
+
     let mut data = ArrayTrait::new();
     data.append(420);
     data.append(1337);
-    world.execute('bar'.into(), data.span());
-// let foo = world.entity('Foo'.into(), alice, 0, dojo::SerdeLen::<Foo>::len());
-// assert(*foo[0] == 420, 'data not stored');
-// assert(*foo[1] == 1337, 'data not stored');
+    world.execute('bar', data.span());
+    let foo = world.entity('Foo', keys.span(), 0, dojo::SerdeLen::<Foo>::len());
+    assert(*foo[0] == 420, 'data not stored');
+    assert(*foo[1] == 1337, 'data not stored');
 }
 
 #[test]
@@ -218,7 +204,8 @@ fn test_library_call_system() {
     world.register_system(library_call::TEST_CLASS_HASH.try_into().unwrap());
     let mut calldata = ArrayTrait::new();
     calldata.append(foo::TEST_CLASS_HASH);
-    calldata.append(0x011efd13169e3bceace525b23b7f968b3cc611248271e35f04c5c917311fc7f7);
+    // 'name' entrypoint
+    calldata.append(0x0361458367e696363fbcc70777d07ebbd2394e89fd0adcaf147faccd1d294d60);
     calldata.append(0);
     world.execute('library_call'.into(), calldata.span());
 }
