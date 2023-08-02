@@ -23,13 +23,16 @@ cairo-lang-sierra.workspace = true
 cairo-lang-sierra-to-casm.workspace = true
 cairo-lang-starknet.workspace = true
 cairo-lang-test-runner.workspace = true
+include_dir = "0.7.3"
 scarb.workspace = true
+scarb-metadata = "1.4.2"
 semver.workspace = true
 serde.workspace = true
 console.workspace = true
 serde_json.workspace = true
 smol_str.workspace = true
 starknet.workspace = true
+tempfile = "3.6.0"
 thiserror.workspace = true
 tokio = { version = "1.15.0", features = ["full"] }
 toml.workspace = true
@@ -38,6 +41,14 @@ clap-verbosity-flag = "2.0.1"
 yansi.workspace = true
 tracing.workspace = true
 tracing-log = "0.1.3"
+forge = { git = "https://github.com/foundry-rs/starknet-foundry", version = "0.2.0" }
+
+# blockifier = { git = "https://github.com/starkware-libs/blockifier.git", rev = "9238b4d" }
+# starknet_api = { git = "https://github.com/starkware-libs/starknet-api", rev = "a4c78ff" }
+# cairo-lang-casm = { git = "https://github.com/starkware-libs/cairo", rev = "f9e7b41" }
+# cairo-lang-runner = { git = "https://github.com/starkware-libs/cairo", rev = "f9e7b41" }
+
+regex = "1.9.1"
 
 [dev-dependencies]
 assert_fs = "1.0.10"

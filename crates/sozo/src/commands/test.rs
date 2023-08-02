@@ -1,25 +1,25 @@
 //! Compiles and runs tests for a Dojo project.
 
-use std::iter;
-use std::sync::Arc;
+use include_dir::{include_dir, Dir};
 
-use anyhow::{bail, Result};
-use cairo_lang_compiler::db::RootDatabase;
-use cairo_lang_compiler::diagnostics::DiagnosticsReporter;
-use cairo_lang_compiler::project::{ProjectConfig, ProjectConfigContent};
-use cairo_lang_filesystem::cfg::{Cfg, CfgSet};
-use cairo_lang_filesystem::ids::Directory;
-use cairo_lang_starknet::plugin::StarkNetPlugin;
-use cairo_lang_test_runner::plugin::TestPlugin;
-use cairo_lang_test_runner::TestRunner;
+use std::path::PathBuf;
+
+use anyhow::Result;
+
+use camino::Utf8PathBuf;
 use clap::Args;
-use dojo_lang::compiler::collect_main_crate_ids;
-use dojo_lang::plugin::DojoPlugin;
-use scarb::compiler::CompilationUnit;
+
+use tempfile::tempdir;
+
+use forge::scarb::{get_contracts_map, try_get_starknet_artifacts_path};
+use forge::{run, RunnerConfig};
+
 use scarb::core::Config;
 use scarb::ops;
-use tracing::trace;
 
+use scarb_metadata::MetadataCommand;
+
+static PREDEPLOYED_CONTRACTS: Dir = include_dir!("crates/snforge-predeployed-contracts");
 /// Execute all unit tests of a local package.
 #[derive(Args, Clone)]
 pub struct TestArgs {
@@ -36,78 +36,86 @@ pub struct TestArgs {
 
 impl TestArgs {
     pub fn run(self, config: &Config) -> anyhow::Result<()> {
+        println!("Config path {}", config.manifest_path());
+        // Workspace
         let ws = ops::read_workspace(config.manifest_path(), config).unwrap_or_else(|err| {
             eprintln!("error: {err}");
             std::process::exit(1);
         });
 
+        // Build artifacts
+        sozo_build(config)?;
+
+        // Corelib
         let resolve = ops::resolve_workspace(&ws)?;
         let compilation_units = ops::generate_compilation_units(&resolve, &ws)?;
+        let corelib =
+            Utf8PathBuf::from(compilation_units[0].core_package_component().target.source_root());
 
-        for unit in compilation_units {
-            let db = build_root_database(&unit)?;
+        // let corelib = Utf8PathBuf::from_path_buf(load_files_in_dir(&CORELIB_PATH).unwrap())
+        //     .expect("Failed to prepare corelib");
 
-            let main_crate_ids = collect_main_crate_ids(&unit, &db);
+        // Foundry friendly metadata
+        let scarb_metadata =
+            MetadataCommand::new().manifest_path(config.manifest_path()).inherit_stderr().exec()?;
 
-            if DiagnosticsReporter::stderr().check(&db) {
-                bail!("failed to compile");
-            }
+        let predeployed_contracts =
+            Utf8PathBuf::from_path_buf(load_files_in_dir(&PREDEPLOYED_CONTRACTS).unwrap())
+                .expect("Failed to prepare cheats");
 
-            let runner = TestRunner {
-                db,
-                main_crate_ids,
-                filter: self.filter.clone(),
-                include_ignored: self.include_ignored,
-                ignored: self.ignored,
-                starknet: true,
-            };
-            runner.run()?;
+        for package in &scarb_metadata.workspace.members {
+            let forge_config =
+                forge::scarb::config_from_scarb_for_package(&scarb_metadata, package)?;
 
-            println!();
+            let (package_path, lib_path, _corelib_path, dependencies, target_name) =
+                forge::scarb::dependencies_for_package(&scarb_metadata, package)?;
+            let contracts_path = try_get_starknet_artifacts_path(&package_path, &target_name)?;
+            let contracts = contracts_path
+                .map(|path| get_contracts_map(&path))
+                .transpose()?
+                .unwrap_or_default();
+
+            let runner_config = RunnerConfig::new(
+                if self.filter.len() > 0 { Some(self.filter.clone()) } else { None },
+                false,
+                false,
+                &forge_config,
+            );
+
+            println!("--------------- RUN ARGS ---------------");
+            println!("package_path: {package_path}");
+            println!("lib_path: {lib_path}");
+            println!("dependencies: {dependencies:?}");
+            println!("runner_config: {runner_config:?}");
+            println!("corelib: {corelib}");
+            println!("contracts: HashMap<String, StarknetContractArtifacts>");
+            println!("predeployed_contracts: {predeployed_contracts}");
+
+            run(
+                &package_path,
+                &lib_path,
+                &Some(dependencies.clone()),
+                &runner_config,
+                Some(&corelib),
+                &contracts,
+                &predeployed_contracts,
+            )?;
         }
+        println!("Thats all packages.");
 
         Ok(())
     }
 }
 
-pub(crate) fn build_root_database(unit: &CompilationUnit) -> Result<RootDatabase> {
-    let mut b = RootDatabase::builder();
-    b.with_project_config(build_project_config(unit)?);
-    b.with_cfg(
-        unit.cfg_set
-            .iter()
-            .map(|cfg| {
-                serde_json::to_value(cfg)
-                    .and_then(serde_json::from_value)
-                    .expect("Cairo's `Cfg` must serialize identically as Scarb Metadata's `Cfg`.")
-            })
-            .chain(iter::once(Cfg::name("test")))
-            .collect::<CfgSet>(),
-    );
-
-    b.with_semantic_plugin(Arc::new(TestPlugin::default()));
-    b.with_semantic_plugin(Arc::new(DojoPlugin));
-    b.with_semantic_plugin(Arc::new(StarkNetPlugin::default()));
-
-    b.build()
+// Essentially main for Commands::Build(_)
+// DojoCompiler added for Command::Test
+fn sozo_build(config: &Config) -> Result<()> {
+    let ws = scarb::ops::read_workspace(config.manifest_path(), &config)?;
+    ops::compile(&ws)
 }
 
-fn build_project_config(unit: &CompilationUnit) -> Result<ProjectConfig> {
-    let crate_roots = unit
-        .components
-        .iter()
-        .filter(|component| !component.package.id.is_core())
-        .map(|component| (component.cairo_package_name(), component.target.source_root().into()))
-        .collect();
-
-    let corelib = Some(Directory(unit.core_package_component().target.source_root().into()));
-
-    let content = ProjectConfigContent { crate_roots };
-
-    let project_config =
-        ProjectConfig { base_path: unit.main_component().package.root().into(), corelib, content };
-
-    trace!(?project_config);
-
-    Ok(project_config)
+fn load_files_in_dir(files: &Dir) -> Result<PathBuf> {
+    let tmp_dir = tempdir()?;
+    files.extract(&tmp_dir)?;
+    Ok(tmp_dir.path().into())
 }

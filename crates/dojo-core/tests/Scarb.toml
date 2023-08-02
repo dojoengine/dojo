@@ -6,4 +6,7 @@ description = "Tests for Dojo Core"
 [dependencies]
 dojo = { path = "../" }
 
+[[target.starknet-contract]]
+# sierra = true
+
 [[target.dojo]]

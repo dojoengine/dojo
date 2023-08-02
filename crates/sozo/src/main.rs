@@ -34,6 +34,10 @@ fn cli_main(args: SozoArgs) -> Result<()> {
         compilers.add(Box::new(DojoCompiler)).unwrap();
     }
 
+    if let Commands::Test(_) = &args.command {
+        compilers.add(Box::new(DojoCompiler)).unwrap();
+    }
+
     let manifest_path = scarb::ops::find_manifest_path(args.manifest_path.as_deref())?;
 
     let config = Config::builder(manifest_path)
