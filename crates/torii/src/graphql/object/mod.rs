@@ -47,18 +47,18 @@ pub trait ObjectTrait {
 
         // Add fields (ie id, createdAt, etc) and their resolver
         for (field_name, field_type) in self.type_mapping() {
-            let name = self.name().to_string();
+            let field_name = field_name.clone();
 
             let field =
-                Field::new(field_name.as_str(), TypeRef::named_nn(field_type), move |ctx| {
-                    let name = name.clone();
+                Field::new(field_name.to_string(), TypeRef::named_nn(field_type), move |ctx| {
+                    let field_name = field_name.clone();
 
                     FieldFuture::new(async move {
                         let mapping = ctx.parent_value.try_downcast_ref::<ValueMapping>()?;
 
-                        match mapping.get(name.as_str()) {
+                        match mapping.get(field_name.as_str()) {
                             Some(value) => Ok(Some(value.clone())),
-                            _ => Err(format!("{} field not found", name).into()),
+                            _ => Err(format!("{} field not found", field_name).into()),
                         }
                     })
                 });
