@@ -31,8 +31,8 @@ pub struct KatanaArgs {
     #[arg(hide = true)]
     #[arg(value_name = "PATH")]
     #[arg(help = "Dump the state of chain on exit to the given file.")]
-    #[arg(long_help = "Dump the state of chain on exit to the given file. \
-                       If the value is a directory, the state will be written to `<PATH>/state.bin`.")]
+    #[arg(long_help = "Dump the state of chain on exit to the given file. If the value is a \
+                       directory, the state will be written to `<PATH>/state.bin`.")]
     pub dump_state: Option<PathBuf>,
 
     #[arg(long)]

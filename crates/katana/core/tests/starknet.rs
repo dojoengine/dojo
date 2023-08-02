@@ -11,9 +11,9 @@ use starknet::core::types::FieldElement;
 use starknet_api::block::BlockNumber;
 use starknet_api::core::{ClassHash, ContractAddress, Nonce};
 use starknet_api::hash::StarkFelt;
-use starknet_api::transaction::DeclareTransaction as DeclareApiTransaction;
 use starknet_api::transaction::{
-    Calldata, DeclareTransactionV0V1, InvokeTransaction, InvokeTransactionV1, TransactionHash,
+    Calldata, DeclareTransaction as DeclareApiTransaction, DeclareTransactionV0V1,
+    InvokeTransaction, InvokeTransactionV1, TransactionHash,
 };
 use starknet_api::{calldata, stark_felt};
 

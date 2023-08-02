@@ -1,17 +1,14 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
+use std::sync::Arc;
 
-use cairo_vm::{
-    felt::Felt252,
-    hint_processor::hint_processor_definition::HintReference,
-    serde::deserialize_program::{
-        ApTracking, Attribute, BuiltinName, FlowTrackingData, HintParams, Identifier,
-        InstructionLocation, Member, OffsetValue,
-    },
-    types::{
-        program::{Program, SharedProgramData},
-        relocatable::MaybeRelocatable,
-    },
+use cairo_vm::felt::Felt252;
+use cairo_vm::hint_processor::hint_processor_definition::HintReference;
+use cairo_vm::serde::deserialize_program::{
+    ApTracking, Attribute, BuiltinName, FlowTrackingData, HintParams, Identifier,
+    InstructionLocation, Member, OffsetValue,
 };
+use cairo_vm::types::program::{Program, SharedProgramData};
+use cairo_vm::types::relocatable::MaybeRelocatable;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

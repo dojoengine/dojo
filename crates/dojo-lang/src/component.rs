@@ -35,18 +35,9 @@ pub fn handle_component_struct(
         .collect::<_>();
 
     let elements = struct_ast.members(db).elements(db);
-    let keys: Vec<_> = elements
-        .iter()
-        .filter_map(|e| {
-            if e.has_attr(db, "key") {
-                return Some(e);
-            }
+    let keys: Vec<_> = elements.iter().filter(|e| e.has_attr(db, "key")).collect::<_>();
 
-            None
-        })
-        .collect::<_>();
-
-    if keys.len() == 0 {
+    if keys.is_empty() {
         diagnostics.push(PluginDiagnostic {
             message: "Component must define atleast one #[key] attribute".into(),
             stable_ptr: struct_ast.name(db).stable_ptr().untyped(),

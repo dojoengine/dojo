@@ -41,7 +41,7 @@ impl InlineMacro for SetMacro {
             }
         }
 
-        if bundle.len() == 0 {
+        if bundle.is_empty() {
             macro_expander_data.diagnostics.push(PluginDiagnostic {
                 message: "Invalid arguments: No components provided.".to_string(),
                 stable_ptr: macro_arguments.as_syntax_node().stable_ptr(),
