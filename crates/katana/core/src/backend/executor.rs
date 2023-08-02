@@ -16,10 +16,11 @@ use tokio::sync::RwLock as AsyncRwLock;
 use tracing::{trace, warn};
 
 use super::state::MemDb;
-use super::storage::block::{Block, PartialBlock, PartialHeader};
+use super::storage::block::{PartialBlock, PartialHeader};
 use super::storage::transaction::{RejectedTransaction, TransactionOutput};
 use super::storage::BlockchainStorage;
 use crate::backend::storage::transaction::KnownTransaction;
+use crate::env::Env;
 use crate::utils::transaction::convert_blockifier_to_api_tx;
 
 #[derive(Debug)]
@@ -31,7 +32,7 @@ pub struct PendingBlockExecutor {
     /// persisted for the next included transaction.
     pub state: CachedState<MemDb>,
     pub storage: Arc<AsyncRwLock<BlockchainStorage>>,
-    pub block_context: Arc<RwLock<BlockContext>>,
+    pub env: Arc<RwLock<Env>>,
     pub transactions: Vec<Arc<ExecutedTransaction>>,
     pub outputs: Vec<TransactionOutput>,
 }
@@ -40,13 +41,13 @@ impl PendingBlockExecutor {
     pub fn new(
         parent_hash: FieldElement,
         state: MemDb,
-        block_context: Arc<RwLock<BlockContext>>,
+        env: Arc<RwLock<Env>>,
         storage: Arc<AsyncRwLock<BlockchainStorage>>,
     ) -> Self {
         Self {
+            env,
             storage,
             parent_hash,
-            block_context,
             outputs: Vec::new(),
             transactions: Vec::new(),
             state: CachedState::new(state),
@@ -54,7 +55,7 @@ impl PendingBlockExecutor {
     }
 
     pub fn as_block(&self) -> PartialBlock {
-        let block_context = self.block_context.read();
+        let block_context = &self.env.read().block;
 
         let header = PartialHeader {
             parent_hash: self.parent_hash,
@@ -71,19 +72,6 @@ impl PendingBlockExecutor {
         }
     }
 
-    /// Generate a new valid block which will be included to the blockchain.
-    pub async fn to_block(&self) -> Block {
-        let partial_header = PartialHeader {
-            parent_hash: self.parent_hash,
-            gas_price: self.block_context.read().gas_price,
-            number: self.block_context.read().block_number.0,
-            timestamp: self.block_context.read().block_timestamp.0,
-            sequencer_address: (*self.block_context.read().sequencer_address.0.key()).into(),
-        };
-
-        Block::new(partial_header, self.transactions.clone(), self.outputs.clone())
-    }
-
     // Add a transaction to the executor. The transaction will be executed
     // on the pending state. The transaction will be added to the pending block
     // if it passes the validation logic. Otherwise, the transaction will be
@@ -96,12 +84,8 @@ impl PendingBlockExecutor {
     ) -> bool {
         let api_tx = convert_blockifier_to_api_tx(&transaction);
         let hash: FieldElement = api_tx.transaction_hash().0.into();
-        let res = execute_transaction(
-            transaction,
-            &mut self.state,
-            &self.block_context.read(),
-            charge_fee,
-        );
+        let res =
+            execute_transaction(transaction, &mut self.state, &self.env.read().block, charge_fee);
 
         match res {
             Ok(execution_info) => {

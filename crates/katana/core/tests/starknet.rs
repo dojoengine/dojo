@@ -59,13 +59,13 @@ fn create_declare_transaction(sender_address: ContractAddress) -> DeclareTransac
 #[tokio::test]
 async fn test_next_block_timestamp_in_past() {
     let starknet = create_test_starknet();
-    starknet.generate_pending_block().await;
+    starknet.open_pending_block().await;
 
-    let timestamp = starknet.block_context.read().block_timestamp;
+    let timestamp = starknet.env.read().block.block_timestamp;
     starknet.set_next_block_timestamp(timestamp.0 - 1000).await.unwrap();
 
-    starknet.generate_pending_block().await;
-    let new_timestamp = starknet.block_context.read().block_timestamp;
+    starknet.open_pending_block().await;
+    let new_timestamp = starknet.env.read().block.block_timestamp;
 
     assert_eq!(new_timestamp.0, timestamp.0 - 1000, "timestamp should be updated");
 }
@@ -73,13 +73,13 @@ async fn test_next_block_timestamp_in_past() {
 #[tokio::test]
 async fn test_set_next_block_timestamp_in_future() {
     let starknet = create_test_starknet();
-    starknet.generate_pending_block().await;
+    starknet.open_pending_block().await;
 
-    let timestamp = starknet.block_context.read().block_timestamp;
+    let timestamp = starknet.env.read().block.block_timestamp;
     starknet.set_next_block_timestamp(timestamp.0 + 1000).await.unwrap();
 
-    starknet.generate_pending_block().await;
-    let new_timestamp = starknet.block_context.read().block_timestamp;
+    starknet.open_pending_block().await;
+    let new_timestamp = starknet.env.read().block.block_timestamp;
 
     assert_eq!(new_timestamp.0, timestamp.0 + 1000, "timestamp should be updated");
 }
@@ -87,13 +87,13 @@ async fn test_set_next_block_timestamp_in_future() {
 #[tokio::test]
 async fn test_increase_next_block_timestamp() {
     let starknet = create_test_starknet();
-    starknet.generate_pending_block().await;
+    starknet.open_pending_block().await;
 
-    let timestamp = starknet.block_context.read().block_timestamp;
+    let timestamp = starknet.env.read().block.block_timestamp;
     starknet.increase_next_block_timestamp(1000).await.unwrap();
 
-    starknet.generate_pending_block().await;
-    let new_timestamp = starknet.block_context.read().block_timestamp;
+    starknet.open_pending_block().await;
+    let new_timestamp = starknet.env.read().block.block_timestamp;
 
     assert_eq!(new_timestamp.0, timestamp.0 + 1000, "timestamp should be updated");
 }
@@ -101,13 +101,13 @@ async fn test_increase_next_block_timestamp() {
 #[tokio::test]
 async fn test_creating_blocks() {
     let starknet = create_test_starknet();
-    starknet.generate_pending_block().await;
+    starknet.open_pending_block().await;
     starknet.mine_block().await;
 
     assert_eq!(starknet.storage.read().await.blocks.len(), 2);
     assert_eq!(starknet.storage.read().await.latest_number, 1);
     assert_eq!(
-        starknet.block_context.read().block_number,
+        starknet.env.read().block.block_number,
         BlockNumber(1),
         "block context should only be updated on new pending block"
     );
@@ -122,7 +122,7 @@ async fn test_creating_blocks() {
 #[tokio::test]
 async fn test_add_transaction() {
     let starknet = create_test_starknet();
-    starknet.generate_pending_block().await;
+    starknet.open_pending_block().await;
 
     let a = starknet.predeployed_accounts.accounts[0].clone();
     let b = starknet.predeployed_accounts.accounts[1].clone();
@@ -176,7 +176,7 @@ async fn test_add_transaction() {
 #[tokio::test]
 async fn test_add_reverted_transaction() {
     let starknet = create_test_starknet();
-    starknet.generate_pending_block().await;
+    starknet.open_pending_block().await;
 
     let transaction_hash = TransactionHash(stark_felt!("0x1234"));
     let transaction = Transaction::AccountTransaction(AccountTransaction::Invoke(
@@ -200,7 +200,7 @@ async fn test_add_reverted_transaction() {
 #[tokio::test]
 async fn dump_and_load_state() {
     let backend_old = create_test_starknet();
-    backend_old.generate_pending_block().await;
+    backend_old.open_pending_block().await;
 
     let declare_tx =
         create_declare_transaction(backend_old.predeployed_accounts.accounts[0].account_address);
@@ -244,7 +244,7 @@ async fn dump_and_load_state() {
 #[tokio::test]
 async fn test_set_storage_at() {
     let starknet = create_test_starknet();
-    starknet.generate_pending_block().await;
+    starknet.open_pending_block().await;
 
     let contract_address = ContractAddress(patricia_key!("0x1337"));
     let key = StorageKey(patricia_key!("0x20"));

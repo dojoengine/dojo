@@ -143,13 +143,13 @@ impl KatanaSequencer {
             let starknet = self.backend.clone();
             tokio::spawn(async move {
                 loop {
-                    starknet.generate_pending_block().await;
+                    starknet.open_pending_block().await;
                     time::sleep(time::Duration::from_secs(block_time)).await;
                     starknet.mine_block().await;
                 }
             });
         } else {
-            self.backend.generate_pending_block().await;
+            self.backend.open_pending_block().await;
         }
     }
 
@@ -346,7 +346,7 @@ impl Sequencer for KatanaSequencer {
     }
 
     async fn chain_id(&self) -> ChainId {
-        self.backend.block_context.read().chain_id.clone()
+        self.backend.env.read().block.chain_id.clone()
     }
 
     async fn block_number(&self) -> u64 {
