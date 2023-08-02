@@ -3808,13 +3808,13 @@ dependencies = [
  "assert_matches",
  "clap",
  "clap_complete",
+ "console",
  "env_logger",
  "katana-core",
  "katana-rpc",
  "log",
  "starknet_api",
  "tokio",
- "yansi",
 ]
 
 [[package]]
@@ -5733,7 +5733,6 @@ dependencies = [
  "tracing",
  "tracing-log",
  "url",
- "yansi",
 ]
 
 [[package]]
