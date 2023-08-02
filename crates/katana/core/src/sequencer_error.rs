@@ -40,4 +40,6 @@ pub enum SequencerError {
     DataUnavailable,
     #[error("Failed to decode state")]
     FailedToDecodeStateDump,
+    #[error("Failed to set storage")]
+    FailedToSetStorage,
 }
