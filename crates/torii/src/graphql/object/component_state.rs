@@ -98,11 +98,12 @@ impl ObjectTrait for ComponentStateObject {
             .type_mapping()
             .into_iter()
             .fold(field, |field, (name, ty)| {
+                let ty = ty.clone();
                 // we want to be able to return entity_id in component queries
                 // but don't need this as a filter parameter
                 match name.as_str() {
                     ENTITY_ID => field,
-                    _ => field.argument(InputValue::new(name.as_str(), TypeRef::named(ty))),
+                    _ => field.argument(InputValue::new(name.as_str(), ty)),
                 }
             })
             .argument(InputValue::new("limit", TypeRef::named(TypeRef::INT)));
@@ -136,7 +137,7 @@ fn parse_inputs(
         let input_option = ctx.args.try_get(name.as_str());
 
         if let Ok(input) = input_option {
-            let input_str = match ScalarType::from_str(ty)? {
+            let input_str = match ScalarType::from_str(ty.to_string())? {
                 scalar if scalar.is_numeric_type() => input.u64()?.to_string(),
                 _ => input.string()?.to_string(),
             };
@@ -194,7 +195,7 @@ fn value_mapping_from_row(row: &SqliteRow, fields: &TypeMapping) -> sqlx::Result
             // handle entity_id separately since it's not a component member
             match name.as_str() {
                 ENTITY_ID => Ok((Name::new(name), fetch_string(row, name)?)),
-                _ => Ok((Name::new(name), fetch_value(row, name, ty)?)),
+                _ => Ok((Name::new(name), fetch_value(row, name, &ty.to_string())?)),
             }
         })
         .collect::<sqlx::Result<ValueMapping>>()
@@ -247,10 +248,10 @@ pub async fn type_mapping_from(
     // field type mapping is 1:1 to component members, but entity_id
     // is not a member so we need to add it manually
     let mut type_mapping = TypeMapping::new();
-    type_mapping.insert(Name::new(ENTITY_ID), TypeRef::ID.to_string());
+    type_mapping.insert(Name::new(ENTITY_ID), TypeRef::named(TypeRef::ID));
 
     for member in component_members {
-        type_mapping.insert(Name::new(member.name), member.ty);
+        type_mapping.insert(Name::new(member.name), TypeRef::named(member.ty));
     }
 
     Ok(type_mapping)

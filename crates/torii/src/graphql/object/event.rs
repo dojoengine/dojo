@@ -31,11 +31,11 @@ impl EventObject {
     pub fn new() -> Self {
         Self {
             type_mapping: IndexMap::from([
-                (Name::new("id"), TypeRef::ID.to_string()),
-                (Name::new("keys"), TypeRef::STRING.to_string()),
-                (Name::new("data"), TypeRef::STRING.to_string()),
-                (Name::new("systemCallId"), TypeRef::INT.to_string()),
-                (Name::new("createdAt"), ScalarType::DateTime.to_string()),
+                (Name::new("id"), TypeRef::named(TypeRef::ID)),
+                (Name::new("keys"), TypeRef::named(TypeRef::STRING)),
+                (Name::new("data"), TypeRef::named(TypeRef::STRING)),
+                (Name::new("systemCallId"), TypeRef::named(TypeRef::INT)),
+                (Name::new("createdAt"), TypeRef::named(ScalarType::DateTime.to_string())),
             ]),
         }
     }

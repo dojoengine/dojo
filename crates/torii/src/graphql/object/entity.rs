@@ -33,11 +33,11 @@ impl EntityObject {
     pub fn new() -> Self {
         Self {
             type_mapping: IndexMap::from([
-                (Name::new("id"), TypeRef::ID.to_string()),
-                (Name::new("keys"), TypeRef::STRING.to_string()),
-                (Name::new("componentNames"), TypeRef::STRING.to_string()),
-                (Name::new("createdAt"), ScalarType::DateTime.to_string()),
-                (Name::new("updatedAt"), ScalarType::DateTime.to_string()),
+                (Name::new("id"), TypeRef::named(TypeRef::ID)),
+                (Name::new("keys"), TypeRef::named(TypeRef::STRING)),
+                (Name::new("componentNames"), TypeRef::named(TypeRef::STRING)),
+                (Name::new("createdAt"), TypeRef::named(ScalarType::DateTime.to_string())),
+                (Name::new("updatedAt"), TypeRef::named(ScalarType::DateTime.to_string())),
             ]),
         }
     }

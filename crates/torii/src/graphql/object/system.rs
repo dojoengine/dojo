@@ -32,12 +32,12 @@ impl SystemObject {
     pub fn new() -> Self {
         Self {
             type_mapping: IndexMap::from([
-                (Name::new("id"), TypeRef::ID.to_string()),
-                (Name::new("name"), TypeRef::STRING.to_string()),
-                (Name::new("address"), ScalarType::Address.to_string()),
-                (Name::new("classHash"), ScalarType::Felt252.to_string()),
-                (Name::new("transactionHash"), ScalarType::Felt252.to_string()),
-                (Name::new("createdAt"), ScalarType::DateTime.to_string()),
+                (Name::new("id"), TypeRef::named(TypeRef::ID)),
+                (Name::new("name"), TypeRef::named(TypeRef::STRING)),
+                (Name::new("address"), TypeRef::named(ScalarType::Address.to_string())),
+                (Name::new("classHash"), TypeRef::named(ScalarType::Felt252.to_string())),
+                (Name::new("transactionHash"), TypeRef::named(ScalarType::Felt252.to_string())),
+                (Name::new("createdAt"), TypeRef::named(ScalarType::DateTime.to_string())),
             ]),
         }
     }
