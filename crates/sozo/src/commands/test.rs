@@ -2,14 +2,12 @@
 
 use include_dir::{include_dir, Dir};
 
-use std::path::PathBuf;
-
 use anyhow::Result;
 
 use camino::Utf8PathBuf;
 use clap::Args;
 
-use tempfile::tempdir;
+use tempfile::{tempdir, TempDir};
 
 use forge::scarb::{get_contracts_map, try_get_starknet_artifacts_path};
 use forge::{run, RunnerConfig};
@@ -19,7 +17,9 @@ use scarb::ops;
 
 use scarb_metadata::MetadataCommand;
 
-static PREDEPLOYED_CONTRACTS: Dir = include_dir!("crates/snforge-predeployed-contracts");
+static PREDEPLOYED_CONTRACTS: Dir = include_dir!("crates/starknet-foundry/predeployed-contracts");
+static CORELIB_DIR: Dir = include_dir!("crates/starknet-foundry/corelib/src");
+
 /// Execute all unit tests of a local package.
 #[derive(Args, Clone)]
 pub struct TestArgs {
@@ -36,32 +36,22 @@ pub struct TestArgs {
 
 impl TestArgs {
     pub fn run(self, config: &Config) -> anyhow::Result<()> {
-        println!("Config path {}", config.manifest_path());
-        // Workspace
-        let ws = ops::read_workspace(config.manifest_path(), config).unwrap_or_else(|err| {
-            eprintln!("error: {err}");
-            std::process::exit(1);
-        });
-
         // Build artifacts
         sozo_build(config)?;
 
-        // Corelib
-        let resolve = ops::resolve_workspace(&ws)?;
-        let compilation_units = ops::generate_compilation_units(&resolve, &ws)?;
-        let corelib =
-            Utf8PathBuf::from(compilation_units[0].core_package_component().target.source_root());
+        let corelib_dir = load_files_in_dir(&CORELIB_DIR);
+        let corelib = Utf8PathBuf::from_path_buf(corelib_dir.path().into())
+            .expect("Failed to prepare corelib");
+        println!("corelib: {corelib}");
 
-        // let corelib = Utf8PathBuf::from_path_buf(load_files_in_dir(&CORELIB_PATH).unwrap())
-        //     .expect("Failed to prepare corelib");
+        let predeployed_contracts_dir = load_files_in_dir(&PREDEPLOYED_CONTRACTS);
+        let predeployed_contracts =
+            Utf8PathBuf::from_path_buf(predeployed_contracts_dir.path().into())
+                .expect("Failed to prepare cheats");
 
         // Foundry friendly metadata
         let scarb_metadata =
             MetadataCommand::new().manifest_path(config.manifest_path()).inherit_stderr().exec()?;
-
-        let predeployed_contracts =
-            Utf8PathBuf::from_path_buf(load_files_in_dir(&PREDEPLOYED_CONTRACTS).unwrap())
-                .expect("Failed to prepare cheats");
 
         for package in &scarb_metadata.workspace.members {
             let forge_config =
@@ -101,7 +91,6 @@ impl TestArgs {
                 &predeployed_contracts,
             )?;
         }
-        println!("Thats all packages.");
 
         Ok(())
     }
@@ -114,8 +103,37 @@ fn sozo_build(config: &Config) -> Result<()> {
     ops::compile(&ws)
 }
 
-fn load_files_in_dir(files: &Dir) -> Result<PathBuf> {
-    let tmp_dir = tempdir()?;
-    files.extract(&tmp_dir)?;
-    Ok(tmp_dir.path().into())
+fn load_files_in_dir(files: &Dir) -> TempDir {
+    let tmp_dir = tempdir().unwrap();
+    files.extract(&tmp_dir).unwrap();
+    tmp_dir
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use dojo_lang::compiler::DojoCompiler;
+    use dojo_lang::plugin::CairoPluginRepository;
+    use scarb::compiler::CompilerRepository;
+
+    #[test]
+    fn test_args_run() {
+        let test_args = TestArgs { filter: "".into(), include_ignored: false, ignored: false };
+
+        let mut compilers = CompilerRepository::std();
+        let cairo_plugins = CairoPluginRepository::new();
+        compilers.add(Box::new(DojoCompiler)).unwrap();
+
+        let manifest_path = Utf8PathBuf::from("crates/dojo-core/Scarb.toml");
+        let manifest_path = scarb::ops::find_manifest_path(Some(&manifest_path)).unwrap();
+
+        let config = Config::builder(manifest_path)
+            .cairo_plugins(cairo_plugins.into())
+            .ui_verbosity(scarb::ui::Verbosity::Normal)
+            .compilers(compilers)
+            .build()
+            .unwrap();
+
+        test_args.run(&config).unwrap();
+    }
 }

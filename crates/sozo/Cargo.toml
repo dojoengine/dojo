@@ -41,7 +41,7 @@ clap-verbosity-flag = "2.0.1"
 yansi.workspace = true
 tracing.workspace = true
 tracing-log = "0.1.3"
-forge = { git = "https://github.com/foundry-rs/starknet-foundry", version = "0.2.0" }
+forge.workspace = true
 
 # blockifier = { git = "https://github.com/starkware-libs/blockifier.git", rev = "9238b4d" }
 # starknet_api = { git = "https://github.com/starkware-libs/starknet-api", rev = "a4c78ff" }
