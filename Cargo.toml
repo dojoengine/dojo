@@ -27,7 +27,6 @@ version = "0.1.0"
 [workspace.dependencies]
 anyhow = "1.0.66"
 async-trait = "0.1.68"
-blockifier = { git = "https://github.com/starkware-libs/blockifier" }
 cairo-lang-casm = "2.0.1"
 cairo-lang-compiler = "2.0.1"
 cairo-lang-debug = "2.0.1"
@@ -83,8 +82,6 @@ tracing = "0.1"
 tracing-subscriber = "0.3.16"
 yansi = "0.5.1"
 
-[patch."https://github.com/starkware-libs/blockifier"]
-blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "a31892d" }
 
 [patch.crates-io]
 cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "51a35b2b405f29786e48a94f364d64d373d79eea" }
