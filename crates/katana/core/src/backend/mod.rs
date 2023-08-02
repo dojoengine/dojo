@@ -2,7 +2,6 @@ use std::io::Write;
 use std::sync::Arc;
 
 use anyhow::Result;
-use blockifier::block_context::BlockContext;
 use blockifier::execution::entry_point::{
     CallEntryPoint, CallInfo, EntryPointExecutionContext, ExecutionResources,
 };
@@ -42,7 +41,7 @@ use crate::backend::state::{MemDb, StateExt};
 use crate::constants::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
 use crate::db::serde::state::SerializableState;
 use crate::db::Db;
-use crate::env::BlockContextGenerator;
+use crate::env::{BlockContextGenerator, Env};
 use crate::sequencer_error::SequencerError;
 use crate::utils::transaction::convert_blockifier_to_api_tx;
 use crate::utils::{convert_state_diff_to_rpc_state_diff, get_current_timestamp};
@@ -61,7 +60,8 @@ pub struct Backend {
     pub pending_block: AsyncRwLock<Option<PendingBlockExecutor>>,
     /// Historic states of previous blocks
     pub states: AsyncRwLock<InMemoryBlockStates>,
-    pub block_context: Arc<RwLock<BlockContext>>,
+    /// The chain environment values.
+    pub env: Arc<RwLock<Env>>,
     pub block_context_generator: RwLock<BlockContextGenerator>,
     pub state: AsyncRwLock<MemDb>,
     pub predeployed_accounts: PredeployedAccounts,
@@ -69,13 +69,14 @@ pub struct Backend {
 
 impl Backend {
     pub fn new(config: StarknetConfig) -> Self {
-        let block_context = Arc::new(RwLock::new(config.block_context()));
+        let block_context = config.block_context();
         let block_context_generator = config.block_context_generator();
 
         let mut state = MemDb::default();
 
-        let storage = BlockchainStorage::new(&block_context.read());
+        let storage = BlockchainStorage::new(&block_context);
         let states = InMemoryBlockStates::default();
+        let env = Env { block: block_context };
 
         if let Some(ref init_state) = config.init_state {
             state.load_state(init_state.clone()).expect("failed to load initial state");
@@ -92,7 +93,7 @@ impl Backend {
         predeployed_accounts.deploy_accounts(&mut state);
 
         Self {
-            block_context,
+            env: Arc::new(RwLock::new(env)),
             state: AsyncRwLock::new(state),
             config: RwLock::new(config),
             states: AsyncRwLock::new(states),
@@ -129,7 +130,7 @@ impl Backend {
         let exec_info = execute_transaction(
             Transaction::AccountTransaction(transaction),
             &mut state,
-            &self.block_context.read(),
+            &self.env.read().block,
             true,
         )?;
 
@@ -142,10 +143,10 @@ impl Backend {
 
         let (l1_gas_usage, vm_resources) = extract_l1_gas_and_vm_usage(&exec_info.actual_resources);
         let l1_gas_by_vm_usage =
-            calculate_l1_gas_by_vm_usage(&self.block_context.read(), &vm_resources)?;
+            calculate_l1_gas_by_vm_usage(&self.env.read().block, &vm_resources)?;
         let total_l1_gas_usage = l1_gas_usage as f64 + l1_gas_by_vm_usage;
 
-        let gas_price = self.block_context.read().gas_price as u64;
+        let gas_price = self.env.read().block.gas_price as u64;
 
         Ok(FeeEstimate {
             gas_consumed: total_l1_gas_usage.ceil() as u64,
@@ -169,7 +170,7 @@ impl Backend {
 
         if is_valid && self.config.read().auto_mine {
             self.mine_block().await;
-            self.generate_pending_block().await;
+            self.open_pending_block().await;
         }
     }
 
@@ -223,17 +224,37 @@ impl Backend {
         }
     }
 
-    pub async fn generate_pending_block(&self) {
+    pub async fn open_pending_block(&self) {
         let latest_hash = self.storage.read().await.latest_hash;
         let latest_state = self.state.read().await.clone();
 
         self.update_block_context();
+
         let _ = self.pending_block.write().await.insert(PendingBlockExecutor::new(
             latest_hash,
             latest_state,
-            self.block_context.clone(),
+            self.env.clone(),
             self.storage.clone(),
         ));
+    }
+
+    fn update_block_context(&self) {
+        let mut context_gen = self.block_context_generator.write();
+        let block_context = &mut self.env.write().block;
+
+        let current_timestamp_secs = get_current_timestamp().as_secs() as i64;
+
+        let timestamp = if context_gen.next_block_start_time == 0 {
+            (current_timestamp_secs + context_gen.block_timestamp_offset) as u64
+        } else {
+            let timestamp = context_gen.next_block_start_time;
+            context_gen.block_timestamp_offset = timestamp as i64 - current_timestamp_secs;
+            context_gen.next_block_start_time = 0;
+            timestamp
+        };
+
+        block_context.block_number = block_context.block_number.next();
+        block_context.block_timestamp = BlockTimestamp(timestamp);
     }
 
     pub fn call(
@@ -256,7 +277,7 @@ impl Backend {
             &mut state,
             &mut ExecutionResources::default(),
             &mut EntryPointExecutionContext::new(
-                self.block_context.read().clone(),
+                self.env.read().block.clone(),
                 AccountTransactionContext::default(),
                 1000000000,
             ),
@@ -285,35 +306,17 @@ impl Backend {
 
     pub async fn create_empty_block(&self) -> Block {
         let parent_hash = self.storage.read().await.latest_hash;
+        let block_context = &self.env.read().block;
 
         let partial_header = PartialHeader {
             parent_hash,
-            gas_price: self.block_context.read().gas_price,
-            number: self.block_context.read().block_number.0,
-            timestamp: self.block_context.read().block_timestamp.0,
-            sequencer_address: (*self.block_context.read().sequencer_address.0.key()).into(),
+            gas_price: block_context.gas_price,
+            number: block_context.block_number.0,
+            timestamp: block_context.block_timestamp.0,
+            sequencer_address: (*block_context.sequencer_address.0.key()).into(),
         };
 
         Block::new(partial_header, vec![], vec![])
-    }
-
-    fn update_block_context(&self) {
-        let mut block_context_gen = self.block_context_generator.write();
-        let mut block_context = self.block_context.write();
-        block_context.block_number = block_context.block_number.next();
-
-        let current_timestamp_secs = get_current_timestamp().as_secs() as i64;
-
-        if block_context_gen.next_block_start_time == 0 {
-            let block_timestamp = current_timestamp_secs + block_context_gen.block_timestamp_offset;
-            block_context.block_timestamp = BlockTimestamp(block_timestamp as u64);
-        } else {
-            let block_timestamp = block_context_gen.next_block_start_time;
-            block_context_gen.block_timestamp_offset =
-                block_timestamp as i64 - current_timestamp_secs;
-            block_context.block_timestamp = BlockTimestamp(block_timestamp);
-            block_context_gen.next_block_start_time = 0;
-        }
     }
 
     pub async fn set_next_block_timestamp(&self, timestamp: u64) -> Result<(), SequencerError> {
