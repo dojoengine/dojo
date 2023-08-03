@@ -1,5 +1,6 @@
+use std::io;
+use std::process::exit;
 use std::sync::Arc;
-use std::{io, process::exit};
 
 use clap::{CommandFactory, Parser};
 use clap_complete::{generate, Shell};
@@ -11,7 +12,8 @@ use yansi::Paint;
 
 mod args;
 
-use args::{Commands::Completions, KatanaArgs};
+use args::Commands::Completions;
+use args::KatanaArgs;
 
 #[tokio::main]
 async fn main() {
