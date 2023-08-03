@@ -53,6 +53,7 @@ cairo-vm = "0.8.2"
 camino = { version = "1.1.2", features = ["serde1"] }
 chrono = { version = "0.4.24", features = ["serde"] }
 clap = { version = "4.2", features = ["derive"] }
+clap_complete = "4.3"
 colored = "2"
 console = "0.15.7"
 convert_case = "0.6.0"
