@@ -42,15 +42,9 @@ impl MigrateArgs {
             scarb::ops::compile(&ws)?;
         }
 
-        let mut env_metadata = dojo_metadata_from_workspace(&ws)
-            .and_then(|dojo_metadata| dojo_metadata.get("env").cloned());
-
-        // If there is an environment-specific metadata, use that, otherwise use the
-        // workspace's default environment metadata.
-        env_metadata = env_metadata
-            .as_ref()
-            .and_then(|env_metadata| env_metadata.get(ws.config().profile().as_str()).cloned())
-            .or(env_metadata);
+        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+        let env_metadata = dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env());
+        // TODO: Check the updated scarb way to read profile specific values
 
         ws.config().tokio_handle().block_on(migration::execute(
             self,
