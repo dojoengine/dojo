@@ -1,107 +1,129 @@
-use blockifier::abi::abi_utils::{get_storage_var_address, selector_from_name};
+use blockifier::abi::abi_utils::selector_from_name;
+use blockifier::state::state_api::StateReader;
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transaction_execution::Transaction;
+use blockifier::transaction::transactions::DeclareTransaction;
 use katana_core::backend::config::{Environment, StarknetConfig};
-use katana_core::backend::StarknetWrapper;
+use katana_core::backend::Backend;
 use katana_core::constants::FEE_TOKEN_ADDRESS;
-use starknet::core::types::TransactionStatus;
+use katana_core::db::Db;
+use katana_core::utils::contract::get_contract_class;
+use starknet::core::types::FieldElement;
 use starknet_api::block::BlockNumber;
-use starknet_api::core::Nonce;
-use starknet_api::hash::StarkFelt;
-use starknet_api::transaction::{
-    Calldata, InvokeTransaction, InvokeTransactionV1, TransactionHash,
-};
-use starknet_api::{calldata, stark_felt};
+use starknet_api::core::{ClassHash, ContractAddress, Nonce, PatriciaKey};
+use starknet_api::hash::{StarkFelt, StarkHash};
 
-fn create_test_starknet() -> StarknetWrapper {
+use starknet_api::state::StorageKey;
+use starknet_api::transaction::DeclareTransaction as DeclareApiTransaction;
+use starknet_api::transaction::{
+    Calldata, DeclareTransactionV0V1, InvokeTransaction, InvokeTransactionV1, TransactionHash,
+};
+use starknet_api::{calldata, patricia_key, stark_felt};
+
+fn create_test_starknet_config() -> StarknetConfig {
     let test_account_path =
         [env!("CARGO_MANIFEST_DIR"), "./contracts/compiled/account_without_validation.json"]
             .iter()
             .collect();
 
-    let mut starknet = StarknetWrapper::new(StarknetConfig {
+    StarknetConfig {
         seed: [0u8; 32],
         auto_mine: true,
         total_accounts: 2,
         allow_zero_max_fee: true,
         account_path: Some(test_account_path),
         env: Environment::default(),
-    });
-
-    starknet.generate_genesis_block();
-    starknet
+        ..Default::default()
+    }
 }
 
-#[test]
-fn test_next_block_timestamp_in_past() {
-    let mut starknet = create_test_starknet();
-    starknet.generate_pending_block();
+fn create_test_starknet() -> Backend {
+    Backend::new(create_test_starknet_config())
+}
 
-    let timestamp = starknet.block_context.block_timestamp;
-    starknet.set_next_block_timestamp(timestamp.0 - 1000).unwrap();
+fn create_declare_transaction(sender_address: ContractAddress) -> DeclareTransaction {
+    let test_contract_class =
+        get_contract_class(include_str!("../contracts/compiled/test_contract.json"));
+    DeclareTransaction::new(
+        DeclareApiTransaction::V0(DeclareTransactionV0V1 {
+            class_hash: ClassHash(stark_felt!("0x1234")),
+            nonce: Nonce(1u8.into()),
+            sender_address,
+            transaction_hash: TransactionHash(stark_felt!("0x6969")),
+            ..Default::default()
+        }),
+        test_contract_class,
+    )
+    .unwrap()
+}
 
-    starknet.generate_pending_block();
-    let new_timestamp = starknet.block_context.block_timestamp;
+#[tokio::test]
+async fn test_next_block_timestamp_in_past() {
+    let starknet = create_test_starknet();
+    starknet.generate_pending_block().await;
+
+    let timestamp = starknet.block_context.read().block_timestamp;
+    starknet.set_next_block_timestamp(timestamp.0 - 1000).await.unwrap();
+
+    starknet.generate_pending_block().await;
+    let new_timestamp = starknet.block_context.read().block_timestamp;
 
     assert_eq!(new_timestamp.0, timestamp.0 - 1000, "timestamp should be updated");
 }
 
-#[test]
-fn test_set_next_block_timestamp_in_future() {
-    let mut starknet = create_test_starknet();
-    starknet.generate_pending_block();
+#[tokio::test]
+async fn test_set_next_block_timestamp_in_future() {
+    let starknet = create_test_starknet();
+    starknet.generate_pending_block().await;
 
-    let timestamp = starknet.block_context.block_timestamp;
-    starknet.set_next_block_timestamp(timestamp.0 + 1000).unwrap();
+    let timestamp = starknet.block_context.read().block_timestamp;
+    starknet.set_next_block_timestamp(timestamp.0 + 1000).await.unwrap();
 
-    starknet.generate_pending_block();
-    let new_timestamp = starknet.block_context.block_timestamp;
-
-    assert_eq!(new_timestamp.0, timestamp.0 + 1000, "timestamp should be updated");
-}
-
-#[test]
-fn test_increase_next_block_timestamp() {
-    let mut starknet = create_test_starknet();
-    starknet.generate_pending_block();
-
-    let timestamp = starknet.block_context.block_timestamp;
-    starknet.increase_next_block_timestamp(1000).unwrap();
-
-    starknet.generate_pending_block();
-    let new_timestamp = starknet.block_context.block_timestamp;
+    starknet.generate_pending_block().await;
+    let new_timestamp = starknet.block_context.read().block_timestamp;
 
     assert_eq!(new_timestamp.0, timestamp.0 + 1000, "timestamp should be updated");
 }
 
-#[test]
-fn test_creating_blocks() {
-    let mut starknet = create_test_starknet();
-    starknet.generate_pending_block();
-    starknet.generate_latest_block();
+#[tokio::test]
+async fn test_increase_next_block_timestamp() {
+    let starknet = create_test_starknet();
+    starknet.generate_pending_block().await;
 
-    assert_eq!(starknet.blocks.hash_to_num.len(), 2);
-    assert_eq!(starknet.blocks.num_to_block.len(), 2);
+    let timestamp = starknet.block_context.read().block_timestamp;
+    starknet.increase_next_block_timestamp(1000).await.unwrap();
+
+    starknet.generate_pending_block().await;
+    let new_timestamp = starknet.block_context.read().block_timestamp;
+
+    assert_eq!(new_timestamp.0, timestamp.0 + 1000, "timestamp should be updated");
+}
+
+#[tokio::test]
+async fn test_creating_blocks() {
+    let starknet = create_test_starknet();
+    starknet.generate_pending_block().await;
+    starknet.generate_latest_block().await;
+
+    assert_eq!(starknet.storage.read().await.blocks.len(), 2);
+    assert_eq!(starknet.storage.read().await.latest_number, 1);
     assert_eq!(
-        starknet.block_context.block_number,
+        starknet.block_context.read().block_number,
         BlockNumber(1),
         "block context should only be updated on new pending block"
     );
 
-    let block0 = starknet.blocks.by_number(BlockNumber(0)).unwrap();
-    let block1 = starknet.blocks.by_number(BlockNumber(1)).unwrap();
-    let last_block = starknet.blocks.latest().unwrap();
+    let block0 = starknet.storage.read().await.block_by_number(0).unwrap().clone();
+    let block1 = starknet.storage.read().await.block_by_number(1).unwrap().clone();
 
-    assert_eq!(block0.transactions().len(), 4, "genesis block should have 4 transactions");
-    assert_eq!(block0.block_number(), BlockNumber(0));
-    assert_eq!(block1.block_number(), BlockNumber(1));
-    assert_eq!(last_block.block_number(), BlockNumber(1));
+    assert_eq!(block0.header.number, 0);
+    assert_eq!(block1.header.number, 1);
 }
 
-#[test]
-fn test_add_transaction() {
-    let mut starknet = create_test_starknet();
-    starknet.generate_pending_block();
+#[tokio::test]
+async fn test_add_transaction() {
+    let starknet = create_test_starknet();
+    starknet.generate_pending_block().await;
 
     let a = starknet.predeployed_accounts.accounts[0].clone();
     let b = starknet.predeployed_accounts.accounts[1].clone();
@@ -119,100 +141,136 @@ fn test_add_transaction() {
         stark_felt!(0_u8)           // Calldata: num.
     ];
 
-    starknet.handle_transaction(Transaction::AccountTransaction(AccountTransaction::Invoke(
-        InvokeTransaction::V1(InvokeTransactionV1 {
-            sender_address: a.account_address,
-            calldata: execute_calldata,
-            transaction_hash: TransactionHash(stark_felt!("0x6969")),
-            nonce: Nonce(1u8.into()),
-            ..Default::default()
-        }),
-    )));
+    starknet
+        .handle_transaction(Transaction::AccountTransaction(AccountTransaction::Invoke(
+            InvokeTransaction::V1(InvokeTransactionV1 {
+                sender_address: a.account_address,
+                calldata: execute_calldata,
+                transaction_hash: TransactionHash(stark_felt!("0x6969")),
+                nonce: Nonce(1u8.into()),
+                ..Default::default()
+            }),
+        )))
+        .await;
 
     // SEND INVOKE TRANSACTION
     //
 
-    let tx = starknet.transactions.transactions.get(&TransactionHash(stark_felt!("0x6969")));
+    let tx = starknet
+        .storage
+        .read()
+        .await
+        .transactions
+        .get(&FieldElement::from(0x6969u64))
+        .cloned()
+        .unwrap();
 
-    let block = starknet.blocks.by_number(BlockNumber(1)).unwrap();
+    let block = starknet.storage.read().await.block_by_number(1).cloned().unwrap();
 
-    assert!(tx.is_some(), "transaction must be stored");
-    assert_eq!(tx.unwrap().block_number, Some(BlockNumber(1)));
-    assert!(block.transaction_by_index(0).is_some(), "transaction must be included in the block");
+    assert!(tx.is_included());
     assert_eq!(
-        block.transaction_by_index(0).unwrap().transaction_hash(),
+        block.transactions[0].transaction.transaction_hash(),
         TransactionHash(stark_felt!("0x6969"))
     );
-    assert_eq!(tx.unwrap().status, TransactionStatus::AcceptedOnL2);
-
-    // CHECK THAT THE BALANCE IS UPDATED
-    //
-
-    println!("FEE Address : {}", *FEE_TOKEN_ADDRESS);
-    println!(
-        "STORAGE ADDR : {}",
-        get_storage_var_address("ERC20_balances", &[*a.account_address.0.key()]).unwrap().0.key()
-    );
-
-    // println!(
-    //     "After {:?}",
-    //     starknet.state.state.storage_view.get(&(
-    //         ContractAddress(patricia_key!(FEE_ERC20_CONTRACT_ADDRESS)),
-    //         get_storage_var_address("ERC20_balances", &[*a.account_address.0.key()]).unwrap()
-    //     ))
-    // );
 }
 
-#[test]
-fn test_add_reverted_transaction() {
-    let mut starknet = create_test_starknet();
-    starknet.generate_pending_block();
+#[tokio::test]
+async fn test_add_reverted_transaction() {
+    let starknet = create_test_starknet();
+    starknet.generate_pending_block().await;
 
     let transaction_hash = TransactionHash(stark_felt!("0x1234"));
     let transaction = Transaction::AccountTransaction(AccountTransaction::Invoke(
         InvokeTransaction::V1(InvokeTransactionV1 { transaction_hash, ..Default::default() }),
     ));
 
-    starknet.handle_transaction(transaction);
-
-    let tx = starknet.transactions.transactions.get(&transaction_hash);
+    starknet.handle_transaction(transaction).await;
 
     assert_eq!(
-        starknet.transactions.transactions.len(),
-        5,
+        starknet.storage.read().await.transactions.len(),
+        1,
         "transaction must be stored even if execution fail"
     );
-    assert_eq!(tx.unwrap().block_hash, None);
-    assert_eq!(tx.unwrap().block_number, None);
-    assert_eq!(tx.unwrap().status, TransactionStatus::Rejected);
     assert_eq!(
-        starknet.blocks.num_to_block.len(),
+        starknet.storage.read().await.total_blocks(),
         1,
         "no new block should be created if tx failed"
     );
 }
 
-// #[test]
-// fn test_function_call() {
-//     let starknet = create_test_starknet();
-//     let account = &starknet.predeployed_accounts.accounts[0]
-//         .account_address
-//         .0
-//         .key();
+#[tokio::test]
+async fn dump_and_load_state() {
+    let backend_old = create_test_starknet();
+    backend_old.generate_pending_block().await;
 
-//     let call = ExternalFunctionCall {
-//         calldata: Calldata(Arc::new(vec![**account])),
-//         contract_address: ContractAddress(patricia_key!(FEE_ERC20_CONTRACT_ADDRESS)),
-//         entry_point_selector: EntryPointSelector(StarkFelt::from(
-//             get_selector_from_name("balanceOf").unwrap(),
-//         )),
-//     };
+    let declare_tx =
+        create_declare_transaction(backend_old.predeployed_accounts.accounts[0].account_address);
 
-//     let res = starknet.call(call);
+    backend_old
+        .handle_transaction(Transaction::AccountTransaction(AccountTransaction::Declare(
+            declare_tx,
+        )))
+        .await;
 
-//     assert!(res.is_ok(), "call must succeed");
-//     assert_eq!(
-//         res.unwrap().execution.retdata.0[0],
-//         stark_felt!(DEFAULT_PREFUNDED_ACCOUNT_BALANCE),
-//     );
-// }
+    let serializable_state =
+        backend_old.state.read().await.dump_state().expect("must be able to serialize state");
+
+    let mut starknet_config = create_test_starknet_config();
+    starknet_config.init_state = Some(serializable_state);
+    let backend_new = Backend::new(starknet_config);
+
+    let old_contract = backend_old
+        .state
+        .write()
+        .await
+        .classes
+        .get(&ClassHash(stark_felt!("0x1234")))
+        .cloned()
+        .unwrap()
+        .class;
+
+    let new_contract = backend_new
+        .state
+        .write()
+        .await
+        .classes
+        .get(&ClassHash(stark_felt!("0x1234")))
+        .cloned()
+        .unwrap()
+        .class;
+
+    assert_eq!(old_contract, new_contract,);
+}
+
+#[tokio::test]
+async fn test_set_storage_at() {
+    let starknet = create_test_starknet();
+    starknet.generate_pending_block().await;
+
+    let contract_address = ContractAddress(patricia_key!("0x1337"));
+    let key = StorageKey(patricia_key!("0x20"));
+    let val = stark_felt!("0xABC");
+
+    starknet.set_storage_at(contract_address, key, val).await.unwrap();
+
+    {
+        let mut state = starknet.state.write().await;
+        let read_val = state.get_storage_at(contract_address, key).unwrap();
+        assert_eq!(stark_felt!("0x0"), read_val, "latest storage value should be 0");
+    }
+
+    {
+        if let Some(pending_block) = starknet.pending_block.write().await.as_mut() {
+            let read_val = pending_block.state.get_storage_at(contract_address, key).unwrap();
+            assert_eq!(val, read_val, "pending set storage value incorrect");
+        }
+    }
+
+    starknet.generate_latest_block().await;
+
+    {
+        let mut state = starknet.state.write().await;
+        let read_val = state.get_storage_at(contract_address, key).unwrap();
+        assert_eq!(val, read_val, "latest storage value incorrect after generate");
+    }
+}

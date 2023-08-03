@@ -2,7 +2,6 @@ mod api;
 pub mod config;
 mod katana;
 mod starknet;
-mod utils;
 
 use std::net::SocketAddr;
 use std::time::{Duration, Instant};
@@ -43,6 +42,7 @@ where
             // Allow requests from any origin
             .allow_origin(Any)
             .allow_headers([hyper::header::CONTENT_TYPE]);
+
     let middleware = tower::ServiceBuilder::new()
         .layer(cors)
         .layer(ProxyGetRequestLayer::new("/", "health")?)

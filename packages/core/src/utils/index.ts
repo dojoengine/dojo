@@ -1,6 +1,7 @@
 import { EntityIndex, setComponent, Component, Schema, Components } from "@latticexyz/recs";
 import { Event } from "starknet";
 import { poseidonHashMany } from 'micro-starknet';
+import { Entity } from "../network/graphql";
 
 export function strTofelt252Felt(str: string): string {
   const encoder = new TextEncoder();
@@ -70,6 +71,24 @@ export function setComponentFromEntitiesQuery(component: Component, entities: bi
       
       index += numValues;
     }
+}
+
+export function setComponentFromEntitiesGraphqlQuery(component: Component, entities: Entity[]) {
+  entities.forEach((entity) => {
+    const keys = entity.keys.split(',').map((key) => BigInt(key));
+    keys.pop();
+    const entityIndex = getEntityIdFromKeys(keys);
+    entity.components.forEach((comp) => {
+      if (comp.__typename === component.metadata?.name) {
+        const componentValues = Object.keys(component.schema).reduce((acc: Schema, key) => {
+          const value = comp[key];
+          acc[key] = Number(value);
+          return acc;
+        }, {});
+        setComponent(component, entityIndex, componentValues);
+      }
+    });
+  });
 }
 
 export function setComponentFromEvent(components: Components, eventData: string[]) {

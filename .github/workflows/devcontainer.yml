@@ -1,9 +1,6 @@
 name: devcontainer
 
 on:
-  release:
-    types:
-      - created
   push:
     paths:
       - '.devcontainer/**'

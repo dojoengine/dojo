@@ -115,7 +115,6 @@ pub trait Declarable {
     fn artifact_path(&self) -> &PathBuf;
 }
 
-// TODO: Remove `mut` once we can calculate the contract address before sending the tx
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait Deployable: Declarable + Sync {
@@ -142,7 +141,7 @@ pub trait Deployable: Declarable + Sync {
         let calldata = [
             vec![
                 class_hash,                                     // class hash
-                FieldElement::ZERO,                             // salt
+                self.salt(),                                    // salt
                 FieldElement::ZERO,                             // unique
                 FieldElement::from(constructor_calldata.len()), // constructor calldata len
             ],
@@ -151,7 +150,7 @@ pub trait Deployable: Declarable + Sync {
         .concat();
 
         let contract_address = get_contract_address(
-            FieldElement::ZERO,
+            self.salt(),
             class_hash,
             &constructor_calldata,
             FieldElement::ZERO,
@@ -188,6 +187,8 @@ pub trait Deployable: Declarable + Sync {
 
         Ok(DeployOutput { transaction_hash, contract_address, declare })
     }
+
+    fn salt(&self) -> FieldElement;
 }
 
 fn prepare_contract_declaration_params(

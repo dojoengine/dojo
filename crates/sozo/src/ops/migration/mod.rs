@@ -5,43 +5,138 @@ use dojo_client::contract::world::WorldContract;
 use dojo_world::manifest::{Manifest, ManifestError};
 use dojo_world::migration::strategy::{prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
-use dojo_world::migration::{Declarable, Deployable, MigrationError, RegisterOutput};
+use dojo_world::migration::{Declarable, Deployable, MigrationError, RegisterOutput, StateDiff};
 use dojo_world::utils::TransactionWaiter;
 use scarb::core::Config;
-use starknet::accounts::{ConnectedAccount, SingleOwnerAccount};
-use starknet::core::types::{FieldElement, InvokeTransactionResult};
+use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
+use starknet::core::types::{
+    BlockId, BlockTag, FieldElement, InvokeTransactionResult, StarknetError,
+};
+use starknet::core::utils::cairo_short_string_to_felt;
+use starknet::providers::jsonrpc::HttpTransport;
+use toml::Value;
 
 #[cfg(test)]
 #[path = "migration_test.rs"]
 mod migration_test;
 mod ui;
 
-use starknet::providers::Provider;
-use starknet::signers::Signer;
+use starknet::providers::{JsonRpcClient, Provider, ProviderError};
+use starknet::signers::{LocalWallet, Signer};
 use ui::MigrationUi;
+
+use crate::commands::migrate::MigrateArgs;
+use crate::commands::options::account::AccountOptions;
+use crate::commands::options::starknet::StarknetOptions;
+use crate::commands::options::world::WorldOptions;
 
 use self::ui::{bold_message, italic_message};
 
-pub async fn execute<U, P, S>(
-    world_address: Option<FieldElement>,
-    migrator: SingleOwnerAccount<P, S>,
+pub async fn execute<U>(
+    args: MigrateArgs,
+    env_metadata: Option<Value>,
     target_dir: U,
-    ws_config: &Config,
+    config: &Config,
 ) -> Result<()>
+where
+    U: AsRef<Path>,
+{
+    let MigrateArgs { account, starknet, world, name, .. } = args;
+
+    // Setup account for migration and fetch world address if it exists.
+
+    let (world_address, account) =
+        setup_env(account, starknet, world, env_metadata, config).await?;
+
+    // Load local and remote World manifests.
+
+    let (local_manifest, remote_manifest) =
+        load_world_manifests(&target_dir, world_address, &account, config).await?;
+
+    // Calculate diff between local and remote World manifests.
+
+    config.ui().print_step(2, "🧰", "Evaluating Worlds diff...");
+    let diff = WorldDiff::compute(local_manifest, remote_manifest);
+    let total_diffs = diff.count_diffs();
+    config.ui().print_sub(format!("Total diffs found: {total_diffs}"));
+
+    if total_diffs == 0 {
+        config.ui().print("\n✨ No changes to be made. Remote World is already up to date!")
+    } else {
+        // Prepare migration strategy based on the diff.
+
+        let strategy = prepare_migration(target_dir, diff, name, world_address, config)?;
+
+        println!("  ");
+
+        execute_strategy(&strategy, &account, config)
+            .await
+            .map_err(|e| anyhow!(e))
+            .with_context(|| "Problem trying to migrate.")?;
+
+        config.ui().print(format!(
+            "\n🎉 Successfully migrated World at address {}",
+            bold_message(format!(
+                "{:#x}",
+                strategy.world_address().expect("world address must exist")
+            ))
+        ));
+    }
+
+    Ok(())
+}
+
+async fn setup_env(
+    account: AccountOptions,
+    starknet: StarknetOptions,
+    world: WorldOptions,
+    env_metadata: Option<Value>,
+    config: &Config,
+) -> Result<(Option<FieldElement>, SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>)> {
+    let world_address = world.address(env_metadata.as_ref()).ok();
+
+    let account = {
+        let provider = starknet.provider(env_metadata.as_ref())?;
+        let mut account = account.account(provider, env_metadata.as_ref()).await?;
+        account.set_block_id(BlockId::Tag(BlockTag::Pending));
+
+        let address = account.address();
+
+        config.ui().print(format!("\nMigration account: {address:#x}\n"));
+
+        match account.provider().get_class_hash_at(BlockId::Tag(BlockTag::Pending), address).await {
+            Ok(_) => Ok(account),
+            Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
+                Err(anyhow!("Account with address {:#x} doesn't exist.", account.address()))
+            }
+            Err(e) => Err(e.into()),
+        }
+    }
+    .with_context(|| "Problem initializing account for migration.")?;
+
+    Ok((world_address, account))
+}
+
+async fn load_world_manifests<U, P, S>(
+    target_dir: U,
+    world_address: Option<FieldElement>,
+    account: &SingleOwnerAccount<P, S>,
+    config: &Config,
+) -> Result<(Manifest, Option<Manifest>)>
 where
     U: AsRef<Path>,
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
 {
-    ws_config.ui().print_step(1, "🌎", "Building World state...");
+    config.ui().print_step(1, "🌎", "Building World state...");
 
     let local_manifest = Manifest::load_from_path(target_dir.as_ref().join("manifest.json"))?;
 
     let remote_manifest = if let Some(world_address) = world_address {
-        ws_config.ui().print_sub(format!("Found remote World: {world_address:#x}"));
-        ws_config.ui().print_sub("Fetching remote state");
+        config.ui().print_sub(format!("Found remote World: {world_address:#x}"));
+        config.ui().print_sub("Fetching remote state");
 
-        Manifest::from_remote(migrator.provider(), world_address, Some(local_manifest.clone()))
+        Manifest::from_remote(account.provider(), world_address, Some(local_manifest.clone()))
             .await
             .map(Some)
             .map_err(|e| match e {
@@ -55,58 +150,53 @@ where
             })
             .with_context(|| "Failed to build remote World state.")?
     } else {
-        ws_config.ui().print_sub("No remote World found");
+        config.ui().print_sub("No remote World found");
         None
     };
 
-    ws_config.ui().print_step(2, "🧰", "Evaluating Worlds diff...");
-
-    let diff = WorldDiff::compute(local_manifest, remote_manifest);
-
-    let total_diffs = diff.count_diffs();
-
-    ws_config.ui().print_sub(format!("Total diffs found: {total_diffs}"));
-
-    if total_diffs == 0 {
-        ws_config.ui().print("\n✨ No changes to be made. Remote World is already up to date!")
-    } else {
-        ws_config.ui().print_step(3, "📦", "Preparing for migration...");
-
-        let mut migration = prepare_for_migration(world_address, target_dir, diff)
-            .with_context(|| "Problem preparing for migration.")?;
-
-        let info = migration.info();
-
-        ws_config.ui().print_sub(format!(
-            "Total items to be migrated ({}): New {} Update {}",
-            info.new + info.update,
-            info.new,
-            info.update
-        ));
-
-        println!("  ");
-
-        execute_strategy(&mut migration, migrator, ws_config)
-            .await
-            .map_err(|e| anyhow!(e))
-            .with_context(|| "Problem trying to migrate.")?;
-
-        ws_config.ui().print(format!(
-            "\n🎉 Successfully migrated World at address {}",
-            bold_message(format!(
-                "{:#x}",
-                migration.world_address().expect("world address must exist")
-            ))
-        ));
-    }
-
-    Ok(())
+    Ok((local_manifest, remote_manifest))
 }
 
-// TODO: display migration type (either new or update)
+fn prepare_migration<U>(
+    target_dir: U,
+    diff: WorldDiff,
+    name: Option<String>,
+    world_address: Option<FieldElement>,
+    config: &Config,
+) -> Result<MigrationStrategy>
+where
+    U: AsRef<Path>,
+{
+    config.ui().print_step(3, "📦", "Preparing for migration...");
+
+    if name.is_none() && !diff.world.is_same() {
+        bail!("World name is required when attempting to migrate the World contract. Please provide it using `--name`.");
+    }
+
+    let name = if let Some(name) = name {
+        Some(cairo_short_string_to_felt(&name).with_context(|| "Failed to parse World name.")?)
+    } else {
+        None
+    };
+
+    let migration = prepare_for_migration(world_address, name, target_dir, diff)
+        .with_context(|| "Problem preparing for migration.")?;
+
+    let info = migration.info();
+
+    config.ui().print_sub(format!(
+        "Total items to be migrated ({}): New {} Update {}",
+        info.new + info.update,
+        info.new,
+        info.update
+    ));
+
+    Ok(migration)
+}
+
 async fn execute_strategy<P, S>(
-    strategy: &mut MigrationStrategy,
-    migrator: SingleOwnerAccount<P, S>,
+    strategy: &MigrationStrategy,
+    migrator: &SingleOwnerAccount<P, S>,
     ws_config: &Config,
 ) -> Result<()>
 where
@@ -117,7 +207,7 @@ where
         Some(executor) => {
             ws_config.ui().print_header("# Executor");
 
-            match executor.deploy(executor.diff.local, vec![], &migrator).await {
+            match executor.deploy(executor.diff.local, vec![], migrator).await {
                 Ok(val) => {
                     if let Some(declare) = val.clone().declare {
                         ws_config.ui().print_hidden_sub(format!(
@@ -156,7 +246,7 @@ where
         None => {}
     };
 
-    match &mut strategy.world {
+    match &strategy.world {
         Some(world) => {
             ws_config.ui().print_header("# World");
 
@@ -164,14 +254,14 @@ where
                 .deploy(
                     world.diff.local,
                     vec![strategy.executor.as_ref().unwrap().contract_address],
-                    &migrator,
+                    migrator,
                 )
                 .await
             {
                 Ok(val) => {
                     if let Some(declare) = val.clone().declare {
                         ws_config.ui().print_hidden_sub(format!(
-                            "declare transaction: {:#x}",
+                            "Declare transaction: {:#x}",
                             declare.transaction_hash
                         ));
                     }
@@ -183,7 +273,11 @@ where
 
                     Ok(())
                 }
-                Err(MigrationError::ContractAlreadyDeployed) => Ok(()),
+                Err(MigrationError::ContractAlreadyDeployed) => Err(anyhow!(
+                    "Attempting to deploy World at address {:#x} but a World already exists there. Try \
+                     using a different World name using `--name`.",
+                    world.contract_address
+                )),
                 Err(e) => Err(anyhow!("Failed to migrate world: {:?}", e)),
             }?;
 
@@ -192,8 +286,8 @@ where
         None => {}
     };
 
-    register_components(strategy, &migrator, ws_config).await?;
-    register_systems(strategy, &migrator, ws_config).await?;
+    register_components(strategy, migrator, ws_config).await?;
+    register_systems(strategy, migrator, ws_config).await?;
 
     Ok(())
 }

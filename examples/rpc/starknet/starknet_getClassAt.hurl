@@ -2,10 +2,10 @@ POST http://0.0.0.0:5050
 Content-Type: application/json
 {
     "jsonrpc": "2.0",
-    "method": "starknet_getClass",
+    "method": "starknet_getClassAt",
     "params": [
         "latest",
-        "0x00d0e183745e9dae3e4e78a8ffedcce0903fc4900beace4e0abf192d4c202da3"
+        "0x05b92948371346d0df1d3c2d7568573364497f6cba65f4734ecd54ed0a0dbd11"
     ],
     "id":1
 }

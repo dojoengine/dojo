@@ -1,18 +1,14 @@
-pub mod contract;
-
-use std::collections::BTreeMap;
+pub mod serde;
 
 use anyhow::Result;
 use blockifier::state::state_api::{State, StateReader};
-use serde::{Deserialize, Serialize};
-use starknet::core::types::{FieldElement, FlattenedSierraClass};
 use starknet_api::core::{ClassHash, CompiledClassHash, ContractAddress, Nonce, PatriciaKey};
 use starknet_api::hash::StarkHash;
 use starknet_api::patricia_key;
 use starknet_api::state::StorageKey;
 
+use self::serde::state::SerializableState;
 use crate::backend::state::StateExt;
-use crate::db::contract::SerializableContractClass;
 
 pub trait Db: State + StateReader + StateExt {
     fn set_nonce(&mut self, addr: ContractAddress, nonce: Nonce);
@@ -20,7 +16,7 @@ pub trait Db: State + StateReader + StateExt {
     fn dump_state(&self) -> Result<SerializableState>;
 
     fn load_state(&mut self, state: SerializableState) -> Result<()> {
-        for (addr, record) in state.state.iter() {
+        for (addr, record) in state.storage.iter() {
             let address = ContractAddress(patricia_key!(*addr));
 
             record.storage.iter().for_each(|(key, value)| {
@@ -43,28 +39,6 @@ pub trait Db: State + StateReader + StateExt {
             }
         }
 
-        todo!()
+        Ok(())
     }
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct SerializableState {
-    /// Address to storage record.
-    state: BTreeMap<FieldElement, SerializableStorageRecord>,
-    /// Class hash to class record.
-    classes: BTreeMap<FieldElement, SerializableClassRecord>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct SerializableClassRecord {
-    compiled_hash: FieldElement,
-    class: SerializableContractClass,
-    sierra_class: Option<FlattenedSierraClass>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct SerializableStorageRecord {
-    nonce: FieldElement,
-    class_hash: FieldElement,
-    storage: BTreeMap<FieldElement, FieldElement>,
 }

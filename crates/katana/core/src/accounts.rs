@@ -21,7 +21,7 @@ use crate::backend::state::{ClassRecord, MemDb, StorageRecord};
 use crate::constants::{
     DEFAULT_ACCOUNT_CONTRACT, DEFAULT_ACCOUNT_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS,
 };
-use crate::util::compute_legacy_class_hash;
+use crate::utils::contract::compute_legacy_class_hash;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Account {

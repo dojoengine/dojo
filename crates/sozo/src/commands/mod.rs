@@ -3,7 +3,9 @@ use scarb::core::Config;
 
 use crate::args::Commands;
 
+pub(crate) mod auth;
 pub(crate) mod build;
+pub(crate) mod completions;
 pub(crate) mod component;
 pub(crate) mod events;
 pub(crate) mod execute;
@@ -21,10 +23,12 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
         Commands::Build(args) => args.run(config),
         Commands::Migrate(args) => args.run(config),
 
+        Commands::Auth(args) => args.run(config),
         Commands::Execute(args) => args.run(config),
         Commands::Component(args) => args.run(config),
         Commands::System(args) => args.run(config),
         Commands::Register(args) => args.run(config),
         Commands::Events(args) => args.run(config),
+        Commands::Completions(args) => args.run(),
     }
 }

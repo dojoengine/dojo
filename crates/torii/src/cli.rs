@@ -34,7 +34,7 @@ mod tests;
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// The world to index
-    #[arg(short, long, default_value = "0x420")]
+    #[arg(short, long)]
     world_address: FieldElement,
     /// The rpc endpoint to use
     #[arg(long, default_value = "http://localhost:5050")]
@@ -45,6 +45,9 @@ struct Args {
     /// Specify a local manifest to intiailize from
     #[arg(short, long)]
     manifest: Option<Utf8PathBuf>,
+    /// Specify a block to start indexing from, ignored if stored head exists
+    #[arg(short, long, default_value = "0")]
+    start_block: u64,
 }
 
 #[tokio::main]
@@ -92,7 +95,8 @@ async fn main() -> anyhow::Result<()> {
         ..Processors::default()
     };
 
-    let indexer = Indexer::new(&state, &provider, processors, manifest);
+    let indexer =
+        Indexer::new(&state, &provider, processors, manifest, args.world_address, args.start_block);
     let graphql = start_graphql(&pool);
 
     tokio::select! {

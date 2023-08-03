@@ -1,7 +1,9 @@
-use blockifier::execution::contract_class::{ContractClass, ContractClassV0};
+use blockifier::execution::contract_class::ContractClass;
 use lazy_static::lazy_static;
 use starknet_api::hash::StarkFelt;
 use starknet_api::stark_felt;
+
+use crate::utils::contract::get_contract_class;
 
 pub const DEFAULT_GAS_PRICE: u128 = 100 * u128::pow(10, 9); // Given in units of wei.
 
@@ -29,9 +31,4 @@ lazy_static! {
     pub static ref DEFAULT_ACCOUNT_CONTRACT: ContractClass = get_contract_class(include_str!("../contracts/compiled/account.json"));
 
     pub static ref DEFAULT_PREFUNDED_ACCOUNT_BALANCE: StarkFelt = stark_felt!("0x3635c9adc5dea00000"); // 10^21
-}
-
-fn get_contract_class(contract_class_str: &str) -> ContractClass {
-    let legacy_contract_class: ContractClassV0 = serde_json::from_str(contract_class_str).unwrap();
-    ContractClass::V0(legacy_contract_class)
 }
