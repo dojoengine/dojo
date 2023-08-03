@@ -1,5 +1,3 @@
-use std::fmt::format;
-
 use anyhow::Result;
 use blockifier::block_context::BlockContext;
 use blockifier::execution::entry_point::{
@@ -497,10 +495,9 @@ fn pretty_print_resources(resources: &ResourcesMapping) -> String {
 
 fn trace_events(events: &[Event]) {
     for e in events {
-        let mut formattedEventData = String::new();
-        for (keyNumber, k) in e.content.keys.iter().enumerate() {
-            formattedEventData.push_str(&format!("key{}={} ", keyNumber + 1, k.0));
-        }
-        trace!("Event emitted {}", formattedEventData);
+        let formatted_keys =
+            e.content.keys.iter().map(|k| k.0.to_string()).collect::<Vec<_>>().join(", ");
+
+        trace!("Event emitted keys=[{}]", formatted_keys);
     }
 }
