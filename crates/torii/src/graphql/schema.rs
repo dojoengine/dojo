@@ -4,6 +4,7 @@ use sqlx::SqlitePool;
 
 use super::object::component::Component;
 use super::object::component_state::{type_mapping_from, ComponentStateObject};
+use super::object::connection::page_info::PageInfoObject;
 use super::object::entity::EntityObject;
 use super::object::event::EventObject;
 use super::object::system::SystemObject;
@@ -12,6 +13,9 @@ use super::object::ObjectTrait;
 use super::types::ScalarType;
 use super::utils::format_name;
 
+// The graphql schema is built dynamically at runtime, this is because we won't know the schema of the components
+// until runtime. There are however, predefined objects such as entities and system_calls, their schema is known
+// but we generate them dynamically as well since async-graphql does not allow mixing of static and dynamic schemas.
 pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     let mut schema_builder = Schema::build("Query", None, None);
 
@@ -21,6 +25,7 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
         Box::new(SystemObject::new()),
         Box::new(EventObject::new()),
         Box::new(SystemCallObject::new()),
+        Box::new(PageInfoObject::new()),
     ];
 
     // register dynamic component objects
@@ -28,7 +33,7 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     objects.extend(component_objects);
     schema_builder = schema_builder.register(component_union);
 
-    // collect resolvers for one and many queries
+    // collect resolvers for single and plural queries
     let mut fields: Vec<Field> = Vec::new();
     for object in &objects {
         if let Some(resolve_one) = object.resolve_one() {
@@ -53,6 +58,13 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     // register gql objects
     for object in &objects {
         schema_builder = schema_builder.register(object.create());
+
+        // register connection types, relay
+        if let Some(conn_objects) = object.connection() {
+            for object in conn_objects {
+                schema_builder = schema_builder.register(object);
+            }
+        }
     }
 
     schema_builder.register(query_root).data(pool.clone()).finish().map_err(|e| e.into())

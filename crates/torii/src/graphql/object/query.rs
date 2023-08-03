@@ -36,3 +36,9 @@ where
     let results: Vec<T> = builder.build_query_as().fetch_all(conn).await?;
     Ok(results)
 }
+
+pub async fn query_total_count(conn: &mut PoolConnection<Sqlite>, table_name: &str) -> Result<i64> {
+    let query = format!("SELECT COUNT(*) FROM {}", table_name);
+    let result: (i64,) = sqlx::query_as(&query).fetch_one(conn).await?;
+    Ok(result.0)
+}

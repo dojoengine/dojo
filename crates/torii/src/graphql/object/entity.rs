@@ -75,24 +75,34 @@ impl ObjectTrait for EntityObject {
     fn nested_fields(&self) -> Option<Vec<Field>> {
         Some(vec![Field::new("components", TypeRef::named_list("ComponentUnion"), move |ctx| {
             FieldFuture::new(async move {
-                let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                let entity = ctx.parent_value.try_downcast_ref::<ValueMapping>()?;
+                match ctx.parent_value.try_to_value()? {
+                    Value::Object(indexmap) => {
+                        let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                        let components =
+                            csv_to_vec(&extract::<String>(indexmap, "componentNames")?);
+                        let id = extract::<String>(indexmap, "id")?;
 
-                let components = csv_to_vec(&extract::<String>(entity, "componentNames")?);
-                let id = extract::<String>(entity, "id")?;
-
-                let mut results: Vec<FieldValue<'_>> = Vec::new();
-                for component_name in components {
-                    let table_name = component_name.to_lowercase();
-                    let type_mapping = type_mapping_from(&mut conn, &table_name).await?;
-                    let state =
-                        component_state_by_entity_id(&mut conn, &table_name, &id, &type_mapping)
+                        let mut results: Vec<FieldValue<'_>> = Vec::new();
+                        for component_name in components {
+                            let table_name = component_name.to_lowercase();
+                            let type_mapping = type_mapping_from(&mut conn, &table_name).await?;
+                            let state = component_state_by_entity_id(
+                                &mut conn,
+                                &table_name,
+                                &id,
+                                &type_mapping,
+                            )
                             .await?;
-                    results
-                        .push(FieldValue::with_type(FieldValue::owned_any(state), component_name));
-                }
+                            results.push(FieldValue::with_type(
+                                FieldValue::owned_any(state),
+                                component_name,
+                            ));
+                        }
 
-                Ok(Some(FieldValue::list(results)))
+                        Ok(Some(FieldValue::list(results)))
+                    }
+                    _ => Err("incorrect value, requires Value::Object".into()),
+                }
             })
         })])
     }
@@ -105,7 +115,7 @@ impl ObjectTrait for EntityObject {
                     let id = ctx.args.try_get("id")?.string()?.to_string();
                     let entity = query_by_id(&mut conn, "entities", ID::Str(id)).await?;
                     let result = EntityObject::value_mapping(entity);
-                    Ok(Some(FieldValue::owned_any(result)))
+                    Ok(Some(Value::Object(result)))
                 })
             })
             .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID))),

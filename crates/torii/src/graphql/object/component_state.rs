@@ -1,15 +1,16 @@
 use std::collections::HashMap;
 
-use async_graphql::dynamic::{
-    Field, FieldFuture, FieldValue, InputValue, ResolverContext, TypeRef,
-};
+use async_graphql::dynamic::{Field, FieldFuture, ResolverContext, TypeRef};
 use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
+use serde_json::Number;
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{FromRow, Pool, QueryBuilder, Row, Sqlite};
 
+use super::connection::{parse_arguments, ConnectionObject};
+use super::query::query_total_count;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::graphql::constants::DEFAULT_LIMIT;
 use crate::graphql::object::entity::{Entity, EntityObject};
@@ -65,48 +66,68 @@ impl ObjectTrait for ComponentStateObject {
     }
 
     fn resolve_many(&self) -> Option<Field> {
-        let type_mapping = self.type_mapping.clone();
         let name = self.name.clone();
+        let type_mapping = self.type_mapping.clone();
+        let field_name = format!("{}Components", self.name());
+        let field_type = format!("{}Connection", self.type_name());
 
-        let mut field = Field::new(
-            format!("{}Components", self.name()),
-            TypeRef::named_list(self.type_name()),
-            move |ctx| {
-                let type_mapping = type_mapping.clone();
-                let name = name.clone();
+        let mut field = Field::new(field_name, TypeRef::named(field_type), move |ctx| {
+            let type_mapping = type_mapping.clone();
+            let name = name.clone();
 
-                FieldFuture::new(async move {
-                    // parse optional input query params
-                    let (filters, limit) = parse_inputs(&ctx, &type_mapping)?;
+            FieldFuture::new(async move {
+                let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                let total_count =
+                    query_total_count(&mut conn, format!("external_{}", name).as_str()).await?;
+                let connection_args = parse_arguments(&ctx);
 
-                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let state_values =
-                        component_states_query(&mut conn, &name, &filters, limit, &type_mapping)
-                            .await?;
+                let component_values = component_states_query(
+                    &mut conn,
+                    &name,
+                    &ComponentFilters::new(), // TODO: whereInput filter
+                    DEFAULT_LIMIT,
+                    &type_mapping,
+                )
+                .await?;
 
-                    let result: Vec<FieldValue<'_>> =
-                        state_values.into_iter().map(FieldValue::owned_any).collect();
+                // TODO: based64 encode entity_id for cursor
+                let edges: Vec<Value> = component_values
+                    .into_iter()
+                    .map(|v| {
+                        let cursor = v.get("entity_id").unwrap(); // safe unwrap
+                        let mut edge = ValueMapping::new();
+                        edge.insert(Name::new("node"), Value::Object(v.clone()));
+                        edge.insert(Name::new("cursor"), cursor.clone());
 
-                    Ok(Some(FieldValue::list(result)))
-                })
-            },
-        );
+                        Value::Object(edge)
+                    })
+                    .collect();
 
-        // Add all objects fields as filter parameters, currently only
-        // equality is supported
-        field = self
-            .type_mapping()
-            .into_iter()
-            .fold(field, |field, (name, ty)| {
-                let ty = ty.clone();
-                // we want to be able to return entity_id in component queries
-                // but don't need this as a filter parameter
-                match name.as_str() {
-                    ENTITY_ID => field,
-                    _ => field.argument(InputValue::new(name.as_str(), ty)),
-                }
+                let mut result = ValueMapping::new();
+                result.insert(Name::new("totalCount"), Value::Number(Number::from(total_count)));
+                result.insert(Name::new("edges"), Value::List(edges));
+
+                Ok(Some(Value::Object(result)))
             })
-            .argument(InputValue::new("limit", TypeRef::named(TypeRef::INT)));
+        });
+
+        // Add relay connection fields (first, last, before, after)
+        field = ConnectionObject::arguments(field);
+
+        // TODO: type mapping also act as filters, add this to `where: nameWhereInput`
+        // field = self
+        //     .type_mapping()
+        //     .into_iter()
+        //     .fold(field, |field, (name, ty)| {
+        //         let ty = ty.clone();
+        //         // we want to be able to return entity_id in component queries
+        //         // but don't need this as a filter parameter
+        //         match name.as_str() {
+        //             ENTITY_ID => field,
+        //             _ => field.argument(InputValue::new(name.as_str(), ty)),
+        //         }
+        //     })
+        //     .argument(InputValue::new("limit", TypeRef::named(TypeRef::INT)));
 
         Some(field)
     }
@@ -115,13 +136,17 @@ impl ObjectTrait for ComponentStateObject {
 fn entity_field() -> Field {
     Field::new("entity", TypeRef::named("Entity"), |ctx| {
         FieldFuture::new(async move {
-            let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-            let mapping = ctx.parent_value.try_downcast_ref::<ValueMapping>()?;
-            let id = extract::<String>(mapping, ENTITY_ID)?;
-            let entity: Entity = query_by_id(&mut conn, "entities", ID::Str(id)).await?;
-            let result = EntityObject::value_mapping(entity);
+            match ctx.parent_value.try_to_value()? {
+                Value::Object(indexmap) => {
+                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                    let id = extract::<String>(indexmap, ENTITY_ID)?;
+                    let entity: Entity = query_by_id(&mut conn, "entities", ID::Str(id)).await?;
+                    let result = EntityObject::value_mapping(entity);
 
-            Ok(Some(FieldValue::owned_any(result)))
+                    Ok(Some(Value::Object(result)))
+                }
+                _ => Err("incorrect value, requires Value::Object".into()),
+            }
         })
     })
 }
