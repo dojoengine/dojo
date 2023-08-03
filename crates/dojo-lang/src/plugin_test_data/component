@@ -67,20 +67,6 @@ struct Position {
     y: felt252
 }
 
-trait PositionKeysTrait {
-    fn serialize_keys(keys: (felt252, )) -> Span<felt252>;
-}
-
-impl PositionKeysImpl of PositionKeysTrait {
-    #[inline(always)]
-    fn serialize_keys(keys: (felt252, )) -> Span<felt252> {
-        let (id, ): (felt252, ) = keys;
-        let mut serialized = ArrayTrait::new();
-        serialized.append(*id);
-        serialized.span()
-    }
-}
-
 impl PositionComponent of dojo::traits::Component<Position> {
     #[inline(always)]
     fn name(self: @Position) -> felt252 {
@@ -90,16 +76,17 @@ impl PositionComponent of dojo::traits::Component<Position> {
     #[inline(always)]
     fn keys(self: @Position) -> Span<felt252> {
         let mut serialized = ArrayTrait::new();
-        serialized.append(*self.id);
-        serialized.span()
+        array::ArrayTrait::append(ref serialized, *self.id);
+
+        array::ArrayTrait::span(@serialized)
     }
 
     #[inline(always)]
     fn values(self: @Position) -> Span<felt252> {
         let mut serialized = ArrayTrait::new();
-        self.x.serialize(ref serialized);
-        self.y.serialize(ref serialized);
-        serialized.span()
+        array::ArrayTrait::append(ref serialized, *self.x);
+        serde::Serde::serialize(self.y, ref serialized);
+        array::ArrayTrait::span(@serialized)
     }
 }
 
@@ -160,20 +147,6 @@ struct Roles {
     role_ids: Array<u8>
 }
 
-trait RolesKeysTrait {
-    fn serialize_keys(keys: (,)) -> Span<felt252>;
-}
-
-impl RolesKeysImpl of RolesKeysTrait {
-    #[inline(always)]
-    fn serialize_keys(keys: (,)) -> Span<felt252> {
-        let (,): (,) = keys;
-        let mut serialized = ArrayTrait::new();
-
-        serialized.span()
-    }
-}
-
 impl RolesComponent of dojo::traits::Component<Roles> {
     #[inline(always)]
     fn name(self: @Roles) -> felt252 {
@@ -184,14 +157,14 @@ impl RolesComponent of dojo::traits::Component<Roles> {
     fn keys(self: @Roles) -> Span<felt252> {
         let mut serialized = ArrayTrait::new();
 
-        serialized.span()
+        array::ArrayTrait::span(@serialized)
     }
 
     #[inline(always)]
     fn values(self: @Roles) -> Span<felt252> {
         let mut serialized = ArrayTrait::new();
-        self.role_ids.serialize(ref serialized);
-        serialized.span()
+        serde::Serde::serialize(self.role_ids, ref serialized);
+        array::ArrayTrait::span(@serialized)
     }
 }
 
@@ -227,27 +200,15 @@ impl RolesSerdeLen of dojo::SerdeLen<Roles> {
     }
 }
 
+
+use starknet::ContractAddress;
+
 struct Player {
     #[key]
     game: felt252,
     #[key]
-    player: felt252,
+    player: ContractAddress,
     name: felt252,
-}
-
-trait PlayerKeysTrait {
-    fn serialize_keys(keys: (felt252, felt252, )) -> Span<felt252>;
-}
-
-impl PlayerKeysImpl of PlayerKeysTrait {
-    #[inline(always)]
-    fn serialize_keys(keys: (felt252, felt252, )) -> Span<felt252> {
-        let (game, player, ): (felt252, felt252, ) = keys;
-        let mut serialized = ArrayTrait::new();
-        serialized.append(*game);
-        serialized.append(*player);
-        serialized.span()
-    }
 }
 
 impl PlayerComponent of dojo::traits::Component<Player> {
@@ -259,16 +220,18 @@ impl PlayerComponent of dojo::traits::Component<Player> {
     #[inline(always)]
     fn keys(self: @Player) -> Span<felt252> {
         let mut serialized = ArrayTrait::new();
-        serialized.append(*self.game);
-        serialized.append(*self.player);
-        serialized.span()
+        array::ArrayTrait::append(ref serialized, *self.game);
+        serde::Serde::serialize(self.player, ref serialized);
+
+        array::ArrayTrait::span(@serialized)
     }
 
     #[inline(always)]
     fn values(self: @Player) -> Span<felt252> {
         let mut serialized = ArrayTrait::new();
-        self.name.serialize(ref serialized);
-        serialized.span()
+        array::ArrayTrait::append(ref serialized, *self.name);
+
+        array::ArrayTrait::span(@serialized)
     }
 }
 
@@ -299,7 +262,7 @@ impl SerdeLenPlayer of dojo::SerdeLen<Player> {
     #[inline(always)]
     fn len() -> usize {
         dojo::SerdeLen::<felt252>::len()
-            + dojo::SerdeLen::<felt252>::len()
+            + dojo::SerdeLen::<ContractAddress>::len()
             + dojo::SerdeLen::<felt252>::len()
     }
 }

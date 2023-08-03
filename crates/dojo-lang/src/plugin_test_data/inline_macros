@@ -55,18 +55,18 @@ fn foo() {
         let __set_macro_value__ = player;
         world
             .set_entity(
-                __set_macro_value__.name(),
-                __set_macro_value__.keys(),
+                dojo::traits::Component::name(@__set_macro_value__),
+                dojo::traits::Component::keys(@__set_macro_value__),
                 0_u8,
-                __set_macro_value__.values()
+                dojo::traits::Component::values(@__set_macro_value__)
             );
         let __set_macro_value__ = Position { key: 'key', x: 0, y: 0 };
         world
             .set_entity(
-                __set_macro_value__.name(),
-                __set_macro_value__.keys(),
+                dojo::traits::Component::name(@__set_macro_value__),
+                dojo::traits::Component::keys(@__set_macro_value__),
                 0_u8,
-                __set_macro_value__.values()
+                dojo::traits::Component::values(@__set_macro_value__)
             );
     };
 ; ; }
@@ -101,10 +101,12 @@ fn foo() {
 //! > generated_cairo_code
 fn foo() {
     let (position, moves) = {
+        let mut __get_macro_keys__ = array::ArrayTrait::new();
+        serde::Serde::serialize(@(0x420), ref __get_macro_keys__);
         let mut __Position_raw = world
             .entity(
                 'Position',
-                PositionKeysTrait::serialize_keys((0x420)),
+                array::ArrayTrait::span(@__get_macro_keys__),
                 0_u8,
                 dojo::SerdeLen::<Position>::len()
             );
@@ -113,7 +115,7 @@ fn foo() {
         let mut __Moves_raw = world
             .entity(
                 'Moves',
-                MovesKeysTrait::serialize_keys((0x420)),
+                array::ArrayTrait::span(@__get_macro_keys__),
                 0_u8,
                 dojo::SerdeLen::<Moves>::len()
             );
@@ -122,10 +124,12 @@ fn foo() {
         (__Position, __Moves)
     };
     let position = {
+        let mut __get_macro_keys__ = array::ArrayTrait::new();
+        serde::Serde::serialize(@(0x420, 0x1337), ref __get_macro_keys__);
         let mut __Position_raw = world
             .entity(
                 'Position',
-                PositionKeysTrait::serialize_keys((0x420, 0x1337)),
+                array::ArrayTrait::span(@__get_macro_keys__),
                 0_u8,
                 dojo::SerdeLen::<Position>::len()
             );
@@ -136,10 +140,12 @@ fn foo() {
 
     let id = (0x420, 0x1337);
     let position = {
+        let mut __get_macro_keys__ = array::ArrayTrait::new();
+        serde::Serde::serialize(@id, ref __get_macro_keys__);
         let mut __Position_raw = world
             .entity(
                 'Position',
-                PositionKeysTrait::serialize_keys(id),
+                array::ArrayTrait::span(@__get_macro_keys__),
                 0_u8,
                 dojo::SerdeLen::<Position>::len()
             );

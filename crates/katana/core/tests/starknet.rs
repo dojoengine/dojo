@@ -1,4 +1,5 @@
 use blockifier::abi::abi_utils::selector_from_name;
+use blockifier::state::state_api::StateReader;
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transaction_execution::Transaction;
 use blockifier::transaction::transactions::DeclareTransaction;
@@ -9,13 +10,14 @@ use katana_core::db::Db;
 use katana_core::utils::contract::get_contract_class;
 use starknet::core::types::FieldElement;
 use starknet_api::block::BlockNumber;
-use starknet_api::core::{ClassHash, ContractAddress, Nonce};
-use starknet_api::hash::StarkFelt;
+use starknet_api::core::{ClassHash, ContractAddress, Nonce, PatriciaKey};
+use starknet_api::hash::{StarkFelt, StarkHash};
+use starknet_api::state::StorageKey;
 use starknet_api::transaction::{
     Calldata, DeclareTransaction as DeclareApiTransaction, DeclareTransactionV0V1,
     InvokeTransaction, InvokeTransactionV1, TransactionHash,
 };
-use starknet_api::{calldata, stark_felt};
+use starknet_api::{calldata, patricia_key, stark_felt};
 
 fn create_test_starknet_config() -> StarknetConfig {
     let test_account_path =
@@ -237,4 +239,37 @@ async fn dump_and_load_state() {
         .class;
 
     assert_eq!(old_contract, new_contract,);
+}
+
+#[tokio::test]
+async fn test_set_storage_at() {
+    let starknet = create_test_starknet();
+    starknet.generate_pending_block().await;
+
+    let contract_address = ContractAddress(patricia_key!("0x1337"));
+    let key = StorageKey(patricia_key!("0x20"));
+    let val = stark_felt!("0xABC");
+
+    starknet.set_storage_at(contract_address, key, val).await.unwrap();
+
+    {
+        let mut state = starknet.state.write().await;
+        let read_val = state.get_storage_at(contract_address, key).unwrap();
+        assert_eq!(stark_felt!("0x0"), read_val, "latest storage value should be 0");
+    }
+
+    {
+        if let Some(pending_block) = starknet.pending_block.write().await.as_mut() {
+            let read_val = pending_block.state.get_storage_at(contract_address, key).unwrap();
+            assert_eq!(val, read_val, "pending set storage value incorrect");
+        }
+    }
+
+    starknet.generate_latest_block().await;
+
+    {
+        let mut state = starknet.state.write().await;
+        let read_val = state.get_storage_at(contract_address, key).unwrap();
+        assert_eq!(val, read_val, "latest storage value incorrect after generate");
+    }
 }
