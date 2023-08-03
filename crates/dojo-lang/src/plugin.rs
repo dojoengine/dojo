@@ -121,7 +121,7 @@ impl MacroPlugin for DojoPlugin {
             return PluginResult {
                 code: None,
                 diagnostics: expander_data.diagnostics,
-                remove_original_item: true,
+                remove_original_item: false,
             };
         }
 

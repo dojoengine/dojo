@@ -45,7 +45,8 @@ impl InlineMacro for GetMacro {
         let mut expanded_code = format!(
             "{{
             let mut __get_macro_keys__ = array::ArrayTrait::new();
-            serde::Serde::serialize(@{args}, ref __get_macro_keys__);"
+            serde::Serde::serialize(@{args}, ref __get_macro_keys__);
+            let __get_macro_keys__ = array::ArrayTrait::span(@__get_macro_keys__);"
         );
 
         for component in &components {
@@ -55,11 +56,16 @@ impl InlineMacro for GetMacro {
             deser_err_msg.truncate(CAIRO_ERR_MSG_LEN);
 
             expanded_code.push_str(&format!(
-                "\n            let mut __{component}_raw = {}.entity('{component}', \
-                 array::ArrayTrait::span(@__get_macro_keys__), 0_u8, \
-                 dojo::SerdeLen::<{component}>::len());
+                "\n            let __{component}_values__ = {}.entity('{component}', \
+                 __get_macro_keys__, 0_u8, dojo::SerdeLen::<{component}>::len());
+                 let mut __{component}_component__ = array::ArrayTrait::new();
+                 array::serialize_array_helper(__get_macro_keys__, ref __{component}_component__);
+                 array::serialize_array_helper(__{component}_values__, ref \
+                 __{component}_component__);
+                 let mut __{component}_component_span__ = \
+                 array::ArrayTrait::span(@__{component}_component__);
                    let __{component} = serde::Serde::<{component}>::deserialize(
-                       ref __{component}_raw
+                       ref __{component}_component_span__
                    ).expect('{deser_err_msg}');",
                 world.as_syntax_node().get_text(db),
             ));
