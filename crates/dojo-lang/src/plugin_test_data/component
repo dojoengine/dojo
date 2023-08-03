@@ -116,9 +116,7 @@ mod position {
 impl SerdeLenPosition of dojo::SerdeLen<Position> {
     #[inline(always)]
     fn len() -> usize {
-        dojo::SerdeLen::<felt252>::len()
-            + dojo::SerdeLen::<felt252>::len()
-            + dojo::SerdeLen::<felt252>::len()
+        dojo::SerdeLen::<felt252>::len() + dojo::SerdeLen::<felt252>::len()
     }
 }
 
@@ -262,8 +260,6 @@ impl SerdeLenPlayer of dojo::SerdeLen<Player> {
     #[inline(always)]
     fn len() -> usize {
         dojo::SerdeLen::<felt252>::len()
-            + dojo::SerdeLen::<ContractAddress>::len()
-            + dojo::SerdeLen::<felt252>::len()
     }
 }
 
