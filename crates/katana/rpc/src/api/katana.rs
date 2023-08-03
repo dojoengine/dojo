@@ -3,12 +3,17 @@ use jsonrpsee::proc_macros::rpc;
 use jsonrpsee::types::error::CallError;
 use jsonrpsee::types::ErrorObject;
 use katana_core::accounts::Account;
+use starknet::core::types::FieldElement;
 
 #[derive(thiserror::Error, Clone, Copy, Debug)]
 #[allow(clippy::enum_variant_names)]
 pub enum KatanaApiError {
-    #[error("Failed to change next block timestamp")]
+    #[error("Failed to change next block timestamp.")]
     FailedToChangeNextBlockTimestamp = 1,
+    #[error("Failed to dump state.")]
+    FailedToDumpState = 2,
+    #[error("Failed to update storage.")]
+    FailedToUpdateStorage = 3,
 }
 
 impl From<KatanaApiError> for Error {
@@ -33,4 +38,12 @@ pub trait KatanaApi {
 
     #[method(name = "predeployedAccounts")]
     async fn predeployed_accounts(&self) -> Result<Vec<Account>, Error>;
+
+    #[method(name = "setStorageAt")]
+    async fn set_storage_at(
+        &self,
+        contract_address: FieldElement,
+        key: FieldElement,
+        value: FieldElement,
+    ) -> Result<(), Error>;
 }

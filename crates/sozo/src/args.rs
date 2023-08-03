@@ -7,7 +7,9 @@ use smol_str::SmolStr;
 use tracing::level_filters::LevelFilter;
 use tracing_log::AsTrace;
 
+use crate::commands::auth::AuthArgs;
 use crate::commands::build::BuildArgs;
+use crate::commands::completions::CompletionsArgs;
 use crate::commands::component::ComponentArgs;
 use crate::commands::events::EventsArgs;
 use crate::commands::execute::ExecuteArgs;
@@ -61,6 +63,10 @@ pub enum Commands {
     Register(RegisterArgs),
     #[command(about = "Queries world events")]
     Events(EventsArgs),
+    #[command(about = "Manage world authorization")]
+    Auth(AuthArgs),
+    #[command(about = "Generate shell completion file for specified shell")]
+    Completions(CompletionsArgs),
 }
 
 impl SozoArgs {

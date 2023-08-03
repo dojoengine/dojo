@@ -8,8 +8,9 @@ use starknet::core::types::{
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
 use starknet::providers::Provider;
+use starknet_crypto::FieldElement;
 use tokio::time::sleep;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
 use crate::state::sql::Executable;
@@ -30,11 +31,17 @@ impl<S: State, T: JsonRpcTransport + Sync + Send> Default for Processors<S, T> {
 #[derive(Debug)]
 pub struct EngineConfig {
     pub block_time: Duration,
+    pub world_address: FieldElement,
+    pub start_block: u64,
 }
 
 impl Default for EngineConfig {
     fn default() -> Self {
-        Self { block_time: Duration::from_secs(1) }
+        Self {
+            block_time: Duration::from_secs(1),
+            world_address: FieldElement::ZERO,
+            start_block: 0,
+        }
     }
 }
 
@@ -56,7 +63,17 @@ impl<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> Engine<'a, S,
     }
 
     pub async fn start(&self) -> Result<(), Box<dyn Error>> {
-        let mut current_block_number = self.storage.head().await?;
+        let storage_head = self.storage.head().await?;
+
+        let mut current_block_number = match storage_head {
+            0 => self.config.start_block,
+            _ => {
+                if self.config.start_block != 0 {
+                    warn!("start block ignored, stored head exists and will be used instead");
+                }
+                storage_head
+            }
+        };
 
         loop {
             sleep(self.config.block_time).await;
@@ -144,6 +161,11 @@ impl<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> Engine<'a, S,
 
             if let TransactionReceipt::Invoke(invoke_receipt) = receipt.clone() {
                 for event in &invoke_receipt.events {
+                    if event.from_address != self.config.world_address {
+                        info!("event not from world address, skipping");
+                        continue;
+                    }
+
                     process_event(
                         self.storage,
                         self.provider,

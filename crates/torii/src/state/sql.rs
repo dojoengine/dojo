@@ -1,3 +1,5 @@
+use super::{State, World};
+use crate::graphql::types::ScalarType;
 use anyhow::Result;
 use async_trait::async_trait;
 use dojo_world::manifest::{Component, Manifest, System};
@@ -7,9 +9,6 @@ use sqlx::{Executor, Pool, Row, Sqlite};
 use starknet::core::types::FieldElement;
 use starknet_crypto::poseidon_hash_many;
 use tokio::sync::Mutex;
-
-use super::{State, World};
-use crate::graphql::types::ScalarType;
 
 #[cfg(test)]
 #[path = "sql_test.rs"]
@@ -163,8 +162,8 @@ impl State for Sql {
         )];
 
         let mut component_table_query = format!(
-            "CREATE TABLE IF NOT EXISTS external_{} (id TEXT NOT NULL PRIMARY KEY, partition TEXT \
-             NOT NULL, ",
+            "CREATE TABLE IF NOT EXISTS external_{} (entity_id TEXT NOT NULL PRIMARY KEY, \
+             partition TEXT NOT NULL, ",
             component.name.to_lowercase()
         );
 
@@ -175,7 +174,7 @@ impl State for Sql {
 
         component_table_query.push_str(
             "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (id) REFERENCES entities(id));",
+        FOREIGN KEY (entity_id) REFERENCES entities(id));",
         );
         queries.push(component_table_query);
 
@@ -216,7 +215,17 @@ impl State for Sql {
             .bind(&entity_id)
             .fetch_optional(&self.pool)
             .await?;
+
+        // TODO: map keys to individual columns
+        let keys_str = keys.iter().map(|k| format!("{:#x},", k)).collect::<Vec<String>>().join("");
         let component_names = component_names(entity_result, &component)?;
+        let insert_entities = format!(
+            "INSERT INTO entities (id, partition, keys, component_names) VALUES ('{}', '{:#x}', \
+             '{}', '{}') ON CONFLICT(id) DO UPDATE SET
+             component_names=excluded.component_names, 
+             updated_at=CURRENT_TIMESTAMP",
+            entity_id, partition, keys_str, component_names
+        );
 
         let member_results =
             sqlx::query("SELECT * FROM component_members WHERE component_id = ? ORDER BY slot")
@@ -225,18 +234,8 @@ impl State for Sql {
                 .await?;
 
         let (names_str, values_str) = format_values(member_results, values)?;
-        // TODO: map keys to individual columns
-        let keys_str = keys.iter().map(|k| format!("{:#x},", k)).collect::<Vec<String>>().join("");
-
-        let insert_entities = format!(
-            "INSERT INTO entities (id, partition, keys, component_names) VALUES ('{}', '{:#x}', \
-             '{}', '{}') ON CONFLICT(id) DO UPDATE SET
-             component_names=excluded.component_names, 
-             updated_at=CURRENT_TIMESTAMP",
-            entity_id, partition, keys_str, component_names
-        );
         let insert_components = format!(
-            "INSERT OR REPLACE INTO external_{} (id, partition, {}) VALUES ('{}', '{:#x}', {})",
+            "INSERT OR REPLACE INTO external_{} (entity_id, partition {}) VALUES ('{}', '{:#x}' {})",
             component.to_lowercase(),
             names_str,
             entity_id,
@@ -311,7 +310,7 @@ fn format_values(
         .iter()
         .map(|row| {
             let name = row.try_get::<String, &str>("name")?;
-            Ok(format!("external_{}", name))
+            Ok(format!(",external_{}", name))
         })
         .collect();
 
@@ -324,12 +323,12 @@ fn format_values(
         .zip(types?.iter())
         .map(|(value, ty)| {
             if ScalarType::from_str(ty)?.is_numeric_type() {
-                Ok(format!("'{}'", value))
+                Ok(format!(",'{}'", value))
             } else {
-                Ok(format!("'{:#x}'", value))
+                Ok(format!(",'{:#x}'", value))
             }
         })
         .collect();
 
-    Ok((names?.join(", "), values?.join(", ")))
+    Ok((names?.join(""), values?.join("")))
 }

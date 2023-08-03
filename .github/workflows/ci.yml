@@ -52,7 +52,7 @@ jobs:
       - run: scripts/cairo_test.sh
 
   clippy:
-    runs-on: ubuntu-latest-32-cores
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
@@ -68,7 +68,7 @@ jobs:
       - run: scripts/clippy.sh
 
   fmt:
-    runs-on: ubuntu-latest-32-cores
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 

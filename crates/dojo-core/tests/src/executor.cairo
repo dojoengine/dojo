@@ -9,7 +9,7 @@ use starknet::class_hash::Felt252TryIntoClassHash;
 use dojo::executor::{executor, IExecutorDispatcher, IExecutorDispatcherTrait};
 use dojo::world::{Context, IWorldDispatcher};
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Foo {
     a: felt252,
     b: u128,

@@ -1,19 +1,15 @@
-use std::env;
-
-use camino::{Utf8Path, Utf8PathBuf};
-use dojo_lang::compiler::DojoCompiler;
-use dojo_lang::plugin::CairoPluginRepository;
-use scarb::compiler::CompilerRepository;
-use scarb::core::Config;
-use scarb::ops;
-use scarb::ui::Verbosity;
-
-#[allow(unreachable_code)]
+#[cfg(feature = "build-examples")]
 fn main() {
-    #[cfg(feature = "skip-build")]
-    {
-        return;
-    }
+    use std::env;
+
+    use camino::{Utf8Path, Utf8PathBuf};
+    use dojo_lang::compiler::DojoCompiler;
+    use dojo_lang::plugin::CairoPluginRepository;
+    use scarb::compiler::CompilerRepository;
+    use scarb::core::Config;
+    use scarb::ops;
+    use scarb::ui::Verbosity;
+
     let mut compilers = CompilerRepository::empty();
     compilers.add(Box::new(DojoCompiler)).unwrap();
 
@@ -36,3 +32,6 @@ fn main() {
     let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
     ops::compile(&ws).unwrap();
 }
+
+#[cfg(not(feature = "build-examples"))]
+fn main() {}

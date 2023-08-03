@@ -1,8 +1,12 @@
+use crate::api::katana::{KatanaApiError, KatanaApiServer};
 use jsonrpsee::core::{async_trait, Error};
 use katana_core::accounts::Account;
 use katana_core::sequencer::Sequencer;
-
-use crate::api::katana::{KatanaApiError, KatanaApiServer};
+use starknet::core::types::FieldElement;
+use starknet_api::core::{ContractAddress, PatriciaKey};
+use starknet_api::hash::{StarkFelt, StarkHash};
+use starknet_api::state::StorageKey;
+use starknet_api::{patricia_key, stark_felt};
 
 pub struct KatanaApi<S> {
     sequencer: S,
@@ -23,33 +27,49 @@ where
     S: Sequencer + Send + Sync + 'static,
 {
     async fn generate_block(&self) -> Result<(), Error> {
-        let mut starknet = self.sequencer.mut_starknet().await;
-        starknet.generate_latest_block();
-        starknet.generate_pending_block();
+        self.sequencer.backend().generate_latest_block().await;
+        self.sequencer.backend().generate_pending_block().await;
         Ok(())
     }
 
     async fn next_block_timestamp(&self) -> Result<u64, Error> {
-        Ok(self.sequencer.starknet().await.block_context.block_timestamp.0)
+        Ok(self.sequencer.backend().block_context.read().block_timestamp.0)
     }
 
     async fn set_next_block_timestamp(&self, timestamp: u64) -> Result<(), Error> {
         self.sequencer
-            .mut_starknet()
-            .await
+            .backend()
             .set_next_block_timestamp(timestamp)
+            .await
             .map_err(|_| Error::from(KatanaApiError::FailedToChangeNextBlockTimestamp))
     }
 
     async fn increase_next_block_timestamp(&self, timestamp: u64) -> Result<(), Error> {
         self.sequencer
-            .mut_starknet()
-            .await
+            .backend()
             .increase_next_block_timestamp(timestamp)
+            .await
             .map_err(|_| Error::from(KatanaApiError::FailedToChangeNextBlockTimestamp))
     }
 
     async fn predeployed_accounts(&self) -> Result<Vec<Account>, Error> {
-        Ok(self.sequencer.starknet().await.predeployed_accounts.accounts.clone())
+        Ok(self.sequencer.backend().predeployed_accounts.accounts.clone())
+    }
+
+    async fn set_storage_at(
+        &self,
+        contract_address: FieldElement,
+        key: FieldElement,
+        value: FieldElement,
+    ) -> Result<(), Error> {
+        self.sequencer
+            .backend()
+            .set_storage_at(
+                ContractAddress(patricia_key!(contract_address)),
+                StorageKey(patricia_key!(key)),
+                stark_felt!(value),
+            )
+            .await
+            .map_err(|_| Error::from(KatanaApiError::FailedToUpdateStorage))
     }
 }

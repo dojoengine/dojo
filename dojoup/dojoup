@@ -74,19 +74,17 @@ main() {
 
   # Install by downloading binaries
   if [[ "$DOJOUP_REPO" == "dojoengine/dojo" && -z "$DOJOUP_BRANCH" && -z "$DOJOUP_COMMIT" ]]; then
-    DOJOUP_VERSION=${DOJOUP_VERSION-nightly}
+    DOJOUP_VERSION=${DOJOUP_VERSION-stable}
     DOJOUP_TAG=$DOJOUP_VERSION
 
     # Normalize versions (handle channels, versions without v prefix
-    if [[ "$DOJOUP_VERSION" == "nightly" ]]; then
-      # Locate real nightly tag
-      SHA=$(ensure curl -sSf "https://api.github.com/repos/$DOJOUP_REPO/git/refs/tags/nightly" \
-        | grep -Eo '"sha"[^,]*' \
-        | grep -Eo '[^:]*$' \
-        | tr -d '"' \
-        | tr -d ' ' \
-        | cut -d ':' -f2 )
-      DOJOUP_TAG="nightly-${SHA}"
+    if [[ "$DOJOUP_VERSION" == "stable" ]]; then
+      # Fetch the list of releases from the GitHub API and get the first non-prerelease
+      DOJOUP_TAG=$(curl -s "https://api.github.com/repos/${DOJOUP_REPO}/releases" \
+        | jq -r '.[] | select(.prerelease==false) | .tag_name' \
+        | grep -v '-' \
+        | head -n 1)
+      DOJOUP_VERSION=$DOJOUP_TAG
     elif [[ "$DOJOUP_VERSION" == nightly* ]]; then
       DOJOUP_VERSION="nightly"
     elif [[ "$DOJOUP_VERSION" == [[:digit:]]* ]]; then

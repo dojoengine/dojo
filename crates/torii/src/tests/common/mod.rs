@@ -1,4 +1,5 @@
 use camino::Utf8PathBuf;
+use serde::Deserialize;
 use serde_json::Value;
 use sqlx::SqlitePool;
 use starknet::core::types::FieldElement;
@@ -6,6 +7,26 @@ use starknet::core::types::FieldElement;
 use crate::graphql::schema::build_schema;
 use crate::state::sql::{Executable, Sql};
 use crate::state::State;
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Entity {
+    pub component_names: String,
+    pub keys: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct Moves {
+    pub __typename: String,
+    pub remaining: u32,
+}
+
+#[derive(Deserialize)]
+pub struct Position {
+    pub __typename: String,
+    pub x: u32,
+    pub y: u32,
+}
 
 #[allow(dead_code)]
 pub async fn run_graphql_query(pool: &SqlitePool, query: &str) -> Value {
