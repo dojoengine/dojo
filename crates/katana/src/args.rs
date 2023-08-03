@@ -29,7 +29,6 @@ pub struct KatanaArgs {
     pub block_time: Option<u64>,
 
     #[arg(long)]
-    #[arg(hide = true)]
     #[arg(value_name = "PATH")]
     #[arg(help = "Dump the state of chain on exit to the given file.")]
     #[arg(long_help = "Dump the state of chain on exit to the given file. If the value is a \
