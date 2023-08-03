@@ -17,9 +17,11 @@ use blockifier::transaction::transaction_execution::Transaction;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use parking_lot::RwLock;
-use starknet::core::types::{FeeEstimate, FieldElement};
+use starknet::core::types::{BlockId, BlockTag, FeeEstimate, FieldElement};
 use starknet_api::block::BlockTimestamp;
 use starknet_api::core::{ContractAddress, EntryPointSelector};
+use starknet_api::hash::StarkFelt;
+use starknet_api::state::StorageKey;
 use starknet_api::transaction::Calldata;
 use tokio::sync::RwLock as AsyncRwLock;
 use tracing::{error, info, warn};
@@ -368,6 +370,21 @@ impl Backend {
             !block.transactions.is_empty()
         } else {
             false
+        }
+    }
+
+    pub async fn set_storage_at(
+        &self,
+        contract_address: ContractAddress,
+        storage_key: StorageKey,
+        value: StarkFelt,
+    ) -> Result<(), SequencerError> {
+        match self.pending_block.write().await.as_mut() {
+            Some(pending_block) => {
+                pending_block.state.set_storage_at(contract_address, storage_key, value);
+                Ok(())
+            }
+            None => Err(SequencerError::StateNotFound(BlockId::Tag(BlockTag::Pending))),
         }
     }
 }
