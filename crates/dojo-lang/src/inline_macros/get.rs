@@ -38,20 +38,15 @@ impl InlineMacro for GetMacro {
         }
 
         let args = match keys {
-            Expr::Parenthesized(_) => keys.as_syntax_node().get_text(db),
-            Expr::Tuple(_) => keys.as_syntax_node().get_text(db),
-            Expr::Path(path) => path.as_syntax_node().get_text(db),
             Expr::Literal(literal) => format!("({})", literal.as_syntax_node().get_text(db)),
-            _ => {
-                macro_expander_data.diagnostics.push(PluginDiagnostic {
-                    message: "Keys must be literal, arg, or tuple".to_string(),
-                    stable_ptr: macro_arguments.as_syntax_node().stable_ptr(),
-                });
-                return;
-            }
+            _ => keys.as_syntax_node().get_text(db),
         };
 
-        let mut expanded_code = "{".to_string();
+        let mut expanded_code = format!(
+            "{{
+            let mut __get_macro_keys__ = array::ArrayTrait::new();
+            serde::Serde::serialize(@{args}, ref __get_macro_keys__);"
+        );
 
         for component in &components {
             let mut lookup_err_msg = format!("{} not found", component.to_string());
@@ -61,7 +56,7 @@ impl InlineMacro for GetMacro {
 
             expanded_code.push_str(&format!(
                 "\n            let mut __{component}_raw = {}.entity('{component}', \
-                 {component}KeysTrait::serialize_keys({args}), 0_u8, \
+                 array::ArrayTrait::span(@__get_macro_keys__), 0_u8, \
                  dojo::SerdeLen::<{component}>::len());
                    let __{component} = serde::Serde::<{component}>::deserialize(
                        ref __{component}_raw

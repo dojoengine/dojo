@@ -125,20 +125,6 @@ pub fn handle_component_struct(
                 $members$
             }
 
-            trait $type_name$KeysTrait {
-                fn serialize_keys(keys: ($key_types$, )) -> Span<felt252>;
-            }
-
-            impl $type_name$KeysImpl of $type_name$KeysTrait {
-                #[inline(always)]
-                fn serialize_keys(keys: ($key_types$, )) -> Span<felt252> {
-                    let ($key_names$, ): ($key_types$, ) = keys;
-                    let mut serialized = ArrayTrait::new();
-                    $serialized_keys$
-                    array::ArrayTrait::span(@serialized)
-                }
-            }
-
             impl $type_name$Component of dojo::traits::Component<$type_name$> {
                 #[inline(always)]
                 fn name(self: @$type_name$) -> felt252 {
