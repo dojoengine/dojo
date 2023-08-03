@@ -274,7 +274,8 @@ pub fn pretty_print_resources(resources: &ResourcesMapping) -> String {
 
 pub fn trace_events(events: &[Event]) {
     for e in events {
-        let formatted_keys = e.keys.iter().map(|k| k.to_string()).collect::<Vec<_>>().join(", ");
+        let formatted_keys =
+            e.keys.iter().map(|k| format!("{k:#x}")).collect::<Vec<_>>().join(", ");
 
         trace!("Event emitted keys=[{}]", formatted_keys);
     }
