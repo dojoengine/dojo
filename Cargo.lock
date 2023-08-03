@@ -1992,7 +1992,6 @@ dependencies = [
  "cairo-lang-test-utils",
  "cairo-lang-utils",
  "camino",
- "cargo_metadata",
  "convert_case 0.6.0",
  "dojo-test-utils",
  "dojo-types",

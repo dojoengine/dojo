@@ -101,23 +101,28 @@ mod ERC20 {
         supply.amount.into()
     }
 
-    // #[external(v0)]
-    // fn balance_of(self: @ContractState, account: ContractAddress) -> u256 {
-    //     let token = get_contract_address();
-    //     let query: Query = (token, (account,)).into_partitioned();        
-    //     let mut balance_raw = world(self).entity('Balance'.into(), query, 0, 0);
-    //     let balance = serde::Serde::<Balance>::deserialize(ref balance_raw).unwrap();
-    //     balance.amount.into()
-    // }
+    #[external(v0)]
+    fn balance_of(self: @ContractState, account: ContractAddress) -> u256 {
+        let token = get_contract_address();
+        let mut keys = ArrayTrait::new();
+        keys.append(token.into());
+        keys.append(account.into());
+        let mut balance_raw = world(self).entity('Balance', keys.span(), 0, 0);
+        let balance = serde::Serde::<Balance>::deserialize(ref balance_raw).unwrap();
+        balance.amount.into()
+    }
 
-    // #[external(v0)]
-    // fn allowance(self: @ContractState, owner: ContractAddress, spender: ContractAddress) -> u256 {
-    //     let token = get_contract_address();
-    //     let query: Query = (token, (owner, spender)).into_partitioned();
-    //     let mut allowance_raw = world(self).entity('Allowance'.into(), query, 0, 0);
-    //     let allowance = serde::Serde::<Allowance>::deserialize(ref allowance_raw).unwrap();
-    //     allowance.amount.into()
-    // }
+    #[external(v0)]
+    fn allowance(self: @ContractState, owner: ContractAddress, spender: ContractAddress) -> u256 {
+        let token = get_contract_address();
+        let mut keys = ArrayTrait::new();
+        keys.append(token.into());
+        keys.append(owner.into());
+        keys.append(spender.into());
+        let mut allowance_raw = world(self).entity('Allowance', keys.span(), 0, 0);
+        let allowance = serde::Serde::<Allowance>::deserialize(ref allowance_raw).unwrap();
+        allowance.amount.into()
+    }
 
     #[external(v0)]
     fn approve(ref self: ContractState, spender: ContractAddress, amount: u256) -> bool {
