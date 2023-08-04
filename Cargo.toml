@@ -12,6 +12,7 @@ members = [
   "crates/dojo-world",
   "crates/katana",
   "crates/katana/core",
+  "crates/katana/merkle-tree",
   "crates/katana/rpc",
   "crates/sozo",
   "crates/torii",

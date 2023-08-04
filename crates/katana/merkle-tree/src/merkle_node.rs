@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use crate::backend::hash::FeltHash;
+use crate::hash::FeltHash;
 use bitvec::{order::Msb0, prelude::BitVec, slice::BitSlice, view::BitView};
 use starknet::core::types::FieldElement;
 use starknet_crypto::pedersen_hash;

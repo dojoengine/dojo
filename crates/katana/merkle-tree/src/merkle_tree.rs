@@ -1,5 +1,5 @@
-use crate::backend::hash::FeltHash;
-use crate::backend::merkle_node::Node;
+use crate::hash::FeltHash;
+use crate::merkle_node::Node;
 use bitvec::{prelude::Msb0, slice::BitSlice, vec::BitVec};
 use starknet_crypto::FieldElement;
 use std::{cell::RefCell, iter::once, rc::Rc};

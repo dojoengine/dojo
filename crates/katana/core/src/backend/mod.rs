@@ -26,9 +26,6 @@ use tracing::{info, trace, warn};
 pub mod block;
 pub mod config;
 pub mod contract;
-pub mod hash;
-pub mod merkle_node;
-pub mod merkle_tree;
 pub mod state;
 pub mod transaction;
 

@@ -3862,6 +3862,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "katana-merkle-tree"
+version = "0.1.0"
+dependencies = [
+ "bitvec",
+ "starknet",
+ "starknet-crypto 0.5.1",
+]
+
+[[package]]
 name = "katana-rpc"
 version = "0.1.0"
 dependencies = [
