@@ -1,0 +1,27 @@
+query getEntities {
+  entities(keys: ["%"]) {
+    keys
+    components {
+      __typename
+      ... on Moves {
+        remaining
+      }
+      ... on Position {
+        x
+        y
+      }
+    }
+  }
+}
+
+query getEntityMoves($entityId: String!) {
+  entities(keys: [$entityId], componentName: "Moves") {
+    keys
+  }
+}
+
+query getEntityPosition($entityId: String!) {
+  entities(keys: [$entityId], componentName: "Position") {
+    keys
+  }
+}

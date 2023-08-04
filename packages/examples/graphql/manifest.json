@@ -1,0 +1,117 @@
+{
+  "world": {
+    "name": "world",
+    "address": null,
+    "class_hash": "0x332c8f1f381f577b8e4e600ac0979cc251d9f2e23e04a4e2d6f742b37bf9608"
+  },
+  "executor": {
+    "name": "executor",
+    "address": null,
+    "class_hash": "0x3a18e932f38edf59c456794a743006a62ecdbe6ec993434bbd3ef693861be16"
+  },
+  "systems": [
+    {
+      "name": "spawn",
+      "inputs": [
+        {
+          "name": "self",
+          "type": "@dojo_examples::systems::spawn::ContractState"
+        }
+      ],
+      "outputs": [],
+      "class_hash": "0xb8ecd0539f9ca92df353f1df9d619fabcced0262bfeffcf73814eae437d9fc",
+      "dependencies": [
+        {
+          "name": "Moves",
+          "read": false,
+          "write": true
+        },
+        {
+          "name": "Position",
+          "read": false,
+          "write": true
+        }
+      ]
+    },
+    {
+      "name": "move",
+      "inputs": [
+        {
+          "name": "self",
+          "type": "@dojo_examples::systems::move::ContractState"
+        }
+      ],
+      "outputs": [],
+      "class_hash": "0xebd9c292af248806ebb85c81beb929f13de2378113ab29e696fbaf2ba6f594",
+      "dependencies": [
+        {
+          "name": "Moves",
+          "read": true,
+          "write": true
+        },
+        {
+          "name": "Position",
+          "read": true,
+          "write": true
+        }
+      ]
+    },
+    {
+      "name": "library_call",
+      "inputs": [
+        {
+          "name": "self",
+          "type": "@dojo::world::library_call::ContractState"
+        },
+        {
+          "name": "class_hash",
+          "type": "core::starknet::class_hash::ClassHash"
+        },
+        {
+          "name": "entrypoint",
+          "type": "core::felt252"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "core::array::Span::<core::felt252>"
+        }
+      ],
+      "class_hash": "0x68db745e776a934ba464f98c2286844df8c56eda78a0911f0971f7081b26d21",
+      "dependencies": []
+    }
+  ],
+  "contracts": [],
+  "components": [
+    {
+      "name": "Moves",
+      "members": [
+        {
+          "name": "remaining",
+          "type": "u8",
+          "slot": 0,
+          "offset": 0
+        }
+      ],
+      "class_hash": "0x48beb97980d7c99b154353e2e9243fe82862c5d8676f606e4954307b0b50f40"
+    },
+    {
+      "name": "Position",
+      "members": [
+        {
+          "name": "x",
+          "type": "u32",
+          "slot": 0,
+          "offset": 0
+        },
+        {
+          "name": "y",
+          "type": "u32",
+          "slot": 1,
+          "offset": 0
+        }
+      ],
+      "class_hash": "0x42e9aac8d3d6e6185815f891a5fa3b442e86e2bef3bca3ac620744309af7fe7"
+    }
+  ]
+}
