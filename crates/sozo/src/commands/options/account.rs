@@ -6,7 +6,8 @@ use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::FieldElement;
 use starknet::providers::Provider;
 use starknet::signers::{LocalWallet, SigningKey};
-use toml::Value;
+
+use super::Environment;
 
 #[derive(Debug, Args)]
 #[command(next_help_heading = "Account options")]
@@ -39,7 +40,7 @@ impl AccountOptions {
     pub async fn account<P>(
         &self,
         provider: P,
-        env_metadata: Option<&Value>,
+        env_metadata: Option<&Environment>,
     ) -> Result<SingleOwnerAccount<P, LocalWallet>>
     where
         P: Provider + Send + Sync + 'static,
@@ -53,13 +54,11 @@ impl AccountOptions {
         Ok(SingleOwnerAccount::new(provider, signer, account_address, chain_id))
     }
 
-    fn signer(&self, env_metadata: Option<&Value>) -> Result<LocalWallet> {
+    fn signer(&self, env_metadata: Option<&Environment>) -> Result<LocalWallet> {
         if let Some(private_key) = self
             .private_key
             .as_deref()
-            .or_else(|| {
-                env_metadata.and_then(|env| env.get("private_key").and_then(|v| v.as_str()))
-            })
+            .or_else(|| env_metadata.and_then(|env| env.private_key()))
             .or(std::env::var("DOJO_PRIVATE_KEY").ok().as_deref())
         {
             return Ok(LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
@@ -71,14 +70,11 @@ impl AccountOptions {
             if let Some(password) = self
                 .keystore_password
                 .as_deref()
-                .or_else(|| {
-                    env_metadata
-                        .and_then(|env| env.get("keystore_password").and_then(|v| v.as_str()))
-                })
+                .or_else(|| env_metadata.and_then(|env| env.keystore_password()))
                 .or(std::env::var("DOJO_KEYSTORE_PASSWORD").ok().as_deref())
             {
                 return Ok(LocalWallet::from_signing_key(SigningKey::from_keystore(
-                    path, password,
+                    path, &password,
                 )?));
             } else {
                 return Err(anyhow!("Keystore path is specified but password is not."));
@@ -91,14 +87,13 @@ impl AccountOptions {
         ))
     }
 
-    fn account_address(&self, env_metadata: Option<&Value>) -> Result<FieldElement> {
+    fn account_address(&self, env_metadata: Option<&Environment>) -> Result<FieldElement> {
         if let Some(address) = self.account_address {
             Ok(address)
-        } else if let Some(address) = env_metadata.and_then(|env| {
-            env.get("account_address")
-                .and_then(|v| v.as_str().map(|s| s.to_string()))
-                .or(std::env::var("DOJO_ACCOUNT_ADDRESS").ok())
-        }) {
+        } else if let Some(address) = env_metadata
+            .and_then(|env| env.account_address())
+            .or(std::env::var("DOJO_ACCOUNT_ADDRESS").ok().as_deref())
+        {
             Ok(FieldElement::from_str(&address)?)
         } else {
             Err(anyhow!(

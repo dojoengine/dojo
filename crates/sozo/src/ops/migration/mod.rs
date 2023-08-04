@@ -14,7 +14,6 @@ use starknet::core::types::{
 };
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
-use toml::Value;
 
 #[cfg(test)]
 #[path = "migration_test.rs"]
@@ -29,12 +28,13 @@ use crate::commands::migrate::MigrateArgs;
 use crate::commands::options::account::AccountOptions;
 use crate::commands::options::starknet::StarknetOptions;
 use crate::commands::options::world::WorldOptions;
+use crate::commands::options::Environment;
 
 use self::ui::{bold_message, italic_message};
 
 pub async fn execute<U>(
     args: MigrateArgs,
-    env_metadata: Option<Value>,
+    env_metadata: Option<Environment>,
     target_dir: U,
     config: &Config,
 ) -> Result<()>
@@ -46,7 +46,7 @@ where
     // Setup account for migration and fetch world address if it exists.
 
     let (world_address, account) =
-        setup_env(account, starknet, world, env_metadata, config).await?;
+        setup_env(account, starknet, world, env_metadata.as_ref(), config).await?;
 
     // Load local and remote World manifests.
 
@@ -90,14 +90,14 @@ async fn setup_env(
     account: AccountOptions,
     starknet: StarknetOptions,
     world: WorldOptions,
-    env_metadata: Option<Value>,
+    env_metadata: Option<&Environment>,
     config: &Config,
 ) -> Result<(Option<FieldElement>, SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>)> {
-    let world_address = world.address(env_metadata.as_ref()).ok();
+    let world_address = world.address(env_metadata).ok();
 
     let account = {
-        let provider = starknet.provider(env_metadata.as_ref())?;
-        let mut account = account.account(provider, env_metadata.as_ref()).await?;
+        let provider = starknet.provider(env_metadata)?;
+        let mut account = account.account(provider, env_metadata).await?;
         account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
         let address = account.address();
