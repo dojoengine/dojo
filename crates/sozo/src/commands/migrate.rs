@@ -42,7 +42,6 @@ impl MigrateArgs {
             scarb::ops::compile(&ws)?;
         }
 
-        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
         let env_metadata = dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned());
         // TODO: Check the updated scarb way to read profile specific values
 
