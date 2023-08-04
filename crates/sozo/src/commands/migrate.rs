@@ -38,7 +38,8 @@ impl MigrateArgs {
         let target_dir = target_dir.join(ws.config().profile().as_str());
 
         if !target_dir.join("manifest.json").exists() {
-            scarb::ops::compile(vec![], &ws)?;
+            let packages = ws.members().map(|p| p.id).collect();
+            scarb::ops::compile(packages, &ws)?;
         }
 
         let mut env_metadata = dojo_metadata_from_workspace(&ws)
