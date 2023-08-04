@@ -14,11 +14,12 @@ bitvec = "1.0.1"
 blockifier.workspace = true
 cairo-lang-casm.workspace = true
 cairo-lang-starknet.workspace = true
-cairo-vm = "0.6"
+cairo-vm.workspace = true
 convert_case.workspace = true
-flate2 = "1.0.26"
+flate2.workspace = true
 futures = "0.3"
 lazy_static = "1.4.0"
+parking_lot = "0.12.1"
 rand = { version = "0.8.5", features = ["small_rng"] }
 serde.workspace = true
 serde_json = "1.0.70"

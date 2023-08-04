@@ -1459,6 +1459,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "clap_complete"
+version = "4.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5fc443334c81a804575546c5a8a79b4913b50e28d69232903604cada1de817ce"
+dependencies = [
+ "clap",
+]
+
+[[package]]
 name = "clap_derive"
 version = "4.3.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3824,6 +3833,7 @@ dependencies = [
  "assert_matches",
  "bitvec",
  "clap",
+ "clap_complete",
  "env_logger 0.10.0",
  "katana-core",
  "katana-rpc",
@@ -3850,6 +3860,7 @@ dependencies = [
  "flate2",
  "futures",
  "lazy_static",
+ "parking_lot 0.12.1",
  "rand",
  "serde",
  "serde_json",
@@ -5712,6 +5723,7 @@ dependencies = [
  "camino",
  "clap",
  "clap-verbosity-flag",
+ "clap_complete",
  "console",
  "dojo-client",
  "dojo-lang",

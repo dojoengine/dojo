@@ -1,6 +1,4 @@
-use cubit::types::fixed::Fixed as FixedTrait;
-use cubit::types::fixed::Fixed as Fixed;
-use cubit::types::fixed::ONE_u128;
+use cubit::types::fixed::{Fixed, FixedTrait, ONE_u128};
 
 struct Vec2<T> {
     x: T,
@@ -20,7 +18,6 @@ trait Vec2Trait<T> {
     fn dot<impl TMul: Mul<T>, impl TAdd: Add<T>>(self: Vec2<T>, rhs: Vec2<T>) -> T;
     fn dot_into_vec<impl TMul: Mul<T>, impl TAdd: Add<T>>(self: Vec2<T>, rhs: Vec2<T>) -> Vec2<T>;
     // Swizzles
-
     fn xy(self: Vec2<T>) -> Vec2<T>;
     fn xx(self: Vec2<T>) -> Vec2<T>;
     fn yx(self: Vec2<T>) -> Vec2<T>;

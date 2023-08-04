@@ -6,7 +6,7 @@ use starknet_api::core::ContractAddress;
 use starknet_api::transaction::TransactionHash;
 use starknet_api::StarknetApiError;
 
-use crate::util::ContinuationTokenError;
+use crate::utils::event::ContinuationTokenError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SequencerError {
@@ -30,8 +30,14 @@ pub enum SequencerError {
     StarknetApi(#[from] StarknetApiError),
     #[error(transparent)]
     EntryPointExecution(#[from] EntryPointExecutionError),
-    #[error("Wait for pending transactions")]
+    #[error("Wait for pending transactions.")]
     PendingTransactions,
     #[error(transparent)]
     ContinuationToken(#[from] ContinuationTokenError),
+    #[error("Error serializing state.")]
+    StateSerialization,
+    #[error("Required data unavailable")]
+    DataUnavailable,
+    #[error("Failed to decode state")]
+    FailedToDecodeStateDump,
 }
