@@ -1,6 +1,6 @@
 {
   "name": "@dojoengine/core",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Dojo engine core providers and types",
   "scripts": {
     "build": "tsc",
