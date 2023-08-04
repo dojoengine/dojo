@@ -28,7 +28,7 @@ async fn test_component() {
     assert_eq!(
         component.class_hash(),
         FieldElement::from_hex_be(
-            "0x02da8fb6056624dd6fa7070497350a13914a21e2a53f171271f72721c5448912"
+            "0x04caa1806451739b6fb470652b8066a11f80e847d49003b43cca75a2fd7647b6"
         )
         .unwrap()
     );
@@ -38,8 +38,9 @@ async fn test_component() {
     assert_eq!(
         members,
         vec![
-            Member { name: "x".into(), ty: "u32".into(), slot: 0, offset: 0 },
-            Member { name: "y".into(), ty: "u32".into(), slot: 1, offset: 0 }
+            Member { name: "player".into(), ty: "ContractAddress".into(), key: true },
+            Member { name: "x".into(), ty: "u32".into(), key: false },
+            Member { name: "y".into(), ty: "u32".into(), key: false }
         ]
     )
 }

@@ -11,7 +11,7 @@ export abstract class Provider extends EventEmitter implements ICommands {
 
     public abstract entity(component: string, query: Query, offset: number, length: number): Promise<Array<bigint>>;
 
-    public abstract entities(component: string, partition: string, length: number): Promise<Array<bigint>>;
+    public abstract entities(component: string, length: number): Promise<Array<bigint>>;
 
     public getWorldAddress(): string {
         return this.worldAddress;

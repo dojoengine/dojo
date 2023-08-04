@@ -54,10 +54,6 @@ pub enum ComponentCommands {
         #[arg(help = "Comma seperated values e.g., 0x12345,0x69420,...")]
         keys: Vec<FieldElement>,
 
-        #[arg(long = "partition_id", default_value = "0x0")]
-        #[arg(help = "Entity query partition id.")]
-        partition_id: FieldElement,
-
         #[command(flatten)]
         world: WorldOptions,
 

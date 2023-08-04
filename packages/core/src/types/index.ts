@@ -11,14 +11,13 @@ export enum WorldEntryPoints {
 
 export interface Query {
     address_domain: string,
-    partition: string,
     keys: bigint[]
 }
 
 export interface ICommands {
 
     entity?(component: string, query: Query, offset: number, length: number): Promise<Array<bigint>>;
-    entities?(component: string, partition: string, length: number): Promise<Array<bigint>>;
+    entities?(component: string, length: number): Promise<Array<bigint>>;
     execute?(name: bigint, execute_calldata: Array<bigint>): Promise<Array<bigint>>;
 
     register_component?(class_hash: string): Promise<bigint>;
@@ -47,8 +46,7 @@ export type ExecuteState = 'idle' | 'loading' | 'done' | 'error'
 export interface Members {
     name: string;
     type: string;
-    slot: number;
-    offset: number;
+    key: bool;
 }
 
 export interface RegisteredComponent {

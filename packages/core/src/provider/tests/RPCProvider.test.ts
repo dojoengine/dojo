@@ -18,7 +18,7 @@ describe('RPCProvider', () => {
         rpcProvider.entity = jest.fn().mockResolvedValue(mockResponse);
 
         const component = 'testComponent';
-        const query: Query = { partition: 'testPartition', keys: ['key1', 'key2'] };
+        const query: Query = { keys: ['key1', 'key2'] };
         const offset = 0;
         const length = 3;
 
@@ -40,7 +40,6 @@ describe('RPCProvider', () => {
     //         {
     //             component: "component1",
     //             query: {
-    //                 partition: "partition1",
     //                 keys: ["key1", "key2"],
     //             },
     //             offset: 0,
@@ -49,7 +48,6 @@ describe('RPCProvider', () => {
     //         {
     //             component: "component2",
     //             query: {
-    //                 partition: "partition2",
     //                 keys: ["key3", "key4"],
     //             },
     //             offset: 0,

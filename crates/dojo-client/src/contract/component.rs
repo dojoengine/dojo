@@ -80,29 +80,27 @@ impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
             .map_err(ComponentError::ContractReaderError)?;
 
         let mut members = vec![];
-        for chunk in res[3..].chunks(4) {
-            if chunk.len() != 4 {
+        for chunk in res[3..].chunks(3) {
+            if chunk.len() != 3 {
                 return Err(ComponentError::InvalidSchemaLength);
             }
+
+            let is_key: u8 = chunk[2].try_into().map_err(|_| ComponentError::ConvertingFelt)?;
 
             members.push(Member {
                 name: parse_cairo_short_string(&chunk[0])
                     .map_err(ComponentError::ParseCairoShortStringError)?,
                 ty: parse_cairo_short_string(&chunk[1])
                     .map_err(ComponentError::ParseCairoShortStringError)?,
-                slot: chunk[2].try_into().map_err(|_| ComponentError::ConvertingFelt)?,
-                offset: chunk[3].try_into().map_err(|_| ComponentError::ConvertingFelt)?,
+                key: is_key == 1,
             });
         }
 
         Ok(members)
     }
 
-    pub async fn length(
-        &self,
-        block_id: BlockId,
-    ) -> Result<FieldElement, ComponentError<P::Error>> {
-        let entrypoint = get_selector_from_name("length").unwrap();
+    pub async fn size(&self, block_id: BlockId) -> Result<FieldElement, ComponentError<P::Error>> {
+        let entrypoint = get_selector_from_name("size").unwrap();
 
         let res = self
             .world
@@ -119,30 +117,16 @@ impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
 
     pub async fn entity(
         &self,
-        partition_id: FieldElement,
         keys: Vec<FieldElement>,
         block_id: BlockId,
     ) -> Result<Vec<FieldElement>, ComponentError<P::Error>> {
-        let length: u8 = self.length(block_id).await?.try_into().unwrap();
+        let size: u8 = self.size(block_id).await?.try_into().unwrap();
 
-        let table = if partition_id == FieldElement::ZERO {
-            self.name
-        } else {
-            poseidon_hash_many(&[self.name, partition_id])
-        };
-
-        let id = if keys.len() == 1 {
-            keys[0]
-        } else {
-            let mut keys = keys;
-            keys.insert(0, keys.len().into());
-            poseidon_hash_many(&keys)
-        };
-
-        let key = poseidon_hash_many(&[short_string!("dojo_storage"), table, id]);
+        let key = poseidon_hash_many(&keys);
+        let key = poseidon_hash_many(&[short_string!("dojo_storage"), self.name, key]);
 
         let mut values = vec![];
-        for slot in 0..length {
+        for slot in 0..size {
             let value = self
                 .world
                 .provider

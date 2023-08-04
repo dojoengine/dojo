@@ -111,6 +111,15 @@ mod position {
     fn size(self: @ContractState) -> usize {
         dojo::SerdeLen::<Position>::len()
     }
+
+    #[external(v0)]
+    fn schema(self: @ContractState) -> Array<(felt252, felt252, bool)> {
+        let mut arr = array::ArrayTrait::new();
+        array::ArrayTrait::append(ref arr, ('id', 'felt252', true));
+        array::ArrayTrait::append(ref arr, ('x', 'felt252', false));
+        array::ArrayTrait::append(ref arr, ('y', 'felt252', false));
+        arr
+    }
 }
 
 impl SerdeLenPosition of dojo::SerdeLen<Position> {
@@ -187,6 +196,13 @@ mod roles {
     fn size(self: @ContractState) -> usize {
         dojo::SerdeLen::<Roles>::len()
     }
+
+    #[external(v0)]
+    fn schema(self: @ContractState) -> Array<(felt252, felt252, bool)> {
+        let mut arr = array::ArrayTrait::new();
+        array::ArrayTrait::append(ref arr, ('role_ids', 'Array<u8>', false));
+        arr
+    }
 }
 
 
@@ -253,6 +269,15 @@ mod player {
     #[external(v0)]
     fn size(self: @ContractState) -> usize {
         dojo::SerdeLen::<Player>::len()
+    }
+
+    #[external(v0)]
+    fn schema(self: @ContractState) -> Array<(felt252, felt252, bool)> {
+        let mut arr = array::ArrayTrait::new();
+        array::ArrayTrait::append(ref arr, ('game', 'felt252', true));
+        array::ArrayTrait::append(ref arr, ('player', 'ContractAddress', true));
+        array::ArrayTrait::append(ref arr, ('name', 'felt252', false));
+        arr
     }
 }
 

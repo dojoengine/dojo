@@ -28,9 +28,8 @@ pub fn handle_component_struct(
         .members(db)
         .elements(db)
         .iter()
-        .enumerate()
-        .map(|(slot, member)| {
-            (member.name(db).text(db), member.type_clause(db).ty(db), slot as u64, 0)
+        .map(|member| {
+            (member.name(db).text(db), member.type_clause(db).ty(db), member.has_attr(db, "key"))
         })
         .collect::<_>();
 
@@ -104,16 +103,38 @@ pub fn handle_component_struct(
         })
         .collect::<_>();
 
+    let schema = elements
+        .iter()
+        .map(|member| {
+            RewriteNode::interpolate_patched(
+                "array::ArrayTrait::append(ref arr, ('$name$', '$typ$', $is_key$));",
+                UnorderedHashMap::from([
+                    (
+                        "name".to_string(),
+                        RewriteNode::new_trimmed(member.name(db).as_syntax_node()),
+                    ),
+                    (
+                        "typ".to_string(),
+                        RewriteNode::new_trimmed(member.type_clause(db).ty(db).as_syntax_node()),
+                    ),
+                    (
+                        "is_key".to_string(),
+                        RewriteNode::Text(member.has_attr(db, "key").to_string()),
+                    ),
+                ]),
+            )
+        })
+        .collect::<_>();
+
     let name = struct_ast.name(db).text(db);
     aux_data.components.push(Component {
         name: name.to_string(),
         members: members
             .iter()
-            .map(|(name, ty, slot, offset)| Member {
+            .map(|(name, ty, key)| Member {
                 name: name.to_string(),
                 ty: ty.as_syntax_node().get_text(db).trim().to_string(),
-                slot: *slot,
-                offset: *offset,
+                key: *key,
             })
             .collect(),
     });
@@ -167,6 +188,13 @@ pub fn handle_component_struct(
                 fn size(self: @ContractState) -> usize {
                     dojo::SerdeLen::<$type_name$>::len()
                 }
+
+                #[external(v0)]
+                fn schema(self: @ContractState) -> Array<(felt252, felt252, bool)> {
+                    let mut arr = array::ArrayTrait::new();
+                    $schema$
+                    arr
+                }
             }
         ",
             UnorderedHashMap::from([
@@ -190,6 +218,7 @@ pub fn handle_component_struct(
                     "component_serialized_values".to_string(),
                     RewriteNode::new_modified(component_serialized_values),
                 ),
+                ("schema".to_string(), RewriteNode::new_modified(schema)),
             ]),
         ),
         diagnostics,

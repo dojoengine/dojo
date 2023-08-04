@@ -2,7 +2,7 @@ import { defineContractComponents } from "./contractComponents";
 import { world } from "./world";
 import { number } from 'starknet';
 
-import { Providers, Query, SyncWorker} from "@dojoengine/core";
+import { Providers, Query, SyncWorker } from "@dojoengine/core";
 import { Account, ec } from "starknet";
 
 export const KATANA_ACCOUNT_1_ADDRESS = "0x06f62894bfd81d2e396ce266b2ad0f21e0668d604e5bb1077337b6d570a54aea"
@@ -29,7 +29,7 @@ export async function setupNetwork() {
         signer,
         execute: async (system: string, call_data: number.BigNumberish[]) => provider.execute(signer, system, call_data),
         entity: async (component: string, query: Query) => provider.entity(component, query),
-        entities: async (component: string, partition: string) => provider.entities(component, partition),
+        entities: async (component: string) => provider.entities(component),
         world,
         syncWorker
     };
