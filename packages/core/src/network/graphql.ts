@@ -1,17 +1,16 @@
 import { Schema } from '@latticexyz/recs';
-import { request} from 'graphql-request';
+import { request } from 'graphql-request';
 import gql from 'graphql-tag';
-
 
 export type Entity = {
     keys: string;
-    components: any[]; 
+    components: any[];
 }
 
 export const getEntities = async (url: string, componentName: string, componentSchema: Schema): Promise<Entity[] | undefined> => {
     const fieldKeys = Object.keys(componentSchema);
     const fields = fieldKeys.map((key) => `${key}`);
-  
+
     const fieldSelections = fields.join('\n');
     // TODO: issue, need to change limit
     const query = `query {
@@ -31,9 +30,9 @@ export const getEntities = async (url: string, componentName: string, componentS
     `;
 
     try {
-        const response: {entities: Entity[]} = await request(url, GET_ENTITIES_QUERY);
+        const response: { entities: Entity[] } = await request(url, GET_ENTITIES_QUERY);
         return response.entities;
-      } catch (error) {
+    } catch (error) {
         console.error(error);
-      }
+    }
 }

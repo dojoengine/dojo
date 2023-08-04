@@ -29,7 +29,7 @@ Providers that clients can use to connect to and interact with Dojo worlds seaml
 
 __todo__
 
-#### Websocker Providers
+#### Websocket Providers
 
 __todo__
 
