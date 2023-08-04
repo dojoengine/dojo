@@ -9,6 +9,7 @@ use starknet::core::types::{
     Transaction as RpcTransaction, TransactionReceipt as RpcTransactionReceipt,
     TransactionStatus as RpcTransactionStatus,
 };
+use starknet::core::utils::get_contract_address;
 use starknet_api::transaction::Transaction as ApiTransaction;
 
 use crate::backend::executor::ExecutedTransaction;
@@ -111,8 +112,13 @@ impl IncludedTransaction {
                     block_number: self.block_number,
                     events: self.transaction.output.events.clone(),
                     transaction_hash: tx.transaction_hash.0.into(),
-                    // TODO: store contract address in the storage or compute it everytime?
-                    contract_address: FieldElement::ZERO,
+                    // TODO: store the contract address instead of computing everytime
+                    contract_address: get_contract_address(
+                        tx.contract_address_salt.0.into(),
+                        tx.class_hash.0.into(),
+                        &tx.constructor_calldata.0.iter().map(|f| (*f).into()).collect::<Vec<_>>(),
+                        FieldElement::ZERO,
+                    ),
                     messages_sent: self.transaction.output.messages_sent.clone(),
                     actual_fee: self.transaction.execution_info.actual_fee.0.into(),
                 })
@@ -136,8 +142,13 @@ impl IncludedTransaction {
                 block_number: self.block_number,
                 events: self.transaction.output.events.clone(),
                 transaction_hash: tx.transaction_hash.0.into(),
-                // TODO: store contract address in the storage or compute it everytime?
-                contract_address: FieldElement::ZERO,
+                // TODO: store the contract address instead of computing everytime
+                contract_address: get_contract_address(
+                    tx.contract_address_salt.0.into(),
+                    tx.class_hash.0.into(),
+                    &tx.constructor_calldata.0.iter().map(|f| (*f).into()).collect::<Vec<_>>(),
+                    FieldElement::ZERO,
+                ),
                 messages_sent: self.transaction.output.messages_sent.clone(),
                 actual_fee: self.transaction.execution_info.actual_fee.0.into(),
             }),
@@ -190,8 +201,13 @@ impl PendingTransaction {
                     transaction_hash: tx.transaction_hash.0.into(),
                     messages_sent: self.0.output.messages_sent.clone(),
                     actual_fee: self.0.execution_info.actual_fee.0.into(),
-                    // TODO: store contract address in the storage or compute it everytime?
-                    contract_address: FieldElement::ZERO,
+                    // TODO: store the contract address instead of computing everytime
+                    contract_address: get_contract_address(
+                        tx.contract_address_salt.0.into(),
+                        tx.class_hash.0.into(),
+                        &tx.constructor_calldata.0.iter().map(|f| (*f).into()).collect::<Vec<_>>(),
+                        FieldElement::ZERO,
+                    ),
                 })
             }
         }
