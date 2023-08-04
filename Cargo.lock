@@ -3854,6 +3854,7 @@ dependencies = [
  "serde",
  "serde_json",
  "starknet",
+ "starknet-crypto 0.5.1",
  "starknet_api",
  "thiserror",
  "tokio",
