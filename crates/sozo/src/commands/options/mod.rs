@@ -1,5 +1,5 @@
 use scarb::core::{ManifestMetadata, Workspace};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 pub mod account;
 pub mod starknet;
@@ -9,12 +9,12 @@ pub(crate) fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Option<DojoMet
     Some(ws.current_package().ok()?.manifest.metadata.dojo())
 }
 
-#[derive(Default, Serialize, Deserialize, Debug, Clone)]
+#[derive(Default, Deserialize, Debug, Clone)]
 pub(crate) struct DojoMetadata {
     env: Option<Environment>,
 }
 
-#[derive(Default, Serialize, Deserialize, Clone, Debug)]
+#[derive(Default, Deserialize, Clone, Debug)]
 pub struct Environment {
     rpc_url: Option<String>,
     account_address: Option<String>,
