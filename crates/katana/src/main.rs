@@ -1,12 +1,14 @@
+use std::fs;
 use std::sync::Arc;
 use std::{io, process::exit};
 
 use clap::{CommandFactory, Parser};
 use clap_complete::{generate, Shell};
 use env_logger::Env;
-use katana_core::sequencer::KatanaSequencer;
+use katana_core::sequencer::{KatanaSequencer, Sequencer};
 use katana_rpc::{spawn, KatanaApi, NodeHandle, StarknetApi};
-use log::error;
+use log::{error, info};
+use tokio::signal::ctrl_c;
 use yansi::Paint;
 
 mod args;
@@ -45,13 +47,17 @@ async fn main() {
 
                 print_intro(
                     accounts,
-                    config.starknet.seed,
+                    config.starknet.seed.clone(),
                     format!("🚀 JSON-RPC server started: {}", Paint::red(format!("http://{addr}"))),
                 );
             }
 
             sequencer.start().await;
-            handle.stopped().await;
+
+            // Wait until Ctrl + C is pressed, then shutdown
+            ctrl_c().await.unwrap();
+            shutdown_handler(sequencer.clone(), config).await;
+            handle.stop().unwrap();
         }
         Err(err) => {
             error! {"{}", err};
@@ -101,4 +107,23 @@ ACCOUNTS SEED
     );
 
     println!("\n{address}\n\n");
+}
+
+pub async fn shutdown_handler(sequencer: Arc<impl Sequencer>, config: KatanaArgs) {
+    if let Some(path) = config.dump_state {
+        info!("Dumping state on shutdown");
+        let state = (*sequencer).backend().dump_state().await;
+        if let Ok(state) = state {
+            match fs::write(path.clone(), state) {
+                Ok(_) => {
+                    info!("Successfully dumped state")
+                }
+                Err(_) => {
+                    error!("Failed to write state dump to {:?}", path)
+                }
+            };
+        } else {
+            error!("Failed to fetch state dump.")
+        }
+    };
 }
