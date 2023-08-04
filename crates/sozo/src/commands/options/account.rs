@@ -74,7 +74,7 @@ impl AccountOptions {
                 .or(std::env::var("DOJO_KEYSTORE_PASSWORD").ok().as_deref())
             {
                 return Ok(LocalWallet::from_signing_key(SigningKey::from_keystore(
-                    path, &password,
+                    path, password,
                 )?));
             } else {
                 return Err(anyhow!("Keystore path is specified but password is not."));
@@ -94,7 +94,7 @@ impl AccountOptions {
             .and_then(|env| env.account_address())
             .or(std::env::var("DOJO_ACCOUNT_ADDRESS").ok().as_deref())
         {
-            Ok(FieldElement::from_str(&address)?)
+            Ok(FieldElement::from_str(address)?)
         } else {
             Err(anyhow!(
                 "Could not find account address. Please specify it with --account-address or in \

@@ -70,10 +70,9 @@ impl ComponentArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         let env_metadata = if config.manifest_path().exists() {
             let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-            let env_metadata =
-                dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned());
+            
             // TODO: Check the updated scarb way to read profile specific values
-            env_metadata
+            dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned())
         } else {
             None
         };
