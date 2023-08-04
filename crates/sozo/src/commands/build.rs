@@ -9,6 +9,7 @@ pub struct BuildArgs;
 impl BuildArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-        ops::compile(vec![], &ws)
+        let packages = ws.members().map(|p| p.id).collect();
+        ops::compile(packages, &ws)
     }
 }
