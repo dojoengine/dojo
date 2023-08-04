@@ -103,6 +103,8 @@ impl PendingBlockExecutor {
 
                 let executed_tx = Arc::new(ExecutedTransaction::new(api_tx, execution_info));
 
+                trace_events(&executed_tx.output.events);
+
                 self.outputs.push(executed_tx.output.clone());
                 self.transactions.push(executed_tx);
 
@@ -268,4 +270,13 @@ pub fn pretty_print_resources(resources: &ResourcesMapping) -> String {
     }
 
     mapped_strings.join(" | ")
+}
+
+pub fn trace_events(events: &[Event]) {
+    for e in events {
+        let formatted_keys =
+            e.keys.iter().map(|k| format!("{k:#x}")).collect::<Vec<_>>().join(", ");
+
+        trace!("Event emitted keys=[{}]", formatted_keys);
+    }
 }
