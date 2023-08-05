@@ -1,9 +1,9 @@
 [package]
-name = "dojo-test-utils"
-version.workspace = true
 edition.workspace = true
-repository.workspace = true
 license-file.workspace = true
+name = "dojo-test-utils"
+repository.workspace = true
+version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
@@ -11,24 +11,24 @@ assert_fs = "1.0.9"
 async-trait.workspace = true
 cairo-lang-compiler.workspace = true
 cairo-lang-filesystem.workspace = true
-cairo-lang-starknet.workspace = true
 cairo-lang-project.workspace = true
+cairo-lang-starknet.workspace = true
 camino.workspace = true
 dojo-lang = { path = "../dojo-lang" }
-jsonrpsee = { version = "0.16.2", features = ["server"] }
+jsonrpsee = { version = "0.16.2", features = [ "server" ] }
 katana-core = { path = "../katana/core" }
 katana-rpc = { path = "../katana/rpc" }
-tokio = { version = "1.28.0", features = ["full"] }
-thiserror.workspace = true
-toml = "0.7.1"
 scarb.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
 smol_str.workspace = true
 starknet.workspace = true
-url = "2.2.2"
+thiserror.workspace = true
+tokio = { version = "1.28.0", features = [ "full" ] }
+toml = "0.7.1"
 tracing.workspace = true
+url = "2.2.2"
 
 [build-dependencies]
 assert_fs = "1.0.9"
@@ -37,4 +37,4 @@ dojo-lang = { path = "../dojo-lang" }
 scarb.workspace = true
 
 [features]
-build-examples = []
+build-examples = [  ]

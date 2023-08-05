@@ -2,7 +2,8 @@ use anyhow::Result;
 use dojo_client::contract::world::WorldContractReader;
 use starknet::core::types::{BlockId, BlockTag};
 
-use crate::commands::{component::ComponentCommands, options::Environment};
+use crate::commands::component::ComponentCommands;
+use crate::commands::options::Environment;
 
 pub async fn execute(command: ComponentCommands, env_metadata: Option<Environment>) -> Result<()> {
     match command {

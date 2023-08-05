@@ -1,7 +1,8 @@
 use anyhow::{Context, Result};
 use dojo_client::contract::world::WorldContract;
 
-use crate::commands::{execute::ExecuteArgs, options::Environment};
+use crate::commands::execute::ExecuteArgs;
+use crate::commands::options::Environment;
 
 pub async fn execute(args: ExecuteArgs, env_metadata: Option<Environment>) -> Result<()> {
     let ExecuteArgs { system, calldata, world, starknet, account } = args;

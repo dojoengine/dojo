@@ -74,7 +74,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ env.RUST_VERSION }}
+          toolchain: nightly
           components: rustfmt
       
       - uses: Swatinem/rust-cache@v2
