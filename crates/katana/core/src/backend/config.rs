@@ -18,7 +18,7 @@ pub struct StarknetConfig {
     pub seed: [u8; 32],
     pub auto_mine: bool,
     pub total_accounts: u8,
-    pub allow_zero_max_fee: bool,
+    pub disable_fee: bool,
     pub account_path: Option<PathBuf>,
     pub env: Environment,
     pub init_state: Option<SerializableState>,
@@ -32,10 +32,11 @@ impl StarknetConfig {
             block_timestamp: BlockTimestamp::default(),
             sequencer_address: ContractAddress(patricia_key!(*SEQUENCER_ADDRESS)),
             fee_token_address: ContractAddress(patricia_key!(*FEE_TOKEN_ADDRESS)),
-            vm_resource_fee_cost: get_default_vm_resource_fee_cost(),
+            vm_resource_fee_cost: get_default_vm_resource_fee_cost().into(),
             gas_price: self.env.gas_price,
             validate_max_n_steps: self.env.validate_max_steps,
             invoke_tx_max_n_steps: self.env.invoke_max_steps,
+            max_recursion_depth: 1000,
         }
     }
 
@@ -52,7 +53,7 @@ impl Default for StarknetConfig {
             auto_mine: true,
             total_accounts: 10,
             account_path: None,
-            allow_zero_max_fee: false,
+            disable_fee: false,
             env: Environment::default(),
         }
     }

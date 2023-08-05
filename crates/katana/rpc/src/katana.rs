@@ -1,4 +1,3 @@
-use crate::api::katana::{KatanaApiError, KatanaApiServer};
 use jsonrpsee::core::{async_trait, Error};
 use katana_core::accounts::Account;
 use katana_core::sequencer::Sequencer;
@@ -7,6 +6,8 @@ use starknet_api::core::{ContractAddress, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};
 use starknet_api::state::StorageKey;
 use starknet_api::{patricia_key, stark_felt};
+
+use crate::api::katana::{KatanaApiError, KatanaApiServer};
 
 pub struct KatanaApi<S> {
     sequencer: S,

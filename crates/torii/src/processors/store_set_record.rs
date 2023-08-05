@@ -35,10 +35,7 @@ impl<S: State + Sync, T: JsonRpcTransport> EventProcessor<S, T> for StoreSetReco
         let keys = values_at(&event.data, NUM_KEYS_INDEX)?;
         let values_index = keys.len() + NUM_KEYS_INDEX + 2;
         let values = values_at(&event.data, values_index)?;
-        // TODO: are we removing partitions?
-        let partition = FieldElement::ZERO;
-
-        storage.set_entity(name, partition, keys, values).await?;
+        storage.set_entity(name, keys, values).await?;
         Ok(())
     }
 }

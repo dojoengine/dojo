@@ -25,12 +25,11 @@ use starknet::providers::{JsonRpcClient, Provider, ProviderError};
 use starknet::signers::{LocalWallet, Signer};
 use ui::MigrationUi;
 
+use self::ui::{bold_message, italic_message};
 use crate::commands::migrate::MigrateArgs;
 use crate::commands::options::account::AccountOptions;
 use crate::commands::options::starknet::StarknetOptions;
 use crate::commands::options::world::WorldOptions;
-
-use self::ui::{bold_message, italic_message};
 
 pub async fn execute<U>(
     args: MigrateArgs,
@@ -170,7 +169,10 @@ where
     config.ui().print_step(3, "📦", "Preparing for migration...");
 
     if name.is_none() && !diff.world.is_same() {
-        bail!("World name is required when attempting to migrate the World contract. Please provide it using `--name`.");
+        bail!(
+            "World name is required when attempting to migrate the World contract. Please provide \
+             it using `--name`."
+        );
     }
 
     let name = if let Some(name) = name {
@@ -274,8 +276,8 @@ where
                     Ok(())
                 }
                 Err(MigrationError::ContractAlreadyDeployed) => Err(anyhow!(
-                    "Attempting to deploy World at address {:#x} but a World already exists there. Try \
-                     using a different World name using `--name`.",
+                    "Attempting to deploy World at address {:#x} but a World already exists \
+                     there. Try using a different World name using `--name`.",
                     world.contract_address
                 )),
                 Err(e) => Err(anyhow!("Failed to migrate world: {:?}", e)),

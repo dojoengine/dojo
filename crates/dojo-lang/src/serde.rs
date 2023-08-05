@@ -1,6 +1,7 @@
 use cairo_lang_semantic::patcher::RewriteNode;
 use cairo_lang_syntax::node::ast::ItemStruct;
 use cairo_lang_syntax::node::db::SyntaxGroup;
+use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::TypedSyntaxNode;
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use itertools::Itertools;
@@ -31,11 +32,15 @@ pub fn handle_serde_len_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> 
                         .members(db)
                         .elements(db)
                         .iter()
-                        .map(|member| {
-                            format!(
+                        .filter_map(|member| {
+                            if member.has_attr(db, "key") {
+                                return None;
+                            }
+
+                            Some(format!(
                                 "dojo::SerdeLen::<{}>::len()",
                                 member.type_clause(db).ty(db).as_syntax_node().get_text(db),
-                            )
+                            ))
                         })
                         .join(" + "),
                 ),

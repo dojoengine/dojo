@@ -10,7 +10,7 @@ use blockifier::execution::contract_class::ContractClass;
 use blockifier::state::state_api::StateReader;
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transaction_execution::Transaction;
-use blockifier::transaction::transactions::DeclareTransaction;
+use blockifier::transaction::transactions::{DeclareTransaction, DeployAccountTransaction};
 use starknet::core::types::{
     BlockId, BlockTag, EmittedEvent, Event, EventsPage, FeeEstimate, FieldElement,
     FlattenedSierraClass, MaybePendingTransactionReceipt, StateUpdate,
@@ -18,7 +18,7 @@ use starknet::core::types::{
 use starknet_api::core::{ChainId, ClassHash, ContractAddress, Nonce};
 use starknet_api::hash::StarkFelt;
 use starknet_api::state::StorageKey;
-use starknet_api::transaction::{DeployAccountTransaction, InvokeTransaction, TransactionHash};
+use starknet_api::transaction::{InvokeTransaction, TransactionHash};
 use tokio::time;
 
 use crate::backend::config::StarknetConfig;
@@ -157,9 +157,8 @@ impl KatanaSequencer {
     //     &self,
     //     transaction: DeployAccountTransaction,
     //     balance: u64,
-    // ) -> SequencerResult<(TransactionHash, ContractAddress)> {
-    //     let (transaction_hash, contract_address) =
-    //         self.add_deploy_account_transaction(transaction).await;
+    // ) -> SequencerResult<(TransactionHash, ContractAddress)> { let (transaction_hash,
+    //   contract_address) = self.add_deploy_account_transaction(transaction).await;
 
     //     let deployed_account_balance_key =
     //         get_storage_var_address("ERC20_balances", &[*contract_address.0.key()])
@@ -218,7 +217,7 @@ impl Sequencer for KatanaSequencer {
         &self,
         transaction: DeployAccountTransaction,
     ) -> (TransactionHash, ContractAddress) {
-        let transaction_hash = transaction.transaction_hash;
+        let transaction_hash = transaction.tx.transaction_hash;
         let contract_address = transaction.contract_address;
 
         self.backend
@@ -272,9 +271,10 @@ impl Sequencer for KatanaSequencer {
         }
 
         match &account_transaction {
-            AccountTransaction::Invoke(tx) => tx.sender_address(),
+            AccountTransaction::Invoke(InvokeTransaction::V1(tx)) => tx.sender_address,
             AccountTransaction::Declare(tx) => tx.tx().sender_address(),
             AccountTransaction::DeployAccount(tx) => tx.contract_address,
+            _ => return Err(SequencerError::UnsupportedTransaction),
         };
 
         let state = self.state(&block_id).await?;
@@ -535,7 +535,7 @@ impl Sequencer for KatanaSequencer {
                     Ordering::Less => {
                         return Err(SequencerError::ContinuationToken(
                             ContinuationTokenError::InvalidToken,
-                        ))
+                        ));
                     }
                     Ordering::Equal => {
                         continuation_token.txn_n += 1;
@@ -626,13 +626,16 @@ fn filter_events_by_params(
 
         let match_keys = match filter_keys {
             // From starknet-api spec:
-            // Per key (by position), designate the possible values to be matched for events to be returned. Empty array designates 'any' value"
+            // Per key (by position), designate the possible values to be matched for events to be
+            // returned. Empty array designates 'any' value"
             Some(ref filter_keys) => filter_keys.iter().enumerate().all(|(i, keys)| {
-                // Lets say we want to filter events which are either named `Event1` or `Event2` and custom key `0x1` or `0x2`
-                // Filter: [[sn_keccack("Event1"), sn_keccack("Event2")], ["0x1", "0x2"]]
+                // Lets say we want to filter events which are either named `Event1` or `Event2` and
+                // custom key `0x1` or `0x2` Filter: [[sn_keccack("Event1"),
+                // sn_keccack("Event2")], ["0x1", "0x2"]]
 
-                // This checks: number of keys in event >= number of keys in filter (we check > i and not >= i because i is zero indexed)
-                // because otherwise this event doesn't contain all the keys we requested
+                // This checks: number of keys in event >= number of keys in filter (we check > i
+                // and not >= i because i is zero indexed) because otherwise this
+                // event doesn't contain all the keys we requested
                 event.keys.len() > i &&
                     // This checks: Empty array desginates 'any' value
                     (keys.is_empty()

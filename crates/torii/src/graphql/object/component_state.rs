@@ -28,8 +28,7 @@ pub struct ComponentMembers {
     pub name: String,
     #[serde(rename = "type")]
     pub ty: String,
-    pub slot: i64,
-    pub offset: i64,
+    pub key: bool,
     pub created_at: DateTime<Utc>,
 }
 
@@ -236,8 +235,7 @@ pub async fn type_mapping_from(
                     component_id,
                     name,
                     type AS ty,
-                    slot,
-                    offset,
+                    key,
                     created_at
                 FROM component_members WHERE component_id = ?
             "#,

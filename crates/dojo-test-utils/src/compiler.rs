@@ -1,16 +1,17 @@
-use std::env;
+use std::env::{self, current_dir};
 
 use anyhow::Result;
 use assert_fs::TempDir;
 use cairo_lang_compiler::db::RootDatabase;
-use cairo_lang_filesystem::ids::Directory;
+use cairo_lang_filesystem::db::{FilesGroup, FilesGroupEx};
+use cairo_lang_filesystem::ids::{CrateLongId, Directory};
 use cairo_lang_project::{ProjectConfig, ProjectConfigContent};
 use camino::{Utf8Path, Utf8PathBuf};
 use dojo_lang::compiler::DojoCompiler;
 use dojo_lang::db::DojoRootDatabaseBuilderEx;
 use dojo_lang::plugin::CairoPluginRepository;
 use scarb::compiler::{CompilationUnit, CompilerRepository};
-use scarb::core::{Config, Workspace};
+use scarb::core::Config;
 use scarb::ops;
 use scarb::ui::Verbosity;
 use tracing::trace;
@@ -35,16 +36,25 @@ pub fn build_test_config(path: &str) -> anyhow::Result<Config> {
         .build()
 }
 
-pub fn build_test_db(ws: &Workspace<'_>) -> anyhow::Result<RootDatabase> {
-    let resolve = ops::resolve_workspace(ws)?;
-    let compilation_units = ops::generate_compilation_units(&resolve, ws)?;
+pub fn build_test_db(manifest_path: &str) -> anyhow::Result<RootDatabase> {
+    let config = build_test_config(manifest_path).unwrap();
+    let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
+    let resolve = ops::resolve_workspace(&ws)?;
+    let compilation_units = ops::generate_compilation_units(&resolve, &ws)?;
 
-    let unit = compilation_units[0].clone();
+    let unit: CompilationUnit = compilation_units[0].clone();
 
-    let db = RootDatabase::builder()
+    let mut db = RootDatabase::builder()
         .with_project_config(build_project_config(&unit)?)
         .with_dojo()
         .build()?;
+
+    let mut current_path = current_dir().unwrap();
+    current_path.push("../dojo-core/src");
+
+    let crate_id = db.intern_crate(CrateLongId("dojo".into()));
+    let root = Directory(current_path);
+    db.set_crate_root(crate_id, Some(root));
 
     Ok(db)
 }

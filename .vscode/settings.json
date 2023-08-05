@@ -1,4 +1,7 @@
 {
     "cairo1.languageServerPath": "/workspaces/dojo/target/release/dojo-language-server",
-    "cairo1.enableLanguageServer": true
+    "cairo1.enableLanguageServer": true,
+    "rust-analyzer.linkedProjects": [
+        "./crates/dojo-lang/Cargo.toml"
+    ]
 }

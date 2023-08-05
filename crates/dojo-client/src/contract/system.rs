@@ -65,13 +65,6 @@ impl<'a, A: ConnectedAccount + Sync> System<'a, A> {
         self.reader.call(calldata, block_id).await.map_err(SystemError::ReaderError)
     }
 
-    pub async fn dependencies(
-        &self,
-        block_id: BlockId,
-    ) -> Result<Vec<Dependency>, SystemError<A::SignError, <A::Provider as Provider>::Error>> {
-        self.reader.dependencies(block_id).await.map_err(SystemError::ReaderError)
-    }
-
     pub async fn execute(
         &self,
         calldata: Vec<FieldElement>,

@@ -18,7 +18,6 @@ use crate::graphql::utils::extract_value::extract;
 #[serde(rename_all = "camelCase")]
 pub struct Entity {
     pub id: String,
-    pub partition: String,
     pub keys: Option<String>,
     pub component_names: String,
     pub created_at: DateTime<Utc>,

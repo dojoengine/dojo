@@ -9,7 +9,7 @@ use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::patcher::{PatchBuilder, Patches};
 use cairo_lang_semantic::plugin::{
     AsDynGeneratedFileAuxData, AsDynMacroPlugin, DynPluginAuxData, PluginAuxData,
-    PluginMappedDiagnostic, SemanticPlugin,
+    PluginMappedDiagnostic, SemanticPlugin, TrivialPluginAuxData,
 };
 use cairo_lang_semantic::SemanticDiagnostic;
 use cairo_lang_starknet::plugin::StarkNetPlugin;
@@ -18,7 +18,7 @@ use cairo_lang_syntax::attribute::structured::{
 };
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
-use cairo_lang_syntax::node::{ast, Terminal};
+use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use dojo_types::component::Member;
 use dojo_types::system::Dependency;
 use scarb::compiler::plugin::builtin::BuiltinSemanticCairoPlugin;
@@ -28,6 +28,7 @@ use smol_str::SmolStr;
 use url::Url;
 
 use crate::component::handle_component_struct;
+use crate::inline_macro_plugin::InlineMacroExpanderData;
 use crate::serde::handle_serde_len_struct;
 use crate::system::System;
 
@@ -108,6 +109,26 @@ impl DojoPlugin {
 
 impl MacroPlugin for DojoPlugin {
     fn generate_code(&self, db: &dyn SyntaxGroup, item_ast: ast::Item) -> PluginResult {
+        let mut expander_data = InlineMacroExpanderData::default();
+        expander_data.expand_node(db, &item_ast.as_syntax_node());
+        if expander_data.code_changed {
+            return PluginResult {
+                code: Some(PluginGeneratedFile {
+                    name: "inline_macros".into(),
+                    content: expander_data.result_code.clone(),
+                    aux_data: DynGeneratedFileAuxData(Arc::new(TrivialPluginAuxData {})),
+                }),
+                diagnostics: expander_data.diagnostics,
+                remove_original_item: true,
+            };
+        } else if !expander_data.diagnostics.is_empty() {
+            return PluginResult {
+                code: None,
+                diagnostics: expander_data.diagnostics,
+                remove_original_item: false,
+            };
+        }
+
         match item_ast {
             ast::Item::Module(module_ast) => self.handle_mod(db, module_ast),
             ast::Item::Struct(struct_ast) => {
@@ -154,11 +175,10 @@ impl MacroPlugin for DojoPlugin {
 
                         match derived.as_str() {
                             "Component" => {
-                                rewrite_nodes.push(handle_component_struct(
-                                    db,
-                                    &mut aux_data,
-                                    struct_ast.clone(),
-                                ));
+                                let (component_rewrite_nodes, component_diagnostics) =
+                                    handle_component_struct(db, &mut aux_data, struct_ast.clone());
+                                rewrite_nodes.push(component_rewrite_nodes);
+                                diagnostics.extend(component_diagnostics);
                             }
                             "SerdeLen" => {
                                 rewrite_nodes.push(handle_serde_len_struct(db, struct_ast.clone()));
@@ -184,7 +204,7 @@ impl MacroPlugin for DojoPlugin {
                         content: builder.code,
                         aux_data: DynGeneratedFileAuxData::new(DynPluginAuxData::new(aux_data)),
                     }),
-                    diagnostics: vec![],
+                    diagnostics,
                     remove_original_item: true,
                 }
             }
@@ -217,7 +237,7 @@ impl CairoPluginRepository {
         repo.add(Box::new(BuiltinSemanticCairoPlugin::<DojoPlugin>::new(dojo_package_id))).unwrap();
         let starknet_package_id = PackageId::new(
             PackageName::STARKNET,
-            Version::parse("2.0.1").unwrap(),
+            Version::parse("2.1.0-rc4").unwrap(),
             SourceId::for_std(),
         );
         repo.add(Box::new(BuiltinSemanticCairoPlugin::<StarkNetPlugin>::new(starknet_package_id)))

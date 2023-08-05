@@ -7,10 +7,10 @@ use traits::TryInto;
 use option::OptionTrait;
 use starknet::class_hash::Felt252TryIntoClassHash;
 use starknet::contract_address_const;
+use starknet::ContractAddress;
 use starknet::get_caller_address;
 use starknet::syscalls::deploy_syscall;
 
-use dojo::database::query::QueryTrait;
 use dojo::executor::executor;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, library_call, world};
 
@@ -18,12 +18,16 @@ use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, library_call, world};
 
 #[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Foo {
+    #[key]
+    caller: ContractAddress,
     a: felt252,
     b: u128,
 }
 
 #[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Fizz {
+    #[key]
+    caller: ContractAddress,
     a: felt252
 }
 
@@ -35,7 +39,7 @@ mod bar {
     use dojo::world::Context;
 
     fn execute(ctx: Context, a: felt252, b: u128) {
-        set !(ctx.world, ctx.origin.into(), (Foo { a, b }));
+        set !(ctx.world, Foo { caller: ctx.origin, a, b });
     }
 }
 
@@ -47,8 +51,8 @@ mod Buzz {
     use dojo::world::Context;
 
     fn execute(ctx: Context, a: felt252, b: u128) {
-        set !(ctx.world, ctx.origin.into(), (Foo { a, b }));
-        let fizz = try_get !(ctx.world, ctx.origin.into(), Fizz);
+        set !(ctx.world, (Foo { caller: ctx.origin, a, b }));
+    // let fizz = get !(ctx.world, ctx.origin, Fizz);
     }
 }
 
@@ -68,34 +72,17 @@ fn deploy_world() -> IWorldDispatcher {
 #[test]
 #[available_gas(2000000)]
 fn test_component() {
-    let name = 'Foo'.into();
+    let name = 'Foo';
     let world = deploy_world();
 
     world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
-    let mut data = ArrayTrait::new();
-    data.append(1337);
-    let id = world.uuid();
-    world.set_entity(name, QueryTrait::new_from_id(id.into()), 0, data.span());
-    let stored = world
-        .entity(name, QueryTrait::new_from_id(id.into()), 0, dojo::SerdeLen::<Foo>::len());
-    assert(*stored.snapshot.at(0) == 1337, 'data not stored');
-}
-
-#[test]
-#[available_gas(2000000)]
-fn test_component_with_partition() {
-    let name = 'Foo'.into();
-    let world = deploy_world();
-
-    world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
-    let mut data = ArrayTrait::new();
-    data.append(1337);
-    let id = world.uuid();
     let mut keys = ArrayTrait::new();
-    keys.append(1337.into());
-    world.set_entity(name, QueryTrait::new(0, 1.into(), keys.span()), 0, data.span());
-    let stored = world
-        .entity(name, QueryTrait::new(0, 1.into(), keys.span()), 0, dojo::SerdeLen::<Foo>::len());
+    keys.append(420);
+    let mut data = ArrayTrait::new();
+    data.append(1337);
+
+    world.set_entity(name, keys.span(), 0, data.span());
+    let stored = world.entity(name, keys.span(), 0, dojo::SerdeLen::<Foo>::len());
     assert(*stored.snapshot.at(0) == 1337, 'data not stored');
 }
 
@@ -139,12 +126,14 @@ fn test_set_entity_admin() {
     let alice = starknet::contract_address_const::<0x1337>();
     starknet::testing::set_contract_address(alice);
 
+    let mut keys = array::ArrayTrait::new();
+    keys.append(alice.into());
+
     let mut data = ArrayTrait::new();
     data.append(420);
     data.append(1337);
-    world.execute('bar'.into(), data.span());
-
-    let foo = world.entity('Foo'.into(), alice.into(), 0, dojo::SerdeLen::<Foo>::len());
+    world.execute('bar', data.span());
+    let foo = world.entity('Foo', keys.span(), 0, dojo::SerdeLen::<Foo>::len());
     assert(*foo[0] == 420, 'data not stored');
     assert(*foo[1] == 1337, 'data not stored');
 }
@@ -179,12 +168,7 @@ fn test_set_entity_directly() {
     world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
 
-    // Change Foo component directly
-    let id = world.uuid();
-    let mut data = ArrayTrait::new();
-    data.append(420);
-    data.append(1337);
-    world.set_entity('Foo'.into(), QueryTrait::new_from_id(id.into()), 0, data.span());
+    set !(world, Foo { caller: starknet::contract_address_const::<0x1337>(), a: 420, b: 1337 });
 }
 
 // Utils
@@ -220,7 +204,8 @@ fn test_library_call_system() {
     world.register_system(library_call::TEST_CLASS_HASH.try_into().unwrap());
     let mut calldata = ArrayTrait::new();
     calldata.append(foo::TEST_CLASS_HASH);
-    calldata.append(0x011efd13169e3bceace525b23b7f968b3cc611248271e35f04c5c917311fc7f7);
+    // 'name' entrypoint
+    calldata.append(0x0361458367e696363fbcc70777d07ebbd2394e89fd0adcaf147faccd1d294d60);
     calldata.append(0);
     world.execute('library_call'.into(), calldata.span());
 }
