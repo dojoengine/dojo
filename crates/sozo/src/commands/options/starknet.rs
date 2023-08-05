@@ -2,8 +2,9 @@ use anyhow::{anyhow, Result};
 use clap::Args;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use toml::Value;
 use url::Url;
+
+use super::Environment;
 
 #[derive(Debug, Args)]
 #[command(next_help_heading = "Starknet options")]
@@ -15,14 +16,18 @@ pub struct StarknetOptions {
 }
 
 impl StarknetOptions {
-    pub fn provider(&self, env_metadata: Option<&Value>) -> Result<JsonRpcClient<HttpTransport>> {
+    pub fn provider(
+        &self,
+        env_metadata: Option<&Environment>,
+    ) -> Result<JsonRpcClient<HttpTransport>> {
         let url = if let Some(url) = self.rpc_url.clone() {
             Some(url)
-        } else if let Some(url) = env_metadata
-            .and_then(|env| env.get("rpc_url").and_then(|v| v.as_str().map(|s| s.to_string())))
-            .or(std::env::var("STARKNET_RPC_URL").ok())
+        } else if let Some(url) =
+            env_metadata
+                .and_then(|env| env.rpc_url())
+                .or(std::env::var("STARKNET_RPC_URL").ok().as_deref())
         {
-            Some(Url::parse(&url)?)
+            Some(Url::parse(url)?)
         } else {
             None
         };
