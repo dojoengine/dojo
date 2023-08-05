@@ -125,7 +125,8 @@ async fn migrate_with_same_seed_will_fail() {
     )
     .unwrap();
     execute_strategy(&migration, &account, &config).await.unwrap();
-    // migrate 2nd world with `0x12345` seed should fail because the world contract address will be the same
+    // migrate 2nd world with `0x12345` seed should fail because the world contract address will be
+    // the same
     assert!(execute_strategy(&migration, &account, &config).await.is_err());
     sequencer.stop().unwrap();
 }

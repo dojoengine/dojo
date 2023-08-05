@@ -32,6 +32,8 @@ pub enum SequencerError {
     EntryPointExecution(#[from] EntryPointExecutionError),
     #[error("Wait for pending transactions.")]
     PendingTransactions,
+    #[error("Unsupported Transaction")]
+    UnsupportedTransaction,
     #[error(transparent)]
     ContinuationToken(#[from] ContinuationTokenError),
     #[error("Error serializing state.")]

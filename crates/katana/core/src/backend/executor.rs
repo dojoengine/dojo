@@ -1,12 +1,13 @@
 use std::sync::Arc;
 
+use blockifier::block_context::BlockContext;
 use blockifier::execution::entry_point::CallInfo;
+use blockifier::state::cached_state::CachedState;
 use blockifier::state::state_api::StateReader;
 use blockifier::transaction::errors::TransactionExecutionError;
 use blockifier::transaction::objects::{ResourcesMapping, TransactionExecutionInfo};
 use blockifier::transaction::transaction_execution::Transaction as ExecutionTransaction;
 use blockifier::transaction::transactions::ExecutableTransaction;
-use blockifier::{block_context::BlockContext, state::cached_state::CachedState};
 use convert_case::{Case, Casing};
 use parking_lot::RwLock;
 use starknet::core::types::{Event, FieldElement, MsgToL1};
@@ -14,13 +15,12 @@ use starknet_api::transaction::Transaction;
 use tokio::sync::RwLock as AsyncRwLock;
 use tracing::{trace, warn};
 
-use crate::backend::storage::transaction::KnownTransaction;
-use crate::utils::transaction::convert_blockifier_to_api_tx;
-
 use super::state::MemDb;
 use super::storage::block::{Block, PartialBlock, PartialHeader};
 use super::storage::transaction::{RejectedTransaction, TransactionOutput};
 use super::storage::BlockchainStorage;
+use crate::backend::storage::transaction::KnownTransaction;
+use crate::utils::transaction::convert_blockifier_to_api_tx;
 
 #[derive(Debug)]
 pub struct PendingBlockExecutor {
@@ -89,10 +89,19 @@ impl PendingBlockExecutor {
     // if it passes the validation logic. Otherwise, the transaction will be
     // rejected. On both cases, the transaction will still be stored in the
     // storage.
-    pub async fn add_transaction(&mut self, transaction: ExecutionTransaction) -> bool {
+    pub async fn add_transaction(
+        &mut self,
+        transaction: ExecutionTransaction,
+        charge_fee: bool,
+    ) -> bool {
         let api_tx = convert_blockifier_to_api_tx(&transaction);
         let hash: FieldElement = api_tx.transaction_hash().0.into();
-        let res = execute_transaction(transaction, &mut self.state, &self.block_context.read());
+        let res = execute_transaction(
+            transaction,
+            &mut self.state,
+            &self.block_context.read(),
+            charge_fee,
+        );
 
         match res {
             Ok(execution_info) => {
@@ -224,10 +233,15 @@ pub fn execute_transaction<S: StateReader>(
     transaction: ExecutionTransaction,
     pending_state: &mut CachedState<S>,
     block_context: &BlockContext,
+    charge_fee: bool,
 ) -> Result<TransactionExecutionInfo, TransactionExecutionError> {
     let res = match transaction {
-        ExecutionTransaction::AccountTransaction(tx) => tx.execute(pending_state, block_context),
-        ExecutionTransaction::L1HandlerTransaction(tx) => tx.execute(pending_state, block_context),
+        ExecutionTransaction::AccountTransaction(tx) => {
+            tx.execute(pending_state, block_context, charge_fee)
+        }
+        ExecutionTransaction::L1HandlerTransaction(tx) => {
+            tx.execute(pending_state, block_context, charge_fee)
+        }
     };
 
     match res {

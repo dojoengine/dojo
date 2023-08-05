@@ -2,7 +2,6 @@ use camino::Utf8PathBuf;
 use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, TestSequencer,
 };
-use dojo_types::system::Dependency;
 use starknet::accounts::Account;
 use starknet::core::types::{BlockId, BlockTag};
 use starknet_crypto::FieldElement;
@@ -24,20 +23,11 @@ async fn test_system() {
     let block_id: BlockId = BlockId::Tag(BlockTag::Latest);
     let world = WorldContract::new(world_address, &account);
     let spawn = world.system("spawn", block_id).await.unwrap();
-    let dependencies = spawn.dependencies(block_id).await.unwrap();
-    assert_eq!(
-        dependencies,
-        vec![
-            Dependency { name: "Moves".into(), read: false, write: true },
-            Dependency { name: "Position".into(), read: false, write: true }
-        ]
-    );
 
     let _ = spawn.execute(vec![]).await.unwrap();
 
     let component = world.component("Moves", block_id).await.unwrap();
-    let moves =
-        component.entity(FieldElement::ZERO, vec![account.address()], block_id).await.unwrap();
+    let moves = component.entity(vec![account.address()], block_id).await.unwrap();
 
     assert_eq!(moves, vec![10_u8.into()]);
 
@@ -46,17 +36,13 @@ async fn test_system() {
     let _ = move_system.execute(vec![FieldElement::ONE]).await.unwrap();
     let _ = move_system.execute(vec![FieldElement::THREE]).await.unwrap();
 
-    let moves =
-        component.entity(FieldElement::ZERO, vec![account.address()], block_id).await.unwrap();
+    let moves = component.entity(vec![account.address()], block_id).await.unwrap();
 
     assert_eq!(moves, vec![8_u8.into()]);
 
     let position_component = world.component("Position", block_id).await.unwrap();
 
-    let position = position_component
-        .entity(FieldElement::ZERO, vec![account.address()], block_id)
-        .await
-        .unwrap();
+    let position = position_component.entity(vec![account.address()], block_id).await.unwrap();
 
     assert_eq!(position, vec![1_u8.into(), 1_u8.into()]);
 }

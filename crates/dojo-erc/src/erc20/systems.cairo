@@ -1,11 +1,18 @@
 #[system]
 mod ERC20Approve {
     use traits::Into;
+    use starknet::ContractAddress;
     use dojo::world::Context;
     use dojo_erc::erc20::components::Allowance;
 
-    fn execute(ctx: Context, token: felt252, owner: felt252, spender: felt252, amount: felt252) {
-        set !(ctx.world, (token, (owner, spender)).into_partitioned(), (Allowance { amount }))
+    fn execute(
+        ctx: Context,
+        token: ContractAddress,
+        owner: ContractAddress,
+        spender: ContractAddress,
+        amount: felt252
+    ) {
+        set !(ctx.world, Allowance { token, owner, spender, amount })
     }
 }
 
@@ -29,31 +36,22 @@ mod ERC20TransferFrom {
         let caller: felt252 = get_caller_address().into();
         if spender != caller {
             // decrease allowance if it's not owner doing the transfer
-            let allowance = get !(ctx.world, (token, (caller, spender)).into_partitioned(), Allowance);
+            let mut allowance = get !(ctx.world, (token, caller, spender), Allowance);
             if !is_unlimited_allowance(allowance) {
-                set !(
-                    ctx.world,
-                    (token, (caller, spender)).into_partitioned(),
-                    (Allowance { amount: allowance.amount - amount })
-                );
+                allowance.amount -= amount;
+                set !(ctx.world, (allowance));
             }
         }
 
         // decrease spender's balance
-        let balance = get !(ctx.world, (token, (spender)).into_partitioned(), Balance);
-        set !(
-            ctx.world,
-            (token, (spender)).into_partitioned(),
-            (Balance { amount: balance.amount - amount })
-        );
+        let mut balance = get !(ctx.world, (token, spender), Balance);
+        balance.amount -= amount;
+        set !(ctx.world, (balance));
 
         // increase recipient's balance
-        let balance = get !(ctx.world, (token, (recipient)).into_partitioned(), Balance);
-        set !(
-            ctx.world,
-            (token, (recipient)).into_partitioned(),
-            (Balance { amount: balance.amount + amount })
-        );
+        let mut balance = get !(ctx.world, (token, recipient), Balance);
+        balance.amount += amount;
+        set !(ctx.world, (balance));
     }
 
     fn is_unlimited_allowance(allowance: Allowance) -> bool {
@@ -72,12 +70,14 @@ mod ERC20Mint {
         assert(recipient.is_non_zero(), 'ERC20: mint to 0');
 
         // increase token supply
-        let supply = get !(ctx.world, token.into(), Supply);
-        set !(ctx.world, token.into(), (Supply { amount: supply.amount + amount }));
+        let mut supply = get !(ctx.world, token, Supply);
+        supply.amount += amount;
+        set !(ctx.world, (supply));
 
         // increase balance of recipient
-        let balance = get !(ctx.world, (token, (recipient)).into_partitioned(), Balance);
-        set !(ctx.world, (token, (recipient)).into(), (Balance { amount: balance.amount + amount }));
+        let mut balance = get !(ctx.world, (token, recipient), Balance);
+        balance.amount -= amount;
+        set !(ctx.world, (balance));
     }
 }
 
@@ -92,13 +92,13 @@ mod ERC20Burn {
         assert(owner.is_non_zero(), 'ERC20: burn from 0');
 
         // decrease token supply
-        let supply = get !(ctx.world, token.into(), Supply);
-        set !(ctx.world, token.into(), (Supply { amount: supply.amount - amount }));
+        let mut supply = get !(ctx.world, token, Supply);
+        supply.amount -= amount;
+        set !(ctx.world, (supply));
 
         // decrease balance of owner
-        let balance = get !(ctx.world, (token, (owner)).into_partitioned(), Balance);
-        set !(
-            ctx.world, (token, (owner)).into_partitioned(), (Balance { amount: balance.amount - amount })
-        );
+        let mut balance = get !(ctx.world, (token, owner), Balance);
+        balance.amount -= amount;
+        set !(ctx.world, (balance));
     }
 }

@@ -1,17 +1,15 @@
 use std::sync::Arc;
 
-use starknet::core::{
-    crypto::compute_hash_on_elements,
-    types::{
-        BlockStatus as RpcBlockStatus, FieldElement, MaybePendingBlockWithTxs,
-        PendingBlockWithTxHashes, PendingBlockWithTxs,
-    },
-    types::{BlockWithTxHashes, BlockWithTxs, MaybePendingBlockWithTxHashes},
+use starknet::core::crypto::compute_hash_on_elements;
+use starknet::core::types::{
+    BlockStatus as RpcBlockStatus, BlockWithTxHashes, BlockWithTxs, FieldElement,
+    MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, PendingBlockWithTxHashes,
+    PendingBlockWithTxs,
 };
 
-use crate::{backend::executor::ExecutedTransaction, utils::transaction::convert_api_to_rpc_tx};
-
 use super::transaction::TransactionOutput;
+use crate::backend::executor::ExecutedTransaction;
+use crate::utils::transaction::convert_api_to_rpc_tx;
 
 #[derive(Debug, Clone, Copy)]
 pub enum BlockStatus {

@@ -188,10 +188,10 @@ fn convert_deploy_account_to_rpc_tx(
 fn convert_invoke_to_rpc_tx(transaction: ApiInvokeTransaction) -> InvokeTransaction {
     match transaction {
         ApiInvokeTransaction::V0(tx) => InvokeTransaction::V0(InvokeTransactionV0 {
-            nonce: tx.nonce.0.into(),
+            nonce: FieldElement::ZERO,
             max_fee: tx.max_fee.0.into(),
             transaction_hash: tx.transaction_hash.0.into(),
-            contract_address: (*tx.sender_address.0.key()).into(),
+            contract_address: (*tx.contract_address.0.key()).into(),
             entry_point_selector: tx.entry_point_selector.0.into(),
             calldata: stark_felt_to_field_element_array(&tx.calldata.0),
             signature: stark_felt_to_field_element_array(&tx.signature.0),
@@ -236,7 +236,7 @@ pub fn convert_blockifier_to_api_tx(transaction: &ExecutionTransaction) -> ApiTr
         ExecutionTransaction::AccountTransaction(tx) => match tx {
             AccountTransaction::Invoke(tx) => ApiTransaction::Invoke(tx.clone()),
             AccountTransaction::Declare(tx) => ApiTransaction::Declare(tx.tx().clone()),
-            AccountTransaction::DeployAccount(tx) => ApiTransaction::DeployAccount(tx.clone()),
+            AccountTransaction::DeployAccount(tx) => ApiTransaction::DeployAccount(tx.tx.clone()),
         },
         ExecutionTransaction::L1HandlerTransaction(tx) => ApiTransaction::L1Handler(tx.tx.clone()),
     }

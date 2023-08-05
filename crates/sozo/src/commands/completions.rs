@@ -1,9 +1,10 @@
 use std::io;
 
-use crate::SozoArgs;
 use anyhow::Result;
 use clap::{Args, CommandFactory};
 use clap_complete::{generate, Shell};
+
+use crate::SozoArgs;
 
 #[derive(Args, Debug)]
 pub struct CompletionsArgs {

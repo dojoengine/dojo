@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use blockifier::state::errors::StateError;
 use blockifier::transaction::account_transaction::AccountTransaction;
-use blockifier::transaction::transactions::DeclareTransaction;
+use blockifier::transaction::transactions::{DeclareTransaction, DeployAccountTransaction};
 use jsonrpsee::core::{async_trait, Error};
 use katana_core::backend::contract::StarknetContract;
 use katana_core::backend::storage::transaction::{KnownTransaction, PendingTransaction};
@@ -13,10 +13,9 @@ use katana_core::utils::contract::{
     legacy_inner_to_rpc_class, legacy_rpc_to_inner_class, rpc_to_inner_class,
 };
 use katana_core::utils::starkfelt_to_u128;
-use katana_core::utils::transaction::compute_deploy_account_v1_transaction_hash;
 use katana_core::utils::transaction::{
     compute_declare_v1_transaction_hash, compute_declare_v2_transaction_hash,
-    compute_invoke_v1_transaction_hash,
+    compute_deploy_account_v1_transaction_hash, compute_invoke_v1_transaction_hash,
 };
 use starknet::core::types::{
     BlockHashAndNumber, BlockId, BlockTag, BroadcastedDeclareTransaction,
@@ -28,14 +27,15 @@ use starknet::core::types::{
 };
 use starknet::core::utils::get_contract_address;
 use starknet_api::core::{
-    ClassHash, CompiledClassHash, ContractAddress, EntryPointSelector, Nonce, PatriciaKey,
+    calculate_contract_address, ClassHash, CompiledClassHash, ContractAddress, EntryPointSelector,
+    Nonce, PatriciaKey,
 };
 use starknet_api::hash::{StarkFelt, StarkHash};
 use starknet_api::state::StorageKey;
 use starknet_api::transaction::{
     Calldata, ContractAddressSalt, DeclareTransactionV0V1, DeclareTransactionV2,
-    DeployAccountTransaction, Fee, InvokeTransaction, InvokeTransactionV1, TransactionHash,
-    TransactionSignature, TransactionVersion,
+    DeployAccountTransaction as DeployAccountApiTransaction, Fee, InvokeTransaction,
+    InvokeTransactionV1, TransactionHash, TransactionSignature, TransactionVersion,
 };
 use starknet_api::{patricia_key, stark_felt};
 
@@ -346,14 +346,13 @@ where
             nonce,
         );
 
-        let transaction = DeployAccountTransaction {
+        let transaction = DeployAccountApiTransaction {
             signature: TransactionSignature(signature.into_iter().map(|s| s.into()).collect()),
             contract_address_salt: ContractAddressSalt(StarkFelt::from(contract_address_salt)),
             constructor_calldata: Calldata(Arc::new(
                 constructor_calldata.into_iter().map(|d| d.into()).collect(),
             )),
             class_hash: ClassHash(class_hash.into()),
-            contract_address: ContractAddress(patricia_key!(contract_address)),
             max_fee: Fee(starkfelt_to_u128(max_fee.into())
                 .map_err(|_| Error::from(StarknetApiError::InternalServerError))?),
             nonce: Nonce(nonce.into()),
@@ -361,9 +360,25 @@ where
             version: TransactionVersion(stark_felt!(1_u32)),
         };
 
-        self.sequencer.add_deploy_account_transaction(transaction).await;
+        let contract_address = calculate_contract_address(
+            transaction.contract_address_salt,
+            transaction.class_hash,
+            &transaction.constructor_calldata,
+            ContractAddress::default(),
+        )
+        .map_err(|_| Error::from(StarknetApiError::InternalServerError))?;
 
-        Ok(DeployAccountTransactionResult { transaction_hash, contract_address })
+        self.sequencer
+            .add_deploy_account_transaction(DeployAccountTransaction {
+                tx: transaction,
+                contract_address,
+            })
+            .await;
+
+        Ok(DeployAccountTransactionResult {
+            transaction_hash,
+            contract_address: (*contract_address.0.key()).into(),
+        })
     }
 
     async fn estimate_fee(
@@ -495,7 +510,7 @@ where
                         nonce,
                     );
 
-                    let transaction = DeployAccountTransaction {
+                    let transaction = DeployAccountApiTransaction {
                         signature: TransactionSignature(
                             signature.into_iter().map(|s| s.into()).collect(),
                         ),
@@ -506,7 +521,6 @@ where
                             constructor_calldata.into_iter().map(|d| d.into()).collect(),
                         )),
                         class_hash: ClassHash(class_hash.into()),
-                        contract_address: ContractAddress(patricia_key!(contract_address)),
                         max_fee: Fee(starkfelt_to_u128(max_fee.into())
                             .map_err(|_| Error::from(StarknetApiError::InternalServerError))?),
                         nonce: Nonce(nonce.into()),
@@ -514,7 +528,18 @@ where
                         version: TransactionVersion(stark_felt!(1_u32)),
                     };
 
-                    AccountTransaction::DeployAccount(transaction)
+                    let contract_address = calculate_contract_address(
+                        transaction.contract_address_salt,
+                        transaction.class_hash,
+                        &transaction.constructor_calldata,
+                        ContractAddress::default(),
+                    )
+                    .map_err(|_| Error::from(StarknetApiError::InternalServerError))?;
+
+                    AccountTransaction::DeployAccount(DeployAccountTransaction {
+                        tx: transaction,
+                        contract_address,
+                    })
                 }
 
                 _ => return Err(Error::from(StarknetApiError::UnsupportedTransactionVersion)),

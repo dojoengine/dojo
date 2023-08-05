@@ -29,6 +29,7 @@ cairo-lang-utils.workspace = true
 convert_case.workspace = true
 dojo-types = { path = "../dojo-types" }
 dojo-world = { path = "../dojo-world" }
+indoc.workspace = true
 itertools.workspace = true
 scarb.workspace = true
 semver.workspace = true

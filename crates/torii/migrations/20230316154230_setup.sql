@@ -27,8 +27,7 @@ CREATE TABLE component_members(
     component_id TEXT NOT NULL,
     name TEXT NOT NULL,
     type TEXT NOT NULL,
-    slot INTEGER NOT NULL,
-    offset INTEGER NOT NULL,
+    key BOOLEAN NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (component_id, name),
     FOREIGN KEY (component_id) REFERENCES components(id)
@@ -57,14 +56,12 @@ CREATE INDEX idx_systems_created_at ON systems (created_at);
 
 CREATE TABLE entities (
     id TEXT NOT NULL PRIMARY KEY,
-    partition TEXT NOT NULL,
     keys TEXT,
     component_names TEXT,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_entities_partition ON entities (partition);
 CREATE INDEX idx_entities_keys ON entities (keys);
 CREATE INDEX idx_entities_keys_create_on ON entities (keys, created_at);
 

@@ -47,7 +47,6 @@ impl State for InMemory {
     async fn set_entity(
         &mut self,
         component: String,
-        partition: FieldElement,
         key: FieldElement,
         values: HashMap<String, FieldElement>,
     ) -> Result<()> {
@@ -58,12 +57,7 @@ impl State for InMemory {
         Ok(())
     }
 
-    async fn delete_entity(
-        &mut self,
-        component: String,
-        partition: FieldElement,
-        key: FieldElement,
-    ) -> Result<()> {
+    async fn delete_entity(&mut self, component: String, key: FieldElement) -> Result<()> {
         if let Some(component_data) = self.components_to_entites.get_mut(&component) {
             if let Some(partition_data) = component_data.get_mut(&partition) {
                 partition_data.remove(&key);
@@ -72,12 +66,7 @@ impl State for InMemory {
         Ok(())
     }
 
-    async fn entity(
-        &self,
-        component: String,
-        partition: FieldElement,
-        key: FieldElement,
-    ) -> Result<Vec<FieldElement>> {
+    async fn entity(&self, component: String, key: FieldElement) -> Result<Vec<FieldElement>> {
         if let Some(component_data) = self.components_to_entites.get(&component) {
             if let Some(partition_data) = component_data.get(&partition) {
                 if let Some(entity) = partition_data.get(&key) {
@@ -88,11 +77,7 @@ impl State for InMemory {
         Ok(vec![])
     }
 
-    async fn entities(
-        &self,
-        component: String,
-        partition: FieldElement,
-    ) -> Result<Vec<Vec<FieldElement>>> {
+    async fn entities(&self, component: String) -> Result<Vec<Vec<FieldElement>>> {
         let mut result = Vec::new();
         if let Some(component_data) = self.components_to_entites.get(&component) {
             if let Some(partition_data) = component_data.get(&partition) {

@@ -1,5 +1,3 @@
-use super::{State, World};
-use crate::graphql::types::ScalarType;
 use anyhow::Result;
 use async_trait::async_trait;
 use dojo_world::manifest::{Component, Manifest, System};
@@ -9,6 +7,9 @@ use sqlx::{Executor, Pool, Row, Sqlite};
 use starknet::core::types::FieldElement;
 use starknet_crypto::poseidon_hash_many;
 use tokio::sync::Mutex;
+
+use super::{State, World};
+use crate::graphql::types::ScalarType;
 
 #[cfg(test)]
 #[path = "sql_test.rs"]
@@ -162,8 +163,7 @@ impl State for Sql {
         )];
 
         let mut component_table_query = format!(
-            "CREATE TABLE IF NOT EXISTS external_{} (entity_id TEXT NOT NULL PRIMARY KEY, \
-             partition TEXT NOT NULL, ",
+            "CREATE TABLE IF NOT EXISTS external_{} (entity_id TEXT NOT NULL PRIMARY KEY, ",
             component.name.to_lowercase()
         );
 
@@ -180,9 +180,9 @@ impl State for Sql {
 
         for member in component.members {
             queries.push(format!(
-                "INSERT OR IGNORE INTO component_members (component_id, name, type, slot, offset) \
-                 VALUES ('{}', '{}', '{}', '{}', '{}')",
-                component_id, member.name, member.ty, member.slot, member.offset,
+                "INSERT OR IGNORE INTO component_members (component_id, name, type, key) VALUES \
+                 ('{}', '{}', '{}', {})",
+                component_id, member.name, member.ty, member.key,
             ));
         }
 
@@ -206,7 +206,6 @@ impl State for Sql {
     async fn set_entity(
         &self,
         component: String,
-        partition: FieldElement,
         keys: Vec<FieldElement>,
         values: Vec<FieldElement>,
     ) -> Result<()> {
@@ -220,26 +219,24 @@ impl State for Sql {
         let keys_str = keys.iter().map(|k| format!("{:#x},", k)).collect::<Vec<String>>().join("");
         let component_names = component_names(entity_result, &component)?;
         let insert_entities = format!(
-            "INSERT INTO entities (id, partition, keys, component_names) VALUES ('{}', '{:#x}', \
-             '{}', '{}') ON CONFLICT(id) DO UPDATE SET
+            "INSERT INTO entities (id, keys, component_names) VALUES ('{}', '{}', '{}') ON \
+             CONFLICT(id) DO UPDATE SET
              component_names=excluded.component_names, 
              updated_at=CURRENT_TIMESTAMP",
-            entity_id, partition, keys_str, component_names
+            entity_id, keys_str, component_names
         );
 
-        let member_results =
-            sqlx::query("SELECT * FROM component_members WHERE component_id = ? ORDER BY slot")
-                .bind(component.to_lowercase())
-                .fetch_all(&self.pool)
-                .await?;
+        let member_results = sqlx::query("SELECT * FROM component_members WHERE component_id = ?")
+            .bind(component.to_lowercase())
+            .fetch_all(&self.pool)
+            .await?;
 
         let (names_str, values_str) = format_values(member_results, values)?;
         let insert_components = format!(
-            "INSERT OR REPLACE INTO external_{} (entity_id, partition {}) VALUES ('{}', '{:#x}' {})",
+            "INSERT OR REPLACE INTO external_{} (entity_id {}) VALUES ('{}' {})",
             component.to_lowercase(),
             names_str,
             entity_id,
-            partition,
             values_str
         );
 
@@ -249,36 +246,21 @@ impl State for Sql {
         Ok(())
     }
 
-    async fn delete_entity(
-        &self,
-        component: String,
-        partition: FieldElement,
-        key: FieldElement,
-    ) -> Result<()> {
-        let query = format!("DELETE FROM {component} WHERE id = {key} AND partition = {partition}");
+    async fn delete_entity(&self, component: String, key: FieldElement) -> Result<()> {
+        let query = format!("DELETE FROM {component} WHERE id = {key}");
         self.queue(vec![query]).await;
         Ok(())
     }
 
-    async fn entity(
-        &self,
-        component: String,
-        partition: FieldElement,
-        key: FieldElement,
-    ) -> Result<Vec<FieldElement>> {
-        let query =
-            format!("SELECT * FROM {component} WHERE id = {key} AND partition = {partition}");
+    async fn entity(&self, component: String, key: FieldElement) -> Result<Vec<FieldElement>> {
+        let query = format!("SELECT * FROM {component} WHERE id = {key}");
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
         let row: (i32, String, String) = sqlx::query_as(&query).fetch_one(&mut conn).await?;
         Ok(serde_json::from_str(&row.2).unwrap())
     }
 
-    async fn entities(
-        &self,
-        component: String,
-        partition: FieldElement,
-    ) -> Result<Vec<Vec<FieldElement>>> {
-        let query = format!("SELECT * FROM {component} WHERE partition = {partition}");
+    async fn entities(&self, component: String) -> Result<Vec<Vec<FieldElement>>> {
+        let query = format!("SELECT * FROM {component}");
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
         let mut rows =
             sqlx::query_as::<_, (i32, String, String)>(&query).fetch_all(&mut conn).await?;

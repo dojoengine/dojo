@@ -15,7 +15,7 @@ describe('RPCProvider', () => {
         rpcProvider.entity = jest.fn().mockResolvedValue(mockResponse);
 
         const component = 'Position';
-        const query: Query = { address_domain: '0', partition: '0', keys: [BigInt(1), BigInt(1)] };
+        const query: Query = { address_domain: '0', keys: [BigInt(1), BigInt(1)] };
         const offset = 0;
         const length = 3;
 

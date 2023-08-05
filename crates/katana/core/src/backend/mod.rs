@@ -32,6 +32,11 @@ pub mod executor;
 pub mod state;
 pub mod storage;
 
+use self::config::StarknetConfig;
+use self::executor::{execute_transaction, PendingBlockExecutor};
+use self::storage::block::{Block, PartialHeader};
+use self::storage::transaction::{IncludedTransaction, KnownTransaction, TransactionStatus};
+use self::storage::{BlockchainStorage, InMemoryBlockStates};
 use crate::accounts::PredeployedAccounts;
 use crate::backend::state::{MemDb, StateExt};
 use crate::block_context::BlockContextGenerator;
@@ -41,12 +46,6 @@ use crate::db::Db;
 use crate::sequencer_error::SequencerError;
 use crate::utils::transaction::convert_blockifier_to_api_tx;
 use crate::utils::{convert_state_diff_to_rpc_state_diff, get_current_timestamp};
-
-use self::config::StarknetConfig;
-use self::executor::{execute_transaction, PendingBlockExecutor};
-use self::storage::block::{Block, PartialHeader};
-use self::storage::transaction::{IncludedTransaction, KnownTransaction, TransactionStatus};
-use self::storage::{BlockchainStorage, InMemoryBlockStates};
 
 pub struct ExternalFunctionCall {
     pub calldata: Calldata,
@@ -131,6 +130,7 @@ impl Backend {
             Transaction::AccountTransaction(transaction),
             &mut state,
             &self.block_context.read(),
+            true,
         )?;
 
         if exec_info.revert_error.is_some() {
@@ -158,13 +158,11 @@ impl Backend {
     pub async fn handle_transaction(&self, transaction: Transaction) {
         let api_tx = convert_blockifier_to_api_tx(&transaction);
 
-        if let Transaction::AccountTransaction(tx) = &transaction {
-            self.check_tx_fee(tx);
-        }
-
         let is_valid = if let Some(pending_block) = self.pending_block.write().await.as_mut() {
             info!("Transaction received | Hash: {}", api_tx.transaction_hash());
-            pending_block.add_transaction(transaction).await
+
+            let charge_fee = !self.config.read().disable_fee;
+            pending_block.add_transaction(transaction, charge_fee).await
         } else {
             return error!("Unable to process transaction: no pending block");
         };
@@ -224,7 +222,7 @@ impl Backend {
 
     // apply the pending state diff to the state
     async fn apply_pending_state(&self) {
-        let Some(ref mut pending_block ) = *self.pending_block.write().await else {
+        let Some(ref mut pending_block) = *self.pending_block.write().await else {
             panic!("failed to apply pending state: no pending block")
         };
 
@@ -295,22 +293,6 @@ impl Backend {
 
     pub async fn latest_state(&self) -> MemDb {
         self.state.read().await.clone()
-    }
-
-    fn check_tx_fee(&self, transaction: &AccountTransaction) {
-        let max_fee = match transaction {
-            AccountTransaction::Invoke(tx) => tx.max_fee(),
-            AccountTransaction::DeployAccount(tx) => tx.max_fee,
-            AccountTransaction::Declare(tx) => match tx.tx() {
-                starknet_api::transaction::DeclareTransaction::V0(tx) => tx.max_fee,
-                starknet_api::transaction::DeclareTransaction::V1(tx) => tx.max_fee,
-                starknet_api::transaction::DeclareTransaction::V2(tx) => tx.max_fee,
-            },
-        };
-
-        if !self.config.read().allow_zero_max_fee && max_fee.0 == 0 {
-            panic!("max fee == 0 is not supported")
-        }
     }
 
     pub async fn create_empty_block(&self) -> Block {

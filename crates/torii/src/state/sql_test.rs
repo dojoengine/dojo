@@ -53,7 +53,7 @@ async fn test_load_from_manifest(pool: SqlitePool) {
     state
         .register_component(Component {
             name: "Test".into(),
-            members: vec![Member { name: "test".into(), ty: "u32".into(), slot: 0, offset: 1 }],
+            members: vec![Member { name: "test".into(), ty: "u32".into(), key: false }],
             class_hash: FieldElement::TWO,
         })
         .await
@@ -99,9 +99,9 @@ async fn test_load_from_manifest(pool: SqlitePool) {
     state
         .set_entity(
             "Position".to_string(),
-            FieldElement::ZERO,
             vec![FieldElement::ONE],
             vec![
+                FieldElement::ONE,
                 FieldElement::from_dec_str("42").unwrap(),
                 FieldElement::from_dec_str("69").unwrap(),
             ],

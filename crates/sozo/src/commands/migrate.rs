@@ -16,9 +16,8 @@ pub struct MigrateArgs {
 
     #[arg(long)]
     #[arg(help = "Name of the World.")]
-    #[arg(
-        long_help = "Name of the World. It's hash will be used as a salt when deploying the contract to avoid address conflicts."
-    )]
+    #[arg(long_help = "Name of the World. It's hash will be used as a salt when deploying the \
+                       contract to avoid address conflicts.")]
     pub name: Option<String>,
 
     #[command(flatten)]
@@ -39,7 +38,8 @@ impl MigrateArgs {
         let target_dir = target_dir.join(ws.config().profile().as_str());
 
         if !target_dir.join("manifest.json").exists() {
-            scarb::ops::compile(&ws)?;
+            let packages = ws.members().map(|p| p.id).collect();
+            scarb::ops::compile(packages, &ws)?;
         }
 
         let mut env_metadata = dojo_metadata_from_workspace(&ws)

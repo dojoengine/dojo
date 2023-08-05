@@ -1,8 +1,8 @@
 mod database;
 mod executor;
-mod interfaces;
 mod serde;
 use serde::SerdeLen;
+mod traits;
 mod world;
 mod world_factory;
 

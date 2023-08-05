@@ -11,7 +11,6 @@ use starknet::core::types::{
     StorageEntry,
 };
 use starknet_api::hash::StarkFelt;
-
 use starknet_api::StarknetApiError;
 
 pub fn get_current_timestamp() -> Duration {
