@@ -10,6 +10,11 @@ fn main() {
     use scarb::ops;
     use scarb::ui::Verbosity;
 
+    let target_path = Utf8PathBuf::from_path_buf("../../examples/ecs/target".into()).unwrap();
+    if target_path.exists() {
+        return;
+    }
+
     let mut compilers = CompilerRepository::empty();
     compilers.add(Box::new(DojoCompiler)).unwrap();
 
@@ -30,7 +35,8 @@ fn main() {
         .unwrap();
 
     let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
-    ops::compile(&ws).unwrap();
+    let packages = ws.members().map(|p| p.id).collect();
+    ops::compile(packages, &ws).unwrap();
 }
 
 #[cfg(not(feature = "build-examples"))]

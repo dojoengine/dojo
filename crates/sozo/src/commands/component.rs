@@ -54,10 +54,6 @@ pub enum ComponentCommands {
         #[arg(help = "Comma seperated values e.g., 0x12345,0x69420,...")]
         keys: Vec<FieldElement>,
 
-        #[arg(long = "partition_id", default_value = "0x0")]
-        #[arg(help = "Entity query partition id.")]
-        partition_id: FieldElement,
-
         #[command(flatten)]
         world: WorldOptions,
 
@@ -70,13 +66,9 @@ impl ComponentArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         let env_metadata = if config.manifest_path().exists() {
             let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-            let env_metadata = dojo_metadata_from_workspace(&ws)
-                .and_then(|dojo_metadata| dojo_metadata.get("env").cloned());
 
-            env_metadata
-                .as_ref()
-                .and_then(|env_metadata| env_metadata.get(ws.config().profile().as_str()).cloned())
-                .or(env_metadata)
+            // TODO: Check the updated scarb way to read profile specific values
+            dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned())
         } else {
             None
         };

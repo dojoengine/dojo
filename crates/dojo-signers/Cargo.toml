@@ -1,10 +1,10 @@
 [package]
-name = "dojo-signers"
-version.workspace = true
-edition.workspace = true
-repository.workspace = true
-license-file.workspace = true
 description = "Dojo Signer implementations"
+edition.workspace = true
+license-file.workspace = true
+name = "dojo-signers"
+repository.workspace = true
+version.workspace = true
 
 [dependencies]
 anyhow.workspace = true

@@ -76,7 +76,7 @@ impl TestSequencer {
 
 pub fn get_default_test_starknet_config() -> StarknetConfig {
     StarknetConfig {
-        allow_zero_max_fee: true,
+        disable_fee: true,
         env: Environment { chain_id: "SN_GOERLI".into(), ..Default::default() },
         ..Default::default()
     }

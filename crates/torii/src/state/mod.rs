@@ -34,25 +34,10 @@ pub trait State {
     async fn set_entity(
         &self,
         component: String,
-        partition: FieldElement,
         keys: Vec<FieldElement>,
         values: Vec<FieldElement>,
     ) -> Result<()>;
-    async fn delete_entity(
-        &self,
-        component: String,
-        partition: FieldElement,
-        key: FieldElement,
-    ) -> Result<()>;
-    async fn entity(
-        &self,
-        component: String,
-        partition: FieldElement,
-        key: FieldElement,
-    ) -> Result<Vec<FieldElement>>;
-    async fn entities(
-        &self,
-        component: String,
-        partition: FieldElement,
-    ) -> Result<Vec<Vec<FieldElement>>>;
+    async fn delete_entity(&self, component: String, key: FieldElement) -> Result<()>;
+    async fn entity(&self, component: String, key: FieldElement) -> Result<Vec<FieldElement>>;
+    async fn entities(&self, component: String) -> Result<Vec<Vec<FieldElement>>>;
 }

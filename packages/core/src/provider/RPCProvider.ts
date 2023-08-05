@@ -37,7 +37,6 @@ export class RPCProvider extends Provider {
             calldata: [
                 strTofelt252Felt(component),
                 query.address_domain,
-                query.partition,
                 query.keys.length,
                 ...query.keys as any,
                 offset,
@@ -54,12 +53,12 @@ export class RPCProvider extends Provider {
         }
     }
 
-    public async entities(component: string, partition: string, length: number): Promise<Array<bigint>> {
+    public async entities(component: string, length: number): Promise<Array<bigint>> {
 
         const call: Call = {
             entrypoint: WorldEntryPoints.entities,
             contractAddress: this.getWorldAddress(),
-            calldata: [strTofelt252Felt(component), partition, length]
+            calldata: [strTofelt252Felt(component), length]
         }
 
         try {

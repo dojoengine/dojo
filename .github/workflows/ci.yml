@@ -74,7 +74,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ env.RUST_VERSION }}
+          toolchain: nightly
           components: rustfmt
       
       - uses: Swatinem/rust-cache@v2
@@ -152,6 +152,6 @@ jobs:
       - name: Build and start Katana node
         run: |
           cargo build --bin katana
-          nohup target/debug/katana --accounts 2 --account-class crates/katana/core/contracts/compiled/account_without_validation.json --allow-zero-max-fee &
+          nohup target/debug/katana --accounts 2 --account-class crates/katana/core/contracts/compiled/account_without_validation.json --disable-fee &
       - name: Execute Hurl Scripts
         run: hurl --test examples/rpc/**/*.hurl

@@ -12,11 +12,10 @@ use starknet::core::types::FieldElement;
 use starknet_api::block::BlockNumber;
 use starknet_api::core::{ClassHash, ContractAddress, Nonce, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};
-
 use starknet_api::state::StorageKey;
-use starknet_api::transaction::DeclareTransaction as DeclareApiTransaction;
 use starknet_api::transaction::{
-    Calldata, DeclareTransactionV0V1, InvokeTransaction, InvokeTransactionV1, TransactionHash,
+    Calldata, DeclareTransaction as DeclareApiTransaction, DeclareTransactionV0V1,
+    InvokeTransaction, InvokeTransactionV1, TransactionHash,
 };
 use starknet_api::{calldata, patricia_key, stark_felt};
 
@@ -30,7 +29,7 @@ fn create_test_starknet_config() -> StarknetConfig {
         seed: [0u8; 32],
         auto_mine: true,
         total_accounts: 2,
-        allow_zero_max_fee: true,
+        disable_fee: true,
         account_path: Some(test_account_path),
         env: Environment::default(),
         ..Default::default()

@@ -1,3 +1,3 @@
 [crate_roots]
-projectile = "src"
 dojo_physics = "../../src"
+projectile = "src"

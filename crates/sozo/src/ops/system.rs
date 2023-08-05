@@ -1,12 +1,12 @@
 use anyhow::Result;
 use dojo_client::contract::world::WorldContractReader;
 use starknet::core::types::{BlockId, BlockTag};
-use toml::Value;
 use yansi::Paint;
 
+use crate::commands::options::Environment;
 use crate::commands::system::SystemCommands;
 
-pub async fn execute(command: SystemCommands, env_metadata: Option<Value>) -> Result<()> {
+pub async fn execute(command: SystemCommands, env_metadata: Option<Environment>) -> Result<()> {
     match command {
         SystemCommands::Get { name, world, starknet } => {
             let world_address = world.address(env_metadata.as_ref())?;
@@ -34,11 +34,7 @@ pub async fn execute(command: SystemCommands, env_metadata: Option<Value>) -> Re
                     .iter()
                     .enumerate()
                     .filter_map(|(i, d)| {
-                        if d.read {
-                            Some(format!("{}.{}", i + 1, d.name.clone()))
-                        } else {
-                            None
-                        }
+                        if d.read { Some(format!("{}.{}", i + 1, d.name.clone())) } else { None }
                     })
                     .collect::<Vec<_>>();
 
@@ -46,11 +42,7 @@ pub async fn execute(command: SystemCommands, env_metadata: Option<Value>) -> Re
                     .iter()
                     .enumerate()
                     .filter_map(|(i, d)| {
-                        if d.write {
-                            Some(format!("{}. {}", i + 1, d.name.clone()))
-                        } else {
-                            None
-                        }
+                        if d.write { Some(format!("{}. {}", i + 1, d.name.clone())) } else { None }
                     })
                     .collect::<Vec<_>>();
 

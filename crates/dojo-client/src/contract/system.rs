@@ -65,13 +65,6 @@ impl<'a, A: ConnectedAccount + Sync> System<'a, A> {
         self.reader.call(calldata, block_id).await.map_err(SystemError::ReaderError)
     }
 
-    pub async fn dependencies(
-        &self,
-        block_id: BlockId,
-    ) -> Result<Vec<Dependency>, SystemError<A::SignError, <A::Provider as Provider>::Error>> {
-        self.reader.dependencies(block_id).await.map_err(SystemError::ReaderError)
-    }
-
     pub async fn execute(
         &self,
         calldata: Vec<FieldElement>,
@@ -115,8 +108,10 @@ impl<'a, P: Provider + Sync> SystemReader<'a, P> {
             .call(
                 FunctionCall {
                     contract_address: world.address,
-                    calldata: vec![cairo_short_string_to_felt(&name)
-                        .map_err(SystemReaderError::CairoShortStringToFeltError)?],
+                    calldata: vec![
+                        cairo_short_string_to_felt(&name)
+                            .map_err(SystemReaderError::CairoShortStringToFeltError)?,
+                    ],
                     entry_point_selector: get_selector_from_name("system").unwrap(),
                 },
                 block_id,

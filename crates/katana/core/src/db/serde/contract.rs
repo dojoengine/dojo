@@ -182,12 +182,12 @@ impl From<blockifier::execution::contract_class::ContractClass> for Serializable
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::contract::rpc_to_inner_class;
     use blockifier::execution::contract_class::ContractClass;
     use starknet::core::types::contract::SierraClass;
 
     use super::*;
     use crate::constants::UDC_CONTRACT;
+    use crate::utils::contract::rpc_to_inner_class;
 
     #[test]
     fn serialize_and_deserialize_legacy_contract() {

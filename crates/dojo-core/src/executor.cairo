@@ -16,7 +16,7 @@ mod executor {
     use starknet::{get_caller_address, get_tx_info};
 
     use dojo::world::IWorldDispatcher;
-    use dojo::interfaces::{ISystemLibraryDispatcher, ISystemDispatcherTrait};
+    use dojo::traits::{ISystemLibraryDispatcher, ISystemDispatcherTrait};
     use dojo::world::Context;
 
     use super::IExecutor;

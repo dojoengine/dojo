@@ -1,14 +1,13 @@
-use std::{
-    collections::BTreeMap,
-    fs,
-    io::{self, Read},
-    path::Path,
-};
+use std::collections::BTreeMap;
+use std::fs;
+use std::io::{self, Read};
+use std::path::Path;
 
-use crate::db::serde::contract::SerializableContractClass;
 use ::serde::{Deserialize, Serialize};
 use flate2::read::GzDecoder;
 use starknet::core::types::{FieldElement, FlattenedSierraClass};
+
+use crate::db::serde::contract::SerializableContractClass;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SerializableState {
