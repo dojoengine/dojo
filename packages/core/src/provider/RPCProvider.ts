@@ -1,15 +1,15 @@
-import { RpcProvider, Provider as StarknetProvider, Account, stark, number, Call, InvokeFunctionResponse } from "starknet";
+import { RpcProvider, Provider as StarknetProvider, Account, number, Call, InvokeFunctionResponse } from "starknet";
 import { Provider } from "./provider";
 import { Query, WorldEntryPoints } from "../types";
 import { strTofelt252Felt } from '../utils'
-import { LOCAL_TORII } from '../constants';
+import { LOCAL_KATANA } from '../constants';
 
 export class RPCProvider extends Provider {
     public provider: RpcProvider;
     public sequencerProvider: StarknetProvider;
     private loggingEnabled: boolean;
 
-    constructor(world_address: string, url: string = LOCAL_TORII, loggingEnabled = false) {
+    constructor(world_address: string, url: string = LOCAL_KATANA, loggingEnabled = false) {
         super(world_address);
         this.provider = new RpcProvider({
             nodeUrl: url,
@@ -44,8 +44,6 @@ export class RPCProvider extends Provider {
             ]
         }
 
-        console.log(call)
-
         try {
             const response = await this.sequencerProvider.callContract(call);
 
@@ -62,8 +60,6 @@ export class RPCProvider extends Provider {
             contractAddress: this.getWorldAddress(),
             calldata: [strTofelt252Felt(component), length]
         }
-
-        console.log(call)
 
         try {
             const response = await this.sequencerProvider.callContract(call);
@@ -93,12 +89,6 @@ export class RPCProvider extends Provider {
 
     public async execute(account: Account, system: string, call_data: number.BigNumberish[]): Promise<InvokeFunctionResponse> {
 
-        // DISCUSS: is this needed?
-        // let call_data_obj = call_data.reduce((obj: any, item, index) => {
-        //     obj[index] = item;
-        //     return obj;
-        // }, {});
-
         try {
             const nonce = await account?.getNonce()
             const call = await account?.execute(
@@ -109,7 +99,7 @@ export class RPCProvider extends Provider {
                 },
                 undefined,
                 {
-                    nonce: nonce,
+                    nonce,
                     maxFee: 0 // TODO: Update
                 }
             );
