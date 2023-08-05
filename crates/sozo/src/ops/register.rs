@@ -1,7 +1,8 @@
 use anyhow::{Context, Result};
 use dojo_client::contract::world::WorldContract;
 
-use crate::commands::{options::Environment, register::RegisterCommand};
+use crate::commands::options::Environment;
+use crate::commands::register::RegisterCommand;
 
 pub async fn execute(command: RegisterCommand, env_metadata: Option<Environment>) -> Result<()> {
     match command {

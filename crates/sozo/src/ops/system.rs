@@ -3,7 +3,8 @@ use dojo_client::contract::world::WorldContractReader;
 use starknet::core::types::{BlockId, BlockTag};
 use yansi::Paint;
 
-use crate::commands::{options::Environment, system::SystemCommands};
+use crate::commands::options::Environment;
+use crate::commands::system::SystemCommands;
 
 pub async fn execute(command: SystemCommands, env_metadata: Option<Environment>) -> Result<()> {
     match command {
@@ -33,11 +34,7 @@ pub async fn execute(command: SystemCommands, env_metadata: Option<Environment>)
                     .iter()
                     .enumerate()
                     .filter_map(|(i, d)| {
-                        if d.read {
-                            Some(format!("{}.{}", i + 1, d.name.clone()))
-                        } else {
-                            None
-                        }
+                        if d.read { Some(format!("{}.{}", i + 1, d.name.clone())) } else { None }
                     })
                     .collect::<Vec<_>>();
 
@@ -45,11 +42,7 @@ pub async fn execute(command: SystemCommands, env_metadata: Option<Environment>)
                     .iter()
                     .enumerate()
                     .filter_map(|(i, d)| {
-                        if d.write {
-                            Some(format!("{}. {}", i + 1, d.name.clone()))
-                        } else {
-                            None
-                        }
+                        if d.write { Some(format!("{}. {}", i + 1, d.name.clone())) } else { None }
                     })
                     .collect::<Vec<_>>();
 
