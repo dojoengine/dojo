@@ -222,7 +222,7 @@ impl Backend {
 
     // apply the pending state diff to the state
     async fn apply_pending_state(&self) {
-        let Some(ref mut pending_block ) = *self.pending_block.write().await else {
+        let Some(ref mut pending_block) = *self.pending_block.write().await else {
             panic!("failed to apply pending state: no pending block")
         };
 

@@ -157,9 +157,8 @@ impl KatanaSequencer {
     //     &self,
     //     transaction: DeployAccountTransaction,
     //     balance: u64,
-    // ) -> SequencerResult<(TransactionHash, ContractAddress)> {
-    //     let (transaction_hash, contract_address) =
-    //         self.add_deploy_account_transaction(transaction).await;
+    // ) -> SequencerResult<(TransactionHash, ContractAddress)> { let (transaction_hash,
+    //   contract_address) = self.add_deploy_account_transaction(transaction).await;
 
     //     let deployed_account_balance_key =
     //         get_storage_var_address("ERC20_balances", &[*contract_address.0.key()])
