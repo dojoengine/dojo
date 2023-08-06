@@ -11,7 +11,6 @@ use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::graphql::constants::DEFAULT_LIMIT;
 use crate::graphql::types::ScalarType;
 use crate::graphql::utils::extract_value::extract;
-use crate::graphql::utils::remove_quotes;
 
 #[derive(FromRow, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -72,7 +71,7 @@ impl ObjectTrait for EventObject {
             Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let id = remove_quotes(ctx.args.try_get("id")?.string()?);
+                    let id = ctx.args.try_get("id")?.string()?.to_string();
                     let event = query_by_id(&mut conn, "events", ID::Str(id)).await?;
                     let result = EventObject::value_mapping(event);
                     Ok(Some(FieldValue::owned_any(result)))
