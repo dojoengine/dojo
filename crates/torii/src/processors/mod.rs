@@ -9,7 +9,7 @@ use crate::state::State;
 pub mod register_component;
 pub mod register_system;
 pub mod store_set_record;
-pub mod store_set_record_state_diff;
+pub mod store_set_record_legacy;
 
 #[async_trait]
 pub trait StateDiffProcessor<S: State> {

@@ -17,6 +17,7 @@ use crate::indexer::Indexer;
 use crate::processors::register_component::RegisterComponentProcessor;
 use crate::processors::register_system::RegisterSystemProcessor;
 use crate::processors::store_set_record::StoreSetRecordProcessor;
+use crate::processors::store_set_record_legacy::StoreSetRecordProcessorLegacy;
 use crate::state::State;
 
 mod engine;

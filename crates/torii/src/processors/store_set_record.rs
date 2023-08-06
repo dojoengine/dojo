@@ -1,48 +1,55 @@
+use crate::state::State;
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
-use starknet::core::types::{BlockWithTxs, Event, TransactionReceipt};
-use starknet::core::utils::parse_cairo_short_string;
-use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
+use starknet::core::types::StateDiff;
+use starknet::core::utils::cairo_short_string_to_felt;
+use starknet::macros::short_string;
+use starknet_crypto::poseidon_hash_many;
 use starknet_crypto::FieldElement;
 use tracing::info;
 
-use super::EventProcessor;
-use crate::state::State;
+use super::StateDiffProcessor;
 
 #[derive(Default)]
 pub struct StoreSetRecordProcessor;
 
-const COMPONENT_INDEX: usize = 0;
-const NUM_KEYS_INDEX: usize = 1;
-
 #[async_trait]
-impl<S: State + Sync, T: JsonRpcTransport> EventProcessor<S, T> for StoreSetRecordProcessor {
-    fn event_key(&self) -> String {
-        "StoreSetRecord".to_string()
-    }
-
+impl<S: State + std::marker::Sync> StateDiffProcessor<S> for StoreSetRecordProcessor {
     async fn process(
         &self,
         storage: &S,
-        _provider: &JsonRpcClient<T>,
-        _block: &BlockWithTxs,
-        _transaction_receipt: &TransactionReceipt,
-        event: &Event,
+        component: String,
+        world: FieldElement,
+        length: usize,
+        keys: Vec<FieldElement>,
+        state_diff: &StateDiff,
     ) -> Result<(), Error> {
-        let name = parse_cairo_short_string(&event.data[COMPONENT_INDEX])?;
-        info!("store set record: {}", name);
+        info!("store set record: {}", component);
+        // id is key for entity
+        let id = poseidon_hash_many(&keys);
+        // key is component's base storage key
+        let key = poseidon_hash_many(&[
+            short_string!("dojo_storage"),
+            cairo_short_string_to_felt(&component).unwrap(),
+            id,
+        ]);
 
-        let keys = values_at(&event.data, NUM_KEYS_INDEX)?;
-        let values_index = keys.len() + NUM_KEYS_INDEX + 2;
-        let values = values_at(&event.data, values_index)?;
-        storage.set_entity(name, keys, values).await?;
+        let mut values = Vec::new();
+
+        // loop from offset 0 to until it reaches length
+        for i in 0..length {
+            for storage_diff in state_diff.storage_diffs.iter() {
+                if storage_diff.address == world {
+                    for storage_entries in storage_diff.storage_entries.iter() {
+                        if storage_entries.key == key + i.into() {
+                            values.push(storage_entries.value);
+                        }
+                    }
+                }
+            }
+        }
+
+        storage.set_entity(component, keys, values).await?;
         Ok(())
     }
-}
-
-fn values_at(data: &[FieldElement], len_index: usize) -> Result<Vec<FieldElement>, Error> {
-    let len: usize = u8::try_from(data[len_index])?.into();
-    let start = len_index + 1_usize;
-    let end = start + len;
-    Ok(data[start..end].to_vec())
 }
