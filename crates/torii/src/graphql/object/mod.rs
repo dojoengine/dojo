@@ -7,7 +7,7 @@ mod query;
 pub mod system;
 pub mod system_call;
 
-use async_graphql::dynamic::{Field, FieldFuture, FieldValue, Object, TypeRef};
+use async_graphql::dynamic::{Field, FieldFuture, Object, TypeRef};
 use async_graphql::{Error, Name, Value};
 use indexmap::IndexMap;
 

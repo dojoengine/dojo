@@ -6,7 +6,8 @@ use serde::Deserialize;
 use sqlx::pool::PoolConnection;
 use sqlx::{FromRow, Pool, Result, Sqlite};
 
-use super::query::{query_all, query_by_id, ID};
+use super::connection::connection_output;
+use super::query::{query_all, query_by_id, query_total_count, ID};
 use super::system::SystemObject;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::graphql::constants::DEFAULT_LIMIT;
@@ -76,7 +77,7 @@ impl ObjectTrait for SystemCallObject {
                     let id = ctx.args.try_get("id")?.i64()?;
                     let system_call = query_by_id(&mut conn, "system_calls", ID::I64(id)).await?;
                     let result = SystemCallObject::value_mapping(system_call);
-                    Ok(Some(FieldValue::owned_any(result)))
+                    Ok(Some(Value::Object(result)))
                 })
             })
             .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::INT))),
@@ -84,26 +85,22 @@ impl ObjectTrait for SystemCallObject {
     }
 
     fn resolve_many(&self) -> Option<Field> {
-        Some(Field::new("systemCalls", TypeRef::named_list(self.type_name()), |ctx| {
-            FieldFuture::new(async move {
-                let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                let limit = ctx
-                    .args
-                    .try_get("limit")
-                    .and_then(|limit| limit.u64())
-                    .unwrap_or(DEFAULT_LIMIT);
+        Some(Field::new(
+            "systemCalls",
+            TypeRef::named(format!("{}Connection", self.type_name())),
+            |ctx| {
+                FieldFuture::new(async move {
+                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                    let total_count = query_total_count(&mut conn, "system_calls").await?;
+                    let data: Vec<SystemCall> =
+                        query_all(&mut conn, "system_calls", DEFAULT_LIMIT).await?;
+                    let system_calls: Vec<ValueMapping> =
+                        data.into_iter().map(SystemCallObject::value_mapping).collect();
 
-                let system_calls: Vec<SystemCall> =
-                    query_all(&mut conn, "system_calls", limit).await?;
-                let result: Vec<FieldValue<'_>> = system_calls
-                    .into_iter()
-                    .map(SystemCallObject::value_mapping)
-                    .map(FieldValue::owned_any)
-                    .collect();
-
-                Ok(Some(FieldValue::list(result)))
-            })
-        }))
+                    Ok(Some(Value::Object(connection_output(&system_calls, "id", total_count))))
+                })
+            },
+        ))
     }
 
     fn nested_fields(&self) -> Option<Vec<Field>> {
@@ -114,7 +111,7 @@ impl ObjectTrait for SystemCallObject {
                 let system_id = extract::<String>(syscall_values, "systemId")?;
                 let system = query_by_id(&mut conn, "systems", ID::Str(system_id)).await?;
                 let result = SystemObject::value_mapping(system);
-                Ok(Some(FieldValue::owned_any(result)))
+                Ok(Some(Value::Object(result)))
             })
         })])
     }

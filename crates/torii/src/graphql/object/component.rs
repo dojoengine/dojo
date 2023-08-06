@@ -5,7 +5,8 @@ use indexmap::IndexMap;
 use serde::Deserialize;
 use sqlx::{FromRow, Pool, Sqlite};
 
-use super::query::{query_all, query_by_id, ID};
+use super::connection::connection_output;
+use super::query::{query_all, query_by_id, query_total_count, ID};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::graphql::constants::DEFAULT_LIMIT;
 use crate::graphql::types::ScalarType;
@@ -75,7 +76,7 @@ impl ObjectTrait for ComponentObject {
                     let id = ctx.args.try_get("id")?.string()?.to_string();
                     let component = query_by_id(&mut conn, "components", ID::Str(id)).await?;
                     let result = ComponentObject::value_mapping(component);
-                    Ok(Some(FieldValue::owned_any(result)))
+                    Ok(Some(Value::Object(result)))
                 })
             })
             .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID))),
@@ -83,28 +84,21 @@ impl ObjectTrait for ComponentObject {
     }
 
     fn resolve_many(&self) -> Option<Field> {
-        Some(
-            Field::new("components", TypeRef::named_list(self.type_name()), |ctx| {
+        Some(Field::new(
+            "components",
+            TypeRef::named(format!("{}Connection", self.type_name())),
+            |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let limit = ctx
-                        .args
-                        .try_get("limit")
-                        .and_then(|limit| limit.u64())
-                        .unwrap_or(DEFAULT_LIMIT);
+                    let total_count = query_total_count(&mut conn, "components").await?;
+                    let data: Vec<Component> =
+                        query_all(&mut conn, "components", DEFAULT_LIMIT).await?;
+                    let components: Vec<ValueMapping> =
+                        data.into_iter().map(ComponentObject::value_mapping).collect();
 
-                    let components: Vec<Component> =
-                        query_all(&mut conn, "components", limit).await?;
-                    let result: Vec<FieldValue<'_>> = components
-                        .into_iter()
-                        .map(ComponentObject::value_mapping)
-                        .map(FieldValue::owned_any)
-                        .collect();
-
-                    Ok(Some(FieldValue::list(result)))
+                    Ok(Some(Value::Object(connection_output(&components, "id", total_count))))
                 })
-            })
-            .argument(InputValue::new("limit", TypeRef::named(TypeRef::INT))),
-        )
+            },
+        ))
     }
 }

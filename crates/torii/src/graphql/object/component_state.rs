@@ -4,12 +4,11 @@ use async_graphql::dynamic::{Field, FieldFuture, ResolverContext, TypeRef};
 use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
-use serde_json::Number;
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{FromRow, Pool, QueryBuilder, Row, Sqlite};
 
-use super::connection::{parse_arguments, ConnectionObject};
+use super::connection::{connection_input, connection_output, parse_arguments};
 use super::query::query_total_count;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::graphql::constants::DEFAULT_LIMIT;
@@ -90,29 +89,13 @@ impl ObjectTrait for ComponentStateObject {
                 )
                 .await?;
 
-                // TODO: based64 encode entity_id for cursor
-                let edges: Vec<Value> = component_values
-                    .into_iter()
-                    .map(|v| {
-                        let cursor = v.get("entity_id").unwrap(); // safe unwrap
-                        let mut edge = ValueMapping::new();
-                        edge.insert(Name::new("node"), Value::Object(v.clone()));
-                        edge.insert(Name::new("cursor"), cursor.clone());
-
-                        Value::Object(edge)
-                    })
-                    .collect();
-
-                let mut result = ValueMapping::new();
-                result.insert(Name::new("totalCount"), Value::Number(Number::from(total_count)));
-                result.insert(Name::new("edges"), Value::List(edges));
-
+                let result = connection_output(&component_values, "entity_id", total_count);
                 Ok(Some(Value::Object(result)))
             })
         });
 
         // Add relay connection fields (first, last, before, after)
-        field = ConnectionObject::arguments(field);
+        field = connection_input(field);
 
         // TODO: type mapping also act as filters, add this to `where: nameWhereInput`
         // field = self
