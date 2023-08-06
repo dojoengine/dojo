@@ -10,7 +10,7 @@ use dojo_world::utils::TransactionWaiter;
 use scarb::core::Config;
 use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::{
-    BlockId, BlockTag, FieldElement, InvokeTransactionResult, StarknetError,
+    BlockId, BlockTag, FieldElement, InvokeTransactionResult, StarknetError, TransactionReceipt,
 };
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -68,13 +68,14 @@ where
 
         println!("  ");
 
-        execute_strategy(&strategy, &account, config)
+        let block_height = execute_strategy(&strategy, &account, config)
             .await
             .map_err(|e| anyhow!(e))
             .with_context(|| "Problem trying to migrate.")?;
 
         config.ui().print(format!(
-            "\n🎉 Successfully migrated World at address {}",
+            "\n🎉 Successfully migrated World on block #{} at address {}",
+            block_height.expect("because world address always exists there is always a deployment so this cannot be none"),
             bold_message(format!(
                 "{:#x}",
                 strategy.world_address().expect("world address must exist")
@@ -196,15 +197,17 @@ where
     Ok(migration)
 }
 
+// returns the block number at which new/updated world contract if deployed
 async fn execute_strategy<P, S>(
     strategy: &MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
     ws_config: &Config,
-) -> Result<()>
+) -> Result<Option<u64>>
 where
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
 {
+    let mut block_height_world = None;
     match &strategy.executor {
         Some(executor) => {
             ws_config.ui().print_header("# Executor");
@@ -236,9 +239,13 @@ where
                         .set_executor(executor.contract_address)
                         .await?;
 
-                let _ = TransactionWaiter::new(transaction_hash, migrator.provider())
+                let txn = TransactionWaiter::new(transaction_hash, migrator.provider())
                     .await
                     .map_err(MigrationError::<S, <P as Provider>::Error>::WaitingError);
+
+                if let Ok(txn) = txn {
+                    block_height_world = Some(get_block_number(&txn));
+                }
 
                 ws_config.ui().print_hidden_sub(format!("Updated at: {transaction_hash:#x}"));
             }
@@ -272,6 +279,8 @@ where
                         "Deploy transaction: {:#x}",
                         val.transaction_hash
                     ));
+                    
+                    block_height_world = Some(val.block_number);
 
                     Ok(())
                 }
@@ -291,7 +300,7 @@ where
     register_components(strategy, migrator, ws_config).await?;
     register_systems(strategy, migrator, ws_config).await?;
 
-    Ok(())
+    Ok(block_height_world)
 }
 
 async fn register_components<P, S>(
@@ -412,4 +421,14 @@ where
     ws_config.ui().print_hidden_sub(format!("registered at: {transaction_hash:#x}"));
 
     Ok(Some(RegisterOutput { transaction_hash, declare_output }))
+}
+
+fn get_block_number(tx: &TransactionReceipt) -> u64 {
+    match tx {
+        TransactionReceipt::Invoke(tx) => tx.block_number,
+        TransactionReceipt::L1Handler(tx) => tx.block_number,
+        TransactionReceipt::Declare(tx) => tx.block_number,
+        TransactionReceipt::Deploy(tx) => tx.block_number,
+        TransactionReceipt::DeployAccount(tx) => tx.block_number,
+    }
 }

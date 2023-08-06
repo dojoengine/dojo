@@ -10,7 +10,7 @@ use starknet::accounts::{Account, AccountError, Call, ConnectedAccount, SingleOw
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
     BlockId, BlockTag, DeclareTransactionResult, FieldElement, FlattenedSierraClass,
-    InvokeTransactionResult, StarknetError,
+    InvokeTransactionResult, StarknetError, TransactionReceipt,
 };
 use starknet::core::utils::{
     get_contract_address, get_selector_from_name, CairoShortStringToFeltError,
@@ -33,6 +33,7 @@ pub struct DeployOutput {
     pub transaction_hash: FieldElement,
     pub contract_address: FieldElement,
     pub declare: Option<DeclareOutput>,
+    pub block_number: u64,
 }
 
 #[derive(Debug)]
@@ -181,11 +182,16 @@ pub trait Deployable: Declarable + Sync {
             .await
             .map_err(MigrationError::Migrator)?;
 
-        let _ = TransactionWaiter::new(transaction_hash, account.provider())
+        let txn = TransactionWaiter::new(transaction_hash, account.provider())
             .await
             .map_err(MigrationError::WaitingError)?;
 
-        Ok(DeployOutput { transaction_hash, contract_address, declare })
+        Ok(DeployOutput {
+            transaction_hash,
+            contract_address,
+            declare,
+            block_number: get_block_number(&txn),
+        })
     }
 
     fn salt(&self) -> FieldElement;
@@ -215,4 +221,14 @@ fn get_compiled_class_hash(artifact_path: &PathBuf) -> Result<FieldElement> {
     let res = serde_json::to_string_pretty(&casm_contract)?;
     let compiled_class: CompiledClass = serde_json::from_str(&res)?;
     Ok(compiled_class.class_hash()?)
+}
+
+fn get_block_number(tx: &TransactionReceipt) -> u64 {
+    match tx {
+        TransactionReceipt::Invoke(tx) => tx.block_number,
+        TransactionReceipt::L1Handler(tx) => tx.block_number,
+        TransactionReceipt::Declare(tx) => tx.block_number,
+        TransactionReceipt::Deploy(tx) => tx.block_number,
+        TransactionReceipt::DeployAccount(tx) => tx.block_number,
+    }
 }
