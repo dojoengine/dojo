@@ -1,6 +1,5 @@
 use traits::{Into, TryInto};
 use option::OptionTrait;
-use debug::PrintTrait;
 
 // Cubit fixed point math library
 use cubit::types::fixed::{Fixed, FixedInto, FixedTrait, ONE_u128};

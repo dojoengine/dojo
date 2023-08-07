@@ -143,7 +143,10 @@ pub fn handle_component_struct(
         .iter()
         .map(|member| {
             let member_name = &member.0;
-            format!("'{}'.print(); self.{}.print();", member_name, member_name)
+            format!(
+                "debug::PrintTrait::print('{}'); debug::PrintTrait::print(self.{});",
+                member_name, member_name
+            )
         })
         .collect();
 
@@ -177,8 +180,7 @@ pub fn handle_component_struct(
                 }
             }
 
-            #[cfg(test)]
-            impl $type_name$PrintImpl of PrintTrait<$type_name$> {
+            impl $type_name$PrintImpl of debug::PrintTrait<$type_name$> {
                 fn print(self: $type_name$) {
                     $print_body$
                 }

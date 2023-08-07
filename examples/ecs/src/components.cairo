@@ -1,5 +1,4 @@
 use array::ArrayTrait;
-use debug::PrintTrait;
 use starknet::ContractAddress;
 
 #[derive(Component, Copy, Drop, Serde, SerdeLen)]

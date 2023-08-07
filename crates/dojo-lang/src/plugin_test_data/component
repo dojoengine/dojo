@@ -5,7 +5,6 @@ test_expand_plugin
 
 //! > cairo_code
 use serde::Serde;
-use debug::PrintTrait;
 
 #[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Position {
@@ -61,8 +60,6 @@ struct Player {
 //! > generated_cairo_code
 use serde::Serde;
 
-use debug::PrintTrait;
-
 struct Position {
     #[key]
     id: felt252,
@@ -93,15 +90,14 @@ impl PositionComponent of dojo::traits::Component<Position> {
     }
 }
 
-#[cfg(test)]
-impl PositionPrintImpl of PrintTrait<Position> {
+impl PositionPrintImpl of debug::PrintTrait<Position> {
     fn print(self: Position) {
-        'id'.print();
-        self.id.print();
-        'x'.print();
-        self.x.print();
-        'y'.print();
-        self.y.print();
+        debug::PrintTrait::print('id');
+        debug::PrintTrait::print(self.id);
+        debug::PrintTrait::print('x');
+        debug::PrintTrait::print(self.x);
+        debug::PrintTrait::print('y');
+        debug::PrintTrait::print(self.y);
     }
 }
 
@@ -190,11 +186,10 @@ impl RolesComponent of dojo::traits::Component<Roles> {
     }
 }
 
-#[cfg(test)]
-impl RolesPrintImpl of PrintTrait<Roles> {
+impl RolesPrintImpl of debug::PrintTrait<Roles> {
     fn print(self: Roles) {
-        'role_ids'.print();
-        self.role_ids.print();
+        debug::PrintTrait::print('role_ids');
+        debug::PrintTrait::print(self.role_ids);
     }
 }
 
@@ -272,15 +267,14 @@ impl PlayerComponent of dojo::traits::Component<Player> {
     }
 }
 
-#[cfg(test)]
-impl PlayerPrintImpl of PrintTrait<Player> {
+impl PlayerPrintImpl of debug::PrintTrait<Player> {
     fn print(self: Player) {
-        'game'.print();
-        self.game.print();
-        'player'.print();
-        self.player.print();
-        'name'.print();
-        self.name.print();
+        debug::PrintTrait::print('game');
+        debug::PrintTrait::print(self.game);
+        debug::PrintTrait::print('player');
+        debug::PrintTrait::print(self.player);
+        debug::PrintTrait::print('name');
+        debug::PrintTrait::print(self.name);
     }
 }
 
@@ -325,6 +319,6 @@ impl SerdeLenPlayer of dojo::SerdeLen<Player> {
 
 //! > expected_diagnostics
 error: Component must define atleast one #[key] attribute
- --> dummy_file.cairo:32:8
+ --> dummy_file.cairo:31:8
 struct Roles {
        ^***^

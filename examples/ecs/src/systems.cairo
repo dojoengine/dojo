@@ -3,7 +3,6 @@ mod spawn {
     use array::ArrayTrait;
     use box::BoxTrait;
     use traits::Into;
-    use debug::PrintTrait;
     use dojo::world::Context;
 
     use dojo_examples::components::Position;
