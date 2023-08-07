@@ -75,7 +75,7 @@ where
 
         config.ui().print(format!(
             "\n🎉 Successfully migrated World on block #{} at address {}",
-            block_height.expect("because world address always exists there is always a deployment so this cannot be none"),
+            block_height.expect("Atleast one of the contract should be upgraded"),
             bold_message(format!(
                 "{:#x}",
                 strategy.world_address().expect("world address must exist")
@@ -197,7 +197,7 @@ where
     Ok(migration)
 }
 
-// returns the block number at which new/updated world contract if deployed
+// returns the block number at which migration happened
 async fn execute_strategy<P, S>(
     strategy: &MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
@@ -207,7 +207,7 @@ where
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
 {
-    let mut block_height_world = None;
+    let mut block_height = None;
     match &strategy.executor {
         Some(executor) => {
             ws_config.ui().print_header("# Executor");
@@ -241,11 +241,9 @@ where
 
                 let txn = TransactionWaiter::new(transaction_hash, migrator.provider())
                     .await
-                    .map_err(MigrationError::<S, <P as Provider>::Error>::WaitingError);
+                    .map_err(|_| anyhow!("Transaction execution failed"))?;
 
-                if let Ok(txn) = txn {
-                    block_height_world = Some(get_block_number(&txn));
-                }
+                block_height = Some(get_block_number(&txn));
 
                 ws_config.ui().print_hidden_sub(format!("Updated at: {transaction_hash:#x}"));
             }
@@ -279,8 +277,8 @@ where
                         "Deploy transaction: {:#x}",
                         val.transaction_hash
                     ));
-                    
-                    block_height_world = Some(val.block_number);
+
+                    block_height = Some(val.block_number);
 
                     Ok(())
                 }
@@ -297,16 +295,17 @@ where
         None => {}
     };
 
-    register_components(strategy, migrator, ws_config).await?;
-    register_systems(strategy, migrator, ws_config).await?;
+    register_components(strategy, migrator, ws_config, &mut block_height).await?;
+    register_systems(strategy, migrator, ws_config, &mut block_height).await?;
 
-    Ok(block_height_world)
+    Ok(block_height)
 }
 
 async fn register_components<P, S>(
     strategy: &MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
     ws_config: &Config,
+    block_height: &mut Option<u64>,
 ) -> Result<Option<RegisterOutput>>
 where
     P: Provider + Sync + Send + 'static,
@@ -354,9 +353,11 @@ where
         .await
         .map_err(|e| anyhow!("Failed to register components to World: {e}"))?;
 
-    let _ = TransactionWaiter::new(transaction_hash, migrator.provider())
+    let txn = TransactionWaiter::new(transaction_hash, migrator.provider())
         .await
-        .map_err(MigrationError::<S, <P as Provider>::Error>::WaitingError);
+        .map_err(|_| anyhow!("Transaction execution failed"))?;
+
+    *block_height = Some(get_block_number(&txn));
 
     ws_config.ui().print_hidden_sub(format!("registered at: {transaction_hash:#x}"));
 
@@ -367,6 +368,7 @@ async fn register_systems<P, S>(
     strategy: &MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
     ws_config: &Config,
+    block_height: &mut Option<u64>,
 ) -> Result<Option<RegisterOutput>>
 where
     P: Provider + Sync + Send + 'static,
@@ -414,9 +416,11 @@ where
         .await
         .map_err(|e| anyhow!("Failed to register systems to World: {e}"))?;
 
-    let _ = TransactionWaiter::new(transaction_hash, migrator.provider())
+    let txn = TransactionWaiter::new(transaction_hash, migrator.provider())
         .await
-        .map_err(MigrationError::<S, <P as Provider>::Error>::WaitingError);
+        .map_err(|_| anyhow!("Transaction execution failed"))?;
+
+    *block_height = Some(get_block_number(&txn));
 
     ws_config.ui().print_hidden_sub(format!("registered at: {transaction_hash:#x}"));
 
