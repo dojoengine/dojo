@@ -6,11 +6,11 @@ use dojo_world::manifest::{Manifest, ManifestError};
 use dojo_world::migration::strategy::{prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{Declarable, Deployable, MigrationError, RegisterOutput, StateDiff};
-use dojo_world::utils::TransactionWaiter;
+use dojo_world::utils::{block_number_from_receipt, TransactionWaiter};
 use scarb::core::Config;
 use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::{
-    BlockId, BlockTag, FieldElement, InvokeTransactionResult, StarknetError, TransactionReceipt,
+    BlockId, BlockTag, FieldElement, InvokeTransactionResult, StarknetError,
 };
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -243,7 +243,7 @@ where
                     .await
                     .map_err(|_| anyhow!("Transaction execution failed"))?;
 
-                block_height = Some(get_block_number(&txn));
+                block_height = Some(block_number_from_receipt(&txn));
 
                 ws_config.ui().print_hidden_sub(format!("Updated at: {transaction_hash:#x}"));
             }
@@ -357,7 +357,7 @@ where
         .await
         .map_err(|_| anyhow!("Transaction execution failed"))?;
 
-    *block_height = Some(get_block_number(&txn));
+    *block_height = Some(block_number_from_receipt(&txn));
 
     ws_config.ui().print_hidden_sub(format!("registered at: {transaction_hash:#x}"));
 
@@ -420,19 +420,9 @@ where
         .await
         .map_err(|_| anyhow!("Transaction execution failed"))?;
 
-    *block_height = Some(get_block_number(&txn));
+    *block_height = Some(block_number_from_receipt(&txn));
 
     ws_config.ui().print_hidden_sub(format!("registered at: {transaction_hash:#x}"));
 
     Ok(Some(RegisterOutput { transaction_hash, declare_output }))
-}
-
-fn get_block_number(tx: &TransactionReceipt) -> u64 {
-    match tx {
-        TransactionReceipt::Invoke(tx) => tx.block_number,
-        TransactionReceipt::L1Handler(tx) => tx.block_number,
-        TransactionReceipt::Declare(tx) => tx.block_number,
-        TransactionReceipt::Deploy(tx) => tx.block_number,
-        TransactionReceipt::DeployAccount(tx) => tx.block_number,
-    }
 }

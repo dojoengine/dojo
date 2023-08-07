@@ -10,7 +10,7 @@ use starknet::accounts::{Account, AccountError, Call, ConnectedAccount, SingleOw
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
     BlockId, BlockTag, DeclareTransactionResult, FieldElement, FlattenedSierraClass,
-    InvokeTransactionResult, StarknetError, TransactionReceipt,
+    InvokeTransactionResult, StarknetError,
 };
 use starknet::core::utils::{
     get_contract_address, get_selector_from_name, CairoShortStringToFeltError,
@@ -19,7 +19,7 @@ use starknet::providers::{Provider, ProviderError};
 use starknet::signers::Signer;
 use thiserror::Error;
 
-use crate::utils::{TransactionWaiter, TransactionWaitingError};
+use crate::utils::{block_number_from_receipt, TransactionWaiter, TransactionWaitingError};
 
 pub mod class;
 pub mod contract;
@@ -190,7 +190,7 @@ pub trait Deployable: Declarable + Sync {
             transaction_hash,
             contract_address,
             declare,
-            block_number: get_block_number(&txn),
+            block_number: block_number_from_receipt(&txn),
         })
     }
 
@@ -221,14 +221,4 @@ fn get_compiled_class_hash(artifact_path: &PathBuf) -> Result<FieldElement> {
     let res = serde_json::to_string_pretty(&casm_contract)?;
     let compiled_class: CompiledClass = serde_json::from_str(&res)?;
     Ok(compiled_class.class_hash()?)
-}
-
-fn get_block_number(tx: &TransactionReceipt) -> u64 {
-    match tx {
-        TransactionReceipt::Invoke(tx) => tx.block_number,
-        TransactionReceipt::L1Handler(tx) => tx.block_number,
-        TransactionReceipt::Declare(tx) => tx.block_number,
-        TransactionReceipt::Deploy(tx) => tx.block_number,
-        TransactionReceipt::DeployAccount(tx) => tx.block_number,
-    }
 }
