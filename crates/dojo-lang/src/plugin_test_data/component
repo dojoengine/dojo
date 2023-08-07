@@ -5,6 +5,7 @@ test_expand_plugin
 
 //! > cairo_code
 use serde::Serde;
+use debug::PrintTrait;
 
 #[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Position {
@@ -60,6 +61,8 @@ struct Player {
 //! > generated_cairo_code
 use serde::Serde;
 
+use debug::PrintTrait;
+
 struct Position {
     #[key]
     id: felt252,
@@ -87,6 +90,18 @@ impl PositionComponent of dojo::traits::Component<Position> {
         array::ArrayTrait::append(ref serialized, *self.x);
         serde::Serde::serialize(self.y, ref serialized);
         array::ArrayTrait::span(@serialized)
+    }
+}
+
+#[cfg(test)]
+impl PositionPrintImpl of PrintTrait<Position> {
+    fn print(self: Position) {
+        'id'.print();
+        self.id.print();
+        'x'.print();
+        self.x.print();
+        'y'.print();
+        self.y.print();
     }
 }
 
@@ -175,6 +190,14 @@ impl RolesComponent of dojo::traits::Component<Roles> {
     }
 }
 
+#[cfg(test)]
+impl RolesPrintImpl of PrintTrait<Roles> {
+    fn print(self: Roles) {
+        'role_ids'.print();
+        self.role_ids.print();
+    }
+}
+
 #[starknet::interface]
 trait IRoles<T> {
     fn name(self: @T) -> felt252;
@@ -249,6 +272,18 @@ impl PlayerComponent of dojo::traits::Component<Player> {
     }
 }
 
+#[cfg(test)]
+impl PlayerPrintImpl of PrintTrait<Player> {
+    fn print(self: Player) {
+        'game'.print();
+        self.game.print();
+        'player'.print();
+        self.player.print();
+        'name'.print();
+        self.name.print();
+    }
+}
+
 #[starknet::interface]
 trait IPlayer<T> {
     fn name(self: @T) -> felt252;
@@ -290,6 +325,6 @@ impl SerdeLenPlayer of dojo::SerdeLen<Player> {
 
 //! > expected_diagnostics
 error: Component must define atleast one #[key] attribute
- --> dummy_file.cairo:31:8
+ --> dummy_file.cairo:32:8
 struct Roles {
        ^***^

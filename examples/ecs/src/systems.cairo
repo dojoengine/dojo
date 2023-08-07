@@ -3,6 +3,7 @@ mod spawn {
     use array::ArrayTrait;
     use box::BoxTrait;
     use traits::Into;
+    use debug::PrintTrait;
     use dojo::world::Context;
 
     use dojo_examples::components::Position;
@@ -29,6 +30,7 @@ mod move {
     use box::BoxTrait;
     use traits::Into;
     use dojo::world::Context;
+    use debug::PrintTrait;
 
     use dojo_examples::components::Position;
     use dojo_examples::components::Moves;
@@ -55,6 +57,7 @@ mod move {
     fn execute(ctx: Context, direction: Direction) {
         let (mut position, mut moves) = get !(ctx.world, ctx.origin, (Position, Moves));
         moves.remaining -= 1;
+        moves.print();
         let next = next_position(position, direction);
         set !(ctx.world, (moves, next));
         return ();

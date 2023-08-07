@@ -3,6 +3,7 @@ use core::result::ResultTrait;
 use array::ArrayTrait;
 use option::OptionTrait;
 use traits::TryInto;
+use debug::PrintTrait;
 
 use starknet::syscalls::deploy_syscall;
 use starknet::class_hash::Felt252TryIntoClassHash;

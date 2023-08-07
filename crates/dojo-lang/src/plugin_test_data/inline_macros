@@ -4,6 +4,8 @@
 test_expand_plugin
 
 //! > cairo_code
+use debug::PrintTrait;
+
 struct Player {
     #[key]
     key: felt252,
@@ -31,6 +33,8 @@ fn foo() {
 }
 
 //! > generated_cairo_code
+use debug::PrintTrait;
+
 struct Player {
     #[key]
     key: felt252,
@@ -90,6 +94,8 @@ error: Invalid arguments: No components provided.
 test_expand_plugin
 
 //! > cairo_code
+use debug::PrintTrait;
+
 fn foo() {
     let (position, moves) = get!(world, 0x420, (Position, Moves));
     let position = get!(world, (0x420, 0x1337), Position);
@@ -99,6 +105,8 @@ fn foo() {
 }
 
 //! > generated_cairo_code
+use debug::PrintTrait;
+
 fn foo() {
     let (position, moves) = {
         let mut __get_macro_keys__ = array::ArrayTrait::new();
