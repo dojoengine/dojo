@@ -4,7 +4,8 @@ Content-Type: application/json
     "jsonrpc": "2.0",
     "method": "starknet_getNonce",
     "params": [
-        "0x010b6c96d364cf182964fbd4a3438a5ae84cab990770c07994f9cb99fd26f6dc"
+        "latest",
+        "0x05b92948371346d0df1d3c2d7568573364497f6cba65f4734ecd54ed0a0dbd11"
     ],
     "id":1
 }
@@ -12,4 +13,4 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 jsonpath "$.error" not exists
-jsonpath "$.result" matches /^[0-9]+$/
+jsonpath "$.result" matches /^0x[A-Fa-f0-9]+$/

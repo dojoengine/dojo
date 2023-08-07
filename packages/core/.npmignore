@@ -1,5 +1,6 @@
-node_modules
-dist
-src
-*.test.ts
-*.test.js
+*
+
+!dist/**
+!package.json
+!readme.md
+!changelog.md

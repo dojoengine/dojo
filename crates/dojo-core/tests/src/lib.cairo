@@ -1,5 +1,8 @@
+#[cfg(test)]
 mod executor;
-mod integer;
-mod storage;
+#[cfg(test)]
+mod database;
+#[cfg(test)]
 mod world;
+#[cfg(test)]
 mod world_factory;

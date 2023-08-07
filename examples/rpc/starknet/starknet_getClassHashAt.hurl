@@ -4,10 +4,8 @@ Content-Type: application/json
   "jsonrpc": "2.0",
   "method": "starknet_getClassHashAt",
   "params": [
-    {
-      "block_number": 22050
-    },
-    "0x07f38ab7537dbb5f8dc2d049d441f2b250c2186a13d943b8467cfa86b8dba12b"
+    "pending",
+    "0x05b92948371346d0df1d3c2d7568573364497f6cba65f4734ecd54ed0a0dbd11"
   ],
   "id": 1
 }
@@ -15,4 +13,4 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 jsonpath "$.error" not exists
-jsonpath "$.result" matches "^\\d+$"
+jsonpath "$.result" matches /^0x[A-Fa-f0-9]+$/

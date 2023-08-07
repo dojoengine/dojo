@@ -1,42 +1,46 @@
 use anyhow::{Error, Result};
-use apibara_core::starknet::v1alpha2::{Block, EventWithTransaction, TransactionWithReceipt};
-use sqlx::{Pool, Sqlite};
+use async_trait::async_trait;
+use starknet::core::types::{BlockWithTxs, Event, TransactionReceipt};
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
-use tonic::async_trait;
 
-pub mod component_register;
-pub mod component_state_update;
-pub mod system_register;
+use crate::state::State;
+
+pub mod register_component;
+pub mod register_system;
+pub mod store_set_record;
 
 #[async_trait]
-pub trait EventProcessor<S: JsonRpcTransport> {
+pub trait EventProcessor<S: State, T: JsonRpcTransport> {
     fn event_key(&self) -> String;
     async fn process(
         &self,
-        pool: &Pool<Sqlite>,
-        provider: &JsonRpcClient<S>,
-        data: EventWithTransaction,
+        storage: &S,
+        provider: &JsonRpcClient<T>,
+        block: &BlockWithTxs,
+        transaction_receipt: &TransactionReceipt,
+        event: &Event,
     ) -> Result<(), Error>;
 }
 
 #[async_trait]
-pub trait BlockProcessor<S: JsonRpcTransport> {
+pub trait BlockProcessor<S: State, T: JsonRpcTransport> {
     fn get_block_number(&self) -> String;
     async fn process(
         &self,
-        pool: &Pool<Sqlite>,
-        provider: &JsonRpcClient<S>,
-        data: Block,
+        storage: &S,
+        provider: &JsonRpcClient<T>,
+        block: &BlockWithTxs,
     ) -> Result<(), Error>;
 }
 
 #[async_trait]
-pub trait TransactionProcessor<S: JsonRpcTransport> {
+pub trait TransactionProcessor<S: State, T: JsonRpcTransport> {
     fn get_transaction_hash(&self) -> String;
     async fn process(
         &self,
-        pool: &Pool<Sqlite>,
-        provider: &JsonRpcClient<S>,
-        data: TransactionWithReceipt,
+        storage: &S,
+        provider: &JsonRpcClient<T>,
+        block: &BlockWithTxs,
+        transaction_receipt: &TransactionReceipt,
     ) -> Result<(), Error>;
 }

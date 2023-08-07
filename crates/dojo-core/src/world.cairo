@@ -1,249 +1,530 @@
-#[contract]
-mod World {
-    use array::ArrayTrait;
-    use array::SpanTrait;
+use starknet::{ContractAddress, ClassHash, StorageBaseAddress, SyscallResult};
+use traits::{Into, TryInto};
+use option::OptionTrait;
+
+#[derive(Copy, Drop, Serde)]
+struct Context {
+    world: IWorldDispatcher, // Dispatcher to the world contract
+    origin: ContractAddress, // Address of the origin
+    system: felt252, // Name of the calling system
+    system_class_hash: ClassHash, // Class hash of the calling system
+}
+
+#[starknet::interface]
+trait IWorld<T> {
+    fn component(self: @T, name: felt252) -> ClassHash;
+    fn register_component(ref self: T, class_hash: ClassHash);
+    fn system(self: @T, name: felt252) -> ClassHash;
+    fn register_system(ref self: T, class_hash: ClassHash);
+    fn uuid(ref self: T) -> usize;
+    fn emit(self: @T, keys: Span<felt252>, values: Span<felt252>);
+    fn execute(ref self: T, system: felt252, calldata: Span<felt252>) -> Span<felt252>;
+    fn entity(
+        self: @T, component: felt252, keys: Span<felt252>, offset: u8, length: usize
+    ) -> Span<felt252>;
+    fn set_entity(
+        ref self: T, component: felt252, keys: Span<felt252>, offset: u8, value: Span<felt252>
+    );
+    fn entities(
+        self: @T, component: felt252, index: felt252, length: usize
+    ) -> (Span<felt252>, Span<Span<felt252>>);
+    fn set_executor(ref self: T, contract_address: ContractAddress);
+    fn executor(self: @T) -> ContractAddress;
+    fn delete_entity(ref self: T, component: felt252, keys: Span<felt252>);
+    fn origin(self: @T) -> ContractAddress;
+
+    fn is_owner(self: @T, account: ContractAddress, target: felt252) -> bool;
+    fn grant_owner(ref self: T, account: ContractAddress, target: felt252);
+    fn revoke_owner(ref self: T, account: ContractAddress, target: felt252);
+
+    fn is_writer(self: @T, component: felt252, system: felt252) -> bool;
+    fn grant_writer(ref self: T, component: felt252, system: felt252);
+    fn revoke_writer(ref self: T, component: felt252, system: felt252);
+}
+
+#[starknet::contract]
+mod world {
+    use array::{ArrayTrait, SpanTrait};
     use traits::Into;
     use option::OptionTrait;
     use box::BoxTrait;
     use serde::Serde;
-    use starknet::get_caller_address;
-    use starknet::get_contract_address;
-    use starknet::get_tx_info;
-    use starknet::contract_address::ContractAddressIntoFelt252;
-    use starknet::ClassHash;
-    use starknet::Zeroable;
-    use starknet::ContractAddress;
+    use starknet::{
+        get_caller_address, get_contract_address, get_tx_info,
+        contract_address::ContractAddressIntoFelt252, ClassHash, Zeroable, ContractAddress,
+        syscalls::emit_event_syscall
+    };
 
-    use dojo_core::storage::query::Query;
-    use dojo_core::storage::query::QueryTrait;
-    use dojo_core::storage::db::Database;
-    use dojo_core::integer::u250;
-    use dojo_core::integer::ContractAddressIntoU250;
-    use dojo_core::string::ShortString;
-    use dojo_core::auth::systems::Route;
+    use dojo::database;
+    use dojo::executor::{IExecutorDispatcher, IExecutorDispatcherTrait};
+    use dojo::traits::{
+        IComponentLibraryDispatcher, IComponentDispatcherTrait, ISystemLibraryDispatcher,
+        ISystemDispatcherTrait
+    };
+    use dojo::world::{IWorldDispatcher, IWorld};
 
-    use dojo_core::interfaces::IComponentLibraryDispatcher;
-    use dojo_core::interfaces::IComponentDispatcherTrait;
-    use dojo_core::interfaces::IExecutorDispatcher;
-    use dojo_core::interfaces::IExecutorDispatcherTrait;
-    use dojo_core::interfaces::ISystemLibraryDispatcher;
-    use dojo_core::interfaces::ISystemDispatcherTrait;
+    use super::Context;
 
     #[event]
-    fn WorldSpawned(address: ContractAddress, caller: ContractAddress, name: ShortString) {}
+    #[derive(Drop, starknet::Event)]
+    enum Event {
+        WorldSpawned: WorldSpawned,
+        ComponentRegistered: ComponentRegistered,
+        SystemRegistered: SystemRegistered,
+        StoreSetRecord: StoreSetRecord,
+        StoreDelRecord: StoreDelRecord
+    }
 
-    #[event]
-    fn ComponentRegistered(name: ShortString, class_hash: ClassHash) {}
+    #[derive(Drop, starknet::Event)]
+    struct WorldSpawned {
+        address: ContractAddress,
+        caller: ContractAddress
+    }
 
-    #[event]
-    fn SystemRegistered(name: ShortString, class_hash: ClassHash) {}
+    #[derive(Drop, starknet::Event)]
+    struct ComponentRegistered {
+        name: felt252,
+        class_hash: ClassHash
+    }
 
+    #[derive(Drop, starknet::Event)]
+    struct SystemRegistered {
+        name: felt252,
+        class_hash: ClassHash
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct StoreSetRecord {
+        table: felt252,
+        keys: Span<felt252>,
+        offset: u8,
+        value: Span<felt252>,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct StoreDelRecord {
+        table: felt252,
+        keys: Span<felt252>,
+    }
+
+    #[storage]
     struct Storage {
-        caller: ClassHash,
-        executor: ContractAddress,
-        component_registry: LegacyMap::<ShortString, ClassHash>,
-        system_registry: LegacyMap::<ShortString, ClassHash>,
-        initialized: bool,
+        executor_dispatcher: IExecutorDispatcher,
+        components: LegacyMap::<felt252, ClassHash>,
+        systems: LegacyMap::<felt252, ClassHash>,
         nonce: usize,
+        owners: LegacyMap::<(felt252, ContractAddress), bool>,
+        writers: LegacyMap::<(felt252, felt252), bool>,
+        // Tracks the origin executor.
+        call_origin: ContractAddress,
+        // Tracks the calling systems name for auth purposes.
+        call_stack_len: felt252,
+        call_stack: LegacyMap::<felt252, felt252>,
     }
 
     #[constructor]
-    fn constructor(name: ShortString, executor_: ContractAddress) {
-        executor::write(executor_);
+    fn constructor(ref self: ContractState, executor: ContractAddress) {
+        self.executor_dispatcher.write(IExecutorDispatcher { contract_address: executor });
+        self
+            .owners
+            .write((0, starknet::get_tx_info().unbox().account_contract_address), bool::True(()));
 
-        WorldSpawned(get_contract_address(), get_tx_info().unbox().account_contract_address, name);
+        EventEmitter::emit(
+            ref self,
+            WorldSpawned {
+                address: get_contract_address(),
+                caller: get_tx_info().unbox().account_contract_address
+            }
+        );
     }
 
-    // Initialize the world with the routes that specify
-    // the permissions for each system to access components.
-    #[external]
-    fn initialize(routes: Array<Route>) {
-        // Assert that the world has not been initialized
-        assert(!initialized::read(), 'already initialized');
+    #[external(v0)]
+    impl World of IWorld<ContractState> {
+        /// Checks if the provided account is an owner of the target.
+        ///
+        /// # Arguments
+        ///
+        /// * `account` - The account.
+        /// * `target` - The target.
+        ///
+        /// # Returns
+        ///
+        /// * `bool` - True if the account is an owner of the target, false otherwise.
+        fn is_owner(self: @ContractState, account: ContractAddress, target: felt252) -> bool {
+            self.owners.read((target, account))
+        }
 
-        let route_auth_class_hash = system_registry::read('RouteAuth'.into());
-        let mut index = 0;
+        /// Grants ownership of the target to the account.
+        /// Can only be called by an existing owner or the world admin.
+        ///
+        /// # Arguments
+        ///
+        /// * `account` - The account.
+        /// * `target` - The target.
+        fn grant_owner(ref self: ContractState, account: ContractAddress, target: felt252) {
+            let caller = get_caller_address();
+            assert(
+                IWorld::is_owner(@self, caller, target) || IWorld::is_owner(@self, caller, 0),
+                'not owner'
+            );
+            self.owners.write((target, account), bool::True(()));
+        }
 
-        // Loop through each route and handle the auth.
-        // This grants the system the permission to specific components.
-        loop {
-            if index == routes.len() {
-                break ();
+        /// Revokes owner permission to the system for the component.
+        /// Can only be called by an existing owner or the world admin.
+        ///
+        /// # Arguments
+        ///
+        /// * `account` - The account.
+        /// * `target` - The target.
+        fn revoke_owner(ref self: ContractState, account: ContractAddress, target: felt252) {
+            assert(
+                IWorld::is_owner(@self, get_caller_address(), target)
+                    || IWorld::is_owner(@self, get_caller_address(), 0),
+                'not owner'
+            );
+            self.owners.write((target, account), bool::False(()));
+        }
+
+        /// Checks if the provided system is a writer of the component.
+        ///
+        /// # Arguments
+        ///
+        /// * `component` - The name of the component.
+        /// * `system` - The name of the system.
+        ///
+        /// # Returns
+        ///
+        /// * `bool` - True if the system is a writer of the component, false otherwise
+        fn is_writer(self: @ContractState, component: felt252, system: felt252) -> bool {
+            self.writers.read((component, system))
+        }
+
+        /// Grants writer permission to the system for the component.
+        /// Can only be called by an existing component owner or the world admin.
+        ///
+        /// # Arguments
+        ///
+        /// * `component` - The name of the component.
+        /// * `system` - The name of the system.
+        fn grant_writer(ref self: ContractState, component: felt252, system: felt252) {
+            assert(
+                IWorld::is_owner(@self, get_caller_address(), component)
+                    || IWorld::is_owner(@self, get_caller_address(), 0),
+                'not owner'
+            );
+            self.writers.write((component, system), bool::True(()));
+        }
+
+        /// Revokes writer permission to the system for the component.
+        /// Can only be called by an existing component writer, owner or the world admin.
+        ///
+        /// # Arguments
+        ///
+        /// * `component` - The name of the component.
+        /// * `system` - The name of the system.
+        fn revoke_writer(ref self: ContractState, component: felt252, system: felt252) {
+            assert(
+                IWorld::is_writer(@self, caller_system(@self), component)
+                    || IWorld::is_owner(@self, get_caller_address(), component)
+                    || IWorld::is_owner(@self, get_caller_address(), 0),
+                'not owner'
+            );
+            self.writers.write((component, system), bool::False(()));
+        }
+
+        /// Registers a component in the world. If the component is already registered,
+        /// the implementation will be updated.
+        ///
+        /// # Arguments
+        ///
+        /// * `class_hash` - The class hash of the component to be registered.
+        fn register_component(ref self: ContractState, class_hash: ClassHash) {
+            let name = IComponentLibraryDispatcher { class_hash: class_hash }.name();
+
+            // If component is already registered, validate permission to update.
+            if self.components.read(name).is_non_zero() {
+                assert(
+                    IWorld::is_owner(@self, get_caller_address(), name), 'only owner can update'
+                );
             }
 
-            // Serialize the route
-            let mut calldata = ArrayTrait::new();
-            let r = routes.at(index);
-            r.serialize(ref calldata);
+            self.components.write(name, class_hash);
+            EventEmitter::emit(ref self, ComponentRegistered { name, class_hash });
+        }
 
-            // Call RouteAuth system via executor with the serialized route
-            IExecutorDispatcher {
-                contract_address: executor::read()
-            }.execute(route_auth_class_hash, calldata.span());
+        /// Gets the class hash of a registered component.
+        ///
+        /// # Arguments
+        ///
+        /// * `name` - The name of the component.
+        ///
+        /// # Returns
+        ///
+        /// * `ClassHash` - The class hash of the component.
+        fn component(self: @ContractState, name: felt252) -> ClassHash {
+            self.components.read(name)
+        }
 
-            index += 1;
-        };
+        /// Registers a system in the world. If the system is already registered,
+        /// the implementation will be updated.
+        ///
+        /// # Arguments
+        ///
+        /// * `class_hash` - The class hash of the system to be registered.
+        fn register_system(ref self: ContractState, class_hash: ClassHash) {
+            let name = ISystemLibraryDispatcher { class_hash: class_hash }.name();
 
-        // Set the initialized flag.
-        initialized::write(true);
-    }
-
-    // Check if system is authorized to write to the component
-    #[view]
-    fn is_authorized(system: ClassHash, component: ClassHash) -> bool {
-        let authorize_class_hash = system_registry::read('IsAuthorized'.into());
-
-        // If the world has been initialized, check the authorization.
-        // World is initialized when WorldFactory::spawn is called
-        if initialized::read() {
-            let system = ISystemLibraryDispatcher { class_hash: system }.name().into();
-            let component = IComponentLibraryDispatcher { class_hash: component }.name().into();
-
-            // If component to be updated is AuthStatus or AuthRole, check if the caller account is Admin
-            if component == 'AuthStatus' | component == 'AuthRole' {
-                is_account_admin()
-            } else {
-                // Check if the system is authorized to write to the component
-                let mut calldata = ArrayTrait::<felt252>::new();
-                calldata.append(system); // target_id
-                calldata.append(component); // resource_id
-
-                // Call IsAuthorized system via executor with serialized system and component
-                // If the system is authorized, the result will be non-zero
-                let res = IExecutorDispatcher {
-                    contract_address: executor::read()
-                }.execute(authorize_class_hash, calldata.span());
-                (*res[0]).is_non_zero()
+            // If system is already registered, validate permission to update.
+            if self.systems.read(name).is_non_zero() {
+                assert(
+                    IWorld::is_owner(@self, get_caller_address(), name), 'only owner can update'
+                );
             }
-        } else {
-            // If the world has not yet been initialized, all systems are authorized.
-            // This is to allow the initial Admin role to be set
-            bool::True(())
+
+            self.systems.write(name, class_hash);
+            EventEmitter::emit(ref self, SystemRegistered { name, class_hash });
         }
-    }
 
-    // Check if the calling account has Admin role
-    #[view]
-    fn is_account_admin() -> bool {
-        let admin_class_hash = system_registry::read('IsAccountAdmin'.into());
-        // Call IsAccountAdmin system via executor
-        let mut calldata = ArrayTrait::<felt252>::new();
-        let res = IExecutorDispatcher {
-            contract_address: executor::read()
-        }.execute(admin_class_hash, calldata.span());
-        (*res[0]).is_non_zero()
-    }
-
-    // Register a component in the world. If the component is already registered,
-    // the implementation will be updated.
-    #[external]
-    fn register_component(class_hash: ClassHash) {
-        let name = IComponentLibraryDispatcher { class_hash: class_hash }.name();
-        // If component is already registered, validate permission to update.
-        if component_registry::read(
-            name
-        ).is_non_zero() {
-            assert(is_account_admin(), 'only admin can update');
+        /// Gets the class hash of a registered system.
+        ///
+        /// # Arguments
+        ///
+        /// * `name` - The name of the system.
+        ///
+        /// # Returns
+        ///
+        /// * `ClassHash` - The class hash of the system.
+        fn system(self: @ContractState, name: felt252) -> ClassHash {
+            self.systems.read(name)
         }
-        component_registry::write(name, class_hash);
-        ComponentRegistered(name, class_hash);
-    }
 
-    #[view]
-    fn component(name: ShortString) -> ClassHash {
-        component_registry::read(name)
-    }
+        /// Executes a system with the given calldata.
+        ///
+        /// # Arguments
+        ///
+        /// * `system` - The name of the system to be executed.
+        /// * `calldata` - The calldata to be passed to the system.
+        ///
+        /// # Returns
+        ///
+        /// * `Span<felt252>` - The result of the system execution.
+        fn execute(
+            ref self: ContractState, system: felt252, calldata: Span<felt252>
+        ) -> Span<felt252> {
+            let stack_len = self.call_stack_len.read();
+            self.call_stack.write(stack_len, system);
+            self.call_stack_len.write(stack_len + 1);
 
-    // Register a system in the world. If the system is already registered,
-    // the implementation will be updated.
-    #[external]
-    fn register_system(class_hash: ClassHash) {
-        let name = ISystemLibraryDispatcher { class_hash: class_hash }.name();
-        // If system is already registered, validate permission to update.
-        if system_registry::read(
-            name
-        ).is_non_zero() {
-            assert(is_account_admin(), 'only admin can update');
-        }
-        system_registry::write(name, class_hash);
-        SystemRegistered(name, class_hash);
-    }
+            // Get the class hash of the system to be executed
+            let system_class_hash = self.systems.read(system);
 
-    #[view]
-    fn system(name: ShortString) -> ClassHash {
-        system_registry::read(name)
-    }
-
-    #[external]
-    fn execute(name: ShortString, execute_calldata: Span<felt252>) -> Span<felt252> {
-        let class_hash = system_registry::read(name);
-        caller::write(class_hash);
-
-        let res = IExecutorDispatcher {
-            contract_address: executor::read()
-        }.execute(class_hash, execute_calldata);
-
-        caller::write(starknet::class_hash_const::<0x0>());
-        res
-    }
-
-    // Issue an autoincremented id to the caller.
-    #[external]
-    fn uuid() -> usize {
-        let next = nonce::read();
-        nonce::write(next + 1);
-        return next;
-    }
-
-    #[external]
-    fn set_entity(component: ShortString, query: Query, offset: u8, value: Span<felt252>) {
-        // Assert can only be called through the executor
-        // This is to prevent system from writing to storage directly
-        assert(get_caller_address() == executor::read(), 'must be called thru executor');
-
-        let system_class_hash = caller::read();
-        let table = query.table(component);
-        let component_class_hash = component_registry::read(component);
-
-        // Validate the calling system has permission to write to the component
-        assert(is_authorized(system_class_hash, component_class_hash), 'system not authorized');
-        Database::set(component_class_hash, table, query, offset, value)
-    }
-
-    #[external]
-    fn delete_entity(component: ShortString, query: Query) {
-        // Assert can only be called through the executor
-        // This is to prevent system from writing to storage directly
-        assert(get_caller_address() == executor::read(), 'must be called thru executor');
-
-        let system_class_hash = caller::read();
-        let table = query.table(component);
-        let component_class_hash = component_registry::read(component);
-
-        // Validate the calling system has permission to write to the component
-        assert(is_authorized(system_class_hash, component_class_hash), 'system not authorized');
-        let res = Database::del(system_class_hash, component.into(), query);
-    }
-
-    #[view]
-    fn entity(component: ShortString, query: Query, offset: u8, length: usize) -> Span<felt252> {
-        let class_hash = component_registry::read(component);
-        match Database::get(class_hash, component.into(), query, offset, length) {
-            Option::Some(res) => res,
-            Option::None(_) => {
-                ArrayTrait::<felt252>::new().span()
+            // If this is the initial call, set the origin to the caller
+            let mut call_origin = self.call_origin.read();
+            if stack_len.is_zero() {
+                call_origin = get_caller_address();
+                self.call_origin.write(call_origin);
             }
+
+            // Call the system via executor
+            let res = self
+                .executor_dispatcher
+                .read()
+                .execute(
+                    Context {
+                        world: IWorldDispatcher {
+                            contract_address: get_contract_address()
+                        }, origin: self.call_origin.read(), system, system_class_hash,
+                    },
+                    calldata
+                );
+
+            // Reset the current call stack frame
+            self.call_stack.write(stack_len, 0);
+            // Decrement the call stack pointer
+            self.call_stack_len.write(stack_len);
+
+            // If this is the initial call, reset the origin on exit
+            if stack_len.is_zero() {
+                self.call_origin.write(starknet::contract_address_const::<0x0>());
+            }
+
+            res
+        }
+
+        /// Issues an autoincremented id to the caller.
+        ///
+        /// # Returns
+        ///
+        /// * `usize` - The autoincremented id.
+        fn uuid(ref self: ContractState) -> usize {
+            let current = self.nonce.read();
+            self.nonce.write(current + 1);
+            current
+        }
+
+        /// Emits a custom event.
+        ///
+        /// # Arguments
+        ///
+        /// * `keys` - The keys of the event.
+        /// * `values` - The data to be logged by the event.
+        fn emit(self: @ContractState, keys: Span<felt252>, values: Span<felt252>) {
+            // Assert can only be called through the executor
+            // This is to prevent system from writing to storage directly
+            assert(
+                get_caller_address() == self.executor_dispatcher.read().contract_address,
+                'must be called thru executor'
+            );
+
+            emit_event_syscall(keys, values).unwrap_syscall();
+        }
+
+        /// Sets the component value for an entity.
+        ///
+        /// # Arguments
+        ///
+        /// * `component` - The name of the component to be set.
+        /// * `key` - The key to be used to find the entity.
+        /// * `offset` - The offset of the component in the entity.
+        /// * `value` - The value to be set.
+        fn set_entity(
+            ref self: ContractState,
+            component: felt252,
+            keys: Span<felt252>,
+            offset: u8,
+            value: Span<felt252>
+        ) {
+            assert_can_write(@self, component);
+
+            let key = poseidon::poseidon_hash_span(keys);
+            let component_class_hash = self.components.read(component);
+            database::set(component_class_hash, component, key, offset, value);
+
+            EventEmitter::emit(ref self, StoreSetRecord { table: component, keys, offset, value });
+        }
+
+        /// Deletes a component from an entity.
+        ///
+        /// # Arguments
+        ///
+        /// * `component` - The name of the component to be deleted.
+        /// * `query` - The query to be used to find the entity.
+        fn delete_entity(ref self: ContractState, component: felt252, keys: Span<felt252>) {
+            assert_can_write(@self, component);
+
+            let key = poseidon::poseidon_hash_span(keys);
+            let component_class_hash = self.components.read(component);
+            database::del(component_class_hash, component, key);
+
+            EventEmitter::emit(ref self, StoreDelRecord { table: component, keys });
+        }
+
+        /// Gets the component value for an entity. Returns a zero initialized
+        /// component value if the entity has not been set.
+        ///
+        /// # Arguments
+        ///
+        /// * `component` - The name of the component to be retrieved.
+        /// * `query` - The query to be used to find the entity.
+        /// * `offset` - The offset of the component values.
+        /// * `length` - The length of the component values.
+        ///
+        /// # Returns
+        ///
+        /// * `Span<felt252>` - The value of the component, zero initialized if not set.
+        fn entity(
+            self: @ContractState, component: felt252, keys: Span<felt252>, offset: u8, length: usize
+        ) -> Span<felt252> {
+            let class_hash = self.components.read(component);
+            let key = poseidon::poseidon_hash_span(keys);
+            database::get(class_hash, component, key, offset, length)
+        }
+
+        /// Returns entity IDs and entities that contain the component state.
+        ///
+        /// # Arguments
+        ///
+        /// * `component` - The name of the component to be retrieved.
+        /// * `index` - The index to be retrieved.
+        ///
+        /// # Returns
+        ///
+        /// * `Span<felt252>` - The entity IDs.
+        /// * `Span<Span<felt252>>` - The entities.
+        fn entities(
+            self: @ContractState, component: felt252, index: felt252, length: usize
+        ) -> (Span<felt252>, Span<Span<felt252>>) {
+            let class_hash = self.components.read(component);
+            database::all(class_hash, component.into(), index, length)
+        }
+
+        /// Sets the executor contract address.
+        ///
+        /// # Arguments
+        ///
+        /// * `contract_address` - The contract address of the executor.
+        fn set_executor(ref self: ContractState, contract_address: ContractAddress) {
+            // Only owner can set executor
+            assert(IWorld::is_owner(@self, get_caller_address(), 0), 'only owner can set executor');
+            self
+                .executor_dispatcher
+                .write(IExecutorDispatcher { contract_address: contract_address });
+        }
+
+        /// Gets the executor contract address.
+        ///
+        /// # Returns
+        ///
+        /// * `ContractAddress` - The address of the executor contract.
+        fn executor(self: @ContractState) -> ContractAddress {
+            self.executor_dispatcher.read().contract_address
+        }
+
+        /// Gets the origin caller.
+        ///
+        /// # Returns
+        ///
+        /// * `felt252` - The origin caller.
+        fn origin(self: @ContractState) -> ContractAddress {
+            self.call_origin.read()
         }
     }
 
-    // Returns entities that contain the component state.
-    #[view]
-    fn entities(component: ShortString, partition: u250) -> Array::<u250> {
-        Database::all(component.into(), partition)
+    /// Gets the caller system's name.
+    ///
+    /// # Returns
+    ///
+    /// * `felt252` - The caller system's name.
+    fn caller_system(self: @ContractState) -> felt252 {
+        self.call_stack.read(self.call_stack_len.read() - 1)
     }
 
-    #[external]
-    fn set_executor(contract_address: ContractAddress) {
-        executor::write(contract_address);
+    /// Asserts that the current caller can write to the component.
+    ///
+    /// # Arguments
+    ///
+    /// * `component` - The name of the component being written to.
+    fn assert_can_write(self: @ContractState, component: felt252) {
+        assert(
+            get_caller_address() == self.executor_dispatcher.read().contract_address,
+            'must be called thru executor'
+        );
+
+        assert(
+            IWorld::is_writer(self, caller_system(self), component)
+                || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, component)
+                || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, 0),
+            'not writer'
+        );
+    }
+}
+
+#[system]
+mod library_call {
+    fn execute(
+        class_hash: starknet::ClassHash, entrypoint: felt252, calladata: Span<felt252>
+    ) -> Span<felt252> {
+        starknet::syscalls::library_call_syscall(class_hash, entrypoint, calladata).unwrap_syscall()
     }
 }

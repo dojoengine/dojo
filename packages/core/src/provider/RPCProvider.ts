@@ -1,66 +1,96 @@
-import { RpcProvider } from "starknet";
-import { Call } from "starknet";
+import { RpcProvider, Account, num, Call, InvokeFunctionResponse } from "starknet";
 import { Provider } from "./provider";
 import { Query, WorldEntryPoints } from "../types";
-import logger from "../logging/logger";
+import { strTofelt252Felt } from '../utils'
+import { LOCAL_KATANA } from '../constants';
 
 export class RPCProvider extends Provider {
-    private provider: RpcProvider;
-    private loggingEnabled: boolean;
+    public provider: RpcProvider;
 
-    constructor(world_address: string, url: string, loggingEnabled = false) {
+    constructor(world_address: string, url: string = LOCAL_KATANA) {
         super(world_address);
         this.provider = new RpcProvider({
             nodeUrl: url,
         });
-        this.loggingEnabled = loggingEnabled;
     }
 
-    private log(level: string, message: string) {
-        if (this.loggingEnabled) {
-            logger.log(level, message);
-        }
-    }
-
-    // fetches a component of an entity
-    public async entity(component: string, query: Query, offset: number, length: number): Promise<Array<bigint>> {
-
-        const call_data = [component, query.partition, ...query.keys, offset, length]
+    public async entity(component: string, query: Query, offset: number = 0, length: number = 0): Promise<Array<bigint>> {
 
         const call: Call = {
-            entrypoint: WorldEntryPoints.get,
+            entrypoint: WorldEntryPoints.get, // "entity"
             contractAddress: this.getWorldAddress(),
-            calldata: call_data
+            calldata: [
+                strTofelt252Felt(component),
+                query.address_domain,
+                query.keys.length,
+                ...query.keys as any,
+                offset,
+                length
+            ]
         }
 
         try {
             const response = await this.provider.callContract(call);
-            this.log("info", `Entity call successful: ${JSON.stringify(response)}`);
+
             return response.result as unknown as Array<bigint>;
         } catch (error) {
-            this.log("error", `Entity call failed: ${error}`);
-            this.emit("error", error);
             throw error;
         }
     }
 
-    // fetches multiple components of an entity
-    public async constructEntity(parameters: Array<{ component: string; query: Query; offset: number; length: number }>): Promise<{ [key: string]: Array<bigint> }> {
-        const responseObj: { [key: string]: Array<bigint> } = {};
+    public async entities(component: string, length: number): Promise<Array<bigint>> {
 
-        for (const param of parameters) {
-            const { component, query, offset, length } = param;
-            try {
-                const response = await this.entity(component, query, offset, length);
-                responseObj[component] = response;
-            } catch (error) {
-                this.log("error", `Fetch multiple entities failed for component ${component}: ${error}`);
-                this.emit("error", error);
-                throw error;
-            }
+        const call: Call = {
+            entrypoint: WorldEntryPoints.entities,
+            contractAddress: this.getWorldAddress(),
+            calldata: [strTofelt252Felt(component), length]
         }
 
-        this.log("info", `Fetch multiple entities successful: ${JSON.stringify(responseObj)}`);
-        return responseObj;
+        try {
+            const response = await this.provider.callContract(call);
+
+            return response.result as unknown as Array<bigint>;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    public async component(name: string): Promise<bigint> {
+
+        const call: Call = {
+            entrypoint: WorldEntryPoints.component,
+            contractAddress: this.getWorldAddress(),
+            calldata: [strTofelt252Felt(name)]
+        }
+
+        try {
+            const response = await this.provider.callContract(call);
+
+            return response.result as unknown as bigint;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    public async execute(account: Account, system: string, call_data: num.BigNumberish[]): Promise<InvokeFunctionResponse> {
+
+        try {
+            const nonce = await account?.getNonce()
+            const call = await account?.execute(
+                {
+                    contractAddress: this.getWorldAddress() || "",
+                    entrypoint: WorldEntryPoints.execute,
+                    calldata: [strTofelt252Felt(system), call_data.length, ...call_data]
+                },
+                undefined,
+                {
+                    nonce,
+                    maxFee: 0 // TODO: Update
+                }
+            );
+            return call;
+        } catch (error) {
+            throw error;
+        }
     }
 }

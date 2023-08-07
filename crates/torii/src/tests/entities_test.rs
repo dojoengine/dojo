@@ -1,46 +1,107 @@
 #[cfg(test)]
 mod tests {
     use sqlx::SqlitePool;
+    use starknet_crypto::{poseidon_hash_many, FieldElement};
 
-    use crate::graphql::entity::Entity;
-    use crate::tests::common::run_graphql_query;
+    use crate::tests::common::{entity_fixtures, run_graphql_query, Entity, Moves, Position};
 
-    #[sqlx::test(migrations = "./migrations", fixtures("entities"))]
+    #[sqlx::test(migrations = "./migrations")]
     async fn test_entity(pool: SqlitePool) {
-        let _ = pool.acquire().await;
-
-        let query =
-            "{ entity(id: \"entity_1\") { id name partitionId keys transactionHash createdAt } }";
-        let value = run_graphql_query(&pool, query).await;
+        entity_fixtures(&pool).await;
+        let entity_id = poseidon_hash_many(&[FieldElement::ONE]);
+        let query = format!(
+            r#"
+            {{
+                entity(id: "{:#x}") {{
+                    componentNames
+                }}
+            }}
+        "#,
+            entity_id
+        );
+        let value = run_graphql_query(&pool, &query).await;
 
         let entity = value.get("entity").ok_or("no entity found").unwrap();
         let entity: Entity = serde_json::from_value(entity.clone()).unwrap();
-        assert_eq!(entity.id, "entity_1".to_string());
+        assert_eq!(entity.component_names, "Moves".to_string());
     }
 
-    #[sqlx::test(migrations = "./migrations", fixtures("entities"))]
-    async fn test_entities_partition_id(pool: SqlitePool) {
-        let _ = pool.acquire().await;
+    #[sqlx::test(migrations = "./migrations")]
+    async fn test_entity_components(pool: SqlitePool) {
+        entity_fixtures(&pool).await;
 
-        let query = "{ entities (partitionId: \"420\") { id name partitionId keys transactionHash \
-                     createdAt } }";
-        let value = run_graphql_query(&pool, query).await;
+        let entity_id = poseidon_hash_many(&[FieldElement::THREE]);
+        let query = format!(
+            r#"
+                {{
+                    entity (id: "{:#x}") {{
+                        components {{
+                            __typename
+                            ... on Moves {{
+                                remaining
+                            }}
+                            ... on Position {{
+                                x
+                                y
+                            }}
+                        }}
+                    }}
+                }}
+            "#,
+            entity_id
+        );
+        let value = run_graphql_query(&pool, &query).await;
 
-        let entities = value.get("entities").ok_or("incorrect entities").unwrap();
-        let entities: Vec<Entity> = serde_json::from_value(entities.clone()).unwrap();
-        assert_eq!(entities.len(), 2);
+        let entity = value.get("entity").ok_or("no entity found").unwrap();
+        let components = entity.get("components").ok_or("no components found").unwrap();
+        let component_moves: Moves = serde_json::from_value(components[0].clone()).unwrap();
+        let component_position: Position = serde_json::from_value(components[1].clone()).unwrap();
+
+        assert_eq!(component_moves.__typename, "Moves");
+        assert_eq!(component_moves.remaining, 10);
+        assert_eq!(component_position.__typename, "Position");
+        assert_eq!(component_position.x, 42);
+        assert_eq!(component_position.y, 69);
     }
 
-    #[sqlx::test(migrations = "./migrations", fixtures("entities"))]
-    async fn test_entities_partition_id_keys(pool: SqlitePool) {
-        let _ = pool.acquire().await;
+    #[sqlx::test(migrations = "./migrations")]
+    async fn test_entities_without_component_filters(pool: SqlitePool) {
+        entity_fixtures(&pool).await;
 
-        let query = "{ entities (partitionId: \"69\", keys: [\"420\"]) { id name partitionId keys \
-                     transactionHash createdAt } }";
+        let query = "
+        {
+            entities (keys: [\"%%\"]) {
+                keys
+                componentNames
+            }
+        }
+        ";
         let value = run_graphql_query(&pool, query).await;
 
-        let entities = value.get("entities").ok_or("no entity found").unwrap();
+        let entities = value.get("entities").ok_or("entities not found").unwrap();
         let entities: Vec<Entity> = serde_json::from_value(entities.clone()).unwrap();
-        assert_eq!(entities[0].id, "entity_3".to_string());
+        assert_eq!(entities[0].keys.clone().unwrap(), "0x1,");
+        assert_eq!(entities[1].keys.clone().unwrap(), "0x2,");
+        assert_eq!(entities[2].keys.clone().unwrap(), "0x3,");
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    async fn test_entities_with_component_filters(pool: SqlitePool) {
+        entity_fixtures(&pool).await;
+
+        let query = "
+        {
+            entities (keys: [\"%%\"], componentName:\"Moves\") {
+                keys
+                componentNames
+            }
+        }
+        ";
+        let value = run_graphql_query(&pool, query).await;
+
+        let entities = value.get("entities").ok_or("entities not found").unwrap();
+        let entities: Vec<Entity> = serde_json::from_value(entities.clone()).unwrap();
+        assert_eq!(entities[0].keys.clone().unwrap(), "0x1,");
+        assert_eq!(entities[1].keys.clone().unwrap(), "0x3,");
     }
 }

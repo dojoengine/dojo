@@ -1,30 +1,36 @@
 [package]
-name = "dojo-world"
-version.workspace = true
-edition.workspace = true
-repository.workspace = true
-license-file.workspace = true
 description = "Dojo world specification. For example, crates and flags used for compilation."
+edition.workspace = true
+license-file.workspace = true
+name = "dojo-world"
+repository.workspace = true
+version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-cairo-lang-starknet.workspace = true
-cairo-lang-project.workspace = true
-camino.workspace = true
-thiserror.workspace = true
-toml = "0.7.1"
+async-trait.workspace = true
 cairo-lang-filesystem.workspace = true
-scarb.workspace = true
+cairo-lang-project.workspace = true
+cairo-lang-starknet.workspace = true
+camino.workspace = true
+convert_case.workspace = true
+dojo-types = { path = "../dojo-types" }
+futures = "0.3.28"
+reqwest = { version = "0.11.18", default-features = false, features = [ "rustls-tls" ] }
 serde.workspace = true
 serde_json.workspace = true
-serde_with = "2.3.1"
+serde_with.workspace = true
 smol_str.workspace = true
+starknet-crypto.workspace = true
 starknet.workspace = true
-url = "2.2.2"
-async-trait = "0.1.68"
+thiserror.workspace = true
+tokio.workspace = true
 tracing.workspace = true
+url = "2.2.2"
 
 [dev-dependencies]
-indoc.workspace = true
-test-log.workspace = true
-tokio = { version = "1.28.0", features = ["full"] }
+assert_fs = "1.0.9"
+assert_matches = "1.5.0"
+dojo-lang = { path = "../dojo-lang" }
+dojo-test-utils = { path = "../dojo-test-utils" }
+tokio = { version = "1.28.0", features = [ "full" ] }

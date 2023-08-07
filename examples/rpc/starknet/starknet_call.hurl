@@ -3,14 +3,16 @@ Content-Type: application/json
 {
     "jsonrpc":"2.0",
     "method":"starknet_call",
-    "params": {
-        "request": {
-            "contract_address": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
-            "entry_point_selector": "0x361458367e696363fbcc70777d07ebbd2394e89fd0adcaf147faccd1d294d60",
-            "calldata": []
-        },
-        "block_number": 33482
-    },
+    "params": [
+        {
+			"contract_address": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+			"entry_point_selector": "0x2e4263afad30923c891518314c3c95dbe830a16874e8abc5777a9a20b54c76e",
+			"calldata": [
+				"0x05b92948371346d0df1d3c2d7568573364497f6cba65f4734ecd54ed0a0dbd11"
+			]
+		},
+		"pending"
+    ],
     "id":1
 }
 

@@ -1,19 +1,20 @@
 [package]
-name = "katana"
-version.workspace = true
+description = "A fast and lightweight local Starknet development sequencer."
 edition.workspace = true
-repository.workspace = true
 license-file.workspace = true
-description = "Katana command line interface."
+name = "katana"
+repository.workspace = true
+version.workspace = true
 
 [dependencies]
 clap.workspace = true
+clap_complete.workspace = true
 env_logger.workspace = true
+katana-core = { path = "core" }
+katana-rpc = { path = "rpc" }
 log.workspace = true
-tokio.workspace = true
-katana-core = { path = "../katana-core" }
-katana-rpc = { path = "../katana-rpc" }
 starknet_api.workspace = true
+tokio.workspace = true
 yansi.workspace = true
 
 [dev-dependencies]

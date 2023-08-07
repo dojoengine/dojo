@@ -1,9 +1,9 @@
 #!/bin/bash
 set -euxo pipefail
 
-cargo +nightly-2022-11-03 run --bin dojo-test -- crates/dojo-core
-cargo +nightly-2022-11-03 run --bin dojo-test -- crates/dojo-erc
-#cargo +nightly-2022-11-03 run --bin dojo-test -- crates/dojo-physics
-cargo +nightly-2022-11-03 run --bin dojo-test -- crates/dojo-core/tests
-cargo +nightly-2022-11-03 run --bin dojo-test -- crates/dojo-defi
-cargo +nightly-2022-11-03 run --bin dojo-test -- examples
+cargo run --bin sozo -- --manifest-path crates/dojo-core/Scarb.toml test
+# cargo run --bin sozo -- test crates/dojo-physics
+cargo run --bin sozo -- --manifest-path crates/dojo-core/tests/Scarb.toml test
+cargo run --bin sozo -- --manifest-path crates/dojo-erc/Scarb.toml test
+# cargo run --bin sozo -- test crates/dojo-defi
+cargo run --bin sozo -- --manifest-path examples/ecs/Scarb.toml test

@@ -1,2 +1,1 @@
-import { RPCProvider } from "./RPCProvider";
-export { RPCProvider };
+export { RPCProvider } from "./RPCProvider";

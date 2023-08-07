@@ -1,10 +1,17 @@
 {
   "compilerOptions": {
-    "target": "ES2018",
+    "target": "esnext",
     "module": "commonjs",
     "declaration": true,
     "outDir": "./dist",
+    "sourceMap": true,
+    "noImplicitAny": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
     "strict": true,
+    "strictNullChecks": true,
     "types": [
       "jest"
     ],
@@ -13,6 +20,7 @@
   "include": [
     "src/**/*.ts"
   ],
+  "skipLibCheck": true,
   "exclude": [
     "node_modules",
     "dist",

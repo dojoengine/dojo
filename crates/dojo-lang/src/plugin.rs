@@ -1,13 +1,15 @@
 use std::sync::Arc;
 
-use anyhow::Result;
-use cairo_lang_defs::plugin::{GeneratedFileAuxData, MacroPlugin, PluginDiagnostic, PluginResult};
+use cairo_lang_defs::plugin::{
+    DynGeneratedFileAuxData, GeneratedFileAuxData, MacroPlugin, PluginDiagnostic,
+    PluginGeneratedFile, PluginResult,
+};
 use cairo_lang_diagnostics::DiagnosticEntry;
 use cairo_lang_semantic::db::SemanticGroup;
-use cairo_lang_semantic::patcher::Patches;
+use cairo_lang_semantic::patcher::{PatchBuilder, Patches};
 use cairo_lang_semantic::plugin::{
-    AsDynGeneratedFileAuxData, AsDynMacroPlugin, PluginAuxData, PluginMappedDiagnostic,
-    SemanticPlugin,
+    AsDynGeneratedFileAuxData, AsDynMacroPlugin, DynPluginAuxData, PluginAuxData,
+    PluginMappedDiagnostic, SemanticPlugin, TrivialPluginAuxData,
 };
 use cairo_lang_semantic::SemanticDiagnostic;
 use cairo_lang_starknet::plugin::StarkNetPlugin;
@@ -16,31 +18,42 @@ use cairo_lang_syntax::attribute::structured::{
 };
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
-use cairo_lang_syntax::node::{ast, Terminal};
+use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
+use dojo_types::component::Member;
+use dojo_types::system::Dependency;
 use scarb::compiler::plugin::builtin::BuiltinSemanticCairoPlugin;
 use scarb::core::{PackageId, PackageName, SourceId};
 use semver::Version;
 use smol_str::SmolStr;
+use url::Url;
 
 use crate::component::handle_component_struct;
+use crate::inline_macro_plugin::InlineMacroExpanderData;
+use crate::serde::handle_serde_len_struct;
 use crate::system::System;
 
 const SYSTEM_ATTR: &str = "system";
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct Component {
+    pub name: String,
+    pub members: Vec<Member>,
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct SystemAuxData {
     pub name: SmolStr,
-    pub dependencies: Vec<SmolStr>,
+    pub dependencies: Vec<Dependency>,
 }
 
 /// Dojo related auxiliary data of the Dojo plugin.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Default, PartialEq)]
 pub struct DojoAuxData {
     /// Patches of code that need translation in case they have diagnostics.
     pub patches: Patches,
 
     /// A list of components that were processed by the plugin.
-    pub components: Vec<smol_str::SmolStr>,
+    pub components: Vec<Component>,
     /// A list of systems that were processed by the plugin and their component dependencies.
     pub systems: Vec<SystemAuxData>,
 }
@@ -63,7 +76,9 @@ impl PluginAuxData for DojoAuxData {
         db: &(dyn SemanticGroup + 'static),
         diag: &dyn std::any::Any,
     ) -> Option<PluginMappedDiagnostic> {
-        let Some(diag) = diag.downcast_ref::<SemanticDiagnostic>() else {return None;};
+        let Some(diag) = diag.downcast_ref::<SemanticDiagnostic>() else {
+            return None;
+        };
         let span = self
             .patches
             .translate(db.upcast(), diag.stable_location.diagnostic_location(db.upcast()).span)?;
@@ -90,9 +105,31 @@ impl DojoPlugin {
 
 impl MacroPlugin for DojoPlugin {
     fn generate_code(&self, db: &dyn SyntaxGroup, item_ast: ast::Item) -> PluginResult {
+        let mut expander_data = InlineMacroExpanderData::default();
+        expander_data.expand_node(db, &item_ast.as_syntax_node());
+        if expander_data.code_changed {
+            return PluginResult {
+                code: Some(PluginGeneratedFile {
+                    name: "inline_macros".into(),
+                    content: expander_data.result_code.clone(),
+                    aux_data: DynGeneratedFileAuxData(Arc::new(TrivialPluginAuxData {})),
+                }),
+                diagnostics: expander_data.diagnostics,
+                remove_original_item: true,
+            };
+        } else if !expander_data.diagnostics.is_empty() {
+            return PluginResult {
+                code: None,
+                diagnostics: expander_data.diagnostics,
+                remove_original_item: false,
+            };
+        }
+
         match item_ast {
             ast::Item::Module(module_ast) => self.handle_mod(db, module_ast),
             ast::Item::Struct(struct_ast) => {
+                let mut aux_data = DojoAuxData::default();
+                let mut rewrite_nodes = vec![];
                 let mut diagnostics = vec![];
 
                 // Iterate over all the derive attributes of the struct
@@ -111,14 +148,12 @@ impl MacroPlugin for DojoPlugin {
                     // Iterate over all the arguments of the derive attribute
                     for arg in attr.args {
                         // Check if the argument is a path then set it to arg
-                        let AttributeArg{
-                            variant: AttributeArgVariant::Unnamed {
-                                value: ast::Expr::Path(path),
-                                value_stable_ptr,
-                                ..
-                            },
+                        let AttributeArg {
+                            variant:
+                                AttributeArgVariant::Unnamed { value: ast::Expr::Path(path), .. },
                             ..
-                        } = arg else {
+                        } = arg
+                        else {
                             diagnostics.push(PluginDiagnostic {
                                 stable_ptr: arg.arg_stable_ptr.untyped(),
                                 message: "Expected path.".into(),
@@ -128,24 +163,46 @@ impl MacroPlugin for DojoPlugin {
 
                         // Check if the path has a single segment
                         let [ast::PathSegment::Simple(segment)] = &path.elements(db)[..] else {
-                            diagnostics.push(PluginDiagnostic {
-                                stable_ptr: value_stable_ptr.untyped(),
-                                message: "Expected a single segment.".into(),
-                            });
                             continue;
                         };
 
                         // Get the text of the segment and check if it is "Component"
                         let derived = segment.ident(db).text(db);
 
-                        // If struct has a derive attribute with "Component" then handle it
-                        if matches!(derived.as_str(), "Component") {
-                            return handle_component_struct(db, struct_ast);
+                        match derived.as_str() {
+                            "Component" => {
+                                let (component_rewrite_nodes, component_diagnostics) =
+                                    handle_component_struct(db, &mut aux_data, struct_ast.clone());
+                                rewrite_nodes.push(component_rewrite_nodes);
+                                diagnostics.extend(component_diagnostics);
+                            }
+                            "SerdeLen" => {
+                                rewrite_nodes.push(handle_serde_len_struct(db, struct_ast.clone()));
+                            }
+                            _ => continue,
                         }
                     }
                 }
 
-                PluginResult { diagnostics, ..PluginResult::default() }
+                if rewrite_nodes.is_empty() {
+                    return PluginResult { diagnostics, ..PluginResult::default() };
+                }
+
+                let name = struct_ast.name(db).text(db);
+                let mut builder = PatchBuilder::new(db);
+                for node in rewrite_nodes {
+                    builder.add_modified(node);
+                }
+
+                PluginResult {
+                    code: Some(PluginGeneratedFile {
+                        name,
+                        content: builder.code,
+                        aux_data: DynGeneratedFileAuxData::new(DynPluginAuxData::new(aux_data)),
+                    }),
+                    diagnostics,
+                    remove_original_item: true,
+                }
             }
             _ => PluginResult::default(),
         }
@@ -165,22 +222,29 @@ impl SemanticPlugin for DojoPlugin {}
 pub struct CairoPluginRepository(scarb::compiler::plugin::CairoPluginRepository);
 
 impl CairoPluginRepository {
-    pub fn new() -> Result<Self> {
+    pub fn new() -> Self {
         let mut repo = scarb::compiler::plugin::CairoPluginRepository::empty();
+        let url = Url::parse("https://github.com/dojoengine/dojo").unwrap();
         let dojo_package_id = PackageId::new(
-            PackageName::new("dojo_core"),
+            PackageName::new("dojo_plugin"),
             Version::parse("0.1.0").unwrap(),
-            SourceId::for_std(),
+            SourceId::for_git(&url, &scarb::core::GitReference::DefaultBranch).unwrap(),
         );
-        repo.add(Box::new(BuiltinSemanticCairoPlugin::<DojoPlugin>::new(dojo_package_id)))?;
+        repo.add(Box::new(BuiltinSemanticCairoPlugin::<DojoPlugin>::new(dojo_package_id))).unwrap();
         let starknet_package_id = PackageId::new(
             PackageName::STARKNET,
-            Version::parse("0.1.0").unwrap(),
+            Version::parse("2.1.0-rc4").unwrap(),
             SourceId::for_std(),
         );
         repo.add(Box::new(BuiltinSemanticCairoPlugin::<StarkNetPlugin>::new(starknet_package_id)))
             .unwrap();
-        Ok(Self(repo))
+        Self(repo)
+    }
+}
+
+impl Default for CairoPluginRepository {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

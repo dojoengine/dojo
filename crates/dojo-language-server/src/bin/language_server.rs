@@ -21,14 +21,14 @@ async fn main() {
 
     let db = RootDatabase::builder()
         .with_cfg(CfgSet::from_iter([Cfg::name("test")]))
-        .with_semantic_plugin(Arc::new(DojoPlugin::default()))
+        .with_semantic_plugin(Arc::new(DojoPlugin))
         .with_semantic_plugin(Arc::new(StarkNetPlugin::default()))
         .build()
         .unwrap_or_else(|error| {
             panic!("Problem creating language database: {error:?}");
         });
 
-    let (service, socket) = LspService::build(|client| Backend::new(client, db.into()))
+    let (service, socket) = LspService::build(|client| Backend::new(client, db))
         .custom_method("vfs/provide", Backend::vfs_provide)
         .finish();
     Server::new(stdin, stdout, socket).serve(service).await;

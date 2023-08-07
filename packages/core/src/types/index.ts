@@ -2,29 +2,35 @@ export enum WorldEntryPoints {
     get = "entity",
     set = "set_entity",
     entities = "entities",
-    execute = "execute"
+    execute = "execute",
+    register_system = "register_system",
+    register_component = "register_component",
+    component = "component",
+    system = "system"
 }
 
 export interface Query {
-    partition: string,
-    keys: string[]
+    address_domain: string,
+    keys: bigint[]
 }
 
-// TODO: add individual interfaces for each of the entrypoints
-export interface IWorld {
-    register_component?(string: string): void;
-    component?(name: bigint): Promise<string>;
-    register_system?(string: string): void;
-    system?(name: bigint): Promise<string>;
-    execute?(name: bigint, execute_calldata: Array<bigint>): Promise<Array<bigint>>;
-    uuid?(): Promise<bigint>;
-    set_entity?(component: bigint, query: Query, offset: number, value: Array<bigint>): void;
-    delete_entity?(component: bigint, query: Query): void;
+export interface ICommands {
+
     entity?(component: string, query: Query, offset: number, length: number): Promise<Array<bigint>>;
-    entities?(component: bigint, partition: bigint): Promise<Array<bigint>>;
-    set_executor?(string: string): void;
-    has_role?(role: bigint, account: string): Promise<boolean>;
-    grant_role?(role: bigint, account: string): void;
-    revoke_role?(role: bigint, account: string): void;
-    renounce_role?(role: bigint): void;
+    entities?(component: string, length: number): Promise<Array<bigint>>;
+    execute?(name: bigint, execute_calldata: Array<bigint>): Promise<Array<bigint>>;
+
+    register_component?(class_hash: string): Promise<bigint>;
+    register_system?(class_hash: string): Promise<bigint>;
+
+    // views
+    is_authorized?(system: string, component: string): Promise<bigint>;
+    is_account_admin?(): Promise<bigint>;
+
+    component?(name: string): Promise<bigint>;
+    system?(name: string): Promise<bigint>;
+
+    // add generic world commands
+    blocktime?(): Promise<bigint>;
+    worldAge?(): Promise<bigint>;
 }
