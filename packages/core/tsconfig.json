@@ -4,7 +4,14 @@
     "module": "commonjs",
     "declaration": true,
     "outDir": "./dist",
+    "sourceMap": true,
+    "noImplicitAny": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
     "strict": true,
+    "strictNullChecks": true,
     "types": [
       "jest"
     ],
