@@ -88,12 +88,13 @@ async fn main() -> anyhow::Result<()> {
     state.load_from_manifest(manifest.clone()).await?;
     let processors = Processors {
         event: vec![Box::new(RegisterComponentProcessor), Box::new(RegisterSystemProcessor)],
-        block: vec![Box::new(StoreSetRecordProcessor {
-            component: "Component".to_string(),
-            world: args.world_address,
-            length: 1,
-            keys: vec![],
-        })],
+        //TODO: Change mocked values into args from cli
+        block: vec![Box::new(StoreSetRecordProcessor::new(
+            "Component".to_string(),
+            args.world_address,
+            1,
+            vec![],
+        ))],
         ..Processors::default()
     };
 
