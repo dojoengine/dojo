@@ -85,13 +85,6 @@ pub struct StarknetOptions {
     #[arg(help = "Number of pre-funded accounts to generate.")]
     pub total_accounts: u8,
 
-    #[arg(value_name = "PATH")]
-    #[arg(long = "account-class")]
-    #[arg(help = "The account implementation for the predeployed accounts.")]
-    #[arg(long_help = "Specify the account implementation to be used for the predeployed \
-                       accounts; should be a path to the compiled JSON artifact.")]
-    pub account_path: Option<PathBuf>,
-
     #[arg(long)]
     #[arg(help = "Disable charging fee for transactions.")]
     pub disable_fee: bool,
@@ -137,7 +130,6 @@ impl KatanaArgs {
         StarknetConfig {
             total_accounts: self.starknet.total_accounts,
             seed: parse_seed(&self.starknet.seed),
-            account_path: self.starknet.account_path.clone(),
             disable_fee: self.starknet.disable_fee,
             auto_mine: self.block_time.is_none() && !self.no_mining,
             init_state: self.load_state.clone(),

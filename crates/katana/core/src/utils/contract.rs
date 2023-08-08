@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::io::Read;
 
-use anyhow::{anyhow, Ok, Result};
+use anyhow::{anyhow, Result};
 use blockifier::execution::contract_class::{
     ContractClass as InnerContractClass, ContractClassV0 as InnerContractClassV0,
 };

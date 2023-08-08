@@ -44,7 +44,13 @@ async fn main() {
     match spawn(katana_api, starknet_api, server_config).await {
         Ok(NodeHandle { addr, handle, .. }) => {
             if !config.silent {
-                let accounts = sequencer.backend.predeployed_accounts.display();
+                let accounts = sequencer
+                    .backend
+                    .accounts
+                    .iter()
+                    .map(|a| format!("{a}"))
+                    .collect::<Vec<_>>()
+                    .join("\n");
 
                 print_intro(
                     accounts,
