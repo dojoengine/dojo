@@ -127,7 +127,7 @@ mod tests {
         assert(*moves[0] == 9, 'moves is wrong');
         let new_position = world
             .entity('Position', keys.span(), 0, dojo::SerdeLen::<Position>::len());
-        assert(*new_position[0] == 1, 'position x is wrong');
-        assert(*new_position[1] == 0, 'position y is wrong');
+        assert(*new_position[0] == 11, 'position x is wrong');
+        assert(*new_position[1] == 10, 'position y is wrong');
     }
 }
