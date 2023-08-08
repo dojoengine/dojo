@@ -34,21 +34,24 @@ impl PositionImpl of PositionTrait {
     }
 }
 
-#[test]
-#[available_gas(100000)]
-fn test_position_is_zero() {
-    let player = starknet::contract_address_const::<0x0>();
-    assert(PositionTrait::is_zero(Position { player, x: 0, y: 0 }), 'not zero');
-}
+#[cfg(test)]
+mod tests {
+    use debug::PrintTrait;
+    use super::{Position, PositionTrait};
 
-#[test]
-#[available_gas(100000)]
-fn test_position_is_equal() {
-    let player = starknet::contract_address_const::<0x0>();
-    assert(
-        PositionTrait::is_equal(
-            Position { player, x: 420, y: 0 }, Position { player, x: 420, y: 0 }
-        ),
-        'not equal'
-    );
+    #[test]
+    #[available_gas(100000)]
+    fn test_position_is_zero() {
+        let player = starknet::contract_address_const::<0x0>();
+        assert(PositionTrait::is_zero(Position { player, x: 0, y: 0 }), 'not zero');
+    }
+
+    #[test]
+    #[available_gas(100000)]
+    fn test_position_is_equal() {
+        let player = starknet::contract_address_const::<0x0>();
+        let position = Position { player, x: 420, y: 0 };
+        position.print();
+        assert(PositionTrait::is_equal(position, Position { player, x: 420, y: 0 }), 'not equal');
+    }
 }

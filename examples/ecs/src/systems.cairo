@@ -29,6 +29,7 @@ mod move {
     use box::BoxTrait;
     use traits::Into;
     use dojo::world::Context;
+    use debug::PrintTrait;
 
     use dojo_examples::components::Position;
     use dojo_examples::components::Moves;

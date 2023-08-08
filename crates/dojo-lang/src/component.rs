@@ -139,6 +139,19 @@ pub fn handle_component_struct(
             .collect(),
     });
 
+    let member_prints: Vec<_> = members
+        .iter()
+        .map(|member| {
+            let member_name = &member.0;
+            format!(
+                "debug::PrintTrait::print('{}'); debug::PrintTrait::print(self.{});",
+                member_name, member_name
+            )
+        })
+        .collect();
+
+    let print_body = member_prints.join("\n");
+
     (
         RewriteNode::interpolate_patched(
             "
@@ -164,6 +177,13 @@ pub fn handle_component_struct(
                     let mut serialized = ArrayTrait::new();
                     $component_serialized_values$
                     array::ArrayTrait::span(@serialized)
+                }
+            }
+
+            #[cfg(test)]
+            impl $type_name$PrintImpl of debug::PrintTrait<$type_name$> {
+                fn print(self: $type_name$) {
+                    $print_body$
                 }
             }
 
@@ -219,6 +239,7 @@ pub fn handle_component_struct(
                     RewriteNode::new_modified(component_serialized_values),
                 ),
                 ("schema".to_string(), RewriteNode::new_modified(schema)),
+                ("print_body".to_string(), RewriteNode::Text(print_body)),
             ]),
         ),
         diagnostics,
