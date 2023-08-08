@@ -30,6 +30,6 @@ pub fn component_storage_base_address(
     component: FieldElement,
     keys: &[FieldElement],
 ) -> FieldElement {
-    let id = poseidon_hash_many(&keys);
+    let id = poseidon_hash_many(keys);
     poseidon_hash_many(&[short_string!("dojo_storage"), component, id])
 }

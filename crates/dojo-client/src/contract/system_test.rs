@@ -44,5 +44,5 @@ async fn test_system() {
 
     let position = position_component.entity(vec![account.address()], block_id).await.unwrap();
 
-    assert_eq!(position, vec![1_u8.into(), 1_u8.into()]);
+    assert_eq!(position, vec![11_u8.into(), 11_u8.into()]);
 }

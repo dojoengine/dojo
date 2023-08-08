@@ -13,7 +13,9 @@ mod spawn {
         set !(
             ctx.world,
             (
-               Position {
+                Moves {
+                    player: ctx.origin, remaining: 10
+                    }, Position {
                     player: ctx.origin, x: position.x + 10, y: position.y + 10
                 },
             )
