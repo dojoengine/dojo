@@ -9,7 +9,7 @@ use starknet::core::types::{
 
 use super::transaction::TransactionOutput;
 use crate::backend::executor::ExecutedTransaction;
-use crate::utils::transaction::convert_api_to_rpc_tx;
+use crate::utils::transaction::api_to_rpc_transaction;
 
 #[derive(Debug, Clone, Copy)]
 pub enum BlockStatus {
@@ -154,7 +154,7 @@ impl From<Block> for BlockWithTxs {
             transactions: value
                 .transactions
                 .into_iter()
-                .map(|t| convert_api_to_rpc_tx(t.transaction.clone()))
+                .map(|t| api_to_rpc_transaction(t.transaction.clone()))
                 .collect(),
         }
     }
@@ -174,7 +174,7 @@ impl From<ExecutedBlock> for MaybePendingBlockWithTxs {
                 transactions: block
                     .transactions
                     .into_iter()
-                    .map(|t| convert_api_to_rpc_tx(t.transaction.clone()))
+                    .map(|t| api_to_rpc_transaction(t.transaction.clone()))
                     .collect(),
             }),
             ExecutedBlock::Pending(block) => {
@@ -185,7 +185,7 @@ impl From<ExecutedBlock> for MaybePendingBlockWithTxs {
                     transactions: block
                         .transactions
                         .into_iter()
-                        .map(|t| convert_api_to_rpc_tx(t.transaction.clone()))
+                        .map(|t| api_to_rpc_transaction(t.transaction.clone()))
                         .collect(),
                 })
             }
