@@ -4,7 +4,7 @@ use dojo_world::manifest::Manifest;
 use graphql::server::start_graphql;
 use sqlx::sqlite::SqlitePoolOptions;
 use starknet::core::types::FieldElement;
-use starknet::providers::jsonrpc::{HttpTransport, JsonRpcMethod};
+use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use state::sql::Sql;
 use tokio_util::sync::CancellationToken;
@@ -17,6 +17,7 @@ use crate::indexer::Indexer;
 use crate::processors::register_component::RegisterComponentProcessor;
 use crate::processors::register_system::RegisterSystemProcessor;
 use crate::processors::store_set_record::StoreSetRecordProcessor;
+use crate::processors::store_state_diff::StateDiffProcessor;
 use crate::state::State;
 
 mod engine;
@@ -87,9 +88,13 @@ async fn main() -> anyhow::Result<()> {
     let state = Sql::new(pool.clone(), args.world_address).await?;
     state.load_from_manifest(manifest.clone()).await?;
     let processors = Processors {
-        event: vec![Box::new(RegisterComponentProcessor), Box::new(RegisterSystemProcessor)],
+        event: vec![
+            Box::new(RegisterComponentProcessor),
+            Box::new(RegisterSystemProcessor),
+            Box::new(StoreSetRecordProcessor),
+        ],
         //TODO: Change mocked values into args from cli
-        block: vec![Box::new(StoreSetRecordProcessor::new(
+        block: vec![Box::new(StateDiffProcessor::new(
             "Component".to_string(),
             args.world_address,
             1,

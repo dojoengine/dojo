@@ -13,7 +13,11 @@ use crate::state::State;
 pub struct RegisterComponentProcessor;
 
 #[async_trait]
-impl<S: State + Sync, T: JsonRpcTransport> EventProcessor<S, T> for RegisterComponentProcessor {
+impl<S, T> EventProcessor<S, T> for RegisterComponentProcessor
+where
+    S: State + Sync,
+    T: JsonRpcTransport,
+{
     fn event_key(&self) -> String {
         "ComponentRegistered".to_string()
     }

@@ -8,6 +8,7 @@ use crate::state::State;
 pub mod register_component;
 pub mod register_system;
 pub mod store_set_record;
+pub mod store_state_diff;
 
 #[async_trait]
 pub trait EventProcessor<S: State, T: JsonRpcTransport> {
