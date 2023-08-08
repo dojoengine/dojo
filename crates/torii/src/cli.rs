@@ -4,7 +4,7 @@ use dojo_world::manifest::Manifest;
 use graphql::server::start_graphql;
 use sqlx::sqlite::SqlitePoolOptions;
 use starknet::core::types::FieldElement;
-use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::jsonrpc::{HttpTransport, JsonRpcMethod};
 use starknet::providers::JsonRpcClient;
 use state::sql::Sql;
 use tokio_util::sync::CancellationToken;
@@ -17,7 +17,6 @@ use crate::indexer::Indexer;
 use crate::processors::register_component::RegisterComponentProcessor;
 use crate::processors::register_system::RegisterSystemProcessor;
 use crate::processors::store_set_record::StoreSetRecordProcessor;
-use crate::processors::store_set_record_legacy::StoreSetRecordProcessorLegacy;
 use crate::state::State;
 
 mod engine;
@@ -88,11 +87,13 @@ async fn main() -> anyhow::Result<()> {
     let state = Sql::new(pool.clone(), args.world_address).await?;
     state.load_from_manifest(manifest.clone()).await?;
     let processors = Processors {
-        event: vec![
-            Box::new(RegisterComponentProcessor),
-            Box::new(RegisterSystemProcessor),
-            Box::new(StoreSetRecordProcessor),
-        ],
+        event: vec![Box::new(RegisterComponentProcessor), Box::new(RegisterSystemProcessor)],
+        block: vec![Box::new(StoreSetRecordProcessor {
+            component: "Component".to_string(),
+            world: args.world_address,
+            length: 1,
+            keys: vec![],
+        })],
         ..Processors::default()
     };
 
