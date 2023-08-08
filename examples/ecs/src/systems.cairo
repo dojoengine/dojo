@@ -9,13 +9,14 @@ mod spawn {
     use dojo_examples::components::Moves;
 
     fn execute(ctx: Context) {
+        let position = get !(ctx.world, ctx.origin, (Position));
         set !(
             ctx.world,
             (
                 Moves {
                     player: ctx.origin, remaining: 10
                     }, Position {
-                    player: ctx.origin, x: 0, y: 0
+                    player: ctx.origin, x: position.x + 10, y: position.y + 10
                 },
             )
         );
@@ -127,7 +128,7 @@ mod tests {
         assert(*moves[0] == 9, 'moves is wrong');
         let new_position = world
             .entity('Position', keys.span(), 0, dojo::SerdeLen::<Position>::len());
-        assert(*new_position[0] == 1, 'position x is wrong');
-        assert(*new_position[1] == 0, 'position y is wrong');
+        assert(*new_position[0] == 11, 'position x is wrong');
+        assert(*new_position[1] == 10, 'position y is wrong');
     }
 }
