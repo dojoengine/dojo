@@ -1,186 +1,177 @@
-use std::collections::HashMap;
-use std::fs;
-use std::path::PathBuf;
+use std::fmt::Display;
 use std::sync::Arc;
 
-use anyhow::Result;
 use blockifier::abi::abi_utils::get_storage_var_address;
-use blockifier::execution::contract_class::{ContractClass, ContractClassV0};
+use blockifier::execution::contract_class::ContractClass;
+use blockifier::state::state_api::StateResult;
 use rand::rngs::SmallRng;
 use rand::{RngCore, SeedableRng};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
+use serde_with::serde_as;
+use starknet::core::serde::unsigned_field_element::UfeHex;
+use starknet::core::types::FieldElement;
+use starknet::core::utils::get_contract_address;
 use starknet::signers::SigningKey;
-use starknet_api::core::{
-    calculate_contract_address, ClassHash, CompiledClassHash, ContractAddress, Nonce, PatriciaKey,
-};
-use starknet_api::hash::{StarkFelt, StarkHash};
-use starknet_api::transaction::{Calldata, ContractAddressSalt};
-use starknet_api::{patricia_key, stark_felt};
+use starknet_api::core::{ClassHash, CompiledClassHash, ContractAddress, Nonce, PatriciaKey};
+use starknet_api::hash::StarkHash;
+use starknet_api::patricia_key;
 
-use crate::backend::state::{ClassRecord, MemDb, StorageRecord};
 use crate::constants::{
     DEFAULT_ACCOUNT_CONTRACT, DEFAULT_ACCOUNT_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS,
 };
-use crate::utils::contract::compute_legacy_class_hash;
+use crate::db::Db;
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde_as]
+#[derive(Debug, Clone, Serialize)]
 pub struct Account {
-    pub balance: StarkFelt,
-    pub class_hash: ClassHash,
-    pub public_key: StarkFelt,
-    pub private_key: StarkFelt,
-    #[serde(rename(serialize = "address"))]
-    pub account_address: ContractAddress,
+    #[serde_as(as = "UfeHex")]
+    pub balance: FieldElement,
+    #[serde_as(as = "UfeHex")]
+    pub public_key: FieldElement,
+    #[serde_as(as = "UfeHex")]
+    pub private_key: FieldElement,
+    #[serde_as(as = "UfeHex")]
+    pub address: FieldElement,
+    #[serde_as(as = "UfeHex")]
+    pub class_hash: FieldElement,
+    #[serde(skip_serializing)]
+    pub contract_class: Arc<ContractClass>,
 }
 
 impl Account {
+    #[must_use]
     pub fn new(
-        balance: StarkFelt,
-        public_key: StarkFelt,
-        private_key: StarkFelt,
-        class_hash: ClassHash,
+        private_key: FieldElement,
+        balance: FieldElement,
+        class_hash: FieldElement,
+        contract_class: Arc<ContractClass>,
     ) -> Self {
-        let account_address = calculate_contract_address(
-            ContractAddressSalt(stark_felt!(666_u128)),
+        let public_key = public_key_from_private_key(private_key);
+        let address = get_contract_address(
+            FieldElement::from(666u32),
             class_hash,
-            &Calldata(Arc::new(vec![public_key])),
-            ContractAddress(patricia_key!(0_u8)),
+            &[public_key],
+            FieldElement::ZERO,
+        );
+
+        Self { address, public_key, balance, class_hash, private_key, contract_class }
+    }
+
+    // TODO: separate fund logic from this struct - implement FeeToken type
+    pub fn deploy_and_fund<S: Db>(&self, state: &mut S) -> StateResult<()> {
+        self.declare(state)?;
+        self.deploy(state)?;
+        self.fund(state);
+        Ok(())
+    }
+
+    fn deploy<S: Db>(&self, state: &mut S) -> StateResult<()> {
+        let address = ContractAddress(patricia_key!(self.address));
+        // set the class hash at the account address
+        state.set_class_hash_at(address, ClassHash(self.class_hash.into()))?;
+        // set the public key in the account contract
+        state.set_storage_at(
+            address,
+            get_storage_var_address("Account_public_key", &[]).unwrap(),
+            self.public_key.into(),
+        );
+        // initialze account nonce
+        state.set_nonce(address, Nonce(1u128.into()));
+        Ok(())
+    }
+
+    fn fund<S: Db>(&self, state: &mut S) {
+        state.set_storage_at(
+            ContractAddress(patricia_key!(*FEE_TOKEN_ADDRESS)),
+            get_storage_var_address("ERC20_balances", &[self.address.into()]).unwrap(),
+            self.balance.into(),
+        );
+    }
+
+    fn declare<S: Db>(&self, state: &mut S) -> StateResult<()> {
+        let class_hash = ClassHash(self.class_hash.into());
+
+        if state.get_compiled_contract_class(&class_hash).is_ok() {
+            return Ok(());
+        }
+
+        state.set_contract_class(&class_hash, (*self.contract_class).clone())?;
+        state.set_compiled_class_hash(class_hash, CompiledClassHash(self.class_hash.into()))
+    }
+}
+
+impl Display for Account {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            r"
+| Account address |  {:#x} 
+| Private key     |  {:#x}
+| Public key      |  {:#x}",
+            self.address, self.private_key, self.public_key
         )
-        .expect("should calculate contract address");
-
-        Self { balance, public_key, private_key, class_hash, account_address }
-    }
-
-    pub fn deploy(&self, contract_class: &ContractClass, state: &mut MemDb) {
-        self.declare(contract_class, state);
-
-        state.storage.insert(
-            self.account_address,
-            StorageRecord {
-                // intialize the account nonce
-                nonce: Nonce(1u8.into()),
-                // set the contract
-                class_hash: self.class_hash,
-                storage: HashMap::from_iter([
-                    // set the public key in the account contract
-                    (get_storage_var_address("Account_public_key", &[]).unwrap(), self.public_key),
-                ]),
-            },
-        );
-
-        // set the balance in the FEE CONTRACT
-        state.storage.entry(ContractAddress(patricia_key!(*FEE_TOKEN_ADDRESS))).and_modify(|r| {
-            r.storage.insert(
-                get_storage_var_address("ERC20_balances", &[*self.account_address.0.key()])
-                    .unwrap(),
-                self.balance,
-            );
-        });
-    }
-
-    fn declare(&self, contract_class: &ContractClass, state: &mut MemDb) {
-        state.classes.insert(
-            self.class_hash,
-            ClassRecord {
-                class: contract_class.clone(),
-                compiled_hash: CompiledClassHash(self.class_hash.0),
-                sierra_class: None,
-            },
-        );
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct PredeployedAccounts {
+pub struct DevAccountGenerator {
+    pub total: u8,
     pub seed: [u8; 32],
-    pub accounts: Vec<Account>,
-    pub initial_balance: StarkFelt,
-    pub contract_class: ContractClass,
+    pub balance: FieldElement,
+    pub class_hash: FieldElement,
+    pub contract_class: Arc<ContractClass>,
 }
 
-impl PredeployedAccounts {
-    pub fn initialize(
-        total: u8,
-        seed: [u8; 32],
-        initial_balance: StarkFelt,
-        contract_class_path: Option<PathBuf>,
-    ) -> Result<Self> {
-        let (class_hash, contract_class) = if let Some(path) = contract_class_path {
-            let contract_class_str = fs::read_to_string(path)?;
-            let contract_class = serde_json::from_str::<ContractClassV0>(&contract_class_str)
-                .expect("can deserialize contract class");
-            let class_hash = compute_legacy_class_hash(&contract_class_str)
-                .expect("can compute legacy contract class hash");
-
-            (class_hash, ContractClass::V0(contract_class))
-        } else {
-            Self::default_account_class()
-        };
-
-        let accounts = Self::generate_accounts(total, seed, initial_balance, class_hash);
-
-        Ok(Self { seed, accounts, contract_class, initial_balance })
-    }
-
-    pub fn deploy_accounts(&self, state: &mut MemDb) {
-        for account in &self.accounts {
-            account.deploy(&self.contract_class, state);
+impl DevAccountGenerator {
+    #[must_use]
+    pub fn new(total: u8) -> Self {
+        Self {
+            total,
+            seed: [0u8; 32],
+            balance: FieldElement::ZERO,
+            class_hash: (*DEFAULT_ACCOUNT_CONTRACT_CLASS_HASH).into(),
+            contract_class: Arc::new((*DEFAULT_ACCOUNT_CONTRACT).clone()),
         }
     }
 
-    pub fn display(&self) -> String {
-        fn print_account(account: &Account) -> String {
-            format!(
-                r"
-| Account address |  {} 
-| Private key     |  {}
-| Public key      |  {}",
-                account.account_address.0.key(),
-                account.private_key,
-                account.public_key
-            )
-        }
-
-        self.accounts.iter().map(print_account).collect::<Vec<String>>().join("\n")
+    pub fn with_seed(self, seed: [u8; 32]) -> Self {
+        Self { seed, ..self }
     }
 
-    fn generate_accounts(
-        total: u8,
-        seed: [u8; 32],
-        balance: StarkFelt,
-        class_hash: ClassHash,
-    ) -> Vec<Account> {
-        let mut seed = seed;
-        let mut accounts = vec![];
-
-        for _ in 0..total {
-            let mut rng = SmallRng::from_seed(seed);
-            let mut private_key_bytes = [0u8; 32];
-
-            rng.fill_bytes(&mut private_key_bytes);
-            private_key_bytes[0] %= 0x9;
-            seed = private_key_bytes;
-
-            let private_key =
-                StarkFelt::new(private_key_bytes).expect("should create StarkFelt from bytes");
-
-            accounts.push(Account::new(
-                balance,
-                compute_public_key_from_private_key(private_key),
-                private_key,
-                class_hash,
-            ));
-        }
-
-        accounts
+    pub fn with_balance(self, balance: FieldElement) -> Self {
+        Self { balance, ..self }
     }
 
-    pub fn default_account_class() -> (ClassHash, ContractClass) {
-        (ClassHash(*DEFAULT_ACCOUNT_CONTRACT_CLASS_HASH), (*DEFAULT_ACCOUNT_CONTRACT).clone())
+    pub fn with_class(self, class_hash: FieldElement, contract_class: Arc<ContractClass>) -> Self {
+        Self { class_hash, contract_class, ..self }
+    }
+
+    /// Generate `total` number of accounts based on the `seed`.
+    #[must_use]
+    pub fn generate(&self) -> Vec<Account> {
+        let mut seed = self.seed;
+        (0..self.total)
+            .map(|_| {
+                let mut rng = SmallRng::from_seed(seed);
+                let mut private_key_bytes = [0u8; 32];
+
+                rng.fill_bytes(&mut private_key_bytes);
+                private_key_bytes[0] %= 0x9;
+                seed = private_key_bytes;
+
+                let private_key = FieldElement::from_bytes_be(&private_key_bytes)
+                    .expect("able to create FieldElement from bytes");
+
+                Account::new(
+                    private_key,
+                    self.balance,
+                    self.class_hash,
+                    self.contract_class.clone(),
+                )
+            })
+            .collect()
     }
 }
 
-// TODO: remove starknet-rs dependency
-fn compute_public_key_from_private_key(private_key: StarkFelt) -> StarkFelt {
-    StarkFelt::from(SigningKey::from_secret_scalar(private_key.into()).verifying_key().scalar())
+fn public_key_from_private_key(private_key: FieldElement) -> FieldElement {
+    SigningKey::from_secret_scalar(private_key).verifying_key().scalar()
 }

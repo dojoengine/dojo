@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use blockifier::block_context::BlockContext;
 use starknet_api::block::{BlockNumber, BlockTimestamp};
 use starknet_api::core::{ChainId, ContractAddress, PatriciaKey};
@@ -19,7 +17,6 @@ pub struct StarknetConfig {
     pub auto_mine: bool,
     pub total_accounts: u8,
     pub disable_fee: bool,
-    pub account_path: Option<PathBuf>,
     pub env: Environment,
     pub init_state: Option<SerializableState>,
 }
@@ -52,7 +49,6 @@ impl Default for StarknetConfig {
             seed: [0; 32],
             auto_mine: true,
             total_accounts: 10,
-            account_path: None,
             disable_fee: false,
             env: Environment::default(),
         }

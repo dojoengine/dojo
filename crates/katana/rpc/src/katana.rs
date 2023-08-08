@@ -54,7 +54,7 @@ where
     }
 
     async fn predeployed_accounts(&self) -> Result<Vec<Account>, Error> {
-        Ok(self.sequencer.backend().predeployed_accounts.accounts.clone())
+        Ok(self.sequencer.backend().accounts.clone())
     }
 
     async fn set_storage_at(

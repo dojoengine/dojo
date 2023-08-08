@@ -36,7 +36,7 @@ use self::executor::{execute_transaction, PendingBlockExecutor};
 use self::storage::block::{Block, PartialHeader};
 use self::storage::transaction::{IncludedTransaction, KnownTransaction, TransactionStatus};
 use self::storage::{BlockchainStorage, InMemoryBlockStates};
-use crate::accounts::PredeployedAccounts;
+use crate::accounts::{Account, DevAccountGenerator};
 use crate::backend::state::{MemDb, StateExt};
 use crate::constants::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
 use crate::db::serde::state::SerializableState;
@@ -64,7 +64,8 @@ pub struct Backend {
     pub env: Arc<RwLock<Env>>,
     pub block_context_generator: RwLock<BlockContextGenerator>,
     pub state: AsyncRwLock<MemDb>,
-    pub predeployed_accounts: PredeployedAccounts,
+    /// Prefunded dev accounts
+    pub accounts: Vec<Account>,
 }
 
 impl Backend {
@@ -83,14 +84,14 @@ impl Backend {
             info!("Successfully loaded initial state");
         }
 
-        let predeployed_accounts = PredeployedAccounts::initialize(
-            config.total_accounts,
-            config.seed,
-            *DEFAULT_PREFUNDED_ACCOUNT_BALANCE,
-            config.account_path.clone(),
-        )
-        .expect("should be able to generate accounts");
-        predeployed_accounts.deploy_accounts(&mut state);
+        let accounts = DevAccountGenerator::new(config.total_accounts)
+            .with_seed(config.seed)
+            .with_balance((*DEFAULT_PREFUNDED_ACCOUNT_BALANCE).into())
+            .generate();
+
+        for acc in &accounts {
+            acc.deploy_and_fund(&mut state).expect("should be able to deploy and fund dev account");
+        }
 
         Self {
             env: Arc::new(RwLock::new(env)),
@@ -100,7 +101,7 @@ impl Backend {
             storage: Arc::new(AsyncRwLock::new(storage)),
             block_context_generator: RwLock::new(block_context_generator),
             pending_block: AsyncRwLock::new(None),
-            predeployed_accounts,
+            accounts,
         }
     }
 
