@@ -56,7 +56,6 @@ mod move {
     fn execute(ctx: Context, direction: Direction) {
         let (mut position, mut moves) = get !(ctx.world, ctx.origin, (Position, Moves));
         moves.remaining -= 1;
-        moves.print();
         let next = next_position(position, direction);
         set !(ctx.world, (moves, next));
         return ();

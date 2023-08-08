@@ -90,6 +90,7 @@ impl PositionComponent of dojo::traits::Component<Position> {
     }
 }
 
+#[cfg(test)]
 impl PositionPrintImpl of debug::PrintTrait<Position> {
     fn print(self: Position) {
         debug::PrintTrait::print('id');
@@ -186,6 +187,7 @@ impl RolesComponent of dojo::traits::Component<Roles> {
     }
 }
 
+#[cfg(test)]
 impl RolesPrintImpl of debug::PrintTrait<Roles> {
     fn print(self: Roles) {
         debug::PrintTrait::print('role_ids');
@@ -267,6 +269,7 @@ impl PlayerComponent of dojo::traits::Component<Player> {
     }
 }
 
+#[cfg(test)]
 impl PlayerPrintImpl of debug::PrintTrait<Player> {
     fn print(self: Player) {
         debug::PrintTrait::print('game');

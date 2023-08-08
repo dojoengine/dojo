@@ -180,6 +180,7 @@ pub fn handle_component_struct(
                 }
             }
 
+            #[cfg(test)]
             impl $type_name$PrintImpl of debug::PrintTrait<$type_name$> {
                 fn print(self: $type_name$) {
                     $print_body$
