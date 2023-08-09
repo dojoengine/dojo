@@ -6497,6 +6497,7 @@ dependencies = [
  "async-graphql",
  "async-graphql-poem",
  "async-trait",
+ "base64 0.21.2",
  "camino",
  "chrono",
  "clap",

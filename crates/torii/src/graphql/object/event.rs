@@ -1,4 +1,4 @@
-use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
+use async_graphql::dynamic::{Field, FieldFuture, InputValue, TypeRef};
 use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
@@ -94,7 +94,7 @@ impl ObjectTrait for EventObject {
                     let events: Vec<ValueMapping> =
                         data.into_iter().map(EventObject::value_mapping).collect();
 
-                    Ok(Some(Value::Object(connection_output(&events, "id", total_count))))
+                    Ok(Some(Value::Object(connection_output(&events, total_count))))
                 })
             },
         ))

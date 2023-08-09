@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-
-use async_graphql::dynamic::{Field, FieldFuture, ResolverContext, TypeRef};
+use async_graphql::dynamic::{Field, FieldFuture, TypeRef};
 use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
@@ -8,10 +6,9 @@ use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{FromRow, Pool, QueryBuilder, Row, Sqlite};
 
-use super::connection::{connection_input, connection_output, parse_arguments};
-use super::query::query_total_count;
+use super::connection::{connection_input, encode_cursor, parse_arguments};
+use super::query::{query_total_count, Order};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
-use crate::graphql::constants::DEFAULT_LIMIT;
 use crate::graphql::object::entity::{Entity, EntityObject};
 use crate::graphql::object::query::{query_by_id, ID};
 use crate::graphql::types::ScalarType;
@@ -19,8 +16,6 @@ use crate::graphql::utils::extract_value::extract;
 
 const BOOLEAN_TRUE: i64 = 1;
 const ENTITY_ID: &str = "entity_id";
-
-pub type ComponentFilters = HashMap<String, String>;
 
 #[derive(FromRow, Deserialize)]
 pub struct ComponentMembers {
@@ -75,22 +70,15 @@ impl ObjectTrait for ComponentStateObject {
             let name = name.clone();
 
             FieldFuture::new(async move {
+                let (limit, offset, order) = parse_arguments(&ctx)?;
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                let total_count =
-                    query_total_count(&mut conn, format!("external_{}", name).as_str()).await?;
-                let connection_args = parse_arguments(&ctx);
+                let table_name = format!("external_{}", name);
+                let total_count = query_total_count(&mut conn, &table_name).await?;
+                let data =
+                    component_states_query(&mut conn, &table_name, order, limit, offset).await?;
+                let connection = component_connection(&data, &type_mapping, total_count)?;
 
-                let component_values = component_states_query(
-                    &mut conn,
-                    &name,
-                    &ComponentFilters::new(), // TODO: whereInput filter
-                    DEFAULT_LIMIT,
-                    &type_mapping,
-                )
-                .await?;
-
-                let result = connection_output(&component_values, "entity_id", total_count);
-                Ok(Some(Value::Object(result)))
+                Ok(Some(Value::Object(connection)))
             })
         });
 
@@ -134,32 +122,32 @@ fn entity_field() -> Field {
     })
 }
 
-fn parse_inputs(
-    ctx: &ResolverContext<'_>,
-    type_mapping: &TypeMapping,
-) -> async_graphql::Result<(ComponentFilters, u64), async_graphql::Error> {
-    let mut filters: ComponentFilters = ComponentFilters::new();
+// fn parse_inputs(
+//     ctx: &ResolverContext<'_>,
+//     type_mapping: &TypeMapping,
+// ) -> async_graphql::Result<(ComponentFilters, u64), async_graphql::Error> {
+//     let mut filters: ComponentFilters = ComponentFilters::new();
 
-    // parse inputs based on field type mapping
-    for (name, ty) in type_mapping.iter() {
-        let input_option = ctx.args.try_get(name.as_str());
+//     // parse inputs based on field type mapping
+//     for (name, ty) in type_mapping.iter() {
+//         let input_option = ctx.args.try_get(name.as_str());
 
-        if let Ok(input) = input_option {
-            let input_str = match ScalarType::from_str(ty.to_string())? {
-                scalar if scalar.is_numeric_type() => input.u64()?.to_string(),
-                _ => input.string()?.to_string(),
-            };
+//         if let Ok(input) = input_option {
+//             let input_str = match ScalarType::from_str(ty.to_string())? {
+//                 scalar if scalar.is_numeric_type() => input.u64()?.to_string(),
+//                 _ => input.string()?.to_string(),
+//             };
 
-            filters.insert(name.to_string(), input_str);
-        }
-    }
+//             filters.insert(name.to_string(), input_str);
+//         }
+//     }
 
-    let limit = ctx.args.try_get("limit").and_then(|limit| limit.u64()).unwrap_or(DEFAULT_LIMIT);
+//     let limit = ctx.args.try_get("limit").and_then(|limit| limit.u64()).unwrap_or(DEFAULT_LIMIT);
 
-    Ok((filters, limit))
-}
+//     Ok((filters, limit))
+// }
 
-pub async fn component_state_by_entity_id(
+pub async fn component_state_by_id_query(
     conn: &mut PoolConnection<Sqlite>,
     name: &str,
     id: &str,
@@ -174,38 +162,61 @@ pub async fn component_state_by_entity_id(
 
 pub async fn component_states_query(
     conn: &mut PoolConnection<Sqlite>,
-    name: &str,
-    filters: &ComponentFilters,
-    limit: u64,
-    fields: &TypeMapping,
-) -> sqlx::Result<Vec<ValueMapping>> {
-    let table_name = format!("external_{}", name);
-    let mut builder: QueryBuilder<'_, Sqlite> = QueryBuilder::new("SELECT * FROM ");
+    table_name: &str,
+    order: Order,
+    limit: i64,
+    offset: i64,
+) -> sqlx::Result<Vec<SqliteRow>> {
+    // FIXME?: Possible performance impact using row_number window function for large datasets, can migrate to use
+    // (created_at, id) for cursor. However, created_at also doesn't reflect proper chronological ordering as multiple
+    // entires could have the same timestamp. Possible fix is to include block_number as part of component data
+    // and used as cursor.
+    let mut builder: QueryBuilder<'_, Sqlite> = QueryBuilder::new(
+        "SELECT *, row_number() OVER (ORDER BY created_at DESC) AS row_number FROM ",
+    );
     builder.push(table_name);
+    builder.push(" ORDER BY created_at ").push(order);
+    builder.push(" LIMIT ").push(limit);
+    builder.push(" OFFSET ").push(offset);
 
-    if !filters.is_empty() {
-        builder.push(" WHERE ");
-        let mut separated = builder.separated(" AND ");
-        for (name, value) in filters.iter() {
-            separated.push(format!("external_{} = '{}'", name, value));
-        }
-    }
-    builder.push(" ORDER BY created_at DESC LIMIT ").push_bind(limit.to_string());
-
-    let component_states = builder.build().fetch_all(conn).await?;
-    component_states.iter().map(|row| value_mapping_from_row(row, fields)).collect()
+    builder.build().fetch_all(conn).await
 }
 
-fn value_mapping_from_row(row: &SqliteRow, fields: &TypeMapping) -> sqlx::Result<ValueMapping> {
-    fields
+// TODO: make `connection_output()` more generic. Currently, `component_connection()` method required as we
+// need to explicity add `entity_id` to each edge.
+fn component_connection(
+    data: &Vec<SqliteRow>,
+    types: &TypeMapping,
+    total_count: i64,
+) -> sqlx::Result<ValueMapping> {
+    let component_edges = data
         .iter()
-        .map(|(name, ty)| {
-            // handle entity_id separately since it's not a component member
-            match name.as_str() {
-                ENTITY_ID => Ok((Name::new(name), fetch_string(row, name)?)),
-                _ => Ok((Name::new(name), fetch_value(row, name, &ty.to_string())?)),
-            }
+        .map(|row| {
+            // Fetch entity_id and offset manually as they're not part of component memebers
+            let row_number = fetch_numeric(row, "row_number")?.to_string();
+            let entity_id = fetch_string(row, "entity_id")?;
+
+            let mut value_mapping = value_mapping_from_row(row, types)?;
+            value_mapping.insert(Name::new("entity_id"), entity_id);
+
+            let mut edge = ValueMapping::new();
+            edge.insert(Name::new("node"), Value::Object(value_mapping));
+            edge.insert(Name::new("cursor"), Value::String(encode_cursor(row_number.clone())));
+
+            Ok(Value::Object(edge))
         })
+        .collect::<sqlx::Result<Vec<Value>>>();
+
+    Ok(ValueMapping::from([
+        (Name::new("totalCount"), Value::from(total_count)),
+        (Name::new("edges"), Value::List(component_edges?)),
+    ]))
+}
+
+fn value_mapping_from_row(row: &SqliteRow, types: &TypeMapping) -> sqlx::Result<ValueMapping> {
+    types
+        .iter()
+        .map(|(name, ty)| Ok((Name::new(name), fetch_value(row, name, &ty.to_string())?)))
         .collect::<sqlx::Result<ValueMapping>>()
 }
 
@@ -233,7 +244,7 @@ fn fetch_boolean(row: &SqliteRow, column_name: &str) -> sqlx::Result<Value> {
     Ok(Value::from(matches!(result?, BOOLEAN_TRUE)))
 }
 
-pub async fn type_mapping_from(
+pub async fn type_mapping_query(
     conn: &mut PoolConnection<Sqlite>,
     component_id: &str,
 ) -> sqlx::Result<TypeMapping> {
@@ -253,11 +264,7 @@ pub async fn type_mapping_from(
     .fetch_all(conn)
     .await?;
 
-    // field type mapping is 1:1 to component members, but entity_id
-    // is not a member so we need to add it manually
     let mut type_mapping = TypeMapping::new();
-    type_mapping.insert(Name::new(ENTITY_ID), TypeRef::named(TypeRef::ID));
-
     for member in component_members {
         type_mapping.insert(Name::new(member.name), TypeRef::named(member.ty));
     }

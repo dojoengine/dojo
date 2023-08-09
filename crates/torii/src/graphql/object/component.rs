@@ -1,4 +1,4 @@
-use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
+use async_graphql::dynamic::{Field, FieldFuture, InputValue, TypeRef};
 use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
@@ -96,7 +96,7 @@ impl ObjectTrait for ComponentObject {
                     let components: Vec<ValueMapping> =
                         data.into_iter().map(ComponentObject::value_mapping).collect();
 
-                    Ok(Some(Value::Object(connection_output(&components, "id", total_count))))
+                    Ok(Some(Value::Object(connection_output(&components, total_count))))
                 })
             },
         ))

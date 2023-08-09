@@ -1,4 +1,4 @@
-use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
+use async_graphql::dynamic::{Field, FieldFuture, InputValue, TypeRef};
 use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
@@ -97,7 +97,7 @@ impl ObjectTrait for SystemCallObject {
                     let system_calls: Vec<ValueMapping> =
                         data.into_iter().map(SystemCallObject::value_mapping).collect();
 
-                    Ok(Some(Value::Object(connection_output(&system_calls, "id", total_count))))
+                    Ok(Some(Value::Object(connection_output(&system_calls, total_count))))
                 })
             },
         ))

@@ -1,10 +1,25 @@
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{FromRow, QueryBuilder, Result, Sqlite};
+use std::fmt;
 
 pub enum ID {
     Str(String),
     I64(i64),
+}
+
+pub enum Order {
+    Desc,
+    Asc,
+}
+
+impl fmt::Display for Order {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Order::Desc => write!(f, "DESC"),
+            Order::Asc => write!(f, "ASC"),
+        }
+    }
 }
 
 pub async fn query_by_id<T>(

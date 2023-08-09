@@ -36,6 +36,7 @@ async-graphql = { version = "5.0.8", features = ["chrono", "dynamic-schema"] }
 async-graphql-poem = "5.0.8"
 poem = "1.3.48"
 indexmap = "1.9.3"
+base64 = "0.21.2"
 
 [dev-dependencies]
 camino.workspace = true

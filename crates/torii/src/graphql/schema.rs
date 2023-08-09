@@ -3,7 +3,7 @@ use async_graphql::dynamic::{Field, Object, Scalar, Schema, Union};
 use sqlx::SqlitePool;
 
 use super::object::component::Component;
-use super::object::component_state::{type_mapping_from, ComponentStateObject};
+use super::object::component_state::{type_mapping_query, ComponentStateObject};
 use super::object::connection::page_info::PageInfoObject;
 use super::object::entity::EntityObject;
 use super::object::event::EventObject;
@@ -82,7 +82,7 @@ async fn component_objects(pool: &SqlitePool) -> Result<(Vec<Box<dyn ObjectTrait
 
     // component state objects
     for component_metadata in components {
-        let field_type_mapping = type_mapping_from(&mut conn, &component_metadata.id).await?;
+        let field_type_mapping = type_mapping_query(&mut conn, &component_metadata.id).await?;
         if !field_type_mapping.is_empty() {
             let (name, type_name) = format_name(&component_metadata.name);
             let state_object = Box::new(ComponentStateObject::new(

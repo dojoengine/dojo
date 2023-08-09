@@ -6,7 +6,7 @@ use serde::Deserialize;
 use sqlx::pool::PoolConnection;
 use sqlx::{FromRow, Pool, QueryBuilder, Result, Sqlite};
 
-use super::component_state::{component_state_by_entity_id, type_mapping_from};
+use super::component_state::{component_state_by_id_query, type_mapping_query};
 use super::connection::connection_output;
 use super::query::{query_by_id, ID};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
@@ -86,8 +86,8 @@ impl ObjectTrait for EntityObject {
                         let mut results: Vec<FieldValue<'_>> = Vec::new();
                         for component_name in components {
                             let table_name = component_name.to_lowercase();
-                            let type_mapping = type_mapping_from(&mut conn, &table_name).await?;
-                            let state = component_state_by_entity_id(
+                            let type_mapping = type_mapping_query(&mut conn, &table_name).await?;
+                            let state = component_state_by_id_query(
                                 &mut conn,
                                 &table_name,
                                 &id,
@@ -143,7 +143,7 @@ impl ObjectTrait for EntityObject {
 
                         let entities = entities_by_sk(&mut conn, keys, DEFAULT_LIMIT).await?;
 
-                        Ok(Some(Value::Object(connection_output(&entities, "id", total_count))))
+                        Ok(Some(Value::Object(connection_output(&entities, total_count))))
                     })
                 },
             )
