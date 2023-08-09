@@ -6,7 +6,7 @@ use dojo_world::manifest::{Manifest, ManifestError};
 use dojo_world::migration::strategy::{prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{Declarable, Deployable, MigrationError, RegisterOutput, StateDiff};
-use dojo_world::utils::{block_number_from_receipt, TransactionWaiter};
+use dojo_world::utils::TransactionWaiter;
 use scarb::core::Config;
 use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::{
@@ -73,14 +73,24 @@ where
             .map_err(|e| anyhow!(e))
             .with_context(|| "Problem trying to migrate.")?;
 
-        config.ui().print(format!(
-            "\n🎉 Successfully migrated World on block #{} at address {}",
-            block_height.expect("Atleast one of the contract should be upgraded"),
-            bold_message(format!(
-                "{:#x}",
-                strategy.world_address().expect("world address must exist")
-            ))
-        ));
+        if let Some(block_height) = block_height {
+            config.ui().print(format!(
+                "\n🎉 Successfully migrated World on block #{} at address {}",
+                block_height,
+                bold_message(format!(
+                    "{:#x}",
+                    strategy.world_address().expect("world address must exist")
+                ))
+            ));
+        } else {
+            config.ui().print(format!(
+                "\n🎉 Successfully migrated World at address {}",
+                bold_message(format!(
+                    "{:#x}",
+                    strategy.world_address().expect("world address must exist")
+                ))
+            ));
+        }
     }
 
     Ok(())
@@ -239,11 +249,9 @@ where
                         .set_executor(executor.contract_address)
                         .await?;
 
-                let txn = TransactionWaiter::new(transaction_hash, migrator.provider())
+                let _ = TransactionWaiter::new(transaction_hash, migrator.provider())
                     .await
                     .map_err(|_| anyhow!("Transaction execution failed"))?;
-
-                block_height = Some(block_number_from_receipt(&txn));
 
                 ws_config.ui().print_hidden_sub(format!("Updated at: {transaction_hash:#x}"));
             }
@@ -295,8 +303,8 @@ where
         None => {}
     };
 
-    register_components(strategy, migrator, ws_config, &mut block_height).await?;
-    register_systems(strategy, migrator, ws_config, &mut block_height).await?;
+    register_components(strategy, migrator, ws_config).await?;
+    register_systems(strategy, migrator, ws_config).await?;
 
     Ok(block_height)
 }
@@ -305,7 +313,6 @@ async fn register_components<P, S>(
     strategy: &MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
     ws_config: &Config,
-    block_height: &mut Option<u64>,
 ) -> Result<Option<RegisterOutput>>
 where
     P: Provider + Sync + Send + 'static,
@@ -353,11 +360,9 @@ where
         .await
         .map_err(|e| anyhow!("Failed to register components to World: {e}"))?;
 
-    let txn = TransactionWaiter::new(transaction_hash, migrator.provider())
+    let _ = TransactionWaiter::new(transaction_hash, migrator.provider())
         .await
         .map_err(|_| anyhow!("Transaction execution failed"))?;
-
-    *block_height = Some(block_number_from_receipt(&txn));
 
     ws_config.ui().print_hidden_sub(format!("registered at: {transaction_hash:#x}"));
 
@@ -368,7 +373,6 @@ async fn register_systems<P, S>(
     strategy: &MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
     ws_config: &Config,
-    block_height: &mut Option<u64>,
 ) -> Result<Option<RegisterOutput>>
 where
     P: Provider + Sync + Send + 'static,
@@ -416,11 +420,9 @@ where
         .await
         .map_err(|e| anyhow!("Failed to register systems to World: {e}"))?;
 
-    let txn = TransactionWaiter::new(transaction_hash, migrator.provider())
+    let _ = TransactionWaiter::new(transaction_hash, migrator.provider())
         .await
         .map_err(|_| anyhow!("Transaction execution failed"))?;
-
-    *block_height = Some(block_number_from_receipt(&txn));
 
     ws_config.ui().print_hidden_sub(format!("registered at: {transaction_hash:#x}"));
 
