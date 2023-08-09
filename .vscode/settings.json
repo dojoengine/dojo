@@ -3,5 +3,8 @@
     "cairo1.enableLanguageServer": true,
     "rust-analyzer.linkedProjects": [
         "./crates/dojo-lang/Cargo.toml"
+    ],
+    "rust-analyzer.rustfmt.extraArgs": [
+        "+nightly"
     ]
 }
