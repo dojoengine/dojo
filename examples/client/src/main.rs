@@ -11,7 +11,8 @@ use std::time::Duration;
 use std::vec;
 
 use async_std::sync::RwLock;
-use dojo_client::contract::world::{WorldContract, WorldContractReader};
+use dojo_client::contract::world::WorldContract;
+use dojo_client::provider::jsonrpc::JsonRpcProvider;
 use dojo_client::storage::EntityStorage;
 use dojo_client::sync::{EntityComponentReq, WorldPartialSyncer};
 use starknet::accounts::SingleOwnerAccount;
@@ -94,10 +95,11 @@ async fn main() {
 
     let storage = Arc::new(RwLock::new(InMemoryStorage::new()));
 
-    let world_reader = WorldContractReader::new(world_address, &client);
+    // let world_reader = WorldContractReader::new(world_address, &client);
+    let provider = JsonRpcProvider::new(client, world_address);
     let mut syncer = WorldPartialSyncer::new(
         Arc::clone(&storage),
-        &world_reader,
+        provider,
         vec![EntityComponentReq { component: String::from("Position"), keys: keys.clone() }],
     )
     .with_interval(2000);
