@@ -233,7 +233,7 @@ impl CairoPluginRepository {
         repo.add(Box::new(BuiltinSemanticCairoPlugin::<DojoPlugin>::new(dojo_package_id))).unwrap();
         let starknet_package_id = PackageId::new(
             PackageName::STARKNET,
-            Version::parse("2.1.0-rc4").unwrap(),
+            Version::parse("2.1.0").unwrap(),
             SourceId::for_std(),
         );
         repo.add(Box::new(BuiltinSemanticCairoPlugin::<StarkNetPlugin>::new(starknet_package_id)))
