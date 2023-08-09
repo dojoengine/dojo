@@ -93,13 +93,6 @@ async fn main() -> anyhow::Result<()> {
             Box::new(RegisterSystemProcessor),
             Box::new(StoreSetRecordProcessor),
         ],
-        //TODO: Change mocked values into args from cli
-        block: vec![Box::new(StateDiffProcessor::new(
-            "Component".to_string(),
-            args.world_address,
-            1,
-            vec![],
-        ))],
         ..Processors::default()
     };
 

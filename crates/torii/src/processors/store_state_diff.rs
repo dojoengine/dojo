@@ -11,22 +11,35 @@ use tracing::info;
 use super::BlockProcessor;
 use crate::state::State;
 
+/// Request to sync a component of an entity.
+pub struct EntityComponent {
+    /// Component name
+    pub component: String,
+    /// The entity keys
+    pub keys: Vec<FieldElement>,
+    /// Component length
+    pub length: usize,
+}
+
 #[derive(Default)]
 pub struct StateDiffProcessor {
-    pub component: String,
+    pub entities: Vec<EntityComponent>,
     pub world: FieldElement,
-    pub length: usize,
-    pub keys: Vec<FieldElement>,
 }
 
 impl StateDiffProcessor {
-    pub fn new(
-        component: String,
-        world: FieldElement,
-        length: usize,
-        keys: Vec<FieldElement>,
-    ) -> Self {
-        Self { component, world, length, keys }
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn with_entities(mut self, entities: Vec<EntityComponent>) -> Self {
+        self.entities = entities;
+        self
+    }
+
+    pub fn with_world(mut self, world: FieldElement) -> Self {
+        self.world = world;
+        self
     }
 }
 
@@ -46,17 +59,7 @@ where
         provider: &JsonRpcClient<T>,
         block: &BlockWithTxs,
     ) -> Result<(), Error> {
-        info!("store set record: {}", self.component);
-        // id is key for entity
-        let id = poseidon_hash_many(&self.keys);
-        // key is component's base storage key
-        let key = poseidon_hash_many(&[
-            short_string!("dojo_storage"),
-            cairo_short_string_to_felt(&self.component).unwrap(),
-            id,
-        ]);
-
-        // get State diff from JsonRpc
+        // get State diff
         let block_id = BlockId::Hash(block.block_hash);
         let maybe_state_update = provider.get_state_update(block_id).await?;
         let state_diff = match maybe_state_update {
@@ -66,22 +69,34 @@ where
             }
         };
 
-        let mut values = Vec::new();
+        for entity in self.entities.iter() {
+            info!("store state diff: {}", entity.component);
+            // id is key for entity
+            let id = poseidon_hash_many(&entity.keys);
+            // key is component's base storage key
+            let key = poseidon_hash_many(&[
+                short_string!("dojo_storage"),
+                cairo_short_string_to_felt(&entity.component).unwrap(),
+                id,
+            ]);
 
-        // loop from offset 0 to until it reaches length
-        for i in 0..self.length {
-            for storage_diff in state_diff.storage_diffs.iter() {
-                if storage_diff.address == self.world {
-                    for storage_entries in storage_diff.storage_entries.iter() {
-                        if storage_entries.key == key + i.into() {
-                            values.push(storage_entries.value);
+            let mut values = Vec::new();
+
+            // loop from offset 0 to until it reaches length
+            for i in 0..entity.length {
+                for storage_diff in state_diff.storage_diffs.iter() {
+                    if storage_diff.address == self.world {
+                        for storage_entries in storage_diff.storage_entries.iter() {
+                            if storage_entries.key == key + i.into() {
+                                values.push(storage_entries.value);
+                            }
                         }
                     }
                 }
             }
+            storage.set_entity(entity.component.clone(), entity.keys.clone(), values).await?;
         }
 
-        storage.set_entity(self.component.clone(), self.keys.clone(), values).await?;
         Ok(())
     }
 }
