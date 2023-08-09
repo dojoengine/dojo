@@ -1,13 +1,13 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use async_std::stream::{self, Interval, StreamExt};
+use async_std::sync::RwLock;
 use starknet::core::types::{BlockId, BlockTag};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
 use thiserror::Error;
-use tokio::sync::RwLock;
-use tokio::time::{Instant, Interval};
 
 use crate::contract::component::{ComponentError, ComponentReader};
 use crate::contract::world::WorldContractReader;
@@ -68,16 +68,13 @@ where
             world_reader,
             storage,
             entity_components_to_sync: entities,
-            interval: tokio::time::interval_at(
-                Instant::now() + Self::DEFAULT_INTERVAL,
-                Self::DEFAULT_INTERVAL,
-            ),
+            interval: stream::interval(Self::DEFAULT_INTERVAL),
         }
     }
 
     pub fn with_interval(mut self, milisecond: u64) -> Self {
-        let interval = Duration::from_millis(milisecond);
-        self.interval = tokio::time::interval_at(Instant::now() + interval, interval);
+        let duration = Duration::from_millis(milisecond);
+        self.interval = stream::interval(duration);
         self
     }
 
@@ -86,9 +83,7 @@ where
     pub async fn start(&mut self) -> Result<(), SyncerError<S::Error, P::Error>> {
         let entity_readers = self.entity_readers().await?;
 
-        loop {
-            self.interval.tick().await;
-
+        while self.interval.next().await.is_some() {
             for reader in &entity_readers {
                 let values = reader
                     .reader
@@ -108,6 +103,8 @@ where
                     .map_err(SyncerError::Storage)?
             }
         }
+
+        Ok(())
     }
 
     /// Get the entity reader for every requested component to sync.
