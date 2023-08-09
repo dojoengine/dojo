@@ -8,7 +8,7 @@ mod erc721_approve {
     use dojo_erc::erc721::erc721::ERC721;
 
     fn execute(ctx: Context, token: ContractAddress, token_id: felt252, operator: ContractAddress) {
-        // TODO: operator + token can not be used defined
+        assert(token == ctx.origin, 'ERC721: not authorized');
         let owner = get !(ctx.world, (token, token_id), Owner);
         let approval = get !(ctx.world, (token, owner.address, operator), OperatorApproval);
         assert(owner.address == operator || approval.approved, 'ERC721: unauthorized caller');
@@ -31,6 +31,7 @@ mod erc721_set_approval_for_all {
         operator: ContractAddress,
         approved: bool
     ) {
+        assert(token == ctx.origin, 'ERC721: not authorized');
         assert(owner != operator, 'ERC721: self approval');
         set !(ctx.world, OperatorApproval { token, owner, operator, approved });
     }
@@ -53,6 +54,8 @@ mod erc721_transfer_from {
         to: ContractAddress,
         token_id: felt252
     ) {
+        assert(token == ctx.origin, 'ERC721: not authorized');
+
         let owner = get !(ctx.world, (token, token_id), Owner);
         let is_approved = get !(ctx.world, (token, owner.address, from), OperatorApproval);
         assert(owner.address == from || is_approved.approved, 'ERC721: unauthorized caller');
@@ -83,6 +86,7 @@ mod erc721_mint {
     fn execute(
         ctx: Context, token: ContractAddress, token_id: felt252, recipient: ContractAddress
     ) {
+        assert(token == ctx.origin, 'ERC721: not authorized');
         assert(recipient.is_non_zero(), 'ERC721: mint to 0');
 
         // increase token supply
@@ -103,6 +107,8 @@ mod erc721_burn {
     use dojo_erc::erc721::components::{Balance, Owner};
 
     fn execute(ctx: Context, token: ContractAddress, token_id: felt252) {
+        assert(token == ctx.origin, 'ERC721: not authorized');
+
         let owner = get !(ctx.world, (token, token_id), Owner);
         let mut balance = get !(ctx.world, (token, owner.address), Balance);
         balance.amount -= 1;

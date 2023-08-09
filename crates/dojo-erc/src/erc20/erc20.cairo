@@ -159,6 +159,7 @@ mod ERC20 {
         let token = get_contract_address();
         let mut calldata = ArrayTrait::new();
         calldata.append(token.into());
+        calldata.append(get_caller_address().into());
         calldata.append(spender.into());
         calldata.append(recipient.into());
         calldata.append(u256_into_felt252(amount));
