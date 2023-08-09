@@ -1,25 +1,18 @@
 #[system]
 mod erc721_approve {
-    use starknet::{ContractAddress, get_caller_address};
+    use starknet::ContractAddress;
     use traits::Into;
+
     use dojo::world::Context;
-    use dojo_erc::erc721::components::{Owners, TokenApprovals, OperatorApprovals};
+    use dojo_erc::erc721::components::{Owner, TokenApproval, OperatorApproval};
     use dojo_erc::erc721::erc721::ERC721;
 
-    fn execute(ctx: Context, token_id: felt252, operator: felt252) {
-        let owner = get!(ctx.world, token_id.into(), Owners);
-        let is_approved_for_all = get!(
-            ctx.world, (owner.address, operator).into_partitioned(), OperatorApprovals
-        );
-        assert(
-            owner.address == operator || ERC721::felt252_into_bool(is_approved_for_all.approved),
-            'ERC721: unauthorized caller'
-        );
-        set!(
-            ctx.world,
-            (token_id, operator).into_partitioned(),
-            (TokenApprovals { address: operator })
-        )
+    fn execute(ctx: Context, token: ContractAddress, token_id: felt252, operator: ContractAddress) {
+        // TODO: operator + token can not be used defined
+        let owner = get !(ctx.world, (token, token_id), Owner);
+        let approval = get !(ctx.world, (token, owner.address, operator), OperatorApproval);
+        assert(owner.address == operator || approval.approved, 'ERC721: unauthorized caller');
+        set !(ctx.world, TokenApproval { token, token_id, address: operator });
     }
 }
 
@@ -29,75 +22,91 @@ mod erc721_set_approval_for_all {
     use traits::Into;
 
     use dojo::world::Context;
-    use dojo_erc::erc721::components::OperatorApprovals;
+    use dojo_erc::erc721::components::OperatorApproval;
 
-    fn execute(ctx: Context, owner: felt252, operator: felt252, _approved: felt252) {
+    fn execute(
+        ctx: Context,
+        token: ContractAddress,
+        owner: ContractAddress,
+        operator: ContractAddress,
+        approved: bool
+    ) {
         assert(owner != operator, 'ERC721: self approval');
-        set!(
-            ctx.world,
-            (owner, operator).into_partitioned(),
-            (OperatorApprovals { approved: _approved })
-        )
+        set !(ctx.world, OperatorApproval { token, owner, operator, approved });
     }
 }
 
 #[system]
 mod erc721_transfer_from {
+    use starknet::ContractAddress;
     use traits::Into;
     use zeroable::Zeroable;
 
     use dojo::world::Context;
-    use dojo_erc::erc721::components::{Balances, TokenApprovals, OperatorApprovals, Owners};
+    use dojo_erc::erc721::components::{Balance, TokenApproval, OperatorApproval, Owner};
     use dojo_erc::erc721::erc721::ERC721;
 
-    fn execute(ctx: Context, from: felt252, to: felt252, token_id: felt252) {
-        let owner = get!(ctx.world, token_id.into(), Owners);
-        let is_approved_for_all = get!(
-            ctx.world, (owner.address, from).into_partitioned(), OperatorApprovals
-        );
-        assert(
-            owner.address == from || ERC721::felt252_into_bool(is_approved_for_all.approved),
-            'ERC721: unauthorized caller'
-        );
+    fn execute(
+        ctx: Context,
+        token: ContractAddress,
+        from: ContractAddress,
+        to: ContractAddress,
+        token_id: felt252
+    ) {
+        let owner = get !(ctx.world, (token, token_id), Owner);
+        let is_approved = get !(ctx.world, (token, owner.address, from), OperatorApproval);
+        assert(owner.address == from || is_approved.approved, 'ERC721: unauthorized caller');
         assert(!to.is_zero(), 'ERC721: invalid receiver');
         assert(from == owner.address, 'ERC721: wrong sender');
-        set!(ctx.world, (token_id).into(), (TokenApprovals { address: Zeroable::zero() }))
-        let from_balance = get!(ctx.world, from.into(), Balances);
-        let to_balance = get!(ctx.world, to.into(), Balances);
-        set!(ctx.world, (from).into(), (Balances { amount: from_balance.amount - 1 }))
-        set!(ctx.world, (to).into(), (Balances { amount: to_balance.amount + 1 }))
+
+        set !(ctx.world, TokenApproval { token, token_id, address: Zeroable::zero() });
+
+        let mut from_balance = get !(ctx.world, (token, from), Balance);
+        from_balance.amount -= 1;
+        set !(ctx.world, (from_balance));
+
+        let mut to_balance = get !(ctx.world, (token, to), Balance);
+        to_balance.amount += 1;
+        set !(ctx.world, (to_balance));
     }
 }
 
 #[system]
 mod erc721_mint {
+    use starknet::ContractAddress;
     use traits::Into;
     use zeroable::Zeroable;
-    use dojo::world::Context;
-    use dojo_erc::erc721::components::{Balances, Owners};
 
-    fn execute(ctx: Context, token_id: felt252, recipient: felt252) {
+    use dojo::world::Context;
+    use dojo_erc::erc721::components::{Balance, Owner};
+
+    fn execute(
+        ctx: Context, token: ContractAddress, token_id: felt252, recipient: ContractAddress
+    ) {
         assert(recipient.is_non_zero(), 'ERC721: mint to 0');
 
         // increase token supply
-        let balance = get!(ctx.world, recipient.into(), Balances);
-        set!(ctx.world, recipient.into(), (Balances { amount: balance.amount + 1 }));
-
-        set!(ctx.world, token_id.into(), (Owners { address: recipient }));
+        let mut balance = get !(ctx.world, (token, recipient), Balance);
+        balance.amount += 1;
+        set !(ctx.world, (balance));
+        set !(ctx.world, Owner { token, token_id, address: recipient });
     }
 }
 
 #[system]
 mod erc721_burn {
+    use starknet::ContractAddress;
     use traits::Into;
     use zeroable::Zeroable;
-    use dojo::world::Context;
-    use dojo_erc::erc721::components::{Balances, Owners};
 
-    fn execute(ctx: Context, token_id: felt252) {
-        let owner = get!(ctx.world, token_id.into(), Owners);
-        let balance = get!(ctx.world, owner.address.into(), Balances);
-        set!(ctx.world, owner.address.into(), (Balances { amount: balance.amount - 1 }));
-        set!(ctx.world, token_id.into(), (Owners { address: Zeroable::zero() }));
+    use dojo::world::Context;
+    use dojo_erc::erc721::components::{Balance, Owner};
+
+    fn execute(ctx: Context, token: ContractAddress, token_id: felt252) {
+        let owner = get !(ctx.world, (token, token_id), Owner);
+        let mut balance = get !(ctx.world, (token, owner.address), Balance);
+        balance.amount -= 1;
+        set !(ctx.world, (balance));
+        set !(ctx.world, Owner { token, token_id, address: Zeroable::zero() });
     }
 }
