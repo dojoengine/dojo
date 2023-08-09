@@ -45,9 +45,6 @@ impl System {
                 "
                 #[starknet::contract]
                 mod $name$ {
-                    use option::OptionTrait;
-                    use array::SpanTrait;
-
                     use dojo::world;
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;

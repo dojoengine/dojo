@@ -64,9 +64,10 @@ impl InlineMacro for GetMacro {
                  __{component}_component__);
                  let mut __{component}_component_span__ = \
                  array::ArrayTrait::span(@__{component}_component__);
-                   let __{component} = serde::Serde::<{component}>::deserialize(
+                   let __{component} = \
+                 option::OptionTrait::expect(serde::Serde::<{component}>::deserialize(
                        ref __{component}_component_span__
-                   ).expect('{deser_err_msg}');",
+                   ), '{deser_err_msg}');",
                 world.as_syntax_node().get_text(db),
             ));
         }

@@ -110,16 +110,20 @@ fn foo() {
         array::serialize_array_helper(__get_macro_keys__, ref __Position_component__);
         array::serialize_array_helper(__Position_values__, ref __Position_component__);
         let mut __Position_component_span__ = array::ArrayTrait::span(@__Position_component__);
-        let __Position = serde::Serde::<Position>::deserialize(ref __Position_component_span__)
-            .expect('Position failed to deserialize');
+        let __Position = option::OptionTrait::expect(
+            serde::Serde::<Position>::deserialize(ref __Position_component_span__),
+            'Position failed to deserialize'
+        );
         let __Moves_values__ = world
             .entity('Moves', __get_macro_keys__, 0_u8, dojo::SerdeLen::<Moves>::len());
         let mut __Moves_component__ = array::ArrayTrait::new();
         array::serialize_array_helper(__get_macro_keys__, ref __Moves_component__);
         array::serialize_array_helper(__Moves_values__, ref __Moves_component__);
         let mut __Moves_component_span__ = array::ArrayTrait::span(@__Moves_component__);
-        let __Moves = serde::Serde::<Moves>::deserialize(ref __Moves_component_span__)
-            .expect('Moves failed to deserialize');
+        let __Moves = option::OptionTrait::expect(
+            serde::Serde::<Moves>::deserialize(ref __Moves_component_span__),
+            'Moves failed to deserialize'
+        );
         (__Position, __Moves)
     };
     let position = {
@@ -132,8 +136,10 @@ fn foo() {
         array::serialize_array_helper(__get_macro_keys__, ref __Position_component__);
         array::serialize_array_helper(__Position_values__, ref __Position_component__);
         let mut __Position_component_span__ = array::ArrayTrait::span(@__Position_component__);
-        let __Position = serde::Serde::<Position>::deserialize(ref __Position_component_span__)
-            .expect('Position failed to deserialize');
+        let __Position = option::OptionTrait::expect(
+            serde::Serde::<Position>::deserialize(ref __Position_component_span__),
+            'Position failed to deserialize'
+        );
         (__Position)
     };
 
@@ -148,8 +154,10 @@ fn foo() {
         array::serialize_array_helper(__get_macro_keys__, ref __Position_component__);
         array::serialize_array_helper(__Position_values__, ref __Position_component__);
         let mut __Position_component_span__ = array::ArrayTrait::span(@__Position_component__);
-        let __Position = serde::Serde::<Position>::deserialize(ref __Position_component_span__)
-            .expect('Position failed to deserialize');
+        let __Position = option::OptionTrait::expect(
+            serde::Serde::<Position>::deserialize(ref __Position_component_span__),
+            'Position failed to deserialize'
+        );
         (__Position)
     };
 }
