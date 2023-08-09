@@ -1,5 +1,5 @@
 #[system]
-mod ERC20Approve {
+mod erc20_approve {
     use traits::Into;
     use starknet::ContractAddress;
     use dojo::world::Context;
@@ -17,7 +17,7 @@ mod ERC20Approve {
 }
 
 #[system]
-mod ERC20TransferFrom {
+mod erc20_transfer_from {
     const UNLIMITED_ALLOWANCE: felt252 =
         3618502788666131213697322783095070105623107215331596699973092056135872020480;
 
@@ -60,7 +60,7 @@ mod ERC20TransferFrom {
 }
 
 #[system]
-mod ERC20Mint {
+mod erc20_mint {
     use traits::Into;
     use zeroable::Zeroable;
     use dojo::world::Context;
@@ -82,7 +82,7 @@ mod ERC20Mint {
 }
 
 #[system]
-mod ERC20Burn {
+mod erc20_burn {
     use traits::Into;
     use zeroable::Zeroable;
     use dojo::world::Context;
