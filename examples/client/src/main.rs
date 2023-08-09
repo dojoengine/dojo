@@ -10,6 +10,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::vec;
 
+use async_std::sync::RwLock;
 use dojo_client::contract::world::{WorldContract, WorldContractReader};
 use dojo_client::storage::EntityStorage;
 use dojo_client::sync::{EntityComponentReq, WorldPartialSyncer};
@@ -21,7 +22,6 @@ use starknet::providers::{JsonRpcClient, Provider};
 use starknet::signers::{LocalWallet, SigningKey};
 use storage::InMemoryStorage;
 use tokio::select;
-use tokio::sync::RwLock;
 use url::Url;
 
 mod storage;
@@ -55,6 +55,7 @@ async fn run_execute_system_loop() {
     let world = WorldContract::new(world_address, &account);
 
     loop {
+        println!("Execute spawn");
         let _ = world.execute("spawn", vec![]).await.unwrap();
         tokio::time::sleep(Duration::from_secs(1)).await;
     }
@@ -70,7 +71,7 @@ async fn run_read_storage_loop(storage: Arc<RwLock<InMemoryStorage>>, keys: Vec<
             .await
             .unwrap();
 
-        println!("Position x {:#x} y {:#x}", values[0], values[1]);
+        println!("Storage: Position x {:#x} y {:#x}", values[0], values[1]);
         tokio::time::sleep(Duration::from_secs(1)).await;
     }
 }
