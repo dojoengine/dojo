@@ -3,26 +3,22 @@ use std::time::Duration;
 
 use async_std::stream::{self, Interval, StreamExt};
 use async_std::sync::RwLock;
-use starknet::core::types::{BlockId, BlockTag};
 use starknet::core::utils::cairo_short_string_to_felt;
-use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
 use thiserror::Error;
 
-use crate::contract::component::{ComponentError, ComponentReader};
-use crate::contract::world::WorldContractReader;
+use crate::provider::Provider;
 use crate::storage::EntityStorage;
 
 #[derive(Debug, Error)]
 pub enum SyncerError<S, P> {
     #[error(transparent)]
-    Component(ComponentError<P>),
+    Provider(P),
     #[error(transparent)]
     Storage(S),
 }
 
 /// Request to sync a component of an entity.
-/// This struct will be used to construct an [EntityReader].
 pub struct EntityComponentReq {
     /// Component name
     pub component: String,
@@ -30,29 +26,19 @@ pub struct EntityComponentReq {
     pub keys: Vec<FieldElement>,
 }
 
-/// A type which wraps a [ComponentReader] for reading a component value of an entity.
-pub struct EntityReader<'a, P: Provider + Sync> {
-    /// Component name
-    component: String,
-    /// The entity keys
-    keys: Vec<FieldElement>,
-    /// Component reader
-    reader: ComponentReader<'a, P>,
-}
-
-pub struct WorldPartialSyncer<'a, S: EntityStorage, P: Provider + Sync> {
+pub struct WorldPartialSyncer<S: EntityStorage, P: Provider> {
     // We wrap it in an Arc<RwLock> to allow sharing the storage between threads.
     /// Storage to store the synced entity component values.
     storage: Arc<RwLock<S>>,
-    /// Client for reading the World contract.
-    world_reader: &'a WorldContractReader<'a, P>,
+    /// A provider implementation to query the World for entity components.
+    provider: P,
     /// The entity components to sync.
     entity_components_to_sync: Vec<EntityComponentReq>,
     /// The interval to run the syncing loop.
     interval: Interval,
 }
 
-impl<'a, S, P> WorldPartialSyncer<'a, S, P>
+impl<S, P> WorldPartialSyncer<S, P>
 where
     S: EntityStorage + Send + Sync,
     P: Provider + Sync + 'static,
@@ -61,12 +47,12 @@ where
 
     pub fn new(
         storage: Arc<RwLock<S>>,
-        world_reader: &'a WorldContractReader<'a, P>,
+        provider: P,
         entities: Vec<EntityComponentReq>,
-    ) -> WorldPartialSyncer<'a, S, P> {
+    ) -> WorldPartialSyncer<S, P> {
         Self {
-            world_reader,
             storage,
+            provider,
             entity_components_to_sync: entities,
             interval: stream::interval(Self::DEFAULT_INTERVAL),
         }
@@ -81,22 +67,20 @@ where
     /// Starts the syncing process.
     /// This function will run forever.
     pub async fn start(&mut self) -> Result<(), SyncerError<S::Error, P::Error>> {
-        let entity_readers = self.entity_readers().await?;
-
         while self.interval.next().await.is_some() {
-            for reader in &entity_readers {
-                let values = reader
-                    .reader
-                    .entity(reader.keys.clone(), BlockId::Tag(BlockTag::Pending))
+            for entity in &self.entity_components_to_sync {
+                let values = self
+                    .provider
+                    .entity(&entity.component, entity.keys.clone())
                     .await
-                    .map_err(SyncerError::Component)?;
+                    .map_err(SyncerError::Provider)?;
 
                 self.storage
                     .write()
                     .await
                     .set(
-                        cairo_short_string_to_felt(&reader.component).unwrap(),
-                        reader.keys.clone(),
+                        cairo_short_string_to_felt(&entity.component).unwrap(),
+                        entity.keys.clone(),
                         values,
                     )
                     .await
@@ -105,28 +89,5 @@ where
         }
 
         Ok(())
-    }
-
-    /// Get the entity reader for every requested component to sync.
-    async fn entity_readers(
-        &self,
-    ) -> Result<Vec<EntityReader<'a, P>>, SyncerError<S::Error, P::Error>> {
-        let mut entity_readers = Vec::new();
-
-        for i in &self.entity_components_to_sync {
-            let comp_reader = self
-                .world_reader
-                .component(&i.component, BlockId::Tag(BlockTag::Pending))
-                .await
-                .map_err(SyncerError::Component)?;
-
-            entity_readers.push(EntityReader {
-                component: i.component.clone(),
-                keys: i.keys.clone(),
-                reader: comp_reader,
-            });
-        }
-
-        Ok(entity_readers)
     }
 }
