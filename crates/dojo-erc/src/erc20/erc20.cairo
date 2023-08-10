@@ -70,7 +70,7 @@ mod ERC20 {
             calldata.append(token.into());
             calldata.append(recipient.into());
             calldata.append(initial_supply);
-            self.world.read().execute('erc20_mint', calldata.span());
+            self.world.read().execute('erc20_mint', calldata);
 
             self
                 .emit(
@@ -126,7 +126,7 @@ mod ERC20 {
         calldata.append(owner.into());
         calldata.append(spender.into());
         calldata.append(u256_as_allowance(amount));
-        self.world.read().execute('erc20_approve', calldata.span());
+        self.world.read().execute('erc20_approve', calldata);
 
         self.emit(Approval { owner, spender, value: amount });
 
@@ -164,7 +164,7 @@ mod ERC20 {
         calldata.append(recipient.into());
         calldata.append(u256_into_felt252(amount));
 
-        self.world.read().execute('erc20_transfer_from', calldata.span());
+        self.world.read().execute('erc20_transfer_from', calldata);
 
         self.emit(Transfer { from: Zeroable::zero(), to: recipient, value: amount });
     }

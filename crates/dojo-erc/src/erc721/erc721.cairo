@@ -111,7 +111,7 @@ mod ERC721 {
         let owner = owner_of(@self, token_id);
         calldata.append(u256_into_felt252(token_id));
         calldata.append(to.into());
-        self.world.read().execute('erc721_approve'.into(), calldata.span());
+        self.world.read().execute('erc721_approve'.into(), calldata);
         let owner = owner_of(@self, token_id);
         self.emit(Approval { owner, to, token_id });
     }
@@ -124,7 +124,7 @@ mod ERC721 {
         calldata.append(owner.into());
         calldata.append(operator.into());
         calldata.append(approved.into());
-        self.world.read().execute('erc721_set_approval_for_all'.into(), calldata.span());
+        self.world.read().execute('erc721_set_approval_for_all'.into(), calldata);
         self.emit(ApprovalForAll { owner, operator, approved });
     }
 
@@ -137,7 +137,7 @@ mod ERC721 {
         calldata.append(from.into());
         calldata.append(to.into());
         calldata.append(u256_into_felt252(token_id));
-        self.world.read().execute('erc721_transfer_from'.into(), calldata.span());
+        self.world.read().execute('erc721_transfer_from'.into(), calldata);
         self.emit(Transfer { from, to, token_id });
     }
 

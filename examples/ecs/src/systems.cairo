@@ -116,11 +116,11 @@ mod tests {
         let world = spawn_test_world(components, systems);
 
         let spawn_call_data = array::ArrayTrait::new();
-        world.execute('spawn', spawn_call_data.span());
+        world.execute('spawn', spawn_call_data);
 
         let mut move_calldata = array::ArrayTrait::new();
         move_calldata.append(move::Direction::Right(()).into());
-        world.execute('move', move_calldata.span());
+        world.execute('move', move_calldata);
         let mut keys = array::ArrayTrait::new();
         keys.append(caller.into());
 
