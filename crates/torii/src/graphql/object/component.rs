@@ -96,7 +96,7 @@ impl ObjectTrait for ComponentObject {
                     let components: Vec<ValueMapping> =
                         data.into_iter().map(ComponentObject::value_mapping).collect();
 
-                    Ok(Some(Value::Object(connection_output(&components, total_count))))
+                    Ok(Some(Value::Object(connection_output(components, total_count))))
                 })
             },
         ))

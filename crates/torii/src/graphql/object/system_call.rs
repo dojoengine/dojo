@@ -97,7 +97,7 @@ impl ObjectTrait for SystemCallObject {
                     let system_calls: Vec<ValueMapping> =
                         data.into_iter().map(SystemCallObject::value_mapping).collect();
 
-                    Ok(Some(Value::Object(connection_output(&system_calls, total_count))))
+                    Ok(Some(Value::Object(connection_output(system_calls, total_count))))
                 })
             },
         ))

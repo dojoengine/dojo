@@ -8,24 +8,40 @@ use crate::graphql::schema::build_schema;
 use crate::state::sql::{Executable, Sql};
 use crate::state::State;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Connection<T> {
+    pub total_count: i64,
+    pub edges: Vec<Edge<T>>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Edge<T> {
+    pub node: T,
+    pub cursor: String,
+}
+
+#[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Entity {
     pub component_names: String,
     pub keys: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct Moves {
     pub __typename: String,
     pub remaining: u32,
+    pub entity: Option<Entity>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct Position {
     pub __typename: String,
     pub x: u32,
     pub y: u32,
+    pub entity: Option<Entity>,
 }
 
 #[allow(dead_code)]

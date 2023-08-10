@@ -9,7 +9,7 @@ use sqlx::{FromRow, Pool, QueryBuilder, Row, Sqlite};
 use super::connection::{
     connection_input, decode_cursor, encode_cursor, parse_arguments, ConnectionArguments,
 };
-use super::query::{query_total_count};
+use super::query::query_total_count;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::graphql::constants::DEFAULT_LIMIT;
 use crate::graphql::object::entity::{Entity, EntityObject};
@@ -181,7 +181,7 @@ pub async fn component_states_query(
 
 // TODO: make `connection_output()` more generic. Currently, `component_connection()` method required as we
 // need to explicity add `entity_id` to each edge.
-fn component_connection(
+pub fn component_connection(
     data: &Vec<SqliteRow>,
     types: &TypeMapping,
     total_count: i64,
@@ -222,7 +222,6 @@ fn value_mapping_from_row(row: &SqliteRow, types: &TypeMapping) -> sqlx::Result<
 
 fn fetch_value(row: &SqliteRow, field_name: &str, field_type: &str) -> sqlx::Result<Value> {
     let column_name = format!("external_{}", field_name);
-
     match ScalarType::from_str(field_type) {
         Ok(ScalarType::Bool) => fetch_boolean(row, &column_name),
         Ok(ty) if ty.is_numeric_type() => fetch_numeric(row, &column_name),

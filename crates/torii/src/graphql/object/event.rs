@@ -94,7 +94,7 @@ impl ObjectTrait for EventObject {
                     let events: Vec<ValueMapping> =
                         data.into_iter().map(EventObject::value_mapping).collect();
 
-                    Ok(Some(Value::Object(connection_output(&events, total_count))))
+                    Ok(Some(Value::Object(connection_output(events, total_count))))
                 })
             },
         ))

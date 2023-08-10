@@ -5,6 +5,7 @@ use indexmap::IndexMap;
 use serde_json::Number;
 
 use crate::graphql::types::ScalarType;
+use crate::graphql::utils::extract_value::extract;
 
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 
@@ -29,7 +30,6 @@ impl ConnectionObject {
     pub fn new(name: String, type_name: String) -> Self {
         let type_mapping = IndexMap::from([
             (Name::new("edges"), TypeRef::named_list(format!("{}Edge", type_name))),
-            (Name::new("pageInfo"), TypeRef::named_nn("PageInfo")),
             (Name::new("totalCount"), TypeRef::named_nn(TypeRef::INT)),
         ]);
 
@@ -97,14 +97,18 @@ pub fn connection_input(field: Field) -> Field {
         .argument(InputValue::new("after", TypeRef::named(ScalarType::Cursor.to_string())))
 }
 
-pub fn connection_output(data: &Vec<ValueMapping>, total_count: i64) -> ValueMapping {
+pub fn connection_output(data: Vec<ValueMapping>, total_count: i64) -> ValueMapping {
     let edges: Vec<Value> = data
         .into_iter()
         .map(|v| {
-            let cursor = v.get("id").expect("invalid cursor field");
+            let id = extract::<String>(&v, "id").expect("Invalid cursor field ID");
+            let created_at =
+                extract::<String>(&v, "createdAt").expect("Invalid cursor field createdAt");
+            let cursor = encode_cursor(&created_at, &id);
+
             let mut edge = ValueMapping::new();
-            edge.insert(Name::new("node"), Value::Object(v.clone()));
-            edge.insert(Name::new("cursor"), cursor.clone());
+            edge.insert(Name::new("node"), Value::Object(v));
+            edge.insert(Name::new("cursor"), Value::String(cursor));
 
             Value::Object(edge)
         })
