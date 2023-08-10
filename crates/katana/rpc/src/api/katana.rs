@@ -4,6 +4,7 @@ use jsonrpsee::types::error::CallError;
 use jsonrpsee::types::ErrorObject;
 use katana_core::accounts::Account;
 use starknet::core::types::FieldElement;
+use starknet_api::hash::StarkFelt;
 
 #[derive(thiserror::Error, Clone, Copy, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -22,6 +23,9 @@ impl From<KatanaApiError> for Error {
     }
 }
 
+pub type ContractAddressFieldElement = FieldElement;
+pub type StorageKeyFieldElement = FieldElement;
+
 #[rpc(server, namespace = "katana")]
 pub trait KatanaApi {
     #[method(name = "generateBlock")]
@@ -38,6 +42,12 @@ pub trait KatanaApi {
 
     #[method(name = "predeployedAccounts")]
     async fn predeployed_accounts(&self) -> Result<Vec<Account>, Error>;
+
+    #[method(name = "getStorageAtMultiple")]
+    async fn get_storage_multiple(
+        &self,
+        storage_addresses: Vec<(ContractAddressFieldElement, Vec<StorageKeyFieldElement>)>,
+    ) -> Result<Vec<Vec<StarkFelt>>, Error>;
 
     #[method(name = "setStorageAt")]
     async fn set_storage_at(

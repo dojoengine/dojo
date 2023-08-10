@@ -7,7 +7,9 @@ use starknet_api::hash::{StarkFelt, StarkHash};
 use starknet_api::state::StorageKey;
 use starknet_api::{patricia_key, stark_felt};
 
-use crate::api::katana::{KatanaApiError, KatanaApiServer};
+use crate::api::katana::{
+    ContractAddressFieldElement, KatanaApiError, KatanaApiServer, StorageKeyFieldElement,
+};
 
 pub struct KatanaApi<S> {
     sequencer: S,
@@ -55,6 +57,17 @@ where
 
     async fn predeployed_accounts(&self) -> Result<Vec<Account>, Error> {
         Ok(self.sequencer.backend().accounts.clone())
+    }
+
+    async fn get_storage_multiple(
+        &self,
+        storage_addresses: Vec<(ContractAddressFieldElement, Vec<StorageKeyFieldElement>)>,
+    ) -> Result<Vec<Vec<StarkFelt>>, Error> {
+        self.sequencer
+            .backend()
+            .get_storages_at(storage_addresses)
+            .await
+            .map_err(|_| Error::from(KatanaApiError::FailedToUpdateStorage))
     }
 
     async fn set_storage_at(

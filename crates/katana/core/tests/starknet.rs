@@ -6,6 +6,7 @@ use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::backend::Backend;
 use katana_core::db::Db;
 use katana_core::utils::contract::get_contract_class;
+use starknet::core::types::FieldElement;
 use starknet_api::block::BlockNumber;
 use starknet_api::core::{ClassHash, ContractAddress, Nonce, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};
@@ -183,5 +184,61 @@ async fn test_set_storage_at() {
         let mut state = starknet.state.write().await;
         let read_val = state.get_storage_at(contract_address, key).unwrap();
         assert_eq!(val, read_val, "latest storage value incorrect after generate");
+    }
+}
+
+#[tokio::test]
+async fn test_get_storages_at() {
+    let starknet = create_test_starknet();
+    starknet.open_pending_block().await;
+
+    // First contract data
+    let contract_address_felt = FieldElement::from(stark_felt!("0x1ee7"));
+    let contract_address = ContractAddress(patricia_key!(contract_address_felt));
+    let keys = vec![stark_felt!("0xb0b"), stark_felt!("0xab1"), stark_felt!("0xdad")];
+    let keys: Vec<FieldElement> = keys.iter().map(|f| FieldElement::from(*f)).collect();
+    let test_vals = vec![stark_felt!("0x100"), stark_felt!("0x200"), stark_felt!("0x300")];
+    for (i, key) in keys.iter().enumerate() {
+        starknet
+            .set_storage_at(contract_address, StorageKey(patricia_key!(*key)), test_vals[i])
+            .await
+            .unwrap();
+    }
+
+    // Second contract data
+    let contract_address_felt2 = FieldElement::from(stark_felt!("0x1ee8"));
+    let contract_address2 = ContractAddress(patricia_key!(contract_address_felt2));
+    let keys2 = vec![stark_felt!("0xbabe"), stark_felt!("0xf00")];
+    let keys2: Vec<FieldElement> = keys2.iter().map(|f| FieldElement::from(*f)).collect();
+    let test_vals2 = vec![stark_felt!("0x1002"), stark_felt!("0x2002")];
+    for (i, key) in keys.iter().enumerate() {
+        starknet
+            .set_storage_at(contract_address, StorageKey(patricia_key!(*key)), test_vals[i])
+            .await
+            .unwrap();
+    }
+    for (i, key2) in keys2.iter().enumerate() {
+        starknet
+            .set_storage_at(contract_address2, StorageKey(patricia_key!(*key2)), test_vals2[i])
+            .await
+            .unwrap();
+    }
+
+    {
+        // Read vals across the two contracts
+        let read_vals = starknet
+            .get_storages_at(vec![(contract_address_felt, keys), (contract_address_felt2, keys2)])
+            .await
+            .unwrap();
+
+        // Assert first contract storage values
+        for (i, val) in test_vals.iter().enumerate() {
+            assert_eq!(val, &read_vals[0][i], "Value {i} not matching");
+        }
+
+        // Assert second contract storage values
+        for (i, val2) in test_vals2.iter().enumerate() {
+            assert_eq!(val2, &read_vals[1][i], "Value {i} not matching");
+        }
     }
 }

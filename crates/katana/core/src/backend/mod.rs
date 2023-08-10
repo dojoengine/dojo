@@ -8,7 +8,7 @@ use blockifier::execution::entry_point::{
 use blockifier::execution::errors::EntryPointExecutionError;
 use blockifier::fee::fee_utils::{calculate_l1_gas_by_vm_usage, extract_l1_gas_and_vm_usage};
 use blockifier::state::cached_state::{CachedState, MutRefState};
-use blockifier::state::state_api::State;
+use blockifier::state::state_api::{State, StateReader};
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::errors::TransactionExecutionError;
 use blockifier::transaction::objects::AccountTransactionContext;
@@ -18,8 +18,9 @@ use flate2::Compression;
 use parking_lot::RwLock;
 use starknet::core::types::{BlockId, BlockTag, FeeEstimate, FieldElement};
 use starknet_api::block::BlockTimestamp;
-use starknet_api::core::{ContractAddress, EntryPointSelector};
-use starknet_api::hash::StarkFelt;
+use starknet_api::core::{ContractAddress, EntryPointSelector, PatriciaKey};
+use starknet_api::hash::{StarkFelt, StarkHash};
+use starknet_api::patricia_key;
 use starknet_api::state::StorageKey;
 use starknet_api::transaction::Calldata;
 use tokio::sync::RwLock as AsyncRwLock;
@@ -344,6 +345,31 @@ impl Backend {
             !block.transactions.is_empty()
         } else {
             false
+        }
+    }
+
+    pub async fn get_storages_at(
+        &self,
+        storage_addresses: Vec<(FieldElement, Vec<FieldElement>)>,
+    ) -> Result<Vec<Vec<StarkFelt>>, SequencerError> {
+        if let Some(pending_block) = self.pending_block.write().await.as_mut() {
+            let mut storage_values = vec![];
+            for (contract_address, keys) in storage_addresses.iter() {
+                let mut values = vec![];
+                for key in keys.iter() {
+                    let storage_value = pending_block.state.get_storage_at(
+                        ContractAddress(patricia_key!(*contract_address)),
+                        StorageKey(patricia_key!(*key)),
+                    )?;
+
+                    values.push(storage_value)
+                }
+                // storage_values.push((contract_address, values));
+                storage_values.push(values);
+            }
+            Ok(storage_values)
+        } else {
+            Err(SequencerError::StateNotFound(BlockId::Tag(BlockTag::Pending)))
         }
     }
 
