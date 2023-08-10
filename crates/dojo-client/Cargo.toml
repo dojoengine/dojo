@@ -11,7 +11,9 @@ crate-type = [ "cdylib", "rlib" ]
 [dependencies]
 async-std = { version = "1.12.0", features = [ "std", "unstable" ], default-features = false }
 async-trait.workspace = true
+cynic = { version = "3.2.2", features = [ "http-reqwest" ] }
 dojo-types = { path = "../dojo-types" }
+reqwest.workspace = true
 starknet-crypto.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
@@ -21,3 +23,6 @@ camino.workspace = true
 dojo-test-utils = { path = "../dojo-test-utils", features = [ "build-examples" ] }
 dojo-world = { path = "../dojo-world" }
 tokio.workspace = true
+
+[build-dependencies]
+cynic-codegen = "3.2.2"

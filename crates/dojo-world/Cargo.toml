@@ -16,7 +16,7 @@ camino.workspace = true
 convert_case.workspace = true
 dojo-types = { path = "../dojo-types" }
 futures = "0.3.28"
-reqwest = { version = "0.11.18", default-features = false, features = [ "rustls-tls" ] }
+reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true

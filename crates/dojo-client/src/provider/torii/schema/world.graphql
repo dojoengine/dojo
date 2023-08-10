@@ -1,0 +1,63 @@
+union ComponentUnion = Component
+
+scalar ContractAddress
+
+scalar DateTime
+
+type Component {
+	id: ID!
+	name: String!
+	class_hash: felt252!
+	transaction_hash: felt252!
+	created_at: DateTime!
+}
+
+type Entity {
+	id: ID!
+	keys: String!
+	componentNames: String!
+	createdAt: DateTime!
+	updatedAt: DateTime!
+	components: [ComponentUnion]
+}
+
+type Event {
+	id: ID!
+	keys: String!
+	data: String!
+	systemCallId: Int!
+	createdAt: DateTime!
+	systemCall: SystemCall!
+}
+
+type Query {
+	entity(id: ID!): Entity!
+	entities(keys: [String!]!, limit: Int, componentName: String): [Entity]
+	system(id: ID!): System!
+	systems(limit: Int): [System]
+	event(id: ID!): Event!
+	events(limit: Int): [Event]
+	systemCall(id: Int!): SystemCall!
+	systemCalls: [SystemCall]
+}
+
+type System {
+	id: ID!
+	name: String!
+	address: ContractAddress!
+	classHash: felt252!
+	transactionHash: felt252!
+	createdAt: DateTime!
+	systemCalls: [SystemCall!]!
+}
+
+type SystemCall {
+	id: ID!
+	transactionHash: String!
+	data: String!
+	systemId: ID!
+	createdAt: DateTime!
+	system: System!
+}
+
+scalar felt252

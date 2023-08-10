@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use starknet_crypto::FieldElement;
 
 pub mod jsonrpc;
+pub mod torii;
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
