@@ -21,6 +21,8 @@ const world: felt252 = 0xbeef;
 const player: Player = Player { key: 'key', name: 'name' };
 
 fn foo() {
+    // Should not emit diagnostics for unknown macros
+    let arr = array![1, 2, 3];
     set!(world, (
         player,
         Position { key: 'key', x: 0, y: 0 },
@@ -51,6 +53,8 @@ const world: felt252 = 0xbeef;
 const player: Player = Player { key: 'key', name: 'name' };
 
 fn foo() {
+    // Should not emit diagnostics for unknown macros
+    let arr = array![1, 2, 3];
     {
         let __set_macro_value__ = player;
         world
@@ -73,12 +77,12 @@ fn foo() {
 
 //! > expected_diagnostics
 error: Invalid arguments. Expected "(world, (components,))"
- --> dummy_file.cairo:23:10
+ --> dummy_file.cairo:25:10
     set!();
          ^
 
 error: Invalid arguments: No components provided.
- --> dummy_file.cairo:24:10
+ --> dummy_file.cairo:26:10
     set!(world, ());
          ^*******^
 
