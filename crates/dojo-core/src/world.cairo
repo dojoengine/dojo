@@ -18,7 +18,7 @@ trait IWorld<T> {
     fn register_system(ref self: T, class_hash: ClassHash);
     fn uuid(ref self: T) -> usize;
     fn emit(self: @T, keys: Span<felt252>, values: Span<felt252>);
-    fn execute(ref self: T, system: felt252, calldata: Span<felt252>) -> Span<felt252>;
+    fn execute(ref self: T, system: felt252, calldata: Array<felt252>) -> Span<felt252>;
     fn entity(
         self: @T, component: felt252, keys: Span<felt252>, offset: u8, length: usize
     ) -> Span<felt252>;
@@ -310,7 +310,7 @@ mod world {
         ///
         /// * `Span<felt252>` - The result of the system execution.
         fn execute(
-            ref self: ContractState, system: felt252, calldata: Span<felt252>
+            ref self: ContractState, system: felt252, mut calldata: Array<felt252>
         ) -> Span<felt252> {
             let stack_len = self.call_stack_len.read();
             self.call_stack.write(stack_len, system);
@@ -326,18 +326,20 @@ mod world {
                 self.call_origin.write(call_origin);
             }
 
+            let ctx = Context {
+                world: IWorldDispatcher {
+                    contract_address: get_contract_address()
+                }, origin: self.call_origin.read(), system, system_class_hash,
+            };
+
+            // Add context to calldata
+            ctx.serialize(ref calldata);
+
             // Call the system via executor
             let res = self
                 .executor_dispatcher
                 .read()
-                .execute(
-                    Context {
-                        world: IWorldDispatcher {
-                            contract_address: get_contract_address()
-                        }, origin: self.call_origin.read(), system, system_class_hash,
-                    },
-                    calldata
-                );
+                .execute(ctx.system_class_hash, calldata.span());
 
             // Reset the current call stack frame
             self.call_stack.write(stack_len, 0);
