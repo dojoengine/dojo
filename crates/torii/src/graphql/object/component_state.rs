@@ -237,7 +237,7 @@ pub async fn type_mapping_from(
                     type AS ty,
                     key,
                     created_at
-                FROM component_members WHERE component_id = ?
+                FROM component_members WHERE key == FALSE AND component_id = ?
             "#,
     )
     .bind(component_id)

@@ -168,6 +168,10 @@ impl State for Sql {
         );
 
         for member in component.clone().members {
+            if member.key {
+                continue;
+            }
+
             let sql_type = ScalarType::from_str(member.ty).map(|t| t.as_sql_type())?;
             component_table_query.push_str(&format!("external_{} {}, ", member.name, sql_type));
         }
@@ -226,10 +230,11 @@ impl State for Sql {
             entity_id, keys_str, component_names
         );
 
-        let member_results = sqlx::query("SELECT * FROM component_members WHERE component_id = ?")
-            .bind(component.to_lowercase())
-            .fetch_all(&self.pool)
-            .await?;
+        let member_results =
+            sqlx::query("SELECT * FROM component_members WHERE key == FALSE AND component_id = ?")
+                .bind(component.to_lowercase())
+                .fetch_all(&self.pool)
+                .await?;
 
         let (names_str, values_str) = format_values(member_results, values)?;
         let insert_components = format!(
