@@ -167,3 +167,40 @@ fn foo() {
 }
 
 //! > expected_diagnostics
+
+//! > ==========================================================================
+
+//! > Test emit! macro.
+
+//! > test_runner_name
+test_expand_plugin
+
+//! > cairo_code
+fn foo() {
+    emit!(world, Struct {
+        x: 10,
+    });
+
+    let id = (0x420, 0x1337);
+    emit!(world, id);
+}
+
+//! > generated_cairo_code
+fn foo() {
+    {
+        let mut keys = Default::<array::Array>::default();
+        let mut data = Default::<array::Array>::default();
+        starknet::Event::append_keys_and_data(@Struct { x: 10,  }, ref keys, ref data);
+        world.emit(keys, data.span());
+    };
+
+    let id = (0x420, 0x1337);
+    {
+        let mut keys = Default::<array::Array>::default();
+        let mut data = Default::<array::Array>::default();
+        starknet::Event::append_keys_and_data(@id, ref keys, ref data);
+        world.emit(keys, data.span());
+    };
+}
+
+//! > expected_diagnostics
