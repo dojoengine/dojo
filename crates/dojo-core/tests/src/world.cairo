@@ -111,7 +111,7 @@ fn test_emit() {
     let mut values = ArrayTrait::new();
     values.append(1);
     values.append(2);
-    world.emit(keys.span(), values.span());
+    world.emit(keys, values.span());
 }
 
 #[test]
