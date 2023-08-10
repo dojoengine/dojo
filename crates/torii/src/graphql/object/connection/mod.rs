@@ -6,7 +6,6 @@ use serde_json::Number;
 
 use crate::graphql::types::ScalarType;
 
-use super::query::Order;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 
 pub mod edge;
@@ -56,7 +55,7 @@ impl ObjectTrait for ConnectionObject {
     }
 }
 
-pub fn parse_arguments(ctx: &ResolverContext<'_>) -> Result<(i64, i64, Order), Error> {
+pub fn parse_arguments(ctx: &ResolverContext<'_>) -> Result<ConnectionArguments, Error> {
     let first = ctx.args.try_get("first").and_then(|first| first.i64()).ok();
     let last = ctx.args.try_get("last").and_then(|last| last.i64()).ok();
     let after = ctx.args.try_get("after").and_then(|after| Ok(after.string()?.to_string())).ok();
@@ -87,19 +86,7 @@ pub fn parse_arguments(ctx: &ResolverContext<'_>) -> Result<(i64, i64, Order), E
         }
     }
 
-    let (limit, order) = match (first, last) {
-        (Some(f), _) => (f, Order::Desc),
-        (_, Some(l)) => (l, Order::Asc),
-        _ => (0, Order::Desc),
-    };
-
-    let (offset, order) = match (before, after) {
-        (Some(b), _) => (decode_cursor(b)?, Order::Asc),
-        (_, Some(a)) => (decode_cursor(a)?, Order::Desc),
-        _ => (0, order),
-    };
-
-    Ok((limit, offset, order))
+    Ok(ConnectionArguments { first, last, after, before })
 }
 
 pub fn connection_input(field: Field) -> Field {
@@ -129,24 +116,22 @@ pub fn connection_output(data: &Vec<ValueMapping>, total_count: i64) -> ValueMap
     ])
 }
 
-pub fn encode_cursor(row_number: String) -> String {
-    let cursor = format!("cursor:{}", row_number);
+pub fn encode_cursor(created_at: &str, id: &str) -> String {
+    let cursor = format!("cursor/{}/{}", created_at, id);
     general_purpose::STANDARD.encode(cursor.as_bytes())
 }
 
-pub fn decode_cursor(cursor: String) -> Result<i64, Error> {
-    let bytes = general_purpose::STANDARD.decode(cursor).map_err(|_| "Failed to decode cursor")?;
-    let cursor = String::from_utf8(bytes).map_err(|_| "Failed to convert cursor to string")?;
-    let parts: Vec<&str> = cursor.split(':').collect();
+pub fn decode_cursor(cursor: String) -> Result<(String, String), Error> {
+    let bytes = general_purpose::STANDARD.decode(cursor)?;
+    let cursor = String::from_utf8(bytes)?;
+    let parts: Vec<&str> = cursor.split('/').collect();
 
-    if parts.len() != 2 || parts[0] != "cursor" {
+    if parts.len() != 3 || parts[0] != "cursor" {
         return Err("Invalid cursor format".into());
     }
 
-    let row_number = parts[1].parse::<i64>().map_err(|_| "Failed to parse row_number")?;
-    if row_number < 0 {
-        return Err("Cursor row_number cannot be less than 0".into());
-    }
+    let created_at = parts[1].parse::<String>()?;
+    let id = parts[2].parse::<String>()?;
 
-    Ok(row_number)
+    Ok((created_at, id))
 }

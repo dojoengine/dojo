@@ -6,16 +6,18 @@ use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{FromRow, Pool, QueryBuilder, Row, Sqlite};
 
-use super::connection::{connection_input, encode_cursor, parse_arguments};
-use super::query::{query_total_count, Order};
+use super::connection::{
+    connection_input, decode_cursor, encode_cursor, parse_arguments, ConnectionArguments,
+};
+use super::query::{query_total_count};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
+use crate::graphql::constants::DEFAULT_LIMIT;
 use crate::graphql::object::entity::{Entity, EntityObject};
 use crate::graphql::object::query::{query_by_id, ID};
 use crate::graphql::types::ScalarType;
 use crate::graphql::utils::extract_value::extract;
 
 const BOOLEAN_TRUE: i64 = 1;
-const ENTITY_ID: &str = "entity_id";
 
 #[derive(FromRow, Deserialize)]
 pub struct ComponentMembers {
@@ -70,12 +72,11 @@ impl ObjectTrait for ComponentStateObject {
             let name = name.clone();
 
             FieldFuture::new(async move {
-                let (limit, offset, order) = parse_arguments(&ctx)?;
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                 let table_name = format!("external_{}", name);
                 let total_count = query_total_count(&mut conn, &table_name).await?;
-                let data =
-                    component_states_query(&mut conn, &table_name, order, limit, offset).await?;
+                let args = parse_arguments(&ctx)?;
+                let data = component_states_query(&mut conn, &table_name, args).await?;
                 let connection = component_connection(&data, &type_mapping, total_count)?;
 
                 Ok(Some(Value::Object(connection)))
@@ -110,7 +111,7 @@ fn entity_field() -> Field {
             match ctx.parent_value.try_to_value()? {
                 Value::Object(indexmap) => {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let id = extract::<String>(indexmap, ENTITY_ID)?;
+                    let id = extract::<String>(indexmap, "entity_id")?;
                     let entity: Entity = query_by_id(&mut conn, "entities", ID::Str(id)).await?;
                     let result = EntityObject::value_mapping(entity);
 
@@ -121,31 +122,6 @@ fn entity_field() -> Field {
         })
     })
 }
-
-// fn parse_inputs(
-//     ctx: &ResolverContext<'_>,
-//     type_mapping: &TypeMapping,
-// ) -> async_graphql::Result<(ComponentFilters, u64), async_graphql::Error> {
-//     let mut filters: ComponentFilters = ComponentFilters::new();
-
-//     // parse inputs based on field type mapping
-//     for (name, ty) in type_mapping.iter() {
-//         let input_option = ctx.args.try_get(name.as_str());
-
-//         if let Ok(input) = input_option {
-//             let input_str = match ScalarType::from_str(ty.to_string())? {
-//                 scalar if scalar.is_numeric_type() => input.u64()?.to_string(),
-//                 _ => input.string()?.to_string(),
-//             };
-
-//             filters.insert(name.to_string(), input_str);
-//         }
-//     }
-
-//     let limit = ctx.args.try_get("limit").and_then(|limit| limit.u64()).unwrap_or(DEFAULT_LIMIT);
-
-//     Ok((filters, limit))
-// }
 
 pub async fn component_state_by_id_query(
     conn: &mut PoolConnection<Sqlite>,
@@ -163,21 +139,42 @@ pub async fn component_state_by_id_query(
 pub async fn component_states_query(
     conn: &mut PoolConnection<Sqlite>,
     table_name: &str,
-    order: Order,
-    limit: i64,
-    offset: i64,
+    args: ConnectionArguments,
 ) -> sqlx::Result<Vec<SqliteRow>> {
-    // FIXME?: Possible performance impact using row_number window function for large datasets, can migrate to use
-    // (created_at, id) for cursor. However, created_at also doesn't reflect proper chronological ordering as multiple
-    // entires could have the same timestamp. Possible fix is to include block_number as part of component data
-    // and used as cursor.
-    let mut builder: QueryBuilder<'_, Sqlite> = QueryBuilder::new(
-        "SELECT *, row_number() OVER (ORDER BY created_at DESC) AS row_number FROM ",
-    );
+    let mut builder: QueryBuilder<'_, Sqlite> = QueryBuilder::new("SELECT * FROM ");
     builder.push(table_name);
-    builder.push(" ORDER BY created_at ").push(order);
-    builder.push(" LIMIT ").push(limit);
-    builder.push(" OFFSET ").push(offset);
+
+    if let Some(after_cursor) = &args.after {
+        match decode_cursor(after_cursor.clone()) {
+            Ok((created_at, id)) => {
+                builder.push(" WHERE (created_at, entity_id) < (");
+                builder.push_bind(created_at).push(",");
+                builder.push_bind(id).push(") ");
+            }
+            Err(_) => return Err(sqlx::Error::Decode("Invalid after cursor format".into())),
+        }
+    }
+
+    if let Some(before_cursor) = &args.before {
+        match decode_cursor(before_cursor.clone()) {
+            Ok((created_at, id)) => {
+                builder.push(" WHERE (created_at, entity_id) > (");
+                builder.push_bind(created_at).push(",");
+                builder.push_bind(id).push(") ");
+            }
+            Err(_) => return Err(sqlx::Error::Decode("Invalid before cursor format".into())),
+        }
+    }
+
+    if let Some(first) = args.first {
+        builder.push(" ORDER BY created_at DESC, entity_id DESC LIMIT ");
+        builder.push(first);
+    } else if let Some(last) = args.last {
+        builder.push(" ORDER BY created_at ASC, entity_id ASC LIMIT ");
+        builder.push(last);
+    } else {
+        builder.push(" ORDER BY created_at DESC, entity_id DESC LIMIT ").push(DEFAULT_LIMIT);
+    }
 
     builder.build().fetch_all(conn).await
 }
@@ -192,16 +189,18 @@ fn component_connection(
     let component_edges = data
         .iter()
         .map(|row| {
-            // Fetch entity_id and offset manually as they're not part of component memebers
-            let row_number = fetch_numeric(row, "row_number")?.to_string();
-            let entity_id = fetch_string(row, "entity_id")?;
+            // entity_id and created_at used to create cursor
+            let entity_id = row.try_get::<String, &str>("entity_id")?;
+            let created_at = row.try_get::<String, &str>("created_at")?;
+            let cursor = encode_cursor(&created_at, &entity_id);
 
+            // insert entity_id because it needs to be queriable
             let mut value_mapping = value_mapping_from_row(row, types)?;
-            value_mapping.insert(Name::new("entity_id"), entity_id);
+            value_mapping.insert(Name::new("entity_id"), Value::String(entity_id));
 
             let mut edge = ValueMapping::new();
             edge.insert(Name::new("node"), Value::Object(value_mapping));
-            edge.insert(Name::new("cursor"), Value::String(encode_cursor(row_number.clone())));
+            edge.insert(Name::new("cursor"), Value::String(cursor));
 
             Ok(Value::Object(edge))
         })
@@ -210,6 +209,7 @@ fn component_connection(
     Ok(ValueMapping::from([
         (Name::new("totalCount"), Value::from(total_count)),
         (Name::new("edges"), Value::List(component_edges?)),
+        // TODO: add pageInfo
     ]))
 }
 
