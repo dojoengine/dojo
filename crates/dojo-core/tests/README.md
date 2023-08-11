@@ -1,1 +1,0 @@
-We implement tests as a separate crate due to a tooling limitation where including core contracts in a dojo project also includes their tests cases. This way, dojo projects don't need to inadvertently run core tests.
