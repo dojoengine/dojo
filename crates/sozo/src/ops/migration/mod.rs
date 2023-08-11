@@ -207,7 +207,8 @@ where
     Ok(migration)
 }
 
-// returns the block number at which migration happened
+// returns the Some(block number) at which migration world is deployed, returns none if world was
+// not redeployed
 async fn execute_strategy<P, S>(
     strategy: &MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
@@ -249,9 +250,13 @@ where
                         .set_executor(executor.contract_address)
                         .await?;
 
-                let _ = TransactionWaiter::new(transaction_hash, migrator.provider())
-                    .await
-                    .map_err(|_| anyhow!("Transaction execution failed"))?;
+                let _ =
+                    TransactionWaiter::new(transaction_hash, migrator.provider()).await.map_err(
+                        MigrationError::<
+                            <SingleOwnerAccount<P, S> as Account>::SignError,
+                            <P as Provider>::Error,
+                        >::WaitingError,
+                    )?;
 
                 ws_config.ui().print_hidden_sub(format!("Updated at: {transaction_hash:#x}"));
             }
@@ -360,9 +365,13 @@ where
         .await
         .map_err(|e| anyhow!("Failed to register components to World: {e}"))?;
 
-    let _ = TransactionWaiter::new(transaction_hash, migrator.provider())
-        .await
-        .map_err(|_| anyhow!("Transaction execution failed"))?;
+    let _ =
+        TransactionWaiter::new(transaction_hash, migrator.provider()).await.map_err(
+            MigrationError::<
+                <SingleOwnerAccount<P, S> as Account>::SignError,
+                <P as Provider>::Error,
+            >::WaitingError,
+        )?;
 
     ws_config.ui().print_hidden_sub(format!("registered at: {transaction_hash:#x}"));
 
@@ -420,9 +429,13 @@ where
         .await
         .map_err(|e| anyhow!("Failed to register systems to World: {e}"))?;
 
-    let _ = TransactionWaiter::new(transaction_hash, migrator.provider())
-        .await
-        .map_err(|_| anyhow!("Transaction execution failed"))?;
+    let _ =
+        TransactionWaiter::new(transaction_hash, migrator.provider()).await.map_err(
+            MigrationError::<
+                <SingleOwnerAccount<P, S> as Account>::SignError,
+                <P as Provider>::Error,
+            >::WaitingError,
+        )?;
 
     ws_config.ui().print_hidden_sub(format!("registered at: {transaction_hash:#x}"));
 
