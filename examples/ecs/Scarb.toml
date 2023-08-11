@@ -10,6 +10,7 @@ sierra-replace-ids = true
 dojo = { path = "../../crates/dojo-core" }
 
 [[target.dojo]]
+build-external-contracts = [  ]
 
 [tool.dojo]
 initializer_class_hash = "0xbeef"
