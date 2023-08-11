@@ -1,9 +1,0 @@
-[package]
-description = "Tests for Dojo Core"
-name = "dojo_tests"
-version = "0.1.0"
-
-[dependencies]
-dojo = { path = "../" }
-
-[[target.dojo]]
