@@ -17,7 +17,7 @@ trait IWorld<T> {
     fn system(self: @T, name: felt252) -> ClassHash;
     fn register_system(ref self: T, class_hash: ClassHash);
     fn uuid(ref self: T) -> usize;
-    fn emit(self: @T, keys: Span<felt252>, values: Span<felt252>);
+    fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
     fn execute(ref self: T, system: felt252, calldata: Array<felt252>) -> Span<felt252>;
     fn entity(
         self: @T, component: felt252, keys: Span<felt252>, offset: u8, length: usize
@@ -371,15 +371,9 @@ mod world {
         ///
         /// * `keys` - The keys of the event.
         /// * `values` - The data to be logged by the event.
-        fn emit(self: @ContractState, keys: Span<felt252>, values: Span<felt252>) {
-            // Assert can only be called through the executor
-            // This is to prevent system from writing to storage directly
-            assert(
-                get_caller_address() == self.executor_dispatcher.read().contract_address,
-                'must be called thru executor'
-            );
-
-            emit_event_syscall(keys, values).unwrap_syscall();
+        fn emit(self: @ContractState, mut keys: Array<felt252>, values: Span<felt252>) {
+            caller_system(self).serialize(ref keys);
+            emit_event_syscall(keys.span(), values).unwrap_syscall();
         }
 
         /// Sets the component value for an entity.

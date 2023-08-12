@@ -26,16 +26,23 @@ mod spawn {
 
 #[system]
 mod move {
+    use starknet::ContractAddress;
     use array::ArrayTrait;
     use box::BoxTrait;
     use traits::Into;
     use dojo::world::Context;
-    use debug::PrintTrait;
 
     use dojo_examples::components::Position;
     use dojo_examples::components::Moves;
 
-    #[derive(Serde, Drop)]
+    #[derive(Drop, starknet::Event)]
+    struct Moved {
+        address: ContractAddress,
+        direction: Direction
+    }
+
+
+    #[derive(Serde, Copy, Drop)]
     enum Direction {
         Left: (),
         Right: (),
@@ -59,6 +66,7 @@ mod move {
         moves.remaining -= 1;
         let next = next_position(position, direction);
         set !(ctx.world, (moves, next));
+        emit !(ctx.world, Moved { address: ctx.origin, direction });
         return ();
     }
 

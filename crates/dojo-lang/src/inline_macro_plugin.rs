@@ -4,6 +4,7 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::kind::SyntaxKind;
 use cairo_lang_syntax::node::{SyntaxNode, TypedSyntaxNode};
 
+use crate::inline_macros::emit::EmitMacro;
 use crate::inline_macros::get::GetMacro;
 use crate::inline_macros::set::SetMacro;
 
@@ -35,6 +36,7 @@ pub trait InlineMacro {
 /// Returns the inline macro plugin for the given macro name, or None if no such plugin exists.
 fn get_inline_macro_plugin(macro_name: &str) -> Option<Box<dyn InlineMacro>> {
     match macro_name {
+        "emit" => Some(Box::new(EmitMacro)),
         "get" => Some(Box::new(GetMacro)),
         "set" => Some(Box::new(SetMacro)),
         _ => None,

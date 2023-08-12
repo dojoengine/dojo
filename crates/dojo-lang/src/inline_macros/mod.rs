@@ -2,6 +2,7 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use smol_str::SmolStr;
 
+pub mod emit;
 pub mod get;
 pub mod set;
 
