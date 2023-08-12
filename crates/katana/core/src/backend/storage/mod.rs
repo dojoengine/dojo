@@ -3,7 +3,8 @@ use std::collections::{HashMap, VecDeque};
 use blockifier::block_context::BlockContext;
 use starknet::core::types::{BlockId, BlockTag, FieldElement, StateDiff, StateUpdate};
 
-use self::{block::Block, transaction::KnownTransaction};
+use self::block::Block;
+use self::transaction::KnownTransaction;
 use super::state::MemDb;
 use crate::backend::storage::block::PartialHeader;
 

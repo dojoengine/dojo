@@ -19,7 +19,7 @@ use starknet::providers::{Provider, ProviderError};
 use starknet::signers::Signer;
 use thiserror::Error;
 
-use crate::utils::{TransactionWaiter, TransactionWaitingError};
+use crate::utils::{block_number_from_receipt, TransactionWaiter, TransactionWaitingError};
 
 pub mod class;
 pub mod contract;
@@ -33,6 +33,7 @@ pub struct DeployOutput {
     pub transaction_hash: FieldElement,
     pub contract_address: FieldElement,
     pub declare: Option<DeclareOutput>,
+    pub block_number: u64,
 }
 
 #[derive(Debug)]
@@ -181,11 +182,16 @@ pub trait Deployable: Declarable + Sync {
             .await
             .map_err(MigrationError::Migrator)?;
 
-        let _ = TransactionWaiter::new(transaction_hash, account.provider())
+        let txn = TransactionWaiter::new(transaction_hash, account.provider())
             .await
             .map_err(MigrationError::WaitingError)?;
 
-        Ok(DeployOutput { transaction_hash, contract_address, declare })
+        Ok(DeployOutput {
+            transaction_hash,
+            contract_address,
+            declare,
+            block_number: block_number_from_receipt(&txn),
+        })
     }
 
     fn salt(&self) -> FieldElement;

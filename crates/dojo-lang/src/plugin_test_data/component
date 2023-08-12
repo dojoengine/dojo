@@ -1,13 +1,16 @@
 //! > Test expansion of the component contract.
 
 //! > test_runner_name
-ExpandContractTestRunner
+test_expand_plugin
 
 //! > cairo_code
 use serde::Serde;
 
 #[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Position {
+    #[key]
+    id: felt252,
+
     x: felt252,
     y: felt252
 }
@@ -42,42 +45,61 @@ impl RolesSerdeLen of dojo::SerdeLen<Roles> {
     }
 }
 
+use starknet::ContractAddress;
+
 #[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Player {
+    #[key]
+    game: felt252,
+    #[key]
+    player: ContractAddress,
+
     name: felt252, 
 }
 
 //! > generated_cairo_code
 use serde::Serde;
 
-trait PositionTrait {
-    fn is_zero(self: Position) -> bool;
-    fn is_equal(self: Position, b: Position) -> bool;
-}
-
-impl PositionImpl of PositionTrait {
-    fn is_zero(self: Position) -> bool {
-        match self.x - self.y {
-            0 => bool::True(()),
-            _ => bool::False(()),
-        }
-    }
-
-    fn is_equal(self: Position, b: Position) -> bool {
-        self.x == b.x && self.y == b.y
-    }
-}
-
-impl RolesSerdeLen of dojo::SerdeLen<Roles> {
-    #[inline(always)]
-    fn len() -> usize {
-        5
-    }
-}
-
 struct Position {
+    #[key]
+    id: felt252,
     x: felt252,
     y: felt252
+}
+
+impl PositionComponent of dojo::traits::Component<Position> {
+    #[inline(always)]
+    fn name(self: @Position) -> felt252 {
+        'Position'
+    }
+
+    #[inline(always)]
+    fn keys(self: @Position) -> Span<felt252> {
+        let mut serialized = ArrayTrait::new();
+        array::ArrayTrait::append(ref serialized, *self.id);
+
+        array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn values(self: @Position) -> Span<felt252> {
+        let mut serialized = ArrayTrait::new();
+        array::ArrayTrait::append(ref serialized, *self.x);
+        serde::Serde::serialize(self.y, ref serialized);
+        array::ArrayTrait::span(@serialized)
+    }
+}
+
+#[cfg(test)]
+impl PositionPrintImpl of debug::PrintTrait<Position> {
+    fn print(self: Position) {
+        debug::PrintTrait::print('id');
+        debug::PrintTrait::print(self.id);
+        debug::PrintTrait::print('x');
+        debug::PrintTrait::print(self.x);
+        debug::PrintTrait::print('y');
+        debug::PrintTrait::print(self.y);
+    }
 }
 
 #[starknet::interface]
@@ -93,28 +115,22 @@ mod position {
     struct Storage {}
 
     #[external(v0)]
-    fn schema(self: @ContractState) -> Array<(felt252, felt252, usize, u8)> {
-        let mut arr = array::ArrayTrait::new();
-        array::ArrayTrait::append(ref arr, ('x', 'felt252', 0, 0));
-        array::ArrayTrait::append(ref arr, ('y', 'felt252', 1, 0));
-
-        arr
-    }
-
-    #[external(v0)]
-    fn length(self: @ContractState) -> usize {
-        dojo::SerdeLen::<Position>::len()
-    }
-
-
-    #[external(v0)]
     fn name(self: @ContractState) -> felt252 {
         'Position'
     }
 
     #[external(v0)]
-    fn is_indexed(self: @ContractState) -> bool {
-        bool::False(())
+    fn size(self: @ContractState) -> usize {
+        dojo::SerdeLen::<Position>::len()
+    }
+
+    #[external(v0)]
+    fn schema(self: @ContractState) -> Array<(felt252, felt252, bool)> {
+        let mut arr = array::ArrayTrait::new();
+        array::ArrayTrait::append(ref arr, ('id', 'felt252', true));
+        array::ArrayTrait::append(ref arr, ('x', 'felt252', false));
+        array::ArrayTrait::append(ref arr, ('y', 'felt252', false));
+        arr
     }
 }
 
@@ -125,8 +141,58 @@ impl SerdeLenPosition of dojo::SerdeLen<Position> {
     }
 }
 
+
+
+trait PositionTrait {
+    fn is_zero(self: Position) -> bool;
+    fn is_equal(self: Position, b: Position) -> bool;
+}
+
+
+impl PositionImpl of PositionTrait {
+    fn is_zero(self: Position) -> bool {
+        match self.x - self.y {
+            0 => bool::True(()),
+            _ => bool::False(()),
+        }
+    }
+
+    fn is_equal(self: Position, b: Position) -> bool {
+        self.x == b.x && self.y == b.y
+    }
+}
+
 struct Roles {
     role_ids: Array<u8>
+}
+
+impl RolesComponent of dojo::traits::Component<Roles> {
+    #[inline(always)]
+    fn name(self: @Roles) -> felt252 {
+        'Roles'
+    }
+
+    #[inline(always)]
+    fn keys(self: @Roles) -> Span<felt252> {
+        let mut serialized = ArrayTrait::new();
+
+        array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn values(self: @Roles) -> Span<felt252> {
+        let mut serialized = ArrayTrait::new();
+        serde::Serde::serialize(self.role_ids, ref serialized);
+        array::ArrayTrait::span(@serialized)
+    }
+}
+
+#[cfg(test)]
+impl RolesPrintImpl of debug::PrintTrait<Roles> {
+    fn print(self: Roles) {
+        debug::PrintTrait::print('role_ids');
+        debug::PrintTrait::print(self.role_ids);
+    }
 }
 
 #[starknet::interface]
@@ -142,32 +208,77 @@ mod roles {
     struct Storage {}
 
     #[external(v0)]
-    fn schema(self: @ContractState) -> Array<(felt252, felt252, usize, u8)> {
-        let mut arr = array::ArrayTrait::new();
-        array::ArrayTrait::append(ref arr, ('role_ids', 'Array<u8>', 0, 0));
-
-        arr
-    }
-
-    #[external(v0)]
-    fn length(self: @ContractState) -> usize {
-        dojo::SerdeLen::<Roles>::len()
-    }
-
-
-    #[external(v0)]
     fn name(self: @ContractState) -> felt252 {
         'Roles'
     }
 
     #[external(v0)]
-    fn is_indexed(self: @ContractState) -> bool {
-        bool::False(())
+    fn size(self: @ContractState) -> usize {
+        dojo::SerdeLen::<Roles>::len()
+    }
+
+    #[external(v0)]
+    fn schema(self: @ContractState) -> Array<(felt252, felt252, bool)> {
+        let mut arr = array::ArrayTrait::new();
+        array::ArrayTrait::append(ref arr, ('role_ids', 'Array<u8>', false));
+        arr
     }
 }
 
+
+
+impl RolesSerdeLen of dojo::SerdeLen<Roles> {
+    #[inline(always)]
+    fn len() -> usize {
+        5
+    }
+}
+
+
+use starknet::ContractAddress;
+
 struct Player {
-    name: felt252, 
+    #[key]
+    game: felt252,
+    #[key]
+    player: ContractAddress,
+    name: felt252,
+}
+
+impl PlayerComponent of dojo::traits::Component<Player> {
+    #[inline(always)]
+    fn name(self: @Player) -> felt252 {
+        'Player'
+    }
+
+    #[inline(always)]
+    fn keys(self: @Player) -> Span<felt252> {
+        let mut serialized = ArrayTrait::new();
+        array::ArrayTrait::append(ref serialized, *self.game);
+        serde::Serde::serialize(self.player, ref serialized);
+
+        array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn values(self: @Player) -> Span<felt252> {
+        let mut serialized = ArrayTrait::new();
+        array::ArrayTrait::append(ref serialized, *self.name);
+
+        array::ArrayTrait::span(@serialized)
+    }
+}
+
+#[cfg(test)]
+impl PlayerPrintImpl of debug::PrintTrait<Player> {
+    fn print(self: Player) {
+        debug::PrintTrait::print('game');
+        debug::PrintTrait::print(self.game);
+        debug::PrintTrait::print('player');
+        debug::PrintTrait::print(self.player);
+        debug::PrintTrait::print('name');
+        debug::PrintTrait::print(self.name);
+    }
 }
 
 #[starknet::interface]
@@ -183,27 +294,22 @@ mod player {
     struct Storage {}
 
     #[external(v0)]
-    fn schema(self: @ContractState) -> Array<(felt252, felt252, usize, u8)> {
-        let mut arr = array::ArrayTrait::new();
-        array::ArrayTrait::append(ref arr, ('name', 'felt252', 0, 0));
-
-        arr
-    }
-
-    #[external(v0)]
-    fn length(self: @ContractState) -> usize {
-        dojo::SerdeLen::<Player>::len()
-    }
-
-
-    #[external(v0)]
     fn name(self: @ContractState) -> felt252 {
         'Player'
     }
 
     #[external(v0)]
-    fn is_indexed(self: @ContractState) -> bool {
-        bool::False(())
+    fn size(self: @ContractState) -> usize {
+        dojo::SerdeLen::<Player>::len()
+    }
+
+    #[external(v0)]
+    fn schema(self: @ContractState) -> Array<(felt252, felt252, bool)> {
+        let mut arr = array::ArrayTrait::new();
+        array::ArrayTrait::append(ref arr, ('game', 'felt252', true));
+        array::ArrayTrait::append(ref arr, ('player', 'ContractAddress', true));
+        array::ArrayTrait::append(ref arr, ('name', 'felt252', false));
+        arr
     }
 }
 
@@ -215,3 +321,7 @@ impl SerdeLenPlayer of dojo::SerdeLen<Player> {
 }
 
 //! > expected_diagnostics
+error: Component must define atleast one #[key] attribute
+ --> dummy_file.cairo:31:8
+struct Roles {
+       ^***^

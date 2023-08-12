@@ -6,15 +6,14 @@ use starknet::core::types::{
     PendingDeclareTransactionReceipt, PendingDeployAccountTransactionReceipt,
     PendingDeployTransactionReceipt, PendingInvokeTransactionReceipt,
     PendingL1HandlerTransactionReceipt, PendingTransactionReceipt as RpcPendingTransactionReceipt,
+    Transaction as RpcTransaction, TransactionReceipt as RpcTransactionReceipt,
     TransactionStatus as RpcTransactionStatus,
 };
-use starknet::core::types::{
-    Transaction as RpcTransaction, TransactionReceipt as RpcTransactionReceipt,
-};
+use starknet::core::utils::get_contract_address;
 use starknet_api::transaction::Transaction as ApiTransaction;
 
 use crate::backend::executor::ExecutedTransaction;
-use crate::utils::transaction::convert_api_to_rpc_tx;
+use crate::utils::transaction::api_to_rpc_transaction;
 
 /// The status of the transactions known to the sequencer.
 #[derive(Debug, Clone, Copy)]
@@ -113,7 +112,13 @@ impl IncludedTransaction {
                     block_number: self.block_number,
                     events: self.transaction.output.events.clone(),
                     transaction_hash: tx.transaction_hash.0.into(),
-                    contract_address: (*tx.contract_address.0.key()).into(),
+                    // TODO: store the contract address instead of computing everytime
+                    contract_address: get_contract_address(
+                        tx.contract_address_salt.0.into(),
+                        tx.class_hash.0.into(),
+                        &tx.constructor_calldata.0.iter().map(|f| (*f).into()).collect::<Vec<_>>(),
+                        FieldElement::ZERO,
+                    ),
                     messages_sent: self.transaction.output.messages_sent.clone(),
                     actual_fee: self.transaction.execution_info.actual_fee.0.into(),
                 })
@@ -137,7 +142,13 @@ impl IncludedTransaction {
                 block_number: self.block_number,
                 events: self.transaction.output.events.clone(),
                 transaction_hash: tx.transaction_hash.0.into(),
-                contract_address: (*tx.contract_address.0.key()).into(),
+                // TODO: store the contract address instead of computing everytime
+                contract_address: get_contract_address(
+                    tx.contract_address_salt.0.into(),
+                    tx.class_hash.0.into(),
+                    &tx.constructor_calldata.0.iter().map(|f| (*f).into()).collect::<Vec<_>>(),
+                    FieldElement::ZERO,
+                ),
                 messages_sent: self.transaction.output.messages_sent.clone(),
                 actual_fee: self.transaction.execution_info.actual_fee.0.into(),
             }),
@@ -190,7 +201,13 @@ impl PendingTransaction {
                     transaction_hash: tx.transaction_hash.0.into(),
                     messages_sent: self.0.output.messages_sent.clone(),
                     actual_fee: self.0.execution_info.actual_fee.0.into(),
-                    contract_address: (*tx.contract_address.0.key()).into(),
+                    // TODO: store the contract address instead of computing everytime
+                    contract_address: get_contract_address(
+                        tx.contract_address_salt.0.into(),
+                        tx.class_hash.0.into(),
+                        &tx.constructor_calldata.0.iter().map(|f| (*f).into()).collect::<Vec<_>>(),
+                        FieldElement::ZERO,
+                    ),
                 })
             }
         }
@@ -240,10 +257,10 @@ impl From<RejectedTransaction> for KnownTransaction {
 impl From<KnownTransaction> for RpcTransaction {
     fn from(transaction: KnownTransaction) -> Self {
         match transaction {
-            KnownTransaction::Pending(tx) => convert_api_to_rpc_tx(tx.0.transaction.clone()),
-            KnownTransaction::Rejected(tx) => convert_api_to_rpc_tx(tx.transaction),
+            KnownTransaction::Pending(tx) => api_to_rpc_transaction(tx.0.transaction.clone()),
+            KnownTransaction::Rejected(tx) => api_to_rpc_transaction(tx.transaction),
             KnownTransaction::Included(tx) => {
-                convert_api_to_rpc_tx(tx.transaction.transaction.clone())
+                api_to_rpc_transaction(tx.transaction.transaction.clone())
             }
         }
     }

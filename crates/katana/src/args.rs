@@ -1,10 +1,12 @@
 use std::path::PathBuf;
 
-use clap::{Args, Parser};
+use clap::{Args, Parser, Subcommand};
+use clap_complete::Shell;
 use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::constants::{
     DEFAULT_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_VALIDATE_MAX_STEPS,
 };
+use katana_core::db::serde::state::SerializableState;
 use katana_core::sequencer::SequencerConfig;
 use katana_rpc::config::ServerConfig;
 
@@ -26,6 +28,20 @@ pub struct KatanaArgs {
     #[arg(help = "Block time in seconds for interval mining.")]
     pub block_time: Option<u64>,
 
+    #[arg(long)]
+    #[arg(value_name = "PATH")]
+    #[arg(help = "Dump the state of chain on exit to the given file.")]
+    #[arg(long_help = "Dump the state of chain on exit to the given file. If the value is a \
+                       directory, the state will be written to `<PATH>/state.bin`.")]
+    pub dump_state: Option<PathBuf>,
+
+    #[arg(long)]
+    #[arg(hide = true)]
+    #[arg(value_name = "PATH")]
+    #[arg(value_parser = SerializableState::parse)]
+    #[arg(help = "Initialize the chain from a previously saved state snapshot.")]
+    pub load_state: Option<SerializableState>,
+
     #[command(flatten)]
     #[command(next_help_heading = "Server options")]
     pub server: ServerOptions,
@@ -33,6 +49,15 @@ pub struct KatanaArgs {
     #[command(flatten)]
     #[command(next_help_heading = "Starknet options")]
     pub starknet: StarknetOptions,
+
+    #[command(subcommand)]
+    pub command: Option<Commands>,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum Commands {
+    #[command(about = "Generate shell completion file for specified shell")]
+    Completions { shell: Shell },
 }
 
 #[derive(Debug, Args, Clone)]
@@ -60,16 +85,9 @@ pub struct StarknetOptions {
     #[arg(help = "Number of pre-funded accounts to generate.")]
     pub total_accounts: u8,
 
-    #[arg(value_name = "PATH")]
-    #[arg(long = "account-class")]
-    #[arg(help = "The account implementation for the predeployed accounts.")]
-    #[arg(long_help = "Specify the account implementation to be used for the predeployed \
-                       accounts; should be a path to the compiled JSON artifact.")]
-    pub account_path: Option<PathBuf>,
-
     #[arg(long)]
-    #[arg(help = "Allow transaction max fee to be zero.")]
-    pub allow_zero_max_fee: bool,
+    #[arg(help = "Disable charging fee for transactions.")]
+    pub disable_fee: bool,
 
     #[command(flatten)]
     #[command(next_help_heading = "Environment options")]
@@ -112,9 +130,9 @@ impl KatanaArgs {
         StarknetConfig {
             total_accounts: self.starknet.total_accounts,
             seed: parse_seed(&self.starknet.seed),
-            account_path: self.starknet.account_path.clone(),
-            allow_zero_max_fee: self.starknet.allow_zero_max_fee,
+            disable_fee: self.starknet.disable_fee,
             auto_mine: self.block_time.is_none() && !self.no_mining,
+            init_state: self.load_state.clone(),
             env: Environment {
                 chain_id: self.starknet.environment.chain_id.clone(),
                 gas_price: self.starknet.environment.gas_price.unwrap_or(DEFAULT_GAS_PRICE),

@@ -1,32 +1,17 @@
-import { RpcProvider, Provider as StarknetProvider, Account, stark, number, Call, InvokeFunctionResponse } from "starknet";
+import { RpcProvider, Account, num, Call, InvokeFunctionResponse } from "starknet";
 import { Provider } from "./provider";
 import { Query, WorldEntryPoints } from "../types";
 import { strTofelt252Felt } from '../utils'
-import { LOCAL_TORII } from '../constants';
+import { LOCAL_KATANA } from '../constants';
 
 export class RPCProvider extends Provider {
     public provider: RpcProvider;
-    public sequencerProvider: StarknetProvider;
-    private loggingEnabled: boolean;
 
-    constructor(world_address: string, url: string = LOCAL_TORII, loggingEnabled = false) {
+    constructor(world_address: string, url: string = LOCAL_KATANA) {
         super(world_address);
         this.provider = new RpcProvider({
             nodeUrl: url,
         });
-
-        // have to use this provider with Starknet.js
-        this.sequencerProvider = new StarknetProvider({
-            sequencer: {
-                // TODO: change name to KATANA
-                network: 'mainnet-alpha',
-                baseUrl: url
-            },
-            rpc: {
-                nodeUrl: url
-            }
-        })
-        this.loggingEnabled = loggingEnabled;
     }
 
     public async entity(component: string, query: Query, offset: number = 0, length: number = 0): Promise<Array<bigint>> {
@@ -37,7 +22,6 @@ export class RPCProvider extends Provider {
             calldata: [
                 strTofelt252Felt(component),
                 query.address_domain,
-                query.partition,
                 query.keys.length,
                 ...query.keys as any,
                 offset,
@@ -45,10 +29,8 @@ export class RPCProvider extends Provider {
             ]
         }
 
-        console.log(call)
-
         try {
-            const response = await this.sequencerProvider.callContract(call);
+            const response = await this.provider.callContract(call);
 
             return response.result as unknown as Array<bigint>;
         } catch (error) {
@@ -56,18 +38,16 @@ export class RPCProvider extends Provider {
         }
     }
 
-    public async entities(component: string, partition: string, length: number): Promise<Array<bigint>> {
+    public async entities(component: string, length: number): Promise<Array<bigint>> {
 
         const call: Call = {
             entrypoint: WorldEntryPoints.entities,
             contractAddress: this.getWorldAddress(),
-            calldata: [strTofelt252Felt(component), partition, length]
+            calldata: [strTofelt252Felt(component), length]
         }
 
-        console.log(call)
-
         try {
-            const response = await this.sequencerProvider.callContract(call);
+            const response = await this.provider.callContract(call);
 
             return response.result as unknown as Array<bigint>;
         } catch (error) {
@@ -84,7 +64,7 @@ export class RPCProvider extends Provider {
         }
 
         try {
-            const response = await this.sequencerProvider.callContract(call);
+            const response = await this.provider.callContract(call);
 
             return response.result as unknown as bigint;
         } catch (error) {
@@ -92,13 +72,7 @@ export class RPCProvider extends Provider {
         }
     }
 
-    public async execute(account: Account, system: string, call_data: number.BigNumberish[]): Promise<InvokeFunctionResponse> {
-
-        // DISCUSS: is this needed?
-        // let call_data_obj = call_data.reduce((obj: any, item, index) => {
-        //     obj[index] = item;
-        //     return obj;
-        // }, {});
+    public async execute(account: Account, system: string, call_data: num.BigNumberish[]): Promise<InvokeFunctionResponse> {
 
         try {
             const nonce = await account?.getNonce()
@@ -110,7 +84,7 @@ export class RPCProvider extends Provider {
                 },
                 undefined,
                 {
-                    nonce: nonce,
+                    nonce,
                     maxFee: 0 // TODO: Update
                 }
             );

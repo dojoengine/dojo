@@ -1,10 +1,10 @@
 [package]
-name = "dojo-world"
-version.workspace = true
-edition.workspace = true
-repository.workspace = true
-license-file.workspace = true
 description = "Dojo world specification. For example, crates and flags used for compilation."
+edition.workspace = true
+license-file.workspace = true
+name = "dojo-world"
+repository.workspace = true
+version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
@@ -16,24 +16,21 @@ camino.workspace = true
 convert_case.workspace = true
 dojo-types = { path = "../dojo-types" }
 futures = "0.3.28"
-reqwest = { version = "0.11.18", default-features = false, features = [
-    "rustls-tls",
-] }
+reqwest = { version = "0.11.18", default-features = false, features = [ "rustls-tls" ] }
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
 smol_str.workspace = true
-starknet.workspace = true
 starknet-crypto.workspace = true
+starknet.workspace = true
 thiserror.workspace = true
-tracing.workspace = true
 tokio.workspace = true
+tracing.workspace = true
 url = "2.2.2"
 
 [dev-dependencies]
 assert_fs = "1.0.9"
 assert_matches = "1.5.0"
-dojo-test-utils = { path = "../dojo-test-utils" }
 dojo-lang = { path = "../dojo-lang" }
-tokio = { version = "1.28.0", features = ["full"] }
-
+dojo-test-utils = { path = "../dojo-test-utils" }
+tokio = { version = "1.28.0", features = [ "full" ] }

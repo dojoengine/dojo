@@ -31,12 +31,8 @@ mod Buy {
 
         // update player item
         let item_sk: Query = (partition, (player, item_id)).into_partitioned();
-        let maybe_item = try_get !(ctx.world, item_sk, Item);
-        let player_quantity = match maybe_item {
-            Option::Some(item) => item.quantity + quantity,
-            Option::None(_) => quantity,
-        };
-        set !(ctx.world, item_sk, (Item { quantity: player_quantity }));
+        let item = get !(ctx.world, item_sk, Item);
+        set !(ctx.world, item_sk, (Item { quantity: item.quantity + quantity }));
     }
 }
 
@@ -50,11 +46,8 @@ mod Sell {
         let player: felt252 = starknet::get_caller_address().into();
 
         let item_sk: Query = (partition, (player, item_id)).into_partitioned();
-        let maybe_item = try_get !(ctx.world, item_sk, Item);
-        let player_quantity = match maybe_item {
-            Option::Some(item) => item.quantity,
-            Option::None(_) => 0,
-        };
+        let item = get !(ctx.world, item_sk, Item);
+        let player_quantity = item.quantity;
         assert(player_quantity >= quantity, 'not enough items');
 
         let cash_sk: Query = (partition, (player)).into_partitioned();
@@ -96,11 +89,8 @@ mod AddLiquidity {
         let player: felt252 = starknet::get_caller_address().into();
 
         let item_sk: Query = (partition, (player, item_id)).into_partitioned();
-        let maybe_item = try_get !(ctx.world, item_sk, Item);
-        let player_quantity = match maybe_item {
-            Option::Some(item) => item.quantity,
-            Option::None(_) => 0,
-        };
+        let item = get !(ctx.world, item_sk, Item);
+        let player_quantity = item.quantity;
         assert(player_quantity >= quantity, 'not enough items');
 
         let cash_sk: Query = (partition, (player)).into_partitioned();
@@ -130,7 +120,11 @@ mod AddLiquidity {
         // update player liquidity
         let liquidity_sk: Query = (partition, (player, item_id)).into_partitioned();
         let player_liquidity = get !(ctx.world, liquidity_sk, Liquidity);
-        set !(ctx.world, liquidity_sk, (Liquidity { shares: player_liquidity.shares + liquidity_shares }));
+        set !(
+            ctx.world,
+            liquidity_sk,
+            (Liquidity { shares: player_liquidity.shares + liquidity_shares })
+        );
     }
 }
 
@@ -173,11 +167,8 @@ mod RemoveLiquidity {
 
         // update player item
         let item_sk: Query = (partition, (player, item_id)).into_partitioned();
-        let maybe_item = try_get !(ctx.world, item_sk, Item);
-        let player_quantity = match maybe_item {
-            Option::Some(item) => item.quantity,
-            Option::None(_) => 0,
-        };
+        let item = get !(ctx.world, item_sk, Item);
+        let player_quantity = item.quantity;
         set !(ctx.world, item_sk, (Item { quantity: player_quantity + payout_quantity }));
 
         // update player liquidity

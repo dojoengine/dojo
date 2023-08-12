@@ -9,8 +9,16 @@ mod spawn {
     use dojo_examples::components::Moves;
 
     fn execute(ctx: Context) {
+        let position = get !(ctx.world, ctx.origin, (Position));
         set !(
-            ctx.world, ctx.origin.into(), (Moves { remaining: 10 }, Position { x: 0, y: 0 }, )
+            ctx.world,
+            (
+                Moves {
+                    player: ctx.origin, remaining: 10
+                    }, Position {
+                    player: ctx.origin, x: position.x + 10, y: position.y + 10
+                },
+            )
         );
         return ();
     }
@@ -18,6 +26,7 @@ mod spawn {
 
 #[system]
 mod move {
+    use starknet::ContractAddress;
     use array::ArrayTrait;
     use box::BoxTrait;
     use traits::Into;
@@ -26,7 +35,14 @@ mod move {
     use dojo_examples::components::Position;
     use dojo_examples::components::Moves;
 
-    #[derive(Serde, Drop)]
+    #[derive(Drop, starknet::Event)]
+    struct Moved {
+        address: ContractAddress,
+        direction: Direction
+    }
+
+
+    #[derive(Serde, Copy, Drop)]
     enum Direction {
         Left: (),
         Right: (),
@@ -46,31 +62,31 @@ mod move {
     }
 
     fn execute(ctx: Context, direction: Direction) {
-        let (position, moves) = get !(ctx.world, ctx.origin.into(), (Position, Moves));
+        let (mut position, mut moves) = get !(ctx.world, ctx.origin, (Position, Moves));
+        moves.remaining -= 1;
         let next = next_position(position, direction);
-        set !(
-            ctx.world,
-            ctx.origin.into(),
-            (Moves { remaining: moves.remaining - 1 }, Position { x: next.x, y: next.y }, )
-        );
+        set !(ctx.world, (moves, next));
+        emit !(ctx.world, Moved { address: ctx.origin, direction });
         return ();
     }
 
-    fn next_position(position: Position, direction: Direction) -> Position {
+    fn next_position(mut position: Position, direction: Direction) -> Position {
         match direction {
             Direction::Left(()) => {
-                Position { x: position.x - 1, y: position.y }
+                position.x -= 1;
             },
             Direction::Right(()) => {
-                Position { x: position.x + 1, y: position.y }
+                position.x += 1;
             },
             Direction::Up(()) => {
-                Position { x: position.x, y: position.y - 1 }
+                position.y -= 1;
             },
             Direction::Down(()) => {
-                Position { x: position.x, y: position.y + 1 }
+                position.y += 1;
             },
-        }
+        };
+
+        position
     }
 }
 
@@ -108,16 +124,19 @@ mod tests {
         let world = spawn_test_world(components, systems);
 
         let spawn_call_data = array::ArrayTrait::new();
-        world.execute('spawn'.into(), spawn_call_data.span());
+        world.execute('spawn', spawn_call_data);
 
         let mut move_calldata = array::ArrayTrait::new();
         move_calldata.append(move::Direction::Right(()).into());
-        world.execute('move'.into(), move_calldata.span());
+        world.execute('move', move_calldata);
+        let mut keys = array::ArrayTrait::new();
+        keys.append(caller.into());
 
-        let moves = world.entity('Moves'.into(), caller.into(), 0, dojo::SerdeLen::<Moves>::len());
+        let moves = world.entity('Moves', keys.span(), 0, dojo::SerdeLen::<Moves>::len());
         assert(*moves[0] == 9, 'moves is wrong');
-        let new_position = world.entity('Position'.into(), caller.into(), 0, dojo::SerdeLen::<Position>::len());
-        assert(*new_position[0] == 1, 'position x is wrong');
-        assert(*new_position[1] == 0, 'position y is wrong');
+        let new_position = world
+            .entity('Position', keys.span(), 0, dojo::SerdeLen::<Position>::len());
+        assert(*new_position[0] == 11, 'position x is wrong');
+        assert(*new_position[1] == 10, 'position y is wrong');
     }
 }

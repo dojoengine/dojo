@@ -30,8 +30,16 @@ pub enum SequencerError {
     StarknetApi(#[from] StarknetApiError),
     #[error(transparent)]
     EntryPointExecution(#[from] EntryPointExecutionError),
-    #[error("Wait for pending transactions")]
+    #[error("Wait for pending transactions.")]
     PendingTransactions,
+    #[error("Unsupported Transaction")]
+    UnsupportedTransaction,
     #[error(transparent)]
     ContinuationToken(#[from] ContinuationTokenError),
+    #[error("Error serializing state.")]
+    StateSerialization,
+    #[error("Required data unavailable")]
+    DataUnavailable,
+    #[error("Failed to decode state")]
+    FailedToDecodeStateDump,
 }
