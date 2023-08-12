@@ -47,9 +47,7 @@ impl ComponentObject {
             (Name::new("transactionHash"), Value::from(component.transaction_hash)),
             (
                 Name::new("createdAt"),
-                Value::from(
-                    component.created_at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
-                ),
+                Value::from(component.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
             ),
         ])
     }

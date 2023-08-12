@@ -48,9 +48,7 @@ impl SystemCallObject {
             (Name::new("systemId"), Value::from(system_call.system_id)),
             (
                 Name::new("createdAt"),
-                Value::from(
-                    system_call.created_at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
-                ),
+                Value::from(system_call.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
             ),
         ])
     }

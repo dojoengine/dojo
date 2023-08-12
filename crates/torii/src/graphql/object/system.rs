@@ -48,7 +48,7 @@ impl SystemObject {
             (Name::new("transactionHash"), Value::from(system.transaction_hash)),
             (
                 Name::new("createdAt"),
-                Value::from(system.created_at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)),
+                Value::from(system.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
             ),
         ])
     }

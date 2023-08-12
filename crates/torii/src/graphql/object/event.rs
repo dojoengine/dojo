@@ -48,7 +48,7 @@ impl EventObject {
             (Name::new("systemCallId"), Value::from(event.system_call_id)),
             (
                 Name::new("createdAt"),
-                Value::from(event.created_at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)),
+                Value::from(event.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
             ),
         ])
     }
