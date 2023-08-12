@@ -4,7 +4,7 @@ mod tests {
     use starknet_crypto::{poseidon_hash_many, FieldElement};
 
     use crate::tests::common::{
-        entity_fixtures, run_graphql_query, paginate, Direction, Entity, Moves, Position,
+        entity_fixtures, paginate, run_graphql_query, Direction, Entity, Moves, Position,
     };
 
     #[sqlx::test(migrations = "./migrations")]
@@ -79,7 +79,8 @@ mod tests {
 
         let cursor: String = entities_connection.edges[0].cursor.clone();
         let next_cursor: String = entities_connection.edges[1].cursor.clone();
-        let entities_connection = paginate(&pool, Some(cursor), Direction::Forward, page_size).await;
+        let entities_connection =
+            paginate(&pool, Some(cursor), Direction::Forward, page_size).await;
         assert_eq!(entities_connection.total_count, 3);
         assert_eq!(entities_connection.edges.len(), page_size);
         assert_eq!(entities_connection.edges[0].cursor, next_cursor);
@@ -91,7 +92,8 @@ mod tests {
 
         let cursor: String = entities_connection.edges[0].cursor.clone();
         let next_cursor: String = entities_connection.edges[1].cursor.clone();
-        let entities_connection = paginate(&pool, Some(cursor), Direction::Backward, page_size).await;
+        let entities_connection =
+            paginate(&pool, Some(cursor), Direction::Backward, page_size).await;
         assert_eq!(entities_connection.total_count, 3);
         assert_eq!(entities_connection.edges.len(), page_size);
         assert_eq!(entities_connection.edges[0].cursor, next_cursor);

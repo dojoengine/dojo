@@ -178,10 +178,10 @@ pub async fn component_states_query(
     builder.build().fetch_all(conn).await
 }
 
-// TODO: make `connection_output()` more generic. Currently, `component_connection()` method required as we
-// need to explicity add `entity_id` to each edge.
+// TODO: make `connection_output()` more generic. Currently, `component_connection()` method
+// required as we need to explicity add `entity_id` to each edge.
 pub fn component_connection(
-    data: &Vec<SqliteRow>,
+    data: &[SqliteRow],
     types: &TypeMapping,
     total_count: i64,
 ) -> sqlx::Result<ValueMapping> {

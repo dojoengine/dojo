@@ -1,10 +1,9 @@
-use async_graphql::{dynamic::TypeRef, Name};
+use async_graphql::dynamic::TypeRef;
+use async_graphql::Name;
 use indexmap::IndexMap;
 
-use crate::graphql::{
-    object::{ObjectTrait, TypeMapping},
-    types::ScalarType,
-};
+use crate::graphql::object::{ObjectTrait, TypeMapping};
+use crate::graphql::types::ScalarType;
 
 pub struct EdgeObject {
     pub name: String,

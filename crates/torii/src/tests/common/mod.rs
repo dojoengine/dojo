@@ -118,7 +118,7 @@ pub async fn paginate(
         "
     );
 
-    let value = run_graphql_query(&pool, &query).await;
+    let value = run_graphql_query(pool, &query).await;
     let entities = value.get("entities").ok_or("entities not found").unwrap();
     serde_json::from_value(entities.clone()).unwrap()
 }

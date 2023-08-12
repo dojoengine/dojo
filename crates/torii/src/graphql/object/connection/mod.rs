@@ -1,13 +1,13 @@
 use async_graphql::dynamic::{Field, InputValue, ResolverContext, TypeRef};
 use async_graphql::{Error, Name, Value};
-use base64::{engine::general_purpose, Engine as _};
+use base64::engine::general_purpose;
+use base64::Engine as _;
 use indexmap::IndexMap;
 use serde_json::Number;
 
+use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::graphql::types::ScalarType;
 use crate::graphql::utils::extract_value::extract;
-
-use super::{ObjectTrait, TypeMapping, ValueMapping};
 
 pub mod edge;
 pub mod page_info;

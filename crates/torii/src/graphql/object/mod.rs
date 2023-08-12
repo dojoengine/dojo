@@ -43,8 +43,8 @@ pub trait ObjectTrait {
         None
     }
 
-    // Connection type, if resolve_many is Some then register connection graphql obj, includes {type_name}Connection
-    // and {type_name}Edge according to relay spec https://relay.dev/graphql/connections.htm
+    // Connection type, if resolve_many is Some then register connection graphql obj, includes
+    // {type_name}Connection and {type_name}Edge according to relay spec https://relay.dev/graphql/connections.htm
     fn connection(&self) -> Option<Vec<Object>> {
         self.resolve_many()?;
 
@@ -67,23 +67,26 @@ pub trait ObjectTrait {
                 let field_name = field_name.clone();
 
                 FieldFuture::new(async move {
-                    // All direct queries, single and plural, passes down results as Value of type Object, and
-                    // Object is an indexmap that contains fields and their corresponding result. The result
-                    // can also be another Object. This is evaluated repeatedly until Value is a string or number.
+                    // All direct queries, single and plural, passes down results as Value of type
+                    // Object, and Object is an indexmap that contains fields
+                    // and their corresponding result. The result can also be
+                    // another Object. This is evaluated repeatedly until Value is a string or
+                    // number.
                     if let Some(value) = ctx.parent_value.as_value() {
                         return match value {
-                            Value::Object(indexmap) => field_value(&indexmap, field_name.as_str()),
+                            Value::Object(indexmap) => field_value(indexmap, field_name.as_str()),
                             _ => Err("Incorrect value, requires Value::Object".into()),
                         };
                     }
 
-                    // Component union queries is a special case, it instead passes down a IndexMap<Name, Value>. This
-                    // could be avoided if async-graphql allowed union resolver to be passed down as Value.
+                    // Component union queries is a special case, it instead passes down a
+                    // IndexMap<Name, Value>. This could be avoided if
+                    // async-graphql allowed union resolver to be passed down as Value.
                     if let Some(indexmap) = ctx.parent_value.downcast_ref::<ValueMapping>() {
-                        return field_value(&indexmap, field_name.as_str());
+                        return field_value(indexmap, field_name.as_str());
                     }
 
-                    return Err("Field resolver only accepts Value or IndexMap".into());
+                    Err("Field resolver only accepts Value or IndexMap".into())
                 })
             });
 
