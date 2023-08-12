@@ -132,7 +132,6 @@ impl ObjectTrait for EntityObject {
             |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let total_count = 100;
                     let args = parse_arguments(&ctx)?;
                     let keys_value = ctx.args.try_get("keys")?;
                     let keys = keys_value
@@ -143,7 +142,7 @@ impl ObjectTrait for EntityObject {
                         )
                         .collect();
 
-                    let entities = entities_by_sk(&mut conn, keys, args).await?;
+                    let (entities, total_count) = entities_by_sk(&mut conn, keys, args).await?;
                     Ok(Some(Value::Object(connection_output(entities, total_count))))
                 })
             },
@@ -161,10 +160,10 @@ async fn entities_by_sk(
     conn: &mut PoolConnection<Sqlite>,
     keys: Vec<String>,
     args: ConnectionArguments,
-) -> Result<Vec<ValueMapping>> {
+) -> Result<(Vec<ValueMapping>, i64)> {
     let mut builder: QueryBuilder<'_, Sqlite> = QueryBuilder::new("SELECT * FROM entities");
     let keys_str = format!("{},%", keys.join(","));
-    builder.push(" WHERE keys LIKE ").push_bind(keys_str);
+    builder.push(" WHERE keys LIKE ").push_bind(&keys_str);
 
     if let Some(after_cursor) = &args.after {
         match decode_cursor(after_cursor.clone()) {
@@ -198,6 +197,11 @@ async fn entities_by_sk(
         builder.push(" ORDER BY created_at DESC, id DESC LIMIT ").push(DEFAULT_LIMIT);
     }
 
-    let entities: Vec<Entity> = builder.build_query_as().fetch_all(conn).await?;
-    Ok(entities.into_iter().map(EntityObject::value_mapping).collect())
+    let entities: Vec<Entity> = builder.build_query_as().fetch_all(conn.as_mut()).await?;
+    let total_result: (i64,) =
+        sqlx::query_as(&format!("SELECT COUNT(*) FROM entities WHERE keys LIKE '{}'", keys_str))
+            .fetch_one(conn)
+            .await?;
+
+    Ok((entities.into_iter().map(EntityObject::value_mapping).collect(), total_result.0))
 }
