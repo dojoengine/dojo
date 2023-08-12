@@ -38,6 +38,11 @@ pub struct SozoArgs {
     #[command(flatten)]
     pub verbose: clap_verbosity_flag::Verbosity,
 
+    #[arg(long)]
+    #[arg(env = "SOZO_OFFLINE")]
+    #[arg(help = "Run without accessing the network.")]
+    pub offline: bool,
+
     #[command(subcommand)]
     pub command: Commands,
 }
