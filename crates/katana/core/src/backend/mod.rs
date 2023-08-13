@@ -43,7 +43,6 @@ use crate::db::serde::state::SerializableState;
 use crate::db::Db;
 use crate::env::{BlockContextGenerator, Env};
 use crate::sequencer_error::SequencerError;
-use crate::utils::transaction::convert_blockifier_to_api_tx;
 use crate::utils::{convert_state_diff_to_rpc_state_diff, get_current_timestamp};
 
 pub struct ExternalFunctionCall {
@@ -158,11 +157,7 @@ impl Backend {
 
     // execute the tx
     pub async fn handle_transaction(&self, transaction: Transaction) {
-        let api_tx = convert_blockifier_to_api_tx(&transaction);
-
         let is_valid = if let Some(pending_block) = self.pending_block.write().await.as_mut() {
-            info!("Transaction received | Hash: {}", api_tx.transaction_hash());
-
             let charge_fee = !self.config.read().disable_fee;
             pending_block.add_transaction(transaction, charge_fee).await
         } else {

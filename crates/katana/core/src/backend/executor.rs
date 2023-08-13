@@ -13,7 +13,7 @@ use parking_lot::RwLock;
 use starknet::core::types::{Event, FieldElement, MsgToL1};
 use starknet_api::transaction::Transaction;
 use tokio::sync::RwLock as AsyncRwLock;
-use tracing::{trace, warn};
+use tracing::{info, trace, warn};
 
 use super::state::MemDb;
 use super::storage::block::{PartialBlock, PartialHeader};
@@ -84,6 +84,9 @@ impl PendingBlockExecutor {
     ) -> bool {
         let api_tx = convert_blockifier_to_api_tx(&transaction);
         let hash: FieldElement = api_tx.transaction_hash().0.into();
+
+        info!("Transaction received | Hash: {}", api_tx.transaction_hash());
+
         let res =
             execute_transaction(transaction, &mut self.state, &self.env.read().block, charge_fee);
 
