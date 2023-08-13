@@ -40,6 +40,7 @@ pub struct SozoArgs {
 
     #[arg(long)]
     #[arg(env = "SOZO_OFFLINE")]
+    #[arg(hide_short_help = true)]
     #[arg(help = "Run without accessing the network.")]
     pub offline: bool,
 
