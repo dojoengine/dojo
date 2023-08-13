@@ -220,20 +220,7 @@ impl Sequencer for KatanaSequencer {
     }
 
     async fn add_declare_transaction(&self, transaction: DeclareTransaction) {
-        let class_hash = transaction.inner.class_hash();
-        let sierra_class = transaction.sierra_class.clone();
-
         self.backend.handle_transaction(Transaction::Declare(transaction)).await;
-
-        if let Some(sierra_class) = sierra_class {
-            self.backend
-                .state
-                .write()
-                .await
-                .classes
-                .entry(class_hash)
-                .and_modify(|r| r.sierra_class = Some(sierra_class));
-        }
     }
 
     async fn add_invoke_transaction(&self, transaction: InvokeTransaction) {

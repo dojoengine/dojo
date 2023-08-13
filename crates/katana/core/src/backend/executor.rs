@@ -18,7 +18,7 @@ use super::state::MemDb;
 use super::storage::block::{PartialBlock, PartialHeader};
 use super::storage::transaction::{RejectedTransaction, Transaction, TransactionOutput};
 use super::storage::BlockchainStorage;
-use crate::backend::storage::transaction::KnownTransaction;
+use crate::backend::storage::transaction::{DeclareTransaction, KnownTransaction};
 use crate::env::Env;
 
 #[derive(Debug)]
@@ -93,6 +93,18 @@ impl PendingBlockExecutor {
                     "Transaction resource usage: {}",
                     pretty_print_resources(&execution_info.actual_resources)
                 );
+
+                // Because `State` trait from `blockifier` doesn't have a method to set the
+                // `sierra_class` of a contract, we need to do it manually.
+                if let Transaction::Declare(DeclareTransaction {
+                    inner,
+                    sierra_class: Some(sierra_class),
+                    ..
+                }) = &transaction
+                {
+                    let class_hash = inner.class_hash();
+                    self.state.state.sierra_classes.insert(class_hash, sierra_class.clone());
+                }
 
                 let executed_tx = Arc::new(ExecutedTransaction::new(transaction, execution_info));
 

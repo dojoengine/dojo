@@ -212,12 +212,19 @@ impl Backend {
 
         info!("⛏️ Block {block_number} mined with {tx_count} transactions");
 
-        // apply the pending state to the current state
-        self.state.write().await.apply_state(&mut pending.state);
+        // TODO: This is a hack, we should be able to apply the state diff directly
+        // to the current state instead of applying the diff onto the pending state.
+        // This is because `CachedState` have no notion of `Sierra` class, which whenever
+        // we execute a Declare transaction, we will set the `Sierra` class directly to the
+        // underlying `MemDb`. However, this is not reflected in the `CachedState`.
+        //
+        // Set the new pending state as the current state
+        let mut new_state = pending.state.state.clone();
+        new_state.apply_state(&mut pending.state);
+        *self.state.write().await = new_state.clone();
 
         // store the current state
-        let state = self.state.read().await.clone();
-        self.states.write().await.insert(block_hash, state);
+        self.states.write().await.insert(block_hash, new_state);
     }
 
     pub async fn open_pending_block(&self) {
