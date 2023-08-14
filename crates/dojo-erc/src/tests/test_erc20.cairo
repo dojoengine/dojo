@@ -71,7 +71,7 @@ fn test_approve() {
 
 #[test]
 #[available_gas(200000000)]
-#[should_panic]
+#[should_panic(expected: ('ERC20: approve from 0', 'ENTRYPOINT_FAILED'))]
 fn test_approve_from_zero() {
     let (world, erc20_address) = deploy_erc20();
     IERC20Dispatcher { contract_address: erc20_address }.approve(SPENDER(), VALUE);
@@ -79,7 +79,7 @@ fn test_approve_from_zero() {
 
 #[test]
 #[available_gas(200000000)]
-#[should_panic]
+#[should_panic(expected: ('ERC20: approve to 0', 'ENTRYPOINT_FAILED'))]
 fn test_approve_to_zero() {
     set_contract_address(OWNER());
     let (world, erc20_address) = deploy_erc20();
@@ -99,7 +99,7 @@ fn test_transfer() {
 
 #[test]
 #[available_gas(2000000000)]
-#[should_panic]
+#[should_panic(expected: ('ERC20: not enough balance', 'ENTRYPOINT_FAILED'))]
 fn test_transfer_not_enough_balance() {
     let (world, erc20_address) = deploy_erc20();
     set_contract_address(OWNER());
@@ -111,7 +111,7 @@ fn test_transfer_not_enough_balance() {
 
 #[test]
 #[available_gas(2000000000)]
-#[should_panic]
+#[should_panic(expected: ('ERC20: transfer from 0', 'ENTRYPOINT_FAILED'))]
 fn test_transfer_from_zero() {
     let (world, erc20_address) = deploy_erc20();
     IERC20Dispatcher { contract_address: erc20_address }.transfer(RECIPIENT(), VALUE);
@@ -119,8 +119,8 @@ fn test_transfer_from_zero() {
 
 #[test]
 #[available_gas(2000000000)]
-#[should_panic]
-fn test_to_from_zero() {
+#[should_panic(expected: ('ERC20: transfer to 0', 'ENTRYPOINT_FAILED'))]
+fn test_transfer_to_zero() {
     let (world, erc20_address) = deploy_erc20();
     set_contract_address(RECIPIENT());
     IERC20Dispatcher { contract_address: erc20_address }.transfer(Zeroable::zero(), VALUE);
@@ -186,7 +186,7 @@ fn test_transfer_from_doesnt_consume_infinite_allowance() {
 
 #[test]
 #[available_gas(200000000)]
-#[should_panic]
+#[should_panic(expected: ('u256_sub Overflow', 'ENTRYPOINT_FAILED'))]
 fn test_transfer_from_greater_than_allowance() {
     let (world, erc20_address) = deploy_erc20();
     set_contract_address(OWNER());
@@ -201,7 +201,7 @@ fn test_transfer_from_greater_than_allowance() {
 
 #[test]
 #[available_gas(200000000)]
-#[should_panic]
+#[should_panic(expected: ('ERC20: transfer to 0', 'ENTRYPOINT_FAILED'))]
 fn test_transfer_from_to_zero_address() {
     let (world, erc20_address) = deploy_erc20();
     set_contract_address(OWNER());
@@ -215,7 +215,7 @@ fn test_transfer_from_to_zero_address() {
 
 #[test]
 #[available_gas(200000000)]
-#[should_panic]
+#[should_panic(expected: ('u256_sub Overflow', 'ENTRYPOINT_FAILED'))]
 fn test_transfer_from_from_zero_address() {
     let (world, erc20_address) = deploy_erc20();
     IERC20Dispatcher {
