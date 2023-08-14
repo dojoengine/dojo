@@ -11,11 +11,12 @@ use starknet::SyscallResultTrait;
 use starknet::testing::set_contract_address;
 use traits::{Into, TryInto};
 use zeroable::Zeroable;
+
 use dojo_erc::erc20::erc20::{IERC20Dispatcher, IERC20DispatcherTrait, ERC20};
-use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
-use dojo_erc::tests::test_utils::{
+use dojo_erc::tests::test_erc20_utils::{
     NAME, SYMBOL, DECIMALS, OWNER, SPENDER, SUPPLY, RECIPIENT, VALUE, deploy_erc20
 };
+use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
 #[test]
 #[available_gas(200000000)]

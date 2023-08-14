@@ -23,10 +23,6 @@ trait IERC20<TState> {
 
 #[starknet::contract]
 mod ERC20 {
-    // max(felt252)
-    const UNLIMITED_ALLOWANCE: felt252 =
-        3618502788666131213697322783095070105623107215331596699973092056135872020480;
-    use debug::PrintTrait;
     use array::ArrayTrait;
     use box::BoxTrait;
     use integer::BoundedInt;
@@ -37,9 +33,13 @@ mod ERC20 {
     };
     use traits::{Into, TryInto};
     use zeroable::Zeroable;
+    use debug::PrintTrait;
 
     use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
     use dojo_erc::erc20::components::{Allowance, Balance, Supply};
+
+    const UNLIMITED_ALLOWANCE: felt252 =
+        3618502788666131213697322783095070105623107215331596699973092056135872020480;
 
     #[storage]
     struct Storage {

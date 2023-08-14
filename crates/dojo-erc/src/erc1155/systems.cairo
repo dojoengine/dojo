@@ -5,12 +5,9 @@ mod ERC1155SetApprovalForAll {
     use dojo_erc::erc1155::components::OperatorApproval;
 
     fn execute(ctx: Context, token: felt252, owner: felt252, operator: felt252, approved: bool) {
-        let mut operator_approval = get !(ctx.world, (token, owner, operator), OperatorApproval);
+        let mut operator_approval = get!(ctx.world, (token, owner, operator), OperatorApproval);
         operator_approval.approved = approved;
-        set !(
-            ctx.world,
-            (operator_approval),
-        )
+        set!(ctx.world, (operator_approval), )
     }
 }
 
@@ -22,9 +19,9 @@ mod ERC1155SetUri {
     use dojo_erc::erc1155::components::Uri;
 
     fn execute(ctx: Context, token: felt252, uri: felt252) {
-        let mut _uri = get !(ctx.world, (token), Uri);
+        let mut _uri = get!(ctx.world, (token), Uri);
         _uri.uri = uri;
-        set !(ctx.world, (_uri))
+        set!(ctx.world, (_uri))
     }
 }
 
@@ -49,31 +46,25 @@ mod ERC1155Update {
         let mut index = 0;
         loop {
             if index == ids.len() {
-                break();
+                break ();
             }
             let id = *ids.at(index);
             let amount = *amounts.at(index);
 
             if (from.is_non_zero()) {
-                let mut from_balance = get !(ctx.world, (token, id, from), Balance);
+                let mut from_balance = get!(ctx.world, (token, id, from), Balance);
                 from_balance.amount = from_balance.amount - amount;
-                let amount256: u256 = amount.into(); 
+                let amount256: u256 = amount.into();
                 assert(from_balance.amount.into() >= amount256, 'ERC1155: insufficient balance');
-                set !(
-                    ctx.world,
-                    (from_balance)
-                );
+                set!(ctx.world, (from_balance));
             }
 
             if (to.is_non_zero()) {
-                let mut to_balance = get !(ctx.world, (token, id, to), Balance);
+                let mut to_balance = get!(ctx.world, (token, id, to), Balance);
                 to_balance.amount = to_balance.amount + amount;
-                set !(
-                    ctx.world,
-                    (to_balance)
-                );
+                set!(ctx.world, (to_balance));
             }
             index += 1;
         };
     }
-} 
+}

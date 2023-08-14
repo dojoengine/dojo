@@ -2,8 +2,9 @@
 mod erc20_approve {
     use traits::Into;
     use starknet::ContractAddress;
-    use dojo::world::Context;
+
     use dojo_erc::erc20::components::Allowance;
+    use dojo::world::Context;
 
     use core::debug::PrintTrait;
     fn execute(
@@ -19,16 +20,16 @@ mod erc20_approve {
 
 #[system]
 mod erc20_transfer_from {
-    const UNLIMITED_ALLOWANCE: felt252 =
-        3618502788666131213697322783095070105623107215331596699973092056135872020480;
-
     use starknet::ContractAddress;
     use traits::Into;
     use zeroable::Zeroable;
-    use dojo::world::Context;
-    use dojo_erc::erc20::components::{Allowance, Balance};
 
-    use debug::PrintTrait;
+    use dojo_erc::erc20::components::{Allowance, Balance};
+    use dojo::world::Context;
+
+    const UNLIMITED_ALLOWANCE: felt252 =
+        3618502788666131213697322783095070105623107215331596699973092056135872020480;
+
     fn execute(
         ctx: Context,
         token: ContractAddress,
@@ -57,10 +58,9 @@ mod erc20_mint {
     use starknet::ContractAddress;
     use traits::Into;
     use zeroable::Zeroable;
-    use dojo::world::Context;
-    use dojo_erc::erc20::components::{Balance, Supply};
 
-    use debug::PrintTrait;
+    use dojo_erc::erc20::components::{Balance, Supply};
+    use dojo::world::Context;
 
     fn execute(ctx: Context, token: ContractAddress, recipient: ContractAddress, amount: felt252) {
         assert(token == ctx.origin, 'ERC20: not authorized');
@@ -82,8 +82,9 @@ mod erc20_burn {
     use starknet::ContractAddress;
     use traits::Into;
     use zeroable::Zeroable;
-    use dojo::world::Context;
+
     use dojo_erc::erc20::components::{Balance, Supply};
+    use dojo::world::Context;
 
     fn execute(ctx: Context, token: ContractAddress, owner: ContractAddress, amount: felt252) {
         assert(token == ctx.origin, 'ERC20: not authorized');

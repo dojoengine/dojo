@@ -1,36 +1,35 @@
+use array::{ArrayTrait, SpanTrait};
 use core::debug::PrintTrait;
+use option::OptionTrait;
+use result::ResultTrait;
+use starknet::SyscallResultTrait;
 use starknet::{
     ClassHash, ContractAddress, syscalls::deploy_syscall, class_hash::Felt252TryIntoClassHash,
     get_caller_address, contract_address_const
 };
-use array::{ArrayTrait, SpanTrait};
 use traits::{Into, TryInto};
-use option::OptionTrait;
-use result::ResultTrait;
-use starknet::SyscallResultTrait;
 
+use dojo::executor::executor;
 use dojo::test_utils::spawn_test_world;
+use dojo::world::{world, IWorldDispatcher, IWorldDispatcherTrait};
 use dojo_erc::erc20::components::{allowance, balance, supply};
-// use dojo_erc::tests::mock_erc20::ERC20;
 use dojo_erc::erc20::erc20::ERC20;
 use dojo_erc::erc20::systems::{erc20_approve, erc20_burn, erc20_mint, erc20_transfer_from};
-use dojo::executor::executor;
-use dojo::world::{world, IWorldDispatcher, IWorldDispatcherTrait};
 
-const NAME: felt252 = 111;
-const SYMBOL: felt252 = 222;
 const DECIMALS: u8 = 18;
+const NAME: felt252 = 111;
 const SUPPLY: u256 = 2000;
+const SYMBOL: felt252 = 222;
 const VALUE: u256 = 300;
 
 fn OWNER() -> ContractAddress {
     contract_address_const::<0x5>()
 }
-fn SPENDER() -> ContractAddress {
-    contract_address_const::<0x6>()
-}
 fn RECIPIENT() -> ContractAddress {
     contract_address_const::<0x7>()
+}
+fn SPENDER() -> ContractAddress {
+    contract_address_const::<0x6>()
 }
 
 fn deploy_erc20() -> (IWorldDispatcher, ContractAddress) {
