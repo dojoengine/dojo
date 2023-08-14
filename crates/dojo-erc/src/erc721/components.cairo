@@ -1,4 +1,4 @@
-use starknet::ContractAddress; 
+use starknet::ContractAddress;
 
 #[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Balance {
@@ -38,9 +38,3 @@ struct OperatorApproval {
     approved: bool
 }
 
-#[derive(Component, Copy, Drop, Serde, SerdeLen)]
-struct TokenUri {
-    #[key]
-    token_id: felt252,
-    uri: felt252
-}

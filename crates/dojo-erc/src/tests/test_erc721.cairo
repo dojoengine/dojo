@@ -7,35 +7,22 @@ use starknet::testing::set_contract_address;
 
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
-use dojo_erc::tests::test_erc721_utils::{spawn_world, deploy_erc721, deploy_default};
+use dojo_erc::tests::test_erc721_utils::{
+    spawn_world, deploy_erc721, deploy_default, USER1, USER2, DEPLOYER
+};
 use dojo_erc::erc721::interface::{IERC721, IERC721Dispatcher, IERC721DispatcherTrait};
 
-
-// !!! u256 are "truncted" as felt252
 // actually it's possible to mint -> burn -> mint -> ...
 // todo : add Minted component to keep track of minted ids
-
-fn deployer() -> ContractAddress {
-    starknet::contract_address_const::<0x420>()
-}
-
-fn user1() -> ContractAddress {
-    starknet::contract_address_const::<0x111>()
-}
-
-fn user2() -> ContractAddress {
-    starknet::contract_address_const::<0x222>()
-}
-
 
 #[test]
 #[available_gas(30000000)]
 fn test_deploy() {
     let world = spawn_world();
-    let erc721_address = deploy_erc721(world, deployer(), 'name', 'symbol', 'uri', 'seed-42');
+    let erc721_address = deploy_erc721(world, DEPLOYER(), 'name', 'symbol', 'uri', 'seed-42');
     let erc721 = IERC721Dispatcher { contract_address: erc721_address };
 
-    assert(erc721.owner() == deployer(), 'invalid owner');
+    assert(erc721.owner() == DEPLOYER(), 'invalid owner');
     assert(erc721.name() == 'name', 'invalid name');
     assert(erc721.symbol() == 'symbol', 'invalid symbol');
     assert(erc721.token_uri(0) == 'uri', 'invalid uri')
@@ -55,16 +42,16 @@ fn test_deploy_default() {
 fn test_mint_simple() {
     let (world, erc721) = deploy_default();
 
-    erc721.mint(user1(), 0);
-    erc721.mint(user2(), 1);
-    erc721.mint(user2(), 2);
+    erc721.mint(USER1(), 0);
+    erc721.mint(USER2(), 1);
+    erc721.mint(USER2(), 2);
 
-    assert(erc721.balance_of(user1()) == 1, 'balance should be 1');
-    assert(erc721.balance_of(user2()) == 2, 'balance should be 2');
+    assert(erc721.balance_of(USER1()) == 1, 'balance should be 1');
+    assert(erc721.balance_of(USER2()) == 2, 'balance should be 2');
 
-    assert(erc721.owner_of(0) == user1(), 'invalid owner');
-    assert(erc721.owner_of(1) == user2(), 'invalid owner');
-    assert(erc721.owner_of(2) == user2(), 'invalid owner');
+    assert(erc721.owner_of(0) == USER1(), 'invalid owner');
+    assert(erc721.owner_of(1) == USER2(), 'invalid owner');
+    assert(erc721.owner_of(2) == USER2(), 'invalid owner');
 }
 
 #[test]
@@ -81,8 +68,8 @@ fn test_mint_simple() {
 fn test_mint_same_id_twice() {
     let (world, erc721) = deploy_default();
 
-    erc721.mint(user1(), 0);
-    erc721.mint(user2(), 0); // should panic
+    erc721.mint(USER1(), 0);
+    erc721.mint(USER2(), 0); // should panic
 }
 
 #[test]
@@ -90,16 +77,16 @@ fn test_mint_same_id_twice() {
 fn test_burn_simple() {
     let (world, erc721) = deploy_default();
 
-    erc721.mint(user1(), 42);
+    erc721.mint(USER1(), 42);
 
-    assert(erc721.balance_of(user1()) == 1, 'balance should be 1');
-    assert(erc721.owner_of(42) == user1(), 'invalid owner');
+    assert(erc721.balance_of(USER1()) == 1, 'balance should be 1');
+    assert(erc721.owner_of(42) == USER1(), 'invalid owner');
 
     // impersonate user1
-    set_contract_address(user1());
+    set_contract_address(USER1());
     erc721.burn(42);
 
-    assert(erc721.balance_of(user1()) == 0, 'balance should be 0');
+    assert(erc721.balance_of(USER1()) == 0, 'balance should be 0');
     assert(erc721.owner_of(42).is_zero(), 'invalid owner');
 }
 
@@ -108,22 +95,22 @@ fn test_burn_simple() {
 fn test_burn_from_approved() {
     let (world, erc721) = deploy_default();
 
-    erc721.mint(user1(), 42);
+    erc721.mint(USER1(), 42);
 
-    assert(erc721.balance_of(user1()) == 1, 'balance should be 1');
-    assert(erc721.owner_of(42) == user1(), 'invalid owner');
+    assert(erc721.balance_of(USER1()) == 1, 'balance should be 1');
+    assert(erc721.owner_of(42) == USER1(), 'invalid owner');
 
     // impersonate user1
-    set_contract_address(user1());
+    set_contract_address(USER1());
 
     // user1 approve user2 for token 42
-    erc721.approve(user2(), 42);
+    erc721.approve(USER2(), 42);
 
     // impersonate user2
-    set_contract_address(user2());
+    set_contract_address(USER2());
     erc721.burn(42);
 
-    assert(erc721.balance_of(user1()) == 0, 'balance should be 0');
+    assert(erc721.balance_of(USER1()) == 0, 'balance should be 0');
     assert(erc721.owner_of(42).is_zero(), 'invalid owner');
 }
 
@@ -133,19 +120,19 @@ fn test_burn_from_approved() {
 fn test_burn_from_approved_operator() {
     let (world, erc721) = deploy_default();
 
-    erc721.mint(user1(), 42);
+    erc721.mint(USER1(), 42);
 
-    assert(erc721.balance_of(user1()) == 1, 'balance should be 1');
-    assert(erc721.owner_of(42) == user1(), 'invalid owner');
+    assert(erc721.balance_of(USER1()) == 1, 'balance should be 1');
+    assert(erc721.owner_of(42) == USER1(), 'invalid owner');
 
     // impersonate user1
-    set_contract_address(user1());
+    set_contract_address(USER1());
 
     // user1 set_approval_for_all to user2
-    erc721.set_approval_for_all(user2(), true);
+    erc721.set_approval_for_all(USER2(), true);
 
     // impersonate user2
-    set_contract_address(user2());
+    set_contract_address(USER2());
 
     //user2 burn user1 token 42
     erc721.burn(42);
@@ -181,10 +168,10 @@ fn test_burn_invalid_id() {
 )]
 fn test_burn_not_owned_id() {
     let (world, erc721) = deploy_default();
-    erc721.mint(user1(), 0);
+    erc721.mint(USER1(), 0);
 
     // impersonate deployer
-    set_contract_address(deployer());
+    set_contract_address(DEPLOYER());
 
     erc721.burn(0); // should panic
 }
@@ -195,21 +182,21 @@ fn test_burn_not_owned_id() {
 fn test_approve() {
     let (world, erc721) = deploy_default();
 
-    erc721.mint(user1(), 0);
+    erc721.mint(USER1(), 0);
     assert(erc721.get_approved(0).is_zero(), 'should be 0');
 
     // impersonate user1
-    set_contract_address(user1());
+    set_contract_address(USER1());
 
     // approve user2 for token 0
-    erc721.approve(user2(), 0);
-    assert(erc721.get_approved(0) == user2(), 'should be user2 address');
+    erc721.approve(USER2(), 0);
+    assert(erc721.get_approved(0) == USER2(), 'should be user2 address');
 
     // impersonate user2
-    set_contract_address(user2());
+    set_contract_address(USER2());
     // user2 can transfer_from token 0
-    erc721.transfer_from(user1(), user2(), 0);
-    assert(erc721.owner_of(0) == user2(), 'owner should be user2');
+    erc721.transfer_from(USER1(), USER2(), 0);
+    assert(erc721.owner_of(0) == USER2(), 'owner should be user2');
 
     // approval is reset after transfer
     assert(erc721.get_approved(0).is_zero(), 'shoud reset to 0');
@@ -220,29 +207,29 @@ fn test_approve() {
 fn test_set_approval_for_all() {
     let (world, erc721) = deploy_default();
 
-    erc721.mint(user1(), 0);
-    erc721.mint(user1(), 1);
+    erc721.mint(USER1(), 0);
+    erc721.mint(USER1(), 1);
 
     // impersonate user1
-    set_contract_address(user1());
+    set_contract_address(USER1());
 
     // approve user2 
-    erc721.set_approval_for_all(user2(), true);
-    assert(erc721.is_approved_for_all(user1(), user2()), 'should be approved');
+    erc721.set_approval_for_all(USER2(), true);
+    assert(erc721.is_approved_for_all(USER1(), USER2()), 'should be approved');
 
     // impersonate user2
-    set_contract_address(user2());
+    set_contract_address(USER2());
 
     // user2 can approve
-    erc721.approve(user2(), 0);
-    erc721.approve(user2(), 1);
-    assert(erc721.get_approved(0) == user2(), 'should be user2 address');
-    assert(erc721.get_approved(1) == user2(), 'should be user2 address');
+    erc721.approve(USER2(), 0);
+    erc721.approve(USER2(), 1);
+    assert(erc721.get_approved(0) == USER2(), 'should be user2 address');
+    assert(erc721.get_approved(1) == USER2(), 'should be user2 address');
     // user2 can transfer_from
-    erc721.transfer_from(erc721.owner_of(0), user2(), 0);
-    erc721.transfer_from(erc721.owner_of(0), user2(), 1);
-    assert(erc721.owner_of(0) == user2(), 'should be user2 address');
-    assert(erc721.owner_of(1) == user2(), 'should be user2 address');
+    erc721.transfer_from(erc721.owner_of(0), USER2(), 0);
+    erc721.transfer_from(erc721.owner_of(0), USER2(), 1);
+    assert(erc721.owner_of(0) == USER2(), 'should be user2 address');
+    assert(erc721.owner_of(1) == USER2(), 'should be user2 address');
 }
 
 
@@ -251,13 +238,13 @@ fn test_set_approval_for_all() {
 fn test_transfer() {
     let (world, erc721) = deploy_default();
 
-    erc721.mint(user1(), 0);
+    erc721.mint(USER1(), 0);
 
     // impersonate user1
-    set_contract_address(user1());
+    set_contract_address(USER1());
 
-    erc721.transfer(user2(), 0);
-    assert(erc721.owner_of(0) == user2(), 'should be user2 address');
+    erc721.transfer(USER2(), 0);
+    assert(erc721.owner_of(0) == USER2(), 'should be user2 address');
 }
 
 #[test]
@@ -265,16 +252,16 @@ fn test_transfer() {
 fn test_transfer_reset_approvals() {
     let (world, erc721) = deploy_default();
 
-    erc721.mint(user1(), 0);
+    erc721.mint(USER1(), 0);
 
     // impersonate user1
-    set_contract_address(user1());
+    set_contract_address(USER1());
 
     // approve deployer for token 0
-    erc721.approve(deployer(), 0);
+    erc721.approve(DEPLOYER(), 0);
 
-    erc721.transfer(user2(), 0);
-    assert(erc721.owner_of(0) == user2(), 'should be user2 address');
+    erc721.transfer(USER2(), 0);
+    assert(erc721.owner_of(0) == USER2(), 'should be user2 address');
     assert(erc721.get_approved(0).is_zero(), 'should reset approval');
 }
 
@@ -284,20 +271,20 @@ fn test_transfer_reset_approvals() {
 fn test_transfer_from_approved() {
     let (world, erc721) = deploy_default();
 
-    erc721.mint(user1(), 0);
+    erc721.mint(USER1(), 0);
 
     // impersonate user1
-    set_contract_address(user1());
+    set_contract_address(USER1());
 
     // user1 approve user2
-    erc721.approve(user2(), 0);
+    erc721.approve(USER2(), 0);
 
     // impersonate user2
-    set_contract_address(user2());
+    set_contract_address(USER2());
 
     // user2 can transfer_from
-    erc721.transfer_from(user1(), user2(), 0);
-    assert(erc721.owner_of(0) == user2(), 'should be user2 address');
+    erc721.transfer_from(USER1(), USER2(), 0);
+    assert(erc721.owner_of(0) == USER2(), 'should be user2 address');
 }
 
 #[test]
@@ -305,22 +292,21 @@ fn test_transfer_from_approved() {
 fn test_transfer_from_approved_operator() {
     let (world, erc721) = deploy_default();
 
-    erc721.mint(user1(), 0);
+    erc721.mint(USER1(), 0);
 
     // impersonate user1
-    set_contract_address(user1());
+    set_contract_address(USER1());
 
     // user1 set_approve_for_all user2
-    erc721.set_approval_for_all(user2(), true);
+    erc721.set_approval_for_all(USER2(), true);
 
     // impersonate user2
-    set_contract_address(user2());
+    set_contract_address(USER2());
 
     // user2 can transfer_from
-    erc721.transfer_from(user1(), user2(), 0);
-    assert(erc721.owner_of(0) == user2(), 'should be user2 address');
+    erc721.transfer_from(USER1(), USER2(), 0);
+    assert(erc721.owner_of(0) == USER2(), 'should be user2 address');
 }
-// TODO: safe_transfer_from
-// TODO: more tests
+// TODO: more tests 
 
 
