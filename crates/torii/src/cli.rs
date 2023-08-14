@@ -4,10 +4,10 @@ use std::str::FromStr;
 use anyhow::{anyhow, Error};
 use camino::Utf8PathBuf;
 use clap::Parser;
+use dojo_world::environment::{dojo_metadata_from_workspace, Environment};
 use dojo_world::manifest::Manifest;
 use graphql::server::start_graphql;
-use scarb::core::{Config, ManifestMetadata, Workspace};
-use serde::Deserialize;
+use scarb::core::Config;
 use sqlx::sqlite::SqlitePoolOptions;
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -35,72 +35,6 @@ mod types;
 #[cfg(test)]
 mod tests;
 
-pub(crate) fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Option<DojoMetadata> {
-    Some(ws.current_package().ok()?.manifest.metadata.dojo())
-}
-
-#[derive(Default, Deserialize, Debug, Clone)]
-pub(crate) struct DojoMetadata {
-    env: Option<Environment>,
-}
-
-#[derive(Default, Deserialize, Clone, Debug)]
-pub struct Environment {
-    rpc_url: Option<String>,
-    account_address: Option<String>,
-    private_key: Option<String>,
-    keystore_path: Option<String>,
-    keystore_password: Option<String>,
-    world_address: Option<String>,
-}
-
-impl Environment {
-    pub fn world_address(&self) -> Option<&str> {
-        self.world_address.as_deref()
-    }
-
-    pub fn rpc_url(&self) -> Option<&str> {
-        self.rpc_url.as_deref()
-    }
-
-    pub fn account_address(&self) -> Option<&str> {
-        self.account_address.as_deref()
-    }
-
-    pub fn private_key(&self) -> Option<&str> {
-        self.private_key.as_deref()
-    }
-
-    #[allow(dead_code)]
-    pub fn keystore_path(&self) -> Option<&str> {
-        self.keystore_path.as_deref()
-    }
-
-    pub fn keystore_password(&self) -> Option<&str> {
-        self.keystore_password.as_deref()
-    }
-}
-
-impl DojoMetadata {
-    pub fn env(&self) -> Option<&Environment> {
-        self.env.as_ref()
-    }
-}
-trait MetadataExt {
-    fn dojo(&self) -> DojoMetadata;
-}
-
-impl MetadataExt for ManifestMetadata {
-    fn dojo(&self) -> DojoMetadata {
-        self.tool_metadata
-            .as_ref()
-            .and_then(|e| e.get("dojo"))
-            .cloned()
-            .map(|v| v.try_into::<DojoMetadata>().unwrap_or_default())
-            .unwrap_or_default()
-    }
-}
-
 /// Dojo World Indexer
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -122,12 +56,11 @@ struct Args {
     start_block: u64,
 }
 
-fn address(arg: &Args, env_metadata: Option<&Environment>) -> Result<FieldElement, Error> {
-    if let Some(world_address) = arg.world_address {
-        Ok(world_address)
-    } else if let Some(world_address) = env_metadata
-        .and_then(|env| env.world_address())
-        .or(std::env::var("DOJO_WORLD_ADDRESS").ok().as_deref())
+fn address_from_dojo_metadata(env_metadata: Option<&Environment>) -> Result<FieldElement, Error> {
+    if let Some(world_address) =
+        env_metadata
+            .and_then(|env| env.world_address())
+            .or(std::env::var("DOJO_WORLD_ADDRESS").ok().as_deref())
     {
         Ok(FieldElement::from_str(world_address)?)
     } else {
@@ -165,32 +98,26 @@ async fn main() -> anyhow::Result<()> {
 
     let provider = JsonRpcClient::new(HttpTransport::new(Url::parse(&args.rpc).unwrap()));
 
-    let mut manifest_path = scarb::ops::find_manifest_path(args.manifest.as_deref())?;
+    // Load manifest
+    let manifest_path = scarb::ops::find_manifest_path(None)?;
     let config = Config::builder(manifest_path.clone())
         .log_filter_directive(env::var_os("SCARB_LOG"))
         .build()?;
-    let env_metadata = if config.manifest_path().exists() {
-        let ws = scarb::ops::read_workspace(config.manifest_path(), &config)?;
+    let ws = scarb::ops::read_workspace(config.manifest_path(), &config)?;
+    let target_dir = ws.target_dir().path_existent().unwrap();
+    let target_dir = target_dir.join(ws.config().profile().as_str());
+    let manifest = Manifest::load_from_path(target_dir.join("manifest.json"))
+        .expect("Failed to load manifest");
 
-        // TODO: Check the updated scarb way to read profile specific values
-        dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned())
+    // Get world address
+    let world_address = if let Some(address) = args.world_address {
+        address
+    } else if let Some(address) = manifest.world.address {
+        address
     } else {
-        None
-    };
-
-    println!("{:?}", env_metadata);
-
-    if manifest_path.ends_with("Scarb.toml") {
-        manifest_path.pop();
-        manifest_path.push("target/dev/manifest.json");
-    }
-
-    let manifest = Manifest::load_from_path(manifest_path).expect("Failed to load manifest");
-    let world_address_result = address(&args, env_metadata.as_ref());
-
-    let world_address = match world_address_result {
-        Ok(world_address) => world_address,
-        Err(e) => return Err(e),
+        let dojo_env_metadata =
+            dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned());
+        address_from_dojo_metadata(dojo_env_metadata.as_ref())?
     };
 
     let state = Sql::new(pool.clone(), world_address).await?;

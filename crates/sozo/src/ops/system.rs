@@ -1,9 +1,9 @@
 use anyhow::Result;
 use console::Style;
 use dojo_client::contract::world::WorldContractReader;
+use dojo_world::environment::Environment;
 use starknet::core::types::{BlockId, BlockTag};
 
-use crate::commands::options::Environment;
 use crate::commands::system::SystemCommands;
 
 pub async fn execute(command: SystemCommands, env_metadata: Option<Environment>) -> Result<()> {

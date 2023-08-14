@@ -2,6 +2,7 @@ use std::path::Path;
 
 use anyhow::{anyhow, bail, Context, Result};
 use dojo_client::contract::world::WorldContract;
+use dojo_world::environment::Environment;
 use dojo_world::manifest::{Manifest, ManifestError};
 use dojo_world::migration::strategy::{prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
@@ -29,7 +30,6 @@ use crate::commands::migrate::MigrateArgs;
 use crate::commands::options::account::AccountOptions;
 use crate::commands::options::starknet::StarknetOptions;
 use crate::commands::options::world::WorldOptions;
-use crate::commands::options::Environment;
 
 pub async fn execute<U>(
     args: MigrateArgs,

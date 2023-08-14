@@ -2,9 +2,8 @@ use std::str::FromStr;
 
 use anyhow::{anyhow, Result};
 use clap::Args;
+use dojo_world::environment::Environment;
 use starknet::core::types::FieldElement;
-
-use super::Environment;
 
 #[derive(Debug, Args)]
 #[command(next_help_heading = "World options")]

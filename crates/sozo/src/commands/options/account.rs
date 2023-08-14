@@ -2,12 +2,11 @@ use std::str::FromStr;
 
 use anyhow::{anyhow, Context, Result};
 use clap::Args;
+use dojo_world::environment::Environment;
 use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::FieldElement;
 use starknet::providers::Provider;
 use starknet::signers::{LocalWallet, SigningKey};
-
-use super::Environment;
 
 #[derive(Debug, Args)]
 #[command(next_help_heading = "Account options")]
