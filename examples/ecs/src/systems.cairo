@@ -9,13 +9,14 @@ mod spawn {
     use dojo_examples::components::Moves;
 
     fn execute(ctx: Context) {
+        let position = get !(ctx.world, ctx.origin, (Position));
         set !(
             ctx.world,
             (
                 Moves {
                     player: ctx.origin, remaining: 10
                     }, Position {
-                    player: ctx.origin, x: 0, y: 0
+                    player: ctx.origin, x: position.x + 10, y: position.y + 10
                 },
             )
         );
@@ -25,6 +26,7 @@ mod spawn {
 
 #[system]
 mod move {
+    use starknet::ContractAddress;
     use array::ArrayTrait;
     use box::BoxTrait;
     use traits::Into;
@@ -33,7 +35,14 @@ mod move {
     use dojo_examples::components::Position;
     use dojo_examples::components::Moves;
 
-    #[derive(Serde, Drop)]
+    #[derive(Drop, starknet::Event)]
+    struct Moved {
+        address: ContractAddress,
+        direction: Direction
+    }
+
+
+    #[derive(Serde, Copy, Drop)]
     enum Direction {
         Left: (),
         Right: (),
@@ -57,6 +66,7 @@ mod move {
         moves.remaining -= 1;
         let next = next_position(position, direction);
         set !(ctx.world, (moves, next));
+        emit !(ctx.world, Moved { address: ctx.origin, direction });
         return ();
     }
 
@@ -114,11 +124,11 @@ mod tests {
         let world = spawn_test_world(components, systems);
 
         let spawn_call_data = array::ArrayTrait::new();
-        world.execute('spawn', spawn_call_data.span());
+        world.execute('spawn', spawn_call_data);
 
         let mut move_calldata = array::ArrayTrait::new();
         move_calldata.append(move::Direction::Right(()).into());
-        world.execute('move', move_calldata.span());
+        world.execute('move', move_calldata);
         let mut keys = array::ArrayTrait::new();
         keys.append(caller.into());
 
@@ -126,7 +136,7 @@ mod tests {
         assert(*moves[0] == 9, 'moves is wrong');
         let new_position = world
             .entity('Position', keys.span(), 0, dojo::SerdeLen::<Position>::len());
-        assert(*new_position[0] == 1, 'position x is wrong');
-        assert(*new_position[1] == 0, 'position y is wrong');
+        assert(*new_position[0] == 11, 'position x is wrong');
+        assert(*new_position[1] == 10, 'position y is wrong');
     }
 }

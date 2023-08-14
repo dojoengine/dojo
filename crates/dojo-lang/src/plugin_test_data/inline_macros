@@ -21,6 +21,8 @@ const world: felt252 = 0xbeef;
 const player: Player = Player { key: 'key', name: 'name' };
 
 fn foo() {
+    // Should not emit diagnostics for unknown macros
+    let arr = array![1, 2, 3];
     set!(world, (
         player,
         Position { key: 'key', x: 0, y: 0 },
@@ -51,6 +53,8 @@ const world: felt252 = 0xbeef;
 const player: Player = Player { key: 'key', name: 'name' };
 
 fn foo() {
+    // Should not emit diagnostics for unknown macros
+    let arr = array![1, 2, 3];
     {
         let __set_macro_value__ = player;
         world
@@ -73,12 +77,12 @@ fn foo() {
 
 //! > expected_diagnostics
 error: Invalid arguments. Expected "(world, (components,))"
- --> dummy_file.cairo:23:10
+ --> dummy_file.cairo:25:10
     set!();
          ^
 
 error: Invalid arguments: No components provided.
- --> dummy_file.cairo:24:10
+ --> dummy_file.cairo:26:10
     set!(world, ());
          ^*******^
 
@@ -110,16 +114,20 @@ fn foo() {
         array::serialize_array_helper(__get_macro_keys__, ref __Position_component__);
         array::serialize_array_helper(__Position_values__, ref __Position_component__);
         let mut __Position_component_span__ = array::ArrayTrait::span(@__Position_component__);
-        let __Position = serde::Serde::<Position>::deserialize(ref __Position_component_span__)
-            .expect('Position failed to deserialize');
+        let __Position = option::OptionTrait::expect(
+            serde::Serde::<Position>::deserialize(ref __Position_component_span__),
+            'Position failed to deserialize'
+        );
         let __Moves_values__ = world
             .entity('Moves', __get_macro_keys__, 0_u8, dojo::SerdeLen::<Moves>::len());
         let mut __Moves_component__ = array::ArrayTrait::new();
         array::serialize_array_helper(__get_macro_keys__, ref __Moves_component__);
         array::serialize_array_helper(__Moves_values__, ref __Moves_component__);
         let mut __Moves_component_span__ = array::ArrayTrait::span(@__Moves_component__);
-        let __Moves = serde::Serde::<Moves>::deserialize(ref __Moves_component_span__)
-            .expect('Moves failed to deserialize');
+        let __Moves = option::OptionTrait::expect(
+            serde::Serde::<Moves>::deserialize(ref __Moves_component_span__),
+            'Moves failed to deserialize'
+        );
         (__Position, __Moves)
     };
     let position = {
@@ -132,8 +140,10 @@ fn foo() {
         array::serialize_array_helper(__get_macro_keys__, ref __Position_component__);
         array::serialize_array_helper(__Position_values__, ref __Position_component__);
         let mut __Position_component_span__ = array::ArrayTrait::span(@__Position_component__);
-        let __Position = serde::Serde::<Position>::deserialize(ref __Position_component_span__)
-            .expect('Position failed to deserialize');
+        let __Position = option::OptionTrait::expect(
+            serde::Serde::<Position>::deserialize(ref __Position_component_span__),
+            'Position failed to deserialize'
+        );
         (__Position)
     };
 
@@ -148,9 +158,48 @@ fn foo() {
         array::serialize_array_helper(__get_macro_keys__, ref __Position_component__);
         array::serialize_array_helper(__Position_values__, ref __Position_component__);
         let mut __Position_component_span__ = array::ArrayTrait::span(@__Position_component__);
-        let __Position = serde::Serde::<Position>::deserialize(ref __Position_component_span__)
-            .expect('Position failed to deserialize');
+        let __Position = option::OptionTrait::expect(
+            serde::Serde::<Position>::deserialize(ref __Position_component_span__),
+            'Position failed to deserialize'
+        );
         (__Position)
+    };
+}
+
+//! > expected_diagnostics
+
+//! > ==========================================================================
+
+//! > Test emit! macro.
+
+//! > test_runner_name
+test_expand_plugin
+
+//! > cairo_code
+fn foo() {
+    emit!(world, Struct {
+        x: 10,
+    });
+
+    let id = (0x420, 0x1337);
+    emit!(world, id);
+}
+
+//! > generated_cairo_code
+fn foo() {
+    {
+        let mut keys = Default::<array::Array>::default();
+        let mut data = Default::<array::Array>::default();
+        starknet::Event::append_keys_and_data(@Struct { x: 10,  }, ref keys, ref data);
+        world.emit(keys, data.span());
+    };
+
+    let id = (0x420, 0x1337);
+    {
+        let mut keys = Default::<array::Array>::default();
+        let mut data = Default::<array::Array>::default();
+        starknet::Event::append_keys_and_data(@id, ref keys, ref data);
+        world.emit(keys, data.span());
     };
 }
 

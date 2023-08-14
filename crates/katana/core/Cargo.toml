@@ -22,6 +22,7 @@ parking_lot = "0.12.1"
 rand = { version = "0.8.5", features = [ "small_rng" ] }
 serde.workspace = true
 serde_json = "1.0.70"
+serde_with.workspace = true
 starknet.workspace = true
 starknet_api.workspace = true
 thiserror.workspace = true

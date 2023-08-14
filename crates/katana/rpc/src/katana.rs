@@ -28,13 +28,13 @@ where
     S: Sequencer + Send + Sync + 'static,
 {
     async fn generate_block(&self) -> Result<(), Error> {
-        self.sequencer.backend().generate_latest_block().await;
-        self.sequencer.backend().generate_pending_block().await;
+        self.sequencer.backend().mine_block().await;
+        self.sequencer.backend().open_pending_block().await;
         Ok(())
     }
 
     async fn next_block_timestamp(&self) -> Result<u64, Error> {
-        Ok(self.sequencer.backend().block_context.read().block_timestamp.0)
+        Ok(self.sequencer.backend().env.read().block.block_timestamp.0)
     }
 
     async fn set_next_block_timestamp(&self, timestamp: u64) -> Result<(), Error> {
@@ -54,7 +54,7 @@ where
     }
 
     async fn predeployed_accounts(&self) -> Result<Vec<Account>, Error> {
-        Ok(self.sequencer.backend().predeployed_accounts.accounts.clone())
+        Ok(self.sequencer.backend().accounts.clone())
     }
 
     async fn set_storage_at(

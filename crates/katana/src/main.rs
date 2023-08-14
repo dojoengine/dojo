@@ -4,12 +4,12 @@ use std::{fs, io};
 
 use clap::{CommandFactory, Parser};
 use clap_complete::{generate, Shell};
+use console::Style;
 use env_logger::Env;
 use katana_core::sequencer::{KatanaSequencer, Sequencer};
 use katana_rpc::{spawn, KatanaApi, NodeHandle, StarknetApi};
 use log::{error, info};
 use tokio::signal::ctrl_c;
-use yansi::Paint;
 
 mod args;
 
@@ -44,12 +44,21 @@ async fn main() {
     match spawn(katana_api, starknet_api, server_config).await {
         Ok(NodeHandle { addr, handle, .. }) => {
             if !config.silent {
-                let accounts = sequencer.backend.predeployed_accounts.display();
+                let accounts = sequencer
+                    .backend
+                    .accounts
+                    .iter()
+                    .map(|a| format!("{a}"))
+                    .collect::<Vec<_>>()
+                    .join("\n");
 
                 print_intro(
                     accounts,
                     config.starknet.seed.clone(),
-                    format!("🚀 JSON-RPC server started: {}", Paint::red(format!("http://{addr}"))),
+                    format!(
+                        "🚀 JSON-RPC server started: {}",
+                        Style::new().red().apply_to(format!("http://{addr}"))
+                    ),
                 );
             }
 
@@ -76,7 +85,7 @@ fn print_completion(shell: Shell) {
 fn print_intro(accounts: String, seed: String, address: String) {
     println!(
         "{}",
-        Paint::red(
+        Style::new().red().apply_to(
             r"
 
 

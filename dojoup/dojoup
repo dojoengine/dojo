@@ -76,7 +76,8 @@ main() {
   if [[ "$DOJOUP_REPO" == "dojoengine/dojo" && -z "$DOJOUP_BRANCH" && -z "$DOJOUP_COMMIT" ]]; then
     DOJOUP_VERSION=${DOJOUP_VERSION-stable}
     DOJOUP_TAG=$DOJOUP_VERSION
-
+    need_cmd jq
+    
     # Normalize versions (handle channels, versions without v prefix
     if [[ "$DOJOUP_VERSION" == "stable" ]]; then
       # Fetch the list of releases from the GitHub API and get the first non-prerelease

@@ -2,6 +2,7 @@ use core::traits::Into;
 use core::result::ResultTrait;
 use array::ArrayTrait;
 use option::OptionTrait;
+use serde::Serde;
 use traits::TryInto;
 
 use starknet::syscalls::deploy_syscall;
@@ -41,16 +42,17 @@ fn test_executor() {
     system_calldata.append(1);
     system_calldata.append(42);
     system_calldata.append(53);
-    let res = executor
-        .execute(
-            Context {
-                world: IWorldDispatcher {
-                    contract_address: starknet::contract_address_const::<0x1337>()
-                },
-                origin: starknet::contract_address_const::<0x1337>(),
-                system: 'Bar',
-                system_class_hash: Bar::TEST_CLASS_HASH.try_into().unwrap(),
-            },
-            system_calldata.span()
-        );
+
+    let ctx = Context {
+        world: IWorldDispatcher {
+            contract_address: starknet::contract_address_const::<0x1337>()
+        },
+        origin: starknet::contract_address_const::<0x1337>(),
+        system: 'Bar',
+        system_class_hash: Bar::TEST_CLASS_HASH.try_into().unwrap(),
+    };
+
+    ctx.serialize(ref system_calldata);
+
+    let res = executor.execute(ctx.system_class_hash, system_calldata.span());
 }

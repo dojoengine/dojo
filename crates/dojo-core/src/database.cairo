@@ -5,8 +5,14 @@ use hash::LegacyHash;
 use poseidon::poseidon_hash_span;
 
 mod index;
+#[cfg(test)]
+mod index_test;
 mod storage;
+#[cfg(test)]
+mod storage_test;
 mod utils;
+#[cfg(test)]
+mod utils_test;
 
 fn get(
     class_hash: starknet::ClassHash, table: felt252, key: felt252, offset: u8, length: usize

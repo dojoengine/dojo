@@ -21,12 +21,19 @@ mod proxy {
     }
 }
 
+#[system]
+mod ctxnamed {
+    use traits::Into;
+    use dojo::world::Context;
+
+    fn execute(ctx2: Context, name: felt252) {
+        return ();
+    }
+}
+
 //! > generated_cairo_code
 #[starknet::contract]
 mod spawn {
-    use option::OptionTrait;
-    use array::SpanTrait;
-
     use dojo::world;
     use dojo::world::IWorldDispatcher;
     use dojo::world::IWorldDispatcherTrait;
@@ -43,7 +50,7 @@ mod spawn {
     use dojo::world::Context;
 
     #[external(v0)]
-    fn execute(self: @ContractState, ctx: Context, name: felt252) {
+    fn execute(self: @ContractState, name: felt252, ctx: Context) {
         return ();
     }
 }
@@ -51,9 +58,6 @@ mod spawn {
 
 #[starknet::contract]
 mod proxy {
-    use option::OptionTrait;
-    use array::SpanTrait;
-
     use dojo::world;
     use dojo::world::IWorldDispatcher;
     use dojo::world::IWorldDispatcherTrait;
@@ -68,8 +72,32 @@ mod proxy {
 
 
     #[external(v0)]
-    fn execute(self: @ContractState, _ctx: dojo::world::Context, value: felt252) -> felt252 {
+    fn execute(self: @ContractState, value: felt252, _ctx: dojo::world::Context) -> felt252 {
         value
+    }
+}
+
+
+#[starknet::contract]
+mod ctxnamed {
+    use dojo::world;
+    use dojo::world::IWorldDispatcher;
+    use dojo::world::IWorldDispatcherTrait;
+
+    #[storage]
+    struct Storage {}
+
+    #[external(v0)]
+    fn name(self: @ContractState) -> felt252 {
+        'ctxnamed'
+    }
+
+    use traits::Into;
+    use dojo::world::Context;
+
+    #[external(v0)]
+    fn execute(self: @ContractState, name: felt252, ctx2: Context) {
+        return ();
     }
 }
 

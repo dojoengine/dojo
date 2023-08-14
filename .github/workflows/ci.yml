@@ -12,7 +12,7 @@ env:
 
 jobs:
   test:
-    runs-on: ubuntu-latest-32-cores
+    runs-on: ubuntu-latest-4-cores
     steps:
       - uses: actions/checkout@v3
 
@@ -28,7 +28,7 @@ jobs:
           cargo test
 
   # cairofmt:
-  #   runs-on: ubuntu-latest-32-cores
+  #   runs-on: ubuntu-latest
   #   steps:
   #     - uses: actions/checkout@v3
   #     - uses: actions-rs/toolchain@v1
@@ -40,7 +40,7 @@ jobs:
   #     - run: scripts/cairo_fmt.sh --check
 
   cairotest:
-    runs-on: ubuntu-latest-32-cores
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       
@@ -74,7 +74,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ env.RUST_VERSION }}
+          toolchain: nightly
           components: rustfmt
       
       - uses: Swatinem/rust-cache@v2
@@ -87,7 +87,7 @@ jobs:
 
   # Check for unnecessary dependencies.
   # udeps:
-  #   runs-on: ubuntu-latest-32-cores
+  #   runs-on: ubuntu-latest
   #   steps:
   #     - uses: actions/checkout@v3
 
@@ -116,7 +116,7 @@ jobs:
   #         RUSTUP_TOOLCHAIN: ${{ env.RUST_VERSION }}
 
   docs:
-    runs-on: ubuntu-latest-32-cores
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
@@ -132,7 +132,7 @@ jobs:
           scripts/docs.sh
 
   test-hurl:
-    runs-on: ubuntu-latest-32-cores
+    runs-on: ubuntu-latest
     permissions:
       pull-requests: write
 
@@ -152,6 +152,6 @@ jobs:
       - name: Build and start Katana node
         run: |
           cargo build --bin katana
-          nohup target/debug/katana --accounts 2 --account-class crates/katana/core/contracts/compiled/account_without_validation.json --disable-fee &
+          nohup target/debug/katana --accounts 2 --disable-fee &
       - name: Execute Hurl Scripts
         run: hurl --test examples/rpc/**/*.hurl

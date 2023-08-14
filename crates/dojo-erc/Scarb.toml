@@ -1,10 +1,12 @@
 [package]
+cairo-version = "2.1.0"
+description = "Implementations of ERC standards for the Dojo framework"
 name = "dojo_erc"
 version = "0.1.0"
-cairo-version = "2.1.0-rc4"
-description = "Implementations of ERC standards for the Dojo framework"
 
 [dependencies]
 dojo = { path = "../dojo-core" }
+
+[lib]
 
 [[target.dojo]]
