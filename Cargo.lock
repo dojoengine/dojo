@@ -2225,6 +2225,7 @@ dependencies = [
  "starknet-crypto 0.5.1",
  "thiserror",
  "tokio",
+ "toml",
  "tracing",
  "url",
 ]
@@ -5964,7 +5965,6 @@ dependencies = [
  "starknet",
  "thiserror",
  "tokio",
- "toml",
  "tracing",
  "tracing-log",
  "url",

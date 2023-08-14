@@ -35,3 +35,4 @@ assert_matches = "1.5.0"
 dojo-lang = { path = "../dojo-lang" }
 dojo-test-utils = { path = "../dojo-test-utils" }
 tokio = { version = "1.28.0", features = [ "full" ] }
+toml.workspace = true
