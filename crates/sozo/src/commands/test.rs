@@ -49,8 +49,11 @@ impl TestArgs {
             let db = build_root_database(&unit)?;
 
             let mut main_crate_ids = collect_main_crate_ids(&unit, &db);
-            let core_crate_ids = collect_core_crate_ids(&db);
-            main_crate_ids.extend(core_crate_ids);
+
+            if unit.main_package_id.name.to_string() != "dojo" {
+                let core_crate_ids = collect_core_crate_ids(&db);
+                main_crate_ids.extend(core_crate_ids);
+            }
 
             if let Some(external_contracts) = props.build_external_contracts {
                 main_crate_ids.extend(collect_external_crate_ids(&db, external_contracts));
