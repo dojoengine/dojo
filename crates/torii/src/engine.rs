@@ -10,11 +10,10 @@ use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
 use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
 use tokio::time::sleep;
+use torii_core::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
+use torii_core::sql::Executable;
+use torii_core::State;
 use tracing::{error, info, warn};
-
-use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
-use crate::state::sql::Executable;
-use crate::state::State;
 
 pub struct Processors<S: State, T: JsonRpcTransport + Sync + Send> {
     pub block: Vec<Box<dyn BlockProcessor<S, T>>>,

@@ -6,34 +6,27 @@ use camino::Utf8PathBuf;
 use clap::Parser;
 use dojo_world::manifest::Manifest;
 use dojo_world::metadata::{dojo_metadata_from_workspace, Environment};
-use graphql::server::start_graphql;
 use scarb::core::Config;
 use sqlx::sqlite::SqlitePoolOptions;
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use state::sql::Sql;
 use tokio_util::sync::CancellationToken;
+use torii_core::processors::register_component::RegisterComponentProcessor;
+use torii_core::processors::register_system::RegisterSystemProcessor;
+use torii_core::processors::store_set_record::StoreSetRecordProcessor;
+use torii_core::sql::Sql;
+use torii_core::State;
+use torii_graphql::server::start_graphql;
 use tracing::error;
 use tracing_subscriber::fmt;
 use url::Url;
 
 use crate::engine::Processors;
 use crate::indexer::Indexer;
-use crate::processors::register_component::RegisterComponentProcessor;
-use crate::processors::register_system::RegisterSystemProcessor;
-use crate::processors::store_set_record::StoreSetRecordProcessor;
-use crate::state::State;
 
 mod engine;
-mod graphql;
 mod indexer;
-mod processors;
-mod state;
-mod types;
-
-#[cfg(test)]
-mod tests;
 
 /// Dojo World Indexer
 #[derive(Parser, Debug)]

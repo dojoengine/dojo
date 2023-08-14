@@ -3,11 +3,11 @@ use std::error::Error;
 use dojo_world::manifest::Manifest;
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
 use starknet_crypto::FieldElement;
+use torii_core::sql::Executable;
+use torii_core::State;
 use tracing::info;
 
 use crate::engine::{Engine, EngineConfig, Processors};
-use crate::state::sql::Executable;
-use crate::state::State;
 
 #[allow(dead_code)]
 pub struct Indexer<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> {
