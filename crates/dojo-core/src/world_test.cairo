@@ -43,19 +43,6 @@ mod bar {
     }
 }
 
-#[system]
-mod Buzz {
-    use super::{Foo, Fizz};
-    use traits::Into;
-    use starknet::get_caller_address;
-    use dojo::world::Context;
-
-    fn execute(ctx: Context, a: felt252, b: u128) {
-        set !(ctx.world, (Foo { caller: ctx.origin, a, b }));
-    // let fizz = get !(ctx.world, ctx.origin, Fizz);
-    }
-}
-
 // Tests
 
 #[test]
@@ -65,14 +52,6 @@ fn test_component() {
     let world = deploy_world();
 
     world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
-// let mut keys = ArrayTrait::new();
-// keys.append(420);
-// let mut data = ArrayTrait::new();
-// data.append(1337);
-
-// world.set_entity(name, keys.span(), 0, data.span());
-// let stored = world.entity(name, keys.span(), 0, dojo::SerdeLen::<Foo>::len());
-// assert(*stored.snapshot.at(0) == 1337, 'data not stored');
 }
 
 #[test]
@@ -88,6 +67,12 @@ fn test_system() {
     data.append(1337);
     let id = world.uuid();
     world.execute('bar', data);
+
+    let mut keys = ArrayTrait::new();
+    keys.append(0);
+
+    let stored = world.entity('Foo', keys.span(), 0, dojo::SerdeLen::<Foo>::len());
+    assert(*stored.snapshot.at(0) == 1337, 'data not stored');
 }
 
 #[test]
