@@ -40,7 +40,7 @@ mod tests;
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// The world to index
-    #[arg(short, long)]
+    #[arg(short, long = "world")]
     world_address: Option<FieldElement>,
     /// The rpc endpoint to use
     #[arg(long, default_value = "http://localhost:5050")]
@@ -56,16 +56,24 @@ struct Args {
     start_block: u64,
 }
 
-fn address_from_dojo_metadata(env_metadata: Option<&Environment>) -> anyhow::Result<FieldElement> {
-    if let Some(world_address) =
-        env_metadata
-            .and_then(|env| env.world_address())
-            .or(std::env::var("DOJO_WORLD_ADDRESS").ok().as_deref())
+fn get_world_address(
+    args: &Args,
+    manifest: &Manifest,
+    env_metadata: Option<&Environment>,
+) -> anyhow::Result<FieldElement> {
+    if let Some(address) = args.world_address {
+        Ok(address)
+    } else if let Some(address) = manifest.world.address {
+        Ok(address)
+    } else if let Some(world_address) = env_metadata
+        .and_then(|env| env.world_address())
+        .or(std::env::var("DOJO_WORLD_ADDRESS").ok().as_deref())
     {
         Ok(FieldElement::from_str(world_address)?)
     } else {
         Err(anyhow!(
-            "Could not find World address. Please specify it with --world or in the world config."
+            "Could not find World address. Please specify it with --world, or in manifest.json or 
+             [tool.dojo.env] in Scarb.toml"
         ))
     }
 }
@@ -109,15 +117,11 @@ async fn main() -> anyhow::Result<()> {
     let manifest = Manifest::load_from_path(target_dir.join("manifest.json"))?;
 
     // Get world address
-    let world_address = if let Some(address) = args.world_address {
-        address
-    } else if let Some(address) = manifest.world.address {
-        address
-    } else {
-        let dojo_env_metadata =
-            dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned());
-        address_from_dojo_metadata(dojo_env_metadata.as_ref())?
-    };
+    let world_address = get_world_address(
+        &args,
+        &manifest,
+        dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned()).as_ref(),
+    )?;
 
     let state = Sql::new(pool.clone(), world_address).await?;
     state.load_from_manifest(manifest.clone()).await?;
