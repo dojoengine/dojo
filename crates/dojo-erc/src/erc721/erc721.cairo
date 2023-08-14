@@ -7,10 +7,8 @@ mod ERC721 {
     use zeroable::Zeroable;
 
     use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
-    use dojo_erc::erc721::components::{Balance, OperatorApproval, Owner, TokenApproval, TokenUri};
-    use dojo_erc::erc721::systems::{
-        erc721_approve, erc721_set_approval_for_all, erc721_transfer_from
-    };
+    use dojo_erc::erc721::components::{Balance, OperatorApproval, Owner, TokenApproval};
+    use dojo_erc::erc721::interface::IERC721;
 
     #[storage]
     struct Storage {
@@ -67,143 +65,135 @@ mod ERC721 {
     }
 
     #[external(v0)]
-    fn owner(self: @ContractState) -> ContractAddress {
-        self.owner_.read()
-    }
+    impl ERC721 of IERC721<ContractState> {
+        fn owner(self: @ContractState) -> ContractAddress {
+            self.owner_.read()
+        }
 
-    #[external(v0)]
-    fn name(self: @ContractState) -> felt252 {
-        self.name_.read()
-    }
+        fn name(self: @ContractState) -> felt252 {
+            self.name_.read()
+        }
 
-    #[external(v0)]
-    fn symbol(self: @ContractState) -> felt252 {
-        self.symbol_.read()
-    }
+        fn symbol(self: @ContractState) -> felt252 {
+            self.symbol_.read()
+        }
 
-    #[external(v0)]
-    fn token_uri(self: @ContractState, token_id: u256) -> felt252 {
-        // TODO : return self.token_uri + '/' + token_id
-        self.token_uri_.read()
-    }
+        fn token_uri(self: @ContractState, token_id: u256) -> felt252 {
+            // TODO : return self.token_uri + '/' + token_id
+            self.token_uri_.read()
+        }
 
-    #[external(v0)]
-    fn balance_of(self: @ContractState, account: ContractAddress) -> u256 {
-        let token = get_contract_address();
-        let balance = get!(self.world.read(), (token, account), Balance);
-        balance.amount.into()
-    }
+        fn balance_of(self: @ContractState, account: ContractAddress) -> u256 {
+            let token = get_contract_address();
+            let balance = get!(self.world.read(), (token, account), Balance);
+            balance.amount.into()
+        }
 
-    fn exists(self: @ContractState, token_id: u256) -> bool {
-        owner_of(self, token_id).is_non_zero()
-    }
+        fn exists(self: @ContractState, token_id: u256) -> bool {
+            self.owner_of(token_id).is_non_zero()
+        }
 
+        fn owner_of(self: @ContractState, token_id: u256) -> ContractAddress {
+            let token = get_contract_address();
+            let owner = get!(self.world.read(), (token, u256_into_felt252(token_id)), Owner);
+            owner.address
+        }
 
-    #[external(v0)]
-    fn owner_of(self: @ContractState, token_id: u256) -> ContractAddress {
-        let token = get_contract_address();
-        let owner = get!(self.world.read(), (token, u256_into_felt252(token_id)), Owner);
-        owner.address
-    }
+        fn get_approved(self: @ContractState, token_id: u256) -> ContractAddress {
+            assert(self.exists(token_id), 'ERC721: invalid token_id');
 
-    #[external(v0)]
-    fn get_approved(self: @ContractState, token_id: u256) -> ContractAddress {
-        assert(exists(self, token_id), 'ERC721: invalid token_id');
+            let token = get_contract_address();
+            let approved = get!(
+                self.world.read(), (token, u256_into_felt252(token_id)), TokenApproval
+            );
+            approved.address
+        }
 
-        let token = get_contract_address();
-        let approved = get!(self.world.read(), (token, u256_into_felt252(token_id)), TokenApproval);
-        approved.address
-    }
+        fn is_approved_for_all(
+            self: @ContractState, owner: ContractAddress, operator: ContractAddress
+        ) -> bool {
+            let token = get_contract_address();
+            let result = get!(self.world.read(), (token, owner, operator), OperatorApproval);
+            result.approved
+        }
 
-    #[external(v0)]
-    fn is_approved_for_all(
-        self: @ContractState, owner: ContractAddress, operator: ContractAddress
-    ) -> bool {
-        let token = get_contract_address();
-        let result = get!(self.world.read(), (token, owner, operator), OperatorApproval);
-        result.approved
-    }
+        fn approve(ref self: ContractState, to: ContractAddress, token_id: u256) {
+            let token = get_contract_address();
+            let caller = get_caller_address();
 
-    #[external(v0)]
-    fn approve(ref self: ContractState, to: ContractAddress, token_id: u256) {
-        let token = get_contract_address();
-        let caller = get_caller_address();
+            let mut calldata = ArrayTrait::new();
+            calldata.append(token.into());
+            calldata.append(caller.into());
+            calldata.append(u256_into_felt252(token_id));
+            calldata.append(to.into());
+            self.world.read().execute('erc721_approve'.into(), calldata);
+            let owner = self.owner_of(token_id);
+            self.emit(Approval { owner, to, token_id });
+        }
 
-        let mut calldata = ArrayTrait::new();
-        calldata.append(token.into());
-        calldata.append(caller.into());
-        calldata.append(u256_into_felt252(token_id));
-        calldata.append(to.into());
-        self.world.read().execute('erc721_approve'.into(), calldata);
-        let owner = owner_of(@self, token_id);
-        self.emit(Approval { owner, to, token_id });
-    }
+        fn set_approval_for_all(
+            ref self: ContractState, operator: ContractAddress, approved: bool
+        ) {
+            let token = get_contract_address();
+            let caller = get_caller_address();
 
-    #[external(v0)]
-    fn set_approval_for_all(ref self: ContractState, operator: ContractAddress, approved: bool) {
-        let token = get_contract_address();
-        let caller = get_caller_address();
-
-        let mut calldata = ArrayTrait::new();
-        calldata.append(token.into());
-        calldata.append(caller.into());
-        calldata.append(operator.into());
-        calldata.append(approved.into());
-        self.world.read().execute('erc721_set_approval_for_all'.into(), calldata);
-        self.emit(ApprovalForAll { owner: caller, operator, approved });
-    }
-
-    #[external(v0)]
-    fn transfer(ref self: ContractState, to: ContractAddress, token_id: u256) {
-        transfer_from(ref self, get_caller_address(), to, token_id);
-    }
-
-    #[external(v0)]
-    fn transfer_from(
-        ref self: ContractState, from: ContractAddress, to: ContractAddress, token_id: u256
-    ) {
-        let token = get_contract_address();
-        let caller = get_caller_address();
-
-        let mut calldata = ArrayTrait::new();
-        calldata.append(token.into());
-        calldata.append(caller.into());
-        calldata.append(from.into());
-        calldata.append(to.into());
-        calldata.append(u256_into_felt252(token_id));
-        self.world.read().execute('erc721_transfer_from'.into(), calldata);
-        self.emit(Transfer { from, to, token_id });
-    }
+            let mut calldata = ArrayTrait::new();
+            calldata.append(token.into());
+            calldata.append(caller.into());
+            calldata.append(operator.into());
+            calldata.append(approved.into());
+            self.world.read().execute('erc721_set_approval_for_all'.into(), calldata);
+            self.emit(ApprovalForAll { owner: caller, operator, approved });
+        }
 
 
-    #[external(v0)]
-    fn mint(ref self: ContractState, to: ContractAddress, token_id: u256) {
-        let token = get_contract_address();
+        fn transfer_from(
+            ref self: ContractState, from: ContractAddress, to: ContractAddress, token_id: u256
+        ) {
+            let token = get_contract_address();
+            let caller = get_caller_address();
 
-        let mut calldata: Array<felt252> = ArrayTrait::new();
-        calldata.append(token.into());
-        calldata.append(u256_into_felt252(token_id));
-        calldata.append(to.into());
-        self.world.read().execute('erc721_mint'.into(), calldata);
-        self.emit(Transfer { from: Zeroable::zero(), to, token_id });
-    }
+            let mut calldata = ArrayTrait::new();
+            calldata.append(token.into());
+            calldata.append(caller.into());
+            calldata.append(from.into());
+            calldata.append(to.into());
+            calldata.append(u256_into_felt252(token_id));
+            self.world.read().execute('erc721_transfer_from'.into(), calldata);
+            self.emit(Transfer { from, to, token_id });
+        }
 
-    #[external(v0)]
-    fn burn(ref self: ContractState, token_id: u256) {
-        let token = get_contract_address();
-        let caller = get_caller_address();
 
-        let mut calldata: Array<felt252> = ArrayTrait::new();
-        calldata.append(token.into());
-        calldata.append(caller.into());
-        calldata.append(u256_into_felt252(token_id));
+        fn transfer(ref self: ContractState, to: ContractAddress, token_id: u256) {
+            self.transfer_from(get_caller_address(), to, token_id);
+        }
 
-        self.world.read().execute('erc721_burn'.into(), calldata);
-        self.emit(Transfer { from: get_caller_address(), to: Zeroable::zero(), token_id });
+        fn mint(ref self: ContractState, to: ContractAddress, token_id: u256) {
+            let token = get_contract_address();
+
+            let mut calldata: Array<felt252> = ArrayTrait::new();
+            calldata.append(token.into());
+            calldata.append(u256_into_felt252(token_id));
+            calldata.append(to.into());
+            self.world.read().execute('erc721_mint'.into(), calldata);
+            self.emit(Transfer { from: Zeroable::zero(), to, token_id });
+        }
+
+        fn burn(ref self: ContractState, token_id: u256) {
+            let token = get_contract_address();
+            let caller = get_caller_address();
+
+            let mut calldata: Array<felt252> = ArrayTrait::new();
+            calldata.append(token.into());
+            calldata.append(caller.into());
+            calldata.append(u256_into_felt252(token_id));
+
+            self.world.read().execute('erc721_burn'.into(), calldata);
+            self.emit(Transfer { from: get_caller_address(), to: Zeroable::zero(), token_id });
+        }
     }
 
     fn u256_into_felt252(val: u256) -> felt252 {
-        // temporary, until TryInto of this is in corelib
-        val.low.into() + val.high.into() * 0x100000000000000000000000000000000
+        val.try_into().unwrap()
     }
 }

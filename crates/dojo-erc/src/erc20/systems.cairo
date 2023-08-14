@@ -12,7 +12,7 @@ mod erc20_approve {
         spender: ContractAddress,
         amount: felt252
     ) {
-        set !(ctx.world, Allowance { token, owner, spender, amount })
+        set!(ctx.world, Allowance { token, owner, spender, amount })
     }
 }
 
@@ -41,22 +41,22 @@ mod erc20_transfer_from {
 
         if spender != caller {
             // decrease allowance if it's not owner doing the transfer
-            let mut allowance = get !(ctx.world, (token, caller, spender), Allowance);
+            let mut allowance = get!(ctx.world, (token, caller, spender), Allowance);
             if !is_unlimited_allowance(allowance) {
                 allowance.amount -= amount;
-                set !(ctx.world, (allowance));
+                set!(ctx.world, (allowance));
             }
         }
 
         // decrease spender's balance
-        let mut balance = get !(ctx.world, (token, spender), Balance);
+        let mut balance = get!(ctx.world, (token, spender), Balance);
         balance.amount -= amount;
-        set !(ctx.world, (balance));
+        set!(ctx.world, (balance));
 
         // increase recipient's balance
-        let mut balance = get !(ctx.world, (token, recipient), Balance);
+        let mut balance = get!(ctx.world, (token, recipient), Balance);
         balance.amount += amount;
-        set !(ctx.world, (balance));
+        set!(ctx.world, (balance));
     }
 
     fn is_unlimited_allowance(allowance: Allowance) -> bool {
@@ -77,14 +77,14 @@ mod erc20_mint {
         assert(recipient.is_non_zero(), 'ERC20: mint to 0');
 
         // increase token supply
-        let mut supply = get !(ctx.world, token, Supply);
+        let mut supply = get!(ctx.world, token, Supply);
         supply.amount += amount;
-        set !(ctx.world, (supply));
+        set!(ctx.world, (supply));
 
         // increase balance of recipient
-        let mut balance = get !(ctx.world, (token, recipient), Balance);
+        let mut balance = get!(ctx.world, (token, recipient), Balance);
         balance.amount -= amount;
-        set !(ctx.world, (balance));
+        set!(ctx.world, (balance));
     }
 }
 
@@ -101,13 +101,13 @@ mod erc20_burn {
         assert(owner.is_non_zero(), 'ERC20: burn from 0');
 
         // decrease token supply
-        let mut supply = get !(ctx.world, token, Supply);
+        let mut supply = get!(ctx.world, token, Supply);
         supply.amount -= amount;
-        set !(ctx.world, (supply));
+        set!(ctx.world, (supply));
 
         // decrease balance of owner
-        let mut balance = get !(ctx.world, (token, owner), Balance);
+        let mut balance = get!(ctx.world, (token, owner), Balance);
         balance.amount -= amount;
-        set !(ctx.world, (balance));
+        set!(ctx.world, (balance));
     }
 }

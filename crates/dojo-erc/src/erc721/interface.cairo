@@ -19,13 +19,15 @@ trait IERC721<TState> {
 
     fn transfer(ref self: TState, to: ContractAddress, token_id: u256);
     fn transfer_from(ref self: TState, from: ContractAddress, to: ContractAddress, token_id: u256);
-    fn safe_transfer_from(
-        ref self: TState,
-        from: ContractAddress,
-        to: ContractAddress,
-        token_id: u256,
-        data: Span<felt252>
-    );
+
+    // TODO: check if should support
+    // fn safe_transfer_from(
+    //     ref self: TState,
+    //     from: ContractAddress,
+    //     to: ContractAddress,
+    //     token_id: u256,
+    //     data: Span<felt252>
+    // );
 
     fn mint(ref self: TState, to: ContractAddress, token_id: u256);
     fn burn(ref self: TState, token_id: u256);
