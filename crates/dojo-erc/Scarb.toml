@@ -9,6 +9,3 @@ dojo_plugin = { git = "https://github.com/dojoengine/dojo" }
 starknet = "2.1.0-rc4"
 dojo = { path = "../dojo-core" }
 
-[lib]
-
-[[target.dojo]]
