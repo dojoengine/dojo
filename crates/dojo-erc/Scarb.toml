@@ -9,4 +9,3 @@ dojo = { path = "../dojo-core" }
 
 [lib]
 
-[[target.dojo]]
