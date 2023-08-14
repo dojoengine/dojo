@@ -1,10 +1,10 @@
 use anyhow::Result;
 use clap::Args;
+use dojo_world::metadata::dojo_metadata_from_workspace;
 use scarb::core::Config;
 use starknet::core::types::FieldElement;
 
 use super::options::account::AccountOptions;
-use super::options::dojo_metadata_from_workspace;
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
 use crate::ops::execute;

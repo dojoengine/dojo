@@ -1,10 +1,10 @@
 use anyhow::Result;
+use dojo_world::metadata::Environment;
 use starknet::core::types::{BlockId, EventFilter};
 use starknet::core::utils::starknet_keccak;
 use starknet::providers::Provider;
 
 use crate::commands::events::EventsArgs;
-use crate::commands::options::Environment;
 
 pub async fn execute(args: EventsArgs, env_metadata: Option<Environment>) -> Result<()> {
     let EventsArgs {

@@ -1,8 +1,8 @@
 use anyhow::Result;
 use clap::Parser;
+use dojo_world::metadata::dojo_metadata_from_workspace;
 use scarb::core::Config;
 
-use super::options::dojo_metadata_from_workspace;
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
 use crate::ops::events;

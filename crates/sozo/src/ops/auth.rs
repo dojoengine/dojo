@@ -1,8 +1,8 @@
 use anyhow::{Context, Result};
 use dojo_client::contract::world::WorldContract;
+use dojo_world::metadata::Environment;
 
 use crate::commands::auth::AuthCommand;
-use crate::commands::options::Environment;
 
 pub async fn execute(command: AuthCommand, env_metadata: Option<Environment>) -> Result<()> {
     match command {

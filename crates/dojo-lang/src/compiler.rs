@@ -11,7 +11,7 @@ use cairo_lang_starknet::contract::{find_contracts, ContractDeclaration};
 use cairo_lang_starknet::contract_class::{compile_prepared_db, ContractClass};
 use cairo_lang_utils::UpcastMut;
 use itertools::Itertools;
-use scarb::compiler::helpers::build_compiler_config;
+use scarb::compiler::helpers::{build_compiler_config, collect_main_crate_ids};
 use scarb::compiler::{CompilationUnit, Compiler};
 use scarb::core::{PackageName, Workspace};
 use serde::{Deserialize, Serialize};
@@ -28,12 +28,12 @@ pub struct DojoCompiler;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-struct Props {
+pub struct Props {
     pub build_external_contracts: Option<Vec<ContractSelector>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-struct ContractSelector(String);
+pub struct ContractSelector(String);
 
 impl ContractSelector {
     fn package(&self) -> PackageName {
@@ -60,7 +60,10 @@ impl Compiler for DojoCompiler {
         let props: Props = unit.target().props()?;
         let target_dir = unit.target_dir(ws.config());
         let compiler_config = build_compiler_config(&unit, ws);
-        let main_crate_ids = collect_main_crate_ids(&unit, db);
+
+        let mut main_crate_ids = collect_main_crate_ids(&unit, db);
+        let core_crate_ids: Vec<CrateId> = collect_core_crate_ids(db);
+        main_crate_ids.extend(core_crate_ids);
 
         let contracts = find_project_contracts(
             db.upcast_mut(),
@@ -152,25 +155,30 @@ fn find_project_contracts(
     Ok(internal_contracts.into_iter().chain(external_contracts.into_iter()).collect())
 }
 
-pub fn collect_main_crate_ids(unit: &CompilationUnit, db: &RootDatabase) -> Vec<CrateId> {
-    let mut main_crate_ids = scarb::compiler::helpers::collect_main_crate_ids(unit, db);
-
-    let dojo_core_contracts = [
+pub fn collect_core_crate_ids(db: &RootDatabase) -> Vec<CrateId> {
+    [
         ContractSelector("dojo::executor::executor".to_string()),
         ContractSelector("dojo::world::world".to_string()),
         ContractSelector("dojo::world::library_call".to_string()),
         ContractSelector("dojo::world_factory::world_factory".to_string()),
-    ];
+    ]
+    .iter()
+    .map(|selector| selector.package().into())
+    .unique()
+    .map(|package_name: SmolStr| db.intern_crate(CrateLongId(package_name)))
+    .collect::<Vec<_>>()
+}
 
-    let crate_ids = dojo_core_contracts
+pub fn collect_external_crate_ids(
+    db: &RootDatabase,
+    external_contracts: Vec<ContractSelector>,
+) -> Vec<CrateId> {
+    external_contracts
         .iter()
         .map(|selector| selector.package().into())
         .unique()
         .map(|package_name: SmolStr| db.intern_crate(CrateLongId(package_name)))
-        .collect::<Vec<_>>();
-
-    main_crate_ids.extend(crate_ids);
-    main_crate_ids
+        .collect::<Vec<_>>()
 }
 
 #[test]

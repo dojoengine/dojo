@@ -115,6 +115,7 @@ mod tests {
         let mut components = array::ArrayTrait::new();
         components.append(position::TEST_CLASS_HASH);
         components.append(moves::TEST_CLASS_HASH);
+        components.append(dojo_erc::erc20::components::balance::TEST_CLASS_HASH);
         // systems
         let mut systems = array::ArrayTrait::new();
         systems.append(spawn::TEST_CLASS_HASH);

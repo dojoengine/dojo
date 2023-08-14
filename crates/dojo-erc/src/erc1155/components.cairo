@@ -1,14 +1,21 @@
 use starknet::ContractAddress;
 
 #[derive(Component, Copy, Drop, Serde, SerdeLen)]
-struct Allowance {
+struct OperatorApproval {
     #[key]
     token: ContractAddress,
     #[key]
     owner: ContractAddress,
     #[key]
-    spender: ContractAddress,
-    amount: felt252,
+    operator: ContractAddress,
+    approved: bool
+}
+
+#[derive(Component, Copy, Drop, Serde, SerdeLen)]
+struct Uri {
+    #[key]
+    token: ContractAddress,
+    uri: felt252
 }
 
 #[derive(Component, Copy, Drop, Serde, SerdeLen)]
@@ -16,13 +23,8 @@ struct Balance {
     #[key]
     token: ContractAddress,
     #[key]
-    sender: ContractAddress,
-    amount: felt252,
-}
-
-#[derive(Component, Copy, Drop, Serde, SerdeLen)]
-struct Supply {
+    token_id: felt252,
     #[key]
-    token: ContractAddress,
-    amount: felt252
+    account: ContractAddress,
+    amount: felt252,
 }

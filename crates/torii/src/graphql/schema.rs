@@ -1,9 +1,10 @@
 use anyhow::Result;
-use async_graphql::dynamic::{Object, Scalar, Schema, Union};
+use async_graphql::dynamic::{Field, Object, Scalar, Schema, Union};
 use sqlx::SqlitePool;
 
 use super::object::component::Component;
-use super::object::component_state::{type_mapping_from, ComponentStateObject};
+use super::object::component_state::{type_mapping_query, ComponentStateObject};
+use super::object::connection::page_info::PageInfoObject;
 use super::object::entity::EntityObject;
 use super::object::event::EventObject;
 use super::object::system::SystemObject;
@@ -12,6 +13,10 @@ use super::object::ObjectTrait;
 use super::types::ScalarType;
 use super::utils::format_name;
 
+// The graphql schema is built dynamically at runtime, this is because we won't know the schema of
+// the components until runtime. There are however, predefined objects such as entities and
+// system_calls, their schema is known but we generate them dynamically as well since async-graphql
+// does not allow mixing of static and dynamic schemas.
 pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     let mut schema_builder = Schema::build("Query", None, None);
 
@@ -21,6 +26,7 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
         Box::new(SystemObject::new()),
         Box::new(EventObject::new()),
         Box::new(SystemCallObject::new()),
+        Box::new(PageInfoObject::new()),
     ];
 
     // register dynamic component objects
@@ -28,10 +34,15 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     objects.extend(component_objects);
     schema_builder = schema_builder.register(component_union);
 
-    // collect field resolvers
-    let mut fields = Vec::new();
+    // collect resolvers for single and plural queries
+    let mut fields: Vec<Field> = Vec::new();
     for object in &objects {
-        fields.extend(object.resolvers());
+        if let Some(resolve_one) = object.resolve_one() {
+            fields.push(resolve_one);
+        }
+        if let Some(resolve_many) = object.resolve_many() {
+            fields.push(resolve_many);
+        }
     }
 
     // add field resolvers to query root
@@ -47,7 +58,14 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
 
     // register gql objects
     for object in &objects {
-        schema_builder = schema_builder.register(object.object());
+        schema_builder = schema_builder.register(object.create());
+
+        // register connection types, relay
+        if let Some(conn_objects) = object.connection() {
+            for object in conn_objects {
+                schema_builder = schema_builder.register(object);
+            }
+        }
     }
 
     schema_builder.register(query_root).data(pool.clone()).finish().map_err(|e| e.into())
@@ -65,7 +83,7 @@ async fn component_objects(pool: &SqlitePool) -> Result<(Vec<Box<dyn ObjectTrait
 
     // component state objects
     for component_metadata in components {
-        let field_type_mapping = type_mapping_from(&mut conn, &component_metadata.id).await?;
+        let field_type_mapping = type_mapping_query(&mut conn, &component_metadata.id).await?;
         if !field_type_mapping.is_empty() {
             let (name, type_name) = format_name(&component_metadata.name);
             let state_object = Box::new(ComponentStateObject::new(
