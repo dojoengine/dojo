@@ -1,7 +1,13 @@
+use std::env;
+use std::str::FromStr;
+
+use anyhow::anyhow;
 use camino::Utf8PathBuf;
 use clap::Parser;
 use dojo_world::manifest::Manifest;
+use dojo_world::metadata::{dojo_metadata_from_workspace, Environment};
 use graphql::server::start_graphql;
+use scarb::core::Config;
 use sqlx::sqlite::SqlitePoolOptions;
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -34,8 +40,8 @@ mod tests;
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// The world to index
-    #[arg(short, long)]
-    world_address: FieldElement,
+    #[arg(short, long = "world")]
+    world_address: Option<FieldElement>,
     /// The rpc endpoint to use
     #[arg(long, default_value = "http://localhost:5050")]
     rpc: String,
@@ -48,6 +54,28 @@ struct Args {
     /// Specify a block to start indexing from, ignored if stored head exists
     #[arg(short, long, default_value = "0")]
     start_block: u64,
+}
+
+fn get_world_address(
+    args: &Args,
+    manifest: &Manifest,
+    env_metadata: Option<&Environment>,
+) -> anyhow::Result<FieldElement> {
+    if let Some(address) = args.world_address {
+        Ok(address)
+    } else if let Some(address) = manifest.world.address {
+        Ok(address)
+    } else if let Some(world_address) = env_metadata
+        .and_then(|env| env.world_address())
+        .or(std::env::var("DOJO_WORLD_ADDRESS").ok().as_deref())
+    {
+        Ok(FieldElement::from_str(world_address)?)
+    } else {
+        Err(anyhow!(
+            "Could not find World address. Please specify it with --world, or in manifest.json or 
+             [tool.dojo.env] in Scarb.toml"
+        ))
+    }
 }
 
 #[tokio::main]
@@ -78,13 +106,24 @@ async fn main() -> anyhow::Result<()> {
 
     let provider = JsonRpcClient::new(HttpTransport::new(Url::parse(&args.rpc).unwrap()));
 
-    let manifest = if let Some(manifest_path) = args.manifest {
-        Manifest::load_from_path(manifest_path).expect("Failed to load manifest")
-    } else {
-        Manifest::default()
-    };
+    // Load manifest
+    let manifest_path = scarb::ops::find_manifest_path(None)?;
+    let config = Config::builder(manifest_path.clone())
+        .log_filter_directive(env::var_os("SCARB_LOG"))
+        .build()?;
+    let ws = scarb::ops::read_workspace(config.manifest_path(), &config)?;
+    let target_dir = ws.target_dir().path_existent()?;
+    let target_dir = target_dir.join(ws.config().profile().as_str());
+    let manifest = Manifest::load_from_path(target_dir.join("manifest.json"))?;
 
-    let state = Sql::new(pool.clone(), args.world_address).await?;
+    // Get world address
+    let world_address = get_world_address(
+        &args,
+        &manifest,
+        dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned()).as_ref(),
+    )?;
+
+    let state = Sql::new(pool.clone(), world_address).await?;
     state.load_from_manifest(manifest.clone()).await?;
     let processors = Processors {
         event: vec![
@@ -96,7 +135,7 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let indexer =
-        Indexer::new(&state, &provider, processors, manifest, args.world_address, args.start_block);
+        Indexer::new(&state, &provider, processors, manifest, world_address, args.start_block);
     let graphql = start_graphql(&pool);
 
     tokio::select! {
