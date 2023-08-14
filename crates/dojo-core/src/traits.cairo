@@ -5,11 +5,6 @@ trait Component<T> {
 }
 
 #[starknet::interface]
-trait IComponent<T> {
-    fn name(self: @T) -> felt252;
-}
-
-#[starknet::interface]
-trait ISystem<T> {
+trait INamed<T> {
     fn name(self: @T) -> felt252;
 }
