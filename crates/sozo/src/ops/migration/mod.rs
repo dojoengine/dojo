@@ -2,8 +2,8 @@ use std::path::Path;
 
 use anyhow::{anyhow, bail, Context, Result};
 use dojo_client::contract::world::WorldContract;
-use dojo_world::environment::Environment;
 use dojo_world::manifest::{Manifest, ManifestError};
+use dojo_world::metadata::Environment;
 use dojo_world::migration::strategy::{prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{Declarable, Deployable, MigrationError, RegisterOutput, StateDiff};

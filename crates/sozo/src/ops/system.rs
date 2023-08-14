@@ -1,7 +1,7 @@
 use anyhow::Result;
 use console::Style;
 use dojo_client::contract::world::WorldContractReader;
-use dojo_world::environment::Environment;
+use dojo_world::metadata::Environment;
 use starknet::core::types::{BlockId, BlockTag};
 
 use crate::commands::system::SystemCommands;

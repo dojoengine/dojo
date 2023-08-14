@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use dojo_client::contract::world::WorldContract;
-use dojo_world::environment::Environment;
+use dojo_world::metadata::Environment;
 
 use crate::commands::execute::ExecuteArgs;
 

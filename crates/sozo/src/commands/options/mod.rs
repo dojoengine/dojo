@@ -4,7 +4,7 @@ pub mod world;
 
 #[cfg(test)]
 mod test {
-    use dojo_world::environment::DojoMetadata;
+    use dojo_world::metadata::DojoMetadata;
 
     #[test]
     fn check_deserialization() {

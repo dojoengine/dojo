@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::{Args, Subcommand};
-use dojo_world::environment::dojo_metadata_from_workspace;
+use dojo_world::metadata::dojo_metadata_from_workspace;
 use scarb::core::Config;
 use starknet::core::types::FieldElement;
 

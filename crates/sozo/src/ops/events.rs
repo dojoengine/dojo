@@ -1,5 +1,5 @@
 use anyhow::Result;
-use dojo_world::environment::Environment;
+use dojo_world::metadata::Environment;
 use starknet::core::types::{BlockId, EventFilter};
 use starknet::core::utils::starknet_keccak;
 use starknet::providers::Provider;

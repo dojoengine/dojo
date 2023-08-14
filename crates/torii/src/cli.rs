@@ -1,11 +1,11 @@
 use std::env;
 use std::str::FromStr;
 
-use anyhow::{anyhow, Error};
+use anyhow::anyhow;
 use camino::Utf8PathBuf;
 use clap::Parser;
-use dojo_world::environment::{dojo_metadata_from_workspace, Environment};
 use dojo_world::manifest::Manifest;
+use dojo_world::metadata::{dojo_metadata_from_workspace, Environment};
 use graphql::server::start_graphql;
 use scarb::core::Config;
 use sqlx::sqlite::SqlitePoolOptions;
@@ -56,7 +56,7 @@ struct Args {
     start_block: u64,
 }
 
-fn address_from_dojo_metadata(env_metadata: Option<&Environment>) -> Result<FieldElement, Error> {
+fn address_from_dojo_metadata(env_metadata: Option<&Environment>) -> anyhow::Result<FieldElement> {
     if let Some(world_address) =
         env_metadata
             .and_then(|env| env.world_address())
@@ -104,10 +104,9 @@ async fn main() -> anyhow::Result<()> {
         .log_filter_directive(env::var_os("SCARB_LOG"))
         .build()?;
     let ws = scarb::ops::read_workspace(config.manifest_path(), &config)?;
-    let target_dir = ws.target_dir().path_existent().unwrap();
+    let target_dir = ws.target_dir().path_existent()?;
     let target_dir = target_dir.join(ws.config().profile().as_str());
-    let manifest = Manifest::load_from_path(target_dir.join("manifest.json"))
-        .expect("Failed to load manifest");
+    let manifest = Manifest::load_from_path(target_dir.join("manifest.json"))?;
 
     // Get world address
     let world_address = if let Some(address) = args.world_address {
