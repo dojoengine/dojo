@@ -1,30 +1,8 @@
-use core::traits::TryInto;
-// TODO: future improvements when Cairo catches up
-//    * use BoundedInt in allowance calc
-//    * use inline commands (currently available only in systems)
 //    * use ufelt when available
-
-use starknet::ContractAddress;
-
-#[starknet::interface]
-trait IERC20<TState> {
-    fn name(self: @TState) -> felt252;
-    fn symbol(self: @TState) -> felt252;
-    fn decimals(self: @TState) -> u8;
-    fn total_supply(self: @TState) -> u256;
-    fn balance_of(self: @TState, account: ContractAddress) -> u256;
-    fn allowance(self: @TState, owner: ContractAddress, spender: ContractAddress) -> u256;
-    fn transfer(ref self: TState, recipient: ContractAddress, amount: u256) -> bool;
-    fn transfer_from(
-        ref self: TState, sender: ContractAddress, recipient: ContractAddress, amount: u256
-    ) -> bool;
-    fn approve(ref self: TState, spender: ContractAddress, amount: u256) -> bool;
-}
 
 #[starknet::contract]
 mod ERC20 {
     use array::ArrayTrait;
-    use box::BoxTrait;
     use integer::BoundedInt;
     use option::OptionTrait;
     use starknet::{
@@ -33,7 +11,6 @@ mod ERC20 {
     };
     use traits::{Into, TryInto};
     use zeroable::Zeroable;
-    use debug::PrintTrait;
 
     use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
     use dojo_erc::erc20::components::{Allowance, Balance, Supply};
