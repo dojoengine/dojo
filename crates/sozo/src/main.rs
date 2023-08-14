@@ -39,6 +39,7 @@ fn cli_main(args: SozoArgs) -> Result<()> {
     let config = Config::builder(manifest_path)
         .log_filter_directive(env::var_os("SCARB_LOG"))
         .profile(args.profile_spec.determine()?)
+        .offline(args.offline)
         .cairo_plugins(cairo_plugins.into())
         .ui_verbosity(args.ui_verbosity())
         .compilers(compilers)
