@@ -15,10 +15,10 @@ mod ERC721 {
     #[storage]
     struct Storage {
         world: IWorldDispatcher,
-        _owner: ContractAddress,
-        _name: felt252,
-        _symbol: felt252,
-        _token_uri: felt252,
+        owner_: ContractAddress,
+        name_: felt252,
+        symbol_: felt252,
+        token_uri_: felt252,
     }
 
     #[event]
@@ -60,33 +60,31 @@ mod ERC721 {
         uri: felt252,
     ) {
         self.world.write(world);
-        self._owner.write(owner);
-        self._name.write(name);
-        self._symbol.write(symbol);
-        self._token_uri.write(uri);
+        self.owner_.write(owner);
+        self.name_.write(name);
+        self.symbol_.write(symbol);
+        self.token_uri_.write(uri);
     }
 
     #[external(v0)]
     fn owner(self: @ContractState) -> ContractAddress {
-        self._owner.read()
+        self.owner_.read()
     }
 
     #[external(v0)]
     fn name(self: @ContractState) -> felt252 {
-        self._name.read()
+        self.name_.read()
     }
 
     #[external(v0)]
     fn symbol(self: @ContractState) -> felt252 {
-        self._symbol.read()
+        self.symbol_.read()
     }
 
     #[external(v0)]
     fn token_uri(self: @ContractState, token_id: u256) -> felt252 {
-        assert(exists(self, token_id), 'ERC721: invalid token_id');
-
         // TODO : return self.token_uri + '/' + token_id
-        self._token_uri.read()
+        self.token_uri_.read()
     }
 
     #[external(v0)]
@@ -158,14 +156,6 @@ mod ERC721 {
     #[external(v0)]
     fn transfer(ref self: ContractState, to: ContractAddress, token_id: u256) {
         transfer_from(ref self, get_caller_address(), to, token_id);
-    }
-
-    #[external(v0)]
-    fn safe_transfer_from(
-        ref self: ContractState, from: ContractAddress, to: ContractAddress, token_id: u256
-    ) { // TODO: implement
-    // TODO: revert on non existing id
-    // panic(array!['not implemented'])
     }
 
     #[external(v0)]

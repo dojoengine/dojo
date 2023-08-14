@@ -38,6 +38,7 @@ fn test_deploy() {
     assert(erc721.owner() == deployer(), 'invalid owner');
     assert(erc721.name() == 'name', 'invalid name');
     assert(erc721.symbol() == 'symbol', 'invalid symbol');
+    assert(erc721.token_uri(0) == 'uri', 'invalid uri')
 }
 
 
@@ -46,14 +47,6 @@ fn test_deploy() {
 fn test_deploy_default() {
     let (world, erc721) = deploy_default();
     assert(erc721.name() == 'name', 'invalid name');
-}
-
-#[test]
-#[available_gas(30000000)]
-#[should_panic(expected: ('ERC721: invalid token_id', 'ENTRYPOINT_FAILED', ))]
-fn test_uri_with_invalid_id() {
-    let (world, erc721) = deploy_default();
-    erc721.token_uri(0); // should panic
 }
 
 
