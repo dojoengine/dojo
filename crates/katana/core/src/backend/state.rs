@@ -48,8 +48,6 @@ pub struct ClassRecord {
     /// The hash of a compiled Sierra class (if the class is a Sierra class, otherwise
     /// for legacy contract, it is the same as the class hash).
     pub compiled_hash: CompiledClassHash,
-    /// The Sierra class definition (if the class is a Sierra class, otherwise None).
-    pub sierra_class: Option<FlattenedSierraClass>,
 }
 
 #[derive(Clone, Debug)]
@@ -58,11 +56,17 @@ pub struct MemDb {
     pub classes: HashMap<ClassHash, ClassRecord>,
     /// A map of contract address to the contract information.
     pub storage: HashMap<ContractAddress, StorageRecord>,
+    /// A map of class hash to its Sierra class definition (if any).
+    pub sierra_classes: HashMap<ClassHash, FlattenedSierraClass>,
 }
 
 impl Default for MemDb {
     fn default() -> Self {
-        let mut state = MemDb { storage: HashMap::new(), classes: HashMap::new() };
+        let mut state = MemDb {
+            storage: HashMap::new(),
+            classes: HashMap::new(),
+            sierra_classes: HashMap::new(),
+        };
         deploy_fee_contract(&mut state);
         deploy_universal_deployer_contract(&mut state);
         state
@@ -75,9 +79,9 @@ impl StateExt for MemDb {
             return Err(StateError::StateReadError("Class hash is not a Sierra class".to_string()));
         };
 
-        self.classes
+        self.sierra_classes
             .get(class_hash)
-            .and_then(|r| r.sierra_class.clone())
+            .cloned()
             .ok_or(StateError::StateReadError("Missing Sierra class".to_string()))
     }
 
@@ -86,9 +90,11 @@ impl StateExt for MemDb {
         class_hash: ClassHash,
         sierra_class: FlattenedSierraClass,
     ) -> StateResult<()> {
-        if let Some(r) = self.classes.get_mut(&class_hash) {
-            r.sierra_class = Some(sierra_class);
-        }
+        // check the class hash must not be a legacy contract
+        if let ContractClass::V0(_) = self.get_compiled_contract_class(&class_hash)? {
+            return Err(StateError::StateReadError("Class hash is not a Sierra class".to_string()));
+        };
+        self.sierra_classes.insert(class_hash, sierra_class);
         Ok(())
     }
 
@@ -177,14 +183,8 @@ impl State for MemDb {
         class_hash: &ClassHash,
         contract_class: ContractClass,
     ) -> StateResult<()> {
-        self.classes.insert(
-            *class_hash,
-            ClassRecord {
-                sierra_class: None,
-                class: contract_class,
-                compiled_hash: CompiledClassHash(class_hash.0),
-            },
-        );
+        let compiled_hash = CompiledClassHash(class_hash.0);
+        self.classes.insert(*class_hash, ClassRecord { class: contract_class, compiled_hash });
         Ok(())
     }
 
@@ -247,8 +247,7 @@ impl StateReader for MemDb {
 
 impl Db for MemDb {
     fn dump_state(&self) -> Result<SerializableState> {
-        let mut serializable =
-            SerializableState { storage: BTreeMap::new(), classes: BTreeMap::new() };
+        let mut serializable = SerializableState::default();
 
         self.storage.iter().for_each(|(addr, storage)| {
             let mut record = SerializableStorageRecord {
@@ -269,10 +268,13 @@ impl Db for MemDb {
                 class_hash.0.into(),
                 SerializableClassRecord {
                     class: class_record.class.clone().into(),
-                    sierra_class: class_record.sierra_class.clone(),
                     compiled_hash: class_record.compiled_hash.0.into(),
                 },
             );
+        });
+
+        self.sierra_classes.iter().for_each(|(class_hash, class)| {
+            serializable.sierra_classes.insert(class_hash.0.into(), class.clone());
         });
 
         Ok(serializable)
@@ -288,11 +290,7 @@ fn deploy_fee_contract(state: &mut MemDb) {
     let hash = ClassHash(*ERC20_CONTRACT_CLASS_HASH);
     let compiled_hash = CompiledClassHash(*ERC20_CONTRACT_CLASS_HASH);
 
-    state.classes.insert(
-        hash,
-        ClassRecord { sierra_class: None, class: (*ERC20_CONTRACT).clone(), compiled_hash },
-    );
-
+    state.classes.insert(hash, ClassRecord { class: (*ERC20_CONTRACT).clone(), compiled_hash });
     state.storage.insert(
         address,
         StorageRecord { class_hash: hash, nonce: Nonce(1_u128.into()), storage: HashMap::new() },
@@ -304,11 +302,7 @@ fn deploy_universal_deployer_contract(state: &mut MemDb) {
     let hash = ClassHash(*UDC_CLASS_HASH);
     let compiled_hash = CompiledClassHash(*UDC_CLASS_HASH);
 
-    state.classes.insert(
-        hash,
-        ClassRecord { sierra_class: None, class: (*UDC_CONTRACT).clone(), compiled_hash },
-    );
-
+    state.classes.insert(hash, ClassRecord { class: (*UDC_CONTRACT).clone(), compiled_hash });
     state.storage.insert(
         address,
         StorageRecord { class_hash: hash, nonce: Nonce(1_u128.into()), storage: HashMap::new() },
@@ -327,8 +321,11 @@ mod tests {
 
     #[test]
     fn get_uninitialized_storage_value() {
-        let mut state =
-            CachedState::new(MemDb { classes: HashMap::new(), storage: HashMap::new() });
+        let mut state = CachedState::new(MemDb {
+            classes: HashMap::new(),
+            storage: HashMap::new(),
+            sierra_classes: HashMap::new(),
+        });
         let contract_address = ContractAddress(patricia_key!("0x1"));
         let key = StorageKey(patricia_key!("0x10"));
         assert_eq!(state.get_storage_at(contract_address, key).unwrap(), StarkFelt::default());
@@ -363,6 +360,7 @@ mod tests {
                 ),
             ]),
             classes: HashMap::new(),
+            sierra_classes: HashMap::new(),
         });
 
         assert_eq!(state.get_storage_at(contract_address0, key0).unwrap(), storage_val0);
@@ -381,24 +379,33 @@ mod tests {
 
     #[test]
     fn get_uninitialized_value() {
-        let mut state =
-            CachedState::new(MemDb { classes: HashMap::new(), storage: HashMap::new() });
+        let mut state = CachedState::new(MemDb {
+            classes: HashMap::new(),
+            storage: HashMap::new(),
+            sierra_classes: HashMap::new(),
+        });
         let contract_address = ContractAddress(patricia_key!("0x1"));
         assert_eq!(state.get_nonce_at(contract_address).unwrap(), Nonce::default());
     }
 
     #[test]
     fn get_uninitialized_class_hash_value() {
-        let mut state =
-            CachedState::new(MemDb { classes: HashMap::new(), storage: HashMap::new() });
+        let mut state = CachedState::new(MemDb {
+            classes: HashMap::new(),
+            storage: HashMap::new(),
+            sierra_classes: HashMap::new(),
+        });
         let valid_contract_address = ContractAddress(patricia_key!("0x1"));
         assert_eq!(state.get_class_hash_at(valid_contract_address).unwrap(), ClassHash::default());
     }
 
     #[test]
     fn cannot_set_class_hash_to_uninitialized_contract() {
-        let mut state =
-            CachedState::new(MemDb { classes: HashMap::new(), storage: HashMap::new() });
+        let mut state = CachedState::new(MemDb {
+            classes: HashMap::new(),
+            storage: HashMap::new(),
+            sierra_classes: HashMap::new(),
+        });
         let uninitialized_contract_address = ContractAddress::default();
         let class_hash = ClassHash(stark_felt!("0x100"));
         assert_matches!(
@@ -433,6 +440,7 @@ mod tests {
                 ),
             ]),
             classes: HashMap::new(),
+            sierra_classes: HashMap::new(),
         });
 
         assert_eq!(state.get_nonce_at(contract_address1).unwrap(), initial_nonce);
@@ -456,9 +464,16 @@ mod tests {
 
     #[test]
     fn apply_state_update() {
-        let mut old_state = MemDb { classes: HashMap::new(), storage: HashMap::new() };
-        let mut new_state =
-            CachedState::new(MemDb { classes: HashMap::new(), storage: HashMap::new() });
+        let mut old_state = MemDb {
+            classes: HashMap::new(),
+            storage: HashMap::new(),
+            sierra_classes: HashMap::new(),
+        };
+        let mut new_state = CachedState::new(MemDb {
+            classes: HashMap::new(),
+            storage: HashMap::new(),
+            sierra_classes: HashMap::new(),
+        });
 
         let class_hash = ClassHash(stark_felt!("0x1"));
         let address = ContractAddress(patricia_key!("0x1"));
@@ -493,7 +508,11 @@ mod tests {
 
     #[test]
     fn dump_and_load_state() {
-        let mut state = MemDb { classes: HashMap::new(), storage: HashMap::new() };
+        let mut state = MemDb {
+            classes: HashMap::new(),
+            storage: HashMap::new(),
+            sierra_classes: HashMap::new(),
+        };
 
         let class_hash = ClassHash(stark_felt!("0x1"));
         let address = ContractAddress(patricia_key!("0x1"));
@@ -509,7 +528,11 @@ mod tests {
 
         let dump = state.dump_state().expect("should dump state");
 
-        let mut new_state = MemDb { classes: HashMap::new(), storage: HashMap::new() };
+        let mut new_state = MemDb {
+            classes: HashMap::new(),
+            storage: HashMap::new(),
+            sierra_classes: HashMap::new(),
+        };
         new_state.load_state(dump).expect("should load state");
 
         assert_eq!(new_state.get_compiled_contract_class(&class_hash).unwrap(), contract);

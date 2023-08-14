@@ -98,7 +98,7 @@ fn test_system() {
     data.append(1337);
     data.append(1337);
     let id = world.uuid();
-    world.execute('bar'.into(), data.span());
+    world.execute('bar', data);
 }
 
 #[test]
@@ -111,7 +111,7 @@ fn test_emit() {
     let mut values = ArrayTrait::new();
     values.append(1);
     values.append(2);
-    world.emit(keys.span(), values.span());
+    world.emit(keys, values.span());
 }
 
 #[test]
@@ -132,7 +132,7 @@ fn test_set_entity_admin() {
     let mut data = ArrayTrait::new();
     data.append(420);
     data.append(1337);
-    world.execute('bar', data.span());
+    world.execute('bar', data);
     let foo = world.entity('Foo', keys.span(), 0, dojo::SerdeLen::<Foo>::len());
     assert(*foo[0] == 420, 'data not stored');
     assert(*foo[1] == 1337, 'data not stored');
@@ -155,7 +155,7 @@ fn test_set_entity_unauthorized() {
     let mut data = ArrayTrait::new();
     data.append(420);
     data.append(1337);
-    world.execute('bar'.into(), data.span());
+    world.execute('bar', data);
 }
 
 #[test]
@@ -207,7 +207,7 @@ fn test_library_call_system() {
     // 'name' entrypoint
     calldata.append(0x0361458367e696363fbcc70777d07ebbd2394e89fd0adcaf147faccd1d294d60);
     calldata.append(0);
-    world.execute('library_call'.into(), calldata.span());
+    world.execute('library_call', calldata);
 }
 
 #[test]
@@ -293,9 +293,9 @@ mod origin_wrapper {
     use dojo::world::Context;
 
     fn execute(ctx: Context) {
-        let data = ArrayTrait::new();
+        let data: Array<felt252> = ArrayTrait::new();
         assert(ctx.origin == starknet::contract_address_const::<0x1337>(), 'should be equal');
-        ctx.world.execute('origin'.into(), data.span());
+        ctx.world.execute('origin', data);
         assert(ctx.origin == starknet::contract_address_const::<0x1337>(), 'should be equal');
     }
 }
@@ -314,6 +314,6 @@ fn test_execute_origin() {
     let alice = starknet::contract_address_const::<0x1337>();
     starknet::testing::set_contract_address(alice);
     assert(world.origin() == starknet::contract_address_const::<0x0>(), 'should be equal');
-    world.execute('origin_wrapper'.into(), data.span());
+    world.execute('origin_wrapper', data);
     assert(world.origin() == starknet::contract_address_const::<0x0>(), 'should be equal');
 }

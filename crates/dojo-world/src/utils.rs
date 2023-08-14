@@ -153,13 +153,23 @@ where
     }
 }
 
-fn transaction_status_from_receipt(receipt: &TransactionReceipt) -> TransactionStatus {
+pub fn transaction_status_from_receipt(receipt: &TransactionReceipt) -> TransactionStatus {
     match receipt {
         TransactionReceipt::Invoke(receipt) => receipt.status,
         TransactionReceipt::Deploy(receipt) => receipt.status,
         TransactionReceipt::Declare(receipt) => receipt.status,
         TransactionReceipt::L1Handler(receipt) => receipt.status,
         TransactionReceipt::DeployAccount(receipt) => receipt.status,
+    }
+}
+
+pub fn block_number_from_receipt(tx: &TransactionReceipt) -> u64 {
+    match tx {
+        TransactionReceipt::Invoke(tx) => tx.block_number,
+        TransactionReceipt::L1Handler(tx) => tx.block_number,
+        TransactionReceipt::Declare(tx) => tx.block_number,
+        TransactionReceipt::Deploy(tx) => tx.block_number,
+        TransactionReceipt::DeployAccount(tx) => tx.block_number,
     }
 }
 

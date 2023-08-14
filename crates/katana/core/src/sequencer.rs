@@ -9,16 +9,13 @@ use auto_impl::auto_impl;
 use blockifier::execution::contract_class::ContractClass;
 use blockifier::state::state_api::StateReader;
 use blockifier::transaction::account_transaction::AccountTransaction;
-use blockifier::transaction::transaction_execution::Transaction;
-use blockifier::transaction::transactions::{DeclareTransaction, DeployAccountTransaction};
 use starknet::core::types::{
     BlockId, BlockTag, EmittedEvent, Event, EventsPage, FeeEstimate, FieldElement,
-    FlattenedSierraClass, MaybePendingTransactionReceipt, StateUpdate,
+    MaybePendingTransactionReceipt, StateUpdate,
 };
 use starknet_api::core::{ChainId, ClassHash, ContractAddress, Nonce};
 use starknet_api::hash::StarkFelt;
 use starknet_api::state::StorageKey;
-use starknet_api::transaction::{InvokeTransaction, TransactionHash};
 use tokio::time;
 
 use crate::backend::config::StarknetConfig;
@@ -26,7 +23,8 @@ use crate::backend::contract::StarknetContract;
 use crate::backend::state::{MemDb, StateExt};
 use crate::backend::storage::block::ExecutedBlock;
 use crate::backend::storage::transaction::{
-    KnownTransaction, PendingTransaction, TransactionStatus,
+    DeclareTransaction, DeployAccountTransaction, InvokeTransaction, KnownTransaction,
+    PendingTransaction, Transaction, TransactionStatus,
 };
 use crate::backend::{Backend, ExternalFunctionCall};
 use crate::sequencer_error::SequencerError;
@@ -97,13 +95,9 @@ pub trait Sequencer {
     async fn add_deploy_account_transaction(
         &self,
         transaction: DeployAccountTransaction,
-    ) -> (TransactionHash, ContractAddress);
+    ) -> (FieldElement, FieldElement);
 
-    async fn add_declare_transaction(
-        &self,
-        transaction: DeclareTransaction,
-        sierra_class: Option<FlattenedSierraClass>,
-    );
+    async fn add_declare_transaction(&self, transaction: DeclareTransaction);
 
     async fn add_invoke_transaction(&self, transaction: InvokeTransaction);
 
@@ -216,49 +210,21 @@ impl Sequencer for KatanaSequencer {
     async fn add_deploy_account_transaction(
         &self,
         transaction: DeployAccountTransaction,
-    ) -> (TransactionHash, ContractAddress) {
-        let transaction_hash = transaction.tx.transaction_hash;
+    ) -> (FieldElement, FieldElement) {
+        let transaction_hash = transaction.inner.transaction_hash.0.into();
         let contract_address = transaction.contract_address;
 
-        self.backend
-            .handle_transaction(Transaction::AccountTransaction(AccountTransaction::DeployAccount(
-                transaction,
-            )))
-            .await;
+        self.backend.handle_transaction(Transaction::DeployAccount(transaction)).await;
 
         (transaction_hash, contract_address)
     }
 
-    async fn add_declare_transaction(
-        &self,
-        transaction: DeclareTransaction,
-        sierra_class: Option<FlattenedSierraClass>,
-    ) {
-        let class_hash = transaction.tx().class_hash();
-
-        self.backend
-            .handle_transaction(Transaction::AccountTransaction(AccountTransaction::Declare(
-                transaction,
-            )))
-            .await;
-
-        if let Some(sierra_class) = sierra_class {
-            self.backend
-                .state
-                .write()
-                .await
-                .classes
-                .entry(class_hash)
-                .and_modify(|r| r.sierra_class = Some(sierra_class));
-        }
+    async fn add_declare_transaction(&self, transaction: DeclareTransaction) {
+        self.backend.handle_transaction(Transaction::Declare(transaction)).await;
     }
 
     async fn add_invoke_transaction(&self, transaction: InvokeTransaction) {
-        self.backend
-            .handle_transaction(Transaction::AccountTransaction(AccountTransaction::Invoke(
-                transaction,
-            )))
-            .await;
+        self.backend.handle_transaction(Transaction::Invoke(transaction)).await;
     }
 
     async fn estimate_fee(
@@ -269,13 +235,6 @@ impl Sequencer for KatanaSequencer {
         if self.block(block_id).await.is_none() {
             return Err(SequencerError::BlockNotFound(block_id));
         }
-
-        match &account_transaction {
-            AccountTransaction::Invoke(InvokeTransaction::V1(tx)) => tx.sender_address,
-            AccountTransaction::Declare(tx) => tx.tx().sender_address(),
-            AccountTransaction::DeployAccount(tx) => tx.contract_address,
-            _ => return Err(SequencerError::UnsupportedTransaction),
-        };
 
         let state = self.state(&block_id).await?;
 
@@ -418,9 +377,7 @@ impl Sequencer for KatanaSequencer {
             None => self.backend.pending_block.read().await.as_ref().and_then(|b| {
                 b.transactions
                     .iter()
-                    .find(|tx| {
-                        Into::<FieldElement>::into(tx.transaction.transaction_hash().0) == *hash
-                    })
+                    .find(|tx| tx.inner.hash() == *hash)
                     .map(|_| TransactionStatus::AcceptedOnL2)
             }),
         }
@@ -451,7 +408,7 @@ impl Sequencer for KatanaSequencer {
             None => self.backend.pending_block.read().await.as_ref().and_then(|b| {
                 b.transactions
                     .iter()
-                    .find(|tx| tx.hash() == *hash)
+                    .find(|tx| tx.inner.hash() == *hash)
                     .map(|tx| PendingTransaction(tx.clone()).into())
             }),
         }
@@ -560,7 +517,7 @@ impl Sequencer for KatanaSequencer {
                     data: e.data.clone(),
                     block_hash,
                     block_number,
-                    transaction_hash: txn.hash(),
+                    transaction_hash: txn.inner.hash(),
                 }));
 
                 if filtered_events.len() >= chunk_size as usize {

@@ -48,16 +48,12 @@ pub async fn entity_fixtures(pool: &SqlitePool) {
 
     // Set entity with one moves component
     let key = vec![FieldElement::ONE];
-    let moves_values = vec![
-        FieldElement::from_hex_be("0xbeef").unwrap(),
-        FieldElement::from_hex_be("0xa").unwrap(),
-    ];
+    let moves_values = vec![FieldElement::from_hex_be("0xa").unwrap()];
     state.set_entity("Moves".to_string(), key, moves_values.clone()).await.unwrap();
 
     // Set entity with one position component
     let key = vec![FieldElement::TWO];
     let position_values = vec![
-        FieldElement::from_hex_be("0xbeef").unwrap(),
         FieldElement::from_hex_be("0x2a").unwrap(),
         FieldElement::from_hex_be("0x45").unwrap(),
     ];

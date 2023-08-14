@@ -1,5 +1,5 @@
 #[system]
-mod ERC20Approve {
+mod erc20_approve {
     use traits::Into;
     use starknet::ContractAddress;
     use dojo::world::Context;
@@ -17,23 +17,28 @@ mod ERC20Approve {
 }
 
 #[system]
-mod ERC20TransferFrom {
+mod erc20_transfer_from {
     const UNLIMITED_ALLOWANCE: felt252 =
         3618502788666131213697322783095070105623107215331596699973092056135872020480;
 
-    use starknet::get_caller_address;
+    use starknet::ContractAddress;
     use traits::Into;
     use zeroable::Zeroable;
     use dojo::world::Context;
     use dojo_erc::erc20::components::{Allowance, Balance};
 
     fn execute(
-        ctx: Context, token: felt252, spender: felt252, recipient: felt252, amount: felt252
+        ctx: Context,
+        token: ContractAddress,
+        caller: ContractAddress,
+        spender: ContractAddress,
+        recipient: ContractAddress,
+        amount: felt252
     ) {
+        assert(token == ctx.origin, 'ERC20: not authorized');
         assert(spender.is_non_zero(), 'ERC20: transfer from 0');
         assert(recipient.is_non_zero(), 'ERC20: transfer to 0');
 
-        let caller: felt252 = get_caller_address().into();
         if spender != caller {
             // decrease allowance if it's not owner doing the transfer
             let mut allowance = get !(ctx.world, (token, caller, spender), Allowance);
@@ -60,13 +65,15 @@ mod ERC20TransferFrom {
 }
 
 #[system]
-mod ERC20Mint {
+mod erc20_mint {
+    use starknet::ContractAddress;
     use traits::Into;
     use zeroable::Zeroable;
     use dojo::world::Context;
     use dojo_erc::erc20::components::{Balance, Supply};
 
-    fn execute(ctx: Context, token: felt252, recipient: felt252, amount: felt252) {
+    fn execute(ctx: Context, token: ContractAddress, recipient: ContractAddress, amount: felt252) {
+        assert(token == ctx.origin, 'ERC20: not authorized');
         assert(recipient.is_non_zero(), 'ERC20: mint to 0');
 
         // increase token supply
@@ -82,13 +89,15 @@ mod ERC20Mint {
 }
 
 #[system]
-mod ERC20Burn {
+mod erc20_burn {
+    use starknet::ContractAddress;
     use traits::Into;
     use zeroable::Zeroable;
     use dojo::world::Context;
     use dojo_erc::erc20::components::{Balance, Supply};
 
-    fn execute(ctx: Context, token: felt252, owner: felt252, amount: felt252) {
+    fn execute(ctx: Context, token: ContractAddress, owner: ContractAddress, amount: felt252) {
+        assert(token == ctx.origin, 'ERC20: not authorized');
         assert(owner.is_non_zero(), 'ERC20: burn from 0');
 
         // decrease token supply

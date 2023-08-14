@@ -2,10 +2,16 @@ use std::sync::Arc;
 
 use blockifier::state::errors::StateError;
 use blockifier::transaction::account_transaction::AccountTransaction;
-use blockifier::transaction::transactions::{DeclareTransaction, DeployAccountTransaction};
+use blockifier::transaction::transactions::{
+    DeclareTransaction as ExecutionDeclareTransaction,
+    DeployAccountTransaction as ExecutionDeployAccountTransaction,
+};
 use jsonrpsee::core::{async_trait, Error};
 use katana_core::backend::contract::StarknetContract;
-use katana_core::backend::storage::transaction::{KnownTransaction, PendingTransaction};
+use katana_core::backend::storage::transaction::{
+    DeclareTransaction, DeployAccountTransaction, InvokeTransaction, KnownTransaction,
+    PendingTransaction,
+};
 use katana_core::backend::ExternalFunctionCall;
 use katana_core::sequencer::Sequencer;
 use katana_core::sequencer_error::SequencerError;
@@ -139,7 +145,7 @@ where
         let hash: FieldElement = block
             .transactions()
             .get(index)
-            .map(|t| t.transaction.transaction_hash().0.into())
+            .map(|t| t.inner.hash())
             .ok_or(Error::from(StarknetApiError::InvalidTxnIndex))?;
 
         self.transaction_by_hash(hash).await
@@ -315,8 +321,8 @@ where
 
         self.sequencer
             .add_deploy_account_transaction(DeployAccountTransaction {
-                tx: transaction,
-                contract_address: ContractAddress(patricia_key!(contract_address)),
+                contract_address,
+                inner: transaction,
             })
             .await;
 
@@ -340,7 +346,7 @@ where
                         broadcasted_declare_rpc_to_api_transaction(tx, chain_id).unwrap();
 
                     AccountTransaction::Declare(
-                        DeclareTransaction::new(transaction, contract_class)
+                        ExecutionDeclareTransaction::new(transaction, contract_class)
                             .map_err(|_| Error::from(StarknetApiError::InternalServerError))?,
                     )
                 }
@@ -354,7 +360,7 @@ where
                     let (transaction, contract_address) =
                         broadcasted_deploy_account_rpc_to_api_transaction(tx, chain_id);
 
-                    AccountTransaction::DeployAccount(DeployAccountTransaction {
+                    AccountTransaction::DeployAccount(ExecutionDeployAccountTransaction {
                         tx: transaction,
                         contract_address: ContractAddress(patricia_key!(contract_address)),
                     })
@@ -401,11 +407,11 @@ where
         let class_hash = transaction.class_hash().0.into();
 
         self.sequencer
-            .add_declare_transaction(
-                DeclareTransaction::new(transaction, contract_class)
-                    .expect("tx and contract must match"),
+            .add_declare_transaction(DeclareTransaction {
                 sierra_class,
-            )
+                inner: transaction,
+                compiled_class: contract_class,
+            })
             .await;
 
         Ok(DeclareTransactionResult { transaction_hash, class_hash })
@@ -421,7 +427,7 @@ where
         let transaction = broadcasted_invoke_rpc_to_api_transaction(invoke_transaction, chain_id);
         let transaction_hash = transaction.transaction_hash().0.into();
 
-        self.sequencer.add_invoke_transaction(transaction).await;
+        self.sequencer.add_invoke_transaction(InvokeTransaction(transaction)).await;
 
         Ok(InvokeTransactionResult { transaction_hash })
     }

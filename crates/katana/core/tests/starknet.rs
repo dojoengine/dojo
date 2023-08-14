@@ -1,8 +1,6 @@
 use blockifier::state::state_api::StateReader;
-use blockifier::transaction::account_transaction::AccountTransaction;
-use blockifier::transaction::transaction_execution::Transaction;
-use blockifier::transaction::transactions::DeclareTransaction;
 use katana_core::backend::config::{Environment, StarknetConfig};
+use katana_core::backend::storage::transaction::{DeclareTransaction, Transaction};
 use katana_core::backend::Backend;
 use katana_core::db::Db;
 use katana_core::utils::contract::get_contract_class;
@@ -31,19 +29,19 @@ fn create_test_starknet() -> Backend {
 }
 
 fn create_declare_transaction(sender_address: ContractAddress) -> DeclareTransaction {
-    let test_contract_class =
+    let compiled_class =
         get_contract_class(include_str!("../contracts/compiled/test_contract.json"));
-    DeclareTransaction::new(
-        DeclareApiTransaction::V0(DeclareTransactionV0V1 {
+    DeclareTransaction {
+        inner: DeclareApiTransaction::V0(DeclareTransactionV0V1 {
             class_hash: ClassHash(stark_felt!("0x1234")),
             nonce: Nonce(1u8.into()),
             sender_address,
             transaction_hash: TransactionHash(stark_felt!("0x6969")),
             ..Default::default()
         }),
-        test_contract_class,
-    )
-    .unwrap()
+        compiled_class,
+        sierra_class: None,
+    }
 }
 
 #[tokio::test]
@@ -117,11 +115,7 @@ async fn dump_and_load_state() {
     let declare_tx =
         create_declare_transaction(ContractAddress(patricia_key!(backend_old.accounts[0].address)));
 
-    backend_old
-        .handle_transaction(Transaction::AccountTransaction(AccountTransaction::Declare(
-            declare_tx,
-        )))
-        .await;
+    backend_old.handle_transaction(Transaction::Declare(declare_tx)).await;
 
     let serializable_state =
         backend_old.state.read().await.dump_state().expect("must be able to serialize state");
