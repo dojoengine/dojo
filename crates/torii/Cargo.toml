@@ -31,13 +31,14 @@ tokio-util = "0.7.7"
 tracing-subscriber.workspace = true
 tracing.workspace = true
 url = "2.2.2"
+base64 = "0.21.2"
 
 [dev-dependencies]
 camino.workspace = true
 
 [features]
-default = [ "sqlite" ]
-sqlite = [ "sqlx/sqlite" ]
+default = ["sqlite"]
+sqlite = ["sqlx/sqlite"]
 
 [[bin]]
 name = "torii"

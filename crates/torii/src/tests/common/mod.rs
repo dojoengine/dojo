@@ -8,24 +8,46 @@ use crate::graphql::schema::build_schema;
 use crate::state::sql::{Executable, Sql};
 use crate::state::State;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Connection<T> {
+    pub total_count: i64,
+    pub edges: Vec<Edge<T>>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Edge<T> {
+    pub node: T,
+    pub cursor: String,
+}
+
+#[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Entity {
     pub component_names: String,
     pub keys: Option<String>,
+    pub created_at: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct Moves {
     pub __typename: String,
     pub remaining: u32,
+    pub entity: Option<Entity>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct Position {
     pub __typename: String,
     pub x: u32,
     pub y: u32,
+    pub entity: Option<Entity>,
+}
+
+pub enum Direction {
+    Forward,
+    Backward,
 }
 
 #[allow(dead_code)]
@@ -65,4 +87,38 @@ pub async fn entity_fixtures(pool: &SqlitePool) {
     state.set_entity("Position".to_string(), key, position_values).await.unwrap();
 
     state.execute().await.unwrap();
+}
+
+pub async fn paginate(
+    pool: &SqlitePool,
+    cursor: Option<String>,
+    direction: Direction,
+    page_size: usize,
+) -> Connection<Entity> {
+    let (first_last, before_after) = match direction {
+        Direction::Forward => ("first", "after"),
+        Direction::Backward => ("last", "before"),
+    };
+
+    let cursor = cursor.map_or(String::new(), |c| format!(", {before_after}: \"{c}\""));
+    let query = format!(
+        "
+        {{
+            entities (keys: [\"%\"], {first_last}: {page_size} {cursor}) 
+            {{
+                totalCount
+                edges {{
+                    cursor
+                    node {{
+                        componentNames
+                    }}
+                }}
+            }}
+        }}
+        "
+    );
+
+    let value = run_graphql_query(pool, &query).await;
+    let entities = value.get("entities").ok_or("entities not found").unwrap();
+    serde_json::from_value(entities.clone()).unwrap()
 }
