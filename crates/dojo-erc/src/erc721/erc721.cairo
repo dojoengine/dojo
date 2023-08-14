@@ -83,7 +83,7 @@ mod ERC721 {
 
     #[external(v0)]
     fn token_uri(self: @ContractState, token_id: u256) -> felt252 {
-        assert(exists(self, token_id), 'invalid token_id');
+        assert(exists(self, token_id), 'ERC721: invalid token_id');
 
         // TODO : return self.token_uri + '/' + token_id
         self._token_uri.read()
@@ -110,7 +110,7 @@ mod ERC721 {
 
     #[external(v0)]
     fn get_approved(self: @ContractState, token_id: u256) -> ContractAddress {
-        assert(exists(self, token_id), 'invalid token_id');
+        assert(exists(self, token_id), 'ERC721: invalid token_id');
 
         let token = get_contract_address();
         let approved = get!(self.world.read(), (token, u256_into_felt252(token_id)), TokenApproval);
@@ -128,8 +128,6 @@ mod ERC721 {
 
     #[external(v0)]
     fn approve(ref self: ContractState, to: ContractAddress, token_id: u256) {
-        assert(exists(@self, token_id), 'invalid token_id');
-
         let token = get_contract_address();
         let caller = get_caller_address();
 
@@ -145,7 +143,6 @@ mod ERC721 {
 
     #[external(v0)]
     fn set_approval_for_all(ref self: ContractState, operator: ContractAddress, approved: bool) {
-
         let token = get_contract_address();
         let caller = get_caller_address();
 
@@ -175,12 +172,12 @@ mod ERC721 {
     fn transfer_from(
         ref self: ContractState, from: ContractAddress, to: ContractAddress, token_id: u256
     ) {
-        assert(exists(@self, token_id), 'invalid token_id');
-
         let token = get_contract_address();
+        let caller = get_caller_address();
 
         let mut calldata = ArrayTrait::new();
         calldata.append(token.into());
+        calldata.append(caller.into());
         calldata.append(from.into());
         calldata.append(to.into());
         calldata.append(u256_into_felt252(token_id));
@@ -191,8 +188,6 @@ mod ERC721 {
 
     #[external(v0)]
     fn mint(ref self: ContractState, to: ContractAddress, token_id: u256) {
-        assert(!exists(@self, token_id), 'already minted');
-
         let token = get_contract_address();
 
         let mut calldata: Array<felt252> = ArrayTrait::new();
@@ -205,13 +200,12 @@ mod ERC721 {
 
     #[external(v0)]
     fn burn(ref self: ContractState, token_id: u256) {
-        assert(exists(@self, token_id), 'invalid token_id');
-        assert(owner_of(@self, token_id) == get_caller_address(), 'caller is not owner');
-
         let token = get_contract_address();
+        let caller = get_caller_address();
 
         let mut calldata: Array<felt252> = ArrayTrait::new();
         calldata.append(token.into());
+        calldata.append(caller.into());
         calldata.append(u256_into_felt252(token_id));
 
         self.world.read().execute('erc721_burn'.into(), calldata);
