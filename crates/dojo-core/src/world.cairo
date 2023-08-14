@@ -57,13 +57,13 @@ mod world {
 
     use dojo::database;
     use dojo::executor::{IExecutorDispatcher, IExecutorDispatcherTrait};
-    use dojo::traits::{
-        IComponentLibraryDispatcher, IComponentDispatcherTrait, ISystemLibraryDispatcher,
-        ISystemDispatcherTrait
-    };
+    use dojo::traits::{INamedLibraryDispatcher, INamedDispatcherTrait, };
     use dojo::world::{IWorldDispatcher, IWorld};
 
     use super::Context;
+
+    const NAME_ENTRYPOINT: felt252 =
+        0x0361458367e696363fbcc70777d07ebbd2394e89fd0adcaf147faccd1d294d60;
 
     #[event]
     #[derive(Drop, starknet::Event)]
@@ -240,7 +240,11 @@ mod world {
         ///
         /// * `class_hash` - The class hash of the component to be registered.
         fn register_component(ref self: ContractState, class_hash: ClassHash) {
-            let name = IComponentLibraryDispatcher { class_hash: class_hash }.name();
+            let calldata = ArrayTrait::new();
+            let name = *self
+                .executor_dispatcher
+                .read()
+                .call(class_hash, NAME_ENTRYPOINT, calldata.span())[0];
 
             // If component is already registered, validate permission to update.
             if self.components.read(name).is_non_zero() {
@@ -273,7 +277,11 @@ mod world {
         ///
         /// * `class_hash` - The class hash of the system to be registered.
         fn register_system(ref self: ContractState, class_hash: ClassHash) {
-            let name = ISystemLibraryDispatcher { class_hash: class_hash }.name();
+            let calldata = ArrayTrait::new();
+            let name = *self
+                .executor_dispatcher
+                .read()
+                .call(class_hash, NAME_ENTRYPOINT, calldata.span())[0];
 
             // If system is already registered, validate permission to update.
             if self.systems.read(name).is_non_zero() {

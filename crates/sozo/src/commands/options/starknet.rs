@@ -1,10 +1,9 @@
 use anyhow::{anyhow, Result};
 use clap::Args;
+use dojo_world::metadata::Environment;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use url::Url;
-
-use super::Environment;
 
 #[derive(Debug, Args)]
 #[command(next_help_heading = "Starknet options")]

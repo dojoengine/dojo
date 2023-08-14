@@ -43,31 +43,7 @@ mod bar {
     }
 }
 
-#[system]
-mod Buzz {
-    use super::{Foo, Fizz};
-    use traits::Into;
-    use starknet::get_caller_address;
-    use dojo::world::Context;
-
-    fn execute(ctx: Context, a: felt252, b: u128) {
-        set !(ctx.world, (Foo { caller: ctx.origin, a, b }));
-    // let fizz = get !(ctx.world, ctx.origin, Fizz);
-    }
-}
-
 // Tests
-
-fn deploy_world() -> IWorldDispatcher {
-    let mut calldata: Array<felt252> = array::ArrayTrait::new();
-    calldata.append(starknet::contract_address_const::<0x0>().into());
-    let (world_address, _) = deploy_syscall(
-        world::TEST_CLASS_HASH.try_into().unwrap(), 0, calldata.span(), false
-    )
-        .unwrap();
-
-    IWorldDispatcher { contract_address: world_address }
-}
 
 #[test]
 #[available_gas(2000000)]
@@ -76,21 +52,13 @@ fn test_component() {
     let world = deploy_world();
 
     world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
-    let mut keys = ArrayTrait::new();
-    keys.append(420);
-    let mut data = ArrayTrait::new();
-    data.append(1337);
-
-    world.set_entity(name, keys.span(), 0, data.span());
-    let stored = world.entity(name, keys.span(), 0, dojo::SerdeLen::<Foo>::len());
-    assert(*stored.snapshot.at(0) == 1337, 'data not stored');
 }
 
 #[test]
 #[available_gas(6000000)]
 fn test_system() {
     // Spawn empty world
-    let world = spawn_empty_world();
+    let world = deploy_world();
 
     world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
@@ -99,6 +67,12 @@ fn test_system() {
     data.append(1337);
     let id = world.uuid();
     world.execute('bar', data);
+
+    let mut keys = ArrayTrait::new();
+    keys.append(0);
+
+    let stored = world.entity('Foo', keys.span(), 0, dojo::SerdeLen::<Foo>::len());
+    assert(*stored.snapshot.at(0) == 1337, 'data not stored');
 }
 
 #[test]
@@ -118,7 +92,7 @@ fn test_emit() {
 #[available_gas(9000000)]
 fn test_set_entity_admin() {
     // Spawn empty world
-    let world = spawn_empty_world();
+    let world = deploy_world();
 
     world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
@@ -143,7 +117,7 @@ fn test_set_entity_admin() {
 #[should_panic]
 fn test_set_entity_unauthorized() {
     // Spawn empty world
-    let world = spawn_empty_world();
+    let world = deploy_world();
 
     world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
@@ -163,7 +137,7 @@ fn test_set_entity_unauthorized() {
 #[should_panic]
 fn test_set_entity_directly() {
     // Spawn empty world
-    let world = spawn_empty_world();
+    let world = deploy_world();
 
     world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
@@ -172,7 +146,7 @@ fn test_set_entity_directly() {
 }
 
 // Utils
-fn spawn_empty_world() -> IWorldDispatcher {
+fn deploy_world() -> IWorldDispatcher {
     // Deploy executor contract
     let executor_constructor_calldata = array::ArrayTrait::new();
     let (executor_address, _) = deploy_syscall(
@@ -199,7 +173,7 @@ fn spawn_empty_world() -> IWorldDispatcher {
 #[available_gas(6000000)]
 fn test_library_call_system() {
     // Spawn empty world
-    let world = spawn_empty_world();
+    let world = deploy_world();
 
     world.register_system(library_call::TEST_CLASS_HASH.try_into().unwrap());
     let mut calldata = ArrayTrait::new();
@@ -213,7 +187,7 @@ fn test_library_call_system() {
 #[test]
 #[available_gas(6000000)]
 fn test_owner() {
-    let world = spawn_empty_world();
+    let world = deploy_world();
 
     let alice = starknet::contract_address_const::<0x1337>();
     let bob = starknet::contract_address_const::<0x1338>();
@@ -238,7 +212,7 @@ fn test_owner() {
 #[available_gas(6000000)]
 #[should_panic]
 fn test_set_owner_fails_for_non_owner() {
-    let world = spawn_empty_world();
+    let world = deploy_world();
 
     let alice = starknet::contract_address_const::<0x1337>();
 
@@ -253,7 +227,7 @@ fn test_set_owner_fails_for_non_owner() {
 #[test]
 #[available_gas(6000000)]
 fn test_writer() {
-    let world = spawn_empty_world();
+    let world = deploy_world();
 
     assert(!world.is_writer(42, 69), 'should not be writer');
 
@@ -268,7 +242,7 @@ fn test_writer() {
 #[available_gas(6000000)]
 #[should_panic]
 fn test_set_writer_fails_for_non_owner() {
-    let world = spawn_empty_world();
+    let world = deploy_world();
 
     let alice = starknet::contract_address_const::<0x1337>();
     starknet::testing::set_contract_address(alice);
@@ -304,7 +278,7 @@ mod origin_wrapper {
 #[available_gas(6000000)]
 fn test_execute_origin() {
     // Spawn empty world
-    let world = spawn_empty_world();
+    let world = deploy_world();
 
     world.register_system(origin::TEST_CLASS_HASH.try_into().unwrap());
     world.register_system(origin_wrapper::TEST_CLASS_HASH.try_into().unwrap());

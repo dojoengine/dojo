@@ -6,7 +6,10 @@ use serde::Deserialize;
 use sqlx::pool::PoolConnection;
 use sqlx::{FromRow, Pool, QueryBuilder, Result, Sqlite};
 
-use super::component_state::{component_state_by_entity_id, type_mapping_from};
+use super::component_state::{component_state_by_id_query, type_mapping_query};
+use super::connection::{
+    connection_input, connection_output, decode_cursor, parse_arguments, ConnectionArguments,
+};
 use super::query::{query_by_id, ID};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::graphql::constants::DEFAULT_LIMIT;
@@ -14,7 +17,7 @@ use crate::graphql::types::ScalarType;
 use crate::graphql::utils::csv_to_vec;
 use crate::graphql::utils::extract_value::extract;
 
-#[derive(FromRow, Deserialize)]
+#[derive(FromRow, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Entity {
     pub id: String,
@@ -25,18 +28,18 @@ pub struct Entity {
 }
 
 pub struct EntityObject {
-    pub field_type_mapping: TypeMapping,
+    pub type_mapping: TypeMapping,
 }
 
 impl EntityObject {
     pub fn new() -> Self {
         Self {
-            field_type_mapping: IndexMap::from([
-                (Name::new("id"), TypeRef::ID.to_string()),
-                (Name::new("keys"), TypeRef::STRING.to_string()),
-                (Name::new("componentNames"), TypeRef::STRING.to_string()),
-                (Name::new("createdAt"), ScalarType::DateTime.to_string()),
-                (Name::new("updatedAt"), ScalarType::DateTime.to_string()),
+            type_mapping: IndexMap::from([
+                (Name::new("id"), TypeRef::named(TypeRef::ID)),
+                (Name::new("keys"), TypeRef::named(TypeRef::STRING)),
+                (Name::new("componentNames"), TypeRef::named(TypeRef::STRING)),
+                (Name::new("createdAt"), TypeRef::named(ScalarType::DateTime.to_string())),
+                (Name::new("updatedAt"), TypeRef::named(ScalarType::DateTime.to_string())),
             ]),
         }
     }
@@ -48,11 +51,11 @@ impl EntityObject {
             (Name::new("componentNames"), Value::from(entity.component_names)),
             (
                 Name::new("createdAt"),
-                Value::from(entity.created_at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)),
+                Value::from(entity.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
             ),
             (
                 Name::new("updatedAt"),
-                Value::from(entity.updated_at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)),
+                Value::from(entity.updated_at.format("%Y-%m-%d %H:%M:%S").to_string()),
             ),
         ])
     }
@@ -67,118 +70,137 @@ impl ObjectTrait for EntityObject {
         "Entity"
     }
 
-    fn field_type_mapping(&self) -> &TypeMapping {
-        &self.field_type_mapping
+    fn type_mapping(&self) -> &TypeMapping {
+        &self.type_mapping
     }
 
     fn nested_fields(&self) -> Option<Vec<Field>> {
         Some(vec![Field::new("components", TypeRef::named_list("ComponentUnion"), move |ctx| {
             FieldFuture::new(async move {
-                let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                let entity = ctx.parent_value.try_downcast_ref::<ValueMapping>()?;
+                match ctx.parent_value.try_to_value()? {
+                    Value::Object(indexmap) => {
+                        let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                        let components =
+                            csv_to_vec(&extract::<String>(indexmap, "componentNames")?);
+                        let id = extract::<String>(indexmap, "id")?;
 
-                let components = csv_to_vec(&extract::<String>(entity, "componentNames")?);
-                let id = extract::<String>(entity, "id")?;
+                        let mut results: Vec<FieldValue<'_>> = Vec::new();
+                        for component_name in components {
+                            let table_name = component_name.to_lowercase();
+                            let type_mapping = type_mapping_query(&mut conn, &table_name).await?;
+                            let state = component_state_by_id_query(
+                                &mut conn,
+                                &table_name,
+                                &id,
+                                &type_mapping,
+                            )
+                            .await?;
+                            results.push(FieldValue::with_type(
+                                FieldValue::owned_any(state),
+                                component_name,
+                            ));
+                        }
 
-                let mut results: Vec<FieldValue<'_>> = Vec::new();
-                for component_name in components {
-                    let table_name = component_name.to_lowercase();
-                    let field_type_mapping = type_mapping_from(&mut conn, &table_name).await?;
-                    let state = component_state_by_entity_id(
-                        &mut conn,
-                        &table_name,
-                        &id,
-                        &field_type_mapping,
-                    )
-                    .await?;
-                    results
-                        .push(FieldValue::with_type(FieldValue::owned_any(state), component_name));
+                        Ok(Some(FieldValue::list(results)))
+                    }
+                    _ => Err("incorrect value, requires Value::Object".into()),
                 }
-
-                Ok(Some(FieldValue::list(results)))
             })
         })])
     }
 
-    fn resolvers(&self) -> Vec<Field> {
-        vec![
-            resolve_one(self.name(), self.type_name()), // one
-            resolve_many("entities", self.type_name()), // many
-        ]
+    fn resolve_one(&self) -> Option<Field> {
+        Some(
+            Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
+                FieldFuture::new(async move {
+                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                    let id = ctx.args.try_get("id")?.string()?.to_string();
+                    let entity = query_by_id(&mut conn, "entities", ID::Str(id)).await?;
+                    let result = EntityObject::value_mapping(entity);
+                    Ok(Some(Value::Object(result)))
+                })
+            })
+            .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID))),
+        )
     }
-}
 
-fn resolve_one(name: &str, type_name: &str) -> Field {
-    Field::new(name, TypeRef::named_nn(type_name), |ctx| {
-        FieldFuture::new(async move {
-            let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-            let id = ctx.args.try_get("id")?.string()?.to_string();
-            let entity = query_by_id(&mut conn, "entities", ID::Str(id)).await?;
-            let result = EntityObject::value_mapping(entity);
-            Ok(Some(FieldValue::owned_any(result)))
-        })
-    })
-    .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID)))
-}
+    fn resolve_many(&self) -> Option<Field> {
+        let mut field = Field::new(
+            "entities",
+            TypeRef::named(format!("{}Connection", self.type_name())),
+            |ctx| {
+                FieldFuture::new(async move {
+                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                    let args = parse_arguments(&ctx)?;
+                    let keys_value = ctx.args.try_get("keys")?;
+                    let keys = keys_value
+                        .list()?
+                        .iter()
+                        .map(
+                            |val| val.string().unwrap().to_string(), // safe unwrap
+                        )
+                        .collect();
 
-fn resolve_many(name: &str, type_name: &str) -> Field {
-    Field::new(name, TypeRef::named_list(type_name), |ctx| {
-        FieldFuture::new(async move {
-            let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                    let (entities, total_count) = entities_by_sk(&mut conn, keys, args).await?;
+                    Ok(Some(Value::Object(connection_output(entities, total_count))))
+                })
+            },
+        )
+        .argument(InputValue::new("keys", TypeRef::named_nn_list_nn(TypeRef::STRING)));
 
-            let keys_value = ctx.args.try_get("keys")?;
-            let keys = keys_value
-                .list()?
-                .iter()
-                .map(
-                    |val| val.string().unwrap().to_string(), // safe unwrap
-                )
-                .collect();
+        // Add relay connection fields (first, last, before, after)
+        field = connection_input(field);
 
-            let limit =
-                ctx.args.try_get("limit").and_then(|limit| limit.u64()).unwrap_or(DEFAULT_LIMIT);
-
-            let component_name = ctx.args.try_get("componentName") // Add the component name argument
-                .and_then(|name| name.string().map(|s| s.to_string())).ok();
-
-            let entities = entities_by_sk(&mut conn, keys, component_name, limit).await?;
-            Ok(Some(FieldValue::list(entities.into_iter().map(FieldValue::owned_any))))
-        })
-    })
-    .argument(InputValue::new("keys", TypeRef::named_nn_list_nn(TypeRef::STRING)))
-    .argument(InputValue::new("limit", TypeRef::named(TypeRef::INT)))
-    .argument(InputValue::new("componentName", TypeRef::named(TypeRef::STRING)))
+        Some(field)
+    }
 }
 
 async fn entities_by_sk(
     conn: &mut PoolConnection<Sqlite>,
     keys: Vec<String>,
-    component_name: Option<String>, // Add the filter parameter
-    limit: u64,
-) -> Result<Vec<ValueMapping>> {
+    args: ConnectionArguments,
+) -> Result<(Vec<ValueMapping>, i64)> {
     let mut builder: QueryBuilder<'_, Sqlite> = QueryBuilder::new("SELECT * FROM entities");
     let keys_str = format!("{},%", keys.join(","));
-    builder.push(" WHERE keys LIKE ").push_bind(keys_str);
+    builder.push(" WHERE keys LIKE ").push_bind(&keys_str);
 
-    if let Some(name) = component_name {
-        builder
-            .push(" AND (")
-            .push("component_names = ")
-            .push_bind(name.clone())
-            .push(" OR ")
-            .push("component_names LIKE ")
-            .push_bind(format!("{},%", name))
-            .push(" OR ")
-            .push("component_names LIKE ")
-            .push_bind(format!("%,{}", name))
-            .push(" OR ")
-            .push("component_names LIKE ")
-            .push_bind(format!("%,{},%", name))
-            .push(")");
+    if let Some(after_cursor) = &args.after {
+        match decode_cursor(after_cursor.clone()) {
+            Ok((created_at, id)) => {
+                builder.push(" AND (created_at, id) < (");
+                builder.push_bind(created_at).push(",");
+                builder.push_bind(id).push(") ");
+            }
+            Err(_) => return Err(sqlx::Error::Decode("Invalid after cursor format".into())),
+        }
     }
 
-    builder.push(" ORDER BY created_at DESC LIMIT ").push(limit);
+    if let Some(before_cursor) = &args.before {
+        match decode_cursor(before_cursor.clone()) {
+            Ok((created_at, id)) => {
+                builder.push(" AND (created_at, id) > (");
+                builder.push_bind(created_at).push(",");
+                builder.push_bind(id).push(") ");
+            }
+            Err(_) => return Err(sqlx::Error::Decode("Invalid before cursor format".into())),
+        }
+    }
 
-    let entities: Vec<Entity> = builder.build_query_as().fetch_all(conn).await?;
-    Ok(entities.into_iter().map(EntityObject::value_mapping).collect())
+    if let Some(first) = args.first {
+        builder.push(" ORDER BY created_at DESC, id DESC LIMIT ");
+        builder.push(first);
+    } else if let Some(last) = args.last {
+        builder.push(" ORDER BY created_at ASC, id ASC LIMIT ");
+        builder.push(last);
+    } else {
+        builder.push(" ORDER BY created_at DESC, id DESC LIMIT ").push(DEFAULT_LIMIT);
+    }
+
+    let entities: Vec<Entity> = builder.build_query_as().fetch_all(conn.as_mut()).await?;
+    let total_result: (i64,) =
+        sqlx::query_as(&format!("SELECT COUNT(*) FROM entities WHERE keys LIKE '{}'", keys_str))
+            .fetch_one(conn)
+            .await?;
+
+    Ok((entities.into_iter().map(EntityObject::value_mapping).collect(), total_result.0))
 }

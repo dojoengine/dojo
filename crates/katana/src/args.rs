@@ -36,7 +36,6 @@ pub struct KatanaArgs {
     pub dump_state: Option<PathBuf>,
 
     #[arg(long)]
-    #[arg(hide = true)]
     #[arg(value_name = "PATH")]
     #[arg(value_parser = SerializableState::parse)]
     #[arg(help = "Initialize the chain from a previously saved state snapshot.")]

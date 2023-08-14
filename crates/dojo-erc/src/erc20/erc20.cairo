@@ -245,4 +245,3 @@ mod ERC20 {
         val.try_into().unwrap()
     }
 }
-

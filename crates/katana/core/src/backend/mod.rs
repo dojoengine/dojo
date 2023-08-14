@@ -12,11 +12,11 @@ use blockifier::state::state_api::State;
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::errors::TransactionExecutionError;
 use blockifier::transaction::objects::AccountTransactionContext;
-use blockifier::transaction::transaction_execution::Transaction;
+use blockifier::transaction::transaction_execution::Transaction as ExecutionTransaction;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use parking_lot::RwLock;
-use starknet::core::types::{BlockId, BlockTag, FeeEstimate, FieldElement};
+use starknet::core::types::{BlockId, BlockTag, FeeEstimate};
 use starknet_api::block::BlockTimestamp;
 use starknet_api::core::{ContractAddress, EntryPointSelector};
 use starknet_api::hash::StarkFelt;
@@ -34,7 +34,7 @@ pub mod storage;
 use self::config::StarknetConfig;
 use self::executor::{execute_transaction, PendingBlockExecutor};
 use self::storage::block::{Block, PartialHeader};
-use self::storage::transaction::{IncludedTransaction, KnownTransaction, TransactionStatus};
+use self::storage::transaction::{IncludedTransaction, Transaction, TransactionStatus};
 use self::storage::{BlockchainStorage, InMemoryBlockStates};
 use crate::accounts::{Account, DevAccountGenerator};
 use crate::backend::state::{MemDb, StateExt};
@@ -43,7 +43,6 @@ use crate::db::serde::state::SerializableState;
 use crate::db::Db;
 use crate::env::{BlockContextGenerator, Env};
 use crate::sequencer_error::SequencerError;
-use crate::utils::transaction::convert_blockifier_to_api_tx;
 use crate::utils::{convert_state_diff_to_rpc_state_diff, get_current_timestamp};
 
 pub struct ExternalFunctionCall {
@@ -129,7 +128,7 @@ impl Backend {
         let mut state = CachedState::new(state);
 
         let exec_info = execute_transaction(
-            Transaction::AccountTransaction(transaction),
+            ExecutionTransaction::AccountTransaction(transaction),
             &mut state,
             &self.env.read().block,
             true,
@@ -158,11 +157,7 @@ impl Backend {
 
     // execute the tx
     pub async fn handle_transaction(&self, transaction: Transaction) {
-        let api_tx = convert_blockifier_to_api_tx(&transaction);
-
         let is_valid = if let Some(pending_block) = self.pending_block.write().await.as_mut() {
-            info!("Transaction received | Hash: {}", api_tx.transaction_hash());
-
             let charge_fee = !self.config.read().disable_fee;
             pending_block.add_transaction(transaction, charge_fee).await
         } else {
@@ -189,12 +184,24 @@ impl Backend {
             Block::new(partial_block.header, partial_block.transactions, partial_block.outputs)
         };
 
-        let pending_txs = block.transactions.clone();
-
         let block_hash = block.header.hash();
         let block_number = block.header.number;
+        let tx_count = block.transactions.len();
 
-        info!("⛏️ Block {block_number} mined with {} transactions", pending_txs.len());
+        // Stores the pending transaction in storage
+        for tx in &block.transactions {
+            let transaction_hash = tx.inner.hash();
+            self.storage.write().await.transactions.insert(
+                transaction_hash,
+                IncludedTransaction {
+                    block_number,
+                    block_hash,
+                    transaction: tx.clone(),
+                    status: TransactionStatus::AcceptedOnL2,
+                }
+                .into(),
+            );
+        }
 
         // get state diffs
         let pending_state_diff = pending.state.to_state_diff();
@@ -203,26 +210,21 @@ impl Backend {
         // store block and the state diff
         self.storage.write().await.append_block(block_hash, block, state_diff);
 
-        // apply the pending state to the current state
-        self.state.write().await.apply_state(&mut pending.state);
+        info!("⛏️ Block {block_number} mined with {tx_count} transactions");
+
+        // TODO: This is a hack, we should be able to apply the state diff directly
+        // to the current state instead of applying the diff onto the pending state.
+        // This is because `CachedState` have no notion of `Sierra` class, which whenever
+        // we execute a Declare transaction, we will set the `Sierra` class directly to the
+        // underlying `MemDb`. However, this is not reflected in the `CachedState`.
+        //
+        // Set the new pending state as the current state
+        let mut new_state = pending.state.state.clone();
+        new_state.apply_state(&mut pending.state);
+        *self.state.write().await = new_state.clone();
 
         // store the current state
-        let state = self.state.read().await.clone();
-        self.states.write().await.insert(block_hash, state);
-
-        // Stores the pending transaction in storage
-        for tx in pending_txs {
-            let hash: FieldElement = tx.transaction.transaction_hash().0.into();
-            self.storage.write().await.transactions.insert(
-                hash,
-                KnownTransaction::Included(IncludedTransaction {
-                    block_number,
-                    block_hash,
-                    transaction: tx.clone(),
-                    status: TransactionStatus::AcceptedOnL2,
-                }),
-            );
-        }
+        self.states.write().await.insert(block_hash, new_state);
     }
 
     pub async fn open_pending_block(&self) {

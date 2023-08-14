@@ -1,6 +1,5 @@
 //! Compiles and runs tests for a Dojo project.
 
-use std::iter;
 use std::sync::Arc;
 
 use anyhow::{bail, Result};
@@ -13,8 +12,9 @@ use cairo_lang_starknet::plugin::StarkNetPlugin;
 use cairo_lang_test_runner::plugin::TestPlugin;
 use cairo_lang_test_runner::TestRunner;
 use clap::Args;
-use dojo_lang::compiler::collect_main_crate_ids;
+use dojo_lang::compiler::{collect_core_crate_ids, collect_external_crate_ids, Props};
 use dojo_lang::plugin::DojoPlugin;
+use scarb::compiler::helpers::collect_main_crate_ids;
 use scarb::compiler::CompilationUnit;
 use scarb::core::Config;
 use scarb::ops;
@@ -45,9 +45,19 @@ impl TestArgs {
         let compilation_units = ops::generate_compilation_units(&resolve, &ws)?;
 
         for unit in compilation_units {
+            let props: Props = unit.target().props()?;
             let db = build_root_database(&unit)?;
 
-            let main_crate_ids = collect_main_crate_ids(&unit, &db);
+            let mut main_crate_ids = collect_main_crate_ids(&unit, &db);
+
+            if unit.main_package_id.name.to_string() != "dojo" {
+                let core_crate_ids = collect_core_crate_ids(&db);
+                main_crate_ids.extend(core_crate_ids);
+            }
+
+            if let Some(external_contracts) = props.build_external_contracts {
+                main_crate_ids.extend(collect_external_crate_ids(&db, external_contracts));
+            }
 
             if DiagnosticsReporter::stderr().check(&db) {
                 bail!("failed to compile");
@@ -73,17 +83,7 @@ impl TestArgs {
 pub(crate) fn build_root_database(unit: &CompilationUnit) -> Result<RootDatabase> {
     let mut b = RootDatabase::builder();
     b.with_project_config(build_project_config(unit)?);
-    b.with_cfg(
-        unit.cfg_set
-            .iter()
-            .map(|cfg| {
-                serde_json::to_value(cfg)
-                    .and_then(serde_json::from_value)
-                    .expect("Cairo's `Cfg` must serialize identically as Scarb Metadata's `Cfg`.")
-            })
-            .chain(iter::once(Cfg::name("test")))
-            .collect::<CfgSet>(),
-    );
+    b.with_cfg(CfgSet::from_iter([Cfg::name("test")]));
 
     b.with_semantic_plugin(Arc::new(TestPlugin::default()));
     b.with_semantic_plugin(Arc::new(DojoPlugin));

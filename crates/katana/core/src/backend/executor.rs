@@ -11,17 +11,15 @@ use blockifier::transaction::transactions::ExecutableTransaction;
 use convert_case::{Case, Casing};
 use parking_lot::RwLock;
 use starknet::core::types::{Event, FieldElement, MsgToL1};
-use starknet_api::transaction::Transaction;
 use tokio::sync::RwLock as AsyncRwLock;
-use tracing::{trace, warn};
+use tracing::{info, trace, warn};
 
 use super::state::MemDb;
 use super::storage::block::{PartialBlock, PartialHeader};
-use super::storage::transaction::{RejectedTransaction, TransactionOutput};
+use super::storage::transaction::{RejectedTransaction, Transaction, TransactionOutput};
 use super::storage::BlockchainStorage;
-use crate::backend::storage::transaction::KnownTransaction;
+use crate::backend::storage::transaction::{DeclareTransaction, KnownTransaction};
 use crate::env::Env;
-use crate::utils::transaction::convert_blockifier_to_api_tx;
 
 #[derive(Debug)]
 pub struct PendingBlockExecutor {
@@ -77,15 +75,17 @@ impl PendingBlockExecutor {
     // if it passes the validation logic. Otherwise, the transaction will be
     // rejected. On both cases, the transaction will still be stored in the
     // storage.
-    pub async fn add_transaction(
-        &mut self,
-        transaction: ExecutionTransaction,
-        charge_fee: bool,
-    ) -> bool {
-        let api_tx = convert_blockifier_to_api_tx(&transaction);
-        let hash: FieldElement = api_tx.transaction_hash().0.into();
-        let res =
-            execute_transaction(transaction, &mut self.state, &self.env.read().block, charge_fee);
+    pub async fn add_transaction(&mut self, transaction: Transaction, charge_fee: bool) -> bool {
+        let transaction_hash = transaction.hash();
+
+        info!("Transaction received | Hash: {transaction_hash:#x}");
+
+        let res = execute_transaction(
+            ExecutionTransaction::AccountTransaction(transaction.clone().into()),
+            &mut self.state,
+            &self.env.read().block,
+            charge_fee,
+        );
 
         match res {
             Ok(execution_info) => {
@@ -94,7 +94,19 @@ impl PendingBlockExecutor {
                     pretty_print_resources(&execution_info.actual_resources)
                 );
 
-                let executed_tx = Arc::new(ExecutedTransaction::new(api_tx, execution_info));
+                // Because `State` trait from `blockifier` doesn't have a method to set the
+                // `sierra_class` of a contract, we need to do it manually.
+                if let Transaction::Declare(DeclareTransaction {
+                    inner,
+                    sierra_class: Some(sierra_class),
+                    ..
+                }) = &transaction
+                {
+                    let class_hash = inner.class_hash();
+                    self.state.state.sierra_classes.insert(class_hash, sierra_class.clone());
+                }
+
+                let executed_tx = Arc::new(ExecutedTransaction::new(transaction, execution_info));
 
                 trace_events(&executed_tx.output.events);
 
@@ -106,9 +118,9 @@ impl PendingBlockExecutor {
 
             Err(err) => {
                 self.storage.write().await.transactions.insert(
-                    hash,
+                    transaction_hash,
                     KnownTransaction::Rejected(Box::new(RejectedTransaction {
-                        transaction: api_tx,
+                        transaction: transaction.into(),
                         execution_error: err.to_string(),
                     })),
                 );
@@ -121,7 +133,7 @@ impl PendingBlockExecutor {
 
 #[derive(Debug)]
 pub struct ExecutedTransaction {
-    pub transaction: Transaction,
+    pub inner: Transaction,
     pub output: TransactionOutput,
     pub execution_info: TransactionExecutionInfo,
 }
@@ -133,14 +145,10 @@ impl ExecutedTransaction {
         let messages_sent = Self::l2_to_l1_messages(&execution_info);
 
         Self {
-            transaction,
+            inner: transaction,
             execution_info,
             output: TransactionOutput { actual_fee, events, messages_sent },
         }
-    }
-
-    pub fn hash(&self) -> FieldElement {
-        self.transaction.transaction_hash().0.into()
     }
 
     fn events(execution_info: &TransactionExecutionInfo) -> Vec<Event> {
