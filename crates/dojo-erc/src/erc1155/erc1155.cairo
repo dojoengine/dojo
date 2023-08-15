@@ -9,7 +9,10 @@ mod ERC1155 {
     use zeroable::Zeroable;
     use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
     use dojo_erc::erc1155::components::{OperatorApproval, Uri, Balance};
-    use dojo_erc::erc1155::interface::IERC1155;
+    use dojo_erc::erc1155::interface::{
+        IERC1155, IERC1155TokenReceiver, IERC1155TokenReceiverDispatcher,
+        IERC1155TokenReceiverDispatcherTrait, IERC165, IERC165Dispatcher, IERC165DispatcherTrait
+    };
 
     const UNLIMITED_ALLOWANCE: felt252 =
         3618502788666131213697322783095070105623107215331596699973092056135872020480;
@@ -24,30 +27,6 @@ mod ERC1155 {
     const ON_ERC1155_RECEIVED_SELECTOR: u32 = 0xf23a6e61_u32;
     const ON_ERC1155_BATCH_RECEIVED_SELECTOR: u32 = 0xbc197c81_u32;
 
-    #[starknet::interface]
-    trait IERC1155TokenReceiver {
-        fn on_erc1155_received(
-            self: ContractState,
-            operator: ContractAddress,
-            from: ContractAddress,
-            token_id: u256,
-            amount: u256,
-            data: Array<u8>
-        ) -> u32;
-        fn on_erc1155_batch_received(
-            self: ContractState,
-            operator: ContractAddress,
-            from: ContractAddress,
-            token_ids: Array<u256>,
-            amounts: Array<u256>,
-            data: Array<u8>
-        ) -> u32;
-    }
-
-    #[starknet::interface]
-    trait IERC165 {
-        fn supports_interface(self: ContractState, interface_id: u32) -> bool;
-    }
 
     #[event]
     #[derive(Drop, starknet::Event)]
@@ -84,7 +63,8 @@ mod ERC1155 {
 
     #[storage]
     struct Storage {
-        world: IWorldDispatcher, 
+        world: IWorldDispatcher,
+        owner_: ContractAddress
     }
 
     //
@@ -92,8 +72,11 @@ mod ERC1155 {
     //
 
     #[constructor]
-    fn constructor(ref self: ContractState, world: ContractAddress, uri: felt252) {
+    fn constructor(
+        ref self: ContractState, world: ContractAddress, deployer: ContractAddress, uri: felt252
+    ) {
         self.world.write(IWorldDispatcher { contract_address: world });
+        self.owner_.write(deployer);
         self._set_uri(uri);
     }
 
@@ -180,6 +163,11 @@ mod ERC1155 {
                 'ERC1155: insufficient approval'
             );
             self._safe_batch_transfer_from(from, to, ids, amounts, data);
+        }
+
+        // should move to another interface ?
+        fn owner(self: @ContractState) -> ContractAddress {
+            self.owner_.read()
         }
     }
 
