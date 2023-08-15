@@ -1,6 +1,6 @@
 [package]
 edition = "2021"
-name = "torii"
+name = "torii-server"
 version = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -15,8 +15,8 @@ camino.workspace = true
 chrono.workspace = true
 clap.workspace = true
 ctrlc = "3.2.5"
-dojo-types = { path = "../dojo-types" }
-dojo-world = { path = "../dojo-world" }
+dojo-types = { path = "../../dojo-types" }
+dojo-world = { path = "../../dojo-world" }
 indexmap = "1.9.3"
 log = "0.4.17"
 poem = "1.3.48"
@@ -29,8 +29,8 @@ starknet.workspace = true
 tokio = { version = "1.20.1", features = [ "full" ] }
 tokio-stream = "0.1.11"
 tokio-util = "0.7.7"
-torii-core = { path = "./core" }
-torii-graphql = { path = "./graphql" }
+torii-core = { path = "../core" }
+torii-graphql = { path = "../graphql" }
 tracing-subscriber.workspace = true
 tracing.workspace = true
 url = "2.2.2"
