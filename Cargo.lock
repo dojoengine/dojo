@@ -6741,12 +6741,9 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
- "starknet",
- "starknet-crypto 0.5.1",
  "tokio",
  "tokio-stream",
  "tokio-util",
- "torii-core",
  "tracing",
  "url",
 ]
