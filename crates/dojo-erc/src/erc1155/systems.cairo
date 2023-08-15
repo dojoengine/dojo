@@ -67,9 +67,6 @@ mod ERC1155Update {
             if (from.is_non_zero()) {
                 let mut from_balance = get!(ctx.world, (token, id, from), Balance);
                 from_balance.amount -= amount;
-
-                let amount256: u256 = amount.into();
-                assert(from_balance.amount.into() >= amount256, 'ERC1155: insufficient balance');
                 set!(ctx.world, (from_balance));
             }
 

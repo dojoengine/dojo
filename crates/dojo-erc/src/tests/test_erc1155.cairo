@@ -12,6 +12,9 @@ use dojo_erc::tests::test_erc1155_utils::{
     PROXY
 };
 use dojo_erc::erc1155::interface::{IERC1155, IERC1155Dispatcher, IERC1155DispatcherTrait};
+use dojo_erc::tests::constants::{
+    INTERFACE_ERC165, INTERFACE_ERC1155, INTERFACE_ERC1155_METADATA, INTERFACE_ERC1155_RECEIVER
+};
 
 #[test]
 #[available_gas(30000000)]
@@ -29,12 +32,47 @@ fn test_deploy_default() {
     assert(erc1155.owner() == DEPLOYER(), 'invalid owner');
 }
 
+
+//
+// supports_interface
+//
+
+#[test]
+#[available_gas(30000000)]
+fn test_should_support_interfaces() {
+    let (world, erc1155) = deploy_default();
+
+    assert(erc1155.supports_interface(INTERFACE_ERC165) == true, 'should support erc165');
+    assert(erc1155.supports_interface(INTERFACE_ERC1155) == true, 'should support erc1155');
+    assert(
+        erc1155.supports_interface(INTERFACE_ERC1155_METADATA) == true,
+        'should support erc1155_metadata'
+    );
+}
+
+//
+// uri
+//
+
+use debug::PrintTrait;
+
+#[test]
+#[available_gas(30000000)]
+fn test_uri() {
+    let (world, erc1155) = deploy_default();
+    'uri'.print();
+    erc1155.uri(1).print();
+    assert(erc1155.uri(64) == 'uri', 'invalid uri');
+}
+
+
 //
 // behaves like an ERC1155
 //
 
+//
 // balance_of
-
+//
 #[test]
 #[available_gas(30000000)]
 #[should_panic(expected: ('ERC1155: invalid owner address', 'ENTRYPOINT_FAILED', ))]
@@ -322,5 +360,153 @@ fn test_safe_transfer_from_approved_operator_preserve_operator_balance() {
     assert(balance_before_2 == balance_after_2, 'should be equal');
     assert(balance_before_3 == balance_after_3, 'should be equal');
 }
+
+
+//
+// safe_batch_transfer_from
+//
+
+#[test]
+#[available_gas(50000000)]
+#[should_panic]
+fn test_safe_batch_transfer_from_more_than_balance() {
+    // reverts when transferring amount more than any of balances
+    let (world, erc1155) = deploy_testcase1();
+
+    // impersonate user1
+    set_contract_address(USER1());
+
+    erc1155
+        .safe_batch_transfer_from(USER1(), USER2(), array![1, 2, 3], array![1, 999, 1], array![]);
+}
+
+
+#[test]
+#[available_gas(50000000)]
+#[should_panic]
+fn test_safe_batch_transfer_from_mismatching_array_len() {
+    // reverts when ids array length doesn't match amounts array length
+    let (world, erc1155) = deploy_testcase1();
+
+    // impersonate user1
+    set_contract_address(USER1());
+
+    erc1155.safe_batch_transfer_from(USER1(), USER2(), array![1, 2, 3], array![1, 1], array![]);
+}
+
+
+#[test]
+#[available_gas(50000000)]
+#[should_panic]
+fn test_safe_batch_transfer_from_to_zero_address() {
+    // reverts when transferring to zero address
+    let (world, erc1155) = deploy_testcase1();
+
+    // impersonate user1
+    set_contract_address(USER1());
+
+    erc1155.safe_batch_transfer_from(USER1(), ZERO(), array![1, 2], array![1, 1], array![]);
+}
+
+
+#[test]
+#[available_gas(50000000)]
+fn test_safe_batch_transfer_from_debits_sender() {
+    // debits transferred balances from sender
+    let (world, erc1155) = deploy_testcase1();
+
+    // impersonate user1
+    set_contract_address(USER1());
+
+    let balance_before_1 = erc1155.balance_of(USER1(), 1);
+    let balance_before_2 = erc1155.balance_of(USER1(), 2);
+    let balance_before_3 = erc1155.balance_of(USER1(), 3);
+    erc1155
+        .safe_batch_transfer_from(USER1(), USER2(), array![1, 2, 3], array![1, 10, 20], array![]);
+    let balance_after_1 = erc1155.balance_of(USER1(), 1);
+    let balance_after_2 = erc1155.balance_of(USER1(), 2);
+    let balance_after_3 = erc1155.balance_of(USER1(), 3);
+
+    assert(balance_before_1 - 1 == balance_after_1, 'invalid balance');
+    assert(balance_before_2 - 10 == balance_after_2, 'invalid balance');
+    assert(balance_before_3 - 20 == balance_after_3, 'invalid balance');
+}
+
+
+#[test]
+#[available_gas(50000000)]
+fn test_safe_batch_transfer_from_credits_recipient() {
+    // credits transferred balances to receiver
+    let (world, erc1155) = deploy_testcase1();
+
+    // impersonate user1
+    set_contract_address(USER1());
+
+    let balance_before_1 = erc1155.balance_of(USER2(), 1);
+    let balance_before_2 = erc1155.balance_of(USER2(), 2);
+    let balance_before_3 = erc1155.balance_of(USER2(), 3);
+    erc1155
+        .safe_batch_transfer_from(USER1(), USER2(), array![1, 2, 3], array![1, 10, 20], array![]);
+    let balance_after_1 = erc1155.balance_of(USER2(), 1);
+    let balance_after_2 = erc1155.balance_of(USER2(), 2);
+    let balance_after_3 = erc1155.balance_of(USER2(), 3);
+
+    assert(balance_before_1 + 1 == balance_after_1, 'invalid balance');
+    assert(balance_before_2 + 10 == balance_after_2, 'invalid balance');
+    assert(balance_before_1 + 20 == balance_after_3, 'invalid balance');
+}
+
+
+#[test]
+#[available_gas(50000000)]
+#[should_panic]
+fn test_safe_batch_transfer_from_unapproved_operator() {
+    // when called by an operator on behalf of the multiTokenHolder
+    // when operator is not approved by multiTokenHolder
+
+    let (world, erc1155) = deploy_testcase1();
+
+    // impersonate user2
+    set_contract_address(USER2());
+
+    erc1155.safe_batch_transfer_from(USER1(), USER2(), array![1, 2], array![1, 10], array![]);
+}
+
+#[test]
+#[available_gas(50000000)]
+fn test_safe_batch_transfer_from_approved_operator_preserve_operator_balance() {
+    // when called by an operator on behalf of the multiTokenHolder
+    // preserves operator's balances not involved in the transfer
+
+    let (world, erc1155) = deploy_testcase1();
+
+    // impersonate proxy
+    set_contract_address(PROXY());
+
+    let balance_before_1 = erc1155.balance_of(PROXY(), 1);
+    let balance_before_2 = erc1155.balance_of(PROXY(), 2);
+    let balance_before_3 = erc1155.balance_of(PROXY(), 3);
+
+    erc1155
+        .safe_batch_transfer_from(USER1(), USER2(), array![1, 2, 3], array![1, 10, 20], array![]);
+
+    let balance_after_1 = erc1155.balance_of(PROXY(), 1);
+    let balance_after_2 = erc1155.balance_of(PROXY(), 2);
+    let balance_after_3 = erc1155.balance_of(PROXY(), 3);
+
+    assert(balance_before_1 == balance_after_1, 'should be equal');
+    assert(balance_before_2 == balance_after_2, 'should be equal');
+    assert(balance_before_3 == balance_after_3, 'should be equal');
+}
+//
+// mint_batch
+//
+
+//
+// burn_batch
+//
+
 // TODO : to be continued
+
+// TODO : add test if we support IERC1155Receiver
 

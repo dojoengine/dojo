@@ -94,7 +94,7 @@ mod ERC1155 {
         fn uri(self: @ContractState, token_id: u256) -> felt252 {
             let token = get_contract_address();
             let token_id_felt: felt252 = token_id.try_into().unwrap();
-            get!(self.world.read(), (token, token_id_felt), Uri).uri
+            get!(self.world.read(), (token), Uri).uri
         }
 
         //
