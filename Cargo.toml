@@ -15,7 +15,7 @@ members = [
   "crates/katana/core",
   "crates/katana/rpc",
   "crates/sozo",
-  "crates/torii",
+  "crates/torii/server",
 ]
 
 [workspace.package]
