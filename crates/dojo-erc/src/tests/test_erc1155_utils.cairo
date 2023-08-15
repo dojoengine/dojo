@@ -16,6 +16,11 @@ use dojo_erc::erc1155::interface::{IERC1155Dispatcher, IERC1155DispatcherTrait};
 use dojo_erc::erc1155::components::{balance, uri, operator_approval};
 use dojo_erc::erc1155::systems::{ERC1155SetApprovalForAll, ERC1155SetUri, ERC1155Update};
 
+
+fn ZERO() -> ContractAddress {
+    starknet::contract_address_const::<0x0>()
+}
+
 fn DEPLOYER() -> ContractAddress {
     starknet::contract_address_const::<0x420>()
 }
@@ -65,5 +70,15 @@ fn deploy_default() -> (IWorldDispatcher, IERC1155Dispatcher) {
     let erc1155_address = deploy_erc1155(world, DEPLOYER(), 'uri', 'seed-42');
     let erc1155 = IERC1155Dispatcher { contract_address: erc1155_address };
 
+    (world, erc1155)
+}
+
+
+fn deploy_testcase() -> (IWorldDispatcher, IERC1155Dispatcher) {
+    let world = spawn_world();
+    let erc1155_address = deploy_erc1155(world, DEPLOYER(), 'uri', 'seed-42');
+    let erc1155 = IERC1155Dispatcher { contract_address: erc1155_address };
+
+    // TODO setup testcase : mint tokens, etc
     (world, erc1155)
 }

@@ -3,8 +3,13 @@ mod ERC1155SetApprovalForAll {
     use traits::Into;
     use dojo::world::Context;
     use dojo_erc::erc1155::components::OperatorApproval;
+    use starknet::ContractAddress;
 
-    fn execute(ctx: Context, token: felt252, owner: felt252, operator: felt252, approved: bool) {
+    fn execute(
+        ctx: Context, token: ContractAddress, owner: felt252, operator: felt252, approved: bool
+    ) {
+        assert(token == ctx.origin, 'ERC1155: not authorized');
+
         let mut operator_approval = get!(ctx.world, (token, owner, operator), OperatorApproval);
         operator_approval.approved = approved;
         set!(ctx.world, (operator_approval), )
@@ -17,8 +22,11 @@ mod ERC1155SetUri {
     use traits::Into;
     use dojo::world::Context;
     use dojo_erc::erc1155::components::Uri;
+    use starknet::ContractAddress;
 
-    fn execute(ctx: Context, token: felt252, uri: felt252) {
+    fn execute(ctx: Context, token: ContractAddress, uri: felt252) {
+        assert(token == ctx.origin, 'ERC1155: not authorized');
+
         let mut _uri = get!(ctx.world, (token), Uri);
         _uri.uri = uri;
         set!(ctx.world, (_uri))
@@ -32,10 +40,11 @@ mod ERC1155Update {
     use array::ArrayTrait;
     use dojo::world::Context;
     use zeroable::Zeroable;
+    use starknet::ContractAddress;
 
     fn execute(
         ctx: Context,
-        token: felt252,
+        token: ContractAddress,
         operator: felt252,
         from: felt252,
         to: felt252,
@@ -43,6 +52,10 @@ mod ERC1155Update {
         amounts: Array<felt252>,
         data: Array<felt252>
     ) {
+        assert(token == ctx.origin, 'ERC1155: not authorized');
+
+        // TODO : check approvals !!
+
         let mut index = 0;
         loop {
             if index == ids.len() {
@@ -53,7 +66,7 @@ mod ERC1155Update {
 
             if (from.is_non_zero()) {
                 let mut from_balance = get!(ctx.world, (token, id, from), Balance);
-                from_balance.amount = from_balance.amount - amount;
+                from_balance.amount -= amount;
                 let amount256: u256 = amount.into();
                 assert(from_balance.amount.into() >= amount256, 'ERC1155: insufficient balance');
                 set!(ctx.world, (from_balance));
@@ -61,7 +74,7 @@ mod ERC1155Update {
 
             if (to.is_non_zero()) {
                 let mut to_balance = get!(ctx.world, (token, id, to), Balance);
-                to_balance.amount = to_balance.amount + amount;
+                to_balance.amount += amount;
                 set!(ctx.world, (to_balance));
             }
             index += 1;

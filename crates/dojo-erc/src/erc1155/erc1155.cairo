@@ -165,9 +165,29 @@ mod ERC1155 {
             self._safe_batch_transfer_from(from, to, ids, amounts, data);
         }
 
+
+        //
         // should move to another interface ?
+        //
+
         fn owner(self: @ContractState) -> ContractAddress {
             self.owner_.read()
+        }
+
+        fn mint(
+            ref self: ContractState, to: ContractAddress, id: u256, amount: u256, data: Array<u8>
+        ) {
+            self._mint(to, id, amount, data);
+        }
+
+        fn mint_batch(
+            ref self: ContractState,
+            to: ContractAddress,
+            ids: Array<u256>,
+            amounts: Array<u256>,
+            data: Array<u8>
+        ) {
+            self._mint_batch(to, ids, amounts, data);
         }
     }
 
@@ -178,16 +198,20 @@ mod ERC1155 {
     #[generate_trait]
     impl PrivateFunctions of PrivateFunctionsTrait {
         fn _balance_of(self: @ContractState, account: ContractAddress, id: u256) -> u256 {
+            // ERC1155: address zero is not a valid owner
+            assert(account.is_non_zero(), 'ERC1155: invalid owner address');
             let token = get_contract_address();
             let id_felt: felt252 = id.try_into().unwrap();
-            get!(self.world.read(), (token, account, id_felt), Balance).amount.into()
+            let balance = get!(self.world.read(), (token, id_felt, account), Balance);
+            balance.amount.into()
         }
 
         fn _is_approved_for_all(
             self: @ContractState, account: ContractAddress, operator: ContractAddress
         ) -> bool {
             let token = get_contract_address();
-            get!(self.world.read(), (token, account, operator), OperatorApproval).approved
+            let approval = get!(self.world.read(), (token, account, operator), OperatorApproval);
+            approval.approved
         }
 
         fn _update(
@@ -214,6 +238,7 @@ mod ERC1155 {
             let amounts_clone = ids.clone();
             let data_clone = data.clone();
 
+            // TODO : replace with span / match / pop_front
             let mut index = 0;
             loop {
                 if index == ids.len() {
@@ -382,25 +407,24 @@ mod ERC1155 {
         id: u256,
         amount: u256,
         data: Array<u8>
-    ) {
-        if (IERC165Dispatcher {
-            contract_address: to
-        }.supports_interface(INTERFACE_ERC1155_RECEIVER)) {
-            assert(
-                IERC1155TokenReceiverDispatcher {
-                    contract_address: to
-                }
-                    .on_erc1155_received(
-                        operator, from, id, amount, data
-                    ) == ON_ERC1155_RECEIVED_SELECTOR,
-                'ERC1155: ERC1155Receiver reject'
-            );
-            return ();
-        }
-        assert(
-            IERC165Dispatcher { contract_address: to }.supports_interface(IACCOUNT_ID),
-            'Transfer to non-ERC1155Receiver'
-        );
+    ) { // if (IERC165Dispatcher {
+    //     contract_address: to
+    // }.supports_interface(INTERFACE_ERC1155_RECEIVER)) {
+    //     assert(
+    //         IERC1155TokenReceiverDispatcher {
+    //             contract_address: to
+    //         }
+    //             .on_erc1155_received(
+    //                 operator, from, id, amount, data
+    //             ) == ON_ERC1155_RECEIVED_SELECTOR,
+    //         'ERC1155: ERC1155Receiver reject'
+    //     );
+    //     return ();
+    // }
+    // assert(
+    //     IERC165Dispatcher { contract_address: to }.supports_interface(IACCOUNT_ID),
+    //     'Transfer to non-ERC1155Receiver'
+    // );
     }
 
     fn _do_safe_batch_transfer_acceptance_check(
@@ -410,25 +434,24 @@ mod ERC1155 {
         ids: Array<u256>,
         amounts: Array<u256>,
         data: Array<u8>
-    ) {
-        if (IERC165Dispatcher {
-            contract_address: to
-        }.supports_interface(INTERFACE_ERC1155_RECEIVER)) {
-            assert(
-                IERC1155TokenReceiverDispatcher {
-                    contract_address: to
-                }
-                    .on_erc1155_batch_received(
-                        operator, from, ids, amounts, data
-                    ) == ON_ERC1155_BATCH_RECEIVED_SELECTOR,
-                'ERC1155: ERC1155Receiver reject'
-            );
-            return ();
-        }
-        assert(
-            IERC165Dispatcher { contract_address: to }.supports_interface(IACCOUNT_ID),
-            'Transfer to non-ERC1155Receiver'
-        );
+    ) { // if (IERC165Dispatcher {
+    //     contract_address: to
+    // }.supports_interface(INTERFACE_ERC1155_RECEIVER)) {
+    //     assert(
+    //         IERC1155TokenReceiverDispatcher {
+    //             contract_address: to
+    //         }
+    //             .on_erc1155_batch_received(
+    //                 operator, from, ids, amounts, data
+    //             ) == ON_ERC1155_BATCH_RECEIVED_SELECTOR,
+    //         'ERC1155: ERC1155Receiver reject'
+    //     );
+    //     return ();
+    // }
+    // assert(
+    //     IERC165Dispatcher { contract_address: to }.supports_interface(IACCOUNT_ID),
+    //     'Transfer to non-ERC1155Receiver'
+    // );
     }
 
     fn _as_singleton_array(element: u256) -> Array<u256> {
