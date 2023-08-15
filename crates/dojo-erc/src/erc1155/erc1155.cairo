@@ -165,7 +165,6 @@ mod ERC1155 {
             self._safe_batch_transfer_from(from, to, ids, amounts, data);
         }
 
-
         //
         // should move to another interface ?
         //
@@ -228,7 +227,7 @@ mod ERC1155 {
             let token = get_contract_address();
             let mut calldata = ArrayTrait::new();
             calldata.append(token.into());
-            calldata.append(operator.into());
+            // calldata.append(operator.into());
             calldata.append(from.into());
             calldata.append(to.into());
             calldata.append(ids.len().into());

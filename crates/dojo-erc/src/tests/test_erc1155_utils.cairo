@@ -33,6 +33,10 @@ fn USER2() -> ContractAddress {
     starknet::contract_address_const::<0x222>()
 }
 
+fn PROXY() -> ContractAddress {
+    starknet::contract_address_const::<0x999>()
+}
+
 fn spawn_world() -> IWorldDispatcher {
     // components
     let mut components = array![
@@ -74,11 +78,28 @@ fn deploy_default() -> (IWorldDispatcher, IERC1155Dispatcher) {
 }
 
 
-fn deploy_testcase() -> (IWorldDispatcher, IERC1155Dispatcher) {
+fn deploy_testcase1() -> (IWorldDispatcher, IERC1155Dispatcher) {
     let world = spawn_world();
     let erc1155_address = deploy_erc1155(world, DEPLOYER(), 'uri', 'seed-42');
     let erc1155 = IERC1155Dispatcher { contract_address: erc1155_address };
 
-    // TODO setup testcase : mint tokens, etc
+    // proxy  token_id 1  x 5
+    erc1155.mint(PROXY(), 1, 5, array![]);
+    // proxy  token_id 2 x 5
+    erc1155.mint(PROXY(), 2, 5, array![]);
+     // proxy  token_id 3 x 5
+    erc1155.mint(PROXY(), 3, 5, array![]);
+
+    // user1  token_id 1  x 10
+    erc1155.mint(USER1(), 1, 10, array![]);
+    // user1  token_id 2 x 20
+    erc1155.mint(USER1(), 2, 20, array![]);
+     // user1  token_id 3 x 30
+    erc1155.mint(USER1(), 3, 30, array![]);
+
+    set_contract_address(USER1());
+    //user1 approve_for_all proxy
+    erc1155.set_approval_for_all(PROXY(), true);
+
     (world, erc1155)
 }

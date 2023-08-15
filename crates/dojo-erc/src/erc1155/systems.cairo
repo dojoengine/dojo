@@ -35,17 +35,19 @@ mod ERC1155SetUri {
 
 #[system]
 mod ERC1155Update {
-    use traits::Into;
+    use traits::{Into, TryInto};
+    use option::OptionTrait;
     use dojo_erc::erc1155::components::Balance;
     use array::ArrayTrait;
     use dojo::world::Context;
     use zeroable::Zeroable;
     use starknet::ContractAddress;
 
+    use debug::PrintTrait;
+
     fn execute(
         ctx: Context,
         token: ContractAddress,
-        operator: felt252,
         from: felt252,
         to: felt252,
         ids: Array<felt252>,
@@ -54,19 +56,18 @@ mod ERC1155Update {
     ) {
         assert(token == ctx.origin, 'ERC1155: not authorized');
 
-        // TODO : check approvals !!
-
         let mut index = 0;
         loop {
             if index == ids.len() {
                 break ();
             }
             let id = *ids.at(index);
-            let amount = *amounts.at(index);
+            let amount: u128 = (*amounts.at(index)).try_into().unwrap();
 
             if (from.is_non_zero()) {
                 let mut from_balance = get!(ctx.world, (token, id, from), Balance);
                 from_balance.amount -= amount;
+
                 let amount256: u256 = amount.into();
                 assert(from_balance.amount.into() >= amount256, 'ERC1155: insufficient balance');
                 set!(ctx.world, (from_balance));

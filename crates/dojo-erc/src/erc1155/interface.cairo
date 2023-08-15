@@ -31,15 +31,9 @@ trait IERC1155<TState> {
 
     //
     fn owner(self: @TState) -> ContractAddress;
-    fn mint(ref self: TState, to: ContractAddress, id: u256, amount: u256, data: Array<u8>);
+                fn mint(ref self: TState, to: ContractAddress, id: u256, amount: u256,data: Array<u8>);
 
-    fn mint_batch(
-        ref self: TState,
-        to: ContractAddress,
-        ids: Array<u256>,
-        amounts: Array<u256>,
-        data: Array<u8>
-    );
+    fn mint_batch(ref self: TState, to: ContractAddress, ids: Array<u256>, amounts: Array<u256>,data: Array<u8>);
 }
 
 #[starknet::interface]

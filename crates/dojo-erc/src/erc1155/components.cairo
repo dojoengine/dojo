@@ -1,15 +1,5 @@
 use starknet::ContractAddress;
-
-#[derive(Component, Copy, Drop, Serde, SerdeLen)]
-struct OperatorApproval {
-    #[key]
-    token: ContractAddress,
-    #[key]
-    owner: ContractAddress,
-    #[key]
-    operator: ContractAddress,
-    approved: bool
-}
+use dojo_erc::erc_common::components::{operator_approval, OperatorApproval};
 
 #[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Uri {
@@ -26,5 +16,6 @@ struct Balance {
     token_id: felt252,
     #[key]
     account: ContractAddress,
-    amount: felt252,
+    //amount: felt252,
+    amount: u128
 }

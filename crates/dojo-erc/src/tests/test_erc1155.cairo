@@ -8,7 +8,8 @@ use starknet::testing::set_contract_address;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
 use dojo_erc::tests::test_erc1155_utils::{
-    spawn_world, deploy_erc1155, deploy_default, ZERO, USER1, USER2, DEPLOYER
+    spawn_world, deploy_erc1155, deploy_default, deploy_testcase1, ZERO, USER1, USER2, DEPLOYER,
+    PROXY
 };
 use dojo_erc::erc1155::interface::{IERC1155, IERC1155Dispatcher, IERC1155DispatcherTrait};
 
@@ -108,7 +109,6 @@ fn test_balance_of_batch_empty_account() {
     assert(bals[2] == @0_u256, 'should be 0');
 }
 
-
 #[test]
 #[available_gas(30000000)]
 fn test_balance_of_batch_with_tokens() {
@@ -146,4 +146,181 @@ fn test_balance_of_batch_with_tokens_2() {
     assert(bals[2] == @1_u256, 'should be 1');
 }
 
+
+//
+// balance_of_batch
+//
+
+#[test]
+#[available_gas(30000000)]
+fn test_set_approval_for_all() {
+    // sets approval status which can be queried via is_approved_for_all
+    let (world, erc1155) = deploy_default();
+    // impersonate user1
+    set_contract_address(USER1());
+
+    erc1155.set_approval_for_all(PROXY(), true);
+    assert(erc1155.is_approved_for_all(USER1(), PROXY()) == true, 'should be true');
+}
+
+#[test]
+#[available_gas(30000000)]
+fn test_set_unset_approval_for_all() {
+    // sets approval status which can be queried via is_approved_for_all
+    let (world, erc1155) = deploy_default();
+    // impersonate user1
+    set_contract_address(USER1());
+    erc1155.set_approval_for_all(PROXY(), true);
+    assert(erc1155.is_approved_for_all(USER1(), PROXY()) == true, 'should be true');
+    erc1155.set_approval_for_all(PROXY(), false);
+    assert(erc1155.is_approved_for_all(USER1(), PROXY()) == false, 'should be false');
+}
+
+#[test]
+#[available_gas(30000000)]
+#[should_panic()]
+fn test_set_approval_for_all_on_self() {
+    // reverts if attempting to approve self as an operator
+    let (world, erc1155) = deploy_default();
+    // impersonate user1
+    set_contract_address(USER1());
+    erc1155.set_approval_for_all(USER1(), true); // should panic
+}
+
+//
+// safe_transfer_from
+//
+
+#[test]
+#[available_gas(30000000)]
+#[should_panic()]
+fn test_safe_transfer_from() {
+    // reverts when transferring more than balance
+    let (world, erc1155) = deploy_testcase1();
+
+    // impersonate user1
+    set_contract_address(USER1());
+
+    erc1155.safe_transfer_from(USER1(), USER2(), 1, 999, array![]); // should panic
+}
+
+#[test]
+#[available_gas(30000000)]
+#[should_panic()]
+fn test_safe_transfer_to_zero() {
+    // reverts when transferring to zero address
+    let (world, erc1155) = deploy_testcase1();
+
+    // impersonate user1
+    set_contract_address(USER1());
+
+    erc1155.safe_transfer_from(USER1(), ZERO(), 1, 1, array![]); // should panic
+}
+
+#[test]
+#[available_gas(50000000)]
+fn test_safe_transfer_debit_sender() {
+    // debits transferred balance from sender
+    let (world, erc1155) = deploy_testcase1();
+
+    // impersonate user1
+    set_contract_address(USER1());
+
+    let balance_before = erc1155.balance_of(USER1(), 1);
+    erc1155.safe_transfer_from(USER1(), USER2(), 1, 1, array![]);
+    let balance_after = erc1155.balance_of(USER1(), 1);
+
+    assert(balance_after == balance_before - 1, 'invalid balance after');
+}
+
+#[test]
+#[available_gas(50000000)]
+fn test_safe_transfer_credit_receiver() {
+    // credits transferred balance to receiver
+    let (world, erc1155) = deploy_testcase1();
+
+    // impersonate user1
+    set_contract_address(USER1());
+
+    let balance_before = erc1155.balance_of(USER2(), 1);
+    erc1155.safe_transfer_from(USER1(), USER2(), 1, 1, array![]);
+    let balance_after = erc1155.balance_of(USER2(), 1);
+
+    assert(balance_after == balance_before + 1, 'invalid balance after');
+}
+
+#[test]
+#[available_gas(50000000)]
+fn test_safe_transfer_preserve_existing_balances() {
+    // preserves existing balances which are not transferred by multiTokenHolder
+    let (world, erc1155) = deploy_testcase1();
+
+    // impersonate user1
+    set_contract_address(USER1());
+
+    let balance_before_2 = erc1155.balance_of(USER2(), 2);
+    let balance_before_3 = erc1155.balance_of(USER2(), 3);
+    erc1155.safe_transfer_from(USER1(), USER2(), 1, 1, array![]);
+    let balance_after_2 = erc1155.balance_of(USER2(), 2);
+    let balance_after_3 = erc1155.balance_of(USER2(), 3);
+
+    assert(balance_after_2 == balance_before_2, 'should be equal');
+    assert(balance_after_3 == balance_before_3, 'should be equal');
+}
+
+#[test]
+#[available_gas(30000000)]
+#[should_panic()]
+fn test_safe_transfer_from_unapproved_operator() {
+    // when called by an operator on behalf of the multiTokenHolder
+    // when operator is not approved by multiTokenHolder
+
+    let (world, erc1155) = deploy_testcase1();
+
+    // impersonate user2
+    set_contract_address(USER2());
+
+    erc1155.safe_transfer_from(USER1(), USER2(), 1, 1, array![]); // should panic
+}
+
+#[test]
+#[available_gas(50000000)]
+fn test_safe_transfer_from_approved_operator() {
+    // when called by an operator on behalf of the multiTokenHolder
+    // when operator is approved by multiTokenHolder
+    let (world, erc1155) = deploy_testcase1();
+
+    // impersonate user1
+    set_contract_address(PROXY());
+
+    let balance_before = erc1155.balance_of(USER1(), 1);
+    erc1155.safe_transfer_from(USER1(), USER2(), 1, 2, array![]);
+    let balance_after = erc1155.balance_of(USER1(), 1);
+
+    assert(balance_after == balance_before - 2, 'invalid balance');
+}
+
+#[test]
+#[available_gas(50000000)]
+fn test_safe_transfer_from_approved_operator_preserve_operator_balance() {
+    // when called by an operator on behalf of the multiTokenHolder
+    // preserves operator's balances not involved in the transfer
+    let (world, erc1155) = deploy_testcase1();
+
+    // impersonate user1
+    set_contract_address(PROXY());
+
+    let balance_before_1 = erc1155.balance_of(PROXY(), 1);
+    let balance_before_2 = erc1155.balance_of(PROXY(), 2);
+    let balance_before_3 = erc1155.balance_of(PROXY(), 3);
+    erc1155.safe_transfer_from(USER1(), USER2(), 1, 2, array![]);
+    let balance_after_1 = erc1155.balance_of(PROXY(), 1);
+    let balance_after_2 = erc1155.balance_of(PROXY(), 2);
+    let balance_after_3 = erc1155.balance_of(PROXY(), 3);
+
+    assert(balance_before_1 == balance_after_1, 'should be equal');
+    assert(balance_before_2 == balance_after_2, 'should be equal');
+    assert(balance_before_3 == balance_after_3, 'should be equal');
+}
 // TODO : to be continued
+
