@@ -9,7 +9,7 @@ version.workspace = true
 [dependencies]
 anyhow = "1.0.40"
 blockifier.workspace = true
-cairo-lang-starknet = "2.1.0"
+cairo-lang-starknet = "2.1.1"
 cairo-vm.workspace = true
 flate2.workspace = true
 hex = { version = "0.4.3", default-features = false }
