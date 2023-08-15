@@ -6768,12 +6768,10 @@ dependencies = [
  "base64 0.21.2",
  "camino",
  "chrono",
- "ctrlc",
  "dojo-world",
  "indexmap 1.9.3",
  "log",
  "poem",
- "scarb",
  "serde",
  "serde_json",
  "sqlx",
@@ -6784,7 +6782,6 @@ dependencies = [
  "tokio-util",
  "torii-core",
  "tracing",
- "tracing-subscriber",
  "url",
 ]
 
