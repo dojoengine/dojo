@@ -5,11 +5,19 @@ use cairo_lang_filesystem::cfg::{Cfg, CfgSet};
 use cairo_lang_language_server::Backend;
 use cairo_lang_starknet::plugin::StarkNetPlugin;
 use cairo_lang_utils::logging::init_logging;
+use clap::Parser;
 use dojo_lang::plugin::DojoPlugin;
 use tower_lsp::{LspService, Server};
 
+/// Dojo Language Server
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {}
+
 #[tokio::main]
 async fn main() {
+    let _args = Args::parse();
+
     init_logging(log::LevelFilter::Warn);
 
     #[cfg(feature = "runtime-agnostic")]

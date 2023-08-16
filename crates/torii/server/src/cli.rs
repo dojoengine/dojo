@@ -30,7 +30,7 @@ mod indexer;
 
 /// Dojo World Indexer
 #[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
+#[command(name = "torii", author, version, about, long_about = None)]
 struct Args {
     /// The world to index
     #[arg(short, long = "world")]

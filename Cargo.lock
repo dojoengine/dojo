@@ -2145,6 +2145,7 @@ dependencies = [
  "cairo-lang-semantic",
  "cairo-lang-starknet",
  "cairo-lang-utils",
+ "clap",
  "dojo-lang",
  "log",
  "salsa",
