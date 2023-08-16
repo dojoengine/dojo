@@ -17,6 +17,7 @@ cairo-lang-plugins.workspace = true
 cairo-lang-semantic.workspace = true
 cairo-lang-starknet.workspace = true
 cairo-lang-utils.workspace = true
+clap.workspace = true
 dojo-lang = { path = "../dojo-lang" }
 log = "0.4.14"
 salsa = "0.16.1"
