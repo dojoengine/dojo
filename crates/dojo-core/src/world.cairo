@@ -225,7 +225,7 @@ mod world {
         /// * `system` - The name of the system.
         fn revoke_writer(ref self: ContractState, component: felt252, system: felt252) {
             assert(
-                IWorld::is_writer(@self, caller_system(@self), component)
+                IWorld::is_writer(@self, component, caller_system(@self))
                     || IWorld::is_owner(@self, get_caller_address(), component)
                     || IWorld::is_owner(@self, get_caller_address(), 0),
                 'not owner'
@@ -516,7 +516,7 @@ mod world {
         );
 
         assert(
-            IWorld::is_writer(self, caller_system(self), component)
+            IWorld::is_writer(self, component, caller_system(self))
                 || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, component)
                 || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, 0),
             'not writer'
