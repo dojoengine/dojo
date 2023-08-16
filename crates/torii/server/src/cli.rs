@@ -17,7 +17,6 @@ use torii_core::processors::register_system::RegisterSystemProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::sql::Sql;
 use torii_core::State;
-use torii_graphql::server::start_graphql;
 use tracing::error;
 use tracing_subscriber::fmt;
 use url::Url;
@@ -129,7 +128,8 @@ async fn main() -> anyhow::Result<()> {
 
     let indexer =
         Indexer::new(&state, &provider, processors, manifest, world_address, args.start_block);
-    let graphql = start_graphql(&pool);
+    let graphql = torii_graphql::server::start(pool.clone());
+    let grpc = torii_grpc::server::start(pool);
 
     tokio::select! {
         res = indexer.start() => {
@@ -140,6 +140,11 @@ async fn main() -> anyhow::Result<()> {
         res = graphql => {
             if let Err(e) = res {
                 error!("GraphQL server failed with error: {:?}", e);
+            }
+        }
+        rs = grpc => {
+            if let Err(e) = rs {
+                error!("GRPC server failed with error: {:?}", e);
             }
         }
         _ = tokio::signal::ctrl_c() => {

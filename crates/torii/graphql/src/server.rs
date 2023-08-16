@@ -13,8 +13,8 @@ async fn graphiql() -> impl IntoResponse {
     Html(GraphiQLSource::build().endpoint("/").finish())
 }
 
-pub async fn start_graphql(pool: &Pool<Sqlite>) -> anyhow::Result<()> {
-    let schema = build_schema(pool).await?;
+pub async fn start(pool: Pool<Sqlite>) -> anyhow::Result<()> {
+    let schema = build_schema(&pool).await?;
 
     let app = Route::new().at("/", get(graphiql).post(GraphQL::new(schema))).with(Cors::new());
     Server::new(TcpListener::bind("0.0.0.0:8080")).run(app).await?;
