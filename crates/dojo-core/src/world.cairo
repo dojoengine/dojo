@@ -32,6 +32,7 @@ trait IWorld<T> {
     fn executor(self: @T) -> ContractAddress;
     fn delete_entity(ref self: T, component: felt252, keys: Span<felt252>);
     fn origin(self: @T) -> ContractAddress;
+    fn caller_system(self: @T) -> felt252;
 
     fn is_owner(self: @T, account: ContractAddress, target: felt252) -> bool;
     fn grant_owner(ref self: T, account: ContractAddress, target: felt252);
@@ -225,7 +226,7 @@ mod world {
         /// * `system` - The name of the system.
         fn revoke_writer(ref self: ContractState, component: felt252, system: felt252) {
             assert(
-                IWorld::is_writer(@self, component, caller_system(@self))
+                IWorld::is_writer(@self, component, self.caller_system())
                     || IWorld::is_owner(@self, get_caller_address(), component)
                     || IWorld::is_owner(@self, get_caller_address(), 0),
                 'not owner'
@@ -380,7 +381,7 @@ mod world {
         /// * `keys` - The keys of the event.
         /// * `values` - The data to be logged by the event.
         fn emit(self: @ContractState, mut keys: Array<felt252>, values: Span<felt252>) {
-            caller_system(self).serialize(ref keys);
+            self.caller_system().serialize(ref keys);
             emit_event_syscall(keys.span(), values).unwrap_syscall();
         }
 
@@ -493,15 +494,15 @@ mod world {
         fn origin(self: @ContractState) -> ContractAddress {
             self.call_origin.read()
         }
-    }
 
-    /// Gets the caller system's name.
-    ///
-    /// # Returns
-    ///
-    /// * `felt252` - The caller system's name.
-    fn caller_system(self: @ContractState) -> felt252 {
-        self.call_stack.read(self.call_stack_len.read() - 1)
+        /// Gets the caller system's name.
+        ///
+        /// # Returns
+        ///
+        /// * `felt252` - The caller system's name.
+        fn caller_system(self: @ContractState) -> felt252 {
+            self.call_stack.read(self.call_stack_len.read() - 1)
+        }
     }
 
     /// Asserts that the current caller can write to the component.
@@ -516,7 +517,7 @@ mod world {
         );
 
         assert(
-            IWorld::is_writer(self, component, caller_system(self))
+            IWorld::is_writer(self, component, self.caller_system())
                 || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, component)
                 || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, 0),
             'not writer'
