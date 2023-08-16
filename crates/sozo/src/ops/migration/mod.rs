@@ -295,11 +295,10 @@ where
 
                     Ok(())
                 }
-                Err(MigrationError::ContractAlreadyDeployed) => Err(anyhow!(
-                    "Attempting to deploy World at address {:#x} but a World already exists \
-                     there. Try using a different World name using `--name`.",
-                    world.contract_address
-                )),
+                Err(MigrationError::ContractAlreadyDeployed) => {
+                    ws_config.ui().print_sub("World already exists, updating...");
+                    Ok(())
+                }
                 Err(e) => Err(anyhow!("Failed to migrate world: {:?}", e)),
             }?;
 
