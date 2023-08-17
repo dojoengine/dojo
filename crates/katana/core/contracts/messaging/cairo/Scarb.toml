@@ -1,5 +1,5 @@
 [package]
-name = "katana_messaging_cairo"
+name = "katana_messaging"
 version = "0.1.0"
 
 [dependencies]
