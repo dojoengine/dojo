@@ -43,13 +43,14 @@ mod ERC1155 {
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use traits::{Into, TryInto};
     use zeroable::Zeroable;
-    use serde::Serde;
+   // use serde::Serde;
     use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
     use dojo_erc::erc1155::components::{OperatorApproval, Uri, ERC1155BalanceTrait};
     use dojo_erc::erc1155::interface::{
         IERC1155, IERC1155TokenReceiver, IERC1155TokenReceiverDispatcher,
         IERC1155TokenReceiverDispatcherTrait, IERC165, IERC165Dispatcher, IERC165DispatcherTrait
     };
+    use dojo_erc::erc_common::utils::{to_calldata, ToCallDataTrait};
 
     const UNLIMITED_ALLOWANCE: felt252 =
         3618502788666131213697322783095070105623107215331596699973092056135872020480;
@@ -267,22 +268,22 @@ mod ERC1155 {
         );
     }
 
-    #[derive(Drop)]
-    struct ToCallData {
-        data: Array<felt252>,
-    }
+    // #[derive(Drop)]
+    // struct ToCallData {
+    //     data: Array<felt252>,
+    // }
 
-    #[generate_trait]
-    impl ToCallDataImpl of ToCallDataTrait {
-        fn plus<T, impl TSerde: Serde<T>, impl TD: Drop<T>>(mut self: ToCallData, data: T) -> ToCallData {
-            data.serialize(ref self.data);
-            self
-        }
-    }
+    // #[generate_trait]
+    // impl ToCallDataImpl of ToCallDataTrait {
+    //     fn plus<T, impl TSerde: Serde<T>, impl TD: Drop<T>>(mut self: ToCallData, data: T) -> ToCallData {
+    //         data.serialize(ref self.data);
+    //         self
+    //     }
+    // }
 
-    fn to_calldata<T, impl TSerde: Serde<T>, impl TD: Drop<T>>(data: T) -> ToCallData {
-        let mut calldata: Array<felt252> = ArrayTrait::new();
-        data.serialize(ref calldata);
-        ToCallData { data: calldata }
-    }
+    // fn to_calldata<T, impl TSerde: Serde<T>, impl TD: Drop<T>>(data: T) -> ToCallData {
+    //     let mut calldata: Array<felt252> = ArrayTrait::new();
+    //     data.serialize(ref calldata);
+    //     ToCallData { data: calldata }
+    // }
 }
