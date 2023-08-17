@@ -7,7 +7,7 @@ use katana_core::constants::{
     DEFAULT_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_VALIDATE_MAX_STEPS,
 };
 use katana_core::db::serde::state::SerializableState;
-use katana_core::sequencer::SequencerConfig;
+use katana_core::sequencer::{SequencerConfig, SequencerMessagingConfig};
 use katana_rpc::config::ServerConfig;
 
 #[derive(Parser, Debug)]
@@ -48,6 +48,10 @@ pub struct KatanaArgs {
     #[command(flatten)]
     #[command(next_help_heading = "Starknet options")]
     pub starknet: StarknetOptions,
+
+    #[command(flatten)]
+    #[command(next_help_heading = "Messaging options")]
+    pub messaging: MessagingOptions,
 
     #[command(subcommand)]
     pub command: Option<Commands>,
@@ -113,9 +117,36 @@ pub struct EnvironmentOptions {
     pub invoke_max_steps: Option<u32>,
 }
 
+#[derive(Debug, Args, Clone)]
+pub struct MessagingOptions {
+    #[arg(long)]
+    #[arg(help = "RPC URL of a node for the settlement chain.")]
+    pub messaging_rpc_url: Option<String>,
+
+    #[arg(long)]
+    #[arg(help = "The messaging contract address on the settlement chain.")]
+    pub messaging_contract_address: Option<String>,
+
+    #[arg(long)]
+    #[arg(help = "The address of the sender on the settlement chain associated with the private key.")]
+    pub messaging_sender_address: Option<String>,
+
+    #[arg(long)]
+    #[arg(help = "The private key used to send transaction to the settlement chain.")]
+    pub messaging_private_key: Option<String>,
+
+    #[arg(long)]
+    #[arg(help = "The interval in seconds after which katana checks for messages on the settlement chain.")]
+    #[arg(default_value = "5")]
+    pub messaging_fetch_interval: Option<u64>,
+}
+
 impl KatanaArgs {
     pub fn sequencer_config(&self) -> SequencerConfig {
-        SequencerConfig { block_time: self.block_time }
+        SequencerConfig {
+            block_time: self.block_time,
+            messaging: sequencer_messaging_config(self.messaging.clone()),
+        }
     }
 
     pub fn server_config(&self) -> ServerConfig {
@@ -159,6 +190,25 @@ fn parse_seed(seed: &str) -> [u8; 32] {
         let mut actual_seed = [0u8; 32];
         seed.iter().enumerate().for_each(|(i, b)| actual_seed[i] = *b);
         actual_seed
+    }
+}
+
+fn sequencer_messaging_config(options: MessagingOptions) -> Option<SequencerMessagingConfig> {
+    match (options.messaging_rpc_url,
+           options.messaging_contract_address,
+           options.messaging_sender_address,
+           options.messaging_private_key,
+           options.messaging_fetch_interval) {
+        (Some(rpc_url), Some(contract_address), Some(sender_address), Some(private_key), Some(fetch_interval)) => {
+            Some(SequencerMessagingConfig {
+                rpc_url,
+                contract_address,
+                sender_address,
+                private_key,
+                fetch_interval,
+            })
+        }
+        _ => None
     }
 }
 

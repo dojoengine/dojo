@@ -29,12 +29,23 @@ use crate::backend::storage::transaction::{
 use crate::backend::{Backend, ExternalFunctionCall};
 use crate::sequencer_error::SequencerError;
 use crate::utils::event::{ContinuationToken, ContinuationTokenError};
+use crate::messaging;
 
 type SequencerResult<T> = Result<T, SequencerError>;
 
 #[derive(Debug, Default)]
 pub struct SequencerConfig {
     pub block_time: Option<u64>,
+    pub messaging: Option<SequencerMessagingConfig>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct SequencerMessagingConfig {
+    pub rpc_url: String,
+    pub contract_address: String,
+    pub sender_address: String,
+    pub private_key: String,
+    pub fetch_interval: u64,
 }
 
 #[async_trait]
@@ -132,6 +143,18 @@ impl KatanaSequencer {
 
     pub async fn start(&self) {
         // self.starknet.generate_genesis_block().await;
+
+        if let Some(messaging_config) = self.config.messaging.clone() {
+            let starknet = self.backend.clone();
+            tokio::spawn(async move {
+                match messaging::messaging_main_loop(messaging_config, starknet).await {
+                    Ok(_) => tracing::info!("Normal termination of messaging main loop."),
+                    Err(e) => tracing::error!("Messaging main loop error: {:?}.", e),
+                }
+            });
+        } else {
+            tracing::debug!("Messaging is disabled, please provide all messaging args.");
+        }
 
         if let Some(block_time) = self.config.block_time {
             let starknet = self.backend.clone();
