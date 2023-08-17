@@ -29,7 +29,7 @@ pub struct LogMessageToL2 {
     #[ethevent(indexed)]
     from_address: Address,
     #[ethevent(indexed)]
-    to_address: Address,
+    to_address: U256,
     #[ethevent(indexed)]
     selector: U256,
     payload: Vec<U256>,
@@ -90,6 +90,8 @@ impl EthereumMessenger {
                 to_block: Some(BlockNumber::Number(to_block.into())),
             },
             address: Some(ValueOrArray::Value(self.messaging_contract_address)),
+
+            // TODO: the topic is needed! To only gather message logs.
             topics: Default::default(),
         };
 
@@ -142,10 +144,9 @@ impl Messenger for EthereumMessenger {
                 block_logs
                     .iter()
                     .for_each(|l| {
-                        if let Ok(tx) = l1_handler_tx_from_log(l) {
-                            l1_handler_txs.push(tx);
-                        } else {
-                            tracing::warn!("Error converting a log into L1HandlerTx.");
+                        match l1_handler_tx_from_log(l) {
+                            Ok(tx) => l1_handler_txs.push(tx),
+                            Err(e) => tracing::warn!("Error converting a log into L1HandlerTx. {:?}", e),
                         }
                     })
             });
@@ -186,7 +187,7 @@ fn l1_handler_tx_from_log(log: &Log) -> Result<Transaction> {
     let parsed_log = <LogMessageToL2 as EthLogDecode>::decode_log(&log.clone().into())?;
 
     let from_address = stark_felt_from_address(parsed_log.from_address);
-    let contract_address = stark_felt_from_address(parsed_log.to_address);
+    let contract_address = stark_felt_from_u256(parsed_log.to_address);
     let selector = stark_felt_from_u256(parsed_log.selector);
     let nonce = stark_felt_from_u256(parsed_log.nonce);
     let fee: u128 = parsed_log.fee
@@ -205,24 +206,27 @@ fn l1_handler_tx_from_log(log: &Log) -> Result<Transaction> {
     // ok for now? Or is it derived from something?
     let tx_hash = hash::pedersen_hash(&nonce, &contract_address);
 
-    Ok(Transaction::L1Handler(L1HandlerTransaction(
-        ApiL1HandlerTransaction {
+    let tx = Transaction::L1Handler(L1HandlerTransaction {
+        inner: ApiL1HandlerTransaction {
             transaction_hash: TransactionHash(tx_hash),
             version: TransactionVersion(stark_felt!(1 as u32)),
             nonce: Nonce(nonce),
             contract_address: ContractAddress::try_from(contract_address).unwrap(),
             entry_point_selector: EntryPointSelector(selector),
             calldata: calldata,
-        }
-    )))
+        },
+        paid_fee_on_l1: Fee(fee),
+    });
+
+    Ok(tx)
 }
 
 fn stark_felt_from_u256(v: U256) -> StarkFelt {
-    stark_felt!(format!("{:#64x}", v).as_str())
+    stark_felt!(format!("{:#064x}", v).as_str())
 }
 
 fn stark_felt_from_address(v: Address) -> StarkFelt {
-    stark_felt!(format!("{:#64x}", v).as_str())
+    stark_felt!(format!("{:#064x}", v).as_str())
 }
 
 impl From<ProviderError> for MessengerError {

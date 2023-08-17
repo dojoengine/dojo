@@ -5,6 +5,7 @@ use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transactions::{
     DeclareTransaction as ExecutionDeclareTransaction,
     DeployAccountTransaction as ExecutionDeployAccountTransaction,
+    L1HandlerTransaction as ExecutionL1HandlerTransaction,
 };
 use starknet::core::types::{
     DeclareTransactionReceipt, DeployAccountTransactionReceipt, Event, FieldElement,
@@ -20,7 +21,7 @@ use starknet_api::transaction::{
     DeclareTransaction as ApiDeclareTransaction,
     DeployAccountTransaction as ApiDeployAccountTransaction,
     InvokeTransaction as ApiInvokeTransaction, Transaction as ApiTransaction,
-    L1HandlerTransaction as ApiL1HandlerTransaction,
+    L1HandlerTransaction as ApiL1HandlerTransaction, Fee,
 };
 
 use crate::backend::executor::ExecutedTransaction;
@@ -105,13 +106,16 @@ impl Transaction {
             Transaction::Invoke(tx) => tx.0.transaction_hash().0.into(),
             Transaction::Declare(tx) => tx.inner.transaction_hash().0.into(),
             Transaction::DeployAccount(tx) => tx.inner.transaction_hash.0.into(),
-            Transaction::L1Handler(tx) => tx.0.transaction_hash.0.into(),
+            Transaction::L1Handler(tx) => tx.inner.transaction_hash.0.into(),
         }
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct L1HandlerTransaction(pub ApiL1HandlerTransaction);
+pub struct L1HandlerTransaction {
+    pub inner: ApiL1HandlerTransaction,
+    pub paid_fee_on_l1: Fee,
+}
 
 #[derive(Debug, Clone)]
 pub struct InvokeTransaction(pub ApiInvokeTransaction);
@@ -278,7 +282,7 @@ impl From<Transaction> for ApiTransaction {
             Transaction::Invoke(tx) => ApiTransaction::Invoke(tx.0),
             Transaction::Declare(tx) => ApiTransaction::Declare(tx.inner),
             Transaction::DeployAccount(tx) => ApiTransaction::DeployAccount(tx.inner),
-            Transaction::L1Handler(tx) => ApiTransaction::L1Handler(tx.0),
+            Transaction::L1Handler(tx) => ApiTransaction::L1Handler(tx.inner),
         }
     }
 }
@@ -298,6 +302,18 @@ impl From<Transaction> for AccountTransaction {
                 })
             },
             Transaction::L1Handler(_) => panic!("L1HandlerTransaction is not an AccountTransaction"),
+        }
+    }
+}
+
+impl From<Transaction> for ExecutionL1HandlerTransaction {
+    fn from(value: Transaction) -> Self {
+        match value {
+            Transaction::L1Handler(tx) => ExecutionL1HandlerTransaction {
+                tx: tx.inner,
+                paid_fee_on_l1: tx.paid_fee_on_l1,
+            },
+            _ => panic!("Only L1Handler is expected to be converted here"),
         }
     }
 }
