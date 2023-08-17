@@ -83,11 +83,13 @@ impl PendingBlockExecutor {
         let res = execute_transaction(
             match transaction {
                 Transaction::L1Handler(_) => ExecutionTransaction::L1HandlerTransaction(
-                    transaction.clone().into()
-                ),
-                Transaction::Declare(_) => ExecutionTransaction::AccountTransaction(transaction.clone().into()),
-                Transaction::DeployAccount(_) => ExecutionTransaction::AccountTransaction(transaction.clone().into()),
-                Transaction::Invoke(_) => ExecutionTransaction::AccountTransaction(transaction.clone().into()),
+                    transaction.clone().into()),
+                Transaction::Declare(_) => ExecutionTransaction::AccountTransaction(
+                    transaction.clone().into()),
+                Transaction::DeployAccount(_) => ExecutionTransaction::AccountTransaction(
+                    transaction.clone().into()),
+                Transaction::Invoke(_) => ExecutionTransaction::AccountTransaction(
+                    transaction.clone().into()),
             },
             &mut self.state,
             &self.env.read().block,
