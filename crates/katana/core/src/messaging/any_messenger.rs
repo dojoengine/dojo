@@ -1,7 +1,5 @@
 use async_trait::async_trait;
 
-
-use blockifier::transaction::transaction_execution::Transaction;
 use starknet::core::types::MsgToL1;
 
 use super::ethereum_messenger::EthereumMessenger;
@@ -9,6 +7,7 @@ use super::starknet_messenger::StarknetMessenger;
 
 use crate::messaging::{Messenger, MessengerResult, MessengerError};
 use crate::sequencer::SequencerMessagingConfig;
+use crate::backend::storage::transaction::Transaction;
 
 pub enum AnyMessenger {
     Ethereum(EthereumMessenger),

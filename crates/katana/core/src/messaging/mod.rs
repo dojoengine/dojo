@@ -4,15 +4,14 @@ mod any_messenger;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blockifier::transaction::transaction_execution::Transaction;
 use std::sync::Arc;
 use tokio::time;
 use starknet::core::types::MsgToL1;
 use ethers::providers::ProviderError;
 
 use crate::sequencer::SequencerMessagingConfig;
-use crate::backend::{Backend};
-
+use crate::backend::{Backend, storage::transaction::Transaction}
+;
 use any_messenger::AnyMessenger;
 
 type MessengerResult<T> = Result<T, MessengerError>;
@@ -81,17 +80,17 @@ pub async fn messaging_main_loop(
     // TODO: check how this can be easier to configure.
     let max_blocks = 200;
 
-    let local_latest_block_number: u64 = 0;
-    let _settlement_latest_block_number: u64 = 0;
+    let mut local_latest_block_number: u64 = 0;
+    let mut settlement_latest_block_number: u64 = 0;
 
     loop {
         time::sleep(time::Duration::from_secs(config.fetch_interval)).await;
 
-        let (local_latest_block_number, _sent_count)
+        (local_latest_block_number, _)
             = worker.send_messages(local_latest_block_number).await?;
 
-        let (_settlement_latest_block_number, _gather_count)
-            = worker.gather_messages(local_latest_block_number, max_blocks).await?;
+        (settlement_latest_block_number, _)
+            = worker.gather_messages(settlement_latest_block_number, max_blocks).await;
     }
 }
 
@@ -129,22 +128,24 @@ impl Worker {
 
     /// Fetches messages from the settlement chain.
     /// Returns the latest fetched block, and the count of messages gathered.
-    async fn gather_messages(&self, from_block: u64, _max_block: u64) -> MessengerResult<(u64, u64)> {
-
-        // Get last block id on chain
-        // -> then fetch (no too much blocks) and then return.
-        // Does not matter if we don't go until latest at the first hit.
-        let chain_latest = 0;
-        let latest_processed = 0;
-        let messages_count = 0;
-
-        // Get list of l1 tx from logs.
-        //
-        // for tx in l1_handler_txs {
-        //     self.starknet.write().await.handle_transaction(tx);
-        // }
-
-        tracing::debug!("Messages gathered {} [{} - {}]", 0, from_block, chain_latest);
-        Ok((latest_processed, messages_count))
+    async fn gather_messages(&self, from_block: u64, max_blocks: u64) -> (u64, u64) {
+        if let Ok((latest_block_fetched, l1_handler_txs))
+            = self.messenger.gather_messages(from_block, max_blocks).await
+        {
+            for tx in &l1_handler_txs {
+                self.starknet.handle_transaction(tx.clone()).await;
+            }
+            
+            tracing::debug!(
+                "Messages gathered {} [{} - {}]",
+                l1_handler_txs.len(),
+                from_block,
+                latest_block_fetched
+            );
+            
+            return (latest_block_fetched, l1_handler_txs.len() as u64)
+        } else {
+            (from_block, 0)
+        }
     }
 }

@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 
-use blockifier::transaction::transaction_execution::Transaction;
 use starknet::core::types::{MsgToL1, FieldElement};
 
 use anyhow::Result;
@@ -13,16 +12,16 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use sha3::{Digest, Keccak256};
 
-use blockifier::transaction::transactions::L1HandlerTransaction;
 use starknet_api::core::{ContractAddress, Nonce, EntryPointSelector};
 use starknet_api::hash::{self, StarkFelt};
 use starknet_api::stark_felt;
 use starknet_api::transaction::{
-    Calldata, Fee, TransactionHash, L1HandlerTransaction as StarknetApiL1HTx, TransactionVersion,
+    Calldata, Fee, TransactionHash, L1HandlerTransaction as ApiL1HandlerTransaction, TransactionVersion,
 };
 
 use crate::messaging::{Messenger, MessengerError, MessengerResult};
 use crate::sequencer::SequencerMessagingConfig;
+use crate::backend::storage::transaction::{Transaction, L1HandlerTransaction};
 
 ///
 #[derive(Debug, PartialEq, Eq, EthEvent)]
@@ -206,17 +205,16 @@ fn l1_handler_tx_from_log(log: &Log) -> Result<Transaction> {
     // ok for now? Or is it derived from something?
     let tx_hash = hash::pedersen_hash(&nonce, &contract_address);
 
-    Ok(Transaction::L1HandlerTransaction(L1HandlerTransaction {
-        tx: StarknetApiL1HTx {
+    Ok(Transaction::L1Handler(L1HandlerTransaction(
+        ApiL1HandlerTransaction {
             transaction_hash: TransactionHash(tx_hash),
             version: TransactionVersion(stark_felt!(1 as u32)),
             nonce: Nonce(nonce),
             contract_address: ContractAddress::try_from(contract_address).unwrap(),
             entry_point_selector: EntryPointSelector(selector),
             calldata: calldata,
-        },
-        paid_fee_on_l1: Fee(fee)
-    }))
+        }
+    )))
 }
 
 fn stark_felt_from_u256(v: U256) -> StarkFelt {

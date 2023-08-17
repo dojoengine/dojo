@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 
-use blockifier::transaction::transaction_execution::Transaction;
 use starknet::core::types::MsgToL1;
 
 use anyhow::{Result};
@@ -15,6 +14,7 @@ use url::Url;
 
 use crate::messaging::{Messenger, MessengerResult};
 use crate::sequencer::SequencerMessagingConfig;
+use crate::backend::storage::transaction::Transaction;
 
 ///
 pub struct StarknetMessenger {

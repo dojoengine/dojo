@@ -9,7 +9,7 @@ use blockifier::transaction::transactions::{
 use starknet::core::types::{
     DeclareTransactionReceipt, DeployAccountTransactionReceipt, Event, FieldElement,
     FlattenedSierraClass, InvokeTransactionReceipt, MsgToL1, PendingDeclareTransactionReceipt,
-    PendingDeployAccountTransactionReceipt, PendingInvokeTransactionReceipt,
+    PendingDeployAccountTransactionReceipt, PendingInvokeTransactionReceipt, L1HandlerTransactionReceipt, PendingL1HandlerTransactionReceipt,
     PendingTransactionReceipt as RpcPendingTransactionReceipt, Transaction as RpcTransaction,
     TransactionReceipt as RpcTransactionReceipt, TransactionStatus as RpcTransactionStatus,
 };
@@ -20,6 +20,7 @@ use starknet_api::transaction::{
     DeclareTransaction as ApiDeclareTransaction,
     DeployAccountTransaction as ApiDeployAccountTransaction,
     InvokeTransaction as ApiInvokeTransaction, Transaction as ApiTransaction,
+    L1HandlerTransaction as ApiL1HandlerTransaction,
 };
 
 use crate::backend::executor::ExecutedTransaction;
@@ -95,6 +96,7 @@ pub enum Transaction {
     Invoke(InvokeTransaction),
     Declare(DeclareTransaction),
     DeployAccount(DeployAccountTransaction),
+    L1Handler(L1HandlerTransaction),
 }
 
 impl Transaction {
@@ -103,9 +105,13 @@ impl Transaction {
             Transaction::Invoke(tx) => tx.0.transaction_hash().0.into(),
             Transaction::Declare(tx) => tx.inner.transaction_hash().0.into(),
             Transaction::DeployAccount(tx) => tx.inner.transaction_hash.0.into(),
+            Transaction::L1Handler(tx) => tx.0.transaction_hash.0.into(),
         }
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct L1HandlerTransaction(pub ApiL1HandlerTransaction);
 
 #[derive(Debug, Clone)]
 pub struct InvokeTransaction(pub ApiInvokeTransaction);
@@ -157,7 +163,17 @@ impl IncludedTransaction {
                     messages_sent: self.transaction.output.messages_sent.clone(),
                     actual_fee: self.transaction.execution_info.actual_fee.0.into(),
                 })
-            }
+            },
+
+            Transaction::L1Handler(_) => RpcTransactionReceipt::L1Handler(L1HandlerTransactionReceipt {
+                status: self.status.into(),
+                block_hash: self.block_hash,
+                block_number: self.block_number,
+                events: self.transaction.output.events.clone(),
+                messages_sent: self.transaction.output.messages_sent.clone(),
+                transaction_hash: self.transaction.inner.hash(),
+                actual_fee: self.transaction.execution_info.actual_fee.0.into(),
+            }),
         }
     }
 }
@@ -185,6 +201,15 @@ impl PendingTransaction {
 
             Transaction::DeployAccount(_) => RpcPendingTransactionReceipt::DeployAccount(
                 PendingDeployAccountTransactionReceipt {
+                    events: self.0.output.events.clone(),
+                    transaction_hash: self.0.inner.hash(),
+                    messages_sent: self.0.output.messages_sent.clone(),
+                    actual_fee: self.0.execution_info.actual_fee.0.into(),
+                },
+            ),
+
+            Transaction::L1Handler(_) => RpcPendingTransactionReceipt::L1Handler(
+                PendingL1HandlerTransactionReceipt {
                     events: self.0.output.events.clone(),
                     transaction_hash: self.0.inner.hash(),
                     messages_sent: self.0.output.messages_sent.clone(),
@@ -253,6 +278,7 @@ impl From<Transaction> for ApiTransaction {
             Transaction::Invoke(tx) => ApiTransaction::Invoke(tx.0),
             Transaction::Declare(tx) => ApiTransaction::Declare(tx.inner),
             Transaction::DeployAccount(tx) => ApiTransaction::DeployAccount(tx.inner),
+            Transaction::L1Handler(tx) => ApiTransaction::L1Handler(tx.0),
         }
     }
 }
@@ -270,7 +296,8 @@ impl From<Transaction> for AccountTransaction {
                     tx: tx.inner,
                     contract_address: ContractAddress(patricia_key!(tx.contract_address)),
                 })
-            }
+            },
+            Transaction::L1Handler(_) => panic!("L1HandlerTransaction is not an AccountTransaction"),
         }
     }
 }
