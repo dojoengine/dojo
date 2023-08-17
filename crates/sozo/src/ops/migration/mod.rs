@@ -45,7 +45,7 @@ where
     // Setup account for migration and fetch world address if it exists.
 
     let (world_address, account) =
-        setup_env(account, starknet, world, env_metadata.as_ref(), config).await?;
+        setup_env(account, starknet, world, env_metadata.as_ref(), config, name.as_ref()).await?;
 
     // Load local and remote World manifests.
 
@@ -102,6 +102,7 @@ async fn setup_env(
     world: WorldOptions,
     env_metadata: Option<&Environment>,
     config: &Config,
+    name: Option<&String>,
 ) -> Result<(Option<FieldElement>, SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>)> {
     let world_address = world.address(env_metadata).ok();
 
@@ -112,7 +113,10 @@ async fn setup_env(
 
         let address = account.address();
 
-        config.ui().print(format!("\nMigration account: {address:#x}\n"));
+        config.ui().print(format!("\nMigration account: {address:#x}"));
+        if let Some(name) = name {
+            config.ui().print(format!("\nWorld seed: {name}\n"));
+        }
 
         match account.provider().get_class_hash_at(BlockId::Tag(BlockTag::Pending), address).await {
             Ok(_) => Ok(account),
