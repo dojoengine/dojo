@@ -36,7 +36,7 @@ impl EntityObject {
         Self {
             type_mapping: IndexMap::from([
                 (Name::new("id"), TypeRef::named(TypeRef::ID)),
-                (Name::new("keys"), TypeRef::named(TypeRef::STRING)),
+                (Name::new("keys"), TypeRef::named_list(TypeRef::STRING)),
                 (Name::new("componentNames"), TypeRef::named(TypeRef::STRING)),
                 (Name::new("createdAt"), TypeRef::named(ScalarType::DateTime.to_string())),
                 (Name::new("updatedAt"), TypeRef::named(ScalarType::DateTime.to_string())),
@@ -45,9 +45,11 @@ impl EntityObject {
     }
 
     pub fn value_mapping(entity: Entity) -> ValueMapping {
+        let keys_str = entity.keys.unwrap(); // safe unwrap
+        let keys: Vec<&str> = keys_str.split(',').map(|s| s.trim()).collect();
         IndexMap::from([
             (Name::new("id"), Value::from(entity.id)),
-            (Name::new("keys"), Value::from(entity.keys.unwrap_or_default())),
+            (Name::new("keys"), Value::from(keys)),
             (Name::new("componentNames"), Value::from(entity.component_names)),
             (
                 Name::new("createdAt"),
@@ -161,7 +163,7 @@ async fn entities_by_sk(
     args: ConnectionArguments,
 ) -> Result<(Vec<ValueMapping>, i64)> {
     let mut builder: QueryBuilder<'_, Sqlite> = QueryBuilder::new("SELECT * FROM entities");
-    let keys_str = format!("{},%", keys.join(","));
+    let keys_str = format!("{}%", keys.join(","));
     builder.push(" WHERE keys LIKE ").push_bind(&keys_str);
 
     if let Some(after_cursor) = &args.after {

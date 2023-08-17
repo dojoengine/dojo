@@ -219,7 +219,7 @@ impl State for Sql {
             .await?;
 
         // TODO: map keys to individual columns
-        let keys_str = keys.iter().map(|k| format!("{:#x},", k)).collect::<Vec<String>>().join("");
+        let keys_str = keys.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join(",");
         let component_names = component_names(entity_result, &component)?;
         let insert_entities = format!(
             "INSERT INTO entities (id, keys, component_names) VALUES ('{}', '{}', '{}') ON \

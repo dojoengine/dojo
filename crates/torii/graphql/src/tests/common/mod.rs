@@ -26,7 +26,7 @@ pub struct Edge<T> {
 #[serde(rename_all = "camelCase")]
 pub struct Entity {
     pub component_names: String,
-    pub keys: Option<String>,
+    pub keys: Option<Vec<String>>,
     pub created_at: Option<String>,
 }
 
