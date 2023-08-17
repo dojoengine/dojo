@@ -15,7 +15,9 @@ use starknet::core::types::{
 use starknet::core::utils::{
     get_contract_address, get_selector_from_name, CairoShortStringToFeltError,
 };
-use starknet::providers::{Provider, ProviderError};
+use starknet::providers::{
+    MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage,
+};
 use starknet::signers::Signer;
 use thiserror::Error;
 
@@ -96,7 +98,10 @@ pub trait Declarable {
             .get_class(BlockId::Tag(BlockTag::Pending), flattened_class.class_hash())
             .await
         {
-            Err(ProviderError::StarknetError(StarknetError::ClassHashNotFound)) => {}
+            Err(ProviderError::StarknetError(StarknetErrorWithMessage {
+                code: MaybeUnknownErrorCode::Known(StarknetError::ClassHashNotFound),
+                ..
+            })) => {}
 
             Ok(_) => return Err(MigrationError::ClassAlreadyDeclared),
             Err(e) => return Err(MigrationError::Provider(e)),
@@ -162,7 +167,10 @@ pub trait Deployable: Declarable + Sync {
             .get_class_hash_at(BlockId::Tag(BlockTag::Pending), contract_address)
             .await
         {
-            Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {}
+            Err(ProviderError::StarknetError(StarknetErrorWithMessage {
+                code: MaybeUnknownErrorCode::Known(StarknetError::ContractNotFound),
+                ..
+            })) => {}
 
             Ok(_) => return Err(MigrationError::ContractAlreadyDeployed),
             Err(e) => return Err(MigrationError::Provider(e)),

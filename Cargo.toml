@@ -73,7 +73,7 @@ serde = { version = "1.0.156", features = [ "derive" ] }
 serde_json = "1.0"
 serde_with = "2.3.1"
 smol_str = { version = "0.2.0", features = [ "serde" ] }
-starknet = "0.4.0"
+starknet = "0.5.0"
 starknet-crypto = "0.5.1"
 starknet_api = { git = "https://github.com/starkware-libs/starknet-api", rev = "ecc9b6946ef13003da202838e4124a9ad2efabb0" }
 test-log = "0.2.11"
