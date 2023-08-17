@@ -11,10 +11,12 @@ use dojo_erc::tests::test_erc1155_utils::{
     spawn_world, deploy_erc1155, deploy_default, deploy_testcase1, ZERO, USER1, USER2, DEPLOYER,
     PROXY
 };
-use dojo_erc::erc1155::interface::{IERC1155, IERC1155Dispatcher, IERC1155DispatcherTrait};
 use dojo_erc::tests::constants::{
     INTERFACE_ERC165, INTERFACE_ERC1155, INTERFACE_ERC1155_METADATA, INTERFACE_ERC1155_RECEIVER
 };
+
+use dojo_erc::tests::test_erc1155_utils::{IERC1155Dispatcher, IERC1155DispatcherTrait};
+
 
 #[test]
 #[available_gas(30000000)]
@@ -54,14 +56,10 @@ fn test_should_support_interfaces() {
 // uri
 //
 
-use debug::PrintTrait;
-
 #[test]
 #[available_gas(30000000)]
 fn test_uri() {
     let (world, erc1155) = deploy_default();
-    'uri'.print();
-    erc1155.uri(1).print();
     assert(erc1155.uri(64) == 'uri', 'invalid uri');
 }
 

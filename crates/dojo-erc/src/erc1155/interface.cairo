@@ -28,12 +28,6 @@ trait IERC1155<TState> {
     ) -> Array<u256>;
     fn uri(self: @TState, token_id: u256) -> felt252;
     fn supports_interface(self: @TState, interface_id: u32) -> bool;
-
-    //
-    fn owner(self: @TState) -> ContractAddress;
-                fn mint(ref self: TState, to: ContractAddress, id: u256, amount: u256,data: Array<u8>);
-
-    fn mint_batch(ref self: TState, to: ContractAddress, ids: Array<u256>, amounts: Array<u256>,data: Array<u8>);
 }
 
 #[starknet::interface]

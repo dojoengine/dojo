@@ -7,8 +7,9 @@ mod ERC1155 {
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use traits::{Into, TryInto};
     use zeroable::Zeroable;
+    use serde::Serde;
     use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
-    use dojo_erc::erc1155::components::{OperatorApproval, Uri, Balance};
+    use dojo_erc::erc1155::components::{OperatorApproval, Uri, ERC1155Balance};
     use dojo_erc::erc1155::interface::{
         IERC1155, IERC1155TokenReceiver, IERC1155TokenReceiverDispatcher,
         IERC1155TokenReceiverDispatcherTrait, IERC165, IERC165Dispatcher, IERC165DispatcherTrait
@@ -26,7 +27,6 @@ mod ERC1155 {
     const INTERFACE_ERC1155_RECEIVER: u32 = 0x4e2312e0_u32;
     const ON_ERC1155_RECEIVED_SELECTOR: u32 = 0xf23a6e61_u32;
     const ON_ERC1155_BATCH_RECEIVED_SELECTOR: u32 = 0xbc197c81_u32;
-
 
     #[event]
     #[derive(Drop, starknet::Event)]
@@ -101,7 +101,7 @@ mod ERC1155 {
         // ERC1155
         //
         fn balance_of(self: @ContractState, account: ContractAddress, id: u256) -> u256 {
-            self._balance_of(account, id)
+            dojo_erc::erc1155::systems::balance_of(self.world.read(), get_contract_address(), account, id)
         }
 
         fn balance_of_batch(
@@ -115,7 +115,7 @@ mod ERC1155 {
                 if index == ids.len() {
                     break batch_balances.clone();
                 }
-                batch_balances.append(self._balance_of(*accounts.at(index), *ids.at(index)));
+                batch_balances.append(dojo_erc::erc1155::systems::balance_of(self.world.read(), get_contract_address(), *accounts.at(index), *ids.at(index)));
                 index += 1;
             }
         }
@@ -123,14 +123,25 @@ mod ERC1155 {
         fn is_approved_for_all(
             self: @ContractState, account: ContractAddress, operator: ContractAddress
         ) -> bool {
-            self._is_approved_for_all(account, operator)
+            dojo_erc::erc1155::systems::is_approved_for_all(self.world.read(), get_contract_address(), account, operator)
         }
 
         fn set_approval_for_all(
             ref self: ContractState, operator: ContractAddress, approved: bool
         ) {
-            let caller = get_caller_address();
-            self._set_approval_for_all(caller, operator, approved);
+            let owner = get_caller_address();
+
+            assert(owner != operator, 'ERC1155: wrong approval');
+
+            self.world.read().execute('ERC1155SetApprovalForAll',
+                to_calldata(get_contract_address())
+                    .plus(owner)
+                    .plus(operator)
+                    .plus(approved)
+                    .data
+            );
+
+            self.emit(ApprovalForAll { owner, operator, approved });
         }
 
         fn safe_transfer_from(
@@ -141,321 +152,179 @@ mod ERC1155 {
             amount: u256,
             data: Array<u8>
         ) {
-            let caller = get_caller_address();
-            assert(
-                caller == from || self._is_approved_for_all(from, caller),
-                'ERC1155: insufficient approval'
+            let idf: felt252 = id.try_into().unwrap();
+            let amount128: u128 = amount.try_into().unwrap();
+            self.world.read().execute('ERC1155SafeTransferFrom',
+                to_calldata(get_caller_address())
+                    .plus(get_contract_address())
+                    .plus(from)
+                    .plus(to)
+                    .plus(idf)
+                    .plus(amount128)
+                    .plus(data)
+                    .data
             );
-            self._safe_transfer_from(from, to, id, amount, data);
         }
 
         fn safe_batch_transfer_from(
             ref self: ContractState,
             from: ContractAddress,
             to: ContractAddress,
-            ids: Array<u256>,
-            amounts: Array<u256>,
+            mut ids: Array<u256>,
+            mut amounts: Array<u256>,
             data: Array<u8>
         ) {
-            let caller = get_caller_address();
-            assert(
-                caller == from || self._is_approved_for_all(from, caller),
-                'ERC1155: insufficient approval'
+            let mut idsf: Array<felt252> = ArrayTrait::new();
+            let mut amounts128: Array<u128> = ArrayTrait::new();
+            loop {
+                if ids.len() == 0 {
+                    break;
+                }
+                idsf.append(ids.pop_front().unwrap().try_into().unwrap());
+                amounts128.append(amounts.pop_front().unwrap().try_into().unwrap());
+            };
+
+            self.world.read().execute('ERC1155SafeBatchTransferFrom',
+                to_calldata(get_caller_address())
+                    .plus(get_contract_address())
+                    .plus(from)
+                    .plus(to)
+                    .plus(idsf)
+                    .plus(amounts128)
+                    .plus(data)
+                    .data
             );
-            self._safe_batch_transfer_from(from, to, ids, amounts, data);
-        }
-
-        //
-        // should move to another interface ?
-        //
-
-        fn owner(self: @ContractState) -> ContractAddress {
-            self.owner_.read()
-        }
-
-        fn mint(
-            ref self: ContractState, to: ContractAddress, id: u256, amount: u256, data: Array<u8>
-        ) {
-            self._mint(to, id, amount, data);
-        }
-
-        fn mint_batch(
-            ref self: ContractState,
-            to: ContractAddress,
-            ids: Array<u256>,
-            amounts: Array<u256>,
-            data: Array<u8>
-        ) {
-            self._mint_batch(to, ids, amounts, data);
         }
     }
 
+    #[external(v0)]
+    fn owner(self: @ContractState) -> ContractAddress {
+        self.owner_.read()
+    }
+
+    #[external(v0)]
+    fn mint(
+        ref self: ContractState, to: ContractAddress, id: u256, amount: u256, data: Array<u8>
+    ) {
+        self._mint(to, id.try_into().unwrap(), amount.try_into().unwrap(), data);
+    }
+
+    #[external(v0)]
+    fn mint_batch(
+        ref self: ContractState,
+        to: ContractAddress,
+        mut ids: Array<u256>,
+        mut amounts: Array<u256>,
+        data: Array<u8>
+    ) {
+        let mut ids_felt: Array<felt252> = ArrayTrait::new();
+        let mut amounts_u128: Array<u128> = ArrayTrait::new();
+        loop {
+            if ids.len() == 0 {
+                break ();
+            }
+            ids_felt.append(ids.pop_front().unwrap().try_into().unwrap());
+            amounts_u128.append(amounts.pop_front().unwrap().try_into().unwrap());
+        };
+        self._mint_batch(to, ids_felt, amounts_u128, data);
+    }
+    
     //
     // Internal
     //
-
+    
     #[generate_trait]
     impl PrivateFunctions of PrivateFunctionsTrait {
-        fn _balance_of(self: @ContractState, account: ContractAddress, id: u256) -> u256 {
-            // ERC1155: address zero is not a valid owner
-            assert(account.is_non_zero(), 'ERC1155: invalid owner address');
-            let token = get_contract_address();
-            let id_felt: felt252 = id.try_into().unwrap();
-            let balance = get!(self.world.read(), (token, id_felt, account), Balance);
-            balance.amount.into()
-        }
-
-        fn _is_approved_for_all(
-            self: @ContractState, account: ContractAddress, operator: ContractAddress
-        ) -> bool {
-            let token = get_contract_address();
-            let approval = get!(self.world.read(), (token, account, operator), OperatorApproval);
-            approval.approved
-        }
-
-        fn _update(
-            ref self: ContractState,
-            from: ContractAddress,
-            to: ContractAddress,
-            ids: Array<u256>,
-            amounts: Array<u256>,
-            data: Array<u8>
-        ) {
-            assert(ids.len() == amounts.len(), 'ERC1155: invalid length');
-
-            let operator = get_caller_address();
-            let token = get_contract_address();
-            let mut calldata = ArrayTrait::new();
-            calldata.append(token.into());
-            // calldata.append(operator.into());
-            calldata.append(from.into());
-            calldata.append(to.into());
-            calldata.append(ids.len().into());
-
-            // cloning because loop takes ownership
-            let ids_clone = ids.clone();
-            let amounts_clone = ids.clone();
-            let data_clone = data.clone();
-
-            // TODO : replace with span / match / pop_front
-            let mut index = 0;
-            loop {
-                if index == ids.len() {
-                    break ();
-                }
-                let id: felt252 = (*ids.at(index)).try_into().unwrap();
-                calldata.append(id);
-                index += 1;
-            };
-            calldata.append(amounts.len().into());
-            let mut index = 0;
-            loop {
-                if index == amounts.len() {
-                    break ();
-                }
-                let amount: felt252 = (*amounts.at(index)).try_into().unwrap();
-                calldata.append(amount);
-                index += 1;
-            };
-            calldata.append(data.len().into());
-            let mut index = 0;
-            loop {
-                if index == data.len() {
-                    break ();
-                }
-                let data_cell: felt252 = (*data.at(index)).into();
-                calldata.append(data_cell);
-                index += 1;
-            };
-            self.world.read().execute('ERC1155Update'.into(), calldata);
-
-            if (ids_clone.len() == 1) {
-                let id = *ids_clone.at(0);
-                let amount = *amounts_clone.at(0);
-
-                self.emit(TransferSingle { operator, from, to, id, value: amount });
-
-                if (to.is_non_zero()) {
-                    _do_safe_transfer_acceptance_check(operator, from, to, id, amount, data_clone);
-                } else {
-                    self
-                        .emit(
-                            TransferBatch {
-                                operator: operator,
-                                from: from,
-                                to: to,
-                                ids: ids_clone.clone(),
-                                values: amounts_clone.clone()
-                            }
-                        );
-                    if (to.is_non_zero()) {
-                        _do_safe_batch_transfer_acceptance_check(
-                            operator, from, to, ids_clone, amounts_clone, data_clone
-                        );
-                    }
-                }
-            }
-        }
-
-        fn _safe_transfer_from(
-            ref self: ContractState,
-            from: ContractAddress,
-            to: ContractAddress,
-            id: u256,
-            amount: u256,
-            data: Array<u8>
-        ) {
-            assert(to.is_non_zero(), 'ERC1155: invalid receiver');
-            assert(from.is_non_zero(), 'ERC1155: invalid sender');
-
-            let ids = _as_singleton_array(id);
-            let amounts = _as_singleton_array(amount);
-            self._update(from, to, ids, amounts, data);
-        }
-
-        fn _safe_batch_transfer_from(
-            ref self: ContractState,
-            from: ContractAddress,
-            to: ContractAddress,
-            ids: Array<u256>,
-            amounts: Array<u256>,
-            data: Array<u8>
-        ) {
-            assert(to.is_non_zero(), 'ERC1155: invalid receiver');
-            assert(from.is_non_zero(), 'ERC1155: invalid sender');
-            self._update(from, to, ids, amounts, data);
-        }
-
         fn _set_uri(ref self: ContractState, uri: felt252) {
-            let token = get_contract_address();
             let mut calldata = ArrayTrait::new();
-            calldata.append(token.into());
             calldata.append(uri);
             self.world.read().execute('ERC1155SetUri'.into(), calldata);
         }
 
         fn _mint(
-            ref self: ContractState, to: ContractAddress, id: u256, amount: u256, data: Array<u8>
+            ref self: ContractState, to: ContractAddress, id: felt252, amount: u128, data: Array<u8>
         ) {
             assert(to.is_non_zero(), 'ERC1155: invalid receiver');
 
-            let ids = _as_singleton_array(id);
-            let amounts = _as_singleton_array(amount);
-            self._update(Zeroable::zero(), to, ids, amounts, data);
+            self.world.read().execute('ERC1155Mint',
+                to_calldata(get_caller_address())
+                    .plus(get_contract_address())
+                    .plus(to)
+                    .plus(array![id])
+                    .plus(array![amount])
+                    .plus(data)
+                    .data
+            );
         }
 
         fn _mint_batch(
             ref self: ContractState,
             to: ContractAddress,
-            ids: Array<u256>,
-            amounts: Array<u256>,
+            ids: Array<felt252>,
+            amounts: Array<u128>,
             data: Array<u8>
         ) {
             assert(to.is_non_zero(), 'ERC1155: invalid receiver');
-            self._update(Zeroable::zero(), to, ids, amounts, data)
+            self.world.read().execute('ERC1155Mint',
+                to_calldata(get_caller_address())
+                    .plus(get_contract_address())
+                    .plus(to)
+                    .plus(ids)
+                    .plus(amounts)
+                    .plus(data)
+                    .data
+            );
         }
 
         fn _burn(
-            ref self: ContractState, from: ContractAddress, id: u256, amount: u256, data: Array<u8>
+            ref self: ContractState, from: ContractAddress, id: felt252, amount: u128
         ) {
             assert(from.is_non_zero(), 'ERC1155: invalid sender');
 
-            let ids = _as_singleton_array(id);
-            let amounts = _as_singleton_array(amount);
-            self._update(from, Zeroable::zero(), ids, amounts, data);
+            self.world.read().execute('ERC1155Burn',
+                to_calldata(get_caller_address())
+                    .plus(get_contract_address())
+                    .plus(from)
+                    .plus(array![id])
+                    .plus(array![amount])
+                    .data
+            );
         }
 
         fn _burn_batch(
             ref self: ContractState,
             from: ContractAddress,
-            ids: Array<u256>,
-            amounts: Array<u256>,
-            data: Array<u8>
+            ids: Array<felt252>,
+            amounts: Array<u128>
         ) {
             assert(from.is_non_zero(), 'ERC1155: invalid sender');
-            self._update(from, Zeroable::zero(), ids, amounts, data);
-        }
-
-        fn _set_approval_for_all(
-            ref self: ContractState,
-            owner: ContractAddress,
-            operator: ContractAddress,
-            approved: bool
-        ) {
-            assert(owner != operator, 'ERC1155: wrong approval');
-            let token = get_contract_address();
-            let mut calldata: Array<felt252> = ArrayTrait::new();
-            calldata.append(token.into());
-            calldata.append(owner.into());
-            calldata.append(operator.into());
-            if approved {
-                calldata.append(1);
-            } else {
-                calldata.append(0);
-            }
-            self.world.read().execute('ERC1155SetApprovalForAll'.into(), calldata);
-
-            self.emit(ApprovalForAll { owner, operator, approved });
+            self.world.read().execute('ERC1155Burn',
+                to_calldata(get_caller_address())
+                    .plus(get_contract_address())
+                    .plus(from)
+                    .plus(ids)
+                    .plus(amounts)
+                    .data
+            );
         }
     }
 
-    fn _do_safe_transfer_acceptance_check(
-        operator: ContractAddress,
-        from: ContractAddress,
-        to: ContractAddress,
-        id: u256,
-        amount: u256,
-        data: Array<u8>
-    ) { // if (IERC165Dispatcher {
-    //     contract_address: to
-    // }.supports_interface(INTERFACE_ERC1155_RECEIVER)) {
-    //     assert(
-    //         IERC1155TokenReceiverDispatcher {
-    //             contract_address: to
-    //         }
-    //             .on_erc1155_received(
-    //                 operator, from, id, amount, data
-    //             ) == ON_ERC1155_RECEIVED_SELECTOR,
-    //         'ERC1155: ERC1155Receiver reject'
-    //     );
-    //     return ();
-    // }
-    // assert(
-    //     IERC165Dispatcher { contract_address: to }.supports_interface(IACCOUNT_ID),
-    //     'Transfer to non-ERC1155Receiver'
-    // );
+    #[derive(Drop)]
+    struct ToCallData {
+        data: Array<felt252>,
     }
 
-    fn _do_safe_batch_transfer_acceptance_check(
-        operator: ContractAddress,
-        from: ContractAddress,
-        to: ContractAddress,
-        ids: Array<u256>,
-        amounts: Array<u256>,
-        data: Array<u8>
-    ) { // if (IERC165Dispatcher {
-    //     contract_address: to
-    // }.supports_interface(INTERFACE_ERC1155_RECEIVER)) {
-    //     assert(
-    //         IERC1155TokenReceiverDispatcher {
-    //             contract_address: to
-    //         }
-    //             .on_erc1155_batch_received(
-    //                 operator, from, ids, amounts, data
-    //             ) == ON_ERC1155_BATCH_RECEIVED_SELECTOR,
-    //         'ERC1155: ERC1155Receiver reject'
-    //     );
-    //     return ();
-    // }
-    // assert(
-    //     IERC165Dispatcher { contract_address: to }.supports_interface(IACCOUNT_ID),
-    //     'Transfer to non-ERC1155Receiver'
-    // );
+    #[generate_trait]
+    impl ToCallDataImpl of ToCallDataTrait {
+        fn plus<T, impl TSerde: Serde<T>, impl TD: Drop<T>>(mut self: ToCallData, data: T) -> ToCallData {
+            data.serialize(ref self.data);
+            self
+        }
     }
 
-    fn _as_singleton_array(element: u256) -> Array<u256> {
-        let mut array = ArrayTrait::new();
-        array.append(element);
-        array
+    fn to_calldata<T, impl TSerde: Serde<T>, impl TD: Drop<T>>(data: T) -> ToCallData {
+        let mut calldata: Array<felt252> = ArrayTrait::new();
+        data.serialize(ref calldata);
+        ToCallData { data: calldata }
     }
 }

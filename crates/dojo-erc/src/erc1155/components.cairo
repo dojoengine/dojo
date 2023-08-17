@@ -9,13 +9,13 @@ struct Uri {
 }
 
 #[derive(Component, Copy, Drop, Serde, SerdeLen)]
-struct Balance {
+struct ERC1155Balance {
     #[key]
     token: ContractAddress,
     #[key]
     token_id: felt252,
     #[key]
     account: ContractAddress,
-    //amount: felt252,
+
     amount: u128
 }
