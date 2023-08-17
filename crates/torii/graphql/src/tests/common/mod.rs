@@ -105,7 +105,7 @@ pub async fn paginate(
     let query = format!(
         "
         {{
-            entities (keys: [\"%\"], {first_last}: {page_size} {cursor}) 
+            entities ({first_last}: {page_size} {cursor}) 
             {{
                 totalCount
                 edges {{
