@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use anyhow::Result;
+
 use blockifier::transaction::transaction_execution::Transaction;
 use starknet::core::types::MsgToL1;
 

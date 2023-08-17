@@ -169,7 +169,7 @@ impl Messenger for EthereumMessenger {
             let hash = hasher.finalize();
 
             // Because we know hash is always 32 bytes.
-            let hash_bytes = unsafe { &*(hash[..].as_ptr() as *const [u8; 32]) };
+            let _hash_bytes = unsafe { &*(hash[..].as_ptr() as *const [u8; 32]) };
 
             // Send tx to add the message hash. (Need ABI of SNCoreLocal).
         }
@@ -177,7 +177,7 @@ impl Messenger for EthereumMessenger {
         Ok(())
     }
 
-    async fn execute_messages(&self, messages: &Vec<MsgToL1>) -> MessengerResult<()> {
+    async fn execute_messages(&self, _messages: &Vec<MsgToL1>) -> MessengerResult<()> {
         Ok(())
     }
 }

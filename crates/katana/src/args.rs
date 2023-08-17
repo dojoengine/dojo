@@ -128,7 +128,9 @@ pub struct MessagingOptions {
     pub messaging_contract_address: Option<String>,
 
     #[arg(long)]
-    #[arg(help = "The address of the sender on the settlement chain associated with the private key.")]
+    #[arg(
+        help = "The address of the sender on the settlement chain associated with the private key."
+    )]
     pub messaging_sender_address: Option<String>,
 
     #[arg(long)]
@@ -136,7 +138,9 @@ pub struct MessagingOptions {
     pub messaging_private_key: Option<String>,
 
     #[arg(long)]
-    #[arg(help = "The interval in seconds after which katana checks for messages on the settlement chain.")]
+    #[arg(
+        help = "The interval in seconds after which katana checks for messages on the settlement chain."
+    )]
     #[arg(default_value = "5")]
     pub messaging_fetch_interval: Option<u64>,
 }
@@ -194,21 +198,27 @@ fn parse_seed(seed: &str) -> [u8; 32] {
 }
 
 fn sequencer_messaging_config(options: MessagingOptions) -> Option<SequencerMessagingConfig> {
-    match (options.messaging_rpc_url,
-           options.messaging_contract_address,
-           options.messaging_sender_address,
-           options.messaging_private_key,
-           options.messaging_fetch_interval) {
-        (Some(rpc_url), Some(contract_address), Some(sender_address), Some(private_key), Some(fetch_interval)) => {
-            Some(SequencerMessagingConfig {
-                rpc_url,
-                contract_address,
-                sender_address,
-                private_key,
-                fetch_interval,
-            })
-        }
-        _ => None
+    match (
+        options.messaging_rpc_url,
+        options.messaging_contract_address,
+        options.messaging_sender_address,
+        options.messaging_private_key,
+        options.messaging_fetch_interval,
+    ) {
+        (
+            Some(rpc_url),
+            Some(contract_address),
+            Some(sender_address),
+            Some(private_key),
+            Some(fetch_interval),
+        ) => Some(SequencerMessagingConfig {
+            rpc_url,
+            contract_address,
+            sender_address,
+            private_key,
+            fetch_interval,
+        }),
+        _ => None,
     }
 }
 

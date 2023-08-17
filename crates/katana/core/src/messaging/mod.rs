@@ -11,10 +11,8 @@ use starknet::core::types::MsgToL1;
 use ethers::providers::ProviderError;
 
 use crate::sequencer::SequencerMessagingConfig;
-use crate::backend::{Backend, storage::transaction::TransactionOutput};
+use crate::backend::{Backend};
 
-use ethereum_messenger::EthereumMessenger;
-use starknet_messenger::StarknetMessenger;
 use any_messenger::AnyMessenger;
 
 type MessengerResult<T> = Result<T, MessengerError>;
@@ -83,16 +81,16 @@ pub async fn messaging_main_loop(
     // TODO: check how this can be easier to configure.
     let max_blocks = 200;
 
-    let mut local_latest_block_number: u64 = 0;
-    let mut settlement_latest_block_number: u64 = 0;
+    let local_latest_block_number: u64 = 0;
+    let _settlement_latest_block_number: u64 = 0;
 
     loop {
         time::sleep(time::Duration::from_secs(config.fetch_interval)).await;
 
-        let (local_latest_block_number, sent_count)
+        let (local_latest_block_number, _sent_count)
             = worker.send_messages(local_latest_block_number).await?;
 
-        let (settlement_latest_block_number, gather_count)
+        let (_settlement_latest_block_number, _gather_count)
             = worker.gather_messages(local_latest_block_number, max_blocks).await?;
     }
 }
@@ -112,12 +110,15 @@ impl Worker {
             return Ok((from_block, 0));
         }
 
-        let mut messages_count = 0;
+        let messages_count = 0;
 
         for i in from_block..local_latest {
             if let Some(block) = self.starknet.storage.read().await.block_by_number(i) {
                 for o in &block.outputs {
-                    self.messenger.settle_messages(&o.messages_sent);
+                    match self.messenger.settle_messages(&o.messages_sent).await {
+                        Ok(_) => (),
+                        Err(e) => tracing::warn!("Error settling messages for block {}: {:?}", i, e),
+                    };
                 }   
             }
         }
@@ -128,7 +129,7 @@ impl Worker {
 
     /// Fetches messages from the settlement chain.
     /// Returns the latest fetched block, and the count of messages gathered.
-    async fn gather_messages(&self, from_block: u64, max_block: u64) -> MessengerResult<(u64, u64)> {
+    async fn gather_messages(&self, from_block: u64, _max_block: u64) -> MessengerResult<(u64, u64)> {
 
         // Get last block id on chain
         // -> then fetch (no too much blocks) and then return.

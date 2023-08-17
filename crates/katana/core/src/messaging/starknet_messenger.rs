@@ -3,17 +3,17 @@ use async_trait::async_trait;
 use blockifier::transaction::transaction_execution::Transaction;
 use starknet::core::types::MsgToL1;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result};
 use starknet::{
-    accounts::{Account, Call, SingleOwnerAccount},
-    core::{types::FieldElement, types::*},
+    accounts::{Account},
+    core::{types::FieldElement},
     providers::{jsonrpc::HttpTransport, AnyProvider, JsonRpcClient, Provider},
     signers::{LocalWallet, SigningKey},
 };
-use std::collections::HashMap;
+
 use url::Url;
 
-use crate::messaging::{Messenger, MessengerError, MessengerResult};
+use crate::messaging::{Messenger, MessengerResult};
 use crate::sequencer::SequencerMessagingConfig;
 
 ///
@@ -53,15 +53,15 @@ impl StarknetMessenger {
 
 #[async_trait]
 impl Messenger for StarknetMessenger {
-    async fn gather_messages(&self, from_block: u64, max_blocks: u64) -> MessengerResult<(u64, Vec<Transaction>)> {
+    async fn gather_messages(&self, _from_block: u64, _max_blocks: u64) -> MessengerResult<(u64, Vec<Transaction>)> {
         Ok((0, vec![]))
     }
 
-    async fn settle_messages(&self, messages: &Vec<MsgToL1>) -> MessengerResult<()> {
+    async fn settle_messages(&self, _messages: &Vec<MsgToL1>) -> MessengerResult<()> {
         Ok(())
     }
 
-    async fn execute_messages(&self, messages: &Vec<MsgToL1>) -> MessengerResult<()> {
+    async fn execute_messages(&self, _messages: &Vec<MsgToL1>) -> MessengerResult<()> {
         Ok(())
     }
 }
