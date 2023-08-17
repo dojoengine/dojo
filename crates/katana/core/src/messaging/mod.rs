@@ -143,7 +143,7 @@ impl Worker {
                 latest_block_fetched
             );
             
-            return (latest_block_fetched, l1_handler_txs.len() as u64)
+            return (latest_block_fetched + 1, l1_handler_txs.len() as u64)
         } else {
             (from_block, 0)
         }
