@@ -18,13 +18,13 @@ type MessengerResult<T> = Result<T, MessengerError>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum MessengerError {
-    #[error("Error initializing messaging.")]
+    #[error("Error initializing messaging, please check messaging args")]
     InitError,
-    #[error("Error gathering messages.")]
+    #[error("Error gathering messages")]
     GatherError,
-    #[error("Error sending messages.")]
+    #[error("Error sending messages")]
     SendError,
-    #[error("Error ethereum provider: {0}.")]
+    #[error("Error ethereum provider: {0}")]
     EthereumProviderError(ProviderError),
 }
 

@@ -149,7 +149,7 @@ impl KatanaSequencer {
             tokio::spawn(async move {
                 match messaging::messaging_main_loop(messaging_config, starknet).await {
                     Ok(_) => tracing::info!("Normal termination of messaging main loop."),
-                    Err(e) => tracing::error!("Messaging main loop error: {:?}.", e),
+                    Err(e) => tracing::error!("Messaging main loop error: {:?}.", e.to_string()),
                 }
             });
         } else {

@@ -20,15 +20,17 @@ pub async fn from_config(config: SequencerMessagingConfig) -> MessengerResult<An
             tracing::debug!("Messaging enabled [Ethereum]");
             Ok(AnyMessenger::Ethereum(m_eth))
         },
-        Err(e_eth) => match StarknetMessenger::new(config.clone()).await {
-            Ok(m_sn) => {
-                tracing::debug!("Messaging enabled [Starknet]");
-                Ok(AnyMessenger::Starknet(m_sn))
-            },
-            Err(e_sn) => {
-                tracing::error!("Invalid messaging configuration\n[ETH] {:?}\n[SN] {:?}",
-                                e_eth, e_sn);
-                return Err(MessengerError::InitError);
+        Err(e_eth) => {
+            tracing::debug!("Ethereum messenger init failed: {:?}", e_eth);
+            match StarknetMessenger::new(config.clone()).await {
+                Ok(m_sn) => {
+                    tracing::debug!("Messaging enabled [Starknet]");
+                    Ok(AnyMessenger::Starknet(m_sn))
+                },
+                Err(e_sn) => {
+                    tracing::debug!("Starknet messenger init failed: {:?}", e_sn);
+                    return Err(MessengerError::InitError);
+                }
             }
         }
     }

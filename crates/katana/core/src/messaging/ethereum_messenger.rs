@@ -48,7 +48,7 @@ impl EthereumMessenger {
     pub async fn new(config: SequencerMessagingConfig) -> Result<EthereumMessenger> {
         let provider = Provider::<Http>::try_from(&config.rpc_url)?;
 
-        let chain_id = provider.get_chainid().await.unwrap();
+        let chain_id = provider.get_chainid().await?;
 
         let wallet: LocalWallet = config.private_key
             .parse::<LocalWallet>()?
