@@ -46,14 +46,8 @@ trait IERC1155<TState> {
 
     // Test methods
     fn owner(self: @TState) -> ContractAddress;
-    fn mint(ref self: TState, to: ContractAddress, id: u256, amount: u256, data: Array<u8>);
-    fn mint_batch(
-        ref self: TState,
-        to: ContractAddress,
-        ids: Array<u256>,
-        amounts: Array<u256>,
-        data: Array<u8>
-    );
+    fn mint(ref self: TState, to: ContractAddress, id: felt252, amount: u128, data: Array<u8>);
+    fn burn(ref self: TState, from: ContractAddress, id: felt252, amount: u128);
 }
 
 fn ZERO() -> ContractAddress {
@@ -99,8 +93,6 @@ fn spawn_world() -> IWorldDispatcher {
 fn deploy_erc1155(
     world: IWorldDispatcher, deployer: ContractAddress, uri: felt252, seed: felt252
 ) -> ContractAddress {
-    let world = spawn_world();
-
     let constructor_calldata = array![world.contract_address.into(), deployer.into(), uri];
     let (deployed_address, _) = deploy_syscall(
         ERC1155::TEST_CLASS_HASH.try_into().unwrap(), seed, constructor_calldata.span(), false

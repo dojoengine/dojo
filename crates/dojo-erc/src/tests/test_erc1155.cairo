@@ -271,6 +271,31 @@ fn test_safe_transfer_debit_sender() {
 
 #[test]
 #[available_gas(50000000)]
+fn test_safe_transfer_debit_sender_via_dojo() {
+    // debits transferred balance from sender
+    let (world, erc1155) = deploy_testcase1();
+
+    // impersonate user1
+    set_contract_address(USER1());
+
+    let balance_before = erc1155.balance_of(USER1(), 1);
+    
+    let mut calldata: Array<felt252> = array![];
+    calldata.append(USER1().into());
+    calldata.append(erc1155.contract_address.into());
+    calldata.append(USER1().into());
+    calldata.append(USER2().into());
+    calldata.append(1);
+    calldata.append(1);
+    ArrayTrait::<felt252>::new().serialize(ref calldata);
+    world.execute('ERC1155SafeTransferFrom', calldata);
+    let balance_after = erc1155.balance_of(USER1(), 1);
+
+    assert(balance_after == balance_before - 1, 'invalid balance after');
+}
+
+#[test]
+#[available_gas(50000000)]
 fn test_safe_transfer_credit_receiver() {
     // credits transferred balance to receiver
     let (world, erc1155) = deploy_testcase1();

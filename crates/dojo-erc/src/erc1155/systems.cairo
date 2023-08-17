@@ -4,58 +4,56 @@ use zeroable::Zeroable;
 use array::ArrayTrait;
 use option::OptionTrait;
 use serde::Serde;
+use clone::Clone;
 use traits::{Into, TryInto};
 
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
-use dojo_erc::erc1155::erc1155::ERC1155::{TransferSingle, TransferBatch};
-use dojo_erc::erc1155::components::{ERC1155Balance, OperatorApproval};
+use dojo_erc::erc1155::erc1155::{TransferSingle, TransferBatch};
+use dojo_erc::erc1155::erc1155::{IDojoERC1155Dispatcher, IDojoERC1155DispatcherTrait};
+use dojo_erc::erc1155::components::{ERC1155BalanceTrait, OperatorApprovalTrait};
 
-
-fn balance_of(world: IWorldDispatcher, token: ContractAddress, account: ContractAddress, id: u256) -> u256 {
-    // ERC1155: address zero is not a valid owner
-    assert(account.is_non_zero(), 'ERC1155: invalid owner address');
-
-    let id_felt: felt252 = id.try_into().unwrap();
-    let balance = get!(world, (token, id_felt, account), ERC1155Balance);
-    balance.amount.into()
-}
-
-fn is_approved_for_all(
-    world: IWorldDispatcher, token: ContractAddress, account: ContractAddress, operator: ContractAddress
-) -> bool {
-    let approval = get!(world, (token, account, operator), OperatorApproval);
-    approval.approved
-}
-
-fn transfer_tokens(
+fn emit_transfer_single(
     world: IWorldDispatcher,
     token: ContractAddress,
+    operator: ContractAddress,
+    from: ContractAddress,
+    to: ContractAddress,
+    id: felt252,
+    amount: u128
+) {
+    let event = TransferSingle { operator, from, to, id: id.into(), value: amount.into() };
+    IDojoERC1155Dispatcher { contract_address: token }.on_transfer_single(event.clone());
+    emit!(world, event);
+}
+
+fn emit_transfer_batch(
+    world: IWorldDispatcher,
+    token: ContractAddress,
+    operator: ContractAddress,
     from: ContractAddress,
     to: ContractAddress,
     mut ids: Span<felt252>,
-    mut amounts: Span<u128>,
-)
-{
+    mut amounts: Span<u128>
+) {
+    let mut ids_u256: Array<u256> = ArrayTrait::new();
+    let mut amounts_u256: Array<u256> = ArrayTrait::new();
     loop {
         if ids.len() == 0 {
-            break ();
+            break;
         }
-        let id = *ids.pop_front().unwrap();
-        let amount: u128 = *amounts.pop_front().unwrap();
-
-        if (from.is_non_zero()) {
-            let mut from_balance = get!(world, (token, id, from), ERC1155Balance);
-            from_balance.amount -= amount;
-            set!(world, (from_balance));
-        }
-
-        if (to.is_non_zero()) {
-            let mut to_balance = get!(world, (token, id, to), ERC1155Balance);
-            to_balance.amount += amount;
-            set!(world, (to_balance));
-        };
+        ids_u256.append((*ids.pop_front().unwrap()).into());
+        amounts_u256.append((*amounts.pop_front().unwrap()).into());
     };
+    let event = TransferBatch {
+        operator: operator,
+        from: from,
+        to: to,
+        ids: ids_u256,
+        values: amounts_u256,
+    };
+    IDojoERC1155Dispatcher { contract_address: token }.on_transfer_batch(event.clone());
+    emit!(world, event);
 }
 
 fn update(
@@ -71,35 +69,29 @@ fn update(
     assert(ids.len() == amounts.len(), 'ERC1155: invalid length');
 
     assert(
-        operator == from || is_approved_for_all(world, token, from, operator),
+        operator == from || OperatorApprovalTrait::is_approved_for_all(world, token, from, operator),
         'ERC1155: insufficient approval'
     );
 
-    transfer_tokens(world, token, from, to, ids.span(), amounts.span());
+    ERC1155BalanceTrait::transfer_tokens(world, token, from, to, ids.span(), amounts.span());
     
-    // if (ids.len() == 1) {
-    //     let id = *ids.at(0);
-    //     let amount = *amounts.at(0);
+    if (ids.len() == 1) {
+        let id = *ids.at(0);
+        let amount = *amounts.at(0);
 
-    //     emit!(world, TransferSingle { operator, from, to, id: id.into(), value: amount.into() });
+        emit_transfer_single(world, token, operator, from, to, id, amount);
 
-    //     if (to.is_non_zero()) {
-    //         do_safe_transfer_acceptance_check(operator, from, to, id.into(), amount.into(), data);
-    //     } else {
-    //         emit!(world, TransferBatch {
-    //             operator: operator,
-    //             from: from,
-    //             to: to,
-    //             ids: ids.clone(),
-    //             values: amounts.clone()
-    //         });
-    //         if (to.is_non_zero()) {
-    //             do_safe_batch_transfer_acceptance_check(
-    //                 operator, from, to, ids, amounts, data
-    //             );
-    //         }
-    //     }
-    // }
+        if (to.is_non_zero()) {
+            //do_safe_transfer_acceptance_check(operator, from, to, id.into(), amount.into(), data);
+        } else {
+            emit_transfer_batch(world, token, operator, from, to, ids.span(), amounts.span());
+            if (to.is_non_zero()) {
+                //do_safe_batch_transfer_acceptance_check(
+                //    operator, from, to, ids, amounts, data
+                //);
+            }
+        }
+    }
 }
 
 fn do_safe_transfer_acceptance_check(
@@ -160,17 +152,20 @@ fn do_safe_batch_transfer_acceptance_check(
 mod ERC1155SetApprovalForAll {
     use traits::Into;
     use dojo::world::Context;
-    use dojo_erc::erc1155::components::OperatorApproval;
     use starknet::ContractAddress;
+    use array::ArrayTrait;
+    use clone::Clone;
 
+    use dojo_erc::erc1155::components::OperatorApprovalTrait;
+    use dojo_erc::erc1155::erc1155::{IDojoERC1155Dispatcher, IDojoERC1155DispatcherTrait, ApprovalForAll};
     fn execute(
         ctx: Context, token: ContractAddress, owner: ContractAddress, operator: ContractAddress, approved: bool
     ) {
-        assert(token == ctx.origin, 'ERC1155: not authorized');
+        OperatorApprovalTrait::set_approval_for_all(ctx.world, token, owner, operator, approved);
 
-        let mut operator_approval = get!(ctx.world, (token, owner, operator), OperatorApproval);
-        operator_approval.approved = approved;
-        set!(ctx.world, (operator_approval))
+        let event = ApprovalForAll { owner, operator, approved };
+        IDojoERC1155Dispatcher { contract_address: token }.on_approval_for_all(event.clone());
+        emit!(ctx.world, event);
     }
 }
 
@@ -182,11 +177,9 @@ mod ERC1155SetUri {
     use dojo_erc::erc1155::components::Uri;
     use starknet::ContractAddress;
 
-    fn execute(ctx: Context, uri: felt252) {
-        // TODO
-        //assert(token == ctx.origin, 'ERC1155: not authorized');
-
-        let mut _uri = get!(ctx.world, (ctx.origin), Uri);
+    fn execute(ctx: Context, token: ContractAddress, uri: felt252) {
+        assert(ctx.origin == token, 'ERC1155: not authorized');
+        let mut _uri = get!(ctx.world, (token), Uri);
         _uri.uri = uri;
         set!(ctx.world, (_uri))
     }
@@ -211,8 +204,7 @@ mod ERC1155SafeTransferFrom {
         amount: u128,
         data: Array<u8>
     ) {
-        assert(token == ctx.origin, 'ERC1155: not authorized');
-
+        assert(ctx.origin == operator || ctx.origin == token, 'ERC1155: not authorized');
         assert(to.is_non_zero(), 'ERC1155: to cannot be 0');
 
         super::update(ctx.world, operator, token, from, to, array![id], array![amount], data);
@@ -238,8 +230,7 @@ mod ERC1155SafeBatchTransferFrom {
         amounts: Array<u128>,
         data: Array<u8>
     ) {
-        assert(token == ctx.origin, 'ERC1155: not authorized');
-
+        assert(ctx.origin == operator || ctx.origin == token, 'ERC1155: not authorized');
         assert(to.is_non_zero(), 'ERC1155: to cannot be 0');
 
         super::update(ctx.world, operator, token, from, to, ids, amounts, data);
@@ -265,7 +256,8 @@ mod ERC1155Mint {
         amounts: Array<u128>,
         data: Array<u8>
     ) {
-        assert(token == ctx.origin, 'ERC1155: not authorized');
+        assert(ctx.origin == operator || ctx.origin == token, 'ERC1155: not authorized');
+        assert(to.is_non_zero(), 'ERC1155: invalid receiver');
 
         super::update(ctx.world, operator, token, Zeroable::zero(), to, ids, amounts, data);
     }
@@ -289,7 +281,8 @@ mod ERC1155Burn {
         ids: Array<felt252>,
         amounts: Array<u128>
     ) {
-        assert(token == ctx.origin, 'ERC1155: not authorized');
+        assert(ctx.origin == operator || ctx.origin == token, 'ERC1155: not authorized');
+        assert(from.is_non_zero(), 'ERC1155: invalid sender');
 
         super::update(ctx.world, operator, token, from, Zeroable::zero(), ids, amounts, array![]);
     }

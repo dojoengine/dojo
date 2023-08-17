@@ -1,4 +1,5 @@
 use starknet::ContractAddress;
+use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
 #[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct OperatorApproval {
@@ -9,4 +10,33 @@ struct OperatorApproval {
     #[key]
     operator: ContractAddress,
     approved: bool
+}
+
+trait OperatorApprovalTrait
+{
+    fn is_approved_for_all(
+        world: IWorldDispatcher, token: ContractAddress, account: ContractAddress, operator: ContractAddress
+    ) -> bool;
+
+    fn set_approval_for_all(
+        world: IWorldDispatcher, token: ContractAddress, owner: ContractAddress, operator: ContractAddress, approved: bool
+    );
+}
+
+impl OperatorApprovalImpl of OperatorApprovalTrait
+{
+    fn is_approved_for_all(
+        world: IWorldDispatcher, token: ContractAddress, account: ContractAddress, operator: ContractAddress
+    ) -> bool {
+        let approval = get!(world, (token, account, operator), OperatorApproval);
+        approval.approved
+    }
+
+    fn set_approval_for_all(
+        world: IWorldDispatcher, token: ContractAddress, owner: ContractAddress, operator: ContractAddress, approved: bool
+    ) {
+        let mut operator_approval = get!(world, (token, owner, operator), OperatorApproval);
+        operator_approval.approved = approved;
+        set!(world, (operator_approval))
+    }
 }
