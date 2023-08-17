@@ -1,42 +1,5 @@
-use starknet::ContractAddress;
-use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
+mod base_uri_component;
+mod operator_approval_component;
 
-#[derive(Component, Copy, Drop, Serde, SerdeLen)]
-struct OperatorApproval {
-    #[key]
-    token: ContractAddress,
-    #[key]
-    owner: ContractAddress,
-    #[key]
-    operator: ContractAddress,
-    approved: bool
-}
-
-trait OperatorApprovalTrait
-{
-    fn is_approved_for_all(
-        world: IWorldDispatcher, token: ContractAddress, account: ContractAddress, operator: ContractAddress
-    ) -> bool;
-
-    fn set_approval_for_all(
-        world: IWorldDispatcher, token: ContractAddress, owner: ContractAddress, operator: ContractAddress, approved: bool
-    );
-}
-
-impl OperatorApprovalImpl of OperatorApprovalTrait
-{
-    fn is_approved_for_all(
-        world: IWorldDispatcher, token: ContractAddress, account: ContractAddress, operator: ContractAddress
-    ) -> bool {
-        let approval = get!(world, (token, account, operator), OperatorApproval);
-        approval.approved
-    }
-
-    fn set_approval_for_all(
-        world: IWorldDispatcher, token: ContractAddress, owner: ContractAddress, operator: ContractAddress, approved: bool
-    ) {
-        let mut operator_approval = get!(world, (token, owner, operator), OperatorApproval);
-        operator_approval.approved = approved;
-        set!(world, (operator_approval))
-    }
-}
+use base_uri_component::{base_uri, BaseUri, BaseUriTrait};
+use operator_approval_component::{operator_approval, OperatorApproval, OperatorApprovalTrait};

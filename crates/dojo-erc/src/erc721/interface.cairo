@@ -10,15 +10,16 @@ trait IERC721<TState> {
     fn balance_of(self: @TState, account: ContractAddress) -> u256;
     fn owner_of(self: @TState, token_id: u256) -> ContractAddress;
 
+    fn approve(ref self: TState, to: ContractAddress, token_id: u256);
     fn get_approved(self: @TState, token_id: u256) -> ContractAddress;
     fn is_approved_for_all(
         self: @TState, owner: ContractAddress, operator: ContractAddress
     ) -> bool;
-    fn approve(ref self: TState, to: ContractAddress, token_id: u256);
     fn set_approval_for_all(ref self: TState, operator: ContractAddress, approved: bool);
 
     fn transfer(ref self: TState, to: ContractAddress, token_id: u256);
     fn transfer_from(ref self: TState, from: ContractAddress, to: ContractAddress, token_id: u256);
+
 
     // TODO: check if should support
     // fn safe_transfer_from(
@@ -34,4 +35,7 @@ trait IERC721<TState> {
 
     fn exists(self: @TState, token_id: u256) -> bool;
 }
+// TODO: should use IERC165
+// fn supports_interface(self: @TState, interface_id: u32) -> bool;
+
 

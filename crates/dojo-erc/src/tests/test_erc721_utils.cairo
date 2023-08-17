@@ -13,9 +13,11 @@ use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 use dojo_erc::erc721::erc721::ERC721;
 use dojo_erc::erc721::interface::{IERC721, IERC721Dispatcher, IERC721DispatcherTrait};
 
-use dojo_erc::erc721::components::{balance, owner, token_approval, operator_approval};
+use dojo_erc::erc721::components::{
+    erc_721_balance, erc_721_owner, erc_721_token_approval, operator_approval, base_uri
+};
 use dojo_erc::erc721::systems::{
-    erc721_approve, erc721_set_approval_for_all, erc721_transfer_from, erc721_mint, erc721_burn,
+    ERC721Approve, ERC721SetApprovalForAll, ERC721TransferFrom, ERC721Mint, ERC721Burn
 };
 
 fn DEPLOYER() -> ContractAddress {
@@ -33,19 +35,20 @@ fn USER2() -> ContractAddress {
 fn spawn_world() -> IWorldDispatcher {
     // components
     let mut components = array![
-        balance::TEST_CLASS_HASH,
-        owner::TEST_CLASS_HASH,
-        token_approval::TEST_CLASS_HASH,
+        erc_721_balance::TEST_CLASS_HASH,
+        erc_721_owner::TEST_CLASS_HASH,
+        erc_721_token_approval::TEST_CLASS_HASH,
         operator_approval::TEST_CLASS_HASH,
+        base_uri::TEST_CLASS_HASH,
     ];
 
     // systems
     let mut systems = array![
-        erc721_approve::TEST_CLASS_HASH,
-        erc721_set_approval_for_all::TEST_CLASS_HASH,
-        erc721_transfer_from::TEST_CLASS_HASH,
-        erc721_mint::TEST_CLASS_HASH,
-        erc721_burn::TEST_CLASS_HASH,
+        ERC721Approve::TEST_CLASS_HASH,
+        ERC721SetApprovalForAll::TEST_CLASS_HASH,
+        ERC721TransferFrom::TEST_CLASS_HASH,
+        ERC721Mint::TEST_CLASS_HASH,
+        ERC721Burn::TEST_CLASS_HASH,
     ];
 
     let world = spawn_test_world(components, systems);

@@ -1,9 +1,16 @@
 use starknet::ContractAddress;
-use dojo_erc::erc_common::components::{operator_approval, OperatorApproval, OperatorApprovalTrait};
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 use zeroable::Zeroable;
 use array::{ArrayTrait, SpanTrait};
 use option::OptionTrait;
+
+// re-export components from erc_common
+use dojo_erc::erc_common::components::{operator_approval, OperatorApproval, OperatorApprovalTrait};
+
+
+//
+// Uri TODO: use BaseURI from erc_common
+//
 
 #[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Uri {
@@ -11,6 +18,10 @@ struct Uri {
     token: ContractAddress,
     uri: felt252
 }
+
+//
+// ERC1155Balance
+//
 
 #[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct ERC1155Balance {

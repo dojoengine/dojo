@@ -43,13 +43,16 @@ mod ERC1155 {
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use traits::{Into, TryInto};
     use zeroable::Zeroable;
-   // use serde::Serde;
+    use serde::Serde;
     use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
-    use dojo_erc::erc1155::components::{OperatorApproval, Uri, ERC1155BalanceTrait};
+    use dojo_erc::erc1155::components::{
+        Uri, ERC1155BalanceTrait, OperatorApproval, OperatorApprovalTrait
+    };
     use dojo_erc::erc1155::interface::{
         IERC1155, IERC1155TokenReceiver, IERC1155TokenReceiverDispatcher,
-        IERC1155TokenReceiverDispatcherTrait, IERC165, IERC165Dispatcher, IERC165DispatcherTrait
+        IERC1155TokenReceiverDispatcherTrait,
     };
+    use dojo_erc::erc165::{IERC165, IERC165Dispatcher, IERC165DispatcherTrait};
     use dojo_erc::erc_common::utils::{to_calldata, ToCallDataTrait};
 
     const UNLIMITED_ALLOWANCE: felt252 =
@@ -65,9 +68,7 @@ mod ERC1155 {
     const ON_ERC1155_RECEIVED_SELECTOR: u32 = 0xf23a6e61_u32;
     const ON_ERC1155_BATCH_RECEIVED_SELECTOR: u32 = 0xbc197c81_u32;
 
-    use super::TransferSingle;
-    use super::TransferBatch;
-    use super::ApprovalForAll;
+    use super::{TransferSingle, TransferBatch, ApprovalForAll};
 
     #[event]
     #[derive(Drop, starknet::Event)]
@@ -93,11 +94,10 @@ mod ERC1155 {
     ) {
         self.world.write(IWorldDispatcher { contract_address: world });
         self.owner_.write(deployer);
-        self.world.read().execute('ERC1155SetUri',
-            to_calldata(get_contract_address())
-                .plus(uri)
-                .data
-        );
+        self
+            .world
+            .read()
+            .execute('ERC1155SetUri', to_calldata(get_contract_address()).plus(uri).data);
     }
 
     #[external(v0)]
@@ -121,7 +121,10 @@ mod ERC1155 {
         // ERC1155
         //
         fn balance_of(self: @ContractState, account: ContractAddress, id: u256) -> u256 {
-            ERC1155BalanceTrait::balance_of(self.world.read(), get_contract_address(), account, id.try_into().unwrap()).into()
+            ERC1155BalanceTrait::balance_of(
+                self.world.read(), get_contract_address(), account, id.try_into().unwrap()
+            )
+                .into()
         }
 
         fn balance_of_batch(
@@ -135,7 +138,16 @@ mod ERC1155 {
                 if index == ids.len() {
                     break batch_balances.clone();
                 }
-                batch_balances.append(ERC1155BalanceTrait::balance_of(self.world.read(), get_contract_address(), *accounts.at(index), (*ids.at(index)).try_into().unwrap()).into());
+                batch_balances
+                    .append(
+                        ERC1155BalanceTrait::balance_of(
+                            self.world.read(),
+                            get_contract_address(),
+                            *accounts.at(index),
+                            (*ids.at(index)).try_into().unwrap()
+                        )
+                            .into()
+                    );
                 index += 1;
             }
         }
@@ -143,7 +155,9 @@ mod ERC1155 {
         fn is_approved_for_all(
             self: @ContractState, account: ContractAddress, operator: ContractAddress
         ) -> bool {
-            dojo_erc::erc1155::components::OperatorApprovalTrait::is_approved_for_all(self.world.read(), get_contract_address(), account, operator)
+            OperatorApprovalTrait::is_approved_for_all(
+                self.world.read(), get_contract_address(), account, operator
+            )
         }
 
         fn set_approval_for_all(
@@ -153,13 +167,17 @@ mod ERC1155 {
 
             assert(owner != operator, 'ERC1155: wrong approval');
 
-            self.world.read().execute('ERC1155SetApprovalForAll',
-                to_calldata(get_contract_address())
-                    .plus(owner)
-                    .plus(operator)
-                    .plus(approved)
-                    .data
-            );
+            self
+                .world
+                .read()
+                .execute(
+                    'ERC1155SetApprovalForAll',
+                    to_calldata(get_contract_address())
+                        .plus(owner)
+                        .plus(operator)
+                        .plus(approved)
+                        .data
+                );
         }
 
         fn safe_transfer_from(
@@ -172,16 +190,20 @@ mod ERC1155 {
         ) {
             let idf: felt252 = id.try_into().unwrap();
             let amount128: u128 = amount.try_into().unwrap();
-            self.world.read().execute('ERC1155SafeTransferFrom',
-                to_calldata(get_caller_address())
-                    .plus(get_contract_address())
-                    .plus(from)
-                    .plus(to)
-                    .plus(idf)
-                    .plus(amount128)
-                    .plus(data)
-                    .data
-            );
+            self
+                .world
+                .read()
+                .execute(
+                    'ERC1155SafeTransferFrom',
+                    to_calldata(get_contract_address())
+                        .plus(get_caller_address())
+                        .plus(from)
+                        .plus(to)
+                        .plus(idf)
+                        .plus(amount128)
+                        .plus(data)
+                        .data
+                );
         }
 
         fn safe_batch_transfer_from(
@@ -202,16 +224,20 @@ mod ERC1155 {
                 amounts128.append(amounts.pop_front().unwrap().try_into().unwrap());
             };
 
-            self.world.read().execute('ERC1155SafeBatchTransferFrom',
-                to_calldata(get_caller_address())
-                    .plus(get_contract_address())
-                    .plus(from)
-                    .plus(to)
-                    .plus(idsf)
-                    .plus(amounts128)
-                    .plus(data)
-                    .data
-            );
+            self
+                .world
+                .read()
+                .execute(
+                    'ERC1155SafeBatchTransferFrom',
+                    to_calldata(get_caller_address())
+                        .plus(get_contract_address())
+                        .plus(from)
+                        .plus(to)
+                        .plus(idsf)
+                        .plus(amounts128)
+                        .plus(data)
+                        .data
+                );
         }
     }
 
@@ -243,47 +269,34 @@ mod ERC1155 {
     fn mint(
         ref self: ContractState, to: ContractAddress, id: felt252, amount: u128, data: Array<u8>
     ) {
-        self.world.read().execute('ERC1155Mint',
-            to_calldata(get_caller_address())
-                .plus(get_contract_address())
-                .plus(to)
-                .plus(array![id])
-                .plus(array![amount])
-                .plus(data)
-                .data
-        );
+        self
+            .world
+            .read()
+            .execute(
+                'ERC1155Mint',
+                to_calldata(get_contract_address())
+                    .plus(get_caller_address())
+                    .plus(to)
+                    .plus(array![id])
+                    .plus(array![amount])
+                    .plus(data)
+                    .data
+            );
     }
 
     #[external(v0)]
-    fn burn(
-        ref self: ContractState, from: ContractAddress, id: felt252, amount: u128
-    ) {
-        self.world.read().execute('ERC1155Burn',
-            to_calldata(get_caller_address())
-                .plus(get_contract_address())
-                .plus(from)
-                .plus(array![id])
-                .plus(array![amount])
-                .data
-        );
+    fn burn(ref self: ContractState, from: ContractAddress, id: felt252, amount: u128) {
+        self
+            .world
+            .read()
+            .execute(
+                'ERC1155Burn',
+                to_calldata(get_contract_address())
+                    .plus(get_caller_address())
+                    .plus(from)
+                    .plus(array![id])
+                    .plus(array![amount])
+                    .data
+            );
     }
-
-    // #[derive(Drop)]
-    // struct ToCallData {
-    //     data: Array<felt252>,
-    // }
-
-    // #[generate_trait]
-    // impl ToCallDataImpl of ToCallDataTrait {
-    //     fn plus<T, impl TSerde: Serde<T>, impl TD: Drop<T>>(mut self: ToCallData, data: T) -> ToCallData {
-    //         data.serialize(ref self.data);
-    //         self
-    //     }
-    // }
-
-    // fn to_calldata<T, impl TSerde: Serde<T>, impl TD: Drop<T>>(data: T) -> ToCallData {
-    //     let mut calldata: Array<felt252> = ArrayTrait::new();
-    //     data.serialize(ref calldata);
-    //     ToCallData { data: calldata }
-    // }
 }
