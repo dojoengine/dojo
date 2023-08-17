@@ -57,8 +57,8 @@ impl Messenger for StarknetMessenger {
         Ok((0, vec![]))
     }
 
-    async fn settle_messages(&self, _messages: &Vec<MsgToL1>) -> MessengerResult<u64> {
-        Ok(0)
+    async fn settle_messages(&self, _messages: &Vec<MsgToL1>) -> MessengerResult<()> {
+        Ok(())
     }
 
     async fn execute_messages(&self, _messages: &Vec<MsgToL1>) -> MessengerResult<()> {

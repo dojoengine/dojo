@@ -39,7 +39,6 @@ pub trait Messenger {
     async fn gather_messages(&self, from_block: u64, max_blocks: u64) -> MessengerResult<(u64, Vec<Transaction>)>;
 
     /// Computes the hash of the given messages and sends them to the settlement chain.
-    /// Returns the count of messages successfully sent.
     ///
     /// Once message's hash is settled, one must send a transaction (with the message content)
     /// on the settlement chain to actually consume it.
@@ -47,7 +46,7 @@ pub trait Messenger {
     /// # Arguments
     ///
     /// * `messages` - Messages to settle.
-    async fn settle_messages(&self, messages: &Vec<MsgToL1>) -> MessengerResult<u64>;
+    async fn settle_messages(&self, messages: &Vec<MsgToL1>) -> MessengerResult<()>;
 
     /// Sends a transaction to the settlement chain using the message content to define
     /// the recipient and the calldata.
@@ -88,7 +87,7 @@ pub async fn messaging_main_loop(
         time::sleep(time::Duration::from_secs(config.fetch_interval)).await;
 
         (local_latest_block_number, _)
-            = worker.send_messages(local_latest_block_number).await?;
+            = worker.settle_messages(local_latest_block_number).await?;
 
         (settlement_latest_block_number, _)
             = worker.gather_messages(settlement_latest_block_number, max_blocks).await;
@@ -103,7 +102,7 @@ struct Worker {
 impl Worker {
     /// Parses the local blocks transactions to find messages ready to be sent.
     /// Returns the latest processed block, and the count of messages sent.
-    async fn send_messages(&self, from_block: u64) -> MessengerResult<(u64, u64)> {
+    async fn settle_messages(&self, from_block: u64) -> MessengerResult<(u64, u64)> {
         let local_latest = self.starknet.storage.read().await.latest_number;
         tracing::debug!("Latest local block: {}", local_latest);
 
@@ -111,14 +110,13 @@ impl Worker {
             return Ok((from_block, 0));
         }
 
-        let mut messages_sent = 0;
+        let mut n_sent = 0;
 
         for i in from_block..=local_latest {
             if let Some(block) = self.starknet.storage.read().await.block_by_number(i) {
                 for o in &block.outputs {
-                    tracing::debug!("block {:?} output: {:?}", i, o);
                     match self.messenger.settle_messages(&o.messages_sent).await {
-                        Ok(n) => messages_sent += n,
+                        Ok(()) => n_sent += o.messages_sent.len() as u64,
                         Err(e) => tracing::warn!("Error settling messages for block {}: {:?}", i, e),
                     };
                 }   
@@ -127,12 +125,13 @@ impl Worker {
 
         tracing::debug!(
             "Messages sent: {} (from_block {}, to_block {})",
-            messages_sent,
+            n_sent,
             from_block,
             local_latest
         );
 
-        Ok((local_latest, messages_sent))
+        // +1 to ensure last block is not checked before the latest changes.
+        Ok((local_latest + 1, n_sent))
     }
 
     /// Fetches messages from the settlement chain.

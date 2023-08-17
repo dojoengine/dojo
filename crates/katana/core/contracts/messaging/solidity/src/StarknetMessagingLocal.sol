@@ -7,8 +7,8 @@ import "starknet/StarknetMessaging.sol";
    @notice Interface related to local messaging for Starknet.
 */
 interface IStarknetMessagingLocal {
-    function addMessageHashFromL2(
-        uint256 msgHash
+    function addMessageHashesFromL2(
+        uint256[] calldata msgHashes
     )
         external
         payable;
@@ -30,27 +30,30 @@ interface IStarknetMessagingLocal {
 contract StarknetMessagingLocal is StarknetMessaging, IStarknetMessagingLocal {
 
     /**
-       @notice A message hash was added directly.
+       @notice Hashes were added.
     */
-    event MessageHashAddedFromL2(
-        bytes32 indexed messageHash
+    event MessageHashesAddedFromL2(
+        uint256[] hashes
     );
 
     /**
-       @notice Adds the hash of a message from L2.
+       @notice Adds the hashes of messages from L2.
 
-       @param msgHash Hash of the message to be considered as consumable.
+       @param msgHashes Hashes to register as consumable.
     */
-    function addMessageHashFromL2(
-        uint256 msgHash
+    function addMessageHashesFromL2(
+        uint256[] calldata msgHashes
     )
         external
         payable
     {
         // TODO: You can add here a whitelist of senders if you wish.
-        bytes32 hash = bytes32(msgHash);
-        emit MessageHashAddedFromL2(hash);
-        l2ToL1Messages()[hash] += 1;
+        for (uint256 i = 0; i < msgHashes.length; i++) {
+            bytes32 hash = bytes32(msgHashes[i]);
+            l2ToL1Messages()[hash] += 1;
+        }
+
+        emit MessageHashesAddedFromL2(msgHashes);
     }
 
 }

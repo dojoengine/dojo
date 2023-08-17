@@ -2,12 +2,12 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "msgHash",
-        "type": "uint256"
+        "internalType": "uint256[]",
+        "name": "msgHashes",
+        "type": "uint256[]"
       }
     ],
-    "name": "addMessageHashFromL2",
+    "name": "addMessageHashesFromL2",
     "outputs": [],
     "stateMutability": "payable",
     "type": "function"

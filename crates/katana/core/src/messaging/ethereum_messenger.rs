@@ -153,7 +153,11 @@ impl Messenger for EthereumMessenger {
                     .for_each(|l| {
                         match l1_handler_tx_from_log(l) {
                             Ok(tx) => l1_handler_txs.push(tx),
-                            Err(e) => tracing::warn!("Error converting a log into L1HandlerTx. {:?}", e),
+                            // TODO: Some logs are just not to be considered.
+                            // So, we can accept a list of topics to filter the logs,
+                            // which could be the best option.
+                            Err(_) => (),
+                            
                         }
                     })
             });
@@ -161,15 +165,17 @@ impl Messenger for EthereumMessenger {
         Ok((to_block, l1_handler_txs))
     }
 
-    async fn settle_messages(&self, messages: &Vec<MsgToL1>) -> MessengerResult<u64> {
-        // TODO: actually change the interface for IStarknetLocalMessaging
-        // to be able to send several hashes in the same request...!?
-        let mut n_sent = 0;
+    async fn settle_messages(&self, messages: &Vec<MsgToL1>) -> MessengerResult<()> {
+        if messages.len() == 0 {
+            return Ok(());
+        }
 
         let starknet_messaging = StarknetMessagingLocal::new(
             self.messaging_contract_address,
             self.provider_signer.clone()
         );
+
+        let mut hashes: Vec<U256> = vec![];
 
         for m in messages {
             let mut buf: Vec<u8> = vec![];
@@ -180,24 +186,43 @@ impl Messenger for EthereumMessenger {
                 buf.extend(p.to_bytes_be());
             }
 
-            let hash = compute_message_hash(&buf);
-
-            // TODO: add more info about the error.
-            if let Some(receipt) = starknet_messaging.add_message_hash_from_l2(hash)
-                .send()
-                .await.map_err(|_| MessengerError::SendError)
-                .unwrap()
-                .await? {
-                    n_sent += 1;
-                    tracing::trace!("L1 tx hash for message sending: {:?}", receipt.transaction_hash);
-            }
+            hashes.push(compute_message_hash(&buf));
         }
 
-        Ok(n_sent)
+        tracing::debug!("Sending transaction on L1 to register messages...");
+        // TODO: add more info about the error.
+        match starknet_messaging.add_message_hashes_from_l2(hashes.clone())
+            .send()
+            .await.map_err(|_| MessengerError::SendError)
+            .unwrap()
+            .await?
+        {
+            Some(receipt) => {
+                trace_hashes(receipt.transaction_hash, hashes);
+                Ok(())
+            }
+            None => {
+                tracing::warn!("No receipt for L1 transaction.");
+                Err(MessengerError::SendError)
+            }
+        }
     }
 
     async fn execute_messages(&self, _messages: &Vec<MsgToL1>) -> MessengerResult<()> {
         Ok(())
+    }
+}
+
+///
+fn trace_hashes(tx_hash: TxHash, hashes: Vec<U256>) {
+    tracing::trace!(
+        "Transaction on L1 for {} messages: {:#x}",
+        hashes.len(),
+        tx_hash,
+    );
+
+    for h in hashes {
+        tracing::trace!("Msg hash sent=[{:#x}]", h);
     }
 }
 
@@ -206,13 +231,8 @@ fn compute_message_hash(data: &[u8]) -> U256 {
     let mut hasher = Keccak256::new();
     hasher.update(data);
     let hash = hasher.finalize();
-
     let hash_bytes = hash.as_slice();
-    let mut u256_bytes = [0u8; 32];
-
-    u256_bytes.copy_from_slice(&hash_bytes[..32]);
-
-    U256::from_big_endian(&u256_bytes)
+    U256::from_big_endian(&hash_bytes)
 }
 
 /// Converts a starknet core log into a L1 handler transaction.

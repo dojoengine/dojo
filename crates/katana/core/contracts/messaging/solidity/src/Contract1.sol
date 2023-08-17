@@ -22,6 +22,12 @@ contract Contract1 {
         _snMessaging = IStarknetMessaging(snMessaging);
     }
 
+    event DebugEvent(
+        bytes32 indexed hash1,
+        uint256 indexed hash2
+    );
+
+
     /**
        @notice Sends a message to Starknet contract.
 
@@ -51,27 +57,22 @@ contract Contract1 {
     /**
        @notice Manually consumes a message that was received from L2.
 
+       @param fromAddress L2 contract (account) that has sent the message.
        @param payload Payload of the message used to verify the hash.
 
        @dev A message "receive" means that the message hash is registered as consumable.
        One must provide the message content, to let Starknet Core contract verify the hash
        and validate the message consumption.
-
-       The `from_address` is also included in the hash with the payload.
-       In this version, the `from_address` is the sender. But you can have other
-       scenarios where it can be an operator instead of the end user.
     */
     function consumeMessage(
+        uint256 fromAddress,
         uint256[] calldata payload
     )
         external
     {
         // Will revert if the message is not consumable.
-        _snMessaging.consumeMessageFromL2(
-            uint256(uint160(msg.sender)),
-            payload
-        );
+        _snMessaging.consumeMessageFromL2(fromAddress, payload);
 
-        // The previous call returns bytes32 which is the message hash.
+        // The previous call returns the message hash (bytes32).
     }
 }

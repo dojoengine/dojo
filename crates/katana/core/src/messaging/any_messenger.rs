@@ -45,7 +45,7 @@ impl Messenger for AnyMessenger {
         }
     }
 
-    async fn settle_messages(&self, messages: &Vec<MsgToL1>) -> MessengerResult<u64> {
+    async fn settle_messages(&self, messages: &Vec<MsgToL1>) -> MessengerResult<()> {
         match self {
             Self::Ethereum(inner) => inner.settle_messages(messages).await,
             Self::Starknet(inner) => inner.settle_messages(messages).await,

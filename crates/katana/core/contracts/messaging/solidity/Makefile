@@ -7,7 +7,7 @@ deploy:
 	forge script --broadcast --rpc-url ${ETH_RPC_URL} script/LocalTesting.s.sol:LocalSetup
 
 send_msg_usage:
-	@echo make send_msg l1_contract=0x123 l2_contract=0x456 selector=0x888 payload="[1,2]"
+	@echo make send_msg l1_contract=0x123 l2_contract=0x456 selector=0x888 payload=\"[1,2]\"
 
 send_msg:
 	cast send $(l1_contract) \
@@ -16,10 +16,10 @@ send_msg:
 	--private-key ${ACCOUNT_PRIVATE_KEY} --value 1
 
 consume_msg_usage:
-	@echo make consume_msg l1_contract=0x123 payload="[1,2]"
+	@echo make consume_msg l1_contract=0x123 l2_account=0x823 payload=\"[1,2]\"
 
 consume_msg:
 	cast send $(l1_contract) \
-	"consumeMessage(uint256[])" \
-	$(payload) \
+	"consumeMessage(uint256,uint256[])" \
+	$(l2_account) $(payload) \
 	--private-key ${ACCOUNT_PRIVATE_KEY}
