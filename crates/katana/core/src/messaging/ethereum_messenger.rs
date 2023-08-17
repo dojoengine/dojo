@@ -10,6 +10,7 @@ use ethers::providers::ProviderError;
 use k256::ecdsa::SigningKey;
 use std::collections::HashMap;
 use std::str::FromStr;
+use std::sync::Arc;
 use sha3::{Digest, Keccak256};
 
 use starknet_api::core::{ContractAddress, Nonce, EntryPointSelector};
@@ -22,6 +23,12 @@ use starknet_api::transaction::{
 use crate::messaging::{Messenger, MessengerError, MessengerResult};
 use crate::sequencer::SequencerMessagingConfig;
 use crate::backend::storage::transaction::{Transaction, L1HandlerTransaction};
+
+abigen!(
+    StarknetMessagingLocal,
+    "./crates/katana/core/contracts/messaging/solidity/IStarknetMessagingLocal_ABI.json",
+    event_derives(serde::Deserialize, serde::Serialize)
+);
 
 ///
 #[derive(Debug, PartialEq, Eq, EthEvent)]
@@ -40,7 +47,7 @@ pub struct LogMessageToL2 {
 ///
 pub struct EthereumMessenger {
     provider: Provider<Http>,
-    provider_signer: SignerMiddleware<Provider<Http>, Wallet<SigningKey>>,
+    provider_signer: Arc<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
     messaging_contract_address: Address,
 }
 
@@ -59,7 +66,7 @@ impl EthereumMessenger {
 
         Ok(EthereumMessenger {
             provider,
-            provider_signer,
+            provider_signer: Arc::new(provider_signer),
             messaging_contract_address,
         })
     }
@@ -116,7 +123,7 @@ impl EthereumMessenger {
 impl Messenger for EthereumMessenger {
     async fn gather_messages(
         &self,
-        from_block: u64, 
+        from_block: u64,
         max_blocks: u64
     ) -> MessengerResult<(u64, Vec<Transaction>)> {
         let chain_latest_block: u64 = self.provider.get_block_number().await?
@@ -154,7 +161,16 @@ impl Messenger for EthereumMessenger {
         Ok((to_block, l1_handler_txs))
     }
 
-    async fn settle_messages(&self, messages: &Vec<MsgToL1>) -> MessengerResult<()> {
+    async fn settle_messages(&self, messages: &Vec<MsgToL1>) -> MessengerResult<u64> {
+        // TODO: actually change the interface for IStarknetLocalMessaging
+        // to be able to send several hashes in the same request...!?
+        let mut n_sent = 0;
+
+        let starknet_messaging = StarknetMessagingLocal::new(
+            self.messaging_contract_address,
+            self.provider_signer.clone()
+        );
+
         for m in messages {
             let mut buf: Vec<u8> = vec![];
             buf.extend(m.from_address.to_bytes_be());
@@ -164,22 +180,39 @@ impl Messenger for EthereumMessenger {
                 buf.extend(p.to_bytes_be());
             }
 
-            let mut hasher = Keccak256::new();
-            hasher.update(buf);
-            let hash = hasher.finalize();
+            let hash = compute_message_hash(&buf);
 
-            // Because we know hash is always 32 bytes.
-            let _hash_bytes = unsafe { &*(hash[..].as_ptr() as *const [u8; 32]) };
-
-            // Send tx to add the message hash. (Need ABI of SNCoreLocal).
+            // TODO: add more info about the error.
+            if let Some(receipt) = starknet_messaging.add_message_hash_from_l2(hash)
+                .send()
+                .await.map_err(|_| MessengerError::SendError)
+                .unwrap()
+                .await? {
+                    n_sent += 1;
+                    tracing::trace!("L1 tx hash for message sending: {:?}", receipt.transaction_hash);
+            }
         }
 
-        Ok(())
+        Ok(n_sent)
     }
 
     async fn execute_messages(&self, _messages: &Vec<MsgToL1>) -> MessengerResult<()> {
         Ok(())
     }
+}
+
+/// Computes the message hash.
+fn compute_message_hash(data: &[u8]) -> U256 {
+    let mut hasher = Keccak256::new();
+    hasher.update(data);
+    let hash = hasher.finalize();
+
+    let hash_bytes = hash.as_slice();
+    let mut u256_bytes = [0u8; 32];
+
+    u256_bytes.copy_from_slice(&hash_bytes[..32]);
+
+    U256::from_big_endian(&u256_bytes)
 }
 
 /// Converts a starknet core log into a L1 handler transaction.
