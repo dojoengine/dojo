@@ -5,11 +5,12 @@ use clone::Clone;
 use traits::{Into, TryInto};
 use starknet::{ContractAddress, get_contract_address};
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
-use dojo_erc::erc721::erc721::{
-    IERC721EventEmitterDispatcher, IERC721EventEmitterDispatcherTrait, ERC721, Approval, Transfer,
+use dojo_erc::erc721::erc721::ERC721;
+
+use dojo_erc::erc721::erc721::ERC721::{
+    IERC721EventEmitterDispatcher, IERC721EventEmitterDispatcherTrait, Approval, Transfer,
     ApprovalForAll
 };
-
 
 fn emit_transfer(
     world: IWorldDispatcher,

@@ -1,36 +1,3 @@
-use starknet::ContractAddress;
-use serde::Serde;
-use clone::Clone;
-
-#[derive(Clone, Drop, Serde, PartialEq, starknet::Event)]
-struct Transfer {
-    from: ContractAddress,
-    to: ContractAddress,
-    token_id: u256
-}
-
-#[derive(Clone, Drop, Serde,PartialEq, starknet::Event)]
-struct Approval {
-    owner: ContractAddress,
-    to: ContractAddress,
-    token_id: u256
-}
-
-#[derive(Clone, Drop, Serde,PartialEq, starknet::Event)]
-struct ApprovalForAll {
-    owner: ContractAddress,
-    operator: ContractAddress,
-    approved: bool
-}
-
-#[starknet::interface]
-trait IERC721EventEmitter<ContractState> {
-    fn on_transfer(ref self: ContractState, event: Transfer);
-    fn on_approval(ref self: ContractState, event: Approval);
-    fn on_approval_for_all(ref self: ContractState, event: ApprovalForAll);
-}
-
-
 #[starknet::contract]
 mod ERC721 {
     use array::ArrayTrait;
@@ -38,6 +5,8 @@ mod ERC721 {
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use traits::{Into, TryInto};
     use zeroable::Zeroable;
+    use serde::Serde;
+    use clone::Clone;
 
     use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
     use dojo_erc::erc721::components::{
@@ -46,8 +15,6 @@ mod ERC721 {
     };
     use dojo_erc::erc721::interface::IERC721;
     use dojo_erc::erc_common::utils::{to_calldata, ToCallDataTrait};
-
-    use super::{Transfer, Approval, ApprovalForAll};
 
     use debug::PrintTrait;
 
@@ -59,12 +26,40 @@ mod ERC721 {
         symbol_: felt252,
     }
 
+    #[derive(Clone, Drop, Serde, PartialEq, starknet::Event)]
+    struct Transfer {
+        from: ContractAddress,
+        to: ContractAddress,
+        token_id: u256
+    }
+
+    #[derive(Clone, Drop, Serde, PartialEq, starknet::Event)]
+    struct Approval {
+        owner: ContractAddress,
+        to: ContractAddress,
+        token_id: u256
+    }
+
+    #[derive(Clone, Drop, Serde, PartialEq, starknet::Event)]
+    struct ApprovalForAll {
+        owner: ContractAddress,
+        operator: ContractAddress,
+        approved: bool
+    }
+
     #[event]
-    #[derive(Drop,PartialEq, starknet::Event)]
+    #[derive(Drop, PartialEq, starknet::Event)]
     enum Event {
         Transfer: Transfer,
         Approval: Approval,
         ApprovalForAll: ApprovalForAll
+    }
+
+    #[starknet::interface]
+    trait IERC721EventEmitter<ContractState> {
+        fn on_transfer(ref self: ContractState, event: Transfer);
+        fn on_approval(ref self: ContractState, event: Approval);
+        fn on_approval_for_all(ref self: ContractState, event: ApprovalForAll);
     }
 
     //
@@ -227,7 +222,7 @@ mod ERC721 {
     }
 
     #[external(v0)]
-    impl ERC721EventEmitter of super::IERC721EventEmitter<ContractState> {
+    impl ERC721EventEmitter of IERC721EventEmitter<ContractState> {
         fn on_transfer(ref self: ContractState, event: Transfer) {
             assert(get_caller_address() == self.world.read().executor(), 'ERC721: not authorized');
             self.emit(event);

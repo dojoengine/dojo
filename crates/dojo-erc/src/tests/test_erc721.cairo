@@ -336,6 +336,8 @@ fn test_event_transfer() {
             .unwrap() == @Event::Transfer(Transfer { from: USER1(), to: USER2(), token_id: 42 }),
         'invalid Transfer event'
     );
+
+    
 // ERROR : 
 // error: Failed setting up runner.
 // Caused by:

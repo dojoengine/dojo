@@ -496,13 +496,8 @@ fn test_safe_batch_transfer_from_approved_operator_preserve_operator_balance() {
     assert(balance_before_2 == balance_after_2, 'should be equal');
     assert(balance_before_3 == balance_after_3, 'should be equal');
 }
-//
-// mint_batch
-//
 
-//
-// burn_batch
-//
+
 
 // TODO : to be continued
 
