@@ -89,7 +89,7 @@ pub fn parse_arguments(ctx: &ResolverContext<'_>) -> Result<ConnectionArguments,
     Ok(ConnectionArguments { first, last, after, before })
 }
 
-pub fn connection_input(field: Field) -> Field {
+pub fn connection_arguments(field: Field) -> Field {
     field
         .argument(InputValue::new("first", TypeRef::named(TypeRef::INT)))
         .argument(InputValue::new("last", TypeRef::named(TypeRef::INT)))

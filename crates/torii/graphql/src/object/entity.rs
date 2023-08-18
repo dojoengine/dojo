@@ -8,7 +8,7 @@ use sqlx::{FromRow, Pool, Result, Sqlite};
 
 use super::component_state::{component_state_by_id_query, type_mapping_query};
 use super::connection::{
-    connection_input, connection_output, decode_cursor, parse_arguments, ConnectionArguments,
+    connection_arguments, connection_output, decode_cursor, parse_arguments, ConnectionArguments,
 };
 use super::query::{query_by_id, ID};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
@@ -126,7 +126,7 @@ impl ObjectTrait for EntityObject {
     }
 
     fn resolve_many(&self) -> Option<Field> {
-        let field = Field::new(
+        let mut field = Field::new(
             "entities",
             TypeRef::named(format!("{}Connection", self.type_name())),
             |ctx| {
@@ -150,7 +150,9 @@ impl ObjectTrait for EntityObject {
         .argument(InputValue::new("keys", TypeRef::named_list(TypeRef::STRING)));
 
         // Add relay connection fields (first, last, before, after)
-        Some(connection_input(field))
+        field = connection_arguments(field);
+
+        Some(field)
     }
 }
 

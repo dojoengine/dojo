@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use async_graphql::dynamic::{Field, FieldFuture, TypeRef};
+use async_graphql::dynamic::{Field, FieldFuture, InputObject, TypeRef};
 use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
@@ -9,8 +9,9 @@ use sqlx::sqlite::SqliteRow;
 use sqlx::{FromRow, Pool, QueryBuilder, Row, Sqlite};
 
 use super::connection::{
-    connection_input, decode_cursor, encode_cursor, parse_arguments, ConnectionArguments,
+    connection_arguments, decode_cursor, encode_cursor, parse_arguments, ConnectionArguments,
 };
+use super::input::r#where::{where_argument, WhereInputObject};
 use super::query::query_total_count;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
@@ -62,6 +63,10 @@ impl ObjectTrait for ComponentStateObject {
         Some(vec![entity_field()])
     }
 
+    fn input_objects(&self) -> Option<Vec<InputObject>> {
+        Some(vec![WhereInputObject::new(self.type_name(), self.type_mapping())])
+    }
+
     fn resolve_many(&self) -> Option<Field> {
         let name = self.name.clone();
         let type_mapping = self.type_mapping.clone();
@@ -84,23 +89,9 @@ impl ObjectTrait for ComponentStateObject {
             })
         });
 
-        // Add relay connection fields (first, last, before, after)
-        field = connection_input(field);
-
-        // TODO: type mapping also act as filters, add this to `where: nameWhereInput`
-        // field = self
-        //     .type_mapping()
-        //     .into_iter()
-        //     .fold(field, |field, (name, ty)| {
-        //         let ty = ty.clone();
-        //         // we want to be able to return entity_id in component queries
-        //         // but don't need this as a filter parameter
-        //         match name.as_str() {
-        //             ENTITY_ID => field,
-        //             _ => field.argument(InputValue::new(name.as_str(), ty)),
-        //         }
-        //     })
-        //     .argument(InputValue::new("limit", TypeRef::named(TypeRef::INT)));
+        // Add relay connection fields (first, last, before, after, where)
+        field = connection_arguments(field);
+        field = where_argument(field, self.type_name());
 
         Some(field)
     }
