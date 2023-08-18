@@ -4,7 +4,6 @@ use starknet::core::types::MsgToL1;
 
 use anyhow::{Result};
 use starknet::{
-    accounts::{Account},
     core::{types::FieldElement},
     providers::{jsonrpc::HttpTransport, AnyProvider, JsonRpcClient, Provider},
     signers::{LocalWallet, SigningKey},
@@ -57,11 +56,7 @@ impl Messenger for StarknetMessenger {
         Ok((0, vec![]))
     }
 
-    async fn settle_messages(&self, _messages: &Vec<MsgToL1>) -> MessengerResult<()> {
-        Ok(())
-    }
-
-    async fn execute_messages(&self, _messages: &Vec<MsgToL1>) -> MessengerResult<()> {
-        Ok(())
+    async fn settle_messages(&self, _messages: &Vec<MsgToL1>) -> MessengerResult<Vec<String>> {
+        Ok(vec![])
     }
 }

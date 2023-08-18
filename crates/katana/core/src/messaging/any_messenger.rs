@@ -45,17 +45,10 @@ impl Messenger for AnyMessenger {
         }
     }
 
-    async fn settle_messages(&self, messages: &Vec<MsgToL1>) -> MessengerResult<()> {
+    async fn settle_messages(&self, messages: &Vec<MsgToL1>) -> MessengerResult<Vec<String>> {
         match self {
             Self::Ethereum(inner) => inner.settle_messages(messages).await,
             Self::Starknet(inner) => inner.settle_messages(messages).await,
-        }
-    }
-
-    async fn execute_messages(&self, messages: &Vec<MsgToL1>) -> MessengerResult<()> {
-        match self {
-            Self::Ethereum(inner) => inner.execute_messages(messages).await,
-            Self::Starknet(inner) => inner.execute_messages(messages).await,
         }
     }
 }

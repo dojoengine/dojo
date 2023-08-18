@@ -8,7 +8,6 @@ use std::sync::Arc;
 use tokio::time;
 use starknet::core::types::{MsgToL1, FieldElement};
 use ethers::providers::ProviderError;
-use starknet_api::hash::StarkFelt;
 
 use crate::sequencer::SequencerMessagingConfig;
 use crate::backend::{Backend, storage::transaction::{Transaction, L1HandlerTransaction}}
@@ -47,15 +46,7 @@ pub trait Messenger {
     /// # Arguments
     ///
     /// * `messages` - Messages to settle.
-    async fn settle_messages(&self, messages: &Vec<MsgToL1>) -> MessengerResult<()>;
-
-    /// Sends a transaction to the settlement chain using the message content to define
-    /// the recipient and the calldata.
-    ///
-    /// # Arguments
-    ///
-    /// * `messages` - Messages to execute.
-    async fn execute_messages(&self, messages: &Vec<MsgToL1>) -> MessengerResult<()>;
+    async fn settle_messages(&self, messages: &Vec<MsgToL1>) -> MessengerResult<Vec<String>>;
 }
 
 ///
@@ -117,19 +108,15 @@ impl Worker {
             if let Some(block) = self.starknet.storage.read().await.block_by_number(i) {
                 for o in &block.outputs {
                     match self.messenger.settle_messages(&o.messages_sent).await {
-                        Ok(()) => n_sent += o.messages_sent.len() as u64,
+                        Ok(hashes) => {
+                            trace_msg_to_l1_sent(&o.messages_sent, &hashes);
+                            n_sent += o.messages_sent.len() as u64;
+                        },
                         Err(e) => tracing::warn!("Error settling messages for block {}: {:?}", i, e),
                     };
                 }   
             }
         }
-
-        tracing::debug!(
-            "Messages sent: {} (from_block {}, to_block {})",
-            n_sent,
-            from_block,
-            local_latest
-        );
 
         // +1 to ensure last block is not checked before the latest changes.
         Ok((local_latest + 1, n_sent))
@@ -146,17 +133,35 @@ impl Worker {
                 self.starknet.handle_transaction(Transaction::L1Handler(tx.clone())).await;
             }
             
-            tracing::debug!(
-                "Messages gathered {} [{} - {}]",
-                l1_handler_txs.len(),
-                from_block,
-                latest_block_fetched
-            );
-            
             return (latest_block_fetched + 1, l1_handler_txs.len() as u64)
         } else {
             (from_block, 0)
         }
+    }
+}
+
+fn trace_msg_to_l1_sent(messages: &Vec<MsgToL1>, hashes: &Vec<String>) {
+    assert_eq!(messages.len(), hashes.len());
+
+    for (i, m) in messages.iter().enumerate() {
+        let payload_str: Vec<String> = m.payload
+            .iter()
+            .map(|f| format!("{:#x}", *f)).collect();
+
+        let hash = &hashes[i];
+
+        tracing::trace!(
+            r"Message to L1 being sent:
+|     hash     | {}
+| from_address | {:#x}
+|  to_address  | {:#x}
+|   payload    | [{}]
+
+",
+            hash.as_str(),
+            m.from_address,
+            m.to_address,
+            payload_str.join(", "));
     }
 }
 
@@ -166,15 +171,16 @@ fn trace_l1_handler_tx_exec(tx: &L1HandlerTransaction) {
         .iter()
         .map(|f| format!("{:#x}", FieldElement::from(*f))).collect();
 
-    tracing::trace!(r"L1Handler transaction to be executed
+    tracing::trace!(
+        r"L1Handler transaction to be executed:
 |      tx_hash     | {:#x}
 | contract_address | {:#x}
 |     selector     | {:#x}
 |     calldata     | [{}]
 
 ",
-                    FieldElement::from(tx.inner.transaction_hash.0),
-                    FieldElement::from(*tx.inner.contract_address.0.key()),
-                    FieldElement::from(tx.inner.entry_point_selector.0),
-                    calldata_str.join(", "));
+        FieldElement::from(tx.inner.transaction_hash.0),
+        FieldElement::from(*tx.inner.contract_address.0.key()),
+        FieldElement::from(tx.inner.entry_point_selector.0),
+        calldata_str.join(", "));
 }

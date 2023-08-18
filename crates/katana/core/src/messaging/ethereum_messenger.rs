@@ -165,9 +165,9 @@ impl Messenger for EthereumMessenger {
         Ok((to_block, l1_handler_txs))
     }
 
-    async fn settle_messages(&self, messages: &Vec<MsgToL1>) -> MessengerResult<()> {
+    async fn settle_messages(&self, messages: &Vec<MsgToL1>) -> MessengerResult<Vec<String>> {
         if messages.len() == 0 {
-            return Ok(());
+            return Ok(vec![]);
         }
 
         let starknet_messaging = StarknetMessagingLocal::new(
@@ -198,31 +198,24 @@ impl Messenger for EthereumMessenger {
             .await?
         {
             Some(receipt) => {
-                trace_hashes(receipt.transaction_hash, hashes);
-                Ok(())
+                tracing::trace!(
+                    "Transaction on L1 for {} messages: {:#x}",
+                    hashes.len(),
+                    receipt.transaction_hash,
+                );
+
+                Ok(hashes
+                   .iter()
+                   .map(|h| format!("{:#x}", h))
+                   .collect())
             }
             None => {
                 tracing::warn!("No receipt for L1 transaction.");
                 Err(MessengerError::SendError)
             }
         }
-    }
 
-    async fn execute_messages(&self, _messages: &Vec<MsgToL1>) -> MessengerResult<()> {
-        Ok(())
-    }
-}
 
-///
-fn trace_hashes(tx_hash: TxHash, hashes: Vec<U256>) {
-    tracing::trace!(
-        "Transaction on L1 for {} messages: {:#x}",
-        hashes.len(),
-        tx_hash,
-    );
-
-    for h in hashes {
-        tracing::trace!("Msg hash sent=[{:#x}]", h);
     }
 }
 
