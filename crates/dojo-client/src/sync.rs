@@ -47,7 +47,7 @@ pub struct Client<S, P> {
     // DEV: It's wrapped in [parking_lot::RwLock] to prevent from having the `Self::start()` to be
     // `mut`. Having it on `mut` seems to be causing this issue https://github.com/rustwasm/wasm-bindgen/issues/1578 when compiled to wasm32.
     #[cfg(not(target_arch = "wasm32"))]
-    interval: RwLock<tokio::time::Interval>,
+    interval: AsyncRwLock<tokio::time::Interval>,
     #[cfg(target_arch = "wasm32")]
     interval: i32,
 }
@@ -69,7 +69,7 @@ where
             provider,
             sync_entities: RwLock::new(HashSet::from_iter(entities)),
             #[cfg(not(target_arch = "wasm32"))]
-            interval: RwLock::new(tokio::time::interval_at(
+            interval: AsyncRwLock::new(tokio::time::interval_at(
                 tokio::time::Instant::now() + Self::DEFAULT_INTERVAL,
                 Self::DEFAULT_INTERVAL,
             )),
@@ -87,7 +87,7 @@ where
         {
             use tokio::time::{interval_at, Instant};
             let interval = Duration::from_millis(milisecond);
-            self.interval = RwLock::new(interval_at(Instant::now() + interval, interval));
+            self.interval = AsyncRwLock::new(interval_at(Instant::now() + interval, interval));
         }
 
         #[cfg(target_arch = "wasm32")]
@@ -108,7 +108,7 @@ where
     pub async fn start(&self) -> Result<(), ClientError<S::Error, P::Error>> {
         loop {
             #[cfg(not(target_arch = "wasm32"))]
-            self.interval.write().tick().await;
+            self.interval.write().await.tick().await;
 
             #[cfg(target_arch = "wasm32")]
             sleep(self.interval).await;
