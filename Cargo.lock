@@ -2061,48 +2061,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
-name = "dojo-client"
-version = "0.1.0"
-dependencies = [
- "async-std",
- "async-trait",
- "camino",
- "dojo-test-utils",
- "dojo-types",
- "dojo-world",
- "js-sys",
- "parking_lot 0.12.1",
- "serde",
- "starknet",
- "starknet-crypto 0.5.1",
- "thiserror",
- "tokio",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
-]
-
-[[package]]
-name = "dojo-client-wasm"
-version = "0.1.0"
-dependencies = [
- "async-std",
- "async-trait",
- "console_error_panic_hook",
- "dojo-client",
- "js-sys",
- "parking_lot 0.12.1",
- "serde",
- "serde-wasm-bindgen",
- "starknet",
- "thiserror",
- "url",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
-]
-
-[[package]]
 name = "dojo-lang"
 version = "0.1.0"
 dependencies = [
@@ -5998,7 +5956,6 @@ dependencies = [
  "clap-verbosity-flag",
  "clap_complete",
  "console",
- "dojo-client",
  "dojo-lang",
  "dojo-test-utils",
  "dojo-world",
@@ -6012,6 +5969,7 @@ dependencies = [
  "starknet",
  "thiserror",
  "tokio",
+ "torii-client",
  "tracing",
  "tracing-log",
  "url",
@@ -6786,6 +6744,48 @@ dependencies = [
  "prost-build",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "torii-client"
+version = "0.1.0"
+dependencies = [
+ "async-std",
+ "async-trait",
+ "camino",
+ "dojo-test-utils",
+ "dojo-types",
+ "dojo-world",
+ "js-sys",
+ "parking_lot 0.12.1",
+ "serde",
+ "starknet",
+ "starknet-crypto 0.5.1",
+ "thiserror",
+ "tokio",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
+name = "torii-client-wasm"
+version = "0.1.0"
+dependencies = [
+ "async-std",
+ "async-trait",
+ "console_error_panic_hook",
+ "js-sys",
+ "parking_lot 0.12.1",
+ "serde",
+ "serde-wasm-bindgen",
+ "starknet",
+ "thiserror",
+ "torii-client",
+ "url",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
 ]
 
 [[package]]

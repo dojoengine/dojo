@@ -1,6 +1,6 @@
 [package]
 edition = "2021"
-name = "dojo-client-wasm"
+name = "torii-client-wasm"
 version = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -11,11 +11,11 @@ crate-type = [ "cdylib", "rlib" ]
 [dependencies]
 async-std = { version = "1.12.0", default-features = false, features = [ "std" ] }
 async-trait.workspace = true
-dojo-client = { path = ".." }
 parking_lot = "0.12.1"
 serde.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
+torii-client = { path = ".." }
 url = "2.4.0"
 # wasm
 js-sys = "0.3.64"

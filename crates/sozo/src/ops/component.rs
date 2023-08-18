@@ -1,7 +1,7 @@
 use anyhow::Result;
-use dojo_client::contract::world::WorldContractReader;
 use dojo_world::metadata::Environment;
 use starknet::core::types::{BlockId, BlockTag};
+use torii_client::contract::world::WorldContractReader;
 
 use crate::commands::component::ComponentCommands;
 

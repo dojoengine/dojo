@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
 use async_std::sync::RwLock as AsyncRwLock;
-use dojo_client::provider::jsonrpc::JsonRpcProvider;
-use dojo_client::storage::EntityStorage;
-use dojo_client::sync::{self, Client, Entity};
 use starknet::core::types::FieldElement;
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
+use torii_client::provider::jsonrpc::JsonRpcProvider;
+use torii_client::storage::EntityStorage;
+use torii_client::sync::{self, Client, Entity};
 use url::Url;
 use wasm_bindgen::prelude::*;
 

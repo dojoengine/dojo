@@ -25,7 +25,7 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: |
-          cargo test --workspace --exclude dojo-client-wasm
+          cargo test --workspace --exclude torii-client-wasm
 
   ensure-wasm:
     runs-on: ubuntu-latest
@@ -38,12 +38,12 @@ jobs:
           targets: wasm32-unknown-unknown
 
       - uses: Swatinem/rust-cache@v2
-      - name: "Ensure `dojo-client` is wasmable"
+      - name: "Ensure `torii-client` crate is wasmable"
         run: |
-          cargo build -r --target wasm32-unknown-unknown -p dojo-client
-      - name: "Ensure `dojo-client-wasm` is wasmable"
+          cargo build -r --target wasm32-unknown-unknown -p torii-client
+      - name: "Ensure `torii-client-wasm` crate is wasmable"
         run: |
-          cargo build -r --target wasm32-unknown-unknown -p dojo-client-wasm
+          cargo build -r --target wasm32-unknown-unknown -p torii-client-wasm
 
   # cairofmt:
   #   runs-on: ubuntu-latest

@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
 use async_trait::async_trait;
-use dojo_client::storage::{component_storage_base_address, EntityStorage};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
+use torii_client::storage::{component_storage_base_address, EntityStorage};
 
 /// Simple in memory implementation of [EntityStorage]
 #[derive(Serialize, Deserialize)]
