@@ -29,7 +29,6 @@ trait IContract1<T> {
 
 #[starknet::contract]
 mod contract_1 {
-
     use array::{ArrayTrait, SpanTrait};
     use traits::Into;
     use starknet::EthAddress;
@@ -56,11 +55,7 @@ mod contract_1 {
     /// In this example, the payload is expected to be a single felt value. But it can be any
     /// deserializable struct written in cairo.
     #[l1_handler]
-    fn msg_handler_value(
-        ref self: ContractState,
-        from_address: felt252,
-        value: felt252
-    ) {
+    fn msg_handler_value(ref self: ContractState, from_address: felt252, value: felt252) {
         // assert(from_address == ...);
 
         assert(value == 123, 'Invalid value');
@@ -73,11 +68,7 @@ mod contract_1 {
     /// * `from_address` - The L1 contract sending the message.
     /// * `data` - Expected data in the payload (automatically deserialized).
     #[l1_handler]
-    fn msg_handler_struct(
-        ref self: ContractState,
-        from_address: felt252,
-        data: MyData
-    ) {
+    fn msg_handler_struct(ref self: ContractState, from_address: felt252, data: MyData) {
         // assert(from_address == ...);
 
         assert(data.a == 0, 'data.a is invalid');
@@ -95,9 +86,7 @@ mod contract_1 {
         fn send_message_struct(ref self: ContractState, to_address: EthAddress, data: MyData) {
             let mut buf: Array<felt252> = array![];
             data.serialize(ref buf);
-            starknet::send_message_to_l1_syscall(to_address.into(), buf.span())
-                .unwrap_syscall();
+            starknet::send_message_to_l1_syscall(to_address.into(), buf.span()).unwrap_syscall();
         }
     }
-
 }
