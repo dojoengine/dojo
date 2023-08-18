@@ -11,6 +11,7 @@ use blockifier::transaction::transactions::ExecutableTransaction;
 use convert_case::{Case, Casing};
 use parking_lot::RwLock;
 use starknet::core::types::{Event, FieldElement, MsgToL1};
+
 use tokio::sync::RwLock as AsyncRwLock;
 use tracing::{info, trace, warn};
 
@@ -19,6 +20,7 @@ use super::storage::block::{PartialBlock, PartialHeader};
 use super::storage::transaction::{RejectedTransaction, Transaction, TransactionOutput};
 use super::storage::BlockchainStorage;
 use crate::backend::storage::transaction::{DeclareTransaction, KnownTransaction};
+use crate::utils::transaction::warn_message_transaction_error_exec_error;
 use crate::env::Env;
 
 #[derive(Debug)]
@@ -254,7 +256,7 @@ pub fn execute_transaction<S: StateReader>(
             Ok(exec_info)
         }
         Err(err) => {
-            warn!("Transaction validation error: {err:?}");
+            warn_message_transaction_error_exec_error(&err);
             Err(err)
         }
     }

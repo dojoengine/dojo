@@ -1,8 +1,14 @@
 use std::sync::Arc;
 
-use blockifier::execution::contract_class::ContractClass;
+use blockifier::execution::{
+    errors::EntryPointExecutionError,
+    contract_class::ContractClass
+};
 use blockifier::transaction::account_transaction::AccountTransaction;
-use blockifier::transaction::transaction_execution::Transaction as ExecutionTransaction;
+use blockifier::transaction::{
+    errors::TransactionExecutionError,
+    transaction_execution::Transaction as ExecutionTransaction
+};
 use starknet::core::crypto::compute_hash_on_elements;
 use starknet::core::types::{
     BroadcastedDeclareTransaction, BroadcastedDeployAccountTransaction,
@@ -10,7 +16,7 @@ use starknet::core::types::{
     DeployAccountTransaction, DeployTransaction, FieldElement, InvokeTransaction,
     InvokeTransactionV0, InvokeTransactionV1, L1HandlerTransaction, Transaction as RpcTransaction,
 };
-use starknet::core::utils::get_contract_address;
+use starknet::core::utils::{get_contract_address, parse_cairo_short_string};
 use starknet_api::core::{
     ClassHash, CompiledClassHash, ContractAddress, EntryPointSelector, Nonce, PatriciaKey,
 };
@@ -26,6 +32,7 @@ use starknet_api::transaction::{
     TransactionHash, TransactionSignature, TransactionVersion,
 };
 use starknet_api::{patricia_key, stark_felt};
+use tracing::warn;
 
 use super::contract::rpc_to_inner_class;
 use crate::utils::contract::legacy_rpc_to_inner_class;
@@ -462,6 +469,29 @@ pub fn broadcasted_deploy_account_rpc_to_api_transaction(
     };
 
     (api_transaction, contract_address)
+}
+
+pub fn warn_message_transaction_error_exec_error(err: &TransactionExecutionError) {
+    match err {
+        TransactionExecutionError::EntryPointExecutionError(ref eperr) |
+        TransactionExecutionError::ExecutionError(ref eperr) => {
+            match eperr {
+                EntryPointExecutionError::ExecutionFailed { error_data } => {
+                    let mut reasons: Vec<String> = vec![];
+                    error_data.iter()
+                        .for_each(|felt| {
+                            if let Ok(s) = parse_cairo_short_string(&FieldElement::from(*felt)) {
+                                reasons.push(s);
+                            }
+                        });
+                    
+                    warn!("Transaction validation error: {}", reasons.join(" "));
+                },
+                _ => warn!("Transaction validation error: {:?}", err)
+            }
+        },
+        _ => warn!("Transaction validation error: {:?}", err)
+    }
 }
 
 #[cfg(test)]
