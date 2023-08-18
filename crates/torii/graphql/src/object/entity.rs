@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
 use serde::Deserialize;
 use sqlx::pool::PoolConnection;
-use sqlx::{FromRow, Pool, QueryBuilder, Result, Sqlite};
+use sqlx::{FromRow, Pool, Result, Sqlite};
 
 use super::component_state::{component_state_by_id_query, type_mapping_query};
 use super::connection::{
@@ -21,7 +21,7 @@ use crate::utils::extract_value::extract;
 #[serde(rename_all = "camelCase")]
 pub struct Entity {
     pub id: String,
-    pub keys: Option<String>,
+    pub keys: String,
     pub component_names: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -36,7 +36,7 @@ impl EntityObject {
         Self {
             type_mapping: IndexMap::from([
                 (Name::new("id"), TypeRef::named(TypeRef::ID)),
-                (Name::new("keys"), TypeRef::named(TypeRef::STRING)),
+                (Name::new("keys"), TypeRef::named_list(TypeRef::STRING)),
                 (Name::new("componentNames"), TypeRef::named(TypeRef::STRING)),
                 (Name::new("createdAt"), TypeRef::named(ScalarType::DateTime.to_string())),
                 (Name::new("updatedAt"), TypeRef::named(ScalarType::DateTime.to_string())),
@@ -45,9 +45,10 @@ impl EntityObject {
     }
 
     pub fn value_mapping(entity: Entity) -> ValueMapping {
+        let keys: Vec<&str> = entity.keys.split(',').map(|s| s.trim()).collect();
         IndexMap::from([
             (Name::new("id"), Value::from(entity.id)),
-            (Name::new("keys"), Value::from(entity.keys.unwrap_or_default())),
+            (Name::new("keys"), Value::from(keys)),
             (Name::new("componentNames"), Value::from(entity.component_names)),
             (
                 Name::new("createdAt"),
@@ -125,51 +126,52 @@ impl ObjectTrait for EntityObject {
     }
 
     fn resolve_many(&self) -> Option<Field> {
-        let mut field = Field::new(
+        let field = Field::new(
             "entities",
             TypeRef::named(format!("{}Connection", self.type_name())),
             |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                     let args = parse_arguments(&ctx)?;
-                    let keys_value = ctx.args.try_get("keys")?;
-                    let keys = keys_value
-                        .list()?
-                        .iter()
-                        .map(
-                            |val| val.string().unwrap().to_string(), // safe unwrap
-                        )
-                        .collect();
+                    let keys = ctx.args.try_get("keys").ok().and_then(|keys| {
+                        keys.list().ok().map(|key_list| {
+                            key_list
+                                    .iter()
+                                    .map(|val| val.string().unwrap().to_string()) // safe unwrap
+                                    .collect()
+                        })
+                    });
 
                     let (entities, total_count) = entities_by_sk(&mut conn, keys, args).await?;
                     Ok(Some(Value::Object(connection_output(entities, total_count))))
                 })
             },
         )
-        .argument(InputValue::new("keys", TypeRef::named_nn_list_nn(TypeRef::STRING)));
+        .argument(InputValue::new("keys", TypeRef::named_list(TypeRef::STRING)));
 
         // Add relay connection fields (first, last, before, after)
-        field = connection_input(field);
-
-        Some(field)
+        Some(connection_input(field))
     }
 }
 
 async fn entities_by_sk(
     conn: &mut PoolConnection<Sqlite>,
-    keys: Vec<String>,
+    keys: Option<Vec<String>>,
     args: ConnectionArguments,
 ) -> Result<(Vec<ValueMapping>, i64)> {
-    let mut builder: QueryBuilder<'_, Sqlite> = QueryBuilder::new("SELECT * FROM entities");
-    let keys_str = format!("{},%", keys.join(","));
-    builder.push(" WHERE keys LIKE ").push_bind(&keys_str);
+    let mut count_query = "SELECT COUNT(*) FROM entities".to_string();
+    let mut entities_query = "SELECT * FROM entities".to_string();
+    let mut conditions = Vec::new();
+
+    if let Some(keys) = &keys {
+        conditions.push(format!("keys LIKE '{}%'", keys.join(",")));
+        count_query.push_str(&format!(" WHERE keys LIKE '{}%'", keys.join(",")));
+    }
 
     if let Some(after_cursor) = &args.after {
         match decode_cursor(after_cursor.clone()) {
             Ok((created_at, id)) => {
-                builder.push(" AND (created_at, id) < (");
-                builder.push_bind(created_at).push(",");
-                builder.push_bind(id).push(") ");
+                conditions.push(format!("(created_at, id) < ('{}', '{}')", created_at, id));
             }
             Err(_) => return Err(sqlx::Error::Decode("Invalid after cursor format".into())),
         }
@@ -178,29 +180,25 @@ async fn entities_by_sk(
     if let Some(before_cursor) = &args.before {
         match decode_cursor(before_cursor.clone()) {
             Ok((created_at, id)) => {
-                builder.push(" AND (created_at, id) > (");
-                builder.push_bind(created_at).push(",");
-                builder.push_bind(id).push(") ");
+                conditions.push(format!("(created_at, id) > ('{}', '{}')", created_at, id));
             }
             Err(_) => return Err(sqlx::Error::Decode("Invalid before cursor format".into())),
         }
     }
 
-    if let Some(first) = args.first {
-        builder.push(" ORDER BY created_at DESC, id DESC LIMIT ");
-        builder.push(first);
-    } else if let Some(last) = args.last {
-        builder.push(" ORDER BY created_at ASC, id ASC LIMIT ");
-        builder.push(last);
-    } else {
-        builder.push(" ORDER BY created_at DESC, id DESC LIMIT ").push(DEFAULT_LIMIT);
+    if !conditions.is_empty() {
+        let condition_string = conditions.join(" AND ");
+        entities_query.push_str(&format!(" WHERE {}", condition_string));
     }
 
-    let entities: Vec<Entity> = builder.build_query_as().fetch_all(conn.as_mut()).await?;
-    let total_result: (i64,) =
-        sqlx::query_as(&format!("SELECT COUNT(*) FROM entities WHERE keys LIKE '{}'", keys_str))
-            .fetch_one(conn)
-            .await?;
+    let limit = args.first.or(args.last).unwrap_or(DEFAULT_LIMIT);
+    let order = if args.first.is_some() { "DESC" } else { "ASC" };
+
+    entities_query
+        .push_str(&format!(" ORDER BY created_at {}, id {} LIMIT {}", order, order, limit));
+
+    let entities: Vec<Entity> = sqlx::query_as(&entities_query).fetch_all(conn.as_mut()).await?;
+    let total_result: (i64,) = sqlx::query_as(&count_query).fetch_one(conn.as_mut()).await?;
 
     Ok((entities.into_iter().map(EntityObject::value_mapping).collect(), total_result.0))
 }

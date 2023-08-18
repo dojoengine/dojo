@@ -26,7 +26,7 @@ pub struct Edge<T> {
 #[serde(rename_all = "camelCase")]
 pub struct Entity {
     pub component_names: String,
-    pub keys: Option<String>,
+    pub keys: Option<Vec<String>>,
     pub created_at: Option<String>,
 }
 
@@ -105,7 +105,7 @@ pub async fn paginate(
     let query = format!(
         "
         {{
-            entities (keys: [\"%\"], {first_last}: {page_size} {cursor}) 
+            entities ({first_last}: {page_size} {cursor}) 
             {{
                 totalCount
                 edges {{
