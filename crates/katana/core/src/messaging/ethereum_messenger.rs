@@ -151,7 +151,9 @@ impl Messenger for EthereumMessenger {
                 );
 
                 block_logs.iter().for_each(|l| {
-                    if let Ok(tx) = l1_handler_tx_from_log(l) { l1_handler_txs.push(tx) }
+                    if let Ok(tx) = l1_handler_tx_from_log(l) {
+                        l1_handler_txs.push(tx)
+                    }
                 })
             },
         );
