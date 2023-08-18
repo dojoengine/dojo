@@ -51,7 +51,7 @@ pub trait Messenger {
     /// # Arguments
     ///
     /// * `messages` - Messages to settle.
-    async fn settle_messages(&self, messages: &Vec<MsgToL1>) -> MessengerResult<Vec<String>>;
+    async fn settle_messages(&self, messages: &[MsgToL1]) -> MessengerResult<Vec<String>>;
 }
 
 ///
@@ -131,11 +131,11 @@ impl Worker {
             self.messenger.gather_messages(from_block, max_blocks).await
         {
             for tx in &l1_handler_txs {
-                trace_l1_handler_tx_exec(&tx);
+                trace_l1_handler_tx_exec(tx);
                 self.starknet.handle_transaction(Transaction::L1Handler(tx.clone())).await;
             }
 
-            return (latest_block_fetched + 1, l1_handler_txs.len() as u64);
+            (latest_block_fetched + 1, l1_handler_txs.len() as u64)
         } else {
             (from_block, 0)
         }

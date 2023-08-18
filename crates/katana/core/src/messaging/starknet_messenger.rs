@@ -52,10 +52,15 @@ impl Messenger for StarknetMessenger {
         _from_block: u64,
         _max_blocks: u64,
     ) -> MessengerResult<(u64, Vec<L1HandlerTransaction>)> {
+        let _c = self.chain_id;
+        let _p = &self.provider;
+        let _w = &self.wallet;
+        let _s = self.sender_account_address;
+        let _m = self.messaging_contract_address;
         Ok((0, vec![]))
     }
 
-    async fn settle_messages(&self, _messages: &Vec<MsgToL1>) -> MessengerResult<Vec<String>> {
+    async fn settle_messages(&self, _messages: &[MsgToL1]) -> MessengerResult<Vec<String>> {
         Ok(vec![])
     }
 }

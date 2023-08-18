@@ -58,7 +58,7 @@ impl EthereumMessenger {
         let wallet: LocalWallet =
             config.private_key.parse::<LocalWallet>()?.with_chain_id(chain_id.as_u32());
 
-        let provider_signer = SignerMiddleware::new(provider.clone(), wallet.clone());
+        let provider_signer = SignerMiddleware::new(provider.clone(), wallet);
         let messaging_contract_address = Address::from_str(&config.contract_address)?;
 
         Ok(EthereumMessenger {
@@ -151,13 +151,7 @@ impl Messenger for EthereumMessenger {
                 );
 
                 block_logs.iter().for_each(|l| {
-                    match l1_handler_tx_from_log(l) {
-                        Ok(tx) => l1_handler_txs.push(tx),
-                        // TODO: Some logs are just not to be considered.
-                        // So, we can accept a list of topics to filter the logs,
-                        // which could be the best option.
-                        Err(_) => (),
-                    }
+                    if let Ok(tx) = l1_handler_tx_from_log(l) { l1_handler_txs.push(tx) }
                 })
             },
         );
@@ -165,8 +159,8 @@ impl Messenger for EthereumMessenger {
         Ok((to_block, l1_handler_txs))
     }
 
-    async fn settle_messages(&self, messages: &Vec<MsgToL1>) -> MessengerResult<Vec<String>> {
-        if messages.len() == 0 {
+    async fn settle_messages(&self, messages: &[MsgToL1]) -> MessengerResult<Vec<String>> {
+        if messages.is_empty() {
             return Ok(vec![]);
         }
 
@@ -222,7 +216,7 @@ fn compute_message_hash(data: &[u8]) -> U256 {
     hasher.update(data);
     let hash = hasher.finalize();
     let hash_bytes = hash.as_slice();
-    U256::from_big_endian(&hash_bytes)
+    U256::from_big_endian(hash_bytes)
 }
 
 /// Converts a starknet core log into a L1 handler transaction.
@@ -250,7 +244,7 @@ fn l1_handler_tx_from_log(log: &Log) -> Result<L1HandlerTransaction> {
     let tx = L1HandlerTransaction {
         inner: ApiL1HandlerTransaction {
             transaction_hash: TransactionHash(tx_hash),
-            version: TransactionVersion(stark_felt!(1 as u32)),
+            version: TransactionVersion(stark_felt!(1_u32)),
             nonce: Nonce(nonce),
             contract_address: ContractAddress::try_from(contract_address).unwrap(),
             entry_point_selector: EntryPointSelector(selector),

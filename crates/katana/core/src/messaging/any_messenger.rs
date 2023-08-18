@@ -27,7 +27,7 @@ pub async fn from_config(config: SequencerMessagingConfig) -> MessengerResult<An
                 }
                 Err(e_sn) => {
                     tracing::debug!("Starknet messenger init failed: {:?}", e_sn);
-                    return Err(MessengerError::InitError);
+                    Err(MessengerError::InitError)
                 }
             }
         }
@@ -47,7 +47,7 @@ impl Messenger for AnyMessenger {
         }
     }
 
-    async fn settle_messages(&self, messages: &Vec<MsgToL1>) -> MessengerResult<Vec<String>> {
+    async fn settle_messages(&self, messages: &[MsgToL1]) -> MessengerResult<Vec<String>> {
         match self {
             Self::Ethereum(inner) => inner.settle_messages(messages).await,
             Self::Starknet(inner) => inner.settle_messages(messages).await,
