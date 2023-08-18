@@ -48,33 +48,6 @@ struct Args {
     start_block: u64,
 }
 
-fn get_world_address(
-    args: &Args,
-    manifest: &Manifest,
-    env_metadata: Option<&Environment>,
-) -> anyhow::Result<FieldElement> {
-    if let Some(address) = args.world_address {
-        return Ok(address);
-    }
-
-    if let Some(address) = manifest.world.address {
-        return Ok(address);
-    }
-
-    if let Some(world_address) =
-        env_metadata
-            .and_then(|env| env.world_address())
-            .or(std::env::var("DOJO_WORLD_ADDRESS").ok().as_deref())
-    {
-        Ok(FieldElement::from_str(world_address)?)
-    } else {
-        Err(anyhow!(
-            "Could not find World address. Please specify it with --world, or in manifest.json or \
-             [tool.dojo.env] in Scarb.toml"
-        ))
-    }
-}
-
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
@@ -190,4 +163,31 @@ fn get_manifest_and_env(
         None
     };
     Ok((manifest, env))
+}
+
+fn get_world_address(
+    args: &Args,
+    manifest: &Manifest,
+    env_metadata: Option<&Environment>,
+) -> anyhow::Result<FieldElement> {
+    if let Some(address) = args.world_address {
+        return Ok(address);
+    }
+
+    if let Some(address) = manifest.world.address {
+        return Ok(address);
+    }
+
+    if let Some(world_address) =
+        env_metadata
+            .and_then(|env| env.world_address())
+            .or(std::env::var("DOJO_WORLD_ADDRESS").ok().as_deref())
+    {
+        Ok(FieldElement::from_str(world_address)?)
+    } else {
+        Err(anyhow!(
+            "Could not find World address. Please specify it with --world, or in manifest.json or \
+             [tool.dojo.env] in Scarb.toml"
+        ))
+    }
 }
