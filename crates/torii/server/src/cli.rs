@@ -145,18 +145,16 @@ fn get_manifest_and_env(
 
     let manifest = if let Some(manifest_path) = args_path {
         Manifest::load_from_path(manifest_path)?
+    } else if let Some(ref ws) = ws {
+        let target_dir = ws.target_dir().path_existent()?;
+        let target_dir = target_dir.join(ws.config().profile().as_str());
+        let manifest_path = target_dir.join("manifest.json");
+        Manifest::load_from_path(manifest_path)?
     } else {
-        if let Some(ref ws) = ws {
-            let target_dir = ws.target_dir().path_existent()?;
-            let target_dir = target_dir.join(ws.config().profile().as_str());
-            let manifest_path = target_dir.join("manifest.json");
-            Manifest::load_from_path(manifest_path)?
-        } else {
-            return Err(anyhow!(
-                "Cannot find Scarb manifest file. Either run this command from within a Scarb \
-                 project or specify it using `--manifest` argument"
-            ));
-        }
+        return Err(anyhow!(
+            "Cannot find Scarb manifest file. Either run this command from within a Scarb project \
+             or specify it using `--manifest` argument"
+        ));
     };
     let env = if let Some(ws) = ws {
         dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned())
@@ -175,12 +173,12 @@ fn get_world_address(
         return Ok(address);
     }
 
-    if let Some(world_address) = env_metadata.and_then(|env| env.world_address()).as_deref() {
+    if let Some(world_address) = env_metadata.and_then(|env| env.world_address()) {
         return Ok(FieldElement::from_str(world_address)?);
     }
 
     if let Some(address) = manifest.world.address {
-        return Ok(address);
+        Ok(address)
     } else {
         Err(anyhow!(
             "Could not find World address. Please specify it with --world, or in manifest.json or \
