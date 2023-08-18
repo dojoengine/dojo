@@ -7,7 +7,7 @@ use super::starknet_messenger::StarknetMessenger;
 
 use crate::messaging::{Messenger, MessengerResult, MessengerError};
 use crate::sequencer::SequencerMessagingConfig;
-use crate::backend::storage::transaction::Transaction;
+use crate::backend::storage::transaction::L1HandlerTransaction;
 
 pub enum AnyMessenger {
     Ethereum(EthereumMessenger),
@@ -38,7 +38,7 @@ pub async fn from_config(config: SequencerMessagingConfig) -> MessengerResult<An
 
 #[async_trait]
 impl Messenger for AnyMessenger {
-    async fn gather_messages(&self, from_block: u64, max_blocks: u64) -> MessengerResult<(u64, Vec<Transaction>)> {
+    async fn gather_messages(&self, from_block: u64, max_blocks: u64) -> MessengerResult<(u64, Vec<L1HandlerTransaction>)> {
         match self {
             Self::Ethereum(inner) => inner.gather_messages(from_block, max_blocks).await,
             Self::Starknet(inner) => inner.gather_messages(from_block, max_blocks).await,

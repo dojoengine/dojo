@@ -22,7 +22,7 @@ use starknet_api::transaction::{
 
 use crate::messaging::{Messenger, MessengerError, MessengerResult};
 use crate::sequencer::SequencerMessagingConfig;
-use crate::backend::storage::transaction::{Transaction, L1HandlerTransaction};
+use crate::backend::storage::transaction::L1HandlerTransaction;
 
 abigen!(
     StarknetMessagingLocal,
@@ -125,7 +125,7 @@ impl Messenger for EthereumMessenger {
         &self,
         from_block: u64,
         max_blocks: u64
-    ) -> MessengerResult<(u64, Vec<Transaction>)> {
+    ) -> MessengerResult<(u64, Vec<L1HandlerTransaction>)> {
         let chain_latest_block: u64 = self.provider.get_block_number().await?
             .try_into()
             .expect("Can't convert latest block number into u64.");
@@ -236,7 +236,7 @@ fn compute_message_hash(data: &[u8]) -> U256 {
 }
 
 /// Converts a starknet core log into a L1 handler transaction.
-fn l1_handler_tx_from_log(log: &Log) -> Result<Transaction> {
+fn l1_handler_tx_from_log(log: &Log) -> Result<L1HandlerTransaction> {
     let parsed_log = <LogMessageToL2 as EthLogDecode>::decode_log(&log.clone().into())?;
 
     let from_address = stark_felt_from_address(parsed_log.from_address);
@@ -259,7 +259,7 @@ fn l1_handler_tx_from_log(log: &Log) -> Result<Transaction> {
     // ok for now? Or is it derived from something?
     let tx_hash = hash::pedersen_hash(&nonce, &contract_address);
 
-    let tx = Transaction::L1Handler(L1HandlerTransaction {
+    let tx = L1HandlerTransaction {
         inner: ApiL1HandlerTransaction {
             transaction_hash: TransactionHash(tx_hash),
             version: TransactionVersion(stark_felt!(1 as u32)),
@@ -269,7 +269,7 @@ fn l1_handler_tx_from_log(log: &Log) -> Result<Transaction> {
             calldata: calldata,
         },
         paid_fee_on_l1: Fee(fee),
-    });
+    };
 
     Ok(tx)
 }

@@ -14,7 +14,7 @@ use url::Url;
 
 use crate::messaging::{Messenger, MessengerResult};
 use crate::sequencer::SequencerMessagingConfig;
-use crate::backend::storage::transaction::Transaction;
+use crate::backend::storage::transaction::L1HandlerTransaction;
 
 ///
 pub struct StarknetMessenger {
@@ -53,7 +53,7 @@ impl StarknetMessenger {
 
 #[async_trait]
 impl Messenger for StarknetMessenger {
-    async fn gather_messages(&self, _from_block: u64, _max_blocks: u64) -> MessengerResult<(u64, Vec<Transaction>)> {
+    async fn gather_messages(&self, _from_block: u64, _max_blocks: u64) -> MessengerResult<(u64, Vec<L1HandlerTransaction>)> {
         Ok((0, vec![]))
     }
 

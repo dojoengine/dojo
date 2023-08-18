@@ -16,7 +16,7 @@ send_msg_value:
 	starkli invoke $(l2_contract) send_message_value $(l1_contract) $(value) $(OPTS)
 
 send_msg_struct_usage:
-	@echo make send_msg_struct l2_contract=0x123 l1_contract=0x456 data="123 88"
+	@echo make send_msg_struct l2_contract=0x123 l1_contract=0x456 data=\"123 88\"
 
 send_msg_struct:
 	starkli invoke $(l2_contract) send_message_struct $(l1_contract) $(data) $(OPTS)

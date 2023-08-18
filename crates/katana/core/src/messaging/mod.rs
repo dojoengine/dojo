@@ -6,11 +6,12 @@ use anyhow::Result;
 use async_trait::async_trait;
 use std::sync::Arc;
 use tokio::time;
-use starknet::core::types::MsgToL1;
+use starknet::core::types::{MsgToL1, FieldElement};
 use ethers::providers::ProviderError;
+use starknet_api::hash::StarkFelt;
 
 use crate::sequencer::SequencerMessagingConfig;
-use crate::backend::{Backend, storage::transaction::Transaction}
+use crate::backend::{Backend, storage::transaction::{Transaction, L1HandlerTransaction}}
 ;
 use any_messenger::AnyMessenger;
 
@@ -36,7 +37,7 @@ pub trait Messenger {
     /// # Arguments
     ///
     /// * `from_block` - From which block the messages should be gathered.
-    async fn gather_messages(&self, from_block: u64, max_blocks: u64) -> MessengerResult<(u64, Vec<Transaction>)>;
+    async fn gather_messages(&self, from_block: u64, max_blocks: u64) -> MessengerResult<(u64, Vec<L1HandlerTransaction>)>;
 
     /// Computes the hash of the given messages and sends them to the settlement chain.
     ///
@@ -141,7 +142,8 @@ impl Worker {
             = self.messenger.gather_messages(from_block, max_blocks).await
         {
             for tx in &l1_handler_txs {
-                self.starknet.handle_transaction(tx.clone()).await;
+                trace_l1_handler_tx_exec(&tx);
+                self.starknet.handle_transaction(Transaction::L1Handler(tx.clone())).await;
             }
             
             tracing::debug!(
@@ -156,4 +158,23 @@ impl Worker {
             (from_block, 0)
         }
     }
+}
+
+fn trace_l1_handler_tx_exec(tx: &L1HandlerTransaction) {
+    // TODO: am I missing a simple way to print StarkFelt is hex..?
+    let calldata_str: Vec<String> = tx.inner.calldata.0
+        .iter()
+        .map(|f| format!("{:#x}", FieldElement::from(*f))).collect();
+
+    tracing::trace!(r"L1Handler transaction to be executed
+|      tx_hash     | {:#x}
+| contract_address | {:#x}
+|     selector     | {:#x}
+|     calldata     | [{}]
+
+",
+                    FieldElement::from(tx.inner.transaction_hash.0),
+                    FieldElement::from(*tx.inner.contract_address.0.key()),
+                    FieldElement::from(tx.inner.entry_point_selector.0),
+                    calldata_str.join(", "));
 }

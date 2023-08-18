@@ -7,12 +7,13 @@ deploy:
 	forge script --broadcast --rpc-url ${ETH_RPC_URL} script/LocalTesting.s.sol:LocalSetup
 
 send_msg_usage:
-	@echo make send_msg l1_contract=0x123 l2_contract=0x456 selector=0x888 payload=\"[1,2]\"
+	@echo make send_msg l1_contract=0x123 l2_contract=0x456 selector_str=funct_name payload=\"[1,2]\"
 
 send_msg:
+	$(eval selector=$(shell starkli selector $(selector_str)))
 	cast send $(l1_contract) \
 	"sendMessage(uint256,uint256,uint256[])" \
-	$(l2_contract) $(selector) $(payload) \
+	$(l2_contract) ${selector} $(payload) \
 	--private-key ${ACCOUNT_PRIVATE_KEY} --value 1
 
 consume_msg_usage:
