@@ -1,4 +1,5 @@
 use starknet::ContractAddress;
+use dojo_erc::erc165::interface::{IERC165};
 
 #[starknet::interface]
 trait IERC1155<TState> {
@@ -27,7 +28,9 @@ trait IERC1155<TState> {
         self: @TState, accounts: Array<ContractAddress>, ids: Array<u256>
     ) -> Array<u256>;
     fn uri(self: @TState, token_id: u256) -> felt252;
+
     fn supports_interface(self: @TState, interface_id: u32) -> bool;
+
 }
 
 #[starknet::interface]
@@ -50,7 +53,3 @@ trait IERC1155TokenReceiver<TState> {
     ) -> u32;
 }
 
-#[starknet::interface]
-trait IERC165<TState> {
-    fn supports_interface(self: TState, interface_id: u32) -> bool;
-}

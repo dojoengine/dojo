@@ -13,7 +13,13 @@ use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 use dojo_erc::erc1155::erc1155::ERC1155;
 
 use dojo_erc::erc1155::components::{erc_1155_balance, uri, operator_approval};
-use dojo_erc::erc1155::systems::{ERC1155SetApprovalForAll, ERC1155SetUri, ERC1155SafeTransferFrom, ERC1155SafeBatchTransferFrom, ERC1155Mint, ERC1155Burn};
+use dojo_erc::erc1155::systems::{
+    ERC1155SetApprovalForAll, ERC1155SetUri, ERC1155SafeTransferFrom, ERC1155SafeBatchTransferFrom,
+    ERC1155Mint, ERC1155Burn
+};
+
+
+// TODO: move
 
 #[starknet::interface]
 trait IERC1155<TState> {
@@ -121,14 +127,14 @@ fn deploy_testcase1() -> (IWorldDispatcher, IERC1155Dispatcher) {
     erc1155.mint(PROXY(), 1, 5, array![]);
     // proxy  token_id 2 x 5
     erc1155.mint(PROXY(), 2, 5, array![]);
-     // proxy  token_id 3 x 5
+    // proxy  token_id 3 x 5
     erc1155.mint(PROXY(), 3, 5, array![]);
 
     // user1  token_id 1  x 10
     erc1155.mint(USER1(), 1, 10, array![]);
     // user1  token_id 2 x 20
     erc1155.mint(USER1(), 2, 20, array![]);
-     // user1  token_id 3 x 30
+    // user1  token_id 3 x 30
     erc1155.mint(USER1(), 3, 30, array![]);
 
     set_contract_address(USER1());

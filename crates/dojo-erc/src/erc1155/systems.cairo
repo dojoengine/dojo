@@ -46,11 +46,7 @@ fn emit_transfer_batch(
         amounts_u256.append((*amounts.pop_front().unwrap()).into());
     };
     let event = TransferBatch {
-        operator: operator,
-        from: from,
-        to: to,
-        ids: ids_u256,
-        values: amounts_u256,
+        operator: operator, from: from, to: to, ids: ids_u256, values: amounts_u256, 
     };
     IDojoERC1155Dispatcher { contract_address: token }.on_transfer_batch(event.clone());
     emit!(world, event);
@@ -69,26 +65,25 @@ fn update(
     assert(ids.len() == amounts.len(), 'ERC1155: invalid length');
 
     assert(
-        operator == from || OperatorApprovalTrait::is_approved_for_all(world, token, from, operator),
+        operator == from
+            || OperatorApprovalTrait::is_approved_for_all(world, token, from, operator),
         'ERC1155: insufficient approval'
     );
 
     ERC1155BalanceTrait::transfer_tokens(world, token, from, to, ids.span(), amounts.span());
-    
+
     if (ids.len() == 1) {
         let id = *ids.at(0);
         let amount = *amounts.at(0);
 
         emit_transfer_single(world, token, operator, from, to, id, amount);
 
-        if (to.is_non_zero()) {
-            //do_safe_transfer_acceptance_check(operator, from, to, id.into(), amount.into(), data);
+        if (to.is_non_zero()) {//do_safe_transfer_acceptance_check(operator, from, to, id.into(), amount.into(), data);
         } else {
             emit_transfer_batch(world, token, operator, from, to, ids.span(), amounts.span());
-            if (to.is_non_zero()) {
-                //do_safe_batch_transfer_acceptance_check(
-                //    operator, from, to, ids, amounts, data
-                //);
+            if (to.is_non_zero()) {//do_safe_batch_transfer_acceptance_check(
+            //    operator, from, to, ids, amounts, data
+            //);
             }
         }
     }
@@ -157,10 +152,18 @@ mod ERC1155SetApprovalForAll {
     use clone::Clone;
 
     use dojo_erc::erc1155::components::OperatorApprovalTrait;
-    use dojo_erc::erc1155::erc1155::{IDojoERC1155Dispatcher, IDojoERC1155DispatcherTrait, ApprovalForAll};
+    use dojo_erc::erc1155::erc1155::{
+        IDojoERC1155Dispatcher, IDojoERC1155DispatcherTrait, ApprovalForAll
+    };
     fn execute(
-        ctx: Context, token: ContractAddress, owner: ContractAddress, operator: ContractAddress, approved: bool
+        ctx: Context,
+        token: ContractAddress,
+        owner: ContractAddress,
+        operator: ContractAddress,
+        approved: bool
     ) {
+        // TODO : safety checks !!
+
         OperatorApprovalTrait::set_approval_for_all(ctx.world, token, owner, operator, approved);
 
         let event = ApprovalForAll { owner, operator, approved };
@@ -196,8 +199,8 @@ mod ERC1155SafeTransferFrom {
 
     fn execute(
         ctx: Context,
-        operator: ContractAddress,
         token: ContractAddress,
+        operator: ContractAddress,
         from: ContractAddress,
         to: ContractAddress,
         id: felt252,
@@ -249,8 +252,8 @@ mod ERC1155Mint {
 
     fn execute(
         ctx: Context,
-        operator: ContractAddress,
         token: ContractAddress,
+        operator: ContractAddress,
         to: ContractAddress,
         ids: Array<felt252>,
         amounts: Array<u128>,
@@ -275,8 +278,8 @@ mod ERC1155Burn {
 
     fn execute(
         ctx: Context,
-        operator: ContractAddress,
         token: ContractAddress,
+        operator: ContractAddress,
         from: ContractAddress,
         ids: Array<felt252>,
         amounts: Array<u128>
