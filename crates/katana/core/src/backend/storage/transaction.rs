@@ -9,8 +9,9 @@ use blockifier::transaction::transactions::{
 };
 use starknet::core::types::{
     DeclareTransactionReceipt, DeployAccountTransactionReceipt, Event, FieldElement,
-    FlattenedSierraClass, InvokeTransactionReceipt, MsgToL1, PendingDeclareTransactionReceipt,
-    PendingDeployAccountTransactionReceipt, PendingInvokeTransactionReceipt, L1HandlerTransactionReceipt, PendingL1HandlerTransactionReceipt,
+    FlattenedSierraClass, InvokeTransactionReceipt, L1HandlerTransactionReceipt, MsgToL1,
+    PendingDeclareTransactionReceipt, PendingDeployAccountTransactionReceipt,
+    PendingInvokeTransactionReceipt, PendingL1HandlerTransactionReceipt,
     PendingTransactionReceipt as RpcPendingTransactionReceipt, Transaction as RpcTransaction,
     TransactionReceipt as RpcTransactionReceipt, TransactionStatus as RpcTransactionStatus,
 };
@@ -19,9 +20,9 @@ use starknet_api::hash::StarkHash;
 use starknet_api::patricia_key;
 use starknet_api::transaction::{
     DeclareTransaction as ApiDeclareTransaction,
-    DeployAccountTransaction as ApiDeployAccountTransaction,
-    InvokeTransaction as ApiInvokeTransaction, Transaction as ApiTransaction,
-    L1HandlerTransaction as ApiL1HandlerTransaction, Fee,
+    DeployAccountTransaction as ApiDeployAccountTransaction, Fee,
+    InvokeTransaction as ApiInvokeTransaction, L1HandlerTransaction as ApiL1HandlerTransaction,
+    Transaction as ApiTransaction,
 };
 
 use crate::backend::executor::ExecutedTransaction;
@@ -167,17 +168,19 @@ impl IncludedTransaction {
                     messages_sent: self.transaction.output.messages_sent.clone(),
                     actual_fee: self.transaction.execution_info.actual_fee.0.into(),
                 })
-            },
+            }
 
-            Transaction::L1Handler(_) => RpcTransactionReceipt::L1Handler(L1HandlerTransactionReceipt {
-                status: self.status.into(),
-                block_hash: self.block_hash,
-                block_number: self.block_number,
-                events: self.transaction.output.events.clone(),
-                messages_sent: self.transaction.output.messages_sent.clone(),
-                transaction_hash: self.transaction.inner.hash(),
-                actual_fee: self.transaction.execution_info.actual_fee.0.into(),
-            }),
+            Transaction::L1Handler(_) => {
+                RpcTransactionReceipt::L1Handler(L1HandlerTransactionReceipt {
+                    status: self.status.into(),
+                    block_hash: self.block_hash,
+                    block_number: self.block_number,
+                    events: self.transaction.output.events.clone(),
+                    messages_sent: self.transaction.output.messages_sent.clone(),
+                    transaction_hash: self.transaction.inner.hash(),
+                    actual_fee: self.transaction.execution_info.actual_fee.0.into(),
+                })
+            }
         }
     }
 }
@@ -212,14 +215,14 @@ impl PendingTransaction {
                 },
             ),
 
-            Transaction::L1Handler(_) => RpcPendingTransactionReceipt::L1Handler(
-                PendingL1HandlerTransactionReceipt {
+            Transaction::L1Handler(_) => {
+                RpcPendingTransactionReceipt::L1Handler(PendingL1HandlerTransactionReceipt {
                     events: self.0.output.events.clone(),
                     transaction_hash: self.0.inner.hash(),
                     messages_sent: self.0.output.messages_sent.clone(),
                     actual_fee: self.0.execution_info.actual_fee.0.into(),
-                },
-            ),
+                })
+            }
         }
     }
 }
@@ -300,8 +303,10 @@ impl From<Transaction> for AccountTransaction {
                     tx: tx.inner,
                     contract_address: ContractAddress(patricia_key!(tx.contract_address)),
                 })
-            },
-            Transaction::L1Handler(_) => panic!("L1HandlerTransaction is not an AccountTransaction"),
+            }
+            Transaction::L1Handler(_) => {
+                panic!("L1HandlerTransaction is not an AccountTransaction")
+            }
         }
     }
 }
@@ -309,10 +314,9 @@ impl From<Transaction> for AccountTransaction {
 impl From<Transaction> for ExecutionL1HandlerTransaction {
     fn from(value: Transaction) -> Self {
         match value {
-            Transaction::L1Handler(tx) => ExecutionL1HandlerTransaction {
-                tx: tx.inner,
-                paid_fee_on_l1: tx.paid_fee_on_l1,
-            },
+            Transaction::L1Handler(tx) => {
+                ExecutionL1HandlerTransaction { tx: tx.inner, paid_fee_on_l1: tx.paid_fee_on_l1 }
+            }
             _ => panic!("Only L1Handler is expected to be converted here"),
         }
     }

@@ -1,18 +1,19 @@
+mod any_messenger;
 mod ethereum_messenger;
 mod starknet_messenger;
-mod any_messenger;
 
+use std::sync::Arc;
+
+use any_messenger::AnyMessenger;
 use anyhow::Result;
 use async_trait::async_trait;
-use std::sync::Arc;
-use tokio::time;
-use starknet::core::types::{MsgToL1, FieldElement};
 use ethers::providers::ProviderError;
+use starknet::core::types::{FieldElement, MsgToL1};
+use tokio::time;
 
+use crate::backend::storage::transaction::{L1HandlerTransaction, Transaction};
+use crate::backend::Backend;
 use crate::sequencer::SequencerMessagingConfig;
-use crate::backend::{Backend, storage::transaction::{Transaction, L1HandlerTransaction}}
-;
-use any_messenger::AnyMessenger;
 
 type MessengerResult<T> = Result<T, MessengerError>;
 
@@ -36,7 +37,11 @@ pub trait Messenger {
     /// # Arguments
     ///
     /// * `from_block` - From which block the messages should be gathered.
-    async fn gather_messages(&self, from_block: u64, max_blocks: u64) -> MessengerResult<(u64, Vec<L1HandlerTransaction>)>;
+    async fn gather_messages(
+        &self,
+        from_block: u64,
+        max_blocks: u64,
+    ) -> MessengerResult<(u64, Vec<L1HandlerTransaction>)>;
 
     /// Computes the hash of the given messages and sends them to the settlement chain.
     ///
@@ -52,9 +57,8 @@ pub trait Messenger {
 ///
 pub async fn messaging_main_loop(
     config: SequencerMessagingConfig,
-    starknet: Arc<Backend>
+    starknet: Arc<Backend>,
 ) -> MessengerResult<()> {
-
     let messenger: AnyMessenger = any_messenger::from_config(config.clone()).await?;
 
     match messenger {
@@ -62,10 +66,7 @@ pub async fn messaging_main_loop(
         AnyMessenger::Starknet(_) => tracing::debug!("Messaging enabled [Starknet]"),
     };
 
-    let worker: Arc<Worker> = Arc::new(Worker {
-        starknet,
-        messenger: Arc::new(messenger),
-    });
+    let worker: Arc<Worker> = Arc::new(Worker { starknet, messenger: Arc::new(messenger) });
 
     tracing::debug!("Messaging enabled {:?}", config);
 
@@ -78,11 +79,10 @@ pub async fn messaging_main_loop(
     loop {
         time::sleep(time::Duration::from_secs(config.fetch_interval)).await;
 
-        (local_latest_block_number, _)
-            = worker.settle_messages(local_latest_block_number).await?;
+        (local_latest_block_number, _) = worker.settle_messages(local_latest_block_number).await?;
 
-        (settlement_latest_block_number, _)
-            = worker.gather_messages(settlement_latest_block_number, max_blocks).await;
+        (settlement_latest_block_number, _) =
+            worker.gather_messages(settlement_latest_block_number, max_blocks).await;
     }
 }
 
@@ -111,10 +111,12 @@ impl Worker {
                         Ok(hashes) => {
                             trace_msg_to_l1_sent(&o.messages_sent, &hashes);
                             n_sent += o.messages_sent.len() as u64;
-                        },
-                        Err(e) => tracing::warn!("Error settling messages for block {}: {:?}", i, e),
+                        }
+                        Err(e) => {
+                            tracing::warn!("Error settling messages for block {}: {:?}", i, e)
+                        }
                     };
-                }   
+                }
             }
         }
 
@@ -125,15 +127,15 @@ impl Worker {
     /// Fetches messages from the settlement chain.
     /// Returns the latest fetched block, and the count of messages gathered.
     async fn gather_messages(&self, from_block: u64, max_blocks: u64) -> (u64, u64) {
-        if let Ok((latest_block_fetched, l1_handler_txs))
-            = self.messenger.gather_messages(from_block, max_blocks).await
+        if let Ok((latest_block_fetched, l1_handler_txs)) =
+            self.messenger.gather_messages(from_block, max_blocks).await
         {
             for tx in &l1_handler_txs {
                 trace_l1_handler_tx_exec(&tx);
                 self.starknet.handle_transaction(Transaction::L1Handler(tx.clone())).await;
             }
-            
-            return (latest_block_fetched + 1, l1_handler_txs.len() as u64)
+
+            return (latest_block_fetched + 1, l1_handler_txs.len() as u64);
         } else {
             (from_block, 0)
         }
@@ -144,9 +146,7 @@ fn trace_msg_to_l1_sent(messages: &Vec<MsgToL1>, hashes: &Vec<String>) {
     assert_eq!(messages.len(), hashes.len());
 
     for (i, m) in messages.iter().enumerate() {
-        let payload_str: Vec<String> = m.payload
-            .iter()
-            .map(|f| format!("{:#x}", *f)).collect();
+        let payload_str: Vec<String> = m.payload.iter().map(|f| format!("{:#x}", *f)).collect();
 
         let hash = &hashes[i];
 
@@ -161,15 +161,15 @@ fn trace_msg_to_l1_sent(messages: &Vec<MsgToL1>, hashes: &Vec<String>) {
             hash.as_str(),
             m.from_address,
             m.to_address,
-            payload_str.join(", "));
+            payload_str.join(", ")
+        );
     }
 }
 
 fn trace_l1_handler_tx_exec(tx: &L1HandlerTransaction) {
     // TODO: am I missing a simple way to print StarkFelt is hex..?
-    let calldata_str: Vec<String> = tx.inner.calldata.0
-        .iter()
-        .map(|f| format!("{:#x}", FieldElement::from(*f))).collect();
+    let calldata_str: Vec<String> =
+        tx.inner.calldata.0.iter().map(|f| format!("{:#x}", FieldElement::from(*f))).collect();
 
     tracing::trace!(
         r"L1Handler transaction to be executed:
@@ -182,5 +182,6 @@ fn trace_l1_handler_tx_exec(tx: &L1HandlerTransaction) {
         FieldElement::from(tx.inner.transaction_hash.0),
         FieldElement::from(*tx.inner.contract_address.0.key()),
         FieldElement::from(tx.inner.entry_point_selector.0),
-        calldata_str.join(", "));
+        calldata_str.join(", ")
+    );
 }

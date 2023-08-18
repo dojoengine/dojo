@@ -11,7 +11,6 @@ use blockifier::transaction::transactions::ExecutableTransaction;
 use convert_case::{Case, Casing};
 use parking_lot::RwLock;
 use starknet::core::types::{Event, FieldElement, MsgToL1};
-
 use tokio::sync::RwLock as AsyncRwLock;
 use tracing::{info, trace, warn};
 
@@ -20,8 +19,8 @@ use super::storage::block::{PartialBlock, PartialHeader};
 use super::storage::transaction::{RejectedTransaction, Transaction, TransactionOutput};
 use super::storage::BlockchainStorage;
 use crate::backend::storage::transaction::{DeclareTransaction, KnownTransaction};
-use crate::utils::transaction::warn_message_transaction_error_exec_error;
 use crate::env::Env;
+use crate::utils::transaction::warn_message_transaction_error_exec_error;
 
 #[derive(Debug)]
 pub struct PendingBlockExecutor {
@@ -84,14 +83,18 @@ impl PendingBlockExecutor {
 
         let res = execute_transaction(
             match transaction {
-                Transaction::L1Handler(_) => ExecutionTransaction::L1HandlerTransaction(
-                    transaction.clone().into()),
-                Transaction::Declare(_) => ExecutionTransaction::AccountTransaction(
-                    transaction.clone().into()),
-                Transaction::DeployAccount(_) => ExecutionTransaction::AccountTransaction(
-                    transaction.clone().into()),
-                Transaction::Invoke(_) => ExecutionTransaction::AccountTransaction(
-                    transaction.clone().into()),
+                Transaction::L1Handler(_) => {
+                    ExecutionTransaction::L1HandlerTransaction(transaction.clone().into())
+                }
+                Transaction::Declare(_) => {
+                    ExecutionTransaction::AccountTransaction(transaction.clone().into())
+                }
+                Transaction::DeployAccount(_) => {
+                    ExecutionTransaction::AccountTransaction(transaction.clone().into())
+                }
+                Transaction::Invoke(_) => {
+                    ExecutionTransaction::AccountTransaction(transaction.clone().into())
+                }
             },
             &mut self.state,
             &self.env.read().block,

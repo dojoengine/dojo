@@ -1,14 +1,10 @@
 use std::sync::Arc;
 
-use blockifier::execution::{
-    errors::EntryPointExecutionError,
-    contract_class::ContractClass
-};
+use blockifier::execution::contract_class::ContractClass;
+use blockifier::execution::errors::EntryPointExecutionError;
 use blockifier::transaction::account_transaction::AccountTransaction;
-use blockifier::transaction::{
-    errors::TransactionExecutionError,
-    transaction_execution::Transaction as ExecutionTransaction
-};
+use blockifier::transaction::errors::TransactionExecutionError;
+use blockifier::transaction::transaction_execution::Transaction as ExecutionTransaction;
 use starknet::core::crypto::compute_hash_on_elements;
 use starknet::core::types::{
     BroadcastedDeclareTransaction, BroadcastedDeployAccountTransaction,
@@ -473,24 +469,21 @@ pub fn broadcasted_deploy_account_rpc_to_api_transaction(
 
 pub fn warn_message_transaction_error_exec_error(err: &TransactionExecutionError) {
     match err {
-        TransactionExecutionError::EntryPointExecutionError(ref eperr) |
-        TransactionExecutionError::ExecutionError(ref eperr) => {
-            match eperr {
-                EntryPointExecutionError::ExecutionFailed { error_data } => {
-                    let mut reasons: Vec<String> = vec![];
-                    error_data.iter()
-                        .for_each(|felt| {
-                            if let Ok(s) = parse_cairo_short_string(&FieldElement::from(*felt)) {
-                                reasons.push(s);
-                            }
-                        });
-                    
-                    warn!("Transaction validation error: {}", reasons.join(" "));
-                },
-                _ => warn!("Transaction validation error: {:?}", err)
+        TransactionExecutionError::EntryPointExecutionError(ref eperr)
+        | TransactionExecutionError::ExecutionError(ref eperr) => match eperr {
+            EntryPointExecutionError::ExecutionFailed { error_data } => {
+                let mut reasons: Vec<String> = vec![];
+                error_data.iter().for_each(|felt| {
+                    if let Ok(s) = parse_cairo_short_string(&FieldElement::from(*felt)) {
+                        reasons.push(s);
+                    }
+                });
+
+                warn!("Transaction validation error: {}", reasons.join(" "));
             }
+            _ => warn!("Transaction validation error: {:?}", err),
         },
-        _ => warn!("Transaction validation error: {:?}", err)
+        _ => warn!("Transaction validation error: {:?}", err),
     }
 }
 

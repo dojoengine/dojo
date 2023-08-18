@@ -1,28 +1,26 @@
-use async_trait::async_trait;
-
-use starknet::core::types::{MsgToL1, FieldElement};
-
-use anyhow::Result;
-use ethers::prelude::*;
-use ethers::providers::{Http, Provider};
-use ethers::types::{Address, BlockNumber, Log};
-use ethers::providers::ProviderError;
-use k256::ecdsa::SigningKey;
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
-use sha3::{Digest, Keccak256};
 
-use starknet_api::core::{ContractAddress, Nonce, EntryPointSelector};
+use anyhow::Result;
+use async_trait::async_trait;
+use ethers::prelude::*;
+use ethers::providers::{Http, Provider, ProviderError};
+use ethers::types::{Address, BlockNumber, Log};
+use k256::ecdsa::SigningKey;
+use sha3::{Digest, Keccak256};
+use starknet::core::types::{FieldElement, MsgToL1};
+use starknet_api::core::{ContractAddress, EntryPointSelector, Nonce};
 use starknet_api::hash::{self, StarkFelt};
 use starknet_api::stark_felt;
 use starknet_api::transaction::{
-    Calldata, Fee, TransactionHash, L1HandlerTransaction as ApiL1HandlerTransaction, TransactionVersion,
+    Calldata, Fee, L1HandlerTransaction as ApiL1HandlerTransaction, TransactionHash,
+    TransactionVersion,
 };
 
+use crate::backend::storage::transaction::L1HandlerTransaction;
 use crate::messaging::{Messenger, MessengerError, MessengerResult};
 use crate::sequencer::SequencerMessagingConfig;
-use crate::backend::storage::transaction::L1HandlerTransaction;
 
 abigen!(
     StarknetMessagingLocal,
@@ -57,9 +55,8 @@ impl EthereumMessenger {
 
         let chain_id = provider.get_chainid().await?;
 
-        let wallet: LocalWallet = config.private_key
-            .parse::<LocalWallet>()?
-            .with_chain_id(chain_id.as_u32());
+        let wallet: LocalWallet =
+            config.private_key.parse::<LocalWallet>()?.with_chain_id(chain_id.as_u32());
 
         let provider_signer = SignerMiddleware::new(provider.clone(), wallet.clone());
         let messaging_contract_address = Address::from_str(&config.contract_address)?;
@@ -102,17 +99,20 @@ impl EthereumMessenger {
             topics: Default::default(),
         };
 
-        self.provider.get_logs(&filters).await?
+        self.provider
+            .get_logs(&filters)
+            .await?
             .iter()
             .filter(|&l| l.block_number.is_some())
             .for_each(|l| {
-
-                logs.entry(l.block_number
+                logs.entry(
+                    l.block_number
                            .unwrap() // safe as we filter on Some only.
                            .try_into()
-                           .expect("Block number couldn't be converted to u64."))
-                    .and_modify(|v| v.push(l.clone()))
-                    .or_insert(vec![l.clone()]);
+                           .expect("Block number couldn't be converted to u64."),
+                )
+                .and_modify(|v| v.push(l.clone()))
+                .or_insert(vec![l.clone()]);
             });
 
         Ok(logs)
@@ -124,9 +124,12 @@ impl Messenger for EthereumMessenger {
     async fn gather_messages(
         &self,
         from_block: u64,
-        max_blocks: u64
+        max_blocks: u64,
     ) -> MessengerResult<(u64, Vec<L1HandlerTransaction>)> {
-        let chain_latest_block: u64 = self.provider.get_block_number().await?
+        let chain_latest_block: u64 = self
+            .provider
+            .get_block_number()
+            .await?
             .try_into()
             .expect("Can't convert latest block number into u64.");
 
@@ -139,28 +142,25 @@ impl Messenger for EthereumMessenger {
 
         let mut l1_handler_txs = vec![];
 
-        self.fetch_logs(from_block, to_block).await?
-            .iter()
-            .for_each(|(block_number, block_logs)| {
+        self.fetch_logs(from_block, to_block).await?.iter().for_each(
+            |(block_number, block_logs)| {
                 tracing::debug!(
                     "Converting logs of block {} into L1HandlerTx ({} logs)",
                     block_number,
                     block_logs.len(),
                 );
 
-                block_logs
-                    .iter()
-                    .for_each(|l| {
-                        match l1_handler_tx_from_log(l) {
-                            Ok(tx) => l1_handler_txs.push(tx),
-                            // TODO: Some logs are just not to be considered.
-                            // So, we can accept a list of topics to filter the logs,
-                            // which could be the best option.
-                            Err(_) => (),
-                            
-                        }
-                    })
-            });
+                block_logs.iter().for_each(|l| {
+                    match l1_handler_tx_from_log(l) {
+                        Ok(tx) => l1_handler_txs.push(tx),
+                        // TODO: Some logs are just not to be considered.
+                        // So, we can accept a list of topics to filter the logs,
+                        // which could be the best option.
+                        Err(_) => (),
+                    }
+                })
+            },
+        );
 
         Ok((to_block, l1_handler_txs))
     }
@@ -172,7 +172,7 @@ impl Messenger for EthereumMessenger {
 
         let starknet_messaging = StarknetMessagingLocal::new(
             self.messaging_contract_address,
-            self.provider_signer.clone()
+            self.provider_signer.clone(),
         );
 
         let mut hashes: Vec<U256> = vec![];
@@ -191,9 +191,11 @@ impl Messenger for EthereumMessenger {
 
         tracing::debug!("Sending transaction on L1 to register messages...");
         // TODO: add more info about the error.
-        match starknet_messaging.add_message_hashes_from_l2(hashes.clone())
+        match starknet_messaging
+            .add_message_hashes_from_l2(hashes.clone())
             .send()
-            .await.map_err(|_| MessengerError::SendError)
+            .await
+            .map_err(|_| MessengerError::SendError)
             .unwrap()
             .await?
         {
@@ -204,18 +206,13 @@ impl Messenger for EthereumMessenger {
                     receipt.transaction_hash,
                 );
 
-                Ok(hashes
-                   .iter()
-                   .map(|h| format!("{:#x}", h))
-                   .collect())
+                Ok(hashes.iter().map(|h| format!("{:#x}", h)).collect())
             }
             None => {
                 tracing::warn!("No receipt for L1 transaction.");
                 Err(MessengerError::SendError)
             }
         }
-
-
     }
 }
 
@@ -236,9 +233,7 @@ fn l1_handler_tx_from_log(log: &Log) -> Result<L1HandlerTransaction> {
     let contract_address = stark_felt_from_u256(parsed_log.to_address);
     let selector = stark_felt_from_u256(parsed_log.selector);
     let nonce = stark_felt_from_u256(parsed_log.nonce);
-    let fee: u128 = parsed_log.fee
-        .try_into()
-        .expect("Fee does not fit into u128.");
+    let fee: u128 = parsed_log.fee.try_into().expect("Fee does not fit into u128.");
 
     let mut calldata_vec = vec![from_address];
     for p in parsed_log.payload {
@@ -259,7 +254,7 @@ fn l1_handler_tx_from_log(log: &Log) -> Result<L1HandlerTransaction> {
             nonce: Nonce(nonce),
             contract_address: ContractAddress::try_from(contract_address).unwrap(),
             entry_point_selector: EntryPointSelector(selector),
-            calldata: calldata,
+            calldata,
         },
         paid_fee_on_l1: Fee(fee),
     };

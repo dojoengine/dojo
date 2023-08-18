@@ -138,9 +138,8 @@ pub struct MessagingOptions {
     pub messaging_private_key: Option<String>,
 
     #[arg(long)]
-    #[arg(
-        help = "The interval in seconds after which katana checks for messages on the settlement chain."
-    )]
+    #[arg(help = "The interval in seconds after which katana checks for messages on the \
+                  settlement chain.")]
     #[arg(default_value = "5")]
     pub messaging_fetch_interval: Option<u64>,
 }

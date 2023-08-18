@@ -27,9 +27,9 @@ use crate::backend::storage::transaction::{
     PendingTransaction, Transaction, TransactionStatus,
 };
 use crate::backend::{Backend, ExternalFunctionCall};
+use crate::messaging;
 use crate::sequencer_error::SequencerError;
 use crate::utils::event::{ContinuationToken, ContinuationTokenError};
-use crate::messaging;
 
 type SequencerResult<T> = Result<T, SequencerError>;
 
