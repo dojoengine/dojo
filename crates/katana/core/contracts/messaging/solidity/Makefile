@@ -1,5 +1,9 @@
 # Only .env file is loaded by foundry, and we can't specify a file.
 # Do not forget to copy your config into `.env`.
+
+# For dev, we always take anvil config.
+COPY_CONFIG:=$(shell cp .anvil.env .env)
+
 include .env
 export $(shell sed 's/=.*//' .env)
 
