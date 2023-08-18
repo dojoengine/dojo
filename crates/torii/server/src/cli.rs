@@ -51,9 +51,6 @@ struct Args {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
-    dbg!(&args.manifest);
-    dbg!(&args.world_address);
-
     let subscriber = fmt::Subscriber::builder()
         .with_max_level(tracing::Level::INFO) // Set the maximum log level
         .finish();
