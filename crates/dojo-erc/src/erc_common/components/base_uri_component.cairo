@@ -26,3 +26,5 @@ impl BaseUriImpl of BaseUriTrait {
         set!(world, (base_uri))
     }
 }
+
+

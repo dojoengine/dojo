@@ -2,21 +2,21 @@ use starknet::ContractAddress;
 use serde::Serde;
 use clone::Clone;
 
-#[derive(Clone, Drop, Serde, starknet::Event)]
+#[derive(Clone, Drop, Serde, PartialEq, starknet::Event)]
 struct Transfer {
     from: ContractAddress,
     to: ContractAddress,
     token_id: u256
 }
 
-#[derive(Clone, Drop, Serde, starknet::Event)]
+#[derive(Clone, Drop, Serde,PartialEq, starknet::Event)]
 struct Approval {
     owner: ContractAddress,
     to: ContractAddress,
     token_id: u256
 }
 
-#[derive(Clone, Drop, Serde, starknet::Event)]
+#[derive(Clone, Drop, Serde,PartialEq, starknet::Event)]
 struct ApprovalForAll {
     owner: ContractAddress,
     operator: ContractAddress,
@@ -29,6 +29,7 @@ trait IERC721EventEmitter<ContractState> {
     fn on_approval(ref self: ContractState, event: Approval);
     fn on_approval_for_all(ref self: ContractState, event: ApprovalForAll);
 }
+
 
 #[starknet::contract]
 mod ERC721 {
@@ -59,7 +60,7 @@ mod ERC721 {
     }
 
     #[event]
-    #[derive(Drop, starknet::Event)]
+    #[derive(Drop,PartialEq, starknet::Event)]
     enum Event {
         Transfer: Transfer,
         Approval: Approval,
@@ -83,10 +84,8 @@ mod ERC721 {
         self.owner_.write(owner);
         self.name_.write(name);
         self.symbol_.write(symbol);
-        let ca = get_contract_address();
-    // NOT WORKING
-    // TODO : check get_contract_address value in constructor
-    // BaseUriTrait::set_base_uri(world, get_contract_address(), uri);
+
+        world.execute('ERC721SetBaseUri', to_calldata(get_contract_address()).plus(uri).data);
     }
 
     #[external(v0)]
@@ -207,10 +206,7 @@ mod ERC721 {
                 .read()
                 .execute(
                     'ERC721Mint',
-                    to_calldata(get_contract_address())
-                        .plus(to)
-                        .plus(token_id_felt)
-                        .data
+                    to_calldata(get_contract_address()).plus(to).plus(token_id_felt).data
                 );
         }
 
@@ -227,6 +223,22 @@ mod ERC721 {
                         .plus(token_id_felt)
                         .data
                 );
+        }
+    }
+
+    #[external(v0)]
+    impl ERC721EventEmitter of super::IERC721EventEmitter<ContractState> {
+        fn on_transfer(ref self: ContractState, event: Transfer) {
+            assert(get_caller_address() == self.world.read().executor(), 'ERC721: not authorized');
+            self.emit(event);
+        }
+        fn on_approval(ref self: ContractState, event: Approval) {
+            assert(get_caller_address() == self.world.read().executor(), 'ERC721: not authorized');
+            self.emit(event);
+        }
+        fn on_approval_for_all(ref self: ContractState, event: ApprovalForAll) {
+            assert(get_caller_address() == self.world.read().executor(), 'ERC721: not authorized');
+            self.emit(event);
         }
     }
 }

@@ -225,8 +225,8 @@ mod ERC1155SafeBatchTransferFrom {
 
     fn execute(
         ctx: Context,
-        operator: ContractAddress,
         token: ContractAddress,
+        operator: ContractAddress,
         from: ContractAddress,
         to: ContractAddress,
         ids: Array<felt252>,

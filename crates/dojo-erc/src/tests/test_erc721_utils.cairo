@@ -17,7 +17,8 @@ use dojo_erc::erc721::components::{
     erc_721_balance, erc_721_owner, erc_721_token_approval, operator_approval, base_uri
 };
 use dojo_erc::erc721::systems::{
-    ERC721Approve, ERC721SetApprovalForAll, ERC721TransferFrom, ERC721Mint, ERC721Burn
+    ERC721Approve, ERC721SetApprovalForAll, ERC721TransferFrom, ERC721Mint, ERC721Burn,
+    ERC721SetBaseUri
 };
 
 fn DEPLOYER() -> ContractAddress {
@@ -30,6 +31,14 @@ fn USER1() -> ContractAddress {
 
 fn USER2() -> ContractAddress {
     starknet::contract_address_const::<0x222>()
+}
+
+fn ZERO() -> ContractAddress {
+    starknet::contract_address_const::<0x0>()
+}
+
+fn PROXY() -> ContractAddress {
+    starknet::contract_address_const::<0x999>()
 }
 
 fn spawn_world() -> IWorldDispatcher {
@@ -49,6 +58,7 @@ fn spawn_world() -> IWorldDispatcher {
         ERC721TransferFrom::TEST_CLASS_HASH,
         ERC721Mint::TEST_CLASS_HASH,
         ERC721Burn::TEST_CLASS_HASH,
+        ERC721SetBaseUri::TEST_CLASS_HASH,
     ];
 
     let world = spawn_test_world(components, systems);
@@ -64,15 +74,13 @@ fn deploy_erc721(
     uri: felt252,
     seed: felt252
 ) -> ContractAddress {
-    let world = spawn_world();
-
     let constructor_calldata = array![
         world.contract_address.into(), deployer.into(), name, symbol, uri
     ];
     let (deployed_address, _) = deploy_syscall(
         ERC721::TEST_CLASS_HASH.try_into().unwrap(), seed, constructor_calldata.span(), false
     )
-        .expect('error deploying');
+        .expect('error deploying ERC721');
 
     deployed_address
 }
