@@ -10,7 +10,7 @@ pub trait InputObjectTrait {
     // object
     fn type_name(&self) -> &str;
 
-    // Type mapping consist of parent object's mapping plus 6 comparators for each component member
+    // Input fields and their corresponding type
     fn type_mapping(&self) -> &TypeMapping;
 
     // Create a new graphql input object with fields defined from type mapping
