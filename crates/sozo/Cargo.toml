@@ -21,7 +21,6 @@ clap-verbosity-flag = "2.0.1"
 clap.workspace = true
 clap_complete.workspace = true
 console.workspace = true
-dojo-client = { path = "../dojo-client" }
 dojo-lang = { path = "../dojo-lang" }
 dojo-world = { path = "../dojo-world" }
 log.workspace = true
@@ -33,6 +32,7 @@ smol_str.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
 tokio = { version = "1.15.0", features = [ "full" ] }
+torii-client = { path = "../torii/client" }
 tracing-log = "0.1.3"
 tracing.workspace = true
 url = "2.2.2"

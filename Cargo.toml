@@ -2,9 +2,7 @@
 
 resolver = "2"
 
-exclude = [ "examples/client" ]
 members = [
-  "crates/dojo-client",
   "crates/dojo-lang",
   "crates/dojo-language-server",
   "crates/dojo-signers",
@@ -15,6 +13,8 @@ members = [
   "crates/katana/core",
   "crates/katana/rpc",
   "crates/sozo",
+  "crates/torii/client",
+  "crates/torii/client/wasm",
   "crates/torii/server",
 ]
 

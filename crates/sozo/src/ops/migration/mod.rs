@@ -1,7 +1,6 @@
 use std::path::Path;
 
 use anyhow::{anyhow, bail, Context, Result};
-use dojo_client::contract::world::WorldContract;
 use dojo_world::manifest::{Manifest, ManifestError};
 use dojo_world::metadata::Environment;
 use dojo_world::migration::strategy::{prepare_for_migration, MigrationStrategy};
@@ -15,6 +14,7 @@ use starknet::core::types::{
 };
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
+use torii_client::contract::world::WorldContract;
 
 #[cfg(test)]
 #[path = "migration_test.rs"]
