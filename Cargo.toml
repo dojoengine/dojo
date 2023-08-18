@@ -2,9 +2,10 @@
 
 resolver = "2"
 
-exclude = [ "examples/client" ]
+exclude = [ "examples/client/wasm-client" ]
 members = [
   "crates/dojo-client",
+  "crates/dojo-client/wasm",
   "crates/dojo-lang",
   "crates/dojo-language-server",
   "crates/dojo-signers",

@@ -25,7 +25,25 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: |
-          cargo test
+          cargo test --workspace --exclude dojo-client-wasm
+
+  ensure-wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+      - name: "Ensure `dojo-client` is wasmable"
+        run: |
+          cargo build -r --target wasm32-unknown-unknown -p dojo-client
+      - name: "Ensure `dojo-client-wasm` is wasmable"
+        run: |
+          cargo build -r --target wasm32-unknown-unknown -p dojo-client-wasm
 
   # cairofmt:
   #   runs-on: ubuntu-latest

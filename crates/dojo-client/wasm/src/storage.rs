@@ -2,9 +2,11 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use dojo_client::storage::{component_storage_base_address, EntityStorage};
+use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
 
 /// Simple in memory implementation of [EntityStorage]
+#[derive(Serialize, Deserialize)]
 pub struct InMemoryStorage {
     /// storage key -> Component value
     pub inner: HashMap<FieldElement, FieldElement>,
@@ -16,10 +18,14 @@ impl InMemoryStorage {
     }
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum InMemoryStorageError {}
+
 // Example implementation of [EntityStorage]
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl EntityStorage for InMemoryStorage {
-    type Error = ();
+    type Error = InMemoryStorageError;
 
     async fn set(
         &mut self,

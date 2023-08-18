@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use async_trait::async_trait;
 use starknet::macros::short_string;
 use starknet_crypto::{poseidon_hash_many, FieldElement};
@@ -7,7 +9,7 @@ use starknet_crypto::{poseidon_hash_many, FieldElement};
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait EntityStorage {
-    type Error;
+    type Error: Error + Send + Sync;
 
     /// This function mimic `world::set_entity` of `dojo-core`
     async fn set(
