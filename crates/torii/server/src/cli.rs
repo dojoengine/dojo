@@ -32,7 +32,7 @@ mod indexer;
 #[command(name = "torii", author, version, about, long_about = None)]
 struct Args {
     /// The world to index
-    #[arg(short, long = "world")]
+    #[arg(short, long = "world", env = "DOJO_WORLD_ADDRESS")]
     world_address: Option<FieldElement>,
     /// The rpc endpoint to use
     #[arg(long, default_value = "http://localhost:5050")]
@@ -41,7 +41,7 @@ struct Args {
     #[arg(short, long, default_value = "sqlite::memory:")]
     database_url: String,
     /// Specify a local manifest to intiailize from
-    #[arg(short, long)]
+    #[arg(short, long, env = "DOJO_MANIFEST_FILE")]
     manifest: Option<Utf8PathBuf>,
     /// Specify a block to start indexing from, ignored if stored head exists
     #[arg(short, long, default_value = "0")]
@@ -51,6 +51,8 @@ struct Args {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
+    dbg!(&args.manifest);
+    dbg!(&args.world_address);
 
     let subscriber = fmt::Subscriber::builder()
         .with_max_level(tracing::Level::INFO) // Set the maximum log level
@@ -133,7 +135,6 @@ async fn main() -> anyhow::Result<()> {
 fn get_manifest_and_env(
     args_path: Option<&Utf8PathBuf>,
 ) -> anyhow::Result<(Manifest, Option<Environment>)> {
-    // If there is scarb manifest file it shoul
     let config;
     let ws = if let Ok(scarb_manifest_path) = scarb::ops::find_manifest_path(None) {
         config = Config::builder(scarb_manifest_path)
@@ -147,16 +148,19 @@ fn get_manifest_and_env(
 
     let manifest = if let Some(manifest_path) = args_path {
         Manifest::load_from_path(manifest_path)?
-    } else if ws.is_some() {
-        let ws = ws.as_ref().unwrap();
-        let target_dir = ws.target_dir().path_existent()?;
-        let target_dir = target_dir.join(ws.config().profile().as_str());
-        let manifest_path = target_dir.join("manifest.json");
-        Manifest::load_from_path(manifest_path)?
     } else {
-        Manifest::load_from_path(Utf8PathBuf::from("./target/dev/manifest.json"))?
+        if let Some(ref ws) = ws {
+            let target_dir = ws.target_dir().path_existent()?;
+            let target_dir = target_dir.join(ws.config().profile().as_str());
+            let manifest_path = target_dir.join("manifest.json");
+            Manifest::load_from_path(manifest_path)?
+        } else {
+            return Err(anyhow!(
+                "Cannot find Scarb manifest file. Either run this command from within a Scarb \
+                 project or specify it using `--manifest` argument"
+            ));
+        }
     };
-
     let env = if let Some(ws) = ws {
         dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned())
     } else {
@@ -174,16 +178,12 @@ fn get_world_address(
         return Ok(address);
     }
 
-    if let Some(address) = manifest.world.address {
-        return Ok(address);
+    if let Some(world_address) = env_metadata.and_then(|env| env.world_address()).as_deref() {
+        return Ok(FieldElement::from_str(world_address)?);
     }
 
-    if let Some(world_address) =
-        env_metadata
-            .and_then(|env| env.world_address())
-            .or(std::env::var("DOJO_WORLD_ADDRESS").ok().as_deref())
-    {
-        Ok(FieldElement::from_str(world_address)?)
+    if let Some(address) = manifest.world.address {
+        return Ok(address);
     } else {
         Err(anyhow!(
             "Could not find World address. Please specify it with --world, or in manifest.json or \
