@@ -34,7 +34,7 @@ trait ERC721OwnerTrait {
 }
 
 impl ERC721OwnerImpl of ERC721OwnerTrait {
-        // ERC721: address zero is not a valid owner
+    // ERC721: address zero is not a valid owner
 
     fn owner_of(
         world: IWorldDispatcher, token: ContractAddress, token_id: felt252
@@ -78,11 +78,13 @@ trait ERC721BalanceTrait {
         amount: u128,
     );
 
-    fn mint(
-        world: IWorldDispatcher, token: ContractAddress, recipient: ContractAddress, amount: u128, 
+    fn increase_balance(
+        world: IWorldDispatcher, token: ContractAddress, owner: ContractAddress, amount: u128, 
     );
 
-    fn burn(world: IWorldDispatcher, token: ContractAddress, from: ContractAddress, amount: u128, );
+    fn decrease_balance(
+        world: IWorldDispatcher, token: ContractAddress, owner: ContractAddress, amount: u128, 
+    );
 }
 
 impl ERC721BalanceImpl of ERC721BalanceTrait {
@@ -110,20 +112,20 @@ impl ERC721BalanceImpl of ERC721BalanceTrait {
         set!(world, (to_balance));
     }
 
-    fn mint(
-        world: IWorldDispatcher, token: ContractAddress, recipient: ContractAddress, amount: u128, 
+    fn increase_balance(
+        world: IWorldDispatcher, token: ContractAddress, owner: ContractAddress, amount: u128, 
     ) {
-        let mut to_balance = get!(world, (token, recipient), ERC721Balance);
-        to_balance.amount += amount;
-        set!(world, (to_balance));
+        let mut balance = get!(world, (token, owner), ERC721Balance);
+        balance.amount += amount;
+        set!(world, (balance));
     }
 
-    fn burn(
-        world: IWorldDispatcher, token: ContractAddress, from: ContractAddress, amount: u128, 
+    fn decrease_balance(
+        world: IWorldDispatcher, token: ContractAddress, owner: ContractAddress, amount: u128, 
     ) {
-        let mut from_balance = get!(world, (token, from), ERC721Balance);
-        from_balance.amount -= amount;
-        set!(world, (from_balance));
+        let mut balance = get!(world, (token, owner), ERC721Balance);
+        balance.amount -= amount;
+        set!(world, (balance));
     }
 }
 

@@ -229,8 +229,8 @@ mod ERC1155 {
                 .read()
                 .execute(
                     'ERC1155SafeBatchTransferFrom',
-                    to_calldata(get_caller_address())
-                        .plus(get_contract_address())
+                    to_calldata(get_contract_address())
+                        .plus(get_caller_address())
                         .plus(from)
                         .plus(to)
                         .plus(idsf)
