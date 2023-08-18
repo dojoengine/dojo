@@ -9,9 +9,10 @@ use sqlx::sqlite::SqliteRow;
 use sqlx::{FromRow, Pool, QueryBuilder, Row, Sqlite};
 
 use super::connection::{
-    connection_arguments, decode_cursor, encode_cursor, parse_arguments, ConnectionArguments,
+    connection_arguments, decode_cursor, encode_cursor, parse_connection_arguments, ConnectionArguments,
 };
-use super::input::r#where::{where_argument, WhereInputObject};
+use super::input::InputObjectTrait;
+use super::input::r#where::{where_argument, WhereInputObject, parse_where_argument};
 use super::query::query_total_count;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
@@ -36,11 +37,13 @@ pub struct ComponentStateObject {
     pub name: String,
     pub type_name: String,
     pub type_mapping: TypeMapping,
+    pub where_input: WhereInputObject,
 }
 
 impl ComponentStateObject {
     pub fn new(name: String, type_name: String, type_mapping: TypeMapping) -> Self {
-        Self { name, type_name, type_mapping }
+        let where_input = WhereInputObject::new(type_name.as_str(), &type_mapping);
+        Self { name, type_name, type_mapping, where_input }
     }
 }
 
@@ -64,7 +67,7 @@ impl ObjectTrait for ComponentStateObject {
     }
 
     fn input_objects(&self) -> Option<Vec<InputObject>> {
-        Some(vec![WhereInputObject::new(self.type_name(), self.type_mapping())])
+        Some(vec![self.where_input.create()])
     }
 
     fn resolve_many(&self) -> Option<Field> {
@@ -81,7 +84,8 @@ impl ObjectTrait for ComponentStateObject {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                 let table_name = format!("external_{}", name);
                 let total_count = query_total_count(&mut conn, &table_name).await?;
-                let args = parse_arguments(&ctx)?;
+                let args = parse_connection_arguments(&ctx)?;
+                parse_where_argument(&ctx)?;
                 let data = component_states_query(&mut conn, &table_name, args).await?;
                 let connection = component_connection(&data, &type_mapping, total_count)?;
 
