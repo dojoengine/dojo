@@ -96,49 +96,21 @@ mod ERC20 {
     #[external(v0)]
     fn total_supply(self: @ContractState) -> u256 {
         let contract_address = get_contract_address();
-        // let supply = get!(self.world.read(), contract_address, Supply);
-        let mut keys: Array<felt252> = array![];
-        keys.append(contract_address.into());
-        // TODO: to be change when global macros are available
-        let span = self
-            .world
-            .read()
-            .entity('Supply', keys.span(), 0, dojo::SerdeLen::<Supply>::len());
-        let supply = *span[0];
-        supply.into()
+        let supply = get!(self.world.read(), contract_address, Supply);
+        supply.amount.into()
     }
 
     #[external(v0)]
     fn balance_of(self: @ContractState, account: ContractAddress) -> u256 {
         let token = get_contract_address();
-        // let balance: Balance = get!(self.world.read(), (token, account), Balance);
-        let mut keys: Array<felt252> = array![];
-        keys.append(token.into());
-        keys.append(account.into());
-        // TODO: to be change when global macros are available
-        let span = self
-            .world
-            .read()
-            .entity('Balance', keys.span(), 0, dojo::SerdeLen::<Balance>::len());
-        let balance = *span[0];
-        balance.into()
+        let balance = get!(self.world.read(), (token, account), Balance);
+        balance.amount.into()
     }
     #[external(v0)]
     fn allowance(self: @ContractState, owner: ContractAddress, spender: ContractAddress) -> u256 {
         let token = get_contract_address();
-        // let allowance = get!(self.world.read(), (token, owner, spender), Allowance);
-        // allowance.amount.into()
-        let mut keys: Array<felt252> = array![];
-        keys.append(token.into());
-        keys.append(owner.into());
-        keys.append(spender.into());
-        // TODO: to be change when global macros are available
-        let span = self
-            .world
-            .read()
-            .entity('Allowance', keys.span(), 0, dojo::SerdeLen::<Allowance>::len());
-        let allowance = *span[0];
-        allowance.into()
+        let allowance = get!(self.world.read(), (token, owner, spender), Allowance);
+        allowance.amount.into()
     }
 
     #[external(v0)]
@@ -175,11 +147,9 @@ mod ERC20 {
         assert(!owner.is_zero(), 'ERC20: approve from 0');
         assert(!spender.is_zero(), 'ERC20: approve to 0');
         let token = get_contract_address();
-        let mut calldata: Array<felt252> = array![];
-        calldata.append(token.into());
-        calldata.append(owner.into());
-        calldata.append(spender.into());
-        calldata.append(u256_as_allowance(amount));
+        let mut calldata: Array<felt252> = array![
+            token.into(), owner.into(), spender.into(), u256_as_allowance(amount)
+        ];
         self.world.read().execute('erc20_approve', calldata);
 
         self.emit(Approval { owner, spender, value: amount });
@@ -193,11 +163,9 @@ mod ERC20 {
         assert(balance_of(@self, sender) >= amount, 'ERC20: not enough balance');
 
         let token = get_contract_address();
-        let mut calldata: Array<felt252> = array![];
-        calldata.append(token.into());
-        calldata.append(sender.into());
-        calldata.append(recipient.into());
-        calldata.append(amount.try_into().unwrap());
+        let mut calldata: Array<felt252> = array![
+            token.into(), sender.into(), recipient.into(), amount.try_into().unwrap()
+        ];
         self.world.read().execute('erc20_transfer_from', calldata);
 
         self.emit(Transfer { from: Zeroable::zero(), to: recipient, value: amount });
