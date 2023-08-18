@@ -12,7 +12,9 @@ use starknet::core::types::{BlockId, BlockTag, FieldElement, FunctionCall, Stark
 use starknet::core::utils::{
     cairo_short_string_to_felt, get_selector_from_name, CairoShortStringToFeltError,
 };
-use starknet::providers::{Provider, ProviderError};
+use starknet::providers::{
+    MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage,
+};
 use thiserror::Error;
 
 #[cfg(test)]
@@ -114,9 +116,10 @@ impl Manifest {
             .get_class_hash_at(BlockId::Tag(BlockTag::Pending), world_address)
             .await
             .map_err(|err| match err {
-                ProviderError::StarknetError(StarknetError::ContractNotFound) => {
-                    ManifestError::RemoteWorldNotFound
-                }
+                ProviderError::StarknetError(StarknetErrorWithMessage {
+                    code: MaybeUnknownErrorCode::Known(StarknetError::ContractNotFound),
+                    ..
+                }) => ManifestError::RemoteWorldNotFound,
                 _ => ManifestError::Provider(err),
             })?;
 
@@ -136,9 +139,10 @@ impl Manifest {
             .get_class_hash_at(BlockId::Tag(BlockTag::Pending), executor_address)
             .await
             .map_err(|err| match err {
-                ProviderError::StarknetError(StarknetError::ContractNotFound) => {
-                    ManifestError::ExecutorNotFound
-                }
+                ProviderError::StarknetError(StarknetErrorWithMessage {
+                    code: MaybeUnknownErrorCode::Known(StarknetError::ContractNotFound),
+                    ..
+                }) => ManifestError::ExecutorNotFound,
                 _ => ManifestError::Provider(err),
             })?;
 

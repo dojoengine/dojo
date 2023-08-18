@@ -8,7 +8,9 @@ use starknet::core::types::{
     FieldElement, MaybePendingTransactionReceipt, StarknetError, TransactionReceipt,
     TransactionStatus,
 };
-use starknet::providers::{Provider, ProviderError};
+use starknet::providers::{
+    MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage,
+};
 use tokio::time::{Instant, Interval};
 
 type GetReceiptResult<E> = Result<MaybePendingTransactionReceipt, ProviderError<E>>;
@@ -128,9 +130,11 @@ where
                         }
 
                         Ok(MaybePendingTransactionReceipt::PendingReceipt(_))
-                        | Err(ProviderError::StarknetError(
-                            StarknetError::TransactionHashNotFound,
-                        )) => {}
+                        | Err(ProviderError::StarknetError(StarknetErrorWithMessage {
+                            code:
+                                MaybeUnknownErrorCode::Known(StarknetError::TransactionHashNotFound),
+                            ..
+                        })) => {}
 
                         Err(e) => return Poll::Ready(Err(TransactionWaitingError::Provider(e))),
                     },

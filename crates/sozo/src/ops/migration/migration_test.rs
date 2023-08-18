@@ -91,46 +91,6 @@ async fn migrate_with_block_time() {
     sequencer.stop().unwrap();
 }
 
-#[tokio::test]
-async fn migrate_with_same_seed_will_fail() {
-    let target_dir = Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap();
-
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
-
-    let account = SingleOwnerAccount::new(
-        JsonRpcClient::new(HttpTransport::new(sequencer.url())),
-        LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
-            sequencer.raw_account().private_key,
-        )),
-        sequencer.raw_account().account_address,
-        chain_id::TESTNET,
-    );
-
-    let config = Config::builder(Utf8PathBuf::from_path_buf("../../examples/ecs/".into()).unwrap())
-        .ui_verbosity(Verbosity::Quiet)
-        .build()
-        .unwrap();
-
-    let manifest = Manifest::load_from_path(target_dir.join("manifest.json")).unwrap();
-    let world = WorldDiff::compute(manifest, None);
-
-    // migrate 1st world with `seed` seed
-
-    let migration = prepare_for_migration(
-        None,
-        Some(FieldElement::from_hex_be("0x12345").unwrap()),
-        target_dir.clone(),
-        world.clone(),
-    )
-    .unwrap();
-    execute_strategy(&migration, &account, &config).await.unwrap();
-    // migrate 2nd world with `0x12345` seed should fail because the world contract address will be
-    // the same
-    assert!(execute_strategy(&migration, &account, &config).await.is_err());
-    sequencer.stop().unwrap();
-}
-
 #[test]
 fn migrate_world_without_seed_will_fail() {
     let target_dir = Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap();

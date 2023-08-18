@@ -21,7 +21,9 @@ use starknet::providers::jsonrpc::HttpTransport;
 mod migration_test;
 mod ui;
 
-use starknet::providers::{JsonRpcClient, Provider, ProviderError};
+use starknet::providers::{
+    JsonRpcClient, MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage,
+};
 use starknet::signers::{LocalWallet, Signer};
 use ui::MigrationUi;
 
@@ -116,9 +118,10 @@ async fn setup_env(
 
         match account.provider().get_class_hash_at(BlockId::Tag(BlockTag::Pending), address).await {
             Ok(_) => Ok(account),
-            Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
-                Err(anyhow!("Account with address {:#x} doesn't exist.", account.address()))
-            }
+            Err(ProviderError::StarknetError(StarknetErrorWithMessage {
+                code: MaybeUnknownErrorCode::Known(StarknetError::ContractNotFound),
+                ..
+            })) => Err(anyhow!("Account with address {:#x} doesn't exist.", account.address())),
             Err(e) => Err(e.into()),
         }
     }
@@ -295,11 +298,10 @@ where
 
                     Ok(())
                 }
-                Err(MigrationError::ContractAlreadyDeployed) => Err(anyhow!(
-                    "Attempting to deploy World at address {:#x} but a World already exists \
-                     there. Try using a different World name using `--name`.",
-                    world.contract_address
-                )),
+                Err(MigrationError::ContractAlreadyDeployed) => {
+                    ws_config.ui().print_sub("World already exists, updating...");
+                    Ok(())
+                }
                 Err(e) => Err(anyhow!("Failed to migrate world: {:?}", e)),
             }?;
 

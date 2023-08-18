@@ -39,7 +39,7 @@ Dojo offers a comprehensive suite of onchain game development tools, harnessing 
 
 ## 🚀 Quick Start
 
-See the [installation guide](https://book.dojoengine.org/getting-started/installation.html) in the Dojo book.
+See the [installation guide](https://book.dojoengine.org/getting-started/quick-start.html) in the Dojo book.
 
 ## 🗒️ Documentation
 
@@ -55,12 +55,11 @@ We welcome contributions of all kinds from anyone. See our [Contribution Guide](
 
 ## ✏️ Enviroment
 
-See our [Enviroment setup](https://book.dojoengine.org/development/setup.html) for more information.
+See our [Enviroment setup](https://book.dojoengine.org/getting-started/setup.html) for more information.
 
 ## ⛩️ Built with Dojo
 
--   [Roll Your Own](https://github.com/cartridge-gg/rollyourown)
--   [Realms Autonomous World](https://github.com/BibliothecaDAO/eternum)
+-   [Awesome Dojo](https://github.com/dojoengine/awesome-dojo)
 
 ## Contributors ✨
 

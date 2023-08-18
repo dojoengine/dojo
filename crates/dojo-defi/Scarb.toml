@@ -1,5 +1,5 @@
 [package]
-cairo-version = "2.0.0-rc4"
+cairo-version = "2.1.0-rc4"
 description = "Implementations of a defi primitives for the Dojo framework"
 name = "dojo_defi"
 version = "0.1.0"
