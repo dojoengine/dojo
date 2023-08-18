@@ -117,7 +117,7 @@ async fn setup_env(
 
         config.ui().print(format!("\nMigration account: {address:#x}"));
         if let Some(name) = name {
-            config.ui().print(format!("\nWorld seed: {name}\n"));
+            config.ui().print(format!("\nWorld name: {name}\n"));
         }
 
         match account.provider().get_class_hash_at(BlockId::Tag(BlockTag::Pending), address).await {
