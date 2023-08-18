@@ -1,12 +1,12 @@
 use std::str::FromStr;
 
-use async_graphql::dynamic::{Field, InputObject, InputValue, TypeRef, ResolverContext};
-use async_graphql::{Name, Error};
+use async_graphql::dynamic::{Field, InputObject, InputValue, ResolverContext, TypeRef};
+use async_graphql::{Error, Name};
 
+use super::filter::{parse_filter, Filter, FilterValue};
+use super::InputObjectTrait;
 use crate::object::TypeMapping;
 use crate::types::ScalarType;
-
-use super::InputObjectTrait;
 
 pub struct WhereInputObject {
     pub type_name: String,
@@ -17,8 +17,8 @@ impl WhereInputObject {
     // Iterate through an object's type mapping and create a new mapping for whereInput. For each of
     // the object type (component member), we add 6 additional types for comparators (great than,
     // not equal, etc). Only filter on our custom scalar types and ignore async-graphql's types.
-    // Due to sqlite column constraints, u8 thru u64 are treated as numerics and the rest of the types
-    // are treated as strings.
+    // Due to sqlite column constraints, u8 thru u64 are treated as numerics and the rest of the
+    // types are treated as strings.
     pub fn new(type_name: &str, object_types: &TypeMapping) -> Self {
         let where_mapping = object_types
             .iter()
@@ -43,10 +43,7 @@ impl WhereInputObject {
             .flatten()
             .collect();
 
-        Self {
-            type_name: format!("{}WhereInput", type_name),
-            type_mapping: where_mapping
-        }
+        Self { type_name: format!("{}WhereInput", type_name), type_mapping: where_mapping }
     }
 }
 
@@ -60,12 +57,9 @@ impl InputObjectTrait for WhereInputObject {
     }
 
     fn create(&self) -> InputObject {
-        self.type_mapping.iter().fold(
-            InputObject::new(self.type_name()),
-            |acc, (ty_name, ty)| {
-                acc.field(InputValue::new(ty_name.to_string(), TypeRef::named(ty.to_string())))
-            },
-        )
+        self.type_mapping.iter().fold(InputObject::new(self.type_name()), |acc, (ty_name, ty)| {
+            acc.field(InputValue::new(ty_name.to_string(), TypeRef::named(ty.to_string())))
+        })
     }
 }
 
@@ -73,8 +67,29 @@ pub fn where_argument(field: Field, type_name: &str) -> Field {
     field.argument(InputValue::new("where", TypeRef::named(format!("{}WhereInput", type_name))))
 }
 
-pub fn parse_where_argument(ctx: &ResolverContext<'_>) -> Result<(), Error> {
-    let where_input = ctx.args.try_get("where")?; 
-    let where_input = where_input.object()?;
-    Ok(())
+pub fn parse_where_argument(
+    ctx: &ResolverContext<'_>,
+    where_mapping: &TypeMapping,
+) -> Result<Vec<Filter>, Error> {
+    let mut filters: Vec<Filter> = Vec::new();
+    let where_input = ctx.args.try_get("where");
+    if let Ok(where_input) = where_input {
+        let input_object = where_input.object()?;
+
+        for (ty_name, ty) in where_mapping.iter() {
+            if let Some(input_filter) = input_object.get(ty_name) {
+                let data_type = match ty.to_string().as_str() {
+                    TypeRef::STRING => FilterValue::String(input_filter.string()?.to_string()),
+                    TypeRef::INT => FilterValue::Int(input_filter.i64()?),
+                    _ => {
+                        return Err(Error::from("Unsupported `where` argument type"));
+                    }
+                };
+
+                filters.push(parse_filter(ty_name, data_type));
+            }
+        }
+    }
+
+    Ok(filters)
 }

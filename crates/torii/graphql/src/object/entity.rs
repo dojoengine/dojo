@@ -8,7 +8,8 @@ use sqlx::{FromRow, Pool, Result, Sqlite};
 
 use super::component_state::{component_state_by_id_query, type_mapping_query};
 use super::connection::{
-    connection_arguments, connection_output, decode_cursor, parse_connection_arguments, ConnectionArguments,
+    connection_arguments, connection_output, decode_cursor, parse_connection_arguments,
+    ConnectionArguments,
 };
 use super::query::{query_by_id, ID};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
