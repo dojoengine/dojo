@@ -2,6 +2,7 @@ use starknet::ContractAddress;
 use serde::Serde;
 use clone::Clone;
 
+
 #[derive(Clone, Drop, Serde, starknet::Event)]
 struct TransferSingle {
     operator: ContractAddress,
@@ -53,7 +54,12 @@ mod ERC1155 {
         IERC1155TokenReceiverDispatcherTrait,
     };
     use dojo_erc::erc165::{IERC165, IERC165Dispatcher, IERC165DispatcherTrait};
-    use dojo_erc::erc_common::utils::{to_calldata, ToCallDataTrait};
+    use dojo_erc::erc_common::utils::{to_calldata, ToCallDataTrait, system_calldata};
+
+    use dojo_erc::erc1155::systems::{
+        ERC1155SetApprovalForAllParams, ERC1155SafeTransferFromParams,
+        ERC1155SafeBatchTransferFromParams, ERC1155MintParams, ERC1155BurnParams
+    };
 
     const UNLIMITED_ALLOWANCE: felt252 =
         3618502788666131213697322783095070105623107215331596699973092056135872020480;
@@ -172,11 +178,14 @@ mod ERC1155 {
                 .read()
                 .execute(
                     'ERC1155SetApprovalForAll',
-                    to_calldata(get_contract_address())
-                        .plus(owner)
-                        .plus(operator)
-                        .plus(approved)
-                        .data
+                    system_calldata(
+                        ERC1155SetApprovalForAllParams {
+                            token: get_contract_address(),
+                            owner: get_caller_address(),
+                            operator,
+                            approved
+                        }
+                    )
                 );
         }
 
@@ -188,21 +197,22 @@ mod ERC1155 {
             amount: u256,
             data: Array<u8>
         ) {
-            let idf: felt252 = id.try_into().unwrap();
-            let amount128: u128 = amount.try_into().unwrap();
             self
                 .world
                 .read()
                 .execute(
                     'ERC1155SafeTransferFrom',
-                    to_calldata(get_contract_address())
-                        .plus(get_caller_address())
-                        .plus(from)
-                        .plus(to)
-                        .plus(idf)
-                        .plus(amount128)
-                        .plus(data)
-                        .data
+                    system_calldata(
+                        ERC1155SafeTransferFromParams {
+                            token: get_contract_address(),
+                            operator: get_caller_address(),
+                            from,
+                            to,
+                            id: id.try_into().unwrap(),
+                            amount: amount.try_into().unwrap(),
+                            data: data
+                        }
+                    )
                 );
         }
 
@@ -229,14 +239,17 @@ mod ERC1155 {
                 .read()
                 .execute(
                     'ERC1155SafeBatchTransferFrom',
-                    to_calldata(get_contract_address())
-                        .plus(get_caller_address())
-                        .plus(from)
-                        .plus(to)
-                        .plus(idsf)
-                        .plus(amounts128)
-                        .plus(data)
-                        .data
+                    system_calldata(
+                        ERC1155SafeBatchTransferFromParams {
+                            token: get_contract_address(),
+                            operator: get_caller_address(),
+                            from,
+                            to,
+                            ids: idsf,
+                            amounts: amounts128,
+                            data: data
+                        }
+                    )
                 );
         }
     }
@@ -274,13 +287,16 @@ mod ERC1155 {
             .read()
             .execute(
                 'ERC1155Mint',
-                to_calldata(get_contract_address())
-                    .plus(get_caller_address())
-                    .plus(to)
-                    .plus(array![id])
-                    .plus(array![amount])
-                    .plus(data)
-                    .data
+                system_calldata(
+                    ERC1155MintParams {
+                        token: get_contract_address(),
+                        operator: get_caller_address(),
+                        to,
+                        ids: array![id],
+                        amounts: array![amount],
+                        data: data
+                    }
+                )
             );
     }
 
@@ -291,12 +307,15 @@ mod ERC1155 {
             .read()
             .execute(
                 'ERC1155Burn',
-                to_calldata(get_contract_address())
-                    .plus(get_caller_address())
-                    .plus(from)
-                    .plus(array![id])
-                    .plus(array![amount])
-                    .data
+                system_calldata(
+                    ERC1155BurnParams {
+                        token: get_contract_address(),
+                        operator: get_caller_address(),
+                        from,
+                        ids: array![id],
+                        amounts: array![amount]
+                    }
+                )
             );
     }
 }
