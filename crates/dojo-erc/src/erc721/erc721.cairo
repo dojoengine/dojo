@@ -13,8 +13,13 @@ mod ERC721 {
         ERC721Owner, ERC721OwnerTrait, BaseUri, BaseUriTrait, ERC721Balance, ERC721BalanceTrait,
         ERC721TokenApproval, ERC721TokenApprovalTrait, OperatorApproval, OperatorApprovalTrait
     };
+    use dojo_erc::erc721::systems::{
+        ERC721ApproveParams, ERC721SetApprovalForAllParams, ERC721TransferFromParams,
+        ERC721MintParams, ERC721BurnParams
+    };
+
     use dojo_erc::erc721::interface::IERC721;
-    use dojo_erc::erc_common::utils::{to_calldata, ToCallDataTrait};
+    use dojo_erc::erc_common::utils::{to_calldata, ToCallDataTrait, system_calldata};
 
     use debug::PrintTrait;
 
@@ -127,16 +132,19 @@ mod ERC721 {
         }
 
         fn approve(ref self: ContractState, to: ContractAddress, token_id: u256) {
-            let token = get_contract_address();
-            let caller = get_caller_address();
-            let token_id_felt: felt252 = token_id.try_into().unwrap();
-
             self
                 .world
                 .read()
                 .execute(
                     'ERC721Approve',
-                    to_calldata(token).plus(caller).plus(token_id_felt).plus(to).data
+                    system_calldata(
+                        ERC721ApproveParams {
+                            token: get_contract_address(),
+                            caller: get_caller_address(),
+                            token_id: token_id.try_into().unwrap(),
+                            to
+                        }
+                    )
                 );
         }
 
@@ -160,31 +168,34 @@ mod ERC721 {
                 .read()
                 .execute(
                     'ERC721SetApprovalForAll',
-                    to_calldata(get_contract_address())
-                        .plus(owner)
-                        .plus(operator)
-                        .plus(approved)
-                        .data
+                    system_calldata(
+                        ERC721SetApprovalForAllParams {
+                            token: get_contract_address(),
+                            owner: get_caller_address(),
+                            operator,
+                            approved
+                        }
+                    )
                 );
         }
-
 
         fn transfer_from(
             ref self: ContractState, from: ContractAddress, to: ContractAddress, token_id: u256
         ) {
-            let token_id_felt: felt252 = token_id.try_into().unwrap();
-
             self
                 .world
                 .read()
                 .execute(
                     'ERC721TransferFrom',
-                    to_calldata(get_contract_address())
-                        .plus(get_caller_address())
-                        .plus(from)
-                        .plus(to)
-                        .plus(token_id_felt)
-                        .data
+                    system_calldata(
+                        ERC721TransferFromParams {
+                            token: get_contract_address(),
+                            caller: get_caller_address(),
+                            from,
+                            to,
+                            token_id: token_id.try_into().unwrap()
+                        }
+                    )
                 );
         }
 
@@ -194,14 +205,18 @@ mod ERC721 {
         }
 
         fn mint(ref self: ContractState, to: ContractAddress, token_id: u256) {
-            let token_id_felt: felt252 = token_id.try_into().unwrap();
-
             self
                 .world
                 .read()
                 .execute(
                     'ERC721Mint',
-                    to_calldata(get_contract_address()).plus(to).plus(token_id_felt).data
+                    system_calldata(
+                        ERC721MintParams {
+                            token: get_contract_address(),
+                            recipient: to,
+                            token_id: token_id.try_into().unwrap()
+                        }
+                    )
                 );
         }
 
@@ -213,10 +228,13 @@ mod ERC721 {
                 .read()
                 .execute(
                     'ERC721Burn',
-                    to_calldata(get_contract_address())
-                        .plus(get_caller_address())
-                        .plus(token_id_felt)
-                        .data
+                    system_calldata(
+                        ERC721BurnParams {
+                            token: get_contract_address(),
+                            caller: get_caller_address(),
+                            token_id: token_id.try_into().unwrap()
+                        }
+                    )
                 );
         }
     }
