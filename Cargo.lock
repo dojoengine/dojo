@@ -1589,16 +1589,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "console_error_panic_hook"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a06aeb73f470f66dcdbf7223caeebb85984942f22f1adb2a088cf9668146bbbc"
-dependencies = [
- "cfg-if",
- "wasm-bindgen",
-]
-
-[[package]]
 name = "const-fnv1a-hash"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5649,17 +5639,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde-wasm-bindgen"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3b143e2833c57ab9ad3ea280d21fd34e285a42837aeb0ee301f4f41890fa00e"
-dependencies = [
- "js-sys",
- "serde",
- "wasm-bindgen",
-]
-
-[[package]]
 name = "serde_derive"
 version = "1.0.183"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6763,26 +6742,6 @@ dependencies = [
  "starknet-crypto 0.5.1",
  "thiserror",
  "tokio",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
-]
-
-[[package]]
-name = "torii-client-wasm"
-version = "0.1.0"
-dependencies = [
- "async-std",
- "async-trait",
- "console_error_panic_hook",
- "js-sys",
- "parking_lot 0.12.1",
- "serde",
- "serde-wasm-bindgen",
- "starknet",
- "thiserror",
- "torii-client",
- "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
