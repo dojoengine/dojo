@@ -92,16 +92,16 @@ async fn test_creating_blocks() {
     starknet.open_pending_block().await;
     starknet.mine_block().await;
 
-    assert_eq!(starknet.storage.read().await.blocks.len(), 2);
-    assert_eq!(starknet.storage.read().await.latest_number, 1);
+    assert_eq!(starknet.blockchain.storage.read().blocks.len(), 2);
+    assert_eq!(starknet.blockchain.storage.read().latest_number, 1);
     assert_eq!(
         starknet.env.read().block.block_number,
         BlockNumber(1),
         "block context should only be updated on new pending block"
     );
 
-    let block0 = starknet.storage.read().await.block_by_number(0).unwrap().clone();
-    let block1 = starknet.storage.read().await.block_by_number(1).unwrap().clone();
+    let block0 = starknet.blockchain.storage.read().block_by_number(0).unwrap().clone();
+    let block1 = starknet.blockchain.storage.read().block_by_number(1).unwrap().clone();
 
     assert_eq!(block0.header.number, 0);
     assert_eq!(block1.header.number, 1);

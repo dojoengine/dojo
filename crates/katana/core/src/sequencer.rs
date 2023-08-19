@@ -192,7 +192,7 @@ impl Sequencer for KatanaSequencer {
             }
 
             _ => {
-                if let Some(hash) = self.backend.storage.read().await.block_hash(*block_id) {
+                if let Some(hash) = self.backend.blockchain.block_hash(*block_id) {
                     self.backend
                         .states
                         .read()
@@ -244,8 +244,8 @@ impl Sequencer for KatanaSequencer {
     }
 
     async fn block_hash_and_number(&self) -> (FieldElement, u64) {
-        let hash = self.backend.storage.read().await.latest_hash;
-        let number = self.backend.storage.read().await.latest_number;
+        let hash = self.backend.blockchain.storage.read().latest_hash;
+        let number = self.backend.blockchain.storage.read().latest_number;
         (hash, number)
     }
 
@@ -309,7 +309,7 @@ impl Sequencer for KatanaSequencer {
     }
 
     async fn block_number(&self) -> u64 {
-        self.backend.storage.read().await.latest_number
+        self.backend.blockchain.storage.read().latest_number
     }
 
     async fn block(&self, block_id: BlockId) -> Option<ExecutedBlock> {
@@ -317,16 +317,9 @@ impl Sequencer for KatanaSequencer {
             BlockId::Tag(BlockTag::Pending) => {
                 self.backend.pending_block.read().await.as_ref().map(|b| b.as_block().into())
             }
-            BlockId::Tag(BlockTag::Latest) => {
-                let latest_hash = self.backend.storage.read().await.latest_hash;
-                self.backend.storage.read().await.blocks.get(&latest_hash).map(|b| b.clone().into())
-            }
-            BlockId::Hash(hash) => {
-                self.backend.storage.read().await.blocks.get(&hash).map(|b| b.clone().into())
-            }
-            BlockId::Number(num) => {
-                let hash = *self.backend.storage.read().await.hashes.get(&num)?;
-                self.backend.storage.read().await.blocks.get(&hash).map(|b| b.clone().into())
+            _ => {
+                let hash = self.backend.blockchain.block_hash(block_id)?;
+                self.backend.blockchain.storage.read().blocks.get(&hash).map(|b| b.clone().into())
             }
         }
     }
@@ -370,7 +363,8 @@ impl Sequencer for KatanaSequencer {
     }
 
     async fn transaction_status(&self, hash: &FieldElement) -> Option<TransactionStatus> {
-        match self.backend.storage.read().await.transactions.get(hash) {
+        let tx = self.backend.blockchain.storage.read().transactions.get(hash).cloned();
+        match tx {
             Some(tx) => Some(tx.status()),
             // If the requested transaction is not available in the storage then
             // check if it is available in the pending block.
@@ -401,8 +395,9 @@ impl Sequencer for KatanaSequencer {
     }
 
     async fn transaction(&self, hash: &FieldElement) -> Option<KnownTransaction> {
-        match self.backend.storage.read().await.transactions.get(hash) {
-            Some(tx) => Some(tx.clone()),
+        let tx = self.backend.blockchain.storage.read().transactions.get(hash).cloned();
+        match tx {
+            Some(tx) => Some(tx),
             // If the requested transaction is not available in the storage then
             // check if it is available in the pending block.
             None => self.backend.pending_block.read().await.as_ref().and_then(|b| {
@@ -426,16 +421,16 @@ impl Sequencer for KatanaSequencer {
         let mut current_block = 0;
 
         let (mut from_block, to_block) = {
-            let storage = self.backend.storage.read().await;
+            let storage = &self.backend.blockchain;
 
             let from = storage
                 .block_hash(from_block)
-                .and_then(|hash| storage.blocks.get(&hash).map(|b| b.header.number))
+                .and_then(|hash| storage.storage.read().blocks.get(&hash).map(|b| b.header.number))
                 .ok_or(SequencerError::BlockNotFound(from_block))?;
 
             let to = storage
                 .block_hash(to_block)
-                .and_then(|hash| storage.blocks.get(&hash).map(|b| b.header.number))
+                .and_then(|hash| storage.storage.read().blocks.get(&hash).map(|b| b.header.number))
                 .ok_or(SequencerError::BlockNotFound(to_block))?;
 
             (from, to)
@@ -454,9 +449,9 @@ impl Sequencer for KatanaSequencer {
         for i in from_block..=to_block {
             let block = self
                 .backend
+                .blockchain
                 .storage
                 .read()
-                .await
                 .block_by_number(i)
                 .cloned()
                 .ok_or(SequencerError::BlockNotFound(BlockId::Number(i)))?;
@@ -465,12 +460,12 @@ impl Sequencer for KatanaSequencer {
             // if the current block is the latest block then we use the latest hash
             let block_hash = self
                 .backend
+                .blockchain
                 .storage
                 .read()
-                .await
                 .block_by_number(i + 1)
                 .map(|b| b.header.parent_hash)
-                .unwrap_or(self.backend.storage.read().await.latest_hash);
+                .unwrap_or(self.backend.blockchain.storage.read().latest_hash);
 
             let block_number = i;
 
@@ -548,16 +543,14 @@ impl Sequencer for KatanaSequencer {
     async fn state_update(&self, block_id: BlockId) -> SequencerResult<StateUpdate> {
         let block_number = self
             .backend
-            .storage
-            .read()
-            .await
+            .blockchain
             .block_hash(block_id)
             .ok_or(SequencerError::BlockNotFound(block_id))?;
 
         self.backend
+            .blockchain
             .storage
             .read()
-            .await
             .state_update
             .get(&block_number)
             .cloned()

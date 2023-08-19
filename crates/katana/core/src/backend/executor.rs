@@ -11,13 +11,12 @@ use blockifier::transaction::transactions::ExecutableTransaction;
 use convert_case::{Case, Casing};
 use parking_lot::RwLock;
 use starknet::core::types::{Event, FieldElement, MsgToL1};
-use tokio::sync::RwLock as AsyncRwLock;
 use tracing::{info, trace, warn};
 
 use super::state::MemDb;
 use super::storage::block::{PartialBlock, PartialHeader};
 use super::storage::transaction::{RejectedTransaction, Transaction, TransactionOutput};
-use super::storage::BlockchainStorage;
+use super::storage::Storage;
 use crate::backend::storage::transaction::{DeclareTransaction, KnownTransaction};
 use crate::env::Env;
 
@@ -29,7 +28,7 @@ pub struct PendingBlockExecutor {
     /// The changes made after the execution of a transaction will be
     /// persisted for the next included transaction.
     pub state: CachedState<MemDb>,
-    pub storage: Arc<AsyncRwLock<BlockchainStorage>>,
+    pub storage: Arc<RwLock<Storage>>,
     pub env: Arc<RwLock<Env>>,
     pub transactions: Vec<Arc<ExecutedTransaction>>,
     pub outputs: Vec<TransactionOutput>,
@@ -40,7 +39,7 @@ impl PendingBlockExecutor {
         parent_hash: FieldElement,
         state: MemDb,
         env: Arc<RwLock<Env>>,
-        storage: Arc<AsyncRwLock<BlockchainStorage>>,
+        storage: Arc<RwLock<Storage>>,
     ) -> Self {
         Self {
             env,
@@ -117,7 +116,7 @@ impl PendingBlockExecutor {
             }
 
             Err(err) => {
-                self.storage.write().await.transactions.insert(
+                self.storage.write().transactions.insert(
                     transaction_hash,
                     KnownTransaction::Rejected(Box::new(RejectedTransaction {
                         transaction: transaction.into(),

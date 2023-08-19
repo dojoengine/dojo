@@ -35,7 +35,7 @@ use self::config::StarknetConfig;
 use self::executor::{execute_transaction, PendingBlockExecutor};
 use self::storage::block::{Block, PartialHeader};
 use self::storage::transaction::{IncludedTransaction, Transaction, TransactionStatus};
-use self::storage::{BlockchainStorage, InMemoryBlockStates};
+use self::storage::{Blockchain, InMemoryBlockStates, Storage};
 use crate::accounts::{Account, DevAccountGenerator};
 use crate::backend::state::{MemDb, StateExt};
 use crate::constants::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
@@ -54,7 +54,7 @@ pub struct ExternalFunctionCall {
 pub struct Backend {
     pub config: RwLock<StarknetConfig>,
     /// stores all block related data in memory
-    pub storage: Arc<AsyncRwLock<BlockchainStorage>>,
+    pub blockchain: Blockchain,
     // TEMP: pending block for transaction execution
     pub pending_block: AsyncRwLock<Option<PendingBlockExecutor>>,
     /// Historic states of previous blocks
@@ -74,7 +74,8 @@ impl Backend {
 
         let mut state = MemDb::default();
 
-        let storage = BlockchainStorage::new(&block_context);
+        let storage = Arc::new(RwLock::new(Storage::new(&block_context)));
+        let blockchain = Blockchain::new(Arc::clone(&storage));
         let states = InMemoryBlockStates::default();
         let env = Env { block: block_context };
 
@@ -97,7 +98,7 @@ impl Backend {
             state: AsyncRwLock::new(state),
             config: RwLock::new(config),
             states: AsyncRwLock::new(states),
-            storage: Arc::new(AsyncRwLock::new(storage)),
+            blockchain,
             block_context_generator: RwLock::new(block_context_generator),
             pending_block: AsyncRwLock::new(None),
             accounts,
@@ -191,7 +192,7 @@ impl Backend {
         // Stores the pending transaction in storage
         for tx in &block.transactions {
             let transaction_hash = tx.inner.hash();
-            self.storage.write().await.transactions.insert(
+            self.blockchain.storage.write().transactions.insert(
                 transaction_hash,
                 IncludedTransaction {
                     block_number,
@@ -208,7 +209,7 @@ impl Backend {
         let state_diff = convert_state_diff_to_rpc_state_diff(pending_state_diff);
 
         // store block and the state diff
-        self.storage.write().await.append_block(block_hash, block, state_diff);
+        self.blockchain.append_block(block_hash, block, state_diff);
 
         info!("⛏️ Block {block_number} mined with {tx_count} transactions");
 
@@ -228,7 +229,7 @@ impl Backend {
     }
 
     pub async fn open_pending_block(&self) {
-        let latest_hash = self.storage.read().await.latest_hash;
+        let latest_hash = self.blockchain.storage.read().latest_hash;
         let latest_state = self.state.read().await.clone();
 
         self.update_block_context();
@@ -237,7 +238,7 @@ impl Backend {
             latest_hash,
             latest_state,
             self.env.clone(),
-            self.storage.clone(),
+            self.blockchain.storage.clone(),
         ));
     }
 
@@ -308,7 +309,7 @@ impl Backend {
     }
 
     pub async fn create_empty_block(&self) -> Block {
-        let parent_hash = self.storage.read().await.latest_hash;
+        let parent_hash = self.blockchain.storage.read().latest_hash;
         let block_context = &self.env.read().block;
 
         let partial_header = PartialHeader {

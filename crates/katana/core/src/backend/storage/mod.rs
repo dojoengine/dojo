@@ -1,6 +1,8 @@
 use std::collections::{HashMap, VecDeque};
+use std::sync::Arc;
 
 use blockifier::block_context::BlockContext;
+use parking_lot::RwLock;
 use starknet::core::types::{BlockId, BlockTag, FieldElement, StateDiff, StateUpdate};
 
 use self::block::Block;
@@ -80,9 +82,8 @@ impl Default for InMemoryBlockStates {
     }
 }
 
-// TODO: can we wrap all the fields in a `RwLock` to prevent read blocking?
 #[derive(Debug, Default)]
-pub struct BlockchainStorage {
+pub struct Storage {
     /// Mapping from block hash -> block
     pub blocks: HashMap<FieldElement, Block>,
     /// Mapping from block number -> block hash
@@ -97,7 +98,7 @@ pub struct BlockchainStorage {
     pub transactions: HashMap<FieldElement, KnownTransaction>,
 }
 
-impl BlockchainStorage {
+impl Storage {
     /// Creates a new blockchain from a genesis block
     pub fn new(block_context: &BlockContext) -> Self {
         let partial_header = PartialHeader {
@@ -123,13 +124,58 @@ impl BlockchainStorage {
         }
     }
 
+    /// Creates a new blockchain from a forked network
+    pub fn new_forked(latest_number: u64, latest_hash: FieldElement) -> Self {
+        Self {
+            latest_hash,
+            latest_number,
+            blocks: HashMap::default(),
+            hashes: HashMap::default(),
+            state_update: HashMap::default(),
+            transactions: HashMap::default(),
+        }
+    }
+
+    pub fn block_by_number(&self, number: u64) -> Option<&Block> {
+        self.hashes.get(&number).and_then(|hash| self.blocks.get(hash))
+    }
+}
+
+pub struct Blockchain {
+    pub storage: Arc<RwLock<Storage>>,
+}
+
+impl Blockchain {
+    pub fn new(storage: Arc<RwLock<Storage>>) -> Self {
+        Self { storage }
+    }
+
+    pub fn new_forked(latest_number: u64, latest_hash: FieldElement) -> Self {
+        Self::new(Arc::new(RwLock::new(Storage::new_forked(latest_number, latest_hash))))
+    }
+
+    /// Returns the block hash based on the block id
+    pub fn block_hash(&self, block: BlockId) -> Option<FieldElement> {
+        match block {
+            BlockId::Tag(BlockTag::Pending) => None,
+            BlockId::Tag(BlockTag::Latest) => Some(self.storage.read().latest_hash),
+            BlockId::Hash(hash) => Some(hash),
+            BlockId::Number(num) => self.storage.read().hashes.get(&num).copied(),
+        }
+    }
+
+    pub fn total_blocks(&self) -> usize {
+        self.storage.read().blocks.len()
+    }
+
     /// Appends a new block to the chain and store the state diff.
-    pub fn append_block(&mut self, hash: FieldElement, block: Block, state_diff: StateDiff) {
+    pub fn append_block(&self, hash: FieldElement, block: Block, state_diff: StateDiff) {
         let number = block.header.number;
+        let mut storage = self.storage.write();
 
-        assert_eq!(self.latest_number + 1, number);
+        assert_eq!(storage.latest_number + 1, number);
 
-        let old_root = self.blocks.get(&self.latest_hash).map(|b| b.header.state_root);
+        let old_root = storage.blocks.get(&storage.latest_hash).map(|b| b.header.state_root);
 
         let state_update = StateUpdate {
             block_hash: hash,
@@ -138,29 +184,11 @@ impl BlockchainStorage {
             state_diff,
         };
 
-        self.latest_hash = hash;
-        self.latest_number = number;
-        self.blocks.insert(hash, block);
-        self.hashes.insert(number, hash);
-        self.state_update.insert(hash, state_update);
-    }
-
-    pub fn total_blocks(&self) -> usize {
-        self.blocks.len()
-    }
-
-    /// Returns the block hash based on the block id
-    pub fn block_hash(&self, block: BlockId) -> Option<FieldElement> {
-        match block {
-            BlockId::Tag(BlockTag::Pending) => None,
-            BlockId::Tag(BlockTag::Latest) => Some(self.latest_hash),
-            BlockId::Hash(hash) => Some(hash),
-            BlockId::Number(num) => self.hashes.get(&num).copied(),
-        }
-    }
-
-    pub fn block_by_number(&self, number: u64) -> Option<&Block> {
-        self.hashes.get(&number).and_then(|hash| self.blocks.get(hash))
+        storage.latest_hash = hash;
+        storage.latest_number = number;
+        storage.blocks.insert(hash, block);
+        storage.hashes.insert(number, hash);
+        storage.state_update.insert(hash, state_update);
     }
 }
 
