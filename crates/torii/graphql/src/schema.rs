@@ -56,9 +56,13 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
         schema_builder = schema_builder.register(Scalar::new(scalar_type.to_string()));
     }
 
-    // register gql objects
     for object in &objects {
-        schema_builder = schema_builder.register(object.create());
+        // register input objects, whereInput and orderBy
+        if let Some(input_objects) = object.input_objects() {
+            for input in input_objects {
+                schema_builder = schema_builder.register(input);
+            }
+        }
 
         // register connection types, relay
         if let Some(conn_objects) = object.connection() {
@@ -66,6 +70,9 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
                 schema_builder = schema_builder.register(object);
             }
         }
+
+        // register gql objects
+        schema_builder = schema_builder.register(object.create());
     }
 
     schema_builder.register(query_root).data(pool.clone()).finish().map_err(|e| e.into())

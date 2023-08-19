@@ -3,11 +3,13 @@ pub mod component_state;
 pub mod connection;
 pub mod entity;
 pub mod event;
+mod filter;
+pub mod input;
 mod query;
 pub mod system;
 pub mod system_call;
 
-use async_graphql::dynamic::{Field, FieldFuture, Object, TypeRef};
+use async_graphql::dynamic::{Field, FieldFuture, InputObject, Object, TypeRef};
 use async_graphql::{Error, Name, Value};
 use indexmap::IndexMap;
 
@@ -40,6 +42,12 @@ pub trait ObjectTrait {
 
     // Resolves plural object queries, returns type of {type_name}Connection (eg "PlayerConnection")
     fn resolve_many(&self) -> Option<Field> {
+        None
+    }
+
+    // Input objects consist of {type_name}WhereInput for filtering and {type_name}Order for
+    // ordering
+    fn input_objects(&self) -> Option<Vec<InputObject>> {
         None
     }
 

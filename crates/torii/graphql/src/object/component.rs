@@ -88,7 +88,8 @@ impl ObjectTrait for ComponentObject {
             |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let total_count = query_total_count(&mut conn, "components").await?;
+                    let total_count =
+                        query_total_count(&mut conn, "components", &Vec::new()).await?;
                     let data: Vec<Component> =
                         query_all(&mut conn, "components", DEFAULT_LIMIT).await?;
                     let components: Vec<ValueMapping> =

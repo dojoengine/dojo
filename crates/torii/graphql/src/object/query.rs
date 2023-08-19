@@ -2,6 +2,8 @@ use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{FromRow, QueryBuilder, Result, Sqlite};
 
+use crate::object::filter::{Filter, FilterValue};
+
 pub enum ID {
     Str(String),
     I64(i64),
@@ -37,8 +39,27 @@ where
     Ok(results)
 }
 
-pub async fn query_total_count(conn: &mut PoolConnection<Sqlite>, table_name: &str) -> Result<i64> {
-    let query = format!("SELECT COUNT(*) FROM {}", table_name);
+pub async fn query_total_count(
+    conn: &mut PoolConnection<Sqlite>,
+    table_name: &str,
+    filters: &Vec<Filter>,
+) -> Result<i64> {
+    let mut query = format!("SELECT COUNT(*) FROM {}", table_name);
+    let mut conditions = Vec::new();
+
+    for filter in filters {
+        let condition = match filter.value {
+            FilterValue::Int(i) => format!("{} {} {}", filter.field, filter.comparator, i),
+            FilterValue::String(ref s) => format!("{} {} '{}'", filter.field, filter.comparator, s),
+        };
+
+        conditions.push(condition);
+    }
+
+    if !conditions.is_empty() {
+        query.push_str(&format!(" WHERE {}", conditions.join(" AND ")));
+    }
+
     let result: (i64,) = sqlx::query_as(&query).fetch_one(conn).await?;
     Ok(result.0)
 }

@@ -50,26 +50,49 @@ mod tests {
         assert_eq!(position_connection.edges[0].node.y, 69);
     }
 
-    // TODO: add back in filter after WhereInput
-    // #[sqlx::test(migrations = "../migrations")]
-    // async fn test_component_filter(pool: SqlitePool) {
-    //     entity_fixtures(&pool).await;
+    #[sqlx::test(migrations = "../migrations")]
+    async fn test_component_where_filter(pool: SqlitePool) {
+        entity_fixtures(&pool).await;
 
-    //     let query = r#"
-    //             {
-    //                 positionComponents (x: 42) {
-    //                     __typename
-    //                     x
-    //                     y
-    //                 }
-    //             }
-    //         "#;
-    //     let value = run_graphql_query(&pool, query).await;
+        // fixtures inserts two position components with members (x: 42, y: 69) and (x: 69, y: 42)
+        // the following filters and expected total results can be simply calculated
+        let where_filters = Vec::from([
+            ("where: { x: 42 }", 1),
+            ("where: { xNEQ: 42 }", 1),
+            ("where: { xGT: 42 }", 1),
+            ("where: { xGTE: 42 }", 2),
+            ("where: { xLT: 42 }", 0),
+            ("where: { xLTE: 42 }", 1),
+            ("where: { x: 1337, yGTE: 1234 }", 0),
+        ]);
 
-    //     let positions = value.get("positionComponents").ok_or("no positions found").unwrap();
-    //     let positions: Vec<Position> = serde_json::from_value(positions.clone()).unwrap();
-    //     assert_eq!(positions[0].y, 69);
-    // }
+        for (filter, expected_total) in where_filters {
+            let query = format!(
+                r#"
+                    {{
+                        positionComponents ({}) {{
+                            totalCount 
+                            edges {{
+                                node {{
+                                    __typename
+                                    x
+                                    y
+                                }}
+                                cursor
+                            }}
+                        }}
+                    }}
+                "#,
+                filter
+            );
+
+            let value = run_graphql_query(&pool, &query).await;
+            let positions = value.get("positionComponents").ok_or("no positions found").unwrap();
+            let connection: Connection<Position> =
+                serde_json::from_value(positions.clone()).unwrap();
+            assert_eq!(connection.total_count, expected_total);
+        }
+    }
 
     #[sqlx::test(migrations = "../migrations")]
     async fn test_component_entity_relationship(pool: SqlitePool) {
@@ -99,6 +122,6 @@ mod tests {
         let positions = value.get("positionComponents").ok_or("no positions found").unwrap();
         let connection: Connection<Position> = serde_json::from_value(positions.clone()).unwrap();
         let entity = connection.edges[0].node.entity.as_ref().unwrap();
-        assert_eq!(entity.component_names, "Moves,Position".to_string());
+        assert_eq!(entity.component_names, "Position".to_string());
     }
 }

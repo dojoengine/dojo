@@ -55,7 +55,7 @@ impl ObjectTrait for ConnectionObject {
     }
 }
 
-pub fn parse_arguments(ctx: &ResolverContext<'_>) -> Result<ConnectionArguments, Error> {
+pub fn parse_connection_arguments(ctx: &ResolverContext<'_>) -> Result<ConnectionArguments, Error> {
     let first = ctx.args.try_get("first").and_then(|first| first.i64()).ok();
     let last = ctx.args.try_get("last").and_then(|last| last.i64()).ok();
     let after = ctx.args.try_get("after").and_then(|after| Ok(after.string()?.to_string())).ok();
@@ -89,7 +89,7 @@ pub fn parse_arguments(ctx: &ResolverContext<'_>) -> Result<ConnectionArguments,
     Ok(ConnectionArguments { first, last, after, before })
 }
 
-pub fn connection_input(field: Field) -> Field {
+pub fn connection_arguments(field: Field) -> Field {
     field
         .argument(InputValue::new("first", TypeRef::named(TypeRef::INT)))
         .argument(InputValue::new("last", TypeRef::named(TypeRef::INT)))
