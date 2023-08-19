@@ -6,7 +6,6 @@ mod erc20_approve {
     use dojo_erc::erc20::components::Allowance;
     use dojo::world::Context;
 
-    use core::debug::PrintTrait;
     fn execute(
         ctx: Context,
         token: ContractAddress,
@@ -59,8 +58,8 @@ mod erc20_mint {
     use traits::Into;
     use zeroable::Zeroable;
 
-    use dojo_erc::erc20::components::{Balance, Supply};
     use dojo::world::Context;
+    use dojo_erc::erc20::components::{Balance, Supply};
 
     fn execute(ctx: Context, token: ContractAddress, recipient: ContractAddress, amount: felt252) {
         assert(token == ctx.origin, 'ERC20: not authorized');
@@ -83,8 +82,8 @@ mod erc20_burn {
     use traits::Into;
     use zeroable::Zeroable;
 
-    use dojo_erc::erc20::components::{Balance, Supply};
     use dojo::world::Context;
+    use dojo_erc::erc20::components::{Balance, Supply};
 
     fn execute(ctx: Context, token: ContractAddress, owner: ContractAddress, amount: felt252) {
         assert(token == ctx.origin, 'ERC20: not authorized');
