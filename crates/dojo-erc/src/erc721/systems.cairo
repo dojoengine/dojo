@@ -138,7 +138,7 @@ mod erc721_burn {
 
         let token_approval = get!(ctx.world, (token, token_id), TokenApproval);
         let is_approved = get!(ctx.world, (token, token_owner.address, caller), OperatorApproval);
-       
+
         assert(
             token_owner.address == caller
                 || is_approved.approved
