@@ -25,7 +25,7 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: |
-          cargo test --workspace --exclude torii-client-wasm
+          cargo test
 
   ensure-wasm:
     runs-on: ubuntu-latest
@@ -43,7 +43,7 @@ jobs:
           cargo build -r --target wasm32-unknown-unknown -p torii-client
       - name: "Ensure `torii-client-wasm` crate is wasmable"
         run: |
-          cargo build -r --target wasm32-unknown-unknown -p torii-client-wasm
+          cargo build -r --target wasm32-unknown-unknown --manifest-path crates/torii/client/wasm/Cargo.toml
 
   # cairofmt:
   #   runs-on: ubuntu-latest
