@@ -89,7 +89,7 @@ impl ObjectTrait for SystemObject {
             |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let total_count = query_total_count(&mut conn, "systems").await?;
+                    let total_count = query_total_count(&mut conn, "systems", &Vec::new()).await?;
                     let data: Vec<System> = query_all(&mut conn, "systems", DEFAULT_LIMIT).await?;
                     let systems: Vec<ValueMapping> =
                         data.into_iter().map(SystemObject::value_mapping).collect();

@@ -12,13 +12,13 @@ use super::connection::{
     connection_arguments, decode_cursor, encode_cursor, parse_connection_arguments,
     ConnectionArguments,
 };
-use super::input::filter::{Filter, FilterValue};
 use super::input::r#where::{parse_where_argument, where_argument, WhereInputObject};
 use super::input::InputObjectTrait;
 use super::query::query_total_count;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
 use crate::object::entity::{Entity, EntityObject};
+use crate::object::filter::{Filter, FilterValue};
 use crate::object::query::{query_by_id, ID};
 use crate::types::ScalarType;
 use crate::utils::extract_value::extract;
@@ -87,9 +87,9 @@ impl ObjectTrait for ComponentStateObject {
             FieldFuture::new(async move {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                 let table_name = format!("external_{}", name);
-                let total_count = query_total_count(&mut conn, &table_name).await?;
-                let connection = parse_connection_arguments(&ctx)?;
                 let filters = parse_where_argument(&ctx, &where_mapping)?;
+                let total_count = query_total_count(&mut conn, &table_name, &filters).await?;
+                let connection = parse_connection_arguments(&ctx)?;
                 let data =
                     component_states_query(&mut conn, &table_name, &connection, &filters).await?;
                 let connection = component_connection(&data, &type_mapping, total_count)?;
@@ -165,9 +165,8 @@ pub async fn component_states_query(
     }
 
     for filter in filters {
-        let column = format!("external_{}", filter.field);
         let condition = match filter.value {
-            FilterValue::Int(i) => format!("{} {} {}", column, filter.comparator, i),
+            FilterValue::Int(i) => format!("{} {} {}", filter.field, filter.comparator, i),
             FilterValue::String(ref s) => format!("{} {} '{}'", filter.field, filter.comparator, s),
         };
 

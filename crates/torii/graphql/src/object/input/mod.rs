@@ -2,7 +2,6 @@ use async_graphql::dynamic::InputObject;
 
 use super::TypeMapping;
 
-pub mod filter;
 pub mod r#where;
 
 pub trait InputObjectTrait {

@@ -30,6 +30,7 @@ pub enum FilterValue {
     Int(i64),
     String(String),
 }
+
 #[derive(Debug)]
 pub struct Filter {
     pub field: String,
@@ -48,10 +49,16 @@ pub fn parse_filter(input: &Name, value: FilterValue) -> Filter {
 
     for (suffix, comparator) in suffixes {
         if let Some(field) = input.strip_suffix(suffix) {
-          return Filter { field: field.to_string(), comparator: comparator.clone(), value };
+            // Filtering only applies to component members which are stored in db with
+            // external_{name}
+            return Filter {
+                field: format!("external_{}", field),
+                comparator: comparator.clone(),
+                value,
+            };
         }
     }
 
     // If no suffix found assume equality comparison
-    Filter { field: input.to_string(), comparator: Comparator::Eq, value }
+    Filter { field: format!("external_{}", input), comparator: Comparator::Eq, value }
 }

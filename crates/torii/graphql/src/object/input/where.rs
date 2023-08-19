@@ -3,8 +3,8 @@ use std::str::FromStr;
 use async_graphql::dynamic::{Field, InputObject, InputValue, ResolverContext, TypeRef};
 use async_graphql::{Error, Name};
 
-use super::filter::{parse_filter, Filter, FilterValue};
 use super::InputObjectTrait;
+use crate::object::filter::{parse_filter, Filter, FilterValue};
 use crate::object::TypeMapping;
 use crate::types::ScalarType;
 

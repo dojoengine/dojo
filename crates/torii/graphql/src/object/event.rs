@@ -89,7 +89,7 @@ impl ObjectTrait for EventObject {
             |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let total_count = query_total_count(&mut conn, "events").await?;
+                    let total_count = query_total_count(&mut conn, "events", &Vec::new()).await?;
                     let data: Vec<Event> = query_all(&mut conn, "events", DEFAULT_LIMIT).await?;
                     let events: Vec<ValueMapping> =
                         data.into_iter().map(EventObject::value_mapping).collect();

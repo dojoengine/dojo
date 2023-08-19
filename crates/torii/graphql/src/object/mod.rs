@@ -3,6 +3,7 @@ pub mod component_state;
 pub mod connection;
 pub mod entity;
 pub mod event;
+mod filter;
 pub mod input;
 mod query;
 pub mod system;
