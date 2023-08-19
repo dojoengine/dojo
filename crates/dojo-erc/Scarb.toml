@@ -4,8 +4,18 @@ description = "Implementations of ERC standards for the Dojo framework"
 name = "dojo_erc"
 version = "0.1.0"
 
+[cairo]
+sierra-replace-ids = true
+
 [dependencies]
 dojo = { path = "../dojo-core" }
 
-[lib]
 
+# Generate targets/manifest with sozo
+[[target.dojo]]
+
+[tool.dojo.env]
+# Katana
+rpc_url = "http://localhost:5050"
+account_address = "0x03ee9e18edc71a6df30ac3aca2e0b02a198fbce19b7480a63a0d71cbd76652e0"
+private_key = "0x0300001800000000300000180000000000030000000000003006001800006600"
