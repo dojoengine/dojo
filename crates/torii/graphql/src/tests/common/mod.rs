@@ -70,11 +70,14 @@ pub async fn entity_fixtures(pool: &SqlitePool) {
     state.load_from_manifest(manifest).await.unwrap();
 
     // Set entity with one moves component
+    // remaining: 10
     let key = vec![FieldElement::ONE];
     let moves_values = vec![FieldElement::from_hex_be("0xa").unwrap()];
     state.set_entity("Moves".to_string(), key, moves_values.clone()).await.unwrap();
 
     // Set entity with one position component
+    // x: 42
+    // y: 69
     let key = vec![FieldElement::TWO];
     let position_values = vec![
         FieldElement::from_hex_be("0x2a").unwrap(),
@@ -83,7 +86,15 @@ pub async fn entity_fixtures(pool: &SqlitePool) {
     state.set_entity("Position".to_string(), key, position_values.clone()).await.unwrap();
 
     // Set an entity with both moves and position components
+    // remaining: 1
+    // x: 69
+    // y: 42
     let key = vec![FieldElement::THREE];
+    let moves_values = vec![FieldElement::from_hex_be("0x1").unwrap()];
+    let position_values = vec![
+        FieldElement::from_hex_be("0x45").unwrap(),
+        FieldElement::from_hex_be("0x2a").unwrap(),
+    ];
     state.set_entity("Moves".to_string(), key.clone(), moves_values).await.unwrap();
     state.set_entity("Position".to_string(), key, position_values).await.unwrap();
 
