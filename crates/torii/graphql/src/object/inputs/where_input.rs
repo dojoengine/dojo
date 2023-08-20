@@ -4,8 +4,8 @@ use async_graphql::dynamic::{Field, InputObject, InputValue, ResolverContext, Ty
 use async_graphql::{Error, Name};
 
 use super::InputObjectTrait;
-use crate::object::filter::{parse_filter, Filter, FilterValue};
 use crate::object::TypeMapping;
+use crate::query::filter::{parse_filter, Filter, FilterValue};
 use crate::types::ScalarType;
 
 pub struct WhereInputObject {

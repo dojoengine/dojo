@@ -2,7 +2,9 @@ use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{FromRow, QueryBuilder, Result, Sqlite};
 
-use crate::object::filter::{Filter, FilterValue};
+use self::filter::{Filter, FilterValue};
+
+pub mod filter;
 
 pub enum ID {
     Str(String),

@@ -12,15 +12,14 @@ use super::connection::{
     connection_arguments, decode_cursor, encode_cursor, parse_connection_arguments,
     ConnectionArguments,
 };
-use super::input::order::{order_argument, OrderInputObject};
-use super::input::r#where::{parse_where_argument, where_argument, WhereInputObject};
-use super::input::InputObjectTrait;
-use super::query::query_total_count;
+use super::inputs::order_input::{order_argument, OrderInputObject};
+use super::inputs::where_input::{parse_where_argument, where_argument, WhereInputObject};
+use super::inputs::InputObjectTrait;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
 use crate::object::entity::{Entity, EntityObject};
-use crate::object::filter::{Filter, FilterValue};
-use crate::object::query::{query_by_id, ID};
+use crate::query::filter::{Filter, FilterValue};
+use crate::query::{query_by_id, query_total_count, ID};
 use crate::types::ScalarType;
 use crate::utils::extract_value::extract;
 
@@ -83,12 +82,14 @@ impl ObjectTrait for ComponentStateObject {
         let name = self.name.clone();
         let type_mapping = self.type_mapping.clone();
         let where_mapping = self.where_input.type_mapping.clone();
+        let order_mapping = self.order_input.type_mapping.clone();
         let field_name = format!("{}Components", self.name());
         let field_type = format!("{}Connection", self.type_name());
 
         let mut field = Field::new(field_name, TypeRef::named(field_type), move |ctx| {
             let type_mapping = type_mapping.clone();
             let where_mapping = where_mapping.clone();
+            let order_mapping = order_mapping.clone();
             let name = name.clone();
 
             FieldFuture::new(async move {

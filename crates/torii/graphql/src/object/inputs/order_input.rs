@@ -33,13 +33,17 @@ impl InputObjectTrait for OrderInputObject {
     }
 
     fn enum_objects(&self) -> Option<Vec<Enum>> {
+        // Direction enum has only two members ASC and DESC
         let direction = Enum::new("Direction").item("ASC").item("DESC");
+
+        // Field Order enum consist of all members of a component
         let field_order = self
             .type_mapping
             .iter()
             .fold(Enum::new(format!("{}OrderField", self.type_name())), |acc, (ty_name, _)| {
                 acc.item(ty_name.to_ascii_uppercase())
             });
+
         Some(vec![direction, field_order])
     }
 }

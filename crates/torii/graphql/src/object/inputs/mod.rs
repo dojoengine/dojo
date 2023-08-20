@@ -2,8 +2,8 @@ use async_graphql::dynamic::{Enum, InputObject};
 
 use super::TypeMapping;
 
-pub mod order;
-pub mod r#where;
+pub mod order_input;
+pub mod where_input;
 
 pub trait InputObjectTrait {
     // Type name of the input graphql object, we don't need a name as this will always be an input
