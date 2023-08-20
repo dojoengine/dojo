@@ -11,7 +11,7 @@ use dojo::test_utils::spawn_test_world;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
 use dojo_erc::erc721::erc721::ERC721;
-use dojo_erc::erc721::interface::{IERC721, IERC721Dispatcher, IERC721DispatcherTrait};
+use dojo_erc::erc721::interface::{IERC721, IERC721ADispatcher, IERC721ADispatcherTrait};
 
 use dojo_erc::erc721::components::{
     erc_721_balance, erc_721_owner, erc_721_token_approval, operator_approval, base_uri
@@ -86,10 +86,10 @@ fn deploy_erc721(
 }
 
 
-fn deploy_default() -> (IWorldDispatcher, IERC721Dispatcher) {
+fn deploy_default() -> (IWorldDispatcher, IERC721ADispatcher) {
     let world = spawn_world();
     let erc721_address = deploy_erc721(world, DEPLOYER(), 'name', 'symbol', 'uri', 'seed-42');
-    let erc721 = IERC721Dispatcher { contract_address: erc721_address };
+    let erc721 = IERC721ADispatcher { contract_address: erc721_address };
 
     (world, erc721)
 }

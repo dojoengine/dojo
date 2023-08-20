@@ -173,8 +173,8 @@ mod ERC1155SetApprovalForAll {
     }
 
     fn execute(ctx: Context, params: ERC1155SetApprovalForAllParams) {
-        // TODO : safety checks !!
         let ERC1155SetApprovalForAllParams{token, owner, operator, approved } = params;
+        assert(owner != operator, 'ERC1155: wrong approval');
 
         OperatorApprovalTrait::set_approval_for_all(ctx.world, token, owner, operator, approved);
 
