@@ -229,11 +229,13 @@ impl State for Sql {
             entity_id, keys_str, component_names
         );
 
-        let member_results =
-            sqlx::query("SELECT * FROM component_members WHERE key == FALSE AND component_id = ?")
-                .bind(component.to_lowercase())
-                .fetch_all(&self.pool)
-                .await?;
+        let member_results = sqlx::query(
+            "SELECT * FROM component_members WHERE key == FALSE AND component_id = ? ORDER BY id \
+             ASC",
+        )
+        .bind(component.to_lowercase())
+        .fetch_all(&self.pool)
+        .await?;
 
         let (names_str, values_str) = format_values(member_results, values)?;
         let insert_components = format!(

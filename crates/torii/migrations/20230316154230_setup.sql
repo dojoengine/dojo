@@ -24,14 +24,16 @@ CREATE TABLE components (
 CREATE INDEX idx_components_created_at ON components (created_at);
 
 CREATE TABLE component_members(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     component_id TEXT NOT NULL,
     name TEXT NOT NULL,
     type TEXT NOT NULL,
     key BOOLEAN NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (component_id, name),
     FOREIGN KEY (component_id) REFERENCES components(id)
 );
+
+CREATE INDEX idx_component_members_component_id ON component_members (component_id);
 
 CREATE TABLE system_calls (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
