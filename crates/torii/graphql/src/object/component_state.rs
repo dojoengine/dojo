@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use async_graphql::dynamic::{Field, FieldFuture, InputObject, TypeRef};
+use async_graphql::dynamic::{Enum, Field, FieldFuture, InputObject, TypeRef};
 use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
@@ -12,6 +12,7 @@ use super::connection::{
     connection_arguments, decode_cursor, encode_cursor, parse_connection_arguments,
     ConnectionArguments,
 };
+use super::input::order::{order_argument, OrderInputObject};
 use super::input::r#where::{parse_where_argument, where_argument, WhereInputObject};
 use super::input::InputObjectTrait;
 use super::query::query_total_count;
@@ -40,12 +41,14 @@ pub struct ComponentStateObject {
     pub type_name: String,
     pub type_mapping: TypeMapping,
     pub where_input: WhereInputObject,
+    pub order_input: OrderInputObject,
 }
 
 impl ComponentStateObject {
     pub fn new(name: String, type_name: String, type_mapping: TypeMapping) -> Self {
         let where_input = WhereInputObject::new(type_name.as_str(), &type_mapping);
-        Self { name, type_name, type_mapping, where_input }
+        let order_input = OrderInputObject::new(type_name.as_str(), &type_mapping);
+        Self { name, type_name, type_mapping, where_input, order_input }
     }
 }
 
@@ -69,7 +72,11 @@ impl ObjectTrait for ComponentStateObject {
     }
 
     fn input_objects(&self) -> Option<Vec<InputObject>> {
-        Some(vec![self.where_input.create()])
+        Some(vec![self.where_input.input_object(), self.order_input.input_object()])
+    }
+
+    fn enum_objects(&self) -> Option<Vec<Enum>> {
+        self.order_input.enum_objects()
     }
 
     fn resolve_many(&self) -> Option<Field> {
@@ -101,6 +108,7 @@ impl ObjectTrait for ComponentStateObject {
         // Add relay connection fields (first, last, before, after, where)
         field = connection_arguments(field);
         field = where_argument(field, self.type_name());
+        field = order_argument(field, self.type_name());
 
         Some(field)
     }

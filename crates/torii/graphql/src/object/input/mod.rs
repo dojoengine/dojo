@@ -1,7 +1,8 @@
-use async_graphql::dynamic::InputObject;
+use async_graphql::dynamic::{Enum, InputObject};
 
 use super::TypeMapping;
 
+pub mod order;
 pub mod r#where;
 
 pub trait InputObjectTrait {
@@ -13,5 +14,10 @@ pub trait InputObjectTrait {
     fn type_mapping(&self) -> &TypeMapping;
 
     // Create a new graphql input object with fields defined from type mapping
-    fn create(&self) -> InputObject;
+    fn input_object(&self) -> InputObject;
+
+    // Enum objects
+    fn enum_objects(&self) -> Option<Vec<Enum>> {
+        None
+    }
 }

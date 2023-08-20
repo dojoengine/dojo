@@ -56,7 +56,7 @@ impl InputObjectTrait for WhereInputObject {
         &self.type_mapping
     }
 
-    fn create(&self) -> InputObject {
+    fn input_object(&self) -> InputObject {
         self.type_mapping.iter().fold(InputObject::new(self.type_name()), |acc, (ty_name, ty)| {
             acc.field(InputValue::new(ty_name.to_string(), TypeRef::named(ty.to_string())))
         })

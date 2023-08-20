@@ -9,7 +9,7 @@ mod query;
 pub mod system;
 pub mod system_call;
 
-use async_graphql::dynamic::{Field, FieldFuture, InputObject, Object, TypeRef};
+use async_graphql::dynamic::{Enum, Field, FieldFuture, InputObject, Object, TypeRef};
 use async_graphql::{Error, Name, Value};
 use indexmap::IndexMap;
 
@@ -48,6 +48,11 @@ pub trait ObjectTrait {
     // Input objects consist of {type_name}WhereInput for filtering and {type_name}Order for
     // ordering
     fn input_objects(&self) -> Option<Vec<InputObject>> {
+        None
+    }
+
+    // Enum objects
+    fn enum_objects(&self) -> Option<Vec<Enum>> {
         None
     }
 
