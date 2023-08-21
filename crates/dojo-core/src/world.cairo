@@ -20,6 +20,7 @@ trait IWorld<T> {
     fn register_system(ref self: T, class_hash: ClassHash);
     fn uuid(ref self: T) -> usize;
     fn emit(self: @T, keys: Span<felt252>, values: Span<felt252>);
+    fn log(ref self: T, ctx: Context, data: Span<felt252>);
     fn execute(ref self: T, system: felt252, calldata: Span<felt252>) -> Span<felt252>;
     fn entity(
         self: @T, component: felt252, query: Query, offset: u8, length: usize
@@ -379,6 +380,29 @@ mod world {
             );
 
             emit_event_syscall(keys, values).unwrap_syscall();
+        }
+
+        /// Logs the provided data.
+        ///
+        /// # Arguments
+        ///
+        /// * `ctx` - The execution context.
+        /// * `data` - The data to be logged.
+        fn log(ref self: ContractState, ctx: Context, data: Span<felt252>) {
+            // Validate that the call comes from an installed system
+            assert(
+                self.systems.read(ctx.system).is_non_zero(),
+                'only installed system can log'
+            );
+
+            // Append the caller_account and caller_system from the execution context to the keys
+            let keys = [ctx.origin.to_felt252(), ctx.system];
+            
+            // Append the execution_role to the data
+            let data = [ctx.execution_role, data];
+
+            // Emit the log event
+            emit_event_syscall(keys.span(), data.span()).unwrap_syscall();
         }
 
         /// Sets the component value for an entity.
