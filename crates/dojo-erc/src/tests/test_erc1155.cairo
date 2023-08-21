@@ -13,7 +13,10 @@ use dojo_erc::tests::test_erc1155_utils::{
 };
 
 use dojo_erc::erc165::interface::IERC165_ID;
-use dojo_erc::erc1155::interface::{IERC1155A,IERC1155ADispatcher,IERC1155ADispatcherTrait, IERC1155_ID, IERC1155_METADATA_ID, IERC1155_RECEIVER_ID};
+use dojo_erc::erc1155::interface::{
+    IERC1155A, IERC1155ADispatcher, IERC1155ADispatcherTrait, IERC1155_ID, IERC1155_METADATA_ID,
+    IERC1155_RECEIVER_ID
+};
 
 
 #[test]
@@ -45,8 +48,7 @@ fn test_should_support_interfaces() {
     assert(erc1155.supports_interface(IERC165_ID) == true, 'should support erc165');
     assert(erc1155.supports_interface(IERC1155_ID) == true, 'should support erc1155');
     assert(
-        erc1155.supports_interface(IERC1155_METADATA_ID) == true,
-        'should support erc1155_metadata'
+        erc1155.supports_interface(IERC1155_METADATA_ID) == true, 'should support erc1155_metadata'
     );
 }
 
@@ -496,9 +498,6 @@ fn test_safe_batch_transfer_from_approved_operator_preserve_operator_balance() {
     assert(balance_before_2 == balance_after_2, 'should be equal');
     assert(balance_before_3 == balance_after_3, 'should be equal');
 }
-
-
-
 // TODO : to be continued
 
 // TODO : add test if we support IERC1155Receiver

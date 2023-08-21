@@ -9,8 +9,10 @@ use traits::{Into, TryInto};
 
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
-use dojo_erc::erc1155::erc1155::{TransferSingle, TransferBatch};
-use dojo_erc::erc1155::erc1155::{IDojoERC1155Dispatcher, IDojoERC1155DispatcherTrait};
+use dojo_erc::erc1155::erc1155::ERC1155::{
+    ApprovalForAll, TransferSingle, TransferBatch, IERC1155EventsDispatcher,
+    IERC1155EventsDispatcherTrait
+};
 use dojo_erc::erc1155::components::{ERC1155BalanceTrait, OperatorApprovalTrait};
 
 fn emit_transfer_single(
@@ -23,7 +25,7 @@ fn emit_transfer_single(
     amount: u128
 ) {
     let event = TransferSingle { operator, from, to, id: id.into(), value: amount.into() };
-    IDojoERC1155Dispatcher { contract_address: token }.on_transfer_single(event.clone());
+    IERC1155EventsDispatcher { contract_address: token }.on_transfer_single(event.clone());
     emit!(world, event);
 }
 
@@ -48,7 +50,7 @@ fn emit_transfer_batch(
     let event = TransferBatch {
         operator: operator, from: from, to: to, ids: ids_u256, values: amounts_u256, 
     };
-    IDojoERC1155Dispatcher { contract_address: token }.on_transfer_batch(event.clone());
+    IERC1155EventsDispatcher { contract_address: token }.on_transfer_batch(event.clone());
     emit!(world, event);
 }
 
@@ -159,9 +161,7 @@ mod ERC1155SetApprovalForAll {
     use clone::Clone;
 
     use dojo_erc::erc1155::components::OperatorApprovalTrait;
-    use dojo_erc::erc1155::erc1155::{
-        IDojoERC1155Dispatcher, IDojoERC1155DispatcherTrait, ApprovalForAll
-    };
+    use super::{IERC1155EventsDispatcher, IERC1155EventsDispatcherTrait, ApprovalForAll};
 
 
     #[derive(Drop, Serde)]
@@ -179,7 +179,7 @@ mod ERC1155SetApprovalForAll {
         OperatorApprovalTrait::set_approval_for_all(ctx.world, token, owner, operator, approved);
 
         let event = ApprovalForAll { owner, operator, approved };
-        IDojoERC1155Dispatcher { contract_address: token }.on_approval_for_all(event.clone());
+        IERC1155EventsDispatcher { contract_address: token }.on_approval_for_all(event.clone());
         emit!(ctx.world, event);
     }
 }

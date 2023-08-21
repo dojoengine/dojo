@@ -1,3 +1,4 @@
+
 #[starknet::contract]
 mod ERC721 {
     use array::ArrayTrait;
@@ -63,7 +64,7 @@ mod ERC721 {
     }
 
     #[starknet::interface]
-    trait IERC721EventEmitter<ContractState> {
+    trait IERC721Events<ContractState> {
         fn on_transfer(ref self: ContractState, event: Transfer);
         fn on_approval(ref self: ContractState, event: Approval);
         fn on_approval_for_all(ref self: ContractState, event: ApprovalForAll);
@@ -265,7 +266,7 @@ mod ERC721 {
 
 
     #[external(v0)]
-    impl ERC721EventEmitter of IERC721EventEmitter<ContractState> {
+    impl ERC721EventEmitter of IERC721Events<ContractState> {
         fn on_transfer(ref self: ContractState, event: Transfer) {
             assert(get_caller_address() == self.world.read().executor(), 'ERC721: not authorized');
             self.emit(event);
