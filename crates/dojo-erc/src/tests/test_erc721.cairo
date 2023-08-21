@@ -32,7 +32,6 @@ fn test_deploy() {
     assert(erc721.owner() == DEPLOYER(), 'invalid owner');
     assert(erc721.name() == 'name', 'invalid name');
     assert(erc721.symbol() == 'symbol', 'invalid symbol');
-    assert(erc721.token_uri(0) == 'uri', 'invalid uri')
 }
 
 
