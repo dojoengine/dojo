@@ -24,7 +24,7 @@ use crate::sequencer::SequencerMessagingConfig;
 
 abigen!(
     StarknetMessagingLocal,
-    "./crates/katana/core/contracts/messaging/solidity/IStarknetMessagingLocal_ABI.json",
+    "contracts/messaging/solidity/IStarknetMessagingLocal_ABI.json",
     event_derives(serde::Deserialize, serde::Serialize)
 );
 
