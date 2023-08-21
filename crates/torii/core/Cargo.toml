@@ -14,7 +14,6 @@ async-trait.workspace = true
 chrono.workspace = true
 dojo-types = { path = "../../dojo-types" }
 dojo-world = { path = "../../dojo-world" }
-torii-graphql = { path = "../graphql" }
 log = "0.4.17"
 serde.workspace = true
 serde_json.workspace = true

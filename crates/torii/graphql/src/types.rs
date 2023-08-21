@@ -2,6 +2,8 @@ use std::collections::HashSet;
 use std::fmt;
 use std::str::FromStr;
 
+// NOTE: If adding/removing types, corresponding change needs to be made to torii-core `src/sql.rs`
+// in method sql_type()
 #[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
 pub enum ScalarType {
     U8,

@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use anyhow::Result;
 use async_trait::async_trait;
 use dojo_world::manifest::{Component, Manifest, System};
@@ -9,7 +7,6 @@ use sqlx::{Executor, Pool, Row, Sqlite};
 use starknet::core::types::FieldElement;
 use starknet_crypto::poseidon_hash_many;
 use tokio::sync::Mutex;
-use torii_graphql::types::ScalarType;
 
 use super::{State, World};
 
@@ -174,13 +171,11 @@ impl State for Sql {
                 continue;
             }
 
-            let sql_type = if ScalarType::from_str(&member.ty)?.is_numeric_type() {
-                "INTEGER"
-            } else {
-                "TEXT"
-            };
-
-            component_table_query.push_str(&format!("external_{} {}, ", member.name, sql_type));
+            component_table_query.push_str(&format!(
+                "external_{} {}, ",
+                member.name,
+                sql_type(&member.ty)?
+            ));
         }
 
         component_table_query.push_str(
@@ -316,7 +311,7 @@ fn format_values(
         .iter()
         .zip(types?.iter())
         .map(|(value, ty)| {
-            if ScalarType::from_str(ty)?.is_numeric_type() {
+            if sql_type(ty)? == "INTEGER" {
                 Ok(format!(",'{}'", value))
             } else {
                 Ok(format!(",'{:#x}'", value))
@@ -325,4 +320,14 @@ fn format_values(
         .collect();
 
     Ok((names?.join(""), values?.join("")))
+}
+
+// NOTE: If adding/removing types, corresponding change needs to be made to torii-graphql
+// `src/types.rs`
+fn sql_type(member_type: &str) -> Result<&str, anyhow::Error> {
+    match member_type {
+        "u8" | "u16" | "u32" | "u64" | "u128" | "u256" | "usize" | "bool" => Ok("INTEGER"),
+        "Cursor" | "ContractAddress" | "ClassHash" | "DateTime" | "felt252" => Ok("TEXT"),
+        _ => Err(anyhow::anyhow!("Unknown member type {}", member_type.to_string())),
+    }
 }
