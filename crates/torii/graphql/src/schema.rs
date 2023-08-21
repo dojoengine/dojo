@@ -1,6 +1,11 @@
 use anyhow::Result;
-use async_graphql::dynamic::{Field, Object, Scalar, Schema, Union};
+use async_graphql::dynamic::{
+    Field, FieldFuture, FieldValue, InputValue, Object, Scalar, Schema, Subscription,
+    SubscriptionField, SubscriptionFieldFuture, TypeRef, Union,
+};
+use async_graphql::Value;
 use sqlx::SqlitePool;
+use tokio_stream::StreamExt;
 
 use super::object::component::Component;
 use super::object::component_state::{type_mapping_query, ComponentStateObject};
@@ -12,13 +17,15 @@ use super::object::system_call::SystemCallObject;
 use super::object::ObjectTrait;
 use super::types::ScalarType;
 use super::utils::format_name;
+use crate::object::entity::Entity;
+use crate::simple_broker::SimpleBroker;
 
 // The graphql schema is built dynamically at runtime, this is because we won't know the schema of
 // the components until runtime. There are however, predefined objects such as entities and
 // system_calls, their schema is known but we generate them dynamically as well since async-graphql
 // does not allow mixing of static and dynamic schemas.
 pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
-    let mut schema_builder = Schema::build("Query", None, None);
+    let mut schema_builder = Schema::build("Query", Some("Mutation"), Some("Subscription"));
 
     // predefined objects
     let mut objects: Vec<Box<dyn ObjectTrait>> = vec![
@@ -74,8 +81,86 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
         // register gql objects
         schema_builder = schema_builder.register(object.create());
     }
+    let mutation_root = Object::new("Mutation") // we can iterate over objects to get the type name
+        .field(
+            Field::new("createEntity", TypeRef::named_nn(TypeRef::STRING), move |ctx| {
+                FieldFuture::new(async move {
+                    // let data: &DataContext = ctx.data().unwrap();
+                    // let state = Sql::new(data.pool.clone(), data.world_address).await.unwrap();
+                    // let component = ctx.args.try_get("component")?.string()?.to_string();
 
-    schema_builder.register(query_root).data(pool.clone()).finish().map_err(|e| e.into())
+                    // let keys = ctx
+                    //     .args
+                    //     .try_get("keys")?
+                    //     .list()?
+                    //     .iter()
+                    //     .map(|key| FieldElement::from_dec_str(key.string().unwrap()).unwrap())
+                    //     .collect::<Vec<FieldElement>>();
+
+                    // let position_values = ctx
+                    //     .args
+                    //     .try_get("values")?
+                    //     .list()?
+                    //     .iter()
+                    //     .map(|value| FieldElement::from_hex_be(value.string().unwrap()).unwrap())
+                    //     .collect::<Vec<FieldElement>>();
+
+                    // state
+                    //     .set_entity(component.clone(), keys.clone(), position_values)
+                    //     .await
+                    //     .unwrap();
+
+                    // // println!("{:?}", state.entities("entities".to_string()).await.unwrap());
+
+                    // let entity_id = format!("{:#x}", poseidon_hash_many(&keys.clone()));
+                    // let keys_str =
+                    //     keys.iter().map(|k| format!("{:#x},",
+                    // k)).collect::<Vec<String>>().join("");
+
+                    // let entity = Entity {
+                    //     id: entity_id.clone(),
+                    //     keys: Some(keys_str),
+                    //     component_names: component.clone(), // todo
+                    //     created_at: Default::default(),
+                    //     updated_at: Default::default(),
+                    // };
+                    let entity: Entity = Entity {
+                        id: "abc".to_string(),
+                        keys: "123".to_string(),
+                        component_names: "xyz".to_string(),
+                        created_at: Default::default(),
+                        updated_at: Default::default(),
+                    };
+                    let value_mapping = EntityObject::value_mapping(entity);
+
+                    SimpleBroker::publish(value_mapping); // publish entity object that has been inserted/updated in Database
+                    Result::Ok(Some(Value::from("abc".to_string())))
+                })
+            })
+            .argument(InputValue::new("component", TypeRef::named_nn(TypeRef::STRING)))
+            .argument(InputValue::new("keys", TypeRef::named_nn_list_nn(TypeRef::STRING)))
+            .argument(InputValue::new("values", TypeRef::named_nn_list_nn(TypeRef::STRING))),
+        );
+    // todo: find a way to iterate over fields to create arguments
+    let subscription_root = Subscription::new("Subscription").field(SubscriptionField::new(
+        "entityAdded",
+        TypeRef::named_nn(objects[0].type_name()),
+        |_| {
+            SubscriptionFieldFuture::new(async {
+                Result::Ok(
+                    SimpleBroker::<indexmap::IndexMap<async_graphql::Name, Value>>::subscribe()
+                        .map(|entity| Result::Ok(FieldValue::owned_any(entity))),
+                )
+            })
+        },
+    ));
+    schema_builder
+        .register(query_root)
+        .register(mutation_root)
+        .register(subscription_root)
+        .data(pool.clone())
+        .finish()
+        .map_err(|e| e.into())
 }
 
 async fn component_objects(pool: &SqlitePool) -> Result<(Vec<Box<dyn ObjectTrait>>, Union)> {
