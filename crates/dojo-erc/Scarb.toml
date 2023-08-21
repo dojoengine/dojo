@@ -7,6 +7,8 @@ version = "0.1.0"
 [cairo]
 sierra-replace-ids = true
 
+[lib]
+
 [dependencies]
 dojo = { path = "../dojo-core" }
 

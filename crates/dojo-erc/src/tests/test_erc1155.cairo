@@ -56,7 +56,6 @@ fn test_should_support_interfaces() {
 // uri
 //
 
-use debug::PrintTrait;
 
 #[test]
 #[available_gas(30000000)]

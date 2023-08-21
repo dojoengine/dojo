@@ -33,6 +33,10 @@ fn USER2() -> ContractAddress {
     starknet::contract_address_const::<0x222>()
 }
 
+fn USER3() -> ContractAddress {
+    starknet::contract_address_const::<0x333>()
+}
+
 fn ZERO() -> ContractAddress {
     starknet::contract_address_const::<0x0>()
 }
@@ -93,3 +97,31 @@ fn deploy_default() -> (IWorldDispatcher, IERC721ADispatcher) {
 
     (world, erc721)
 }
+
+
+fn deploy_testcase1() -> (IWorldDispatcher, IERC721ADispatcher) {
+    let world = spawn_world();
+    let erc721_address = deploy_erc721(world, DEPLOYER(), 'name', 'symbol', 'uri', 'seed-42');
+    let erc721 = IERC721ADispatcher { contract_address: erc721_address };
+
+    // user1 owns id : 1,2,3
+    erc721.mint(USER1(), 1);
+    erc721.mint(USER1(), 2);
+    erc721.mint(USER1(), 3);
+
+    // proxy owns id : 10, 11,12,13
+    erc721.mint(PROXY(), 10);
+    erc721.mint(PROXY(), 11);
+    erc721.mint(PROXY(), 12);
+    erc721.mint(PROXY(), 13);
+
+   //user2 owns id : 20
+    erc721.mint(USER2(), 20);
+
+    set_contract_address(USER1());
+    //user1 approve_for_all proxy
+    erc721.set_approval_for_all(PROXY(), true);
+
+    (world, erc721)
+}
+
