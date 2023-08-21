@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use dojo_world::manifest::{Component, Manifest, System};
@@ -7,6 +9,7 @@ use sqlx::{Executor, Pool, Row, Sqlite};
 use starknet::core::types::FieldElement;
 use starknet_crypto::poseidon_hash_many;
 use tokio::sync::Mutex;
+use torii_graphql::types::ScalarType;
 
 use super::{State, World};
 
@@ -171,7 +174,12 @@ impl State for Sql {
                 continue;
             }
 
-            let sql_type = as_sql_type(&member.ty)?;
+            let sql_type = if ScalarType::from_str(&member.ty)?.is_numeric_type() {
+                "INTEGER"
+            } else {
+                "TEXT"
+            };
+
             component_table_query.push_str(&format!("external_{} {}, ", member.name, sql_type));
         }
 
@@ -308,7 +316,7 @@ fn format_values(
         .iter()
         .zip(types?.iter())
         .map(|(value, ty)| {
-            if as_sql_type(ty)? == "INTEGER" {
+            if ScalarType::from_str(ty)?.is_numeric_type() {
                 Ok(format!(",'{}'", value))
             } else {
                 Ok(format!(",'{:#x}'", value))
@@ -317,22 +325,4 @@ fn format_values(
         .collect();
 
     Ok((names?.join(""), values?.join("")))
-}
-
-fn as_sql_type(s: &str) -> Result<&str, anyhow::Error> {
-    match s {
-        "u8" => Ok("INTEGER"),
-        "u16" => Ok("INTEGER"),
-        "u32" => Ok("INTEGER"),
-        "u64" => Ok("INTEGER"),
-        "u128" => Ok("TEXT"),
-        "u256" => Ok("TEXT"),
-        "usize" => Ok("INTEGER"),
-        "bool" => Ok("INTEGER"),
-        "Cursor" => Ok("TEXT"),
-        "ContractAddress" => Ok("TEXT"),
-        "DateTime" => Ok("TEXT"),
-        "felt252" => Ok("TEXT"),
-        _ => Err(anyhow::anyhow!("Unknown type {}", s.to_string())),
-    }
 }

@@ -6766,6 +6766,7 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tokio-util",
+ "torii-graphql",
  "tracing",
 ]
 
