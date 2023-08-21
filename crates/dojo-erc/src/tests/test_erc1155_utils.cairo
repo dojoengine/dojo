@@ -11,7 +11,7 @@ use dojo::test_utils::spawn_test_world;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
 use dojo_erc::erc1155::erc1155::ERC1155;
-use dojo_erc::erc1155::interface::{IERC1155A,IERC1155ADispatcher,IERC1155ADispatcherTrait};
+use dojo_erc::erc1155::interface::{IERC1155A, IERC1155ADispatcher, IERC1155ADispatcherTrait};
 
 use dojo_erc::erc1155::components::{erc_1155_balance, uri, operator_approval};
 use dojo_erc::erc1155::systems::{
@@ -34,6 +34,10 @@ fn USER1() -> ContractAddress {
 
 fn USER2() -> ContractAddress {
     starknet::contract_address_const::<0x222>()
+}
+
+fn USER3() -> ContractAddress {
+    starknet::contract_address_const::<0x333>()
 }
 
 fn PROXY() -> ContractAddress {

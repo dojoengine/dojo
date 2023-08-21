@@ -1,4 +1,3 @@
-
 #[starknet::contract]
 mod ERC721 {
     use array::ArrayTrait;
@@ -24,7 +23,6 @@ mod ERC721 {
 
     use dojo_erc::erc_common::utils::{to_calldata, ToCallDataTrait, system_calldata};
 
-    use debug::PrintTrait;
 
     #[storage]
     struct Storage {
@@ -109,9 +107,11 @@ mod ERC721 {
         }
 
         fn owner_of(self: @ContractState, token_id: u256) -> ContractAddress {
-            ERC721OwnerTrait::owner_of(
+            let owner = ERC721OwnerTrait::owner_of(
                 self.world.read(), get_contract_address(), token_id.try_into().unwrap()
-            )
+            );
+            assert(owner.is_non_zero(), 'ERC721: invalid token_id');
+            owner
         }
 
         fn get_approved(self: @ContractState, token_id: u256) -> ContractAddress {
@@ -211,6 +211,7 @@ mod ERC721 {
 
         fn token_uri(self: @ContractState, token_id: u256) -> felt252 {
             // TODO : add token_id to base_uri
+            assert(self.exists(token_id), 'ERC721: invalid token_id');
             BaseUriTrait::get_base_uri(self.world.read(), get_contract_address())
         }
     }

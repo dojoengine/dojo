@@ -83,6 +83,7 @@ mod ERC721Approve {
         let ERC721ApproveParams{token, caller, token_id, to } = params;
 
         assert(token == ctx.origin, 'ERC721: not authorized');
+        assert(caller != to, 'ERC721: invalid self approval');
 
         let owner = ERC721OwnerTrait::owner_of(ctx.world, token, token_id);
         assert(owner.is_non_zero(), 'ERC721: invalid token_id');
