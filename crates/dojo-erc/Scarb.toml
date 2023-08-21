@@ -12,8 +12,6 @@ sierra-replace-ids = true
 [dependencies]
 dojo = { path = "../dojo-core" }
 
-[lib]
-
 [scripts]
 build = "sozo build"
 migrate = "sozo migrate"
