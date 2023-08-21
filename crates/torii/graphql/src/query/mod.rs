@@ -5,6 +5,7 @@ use sqlx::{FromRow, QueryBuilder, Result, Sqlite};
 use self::filter::{Filter, FilterValue};
 
 pub mod filter;
+pub mod order;
 
 pub enum ID {
     Str(String),

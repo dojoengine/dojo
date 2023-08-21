@@ -1,7 +1,8 @@
-use async_graphql::dynamic::{Enum, Field, InputObject, InputValue, TypeRef};
+use async_graphql::dynamic::{Enum, Field, InputObject, InputValue, ResolverContext, TypeRef};
 
 use super::InputObjectTrait;
 use crate::object::TypeMapping;
+use crate::query::order::{Direction, Order};
 
 pub struct OrderInputObject {
     pub type_name: String,
@@ -24,6 +25,7 @@ impl InputObjectTrait for OrderInputObject {
     }
 
     fn input_object(&self) -> InputObject {
+        // direction and field values are required (not null)
         InputObject::new(self.type_name())
             .field(InputValue::new("direction", TypeRef::named_nn("Direction")))
             .field(InputValue::new(
@@ -41,7 +43,7 @@ impl InputObjectTrait for OrderInputObject {
             .type_mapping
             .iter()
             .fold(Enum::new(format!("{}OrderField", self.type_name())), |acc, (ty_name, _)| {
-                acc.item(ty_name.to_ascii_uppercase())
+                acc.item(ty_name.to_uppercase())
             });
 
         Some(vec![direction, field_order])
@@ -50,4 +52,15 @@ impl InputObjectTrait for OrderInputObject {
 
 pub fn order_argument(field: Field, type_name: &str) -> Field {
     field.argument(InputValue::new("order", TypeRef::named(format!("{}Order", type_name))))
+}
+
+pub fn parse_order_argument(ctx: &ResolverContext<'_>) -> Option<Order> {
+    let order_input = ctx.args.get("order")?;
+    let input_object = order_input.object().ok()?;
+    let dir_value = input_object.get("direction")?;
+    let field_value = input_object.get("field")?;
+
+    let direction = Direction::try_from(dir_value.enum_name().ok()?).ok()?;
+    let field = field_value.enum_name().ok()?.to_lowercase();
+    Some(Order { direction, field })
 }

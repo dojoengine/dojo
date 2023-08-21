@@ -71,25 +71,27 @@ pub fn parse_where_argument(
     ctx: &ResolverContext<'_>,
     where_mapping: &TypeMapping,
 ) -> Result<Vec<Filter>, Error> {
-    let mut filters: Vec<Filter> = Vec::new();
-    let where_input = ctx.args.try_get("where");
-    if let Ok(where_input) = where_input {
-        let input_object = where_input.object()?;
+    let where_input = match ctx.args.try_get("where") {
+        Ok(input) => input,
+        Err(_) => return Ok(Vec::new()),
+    };
 
-        for (ty_name, ty) in where_mapping.iter() {
-            if let Some(input_filter) = input_object.get(ty_name) {
+    let input_object = where_input.object()?;
+
+    let filters = where_mapping
+        .iter()
+        .filter_map(|(ty_name, ty)| {
+            input_object.get(ty_name).map(|input_filter| {
                 let data_type = match ty.to_string().as_str() {
                     TypeRef::STRING => FilterValue::String(input_filter.string()?.to_string()),
                     TypeRef::INT => FilterValue::Int(input_filter.i64()?),
-                    _ => {
-                        return Err(Error::from("Unsupported `where` argument type"));
-                    }
+                    _ => return Err(Error::from("Unsupported `where` argument type")),
                 };
 
-                filters.push(parse_filter(ty_name, data_type));
-            }
-        }
-    }
+                Ok(parse_filter(ty_name, data_type))
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
 
     Ok(filters)
 }

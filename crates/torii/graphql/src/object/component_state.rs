@@ -12,13 +12,14 @@ use super::connection::{
     connection_arguments, decode_cursor, encode_cursor, parse_connection_arguments,
     ConnectionArguments,
 };
-use super::inputs::order_input::{order_argument, OrderInputObject};
+use super::inputs::order_input::{order_argument, parse_order_argument, OrderInputObject};
 use super::inputs::where_input::{parse_where_argument, where_argument, WhereInputObject};
 use super::inputs::InputObjectTrait;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
 use crate::object::entity::{Entity, EntityObject};
 use crate::query::filter::{Filter, FilterValue};
+use crate::query::order::{Direction, Order};
 use crate::query::{query_by_id, query_total_count, ID};
 use crate::types::ScalarType;
 use crate::utils::extract_value::extract;
@@ -82,24 +83,24 @@ impl ObjectTrait for ComponentStateObject {
         let name = self.name.clone();
         let type_mapping = self.type_mapping.clone();
         let where_mapping = self.where_input.type_mapping.clone();
-        let order_mapping = self.order_input.type_mapping.clone();
         let field_name = format!("{}Components", self.name());
         let field_type = format!("{}Connection", self.type_name());
 
         let mut field = Field::new(field_name, TypeRef::named(field_type), move |ctx| {
             let type_mapping = type_mapping.clone();
             let where_mapping = where_mapping.clone();
-            let order_mapping = order_mapping.clone();
             let name = name.clone();
 
             FieldFuture::new(async move {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                 let table_name = format!("external_{}", name);
+                let order = parse_order_argument(&ctx);
                 let filters = parse_where_argument(&ctx, &where_mapping)?;
-                let total_count = query_total_count(&mut conn, &table_name, &filters).await?;
                 let connection = parse_connection_arguments(&ctx)?;
                 let data =
-                    component_states_query(&mut conn, &table_name, &connection, &filters).await?;
+                    component_states_query(&mut conn, &table_name, &order, &filters, &connection)
+                        .await?;
+                let total_count = query_total_count(&mut conn, &table_name, &filters).await?;
                 let connection = component_connection(&data, &type_mapping, total_count)?;
 
                 Ok(Some(Value::Object(connection)))
@@ -149,12 +150,14 @@ pub async fn component_state_by_id_query(
 pub async fn component_states_query(
     conn: &mut PoolConnection<Sqlite>,
     table_name: &str,
-    connection: &ConnectionArguments,
+    order: &Option<Order>,
     filters: &Vec<Filter>,
+    connection: &ConnectionArguments,
 ) -> sqlx::Result<Vec<SqliteRow>> {
     let mut query = format!("SELECT * FROM {}", table_name);
     let mut conditions = Vec::new();
 
+    // Handle after cursor if exists
     if let Some(after_cursor) = &connection.after {
         match decode_cursor(after_cursor.clone()) {
             Ok((created_at, id)) => {
@@ -164,6 +167,7 @@ pub async fn component_states_query(
         }
     }
 
+    // Handle before cursor if exists
     if let Some(before_cursor) = &connection.before {
         match decode_cursor(before_cursor.clone()) {
             Ok((created_at, id)) => {
@@ -173,6 +177,7 @@ pub async fn component_states_query(
         }
     }
 
+    // Handle filters
     for filter in filters {
         let condition = match filter.value {
             FilterValue::Int(i) => format!("{} {} {}", filter.field, filter.comparator, i),
@@ -182,14 +187,30 @@ pub async fn component_states_query(
         conditions.push(condition);
     }
 
+    // Combine conditions query
     if !conditions.is_empty() {
         query.push_str(&format!(" WHERE {}", conditions.join(" AND ")));
     }
 
+    // Handle order and limit
+    // NOTE: Order is determiined by the `order` param if provided, otherwise it's inferred from the
+    // `first` or `last` param. Explicity ordering take precedence
     let limit = connection.first.or(connection.last).unwrap_or(DEFAULT_LIMIT);
-    let order = if connection.first.is_some() { "DESC" } else { "ASC" };
+    let (column, direction) = if let Some(order) = order {
+        let column = format!("external_{}", order.field);
+        (
+            column,
+            match order.direction {
+                Direction::Asc => "ASC",
+                Direction::Desc => "DESC",
+            },
+        )
+    } else {
+        // if no order specified default to created_at
+        ("created_at".to_string(), if connection.first.is_some() { "DESC" } else { "ASC" })
+    };
 
-    query.push_str(&format!(" ORDER BY created_at {}, entity_id {} LIMIT {}", order, order, limit));
+    query.push_str(&format!(" ORDER BY {column} {direction} LIMIT {limit}"));
 
     sqlx::query(&query).fetch_all(conn).await
 }
