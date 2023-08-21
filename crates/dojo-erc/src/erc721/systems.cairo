@@ -8,7 +8,7 @@ use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 use dojo_erc::erc721::erc721::ERC721;
 
 use dojo_erc::erc721::erc721::ERC721::{
-    IERC721EventEmitterDispatcher, IERC721EventEmitterDispatcherTrait, Approval, Transfer,
+    IERC721EventsDispatcher, IERC721EventsDispatcherTrait, Approval, Transfer,
     ApprovalForAll
 };
 
@@ -26,7 +26,7 @@ fn emit_transfer(
     token_id: felt252,
 ) {
     let event = Transfer { from, to, token_id: token_id.into() };
-    IERC721EventEmitterDispatcher { contract_address: token }.on_transfer(event.clone());
+    IERC721EventsDispatcher { contract_address: token }.on_transfer(event.clone());
     emit!(world, event);
 }
 
@@ -38,7 +38,7 @@ fn emit_approval(
     token_id: felt252,
 ) {
     let event = Approval { owner, to, token_id: token_id.into() };
-    IERC721EventEmitterDispatcher { contract_address: token }.on_approval(event.clone());
+    IERC721EventsDispatcher { contract_address: token }.on_approval(event.clone());
     emit!(world, event);
 }
 
@@ -51,7 +51,7 @@ fn emit_approval_for_all(
     approved: bool,
 ) {
     let event = ApprovalForAll { owner, operator, approved };
-    IERC721EventEmitterDispatcher { contract_address: token }.on_approval_for_all(event.clone());
+    IERC721EventsDispatcher { contract_address: token }.on_approval_for_all(event.clone());
     emit!(world, event);
 }
 
@@ -68,7 +68,7 @@ mod ERC721Approve {
     use dojo_erc::erc721::components::{
         ERC721OwnerTrait, ERC721TokenApprovalTrait, OperatorApprovalTrait
     };
-    use super::{IERC721EventEmitterDispatcher, IERC721EventEmitterDispatcherTrait, Approval};
+    use super::{IERC721EventsDispatcher, IERC721EventsDispatcherTrait, Approval};
     use zeroable::Zeroable;
 
     #[derive(Drop, Serde)]

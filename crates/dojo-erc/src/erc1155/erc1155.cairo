@@ -1,40 +1,3 @@
-use starknet::ContractAddress;
-use serde::Serde;
-use clone::Clone;
-
-
-#[derive(Clone, Drop, Serde, starknet::Event)]
-struct TransferSingle {
-    operator: ContractAddress,
-    from: ContractAddress,
-    to: ContractAddress,
-    id: u256,
-    value: u256
-}
-
-#[derive(Clone, Drop, Serde, starknet::Event)]
-struct TransferBatch {
-    operator: ContractAddress,
-    from: ContractAddress,
-    to: ContractAddress,
-    ids: Array<u256>,
-    values: Array<u256>
-}
-
-#[derive(Clone, Drop, Serde, starknet::Event)]
-struct ApprovalForAll {
-    owner: ContractAddress,
-    operator: ContractAddress,
-    approved: bool
-}
-
-#[starknet::interface]
-trait IDojoERC1155<ContractState> {
-    fn on_transfer_single(ref self: ContractState, event: TransferSingle);
-    fn on_transfer_batch(ref self: ContractState, event: TransferBatch);
-    fn on_approval_for_all(ref self: ContractState, event: ApprovalForAll);
-}
-
 #[starknet::contract]
 mod ERC1155 {
     use array::ArrayTrait;
@@ -66,7 +29,38 @@ mod ERC1155 {
     const UNLIMITED_ALLOWANCE: felt252 =
         3618502788666131213697322783095070105623107215331596699973092056135872020480;
 
-    use super::{TransferSingle, TransferBatch, ApprovalForAll};
+
+    #[derive(Clone, Drop, Serde, starknet::Event)]
+    struct TransferSingle {
+        operator: ContractAddress,
+        from: ContractAddress,
+        to: ContractAddress,
+        id: u256,
+        value: u256
+    }
+
+    #[derive(Clone, Drop, Serde, starknet::Event)]
+    struct TransferBatch {
+        operator: ContractAddress,
+        from: ContractAddress,
+        to: ContractAddress,
+        ids: Array<u256>,
+        values: Array<u256>
+    }
+
+    #[derive(Clone, Drop, Serde, starknet::Event)]
+    struct ApprovalForAll {
+        owner: ContractAddress,
+        operator: ContractAddress,
+        approved: bool
+    }
+
+    #[starknet::interface]
+    trait IERC1155Events<ContractState> {
+        fn on_transfer_single(ref self: ContractState, event: TransferSingle);
+        fn on_transfer_batch(ref self: ContractState, event: TransferBatch);
+        fn on_approval_for_all(ref self: ContractState, event: ApprovalForAll);
+    }
 
     #[event]
     #[derive(Drop, starknet::Event)]
@@ -244,7 +238,7 @@ mod ERC1155 {
     }
 
     #[external(v0)]
-    impl DojoERC1155 of super::IDojoERC1155<ContractState> {
+    impl ERC1155Events of IERC1155Events<ContractState> {
         fn on_transfer_single(ref self: ContractState, event: TransferSingle) {
             assert(get_caller_address() == self.world.read().executor(), 'ERC1155: not authorized');
             self.emit(event);
