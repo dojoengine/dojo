@@ -13,8 +13,15 @@ mod ERC721 {
         ERC721Owner, ERC721OwnerTrait, BaseUri, BaseUriTrait, ERC721Balance, ERC721BalanceTrait,
         ERC721TokenApproval, ERC721TokenApprovalTrait, OperatorApproval, OperatorApprovalTrait
     };
-    use dojo_erc::erc721::interface::IERC721;
-    use dojo_erc::erc_common::utils::{to_calldata, ToCallDataTrait};
+    use dojo_erc::erc721::systems::{
+        ERC721ApproveParams, ERC721SetApprovalForAllParams, ERC721TransferFromParams,
+        ERC721MintParams, ERC721BurnParams
+    };
+
+    use dojo_erc::erc165::interface::{IERC165, IERC165_ID};
+    use dojo_erc::erc721::interface::{IERC721, IERC721Metadata, IERC721_ID, IERC721_METADATA_ID};
+
+    use dojo_erc::erc_common::utils::{to_calldata, ToCallDataTrait, system_calldata};
 
     use debug::PrintTrait;
 
@@ -83,32 +90,21 @@ mod ERC721 {
         world.execute('ERC721SetBaseUri', to_calldata(get_contract_address()).plus(uri).data);
     }
 
+
+    #[external(v0)]
+    impl ERC165 of IERC165<ContractState> {
+        fn supports_interface(self: @ContractState, interface_id: u32) -> bool {
+            interface_id == IERC165_ID
+                || interface_id == IERC721_ID
+                || interface_id == IERC721_METADATA_ID
+        }
+    }
+
     #[external(v0)]
     impl ERC721 of IERC721<ContractState> {
-        fn owner(self: @ContractState) -> ContractAddress {
-            self.owner_.read()
-        }
-
-        fn name(self: @ContractState) -> felt252 {
-            self.name_.read()
-        }
-
-        fn symbol(self: @ContractState) -> felt252 {
-            self.symbol_.read()
-        }
-
-        fn token_uri(self: @ContractState, token_id: u256) -> felt252 {
-            // TODO : add token_id to base_uri
-            BaseUriTrait::get_base_uri(self.world.read(), get_contract_address())
-        }
-
         fn balance_of(self: @ContractState, account: ContractAddress) -> u256 {
             ERC721BalanceTrait::balance_of(self.world.read(), get_contract_address(), account)
                 .into()
-        }
-
-        fn exists(self: @ContractState, token_id: u256) -> bool {
-            self.owner_of(token_id).is_non_zero()
         }
 
         fn owner_of(self: @ContractState, token_id: u256) -> ContractAddress {
@@ -127,16 +123,19 @@ mod ERC721 {
         }
 
         fn approve(ref self: ContractState, to: ContractAddress, token_id: u256) {
-            let token = get_contract_address();
-            let caller = get_caller_address();
-            let token_id_felt: felt252 = token_id.try_into().unwrap();
-
             self
                 .world
                 .read()
                 .execute(
                     'ERC721Approve',
-                    to_calldata(token).plus(caller).plus(token_id_felt).plus(to).data
+                    system_calldata(
+                        ERC721ApproveParams {
+                            token: get_contract_address(),
+                            caller: get_caller_address(),
+                            token_id: token_id.try_into().unwrap(),
+                            to
+                        }
+                    )
                 );
         }
 
@@ -151,75 +150,119 @@ mod ERC721 {
         fn set_approval_for_all(
             ref self: ContractState, operator: ContractAddress, approved: bool
         ) {
-            let owner = get_caller_address();
-
-            assert(owner != operator, 'ERC1155: wrong approval');
-
             self
                 .world
                 .read()
                 .execute(
                     'ERC721SetApprovalForAll',
-                    to_calldata(get_contract_address())
-                        .plus(owner)
-                        .plus(operator)
-                        .plus(approved)
-                        .data
+                    system_calldata(
+                        ERC721SetApprovalForAllParams {
+                            token: get_contract_address(),
+                            owner: get_caller_address(),
+                            operator,
+                            approved
+                        }
+                    )
                 );
         }
-
 
         fn transfer_from(
             ref self: ContractState, from: ContractAddress, to: ContractAddress, token_id: u256
         ) {
-            let token_id_felt: felt252 = token_id.try_into().unwrap();
-
             self
                 .world
                 .read()
                 .execute(
                     'ERC721TransferFrom',
-                    to_calldata(get_contract_address())
-                        .plus(get_caller_address())
-                        .plus(from)
-                        .plus(to)
-                        .plus(token_id_felt)
-                        .data
+                    system_calldata(
+                        ERC721TransferFromParams {
+                            token: get_contract_address(),
+                            caller: get_caller_address(),
+                            from,
+                            to,
+                            token_id: token_id.try_into().unwrap()
+                        }
+                    )
                 );
         }
 
+        fn safe_transfer_from(
+            ref self: ContractState,
+            from: ContractAddress,
+            to: ContractAddress,
+            token_id: u256,
+            data: Span<felt252>
+        ) {
+            // TODO: check if we should do it
+            panic(array!['not implemented !']);
+        }
+    }
+
+    #[external(v0)]
+    impl ERC721Metadata of IERC721Metadata<ContractState> {
+        fn name(self: @ContractState) -> felt252 {
+            self.name_.read()
+        }
+
+        fn symbol(self: @ContractState) -> felt252 {
+            self.symbol_.read()
+        }
+
+        fn token_uri(self: @ContractState, token_id: u256) -> felt252 {
+            // TODO : add token_id to base_uri
+            BaseUriTrait::get_base_uri(self.world.read(), get_contract_address())
+        }
+    }
+
+
+    #[external(v0)]
+    #[generate_trait]
+    impl ERC721Custom of ERC721CustomTrait {
+        fn exists(self: @ContractState, token_id: u256) -> bool {
+            self.owner_of(token_id).is_non_zero()
+        }
+
+        fn owner(self: @ContractState) -> ContractAddress {
+            self.owner_.read()
+        }
 
         fn transfer(ref self: ContractState, to: ContractAddress, token_id: u256) {
             self.transfer_from(get_caller_address(), to, token_id);
         }
 
         fn mint(ref self: ContractState, to: ContractAddress, token_id: u256) {
-            let token_id_felt: felt252 = token_id.try_into().unwrap();
-
             self
                 .world
                 .read()
                 .execute(
                     'ERC721Mint',
-                    to_calldata(get_contract_address()).plus(to).plus(token_id_felt).data
+                    system_calldata(
+                        ERC721MintParams {
+                            token: get_contract_address(),
+                            recipient: to,
+                            token_id: token_id.try_into().unwrap()
+                        }
+                    )
                 );
         }
 
         fn burn(ref self: ContractState, token_id: u256) {
-            let token_id_felt: felt252 = token_id.try_into().unwrap();
-
             self
                 .world
                 .read()
                 .execute(
                     'ERC721Burn',
-                    to_calldata(get_contract_address())
-                        .plus(get_caller_address())
-                        .plus(token_id_felt)
-                        .data
+                    system_calldata(
+                        ERC721BurnParams {
+                            token: get_contract_address(),
+                            caller: get_caller_address(),
+                            token_id: token_id.try_into().unwrap()
+                        }
+                    )
                 );
         }
     }
+
 
     #[external(v0)]
     impl ERC721EventEmitter of IERC721EventEmitter<ContractState> {

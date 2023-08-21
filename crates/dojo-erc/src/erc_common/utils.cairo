@@ -21,3 +21,10 @@ fn to_calldata<T, impl TSerde: Serde<T>, impl TD: Drop<T>>(data: T) -> ToCallDat
     data.serialize(ref calldata);
     ToCallData { data: calldata }
 }
+
+
+fn system_calldata<T, impl TSerde: Serde<T>, impl TD: Drop<T>>(data: T) -> Array<felt252> {
+    let mut calldata: Array<felt252> = ArrayTrait::new();
+    data.serialize(ref calldata);
+    calldata
+}

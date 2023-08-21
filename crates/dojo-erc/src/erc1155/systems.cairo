@@ -78,10 +78,11 @@ fn update(
 
         emit_transfer_single(world, token, operator, from, to, id, amount);
 
-        if (to.is_non_zero()) {//do_safe_transfer_acceptance_check(operator, from, to, id.into(), amount.into(), data);
+        if (to
+            .is_non_zero()) { //do_safe_transfer_acceptance_check(operator, from, to, id.into(), amount.into(), data);
         } else {
             emit_transfer_batch(world, token, operator, from, to, ids.span(), amounts.span());
-            if (to.is_non_zero()) {//do_safe_batch_transfer_acceptance_check(
+            if (to.is_non_zero()) { //do_safe_batch_transfer_acceptance_check(
             //    operator, from, to, ids, amounts, data
             //);
             }
@@ -143,6 +144,12 @@ fn do_safe_batch_transfer_acceptance_check(
 // );
 }
 
+use ERC1155SetApprovalForAll::ERC1155SetApprovalForAllParams;
+use ERC1155SafeTransferFrom::ERC1155SafeTransferFromParams;
+use ERC1155SafeBatchTransferFrom::ERC1155SafeBatchTransferFromParams;
+use ERC1155Mint::ERC1155MintParams;
+use ERC1155Burn::ERC1155BurnParams;
+
 #[system]
 mod ERC1155SetApprovalForAll {
     use traits::Into;
@@ -155,14 +162,19 @@ mod ERC1155SetApprovalForAll {
     use dojo_erc::erc1155::erc1155::{
         IDojoERC1155Dispatcher, IDojoERC1155DispatcherTrait, ApprovalForAll
     };
-    fn execute(
-        ctx: Context,
+
+
+    #[derive(Drop, Serde)]
+    struct ERC1155SetApprovalForAllParams {
         token: ContractAddress,
         owner: ContractAddress,
         operator: ContractAddress,
-        approved: bool
-    ) {
-        // TODO : safety checks !!
+        approved: bool,
+    }
+
+    fn execute(ctx: Context, params: ERC1155SetApprovalForAllParams) {
+        let ERC1155SetApprovalForAllParams{token, owner, operator, approved } = params;
+        assert(owner != operator, 'ERC1155: wrong approval');
 
         OperatorApprovalTrait::set_approval_for_all(ctx.world, token, owner, operator, approved);
 
@@ -197,8 +209,8 @@ mod ERC1155SafeTransferFrom {
     use zeroable::Zeroable;
     use starknet::ContractAddress;
 
-    fn execute(
-        ctx: Context,
+    #[derive(Drop, Serde)]
+    struct ERC1155SafeTransferFromParams {
         token: ContractAddress,
         operator: ContractAddress,
         from: ContractAddress,
@@ -206,7 +218,10 @@ mod ERC1155SafeTransferFrom {
         id: felt252,
         amount: u128,
         data: Array<u8>
-    ) {
+    }
+
+    fn execute(ctx: Context, params: ERC1155SafeTransferFromParams) {
+        let ERC1155SafeTransferFromParams{token, operator, from, to, id, amount, data } = params;
         assert(ctx.origin == operator || ctx.origin == token, 'ERC1155: not authorized');
         assert(to.is_non_zero(), 'ERC1155: to cannot be 0');
 
@@ -223,8 +238,8 @@ mod ERC1155SafeBatchTransferFrom {
     use zeroable::Zeroable;
     use starknet::ContractAddress;
 
-    fn execute(
-        ctx: Context,
+    #[derive(Drop, Serde)]
+    struct ERC1155SafeBatchTransferFromParams {
         token: ContractAddress,
         operator: ContractAddress,
         from: ContractAddress,
@@ -232,7 +247,12 @@ mod ERC1155SafeBatchTransferFrom {
         ids: Array<felt252>,
         amounts: Array<u128>,
         data: Array<u8>
-    ) {
+    }
+
+    fn execute(ctx: Context, params: ERC1155SafeBatchTransferFromParams) {
+        let ERC1155SafeBatchTransferFromParams{token, operator, from, to, ids, amounts, data } =
+            params;
+
         assert(ctx.origin == operator || ctx.origin == token, 'ERC1155: not authorized');
         assert(to.is_non_zero(), 'ERC1155: to cannot be 0');
 
@@ -250,15 +270,19 @@ mod ERC1155Mint {
     use zeroable::Zeroable;
     use starknet::ContractAddress;
 
-    fn execute(
-        ctx: Context,
+    #[derive(Drop, Serde)]
+    struct ERC1155MintParams {
         token: ContractAddress,
         operator: ContractAddress,
         to: ContractAddress,
         ids: Array<felt252>,
         amounts: Array<u128>,
         data: Array<u8>
-    ) {
+    }
+
+    fn execute(ctx: Context, params: ERC1155MintParams) {
+        let ERC1155MintParams{token, operator, to, ids, amounts, data } = params;
+
         assert(ctx.origin == operator || ctx.origin == token, 'ERC1155: not authorized');
         assert(to.is_non_zero(), 'ERC1155: invalid receiver');
 
@@ -276,14 +300,17 @@ mod ERC1155Burn {
     use zeroable::Zeroable;
     use starknet::ContractAddress;
 
-    fn execute(
-        ctx: Context,
+    #[derive(Drop, Serde)]
+    struct ERC1155BurnParams {
         token: ContractAddress,
         operator: ContractAddress,
         from: ContractAddress,
         ids: Array<felt252>,
         amounts: Array<u128>
-    ) {
+    }
+
+    fn execute(ctx: Context, params: ERC1155BurnParams) {
+        let ERC1155BurnParams{token, operator, from, ids, amounts } = params;
         assert(ctx.origin == operator || ctx.origin == token, 'ERC1155: not authorized');
         assert(from.is_non_zero(), 'ERC1155: invalid sender');
 

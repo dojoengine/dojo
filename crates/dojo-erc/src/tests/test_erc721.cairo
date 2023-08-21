@@ -11,7 +11,11 @@ use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 use dojo_erc::tests::test_erc721_utils::{
     spawn_world, deploy_erc721, deploy_default, USER1, USER2, DEPLOYER, ZERO, PROXY
 };
-use dojo_erc::erc721::interface::{IERC721, IERC721Dispatcher, IERC721DispatcherTrait};
+
+use dojo_erc::erc165::interface::IERC165_ID;
+use dojo_erc::erc721::interface::{
+    IERC721, IERC721ADispatcher, IERC721ADispatcherTrait, IERC721_ID, IERC721_METADATA_ID
+};
 use dojo_erc::erc721::erc721::ERC721::{Event, Transfer, Approval, ApprovalForAll};
 // actually it's possible to mint -> burn -> mint -> ...
 // todo : add Minted component to keep track of minted ids
@@ -21,7 +25,7 @@ use dojo_erc::erc721::erc721::ERC721::{Event, Transfer, Approval, ApprovalForAll
 fn test_deploy() {
     let world = spawn_world();
     let erc721_address = deploy_erc721(world, DEPLOYER(), 'name', 'symbol', 'uri', 'seed-42');
-    let erc721 = IERC721Dispatcher { contract_address: erc721_address };
+    let erc721 = IERC721ADispatcher { contract_address: erc721_address };
 
     assert(erc721.owner() == DEPLOYER(), 'invalid owner');
     assert(erc721.name() == 'name', 'invalid name');
@@ -35,6 +39,22 @@ fn test_deploy() {
 fn test_deploy_default() {
     let (world, erc721) = deploy_default();
     assert(erc721.name() == 'name', 'invalid name');
+}
+
+//
+// supports_interface
+//
+
+#[test]
+#[available_gas(30000000)]
+fn test_should_support_interfaces() {
+    let (world, erc721) = deploy_default();
+
+    assert(erc721.supports_interface(IERC165_ID) == true, 'should support erc165');
+    assert(erc721.supports_interface(IERC721_ID) == true, 'should support erc721');
+    assert(
+        erc721.supports_interface(IERC721_METADATA_ID) == true, 'should support erc721_metadata'
+    );
 }
 
 
@@ -321,39 +341,77 @@ fn test_event_transfer() {
     let (world, erc721) = deploy_default();
 
     erc721.mint(USER1(), 42);
-    assert(
-        @starknet::testing::pop_log(erc721.contract_address)
-            .unwrap() == @Event::Transfer(Transfer { from: ZERO(), to: USER1(), token_id: 42 }),
-        'invalid Transfer event'
-    );
 
     // impersonate user1
     set_contract_address(USER1());
     // transfer token_id 42 from user1 to user2
     erc721.transfer(USER2(), 42);
+
+    // impersonate user2
+    set_contract_address(USER2());
+    // user2 burns token_id 42
+    erc721.burn(42);
+
+    // mint
+    assert(
+        @starknet::testing::pop_log(erc721.contract_address)
+            .unwrap() == @Event::Transfer(Transfer { from: ZERO(), to: USER1(), token_id: 42 }),
+        'invalid Transfer event'
+    );
+    // transfer
     assert(
         @starknet::testing::pop_log(erc721.contract_address)
             .unwrap() == @Event::Transfer(Transfer { from: USER1(), to: USER2(), token_id: 42 }),
         'invalid Transfer event'
     );
-
-    
-// ERROR : 
-// error: Failed setting up runner.
-// Caused by:
-// #24625->#24626: Got 'Unknown ap change' error while moving [3].
-
-// impersonate user2
-//set_contract_address(USER2());
-// // user2 burns token_id 42
-// erc721.burn(42);
-// assert(
-//     @starknet::testing::pop_log(erc721.contract_address)
-//         .unwrap() == @Event::Transfer(Transfer { from: USER2(), to: ZERO(), token_id: 42 }),
-//     'invalid Transfer event'
-// );
+    // burn
+    assert(
+        @starknet::testing::pop_log(erc721.contract_address)
+            .unwrap() == @Event::Transfer(Transfer { from: USER2(), to: ZERO(), token_id: 42 }),
+        'invalid Transfer event'
+    );
 }
 
+// #[test]
+// #[available_gas(50000000)]
+// fn test_event_transfer_failing() {
+//     let (world, erc721) = deploy_default();
+
+//     erc721.mint(USER1(), 42);
+//     // mint
+//     assert(
+//         @starknet::testing::pop_log(erc721.contract_address)
+//             .unwrap() == @Event::Transfer(Transfer { from: ZERO(), to: USER1(), token_id: 42 }),
+//         'invalid Transfer event'
+//     );
+//     // impersonate user1
+//     set_contract_address(USER1());
+//     // transfer token_id 42 from user1 to user2
+//     erc721.transfer(USER2(), 42);
+//     // transfer
+//     assert(
+//         @starknet::testing::pop_log(erc721.contract_address)
+//             .unwrap() == @Event::Transfer(Transfer { from: USER1(), to: USER2(), token_id: 42 }),
+//         'invalid Transfer event'
+//     );
+
+//     // impersonate user2
+//     set_contract_address(USER2());
+//     // user2 burns token_id 42
+//     erc721.burn(42);
+
+//     // burn
+//     assert(
+//         @starknet::testing::pop_log(erc721.contract_address)
+//             .unwrap() == @Event::Transfer(Transfer { from: USER2(), to: ZERO(), token_id: 42 }),
+//         'invalid Transfer event'
+//     );
+// // ERROR : 
+// // error: Failed setting up runner.
+// // Caused by:
+// // #24625->#24626: Got 'Unknown ap change' error while moving [3].
+
+// }
 
 #[test]
 #[available_gas(50000000)]

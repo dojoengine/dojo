@@ -12,6 +12,12 @@ use dojo_erc::erc721::erc721::ERC721::{
     ApprovalForAll
 };
 
+use ERC721Approve::ERC721ApproveParams;
+use ERC721SetApprovalForAll::ERC721SetApprovalForAllParams;
+use ERC721TransferFrom::ERC721TransferFromParams;
+use ERC721Mint::ERC721MintParams;
+use ERC721Burn::ERC721BurnParams;
+
 fn emit_transfer(
     world: IWorldDispatcher,
     token: ContractAddress,
@@ -65,13 +71,17 @@ mod ERC721Approve {
     use super::{IERC721EventEmitterDispatcher, IERC721EventEmitterDispatcherTrait, Approval};
     use zeroable::Zeroable;
 
-    fn execute(
-        ctx: Context,
+    #[derive(Drop, Serde)]
+    struct ERC721ApproveParams {
         token: ContractAddress,
         caller: ContractAddress,
         token_id: felt252,
         to: ContractAddress
-    ) {
+    }
+
+    fn execute(ctx: Context, params: ERC721ApproveParams) {
+        let ERC721ApproveParams{token, caller, token_id, to } = params;
+
         assert(token == ctx.origin, 'ERC721: not authorized');
 
         let owner = ERC721OwnerTrait::owner_of(ctx.world, token, token_id);
@@ -99,17 +109,21 @@ mod ERC721SetApprovalForAll {
 
     use dojo_erc::erc721::components::{OperatorApprovalTrait};
 
-    fn execute(
-        ctx: Context,
+
+    #[derive(Drop, Serde)]
+    struct ERC721SetApprovalForAllParams {
         token: ContractAddress,
         owner: ContractAddress,
         operator: ContractAddress,
         approved: bool
-    ) {
-        // assert(token == ctx.origin, 'ERC721: not authorized');
-        // assert(owner != operator, 'ERC721: self approval');
+    }
 
-        // TODO : safety checks !!
+    fn execute(ctx: Context, params: ERC721SetApprovalForAllParams) {
+        let ERC721SetApprovalForAllParams{token, owner, operator, approved } = params;
+
+        assert(token == ctx.origin, 'ERC721: not authorized');
+        assert(owner != operator, 'ERC721: self approval');
+
         OperatorApprovalTrait::set_approval_for_all(ctx.world, token, owner, operator, approved);
 
         // emit event
@@ -129,14 +143,18 @@ mod ERC721TransferFrom {
         OperatorApprovalTrait, ERC721BalanceTrait, ERC721TokenApprovalTrait, ERC721OwnerTrait,
     };
 
-    fn execute(
-        ctx: Context,
-        token: ContractAddress,
+    #[derive(Drop, Serde)]
+    struct ERC721TransferFromParams {
         caller: ContractAddress,
+        token: ContractAddress,
         from: ContractAddress,
         to: ContractAddress,
         token_id: felt252
-    ) {
+    }
+
+    fn execute(ctx: Context, params: ERC721TransferFromParams) {
+        let ERC721TransferFromParams{caller, token, from, to, token_id } = params;
+
         assert(token == ctx.origin, 'ERC721: not authorized');
         assert(!to.is_zero(), 'ERC721: invalid receiver');
 
@@ -172,10 +190,16 @@ mod ERC721Mint {
     use dojo::world::Context;
     use dojo_erc::erc721::components::{ERC721BalanceTrait, ERC721OwnerTrait};
 
+    #[derive(Drop, Serde)]
+    struct ERC721MintParams {
+        token: ContractAddress,
+        recipient: ContractAddress,
+        token_id: felt252
+    }
 
-    fn execute(
-        ctx: Context, token: ContractAddress, recipient: ContractAddress, token_id: felt252
-    ) {
+    fn execute(ctx: Context, params: ERC721MintParams) {
+        let ERC721MintParams{token, recipient, token_id } = params;
+
         assert(token == ctx.origin, 'ERC721: not authorized');
         assert(recipient.is_non_zero(), 'ERC721: mint to 0');
 
@@ -201,7 +225,16 @@ mod ERC721Burn {
         ERC721BalanceTrait, ERC721OwnerTrait, ERC721TokenApprovalTrait, OperatorApprovalTrait,
     };
 
-    fn execute(ctx: Context, token: ContractAddress, caller: ContractAddress, token_id: felt252) {
+      #[derive(Drop, Serde)]
+    struct ERC721BurnParams {
+        token: ContractAddress,
+        caller: ContractAddress,
+        token_id: felt252
+    }
+
+    fn execute(ctx: Context, params: ERC721BurnParams) {
+        let ERC721BurnParams{token, caller, token_id } = params;
+
         assert(token == ctx.origin, 'ERC721: not authorized');
 
         let owner = ERC721OwnerTrait::owner_of(ctx.world, token, token_id);

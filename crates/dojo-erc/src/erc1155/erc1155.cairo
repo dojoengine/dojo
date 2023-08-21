@@ -2,6 +2,7 @@ use starknet::ContractAddress;
 use serde::Serde;
 use clone::Clone;
 
+
 #[derive(Clone, Drop, Serde, starknet::Event)]
 struct TransferSingle {
     operator: ContractAddress,
@@ -49,24 +50,21 @@ mod ERC1155 {
         Uri, ERC1155BalanceTrait, OperatorApproval, OperatorApprovalTrait
     };
     use dojo_erc::erc1155::interface::{
-        IERC1155, IERC1155TokenReceiver, IERC1155TokenReceiverDispatcher,
-        IERC1155TokenReceiverDispatcherTrait,
+        IERC1155, IERC1155Metadata, IERC1155TokenReceiver, IERC1155TokenReceiverDispatcher,
+        IERC1155TokenReceiverDispatcherTrait, IERC1155_ID, IERC1155_METADATA_ID,
+        IERC1155_RECEIVER_ID
     };
-    use dojo_erc::erc165::{IERC165, IERC165Dispatcher, IERC165DispatcherTrait};
-    use dojo_erc::erc_common::utils::{to_calldata, ToCallDataTrait};
+    use dojo_erc::erc165::interface::{IERC165, IERC165_ID};
+
+    use dojo_erc::erc_common::utils::{to_calldata, ToCallDataTrait, system_calldata};
+
+    use dojo_erc::erc1155::systems::{
+        ERC1155SetApprovalForAllParams, ERC1155SafeTransferFromParams,
+        ERC1155SafeBatchTransferFromParams, ERC1155MintParams, ERC1155BurnParams
+    };
 
     const UNLIMITED_ALLOWANCE: felt252 =
         3618502788666131213697322783095070105623107215331596699973092056135872020480;
-
-    // Account
-    const IACCOUNT_ID: u32 = 0xa66bd575_u32;
-    // ERC 165 interface codes
-    const INTERFACE_ERC165: u32 = 0x01ffc9a7_u32;
-    const INTERFACE_ERC1155: u32 = 0xd9b67a26_u32;
-    const INTERFACE_ERC1155_METADATA: u32 = 0x0e89341c_u32;
-    const INTERFACE_ERC1155_RECEIVER: u32 = 0x4e2312e0_u32;
-    const ON_ERC1155_RECEIVED_SELECTOR: u32 = 0xf23a6e61_u32;
-    const ON_ERC1155_BATCH_RECEIVED_SELECTOR: u32 = 0xbc197c81_u32;
 
     use super::{TransferSingle, TransferBatch, ApprovalForAll};
 
@@ -101,25 +99,26 @@ mod ERC1155 {
     }
 
     #[external(v0)]
-    impl ERC1155 of IERC1155<ContractState> {
+    impl ERC165 of IERC165<ContractState> {
         fn supports_interface(self: @ContractState, interface_id: u32) -> bool {
-            interface_id == INTERFACE_ERC165
-                || interface_id == INTERFACE_ERC1155
-                || interface_id == INTERFACE_ERC1155_METADATA
+            interface_id == IERC165_ID
+                || interface_id == IERC1155_ID
+                || interface_id == IERC1155_METADATA_ID
         }
+    }
 
-        //
-        // ERC1155Metadata
-        //
+    #[external(v0)]
+    impl ERC1155Metadata of IERC1155Metadata<ContractState> {
         fn uri(self: @ContractState, token_id: u256) -> felt252 {
             let token = get_contract_address();
             let token_id_felt: felt252 = token_id.try_into().unwrap();
             get!(self.world.read(), (token), Uri).uri
         }
+    }
 
-        //
-        // ERC1155
-        //
+
+    #[external(v0)]
+    impl ERC1155 of IERC1155<ContractState> {
         fn balance_of(self: @ContractState, account: ContractAddress, id: u256) -> u256 {
             ERC1155BalanceTrait::balance_of(
                 self.world.read(), get_contract_address(), account, id.try_into().unwrap()
@@ -163,20 +162,19 @@ mod ERC1155 {
         fn set_approval_for_all(
             ref self: ContractState, operator: ContractAddress, approved: bool
         ) {
-            let owner = get_caller_address();
-
-            assert(owner != operator, 'ERC1155: wrong approval');
-
             self
                 .world
                 .read()
                 .execute(
                     'ERC1155SetApprovalForAll',
-                    to_calldata(get_contract_address())
-                        .plus(owner)
-                        .plus(operator)
-                        .plus(approved)
-                        .data
+                    system_calldata(
+                        ERC1155SetApprovalForAllParams {
+                            token: get_contract_address(),
+                            owner: get_caller_address(),
+                            operator,
+                            approved
+                        }
+                    )
                 );
         }
 
@@ -188,21 +186,22 @@ mod ERC1155 {
             amount: u256,
             data: Array<u8>
         ) {
-            let idf: felt252 = id.try_into().unwrap();
-            let amount128: u128 = amount.try_into().unwrap();
             self
                 .world
                 .read()
                 .execute(
                     'ERC1155SafeTransferFrom',
-                    to_calldata(get_contract_address())
-                        .plus(get_caller_address())
-                        .plus(from)
-                        .plus(to)
-                        .plus(idf)
-                        .plus(amount128)
-                        .plus(data)
-                        .data
+                    system_calldata(
+                        ERC1155SafeTransferFromParams {
+                            token: get_contract_address(),
+                            operator: get_caller_address(),
+                            from,
+                            to,
+                            id: id.try_into().unwrap(),
+                            amount: amount.try_into().unwrap(),
+                            data: data
+                        }
+                    )
                 );
         }
 
@@ -229,14 +228,17 @@ mod ERC1155 {
                 .read()
                 .execute(
                     'ERC1155SafeBatchTransferFrom',
-                    to_calldata(get_contract_address())
-                        .plus(get_caller_address())
-                        .plus(from)
-                        .plus(to)
-                        .plus(idsf)
-                        .plus(amounts128)
-                        .plus(data)
-                        .data
+                    system_calldata(
+                        ERC1155SafeBatchTransferFromParams {
+                            token: get_contract_address(),
+                            operator: get_caller_address(),
+                            from,
+                            to,
+                            ids: idsf,
+                            amounts: amounts128,
+                            data: data
+                        }
+                    )
                 );
         }
     }
@@ -258,45 +260,51 @@ mod ERC1155 {
     }
 
 
-    // TODO: use systems directly for these instead.
-
     #[external(v0)]
-    fn owner(self: @ContractState) -> ContractAddress {
-        self.owner_.read()
-    }
+    #[generate_trait]
+    impl ERC721Custom of ERC721CustomTrait {
+        // TODO: use systems directly for these instead.
+        fn owner(self: @ContractState) -> ContractAddress {
+            self.owner_.read()
+        }
 
-    #[external(v0)]
-    fn mint(
-        ref self: ContractState, to: ContractAddress, id: felt252, amount: u128, data: Array<u8>
-    ) {
-        self
-            .world
-            .read()
-            .execute(
-                'ERC1155Mint',
-                to_calldata(get_contract_address())
-                    .plus(get_caller_address())
-                    .plus(to)
-                    .plus(array![id])
-                    .plus(array![amount])
-                    .plus(data)
-                    .data
-            );
-    }
+        fn mint(
+            ref self: ContractState, to: ContractAddress, id: felt252, amount: u128, data: Array<u8>
+        ) {
+            self
+                .world
+                .read()
+                .execute(
+                    'ERC1155Mint',
+                    system_calldata(
+                        ERC1155MintParams {
+                            token: get_contract_address(),
+                            operator: get_caller_address(),
+                            to,
+                            ids: array![id],
+                            amounts: array![amount],
+                            data: data
+                        }
+                    )
+                );
+        }
 
-    #[external(v0)]
-    fn burn(ref self: ContractState, from: ContractAddress, id: felt252, amount: u128) {
-        self
-            .world
-            .read()
-            .execute(
-                'ERC1155Burn',
-                to_calldata(get_contract_address())
-                    .plus(get_caller_address())
-                    .plus(from)
-                    .plus(array![id])
-                    .plus(array![amount])
-                    .data
-            );
+        fn burn(ref self: ContractState, from: ContractAddress, id: felt252, amount: u128) {
+            self
+                .world
+                .read()
+                .execute(
+                    'ERC1155Burn',
+                    system_calldata(
+                        ERC1155BurnParams {
+                            token: get_contract_address(),
+                            operator: get_caller_address(),
+                            from,
+                            ids: array![id],
+                            amounts: array![amount]
+                        }
+                    )
+                );
+        }
     }
 }
