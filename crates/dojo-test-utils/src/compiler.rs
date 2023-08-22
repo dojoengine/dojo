@@ -1,4 +1,4 @@
-use std::env::{self};
+use std::env;
 
 use assert_fs::TempDir;
 use camino::{Utf8Path, Utf8PathBuf};
@@ -14,11 +14,10 @@ pub fn build_test_config(path: &str) -> anyhow::Result<Config> {
 
     let cairo_plugins = CairoPluginRepository::new();
 
-    let path = Utf8PathBuf::from_path_buf(path.into()).unwrap();
-
     let cache_dir = TempDir::new().unwrap();
     let config_dir = TempDir::new().unwrap();
 
+    let path = Utf8PathBuf::from_path_buf(path.into()).unwrap();
     Config::builder(path.canonicalize_utf8().unwrap())
         .global_cache_dir_override(Some(Utf8Path::from_path(cache_dir.path()).unwrap()))
         .global_config_dir_override(Some(Utf8Path::from_path(config_dir.path()).unwrap()))
