@@ -4,4 +4,113 @@
 test_manifest_file
 
 //! > expected_manifest_file
-expected manifest file will go here
+{
+  "world": {
+    "name": "world",
+    "address": null,
+    "class_hash": "0x1527b232cbd77c7f021fdc129339d7623edfd9a9c79a1b9add29c9064961497"
+  },
+  "executor": {
+    "name": "executor",
+    "address": null,
+    "class_hash": "0x7b79892389a0c9fe22f74b1d28a9e9185c7b6d2c60cc1df814053e47e9078c2"
+  },
+  "systems": [
+    {
+      "name": "spawn",
+      "inputs": [
+        {
+          "name": "self",
+          "type": "@dojo_examples::systems::spawn::ContractState"
+        }
+      ],
+      "outputs": [],
+      "class_hash": "0x73a2c968589ad1bf663ae71cdd7e55125265dbbfece0992ab993e0711fbfb1f",
+      "dependencies": []
+    },
+    {
+      "name": "move",
+      "inputs": [
+        {
+          "name": "self",
+          "type": "@dojo_examples::systems::move::ContractState"
+        },
+        {
+          "name": "direction",
+          "type": "dojo_examples::systems::move::Direction"
+        }
+      ],
+      "outputs": [],
+      "class_hash": "0x5df94ea0e971f9c98c222350f0acdb8fea75759678a7d922ca454d14408430f",
+      "dependencies": []
+    },
+    {
+      "name": "library_call",
+      "inputs": [
+        {
+          "name": "self",
+          "type": "@dojo::world::library_call::ContractState"
+        },
+        {
+          "name": "class_hash",
+          "type": "core::starknet::class_hash::ClassHash"
+        },
+        {
+          "name": "entrypoint",
+          "type": "core::felt252"
+        },
+        {
+          "name": "calladata",
+          "type": "core::array::Span::<core::felt252>"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "core::array::Span::<core::felt252>"
+        }
+      ],
+      "class_hash": "0x5c3f8568adfef908692f02fcfcc80e303c237183fe864f6cff8c34d29d3f130",
+      "dependencies": []
+    }
+  ],
+  "contracts": [],
+  "components": [
+    {
+      "name": "Moves",
+      "members": [
+        {
+          "name": "player",
+          "type": "ContractAddress",
+          "key": true
+        },
+        {
+          "name": "remaining",
+          "type": "u8",
+          "key": false
+        }
+      ],
+      "class_hash": "0x5baa2a6749eebb5c2206c497a31c760455709e37f42bec5a7418bb98126d284"
+    },
+    {
+      "name": "Position",
+      "members": [
+        {
+          "name": "player",
+          "type": "ContractAddress",
+          "key": true
+        },
+        {
+          "name": "x",
+          "type": "u32",
+          "key": false
+        },
+        {
+          "name": "y",
+          "type": "u32",
+          "key": false
+        }
+      ],
+      "class_hash": "0x4973c97a1cd5e141d6dfe05c36517234851118ea703e510fcb72a39a092c228"
+    }
+  ]
+}

@@ -1,13 +1,8 @@
-use std::collections::HashMap;
-use std::env;
+use std::{env, fs};
 
-use cairo_lang_filesystem::db::FilesGroup;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
-use dojo_test_utils::compiler::build_test_db;
-use smol_str::SmolStr;
-use starknet::core::types::FieldElement;
-
-use crate::manifest::Manifest;
+use dojo_test_utils::compiler::build_test_config;
+use scarb::ops;
 
 cairo_lang_test_utils::test_file_test!(
     manifest_file,
@@ -19,22 +14,16 @@ cairo_lang_test_utils::test_file_test!(
 );
 
 pub fn test_manifest_file(
-    inputs: &OrderedHashMap<String, String>,
+    _inputs: &OrderedHashMap<String, String>,
 ) -> OrderedHashMap<String, String> {
-    let db = &mut build_test_db("../../examples/ecs/Scarb.toml").unwrap();
-    let class_hash = FieldElement::from_hex_be("0x123").unwrap();
+    let config = build_test_config("./src/manifest_test_crate/Scarb.toml").unwrap();
+    let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
 
-    let mut compiled_contracts: HashMap<SmolStr, FieldElement> = HashMap::new();
-    compiled_contracts.insert("World".into(), class_hash);
-    compiled_contracts.insert("Store".into(), class_hash);
-    compiled_contracts.insert("Indexer".into(), class_hash);
-    compiled_contracts.insert("Executor".into(), class_hash);
-    compiled_contracts
-        .insert("PositionComponent".into(), FieldElement::from_hex_be("0x420").unwrap());
-    compiled_contracts.insert("MoveSystem".into(), FieldElement::from_hex_be("0x69").unwrap());
+    let packages = ws.members().map(|p| p.id).collect();
+    ops::compile(packages, &ws).unwrap_or_else(|op| panic!("Error compiling: {op:?}"));
 
-    let manifest = Manifest::new(db, &db.crates(), compiled_contracts);
+    let generated_file =
+        fs::read_to_string("./src/manifest_test_crate/target/dev/manifest.json").unwrap();
 
-    dbg!(&manifest);
-    todo!("Compare generated manifest file with expected one in inputs");
+    OrderedHashMap::from([("expected_manifest_file".into(), generated_file)])
 }
