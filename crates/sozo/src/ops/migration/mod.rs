@@ -1,7 +1,6 @@
 use std::path::Path;
 
 use anyhow::{anyhow, bail, Context, Result};
-use dojo_client::contract::world::WorldContract;
 use dojo_world::manifest::{Manifest, ManifestError};
 use dojo_world::metadata::Environment;
 use dojo_world::migration::strategy::{prepare_for_migration, MigrationStrategy};
@@ -15,13 +14,16 @@ use starknet::core::types::{
 };
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
+use torii_client::contract::world::WorldContract;
 
 #[cfg(test)]
 #[path = "migration_test.rs"]
 mod migration_test;
 mod ui;
 
-use starknet::providers::{JsonRpcClient, Provider, ProviderError};
+use starknet::providers::{
+    JsonRpcClient, MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage,
+};
 use starknet::signers::{LocalWallet, Signer};
 use ui::MigrationUi;
 
@@ -45,7 +47,7 @@ where
     // Setup account for migration and fetch world address if it exists.
 
     let (world_address, account) =
-        setup_env(account, starknet, world, env_metadata.as_ref(), config).await?;
+        setup_env(account, starknet, world, env_metadata.as_ref(), config, name.as_ref()).await?;
 
     // Load local and remote World manifests.
 
@@ -102,6 +104,7 @@ async fn setup_env(
     world: WorldOptions,
     env_metadata: Option<&Environment>,
     config: &Config,
+    name: Option<&String>,
 ) -> Result<(Option<FieldElement>, SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>)> {
     let world_address = world.address(env_metadata).ok();
 
@@ -112,13 +115,17 @@ async fn setup_env(
 
         let address = account.address();
 
-        config.ui().print(format!("\nMigration account: {address:#x}\n"));
+        config.ui().print(format!("\nMigration account: {address:#x}"));
+        if let Some(name) = name {
+            config.ui().print(format!("\nWorld name: {name}\n"));
+        }
 
         match account.provider().get_class_hash_at(BlockId::Tag(BlockTag::Pending), address).await {
             Ok(_) => Ok(account),
-            Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
-                Err(anyhow!("Account with address {:#x} doesn't exist.", account.address()))
-            }
+            Err(ProviderError::StarknetError(StarknetErrorWithMessage {
+                code: MaybeUnknownErrorCode::Known(StarknetError::ContractNotFound),
+                ..
+            })) => Err(anyhow!("Account with address {:#x} doesn't exist.", account.address())),
             Err(e) => Err(e.into()),
         }
     }

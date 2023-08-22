@@ -432,6 +432,7 @@ pub fn broadcasted_deploy_account_rpc_to_api_transaction(
         class_hash,
         constructor_calldata,
         contract_address_salt,
+        ..
     } = transaction;
 
     let contract_address = get_contract_address(

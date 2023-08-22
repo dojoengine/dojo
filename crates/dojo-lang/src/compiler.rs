@@ -7,6 +7,7 @@ use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_filesystem::db::FilesGroup;
 use cairo_lang_filesystem::ids::{CrateId, CrateLongId};
 use cairo_lang_semantic::db::SemanticGroup;
+use cairo_lang_starknet::abi;
 use cairo_lang_starknet::contract::{find_contracts, ContractDeclaration};
 use cairo_lang_starknet::contract_class::{compile_prepared_db, ContractClass};
 use cairo_lang_utils::UpcastMut;
@@ -85,7 +86,8 @@ impl Compiler for DojoCompiler {
         };
 
         // (contract name, class hash)
-        let mut compiled_classes: HashMap<SmolStr, FieldElement> = HashMap::new();
+        let mut compiled_classes: HashMap<SmolStr, (FieldElement, Option<abi::Contract>)> =
+            HashMap::new();
 
         for (decl, class) in zip(contracts, classes) {
             let target_name = &unit.target().name;
@@ -96,10 +98,10 @@ impl Compiler for DojoCompiler {
             serde_json::to_writer_pretty(file.deref_mut(), &class)
                 .with_context(|| format!("failed to serialize contract: {contract_name}"))?;
 
-            let class_hash = compute_class_hash_of_contract_class(class).with_context(|| {
+            let class_hash = compute_class_hash_of_contract_class(&class).with_context(|| {
                 format!("problem computing class hash for contract `{contract_name}`")
             })?;
-            compiled_classes.insert(contract_name, class_hash);
+            compiled_classes.insert(contract_name, (class_hash, class.abi));
         }
 
         let mut file = target_dir.open_rw("manifest.json", "output file", ws.config())?;
@@ -111,7 +113,7 @@ impl Compiler for DojoCompiler {
     }
 }
 
-fn compute_class_hash_of_contract_class(class: ContractClass) -> Result<FieldElement> {
+fn compute_class_hash_of_contract_class(class: &ContractClass) -> Result<FieldElement> {
     let class_str = serde_json::to_string(&class)?;
     let sierra_class = serde_json::from_str::<SierraClass>(&class_str)
         .map_err(|e| anyhow!("error parsing Sierra class: {e}"))?;

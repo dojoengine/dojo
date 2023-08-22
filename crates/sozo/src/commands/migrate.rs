@@ -31,8 +31,15 @@ pub struct MigrateArgs {
 }
 
 impl MigrateArgs {
-    pub fn run(self, config: &Config) -> Result<()> {
+    pub fn run(mut self, config: &Config) -> Result<()> {
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+
+        // If `name` was not specified use package name from `Scarb.toml` file if it exists
+        if self.name.is_none() {
+            if let Some(root_package) = ws.root_package() {
+                self.name = Some(root_package.id.name.to_string());
+            }
+        }
 
         let target_dir = ws.target_dir().path_existent().unwrap();
         let target_dir = target_dir.join(ws.config().profile().as_str());

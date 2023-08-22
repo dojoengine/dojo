@@ -3,6 +3,7 @@ use std::path::Path;
 
 use ::serde::{Deserialize, Serialize};
 use anyhow::{anyhow, Result};
+use cairo_lang_starknet::abi;
 use dojo_types::component::Member;
 use dojo_types::system::Dependency;
 use serde_with::serde_as;
@@ -12,7 +13,9 @@ use starknet::core::types::{BlockId, BlockTag, FieldElement, FunctionCall, Stark
 use starknet::core::utils::{
     cairo_short_string_to_felt, get_selector_from_name, CairoShortStringToFeltError,
 };
-use starknet::providers::{Provider, ProviderError};
+use starknet::providers::{
+    MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage,
+};
 use thiserror::Error;
 
 #[cfg(test)]
@@ -44,6 +47,7 @@ pub struct Component {
     pub members: Vec<Member>,
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
+    pub abi: Option<abi::Contract>,
 }
 
 /// System input ABI.
@@ -71,6 +75,7 @@ pub struct System {
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
     pub dependencies: Vec<Dependency>,
+    pub abi: Option<abi::Contract>,
 }
 
 #[serde_as]
@@ -81,6 +86,7 @@ pub struct Contract {
     pub address: Option<FieldElement>,
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
+    pub abi: Option<abi::Contract>,
 }
 
 #[serde_as]
@@ -114,9 +120,10 @@ impl Manifest {
             .get_class_hash_at(BlockId::Tag(BlockTag::Pending), world_address)
             .await
             .map_err(|err| match err {
-                ProviderError::StarknetError(StarknetError::ContractNotFound) => {
-                    ManifestError::RemoteWorldNotFound
-                }
+                ProviderError::StarknetError(StarknetErrorWithMessage {
+                    code: MaybeUnknownErrorCode::Known(StarknetError::ContractNotFound),
+                    ..
+                }) => ManifestError::RemoteWorldNotFound,
                 _ => ManifestError::Provider(err),
             })?;
 
@@ -136,9 +143,10 @@ impl Manifest {
             .get_class_hash_at(BlockId::Tag(BlockTag::Pending), executor_address)
             .await
             .map_err(|err| match err {
-                ProviderError::StarknetError(StarknetError::ContractNotFound) => {
-                    ManifestError::ExecutorNotFound
-                }
+                ProviderError::StarknetError(StarknetErrorWithMessage {
+                    code: MaybeUnknownErrorCode::Known(StarknetError::ContractNotFound),
+                    ..
+                }) => ManifestError::ExecutorNotFound,
                 _ => ManifestError::Provider(err),
             })?;
 
@@ -205,11 +213,13 @@ impl Manifest {
                 name: WORLD_CONTRACT_NAME.into(),
                 class_hash: world_class_hash,
                 address: Some(world_address),
+                ..Default::default()
             },
             executor: Contract {
                 name: EXECUTOR_CONTRACT_NAME.into(),
                 address: Some(executor_address),
                 class_hash: executor_class_hash,
+                ..Default::default()
             },
         })
     }

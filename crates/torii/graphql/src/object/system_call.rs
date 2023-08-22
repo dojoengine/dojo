@@ -7,10 +7,10 @@ use sqlx::pool::PoolConnection;
 use sqlx::{FromRow, Pool, Result, Sqlite};
 
 use super::connection::connection_output;
-use super::query::{query_all, query_by_id, query_total_count, ID};
 use super::system::SystemObject;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
+use crate::query::{query_all, query_by_id, query_total_count, ID};
 use crate::types::ScalarType;
 use crate::utils::extract_value::extract;
 
@@ -89,7 +89,8 @@ impl ObjectTrait for SystemCallObject {
             |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let total_count = query_total_count(&mut conn, "system_calls").await?;
+                    let total_count =
+                        query_total_count(&mut conn, "system_calls", &Vec::new()).await?;
                     let data: Vec<SystemCall> =
                         query_all(&mut conn, "system_calls", DEFAULT_LIMIT).await?;
                     let system_calls: Vec<ValueMapping> =
