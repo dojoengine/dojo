@@ -22,8 +22,7 @@ pub fn test_manifest_file(
     let packages = ws.members().map(|p| p.id).collect();
     ops::compile(packages, &ws).unwrap_or_else(|op| panic!("Error compiling: {op:?}"));
 
-    let generated_file =
-        fs::read_to_string("./src/manifest_test_crate/target/dev/manifest.json").unwrap();
+    let generated_file = fs::read_to_string(config.manifest_path()).unwrap();
 
     OrderedHashMap::from([("expected_manifest_file".into(), generated_file)])
 }
