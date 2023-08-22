@@ -10,10 +10,12 @@ version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+async-graphql = { version = "5.0.8", features = [ "chrono", "dynamic-schema" ] }
 async-trait.workspace = true
 chrono.workspace = true
 dojo-types = { path = "../../dojo-types" }
 dojo-world = { path = "../../dojo-world" }
+indexmap = "1.9.3"
 torii-graphql = { path = "../graphql" }
 
 log = "0.4.17"

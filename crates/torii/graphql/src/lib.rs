@@ -1,5 +1,5 @@
 mod constants;
-mod object;
+pub mod object;
 pub mod schema;
 pub mod server;
 pub mod simple_broker;

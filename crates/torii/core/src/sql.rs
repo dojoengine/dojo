@@ -1,5 +1,7 @@
 use anyhow::Result;
+use async_graphql::Value;
 use async_trait::async_trait;
+use chrono::Utc;
 use dojo_world::manifest::{Component, Manifest, System};
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
@@ -7,6 +9,8 @@ use sqlx::{Executor, Pool, Row, Sqlite};
 use starknet::core::types::FieldElement;
 use starknet_crypto::poseidon_hash_many;
 use tokio::sync::Mutex;
+use torii_graphql::object::entity::{Entity, EntityObject};
+use torii_graphql::simple_broker::SimpleBroker;
 
 use super::{State, World};
 
@@ -252,6 +256,16 @@ impl State for Sql {
         // tx commit required
         self.queue(vec![insert_entities, insert_components]).await;
         self.execute().await?;
+        let entity = Entity {
+            id: entity_id.clone(),
+            keys: keys_str,
+            component_names,
+            created_at: Default::default(),
+            updated_at: Utc::now(),
+        };
+        let value_mapping: indexmap::IndexMap<async_graphql::Name, Value> =
+            EntityObject::value_mapping(entity);
+        SimpleBroker::publish(value_mapping);
         Ok(())
     }
 

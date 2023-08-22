@@ -5,6 +5,7 @@ use async_graphql::dynamic::{
 };
 use async_graphql::Value;
 use sqlx::SqlitePool;
+use starknet_crypto::{poseidon_hash_many, FieldElement};
 use tokio_stream::StreamExt;
 
 use super::object::component::Component;
@@ -17,7 +18,6 @@ use super::object::system_call::SystemCallObject;
 use super::object::ObjectTrait;
 use super::types::ScalarType;
 use super::utils::format_name;
-use crate::object::entity::Entity;
 use crate::simple_broker::SimpleBroker;
 
 // The graphql schema is built dynamically at runtime, this is because we won't know the schema of
@@ -81,10 +81,22 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
         // register gql objects
         schema_builder = schema_builder.register(object.create());
     }
+    // temporary mutation
     let mutation_root = Object::new("Mutation") // we can iterate over objects to get the type name
         .field(
             Field::new("createEntity", TypeRef::named_nn(TypeRef::STRING), move |ctx| {
-                FieldFuture::new(async move { Result::Ok(Some(Value::from("abc".to_string()))) })
+                FieldFuture::new(async move {
+                    let keys = ctx
+                        .args
+                        .try_get("keys")?
+                        .list()?
+                        .iter()
+                        .map(|key| FieldElement::from_dec_str(key.string().unwrap()).unwrap())
+                        .collect::<Vec<FieldElement>>();
+                    let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
+
+                    Result::Ok(Some(Value::from(entity_id)))
+                })
             })
             .argument(InputValue::new("component", TypeRef::named_nn(TypeRef::STRING)))
             .argument(InputValue::new("keys", TypeRef::named_nn_list_nn(TypeRef::STRING)))

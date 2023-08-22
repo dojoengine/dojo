@@ -6752,11 +6752,13 @@ name = "torii-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-graphql",
  "async-trait",
  "camino",
  "chrono",
  "dojo-types",
  "dojo-world",
+ "indexmap 1.9.3",
  "log",
  "serde",
  "serde_json",
