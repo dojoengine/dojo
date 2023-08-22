@@ -171,8 +171,11 @@ impl State for Sql {
                 continue;
             }
 
-            let sql_type = as_sql_type(&member.ty)?;
-            component_table_query.push_str(&format!("external_{} {}, ", member.name, sql_type));
+            component_table_query.push_str(&format!(
+                "external_{} {}, ",
+                member.name,
+                sql_type(&member.ty)?
+            ));
         }
 
         component_table_query.push_str(
@@ -310,7 +313,7 @@ fn format_values(
         .iter()
         .zip(types?.iter())
         .map(|(value, ty)| {
-            if as_sql_type(ty)? == "INTEGER" {
+            if sql_type(ty)? == "INTEGER" {
                 Ok(format!(",'{}'", value))
             } else {
                 Ok(format!(",'{:#x}'", value))
@@ -321,20 +324,12 @@ fn format_values(
     Ok((names?.join(""), values?.join("")))
 }
 
-fn as_sql_type(s: &str) -> Result<&str, anyhow::Error> {
-    match s {
-        "u8" => Ok("INTEGER"),
-        "u16" => Ok("INTEGER"),
-        "u32" => Ok("INTEGER"),
-        "u64" => Ok("INTEGER"),
-        "u128" => Ok("TEXT"),
-        "u256" => Ok("TEXT"),
-        "usize" => Ok("INTEGER"),
-        "bool" => Ok("INTEGER"),
-        "Cursor" => Ok("TEXT"),
-        "ContractAddress" => Ok("TEXT"),
-        "DateTime" => Ok("TEXT"),
-        "felt252" => Ok("TEXT"),
-        _ => Err(anyhow::anyhow!("Unknown type {}", s.to_string())),
+// NOTE: If adding/removing types, corresponding change needs to be made to torii-graphql
+// `src/types.rs`
+fn sql_type(member_type: &str) -> Result<&str, anyhow::Error> {
+    match member_type {
+        "u8" | "u16" | "u32" | "u64" | "u128" | "u256" | "usize" | "bool" => Ok("INTEGER"),
+        "Cursor" | "ContractAddress" | "ClassHash" | "DateTime" | "felt252" => Ok("TEXT"),
+        _ => Err(anyhow::anyhow!("Unknown member type {}", member_type.to_string())),
     }
 }
