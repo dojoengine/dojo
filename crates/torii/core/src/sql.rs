@@ -257,14 +257,16 @@ impl State for Sql {
         self.queue(vec![insert_entities, insert_components]).await;
         self.execute().await?;
 
-        // let query = format!("SELECT created_at FROM entities WHERE id == {entity_id}");
-        // let created_at: (String,) = sqlx::query_as(&query).fetch_one(&self.pool).await?;
-        // let created_at: DateTime<Utc> = created_at.0.parse().unwrap();
+        let query_result = sqlx::query("SELECT created_at FROM entities WHERE id = ?")
+            .bind(entity_id.clone())
+            .fetch_one(&self.pool)
+            .await?;
+        let created_at: DateTime<Utc> = query_result.try_get("created_at")?;
         let entity = Entity {
             id: entity_id.clone(),
             keys: keys_str,
             component_names,
-            created_at: Default::default(),
+            created_at,
             updated_at: Utc::now(),
         };
         let value_mapping: indexmap::IndexMap<async_graphql::Name, Value> =
