@@ -1,4 +1,4 @@
-use starknet::{ContractAddress, ClassHash, StorageAccess, StorageBaseAddress, SyscallResult};
+use starknet::{ContractAddress, ClassHash, StorageBaseAddress, SyscallResult};
 use traits::{Into, TryInto};
 use option::OptionTrait;
 
@@ -396,10 +396,14 @@ mod world {
             );
 
             // Append the caller_account and caller_system from the execution context to the keys
-            let keys = [ctx.origin.to_felt252(), ctx.system];
+            let mut keys = ArrayTrait::new();
+            keys.append(ctx.origin.into());
+            keys.append(ctx.system);
             
             // Append the execution_role to the data
-            let data = [ctx.execution_role, data];
+            let mut data = ArrayTrait::new();
+            data.append(ctx.execution_role.into());
+            data.append(data);
 
             // Emit the log event
             emit_event_syscall(keys.span(), data.span()).unwrap_syscall();
