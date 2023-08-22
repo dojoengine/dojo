@@ -14,6 +14,11 @@ use dojo_erc::erc1155::erc1155::ERC1155::{
     IERC1155EventsDispatcherTrait
 };
 use dojo_erc::erc1155::components::{ERC1155BalanceTrait, OperatorApprovalTrait};
+use dojo_erc::erc165::interface::{IERC165Dispatcher, IERC165DispatcherTrait, IACCOUNT_ID};
+use dojo_erc::erc1155::interface::{
+    IERC1155TokenReceiverDispatcher, IERC1155TokenReceiverDispatcherTrait, IERC1155TokenReceiver,
+    IERC1155_RECEIVER_ID, ON_ERC1155_RECEIVED_SELECTOR, ON_ERC1155_BATCH_RECEIVED_SELECTOR
+};
 
 fn emit_transfer_single(
     world: IWorldDispatcher,
@@ -79,16 +84,12 @@ fn update(
         let amount = *amounts.at(0);
 
         emit_transfer_single(world, token, operator, from, to, id, amount);
-
-        if (to
-            .is_non_zero()) { //do_safe_transfer_acceptance_check(operator, from, to, id.into(), amount.into(), data);
-        } else {
-            emit_transfer_batch(world, token, operator, from, to, ids.span(), amounts.span());
-            if (to.is_non_zero()) { //do_safe_batch_transfer_acceptance_check(
-            //    operator, from, to, ids, amounts, data
-            //);
-            }
-        }
+    // TODO: call do_safe_transfer_acceptance_check
+    // (not done as it would break tests).
+    } else {
+        emit_transfer_batch(world, token, operator, from, to, ids.span(), amounts.span());
+    // TODO: call do_safe_batch_transfer_acceptance_check
+    // (not done as it would break tests).
     }
 }
 
@@ -99,24 +100,20 @@ fn do_safe_transfer_acceptance_check(
     id: u256,
     amount: u256,
     data: Array<u8>
-) { // if (IERC165Dispatcher {
-//     contract_address: to
-// }.supports_interface(INTERFACE_ERC1155_RECEIVER)) {
-//     assert(
-//         IERC1155TokenReceiverDispatcher {
-//             contract_address: to
-//         }
-//             .on_erc1155_received(
-//                 operator, from, id, amount, data
-//             ) == ON_ERC1155_RECEIVED_SELECTOR,
-//         'ERC1155: ERC1155Receiver reject'
-//     );
-//     return ();
-// }
-// assert(
-//     IERC165Dispatcher { contract_address: to }.supports_interface(IACCOUNT_ID),
-//     'Transfer to non-ERC1155Receiver'
-// );
+) {
+    if (IERC165Dispatcher { contract_address: to }.supports_interface(IERC1155_RECEIVER_ID)) {
+        assert(
+            IERC1155TokenReceiverDispatcher {
+                contract_address: to
+            }.on_erc1155_received(operator, from, id, amount, data) == ON_ERC1155_RECEIVED_SELECTOR,
+            'ERC1155: ERC1155Receiver reject'
+        );
+        return ();
+    }
+    assert(
+        IERC165Dispatcher { contract_address: to }.supports_interface(IACCOUNT_ID),
+        'Transfer to non-ERC1155Receiver'
+    );
 }
 
 fn do_safe_batch_transfer_acceptance_check(
@@ -126,24 +123,23 @@ fn do_safe_batch_transfer_acceptance_check(
     ids: Array<u256>,
     amounts: Array<u256>,
     data: Array<u8>
-) { // if (IERC165Dispatcher {
-//     contract_address: to
-// }.supports_interface(INTERFACE_ERC1155_RECEIVER)) {
-//     assert(
-//         IERC1155TokenReceiverDispatcher {
-//             contract_address: to
-//         }
-//             .on_erc1155_batch_received(
-//                 operator, from, ids, amounts, data
-//             ) == ON_ERC1155_BATCH_RECEIVED_SELECTOR,
-//         'ERC1155: ERC1155Receiver reject'
-//     );
-//     return ();
-// }
-// assert(
-//     IERC165Dispatcher { contract_address: to }.supports_interface(IACCOUNT_ID),
-//     'Transfer to non-ERC1155Receiver'
-// );
+) {
+    if (IERC165Dispatcher { contract_address: to }.supports_interface(IERC1155_RECEIVER_ID)) {
+        assert(
+            IERC1155TokenReceiverDispatcher {
+                contract_address: to
+            }
+                .on_erc1155_batch_received(
+                    operator, from, ids, amounts, data
+                ) == ON_ERC1155_BATCH_RECEIVED_SELECTOR,
+            'ERC1155: ERC1155Receiver reject'
+        );
+        return ();
+    }
+    assert(
+        IERC165Dispatcher { contract_address: to }.supports_interface(IACCOUNT_ID),
+        'Transfer to non-ERC1155Receiver'
+    );
 }
 
 use ERC1155SetApprovalForAll::ERC1155SetApprovalForAllParams;

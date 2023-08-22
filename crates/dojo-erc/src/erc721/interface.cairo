@@ -32,7 +32,7 @@ trait IERC721A<TState> {
         token_id: u256,
         data: Span<felt252>
     );
-   
+
     // IERC721Metadata
     fn name(self: @TState) -> felt252;
     fn symbol(self: @TState) -> felt252;

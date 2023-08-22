@@ -27,4 +27,3 @@ impl BaseUriImpl of BaseUriTrait {
     }
 }
 
-

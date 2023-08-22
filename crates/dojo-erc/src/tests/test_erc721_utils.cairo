@@ -115,7 +115,7 @@ fn deploy_testcase1() -> (IWorldDispatcher, IERC721ADispatcher) {
     erc721.mint(PROXY(), 12);
     erc721.mint(PROXY(), 13);
 
-   //user2 owns id : 20
+    //user2 owns id : 20
     erc721.mint(USER2(), 20);
 
     set_contract_address(USER1());

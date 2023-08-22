@@ -858,7 +858,7 @@ fn test_burn() {
 fn test_burn_same_id_twice() {
     // reverts when burning a token id that has been deleted
     let (world, erc721) = deploy_default();
-    erc721.mint(USER1(),69);
+    erc721.mint(USER1(), 69);
     erc721.burn(69);
     erc721.burn(69); // should panic
 }
@@ -875,5 +875,4 @@ fn test_token_uri_for_non_existing_token_id() {
     let (world, erc721) = deploy_default();
     erc721.token_uri(1234); // should panic
 }
-
 

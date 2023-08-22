@@ -56,7 +56,6 @@ fn test_should_support_interfaces() {
 // uri
 //
 
-
 #[test]
 #[available_gas(30000000)]
 fn test_uri() {

@@ -12,21 +12,29 @@ struct OperatorApproval {
     approved: bool
 }
 
-trait OperatorApprovalTrait
-{
+trait OperatorApprovalTrait {
     fn is_approved_for_all(
-        world: IWorldDispatcher, token: ContractAddress, account: ContractAddress, operator: ContractAddress
+        world: IWorldDispatcher,
+        token: ContractAddress,
+        account: ContractAddress,
+        operator: ContractAddress
     ) -> bool;
 
     fn set_approval_for_all(
-        world: IWorldDispatcher, token: ContractAddress, owner: ContractAddress, operator: ContractAddress, approved: bool
+        world: IWorldDispatcher,
+        token: ContractAddress,
+        owner: ContractAddress,
+        operator: ContractAddress,
+        approved: bool
     );
 }
 
-impl OperatorApprovalImpl of OperatorApprovalTrait
-{
+impl OperatorApprovalImpl of OperatorApprovalTrait {
     fn is_approved_for_all(
-        world: IWorldDispatcher, token: ContractAddress, account: ContractAddress, operator: ContractAddress
+        world: IWorldDispatcher,
+        token: ContractAddress,
+        account: ContractAddress,
+        operator: ContractAddress
     ) -> bool {
         let approval = get!(world, (token, account, operator), OperatorApproval);
         approval.approved
@@ -34,7 +42,11 @@ impl OperatorApprovalImpl of OperatorApprovalTrait
 
     // perform safety checks before calling this fn
     fn set_approval_for_all(
-        world: IWorldDispatcher, token: ContractAddress, owner: ContractAddress, operator: ContractAddress, approved: bool
+        world: IWorldDispatcher,
+        token: ContractAddress,
+        owner: ContractAddress,
+        operator: ContractAddress,
+        approved: bool
     ) {
         let mut operator_approval = get!(world, (token, owner, operator), OperatorApproval);
         operator_approval.approved = approved;
