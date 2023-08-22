@@ -97,21 +97,21 @@ mod ERC20 {
     #[external(v0)]
     fn total_supply(self: @ContractState) -> u256 {
         let contract_address = get_contract_address();
-        let supply = get !(self.world.read(), contract_address, Supply);
+        let supply = get!(self.world.read(), contract_address, Supply);
         supply.amount.into()
     }
 
     #[external(v0)]
     fn balance_of(self: @ContractState, account: ContractAddress) -> u256 {
         let token = get_contract_address();
-        let balance = get !(self.world.read(), (token, account), Balance);
+        let balance = get!(self.world.read(), (token, account), Balance);
         balance.amount.into()
     }
 
     #[external(v0)]
     fn allowance(self: @ContractState, owner: ContractAddress, spender: ContractAddress) -> u256 {
         let token = get_contract_address();
-        let allowance = get !(self.world.read(), (token, owner, spender), Allowance);
+        let allowance = get!(self.world.read(), (token, owner, spender), Allowance);
         allowance.amount.into()
     }
 

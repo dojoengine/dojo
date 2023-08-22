@@ -1,155 +1,276 @@
+use array::{ArrayTrait, SpanTrait};
+use option::OptionTrait;
+use serde::Serde;
+use clone::Clone;
+use traits::{Into, TryInto};
+use starknet::{ContractAddress, get_contract_address};
+use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
+use dojo_erc::erc721::erc721::ERC721;
+
+use dojo_erc::erc721::erc721::ERC721::{
+    IERC721EventsDispatcher, IERC721EventsDispatcherTrait, Approval, Transfer, ApprovalForAll
+};
+
+use ERC721Approve::ERC721ApproveParams;
+use ERC721SetApprovalForAll::ERC721SetApprovalForAllParams;
+use ERC721TransferFrom::ERC721TransferFromParams;
+use ERC721Mint::ERC721MintParams;
+use ERC721Burn::ERC721BurnParams;
+
+fn emit_transfer(
+    world: IWorldDispatcher,
+    token: ContractAddress,
+    from: ContractAddress,
+    to: ContractAddress,
+    token_id: felt252,
+) {
+    let event = Transfer { from, to, token_id: token_id.into() };
+    IERC721EventsDispatcher { contract_address: token }.on_transfer(event.clone());
+    emit!(world, event);
+}
+
+fn emit_approval(
+    world: IWorldDispatcher,
+    token: ContractAddress,
+    owner: ContractAddress,
+    to: ContractAddress,
+    token_id: felt252,
+) {
+    let event = Approval { owner, to, token_id: token_id.into() };
+    IERC721EventsDispatcher { contract_address: token }.on_approval(event.clone());
+    emit!(world, event);
+}
+
+
+fn emit_approval_for_all(
+    world: IWorldDispatcher,
+    token: ContractAddress,
+    owner: ContractAddress,
+    operator: ContractAddress,
+    approved: bool,
+) {
+    let event = ApprovalForAll { owner, operator, approved };
+    IERC721EventsDispatcher { contract_address: token }.on_approval_for_all(event.clone());
+    emit!(world, event);
+}
+
+
 #[system]
-mod erc721_approve {
+mod ERC721Approve {
     use starknet::ContractAddress;
-    use traits::Into;
+    use traits::{Into, TryInto};
+    use option::{OptionTrait};
+    use clone::Clone;
+    use array::{ArrayTrait, SpanTrait};
 
     use dojo::world::Context;
-    use dojo_erc::erc721::components::{Owner, TokenApproval, OperatorApproval};
-    use dojo_erc::erc721::erc721::ERC721;
+    use dojo_erc::erc721::components::{
+        ERC721OwnerTrait, ERC721TokenApprovalTrait, OperatorApprovalTrait
+    };
+    use super::{IERC721EventsDispatcher, IERC721EventsDispatcherTrait, Approval};
     use zeroable::Zeroable;
 
-    fn execute(
-        ctx: Context,
+    #[derive(Drop, Serde)]
+    struct ERC721ApproveParams {
         token: ContractAddress,
         caller: ContractAddress,
         token_id: felt252,
-        operator: ContractAddress
-    ) {
+        to: ContractAddress
+    }
+
+    fn execute(ctx: Context, params: ERC721ApproveParams) {
+        let ERC721ApproveParams{token, caller, token_id, to } = params;
+
         assert(token == ctx.origin, 'ERC721: not authorized');
+        assert(caller != to, 'ERC721: invalid self approval');
 
-        let token_owner = get!(ctx.world, (token, token_id), Owner);
-        assert(token_owner.address.is_non_zero(), 'ERC721: invalid token_id');
+        let owner = ERC721OwnerTrait::owner_of(ctx.world, token, token_id);
+        assert(owner.is_non_zero(), 'ERC721: invalid token_id');
 
-        let approval = get!(ctx.world, (token, token_owner.address, caller), OperatorApproval);
-        // ERC721: approve caller is not token owner or approved for all 
-        assert(caller == token_owner.address || approval.approved, 'ERC721: unauthorized caller');
-        set!(ctx.world, TokenApproval { token, token_id, address: operator });
+        let is_approved_for_all = OperatorApprovalTrait::is_approved_for_all(
+            ctx.world, token, owner, caller
+        );
+        // // ERC721: approve caller is not token owner or approved for all 
+        assert(caller == owner || is_approved_for_all, 'ERC721: unauthorized caller');
+        ERC721TokenApprovalTrait::approve(ctx.world, token, token_id, to, );
+
+        // emit events
+        super::emit_approval(ctx.world, token, owner, to, token_id);
     }
 }
 
 #[system]
-mod erc721_set_approval_for_all {
+mod ERC721SetApprovalForAll {
     use starknet::ContractAddress;
     use traits::Into;
-
     use dojo::world::Context;
-    use dojo_erc::erc721::components::{OperatorApproval, Owner};
+    use clone::Clone;
+    use array::{ArrayTrait, SpanTrait};
 
-    fn execute(
-        ctx: Context,
+    use dojo_erc::erc721::components::{OperatorApprovalTrait};
+
+
+    #[derive(Drop, Serde)]
+    struct ERC721SetApprovalForAllParams {
         token: ContractAddress,
         owner: ContractAddress,
         operator: ContractAddress,
         approved: bool
-    ) {
+    }
+
+    fn execute(ctx: Context, params: ERC721SetApprovalForAllParams) {
+        let ERC721SetApprovalForAllParams{token, owner, operator, approved } = params;
+
         assert(token == ctx.origin, 'ERC721: not authorized');
         assert(owner != operator, 'ERC721: self approval');
 
-        set!(ctx.world, OperatorApproval { token, owner, operator, approved });
+        OperatorApprovalTrait::set_approval_for_all(ctx.world, token, owner, operator, approved);
+
+        // emit event
+        super::emit_approval_for_all(ctx.world, token, owner, operator, approved);
     }
 }
 
 #[system]
-mod erc721_transfer_from {
+mod ERC721TransferFrom {
     use starknet::ContractAddress;
     use traits::Into;
     use zeroable::Zeroable;
+    use array::SpanTrait;
 
     use dojo::world::Context;
-    use dojo_erc::erc721::components::{Balance, TokenApproval, OperatorApproval, Owner};
-    use dojo_erc::erc721::erc721::ERC721;
+    use dojo_erc::erc721::components::{
+        OperatorApprovalTrait, ERC721BalanceTrait, ERC721TokenApprovalTrait, ERC721OwnerTrait,
+    };
 
-    fn execute(
-        ctx: Context,
-        token: ContractAddress,
+    #[derive(Drop, Serde)]
+    struct ERC721TransferFromParams {
         caller: ContractAddress,
+        token: ContractAddress,
         from: ContractAddress,
         to: ContractAddress,
         token_id: felt252
-    ) {
+    }
+
+    fn execute(ctx: Context, params: ERC721TransferFromParams) {
+        let ERC721TransferFromParams{caller, token, from, to, token_id } = params;
+
         assert(token == ctx.origin, 'ERC721: not authorized');
         assert(!to.is_zero(), 'ERC721: invalid receiver');
 
-        let token_owner = get!(ctx.world, (token, token_id), Owner);
-        assert(token_owner.address.is_non_zero(), 'ERC721: invalid token_id');
+        let owner = ERC721OwnerTrait::owner_of(ctx.world, token, token_id);
+        assert(owner.is_non_zero(), 'ERC721: invalid token_id');
 
-        let token_approval = get!(ctx.world, (token, token_id), TokenApproval);
-        let is_approved = get!(ctx.world, (token, token_owner.address, caller), OperatorApproval);
+        let is_approved_for_all = OperatorApprovalTrait::is_approved_for_all(
+            ctx.world, token, owner, caller
+        );
+        let approved = ERC721TokenApprovalTrait::get_approved(ctx.world, token, token_id);
+
         assert(
-            token_owner.address == caller
-                || is_approved.approved
-                || token_approval.address == caller,
+            owner == caller || is_approved_for_all || approved == caller,
             'ERC721: unauthorized caller'
         );
 
-        set!(ctx.world, TokenApproval { token, token_id, address: Zeroable::zero() });
-        set!(ctx.world, Owner { token, token_id, address: to });
+        ERC721OwnerTrait::set_owner(ctx.world, token, token_id, to);
+        ERC721BalanceTrait::transfer_token(ctx.world, token, from, to, 1);
+        ERC721TokenApprovalTrait::approve(ctx.world, token, token_id, Zeroable::zero());
 
-        let mut from_balance = get!(ctx.world, (token, from), Balance);
-        from_balance.amount -= 1;
-        set!(ctx.world, (from_balance));
-
-        let mut to_balance = get!(ctx.world, (token, to), Balance);
-        to_balance.amount += 1;
-        set!(ctx.world, (to_balance));
+        // emit events
+        super::emit_transfer(ctx.world, token, from, to, token_id);
     }
 }
 
 #[system]
-mod erc721_mint {
+mod ERC721Mint {
     use starknet::ContractAddress;
     use traits::Into;
     use zeroable::Zeroable;
+    use array::SpanTrait;
 
     use dojo::world::Context;
-    use dojo_erc::erc721::components::{Balance, Owner};
+    use dojo_erc::erc721::components::{ERC721BalanceTrait, ERC721OwnerTrait};
 
-    fn execute(
-        ctx: Context, token: ContractAddress, token_id: felt252, recipient: ContractAddress
-    ) {
+    #[derive(Drop, Serde)]
+    struct ERC721MintParams {
+        token: ContractAddress,
+        recipient: ContractAddress,
+        token_id: felt252
+    }
+
+    fn execute(ctx: Context, params: ERC721MintParams) {
+        let ERC721MintParams{token, recipient, token_id } = params;
+
         assert(token == ctx.origin, 'ERC721: not authorized');
         assert(recipient.is_non_zero(), 'ERC721: mint to 0');
 
-        let token_owner = get!(ctx.world, (token, token_id), Owner);
-        assert(token_owner.address.is_zero(), 'ERC721: already minted');
+        let owner = ERC721OwnerTrait::owner_of(ctx.world, token, token_id);
+        assert(owner.is_zero(), 'ERC721: already minted');
 
-        // increase token supply
-        let mut balance = get!(ctx.world, (token, recipient), Balance);
-        balance.amount += 1;
-        set!(ctx.world, (balance));
-        set!(ctx.world, Owner { token, token_id, address: recipient });
+        ERC721BalanceTrait::increase_balance(ctx.world, token, recipient, 1);
+        ERC721OwnerTrait::set_owner(ctx.world, token, token_id, recipient);
+        // emit events
+        super::emit_transfer(ctx.world, token, Zeroable::zero(), recipient, token_id);
     }
 }
 
 #[system]
-mod erc721_burn {
+mod ERC721Burn {
     use starknet::ContractAddress;
     use traits::Into;
     use zeroable::Zeroable;
+    use array::SpanTrait;
 
     use dojo::world::Context;
-    use dojo_erc::erc721::components::{Balance, Owner, OperatorApproval, TokenApproval};
+    use dojo_erc::erc721::components::{
+        ERC721BalanceTrait, ERC721OwnerTrait, ERC721TokenApprovalTrait, OperatorApprovalTrait,
+    };
 
-    fn execute(ctx: Context, token: ContractAddress, caller: ContractAddress, token_id: felt252) {
+    #[derive(Drop, Serde)]
+    struct ERC721BurnParams {
+        token: ContractAddress,
+        caller: ContractAddress,
+        token_id: felt252
+    }
+
+    fn execute(ctx: Context, params: ERC721BurnParams) {
+        let ERC721BurnParams{token, caller, token_id } = params;
+
         assert(token == ctx.origin, 'ERC721: not authorized');
 
-        let token_owner = get!(ctx.world, (token, token_id), Owner);
-        assert(token_owner.address.is_non_zero(), 'ERC721: invalid token_id');
+        let owner = ERC721OwnerTrait::owner_of(ctx.world, token, token_id);
+        assert(!owner.is_zero(), 'ERC721: invalid token_id');
 
-        let token_approval = get!(ctx.world, (token, token_id), TokenApproval);
-        let is_approved = get!(ctx.world, (token, token_owner.address, caller), OperatorApproval);
-       
+        let is_approved_for_all = OperatorApprovalTrait::is_approved_for_all(
+            ctx.world, token, owner, caller
+        );
+        let approved = ERC721TokenApprovalTrait::get_approved(ctx.world, token, token_id);
+
         assert(
-            token_owner.address == caller
-                || is_approved.approved
-                || token_approval.address == caller,
+            owner == caller || is_approved_for_all || approved == caller,
             'ERC721: unauthorized caller'
         );
 
-        let mut balance = get!(ctx.world, (token, token_owner.address), Balance);
-        balance.amount -= 1;
-        set!(ctx.world, (balance));
-        set!(ctx.world, Owner { token, token_id, address: Zeroable::zero() });
+        ERC721BalanceTrait::decrease_balance(ctx.world, token, owner, 1);
+        ERC721OwnerTrait::set_owner(ctx.world, token, token_id, Zeroable::zero());
+
+        //  emit events
+        super::emit_transfer(ctx.world, token, owner, Zeroable::zero(), token_id);
     }
 }
 
+
+// TODO: move in erc_common
+
+#[system]
+mod ERC721SetBaseUri {
+    use traits::Into;
+    use dojo::world::Context;
+    use dojo_erc::erc_common::components::{BaseUri, BaseUriTrait};
+    use starknet::ContractAddress;
+
+    fn execute(ctx: Context, token: ContractAddress, uri: felt252) {
+        assert(ctx.origin == token, 'ERC721: not authorized');
+        BaseUriTrait::set_base_uri(ctx.world, token, uri);
+    // TODO: emit event
+    }
+}
