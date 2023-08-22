@@ -1,11 +1,10 @@
 use anyhow::Result;
 use async_graphql::dynamic::{
-    Field, FieldFuture, FieldValue, InputValue, Object, Scalar, Schema, Subscription,
-    SubscriptionField, SubscriptionFieldFuture, TypeRef, Union,
+    Field, FieldValue, Object, Scalar, Schema, Subscription, SubscriptionField,
+    SubscriptionFieldFuture, TypeRef, Union,
 };
 use async_graphql::Value;
 use sqlx::SqlitePool;
-use starknet_crypto::{poseidon_hash_many, FieldElement};
 use tokio_stream::StreamExt;
 
 use super::object::component::Component;
@@ -25,7 +24,7 @@ use crate::simple_broker::SimpleBroker;
 // system_calls, their schema is known but we generate them dynamically as well since async-graphql
 // does not allow mixing of static and dynamic schemas.
 pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
-    let mut schema_builder = Schema::build("Query", Some("Mutation"), Some("Subscription"));
+    let mut schema_builder = Schema::build("Query", None, Some("Subscription"));
 
     // predefined objects
     let mut objects: Vec<Box<dyn ObjectTrait>> = vec![
@@ -81,27 +80,7 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
         // register gql objects
         schema_builder = schema_builder.register(object.create());
     }
-    // temporary mutation
-    let mutation_root = Object::new("Mutation") // we can iterate over objects to get the type name
-        .field(
-            Field::new("createEntity", TypeRef::named_nn(TypeRef::STRING), move |ctx| {
-                FieldFuture::new(async move {
-                    let keys = ctx
-                        .args
-                        .try_get("keys")?
-                        .list()?
-                        .iter()
-                        .map(|key| FieldElement::from_dec_str(key.string().unwrap()).unwrap())
-                        .collect::<Vec<FieldElement>>();
-                    let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
 
-                    Result::Ok(Some(Value::from(entity_id)))
-                })
-            })
-            .argument(InputValue::new("component", TypeRef::named_nn(TypeRef::STRING)))
-            .argument(InputValue::new("keys", TypeRef::named_nn_list_nn(TypeRef::STRING)))
-            .argument(InputValue::new("values", TypeRef::named_nn_list_nn(TypeRef::STRING))),
-        );
     // todo: find a way to iterate over fields to create arguments
     let subscription_root = Subscription::new("Subscription").field(SubscriptionField::new(
         "entityAdded",
@@ -117,7 +96,6 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     ));
     schema_builder
         .register(query_root)
-        .register(mutation_root)
         .register(subscription_root)
         .data(pool.clone())
         .finish()

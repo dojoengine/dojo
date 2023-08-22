@@ -1,7 +1,7 @@
 use anyhow::Result;
 use async_graphql::Value;
 use async_trait::async_trait;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use dojo_world::manifest::{Component, Manifest, System};
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
@@ -256,6 +256,10 @@ impl State for Sql {
         // tx commit required
         self.queue(vec![insert_entities, insert_components]).await;
         self.execute().await?;
+
+        // let query = format!("SELECT created_at FROM entities WHERE id == {entity_id}");
+        // let created_at: (String,) = sqlx::query_as(&query).fetch_one(&self.pool).await?;
+        // let created_at: DateTime<Utc> = created_at.0.parse().unwrap();
         let entity = Entity {
             id: entity_id.clone(),
             keys: keys_str,
