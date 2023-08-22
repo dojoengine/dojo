@@ -84,58 +84,7 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     let mutation_root = Object::new("Mutation") // we can iterate over objects to get the type name
         .field(
             Field::new("createEntity", TypeRef::named_nn(TypeRef::STRING), move |ctx| {
-                FieldFuture::new(async move {
-                    // let data: &DataContext = ctx.data().unwrap();
-                    // let state = Sql::new(data.pool.clone(), data.world_address).await.unwrap();
-                    // let component = ctx.args.try_get("component")?.string()?.to_string();
-
-                    // let keys = ctx
-                    //     .args
-                    //     .try_get("keys")?
-                    //     .list()?
-                    //     .iter()
-                    //     .map(|key| FieldElement::from_dec_str(key.string().unwrap()).unwrap())
-                    //     .collect::<Vec<FieldElement>>();
-
-                    // let position_values = ctx
-                    //     .args
-                    //     .try_get("values")?
-                    //     .list()?
-                    //     .iter()
-                    //     .map(|value| FieldElement::from_hex_be(value.string().unwrap()).unwrap())
-                    //     .collect::<Vec<FieldElement>>();
-
-                    // state
-                    //     .set_entity(component.clone(), keys.clone(), position_values)
-                    //     .await
-                    //     .unwrap();
-
-                    // // println!("{:?}", state.entities("entities".to_string()).await.unwrap());
-
-                    // let entity_id = format!("{:#x}", poseidon_hash_many(&keys.clone()));
-                    // let keys_str =
-                    //     keys.iter().map(|k| format!("{:#x},",
-                    // k)).collect::<Vec<String>>().join("");
-
-                    // let entity = Entity {
-                    //     id: entity_id.clone(),
-                    //     keys: Some(keys_str),
-                    //     component_names: component.clone(), // todo
-                    //     created_at: Default::default(),
-                    //     updated_at: Default::default(),
-                    // };
-                    let entity: Entity = Entity {
-                        id: "abc".to_string(),
-                        keys: "123".to_string(),
-                        component_names: "xyz".to_string(),
-                        created_at: Default::default(),
-                        updated_at: Default::default(),
-                    };
-                    let value_mapping = EntityObject::value_mapping(entity);
-
-                    SimpleBroker::publish(value_mapping); // publish entity object that has been inserted/updated in Database
-                    Result::Ok(Some(Value::from("abc".to_string())))
-                })
+                FieldFuture::new(async move { Result::Ok(Some(Value::from("abc".to_string()))) })
             })
             .argument(InputValue::new("component", TypeRef::named_nn(TypeRef::STRING)))
             .argument(InputValue::new("keys", TypeRef::named_nn_list_nn(TypeRef::STRING)))

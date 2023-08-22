@@ -15,6 +15,8 @@ pub struct StoreSetRecordProcessor;
 const COMPONENT_INDEX: usize = 0;
 const NUM_KEYS_INDEX: usize = 1;
 
+use torii_graphql::simple_broker::SimpleBroker;
+
 #[async_trait]
 impl<S: State + Sync, T: JsonRpcTransport> EventProcessor<S, T> for StoreSetRecordProcessor {
     fn event_key(&self) -> String {
@@ -36,6 +38,7 @@ impl<S: State + Sync, T: JsonRpcTransport> EventProcessor<S, T> for StoreSetReco
         let values_index = keys.len() + NUM_KEYS_INDEX + 2;
         let values = values_at(&event.data, values_index)?;
         storage.set_entity(name, keys, values).await?;
+        SimpleBroker::publish("value_mapping");
         Ok(())
     }
 }
