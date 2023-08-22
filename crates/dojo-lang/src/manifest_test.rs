@@ -26,7 +26,7 @@ pub fn test_manifest_file(
     let target_dir = config.target_dir().path_existent().unwrap();
 
     let generated_manifest_path =
-        Path::new(target_dir).join(&config.profile().as_str()).join("manifest.json");
+        Path::new(target_dir).join(config.profile().as_str()).join("manifest.json");
 
     let generated_file = fs::read_to_string(generated_manifest_path).unwrap();
 
