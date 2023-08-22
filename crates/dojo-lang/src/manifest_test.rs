@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::{env, fs};
 
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
@@ -22,7 +23,12 @@ pub fn test_manifest_file(
     let packages = ws.members().map(|p| p.id).collect();
     ops::compile(packages, &ws).unwrap_or_else(|op| panic!("Error compiling: {op:?}"));
 
-    let generated_file = fs::read_to_string(config.manifest_path()).unwrap();
+    let target_dir = config.target_dir().path_existent().unwrap();
+
+    let generated_manifest_path =
+        Path::new(target_dir).join(&config.profile().as_str()).join("manifest.json");
+
+    let generated_file = fs::read_to_string(generated_manifest_path).unwrap();
 
     OrderedHashMap::from([("expected_manifest_file".into(), generated_file)])
 }
