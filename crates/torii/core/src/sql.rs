@@ -328,8 +328,10 @@ fn format_values(
 // `src/types.rs`
 fn sql_type(member_type: &str) -> Result<&str, anyhow::Error> {
     match member_type {
-        "u8" | "u16" | "u32" | "u64" | "u128" | "u256" | "usize" | "bool" => Ok("INTEGER"),
-        "Cursor" | "ContractAddress" | "ClassHash" | "DateTime" | "felt252" => Ok("TEXT"),
+        "u8" | "u16" | "u32" | "u64" | "usize" | "bool" => Ok("INTEGER"),
+        "u128" | "u256" | "Cursor" | "ContractAddress" | "ClassHash" | "DateTime" | "felt252" => {
+            Ok("TEXT")
+        }
         _ => Err(anyhow::anyhow!("Unknown member type {}", member_type.to_string())),
     }
 }
