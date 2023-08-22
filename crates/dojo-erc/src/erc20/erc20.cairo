@@ -15,17 +15,12 @@ mod ERC20 {
     use traits::Into;
     use zeroable::Zeroable;
 
-    use dojo::database::query::{
-        Query, LiteralIntoQuery, TupleSize1IntoQuery, TupleSize2IntoQuery, IntoPartitioned,
-        IntoPartitionedQuery
-    };
-
     use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
     use dojo_erc::erc20::components::{Allowance, Balance, Supply};
 
     #[storage]
     struct Storage {
-        world_address: ContractAddress,
+        world: IWorldDispatcher,
         token_name: felt252,
         token_symbol: felt252,
         token_decimals: u8,
@@ -63,7 +58,7 @@ mod ERC20 {
         initial_supply: felt252,
         recipient: ContractAddress
     ) {
-        self.world_address.write(world);
+        self.world.write(IWorldDispatcher { contract_address: world });
         self.token_name.write(name);
         self.token_symbol.write(symbol);
         self.token_decimals.write(decimals);
@@ -75,11 +70,12 @@ mod ERC20 {
             calldata.append(token.into());
             calldata.append(recipient.into());
             calldata.append(initial_supply);
-            world(@self).execute('ERC20Mint'.into(), calldata.span());
+            self.world.read().execute('erc20_mint', calldata);
 
-            self.emit(Transfer { 
-                from: Zeroable::zero(), to: recipient, value: initial_supply.into()
-            });
+            self
+                .emit(
+                    Transfer { from: Zeroable::zero(), to: recipient, value: initial_supply.into() }
+                );
         }
     }
 
@@ -100,27 +96,22 @@ mod ERC20 {
 
     #[external(v0)]
     fn total_supply(self: @ContractState) -> u256 {
-        let query: Query = get_contract_address().into();
-        let mut supply_raw = world(self).entity('Supply'.into(), query, 0, 0);
-        let supply = serde::Serde::<Supply>::deserialize(ref supply_raw).unwrap();
+        let contract_address = get_contract_address();
+        let supply = get !(self.world.read(), contract_address, Supply);
         supply.amount.into()
     }
 
     #[external(v0)]
     fn balance_of(self: @ContractState, account: ContractAddress) -> u256 {
         let token = get_contract_address();
-        let query: Query = (token, (account,)).into_partitioned();        
-        let mut balance_raw = world(self).entity('Balance'.into(), query, 0, 0);
-        let balance = serde::Serde::<Balance>::deserialize(ref balance_raw).unwrap();
+        let balance = get !(self.world.read(), (token, account), Balance);
         balance.amount.into()
     }
 
     #[external(v0)]
     fn allowance(self: @ContractState, owner: ContractAddress, spender: ContractAddress) -> u256 {
         let token = get_contract_address();
-        let query: Query = (token, (owner, spender)).into_partitioned();
-        let mut allowance_raw = world(self).entity('Allowance'.into(), query, 0, 0);
-        let allowance = serde::Serde::<Allowance>::deserialize(ref allowance_raw).unwrap();
+        let allowance = get !(self.world.read(), (token, owner, spender), Allowance);
         allowance.amount.into()
     }
 
@@ -135,9 +126,9 @@ mod ERC20 {
         calldata.append(owner.into());
         calldata.append(spender.into());
         calldata.append(u256_as_allowance(amount));
-        world(@self).execute('ERC20Approve'.into(), calldata.span());
+        self.world.read().execute('erc20_approve', calldata);
 
-        self.emit(Approval {owner, spender, value: amount});
+        self.emit(Approval { owner, spender, value: amount });
 
         true
     }
@@ -149,7 +140,9 @@ mod ERC20 {
     }
 
     #[external(v0)]
-    fn transfer_from(ref self: ContractState, spender: ContractAddress, recipient: ContractAddress, amount: u256) -> bool {
+    fn transfer_from(
+        ref self: ContractState, spender: ContractAddress, recipient: ContractAddress, amount: u256
+    ) -> bool {
         transfer_internal(ref self, spender, recipient, amount);
         true
     }
@@ -158,26 +151,22 @@ mod ERC20 {
     // Internal
     //
 
-    // NOTE: temporary, until we have inline commands outside of systems
-    fn world(self: @ContractState) -> IWorldDispatcher {
-        IWorldDispatcher { contract_address: self.world_address.read() }
-    }
-
-    fn transfer_internal(ref self: ContractState, spender: ContractAddress, recipient: ContractAddress, amount: u256) {
+    fn transfer_internal(
+        ref self: ContractState, spender: ContractAddress, recipient: ContractAddress, amount: u256
+    ) {
         assert(recipient.is_non_zero(), 'ERC20: transfer to 0');
 
         let token = get_contract_address();
         let mut calldata = ArrayTrait::new();
         calldata.append(token.into());
+        calldata.append(get_caller_address().into());
         calldata.append(spender.into());
         calldata.append(recipient.into());
         calldata.append(u256_into_felt252(amount));
 
-        world(@self).execute('ERC20TransferFrom'.into(), calldata.span());
+        self.world.read().execute('erc20_transfer_from', calldata);
 
-        self.emit(Transfer { 
-            from: Zeroable::zero(), to: recipient, value: amount
-        });
+        self.emit(Transfer { from: Zeroable::zero(), to: recipient, value: amount });
     }
 
     fn u256_as_allowance(val: u256) -> felt252 {

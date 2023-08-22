@@ -1,23 +1,20 @@
+use starknet::ClassHash;
+
 use dojo::world::Context;
 
 #[starknet::interface]
 trait IExecutor<T> {
-    fn execute(self: @T, ctx: Context, calldata: Span<felt252>) -> Span<felt252>;
+    fn execute(self: @T, class_hash: ClassHash, calldata: Span<felt252>) -> Span<felt252>;
+    fn call(
+        self: @T, class_hash: ClassHash, entrypoint: felt252, calldata: Span<felt252>
+    ) -> Span<felt252>;
 }
 
 #[starknet::contract]
 mod executor {
-    use array::{ArrayTrait, ArrayTCloneImpl, SpanTrait};
-    use serde::Serde;
-    use clone::Clone;
-    use box::BoxTrait;
-    use traits::{TryInto, Into};
+    use array::{ArrayTrait, SpanTrait};
     use option::OptionTrait;
-    use starknet::{get_caller_address, get_tx_info};
-
-    use dojo::world::IWorldDispatcher;
-    use dojo::interfaces::{ISystemLibraryDispatcher, ISystemDispatcherTrait};
-    use dojo::world::Context;
+    use starknet::ClassHash;
 
     use super::IExecutor;
 
@@ -33,42 +30,38 @@ mod executor {
         ///
         /// # Arguments
         ///
-        /// * `ctx` - The world's context for the execution.
-        /// * `calldata` - The calldata to pass to the System.
+        /// * `class_hash` - Class Hash of the System.
+        /// * `calldata` - Calldata to pass to the System.
         ///
         /// # Returns
         ///
         /// The return value of the System's execute entrypoint.
         fn execute(
-            self: @ContractState, ctx: Context, mut calldata: Span<felt252>
+            self: @ContractState, class_hash: ClassHash, calldata: Span<felt252>
         ) -> Span<felt252> {
-            // Get the world address and instantiate the world dispatcher.
-            let world_address = get_caller_address();
-            let world = IWorldDispatcher { contract_address: world_address };
+            starknet::syscalls::library_call_syscall(class_hash, EXECUTE_ENTRYPOINT, calldata)
+                .unwrap_syscall()
+        }
 
-            // Serialize the context
-            let mut calldata_arr = ArrayTrait::new();
-            ctx.serialize(ref calldata_arr);
-
-            // Append the calldata
-            loop {
-                match calldata.pop_front() {
-                    Option::Some(val) => {
-                        calldata_arr.append(*val);
-                    },
-                    Option::None(_) => {
-                        break ();
-                    }
-                };
-            };
-
-            // Call the system
-            let res = starknet::syscalls::library_call_syscall(
-                ctx.system_class_hash, EXECUTE_ENTRYPOINT, calldata_arr.span()
-            )
-                .unwrap_syscall();
-
-            res
+        /// Call the provided `entrypoint` method on the given `class_hash`.
+        ///
+        /// # Arguments
+        ///
+        /// * `class_hash` - Class Hash to call.
+        /// * `entrypoint` - Entrypoint to call.
+        /// * `calldata` - The calldata to pass.
+        ///
+        /// # Returns
+        ///
+        /// The return value of the call.
+        fn call(
+            self: @ContractState,
+            class_hash: ClassHash,
+            entrypoint: felt252,
+            calldata: Span<felt252>
+        ) -> Span<felt252> {
+            starknet::syscalls::library_call_syscall(class_hash, entrypoint, calldata)
+                .unwrap_syscall()
         }
     }
 }

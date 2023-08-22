@@ -29,15 +29,13 @@ pub struct KatanaArgs {
     pub block_time: Option<u64>,
 
     #[arg(long)]
-    #[arg(hide = true)]
     #[arg(value_name = "PATH")]
     #[arg(help = "Dump the state of chain on exit to the given file.")]
-    #[arg(long_help = "Dump the state of chain on exit to the given file. \
-                       If the value is a directory, the state will be written to `<PATH>/state.bin`.")]
+    #[arg(long_help = "Dump the state of chain on exit to the given file. If the value is a \
+                       directory, the state will be written to `<PATH>/state.bin`.")]
     pub dump_state: Option<PathBuf>,
 
     #[arg(long)]
-    #[arg(hide = true)]
     #[arg(value_name = "PATH")]
     #[arg(value_parser = SerializableState::parse)]
     #[arg(help = "Initialize the chain from a previously saved state snapshot.")]
@@ -86,16 +84,9 @@ pub struct StarknetOptions {
     #[arg(help = "Number of pre-funded accounts to generate.")]
     pub total_accounts: u8,
 
-    #[arg(value_name = "PATH")]
-    #[arg(long = "account-class")]
-    #[arg(help = "The account implementation for the predeployed accounts.")]
-    #[arg(long_help = "Specify the account implementation to be used for the predeployed \
-                       accounts; should be a path to the compiled JSON artifact.")]
-    pub account_path: Option<PathBuf>,
-
     #[arg(long)]
-    #[arg(help = "Allow transaction max fee to be zero.")]
-    pub allow_zero_max_fee: bool,
+    #[arg(help = "Disable charging fee for transactions.")]
+    pub disable_fee: bool,
 
     #[command(flatten)]
     #[command(next_help_heading = "Environment options")]
@@ -138,8 +129,7 @@ impl KatanaArgs {
         StarknetConfig {
             total_accounts: self.starknet.total_accounts,
             seed: parse_seed(&self.starknet.seed),
-            account_path: self.starknet.account_path.clone(),
-            allow_zero_max_fee: self.starknet.allow_zero_max_fee,
+            disable_fee: self.starknet.disable_fee,
             auto_mine: self.block_time.is_none() && !self.no_mining,
             init_state: self.load_state.clone(),
             env: Environment {

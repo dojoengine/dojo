@@ -1,20 +1,29 @@
 use std::sync::Arc;
 
-use starknet::core::types::{
-    DeclareTransactionReceipt, DeployAccountTransactionReceipt, DeployTransactionReceipt, Event,
-    FieldElement, InvokeTransactionReceipt, L1HandlerTransactionReceipt, MsgToL1,
-    PendingDeclareTransactionReceipt, PendingDeployAccountTransactionReceipt,
-    PendingDeployTransactionReceipt, PendingInvokeTransactionReceipt,
-    PendingL1HandlerTransactionReceipt, PendingTransactionReceipt as RpcPendingTransactionReceipt,
-    TransactionStatus as RpcTransactionStatus,
+use blockifier::execution::contract_class::ContractClass;
+use blockifier::transaction::account_transaction::AccountTransaction;
+use blockifier::transaction::transactions::{
+    DeclareTransaction as ExecutionDeclareTransaction,
+    DeployAccountTransaction as ExecutionDeployAccountTransaction,
 };
 use starknet::core::types::{
-    Transaction as RpcTransaction, TransactionReceipt as RpcTransactionReceipt,
+    DeclareTransactionReceipt, DeployAccountTransactionReceipt, Event, FieldElement,
+    FlattenedSierraClass, InvokeTransactionReceipt, MsgToL1, PendingDeclareTransactionReceipt,
+    PendingDeployAccountTransactionReceipt, PendingInvokeTransactionReceipt,
+    PendingTransactionReceipt as RpcPendingTransactionReceipt, Transaction as RpcTransaction,
+    TransactionReceipt as RpcTransactionReceipt, TransactionStatus as RpcTransactionStatus,
 };
-use starknet_api::transaction::Transaction as ApiTransaction;
+use starknet_api::core::{ContractAddress, PatriciaKey};
+use starknet_api::hash::StarkHash;
+use starknet_api::patricia_key;
+use starknet_api::transaction::{
+    DeclareTransaction as ApiDeclareTransaction,
+    DeployAccountTransaction as ApiDeployAccountTransaction,
+    InvokeTransaction as ApiInvokeTransaction, Transaction as ApiTransaction,
+};
 
 use crate::backend::executor::ExecutedTransaction;
-use crate::utils::transaction::convert_api_to_rpc_tx;
+use crate::utils::transaction::api_to_rpc_transaction;
 
 /// The status of the transactions known to the sequencer.
 #[derive(Debug, Clone, Copy)]
@@ -81,118 +90,107 @@ pub struct TransactionOutput {
     pub messages_sent: Vec<MsgToL1>,
 }
 
+#[derive(Debug, Clone)]
+pub enum Transaction {
+    Invoke(InvokeTransaction),
+    Declare(DeclareTransaction),
+    DeployAccount(DeployAccountTransaction),
+}
+
+impl Transaction {
+    pub fn hash(&self) -> FieldElement {
+        match self {
+            Transaction::Invoke(tx) => tx.0.transaction_hash().0.into(),
+            Transaction::Declare(tx) => tx.inner.transaction_hash().0.into(),
+            Transaction::DeployAccount(tx) => tx.inner.transaction_hash.0.into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct InvokeTransaction(pub ApiInvokeTransaction);
+
+#[derive(Debug, Clone)]
+pub struct DeclareTransaction {
+    pub inner: ApiDeclareTransaction,
+    pub compiled_class: ContractClass,
+    pub sierra_class: Option<FlattenedSierraClass>,
+}
+
+#[derive(Debug, Clone)]
+pub struct DeployAccountTransaction {
+    pub inner: ApiDeployAccountTransaction,
+    pub contract_address: FieldElement,
+}
+
 impl IncludedTransaction {
     pub fn receipt(&self) -> RpcTransactionReceipt {
-        match &self.transaction.transaction {
-            ApiTransaction::Invoke(tx) => RpcTransactionReceipt::Invoke(InvokeTransactionReceipt {
+        match &self.transaction.inner {
+            Transaction::Invoke(_) => RpcTransactionReceipt::Invoke(InvokeTransactionReceipt {
                 status: self.status.into(),
                 block_hash: self.block_hash,
                 block_number: self.block_number,
                 events: self.transaction.output.events.clone(),
                 messages_sent: self.transaction.output.messages_sent.clone(),
-                transaction_hash: tx.transaction_hash().0.into(),
+                transaction_hash: self.transaction.inner.hash(),
                 actual_fee: self.transaction.execution_info.actual_fee.0.into(),
             }),
 
-            ApiTransaction::Declare(tx) => {
-                RpcTransactionReceipt::Declare(DeclareTransactionReceipt {
-                    status: self.status.into(),
-                    block_hash: self.block_hash,
-                    block_number: self.block_number,
-                    events: self.transaction.output.events.clone(),
-                    transaction_hash: tx.transaction_hash().0.into(),
-                    messages_sent: self.transaction.output.messages_sent.clone(),
-                    actual_fee: self.transaction.execution_info.actual_fee.0.into(),
-                })
-            }
+            Transaction::Declare(_) => RpcTransactionReceipt::Declare(DeclareTransactionReceipt {
+                status: self.status.into(),
+                block_hash: self.block_hash,
+                block_number: self.block_number,
+                events: self.transaction.output.events.clone(),
+                transaction_hash: self.transaction.inner.hash(),
+                messages_sent: self.transaction.output.messages_sent.clone(),
+                actual_fee: self.transaction.execution_info.actual_fee.0.into(),
+            }),
 
-            ApiTransaction::DeployAccount(tx) => {
+            Transaction::DeployAccount(tx) => {
                 RpcTransactionReceipt::DeployAccount(DeployAccountTransactionReceipt {
                     status: self.status.into(),
                     block_hash: self.block_hash,
                     block_number: self.block_number,
+                    contract_address: tx.contract_address,
                     events: self.transaction.output.events.clone(),
-                    transaction_hash: tx.transaction_hash.0.into(),
-                    contract_address: (*tx.contract_address.0.key()).into(),
+                    transaction_hash: self.transaction.inner.hash(),
                     messages_sent: self.transaction.output.messages_sent.clone(),
                     actual_fee: self.transaction.execution_info.actual_fee.0.into(),
                 })
             }
-
-            ApiTransaction::L1Handler(tx) => {
-                RpcTransactionReceipt::L1Handler(L1HandlerTransactionReceipt {
-                    status: self.status.into(),
-                    block_hash: self.block_hash,
-                    block_number: self.block_number,
-                    events: self.transaction.output.events.clone(),
-                    transaction_hash: tx.transaction_hash.0.into(),
-                    messages_sent: self.transaction.output.messages_sent.clone(),
-                    actual_fee: self.transaction.execution_info.actual_fee.0.into(),
-                })
-            }
-
-            ApiTransaction::Deploy(tx) => RpcTransactionReceipt::Deploy(DeployTransactionReceipt {
-                status: self.status.into(),
-                block_hash: self.block_hash,
-                block_number: self.block_number,
-                events: self.transaction.output.events.clone(),
-                transaction_hash: tx.transaction_hash.0.into(),
-                contract_address: (*tx.contract_address.0.key()).into(),
-                messages_sent: self.transaction.output.messages_sent.clone(),
-                actual_fee: self.transaction.execution_info.actual_fee.0.into(),
-            }),
         }
     }
 }
 
 impl PendingTransaction {
     pub fn receipt(&self) -> RpcPendingTransactionReceipt {
-        match &self.0.transaction {
-            ApiTransaction::Invoke(tx) => {
+        match &self.0.inner {
+            Transaction::Invoke(_) => {
                 RpcPendingTransactionReceipt::Invoke(PendingInvokeTransactionReceipt {
                     events: self.0.output.events.clone(),
-                    transaction_hash: tx.transaction_hash().0.into(),
+                    transaction_hash: self.0.inner.hash(),
                     messages_sent: self.0.output.messages_sent.clone(),
                     actual_fee: self.0.execution_info.actual_fee.0.into(),
                 })
             }
 
-            ApiTransaction::Declare(tx) => {
+            Transaction::Declare(_) => {
                 RpcPendingTransactionReceipt::Declare(PendingDeclareTransactionReceipt {
                     events: self.0.output.events.clone(),
-                    transaction_hash: tx.transaction_hash().0.into(),
+                    transaction_hash: self.0.inner.hash(),
                     messages_sent: self.0.output.messages_sent.clone(),
                     actual_fee: self.0.execution_info.actual_fee.0.into(),
                 })
             }
 
-            ApiTransaction::DeployAccount(tx) => RpcPendingTransactionReceipt::DeployAccount(
+            Transaction::DeployAccount(_) => RpcPendingTransactionReceipt::DeployAccount(
                 PendingDeployAccountTransactionReceipt {
                     events: self.0.output.events.clone(),
-                    transaction_hash: tx.transaction_hash.0.into(),
+                    transaction_hash: self.0.inner.hash(),
                     messages_sent: self.0.output.messages_sent.clone(),
                     actual_fee: self.0.execution_info.actual_fee.0.into(),
                 },
             ),
-
-            ApiTransaction::L1Handler(tx) => {
-                RpcPendingTransactionReceipt::L1Handler(PendingL1HandlerTransactionReceipt {
-                    events: self.0.output.events.clone(),
-                    transaction_hash: tx.transaction_hash.0.into(),
-                    messages_sent: self.0.output.messages_sent.clone(),
-                    actual_fee: self.0.execution_info.actual_fee.0.into(),
-                })
-            }
-
-            ApiTransaction::Deploy(tx) => {
-                RpcPendingTransactionReceipt::Deploy(PendingDeployTransactionReceipt {
-                    events: self.0.output.events.clone(),
-                    transaction_hash: tx.transaction_hash.0.into(),
-                    messages_sent: self.0.output.messages_sent.clone(),
-                    actual_fee: self.0.execution_info.actual_fee.0.into(),
-                    contract_address: (*tx.contract_address.0.key()).into(),
-                })
-            }
         }
     }
 }
@@ -240,10 +238,38 @@ impl From<RejectedTransaction> for KnownTransaction {
 impl From<KnownTransaction> for RpcTransaction {
     fn from(transaction: KnownTransaction) -> Self {
         match transaction {
-            KnownTransaction::Pending(tx) => convert_api_to_rpc_tx(tx.0.transaction.clone()),
-            KnownTransaction::Rejected(tx) => convert_api_to_rpc_tx(tx.transaction),
+            KnownTransaction::Pending(tx) => api_to_rpc_transaction(tx.0.inner.clone().into()),
+            KnownTransaction::Rejected(tx) => api_to_rpc_transaction(tx.transaction),
             KnownTransaction::Included(tx) => {
-                convert_api_to_rpc_tx(tx.transaction.transaction.clone())
+                api_to_rpc_transaction(tx.transaction.inner.clone().into())
+            }
+        }
+    }
+}
+
+impl From<Transaction> for ApiTransaction {
+    fn from(value: Transaction) -> Self {
+        match value {
+            Transaction::Invoke(tx) => ApiTransaction::Invoke(tx.0),
+            Transaction::Declare(tx) => ApiTransaction::Declare(tx.inner),
+            Transaction::DeployAccount(tx) => ApiTransaction::DeployAccount(tx.inner),
+        }
+    }
+}
+
+impl From<Transaction> for AccountTransaction {
+    fn from(value: Transaction) -> Self {
+        match value {
+            Transaction::Invoke(tx) => AccountTransaction::Invoke(tx.0),
+            Transaction::Declare(tx) => AccountTransaction::Declare(
+                ExecutionDeclareTransaction::new(tx.inner, tx.compiled_class)
+                    .expect("declare tx must have valid compiled class"),
+            ),
+            Transaction::DeployAccount(tx) => {
+                AccountTransaction::DeployAccount(ExecutionDeployAccountTransaction {
+                    tx: tx.inner,
+                    contract_address: ContractAddress(patricia_key!(tx.contract_address)),
+                })
             }
         }
     }

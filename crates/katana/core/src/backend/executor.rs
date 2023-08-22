@@ -1,26 +1,25 @@
 use std::sync::Arc;
 
+use blockifier::block_context::BlockContext;
 use blockifier::execution::entry_point::CallInfo;
+use blockifier::state::cached_state::CachedState;
 use blockifier::state::state_api::StateReader;
 use blockifier::transaction::errors::TransactionExecutionError;
 use blockifier::transaction::objects::{ResourcesMapping, TransactionExecutionInfo};
 use blockifier::transaction::transaction_execution::Transaction as ExecutionTransaction;
 use blockifier::transaction::transactions::ExecutableTransaction;
-use blockifier::{block_context::BlockContext, state::cached_state::CachedState};
 use convert_case::{Case, Casing};
 use parking_lot::RwLock;
 use starknet::core::types::{Event, FieldElement, MsgToL1};
-use starknet_api::transaction::Transaction;
 use tokio::sync::RwLock as AsyncRwLock;
-use tracing::{trace, warn};
-
-use crate::backend::storage::transaction::KnownTransaction;
-use crate::utils::transaction::convert_blockifier_to_api_tx;
+use tracing::{info, trace, warn};
 
 use super::state::MemDb;
-use super::storage::block::{Block, PartialBlock, PartialHeader};
-use super::storage::transaction::{RejectedTransaction, TransactionOutput};
+use super::storage::block::{PartialBlock, PartialHeader};
+use super::storage::transaction::{RejectedTransaction, Transaction, TransactionOutput};
 use super::storage::BlockchainStorage;
+use crate::backend::storage::transaction::{DeclareTransaction, KnownTransaction};
+use crate::env::Env;
 
 #[derive(Debug)]
 pub struct PendingBlockExecutor {
@@ -31,7 +30,7 @@ pub struct PendingBlockExecutor {
     /// persisted for the next included transaction.
     pub state: CachedState<MemDb>,
     pub storage: Arc<AsyncRwLock<BlockchainStorage>>,
-    pub block_context: Arc<RwLock<BlockContext>>,
+    pub env: Arc<RwLock<Env>>,
     pub transactions: Vec<Arc<ExecutedTransaction>>,
     pub outputs: Vec<TransactionOutput>,
 }
@@ -40,13 +39,13 @@ impl PendingBlockExecutor {
     pub fn new(
         parent_hash: FieldElement,
         state: MemDb,
-        block_context: Arc<RwLock<BlockContext>>,
+        env: Arc<RwLock<Env>>,
         storage: Arc<AsyncRwLock<BlockchainStorage>>,
     ) -> Self {
         Self {
+            env,
             storage,
             parent_hash,
-            block_context,
             outputs: Vec::new(),
             transactions: Vec::new(),
             state: CachedState::new(state),
@@ -54,7 +53,7 @@ impl PendingBlockExecutor {
     }
 
     pub fn as_block(&self) -> PartialBlock {
-        let block_context = self.block_context.read();
+        let block_context = &self.env.read().block;
 
         let header = PartialHeader {
             parent_hash: self.parent_hash,
@@ -71,28 +70,22 @@ impl PendingBlockExecutor {
         }
     }
 
-    /// Generate a new valid block which will be included to the blockchain.
-    pub async fn to_block(&self) -> Block {
-        let partial_header = PartialHeader {
-            parent_hash: self.parent_hash,
-            gas_price: self.block_context.read().gas_price,
-            number: self.block_context.read().block_number.0,
-            timestamp: self.block_context.read().block_timestamp.0,
-            sequencer_address: (*self.block_context.read().sequencer_address.0.key()).into(),
-        };
-
-        Block::new(partial_header, self.transactions.clone(), self.outputs.clone())
-    }
-
     // Add a transaction to the executor. The transaction will be executed
     // on the pending state. The transaction will be added to the pending block
     // if it passes the validation logic. Otherwise, the transaction will be
     // rejected. On both cases, the transaction will still be stored in the
     // storage.
-    pub async fn add_transaction(&mut self, transaction: ExecutionTransaction) -> bool {
-        let api_tx = convert_blockifier_to_api_tx(&transaction);
-        let hash: FieldElement = api_tx.transaction_hash().0.into();
-        let res = execute_transaction(transaction, &mut self.state, &self.block_context.read());
+    pub async fn add_transaction(&mut self, transaction: Transaction, charge_fee: bool) -> bool {
+        let transaction_hash = transaction.hash();
+
+        info!("Transaction received | Hash: {transaction_hash:#x}");
+
+        let res = execute_transaction(
+            ExecutionTransaction::AccountTransaction(transaction.clone().into()),
+            &mut self.state,
+            &self.env.read().block,
+            charge_fee,
+        );
 
         match res {
             Ok(execution_info) => {
@@ -101,7 +94,21 @@ impl PendingBlockExecutor {
                     pretty_print_resources(&execution_info.actual_resources)
                 );
 
-                let executed_tx = Arc::new(ExecutedTransaction::new(api_tx, execution_info));
+                // Because `State` trait from `blockifier` doesn't have a method to set the
+                // `sierra_class` of a contract, we need to do it manually.
+                if let Transaction::Declare(DeclareTransaction {
+                    inner,
+                    sierra_class: Some(sierra_class),
+                    ..
+                }) = &transaction
+                {
+                    let class_hash = inner.class_hash();
+                    self.state.state.sierra_classes.insert(class_hash, sierra_class.clone());
+                }
+
+                let executed_tx = Arc::new(ExecutedTransaction::new(transaction, execution_info));
+
+                trace_events(&executed_tx.output.events);
 
                 self.outputs.push(executed_tx.output.clone());
                 self.transactions.push(executed_tx);
@@ -111,9 +118,9 @@ impl PendingBlockExecutor {
 
             Err(err) => {
                 self.storage.write().await.transactions.insert(
-                    hash,
+                    transaction_hash,
                     KnownTransaction::Rejected(Box::new(RejectedTransaction {
-                        transaction: api_tx,
+                        transaction: transaction.into(),
                         execution_error: err.to_string(),
                     })),
                 );
@@ -126,7 +133,7 @@ impl PendingBlockExecutor {
 
 #[derive(Debug)]
 pub struct ExecutedTransaction {
-    pub transaction: Transaction,
+    pub inner: Transaction,
     pub output: TransactionOutput,
     pub execution_info: TransactionExecutionInfo,
 }
@@ -138,14 +145,10 @@ impl ExecutedTransaction {
         let messages_sent = Self::l2_to_l1_messages(&execution_info);
 
         Self {
-            transaction,
+            inner: transaction,
             execution_info,
             output: TransactionOutput { actual_fee, events, messages_sent },
         }
-    }
-
-    pub fn hash(&self) -> FieldElement {
-        self.transaction.transaction_hash().0.into()
     }
 
     fn events(execution_info: &TransactionExecutionInfo) -> Vec<Event> {
@@ -222,10 +225,15 @@ pub fn execute_transaction<S: StateReader>(
     transaction: ExecutionTransaction,
     pending_state: &mut CachedState<S>,
     block_context: &BlockContext,
+    charge_fee: bool,
 ) -> Result<TransactionExecutionInfo, TransactionExecutionError> {
     let res = match transaction {
-        ExecutionTransaction::AccountTransaction(tx) => tx.execute(pending_state, block_context),
-        ExecutionTransaction::L1HandlerTransaction(tx) => tx.execute(pending_state, block_context),
+        ExecutionTransaction::AccountTransaction(tx) => {
+            tx.execute(pending_state, block_context, charge_fee)
+        }
+        ExecutionTransaction::L1HandlerTransaction(tx) => {
+            tx.execute(pending_state, block_context, charge_fee)
+        }
     };
 
     match res {
@@ -268,4 +276,13 @@ pub fn pretty_print_resources(resources: &ResourcesMapping) -> String {
     }
 
     mapped_strings.join(" | ")
+}
+
+pub fn trace_events(events: &[Event]) {
+    for e in events {
+        let formatted_keys =
+            e.keys.iter().map(|k| format!("{k:#x}")).collect::<Vec<_>>().join(", ");
+
+        trace!("Event emitted keys=[{}]", formatted_keys);
+    }
 }

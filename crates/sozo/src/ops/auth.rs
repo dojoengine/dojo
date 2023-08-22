@@ -1,10 +1,10 @@
 use anyhow::{Context, Result};
-use dojo_client::contract::world::WorldContract;
-use toml::Value;
+use dojo_world::metadata::Environment;
+use torii_client::contract::world::WorldContract;
 
 use crate::commands::auth::AuthCommand;
 
-pub async fn execute(command: AuthCommand, env_metadata: Option<Value>) -> Result<()> {
+pub async fn execute(command: AuthCommand, env_metadata: Option<Environment>) -> Result<()> {
     match command {
         AuthCommand::Writer { component, system, world, starknet, account } => {
             let world_address = world.address(env_metadata.as_ref())?;

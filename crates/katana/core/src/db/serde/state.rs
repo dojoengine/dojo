@@ -1,28 +1,30 @@
-use std::{
-    collections::BTreeMap,
-    fs,
-    io::{self, Read},
-    path::Path,
-};
+use std::collections::BTreeMap;
+use std::fs;
+use std::io::{self, Read};
+use std::path::Path;
 
-use crate::db::serde::contract::SerializableContractClass;
 use ::serde::{Deserialize, Serialize};
 use flate2::read::GzDecoder;
 use starknet::core::types::{FieldElement, FlattenedSierraClass};
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+use crate::db::serde::contract::SerializableContractClass;
+
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct SerializableState {
     /// Address to storage record.
     pub storage: BTreeMap<FieldElement, SerializableStorageRecord>,
     /// Class hash to class record.
     pub classes: BTreeMap<FieldElement, SerializableClassRecord>,
+    /// Class hash to sierra class.
+    pub sierra_classes: BTreeMap<FieldElement, FlattenedSierraClass>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SerializableClassRecord {
+    /// The compiled class hash.
     pub compiled_hash: FieldElement,
+    /// The compiled class.
     pub class: SerializableContractClass,
-    pub sierra_class: Option<FlattenedSierraClass>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

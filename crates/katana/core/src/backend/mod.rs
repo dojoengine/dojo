@@ -2,7 +2,6 @@ use std::io::Write;
 use std::sync::Arc;
 
 use anyhow::Result;
-use blockifier::block_context::BlockContext;
 use blockifier::execution::entry_point::{
     CallEntryPoint, CallInfo, EntryPointExecutionContext, ExecutionResources,
 };
@@ -13,13 +12,15 @@ use blockifier::state::state_api::State;
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::errors::TransactionExecutionError;
 use blockifier::transaction::objects::AccountTransactionContext;
-use blockifier::transaction::transaction_execution::Transaction;
+use blockifier::transaction::transaction_execution::Transaction as ExecutionTransaction;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use parking_lot::RwLock;
-use starknet::core::types::{FeeEstimate, FieldElement};
+use starknet::core::types::{BlockId, BlockTag, FeeEstimate};
 use starknet_api::block::BlockTimestamp;
 use starknet_api::core::{ContractAddress, EntryPointSelector};
+use starknet_api::hash::StarkFelt;
+use starknet_api::state::StorageKey;
 use starknet_api::transaction::Calldata;
 use tokio::sync::RwLock as AsyncRwLock;
 use tracing::{error, info, warn};
@@ -30,21 +31,19 @@ pub mod executor;
 pub mod state;
 pub mod storage;
 
-use crate::accounts::PredeployedAccounts;
-use crate::backend::state::{MemDb, StateExt};
-use crate::block_context::BlockContextGenerator;
-use crate::constants::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
-use crate::db::serde::state::SerializableState;
-use crate::db::Db;
-use crate::sequencer_error::SequencerError;
-use crate::utils::transaction::convert_blockifier_to_api_tx;
-use crate::utils::{convert_state_diff_to_rpc_state_diff, get_current_timestamp};
-
 use self::config::StarknetConfig;
 use self::executor::{execute_transaction, PendingBlockExecutor};
 use self::storage::block::{Block, PartialHeader};
-use self::storage::transaction::{IncludedTransaction, KnownTransaction, TransactionStatus};
+use self::storage::transaction::{IncludedTransaction, Transaction, TransactionStatus};
 use self::storage::{BlockchainStorage, InMemoryBlockStates};
+use crate::accounts::{Account, DevAccountGenerator};
+use crate::backend::state::{MemDb, StateExt};
+use crate::constants::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
+use crate::db::serde::state::SerializableState;
+use crate::db::Db;
+use crate::env::{BlockContextGenerator, Env};
+use crate::sequencer_error::SequencerError;
+use crate::utils::{convert_state_diff_to_rpc_state_diff, get_current_timestamp};
 
 pub struct ExternalFunctionCall {
     pub calldata: Calldata,
@@ -60,45 +59,48 @@ pub struct Backend {
     pub pending_block: AsyncRwLock<Option<PendingBlockExecutor>>,
     /// Historic states of previous blocks
     pub states: AsyncRwLock<InMemoryBlockStates>,
-    pub block_context: Arc<RwLock<BlockContext>>,
+    /// The chain environment values.
+    pub env: Arc<RwLock<Env>>,
     pub block_context_generator: RwLock<BlockContextGenerator>,
     pub state: AsyncRwLock<MemDb>,
-    pub predeployed_accounts: PredeployedAccounts,
+    /// Prefunded dev accounts
+    pub accounts: Vec<Account>,
 }
 
 impl Backend {
     pub fn new(config: StarknetConfig) -> Self {
-        let block_context = Arc::new(RwLock::new(config.block_context()));
+        let block_context = config.block_context();
         let block_context_generator = config.block_context_generator();
 
         let mut state = MemDb::default();
 
-        let storage = BlockchainStorage::new(&block_context.read());
+        let storage = BlockchainStorage::new(&block_context);
         let states = InMemoryBlockStates::default();
+        let env = Env { block: block_context };
 
         if let Some(ref init_state) = config.init_state {
             state.load_state(init_state.clone()).expect("failed to load initial state");
             info!("Successfully loaded initial state");
         }
 
-        let predeployed_accounts = PredeployedAccounts::initialize(
-            config.total_accounts,
-            config.seed,
-            *DEFAULT_PREFUNDED_ACCOUNT_BALANCE,
-            config.account_path.clone(),
-        )
-        .expect("should be able to generate accounts");
-        predeployed_accounts.deploy_accounts(&mut state);
+        let accounts = DevAccountGenerator::new(config.total_accounts)
+            .with_seed(config.seed)
+            .with_balance((*DEFAULT_PREFUNDED_ACCOUNT_BALANCE).into())
+            .generate();
+
+        for acc in &accounts {
+            acc.deploy_and_fund(&mut state).expect("should be able to deploy and fund dev account");
+        }
 
         Self {
-            block_context,
+            env: Arc::new(RwLock::new(env)),
             state: AsyncRwLock::new(state),
             config: RwLock::new(config),
             states: AsyncRwLock::new(states),
             storage: Arc::new(AsyncRwLock::new(storage)),
             block_context_generator: RwLock::new(block_context_generator),
             pending_block: AsyncRwLock::new(None),
-            predeployed_accounts,
+            accounts,
         }
     }
 
@@ -126,9 +128,10 @@ impl Backend {
         let mut state = CachedState::new(state);
 
         let exec_info = execute_transaction(
-            Transaction::AccountTransaction(transaction),
+            ExecutionTransaction::AccountTransaction(transaction),
             &mut state,
-            &self.block_context.read(),
+            &self.env.read().block,
+            true,
         )?;
 
         if exec_info.revert_error.is_some() {
@@ -140,10 +143,10 @@ impl Backend {
 
         let (l1_gas_usage, vm_resources) = extract_l1_gas_and_vm_usage(&exec_info.actual_resources);
         let l1_gas_by_vm_usage =
-            calculate_l1_gas_by_vm_usage(&self.block_context.read(), &vm_resources)?;
+            calculate_l1_gas_by_vm_usage(&self.env.read().block, &vm_resources)?;
         let total_l1_gas_usage = l1_gas_usage as f64 + l1_gas_by_vm_usage;
 
-        let gas_price = self.block_context.read().gas_price as u64;
+        let gas_price = self.env.read().block.gas_price as u64;
 
         Ok(FeeEstimate {
             gas_consumed: total_l1_gas_usage.ceil() as u64,
@@ -154,98 +157,107 @@ impl Backend {
 
     // execute the tx
     pub async fn handle_transaction(&self, transaction: Transaction) {
-        let api_tx = convert_blockifier_to_api_tx(&transaction);
-
-        if let Transaction::AccountTransaction(tx) = &transaction {
-            self.check_tx_fee(tx);
-        }
-
         let is_valid = if let Some(pending_block) = self.pending_block.write().await.as_mut() {
-            info!("Transaction received | Hash: {}", api_tx.transaction_hash());
-            pending_block.add_transaction(transaction).await
+            let charge_fee = !self.config.read().disable_fee;
+            pending_block.add_transaction(transaction, charge_fee).await
         } else {
             return error!("Unable to process transaction: no pending block");
         };
 
         if is_valid && self.config.read().auto_mine {
-            self.generate_latest_block().await;
-            self.generate_pending_block().await;
+            self.mine_block().await;
+            self.open_pending_block().await;
         }
     }
 
-    // Creates a new block that contains all the pending txs
-    // Will update the txs status to accepted
-    // Append the block to the chain
-    // Update the block context
-    pub async fn generate_latest_block(&self) {
-        let block = match self.pending_block.read().await.as_ref().map(|p| {
-            let partial_block = p.as_block();
-            Block::new(partial_block.header, partial_block.transactions, partial_block.outputs)
-        }) {
-            Some(block) => block,
-            None => self.create_empty_block().await,
+    // Generates a new block from the pending block and stores it in the storage.
+    pub async fn mine_block(&self) {
+        let pending = self.pending_block.write().await.take();
+
+        let Some(mut pending) = pending else {
+            warn!("No pending block to mine");
+            return;
         };
 
-        let pending_txs = block.transactions.clone();
+        let block = {
+            let partial_block = pending.as_block();
+            Block::new(partial_block.header, partial_block.transactions, partial_block.outputs)
+        };
 
         let block_hash = block.header.hash();
         let block_number = block.header.number;
+        let tx_count = block.transactions.len();
 
-        // Store state diffs
-        if let Some(pending_block) = self.pending_block.read().await.as_ref() {
-            let state_diff =
-                convert_state_diff_to_rpc_state_diff(pending_block.state.to_state_diff());
-            self.storage.write().await.append_block(block_hash, block, state_diff);
+        // Stores the pending transaction in storage
+        for tx in &block.transactions {
+            let transaction_hash = tx.inner.hash();
+            self.storage.write().await.transactions.insert(
+                transaction_hash,
+                IncludedTransaction {
+                    block_number,
+                    block_hash,
+                    transaction: tx.clone(),
+                    status: TransactionStatus::AcceptedOnL2,
+                }
+                .into(),
+            );
         }
 
-        info!("⛏️ New block generated | Hash: {block_hash:#x} | Number: {block_number}");
+        // get state diffs
+        let pending_state_diff = pending.state.to_state_diff();
+        let state_diff = convert_state_diff_to_rpc_state_diff(pending_state_diff);
 
-        // Stores the pending transaction in the storage
+        // store block and the state diff
+        self.storage.write().await.append_block(block_hash, block, state_diff);
 
-        {
-            for pending_tx in pending_txs.into_iter() {
-                let hash: FieldElement = pending_tx.transaction.transaction_hash().0.into();
-                self.storage.write().await.transactions.insert(
-                    hash,
-                    KnownTransaction::Included(IncludedTransaction {
-                        block_number,
-                        block_hash,
-                        transaction: pending_tx.clone(),
-                        status: TransactionStatus::AcceptedOnL2,
-                    }),
-                );
-            }
-        }
+        info!("⛏️ Block {block_number} mined with {tx_count} transactions");
 
-        self.apply_pending_state().await;
+        // TODO: This is a hack, we should be able to apply the state diff directly
+        // to the current state instead of applying the diff onto the pending state.
+        // This is because `CachedState` have no notion of `Sierra` class, which whenever
+        // we execute a Declare transaction, we will set the `Sierra` class directly to the
+        // underlying `MemDb`. However, this is not reflected in the `CachedState`.
+        //
+        // Set the new pending state as the current state
+        let mut new_state = pending.state.state.clone();
+        new_state.apply_state(&mut pending.state);
+        *self.state.write().await = new_state.clone();
+
+        // store the current state
+        self.states.write().await.insert(block_hash, new_state);
     }
 
-    // apply the pending state diff to the state
-    async fn apply_pending_state(&self) {
-        let Some(ref mut pending_block ) = *self.pending_block.write().await else {
-            panic!("failed to apply pending state: no pending block")
-        };
-
-        // Apply the pending state to the current state
-        self.state.write().await.apply_state(&mut pending_block.state);
-
-        // Store the current state snapshot
-        let state = self.state.read().await.clone();
-        let hash = self.storage.read().await.latest_hash;
-        self.states.write().await.insert(hash, state);
-    }
-
-    pub async fn generate_pending_block(&self) {
+    pub async fn open_pending_block(&self) {
         let latest_hash = self.storage.read().await.latest_hash;
         let latest_state = self.state.read().await.clone();
 
         self.update_block_context();
+
         let _ = self.pending_block.write().await.insert(PendingBlockExecutor::new(
             latest_hash,
             latest_state,
-            self.block_context.clone(),
+            self.env.clone(),
             self.storage.clone(),
         ));
+    }
+
+    fn update_block_context(&self) {
+        let mut context_gen = self.block_context_generator.write();
+        let block_context = &mut self.env.write().block;
+
+        let current_timestamp_secs = get_current_timestamp().as_secs() as i64;
+
+        let timestamp = if context_gen.next_block_start_time == 0 {
+            (current_timestamp_secs + context_gen.block_timestamp_offset) as u64
+        } else {
+            let timestamp = context_gen.next_block_start_time;
+            context_gen.block_timestamp_offset = timestamp as i64 - current_timestamp_secs;
+            context_gen.next_block_start_time = 0;
+            timestamp
+        };
+
+        block_context.block_number = block_context.block_number.next();
+        block_context.block_timestamp = BlockTimestamp(timestamp);
     }
 
     pub fn call(
@@ -268,7 +280,7 @@ impl Backend {
             &mut state,
             &mut ExecutionResources::default(),
             &mut EntryPointExecutionContext::new(
-                self.block_context.read().clone(),
+                self.env.read().block.clone(),
                 AccountTransactionContext::default(),
                 1000000000,
             ),
@@ -295,53 +307,19 @@ impl Backend {
         self.state.read().await.clone()
     }
 
-    fn check_tx_fee(&self, transaction: &AccountTransaction) {
-        let max_fee = match transaction {
-            AccountTransaction::Invoke(tx) => tx.max_fee(),
-            AccountTransaction::DeployAccount(tx) => tx.max_fee,
-            AccountTransaction::Declare(tx) => match tx.tx() {
-                starknet_api::transaction::DeclareTransaction::V0(tx) => tx.max_fee,
-                starknet_api::transaction::DeclareTransaction::V1(tx) => tx.max_fee,
-                starknet_api::transaction::DeclareTransaction::V2(tx) => tx.max_fee,
-            },
-        };
-
-        if !self.config.read().allow_zero_max_fee && max_fee.0 == 0 {
-            panic!("max fee == 0 is not supported")
-        }
-    }
-
     pub async fn create_empty_block(&self) -> Block {
         let parent_hash = self.storage.read().await.latest_hash;
+        let block_context = &self.env.read().block;
 
         let partial_header = PartialHeader {
             parent_hash,
-            gas_price: self.block_context.read().gas_price,
-            number: self.block_context.read().block_number.0,
-            timestamp: self.block_context.read().block_timestamp.0,
-            sequencer_address: (*self.block_context.read().sequencer_address.0.key()).into(),
+            gas_price: block_context.gas_price,
+            number: block_context.block_number.0,
+            timestamp: block_context.block_timestamp.0,
+            sequencer_address: (*block_context.sequencer_address.0.key()).into(),
         };
 
         Block::new(partial_header, vec![], vec![])
-    }
-
-    fn update_block_context(&self) {
-        let mut block_context_gen = self.block_context_generator.write();
-        let mut block_context = self.block_context.write();
-        block_context.block_number = block_context.block_number.next();
-
-        let current_timestamp_secs = get_current_timestamp().as_secs() as i64;
-
-        if block_context_gen.next_block_start_time == 0 {
-            let block_timestamp = current_timestamp_secs + block_context_gen.block_timestamp_offset;
-            block_context.block_timestamp = BlockTimestamp(block_timestamp as u64);
-        } else {
-            let block_timestamp = block_context_gen.next_block_start_time;
-            block_context_gen.block_timestamp_offset =
-                block_timestamp as i64 - current_timestamp_secs;
-            block_context.block_timestamp = BlockTimestamp(block_timestamp);
-            block_context_gen.next_block_start_time = 0;
-        }
     }
 
     pub async fn set_next_block_timestamp(&self, timestamp: u64) -> Result<(), SequencerError> {
@@ -368,6 +346,21 @@ impl Backend {
             !block.transactions.is_empty()
         } else {
             false
+        }
+    }
+
+    pub async fn set_storage_at(
+        &self,
+        contract_address: ContractAddress,
+        storage_key: StorageKey,
+        value: StarkFelt,
+    ) -> Result<(), SequencerError> {
+        match self.pending_block.write().await.as_mut() {
+            Some(pending_block) => {
+                pending_block.state.set_storage_at(contract_address, storage_key, value);
+                Ok(())
+            }
+            None => Err(SequencerError::StateNotFound(BlockId::Tag(BlockTag::Pending))),
         }
     }
 }

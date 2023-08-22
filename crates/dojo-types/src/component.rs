@@ -8,6 +8,5 @@ pub struct Member {
     /// Type of the member.
     #[serde(rename = "type")]
     pub ty: String,
-    pub slot: u64,
-    pub offset: u8,
+    pub key: bool,
 }

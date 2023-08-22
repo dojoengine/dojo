@@ -8,7 +8,9 @@ use starknet::core::types::{
     FieldElement, MaybePendingTransactionReceipt, StarknetError, TransactionReceipt,
     TransactionStatus,
 };
-use starknet::providers::{Provider, ProviderError};
+use starknet::providers::{
+    MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage,
+};
 use tokio::time::{Instant, Interval};
 
 type GetReceiptResult<E> = Result<MaybePendingTransactionReceipt, ProviderError<E>>;
@@ -128,9 +130,11 @@ where
                         }
 
                         Ok(MaybePendingTransactionReceipt::PendingReceipt(_))
-                        | Err(ProviderError::StarknetError(
-                            StarknetError::TransactionHashNotFound,
-                        )) => {}
+                        | Err(ProviderError::StarknetError(StarknetErrorWithMessage {
+                            code:
+                                MaybeUnknownErrorCode::Known(StarknetError::TransactionHashNotFound),
+                            ..
+                        })) => {}
 
                         Err(e) => return Poll::Ready(Err(TransactionWaitingError::Provider(e))),
                     },
@@ -153,13 +157,23 @@ where
     }
 }
 
-fn transaction_status_from_receipt(receipt: &TransactionReceipt) -> TransactionStatus {
+pub fn transaction_status_from_receipt(receipt: &TransactionReceipt) -> TransactionStatus {
     match receipt {
         TransactionReceipt::Invoke(receipt) => receipt.status,
         TransactionReceipt::Deploy(receipt) => receipt.status,
         TransactionReceipt::Declare(receipt) => receipt.status,
         TransactionReceipt::L1Handler(receipt) => receipt.status,
         TransactionReceipt::DeployAccount(receipt) => receipt.status,
+    }
+}
+
+pub fn block_number_from_receipt(tx: &TransactionReceipt) -> u64 {
+    match tx {
+        TransactionReceipt::Invoke(tx) => tx.block_number,
+        TransactionReceipt::L1Handler(tx) => tx.block_number,
+        TransactionReceipt::Declare(tx) => tx.block_number,
+        TransactionReceipt::Deploy(tx) => tx.block_number,
+        TransactionReceipt::DeployAccount(tx) => tx.block_number,
     }
 }
 

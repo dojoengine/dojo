@@ -1,0 +1,26 @@
+syntax = "proto3";
+package world;
+
+// The World service provides information about the world.
+service World {
+    // Retrieves metadata about the world.
+    rpc Meta (MetaRequest) returns (MetaReply);
+}
+
+// A request to retrieve metadata for a specific world ID.
+message MetaRequest {
+    // The address of the world.
+    string id = 1;
+}
+
+// The metadata response contains addresses and class hashes for the world.
+message MetaReply {
+    // The hex-encoded address of the world.
+    string world_address = 1;
+    // The hex-encoded class hash of the world.
+    string world_class_hash = 2;
+    // The hex-encoded address of the executor.
+    string executor_address = 3;
+    // The hex-encoded class hash of the executor.
+    string executor_class_hash = 4;
+}

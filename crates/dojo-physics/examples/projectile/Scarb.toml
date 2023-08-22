@@ -4,4 +4,4 @@ version = "0.1.0"
 
 [dependencies]
 cubit = { git = "https://github.com/influenceth/cubit" }
-dojo_physics = { path = "../.."}
+dojo_physics = { path = "../.." }

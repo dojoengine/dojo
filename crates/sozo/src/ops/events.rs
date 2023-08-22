@@ -1,12 +1,12 @@
 use anyhow::Result;
+use dojo_world::metadata::Environment;
 use starknet::core::types::{BlockId, EventFilter};
 use starknet::core::utils::starknet_keccak;
 use starknet::providers::Provider;
-use toml::Value;
 
 use crate::commands::events::EventsArgs;
 
-pub async fn execute(args: EventsArgs, env_metadata: Option<Value>) -> Result<()> {
+pub async fn execute(args: EventsArgs, env_metadata: Option<Environment>) -> Result<()> {
     let EventsArgs {
         chunk_size,
         starknet,
