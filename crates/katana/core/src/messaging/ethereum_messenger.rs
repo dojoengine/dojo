@@ -96,6 +96,7 @@ impl EthereumMessenger {
             address: Some(ValueOrArray::Value(self.messaging_contract_address)),
 
             // TODO: the topic is needed! To only gather message logs.
+            // This might come from the configuration actually.
             topics: Default::default(),
         };
 

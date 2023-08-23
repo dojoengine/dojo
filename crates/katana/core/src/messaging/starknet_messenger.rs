@@ -1,13 +1,22 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use starknet::core::types::{FieldElement, MsgToL1};
+use starknet::core::types::{FieldElement, MsgToL1, EmittedEvent, BlockId, EventFilter, BlockTag};
+use starknet::accounts::{Account, SingleOwnerAccount, Call};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{AnyProvider, JsonRpcClient, Provider};
 use starknet::signers::{LocalWallet, SigningKey};
+use starknet_api::core::{ContractAddress, EntryPointSelector, Nonce};
+use starknet_api::{stark_felt, hash::{self, StarkFelt}};
+use starknet_api::transaction::{
+    Calldata, Fee, L1HandlerTransaction as ApiL1HandlerTransaction, TransactionHash,
+    TransactionVersion,
+};
 use url::Url;
+use std::collections::HashMap;
+use std::sync::Arc;
 
 use crate::backend::storage::transaction::L1HandlerTransaction;
-use crate::messaging::{Messenger, MessengerResult};
+use crate::messaging::{Messenger, MessengerResult, MessengerError};
 use crate::sequencer::SequencerMessagingConfig;
 
 ///
@@ -43,24 +52,171 @@ impl StarknetMessenger {
             messaging_contract_address,
         })
     }
+
+    /// Fetches events for the given blocks range.
+    pub async fn fetch_events(
+        &self,
+        from_block: BlockId,
+        to_block: BlockId,
+    ) -> Result<HashMap<u64, Vec<EmittedEvent>>> {
+        tracing::trace!("Fetching blocks {:?} - {:?}.", from_block, to_block);
+
+        let mut events: HashMap<u64, Vec<EmittedEvent>> = HashMap::new();
+
+        let filter = EventFilter {
+            from_block: Some(from_block),
+            to_block: Some(to_block),
+            address: Some(self.messaging_contract_address),
+            // TODO: this might come from the configuration actually.
+            keys: None,
+        };
+
+        // TODO: this chunk_size may also come from configuration?
+        let chunk_size = 200;
+        let mut continuation_token: Option<String> = None;
+
+        loop {
+            let event_page = self
+                .provider
+                .get_events(filter.clone(), continuation_token, chunk_size)
+                .await?;
+
+            event_page.events.iter().for_each(|e| {
+                events
+                    .entry(e.block_number)
+                    .and_modify(|v| v.push(e.clone()))
+                    .or_insert(vec![e.clone()]);
+            });
+
+            continuation_token = event_page.continuation_token;
+
+            if continuation_token.is_none() {
+                break;
+            }
+        }
+
+        Ok(events)
+    }
+
+    /// Sends an invoke TX on starknet.
+    pub async fn send_invoke_tx(&self, calls: Vec<Call>) -> Result<()> {
+        let signer = Arc::new(&self.wallet);
+
+        let mut account =
+            SingleOwnerAccount::new(
+                &self.provider,
+                signer,
+                self.sender_account_address,
+                self.chain_id
+            );
+
+        account.set_block_id(BlockId::Tag(BlockTag::Pending));
+
+        // TODO: make maximum fee configurable?
+        let execution = account.execute(calls).fee_estimate_multiplier(1.5f64);
+        let estimated_fee = (execution.estimate_fee().await?.overall_fee) * 3 / 2;
+        let _tx = execution.max_fee(estimated_fee.into()).send().await?;
+
+        // TODO: output the TX hash?
+
+        Ok(())
+    }
 }
 
 #[async_trait]
 impl Messenger for StarknetMessenger {
     async fn gather_messages(
         &self,
-        _from_block: u64,
-        _max_blocks: u64,
+        from_block: u64,
+        max_blocks: u64,
     ) -> MessengerResult<(u64, Vec<L1HandlerTransaction>)> {
-        let _c = self.chain_id;
-        let _p = &self.provider;
-        let _w = &self.wallet;
-        let _s = self.sender_account_address;
-        let _m = self.messaging_contract_address;
-        Ok((0, vec![]))
+        let chain_latest_block: u64 = self
+            .provider
+            .block_number()
+            .await
+            .map_err(|_| MessengerError::SendError)
+            .unwrap();
+
+        // +1 as the from_block counts as 1 block fetched.
+        let to_block = if from_block + max_blocks + 1 < chain_latest_block {
+            from_block + max_blocks
+        } else {
+            chain_latest_block
+        };
+
+        let mut l1_handler_txs: Vec<L1HandlerTransaction> = vec![];
+
+        self.fetch_events(BlockId::Number(from_block), BlockId::Number(to_block))
+            .await
+            .map_err(|_| MessengerError::SendError)
+            .unwrap()
+            .iter()
+            .for_each(
+                |(block_number, block_events)| {
+                    tracing::debug!(
+                        "Converting events of block {} into L1HandlerTx ({} events)",
+                        block_number,
+                        block_events.len(),
+                    );
+
+                    block_events.iter().for_each(|e| {
+                        if let Ok(tx) = l1_handler_tx_from_event(e) {
+                            l1_handler_txs.push(tx)
+                        }
+                    })
+                }
+            );
+
+        Ok((to_block, l1_handler_txs))
     }
 
     async fn settle_messages(&self, _messages: &[MsgToL1]) -> MessengerResult<Vec<String>> {
         Ok(vec![])
     }
+}
+
+fn l1_handler_tx_from_event(event: &EmittedEvent) -> Result<L1HandlerTransaction> {
+    // TODO: replace by the topic in the filter instead of having error here.
+    if event.keys[0] !=
+        FieldElement::from_hex_be("0xd4b578bb2844b25d079c94a3e311d0327f3d260aa13ac72a7ef70212a08d8e")
+        .unwrap()
+    {
+        tracing::debug!(
+            "Event with key {:?} can't be converted into L1HandlerTransaction",
+            event.keys[0],
+        );        
+        return Err(MessengerError::GatherError.into());
+    }
+
+    // See contrat appchain_messaging.cairo for MessageSentToAppchain event.
+    let from_address = event.keys[2];
+    let to_address = event.keys[3];
+    let selector = event.data[0];
+    let nonce = event.data[1];
+
+    // Payload starts at data[2].
+    let mut calldata_vec: Vec<StarkFelt> = vec![from_address.into()];
+    for p in &event.data[2..] {
+        calldata_vec.push((*p).into());
+    }
+
+    let calldata = Calldata(calldata_vec.into());
+
+    let tx_hash = hash::pedersen_hash(&nonce.into(), &to_address.into());
+
+    let tx = L1HandlerTransaction {
+        inner: ApiL1HandlerTransaction {
+            transaction_hash: TransactionHash(tx_hash),
+            version: TransactionVersion(stark_felt!(1_u32)),
+            nonce: Nonce(nonce.into()),
+            contract_address: ContractAddress::try_from(
+                <FieldElement as Into<StarkFelt>>::into(to_address)).unwrap(),
+            entry_point_selector: EntryPointSelector(selector.into()),
+            calldata,
+        },
+        // TODO: fee is missing in the event...!
+        paid_fee_on_l1: Fee(30000_u128),
+    };
+
+    Ok(tx)
 }

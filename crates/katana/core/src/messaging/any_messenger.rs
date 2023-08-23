@@ -13,6 +13,8 @@ pub enum AnyMessenger {
 }
 
 pub async fn from_config(config: SequencerMessagingConfig) -> MessengerResult<AnyMessenger> {
+    // TODO: instead of trying the init of both, how can we easily
+    // determine the chain from the config? Messaging contract address size?
     match EthereumMessenger::new(config.clone()).await {
         Ok(m_eth) => {
             tracing::debug!("Messaging enabled [Ethereum]");
