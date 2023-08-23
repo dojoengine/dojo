@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_graphql::Value;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use dojo_world::manifest::{Component, Manifest, System};
@@ -9,9 +8,8 @@ use sqlx::{Executor, Pool, Row, Sqlite};
 use starknet::core::types::FieldElement;
 use starknet_crypto::poseidon_hash_many;
 use tokio::sync::Mutex;
-use torii_graphql::object::component::{Component as ComponentGraphql, ComponentObject};
-use torii_graphql::object::entity::{Entity, EntityObject};
-use torii_graphql::simple_broker::SimpleBroker;
+use crate::simple_broker::SimpleBroker;
+use crate::types::{Component as ComponentType, Entity};
 
 use super::{State, World};
 
@@ -101,7 +99,7 @@ impl State for Sql {
             updates.join(","),
             self.world_address
         )])
-        .await;
+            .await;
 
         for component in manifest.components {
             self.register_component(component).await?;
@@ -116,12 +114,12 @@ impl State for Sql {
 
     async fn head(&self) -> Result<u64> {
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
-        let indexer: (i64,) = sqlx::query_as(&format!(
+        let indexer: (i64, ) = sqlx::query_as(&format!(
             "SELECT head FROM indexers WHERE id = '{:#x}'",
             self.world_address
         ))
-        .fetch_one(&mut conn)
-        .await?;
+            .fetch_one(&mut conn)
+            .await?;
         Ok(indexer.0.try_into().expect("doesnt fit in u64"))
     }
 
@@ -130,7 +128,7 @@ impl State for Sql {
             "UPDATE indexers SET head = {head} WHERE id = '{:#x}'",
             self.world_address
         )])
-        .await;
+            .await;
         Ok(())
     }
 
@@ -154,7 +152,7 @@ impl State for Sql {
             world.executor_class_hash,
             world.world_address,
         )])
-        .await;
+            .await;
         Ok(())
     }
 
@@ -209,17 +207,13 @@ impl State for Sql {
                 Err(_) => Utc::now(),
             };
 
-        let class_hash = format!("{:#x}", component.class_hash);
-        let component_mapping = ComponentGraphql {
+        SimpleBroker::publish(ComponentType {
             id: component_id,
             name: component.name,
-            class_hash,
+            class_hash: format!("{:#x}", component.class_hash),
             transaction_hash: "0x0".to_string(),
             created_at,
-        };
-        let value_mapping: indexmap::IndexMap<async_graphql::Name, Value> =
-            ComponentObject::value_mapping(component_mapping);
-        SimpleBroker::publish(value_mapping);
+        });
         Ok(())
     }
 
@@ -263,9 +257,9 @@ impl State for Sql {
             "SELECT * FROM component_members WHERE key == FALSE AND component_id = ? ORDER BY id \
              ASC",
         )
-        .bind(component.to_lowercase())
-        .fetch_all(&self.pool)
-        .await?;
+            .bind(component.to_lowercase())
+            .fetch_all(&self.pool)
+            .await?;
 
         let (names_str, values_str) = format_values(member_results, values)?;
         let insert_components = format!(
@@ -285,16 +279,14 @@ impl State for Sql {
             .fetch_one(&self.pool)
             .await?;
         let created_at: DateTime<Utc> = query_result.try_get("created_at")?;
-        let entity = Entity {
+
+        SimpleBroker::publish(Entity {
             id: entity_id.clone(),
             keys: keys_str,
             component_names,
             created_at,
             updated_at: Utc::now(),
-        };
-        let value_mapping: indexmap::IndexMap<async_graphql::Name, Value> =
-            EntityObject::value_mapping(entity);
-        SimpleBroker::publish(value_mapping);
+        });
         Ok(())
     }
 

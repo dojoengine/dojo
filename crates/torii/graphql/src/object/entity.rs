@@ -17,24 +17,14 @@ use crate::query::{query_by_id, ID};
 use crate::types::ScalarType;
 use crate::utils::csv_to_vec;
 use crate::utils::extract_value::extract;
-
-#[derive(FromRow, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct Entity {
-    pub id: String,
-    pub keys: String,
-    pub component_names: String,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-}
+use torii_core::types::Entity;
 
 pub struct EntityObject {
     pub type_mapping: TypeMapping,
 }
 
-#[cfg_attr(feature = "cargo-clippy", allow(clippy::new_without_default))]
 impl EntityObject {
-    pub fn new() -> Self {
+    pub fn default() -> Self {
         Self {
             type_mapping: IndexMap::from([
                 (Name::new("id"), TypeRef::named(TypeRef::ID)),

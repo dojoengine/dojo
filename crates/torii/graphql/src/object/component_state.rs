@@ -17,7 +17,8 @@ use super::inputs::where_input::{parse_where_argument, where_argument, WhereInpu
 use super::inputs::InputObjectTrait;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
-use crate::object::entity::{Entity, EntityObject};
+use torii_core::types::Entity;
+use crate::object::entity::EntityObject;
 use crate::query::filter::{Filter, FilterValue};
 use crate::query::order::{Direction, Order};
 use crate::query::{query_by_id, query_total_count, ID};

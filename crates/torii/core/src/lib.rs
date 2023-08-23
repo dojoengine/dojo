@@ -11,6 +11,7 @@ use crate::types::SQLFieldElement;
 pub mod processors;
 pub mod sql;
 pub mod types;
+pub mod simple_broker;
 
 #[derive(FromRow, Deserialize)]
 pub struct World {

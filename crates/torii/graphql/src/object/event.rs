@@ -27,9 +27,8 @@ pub struct EventObject {
     pub type_mapping: TypeMapping,
 }
 
-#[cfg_attr(feature = "cargo-clippy", allow(clippy::new_without_default))]
 impl EventObject {
-    pub fn new() -> Self {
+    pub fn default() -> Self {
         Self {
             type_mapping: IndexMap::from([
                 (Name::new("id"), TypeRef::named(TypeRef::ID)),

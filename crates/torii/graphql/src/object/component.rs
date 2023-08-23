@@ -10,25 +10,15 @@ use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
 use crate::query::{query_all, query_by_id, query_total_count, ID};
 use crate::types::ScalarType;
-
-#[derive(FromRow, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Component {
-    pub id: String,
-    pub name: String,
-    pub class_hash: String,
-    pub transaction_hash: String,
-    pub created_at: DateTime<Utc>,
-}
+use torii_core::types::Component;
 
 pub struct ComponentObject {
     pub type_mapping: TypeMapping,
 }
 
-#[cfg_attr(feature = "cargo-clippy", allow(clippy::new_without_default))]
 impl ComponentObject {
     // Not used currently, eventually used for component metadata
-    pub fn new() -> Self {
+    pub fn default() -> Self {
         Self {
             type_mapping: IndexMap::from([
                 (Name::new("id"), TypeRef::named(TypeRef::ID)),
