@@ -17,6 +17,7 @@ use super::object::system_call::SystemCallObject;
 use super::object::ObjectTrait;
 use super::types::ScalarType;
 use super::utils::format_name;
+use crate::object::component::ComponentObject;
 use crate::simple_broker::SimpleBroker;
 
 // The graphql schema is built dynamically at runtime, this is because we won't know the schema of
@@ -38,6 +39,8 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     // register dynamic component objects
     let (component_objects, component_union) = component_objects(pool).await?;
     objects.extend(component_objects);
+    objects.push(Box::new(ComponentObject::new())); // In order to susbcribe to component we have to add it to the schema
+
     schema_builder = schema_builder.register(component_union);
 
     // collect resolvers for single and plural queries
@@ -89,18 +92,28 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     }
 
     // todo: find a way to iterate over fields to create arguments
-    let subscription_root = Subscription::new("Subscription").field(SubscriptionField::new(
-        "entityAdded",
-        TypeRef::named_nn(objects[0].type_name()),
-        |_| {
+    let subscription_root = Subscription::new("Subscription")
+        .field(SubscriptionField::new(
+            "entityAdded",
+            TypeRef::named_nn(objects[0].type_name()),
+            |_| {
+                SubscriptionFieldFuture::new(async {
+                    Result::Ok(
+                        SimpleBroker::<indexmap::IndexMap<async_graphql::Name, Value>>::subscribe()
+                            .map(|entity| Result::Ok(FieldValue::owned_any(entity))),
+                    )
+                })
+            },
+        ))
+        .field(SubscriptionField::new("componentAdded", TypeRef::named_nn("Component"), |_| {
             SubscriptionFieldFuture::new(async {
                 Result::Ok(
                     SimpleBroker::<indexmap::IndexMap<async_graphql::Name, Value>>::subscribe()
-                        .map(|entity| Result::Ok(FieldValue::owned_any(entity))),
+                        .map(|component| Result::Ok(FieldValue::owned_any(component))),
                 )
             })
-        },
-    ));
+        }));
+
     schema_builder
         .register(query_root)
         .register(subscription_root)

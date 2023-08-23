@@ -9,6 +9,7 @@ use sqlx::{Executor, Pool, Row, Sqlite};
 use starknet::core::types::FieldElement;
 use starknet_crypto::poseidon_hash_many;
 use tokio::sync::Mutex;
+use torii_graphql::object::component::{Component as ComponentGraphql, ComponentObject};
 use torii_graphql::object::entity::{Entity, EntityObject};
 use torii_graphql::simple_broker::SimpleBroker;
 
@@ -197,6 +198,28 @@ impl State for Sql {
         }
 
         self.queue(queries).await;
+        // Since previous query has not been executed, we have to make sure created_at exists
+        let created_at: DateTime<Utc> =
+            match sqlx::query("SELECT created_at FROM components WHERE id = ?")
+                .bind(component_id.clone())
+                .fetch_one(&self.pool)
+                .await
+            {
+                Ok(query_result) => query_result.try_get("created_at")?,
+                Err(_) => Utc::now(),
+            };
+
+        let class_hash = format!("{:#x}", component.class_hash);
+        let component_mapping = ComponentGraphql {
+            id: component_id,
+            name: component.name,
+            class_hash,
+            transaction_hash: "0x0".to_string(),
+            created_at,
+        };
+        let value_mapping: indexmap::IndexMap<async_graphql::Name, Value> =
+            ComponentObject::value_mapping(component_mapping);
+        SimpleBroker::publish(value_mapping);
         Ok(())
     }
 

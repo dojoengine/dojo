@@ -21,6 +21,7 @@ pub async fn start(pool: Pool<Sqlite>) -> anyhow::Result<()> {
         .at("/ws", get(GraphQLSubscription::new(schema)))
         .with(Cors::new());
 
+    println!("Open GraphiQL IDE: http://localhost:8080");
     Server::new(TcpListener::bind("0.0.0.0:8080")).run(app).await?;
 
     Ok(())

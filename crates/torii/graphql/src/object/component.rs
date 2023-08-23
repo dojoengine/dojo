@@ -27,7 +27,7 @@ pub struct ComponentObject {
 
 impl ComponentObject {
     // Not used currently, eventually used for component metadata
-    pub fn _new() -> Self {
+    pub fn new() -> Self {
         Self {
             type_mapping: IndexMap::from([
                 (Name::new("id"), TypeRef::named(TypeRef::ID)),
