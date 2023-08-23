@@ -27,6 +27,7 @@ pub struct SystemCallObject {
     pub type_mapping: TypeMapping,
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(clippy::new_without_default))]
 impl SystemCallObject {
     pub fn new() -> Self {
         Self {

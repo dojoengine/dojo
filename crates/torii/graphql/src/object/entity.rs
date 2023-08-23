@@ -32,6 +32,7 @@ pub struct EntityObject {
     pub type_mapping: TypeMapping,
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(clippy::new_without_default))]
 impl EntityObject {
     pub fn new() -> Self {
         Self {

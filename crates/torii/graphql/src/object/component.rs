@@ -25,6 +25,7 @@ pub struct ComponentObject {
     pub type_mapping: TypeMapping,
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(clippy::new_without_default))]
 impl ComponentObject {
     // Not used currently, eventually used for component metadata
     pub fn new() -> Self {

@@ -8,7 +8,7 @@ use crate::types::ScalarType;
 pub struct PageInfoObject {
     pub type_mapping: TypeMapping,
 }
-
+#[cfg_attr(feature = "cargo-clippy", allow(clippy::new_without_default))]
 impl PageInfoObject {
     pub fn new() -> Self {
         Self {
