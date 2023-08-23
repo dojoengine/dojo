@@ -1,7 +1,4 @@
-use starknet::testing::set_block_timestamp;
-
-use cubit::f128::types::fixed::{Fixed, FixedTrait, ONE_u128};
-use cubit::f128::math::core::div;
+use cubit::f128::types::fixed::{Fixed, FixedTrait};
 
 use dojo_defi::dutch_auction::gda::{DiscreteGDA, DiscreteGDATrait};
 use dojo_defi::tests::utils::{assert_approx_equal, TOLERANCE};
@@ -12,12 +9,11 @@ fn test_initial_price() {
     let auction = DiscreteGDA {
         sold: FixedTrait::new_unscaled(0, false),
         initial_price: FixedTrait::new_unscaled(1000, false),
-        scale_factor: div(FixedTrait::new_unscaled(11, false), FixedTrait::new_unscaled(10, false)),
-        decay_constant: div(FixedTrait::new_unscaled(1, false), FixedTrait::new_unscaled(2, false)),
-        auction_start_time: 0,
+        scale_factor: FixedTrait::new_unscaled(11, false) / FixedTrait::new_unscaled(10, false),
+        decay_constant: FixedTrait::new_unscaled(1, false) / FixedTrait::new_unscaled(2, false),
     };
-    let price: Fixed = auction.purchase_price(1);
-    assert(price == auction.initial_price, 'wrong price')
+    let price = auction.purchase_price(FixedTrait::ZERO(), FixedTrait::ONE());
+    assert_approx_equal(price.mag, auction.initial_price.mag, TOLERANCE)
 }
 
 // ipynb with calculations at https://colab.research.google.com/drive/14elIFRXdG3_gyiI43tP47lUC_aClDHfB?usp=sharing
@@ -27,12 +23,11 @@ fn test_price() {
     let auction = DiscreteGDA {
         sold: FixedTrait::new_unscaled(2, false),
         initial_price: FixedTrait::new_unscaled(1000, false),
-        scale_factor: div(FixedTrait::new_unscaled(11, false), FixedTrait::new_unscaled(10, false)),
-        decay_constant: div(FixedTrait::new_unscaled(1, false), FixedTrait::new_unscaled(2, false)),
-        auction_start_time: 0,
+        scale_factor: FixedTrait::new_unscaled(11, false) / FixedTrait::new_unscaled(10, false),
+        decay_constant: FixedTrait::new_unscaled(1, false) / FixedTrait::new_unscaled(2, false),
     };
     let expected = FixedTrait::new(2396905028162956000000, false);
-    set_block_timestamp(10);
-    let price: Fixed = auction.purchase_price(10);
+    let price = auction
+        .purchase_price(FixedTrait::new_unscaled(10, false), FixedTrait::new_unscaled(10, false), );
     assert_approx_equal(price.mag, expected.mag, TOLERANCE)
 }
