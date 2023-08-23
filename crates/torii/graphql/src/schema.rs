@@ -57,6 +57,13 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     }
 
     for object in &objects {
+        // register enum objects
+        if let Some(input_objects) = object.enum_objects() {
+            for input in input_objects {
+                schema_builder = schema_builder.register(input);
+            }
+        }
+
         // register input objects, whereInput and orderBy
         if let Some(input_objects) = object.input_objects() {
             for input in input_objects {

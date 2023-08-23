@@ -4,8 +4,8 @@ use async_graphql::dynamic::{Field, InputObject, InputValue, ResolverContext, Ty
 use async_graphql::{Error, Name};
 
 use super::InputObjectTrait;
-use crate::object::filter::{parse_filter, Filter, FilterValue};
 use crate::object::TypeMapping;
+use crate::query::filter::{parse_filter, Filter, FilterValue};
 use crate::types::ScalarType;
 
 pub struct WhereInputObject {
@@ -56,7 +56,7 @@ impl InputObjectTrait for WhereInputObject {
         &self.type_mapping
     }
 
-    fn create(&self) -> InputObject {
+    fn input_object(&self) -> InputObject {
         self.type_mapping.iter().fold(InputObject::new(self.type_name()), |acc, (ty_name, ty)| {
             acc.field(InputValue::new(ty_name.to_string(), TypeRef::named(ty.to_string())))
         })
@@ -71,25 +71,27 @@ pub fn parse_where_argument(
     ctx: &ResolverContext<'_>,
     where_mapping: &TypeMapping,
 ) -> Result<Vec<Filter>, Error> {
-    let mut filters: Vec<Filter> = Vec::new();
-    let where_input = ctx.args.try_get("where");
-    if let Ok(where_input) = where_input {
-        let input_object = where_input.object()?;
+    let where_input = match ctx.args.try_get("where") {
+        Ok(input) => input,
+        Err(_) => return Ok(Vec::new()),
+    };
 
-        for (ty_name, ty) in where_mapping.iter() {
-            if let Some(input_filter) = input_object.get(ty_name) {
+    let input_object = where_input.object()?;
+
+    let filters = where_mapping
+        .iter()
+        .filter_map(|(ty_name, ty)| {
+            input_object.get(ty_name).map(|input_filter| {
                 let data_type = match ty.to_string().as_str() {
                     TypeRef::STRING => FilterValue::String(input_filter.string()?.to_string()),
                     TypeRef::INT => FilterValue::Int(input_filter.i64()?),
-                    _ => {
-                        return Err(Error::from("Unsupported `where` argument type"));
-                    }
+                    _ => return Err(Error::from("Unsupported `where` argument type")),
                 };
 
-                filters.push(parse_filter(ty_name, data_type));
-            }
-        }
-    }
+                Ok(parse_filter(ty_name, data_type))
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
 
     Ok(filters)
 }
