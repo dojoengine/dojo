@@ -1,0 +1,228 @@
+#[starknet::interface]
+trait IAppchainMessaging<T> {
+    /// Sends a message to an appchain by emitting an event.
+    /// Returns the message hash and the nonce.
+    fn send_message_to_appchain(
+        ref self: T,
+        to_address: starknet::ContractAddress,
+        selector: felt252,
+        payload: Span<felt252>,
+    ) -> (felt252, felt252);
+
+    /// Registers messages hashes as consumable.
+    /// Usually, this function is only callable by the appchain developer/owner
+    /// that control the appchain sequencer.
+    fn register_messages_hashes(ref self: T, messages_hashes: Span<felt252>);
+
+    /// Consumes a message registered as consumable by the appchain.
+    fn consume_message_from_appchain(
+        ref self: T,
+        from_address: starknet::ContractAddress,
+        payload: Span<felt252>,
+    );
+}
+
+#[starknet::contract]
+mod appchain_messaging {
+    use option::OptionTrait;
+    use result::ResultTrait;
+    use array::{ArrayTrait, SpanTrait};
+    use traits::{Into, TryInto};
+    use zeroable::Zeroable;
+    use starknet::ContractAddress;
+
+    use debug::PrintTrait;
+
+    use super::IAppchainMessaging;
+
+    #[storage]
+    struct Storage {
+        // The account used by the appchain sequencers to
+        // register messages hashes.
+        appchain_account: ContractAddress,
+        // Abbreviated identifier of the appchain sending messaging
+        // with this contract.
+        appchain_name: felt252,
+        // The nonce for messages sent from Starknet.
+        sn_to_appc_nonce: felt252,
+        // Ledger of messages sent from Starknet to the appchain.
+        sn_to_appc_messages: LegacyMap::<felt252, felt252>,
+        // Records of messages registered from the appchain and a refcount
+        // associated to it.
+        appc_to_sn_messages: LegacyMap::<felt252, felt252>,
+    }
+
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    enum Event {
+        MessageSentToAppchain: MessageSentToAppchain,
+        MessagesRegisteredFromAppchain: MessagesRegisteredFromAppchain,
+        MessageConsumedOnStarknet: MessageConsumedOnStarknet,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct MessageSentToAppchain {
+        #[key]
+        from: ContractAddress,
+        #[key]
+        to: ContractAddress,
+        #[key]
+        selector: felt252,
+        nonce: felt252,
+        payload: Span<felt252>,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct MessagesRegisteredFromAppchain {
+        messages_hashes: Span<felt252>,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct MessageConsumedOnStarknet {
+        #[key]
+        from: ContractAddress,
+        #[key]
+        to: ContractAddress,
+        payload: Span<felt252>,
+    }
+
+    /// Computes the starknet keccak.
+    fn starknet_keccak(data: Span<felt252>) -> felt252 {
+        let mut u256_data: Array<u256> = array![];
+
+        let mut i = 0_usize;
+        loop {
+            if i == data.len() {
+                break;
+            }
+            u256_data.append((*data[i]).into());
+            i += 1;
+        };
+
+        let mut hash = keccak::keccak_u256s_be_inputs(u256_data.span());
+        let low = integer::u128_byte_reverse(hash.high);
+        let high = integer::u128_byte_reverse(hash.low);
+        hash = u256 { low, high };
+        hash = hash & 0x03ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff_u256;
+        hash.try_into().expect('starknet keccak overflow')
+    }
+
+    /// Computes message hash for consuming messages from appchain.
+    /// starknet_keccak(from_address, to_address, payload_len, payload).
+    fn compute_hash_appc_to_sn(
+        from_address: ContractAddress,
+        to_address: ContractAddress,
+        payload: Span<felt252>
+    ) -> felt252 {
+        let mut hash_data: Array<felt252> = array![
+            from_address.into(),
+            to_address.into(),
+            payload.len().into(),
+        ];
+
+        let mut i = 0_usize;
+        loop {
+            if i == payload.len() {
+                break;
+            }
+            hash_data.append((*payload[i]));
+            i += 1;
+        };
+
+        starknet_keccak(hash_data.span())
+    }
+
+    /// Computes message hash for sending messages to appchain.
+    /// starknet_keccak(nonce, to_address, selector, payload).
+    fn compute_hash_sn_to_appc(
+        nonce: felt252,
+        to_address: ContractAddress,
+        selector: felt252,
+        payload: Span<felt252>
+    ) -> felt252 {
+        let mut hash_data = array![
+            nonce,
+            to_address.into(),
+            selector,
+        ];
+
+        let mut i = 0_usize;
+        loop {
+            if i == payload.len() {
+                break;
+            }
+            hash_data.append((*payload[i]));
+            i += 1;
+        };
+
+        starknet_keccak(hash_data.span())
+    }
+
+    #[external(v0)]
+    impl AppchainMessagingImpl of IAppchainMessaging<ContractState> {
+
+        fn register_messages_hashes(ref self: ContractState, messages_hashes: Span<felt252>) {
+            // TODO: assert the caller is the appchain_account.
+
+            let mut i = 0_usize;
+            loop {
+                if i == messages_hashes.len() {
+                    break;
+                }
+
+                let msg_hash = *messages_hashes[i];
+
+                let count = self.appc_to_sn_messages.read(msg_hash);
+                self.appc_to_sn_messages.write(msg_hash, count + 1);
+
+                i += 1;
+            };
+
+            self.emit(MessagesRegisteredFromAppchain { messages_hashes });
+        }
+
+        fn consume_message_from_appchain(
+            ref self: ContractState,
+            from_address: ContractAddress,
+            payload: Span<felt252>
+        ) {
+            let to_address = starknet::get_caller_address();
+
+            let msg_hash = compute_hash_appc_to_sn(from_address, to_address, payload);
+
+            let count = self.appc_to_sn_messages.read(msg_hash);
+            assert(count.is_non_zero(), 'INVALID_MESSAGE_TO_CONSUME');
+
+            self.emit(MessageConsumedOnStarknet {
+                from: from_address,
+                to: to_address,
+                payload,
+            });
+
+            self.appc_to_sn_messages.write(msg_hash, count - 1);
+        }
+
+        fn send_message_to_appchain(
+            ref self: ContractState,
+            to_address: ContractAddress,
+            selector: felt252,
+            payload: Span<felt252>
+        ) -> (felt252, felt252) {
+            let nonce = self.sn_to_appc_nonce.read() + 1;
+            self.sn_to_appc_nonce.write(nonce);
+
+            let msg_hash = compute_hash_sn_to_appc(nonce, to_address, selector, payload);
+
+            self.emit(MessageSentToAppchain {
+                from: starknet::get_caller_address(),
+                to: to_address,
+                selector,
+                nonce,
+                payload,
+            });
+
+            self.sn_to_appc_messages.write(msg_hash, nonce);
+            (msg_hash, nonce)
+        }
+    }
+}
