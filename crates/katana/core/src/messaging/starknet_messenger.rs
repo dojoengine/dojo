@@ -1,23 +1,25 @@
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use anyhow::Result;
 use async_trait::async_trait;
-use starknet::core::types::{FieldElement, MsgToL1, EmittedEvent, BlockId, EventFilter, BlockTag};
-use starknet::accounts::{Account, SingleOwnerAccount, Call};
+use starknet::accounts::{Account, Call, SingleOwnerAccount};
+use starknet::core::types::{BlockId, BlockTag, EmittedEvent, EventFilter, FieldElement, MsgToL1};
+use starknet::core::utils::starknet_keccak;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{AnyProvider, JsonRpcClient, Provider};
 use starknet::signers::{LocalWallet, SigningKey};
-use starknet::core::utils::starknet_keccak;
 use starknet_api::core::{ContractAddress, EntryPointSelector, Nonce};
-use starknet_api::{stark_felt, hash::{self, StarkFelt}};
+use starknet_api::hash::{self, StarkFelt};
+use starknet_api::stark_felt;
 use starknet_api::transaction::{
     Calldata, Fee, L1HandlerTransaction as ApiL1HandlerTransaction, TransactionHash,
     TransactionVersion,
 };
 use url::Url;
-use std::collections::HashMap;
-use std::sync::Arc;
 
 use crate::backend::storage::transaction::L1HandlerTransaction;
-use crate::messaging::{Messenger, MessengerResult, MessengerError};
+use crate::messaging::{Messenger, MessengerError, MessengerResult};
 use crate::sequencer::SequencerMessagingConfig;
 
 ///
@@ -77,10 +79,8 @@ impl StarknetMessenger {
         let mut continuation_token: Option<String> = None;
 
         loop {
-            let event_page = self
-                .provider
-                .get_events(filter.clone(), continuation_token, chunk_size)
-                .await?;
+            let event_page =
+                self.provider.get_events(filter.clone(), continuation_token, chunk_size).await?;
 
             event_page.events.iter().for_each(|e| {
                 events
@@ -103,13 +103,12 @@ impl StarknetMessenger {
     pub async fn send_invoke_tx(&self, calls: Vec<Call>) -> Result<()> {
         let signer = Arc::new(&self.wallet);
 
-        let mut account =
-            SingleOwnerAccount::new(
-                &self.provider,
-                signer,
-                self.sender_account_address,
-                self.chain_id
-            );
+        let mut account = SingleOwnerAccount::new(
+            &self.provider,
+            signer,
+            self.sender_account_address,
+            self.chain_id,
+        );
 
         account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
@@ -131,12 +130,8 @@ impl Messenger for StarknetMessenger {
         from_block: u64,
         max_blocks: u64,
     ) -> MessengerResult<(u64, Vec<L1HandlerTransaction>)> {
-        let chain_latest_block: u64 = self
-            .provider
-            .block_number()
-            .await
-            .map_err(|_| MessengerError::SendError)
-            .unwrap();
+        let chain_latest_block: u64 =
+            self.provider.block_number().await.map_err(|_| MessengerError::SendError).unwrap();
 
         // +1 as the from_block counts as 1 block fetched.
         let to_block = if from_block + max_blocks + 1 < chain_latest_block {
@@ -152,21 +147,19 @@ impl Messenger for StarknetMessenger {
             .map_err(|_| MessengerError::SendError)
             .unwrap()
             .iter()
-            .for_each(
-                |(block_number, block_events)| {
-                    tracing::debug!(
-                        "Converting events of block {} into L1HandlerTx ({} events)",
-                        block_number,
-                        block_events.len(),
-                    );
+            .for_each(|(block_number, block_events)| {
+                tracing::debug!(
+                    "Converting events of block {} into L1HandlerTx ({} events)",
+                    block_number,
+                    block_events.len(),
+                );
 
-                    block_events.iter().for_each(|e| {
-                        if let Ok(tx) = l1_handler_tx_from_event(e) {
-                            l1_handler_txs.push(tx)
-                        }
-                    })
-                }
-            );
+                block_events.iter().for_each(|e| {
+                    if let Ok(tx) = l1_handler_tx_from_event(e) {
+                        l1_handler_txs.push(tx)
+                    }
+                })
+            });
 
         Ok((to_block, l1_handler_txs))
     }
@@ -198,7 +191,6 @@ impl Messenger for StarknetMessenger {
                     selector: m.payload[1],
                     calldata: m.payload[2..].to_vec(),
                 });
-
             } else {
                 let mut buf: Vec<u8> = vec![];
                 buf.extend(m.from_address.to_bytes_be());
@@ -210,14 +202,13 @@ impl Messenger for StarknetMessenger {
 
                 hashes.push(starknet_keccak(&buf));
             }
-
         }
 
-        if calls.len() > 0 {
+        if !calls.is_empty() {
             match self.send_invoke_tx(calls).await {
                 Ok(_) => {
                     // TODO: need to trace something here?
-                },
+                }
                 Err(e) => {
                     tracing::error!("Error sending invoke tx: {:?}", e);
                     return Err(MessengerError::SendError);
@@ -231,8 +222,10 @@ impl Messenger for StarknetMessenger {
 
 fn l1_handler_tx_from_event(event: &EmittedEvent) -> Result<L1HandlerTransaction> {
     // TODO: replace by the topic in the filter instead of having error here.
-    if event.keys[0] !=
-        FieldElement::from_hex_be("0xd4b578bb2844b25d079c94a3e311d0327f3d260aa13ac72a7ef70212a08d8e")
+    if event.keys[0]
+        != FieldElement::from_hex_be(
+            "0xd4b578bb2844b25d079c94a3e311d0327f3d260aa13ac72a7ef70212a08d8e",
+        )
         .unwrap()
     {
         tracing::debug!(
@@ -263,8 +256,10 @@ fn l1_handler_tx_from_event(event: &EmittedEvent) -> Result<L1HandlerTransaction
             transaction_hash: TransactionHash(tx_hash),
             version: TransactionVersion(stark_felt!(1_u32)),
             nonce: Nonce(nonce.into()),
-            contract_address: ContractAddress::try_from(
-                <FieldElement as Into<StarkFelt>>::into(to_address)).unwrap(),
+            contract_address: ContractAddress::try_from(<FieldElement as Into<StarkFelt>>::into(
+                to_address,
+            ))
+            .unwrap(),
             entry_point_selector: EntryPointSelector(selector.into()),
             calldata,
         },
