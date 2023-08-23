@@ -7,7 +7,7 @@ use scarb::ops;
 
 cairo_lang_test_utils::test_file_test!(
     manifest_file,
-    "src/manifest_test_crate",
+    "src/manifest_test_data/",
     {
         manifest: "manifest",
     },
@@ -17,7 +17,8 @@ cairo_lang_test_utils::test_file_test!(
 pub fn test_manifest_file(
     _inputs: &OrderedHashMap<String, String>,
 ) -> OrderedHashMap<String, String> {
-    let config = build_test_config("./src/manifest_test_crate/Scarb.toml").unwrap();
+    let config =
+        build_test_config("./src/manifest_test_data/manifest_test_crate/Scarb.toml").unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
 
     let packages = ws.members().map(|p| p.id).collect();
