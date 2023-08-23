@@ -5,6 +5,7 @@ use starknet::accounts::{Account, SingleOwnerAccount, Call};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{AnyProvider, JsonRpcClient, Provider};
 use starknet::signers::{LocalWallet, SigningKey};
+use starknet::core::utils::starknet_keccak;
 use starknet_api::core::{ContractAddress, EntryPointSelector, Nonce};
 use starknet_api::{stark_felt, hash::{self, StarkFelt}};
 use starknet_api::transaction::{
@@ -170,8 +171,61 @@ impl Messenger for StarknetMessenger {
         Ok((to_block, l1_handler_txs))
     }
 
-    async fn settle_messages(&self, _messages: &[MsgToL1]) -> MessengerResult<Vec<String>> {
-        Ok(vec![])
+    async fn settle_messages(&self, messages: &[MsgToL1]) -> MessengerResult<Vec<String>> {
+        if messages.is_empty() {
+            return Ok(vec![]);
+        }
+
+        let mut hashes: Vec<FieldElement> = vec![];
+        let mut calls: Vec<Call> = vec![];
+
+        for m in messages {
+            if m.to_address == FieldElement::ZERO {
+                // TODO: check payload len. Must be at least 2 felts long to decode
+                // to_address and selector.
+
+                // If it's execute -> no hash computed, only the content is taken to directly
+                // build the calldata.
+                // For now, if the to_address is 0, it is considered as an execute,
+                // and the payload must contains [0] = to_address on starknet, [1] = selector.
+                // TODO: check which special address can be taken instead of 0.
+                // TODO: if this feature is considered nice by dojo team -> do a macro
+                //       for the user using something like `execute_on_starknet!(...)`
+                // and abstract the serialization of to_address and selector into the payload.
+
+                calls.push(Call {
+                    to: m.payload[0],
+                    selector: m.payload[1],
+                    calldata: m.payload[2..].to_vec(),
+                });
+
+            } else {
+                let mut buf: Vec<u8> = vec![];
+                buf.extend(m.from_address.to_bytes_be());
+                buf.extend(m.to_address.to_bytes_be());
+                buf.extend(FieldElement::from(m.payload.len()).to_bytes_be());
+                for p in &m.payload {
+                    buf.extend(p.to_bytes_be());
+                }
+
+                hashes.push(starknet_keccak(&buf));
+            }
+
+        }
+
+        if calls.len() > 0 {
+            match self.send_invoke_tx(calls).await {
+                Ok(_) => {
+                    // TODO: need to trace something here?
+                },
+                Err(e) => {
+                    tracing::error!("Error sending invoke tx: {:?}", e);
+                    return Err(MessengerError::SendError);
+                }
+            }
+        }
+
+        Ok(hashes.iter().map(|h| format!("{:#x}", h)).collect())
     }
 }
 
@@ -184,7 +238,7 @@ fn l1_handler_tx_from_event(event: &EmittedEvent) -> Result<L1HandlerTransaction
         tracing::debug!(
             "Event with key {:?} can't be converted into L1HandlerTransaction",
             event.keys[0],
-        );        
+        );
         return Err(MessengerError::GatherError.into());
     }
 

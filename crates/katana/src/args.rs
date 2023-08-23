@@ -142,6 +142,10 @@ pub struct MessagingOptions {
                   settlement chain.")]
     #[arg(default_value = "5")]
     pub messaging_fetch_interval: Option<u64>,
+
+    #[arg(long)]
+    #[arg(help = "The first block to start fetching event on settlement chain.")]
+    pub messaging_from_block_settlement: Option<u64>,
 }
 
 impl KatanaArgs {
@@ -203,6 +207,7 @@ fn sequencer_messaging_config(options: MessagingOptions) -> Option<SequencerMess
         options.messaging_sender_address,
         options.messaging_private_key,
         options.messaging_fetch_interval,
+        options.messaging_from_block_settlement,
     ) {
         (
             Some(rpc_url),
@@ -210,12 +215,14 @@ fn sequencer_messaging_config(options: MessagingOptions) -> Option<SequencerMess
             Some(sender_address),
             Some(private_key),
             Some(fetch_interval),
+            Some(from_block_settlement),
         ) => Some(SequencerMessagingConfig {
             rpc_url,
             contract_address,
             sender_address,
             private_key,
             fetch_interval,
+            from_block_settlement,
         }),
         _ => None,
     }

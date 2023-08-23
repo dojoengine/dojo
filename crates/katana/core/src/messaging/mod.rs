@@ -74,7 +74,7 @@ pub async fn messaging_main_loop(
     let max_blocks = 200;
 
     let mut local_latest_block_number: u64 = 0;
-    let mut settlement_latest_block_number: u64 = 0;
+    let mut settlement_latest_block_number: u64 = config.from_block_settlement;
 
     loop {
         time::sleep(time::Duration::from_secs(config.fetch_interval)).await;

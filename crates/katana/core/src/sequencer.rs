@@ -46,6 +46,7 @@ pub struct SequencerMessagingConfig {
     pub sender_address: String,
     pub private_key: String,
     pub fetch_interval: u64,
+    pub from_block_settlement: u64,
 }
 
 #[async_trait]
