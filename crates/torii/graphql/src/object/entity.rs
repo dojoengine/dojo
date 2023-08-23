@@ -11,9 +11,9 @@ use super::connection::{
     connection_arguments, connection_output, decode_cursor, parse_connection_arguments,
     ConnectionArguments,
 };
-use super::query::{query_by_id, ID};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
+use crate::query::{query_by_id, ID};
 use crate::types::ScalarType;
 use crate::utils::csv_to_vec;
 use crate::utils::extract_value::extract;

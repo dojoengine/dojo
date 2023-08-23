@@ -2,7 +2,17 @@
 mod tests {
     use sqlx::SqlitePool;
 
-    use crate::tests::common::{entity_fixtures, run_graphql_query, Connection, Moves, Position};
+    use crate::tests::common::{
+        entity_fixtures, run_graphql_query, Connection, Edge, Moves, Position,
+    };
+
+    type OrderTestFn = dyn Fn(&Vec<Edge<Position>>) -> bool;
+
+    struct OrderTest {
+        direction: &'static str,
+        field: &'static str,
+        test_order: Box<OrderTestFn>,
+    }
 
     #[sqlx::test(migrations = "../migrations")]
     async fn test_component_no_filter(pool: SqlitePool) {
@@ -91,6 +101,70 @@ mod tests {
             let connection: Connection<Position> =
                 serde_json::from_value(positions.clone()).unwrap();
             assert_eq!(connection.total_count, expected_total);
+        }
+    }
+
+    #[sqlx::test(migrations = "../migrations")]
+    async fn test_component_ordering(pool: SqlitePool) {
+        entity_fixtures(&pool).await;
+
+        let orders: Vec<OrderTest> = vec![
+            OrderTest {
+                direction: "ASC",
+                field: "X",
+                test_order: Box::new(|edges: &Vec<Edge<Position>>| {
+                    edges[0].node.x < edges[1].node.x
+                }),
+            },
+            OrderTest {
+                direction: "DESC",
+                field: "X",
+                test_order: Box::new(|edges: &Vec<Edge<Position>>| {
+                    edges[0].node.x > edges[1].node.x
+                }),
+            },
+            OrderTest {
+                direction: "ASC",
+                field: "Y",
+                test_order: Box::new(|edges: &Vec<Edge<Position>>| {
+                    edges[0].node.y < edges[1].node.y
+                }),
+            },
+            OrderTest {
+                direction: "DESC",
+                field: "Y",
+                test_order: Box::new(|edges: &Vec<Edge<Position>>| {
+                    edges[0].node.y > edges[1].node.y
+                }),
+            },
+        ];
+
+        for order in orders {
+            let query = format!(
+                r#"
+                {{
+                    positionComponents (order: {{ direction: {}, field: {} }}) {{
+                        totalCount
+                        edges {{
+                            node {{
+                                __typename
+                                x
+                                y
+                            }}
+                            cursor
+                        }}
+                    }}
+                }}
+            "#,
+                order.direction, order.field
+            );
+
+            let value = run_graphql_query(&pool, &query).await;
+            let positions = value.get("positionComponents").ok_or("no positions found").unwrap();
+            let connection: Connection<Position> =
+                serde_json::from_value(positions.clone()).unwrap();
+            assert_eq!(connection.total_count, 2);
+            assert!((order.test_order)(&connection.edges));
         }
     }
 
