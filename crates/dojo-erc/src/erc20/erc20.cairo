@@ -1,22 +1,22 @@
-// TODO: future improvements when Cairo catches up
-//    * use BoundedInt in allowance calc
-//    * use inline commands (currently available only in systems)
 //    * use ufelt when available
 
 #[starknet::contract]
 mod ERC20 {
-    // max(felt252)
-    const UNLIMITED_ALLOWANCE: felt252 =
-        3618502788666131213697322783095070105623107215331596699973092056135872020480;
-
     use array::ArrayTrait;
+    use integer::BoundedInt;
     use option::OptionTrait;
-    use starknet::{ContractAddress, get_caller_address, get_contract_address};
-    use traits::Into;
+    use starknet::{
+        ContractAddress, ContractAddressIntoFelt252, get_caller_address, get_contract_address,
+        get_execution_info
+    };
+    use traits::{Into, TryInto};
     use zeroable::Zeroable;
 
     use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
     use dojo_erc::erc20::components::{Allowance, Balance, Supply};
+
+    const UNLIMITED_ALLOWANCE: felt252 =
+        3618502788666131213697322783095070105623107215331596699973092056135872020480;
 
     #[storage]
     struct Storage {
@@ -62,11 +62,11 @@ mod ERC20 {
         self.token_name.write(name);
         self.token_symbol.write(symbol);
         self.token_decimals.write(decimals);
-
+        let mut calldata: Array<felt252> = array![];
         if initial_supply != 0 {
-            assert(recipient.is_non_zero(), 'ERC20: mint to 0');
+            assert(!recipient.is_zero(), 'ERC20: mint to 0');
+            let mut calldata: Array<felt252> = array![];
             let token = get_contract_address();
-            let mut calldata = ArrayTrait::new();
             calldata.append(token.into());
             calldata.append(recipient.into());
             calldata.append(initial_supply);
@@ -93,57 +93,47 @@ mod ERC20 {
     fn decimals(self: @ContractState) -> u8 {
         self.token_decimals.read()
     }
-
     #[external(v0)]
     fn total_supply(self: @ContractState) -> u256 {
         let contract_address = get_contract_address();
-        let supply = get !(self.world.read(), contract_address, Supply);
+        let supply = get!(self.world.read(), contract_address, Supply);
         supply.amount.into()
     }
 
     #[external(v0)]
     fn balance_of(self: @ContractState, account: ContractAddress) -> u256 {
         let token = get_contract_address();
-        let balance = get !(self.world.read(), (token, account), Balance);
+        let balance = get!(self.world.read(), (token, account), Balance);
         balance.amount.into()
     }
-
     #[external(v0)]
     fn allowance(self: @ContractState, owner: ContractAddress, spender: ContractAddress) -> u256 {
         let token = get_contract_address();
-        let allowance = get !(self.world.read(), (token, owner, spender), Allowance);
+        let allowance = get!(self.world.read(), (token, owner, spender), Allowance);
         allowance.amount.into()
     }
 
     #[external(v0)]
     fn approve(ref self: ContractState, spender: ContractAddress, amount: u256) -> bool {
-        assert(spender.is_non_zero(), 'ERC20: approve to 0');
-
-        let token = get_contract_address();
         let owner = get_caller_address();
-        let mut calldata = ArrayTrait::new();
-        calldata.append(token.into());
-        calldata.append(owner.into());
-        calldata.append(spender.into());
-        calldata.append(u256_as_allowance(amount));
-        self.world.read().execute('erc20_approve', calldata);
-
-        self.emit(Approval { owner, spender, value: amount });
-
+        _approve(ref self, owner, spender, amount);
         true
     }
 
     #[external(v0)]
     fn transfer(ref self: ContractState, recipient: ContractAddress, amount: u256) -> bool {
-        transfer_internal(ref self, get_caller_address(), recipient, amount);
+        let sender = get_caller_address();
+        _transfer(ref self, sender, recipient, amount);
         true
     }
 
     #[external(v0)]
     fn transfer_from(
-        ref self: ContractState, spender: ContractAddress, recipient: ContractAddress, amount: u256
+        ref self: ContractState, sender: ContractAddress, recipient: ContractAddress, amount: u256
     ) -> bool {
-        transfer_internal(ref self, spender, recipient, amount);
+        let caller = get_caller_address();
+        _spend_allowance(ref self, sender, caller, amount);
+        _transfer(ref self, sender, recipient, amount);
         true
     }
 
@@ -151,38 +141,52 @@ mod ERC20 {
     // Internal
     //
 
-    fn transfer_internal(
-        ref self: ContractState, spender: ContractAddress, recipient: ContractAddress, amount: u256
+    fn _approve(
+        ref self: ContractState, owner: ContractAddress, spender: ContractAddress, amount: u256
     ) {
-        assert(recipient.is_non_zero(), 'ERC20: transfer to 0');
+        assert(!owner.is_zero(), 'ERC20: approve from 0');
+        assert(!spender.is_zero(), 'ERC20: approve to 0');
+        let token = get_contract_address();
+        let mut calldata: Array<felt252> = array![
+            token.into(), owner.into(), spender.into(), u256_as_allowance(amount)
+        ];
+        self.world.read().execute('erc20_approve', calldata);
+
+        self.emit(Approval { owner, spender, value: amount });
+    }
+
+    fn _transfer(
+        ref self: ContractState, sender: ContractAddress, recipient: ContractAddress, amount: u256
+    ) {
+        assert(!sender.is_zero(), 'ERC20: transfer from 0');
+        assert(!recipient.is_zero(), 'ERC20: transfer to 0');
+        assert(balance_of(@self, sender) >= amount, 'ERC20: not enough balance');
 
         let token = get_contract_address();
-        let mut calldata = ArrayTrait::new();
-        calldata.append(token.into());
-        calldata.append(get_caller_address().into());
-        calldata.append(spender.into());
-        calldata.append(recipient.into());
-        calldata.append(u256_into_felt252(amount));
-
+        let mut calldata: Array<felt252> = array![
+            token.into(), sender.into(), recipient.into(), amount.try_into().unwrap()
+        ];
         self.world.read().execute('erc20_transfer_from', calldata);
 
         self.emit(Transfer { from: Zeroable::zero(), to: recipient, value: amount });
     }
 
+    fn _spend_allowance(
+        ref self: ContractState, owner: ContractAddress, spender: ContractAddress, amount: u256
+    ) {
+        let current_allowance = allowance(@self, owner, spender);
+
+        if current_allowance != UNLIMITED_ALLOWANCE.into() {
+            _approve(ref self, owner, spender, current_allowance - amount);
+        }
+    }
+
     fn u256_as_allowance(val: u256) -> felt252 {
         // by convention, max(u256) means unlimited amount,
         // but since we're using felts, use max(felt252) to do the same
-        // TODO: use BoundedInt when available
-        let max_u128 = 0xffffffffffffffffffffffffffffffff;
-        let max_u256 = u256 { low: max_u128, high: max_u128 };
-        if val == max_u256 {
+        if val == BoundedInt::max() {
             return UNLIMITED_ALLOWANCE;
         }
-        u256_into_felt252(val)
-    }
-
-    fn u256_into_felt252(val: u256) -> felt252 {
-        // temporary, until TryInto of this is in corelib
-        val.low.into() + val.high.into() * 0x100000000000000000000000000000000
+        val.try_into().unwrap()
     }
 }
