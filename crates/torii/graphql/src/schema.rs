@@ -3,9 +3,10 @@ use async_graphql::dynamic::{
     Field, FieldValue, Object, Scalar, Schema, Subscription, SubscriptionField,
     SubscriptionFieldFuture, TypeRef, Union,
 };
-use async_graphql::Value;
 use sqlx::SqlitePool;
 use tokio_stream::StreamExt;
+use torii_core::simple_broker::SimpleBroker;
+use torii_core::types::{Component, Entity};
 
 use super::object::component_state::{type_mapping_query, ComponentStateObject};
 use super::object::connection::page_info::PageInfoObject;
@@ -17,8 +18,6 @@ use super::object::ObjectTrait;
 use super::types::ScalarType;
 use super::utils::format_name;
 use crate::object::component::ComponentObject;
-use torii_core::simple_broker::SimpleBroker;
-use torii_core::types::{Entity, Component};
 
 // The graphql schema is built dynamically at runtime, this is because we won't know the schema of
 // the components until runtime. There are however, predefined objects such as entities and
@@ -29,17 +28,17 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
 
     // predefined objects
     let mut objects: Vec<Box<dyn ObjectTrait>> = vec![
-        Box::new(EntityObject::default()),
-        Box::new(SystemObject::default()),
-        Box::new(EventObject::default()),
-        Box::new(SystemCallObject::default()),
-        Box::new(PageInfoObject::default()),
+        Box::<EntityObject>::default(),
+        Box::<SystemObject>::default(),
+        Box::<EventObject>::default(),
+        Box::<SystemCallObject>::default(),
+        Box::<PageInfoObject>::default(),
     ];
 
     // register dynamic component objects
     let (component_objects, component_union) = component_objects(pool).await?;
     objects.extend(component_objects);
-    objects.push(Box::new(ComponentObject::default())); // In order to susbcribe to component we have to add it to the schema
+    objects.push(Box::<ComponentObject>::default()); // In order to susbcribe to component we have to add it to the schema
 
     schema_builder = schema_builder.register(component_union);
 
@@ -98,19 +97,17 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
             TypeRef::named_nn(objects[0].type_name()),
             |_| {
                 SubscriptionFieldFuture::new(async {
-                    Result::Ok(
-                        SimpleBroker::<Entity>::subscribe()
-                            .map(|entity: Entity| Result::Ok(FieldValue::owned_any(EntityObject::value_mapping(entity)))),
-                    )
+                    Result::Ok(SimpleBroker::<Entity>::subscribe().map(|entity: Entity| {
+                        Result::Ok(FieldValue::owned_any(EntityObject::value_mapping(entity)))
+                    }))
                 })
             },
         ))
         .field(SubscriptionField::new("componentAdded", TypeRef::named_nn("Component"), |_| {
             SubscriptionFieldFuture::new(async {
-                Result::Ok(
-                    SimpleBroker::<Component>::subscribe()
-                        .map(|component: Component| Result::Ok(FieldValue::owned_any(ComponentObject::value_mapping(component)))),
-                )
+                Result::Ok(SimpleBroker::<Component>::subscribe().map(|component: Component| {
+                    Result::Ok(FieldValue::owned_any(ComponentObject::value_mapping(component)))
+                }))
             })
         }));
 

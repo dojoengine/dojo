@@ -1,24 +1,22 @@
 use async_graphql::dynamic::{Field, FieldFuture, InputValue, TypeRef};
 use async_graphql::{Name, Value};
-use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
-use serde::Deserialize;
-use sqlx::{FromRow, Pool, Sqlite};
+use sqlx::{Pool, Sqlite};
+use torii_core::types::Component;
 
 use super::connection::connection_output;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
 use crate::query::{query_all, query_by_id, query_total_count, ID};
 use crate::types::ScalarType;
-use torii_core::types::Component;
 
 pub struct ComponentObject {
     pub type_mapping: TypeMapping,
 }
 
-impl ComponentObject {
-    // Not used currently, eventually used for component metadata
-    pub fn default() -> Self {
+impl Default for ComponentObject {
+    // Eventually used for component metadata
+    fn default() -> Self {
         Self {
             type_mapping: IndexMap::from([
                 (Name::new("id"), TypeRef::named(TypeRef::ID)),
@@ -29,7 +27,8 @@ impl ComponentObject {
             ]),
         }
     }
-
+}
+impl ComponentObject {
     pub fn value_mapping(component: Component) -> ValueMapping {
         IndexMap::from([
             (Name::new("id"), Value::from(component.id)),
