@@ -1,22 +1,41 @@
-use anyhow::{anyhow, Result};
+use std::path::PathBuf;
+use std::sync::mpsc::channel;
+use std::time::Duration;
 
+use anyhow::{anyhow, Result};
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_filesystem::db::{AsFilesGroupMut, FilesGroupEx, PrivRawFileContentQuery};
 use cairo_lang_filesystem::ids::FileId;
 use clap::Args;
-use notify::event::{AccessKind, AccessMode, ModifyKind, RenameMode};
-use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use dojo_world::manifest::Manifest;
+use dojo_world::migration::world::WorldDiff;
+use notify_debouncer_mini::{new_debouncer, notify::RecursiveMode, DebouncedEvent, DebouncedEventKind};
 use scarb::compiler::CompilationUnit;
 use scarb::core::{Config, Workspace};
 use scarb::ui::Status;
 
-use std::path::PathBuf;
-use std::sync::mpsc::channel;
-
+use super::options::account::AccountOptions;
+use super::options::starknet::StarknetOptions;
+use super::options::world::WorldOptions;
 use super::scarb_internal::build_scarb_root_database;
 
-#[derive(Args, Debug)]
-pub struct DevArgs;
+#[derive(Args)]
+pub struct DevArgs {
+    #[arg(long)]
+    #[arg(help = "Name of the World.")]
+    #[arg(long_help = "Name of the World. It's hash will be used as a salt when deploying the \
+                       contract to avoid address conflicts.")]
+    pub name: Option<String>,
+
+    #[command(flatten)]
+    pub world: WorldOptions,
+
+    #[command(flatten)]
+    pub starknet: StarknetOptions,
+
+    #[command(flatten)]
+    pub account: AccountOptions,
+}
 
 enum DevAction {
     None,
@@ -24,20 +43,17 @@ enum DevAction {
     Build(PathBuf),
 }
 
-fn handle_event(event: Event) -> DevAction {
+fn handle_event(event: &DebouncedEvent) -> DevAction {
     let action = match event.kind {
-        EventKind::Modify(ModifyKind::Name(RenameMode::Both))
-        | EventKind::Modify(ModifyKind::Data(_))
-        | EventKind::Remove(_) => {
-            for p in event.paths.iter() {
-                if let Some(filename) = p.file_name() {
-                    if filename == "Scarb.toml" {
-                        return DevAction::Reload;
-                    } else {
-                        if let Some(extension) = p.extension() {
-                            if extension == "cairo" {
-                                return DevAction::Build(p.clone());
-                            }
+        DebouncedEventKind::Any => {
+            let p = event.path.clone();
+            if let Some(filename) = p.file_name() {
+                if filename == "Scarb.toml" {
+                    return DevAction::Reload;
+                } else {
+                    if let Some(extension) = p.extension() {
+                        if extension == "cairo" {
+                            return DevAction::Build(p.clone());
                         }
                     }
                 }
@@ -85,25 +101,68 @@ fn build(context: &mut DevContext) -> Result<()> {
     Ok(())
 }
 
+fn migrate(ws: &Workspace<'_>, previous_manifest: Option<Manifest>) -> Result<Manifest> {
+    let target_dir = ws.target_dir().path_existent().unwrap();
+    let target_dir = target_dir.join(ws.config().profile().as_str());
+    let manifest_path = target_dir.join("manifest.json");
+    if !manifest_path.exists() {
+        return Err(anyhow!("manifest.json not found"));
+    }
+    let new_manifest = Manifest::load_from_path(manifest_path)?;
+    let diff = WorldDiff::compute(new_manifest.clone(), previous_manifest);
+    let total_diffs = diff.count_diffs();
+    ws.config().ui().print(format!("Total diffs found: {total_diffs}"));
+    Ok(new_manifest)
+}
+
 impl DevArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         let mut context = load_context(config)?;
         let (tx, rx) = channel();
         // Automatically select the best implementation for your platform.
-        let mut watcher = RecommendedWatcher::new(tx, notify::Config::default())?;
 
-        watcher.watch(
+        // No specific tickrate, max debounce time 1 seconds
+        let mut debouncer = new_debouncer(Duration::from_secs(1), None, tx)?;
+
+        debouncer.watcher().watch(
             config.manifest_path().parent().unwrap().as_std_path(),
             RecursiveMode::Recursive,
         )?;
+
         let mut result = build(&mut context);
+        let mut previous_manifest: Option<Manifest> = migrate(&context.ws, None).ok();
 
         loop {
             let mut action = DevAction::None;
             match rx.recv() {
-                Ok(event) => {
-                    if event.is_ok() {
-                        action = handle_event(event.ok().unwrap());
+                Ok(events) => {
+                    if events.is_ok() {
+                        events.unwrap().iter().for_each(|event| {
+                            action = handle_event(event);
+                            match &action {
+                                DevAction::None => {}
+                                DevAction::Build(path) => {
+                                    context.ws.config().ui().print(Status::new(
+                                        "Need to rebuild",
+                                        path.clone().as_path().to_str().unwrap(),
+                                    ));
+                                    let db = &mut context.db;
+                                    let file = FileId::new(db, path.clone());
+                                    PrivRawFileContentQuery
+                                        .in_db_mut(db.as_files_group_mut())
+                                        .invalidate(&file);
+                                    db.override_file_content(file, None);
+                                }
+                                DevAction::Reload => {
+                                    context
+                                        .ws
+                                        .config()
+                                        .ui()
+                                        .print(Status::new("Reloading", "project"));
+                                    context = load_context(config).unwrap();
+                                }
+                            }
+                        });
                     }
                 }
                 Err(error) => {
@@ -113,22 +172,16 @@ impl DevArgs {
             };
             match action {
                 DevAction::None => continue,
-                DevAction::Build(path) => {
-                    context.ws.config().ui().print(Status::new(
-                        "Need to rebuild",
-                        path.clone().as_path().to_str().unwrap(),
-                    ));
-                    let db = &mut context.db;
-                    let file = FileId::new(db, path);
-                    PrivRawFileContentQuery.in_db_mut(db.as_files_group_mut()).invalidate(&file);
-                    db.override_file_content(file, None);
-                }
-                DevAction::Reload => {
-                    context.ws.config().ui().print(Status::new("Reloading", "project"));
-                    context = load_context(config)?;
-                }
+                _ => (),
             }
             result = build(&mut context);
+            match result {
+                Ok(_) => {
+                    context.ws.config().ui().print("Check migration");
+                    previous_manifest = migrate(&context.ws, previous_manifest.clone()).ok();
+                }
+                Err(_) => {}
+            }
         }
         result
     }
