@@ -1,6 +1,6 @@
 use core::fmt;
-use chrono::{DateTime, Utc};
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use starknet::core::types::FieldElement;

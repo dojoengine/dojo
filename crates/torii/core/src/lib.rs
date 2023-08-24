@@ -9,9 +9,9 @@ use crate::types::SQLFieldElement;
 
 // pub mod memory;
 pub mod processors;
+pub mod simple_broker;
 pub mod sql;
 pub mod types;
-pub mod simple_broker;
 
 #[derive(FromRow, Deserialize)]
 pub struct World {
