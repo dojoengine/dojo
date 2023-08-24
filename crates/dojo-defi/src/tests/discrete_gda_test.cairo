@@ -3,8 +3,6 @@ use cubit::f128::types::fixed::{Fixed, FixedTrait};
 use dojo_defi::dutch_auction::gda::{DiscreteGDA, DiscreteGDATrait};
 use dojo_defi::tests::utils::{assert_approx_equal, TOLERANCE};
 
-use debug::PrintTrait;
-
 #[test]
 #[available_gas(2000000)]
 fn test_initial_price() {
@@ -31,7 +29,6 @@ fn test_price_1() {
     let expected = FixedTrait::new(1856620062541316600000, false);
     let price = auction
         .purchase_price(FixedTrait::new_unscaled(10, false), FixedTrait::new_unscaled(9, false), );
-    price.print();
     assert_approx_equal(price, expected, TOLERANCE)
 }
 
