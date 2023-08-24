@@ -541,7 +541,7 @@ test_manifest_file
   "executor": {
     "name": "executor",
     "address": null,
-    "class_hash": "0x7b79892389a0c9fe22f74b1d28a9e9185c7b6d2c60cc1df814053e47e9078c2",
+    "class_hash": "0x6ac7478eec43bd66aacf829f58dcb4694d0e241dc52b332f64de2b736c24137",
     "abi": [
       {
         "type": "impl",
