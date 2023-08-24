@@ -24,7 +24,6 @@ use crate::query::order::{Direction, Order};
 use crate::query::{query_by_id, query_total_count, ID};
 use crate::types::ScalarType;
 use crate::utils::extract_value::extract;
-use torii_core::types::Entity;
 
 const BOOLEAN_TRUE: i64 = 1;
 
