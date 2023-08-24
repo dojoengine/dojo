@@ -1,11 +1,11 @@
 use anyhow::Result;
-use dojo_client::contract::world::WorldContractReader;
+use dojo_world::metadata::Environment;
 use starknet::core::types::{BlockId, BlockTag};
-use toml::Value;
+use torii_client::contract::world::WorldContractReader;
 
 use crate::commands::component::ComponentCommands;
 
-pub async fn execute(command: ComponentCommands, env_metadata: Option<Value>) -> Result<()> {
+pub async fn execute(command: ComponentCommands, env_metadata: Option<Environment>) -> Result<()> {
     match command {
         ComponentCommands::Get { name, world, starknet } => {
             let world_address = world.address(env_metadata.as_ref())?;

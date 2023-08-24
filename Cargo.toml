@@ -3,7 +3,6 @@
 resolver = "2"
 
 members = [
-  "crates/dojo-client",
   "crates/dojo-lang",
   "crates/dojo-language-server",
   "crates/dojo-signers",
@@ -15,7 +14,8 @@ members = [
   "crates/katana/merkle-tree",
   "crates/katana/rpc",
   "crates/sozo",
-  "crates/torii",
+  "crates/torii/client",
+  "crates/torii/server",
 ]
 
 [workspace.package]
@@ -23,37 +23,37 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "0.1.0"
+version = "0.2.1"
 
 [workspace.dependencies]
 anyhow = "1.0.66"
 async-trait = "0.1.68"
 blockifier = { git = "https://github.com/starkware-libs/blockifier" }
-cairo-lang-casm = "2.1.0-rc4"
-cairo-lang-compiler = "2.1.0-rc4"
-cairo-lang-debug = "2.1.0-rc4"
-cairo-lang-defs = "2.1.0-rc4"
-cairo-lang-diagnostics = "2.1.0-rc4"
-cairo-lang-filesystem = "2.1.0-rc4"
-cairo-lang-formatter = "2.1.0-rc4"
-cairo-lang-language-server = "2.1.0-rc4"
-cairo-lang-lowering = "2.1.0-rc4"
-cairo-lang-parser = "2.1.0-rc4"
-cairo-lang-plugins = "2.1.0-rc4"
-cairo-lang-project = "2.1.0-rc4"
-cairo-lang-semantic = { version = "2.1.0-rc4", features = ["testing"] }
-cairo-lang-sierra = "2.1.0-rc4"
-cairo-lang-sierra-generator = "2.1.0-rc4"
-cairo-lang-sierra-to-casm = "2.1.0-rc4"
-cairo-lang-starknet = "2.1.0-rc4"
-cairo-lang-syntax = "2.1.0-rc4"
-cairo-lang-test-runner = "2.1.0-rc4"
-cairo-lang-test-utils = "2.1.0-rc4"
-cairo-lang-utils = "2.1.0-rc4"
+cairo-lang-casm = "2.1.1"
+cairo-lang-compiler = "2.1.1"
+cairo-lang-debug = "2.1.1"
+cairo-lang-defs = "2.1.1"
+cairo-lang-diagnostics = "2.1.1"
+cairo-lang-filesystem = "2.1.1"
+cairo-lang-formatter = "2.1.1"
+cairo-lang-language-server = "2.1.1"
+cairo-lang-lowering = "2.1.1"
+cairo-lang-parser = "2.1.1"
+cairo-lang-plugins = "2.1.1"
+cairo-lang-project = "2.1.1"
+cairo-lang-semantic = { version = "2.1.1", features = [ "testing" ] }
+cairo-lang-sierra = "2.1.1"
+cairo-lang-sierra-generator = "2.1.1"
+cairo-lang-sierra-to-casm = "2.1.1"
+cairo-lang-starknet = "2.1.1"
+cairo-lang-syntax = "2.1.1"
+cairo-lang-test-runner = "2.1.1"
+cairo-lang-test-utils = "2.1.1"
+cairo-lang-utils = "2.1.1"
 cairo-vm = "0.8.2"
-camino = { version = "1.1.2", features = ["serde1"] }
-chrono = { version = "0.4.24", features = ["serde"] }
-clap = { version = "4.2", features = ["derive"] }
+camino = { version = "1.1.2", features = [ "serde1" ] }
+chrono = { version = "0.4.24", features = [ "serde" ] }
+clap = { version = "4.2", features = [ "derive" ] }
 clap_complete = "4.3"
 colored = "2"
 console = "0.15.7"
@@ -68,22 +68,21 @@ num-bigint = "0.4"
 pretty_assertions = "1.2.1"
 rayon = "0.9.0"
 salsa = "0.16.1"
-scarb = { git = "https://github.com/software-mansion/scarb", rev = "a3e7b16" }
+scarb = { git = "https://github.com/software-mansion/scarb", rev = "c07fa61" }
 semver = "1.0.5"
-serde = { version = "1.0.156", features = ["derive"] }
+serde = { version = "1.0.156", features = [ "derive" ] }
 serde_json = "1.0"
 serde_with = "2.3.1"
-smol_str = { version = "0.2.0", features = ["serde"] }
-starknet = "0.4.0"
+smol_str = { version = "0.2.0", features = [ "serde" ] }
+starknet = "0.5.0"
 starknet-crypto = "0.5.1"
 starknet_api = { git = "https://github.com/starkware-libs/starknet-api", rev = "ecc9b6946ef13003da202838e4124a9ad2efabb0" }
 test-log = "0.2.11"
 thiserror = "1.0.32"
-tokio = { version = "1.16", features = ["full"] }
+tokio = { version = "1.16", features = [ "full" ] }
 toml = "0.7.4"
 tracing = "0.1"
 tracing-subscriber = "0.3.16"
-yansi = "0.5.1"
 
 [patch."https://github.com/starkware-libs/blockifier"]
 blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "c794d1b" }

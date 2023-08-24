@@ -17,8 +17,8 @@ trait IWorld<T> {
     fn system(self: @T, name: felt252) -> ClassHash;
     fn register_system(ref self: T, class_hash: ClassHash);
     fn uuid(ref self: T) -> usize;
-    fn emit(self: @T, keys: Span<felt252>, values: Span<felt252>);
-    fn execute(ref self: T, system: felt252, calldata: Span<felt252>) -> Span<felt252>;
+    fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
+    fn execute(ref self: T, system: felt252, calldata: Array<felt252>) -> Span<felt252>;
     fn entity(
         self: @T, component: felt252, keys: Span<felt252>, offset: u8, length: usize
     ) -> Span<felt252>;
@@ -32,10 +32,11 @@ trait IWorld<T> {
     fn executor(self: @T) -> ContractAddress;
     fn delete_entity(ref self: T, component: felt252, keys: Span<felt252>);
     fn origin(self: @T) -> ContractAddress;
+    fn caller_system(self: @T) -> felt252;
 
-    fn is_owner(self: @T, account: ContractAddress, target: felt252) -> bool;
-    fn grant_owner(ref self: T, account: ContractAddress, target: felt252);
-    fn revoke_owner(ref self: T, account: ContractAddress, target: felt252);
+    fn is_owner(self: @T, address: ContractAddress, target: felt252) -> bool;
+    fn grant_owner(ref self: T, address: ContractAddress, target: felt252);
+    fn revoke_owner(ref self: T, address: ContractAddress, target: felt252);
 
     fn is_writer(self: @T, component: felt252, system: felt252) -> bool;
     fn grant_writer(ref self: T, component: felt252, system: felt252);
@@ -57,13 +58,13 @@ mod world {
 
     use dojo::database;
     use dojo::executor::{IExecutorDispatcher, IExecutorDispatcherTrait};
-    use dojo::traits::{
-        IComponentLibraryDispatcher, IComponentDispatcherTrait, ISystemLibraryDispatcher,
-        ISystemDispatcherTrait
-    };
+    use dojo::traits::{INamedLibraryDispatcher, INamedDispatcherTrait, };
     use dojo::world::{IWorldDispatcher, IWorld};
 
     use super::Context;
+
+    const NAME_ENTRYPOINT: felt252 =
+        0x0361458367e696363fbcc70777d07ebbd2394e89fd0adcaf147faccd1d294d60;
 
     #[event]
     #[derive(Drop, starknet::Event)]
@@ -144,30 +145,30 @@ mod world {
         ///
         /// # Arguments
         ///
-        /// * `account` - The account.
+        /// * `address` - The contract address.
         /// * `target` - The target.
         ///
         /// # Returns
         ///
-        /// * `bool` - True if the account is an owner of the target, false otherwise.
-        fn is_owner(self: @ContractState, account: ContractAddress, target: felt252) -> bool {
-            self.owners.read((target, account))
+        /// * `bool` - True if the address is an owner of the target, false otherwise.
+        fn is_owner(self: @ContractState, address: ContractAddress, target: felt252) -> bool {
+            self.owners.read((target, address))
         }
 
-        /// Grants ownership of the target to the account.
+        /// Grants ownership of the target to the address.
         /// Can only be called by an existing owner or the world admin.
         ///
         /// # Arguments
         ///
-        /// * `account` - The account.
+        /// * `address` - The contract address.
         /// * `target` - The target.
-        fn grant_owner(ref self: ContractState, account: ContractAddress, target: felt252) {
+        fn grant_owner(ref self: ContractState, address: ContractAddress, target: felt252) {
             let caller = get_caller_address();
             assert(
-                IWorld::is_owner(@self, caller, target) || IWorld::is_owner(@self, caller, 0),
+                self.is_owner(caller, target) || self.is_owner(caller, 0),
                 'not owner'
             );
-            self.owners.write((target, account), bool::True(()));
+            self.owners.write((target, address), bool::True(()));
         }
 
         /// Revokes owner permission to the system for the component.
@@ -175,15 +176,16 @@ mod world {
         ///
         /// # Arguments
         ///
-        /// * `account` - The account.
+        /// * `address` - The contract address.
         /// * `target` - The target.
-        fn revoke_owner(ref self: ContractState, account: ContractAddress, target: felt252) {
+        fn revoke_owner(ref self: ContractState, address: ContractAddress, target: felt252) {
+            let caller = get_caller_address();
             assert(
-                IWorld::is_owner(@self, get_caller_address(), target)
-                    || IWorld::is_owner(@self, get_caller_address(), 0),
+                self.is_owner(caller, target)
+                    || self.is_owner(caller, 0),
                 'not owner'
             );
-            self.owners.write((target, account), bool::False(()));
+            self.owners.write((target, address), bool::False(()));
         }
 
         /// Checks if the provided system is a writer of the component.
@@ -208,10 +210,12 @@ mod world {
         /// * `component` - The name of the component.
         /// * `system` - The name of the system.
         fn grant_writer(ref self: ContractState, component: felt252, system: felt252) {
+            let caller = get_caller_address();
+
             assert(
-                IWorld::is_owner(@self, get_caller_address(), component)
-                    || IWorld::is_owner(@self, get_caller_address(), 0),
-                'not owner'
+                self.is_owner(caller, component)
+                    || self.is_owner(caller, 0),
+                'not owner or writer'
             );
             self.writers.write((component, system), bool::True(()));
         }
@@ -224,11 +228,13 @@ mod world {
         /// * `component` - The name of the component.
         /// * `system` - The name of the system.
         fn revoke_writer(ref self: ContractState, component: felt252, system: felt252) {
+            let caller = get_caller_address();
+
             assert(
-                IWorld::is_writer(@self, caller_system(@self), component)
-                    || IWorld::is_owner(@self, get_caller_address(), component)
-                    || IWorld::is_owner(@self, get_caller_address(), 0),
-                'not owner'
+                self.is_writer(component, self.caller_system())
+                    || self.is_owner(caller, component)
+                    || self.is_owner(caller, 0),
+                'not owner or writer'
             );
             self.writers.write((component, system), bool::False(()));
         }
@@ -240,14 +246,21 @@ mod world {
         ///
         /// * `class_hash` - The class hash of the component to be registered.
         fn register_component(ref self: ContractState, class_hash: ClassHash) {
-            let name = IComponentLibraryDispatcher { class_hash: class_hash }.name();
+            let caller = get_caller_address();
+            let calldata = ArrayTrait::new();
+            let name = *self
+                .executor_dispatcher
+                .read()
+                .call(class_hash, NAME_ENTRYPOINT, calldata.span())[0];
 
             // If component is already registered, validate permission to update.
             if self.components.read(name).is_non_zero() {
                 assert(
-                    IWorld::is_owner(@self, get_caller_address(), name), 'only owner can update'
+                    self.is_owner(caller, name), 'only owner can update'
                 );
-            }
+            } else {
+                self.owners.write((name, caller), bool::True(()));
+            };
 
             self.components.write(name, class_hash);
             EventEmitter::emit(ref self, ComponentRegistered { name, class_hash });
@@ -273,14 +286,21 @@ mod world {
         ///
         /// * `class_hash` - The class hash of the system to be registered.
         fn register_system(ref self: ContractState, class_hash: ClassHash) {
-            let name = ISystemLibraryDispatcher { class_hash: class_hash }.name();
+            let caller = get_caller_address();
+            let calldata = ArrayTrait::new();
+            let name = *self
+                .executor_dispatcher
+                .read()
+                .call(class_hash, NAME_ENTRYPOINT, calldata.span())[0];
 
             // If system is already registered, validate permission to update.
             if self.systems.read(name).is_non_zero() {
                 assert(
-                    IWorld::is_owner(@self, get_caller_address(), name), 'only owner can update'
+                    self.is_owner(caller, name), 'only owner can update'
                 );
-            }
+            } else {
+                self.owners.write((name, caller), bool::True(()));
+            };
 
             self.systems.write(name, class_hash);
             EventEmitter::emit(ref self, SystemRegistered { name, class_hash });
@@ -310,7 +330,7 @@ mod world {
         ///
         /// * `Span<felt252>` - The result of the system execution.
         fn execute(
-            ref self: ContractState, system: felt252, calldata: Span<felt252>
+            ref self: ContractState, system: felt252, mut calldata: Array<felt252>
         ) -> Span<felt252> {
             let stack_len = self.call_stack_len.read();
             self.call_stack.write(stack_len, system);
@@ -326,18 +346,20 @@ mod world {
                 self.call_origin.write(call_origin);
             }
 
+            let ctx = Context {
+                world: IWorldDispatcher {
+                    contract_address: get_contract_address()
+                }, origin: self.call_origin.read(), system, system_class_hash,
+            };
+
+            // Add context to calldata
+            ctx.serialize(ref calldata);
+
             // Call the system via executor
             let res = self
                 .executor_dispatcher
                 .read()
-                .execute(
-                    Context {
-                        world: IWorldDispatcher {
-                            contract_address: get_contract_address()
-                        }, origin: self.call_origin.read(), system, system_class_hash,
-                    },
-                    calldata
-                );
+                .execute(ctx.system_class_hash, calldata.span());
 
             // Reset the current call stack frame
             self.call_stack.write(stack_len, 0);
@@ -369,15 +391,9 @@ mod world {
         ///
         /// * `keys` - The keys of the event.
         /// * `values` - The data to be logged by the event.
-        fn emit(self: @ContractState, keys: Span<felt252>, values: Span<felt252>) {
-            // Assert can only be called through the executor
-            // This is to prevent system from writing to storage directly
-            assert(
-                get_caller_address() == self.executor_dispatcher.read().contract_address,
-                'must be called thru executor'
-            );
-
-            emit_event_syscall(keys, values).unwrap_syscall();
+        fn emit(self: @ContractState, mut keys: Array<felt252>, values: Span<felt252>) {
+            self.caller_system().serialize(ref keys);
+            emit_event_syscall(keys.span(), values).unwrap_syscall();
         }
 
         /// Sets the component value for an entity.
@@ -466,7 +482,7 @@ mod world {
         /// * `contract_address` - The contract address of the executor.
         fn set_executor(ref self: ContractState, contract_address: ContractAddress) {
             // Only owner can set executor
-            assert(IWorld::is_owner(@self, get_caller_address(), 0), 'only owner can set executor');
+            assert(self.is_owner(get_caller_address(), 0), 'only owner can set executor');
             self
                 .executor_dispatcher
                 .write(IExecutorDispatcher { contract_address: contract_address });
@@ -489,15 +505,15 @@ mod world {
         fn origin(self: @ContractState) -> ContractAddress {
             self.call_origin.read()
         }
-    }
 
-    /// Gets the caller system's name.
-    ///
-    /// # Returns
-    ///
-    /// * `felt252` - The caller system's name.
-    fn caller_system(self: @ContractState) -> felt252 {
-        self.call_stack.read(self.call_stack_len.read() - 1)
+        /// Gets the caller system's name.
+        ///
+        /// # Returns
+        ///
+        /// * `felt252` - The caller system's name.
+        fn caller_system(self: @ContractState) -> felt252 {
+            self.call_stack.read(self.call_stack_len.read() - 1)
+        }
     }
 
     /// Asserts that the current caller can write to the component.
@@ -512,7 +528,7 @@ mod world {
         );
 
         assert(
-            IWorld::is_writer(self, caller_system(self), component)
+            IWorld::is_writer(self, component, self.caller_system())
                 || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, component)
                 || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, 0),
             'not writer'

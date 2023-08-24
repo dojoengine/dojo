@@ -2,20 +2,23 @@ use std::sync::Arc;
 
 use blockifier::state::errors::StateError;
 use blockifier::transaction::account_transaction::AccountTransaction;
-use blockifier::transaction::transactions::{DeclareTransaction, DeployAccountTransaction};
+use blockifier::transaction::transactions::{
+    DeclareTransaction as ExecutionDeclareTransaction,
+    DeployAccountTransaction as ExecutionDeployAccountTransaction,
+};
 use jsonrpsee::core::{async_trait, Error};
 use katana_core::backend::contract::StarknetContract;
-use katana_core::backend::storage::transaction::{KnownTransaction, PendingTransaction};
+use katana_core::backend::storage::transaction::{
+    DeclareTransaction, DeployAccountTransaction, InvokeTransaction, KnownTransaction,
+    PendingTransaction,
+};
 use katana_core::backend::ExternalFunctionCall;
 use katana_core::sequencer::Sequencer;
 use katana_core::sequencer_error::SequencerError;
-use katana_core::utils::contract::{
-    legacy_inner_to_rpc_class, legacy_rpc_to_inner_class, rpc_to_inner_class,
-};
-use katana_core::utils::starkfelt_to_u128;
+use katana_core::utils::contract::legacy_inner_to_rpc_class;
 use katana_core::utils::transaction::{
-    compute_declare_v1_transaction_hash, compute_declare_v2_transaction_hash,
-    compute_deploy_account_v1_transaction_hash, compute_invoke_v1_transaction_hash,
+    broadcasted_declare_rpc_to_api_transaction, broadcasted_deploy_account_rpc_to_api_transaction,
+    broadcasted_invoke_rpc_to_api_transaction,
 };
 use starknet::core::types::{
     BlockHashAndNumber, BlockId, BlockTag, BroadcastedDeclareTransaction,
@@ -25,19 +28,11 @@ use starknet::core::types::{
     MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, MaybePendingTransactionReceipt,
     StateUpdate, Transaction,
 };
-use starknet::core::utils::get_contract_address;
-use starknet_api::core::{
-    calculate_contract_address, ClassHash, CompiledClassHash, ContractAddress, EntryPointSelector,
-    Nonce, PatriciaKey,
-};
+use starknet_api::core::{ClassHash, ContractAddress, EntryPointSelector, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};
+use starknet_api::patricia_key;
 use starknet_api::state::StorageKey;
-use starknet_api::transaction::{
-    Calldata, ContractAddressSalt, DeclareTransactionV0V1, DeclareTransactionV2,
-    DeployAccountTransaction as DeployAccountApiTransaction, Fee, InvokeTransaction,
-    InvokeTransactionV1, TransactionHash, TransactionSignature, TransactionVersion,
-};
-use starknet_api::{patricia_key, stark_felt};
+use starknet_api::transaction::Calldata;
 
 use crate::api::starknet::{Felt, StarknetApiError, StarknetApiServer};
 
@@ -150,7 +145,7 @@ where
         let hash: FieldElement = block
             .transactions()
             .get(index)
-            .map(|t| t.transaction.transaction_hash().0.into())
+            .map(|t| t.inner.hash())
             .ok_or(Error::from(StarknetApiError::InvalidTxnIndex))?;
 
         self.transaction_by_hash(hash).await
@@ -320,65 +315,18 @@ where
         let chain_id = FieldElement::from_hex_be(&self.sequencer.chain_id().await.as_hex())
             .map_err(|_| Error::from(StarknetApiError::InternalServerError))?;
 
-        let BroadcastedDeployAccountTransaction {
-            class_hash,
-            constructor_calldata,
-            contract_address_salt,
-            max_fee,
-            nonce,
-            signature,
-        } = deploy_account_transaction;
-
-        let contract_address = get_contract_address(
-            contract_address_salt,
-            class_hash,
-            &constructor_calldata,
-            FieldElement::ZERO,
-        );
-
-        let transaction_hash = compute_deploy_account_v1_transaction_hash(
-            contract_address,
-            &constructor_calldata,
-            class_hash,
-            contract_address_salt,
-            max_fee,
-            chain_id,
-            nonce,
-        );
-
-        let transaction = DeployAccountApiTransaction {
-            signature: TransactionSignature(signature.into_iter().map(|s| s.into()).collect()),
-            contract_address_salt: ContractAddressSalt(StarkFelt::from(contract_address_salt)),
-            constructor_calldata: Calldata(Arc::new(
-                constructor_calldata.into_iter().map(|d| d.into()).collect(),
-            )),
-            class_hash: ClassHash(class_hash.into()),
-            max_fee: Fee(starkfelt_to_u128(max_fee.into())
-                .map_err(|_| Error::from(StarknetApiError::InternalServerError))?),
-            nonce: Nonce(nonce.into()),
-            transaction_hash: TransactionHash(transaction_hash.into()),
-            version: TransactionVersion(stark_felt!(1_u32)),
-        };
-
-        let contract_address = calculate_contract_address(
-            transaction.contract_address_salt,
-            transaction.class_hash,
-            &transaction.constructor_calldata,
-            ContractAddress::default(),
-        )
-        .map_err(|_| Error::from(StarknetApiError::InternalServerError))?;
+        let (transaction, contract_address) =
+            broadcasted_deploy_account_rpc_to_api_transaction(deploy_account_transaction, chain_id);
+        let transaction_hash = transaction.transaction_hash.0.into();
 
         self.sequencer
             .add_deploy_account_transaction(DeployAccountTransaction {
-                tx: transaction,
                 contract_address,
+                inner: transaction,
             })
             .await;
 
-        Ok(DeployAccountTransactionResult {
-            transaction_hash,
-            contract_address: (*contract_address.0.key()).into(),
-        })
+        Ok(DeployAccountTransactionResult { transaction_hash, contract_address })
     }
 
     async fn estimate_fee(
@@ -393,156 +341,30 @@ where
 
         for r in request {
             let transaction = match r {
-                BroadcastedTransaction::Declare(BroadcastedDeclareTransaction::V1(tx)) => {
-                    let (class_hash, contract) = legacy_rpc_to_inner_class(&tx.contract_class)?;
-
-                    let transaction_hash = compute_declare_v1_transaction_hash(
-                        tx.sender_address,
-                        class_hash,
-                        tx.max_fee,
-                        chain_id,
-                        tx.nonce,
-                    );
-
-                    let transaction = DeclareTransactionV0V1 {
-                        nonce: Nonce(tx.nonce.into()),
-                        class_hash: ClassHash(class_hash.into()),
-                        transaction_hash: TransactionHash(transaction_hash.into()),
-                        sender_address: ContractAddress(patricia_key!(tx.sender_address)),
-                        max_fee: Fee(starkfelt_to_u128(tx.max_fee.into())
-                            .map_err(|_| Error::from(StarknetApiError::InternalServerError))?),
-                        signature: TransactionSignature(
-                            tx.signature.into_iter().map(|e| e.into()).collect(),
-                        ),
-                    };
+                BroadcastedTransaction::Declare(tx) => {
+                    let (transaction, contract_class) =
+                        broadcasted_declare_rpc_to_api_transaction(tx, chain_id).unwrap();
 
                     AccountTransaction::Declare(
-                        DeclareTransaction::new(
-                            starknet_api::transaction::DeclareTransaction::V1(transaction),
-                            contract,
-                        )
-                        .map_err(|_| Error::from(StarknetApiError::InternalServerError))?,
-                    )
-                }
-                BroadcastedTransaction::Declare(BroadcastedDeclareTransaction::V2(tx)) => {
-                    let (class_hash, contract_class) = rpc_to_inner_class(&tx.contract_class)
-                        .map_err(|_| Error::from(StarknetApiError::InternalServerError))?;
-
-                    let transaction_hash = compute_declare_v2_transaction_hash(
-                        tx.sender_address,
-                        class_hash,
-                        tx.max_fee,
-                        chain_id,
-                        tx.nonce,
-                        tx.compiled_class_hash,
-                    );
-
-                    let transaction = DeclareTransactionV2 {
-                        nonce: Nonce(tx.nonce.into()),
-                        class_hash: ClassHash(class_hash.into()),
-                        transaction_hash: TransactionHash(transaction_hash.into()),
-                        sender_address: ContractAddress(patricia_key!(tx.sender_address)),
-                        compiled_class_hash: CompiledClassHash(tx.compiled_class_hash.into()),
-                        max_fee: Fee(starkfelt_to_u128(tx.max_fee.into())
-                            .map_err(|_| Error::from(StarknetApiError::InternalServerError))?),
-                        signature: TransactionSignature(
-                            tx.signature.into_iter().map(|e| e.into()).collect(),
-                        ),
-                    };
-
-                    AccountTransaction::Declare(
-                        DeclareTransaction::new(
-                            starknet_api::transaction::DeclareTransaction::V2(transaction),
-                            contract_class,
-                        )
-                        .map_err(|_| Error::from(StarknetApiError::InternalServerError))?,
+                        ExecutionDeclareTransaction::new(transaction, contract_class)
+                            .map_err(|_| Error::from(StarknetApiError::InternalServerError))?,
                     )
                 }
 
-                BroadcastedTransaction::Invoke(BroadcastedInvokeTransaction::V1(transaction)) => {
-                    let transaction_hash = compute_invoke_v1_transaction_hash(
-                        transaction.sender_address,
-                        &transaction.calldata,
-                        transaction.max_fee,
-                        chain_id,
-                        transaction.nonce,
-                    );
-
-                    let transaction = InvokeTransactionV1 {
-                        transaction_hash: TransactionHash(StarkFelt::from(transaction_hash)),
-                        sender_address: ContractAddress(patricia_key!(transaction.sender_address)),
-                        nonce: Nonce(StarkFelt::from(transaction.nonce)),
-                        calldata: Calldata(Arc::new(
-                            transaction.calldata.into_iter().map(StarkFelt::from).collect(),
-                        )),
-                        max_fee: Fee(starkfelt_to_u128(StarkFelt::from(transaction.max_fee))
-                            .map_err(|_| Error::from(StarknetApiError::InternalServerError))?),
-                        signature: TransactionSignature(
-                            transaction.signature.into_iter().map(StarkFelt::from).collect(),
-                        ),
-                    };
-
-                    AccountTransaction::Invoke(InvokeTransaction::V1(transaction))
+                BroadcastedTransaction::Invoke(tx) => {
+                    let transaction = broadcasted_invoke_rpc_to_api_transaction(tx, chain_id);
+                    AccountTransaction::Invoke(transaction)
                 }
 
-                BroadcastedTransaction::DeployAccount(BroadcastedDeployAccountTransaction {
-                    max_fee,
-                    signature,
-                    nonce,
-                    contract_address_salt,
-                    constructor_calldata,
-                    class_hash,
-                }) => {
-                    let contract_address = get_contract_address(
-                        contract_address_salt,
-                        class_hash,
-                        &constructor_calldata,
-                        FieldElement::ZERO,
-                    );
+                BroadcastedTransaction::DeployAccount(tx) => {
+                    let (transaction, contract_address) =
+                        broadcasted_deploy_account_rpc_to_api_transaction(tx, chain_id);
 
-                    let transaction_hash = compute_deploy_account_v1_transaction_hash(
-                        contract_address,
-                        &constructor_calldata,
-                        class_hash,
-                        contract_address_salt,
-                        max_fee,
-                        chain_id,
-                        nonce,
-                    );
-
-                    let transaction = DeployAccountApiTransaction {
-                        signature: TransactionSignature(
-                            signature.into_iter().map(|s| s.into()).collect(),
-                        ),
-                        contract_address_salt: ContractAddressSalt(StarkFelt::from(
-                            contract_address_salt,
-                        )),
-                        constructor_calldata: Calldata(Arc::new(
-                            constructor_calldata.into_iter().map(|d| d.into()).collect(),
-                        )),
-                        class_hash: ClassHash(class_hash.into()),
-                        max_fee: Fee(starkfelt_to_u128(max_fee.into())
-                            .map_err(|_| Error::from(StarknetApiError::InternalServerError))?),
-                        nonce: Nonce(nonce.into()),
-                        transaction_hash: TransactionHash(transaction_hash.into()),
-                        version: TransactionVersion(stark_felt!(1_u32)),
-                    };
-
-                    let contract_address = calculate_contract_address(
-                        transaction.contract_address_salt,
-                        transaction.class_hash,
-                        &transaction.constructor_calldata,
-                        ContractAddress::default(),
-                    )
-                    .map_err(|_| Error::from(StarknetApiError::InternalServerError))?;
-
-                    AccountTransaction::DeployAccount(DeployAccountTransaction {
+                    AccountTransaction::DeployAccount(ExecutionDeployAccountTransaction {
                         tx: transaction,
-                        contract_address,
+                        contract_address: ContractAddress(patricia_key!(contract_address)),
                     })
                 }
-
-                _ => return Err(Error::from(StarknetApiError::UnsupportedTransactionVersion)),
             };
 
             let fee_estimate =
@@ -572,81 +394,25 @@ where
     ) -> Result<DeclareTransactionResult, Error> {
         let chain_id = FieldElement::from_hex_be(&self.sequencer.chain_id().await.as_hex())
             .map_err(|_| Error::from(StarknetApiError::InternalServerError))?;
-        let (transaction_hash, class_hash, transaction, sierra_class) = match declare_transaction {
-            BroadcastedDeclareTransaction::V1(tx) => {
-                let (class_hash, contract) = legacy_rpc_to_inner_class(&tx.contract_class)?;
 
-                let transaction_hash = compute_declare_v1_transaction_hash(
-                    tx.sender_address,
-                    class_hash,
-                    tx.max_fee,
-                    chain_id,
-                    tx.nonce,
-                );
-
-                let transaction = DeclareTransactionV0V1 {
-                    transaction_hash: TransactionHash(transaction_hash.into()),
-                    class_hash: ClassHash(class_hash.into()),
-                    sender_address: ContractAddress(patricia_key!(tx.sender_address)),
-                    nonce: Nonce(tx.nonce.into()),
-                    max_fee: Fee(starkfelt_to_u128(tx.max_fee.into())
-                        .map_err(|_| Error::from(StarknetApiError::InternalServerError))?),
-                    signature: TransactionSignature(
-                        tx.signature.into_iter().map(|e| e.into()).collect(),
-                    ),
-                };
-
-                (
-                    transaction_hash,
-                    class_hash,
-                    DeclareTransaction::new(
-                        starknet_api::transaction::DeclareTransaction::V1(transaction),
-                        contract,
-                    )
-                    .map_err(|_| Error::from(StarknetApiError::InternalServerError))?,
-                    None,
-                )
-            }
-            BroadcastedDeclareTransaction::V2(tx) => {
-                let (class_hash, contract_class) = rpc_to_inner_class(&tx.contract_class)
-                    .map_err(|_| Error::from(StarknetApiError::InternalServerError))?;
-
-                let transaction_hash = compute_declare_v2_transaction_hash(
-                    tx.sender_address,
-                    class_hash,
-                    tx.max_fee,
-                    chain_id,
-                    tx.nonce,
-                    tx.compiled_class_hash,
-                );
-
-                let transaction = DeclareTransactionV2 {
-                    nonce: Nonce(tx.nonce.into()),
-                    class_hash: ClassHash(class_hash.into()),
-                    transaction_hash: TransactionHash(transaction_hash.into()),
-                    sender_address: ContractAddress(patricia_key!(tx.sender_address)),
-                    compiled_class_hash: CompiledClassHash(tx.compiled_class_hash.into()),
-                    max_fee: Fee(starkfelt_to_u128(tx.max_fee.into())
-                        .map_err(|_| Error::from(StarknetApiError::InternalServerError))?),
-                    signature: TransactionSignature(
-                        tx.signature.into_iter().map(|e| e.into()).collect(),
-                    ),
-                };
-
-                (
-                    transaction_hash,
-                    class_hash,
-                    DeclareTransaction::new(
-                        starknet_api::transaction::DeclareTransaction::V2(transaction),
-                        contract_class,
-                    )
-                    .map_err(|_| Error::from(StarknetApiError::InternalServerError))?,
-                    Some(tx.contract_class.as_ref().clone()),
-                )
-            }
+        let sierra_class = match declare_transaction {
+            BroadcastedDeclareTransaction::V2(ref tx) => Some(tx.contract_class.as_ref().clone()),
+            _ => None,
         };
 
-        self.sequencer.add_declare_transaction(transaction, sierra_class).await;
+        let (transaction, contract_class) =
+            broadcasted_declare_rpc_to_api_transaction(declare_transaction, chain_id).unwrap();
+
+        let transaction_hash = transaction.transaction_hash().0.into();
+        let class_hash = transaction.class_hash().0.into();
+
+        self.sequencer
+            .add_declare_transaction(DeclareTransaction {
+                sierra_class,
+                inner: transaction,
+                compiled_class: contract_class,
+            })
+            .await;
 
         Ok(DeclareTransactionResult { transaction_hash, class_hash })
     }
@@ -655,39 +421,14 @@ where
         &self,
         invoke_transaction: BroadcastedInvokeTransaction,
     ) -> Result<InvokeTransactionResult, Error> {
-        match invoke_transaction {
-            BroadcastedInvokeTransaction::V1(transaction) => {
-                let chain_id = FieldElement::from_hex_be(&self.sequencer.chain_id().await.as_hex())
-                    .map_err(|_| Error::from(StarknetApiError::InternalServerError))?;
+        let chain_id = FieldElement::from_hex_be(&self.sequencer.chain_id().await.as_hex())
+            .map_err(|_| Error::from(StarknetApiError::InternalServerError))?;
 
-                let transaction_hash = compute_invoke_v1_transaction_hash(
-                    transaction.sender_address,
-                    &transaction.calldata,
-                    transaction.max_fee,
-                    chain_id,
-                    transaction.nonce,
-                );
+        let transaction = broadcasted_invoke_rpc_to_api_transaction(invoke_transaction, chain_id);
+        let transaction_hash = transaction.transaction_hash().0.into();
 
-                let transaction = InvokeTransactionV1 {
-                    transaction_hash: TransactionHash(StarkFelt::from(transaction_hash)),
-                    sender_address: ContractAddress(patricia_key!(transaction.sender_address)),
-                    nonce: Nonce(StarkFelt::from(transaction.nonce)),
-                    calldata: Calldata(Arc::new(
-                        transaction.calldata.into_iter().map(StarkFelt::from).collect(),
-                    )),
-                    max_fee: Fee(starkfelt_to_u128(StarkFelt::from(transaction.max_fee))
-                        .map_err(|_| Error::from(StarknetApiError::InternalServerError))?),
-                    signature: TransactionSignature(
-                        transaction.signature.into_iter().map(StarkFelt::from).collect(),
-                    ),
-                };
+        self.sequencer.add_invoke_transaction(InvokeTransaction(transaction)).await;
 
-                self.sequencer.add_invoke_transaction(InvokeTransaction::V1(transaction)).await;
-
-                Ok(InvokeTransactionResult { transaction_hash })
-            }
-
-            _ => Err(Error::from(StarknetApiError::UnsupportedTransactionVersion)),
-        }
+        Ok(InvokeTransactionResult { transaction_hash })
     }
 }

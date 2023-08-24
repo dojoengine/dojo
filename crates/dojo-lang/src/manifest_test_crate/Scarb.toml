@@ -1,4 +1,0 @@
-[package]
-name = "manifest_test"
-version = "0.1.0"
-cairo_version = "1.1.0"

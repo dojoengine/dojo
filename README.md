@@ -1,9 +1,10 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset=".github/mark-dark.svg">
-  <img alt="Dojo logo" align="right" width="120" src=".github/mark-light.svg">
-</picture>
-
-## Dojo
+<!-- markdownlint-disable -->
+<div align="center">
+  <img src=".github/dojo-mark-full-dark.svg" height="128">
+</div>
+<div align="center">
+<br />
+<!-- markdownlint-restore -->
 
 <a href="https://twitter.com/dojostarknet">
 <img src="https://img.shields.io/twitter/follow/dojostarknet?style=social"/>
@@ -18,21 +19,27 @@
 [gha-badge]: https://img.shields.io/github/actions/workflow/status/dojoengine/dojo/ci.yml?branch=main
 [tg-badge]: https://img.shields.io/endpoint?color=neon&logo=telegram&label=chat&style=flat-square&url=https%3A%2F%2Ftg.sumanjay.workers.dev%2Fdojoengine
 [tg-url]: https://t.me/dojoengine
+</div>
+
+# Dojo: The Provable Game Engine
 
 **Dojo is a community driven open-source, Provable Game Engine, providing a comprehensive toolkit for building verifiable games and autonomous worlds.**
 
-Dojo is still in its early stages of development, yet the dedicated contributors are propelling its progress at an impressive pace. The overarching aspiration for Dojo is to empower game developers to kick-start their projects, aiming to reduce the initial setup time from days to mere hours. Join the movement!
+### 🚀 Launch Your Onchain Game Faster with Dojo
 
-## 🔑 Key Features
-- Entity Component System (ECS) written in [Cairo](https://github.com/starkware-libs/cairo)
-- Sozu migration planner
-- [Torii](/crates/torii/README.md) networking & indexing stack
-- [Katana](/crates/katana/README.md) RPC development network
-- Typed SDKs
+Dojo offers a comprehensive suite of onchain game development tools, harnessing the capabilities of Rust and Cairo 🦀, to deliver unparalleled speed and scalability.
+
+### 🔑 Highlighted Features of Dojo:
+
+1. **Entity Component System (ECS)**: Crafted in [Cairo](https://github.com/starkware-libs/cairo), it provides a solid foundation to structure your game.
+2. **[Torii Indexer](/crates/torii/README.md)**: Say goodbye to manually creating indexers. Torii does it automatically for you!
+3. **[Katana Network](/crates/katana/README.md)**: An RPC development network to streamline and expedite your game's iterative processes.
+4. **[Sozo CLI](/crates/sozo/README.md)**: Your trusty CLI tool to oversee and upkeep your in-game universes.
+5. **Typed SDKs**: For a smoother, error-free coding experience.
 
 ## 🚀 Quick Start
 
-See the [installation guide](https://book.dojoengine.org/getting-started/installation.html) in the Dojo book.
+See the [installation guide](https://book.dojoengine.org/getting-started/quick-start.html) in the Dojo book.
 
 ## 🗒️ Documentation
 
@@ -48,12 +55,11 @@ We welcome contributions of all kinds from anyone. See our [Contribution Guide](
 
 ## ✏️ Enviroment
 
-See our [Enviroment setup](https://book.dojoengine.org/development/setup.html) for more information.
+See our [Enviroment setup](https://book.dojoengine.org/getting-started/setup.html) for more information.
 
 ## ⛩️ Built with Dojo
 
--   [Roll Your Own](https://github.com/cartridge-gg/rollyourown)
--   [Realms Autonomous World](https://github.com/BibliothecaDAO/eternum)
+-   [Awesome Dojo](https://github.com/dojoengine/awesome-dojo)
 
 ## Contributors ✨
 

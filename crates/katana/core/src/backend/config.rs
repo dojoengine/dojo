@@ -1,17 +1,15 @@
-use std::path::PathBuf;
-
 use blockifier::block_context::BlockContext;
 use starknet_api::block::{BlockNumber, BlockTimestamp};
 use starknet_api::core::{ChainId, ContractAddress, PatriciaKey};
 use starknet_api::hash::StarkHash;
 use starknet_api::patricia_key;
 
-use crate::block_context::{get_default_vm_resource_fee_cost, BlockContextGenerator};
 use crate::constants::{
     DEFAULT_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_VALIDATE_MAX_STEPS, FEE_TOKEN_ADDRESS,
     SEQUENCER_ADDRESS,
 };
 use crate::db::serde::state::SerializableState;
+use crate::env::{get_default_vm_resource_fee_cost, BlockContextGenerator};
 
 #[derive(Debug)]
 pub struct StarknetConfig {
@@ -19,7 +17,6 @@ pub struct StarknetConfig {
     pub auto_mine: bool,
     pub total_accounts: u8,
     pub disable_fee: bool,
-    pub account_path: Option<PathBuf>,
     pub env: Environment,
     pub init_state: Option<SerializableState>,
 }
@@ -52,7 +49,6 @@ impl Default for StarknetConfig {
             seed: [0; 32],
             auto_mine: true,
             total_accounts: 10,
-            account_path: None,
             disable_fee: false,
             env: Environment::default(),
         }

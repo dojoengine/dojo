@@ -1,10 +1,10 @@
 use anyhow::Result;
 use clap::Args;
+use dojo_world::metadata::dojo_metadata_from_workspace;
 use scarb::core::Config;
 use starknet::core::types::FieldElement;
 
 use super::options::account::AccountOptions;
-use super::options::dojo_metadata_from_workspace;
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
 use crate::ops::execute;
@@ -35,13 +35,9 @@ impl ExecuteArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         let env_metadata = if config.manifest_path().exists() {
             let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-            let env_metadata = dojo_metadata_from_workspace(&ws)
-                .and_then(|dojo_metadata| dojo_metadata.get("env").cloned());
 
-            env_metadata
-                .as_ref()
-                .and_then(|env_metadata| env_metadata.get(ws.config().profile().as_str()).cloned())
-                .or(env_metadata)
+            // TODO: Check the updated scarb way to read profile specific values
+            dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned())
         } else {
             None
         };

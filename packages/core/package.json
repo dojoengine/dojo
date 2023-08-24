@@ -1,6 +1,6 @@
 {
   "name": "@dojoengine/core",
-  "version": "0.0.9",
+  "version": "0.0.15",
   "description": "Dojo engine core providers and types",
   "scripts": {
     "build": "tsc",
@@ -11,22 +11,12 @@
   "main": "dist/index.js",
   "devDependencies": {
     "@types/elliptic": "^6.4.14",
-    "@latticexyz/recs": "^1.43.0",
-    "@types/events": "^3.0.0",
     "@types/jest": "^29.5.0",
     "@types/mocha": "^10.0.1",
-    "events": "^3.3.0",
     "fetch-mock": "^9.11.0",
-    "graphql": "^16.6.0",
-    "graphql-request": "^6.1.0",
-    "graphql-tag": "^2.12.6",
     "jest": "^29.5.0",
-    "micro-starknet": "^0.2.3",
-    "mobx": "^6.9.0",
-    "rxjs": "^7.8.1",
-    "starknet": "^4.22.0",
+    "starknet": "^5.14.1",
     "ts-jest": "^29.1.0",
-    "type-fest": "^3.12.0",
     "typescript": "^5.0.3"
   }
 }

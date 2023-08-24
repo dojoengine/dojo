@@ -16,8 +16,8 @@ pub trait Db: State + StateReader + StateExt {
     fn dump_state(&self) -> Result<SerializableState>;
 
     fn load_state(&mut self, state: SerializableState) -> Result<()> {
-        for (addr, record) in state.storage.iter() {
-            let address = ContractAddress(patricia_key!(*addr));
+        for (addr, record) in state.storage {
+            let address = ContractAddress(patricia_key!(addr));
 
             record.storage.iter().for_each(|(key, value)| {
                 self.set_storage_at(address, StorageKey(patricia_key!(*key)), (*value).into());
@@ -27,16 +27,17 @@ pub trait Db: State + StateReader + StateExt {
             self.set_nonce(address, Nonce(record.nonce.into()));
         }
 
-        for (hash, record) in state.classes.iter() {
-            let hash = ClassHash((*hash).into());
+        for (hash, record) in state.classes {
+            let hash = ClassHash(hash.into());
             let compiled_hash = CompiledClassHash(record.compiled_hash.into());
 
             self.set_contract_class(&hash, record.class.clone().try_into()?)?;
             self.set_compiled_class_hash(hash, compiled_hash)?;
+        }
 
-            if let Some(sierra_class) = record.sierra_class.clone() {
-                self.set_sierra_class(hash, sierra_class)?;
-            }
+        for (hash, sierra_class) in state.sierra_classes {
+            let hash = ClassHash(hash.into());
+            self.set_sierra_class(hash, sierra_class.clone())?;
         }
 
         Ok(())

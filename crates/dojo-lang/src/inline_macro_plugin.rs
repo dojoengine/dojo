@@ -4,6 +4,7 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::kind::SyntaxKind;
 use cairo_lang_syntax::node::{SyntaxNode, TypedSyntaxNode};
 
+use crate::inline_macros::emit::EmitMacro;
 use crate::inline_macros::get::GetMacro;
 use crate::inline_macros::set::SetMacro;
 
@@ -35,6 +36,7 @@ pub trait InlineMacro {
 /// Returns the inline macro plugin for the given macro name, or None if no such plugin exists.
 fn get_inline_macro_plugin(macro_name: &str) -> Option<Box<dyn InlineMacro>> {
     match macro_name {
+        "emit" => Some(Box::new(EmitMacro)),
         "get" => Some(Box::new(GetMacro)),
         "set" => Some(Box::new(SetMacro)),
         _ => None,
@@ -60,7 +62,7 @@ impl InlineMacroExpanderData {
 
     /// Expand a single inline macro.
     fn handle_macro(&mut self, db: &dyn SyntaxGroup, inline_macro: &ast::ExprInlineMacro) {
-        let macro_name = inline_macro.path(db).as_syntax_node().get_text(db).trim().to_string();
+        let macro_name = inline_macro.path(db).as_syntax_node().get_text_without_trivia(db);
         let macro_plugin = get_inline_macro_plugin(&macro_name);
 
         if let Some(macro_plugin) = macro_plugin {
@@ -71,10 +73,6 @@ impl InlineMacroExpanderData {
             }
         } else {
             self.result_code.push_str(&inline_macro.as_syntax_node().get_text(db));
-            self.diagnostics.push(PluginDiagnostic {
-                stable_ptr: inline_macro.stable_ptr().untyped(),
-                message: format!("Unknown inline macro: {}", macro_name),
-            });
         }
     }
 

@@ -1,10 +1,10 @@
 use anyhow::{Context, Result};
-use dojo_client::contract::world::WorldContract;
-use toml::Value;
+use dojo_world::metadata::Environment;
+use torii_client::contract::world::WorldContract;
 
 use crate::commands::register::RegisterCommand;
 
-pub async fn execute(command: RegisterCommand, env_metadata: Option<Value>) -> Result<()> {
+pub async fn execute(command: RegisterCommand, env_metadata: Option<Environment>) -> Result<()> {
     match command {
         RegisterCommand::Component { components, world, starknet, account } => {
             let world_address = world.address(env_metadata.as_ref())?;

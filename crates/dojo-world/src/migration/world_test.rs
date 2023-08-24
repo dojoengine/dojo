@@ -7,16 +7,22 @@ fn no_diff_when_local_and_remote_are_equal() {
         address: Some(77_u32.into()),
         class_hash: 66_u32.into(),
         name: WORLD_CONTRACT_NAME.into(),
+        ..Default::default()
     };
 
     let executor_contract = Contract {
         address: Some(88_u32.into()),
         class_hash: 99_u32.into(),
         name: EXECUTOR_CONTRACT_NAME.into(),
+        ..Default::default()
     };
 
-    let components =
-        vec![Component { members: vec![], name: "Component".into(), class_hash: 11_u32.into() }];
+    let components = vec![Component {
+        members: vec![],
+        name: "Component".into(),
+        class_hash: 11_u32.into(),
+        ..Default::default()
+    }];
 
     let systems =
         vec![System { name: "System".into(), class_hash: 22_u32.into(), ..Default::default() }];
@@ -49,8 +55,12 @@ fn diff_when_local_and_remote_are_different() {
         ..Default::default()
     };
 
-    let components =
-        vec![Component { members: vec![], name: "Component".into(), class_hash: 11_u32.into() }];
+    let components = vec![Component {
+        members: vec![],
+        name: "Component".into(),
+        class_hash: 11_u32.into(),
+        ..Default::default()
+    }];
 
     let systems =
         vec![System { name: "System".into(), class_hash: 22_u32.into(), ..Default::default() }];

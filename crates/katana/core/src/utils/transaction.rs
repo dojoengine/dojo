@@ -1,19 +1,37 @@
+use std::sync::Arc;
+
+use blockifier::execution::contract_class::ContractClass;
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transaction_execution::Transaction as ExecutionTransaction;
 use starknet::core::crypto::compute_hash_on_elements;
 use starknet::core::types::{
-    DeclareTransaction, DeclareTransactionV1, DeclareTransactionV2, DeployAccountTransaction,
-    DeployTransaction, FieldElement, InvokeTransaction, InvokeTransactionV0, InvokeTransactionV1,
-    L1HandlerTransaction, Transaction as RpcTransaction,
+    BroadcastedDeclareTransaction, BroadcastedDeployAccountTransaction,
+    BroadcastedInvokeTransaction, DeclareTransaction, DeclareTransactionV1, DeclareTransactionV2,
+    DeployAccountTransaction, DeployTransaction, FieldElement, InvokeTransaction,
+    InvokeTransactionV0, InvokeTransactionV1, L1HandlerTransaction, Transaction as RpcTransaction,
 };
-use starknet_api::hash::StarkFelt;
+use starknet::core::utils::get_contract_address;
+use starknet_api::core::{
+    ClassHash, CompiledClassHash, ContractAddress, EntryPointSelector, Nonce, PatriciaKey,
+};
+use starknet_api::hash::{StarkFelt, StarkHash};
 use starknet_api::transaction::{
-    DeclareTransaction as ApiDeclareTransaction,
-    DeployAccountTransaction as ApiDeployAccountTransaction,
-    DeployTransaction as ApiDeployTransaction, InvokeTransaction as ApiInvokeTransaction,
-    L1HandlerTransaction as ApiL1HandlerTransaction, Transaction as ApiTransaction,
+    Calldata, ContractAddressSalt, DeclareTransaction as DeclareApiTransaction,
+    DeclareTransactionV0V1 as DeclareApiTransactionV0V1,
+    DeclareTransactionV2 as DeclareApiTransactionV2,
+    DeployAccountTransaction as DeployAccountApiTransaction,
+    DeployTransaction as DeployApiTransaction, Fee, InvokeTransaction as InvokeApiTransaction,
+    InvokeTransactionV0 as InvokeApiTransactionV0, InvokeTransactionV1 as InvokeApiTransactionV1,
+    L1HandlerTransaction as L1HandlerApiTransaction, Transaction as ApiTransaction,
+    TransactionHash, TransactionSignature, TransactionVersion,
 };
+use starknet_api::{patricia_key, stark_felt};
 
+use super::contract::rpc_to_inner_class;
+use crate::utils::contract::legacy_rpc_to_inner_class;
+use crate::utils::starkfelt_to_u128;
+
+/// Cairo string for "invoke"
 const PREFIX_INVOKE: FieldElement = FieldElement::from_mont([
     18443034532770911073,
     18446744073709551615,
@@ -37,6 +55,7 @@ const PREFIX_DEPLOY_ACCOUNT: FieldElement = FieldElement::from_mont([
     461298303000467581,
 ]);
 
+/// Compute the hash of a V1 DeployAccount transaction.
 pub fn compute_deploy_account_v1_transaction_hash(
     contract_address: FieldElement,
     constructor_calldata: &[FieldElement],
@@ -60,6 +79,7 @@ pub fn compute_deploy_account_v1_transaction_hash(
     ])
 }
 
+/// Compute the hash of a V1 Declare transaction.
 pub fn compute_declare_v1_transaction_hash(
     sender_address: FieldElement,
     class_hash: FieldElement,
@@ -79,6 +99,7 @@ pub fn compute_declare_v1_transaction_hash(
     ])
 }
 
+/// Compute the hash of a V2 Declare transaction.
 pub fn compute_declare_v2_transaction_hash(
     sender_address: FieldElement,
     class_hash: FieldElement,
@@ -100,6 +121,26 @@ pub fn compute_declare_v2_transaction_hash(
     ])
 }
 
+/// Compute the hash of a V0 Invoke transaction.
+pub fn compute_invoke_v0_transaction_hash(
+    contract_address: FieldElement,
+    entry_point_selector: FieldElement,
+    calldata: &[FieldElement],
+    max_fee: FieldElement,
+    chain_id: FieldElement,
+) -> FieldElement {
+    compute_hash_on_elements(&[
+        PREFIX_INVOKE,
+        FieldElement::ZERO, // version
+        contract_address,
+        entry_point_selector, // entry_point_selector
+        compute_hash_on_elements(calldata),
+        max_fee,
+        chain_id,
+    ])
+}
+
+/// Compute the hash of a V1 Invoke transaction.
 pub fn compute_invoke_v1_transaction_hash(
     sender_address: FieldElement,
     calldata: &[FieldElement],
@@ -119,28 +160,36 @@ pub fn compute_invoke_v1_transaction_hash(
     ])
 }
 
+/// Convert [StarkFelt] array to [FieldElement] array.
 #[inline]
 pub fn stark_felt_to_field_element_array(arr: &[StarkFelt]) -> Vec<FieldElement> {
     arr.iter().map(|e| (*e).into()).collect()
 }
 
-pub fn convert_api_to_rpc_tx(transaction: ApiTransaction) -> RpcTransaction {
+/// Convert [starknet_api::transaction::Transaction] transaction to JSON-RPC compatible transaction,
+/// [starknet::core::types::Transaction].
+/// `starknet_api` transaction types are used when executing the transaction using `blockifier`.
+pub fn api_to_rpc_transaction(transaction: ApiTransaction) -> RpcTransaction {
     match transaction {
-        ApiTransaction::Invoke(invoke) => RpcTransaction::Invoke(convert_invoke_to_rpc_tx(invoke)),
+        ApiTransaction::Invoke(invoke) => {
+            RpcTransaction::Invoke(api_invoke_to_rpc_transaction(invoke))
+        }
         ApiTransaction::Declare(declare) => {
-            RpcTransaction::Declare(convert_declare_to_rpc_tx(declare))
+            RpcTransaction::Declare(api_declare_to_rpc_transaction(declare))
         }
         ApiTransaction::DeployAccount(deploy) => {
-            RpcTransaction::DeployAccount(convert_deploy_account_to_rpc_tx(deploy))
+            RpcTransaction::DeployAccount(api_deploy_account_to_rpc_transaction(deploy))
         }
         ApiTransaction::L1Handler(l1handler) => {
-            RpcTransaction::L1Handler(convert_l1_handle_to_rpc(l1handler))
+            RpcTransaction::L1Handler(api_l1_handler_to_rpc_transaction(l1handler))
         }
-        ApiTransaction::Deploy(deploy) => RpcTransaction::Deploy(convert_deploy_to_rpc(deploy)),
+        ApiTransaction::Deploy(deploy) => {
+            RpcTransaction::Deploy(api_deploy_to_rpc_transaction(deploy))
+        }
     }
 }
 
-fn convert_l1_handle_to_rpc(transaction: ApiL1HandlerTransaction) -> L1HandlerTransaction {
+fn api_l1_handler_to_rpc_transaction(transaction: L1HandlerApiTransaction) -> L1HandlerTransaction {
     L1HandlerTransaction {
         transaction_hash: transaction.transaction_hash.0.into(),
         contract_address: (*transaction.contract_address.0.key()).into(),
@@ -155,7 +204,7 @@ fn convert_l1_handle_to_rpc(transaction: ApiL1HandlerTransaction) -> L1HandlerTr
     }
 }
 
-fn convert_deploy_to_rpc(transaction: ApiDeployTransaction) -> DeployTransaction {
+fn api_deploy_to_rpc_transaction(transaction: DeployApiTransaction) -> DeployTransaction {
     DeployTransaction {
         transaction_hash: transaction.transaction_hash.0.into(),
         version: <StarkFelt as Into<FieldElement>>::into(transaction.version.0)
@@ -169,8 +218,8 @@ fn convert_deploy_to_rpc(transaction: ApiDeployTransaction) -> DeployTransaction
     }
 }
 
-fn convert_deploy_account_to_rpc_tx(
-    transaction: ApiDeployAccountTransaction,
+fn api_deploy_account_to_rpc_transaction(
+    transaction: DeployAccountApiTransaction,
 ) -> DeployAccountTransaction {
     DeployAccountTransaction {
         nonce: transaction.nonce.0.into(),
@@ -185,9 +234,9 @@ fn convert_deploy_account_to_rpc_tx(
     }
 }
 
-fn convert_invoke_to_rpc_tx(transaction: ApiInvokeTransaction) -> InvokeTransaction {
+fn api_invoke_to_rpc_transaction(transaction: InvokeApiTransaction) -> InvokeTransaction {
     match transaction {
-        ApiInvokeTransaction::V0(tx) => InvokeTransaction::V0(InvokeTransactionV0 {
+        InvokeApiTransaction::V0(tx) => InvokeTransaction::V0(InvokeTransactionV0 {
             nonce: FieldElement::ZERO,
             max_fee: tx.max_fee.0.into(),
             transaction_hash: tx.transaction_hash.0.into(),
@@ -196,7 +245,7 @@ fn convert_invoke_to_rpc_tx(transaction: ApiInvokeTransaction) -> InvokeTransact
             calldata: stark_felt_to_field_element_array(&tx.calldata.0),
             signature: stark_felt_to_field_element_array(&tx.signature.0),
         }),
-        ApiInvokeTransaction::V1(tx) => InvokeTransaction::V1(InvokeTransactionV1 {
+        InvokeApiTransaction::V1(tx) => InvokeTransaction::V1(InvokeTransactionV1 {
             nonce: tx.nonce.0.into(),
             max_fee: tx.max_fee.0.into(),
             transaction_hash: tx.transaction_hash.0.into(),
@@ -207,9 +256,9 @@ fn convert_invoke_to_rpc_tx(transaction: ApiInvokeTransaction) -> InvokeTransact
     }
 }
 
-fn convert_declare_to_rpc_tx(transaction: ApiDeclareTransaction) -> DeclareTransaction {
+fn api_declare_to_rpc_transaction(transaction: DeclareApiTransaction) -> DeclareTransaction {
     match transaction {
-        ApiDeclareTransaction::V0(tx) | ApiDeclareTransaction::V1(tx) => {
+        DeclareApiTransaction::V0(tx) | DeclareApiTransaction::V1(tx) => {
             DeclareTransaction::V1(DeclareTransactionV1 {
                 nonce: tx.nonce.0.into(),
                 max_fee: tx.max_fee.0.into(),
@@ -219,7 +268,7 @@ fn convert_declare_to_rpc_tx(transaction: ApiDeclareTransaction) -> DeclareTrans
                 signature: stark_felt_to_field_element_array(&tx.signature.0),
             })
         }
-        ApiDeclareTransaction::V2(tx) => DeclareTransaction::V2(DeclareTransactionV2 {
+        DeclareApiTransaction::V2(tx) => DeclareTransaction::V2(DeclareTransactionV2 {
             nonce: tx.nonce.0.into(),
             max_fee: tx.max_fee.0.into(),
             class_hash: tx.class_hash.0.into(),
@@ -231,6 +280,7 @@ fn convert_declare_to_rpc_tx(transaction: ApiDeclareTransaction) -> DeclareTrans
     }
 }
 
+/// Convert `blockfiier` transaction type to `starknet_api` transaction.
 pub fn convert_blockifier_to_api_tx(transaction: &ExecutionTransaction) -> ApiTransaction {
     match transaction {
         ExecutionTransaction::AccountTransaction(tx) => match tx {
@@ -240,6 +290,179 @@ pub fn convert_blockifier_to_api_tx(transaction: &ExecutionTransaction) -> ApiTr
         },
         ExecutionTransaction::L1HandlerTransaction(tx) => ApiTransaction::L1Handler(tx.tx.clone()),
     }
+}
+
+/// Convert broadcasted Invoke transaction type from `starknet-rs` to `starknet_api`'s
+/// Invoke transaction.
+pub fn broadcasted_invoke_rpc_to_api_transaction(
+    transaction: BroadcastedInvokeTransaction,
+    chain_id: FieldElement,
+) -> InvokeApiTransaction {
+    match transaction {
+        BroadcastedInvokeTransaction::V0(tx) => {
+            let transaction_hash = compute_invoke_v0_transaction_hash(
+                tx.contract_address,
+                tx.entry_point_selector,
+                &tx.calldata,
+                tx.max_fee,
+                chain_id,
+            );
+
+            let transaction = InvokeApiTransactionV0 {
+                transaction_hash: TransactionHash(transaction_hash.into()),
+                contract_address: ContractAddress(patricia_key!(tx.contract_address)),
+                entry_point_selector: EntryPointSelector(tx.entry_point_selector.into()),
+                calldata: Calldata(Arc::new(tx.calldata.into_iter().map(|c| c.into()).collect())),
+                max_fee: Fee(starkfelt_to_u128(tx.max_fee.into())
+                    .expect("convert max fee StarkFelt to u128")),
+                signature: TransactionSignature(
+                    tx.signature.into_iter().map(|e| e.into()).collect(),
+                ),
+            };
+
+            InvokeApiTransaction::V0(transaction)
+        }
+
+        BroadcastedInvokeTransaction::V1(tx) => {
+            let transaction_hash = compute_invoke_v1_transaction_hash(
+                tx.sender_address,
+                &tx.calldata,
+                tx.max_fee,
+                chain_id,
+                tx.nonce,
+            );
+
+            let transaction = InvokeApiTransactionV1 {
+                transaction_hash: TransactionHash(transaction_hash.into()),
+                sender_address: ContractAddress(patricia_key!(tx.sender_address)),
+                nonce: Nonce(StarkFelt::from(tx.nonce)),
+                calldata: Calldata(Arc::new(tx.calldata.into_iter().map(|c| c.into()).collect())),
+                max_fee: Fee(starkfelt_to_u128(tx.max_fee.into())
+                    .expect("convert max fee StarkFelt to u128")),
+                signature: TransactionSignature(
+                    tx.signature.into_iter().map(|e| e.into()).collect(),
+                ),
+            };
+
+            InvokeApiTransaction::V1(transaction)
+        }
+    }
+}
+
+/// Convert broadcasted Declare transaction type from `starknet-rs` to `starknet_api`'s
+/// Declare transaction.
+///
+/// Returns the transaction and the contract class.
+pub fn broadcasted_declare_rpc_to_api_transaction(
+    transaction: BroadcastedDeclareTransaction,
+    chain_id: FieldElement,
+) -> Result<(DeclareApiTransaction, ContractClass), Box<dyn std::error::Error>> {
+    match transaction {
+        BroadcastedDeclareTransaction::V1(tx) => {
+            let (class_hash, contract) = legacy_rpc_to_inner_class(&tx.contract_class)?;
+
+            let transaction_hash = compute_declare_v1_transaction_hash(
+                tx.sender_address,
+                class_hash,
+                tx.max_fee,
+                chain_id,
+                tx.nonce,
+            );
+
+            let transaction = DeclareApiTransactionV0V1 {
+                nonce: Nonce(tx.nonce.into()),
+                class_hash: ClassHash(class_hash.into()),
+                transaction_hash: TransactionHash(transaction_hash.into()),
+                sender_address: ContractAddress(patricia_key!(tx.sender_address)),
+                max_fee: Fee(starkfelt_to_u128(tx.max_fee.into())
+                    .expect("convert max fee StarkFelt to u128")),
+                signature: TransactionSignature(
+                    tx.signature.into_iter().map(|e| e.into()).collect(),
+                ),
+            };
+
+            Ok((DeclareApiTransaction::V1(transaction), contract))
+        }
+
+        BroadcastedDeclareTransaction::V2(tx) => {
+            let (class_hash, contract_class) = rpc_to_inner_class(&tx.contract_class)?;
+
+            let transaction_hash = compute_declare_v2_transaction_hash(
+                tx.sender_address,
+                class_hash,
+                tx.max_fee,
+                chain_id,
+                tx.nonce,
+                tx.compiled_class_hash,
+            );
+
+            let transaction = DeclareApiTransactionV2 {
+                nonce: Nonce(tx.nonce.into()),
+                class_hash: ClassHash(class_hash.into()),
+                transaction_hash: TransactionHash(transaction_hash.into()),
+                sender_address: ContractAddress(patricia_key!(tx.sender_address)),
+                compiled_class_hash: CompiledClassHash(tx.compiled_class_hash.into()),
+                max_fee: Fee(starkfelt_to_u128(tx.max_fee.into())
+                    .expect("convert max fee StarkFelt to u128")),
+                signature: TransactionSignature(
+                    tx.signature.into_iter().map(|e| e.into()).collect(),
+                ),
+            };
+
+            Ok((DeclareApiTransaction::V2(transaction), contract_class))
+        }
+    }
+}
+
+/// Convert broadcasted DeployAccount transaction type from `starknet-rs` to `starknet_api`'s
+/// DeployAccount transaction.
+///
+/// Returns the transaction and the contract address of the account to be deployed.
+pub fn broadcasted_deploy_account_rpc_to_api_transaction(
+    transaction: BroadcastedDeployAccountTransaction,
+    chain_id: FieldElement,
+) -> (DeployAccountApiTransaction, FieldElement) {
+    let BroadcastedDeployAccountTransaction {
+        nonce,
+        max_fee,
+        signature,
+        class_hash,
+        constructor_calldata,
+        contract_address_salt,
+        ..
+    } = transaction;
+
+    let contract_address = get_contract_address(
+        contract_address_salt,
+        class_hash,
+        &constructor_calldata,
+        FieldElement::ZERO,
+    );
+
+    let transaction_hash = compute_deploy_account_v1_transaction_hash(
+        contract_address,
+        &constructor_calldata,
+        class_hash,
+        contract_address_salt,
+        max_fee,
+        chain_id,
+        nonce,
+    );
+
+    let api_transaction = DeployAccountApiTransaction {
+        signature: TransactionSignature(signature.into_iter().map(|s| s.into()).collect()),
+        contract_address_salt: ContractAddressSalt(StarkFelt::from(contract_address_salt)),
+        constructor_calldata: Calldata(Arc::new(
+            constructor_calldata.into_iter().map(|d| d.into()).collect(),
+        )),
+        class_hash: ClassHash(class_hash.into()),
+        max_fee: Fee(starkfelt_to_u128(max_fee.into()).expect("convert max fee StarkFelt to u128")),
+        nonce: Nonce(nonce.into()),
+        transaction_hash: TransactionHash(transaction_hash.into()),
+        version: TransactionVersion(stark_felt!(1_u32)),
+    };
+
+    (api_transaction, contract_address)
 }
 
 #[cfg(test)]

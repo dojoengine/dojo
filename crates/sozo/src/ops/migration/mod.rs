@@ -1,8 +1,8 @@
 use std::path::Path;
 
 use anyhow::{anyhow, bail, Context, Result};
-use dojo_client::contract::world::WorldContract;
 use dojo_world::manifest::{Manifest, ManifestError};
+use dojo_world::metadata::Environment;
 use dojo_world::migration::strategy::{prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{Declarable, Deployable, MigrationError, RegisterOutput, StateDiff};
@@ -14,14 +14,16 @@ use starknet::core::types::{
 };
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
-use toml::Value;
+use torii_client::contract::world::WorldContract;
 
 #[cfg(test)]
 #[path = "migration_test.rs"]
 mod migration_test;
 mod ui;
 
-use starknet::providers::{JsonRpcClient, Provider, ProviderError};
+use starknet::providers::{
+    JsonRpcClient, MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage,
+};
 use starknet::signers::{LocalWallet, Signer};
 use ui::MigrationUi;
 
@@ -33,7 +35,7 @@ use crate::commands::options::world::WorldOptions;
 
 pub async fn execute<U>(
     args: MigrateArgs,
-    env_metadata: Option<Value>,
+    env_metadata: Option<Environment>,
     target_dir: U,
     config: &Config,
 ) -> Result<()>
@@ -45,7 +47,7 @@ where
     // Setup account for migration and fetch world address if it exists.
 
     let (world_address, account) =
-        setup_env(account, starknet, world, env_metadata, config).await?;
+        setup_env(account, starknet, world, env_metadata.as_ref(), config, name.as_ref()).await?;
 
     // Load local and remote World manifests.
 
@@ -68,18 +70,29 @@ where
 
         println!("  ");
 
-        execute_strategy(&strategy, &account, config)
+        let block_height = execute_strategy(&strategy, &account, config)
             .await
             .map_err(|e| anyhow!(e))
             .with_context(|| "Problem trying to migrate.")?;
 
-        config.ui().print(format!(
-            "\n🎉 Successfully migrated World at address {}",
-            bold_message(format!(
-                "{:#x}",
-                strategy.world_address().expect("world address must exist")
-            ))
-        ));
+        if let Some(block_height) = block_height {
+            config.ui().print(format!(
+                "\n🎉 Successfully migrated World on block #{} at address {}",
+                block_height,
+                bold_message(format!(
+                    "{:#x}",
+                    strategy.world_address().expect("world address must exist")
+                ))
+            ));
+        } else {
+            config.ui().print(format!(
+                "\n🎉 Successfully migrated World at address {}",
+                bold_message(format!(
+                    "{:#x}",
+                    strategy.world_address().expect("world address must exist")
+                ))
+            ));
+        }
     }
 
     Ok(())
@@ -89,25 +102,30 @@ async fn setup_env(
     account: AccountOptions,
     starknet: StarknetOptions,
     world: WorldOptions,
-    env_metadata: Option<Value>,
+    env_metadata: Option<&Environment>,
     config: &Config,
+    name: Option<&String>,
 ) -> Result<(Option<FieldElement>, SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>)> {
-    let world_address = world.address(env_metadata.as_ref()).ok();
+    let world_address = world.address(env_metadata).ok();
 
     let account = {
-        let provider = starknet.provider(env_metadata.as_ref())?;
-        let mut account = account.account(provider, env_metadata.as_ref()).await?;
+        let provider = starknet.provider(env_metadata)?;
+        let mut account = account.account(provider, env_metadata).await?;
         account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
         let address = account.address();
 
-        config.ui().print(format!("\nMigration account: {address:#x}\n"));
+        config.ui().print(format!("\nMigration account: {address:#x}"));
+        if let Some(name) = name {
+            config.ui().print(format!("\nWorld name: {name}\n"));
+        }
 
         match account.provider().get_class_hash_at(BlockId::Tag(BlockTag::Pending), address).await {
             Ok(_) => Ok(account),
-            Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
-                Err(anyhow!("Account with address {:#x} doesn't exist.", account.address()))
-            }
+            Err(ProviderError::StarknetError(StarknetErrorWithMessage {
+                code: MaybeUnknownErrorCode::Known(StarknetError::ContractNotFound),
+                ..
+            })) => Err(anyhow!("Account with address {:#x} doesn't exist.", account.address())),
             Err(e) => Err(e.into()),
         }
     }
@@ -196,15 +214,18 @@ where
     Ok(migration)
 }
 
+// returns the Some(block number) at which migration world is deployed, returns none if world was
+// not redeployed
 async fn execute_strategy<P, S>(
     strategy: &MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
     ws_config: &Config,
-) -> Result<()>
+) -> Result<Option<u64>>
 where
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
 {
+    let mut block_height = None;
     match &strategy.executor {
         Some(executor) => {
             ws_config.ui().print_header("# Executor");
@@ -236,9 +257,13 @@ where
                         .set_executor(executor.contract_address)
                         .await?;
 
-                let _ = TransactionWaiter::new(transaction_hash, migrator.provider())
-                    .await
-                    .map_err(MigrationError::<S, <P as Provider>::Error>::WaitingError);
+                let _ =
+                    TransactionWaiter::new(transaction_hash, migrator.provider()).await.map_err(
+                        MigrationError::<
+                            <SingleOwnerAccount<P, S> as Account>::SignError,
+                            <P as Provider>::Error,
+                        >::WaitingError,
+                    )?;
 
                 ws_config.ui().print_hidden_sub(format!("Updated at: {transaction_hash:#x}"));
             }
@@ -273,13 +298,14 @@ where
                         val.transaction_hash
                     ));
 
+                    block_height = Some(val.block_number);
+
                     Ok(())
                 }
-                Err(MigrationError::ContractAlreadyDeployed) => Err(anyhow!(
-                    "Attempting to deploy World at address {:#x} but a World already exists \
-                     there. Try using a different World name using `--name`.",
-                    world.contract_address
-                )),
+                Err(MigrationError::ContractAlreadyDeployed) => {
+                    ws_config.ui().print_sub("World already exists, updating...");
+                    Ok(())
+                }
                 Err(e) => Err(anyhow!("Failed to migrate world: {:?}", e)),
             }?;
 
@@ -291,7 +317,7 @@ where
     register_components(strategy, migrator, ws_config).await?;
     register_systems(strategy, migrator, ws_config).await?;
 
-    Ok(())
+    Ok(block_height)
 }
 
 async fn register_components<P, S>(
@@ -345,9 +371,13 @@ where
         .await
         .map_err(|e| anyhow!("Failed to register components to World: {e}"))?;
 
-    let _ = TransactionWaiter::new(transaction_hash, migrator.provider())
-        .await
-        .map_err(MigrationError::<S, <P as Provider>::Error>::WaitingError);
+    let _ =
+        TransactionWaiter::new(transaction_hash, migrator.provider()).await.map_err(
+            MigrationError::<
+                <SingleOwnerAccount<P, S> as Account>::SignError,
+                <P as Provider>::Error,
+            >::WaitingError,
+        )?;
 
     ws_config.ui().print_hidden_sub(format!("registered at: {transaction_hash:#x}"));
 
@@ -405,9 +435,13 @@ where
         .await
         .map_err(|e| anyhow!("Failed to register systems to World: {e}"))?;
 
-    let _ = TransactionWaiter::new(transaction_hash, migrator.provider())
-        .await
-        .map_err(MigrationError::<S, <P as Provider>::Error>::WaitingError);
+    let _ =
+        TransactionWaiter::new(transaction_hash, migrator.provider()).await.map_err(
+            MigrationError::<
+                <SingleOwnerAccount<P, S> as Account>::SignError,
+                <P as Provider>::Error,
+            >::WaitingError,
+        )?;
 
     ws_config.ui().print_hidden_sub(format!("registered at: {transaction_hash:#x}"));
 

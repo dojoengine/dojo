@@ -9,7 +9,7 @@ use starknet::core::types::{
 
 use super::transaction::TransactionOutput;
 use crate::backend::executor::ExecutedTransaction;
-use crate::utils::transaction::convert_api_to_rpc_tx;
+use crate::utils::transaction::api_to_rpc_transaction;
 
 #[derive(Debug, Clone, Copy)]
 pub enum BlockStatus {
@@ -154,7 +154,7 @@ impl From<Block> for BlockWithTxs {
             transactions: value
                 .transactions
                 .into_iter()
-                .map(|t| convert_api_to_rpc_tx(t.transaction.clone()))
+                .map(|t| api_to_rpc_transaction(t.inner.clone().into()))
                 .collect(),
         }
     }
@@ -174,7 +174,7 @@ impl From<ExecutedBlock> for MaybePendingBlockWithTxs {
                 transactions: block
                     .transactions
                     .into_iter()
-                    .map(|t| convert_api_to_rpc_tx(t.transaction.clone()))
+                    .map(|t| api_to_rpc_transaction(t.inner.clone().into()))
                     .collect(),
             }),
             ExecutedBlock::Pending(block) => {
@@ -185,7 +185,7 @@ impl From<ExecutedBlock> for MaybePendingBlockWithTxs {
                     transactions: block
                         .transactions
                         .into_iter()
-                        .map(|t| convert_api_to_rpc_tx(t.transaction.clone()))
+                        .map(|t| api_to_rpc_transaction(t.inner.clone().into()))
                         .collect(),
                 })
             }
@@ -205,11 +205,7 @@ impl From<ExecutedBlock> for MaybePendingBlockWithTxHashes {
                     timestamp: block.header.timestamp,
                     parent_hash: block.header.parent_hash,
                     sequencer_address: block.header.sequencer_address,
-                    transactions: block
-                        .transactions
-                        .into_iter()
-                        .map(|t| t.transaction.transaction_hash().0.into())
-                        .collect(),
+                    transactions: block.transactions.into_iter().map(|t| t.inner.hash()).collect(),
                 })
             }
             ExecutedBlock::Pending(block) => {
@@ -217,11 +213,7 @@ impl From<ExecutedBlock> for MaybePendingBlockWithTxHashes {
                     timestamp: block.header.timestamp,
                     parent_hash: block.header.parent_hash,
                     sequencer_address: block.header.sequencer_address,
-                    transactions: block
-                        .transactions
-                        .into_iter()
-                        .map(|t| t.transaction.transaction_hash().0.into())
-                        .collect(),
+                    transactions: block.transactions.into_iter().map(|t| t.inner.hash()).collect(),
                 })
             }
         }

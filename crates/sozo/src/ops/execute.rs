@@ -1,10 +1,10 @@
 use anyhow::{Context, Result};
-use dojo_client::contract::world::WorldContract;
-use toml::Value;
+use dojo_world::metadata::Environment;
+use torii_client::contract::world::WorldContract;
 
 use crate::commands::execute::ExecuteArgs;
 
-pub async fn execute(args: ExecuteArgs, env_metadata: Option<Value>) -> Result<()> {
+pub async fn execute(args: ExecuteArgs, env_metadata: Option<Environment>) -> Result<()> {
     let ExecuteArgs { system, calldata, world, starknet, account } = args;
 
     let world_address = world.address(env_metadata.as_ref())?;
