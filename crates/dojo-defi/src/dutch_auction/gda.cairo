@@ -1,6 +1,8 @@
 use cubit::f128::math::core::{exp, pow};
 use cubit::f128::types::fixed::{Fixed, FixedTrait};
 
+use debug::PrintTrait;
+
 /// A Gradual Dutch Auction represented using discrete time steps.
 /// The purchase price for a given quantity is calculated based on
 /// the initial price, scale factor, decay constant, and the time since
@@ -19,7 +21,7 @@ impl DiscreteGDAImpl of DiscreteGDATrait {
     ///
     /// # Arguments
     ///
-    /// * `time_since_start`: Time since the start of the auction.
+    /// * `time_since_start`: Time since the start of the auction in days.
     /// * `quantity`: Quantity of the item being purchased.
     ///
     /// # Returns
@@ -36,7 +38,7 @@ impl DiscreteGDAImpl of DiscreteGDATrait {
 
 /// A Gradual Dutch Auction represented using continuous time steps.
 /// The purchase price is calculated based on the initial price,
-/// emission rate, decay constant, and the time since the last purchase.
+/// emission rate, decay constant, and the time since the last purchase in days.
 #[derive(Copy, Drop, Serde, starknet::Storage)]
 struct ContinuousGDA {
     initial_price: Fixed,
@@ -50,7 +52,7 @@ impl ContinuousGDAImpl of ContinuousGDATrait {
     ///
     /// # Arguments
     ///
-    /// * `time_since_last`: Time since the last purchase in the auction.
+    /// * `time_since_last`: Time since the last purchase in the auction in days.
     /// * `quantity`: Quantity of the item being purchased.
     ///
     /// # Returns

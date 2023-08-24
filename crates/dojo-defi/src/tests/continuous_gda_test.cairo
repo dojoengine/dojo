@@ -16,7 +16,7 @@ fn test_price_1() {
     let time_since_last = FixedTrait::new_unscaled(10, false);
     let quantity = FixedTrait::new_unscaled(9, false);
     let price: Fixed = auction.purchase_price(time_since_last, quantity);
-    assert_approx_equal(price.mag, expected.mag, TOLERANCE)
+    assert_approx_equal(price, expected, TOLERANCE)
 }
 
 
@@ -32,7 +32,7 @@ fn test_price_2() {
     let time_since_last = FixedTrait::new_unscaled(20, false);
     let quantity = FixedTrait::new_unscaled(8, false);
     let price: Fixed = auction.purchase_price(time_since_last, quantity);
-    assert_approx_equal(price.mag, expected.mag, TOLERANCE)
+    assert_approx_equal(price, expected, TOLERANCE)
 }
 
 #[test]
@@ -47,7 +47,7 @@ fn test_price_3() {
     let time_since_last = FixedTrait::new_unscaled(30, false);
     let quantity = FixedTrait::new_unscaled(15, false);
     let price: Fixed = auction.purchase_price(time_since_last, quantity);
-    assert_approx_equal(price.mag, expected.mag, TOLERANCE)
+    assert_approx_equal(price, expected, TOLERANCE)
 }
 
 #[test]
@@ -62,6 +62,6 @@ fn test_price_4() {
     let time_since_last = FixedTrait::new_unscaled(40, false);
     let quantity = FixedTrait::new_unscaled(35, false);
     let price: Fixed = auction.purchase_price(time_since_last, quantity);
-    assert_approx_equal(price.mag, expected.mag, TOLERANCE)
+    assert_approx_equal(price, expected, TOLERANCE)
 }
 
