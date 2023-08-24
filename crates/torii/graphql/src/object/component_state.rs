@@ -17,13 +17,13 @@ use super::inputs::where_input::{parse_where_argument, where_argument, WhereInpu
 use super::inputs::InputObjectTrait;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
-use torii_core::types::Entity;
 use crate::object::entity::EntityObject;
 use crate::query::filter::{Filter, FilterValue};
 use crate::query::order::{Direction, Order};
 use crate::query::{query_by_id, query_total_count, ID};
 use crate::types::ScalarType;
 use crate::utils::extract_value::extract;
+use torii_core::types::Entity;
 
 const BOOLEAN_TRUE: i64 = 1;
 

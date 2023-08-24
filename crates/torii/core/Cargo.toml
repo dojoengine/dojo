@@ -10,7 +10,6 @@ version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-async-graphql = { version = "5.0.8", features = [ "chrono", "dynamic-schema" ] }
 async-trait.workspace = true
 chrono.workspace = true
 dojo-types = { path = "../../dojo-types" }

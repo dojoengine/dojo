@@ -1,5 +1,5 @@
-use core::fmt;
 use chrono::{DateTime, Utc};
+use core::fmt;
 
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
