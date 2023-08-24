@@ -6752,7 +6752,6 @@ name = "torii-core"
 version = "0.2.1"
 dependencies = [
  "anyhow",
- "async-graphql",
  "async-stream",
  "async-trait",
  "camino",
