@@ -1,9 +1,18 @@
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
+    use async_graphql::value;
+    use dojo_types::component::Member;
+    use dojo_world::manifest::Component;
     use sqlx::SqlitePool;
+    use starknet_crypto::FieldElement;
+    use tokio::sync::mpsc;
+    use torii_core::State;
 
     use crate::tests::common::{
-        entity_fixtures, run_graphql_query, Connection, Edge, Moves, Position,
+        entity_fixtures, init, run_graphql_query, run_graphql_subscription, Connection, Edge,
+        Moves, Position,
     };
 
     type OrderTestFn = dyn Fn(&Vec<Edge<Position>>) -> bool;
@@ -197,5 +206,50 @@ mod tests {
         let connection: Connection<Position> = serde_json::from_value(positions.clone()).unwrap();
         let entity = connection.edges[0].node.entity.as_ref().unwrap();
         assert_eq!(entity.component_names, "Position".to_string());
+    }
+    #[sqlx::test(migrations = "../migrations")]
+    async fn test_component_subscription(pool: SqlitePool) {
+        let state = init(&pool).await;
+        // 0. Preprocess component value
+        let name = "Test".to_string();
+        let component_id = name.to_lowercase();
+        let class_hash = FieldElement::TWO;
+        let hex_class_hash = format!("{:#x}", class_hash);
+        let expected_value: async_graphql::Value = value!({
+         "componentAdded": { "id": component_id.clone(), "name":name, "classHash": hex_class_hash }
+        });
+        let (tx, mut rx) = mpsc::channel(7);
+
+        tokio::spawn(async move {
+            // 1. Open process and sleep.Go to execute subscription
+            tokio::time::sleep(Duration::from_secs(1)).await;
+
+            let component = Component {
+                name,
+                members: vec![Member { name: "test".into(), ty: "u32".into(), key: false }],
+                class_hash,
+                ..Default::default()
+            };
+            state.register_component(component).await.unwrap();
+            // 3. fn publish() is called from state.set_entity()
+
+            tx.send(()).await.unwrap();
+        });
+
+        // 2. The subscription is executed and it is listeing, waiting for publish() to be executed
+        let response_value = run_graphql_subscription(
+            &pool,
+            r#"
+            subscription {
+							componentAdded {
+									id, name, classHash
+                }
+            }"#,
+        )
+        .await;
+        // 4. The subcription has received the message from publish()
+        // 5. Compare values
+        assert_eq!(expected_value, response_value);
+        rx.recv().await.unwrap();
     }
 }

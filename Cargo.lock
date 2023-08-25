@@ -6785,6 +6785,7 @@ dependencies = [
  "base64 0.21.2",
  "camino",
  "chrono",
+ "dojo-types",
  "dojo-world",
  "indexmap 1.9.3",
  "log",
