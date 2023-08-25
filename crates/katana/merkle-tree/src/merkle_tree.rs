@@ -1,4 +1,6 @@
-use crate::hash::FeltHash;
+// A huge thanks to the pathfinder team and madara team which i was referencing from
+
+use crate::{hash::FeltHash, merkle_node::Direction};
 use crate::merkle_node::Node;
 use bitvec::{prelude::Msb0, slice::BitSlice, vec::BitVec};
 use starknet_crypto::FieldElement;
@@ -68,6 +70,10 @@ impl<H: FeltHash> MerkleTree<H> {
         Self::new(FieldElement::ZERO)
     }
 
+    pub fn root(&self) -> FieldElement {
+        self.root.borrow().hash().expect("Node should be committed")
+    }
+
     pub fn commit(&mut self) -> FieldElement {
         self.commit_mut()
     }
@@ -121,6 +127,115 @@ impl<H: FeltHash> MerkleTree<H> {
         let path = self.traverse(key);
         for node in &path {
             node.borrow_mut().mark_dirty();
+        }
+
+        // There are three possibilities.
+        //
+        // 1. The leaf exists, in which case we simply change its value.
+        //
+        // 2. The tree is empty, we insert the new leaf and the root becomes an edge node connecting to it.
+        //
+        // 3. The leaf does not exist, and the tree is not empty. The final node in the traversal will be an
+        //    edge node who's path diverges from our new leaf node's.
+        //
+        //    This edge must be split into a new subtree containing both the existing edge's child and the
+        //    new leaf. This requires an edge followed by a binary node and then further edges to both the
+        //    current child and the new leaf. Any of these new edges may also end with an empty path in
+        //    which case they should be elided. It depends on the common path length of the current edge
+        //    and the new leaf i.e. the split may be at the first bit (in which case there is no leading
+        //    edge), or the split may be in the middle (requires both leading and post edges), or the
+        //    split may be the final bit (no post edge).
+
+        use Node::*;
+        match path.last() {
+            Some(node) => {
+                let updated = match &*node.borrow() {
+                    Edge(edge) => {
+                        let common = edge.common_path(key);
+
+                        //Height of the binary node
+                        let branch_height = edge.height + common.len();
+                        //Height of the binary node's children
+                        let child_height = branch_height + 1;
+
+                        //Path from binary node to new leaf
+                        let new_path = key[child_height..].to_bitvec();
+                        //Path from binary node to existing child 
+                        let old_path = edge.path[child_height..].to_bitvec();
+
+                        //The new leaf branch of the binary node. 
+                        let new_leaf = Node::Leaf(value);
+                        let new = if new_path.is_empty() {
+                            Rc::new(RefCell::new(new_leaf))
+                        }else{
+                            let new_edge = Node::Edge(EdgeNode {
+                                hash: None,
+                                height: branch_height,
+                                path: new_path,
+                                child: Rc::new(RefCell::new(new_leaf)),
+                            });
+                            Rc::new(RefCell::new(new_edge))
+                        };
+
+                        //The existing child branch of the binary node.
+                        let old = if old_path.is_empty() {
+                            edge.child.clone()
+                        }else{
+                            let old_edge = Node::Edge(EdgeNode {
+                                hash: None,
+                                height: branch_height,
+                                path: old_path,
+                                child: edge.child.clone(),
+                            });
+                            Rc::new(RefCell::new(old_edge))
+                        };
+
+                        let new_direction = Direction::from(key[branch_height]);
+                        let(left, right) = match new_direction {
+                            Direction::Left => (new, old),
+                            Direction::Right => (old, new),
+                        };
+
+                        let branch = Node::Binary(BinaryNode {
+                            hash: None,
+                            height: branch_height,
+                            left,
+                            right,
+                        });
+
+                        if common.is_empty() {
+                            branch
+                        }else{
+                            Node::Edge(EdgeNode {
+                                hash: None,
+                                height: edge.height,
+                                path: common.to_bitvec(),
+                                child: Rc::new(RefCell::new(branch)),
+                            })
+                        }
+                    }
+                    Leaf(_) => Node::Leaf(value),
+                    Unresolved(_) | Binary(_) => {
+                        unreachable!("The end of a traversion cannot be unresolved or binary")
+                    }
+                };
+                node.swap(&RefCell::new(updated));
+            }
+            None => {
+                // Getting no travel nodes implies that the tree is empty.
+                //
+                // Create a new leaf node with the value, and the root becomes
+                // an edge node connecting to the leaf.
+                let leaf = Node::Leaf(value);
+                let edge = Node::Edge(EdgeNode {
+                    hash: None,
+                    height: 0,
+                    path: key.to_bitvec(),
+                    child: Rc::new(RefCell::new(leaf)),
+                });
+
+                self.root = Rc::new(RefCell::new(edge));
+            }
         }
     }
 

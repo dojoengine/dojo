@@ -17,7 +17,7 @@ katana-rpc = { path = "rpc" }
 log.workspace = true
 starknet_api.workspace = true
 tokio.workspace = true
-yansi.workspace = true
+# yansi.workspace = true
 
 [dev-dependencies]
 assert_matches = "1.5.0"

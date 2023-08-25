@@ -3961,6 +3961,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "katana-commitments"
+version = "0.2.1"
+dependencies = [
+ "bitvec",
+ "katana-merkle-tree",
+ "starknet-crypto 0.5.1",
+]
+
+[[package]]
 name = "katana-core"
 version = "0.2.1"
 dependencies = [
@@ -3992,7 +4001,7 @@ dependencies = [
 
 [[package]]
 name = "katana-merkle-tree"
-version = "0.1.0"
+version = "0.2.1"
 dependencies = [
  "bitvec",
  "starknet",
@@ -4174,7 +4183,7 @@ dependencies = [
 
 [[package]]
 name = "matchers"
-version = "0.2.1"
+version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8263075bb86c5a1b1427b5ae862e8889656f126e9f77c484496e8b47cf5c5558"
 dependencies = [
@@ -4813,7 +4822,7 @@ checksum = "12cc1b0bf1727a77a54b6654e7b5f1af8604923edc8b81885f8ec92f9e3f0a05"
 
 [[package]]
 name = "pin-utils"
-version = "0.2.1"
+version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
@@ -5276,7 +5285,7 @@ dependencies = [
 
 [[package]]
 name = "rfc7239"
-version = "0.2.1"
+version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "087317b3cf7eb481f13bd9025d729324b7cd068d6f470e2d76d049e191f5ba47"
 dependencies = [
@@ -7231,7 +7240,7 @@ dependencies = [
 
 [[package]]
 name = "valuable"
-version = "0.2.1"
+version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "830b7e5d4d90034032940e4ace0d9a9a057e7a45cd94e6c007832e39edb82f6d"
 
