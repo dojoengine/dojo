@@ -12,3 +12,4 @@ version.workspace = true
 bitvec.workspace = true
 katana-merkle-tree = { path = "../merkle-tree" }
 starknet-crypto.workspace = true
+starknet.workspace = true

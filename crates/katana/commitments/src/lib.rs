@@ -1,1 +1,2 @@
 mod contract;
+mod class;

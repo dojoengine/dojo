@@ -1,3 +1,4 @@
+use bitvec::{slice::BitSlice, prelude::Msb0};
 //Commitment tree for contract
 use starknet_crypto::{FieldElement, pedersen_hash};
 use katana_merkle_tree::{merkle_tree::MerkleTree, hash::FeltHash};
@@ -23,6 +24,18 @@ impl <H: FeltHash> ContractTree<H> {
         let contract_state = pedersen_hash(&pedersen_hash(&pedersen_hash(&class_hash, &storage_root), &nonce),&FieldElement::ZERO);
         contract_state
     }    
+
+    pub fn commit(&mut self) {
+        self.tree.commit();
+    }
+
+    pub fn root(&self) -> FieldElement {
+        self.tree.root()
+    }
+
+    pub fn set(&mut self, key: &BitSlice<u8, Msb0>, value: FieldElement) {
+        self.tree.set(key, value);
+    }
 }
 
 #[cfg(test)]
@@ -41,10 +54,10 @@ mod test {
         let mut contract_tree = ContractTree::new(FieldElement::ZERO, tree);
         let result = contract_tree.calculate_contract(class_hash, storage_root, nonce);
         let key = bitvec![u8,Msb0; 0, 0, 0, 0, 0, 0, 0, 0];
-        contract_tree.tree.set(&key, result);
-        contract_tree.tree.commit();
-        let root = contract_tree.tree.root();
+        contract_tree.set(&key, result);
+        contract_tree.commit();
+        let root = contract_tree.root();
         println!("root: {:?}", root);
-        assert_eq!(FieldElement::from_hex_be("0x008c32ee51c4fea1a293a25dde7eaaad13688143a487a855d2b388f2892fbba5").unwrap(), contract_tree.tree.root());
+        assert_eq!(FieldElement::from_hex_be("0x008c32ee51c4fea1a293a25dde7eaaad13688143a487a855d2b388f2892fbba5").unwrap(), root);
     }
 }
