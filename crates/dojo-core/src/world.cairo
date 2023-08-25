@@ -19,6 +19,13 @@ trait IWorld<T> {
     fn uuid(ref self: T) -> usize;
     fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
     fn execute(ref self: T, system: felt252, calldata: Array<felt252>) -> Span<felt252>;
+    fn proxy_execute(
+        ref self: ContractState,
+        system: felt252,
+        mut calldata: Array<felt252>,
+        caller: ContractAddress
+    ) -> Span<felt252>;
+
     fn entity(
         self: @T, component: felt252, keys: Span<felt252>, offset: u8, length: usize
     ) -> Span<felt252>;
@@ -332,46 +339,30 @@ mod world {
         fn execute(
             ref self: ContractState, system: felt252, mut calldata: Array<felt252>
         ) -> Span<felt252> {
-            let stack_len = self.call_stack_len.read();
-            self.call_stack.write(stack_len, system);
-            self.call_stack_len.write(stack_len + 1);
-
-            // Get the class hash of the system to be executed
-            let system_class_hash = self.systems.read(system);
-
             // If this is the initial call, set the origin to the caller
             let mut call_origin = self.call_origin.read();
-            if stack_len.is_zero() {
+            if self.call_stack_len.read().is_zero() {
                 call_origin = get_caller_address();
                 self.call_origin.write(call_origin);
             }
 
-            let ctx = Context {
-                world: IWorldDispatcher {
-                    contract_address: get_contract_address()
-                }, origin: self.call_origin.read(), system, system_class_hash,
-            };
+            self.execute_impl(system, calldata, call_origin)
+        }
 
-            // Add context to calldata
-            ctx.serialize(ref calldata);
+        fn proxy_execute(
+            ref self: ContractState,
+            system: felt252,
+            mut calldata: Array<felt252>,
+            caller: ContractAddress
+        ) -> Span<felt252> {
+            // The idea of this function is to proxy the original caller,
+            // so this should only be called as the initial entrypoint.
+            assert(self.call_stack_len.read().is_zero(), 'Only initial call');
 
-            // Call the system via executor
-            let res = self
-                .executor_dispatcher
-                .read()
-                .execute(ctx.system_class_hash, calldata.span());
+            // Verify that we can trust the caller to pass a correct caller
+            self.call_origin.write(caller);
 
-            // Reset the current call stack frame
-            self.call_stack.write(stack_len, 0);
-            // Decrement the call stack pointer
-            self.call_stack_len.write(stack_len);
-
-            // If this is the initial call, reset the origin on exit
-            if stack_len.is_zero() {
-                self.call_origin.write(starknet::contract_address_const::<0x0>());
-            }
-
-            res
+            self.execute_impl(system, calldata, caller)
         }
 
         /// Issues an autoincremented id to the caller.
@@ -514,6 +505,44 @@ mod world {
         fn caller_system(self: @ContractState) -> felt252 {
             self.call_stack.read(self.call_stack_len.read() - 1)
         }
+    }
+
+    fn execute_impl(
+        ref self: ContractState,
+        system: felt252,
+        mut calldata: Array<felt252>,
+        caller: ContractAddress
+    ) -> Span<felt252> {
+        let stack_len = self.call_stack_len.read();
+        self.call_stack.write(stack_len, system);
+        self.call_stack_len.write(stack_len + 1);
+
+        // Get the class hash of the system to be executed
+        let system_class_hash = self.systems.read(system);
+
+        let ctx = Context {
+            world: IWorldDispatcher {
+                contract_address: get_contract_address()
+            }, origin: caller, system, system_class_hash,
+        };
+
+        // Add context to calldata
+        ctx.serialize(ref calldata);
+
+        // Call the system via executor
+        let res = self.executor_dispatcher.read().execute(ctx.system_class_hash, calldata.span());
+
+        // Reset the current call stack frame
+        self.call_stack.write(stack_len, 0);
+        // Decrement the call stack pointer
+        self.call_stack_len.write(stack_len);
+
+        // If this is the initial call, reset the origin on exit
+        if stack_len.is_zero() {
+            self.call_origin.write(starknet::contract_address_const::<0x0>());
+        }
+
+        res
     }
 
     /// Asserts that the current caller can write to the component.
