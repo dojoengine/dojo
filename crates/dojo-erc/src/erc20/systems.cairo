@@ -38,7 +38,20 @@ mod erc20_transfer_from {
         amount: felt252
     ) {
         assert(token == ctx.origin, 'ERC20: not authorized');
-        let mut balance = get!(ctx.world, (token, sender), Balance);
+        assert(spender.is_non_zero(), 'ERC20: transfer from 0');
+        assert(recipient.is_non_zero(), 'ERC20: transfer to 0');
+
+        if spender != caller {
+            // decrease allowance if it's not owner doing the transfer
+            let mut allowance = get!(ctx.world, (token, caller, spender), Allowance);
+            if !is_unlimited_allowance(allowance) {
+                allowance.amount -= amount;
+                set!(ctx.world, (allowance));
+            }
+        }
+
+        // decrease spender's balance
+        let mut balance = get!(ctx.world, (token, spender), Balance);
         balance.amount -= amount;
         set!(ctx.world, (balance));
 
@@ -72,7 +85,7 @@ mod erc20_mint {
 
         // increase balance of recipient
         let mut balance = get!(ctx.world, (token, recipient), Balance);
-        balance.amount += amount;
+        balance.amount -= amount;
         set!(ctx.world, (balance));
     }
 }

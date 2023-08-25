@@ -177,6 +177,7 @@ test_expand_plugin
 
 //! > cairo_code
 fn foo() {
+    // A comment should not affect macro name
     emit!(world, Struct {
         x: 10,
     });

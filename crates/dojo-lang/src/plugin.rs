@@ -227,7 +227,7 @@ impl CairoPluginRepository {
         let url = Url::parse("https://github.com/dojoengine/dojo").unwrap();
         let dojo_package_id = PackageId::new(
             PackageName::new("dojo_plugin"),
-            Version::parse("0.1.0").unwrap(),
+            Version::parse("0.2.1").unwrap(),
             SourceId::for_git(&url, &scarb::core::GitReference::DefaultBranch).unwrap(),
         );
         repo.add(Box::new(BuiltinSemanticCairoPlugin::<DojoPlugin>::new(dojo_package_id))).unwrap();

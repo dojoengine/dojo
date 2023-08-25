@@ -2,6 +2,8 @@ use std::collections::HashSet;
 use std::fmt;
 use std::str::FromStr;
 
+// NOTE: If adding/removing types, corresponding change needs to be made to torii-core `src/sql.rs`
+// in method sql_type()
 #[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
 pub enum ScalarType {
     U8,
@@ -14,6 +16,7 @@ pub enum ScalarType {
     Bool,
     Cursor,
     Address,
+    ClassHash,
     DateTime,
     Felt252,
 }
@@ -31,6 +34,7 @@ impl fmt::Display for ScalarType {
             ScalarType::Bool => write!(f, "bool"),
             ScalarType::Cursor => write!(f, "Cursor"),
             ScalarType::Address => write!(f, "ContractAddress"),
+            ScalarType::ClassHash => write!(f, "ClassHash"),
             ScalarType::DateTime => write!(f, "DateTime"),
             ScalarType::Felt252 => write!(f, "felt252"),
         }
@@ -50,6 +54,7 @@ impl ScalarType {
             ScalarType::Bool,
             ScalarType::Cursor,
             ScalarType::Address,
+            ScalarType::ClassHash,
             ScalarType::DateTime,
             ScalarType::Felt252,
         ]
@@ -78,6 +83,7 @@ impl ScalarType {
             ScalarType::U256,
             ScalarType::Cursor,
             ScalarType::Address,
+            ScalarType::ClassHash,
             ScalarType::DateTime,
             ScalarType::Felt252,
         ]
@@ -105,6 +111,7 @@ impl FromStr for ScalarType {
             "bool" => Ok(ScalarType::Bool),
             "Cursor" => Ok(ScalarType::Cursor),
             "ContractAddress" => Ok(ScalarType::Address),
+            "ClassHash" => Ok(ScalarType::ClassHash),
             "DateTime" => Ok(ScalarType::DateTime),
             "felt252" => Ok(ScalarType::Felt252),
             _ => Err(anyhow::anyhow!("Unknown type {}", s.to_string())),
