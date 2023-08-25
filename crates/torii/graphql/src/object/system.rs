@@ -6,10 +6,10 @@ use serde::Deserialize;
 use sqlx::{FromRow, Pool, Sqlite};
 
 use super::connection::connection_output;
-use super::query::{query_all, query_by_id, query_total_count, ID};
 use super::system_call::system_calls_by_system_id;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
+use crate::query::{query_all, query_by_id, query_total_count, ID};
 use crate::types::ScalarType;
 use crate::utils::extract_value::extract;
 
@@ -89,7 +89,7 @@ impl ObjectTrait for SystemObject {
             |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let total_count = query_total_count(&mut conn, "systems").await?;
+                    let total_count = query_total_count(&mut conn, "systems", &Vec::new()).await?;
                     let data: Vec<System> = query_all(&mut conn, "systems", DEFAULT_LIMIT).await?;
                     let systems: Vec<ValueMapping> =
                         data.into_iter().map(SystemObject::value_mapping).collect();

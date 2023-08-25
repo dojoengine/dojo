@@ -60,10 +60,10 @@ mod tests {
         let component_position: Position = serde_json::from_value(components[1].clone()).unwrap();
 
         assert_eq!(component_moves.__typename, "Moves");
-        assert_eq!(component_moves.remaining, 10);
+        assert_eq!(component_moves.remaining, 1);
         assert_eq!(component_position.__typename, "Position");
-        assert_eq!(component_position.x, 42);
-        assert_eq!(component_position.y, 69);
+        assert_eq!(component_position.x, 69);
+        assert_eq!(component_position.y, 42);
     }
 
     #[sqlx::test(migrations = "../migrations")]

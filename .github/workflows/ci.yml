@@ -27,6 +27,24 @@ jobs:
       - run: |
           cargo test
 
+  ensure-wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+      - name: "Ensure `torii-client` crate is wasmable"
+        run: |
+          cargo build -r --target wasm32-unknown-unknown -p torii-client
+      - name: "Ensure `torii-client-wasm` crate is wasmable"
+        run: |
+          cargo build -r --target wasm32-unknown-unknown --manifest-path crates/torii/client/wasm/Cargo.toml
+
   # cairofmt:
   #   runs-on: ubuntu-latest
   #   steps:
@@ -59,6 +77,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_VERSION }}
+          targets: wasm32-unknown-unknown
           components: clippy
       
       - uses: Swatinem/rust-cache@v2

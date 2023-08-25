@@ -6,9 +6,9 @@ use serde::Deserialize;
 use sqlx::{FromRow, Pool, Sqlite};
 
 use super::connection::connection_output;
-use super::query::{query_all, query_by_id, query_total_count, ID};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
+use crate::query::{query_all, query_by_id, query_total_count, ID};
 use crate::types::ScalarType;
 
 #[derive(FromRow, Deserialize)]
@@ -88,7 +88,8 @@ impl ObjectTrait for ComponentObject {
             |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let total_count = query_total_count(&mut conn, "components").await?;
+                    let total_count =
+                        query_total_count(&mut conn, "components", &Vec::new()).await?;
                     let data: Vec<Component> =
                         query_all(&mut conn, "components", DEFAULT_LIMIT).await?;
                     let components: Vec<ValueMapping> =

@@ -56,6 +56,7 @@ async fn test_load_from_manifest(pool: SqlitePool) {
             name: "Test".into(),
             members: vec![Member { name: "test".into(), ty: "u32".into(), key: false }],
             class_hash: FieldElement::TWO,
+            ..Default::default()
         })
         .await
         .unwrap();
@@ -82,6 +83,7 @@ async fn test_load_from_manifest(pool: SqlitePool) {
             outputs: vec![],
             class_hash: FieldElement::THREE,
             dependencies: vec![],
+            ..Default::default()
         })
         .await
         .unwrap();

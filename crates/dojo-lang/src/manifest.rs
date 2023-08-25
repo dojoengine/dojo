@@ -5,6 +5,7 @@ use cairo_lang_defs::ids::{ModuleId, ModuleItemId};
 use cairo_lang_filesystem::ids::CrateId;
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::plugin::DynPluginAuxData;
+use cairo_lang_starknet::abi;
 use convert_case::{Case, Casing};
 use dojo_world::manifest::{
     Contract, Input, Output, System, EXECUTOR_CONTRACT_NAME, WORLD_CONTRACT_NAME,
@@ -23,11 +24,11 @@ impl Manifest {
     pub fn new(
         db: &dyn SemanticGroup,
         crate_ids: &[CrateId],
-        compiled_classes: HashMap<SmolStr, FieldElement>,
+        compiled_classes: HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
     ) -> Self {
         let mut manifest = Manifest(dojo_world::manifest::Manifest::default());
 
-        let world = compiled_classes.get(WORLD_CONTRACT_NAME).unwrap_or_else(|| {
+        let (world, world_abi) = compiled_classes.get(WORLD_CONTRACT_NAME).unwrap_or_else(|| {
             panic!(
                 "{}",
                 format!(
@@ -36,20 +37,29 @@ impl Manifest {
                 )
             );
         });
-        let executor = compiled_classes.get(EXECUTOR_CONTRACT_NAME).unwrap_or_else(|| {
-            panic!(
-                "{}",
-                format!(
-                    "Contract `{}` not found. Did you include `dojo` as a dependency?",
-                    EXECUTOR_CONTRACT_NAME
-                )
-            );
-        });
+        let (executor, executor_abi) =
+            compiled_classes.get(EXECUTOR_CONTRACT_NAME).unwrap_or_else(|| {
+                panic!(
+                    "{}",
+                    format!(
+                        "Contract `{}` not found. Did you include `dojo` as a dependency?",
+                        EXECUTOR_CONTRACT_NAME
+                    )
+                );
+            });
 
-        manifest.0.world =
-            Contract { name: WORLD_CONTRACT_NAME.into(), address: None, class_hash: *world };
-        manifest.0.executor =
-            Contract { name: EXECUTOR_CONTRACT_NAME.into(), address: None, class_hash: *executor };
+        manifest.0.world = Contract {
+            name: WORLD_CONTRACT_NAME.into(),
+            address: None,
+            class_hash: *world,
+            abi: world_abi.clone(),
+        };
+        manifest.0.executor = Contract {
+            name: EXECUTOR_CONTRACT_NAME.into(),
+            address: None,
+            class_hash: *executor,
+            abi: executor_abi.clone(),
+        };
 
         for crate_id in crate_ids {
             let modules = db.crate_modules(*crate_id);
@@ -86,7 +96,7 @@ impl Manifest {
         db: &dyn SemanticGroup,
         aux_data: &DojoAuxData,
         module_id: ModuleId,
-        compiled_classes: &HashMap<SmolStr, FieldElement>,
+        compiled_classes: &HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
     ) {
         for component in &aux_data.components {
             let component = component.clone();
@@ -96,7 +106,7 @@ impl Manifest {
             {
                 // It needs the `Component` suffix because we are
                 // searching from the compiled contracts.
-                let class_hash = compiled_classes
+                let (class_hash, class_abi) = compiled_classes
                     .get(name.to_case(Case::Snake).as_str())
                     .with_context(|| format!("Component {name} not found in target."))
                     .unwrap();
@@ -105,6 +115,7 @@ impl Manifest {
                     name: component.name,
                     members: component.members,
                     class_hash: *class_hash,
+                    abi: class_abi.clone(),
                 });
             }
         }
@@ -115,7 +126,7 @@ impl Manifest {
         db: &dyn SemanticGroup,
         aux_data: &DojoAuxData,
         module_id: ModuleId,
-        compiled_classes: &HashMap<SmolStr, FieldElement>,
+        compiled_classes: &HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
     ) -> Result<()> {
         for SystemAuxData { name, dependencies } in &aux_data.systems {
             if let Ok(Some(ModuleItemId::Submodule(submodule_id))) =
@@ -150,7 +161,7 @@ impl Manifest {
                         vec![Output { ty: signature.return_type.format(db) }]
                     };
 
-                    let class_hash = compiled_classes
+                    let (class_hash, class_abi) = compiled_classes
                         .get(name.as_str())
                         .with_context(|| format!("System {name} not found in target."))
                         .unwrap();
@@ -165,6 +176,7 @@ impl Manifest {
                             .sorted_by(|a, b| a.name.cmp(&b.name))
                             .cloned()
                             .collect::<Vec<_>>(),
+                        abi: class_abi.clone(),
                     });
                 }
             } else {
@@ -175,3 +187,7 @@ impl Manifest {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "manifest_test.rs"]
+mod test;
