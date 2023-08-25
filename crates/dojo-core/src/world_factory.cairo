@@ -32,6 +32,7 @@ mod world_factory {
     struct Storage {
         world_class_hash: ClassHash,
         executor_address: ContractAddress,
+        custom_executor_path: Option<felt252>,
     }
 
     #[event]
@@ -47,10 +48,12 @@ mod world_factory {
 
     #[constructor]
     fn constructor(
-        ref self: ContractState, world_class_hash_: ClassHash, executor_address_: ContractAddress,
+        ref self: ContractState, world_class_hash_: ClassHash, executor_address_: ContractAddress,custom_executor_path_: Option<felt252>
     ) {
         self.world_class_hash.write(world_class_hash_);
         self.executor_address.write(executor_address_);
+
+        self.custom_executor_path.write(custom_executor_path_);
     }
 
     #[external(v0)]
