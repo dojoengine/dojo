@@ -8,16 +8,22 @@ use cairo_lang_filesystem::db::{AsFilesGroupMut, FilesGroupEx, PrivRawFileConten
 use cairo_lang_filesystem::ids::FileId;
 use clap::Args;
 use dojo_world::manifest::Manifest;
+use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::world::WorldDiff;
-use notify_debouncer_mini::{new_debouncer, notify::RecursiveMode, DebouncedEvent, DebouncedEventKind};
+use notify_debouncer_mini::notify::RecursiveMode;
+use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
 use scarb::compiler::CompilationUnit;
 use scarb::core::{Config, Workspace};
-use scarb::ui::Status;
+use starknet::accounts::SingleOwnerAccount;
+use starknet::core::types::FieldElement;
+use starknet::providers::Provider;
+use starknet::signers::Signer;
 
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
 use super::scarb_internal::build_scarb_root_database;
+use crate::ops::migration;
 
 #[derive(Args)]
 pub struct DevArgs {
@@ -69,7 +75,6 @@ struct DevContext<'a> {
     pub db: RootDatabase,
     pub unit: CompilationUnit,
     pub ws: Workspace<'a>,
-    pub packages: Vec<scarb::core::PackageId>,
 }
 
 fn load_context(config: &Config) -> Result<DevContext> {
@@ -83,25 +88,33 @@ fn load_context(config: &Config) -> Result<DevContext> {
     // we have only 1 unit in projects
     let unit = compilation_units.get(0).unwrap();
     let db = build_scarb_root_database(&unit, &ws).unwrap();
-    Ok(DevContext { db, unit: unit.clone(), ws, packages })
+    Ok(DevContext { db, unit: unit.clone(), ws })
 }
 
 fn build(context: &mut DevContext) -> Result<()> {
     let ws = &context.ws;
-    let packages = context.packages.clone();
     let unit = &context.unit;
     let package_name = unit.main_package_id.name.clone();
-    log::error!("compile");
     ws.config().compilers().compile(unit.clone(), &mut ((*context).db), ws).map_err(|err| {
         ws.config().ui().anyhow(&err);
 
         anyhow!("could not compile `{package_name}` due to previous error")
     })?;
-    ws.config().ui().print(Status::new("Rebuild", "done"));
+    ws.config().ui().print("📦 Rebuild done");
     Ok(())
 }
 
-fn migrate(ws: &Workspace<'_>, previous_manifest: Option<Manifest>) -> Result<Manifest> {
+async fn migrate<P, S>(
+    mut world_address: Option<FieldElement>,
+    account: &SingleOwnerAccount<P, S>,
+    name: Option<String>,
+    ws: &Workspace<'_>,
+    previous_manifest: Option<Manifest>,
+) -> Result<(Manifest, Option<FieldElement>)>
+where
+    P: Provider + Sync + Send + 'static,
+    S: Signer + Sync + Send + 'static,
+{
     let target_dir = ws.target_dir().path_existent().unwrap();
     let target_dir = target_dir.join(ws.config().profile().as_str());
     let manifest_path = target_dir.join("manifest.json");
@@ -111,29 +124,78 @@ fn migrate(ws: &Workspace<'_>, previous_manifest: Option<Manifest>) -> Result<Ma
     let new_manifest = Manifest::load_from_path(manifest_path)?;
     let diff = WorldDiff::compute(new_manifest.clone(), previous_manifest);
     let total_diffs = diff.count_diffs();
-    ws.config().ui().print(format!("Total diffs found: {total_diffs}"));
-    Ok(new_manifest)
+    let config = ws.config();
+    config.ui().print(format!("Total diffs found: {total_diffs}"));
+    if total_diffs == 0 {
+        return Ok((new_manifest, world_address));
+    }
+    match migration::apply_diff(target_dir, diff, name.clone(), world_address, account, config)
+        .await
+    {
+        Ok(address) => {
+            config.ui().print(format!("🎉 World at address {} updated!", format!("{:#x}", address)));
+            world_address = Some(address);
+        }
+        Err(err) => {
+            config.ui().error(err.to_string());
+            return Err(err);
+        }
+    }
+
+    Ok((new_manifest, world_address))
 }
 
 impl DevArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         let mut context = load_context(config)?;
         let (tx, rx) = channel();
-        // Automatically select the best implementation for your platform.
-
-        // No specific tickrate, max debounce time 1 seconds
         let mut debouncer = new_debouncer(Duration::from_secs(1), None, tx)?;
 
         debouncer.watcher().watch(
             config.manifest_path().parent().unwrap().as_std_path(),
             RecursiveMode::Recursive,
         )?;
-
+        let name = self.name.clone();
+        let mut previous_manifest: Option<Manifest> = Option::None;
         let mut result = build(&mut context);
-        let mut previous_manifest: Option<Manifest> = migrate(&context.ws, None).ok();
 
+        let mut env_metadata =
+            dojo_metadata_from_workspace(&context.ws).and_then(|inner| inner.env().cloned());
+        let Some((mut world_address, account)) = context
+            .ws
+            .config()
+            .tokio_handle()
+            .block_on(migration::setup_env(
+                self.account,
+                self.starknet,
+                self.world,
+                env_metadata.as_ref(),
+                config,
+                name.as_ref(),
+            ))
+            .ok()
+        else {
+            return Err(anyhow!("Failed to setup environment"));
+        };
+
+        match context.ws.config().tokio_handle().block_on(migrate(
+            world_address,
+            &account,
+            name.clone(),
+            &context.ws,
+            previous_manifest.clone(),
+        )) {
+            Ok((manifest, address)) => {
+                previous_manifest = Some(manifest);
+                world_address = address;
+            }
+            Err(error) => {
+                log::error!("Error: {error:?}");
+            }
+        }
         loop {
             let mut action = DevAction::None;
+
             match rx.recv() {
                 Ok(events) => {
                     if events.is_ok() {
@@ -142,8 +204,8 @@ impl DevArgs {
                             match &action {
                                 DevAction::None => {}
                                 DevAction::Build(path) => {
-                                    context.ws.config().ui().print(Status::new(
-                                        "Need to rebuild",
+                                    context.ws.config().ui().print(format!(
+                                        "📦 Need to rebuild {}",
                                         path.clone().as_path().to_str().unwrap(),
                                     ));
                                     let db = &mut context.db;
@@ -158,8 +220,10 @@ impl DevArgs {
                                         .ws
                                         .config()
                                         .ui()
-                                        .print(Status::new("Reloading", "project"));
+                                        .print("Reloading project");
                                     context = load_context(config).unwrap();
+                                    env_metadata = dojo_metadata_from_workspace(&context.ws)
+                                        .and_then(|inner| inner.env().cloned());
                                 }
                             }
                         });
@@ -177,8 +241,21 @@ impl DevArgs {
             result = build(&mut context);
             match result {
                 Ok(_) => {
-                    context.ws.config().ui().print("Check migration");
-                    previous_manifest = migrate(&context.ws, previous_manifest.clone()).ok();
+                    match context.ws.config().tokio_handle().block_on(migrate(
+                        world_address,
+                        &account,
+                        name.clone(),
+                        &context.ws,
+                        previous_manifest.clone(),
+                    )) {
+                        Ok((manifest, address)) => {
+                            previous_manifest = Some(manifest);
+                            world_address = address;
+                        }
+                        Err(error) => {
+                            log::error!("Error: {error:?}");
+                        }
+                    }
                 }
                 Err(_) => {}
             }
