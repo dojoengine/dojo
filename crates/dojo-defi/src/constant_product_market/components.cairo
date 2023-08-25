@@ -4,7 +4,6 @@ use option::OptionTrait;
 // Cubit fixed point math library
 use cubit::types::fixed::{Fixed, FixedInto, FixedTrait, ONE_u128};
 
-
 use cubit::test::helpers::assert_precise;
 
 const SCALING_FACTOR: u128 = 10000;
@@ -251,7 +250,6 @@ fn normalize(quantity: usize, market: @Market) -> (u128, u128, u128) {
     (quantity, available, *market.cash_amount)
 }
 
-
 #[test]
 #[should_panic(expected: ('not enough liquidity', ))]
 fn test_not_enough_quantity() {
@@ -362,7 +360,6 @@ fn test_market_add_liquidity_insufficient_amount() {
     let (amount_add, quantity_add, liquidity_add) = market.add_liquidity(SCALING_FACTOR * 1, 20);
 }
 
-
 #[test]
 #[available_gas(1000000)]
 fn test_market_remove_liquidity() {
@@ -417,3 +414,4 @@ fn test_market_remove_liquidity_more_than_available() {
 
     let (amount_remove, quantity_remove) = market.remove_liquidity(liquidity_remove);
 }
+
