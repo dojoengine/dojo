@@ -20,9 +20,9 @@ trait IWorld<T> {
     fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
     fn execute(ref self: T, system: felt252, calldata: Array<felt252>) -> Span<felt252>;
     fn proxy_execute(
-        ref self: ContractState,
+        ref self: T,
         system: felt252,
-        mut calldata: Array<felt252>,
+        calldata: Array<felt252>,
         caller: ContractAddress
     ) -> Span<felt252>;
 
@@ -346,7 +346,7 @@ mod world {
                 self.call_origin.write(call_origin);
             }
 
-            self.execute_impl(system, calldata, call_origin)
+            execute_impl(ref self, system, calldata, call_origin)
         }
 
         fn proxy_execute(
@@ -360,9 +360,11 @@ mod world {
             assert(self.call_stack_len.read().is_zero(), 'Only initial call');
 
             // Verify that we can trust the caller to pass a correct caller
+            assert(self.writers.read((get_caller_address().into(), system)), 'Not authorized');
+
             self.call_origin.write(caller);
 
-            self.execute_impl(system, calldata, caller)
+            execute_impl(ref self, system, calldata, caller)
         }
 
         /// Issues an autoincremented id to the caller.

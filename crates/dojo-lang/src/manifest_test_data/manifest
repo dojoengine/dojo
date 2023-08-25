@@ -8,7 +8,7 @@ test_manifest_file
   "world": {
     "name": "world",
     "address": null,
-    "class_hash": "0x1527b232cbd77c7f021fdc129339d7623edfd9a9c79a1b9add29c9064961497",
+    "class_hash": "0x1749f8cecba71527826fa49a6618ef58e26453ceaea8c18d6a521968c7e502a",
     "abi": [
       {
         "type": "impl",
@@ -147,6 +147,30 @@ test_manifest_file
               {
                 "name": "calldata",
                 "type": "core::array::Array::<core::felt252>"
+              }
+            ],
+            "outputs": [
+              {
+                "type": "core::array::Span::<core::felt252>"
+              }
+            ],
+            "state_mutability": "external"
+          },
+          {
+            "type": "function",
+            "name": "proxy_execute",
+            "inputs": [
+              {
+                "name": "system",
+                "type": "core::felt252"
+              },
+              {
+                "name": "calldata",
+                "type": "core::array::Array::<core::felt252>"
+              },
+              {
+                "name": "caller",
+                "type": "core::starknet::contract_address::ContractAddress"
               }
             ],
             "outputs": [
