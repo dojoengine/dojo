@@ -113,7 +113,7 @@ mod tests {
         let entity_id = format!("{:#x}", poseidon_hash_many(&key));
         let keys_str = key.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join(",");
         let expected_value: async_graphql::Value = value!({
-                            "entityAdded": { "id": entity_id.clone(), "keys":vec![keys_str.clone()], "componentNames": "Moves" }
+                            "EntityAdded": { "id": entity_id.clone(), "keys":vec![keys_str.clone()], "componentNames": "Moves" }
         });
         let (tx, mut rx) = mpsc::channel(10);
 
@@ -135,7 +135,7 @@ mod tests {
             &pool,
             r#"
             subscription {
-                entityAdded {
+                EntityAdded {
 									id, keys, componentNames
                 }
             }"#,

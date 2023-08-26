@@ -8,11 +8,12 @@ mod tests {
     use sqlx::SqlitePool;
     use starknet_crypto::FieldElement;
     use tokio::sync::mpsc;
+    use torii_core::sql::Sql;
     use torii_core::State;
 
     use crate::tests::common::{
-        entity_fixtures, init, run_graphql_query, run_graphql_subscription, Connection, Edge,
-        Moves, Position,
+        entity_fixtures, run_graphql_query, run_graphql_subscription, Connection, Edge, Moves,
+        Position,
     };
 
     type OrderTestFn = dyn Fn(&Vec<Edge<Position>>) -> bool;
@@ -209,14 +210,17 @@ mod tests {
     }
     #[sqlx::test(migrations = "../migrations")]
     async fn test_component_subscription(pool: SqlitePool) {
-        let state = init(&pool).await;
+        // Sleep in order to run this test at the end in a single thread
+        tokio::time::sleep(Duration::from_secs(11)).await;
+
+        let state = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
         // 0. Preprocess component value
         let name = "Test".to_string();
         let component_id = name.to_lowercase();
         let class_hash = FieldElement::TWO;
         let hex_class_hash = format!("{:#x}", class_hash);
         let expected_value: async_graphql::Value = value!({
-         "componentAdded": { "id": component_id.clone(), "name":name, "classHash": hex_class_hash }
+         "ComponentAdded": { "id": component_id.clone(), "name":name, "classHash": hex_class_hash }
         });
         let (tx, mut rx) = mpsc::channel(7);
 
@@ -240,11 +244,11 @@ mod tests {
         let response_value = run_graphql_subscription(
             &pool,
             r#"
-            subscription {
-							componentAdded {
+						subscription {
+							ComponentAdded {
 									id, name, classHash
-                }
-            }"#,
+								}
+						}"#,
         )
         .await;
         // 4. The subcription has received the message from publish()
