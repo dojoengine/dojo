@@ -16,7 +16,8 @@ cairo_lang_test_utils::test_file_test!(
 
 pub fn test_manifest_file(
     _inputs: &OrderedHashMap<String, String>,
-) -> OrderedHashMap<String, String> {
+    _args: &OrderedHashMap<String, String>,
+) -> Result<OrderedHashMap<String, String>, String> {
     let config =
         build_test_config("./src/manifest_test_data/manifest_test_crate/Scarb.toml").unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
@@ -31,5 +32,5 @@ pub fn test_manifest_file(
 
     let generated_file = fs::read_to_string(generated_manifest_path).unwrap();
 
-    OrderedHashMap::from([("expected_manifest_file".into(), generated_file)])
+    Ok(OrderedHashMap::from([("expected_manifest_file".into(), generated_file)]))
 }

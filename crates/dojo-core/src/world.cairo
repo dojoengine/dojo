@@ -53,7 +53,7 @@ mod world {
     use starknet::{
         get_caller_address, get_contract_address, get_tx_info,
         contract_address::ContractAddressIntoFelt252, ClassHash, Zeroable, ContractAddress,
-        syscalls::emit_event_syscall
+        syscalls::emit_event_syscall, SyscallResultTrait, SyscallResultTraitImpl
     };
 
     use dojo::database;
@@ -540,6 +540,8 @@ mod world {
 
 #[system]
 mod library_call {
+    use starknet::{SyscallResultTrait, SyscallResultTraitImpl};
+
     fn execute(
         class_hash: starknet::ClassHash, entrypoint: felt252, calladata: Span<felt252>
     ) -> Span<felt252> {

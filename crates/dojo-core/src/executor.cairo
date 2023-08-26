@@ -14,7 +14,7 @@ trait IExecutor<T> {
 mod executor {
     use array::{ArrayTrait, SpanTrait};
     use option::OptionTrait;
-    use starknet::ClassHash;
+    use starknet::{ClassHash, SyscallResultTrait, SyscallResultTraitImpl};
 
     use super::IExecutor;
 

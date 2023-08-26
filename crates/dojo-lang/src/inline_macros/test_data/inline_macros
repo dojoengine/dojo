@@ -1,0 +1,126 @@
+//! > Test set! macro.
+
+//! > test_runner_name
+test_expand_plugin
+
+//! > cairo_code
+struct Player {
+    #[key]
+    key: felt252,
+    name: felt252
+}
+
+struct Position {
+    #[key]
+    key: felt252,
+    x: felt252,
+    y: felt252
+}
+
+const world: felt252 = 0xbeef;
+const player: Player = Player { key: 'key', name: 'name' };
+
+fn foo() {
+    // Should not emit diagnostics for unknown macros
+    let arr = array![1, 2, 3];
+    set!(world, (
+        player,
+        Position { key: 'key', x: 0, y: 0 },
+    ));
+
+    set!();
+    set!(world, ());
+}
+
+//! > generated_cairo_code
+struct Player {
+    #[key]
+    key: felt252,
+    name: felt252
+}
+
+
+struct Position {
+    #[key]
+    key: felt252,
+    x: felt252,
+    y: felt252
+}
+
+
+const world: felt252 = 0xbeef;
+
+const player: Player = Player { key: 'key', name: 'name' };
+
+
+fn foo() {
+    // Should not emit diagnostics for unknown macros
+    let arr = array![1, 2, 3];
+    set!(world, (
+        player,
+        Position { key: 'key', x: 0, y: 0 },
+    ));
+
+    set!();
+    set!(world, ());
+}
+
+//! > expected_diagnostics
+
+//! > ==========================================================================
+
+//! > Test get! macro.
+
+//! > test_runner_name
+test_expand_plugin
+
+//! > cairo_code
+fn foo() {
+    let (position, moves) = get!(world, 0x420, (Position, Moves));
+    let position = get!(world, (0x420, 0x1337), Position);
+
+    let id = (0x420, 0x1337);
+    let position = get!(world, id, Position);
+}
+
+//! > generated_cairo_code
+fn foo() {
+    let (position, moves) = get!(world, 0x420, (Position, Moves));
+    let position = get!(world, (0x420, 0x1337), Position);
+
+    let id = (0x420, 0x1337);
+    let position = get!(world, id, Position);
+}
+
+//! > expected_diagnostics
+
+//! > ==========================================================================
+
+//! > Test emit! macro.
+
+//! > test_runner_name
+test_expand_plugin
+
+//! > cairo_code
+fn foo() {
+    // A comment should not affect macro name
+    emit!(world, Struct {
+        x: 10,
+    });
+
+    let id = (0x420, 0x1337);
+    emit!(world, id);
+}
+
+//! > generated_cairo_code
+fn foo() {
+    // A comment should not affect macro name
+    emit!(world, Struct {
+        x: 10,
+    });
+
+    let id = (0x420, 0x1337);
+    emit!(world, id);
+}
+
+//! > expected_diagnostics

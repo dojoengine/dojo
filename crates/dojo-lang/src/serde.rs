@@ -1,4 +1,4 @@
-use cairo_lang_semantic::patcher::RewriteNode;
+use cairo_lang_defs::patcher::RewriteNode;
 use cairo_lang_syntax::node::ast::ItemStruct;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
