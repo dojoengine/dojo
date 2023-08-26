@@ -21,7 +21,7 @@ impl <H: FeltHash> ContractTree<H> {
     }
 
     pub fn calculate_contract(&mut self, class_hash: FieldElement, storage_root: FieldElement, nonce: FieldElement) -> FieldElement {
-        let contract_state = pedersen_hash(&pedersen_hash(&pedersen_hash(&class_hash, &storage_root), &nonce),&FieldElement::ZERO);
+        let contract_state = H::multipleHash(&[class_hash, storage_root, nonce, FieldElement::ZERO]);
         contract_state
     }    
 

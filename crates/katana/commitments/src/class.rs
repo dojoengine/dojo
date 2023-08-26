@@ -19,7 +19,7 @@ impl <H: FeltHash> ClassTree<H> {
     }
 
     pub fn calculate_class(&mut self, compiled_class_hash: FieldElement) -> FieldElement {
-        let class_state = poseidon_hash(cairo_short_string_to_felt("CONTRACT_CLASS_LEAF_V0").unwrap(), compiled_class_hash);
+        let class_state = H::hash(cairo_short_string_to_felt("CONTRACT_CLASS_LEAF_V0").unwrap(), compiled_class_hash);
         class_state
     }    
 

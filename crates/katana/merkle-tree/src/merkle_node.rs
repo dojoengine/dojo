@@ -126,7 +126,7 @@ impl BinaryNode {
             None => unreachable!("subtrees have to be commited first"),
         };
 
-        self.hash = Some(pedersen_hash(&left, &right));
+        self.hash = Some(H::hash(left, right));
     }
 }
 

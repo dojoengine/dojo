@@ -60,7 +60,7 @@ impl From<&BinaryNode> for ProofNode {
     }
 }
 
-impl<H: FeltHash> MerkleTree<H> {
+impl <H: FeltHash> MerkleTree<H> {
     pub fn new(root: FieldElement) -> Self {
         let root_node = Rc::new(RefCell::new(Node::Unresolved(root)));
         Self { root: root_node, _hasher: std::marker::PhantomData }
