@@ -238,7 +238,7 @@ mod ERC721Burn {
         assert(token == ctx.origin, 'ERC721: not authorized');
 
         let owner = ERC721OwnerTrait::owner_of(ctx.world, token, token_id);
-        assert(!owner.is_zero(), 'ERC721: invalid token_id');
+        assert(owner.is_non_zero(), 'ERC721: invalid token_id');
 
         let is_approved_for_all = OperatorApprovalTrait::is_approved_for_all(
             ctx.world, token, owner, caller

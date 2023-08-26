@@ -53,7 +53,7 @@ fn emit_transfer_batch(
         amounts_u256.append((*amounts.pop_front().unwrap()).into());
     };
     let event = TransferBatch {
-        operator: operator, from: from, to: to, ids: ids_u256, values: amounts_u256, 
+        operator: operator, from: from, to: to, ids: ids_u256, values: amounts_u256,
     };
     IERC1155EventsDispatcher { contract_address: token }.on_transfer_batch(event.clone());
     emit!(world, event);
@@ -73,7 +73,8 @@ fn update(
 
     assert(
         operator == from
-            || OperatorApprovalTrait::is_approved_for_all(world, token, from, operator),
+            || OperatorApprovalTrait::is_approved_for_all(world, token, from, operator)
+            || from.is_zero(),
         'ERC1155: insufficient approval'
     );
 
@@ -103,9 +104,10 @@ fn do_safe_transfer_acceptance_check(
 ) {
     if (IERC165Dispatcher { contract_address: to }.supports_interface(IERC1155_RECEIVER_ID)) {
         assert(
-            IERC1155TokenReceiverDispatcher {
-                contract_address: to
-            }.on_erc1155_received(operator, from, id, amount, data) == ON_ERC1155_RECEIVED_SELECTOR,
+            IERC1155TokenReceiverDispatcher { contract_address: to }
+                .on_erc1155_received(
+                    operator, from, id, amount, data
+                ) == ON_ERC1155_RECEIVED_SELECTOR,
             'ERC1155: ERC1155Receiver reject'
         );
         return ();
@@ -126,9 +128,7 @@ fn do_safe_batch_transfer_acceptance_check(
 ) {
     if (IERC165Dispatcher { contract_address: to }.supports_interface(IERC1155_RECEIVER_ID)) {
         assert(
-            IERC1155TokenReceiverDispatcher {
-                contract_address: to
-            }
+            IERC1155TokenReceiverDispatcher { contract_address: to }
                 .on_erc1155_batch_received(
                     operator, from, ids, amounts, data
                 ) == ON_ERC1155_BATCH_RECEIVED_SELECTOR,
@@ -220,6 +220,7 @@ mod ERC1155SafeTransferFrom {
         let ERC1155SafeTransferFromParams{token, operator, from, to, id, amount, data } = params;
         assert(ctx.origin == operator || ctx.origin == token, 'ERC1155: not authorized');
         assert(to.is_non_zero(), 'ERC1155: to cannot be 0');
+        assert(from.is_non_zero(), 'ERC1155: from cannot be 0');
 
         super::update(ctx.world, operator, token, from, to, array![id], array![amount], data);
     }
@@ -251,6 +252,7 @@ mod ERC1155SafeBatchTransferFrom {
 
         assert(ctx.origin == operator || ctx.origin == token, 'ERC1155: not authorized');
         assert(to.is_non_zero(), 'ERC1155: to cannot be 0');
+        assert(from.is_non_zero(), 'ERC1155: from cannot be 0');
 
         super::update(ctx.world, operator, token, from, to, ids, amounts, data);
     }
