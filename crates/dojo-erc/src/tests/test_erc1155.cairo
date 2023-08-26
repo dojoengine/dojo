@@ -196,7 +196,6 @@ fn test_balance_of_batch_with_tokens_2() {
 fn test_set_approval_for_all() {
     // sets approval status which can be queried via is_approved_for_all
     let (world, erc1155) = deploy_default();
-
     impersonate(USER1());
 
     erc1155.set_approval_for_all(PROXY(), true);
@@ -208,7 +207,6 @@ fn test_set_approval_for_all() {
 fn test_set_approval_for_all_emit_event() {
     // set_approval_for_all emits ApprovalForAll event
     let (world, erc1155) = deploy_default();
-
     impersonate(USER1());
 
     erc1155.set_approval_for_all(PROXY(), true);
@@ -229,7 +227,6 @@ fn test_set_approval_for_all_emit_event() {
 fn test_set_unset_approval_for_all() {
     // sets approval status which can be queried via is_approved_for_all
     let (world, erc1155) = deploy_default();
-
     impersonate(USER1());
 
     erc1155.set_approval_for_all(PROXY(), true);
@@ -244,7 +241,6 @@ fn test_set_unset_approval_for_all() {
 fn test_set_approval_for_all_on_self() {
     // reverts if attempting to approve self as an operator
     let (world, erc1155) = deploy_default();
-
     impersonate(USER1());
 
     erc1155.set_approval_for_all(USER1(), true); // should panic
@@ -581,7 +577,6 @@ fn test_burn_non_existing_token_id() {
     let (world, erc1155) = deploy_default();
 
     impersonate(USER1());
-
     erc1155.burn(USER1(), 69, 1); // should panic
 }
 
