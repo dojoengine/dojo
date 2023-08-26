@@ -1,7 +1,11 @@
-use async_graphql::dynamic::{Field, FieldFuture, InputValue, TypeRef};
+use async_graphql::dynamic::{
+    Field, FieldFuture, FieldValue, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
+};
 use async_graphql::{Name, Value};
 use indexmap::IndexMap;
 use sqlx::{Pool, Sqlite};
+use tokio_stream::StreamExt;
+use torii_core::simple_broker::SimpleBroker;
 use torii_core::types::Component;
 
 use super::connection::connection_output;
@@ -89,5 +93,22 @@ impl ObjectTrait for ComponentObject {
                 })
             },
         ))
+    }
+
+    fn subscription_resolve_one(&self) -> Option<SubscriptionField> {
+        let name = format!("{}Added", self.type_name());
+        Some(SubscriptionField::new(name, TypeRef::named_nn(self.type_name()), |_| {
+            {
+                SubscriptionFieldFuture::new(async {
+                    Result::Ok(SimpleBroker::<Component>::subscribe().map(
+                        |component: Component| {
+                            Result::Ok(FieldValue::owned_any(ComponentObject::value_mapping(
+                                component,
+                            )))
+                        },
+                    ))
+                })
+            }
+        }))
     }
 }

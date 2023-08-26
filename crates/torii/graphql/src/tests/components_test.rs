@@ -211,7 +211,7 @@ mod tests {
     #[sqlx::test(migrations = "../migrations")]
     async fn test_component_subscription(pool: SqlitePool) {
         // Sleep in order to run this test at the end in a single thread
-        tokio::time::sleep(Duration::from_secs(11)).await;
+        tokio::time::sleep(Duration::from_secs(30)).await;
 
         let state = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
         // 0. Preprocess component value

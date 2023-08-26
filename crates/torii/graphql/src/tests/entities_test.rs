@@ -107,6 +107,8 @@ mod tests {
 
     #[sqlx::test(migrations = "../migrations")]
     async fn test_entity_subscription(pool: SqlitePool) {
+        // Sleep in order to run this test in a single thread
+        tokio::time::sleep(Duration::from_secs(10)).await;
         let state = init(&pool).await;
         // 0. Preprocess expected entity value
         let key = vec![FieldElement::ONE];

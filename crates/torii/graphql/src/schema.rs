@@ -1,12 +1,9 @@
 use anyhow::Result;
 use async_graphql::dynamic::{
-    Field, FieldValue, Object, Scalar, Schema, Subscription, SubscriptionField,
-    SubscriptionFieldFuture, TypeRef, Union,
+    Field, Object, Scalar, Schema, Subscription, SubscriptionField, Union,
 };
 use sqlx::SqlitePool;
-use tokio_stream::StreamExt;
-use torii_core::simple_broker::SimpleBroker;
-use torii_core::types::{Component, Entity};
+use torii_core::types::Component;
 
 use super::object::component_state::{type_mapping_query, ComponentStateObject};
 use super::object::connection::page_info::PageInfoObject;
@@ -29,6 +26,7 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     // predefined objects
     let mut objects: Vec<Box<dyn ObjectTrait>> = vec![
         Box::<EntityObject>::default(),
+        Box::<ComponentObject>::default(),
         Box::<SystemObject>::default(),
         Box::<EventObject>::default(),
         Box::<SystemCallObject>::default(),
@@ -38,7 +36,6 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     // register dynamic component objects
     let (component_objects, component_union) = component_objects(pool).await?;
     objects.extend(component_objects);
-    objects.push(Box::<ComponentObject>::default()); // In order to susbcribe to component we have to add it to the schema
 
     schema_builder = schema_builder.register(component_union);
 
@@ -90,27 +87,19 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
         schema_builder = schema_builder.register(object.create());
     }
 
-    // todo: find a way to iterate over fields to create arguments
-    let subscription_root = Subscription::new("Subscription")
-        .field(SubscriptionField::new(
-            "entityAdded",
-            TypeRef::named_nn(objects[0].type_name()),
-            |_| {
-                SubscriptionFieldFuture::new(async {
-                    Result::Ok(SimpleBroker::<Entity>::subscribe().map(|entity: Entity| {
-                        Result::Ok(FieldValue::owned_any(EntityObject::value_mapping(entity)))
-                    }))
-                })
-            },
-        ))
-        .field(SubscriptionField::new("componentAdded", TypeRef::named_nn("Component"), |_| {
-            SubscriptionFieldFuture::new(async {
-                Result::Ok(SimpleBroker::<Component>::subscribe().map(|component: Component| {
-                    Result::Ok(FieldValue::owned_any(ComponentObject::value_mapping(component)))
-                }))
-            })
-        }));
+    // collect resolvers for single subscriptions
+    let mut subscription_fields: Vec<SubscriptionField> = Vec::new();
+    for object in &objects {
+        if let Some(subscription_resolve_one) = object.subscription_resolve_one() {
+            subscription_fields.push(subscription_resolve_one);
+        }
+    }
 
+    // add field resolvers to subscription root
+    let mut subscription_root = Subscription::new("Subscription");
+    for field in subscription_fields {
+        subscription_root = subscription_root.field(field);
+    }
     schema_builder
         .register(query_root)
         .register(subscription_root)

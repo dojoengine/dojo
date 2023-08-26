@@ -1,8 +1,12 @@
-use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
+use async_graphql::dynamic::{
+    Field, FieldFuture, FieldValue, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
+};
 use async_graphql::{Name, Value};
 use indexmap::IndexMap;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Result, Sqlite};
+use tokio_stream::StreamExt;
+use torii_core::simple_broker::SimpleBroker;
 use torii_core::types::Entity;
 
 use super::component_state::{component_state_by_id_query, type_mapping_query};
@@ -144,6 +148,16 @@ impl ObjectTrait for EntityObject {
         field = connection_arguments(field);
 
         Some(field)
+    }
+    fn subscription_resolve_one(&self) -> Option<SubscriptionField> {
+        let name = format!("{}Added", self.type_name());
+        Some(SubscriptionField::new(name, TypeRef::named_nn(self.type_name()), |_| {
+            SubscriptionFieldFuture::new(async {
+                Ok(SimpleBroker::<Entity>::subscribe().map(|entity: Entity| {
+                    Ok(FieldValue::owned_any(EntityObject::value_mapping(entity)))
+                }))
+            })
+        }))
     }
 }
 
