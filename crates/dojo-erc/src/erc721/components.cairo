@@ -79,11 +79,11 @@ trait ERC721BalanceTrait {
     );
 
     fn increase_balance(
-        world: IWorldDispatcher, token: ContractAddress, owner: ContractAddress, amount: u128, 
+        world: IWorldDispatcher, token: ContractAddress, owner: ContractAddress, amount: u128,
     );
 
     fn decrease_balance(
-        world: IWorldDispatcher, token: ContractAddress, owner: ContractAddress, amount: u128, 
+        world: IWorldDispatcher, token: ContractAddress, owner: ContractAddress, amount: u128,
     );
 }
 
@@ -113,7 +113,7 @@ impl ERC721BalanceImpl of ERC721BalanceTrait {
     }
 
     fn increase_balance(
-        world: IWorldDispatcher, token: ContractAddress, owner: ContractAddress, amount: u128, 
+        world: IWorldDispatcher, token: ContractAddress, owner: ContractAddress, amount: u128,
     ) {
         let mut balance = get!(world, (token, owner), ERC721Balance);
         balance.amount += amount;
@@ -121,7 +121,7 @@ impl ERC721BalanceImpl of ERC721BalanceTrait {
     }
 
     fn decrease_balance(
-        world: IWorldDispatcher, token: ContractAddress, owner: ContractAddress, amount: u128, 
+        world: IWorldDispatcher, token: ContractAddress, owner: ContractAddress, amount: u128,
     ) {
         let mut balance = get!(world, (token, owner), ERC721Balance);
         balance.amount -= amount;

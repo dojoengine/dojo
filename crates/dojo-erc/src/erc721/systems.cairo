@@ -92,7 +92,7 @@ mod ERC721Approve {
         );
         // // ERC721: approve caller is not token owner or approved for all 
         assert(caller == owner || is_approved_for_all, 'ERC721: unauthorized caller');
-        ERC721TokenApprovalTrait::approve(ctx.world, token, token_id, to, );
+        ERC721TokenApprovalTrait::approve(ctx.world, token, token_id, to,);
 
         // emit events
         super::emit_approval(ctx.world, token, owner, to, token_id);

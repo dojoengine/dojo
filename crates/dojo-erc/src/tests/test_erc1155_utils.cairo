@@ -50,9 +50,7 @@ fn spawn_world(world_admin: ContractAddress) -> IWorldDispatcher {
 
     // components
     let mut components = array![
-        erc_1155_balance::TEST_CLASS_HASH, 
-        uri::TEST_CLASS_HASH,
-        operator_approval::TEST_CLASS_HASH, 
+        erc_1155_balance::TEST_CLASS_HASH, uri::TEST_CLASS_HASH, operator_approval::TEST_CLASS_HASH,
     ];
 
     // systems
@@ -70,17 +68,16 @@ fn spawn_world(world_admin: ContractAddress) -> IWorldDispatcher {
     // Grants writer rights for Component / System
 
     //  erc_1155_balance
-     world.grant_writer('ERC1155Balance', 'ERC1155SafeTransferFrom');
-     world.grant_writer('ERC1155Balance', 'ERC1155SafeBatchTransferFrom');
-     world.grant_writer('ERC1155Balance', 'ERC1155Mint');
-     world.grant_writer('ERC1155Balance', 'ERC1155Burn');
+    world.grant_writer('ERC1155Balance', 'ERC1155SafeTransferFrom');
+    world.grant_writer('ERC1155Balance', 'ERC1155SafeBatchTransferFrom');
+    world.grant_writer('ERC1155Balance', 'ERC1155Mint');
+    world.grant_writer('ERC1155Balance', 'ERC1155Burn');
 
     //  uri
     world.grant_writer('Uri', 'ERC1155SetUri');
 
     // operator_approval
     world.grant_writer('OperatorApproval', 'ERC1155SetApprovalForAll');
-
 
     world
 }

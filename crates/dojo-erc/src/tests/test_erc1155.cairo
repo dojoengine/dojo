@@ -196,7 +196,7 @@ fn test_balance_of_batch_with_tokens_2() {
 fn test_set_approval_for_all() {
     // sets approval status which can be queried via is_approved_for_all
     let (world, erc1155) = deploy_default();
-    
+
     impersonate(USER1());
 
     erc1155.set_approval_for_all(PROXY(), true);
@@ -208,7 +208,7 @@ fn test_set_approval_for_all() {
 fn test_set_approval_for_all_emit_event() {
     // set_approval_for_all emits ApprovalForAll event
     let (world, erc1155) = deploy_default();
-   
+
     impersonate(USER1());
 
     erc1155.set_approval_for_all(PROXY(), true);
@@ -229,7 +229,7 @@ fn test_set_approval_for_all_emit_event() {
 fn test_set_unset_approval_for_all() {
     // sets approval status which can be queried via is_approved_for_all
     let (world, erc1155) = deploy_default();
-   
+
     impersonate(USER1());
 
     erc1155.set_approval_for_all(PROXY(), true);
@@ -244,7 +244,7 @@ fn test_set_unset_approval_for_all() {
 fn test_set_approval_for_all_on_self() {
     // reverts if attempting to approve self as an operator
     let (world, erc1155) = deploy_default();
-    
+
     impersonate(USER1());
 
     erc1155.set_approval_for_all(USER1(), true); // should panic
@@ -284,7 +284,7 @@ fn test_safe_transfer_debit_sender() {
     // debits transferred balance from sender
     let (world, erc1155) = deploy_testcase1();
 
-     impersonate(USER1());
+    impersonate(USER1());
 
     let balance_before = erc1155.balance_of(USER1(), 1);
     erc1155.safe_transfer_from(USER1(), USER2(), 1, 1, array![]);
@@ -299,7 +299,7 @@ fn test_safe_transfer_credit_receiver() {
     // credits transferred balance to receiver
     let (world, erc1155) = deploy_testcase1();
 
-       impersonate(USER1());
+    impersonate(USER1());
 
     let balance_before = erc1155.balance_of(USER2(), 1);
     erc1155.safe_transfer_from(USER1(), USER2(), 1, 1, array![]);
@@ -348,7 +348,7 @@ fn test_safe_transfer_from_approved_operator() {
     // when operator is approved by multiTokenHolder
     let (world, erc1155) = deploy_testcase1();
 
-     impersonate(PROXY());
+    impersonate(PROXY());
 
     let balance_before = erc1155.balance_of(USER1(), 1);
     erc1155.safe_transfer_from(USER1(), USER2(), 1, 2, array![]);
@@ -384,7 +384,6 @@ fn test_safe_transfer_from_approved_operator_preserve_operator_balance() {
 #[available_gas(50000000)]
 #[should_panic]
 fn test_safe_transfer_from_zero_address() {
-   
     let (world, erc1155) = deploy_testcase1();
 
     impersonate(USER1());
@@ -430,7 +429,7 @@ fn test_safe_batch_transfer_from_to_zero_address() {
     // reverts when transferring to zero address
     let (world, erc1155) = deploy_testcase1();
 
-     impersonate(USER1());
+    impersonate(USER1());
 
     erc1155.safe_batch_transfer_from(USER1(), ZERO(), array![1, 2], array![1, 1], array![]);
 }
@@ -526,12 +525,11 @@ fn test_safe_batch_transfer_from_approved_operator_preserve_operator_balance() {
 #[available_gas(50000000)]
 #[should_panic]
 fn test_safe_batch_transfer_from_zero_address() {
-   
     let (world, erc1155) = deploy_testcase1();
 
-     impersonate(USER1());
+    impersonate(USER1());
 
-    erc1155.safe_batch_transfer_from(ZERO(), USER1(), array![1,2], array![1,1], array![]);
+    erc1155.safe_batch_transfer_from(ZERO(), USER1(), array![1, 2], array![1, 1], array![]);
 }
 
 
@@ -545,7 +543,7 @@ fn test_safe_batch_transfer_emit_transfer_batch_event() {
     // user1  token_id 2 x 20
     erc1155.mint(USER1(), 2, 20, array![]);
 
-     impersonate(USER1());
+    impersonate(USER1());
 
     erc1155.safe_batch_transfer_from(USER1(), USER2(), array![1, 2], array![1, 10], array![]);
 
@@ -583,7 +581,7 @@ fn test_burn_non_existing_token_id() {
     let (world, erc1155) = deploy_default();
 
     impersonate(USER1());
-    
+
     erc1155.burn(USER1(), 69, 1); // should panic
 }
 

@@ -14,7 +14,7 @@ trait BaseUriTrait {
 }
 
 impl BaseUriImpl of BaseUriTrait {
-    fn get_base_uri(world: IWorldDispatcher, token: ContractAddress, ) -> felt252 {
+    fn get_base_uri(world: IWorldDispatcher, token: ContractAddress,) -> felt252 {
         let base_uri = get!(world, (token), BaseUri);
         base_uri.uri
     }

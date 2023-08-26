@@ -19,7 +19,9 @@ mod ERC1155 {
     };
     use dojo_erc::erc165::interface::{IERC165, IERC165_ID};
 
-    use dojo_erc::erc_common::utils::{to_calldata, ToCallDataTrait, system_calldata, PartialEqArray};
+    use dojo_erc::erc_common::utils::{
+        to_calldata, ToCallDataTrait, system_calldata, PartialEqArray
+    };
 
     use dojo_erc::erc1155::systems::{
         ERC1155SetApprovalForAllParams, ERC1155SafeTransferFromParams,
@@ -29,7 +31,7 @@ mod ERC1155 {
     const UNLIMITED_ALLOWANCE: felt252 =
         3618502788666131213697322783095070105623107215331596699973092056135872020480;
 
-   
+
     #[derive(Clone, Drop, Serde, PartialEq, starknet::Event)]
     struct TransferSingle {
         operator: ContractAddress,
