@@ -1,5 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use dojo_world::manifest::{Component, Manifest, System};
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
@@ -9,6 +10,8 @@ use starknet_crypto::poseidon_hash_many;
 use tokio::sync::Mutex;
 
 use super::{State, World};
+use crate::simple_broker::SimpleBroker;
+use crate::types::{Component as ComponentType, Entity};
 
 #[cfg(test)]
 #[path = "sql_test.rs"]
@@ -193,6 +196,24 @@ impl State for Sql {
         }
 
         self.queue(queries).await;
+        // Since previous query has not been executed, we have to make sure created_at exists
+        let created_at: DateTime<Utc> =
+            match sqlx::query("SELECT created_at FROM components WHERE id = ?")
+                .bind(component_id.clone())
+                .fetch_one(&self.pool)
+                .await
+            {
+                Ok(query_result) => query_result.try_get("created_at")?,
+                Err(_) => Utc::now(),
+            };
+
+        SimpleBroker::publish(ComponentType {
+            id: component_id,
+            name: component.name,
+            class_hash: format!("{:#x}", component.class_hash),
+            transaction_hash: "0x0".to_string(),
+            created_at,
+        });
         Ok(())
     }
 
@@ -252,6 +273,20 @@ impl State for Sql {
         // tx commit required
         self.queue(vec![insert_entities, insert_components]).await;
         self.execute().await?;
+
+        let query_result = sqlx::query("SELECT created_at FROM entities WHERE id = ?")
+            .bind(entity_id.clone())
+            .fetch_one(&self.pool)
+            .await?;
+        let created_at: DateTime<Utc> = query_result.try_get("created_at")?;
+
+        SimpleBroker::publish(Entity {
+            id: entity_id.clone(),
+            keys: keys_str,
+            component_names,
+            created_at,
+            updated_at: Utc::now(),
+        });
         Ok(())
     }
 

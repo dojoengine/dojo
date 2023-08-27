@@ -27,8 +27,8 @@ pub struct SystemCallObject {
     pub type_mapping: TypeMapping,
 }
 
-impl SystemCallObject {
-    pub fn new() -> Self {
+impl Default for SystemCallObject {
+    fn default() -> Self {
         Self {
             type_mapping: IndexMap::from([
                 (Name::new("id"), TypeRef::named(TypeRef::ID)),
@@ -39,7 +39,8 @@ impl SystemCallObject {
             ]),
         }
     }
-
+}
+impl SystemCallObject {
     pub fn value_mapping(system_call: SystemCall) -> ValueMapping {
         IndexMap::from([
             (Name::new("id"), Value::from(system_call.id.to_string())),

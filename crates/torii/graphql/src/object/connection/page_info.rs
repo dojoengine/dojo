@@ -9,8 +9,8 @@ pub struct PageInfoObject {
     pub type_mapping: TypeMapping,
 }
 
-impl PageInfoObject {
-    pub fn new() -> Self {
+impl Default for PageInfoObject {
+    fn default() -> Self {
         Self {
             type_mapping: IndexMap::from([
                 (Name::new("hasPreviousPage"), TypeRef::named(TypeRef::BOOLEAN)),

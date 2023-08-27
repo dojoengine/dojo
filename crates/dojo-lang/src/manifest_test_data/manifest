@@ -705,7 +705,7 @@ test_manifest_file
         }
       ],
       "outputs": [],
-      "class_hash": "0x5df94ea0e971f9c98c222350f0acdb8fea75759678a7d922ca454d14408430f",
+      "class_hash": "0x601d780f4ccee957d308dbb6ad98cb5d4bf8e4e4b9cf7b221b8264c1d7186ef",
       "dependencies": [],
       "abi": [
         {
@@ -791,9 +791,32 @@ test_manifest_file
         },
         {
           "type": "event",
+          "name": "dojo_examples::systems::move::Moved",
+          "kind": "struct",
+          "members": [
+            {
+              "name": "address",
+              "type": "core::starknet::contract_address::ContractAddress",
+              "kind": "data"
+            },
+            {
+              "name": "direction",
+              "type": "dojo_examples::systems::move::Direction",
+              "kind": "data"
+            }
+          ]
+        },
+        {
+          "type": "event",
           "name": "dojo_examples::systems::move::Event",
           "kind": "enum",
-          "variants": []
+          "variants": [
+            {
+              "name": "Moved",
+              "type": "dojo_examples::systems::move::Moved",
+              "kind": "nested"
+            }
+          ]
         }
       ]
     },
