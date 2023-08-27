@@ -35,12 +35,17 @@ mod move {
     use dojo_examples::components::Position;
     use dojo_examples::components::Moves;
 
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    enum Event {
+        Moved: Moved,
+    }
+
     #[derive(Drop, starknet::Event)]
     struct Moved {
         address: ContractAddress,
         direction: Direction
     }
-
 
     #[derive(Serde, Copy, Drop)]
     enum Direction {
