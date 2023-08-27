@@ -192,7 +192,7 @@ fn foo() {
         let mut keys = Default::<array::Array>::default();
         let mut data = Default::<array::Array>::default();
         starknet::Event::append_keys_and_data(
-            @Into::<_, Event>::into(Struct { x: 10,  }), ref keys, ref data
+            @traits::Into::<_, Event>::into(Struct { x: 10,  }), ref keys, ref data
         );
         world.emit(keys, data.span());
     };
@@ -201,7 +201,9 @@ fn foo() {
     {
         let mut keys = Default::<array::Array>::default();
         let mut data = Default::<array::Array>::default();
-        starknet::Event::append_keys_and_data(@Into::<_, Event>::into(id), ref keys, ref data);
+        starknet::Event::append_keys_and_data(
+            @traits::Into::<_, Event>::into(id), ref keys, ref data
+        );
         world.emit(keys, data.span());
     };
 }

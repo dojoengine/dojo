@@ -27,8 +27,8 @@ impl InlineMacro for EmitMacro {
             "{{
                 let mut keys = Default::<array::Array>::default();
                 let mut data = Default::<array::Array>::default();
-                starknet::Event::append_keys_and_data(@traits::Into::<_, Event>::into({}), ref keys, ref \
-             data);
+                starknet::Event::append_keys_and_data(@traits::Into::<_, Event>::into({}), ref \
+             keys, ref data);
                 {}.emit(keys, data.span());
             }}",
             event.as_syntax_node().get_text(db),
