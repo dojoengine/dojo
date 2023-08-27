@@ -1,4 +1,8 @@
+use std::collections::HashMap;
+
 use anyhow::Result;
+use cairo_lang_starknet::abi::Event;
+use dojo_world::manifest::Manifest;
 use dojo_world::metadata::Environment;
 use starknet::core::types::{BlockId, EventFilter};
 use starknet::core::utils::starknet_keccak;
@@ -6,7 +10,12 @@ use starknet::providers::Provider;
 
 use crate::commands::events::EventsArgs;
 
-pub async fn execute(args: EventsArgs, env_metadata: Option<Environment>) -> Result<()> {
+pub async fn execute(
+    args: EventsArgs,
+    env_metadata: Option<Environment>,
+    manifest: HashMap<String, Event>,
+) -> Result<()> {
+    dbg!(&manifest.values().map(|e| e.name.clone()).collect::<Vec<_>>());
     let EventsArgs {
         chunk_size,
         starknet,
@@ -30,6 +39,7 @@ pub async fn execute(args: EventsArgs, env_metadata: Option<Environment>) -> Res
     let res = provider.get_events(event_filter, continuation_token, chunk_size).await?;
 
     let value = serde_json::to_value(res)?;
+
     println!("{}", serde_json::to_string_pretty(&value)?);
     Ok(())
 }
