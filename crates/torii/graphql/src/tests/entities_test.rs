@@ -4,7 +4,7 @@ mod tests {
     use starknet_crypto::{poseidon_hash_many, FieldElement};
 
     use crate::tests::common::{
-        entity_fixtures, init, paginate, run_graphql_query, Direction, Entity, Moves, Position,
+        entity_fixtures, paginate, run_graphql_query, Direction, Entity, Moves, Position,
     };
 
     #[sqlx::test(migrations = "../migrations")]
