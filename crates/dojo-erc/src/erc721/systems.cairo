@@ -8,7 +8,7 @@ use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 use dojo_erc::erc721::erc721::ERC721;
 
 use dojo_erc::erc721::erc721::ERC721::{
-    IERC721EventsDispatcher, IERC721EventsDispatcherTrait, Approval, Transfer, ApprovalForAll
+    IERC721EventsDispatcher, IERC721EventsDispatcherTrait, Approval, Transfer, ApprovalForAll, Event
 };
 
 use ERC721Approve::ERC721ApproveParams;
