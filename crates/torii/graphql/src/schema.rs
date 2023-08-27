@@ -90,8 +90,10 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     // collect resolvers for single subscriptions
     let mut subscription_fields: Vec<SubscriptionField> = Vec::new();
     for object in &objects {
-        if let Some(subscription_resolve_one) = object.subscription_resolve_one() {
-            subscription_fields.push(subscription_resolve_one);
+        if let Some(subscriptions) = object.subscriptions() {
+            for sub in subscriptions {
+                subscription_fields.push(sub);
+            }
         }
     }
 
@@ -100,6 +102,7 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     for field in subscription_fields {
         subscription_root = subscription_root.field(field);
     }
+
     schema_builder
         .register(query_root)
         .register(subscription_root)

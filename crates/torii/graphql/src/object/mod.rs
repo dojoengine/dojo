@@ -40,8 +40,8 @@ pub trait ObjectTrait {
         None
     }
 
-    // Resolves single object subscription, returns current object (eg "PlayerAdded")
-    fn subscription_resolve_one(&self) -> Option<SubscriptionField> {
+    // Resolves subscriptions, returns current object (eg "PlayerAdded")
+    fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
         None
     }
     // Resolves plural object queries, returns type of {type_name}Connection (eg "PlayerConnection")

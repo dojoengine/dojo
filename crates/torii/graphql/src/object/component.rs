@@ -95,9 +95,9 @@ impl ObjectTrait for ComponentObject {
         ))
     }
 
-    fn subscription_resolve_one(&self) -> Option<SubscriptionField> {
-        let name = format!("{}Added", self.type_name());
-        Some(SubscriptionField::new(name, TypeRef::named_nn(self.type_name()), |_| {
+    fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
+        let name = format!("{}Registered", self.name());
+        Some(vec![SubscriptionField::new(name, TypeRef::named_nn(self.type_name()), |_| {
             {
                 SubscriptionFieldFuture::new(async {
                     Result::Ok(SimpleBroker::<Component>::subscribe().map(
@@ -109,6 +109,6 @@ impl ObjectTrait for ComponentObject {
                     ))
                 })
             }
-        }))
+        })])
     }
 }

@@ -149,15 +149,16 @@ impl ObjectTrait for EntityObject {
 
         Some(field)
     }
-    fn subscription_resolve_one(&self) -> Option<SubscriptionField> {
-        let name = format!("{}Added", self.type_name());
-        Some(SubscriptionField::new(name, TypeRef::named_nn(self.type_name()), |_| {
+
+    fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
+        let name = format!("{}Updated", self.name());
+        Some(vec![SubscriptionField::new(name, TypeRef::named_nn(self.type_name()), |_| {
             SubscriptionFieldFuture::new(async {
                 Ok(SimpleBroker::<Entity>::subscribe().map(|entity: Entity| {
                     Ok(FieldValue::owned_any(EntityObject::value_mapping(entity)))
                 }))
             })
-        }))
+        })])
     }
 }
 
