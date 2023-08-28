@@ -89,13 +89,23 @@ fn parse_event(
                     }
                     match field.ty.as_str() {
                         "core::starknet::contract_address::ContractAddress"
-                        | "core::felt252"
                         | "core::starknet::class_hash::ClassHash" => {
                             let value = match data.pop_front() {
                                 Some(addr) => addr,
                                 None => continue 'outer,
                             };
                             ret.push_str(&format!("{}: {:#x}\n", field.name, value));
+                        }
+                        "core::felt252" => {
+                            let value = match data.pop_front() {
+                                Some(addr) => addr,
+                                None => continue 'outer,
+                            };
+                            let value = match parse_cairo_short_string(&value) {
+                                Ok(v) => v,
+                                Err(_) => format!("{:#x}", value),
+                            };
+                            ret.push_str(&format!("{}: {}\n", field.name, value));
                         }
                         "core::integer::u8" => {
                             let value = match data.pop_front() {
