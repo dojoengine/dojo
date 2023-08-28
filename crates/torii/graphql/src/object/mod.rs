@@ -7,7 +7,9 @@ pub mod inputs;
 pub mod system;
 pub mod system_call;
 
-use async_graphql::dynamic::{Enum, Field, FieldFuture, InputObject, Object, TypeRef};
+use async_graphql::dynamic::{
+    Enum, Field, FieldFuture, InputObject, Object, SubscriptionField, TypeRef,
+};
 use async_graphql::{Error, Name, Value};
 use indexmap::IndexMap;
 
@@ -38,6 +40,10 @@ pub trait ObjectTrait {
         None
     }
 
+    // Resolves subscriptions, returns current object (eg "PlayerAdded")
+    fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
+        None
+    }
     // Resolves plural object queries, returns type of {type_name}Connection (eg "PlayerConnection")
     fn resolve_many(&self) -> Option<Field> {
         None

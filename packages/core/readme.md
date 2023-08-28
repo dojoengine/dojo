@@ -1,38 +1,11 @@
-# Dojo Core SDK
+# Dojo Core
 
-Dojo core package to interact with Dojo worlds. It exposes World interface commands to allow the creation of:
+The goal of Dojo Core is to provide a set of low level reusable functions that integrate seamlessly into a Dojo world.
 
-- World explorers
-- World deployers
-- Dojo games
-- Anaylitics 
+It is simple and non-framework orientated, the core should represent the lowest level of the Dojo js stack.
 
 ### Get started
 
 ```
-pnpm install @dojoengine/core
+yarn add @dojoengine/core
 ```
-
-### ECS Store
-
-Simple ECS Scaffolding to use in any project. Uses Zustand for efficient Store.
-
-### Account
-
-Starknet.js Account wrapper for quick testing
-
-### Providers
-
-Providers that clients can use to connect to and interact with Dojo worlds seamlessly.
-
-#### RPC Provider
-
-__todo__
-
-#### Websocket Providers
-
-__todo__
-
-#### GraphQL Provider
-
-__todo__

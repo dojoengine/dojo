@@ -8,16 +8,16 @@ mod Buy {
         let player: felt252 = starknet::get_caller_address().into();
 
         let cash_sk: Query = (partition, (player)).into_partitioned();
-        let player_cash = get !(ctx.world, cash_sk, Cash);
+        let player_cash = get!(ctx.world, cash_sk, Cash);
 
         let market_sk: Query = (partition, (item_id)).into_partitioned();
-        let market = get !(ctx.world, market_sk, Market);
+        let market = get!(ctx.world, market_sk, Market);
 
         let cost = market.buy(quantity);
         assert(cost <= player_cash.amount, 'not enough cash');
 
         // update market
-        set !(
+        set!(
             ctx.world,
             market_sk,
             (Market {
@@ -27,12 +27,12 @@ mod Buy {
         );
 
         // update player cash
-        set !(ctx.world, cash_sk, (Cash { amount: player_cash.amount - cost }));
+        set!(ctx.world, cash_sk, (Cash { amount: player_cash.amount - cost }));
 
         // update player item
         let item_sk: Query = (partition, (player, item_id)).into_partitioned();
-        let item = get !(ctx.world, item_sk, Item);
-        set !(ctx.world, item_sk, (Item { quantity: item.quantity + quantity }));
+        let item = get!(ctx.world, item_sk, Item);
+        set!(ctx.world, item_sk, (Item { quantity: item.quantity + quantity }));
     }
 }
 
@@ -46,19 +46,19 @@ mod Sell {
         let player: felt252 = starknet::get_caller_address().into();
 
         let item_sk: Query = (partition, (player, item_id)).into_partitioned();
-        let item = get !(ctx.world, item_sk, Item);
+        let item = get!(ctx.world, item_sk, Item);
         let player_quantity = item.quantity;
         assert(player_quantity >= quantity, 'not enough items');
 
         let cash_sk: Query = (partition, (player)).into_partitioned();
-        let player_cash = get !(ctx.world, cash_sk, Cash);
+        let player_cash = get!(ctx.world, cash_sk, Cash);
 
         let market_sk: Query = (partition, (item_id)).into_partitioned();
-        let market = get !(ctx.world, market_sk, Market);
+        let market = get!(ctx.world, market_sk, Market);
         let payout = market.sell(quantity);
 
         // update market
-        set !(
+        set!(
             ctx.world,
             market_sk,
             (Market {
@@ -68,10 +68,10 @@ mod Sell {
         );
 
         // update player cash
-        set !(ctx.world, cash_sk, (Cash { amount: player_cash.amount + payout }));
+        set!(ctx.world, cash_sk, (Cash { amount: player_cash.amount + payout }));
 
         // update player item
-        set !(ctx.world, item_sk, (Item { quantity: player_quantity - quantity }));
+        set!(ctx.world, item_sk, (Item { quantity: player_quantity - quantity }));
     }
 }
 
@@ -89,20 +89,20 @@ mod AddLiquidity {
         let player: felt252 = starknet::get_caller_address().into();
 
         let item_sk: Query = (partition, (player, item_id)).into_partitioned();
-        let item = get !(ctx.world, item_sk, Item);
+        let item = get!(ctx.world, item_sk, Item);
         let player_quantity = item.quantity;
         assert(player_quantity >= quantity, 'not enough items');
 
         let cash_sk: Query = (partition, (player)).into_partitioned();
-        let player_cash = get !(ctx.world, cash_sk, Cash);
+        let player_cash = get!(ctx.world, cash_sk, Cash);
         assert(amount <= player_cash.amount, 'not enough cash');
 
         let market_sk: Query = (partition, (item_id)).into_partitioned();
-        let market = get !(ctx.world, market_sk, Market);
+        let market = get!(ctx.world, market_sk, Market);
         let (cost_cash, cost_quantity, liquidity_shares) = market.add_liquidity(amount, quantity);
 
         // update market
-        set !(
+        set!(
             ctx.world,
             market_sk,
             (Market {
@@ -112,15 +112,15 @@ mod AddLiquidity {
         );
 
         // update player cash
-        set !(ctx.world, cash_sk, (Cash { amount: player_cash.amount - cost_cash }));
+        set!(ctx.world, cash_sk, (Cash { amount: player_cash.amount - cost_cash }));
 
         // update player item
-        set !(ctx.world, item_sk, (Item { quantity: player_quantity - cost_quantity }));
+        set!(ctx.world, item_sk, (Item { quantity: player_quantity - cost_quantity }));
 
         // update player liquidity
         let liquidity_sk: Query = (partition, (player, item_id)).into_partitioned();
-        let player_liquidity = get !(ctx.world, liquidity_sk, Liquidity);
-        set !(
+        let player_liquidity = get!(ctx.world, liquidity_sk, Liquidity);
+        set!(
             ctx.world,
             liquidity_sk,
             (Liquidity { shares: player_liquidity.shares + liquidity_shares })
@@ -143,15 +143,15 @@ mod RemoveLiquidity {
         let player: felt252 = starknet::get_caller_address().into();
 
         let liquidity_sk: Query = (partition, (player, item_id)).into_partitioned();
-        let player_liquidity = get !(ctx.world, liquidity_sk, Liquidity);
+        let player_liquidity = get!(ctx.world, liquidity_sk, Liquidity);
         assert(player_liquidity.shares >= shares, 'not enough shares');
 
         let market_sk: Query = (partition, (item_id)).into_partitioned();
-        let market = get !(ctx.world, market_sk, Market);
+        let market = get!(ctx.world, market_sk, Market);
         let (payout_cash, payout_quantity) = market.remove_liquidity(shares);
 
         // update market
-        set !(
+        set!(
             ctx.world,
             market_sk,
             (Market {
@@ -162,18 +162,19 @@ mod RemoveLiquidity {
 
         // update player cash
         let cash_sk: Query = (partition, (player)).into_partitioned();
-        let player_cash = get !(ctx.world, cash_sk, Cash);
-        set !(ctx.world, cash_sk, (Cash { amount: player_cash.amount + payout_cash }));
+        let player_cash = get!(ctx.world, cash_sk, Cash);
+        set!(ctx.world, cash_sk, (Cash { amount: player_cash.amount + payout_cash }));
 
         // update player item
         let item_sk: Query = (partition, (player, item_id)).into_partitioned();
-        let item = get !(ctx.world, item_sk, Item);
+        let item = get!(ctx.world, item_sk, Item);
         let player_quantity = item.quantity;
-        set !(ctx.world, item_sk, (Item { quantity: player_quantity + payout_quantity }));
+        set!(ctx.world, item_sk, (Item { quantity: player_quantity + payout_quantity }));
 
         // update player liquidity
         let liquidity_sk: Query = (partition, (player, item_id)).into_partitioned();
-        let player_liquidity = get !(ctx.world, liquidity_sk);
-        set !(ctx.world, liquidity_sk, (Liquidity { shares: player_liquidity.shares - shares }));
+        let player_liquidity = get!(ctx.world, liquidity_sk);
+        set!(ctx.world, liquidity_sk, (Liquidity { shares: player_liquidity.shares - shares }));
     }
 }
+

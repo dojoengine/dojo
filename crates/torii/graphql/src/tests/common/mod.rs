@@ -3,6 +3,7 @@ use serde::Deserialize;
 use serde_json::Value;
 use sqlx::SqlitePool;
 use starknet::core::types::FieldElement;
+use tokio_stream::StreamExt;
 use torii_core::sql::{Executable, Sql};
 use torii_core::State;
 
@@ -59,15 +60,18 @@ pub async fn run_graphql_query(pool: &SqlitePool, query: &str) -> Value {
     serde_json::to_value(res.data).expect("Failed to serialize GraphQL response")
 }
 
-pub async fn entity_fixtures(pool: &SqlitePool) {
-    let manifest = dojo_world::manifest::Manifest::load_from_path(
-        Utf8PathBuf::from_path_buf("../../../examples/ecs/target/dev/manifest.json".into())
-            .unwrap(),
-    )
-    .unwrap();
+pub async fn run_graphql_subscription(
+    pool: &SqlitePool,
+    subscription: &str,
+) -> async_graphql::Value {
+    // Build dynamic schema
+    let schema = build_schema(pool).await.unwrap();
+    schema.execute_stream(subscription).next().await.unwrap().into_result().unwrap().data
+    // fn subscribe() is called from inside dynamic subscription
+}
 
-    let state = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
-    state.load_from_manifest(manifest).await.unwrap();
+pub async fn entity_fixtures(pool: &SqlitePool) {
+    let state = init(pool).await;
 
     // Set entity with one moves component
     // remaining: 10
@@ -99,6 +103,18 @@ pub async fn entity_fixtures(pool: &SqlitePool) {
     state.set_entity("Position".to_string(), key, position_values).await.unwrap();
 
     state.execute().await.unwrap();
+}
+
+pub async fn init(pool: &SqlitePool) -> Sql {
+    let manifest = dojo_world::manifest::Manifest::load_from_path(
+        Utf8PathBuf::from_path_buf("../../../examples/ecs/target/dev/manifest.json".into())
+            .unwrap(),
+    )
+    .unwrap();
+
+    let state = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
+    state.load_from_manifest(manifest).await.unwrap();
+    state
 }
 
 pub async fn paginate(
