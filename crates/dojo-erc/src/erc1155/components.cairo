@@ -38,7 +38,7 @@ trait ERC1155BalanceTrait {
     fn balance_of(
         world: IWorldDispatcher, token: ContractAddress, account: ContractAddress, id: felt252
     ) -> u128;
-    fn transfer_tokens(
+    fn unchecked_transfer_tokens(
         world: IWorldDispatcher,
         token: ContractAddress,
         from: ContractAddress,
@@ -57,7 +57,7 @@ impl ERC1155BalanceImpl of ERC1155BalanceTrait {
         get!(world, (token, id, account), ERC1155Balance).amount
     }
 
-    fn transfer_tokens(
+    fn unchecked_transfer_tokens(
         world: IWorldDispatcher,
         token: ContractAddress,
         from: ContractAddress,

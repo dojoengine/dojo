@@ -28,7 +28,7 @@ trait ERC721OwnerTrait {
     fn owner_of(
         world: IWorldDispatcher, token: ContractAddress, token_id: felt252
     ) -> ContractAddress;
-    fn set_owner(
+    fn unchecked_set_owner(
         world: IWorldDispatcher, token: ContractAddress, token_id: felt252, account: ContractAddress
     );
 }
@@ -42,8 +42,7 @@ impl ERC721OwnerImpl of ERC721OwnerTrait {
         get!(world, (token, token_id), ERC721Owner).address
     }
 
-    // perform safety checks before calling this fn
-    fn set_owner(
+    fn unchecked_set_owner(
         world: IWorldDispatcher, token: ContractAddress, token_id: felt252, account: ContractAddress
     ) {
         let mut owner = get!(world, (token, token_id), ERC721Owner);
@@ -70,7 +69,7 @@ trait ERC721BalanceTrait {
     fn balance_of(
         world: IWorldDispatcher, token: ContractAddress, account: ContractAddress
     ) -> u128;
-    fn transfer_token(
+    fn unchecked_transfer_token(
         world: IWorldDispatcher,
         token: ContractAddress,
         from: ContractAddress,
@@ -78,11 +77,11 @@ trait ERC721BalanceTrait {
         amount: u128,
     );
 
-    fn increase_balance(
+    fn unchecked_increase_balance(
         world: IWorldDispatcher, token: ContractAddress, owner: ContractAddress, amount: u128,
     );
 
-    fn decrease_balance(
+    fn unchecked_decrease_balance(
         world: IWorldDispatcher, token: ContractAddress, owner: ContractAddress, amount: u128,
     );
 }
@@ -96,7 +95,7 @@ impl ERC721BalanceImpl of ERC721BalanceTrait {
         get!(world, (token, account), ERC721Balance).amount
     }
 
-    fn transfer_token(
+    fn unchecked_transfer_token(
         world: IWorldDispatcher,
         token: ContractAddress,
         from: ContractAddress,
@@ -112,7 +111,7 @@ impl ERC721BalanceImpl of ERC721BalanceTrait {
         set!(world, (to_balance));
     }
 
-    fn increase_balance(
+    fn unchecked_increase_balance(
         world: IWorldDispatcher, token: ContractAddress, owner: ContractAddress, amount: u128,
     ) {
         let mut balance = get!(world, (token, owner), ERC721Balance);
@@ -120,7 +119,7 @@ impl ERC721BalanceImpl of ERC721BalanceTrait {
         set!(world, (balance));
     }
 
-    fn decrease_balance(
+    fn unchecked_decrease_balance(
         world: IWorldDispatcher, token: ContractAddress, owner: ContractAddress, amount: u128,
     ) {
         let mut balance = get!(world, (token, owner), ERC721Balance);
@@ -149,7 +148,7 @@ trait ERC721TokenApprovalTrait {
         world: IWorldDispatcher, token: ContractAddress, token_id: felt252
     ) -> ContractAddress;
 
-    fn approve(
+    fn unchecked_approve(
         world: IWorldDispatcher, token: ContractAddress, token_id: felt252, to: ContractAddress
     );
 }
@@ -162,7 +161,7 @@ impl ERC721TokenApprovalImpl of ERC721TokenApprovalTrait {
         approval.address
     }
 
-    fn approve(
+    fn unchecked_approve(
         world: IWorldDispatcher, token: ContractAddress, token_id: felt252, to: ContractAddress
     ) {
         let mut approval = get!(world, (token, token_id), ERC721TokenApproval);

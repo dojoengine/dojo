@@ -59,7 +59,7 @@ fn emit_transfer_batch(
     emit!(world, event);
 }
 
-fn update(
+fn unchecked_update(
     world: IWorldDispatcher,
     operator: ContractAddress,
     token: ContractAddress,
@@ -71,14 +71,7 @@ fn update(
 ) {
     assert(ids.len() == amounts.len(), 'ERC1155: invalid length');
 
-    assert(
-        operator == from
-            || OperatorApprovalTrait::is_approved_for_all(world, token, from, operator)
-            || from.is_zero(),
-        'ERC1155: insufficient approval'
-    );
-
-    ERC1155BalanceTrait::transfer_tokens(world, token, from, to, ids.span(), amounts.span());
+    ERC1155BalanceTrait::unchecked_transfer_tokens(world, token, from, to, ids.span(), amounts.span());
 
     if (ids.len() == 1) {
         let id = *ids.at(0);
@@ -172,7 +165,7 @@ mod ERC1155SetApprovalForAll {
         let ERC1155SetApprovalForAllParams{token, owner, operator, approved } = params;
         assert(owner != operator, 'ERC1155: wrong approval');
 
-        OperatorApprovalTrait::set_approval_for_all(ctx.world, token, owner, operator, approved);
+        OperatorApprovalTrait::unchecked_set_approval_for_all(ctx.world, token, owner, operator, approved);
 
         let event = ApprovalForAll { owner, operator, approved };
         IERC1155EventsDispatcher { contract_address: token }.on_approval_for_all(event.clone());
@@ -205,6 +198,7 @@ mod ERC1155SafeTransferFrom {
     use zeroable::Zeroable;
     use starknet::ContractAddress;
 
+
     #[derive(Drop, Serde)]
     struct ERC1155SafeTransferFromParams {
         token: ContractAddress,
@@ -222,7 +216,17 @@ mod ERC1155SafeTransferFrom {
         assert(to.is_non_zero(), 'ERC1155: to cannot be 0');
         assert(from.is_non_zero(), 'ERC1155: from cannot be 0');
 
-        super::update(ctx.world, operator, token, from, to, array![id], array![amount], data);
+        assert(
+            operator == from
+                || super::OperatorApprovalTrait::is_approved_for_all(
+                    ctx.world, token, from, operator
+                ),
+            'ERC1155: insufficient approval'
+        );
+
+        super::unchecked_update(
+            ctx.world, operator, token, from, to, array![id], array![amount], data
+        );
     }
 }
 
@@ -254,7 +258,15 @@ mod ERC1155SafeBatchTransferFrom {
         assert(to.is_non_zero(), 'ERC1155: to cannot be 0');
         assert(from.is_non_zero(), 'ERC1155: from cannot be 0');
 
-        super::update(ctx.world, operator, token, from, to, ids, amounts, data);
+        assert(
+            operator == from
+                || super::OperatorApprovalTrait::is_approved_for_all(
+                    ctx.world, token, from, operator
+                ),
+            'ERC1155: insufficient approval'
+        );
+
+        super::unchecked_update(ctx.world, operator, token, from, to, ids, amounts, data);
     }
 }
 
@@ -284,7 +296,9 @@ mod ERC1155Mint {
         assert(ctx.origin == operator || ctx.origin == token, 'ERC1155: not authorized');
         assert(to.is_non_zero(), 'ERC1155: invalid receiver');
 
-        super::update(ctx.world, operator, token, Zeroable::zero(), to, ids, amounts, data);
+        super::unchecked_update(
+            ctx.world, operator, token, Zeroable::zero(), to, ids, amounts, data
+        );
     }
 }
 
@@ -312,6 +326,16 @@ mod ERC1155Burn {
         assert(ctx.origin == operator || ctx.origin == token, 'ERC1155: not authorized');
         assert(from.is_non_zero(), 'ERC1155: invalid sender');
 
-        super::update(ctx.world, operator, token, from, Zeroable::zero(), ids, amounts, array![]);
+        assert(
+            operator == from
+                || super::OperatorApprovalTrait::is_approved_for_all(
+                    ctx.world, token, from, operator
+                ),
+            'ERC1155: insufficient approval'
+        );
+
+        super::unchecked_update(
+            ctx.world, operator, token, from, Zeroable::zero(), ids, amounts, array![]
+        );
     }
 }

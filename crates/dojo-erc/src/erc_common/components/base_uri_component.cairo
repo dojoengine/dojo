@@ -10,7 +10,7 @@ struct BaseUri {
 
 trait BaseUriTrait {
     fn get_base_uri(world: IWorldDispatcher, token: ContractAddress) -> felt252;
-    fn set_base_uri(world: IWorldDispatcher, token: ContractAddress, new_base_uri: felt252);
+    fn unchecked_set_base_uri(world: IWorldDispatcher, token: ContractAddress, new_base_uri: felt252);
 }
 
 impl BaseUriImpl of BaseUriTrait {
@@ -19,8 +19,7 @@ impl BaseUriImpl of BaseUriTrait {
         base_uri.uri
     }
 
-    // perform safety checks before calling this fn
-    fn set_base_uri(world: IWorldDispatcher, token: ContractAddress, new_base_uri: felt252) {
+    fn unchecked_set_base_uri(world: IWorldDispatcher, token: ContractAddress, new_base_uri: felt252) {
         let mut base_uri = get!(world, (token), BaseUri);
         base_uri.uri = new_base_uri;
         set!(world, (base_uri))
