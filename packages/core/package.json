@@ -1,12 +1,13 @@
 {
   "name": "@dojoengine/core",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "description": "Dojo engine core providers and types",
   "scripts": {
     "build": "tsc",
+    "postbuild": "cp -R bin/ dist/",
     "test": "jest"
   },
-  "author": "Democritus",
+  "author": "Loaf",
   "license": "MIT",
   "main": "dist/index.js",
   "devDependencies": {
@@ -18,5 +19,8 @@
     "starknet": "^5.14.1",
     "ts-jest": "^29.1.0",
     "typescript": "^5.0.3"
+  },
+  "bin": {
+    "create-components": "./dist/bin/generateComponents.cjs"
   }
 }
