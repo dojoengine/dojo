@@ -1,11 +1,11 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 use anyhow::Result;
-use cairo_lang_starknet::abi::Event;
-use dojo_world::manifest::Manifest;
+use cairo_lang_starknet::abi::{Event, EventKind};
+use cairo_lang_starknet::plugin::events::EventFieldKind;
 use dojo_world::metadata::Environment;
 use starknet::core::types::{BlockId, EventFilter};
-use starknet::core::utils::starknet_keccak;
+use starknet::core::utils::{parse_cairo_short_string, starknet_keccak};
 use starknet::providers::Provider;
 
 use crate::commands::events::EventsArgs;
@@ -13,9 +13,8 @@ use crate::commands::events::EventsArgs;
 pub async fn execute(
     args: EventsArgs,
     env_metadata: Option<Environment>,
-    manifest: HashMap<String, Event>,
+    events_map: HashMap<String, Vec<Event>>,
 ) -> Result<()> {
-    dbg!(&manifest.values().map(|e| e.name.clone()).collect::<Vec<_>>());
     let EventsArgs {
         chunk_size,
         starknet,
@@ -24,6 +23,7 @@ pub async fn execute(
         to_block,
         events,
         continuation_token,
+        json,
     } = args;
 
     let from_block = from_block.map(BlockId::Number);
@@ -38,8 +38,110 @@ pub async fn execute(
 
     let res = provider.get_events(event_filter, continuation_token, chunk_size).await?;
 
-    let value = serde_json::to_value(res)?;
-
-    println!("{}", serde_json::to_string_pretty(&value)?);
+    if json {
+        let value = serde_json::to_value(res)?;
+        println!("{}", serde_json::to_string_pretty(&value)?);
+    } else {
+        parse_and_print_events(res, events_map);
+    }
     Ok(())
+}
+
+fn parse_and_print_events(
+    res: starknet::core::types::EventsPage,
+    events_map: HashMap<String, Vec<Event>>,
+) {
+    println!("Continuation token: {:?}", res.continuation_token);
+    println!("----------------------------------------------");
+    for event in res.events {
+        if let Some(e) = parse_event(event.clone(), &events_map) {
+            println!("{}\n", e);
+        } else {
+            // Couldn't parse event
+            println!("{}\n", serde_json::to_string_pretty(&event).unwrap());
+        }
+    }
+}
+
+fn parse_event(
+    event: starknet::core::types::EmittedEvent,
+    events_map: &HashMap<String, Vec<Event>>,
+) -> Option<String> {
+    let keys = event.keys;
+    let event_hash = keys[0].to_string();
+    let Some(events) = events_map.get(&event_hash) else { return None };
+
+    'outer: for e in events {
+        let mut ret = format!("Event name: {}\n", e.name);
+        let mut data = VecDeque::from(event.data.clone());
+
+        // Length is two only when its custom event
+        if keys.len() == 2 {
+            let name = parse_cairo_short_string(&keys[1]).ok()?;
+            ret.push_str(&format!("Component name: {}", name));
+        }
+
+        match &e.kind {
+            EventKind::Struct { members } => {
+                for field in members {
+                    if field.kind != EventFieldKind::DataSerde {
+                        continue;
+                    }
+                    match field.ty.as_str() {
+                        "core::starknet::contract_address::ContractAddress"
+                        | "core::felt252"
+                        | "core::starknet::class_hash::ClassHash" => {
+                            let value = match data.pop_front() {
+                                Some(addr) => addr,
+                                None => continue 'outer,
+                            };
+                            ret.push_str(&format!("{}: {:#x}\n", field.name, value));
+                        }
+                        "core::integer::u8" => {
+                            let value = match data.pop_front() {
+                                Some(addr) => addr,
+                                None => continue 'outer,
+                            };
+                            let num = match value.to_string().parse::<u8>() {
+                                Ok(num) => num,
+                                Err(_) => continue 'outer,
+                            };
+
+                            ret.push_str(&format!("{}: {}\n", field.name, num));
+                        }
+                        "dojo_examples::systems::move::Direction" => {
+                            let value = match data.pop_front() {
+                                Some(addr) => addr,
+                                None => continue 'outer,
+                            };
+                            ret.push_str(&format!("{}: {}\n", field.name, value.to_string()));
+                        }
+                        "core::array::Span::<core::felt252>" => {
+                            let length = match data.pop_front() {
+                                Some(addr) => addr,
+                                None => continue 'outer,
+                            };
+                            let length = match length.to_string().parse::<usize>() {
+                                Ok(len) => len,
+                                Err(_) => continue 'outer,
+                            };
+                            ret.push_str(&format!("{}: ", field.name));
+                            if length >= data.len() {
+                                ret.push_str(&format!("{:?}\n", data.range(..length)));
+                            } else {
+                                continue 'outer;
+                            }
+                        }
+                        _ => {
+                            return None;
+                        }
+                    }
+                }
+                return Some(ret);
+            }
+            EventKind::Enum { .. } => unreachable!("shouldn't reach here"),
+        }
+    }
+
+    None
 }

@@ -34,6 +34,10 @@ pub struct EventsArgs {
     #[arg(help = "Continuation string to be passed for rpc request")]
     pub continuation_token: Option<String>,
 
+    #[arg(long)]
+    #[arg(help = "Print values as raw json")]
+    pub json: bool,
+
     #[command(flatten)]
     pub world: WorldOptions,
 
@@ -64,8 +68,8 @@ impl EventsArgs {
     }
 }
 
-fn extract_events(manifest: &Manifest) -> HashMap<String, Event> {
-    fn inner_helper(events: &mut HashMap<String, Event>, contract: &Option<abi::Contract>) {
+fn extract_events(manifest: &Manifest) -> HashMap<String, Vec<Event>> {
+    fn inner_helper(events: &mut HashMap<String, Vec<Event>>, contract: &Option<abi::Contract>) {
         if let Some(contract) = contract {
             for item in &contract.items {
                 if let Item::Event(e) = item {
@@ -73,7 +77,8 @@ fn extract_events(manifest: &Manifest) -> HashMap<String, Event> {
                         abi::EventKind::Struct { .. } => {
                             let event_name =
                                 starknet_keccak(e.name.split("::").last().unwrap().as_bytes());
-                            events.insert(event_name.to_string(), e.clone());
+                            let vec = events.entry(event_name.to_string()).or_insert(Vec::new());
+                            vec.push(e.clone());
                         }
                         abi::EventKind::Enum { .. } => (),
                     }
