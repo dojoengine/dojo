@@ -41,6 +41,9 @@ trait IWorld<T> {
     fn is_writer(self: @T, component: felt252, system: felt252) -> bool;
     fn grant_writer(ref self: T, component: felt252, system: felt252);
     fn revoke_writer(ref self: T, component: felt252, system: felt252);
+    fn register_middleware(&self, middleware: Middleware);
+    fn unregister_middleware(&self, middleware: Middleware);
+    fn get_middleware(&self) -> Array<Middleware>;
 }
 
 #[starknet::contract]
@@ -113,6 +116,7 @@ mod world {
     #[storage]
     struct Storage {
         executor_dispatcher: IExecutorDispatcher,
+        middlewares: LegacyMap::<felt252, Middleware>,
         components: LegacyMap::<felt252, ClassHash>,
         systems: LegacyMap::<felt252, ClassHash>,
         nonce: usize,
@@ -123,7 +127,6 @@ mod world {
         // Tracks the calling systems name for auth purposes.
         call_stack_len: felt252,
         call_stack: LegacyMap::<felt252, felt252>,
-        custom_executor_path: Option<felt252>,
     }
 
     #[constructor]
@@ -536,6 +539,33 @@ mod world {
                 || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, WORLD),
             'not writer'
         );
+    }
+
+    fn register_middleware(&self, middleware: Middleware) {
+        let middlewares = self.middleware.read();
+        self.middleware.write(middlewares.append(middleware));
+    }
+
+    fn unregister_middleware(&self, middleware: Middleware) {
+        let middlewares = self.middleware.read();
+        let index = middlewares.len();
+        loop {
+            if index == 0 {
+                break;
+            }
+            index -= 1;
+            let value = middlewares.pop_front();
+            if value == middleware {
+                break;
+            }
+            middlewares.push_back(value);
+        } 
+        
+        self.middleware.write(middleware);
+    }
+
+    fn get_middleware(&self) -> Array<Middleware> {
+        self.middleware.read();
     }
 }
 

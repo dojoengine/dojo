@@ -47,8 +47,19 @@ mod executor {
                     .at(calldata.len() - WORLD_ADDRESS_OFFSET),
                 'Only world caller'
             );
+
+            // before
+            for middleware in before_middleware {
+                ctx = middleware.before_execute(ctx);
+            }
+
             starknet::syscalls::library_call_syscall(class_hash, EXECUTE_ENTRYPOINT, calldata)
                 .unwrap_syscall()
+
+            // after
+            for middleware in after_middleware {
+                ctx = middleware.after_execute(ctx);
+            }
         }
 
         /// Call the provided `entrypoint` method on the given `class_hash`.
