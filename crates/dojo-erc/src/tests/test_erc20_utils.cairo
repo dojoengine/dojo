@@ -13,7 +13,10 @@ use dojo::test_utils::spawn_test_world;
 use dojo::world::{world, IWorldDispatcher, IWorldDispatcherTrait};
 use dojo_erc::erc20::components::{allowance, balance, supply};
 use dojo_erc::erc20::erc20::ERC20;
-use dojo_erc::erc20::systems::{erc20_approve, erc20_burn, erc20_mint, erc20_transfer_from};
+use dojo_erc::erc20::systems::{
+    erc20_approve, erc20_burn, erc20_mint, erc20_transfer_from, erc20_increase_allowance,
+    erc20_decrease_allowance
+};
 use dojo_erc::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 
 const DECIMALS: u8 = 18;
@@ -37,7 +40,9 @@ fn deploy_erc20() -> (IWorldDispatcher, IERC20Dispatcher) {
         erc20_approve::TEST_CLASS_HASH,
         erc20_burn::TEST_CLASS_HASH,
         erc20_mint::TEST_CLASS_HASH,
-        erc20_transfer_from::TEST_CLASS_HASH
+        erc20_transfer_from::TEST_CLASS_HASH,
+        erc20_increase_allowance::TEST_CLASS_HASH,
+        erc20_decrease_allowance::TEST_CLASS_HASH
     ];
 
     let mut components = array![

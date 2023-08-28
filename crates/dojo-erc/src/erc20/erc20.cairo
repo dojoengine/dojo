@@ -134,6 +134,18 @@ mod ERC20 {
             self._transfer(sender, recipient, amount);
             true
         }
+
+        fn increase_allowance(
+            ref self: ContractState, spender: ContractAddress, added_value: u256
+        ) -> bool {
+            self._increase_allowance(spender, added_value)
+        }
+
+        fn decrease_allowance(
+            ref self: ContractState, spender: ContractAddress, subtracted_value: u256
+        ) -> bool {
+            self._decrease_allowance(spender, subtracted_value)
+        }
     }
 
 
@@ -173,6 +185,35 @@ mod ERC20 {
             self.world.read().execute('erc20_transfer_from', calldata);
 
             self.emit(Transfer { from: Zeroable::zero(), to: recipient, value: amount });
+        }
+
+        fn _increase_allowance(
+            ref self: ContractState, spender: ContractAddress, added_value: u256
+        ) -> bool {
+            let caller = get_caller_address();
+            let token = get_contract_address();
+            assert(!spender.is_zero(), 'ERC20: approve to 0');
+            assert(!caller.is_zero(), 'ERC20: approve from 0');
+            let mut calldata: Array<felt252> = array![
+                token.into(), caller.into(), spender.into(), added_value.try_into().unwrap()
+            ];
+            self.world.read().execute('erc20_increase_allowance', calldata);
+
+            true
+        }
+
+        fn _decrease_allowance(
+            ref self: ContractState, spender: ContractAddress, subtracted_value: u256
+        ) -> bool {
+            let caller = get_caller_address();
+            let token = get_contract_address();
+            assert(!spender.is_zero(), 'ERC20: approve to 0');
+            assert(!caller.is_zero(), 'ERC20: approve from 0');
+            let mut calldata: Array<felt252> = array![
+                token.into(), caller.into(), spender.into(), subtracted_value.try_into().unwrap()
+            ];
+            self.world.read().execute('erc20_decrease_allowance', calldata);
+            true
         }
 
         fn _spend_allowance(

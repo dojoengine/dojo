@@ -18,6 +18,52 @@ mod erc20_approve {
 }
 
 #[system]
+mod erc20_increase_allowance {
+    use starknet::ContractAddress;
+    use zeroable::Zeroable;
+
+    use dojo_erc::erc20::components::Allowance;
+    use dojo::world::Context;
+
+    fn execute(
+        ctx: Context,
+        token: ContractAddress,
+        owner: ContractAddress,
+        spender: ContractAddress,
+        added_value: felt252
+    ) {
+        let current_allowance = get!(ctx.world, (token, owner, spender), Allowance);
+        set!(
+            ctx.world,
+            Allowance { token, owner, spender, amount: current_allowance.amount + added_value }
+        )
+    }
+}
+
+#[system]
+mod erc20_decrease_allowance {
+    use starknet::ContractAddress;
+    use zeroable::Zeroable;
+
+    use dojo_erc::erc20::components::Allowance;
+    use dojo::world::Context;
+
+    fn execute(
+        ctx: Context,
+        token: ContractAddress,
+        owner: ContractAddress,
+        spender: ContractAddress,
+        added_value: felt252
+    ) {
+        let current_allowance = get!(ctx.world, (token, owner, spender), Allowance);
+        set!(
+            ctx.world,
+            Allowance { token, owner, spender, amount: current_allowance.amount - added_value }
+        )
+    }
+}
+
+#[system]
 mod erc20_transfer_from {
     use starknet::ContractAddress;
     use traits::Into;

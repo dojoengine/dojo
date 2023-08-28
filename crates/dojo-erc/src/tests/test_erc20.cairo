@@ -160,3 +160,62 @@ fn test_transfer_from_from_zero_address() {
     let (world, erc20) = deploy_erc20();
     erc20.transfer_from(Zeroable::zero(), RECIPIENT(), VALUE);
 }
+
+#[test]
+#[available_gas(200000000)]
+fn test_increase_allowance() {
+    let (world, erc20) = deploy_erc20();
+    set_contract_address(OWNER());
+    erc20.approve(SPENDER(), VALUE);
+
+    assert(erc20.increase_allowance(SPENDER(), VALUE), 'Should return true');
+
+    assert(erc20.allowance(OWNER(), SPENDER()) == VALUE * 2, 'Should be amount * 2');
+}
+
+#[test]
+#[available_gas(200000000)]
+#[should_panic(expected: ('ERC20: approve to 0', 'ENTRYPOINT_FAILED',))]
+fn test_increase_allowance_to_zero_address() {
+    let (world, erc20) = deploy_erc20();
+    set_contract_address(OWNER());
+    erc20.increase_allowance(Zeroable::zero(), VALUE);
+}
+
+#[test]
+#[available_gas(200000000)]
+#[should_panic(expected: ('ERC20: approve from 0', 'ENTRYPOINT_FAILED'))]
+fn test_increase_allowance_from_zero_address() {
+    let (world, erc20) = deploy_erc20();
+    set_contract_address(Zeroable::zero());
+    erc20.increase_allowance(SPENDER(), VALUE);
+}
+
+#[test]
+#[available_gas(200000000)]
+fn test_decrease_allowance() {
+    let (world, erc20) = deploy_erc20();
+    set_contract_address(OWNER());
+    erc20.approve(SPENDER(), VALUE);
+    assert(erc20.decrease_allowance(SPENDER(), VALUE), 'Should return true');
+
+    assert(erc20.allowance(OWNER(), SPENDER()) == VALUE - VALUE, 'Should be 0');
+}
+
+#[test]
+#[available_gas(200000000)]
+#[should_panic(expected: ('ERC20: approve to 0', 'ENTRYPOINT_FAILED'))]
+fn test_decrease_allowance_to_zero_address() {
+    let (world, erc20) = deploy_erc20();
+    set_contract_address(OWNER());
+    erc20.decrease_allowance(Zeroable::zero(), VALUE);
+}
+
+#[test]
+#[available_gas(200000000)]
+#[should_panic(expected: ('ERC20: approve from 0', 'ENTRYPOINT_FAILED'))]
+fn test_decrease_allowance_from_zero_address() {
+    let (world, erc20) = deploy_erc20();
+    set_contract_address(Zeroable::zero());
+    erc20.decrease_allowance(SPENDER(), VALUE);
+}
