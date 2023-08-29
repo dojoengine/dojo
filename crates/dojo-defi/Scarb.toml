@@ -4,6 +4,8 @@ description = "Implementations of a defi primitives for the Dojo framework"
 name = "dojo_defi"
 version = "0.2.1"
 
+[lib]
+
 [dependencies]
 # Next lines to be reverted once Cubit repo is updated.
 cubit = { git = "https://github.com/influenceth/cubit" }
