@@ -71,3 +71,10 @@ impl SerdeLenClassHash of SerdeLen<starknet::ClassHash> {
         1
     }
 }
+
+impl SerdeLenFixed of SerdeLen<cubit::f128::types::Fixed> {
+    #[inline(always)]
+    fn len() -> usize {
+        2
+    }
+}

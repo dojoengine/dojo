@@ -5,7 +5,9 @@ name = "dojo_defi"
 version = "0.2.1"
 
 [dependencies]
-cubit = { git = "https://github.com/influenceth/cubit" }
+# Next lines to be reverted once Cubit repo is updated.
+# cubit = { git = "https://github.com/influenceth/cubit" }
+cubit = {git = "https://github.com/ametel01/cubit.git"}
 dojo = { path = "../dojo-core" }
 
 [[target.dojo]]
