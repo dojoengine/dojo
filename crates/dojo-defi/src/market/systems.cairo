@@ -2,7 +2,8 @@
 mod Buy {
     use traits::Into;
     use array::ArrayTrait;
-    use dojo_defi::constant_product_market::components::{Item, Cash, Market, MarketTrait};
+    use dojo_defi::market::components::{Item, Cash, Market};
+    use dojo_defi::market::constant_product_market::MarketTrait;
     use dojo::world::Context;
 
     fn execute(ctx: Context, item_id: u32, quantity: u128) {
@@ -41,7 +42,8 @@ mod Buy {
 mod Sell {
     use traits::Into;
     use array::ArrayTrait;
-    use dojo_defi::constant_product_market::components::{Item, Cash, Market, MarketTrait};
+    use dojo_defi::market::components::{Item, Cash, Market};
+    use dojo_defi::market::constant_product_market::MarketTrait;
     use dojo::world::Context;
 
     fn execute(ctx: Context, item_id: u32, quantity: u128) {
@@ -81,9 +83,8 @@ mod Sell {
 mod AddLiquidity {
     use traits::Into;
     use array::ArrayTrait;
-    use dojo_defi::constant_product_market::components::{
-        Item, Cash, Market, Liquidity, MarketTrait
-    };
+    use dojo_defi::market::components::{Item, Cash, Market, Liquidity};
+    use dojo_defi::market::constant_product_market::MarketTrait;
     use dojo::world::Context;
 
     fn execute(ctx: Context, item_id: u32, amount: u128, quantity: u128) {
@@ -133,9 +134,8 @@ mod AddLiquidity {
 mod RemoveLiquidity {
     use traits::Into;
     use array::ArrayTrait;
-    use dojo_defi::constant_product_market::components::{
-        Item, Cash, Market, Liquidity, MarketTrait
-    };
+    use dojo_defi::market::components::{Item, Cash, Market, Liquidity};
+    use dojo_defi::market::constant_product_market::MarketTrait;
     use dojo::world::Context;
 
     use cubit::f128::types::fixed::Fixed;

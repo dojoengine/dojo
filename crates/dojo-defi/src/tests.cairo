@@ -7,4 +7,5 @@ mod linear_vrgda_test;
 #[cfg(test)]
 mod logistic_vrgda_test;
 #[cfg(test)]
+mod constant_product_market_tests;
 mod utils;
