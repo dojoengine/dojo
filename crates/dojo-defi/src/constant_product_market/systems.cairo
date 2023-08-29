@@ -3,15 +3,14 @@ mod Buy {
     use traits::Into;
     use array::ArrayTrait;
     use dojo_defi::constant_product_market::components::{Item, Cash, Market, MarketTrait};
+    use dojo::world::Context;
 
-    fn execute(partition: felt252, item_id: felt252, quantity: usize) {
-        let player: felt252 = starknet::get_caller_address().into();
+    fn execute(ctx: Context, item_id: u32, quantity: u128) {
+        let player = starknet::get_caller_address();
 
-        let cash_sk: Query = (partition, (player)).into_partitioned();
-        let player_cash = get!(ctx.world, cash_sk, Cash);
+        let player_cash = get!(ctx.world, (player), Cash);
 
-        let market_sk: Query = (partition, (item_id)).into_partitioned();
-        let market = get!(ctx.world, market_sk, Market);
+        let market = get!(ctx.world, (item_id), Market);
 
         let cost = market.buy(quantity);
         assert(cost <= player_cash.amount, 'not enough cash');
@@ -19,20 +18,22 @@ mod Buy {
         // update market
         set!(
             ctx.world,
-            market_sk,
             (Market {
+                item_id: item_id,
                 cash_amount: market.cash_amount + cost,
                 item_quantity: market.item_quantity - quantity,
             })
         );
 
         // update player cash
-        set!(ctx.world, cash_sk, (Cash { amount: player_cash.amount - cost }));
+        set!(ctx.world, (Cash { player: player, amount: player_cash.amount - cost }));
 
         // update player item
-        let item_sk: Query = (partition, (player, item_id)).into_partitioned();
-        let item = get!(ctx.world, item_sk, Item);
-        set!(ctx.world, item_sk, (Item { quantity: item.quantity + quantity }));
+        let item = get!(ctx.world, (player, item_id), Item);
+        set!(
+            ctx.world,
+            (Item { player: player, item_id: item_id, quantity: item.quantity + quantity })
+        );
     }
 }
 
@@ -41,37 +42,38 @@ mod Sell {
     use traits::Into;
     use array::ArrayTrait;
     use dojo_defi::constant_product_market::components::{Item, Cash, Market, MarketTrait};
+    use dojo::world::Context;
 
-    fn execute(partition: felt252, item_id: felt252, quantity: usize) {
-        let player: felt252 = starknet::get_caller_address().into();
+    fn execute(ctx: Context, item_id: u32, quantity: u128) {
+        let player = starknet::get_caller_address();
 
-        let item_sk: Query = (partition, (player, item_id)).into_partitioned();
-        let item = get!(ctx.world, item_sk, Item);
+        let item = get!(ctx.world, (player, item_id), Item);
         let player_quantity = item.quantity;
         assert(player_quantity >= quantity, 'not enough items');
 
-        let cash_sk: Query = (partition, (player)).into_partitioned();
-        let player_cash = get!(ctx.world, cash_sk, Cash);
+        let player_cash = get!(ctx.world, (player), Cash);
 
-        let market_sk: Query = (partition, (item_id)).into_partitioned();
-        let market = get!(ctx.world, market_sk, Market);
+        let market = get!(ctx.world, (item_id), Market);
         let payout = market.sell(quantity);
 
         // update market
         set!(
             ctx.world,
-            market_sk,
             (Market {
+                item_id: item_id,
                 cash_amount: market.cash_amount - payout,
                 item_quantity: market.item_quantity + quantity,
             })
         );
 
         // update player cash
-        set!(ctx.world, cash_sk, (Cash { amount: player_cash.amount + payout }));
+        set!(ctx.world, (Cash { player: player, amount: player_cash.amount + payout }));
 
         // update player item
-        set!(ctx.world, item_sk, (Item { quantity: player_quantity - quantity }));
+        set!(
+            ctx.world,
+            (Item { player: player, item_id: item_id, quantity: player_quantity - quantity })
+        );
     }
 }
 
@@ -82,48 +84,47 @@ mod AddLiquidity {
     use dojo_defi::constant_product_market::components::{
         Item, Cash, Market, Liquidity, MarketTrait
     };
+    use dojo::world::Context;
 
-    use cubit::types::fixed::Fixed;
+    fn execute(ctx: Context, item_id: u32, amount: u128, quantity: u128) {
+        let player = starknet::get_caller_address();
 
-    fn execute(partition: felt252, item_id: felt252, amount: u128, quantity: usize) {
-        let player: felt252 = starknet::get_caller_address().into();
-
-        let item_sk: Query = (partition, (player, item_id)).into_partitioned();
-        let item = get!(ctx.world, item_sk, Item);
+        let item = get!(ctx.world, (player, item_id), Item);
         let player_quantity = item.quantity;
         assert(player_quantity >= quantity, 'not enough items');
 
-        let cash_sk: Query = (partition, (player)).into_partitioned();
-        let player_cash = get!(ctx.world, cash_sk, Cash);
+        let player_cash = get!(ctx.world, (player), Cash);
         assert(amount <= player_cash.amount, 'not enough cash');
 
-        let market_sk: Query = (partition, (item_id)).into_partitioned();
-        let market = get!(ctx.world, market_sk, Market);
+        let market = get!(ctx.world, (item_id), Market);
         let (cost_cash, cost_quantity, liquidity_shares) = market.add_liquidity(amount, quantity);
 
         // update market
         set!(
             ctx.world,
-            market_sk,
             (Market {
+                item_id: item_id,
                 cash_amount: market.cash_amount + cost_cash,
                 item_quantity: market.item_quantity + cost_quantity
             })
         );
 
         // update player cash
-        set!(ctx.world, cash_sk, (Cash { amount: player_cash.amount - cost_cash }));
+        set!(ctx.world, (Cash { player: player, amount: player_cash.amount - cost_cash }));
 
         // update player item
-        set!(ctx.world, item_sk, (Item { quantity: player_quantity - cost_quantity }));
-
-        // update player liquidity
-        let liquidity_sk: Query = (partition, (player, item_id)).into_partitioned();
-        let player_liquidity = get!(ctx.world, liquidity_sk, Liquidity);
         set!(
             ctx.world,
-            liquidity_sk,
-            (Liquidity { shares: player_liquidity.shares + liquidity_shares })
+            (Item { player: player, item_id: item_id, quantity: player_quantity - cost_quantity })
+        );
+
+        // update player liquidity
+        let player_liquidity = get!(ctx.world, (player, item_id), Liquidity);
+        set!(
+            ctx.world,
+            (Liquidity {
+                player: player, item_id: item_id, shares: player_liquidity.shares + liquidity_shares
+            })
         );
     }
 }
@@ -135,46 +136,49 @@ mod RemoveLiquidity {
     use dojo_defi::constant_product_market::components::{
         Item, Cash, Market, Liquidity, MarketTrait
     };
+    use dojo::world::Context;
 
-    use cubit::types::fixed::Fixed;
-    use serde::Serde;
+    use cubit::f128::types::fixed::Fixed;
 
-    fn execute(partition: felt252, item_id: felt252, shares: Fixed) {
-        let player: felt252 = starknet::get_caller_address().into();
+    fn execute(ctx: Context, item_id: u32, shares: Fixed) {
+        let player = starknet::get_caller_address();
 
-        let liquidity_sk: Query = (partition, (player, item_id)).into_partitioned();
-        let player_liquidity = get!(ctx.world, liquidity_sk, Liquidity);
+        let player_liquidity = get!(ctx.world, (player, item_id), Liquidity);
         assert(player_liquidity.shares >= shares, 'not enough shares');
 
-        let market_sk: Query = (partition, (item_id)).into_partitioned();
-        let market = get!(ctx.world, market_sk, Market);
+        let market = get!(ctx.world, (item_id), Market);
         let (payout_cash, payout_quantity) = market.remove_liquidity(shares);
 
         // update market
         set!(
             ctx.world,
-            market_sk,
             (Market {
+                item_id: item_id,
                 cash_amount: market.cash_amount - payout_cash,
                 item_quantity: market.item_quantity - payout_quantity
             })
         );
 
         // update player cash
-        let cash_sk: Query = (partition, (player)).into_partitioned();
-        let player_cash = get!(ctx.world, cash_sk, Cash);
-        set!(ctx.world, cash_sk, (Cash { amount: player_cash.amount + payout_cash }));
+        let player_cash = get!(ctx.world, (player), Cash);
+        set!(ctx.world, (Cash { player: player, amount: player_cash.amount + payout_cash }));
 
         // update player item
-        let item_sk: Query = (partition, (player, item_id)).into_partitioned();
-        let item = get!(ctx.world, item_sk, Item);
+        let item = get!(ctx.world, (player, item_id), Item);
         let player_quantity = item.quantity;
-        set!(ctx.world, item_sk, (Item { quantity: player_quantity + payout_quantity }));
+        set!(
+            ctx.world,
+            (Item { player: player, item_id: item_id, quantity: player_quantity + payout_quantity })
+        );
 
         // update player liquidity
-        let liquidity_sk: Query = (partition, (player, item_id)).into_partitioned();
-        let player_liquidity = get!(ctx.world, liquidity_sk);
-        set!(ctx.world, liquidity_sk, (Liquidity { shares: player_liquidity.shares - shares }));
+        let player_liquidity = get!(ctx.world, (player, item_id), Liquidity);
+        set!(
+            ctx.world,
+            (Liquidity {
+                player: player, item_id: item_id, shares: player_liquidity.shares - shares
+            })
+        );
     }
 }
 
