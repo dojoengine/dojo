@@ -1,7 +1,7 @@
 // The worker has its own scope and no direct access to functions/objects of the
 // global scope. We import the generated JS file to make `wasm_bindgen`
 // available which we need to initialize our Wasm code.
-importScripts("./pkg/dojo_client_wasm.js");
+importScripts("./pkg/torii_client_wasm.js");
 
 console.log("Initializing worker");
 
@@ -11,11 +11,11 @@ const { WasmClient } = wasm_bindgen;
 
 async function setup() {
 	// Load the wasm file by awaiting the Promise returned by `wasm_bindgen`.
-	await wasm_bindgen("./pkg/dojo_client_wasm_bg.wasm");
+	await wasm_bindgen("./pkg/torii_client_wasm_bg.wasm");
 
 	const client = new WasmClient(
 		"http://localhost:5050",
-		"0xa89fbc16c54a1042db8e877e27ba1924417336a1ad2fd1bb495bb909b4829e"
+		"0x398c6b4f479e2a6181ae895ad34333b44e419e48098d2a9622f976216d044dd"
 	);
 
 	client.start();

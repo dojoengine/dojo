@@ -1,21 +1,23 @@
 <html>
-	<head>
-		<meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
-		<link rel="stylesheet" href="style.css" />
-	</head>
 
-	<body>
-		<div id="wrapper">
-			<h1>Main Thread/Wasm Web Worker Interaction</h1>
+<head>
+	<meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
+	<link rel="stylesheet" href="style.css" />
+</head>
 
-			<input type="text" id="inputNumber" />
+<body>
+	<div id="wrapper">
+		<h1>Main Thread/Wasm Web Worker Interaction</h1>
 
-			<div id="resultField"></div>
-		</div>
+		<input type="text" id="inputNumber" />
 
-		<!-- Make `wasm_bindgen` available for `index.js` -->
-		<script src="./pkg/dojo_client_wasm.js"></script>
-		<!-- Note that there is no `type="module"` in the script tag -->
-		<script src="./index.js"></script>
-	</body>
+		<div id="resultField"></div>
+	</div>
+
+	<!-- Make `wasm_bindgen` available for `index.js` -->
+	<script src="./pkg/torii_client_wasm.js"></script>
+	<!-- Note that there is no `type="module"` in the script tag -->
+	<script src="./index.js"></script>
+</body>
+
 </html>
