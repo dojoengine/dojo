@@ -2,12 +2,21 @@ use traits::{Into, TryInto};
 use option::OptionTrait;
 use starknet::ContractAddress;
 
+use dojo::serde::SerdeLen;
 use dojo_defi::tests::utils::{TOLERANCE, assert_approx_equal};
+
 
 // Cubit fixed point math library
 use cubit::f128::types::fixed::{Fixed, FixedInto, FixedTrait, ONE_u128};
 
 const SCALING_FACTOR: u128 = 10000;
+
+impl SerdeLenFixed of SerdeLen<Fixed> {
+    #[inline(always)]
+    fn len() -> usize {
+        2
+    }
+}
 
 #[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Cash {
