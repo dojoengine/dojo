@@ -6,5 +6,4 @@ version = "0.2.1"
 
 [dependencies]
 dojo_plugin = { git = "https://github.com/dojoengine/dojo" }
-cubit = {git = "https://github.com/ametel01/cubit.git"}
 starknet = "2.1.1"
