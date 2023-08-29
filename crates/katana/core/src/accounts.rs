@@ -155,7 +155,7 @@ impl DevAccountGenerator {
                 let mut private_key_bytes = [0u8; 32];
 
                 rng.fill_bytes(&mut private_key_bytes);
-                private_key_bytes[0] %= 0x9;
+                private_key_bytes[0] %= 0x8;
                 seed = private_key_bytes;
 
                 let private_key = FieldElement::from_bytes_be(&private_key_bytes)
