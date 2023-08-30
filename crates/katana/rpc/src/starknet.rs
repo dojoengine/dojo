@@ -427,6 +427,8 @@ where
         let transaction = broadcasted_invoke_rpc_to_api_transaction(invoke_transaction, chain_id);
         let transaction_hash = transaction.transaction_hash().0.into();
 
+        // call SN
+
         self.sequencer.add_invoke_transaction(InvokeTransaction(transaction)).await;
 
         Ok(InvokeTransactionResult { transaction_hash })

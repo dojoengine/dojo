@@ -128,7 +128,7 @@ impl Worker {
     /// Returns the latest fetched block, and the count of messages gathered.
     async fn gather_messages(&self, from_block: u64, max_blocks: u64) -> (u64, u64) {
         if let Ok((latest_block_fetched, l1_handler_txs)) =
-            self.messenger.gather_messages(from_block, max_blocks).await
+           self.messenger.gather_messages(from_block, max_blocks).await
         {
             for tx in &l1_handler_txs {
                 trace_l1_handler_tx_exec(tx);

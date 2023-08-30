@@ -133,6 +133,11 @@ impl Messenger for StarknetMessenger {
         let chain_latest_block: u64 =
             self.provider.block_number().await.map_err(|_| MessengerError::SendError).unwrap();
 
+        if from_block > chain_latest_block {
+            tracing::debug!("Nothing to fetch");
+            return Ok((from_block, vec![]));
+        }
+
         // +1 as the from_block counts as 1 block fetched.
         let to_block = if from_block + max_blocks + 1 < chain_latest_block {
             from_block + max_blocks
@@ -191,6 +196,8 @@ impl Messenger for StarknetMessenger {
                     selector: m.payload[1],
                     calldata: m.payload[2..].to_vec(),
                 });
+
+                hashes.push(FieldElement::from_hex_be("0xeeeeeeeeeeee").unwrap());
             } else {
                 let mut buf: Vec<u8> = vec![];
                 buf.extend(m.from_address.to_bytes_be());
@@ -241,9 +248,10 @@ fn l1_handler_tx_from_event(event: &EmittedEvent) -> Result<L1HandlerTransaction
     let selector = event.data[0];
     let nonce = event.data[1];
 
-    // Payload starts at data[2].
+    // Skip the length of the serialized array for the payload which is data[2].
+    // Payload starts at data[3].
     let mut calldata_vec: Vec<StarkFelt> = vec![from_address.into()];
-    for p in &event.data[2..] {
+    for p in &event.data[3..] {
         calldata_vec.push((*p).into());
     }
 
