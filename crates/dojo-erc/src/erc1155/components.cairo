@@ -28,9 +28,9 @@ struct ERC1155Balance {
     #[key]
     token: ContractAddress,
     #[key]
-    token_id: felt252,
-    #[key]
     account: ContractAddress,
+    #[key]
+    token_id: felt252,
     amount: u128
 }
 
@@ -38,13 +38,27 @@ trait ERC1155BalanceTrait {
     fn balance_of(
         world: IWorldDispatcher, token: ContractAddress, account: ContractAddress, id: felt252
     ) -> u128;
-    fn transfer_tokens(
+    fn unchecked_transfer_tokens(
         world: IWorldDispatcher,
         token: ContractAddress,
         from: ContractAddress,
         to: ContractAddress,
         ids: Span<felt252>,
         amounts: Span<u128>,
+    );
+    fn unchecked_increase_balance(
+        world: IWorldDispatcher,
+        token: ContractAddress,
+        owner: ContractAddress,
+        id: felt252,
+        amount: u128,
+    );
+    fn unchecked_decrease_balance(
+        world: IWorldDispatcher,
+        token: ContractAddress,
+        owner: ContractAddress,
+        id: felt252,
+        amount: u128,
     );
 }
 
@@ -54,10 +68,10 @@ impl ERC1155BalanceImpl of ERC1155BalanceTrait {
     ) -> u128 {
         // ERC1155: address zero is not a valid owner
         assert(account.is_non_zero(), 'ERC1155: invalid owner address');
-        get!(world, (token, id, account), ERC1155Balance).amount
+        get!(world, (token, account, id), ERC1155Balance).amount
     }
 
-    fn transfer_tokens(
+    fn unchecked_transfer_tokens(
         world: IWorldDispatcher,
         token: ContractAddress,
         from: ContractAddress,
@@ -73,16 +87,40 @@ impl ERC1155BalanceImpl of ERC1155BalanceTrait {
             let amount: u128 = *amounts.pop_front().unwrap();
 
             if (from.is_non_zero()) {
-                let mut from_balance = get!(world, (token, id, from), ERC1155Balance);
+                let mut from_balance = get!(world, (token, from, id), ERC1155Balance);
                 from_balance.amount -= amount;
                 set!(world, (from_balance));
             }
 
             if (to.is_non_zero()) {
-                let mut to_balance = get!(world, (token, id, to), ERC1155Balance);
+                let mut to_balance = get!(world, (token, to, id), ERC1155Balance);
                 to_balance.amount += amount;
                 set!(world, (to_balance));
             };
         };
+    }
+
+    fn unchecked_increase_balance(
+        world: IWorldDispatcher,
+        token: ContractAddress,
+        owner: ContractAddress,
+        id: felt252,
+        amount: u128,
+    ) {
+        let mut balance = get!(world, (token, owner, id), ERC1155Balance);
+        balance.amount += amount;
+        set!(world, (balance));
+    }
+
+    fn unchecked_decrease_balance(
+        world: IWorldDispatcher,
+        token: ContractAddress,
+        owner: ContractAddress,
+        id: felt252,
+        amount: u128,
+    ) {
+        let mut balance = get!(world, (token, owner, id), ERC1155Balance);
+        balance.amount -= amount;
+        set!(world, (balance));
     }
 }

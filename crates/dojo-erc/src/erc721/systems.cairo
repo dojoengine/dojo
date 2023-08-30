@@ -92,7 +92,7 @@ mod ERC721Approve {
         );
         // // ERC721: approve caller is not token owner or approved for all 
         assert(caller == owner || is_approved_for_all, 'ERC721: unauthorized caller');
-        ERC721TokenApprovalTrait::approve(ctx.world, token, token_id, to, );
+        ERC721TokenApprovalTrait::unchecked_approve(ctx.world, token, token_id, to,);
 
         // emit events
         super::emit_approval(ctx.world, token, owner, to, token_id);
@@ -124,7 +124,7 @@ mod ERC721SetApprovalForAll {
         assert(token == ctx.origin, 'ERC721: not authorized');
         assert(owner != operator, 'ERC721: self approval');
 
-        OperatorApprovalTrait::set_approval_for_all(ctx.world, token, owner, operator, approved);
+        OperatorApprovalTrait::unchecked_set_approval_for_all(ctx.world, token, owner, operator, approved);
 
         // emit event
         super::emit_approval_for_all(ctx.world, token, owner, operator, approved);
@@ -171,9 +171,9 @@ mod ERC721TransferFrom {
             'ERC721: unauthorized caller'
         );
 
-        ERC721OwnerTrait::set_owner(ctx.world, token, token_id, to);
-        ERC721BalanceTrait::transfer_token(ctx.world, token, from, to, 1);
-        ERC721TokenApprovalTrait::approve(ctx.world, token, token_id, Zeroable::zero());
+        ERC721OwnerTrait::unchecked_set_owner(ctx.world, token, token_id, to);
+        ERC721BalanceTrait::unchecked_transfer_token(ctx.world, token, from, to, 1);
+        ERC721TokenApprovalTrait::unchecked_approve(ctx.world, token, token_id, Zeroable::zero());
 
         // emit events
         super::emit_transfer(ctx.world, token, from, to, token_id);
@@ -206,8 +206,8 @@ mod ERC721Mint {
         let owner = ERC721OwnerTrait::owner_of(ctx.world, token, token_id);
         assert(owner.is_zero(), 'ERC721: already minted');
 
-        ERC721BalanceTrait::increase_balance(ctx.world, token, recipient, 1);
-        ERC721OwnerTrait::set_owner(ctx.world, token, token_id, recipient);
+        ERC721BalanceTrait::unchecked_increase_balance(ctx.world, token, recipient, 1);
+        ERC721OwnerTrait::unchecked_set_owner(ctx.world, token, token_id, recipient);
         // emit events
         super::emit_transfer(ctx.world, token, Zeroable::zero(), recipient, token_id);
     }
@@ -238,7 +238,7 @@ mod ERC721Burn {
         assert(token == ctx.origin, 'ERC721: not authorized');
 
         let owner = ERC721OwnerTrait::owner_of(ctx.world, token, token_id);
-        assert(!owner.is_zero(), 'ERC721: invalid token_id');
+        assert(owner.is_non_zero(), 'ERC721: invalid token_id');
 
         let is_approved_for_all = OperatorApprovalTrait::is_approved_for_all(
             ctx.world, token, owner, caller
@@ -250,8 +250,8 @@ mod ERC721Burn {
             'ERC721: unauthorized caller'
         );
 
-        ERC721BalanceTrait::decrease_balance(ctx.world, token, owner, 1);
-        ERC721OwnerTrait::set_owner(ctx.world, token, token_id, Zeroable::zero());
+        ERC721BalanceTrait::unchecked_decrease_balance(ctx.world, token, owner, 1);
+        ERC721OwnerTrait::unchecked_set_owner(ctx.world, token, token_id, Zeroable::zero());
 
         //  emit events
         super::emit_transfer(ctx.world, token, owner, Zeroable::zero(), token_id);
@@ -270,7 +270,7 @@ mod ERC721SetBaseUri {
 
     fn execute(ctx: Context, token: ContractAddress, uri: felt252) {
         assert(ctx.origin == token, 'ERC721: not authorized');
-        BaseUriTrait::set_base_uri(ctx.world, token, uri);
+        BaseUriTrait::unchecked_set_base_uri(ctx.world, token, uri);
     // TODO: emit event
     }
 }
