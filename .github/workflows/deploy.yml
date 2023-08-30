@@ -31,5 +31,5 @@ jobs:
           REPOSITORY: arkproject-katana
           IMAGE_TAG: latest
         run: |
-          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG . -f Dockerfile.katana
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
