@@ -22,9 +22,9 @@ sozo component schema --world 0x26065106fa319c3981618e7567480a50132f23932226a51c
 > struct Moves {
 >    remaining: u8
 > }
-0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973
+
 # Get the value of the Moves component for an entity. (in this example,
-# 0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973 is0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973
+# 0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973 is
 # the calling account.
 sozo component entity --world 0x26065106fa319c3981618e7567480a50132f23932226a51c219ffb8e47daa84 Moves 0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973
 > 0x0
@@ -32,7 +32,7 @@ sozo component entity --world 0x26065106fa319c3981618e7567480a50132f23932226a51c
 # The returned value is 0 since we haven't spawned yet. Let's spawn
 # a player for the caller
 sozo execute --world 0x26065106fa319c3981618e7567480a50132f23932226a51c219ffb8e47daa84 spawn
-0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973
+
 # Fetch the updated entity
 sozo component entity --world 0x26065106fa319c3981618e7567480a50132f23932226a51c219ffb8e47daa84 Moves 0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973
 > 0xa
