@@ -1,5 +1,6 @@
 mod constants;
-mod object;
+pub mod object;
+
 mod query;
 pub mod schema;
 pub mod server;

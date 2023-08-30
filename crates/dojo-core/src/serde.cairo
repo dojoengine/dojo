@@ -71,3 +71,4 @@ impl SerdeLenClassHash of SerdeLen<starknet::ClassHash> {
         1
     }
 }
+

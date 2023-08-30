@@ -1,10 +1,13 @@
-use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
+use async_graphql::dynamic::{
+    Field, FieldFuture, FieldValue, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
+};
 use async_graphql::{Name, Value};
-use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
-use serde::Deserialize;
 use sqlx::pool::PoolConnection;
-use sqlx::{FromRow, Pool, Result, Sqlite};
+use sqlx::{Pool, Result, Sqlite};
+use tokio_stream::StreamExt;
+use torii_core::simple_broker::SimpleBroker;
+use torii_core::types::Entity;
 
 use super::component_state::{component_state_by_id_query, type_mapping_query};
 use super::connection::{
@@ -18,22 +21,12 @@ use crate::types::ScalarType;
 use crate::utils::csv_to_vec;
 use crate::utils::extract_value::extract;
 
-#[derive(FromRow, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct Entity {
-    pub id: String,
-    pub keys: String,
-    pub component_names: String,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-}
-
 pub struct EntityObject {
     pub type_mapping: TypeMapping,
 }
 
-impl EntityObject {
-    pub fn new() -> Self {
+impl Default for EntityObject {
+    fn default() -> Self {
         Self {
             type_mapping: IndexMap::from([
                 (Name::new("id"), TypeRef::named(TypeRef::ID)),
@@ -44,7 +37,8 @@ impl EntityObject {
             ]),
         }
     }
-
+}
+impl EntityObject {
     pub fn value_mapping(entity: Entity) -> ValueMapping {
         let keys: Vec<&str> = entity.keys.split(',').map(|s| s.trim()).collect();
         IndexMap::from([
@@ -154,6 +148,17 @@ impl ObjectTrait for EntityObject {
         field = connection_arguments(field);
 
         Some(field)
+    }
+
+    fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
+        let name = format!("{}Updated", self.name());
+        Some(vec![SubscriptionField::new(name, TypeRef::named_nn(self.type_name()), |_| {
+            SubscriptionFieldFuture::new(async {
+                Ok(SimpleBroker::<Entity>::subscribe().map(|entity: Entity| {
+                    Ok(FieldValue::owned_any(EntityObject::value_mapping(entity)))
+                }))
+            })
+        })])
     }
 }
 

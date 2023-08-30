@@ -1,8 +1,10 @@
 use anyhow::Result;
-use async_graphql::dynamic::{Field, Object, Scalar, Schema, Union};
+use async_graphql::dynamic::{
+    Field, Object, Scalar, Schema, Subscription, SubscriptionField, Union,
+};
 use sqlx::SqlitePool;
+use torii_core::types::Component;
 
-use super::object::component::Component;
 use super::object::component_state::{type_mapping_query, ComponentStateObject};
 use super::object::connection::page_info::PageInfoObject;
 use super::object::entity::EntityObject;
@@ -12,26 +14,29 @@ use super::object::system_call::SystemCallObject;
 use super::object::ObjectTrait;
 use super::types::ScalarType;
 use super::utils::format_name;
+use crate::object::component::ComponentObject;
 
 // The graphql schema is built dynamically at runtime, this is because we won't know the schema of
 // the components until runtime. There are however, predefined objects such as entities and
 // system_calls, their schema is known but we generate them dynamically as well since async-graphql
 // does not allow mixing of static and dynamic schemas.
 pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
-    let mut schema_builder = Schema::build("Query", None, None);
+    let mut schema_builder = Schema::build("Query", None, Some("Subscription"));
 
     // predefined objects
     let mut objects: Vec<Box<dyn ObjectTrait>> = vec![
-        Box::new(EntityObject::new()),
-        Box::new(SystemObject::new()),
-        Box::new(EventObject::new()),
-        Box::new(SystemCallObject::new()),
-        Box::new(PageInfoObject::new()),
+        Box::<EntityObject>::default(),
+        Box::<ComponentObject>::default(),
+        Box::<SystemObject>::default(),
+        Box::<EventObject>::default(),
+        Box::<SystemCallObject>::default(),
+        Box::<PageInfoObject>::default(),
     ];
 
     // register dynamic component objects
     let (component_objects, component_union) = component_objects(pool).await?;
     objects.extend(component_objects);
+
     schema_builder = schema_builder.register(component_union);
 
     // collect resolvers for single and plural queries
@@ -82,7 +87,28 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
         schema_builder = schema_builder.register(object.create());
     }
 
-    schema_builder.register(query_root).data(pool.clone()).finish().map_err(|e| e.into())
+    // collect resolvers for single subscriptions
+    let mut subscription_fields: Vec<SubscriptionField> = Vec::new();
+    for object in &objects {
+        if let Some(subscriptions) = object.subscriptions() {
+            for sub in subscriptions {
+                subscription_fields.push(sub);
+            }
+        }
+    }
+
+    // add field resolvers to subscription root
+    let mut subscription_root = Subscription::new("Subscription");
+    for field in subscription_fields {
+        subscription_root = subscription_root.field(field);
+    }
+
+    schema_builder
+        .register(query_root)
+        .register(subscription_root)
+        .data(pool.clone())
+        .finish()
+        .map_err(|e| e.into())
 }
 
 async fn component_objects(pool: &SqlitePool) -> Result<(Vec<Box<dyn ObjectTrait>>, Union)> {

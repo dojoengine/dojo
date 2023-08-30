@@ -187,3 +187,7 @@ impl Manifest {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "manifest_test.rs"]
+mod test;

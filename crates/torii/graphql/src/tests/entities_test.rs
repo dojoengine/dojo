@@ -98,25 +98,4 @@ mod tests {
         assert_eq!(entities_connection.edges.len(), page_size);
         assert_eq!(entities_connection.edges[0].cursor, next_cursor);
     }
-
-    // FIXME: Enable when `WhereInput` param implemented
-    // #[sqlx::test(migrations = "../migrations")]
-    // async fn test_entities_with_component_filters(pool: SqlitePool) {
-    //     entity_fixtures(&pool).await;
-
-    //     let query = "
-    //     {
-    //         entities (keys: [\"%%\"], componentName:\"Moves\") {
-    //             keys
-    //             componentNames
-    //         }
-    //     }
-    //     ";
-    //     let value = run_graphql_query(&pool, query).await;
-
-    //     let entities = value.get("entities").ok_or("entities not found").unwrap();
-    //     let entities: Vec<Entity> = serde_json::from_value(entities.clone()).unwrap();
-    //     assert_eq!(entities[0].keys.clone().unwrap(), "0x1,");
-    //     assert_eq!(entities[1].keys.clone().unwrap(), "0x3,");
-    // }
 }
