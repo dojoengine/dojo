@@ -2094,10 +2094,10 @@ stack-utils@^2.0.3:
   dependencies:
     escape-string-regexp "^2.0.0"
 
-starknet@5.12.0:
-  version "5.12.0"
-  resolved "https://registry.yarnpkg.com/starknet/-/starknet-5.12.0.tgz#cc23d1f02053cd926226083ca11907af4699df8e"
-  integrity sha512-GKx+RdwOfk9rK/lJMQhQmjbc5BIhzX1kOA3HX21uRuu6UXovgWpTOgUzZXKGyRDA9SS4lAsMoLK99ARpC0bUww==
+starknet@^5.14.1:
+  version "5.14.1"
+  resolved "https://registry.yarnpkg.com/starknet/-/starknet-5.14.1.tgz#97fa5f99c4c24e42ffa315cfda525461d09d6087"
+  integrity sha512-EtJwQ6RmFsqSLGuMP+PRp4DwNsMYXy63HDnd1plLCdQKl3FMYajqNKf5RbDl03uGU0uE5ctGp+OW3firHuv6IA==
   dependencies:
     "@noble/curves" "~1.0.0"
     isomorphic-fetch "^3.0.0"

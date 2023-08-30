@@ -41,6 +41,11 @@ Dojo offers a comprehensive suite of onchain game development tools, harnessing 
 
 See the [installation guide](https://book.dojoengine.org/getting-started/quick-start.html) in the Dojo book.
 
+## 📚 Examples in 30s
+
+- [Dojo starter react](https://github.com/dojoengine/dojo-starter-react-app)
+- [Dojo starter phaser](https://github.com/dojoengine/dojo-starter-phaser)
+
 ## 🗒️ Documentation
 
 You can find more detailed documentation in the Dojo Book [here](https://book.dojoengine.org/).

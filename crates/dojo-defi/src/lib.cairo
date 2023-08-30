@@ -1,3 +1,4 @@
-mod constant_product_market;
+mod market;
 mod dutch_auction;
+mod tests;
 

@@ -1,9 +1,12 @@
-use async_graphql::dynamic::{Field, FieldFuture, InputValue, TypeRef};
+use async_graphql::dynamic::{
+    Field, FieldFuture, FieldValue, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
+};
 use async_graphql::{Name, Value};
-use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
-use serde::Deserialize;
-use sqlx::{FromRow, Pool, Sqlite};
+use sqlx::{Pool, Sqlite};
+use tokio_stream::StreamExt;
+use torii_core::simple_broker::SimpleBroker;
+use torii_core::types::Component;
 
 use super::connection::connection_output;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
@@ -11,23 +14,13 @@ use crate::constants::DEFAULT_LIMIT;
 use crate::query::{query_all, query_by_id, query_total_count, ID};
 use crate::types::ScalarType;
 
-#[derive(FromRow, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Component {
-    pub id: String,
-    pub name: String,
-    pub class_hash: String,
-    pub transaction_hash: String,
-    pub created_at: DateTime<Utc>,
-}
-
 pub struct ComponentObject {
     pub type_mapping: TypeMapping,
 }
 
-impl ComponentObject {
-    // Not used currently, eventually used for component metadata
-    pub fn _new() -> Self {
+impl Default for ComponentObject {
+    // Eventually used for component metadata
+    fn default() -> Self {
         Self {
             type_mapping: IndexMap::from([
                 (Name::new("id"), TypeRef::named(TypeRef::ID)),
@@ -38,7 +31,8 @@ impl ComponentObject {
             ]),
         }
     }
-
+}
+impl ComponentObject {
     pub fn value_mapping(component: Component) -> ValueMapping {
         IndexMap::from([
             (Name::new("id"), Value::from(component.id)),
@@ -99,5 +93,22 @@ impl ObjectTrait for ComponentObject {
                 })
             },
         ))
+    }
+
+    fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
+        let name = format!("{}Registered", self.name());
+        Some(vec![SubscriptionField::new(name, TypeRef::named_nn(self.type_name()), |_| {
+            {
+                SubscriptionFieldFuture::new(async {
+                    Result::Ok(SimpleBroker::<Component>::subscribe().map(
+                        |component: Component| {
+                            Result::Ok(FieldValue::owned_any(ComponentObject::value_mapping(
+                                component,
+                            )))
+                        },
+                    ))
+                })
+            }
+        })])
     }
 }

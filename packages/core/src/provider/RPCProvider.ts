@@ -4,9 +4,18 @@ import { Query, WorldEntryPoints } from "../types";
 import { strTofelt252Felt } from '../utils'
 import { LOCAL_KATANA } from '../constants';
 
+/**
+ * RPCProvider class: Extends the generic Provider to handle RPC interactions.
+ */
 export class RPCProvider extends Provider {
     public provider: RpcProvider;
 
+    /**
+     * Constructor: Initializes the RPCProvider with the given world address and URL.
+     * 
+     * @param {string} world_address - Address of the world.
+     * @param {string} [url=LOCAL_KATANA] - RPC URL (defaults to LOCAL_KATANA).
+     */
     constructor(world_address: string, url: string = LOCAL_KATANA) {
         super(world_address);
         this.provider = new RpcProvider({
@@ -14,10 +23,18 @@ export class RPCProvider extends Provider {
         });
     }
 
+    /**
+     * Retrieves a single entity's details.
+     * 
+     * @param {string} component - The component to query.
+     * @param {Query} query - The query details.
+     * @param {number} [offset=0] - Starting offset (defaults to 0).
+     * @param {number} [length=0] - Length to retrieve (defaults to 0).
+     * @returns {Promise<Array<bigint>>} - A promise that resolves to an array of bigints representing the entity's details.
+     */
     public async entity(component: string, query: Query, offset: number = 0, length: number = 0): Promise<Array<bigint>> {
-
         const call: Call = {
-            entrypoint: WorldEntryPoints.get, // "entity"
+            entrypoint: WorldEntryPoints.get,
             contractAddress: this.getWorldAddress(),
             calldata: [
                 strTofelt252Felt(component),
@@ -31,15 +48,20 @@ export class RPCProvider extends Provider {
 
         try {
             const response = await this.provider.callContract(call);
-
             return response.result as unknown as Array<bigint>;
         } catch (error) {
             throw error;
         }
     }
 
+    /**
+     * Retrieves multiple entities' details.
+     * 
+     * @param {string} component - The component to query.
+     * @param {number} length - Number of entities to retrieve.
+     * @returns {Promise<Array<bigint>>} - A promise that resolves to an array of bigints representing the entities' details.
+     */
     public async entities(component: string, length: number): Promise<Array<bigint>> {
-
         const call: Call = {
             entrypoint: WorldEntryPoints.entities,
             contractAddress: this.getWorldAddress(),
@@ -48,15 +70,19 @@ export class RPCProvider extends Provider {
 
         try {
             const response = await this.provider.callContract(call);
-
             return response.result as unknown as Array<bigint>;
         } catch (error) {
             throw error;
         }
     }
 
+    /**
+     * Retrieves a component's details.
+     * 
+     * @param {string} name - Name of the component.
+     * @returns {Promise<bigint>} - A promise that resolves to a bigint representing the component's details.
+     */
     public async component(name: string): Promise<bigint> {
-
         const call: Call = {
             entrypoint: WorldEntryPoints.component,
             contractAddress: this.getWorldAddress(),
@@ -65,15 +91,21 @@ export class RPCProvider extends Provider {
 
         try {
             const response = await this.provider.callContract(call);
-
             return response.result as unknown as bigint;
         } catch (error) {
             throw error;
         }
     }
 
+    /**
+     * Executes a function with the given parameters.
+     * 
+     * @param {Account} account - The account to use.
+     * @param {string} system - The system name to execute.
+     * @param {num.BigNumberish[]} call_data - The call data for the function.
+     * @returns {Promise<InvokeFunctionResponse>} - A promise that resolves to the response of the function execution.
+     */
     public async execute(account: Account, system: string, call_data: num.BigNumberish[]): Promise<InvokeFunctionResponse> {
-
         try {
             const nonce = await account?.getNonce()
             const call = await account?.execute(
@@ -85,7 +117,7 @@ export class RPCProvider extends Provider {
                 undefined,
                 {
                     nonce,
-                    maxFee: 0 // TODO: Update
+                    maxFee: 0 // TODO: Update this value as needed.
                 }
             );
             return call;
