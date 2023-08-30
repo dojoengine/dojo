@@ -1,8 +1,6 @@
 # Dojo ECS Example
 
-This repo contains a simple example of using the Dojo ECS system. It defines a
-simple game where a player has a limited set of moves and can move their
-position through executing the move system.
+This repo contains a simple example of using the Dojo ECS system. It defines a simple game where a player has a limited set of moves and can move their position through executing the move system.
 
 ## Getting started
 
