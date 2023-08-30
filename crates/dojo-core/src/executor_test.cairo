@@ -44,9 +44,7 @@ fn test_executor() {
     system_calldata.append(53);
 
     let ctx = Context {
-        world: IWorldDispatcher {
-            contract_address: starknet::contract_address_const::<0x1337>()
-        },
+        world: IWorldDispatcher { contract_address: starknet::contract_address_const::<0x1337>() },
         origin: starknet::contract_address_const::<0x1337>(),
         system: 'Bar',
         system_class_hash: Bar::TEST_CLASS_HASH.try_into().unwrap(),
@@ -78,9 +76,7 @@ fn test_executor_bad_caller() {
     system_calldata.append(53);
 
     let ctx = Context {
-        world: IWorldDispatcher {
-            contract_address: starknet::contract_address_const::<0x1337>()
-        },
+        world: IWorldDispatcher { contract_address: starknet::contract_address_const::<0x1337>() },
         origin: starknet::contract_address_const::<0x1337>(),
         system: 'Bar',
         system_class_hash: Bar::TEST_CLASS_HASH.try_into().unwrap(),

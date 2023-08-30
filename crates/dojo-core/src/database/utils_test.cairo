@@ -99,7 +99,7 @@ fn test_find_matching() {
 
 #[test]
 #[available_gas(1000000000)]
-#[should_panic(expected: ('lengths dont match', ))]
+#[should_panic(expected: ('lengths dont match',))]
 fn test_find_matching_wrong_arg_len() {
     let mut ids1: Array<felt252> = ArrayTrait::new();
     let mut ids2: Array<felt252> = ArrayTrait::new();

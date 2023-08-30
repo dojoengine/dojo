@@ -538,7 +538,6 @@ mod world {
         /// # Arguments
         ///
         /// * `new_class_hash` - The new implementation class hahs.
-
         fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
             assert(self.is_owner(get_caller_address(), WORLD), 'only world owner can upgrade');
             UpgradeableTrait::upgrade(new_class_hash);

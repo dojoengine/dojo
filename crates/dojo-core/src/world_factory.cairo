@@ -147,9 +147,8 @@ mod world_factory {
         if (index == components_len) {
             return ();
         }
-        IWorldDispatcher {
-            contract_address: world_address
-        }.register_component(*components.at(index));
+        IWorldDispatcher { contract_address: world_address }
+            .register_component(*components.at(index));
         return register_components(self, components, components_len, index + 1, world_address);
     }
 
