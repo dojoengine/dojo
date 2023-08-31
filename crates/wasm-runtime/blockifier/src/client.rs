@@ -23,6 +23,7 @@ pub enum ClientErr {
     UndeclaredClassHash(ClassHash),
     DuplicateContract(ContractAddress),
     DuplicateClassHash(ClassHash),
+    Msg(String),
 }
 
 impl Default for Client {
@@ -35,15 +36,15 @@ impl Client {
     pub fn new() -> Client {
         let state = ClientState::default();
 
-        let mut client = Client { cache: CachedState::new(state), block_ctx: block_context() };
+        let mut client = Client { cache: CachedState::from(state), block_ctx: block_context() };
 
         let account_json = include_bytes!("../contracts/account_without_validation.json");
         let account_json = String::from_utf8_lossy(account_json);
         let erc20_json = include_bytes!("../contracts/erc20.json");
         let erc20_json = String::from_utf8_lossy(erc20_json);
 
-        client.register_class(FEE_TKN_ADDR, &erc20_json).unwrap();
-        client.register_class(ACCOUNT_ADDR, &account_json).unwrap();
+        client.register_class_v0(FEE_TKN_ADDR, &erc20_json).unwrap();
+        client.register_class_v0(ACCOUNT_ADDR, &account_json).unwrap();
 
         let fees_contract_storage = HashMap::from([
             (addr::storage("ERC20_balances", &[ACCOUNT_ADDR]), "200000000000000"),
@@ -79,8 +80,11 @@ impl Client {
         if self.classes().get(&hash).is_some() {
             return Err(ClientErr::DuplicateClassHash(hash));
         }
-        self.classes()
-            .insert(hash, ContractClass::V1(ContractClassV1::try_from_json_string(json).unwrap()));
+        let contract_class = ContractClassV1::try_from_json_string(json);
+        if contract_class.is_err() {
+            return Err(ClientErr::Msg(format!("{:?}", contract_class)));
+        }
+        self.classes().insert(hash, ContractClass::V1(contract_class.unwrap()));
 
         Ok(())
     }
@@ -90,8 +94,11 @@ impl Client {
         if self.classes().get(&hash).is_some() {
             return Err(ClientErr::DuplicateClassHash(hash));
         }
-        self.classes()
-            .insert(hash, ContractClass::V0(ContractClassV0::try_from_json_string(json).unwrap()));
+        let contract_class = ContractClassV0::try_from_json_string(json);
+        if contract_class.is_err() {
+            return Err(ClientErr::Msg("Couldn't parse JSON as ContractClassV0.".into()));
+        }
+        self.classes().insert(hash, ContractClass::V0(contract_class.unwrap()));
 
         Ok(())
     }
@@ -125,7 +132,7 @@ impl Client {
         &mut self,
         tx: AccountTransaction,
     ) -> Result<TransactionExecutionInfo, TransactionExecutionError> {
-        tx.execute(&mut self.cache, &self.block_ctx)
+        tx.execute(&mut self.cache, &self.block_ctx, false, false)
     }
 
     pub fn update_storage(_storage: HashMap<ContractAddress, HashMap<StorageKey, StarkFelt>>) {

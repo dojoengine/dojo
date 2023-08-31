@@ -9,9 +9,8 @@ pub use starknet_api::api_core::{ChainId, ClassHash, ContractAddress, Nonce, Pat
 pub use starknet_api::block::{BlockNumber, BlockTimestamp};
 pub use starknet_api::hash::{StarkFelt, StarkHash};
 pub use starknet_api::state::StorageKey;
-pub use starknet_api::transaction::{
-    Calldata, Fee, InvokeTransaction, InvokeTransactionV1, TransactionSignature,
-};
+use starknet_api::transaction::TransactionHash;
+pub use starknet_api::transaction::{Calldata, Fee, InvokeTransactionV1, TransactionSignature};
 pub mod cairo_vm_const {
     pub const OUTPUT_BUILTIN_NAME: &str = "output_builtin";
     pub const HASH_BUILTIN_NAME: &str = "pedersen_builtin";
@@ -82,14 +81,17 @@ pub fn invoke_tx(
     signature: Option<TransactionSignature>,
     nonce: &str,
 ) -> AccountTransaction {
-    AccountTransaction::Invoke(InvokeTransaction::V1(InvokeTransactionV1 {
-        max_fee: Fee(MAX_FEE),
-        sender_address: addr::contract(sender_address),
-        calldata,
-        signature: signature.unwrap_or_default(),
-        nonce: Nonce(addr::felt(nonce)),
-        ..Default::default()
-    }))
+    AccountTransaction::Invoke(blockifier::transaction::transactions::InvokeTransaction {
+        tx: starknet_api::transaction::InvokeTransaction::V1(InvokeTransactionV1 {
+            max_fee: Fee(MAX_FEE),
+            sender_address: addr::contract(sender_address),
+            calldata,
+            signature: signature.unwrap_or_default(),
+            nonce: Nonce(addr::felt(nonce)),
+            ..Default::default()
+        }),
+        tx_hash: TransactionHash::default(),
+    })
 }
 
 pub fn block_context() -> BlockContext {
@@ -102,7 +104,8 @@ pub fn block_context() -> BlockContext {
         (POSEIDON_BUILTIN_NAME.to_string(), 1_f64),
         (OUTPUT_BUILTIN_NAME.to_string(), 1_f64),
         (EC_OP_BUILTIN_NAME.to_string(), 1_f64),
-    ]);
+    ])
+    .into();
 
     BlockContext {
         chain_id: ChainId("DOJO_CLIENT".to_string()),
@@ -114,5 +117,6 @@ pub fn block_context() -> BlockContext {
         gas_price: DEFAULT_GAS_PRICE,
         invoke_tx_max_n_steps: CAIRO_STEPS,
         validate_max_n_steps: CAIRO_STEPS,
+        max_recursion_depth: 100,
     }
 }

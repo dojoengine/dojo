@@ -6,9 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# blockifier.workspace = true
-# starknet_api.workspace = true
-blockifier = { git = "https://github.com/keep-starknet-strange/blockifier", branch = "no_std-support", default-features = false, features = [
-  "parity-scale-codec",
-] }
-starknet_api = { git = "https://github.com/keep-starknet-strange/starknet-api", branch = "no_std-support", default-features = false }
+# The latest commit on the branch is broken
+# blockifier = { git = "https://github.com/keep-starknet-strange/blockifier", branch = "no_std-support-7578442", default-features = false }
+# Same branch but an earlier commit
+blockifier = { git = "https://github.com/keep-starknet-strange/blockifier", default-features = false, rev = "1042c076ce2b669cad9a20aad2e727b3a94713ac" }
+starknet_api = { git = "https://github.com/keep-starknet-strange/starknet-api", branch = "no_std-support-dc83f05", default-features = false }
