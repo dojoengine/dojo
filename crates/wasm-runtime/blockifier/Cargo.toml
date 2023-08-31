@@ -8,15 +8,15 @@ edition = "2021"
 [dependencies]
 # The latest commit on the branch no_std-support-7578442 is broken
 # Same branch but an older commit
-# blockifier = { git = "https://github.com/keep-starknet-strange/blockifier", default-features = false, rev = "1042c076ce2b669cad9a20aad2e727b3a94713ac" }
+blockifier = { git = "https://github.com/keep-starknet-strange/blockifier", default-features = false, rev = "1042c076ce2b669cad9a20aad2e727b3a94713ac" }
 
 # # For Sierra class struct
-# starknet_api = { git = "https://github.com/keep-starknet-strange/starknet-api", branch = "no_std-support-dc83f05", default-features = false }
+starknet_api = { git = "https://github.com/keep-starknet-strange/starknet-api", branch = "no_std-support-dc83f05", default-features = false }
 
 # # For compiling to Casm
 cairo-lang-starknet = { git = "https://github.com/keep-starknet-strange/cairo.git", branch = "no_std-support-8bbf530", default-features = false }
 
 starknet-core = { version = "0.5.0" }
 
-# serde = { version = "1.0.160", features = ["derive"], default-features = false }
-# serde_json = { version = "1.0.96", features = [ "alloc", "raw_value" ], default-features = false }
+serde = { version = "1.0.160", features = ["derive"], default-features = false }
+serde_json = { version = "1.0.96", features = [ "alloc", "raw_value" ], default-features = false }
