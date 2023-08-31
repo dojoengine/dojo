@@ -1,14 +1,16 @@
-import { RpcProvider, Account, num, Call, InvokeFunctionResponse } from "starknet";
+import { RpcProvider, Account, num, Call, InvokeFunctionResponse, Contract, Result } from "starknet";
 import { Provider } from "./provider";
 import { Query, WorldEntryPoints } from "../types";
 import { strTofelt252Felt } from '../utils'
 import { LOCAL_KATANA } from '../constants';
+import abi from '../constants/abi.json';
 
 /**
  * RPCProvider class: Extends the generic Provider to handle RPC interactions.
  */
 export class RPCProvider extends Provider {
     public provider: RpcProvider;
+    public contract: Contract
 
     /**
      * Constructor: Initializes the RPCProvider with the given world address and URL.
@@ -21,6 +23,7 @@ export class RPCProvider extends Provider {
         this.provider = new RpcProvider({
             nodeUrl: url,
         });
+        this.contract = new Contract(abi, this.getWorldAddress(), this.provider);
     }
 
     /**
@@ -121,6 +124,28 @@ export class RPCProvider extends Provider {
                 }
             );
             return call;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Calls a function with the given parameters.
+     * 
+     * @param {string} selector - The selector of the function.
+     * @param {num.BigNumberish[]} call_data - The call data for the function.
+     * @returns {Promise<CallContractResponse>} - A promise that resolves to the response of the function call.
+     * @throws {Error} - Throws an error if the call fails.
+     * 
+     * @example
+     * const response = await provider.call("position", [1, 2, 3]);
+     * console.log(response.result);
+     * // => 6
+     * 
+     */
+    public async call(selector: string, call_data: num.BigNumberish[]): Promise<Result> {
+        try {
+            return await this.contract.call('execute', [strTofelt252Felt(selector), call_data]);
         } catch (error) {
             throw error;
         }
