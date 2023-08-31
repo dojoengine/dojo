@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod transactions {
+    use std::path::PathBuf;
 
     use blockifier::state::state_api::StateReader;
 
@@ -38,5 +39,14 @@ mod transactions {
         //     assert!(!exec_info.is_reverted(), "Transaction reverted");
         //     assert!(exec_info.execute_call_info.is_some(), "No execution call info");
         // }
+    }
+
+    #[test]
+    fn deploy_world() {
+        let _ = PathBuf::from("../contracts/dojo-world-test.json");
+        let mut client = Client::new();
+        let account_json = include_bytes!("../contracts/dojo-world-test.json");
+        let account_json = String::from_utf8_lossy(account_json);
+        client.register_class("0x3071d", &account_json).unwrap();
     }
 }

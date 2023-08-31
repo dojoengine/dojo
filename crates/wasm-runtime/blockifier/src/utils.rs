@@ -1,5 +1,6 @@
 pub use blockifier::abi::abi_utils::{get_storage_var_address, selector_from_name};
 use blockifier::block_context::BlockContext;
+use blockifier::execution::contract_class::ContractClass;
 pub use blockifier::stdlib::collections::HashMap;
 pub use blockifier::transaction::account_transaction::AccountTransaction;
 pub use blockifier::transaction::errors::TransactionExecutionError;
@@ -73,6 +74,32 @@ pub fn invoke_calldata(contract: &str, entry_point: &str, calldata: Vec<&str>) -
     }
 
     Calldata(calldata_with_callee.into())
+}
+
+pub fn compile_sierra_class(json: &str) -> Result<ContractClass, String> {
+    Err(format!("{}", json.len()))
+    // let class_hash = contract_class.class_hash();
+
+    // let value = serde_json::to_value(json).unwrap();
+
+    // let contract_class = cairo_lang_starknet::contract_class::ContractClass {
+    //     abi: serde_json::from_value(value["abi"].clone()).ok(),
+    //     sierra_program: serde_json::from_value(value["sierra_program"].clone()).unwrap(),
+    //     entry_points_by_type: serde_json::from_value(value["entry_points_by_type"].clone())
+    //         .unwrap(),
+    //     contract_class_version:
+    // serde_json::from_value(value["contract_class_version"].clone())
+    //         .unwrap(),
+    //     sierra_program_debug_info: serde_json::from_value(
+    //         value["sierra_program_debug_info"].clone(),
+    //     )
+    //     .ok(),
+    // };
+
+    // match contract_class.into_casm_contract_class(false) {
+    //     Ok(casm_class) => Ok(ContractClass::V1(casm_class.try_into()?)),
+    //     Err(e) => Err(ClientErr::Msg(&format("{:#?}", casm_class))),
+    // }
 }
 
 pub fn invoke_tx(

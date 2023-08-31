@@ -8,8 +8,8 @@ use starknet_api::hash::StarkFelt;
 use starknet_api::state::StorageKey;
 
 use crate::utils::{
-    addr, block_context, HashMap, TransactionExecutionError, TransactionExecutionInfo,
-    ACCOUNT_ADDR, FEE_TKN_ADDR,
+    addr, block_context, compile_sierra_class, HashMap, TransactionExecutionError,
+    TransactionExecutionInfo, ACCOUNT_ADDR, FEE_TKN_ADDR,
 };
 use crate::ClientState;
 
@@ -75,6 +75,17 @@ impl Client {
         &mut self.cache.state.contracts
     }
 
+    pub fn register_sierra_class(&mut self, hash: &str, json: &str) -> Result<(), ClientErr> {
+        match compile_sierra_class(json) {
+            Ok(sierra_class) => {
+                let hash = addr::class(hash);
+                self.classes().insert(hash, sierra_class);
+                Ok(())
+            }
+            Err(r) => Err(ClientErr::Msg(format!("{:?}", r))),
+        }
+    }
+
     pub fn register_class(&mut self, hash: &str, json: &str) -> Result<(), ClientErr> {
         let hash = addr::class(hash);
         if self.classes().get(&hash).is_some() {
@@ -84,8 +95,8 @@ impl Client {
         if contract_class.is_err() {
             return Err(ClientErr::Msg(format!("{:?}", contract_class)));
         }
+        // FlattenedSierraClass;
         self.classes().insert(hash, ContractClass::V1(contract_class.unwrap()));
-
         Ok(())
     }
 
