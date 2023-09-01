@@ -1,6 +1,6 @@
 use camino::Utf8PathBuf;
 use dojo_test_utils::sequencer::{
-    get_default_test_starknet_config, SequencerConfig, TestSequencer,
+    get_default_test_starknet_config, SequencerConfig, StarknetConfig, TestSequencer,
 };
 use dojo_world::manifest::Manifest;
 use dojo_world::migration::strategy::prepare_for_migration;
@@ -14,6 +14,7 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet::signers::{LocalWallet, SigningKey};
 
+use crate::commands::options::transaction::TransactionOptions;
 use crate::ops::migration::execute_strategy;
 
 #[tokio::test]
@@ -47,7 +48,7 @@ async fn migrate_with_auto_mine() {
         world,
     )
     .unwrap();
-    execute_strategy(&migration, &account, &config).await.unwrap();
+    execute_strategy(&migration, &account, &config, None).await.unwrap();
 
     sequencer.stop().unwrap();
 }
@@ -86,7 +87,56 @@ async fn migrate_with_block_time() {
         world,
     )
     .unwrap();
-    execute_strategy(&migration, &account, &config).await.unwrap();
+    execute_strategy(&migration, &account, &config, None).await.unwrap();
+
+    sequencer.stop().unwrap();
+}
+
+#[tokio::test]
+async fn migrate_with_zero_fee_multiplier_will_fail() {
+    let target_dir = Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap();
+
+    let sequencer = TestSequencer::start(
+        SequencerConfig { block_time: Some(1) },
+        StarknetConfig { disable_fee: false, ..Default::default() },
+    )
+    .await;
+
+    let account = SingleOwnerAccount::new(
+        JsonRpcClient::new(HttpTransport::new(sequencer.url())),
+        LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
+            sequencer.raw_account().private_key,
+        )),
+        sequencer.raw_account().account_address,
+        chain_id::TESTNET,
+    );
+
+    let config = Config::builder(Utf8PathBuf::from_path_buf("../../examples/ecs/".into()).unwrap())
+        .ui_verbosity(Verbosity::Quiet)
+        .build()
+        .unwrap();
+
+    let manifest = Manifest::load_from_path(target_dir.join("manifest.json")).unwrap();
+    let world = WorldDiff::compute(manifest, None);
+
+    let migration = prepare_for_migration(
+        None,
+        Some(FieldElement::from_hex_be("0x12345").unwrap()),
+        target_dir,
+        world,
+    )
+    .unwrap();
+
+    assert!(
+        execute_strategy(
+            &migration,
+            &account,
+            &config,
+            Some(TransactionOptions { fee_estimate_multiplier: Some(0f64) }),
+        )
+        .await
+        .is_err()
+    );
 
     sequencer.stop().unwrap();
 }
@@ -133,7 +183,7 @@ async fn migration_from_remote() {
     )
     .unwrap();
 
-    execute_strategy(&migration, &account, &config).await.unwrap();
+    execute_strategy(&migration, &account, &config, None).await.unwrap();
 
     let local_manifest = Manifest::load_from_path(target_dir.join("manifest.json")).unwrap();
     let remote_manifest = Manifest::from_remote(
