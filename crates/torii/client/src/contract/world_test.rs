@@ -47,21 +47,26 @@ pub async fn deploy_world(
     let executor_address = strategy
         .executor
         .unwrap()
-        .deploy(manifest.clone().executor.class_hash, vec![], &account)
+        .deploy(manifest.clone().executor.class_hash, vec![], &account, Default::default())
         .await
         .unwrap()
         .contract_address;
     let world_address = strategy
         .world
         .unwrap()
-        .deploy(manifest.clone().world.class_hash, vec![executor_address], &account)
+        .deploy(
+            manifest.clone().world.class_hash,
+            vec![executor_address],
+            &account,
+            Default::default(),
+        )
         .await
         .unwrap()
         .contract_address;
 
     let mut declare_output = vec![];
     for component in strategy.components {
-        let res = component.declare(&account).await.unwrap();
+        let res = component.declare(&account, Default::default()).await.unwrap();
         declare_output.push(res);
     }
 
@@ -72,7 +77,7 @@ pub async fn deploy_world(
 
     let mut declare_output = vec![];
     for system in strategy.systems {
-        let res = system.declare(&account).await.unwrap();
+        let res = system.declare(&account, Default::default()).await.unwrap();
         declare_output.push(res);
     }
 

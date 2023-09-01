@@ -76,12 +76,21 @@ pub trait StateDiff {
     fn is_same(&self) -> bool;
 }
 
+/// The transaction configuration to use when sending a transaction.
+#[derive(Debug, Copy, Clone, Default)]
+pub struct TxConfig {
+    /// The multiplier for how much the actual transaction max fee should be relative to the
+    /// estimated fee. If `None` is provided, the multiplier is set to `1.1`.
+    pub fee_estimate_multiplier: Option<f64>,
+}
+
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait Declarable {
     async fn declare<P, S>(
         &self,
         account: &SingleOwnerAccount<P, S>,
+        txn_config: TxConfig,
     ) -> Result<
         DeclareOutput,
         MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError, <P as Provider>::Error>,
@@ -107,13 +116,18 @@ pub trait Declarable {
             Err(e) => return Err(MigrationError::Provider(e)),
         }
 
-        let DeclareTransactionResult { transaction_hash, class_hash } = account
-            .declare(Arc::new(flattened_class), casm_class_hash)
-            .send()
-            .await
-            .map_err(MigrationError::Migrator)?;
+        let mut txn = account.declare(Arc::new(flattened_class), casm_class_hash);
 
-        let _ = TransactionWaiter::new(transaction_hash, account.provider()).await.unwrap();
+        if let TxConfig { fee_estimate_multiplier: Some(multiplier) } = txn_config {
+            txn = txn.fee_estimate_multiplier(multiplier);
+        }
+
+        let DeclareTransactionResult { transaction_hash, class_hash } =
+            txn.send().await.map_err(MigrationError::Migrator)?;
+
+        TransactionWaiter::new(transaction_hash, account.provider())
+            .await
+            .map_err(MigrationError::WaitingError)?;
 
         return Ok(DeclareOutput { transaction_hash, class_hash });
     }
@@ -129,6 +143,7 @@ pub trait Deployable: Declarable + Sync {
         class_hash: FieldElement,
         constructor_calldata: Vec<FieldElement>,
         account: &SingleOwnerAccount<P, S>,
+        txn_config: TxConfig,
     ) -> Result<
         DeployOutput,
         MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError, <P as Provider>::Error>,
@@ -137,7 +152,7 @@ pub trait Deployable: Declarable + Sync {
         P: Provider + Sync + Send,
         S: Signer + Sync + Send,
     {
-        let declare = match self.declare(account).await {
+        let declare = match self.declare(account, txn_config).await {
             Ok(res) => Some(res),
 
             Err(MigrationError::ClassAlreadyDeclared) => None,
@@ -176,19 +191,22 @@ pub trait Deployable: Declarable + Sync {
             Err(e) => return Err(MigrationError::Provider(e)),
         }
 
-        let InvokeTransactionResult { transaction_hash } = account
-            .execute(vec![Call {
-                calldata,
-                // devnet UDC address
-                to: FieldElement::from_hex_be(
-                    "0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf",
-                )
-                .unwrap(),
-                selector: get_selector_from_name("deployContract").unwrap(),
-            }])
-            .send()
-            .await
-            .map_err(MigrationError::Migrator)?;
+        let mut txn = account.execute(vec![Call {
+            calldata,
+            // devnet UDC address
+            to: FieldElement::from_hex_be(
+                "0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf",
+            )
+            .unwrap(),
+            selector: get_selector_from_name("deployContract").unwrap(),
+        }]);
+
+        if let TxConfig { fee_estimate_multiplier: Some(multiplier) } = txn_config {
+            txn = txn.fee_estimate_multiplier(multiplier);
+        }
+
+        let InvokeTransactionResult { transaction_hash } =
+            txn.send().await.map_err(MigrationError::Migrator)?;
 
         let txn = TransactionWaiter::new(transaction_hash, account.provider())
             .await
