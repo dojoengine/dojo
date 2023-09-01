@@ -28,8 +28,8 @@ where
     S: Sequencer + Send + Sync + 'static,
 {
     async fn generate_block(&self) -> Result<(), Error> {
-        self.sequencer.backend().mine_block().await;
-        self.sequencer.backend().open_pending_block().await;
+        // self.sequencer.backend().mine_block().await;
+        // self.sequencer.backend().open_pending_block().await;
         Ok(())
     }
 
@@ -39,7 +39,6 @@ where
 
     async fn set_next_block_timestamp(&self, timestamp: u64) -> Result<(), Error> {
         self.sequencer
-            .backend()
             .set_next_block_timestamp(timestamp)
             .await
             .map_err(|_| Error::from(KatanaApiError::FailedToChangeNextBlockTimestamp))
@@ -47,7 +46,6 @@ where
 
     async fn increase_next_block_timestamp(&self, timestamp: u64) -> Result<(), Error> {
         self.sequencer
-            .backend()
             .increase_next_block_timestamp(timestamp)
             .await
             .map_err(|_| Error::from(KatanaApiError::FailedToChangeNextBlockTimestamp))
@@ -64,7 +62,6 @@ where
         value: FieldElement,
     ) -> Result<(), Error> {
         self.sequencer
-            .backend()
             .set_storage_at(
                 ContractAddress(patricia_key!(contract_address)),
                 StorageKey(patricia_key!(key)),

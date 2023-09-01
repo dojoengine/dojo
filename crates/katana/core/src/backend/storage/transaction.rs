@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use blockifier::execution::contract_class::ContractClass;
 use blockifier::transaction::account_transaction::AccountTransaction;
+use blockifier::transaction::transaction_execution::Transaction as ExecutionTransaction;
 use blockifier::transaction::transactions::{
     DeclareTransaction as ExecutionDeclareTransaction,
     DeployAccountTransaction as ExecutionDeployAccountTransaction,
@@ -22,7 +23,7 @@ use starknet_api::transaction::{
     InvokeTransaction as ApiInvokeTransaction, Transaction as ApiTransaction,
 };
 
-use crate::backend::executor::ExecutedTransaction;
+use crate::execution::ExecutedTransaction;
 use crate::utils::transaction::api_to_rpc_transaction;
 
 /// The status of the transactions known to the sequencer.
@@ -45,7 +46,7 @@ pub enum TransactionStatus {
 pub enum KnownTransaction {
     Pending(PendingTransaction),
     Included(IncludedTransaction),
-    Rejected(Box<RejectedTransaction>),
+    Rejected(Arc<RejectedTransaction>),
 }
 
 impl KnownTransaction {
@@ -79,7 +80,7 @@ pub struct IncludedTransaction {
 /// transaction that didn't pass the validation logic.
 #[derive(Debug, Clone)]
 pub struct RejectedTransaction {
-    pub transaction: ApiTransaction,
+    pub inner: Transaction,
     pub execution_error: String,
 }
 
@@ -231,7 +232,7 @@ impl From<IncludedTransaction> for KnownTransaction {
 
 impl From<RejectedTransaction> for KnownTransaction {
     fn from(transaction: RejectedTransaction) -> Self {
-        KnownTransaction::Rejected(Box::new(transaction))
+        KnownTransaction::Rejected(Arc::new(transaction))
     }
 }
 
@@ -239,7 +240,7 @@ impl From<KnownTransaction> for RpcTransaction {
     fn from(transaction: KnownTransaction) -> Self {
         match transaction {
             KnownTransaction::Pending(tx) => api_to_rpc_transaction(tx.0.inner.clone().into()),
-            KnownTransaction::Rejected(tx) => api_to_rpc_transaction(tx.transaction),
+            KnownTransaction::Rejected(tx) => api_to_rpc_transaction(tx.inner.clone().into()),
             KnownTransaction::Included(tx) => {
                 api_to_rpc_transaction(tx.transaction.inner.clone().into())
             }
@@ -272,5 +273,11 @@ impl From<Transaction> for AccountTransaction {
                 })
             }
         }
+    }
+}
+
+impl From<Transaction> for ExecutionTransaction {
+    fn from(value: Transaction) -> Self {
+        ExecutionTransaction::AccountTransaction(value.into())
     }
 }

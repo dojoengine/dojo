@@ -17,7 +17,7 @@ use starknet::signers::{LocalWallet, SigningKey};
 use crate::commands::options::transaction::TransactionOptions;
 use crate::ops::migration::execute_strategy;
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn migrate_with_auto_mine() {
     let target_dir = Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap();
 
@@ -53,7 +53,7 @@ async fn migrate_with_auto_mine() {
     sequencer.stop().unwrap();
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn migrate_with_block_time() {
     let target_dir = Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap();
 

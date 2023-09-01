@@ -7,8 +7,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use blockifier::execution::contract_class::ContractClass;
-use blockifier::state::state_api::StateReader;
-use blockifier::transaction::account_transaction::AccountTransaction;
+use blockifier::state::state_api::{State, StateReader};
 use starknet::core::types::{
     BlockId, BlockTag, EmittedEvent, Event, EventsPage, FeeEstimate, FieldElement,
     MaybePendingTransactionReceipt, StateUpdate,
@@ -16,18 +15,21 @@ use starknet::core::types::{
 use starknet_api::core::{ChainId, ClassHash, ContractAddress, Nonce};
 use starknet_api::hash::StarkFelt;
 use starknet_api::state::StorageKey;
-use tokio::time;
 
 use crate::backend::config::StarknetConfig;
 use crate::backend::contract::StarknetContract;
-use crate::backend::state::{MemDb, StateExt};
-use crate::backend::storage::block::ExecutedBlock;
+use crate::backend::storage::block::{ExecutedBlock, PartialBlock, PartialHeader};
 use crate::backend::storage::transaction::{
     DeclareTransaction, DeployAccountTransaction, InvokeTransaction, KnownTransaction,
     PendingTransaction, Transaction, TransactionStatus,
 };
 use crate::backend::{Backend, ExternalFunctionCall};
+use crate::db::cached::CachedStateWrapper;
+use crate::db::{AsStateRefDb, StateExtRef, StateRefDb};
+use crate::execution::{MaybeInvalidExecutedTransaction, PendingBlockExecutor, PendingState};
+use crate::pool::TransactionPool;
 use crate::sequencer_error::SequencerError;
+use crate::service::{BlockProducer, NodeService, TransactionMiner};
 use crate::utils::event::{ContinuationToken, ContinuationTokenError};
 
 type SequencerResult<T> = Result<T, SequencerError>;
@@ -42,7 +44,7 @@ pub struct SequencerConfig {
 pub trait Sequencer {
     fn backend(&self) -> &Backend;
 
-    async fn state(&self, block_id: &BlockId) -> SequencerResult<MemDb>;
+    async fn state(&self, block_id: &BlockId) -> SequencerResult<StateRefDb>;
 
     async fn chain_id(&self) -> ChainId;
 
@@ -97,15 +99,15 @@ pub trait Sequencer {
         transaction: DeployAccountTransaction,
     ) -> (FieldElement, FieldElement);
 
-    async fn add_declare_transaction(&self, transaction: DeclareTransaction);
+    fn add_declare_transaction(&self, transaction: DeclareTransaction);
 
-    async fn add_invoke_transaction(&self, transaction: InvokeTransaction);
+    fn add_invoke_transaction(&self, transaction: InvokeTransaction);
 
     async fn estimate_fee(
         &self,
-        account_transaction: AccountTransaction,
+        transactions: Vec<Transaction>,
         block_id: BlockId,
-    ) -> SequencerResult<FeeEstimate>;
+    ) -> SequencerResult<Vec<FeeEstimate>>;
 
     async fn events(
         &self,
@@ -118,54 +120,55 @@ pub trait Sequencer {
     ) -> SequencerResult<EventsPage>;
 
     async fn state_update(&self, block_id: BlockId) -> SequencerResult<StateUpdate>;
+
+    async fn set_next_block_timestamp(&self, timestamp: u64) -> Result<(), SequencerError>;
+
+    async fn increase_next_block_timestamp(&self, timestamp: u64) -> Result<(), SequencerError>;
+
+    async fn has_pending_transactions(&self) -> bool;
+
+    async fn set_storage_at(
+        &self,
+        contract_address: ContractAddress,
+        storage_key: StorageKey,
+        value: StarkFelt,
+    ) -> Result<(), SequencerError>;
 }
 
 pub struct KatanaSequencer {
     pub config: SequencerConfig,
+    pub pool: Arc<TransactionPool>,
     pub backend: Arc<Backend>,
+
+    // pending state if the node is running in interval mode
+    pub pending_state: Option<Arc<PendingState>>,
 }
 
 impl KatanaSequencer {
-    pub fn new(config: SequencerConfig, starknet_config: StarknetConfig) -> Self {
-        Self { config, backend: Arc::new(Backend::new(starknet_config)) }
-    }
+    pub async fn new(config: SequencerConfig, starknet_config: StarknetConfig) -> Self {
+        let backend = Arc::new(Backend::new(starknet_config).await);
 
-    pub async fn start(&self) {
-        // self.starknet.generate_genesis_block().await;
+        let pool = Arc::new(TransactionPool::new());
+        let miner = TransactionMiner::new(pool.add_listener());
 
-        if let Some(block_time) = self.config.block_time {
-            let starknet = self.backend.clone();
-            tokio::spawn(async move {
-                loop {
-                    starknet.open_pending_block().await;
-                    time::sleep(time::Duration::from_secs(block_time)).await;
-                    starknet.mine_block().await;
-                }
-            });
+        let (block_producer, pending_state) = if let Some(block_time) = config.block_time {
+            let executor = PendingBlockExecutor::new(
+                CachedStateWrapper::new(backend.state.read().await.as_ref_db()),
+                Arc::clone(&backend.env),
+                false,
+            );
+
+            let state = executor.state();
+
+            (BlockProducer::interval(Arc::clone(&backend), executor, block_time), Some(state))
         } else {
-            self.backend.open_pending_block().await;
-        }
+            (BlockProducer::instant(Arc::clone(&backend)), None)
+        };
+
+        tokio::spawn(NodeService::new(Arc::clone(&pool), miner, block_producer));
+
+        Self { pool, config, backend, pending_state }
     }
-
-    // pub async fn drip_and_deploy_account(
-    //     &self,
-    //     transaction: DeployAccountTransaction,
-    //     balance: u64,
-    // ) -> SequencerResult<(TransactionHash, ContractAddress)> { let (transaction_hash,
-    //   contract_address) = self.add_deploy_account_transaction(transaction).await;
-
-    //     let deployed_account_balance_key =
-    //         get_storage_var_address("ERC20_balances", &[*contract_address.0.key()])
-    //             .map_err(SequencerError::StarknetApi)?;
-
-    //     self.starknet.pending_cached_state.write().await.set_storage_at(
-    //         self.starknet.block_context.read().fee_token_address,
-    //         deployed_account_balance_key,
-    //         stark_felt!(balance),
-    //     );
-
-    //     Ok((transaction_hash, contract_address))
-    // }
 
     pub(self) async fn verify_contract_exists(&self, contract_address: &ContractAddress) -> bool {
         self.backend
@@ -183,12 +186,16 @@ impl Sequencer for KatanaSequencer {
         &self.backend
     }
 
-    async fn state(&self, block_id: &BlockId) -> SequencerResult<MemDb> {
+    async fn state(&self, block_id: &BlockId) -> SequencerResult<StateRefDb> {
         match block_id {
-            BlockId::Tag(BlockTag::Latest) => Ok(self.backend.state.read().await.clone()),
+            BlockId::Tag(BlockTag::Latest) => Ok(self.backend.state.read().await.as_ref_db()),
 
             BlockId::Tag(BlockTag::Pending) => {
-                self.backend.pending_state().await.ok_or(SequencerError::StateNotFound(*block_id))
+                if let Some(state) = &self.pending_state {
+                    Ok(state.state.read().as_ref_db())
+                } else {
+                    Ok(self.backend.state.read().await.as_ref_db())
+                }
             }
 
             _ => {
@@ -214,33 +221,26 @@ impl Sequencer for KatanaSequencer {
         let transaction_hash = transaction.inner.transaction_hash.0.into();
         let contract_address = transaction.contract_address;
 
-        self.backend.handle_transaction(Transaction::DeployAccount(transaction)).await;
+        self.pool.add_transaction(Transaction::DeployAccount(transaction));
 
         (transaction_hash, contract_address)
     }
 
-    async fn add_declare_transaction(&self, transaction: DeclareTransaction) {
-        self.backend.handle_transaction(Transaction::Declare(transaction)).await;
+    fn add_declare_transaction(&self, transaction: DeclareTransaction) {
+        self.pool.add_transaction(Transaction::Declare(transaction))
     }
 
-    async fn add_invoke_transaction(&self, transaction: InvokeTransaction) {
-        self.backend.handle_transaction(Transaction::Invoke(transaction)).await;
+    fn add_invoke_transaction(&self, transaction: InvokeTransaction) {
+        self.pool.add_transaction(Transaction::Invoke(transaction))
     }
 
     async fn estimate_fee(
         &self,
-        account_transaction: AccountTransaction,
+        transactions: Vec<Transaction>,
         block_id: BlockId,
-    ) -> SequencerResult<FeeEstimate> {
-        if self.block(block_id).await.is_none() {
-            return Err(SequencerError::BlockNotFound(block_id));
-        }
-
+    ) -> SequencerResult<Vec<FeeEstimate>> {
         let state = self.state(&block_id).await?;
-
-        self.backend
-            .estimate_fee(account_transaction, state)
-            .map_err(SequencerError::TransactionExecution)
+        self.backend.estimate_fee(transactions, state).map_err(SequencerError::TransactionExecution)
     }
 
     async fn block_hash_and_number(&self) -> (FieldElement, u64) {
@@ -254,10 +254,6 @@ impl Sequencer for KatanaSequencer {
         block_id: BlockId,
         contract_address: ContractAddress,
     ) -> SequencerResult<ClassHash> {
-        if self.block(block_id).await.is_none() {
-            return Err(SequencerError::BlockNotFound(block_id));
-        }
-
         if !self.verify_contract_exists(&contract_address).await {
             return Err(SequencerError::ContractNotFound(contract_address));
         }
@@ -271,18 +267,17 @@ impl Sequencer for KatanaSequencer {
         block_id: BlockId,
         class_hash: ClassHash,
     ) -> SequencerResult<StarknetContract> {
-        if self.block(block_id).await.is_none() {
-            return Err(SequencerError::BlockNotFound(block_id));
-        }
-
         let mut state = self.state(&block_id).await?;
 
-        match state.get_compiled_contract_class(&class_hash).map_err(SequencerError::State)? {
-            ContractClass::V0(c) => Ok(StarknetContract::Legacy(c)),
-            ContractClass::V1(_) => state
+        if let ContractClass::V0(c) =
+            state.get_compiled_contract_class(&class_hash).map_err(SequencerError::State)?
+        {
+            Ok(StarknetContract::Legacy(c))
+        } else {
+            state
                 .get_sierra_class(&class_hash)
                 .map(StarknetContract::Sierra)
-                .map_err(SequencerError::State),
+                .map_err(SequencerError::State)
         }
     }
 
@@ -292,10 +287,6 @@ impl Sequencer for KatanaSequencer {
         storage_key: StorageKey,
         block_id: BlockId,
     ) -> SequencerResult<StarkFelt> {
-        if self.block(block_id).await.is_none() {
-            return Err(SequencerError::BlockNotFound(block_id));
-        }
-
         if !self.verify_contract_exists(&contract_address).await {
             return Err(SequencerError::ContractNotFound(contract_address));
         }
@@ -313,10 +304,49 @@ impl Sequencer for KatanaSequencer {
     }
 
     async fn block(&self, block_id: BlockId) -> Option<ExecutedBlock> {
-        match block_id {
-            BlockId::Tag(BlockTag::Pending) => {
-                self.backend.pending_block.read().await.as_ref().map(|b| b.as_block().into())
+        let block_id = match block_id {
+            BlockId::Tag(BlockTag::Pending) if self.pending_state.is_none() => {
+                BlockId::Tag(BlockTag::Latest)
             }
+            _ => block_id,
+        };
+
+        match block_id {
+            BlockId::Tag(BlockTag::Pending) => match &self.pending_state {
+                Some(state) => {
+                    let block_context = self.backend.env.read().block.clone();
+                    let latest_hash = self.backend.blockchain.storage.read().latest_hash;
+
+                    let header = PartialHeader {
+                        parent_hash: latest_hash,
+                        gas_price: block_context.gas_price,
+                        number: block_context.block_number.0,
+                        timestamp: block_context.block_timestamp.0,
+                        sequencer_address: (*block_context.sequencer_address.0.key()).into(),
+                    };
+
+                    let (transactions, outputs) = {
+                        state
+                            .executed_transactions
+                            .read()
+                            .iter()
+                            .filter_map(|tx| match tx {
+                                MaybeInvalidExecutedTransaction::Valid(tx) => {
+                                    Some((tx.clone(), tx.output.clone()))
+                                }
+                                _ => None,
+                            })
+                            .unzip()
+                    };
+
+                    Some(ExecutedBlock::Pending(PartialBlock { header, transactions, outputs }))
+                }
+
+                None => {
+                    unreachable!("pending state should exist")
+                }
+            },
+
             _ => {
                 let hash = self.backend.blockchain.block_hash(block_id)?;
                 self.backend.blockchain.storage.read().blocks.get(&hash).map(|b| b.clone().into())
@@ -329,10 +359,6 @@ impl Sequencer for KatanaSequencer {
         block_id: BlockId,
         contract_address: ContractAddress,
     ) -> SequencerResult<Nonce> {
-        if self.block(block_id).await.is_none() {
-            return Err(SequencerError::BlockNotFound(block_id));
-        }
-
         if !self.verify_contract_exists(&contract_address).await {
             return Err(SequencerError::ContractNotFound(contract_address));
         }
@@ -346,10 +372,6 @@ impl Sequencer for KatanaSequencer {
         block_id: BlockId,
         function_call: ExternalFunctionCall,
     ) -> SequencerResult<Vec<StarkFelt>> {
-        if self.block(block_id).await.is_none() {
-            return Err(SequencerError::BlockNotFound(block_id));
-        }
-
         if !self.verify_contract_exists(&function_call.contract_address).await {
             return Err(SequencerError::ContractNotFound(function_call.contract_address));
         }
@@ -368,11 +390,16 @@ impl Sequencer for KatanaSequencer {
             Some(tx) => Some(tx.status()),
             // If the requested transaction is not available in the storage then
             // check if it is available in the pending block.
-            None => self.backend.pending_block.read().await.as_ref().and_then(|b| {
-                b.transactions
-                    .iter()
-                    .find(|tx| tx.inner.hash() == *hash)
-                    .map(|_| TransactionStatus::AcceptedOnL2)
+            None => self.pending_state.as_ref().and_then(|state| {
+                state.executed_transactions.read().iter().find_map(|tx| match tx {
+                    MaybeInvalidExecutedTransaction::Valid(tx) if tx.inner.hash() == *hash => {
+                        Some(TransactionStatus::AcceptedOnL2)
+                    }
+                    MaybeInvalidExecutedTransaction::Invalid(tx) if tx.inner.hash() == *hash => {
+                        Some(TransactionStatus::Rejected)
+                    }
+                    _ => None,
+                })
             }),
         }
     }
@@ -400,11 +427,16 @@ impl Sequencer for KatanaSequencer {
             Some(tx) => Some(tx),
             // If the requested transaction is not available in the storage then
             // check if it is available in the pending block.
-            None => self.backend.pending_block.read().await.as_ref().and_then(|b| {
-                b.transactions
-                    .iter()
-                    .find(|tx| tx.inner.hash() == *hash)
-                    .map(|tx| PendingTransaction(tx.clone()).into())
+            None => self.pending_state.as_ref().and_then(|state| {
+                state.executed_transactions.read().iter().find_map(|tx| match tx {
+                    MaybeInvalidExecutedTransaction::Valid(tx) if tx.inner.hash() == *hash => {
+                        Some(PendingTransaction(tx.clone()).into())
+                    }
+                    MaybeInvalidExecutedTransaction::Invalid(tx) if tx.inner.hash() == *hash => {
+                        Some(tx.as_ref().clone().into())
+                    }
+                    _ => None,
+                })
             }),
         }
     }
@@ -555,6 +587,44 @@ impl Sequencer for KatanaSequencer {
             .get(&block_number)
             .cloned()
             .ok_or(SequencerError::StateUpdateNotFound(block_id))
+    }
+
+    async fn set_next_block_timestamp(&self, timestamp: u64) -> Result<(), SequencerError> {
+        if self.has_pending_transactions().await {
+            return Err(SequencerError::PendingTransactions);
+        }
+        self.backend().block_context_generator.write().next_block_start_time = timestamp;
+        Ok(())
+    }
+
+    async fn increase_next_block_timestamp(&self, timestamp: u64) -> Result<(), SequencerError> {
+        if self.has_pending_transactions().await {
+            return Err(SequencerError::PendingTransactions);
+        }
+        self.backend().block_context_generator.write().block_timestamp_offset += timestamp as i64;
+        Ok(())
+    }
+
+    async fn has_pending_transactions(&self) -> bool {
+        if let Some(ref pending) = self.pending_state {
+            !pending.executed_transactions.read().is_empty()
+        } else {
+            false
+        }
+    }
+
+    async fn set_storage_at(
+        &self,
+        contract_address: ContractAddress,
+        storage_key: StorageKey,
+        value: StarkFelt,
+    ) -> Result<(), SequencerError> {
+        if let Some(ref pending) = self.pending_state {
+            pending.state.write().set_storage_at(contract_address, storage_key, value);
+        } else {
+            self.backend().state.write().await.set_storage_at(contract_address, storage_key, value);
+        }
+        Ok(())
     }
 }
 

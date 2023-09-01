@@ -9,6 +9,7 @@ use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::serde::deserialize_program::ProgramJson;
 use serde_json::json;
 use starknet::core::types::contract::legacy::{LegacyContractClass, LegacyProgram};
+use starknet::core::types::contract::CompiledClass;
 use starknet::core::types::{
     CompressedLegacyContractClass, ContractClass, FieldElement, FlattenedSierraClass,
     LegacyContractEntryPoint, LegacyEntryPointsByType,
@@ -51,9 +52,19 @@ pub fn rpc_to_inner_class(
     contract_class: &FlattenedSierraClass,
 ) -> Result<(FieldElement, InnerContractClass)> {
     let class_hash = contract_class.class_hash();
+    let contract_class = rpc_to_cairo_contract_class(contract_class)?;
+    let casm_contract = CasmContractClass::from_contract_class(contract_class, true)?;
+    Ok((class_hash, InnerContractClass::V1(casm_contract.try_into()?)))
+}
 
+/// Converts `starknet-rs` RPC [FlattenedSierraClass] type to Cairo's
+/// [ContractClass](cairo_lang_starknet::contract_class::ContractClass) type.
+pub fn rpc_to_cairo_contract_class(
+    contract_class: &FlattenedSierraClass,
+) -> Result<cairo_lang_starknet::contract_class::ContractClass> {
     let value = serde_json::to_value(contract_class)?;
-    let contract_class = cairo_lang_starknet::contract_class::ContractClass {
+
+    Ok(cairo_lang_starknet::contract_class::ContractClass {
         abi: serde_json::from_value(value["abi"].clone()).ok(),
         sierra_program: serde_json::from_value(value["sierra_program"].clone())?,
         entry_points_by_type: serde_json::from_value(value["entry_points_by_type"].clone())?,
@@ -62,10 +73,18 @@ pub fn rpc_to_inner_class(
             value["sierra_program_debug_info"].clone(),
         )
         .ok(),
-    };
+    })
+}
 
+/// Compute the compiled class hash from the given [FlattenedSierraClass].
+pub fn compiled_class_hash_from_flattened_sierra_class(
+    contract_class: &FlattenedSierraClass,
+) -> Result<FieldElement> {
+    let contract_class = rpc_to_cairo_contract_class(contract_class)?;
     let casm_contract = CasmContractClass::from_contract_class(contract_class, true)?;
-    Ok((class_hash, InnerContractClass::V1(casm_contract.try_into()?)))
+    let res = serde_json::to_string_pretty(&casm_contract)?;
+    let compiled_class: CompiledClass = serde_json::from_str(&res)?;
+    Ok(compiled_class.class_hash()?)
 }
 
 pub fn legacy_rpc_to_inner_class(

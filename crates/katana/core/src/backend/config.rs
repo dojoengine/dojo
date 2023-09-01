@@ -3,6 +3,7 @@ use starknet_api::block::{BlockNumber, BlockTimestamp};
 use starknet_api::core::{ChainId, ContractAddress, PatriciaKey};
 use starknet_api::hash::StarkHash;
 use starknet_api::patricia_key;
+use url::Url;
 
 use crate::constants::{
     DEFAULT_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_VALIDATE_MAX_STEPS, FEE_TOKEN_ADDRESS,
@@ -14,10 +15,11 @@ use crate::env::{get_default_vm_resource_fee_cost, BlockContextGenerator};
 #[derive(Debug)]
 pub struct StarknetConfig {
     pub seed: [u8; 32],
-    pub auto_mine: bool,
     pub total_accounts: u8,
     pub disable_fee: bool,
     pub env: Environment,
+    pub fork_rpc_url: Option<Url>,
+    pub fork_block_number: Option<u64>,
     pub init_state: Option<SerializableState>,
 }
 
@@ -47,9 +49,10 @@ impl Default for StarknetConfig {
         Self {
             init_state: None,
             seed: [0; 32],
-            auto_mine: true,
             total_accounts: 10,
             disable_fee: false,
+            fork_rpc_url: None,
+            fork_block_number: None,
             env: Environment::default(),
         }
     }

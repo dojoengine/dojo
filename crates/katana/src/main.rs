@@ -19,7 +19,8 @@ use args::KatanaArgs;
 #[tokio::main]
 async fn main() {
     env_logger::Builder::from_env(Env::default().default_filter_or(
-        "info,katana_rpc=debug,katana_core=trace,blockifier=off,jsonrpsee_server=off,hyper=off",
+        "executor=trace,info,katana_rpc=debug,katana_core=trace,blockifier=off,\
+         jsonrpsee_server=off,hyper=off,",
     ))
     .init();
 
@@ -37,7 +38,7 @@ async fn main() {
     let sequencer_config = config.sequencer_config();
     let starknet_config = config.starknet_config();
 
-    let sequencer = Arc::new(KatanaSequencer::new(sequencer_config, starknet_config));
+    let sequencer = Arc::new(KatanaSequencer::new(sequencer_config, starknet_config).await);
     let starknet_api = StarknetApi::new(sequencer.clone());
     let katana_api = KatanaApi::new(sequencer.clone());
 
@@ -62,7 +63,7 @@ async fn main() {
                 );
             }
 
-            sequencer.start().await;
+            // sequencer.start().await;
 
             // Wait until Ctrl + C is pressed, then shutdown
             ctrl_c().await.unwrap();

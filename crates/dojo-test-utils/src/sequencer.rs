@@ -29,9 +29,7 @@ pub struct TestSequencer {
 
 impl TestSequencer {
     pub async fn start(config: SequencerConfig, starknet_config: StarknetConfig) -> Self {
-        let sequencer = Arc::new(KatanaSequencer::new(config, starknet_config));
-
-        sequencer.start().await;
+        let sequencer = Arc::new(KatanaSequencer::new(config, starknet_config).await);
 
         let starknet_api = StarknetApi::new(sequencer.clone());
         let katana_api = KatanaApi::new(sequencer.clone());
