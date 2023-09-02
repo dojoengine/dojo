@@ -124,7 +124,7 @@ fn parse_event(
                                 Some(addr) => addr,
                                 None => continue 'outer,
                             };
-                            ret.push_str(&format!("{}: {}\n", field.name, value.to_string()));
+                            ret.push_str(&format!("{}: {}\n", field.name, value));
                         }
                         "core::array::Span::<core::felt252>" => {
                             let length = match data.pop_front() {
