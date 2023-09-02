@@ -9,15 +9,17 @@ use traits::{Into, TryInto};
 
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
-use dojo_erc::erc1155::erc1155::ERC1155::{
-    ApprovalForAll, TransferSingle, TransferBatch, IERC1155EventsDispatcher,
-    IERC1155EventsDispatcherTrait, Event
-};
+use dojo_erc::erc1155::erc1155::ERC1155::{IERC1155EventsDispatcher, IERC1155EventsDispatcherTrait};
 use dojo_erc::erc1155::components::{ERC1155BalanceTrait, OperatorApprovalTrait};
 use dojo_erc::erc165::interface::{IERC165Dispatcher, IERC165DispatcherTrait, IACCOUNT_ID};
 use dojo_erc::erc1155::interface::{
     IERC1155TokenReceiverDispatcher, IERC1155TokenReceiverDispatcherTrait, IERC1155TokenReceiver,
     IERC1155_RECEIVER_ID, ON_ERC1155_RECEIVED_SELECTOR, ON_ERC1155_BATCH_RECEIVED_SELECTOR
+};
+
+use dojo_erc::erc1155::events::{
+    TransferSingle, TransferBatch, ApprovalForAll, DojoTransferSingle, DojoTransferBatch,
+    DojoApprovalForAll
 };
 
 fn emit_transfer_single(
@@ -30,8 +32,11 @@ fn emit_transfer_single(
     amount: u128
 ) {
     let event = TransferSingle { operator, from, to, id: id.into(), value: amount.into() };
-    IERC1155EventsDispatcher { contract_address: token }.on_transfer_single(event.clone());
-    emit!(world, event);
+    IERC1155EventsDispatcher { contract_address: token }.on_transfer_single(event);
+    let dojo_event = DojoTransferSingle {
+        contract_address: token, operator, from, to, id: id.into(), value: amount.into()
+    };
+    emit!(world, dojo_event);
 }
 
 fn emit_transfer_batch(
@@ -53,10 +58,31 @@ fn emit_transfer_batch(
         amounts_u256.append((*amounts.pop_front().unwrap()).into());
     };
     let event = TransferBatch {
-        operator: operator, from: from, to: to, ids: ids_u256, values: amounts_u256,
+        operator: operator, from: from, to: to, ids: ids_u256.clone(), values: amounts_u256.clone(),
     };
-    IERC1155EventsDispatcher { contract_address: token }.on_transfer_batch(event.clone());
-    emit!(world, event);
+    IERC1155EventsDispatcher { contract_address: token }.on_transfer_batch(event);
+    let dojo_event = DojoTransferBatch {
+        contract_address: token,
+        operator: operator,
+        from: from,
+        to: to,
+        ids: ids_u256,
+        values: amounts_u256,
+    };
+    emit!(world, dojo_event);
+}
+
+fn emit_approval_for_all(
+    world: IWorldDispatcher,
+    token: ContractAddress,
+    owner: ContractAddress,
+    operator: ContractAddress,
+    approved: bool,
+) {
+    let event = ApprovalForAll { owner, operator, approved };
+    IERC1155EventsDispatcher { contract_address: token }.on_approval_for_all(event);
+    let dojo_event = DojoApprovalForAll { contract_address: token, owner, operator, approved };
+    emit!(world, dojo_event);
 }
 
 fn unchecked_update(
@@ -71,7 +97,9 @@ fn unchecked_update(
 ) {
     assert(ids.len() == amounts.len(), 'ERC1155: invalid length');
 
-    ERC1155BalanceTrait::unchecked_transfer_tokens(world, token, from, to, ids.span(), amounts.span());
+    ERC1155BalanceTrait::unchecked_transfer_tokens(
+        world, token, from, to, ids.span(), amounts.span()
+    );
 
     if (ids.len() == 1) {
         let id = *ids.at(0);
@@ -150,7 +178,7 @@ mod ERC1155SetApprovalForAll {
     use clone::Clone;
 
     use dojo_erc::erc1155::components::OperatorApprovalTrait;
-    use super::{IERC1155EventsDispatcher, IERC1155EventsDispatcherTrait, ApprovalForAll, Event};
+    use super::{IERC1155EventsDispatcher, IERC1155EventsDispatcherTrait, ApprovalForAll};
 
 
     #[derive(Drop, Serde)]
@@ -165,11 +193,11 @@ mod ERC1155SetApprovalForAll {
         let ERC1155SetApprovalForAllParams{token, owner, operator, approved } = params;
         assert(owner != operator, 'ERC1155: wrong approval');
 
-        OperatorApprovalTrait::unchecked_set_approval_for_all(ctx.world, token, owner, operator, approved);
+        OperatorApprovalTrait::unchecked_set_approval_for_all(
+            ctx.world, token, owner, operator, approved
+        );
 
-        let event = ApprovalForAll { owner, operator, approved };
-        IERC1155EventsDispatcher { contract_address: token }.on_approval_for_all(event.clone());
-        emit!(ctx.world, event);
+        super::emit_approval_for_all(ctx.world, token, owner, operator, approved);
     }
 }
 

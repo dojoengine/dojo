@@ -7,9 +7,12 @@ use starknet::{ContractAddress, get_contract_address};
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 use dojo_erc::erc721::erc721::ERC721;
 
-use dojo_erc::erc721::erc721::ERC721::{
-    IERC721EventsDispatcher, IERC721EventsDispatcherTrait, Approval, Transfer, ApprovalForAll, Event
+use dojo_erc::erc721::erc721::ERC721::{IERC721EventsDispatcher, IERC721EventsDispatcherTrait};
+
+use dojo_erc::erc721::events::{
+    Approval, Transfer, ApprovalForAll, DojoApproval, DojoTransfer, DojoApprovalForAll
 };
+
 
 use ERC721Approve::ERC721ApproveParams;
 use ERC721SetApprovalForAll::ERC721SetApprovalForAllParams;
@@ -25,8 +28,9 @@ fn emit_transfer(
     token_id: felt252,
 ) {
     let event = Transfer { from, to, token_id: token_id.into() };
-    IERC721EventsDispatcher { contract_address: token }.on_transfer(event.clone());
-    emit!(world, event);
+    IERC721EventsDispatcher { contract_address: token }.on_transfer(event);
+    let dojo_event = DojoTransfer { contract_address: token, from, to, token_id: token_id.into() };
+    emit!(world, dojo_event);
 }
 
 fn emit_approval(
@@ -37,10 +41,10 @@ fn emit_approval(
     token_id: felt252,
 ) {
     let event = Approval { owner, to, token_id: token_id.into() };
-    IERC721EventsDispatcher { contract_address: token }.on_approval(event.clone());
-    emit!(world, event);
+    IERC721EventsDispatcher { contract_address: token }.on_approval(event);
+    let dojo_event = DojoApproval { contract_address: token, owner, to, token_id: token_id.into() };
+    emit!(world, dojo_event);
 }
-
 
 fn emit_approval_for_all(
     world: IWorldDispatcher,
@@ -50,8 +54,9 @@ fn emit_approval_for_all(
     approved: bool,
 ) {
     let event = ApprovalForAll { owner, operator, approved };
-    IERC721EventsDispatcher { contract_address: token }.on_approval_for_all(event.clone());
-    emit!(world, event);
+    IERC721EventsDispatcher { contract_address: token }.on_approval_for_all(event);
+    let dojo_event = DojoApprovalForAll { contract_address: token, owner, operator, approved };
+    emit!(world, dojo_event);
 }
 
 
@@ -124,7 +129,9 @@ mod ERC721SetApprovalForAll {
         assert(token == ctx.origin, 'ERC721: not authorized');
         assert(owner != operator, 'ERC721: self approval');
 
-        OperatorApprovalTrait::unchecked_set_approval_for_all(ctx.world, token, owner, operator, approved);
+        OperatorApprovalTrait::unchecked_set_approval_for_all(
+            ctx.world, token, owner, operator, approved
+        );
 
         // emit event
         super::emit_approval_for_all(ctx.world, token, owner, operator, approved);

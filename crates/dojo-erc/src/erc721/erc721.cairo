@@ -20,38 +20,14 @@ mod ERC721 {
 
     use dojo_erc::erc165::interface::{IERC165, IERC165_ID};
     use dojo_erc::erc721::interface::{IERC721, IERC721Metadata, IERC721_ID, IERC721_METADATA_ID};
+    use dojo_erc::erc721::events::{Transfer, Approval, ApprovalForAll};
 
     use dojo_erc::erc_common::utils::{to_calldata, ToCallDataTrait, system_calldata};
 
 
-    #[storage]
-    struct Storage {
-        world: IWorldDispatcher,
-        owner_: ContractAddress, // TODO: move in components
-        name_: felt252,
-        symbol_: felt252,
-    }
-
-    #[derive(Clone, Drop, Serde, PartialEq, starknet::Event)]
-    struct Transfer {
-        from: ContractAddress,
-        to: ContractAddress,
-        token_id: u256
-    }
-
-    #[derive(Clone, Drop, Serde, PartialEq, starknet::Event)]
-    struct Approval {
-        owner: ContractAddress,
-        to: ContractAddress,
-        token_id: u256
-    }
-
-    #[derive(Clone, Drop, Serde, PartialEq, starknet::Event)]
-    struct ApprovalForAll {
-        owner: ContractAddress,
-        operator: ContractAddress,
-        approved: bool
-    }
+    //
+    // Events
+    //
 
     #[event]
     #[derive(Drop, PartialEq, starknet::Event)]
@@ -66,6 +42,18 @@ mod ERC721 {
         fn on_transfer(ref self: ContractState, event: Transfer);
         fn on_approval(ref self: ContractState, event: Approval);
         fn on_approval_for_all(ref self: ContractState, event: ApprovalForAll);
+    }
+
+    //
+    // Storage
+    //
+
+    #[storage]
+    struct Storage {
+        world: IWorldDispatcher,
+        owner_: ContractAddress, // TODO: move in components
+        name_: felt252,
+        symbol_: felt252,
     }
 
     //
@@ -267,7 +255,7 @@ mod ERC721 {
 
 
     #[external(v0)]
-    impl ERC721EventEmitter of IERC721Events<ContractState> {
+    impl ERC721Events of IERC721Events<ContractState> {
         fn on_transfer(ref self: ContractState, event: Transfer) {
             assert(get_caller_address() == self.world.read().executor(), 'ERC721: not authorized');
             self.emit(event);

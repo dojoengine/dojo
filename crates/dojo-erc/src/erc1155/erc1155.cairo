@@ -28,33 +28,11 @@ mod ERC1155 {
         ERC1155SafeBatchTransferFromParams, ERC1155MintParams, ERC1155BurnParams
     };
 
-    const UNLIMITED_ALLOWANCE: felt252 =
-        3618502788666131213697322783095070105623107215331596699973092056135872020480;
+    use dojo_erc::erc1155::events::{TransferSingle, TransferBatch, ApprovalForAll};
 
-    #[derive(Clone, Drop, Serde, PartialEq, starknet::Event)]
-    struct TransferSingle {
-        operator: ContractAddress,
-        from: ContractAddress,
-        to: ContractAddress,
-        id: u256,
-        value: u256
-    }
-
-    #[derive(Clone, Drop, Serde, PartialEq, starknet::Event)]
-    struct TransferBatch {
-        operator: ContractAddress,
-        from: ContractAddress,
-        to: ContractAddress,
-        ids: Array<u256>,
-        values: Array<u256>
-    }
-
-    #[derive(Clone, Drop, Serde, PartialEq, starknet::Event)]
-    struct ApprovalForAll {
-        owner: ContractAddress,
-        operator: ContractAddress,
-        approved: bool
-    }
+    //
+    // Events
+    //
 
     #[starknet::interface]
     trait IERC1155Events<ContractState> {
@@ -70,6 +48,10 @@ mod ERC1155 {
         TransferBatch: TransferBatch,
         ApprovalForAll: ApprovalForAll
     }
+
+    //
+    // Storage
+    //
 
     #[storage]
     struct Storage {
@@ -239,23 +221,6 @@ mod ERC1155 {
     }
 
     #[external(v0)]
-    impl ERC1155Events of IERC1155Events<ContractState> {
-        fn on_transfer_single(ref self: ContractState, event: TransferSingle) {
-            assert(get_caller_address() == self.world.read().executor(), 'ERC1155: not authorized');
-            self.emit(event);
-        }
-        fn on_transfer_batch(ref self: ContractState, event: TransferBatch) {
-            assert(get_caller_address() == self.world.read().executor(), 'ERC1155: not authorized');
-            self.emit(event);
-        }
-        fn on_approval_for_all(ref self: ContractState, event: ApprovalForAll) {
-            assert(get_caller_address() == self.world.read().executor(), 'ERC1155: not authorized');
-            self.emit(event);
-        }
-    }
-
-
-    #[external(v0)]
     #[generate_trait]
     impl ERC721Custom of ERC721CustomTrait {
         // TODO: use systems directly for these instead.
@@ -300,6 +265,22 @@ mod ERC1155 {
                         }
                     )
                 );
+        }
+    }
+
+    #[external(v0)]
+    impl ERC1155Events of IERC1155Events<ContractState> {
+        fn on_transfer_single(ref self: ContractState, event: TransferSingle) {
+            assert(get_caller_address() == self.world.read().executor(), 'ERC1155: not authorized');
+            self.emit(event);
+        }
+        fn on_transfer_batch(ref self: ContractState, event: TransferBatch) {
+            assert(get_caller_address() == self.world.read().executor(), 'ERC1155: not authorized');
+            self.emit(event);
+        }
+        fn on_approval_for_all(ref self: ContractState, event: ApprovalForAll) {
+            assert(get_caller_address() == self.world.read().executor(), 'ERC1155: not authorized');
+            self.emit(event);
         }
     }
 }
