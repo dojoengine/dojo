@@ -22,9 +22,9 @@ sozo component schema --world 0x26065106fa319c3981618e7567480a50132f23932226a51c
 > }
 
 # Get the value of the Moves component for an entity. (in this example,
-# 0x3ee9e18edc71a6df30ac3aca2e0b02a198fbce19b7480a63a0d71cbd76652e0 is
+# 0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973 is
 # the calling account.
-sozo component entity --world 0x26065106fa319c3981618e7567480a50132f23932226a51c219ffb8e47daa84 Moves 0x3ee9e18edc71a6df30ac3aca2e0b02a198fbce19b7480a63a0d71cbd76652e0
+sozo component entity --world 0x26065106fa319c3981618e7567480a50132f23932226a51c219ffb8e47daa84 Moves 0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973
 > 0x0
 
 # The returned value is 0 since we haven't spawned yet. Let's spawn
@@ -32,6 +32,6 @@ sozo component entity --world 0x26065106fa319c3981618e7567480a50132f23932226a51c
 sozo execute --world 0x26065106fa319c3981618e7567480a50132f23932226a51c219ffb8e47daa84 spawn
 
 # Fetch the updated entity
-sozo component entity --world 0x26065106fa319c3981618e7567480a50132f23932226a51c219ffb8e47daa84 Moves 0x3ee9e18edc71a6df30ac3aca2e0b02a198fbce19b7480a63a0d71cbd76652e0
+sozo component entity --world 0x26065106fa319c3981618e7567480a50132f23932226a51c219ffb8e47daa84 Moves 0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973
 > 0xa
 ```

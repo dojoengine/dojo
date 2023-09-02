@@ -9,6 +9,7 @@ use starknet::testing::set_contract_address;
 
 use dojo::test_utils::spawn_test_world;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
+use dojo_erc::tests::test_utils::impersonate;
 
 use dojo_erc::erc1155::erc1155::ERC1155;
 use dojo_erc::erc1155::interface::{IERC1155A, IERC1155ADispatcher, IERC1155ADispatcherTrait};
@@ -44,10 +45,12 @@ fn PROXY() -> ContractAddress {
     starknet::contract_address_const::<0x999>()
 }
 
-fn spawn_world() -> IWorldDispatcher {
+fn spawn_world(world_admin: ContractAddress) -> IWorldDispatcher {
+    impersonate(world_admin);
+
     // components
     let mut components = array![
-        erc_1155_balance::TEST_CLASS_HASH, uri::TEST_CLASS_HASH, operator_approval::TEST_CLASS_HASH, 
+        erc_1155_balance::TEST_CLASS_HASH, uri::TEST_CLASS_HASH, operator_approval::TEST_CLASS_HASH,
     ];
 
     // systems
@@ -61,6 +64,21 @@ fn spawn_world() -> IWorldDispatcher {
     ];
 
     let world = spawn_test_world(components, systems);
+
+    // Grants writer rights for Component / System
+
+    //  erc_1155_balance
+    world.grant_writer('ERC1155Balance', 'ERC1155SafeTransferFrom');
+    world.grant_writer('ERC1155Balance', 'ERC1155SafeBatchTransferFrom');
+    world.grant_writer('ERC1155Balance', 'ERC1155Mint');
+    world.grant_writer('ERC1155Balance', 'ERC1155Burn');
+
+    //  uri
+    world.grant_writer('Uri', 'ERC1155SetUri');
+
+    // operator_approval
+    world.grant_writer('OperatorApproval', 'ERC1155SetApprovalForAll');
+
     world
 }
 
@@ -78,7 +96,7 @@ fn deploy_erc1155(
 
 
 fn deploy_default() -> (IWorldDispatcher, IERC1155ADispatcher) {
-    let world = spawn_world();
+    let world = spawn_world(DEPLOYER());
     let erc1155_address = deploy_erc1155(world, DEPLOYER(), 'uri', 'seed-42');
     let erc1155 = IERC1155ADispatcher { contract_address: erc1155_address };
 
@@ -87,7 +105,7 @@ fn deploy_default() -> (IWorldDispatcher, IERC1155ADispatcher) {
 
 
 fn deploy_testcase1() -> (IWorldDispatcher, IERC1155ADispatcher) {
-    let world = spawn_world();
+    let world = spawn_world(DEPLOYER());
     let erc1155_address = deploy_erc1155(world, DEPLOYER(), 'uri', 'seed-42');
     let erc1155 = IERC1155ADispatcher { contract_address: erc1155_address };
 
@@ -105,7 +123,7 @@ fn deploy_testcase1() -> (IWorldDispatcher, IERC1155ADispatcher) {
     // user1  token_id 3 x 30
     erc1155.mint(USER1(), 3, 30, array![]);
 
-    set_contract_address(USER1());
+    impersonate(USER1());
     //user1 approve_for_all proxy
     erc1155.set_approval_for_all(PROXY(), true);
 

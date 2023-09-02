@@ -8,6 +8,7 @@ use option::OptionTrait;
 
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
+use dojo_erc::tests::test_utils::impersonate;
 use dojo_erc::tests::test_erc721_utils::{
     spawn_world, deploy_erc721, deploy_default, deploy_testcase1, USER1, USER2, USER3, DEPLOYER,
     ZERO, PROXY
@@ -25,7 +26,7 @@ use dojo_erc::erc721::erc721::ERC721::{Event, Transfer, Approval, ApprovalForAll
 #[test]
 #[available_gas(30000000)]
 fn test_deploy() {
-    let world = spawn_world();
+    let world = spawn_world(DEPLOYER());
     let erc721_address = deploy_erc721(world, DEPLOYER(), 'name', 'symbol', 'uri', 'seed-42');
     let erc721 = IERC721ADispatcher { contract_address: erc721_address };
 
@@ -141,8 +142,7 @@ fn test_transfer_ownership() {
 
     let (world, erc721) = deploy_testcase1();
 
-    // impersonate user1
-    set_contract_address(USER1());
+    impersonate(USER1());
 
     let owner_of_1 = erc721.owner_of(1);
     // transfer token_id 1 to user2
@@ -160,14 +160,12 @@ fn test_transfer_event() {
     // mint
     erc721.mint(USER1(), 42);
 
-    // impersonate user1
-    set_contract_address(USER1());
+    impersonate(USER1());
 
     // transfer token_id 1 to user2
     erc721.transfer(USER2(), 42);
 
-    // impersonate user2
-    set_contract_address(USER2());
+    impersonate(USER2());
     erc721.burn(42);
 
     // mint
@@ -198,8 +196,7 @@ fn test_transfer_clear_approval() {
 
     let (world, erc721) = deploy_testcase1();
 
-    // impersonate user1
-    set_contract_address(USER1());
+    impersonate(USER1());
 
     erc721.approve(PROXY(), 1);
     assert(erc721.get_approved(1) == PROXY(), 'should be proxy');
@@ -216,8 +213,7 @@ fn test_transfer_adjusts_owners_balances() {
 
     let (world, erc721) = deploy_testcase1();
 
-    // impersonate user1
-    set_contract_address(USER1());
+    impersonate(USER1());
 
     let balance_user1_before = erc721.balance_of(USER1());
     let balance_user2_before = erc721.balance_of(USER2());
@@ -240,14 +236,12 @@ fn test_transfer_from_approved() {
 
     let (world, erc721) = deploy_testcase1();
 
-    // impersonate user1
-    set_contract_address(USER1());
+    impersonate(USER1());
 
     //user1 approve user2 for token_id 2
     erc721.approve(USER2(), 2);
 
-    // impersonate user2
-    set_contract_address(USER2());
+    impersonate(USER2());
 
     erc721.transfer_from(USER1(), USER2(), 2);
     assert(erc721.owner_of(2) == USER2(), 'invalid owner');
@@ -260,14 +254,12 @@ fn test_transfer_from_approved_operator() {
 
     let (world, erc721) = deploy_testcase1();
 
-    // impersonate user1
-    set_contract_address(USER1());
+    impersonate(USER1());
 
     //user1 set_approval_for_all for proxy
     erc721.set_approval_for_all(PROXY(), true);
 
-    // impersonate proxy
-    set_contract_address(PROXY());
+    impersonate(PROXY());
 
     erc721.transfer_from(USER1(), USER2(), 2);
     assert(erc721.owner_of(2) == USER2(), 'invalid owner');
@@ -280,8 +272,7 @@ fn test_transfer_from_owner_without_approved() {
 
     let (world, erc721) = deploy_testcase1();
 
-    // impersonate user1
-    set_contract_address(USER1());
+    impersonate(USER1());
 
     erc721.approve(ZERO(), 2);
 
@@ -297,8 +288,7 @@ fn test_transfer_to_owner() {
 
     let (world, erc721) = deploy_testcase1();
 
-    // impersonate user1
-    set_contract_address(USER1());
+    impersonate(USER1());
 
     let balance_before = erc721.balance_of(USER1());
 
@@ -327,8 +317,7 @@ fn test_transfer_when_previous_owner_is_incorrect() {
 
     let (world, erc721) = deploy_testcase1();
 
-    // impersonate user1
-    set_contract_address(USER1());
+    impersonate(USER1());
 
     //user2 owner token_id 10
     erc721.transfer_from(USER1(), PROXY(), 10); // should panic
@@ -341,8 +330,7 @@ fn test_transfer_when_sender_not_authorized() {
     // when the sender is not authorized for the token id
     let (world, erc721) = deploy_testcase1();
 
-    // impersonate user1
-    set_contract_address(PROXY());
+    impersonate(PROXY());
 
     //proxy is not authorized for USER2
     erc721.transfer_from(USER2(), PROXY(), 20); // should panic
@@ -355,8 +343,7 @@ fn test_transfer_when_token_id_doesnt_exists() {
     // when the sender is not authorized for the token id
     let (world, erc721) = deploy_testcase1();
 
-    // impersonate user1
-    set_contract_address(PROXY());
+    impersonate(PROXY());
 
     //proxy is  authorized for USER1 but token_id 50 doesnt exists
     erc721.transfer_from(USER1(), PROXY(), 50); // should panic
@@ -370,8 +357,7 @@ fn test_transfer_to_address_zero() {
     // when the address to transfer the token to is the zero address
     let (world, erc721) = deploy_testcase1();
 
-    // impersonate user1
-    set_contract_address(USER1());
+    impersonate(USER1());
 
     erc721.transfer(ZERO(), 1); // should panic
 }
@@ -390,8 +376,8 @@ fn test_approval_when_clearing_with_prior_approval() {
 
     erc721.mint(USER1(), 42);
 
-    // impersonate user1
-    set_contract_address(USER1());
+    impersonate(USER1());
+
     erc721.approve(PROXY(), 42);
 
     //revoke approve
@@ -422,8 +408,7 @@ fn test_approval_when_clearing_without_prior_approval() {
 
     erc721.mint(USER1(), 42);
 
-    // impersonate user1
-    set_contract_address(USER1());
+    impersonate(USER1());
 
     //revoke approve
     erc721.approve(ZERO(), 42);
@@ -452,8 +437,7 @@ fn test_approval_non_zero_address_with_prior_approval() {
 
     erc721.mint(USER1(), 42);
 
-    // impersonate user1
-    set_contract_address(USER1());
+    impersonate(USER1());
     erc721.approve(PROXY(), 42);
 
     // user1 approves user3
@@ -483,8 +467,7 @@ fn test_approval_non_zero_address_with_no_prior_approval() {
 
     erc721.mint(USER1(), 42);
 
-    // impersonate user1
-    set_contract_address(USER1());
+    impersonate(USER1());
 
     // user1 approves user3
     erc721.approve(USER3(), 42);
@@ -512,8 +495,9 @@ fn test_approval_self_approve() {
     let (world, erc721) = deploy_default();
 
     erc721.mint(USER1(), 42);
-    // impersonate user1
-    set_contract_address(USER1());
+
+    impersonate(USER1());
+
     // user1 approves user1
     erc721.approve(USER1(), 42); // should panic
 }
@@ -525,8 +509,9 @@ fn test_approval_not_owned() {
     // when the sender does not own the given token ID
 
     let (world, erc721) = deploy_testcase1();
-    // impersonate user1
-    set_contract_address(USER1());
+
+    impersonate(USER1());
+
     // user1 approves user2 for token 20
     erc721.approve(USER2(), 20); // should panic
 }
@@ -540,13 +525,13 @@ fn test_approval_from_approved_sender() {
 
     let (world, erc721) = deploy_testcase1();
 
-    // impersonate user1
-    set_contract_address(USER1());
+    impersonate(USER1());
+
     // user1 approve user3
     erc721.approve(USER3(), 1);
 
-    // impersonate USER3
-    set_contract_address(USER3());
+    impersonate(USER3());
+
     // (ERC721: approve caller is not token owner or approved for all)
     erc721.approve(USER2(), 1); // should panic
 }
@@ -560,12 +545,12 @@ fn test_approval_from_approved_operator() {
 
     erc721.mint(USER1(), 50);
 
-    // impersonate user1
-    set_contract_address(USER1());
+    impersonate(USER1());
+
     erc721.set_approval_for_all(PROXY(), true);
 
-    // impersonate proxy , proxy is operator for user1
-    set_contract_address(PROXY());
+    impersonate(PROXY());
+
     // proxy approves user2 for token 20
     erc721.approve(USER2(), 50);
 
@@ -591,8 +576,8 @@ fn test_approval_unexisting_id() {
     // when the given token ID does not exist
     let (world, erc721) = deploy_testcase1();
 
-    // impersonate user1
-    set_contract_address(USER1());
+    impersonate(USER1());
+
     // user1 approve user3
     erc721.approve(USER3(), 69); // should panic
 }
@@ -608,8 +593,7 @@ fn test_approval_for_all_operator_is_not_owner_no_operator_approval() {
     // -when there is no operator approval set by the sender
     let (world, erc721) = deploy_default();
 
-    // impersonate user2
-    set_contract_address(USER2());
+    impersonate(USER2());
 
     // user2 set_approval_for_all PROXY
     erc721.set_approval_for_all(PROXY(), true);
@@ -633,8 +617,7 @@ fn test_approval_for_all_operator_is_not_owner_from_not_approved() {
     // -when the operator was set as not approved
     let (world, erc721) = deploy_default();
 
-    // impersonate user2
-    set_contract_address(USER2());
+    impersonate(USER2());
 
     erc721.set_approval_for_all(PROXY(), false);
 
@@ -663,8 +646,7 @@ fn test_approval_for_all_operator_is_not_owner_can_unset_approval_for_all() {
     // can unset the operator approval
     let (world, erc721) = deploy_default();
 
-    // impersonate user2
-    set_contract_address(USER2());
+    impersonate(USER2());
 
     erc721.set_approval_for_all(PROXY(), false);
     erc721.set_approval_for_all(PROXY(), true);
@@ -694,8 +676,7 @@ fn test_approval_for_all_operator_with_operator_already_approved() {
     // when the operator was already approved
     let (world, erc721) = deploy_default();
 
-    // impersonate user2
-    set_contract_address(USER2());
+    impersonate(USER2());
 
     erc721.set_approval_for_all(PROXY(), true);
     assert(erc721.is_approved_for_all(USER2(), PROXY()) == true, 'invalid is_approved_for_all');
@@ -724,8 +705,8 @@ fn test_approval_for_all_with_owner_as_operator() {
 
     let (world, erc721) = deploy_default();
 
-    // impersonate user1
-    set_contract_address(USER1());
+    impersonate(USER1());
+
     erc721.set_approval_for_all(USER1(), true); // should panic
 }
 
@@ -761,8 +742,8 @@ fn test_get_approved_with_existing_token_and_approval() {
 
     erc721.mint(USER1(), 420);
 
-    // impersonate user1
-    set_contract_address(USER1());
+    impersonate(USER1());
+
     erc721.approve(PROXY(), 420);
     assert(erc721.get_approved(420) == PROXY(), 'invalid get_approved');
 }
@@ -831,12 +812,15 @@ fn test_burn_non_existing_token_id() {
 
 #[test]
 #[available_gas(90000000)]
-fn test_burn() {
-    //reverts when burning a non-existent token id
+fn test_burn_emit_events() {
+    // burn should emit event
     let (world, erc721) = deploy_default();
 
     erc721.mint(USER1(), 69);
     assert(erc721.balance_of(USER1()) == 1, 'invalid balance');
+
+    impersonate(USER1());
+
     erc721.burn(69);
     assert(erc721.balance_of(USER1()) == 0, 'invalid balance');
 
