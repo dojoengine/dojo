@@ -38,3 +38,17 @@ fn test_pricing_basic() {
     assert_rel_approx_eq(cost, auction.target_price, FixedTrait::new(DELTA_0_02, false));
 }
 
+#[test]
+#[available_gas(20000000)]
+fn test_pricing_basic_reverse() {
+    let auction = LinearVRGDA {
+        target_price: FixedTrait::new(_69_42, false),
+        decay_constant: FixedTrait::new(_0_31, false),
+        per_time_unit: FixedTrait::new_unscaled(2, false),
+    };
+    let time_delta = FixedTrait::new(10368001, false); // 120 days
+    let num_mint = FixedTrait::new(239, true);
+    let cost = auction.get_reverse_vrgda_price(time_delta, num_mint);
+    assert_rel_approx_eq(cost, auction.target_price, FixedTrait::new(DELTA_0_02, false));
+}
+
