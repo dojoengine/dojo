@@ -3,7 +3,7 @@
 use futures::channel::mpsc::{channel, Receiver, Sender};
 use parking_lot::RwLock;
 use starknet::core::types::FieldElement;
-use tracing::warn;
+use tracing::{info, warn};
 
 use crate::backend::storage::transaction::Transaction;
 
@@ -23,6 +23,9 @@ impl TransactionPool {
     pub fn add_transaction(&self, transaction: Transaction) {
         let hash = transaction.hash();
         self.transactions.write().push(transaction);
+
+        info!(target: "txpool", "Transaction received | Hash: {hash:#x}");
+
         // notify listeners of new tx added to the pool
         self.notify_listener(hash)
     }

@@ -58,7 +58,7 @@ async fn migrate_with_block_time() {
     let target_dir = Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap();
 
     let sequencer = TestSequencer::start(
-        SequencerConfig { block_time: Some(1) },
+        SequencerConfig { block_time: Some(1), ..Default::default() },
         get_default_test_starknet_config(),
     )
     .await;

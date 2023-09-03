@@ -7,7 +7,7 @@ use blockifier::execution::entry_point::{
 };
 use blockifier::execution::errors::EntryPointExecutionError;
 use blockifier::fee::fee_utils::{calculate_l1_gas_by_vm_usage, extract_l1_gas_and_vm_usage};
-use blockifier::state::cached_state::{CachedState, CommitmentStateDiff, MutRefState};
+use blockifier::state::cached_state::{CachedState, MutRefState};
 use blockifier::state::state_api::StateReader;
 use blockifier::transaction::errors::TransactionExecutionError;
 use blockifier::transaction::objects::AccountTransactionContext;
@@ -233,25 +233,10 @@ impl Backend {
         (outcome, new_state)
     }
 
-    /// Mines an empty block and update the block context accordingly.
+    /// Updates the block context and mines an empty block.
     pub async fn mine_empty_block(&self) -> MinedBlockOutcome {
         self.update_block_context();
-
-        let state_diff = CommitmentStateDiff {
-            storage_updates: [].into(),
-            address_to_nonce: [].into(),
-            address_to_class_hash: [].into(),
-            class_hash_to_compiled_class_hash: [].into(),
-        };
-
-        let execution_outcome = ExecutionOutcome {
-            state_diff,
-            transactions: vec![],
-            declared_classes: Default::default(),
-            declared_sierra_classes: Default::default(),
-        };
-
-        self.do_mine_block(execution_outcome).await
+        self.do_mine_block(ExecutionOutcome::default()).await
     }
 
     pub async fn do_mine_block(&self, execution_outcome: ExecutionOutcome) -> MinedBlockOutcome {

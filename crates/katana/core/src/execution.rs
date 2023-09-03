@@ -77,6 +77,24 @@ impl ExecutionOutcome {
     }
 }
 
+impl Default for ExecutionOutcome {
+    fn default() -> Self {
+        let state_diff = CommitmentStateDiff {
+            storage_updates: Default::default(),
+            address_to_nonce: Default::default(),
+            address_to_class_hash: Default::default(),
+            class_hash_to_compiled_class_hash: Default::default(),
+        };
+
+        Self {
+            state_diff,
+            transactions: Default::default(),
+            declared_classes: Default::default(),
+            declared_sierra_classes: Default::default(),
+        }
+    }
+}
+
 pub struct TransactionExecutor<'a> {
     charge_fee: bool,
     block_context: &'a BlockContext,

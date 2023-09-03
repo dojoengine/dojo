@@ -24,12 +24,11 @@ use crate::backend::storage::transaction::{
     PendingTransaction, Transaction, TransactionStatus,
 };
 use crate::backend::{Backend, ExternalFunctionCall};
-use crate::db::cached::CachedStateWrapper;
 use crate::db::{AsStateRefDb, StateExtRef, StateRefDb};
-use crate::execution::{MaybeInvalidExecutedTransaction, PendingBlockExecutor, PendingState};
+use crate::execution::{MaybeInvalidExecutedTransaction, PendingState};
 use crate::pool::TransactionPool;
 use crate::sequencer_error::SequencerError;
-use crate::service::{BlockProducer, NodeService, TransactionMiner};
+use crate::service::{BlockProducer, BlockProducerMode, NodeService, TransactionMiner};
 use crate::utils::event::{ContinuationToken, ContinuationTokenError};
 
 type SequencerResult<T> = Result<T, SequencerError>;
@@ -37,11 +36,14 @@ type SequencerResult<T> = Result<T, SequencerError>;
 #[derive(Debug, Default)]
 pub struct SequencerConfig {
     pub block_time: Option<u64>,
+    pub no_mining: bool,
 }
 
 #[async_trait]
 #[auto_impl(Arc)]
 pub trait Sequencer {
+    fn block_producer(&self) -> &BlockProducer;
+
     fn backend(&self) -> &Backend;
 
     async fn state(&self, block_id: &BlockId) -> SequencerResult<StateRefDb>;
@@ -139,9 +141,7 @@ pub struct KatanaSequencer {
     pub config: SequencerConfig,
     pub pool: Arc<TransactionPool>,
     pub backend: Arc<Backend>,
-
-    // pending state if the node is running in interval mode
-    pub pending_state: Option<Arc<PendingState>>,
+    pub block_producer: BlockProducer,
 }
 
 impl KatanaSequencer {
@@ -151,26 +151,32 @@ impl KatanaSequencer {
         let pool = Arc::new(TransactionPool::new());
         let miner = TransactionMiner::new(pool.add_listener());
 
-        let (block_producer, pending_state) = if let Some(block_time) = config.block_time {
-            let executor = PendingBlockExecutor::new(
-                CachedStateWrapper::new(backend.state.read().await.as_ref_db()),
-                Arc::clone(&backend.env),
-                false,
-            );
-
-            let state = executor.state();
-
-            (BlockProducer::interval(Arc::clone(&backend), executor, block_time), Some(state))
+        let block_producer = if let Some(block_time) = config.block_time {
+            BlockProducer::interval(
+                Arc::clone(&backend),
+                backend.state.read().await.as_ref_db(),
+                block_time,
+            )
+        } else if config.no_mining {
+            BlockProducer::on_demand(Arc::clone(&backend), backend.state.read().await.as_ref_db())
         } else {
-            (BlockProducer::instant(Arc::clone(&backend)), None)
+            BlockProducer::instant(Arc::clone(&backend))
         };
 
-        tokio::spawn(NodeService::new(Arc::clone(&pool), miner, block_producer));
+        tokio::spawn(NodeService::new(Arc::clone(&pool), miner, block_producer.clone()));
 
-        Self { pool, config, backend, pending_state }
+        Self { pool, config, backend, block_producer }
     }
 
-    pub(self) async fn verify_contract_exists(&self, contract_address: &ContractAddress) -> bool {
+    /// Returns the pending state if the sequencer is running in _interval_ mode. Otherwise `None`.
+    pub fn pending_state(&self) -> Option<Arc<PendingState>> {
+        match &*self.block_producer.inner.read() {
+            BlockProducerMode::Instant(_) => None,
+            BlockProducerMode::Interval(producer) => Some(producer.state()),
+        }
+    }
+
+    async fn verify_contract_exists(&self, contract_address: &ContractAddress) -> bool {
         self.backend
             .state
             .write()
@@ -182,6 +188,10 @@ impl KatanaSequencer {
 
 #[async_trait]
 impl Sequencer for KatanaSequencer {
+    fn block_producer(&self) -> &BlockProducer {
+        &self.block_producer
+    }
+
     fn backend(&self) -> &Backend {
         &self.backend
     }
@@ -191,7 +201,7 @@ impl Sequencer for KatanaSequencer {
             BlockId::Tag(BlockTag::Latest) => Ok(self.backend.state.read().await.as_ref_db()),
 
             BlockId::Tag(BlockTag::Pending) => {
-                if let Some(state) = &self.pending_state {
+                if let Some(state) = self.pending_state() {
                     Ok(state.state.read().as_ref_db())
                 } else {
                     Ok(self.backend.state.read().await.as_ref_db())
@@ -305,47 +315,43 @@ impl Sequencer for KatanaSequencer {
 
     async fn block(&self, block_id: BlockId) -> Option<ExecutedBlock> {
         let block_id = match block_id {
-            BlockId::Tag(BlockTag::Pending) if self.pending_state.is_none() => {
+            BlockId::Tag(BlockTag::Pending) if self.block_producer.is_instant_mining() => {
                 BlockId::Tag(BlockTag::Latest)
             }
             _ => block_id,
         };
 
         match block_id {
-            BlockId::Tag(BlockTag::Pending) => match &self.pending_state {
-                Some(state) => {
-                    let block_context = self.backend.env.read().block.clone();
-                    let latest_hash = self.backend.blockchain.storage.read().latest_hash;
+            BlockId::Tag(BlockTag::Pending) => {
+                let state = self.pending_state().expect("pending state should exist");
 
-                    let header = PartialHeader {
-                        parent_hash: latest_hash,
-                        gas_price: block_context.gas_price,
-                        number: block_context.block_number.0,
-                        timestamp: block_context.block_timestamp.0,
-                        sequencer_address: (*block_context.sequencer_address.0.key()).into(),
-                    };
+                let block_context = self.backend.env.read().block.clone();
+                let latest_hash = self.backend.blockchain.storage.read().latest_hash;
 
-                    let (transactions, outputs) = {
-                        state
-                            .executed_transactions
-                            .read()
-                            .iter()
-                            .filter_map(|tx| match tx {
-                                MaybeInvalidExecutedTransaction::Valid(tx) => {
-                                    Some((tx.clone(), tx.output.clone()))
-                                }
-                                _ => None,
-                            })
-                            .unzip()
-                    };
+                let header = PartialHeader {
+                    parent_hash: latest_hash,
+                    gas_price: block_context.gas_price,
+                    number: block_context.block_number.0,
+                    timestamp: block_context.block_timestamp.0,
+                    sequencer_address: (*block_context.sequencer_address.0.key()).into(),
+                };
 
-                    Some(ExecutedBlock::Pending(PartialBlock { header, transactions, outputs }))
-                }
+                let (transactions, outputs) = {
+                    state
+                        .executed_transactions
+                        .read()
+                        .iter()
+                        .filter_map(|tx| match tx {
+                            MaybeInvalidExecutedTransaction::Valid(tx) => {
+                                Some((tx.clone(), tx.output.clone()))
+                            }
+                            _ => None,
+                        })
+                        .unzip()
+                };
 
-                None => {
-                    unreachable!("pending state should exist")
-                }
-            },
+                Some(ExecutedBlock::Pending(PartialBlock { header, transactions, outputs }))
+            }
 
             _ => {
                 let hash = self.backend.blockchain.block_hash(block_id)?;
@@ -390,7 +396,7 @@ impl Sequencer for KatanaSequencer {
             Some(tx) => Some(tx.status()),
             // If the requested transaction is not available in the storage then
             // check if it is available in the pending block.
-            None => self.pending_state.as_ref().and_then(|state| {
+            None => self.pending_state().as_ref().and_then(|state| {
                 state.executed_transactions.read().iter().find_map(|tx| match tx {
                     MaybeInvalidExecutedTransaction::Valid(tx) if tx.inner.hash() == *hash => {
                         Some(TransactionStatus::AcceptedOnL2)
@@ -427,7 +433,7 @@ impl Sequencer for KatanaSequencer {
             Some(tx) => Some(tx),
             // If the requested transaction is not available in the storage then
             // check if it is available in the pending block.
-            None => self.pending_state.as_ref().and_then(|state| {
+            None => self.pending_state().as_ref().and_then(|state| {
                 state.executed_transactions.read().iter().find_map(|tx| match tx {
                     MaybeInvalidExecutedTransaction::Valid(tx) if tx.inner.hash() == *hash => {
                         Some(PendingTransaction(tx.clone()).into())
@@ -606,7 +612,7 @@ impl Sequencer for KatanaSequencer {
     }
 
     async fn has_pending_transactions(&self) -> bool {
-        if let Some(ref pending) = self.pending_state {
+        if let Some(ref pending) = self.pending_state() {
             !pending.executed_transactions.read().is_empty()
         } else {
             false
@@ -619,7 +625,7 @@ impl Sequencer for KatanaSequencer {
         storage_key: StorageKey,
         value: StarkFelt,
     ) -> Result<(), SequencerError> {
-        if let Some(ref pending) = self.pending_state {
+        if let Some(ref pending) = self.pending_state() {
             pending.state.write().set_storage_at(contract_address, storage_key, value);
         } else {
             self.backend().state.write().await.set_storage_at(contract_address, storage_key, value);

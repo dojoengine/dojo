@@ -28,8 +28,7 @@ where
     S: Sequencer + Send + Sync + 'static,
 {
     async fn generate_block(&self) -> Result<(), Error> {
-        // self.sequencer.backend().mine_block().await;
-        // self.sequencer.backend().open_pending_block().await;
+        self.sequencer.block_producer().force_mine();
         Ok(())
     }
 

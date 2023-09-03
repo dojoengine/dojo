@@ -16,7 +16,7 @@ use tokio::time::sleep;
 
 fn create_test_sequencer_config() -> (SequencerConfig, StarknetConfig) {
     (
-        SequencerConfig { block_time: None },
+        SequencerConfig { block_time: None, ..Default::default() },
         StarknetConfig {
             seed: [0u8; 32],
             total_accounts: 2,

@@ -127,7 +127,7 @@ pub struct EnvironmentOptions {
 
 impl KatanaArgs {
     pub fn sequencer_config(&self) -> SequencerConfig {
-        SequencerConfig { block_time: self.block_time }
+        SequencerConfig { block_time: self.block_time, no_mining: self.no_mining }
     }
 
     pub fn server_config(&self) -> ServerConfig {

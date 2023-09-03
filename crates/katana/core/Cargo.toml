@@ -16,7 +16,7 @@ cairo-lang-starknet = "2.1.1"
 cairo-vm.workspace = true
 convert_case.workspace = true
 flate2.workspace = true
-futures = "0.3"
+futures.workspace = true
 lazy_static = "1.4.0"
 parking_lot = "0.12.1"
 rand = { version = "0.8.5", features = [ "small_rng" ] }
@@ -26,8 +26,8 @@ serde_with.workspace = true
 starknet.workspace = true
 starknet_api.workspace = true
 thiserror.workspace = true
-tokio.workspace = true
 tokio-stream = "0.1.14"
+tokio.workspace = true
 tracing = "0.1.34"
 url.workspace = true
 
