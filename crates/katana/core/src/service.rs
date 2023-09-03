@@ -369,7 +369,6 @@ impl Stream for PendingBlockProducer {
 
 pub struct InstantBlockProducer {
     /// Holds the backend if no block is being mined
-    // idle_backend: Option<Arc<Backend>>,
     backend: Arc<Backend>,
     /// Single active future that mines a new block
     block_mining: Option<InstantBlockMiningFuture>,
