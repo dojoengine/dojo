@@ -92,12 +92,12 @@ async fn migrate_with_block_time() {
     sequencer.stop().unwrap();
 }
 
-#[tokio::test]
-async fn migrate_with_zero_fee_multiplier_will_fail() {
+#[tokio::test(flavor = "multi_thread")]
+async fn migrate_with_small_fee_multiplier_will_fail() {
     let target_dir = Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap();
 
     let sequencer = TestSequencer::start(
-        SequencerConfig { block_time: Some(1) },
+        SequencerConfig { block_time: Some(1), ..Default::default() },
         StarknetConfig { disable_fee: false, ..Default::default() },
     )
     .await;
@@ -132,13 +132,11 @@ async fn migrate_with_zero_fee_multiplier_will_fail() {
             &migration,
             &account,
             &config,
-            Some(TransactionOptions { fee_estimate_multiplier: Some(0f64) }),
+            Some(TransactionOptions { fee_estimate_multiplier: Some(0.2f64) }),
         )
         .await
         .is_err()
     );
-
-    sequencer.stop().unwrap();
 }
 
 #[test]
