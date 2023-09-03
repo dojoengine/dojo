@@ -9,7 +9,7 @@ use starknet::core::types::{BlockId, BlockTag, FieldElement};
 use crate::contract::world::test::deploy_world;
 use crate::contract::world::WorldContractReader;
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_component() {
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;

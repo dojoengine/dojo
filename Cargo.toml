@@ -59,6 +59,7 @@ console = "0.15.7"
 convert_case = "0.6.0"
 env_logger = "0.10.0"
 flate2 = "1.0.24"
+futures = "0.3.28"
 indoc = "1.0.7"
 itertools = "0.10.3"
 log = "0.4.17"
@@ -77,10 +78,11 @@ starknet-crypto = "0.5.1"
 starknet_api = { git = "https://github.com/starkware-libs/starknet-api", rev = "ecc9b6946ef13003da202838e4124a9ad2efabb0" }
 test-log = "0.2.11"
 thiserror = "1.0.32"
-tokio = { version = "1.16", features = [ "full" ] }
+tokio = { version = "1.32.0", features = [ "full" ] }
 toml = "0.7.4"
 tracing = "0.1"
 tracing-subscriber = "0.3.16"
+url = "2.2.2"
 
 [patch."https://github.com/starkware-libs/blockifier"]
 blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "c794d1b" }

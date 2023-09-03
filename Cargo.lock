@@ -1589,6 +1589,42 @@ dependencies = [
 ]
 
 [[package]]
+name = "console-api"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c2895653b4d9f1538a83970077cb01dfc77a4810524e51a110944688e916b18e"
+dependencies = [
+ "prost",
+ "prost-types",
+ "tonic",
+ "tracing-core",
+]
+
+[[package]]
+name = "console-subscriber"
+version = "0.1.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4cf42660ac07fcebed809cfe561dd8730bcd35b075215e6479c516bcd0d11cb"
+dependencies = [
+ "console-api",
+ "crossbeam-channel",
+ "crossbeam-utils",
+ "futures",
+ "hdrhistogram",
+ "humantime",
+ "prost-types",
+ "serde",
+ "serde_json",
+ "thread_local",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+ "tracing",
+ "tracing-core",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "const-fnv1a-hash"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3387,7 +3423,10 @@ version = "7.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f19b9f54f7c7f55e31401bb647626ce0cf0f67b0004982ce815b3ee72a02aa8"
 dependencies = [
+ "base64 0.13.1",
  "byteorder",
+ "flate2",
+ "nom",
  "num-traits 0.2.16",
 ]
 
@@ -3951,12 +3990,14 @@ dependencies = [
  "clap",
  "clap_complete",
  "console",
+ "console-subscriber",
  "env_logger",
  "katana-core",
  "katana-rpc",
  "log",
  "starknet_api",
  "tokio",
+ "url",
 ]
 
 [[package]]
@@ -3984,7 +4025,9 @@ dependencies = [
  "starknet_api",
  "thiserror",
  "tokio",
+ "tokio-stream",
  "tracing",
+ "url",
 ]
 
 [[package]]
@@ -3998,6 +4041,7 @@ dependencies = [
  "cairo-vm",
  "dojo-test-utils",
  "flate2",
+ "futures",
  "hex",
  "hyper",
  "jsonrpsee",
@@ -6553,9 +6597,9 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "tokio"
-version = "1.31.0"
+version = "1.32.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40de3a2ba249dcb097e01be5e67a5ff53cf250397715a071a81543e8a832a920"
+checksum = "17ed6077ed6cd6c74735e21f37eb16dc3935f96878b1fe961074089cc80893f9"
 dependencies = [
  "backtrace",
  "bytes",
@@ -6567,6 +6611,7 @@ dependencies = [
  "signal-hook-registry",
  "socket2 0.5.3",
  "tokio-macros",
+ "tracing",
  "windows-sys 0.48.0",
 ]
 
