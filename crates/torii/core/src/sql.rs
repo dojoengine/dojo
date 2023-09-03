@@ -170,10 +170,6 @@ impl State for Sql {
         );
 
         for member in component.clone().members {
-            if member.key {
-                continue;
-            }
-
             component_table_query.push_str(&format!(
                 "external_{} {}, ",
                 member.name,
@@ -253,15 +249,18 @@ impl State for Sql {
             entity_id, keys_str, component_names
         );
 
-        let member_results = sqlx::query(
-            "SELECT * FROM component_members WHERE key == FALSE AND component_id = ? ORDER BY id \
-             ASC",
-        )
-        .bind(component.to_lowercase())
-        .fetch_all(&self.pool)
-        .await?;
+        let member_names_result =
+            sqlx::query("SELECT * FROM component_members WHERE component_id = ? ORDER BY id ASC")
+                .bind(component.to_lowercase())
+                .fetch_all(&self.pool)
+                .await?;
 
-        let (names_str, values_str) = format_values(member_results, values)?;
+        // keys are part of component members, so combine keys and component values array
+        let mut member_values: Vec<FieldElement> = Vec::new();
+        member_values.extend(keys);
+        member_values.extend(values);
+
+        let (names_str, values_str) = format_values(member_names_result, member_values)?;
         let insert_components = format!(
             "INSERT OR REPLACE INTO external_{} (entity_id {}) VALUES ('{}' {})",
             component.to_lowercase(),
