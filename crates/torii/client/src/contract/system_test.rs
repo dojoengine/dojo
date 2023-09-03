@@ -29,7 +29,7 @@ async fn test_system() {
     let _ = spawn.execute(vec![]).await.unwrap();
 
     // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    tokio::time::sleep(Duration::from_millis(250)).await;
 
     let component = world.component("Moves", block_id).await.unwrap();
     let moves = component.entity(vec![account.address()], block_id).await.unwrap();
@@ -40,11 +40,11 @@ async fn test_system() {
 
     let _ = move_system.execute(vec![FieldElement::ONE]).await.unwrap();
     // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    tokio::time::sleep(Duration::from_millis(250)).await;
 
     let _ = move_system.execute(vec![FieldElement::THREE]).await.unwrap();
     // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    tokio::time::sleep(Duration::from_millis(250)).await;
 
     let moves = component.entity(vec![account.address()], block_id).await.unwrap();
 

@@ -31,7 +31,7 @@ async fn test_send_declare_and_deploy_contract() {
     let res = account.declare(Arc::new(contract), compiled_class_hash).send().await.unwrap();
 
     // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    tokio::time::sleep(Duration::from_millis(250)).await;
 
     let receipt = account.provider().get_transaction_receipt(res.transaction_hash).await.unwrap();
 
@@ -81,7 +81,7 @@ async fn test_send_declare_and_deploy_contract() {
         .unwrap();
 
     // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    tokio::time::sleep(Duration::from_millis(250)).await;
 
     assert_eq!(
         account
@@ -110,7 +110,7 @@ async fn test_send_declare_and_deploy_legacy_contract() {
     let class_hash = contract_class.class_hash().unwrap();
     let res = account.declare_legacy(contract_class).send().await.unwrap();
     // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    tokio::time::sleep(Duration::from_millis(250)).await;
 
     let receipt = account.provider().get_transaction_receipt(res.transaction_hash).await.unwrap();
 
@@ -160,7 +160,7 @@ async fn test_send_declare_and_deploy_legacy_contract() {
         .unwrap();
 
     // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    tokio::time::sleep(Duration::from_millis(250)).await;
 
     assert_eq!(
         account

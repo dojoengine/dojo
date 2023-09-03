@@ -55,7 +55,7 @@ pub async fn deploy_world(
         .contract_address;
 
     // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    tokio::time::sleep(Duration::from_millis(250)).await;
 
     let world_address = strategy
         .world
@@ -77,7 +77,7 @@ pub async fn deploy_world(
     }
 
     // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    tokio::time::sleep(Duration::from_millis(250)).await;
 
     let _ = WorldContract::new(world_address, &account)
         .register_components(&declare_output.iter().map(|o| o.class_hash).collect::<Vec<_>>())
@@ -85,7 +85,7 @@ pub async fn deploy_world(
         .unwrap();
 
     // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    tokio::time::sleep(Duration::from_millis(250)).await;
 
     let mut declare_output = vec![];
     for system in strategy.systems {
@@ -94,7 +94,7 @@ pub async fn deploy_world(
     }
 
     // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    tokio::time::sleep(Duration::from_millis(250)).await;
 
     let world = WorldContract::new(world_address, &account);
     let _ = world
@@ -103,7 +103,7 @@ pub async fn deploy_world(
         .unwrap();
 
     // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    tokio::time::sleep(Duration::from_millis(250)).await;
 
     (world_address, executor_address)
 }
