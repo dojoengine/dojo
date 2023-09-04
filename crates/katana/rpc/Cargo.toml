@@ -7,9 +7,9 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-anyhow = "1.0.40"
+anyhow.workspace = true
 blockifier.workspace = true
-cairo-lang-starknet = "2.1.1"
+cairo-lang-starknet.workspace = true
 cairo-vm.workspace = true
 flate2.workspace = true
 futures.workspace = true
@@ -31,5 +31,4 @@ tracing.workspace = true
 [dev-dependencies]
 assert_matches = "1.5.0"
 dojo-test-utils = { path = "../../dojo-test-utils" }
-starknet.workspace = true
-url = "2.3.1"
+url.workspace = true

@@ -21,7 +21,6 @@ use crate::backend::storage::transaction::{
 };
 use crate::db::cached::CachedStateWrapper;
 use crate::db::{Database, StateExt, StateRefDb};
-use crate::env::Env;
 
 /// The outcome that after executing a list of transactions.
 pub struct ExecutionOutcome {
@@ -219,95 +218,6 @@ pub struct PendingState {
     pub state: RwLock<CachedStateWrapper<StateRefDb>>,
     /// The transactions that have been executed.
     pub executed_transactions: RwLock<Vec<MaybeInvalidExecutedTransaction>>,
-}
-
-/// The executor used when the node is running in interval mode.
-pub struct PendingBlockExecutor {
-    /// The state of the executor.
-    state: Arc<PendingState>,
-    /// Determines whether to charge fees for transactions.
-    charge_fee: bool,
-    /// The environment variable to execute the transaction on.
-    env: Arc<RwLock<Env>>,
-}
-
-impl PendingBlockExecutor {
-    pub fn new(
-        state: CachedStateWrapper<StateRefDb>,
-        env: Arc<RwLock<Env>>,
-        charge_fee: bool,
-    ) -> Self {
-        let state = Arc::new(PendingState {
-            state: RwLock::new(state),
-            executed_transactions: Default::default(),
-        });
-        Self { env, state, charge_fee }
-    }
-
-    pub fn state(&self) -> Arc<PendingState> {
-        self.state.clone()
-    }
-
-    /// Resets the executor to a new state
-    pub fn reset(&mut self, state: StateRefDb) {
-        self.state.executed_transactions.write().clear();
-        *self.state.state.write() = CachedStateWrapper::new(state);
-    }
-
-    /// Execute all the given transactions sequentially based on their order in the list.
-    pub fn execute(&self, transactions: Vec<Transaction>) {
-        let transactions = {
-            let mut state = self.state.state.write();
-            TransactionExecutor::new(&mut state, &self.env.read().block, self.charge_fee)
-                .with_error_log()
-                .with_events_log()
-                .with_resources_log()
-                .execute_many(transactions.clone())
-                .into_iter()
-                .zip(transactions)
-                .map(|(res, tx)| match res {
-                    Ok(exec_info) => {
-                        let executed_tx = ExecutedTransaction::new(tx, exec_info);
-                        MaybeInvalidExecutedTransaction::Valid(Arc::new(executed_tx))
-                    }
-
-                    Err(err) => {
-                        let rejected_tx =
-                            RejectedTransaction { inner: tx, execution_error: err.to_string() };
-                        MaybeInvalidExecutedTransaction::Invalid(Arc::new(rejected_tx))
-                    }
-                })
-                .collect::<Vec<_>>()
-        };
-
-        self.state.executed_transactions.write().extend(transactions)
-    }
-
-    /// Returns the outcome based on the transactions that have been executed thus far.
-    pub fn outcome(&self) -> ExecutionOutcome {
-        let state = &mut self.state.state.write();
-
-        let declared_sierra_classes = state.sierra_class().clone();
-
-        let state_diff = state.to_state_diff();
-        let declared_classes = state_diff
-            .class_hash_to_compiled_class_hash
-            .iter()
-            .map(|(class_hash, _)| {
-                let contract_class = state
-                    .get_compiled_contract_class(class_hash)
-                    .expect("contract class must exist in state if declared");
-                (*class_hash, contract_class)
-            })
-            .collect::<HashMap<_, _>>();
-
-        ExecutionOutcome {
-            state_diff,
-            declared_classes,
-            declared_sierra_classes,
-            transactions: self.state.executed_transactions.read().clone(),
-        }
-    }
 }
 
 #[derive(Debug)]
