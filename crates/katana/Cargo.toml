@@ -9,7 +9,6 @@ version.workspace = true
 [dependencies]
 clap.workspace = true
 clap_complete.workspace = true
-console-subscriber = "0.1.10"
 console.workspace = true
 env_logger.workspace = true
 katana-core = { path = "core" }
@@ -21,7 +20,3 @@ url.workspace = true
 
 [dev-dependencies]
 assert_matches = "1.5.0"
-
-[[bin]]
-name = "katana"
-path = "src/main.rs"

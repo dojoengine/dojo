@@ -1589,42 +1589,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "console-api"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c2895653b4d9f1538a83970077cb01dfc77a4810524e51a110944688e916b18e"
-dependencies = [
- "prost",
- "prost-types",
- "tonic",
- "tracing-core",
-]
-
-[[package]]
-name = "console-subscriber"
-version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4cf42660ac07fcebed809cfe561dd8730bcd35b075215e6479c516bcd0d11cb"
-dependencies = [
- "console-api",
- "crossbeam-channel",
- "crossbeam-utils",
- "futures",
- "hdrhistogram",
- "humantime",
- "prost-types",
- "serde",
- "serde_json",
- "thread_local",
- "tokio",
- "tokio-stream",
- "tonic",
- "tracing",
- "tracing-core",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "const-fnv1a-hash"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3423,10 +3387,7 @@ version = "7.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f19b9f54f7c7f55e31401bb647626ce0cf0f67b0004982ce815b3ee72a02aa8"
 dependencies = [
- "base64 0.13.1",
  "byteorder",
- "flate2",
- "nom",
  "num-traits 0.2.16",
 ]
 
@@ -3990,7 +3951,6 @@ dependencies = [
  "clap",
  "clap_complete",
  "console",
- "console-subscriber",
  "env_logger",
  "katana-core",
  "katana-rpc",
@@ -4025,7 +3985,6 @@ dependencies = [
  "starknet_api",
  "thiserror",
  "tokio",
- "tokio-stream",
  "tracing",
  "url",
 ]
@@ -6611,7 +6570,6 @@ dependencies = [
  "signal-hook-registry",
  "socket2 0.5.3",
  "tokio-macros",
- "tracing",
  "windows-sys 0.48.0",
 ]
 
@@ -6805,7 +6763,6 @@ dependencies = [
  "dojo-world",
  "futures-channel",
  "futures-util",
- "log",
  "once_cell",
  "serde",
  "serde_json",
@@ -6833,7 +6790,6 @@ dependencies = [
  "dojo-types",
  "dojo-world",
  "indexmap 1.9.3",
- "log",
  "poem",
  "serde",
  "serde_json",
@@ -6874,7 +6830,6 @@ dependencies = [
  "dojo-types",
  "dojo-world",
  "indexmap 1.9.3",
- "log",
  "poem",
  "scarb",
  "serde",

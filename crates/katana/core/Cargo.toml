@@ -11,24 +11,23 @@ anyhow.workspace = true
 async-trait.workspace = true
 auto_impl = "1.1.0"
 blockifier.workspace = true
-cairo-lang-casm = "2.1.1"
-cairo-lang-starknet = "2.1.1"
+cairo-lang-casm.workspace = true
+cairo-lang-starknet.workspace = true
 cairo-vm.workspace = true
 convert_case.workspace = true
 flate2.workspace = true
 futures.workspace = true
 lazy_static = "1.4.0"
-parking_lot = "0.12.1"
+parking_lot.workspace = true
 rand = { version = "0.8.5", features = [ "small_rng" ] }
 serde.workspace = true
-serde_json = "1.0.70"
+serde_json.workspace = true
 serde_with.workspace = true
 starknet.workspace = true
 starknet_api.workspace = true
 thiserror.workspace = true
-tokio-stream = "0.1.14"
 tokio.workspace = true
-tracing = "0.1.34"
+tracing.workspace = true
 url.workspace = true
 
 [dev-dependencies]
