@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -27,6 +29,7 @@ pub struct Sql {
     world_address: FieldElement,
     pool: Pool<Sqlite>,
     query_queue: Mutex<Vec<String>>,
+    sql_types: Mutex<HashMap<String, &'static str>>,
 }
 
 impl Sql {
@@ -50,7 +53,28 @@ impl Sql {
 
         tx.commit().await?;
 
-        Ok(Self { pool, world_address, query_queue: Mutex::new(vec![]) })
+        let sql_types = HashMap::from([
+            ("u8".to_string(), "INTEGER"),
+            ("u16".to_string(), "INTEGER"),
+            ("u32".to_string(), "INTEGER"),
+            ("u64".to_string(), "INTEGER"),
+            ("u128".to_string(), "TEXT"),
+            ("u256".to_string(), "TEXT"),
+            ("usize".to_string(), "INTEGER"),
+            ("bool".to_string(), "INTEGER"),
+            ("Cursor".to_string(), "TEXT"),
+            ("ContractAddress".to_string(), "TEXT"),
+            ("ClassHash".to_string(), "TEXT"),
+            ("DateTime".to_string(), "TEXT"),
+            ("felt252".to_string(), "TEXT"),
+        ]);
+
+        Ok(Self {
+            pool,
+            world_address,
+            query_queue: Mutex::new(vec![]),
+            sql_types: Mutex::new(sql_types),
+        })
     }
 }
 
@@ -174,11 +198,11 @@ impl State for Sql {
                 continue;
             }
 
-            component_table_query.push_str(&format!(
-                "external_{} {}, ",
-                member.name,
-                sql_type(&member.ty)?
-            ));
+            // if new type, insert and assume INTEGER type
+            let mut sql_types = self.sql_types.lock().await;
+            let ty = sql_types.entry(member.ty).or_insert("INTEGER");
+
+            component_table_query.push_str(&format!("external_{} {}, ", member.name, ty));
         }
 
         component_table_query.push_str(
@@ -260,7 +284,8 @@ impl State for Sql {
         .fetch_all(&self.pool)
         .await?;
 
-        let (names_str, values_str) = format_values(member_results, values)?;
+        let sql_types = self.sql_types.lock().await;
+        let (names_str, values_str) = format_values(member_results, values, &sql_types)?;
         let insert_components = format!(
             "INSERT OR REPLACE INTO external_{} (entity_id {}) VALUES ('{}' {})",
             component.to_lowercase(),
@@ -330,6 +355,7 @@ fn component_names(entity_result: Option<SqliteRow>, new_component: &str) -> Res
 fn format_values(
     member_results: Vec<SqliteRow>,
     values: Vec<FieldElement>,
+    sql_types: &HashMap<String, &str>,
 ) -> Result<(String, String)> {
     let names: Result<Vec<String>> = member_results
         .iter()
@@ -346,26 +372,12 @@ fn format_values(
     let values: Result<Vec<String>> = values
         .iter()
         .zip(types?.iter())
-        .map(|(value, ty)| {
-            if sql_type(ty)? == "INTEGER" {
-                Ok(format!(",'{}'", value))
-            } else {
-                Ok(format!(",'{:#x}'", value))
-            }
+        .map(|(value, ty)| match sql_types.get(ty).copied() {
+            Some("INTEGER") => Ok(format!(",'{}'", value)),
+            Some("TEXT") => Ok(format!(",'{:#x}'", value)),
+            _ => Err(anyhow::anyhow!("Unsupported type {}", ty)),
         })
         .collect();
 
     Ok((names?.join(""), values?.join("")))
-}
-
-// NOTE: If adding/removing types, corresponding change needs to be made to torii-graphql
-// `src/types.rs`
-fn sql_type(member_type: &str) -> Result<&str, anyhow::Error> {
-    match member_type {
-        "u8" | "u16" | "u32" | "u64" | "usize" | "bool" => Ok("INTEGER"),
-        "u128" | "u256" | "Cursor" | "ContractAddress" | "ClassHash" | "DateTime" | "felt252" => {
-            Ok("TEXT")
-        }
-        _ => Err(anyhow::anyhow!("Unknown member type {}", member_type.to_string())),
-    }
 }
