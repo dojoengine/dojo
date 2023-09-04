@@ -238,11 +238,10 @@ impl State for Sql {
             .fetch_optional(&self.pool)
             .await?;
 
-        // TODO: map keys to individual columns
-        let keys_str = keys.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join(",");
+        let keys_str = keys.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join("/");
         let component_names = component_names(entity_result, &component)?;
         let insert_entities = format!(
-            "INSERT INTO entities (id, keys, component_names) VALUES ('{}', '{}', '{}') ON \
+            "INSERT INTO entities (id, keys, component_names) VALUES ('{}', '{}/', '{}') ON \
              CONFLICT(id) DO UPDATE SET
              component_names=excluded.component_names, 
              updated_at=CURRENT_TIMESTAMP",
