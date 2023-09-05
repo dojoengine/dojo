@@ -3,28 +3,14 @@ use std::sync::Arc;
 use cairo_lang_defs::plugin::{MacroPlugin, PluginGeneratedFile};
 use cairo_lang_diagnostics::{format_diagnostics, DiagnosticLocation};
 use cairo_lang_filesystem::cfg::CfgSet;
-use cairo_lang_filesystem::db::{FilesDatabase, FilesGroup};
+use cairo_lang_filesystem::db::FilesGroup;
 use cairo_lang_formatter::format_string;
 use cairo_lang_parser::test_utils::create_virtual_file;
 use cairo_lang_parser::utils::{get_syntax_file_and_diagnostics, SimpleParserDatabase};
-use cairo_lang_syntax::node::db::SyntaxDatabase;
 use cairo_lang_syntax::node::TypedSyntaxNode;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
-use cairo_lang_utils::Upcast;
 
 use crate::plugin::DojoPlugin;
-
-#[salsa::database(SyntaxDatabase, FilesDatabase)]
-#[derive(Default)]
-pub struct DatabaseImpl {
-    storage: salsa::Storage<DatabaseImpl>,
-}
-impl salsa::Database for DatabaseImpl {}
-impl Upcast<dyn FilesGroup> for DatabaseImpl {
-    fn upcast(&self) -> &(dyn FilesGroup + 'static) {
-        self
-    }
-}
 
 cairo_lang_test_utils::test_file_test!(
     expand_plugin,

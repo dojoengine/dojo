@@ -20,7 +20,7 @@ mod ERC1155 {
     use dojo_erc::erc165::interface::{IERC165, IERC165_ID};
 
     use dojo_erc::erc_common::utils::{
-        to_calldata, ToCallDataTrait, system_calldata, PartialEqArray
+        to_calldata, ToCallDataTrait, system_calldata
     };
 
     use dojo_erc::erc1155::systems::{

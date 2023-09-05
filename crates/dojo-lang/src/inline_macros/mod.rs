@@ -7,9 +7,6 @@ pub mod emit;
 pub mod get;
 pub mod set;
 
-#[cfg(test)]
-mod test;
-
 const CAIRO_ERR_MSG_LEN: usize = 31;
 
 pub fn extract_components(
