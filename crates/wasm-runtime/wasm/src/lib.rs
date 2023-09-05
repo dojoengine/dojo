@@ -1,18 +1,16 @@
+mod utils;
 use std::sync::Mutex;
 
-use client_blockifier::utils::{addr, invoke_calldata, invoke_tx, HashMap};
-use client_blockifier::Client;
+use client_sequencer::utils::{addr, invoke_calldata, invoke_tx, HashMap};
+use client_sequencer::Client;
+use utils::set_panic_hook;
 use wasm_bindgen::prelude::*;
 
 #[macro_use]
 extern crate lazy_static;
 
 lazy_static! {
-    static ref CLIENT: Mutex<Client> = Mutex::new(Client::new());
-}
-
-fn js_str(s: JsValue) -> String {
-    s.as_string().unwrap()
+    pub static ref CLIENT: Mutex<Client> = Mutex::new(Client::new());
 }
 
 #[wasm_bindgen]
@@ -24,7 +22,13 @@ extern "C" {
 }
 
 #[wasm_bindgen]
-pub fn test_tx() -> Result<JsValue, String> {
+pub fn debug() {
+    set_panic_hook();
+    log("Panic hook set");
+}
+
+#[wasm_bindgen]
+pub fn test_tx() -> JsValue {
     let res = execute(
         "0x100".into(),
         "0x1".into(),
@@ -32,36 +36,57 @@ pub fn test_tx() -> Result<JsValue, String> {
         serde_wasm_bindgen::to_value(&vec!["0x1", "0x100"]).unwrap(),
     );
 
-    log(&format!("{res:#?}"));
     res
 }
 
 #[wasm_bindgen]
-pub fn register_class(hash: JsValue, json: JsValue) -> bool {
+pub fn register_class(hash: String, json: String) -> bool {
     let mut client = CLIENT.lock().unwrap();
-    let res = client.register_class(&js_str(hash), &js_str(json));
-    res.is_ok()
+    match client.register_class(&hash, &json) {
+        Ok(_) => true,
+        Err(e) => {
+            log(&format!("{:?}", e));
+            false
+        }
+    }
 }
 
 #[wasm_bindgen]
-pub fn register_class_v0(hash: JsValue, json: JsValue) -> bool {
+pub fn register_class_v0(hash: String, json: String) -> bool {
     let mut client = CLIENT.lock().unwrap();
-    let res = client.register_class_v0(&js_str(hash), &js_str(json));
-    res.is_ok()
+    match client.register_class_v0(&hash, &json) {
+        Ok(_) => true,
+        Err(e) => {
+            log(&format!("{:?}", e));
+            false
+        }
+    }
 }
 
 #[wasm_bindgen]
-pub fn register_contract(address: JsValue, class_hash: JsValue) -> bool {
+pub fn register_contract(address: String, class_hash: String) -> bool {
     let mut client = CLIENT.lock().unwrap();
-    client.register_contract(&js_str(address), &js_str(class_hash), HashMap::new()).is_ok()
+    match client.register_contract(&address, &class_hash, HashMap::new()) {
+        Ok(_) => true,
+        Err(e) => {
+            log(&format!("{:?}", e));
+            false
+        }
+    }
 }
 
 #[wasm_bindgen]
-pub fn build_storage_key(storage_var_name: JsValue, args: JsValue) -> String {
-    let args: Vec<String> = serde_wasm_bindgen::from_value(args).unwrap();
+pub fn build_storage_key(storage_var_name: String, args: JsValue) -> JsValue {
+    let args: Vec<String> = match serde_wasm_bindgen::from_value(args) {
+        Ok(val) => val,
+        Err(e) => {
+            log(&format!("Err: {}", e));
+            return JsValue::FALSE;
+        }
+    };
     let args: Vec<&str> = args.iter().map(|e| e.as_str()).collect();
-
-    format!("{:?}", addr::storage(&js_str(storage_var_name), &args))
+    log(&format!("{}, Args: {:?}", storage_var_name, args));
+    JsValue::from_str(&format!("{:?}", addr::storage(&storage_var_name, &args)))
 }
 
 // #[wasm_bindgen]
@@ -71,18 +96,15 @@ pub fn build_storage_key(storage_var_name: JsValue, args: JsValue) -> String {
 // }
 
 #[wasm_bindgen]
-pub fn execute(
-    caller: JsValue,
-    callee: JsValue,
-    entrypoint: JsValue,
-    calldata: JsValue,
-) -> Result<JsValue, String> {
-    let caller = js_str(caller);
-    let callee = js_str(callee);
-    let entrypoint = js_str(entrypoint);
-
+pub fn execute(caller: String, callee: String, entrypoint: String, calldata: JsValue) -> JsValue {
     let calldata: Vec<String> = serde_wasm_bindgen::from_value(calldata).unwrap();
     let calldata = calldata.iter().map(|cd| cd.as_str()).collect();
+
+    log(&format!(
+        "caller: {} callee: {} entrypoint: {} \n\n{:?}",
+        &caller, &callee, &entrypoint, calldata
+    ));
+
     let tx = invoke_tx(&caller, invoke_calldata(&callee, &entrypoint, calldata), None, "1");
     let mut client = CLIENT.lock().unwrap();
 
@@ -91,14 +113,17 @@ pub fn execute(
     }
 
     let tx_res = client.execute(tx);
-    log(&format!("{tx_res:#?}"));
 
     match tx_res {
         Ok(exec_info) => {
-            let res = exec_info.actual_resources;
-            // res.0
-            Ok(serde_wasm_bindgen::to_value(&res.0).unwrap())
+            log(&format!("execute_call_info: {:#?}", exec_info.execute_call_info));
+            log(&format!("validate_call_info: {:#?}", exec_info.validate_call_info));
+
+            serde_wasm_bindgen::to_value(&vec![2, 5, 7, 9, 11]).unwrap()
         }
-        Err(tx_err) => Err(format!("{tx_err:#?}")),
+        Err(tx_err) => {
+            log(&format!("{:#?}", tx_err));
+            JsValue::FALSE
+        }
     }
 }

@@ -1,0 +1,16 @@
+{
+  "name": "dojo-wasm-runtime",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "sozo": "cargo run --bin sozo build --manifest-path ../../../examples/ecs/Scarb.toml && cp -r ../../../examples/ecs/target ./inc/target",
+    "wasm": "cd ../wasm && wasm-pack build -t no-modules && cd ../js-test && cp -r ../wasm/pkg/ ./public/wasm/",
+    "": "",
+    "": ""
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {}
+}

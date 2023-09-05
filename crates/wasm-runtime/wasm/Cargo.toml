@@ -8,7 +8,8 @@ edition = "2018"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-client-blockifier = { path = "../blockifier" }
+sequencer = { path = "../blockifier" }
+console_error_panic_hook = "0.1.7"
 lazy_static = "1.4.0"
 serde = { version = "1.0", features = ["derive"] }
 serde-wasm-bindgen = "0.4"
@@ -16,7 +17,3 @@ wasm-bindgen = "0.2.84"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.34"
-
-[profile.release]
-# Tell `rustc` to optimize for small code size.
-opt-level = "s"
