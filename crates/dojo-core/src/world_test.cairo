@@ -77,6 +77,20 @@ fn test_system() {
 
 #[test]
 #[available_gas(6000000)]
+fn test_class_hash_getters() {
+    let world = deploy_world();
+
+    world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
+
+    let foo = world.component('Foo');
+    assert(foo == foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo does not exists');
+    let bar = world.system('bar');
+    assert(bar == bar::TEST_CLASS_HASH.try_into().unwrap(), 'bar does not exists');
+}
+
+#[test]
+#[available_gas(6000000)]
 fn test_emit() {
     let world = deploy_world();
 
