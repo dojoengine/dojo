@@ -5,8 +5,8 @@ use std::time::Duration;
 
 use futures::FutureExt;
 use starknet::core::types::{
-    FieldElement, MaybePendingTransactionReceipt, StarknetError, TransactionReceipt,
-    TransactionStatus,
+    ExecutionResult, FieldElement, MaybePendingTransactionReceipt, PendingTransactionReceipt,
+    StarknetError, TransactionFinalityStatus, TransactionReceipt,
 };
 use starknet::providers::{
     MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage,
@@ -20,24 +20,28 @@ type GetReceiptFuture<'a, E> = Pin<Box<dyn Future<Output = GetReceiptResult<E>> 
 pub enum TransactionWaitingError<E> {
     #[error("request timed out")]
     Timeout,
-    #[error("transaction was rejected")]
-    TransactionRejected,
+    #[error("transaction reverted due to failed execution: {0}")]
+    TransactionReverted(String),
     #[error(transparent)]
     Provider(ProviderError<E>),
 }
 
 /// A type that waits for a transaction to achieve `status` status. The transaction will be polled
 /// for every `interval` miliseconds. If the transaction does not achieved `status` status within
-/// `timeout` miliseconds, an error will be returned. An error is also returned if the transaction
-/// is rejected ( i.e., the transaction returns a `REJECTED` status ).
-pub struct TransactionWaiter<'a, P>
-where
-    P: Provider,
-{
+/// `timeout` miliseconds, an error will be returned.
+pub struct TransactionWaiter<'a, P: Provider> {
     /// The hash of the transaction to wait for.
     tx_hash: FieldElement,
-    /// The status to wait for. Defaults to `TransactionStatus::AcceptedOnL2`.
-    status: TransactionStatus,
+    /// The finality status to wait for. If set, the waiter will wait for the transaction to
+    /// achieve this finality status. If not set, the waiter will only wait for the transaction
+    /// until it is included in the _pending_ block.
+    finality_status: Option<TransactionFinalityStatus>,
+    /// A flag to indicate that the waited transaction must either be successfully executed or not.
+    /// If it's set to `true`, then the transaction execution status must be `SUCCEDED` otherwise
+    /// an error will be returned. However, if set to `false`, then the execution status will not
+    /// be considered when waiting for the transaction, meaning `REVERTED` transaction will not
+    /// return an error.
+    must_succeed: bool,
     /// Poll the transaction every `interval` miliseconds. Miliseconds are used so that
     /// we can be more precise with the polling interval. Defaults to 250ms.
     interval: Interval,
@@ -47,7 +51,7 @@ where
     /// The provider to use for polling the transaction.
     provider: &'a P,
     /// The future that get the transaction receipt.
-    future: Option<GetReceiptFuture<'a, <P as Provider>::Error>>,
+    receipt_request_fut: Option<GetReceiptFuture<'a, <P as Provider>::Error>>,
     /// The time when the transaction waiter was polled.
     started_at: Option<Instant>,
 }
@@ -58,15 +62,15 @@ where
 {
     const DEFAULT_TIMEOUT: Duration = Duration::from_secs(60);
     const DEFAULT_INTERVAL: Duration = Duration::from_millis(250);
-    const DEFAULT_STATUS: TransactionStatus = TransactionStatus::AcceptedOnL2;
 
     pub fn new(tx: FieldElement, provider: &'a P) -> Self {
         Self {
             provider,
             tx_hash: tx,
-            future: None,
+            receipt_request_fut: None,
             started_at: None,
-            status: Self::DEFAULT_STATUS,
+            must_succeed: true,
+            finality_status: None,
             timeout: Self::DEFAULT_TIMEOUT,
             interval: tokio::time::interval_at(
                 Instant::now() + Self::DEFAULT_INTERVAL,
@@ -81,8 +85,8 @@ where
         self
     }
 
-    pub fn with_status(mut self, status: TransactionStatus) -> Self {
-        self.status = status;
+    pub fn with_status(mut self, status: TransactionFinalityStatus) -> Self {
+        self.finality_status = Some(status);
         self
     }
 
@@ -96,7 +100,7 @@ impl<'a, P> Future for TransactionWaiter<'a, P>
 where
     P: Provider + Send,
 {
-    type Output = Result<TransactionReceipt, TransactionWaitingError<P::Error>>;
+    type Output = Result<MaybePendingTransactionReceipt, TransactionWaitingError<P::Error>>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.get_mut();
@@ -112,42 +116,76 @@ where
                 }
             }
 
-            if let Some(mut flush) = this.future.take() {
+            if let Some(mut flush) = this.receipt_request_fut.take() {
                 match flush.poll_unpin(cx) {
                     Poll::Ready(res) => match res {
-                        Ok(MaybePendingTransactionReceipt::Receipt(receipt)) => {
-                            match transaction_status_from_receipt(&receipt) {
-                                TransactionStatus::Rejected => {
-                                    return Poll::Ready(Err(
-                                        TransactionWaitingError::TransactionRejected,
-                                    ));
+                        Ok(receipt) => match receipt {
+                            MaybePendingTransactionReceipt::PendingReceipt(r) => {
+                                if this.finality_status.is_none() {
+                                    if this.must_succeed {
+                                        let res = match execution_status_from_pending_receipt(&r) {
+                                            ExecutionResult::Succeeded => Ok(receipt),
+                                            ExecutionResult::Reverted { reason } => {
+                                                Err(TransactionWaitingError::TransactionReverted(
+                                                    reason.clone(),
+                                                ))
+                                            }
+                                        };
+                                        return Poll::Ready(res);
+                                    } else {
+                                        return Poll::Ready(Ok(receipt));
+                                    }
                                 }
-
-                                status if status == this.status => return Poll::Ready(Ok(receipt)),
-
-                                _ => {}
                             }
-                        }
 
-                        Ok(MaybePendingTransactionReceipt::PendingReceipt(_))
-                        | Err(ProviderError::StarknetError(StarknetErrorWithMessage {
+                            MaybePendingTransactionReceipt::Receipt(r) => {
+                                if let Some(finality_status) = this.finality_status {
+                                    match finality_status_from_receipt(&r) {
+                                        status if status == finality_status => {
+                                            if this.must_succeed {
+                                                let res = match execution_status_from_receipt(&r) {
+                                                    ExecutionResult::Succeeded => Ok(receipt),
+                                                    ExecutionResult::Reverted { reason } => {
+                                                        Err(TransactionWaitingError::TransactionReverted(
+                                                            reason.clone(),
+                                                        ))
+                                                    }
+                                                };
+                                                return Poll::Ready(res);
+                                            } else {
+                                                return Poll::Ready(Ok(receipt));
+                                            }
+                                        }
+
+                                        _ => {}
+                                    }
+                                } else {
+                                    return Poll::Ready(Ok(receipt));
+                                }
+                            }
+                        },
+
+                        Err(ProviderError::StarknetError(StarknetErrorWithMessage {
                             code:
                                 MaybeUnknownErrorCode::Known(StarknetError::TransactionHashNotFound),
                             ..
-                        })) => {}
+                        })) => return Poll::Pending,
 
-                        Err(e) => return Poll::Ready(Err(TransactionWaitingError::Provider(e))),
+                        Err(e) => {
+                            return Poll::Ready(Err(TransactionWaitingError::Provider(e)));
+                        }
                     },
 
                     Poll::Pending => {
-                        this.future = Some(flush);
+                        this.receipt_request_fut = Some(flush);
                         return Poll::Pending;
                     }
                 }
             }
 
             if this.interval.poll_tick(cx).is_ready() {
-                this.future = Some(Box::pin(this.provider.get_transaction_receipt(this.tx_hash)));
+                this.receipt_request_fut =
+                    Some(Box::pin(this.provider.get_transaction_receipt(this.tx_hash)));
             } else {
                 break;
             }
@@ -157,16 +195,40 @@ where
     }
 }
 
-pub fn transaction_status_from_receipt(receipt: &TransactionReceipt) -> TransactionStatus {
+#[inline]
+fn execution_status_from_receipt(receipt: &TransactionReceipt) -> &ExecutionResult {
     match receipt {
-        TransactionReceipt::Invoke(receipt) => receipt.status,
-        TransactionReceipt::Deploy(receipt) => receipt.status,
-        TransactionReceipt::Declare(receipt) => receipt.status,
-        TransactionReceipt::L1Handler(receipt) => receipt.status,
-        TransactionReceipt::DeployAccount(receipt) => receipt.status,
+        TransactionReceipt::Invoke(receipt) => &receipt.execution_result,
+        TransactionReceipt::Deploy(receipt) => &receipt.execution_result,
+        TransactionReceipt::Declare(receipt) => &receipt.execution_result,
+        TransactionReceipt::L1Handler(receipt) => &receipt.execution_result,
+        TransactionReceipt::DeployAccount(receipt) => &receipt.execution_result,
     }
 }
 
+#[inline]
+fn execution_status_from_pending_receipt(receipt: &PendingTransactionReceipt) -> &ExecutionResult {
+    match receipt {
+        PendingTransactionReceipt::Invoke(receipt) => &receipt.execution_result,
+        PendingTransactionReceipt::Deploy(receipt) => &receipt.execution_result,
+        PendingTransactionReceipt::Declare(receipt) => &receipt.execution_result,
+        PendingTransactionReceipt::L1Handler(receipt) => &receipt.execution_result,
+        PendingTransactionReceipt::DeployAccount(receipt) => &receipt.execution_result,
+    }
+}
+
+#[inline]
+fn finality_status_from_receipt(receipt: &TransactionReceipt) -> TransactionFinalityStatus {
+    match receipt {
+        TransactionReceipt::Invoke(receipt) => receipt.finality_status,
+        TransactionReceipt::Deploy(receipt) => receipt.finality_status,
+        TransactionReceipt::Declare(receipt) => receipt.finality_status,
+        TransactionReceipt::L1Handler(receipt) => receipt.finality_status,
+        TransactionReceipt::DeployAccount(receipt) => receipt.finality_status,
+    }
+}
+
+#[inline]
 pub fn block_number_from_receipt(tx: &TransactionReceipt) -> u64 {
     match tx {
         TransactionReceipt::Invoke(tx) => tx.block_number,
