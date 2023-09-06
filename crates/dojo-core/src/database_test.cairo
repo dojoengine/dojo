@@ -1,17 +1,16 @@
-use core::traits::Into;
 use core::result::ResultTrait;
 use array::ArrayTrait;
 use option::OptionTrait;
 use serde::Serde;
 use array::SpanTrait;
-use traits::TryInto;
+use traits::{Into, TryInto};
 
 use starknet::syscalls::deploy_syscall;
 use starknet::class_hash::Felt252TryIntoClassHash;
 use dojo::executor::{executor, IExecutorDispatcher, IExecutorDispatcherTrait};
 use dojo::world::{Context, IWorldDispatcher};
 
-use dojo::database::{get, set};
+use dojo::database::{get, set, del, all};
 
 
 
@@ -91,11 +90,49 @@ fn test_database_pagination() {
     set(class_hash, 'table', 'key', 1, values.span());
     let first_res = get(class_hash, 'table', 'key', 1, 3);
     let second_res = get(class_hash, 'table', 'key', 3, 5);
-    let third_res = get(class_hash, 'table', 'key', 5, 6);
+    let third_res = get(class_hash, 'table', 'key', 5, 7);
 
-    assert(first_res.at(0) == values.at(0), 'Values different at index 0!');
-    assert(first_res.at(1) == values.at(1), 'Values different at index 1!');
-    assert(second_res.at(0) == values.at(2), 'Values different at index 2!');
-    assert(second_res.at(1) == values.at(3), 'Values different at index 3!');
-    assert(third_res.at(0) == values.at(4), 'Values different at index 4!');
+    assert(*first_res.at(0) == *values.at(0), 'Values different at index 0!');
+    assert(*first_res.at(1) == *values.at(1), 'Values different at index 1!');
+    assert(*second_res.at(0) == *values.at(2), 'Values different at index 2!');
+    assert(*second_res.at(1) == *values.at(3), 'Values different at index 3!');
+    assert(*third_res.at(0) == *values.at(4), 'Values different at index 4!');
+    assert(*third_res.at(1) == 0x0, 'Value not empty at index 5!');
+}
+
+#[test]
+#[available_gas(10000000)]
+fn test_database_del() {
+    let mut values = ArrayTrait::new();
+    values.append(0x42);
+    
+    let class_hash: starknet::ClassHash = executor::TEST_CLASS_HASH.try_into().unwrap();
+    set(class_hash, 'table', 'key', 0, values.span());
+    
+    let before = get(class_hash, 'table', 'key', 0, values.len());
+    assert(*before.at(0) == *values.at(0), 'Values different at index 0!');
+
+    del(class_hash, 'table', 'key');
+    let after = get(class_hash, 'table', 'key', 0, 0);
+    assert(after.len() == 0, 'Non empty after deletion!');
+}
+
+#[test]
+#[available_gas(10000000)]
+fn test_database_all() {
+    let mut even = ArrayTrait::new();
+    even.append(0x2);
+    even.append(0x4);
+    
+    let mut odd = ArrayTrait::new();
+    even.append(0x1);
+    even.append(0x3);
+
+    let class_hash: starknet::ClassHash = executor::TEST_CLASS_HASH.try_into().unwrap();
+    set(class_hash, 'table', 'even', 0, even.span());
+    set(class_hash, 'table', 'odd', 0, odd.span());
+
+    let base = starknet::storage_base_address_from_felt252('table');
+    let (keys, values) = all(class_hash, 'table', 0, 2);
+
 }
