@@ -2,9 +2,8 @@ mod database;
 mod executor;
 #[cfg(test)]
 mod executor_test;
-mod serde;
-use serde::SerdeLen;
-mod traits;
+mod component;
+use component::ComponentSize;
 mod world;
 #[cfg(test)]
 mod world_test;

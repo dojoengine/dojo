@@ -159,7 +159,7 @@ pub fn handle_component_struct(
                 $members$
             }
 
-            impl $type_name$Component of dojo::traits::Component<$type_name$> {
+            impl $type_name$Component of dojo::component::Component<$type_name$> {
                 #[inline(always)]
                 fn name(self: @$type_name$) -> felt252 {
                     '$type_name$'
@@ -177,6 +177,13 @@ pub fn handle_component_struct(
                     let mut serialized = ArrayTrait::new();
                     $component_serialized_values$
                     array::ArrayTrait::span(@serialized)
+                }
+            }
+
+            impl $type_name$ComponentSize of dojo::ComponentSize<$type_name$> {
+                #[inline(always)]
+                fn storage_size() -> usize {
+                    $size$
                 }
             }
 
@@ -206,7 +213,7 @@ pub fn handle_component_struct(
 
                 #[external(v0)]
                 fn size(self: @ContractState) -> usize {
-                    dojo::SerdeLen::<$type_name$>::len()
+                    dojo::ComponentSize::<$type_name$>::storage_size()
                 }
 
                 #[external(v0)]
@@ -240,6 +247,26 @@ pub fn handle_component_struct(
                 ),
                 ("schema".to_string(), RewriteNode::new_modified(schema)),
                 ("print_body".to_string(), RewriteNode::Text(print_body)),
+                (
+                    "size".to_string(),
+                    RewriteNode::Text(
+                        struct_ast
+                            .members(db)
+                            .elements(db)
+                            .iter()
+                            .filter_map(|member| {
+                                if member.has_attr(db, "key") {
+                                    return None;
+                                }
+
+                                Some(format!(
+                                    "dojo::ComponentSize::<{}>::storage_size()",
+                                    member.type_clause(db).ty(db).as_syntax_node().get_text(db),
+                                ))
+                            })
+                            .join(" + "),
+                    ),
+                ),
             ]),
         ),
         diagnostics,

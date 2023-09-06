@@ -138,10 +138,10 @@ mod tests {
         let mut keys = array::ArrayTrait::new();
         keys.append(caller.into());
 
-        let moves = world.entity('Moves', keys.span(), 0, dojo::SerdeLen::<Moves>::len());
+        let moves = world.entity('Moves', keys.span(), 0, dojo::ComponentSize::<Moves>::storage_size());
         assert(*moves[0] == 9, 'moves is wrong');
         let new_position = world
-            .entity('Position', keys.span(), 0, dojo::SerdeLen::<Position>::len());
+            .entity('Position', keys.span(), 0, dojo::ComponentSize::<Position>::storage_size());
         assert(*new_position[0] == 11, 'position x is wrong');
         assert(*new_position[1] == 10, 'position y is wrong');
     }

@@ -6,7 +6,7 @@ test_expand_plugin
 //! > cairo_code
 use serde::Serde;
 
-#[derive(Component, Copy, Drop, Serde, SerdeLen)]
+#[derive(Component, Copy, Drop, Serde)]
 struct Position {
     #[key]
     id: felt252,
@@ -38,16 +38,9 @@ struct Roles {
     role_ids: Array<u8>
 }
 
-impl RolesSerdeLen of dojo::SerdeLen<Roles> {
-    #[inline(always)]
-    fn len() -> usize {
-        5
-    }
-}
-
 use starknet::ContractAddress;
 
-#[derive(Component, Copy, Drop, Serde, SerdeLen)]
+#[derive(Component, Copy, Drop, Serde)]
 struct Player {
     #[key]
     game: felt252,
@@ -67,7 +60,7 @@ struct Position {
     y: felt252
 }
 
-impl PositionComponent of dojo::traits::Component<Position> {
+impl PositionComponent of dojo::component::Component<Position> {
     #[inline(always)]
     fn name(self: @Position) -> felt252 {
         'Position'
@@ -87,6 +80,14 @@ impl PositionComponent of dojo::traits::Component<Position> {
         array::ArrayTrait::append(ref serialized, *self.x);
         serde::Serde::serialize(self.y, ref serialized);
         array::ArrayTrait::span(@serialized)
+    }
+}
+
+impl PositionComponentSize of dojo::ComponentSize<Position> {
+    #[inline(always)]
+    fn storage_size() -> usize {
+        dojo::ComponentSize::<felt252>::storage_size()
+            + dojo::ComponentSize::<felt252>::storage_size()
     }
 }
 
@@ -121,7 +122,7 @@ mod position {
 
     #[external(v0)]
     fn size(self: @ContractState) -> usize {
-        dojo::SerdeLen::<Position>::len()
+        dojo::ComponentSize::<Position>::storage_size()
     }
 
     #[external(v0)]
@@ -131,13 +132,6 @@ mod position {
         array::ArrayTrait::append(ref arr, ('x', 'felt252', false));
         array::ArrayTrait::append(ref arr, ('y', 'felt252', false));
         arr
-    }
-}
-
-impl SerdeLenPosition of dojo::SerdeLen<Position> {
-    #[inline(always)]
-    fn len() -> usize {
-        dojo::SerdeLen::<felt252>::len() + dojo::SerdeLen::<felt252>::len()
     }
 }
 
@@ -166,7 +160,7 @@ struct Roles {
     role_ids: Array<u8>
 }
 
-impl RolesComponent of dojo::traits::Component<Roles> {
+impl RolesComponent of dojo::component::Component<Roles> {
     #[inline(always)]
     fn name(self: @Roles) -> felt252 {
         'Roles'
@@ -184,6 +178,13 @@ impl RolesComponent of dojo::traits::Component<Roles> {
         let mut serialized = ArrayTrait::new();
         serde::Serde::serialize(self.role_ids, ref serialized);
         array::ArrayTrait::span(@serialized)
+    }
+}
+
+impl RolesComponentSize of dojo::ComponentSize<Roles> {
+    #[inline(always)]
+    fn storage_size() -> usize {
+        dojo::ComponentSize::<Array<u8>>::storage_size()
     }
 }
 
@@ -214,7 +215,7 @@ mod roles {
 
     #[external(v0)]
     fn size(self: @ContractState) -> usize {
-        dojo::SerdeLen::<Roles>::len()
+        dojo::ComponentSize::<Roles>::storage_size()
     }
 
     #[external(v0)]
@@ -227,14 +228,6 @@ mod roles {
 
 
 
-impl RolesSerdeLen of dojo::SerdeLen<Roles> {
-    #[inline(always)]
-    fn len() -> usize {
-        5
-    }
-}
-
-
 use starknet::ContractAddress;
 
 struct Player {
@@ -245,7 +238,7 @@ struct Player {
     name: felt252,
 }
 
-impl PlayerComponent of dojo::traits::Component<Player> {
+impl PlayerComponent of dojo::component::Component<Player> {
     #[inline(always)]
     fn name(self: @Player) -> felt252 {
         'Player'
@@ -266,6 +259,13 @@ impl PlayerComponent of dojo::traits::Component<Player> {
         array::ArrayTrait::append(ref serialized, *self.name);
 
         array::ArrayTrait::span(@serialized)
+    }
+}
+
+impl PlayerComponentSize of dojo::ComponentSize<Player> {
+    #[inline(always)]
+    fn storage_size() -> usize {
+        dojo::ComponentSize::<felt252>::storage_size()
     }
 }
 
@@ -300,7 +300,7 @@ mod player {
 
     #[external(v0)]
     fn size(self: @ContractState) -> usize {
-        dojo::SerdeLen::<Player>::len()
+        dojo::ComponentSize::<Player>::storage_size()
     }
 
     #[external(v0)]
@@ -310,13 +310,6 @@ mod player {
         array::ArrayTrait::append(ref arr, ('player', 'ContractAddress', true));
         array::ArrayTrait::append(ref arr, ('name', 'felt252', false));
         arr
-    }
-}
-
-impl SerdeLenPlayer of dojo::SerdeLen<Player> {
-    #[inline(always)]
-    fn len() -> usize {
-        dojo::SerdeLen::<felt252>::len()
     }
 }
 
