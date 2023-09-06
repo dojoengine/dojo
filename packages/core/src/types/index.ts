@@ -1,3 +1,5 @@
+import { num } from "starknet";
+
 /**
  * Enumeration representing various entry points or functions available in the World.
  */
@@ -16,8 +18,7 @@ export enum WorldEntryPoints {
  * Interface representing a query structure with domain and keys.
  */
 export interface Query {
-    address_domain: string,  // The domain or scope of the address being queried
-    keys: bigint[]  // A list of keys used in the query
+    keys: num.BigNumberish[]  // A list of keys used in the query
 }
 
 /**
