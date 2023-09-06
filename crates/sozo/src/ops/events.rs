@@ -78,7 +78,7 @@ fn parse_event(
         // Length is two only when its custom event
         if keys.len() == 2 {
             let name = parse_cairo_short_string(&keys[1]).ok()?;
-            ret.push_str(&format!("Component name: {}", name));
+            ret.push_str(&format!("Component name: {}\n", name));
         }
 
         match &e.kind {
@@ -136,8 +136,13 @@ fn parse_event(
                                 Err(_) => continue 'outer,
                             };
                             ret.push_str(&format!("{}: ", field.name));
-                            if length >= data.len() {
-                                ret.push_str(&format!("{:?}\n", data.range(..length)));
+                            if data.len() >= length {
+                                ret.push_str(&format!(
+                                    "{:?}\n",
+                                    data.drain(..length)
+                                        .map(|e| format!("{:#x}", e))
+                                        .collect::<Vec<_>>()
+                                ));
                             } else {
                                 continue 'outer;
                             }
