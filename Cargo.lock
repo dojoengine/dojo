@@ -3957,6 +3957,7 @@ dependencies = [
  "log",
  "starknet_api",
  "tokio",
+ "url",
 ]
 
 [[package]]
@@ -3985,6 +3986,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "tracing",
+ "url",
 ]
 
 [[package]]
@@ -3998,6 +4000,7 @@ dependencies = [
  "cairo-vm",
  "dojo-test-utils",
  "flate2",
+ "futures",
  "hex",
  "hyper",
  "jsonrpsee",
@@ -6553,9 +6556,9 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "tokio"
-version = "1.31.0"
+version = "1.32.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40de3a2ba249dcb097e01be5e67a5ff53cf250397715a071a81543e8a832a920"
+checksum = "17ed6077ed6cd6c74735e21f37eb16dc3935f96878b1fe961074089cc80893f9"
 dependencies = [
  "backtrace",
  "bytes",
@@ -6760,7 +6763,6 @@ dependencies = [
  "dojo-world",
  "futures-channel",
  "futures-util",
- "log",
  "once_cell",
  "serde",
  "serde_json",
@@ -6788,7 +6790,6 @@ dependencies = [
  "dojo-types",
  "dojo-world",
  "indexmap 1.9.3",
- "log",
  "poem",
  "serde",
  "serde_json",
@@ -6829,7 +6830,6 @@ dependencies = [
  "dojo-types",
  "dojo-world",
  "indexmap 1.9.3",
- "log",
  "poem",
  "scarb",
  "serde",

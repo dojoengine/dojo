@@ -8,7 +8,7 @@ use starknet::core::types::{
 };
 
 use super::transaction::TransactionOutput;
-use crate::backend::executor::ExecutedTransaction;
+use crate::execution::ExecutedTransaction;
 use crate::utils::transaction::api_to_rpc_transaction;
 
 #[derive(Debug, Clone, Copy)]

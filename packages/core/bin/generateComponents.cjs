@@ -31,7 +31,7 @@ fs.readFile(jsonFilePath, "utf8", (err, jsonString) => {
       fileContent += `      const name = "${tableName}";\n`;
       fileContent += `      return defineComponent(\n        world,\n        {\n`;
 
-      component.members.forEach((member) => {
+      component.members.filter(m => !m.key).forEach((member) => {
         let memberType = "RecsType.Number";  // Default type set to Number
 
         if (

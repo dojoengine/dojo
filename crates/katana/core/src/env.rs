@@ -14,7 +14,7 @@ use starknet_api::patricia_key;
 use crate::constants::{DEFAULT_GAS_PRICE, FEE_TOKEN_ADDRESS, SEQUENCER_ADDRESS};
 
 /// Represents the chain environment.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Env {
     /// The block environment of the current block. This is the context that
     /// the transactions will be executed on.

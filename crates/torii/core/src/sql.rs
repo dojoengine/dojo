@@ -170,10 +170,6 @@ impl State for Sql {
         );
 
         for member in component.clone().members {
-            if member.key {
-                continue;
-            }
-
             component_table_query.push_str(&format!(
                 "external_{} {}, ",
                 member.name,
@@ -242,26 +238,28 @@ impl State for Sql {
             .fetch_optional(&self.pool)
             .await?;
 
-        // TODO: map keys to individual columns
-        let keys_str = keys.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join(",");
+        let keys_str = keys.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join("/");
         let component_names = component_names(entity_result, &component)?;
         let insert_entities = format!(
-            "INSERT INTO entities (id, keys, component_names) VALUES ('{}', '{}', '{}') ON \
+            "INSERT INTO entities (id, keys, component_names) VALUES ('{}', '{}/', '{}') ON \
              CONFLICT(id) DO UPDATE SET
              component_names=excluded.component_names, 
              updated_at=CURRENT_TIMESTAMP",
             entity_id, keys_str, component_names
         );
 
-        let member_results = sqlx::query(
-            "SELECT * FROM component_members WHERE key == FALSE AND component_id = ? ORDER BY id \
-             ASC",
-        )
-        .bind(component.to_lowercase())
-        .fetch_all(&self.pool)
-        .await?;
+        let member_names_result =
+            sqlx::query("SELECT * FROM component_members WHERE component_id = ? ORDER BY id ASC")
+                .bind(component.to_lowercase())
+                .fetch_all(&self.pool)
+                .await?;
 
-        let (names_str, values_str) = format_values(member_results, values)?;
+        // keys are part of component members, so combine keys and component values array
+        let mut member_values: Vec<FieldElement> = Vec::new();
+        member_values.extend(keys);
+        member_values.extend(values);
+
+        let (names_str, values_str) = format_values(member_names_result, member_values)?;
         let insert_components = format!(
             "INSERT OR REPLACE INTO external_{} (entity_id {}) VALUES ('{}' {})",
             component.to_lowercase(),

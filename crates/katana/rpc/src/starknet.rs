@@ -1,16 +1,11 @@
 use std::sync::Arc;
 
 use blockifier::state::errors::StateError;
-use blockifier::transaction::account_transaction::AccountTransaction;
-use blockifier::transaction::transactions::{
-    DeclareTransaction as ExecutionDeclareTransaction,
-    DeployAccountTransaction as ExecutionDeployAccountTransaction,
-};
 use jsonrpsee::core::{async_trait, Error};
 use katana_core::backend::contract::StarknetContract;
 use katana_core::backend::storage::transaction::{
     DeclareTransaction, DeployAccountTransaction, InvokeTransaction, KnownTransaction,
-    PendingTransaction,
+    PendingTransaction, Transaction,
 };
 use katana_core::backend::ExternalFunctionCall;
 use katana_core::sequencer::Sequencer;
@@ -26,7 +21,7 @@ use starknet::core::types::{
     ContractClass, DeclareTransactionResult, DeployAccountTransactionResult, EventFilterWithPage,
     EventsPage, FeeEstimate, FieldElement, FunctionCall, InvokeTransactionResult,
     MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, MaybePendingTransactionReceipt,
-    StateUpdate, Transaction,
+    StateUpdate, Transaction as RpcTransaction,
 };
 use starknet_api::core::{ClassHash, ContractAddress, EntryPointSelector, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};
@@ -84,7 +79,7 @@ where
     async fn transaction_by_hash(
         &self,
         transaction_hash: FieldElement,
-    ) -> Result<Transaction, Error> {
+    ) -> Result<RpcTransaction, Error> {
         let transaction = self
             .sequencer
             .transaction(&transaction_hash)
@@ -135,7 +130,7 @@ where
         &self,
         block_id: BlockId,
         index: usize,
-    ) -> Result<Transaction, Error> {
+    ) -> Result<RpcTransaction, Error> {
         let block = self
             .sequencer
             .block(block_id)
@@ -247,7 +242,7 @@ where
         Ok(events)
     }
 
-    async fn pending_transactions(&self) -> Result<Vec<Transaction>, Error> {
+    async fn pending_transactions(&self) -> Result<Vec<RpcTransaction>, Error> {
         let block = self.sequencer.block(BlockId::Tag(BlockTag::Pending)).await;
 
         Ok(block
@@ -255,7 +250,7 @@ where
                 b.transactions()
                     .iter()
                     .map(|tx| KnownTransaction::Pending(PendingTransaction(tx.clone())).into())
-                    .collect::<Vec<Transaction>>()
+                    .collect::<Vec<RpcTransaction>>()
             })
             .unwrap_or(Vec::new()))
     }
@@ -337,53 +332,52 @@ where
         let chain_id = FieldElement::from_hex_be(&self.sequencer.chain_id().await.as_hex())
             .map_err(|_| Error::from(StarknetApiError::InternalServerError))?;
 
-        let mut res = Vec::new();
-
-        for r in request {
-            let transaction = match r {
+        let transactions = request
+            .into_iter()
+            .map(|r| match r {
                 BroadcastedTransaction::Declare(tx) => {
-                    let (transaction, contract_class) =
+                    let sierra_class = match tx {
+                        BroadcastedDeclareTransaction::V2(ref tx) => {
+                            Some(tx.contract_class.as_ref().clone())
+                        }
+                        _ => None,
+                    };
+
+                    let (transaction, compiled_class) =
                         broadcasted_declare_rpc_to_api_transaction(tx, chain_id).unwrap();
 
-                    AccountTransaction::Declare(
-                        ExecutionDeclareTransaction::new(transaction, contract_class)
-                            .map_err(|_| Error::from(StarknetApiError::InternalServerError))?,
-                    )
+                    Transaction::Declare(DeclareTransaction {
+                        sierra_class,
+                        compiled_class,
+                        inner: transaction,
+                    })
                 }
 
                 BroadcastedTransaction::Invoke(tx) => {
                     let transaction = broadcasted_invoke_rpc_to_api_transaction(tx, chain_id);
-                    AccountTransaction::Invoke(transaction)
+                    Transaction::Invoke(InvokeTransaction(transaction))
                 }
 
                 BroadcastedTransaction::DeployAccount(tx) => {
                     let (transaction, contract_address) =
                         broadcasted_deploy_account_rpc_to_api_transaction(tx, chain_id);
 
-                    AccountTransaction::DeployAccount(ExecutionDeployAccountTransaction {
-                        tx: transaction,
-                        contract_address: ContractAddress(patricia_key!(contract_address)),
+                    Transaction::DeployAccount(DeployAccountTransaction {
+                        contract_address,
+                        inner: transaction,
                     })
                 }
-            };
+            })
+            .collect::<Vec<_>>();
 
-            let fee_estimate =
-                self.sequencer.estimate_fee(transaction, block_id).await.map_err(|e| match e {
-                    SequencerError::BlockNotFound(_) => {
-                        Error::from(StarknetApiError::BlockNotFound)
-                    }
-                    SequencerError::TransactionExecution(_) => {
-                        Error::from(StarknetApiError::ContractError)
-                    }
-                    _ => Error::from(StarknetApiError::InternalServerError),
-                })?;
-
-            res.push(FeeEstimate {
-                gas_price: fee_estimate.gas_price,
-                overall_fee: fee_estimate.overall_fee,
-                gas_consumed: fee_estimate.gas_consumed,
-            });
-        }
+        let res =
+            self.sequencer.estimate_fee(transactions, block_id).await.map_err(|e| match e {
+                SequencerError::BlockNotFound(_) => Error::from(StarknetApiError::BlockNotFound),
+                SequencerError::TransactionExecution(_) => {
+                    Error::from(StarknetApiError::ContractError)
+                }
+                _ => Error::from(StarknetApiError::InternalServerError),
+            })?;
 
         Ok(res)
     }
@@ -406,13 +400,11 @@ where
         let transaction_hash = transaction.transaction_hash().0.into();
         let class_hash = transaction.class_hash().0.into();
 
-        self.sequencer
-            .add_declare_transaction(DeclareTransaction {
-                sierra_class,
-                inner: transaction,
-                compiled_class: contract_class,
-            })
-            .await;
+        self.sequencer.add_declare_transaction(DeclareTransaction {
+            sierra_class,
+            inner: transaction,
+            compiled_class: contract_class,
+        });
 
         Ok(DeclareTransactionResult { transaction_hash, class_hash })
     }
@@ -427,7 +419,7 @@ where
         let transaction = broadcasted_invoke_rpc_to_api_transaction(invoke_transaction, chain_id);
         let transaction_hash = transaction.transaction_hash().0.into();
 
-        self.sequencer.add_invoke_transaction(InvokeTransaction(transaction)).await;
+        self.sequencer.add_invoke_transaction(InvokeTransaction(transaction));
 
         Ok(InvokeTransactionResult { transaction_hash })
     }

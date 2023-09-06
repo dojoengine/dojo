@@ -38,9 +38,10 @@ impl Default for EntityObject {
         }
     }
 }
+
 impl EntityObject {
     pub fn value_mapping(entity: Entity) -> ValueMapping {
-        let keys: Vec<&str> = entity.keys.split(',').map(|s| s.trim()).collect();
+        let keys: Vec<&str> = entity.keys.split('/').filter(|&k| !k.is_empty()).collect();
         IndexMap::from([
             (Name::new("id"), Value::from(entity.id)),
             (Name::new("keys"), Value::from(keys)),
@@ -172,8 +173,9 @@ async fn entities_by_sk(
     let mut conditions = Vec::new();
 
     if let Some(keys) = &keys {
-        conditions.push(format!("keys LIKE '{}%'", keys.join(",")));
-        count_query.push_str(&format!(" WHERE keys LIKE '{}%'", keys.join(",")));
+        let keys_str = keys.join("/");
+        conditions.push(format!("keys LIKE '{}/%'", keys_str));
+        count_query.push_str(&format!(" WHERE keys LIKE '{}/%'", keys_str));
     }
 
     if let Some(after_cursor) = &args.after {
