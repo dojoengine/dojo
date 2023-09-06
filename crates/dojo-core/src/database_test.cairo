@@ -134,5 +134,4 @@ fn test_database_all() {
 
     let base = starknet::storage_base_address_from_felt252('table');
     let (keys, values) = all(class_hash, 'table', 0, 2);
-
 }
