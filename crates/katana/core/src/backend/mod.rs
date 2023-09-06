@@ -14,7 +14,9 @@ use blockifier::transaction::objects::AccountTransactionContext;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use parking_lot::RwLock;
-use starknet::core::types::{BlockId, BlockTag, FeeEstimate, MaybePendingBlockWithTxHashes};
+use starknet::core::types::{
+    BlockId, BlockTag, FeeEstimate, MaybePendingBlockWithTxHashes, TransactionFinalityStatus,
+};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
@@ -33,7 +35,7 @@ pub mod storage;
 
 use self::config::StarknetConfig;
 use self::storage::block::{Block, PartialHeader};
-use self::storage::transaction::{IncludedTransaction, Transaction, TransactionStatus};
+use self::storage::transaction::{IncludedTransaction, Transaction};
 use self::storage::{Blockchain, InMemoryBlockStates, Storage};
 use crate::accounts::{Account, DevAccountGenerator};
 use crate::backend::in_memory_db::MemDb;
@@ -271,7 +273,7 @@ impl Backend {
                         block_number,
                         block_hash,
                         transaction: tx.clone(),
-                        status: TransactionStatus::AcceptedOnL2,
+                        finality_status: TransactionFinalityStatus::AcceptedOnL2,
                     }),
                 ),
 

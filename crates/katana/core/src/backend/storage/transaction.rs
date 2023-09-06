@@ -12,7 +12,7 @@ use starknet::core::types::{
     FlattenedSierraClass, InvokeTransactionReceipt, MsgToL1, PendingDeclareTransactionReceipt,
     PendingDeployAccountTransactionReceipt, PendingInvokeTransactionReceipt,
     PendingTransactionReceipt as RpcPendingTransactionReceipt, Transaction as RpcTransaction,
-    TransactionReceipt as RpcTransactionReceipt, TransactionStatus as RpcTransactionStatus,
+    TransactionFinalityStatus, TransactionReceipt as RpcTransactionReceipt,
 };
 use starknet_api::core::{ContractAddress, PatriciaKey};
 use starknet_api::hash::StarkHash;
@@ -73,7 +73,7 @@ pub struct IncludedTransaction {
     pub block_number: u64,
     pub block_hash: FieldElement,
     pub transaction: Arc<ExecutedTransaction>,
-    pub status: TransactionStatus,
+    pub finality_status: TransactionFinalityStatus,
 }
 
 /// A transaction that is known to be rejected by the sequencer i.e.,
@@ -128,33 +128,36 @@ impl IncludedTransaction {
     pub fn receipt(&self) -> RpcTransactionReceipt {
         match &self.transaction.inner {
             Transaction::Invoke(_) => RpcTransactionReceipt::Invoke(InvokeTransactionReceipt {
-                status: self.status.into(),
                 block_hash: self.block_hash,
                 block_number: self.block_number,
+                finality_status: self.finality_status,
                 events: self.transaction.output.events.clone(),
+                execution_result: self.transaction.execution_result(),
                 messages_sent: self.transaction.output.messages_sent.clone(),
                 transaction_hash: self.transaction.inner.hash(),
                 actual_fee: self.transaction.execution_info.actual_fee.0.into(),
             }),
 
             Transaction::Declare(_) => RpcTransactionReceipt::Declare(DeclareTransactionReceipt {
-                status: self.status.into(),
                 block_hash: self.block_hash,
                 block_number: self.block_number,
+                finality_status: self.finality_status,
                 events: self.transaction.output.events.clone(),
                 transaction_hash: self.transaction.inner.hash(),
+                execution_result: self.transaction.execution_result(),
                 messages_sent: self.transaction.output.messages_sent.clone(),
                 actual_fee: self.transaction.execution_info.actual_fee.0.into(),
             }),
 
             Transaction::DeployAccount(tx) => {
                 RpcTransactionReceipt::DeployAccount(DeployAccountTransactionReceipt {
-                    status: self.status.into(),
                     block_hash: self.block_hash,
                     block_number: self.block_number,
                     contract_address: tx.contract_address,
+                    finality_status: self.finality_status,
                     events: self.transaction.output.events.clone(),
                     transaction_hash: self.transaction.inner.hash(),
+                    execution_result: self.transaction.execution_result(),
                     messages_sent: self.transaction.output.messages_sent.clone(),
                     actual_fee: self.transaction.execution_info.actual_fee.0.into(),
                 })
@@ -170,6 +173,7 @@ impl PendingTransaction {
                 RpcPendingTransactionReceipt::Invoke(PendingInvokeTransactionReceipt {
                     events: self.0.output.events.clone(),
                     transaction_hash: self.0.inner.hash(),
+                    execution_result: self.0.execution_result(),
                     messages_sent: self.0.output.messages_sent.clone(),
                     actual_fee: self.0.execution_info.actual_fee.0.into(),
                 })
@@ -179,6 +183,7 @@ impl PendingTransaction {
                 RpcPendingTransactionReceipt::Declare(PendingDeclareTransactionReceipt {
                     events: self.0.output.events.clone(),
                     transaction_hash: self.0.inner.hash(),
+                    execution_result: self.0.execution_result(),
                     messages_sent: self.0.output.messages_sent.clone(),
                     actual_fee: self.0.execution_info.actual_fee.0.into(),
                 })
@@ -188,32 +193,11 @@ impl PendingTransaction {
                 PendingDeployAccountTransactionReceipt {
                     events: self.0.output.events.clone(),
                     transaction_hash: self.0.inner.hash(),
+                    execution_result: self.0.execution_result(),
                     messages_sent: self.0.output.messages_sent.clone(),
                     actual_fee: self.0.execution_info.actual_fee.0.into(),
                 },
             ),
-        }
-    }
-}
-
-impl KnownTransaction {
-    pub fn status(&self) -> TransactionStatus {
-        match self {
-            KnownTransaction::Pending(_) => TransactionStatus::AcceptedOnL2,
-            KnownTransaction::Rejected(_) => TransactionStatus::Rejected,
-            KnownTransaction::Included(tx) => tx.status,
-        }
-    }
-}
-
-impl From<TransactionStatus> for RpcTransactionStatus {
-    fn from(status: TransactionStatus) -> Self {
-        match status {
-            TransactionStatus::AcceptedOnL2 => RpcTransactionStatus::AcceptedOnL2,
-            TransactionStatus::AcceptedOnL1 => RpcTransactionStatus::AcceptedOnL1,
-            TransactionStatus::Rejected => RpcTransactionStatus::Rejected,
-            // TODO: change this to `REVERTED` once the status is implemented in `starknet-rs`
-            TransactionStatus::Reverted => RpcTransactionStatus::AcceptedOnL2,
         }
     }
 }
