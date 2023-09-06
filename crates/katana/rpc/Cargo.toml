@@ -9,7 +9,7 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 blockifier.workspace = true
-cairo-lang-starknet.workspace = true
+cairo-lang-starknet = "2.2.0"
 cairo-vm.workspace = true
 flate2.workspace = true
 futures.workspace = true

@@ -18,6 +18,7 @@ dojo-lang = { path = "../dojo-lang" }
 jsonrpsee = { version = "0.16.2", features = [ "server" ] }
 katana-core = { path = "../katana/core" }
 katana-rpc = { path = "../katana/rpc" }
+scarb-ui.workspace = true
 scarb.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -34,6 +35,7 @@ url = "2.2.2"
 assert_fs = "1.0.9"
 camino.workspace = true
 dojo-lang = { path = "../dojo-lang" }
+scarb-ui.workspace = true
 scarb.workspace = true
 
 [features]

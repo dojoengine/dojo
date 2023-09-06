@@ -6,7 +6,7 @@ use dojo_lang::compiler::DojoCompiler;
 use dojo_lang::plugin::CairoPluginRepository;
 use scarb::compiler::CompilerRepository;
 use scarb::core::Config;
-use scarb::ui::Verbosity;
+use scarb_ui::Verbosity;
 
 pub fn build_test_config(path: &str) -> anyhow::Result<Config> {
     let mut compilers = CompilerRepository::empty();

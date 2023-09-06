@@ -1,0 +1,10 @@
+[package]
+cairo-version = "2.2.0"
+name = "test_crate"
+version = "0.2.1"
+
+[cairo]
+sierra-replace-ids = true
+
+[dependencies]
+dojo = { path = "../../../../dojo-core" }

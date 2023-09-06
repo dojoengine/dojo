@@ -29,8 +29,8 @@ async fn main() {
 
     let db = RootDatabase::builder()
         .with_cfg(CfgSet::from_iter([Cfg::name("test")]))
-        .with_semantic_plugin(Arc::new(DojoPlugin))
-        .with_semantic_plugin(Arc::new(StarkNetPlugin::default()))
+        .with_macro_plugin(Arc::new(DojoPlugin))
+        .with_macro_plugin(Arc::new(StarkNetPlugin::default()))
         .build()
         .unwrap_or_else(|error| {
             panic!("Problem creating language database: {error:?}");
