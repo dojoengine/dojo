@@ -1,5 +1,5 @@
 [package]
-cairo-version = "2.1.1"
+cairo-version = "2.2.0"
 name = "dojo_examples"
 version = "0.2.1"
 

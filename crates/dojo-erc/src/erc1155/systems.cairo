@@ -11,8 +11,10 @@ use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
 use dojo_erc::erc1155::erc1155::ERC1155::{
     ApprovalForAll, TransferSingle, TransferBatch, IERC1155EventsDispatcher,
-    IERC1155EventsDispatcherTrait, Event
+    IERC1155EventsDispatcherTrait
 };
+#[event]
+use dojo_erc::erc1155::erc1155::ERC1155::Event;
 use dojo_erc::erc1155::components::{ERC1155BalanceTrait, OperatorApprovalTrait};
 use dojo_erc::erc165::interface::{IERC165Dispatcher, IERC165DispatcherTrait, IACCOUNT_ID};
 use dojo_erc::erc1155::interface::{
@@ -152,8 +154,9 @@ mod ERC1155SetApprovalForAll {
     use clone::Clone;
 
     use dojo_erc::erc1155::components::OperatorApprovalTrait;
-    use super::{IERC1155EventsDispatcher, IERC1155EventsDispatcherTrait, ApprovalForAll, Event};
-
+    use super::{IERC1155EventsDispatcher, IERC1155EventsDispatcherTrait, ApprovalForAll};
+    #[event]
+    use super::Event;
 
     #[derive(Drop, Serde)]
     struct ERC1155SetApprovalForAllParams {

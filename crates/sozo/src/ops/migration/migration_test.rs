@@ -6,7 +6,7 @@ use dojo_world::manifest::Manifest;
 use dojo_world::migration::strategy::prepare_for_migration;
 use dojo_world::migration::world::WorldDiff;
 use scarb::core::Config;
-use scarb::ui::Verbosity;
+use scarb_ui::Verbosity;
 use starknet::accounts::SingleOwnerAccount;
 use starknet::core::chain_id;
 use starknet::core::types::FieldElement;
