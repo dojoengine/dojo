@@ -71,7 +71,9 @@ fn unchecked_update(
 ) {
     assert(ids.len() == amounts.len(), 'ERC1155: invalid length');
 
-    ERC1155BalanceTrait::unchecked_transfer_tokens(world, token, from, to, ids.span(), amounts.span());
+    ERC1155BalanceTrait::unchecked_transfer_tokens(
+        world, token, from, to, ids.span(), amounts.span()
+    );
 
     if (ids.len() == 1) {
         let id = *ids.at(0);
@@ -165,7 +167,9 @@ mod ERC1155SetApprovalForAll {
         let ERC1155SetApprovalForAllParams{token, owner, operator, approved } = params;
         assert(owner != operator, 'ERC1155: wrong approval');
 
-        OperatorApprovalTrait::unchecked_set_approval_for_all(ctx.world, token, owner, operator, approved);
+        OperatorApprovalTrait::unchecked_set_approval_for_all(
+            ctx.world, token, owner, operator, approved
+        );
 
         let event = ApprovalForAll { owner, operator, approved };
         IERC1155EventsDispatcher { contract_address: token }.on_approval_for_all(event.clone());

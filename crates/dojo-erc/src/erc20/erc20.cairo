@@ -1,8 +1,7 @@
-//    * use ufelt when available
-
 #[starknet::contract]
 mod ERC20 {
     use array::ArrayTrait;
+    use clone::Clone;
     use integer::BoundedInt;
     use option::OptionTrait;
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
@@ -10,116 +9,147 @@ mod ERC20 {
     use zeroable::Zeroable;
 
     use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
-    use dojo_erc::erc20::components::{Allowance, Balance, Supply};
+    use dojo_erc::erc20::components::{ERC20AllowanceTrait, ERC20BalanceTrait, ERC20SupplyTrait};
     use dojo_erc::erc20::interface::IERC20;
-
-    const UNLIMITED_ALLOWANCE: felt252 =
-        3618502788666131213697322783095070105623107215331596699973092056135872020480;
+    use dojo_erc::erc20::systems::{
+        ERC20Approve, ERC20ApproveParams, ERC20DecreaseAllowance, ERC20DecreaseAllowanceParams,
+        ERC20IncreaseAllowance, ERC20IncreaseAllowanceParams, ERC20Mint, ERC20MintParams,
+        ERC20TransferFrom, ERC20TransferFromParams
+    };
+    use dojo_erc::erc_common::utils::{to_calldata, ToCallDataTrait, system_calldata};
 
     #[storage]
     struct Storage {
         world: IWorldDispatcher,
-        token_name: felt252,
-        token_symbol: felt252,
-        token_decimals: u8,
+        name_: felt252,
+        symbol_: felt252,
+        decimals_: u8,
     }
 
-    #[event]
-    #[derive(Drop, starknet::Event)]
-    enum Event {
-        Transfer: Transfer,
-        Approval: Approval
-    }
-
-
-    #[derive(Drop, starknet::Event)]
+    #[derive(Clone, Drop, Serde, PartialEq, starknet::Event)]
     struct Transfer {
         from: ContractAddress,
         to: ContractAddress,
         value: u256
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Clone, Drop, Serde, PartialEq, starknet::Event)]
     struct Approval {
         owner: ContractAddress,
         spender: ContractAddress,
         value: u256
     }
 
+    #[event]
+    #[derive(Drop, PartialEq, starknet::Event)]
+    enum Event {
+        Transfer: Transfer,
+        Approval: Approval
+    }
+
+    #[starknet::interface]
+    trait IERC20Events<ContractState> {
+        fn on_transfer(ref self: ContractState, event: Transfer);
+        fn on_approval(ref self: ContractState, event: Approval);
+    }
+
     #[constructor]
     fn constructor(
         ref self: ContractState,
-        world: ContractAddress,
+        world: IWorldDispatcher,
         name: felt252,
         symbol: felt252,
         decimals: u8,
         initial_supply: felt252,
         recipient: ContractAddress
     ) {
-        self.world.write(IWorldDispatcher { contract_address: world });
-        self.token_name.write(name);
-        self.token_symbol.write(symbol);
-        self.token_decimals.write(decimals);
-        let mut calldata: Array<felt252> = array![];
-        if initial_supply != 0 {
-            assert(!recipient.is_zero(), 'ERC20: mint to 0');
-            let mut calldata: Array<felt252> = array![];
-            let token = get_contract_address();
-            calldata.append(token.into());
-            calldata.append(recipient.into());
-            calldata.append(initial_supply);
-            self.world.read().execute('erc20_mint', calldata);
-
+        self.world.write(world);
+        self.name_.write(name);
+        self.symbol_.write(symbol);
+        self.decimals_.write(decimals);
+        if !initial_supply.is_zero() {
             self
-                .emit(
-                    Transfer { from: Zeroable::zero(), to: recipient, value: initial_supply.into() }
+                .world
+                .read()
+                .execute(
+                    'ERC20Mint',
+                    system_calldata(
+                        ERC20MintParams {
+                            token: get_contract_address(),
+                            recipient,
+                            amount: initial_supply.try_into().unwrap()
+                        }
+                    )
                 );
         }
     }
 
+
     #[external(v0)]
     impl ERC20 of IERC20<ContractState> {
         fn name(self: @ContractState) -> felt252 {
-            self.token_name.read()
+            self.name_.read()
         }
 
         fn symbol(self: @ContractState) -> felt252 {
-            self.token_symbol.read()
+            self.symbol_.read()
         }
 
         fn decimals(self: @ContractState) -> u8 {
-            self.token_decimals.read()
+            self.decimals_.read()
         }
 
         fn total_supply(self: @ContractState) -> u256 {
-            let contract_address = get_contract_address();
-            let supply = get!(self.world.read(), contract_address, Supply);
-            supply.amount.into()
+            ERC20SupplyTrait::total_supply(self.world.read(), get_contract_address()).into()
         }
 
         fn balance_of(self: @ContractState, account: ContractAddress) -> u256 {
-            let token = get_contract_address();
-            let balance = get!(self.world.read(), (token, account), Balance);
-            balance.amount.into()
+            ERC20BalanceTrait::balance_of(self.world.read(), get_contract_address(), account).into()
         }
 
         fn allowance(
             self: @ContractState, owner: ContractAddress, spender: ContractAddress
         ) -> u256 {
-            let token = get_contract_address();
-            let allowance = get!(self.world.read(), (token, owner, spender), Allowance);
-            allowance.amount.into()
+            ERC20AllowanceTrait::allowance(
+                self.world.read(), get_contract_address(), owner, spender
+            )
+                .into()
         }
 
         fn approve(ref self: ContractState, spender: ContractAddress, amount: u256) -> bool {
-            let owner = get_caller_address();
-            self._approve(owner, spender, amount);
+            self
+                .world
+                .read()
+                .execute(
+                    'ERC20Approve',
+                    system_calldata(
+                        ERC20ApproveParams {
+                            token: get_contract_address(),
+                            caller: get_caller_address(),
+                            spender,
+                            amount: amount.try_into().unwrap()
+                        }
+                    )
+                );
             true
         }
 
         fn transfer(ref self: ContractState, recipient: ContractAddress, amount: u256) -> bool {
-            let sender = get_caller_address();
-            self._transfer(sender, recipient, amount);
+            self
+                .world
+                .read()
+                .execute(
+                    'ERC20TransferFrom',
+                    system_calldata(
+                        ERC20TransferFromParams {
+                            token: get_contract_address(),
+                            sender: get_caller_address(),
+                            caller: get_caller_address(),
+                            recipient,
+                            amount: amount.try_into().unwrap()
+                        }
+                    )
+                );
             true
         }
 
@@ -129,69 +159,75 @@ mod ERC20 {
             recipient: ContractAddress,
             amount: u256
         ) -> bool {
-            let caller = get_caller_address();
-            self._spend_allowance(sender, caller, amount);
-            self._transfer(sender, recipient, amount);
+            self
+                .world
+                .read()
+                .execute(
+                    'ERC20TransferFrom',
+                    system_calldata(
+                        ERC20TransferFromParams {
+                            token: get_contract_address(),
+                            sender,
+                            caller: get_caller_address(),
+                            recipient,
+                            amount: amount.try_into().unwrap()
+                        }
+                    )
+                );
+            true
+        }
+
+        fn increase_allowance(
+            ref self: ContractState, spender: ContractAddress, added_value: u256
+        ) -> bool {
+            self
+                .world
+                .read()
+                .execute(
+                    'ERC20IncreaseAllowance',
+                    system_calldata(
+                        ERC20IncreaseAllowanceParams {
+                            token: get_contract_address(),
+                            caller: get_caller_address(),
+                            spender,
+                            added_value: added_value.try_into().unwrap()
+                        }
+                    )
+                );
+            true
+        }
+
+        fn decrease_allowance(
+            ref self: ContractState, spender: ContractAddress, subtracted_value: u256
+        ) -> bool {
+            self
+                .world
+                .read()
+                .execute(
+                    'ERC20DecreaseAllowance',
+                    system_calldata(
+                        ERC20DecreaseAllowanceParams {
+                            token: get_contract_address(),
+                            caller: get_caller_address(),
+                            spender,
+                            subtracted_value: subtracted_value.try_into().unwrap()
+                        }
+                    )
+                );
             true
         }
     }
 
-
-    //
-    // Internal
-    //
-    #[generate_trait]
-    impl InternalImpl of InternalTrait {
-        fn _approve(
-            ref self: ContractState, owner: ContractAddress, spender: ContractAddress, amount: u256
-        ) {
-            assert(!owner.is_zero(), 'ERC20: approve from 0');
-            assert(!spender.is_zero(), 'ERC20: approve to 0');
-            let token = get_contract_address();
-            let mut calldata: Array<felt252> = array![
-                token.into(), owner.into(), spender.into(), self.u256_as_allowance(amount)
-            ];
-            self.world.read().execute('erc20_approve', calldata);
-
-            self.emit(Approval { owner, spender, value: amount });
+    #[external(v0)]
+    impl ERC20EventEmitter of IERC20Events<ContractState> {
+        fn on_transfer(ref self: ContractState, event: Transfer) {
+            assert(get_caller_address() == self.world.read().executor(), 'ERC20: not authorized');
+            self.emit(event);
         }
-
-        fn _transfer(
-            ref self: ContractState,
-            sender: ContractAddress,
-            recipient: ContractAddress,
-            amount: u256
-        ) {
-            assert(!sender.is_zero(), 'ERC20: transfer from 0');
-            assert(!recipient.is_zero(), 'ERC20: transfer to 0');
-            assert(ERC20::balance_of(@self, sender) >= amount, 'ERC20: not enough balance');
-
-            let token = get_contract_address();
-            let mut calldata: Array<felt252> = array![
-                token.into(), sender.into(), recipient.into(), amount.try_into().unwrap()
-            ];
-            self.world.read().execute('erc20_transfer_from', calldata);
-
-            self.emit(Transfer { from: Zeroable::zero(), to: recipient, value: amount });
-        }
-
-        fn _spend_allowance(
-            ref self: ContractState, owner: ContractAddress, spender: ContractAddress, amount: u256
-        ) {
-            let current_allowance = ERC20::allowance(@self, owner, spender);
-
-            if current_allowance != UNLIMITED_ALLOWANCE.into() {
-                self._approve(owner, spender, current_allowance - amount);
-            }
-        }
-
-        fn u256_as_allowance(ref self: ContractState, val: u256) -> felt252 {
-            // by convention, max(u256) means unlimited amount,
-            // but since we're using felts, use max(felt252) to do the same
-            if val == BoundedInt::max() {
-                return UNLIMITED_ALLOWANCE;
-            }
-            val.try_into().unwrap()
+        fn on_approval(ref self: ContractState, event: Approval) {
+            assert(get_caller_address() == self.world.read().executor(), 'ERC20: not authorized');
+            self.emit(event);
         }
     }
 }
+

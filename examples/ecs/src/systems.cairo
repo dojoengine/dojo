@@ -9,15 +9,12 @@ mod spawn {
     use dojo_examples::components::Moves;
 
     fn execute(ctx: Context) {
-        let position = get !(ctx.world, ctx.origin, (Position));
-        set !(
+        let position = get!(ctx.world, ctx.origin, (Position));
+        set!(
             ctx.world,
             (
-                Moves {
-                    player: ctx.origin, remaining: 10
-                    }, Position {
-                    player: ctx.origin, x: position.x + 10, y: position.y + 10
-                },
+                Moves { player: ctx.origin, remaining: 10 },
+                Position { player: ctx.origin, x: position.x + 10, y: position.y + 10 },
             )
         );
         return ();
@@ -67,11 +64,11 @@ mod move {
     }
 
     fn execute(ctx: Context, direction: Direction) {
-        let (mut position, mut moves) = get !(ctx.world, ctx.origin, (Position, Moves));
+        let (mut position, mut moves) = get!(ctx.world, ctx.origin, (Position, Moves));
         moves.remaining -= 1;
         let next = next_position(position, direction);
-        set !(ctx.world, (moves, next));
-        emit !(ctx.world, Moved { address: ctx.origin, direction });
+        set!(ctx.world, (moves, next));
+        emit!(ctx.world, Moved { address: ctx.origin, direction });
         return ();
     }
 
@@ -120,7 +117,7 @@ mod tests {
         let mut components = array::ArrayTrait::new();
         components.append(position::TEST_CLASS_HASH);
         components.append(moves::TEST_CLASS_HASH);
-        components.append(dojo_erc::erc20::components::balance::TEST_CLASS_HASH);
+        components.append(dojo_erc::erc20::components::erc_20_balance::TEST_CLASS_HASH);
         // systems
         let mut systems = array::ArrayTrait::new();
         systems.append(spawn::TEST_CLASS_HASH);

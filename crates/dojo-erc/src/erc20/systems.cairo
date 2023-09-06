@@ -1,102 +1,198 @@
-#[system]
-mod erc20_approve {
-    use traits::Into;
-    use starknet::ContractAddress;
+use array::{ArrayTrait, SpanTrait};
+use clone::Clone;
+use starknet::ContractAddress;
+use traits::Into;
 
-    use dojo_erc::erc20::components::Allowance;
+
+use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
+use dojo_erc::erc20::erc20::ERC20::{
+    IERC20EventsDispatcher, IERC20EventsDispatcherTrait, Transfer, Approval, Event
+};
+
+use ERC20Approve::ERC20ApproveParams;
+use ERC20DecreaseAllowance::ERC20DecreaseAllowanceParams;
+use ERC20IncreaseAllowance::ERC20IncreaseAllowanceParams;
+use ERC20Mint::ERC20MintParams;
+use ERC20TransferFrom::ERC20TransferFromParams;
+
+fn emit_transfer(
+    world: IWorldDispatcher,
+    token: ContractAddress,
+    from: ContractAddress,
+    to: ContractAddress,
+    value: u128,
+) {
+    let event = Transfer { from, to, value: value.into() };
+    IERC20EventsDispatcher { contract_address: token }.on_transfer(event.clone());
+    emit!(world, event);
+}
+
+fn emit_approval(
+    world: IWorldDispatcher,
+    token: ContractAddress,
+    owner: ContractAddress,
+    spender: ContractAddress,
+    amount: u128,
+) {
+    let event = Approval { owner, spender, value: amount.into() };
+    IERC20EventsDispatcher { contract_address: token }.on_approval(event.clone());
+    emit!(world, event);
+}
+
+#[system]
+mod ERC20Approve {
+    use starknet::ContractAddress;
+    use zeroable::Zeroable;
+
+    use dojo_erc::erc20::components::ERC20AllowanceTrait;
     use dojo::world::Context;
 
-    fn execute(
-        ctx: Context,
+    #[derive(Drop, Serde)]
+    struct ERC20ApproveParams {
         token: ContractAddress,
-        owner: ContractAddress,
+        caller: ContractAddress,
         spender: ContractAddress,
-        amount: felt252
-    ) {
-        set!(ctx.world, Allowance { token, owner, spender, amount })
+        amount: u128
+    }
+
+    fn execute(ctx: Context, params: ERC20ApproveParams) {
+        let ERC20ApproveParams{token, caller, spender, amount } = params;
+
+        assert(!caller.is_zero(), 'ERC20: approve from 0');
+        assert(!spender.is_zero(), 'ERC20: approve to 0');
+        ERC20AllowanceTrait::approve(ctx.world, token, caller, spender, amount);
+
+        super::emit_approval(ctx.world, token, caller, spender, amount);
     }
 }
 
 #[system]
-mod erc20_transfer_from {
+mod ERC20IncreaseAllowance {
     use starknet::ContractAddress;
-    use traits::Into;
     use zeroable::Zeroable;
 
-    use dojo_erc::erc20::components::{Allowance, Balance};
+    use dojo::world::Context;
+    use dojo_erc::erc20::components::ERC20AllowanceTrait;
+
+    #[derive(Drop, Serde)]
+    struct ERC20IncreaseAllowanceParams {
+        token: ContractAddress,
+        caller: ContractAddress,
+        spender: ContractAddress,
+        added_value: u128
+    }
+
+    fn execute(ctx: Context, params: ERC20IncreaseAllowanceParams) {
+        let ERC20IncreaseAllowanceParams{token, caller, spender, added_value } = params;
+        assert(!spender.is_zero(), 'ERC20: approve to 0');
+        assert(!caller.is_zero(), 'ERC20: approve from 0');
+        ERC20AllowanceTrait::decrease_allowance(ctx.world, token, caller, spender, added_value);
+    }
+}
+
+#[system]
+mod ERC20DecreaseAllowance {
+    use starknet::ContractAddress;
+    use zeroable::Zeroable;
+
+    use dojo::world::Context;
+    use dojo_erc::erc20::components::ERC20AllowanceTrait;
+
+    #[derive(Drop, Serde)]
+    struct ERC20DecreaseAllowanceParams {
+        token: ContractAddress,
+        caller: ContractAddress,
+        spender: ContractAddress,
+        subtracted_value: u128
+    }
+
+    fn execute(ctx: Context, params: ERC20DecreaseAllowanceParams) {
+        let ERC20DecreaseAllowanceParams{token, caller, spender, subtracted_value } = params;
+        assert(!spender.is_zero(), 'ERC20: approve to 0');
+        assert(!caller.is_zero(), 'ERC20: approve from 0');
+        ERC20AllowanceTrait::decrease_allowance(
+            ctx.world, token, caller, spender, subtracted_value
+        );
+    }
+}
+
+
+#[system]
+mod ERC20TransferFrom {
+    use starknet::ContractAddress;
+    use zeroable::Zeroable;
+
+    use dojo_erc::erc20::components::{ERC20AllowanceTrait, ERC20BalanceTrait};
     use dojo::world::Context;
 
-    const UNLIMITED_ALLOWANCE: felt252 =
-        3618502788666131213697322783095070105623107215331596699973092056135872020480;
-
-    fn execute(
-        ctx: Context,
+    #[derive(Drop, Serde)]
+    struct ERC20TransferFromParams {
         token: ContractAddress,
         sender: ContractAddress,
+        caller: ContractAddress,
         recipient: ContractAddress,
-        amount: felt252
-    ) {
-        assert(token == ctx.origin, 'ERC20: not authorized');
-        let mut balance = get!(ctx.world, (token, sender), Balance);
-        balance.amount -= amount;
-        set!(ctx.world, (balance));
-
-        // increase recipient's balance
-        let mut balance = get!(ctx.world, (token, recipient), Balance);
-        balance.amount += amount;
-        set!(ctx.world, (balance));
+        amount: u128,
     }
 
-    fn is_unlimited_allowance(allowance: Allowance) -> bool {
-        allowance.amount == UNLIMITED_ALLOWANCE
+
+    fn execute(ctx: Context, params: ERC20TransferFromParams) {
+        let ERC20TransferFromParams{token, sender, caller, recipient, amount } = params;
+        assert(token == ctx.origin, 'ERC20: not authorized');
+        assert(!sender.is_zero(), 'ERC20: transfer from 0');
+        assert(!recipient.is_zero(), 'ERC20: transfer to 0');
+        if sender != caller {
+            ERC20AllowanceTrait::_spend_allowance(ctx.world, token, sender, caller, amount);
+        }
+        ERC20BalanceTrait::transfer_from(ctx.world, token, sender, recipient, amount);
+
+        super::emit_transfer(ctx.world, token, sender, recipient, amount);
     }
 }
 
 #[system]
-mod erc20_mint {
+mod ERC20Mint {
     use starknet::ContractAddress;
     use traits::Into;
     use zeroable::Zeroable;
 
     use dojo::world::Context;
-    use dojo_erc::erc20::components::{Balance, Supply};
+    use dojo_erc::erc20::components::ERC20BalanceTrait;
 
-    fn execute(ctx: Context, token: ContractAddress, recipient: ContractAddress, amount: felt252) {
+    #[derive(Drop, Serde)]
+    struct ERC20MintParams {
+        token: ContractAddress,
+        recipient: ContractAddress,
+        amount: u128,
+    }
+
+    fn execute(ctx: Context, params: ERC20MintParams) {
+        let ERC20MintParams{token, recipient, amount } = params;
         assert(token == ctx.origin, 'ERC20: not authorized');
-        assert(recipient.is_non_zero(), 'ERC20: mint to 0');
-        // increase token supply
-        let mut supply = get!(ctx.world, token, Supply);
-        supply.amount += amount;
-        set!(ctx.world, (supply));
-
-        // increase balance of recipient
-        let mut balance = get!(ctx.world, (token, recipient), Balance);
-        balance.amount += amount;
-        set!(ctx.world, (balance));
+        assert(!recipient.is_zero(), 'ERC20: mint to 0');
+        ERC20BalanceTrait::mint(ctx.world, token, recipient, amount);
     }
 }
 
 #[system]
-mod erc20_burn {
+mod ERC20Burn {
     use starknet::ContractAddress;
     use traits::Into;
     use zeroable::Zeroable;
 
     use dojo::world::Context;
-    use dojo_erc::erc20::components::{Balance, Supply};
+    use dojo_erc::erc20::components::ERC20BalanceTrait;
 
-    fn execute(ctx: Context, token: ContractAddress, owner: ContractAddress, amount: felt252) {
+    #[derive(Drop, Serde)]
+    struct ERC20BurnParams {
+        token: ContractAddress,
+        account: ContractAddress,
+        amount: u128,
+    }
+
+    fn execute(ctx: Context, params: ERC20BurnParams) {
+        let ERC20BurnParams{token, account, amount } = params;
         assert(token == ctx.origin, 'ERC20: not authorized');
-        assert(owner.is_non_zero(), 'ERC20: burn from 0');
-
-        // decrease token supply
-        let mut supply = get!(ctx.world, token, Supply);
-        supply.amount -= amount;
-        set!(ctx.world, (supply));
-
-        // decrease balance of owner
-        let mut balance = get!(ctx.world, (token, owner), Balance);
-        balance.amount -= amount;
-        set!(ctx.world, (balance));
+        assert(!account.is_zero(), 'ERC20: burn from 0');
+        ERC20BalanceTrait::burn(ctx.world, token, account, amount);
     }
 }

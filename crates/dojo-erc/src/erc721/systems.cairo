@@ -124,7 +124,9 @@ mod ERC721SetApprovalForAll {
         assert(token == ctx.origin, 'ERC721: not authorized');
         assert(owner != operator, 'ERC721: self approval');
 
-        OperatorApprovalTrait::unchecked_set_approval_for_all(ctx.world, token, owner, operator, approved);
+        OperatorApprovalTrait::unchecked_set_approval_for_all(
+            ctx.world, token, owner, operator, approved
+        );
 
         // emit event
         super::emit_approval_for_all(ctx.world, token, owner, operator, approved);
