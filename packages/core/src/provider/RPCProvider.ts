@@ -41,7 +41,6 @@ export class RPCProvider extends Provider {
             contractAddress: this.getWorldAddress(),
             calldata: [
                 strTofelt252Felt(component),
-                query.address_domain,
                 query.keys.length,
                 ...query.keys as any,
                 offset,
