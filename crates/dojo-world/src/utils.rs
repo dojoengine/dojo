@@ -26,9 +26,13 @@ pub enum TransactionWaitingError<E> {
     Provider(ProviderError<E>),
 }
 
-/// A type that waits for a transaction to achieve `status` status. The transaction will be polled
-/// for every `interval` miliseconds. If the transaction does not achieved `status` status within
-/// `timeout` miliseconds, an error will be returned.
+/// A type that waits for a transaction to achieve the desired status. The waiter will poll for the
+/// transaction receipt every `interval` miliseconds until it achieves the desired status or until
+/// `timeout` is reached.
+///
+/// The waiter can be configured to wait for a specific finality status (e.g, `ACCEPTED_ON_L2`), or
+/// only until it has been included in the _pending_ block. It can even be set to check if the
+/// transaction is executed successfully or not (reverted).
 pub struct TransactionWaiter<'a, P: Provider> {
     /// The hash of the transaction to wait for.
     tx_hash: FieldElement,
@@ -132,9 +136,9 @@ where
                                             }
                                         };
                                         return Poll::Ready(res);
-                                    } else {
-                                        return Poll::Ready(Ok(receipt));
                                     }
+
+                                    return Poll::Ready(Ok(receipt));
                                 }
                             }
 
@@ -152,9 +156,9 @@ where
                                                     }
                                                 };
                                                 return Poll::Ready(res);
-                                            } else {
-                                                return Poll::Ready(Ok(receipt));
                                             }
+
+                                            return Poll::Ready(Ok(receipt));
                                         }
 
                                         _ => {}
