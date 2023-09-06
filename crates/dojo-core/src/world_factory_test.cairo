@@ -96,3 +96,35 @@ fn test_spawn_world() {
     let bar_hash = world.system('bar'.into());
     assert(bar_hash == bar::TEST_CLASS_HASH.try_into().unwrap(), 'system not registered');
 }
+
+#[test]
+#[available_gas(40000000)]
+fn test_setters() {
+    let mut calldata: Array<felt252> = array::ArrayTrait::new();
+    calldata.append(starknet::class_hash_const::<0x420>().into());
+    calldata.append(starknet::contract_address_const::<0x69>().into());
+
+    let (factory_address, _) = deploy_syscall(
+        world_factory::TEST_CLASS_HASH.try_into().unwrap(), 0, calldata.span(), false
+    )
+        .unwrap();
+
+    let factory = IWorldFactoryDispatcher { contract_address: factory_address };
+
+    assert(factory.world() == starknet::class_hash_const::<0x420>(), 'wrong world class hash');
+    assert(
+        factory.executor() == starknet::contract_address_const::<0x69>(), 'wrong executor contract'
+    );
+
+    factory.set_executor(starknet::contract_address_const::<0x96>().into());
+    assert(factory.world() == starknet::class_hash_const::<0x420>(), 'wrong world class hash');
+    assert(
+        factory.executor() == starknet::contract_address_const::<0x96>(), 'wrong executor contract'
+    );
+
+        factory.set_world(starknet::class_hash_const::<0x421>().into());
+    assert(factory.world() == starknet::class_hash_const::<0x421>(), 'wrong world class hash');
+    assert(
+        factory.executor() == starknet::contract_address_const::<0x96>(), 'wrong executor contract'
+    );
+}
