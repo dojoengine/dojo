@@ -67,6 +67,7 @@ impl Sql {
             ("ClassHash".to_string(), "TEXT"),
             ("DateTime".to_string(), "TEXT"),
             ("felt252".to_string(), "TEXT"),
+            ("Enum".to_string(), "INTEGER"),
         ]);
 
         Ok(Self {
@@ -181,6 +182,8 @@ impl State for Sql {
     }
 
     async fn register_component(&self, component: Component) -> Result<()> {
+        let mut sql_types = self.sql_types.lock().await;
+
         let component_id = component.name.to_lowercase();
         let mut queries = vec![format!(
             "INSERT INTO components (id, name, class_hash) VALUES ('{}', '{}', '{:#x}') ON \
@@ -193,12 +196,24 @@ impl State for Sql {
             component.name.to_lowercase()
         );
 
-        for member in component.clone().members {
-            // TODO: support tested member types
-            let mut sql_types = self.sql_types.lock().await;
-            let ty = sql_types.entry(member.ty).or_insert("INTEGER");
+        for member in &component.members {
+            // FIXME: defaults all unknown component types to Enum for now until we support nested
+            // components
+            let (sql_type, member_type) = match sql_types.get(&member.ty) {
+                Some(sql_type) => (*sql_type, member.ty.as_str()),
+                None => {
+                    sql_types.insert(member.ty.clone(), "INTEGER");
+                    ("INTEGER", "Enum")
+                }
+            };
 
-            component_table_query.push_str(&format!("external_{} {}, ", member.name, ty));
+            queries.push(format!(
+                "INSERT OR IGNORE INTO component_members (component_id, name, type, key) VALUES \
+                 ('{}', '{}', '{}', {})",
+                component_id, member.name, member_type, member.key,
+            ));
+
+            component_table_query.push_str(&format!("external_{} {}, ", member.name, sql_type));
         }
 
         component_table_query.push_str(
@@ -207,15 +222,8 @@ impl State for Sql {
         );
         queries.push(component_table_query);
 
-        for member in component.members {
-            queries.push(format!(
-                "INSERT OR IGNORE INTO component_members (component_id, name, type, key) VALUES \
-                 ('{}', '{}', '{}', {})",
-                component_id, member.name, member.ty, member.key,
-            ));
-        }
-
         self.queue(queries).await;
+
         // Since previous query has not been executed, we have to make sure created_at exists
         let created_at: DateTime<Utc> =
             match sqlx::query("SELECT created_at FROM components WHERE id = ?")
@@ -278,17 +286,14 @@ impl State for Sql {
                 .fetch_all(&self.pool)
                 .await?;
 
-<<<<<<< HEAD
-        let sql_types = self.sql_types.lock().await;
-        let (names_str, values_str) = format_values(member_results, values, &sql_types)?;
-=======
         // keys are part of component members, so combine keys and component values array
         let mut member_values: Vec<FieldElement> = Vec::new();
         member_values.extend(keys);
         member_values.extend(values);
 
-        let (names_str, values_str) = format_values(member_names_result, member_values)?;
->>>>>>> main
+        let sql_types = self.sql_types.lock().await;
+        let (names_str, values_str) =
+            format_values(member_names_result, member_values, &sql_types)?;
         let insert_components = format!(
             "INSERT OR REPLACE INTO external_{} (entity_id {}) VALUES ('{}' {})",
             component.to_lowercase(),
