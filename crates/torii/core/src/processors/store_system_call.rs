@@ -12,7 +12,7 @@ use super::TransactionProcessor;
 use crate::State;
 
 #[derive(Default)]
-pub struct StoreSystemCallProcess;
+pub struct StoreSystemCallProcessor;
 
 const SYSTEM_NAME_OFFSET: usize = 6;
 const ENTRYPOINT_OFFSET: usize = 2;
@@ -20,7 +20,7 @@ const EXECUTE_ENTRYPOINT: &str =
     "0x240060cdb34fcc260f41eac7474ee1d7c80b7e3607daff9ac67c7ea2ebb1c44";
 
 #[async_trait]
-impl<S: State + Sync, T: JsonRpcTransport> TransactionProcessor<S, T> for StoreSystemCallProcess {
+impl<S: State + Sync, T: JsonRpcTransport> TransactionProcessor<S, T> for StoreSystemCallProcessor {
     async fn process(
         &self,
         storage: &S,
