@@ -362,3 +362,53 @@ fn test_execute_origin_failing() {
     world.execute('origin_wrapper', data);
 }
 
+#[test]
+#[available_gas(6000000)]
+fn test_execute_multiple_worlds() {
+    // Deploy executor contract
+    let executor_constructor_calldata = array::ArrayTrait::new();
+    let (executor_address, _) = deploy_syscall(
+        executor::TEST_CLASS_HASH.try_into().unwrap(),
+        0,
+        executor_constructor_calldata.span(),
+        false
+    )
+        .unwrap();
+
+    // Deploy world contract
+    let mut constructor_calldata = array::ArrayTrait::new();
+    constructor_calldata.append(executor_address.into());
+    let (world_address, _) = deploy_syscall(
+        world::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
+    ).unwrap();
+    let world = IWorldDispatcher { contract_address: world_address };
+
+    // Deploy another world contract
+    let (world_address, _) = deploy_syscall(
+        world::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
+    ).unwrap();
+    let another_world = IWorldDispatcher { contract_address: world_address };
+
+    world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
+    another_world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
+    another_world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
+
+
+    let mut data = ArrayTrait::new();
+    data.append(1337);
+    data.append(1337);
+    let mut another_data = ArrayTrait::new();
+    another_data.append(7331);
+    another_data.append(7331);
+    let mut keys = ArrayTrait::new();
+    keys.append(0);
+
+    world.execute('bar', data);
+    another_world.execute('bar', another_data);
+
+    let stored = world.entity('Foo', keys.span(), 0, dojo::SerdeLen::<Foo>::len());
+    let another_stored = another_world.entity('Foo', keys.span(), 0, dojo::SerdeLen::<Foo>::len());
+    assert(*stored.snapshot.at(0) == 1337, 'data not stored');
+    assert(*another_stored.snapshot.at(0) == 7331, 'data not stored');
+}
