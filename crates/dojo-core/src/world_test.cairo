@@ -149,6 +149,46 @@ fn test_set_entity_unauthorized() {
 #[test]
 #[available_gas(8000000)]
 #[should_panic]
+fn test_set_entity_invalid_data() {
+    // Spawn empty world
+    let world = deploy_world();
+
+    world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
+
+    let caller = starknet::contract_address_const::<0x1337>();
+    starknet::testing::set_account_contract_address(caller);
+
+    // Call bar system, should panic as data is invalid
+    let mut data = ArrayTrait::new();
+    data.append(420);
+    world.execute('bar', data);
+}
+
+#[test]
+#[available_gas(8000000)]
+#[should_panic]
+fn test_set_entity_excess_data() {
+    // Spawn empty world
+    let world = deploy_world();
+
+    world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
+
+    let caller = starknet::contract_address_const::<0x1337>();
+    starknet::testing::set_account_contract_address(caller);
+
+    // Call bar system, should panic as it's not authorized
+    let mut data = ArrayTrait::new();
+    data.append(420);
+    data.append(420);
+    data.append(420);
+    world.execute('bar', data);
+}
+
+#[test]
+#[available_gas(8000000)]
+#[should_panic]
 fn test_set_entity_directly() {
     // Spawn empty world
     let world = deploy_world();
@@ -305,3 +345,20 @@ fn test_execute_origin() {
     world.execute('origin_wrapper', data);
     assert(world.origin() == starknet::contract_address_const::<0x0>(), 'should be equal');
 }
+
+#[test]
+#[available_gas(6000000)]
+#[should_panic]
+fn test_execute_origin_failing() {
+    // Spawn empty world
+    let world = deploy_world();
+
+    world.register_system(origin::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_system(origin_wrapper::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
+    let data = ArrayTrait::new();
+
+    let eve = starknet::contract_address_const::<0x1338>();
+    world.execute('origin_wrapper', data);
+}
+
