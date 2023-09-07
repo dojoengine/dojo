@@ -90,3 +90,40 @@ fn test_executor_bad_caller() {
 
     let res = executor.execute(ctx.system_class_hash, system_calldata.span());
 }
+
+#[test]
+#[available_gas(40000000)]
+fn test_executor_with_struct() {
+    let constructor_calldata = array::ArrayTrait::new();
+    let (executor_address, _) = deploy_syscall(
+        executor::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
+    ).unwrap();
+
+    let foo = Foo {
+        id: 1,
+        a: 42,
+        b: 53,
+    };
+    let ctx = Context {
+        world: IWorldDispatcher {
+            contract_address: starknet::contract_address_const::<0x1337>()
+        },
+        origin: starknet::contract_address_const::<0x1337>(),
+        system: 'Bar',
+        system_class_hash: Bar::TEST_CLASS_HASH.try_into().unwrap(),
+    };
+
+    let mut system_calldata = ArrayTrait::new();
+    foo.serialize(ref system_calldata); 
+    ctx.serialize(ref system_calldata);
+
+    starknet::testing::set_contract_address(ctx.world.contract_address);
+    let executor = IExecutorDispatcher { contract_address: executor_address };
+    let mut res = executor.execute(ctx.system_class_hash, system_calldata.span());
+
+    let foo = Serde::<Foo>::deserialize(ref res).unwrap();
+    assert(foo.id == 1, 'Invalid deserialized data');
+    assert(foo.a == 42, 'Invalid deserialized data');
+    assert(foo.b == 53, 'Invalid deserialized data');
+    
+}
