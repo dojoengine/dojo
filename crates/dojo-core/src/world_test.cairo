@@ -407,8 +407,8 @@ fn test_execute_multiple_worlds() {
     world.execute('bar', data);
     another_world.execute('bar', another_data);
 
-    let stored = world.entity('Foo', keys.span(), 0, dojo::SerdeLen::<Foo>::len());
-    let another_stored = another_world.entity('Foo', keys.span(), 0, dojo::SerdeLen::<Foo>::len());
+    let stored = world.entity('Foo', keys.span(), 0, dojo::StorageSize::<Foo>::unpacked_size());
+    let another_stored = another_world.entity('Foo', keys.span(), 0, dojo::StorageSize::<Foo>::unpacked_size());
     assert(*stored.snapshot.at(0) == 1337, 'data not stored');
     assert(*another_stored.snapshot.at(0) == 7331, 'data not stored');
 }
