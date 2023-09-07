@@ -110,14 +110,15 @@ impl StarknetMessenger {
             self.chain_id,
         );
 
-        account.set_block_id(BlockId::Tag(BlockTag::Pending));
+        account.set_block_id(BlockId::Tag(BlockTag::Latest));
 
         // TODO: make maximum fee configurable?
-        let execution = account.execute(calls).fee_estimate_multiplier(1.5f64);
-        let estimated_fee = (execution.estimate_fee().await?.overall_fee) * 3 / 2;
-        let _tx = execution.max_fee(estimated_fee.into()).send().await?;
+        let execution = account.execute(calls).fee_estimate_multiplier(10f64);
+        let estimated_fee = (execution.estimate_fee().await?.overall_fee) * 10;
+        let tx = execution.max_fee(estimated_fee.into()).send().await?;
 
         // TODO: output the TX hash?
+        tracing::trace!("L1 TX {:?}", tx.transaction_hash);
 
         Ok(())
     }
