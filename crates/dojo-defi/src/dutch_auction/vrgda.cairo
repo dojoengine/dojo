@@ -44,7 +44,17 @@ impl LinearVRGDAImpl of LinearVRGDATrait {
                         - self.get_target_sale_time(sold + FixedTrait::new(1, false)))
             )
     }
+
+    fn get_reverse_vrgda_price(self: @LinearVRGDA, time_since_start: Fixed, sold: Fixed) -> Fixed {
+        *self.target_price
+            * exp(
+                (*self.decay_constant * FixedTrait::new(1, true))
+                    * (time_since_start
+                        - self.get_target_sale_time(sold + FixedTrait::new(1, false)))
+            )
+    }
 }
+
 
 #[derive(Copy, Drop, Serde, starknet::Storage)]
 struct LogisticVRGDA {
@@ -92,6 +102,17 @@ impl LogisticVRGDAImpl of LogisticVRGDATrait {
         *self.target_price
             * exp(
                 *self.decay_constant
+                    * (time_since_start
+                        - self.get_target_sale_time(sold + FixedTrait::new(1, false)))
+            )
+    }
+
+    fn get_reverse_vrgda_price(
+        self: @LogisticVRGDA, time_since_start: Fixed, sold: Fixed
+    ) -> Fixed {
+        *self.target_price
+            * exp(
+                (*self.decay_constant * FixedTrait::new(1, true))
                     * (time_since_start
                         - self.get_target_sale_time(sold + FixedTrait::new(1, false)))
             )

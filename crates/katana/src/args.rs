@@ -9,6 +9,7 @@ use katana_core::constants::{
 use katana_core::db::serde::state::SerializableState;
 use katana_core::sequencer::SequencerConfig;
 use katana_rpc::config::ServerConfig;
+use url::Url;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -34,6 +35,17 @@ pub struct KatanaArgs {
     #[arg(long_help = "Dump the state of chain on exit to the given file. If the value is a \
                        directory, the state will be written to `<PATH>/state.bin`.")]
     pub dump_state: Option<PathBuf>,
+
+    #[arg(long)]
+    #[arg(value_name = "URL")]
+    #[arg(help = "The Starknet RPC provider to fork the network from.")]
+    pub rpc_url: Option<Url>,
+
+    #[arg(long)]
+    #[arg(requires = "rpc_url")]
+    #[arg(value_name = "BLOCK_NUMBER")]
+    #[arg(help = "Fork the network at a specific block.")]
+    pub fork_block_number: Option<u64>,
 
     #[arg(long)]
     #[arg(value_name = "PATH")]
@@ -115,7 +127,7 @@ pub struct EnvironmentOptions {
 
 impl KatanaArgs {
     pub fn sequencer_config(&self) -> SequencerConfig {
-        SequencerConfig { block_time: self.block_time }
+        SequencerConfig { block_time: self.block_time, no_mining: self.no_mining }
     }
 
     pub fn server_config(&self) -> ServerConfig {
@@ -130,8 +142,9 @@ impl KatanaArgs {
             total_accounts: self.starknet.total_accounts,
             seed: parse_seed(&self.starknet.seed),
             disable_fee: self.starknet.disable_fee,
-            auto_mine: self.block_time.is_none() && !self.no_mining,
             init_state: self.load_state.clone(),
+            fork_rpc_url: self.rpc_url.clone(),
+            fork_block_number: self.fork_block_number,
             env: Environment {
                 chain_id: self.starknet.environment.chain_id.clone(),
                 gas_price: self.starknet.environment.gas_price.unwrap_or(DEFAULT_GAS_PRICE),

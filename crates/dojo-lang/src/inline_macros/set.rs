@@ -1,30 +1,50 @@
-use cairo_lang_defs::plugin::PluginDiagnostic;
+use cairo_lang_defs::patcher::PatchBuilder;
+use cairo_lang_defs::plugin::{
+    InlineMacroExprPlugin, InlinePluginResult, PluginDiagnostic, PluginGeneratedFile,
+};
+use cairo_lang_semantic::inline_macros::unsupported_bracket_diagnostic;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 
-use crate::inline_macro_plugin::{InlineMacro, InlineMacroExpanderData};
+use super::unsupported_arg_diagnostic;
 
+#[derive(Debug)]
 pub struct SetMacro;
-impl InlineMacro for SetMacro {
-    fn append_macro_code(
+impl SetMacro {
+    pub const NAME: &'static str = "set";
+}
+impl InlineMacroExprPlugin for SetMacro {
+    fn generate_code(
         &self,
-        macro_expander_data: &mut InlineMacroExpanderData,
         db: &dyn cairo_lang_syntax::node::db::SyntaxGroup,
-        macro_arguments: &cairo_lang_syntax::node::ast::ExprList,
-    ) {
-        let args = macro_arguments.elements(db);
+        syntax: &ast::ExprInlineMacro,
+    ) -> InlinePluginResult {
+        let ast::WrappedArgList::ParenthesizedArgList(arg_list) = syntax.arguments(db) else {
+            return unsupported_bracket_diagnostic(db, syntax);
+        };
+        let mut builder = PatchBuilder::new(db);
+        builder.add_str("{");
+
+        let args = arg_list.args(db).elements(db);
 
         if args.len() != 2 {
-            macro_expander_data.diagnostics.push(PluginDiagnostic {
-                message: "Invalid arguments. Expected \"(world, (components,))\"".to_string(),
-                stable_ptr: macro_arguments.as_syntax_node().stable_ptr(),
-            });
-            return;
+            return InlinePluginResult {
+                code: None,
+                diagnostics: vec![PluginDiagnostic {
+                    stable_ptr: arg_list.args(db).stable_ptr().untyped(),
+                    message: "Invalid arguments. Expected \"(world, (components,))\"".to_string(),
+                }],
+            };
         }
 
         let world = &args[0];
+
+        let ast::ArgClause::Unnamed(components) = args[1].arg_clause(db) else {
+            return unsupported_arg_diagnostic(db, syntax);
+        };
+
         let mut bundle = vec![];
 
-        match &args[1] {
+        match components.value(db) {
             ast::Expr::Parenthesized(parens) => {
                 bundle.push(parens.expr(db).as_syntax_node().get_text(db))
             }
@@ -33,25 +53,29 @@ impl InlineMacro for SetMacro {
             }),
             ast::Expr::StructCtorCall(ctor) => bundle.push(ctor.as_syntax_node().get_text(db)),
             _ => {
-                macro_expander_data.diagnostics.push(PluginDiagnostic {
-                    message: "Invalid arguments. Expected \"(world, (components,))\"".to_string(),
-                    stable_ptr: macro_arguments.as_syntax_node().stable_ptr(),
-                });
-                return;
+                return InlinePluginResult {
+                    code: None,
+                    diagnostics: vec![PluginDiagnostic {
+                        message: "Invalid arguments. Expected \"(world, (components,))\""
+                            .to_string(),
+                        stable_ptr: arg_list.args(db).stable_ptr().untyped(),
+                    }],
+                };
             }
         }
 
         if bundle.is_empty() {
-            macro_expander_data.diagnostics.push(PluginDiagnostic {
-                message: "Invalid arguments: No components provided.".to_string(),
-                stable_ptr: macro_arguments.as_syntax_node().stable_ptr(),
-            });
-            return;
+            return InlinePluginResult {
+                code: None,
+                diagnostics: vec![PluginDiagnostic {
+                    message: "Invalid arguments: No components provided.".to_string(),
+                    stable_ptr: arg_list.args(db).stable_ptr().untyped(),
+                }],
+            };
         }
 
-        let mut expanded_code = "{".to_string();
         for entity in bundle {
-            expanded_code.push_str(&format!(
+            builder.add_str(&format!(
                 "\n            let __set_macro_value__ = {};
                 {}.set_entity(dojo::traits::Component::name(@__set_macro_value__), \
                  dojo::traits::Component::keys(@__set_macro_value__), 0_u8, \
@@ -60,19 +84,16 @@ impl InlineMacro for SetMacro {
                 world.as_syntax_node().get_text(db),
             ));
         }
-        expanded_code.push('}');
-        macro_expander_data.result_code.push_str(&expanded_code);
-        macro_expander_data.code_changed = true;
-    }
+        builder.add_str("}");
 
-    fn is_bracket_type_allowed(
-        &self,
-        db: &dyn cairo_lang_syntax::node::db::SyntaxGroup,
-        macro_ast: &cairo_lang_syntax::node::ast::ExprInlineMacro,
-    ) -> bool {
-        matches!(
-            macro_ast.arguments(db),
-            cairo_lang_syntax::node::ast::WrappedExprList::ParenthesizedExprList(_)
-        )
+        InlinePluginResult {
+            code: Some(PluginGeneratedFile {
+                name: "set_inline_macro".into(),
+                content: builder.code,
+                diagnostics_mappings: builder.diagnostics_mappings,
+                aux_data: None,
+            }),
+            diagnostics: vec![],
+        }
     }
 }

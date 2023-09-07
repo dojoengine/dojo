@@ -13,6 +13,7 @@ testing = [  ]
 anyhow.workspace = true
 assert_fs = "1.0.9"
 cairo-lang-compiler.workspace = true
+cairo-lang-debug.workspace = true
 cairo-lang-defs.workspace = true
 cairo-lang-diagnostics.workspace = true
 cairo-lang-filesystem.workspace = true
@@ -31,6 +32,7 @@ dojo-types = { path = "../dojo-types" }
 dojo-world = { path = "../dojo-world" }
 indoc.workspace = true
 itertools.workspace = true
+once_cell.workspace = true
 salsa.workspace = true
 sanitizer = "0.1.6"
 scarb.workspace = true

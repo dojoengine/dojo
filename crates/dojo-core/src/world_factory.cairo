@@ -21,7 +21,7 @@ mod world_factory {
 
     use starknet::{
         ClassHash, ContractAddress, contract_address::ContractAddressIntoFelt252,
-        syscalls::deploy_syscall, get_caller_address
+        syscalls::deploy_syscall, get_caller_address, SyscallResultTrait, SyscallResultTraitImpl
     };
 
     use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};

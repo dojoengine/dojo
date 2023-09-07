@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 
+use cairo_lang_defs::patcher::{PatchBuilder, RewriteNode};
 use cairo_lang_defs::plugin::{
     DynGeneratedFileAuxData, PluginDiagnostic, PluginGeneratedFile, PluginResult,
 };
-use cairo_lang_semantic::patcher::{PatchBuilder, RewriteNode};
-use cairo_lang_semantic::plugin::DynPluginAuxData;
 use cairo_lang_syntax::node::ast::OptionReturnTypeClause::ReturnTypeClause;
 use cairo_lang_syntax::node::ast::{MaybeModuleBody, Param};
 use cairo_lang_syntax::node::db::SyntaxGroup;
@@ -70,14 +69,14 @@ impl System {
                 code: Some(PluginGeneratedFile {
                     name: name.clone(),
                     content: builder.code,
-                    aux_data: DynGeneratedFileAuxData::new(DynPluginAuxData::new(DojoAuxData {
-                        patches: builder.patches,
+                    aux_data: Some(DynGeneratedFileAuxData::new(DojoAuxData {
                         components: vec![],
                         systems: vec![SystemAuxData {
                             name,
                             dependencies: system.dependencies.values().cloned().collect(),
                         }],
                     })),
+                    diagnostics_mappings: builder.diagnostics_mappings,
                 }),
                 diagnostics: system.diagnostics,
                 remove_original_item: true,

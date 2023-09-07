@@ -194,11 +194,7 @@ impl State for Sql {
         );
 
         for member in component.clone().members {
-            if member.key {
-                continue;
-            }
-
-            // if new type, insert and assume INTEGER type
+            // TODO: support tested member types
             let mut sql_types = self.sql_types.lock().await;
             let ty = sql_types.entry(member.ty).or_insert("INTEGER");
 
@@ -276,16 +272,23 @@ impl State for Sql {
             entity_id, keys_str, component_names
         );
 
-        let member_results = sqlx::query(
-            "SELECT * FROM component_members WHERE key == FALSE AND component_id = ? ORDER BY id \
-             ASC",
-        )
-        .bind(component.to_lowercase())
-        .fetch_all(&self.pool)
-        .await?;
+        let member_names_result =
+            sqlx::query("SELECT * FROM component_members WHERE component_id = ? ORDER BY id ASC")
+                .bind(component.to_lowercase())
+                .fetch_all(&self.pool)
+                .await?;
 
+<<<<<<< HEAD
         let sql_types = self.sql_types.lock().await;
         let (names_str, values_str) = format_values(member_results, values, &sql_types)?;
+=======
+        // keys are part of component members, so combine keys and component values array
+        let mut member_values: Vec<FieldElement> = Vec::new();
+        member_values.extend(keys);
+        member_values.extend(values);
+
+        let (names_str, values_str) = format_values(member_names_result, member_values)?;
+>>>>>>> main
         let insert_components = format!(
             "INSERT OR REPLACE INTO external_{} (entity_id {}) VALUES ('{}' {})",
             component.to_lowercase(),
