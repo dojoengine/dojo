@@ -626,7 +626,7 @@ test_manifest_file
         }
       ],
       "outputs": [],
-      "class_hash": "0x3459b99fd17b3bf9aeb6c55b610a457520785646f5c80c21d07041403a25315",
+      "class_hash": "0x205287b11aa6c42e3cef3539607aa250c2b9ffe27f847af8e88f005e1b3525d",
       "dependencies": [],
       "abi": [
         {
@@ -701,11 +701,11 @@ test_manifest_file
         },
         {
           "name": "direction",
-          "type": "dojo_examples::systems::move::Direction"
+          "type": "dojo_examples::components::Direction"
         }
       ],
       "outputs": [],
-      "class_hash": "0x578416d298f2f6c280a229f58fd7b5b2486285700fcfde9ad102c4052d3804e",
+      "class_hash": "0x501dbe28cf4e7f3a47c9abeee23c85992b97fdaa324c1fcb1e2a638882fc470",
       "dependencies": [],
       "abi": [
         {
@@ -721,8 +721,12 @@ test_manifest_file
         },
         {
           "type": "enum",
-          "name": "dojo_examples::systems::move::Direction",
+          "name": "dojo_examples::components::Direction",
           "variants": [
+            {
+              "name": "None",
+              "type": "()"
+            },
             {
               "name": "Left",
               "type": "()"
@@ -779,7 +783,7 @@ test_manifest_file
           "inputs": [
             {
               "name": "direction",
-              "type": "dojo_examples::systems::move::Direction"
+              "type": "dojo_examples::components::Direction"
             },
             {
               "name": "ctx",
@@ -801,7 +805,7 @@ test_manifest_file
             },
             {
               "name": "direction",
-              "type": "dojo_examples::systems::move::Direction",
+              "type": "dojo_examples::components::Direction",
               "kind": "data"
             }
           ]
@@ -952,9 +956,14 @@ test_manifest_file
           "name": "remaining",
           "type": "u8",
           "key": false
+        },
+        {
+          "name": "last_direction",
+          "type": "Direction",
+          "key": false
         }
       ],
-      "class_hash": "0x74c8a6b2e93b4a34788c23eb3d931da62d5a973ef66ba0a671de41b1607a9a4",
+      "class_hash": "0x451a367ced4c22bfc661e6a342391faa6087d3162ea53cf4c6cc86c8630de49",
       "abi": [
         {
           "type": "function",
