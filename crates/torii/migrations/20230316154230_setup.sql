@@ -31,6 +31,7 @@ CREATE TABLE component_members(
     key BOOLEAN NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (component_id) REFERENCES components(id)
+    UNIQUE (component_id, name)
 );
 
 CREATE INDEX idx_component_members_component_id ON component_members (component_id);
