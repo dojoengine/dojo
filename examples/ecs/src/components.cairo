@@ -1,14 +1,14 @@
 use array::ArrayTrait;
 use starknet::ContractAddress;
 
-#[derive(Component, Copy, Drop, Serde, SerdeLen)]
+#[derive(Component, Copy, Drop, Serde)]
 struct Moves {
     #[key]
     player: ContractAddress,
     remaining: u8,
 }
 
-#[derive(Component, Copy, Drop, Serde, SerdeLen)]
+#[derive(Component, Copy, Drop, Serde)]
 struct Position {
     #[key]
     player: ContractAddress,

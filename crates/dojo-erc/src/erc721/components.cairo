@@ -14,7 +14,7 @@ use dojo_erc::erc_common::components::{
 // ERC721Owner
 //
 
-#[derive(Component, Copy, Drop, Serde, SerdeLen)]
+#[derive(Component, Copy, Drop, Serde)]
 struct ERC721Owner {
     #[key]
     token: ContractAddress,
@@ -56,7 +56,7 @@ impl ERC721OwnerImpl of ERC721OwnerTrait {
 // ERC721Balance
 //
 
-#[derive(Component, Copy, Drop, Serde, SerdeLen)]
+#[derive(Component, Copy, Drop, Serde)]
 struct ERC721Balance {
     #[key]
     token: ContractAddress,
@@ -133,7 +133,7 @@ impl ERC721BalanceImpl of ERC721BalanceTrait {
 // ERC721TokenApproval
 //
 
-#[derive(Component, Copy, Drop, Serde, SerdeLen)]
+#[derive(Component, Copy, Drop, Serde)]
 struct ERC721TokenApproval {
     #[key]
     token: ContractAddress,
