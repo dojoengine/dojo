@@ -180,10 +180,15 @@ pub fn handle_component_struct(
                 }
             }
 
-            impl $type_name$ComponentSize of dojo::ComponentSize<$type_name$> {
+            impl $type_name$StorageSize of dojo::StorageSize<$type_name$> {
                 #[inline(always)]
-                fn storage_size() -> usize {
-                    $size$
+                fn unpacked_size() -> usize {
+                    $unpacked_size$
+                }
+
+                #[inline(always)]
+                fn packed_size() -> usize {
+                    $packed_size$
                 }
             }
 
@@ -213,7 +218,7 @@ pub fn handle_component_struct(
 
                 #[external(v0)]
                 fn size(self: @ContractState) -> usize {
-                    dojo::ComponentSize::<$type_name$>::storage_size()
+                    dojo::StorageSize::<$type_name$>::unpacked_size()
                 }
 
                 #[external(v0)]
@@ -248,7 +253,7 @@ pub fn handle_component_struct(
                 ("schema".to_string(), RewriteNode::new_modified(schema)),
                 ("print_body".to_string(), RewriteNode::Text(print_body)),
                 (
-                    "size".to_string(),
+                    "unpacked_size".to_string(),
                     RewriteNode::Text(
                         struct_ast
                             .members(db)
@@ -260,7 +265,27 @@ pub fn handle_component_struct(
                                 }
 
                                 Some(format!(
-                                    "dojo::ComponentSize::<{}>::storage_size()",
+                                    "dojo::StorageSize::<{}>::unpacked_size()",
+                                    member.type_clause(db).ty(db).as_syntax_node().get_text(db),
+                                ))
+                            })
+                            .join(" + "),
+                    ),
+                ),
+                (
+                    "packed_size".to_string(),
+                    RewriteNode::Text(
+                        struct_ast
+                            .members(db)
+                            .elements(db)
+                            .iter()
+                            .filter_map(|member| {
+                                if member.has_attr(db, "key") {
+                                    return None;
+                                }
+
+                                Some(format!(
+                                    "dojo::StorageSize::<{}>::packed_size()",
                                     member.type_clause(db).ty(db).as_syntax_node().get_text(db),
                                 ))
                             })

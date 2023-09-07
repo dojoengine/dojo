@@ -2,7 +2,7 @@ use option::OptionTrait;
 use starknet::ContractAddress;
 use traits::{Into, TryInto};
 
-use dojo::component::ComponentSize;
+use dojo::component::StorageSize;
 
 
 // Cubit fixed point math library
@@ -10,7 +10,7 @@ use cubit::f128::types::fixed::Fixed;
 
 const SCALING_FACTOR: u128 = 10000;
 
-impl ComponentSizeFixed of ComponentSize<Fixed> {
+impl StorageSizeFixed of StorageSize<Fixed> {
     #[inline(always)]
     fn len() -> usize {
         2

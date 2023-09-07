@@ -83,11 +83,16 @@ impl PositionComponent of dojo::component::Component<Position> {
     }
 }
 
-impl PositionComponentSize of dojo::ComponentSize<Position> {
+impl PositionStorageSize of dojo::StorageSize<Position> {
     #[inline(always)]
-    fn storage_size() -> usize {
-        dojo::ComponentSize::<felt252>::storage_size()
-            + dojo::ComponentSize::<felt252>::storage_size()
+    fn unpacked_size() -> usize {
+        dojo::StorageSize::<felt252>::unpacked_size()
+            + dojo::StorageSize::<felt252>::unpacked_size()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> usize {
+        dojo::StorageSize::<felt252>::packed_size() + dojo::StorageSize::<felt252>::packed_size()
     }
 }
 
@@ -122,7 +127,7 @@ mod position {
 
     #[external(v0)]
     fn size(self: @ContractState) -> usize {
-        dojo::ComponentSize::<Position>::storage_size()
+        dojo::StorageSize::<Position>::unpacked_size()
     }
 
     #[external(v0)]
@@ -181,10 +186,15 @@ impl RolesComponent of dojo::component::Component<Roles> {
     }
 }
 
-impl RolesComponentSize of dojo::ComponentSize<Roles> {
+impl RolesStorageSize of dojo::StorageSize<Roles> {
     #[inline(always)]
-    fn storage_size() -> usize {
-        dojo::ComponentSize::<Array<u8>>::storage_size()
+    fn unpacked_size() -> usize {
+        dojo::StorageSize::<Array<u8>>::unpacked_size()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> usize {
+        dojo::StorageSize::<Array<u8>>::packed_size()
     }
 }
 
@@ -215,7 +225,7 @@ mod roles {
 
     #[external(v0)]
     fn size(self: @ContractState) -> usize {
-        dojo::ComponentSize::<Roles>::storage_size()
+        dojo::StorageSize::<Roles>::unpacked_size()
     }
 
     #[external(v0)]
@@ -262,10 +272,15 @@ impl PlayerComponent of dojo::component::Component<Player> {
     }
 }
 
-impl PlayerComponentSize of dojo::ComponentSize<Player> {
+impl PlayerStorageSize of dojo::StorageSize<Player> {
     #[inline(always)]
-    fn storage_size() -> usize {
-        dojo::ComponentSize::<felt252>::storage_size()
+    fn unpacked_size() -> usize {
+        dojo::StorageSize::<felt252>::unpacked_size()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> usize {
+        dojo::StorageSize::<felt252>::packed_size()
     }
 }
 
@@ -300,7 +315,7 @@ mod player {
 
     #[external(v0)]
     fn size(self: @ContractState) -> usize {
-        dojo::ComponentSize::<Player>::storage_size()
+        dojo::StorageSize::<Player>::unpacked_size()
     }
 
     #[external(v0)]
