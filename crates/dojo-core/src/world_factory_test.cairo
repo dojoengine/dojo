@@ -128,3 +128,52 @@ fn test_setters() {
         factory.executor() == starknet::contract_address_const::<0x96>(), 'wrong executor contract'
     );
 }
+
+#[test]
+#[available_gas(90000000)]
+fn test_spawn_multiple_worlds() {
+    // Deploy Executor
+    let constructor_calldata = array::ArrayTrait::new();
+    let (executor_address, _) = deploy_syscall(
+        executor::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
+    )
+        .unwrap();
+
+    // WorldFactory constructor
+    let mut calldata: Array<felt252> = array::ArrayTrait::new();
+    calldata.append(world::TEST_CLASS_HASH);
+    calldata.append(executor_address.into());
+
+    let (factory_address, _) = deploy_syscall(
+        world_factory::TEST_CLASS_HASH.try_into().unwrap(), 0, calldata.span(), false
+    )
+        .unwrap();
+
+    let factory = IWorldFactoryDispatcher { contract_address: factory_address };
+
+    assert(factory.executor() == executor_address, 'wrong executor address');
+    assert(factory.world() == world::TEST_CLASS_HASH.try_into().unwrap(), 'wrong world class hash');
+
+    // Prepare components and systems
+    let mut systems: Array<ClassHash> = array::ArrayTrait::new();
+    systems.append(bar::TEST_CLASS_HASH.try_into().unwrap());
+    let mut components: Array<ClassHash> = array::ArrayTrait::new();
+    components.append(foo::TEST_CLASS_HASH.try_into().unwrap());
+
+    // Spawn World from WorldFactory
+    let world_address = factory.spawn(components, systems);
+    let another_world_address = factory.spawn(components, systems);
+    let world = IWorldDispatcher { contract_address: world_address };
+    let another_world = IWorldDispatcher { contract_address: another_world_address };
+
+    // Check Foo component and Bar system are registered
+    let foo_hash = world.component('Foo'.into());
+    let foo_hash = world.component('Foo'.into());
+    assert(foo_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'component not registered');
+    assert(foo_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'component not registered');
+
+    let bar_hash = world.system('bar'.into());
+    let another_bar_hash = another_world.system('bar'.into());
+    assert(bar_hash == bar::TEST_CLASS_HASH.try_into().unwrap(), 'system not registered');
+    assert(another_bar_hash == bar::TEST_CLASS_HASH.try_into().unwrap(), 'system not registered');
+}
