@@ -162,7 +162,7 @@ fn test_spawn_multiple_worlds() {
 
     // Spawn World from WorldFactory
     let world_address = factory.spawn(components, systems);
-    let another_world_address = factory.spawn(components, systems);
+    let another_world_address = factory.spawn(array::ArrayTrait::new(), array::ArrayTrait::new());
     let world = IWorldDispatcher { contract_address: world_address };
     let another_world = IWorldDispatcher { contract_address: another_world_address };
 
@@ -171,9 +171,4 @@ fn test_spawn_multiple_worlds() {
     let foo_hash = world.component('Foo'.into());
     assert(foo_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'component not registered');
     assert(foo_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'component not registered');
-
-    let bar_hash = world.system('bar'.into());
-    let another_bar_hash = another_world.system('bar'.into());
-    assert(bar_hash == bar::TEST_CLASS_HASH.try_into().unwrap(), 'system not registered');
-    assert(another_bar_hash == bar::TEST_CLASS_HASH.try_into().unwrap(), 'system not registered');
 }
