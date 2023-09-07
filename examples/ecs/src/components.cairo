@@ -11,15 +11,15 @@ enum Direction {
     Down: (),
 }
 
-impl DirectionStorageSizeImpl of dojo::StorageSize<Direction> {
+impl DirectionStorageLayoutImpl of dojo::StorageLayout<Direction> {
     #[inline(always)]
-    fn unpacked_size() -> usize {
+    fn size() -> usize {
         1
     }
 
     #[inline(always)]
-    fn packed_size() -> usize {
-        2
+    fn layout(ref layout: Array<u8>) {
+        layout.append(3);
     }
 }
 

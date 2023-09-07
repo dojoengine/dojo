@@ -1,12 +1,12 @@
 use starknet::ContractAddress;
-use dojo::StorageSize;
+use dojo::component::StorageLayout;
 
 // Cubit fixed point math library
 use cubit::f128::types::fixed::Fixed;
 
 const SCALING_FACTOR: u128 = 10000;
 
-impl StorageSizeFixed of StorageSize<Fixed> {
+impl StorageLayoutFixed of StorageLayout<Fixed> {
     #[inline(always)]
     fn unpacked_size() -> usize {
         1
@@ -15,6 +15,12 @@ impl StorageSizeFixed of StorageSize<Fixed> {
     #[inline(always)]
     fn packed_size() -> usize {
         129
+    }
+
+    #[inline(always)]
+    fn layout(ref layout: Array<u8>) {
+        layout.append(128);
+        layout.append(1);
     }
 }
 

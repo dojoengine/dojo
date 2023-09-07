@@ -70,30 +70,43 @@ impl PositionComponent of dojo::component::Component<Position> {
     fn keys(self: @Position) -> Span<felt252> {
         let mut serialized = ArrayTrait::new();
         array::ArrayTrait::append(ref serialized, *self.id);
-
         array::ArrayTrait::span(@serialized)
     }
 
     #[inline(always)]
-    fn values(self: @Position) -> Span<felt252> {
+    fn pack(self: @Position) -> Span<felt252> {
+        let mut layout = ArrayTrait::new();
+        dojo::StorageLayout::<Position>::layout(ref layout);
+
         let mut serialized = ArrayTrait::new();
         array::ArrayTrait::append(ref serialized, *self.x);
         array::ArrayTrait::append(ref serialized, *self.y);
 
-        array::ArrayTrait::span(@serialized)
+        let mut serialized_span = array::ArrayTrait::span(@serialized);
+        let mut layout_span = array::ArrayTrait::span(@layout);
+        dojo::packing::pack(ref serialized_span, ref layout_span)
+    }
+
+    #[inline(always)]
+    fn unpack(ref packed: Span<felt252>) -> Option<Position> {
+        let mut layout = ArrayTrait::new();
+        dojo::StorageLayout::<Position>::layout(ref layout);
+        let mut layout_span = array::ArrayTrait::span(@layout);
+        let mut unpacked = dojo::packing::unpack(ref packed, ref layout_span)?;
+        serde::Serde::deserialize(ref unpacked)
     }
 }
 
-impl PositionStorageSize of dojo::StorageSize<Position> {
+impl PositionStorageLayout of dojo::StorageLayout<Position> {
     #[inline(always)]
-    fn unpacked_size() -> usize {
-        dojo::StorageSize::<felt252>::unpacked_size()
-            + dojo::StorageSize::<felt252>::unpacked_size()
+    fn size() -> usize {
+        dojo::StorageLayout::<felt252>::size() + dojo::StorageLayout::<felt252>::size()
     }
 
     #[inline(always)]
-    fn packed_size() -> usize {
-        dojo::StorageSize::<felt252>::packed_size() + dojo::StorageSize::<felt252>::packed_size()
+    fn layout(ref layout: Array<u8>) {
+        dojo::StorageLayout::<felt252>::layout(ref layout);
+        dojo::StorageLayout::<felt252>::layout(ref layout);
     }
 }
 
@@ -128,7 +141,14 @@ mod position {
 
     #[external(v0)]
     fn size(self: @ContractState) -> usize {
-        dojo::StorageSize::<Position>::unpacked_size()
+        dojo::StorageLayout::<Position>::size()
+    }
+
+    #[external(v0)]
+    fn layout(self: @ContractState) -> Span<u8> {
+        let mut layout = ArrayTrait::new();
+        dojo::StorageLayout::<Position>::layout(ref layout);
+        array::ArrayTrait::span(@layout)
     }
 
     #[external(v0)]
@@ -180,22 +200,38 @@ impl RolesComponent of dojo::component::Component<Roles> {
     }
 
     #[inline(always)]
-    fn values(self: @Roles) -> Span<felt252> {
+    fn pack(self: @Roles) -> Span<felt252> {
+        let mut layout = ArrayTrait::new();
+        dojo::StorageLayout::<Roles>::layout(ref layout);
+
         let mut serialized = ArrayTrait::new();
         serde::Serde::serialize(self.role_ids, ref serialized);
-        array::ArrayTrait::span(@serialized)
+
+        let mut serialized_span = array::ArrayTrait::span(@serialized);
+        let mut layout_span = array::ArrayTrait::span(@layout);
+        dojo::packing::pack(ref serialized_span, ref layout_span)
+    }
+
+    #[inline(always)]
+    fn unpack(ref packed: Span<felt252>) -> Option<Roles> {
+        let mut layout = ArrayTrait::new();
+        dojo::StorageLayout::<Roles>::layout(ref layout);
+
+        let mut layout_span = array::ArrayTrait::span(@layout);
+        let mut unpacked = dojo::packing::unpack(ref packed, ref layout_span)?;
+        serde::Serde::deserialize(ref unpacked)
     }
 }
 
-impl RolesStorageSize of dojo::StorageSize<Roles> {
+impl RolesStorageLayout of dojo::StorageLayout<Roles> {
     #[inline(always)]
-    fn unpacked_size() -> usize {
-        dojo::StorageSize::<Array<u8>>::unpacked_size()
+    fn size() -> usize {
+        dojo::StorageLayout::<Array<u8>>::size()
     }
 
     #[inline(always)]
-    fn packed_size() -> usize {
-        dojo::StorageSize::<Array<u8>>::packed_size()
+    fn layout(ref layout: Array<u8>) {
+        dojo::StorageLayout::<Array<u8>>::layout(ref layout);
     }
 }
 
@@ -226,7 +262,14 @@ mod roles {
 
     #[external(v0)]
     fn size(self: @ContractState) -> usize {
-        dojo::StorageSize::<Roles>::unpacked_size()
+        dojo::StorageLayout::<Roles>::size()
+    }
+
+    #[external(v0)]
+    fn layout(self: @ContractState) -> Span<u8> {
+        let mut layout = ArrayTrait::new();
+        dojo::StorageLayout::<Roles>::layout(ref layout);
+        array::ArrayTrait::span(@layout)
     }
 
     #[external(v0)]
@@ -264,23 +307,38 @@ impl PlayerComponent of dojo::component::Component<Player> {
     }
 
     #[inline(always)]
-    fn values(self: @Player) -> Span<felt252> {
+    fn pack(self: @Player) -> Span<felt252> {
+        let mut layout = ArrayTrait::new();
+        dojo::StorageLayout::<Player>::layout(ref layout);
+
         let mut serialized = ArrayTrait::new();
         array::ArrayTrait::append(ref serialized, *self.name);
 
-        array::ArrayTrait::span(@serialized)
+        let mut serialized_span = array::ArrayTrait::span(@serialized);
+        let mut layout_span = array::ArrayTrait::span(@layout);
+        dojo::packing::pack(ref serialized_span, ref layout_span)
+    }
+
+    #[inline(always)]
+    fn unpack(ref packed: Span<felt252>) -> Option<Player> {
+        let mut layout = ArrayTrait::new();
+        dojo::StorageLayout::<Player>::layout(ref layout);
+
+        let mut layout_span = array::ArrayTrait::span(@layout);
+        let mut unpacked = dojo::packing::unpack(ref packed, ref layout_span)?;
+        serde::Serde::deserialize(ref unpacked)
     }
 }
 
-impl PlayerStorageSize of dojo::StorageSize<Player> {
+impl PlayerStorageLayout of dojo::StorageLayout<Player> {
     #[inline(always)]
-    fn unpacked_size() -> usize {
-        dojo::StorageSize::<felt252>::unpacked_size()
+    fn size() -> usize {
+        dojo::StorageLayout::<felt252>::size()
     }
 
     #[inline(always)]
-    fn packed_size() -> usize {
-        dojo::StorageSize::<felt252>::packed_size()
+    fn layout(ref layout: Array<u8>) {
+        dojo::StorageLayout::<felt252>::layout(ref layout);
     }
 }
 
@@ -315,7 +373,14 @@ mod player {
 
     #[external(v0)]
     fn size(self: @ContractState) -> usize {
-        dojo::StorageSize::<Player>::unpacked_size()
+        dojo::StorageLayout::<Player>::size()
+    }
+
+    #[external(v0)]
+    fn layout(self: @ContractState) -> Span<u8> {
+        let mut layout = ArrayTrait::new();
+        dojo::StorageLayout::<Player>::layout(ref layout);
+        array::ArrayTrait::span(@layout)
     }
 
     #[external(v0)]

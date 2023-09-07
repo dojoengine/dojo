@@ -626,7 +626,7 @@ test_manifest_file
         }
       ],
       "outputs": [],
-      "class_hash": "0x205287b11aa6c42e3cef3539607aa250c2b9ffe27f847af8e88f005e1b3525d",
+      "class_hash": "0x5a102adb9ce670b7c98c1d086e55a29a7098424fe36d5f8ed7bb70fe80aa0d4",
       "dependencies": [],
       "abi": [
         {
@@ -705,7 +705,7 @@ test_manifest_file
         }
       ],
       "outputs": [],
-      "class_hash": "0x501dbe28cf4e7f3a47c9abeee23c85992b97fdaa324c1fcb1e2a638882fc470",
+      "class_hash": "0x15c2b02f0a872138320630e0543bd272edeac5d88da3d9dc65cf459d4e9effd",
       "dependencies": [],
       "abi": [
         {
@@ -963,7 +963,7 @@ test_manifest_file
           "key": false
         }
       ],
-      "class_hash": "0x451a367ced4c22bfc661e6a342391faa6087d3162ea53cf4c6cc86c8630de49",
+      "class_hash": "0x503b314775888235a3575fd84cbb6a535e6f70db262c5fc4bdf9554e01b98cd",
       "abi": [
         {
           "type": "function",
@@ -983,6 +983,27 @@ test_manifest_file
           "outputs": [
             {
               "type": "core::integer::u32"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<core::integer::u8>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<core::integer::u8>"
+            }
+          ]
+        },
+        {
+          "type": "function",
+          "name": "layout",
+          "inputs": [],
+          "outputs": [
+            {
+              "type": "core::array::Span::<core::integer::u8>"
             }
           ],
           "state_mutability": "view"
@@ -1039,7 +1060,7 @@ test_manifest_file
           "key": false
         }
       ],
-      "class_hash": "0x6a8ab7eb5689bed6f0e9fb63d2565411830e1725aca7299f5f512d375d9a28c",
+      "class_hash": "0x53cb57ccb0cfe1a4642272ecedeb4b183d6f815bab90fef829b34d5ad6a2af4",
       "abi": [
         {
           "type": "function",
@@ -1059,6 +1080,27 @@ test_manifest_file
           "outputs": [
             {
               "type": "core::integer::u32"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<core::integer::u8>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<core::integer::u8>"
+            }
+          ]
+        },
+        {
+          "type": "function",
+          "name": "layout",
+          "inputs": [],
+          "outputs": [
+            {
+              "type": "core::array::Span::<core::integer::u8>"
             }
           ],
           "state_mutability": "view"

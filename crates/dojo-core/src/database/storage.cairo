@@ -62,127 +62,129 @@ fn set_many(address_domain: u32, keys: Span<felt252>, offset: u8, mut value: Spa
 }
 
 
-trait StorageSize<T> {
-    fn unpacked_size() -> usize;
-    fn packed_size() -> usize;
+trait StorageLayout<T> {
+    fn size() -> usize;
+    fn layout(ref layout: Array<u8>);
 }
 
-impl StorageSizeFelt252 of StorageSize<felt252> {
+impl StorageLayoutFelt252 of StorageLayout<felt252> {
     #[inline(always)]
-    fn unpacked_size() -> usize {
+    fn size() -> usize {
         1
     }
 
     #[inline(always)]
-    fn packed_size() -> usize {
-        252
+    fn layout(ref layout: Array<u8>) {
+        // We round down felt252 since it is 251 < felt252 < 252
+        layout.append(251);
     }
 }
 
-impl StorageSizeBool of StorageSize<bool> {
+impl StorageLayoutBool of StorageLayout<bool> {
     #[inline(always)]
-    fn unpacked_size() -> usize {
+    fn size() -> usize {
         1
     }
 
     #[inline(always)]
-    fn packed_size() -> usize {
-        1
+    fn layout(ref layout: Array<u8>) {
+        layout.append(1);
     }
 }
 
-impl StorageSizeU8 of StorageSize<u8> {
+impl StorageLayoutU8 of StorageLayout<u8> {
     #[inline(always)]
-    fn unpacked_size() -> usize {
-        1
-    }
-
-    #[inline(always)]
-    fn packed_size() -> usize {
-        8
-    }
-}
-
-impl StorageSizeU16 of StorageSize<u16> {
-    #[inline(always)]
-    fn unpacked_size() -> usize {
+    fn size() -> usize {
         1
     }
 
     #[inline(always)]
-    fn packed_size() -> usize {
-        16
+    fn layout(ref layout: Array<u8>) {
+        layout.append(8);
     }
 }
 
-impl StorageSizeU32 of StorageSize<u32> {
+impl StorageLayoutU16 of StorageLayout<u16> {
     #[inline(always)]
-    fn unpacked_size() -> usize {
+    fn size() -> usize {
         1
     }
 
     #[inline(always)]
-    fn packed_size() -> usize {
-        32
+    fn layout(ref layout: Array<u8>) {
+        layout.append(16);
     }
 }
 
-impl StorageSizeU64 of StorageSize<u64> {
+impl StorageLayoutU32 of StorageLayout<u32> {
     #[inline(always)]
-    fn unpacked_size() -> usize {
+    fn size() -> usize {
         1
     }
 
     #[inline(always)]
-    fn packed_size() -> usize {
-        64
+    fn layout(ref layout: Array<u8>) {
+        layout.append(32);
     }
 }
 
-impl StorageSizeU128 of StorageSize<u128> {
+impl StorageLayoutU64 of StorageLayout<u64> {
     #[inline(always)]
-    fn unpacked_size() -> usize {
+    fn size() -> usize {
         1
     }
 
     #[inline(always)]
-    fn packed_size() -> usize {
-        128
+    fn layout(ref layout: Array<u8>) {
+        layout.append(64);
     }
 }
 
-impl StorageSizeU256 of StorageSize<u256> {
+impl StorageLayoutU128 of StorageLayout<u128> {
     #[inline(always)]
-    fn unpacked_size() -> usize {
+    fn size() -> usize {
+        1
+    }
+
+    #[inline(always)]
+    fn layout(ref layout: Array<u8>) {
+        layout.append(128);
+    }
+}
+
+impl StorageLayoutU256 of StorageLayout<u256> {
+    #[inline(always)]
+    fn size() -> usize {
         2
     }
 
     #[inline(always)]
-    fn packed_size() -> usize {
-        256
+    fn layout(ref layout: Array<u8>) {
+        layout.append(128);
+        layout.append(128);
     }
 }
 
-impl StorageSizeContractAddress of StorageSize<starknet::ContractAddress> {
+impl StorageLayoutContractAddress of StorageLayout<starknet::ContractAddress> {
     #[inline(always)]
-    fn unpacked_size() -> usize {
+    fn size() -> usize {
         1
     }
 
     #[inline(always)]
-    fn packed_size() -> usize {
-        256
+    fn layout(ref layout: Array<u8>) {
+        layout.append(251);
     }
 }
 
-impl StorageSizeClassHash of StorageSize<starknet::ClassHash> {
+impl StorageLayoutClassHash of StorageLayout<starknet::ClassHash> {
     #[inline(always)]
-    fn unpacked_size() -> usize {
+    fn size() -> usize {
         1
     }
 
     #[inline(always)]
-    fn packed_size() -> usize {
-        256
+    fn layout(ref layout: Array<u8>) {
+        layout.append(251);
     }
 }

@@ -50,7 +50,7 @@ pub fn handle_component_struct(
 
         if m.ty == "felt252" {
             return Some(RewriteNode::Text(format!(
-                "array::ArrayTrait::append(ref serialized, *self.{});\n",
+                "array::ArrayTrait::append(ref serialized, *self.{});",
                 m.name
             )));
         }
@@ -66,6 +66,20 @@ pub fn handle_component_struct(
 
     let serialized_values: Vec<_> =
         members.iter().filter_map(|m| serialize_member(m, false)).collect::<_>();
+
+    let layout: Vec<_> = members
+        .iter()
+        .filter_map(|m| {
+            if m.key {
+                return None;
+            }
+
+            Some(RewriteNode::Text(format!(
+                "dojo::StorageLayout::<{}>::layout(ref layout);\n",
+                m.ty
+            )))
+        })
+        .collect::<_>();
 
     let schema = members
         .iter()
@@ -115,22 +129,38 @@ pub fn handle_component_struct(
                 }
 
                 #[inline(always)]
-                fn values(self: @$type_name$) -> Span<felt252> {
+                fn pack(self: @$type_name$) -> Span<felt252> {
+                    let mut layout = ArrayTrait::new();
+                    dojo::StorageLayout::<$type_name$>::layout(ref layout);
+
                     let mut serialized = ArrayTrait::new();
                     $serialized_values$
-                    array::ArrayTrait::span(@serialized)
+
+                    let mut serialized_span = array::ArrayTrait::span(@serialized);
+                    let mut layout_span = array::ArrayTrait::span(@layout);
+                    dojo::packing::pack(ref serialized_span, ref layout_span)
+                }
+
+                #[inline(always)]
+                fn unpack(ref packed: Span<felt252>) -> Option<$type_name$> {
+                    let mut layout = ArrayTrait::new();
+                    dojo::StorageLayout::<$type_name$>::layout(ref layout);
+
+                    let mut layout_span = array::ArrayTrait::span(@layout);
+                    let mut unpacked = dojo::packing::unpack(ref packed, ref layout_span)?;
+                    serde::Serde::deserialize(ref unpacked)
                 }
             }
 
-            impl $type_name$StorageSize of dojo::StorageSize<$type_name$> {
+            impl $type_name$StorageLayout of dojo::StorageLayout<$type_name$> {
                 #[inline(always)]
-                fn unpacked_size() -> usize {
-                    $unpacked_size$
+                fn size() -> usize {
+                    $size$
                 }
 
                 #[inline(always)]
-                fn packed_size() -> usize {
-                    $packed_size$
+                fn layout(ref layout: Array<u8>) {
+                    $layout$
                 }
             }
 
@@ -160,7 +190,14 @@ pub fn handle_component_struct(
 
                 #[external(v0)]
                 fn size(self: @ContractState) -> usize {
-                    dojo::StorageSize::<$type_name$>::unpacked_size()
+                    dojo::StorageLayout::<$type_name$>::size()
+                }
+
+                #[external(v0)]
+                fn layout(self: @ContractState) -> Span<u8> {
+                    let mut layout = ArrayTrait::new();
+                    dojo::StorageLayout::<$type_name$>::layout(ref layout);
+                    array::ArrayTrait::span(@layout)
                 }
 
                 #[external(v0)]
@@ -191,10 +228,11 @@ pub fn handle_component_struct(
                 ),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
+                ("layout".to_string(), RewriteNode::new_modified(layout)),
                 ("schema".to_string(), RewriteNode::new_modified(schema)),
                 ("print".to_string(), RewriteNode::Text(prints.join("\n"))),
                 (
-                    "unpacked_size".to_string(),
+                    "size".to_string(),
                     RewriteNode::Text(
                         struct_ast
                             .members(db)
@@ -206,27 +244,7 @@ pub fn handle_component_struct(
                                 }
 
                                 Some(format!(
-                                    "dojo::StorageSize::<{}>::unpacked_size()",
-                                    member.type_clause(db).ty(db).as_syntax_node().get_text(db),
-                                ))
-                            })
-                            .join(" + "),
-                    ),
-                ),
-                (
-                    "packed_size".to_string(),
-                    RewriteNode::Text(
-                        struct_ast
-                            .members(db)
-                            .elements(db)
-                            .iter()
-                            .filter_map(|member| {
-                                if member.has_attr(db, "key") {
-                                    return None;
-                                }
-
-                                Some(format!(
-                                    "dojo::StorageSize::<{}>::packed_size()",
+                                    "dojo::StorageLayout::<{}>::size()",
                                     member.type_clause(db).ty(db).as_syntax_node().get_text(db),
                                 ))
                             })

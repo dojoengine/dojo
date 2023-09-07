@@ -58,7 +58,6 @@ mod world {
 
     use dojo::database;
     use dojo::executor::{IExecutorDispatcher, IExecutorDispatcherTrait};
-    use dojo::component::{INamedLibraryDispatcher, INamedDispatcherTrait, };
     use dojo::world::{IWorldDispatcher, IWorld};
 
     use super::Context;
