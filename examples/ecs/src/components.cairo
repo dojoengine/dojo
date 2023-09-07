@@ -11,6 +11,18 @@ enum Direction {
     Down: (),
 }
 
+impl DirectionStorageSizeImpl of dojo::StorageSize<Direction> {
+    #[inline(always)]
+    fn unpacked_size() -> usize {
+        1
+    }
+
+    #[inline(always)]
+    fn packed_size() -> usize {
+        2
+    }
+}
+
 impl DirectionPrintImpl of PrintTrait<Direction> {
     fn print(self: Direction) {
         match self {
@@ -35,14 +47,7 @@ impl DirectionIntoFelt252 of Into<Direction, felt252> {
     }
 }
 
-impl DirectionSerdeLen of dojo::SerdeLen<Direction> {
-    #[inline(always)]
-    fn len() -> usize {
-        1
-    }
-}
-
-#[derive(Component, Copy, Drop, Serde, SerdeLen)]
+#[derive(Component, Copy, Drop, Serde)]
 struct Moves {
     #[key]
     player: ContractAddress,
@@ -50,7 +55,7 @@ struct Moves {
     last_direction: Direction
 }
 
-#[derive(Component, Copy, Drop, Serde, SerdeLen)]
+#[derive(Component, Copy, Drop, Serde)]
 struct Position {
     #[key]
     player: ContractAddress,

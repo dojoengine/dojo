@@ -25,7 +25,6 @@ use crate::component::handle_component_struct;
 use crate::inline_macros::emit::EmitMacro;
 use crate::inline_macros::get::GetMacro;
 use crate::inline_macros::set::SetMacro;
-use crate::serde::handle_serde_len_struct;
 use crate::system::System;
 
 const SYSTEM_ATTR: &str = "system";
@@ -158,9 +157,6 @@ impl MacroPlugin for DojoPlugin {
                                     handle_component_struct(db, &mut aux_data, struct_ast.clone());
                                 rewrite_nodes.push(component_rewrite_nodes);
                                 diagnostics.extend(component_diagnostics);
-                            }
-                            "SerdeLen" => {
-                                rewrite_nodes.push(handle_serde_len_struct(db, struct_ast.clone()));
                             }
                             _ => continue,
                         }
