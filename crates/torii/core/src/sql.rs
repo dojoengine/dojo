@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -27,6 +29,7 @@ pub struct Sql {
     world_address: FieldElement,
     pool: Pool<Sqlite>,
     query_queue: Mutex<Vec<String>>,
+    sql_types: Mutex<HashMap<String, &'static str>>,
 }
 
 impl Sql {
@@ -50,7 +53,29 @@ impl Sql {
 
         tx.commit().await?;
 
-        Ok(Self { pool, world_address, query_queue: Mutex::new(vec![]) })
+        let sql_types = HashMap::from([
+            ("u8".to_string(), "INTEGER"),
+            ("u16".to_string(), "INTEGER"),
+            ("u32".to_string(), "INTEGER"),
+            ("u64".to_string(), "INTEGER"),
+            ("u128".to_string(), "TEXT"),
+            ("u256".to_string(), "TEXT"),
+            ("usize".to_string(), "INTEGER"),
+            ("bool".to_string(), "INTEGER"),
+            ("Cursor".to_string(), "TEXT"),
+            ("ContractAddress".to_string(), "TEXT"),
+            ("ClassHash".to_string(), "TEXT"),
+            ("DateTime".to_string(), "TEXT"),
+            ("felt252".to_string(), "TEXT"),
+            ("Enum".to_string(), "INTEGER"),
+        ]);
+
+        Ok(Self {
+            pool,
+            world_address,
+            query_queue: Mutex::new(vec![]),
+            sql_types: Mutex::new(sql_types),
+        })
     }
 }
 
@@ -157,6 +182,8 @@ impl State for Sql {
     }
 
     async fn register_component(&self, component: Component) -> Result<()> {
+        let mut sql_types = self.sql_types.lock().await;
+
         let component_id = component.name.to_lowercase();
         let mut queries = vec![format!(
             "INSERT INTO components (id, name, class_hash) VALUES ('{}', '{}', '{:#x}') ON \
@@ -169,12 +196,24 @@ impl State for Sql {
             component.name.to_lowercase()
         );
 
-        for member in component.clone().members {
-            component_table_query.push_str(&format!(
-                "external_{} {}, ",
-                member.name,
-                sql_type(&member.ty)?
+        for member in &component.members {
+            // FIXME: defaults all unknown component types to Enum for now until we support nested
+            // components
+            let (sql_type, member_type) = match sql_types.get(&member.ty) {
+                Some(sql_type) => (*sql_type, member.ty.as_str()),
+                None => {
+                    sql_types.insert(member.ty.clone(), "INTEGER");
+                    ("INTEGER", "Enum")
+                }
+            };
+
+            queries.push(format!(
+                "INSERT OR IGNORE INTO component_members (component_id, name, type, key) VALUES \
+                 ('{}', '{}', '{}', {})",
+                component_id, member.name, member_type, member.key,
             ));
+
+            component_table_query.push_str(&format!("external_{} {}, ", member.name, sql_type));
         }
 
         component_table_query.push_str(
@@ -183,15 +222,8 @@ impl State for Sql {
         );
         queries.push(component_table_query);
 
-        for member in component.members {
-            queries.push(format!(
-                "INSERT OR IGNORE INTO component_members (component_id, name, type, key) VALUES \
-                 ('{}', '{}', '{}', {})",
-                component_id, member.name, member.ty, member.key,
-            ));
-        }
-
         self.queue(queries).await;
+
         // Since previous query has not been executed, we have to make sure created_at exists
         let created_at: DateTime<Utc> =
             match sqlx::query("SELECT created_at FROM components WHERE id = ?")
@@ -259,7 +291,9 @@ impl State for Sql {
         member_values.extend(keys);
         member_values.extend(values);
 
-        let (names_str, values_str) = format_values(member_names_result, member_values)?;
+        let sql_types = self.sql_types.lock().await;
+        let (names_str, values_str) =
+            format_values(member_names_result, member_values, &sql_types)?;
         let insert_components = format!(
             "INSERT OR REPLACE INTO external_{} (entity_id {}) VALUES ('{}' {})",
             component.to_lowercase(),
@@ -329,6 +363,7 @@ fn component_names(entity_result: Option<SqliteRow>, new_component: &str) -> Res
 fn format_values(
     member_results: Vec<SqliteRow>,
     values: Vec<FieldElement>,
+    sql_types: &HashMap<String, &str>,
 ) -> Result<(String, String)> {
     let names: Result<Vec<String>> = member_results
         .iter()
@@ -345,26 +380,12 @@ fn format_values(
     let values: Result<Vec<String>> = values
         .iter()
         .zip(types?.iter())
-        .map(|(value, ty)| {
-            if sql_type(ty)? == "INTEGER" {
-                Ok(format!(",'{}'", value))
-            } else {
-                Ok(format!(",'{:#x}'", value))
-            }
+        .map(|(value, ty)| match sql_types.get(ty).copied() {
+            Some("INTEGER") => Ok(format!(",'{}'", value)),
+            Some("TEXT") => Ok(format!(",'{:#x}'", value)),
+            _ => Err(anyhow::anyhow!("Unsupported type {}", ty)),
         })
         .collect();
 
     Ok((names?.join(""), values?.join("")))
-}
-
-// NOTE: If adding/removing types, corresponding change needs to be made to torii-graphql
-// `src/types.rs`
-fn sql_type(member_type: &str) -> Result<&str, anyhow::Error> {
-    match member_type {
-        "u8" | "u16" | "u32" | "u64" | "usize" | "bool" => Ok("INTEGER"),
-        "u128" | "u256" | "Cursor" | "ContractAddress" | "ClassHash" | "DateTime" | "felt252" => {
-            Ok("TEXT")
-        }
-        _ => Err(anyhow::anyhow!("Unknown member type {}", member_type.to_string())),
-    }
 }

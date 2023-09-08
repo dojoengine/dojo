@@ -19,6 +19,7 @@ pub enum ScalarType {
     ClassHash,
     DateTime,
     Felt252,
+    Enum,
 }
 
 impl fmt::Display for ScalarType {
@@ -37,6 +38,7 @@ impl fmt::Display for ScalarType {
             ScalarType::ClassHash => write!(f, "ClassHash"),
             ScalarType::DateTime => write!(f, "DateTime"),
             ScalarType::Felt252 => write!(f, "felt252"),
+            ScalarType::Enum => write!(f, "Enum"),
         }
     }
 }
@@ -57,6 +59,7 @@ impl ScalarType {
             ScalarType::ClassHash,
             ScalarType::DateTime,
             ScalarType::Felt252,
+            ScalarType::Enum,
         ]
         .into_iter()
         .collect()
@@ -70,6 +73,7 @@ impl ScalarType {
             ScalarType::U64,
             ScalarType::USize,
             ScalarType::Bool,
+            ScalarType::Enum,
         ]
         .into_iter()
         .collect()
@@ -114,6 +118,7 @@ impl FromStr for ScalarType {
             "ClassHash" => Ok(ScalarType::ClassHash),
             "DateTime" => Ok(ScalarType::DateTime),
             "felt252" => Ok(ScalarType::Felt252),
+            "Enum" => Ok(ScalarType::Enum),
             _ => Err(anyhow::anyhow!("Unknown type {}", s.to_string())),
         }
     }
