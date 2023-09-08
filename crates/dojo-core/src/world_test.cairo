@@ -408,7 +408,79 @@ fn test_execute_multiple_worlds() {
     another_world.execute('bar', another_data);
 
     let stored = world.entity('Foo', keys.span(), 0, dojo::StorageSize::<Foo>::unpacked_size());
-    let another_stored = another_world.entity('Foo', keys.span(), 0, dojo::StorageSize::<Foo>::unpacked_size());
+    let another_stored = another_world
+        .entity('Foo', keys.span(), 0, dojo::StorageSize::<Foo>::unpacked_size());
     assert(*stored.snapshot.at(0) == 1337, 'data not stored');
     assert(*another_stored.snapshot.at(0) == 7331, 'data not stored');
+}
+
+
+#[starknet::contract]
+mod external_contract {
+    use dojo::world::get_calling_system;
+    use dojo::world::IWorldDispatcher;
+
+    #[storage]
+    struct Storage {}
+
+    #[external(v0)]
+    fn checks_caller(self: @ContractState, world: IWorldDispatcher) -> felt252 {
+        assert(get_calling_system(world) == 'checks_forward_external', 'bad caller');
+        'ok'
+    }
+}
+
+#[system]
+mod calls_system {
+    use super::Foo;
+    use traits::Into;
+    use starknet::get_caller_address;
+    use starknet::ContractAddress;
+    use dojo::world::Context;
+    use dojo::world::get_calling_system;
+
+    fn execute(ctx: Context, address: ContractAddress) -> Span<felt252> {
+        assert(get_calling_system(ctx.world) == 0, 'bad caller');
+        ctx.world.execute('checks_forward_external', array![address.into()])
+    }
+}
+
+#[system]
+mod checks_forward_external {
+    use super::Foo;
+    use traits::Into;
+    use starknet::get_caller_address;
+    use dojo::world::Context;
+    use starknet::SyscallResultTrait;
+    use dojo::world::get_calling_system;
+    use starknet::ContractAddress;
+    use serde::Serde;
+
+    fn execute(ctx: Context, address: ContractAddress) -> Span<felt252> {
+        assert(get_calling_system(ctx.world) == 'calls_system', 'bad caller');
+        let mut calldata: Array<felt252> = ArrayTrait::new();
+        ctx.world.serialize(ref calldata);
+        starknet::syscalls::call_contract_syscall(
+            address, selector!("checks_caller"), calldata.span()
+        )
+            .unwrap_syscall()
+    }
+}
+
+use debug::PrintTrait;
+
+#[test]
+#[available_gas(60000000)]
+fn test_caller_system() {
+    // Spawn empty world
+    let world = deploy_world();
+
+    // Register the systems, deploy the contract, run the tests:
+    world.register_system(calls_system::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_system(checks_forward_external::TEST_CLASS_HASH.try_into().unwrap());
+    let (external_contract, _) = deploy_syscall(
+        external_contract::TEST_CLASS_HASH.try_into().unwrap(), 0, array![].span(), false
+    )
+        .expect('error deploying');
+    assert(world.execute('calls_system', array![external_contract.into()])[2] == @'ok', 'bad call');
 }

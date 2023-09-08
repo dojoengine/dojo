@@ -8,7 +8,7 @@ test_manifest_file
   "world": {
     "name": "world",
     "address": null,
-    "class_hash": "0x2f857fd574c566f9bea8587569d016036377e028f0d47f6e31b4518ee605cd1",
+    "class_hash": "0x3d72ebbd6b610c2cc7975a6c5e82b0eaec597731d46a089cf89780d80df8901",
     "abi": [
       {
         "type": "impl",
@@ -284,8 +284,24 @@ test_manifest_file
           },
           {
             "type": "function",
-            "name": "caller_system",
+            "name": "current_system",
             "inputs": [],
+            "outputs": [
+              {
+                "type": "core::felt252"
+              }
+            ],
+            "state_mutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "call_stack_at_index",
+            "inputs": [
+              {
+                "name": "index",
+                "type": "core::felt252"
+              }
+            ],
             "outputs": [
               {
                 "type": "core::felt252"

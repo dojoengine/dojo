@@ -1,4 +1,7 @@
-use starknet::{ContractAddress, ClassHash, StorageBaseAddress, SyscallResult};
+use starknet::{
+    ContractAddress, ClassHash, StorageBaseAddress, SyscallResult, get_caller_address,
+    get_contract_address
+};
 use traits::{Into, TryInto};
 use option::OptionTrait;
 
@@ -32,7 +35,8 @@ trait IWorld<T> {
     fn executor(self: @T) -> ContractAddress;
     fn delete_entity(ref self: T, component: felt252, keys: Span<felt252>);
     fn origin(self: @T) -> ContractAddress;
-    fn caller_system(self: @T) -> felt252;
+    fn current_system(self: @T) -> felt252;
+    fn call_stack_at_index(self: @T, index: felt252) -> felt252;
 
     fn is_owner(self: @T, address: ContractAddress, target: felt252) -> bool;
     fn grant_owner(ref self: T, address: ContractAddress, target: felt252);
@@ -233,7 +237,7 @@ mod world {
             let caller = get_caller_address();
 
             assert(
-                self.is_writer(component, self.caller_system())
+                self.is_writer(component, self.current_system())
                     || self.is_owner(caller, component)
                     || self.is_owner(caller, WORLD),
                 'not owner or writer'
@@ -394,7 +398,7 @@ mod world {
         /// * `keys` - The keys of the event.
         /// * `values` - The data to be logged by the event.
         fn emit(self: @ContractState, mut keys: Array<felt252>, values: Span<felt252>) {
-            self.caller_system().serialize(ref keys);
+            self.current_system().serialize(ref keys);
             emit_event_syscall(keys.span(), values).unwrap_syscall();
         }
 
@@ -513,8 +517,18 @@ mod world {
         /// # Returns
         ///
         /// * `felt252` - The caller system's name.
-        fn caller_system(self: @ContractState) -> felt252 {
+        fn current_system(self: @ContractState) -> felt252 {
             self.call_stack.read(self.call_stack_len.read() - 1)
+        }
+
+        /// Gets the system in the call stack at a given index.
+        /// This index is relative, so 0 is "current", 1 is caller, etc.
+        ///
+        /// # Returns
+        ///
+        /// * `felt252` - The system name.
+        fn call_stack_at_index(self: @ContractState, index: felt252) -> felt252 {
+            self.call_stack.read(self.call_stack_len.read() - index - 1)
         }
     }
 
@@ -530,7 +544,7 @@ mod world {
         );
 
         assert(
-            IWorld::is_writer(self, component, self.caller_system())
+            IWorld::is_writer(self, component, self.current_system())
                 || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, component)
                 || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, WORLD),
             'not writer'
@@ -547,4 +561,20 @@ mod library_call {
     ) -> Span<felt252> {
         starknet::syscalls::library_call_syscall(class_hash, entrypoint, calladata).unwrap_syscall()
     }
+}
+
+fn get_calling_system(world: IWorldDispatcher) -> felt252 {
+    // If the caller is the executor, then we can presume we were called by a system
+    // and we are an external contract (since calling other systems go through the world),
+    // so the world current sytem is indeed the calling system.
+    if get_caller_address() == world.executor() {
+        assert(get_contract_address() != world.contract_address, 'dont call from a system');
+        return world.current_system();
+    }// If the caller is the world, we can presume the current contract is a system (called through executor)
+    // and so we need to return the next item on the call stack.
+    else if get_caller_address() == world.contract_address {
+        return world.call_stack_at_index(1);
+    }
+    // Not a system
+    return 0;
 }
