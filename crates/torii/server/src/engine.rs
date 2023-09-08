@@ -149,19 +149,9 @@ impl<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> Engine<'a, S,
                 _ => continue,
             };
 
-            process_transaction(
-                self.storage,
-                self.provider,
-                &self.processors.transaction,
-                &block,
-                &receipt.clone(),
-            )
-            .await?;
-
             if let TransactionReceipt::Invoke(invoke_receipt) = receipt.clone() {
                 for event in &invoke_receipt.events {
                     if event.from_address != self.config.world_address {
-                        info!("event not from world address, skipping");
                         continue;
                     }
 
@@ -176,6 +166,15 @@ impl<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> Engine<'a, S,
                     .await?;
                 }
             }
+
+            process_transaction(
+                self.storage,
+                self.provider,
+                &self.processors.transaction,
+                &block,
+                &receipt.clone(),
+            )
+            .await?;
         }
 
         info!("processed block: {}", block.block_number);
@@ -204,7 +203,7 @@ async fn process_transaction<S: State, T: starknet::providers::jsonrpc::JsonRpcT
     receipt: &TransactionReceipt,
 ) -> Result<(), Box<dyn Error>> {
     for processor in processors {
-        processor.process(storage, provider, block, receipt).await?;
+        processor.process(storage, provider, block, receipt).await?
     }
 
     Ok(())

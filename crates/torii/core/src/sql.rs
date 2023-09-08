@@ -342,6 +342,23 @@ impl State for Sql {
             sqlx::query_as::<_, (i32, String, String)>(&query).fetch_all(&mut conn).await?;
         Ok(rows.drain(..).map(|row| serde_json::from_str(&row.2).unwrap()).collect())
     }
+
+    async fn store_system_call(
+        &self,
+        system: String,
+        transaction_hash: FieldElement,
+        calldata: &[FieldElement],
+    ) -> Result<()> {
+        let query = format!(
+            "INSERT OR IGNORE INTO system_calls (data, transaction_hash, system_id) VALUES ('{}', \
+             '{:#x}', '{}')",
+            calldata.iter().map(|c| format!("{:#x}", c)).collect::<Vec<String>>().join(","),
+            transaction_hash,
+            system.to_lowercase()
+        );
+        self.queue(vec![query]).await;
+        Ok(())
+    }
 }
 
 fn component_names(entity_result: Option<SqliteRow>, new_component: &str) -> Result<String> {

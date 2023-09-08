@@ -42,7 +42,8 @@ CREATE TABLE system_calls (
     transaction_hash TEXT NOT NULL,
     system_id TEXT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (system_id) REFERENCES systems(id)
+    FOREIGN KEY (system_id) REFERENCES systems(id),
+    UNIQUE (transaction_hash)
 );  
 
 CREATE INDEX idx_system_calls_created_at ON system_calls (created_at);

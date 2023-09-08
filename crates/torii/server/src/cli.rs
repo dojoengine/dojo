@@ -15,6 +15,7 @@ use tokio_util::sync::CancellationToken;
 use torii_core::processors::register_component::RegisterComponentProcessor;
 use torii_core::processors::register_system::RegisterSystemProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
+use torii_core::processors::store_system_call::StoreSystemCallProcessor;
 use torii_core::sql::Sql;
 use torii_core::State;
 use tracing::error;
@@ -89,6 +90,7 @@ async fn main() -> anyhow::Result<()> {
             Box::new(RegisterSystemProcessor),
             Box::new(StoreSetRecordProcessor),
         ],
+        transaction: vec![Box::new(StoreSystemCallProcessor)],
         ..Processors::default()
     };
 
