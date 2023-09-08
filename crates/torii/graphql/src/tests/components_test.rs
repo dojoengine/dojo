@@ -26,6 +26,7 @@ mod tests {
                             node {
                                 __typename
                                 remaining
+                                last_direction
                             }
                             cursor
                         }

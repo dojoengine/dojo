@@ -32,8 +32,8 @@ mod tests {
             tokio::time::sleep(Duration::from_secs(1)).await;
 
             // Set entity with one moves component
-            // remaining: 10
-            let moves_values = vec![FieldElement::from_hex_be("0xa").unwrap()];
+            // remaining: 10, last_direction: 0
+            let moves_values = vec![FieldElement::from_hex_be("0xa").unwrap(), FieldElement::ZERO];
             state.set_entity("Moves".to_string(), key, moves_values).await.unwrap();
             // 3. fn publish() is called from state.set_entity()
 
