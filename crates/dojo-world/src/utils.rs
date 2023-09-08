@@ -36,12 +36,15 @@ pub enum TransactionWaitingError<E> {
 pub struct TransactionWaiter<'a, P: Provider> {
     /// The hash of the transaction to wait for.
     tx_hash: FieldElement,
-    /// The finality status to wait for. If set, the waiter will wait for the transaction to
-    /// achieve this finality status. If not set, the waiter will only wait for the transaction
-    /// until it is included in the _pending_ block.
+    /// The finality status to wait for.
+    ///
+    /// If set, the waiter will wait for the transaction to achieve this finality status.
+    /// Otherwise, the waiter will only wait for the transaction until it is included in the
+    /// _pending_ block.
     finality_status: Option<TransactionFinalityStatus>,
     /// A flag to indicate that the waited transaction must either be successfully executed or not.
-    /// If it's set to `true`, then the transaction execution status must be `SUCCEDED` otherwise
+    ///
+    /// If it's set to `true`, then the transaction execution status must be `SUCCEEDED` otherwise
     /// an error will be returned. However, if set to `false`, then the execution status will not
     /// be considered when waiting for the transaction, meaning `REVERTED` transaction will not
     /// return an error.
@@ -49,14 +52,15 @@ pub struct TransactionWaiter<'a, P: Provider> {
     /// Poll the transaction every `interval` miliseconds. Miliseconds are used so that
     /// we can be more precise with the polling interval. Defaults to 250ms.
     interval: Interval,
-    /// The maximum amount of time to wait for the transaction to achieve `status` status.
-    /// Defaults to 60 seconds.
+    /// The maximum amount of time to wait for the transaction to achieve the desired status. An
+    /// error will be returned if it is unable to finish within the `timeout` duration. Defaults to
+    /// 60 seconds.
     timeout: Duration,
     /// The provider to use for polling the transaction.
     provider: &'a P,
-    /// The future that get the transaction receipt.
+    /// The future that gets the transaction receipt.
     receipt_request_fut: Option<GetReceiptFuture<'a, <P as Provider>::Error>>,
-    /// The time when the transaction waiter was polled.
+    /// The time when the transaction waiter was first polled.
     started_at: Option<Instant>,
 }
 
@@ -83,20 +87,17 @@ where
         }
     }
 
-    pub fn with_interval(mut self, milisecond: u64) -> Self {
+    pub fn with_interval(self, milisecond: u64) -> Self {
         let interval = Duration::from_millis(milisecond);
-        self.interval = tokio::time::interval_at(Instant::now() + interval, interval);
-        self
+        Self { interval: tokio::time::interval_at(Instant::now() + interval, interval), ..self }
     }
 
-    pub fn with_status(mut self, status: TransactionFinalityStatus) -> Self {
-        self.finality_status = Some(status);
-        self
+    pub fn with_finality(self, status: TransactionFinalityStatus) -> Self {
+        Self { finality_status: Some(status), ..self }
     }
 
-    pub fn with_timeout(mut self, timeout: Duration) -> Self {
-        self.timeout = timeout;
-        self
+    pub fn with_timeout(self, timeout: Duration) -> Self {
+        Self { timeout, ..self }
     }
 }
 
@@ -123,11 +124,11 @@ where
             if let Some(mut flush) = this.receipt_request_fut.take() {
                 match flush.poll_unpin(cx) {
                     Poll::Ready(res) => match res {
-                        Ok(receipt) => match receipt {
+                        Ok(receipt) => match &receipt {
                             MaybePendingTransactionReceipt::PendingReceipt(r) => {
                                 if this.finality_status.is_none() {
                                     if this.must_succeed {
-                                        let res = match execution_status_from_pending_receipt(&r) {
+                                        let res = match execution_status_from_pending_receipt(r) {
                                             ExecutionResult::Succeeded => Ok(receipt),
                                             ExecutionResult::Reverted { reason } => {
                                                 Err(TransactionWaitingError::TransactionReverted(
@@ -144,10 +145,10 @@ where
 
                             MaybePendingTransactionReceipt::Receipt(r) => {
                                 if let Some(finality_status) = this.finality_status {
-                                    match finality_status_from_receipt(&r) {
+                                    match finality_status_from_receipt(r) {
                                         status if status == finality_status => {
                                             if this.must_succeed {
-                                                let res = match execution_status_from_receipt(&r) {
+                                                let res = match execution_status_from_receipt(r) {
                                                     ExecutionResult::Succeeded => Ok(receipt),
                                                     ExecutionResult::Reverted { reason } => {
                                                         Err(TransactionWaitingError::TransactionReverted(
@@ -173,7 +174,7 @@ where
                             code:
                                 MaybeUnknownErrorCode::Known(StarknetError::TransactionHashNotFound),
                             ..
-                        })) => return Poll::Pending,
+                        })) => {}
 
                         Err(e) => {
                             return Poll::Ready(Err(TransactionWaitingError::Provider(e)));
@@ -233,8 +234,8 @@ fn finality_status_from_receipt(receipt: &TransactionReceipt) -> TransactionFina
 }
 
 #[inline]
-pub fn block_number_from_receipt(tx: &TransactionReceipt) -> u64 {
-    match tx {
+pub fn block_number_from_receipt(receipt: &TransactionReceipt) -> u64 {
+    match receipt {
         TransactionReceipt::Invoke(tx) => tx.block_number,
         TransactionReceipt::L1Handler(tx) => tx.block_number,
         TransactionReceipt::Declare(tx) => tx.block_number,
