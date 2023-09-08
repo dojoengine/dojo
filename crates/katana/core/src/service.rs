@@ -398,8 +398,15 @@ impl InstantBlockProducer {
         let mut state = CachedStateWrapper::new(backend.state.read().await.as_ref_db());
         let block_context = backend.env.read().block.clone();
 
-        let results = TransactionExecutor::new(&mut state, &block_context, true)
-            .execute_many(transactions.clone());
+        let results = TransactionExecutor::new(
+            &mut state,
+            &block_context,
+            !backend.config.read().disable_fee,
+        )
+        .with_error_log()
+        .with_events_log()
+        .with_resources_log()
+        .execute_many(transactions.clone());
 
         let outcome = backend
             .do_mine_block(create_execution_outcome(
