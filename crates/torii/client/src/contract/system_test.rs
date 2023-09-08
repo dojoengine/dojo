@@ -34,7 +34,7 @@ async fn test_system() {
     let component = world.component("Moves", block_id).await.unwrap();
     let moves = component.entity(vec![account.address()], block_id).await.unwrap();
 
-    assert_eq!(moves, vec![10_u8.into()]);
+    assert_eq!(moves, vec![10_u8.into(), FieldElement::ZERO]);
 
     let move_system = world.system("move", block_id).await.unwrap();
 
@@ -48,11 +48,11 @@ async fn test_system() {
 
     let moves = component.entity(vec![account.address()], block_id).await.unwrap();
 
-    assert_eq!(moves, vec![8_u8.into()]);
+    assert_eq!(moves, vec![8_u8.into(), FieldElement::THREE]);
 
     let position_component = world.component("Position", block_id).await.unwrap();
 
     let position = position_component.entity(vec![account.address()], block_id).await.unwrap();
 
-    assert_eq!(position, vec![11_u8.into(), 11_u8.into()]);
+    assert_eq!(position, vec![9_u8.into(), 9_u8.into()]);
 }
