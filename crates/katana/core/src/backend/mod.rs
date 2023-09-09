@@ -109,6 +109,7 @@ impl Backend {
                 let mut state = ForkedDb::new(Arc::clone(&provider), forked_block_id);
 
                 trace!(
+                    target: "backend",
                     "forking chain `{}` at block {} from {}",
                     parse_cairo_short_string(&forked_chain_id).unwrap(),
                     block.block_number,
@@ -147,7 +148,7 @@ impl Backend {
                 .await
                 .load_state(init_state.clone())
                 .expect("failed to load initial state");
-            info!("Successfully loaded initial state");
+            info!(target: "backend", "Successfully loaded initial state");
         }
 
         let blockchain = Blockchain::new(storage);
@@ -348,7 +349,7 @@ impl Backend {
         );
 
         if let Err(err) = &res {
-            warn!("Call error: {err:?}");
+            warn!(target: "backend", "Call error: {err:?}");
         }
 
         res

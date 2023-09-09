@@ -15,6 +15,7 @@ cairo-lang-project.workspace = true
 cairo-lang-starknet.workspace = true
 camino.workspace = true
 dojo-lang = { path = "../dojo-lang" }
+dojo-world = { path = "../dojo-world" }
 jsonrpsee = { version = "0.16.2", features = [ "server" ] }
 katana-core = { path = "../katana/core" }
 katana-rpc = { path = "../katana/rpc" }

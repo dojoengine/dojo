@@ -10,7 +10,7 @@ use starknet::core::types::{
     ContractClass, DeclareTransactionResult, DeployAccountTransactionResult, EventFilterWithPage,
     EventsPage, FeeEstimate, FieldElement, FunctionCall, InvokeTransactionResult,
     MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, MaybePendingTransactionReceipt,
-    StateUpdate, Transaction,
+    MsgFromL1, StateUpdate, Transaction,
 };
 
 #[serde_as]
@@ -45,14 +45,38 @@ pub enum StarknetApiError {
     ContractError = 40,
     #[error("Invalid contract class")]
     InvalidContractClass = 50,
+    #[error("Class already declared")]
+    ClassAlreadyDeclared = 51,
+    #[error("Invalid transaction nonce")]
+    InvalidTransactionNonce = 52,
+    #[error("Max fee is smaller than the minimal transaction cost (validation plus fee transfer)")]
+    InsufficientMaxFee = 53,
+    #[error("Account balance is smaller than the transaction's max_fee")]
+    InsufficientAccountBalance = 54,
+    #[error("Account validation failed")]
+    ValidationFailure = 55,
+    #[error("Compilation failed")]
+    CompilationFailed = 56,
+    #[error("Contract class size is too large")]
+    ContractClassSizeIsTooLarge = 57,
+    #[error("Sender address in not an account contract")]
+    NonAccount = 58,
+    #[error("A transaction with the same hash already exists in the mempool")]
+    DuplicateTransaction = 59,
+    #[error("The compiled class hash did not match the one supplied in the transaction")]
+    CompiledClassHashMismatch = 60,
+    #[error("The transaction version is not supported")]
+    UnsupportedTransactionVersion = 61,
+    #[error("The contract class version is not supported")]
+    UnsupportedContractClassVersion = 62,
+    #[error("An unexpected error occured")]
+    UnexpectedError = 63,
     #[error("Too many storage keys requested")]
     ProofLimitExceeded = 10000,
     #[error("Too many keys provided in a filter")]
     TooManyKeysInFilter = 34,
     #[error("Internal server error")]
     InternalServerError = 500,
-    #[error("Unsupported transaction version")]
-    UnsupportedTransactionVersion = 53,
     #[error("Failed to fetch pending transactions")]
     FailedToFetchPendingTransactions = 38,
 }
@@ -65,6 +89,8 @@ impl From<StarknetApiError> for Error {
 
 #[rpc(server, namespace = "starknet")]
 pub trait StarknetApi {
+    // Read API
+
     #[method(name = "chainId")]
     async fn chain_id(&self) -> Result<String, Error>;
 
@@ -142,9 +168,16 @@ pub trait StarknetApi {
     #[method(name = "estimateFee")]
     async fn estimate_fee(
         &self,
-        request: Vec<BroadcastedTransaction>,
+        transactions: Vec<BroadcastedTransaction>,
         block_id: BlockId,
     ) -> Result<Vec<FeeEstimate>, Error>;
+
+    #[method(name = "estimateMessageFee")]
+    async fn estimate_message_fee(
+        &self,
+        message: MsgFromL1,
+        block_id: BlockId,
+    ) -> Result<FeeEstimate, Error>;
 
     #[method(name = "call")]
     async fn call(&self, request: FunctionCall, block_id: BlockId) -> Result<Vec<Felt>, Error>;
@@ -156,6 +189,8 @@ pub trait StarknetApi {
         key: FieldElement,
         block_id: BlockId,
     ) -> Result<Felt, Error>;
+
+    // Write API
 
     #[method(name = "addDeployAccountTransaction")]
     async fn add_deploy_account_transaction(

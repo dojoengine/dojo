@@ -3,7 +3,7 @@ use std::str::FromStr;
 use anyhow::{anyhow, Context, Result};
 use clap::Args;
 use dojo_world::metadata::Environment;
-use starknet::accounts::SingleOwnerAccount;
+use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::FieldElement;
 use starknet::providers::Provider;
 use starknet::signers::{LocalWallet, SigningKey};
@@ -50,7 +50,17 @@ impl AccountOptions {
         let chain_id =
             provider.chain_id().await.with_context(|| "Failed to retrieve network chain id.")?;
 
-        Ok(SingleOwnerAccount::new(provider, signer, account_address, chain_id))
+        Ok(SingleOwnerAccount::new(
+            provider,
+            signer,
+            account_address,
+            chain_id,
+            // This is made under the assumption that the accounts used with `sozo` commands would
+            // be one of the `katana` dev accounts. The dev accounts deployed on `katana` are
+            // legacy accounts (Cairo 0).
+            // TODO: Make this configurable
+            ExecutionEncoding::Legacy,
+        ))
     }
 
     fn signer(&self, env_metadata: Option<&Environment>) -> Result<LocalWallet> {

@@ -7,7 +7,7 @@ use dojo_world::migration::strategy::prepare_for_migration;
 use dojo_world::migration::world::WorldDiff;
 use scarb::core::Config;
 use scarb_ui::Verbosity;
-use starknet::accounts::SingleOwnerAccount;
+use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::chain_id;
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -31,6 +31,7 @@ async fn migrate_with_auto_mine() {
         )),
         sequencer.raw_account().account_address,
         chain_id::TESTNET,
+        ExecutionEncoding::Legacy,
     );
 
     let config = Config::builder(Utf8PathBuf::from_path_buf("../../examples/ecs/".into()).unwrap())
@@ -58,7 +59,7 @@ async fn migrate_with_block_time() {
     let target_dir = Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap();
 
     let sequencer = TestSequencer::start(
-        SequencerConfig { block_time: Some(1), ..Default::default() },
+        SequencerConfig { block_time: Some(1000), ..Default::default() },
         get_default_test_starknet_config(),
     )
     .await;
@@ -70,6 +71,7 @@ async fn migrate_with_block_time() {
         )),
         sequencer.raw_account().account_address,
         chain_id::TESTNET,
+        ExecutionEncoding::Legacy,
     );
 
     let config = Config::builder(Utf8PathBuf::from_path_buf("../../examples/ecs/".into()).unwrap())
@@ -109,6 +111,7 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
         )),
         sequencer.raw_account().account_address,
         chain_id::TESTNET,
+        ExecutionEncoding::Legacy,
     );
 
     let config = Config::builder(Utf8PathBuf::from_path_buf("../../examples/ecs/".into()).unwrap())
@@ -163,6 +166,7 @@ async fn migration_from_remote() {
         )),
         sequencer.raw_account().account_address,
         chain_id::TESTNET,
+        ExecutionEncoding::Legacy,
     );
 
     let config = Config::builder(Utf8PathBuf::from_path_buf("../../examples/ecs/".into()).unwrap())

@@ -10,12 +10,12 @@ version.workspace = true
 clap.workspace = true
 clap_complete.workspace = true
 console.workspace = true
-env_logger.workspace = true
 katana-core = { path = "core" }
 katana-rpc = { path = "rpc" }
-log.workspace = true
 starknet_api.workspace = true
 tokio.workspace = true
+tracing-subscriber.workspace = true
+tracing.workspace = true
 url.workspace = true
 
 [dev-dependencies]

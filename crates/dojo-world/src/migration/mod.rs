@@ -10,7 +10,8 @@ use starknet::accounts::{Account, AccountError, Call, ConnectedAccount, SingleOw
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
     BlockId, BlockTag, DeclareTransactionResult, FieldElement, FlattenedSierraClass,
-    InvokeTransactionResult, StarknetError,
+    InvokeTransactionResult, MaybePendingTransactionReceipt, StarknetError,
+    TransactionFinalityStatus,
 };
 use starknet::core::utils::{
     get_contract_address, get_selector_from_name, CairoShortStringToFeltError,
@@ -208,16 +209,19 @@ pub trait Deployable: Declarable + Sync {
         let InvokeTransactionResult { transaction_hash } =
             txn.send().await.map_err(MigrationError::Migrator)?;
 
-        let txn = TransactionWaiter::new(transaction_hash, account.provider())
+        // TEMP: remove finality check once we can remove displaying the block number in the
+        // migration logs
+        let receipt = TransactionWaiter::new(transaction_hash, account.provider())
+            .with_finality(TransactionFinalityStatus::AcceptedOnL2)
             .await
             .map_err(MigrationError::WaitingError)?;
 
-        Ok(DeployOutput {
-            transaction_hash,
-            contract_address,
-            declare,
-            block_number: block_number_from_receipt(&txn),
-        })
+        let block_number = match receipt {
+            MaybePendingTransactionReceipt::Receipt(receipt) => block_number_from_receipt(&receipt),
+            _ => panic!("Transaction was not accepted on L2"),
+        };
+
+        Ok(DeployOutput { transaction_hash, contract_address, declare, block_number })
     }
 
     fn salt(&self) -> FieldElement;

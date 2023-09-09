@@ -21,12 +21,12 @@ pub struct KatanaArgs {
 
     #[arg(long)]
     #[arg(conflicts_with = "block_time")]
-    #[arg(help = "Disable auto and interval mining, and mine on demand instead.")]
+    #[arg(help = "Disable auto and interval mining, and mine on demand instead via an endpoint.")]
     pub no_mining: bool,
 
     #[arg(short, long)]
-    #[arg(value_name = "SECONDS")]
-    #[arg(help = "Block time in seconds for interval mining.")]
+    #[arg(value_name = "MILLISECONDS")]
+    #[arg(help = "Block time in milliseconds for interval mining.")]
     pub block_time: Option<u64>,
 
     #[arg(long)]

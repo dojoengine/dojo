@@ -5,7 +5,7 @@ use jsonrpsee::core::{async_trait, Error};
 use katana_core::backend::contract::StarknetContract;
 use katana_core::backend::storage::transaction::{
     DeclareTransaction, DeployAccountTransaction, InvokeTransaction, KnownTransaction,
-    PendingTransaction, Transaction,
+    L1HandlerTransaction, PendingTransaction, Transaction,
 };
 use katana_core::backend::ExternalFunctionCall;
 use katana_core::sequencer::Sequencer;
@@ -21,7 +21,7 @@ use starknet::core::types::{
     ContractClass, DeclareTransactionResult, DeployAccountTransactionResult, EventFilterWithPage,
     EventsPage, FeeEstimate, FieldElement, FunctionCall, InvokeTransactionResult,
     MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, MaybePendingTransactionReceipt,
-    StateUpdate, Transaction as RpcTransaction,
+    MsgFromL1, StateUpdate, Transaction as RpcTransaction,
 };
 use starknet_api::core::{ClassHash, ContractAddress, EntryPointSelector, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};
@@ -378,6 +378,38 @@ where
                 }
                 _ => Error::from(StarknetApiError::InternalServerError),
             })?;
+
+        Ok(res)
+    }
+
+    async fn estimate_message_fee(
+        &self,
+        message: MsgFromL1,
+        block_id: BlockId,
+    ) -> Result<FeeEstimate, Error> {
+        let l1handler_tx = L1HandlerTransaction {
+            inner: starknet_api::transaction::L1HandlerTransaction {
+                contract_address: ContractAddress(patricia_key!(message.to_address)),
+                calldata: Calldata(Arc::new(
+                    message.payload.into_iter().map(|f| f.into()).collect(),
+                )),
+                entry_point_selector: EntryPointSelector(message.entry_point_selector.into()),
+                ..Default::default()
+            },
+            paid_l1_fee: 1,
+        };
+
+        let res = self
+            .sequencer
+            .estimate_fee(vec![Transaction::L1Handler(l1handler_tx)], block_id)
+            .await
+            .map_err(|e| match e {
+                SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
+                SequencerError::TransactionExecution(_) => StarknetApiError::ContractError,
+                _ => StarknetApiError::InternalServerError,
+            })?
+            .pop()
+            .expect("should have estimate result");
 
         Ok(res)
     }
