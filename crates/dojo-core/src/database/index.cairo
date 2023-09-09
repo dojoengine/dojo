@@ -22,9 +22,7 @@ fn create_with_keys(address_domain: u32, index: felt252, id: felt252, keys: Span
     if exists(address_domain, index, id) {
         return ();
     }
-    if keys.len() >= 225 {
-        panic("Too many keys")
-    }
+    assert(keys.len() < 255, 'Too many keys');
     create(address_domain, index, id);
 
     let mut positions = ArrayTrait::<felt252>::new();
