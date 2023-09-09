@@ -19,8 +19,29 @@ fn create(address_domain: u32, index: felt252, id: felt252) {
 }
 
 fn create_with_keys(address_domain: u32, index: felt252, id: felt252, keys: Span<felt252>) {
+    if exists(address_domain, index, id) {
+        return ();
+    }
     create(address_domain, index, id);
+
+    let mut idx = 0;
+    loop {
+        if idx == keys.len() {
+            break ();
+        }
+        add_key(address_domain, index, id, *keys.at(idx));                          // key -> id
+        idx += 1;
+    };
     storage::set_many(address_domain, build_index_item_keys(index, id), 0, keys);   // id -> keys
+}
+
+fn add_key(address_domain: u32, index: felt252, id: felt252, key: felt252) {
+    let specific_len_key = build_index_specific_key_len(index, key);
+    let specific_len = storage::get(address_domain, specific_len_key);
+    let specific_key = build_index_specific_key(index, key, specific_len);
+
+    storage::set(address_domain, specific_len_key, specific_len + 1);
+    storage::set(address_domain, specific_key, id);
 }
 
 fn delete(address_domain: u32, index: felt252, id: felt252) {
@@ -89,6 +110,28 @@ fn get_with_keys(address_domain: u32, index: felt252, key_length: usize) -> (Arr
     (ids, all_keys)
 }
 
+fn get_by_key(address_domain: u32, index: felt252, key: felt252) -> Array<felt252> {
+    let mut res = ArrayTrait::new();
+    let specific_len_key = build_index_specific_key_len(index, key);
+    let specific_len = storage::get(address_domain, specific_len_key);
+    let index_len = storage::get(address_domain, specific_len_key);
+
+    let mut idx = 0;
+
+    loop {
+        if idx == index_len {
+            break ();
+        }
+
+        let specific_key = build_index_specific_key(index, key, idx);
+        let id = storage::get(address_domain, specific_key);
+        res.append(id);
+
+        idx += 1;
+    };
+    res
+}
+
 fn index_key_prefix() -> Array<felt252> {
     let mut prefix = ArrayTrait::new();
     prefix.append('dojo_index');
@@ -123,5 +166,22 @@ fn build_index_item_keys(index: felt252, id: felt252) -> Span<felt252> {
     index_len_key.append('index_keys');
     index_len_key.append(index);
     index_len_key.append(id);
+    index_len_key.span()
+}
+
+fn build_index_specific_key_len(index: felt252, key: felt252) -> Span<felt252> {
+    let mut index_len_key = index_key_prefix();
+    index_len_key.append('index_key_len');
+    index_len_key.append(index);
+    index_len_key.append(key);
+    index_len_key.span()
+}
+
+fn build_index_specific_key(index: felt252, key: felt252, idx: felt252) -> Span<felt252> {
+    let mut index_len_key = index_key_prefix();
+    index_len_key.append('index_key');
+    index_len_key.append(index);
+    index_len_key.append(key);
+    index_len_key.append(idx);
     index_len_key.span()
 }

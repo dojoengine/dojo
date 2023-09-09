@@ -89,17 +89,15 @@ fn test_with_keys_deletion() {
     let mut keys = ArrayTrait::new();
     keys.append('animal');
     keys.append('barks');
-    keys.append('brown');
 
     let mut other_keys = ArrayTrait::new();
     other_keys.append('animal');
     other_keys.append('meows');
-    other_keys.append('brown');
 
     index::create_with_keys(0, 69, 420, keys.span());
     index::create_with_keys(0, 69, 421, other_keys.span());
 
-    let (ids, keys) = index::get_with_keys(0, 69, 3);
+    let (ids, keys) = index::get_with_keys(0, 69, keys.len());
     assert(ids.len() == 2, 'Not enough entities indexed');
     assert(keys.len() == 2, 'Lengths of keys inconsistent');
     assert(*ids.at(0) == 420, 'Identity value incorrect');
@@ -115,4 +113,28 @@ fn test_with_keys_deletion() {
     assert(keys.len() == 1, 'Lengths of keys inconsistent');
     assert(*ids.at(0) == 421, 'Identity value incorrect');
     assert(*(*keys.at(0)).at(1) == 'meows', 'Key at position 1 incorrect');
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_get_by_keys() {
+    let mut keys = ArrayTrait::new();
+    keys.append('animal');
+    keys.append('barks');
+
+    let mut other_keys = ArrayTrait::new();
+    other_keys.append('animal');
+    other_keys.append('meows');
+
+    index::create_with_keys(0, 69, 420, keys.span());
+    index::create_with_keys(0, 69, 421, other_keys.span());
+
+    let ids = index::get_by_key(0, 69, 'animal');
+    assert(ids.len() == 2, 'Incorrect number of entities');
+    assert(*ids.at(0) == 420, 'Identity value incorrect at 0');
+    assert(*ids.at(1) == 421, 'Identity value incorrect at 1');
+
+    let ids = index::get_by_key(0, 69, 'barks');
+    assert(ids.len() == 1, 'Incorrect number of entities');
+    assert(*ids.at(0) == 420, 'Identity value incorrect at 0');
 }
