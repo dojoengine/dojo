@@ -32,7 +32,8 @@ fn set(table: felt252, key: felt252, offset: u8, value: Span<felt252>, layout: S
     keys.append('dojo_storage');
     keys.append(table);
     keys.append(key);
-    storage::set_many(0, keys.span(), offset, value, layout);
+    storage::set_many(0, keys.span(), offset, value);
+    index::create(0, table, key);
 }
 
 fn set_with_index(
