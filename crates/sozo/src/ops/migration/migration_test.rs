@@ -24,15 +24,7 @@ async fn migrate_with_auto_mine() {
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
 
-    let account = SingleOwnerAccount::new(
-        JsonRpcClient::new(HttpTransport::new(sequencer.url())),
-        LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
-            sequencer.raw_account().private_key,
-        )),
-        sequencer.raw_account().account_address,
-        chain_id::TESTNET,
-        ExecutionEncoding::Legacy,
-    );
+    let account = sequencer.account();
 
     let config = Config::builder(Utf8PathBuf::from_path_buf("../../examples/ecs/".into()).unwrap())
         .ui_verbosity(Verbosity::Quiet)
@@ -59,20 +51,12 @@ async fn migrate_with_block_time() {
     let target_dir = Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap();
 
     let sequencer = TestSequencer::start(
-        SequencerConfig { block_time: Some(1000), ..Default::default() },
+        SequencerConfig { block_time: Some(2000), ..Default::default() },
         get_default_test_starknet_config(),
     )
     .await;
 
-    let account = SingleOwnerAccount::new(
-        JsonRpcClient::new(HttpTransport::new(sequencer.url())),
-        LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
-            sequencer.raw_account().private_key,
-        )),
-        sequencer.raw_account().account_address,
-        chain_id::TESTNET,
-        ExecutionEncoding::Legacy,
-    );
+    let account = sequencer.account();
 
     let config = Config::builder(Utf8PathBuf::from_path_buf("../../examples/ecs/".into()).unwrap())
         .ui_verbosity(Verbosity::Quiet)
