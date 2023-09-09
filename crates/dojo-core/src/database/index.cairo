@@ -22,26 +22,42 @@ fn create_with_keys(address_domain: u32, index: felt252, id: felt252, keys: Span
     if exists(address_domain, index, id) {
         return ();
     }
+    if keys.len() >= 225 {
+        panic("Too many keys")
+    }
     create(address_domain, index, id);
+
+    let mut positions = ArrayTrait::<felt252>::new();
+    positions.append(keys.len().into());
 
     let mut idx = 0;
     loop {
         if idx == keys.len() {
             break ();
         }
-        add_key(address_domain, index, id, *keys.at(idx));                          // key -> id
+        let pos = add_key(address_domain, index, id, *keys.at(idx), idx); // key -> id
+        positions.append(pos);
         idx += 1;
     };
-    storage::set_many(address_domain, build_index_item_keys(index, id), 0, keys);   // id -> keys
+
+    let index_len_key = build_index_len_key(index);
+
+    let keys_len: u8 = keys.len().try_into().unwrap();
+    storage::set_many(address_domain, build_index_item_keys(index, id), 0, positions.span());  // len of keys and positions
+    storage::set_many(address_domain, build_index_item_keys(index, id), keys_len + 1, keys);   // keys
 }
 
-fn add_key(address_domain: u32, index: felt252, id: felt252, key: felt252) {
+fn add_key(address_domain: u32, index: felt252, id: felt252, key: felt252, idx: u32) -> felt252 {
     let specific_len_key = build_index_specific_key_len(index, key);
     let specific_len = storage::get(address_domain, specific_len_key);
     let specific_key = build_index_specific_key(index, key, specific_len);
 
     storage::set(address_domain, specific_len_key, specific_len + 1);
-    storage::set(address_domain, specific_key, id);
+    let mut val = ArrayTrait::new();
+    val.append(id);
+    val.append(idx.into());
+    storage::set_many(address_domain, specific_key, 0, val.span());
+    specific_len
 }
 
 fn delete(address_domain: u32, index: felt252, id: felt252) {
@@ -101,7 +117,12 @@ fn get_with_keys(address_domain: u32, index: felt252, key_length: usize) -> (Arr
         }
 
         let id = storage::get(address_domain, build_index_key(index, idx));
-        let keys = storage::get_many(address_domain, build_index_item_keys(index, id), 0, key_length);
+        let keys_key = build_index_item_keys(index, id);
+
+        let len = *storage::get_many(address_domain, keys_key, 0, 1).at(0);
+        let offset: u8 = (len + 1).try_into().unwrap();
+        let len: u32 = (len + len + 1).try_into().unwrap();
+        let keys = storage::get_many(address_domain, keys_key, offset, len);
         ids.append(id);
         all_keys.append(keys);
         idx += 1;

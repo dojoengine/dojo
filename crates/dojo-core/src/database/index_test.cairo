@@ -78,9 +78,9 @@ fn test_with_keys() {
     assert(keys.len() == 1, 'entity not indexed');
     assert(*ids.at(0) == 420, 'entity value incorrect');
 
-    assert(*(*keys.at(0)).at(0) == 'animal', 'key incorrect');
-    assert(*(*keys.at(0)).at(1) == 'barks', 'key incorrect');
-    assert(*(*keys.at(0)).at(2) == 'brown', 'key incorrect');
+    assert(*(*keys.at(0)).at(0) == 'animal', 'key incorrect at 0');
+    assert(*(*keys.at(0)).at(1) == 'barks', 'key incorrect at 1');
+    assert(*(*keys.at(0)).at(2) == 'brown', 'key incorrect at 2');
 }
 
 #[test]
