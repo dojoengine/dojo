@@ -132,5 +132,15 @@ fn test_database_all() {
     set(class_hash, 'table', 'odd', 0, odd.span(), array![251, 251].span());
 
     let base = starknet::storage_base_address_from_felt252('table');
-    let (keys, values) = all(class_hash, 'table', 0, 2, array![251, 251].span());
+    let (keys, values) = all(class_hash, 'table', 0, 2);
+
+    assert(keys.len() == 2, 'Wrong length of keys!');
+    assert(*keys.at(0) == 'even', 'Invalid key at index 0!');
+    assert(*keys.at(1) == 'odd', 'Invalid key at index 1!');
+
+    assert(values.len() == 2, 'Wrong length of values!');
+    assert(*(*values.at(0)).at(0) == 2, 'Invalid value at index 0 of 0!');
+    assert(*(*values.at(0)).at(1) == 4, 'Invalid value at index 1 of 0!');
+    assert(*(*values.at(1)).at(0) == 1, 'Invalid value at index 0 of 1!');
+    assert(*(*values.at(1)).at(1) == 3, 'Invalid value at index 1 of 1!');
 }

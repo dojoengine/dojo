@@ -63,3 +63,56 @@ fn test_entity_query_delete_non_existing() {
     assert(index::get(0, 69).len() == 0, 'table len != 0');
     index::delete(0, 69, 999); // deleting non-existing should not panic
 }
+
+#[test]
+#[available_gas(20000000)]
+fn test_with_keys() {
+    let mut keys = ArrayTrait::new();
+    keys.append('animal');
+    keys.append('barks');
+    keys.append('brown');
+
+    index::create_with_keys(0, 69, 420, keys.span());
+    let (ids, keys) = index::get_with_keys(0, 69, 3);
+    assert(ids.len() == 1, 'entity not indexed');
+    assert(keys.len() == 1, 'entity not indexed');
+    assert(*ids.at(0) == 420, 'entity value incorrect');
+
+    assert(*(*keys.at(0)).at(0) == 'animal', 'key incorrect');
+    assert(*(*keys.at(0)).at(1) == 'barks', 'key incorrect');
+    assert(*(*keys.at(0)).at(2) == 'brown', 'key incorrect');
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_with_keys_deletion() {
+    let mut keys = ArrayTrait::new();
+    keys.append('animal');
+    keys.append('barks');
+    keys.append('brown');
+
+    let mut other_keys = ArrayTrait::new();
+    other_keys.append('animal');
+    other_keys.append('meows');
+    other_keys.append('brown');
+
+    index::create_with_keys(0, 69, 420, keys.span());
+    index::create_with_keys(0, 69, 421, other_keys.span());
+
+    let (ids, keys) = index::get_with_keys(0, 69, 3);
+    assert(ids.len() == 2, 'Not enough entities indexed');
+    assert(keys.len() == 2, 'Lengths of keys inconsistent');
+    assert(*ids.at(0) == 420, 'Identity value incorrect');
+    assert(*ids.at(1) == 421, 'Identity value incorrect');
+
+    assert(*(*keys.at(0)).at(1) == 'barks', 'Key at position 0 incorrect');
+    assert(*(*keys.at(1)).at(1) == 'meows', 'Key at position 1 incorrect');
+
+    index::delete(0, 69, 420);
+
+    let (ids, keys) = index::get_with_keys(0, 69, 3);
+    assert(ids.len() == 1, 'Not enough entities indexed');
+    assert(keys.len() == 1, 'Lengths of keys inconsistent');
+    assert(*ids.at(0) == 421, 'Identity value incorrect');
+    assert(*(*keys.at(0)).at(1) == 'meows', 'Key at position 1 incorrect');
+}

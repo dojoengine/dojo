@@ -18,6 +18,11 @@ fn create(address_domain: u32, index: felt252, id: felt252) {
     storage::set(address_domain, build_index_key(index, index_len), id);
 }
 
+fn create_with_keys(address_domain: u32, index: felt252, id: felt252, keys: Span<felt252>) {
+    create(address_domain, index, id);
+    storage::set_many(address_domain, build_index_item_keys(index, id), 0, keys);   // id -> keys
+}
+
 fn delete(address_domain: u32, index: felt252, id: felt252) {
     if !exists(address_domain, index, id) {
         return ();
@@ -61,6 +66,29 @@ fn get(address_domain: u32, index: felt252) -> Array<felt252> {
     res
 }
 
+fn get_with_keys(address_domain: u32, index: felt252, key_length: usize) -> (Array<felt252>, Array<Span<felt252>>) {
+    let mut ids = ArrayTrait::new();
+    let mut all_keys = ArrayTrait::new();
+
+    let index_len_key = build_index_len_key(index);
+    let index_len = storage::get(address_domain, index_len_key);
+    let mut idx = 0;
+
+    loop {
+        if idx == index_len {
+            break ();
+        }
+
+        let id = storage::get(address_domain, build_index_key(index, idx));
+        let keys = storage::get_many(address_domain, build_index_item_keys(index, id), 0, key_length);
+        ids.append(id);
+        all_keys.append(keys);
+        idx += 1;
+    };
+
+    (ids, all_keys)
+}
+
 fn index_key_prefix() -> Array<felt252> {
     let mut prefix = ArrayTrait::new();
     prefix.append('dojo_index');
@@ -85,6 +113,14 @@ fn build_index_key(index: felt252, idx: felt252) -> Span<felt252> {
 fn build_index_item_key(index: felt252, id: felt252) -> Span<felt252> {
     let mut index_len_key = index_key_prefix();
     index_len_key.append('index_ids');
+    index_len_key.append(index);
+    index_len_key.append(id);
+    index_len_key.span()
+}
+
+fn build_index_item_keys(index: felt252, id: felt252) -> Span<felt252> {
+    let mut index_len_key = index_key_prefix();
+    index_len_key.append('index_keys');
     index_len_key.append(index);
     index_len_key.append(id);
     index_len_key.span()
