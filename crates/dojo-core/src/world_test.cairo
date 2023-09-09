@@ -242,6 +242,30 @@ fn test_set_entity_unauthorized() {
 //     set!(world, Foo { caller: starknet::contract_address_const::<0x1337>(), a: 420, b: 1337 });
 // }
 
+// #[test]
+// #[available_gas(9000000)]
+// fn test_entities() {
+//     // Spawn empty world
+//     let world = deploy_world();
+
+//     world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
+//     world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
+
+//     let alice = starknet::contract_address_const::<0x1337>();
+//     starknet::testing::set_contract_address(alice);
+
+//     let mut data = ArrayTrait::new();
+//     data.append(420);
+//     data.append(1337);
+//     world.execute('bar', data);
+
+//     let (keys, values) = world.entities('Foo', 0, 2);
+//     assert(keys.len() != 0, 'No keys found!');
+//     assert(*keys.at(0) == 0x1337, 'Keys not equal!');
+//     assert(*(*values.at(0)).at(0) == 420, 'values not equal at 0!');
+//     assert(*(*values.at(0)).at(0) == 1337, 'values not equal at 1!');
+// }
+
 // Utils
 fn deploy_world() -> IWorldDispatcher {
     spawn_test_world(array![])
