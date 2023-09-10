@@ -46,7 +46,6 @@ fn test_storage_get_many_length() {
         assert(storage::get_many(0, keys.span(), 0, i).len() == i, 'Values should be equal!');
         i += 1;
     };
-    
 }
 
 #[test]

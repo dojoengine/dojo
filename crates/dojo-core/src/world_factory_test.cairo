@@ -122,7 +122,7 @@ fn test_setters() {
         factory.executor() == starknet::contract_address_const::<0x96>(), 'wrong executor contract'
     );
 
-        factory.set_world(starknet::class_hash_const::<0x421>().into());
+    factory.set_world(starknet::class_hash_const::<0x421>().into());
     assert(factory.world() == starknet::class_hash_const::<0x421>(), 'wrong world class hash');
     assert(
         factory.executor() == starknet::contract_address_const::<0x96>(), 'wrong executor contract'

@@ -362,6 +362,7 @@ fn test_execute_origin_failing() {
 
     let eve = starknet::contract_address_const::<0x1338>();
     world.execute('origin_wrapper', data);
+}
 
 #[test]
 #[available_gas(6000000)]
@@ -381,20 +382,21 @@ fn test_execute_multiple_worlds() {
     constructor_calldata.append(executor_address.into());
     let (world_address, _) = deploy_syscall(
         world::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
-    ).unwrap();
+    )
+        .unwrap();
     let world = IWorldDispatcher { contract_address: world_address };
 
     // Deploy another world contract
     let (world_address, _) = deploy_syscall(
         world::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
-    ).unwrap();
+    )
+        .unwrap();
     let another_world = IWorldDispatcher { contract_address: world_address };
 
     world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
     another_world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
     another_world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
-
 
     let mut data = ArrayTrait::new();
     data.append(1337);
@@ -409,7 +411,8 @@ fn test_execute_multiple_worlds() {
     another_world.execute('bar', another_data);
 
     let stored = world.entity('Foo', keys.span(), 0, dojo::StorageSize::<Foo>::unpacked_size());
-    let another_stored = another_world.entity('Foo', keys.span(), 0, dojo::StorageSize::<Foo>::unpacked_size());
+    let another_stored = another_world
+        .entity('Foo', keys.span(), 0, dojo::StorageSize::<Foo>::unpacked_size());
     assert(*stored.snapshot.at(0) == 1337, 'data not stored');
     assert(*another_stored.snapshot.at(0) == 7331, 'data not stored');
 }
@@ -455,6 +458,8 @@ fn test_upgrade_world_with_admin() {
     assert(quantum_dispatcher.plz_more_tps() == 'daddy', 'quantum leap failed');
 }
 
+#[test]
+#[available_gas(6000000)]
 #[should_panic(expected: ('only world owner can upgrade', 'ENTRYPOINT_FAILED'))]
 fn test_upgrade_world_with_non_admin() {
     // Spawn empty world
@@ -468,6 +473,4 @@ fn test_upgrade_world_with_non_admin() {
     let new_class_hash: ClassHash = contract_upgrade::TEST_CLASS_HASH.try_into().unwrap();
     upgradable_dispatcher.upgrade(new_class_hash);
 }
-
-
 
