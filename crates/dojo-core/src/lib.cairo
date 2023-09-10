@@ -15,6 +15,6 @@ mod world_test;
 mod world_factory;
 #[cfg(test)]
 mod world_factory_test;
-
+mod upgradeable;
 #[cfg(test)]
 mod test_utils;

@@ -10,9 +10,11 @@ use starknet::contract_address_const;
 use starknet::ContractAddress;
 use starknet::get_caller_address;
 use starknet::syscalls::deploy_syscall;
+use starknet::ClassHash;
 
 use dojo::executor::executor;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, library_call, world};
+use dojo::upgradeable::{IUpgradeable, IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
 
 // Components and Systems
 
@@ -39,7 +41,7 @@ mod bar {
     use dojo::world::Context;
 
     fn execute(ctx: Context, a: felt252, b: u128) {
-        set !(ctx.world, Foo { caller: ctx.origin, a, b });
+        set!(ctx.world, Foo { caller: ctx.origin, a, b });
     }
 }
 
@@ -196,7 +198,7 @@ fn test_set_entity_directly() {
     world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
 
-    set !(world, Foo { caller: starknet::contract_address_const::<0x1337>(), a: 420, b: 1337 });
+    set!(world, Foo { caller: starknet::contract_address_const::<0x1337>(), a: 420, b: 1337 });
 }
 
 // Utils
@@ -360,7 +362,6 @@ fn test_execute_origin_failing() {
 
     let eve = starknet::contract_address_const::<0x1338>();
     world.execute('origin_wrapper', data);
-}
 
 #[test]
 #[available_gas(6000000)]
@@ -412,3 +413,61 @@ fn test_execute_multiple_worlds() {
     assert(*stored.snapshot.at(0) == 1337, 'data not stored');
     assert(*another_stored.snapshot.at(0) == 7331, 'data not stored');
 }
+
+//
+// Upgradeability
+//
+
+#[starknet::contract]
+mod contract_upgrade {
+    #[storage]
+    struct Storage {}
+
+    #[starknet::interface]
+    trait IQuantumLeap<TState> {
+        fn plz_more_tps(self: @TState) -> felt252;
+    }
+
+    #[constructor]
+    fn constructor(ref self: ContractState) {}
+
+    #[external(v0)]
+    impl QuantumLeap of IQuantumLeap<ContractState> {
+        fn plz_more_tps(self: @ContractState) -> felt252 {
+            'daddy'
+        }
+    }
+}
+use contract_upgrade::{IQuantumLeapDispatcher, IQuantumLeapDispatcherTrait};
+
+#[test]
+#[available_gas(6000000)]
+fn test_upgrade_world_with_admin() {
+    // Spawn empty world
+    let world = deploy_world();
+
+    let upgradable_dispatcher = IUpgradeableDispatcher { contract_address: world.contract_address };
+
+    let new_class_hash: ClassHash = contract_upgrade::TEST_CLASS_HASH.try_into().unwrap();
+    upgradable_dispatcher.upgrade(new_class_hash);
+
+    let quantum_dispatcher = IQuantumLeapDispatcher { contract_address: world.contract_address };
+    assert(quantum_dispatcher.plz_more_tps() == 'daddy', 'quantum leap failed');
+}
+
+#[should_panic(expected: ('only world owner can upgrade', 'ENTRYPOINT_FAILED'))]
+fn test_upgrade_world_with_non_admin() {
+    // Spawn empty world
+    let world = deploy_world();
+
+    let alice = starknet::contract_address_const::<0x1337>();
+    starknet::testing::set_contract_address(alice);
+
+    let upgradable_dispatcher = IUpgradeableDispatcher { contract_address: world.contract_address };
+
+    let new_class_hash: ClassHash = contract_upgrade::TEST_CLASS_HASH.try_into().unwrap();
+    upgradable_dispatcher.upgrade(new_class_hash);
+}
+
+
+

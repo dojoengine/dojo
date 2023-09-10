@@ -60,12 +60,13 @@ mod world {
     use dojo::executor::{IExecutorDispatcher, IExecutorDispatcherTrait};
     use dojo::component::{INamedLibraryDispatcher, INamedDispatcherTrait, };
     use dojo::world::{IWorldDispatcher, IWorld};
+    use dojo::upgradeable::{IUpgradeable, UpgradeableTrait, Upgraded};
 
     use super::Context;
 
     const NAME_ENTRYPOINT: felt252 =
         0x0361458367e696363fbcc70777d07ebbd2394e89fd0adcaf147faccd1d294d60;
-    
+
     const WORLD: felt252 = 0;
 
     #[event]
@@ -75,7 +76,8 @@ mod world {
         ComponentRegistered: ComponentRegistered,
         SystemRegistered: SystemRegistered,
         StoreSetRecord: StoreSetRecord,
-        StoreDelRecord: StoreDelRecord
+        StoreDelRecord: StoreDelRecord,
+        Upgraded: Upgraded
     }
 
     #[derive(Drop, starknet::Event)]
@@ -130,7 +132,9 @@ mod world {
         self.executor_dispatcher.write(IExecutorDispatcher { contract_address: executor });
         self
             .owners
-            .write((WORLD, starknet::get_tx_info().unbox().account_contract_address), bool::True(()));
+            .write(
+                (WORLD, starknet::get_tx_info().unbox().account_contract_address), bool::True(())
+            );
 
         EventEmitter::emit(
             ref self,
@@ -166,10 +170,7 @@ mod world {
         /// * `target` - The target.
         fn grant_owner(ref self: ContractState, address: ContractAddress, target: felt252) {
             let caller = get_caller_address();
-            assert(
-                self.is_owner(caller, target) || self.is_owner(caller, WORLD),
-                'not owner'
-            );
+            assert(self.is_owner(caller, target) || self.is_owner(caller, WORLD), 'not owner');
             self.owners.write((target, address), bool::True(()));
         }
 
@@ -182,11 +183,7 @@ mod world {
         /// * `target` - The target.
         fn revoke_owner(ref self: ContractState, address: ContractAddress, target: felt252) {
             let caller = get_caller_address();
-            assert(
-                self.is_owner(caller, target)
-                    || self.is_owner(caller, WORLD),
-                'not owner'
-            );
+            assert(self.is_owner(caller, target) || self.is_owner(caller, WORLD), 'not owner');
             self.owners.write((target, address), bool::False(()));
         }
 
@@ -215,8 +212,7 @@ mod world {
             let caller = get_caller_address();
 
             assert(
-                self.is_owner(caller, component)
-                    || self.is_owner(caller, WORLD),
+                self.is_owner(caller, component) || self.is_owner(caller, WORLD),
                 'not owner or writer'
             );
             self.writers.write((component, system), bool::True(()));
@@ -257,9 +253,7 @@ mod world {
 
             // If component is already registered, validate permission to update.
             if self.components.read(name).is_non_zero() {
-                assert(
-                    self.is_owner(caller, name), 'only owner can update'
-                );
+                assert(self.is_owner(caller, name), 'only owner can update');
             } else {
                 self.owners.write((name, caller), bool::True(()));
             };
@@ -297,9 +291,7 @@ mod world {
 
             // If system is already registered, validate permission to update.
             if self.systems.read(name).is_non_zero() {
-                assert(
-                    self.is_owner(caller, name), 'only owner can update'
-                );
+                assert(self.is_owner(caller, name), 'only owner can update');
             } else {
                 self.owners.write((name, caller), bool::True(()));
             };
@@ -349,9 +341,10 @@ mod world {
             }
 
             let ctx = Context {
-                world: IWorldDispatcher {
-                    contract_address: get_contract_address()
-                }, origin: self.call_origin.read(), system, system_class_hash,
+                world: IWorldDispatcher { contract_address: get_contract_address() },
+                origin: self.call_origin.read(),
+                system,
+                system_class_hash,
             };
 
             // Add context to calldata
@@ -535,6 +528,22 @@ mod world {
                 || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, WORLD),
             'not writer'
         );
+    }
+
+
+    #[external(v0)]
+    impl Upgradeable of IUpgradeable<ContractState> {
+        /// Upgrade contract implementation to new_class_hash
+        ///
+        /// # Arguments
+        ///
+        /// * `new_class_hash` - The new implementation class hahs.
+
+        fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
+            assert(self.is_owner(get_caller_address(), WORLD), 'only world owner can upgrade');
+            UpgradeableTrait::upgrade(new_class_hash);
+            EventEmitter::emit(ref self, Upgraded { class_hash: new_class_hash });
+        }
     }
 }
 
