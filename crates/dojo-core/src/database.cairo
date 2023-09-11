@@ -171,3 +171,30 @@ fn get_by_keys(
         };
     }
 }
+
+fn get_by_key(
+    class_hash: starknet::ClassHash, component: felt252, partition: felt252, key: felt252, length: usize
+) -> (Span<felt252>, Span<Span<felt252>>) {
+        let table = {
+        if partition == 0.into() {
+            component
+        } else {
+            let mut serialized = ArrayTrait::new();
+            component.serialize(ref serialized);
+            partition.serialize(ref serialized);
+            let hash = poseidon_hash_span(serialized.span());
+            hash.into()
+        }
+    };
+
+    let all_ids = index::get_by_key(0, table, key);
+    (all_ids.span(), get_by_ids(class_hash, table, all_ids.span(), length))
+}
+
+fn set_with_keys(
+    class_hash: starknet::ClassHash, table: felt252, id: felt252, offset: u8, value: Span<felt252>, keys: Span<felt252>
+
+) {
+    set(class_hash, table, id, offset, value);
+    index::create_with_keys(0, table, id, keys);
+}
