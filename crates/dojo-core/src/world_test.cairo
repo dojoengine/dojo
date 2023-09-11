@@ -226,7 +226,9 @@ fn test_set_entity_unauthorized() {
 //     data.append(1337);
 //     world.execute('bar', data);
 
-//     let (keys, values) = world.entities('Foo', 0, 2);
+//     let mut keys = ArrayTrait::new();
+
+//     let (keys, values) = world.entities('Foo', 0, keys.span(), 2);
 //     assert(keys.len() != 0, 'No keys found!');
 //     assert(*keys.at(0) == 0x1337, 'Keys not equal!');
 //     assert(*(*values.at(0)).at(0) == 420, 'values not equal at 0!');
