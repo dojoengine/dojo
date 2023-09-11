@@ -314,7 +314,7 @@ mod world {
 
             let key = poseidon::poseidon_hash_span(keys);
             let model_class_hash = self.models.read(model);
-            database::set(model_class_hash, model, key, offset, values, layout);
+            database::set_with_index(model_class_hash, model, key, offset, values, layout);
 
             EventEmitter::emit(ref self, StoreSetRecord { table: model, keys, offset, values });
         }
@@ -369,6 +369,8 @@ mod world {
         ///
         /// * `model` - The name of the model to be retrieved.
         /// * `index` - The index to be retrieved.
+        /// * `keys` - The query to be used to find the entity.
+        /// * `length` - The length of the component values.
         ///
         /// # Returns
         ///
