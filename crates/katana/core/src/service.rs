@@ -223,7 +223,7 @@ impl IntervalBlockProducer {
         }
     }
 
-    /// Creates a new [PendingBlockProducer] with no `interval`. This mode will not produce blocks
+    /// Creates a new [IntervalBlockProducer] with no `interval`. This mode will not produce blocks
     /// for every fixed interval, although it will still execute all queued transactions and
     /// keep hold of the pending state.
     pub fn new_no_mining(backend: Arc<Backend>, db: StateRefDb) -> Self {

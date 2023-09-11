@@ -225,7 +225,7 @@ impl Backend {
 
     /// Mines a new block based on the provided execution outcome.
     /// This method should only be called by the
-    /// [PendingBlockProducer](crate::service::PendingBlockProducer) when the node is running in
+    /// [IntervalBlockProducer](crate::service::IntervalBlockProducer) when the node is running in
     /// `interval` mining mode.
     pub async fn mine_pending_block(
         &self,
