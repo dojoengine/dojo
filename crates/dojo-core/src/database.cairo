@@ -172,6 +172,13 @@ fn get_by_keys(
     }
 }
 
+/// Returns entries on the given keys.
+/// # Arguments
+/// * `class_hash` - The class hash of the contract.
+/// * `component` - The component to get the entries from.
+/// * `partition` - The partition of the component to get the entries from.
+/// * `key` - The key of the entries to get.
+/// * `length` - The length of the entries.
 fn get_by_key(
     class_hash: starknet::ClassHash, component: felt252, partition: felt252, key: felt252, length: usize
 ) -> (Span<felt252>, Span<Span<felt252>>) {
@@ -191,6 +198,14 @@ fn get_by_key(
     (all_ids.span(), get_by_ids(class_hash, table, all_ids.span(), length))
 }
 
+/// Set, but with writing keys to the appropriate indexes
+/// # Arguments
+/// * `class_hash` - The class hash of the contract.
+/// * `table` - The table to set the entries to.
+/// * `id` - The id of the entry to set.
+/// * `offset` - The offset of the entry to set.
+/// * `value` - The value of the entry to set.
+/// * `keys` - The keys of the entry to set in the index.
 fn set_with_keys(
     class_hash: starknet::ClassHash, table: felt252, id: felt252, offset: u8, value: Span<felt252>, keys: Span<felt252>
 
