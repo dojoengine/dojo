@@ -25,7 +25,7 @@ trait IWorld<T> {
         layout: Span<u8>
     );
     fn entities(
-        self: @T, component: felt252, index: felt252, length: usize, layout: Span<u8>
+        self: @T, component: felt252, index: felt252, keys: Span<felt252>, length: usize
     ) -> (Span<felt252>, Span<Span<felt252>>);
     fn set_executor(ref self: T, contract_address: ContractAddress);
     fn executor(self: @T) -> ContractAddress;
@@ -321,7 +321,7 @@ mod world {
 
             let key = poseidon::poseidon_hash_span(keys);
             let component_class_hash = self.components.read(component);
-            database::set(component_class_hash, component, key, offset, values, layout);
+            database::set_with_keys(component_class_hash, component, key, offset, value, keys);
 
             EventEmitter::emit(ref self, StoreSetRecord { table: component, keys, offset, values });
         }
@@ -376,20 +376,23 @@ mod world {
         ///
         /// * `component` - The name of the component to be retrieved.
         /// * `index` - The index to be retrieved.
+        /// * `keys` - The query to be used to find the entity.
+        /// * `length` - The length of the component values.
         ///
         /// # Returns
         ///
         /// * `Span<felt252>` - The entity IDs.
         /// * `Span<Span<felt252>>` - The entities.
         fn entities(
-            self: @ContractState,
-            component: felt252,
-            index: felt252,
-            length: usize,
-            layout: Span<u8>
+            self: @ContractState, component: felt252, index: felt252, keys: Span<felt252>, length: usize
         ) -> (Span<felt252>, Span<Span<felt252>>) {
             let class_hash = self.components.read(component);
-            database::all(class_hash, component.into(), index, length, layout)
+            assert(keys.len() <= 1, 'Multiple keys not implemented');
+            if (keys.len() == 0) {
+                database::all(class_hash, component, index, length)
+            } else {
+                database::get_by_key(class_hash, component.into(), index, *keys.at(0), length)
+            } 
         }
 
         /// Sets the executor contract address.
