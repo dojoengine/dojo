@@ -33,7 +33,6 @@ fn set(
     keys.append(table);
     keys.append(key);
     storage::set_many(0, keys.span(), offset, value);
-    index::create(0, table, key);
 }
 
 fn del(class_hash: starknet::ClassHash, table: felt252, key: felt252) {
