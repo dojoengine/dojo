@@ -9,3 +9,4 @@ dojo.iml
 .env
 data
 crates/benches/gas_usage.txt
+**/.vscode
