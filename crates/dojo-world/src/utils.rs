@@ -33,6 +33,7 @@ pub enum TransactionWaitingError<E> {
 /// The waiter can be configured to wait for a specific finality status (e.g, `ACCEPTED_ON_L2`), or
 /// only until it has been included in the _pending_ block. It can even be set to check if the
 /// transaction is executed successfully or not (reverted).
+#[must_use = "TransactionWaiter does nothing unless polled"]
 pub struct TransactionWaiter<'a, P: Provider> {
     /// The hash of the transaction to wait for.
     tx_hash: FieldElement,
@@ -75,10 +76,10 @@ where
         Self {
             provider,
             tx_hash: tx,
-            receipt_request_fut: None,
             started_at: None,
             must_succeed: true,
             finality_status: None,
+            receipt_request_fut: None,
             timeout: Self::DEFAULT_TIMEOUT,
             interval: tokio::time::interval_at(
                 Instant::now() + Self::DEFAULT_INTERVAL,

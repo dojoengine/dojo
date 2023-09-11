@@ -13,9 +13,8 @@ use starknet::core::types::{
     InvokeTransactionResult, MaybePendingTransactionReceipt, StarknetError,
     TransactionFinalityStatus,
 };
-use starknet::core::utils::{
-    get_contract_address, get_selector_from_name, CairoShortStringToFeltError,
-};
+use starknet::core::utils::{get_contract_address, CairoShortStringToFeltError};
+use starknet::macros::{felt, selector};
 use starknet::providers::{
     MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage,
 };
@@ -195,11 +194,8 @@ pub trait Deployable: Declarable + Sync {
         let mut txn = account.execute(vec![Call {
             calldata,
             // devnet UDC address
-            to: FieldElement::from_hex_be(
-                "0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf",
-            )
-            .unwrap(),
-            selector: get_selector_from_name("deployContract").unwrap(),
+            selector: selector!("deployContract"),
+            to: felt!("0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"),
         }]);
 
         if let TxConfig { fee_estimate_multiplier: Some(multiplier) } = txn_config {
@@ -209,7 +205,7 @@ pub trait Deployable: Declarable + Sync {
         let InvokeTransactionResult { transaction_hash } =
             txn.send().await.map_err(MigrationError::Migrator)?;
 
-        // TEMP: remove finality check once we can remove displaying the block number in the
+        // TODO: remove finality check once we can remove displaying the block number in the
         // migration logs
         let receipt = TransactionWaiter::new(transaction_hash, account.provider())
             .with_finality(TransactionFinalityStatus::AcceptedOnL2)

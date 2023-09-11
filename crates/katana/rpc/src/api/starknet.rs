@@ -17,6 +17,7 @@ use starknet::core::types::{
 #[derive(Serialize, Deserialize)]
 pub struct Felt(#[serde_as(as = "UfeHex")] pub FieldElement);
 
+// TODO: implement From<SequencerError> for StarknetApiError
 #[derive(thiserror::Error, Clone, Copy, Debug)]
 pub enum StarknetApiError {
     #[error("Failed to write transaction")]
@@ -75,8 +76,6 @@ pub enum StarknetApiError {
     ProofLimitExceeded = 10000,
     #[error("Too many keys provided in a filter")]
     TooManyKeysInFilter = 34,
-    #[error("Internal server error")]
-    InternalServerError = 500,
     #[error("Failed to fetch pending transactions")]
     FailedToFetchPendingTransactions = 38,
 }

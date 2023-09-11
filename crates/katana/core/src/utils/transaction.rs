@@ -298,12 +298,12 @@ pub fn broadcasted_invoke_rpc_to_api_transaction(
         calldata, max_fee, nonce, sender_address, signature, ..
     } = transaction;
 
-    let transaction_hash =
+    let hash =
         compute_invoke_v1_transaction_hash(sender_address, &calldata, max_fee, chain_id, nonce);
 
     let transaction = InvokeApiTransactionV1 {
-        nonce: Nonce(StarkFelt::from(nonce)),
-        transaction_hash: TransactionHash(transaction_hash.into()),
+        nonce: Nonce(nonce.into()),
+        transaction_hash: TransactionHash(hash.into()),
         sender_address: ContractAddress(patricia_key!(sender_address)),
         signature: TransactionSignature(signature.into_iter().map(|e| e.into()).collect()),
         calldata: Calldata(Arc::new(calldata.into_iter().map(|c| c.into()).collect())),

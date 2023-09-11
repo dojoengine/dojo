@@ -9,7 +9,8 @@ use scarb::core::Config;
 use scarb_ui::Verbosity;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::chain_id;
-use starknet::core::types::FieldElement;
+use starknet::core::types::{BlockId, BlockTag};
+use starknet::macros::felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet::signers::{LocalWallet, SigningKey};
@@ -24,7 +25,8 @@ async fn migrate_with_auto_mine() {
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
 
-    let account = sequencer.account();
+    let mut account = sequencer.account();
+    account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
     let config = Config::builder(Utf8PathBuf::from_path_buf("../../examples/ecs/".into()).unwrap())
         .ui_verbosity(Verbosity::Quiet)
@@ -34,13 +36,7 @@ async fn migrate_with_auto_mine() {
     let manifest = Manifest::load_from_path(target_dir.join("manifest.json")).unwrap();
     let world = WorldDiff::compute(manifest, None);
 
-    let migration = prepare_for_migration(
-        None,
-        Some(FieldElement::from_hex_be("0x12345").unwrap()),
-        target_dir,
-        world,
-    )
-    .unwrap();
+    let migration = prepare_for_migration(None, Some(felt!("0x12345")), target_dir, world).unwrap();
     execute_strategy(&migration, &account, &config, None).await.unwrap();
 
     sequencer.stop().unwrap();
@@ -51,12 +47,13 @@ async fn migrate_with_block_time() {
     let target_dir = Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap();
 
     let sequencer = TestSequencer::start(
-        SequencerConfig { block_time: Some(2000), ..Default::default() },
+        SequencerConfig { block_time: Some(1000), ..Default::default() },
         get_default_test_starknet_config(),
     )
     .await;
 
-    let account = sequencer.account();
+    let mut account = sequencer.account();
+    account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
     let config = Config::builder(Utf8PathBuf::from_path_buf("../../examples/ecs/".into()).unwrap())
         .ui_verbosity(Verbosity::Quiet)
@@ -66,16 +63,8 @@ async fn migrate_with_block_time() {
     let manifest = Manifest::load_from_path(target_dir.join("manifest.json")).unwrap();
     let world = WorldDiff::compute(manifest, None);
 
-    let migration = prepare_for_migration(
-        None,
-        Some(FieldElement::from_hex_be("0x12345").unwrap()),
-        target_dir,
-        world,
-    )
-    .unwrap();
+    let migration = prepare_for_migration(None, Some(felt!("0x12345")), target_dir, world).unwrap();
     execute_strategy(&migration, &account, &config, None).await.unwrap();
-
-    sequencer.stop().unwrap();
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -83,7 +72,7 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
     let target_dir = Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap();
 
     let sequencer = TestSequencer::start(
-        SequencerConfig { block_time: Some(1), ..Default::default() },
+        Default::default(),
         StarknetConfig { disable_fee: false, ..Default::default() },
     )
     .await;
@@ -106,13 +95,7 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
     let manifest = Manifest::load_from_path(target_dir.join("manifest.json")).unwrap();
     let world = WorldDiff::compute(manifest, None);
 
-    let migration = prepare_for_migration(
-        None,
-        Some(FieldElement::from_hex_be("0x12345").unwrap()),
-        target_dir,
-        world,
-    )
-    .unwrap();
+    let migration = prepare_for_migration(None, Some(felt!("0x12345")), target_dir, world).unwrap();
 
     assert!(
         execute_strategy(
@@ -161,13 +144,8 @@ async fn migration_from_remote() {
     let manifest = Manifest::load_from_path(target_dir.clone()).unwrap();
     let world = WorldDiff::compute(manifest, None);
 
-    let migration = prepare_for_migration(
-        None,
-        Some(FieldElement::from_hex_be("0x12345").unwrap()),
-        target_dir.clone(),
-        world,
-    )
-    .unwrap();
+    let migration =
+        prepare_for_migration(None, Some(felt!("0x12345")), target_dir.clone(), world).unwrap();
 
     execute_strategy(&migration, &account, &config, None).await.unwrap();
 

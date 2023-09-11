@@ -243,6 +243,9 @@ impl Backend {
     }
 
     pub async fn do_mine_block(&self, execution_outcome: ExecutionOutcome) -> MinedBlockOutcome {
+        // lock the state for the entire block mining process
+        let mut state = self.state.write().await;
+
         let partial_header = PartialHeader {
             gas_price: self.env.read().block.gas_price,
             number: self.env.read().block.block_number.0,
@@ -286,20 +289,15 @@ impl Backend {
             self.blockchain.storage.write().transactions.insert(hash, tx);
         });
 
-        // get state diffs
-        let state_diff = convert_state_diff_to_rpc_state_diff(execution_outcome.state_diff.clone());
-
         // store block and the state diff
+        let state_diff = convert_state_diff_to_rpc_state_diff(execution_outcome.state_diff.clone());
         self.blockchain.append_block(block_hash, block.clone(), state_diff);
-
-        info!(target: "backend", "⛏️ Block {block_number} mined with {tx_count} transactions");
-
         // apply the pending state to the current state
-        let mut state = self.state.write().await;
         execution_outcome.apply_to(&mut *state);
-
         // store the current state
         self.states.write().await.insert(block_hash, state.as_ref_db());
+
+        info!(target: "backend", "⛏️ Block {block_number} mined with {tx_count} transactions");
 
         MinedBlockOutcome { block_number, transactions: execution_outcome.transactions }
     }

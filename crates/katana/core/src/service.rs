@@ -80,21 +80,9 @@ impl Future for NodeService {
 
 type ServiceFuture<T> = Pin<Box<dyn Future<Output = T> + Send + Sync>>;
 type InstantBlockMiningFuture = ServiceFuture<MinedBlockOutcome>;
-type PendingBlockMiningFuture = ServiceFuture<(MinedBlockOutcome, StateRefDb)>;
+type IntervalBlockMiningFuture = ServiceFuture<MinedBlockOutcome>;
 
 /// The type which responsible for block production.
-///
-/// On _interval_ mining, a new block is opened for a fixed amount of interval. Within this
-/// interval, it executes all the queued transactions and keep hold of the pending state after
-/// executing all the transactions. Once the interval is over, the block producer will close/mine
-/// the block with all the transactions that have been executed within the interval and applies the
-/// resulting state to the latest state. Then, a new block is opened for the next interval. As such,
-/// the block context is updated only when a new block is opened.
-///
-/// On _instant_ mining, a new block is mined as soon as there are transactions in the tx pool. The
-/// block producer will execute all the transactions in the mempool and mine a new block with the
-/// resulting state. The block context is only updated every time a new block is mined as opposed to
-/// updating it when the block is opened (in _interval_ mode).
 #[must_use = "BlockProducer does nothing unless polled"]
 #[derive(Clone)]
 pub struct BlockProducer {
@@ -106,7 +94,7 @@ impl BlockProducer {
     /// Creates a block producer that mines a new block every `interval` milliseconds.
     pub fn interval(backend: Arc<Backend>, initial_state: StateRefDb, interval: u64) -> Self {
         Self {
-            inner: Arc::new(RwLock::new(BlockProducerMode::Interval(PendingBlockProducer::new(
+            inner: Arc::new(RwLock::new(BlockProducerMode::Interval(IntervalBlockProducer::new(
                 backend,
                 initial_state,
                 interval,
@@ -119,7 +107,7 @@ impl BlockProducer {
     pub fn on_demand(backend: Arc<Backend>, initial_state: StateRefDb) -> Self {
         Self {
             inner: Arc::new(RwLock::new(BlockProducerMode::Interval(
-                PendingBlockProducer::new_no_mining(backend, initial_state),
+                IntervalBlockProducer::new_no_mining(backend, initial_state),
             ))),
         }
     }
@@ -178,17 +166,30 @@ impl Stream for BlockProducer {
     }
 }
 
+/// The inner type of [BlockProducer].
+///
+/// On _interval_ mining, a new block is opened for a fixed amount of interval. Within this
+/// interval, it executes all the queued transactions and keep hold of the pending state after
+/// executing all the transactions. Once the interval is over, the block producer will close/mine
+/// the block with all the transactions that have been executed within the interval and applies the
+/// resulting state to the latest state. Then, a new block is opened for the next interval. As such,
+/// the block context is updated only when a new block is opened.
+///
+/// On _instant_ mining, a new block is mined as soon as there are transactions in the tx pool. The
+/// block producer will execute all the transactions in the mempool and mine a new block with the
+/// resulting state. The block context is only updated every time a new block is mined as opposed to
+/// updating it when the block is opened (in _interval_ mode).
 pub enum BlockProducerMode {
-    Interval(PendingBlockProducer),
+    Interval(IntervalBlockProducer),
     Instant(InstantBlockProducer),
 }
 
-pub struct PendingBlockProducer {
+pub struct IntervalBlockProducer {
     /// The interval at which new blocks are mined.
     interval: Option<Interval>,
     backend: Arc<Backend>,
     /// Single active future that mines a new block
-    block_mining: Option<PendingBlockMiningFuture>,
+    block_mining: Option<IntervalBlockMiningFuture>,
     /// Backlog of sets of transactions ready to be mined
     queued: VecDeque<Vec<Transaction>>,
     /// The state of the pending block after executing all the transactions within the interval.
@@ -198,9 +199,15 @@ pub struct PendingBlockProducer {
     is_initialized: bool,
 }
 
-impl PendingBlockProducer {
+impl IntervalBlockProducer {
     pub fn new(backend: Arc<Backend>, db: StateRefDb, interval: u64) -> Self {
-        let interval = Duration::from_millis(interval);
+        let interval = {
+            let duration = Duration::from_millis(interval);
+            let mut interval = interval_at(Instant::now() + duration, duration);
+            interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+            interval
+        };
+
         let state = Arc::new(PendingState {
             state: RwLock::new(CachedStateWrapper::new(db)),
             executed_transactions: Default::default(),
@@ -211,8 +218,8 @@ impl PendingBlockProducer {
             backend,
             block_mining: None,
             is_initialized: false,
+            interval: Some(interval),
             queued: VecDeque::default(),
-            interval: Some(interval_at(Instant::now() + interval, interval)),
         }
     }
 
@@ -228,10 +235,10 @@ impl PendingBlockProducer {
         Self {
             state,
             backend,
+            interval: None,
             block_mining: None,
             is_initialized: false,
             queued: VecDeque::default(),
-            interval: None,
         }
     }
 
@@ -243,8 +250,7 @@ impl PendingBlockProducer {
     pub async fn force_mine(&self) {
         if self.block_mining.is_none() {
             let outcome = self.outcome();
-            let (_, new_state) = Self::do_mine(outcome, self.backend.clone()).await;
-            self.reset(new_state);
+            let _ = Self::do_mine(outcome, self.backend.clone(), self.state.clone()).await;
         } else {
             trace!(target: "miner", "unable to force mine while a mining process is running")
         }
@@ -253,30 +259,27 @@ impl PendingBlockProducer {
     async fn do_mine(
         execution_outcome: ExecutionOutcome,
         backend: Arc<Backend>,
-    ) -> (MinedBlockOutcome, StateRefDb) {
+        pending_state: Arc<PendingState>,
+    ) -> MinedBlockOutcome {
         trace!(target: "miner", "creating new block");
         let (outcome, new_state) = backend.mine_pending_block(execution_outcome).await;
         trace!(target: "miner", "created new block: {}", outcome.block_number);
+
         backend.update_block_context();
-        (outcome, new_state)
+        // reset the state for the next block
+        pending_state.executed_transactions.write().clear();
+        *pending_state.state.write() = CachedStateWrapper::new(new_state);
+
+        outcome
     }
 
-    fn reset(&self, state: StateRefDb) {
-        self.state.executed_transactions.write().clear();
-        *self.state.state.write() = CachedStateWrapper::new(state);
-    }
-
-    fn execute_transactions(
-        transactions: Vec<Transaction>,
-        state: Arc<PendingState>,
-        backend: Arc<Backend>,
-    ) {
+    fn execute_transactions(&self, transactions: Vec<Transaction>) {
         let transactions = {
-            let mut state = state.state.write();
+            let mut state = self.state.state.write();
             TransactionExecutor::new(
                 &mut state,
-                &backend.env.read().block,
-                !backend.config.read().disable_fee,
+                &self.backend.env.read().block,
+                !self.backend.config.read().disable_fee,
             )
             .with_error_log()
             .with_events_log()
@@ -298,7 +301,7 @@ impl PendingBlockProducer {
             .collect::<Vec<_>>()
         };
 
-        state.executed_transactions.write().extend(transactions)
+        self.state.executed_transactions.write().extend(transactions);
     }
 
     fn outcome(&self) -> ExecutionOutcome {
@@ -326,7 +329,7 @@ impl PendingBlockProducer {
     }
 }
 
-impl Stream for PendingBlockProducer {
+impl Stream for IntervalBlockProducer {
     // mined block outcome and the new state
     type Item = MinedBlockOutcome;
 
@@ -340,23 +343,24 @@ impl Stream for PendingBlockProducer {
 
         if let Some(interval) = &mut pin.interval {
             if interval.poll_tick(cx).is_ready() && pin.block_mining.is_none() {
-                pin.block_mining =
-                    Some(Box::pin(Self::do_mine(pin.outcome(), pin.backend.clone())));
+                pin.block_mining = Some(Box::pin(Self::do_mine(
+                    pin.outcome(),
+                    pin.backend.clone(),
+                    pin.state.clone(),
+                )));
             }
         }
 
         // only execute transactions if there is no mining in progress
         if !pin.queued.is_empty() && pin.block_mining.is_none() {
             let transactions = pin.queued.pop_front().expect("not empty; qed");
-            Self::execute_transactions(transactions, pin.state.clone(), pin.backend.clone());
+            pin.execute_transactions(transactions);
         }
 
         // poll the mining future
         if let Some(mut mining) = pin.block_mining.take() {
             // reset the executor for the next block
-            if let Poll::Ready((outcome, new_state)) = mining.poll_unpin(cx) {
-                // update the block context for the next pending block
-                pin.reset(new_state);
+            if let Poll::Ready(outcome) = mining.poll_unpin(cx) {
                 return Poll::Ready(Some(outcome));
             } else {
                 pin.block_mining = Some(mining)
