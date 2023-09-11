@@ -126,4 +126,3 @@ fn test_database_scan() {
     assert(*keys.at(0) == 'even', 'Wrong key at index 0!');
     assert(*(*values.at(0)).at(0) == 2, 'Wrong value at index 0!');
     assert(*(*values.at(0)).at(1) == 4, 'Wrong value at index 1!');
-}
