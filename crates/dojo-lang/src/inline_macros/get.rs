@@ -87,9 +87,17 @@ impl InlineMacroExprPlugin for GetMacro {
             builder.add_str(&format!(
                 "\n            let mut __{component}_values__ = {}.entity('{component}', \
                  __get_macro_keys__, 0_u8, dojo::StorageLayout::<{component}>::size());
+                 let mut __{component}_component__ = array::ArrayTrait::new();
+                 array::serialize_array_helper(__get_macro_keys__, ref __{component}_component__);
+                 let __{component}_unpacked__ \
+                 dojo::component::Component::<{component}>::unpack(ref __{component}_component__, \
+                 ref __{component}_values__);
+                 let mut __{component}_component_span__ = \
+                 array::ArrayTrait::span(@__{component}_component__);
                  let __{component} = \
-                 option::OptionTrait::expect(dojo::component::Component::<{component}>::unpack(ref \
-                 __{component}_values__), '{deser_err_msg}');\n",
+                 option::OptionTrait::expect(serde::Serde::<{component}>::deserialize(
+                    ref __{component}_component_span__
+                ), '{deser_err_msg}');\n",
                 world.as_syntax_node().get_text(db),
             ));
         }

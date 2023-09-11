@@ -4,9 +4,8 @@ use traits::{Into, TryInto};
 use integer::{U256BitAnd, U256BitOr, U256BitXor, upcast, downcast, BoundedInt};
 use option::OptionTrait;
 
-fn pack(ref unpacked: Span<felt252>, ref layout: Span<u8>) -> Span<felt252> {
-    // assert(unpacked.len() == layout.len(), "mismatched input lens");
-    let mut packed: Array<felt252> = ArrayTrait::new();
+fn pack(ref packed: Array<felt252>, ref unpacked: Span<felt252>, ref layout: Span<u8>) {
+    assert(unpacked.len() == layout.len(), 'mismatched input lens');
     let mut packing: felt252 = 0x0;
     let mut offset: u8 = 0x0;
     loop {
@@ -20,11 +19,9 @@ fn pack(ref unpacked: Span<felt252>, ref layout: Span<u8>) -> Span<felt252> {
         };
     };
     packed.append(packing);
-    packed.span()
 }
 
-fn unpack(ref packed: Span<felt252>, ref layout: Span<u8>) -> Option<Span<felt252>> {
-    let mut unpacked: Array<felt252> = ArrayTrait::new();
+fn unpack(ref unpacked: Array<felt252>, ref packed: Span<felt252>, ref layout: Span<u8>) {
     let mut unpacking: felt252 = 0x0;
     let mut offset: u8 = 251;
     loop {
@@ -35,12 +32,13 @@ fn unpack(ref packed: Span<felt252>, ref layout: Span<u8>) -> Option<Span<felt25
                         unpacked.append(u);
                     },
                     Option::None(_) => {
-                        break Option::None(());
+                        // TODO: Raise error
+                        break;
                     }
                 }
             },
             Option::None(_) => {
-                break Option::Some(unpacked.span());
+                break;
             }
         };
     }

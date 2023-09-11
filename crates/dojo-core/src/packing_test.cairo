@@ -252,13 +252,18 @@ fn test_pack_unpack_u256_single() {
     let mut layout_span = layout.span();
 
     let mut unpacked_span = unpacked.span();
-    let mut packed = pack(ref unpacked_span, ref layout_span);
+
+    let mut packed = array::ArrayTrait::new();
+    pack(ref packed, ref unpacked_span, ref layout_span);
 
     let mut layout = ArrayTrait::new();
     dojo::StorageLayout::<u256>::layout(ref layout);
     let mut layout_span = layout.span();
 
-    let mut unpacked = unpack(ref packed, ref layout_span).unwrap();
-    let output = serde::Serde::<u256>::deserialize(ref unpacked).unwrap();
+    let mut unpacked = array::ArrayTrait::new();
+    let mut packed_span = packed.span();
+    unpack(ref unpacked, ref packed_span, ref layout_span);
+    let mut unpacked_span = unpacked.span();
+    let output = serde::Serde::<u256>::deserialize(ref unpacked_span).unwrap();
     assert(input == output, 'invalid output');
 }

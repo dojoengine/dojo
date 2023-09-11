@@ -130,6 +130,7 @@ pub fn handle_component_struct(
 
                 #[inline(always)]
                 fn pack(self: @$type_name$) -> Span<felt252> {
+                    let mut unpacked = ArrayTrait::new();
                     let mut layout = ArrayTrait::new();
                     dojo::StorageLayout::<$type_name$>::layout(ref layout);
 
@@ -138,17 +139,16 @@ pub fn handle_component_struct(
 
                     let mut serialized_span = array::ArrayTrait::span(@serialized);
                     let mut layout_span = array::ArrayTrait::span(@layout);
-                    dojo::packing::pack(ref serialized_span, ref layout_span)
+                    dojo::packing::pack(ref unpacked, ref serialized_span, ref layout_span);
+                    unpacked.span()
                 }
 
                 #[inline(always)]
-                fn unpack(ref packed: Span<felt252>) -> Option<$type_name$> {
+                fn unpack(ref unpacked: Array<felt252>, ref packed: Span<felt252>) {
                     let mut layout = ArrayTrait::new();
                     dojo::StorageLayout::<$type_name$>::layout(ref layout);
-
                     let mut layout_span = array::ArrayTrait::span(@layout);
-                    let mut unpacked = dojo::packing::unpack(ref packed, ref layout_span)?;
-                    serde::Serde::deserialize(ref unpacked)
+                    dojo::packing::unpack(ref unpacked, ref packed, ref layout_span);
                 }
             }
 

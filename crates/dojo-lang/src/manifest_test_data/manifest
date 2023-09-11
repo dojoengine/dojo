@@ -626,7 +626,7 @@ test_manifest_file
         }
       ],
       "outputs": [],
-      "class_hash": "0x5a102adb9ce670b7c98c1d086e55a29a7098424fe36d5f8ed7bb70fe80aa0d4",
+      "class_hash": "0x3e5131224ffc8d93a8918b816f498eff4d9edf7c65e22f76003e5570ff050e3",
       "dependencies": [],
       "abi": [
         {
@@ -705,7 +705,7 @@ test_manifest_file
         }
       ],
       "outputs": [],
-      "class_hash": "0x15c2b02f0a872138320630e0543bd272edeac5d88da3d9dc65cf459d4e9effd",
+      "class_hash": "0x59df0f012228748ce054b25daec1a37674b9b65f83871119c8ae05e546581af",
       "dependencies": [],
       "abi": [
         {
