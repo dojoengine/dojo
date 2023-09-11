@@ -108,7 +108,7 @@ fn test_with_keys_deletion() {
 
     index::delete(0, 69, 420);
 
-    let (ids, keys) = index::get_with_keys(0, 69, 3);
+    let (ids, keys) = index::get_with_keys(0, 69, keys.len());
     assert(ids.len() == 1, 'Not enough entities indexed');
     assert(keys.len() == 1, 'Lengths of keys inconsistent');
     assert(*ids.at(0) == 421, 'Identity value incorrect');
