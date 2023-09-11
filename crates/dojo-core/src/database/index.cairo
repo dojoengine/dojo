@@ -18,6 +18,12 @@ fn create(address_domain: u32, index: felt252, id: felt252) {
     storage::set(address_domain, build_index_key(index, index_len), id);
 }
 
+/// Writes a new entry to the index, with given keys.
+/// # Arguments 
+/// * address_domain - The address domain to write to.
+/// * index - The index to write to.
+/// * id - The id of the entry.
+/// * keys - The keys to write.the entry to. 
 fn create_with_keys(address_domain: u32, index: felt252, id: felt252, keys: Span<felt252>) {
     // TODO: handle reapeated
     assert(keys.len() < 255, 'Too many keys');
@@ -43,6 +49,15 @@ fn create_with_keys(address_domain: u32, index: felt252, id: felt252, keys: Span
     storage::set_many(address_domain, build_index_item_keys(index, id), keys_len + 1, keys);   // keys
 }
 
+/// Adds a single key for a given id.
+/// # Arguments
+/// * address_domain - The address domain to write to.
+/// * index - The index to write to.
+/// * id - The id of the entry.
+/// * key - The key to write.
+/// * idx - The index of the key.in the keys array.
+/// # Returns
+/// The position of the key in the the index.
 fn add_key(address_domain: u32, index: felt252, id: felt252, key: felt252, idx: u32) -> felt252 {
     let specific_len_key = build_index_specific_key_len(index, key);
     let specific_len = storage::get(address_domain, specific_len_key);
@@ -56,10 +71,23 @@ fn add_key(address_domain: u32, index: felt252, id: felt252, key: felt252, idx: 
     specific_len
 }
 
+/// Deletes a single key for a given id.
+/// # Arguments
+/// * address_domain - The address domain to write to.
+/// * index - The index to write to.
+/// * id - The id of the entry.
+/// * key - The key to write.
+/// * pos - The position of the key in the the index.
 fn delete_key(address_domain: u32, index: felt252, id: felt252, key: felt252, pos: felt252) {
     // TODO
 }
 
+/// Deletes an entry from the main index, as well as from each of the keys.
+/// # Arguments
+/// * address_domain - The address domain to write to.
+/// * index - The index to write to.
+/// * id - The id of the entry.
+/// # Returns
 fn delete(address_domain: u32, index: felt252, id: felt252) {
     if !exists(address_domain, index, id) {
         return ();
@@ -119,6 +147,12 @@ fn get(address_domain: u32, index: felt252) -> Array<felt252> {
     res
 }
 
+/// Gets all ids for a given index, as well as all keys for each id.
+/// # Arguments
+/// * address_domain - The address domain to write to.
+/// * index - The index to write to.
+/// # Returns
+/// * ids - The ids for the index.
 fn get_with_keys(address_domain: u32, index: felt252, key_length: usize) -> (Array<felt252>, Array<Span<felt252>>) {
     let mut ids = ArrayTrait::new();
     let mut all_keys = ArrayTrait::new();
@@ -147,6 +181,11 @@ fn get_with_keys(address_domain: u32, index: felt252, key_length: usize) -> (Arr
     (ids, all_keys)
 }
 
+/// Returns all the entries that hold a giben key
+/// # Arguments
+/// * address_domain - The address domain to write to.
+/// * index - The index to read from.
+/// * key - The key return values from.
 fn get_by_key(address_domain: u32, index: felt252, key: felt252) -> Array<felt252> {
     let mut res = ArrayTrait::new();
     let specific_len_key = build_index_specific_key_len(index, key);
@@ -198,6 +237,10 @@ fn build_index_item_key(index: felt252, id: felt252) -> Span<felt252> {
     index_len_key.span()
 }
 
+/// Key data about keys of a given entry.
+/// # Arguments
+/// * index - The index to write to.
+/// * id - The id of the entry.
 fn build_index_item_keys(index: felt252, id: felt252) -> Span<felt252> {
     let mut index_len_key = index_key_prefix();
     index_len_key.append('index_keys');
@@ -206,6 +249,10 @@ fn build_index_item_keys(index: felt252, id: felt252) -> Span<felt252> {
     index_len_key.span()
 }
 
+/// Key for a length of index for a given key.
+/// # Arguments
+/// * index - The index to write to.
+/// * key - The key to write.
 fn build_index_specific_key_len(index: felt252, key: felt252) -> Span<felt252> {
     let mut index_len_key = index_key_prefix();
     index_len_key.append('index_key_len');
@@ -214,6 +261,11 @@ fn build_index_specific_key_len(index: felt252, key: felt252) -> Span<felt252> {
     index_len_key.span()
 }
 
+/// Key for an index of a given key.
+/// # Arguments
+/// * index - The index to write to.
+/// * key - The key to write.
+/// * idx - The position in the index.
 fn build_index_specific_key(index: felt252, key: felt252, idx: felt252) -> Span<felt252> {
     let mut index_len_key = index_key_prefix();
     index_len_key.append('index_key');
