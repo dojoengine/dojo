@@ -8,7 +8,7 @@ test_manifest_file
   "world": {
     "name": "world",
     "address": null,
-    "class_hash": "0x370195d9fa250c4844f750f68ca77adf86c7f3293cc1cbac5c65d3404e2b2af",
+    "class_hash": "0x47e60059b22bb509f9a3eb9e8bf48921031def8b2ad5b3ae0a9bda09003985",
     "abi": [
       {
         "type": "impl",
@@ -189,6 +189,10 @@ test_manifest_file
               {
                 "name": "index",
                 "type": "core::felt252"
+              },
+              {
+                "name": "keys",
+                "type": "core::array::Span::<core::felt252>"
               },
               {
                 "name": "length",
