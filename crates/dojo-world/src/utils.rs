@@ -30,9 +30,23 @@ pub enum TransactionWaitingError<E> {
 /// transaction receipt every `interval` miliseconds until it achieves the desired status or until
 /// `timeout` is reached.
 ///
-/// The waiter can be configured to wait for a specific finality status (e.g, `ACCEPTED_ON_L2`), or
-/// only until it has been included in the _pending_ block. It can even be set to check if the
-/// transaction is executed successfully or not (reverted).
+/// The waiter can be configured to wait for a specific finality status (e.g, `ACCEPTED_ON_L2`), by
+/// default, it only waits until the transaction is included in the _pending_ block. It can also be
+/// set to check if the transaction is executed successfully or not (reverted).
+///
+/// # Examples
+///
+/// ```ignore
+/// ues url::Url;
+/// use starknet::providers::jsonrpc::HttpTransport;
+/// use starknet::providers::JsonRpcClient;
+/// use starknet::core::types::TransactionFinalityStatus;
+///
+/// let provider = JsonRpcClient::new(HttpTransport::new(Url::parse("http://localhost:5000").unwrap()));
+///
+/// let tx_hash = FieldElement::from(0xbadbeefu64);
+/// let receipt = TransactionWaiter::new(tx_hash, &provider).with_finality(TransactionFinalityStatus::ACCEPTED_ON_L2).await.unwrap();
+/// ```
 #[must_use = "TransactionWaiter does nothing unless polled"]
 pub struct TransactionWaiter<'a, P: Provider> {
     /// The hash of the transaction to wait for.
