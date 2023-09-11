@@ -48,6 +48,22 @@ fn delete(address_domain: u32, index: felt252, id: felt252) {
     // NOTE: We leave the last element set as to not produce an unncessary state diff.
     let replace_item_value = storage::get(address_domain, build_index_key(index, replace_item_idx));
     storage::set(address_domain, build_index_key(index, delete_item_idx), replace_item_value);
+
+
+    let keys_key = build_index_item_keys(index, id);
+    let len = (*storage::get_many(address_domain, keys_key, 0, 1).at(0)).try_into().unwrap();
+    let end_keys: u32 = len + len + 1;
+    let pos_and_keys = storage::get_many(address_domain, keys_key, 1, end_keys);
+
+
+    let mut idx: u32 = 0;
+    loop {
+        if idx == len {
+            break ();
+        }
+        delete_key(address_domain, index, id, *pos_and_keys.at(idx + 1), *pos_and_keys.at(idx + len + 1));
+        idx += 1;
+    };
 }
 
 fn exists(address_domain: u32, index: felt252, id: felt252) -> bool {
