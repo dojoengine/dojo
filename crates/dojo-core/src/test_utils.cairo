@@ -37,15 +37,5 @@ fn spawn_test_world(components: Array<felt252>, systems: Array<felt252>) -> IWor
         index += 1;
     };
 
-    // register systems
-    let mut index = 0;
-    loop {
-        if index == systems.len() {
-            break ();
-        }
-        world.register_system((*systems[index]).try_into().unwrap());
-        index += 1;
-    };
-
     world
 }

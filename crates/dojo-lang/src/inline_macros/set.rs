@@ -77,7 +77,7 @@ impl InlineMacroExprPlugin for SetMacro {
         for entity in bundle {
             builder.add_str(&format!(
                 "\n            let __set_macro_value__ = {};
-                {}.set_entity(dojo::component::Component::name(@__set_macro_value__), \
+                {}.set_entity('system', dojo::component::Component::name(@__set_macro_value__), \
                  dojo::component::Component::keys(@__set_macro_value__), 0_u8, \
                  dojo::component::Component::values(@__set_macro_value__));",
                 entity,
