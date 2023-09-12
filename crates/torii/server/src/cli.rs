@@ -47,6 +47,15 @@ struct Args {
     /// Specify a block to start indexing from, ignored if stored head exists
     #[arg(short, long, default_value = "0")]
     start_block: u64,
+    /// Host address for GraphQL/gRPC endpoints
+    #[arg(long, default_value = "0.0.0.0")]
+    host: String,
+    /// Port number for GraphQL endpoint
+    #[arg(long, default_value = "8080")]
+    graphql_port: u16,
+    /// Port number for gRPC endpoint
+    #[arg(long, default_value = "50051")]
+    grpc_port: u16,
 }
 
 #[tokio::main]
@@ -96,8 +105,8 @@ async fn main() -> anyhow::Result<()> {
 
     let indexer =
         Indexer::new(&state, &provider, processors, manifest, world_address, args.start_block);
-    let graphql = torii_graphql::server::start(pool.clone());
-    let grpc = torii_grpc::server::start(pool);
+    let graphql = torii_graphql::server::start(&args.host, args.graphql_port, &pool);
+    let grpc = torii_grpc::server::start(&args.host, args.grpc_port, &pool);
 
     tokio::select! {
         res = indexer.start() => {
