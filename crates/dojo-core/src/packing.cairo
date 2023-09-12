@@ -89,6 +89,11 @@ fn unpack_inner(
                 unpacking = *val;
                 unpacking_offset = size;
 
+                // If we are unpacking a full felt.
+                if (size == 251) {
+                    return Option::Some(unpacking);
+                }
+
                 let val_256: u256 = (*val).into();
                 let result = val_256 & (shl(1, size) - 1);
                 return result.try_into();

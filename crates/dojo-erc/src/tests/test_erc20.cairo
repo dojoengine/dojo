@@ -123,7 +123,7 @@ fn test_transfer_from_doesnt_consume_infinite_allowance() {
     set_contract_address(SPENDER());
     assert(erc20.transfer_from(OWNER(), RECIPIENT(), VALUE), 'Should return true');
     assert(
-        erc20.allowance(OWNER(), SPENDER()) == ERC20::UNLIMITED_ALLOWANCE.into(),
+        erc20.allowance(OWNER(), SPENDER()) == BoundedInt::max(),
         'allowance should not change'
     );
 }

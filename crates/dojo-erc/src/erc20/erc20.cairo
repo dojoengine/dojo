@@ -108,6 +108,11 @@ mod ERC20 {
         ) -> u256 {
             let token = get_contract_address();
             let allowance = get!(self.world.read(), (token, owner, spender), Allowance);
+
+            if (allowance.amount == UNLIMITED_ALLOWANCE) {
+                return BoundedInt::max();
+            }
+
             allowance.amount.into()
         }
 
@@ -135,7 +140,6 @@ mod ERC20 {
             true
         }
     }
-
 
     //
     // Internal
@@ -179,8 +183,7 @@ mod ERC20 {
             ref self: ContractState, owner: ContractAddress, spender: ContractAddress, amount: u256
         ) {
             let current_allowance = ERC20::allowance(@self, owner, spender);
-
-            if current_allowance != UNLIMITED_ALLOWANCE.into() {
+            if current_allowance != BoundedInt::max() {
                 self._approve(owner, spender, current_allowance - amount);
             }
         }

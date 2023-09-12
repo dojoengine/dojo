@@ -267,3 +267,50 @@ fn test_pack_unpack_u256_single() {
     let output = serde::Serde::<u256>::deserialize(ref unpacked_span).unwrap();
     assert(input == output, 'invalid output');
 }
+
+#[test]
+#[available_gas(9000000)]
+fn test_pack_unpack_max_felt252() {
+    let MAX: felt252 = 3618502788666131213697322783095070105623107215331596699973092056135872020480;
+    let mut packed = array::ArrayTrait::new();
+    let mut packing: felt252 = 0;
+    let mut offset = 0;
+    pack_inner(@MAX, 251, ref packing, ref offset, ref packed);
+    packed.append(packing);
+
+    let mut unpacking: felt252 = packed.pop_front().unwrap();
+    let mut un_offset = 0;
+    let mut packed_span = packed.span();
+
+    assert(
+        unpack_inner(251, ref packed_span, ref unpacking, ref un_offset).unwrap() == MAX, 
+        'Types MAX'
+    );
+}
+
+#[test]
+#[available_gas(9000000)]
+fn test_pack_unpack_felt252_single() {
+    let input = 2000;
+    let mut unpacked = ArrayTrait::new();
+    input.serialize(ref unpacked);
+    let mut layout = ArrayTrait::new();
+    dojo::StorageLayout::<felt252>::layout(ref layout);
+    let mut layout_span = layout.span();
+
+    let mut unpacked_span = unpacked.span();
+
+    let mut packed = array::ArrayTrait::new();
+    pack(ref packed, ref unpacked_span, ref layout_span);
+
+    let mut layout = ArrayTrait::new();
+    dojo::StorageLayout::<felt252>::layout(ref layout);
+    let mut layout_span = layout.span();
+
+    let mut unpacked = array::ArrayTrait::new();
+    let mut packed_span = packed.span();
+    unpack(ref unpacked, ref packed_span, ref layout_span);
+    let mut unpacked_span = unpacked.span();
+    let output = serde::Serde::<felt252>::deserialize(ref unpacked_span).unwrap();
+    assert(input == output, 'invalid output');
+}
