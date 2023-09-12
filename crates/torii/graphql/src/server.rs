@@ -14,7 +14,7 @@ async fn graphiql() -> impl IntoResponse {
 }
 
 pub async fn start(host: &String, port: u16, pool: &Pool<Sqlite>) -> anyhow::Result<()> {
-    let schema = build_schema(&pool).await?;
+    let schema = build_schema(pool).await?;
 
     let app = Route::new()
         .at("/", get(graphiql).post(GraphQL::new(schema.clone())))
