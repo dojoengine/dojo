@@ -4,7 +4,7 @@ use camino::Utf8PathBuf;
 use dojo_types::component::Member;
 use dojo_world::manifest::{Component, System};
 use sqlx::sqlite::SqlitePool;
-use starknet::core::types::FieldElement;
+use starknet::core::types::{Event, FieldElement};
 
 use crate::sql::{Executable, Sql};
 use crate::State;
@@ -123,5 +123,24 @@ async fn test_load_from_manifest(pool: SqlitePool) {
         .await
         .unwrap();
 
+    state
+        .store_event(
+            &Event {
+                from_address: FieldElement::ONE,
+                keys: Vec::from([FieldElement::TWO]),
+                data: Vec::from([FieldElement::TWO, FieldElement::THREE]),
+            },
+            FieldElement::THREE,
+        )
+        .await
+        .unwrap();
+
     state.execute().await.unwrap();
+
+    let keys = format!("{:#x}/", FieldElement::TWO);
+    let query = format!("SELECT data, transaction_hash FROM events WHERE keys = '{}'", keys);
+    let (data, tx_hash): (String, String) = sqlx::query_as(&query).fetch_one(&pool).await.unwrap();
+
+    assert_eq!(data, format!("{:#x}/{:#x}/", FieldElement::TWO, FieldElement::THREE));
+    assert_eq!(tx_hash, format!("{:#x}", FieldElement::THREE))
 }

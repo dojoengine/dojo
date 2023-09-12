@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use dojo_world::manifest::{Component, Manifest, System};
 use serde::Deserialize;
 use sqlx::FromRow;
-use starknet::core::types::FieldElement;
+use starknet::core::types::{Event, FieldElement};
 
 use crate::types::SQLFieldElement;
 
@@ -49,4 +49,5 @@ pub trait State {
         tx_hash: FieldElement,
         calldata: &[FieldElement],
     ) -> Result<()>;
+    async fn store_event(&self, event: &Event, tx_hash: FieldElement) -> Result<()>;
 }

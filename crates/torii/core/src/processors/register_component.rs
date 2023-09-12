@@ -1,7 +1,7 @@
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
 use dojo_world::manifest::Component;
-use starknet::core::types::{BlockWithTxs, Event, TransactionReceipt};
+use starknet::core::types::{BlockWithTxs, Event, InvokeTransactionReceipt};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
 use tracing::info;
@@ -23,7 +23,7 @@ impl<S: State + Sync, T: JsonRpcTransport> EventProcessor<S, T> for RegisterComp
         storage: &S,
         _provider: &JsonRpcClient<T>,
         _block: &BlockWithTxs,
-        _transaction_receipt: &TransactionReceipt,
+        _invoke_receipt: &InvokeTransactionReceipt,
         event: &Event,
     ) -> Result<(), Error> {
         let name = parse_cairo_short_string(&event.data[0])?;
