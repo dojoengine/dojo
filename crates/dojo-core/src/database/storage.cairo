@@ -62,12 +62,12 @@ fn set_many(address_domain: u32, keys: Span<felt252>, offset: u8, mut value: Spa
 }
 
 
-trait StorageLayout<T> {
+trait StorageIntrospection<T> {
     fn size() -> usize;
     fn layout(ref layout: Array<u8>);
 }
 
-impl StorageLayoutFelt252 of StorageLayout<felt252> {
+impl StorageIntrospectionFelt252 of StorageIntrospection<felt252> {
     #[inline(always)]
     fn size() -> usize {
         1
@@ -80,7 +80,7 @@ impl StorageLayoutFelt252 of StorageLayout<felt252> {
     }
 }
 
-impl StorageLayoutBool of StorageLayout<bool> {
+impl StorageIntrospectionBool of StorageIntrospection<bool> {
     #[inline(always)]
     fn size() -> usize {
         1
@@ -92,7 +92,7 @@ impl StorageLayoutBool of StorageLayout<bool> {
     }
 }
 
-impl StorageLayoutU8 of StorageLayout<u8> {
+impl StorageIntrospectionU8 of StorageIntrospection<u8> {
     #[inline(always)]
     fn size() -> usize {
         1
@@ -104,7 +104,7 @@ impl StorageLayoutU8 of StorageLayout<u8> {
     }
 }
 
-impl StorageLayoutU16 of StorageLayout<u16> {
+impl StorageIntrospectionU16 of StorageIntrospection<u16> {
     #[inline(always)]
     fn size() -> usize {
         1
@@ -116,7 +116,7 @@ impl StorageLayoutU16 of StorageLayout<u16> {
     }
 }
 
-impl StorageLayoutU32 of StorageLayout<u32> {
+impl StorageIntrospectionU32 of StorageIntrospection<u32> {
     #[inline(always)]
     fn size() -> usize {
         1
@@ -128,7 +128,7 @@ impl StorageLayoutU32 of StorageLayout<u32> {
     }
 }
 
-impl StorageLayoutU64 of StorageLayout<u64> {
+impl StorageIntrospectionU64 of StorageIntrospection<u64> {
     #[inline(always)]
     fn size() -> usize {
         1
@@ -140,7 +140,7 @@ impl StorageLayoutU64 of StorageLayout<u64> {
     }
 }
 
-impl StorageLayoutU128 of StorageLayout<u128> {
+impl StorageIntrospectionU128 of StorageIntrospection<u128> {
     #[inline(always)]
     fn size() -> usize {
         1
@@ -152,7 +152,7 @@ impl StorageLayoutU128 of StorageLayout<u128> {
     }
 }
 
-impl StorageLayoutU256 of StorageLayout<u256> {
+impl StorageIntrospectionU256 of StorageIntrospection<u256> {
     #[inline(always)]
     fn size() -> usize {
         2
@@ -165,7 +165,7 @@ impl StorageLayoutU256 of StorageLayout<u256> {
     }
 }
 
-impl StorageLayoutContractAddress of StorageLayout<starknet::ContractAddress> {
+impl StorageIntrospectionContractAddress of StorageIntrospection<starknet::ContractAddress> {
     #[inline(always)]
     fn size() -> usize {
         1
@@ -177,7 +177,7 @@ impl StorageLayoutContractAddress of StorageLayout<starknet::ContractAddress> {
     }
 }
 
-impl StorageLayoutClassHash of StorageLayout<starknet::ClassHash> {
+impl StorageIntrospectionClassHash of StorageIntrospection<starknet::ClassHash> {
     #[inline(always)]
     fn size() -> usize {
         1

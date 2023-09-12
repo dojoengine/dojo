@@ -5,7 +5,7 @@ use integer::U256BitAnd;
 use option::OptionTrait;
 use debug::PrintTrait;
 use traits::{Into, TryInto};
-use dojo::StorageLayout;
+use dojo::StorageIntrospection;
 
 #[test]
 #[available_gas(9000000)]
@@ -248,7 +248,7 @@ fn test_pack_unpack_u256_single() {
     let mut unpacked = ArrayTrait::new();
     input.serialize(ref unpacked);
     let mut layout = ArrayTrait::new();
-    dojo::StorageLayout::<u256>::layout(ref layout);
+    dojo::StorageIntrospection::<u256>::layout(ref layout);
     let mut layout_span = layout.span();
 
     let mut unpacked_span = unpacked.span();
@@ -257,7 +257,7 @@ fn test_pack_unpack_u256_single() {
     pack(ref packed, ref unpacked_span, ref layout_span);
 
     let mut layout = ArrayTrait::new();
-    dojo::StorageLayout::<u256>::layout(ref layout);
+    dojo::StorageIntrospection::<u256>::layout(ref layout);
     let mut layout_span = layout.span();
 
     let mut unpacked = array::ArrayTrait::new();
@@ -295,7 +295,7 @@ fn test_pack_unpack_felt252_single() {
     let mut unpacked = ArrayTrait::new();
     input.serialize(ref unpacked);
     let mut layout = ArrayTrait::new();
-    dojo::StorageLayout::<felt252>::layout(ref layout);
+    dojo::StorageIntrospection::<felt252>::layout(ref layout);
     let mut layout_span = layout.span();
 
     let mut unpacked_span = unpacked.span();
@@ -304,7 +304,7 @@ fn test_pack_unpack_felt252_single() {
     pack(ref packed, ref unpacked_span, ref layout_span);
 
     let mut layout = ArrayTrait::new();
-    dojo::StorageLayout::<felt252>::layout(ref layout);
+    dojo::StorageIntrospection::<felt252>::layout(ref layout);
     let mut layout_span = layout.span();
 
     let mut unpacked = array::ArrayTrait::new();

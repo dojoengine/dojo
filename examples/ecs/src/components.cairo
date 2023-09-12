@@ -11,7 +11,7 @@ enum Direction {
     Down: (),
 }
 
-impl DirectionStorageLayoutImpl of dojo::StorageLayout<Direction> {
+impl DirectionStorageIntrospectionImpl of dojo::StorageIntrospection<Direction> {
     #[inline(always)]
     fn size() -> usize {
         1

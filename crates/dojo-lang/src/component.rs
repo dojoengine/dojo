@@ -75,7 +75,7 @@ pub fn handle_component_struct(
             }
 
             Some(RewriteNode::Text(format!(
-                "dojo::StorageLayout::<{}>::layout(ref layout);\n",
+                "dojo::StorageIntrospection::<{}>::layout(ref layout);\n",
                 m.ty
             )))
         })
@@ -132,7 +132,7 @@ pub fn handle_component_struct(
                 fn pack(self: @$type_name$) -> Span<felt252> {
                     let mut unpacked = ArrayTrait::new();
                     let mut layout = ArrayTrait::new();
-                    dojo::StorageLayout::<$type_name$>::layout(ref layout);
+                    dojo::StorageIntrospection::<$type_name$>::layout(ref layout);
 
                     let mut serialized = ArrayTrait::new();
                     $serialized_values$
@@ -146,13 +146,13 @@ pub fn handle_component_struct(
                 #[inline(always)]
                 fn unpack(ref unpacked: Array<felt252>, ref packed: Span<felt252>) {
                     let mut layout = ArrayTrait::new();
-                    dojo::StorageLayout::<$type_name$>::layout(ref layout);
+                    dojo::StorageIntrospection::<$type_name$>::layout(ref layout);
                     let mut layout_span = array::ArrayTrait::span(@layout);
                     dojo::packing::unpack(ref unpacked, ref packed, ref layout_span);
                 }
             }
 
-            impl $type_name$StorageLayout of dojo::StorageLayout<$type_name$> {
+            impl $type_name$StorageIntrospection of dojo::StorageIntrospection<$type_name$> {
                 #[inline(always)]
                 fn size() -> usize {
                     $size$
@@ -190,13 +190,13 @@ pub fn handle_component_struct(
 
                 #[external(v0)]
                 fn size(self: @ContractState) -> usize {
-                    dojo::StorageLayout::<$type_name$>::size()
+                    dojo::StorageIntrospection::<$type_name$>::size()
                 }
 
                 #[external(v0)]
                 fn layout(self: @ContractState) -> Span<u8> {
                     let mut layout = ArrayTrait::new();
-                    dojo::StorageLayout::<$type_name$>::layout(ref layout);
+                    dojo::StorageIntrospection::<$type_name$>::layout(ref layout);
                     array::ArrayTrait::span(@layout)
                 }
 
@@ -244,7 +244,7 @@ pub fn handle_component_struct(
                                 }
 
                                 Some(format!(
-                                    "dojo::StorageLayout::<{}>::size()",
+                                    "dojo::StorageIntrospection::<{}>::size()",
                                     member.type_clause(db).ty(db).as_syntax_node().get_text(db),
                                 ))
                             })

@@ -1,5 +1,5 @@
 mod database;
-use database::storage::StorageLayout;
+use database::storage::StorageIntrospection;
 #[cfg(test)]
 mod database_test;
 mod executor;
