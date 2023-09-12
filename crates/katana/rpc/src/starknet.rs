@@ -5,7 +5,7 @@ use jsonrpsee::core::{async_trait, Error};
 use katana_core::backend::contract::StarknetContract;
 use katana_core::backend::storage::transaction::{
     DeclareTransaction, DeployAccountTransaction, InvokeTransaction, KnownTransaction,
-    PendingTransaction, Transaction,
+    L1HandlerTransaction, PendingTransaction, Transaction,
 };
 use katana_core::backend::ExternalFunctionCall;
 use katana_core::sequencer::Sequencer;
@@ -21,7 +21,7 @@ use starknet::core::types::{
     ContractClass, DeclareTransactionResult, DeployAccountTransactionResult, EventFilterWithPage,
     EventsPage, FeeEstimate, FieldElement, FunctionCall, InvokeTransactionResult,
     MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, MaybePendingTransactionReceipt,
-    StateUpdate, Transaction as RpcTransaction,
+    MsgFromL1, StateUpdate, Transaction as RpcTransaction,
 };
 use starknet_api::core::{ClassHash, ContractAddress, EntryPointSelector, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};
@@ -62,11 +62,9 @@ where
             .nonce_at(block_id, ContractAddress(patricia_key!(contract_address)))
             .await
             .map_err(|e| match e {
-                SequencerError::StateNotFound(_) => Error::from(StarknetApiError::BlockNotFound),
-                SequencerError::ContractNotFound(_) => {
-                    Error::from(StarknetApiError::ContractNotFound)
-                }
-                _ => Error::from(StarknetApiError::InternalServerError),
+                SequencerError::StateNotFound(_) => StarknetApiError::BlockNotFound,
+                SequencerError::ContractNotFound(_) => StarknetApiError::ContractNotFound,
+                _ => StarknetApiError::UnexpectedError,
             })?;
 
         Ok(Felt(nonce.0.into()))
@@ -117,12 +115,7 @@ where
         &self,
         block_id: BlockId,
     ) -> Result<MaybePendingBlockWithTxHashes, Error> {
-        let block = self
-            .sequencer
-            .block(block_id)
-            .await
-            .ok_or(Error::from(StarknetApiError::BlockNotFound))?;
-
+        let block = self.sequencer.block(block_id).await.ok_or(StarknetApiError::BlockNotFound)?;
         Ok(block.into())
     }
 
@@ -131,28 +124,19 @@ where
         block_id: BlockId,
         index: usize,
     ) -> Result<RpcTransaction, Error> {
-        let block = self
-            .sequencer
-            .block(block_id)
-            .await
-            .ok_or(Error::from(StarknetApiError::BlockNotFound))?;
+        let block = self.sequencer.block(block_id).await.ok_or(StarknetApiError::BlockNotFound)?;
 
         let hash: FieldElement = block
             .transactions()
             .get(index)
             .map(|t| t.inner.hash())
-            .ok_or(Error::from(StarknetApiError::InvalidTxnIndex))?;
+            .ok_or(StarknetApiError::InvalidTxnIndex)?;
 
         self.transaction_by_hash(hash).await
     }
 
     async fn block_with_txs(&self, block_id: BlockId) -> Result<MaybePendingBlockWithTxs, Error> {
-        let block = self
-            .sequencer
-            .block(block_id)
-            .await
-            .ok_or(Error::from(StarknetApiError::BlockNotFound))?;
-
+        let block = self.sequencer.block(block_id).await.ok_or(StarknetApiError::BlockNotFound)?;
         Ok(block.into())
     }
 
@@ -160,7 +144,7 @@ where
         self.sequencer
             .state_update(block_id)
             .await
-            .map_err(|_| Error::from(StarknetApiError::BlockNotFound))
+            .map_err(|_| StarknetApiError::BlockNotFound.into())
     }
 
     async fn transaction_receipt(
@@ -170,7 +154,7 @@ where
         self.sequencer
             .transaction_receipt(&transaction_hash)
             .await
-            .ok_or(Error::from(StarknetApiError::TxnHashNotFound))
+            .ok_or(StarknetApiError::TxnHashNotFound.into())
     }
 
     async fn class_hash_at(
@@ -185,7 +169,7 @@ where
             .map_err(|e| match e {
                 SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
                 SequencerError::ContractNotFound(_) => StarknetApiError::ContractNotFound,
-                _ => StarknetApiError::InternalServerError,
+                _ => StarknetApiError::UnexpectedError,
             })?;
 
         Ok(Felt(class_hash.0.into()))
@@ -202,14 +186,14 @@ where
                 SequencerError::State(StateError::UndeclaredClassHash(_)) => {
                     StarknetApiError::ClassHashNotFound
                 }
-                _ => StarknetApiError::InternalServerError,
+                _ => StarknetApiError::UnexpectedError,
             },
         )?;
 
         match contract {
             StarknetContract::Legacy(c) => {
-                let contract = legacy_inner_to_rpc_class(c)
-                    .map_err(|_| StarknetApiError::InternalServerError)?;
+                let contract =
+                    legacy_inner_to_rpc_class(c).map_err(|_| StarknetApiError::UnexpectedError)?;
                 Ok(contract)
             }
             StarknetContract::Sierra(c) => Ok(ContractClass::Sierra(c)),
@@ -236,7 +220,7 @@ where
             .await
             .map_err(|e| match e {
                 SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
-                _ => StarknetApiError::InternalServerError,
+                _ => StarknetApiError::UnexpectedError,
             })?;
 
         Ok(events)
@@ -265,10 +249,10 @@ where
         };
 
         let res = self.sequencer.call(block_id, call).await.map_err(|e| match e {
-            SequencerError::BlockNotFound(_) => Error::from(StarknetApiError::BlockNotFound),
-            SequencerError::ContractNotFound(_) => Error::from(StarknetApiError::ContractNotFound),
-            SequencerError::EntryPointExecution(_) => Error::from(StarknetApiError::ContractError),
-            _ => Error::from(StarknetApiError::InternalServerError),
+            SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
+            SequencerError::ContractNotFound(_) => StarknetApiError::ContractNotFound,
+            SequencerError::EntryPointExecution(_) => StarknetApiError::ContractError,
+            _ => StarknetApiError::UnexpectedError,
         })?;
 
         let mut values = vec![];
@@ -295,9 +279,9 @@ where
             )
             .await
             .map_err(|e| match e {
-                SequencerError::StateNotFound(_) => Error::from(StarknetApiError::BlockNotFound),
-                SequencerError::State(_) => Error::from(StarknetApiError::ContractNotFound),
-                _ => Error::from(StarknetApiError::InternalServerError),
+                SequencerError::StateNotFound(_) => StarknetApiError::BlockNotFound,
+                SequencerError::State(_) => StarknetApiError::ContractNotFound,
+                _ => StarknetApiError::UnexpectedError,
             })?;
 
         Ok(Felt(value.into()))
@@ -308,7 +292,7 @@ where
         deploy_account_transaction: BroadcastedDeployAccountTransaction,
     ) -> Result<DeployAccountTransactionResult, Error> {
         let chain_id = FieldElement::from_hex_be(&self.sequencer.chain_id().await.as_hex())
-            .map_err(|_| Error::from(StarknetApiError::InternalServerError))?;
+            .map_err(|_| StarknetApiError::UnexpectedError)?;
 
         let (transaction, contract_address) =
             broadcasted_deploy_account_rpc_to_api_transaction(deploy_account_transaction, chain_id);
@@ -330,7 +314,7 @@ where
         block_id: BlockId,
     ) -> Result<Vec<FeeEstimate>, Error> {
         let chain_id = FieldElement::from_hex_be(&self.sequencer.chain_id().await.as_hex())
-            .map_err(|_| Error::from(StarknetApiError::InternalServerError))?;
+            .map_err(|_| StarknetApiError::UnexpectedError)?;
 
         let transactions = request
             .into_iter()
@@ -372,12 +356,42 @@ where
 
         let res =
             self.sequencer.estimate_fee(transactions, block_id).await.map_err(|e| match e {
-                SequencerError::BlockNotFound(_) => Error::from(StarknetApiError::BlockNotFound),
-                SequencerError::TransactionExecution(_) => {
-                    Error::from(StarknetApiError::ContractError)
-                }
-                _ => Error::from(StarknetApiError::InternalServerError),
+                SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
+                SequencerError::TransactionExecution(_) => StarknetApiError::ContractError,
+                _ => StarknetApiError::UnexpectedError,
             })?;
+
+        Ok(res)
+    }
+
+    async fn estimate_message_fee(
+        &self,
+        message: MsgFromL1,
+        block_id: BlockId,
+    ) -> Result<FeeEstimate, Error> {
+        let l1handler_tx = L1HandlerTransaction {
+            inner: starknet_api::transaction::L1HandlerTransaction {
+                contract_address: ContractAddress(patricia_key!(message.to_address)),
+                calldata: Calldata(Arc::new(
+                    message.payload.into_iter().map(|f| f.into()).collect(),
+                )),
+                entry_point_selector: EntryPointSelector(message.entry_point_selector.into()),
+                ..Default::default()
+            },
+            paid_l1_fee: 1,
+        };
+
+        let res = self
+            .sequencer
+            .estimate_fee(vec![Transaction::L1Handler(l1handler_tx)], block_id)
+            .await
+            .map_err(|e| match e {
+                SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
+                SequencerError::TransactionExecution(_) => StarknetApiError::ContractError,
+                _ => StarknetApiError::UnexpectedError,
+            })?
+            .pop()
+            .expect("should have estimate result");
 
         Ok(res)
     }
@@ -387,7 +401,7 @@ where
         declare_transaction: BroadcastedDeclareTransaction,
     ) -> Result<DeclareTransactionResult, Error> {
         let chain_id = FieldElement::from_hex_be(&self.sequencer.chain_id().await.as_hex())
-            .map_err(|_| Error::from(StarknetApiError::InternalServerError))?;
+            .map_err(|_| StarknetApiError::UnexpectedError)?;
 
         let sierra_class = match declare_transaction {
             BroadcastedDeclareTransaction::V2(ref tx) => Some(tx.contract_class.as_ref().clone()),
@@ -414,7 +428,7 @@ where
         invoke_transaction: BroadcastedInvokeTransaction,
     ) -> Result<InvokeTransactionResult, Error> {
         let chain_id = FieldElement::from_hex_be(&self.sequencer.chain_id().await.as_hex())
-            .map_err(|_| Error::from(StarknetApiError::InternalServerError))?;
+            .map_err(|_| StarknetApiError::UnexpectedError)?;
 
         let transaction = broadcasted_invoke_rpc_to_api_transaction(invoke_transaction, chain_id);
         let transaction_hash = transaction.transaction_hash().0.into();

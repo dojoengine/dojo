@@ -14,7 +14,9 @@ use blockifier::transaction::objects::AccountTransactionContext;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use parking_lot::RwLock;
-use starknet::core::types::{BlockId, BlockTag, FeeEstimate, MaybePendingBlockWithTxHashes};
+use starknet::core::types::{
+    BlockId, BlockTag, FeeEstimate, MaybePendingBlockWithTxHashes, TransactionFinalityStatus,
+};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
@@ -33,7 +35,7 @@ pub mod storage;
 
 use self::config::StarknetConfig;
 use self::storage::block::{Block, PartialHeader};
-use self::storage::transaction::{IncludedTransaction, Transaction, TransactionStatus};
+use self::storage::transaction::{IncludedTransaction, Transaction};
 use self::storage::{Blockchain, InMemoryBlockStates, Storage};
 use crate::accounts::{Account, DevAccountGenerator};
 use crate::backend::in_memory_db::MemDb;
@@ -107,6 +109,7 @@ impl Backend {
                 let mut state = ForkedDb::new(Arc::clone(&provider), forked_block_id);
 
                 trace!(
+                    target: "backend",
                     "forking chain `{}` at block {} from {}",
                     parse_cairo_short_string(&forked_chain_id).unwrap(),
                     block.block_number,
@@ -145,7 +148,7 @@ impl Backend {
                 .await
                 .load_state(init_state.clone())
                 .expect("failed to load initial state");
-            info!("Successfully loaded initial state");
+            info!(target: "backend", "Successfully loaded initial state");
         }
 
         let blockchain = Blockchain::new(storage);
@@ -222,7 +225,7 @@ impl Backend {
 
     /// Mines a new block based on the provided execution outcome.
     /// This method should only be called by the
-    /// [PendingBlockProducer](crate::service::PendingBlockProducer) when the node is running in
+    /// [IntervalBlockProducer](crate::service::IntervalBlockProducer) when the node is running in
     /// `interval` mining mode.
     pub async fn mine_pending_block(
         &self,
@@ -240,6 +243,9 @@ impl Backend {
     }
 
     pub async fn do_mine_block(&self, execution_outcome: ExecutionOutcome) -> MinedBlockOutcome {
+        // lock the state for the entire block mining process
+        let mut state = self.state.write().await;
+
         let partial_header = PartialHeader {
             gas_price: self.env.read().block.gas_price,
             number: self.env.read().block.block_number.0,
@@ -271,7 +277,7 @@ impl Backend {
                         block_number,
                         block_hash,
                         transaction: tx.clone(),
-                        status: TransactionStatus::AcceptedOnL2,
+                        finality_status: TransactionFinalityStatus::AcceptedOnL2,
                     }),
                 ),
 
@@ -283,20 +289,15 @@ impl Backend {
             self.blockchain.storage.write().transactions.insert(hash, tx);
         });
 
-        // get state diffs
-        let state_diff = convert_state_diff_to_rpc_state_diff(execution_outcome.state_diff.clone());
-
         // store block and the state diff
+        let state_diff = convert_state_diff_to_rpc_state_diff(execution_outcome.state_diff.clone());
         self.blockchain.append_block(block_hash, block.clone(), state_diff);
-
-        info!(target: "backend", "⛏️ Block {block_number} mined with {tx_count} transactions");
-
         // apply the pending state to the current state
-        let mut state = self.state.write().await;
         execution_outcome.apply_to(&mut *state);
-
         // store the current state
         self.states.write().await.insert(block_hash, state.as_ref_db());
+
+        info!(target: "backend", "⛏️ Block {block_number} mined with {tx_count} transactions");
 
         MinedBlockOutcome { block_number, transactions: execution_outcome.transactions }
     }
@@ -346,7 +347,7 @@ impl Backend {
         );
 
         if let Err(err) = &res {
-            warn!("Call error: {err:?}");
+            warn!(target: "backend", "Call error: {err:?}");
         }
 
         res

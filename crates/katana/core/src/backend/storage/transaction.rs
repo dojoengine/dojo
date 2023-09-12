@@ -6,40 +6,28 @@ use blockifier::transaction::transaction_execution::Transaction as ExecutionTran
 use blockifier::transaction::transactions::{
     DeclareTransaction as ExecutionDeclareTransaction,
     DeployAccountTransaction as ExecutionDeployAccountTransaction,
+    L1HandlerTransaction as ExecutionL1HandlerTransaction,
 };
 use starknet::core::types::{
     DeclareTransactionReceipt, DeployAccountTransactionReceipt, Event, FieldElement,
-    FlattenedSierraClass, InvokeTransactionReceipt, MsgToL1, PendingDeclareTransactionReceipt,
-    PendingDeployAccountTransactionReceipt, PendingInvokeTransactionReceipt,
+    FlattenedSierraClass, InvokeTransactionReceipt, L1HandlerTransactionReceipt, MsgToL1,
+    PendingDeclareTransactionReceipt, PendingDeployAccountTransactionReceipt,
+    PendingInvokeTransactionReceipt, PendingL1HandlerTransactionReceipt,
     PendingTransactionReceipt as RpcPendingTransactionReceipt, Transaction as RpcTransaction,
-    TransactionReceipt as RpcTransactionReceipt, TransactionStatus as RpcTransactionStatus,
+    TransactionFinalityStatus, TransactionReceipt as RpcTransactionReceipt,
 };
 use starknet_api::core::{ContractAddress, PatriciaKey};
 use starknet_api::hash::StarkHash;
 use starknet_api::patricia_key;
 use starknet_api::transaction::{
     DeclareTransaction as ApiDeclareTransaction,
-    DeployAccountTransaction as ApiDeployAccountTransaction,
-    InvokeTransaction as ApiInvokeTransaction, Transaction as ApiTransaction,
+    DeployAccountTransaction as ApiDeployAccountTransaction, Fee,
+    InvokeTransaction as ApiInvokeTransaction, L1HandlerTransaction as ApiL1HandlerTransaction,
+    Transaction as ApiTransaction,
 };
 
 use crate::execution::ExecutedTransaction;
 use crate::utils::transaction::api_to_rpc_transaction;
-
-/// The status of the transactions known to the sequencer.
-#[derive(Debug, Clone, Copy)]
-pub enum TransactionStatus {
-    /// Transaction executed unsuccessfully and thus was skipped.
-    Rejected,
-    /// When the transaction pass validation but encountered error during execution.
-    Reverted,
-    /// Transactions that have been included in the L2 block which have
-    /// passed both validation and execution.
-    AcceptedOnL2,
-    /// When the block of which the transaction is included in have been committed to the
-    /// L1 settlement layer.
-    AcceptedOnL1,
-}
 
 /// Represents all transactions that are known to the sequencer.
 #[derive(Debug, Clone)]
@@ -73,7 +61,7 @@ pub struct IncludedTransaction {
     pub block_number: u64,
     pub block_hash: FieldElement,
     pub transaction: Arc<ExecutedTransaction>,
-    pub status: TransactionStatus,
+    pub finality_status: TransactionFinalityStatus,
 }
 
 /// A transaction that is known to be rejected by the sequencer i.e.,
@@ -96,6 +84,7 @@ pub enum Transaction {
     Invoke(InvokeTransaction),
     Declare(DeclareTransaction),
     DeployAccount(DeployAccountTransaction),
+    L1Handler(L1HandlerTransaction),
 }
 
 impl Transaction {
@@ -103,6 +92,7 @@ impl Transaction {
         match self {
             Transaction::Invoke(tx) => tx.0.transaction_hash().0.into(),
             Transaction::Declare(tx) => tx.inner.transaction_hash().0.into(),
+            Transaction::L1Handler(tx) => tx.inner.transaction_hash.0.into(),
             Transaction::DeployAccount(tx) => tx.inner.transaction_hash.0.into(),
         }
     }
@@ -124,37 +114,59 @@ pub struct DeployAccountTransaction {
     pub contract_address: FieldElement,
 }
 
+#[derive(Debug, Clone)]
+pub struct L1HandlerTransaction {
+    pub inner: ApiL1HandlerTransaction,
+    pub paid_l1_fee: u128,
+}
+
 impl IncludedTransaction {
     pub fn receipt(&self) -> RpcTransactionReceipt {
         match &self.transaction.inner {
             Transaction::Invoke(_) => RpcTransactionReceipt::Invoke(InvokeTransactionReceipt {
-                status: self.status.into(),
                 block_hash: self.block_hash,
                 block_number: self.block_number,
+                finality_status: self.finality_status,
                 events: self.transaction.output.events.clone(),
+                execution_result: self.transaction.execution_result(),
                 messages_sent: self.transaction.output.messages_sent.clone(),
                 transaction_hash: self.transaction.inner.hash(),
                 actual_fee: self.transaction.execution_info.actual_fee.0.into(),
             }),
 
             Transaction::Declare(_) => RpcTransactionReceipt::Declare(DeclareTransactionReceipt {
-                status: self.status.into(),
                 block_hash: self.block_hash,
                 block_number: self.block_number,
+                finality_status: self.finality_status,
                 events: self.transaction.output.events.clone(),
                 transaction_hash: self.transaction.inner.hash(),
+                execution_result: self.transaction.execution_result(),
                 messages_sent: self.transaction.output.messages_sent.clone(),
                 actual_fee: self.transaction.execution_info.actual_fee.0.into(),
             }),
 
             Transaction::DeployAccount(tx) => {
                 RpcTransactionReceipt::DeployAccount(DeployAccountTransactionReceipt {
-                    status: self.status.into(),
                     block_hash: self.block_hash,
                     block_number: self.block_number,
                     contract_address: tx.contract_address,
+                    finality_status: self.finality_status,
                     events: self.transaction.output.events.clone(),
                     transaction_hash: self.transaction.inner.hash(),
+                    execution_result: self.transaction.execution_result(),
+                    messages_sent: self.transaction.output.messages_sent.clone(),
+                    actual_fee: self.transaction.execution_info.actual_fee.0.into(),
+                })
+            }
+
+            Transaction::L1Handler(_) => {
+                RpcTransactionReceipt::L1Handler(L1HandlerTransactionReceipt {
+                    block_hash: self.block_hash,
+                    block_number: self.block_number,
+                    finality_status: self.finality_status,
+                    events: self.transaction.output.events.clone(),
+                    transaction_hash: self.transaction.inner.hash(),
+                    execution_result: self.transaction.execution_result(),
                     messages_sent: self.transaction.output.messages_sent.clone(),
                     actual_fee: self.transaction.execution_info.actual_fee.0.into(),
                 })
@@ -170,6 +182,7 @@ impl PendingTransaction {
                 RpcPendingTransactionReceipt::Invoke(PendingInvokeTransactionReceipt {
                     events: self.0.output.events.clone(),
                     transaction_hash: self.0.inner.hash(),
+                    execution_result: self.0.execution_result(),
                     messages_sent: self.0.output.messages_sent.clone(),
                     actual_fee: self.0.execution_info.actual_fee.0.into(),
                 })
@@ -179,6 +192,7 @@ impl PendingTransaction {
                 RpcPendingTransactionReceipt::Declare(PendingDeclareTransactionReceipt {
                     events: self.0.output.events.clone(),
                     transaction_hash: self.0.inner.hash(),
+                    execution_result: self.0.execution_result(),
                     messages_sent: self.0.output.messages_sent.clone(),
                     actual_fee: self.0.execution_info.actual_fee.0.into(),
                 })
@@ -188,32 +202,21 @@ impl PendingTransaction {
                 PendingDeployAccountTransactionReceipt {
                     events: self.0.output.events.clone(),
                     transaction_hash: self.0.inner.hash(),
+                    execution_result: self.0.execution_result(),
                     messages_sent: self.0.output.messages_sent.clone(),
                     actual_fee: self.0.execution_info.actual_fee.0.into(),
                 },
             ),
-        }
-    }
-}
 
-impl KnownTransaction {
-    pub fn status(&self) -> TransactionStatus {
-        match self {
-            KnownTransaction::Pending(_) => TransactionStatus::AcceptedOnL2,
-            KnownTransaction::Rejected(_) => TransactionStatus::Rejected,
-            KnownTransaction::Included(tx) => tx.status,
-        }
-    }
-}
-
-impl From<TransactionStatus> for RpcTransactionStatus {
-    fn from(status: TransactionStatus) -> Self {
-        match status {
-            TransactionStatus::AcceptedOnL2 => RpcTransactionStatus::AcceptedOnL2,
-            TransactionStatus::AcceptedOnL1 => RpcTransactionStatus::AcceptedOnL1,
-            TransactionStatus::Rejected => RpcTransactionStatus::Rejected,
-            // TODO: change this to `REVERTED` once the status is implemented in `starknet-rs`
-            TransactionStatus::Reverted => RpcTransactionStatus::AcceptedOnL2,
+            Transaction::L1Handler(_) => {
+                RpcPendingTransactionReceipt::L1Handler(PendingL1HandlerTransactionReceipt {
+                    events: self.0.output.events.clone(),
+                    transaction_hash: self.0.inner.hash(),
+                    execution_result: self.0.execution_result(),
+                    messages_sent: self.0.output.messages_sent.clone(),
+                    actual_fee: self.0.execution_info.actual_fee.0.into(),
+                })
+            }
         }
     }
 }
@@ -253,31 +256,39 @@ impl From<Transaction> for ApiTransaction {
         match value {
             Transaction::Invoke(tx) => ApiTransaction::Invoke(tx.0),
             Transaction::Declare(tx) => ApiTransaction::Declare(tx.inner),
+            Transaction::L1Handler(tx) => ApiTransaction::L1Handler(tx.inner),
             Transaction::DeployAccount(tx) => ApiTransaction::DeployAccount(tx.inner),
-        }
-    }
-}
-
-impl From<Transaction> for AccountTransaction {
-    fn from(value: Transaction) -> Self {
-        match value {
-            Transaction::Invoke(tx) => AccountTransaction::Invoke(tx.0),
-            Transaction::Declare(tx) => AccountTransaction::Declare(
-                ExecutionDeclareTransaction::new(tx.inner, tx.compiled_class)
-                    .expect("declare tx must have valid compiled class"),
-            ),
-            Transaction::DeployAccount(tx) => {
-                AccountTransaction::DeployAccount(ExecutionDeployAccountTransaction {
-                    tx: tx.inner,
-                    contract_address: ContractAddress(patricia_key!(tx.contract_address)),
-                })
-            }
         }
     }
 }
 
 impl From<Transaction> for ExecutionTransaction {
     fn from(value: Transaction) -> Self {
-        ExecutionTransaction::AccountTransaction(value.into())
+        match value {
+            Transaction::Invoke(tx) => {
+                ExecutionTransaction::AccountTransaction(AccountTransaction::Invoke(tx.0))
+            }
+
+            Transaction::Declare(tx) => {
+                ExecutionTransaction::AccountTransaction(AccountTransaction::Declare(
+                    ExecutionDeclareTransaction::new(tx.inner, tx.compiled_class)
+                        .expect("declare tx must have valid compiled class"),
+                ))
+            }
+
+            Transaction::DeployAccount(tx) => ExecutionTransaction::AccountTransaction(
+                AccountTransaction::DeployAccount(ExecutionDeployAccountTransaction {
+                    tx: tx.inner,
+                    contract_address: ContractAddress(patricia_key!(tx.contract_address)),
+                }),
+            ),
+
+            Transaction::L1Handler(tx) => {
+                ExecutionTransaction::L1HandlerTransaction(ExecutionL1HandlerTransaction {
+                    tx: tx.inner,
+                    paid_fee_on_l1: Fee(tx.paid_l1_fee),
+                })
+            }
+        }
     }
 }

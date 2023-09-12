@@ -21,7 +21,7 @@ use crate::backend::contract::StarknetContract;
 use crate::backend::storage::block::{ExecutedBlock, PartialBlock, PartialHeader};
 use crate::backend::storage::transaction::{
     DeclareTransaction, DeployAccountTransaction, InvokeTransaction, KnownTransaction,
-    PendingTransaction, Transaction, TransactionStatus,
+    PendingTransaction, Transaction,
 };
 use crate::backend::{Backend, ExternalFunctionCall};
 use crate::db::{AsStateRefDb, StateExtRef, StateRefDb};
@@ -54,8 +54,6 @@ pub trait Sequencer {
         &self,
         hash: &FieldElement,
     ) -> Option<MaybePendingTransactionReceipt>;
-
-    async fn transaction_status(&self, hash: &FieldElement) -> Option<TransactionStatus>;
 
     async fn nonce_at(
         &self,
@@ -388,26 +386,6 @@ impl Sequencer for KatanaSequencer {
             .call(function_call, state)
             .map_err(SequencerError::EntryPointExecution)
             .map(|execution_info| execution_info.execution.retdata.0)
-    }
-
-    async fn transaction_status(&self, hash: &FieldElement) -> Option<TransactionStatus> {
-        let tx = self.backend.blockchain.storage.read().transactions.get(hash).cloned();
-        match tx {
-            Some(tx) => Some(tx.status()),
-            // If the requested transaction is not available in the storage then
-            // check if it is available in the pending block.
-            None => self.pending_state().as_ref().and_then(|state| {
-                state.executed_transactions.read().iter().find_map(|tx| match tx {
-                    MaybeInvalidExecutedTransaction::Valid(tx) if tx.inner.hash() == *hash => {
-                        Some(TransactionStatus::AcceptedOnL2)
-                    }
-                    MaybeInvalidExecutedTransaction::Invalid(tx) if tx.inner.hash() == *hash => {
-                        Some(TransactionStatus::Rejected)
-                    }
-                    _ => None,
-                })
-            }),
-        }
     }
 
     async fn transaction_receipt(

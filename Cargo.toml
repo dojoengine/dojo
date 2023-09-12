@@ -62,7 +62,6 @@ flate2 = "1.0.24"
 futures = "0.3.28"
 indoc = "1.0.7"
 itertools = "0.10.3"
-log = "0.4.17"
 num-bigint = "0.4"
 parking_lot = "0.12.1"
 once_cell = "1.0"
@@ -76,8 +75,8 @@ serde = { version = "1.0.156", features = [ "derive" ] }
 serde_json = "1.0"
 serde_with = "2.3.1"
 smol_str = { version = "0.2.0", features = [ "serde" ] }
-starknet = "0.5.0"
-starknet-crypto = "0.5.1"
+starknet = "0.6.0"
+starknet-crypto = "0.6.0"
 starknet_api = { git = "https://github.com/starkware-libs/starknet-api", rev = "ecc9b6946ef13003da202838e4124a9ad2efabb0" }
 test-log = "0.2.11"
 thiserror = "1.0.32"

@@ -13,7 +13,7 @@ use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
     BlockId, BlockTag, DeclareTransactionReceipt, FieldElement, FlattenedSierraClass,
-    MaybePendingTransactionReceipt, TransactionReceipt, TransactionStatus,
+    MaybePendingTransactionReceipt, TransactionFinalityStatus, TransactionReceipt,
 };
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::providers::Provider;
@@ -37,9 +37,9 @@ async fn test_send_declare_and_deploy_contract() {
 
     match receipt {
         MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Declare(
-            DeclareTransactionReceipt { status, .. },
+            DeclareTransactionReceipt { finality_status, .. },
         )) => {
-            assert_eq!(status, TransactionStatus::AcceptedOnL2);
+            assert_eq!(finality_status, TransactionFinalityStatus::AcceptedOnL2);
         }
         _ => panic!("invalid tx receipt"),
     }
@@ -116,9 +116,9 @@ async fn test_send_declare_and_deploy_legacy_contract() {
 
     match receipt {
         MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Declare(
-            DeclareTransactionReceipt { status, .. },
+            DeclareTransactionReceipt { finality_status, .. },
         )) => {
-            assert_eq!(status, TransactionStatus::AcceptedOnL2);
+            assert_eq!(finality_status, TransactionFinalityStatus::AcceptedOnL2);
         }
         _ => panic!("invalid tx receipt"),
     }

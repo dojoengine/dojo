@@ -23,7 +23,6 @@ clap_complete.workspace = true
 console.workspace = true
 dojo-lang = { path = "../dojo-lang" }
 dojo-world = { path = "../dojo-world" }
-log.workspace = true
 scarb-ui.workspace = true
 scarb.workspace = true
 semver.workspace = true

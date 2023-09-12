@@ -12,7 +12,7 @@ use blockifier::transaction::transaction_execution::Transaction as ExecutionTran
 use blockifier::transaction::transactions::ExecutableTransaction;
 use convert_case::{Case, Casing};
 use parking_lot::RwLock;
-use starknet::core::types::{Event, FieldElement, FlattenedSierraClass, MsgToL1};
+use starknet::core::types::{Event, ExecutionResult, FieldElement, FlattenedSierraClass, MsgToL1};
 use starknet_api::core::ClassHash;
 use tracing::{trace, warn};
 
@@ -237,6 +237,14 @@ impl ExecutedTransaction {
             execution_info,
             inner: transaction,
             output: TransactionOutput { actual_fee, events, messages_sent },
+        }
+    }
+
+    pub fn execution_result(&self) -> ExecutionResult {
+        if let Some(ref revert_err) = self.execution_info.revert_error {
+            ExecutionResult::Reverted { reason: revert_err.clone() }
+        } else {
+            ExecutionResult::Succeeded
         }
     }
 }
