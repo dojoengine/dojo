@@ -75,23 +75,23 @@ pub fn handle_component_struct(
             }
 
             Some(RewriteNode::Text(format!(
-                "dojo::StorageIntrospection::<{}>::layout(ref layout);\n",
+                "dojo::SchemaIntrospection::<{}>::layout(ref layout);\n",
                 m.ty
             )))
         })
         .collect::<_>();
 
-    let schema = members
+    let schema: Vec<_> = members
         .iter()
-        .map(|m| {
-            RewriteNode::interpolate_patched(
-                "array::ArrayTrait::append(ref arr, ('$name$', '$typ$', $is_key$));",
-                UnorderedHashMap::from([
-                    ("name".to_string(), RewriteNode::Text(m.name.to_string())),
-                    ("typ".to_string(), RewriteNode::Text(m.ty.to_string())),
-                    ("is_key".to_string(), RewriteNode::Text(m.key.to_string())),
-                ]),
-            )
+        .filter_map(|m| {
+            if m.key {
+                return None;
+            }
+
+            Some(RewriteNode::Text(format!(
+                "dojo::SchemaIntrospection::<{}>::schema(ref schema);\n",
+                m.ty
+            )))
         })
         .collect::<_>();
 
@@ -132,7 +132,7 @@ pub fn handle_component_struct(
                 fn pack(self: @$type_name$) -> Span<felt252> {
                     let mut unpacked = ArrayTrait::new();
                     let mut layout = ArrayTrait::new();
-                    dojo::StorageIntrospection::<$type_name$>::layout(ref layout);
+                    dojo::SchemaIntrospection::<$type_name$>::layout(ref layout);
 
                     let mut serialized = ArrayTrait::new();
                     $serialized_values$
@@ -146,13 +146,13 @@ pub fn handle_component_struct(
                 #[inline(always)]
                 fn unpack(ref unpacked: Array<felt252>, ref packed: Span<felt252>) {
                     let mut layout = ArrayTrait::new();
-                    dojo::StorageIntrospection::<$type_name$>::layout(ref layout);
+                    dojo::SchemaIntrospection::<$type_name$>::layout(ref layout);
                     let mut layout_span = array::ArrayTrait::span(@layout);
                     dojo::packing::unpack(ref unpacked, ref packed, ref layout_span);
                 }
             }
 
-            impl $type_name$StorageIntrospection of dojo::StorageIntrospection<$type_name$> {
+            impl $type_name$SchemaIntrospection of dojo::SchemaIntrospection<$type_name$> {
                 #[inline(always)]
                 fn size() -> usize {
                     $size$
@@ -161,6 +161,11 @@ pub fn handle_component_struct(
                 #[inline(always)]
                 fn layout(ref layout: Array<u8>) {
                     $layout$
+                }
+
+                #[inline(always)]
+                fn schema(ref schema: Array<dojo::Member>) {
+                    $schema$
                 }
             }
 
@@ -190,21 +195,21 @@ pub fn handle_component_struct(
 
                 #[external(v0)]
                 fn size(self: @ContractState) -> usize {
-                    dojo::StorageIntrospection::<$type_name$>::size()
+                    dojo::SchemaIntrospection::<$type_name$>::size()
                 }
 
                 #[external(v0)]
                 fn layout(self: @ContractState) -> Span<u8> {
                     let mut layout = ArrayTrait::new();
-                    dojo::StorageIntrospection::<$type_name$>::layout(ref layout);
+                    dojo::SchemaIntrospection::<$type_name$>::layout(ref layout);
                     array::ArrayTrait::span(@layout)
                 }
 
                 #[external(v0)]
-                fn schema(self: @ContractState) -> Array<(felt252, felt252, bool)> {
-                    let mut arr = array::ArrayTrait::new();
-                    $schema$
-                    arr
+                fn schema(self: @ContractState) -> Span<dojo::Member> {
+                    let mut schema = ArrayTrait::new();
+                    dojo::SchemaIntrospection::<$type_name$>::schema(ref schema);
+                    array::ArrayTrait::span(@schema)
                 }
             }
         ",
@@ -244,7 +249,7 @@ pub fn handle_component_struct(
                                 }
 
                                 Some(format!(
-                                    "dojo::StorageIntrospection::<{}>::size()",
+                                    "dojo::SchemaIntrospection::<{}>::size()",
                                     member.type_clause(db).ty(db).as_syntax_node().get_text(db),
                                 ))
                             })

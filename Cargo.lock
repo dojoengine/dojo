@@ -1754,6 +1754,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf4c2f4e1afd912bc40bfd6fed5d9dc1f288e0ba01bfcc835cc5bc3eb13efe15"
 dependencies = [
  "generic-array",
+ "rand_core",
  "subtle",
  "zeroize",
 ]
@@ -6767,6 +6768,7 @@ dependencies = [
  "async-std",
  "async-trait",
  "camino",
+ "crypto-bigint",
  "dojo-test-utils",
  "dojo-types",
  "dojo-world",

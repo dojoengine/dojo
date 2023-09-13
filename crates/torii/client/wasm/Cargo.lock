@@ -375,6 +375,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf4c2f4e1afd912bc40bfd6fed5d9dc1f288e0ba01bfcc835cc5bc3eb13efe15"
 dependencies = [
  "generic-array",
+ "rand_core",
  "subtle",
  "zeroize",
 ]
@@ -1913,6 +1914,7 @@ version = "0.2.1"
 dependencies = [
  "async-std",
  "async-trait",
+ "crypto-bigint",
  "dojo-types",
  "js-sys",
  "parking_lot",

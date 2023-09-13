@@ -61,13 +61,19 @@ fn set_many(address_domain: u32, keys: Span<felt252>, offset: u8, mut value: Spa
     };
 }
 
-
-trait StorageIntrospection<T> {
-    fn size() -> usize;
-    fn layout(ref layout: Array<u8>);
+#[derive(Copy, Drop, Serde)]
+struct Member {
+    name: felt252,
+    ty: felt252
 }
 
-impl StorageIntrospectionFelt252 of StorageIntrospection<felt252> {
+trait SchemaIntrospection<T> {
+    fn size() -> usize;
+    fn layout(ref layout: Array<u8>);
+    fn schema(ref schema: Array<Member>);
+}
+
+impl SchemaIntrospectionFelt252 of SchemaIntrospection<felt252> {
     #[inline(always)]
     fn size() -> usize {
         1
@@ -78,9 +84,17 @@ impl StorageIntrospectionFelt252 of StorageIntrospection<felt252> {
         // We round down felt252 since it is 251 < felt252 < 252
         layout.append(251);
     }
+
+    #[inline(always)]
+    fn schema(ref schema: Array<Member>) {
+        Member {
+            name: '-',
+            ty: 'felt252'
+        };
+    }
 }
 
-impl StorageIntrospectionBool of StorageIntrospection<bool> {
+impl SchemaIntrospectionBool of SchemaIntrospection<bool> {
     #[inline(always)]
     fn size() -> usize {
         1
@@ -90,9 +104,17 @@ impl StorageIntrospectionBool of StorageIntrospection<bool> {
     fn layout(ref layout: Array<u8>) {
         layout.append(1);
     }
+
+    #[inline(always)]
+    fn schema(ref schema: Array<Member>) {
+        Member {
+            name: '-',
+            ty: 'bool'
+        };
+    }
 }
 
-impl StorageIntrospectionU8 of StorageIntrospection<u8> {
+impl SchemaIntrospectionU8 of SchemaIntrospection<u8> {
     #[inline(always)]
     fn size() -> usize {
         1
@@ -102,9 +124,17 @@ impl StorageIntrospectionU8 of StorageIntrospection<u8> {
     fn layout(ref layout: Array<u8>) {
         layout.append(8);
     }
+
+    #[inline(always)]
+    fn schema(ref schema: Array<Member>) {
+        Member {
+            name: '-',
+            ty: 'u8'
+        };
+    }
 }
 
-impl StorageIntrospectionU16 of StorageIntrospection<u16> {
+impl SchemaIntrospectionU16 of SchemaIntrospection<u16> {
     #[inline(always)]
     fn size() -> usize {
         1
@@ -114,9 +144,17 @@ impl StorageIntrospectionU16 of StorageIntrospection<u16> {
     fn layout(ref layout: Array<u8>) {
         layout.append(16);
     }
+
+    #[inline(always)]
+    fn schema(ref schema: Array<Member>) {
+        Member {
+            name: '-',
+            ty: 'u16'
+        };
+    }
 }
 
-impl StorageIntrospectionU32 of StorageIntrospection<u32> {
+impl SchemaIntrospectionU32 of SchemaIntrospection<u32> {
     #[inline(always)]
     fn size() -> usize {
         1
@@ -126,9 +164,17 @@ impl StorageIntrospectionU32 of StorageIntrospection<u32> {
     fn layout(ref layout: Array<u8>) {
         layout.append(32);
     }
+
+    #[inline(always)]
+    fn schema(ref schema: Array<Member>) {
+        Member {
+            name: '-',
+            ty: 'u32'
+        };
+    }
 }
 
-impl StorageIntrospectionU64 of StorageIntrospection<u64> {
+impl SchemaIntrospectionU64 of SchemaIntrospection<u64> {
     #[inline(always)]
     fn size() -> usize {
         1
@@ -138,9 +184,17 @@ impl StorageIntrospectionU64 of StorageIntrospection<u64> {
     fn layout(ref layout: Array<u8>) {
         layout.append(64);
     }
+
+    #[inline(always)]
+    fn schema(ref schema: Array<Member>) {
+        Member {
+            name: '-',
+            ty: 'u64'
+        };
+    }
 }
 
-impl StorageIntrospectionU128 of StorageIntrospection<u128> {
+impl SchemaIntrospectionU128 of SchemaIntrospection<u128> {
     #[inline(always)]
     fn size() -> usize {
         1
@@ -150,9 +204,17 @@ impl StorageIntrospectionU128 of StorageIntrospection<u128> {
     fn layout(ref layout: Array<u8>) {
         layout.append(128);
     }
+
+    #[inline(always)]
+    fn schema(ref schema: Array<Member>) {
+        Member {
+            name: '-',
+            ty: 'u128'
+        };
+    }
 }
 
-impl StorageIntrospectionU256 of StorageIntrospection<u256> {
+impl SchemaIntrospectionU256 of SchemaIntrospection<u256> {
     #[inline(always)]
     fn size() -> usize {
         2
@@ -163,9 +225,17 @@ impl StorageIntrospectionU256 of StorageIntrospection<u256> {
         layout.append(128);
         layout.append(128);
     }
+
+    #[inline(always)]
+    fn schema(ref schema: Array<Member>) {
+        Member {
+            name: '-',
+            ty: 'u256'
+        };
+    }
 }
 
-impl StorageIntrospectionContractAddress of StorageIntrospection<starknet::ContractAddress> {
+impl SchemaIntrospectionContractAddress of SchemaIntrospection<starknet::ContractAddress> {
     #[inline(always)]
     fn size() -> usize {
         1
@@ -175,9 +245,17 @@ impl StorageIntrospectionContractAddress of StorageIntrospection<starknet::Contr
     fn layout(ref layout: Array<u8>) {
         layout.append(251);
     }
+
+    #[inline(always)]
+    fn schema(ref schema: Array<Member>) {
+        Member {
+            name: '-',
+            ty: 'starknet::ContractAddress'
+        };
+    }
 }
 
-impl StorageIntrospectionClassHash of StorageIntrospection<starknet::ClassHash> {
+impl SchemaIntrospectionClassHash of SchemaIntrospection<starknet::ClassHash> {
     #[inline(always)]
     fn size() -> usize {
         1
@@ -186,5 +264,13 @@ impl StorageIntrospectionClassHash of StorageIntrospection<starknet::ClassHash> 
     #[inline(always)]
     fn layout(ref layout: Array<u8>) {
         layout.append(251);
+    }
+
+    #[inline(always)]
+    fn schema(ref schema: Array<Member>) {
+        Member {
+            name: '-',
+            ty: 'starknet::ClassHash'
+        };
     }
 }

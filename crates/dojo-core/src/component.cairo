@@ -9,7 +9,7 @@ trait Component<T> {
 trait IComponent<T> {
     fn name(self: @T) -> felt252;
     fn layout(self: @T) -> Span<felt252>;
-    fn schema(self: @T) -> Array<(felt252, felt252, bool)>;
+    fn schema(self: @T) -> Span<dojo::Member>;
 }
 
 #[starknet::interface]

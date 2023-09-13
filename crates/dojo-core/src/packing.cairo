@@ -3,6 +3,7 @@ use array::{ArrayTrait, SpanTrait};
 use traits::{Into, TryInto};
 use integer::{U256BitAnd, U256BitOr, U256BitXor, upcast, downcast, BoundedInt};
 use option::OptionTrait;
+use debug::PrintTrait;
 
 fn pack(ref packed: Array<felt252>, ref unpacked: Span<felt252>, ref layout: Span<u8>) {
     assert(unpacked.len() == layout.len(), 'mismatched input lens');

@@ -1,5 +1,6 @@
 mod database;
-use database::storage::StorageIntrospection;
+use database::storage::SchemaIntrospection;
+use database::storage::Member;
 #[cfg(test)]
 mod database_test;
 mod executor;

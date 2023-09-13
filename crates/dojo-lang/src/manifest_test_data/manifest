@@ -626,7 +626,7 @@ test_manifest_file
         }
       ],
       "outputs": [],
-      "class_hash": "0x3e5131224ffc8d93a8918b816f498eff4d9edf7c65e22f76003e5570ff050e3",
+      "class_hash": "0x6e190e1b15d4c53ef245670c3239ed5c20a6527d6220f32e6c0c8a942a0f7e7",
       "dependencies": [],
       "abi": [
         {
@@ -705,7 +705,7 @@ test_manifest_file
         }
       ],
       "outputs": [],
-      "class_hash": "0x59df0f012228748ce054b25daec1a37674b9b65f83871119c8ae05e546581af",
+      "class_hash": "0x341fa0c075e73d28c136733b22c4e7b90bf137193f7d8cbb10bf26d8952ffe1",
       "dependencies": [],
       "abi": [
         {
@@ -963,7 +963,7 @@ test_manifest_file
           "key": false
         }
       ],
-      "class_hash": "0x503b314775888235a3575fd84cbb6a535e6f70db262c5fc4bdf9554e01b98cd",
+      "class_hash": "0x6a833c8d6fa79d76b86e320e08e3d34f8b9621c555ff452ab5e349ae1ee347c",
       "abi": [
         {
           "type": "function",
@@ -1009,16 +1009,26 @@ test_manifest_file
           "state_mutability": "view"
         },
         {
-          "type": "enum",
-          "name": "core::bool",
-          "variants": [
+          "type": "struct",
+          "name": "dojo::database::storage::Member",
+          "members": [
             {
-              "name": "False",
-              "type": "()"
+              "name": "name",
+              "type": "core::felt252"
             },
             {
-              "name": "True",
-              "type": "()"
+              "name": "ty",
+              "type": "core::felt252"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<dojo::database::storage::Member>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<dojo::database::storage::Member>"
             }
           ]
         },
@@ -1028,7 +1038,7 @@ test_manifest_file
           "inputs": [],
           "outputs": [
             {
-              "type": "core::array::Array::<(core::felt252, core::felt252, core::bool)>"
+              "type": "core::array::Span::<dojo::database::storage::Member>"
             }
           ],
           "state_mutability": "view"
@@ -1060,7 +1070,7 @@ test_manifest_file
           "key": false
         }
       ],
-      "class_hash": "0x53cb57ccb0cfe1a4642272ecedeb4b183d6f815bab90fef829b34d5ad6a2af4",
+      "class_hash": "0x33bfc7a386f2aa93167ff44561470d1160249f4b0afe7b667cc4fb8ae617ace",
       "abi": [
         {
           "type": "function",
@@ -1106,16 +1116,26 @@ test_manifest_file
           "state_mutability": "view"
         },
         {
-          "type": "enum",
-          "name": "core::bool",
-          "variants": [
+          "type": "struct",
+          "name": "dojo::database::storage::Member",
+          "members": [
             {
-              "name": "False",
-              "type": "()"
+              "name": "name",
+              "type": "core::felt252"
             },
             {
-              "name": "True",
-              "type": "()"
+              "name": "ty",
+              "type": "core::felt252"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<dojo::database::storage::Member>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<dojo::database::storage::Member>"
             }
           ]
         },
@@ -1125,7 +1145,7 @@ test_manifest_file
           "inputs": [],
           "outputs": [
             {
-              "type": "core::array::Array::<(core::felt252, core::felt252, core::bool)>"
+              "type": "core::array::Span::<dojo::database::storage::Member>"
             }
           ],
           "state_mutability": "view"

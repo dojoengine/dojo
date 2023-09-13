@@ -1,5 +1,6 @@
 use std::vec;
 
+use crypto_bigint::U256;
 use dojo_types::component::Member;
 use starknet::core::types::{BlockId, FieldElement, FunctionCall};
 use starknet::core::utils::{
@@ -28,6 +29,8 @@ pub enum ComponentError<P> {
     CairoShortStringToFeltError(CairoShortStringToFeltError),
     #[error("Converting felt")]
     ConvertingFelt,
+    #[error("Unpacking entity")]
+    UnpackingEntity,
     #[error(transparent)]
     ContractReaderError(ContractReaderError<P>),
 }
@@ -115,17 +118,37 @@ impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
         Ok(res[2])
     }
 
+    pub async fn layout(
+        &self,
+        block_id: BlockId,
+    ) -> Result<Vec<FieldElement>, ComponentError<P::Error>> {
+        let entrypoint = get_selector_from_name("layout").unwrap();
+
+        let res = self
+            .world
+            .call(
+                "library_call",
+                vec![FieldElement::THREE, self.class_hash, entrypoint, FieldElement::ZERO],
+                block_id,
+            )
+            .await
+            .map_err(ComponentError::ContractReaderError)?;
+
+        Ok(res[3..].into())
+    }
+
     pub async fn entity(
         &self,
         keys: Vec<FieldElement>,
         block_id: BlockId,
     ) -> Result<Vec<FieldElement>, ComponentError<P::Error>> {
         let size: u8 = self.size(block_id).await?.try_into().unwrap();
+        let layout = self.layout(block_id).await?;
 
         let key = poseidon_hash_many(&keys);
         let key = poseidon_hash_many(&[short_string!("dojo_storage"), self.name, key]);
 
-        let mut values = vec![];
+        let mut packed = vec![];
         for slot in 0..size {
             let value = self
                 .world
@@ -134,9 +157,57 @@ impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
                 .await
                 .map_err(ComponentError::ProviderError)?;
 
-            values.push(value);
+            packed.push(value);
         }
 
-        Ok(values)
+        let unpacked = unpack::<P>(packed, layout)?;
+        println!("{:?}", unpacked);
+        Ok(unpacked)
     }
+}
+
+/// Unpacks a vector of packed values according to a given layout.
+///
+/// # Arguments
+///
+/// * `packed_values` - A vector of FieldElement values that are packed.
+/// * `layout` - A vector of FieldElement values that describe the layout of the packed values.
+///
+/// # Returns
+///
+/// * `Result<Vec<FieldElement>, ComponentError<P::Error>>` - A Result containing a vector of
+///   unpacked FieldElement values if successful, or an error if unsuccessful.
+pub fn unpack<P: Provider>(
+    mut packed: Vec<FieldElement>,
+    layout: Vec<FieldElement>,
+) -> Result<Vec<FieldElement>, ComponentError<P::Error>> {
+    packed.reverse();
+    let mut unpacked = vec![];
+
+    let mut unpacking: U256 = packed.pop().unwrap().as_ref().into();
+    let mut offset = 0;
+
+    // Iterate over the layout.
+    for size in layout {
+        let size: u8 = size.try_into().unwrap();
+        let size: usize = size.into();
+        let remaining_bits = 251 - offset;
+
+        // If there are less remaining bits than the size, move to the next felt for unpacking.
+        if remaining_bits < size {
+            unpacking = packed.pop().unwrap().as_ref().into();
+            offset = 0;
+        }
+
+        // Calculate the result and push it to the unpacked values.
+        let mask = U256::from(((1 << size) - 1) as u8);
+        let result = mask & (unpacking >> offset);
+        let result_fe = FieldElement::from_hex_be(&result.to_string()).unwrap();
+        unpacked.push(result_fe);
+
+        // Update unpacking to be the shifted value after extracting the result.
+        offset += size;
+    }
+
+    Ok(unpacked)
 }

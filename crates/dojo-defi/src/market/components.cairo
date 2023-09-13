@@ -6,7 +6,7 @@ use cubit::f128::types::fixed::Fixed;
 
 const SCALING_FACTOR: u128 = 10000;
 
-impl StorageIntrospectionFixed of StorageIntrospection<Fixed> {
+impl SchemaIntrospectionFixed of SchemaIntrospection<Fixed> {
     #[inline(always)]
     fn unpacked_size() -> usize {
         1

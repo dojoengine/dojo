@@ -11,7 +11,7 @@ enum Direction {
     Down: (),
 }
 
-impl DirectionStorageIntrospectionImpl of dojo::StorageIntrospection<Direction> {
+impl DirectionSchemaIntrospectionImpl of dojo::SchemaIntrospection<Direction> {
     #[inline(always)]
     fn size() -> usize {
         1
@@ -19,7 +19,15 @@ impl DirectionStorageIntrospectionImpl of dojo::StorageIntrospection<Direction> 
 
     #[inline(always)]
     fn layout(ref layout: Array<u8>) {
-        layout.append(3);
+        layout.append(8);
+    }
+
+    #[inline(always)]
+    fn schema(ref schema: Array<dojo::Member>) {
+        schema.append(dojo::Member {
+            name: '',
+            ty: 'Direction',
+        });
     }
 }
 

@@ -5,7 +5,7 @@ use integer::U256BitAnd;
 use option::OptionTrait;
 use debug::PrintTrait;
 use traits::{Into, TryInto};
-use dojo::StorageIntrospection;
+use dojo::SchemaIntrospection;
 
 #[test]
 #[available_gas(9000000)]
@@ -248,7 +248,7 @@ fn test_pack_unpack_u256_single() {
     let mut unpacked = ArrayTrait::new();
     input.serialize(ref unpacked);
     let mut layout = ArrayTrait::new();
-    dojo::StorageIntrospection::<u256>::layout(ref layout);
+    dojo::SchemaIntrospection::<u256>::layout(ref layout);
     let mut layout_span = layout.span();
 
     let mut unpacked_span = unpacked.span();
@@ -257,7 +257,7 @@ fn test_pack_unpack_u256_single() {
     pack(ref packed, ref unpacked_span, ref layout_span);
 
     let mut layout = ArrayTrait::new();
-    dojo::StorageIntrospection::<u256>::layout(ref layout);
+    dojo::SchemaIntrospection::<u256>::layout(ref layout);
     let mut layout_span = layout.span();
 
     let mut unpacked = array::ArrayTrait::new();
@@ -278,14 +278,12 @@ fn test_pack_unpack_max_felt252() {
     pack_inner(@MAX, 251, ref packing, ref offset, ref packed);
     packed.append(packing);
 
-    let mut unpacking: felt252 = packed.pop_front().unwrap();
-    let mut un_offset = 0;
+    let mut unpacking: felt252 = 0;
+    let mut offset = 251;
     let mut packed_span = packed.span();
 
-    assert(
-        unpack_inner(251, ref packed_span, ref unpacking, ref un_offset).unwrap() == MAX, 
-        'Types MAX'
-    );
+    let got = unpack_inner(251, ref packed_span, ref unpacking, ref offset).unwrap();
+    assert(got == MAX, 'Types MAX');
 }
 
 #[test]
@@ -295,7 +293,7 @@ fn test_pack_unpack_felt252_single() {
     let mut unpacked = ArrayTrait::new();
     input.serialize(ref unpacked);
     let mut layout = ArrayTrait::new();
-    dojo::StorageIntrospection::<felt252>::layout(ref layout);
+    dojo::SchemaIntrospection::<felt252>::layout(ref layout);
     let mut layout_span = layout.span();
 
     let mut unpacked_span = unpacked.span();
@@ -304,7 +302,7 @@ fn test_pack_unpack_felt252_single() {
     pack(ref packed, ref unpacked_span, ref layout_span);
 
     let mut layout = ArrayTrait::new();
-    dojo::StorageIntrospection::<felt252>::layout(ref layout);
+    dojo::SchemaIntrospection::<felt252>::layout(ref layout);
     let mut layout_span = layout.span();
 
     let mut unpacked = array::ArrayTrait::new();
