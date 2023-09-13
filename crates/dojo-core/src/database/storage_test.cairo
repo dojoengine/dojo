@@ -18,8 +18,8 @@ fn test_storage() {
     storage::set(0, keys.span(), *values.at(0));
     assert(storage::get(0, keys.span()) == *values.at(0), 'value not set');
 
-    storage::set_many(0, keys.span(), 0, values.span());
-    let res = storage::get_many(0, keys.span(), 0, 2);
+    storage::set_many(0, keys.span(), 0, values.span(), array![251, 251].span());
+    let res = storage::get_many(0, keys.span(), 0, 2, array![251, 251].span());
     assert(*res.at(0) == *values.at(0), 'value not set');
 }
 
@@ -28,7 +28,7 @@ fn test_storage() {
 fn test_storage_empty() {
     let mut keys = ArrayTrait::new();
     assert(storage::get(0, keys.span()) == 0x0, 'Value should be 0');
-    let many = storage::get_many(0, keys.span(), 0, 3);
+    let many = storage::get_many(0, keys.span(), 0, 3, array![251, 251, 251].span());
     assert(*many.at(0) == 0x0, 'Value should be 0');
     assert(*many.at(1) == 0x0, 'Value should be 0');
     assert(*many.at(2) == 0x0, 'Value should be 0');
@@ -38,15 +38,17 @@ fn test_storage_empty() {
 #[available_gas(100000000)]
 fn test_storage_get_many_length() {
     let mut keys = ArrayTrait::new();
+    let mut layout = array![];
     let mut i = 0_usize;
     loop {
         if i >= 30 {
             break;
         };
-        assert(storage::get_many(0, keys.span(), 0, i).len() == i, 'Values should be equal!');
+
+        layout.append(251);
+        assert(storage::get_many(0, keys.span(), 0, i, layout.span()).len() == i, 'Values should be equal!');
         i += 1;
     };
-    
 }
 
 #[test]
@@ -61,8 +63,8 @@ fn test_storage_set_many() {
     values.append(0x3);
     values.append(0x4);
 
-    storage::set_many(0, keys.span(), 0, values.span());
-    let many = storage::get_many(0, keys.span(), 0, 4);
+    storage::set_many(0, keys.span(), 0, values.span(), array![251, 251, 251, 251].span());
+    let many = storage::get_many(0, keys.span(), 0, 4, array![251, 251, 251, 251].span());
     assert(many.at(0) == values.at(0), 'Value at 0 not equal!');
     assert(many.at(1) == values.at(1), 'Value at 1 not equal!');
     assert(many.at(2) == values.at(2), 'Value at 2 not equal!');
@@ -81,12 +83,11 @@ fn test_storage_set_many_with_offset() {
     values.append(0x3);
     values.append(0x4);
 
-    storage::set_many(0, keys.span(), 1, values.span());
-    let many = storage::get_many(0, keys.span(), 0, 5);
+    storage::set_many(0, keys.span(), 1, values.span(), array![251, 251, 251, 251].span());
+    let many = storage::get_many(0, keys.span(), 0, 5, array![251, 251, 251, 251, 251].span());
     assert(*many.at(0) == 0x0, 'Value at 0 not equal!');
     assert(many.at(1) == values.at(0), 'Value at 1 not equal!');
     assert(many.at(2) == values.at(1), 'Value at 2 not equal!');
     assert(many.at(3) == values.at(2), 'Value at 3 not equal!');
     assert(many.at(4) == values.at(3), 'Value at 4 not equal!');
 }
-

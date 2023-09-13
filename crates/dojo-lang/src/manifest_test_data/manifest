@@ -8,7 +8,7 @@ test_manifest_file
   "world": {
     "name": "world",
     "address": null,
-    "class_hash": "0x2f857fd574c566f9bea8587569d016036377e028f0d47f6e31b4518ee605cd1",
+    "class_hash": "0x3f3bfd922a5e8d46f9182cd5b73d839159f1fc342347323df6edbebbc732449",
     "abi": [
       {
         "type": "impl",
@@ -22,6 +22,16 @@ test_manifest_file
           {
             "name": "snapshot",
             "type": "@core::array::Array::<core::felt252>"
+          }
+        ]
+      },
+      {
+        "type": "struct",
+        "name": "core::array::Span::<core::integer::u8>",
+        "members": [
+          {
+            "name": "snapshot",
+            "type": "@core::array::Array::<core::integer::u8>"
           }
         ]
       },
@@ -175,6 +185,10 @@ test_manifest_file
               {
                 "name": "length",
                 "type": "core::integer::u32"
+              },
+              {
+                "name": "layout",
+                "type": "core::array::Span::<core::integer::u8>"
               }
             ],
             "outputs": [
@@ -201,8 +215,12 @@ test_manifest_file
                 "type": "core::integer::u8"
               },
               {
-                "name": "value",
+                "name": "values",
                 "type": "core::array::Span::<core::felt252>"
+              },
+              {
+                "name": "layout",
+                "type": "core::array::Span::<core::integer::u8>"
               }
             ],
             "outputs": [],
@@ -223,6 +241,10 @@ test_manifest_file
               {
                 "name": "length",
                 "type": "core::integer::u32"
+              },
+              {
+                "name": "layout",
+                "type": "core::array::Span::<core::integer::u8>"
               }
             ],
             "outputs": [
@@ -481,7 +503,7 @@ test_manifest_file
             "kind": "data"
           },
           {
-            "name": "value",
+            "name": "values",
             "type": "core::array::Span::<core::felt252>",
             "kind": "data"
           }
@@ -626,7 +648,7 @@ test_manifest_file
         }
       ],
       "outputs": [],
-      "class_hash": "0x6e190e1b15d4c53ef245670c3239ed5c20a6527d6220f32e6c0c8a942a0f7e7",
+      "class_hash": "0x1556f9230d8d08a5f4a8f87ed4e065cb5148a828e06b238a75f04d1505d141b",
       "dependencies": [],
       "abi": [
         {
@@ -705,7 +727,7 @@ test_manifest_file
         }
       ],
       "outputs": [],
-      "class_hash": "0x341fa0c075e73d28c136733b22c4e7b90bf137193f7d8cbb10bf26d8952ffe1",
+      "class_hash": "0x7951a67313bebd60cf38a75d6d63deb30a3c059c869ed809a371d5480ea2788",
       "dependencies": [],
       "abi": [
         {

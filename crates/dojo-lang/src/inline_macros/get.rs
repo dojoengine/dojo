@@ -85,13 +85,17 @@ impl InlineMacroExprPlugin for GetMacro {
             deser_err_msg.truncate(CAIRO_ERR_MSG_LEN);
 
             builder.add_str(&format!(
-                "\n            let mut __{component}_values__ = {}.entity('{component}', \
-                 __get_macro_keys__, 0_u8, dojo::SchemaIntrospection::<{component}>::size());
+                "\n            let mut __{component}_layout__ = array::ArrayTrait::new();
+                 dojo::SchemaIntrospection::<{component}>::layout(ref __{component}_layout__);
+                 let __{component}_layout_span__ = \
+                 array::ArrayTrait::span(@__{component}_layout__);
+                 let mut __{component}_values__ = {}.entity('{component}', __get_macro_keys__, \
+                 0_u8, dojo::SchemaIntrospection::<{component}>::size(), \
+                 __{component}_layout_span__);
                  let mut __{component}_component__ = array::ArrayTrait::new();
                  array::serialize_array_helper(__get_macro_keys__, ref __{component}_component__);
-                 let __{component}_unpacked__ \
-                 dojo::component::Component::<{component}>::unpack(ref __{component}_component__, \
-                 ref __{component}_values__);
+                 array::serialize_array_helper(__{component}_values__, ref \
+                 __{component}_component__);
                  let mut __{component}_component_span__ = \
                  array::ArrayTrait::span(@__{component}_component__);
                  let __{component} = \

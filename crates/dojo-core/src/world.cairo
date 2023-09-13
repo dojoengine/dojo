@@ -20,13 +20,13 @@ trait IWorld<T> {
     fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
     fn execute(ref self: T, system: felt252, calldata: Array<felt252>) -> Span<felt252>;
     fn entity(
-        self: @T, component: felt252, keys: Span<felt252>, offset: u8, length: usize
+        self: @T, component: felt252, keys: Span<felt252>, offset: u8, length: usize, layout: Span<u8>
     ) -> Span<felt252>;
     fn set_entity(
-        ref self: T, component: felt252, keys: Span<felt252>, offset: u8, value: Span<felt252>
+        ref self: T, component: felt252, keys: Span<felt252>, offset: u8, values: Span<felt252>, layout: Span<u8>
     );
     fn entities(
-        self: @T, component: felt252, index: felt252, length: usize
+        self: @T, component: felt252, index: felt252, length: usize, layout: Span<u8>
     ) -> (Span<felt252>, Span<Span<felt252>>);
     fn set_executor(ref self: T, contract_address: ContractAddress);
     fn executor(self: @T) -> ContractAddress;
@@ -100,7 +100,7 @@ mod world {
         table: felt252,
         keys: Span<felt252>,
         offset: u8,
-        value: Span<felt252>,
+        values: Span<felt252>,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -410,15 +410,16 @@ mod world {
             component: felt252,
             keys: Span<felt252>,
             offset: u8,
-            value: Span<felt252>
+            values: Span<felt252>,
+            layout: Span<u8>
         ) {
             assert_can_write(@self, component);
 
             let key = poseidon::poseidon_hash_span(keys);
             let component_class_hash = self.components.read(component);
-            database::set(component_class_hash, component, key, offset, value);
+            database::set(component_class_hash, component, key, offset, values, layout);
 
-            EventEmitter::emit(ref self, StoreSetRecord { table: component, keys, offset, value });
+            EventEmitter::emit(ref self, StoreSetRecord { table: component, keys, offset, values });
         }
 
         /// Deletes a component from an entity.
@@ -451,11 +452,11 @@ mod world {
         ///
         /// * `Span<felt252>` - The value of the component, zero initialized if not set.
         fn entity(
-            self: @ContractState, component: felt252, keys: Span<felt252>, offset: u8, length: usize
+            self: @ContractState, component: felt252, keys: Span<felt252>, offset: u8, length: usize, layout: Span<u8>
         ) -> Span<felt252> {
             let class_hash = self.components.read(component);
             let key = poseidon::poseidon_hash_span(keys);
-            database::get(class_hash, component, key, offset, length)
+            database::get(class_hash, component, key, offset, length, layout)
         }
 
         /// Returns entity IDs and entities that contain the component state.
@@ -470,10 +471,10 @@ mod world {
         /// * `Span<felt252>` - The entity IDs.
         /// * `Span<Span<felt252>>` - The entities.
         fn entities(
-            self: @ContractState, component: felt252, index: felt252, length: usize
+            self: @ContractState, component: felt252, index: felt252, length: usize, layout: Span<u8>
         ) -> (Span<felt252>, Span<Span<felt252>>) {
             let class_hash = self.components.read(component);
-            database::all(class_hash, component.into(), index, length)
+            database::all(class_hash, component.into(), index, length, layout)
         }
 
         /// Sets the executor contract address.

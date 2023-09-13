@@ -129,26 +129,17 @@ pub fn handle_component_struct(
                 }
 
                 #[inline(always)]
-                fn pack(self: @$type_name$) -> Span<felt252> {
-                    let mut unpacked = ArrayTrait::new();
-                    let mut layout = ArrayTrait::new();
-                    dojo::SchemaIntrospection::<$type_name$>::layout(ref layout);
-
+                fn values(self: @$type_name$) -> Span<felt252> {
                     let mut serialized = ArrayTrait::new();
                     $serialized_values$
-
-                    let mut serialized_span = array::ArrayTrait::span(@serialized);
-                    let mut layout_span = array::ArrayTrait::span(@layout);
-                    dojo::packing::pack(ref unpacked, ref serialized_span, ref layout_span);
-                    unpacked.span()
+                    array::ArrayTrait::span(@serialized)
                 }
 
                 #[inline(always)]
-                fn unpack(ref unpacked: Array<felt252>, ref packed: Span<felt252>) {
+                fn layout(self: @$type_name$) -> Span<u8> {
                     let mut layout = ArrayTrait::new();
                     dojo::SchemaIntrospection::<$type_name$>::layout(ref layout);
-                    let mut layout_span = array::ArrayTrait::span(@layout);
-                    dojo::packing::unpack(ref unpacked, ref packed, ref layout_span);
+                    array::ArrayTrait::span(@layout)
                 }
             }
 

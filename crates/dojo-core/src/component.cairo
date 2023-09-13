@@ -1,8 +1,8 @@
 trait Component<T> {
     fn name(self: @T) -> felt252;
     fn keys(self: @T) -> Span<felt252>;
-    fn pack(self: @T) -> Span<felt252>;
-    fn unpack(ref unpacked: Array<felt252>, ref packed: Span<felt252>);
+    fn values(self: @T) -> Span<felt252>;
+    fn layout(self: @T) -> Span<u8>;
 }
 
 #[starknet::interface]

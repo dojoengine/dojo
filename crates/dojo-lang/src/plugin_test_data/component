@@ -74,27 +74,18 @@ impl PositionComponent of dojo::component::Component<Position> {
     }
 
     #[inline(always)]
-    fn pack(self: @Position) -> Span<felt252> {
-        let mut unpacked = ArrayTrait::new();
-        let mut layout = ArrayTrait::new();
-        dojo::SchemaIntrospection::<Position>::layout(ref layout);
-
+    fn values(self: @Position) -> Span<felt252> {
         let mut serialized = ArrayTrait::new();
         array::ArrayTrait::append(ref serialized, *self.x);
         array::ArrayTrait::append(ref serialized, *self.y);
-
-        let mut serialized_span = array::ArrayTrait::span(@serialized);
-        let mut layout_span = array::ArrayTrait::span(@layout);
-        dojo::packing::pack(ref unpacked, ref serialized_span, ref layout_span);
-        unpacked.span()
+        array::ArrayTrait::span(@serialized)
     }
 
     #[inline(always)]
-    fn unpack(ref unpacked: Array<felt252>, ref packed: Span<felt252>) {
+    fn layout(self: @Position) -> Span<u8> {
         let mut layout = ArrayTrait::new();
         dojo::SchemaIntrospection::<Position>::layout(ref layout);
-        let mut layout_span = array::ArrayTrait::span(@layout);
-        dojo::packing::unpack(ref unpacked, ref packed, ref layout_span);
+        array::ArrayTrait::span(@layout)
     }
 }
 
@@ -205,26 +196,17 @@ impl RolesComponent of dojo::component::Component<Roles> {
     }
 
     #[inline(always)]
-    fn pack(self: @Roles) -> Span<felt252> {
-        let mut unpacked = ArrayTrait::new();
-        let mut layout = ArrayTrait::new();
-        dojo::SchemaIntrospection::<Roles>::layout(ref layout);
-
+    fn values(self: @Roles) -> Span<felt252> {
         let mut serialized = ArrayTrait::new();
         serde::Serde::serialize(self.role_ids, ref serialized);
-
-        let mut serialized_span = array::ArrayTrait::span(@serialized);
-        let mut layout_span = array::ArrayTrait::span(@layout);
-        dojo::packing::pack(ref unpacked, ref serialized_span, ref layout_span);
-        unpacked.span()
+        array::ArrayTrait::span(@serialized)
     }
 
     #[inline(always)]
-    fn unpack(ref unpacked: Array<felt252>, ref packed: Span<felt252>) {
+    fn layout(self: @Roles) -> Span<u8> {
         let mut layout = ArrayTrait::new();
         dojo::SchemaIntrospection::<Roles>::layout(ref layout);
-        let mut layout_span = array::ArrayTrait::span(@layout);
-        dojo::packing::unpack(ref unpacked, ref packed, ref layout_span);
+        array::ArrayTrait::span(@layout)
     }
 }
 
@@ -317,26 +299,17 @@ impl PlayerComponent of dojo::component::Component<Player> {
     }
 
     #[inline(always)]
-    fn pack(self: @Player) -> Span<felt252> {
-        let mut unpacked = ArrayTrait::new();
-        let mut layout = ArrayTrait::new();
-        dojo::SchemaIntrospection::<Player>::layout(ref layout);
-
+    fn values(self: @Player) -> Span<felt252> {
         let mut serialized = ArrayTrait::new();
         array::ArrayTrait::append(ref serialized, *self.name);
-
-        let mut serialized_span = array::ArrayTrait::span(@serialized);
-        let mut layout_span = array::ArrayTrait::span(@layout);
-        dojo::packing::pack(ref unpacked, ref serialized_span, ref layout_span);
-        unpacked.span()
+        array::ArrayTrait::span(@serialized)
     }
 
     #[inline(always)]
-    fn unpack(ref unpacked: Array<felt252>, ref packed: Span<felt252>) {
+    fn layout(self: @Player) -> Span<u8> {
         let mut layout = ArrayTrait::new();
         dojo::SchemaIntrospection::<Player>::layout(ref layout);
-        let mut layout_span = array::ArrayTrait::span(@layout);
-        dojo::packing::unpack(ref unpacked, ref packed, ref layout_span);
+        array::ArrayTrait::span(@layout)
     }
 }
 
