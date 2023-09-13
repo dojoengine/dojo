@@ -184,25 +184,26 @@ pub fn unpack<P: Provider>(
     packed.reverse();
     let mut unpacked = vec![];
 
-    let mut unpacking: U256 = packed.pop().unwrap().as_ref().into();
+    let mut unpacking: U256 = packed.pop().ok_or(ComponentError::UnpackingEntity)?.as_ref().into();
     let mut offset = 0;
 
     // Iterate over the layout.
     for size in layout {
-        let size: u8 = size.try_into().unwrap();
+        let size: u8 = size.try_into().map_err(|_| ComponentError::ConvertingFelt)?;
         let size: usize = size.into();
         let remaining_bits = 251 - offset;
 
         // If there are less remaining bits than the size, move to the next felt for unpacking.
         if remaining_bits < size {
-            unpacking = packed.pop().unwrap().as_ref().into();
+            unpacking = packed.pop().ok_or(ComponentError::UnpackingEntity)?.as_ref().into();
             offset = 0;
         }
 
         // Calculate the result and push it to the unpacked values.
         let mask = U256::from(((1 << size) - 1) as u8);
         let result = mask & (unpacking >> offset);
-        let result_fe = FieldElement::from_hex_be(&result.to_string()).unwrap();
+        let result_fe = FieldElement::from_hex_be(&result.to_string())
+            .map_err(|_| ComponentError::ConvertingFelt)?;
         unpacked.push(result_fe);
 
         // Update unpacking to be the shifted value after extracting the result.
