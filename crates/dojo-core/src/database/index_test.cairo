@@ -1,5 +1,6 @@
 use array::ArrayTrait;
 use traits::Into;
+use debug::PrintTrait;
 
 use dojo::database::index;
 
@@ -138,4 +139,30 @@ fn test_get_by_keys() {
     let ids = index::get_by_key(0, 69, 'barks');
     assert(ids.len() == 1, 'Incorrect number of entities');
     assert(*ids.at(0) == 420, 'Identity value incorrect at 0');
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_create_new_entry() {
+    let address_domain = 0;
+    let index = 100;
+    let id = 200;
+    
+    index::create(address_domain, index, id);
+
+    assert(index::exists(address_domain, index, id), 'Test failed');
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_add_key() {
+    let address_domain = 0;
+    let index = 420;
+    let id = 123;
+    let key = 69;
+    let idx = 7;
+
+    let result = index::add_key(address_domain, index, id, key, idx);
+    
+    assert(result == 0, 'Expected value incorrect');
 }
