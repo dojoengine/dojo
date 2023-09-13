@@ -4,7 +4,7 @@ mod tests {
     use starknet_crypto::{poseidon_hash_many, FieldElement};
 
     use crate::tests::common::{
-        entity_fixtures, paginate, run_graphql_query, Direction, Entity, Moves, Position,
+        entity_fixtures, paginate, run_graphql_query, Entity, Moves, Paginate, Position,
     };
 
     #[sqlx::test(migrations = "../migrations")]
@@ -41,6 +41,7 @@ mod tests {
                             __typename
                             ... on Moves {{
                                 remaining
+                                last_direction
                             }}
                             ... on Position {{
                                 x
@@ -73,50 +74,28 @@ mod tests {
         let page_size = 2;
 
         // Forward pagination
-        let entities_connection = paginate(&pool, None, Direction::Forward, page_size).await;
+        let entities_connection = paginate(&pool, None, Paginate::Forward, page_size).await;
         assert_eq!(entities_connection.total_count, 3);
         assert_eq!(entities_connection.edges.len(), page_size);
 
         let cursor: String = entities_connection.edges[0].cursor.clone();
         let next_cursor: String = entities_connection.edges[1].cursor.clone();
-        let entities_connection =
-            paginate(&pool, Some(cursor), Direction::Forward, page_size).await;
+        let entities_connection = paginate(&pool, Some(cursor), Paginate::Forward, page_size).await;
         assert_eq!(entities_connection.total_count, 3);
         assert_eq!(entities_connection.edges.len(), page_size);
         assert_eq!(entities_connection.edges[0].cursor, next_cursor);
 
         // Backward pagination
-        let entities_connection = paginate(&pool, None, Direction::Backward, page_size).await;
+        let entities_connection = paginate(&pool, None, Paginate::Backward, page_size).await;
         assert_eq!(entities_connection.total_count, 3);
         assert_eq!(entities_connection.edges.len(), page_size);
 
         let cursor: String = entities_connection.edges[0].cursor.clone();
         let next_cursor: String = entities_connection.edges[1].cursor.clone();
         let entities_connection =
-            paginate(&pool, Some(cursor), Direction::Backward, page_size).await;
+            paginate(&pool, Some(cursor), Paginate::Backward, page_size).await;
         assert_eq!(entities_connection.total_count, 3);
         assert_eq!(entities_connection.edges.len(), page_size);
         assert_eq!(entities_connection.edges[0].cursor, next_cursor);
     }
-
-    // FIXME: Enable when `WhereInput` param implemented
-    // #[sqlx::test(migrations = "../migrations")]
-    // async fn test_entities_with_component_filters(pool: SqlitePool) {
-    //     entity_fixtures(&pool).await;
-
-    //     let query = "
-    //     {
-    //         entities (keys: [\"%%\"], componentName:\"Moves\") {
-    //             keys
-    //             componentNames
-    //         }
-    //     }
-    //     ";
-    //     let value = run_graphql_query(&pool, query).await;
-
-    //     let entities = value.get("entities").ok_or("entities not found").unwrap();
-    //     let entities: Vec<Entity> = serde_json::from_value(entities.clone()).unwrap();
-    //     assert_eq!(entities[0].keys.clone().unwrap(), "0x1,");
-    //     assert_eq!(entities[1].keys.clone().unwrap(), "0x3,");
-    // }
 }

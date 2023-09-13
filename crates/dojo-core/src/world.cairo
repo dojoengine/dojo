@@ -53,18 +53,20 @@ mod world {
     use starknet::{
         get_caller_address, get_contract_address, get_tx_info,
         contract_address::ContractAddressIntoFelt252, ClassHash, Zeroable, ContractAddress,
-        syscalls::emit_event_syscall
+        syscalls::emit_event_syscall, SyscallResultTrait, SyscallResultTraitImpl
     };
 
     use dojo::database;
     use dojo::executor::{IExecutorDispatcher, IExecutorDispatcherTrait};
-    use dojo::traits::{INamedLibraryDispatcher, INamedDispatcherTrait, };
+    use dojo::component::{INamedLibraryDispatcher, INamedDispatcherTrait, };
     use dojo::world::{IWorldDispatcher, IWorld};
 
     use super::Context;
 
     const NAME_ENTRYPOINT: felt252 =
         0x0361458367e696363fbcc70777d07ebbd2394e89fd0adcaf147faccd1d294d60;
+    
+    const WORLD: felt252 = 0;
 
     #[event]
     #[derive(Drop, starknet::Event)]
@@ -128,7 +130,7 @@ mod world {
         self.executor_dispatcher.write(IExecutorDispatcher { contract_address: executor });
         self
             .owners
-            .write((0, starknet::get_tx_info().unbox().account_contract_address), bool::True(()));
+            .write((WORLD, starknet::get_tx_info().unbox().account_contract_address), bool::True(()));
 
         EventEmitter::emit(
             ref self,
@@ -165,7 +167,7 @@ mod world {
         fn grant_owner(ref self: ContractState, address: ContractAddress, target: felt252) {
             let caller = get_caller_address();
             assert(
-                self.is_owner(caller, target) || self.is_owner(caller, 0),
+                self.is_owner(caller, target) || self.is_owner(caller, WORLD),
                 'not owner'
             );
             self.owners.write((target, address), bool::True(()));
@@ -182,7 +184,7 @@ mod world {
             let caller = get_caller_address();
             assert(
                 self.is_owner(caller, target)
-                    || self.is_owner(caller, 0),
+                    || self.is_owner(caller, WORLD),
                 'not owner'
             );
             self.owners.write((target, address), bool::False(()));
@@ -214,7 +216,7 @@ mod world {
 
             assert(
                 self.is_owner(caller, component)
-                    || self.is_owner(caller, 0),
+                    || self.is_owner(caller, WORLD),
                 'not owner or writer'
             );
             self.writers.write((component, system), bool::True(()));
@@ -233,7 +235,7 @@ mod world {
             assert(
                 self.is_writer(component, self.caller_system())
                     || self.is_owner(caller, component)
-                    || self.is_owner(caller, 0),
+                    || self.is_owner(caller, WORLD),
                 'not owner or writer'
             );
             self.writers.write((component, system), bool::False(()));
@@ -482,7 +484,7 @@ mod world {
         /// * `contract_address` - The contract address of the executor.
         fn set_executor(ref self: ContractState, contract_address: ContractAddress) {
             // Only owner can set executor
-            assert(self.is_owner(get_caller_address(), 0), 'only owner can set executor');
+            assert(self.is_owner(get_caller_address(), WORLD), 'only owner can set executor');
             self
                 .executor_dispatcher
                 .write(IExecutorDispatcher { contract_address: contract_address });
@@ -530,7 +532,7 @@ mod world {
         assert(
             IWorld::is_writer(self, component, self.caller_system())
                 || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, component)
-                || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, 0),
+                || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, WORLD),
             'not writer'
         );
     }
@@ -538,6 +540,8 @@ mod world {
 
 #[system]
 mod library_call {
+    use starknet::{SyscallResultTrait, SyscallResultTraitImpl};
+
     fn execute(
         class_hash: starknet::ClassHash, entrypoint: felt252, calladata: Span<felt252>
     ) -> Span<felt252> {

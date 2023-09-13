@@ -9,6 +9,7 @@ use crate::types::SQLFieldElement;
 
 // pub mod memory;
 pub mod processors;
+pub mod simple_broker;
 pub mod sql;
 pub mod types;
 
@@ -42,4 +43,10 @@ pub trait State {
     async fn delete_entity(&self, component: String, key: FieldElement) -> Result<()>;
     async fn entity(&self, component: String, key: FieldElement) -> Result<Vec<FieldElement>>;
     async fn entities(&self, component: String) -> Result<Vec<Vec<FieldElement>>>;
+    async fn store_system_call(
+        &self,
+        system: String,
+        tx_hash: FieldElement,
+        calldata: &[FieldElement],
+    ) -> Result<()>;
 }

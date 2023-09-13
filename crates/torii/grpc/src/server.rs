@@ -55,11 +55,14 @@ impl World for DojoWorld {
     }
 }
 
-pub async fn start(pool: Pool<Sqlite>) -> Result<(), Box<dyn std::error::Error>> {
-    let addr = "[::1]:50051".parse()?;
-    let world = DojoWorld::new(pool);
+pub async fn start(
+    host: &String,
+    port: u16,
+    pool: &Pool<Sqlite>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let addr = format!("{}:{}", host, port).parse()?;
+    let world = DojoWorld::new(pool.clone());
 
     Server::builder().add_service(WorldServer::new(world)).serve(addr).await?;
-
     Ok(())
 }

@@ -8,11 +8,15 @@ use cairo_lang_compiler::diagnostics::DiagnosticsReporter;
 use cairo_lang_compiler::project::{ProjectConfig, ProjectConfigContent};
 use cairo_lang_filesystem::cfg::{Cfg, CfgSet};
 use cairo_lang_filesystem::ids::Directory;
+use cairo_lang_starknet::inline_macros::selector::SelectorMacro;
 use cairo_lang_starknet::plugin::StarkNetPlugin;
 use cairo_lang_test_runner::plugin::TestPlugin;
 use cairo_lang_test_runner::TestRunner;
 use clap::Args;
 use dojo_lang::compiler::{collect_core_crate_ids, collect_external_crate_ids, Props};
+use dojo_lang::inline_macros::emit::EmitMacro;
+use dojo_lang::inline_macros::get::GetMacro;
+use dojo_lang::inline_macros::set::SetMacro;
 use dojo_lang::plugin::DojoPlugin;
 use scarb::compiler::helpers::collect_main_crate_ids;
 use scarb::compiler::CompilationUnit;
@@ -49,6 +53,7 @@ impl TestArgs {
             let db = build_root_database(&unit)?;
 
             let mut main_crate_ids = collect_main_crate_ids(&unit, &db);
+            let test_crate_ids = main_crate_ids.clone();
 
             if unit.main_package_id.name.to_string() != "dojo" {
                 let core_crate_ids = collect_core_crate_ids(&db);
@@ -66,6 +71,7 @@ impl TestArgs {
             let runner = TestRunner {
                 db,
                 main_crate_ids,
+                test_crate_ids,
                 filter: self.filter.clone(),
                 include_ignored: self.include_ignored,
                 ignored: self.ignored,
@@ -85,9 +91,14 @@ pub(crate) fn build_root_database(unit: &CompilationUnit) -> Result<RootDatabase
     b.with_project_config(build_project_config(unit)?);
     b.with_cfg(CfgSet::from_iter([Cfg::name("test")]));
 
-    b.with_semantic_plugin(Arc::new(TestPlugin::default()));
-    b.with_semantic_plugin(Arc::new(DojoPlugin));
-    b.with_semantic_plugin(Arc::new(StarkNetPlugin::default()));
+    b.with_macro_plugin(Arc::new(TestPlugin::default()));
+    b.with_macro_plugin(Arc::new(DojoPlugin));
+    b.with_macro_plugin(Arc::new(StarkNetPlugin::default()));
+
+    b.with_inline_macro_plugin(EmitMacro::NAME, Arc::new(EmitMacro));
+    b.with_inline_macro_plugin(GetMacro::NAME, Arc::new(GetMacro));
+    b.with_inline_macro_plugin(SetMacro::NAME, Arc::new(SetMacro));
+    b.with_inline_macro_plugin(SelectorMacro::NAME, Arc::new(SelectorMacro));
 
     b.build()
 }
@@ -100,7 +111,7 @@ fn build_project_config(unit: &CompilationUnit) -> Result<ProjectConfig> {
         .map(|component| (component.cairo_package_name(), component.target.source_root().into()))
         .collect();
 
-    let corelib = Some(Directory(unit.core_package_component().target.source_root().into()));
+    let corelib = Some(Directory::Real(unit.core_package_component().target.source_root().into()));
 
     let content = ProjectConfigContent { crate_roots };
 

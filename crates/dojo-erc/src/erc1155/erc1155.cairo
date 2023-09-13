@@ -19,7 +19,9 @@ mod ERC1155 {
     };
     use dojo_erc::erc165::interface::{IERC165, IERC165_ID};
 
-    use dojo_erc::erc_common::utils::{to_calldata, ToCallDataTrait, system_calldata};
+    use dojo_erc::erc_common::utils::{
+        to_calldata, ToCallDataTrait, system_calldata
+    };
 
     use dojo_erc::erc1155::systems::{
         ERC1155SetApprovalForAllParams, ERC1155SafeTransferFromParams,
@@ -29,8 +31,7 @@ mod ERC1155 {
     const UNLIMITED_ALLOWANCE: felt252 =
         3618502788666131213697322783095070105623107215331596699973092056135872020480;
 
-
-    #[derive(Clone, Drop, Serde, starknet::Event)]
+    #[derive(Clone, Drop, Serde, PartialEq, starknet::Event)]
     struct TransferSingle {
         operator: ContractAddress,
         from: ContractAddress,
@@ -39,7 +40,7 @@ mod ERC1155 {
         value: u256
     }
 
-    #[derive(Clone, Drop, Serde, starknet::Event)]
+    #[derive(Clone, Drop, Serde, PartialEq, starknet::Event)]
     struct TransferBatch {
         operator: ContractAddress,
         from: ContractAddress,
@@ -48,7 +49,7 @@ mod ERC1155 {
         values: Array<u256>
     }
 
-    #[derive(Clone, Drop, Serde, starknet::Event)]
+    #[derive(Clone, Drop, Serde, PartialEq, starknet::Event)]
     struct ApprovalForAll {
         owner: ContractAddress,
         operator: ContractAddress,
@@ -63,7 +64,7 @@ mod ERC1155 {
     }
 
     #[event]
-    #[derive(Drop, starknet::Event)]
+    #[derive(Drop, PartialEq, starknet::Event)]
     enum Event {
         TransferSingle: TransferSingle,
         TransferBatch: TransferBatch,

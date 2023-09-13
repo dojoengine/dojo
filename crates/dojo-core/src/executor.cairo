@@ -14,12 +14,14 @@ trait IExecutor<T> {
 mod executor {
     use array::{ArrayTrait, SpanTrait};
     use option::OptionTrait;
-    use starknet::ClassHash;
+    use starknet::{ClassHash, SyscallResultTrait, SyscallResultTraitImpl};
 
     use super::IExecutor;
 
     const EXECUTE_ENTRYPOINT: felt252 =
         0x0240060cdb34fcc260f41eac7474ee1d7c80b7e3607daff9ac67c7ea2ebb1c44;
+
+    const WORLD_ADDRESS_OFFSET: u32 = 4;
 
     #[storage]
     struct Storage {}
@@ -39,6 +41,12 @@ mod executor {
         fn execute(
             self: @ContractState, class_hash: ClassHash, calldata: Span<felt252>
         ) -> Span<felt252> {
+            assert(
+                traits::Into::<starknet::ContractAddress,
+                felt252>::into(starknet::get_caller_address()) == *calldata
+                    .at(calldata.len() - WORLD_ADDRESS_OFFSET),
+                'Only world caller'
+            );
             starknet::syscalls::library_call_syscall(class_hash, EXECUTE_ENTRYPOINT, calldata)
                 .unwrap_syscall()
         }

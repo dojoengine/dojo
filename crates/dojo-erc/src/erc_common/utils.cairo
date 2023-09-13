@@ -3,7 +3,7 @@ use array::ArrayTrait;
 
 #[derive(Drop)]
 struct ToCallData {
-    data: Array<felt252>, 
+    data: Array<felt252>,
 }
 
 #[generate_trait]

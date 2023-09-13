@@ -2,7 +2,7 @@ use anyhow::Result;
 use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand};
 use scarb::compiler::Profile;
-use scarb::ui;
+use scarb_ui::Verbosity;
 use smol_str::SmolStr;
 use tracing::level_filters::LevelFilter;
 use tracing_log::AsTrace;
@@ -79,14 +79,14 @@ pub enum Commands {
 }
 
 impl SozoArgs {
-    pub fn ui_verbosity(&self) -> ui::Verbosity {
+    pub fn ui_verbosity(&self) -> Verbosity {
         let filter = self.verbose.log_level_filter().as_trace();
         if filter >= LevelFilter::WARN {
-            ui::Verbosity::Verbose
+            Verbosity::Verbose
         } else if filter > LevelFilter::OFF {
-            ui::Verbosity::Normal
+            Verbosity::Normal
         } else {
-            ui::Verbosity::Quiet
+            Verbosity::Quiet
         }
     }
 }

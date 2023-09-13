@@ -31,6 +31,7 @@ use self::ui::{bold_message, italic_message};
 use crate::commands::migrate::MigrateArgs;
 use crate::commands::options::account::AccountOptions;
 use crate::commands::options::starknet::StarknetOptions;
+use crate::commands::options::transaction::TransactionOptions;
 use crate::commands::options::world::WorldOptions;
 
 pub async fn execute<U>(
@@ -237,6 +238,7 @@ async fn execute_strategy<P, S>(
     strategy: &MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
     ws_config: &Config,
+    txn_config: Option<TransactionOptions>,
 ) -> Result<Option<u64>>
 where
     P: Provider + Sync + Send + 'static,
@@ -247,7 +249,15 @@ where
         Some(executor) => {
             ws_config.ui().print_header("# Executor");
 
-            match executor.deploy(executor.diff.local, vec![], migrator).await {
+            match executor
+                .deploy(
+                    executor.diff.local,
+                    vec![],
+                    migrator,
+                    txn_config.clone().map(|c| c.into()).unwrap_or_default(),
+                )
+                .await
+            {
                 Ok(val) => {
                     if let Some(declare) = val.clone().declare {
                         ws_config.ui().print_hidden_sub(format!(
@@ -299,6 +309,7 @@ where
                     world.diff.local,
                     vec![strategy.executor.as_ref().unwrap().contract_address],
                     migrator,
+                    txn_config.clone().map(|c| c.into()).unwrap_or_default(),
                 )
                 .await
             {
@@ -331,8 +342,8 @@ where
         None => {}
     };
 
-    register_components(strategy, migrator, ws_config).await?;
-    register_systems(strategy, migrator, ws_config).await?;
+    register_components(strategy, migrator, ws_config, txn_config.clone()).await?;
+    register_systems(strategy, migrator, ws_config, txn_config).await?;
 
     Ok(block_height)
 }
@@ -341,6 +352,7 @@ async fn register_components<P, S>(
     strategy: &MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
     ws_config: &Config,
+    txn_config: Option<TransactionOptions>,
 ) -> Result<Option<RegisterOutput>>
 where
     P: Provider + Sync + Send + 'static,
@@ -359,7 +371,8 @@ where
     for c in components.iter() {
         ws_config.ui().print(italic_message(&c.diff.name).to_string());
 
-        let res = c.declare(migrator).await;
+        let res =
+            c.declare(migrator, txn_config.clone().map(|c| c.into()).unwrap_or_default()).await;
         match res {
             Ok(output) => {
                 ws_config.ui().print_hidden_sub(format!(
@@ -388,8 +401,7 @@ where
         .await
         .map_err(|e| anyhow!("Failed to register components to World: {e}"))?;
 
-    let _ =
-        TransactionWaiter::new(transaction_hash, migrator.provider()).await.map_err(
+    TransactionWaiter::new(transaction_hash, migrator.provider()).await.map_err(
             MigrationError::<
                 <SingleOwnerAccount<P, S> as Account>::SignError,
                 <P as Provider>::Error,
@@ -405,6 +417,7 @@ async fn register_systems<P, S>(
     strategy: &MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
     ws_config: &Config,
+    txn_config: Option<TransactionOptions>,
 ) -> Result<Option<RegisterOutput>>
 where
     P: Provider + Sync + Send + 'static,
@@ -423,7 +436,8 @@ where
     for s in strategy.systems.iter() {
         ws_config.ui().print(italic_message(&s.diff.name).to_string());
 
-        let res = s.declare(migrator).await;
+        let res =
+            s.declare(migrator, txn_config.clone().map(|c| c.into()).unwrap_or_default()).await;
         match res {
             Ok(output) => {
                 ws_config.ui().print_hidden_sub(format!(
@@ -452,8 +466,7 @@ where
         .await
         .map_err(|e| anyhow!("Failed to register systems to World: {e}"))?;
 
-    let _ =
-        TransactionWaiter::new(transaction_hash, migrator.provider()).await.map_err(
+    TransactionWaiter::new(transaction_hash, migrator.provider()).await.map_err(
             MigrationError::<
                 <SingleOwnerAccount<P, S> as Account>::SignError,
                 <P as Provider>::Error,

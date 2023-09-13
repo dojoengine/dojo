@@ -4,7 +4,6 @@ use anyhow::{Context, Result};
 use cairo_lang_defs::ids::{ModuleId, ModuleItemId};
 use cairo_lang_filesystem::ids::CrateId;
 use cairo_lang_semantic::db::SemanticGroup;
-use cairo_lang_semantic::plugin::DynPluginAuxData;
 use cairo_lang_starknet::abi;
 use convert_case::{Case, Casing};
 use dojo_world::manifest::{
@@ -71,12 +70,10 @@ impl Manifest {
                     let Some(generated_file_info) = generated_file_info else {
                         continue;
                     };
-                    let Some(mapper) =
-                        generated_file_info.aux_data.0.as_any().downcast_ref::<DynPluginAuxData>()
-                    else {
+                    let Some(aux_data) = &generated_file_info.aux_data else {
                         continue;
                     };
-                    let Some(aux_data) = mapper.0.as_any().downcast_ref::<DojoAuxData>() else {
+                    let Some(aux_data) = aux_data.0.as_any().downcast_ref() else {
                         continue;
                     };
 
@@ -134,11 +131,11 @@ impl Manifest {
             {
                 let defs_db = db.upcast();
                 let fns = db.module_free_functions_ids(ModuleId::Submodule(submodule_id)).unwrap();
-                for fn_id in fns {
+                for fn_id in fns.iter() {
                     if fn_id.name(defs_db) != "execute" {
                         continue;
                     }
-                    let signature = db.free_function_signature(fn_id).unwrap();
+                    let signature = db.free_function_signature(*fn_id).unwrap();
 
                     let mut inputs = vec![];
                     let mut params = signature.params;
@@ -187,3 +184,7 @@ impl Manifest {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "manifest_test.rs"]
+mod test;

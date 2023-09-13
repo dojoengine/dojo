@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use camino::Utf8PathBuf;
 use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, TestSequencer,
@@ -11,7 +13,7 @@ use starknet::core::types::{BlockId, BlockTag, FieldElement};
 
 use super::{WorldContract, WorldContractReader};
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_world_contract_reader() {
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
@@ -47,40 +49,61 @@ pub async fn deploy_world(
     let executor_address = strategy
         .executor
         .unwrap()
-        .deploy(manifest.clone().executor.class_hash, vec![], &account)
+        .deploy(manifest.clone().executor.class_hash, vec![], &account, Default::default())
         .await
         .unwrap()
         .contract_address;
+
+    // wait for the tx to be mined
+    tokio::time::sleep(Duration::from_millis(250)).await;
+
     let world_address = strategy
         .world
         .unwrap()
-        .deploy(manifest.clone().world.class_hash, vec![executor_address], &account)
+        .deploy(
+            manifest.clone().world.class_hash,
+            vec![executor_address],
+            &account,
+            Default::default(),
+        )
         .await
         .unwrap()
         .contract_address;
 
     let mut declare_output = vec![];
     for component in strategy.components {
-        let res = component.declare(&account).await.unwrap();
+        let res = component.declare(&account, Default::default()).await.unwrap();
         declare_output.push(res);
     }
+
+    // wait for the tx to be mined
+    tokio::time::sleep(Duration::from_millis(250)).await;
 
     let _ = WorldContract::new(world_address, &account)
         .register_components(&declare_output.iter().map(|o| o.class_hash).collect::<Vec<_>>())
         .await
         .unwrap();
 
+    // wait for the tx to be mined
+    tokio::time::sleep(Duration::from_millis(250)).await;
+
     let mut declare_output = vec![];
     for system in strategy.systems {
-        let res = system.declare(&account).await.unwrap();
+        let res = system.declare(&account, Default::default()).await.unwrap();
         declare_output.push(res);
     }
+
+    // wait for the tx to be mined
+    tokio::time::sleep(Duration::from_millis(250)).await;
 
     let world = WorldContract::new(world_address, &account);
     let _ = world
         .register_systems(&declare_output.iter().map(|o| o.class_hash).collect::<Vec<_>>())
         .await
         .unwrap();
+
+    // wait for the tx to be mined
+    tokio::time::sleep(Duration::from_millis(250)).await;
 
     (world_address, executor_address)
 }

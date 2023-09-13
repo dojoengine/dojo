@@ -15,6 +15,7 @@ use tokio_util::sync::CancellationToken;
 use torii_core::processors::register_component::RegisterComponentProcessor;
 use torii_core::processors::register_system::RegisterSystemProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
+use torii_core::processors::store_system_call::StoreSystemCallProcessor;
 use torii_core::sql::Sql;
 use torii_core::State;
 use tracing::error;
@@ -46,6 +47,15 @@ struct Args {
     /// Specify a block to start indexing from, ignored if stored head exists
     #[arg(short, long, default_value = "0")]
     start_block: u64,
+    /// Host address for GraphQL/gRPC endpoints
+    #[arg(long, default_value = "0.0.0.0")]
+    host: String,
+    /// Port number for GraphQL endpoint
+    #[arg(long, default_value = "8080")]
+    graphql_port: u16,
+    /// Port number for gRPC endpoint
+    #[arg(long, default_value = "50051")]
+    grpc_port: u16,
 }
 
 #[tokio::main]
@@ -89,13 +99,14 @@ async fn main() -> anyhow::Result<()> {
             Box::new(RegisterSystemProcessor),
             Box::new(StoreSetRecordProcessor),
         ],
+        transaction: vec![Box::new(StoreSystemCallProcessor)],
         ..Processors::default()
     };
 
     let indexer =
         Indexer::new(&state, &provider, processors, manifest, world_address, args.start_block);
-    let graphql = torii_graphql::server::start(pool.clone());
-    let grpc = torii_grpc::server::start(pool);
+    let graphql = torii_graphql::server::start(&args.host, args.graphql_port, &pool);
+    let grpc = torii_grpc::server::start(&args.host, args.grpc_port, &pool);
 
     tokio::select! {
         res = indexer.start() => {

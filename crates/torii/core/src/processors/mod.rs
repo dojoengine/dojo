@@ -8,6 +8,7 @@ use crate::State;
 pub mod register_component;
 pub mod register_system;
 pub mod store_set_record;
+pub mod store_system_call;
 
 #[async_trait]
 pub trait EventProcessor<S: State, T: JsonRpcTransport> {
@@ -35,7 +36,6 @@ pub trait BlockProcessor<S: State, T: JsonRpcTransport> {
 
 #[async_trait]
 pub trait TransactionProcessor<S: State, T: JsonRpcTransport> {
-    fn get_transaction_hash(&self) -> String;
     async fn process(
         &self,
         storage: &S,

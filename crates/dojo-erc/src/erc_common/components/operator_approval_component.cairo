@@ -1,7 +1,7 @@
 use starknet::ContractAddress;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
-#[derive(Component, Copy, Drop, Serde, SerdeLen)]
+#[derive(Component, Copy, Drop, Serde)]
 struct OperatorApproval {
     #[key]
     token: ContractAddress,
@@ -20,7 +20,7 @@ trait OperatorApprovalTrait {
         operator: ContractAddress
     ) -> bool;
 
-    fn set_approval_for_all(
+    fn unchecked_set_approval_for_all(
         world: IWorldDispatcher,
         token: ContractAddress,
         owner: ContractAddress,
@@ -41,7 +41,7 @@ impl OperatorApprovalImpl of OperatorApprovalTrait {
     }
 
     // perform safety checks before calling this fn
-    fn set_approval_for_all(
+    fn unchecked_set_approval_for_all(
         world: IWorldDispatcher,
         token: ContractAddress,
         owner: ContractAddress,

@@ -31,6 +31,7 @@ CREATE TABLE component_members(
     key BOOLEAN NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (component_id) REFERENCES components(id)
+    UNIQUE (component_id, name)
 );
 
 CREATE INDEX idx_component_members_component_id ON component_members (component_id);
@@ -41,7 +42,8 @@ CREATE TABLE system_calls (
     transaction_hash TEXT NOT NULL,
     system_id TEXT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (system_id) REFERENCES systems(id)
+    FOREIGN KEY (system_id) REFERENCES systems(id),
+    UNIQUE (transaction_hash)
 );  
 
 CREATE INDEX idx_system_calls_created_at ON system_calls (created_at);

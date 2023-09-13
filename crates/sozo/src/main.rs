@@ -7,7 +7,7 @@ use dojo_lang::compiler::DojoCompiler;
 use dojo_lang::plugin::CairoPluginRepository;
 use scarb::compiler::CompilerRepository;
 use scarb::core::Config;
-use scarb::ui::{OutputFormat, Ui};
+use scarb_ui::{OutputFormat, Ui};
 
 mod args;
 mod commands;

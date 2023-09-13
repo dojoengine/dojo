@@ -11,6 +11,8 @@ use crate::db::serde::contract::SerializableContractClass;
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct SerializableState {
+    /// Contract address to its class hash
+    pub contracts: BTreeMap<FieldElement, FieldElement>,
     /// Address to storage record.
     pub storage: BTreeMap<FieldElement, SerializableStorageRecord>,
     /// Class hash to class record.
@@ -30,7 +32,6 @@ pub struct SerializableClassRecord {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SerializableStorageRecord {
     pub nonce: FieldElement,
-    pub class_hash: FieldElement,
     pub storage: BTreeMap<FieldElement, FieldElement>,
 }
 

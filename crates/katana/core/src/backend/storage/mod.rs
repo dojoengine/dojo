@@ -1,12 +1,14 @@
 use std::collections::{HashMap, VecDeque};
+use std::sync::Arc;
 
 use blockifier::block_context::BlockContext;
+use parking_lot::RwLock;
 use starknet::core::types::{BlockId, BlockTag, FieldElement, StateDiff, StateUpdate};
 
 use self::block::Block;
 use self::transaction::KnownTransaction;
-use super::state::MemDb;
 use crate::backend::storage::block::PartialHeader;
+use crate::db::StateRefDb;
 
 pub mod block;
 pub mod transaction;
@@ -17,7 +19,7 @@ const MIN_HISTORY_LIMIT: usize = 10;
 /// Represents the complete state of a single block
 pub struct InMemoryBlockStates {
     /// The states at a certain block
-    states: HashMap<FieldElement, MemDb>,
+    states: HashMap<FieldElement, StateRefDb>,
     /// How many states to store at most
     in_memory_limit: usize,
     /// minimum amount of states we keep in memory
@@ -37,7 +39,7 @@ impl InMemoryBlockStates {
     }
 
     /// Returns the state for the given `hash` if present
-    pub fn get(&self, hash: &FieldElement) -> Option<&MemDb> {
+    pub fn get(&self, hash: &FieldElement) -> Option<&StateRefDb> {
         self.states.get(hash)
     }
 
@@ -49,7 +51,7 @@ impl InMemoryBlockStates {
     /// Since we keep a snapshot of the entire state as history, the size of the state will increase
     /// with the transactions processed. To counter this, we gradually decrease the cache limit with
     /// the number of states/blocks until we reached the `min_limit`.
-    pub fn insert(&mut self, hash: FieldElement, state: MemDb) {
+    pub fn insert(&mut self, hash: FieldElement, state: StateRefDb) {
         if self.present.len() >= self.in_memory_limit {
             // once we hit the max limit we gradually decrease it
             self.in_memory_limit =
@@ -80,9 +82,8 @@ impl Default for InMemoryBlockStates {
     }
 }
 
-// TODO: can we wrap all the fields in a `RwLock` to prevent read blocking?
 #[derive(Debug, Default)]
-pub struct BlockchainStorage {
+pub struct Storage {
     /// Mapping from block hash -> block
     pub blocks: HashMap<FieldElement, Block>,
     /// Mapping from block number -> block hash
@@ -97,7 +98,7 @@ pub struct BlockchainStorage {
     pub transactions: HashMap<FieldElement, KnownTransaction>,
 }
 
-impl BlockchainStorage {
+impl Storage {
     /// Creates a new blockchain from a genesis block
     pub fn new(block_context: &BlockContext) -> Self {
         let partial_header = PartialHeader {
@@ -123,39 +124,15 @@ impl BlockchainStorage {
         }
     }
 
-    /// Appends a new block to the chain and store the state diff.
-    pub fn append_block(&mut self, hash: FieldElement, block: Block, state_diff: StateDiff) {
-        let number = block.header.number;
-
-        assert_eq!(self.latest_number + 1, number);
-
-        let old_root = self.blocks.get(&self.latest_hash).map(|b| b.header.state_root);
-
-        let state_update = StateUpdate {
-            block_hash: hash,
-            new_root: block.header.state_root,
-            old_root: if number == 0 { FieldElement::ZERO } else { old_root.unwrap() },
-            state_diff,
-        };
-
-        self.latest_hash = hash;
-        self.latest_number = number;
-        self.blocks.insert(hash, block);
-        self.hashes.insert(number, hash);
-        self.state_update.insert(hash, state_update);
-    }
-
-    pub fn total_blocks(&self) -> usize {
-        self.blocks.len()
-    }
-
-    /// Returns the block hash based on the block id
-    pub fn block_hash(&self, block: BlockId) -> Option<FieldElement> {
-        match block {
-            BlockId::Tag(BlockTag::Pending) => None,
-            BlockId::Tag(BlockTag::Latest) => Some(self.latest_hash),
-            BlockId::Hash(hash) => Some(hash),
-            BlockId::Number(num) => self.hashes.get(&num).copied(),
+    /// Creates a new blockchain from a forked network
+    pub fn new_forked(latest_number: u64, latest_hash: FieldElement) -> Self {
+        Self {
+            latest_hash,
+            latest_number,
+            blocks: HashMap::default(),
+            hashes: HashMap::from([(latest_number, latest_hash)]),
+            state_update: HashMap::default(),
+            transactions: HashMap::default(),
         }
     }
 
@@ -164,23 +141,83 @@ impl BlockchainStorage {
     }
 }
 
+pub struct Blockchain {
+    pub storage: Arc<RwLock<Storage>>,
+}
+
+impl Blockchain {
+    pub fn new(storage: Arc<RwLock<Storage>>) -> Self {
+        Self { storage }
+    }
+
+    pub fn new_forked(latest_number: u64, latest_hash: FieldElement) -> Self {
+        Self::new(Arc::new(RwLock::new(Storage::new_forked(latest_number, latest_hash))))
+    }
+
+    /// Returns the block hash based on the block id
+    pub fn block_hash(&self, block: BlockId) -> Option<FieldElement> {
+        match block {
+            BlockId::Tag(BlockTag::Pending) => None,
+            BlockId::Tag(BlockTag::Latest) => Some(self.storage.read().latest_hash),
+            BlockId::Hash(hash) => Some(hash),
+            BlockId::Number(num) => self.storage.read().hashes.get(&num).copied(),
+        }
+    }
+
+    pub fn total_blocks(&self) -> usize {
+        self.storage.read().blocks.len()
+    }
+
+    /// Appends a new block to the chain and store the state diff.
+    pub fn append_block(&self, hash: FieldElement, block: Block, state_diff: StateDiff) {
+        let number = block.header.number;
+        let mut storage = self.storage.write();
+
+        assert_eq!(storage.latest_number + 1, number);
+
+        let old_root = storage
+            .blocks
+            .get(&storage.latest_hash)
+            .map(|b| b.header.state_root)
+            .unwrap_or_default();
+
+        let state_update = StateUpdate {
+            block_hash: hash,
+            new_root: block.header.state_root,
+            old_root,
+            state_diff,
+        };
+
+        storage.latest_hash = hash;
+        storage.latest_number = number;
+        storage.blocks.insert(hash, block);
+        storage.hashes.insert(number, hash);
+        storage.state_update.insert(hash, state_update);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
 
     use super::*;
+    use crate::backend::in_memory_db::MemDb;
 
     #[test]
     fn remove_old_state_when_limit_is_reached() {
         let mut in_memory_state = InMemoryBlockStates::new(2);
 
-        in_memory_state.insert(FieldElement::from_str("0x1").unwrap(), MemDb::default());
-        in_memory_state.insert(FieldElement::from_str("0x2").unwrap(), MemDb::default());
+        in_memory_state
+            .insert(FieldElement::from_str("0x1").unwrap(), StateRefDb::new(MemDb::new()));
+        in_memory_state
+            .insert(FieldElement::from_str("0x2").unwrap(), StateRefDb::new(MemDb::new()));
+
         assert!(in_memory_state.states.get(&FieldElement::from_str("0x1").unwrap()).is_some());
         assert!(in_memory_state.states.get(&FieldElement::from_str("0x2").unwrap()).is_some());
         assert_eq!(in_memory_state.present.len(), 2);
 
-        in_memory_state.insert(FieldElement::from_str("0x3").unwrap(), MemDb::default());
+        in_memory_state
+            .insert(FieldElement::from_str("0x3").unwrap(), StateRefDb::new(MemDb::new()));
 
         assert_eq!(in_memory_state.present.len(), 2);
         assert!(in_memory_state.states.get(&FieldElement::from_str("0x1").unwrap()).is_none());

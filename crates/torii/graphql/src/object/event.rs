@@ -27,8 +27,8 @@ pub struct EventObject {
     pub type_mapping: TypeMapping,
 }
 
-impl EventObject {
-    pub fn new() -> Self {
+impl Default for EventObject {
+    fn default() -> Self {
         Self {
             type_mapping: IndexMap::from([
                 (Name::new("id"), TypeRef::named(TypeRef::ID)),
@@ -39,7 +39,8 @@ impl EventObject {
             ]),
         }
     }
-
+}
+impl EventObject {
     pub fn value_mapping(event: Event) -> ValueMapping {
         IndexMap::from([
             (Name::new("id"), Value::from(event.id)),

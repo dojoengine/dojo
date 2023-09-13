@@ -9,6 +9,7 @@ use starknet::testing::set_contract_address;
 
 use dojo::test_utils::spawn_test_world;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
+use dojo_erc::tests::test_utils::impersonate;
 
 use dojo_erc::erc721::erc721::ERC721;
 use dojo_erc::erc721::interface::{IERC721, IERC721ADispatcher, IERC721ADispatcherTrait};
@@ -45,7 +46,9 @@ fn PROXY() -> ContractAddress {
     starknet::contract_address_const::<0x999>()
 }
 
-fn spawn_world() -> IWorldDispatcher {
+fn spawn_world(world_admin: ContractAddress) -> IWorldDispatcher {
+    impersonate(world_admin);
+
     // components
     let mut components = array![
         erc_721_balance::TEST_CLASS_HASH,
@@ -66,6 +69,29 @@ fn spawn_world() -> IWorldDispatcher {
     ];
 
     let world = spawn_test_world(components, systems);
+
+    // Grants writer rights for Component / System
+
+    //  erc_721_balance
+    world.grant_writer('ERC721Balance', 'ERC721TransferFrom');
+    world.grant_writer('ERC721Balance', 'ERC721Mint');
+    world.grant_writer('ERC721Balance', 'ERC721Burn');
+
+    // erc_721_owner
+    world.grant_writer('ERC721Owner', 'ERC721TransferFrom');
+    world.grant_writer('ERC721Owner', 'ERC721Mint');
+    world.grant_writer('ERC721Owner', 'ERC721Burn');
+
+    // erc_721_token_approval
+    world.grant_writer('ERC721TokenApproval', 'ERC721Approve');
+    world.grant_writer('ERC721TokenApproval', 'ERC721TransferFrom');
+
+    // operator_approval
+    world.grant_writer('OperatorApproval', 'ERC721SetApprovalForAll');
+
+    // base_uri
+    world.grant_writer('BaseUri', 'ERC721SetBaseUri');
+
     world
 }
 
@@ -91,7 +117,7 @@ fn deploy_erc721(
 
 
 fn deploy_default() -> (IWorldDispatcher, IERC721ADispatcher) {
-    let world = spawn_world();
+    let world = spawn_world(DEPLOYER());
     let erc721_address = deploy_erc721(world, DEPLOYER(), 'name', 'symbol', 'uri', 'seed-42');
     let erc721 = IERC721ADispatcher { contract_address: erc721_address };
 
@@ -100,7 +126,7 @@ fn deploy_default() -> (IWorldDispatcher, IERC721ADispatcher) {
 
 
 fn deploy_testcase1() -> (IWorldDispatcher, IERC721ADispatcher) {
-    let world = spawn_world();
+    let world = spawn_world(DEPLOYER());
     let erc721_address = deploy_erc721(world, DEPLOYER(), 'name', 'symbol', 'uri', 'seed-42');
     let erc721 = IERC721ADispatcher { contract_address: erc721_address };
 
@@ -118,7 +144,7 @@ fn deploy_testcase1() -> (IWorldDispatcher, IERC721ADispatcher) {
     //user2 owns id : 20
     erc721.mint(USER2(), 20);
 
-    set_contract_address(USER1());
+    impersonate(USER1());
     //user1 approve_for_all proxy
     erc721.set_approval_for_all(PROXY(), true);
 
