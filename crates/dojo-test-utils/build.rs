@@ -8,7 +8,7 @@ fn main() {
     use scarb::compiler::CompilerRepository;
     use scarb::core::Config;
     use scarb::ops;
-    use scarb::ui::Verbosity;
+    use scarb_ui::Verbosity;
 
     let target_path = Utf8PathBuf::from_path_buf("../../examples/ecs/target".into()).unwrap();
     if target_path.exists() {

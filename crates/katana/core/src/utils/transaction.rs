@@ -11,9 +11,7 @@ use starknet::core::types::{
     InvokeTransactionV0, InvokeTransactionV1, L1HandlerTransaction, Transaction as RpcTransaction,
 };
 use starknet::core::utils::get_contract_address;
-use starknet_api::core::{
-    ClassHash, CompiledClassHash, ContractAddress, EntryPointSelector, Nonce, PatriciaKey,
-};
+use starknet_api::core::{ClassHash, CompiledClassHash, ContractAddress, Nonce, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};
 use starknet_api::transaction::{
     Calldata, ContractAddressSalt, DeclareTransaction as DeclareApiTransaction,
@@ -21,9 +19,8 @@ use starknet_api::transaction::{
     DeclareTransactionV2 as DeclareApiTransactionV2,
     DeployAccountTransaction as DeployAccountApiTransaction,
     DeployTransaction as DeployApiTransaction, Fee, InvokeTransaction as InvokeApiTransaction,
-    InvokeTransactionV0 as InvokeApiTransactionV0, InvokeTransactionV1 as InvokeApiTransactionV1,
-    L1HandlerTransaction as L1HandlerApiTransaction, Transaction as ApiTransaction,
-    TransactionHash, TransactionSignature, TransactionVersion,
+    InvokeTransactionV1 as InvokeApiTransactionV1, L1HandlerTransaction as L1HandlerApiTransaction,
+    Transaction as ApiTransaction, TransactionHash, TransactionSignature, TransactionVersion,
 };
 use starknet_api::{patricia_key, stark_felt};
 
@@ -237,7 +234,6 @@ fn api_deploy_account_to_rpc_transaction(
 fn api_invoke_to_rpc_transaction(transaction: InvokeApiTransaction) -> InvokeTransaction {
     match transaction {
         InvokeApiTransaction::V0(tx) => InvokeTransaction::V0(InvokeTransactionV0 {
-            nonce: FieldElement::ZERO,
             max_fee: tx.max_fee.0.into(),
             transaction_hash: tx.transaction_hash.0.into(),
             contract_address: (*tx.contract_address.0.key()).into(),
@@ -298,55 +294,23 @@ pub fn broadcasted_invoke_rpc_to_api_transaction(
     transaction: BroadcastedInvokeTransaction,
     chain_id: FieldElement,
 ) -> InvokeApiTransaction {
-    match transaction {
-        BroadcastedInvokeTransaction::V0(tx) => {
-            let transaction_hash = compute_invoke_v0_transaction_hash(
-                tx.contract_address,
-                tx.entry_point_selector,
-                &tx.calldata,
-                tx.max_fee,
-                chain_id,
-            );
+    let BroadcastedInvokeTransaction {
+        calldata, max_fee, nonce, sender_address, signature, ..
+    } = transaction;
 
-            let transaction = InvokeApiTransactionV0 {
-                transaction_hash: TransactionHash(transaction_hash.into()),
-                contract_address: ContractAddress(patricia_key!(tx.contract_address)),
-                entry_point_selector: EntryPointSelector(tx.entry_point_selector.into()),
-                calldata: Calldata(Arc::new(tx.calldata.into_iter().map(|c| c.into()).collect())),
-                max_fee: Fee(starkfelt_to_u128(tx.max_fee.into())
-                    .expect("convert max fee StarkFelt to u128")),
-                signature: TransactionSignature(
-                    tx.signature.into_iter().map(|e| e.into()).collect(),
-                ),
-            };
+    let hash =
+        compute_invoke_v1_transaction_hash(sender_address, &calldata, max_fee, chain_id, nonce);
 
-            InvokeApiTransaction::V0(transaction)
-        }
+    let transaction = InvokeApiTransactionV1 {
+        nonce: Nonce(nonce.into()),
+        transaction_hash: TransactionHash(hash.into()),
+        sender_address: ContractAddress(patricia_key!(sender_address)),
+        signature: TransactionSignature(signature.into_iter().map(|e| e.into()).collect()),
+        calldata: Calldata(Arc::new(calldata.into_iter().map(|c| c.into()).collect())),
+        max_fee: Fee(starkfelt_to_u128(max_fee.into()).expect("convert max fee StarkFelt to u128")),
+    };
 
-        BroadcastedInvokeTransaction::V1(tx) => {
-            let transaction_hash = compute_invoke_v1_transaction_hash(
-                tx.sender_address,
-                &tx.calldata,
-                tx.max_fee,
-                chain_id,
-                tx.nonce,
-            );
-
-            let transaction = InvokeApiTransactionV1 {
-                transaction_hash: TransactionHash(transaction_hash.into()),
-                sender_address: ContractAddress(patricia_key!(tx.sender_address)),
-                nonce: Nonce(StarkFelt::from(tx.nonce)),
-                calldata: Calldata(Arc::new(tx.calldata.into_iter().map(|c| c.into()).collect())),
-                max_fee: Fee(starkfelt_to_u128(tx.max_fee.into())
-                    .expect("convert max fee StarkFelt to u128")),
-                signature: TransactionSignature(
-                    tx.signature.into_iter().map(|e| e.into()).collect(),
-                ),
-            };
-
-            InvokeApiTransaction::V1(transaction)
-        }
-    }
+    InvokeApiTransaction::V1(transaction)
 }
 
 /// Convert broadcasted Declare transaction type from `starknet-rs` to `starknet_api`'s

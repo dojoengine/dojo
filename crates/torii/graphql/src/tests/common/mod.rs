@@ -35,6 +35,7 @@ pub struct Entity {
 pub struct Moves {
     pub __typename: String,
     pub remaining: u32,
+    pub last_direction: u8,
     pub entity: Option<Entity>,
 }
 
@@ -46,7 +47,7 @@ pub struct Position {
     pub entity: Option<Entity>,
 }
 
-pub enum Direction {
+pub enum Paginate {
     Forward,
     Backward,
 }
@@ -74,9 +75,9 @@ pub async fn entity_fixtures(pool: &SqlitePool) {
     let state = init(pool).await;
 
     // Set entity with one moves component
-    // remaining: 10
+    // remaining: 10, last_direction: 0
     let key = vec![FieldElement::ONE];
-    let moves_values = vec![FieldElement::from_hex_be("0xa").unwrap()];
+    let moves_values = vec![FieldElement::from_hex_be("0xa").unwrap(), FieldElement::ZERO];
     state.set_entity("Moves".to_string(), key, moves_values.clone()).await.unwrap();
 
     // Set entity with one position component
@@ -90,11 +91,11 @@ pub async fn entity_fixtures(pool: &SqlitePool) {
     state.set_entity("Position".to_string(), key, position_values.clone()).await.unwrap();
 
     // Set an entity with both moves and position components
-    // remaining: 1
+    // remaining: 1, last_direction: 0
     // x: 69
     // y: 42
     let key = vec![FieldElement::THREE];
-    let moves_values = vec![FieldElement::from_hex_be("0x1").unwrap()];
+    let moves_values = vec![FieldElement::from_hex_be("0x1").unwrap(), FieldElement::ZERO];
     let position_values = vec![
         FieldElement::from_hex_be("0x45").unwrap(),
         FieldElement::from_hex_be("0x2a").unwrap(),
@@ -120,12 +121,12 @@ pub async fn init(pool: &SqlitePool) -> Sql {
 pub async fn paginate(
     pool: &SqlitePool,
     cursor: Option<String>,
-    direction: Direction,
+    direction: Paginate,
     page_size: usize,
 ) -> Connection<Entity> {
     let (first_last, before_after) = match direction {
-        Direction::Forward => ("first", "after"),
-        Direction::Backward => ("last", "before"),
+        Paginate::Forward => ("first", "after"),
+        Paginate::Backward => ("last", "before"),
     };
 
     let cursor = cursor.map_or(String::new(), |c| format!(", {before_after}: \"{c}\""));

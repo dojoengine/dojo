@@ -7,6 +7,7 @@ mod spawn {
 
     use dojo_examples::components::Position;
     use dojo_examples::components::Moves;
+    use dojo_examples::components::Direction;
 
     fn execute(ctx: Context) {
         let position = get !(ctx.world, ctx.origin, (Position));
@@ -14,7 +15,7 @@ mod spawn {
             ctx.world,
             (
                 Moves {
-                    player: ctx.origin, remaining: 10
+                    player: ctx.origin, remaining: 10, last_direction: Direction::None(())
                     }, Position {
                     player: ctx.origin, x: position.x + 10, y: position.y + 10
                 },
@@ -34,11 +35,12 @@ mod move {
 
     use dojo_examples::components::Position;
     use dojo_examples::components::Moves;
+    use dojo_examples::components::Direction;
 
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
-        Moved: Moved,
+        Moved: Moved, 
     }
 
     #[derive(Drop, starknet::Event)]
@@ -47,28 +49,10 @@ mod move {
         direction: Direction
     }
 
-    #[derive(Serde, Copy, Drop)]
-    enum Direction {
-        Left: (),
-        Right: (),
-        Up: (),
-        Down: (),
-    }
-
-    impl DirectionIntoFelt252 of Into<Direction, felt252> {
-        fn into(self: Direction) -> felt252 {
-            match self {
-                Direction::Left(()) => 0,
-                Direction::Right(()) => 1,
-                Direction::Up(()) => 2,
-                Direction::Down(()) => 3,
-            }
-        }
-    }
-
     fn execute(ctx: Context, direction: Direction) {
         let (mut position, mut moves) = get !(ctx.world, ctx.origin, (Position, Moves));
         moves.remaining -= 1;
+        moves.last_direction = direction;
         let next = next_position(position, direction);
         set !(ctx.world, (moves, next));
         emit !(ctx.world, Moved { address: ctx.origin, direction });
@@ -77,6 +61,9 @@ mod move {
 
     fn next_position(mut position: Position, direction: Direction) -> Position {
         match direction {
+            Direction::None(()) => {
+                return position;
+            },
             Direction::Left(()) => {
                 position.x -= 1;
             },
@@ -120,7 +107,7 @@ mod tests {
         let mut components = array::ArrayTrait::new();
         components.append(position::TEST_CLASS_HASH);
         components.append(moves::TEST_CLASS_HASH);
-        components.append(dojo_erc::erc20::components::balance::TEST_CLASS_HASH);
+        // components.append(dojo_erc::erc20::components::balance::TEST_CLASS_HASH);
         // systems
         let mut systems = array::ArrayTrait::new();
         systems.append(spawn::TEST_CLASS_HASH);
@@ -138,10 +125,11 @@ mod tests {
         let mut keys = array::ArrayTrait::new();
         keys.append(caller.into());
 
-        let moves = world.entity('Moves', keys.span(), 0, dojo::SerdeLen::<Moves>::len());
+        let moves = world.entity('Moves', keys.span(), 0, dojo::StorageSize::<Moves>::unpacked_size());
         assert(*moves[0] == 9, 'moves is wrong');
+        assert(*moves[1] == move::Direction::Right(()).into(), 'last direction is wrong');
         let new_position = world
-            .entity('Position', keys.span(), 0, dojo::SerdeLen::<Position>::len());
+            .entity('Position', keys.span(), 0, dojo::StorageSize::<Position>::unpacked_size());
         assert(*new_position[0] == 11, 'position x is wrong');
         assert(*new_position[1] == 10, 'position y is wrong');
     }

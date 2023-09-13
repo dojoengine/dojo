@@ -93,7 +93,7 @@ impl Logger for RpcLogger {
         _kind: MethodKind,
         _transport: TransportProtocol,
     ) {
-        debug!(method = ?method_name);
+        debug!(target: "server", method = ?method_name);
     }
 
     fn on_result(

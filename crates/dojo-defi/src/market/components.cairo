@@ -1,30 +1,31 @@
-use option::OptionTrait;
 use starknet::ContractAddress;
-use traits::{Into, TryInto};
-
-use dojo::serde::SerdeLen;
-
+use dojo::StorageSize;
 
 // Cubit fixed point math library
 use cubit::f128::types::fixed::Fixed;
 
 const SCALING_FACTOR: u128 = 10000;
 
-impl SerdeLenFixed of SerdeLen<Fixed> {
+impl StorageSizeFixed of StorageSize<Fixed> {
     #[inline(always)]
-    fn len() -> usize {
-        2
+    fn unpacked_size() -> usize {
+        1
+    }
+
+    #[inline(always)]
+    fn packed_size() -> usize {
+        129
     }
 }
 
-#[derive(Component, Copy, Drop, Serde, SerdeLen)]
+#[derive(Component, Copy, Drop, Serde)]
 struct Cash {
     #[key]
     player: ContractAddress,
     amount: u128,
 }
 
-#[derive(Component, Copy, Drop, Serde, SerdeLen)]
+#[derive(Component, Copy, Drop, Serde)]
 struct Item {
     #[key]
     player: ContractAddress,
@@ -33,7 +34,7 @@ struct Item {
     quantity: u128,
 }
 
-#[derive(Component, Copy, Drop, Serde, SerdeLen)]
+#[derive(Component, Copy, Drop, Serde)]
 struct Liquidity {
     #[key]
     player: ContractAddress,
@@ -42,7 +43,7 @@ struct Liquidity {
     shares: Fixed,
 }
 
-#[derive(Component, Copy, Drop, Serde, SerdeLen)]
+#[derive(Component, Copy, Drop, Serde)]
 struct Market {
     #[key]
     item_id: u32,

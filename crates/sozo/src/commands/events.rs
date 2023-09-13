@@ -1,7 +1,12 @@
-use anyhow::Result;
+use std::collections::HashMap;
+
+use anyhow::{anyhow, Result};
+use cairo_lang_starknet::abi::{self, Event, Item};
 use clap::Parser;
+use dojo_world::manifest::Manifest;
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use scarb::core::Config;
+use starknet::core::utils::starknet_keccak;
 
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
@@ -29,6 +34,10 @@ pub struct EventsArgs {
     #[arg(help = "Continuation string to be passed for rpc request")]
     pub continuation_token: Option<String>,
 
+    #[arg(long)]
+    #[arg(help = "Print values as raw json")]
+    pub json: bool,
+
     #[command(flatten)]
     pub world: WorldOptions,
 
@@ -38,6 +47,15 @@ pub struct EventsArgs {
 
 impl EventsArgs {
     pub fn run(self, config: &Config) -> Result<()> {
+        let target_dir = config.target_dir().path_existent().unwrap();
+        let manifest_path = target_dir.join(config.profile().as_str()).join("manifest.json");
+
+        if !manifest_path.exists() {
+            return Err(anyhow!("Run scarb migrate before running this command"));
+        }
+
+        let manifest = Manifest::load_from_path(manifest_path)?;
+        let events = extract_events(&manifest);
         let env_metadata = if config.manifest_path().exists() {
             let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
 
@@ -46,8 +64,47 @@ impl EventsArgs {
         } else {
             None
         };
-        config.tokio_handle().block_on(events::execute(self, env_metadata))
+        config.tokio_handle().block_on(events::execute(self, env_metadata, events))
     }
+}
+
+fn extract_events(manifest: &Manifest) -> HashMap<String, Vec<Event>> {
+    fn inner_helper(events: &mut HashMap<String, Vec<Event>>, contract: &Option<abi::Contract>) {
+        if let Some(contract) = contract {
+            for item in &contract.items {
+                if let Item::Event(e) = item {
+                    match e.kind {
+                        abi::EventKind::Struct { .. } => {
+                            let event_name =
+                                starknet_keccak(e.name.split("::").last().unwrap().as_bytes());
+                            let vec = events.entry(event_name.to_string()).or_insert(Vec::new());
+                            vec.push(e.clone());
+                        }
+                        abi::EventKind::Enum { .. } => (),
+                    }
+                }
+            }
+        }
+    }
+
+    let mut events_map = HashMap::new();
+
+    inner_helper(&mut events_map, &manifest.world.abi);
+    inner_helper(&mut events_map, &manifest.executor.abi);
+
+    for system in &manifest.systems {
+        inner_helper(&mut events_map, &system.abi);
+    }
+
+    for contract in &manifest.contracts {
+        inner_helper(&mut events_map, &contract.abi);
+    }
+
+    for component in &manifest.components {
+        inner_helper(&mut events_map, &component.abi);
+    }
+
+    events_map
 }
 
 #[cfg(test)]

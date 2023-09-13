@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use camino::Utf8PathBuf;
 use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, TestSequencer,
@@ -9,7 +11,7 @@ use starknet_crypto::FieldElement;
 use crate::contract::world::test::deploy_world;
 use crate::contract::world::WorldContract;
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_system() {
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
@@ -26,23 +28,31 @@ async fn test_system() {
 
     let _ = spawn.execute(vec![]).await.unwrap();
 
+    // wait for the tx to be mined
+    tokio::time::sleep(Duration::from_millis(250)).await;
+
     let component = world.component("Moves", block_id).await.unwrap();
     let moves = component.entity(vec![account.address()], block_id).await.unwrap();
 
-    assert_eq!(moves, vec![10_u8.into()]);
+    assert_eq!(moves, vec![10_u8.into(), FieldElement::ZERO]);
 
     let move_system = world.system("move", block_id).await.unwrap();
 
     let _ = move_system.execute(vec![FieldElement::ONE]).await.unwrap();
+    // wait for the tx to be mined
+    tokio::time::sleep(Duration::from_millis(250)).await;
+
     let _ = move_system.execute(vec![FieldElement::THREE]).await.unwrap();
+    // wait for the tx to be mined
+    tokio::time::sleep(Duration::from_millis(250)).await;
 
     let moves = component.entity(vec![account.address()], block_id).await.unwrap();
 
-    assert_eq!(moves, vec![8_u8.into()]);
+    assert_eq!(moves, vec![8_u8.into(), FieldElement::THREE]);
 
     let position_component = world.component("Position", block_id).await.unwrap();
 
     let position = position_component.entity(vec![account.address()], block_id).await.unwrap();
 
-    assert_eq!(position, vec![11_u8.into(), 11_u8.into()]);
+    assert_eq!(position, vec![9_u8.into(), 9_u8.into()]);
 }

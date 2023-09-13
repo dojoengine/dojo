@@ -60,3 +60,129 @@ fn set_many(address_domain: u32, keys: Span<felt252>, offset: u8, mut value: Spa
         };
     };
 }
+
+
+trait StorageSize<T> {
+    fn unpacked_size() -> usize;
+    fn packed_size() -> usize;
+}
+
+impl StorageSizeFelt252 of StorageSize<felt252> {
+    #[inline(always)]
+    fn unpacked_size() -> usize {
+        1
+    }
+
+    #[inline(always)]
+    fn packed_size() -> usize {
+        252
+    }
+}
+
+impl StorageSizeBool of StorageSize<bool> {
+    #[inline(always)]
+    fn unpacked_size() -> usize {
+        1
+    }
+
+    #[inline(always)]
+    fn packed_size() -> usize {
+        1
+    }
+}
+
+impl StorageSizeU8 of StorageSize<u8> {
+    #[inline(always)]
+    fn unpacked_size() -> usize {
+        1
+    }
+
+    #[inline(always)]
+    fn packed_size() -> usize {
+        8
+    }
+}
+
+impl StorageSizeU16 of StorageSize<u16> {
+    #[inline(always)]
+    fn unpacked_size() -> usize {
+        1
+    }
+
+    #[inline(always)]
+    fn packed_size() -> usize {
+        16
+    }
+}
+
+impl StorageSizeU32 of StorageSize<u32> {
+    #[inline(always)]
+    fn unpacked_size() -> usize {
+        1
+    }
+
+    #[inline(always)]
+    fn packed_size() -> usize {
+        32
+    }
+}
+
+impl StorageSizeU64 of StorageSize<u64> {
+    #[inline(always)]
+    fn unpacked_size() -> usize {
+        1
+    }
+
+    #[inline(always)]
+    fn packed_size() -> usize {
+        64
+    }
+}
+
+impl StorageSizeU128 of StorageSize<u128> {
+    #[inline(always)]
+    fn unpacked_size() -> usize {
+        1
+    }
+
+    #[inline(always)]
+    fn packed_size() -> usize {
+        128
+    }
+}
+
+impl StorageSizeU256 of StorageSize<u256> {
+    #[inline(always)]
+    fn unpacked_size() -> usize {
+        2
+    }
+
+    #[inline(always)]
+    fn packed_size() -> usize {
+        256
+    }
+}
+
+impl StorageSizeContractAddress of StorageSize<starknet::ContractAddress> {
+    #[inline(always)]
+    fn unpacked_size() -> usize {
+        1
+    }
+
+    #[inline(always)]
+    fn packed_size() -> usize {
+        256
+    }
+}
+
+impl StorageSizeClassHash of StorageSize<starknet::ClassHash> {
+    #[inline(always)]
+    fn unpacked_size() -> usize {
+        1
+    }
+
+    #[inline(always)]
+    fn packed_size() -> usize {
+        256
+    }
+}

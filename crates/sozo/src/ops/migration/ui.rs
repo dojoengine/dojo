@@ -1,5 +1,5 @@
 use console::{pad_str, Alignment, Style, StyledObject};
-use scarb::ui::Ui;
+use scarb_ui::Ui;
 
 pub trait MigrationUi {
     fn print_step(&self, step: usize, icon: &str, message: &str);

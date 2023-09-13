@@ -26,6 +26,7 @@ mod tests {
                             node {
                                 __typename
                                 remaining
+                                last_direction
                             }
                             cursor
                         }
@@ -74,6 +75,7 @@ mod tests {
             ("where: { xLT: 42 }", 0),
             ("where: { xLTE: 42 }", 1),
             ("where: { x: 1337, yGTE: 1234 }", 0),
+            (r#"where: { player: "0x2" }"#, 1), // player is a key
         ]);
 
         for (filter, expected_total) in where_filters {

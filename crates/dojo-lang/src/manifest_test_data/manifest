@@ -8,7 +8,7 @@ test_manifest_file
   "world": {
     "name": "world",
     "address": null,
-    "class_hash": "0x1527b232cbd77c7f021fdc129339d7623edfd9a9c79a1b9add29c9064961497",
+    "class_hash": "0x2f857fd574c566f9bea8587569d016036377e028f0d47f6e31b4518ee605cd1",
     "abi": [
       {
         "type": "impl",
@@ -541,7 +541,7 @@ test_manifest_file
   "executor": {
     "name": "executor",
     "address": null,
-    "class_hash": "0x6ac7478eec43bd66aacf829f58dcb4694d0e241dc52b332f64de2b736c24137",
+    "class_hash": "0x24caf320f4df7648b6f150df66c16c62f51bcba009daecfec1f7622007ad04c",
     "abi": [
       {
         "type": "impl",
@@ -626,7 +626,7 @@ test_manifest_file
         }
       ],
       "outputs": [],
-      "class_hash": "0x73a2c968589ad1bf663ae71cdd7e55125265dbbfece0992ab993e0711fbfb1f",
+      "class_hash": "0x205287b11aa6c42e3cef3539607aa250c2b9ffe27f847af8e88f005e1b3525d",
       "dependencies": [],
       "abi": [
         {
@@ -701,11 +701,11 @@ test_manifest_file
         },
         {
           "name": "direction",
-          "type": "dojo_examples::systems::move::Direction"
+          "type": "dojo_examples::components::Direction"
         }
       ],
       "outputs": [],
-      "class_hash": "0x601d780f4ccee957d308dbb6ad98cb5d4bf8e4e4b9cf7b221b8264c1d7186ef",
+      "class_hash": "0x501dbe28cf4e7f3a47c9abeee23c85992b97fdaa324c1fcb1e2a638882fc470",
       "dependencies": [],
       "abi": [
         {
@@ -721,8 +721,12 @@ test_manifest_file
         },
         {
           "type": "enum",
-          "name": "dojo_examples::systems::move::Direction",
+          "name": "dojo_examples::components::Direction",
           "variants": [
+            {
+              "name": "None",
+              "type": "()"
+            },
             {
               "name": "Left",
               "type": "()"
@@ -779,7 +783,7 @@ test_manifest_file
           "inputs": [
             {
               "name": "direction",
-              "type": "dojo_examples::systems::move::Direction"
+              "type": "dojo_examples::components::Direction"
             },
             {
               "name": "ctx",
@@ -801,7 +805,7 @@ test_manifest_file
             },
             {
               "name": "direction",
-              "type": "dojo_examples::systems::move::Direction",
+              "type": "dojo_examples::components::Direction",
               "kind": "data"
             }
           ]
@@ -845,7 +849,7 @@ test_manifest_file
           "type": "core::array::Span::<core::felt252>"
         }
       ],
-      "class_hash": "0x5c3f8568adfef908692f02fcfcc80e303c237183fe864f6cff8c34d29d3f130",
+      "class_hash": "0x3687cba423875df72318e609c4a5584b222862e01f624e80011c67b18661ae1",
       "dependencies": [],
       "abi": [
         {
@@ -952,9 +956,14 @@ test_manifest_file
           "name": "remaining",
           "type": "u8",
           "key": false
+        },
+        {
+          "name": "last_direction",
+          "type": "Direction",
+          "key": false
         }
       ],
-      "class_hash": "0x5baa2a6749eebb5c2206c497a31c760455709e37f42bec5a7418bb98126d284",
+      "class_hash": "0x451a367ced4c22bfc661e6a342391faa6087d3162ea53cf4c6cc86c8630de49",
       "abi": [
         {
           "type": "function",
@@ -1030,7 +1039,7 @@ test_manifest_file
           "key": false
         }
       ],
-      "class_hash": "0x4973c97a1cd5e141d6dfe05c36517234851118ea703e510fcb72a39a092c228",
+      "class_hash": "0x6a8ab7eb5689bed6f0e9fb63d2565411830e1725aca7299f5f512d375d9a28c",
       "abi": [
         {
           "type": "function",
