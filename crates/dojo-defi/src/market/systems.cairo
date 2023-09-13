@@ -1,7 +1,5 @@
 #[system]
 mod Buy {
-    use traits::Into;
-    use array::ArrayTrait;
     use dojo_defi::market::components::{Item, Cash, Market};
     use dojo_defi::market::constant_product_market::MarketTrait;
     use dojo::world::Context;
@@ -40,8 +38,6 @@ mod Buy {
 
 #[system]
 mod Sell {
-    use traits::Into;
-    use array::ArrayTrait;
     use dojo_defi::market::components::{Item, Cash, Market};
     use dojo_defi::market::constant_product_market::MarketTrait;
     use dojo::world::Context;
@@ -81,8 +77,6 @@ mod Sell {
 
 #[system]
 mod AddLiquidity {
-    use traits::Into;
-    use array::ArrayTrait;
     use dojo_defi::market::components::{Item, Cash, Market, Liquidity};
     use dojo_defi::market::constant_product_market::MarketTrait;
     use dojo::world::Context;
@@ -132,8 +126,6 @@ mod AddLiquidity {
 
 #[system]
 mod RemoveLiquidity {
-    use traits::Into;
-    use array::ArrayTrait;
     use dojo_defi::market::components::{Item, Cash, Market, Liquidity};
     use dojo_defi::market::constant_product_market::MarketTrait;
     use dojo::world::Context;

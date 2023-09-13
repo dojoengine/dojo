@@ -1,9 +1,5 @@
-use traits::{Into, TryInto};
-use option::OptionTrait;
 use starknet::ContractAddress;
-
 use dojo_defi::market::components::Market;
-
 use cubit::f128::types::fixed::{Fixed, FixedTrait};
 
 const SCALING_FACTOR: u128 = 10000;
