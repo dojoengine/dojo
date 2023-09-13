@@ -150,7 +150,7 @@ fn test_create_new_entry() {
     
     index::create(address_domain, index, id);
 
-    assert(index::exists(address_domain, index, id), 'Test failed');
+    assert(index::exists(address_domain, index, id), 'Function saves data incorrectly');
 }
 
 #[test]
@@ -159,10 +159,25 @@ fn test_add_key() {
     let address_domain = 0;
     let index = 420;
     let id = 123;
-    let key = 69;
     let idx = 7;
 
-    let result = index::add_key(address_domain, index, id, key, idx);
+    let mut key = ArrayTrait::new();
+    key.append(69);
+    key.append(111);
+    key.append(420);
+
+    let x = index::add_key(address_domain, index, id, *key.at(0), idx);
+    assert(x == 0, 'Expected value incorrect at 0');
+
+    let x = index::add_key(address_domain, index, id, *key.at(1), idx);
+    assert(x == 0, 'Expected value incorrect at 1');
+
+    let x = index::add_key(address_domain, index, id, *key.at(2), idx);
+    assert(x == 0, 'Expected value incorrect at 2');
     
-    assert(result == 0, 'Expected value incorrect');
+    let x = index::add_key(address_domain, index, id, *key.at(0), idx);
+    assert(x == 1, 'Expected value incorrect at 0');
+
+    let x = index::add_key(address_domain, index, id, *key.at(0), idx);
+    assert(x == 2, 'Expected value incorrect at 0');
 }
