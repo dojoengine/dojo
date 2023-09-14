@@ -1,12 +1,15 @@
-// I have copied source code from https://github.com/software-mansion/scarb/blob/bf927194941f6c0ce62677e7e2ef4f9122489ff6/scarb/src/compiler/db.rs
+// I have copied source code from https://github.com/software-mansion/scarb/blob/main/scarb/src/compiler/db.rs
 // since build_scarb_root_database is not public
 use anyhow::Result;
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_compiler::project::{ProjectConfig, ProjectConfigContent};
+use cairo_lang_defs::db::DefsGroup;
+use cairo_lang_defs::plugin::MacroPlugin;
 use cairo_lang_filesystem::ids::Directory;
+use tracing::trace;
+
 use scarb::compiler::CompilationUnit;
 use scarb::core::Workspace;
-use tracing::trace;
 
 // TODO(mkaput): ScarbDatabase?
 pub(crate) fn build_scarb_root_database(
@@ -23,6 +26,9 @@ pub(crate) fn build_scarb_root_database(
         let instance = plugin.instantiate()?;
         for macro_plugin in instance.macro_plugins() {
             b.with_macro_plugin(macro_plugin);
+        }
+        for (name, inline_macro_plugin) in instance.inline_macro_plugins() {
+            b.with_inline_macro_plugin(&name, inline_macro_plugin);
         }
     }
 
