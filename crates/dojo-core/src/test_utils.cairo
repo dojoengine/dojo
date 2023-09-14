@@ -7,20 +7,11 @@ use traits::TryInto;
 use option::OptionTrait;
 use core::{result::ResultTrait, traits::Into};
 
-use dojo::executor::executor;
 use dojo::world::{world, IWorldDispatcher, IWorldDispatcherTrait};
 
 fn spawn_test_world(components: Array<felt252>, systems: Array<felt252>) -> IWorldDispatcher {
-    // deploy executor
-    let constructor_calldata = array::ArrayTrait::new();
-    let (executor_address, _) = deploy_syscall(
-        executor::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
-    )
-        .unwrap();
-
     // deploy world
     let mut world_constructor_calldata = array::ArrayTrait::new();
-    world_constructor_calldata.append(executor_address.into());
     let (world_address, _) = deploy_syscall(
         world::TEST_CLASS_HASH.try_into().unwrap(), 0, world_constructor_calldata.span(), false
     )

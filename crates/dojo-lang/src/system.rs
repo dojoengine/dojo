@@ -112,6 +112,11 @@ impl System {
                 stable_ptr: param.stable_ptr().untyped(),
             });
         }
+        let ctx_var = context.clone();
+        let ctx_var = match ctx_var.split_once(':') {
+            Some((ctx, _)) => ctx,
+            _ => "_ctx",
+        };
 
         let mut params =
             elements.iter().map(|e| e.as_syntax_node().get_text(db)).collect::<Vec<_>>();
@@ -127,7 +132,11 @@ impl System {
         rewrite_nodes.push(RewriteNode::interpolate_patched(
             "
                 #[external(v0)]
-                fn execute(self: @ContractState, $params$) $ret_clause$ $body$
+                fn execute(self: @ContractState, $params$) $ret_clause$ {
+                    assert( $ctx$.world.contract_address == starknet::get_caller_address(), 'must \
+             be called thru world' );
+                    $body$
+                }
             ",
             UnorderedHashMap::from([
                 ("params".to_string(), RewriteNode::Text(params)),
@@ -136,6 +145,7 @@ impl System {
                     RewriteNode::new_trimmed(function_ast.body(db).as_syntax_node()),
                 ),
                 ("ret_clause".to_string(), ret_clause),
+                ("ctx".to_string(), RewriteNode::Text(ctx_var.to_string())),
             ]),
         ));
 

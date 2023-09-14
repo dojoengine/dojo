@@ -10,15 +10,12 @@ mod spawn {
     use dojo_examples::components::Direction;
 
     fn execute(ctx: Context) {
-        let position = get !(ctx.world, ctx.origin, (Position));
-        set !(
+        let position = get!(ctx.world, ctx.origin, (Position));
+        set!(
             ctx.world,
             (
-                Moves {
-                    player: ctx.origin, remaining: 10, last_direction: Direction::None(())
-                    }, Position {
-                    player: ctx.origin, x: position.x + 10, y: position.y + 10
-                },
+                Moves { player: ctx.origin, remaining: 10, last_direction: Direction::None(()) },
+                Position { player: ctx.origin, x: position.x + 10, y: position.y + 10 },
             )
         );
         return ();
@@ -40,7 +37,7 @@ mod move {
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
-        Moved: Moved, 
+        Moved: Moved,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -50,12 +47,12 @@ mod move {
     }
 
     fn execute(ctx: Context, direction: Direction) {
-        let (mut position, mut moves) = get !(ctx.world, ctx.origin, (Position, Moves));
+        let (mut position, mut moves) = get!(ctx.world, ctx.origin, (Position, Moves));
         moves.remaining -= 1;
         moves.last_direction = direction;
         let next = next_position(position, direction);
-        set !(ctx.world, (moves, next));
-        emit !(ctx.world, Moved { address: ctx.origin, direction });
+        set!(ctx.world, (moves, next));
+        emit!(ctx.world, Moved { address: ctx.origin, direction });
         return ();
     }
 
@@ -113,7 +110,7 @@ mod tests {
         systems.append(spawn::TEST_CLASS_HASH);
         systems.append(move::TEST_CLASS_HASH);
 
-        // deploy executor, world and register components/systems
+        // deploy world and register components/systems
         let world = spawn_test_world(components, systems);
 
         let spawn_call_data = array::ArrayTrait::new();
@@ -125,7 +122,8 @@ mod tests {
         let mut keys = array::ArrayTrait::new();
         keys.append(caller.into());
 
-        let moves = world.entity('Moves', keys.span(), 0, dojo::StorageSize::<Moves>::unpacked_size());
+        let moves = world
+            .entity('Moves', keys.span(), 0, dojo::StorageSize::<Moves>::unpacked_size());
         assert(*moves[0] == 9, 'moves is wrong');
         assert(*moves[1] == move::Direction::Right(()).into(), 'last direction is wrong');
         let new_position = world

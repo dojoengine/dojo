@@ -8,7 +8,6 @@ use starknet::{
 };
 use traits::{Into, TryInto};
 
-use dojo::executor::executor;
 use dojo::test_utils::spawn_test_world;
 use dojo::world::{world, IWorldDispatcher, IWorldDispatcherTrait};
 use dojo_erc::erc20::components::{allowance, balance, supply};

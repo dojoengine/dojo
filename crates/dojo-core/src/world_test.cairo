@@ -11,7 +11,6 @@ use starknet::ContractAddress;
 use starknet::get_caller_address;
 use starknet::syscalls::deploy_syscall;
 
-use dojo::executor::executor;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, library_call, world};
 
 // Components and Systems
@@ -39,7 +38,7 @@ mod bar {
     use dojo::world::Context;
 
     fn execute(ctx: Context, a: felt252, b: u128) {
-        set !(ctx.world, Foo { caller: ctx.origin, a, b });
+        set!(ctx.world, Foo { caller: ctx.origin, a, b });
     }
 }
 
@@ -75,19 +74,21 @@ fn test_system() {
     assert(*stored.snapshot.at(0) == 1337, 'data not stored');
 }
 
-#[test]
-#[available_gas(6000000)]
-fn test_class_hash_getters() {
-    let world = deploy_world();
+// Systems are not class hashes anymore
+//
+// #[test]
+// #[available_gas(6000000)]
+// fn test_class_hash_getters() {
+//     let world = deploy_world();
 
-    world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
-    world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
+//     world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
+//     world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
 
-    let foo = world.component('Foo');
-    assert(foo == foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo does not exists');
-    let bar = world.system('bar');
-    assert(bar == bar::TEST_CLASS_HASH.try_into().unwrap(), 'bar does not exists');
-}
+//     let foo = world.component('Foo');
+//     assert(foo == foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo does not exists');
+//     let bar = world.system('bar');
+//     assert(bar == bar::TEST_CLASS_HASH.try_into().unwrap(), 'bar does not exists');
+// }
 
 #[test]
 #[available_gas(6000000)]
@@ -196,24 +197,13 @@ fn test_set_entity_directly() {
     world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
 
-    set !(world, Foo { caller: starknet::contract_address_const::<0x1337>(), a: 420, b: 1337 });
+    set!(world, Foo { caller: starknet::contract_address_const::<0x1337>(), a: 420, b: 1337 });
 }
 
 // Utils
 fn deploy_world() -> IWorldDispatcher {
-    // Deploy executor contract
-    let executor_constructor_calldata = array::ArrayTrait::new();
-    let (executor_address, _) = deploy_syscall(
-        executor::TEST_CLASS_HASH.try_into().unwrap(),
-        0,
-        executor_constructor_calldata.span(),
-        false
-    )
-        .unwrap();
-
     // Deploy world contract
     let mut constructor_calldata = array::ArrayTrait::new();
-    constructor_calldata.append(executor_address.into());
     let (world_address, _) = deploy_syscall(
         world::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
     )
@@ -323,7 +313,8 @@ mod origin_wrapper {
     fn execute(ctx: Context) {
         let data: Array<felt252> = ArrayTrait::new();
         assert(ctx.origin == starknet::contract_address_const::<0x1337>(), 'should be equal');
-        ctx.world.execute('origin', data);
+        // @TODO Confirm if this is needed
+        // ctx.world.execute('origin', data);
         assert(ctx.origin == starknet::contract_address_const::<0x1337>(), 'should be equal');
     }
 }
@@ -341,9 +332,7 @@ fn test_execute_origin() {
 
     let alice = starknet::contract_address_const::<0x1337>();
     starknet::testing::set_contract_address(alice);
-    assert(world.origin() == starknet::contract_address_const::<0x0>(), 'should be equal');
     world.execute('origin_wrapper', data);
-    assert(world.origin() == starknet::contract_address_const::<0x0>(), 'should be equal');
 }
 
 #[test]
@@ -365,35 +354,25 @@ fn test_execute_origin_failing() {
 #[test]
 #[available_gas(6000000)]
 fn test_execute_multiple_worlds() {
-    // Deploy executor contract
-    let executor_constructor_calldata = array::ArrayTrait::new();
-    let (executor_address, _) = deploy_syscall(
-        executor::TEST_CLASS_HASH.try_into().unwrap(),
-        0,
-        executor_constructor_calldata.span(),
-        false
-    )
-        .unwrap();
-
     // Deploy world contract
     let mut constructor_calldata = array::ArrayTrait::new();
-    constructor_calldata.append(executor_address.into());
     let (world_address, _) = deploy_syscall(
         world::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
-    ).unwrap();
+    )
+        .unwrap();
     let world = IWorldDispatcher { contract_address: world_address };
 
     // Deploy another world contract
     let (world_address, _) = deploy_syscall(
         world::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
-    ).unwrap();
+    )
+        .unwrap();
     let another_world = IWorldDispatcher { contract_address: world_address };
 
     world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
     another_world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
     another_world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
-
 
     let mut data = ArrayTrait::new();
     data.append(1337);
@@ -408,7 +387,8 @@ fn test_execute_multiple_worlds() {
     another_world.execute('bar', another_data);
 
     let stored = world.entity('Foo', keys.span(), 0, dojo::StorageSize::<Foo>::unpacked_size());
-    let another_stored = another_world.entity('Foo', keys.span(), 0, dojo::StorageSize::<Foo>::unpacked_size());
+    let another_stored = another_world
+        .entity('Foo', keys.span(), 0, dojo::StorageSize::<Foo>::unpacked_size());
     assert(*stored.snapshot.at(0) == 1337, 'data not stored');
     assert(*another_stored.snapshot.at(0) == 7331, 'data not stored');
 }
