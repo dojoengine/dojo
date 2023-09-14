@@ -2,7 +2,7 @@ use std::fs::File;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass;
@@ -46,6 +46,8 @@ pub struct RegisterOutput {
 
 #[derive(Debug, Error)]
 pub enum MigrationError<S, P> {
+    #[error("Compiling contract.")]
+    CompilingContract,
     #[error("Class already declared.")]
     ClassAlreadyDeclared,
     #[error("Contract already deployed.")]
@@ -228,8 +230,9 @@ fn prepare_contract_declaration_params(
 ) -> Result<(FlattenedSierraClass, FieldElement)> {
     let flattened_class = get_flattened_class(artifact_path)
         .map_err(|e| anyhow!("error flattening the contract class: {e}"))?;
-    let compiled_class_hash = get_compiled_class_hash(artifact_path)
-        .map_err(|e| anyhow!("error computing compiled class hash: {e}"))?;
+    let compiled_class_hash = get_compiled_class_hash(artifact_path).map_err(|e| {
+        anyhow!("error computing compiled class hash: {} {e}", artifact_path.to_str().unwrap())
+    })?;
     Ok((flattened_class, compiled_class_hash))
 }
 
@@ -242,9 +245,16 @@ fn get_flattened_class(artifact_path: &PathBuf) -> Result<FlattenedSierraClass> 
 fn get_compiled_class_hash(artifact_path: &PathBuf) -> Result<FieldElement> {
     let file = File::open(artifact_path)?;
     let casm_contract_class: ContractClass = serde_json::from_reader(file)?;
-    let casm_contract = CasmContractClass::from_contract_class(casm_contract_class, true)
-        .with_context(|| "Compilation failed.")?;
+    let casm_contract = CasmContractClass::from_contract_class(casm_contract_class, true)?;
     let res = serde_json::to_string_pretty(&casm_contract)?;
     let compiled_class: CompiledClass = serde_json::from_str(&res)?;
     Ok(compiled_class.class_hash()?)
+}
+
+#[test]
+fn compile_moves() {
+    let file = File::open(&PathBuf::from("../../examples/ecs/target/dev/dojo_examples-reproduce.json"))
+        .unwrap();
+    let casm_contract_class: ContractClass = serde_json::from_reader(file).unwrap();
+    let _ = CasmContractClass::from_contract_class(casm_contract_class, true).unwrap();
 }

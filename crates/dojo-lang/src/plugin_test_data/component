@@ -84,27 +84,52 @@ impl PositionComponent of dojo::component::Component<Position> {
     #[inline(always)]
     fn layout(self: @Position) -> Span<u8> {
         let mut layout = ArrayTrait::new();
-        dojo::SchemaIntrospection::<Position>::layout(ref layout);
+        dojo::database::schema::SchemaIntrospection::<Position>::layout(ref layout);
         array::ArrayTrait::span(@layout)
     }
 }
 
-impl PositionSchemaIntrospection of dojo::SchemaIntrospection<Position> {
+impl PositionSchemaIntrospection of dojo::database::schema::SchemaIntrospection<Position> {
     #[inline(always)]
     fn size() -> usize {
-        dojo::SchemaIntrospection::<felt252>::size() + dojo::SchemaIntrospection::<felt252>::size()
+        dojo::database::schema::SchemaIntrospection::<felt252>::size()
+            + dojo::database::schema::SchemaIntrospection::<felt252>::size()
     }
 
     #[inline(always)]
     fn layout(ref layout: Array<u8>) {
-        dojo::SchemaIntrospection::<felt252>::layout(ref layout);
-        dojo::SchemaIntrospection::<felt252>::layout(ref layout);
+        dojo::database::schema::SchemaIntrospection::<felt252>::layout(ref layout);
+        dojo::database::schema::SchemaIntrospection::<felt252>::layout(ref layout);
     }
 
     #[inline(always)]
-    fn schema(ref schema: Array<dojo::Member>) {
-        dojo::SchemaIntrospection::<felt252>::schema(ref schema);
-        dojo::SchemaIntrospection::<felt252>::schema(ref schema);
+    fn ty() -> dojo::database::schema::MemberType {
+        dojo::database::schema::MemberType::Complex(
+            array![
+                dojo::database::schema::serialize_member(
+                    @dojo::database::schema::Member {
+                        name: 'id',
+                        ty: dojo::database::schema::SchemaIntrospection::<felt252>::ty(),
+                        attrs: array!['key'].span()
+                    }
+                ),
+                dojo::database::schema::serialize_member(
+                    @dojo::database::schema::Member {
+                        name: 'x',
+                        ty: dojo::database::schema::SchemaIntrospection::<felt252>::ty(),
+                        attrs: array![].span()
+                    }
+                ),
+                dojo::database::schema::serialize_member(
+                    @dojo::database::schema::Member {
+                        name: 'y',
+                        ty: dojo::database::schema::SchemaIntrospection::<felt252>::ty(),
+                        attrs: array![].span()
+                    }
+                )
+            ]
+                .span()
+        )
     }
 }
 
@@ -139,21 +164,19 @@ mod position {
 
     #[external(v0)]
     fn size(self: @ContractState) -> usize {
-        dojo::SchemaIntrospection::<Position>::size()
+        dojo::database::schema::SchemaIntrospection::<Position>::size()
     }
 
     #[external(v0)]
     fn layout(self: @ContractState) -> Span<u8> {
         let mut layout = ArrayTrait::new();
-        dojo::SchemaIntrospection::<Position>::layout(ref layout);
+        dojo::database::schema::SchemaIntrospection::<Position>::layout(ref layout);
         array::ArrayTrait::span(@layout)
     }
 
     #[external(v0)]
-    fn schema(self: @ContractState) -> Span<dojo::Member> {
-        let mut schema = ArrayTrait::new();
-        dojo::SchemaIntrospection::<Position>::schema(ref schema);
-        array::ArrayTrait::span(@schema)
+    fn schema(self: @ContractState) -> dojo::database::schema::MemberType {
+        dojo::database::schema::SchemaIntrospection::<Position>::ty()
     }
 }
 
@@ -205,25 +228,36 @@ impl RolesComponent of dojo::component::Component<Roles> {
     #[inline(always)]
     fn layout(self: @Roles) -> Span<u8> {
         let mut layout = ArrayTrait::new();
-        dojo::SchemaIntrospection::<Roles>::layout(ref layout);
+        dojo::database::schema::SchemaIntrospection::<Roles>::layout(ref layout);
         array::ArrayTrait::span(@layout)
     }
 }
 
-impl RolesSchemaIntrospection of dojo::SchemaIntrospection<Roles> {
+impl RolesSchemaIntrospection of dojo::database::schema::SchemaIntrospection<Roles> {
     #[inline(always)]
     fn size() -> usize {
-        dojo::SchemaIntrospection::<Array<u8>>::size()
+        dojo::database::schema::SchemaIntrospection::<Array<u8>>::size()
     }
 
     #[inline(always)]
     fn layout(ref layout: Array<u8>) {
-        dojo::SchemaIntrospection::<Array<u8>>::layout(ref layout);
+        dojo::database::schema::SchemaIntrospection::<Array<u8>>::layout(ref layout);
     }
 
     #[inline(always)]
-    fn schema(ref schema: Array<dojo::Member>) {
-        dojo::SchemaIntrospection::<Array<u8>>::schema(ref schema);
+    fn ty() -> dojo::database::schema::MemberType {
+        dojo::database::schema::MemberType::Complex(
+            array![
+                dojo::database::schema::serialize_member(
+                    @dojo::database::schema::Member {
+                        name: 'role_ids',
+                        ty: dojo::database::schema::SchemaIntrospection::<Array<u8>>::ty(),
+                        attrs: array![].span()
+                    }
+                )
+            ]
+                .span()
+        )
     }
 }
 
@@ -254,21 +288,19 @@ mod roles {
 
     #[external(v0)]
     fn size(self: @ContractState) -> usize {
-        dojo::SchemaIntrospection::<Roles>::size()
+        dojo::database::schema::SchemaIntrospection::<Roles>::size()
     }
 
     #[external(v0)]
     fn layout(self: @ContractState) -> Span<u8> {
         let mut layout = ArrayTrait::new();
-        dojo::SchemaIntrospection::<Roles>::layout(ref layout);
+        dojo::database::schema::SchemaIntrospection::<Roles>::layout(ref layout);
         array::ArrayTrait::span(@layout)
     }
 
     #[external(v0)]
-    fn schema(self: @ContractState) -> Span<dojo::Member> {
-        let mut schema = ArrayTrait::new();
-        dojo::SchemaIntrospection::<Roles>::schema(ref schema);
-        array::ArrayTrait::span(@schema)
+    fn schema(self: @ContractState) -> dojo::database::schema::MemberType {
+        dojo::database::schema::SchemaIntrospection::<Roles>::ty()
     }
 }
 
@@ -308,25 +340,50 @@ impl PlayerComponent of dojo::component::Component<Player> {
     #[inline(always)]
     fn layout(self: @Player) -> Span<u8> {
         let mut layout = ArrayTrait::new();
-        dojo::SchemaIntrospection::<Player>::layout(ref layout);
+        dojo::database::schema::SchemaIntrospection::<Player>::layout(ref layout);
         array::ArrayTrait::span(@layout)
     }
 }
 
-impl PlayerSchemaIntrospection of dojo::SchemaIntrospection<Player> {
+impl PlayerSchemaIntrospection of dojo::database::schema::SchemaIntrospection<Player> {
     #[inline(always)]
     fn size() -> usize {
-        dojo::SchemaIntrospection::<felt252>::size()
+        dojo::database::schema::SchemaIntrospection::<felt252>::size()
     }
 
     #[inline(always)]
     fn layout(ref layout: Array<u8>) {
-        dojo::SchemaIntrospection::<felt252>::layout(ref layout);
+        dojo::database::schema::SchemaIntrospection::<felt252>::layout(ref layout);
     }
 
     #[inline(always)]
-    fn schema(ref schema: Array<dojo::Member>) {
-        dojo::SchemaIntrospection::<felt252>::schema(ref schema);
+    fn ty() -> dojo::database::schema::MemberType {
+        dojo::database::schema::MemberType::Complex(
+            array![
+                dojo::database::schema::serialize_member(
+                    @dojo::database::schema::Member {
+                        name: 'game',
+                        ty: dojo::database::schema::SchemaIntrospection::<felt252>::ty(),
+                        attrs: array!['key'].span()
+                    }
+                ),
+                dojo::database::schema::serialize_member(
+                    @dojo::database::schema::Member {
+                        name: 'player',
+                        ty: dojo::database::schema::SchemaIntrospection::<ContractAddress>::ty(),
+                        attrs: array!['key'].span()
+                    }
+                ),
+                dojo::database::schema::serialize_member(
+                    @dojo::database::schema::Member {
+                        name: 'name',
+                        ty: dojo::database::schema::SchemaIntrospection::<felt252>::ty(),
+                        attrs: array![].span()
+                    }
+                )
+            ]
+                .span()
+        )
     }
 }
 
@@ -361,21 +418,19 @@ mod player {
 
     #[external(v0)]
     fn size(self: @ContractState) -> usize {
-        dojo::SchemaIntrospection::<Player>::size()
+        dojo::database::schema::SchemaIntrospection::<Player>::size()
     }
 
     #[external(v0)]
     fn layout(self: @ContractState) -> Span<u8> {
         let mut layout = ArrayTrait::new();
-        dojo::SchemaIntrospection::<Player>::layout(ref layout);
+        dojo::database::schema::SchemaIntrospection::<Player>::layout(ref layout);
         array::ArrayTrait::span(@layout)
     }
 
     #[external(v0)]
-    fn schema(self: @ContractState) -> Span<dojo::Member> {
-        let mut schema = ArrayTrait::new();
-        dojo::SchemaIntrospection::<Player>::schema(ref schema);
-        array::ArrayTrait::span(@schema)
+    fn schema(self: @ContractState) -> dojo::database::schema::MemberType {
+        dojo::database::schema::SchemaIntrospection::<Player>::ty()
     }
 }
 

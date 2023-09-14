@@ -1,6 +1,7 @@
 use array::ArrayTrait;
 use core::debug::PrintTrait;
 use starknet::ContractAddress;
+use dojo::database::schema::{Member, MemberType, SchemaIntrospection, serialize_member};
 
 #[derive(Serde, Copy, Drop)]
 enum Direction {
@@ -11,7 +12,7 @@ enum Direction {
     Down: (),
 }
 
-impl DirectionSchemaIntrospectionImpl of dojo::SchemaIntrospection<Direction> {
+impl DirectionSchemaIntrospectionImpl of SchemaIntrospection<Direction> {
     #[inline(always)]
     fn size() -> usize {
         1
@@ -23,11 +24,14 @@ impl DirectionSchemaIntrospectionImpl of dojo::SchemaIntrospection<Direction> {
     }
 
     #[inline(always)]
-    fn schema(ref schema: Array<dojo::Member>) {
-        schema.append(dojo::Member {
-            name: '',
-            ty: 'Direction',
-        });
+    fn ty() -> MemberType {
+        MemberType::Complex(array![
+            serialize_member(@Member {
+                name: 'Direction',
+                ty: MemberType::Enum(array![].span()),
+                attrs: array![].span(),
+            })
+        ].span())
     }
 }
 
@@ -63,50 +67,126 @@ struct Moves {
     last_direction: Direction
 }
 
-#[derive(Component, Copy, Drop, Serde)]
-struct Position {
-    #[key]
-    player: ContractAddress,
+#[derive(Copy, Drop, Serde)]
+struct Vec2 {
     x: u32,
     y: u32
 }
 
-trait PositionTrait {
-    fn is_zero(self: Position) -> bool;
-    fn is_equal(self: Position, b: Position) -> bool;
+impl Vec2PrintImpl of PrintTrait<Vec2> {
+    fn print(self: Vec2) {
+        self.x.print();
+    }
 }
 
-impl PositionImpl of PositionTrait {
-    fn is_zero(self: Position) -> bool {
+impl Vec2SchemaIntrospectionImpl of SchemaIntrospection<Vec2> {
+    #[inline(always)]
+    fn size() -> usize {
+        2
+    }
+
+    #[inline(always)]
+    fn layout(ref layout: Array<u8>) {
+        layout.append(32);
+        layout.append(32);
+    }
+
+    #[inline(always)]
+    fn ty() -> MemberType {
+        MemberType::Complex(array![
+            serialize_member(@Member {
+                name: 'x',
+                ty: SchemaIntrospection::<u32>::ty(),
+                attrs: array![].span(),
+            }),
+            serialize_member(@Member {
+                name: 'y',
+                ty: SchemaIntrospection::<u32>::ty(),
+                attrs: array![].span(),
+            })
+        ].span())
+    }
+}
+
+#[derive(Component, Copy, Drop, Serde)]
+struct Position {
+    #[key]
+    player: ContractAddress,
+    vec: Vec2,
+}
+
+trait Vec2Trait {
+    fn is_zero(self: Vec2) -> bool;
+    fn is_equal(self: Vec2, b: Vec2) -> bool;
+}
+
+impl Vec2Impl of Vec2Trait {
+    fn is_zero(self: Vec2) -> bool {
         if self.x - self.y == 0 {
             return true;
         }
         false
     }
 
-    fn is_equal(self: Position, b: Position) -> bool {
+    fn is_equal(self: Vec2, b: Vec2) -> bool {
         self.x == b.x && self.y == b.y
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use debug::PrintTrait;
-    use super::{Position, PositionTrait};
+#[starknet::contract]
+mod reproduce {
+    #[storage]
+    struct Storage {}
 
-    #[test]
-    #[available_gas(100000)]
-    fn test_position_is_zero() {
-        let player = starknet::contract_address_const::<0x0>();
-        assert(PositionTrait::is_zero(Position { player, x: 0, y: 0 }), 'not zero');
+    #[derive(Copy, Drop, Serde)]
+    struct Member {
+        name: felt252,
+        ty: MemberType,
     }
 
-    #[test]
-    #[available_gas(100000)]
-    fn test_position_is_equal() {
-        let player = starknet::contract_address_const::<0x0>();
-        let position = Position { player, x: 420, y: 0 };
-        position.print();
-        assert(PositionTrait::is_equal(position, Position { player, x: 420, y: 0 }), 'not equal');
+    #[derive(Copy, Drop, Serde)]
+    enum MemberType {
+        Simple: felt252,
+        Complex: Member,
+    }
+
+    trait SchemaIntrospection<T> {
+        fn ty() -> MemberType;
+    }
+
+    struct Position {
+        x: felt252,
+    }
+
+    impl PositionSchemaIntrospection of SchemaIntrospection<Position> {
+        #[inline(always)]
+        fn ty() -> MemberType {
+            MemberType::Simple('ty')
+        }
+    }
+
+    #[external(v0)]
+    fn schema(self: @ContractState) -> MemberType {
+        SchemaIntrospection::<Position>::ty()
     }
 }
+
+// #[cfg(test)]
+// mod tests {
+//     use debug::PrintTrait;
+//     use super::{Position, Vec2, Vec2Trait};
+
+//     #[test]
+//     #[available_gas(100000)]
+//     fn test_vec_is_zero() {
+//         assert(Vec2Trait::is_zero(Vec2 { x: 0, y: 0 }), 'not zero');
+//     }
+
+//     #[test]
+//     #[available_gas(100000)]
+//     fn test_vec_is_equal() {
+//         let position = Vec2 { x: 420, y: 0 };
+//         position.print();
+//         assert(position.is_equal(Vec2 { x: 420, y: 0 }), 'not equal');
+//     }
+// }

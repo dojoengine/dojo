@@ -21,8 +21,8 @@ mod test;
 pub enum ComponentError<P> {
     #[error(transparent)]
     ProviderError(ProviderError<P>),
-    #[error("Invalid schema length")]
-    InvalidSchemaLength,
+    #[error("Invalid schema")]
+    InvalidSchema,
     #[error(transparent)]
     ParseCairoShortStringError(ParseCairoShortStringError),
     #[error(transparent)]
@@ -82,22 +82,9 @@ impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
             .await
             .map_err(ComponentError::ContractReaderError)?;
 
-        let mut members = vec![];
-        for chunk in res[3..].chunks(3) {
-            if chunk.len() != 3 {
-                return Err(ComponentError::InvalidSchemaLength);
-            }
-
-            let is_key: u8 = chunk[2].try_into().map_err(|_| ComponentError::ConvertingFelt)?;
-
-            members.push(Member {
-                name: parse_cairo_short_string(&chunk[0])
-                    .map_err(ComponentError::ParseCairoShortStringError)?,
-                ty: parse_cairo_short_string(&chunk[1])
-                    .map_err(ComponentError::ParseCairoShortStringError)?,
-                key: is_key == 1,
-            });
-        }
+        println!("{:?}", res);
+        let members = parse_members::<P>(res)?;
+        println!("{:?}", members);
 
         Ok(members)
     }
@@ -211,4 +198,35 @@ pub fn unpack<P: Provider>(
     }
 
     Ok(unpacked)
+}
+
+fn parse_members<P: Provider>(
+    res: Vec<FieldElement>,
+) -> Result<Vec<Member>, ComponentError<P::Error>> {
+    let mut members = vec![];
+
+    let mut i = 3;
+    while i < res.len() {
+        let name = parse_cairo_short_string(&res[i])
+            .map_err(ComponentError::ParseCairoShortStringError)?;
+        let ty = parse_cairo_short_string(&res[i + 1])
+            .map_err(ComponentError::ParseCairoShortStringError)?;
+        let attrs_len: u32 = res[i + 2].try_into().unwrap();
+
+        let attrs = if attrs_len > 0 {
+            let attrs_start = i + 3;
+            let attrs_end = attrs_start + attrs_len as usize;
+            res[attrs_start..attrs_end].to_vec()
+        } else {
+            vec![]
+        };
+
+        let key = attrs.contains(&cairo_short_string_to_felt("key").unwrap());
+
+        members.push(Member { name, ty, key });
+
+        i += 3 + attrs_len as usize;
+    }
+
+    Ok(members)
 }

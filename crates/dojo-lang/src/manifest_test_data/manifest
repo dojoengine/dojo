@@ -985,7 +985,7 @@ test_manifest_file
           "key": false
         }
       ],
-      "class_hash": "0x6a833c8d6fa79d76b86e320e08e3d34f8b9621c555ff452ab5e349ae1ee347c",
+      "class_hash": "0x69e518e9ec4c0d93a51e383eee05c96483027fd0b66eece24159a8d33493f3",
       "abi": [
         {
           "type": "function",
@@ -1092,7 +1092,7 @@ test_manifest_file
           "key": false
         }
       ],
-      "class_hash": "0x33bfc7a386f2aa93167ff44561470d1160249f4b0afe7b667cc4fb8ae617ace",
+      "class_hash": "0x283b3e2395944e09e1ba27ce5452a47da6a685ad93d3a5ba0a102b5b3de66ee",
       "abi": [
         {
           "type": "function",

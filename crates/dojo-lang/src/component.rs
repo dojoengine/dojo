@@ -75,23 +75,30 @@ pub fn handle_component_struct(
             }
 
             Some(RewriteNode::Text(format!(
-                "dojo::SchemaIntrospection::<{}>::layout(ref layout);\n",
+                "dojo::database::schema::SchemaIntrospection::<{}>::layout(ref layout);\n",
                 m.ty
             )))
         })
         .collect::<_>();
 
-    let schema: Vec<_> = members
+    let member_types: Vec<_> = members
         .iter()
-        .filter_map(|m| {
+        .map(|m| {
+            let mut attrs = vec![];
             if m.key {
-                return None;
+                attrs.push("'key'")
             }
 
-            Some(RewriteNode::Text(format!(
-                "dojo::SchemaIntrospection::<{}>::schema(ref schema);\n",
-                m.ty
-            )))
+            format!(
+                "dojo::database::schema::serialize_member(@dojo::database::schema::Member {{
+                    name: '{}',
+                    ty: dojo::database::schema::SchemaIntrospection::<{}>::ty(),
+                    attrs: array![{}].span()
+                }})",
+                m.name,
+                m.ty,
+                attrs.join(","),
+            )
         })
         .collect::<_>();
 
@@ -138,12 +145,13 @@ pub fn handle_component_struct(
                 #[inline(always)]
                 fn layout(self: @$type_name$) -> Span<u8> {
                     let mut layout = ArrayTrait::new();
-                    dojo::SchemaIntrospection::<$type_name$>::layout(ref layout);
+                    dojo::database::schema::SchemaIntrospection::<$type_name$>::layout(ref layout);
                     array::ArrayTrait::span(@layout)
                 }
             }
 
-            impl $type_name$SchemaIntrospection of dojo::SchemaIntrospection<$type_name$> {
+            impl $type_name$SchemaIntrospection of \
+             dojo::database::schema::SchemaIntrospection<$type_name$> {
                 #[inline(always)]
                 fn size() -> usize {
                     $size$
@@ -155,8 +163,8 @@ pub fn handle_component_struct(
                 }
 
                 #[inline(always)]
-                fn schema(ref schema: Array<dojo::Member>) {
-                    $schema$
+                fn ty() -> dojo::database::schema::MemberType {
+                    dojo::database::schema::MemberType::Complex(array![$member_types$].span())
                 }
             }
 
@@ -186,21 +194,19 @@ pub fn handle_component_struct(
 
                 #[external(v0)]
                 fn size(self: @ContractState) -> usize {
-                    dojo::SchemaIntrospection::<$type_name$>::size()
+                    dojo::database::schema::SchemaIntrospection::<$type_name$>::size()
                 }
 
                 #[external(v0)]
                 fn layout(self: @ContractState) -> Span<u8> {
                     let mut layout = ArrayTrait::new();
-                    dojo::SchemaIntrospection::<$type_name$>::layout(ref layout);
+                    dojo::database::schema::SchemaIntrospection::<$type_name$>::layout(ref layout);
                     array::ArrayTrait::span(@layout)
                 }
 
                 #[external(v0)]
-                fn schema(self: @ContractState) -> Span<dojo::Member> {
-                    let mut schema = ArrayTrait::new();
-                    dojo::SchemaIntrospection::<$type_name$>::schema(ref schema);
-                    array::ArrayTrait::span(@schema)
+                fn schema(self: @ContractState) -> dojo::database::schema::MemberType {
+                    dojo::database::schema::SchemaIntrospection::<$type_name$>::ty()
                 }
             }
         ",
@@ -225,7 +231,7 @@ pub fn handle_component_struct(
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
                 ("layout".to_string(), RewriteNode::new_modified(layout)),
-                ("schema".to_string(), RewriteNode::new_modified(schema)),
+                ("member_types".to_string(), RewriteNode::Text(member_types.join(","))),
                 ("print".to_string(), RewriteNode::Text(prints.join("\n"))),
                 (
                     "size".to_string(),
@@ -240,7 +246,7 @@ pub fn handle_component_struct(
                                 }
 
                                 Some(format!(
-                                    "dojo::SchemaIntrospection::<{}>::size()",
+                                    "dojo::database::schema::SchemaIntrospection::<{}>::size()",
                                     member.type_clause(db).ty(db).as_syntax_node().get_text(db),
                                 ))
                             })

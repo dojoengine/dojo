@@ -86,11 +86,11 @@ impl InlineMacroExprPlugin for GetMacro {
 
             builder.add_str(&format!(
                 "\n            let mut __{component}_layout__ = array::ArrayTrait::new();
-                 dojo::SchemaIntrospection::<{component}>::layout(ref __{component}_layout__);
+                 dojo::database::schema::SchemaIntrospection::<{component}>::layout(ref __{component}_layout__);
                  let __{component}_layout_span__ = \
                  array::ArrayTrait::span(@__{component}_layout__);
                  let mut __{component}_values__ = {}.entity('{component}', __get_macro_keys__, \
-                 0_u8, dojo::SchemaIntrospection::<{component}>::size(), \
+                 0_u8, dojo::database::schema::SchemaIntrospection::<{component}>::size(), \
                  __{component}_layout_span__);
                  let mut __{component}_component__ = array::ArrayTrait::new();
                  array::serialize_array_helper(__get_macro_keys__, ref __{component}_component__);

@@ -35,7 +35,7 @@ pub async fn execute(command: ComponentCommands, env_metadata: Option<Environmen
 }}",
                     schema
                         .iter()
-                        .map(|s| format!(r"   {}: {}", s.name, s.ty))
+                        .map(|s| format!(r"   {}: {}", s.key, s.ty))
                         .collect::<Vec<String>>()
                         .join("\n")
                 );
