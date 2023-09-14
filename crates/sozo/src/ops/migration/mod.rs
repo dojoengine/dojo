@@ -66,7 +66,8 @@ where
         config.ui().print("\n✨ No changes to be made. Remote World is already up to date!")
     } else {
         // Mirate according to the diff.
-        apply_diff(target_dir, diff, name, world_address, &account, config).await?;
+        apply_diff(target_dir, diff, name, world_address, &account, config, Some(args.transaction))
+            .await?;
     }
 
     Ok(())
@@ -79,6 +80,7 @@ pub(crate) async fn apply_diff<U, P, S>(
     world_address: Option<FieldElement>,
     account: &SingleOwnerAccount<P, S>,
     config: &Config,
+    txn_config: Option<TransactionOptions>,
 ) -> Result<FieldElement>
 where
     U: AsRef<Path>,
@@ -89,7 +91,7 @@ where
 
     println!("  ");
 
-    let block_height = execute_strategy(&strategy, &account, config)
+    let block_height = execute_strategy(&strategy, &account, config, txn_config)
         .await
         .map_err(|e| anyhow!(e))
         .with_context(|| "Problem trying to migrate.")?;

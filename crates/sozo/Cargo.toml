@@ -9,6 +9,7 @@ version = "0.2.1"
 anyhow.workspace = true
 async-trait.workspace = true
 cairo-lang-compiler.workspace = true
+cairo-lang-defs.workspace = true
 cairo-lang-filesystem.workspace = true
 cairo-lang-plugins.workspace = true
 cairo-lang-project.workspace = true
@@ -23,6 +24,8 @@ clap_complete.workspace = true
 console.workspace = true
 dojo-lang = { path = "../dojo-lang" }
 dojo-world = { path = "../dojo-world" }
+notify = "6.0.1"
+notify-debouncer-mini = "0.3.0"
 scarb-ui.workspace = true
 scarb.workspace = true
 semver.workspace = true
@@ -36,8 +39,6 @@ torii-client = { path = "../torii/client" }
 tracing-log = "0.1.3"
 tracing.workspace = true
 url.workspace = true
-notify-debouncer-mini = "0.3.0"
-notify = "6.0.1"
 
 [dev-dependencies]
 assert_fs = "1.0.10"

@@ -4,10 +4,12 @@ use anyhow::Result;
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_compiler::project::{ProjectConfig, ProjectConfigContent};
 use cairo_lang_filesystem::ids::Directory;
+use tracing::trace;
 
 use scarb::compiler::CompilationUnit;
 use scarb::core::Workspace;
 
+// TODO(mkaput): ScarbDatabase?
 pub(crate) fn build_scarb_root_database(
     unit: &CompilationUnit,
     ws: &Workspace<'_>,
@@ -20,8 +22,8 @@ pub(crate) fn build_scarb_root_database(
         let package_id = plugin_info.package.id;
         let plugin = ws.config().cairo_plugins().fetch(package_id)?;
         let instance = plugin.instantiate()?;
-        for semantic_plugin in instance.semantic_plugins() {
-            b.with_semantic_plugin(semantic_plugin);
+        for macro_plugin in instance.macro_plugins() {
+            b.with_macro_plugin(macro_plugin);
         }
     }
 
@@ -33,25 +35,17 @@ fn build_project_config(unit: &CompilationUnit) -> Result<ProjectConfig> {
         .components
         .iter()
         .filter(|component| !component.package.id.is_core())
-        .map(|component| {
-            (
-                component.cairo_package_name(),
-                component.target.source_root().into(),
-            )
-        })
+        .map(|component| (component.cairo_package_name(), component.target.source_root().into()))
         .collect();
 
-    let corelib = Some(Directory(
-        unit.core_package_component().target.source_root().into(),
-    ));
+    let corelib = Some(Directory::Real(unit.core_package_component().target.source_root().into()));
 
     let content = ProjectConfigContent { crate_roots };
 
-    let project_config = ProjectConfig {
-        base_path: unit.main_component().package.root().into(),
-        corelib,
-        content,
-    };
+    let project_config =
+        ProjectConfig { base_path: unit.main_component().package.root().into(), corelib, content };
+
+    trace!(?project_config);
 
     Ok(project_config)
 }

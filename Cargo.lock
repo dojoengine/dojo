@@ -6040,6 +6040,7 @@ dependencies = [
  "assert_fs",
  "async-trait",
  "cairo-lang-compiler",
+ "cairo-lang-defs",
  "cairo-lang-filesystem",
  "cairo-lang-plugins",
  "cairo-lang-project",

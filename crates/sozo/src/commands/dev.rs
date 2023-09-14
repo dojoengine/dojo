@@ -1,4 +1,5 @@
-use std::path::PathBuf;
+use std::mem;
+use std::path::{Path, PathBuf};
 use std::sync::mpsc::channel;
 use std::time::Duration;
 
@@ -8,7 +9,7 @@ use cairo_lang_filesystem::db::{AsFilesGroupMut, FilesGroupEx, PrivRawFileConten
 use cairo_lang_filesystem::ids::FileId;
 use clap::Args;
 use dojo_world::manifest::Manifest;
-use dojo_world::metadata::dojo_metadata_from_workspace;
+use dojo_world::metadata::{dojo_metadata_from_workspace, DojoMetadata};
 use dojo_world::migration::world::WorldDiff;
 use notify_debouncer_mini::notify::RecursiveMode;
 use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
@@ -18,6 +19,7 @@ use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::FieldElement;
 use starknet::providers::Provider;
 use starknet::signers::Signer;
+use tracing_log::log;
 
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
@@ -43,6 +45,7 @@ pub struct DevArgs {
     pub account: AccountOptions,
 }
 
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 enum DevAction {
     None,
     Reload,
@@ -56,11 +59,9 @@ fn handle_event(event: &DebouncedEvent) -> DevAction {
             if let Some(filename) = p.file_name() {
                 if filename == "Scarb.toml" {
                     return DevAction::Reload;
-                } else {
-                    if let Some(extension) = p.extension() {
-                        if extension == "cairo" {
-                            return DevAction::Build(p.clone());
-                        }
+                } else if let Some(extension) = p.extension() {
+                    if extension == "cairo" {
+                        return DevAction::Build(p.clone());
                     }
                 }
             }
@@ -75,6 +76,7 @@ struct DevContext<'a> {
     pub db: RootDatabase,
     pub unit: CompilationUnit,
     pub ws: Workspace<'a>,
+    pub dojo_metadata: Option<DojoMetadata>,
 }
 
 fn load_context(config: &Config) -> Result<DevContext> {
@@ -88,7 +90,8 @@ fn load_context(config: &Config) -> Result<DevContext> {
     // we have only 1 unit in projects
     let unit = compilation_units.get(0).unwrap();
     let db = build_scarb_root_database(&unit, &ws).unwrap();
-    Ok(DevContext { db, unit: unit.clone(), ws })
+    let dojo_metadata = dojo_metadata_from_workspace(&ws);
+    Ok(DevContext { db, unit: unit.clone(), ws, dojo_metadata })
 }
 
 fn build(context: &mut DevContext) -> Result<()> {
@@ -129,11 +132,21 @@ where
     if total_diffs == 0 {
         return Ok((new_manifest, world_address));
     }
-    match migration::apply_diff(target_dir, diff, name.clone(), world_address, account, config)
-        .await
+    match migration::apply_diff(
+        target_dir,
+        diff,
+        name.clone(),
+        world_address,
+        account,
+        config,
+        None,
+    )
+    .await
     {
         Ok(address) => {
-            config.ui().print(format!("🎉 World at address {} updated!", format!("{:#x}", address)));
+            config
+                .ui()
+                .print(format!("🎉 World at address {} updated!", format!("{:#x}", address)));
             world_address = Some(address);
         }
         Err(err) => {
@@ -143,6 +156,38 @@ where
     }
 
     Ok((new_manifest, world_address))
+}
+
+fn process_event(event: &DebouncedEvent, context: &mut DevContext) -> DevAction {
+    let action = handle_event(event);
+    match &action {
+        DevAction::None => {}
+        DevAction::Build(path) => handle_build_action(path, context),
+        DevAction::Reload => {
+            // TODO: Update this values
+            handle_reload_action(context);
+        }
+    }
+    action
+}
+
+fn handle_build_action(path: &Path, context: &mut DevContext) {
+    context
+        .ws
+        .config()
+        .ui()
+        .print(format!("📦 Need to rebuild {}", path.to_str().unwrap_or_default(),));
+    let db = &mut context.db;
+    let file = FileId::new(db, path.to_path_buf());
+    PrivRawFileContentQuery.in_db_mut(db.as_files_group_mut()).invalidate(&file);
+    db.override_file_content(file, None);
+}
+
+fn handle_reload_action(context: &mut DevContext) {
+    let config = context.ws.config();
+    config.ui().print("Reloading project");
+    let new_context = load_context(config).expect("Failed to load context");
+    let _ = mem::replace(context, new_context);
 }
 
 impl DevArgs {
@@ -157,10 +202,9 @@ impl DevArgs {
         )?;
         let name = self.name.clone();
         let mut previous_manifest: Option<Manifest> = Option::None;
-        let mut result = build(&mut context);
+        let result = build(&mut context);
+        let env_metadata = context.dojo_metadata.as_ref().and_then(|e| e.env.clone());
 
-        let mut env_metadata =
-            dojo_metadata_from_workspace(&context.ws).and_then(|inner| inner.env().cloned());
         let Some((mut world_address, account)) = context
             .ws
             .config()
@@ -194,70 +238,31 @@ impl DevArgs {
             }
         }
         loop {
-            let mut action = DevAction::None;
-
-            match rx.recv() {
-                Ok(events) => {
-                    if events.is_ok() {
-                        events.unwrap().iter().for_each(|event| {
-                            action = handle_event(event);
-                            match &action {
-                                DevAction::None => {}
-                                DevAction::Build(path) => {
-                                    context.ws.config().ui().print(format!(
-                                        "📦 Need to rebuild {}",
-                                        path.clone().as_path().to_str().unwrap(),
-                                    ));
-                                    let db = &mut context.db;
-                                    let file = FileId::new(db, path.clone());
-                                    PrivRawFileContentQuery
-                                        .in_db_mut(db.as_files_group_mut())
-                                        .invalidate(&file);
-                                    db.override_file_content(file, None);
-                                }
-                                DevAction::Reload => {
-                                    context
-                                        .ws
-                                        .config()
-                                        .ui()
-                                        .print("Reloading project");
-                                    context = load_context(config).unwrap();
-                                    env_metadata = dojo_metadata_from_workspace(&context.ws)
-                                        .and_then(|inner| inner.env().cloned());
-                                }
-                            }
-                        });
-                    }
-                }
+            let action = match rx.recv() {
+                Ok(Ok(events)) => events
+                    .iter()
+                    .map(|event| process_event(event, &mut context))
+                    .last()
+                    .unwrap_or(DevAction::None),
+                Ok(Err(_)) => DevAction::None,
                 Err(error) => {
                     log::error!("Error: {error:?}");
                     break;
                 }
             };
-            match action {
-                DevAction::None => continue,
-                _ => (),
-            }
-            result = build(&mut context);
-            match result {
-                Ok(_) => {
-                    match context.ws.config().tokio_handle().block_on(migrate(
+
+            if action != DevAction::None {
+                if let Ok(_) = build(&mut context) {
+                    if let Err(error) = context.ws.config().tokio_handle().block_on(migrate(
                         world_address,
                         &account,
                         name.clone(),
                         &context.ws,
                         previous_manifest.clone(),
                     )) {
-                        Ok((manifest, address)) => {
-                            previous_manifest = Some(manifest);
-                            world_address = address;
-                        }
-                        Err(error) => {
-                            log::error!("Error: {error:?}");
-                        }
+                        log::error!("Error: {:?}", error);
                     }
                 }
-                Err(_) => {}
             }
         }
         result
