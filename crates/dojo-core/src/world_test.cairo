@@ -74,21 +74,21 @@ fn test_system() {
     assert(*stored.snapshot.at(0) == 1337, 'data not stored');
 }
 
-// Systems are not class hashes anymore
-//
-// #[test]
-// #[available_gas(6000000)]
-// fn test_class_hash_getters() {
-//     let world = deploy_world();
+#[test]
+#[available_gas(6000000)]
+fn test_class_hash_getters() {
+    let world = deploy_world();
 
-//     world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
-//     world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
 
-//     let foo = world.component('Foo');
-//     assert(foo == foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo does not exists');
-//     let bar = world.system('bar');
-//     assert(bar == bar::TEST_CLASS_HASH.try_into().unwrap(), 'bar does not exists');
-// }
+    let foo = world.component('Foo');
+    assert(foo == foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo does not exists');
+    let bar = world.system('bar');
+    // Systems are not class hashes anymore
+    // assert(bar == bar::TEST_CLASS_HASH.try_into().unwrap(), 'bar does not exists');
+    assert(bar.is_non_zero(), 'bar does not exists');
+}
 
 #[test]
 #[available_gas(6000000)]
@@ -304,21 +304,6 @@ mod origin {
     }
 }
 
-#[system]
-mod origin_wrapper {
-    use traits::Into;
-    use array::ArrayTrait;
-    use dojo::world::Context;
-
-    fn execute(ctx: Context) {
-        let data: Array<felt252> = ArrayTrait::new();
-        assert(ctx.origin == starknet::contract_address_const::<0x1337>(), 'should be equal');
-        // @TODO Confirm if this is needed
-        // ctx.world.execute('origin', data);
-        assert(ctx.origin == starknet::contract_address_const::<0x1337>(), 'should be equal');
-    }
-}
-
 #[test]
 #[available_gas(6000000)]
 fn test_execute_origin() {
@@ -326,13 +311,12 @@ fn test_execute_origin() {
     let world = deploy_world();
 
     world.register_system(origin::TEST_CLASS_HASH.try_into().unwrap());
-    world.register_system(origin_wrapper::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
     let data = ArrayTrait::new();
 
     let alice = starknet::contract_address_const::<0x1337>();
     starknet::testing::set_contract_address(alice);
-    world.execute('origin_wrapper', data);
+    world.execute('origin', data);
 }
 
 #[test]
@@ -343,12 +327,11 @@ fn test_execute_origin_failing() {
     let world = deploy_world();
 
     world.register_system(origin::TEST_CLASS_HASH.try_into().unwrap());
-    world.register_system(origin_wrapper::TEST_CLASS_HASH.try_into().unwrap());
     world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
     let data = ArrayTrait::new();
 
     let eve = starknet::contract_address_const::<0x1338>();
-    world.execute('origin_wrapper', data);
+    world.execute('origin', data);
 }
 
 #[test]

@@ -4,10 +4,11 @@ use option::OptionTrait;
 
 #[derive(Copy, Drop, Serde)]
 struct Context {
-    world: IWorldDispatcher,
+    world: IWorldDispatcher, // Dispatcher to the world contract
     origin: ContractAddress, // Address of the origin
     system: felt252, // Name of the calling system
 }
+
 
 #[starknet::interface]
 trait IWorld<T> {
