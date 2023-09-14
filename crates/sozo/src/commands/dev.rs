@@ -79,7 +79,7 @@ struct DevContext<'a> {
     pub dojo_metadata: Option<DojoMetadata>,
 }
 
-fn load_context(config: &Config) -> Result<DevContext> {
+fn load_context(config: &Config) -> Result<DevContext<'_>> {
     let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
     let packages: Vec<scarb::core::PackageId> = ws.members().map(|p| p.id).collect();
     let resolve = scarb::ops::resolve_workspace(&ws)?;
@@ -89,16 +89,16 @@ fn load_context(config: &Config) -> Result<DevContext> {
         .collect::<Vec<_>>();
     // we have only 1 unit in projects
     let unit = compilation_units.get(0).unwrap();
-    let db = build_scarb_root_database(&unit, &ws).unwrap();
+    let db = build_scarb_root_database(unit, &ws).unwrap();
     let dojo_metadata = dojo_metadata_from_workspace(&ws);
     Ok(DevContext { db, unit: unit.clone(), ws, dojo_metadata })
 }
 
-fn build(context: &mut DevContext) -> Result<()> {
+fn build(context: &mut DevContext<'_>) -> Result<()> {
     let ws = &context.ws;
     let unit = &context.unit;
     let package_name = unit.main_package_id.name.clone();
-    ws.config().compilers().compile(unit.clone(), &mut ((*context).db), ws).map_err(|err| {
+    ws.config().compilers().compile(unit.clone(), &mut (context.db), ws).map_err(|err| {
         ws.config().ui().anyhow(&err);
 
         anyhow!("could not compile `{package_name}` due to previous error")
@@ -146,7 +146,7 @@ where
         Ok(address) => {
             config
                 .ui()
-                .print(format!("🎉 World at address {} updated!", format!("{:#x}", address)));
+                .print(format!("🎉 World at address {} updated!", format_args!("{:#x}", address)));
             world_address = Some(address);
         }
         Err(err) => {
@@ -158,7 +158,7 @@ where
     Ok((new_manifest, world_address))
 }
 
-fn process_event(event: &DebouncedEvent, context: &mut DevContext) -> DevAction {
+fn process_event(event: &DebouncedEvent, context: &mut DevContext<'_>) -> DevAction {
     let action = handle_event(event);
     match &action {
         DevAction::None => {}
@@ -171,7 +171,7 @@ fn process_event(event: &DebouncedEvent, context: &mut DevContext) -> DevAction 
     action
 }
 
-fn handle_build_action(path: &Path, context: &mut DevContext) {
+fn handle_build_action(path: &Path, context: &mut DevContext<'_>) {
     context
         .ws
         .config()
@@ -183,7 +183,7 @@ fn handle_build_action(path: &Path, context: &mut DevContext) {
     db.override_file_content(file, None);
 }
 
-fn handle_reload_action(context: &mut DevContext) {
+fn handle_reload_action(context: &mut DevContext<'_>) {
     let config = context.ws.config();
     config.ui().print("Reloading project");
     let new_context = load_context(config).expect("Failed to load context");
@@ -251,17 +251,15 @@ impl DevArgs {
                 }
             };
 
-            if action != DevAction::None {
-                if let Ok(_) = build(&mut context) {
-                    if let Err(error) = context.ws.config().tokio_handle().block_on(migrate(
-                        world_address,
-                        &account,
-                        name.clone(),
-                        &context.ws,
-                        previous_manifest.clone(),
-                    )) {
-                        log::error!("Error: {:?}", error);
-                    }
+            if action != DevAction::None && build(&mut context).is_ok() {
+                if let Err(error) = context.ws.config().tokio_handle().block_on(migrate(
+                    world_address,
+                    &account,
+                    name.clone(),
+                    &context.ws,
+                    previous_manifest.clone(),
+                )) {
+                    log::error!("Error: {:?}", error);
                 }
             }
         }

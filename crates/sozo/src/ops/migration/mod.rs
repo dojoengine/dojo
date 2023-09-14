@@ -91,7 +91,7 @@ where
 
     println!("  ");
 
-    let block_height = execute_strategy(&strategy, &account, config, txn_config)
+    let block_height = execute_strategy(&strategy, account, config, txn_config)
         .await
         .map_err(|e| anyhow!(e))
         .with_context(|| "Problem trying to migrate.")?;

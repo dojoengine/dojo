@@ -4,10 +4,9 @@ use anyhow::Result;
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_compiler::project::{ProjectConfig, ProjectConfigContent};
 use cairo_lang_filesystem::ids::Directory;
-use tracing::trace;
-
 use scarb::compiler::CompilationUnit;
 use scarb::core::Workspace;
+use tracing::trace;
 
 // TODO(mkaput): ScarbDatabase?
 pub(crate) fn build_scarb_root_database(
