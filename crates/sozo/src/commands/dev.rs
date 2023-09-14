@@ -164,7 +164,6 @@ fn process_event(event: &DebouncedEvent, context: &mut DevContext<'_>) -> DevAct
         DevAction::None => {}
         DevAction::Build(path) => handle_build_action(path, context),
         DevAction::Reload => {
-            // TODO: Update this values
             handle_reload_action(context);
         }
     }
