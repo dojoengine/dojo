@@ -251,14 +251,20 @@ impl DevArgs {
             };
 
             if action != DevAction::None && build(&mut context).is_ok() {
-                if let Err(error) = context.ws.config().tokio_handle().block_on(migrate(
+                match context.ws.config().tokio_handle().block_on(migrate(
                     world_address,
                     &account,
                     name.clone(),
                     &context.ws,
                     previous_manifest.clone(),
                 )) {
-                    log::error!("Error: {:?}", error);
+                    Ok((manifest, address)) => {
+                        previous_manifest = Some(manifest);
+                        world_address = address;
+                    }
+                    Err(error) => {
+                        log::error!("Error: {error:?}");
+                    }
                 }
             }
         }
