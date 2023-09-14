@@ -250,7 +250,7 @@ mod world {
             let caller = get_caller_address();
 
             assert(
-                self.is_writer(component, system)
+                self.is_writer(component, _system_name_from_caller(@self))
                     || self.is_owner(caller, component)
                     || self.is_owner(caller, WORLD),
                 'not owner or writer'
