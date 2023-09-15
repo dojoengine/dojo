@@ -29,8 +29,9 @@ trait IWorld<T> {
     fn entities(
         self: @T, component: felt252, index: felt252, length: usize
     ) -> (Span<felt252>, Span<Span<felt252>>);
+    fn set_executor(ref self: T, contract_address: ContractAddress);
+    fn executor(self: @T) -> ContractAddress;
     fn delete_entity(ref self: T, component: felt252, keys: Span<felt252>);
-
     fn is_owner(self: @T, address: ContractAddress, target: felt252) -> bool;
     fn grant_owner(ref self: T, address: ContractAddress, target: felt252);
     fn revoke_owner(ref self: T, address: ContractAddress, target: felt252);
@@ -42,8 +43,6 @@ trait IWorld<T> {
 
 #[starknet::contract]
 mod world {
-    const EXECUTE_ENTRYPOINT: felt252 =
-        0x0240060cdb34fcc260f41eac7474ee1d7c80b7e3607daff9ac67c7ea2ebb1c44;
     use array::{ArrayTrait, SpanTrait};
     use traits::Into;
     use option::OptionTrait;
@@ -56,11 +55,14 @@ mod world {
     };
 
     use dojo::database;
+    use dojo::executor::{IExecutorDispatcher, IExecutorDispatcherTrait};
     use dojo::component::{INamedLibraryDispatcher, INamedDispatcherTrait,};
     use dojo::world::{IWorldDispatcher, IWorld};
 
     use super::Context;
 
+    const EXECUTE_ENTRYPOINT: felt252 =
+        0x0240060cdb34fcc260f41eac7474ee1d7c80b7e3607daff9ac67c7ea2ebb1c44;
     const NAME_ENTRYPOINT: felt252 =
         0x0361458367e696363fbcc70777d07ebbd2394e89fd0adcaf147faccd1d294d60;
 
@@ -110,6 +112,7 @@ mod world {
 
     #[storage]
     struct Storage {
+        executor_dispatcher: IExecutorDispatcher,
         components: LegacyMap::<felt252, ClassHash>,
         systems: LegacyMap::<felt252, ContractAddress>,
         system_names: LegacyMap::<ContractAddress, felt252>,
@@ -122,7 +125,8 @@ mod world {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState) {
+    fn constructor(ref self: ContractState, executor: ContractAddress) {
+        self.executor_dispatcher.write(IExecutorDispatcher { contract_address: executor });
         self
             .owners
             .write(
@@ -150,10 +154,10 @@ mod world {
     /// # Returns
     ///
     /// The return value of the call.
-    fn _class_call(
-        class_hash: ClassHash, entrypoint: felt252, calldata: Span<felt252>
+    fn class_call(
+        self: @ContractState, class_hash: ClassHash, entrypoint: felt252, calldata: Span<felt252>
     ) -> Span<felt252> {
-        starknet::syscalls::library_call_syscall(class_hash, entrypoint, calldata).unwrap_syscall()
+        self.executor_dispatcher.read().call(class_hash, entrypoint, calldata)
     }
 
     /// Gets system name from get caller address
@@ -161,7 +165,7 @@ mod world {
     /// # Returns
     ///
     /// * `felt252` - The caller system's name.
-    fn _system_name_from_caller(self: @ContractState) -> felt252 {
+    fn system_name_from_caller(self: @ContractState) -> felt252 {
         self.system_names.read(get_caller_address())
     }
 
@@ -250,7 +254,7 @@ mod world {
             let caller = get_caller_address();
 
             assert(
-                self.is_writer(component, _system_name_from_caller(@self))
+                self.is_writer(component, system_name_from_caller(@self))
                     || self.is_owner(caller, component)
                     || self.is_owner(caller, WORLD),
                 'not owner or writer'
@@ -267,7 +271,7 @@ mod world {
         fn register_component(ref self: ContractState, class_hash: ClassHash) {
             let caller = get_caller_address();
             let calldata = ArrayTrait::new();
-            let name = *_class_call(class_hash, NAME_ENTRYPOINT, calldata.span())[0];
+            let name = *class_call(@self, class_hash, NAME_ENTRYPOINT, calldata.span())[0];
 
             // If component is already registered, validate permission to update.
             if self.components.read(name).is_non_zero() {
@@ -295,7 +299,7 @@ mod world {
 
         fn register_system(ref self: ContractState, class_hash: ClassHash) {
             let caller = get_caller_address();
-            let name = *_class_call(class_hash, NAME_ENTRYPOINT, array![].span())[0];
+            let name = *class_call(@self, class_hash, NAME_ENTRYPOINT, array![].span())[0];
 
             let (system_contract, _) = starknet::deploy_syscall(
                 class_hash, 0, array![].span(), false
@@ -393,7 +397,7 @@ mod world {
         /// * `keys` - The keys of the event.
         /// * `values` - The data to be logged by the event.
         fn emit(self: @ContractState, mut keys: Array<felt252>, values: Span<felt252>) {
-            let system = _system_name_from_caller(self);
+            let system = system_name_from_caller(self);
             system.serialize(ref keys);
             emit_event_syscall(keys.span(), values).unwrap_syscall();
         }
@@ -413,7 +417,7 @@ mod world {
             offset: u8,
             value: Span<felt252>
         ) {
-            let system = _system_name_from_caller(@self);
+            let system = system_name_from_caller(@self);
             assert(system.is_non_zero(), 'must be called thru system');
             assert_can_write(@self, component, system);
 
@@ -431,7 +435,7 @@ mod world {
         /// * `component` - The name of the component to be deleted.
         /// * `query` - The query to be used to find the entity.
         fn delete_entity(ref self: ContractState, component: felt252, keys: Span<felt252>) {
-            let system = _system_name_from_caller(@self);
+            let system = system_name_from_caller(@self);
             assert(system.is_non_zero(), 'must be called thru system');
             assert_can_write(@self, component, system);
 
@@ -479,6 +483,28 @@ mod world {
         ) -> (Span<felt252>, Span<Span<felt252>>) {
             let class_hash = self.components.read(component);
             database::all(class_hash, component.into(), index, length)
+        }
+
+        /// Sets the executor contract address.
+        ///
+        /// # Arguments
+        ///
+        /// * `contract_address` - The contract address of the executor.
+        fn set_executor(ref self: ContractState, contract_address: ContractAddress) {
+            // Only owner can set executor
+            assert(self.is_owner(get_caller_address(), WORLD), 'only owner can set executor');
+            self
+                .executor_dispatcher
+                .write(IExecutorDispatcher { contract_address: contract_address });
+        }
+
+        /// Gets the executor contract address.
+        ///
+        /// # Returns
+        ///
+        /// * `ContractAddress` - The address of the executor contract.
+        fn executor(self: @ContractState) -> ContractAddress {
+            self.executor_dispatcher.read().contract_address
         }
     }
 

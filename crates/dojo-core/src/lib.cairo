@@ -2,6 +2,9 @@ mod database;
 use database::storage::StorageSize;
 #[cfg(test)]
 mod database_test;
+mod executor;
+#[cfg(test)]
+mod executor_test;
 mod component;
 mod packing;
 #[cfg(test)]

@@ -1,17 +1,14 @@
-use array::ArrayTrait;
-use array::SpanTrait;
+use array::{ArrayTrait, SpanTrait};
 use clone::Clone;
 use core::result::ResultTrait;
-use traits::Into;
-use traits::TryInto;
+use traits::{Into, TryInto};
 use option::OptionTrait;
 use starknet::class_hash::Felt252TryIntoClassHash;
-use starknet::contract_address_const;
-use starknet::ContractAddress;
-use starknet::get_caller_address;
+use starknet::{contract_address_const, ContractAddress, get_caller_address};
 use starknet::syscalls::deploy_syscall;
 
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, library_call, world};
+use dojo::test_utils::spawn_test_world;
 
 // Components and Systems
 
@@ -202,15 +199,7 @@ fn test_set_entity_directly() {
 
 // Utils
 fn deploy_world() -> IWorldDispatcher {
-    // Deploy world contract
-    let mut constructor_calldata = array::ArrayTrait::new();
-    let (world_address, _) = deploy_syscall(
-        world::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
-    )
-        .unwrap();
-    let world = IWorldDispatcher { contract_address: world_address };
-
-    world
+    spawn_test_world(array![], array![])
 }
 
 #[test]
@@ -338,24 +327,12 @@ fn test_execute_origin_failing() {
 #[available_gas(6000000)]
 fn test_execute_multiple_worlds() {
     // Deploy world contract
-    let mut constructor_calldata = array::ArrayTrait::new();
-    let (world_address, _) = deploy_syscall(
-        world::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
-    )
-        .unwrap();
-    let world = IWorldDispatcher { contract_address: world_address };
+    let world = spawn_test_world(array![foo::TEST_CLASS_HASH], array![bar::TEST_CLASS_HASH],);
 
     // Deploy another world contract
-    let (world_address, _) = deploy_syscall(
-        world::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
-    )
-        .unwrap();
-    let another_world = IWorldDispatcher { contract_address: world_address };
-
-    world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
-    world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
-    another_world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
-    another_world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
+    let another_world = spawn_test_world(
+        array![foo::TEST_CLASS_HASH], array![bar::TEST_CLASS_HASH],
+    );
 
     let mut data = ArrayTrait::new();
     data.append(1337);
