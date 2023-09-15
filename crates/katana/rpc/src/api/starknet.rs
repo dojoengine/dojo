@@ -167,7 +167,7 @@ pub trait StarknetApi {
     #[method(name = "estimateFee")]
     async fn estimate_fee(
         &self,
-        transactions: Vec<BroadcastedTransaction>,
+        request: Vec<BroadcastedTransaction>,
         block_id: BlockId,
     ) -> Result<Vec<FeeEstimate>, Error>;
 
