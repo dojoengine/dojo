@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::io::Read;
+use std::io::{Read, Write};
 
 use anyhow::{anyhow, Result};
 use blockifier::execution::contract_class::{
@@ -135,7 +135,7 @@ fn to_rpc_legacy_entry_points_by_type(
 /// Returns a compressed vector of bytes
 fn compress(data: &[u8]) -> Result<Vec<u8>> {
     let mut gzip_encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::fast());
-    serde_json::to_writer(&mut gzip_encoder, data)?;
+    gzip_encoder.write_all(data)?;
     Ok(gzip_encoder.finish()?)
 }
 
