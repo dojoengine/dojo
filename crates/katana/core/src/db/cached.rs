@@ -267,7 +267,7 @@ where
 
 pub type AsCachedDb = CachedDb<()>;
 
-/// A helper trait for accessing the inner [CachedDb] of a [Database] if it exists.
+/// A helper trait for getting a [CachedDb] from a database implementation.
 ///
 /// **THIS IS JUST A TEMPORARY SOLUTION THEREFORE NOT MUCH THOUGHT HAS BEEN PUT INTO IT. DO NOT RELY
 /// ON THIS TRAIT AS IT MAY BE REMOVED IN THE FUTURE**.
