@@ -32,10 +32,9 @@ pub struct ClassRecord {
 /// A cached state database which fallbacks to an inner database if the data
 /// is not found in the cache.
 ///
-/// The data that has been fetched from the inner database is cached in the
-/// cache database.
+/// The data that has been fetched from the inner database is stored in the cache.
 #[derive(Clone, Debug)]
-pub struct CachedDb<Db: StateExtRef> {
+pub struct CachedDb<Db> {
     /// A map of class hash to its class definition.
     pub classes: HashMap<ClassHash, ClassRecord>,
     /// A map of contract address to its class hash.
@@ -48,10 +47,7 @@ pub struct CachedDb<Db: StateExtRef> {
     pub db: Db,
 }
 
-impl<Db> CachedDb<Db>
-where
-    Db: StateExtRef,
-{
+impl<Db> CachedDb<Db> {
     /// Construct a new [CachedDb] with an inner database.
     pub fn new(db: Db) -> Self {
         Self {
@@ -269,6 +265,17 @@ where
     }
 }
 
+pub type AsCachedDb = CachedDb<()>;
+
+/// A helper trait for accessing the inner [CachedDb] of a [Database] if it exists.
+///
+/// **THIS IS JUST A TEMPORARY SOLUTION THEREFORE NOT MUCH THOUGHT HAS BEEN PUT INTO IT. DO NOT RELY
+/// ON THIS TRAIT AS IT MAY BE REMOVED IN THE FUTURE**.
+pub trait MaybeAsCachedDb {
+    /// Returns the inner [CachedDb] if it exists. Otherwise `None`.
+    fn maybe_as_cached_db(&self) -> Option<AsCachedDb>;
+}
+
 /// A wrapper type for [CachedState](blockifier::state::cached_state::CachedState) which
 /// also allow storing the Sierra classes.
 ///
@@ -439,11 +446,32 @@ mod tests {
     use starknet_api::{patricia_key, stark_felt};
 
     use super::*;
-    use crate::backend::in_memory_db::EmptyDb;
+    use crate::backend::in_memory_db::MemDb;
+    use crate::db::Database;
+
+    #[test]
+    fn get_inner_cached_db_if_exist() {
+        let mut db: Box<dyn Database> = Box::new(MemDb::new());
+
+        let contract_address = ContractAddress(patricia_key!("123"));
+        let storage_key = StorageKey(patricia_key!("456"));
+        let storage_value = stark_felt!("0x1");
+
+        db.set_storage_at(contract_address, storage_key, storage_value);
+
+        let has_value = db.maybe_as_cached_db().and_then(|db| {
+            db.storage
+                .get(&contract_address)
+                .and_then(|record| record.storage.get(&storage_key))
+                .copied()
+        });
+
+        assert_matches!(has_value, Some(value) if value == storage_value);
+    }
 
     #[test]
     fn get_uninitialized_storage_value() {
-        let mut state = CachedState::new(CachedDb::new(EmptyDb));
+        let mut state = CachedState::new(CachedDb::new(MemDb::new()));
         let contract_address = ContractAddress(patricia_key!("0x1"));
         let key = StorageKey(patricia_key!("0x10"));
         assert_eq!(state.get_storage_at(contract_address, key).unwrap(), StarkFelt::default());
@@ -481,7 +509,7 @@ mod tests {
             ]),
             classes: HashMap::new(),
             sierra_classes: HashMap::new(),
-            db: EmptyDb,
+            db: MemDb::new(),
         });
 
         assert_eq!(state.get_storage_at(contract_address0, key0).unwrap(), storage_val0);
@@ -500,21 +528,21 @@ mod tests {
 
     #[test]
     fn get_uninitialized_value() {
-        let mut state = CachedState::new(CachedDb::new(EmptyDb));
+        let mut state = CachedState::new(CachedDb::new(MemDb::new()));
         let contract_address = ContractAddress(patricia_key!("0x1"));
         assert_eq!(state.get_nonce_at(contract_address).unwrap(), Nonce::default());
     }
 
     #[test]
     fn get_uninitialized_class_hash_value() {
-        let mut state = CachedState::new(CachedDb::new(EmptyDb));
+        let mut state = CachedState::new(CachedDb::new(MemDb::new()));
         let valid_contract_address = ContractAddress(patricia_key!("0x1"));
         assert_eq!(state.get_class_hash_at(valid_contract_address).unwrap(), ClassHash::default());
     }
 
     #[test]
     fn cannot_set_class_hash_to_uninitialized_contract() {
-        let mut state = CachedState::new(CachedDb::new(EmptyDb));
+        let mut state = CachedState::new(CachedDb::new(MemDb::new()));
         let uninitialized_contract_address = ContractAddress::default();
         let class_hash = ClassHash(stark_felt!("0x100"));
         assert_matches!(
@@ -546,7 +574,7 @@ mod tests {
             ]),
             classes: HashMap::new(),
             sierra_classes: HashMap::new(),
-            db: EmptyDb,
+            db: MemDb::new(),
         });
 
         assert_eq!(state.get_nonce_at(contract_address1).unwrap(), initial_nonce);

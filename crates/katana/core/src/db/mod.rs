@@ -11,18 +11,19 @@ use starknet_api::hash::StarkHash;
 use starknet_api::patricia_key;
 use starknet_api::state::StorageKey;
 
+use self::cached::MaybeAsCachedDb;
 use self::serde::state::SerializableState;
 
 pub mod cached;
 pub mod serde;
 
-/// An extension of the `StateReader` trait, to allow fetching Sierra class from the state.
+/// An extension of the [StateReader] trait, to allow fetching Sierra class from the state.
 pub trait StateExtRef: StateReader + fmt::Debug {
     /// Returns the Sierra class for the given class hash.
     fn get_sierra_class(&mut self, class_hash: &ClassHash) -> StateResult<FlattenedSierraClass>;
 }
 
-/// An extension of the `State` trait, to allow setting Sierra class.
+/// An extension of the [State] trait, to allow storing Sierra classes.
 pub trait StateExt: State + StateExtRef {
     /// Set the Sierra class for the given class hash.
     fn set_sierra_class(
@@ -33,7 +34,7 @@ pub trait StateExt: State + StateExtRef {
 }
 
 /// A trait which represents a state database.
-pub trait Database: StateExt + AsStateRefDb + Send + Sync {
+pub trait Database: StateExt + AsStateRefDb + Send + Sync + MaybeAsCachedDb {
     /// Set the exact nonce value for the given contract address.
     fn set_nonce(&mut self, addr: ContractAddress, nonce: Nonce);
 
@@ -87,7 +88,7 @@ pub trait AsStateRefDb {
 /// It implements [Clone] so that it can be cloned into a
 /// [CachedState](blockifier::state::cached_state::CachedState) for executing transactions
 /// based on this state, as [CachedState](blockifier::state::cached_state::CachedState) requires the
-/// an ownership of the inner [StateReader] that it wraps.
+/// ownership of the inner [StateReader] that it wraps.
 ///
 /// The inner type is wrapped inside a [Mutex] to allow interior mutability due to the fact
 /// that the [StateReader] trait requires mutable access to the type that implements it.

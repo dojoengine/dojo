@@ -12,7 +12,7 @@ use starknet_api::hash::StarkFelt;
 use starknet_api::state::StorageKey;
 
 use super::backend::SharedBackend;
-use crate::db::cached::CachedDb;
+use crate::db::cached::{AsCachedDb, CachedDb, MaybeAsCachedDb};
 use crate::db::serde::state::{
     SerializableClassRecord, SerializableState, SerializableStorageRecord,
 };
@@ -94,8 +94,7 @@ impl State for ForkedDb {
 
 impl StateReader for ForkedDb {
     fn get_nonce_at(&mut self, contract_address: ContractAddress) -> StateResult<Nonce> {
-        let nonce = self.db.get_nonce_at(contract_address)?;
-        Ok(nonce)
+        self.db.get_nonce_at(contract_address)
     }
 
     fn get_storage_at(
@@ -144,6 +143,18 @@ impl StateExt for ForkedDb {
 impl AsStateRefDb for ForkedDb {
     fn as_ref_db(&self) -> StateRefDb {
         StateRefDb::new(self.clone())
+    }
+}
+
+impl MaybeAsCachedDb for ForkedDb {
+    fn maybe_as_cached_db(&self) -> Option<AsCachedDb> {
+        Some(CachedDb {
+            db: (),
+            classes: self.db.classes.clone(),
+            storage: self.db.storage.clone(),
+            contracts: self.db.contracts.clone(),
+            sierra_classes: self.db.sierra_classes.clone(),
+        })
     }
 }
 

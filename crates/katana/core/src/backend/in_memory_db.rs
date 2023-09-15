@@ -15,60 +15,21 @@ use crate::constants::{
     ERC20_CONTRACT, ERC20_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS, UDC_ADDRESS, UDC_CLASS_HASH,
     UDC_CONTRACT,
 };
-use crate::db::cached::{CachedDb, ClassRecord, StorageRecord};
+use crate::db::cached::{AsCachedDb, CachedDb, ClassRecord, MaybeAsCachedDb, StorageRecord};
 use crate::db::serde::state::{
     SerializableClassRecord, SerializableState, SerializableStorageRecord,
 };
 use crate::db::{AsStateRefDb, Database, StateExt, StateExtRef, StateRefDb};
 
-/// An empty state database which returns default values for all queries.
-#[derive(Debug, Clone)]
-pub struct EmptyDb;
-
-impl StateReader for EmptyDb {
-    fn get_class_hash_at(&mut self, _contract_address: ContractAddress) -> StateResult<ClassHash> {
-        Ok(ClassHash::default())
-    }
-
-    fn get_nonce_at(&mut self, _contract_address: ContractAddress) -> StateResult<Nonce> {
-        Ok(Nonce::default())
-    }
-
-    fn get_compiled_class_hash(&mut self, class_hash: ClassHash) -> StateResult<CompiledClassHash> {
-        Err(StateError::UndeclaredClassHash(class_hash))
-    }
-
-    fn get_storage_at(
-        &mut self,
-        _contract_address: ContractAddress,
-        _key: StorageKey,
-    ) -> StateResult<StarkFelt> {
-        Ok(StarkFelt::default())
-    }
-
-    fn get_compiled_contract_class(
-        &mut self,
-        class_hash: &ClassHash,
-    ) -> StateResult<ContractClass> {
-        Err(StateError::UndeclaredClassHash(*class_hash))
-    }
-}
-
-impl StateExtRef for EmptyDb {
-    fn get_sierra_class(&mut self, class_hash: &ClassHash) -> StateResult<FlattenedSierraClass> {
-        Err(StateError::UndeclaredClassHash(*class_hash))
-    }
-}
-
 /// A in memory state database implementation with empty cache db.
 #[derive(Clone, Debug)]
 pub struct MemDb {
-    pub db: CachedDb<EmptyDb>,
+    pub db: CachedDb<()>,
 }
 
 impl MemDb {
     pub fn new() -> Self {
-        Self { db: CachedDb::new(EmptyDb) }
+        Self { db: CachedDb::new(()) }
     }
 }
 
@@ -219,6 +180,18 @@ impl StateExt for MemDb {
 impl AsStateRefDb for MemDb {
     fn as_ref_db(&self) -> StateRefDb {
         StateRefDb::new(MemDb { db: self.db.clone() })
+    }
+}
+
+impl MaybeAsCachedDb for MemDb {
+    fn maybe_as_cached_db(&self) -> Option<AsCachedDb> {
+        Some(CachedDb {
+            db: (),
+            classes: self.db.classes.clone(),
+            storage: self.db.storage.clone(),
+            contracts: self.db.contracts.clone(),
+            sierra_classes: self.db.sierra_classes.clone(),
+        })
     }
 }
 
