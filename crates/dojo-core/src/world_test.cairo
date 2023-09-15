@@ -16,7 +16,7 @@ use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, library_call, world};
 
 // Components and Systems
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Foo {
     #[key]
     caller: ContractAddress,
@@ -24,7 +24,7 @@ struct Foo {
     b: u128,
 }
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Fizz {
     #[key]
     caller: ContractAddress,
@@ -71,7 +71,7 @@ fn test_system() {
     let mut keys = ArrayTrait::new();
     keys.append(0);
 
-    let stored = world.entity('Foo', keys.span(), 0, dojo::StorageSize::<Foo>::unpacked_size());
+    let stored = world.entity('Foo', keys.span(), 0, dojo::SerdeLen::<Foo>::len());
     assert(*stored.snapshot.at(0) == 1337, 'data not stored');
 }
 
@@ -121,7 +121,7 @@ fn test_set_entity_admin() {
     data.append(420);
     data.append(1337);
     world.execute('bar', data);
-    let foo = world.entity('Foo', keys.span(), 0, dojo::StorageSize::<Foo>::unpacked_size());
+    let foo = world.entity('Foo', keys.span(), 0, dojo::SerdeLen::<Foo>::len());
     assert(*foo[0] == 420, 'data not stored');
     assert(*foo[1] == 1337, 'data not stored');
 }
@@ -407,8 +407,8 @@ fn test_execute_multiple_worlds() {
     world.execute('bar', data);
     another_world.execute('bar', another_data);
 
-    let stored = world.entity('Foo', keys.span(), 0, dojo::StorageSize::<Foo>::unpacked_size());
-    let another_stored = another_world.entity('Foo', keys.span(), 0, dojo::StorageSize::<Foo>::unpacked_size());
+    let stored = world.entity('Foo', keys.span(), 0, dojo::SerdeLen::<Foo>::len());
+    let another_stored = another_world.entity('Foo', keys.span(), 0, dojo::SerdeLen::<Foo>::len());
     assert(*stored.snapshot.at(0) == 1337, 'data not stored');
     assert(*another_stored.snapshot.at(0) == 7331, 'data not stored');
 }

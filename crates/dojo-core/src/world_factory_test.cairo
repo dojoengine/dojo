@@ -16,7 +16,7 @@ use dojo::world_factory::{IWorldFactoryDispatcher, IWorldFactoryDispatcherTrait,
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, world};
 
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Foo {
     #[key]
     id: felt252,

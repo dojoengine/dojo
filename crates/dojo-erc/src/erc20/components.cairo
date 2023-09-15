@@ -1,6 +1,6 @@
 use starknet::ContractAddress;
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Allowance {
     #[key]
     token: ContractAddress,
@@ -11,7 +11,7 @@ struct Allowance {
     amount: felt252,
 }
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Balance {
     #[key]
     token: ContractAddress,
@@ -20,7 +20,7 @@ struct Balance {
     amount: felt252,
 }
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Supply {
     #[key]
     token: ContractAddress,

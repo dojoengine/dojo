@@ -101,7 +101,7 @@ pub fn handle_component_struct(
                 $members$
             }
 
-            impl $type_name$Component of dojo::component::Component<$type_name$> {
+            impl $type_name$Component of dojo::traits::Component<$type_name$> {
                 #[inline(always)]
                 fn name(self: @$type_name$) -> felt252 {
                     '$type_name$'
@@ -119,18 +119,6 @@ pub fn handle_component_struct(
                     let mut serialized = ArrayTrait::new();
                     $serialized_values$
                     array::ArrayTrait::span(@serialized)
-                }
-            }
-
-            impl $type_name$StorageSize of dojo::StorageSize<$type_name$> {
-                #[inline(always)]
-                fn unpacked_size() -> usize {
-                    $unpacked_size$
-                }
-
-                #[inline(always)]
-                fn packed_size() -> usize {
-                    $packed_size$
                 }
             }
 
@@ -160,7 +148,7 @@ pub fn handle_component_struct(
 
                 #[external(v0)]
                 fn size(self: @ContractState) -> usize {
-                    dojo::StorageSize::<$type_name$>::unpacked_size()
+                    dojo::SerdeLen::<$type_name$>::len()
                 }
 
                 #[external(v0)]
@@ -193,46 +181,6 @@ pub fn handle_component_struct(
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
                 ("schema".to_string(), RewriteNode::new_modified(schema)),
                 ("print".to_string(), RewriteNode::Text(prints.join("\n"))),
-                (
-                    "unpacked_size".to_string(),
-                    RewriteNode::Text(
-                        struct_ast
-                            .members(db)
-                            .elements(db)
-                            .iter()
-                            .filter_map(|member| {
-                                if member.has_attr(db, "key") {
-                                    return None;
-                                }
-
-                                Some(format!(
-                                    "dojo::StorageSize::<{}>::unpacked_size()",
-                                    member.type_clause(db).ty(db).as_syntax_node().get_text(db),
-                                ))
-                            })
-                            .join(" + "),
-                    ),
-                ),
-                (
-                    "packed_size".to_string(),
-                    RewriteNode::Text(
-                        struct_ast
-                            .members(db)
-                            .elements(db)
-                            .iter()
-                            .filter_map(|member| {
-                                if member.has_attr(db, "key") {
-                                    return None;
-                                }
-
-                                Some(format!(
-                                    "dojo::StorageSize::<{}>::packed_size()",
-                                    member.type_clause(db).ty(db).as_syntax_node().get_text(db),
-                                ))
-                            })
-                            .join(" + "),
-                    ),
-                ),
             ]),
         ),
         diagnostics,

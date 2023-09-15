@@ -12,7 +12,7 @@ use dojo_erc::erc_common::components::{operator_approval, OperatorApproval, Oper
 // Uri TODO: use BaseURI from erc_common
 //
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct Uri {
     #[key]
     token: ContractAddress,
@@ -23,7 +23,7 @@ struct Uri {
 // ERC1155Balance
 //
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Component, Copy, Drop, Serde, SerdeLen)]
 struct ERC1155Balance {
     #[key]
     token: ContractAddress,
