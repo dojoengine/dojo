@@ -28,6 +28,14 @@ use super::contract::rpc_to_inner_class;
 use crate::utils::contract::legacy_rpc_to_inner_class;
 use crate::utils::starkfelt_to_u128;
 
+/// 2^ 128
+const QUERY_VERSION_OFFSET: FieldElement = FieldElement::from_mont([
+    18446744073700081665,
+    17407,
+    18446744073709551584,
+    576460752142434320,
+]);
+
 /// Cairo string for "invoke"
 const PREFIX_INVOKE: FieldElement = FieldElement::from_mont([
     18443034532770911073,
@@ -53,6 +61,7 @@ const PREFIX_DEPLOY_ACCOUNT: FieldElement = FieldElement::from_mont([
 ]);
 
 /// Compute the hash of a V1 DeployAccount transaction.
+#[allow(clippy::too_many_arguments)]
 pub fn compute_deploy_account_v1_transaction_hash(
     contract_address: FieldElement,
     constructor_calldata: &[FieldElement],
@@ -61,12 +70,13 @@ pub fn compute_deploy_account_v1_transaction_hash(
     max_fee: FieldElement,
     chain_id: FieldElement,
     nonce: FieldElement,
+    is_query: bool,
 ) -> FieldElement {
     let calldata_to_hash = [&[class_hash, salt], constructor_calldata].concat();
 
     compute_hash_on_elements(&[
         PREFIX_DEPLOY_ACCOUNT,
-        FieldElement::ONE, // version
+        if is_query { QUERY_VERSION_OFFSET + FieldElement::ONE } else { FieldElement::ONE }, /* version */
         contract_address,
         FieldElement::ZERO, // entry_point_selector
         compute_hash_on_elements(&calldata_to_hash),
@@ -83,10 +93,11 @@ pub fn compute_declare_v1_transaction_hash(
     max_fee: FieldElement,
     chain_id: FieldElement,
     nonce: FieldElement,
+    is_query: bool,
 ) -> FieldElement {
     compute_hash_on_elements(&[
         PREFIX_DECLARE,
-        FieldElement::ONE, // version
+        if is_query { QUERY_VERSION_OFFSET + FieldElement::ONE } else { FieldElement::ONE }, /* version */
         sender_address,
         FieldElement::ZERO, // entry_point_selector
         compute_hash_on_elements(&[class_hash]),
@@ -104,10 +115,11 @@ pub fn compute_declare_v2_transaction_hash(
     chain_id: FieldElement,
     nonce: FieldElement,
     compiled_class_hash: FieldElement,
+    is_query: bool,
 ) -> FieldElement {
     compute_hash_on_elements(&[
         PREFIX_DECLARE,
-        FieldElement::TWO, // version
+        if is_query { QUERY_VERSION_OFFSET + FieldElement::TWO } else { FieldElement::TWO }, /* version */
         sender_address,
         FieldElement::ZERO, // entry_point_selector
         compute_hash_on_elements(&[class_hash]),
@@ -125,10 +137,11 @@ pub fn compute_invoke_v0_transaction_hash(
     calldata: &[FieldElement],
     max_fee: FieldElement,
     chain_id: FieldElement,
+    is_query: bool,
 ) -> FieldElement {
     compute_hash_on_elements(&[
         PREFIX_INVOKE,
-        FieldElement::ZERO, // version
+        if is_query { QUERY_VERSION_OFFSET + FieldElement::ZERO } else { FieldElement::ZERO }, /* version */
         contract_address,
         entry_point_selector, // entry_point_selector
         compute_hash_on_elements(calldata),
@@ -144,10 +157,11 @@ pub fn compute_invoke_v1_transaction_hash(
     max_fee: FieldElement,
     chain_id: FieldElement,
     nonce: FieldElement,
+    is_query: bool,
 ) -> FieldElement {
     compute_hash_on_elements(&[
         PREFIX_INVOKE,
-        FieldElement::ONE, // version
+        if is_query { QUERY_VERSION_OFFSET + FieldElement::ONE } else { FieldElement::ONE }, /* version */
         sender_address,
         FieldElement::ZERO, // entry_point_selector
         compute_hash_on_elements(calldata),
@@ -298,8 +312,14 @@ pub fn broadcasted_invoke_rpc_to_api_transaction(
         calldata, max_fee, nonce, sender_address, signature, ..
     } = transaction;
 
-    let hash =
-        compute_invoke_v1_transaction_hash(sender_address, &calldata, max_fee, chain_id, nonce);
+    let hash = compute_invoke_v1_transaction_hash(
+        sender_address,
+        &calldata,
+        max_fee,
+        chain_id,
+        nonce,
+        transaction.is_query,
+    );
 
     let transaction = InvokeApiTransactionV1 {
         nonce: Nonce(nonce.into()),
@@ -331,6 +351,7 @@ pub fn broadcasted_declare_rpc_to_api_transaction(
                 tx.max_fee,
                 chain_id,
                 tx.nonce,
+                tx.is_query,
             );
 
             let transaction = DeclareApiTransactionV0V1 {
@@ -358,6 +379,7 @@ pub fn broadcasted_declare_rpc_to_api_transaction(
                 chain_id,
                 tx.nonce,
                 tx.compiled_class_hash,
+                tx.is_query,
             );
 
             let transaction = DeclareApiTransactionV2 {
@@ -411,6 +433,7 @@ pub fn broadcasted_deploy_account_rpc_to_api_transaction(
         max_fee,
         chain_id,
         nonce,
+        transaction.is_query,
     );
 
     let api_transaction = DeployAccountApiTransaction {
@@ -477,6 +500,7 @@ mod tests {
             max_fee,
             chain_id,
             nonce,
+            false,
         );
 
         assert_eq!(
