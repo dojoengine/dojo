@@ -291,6 +291,10 @@ where
         &self,
         deploy_account_transaction: BroadcastedDeployAccountTransaction,
     ) -> Result<DeployAccountTransactionResult, Error> {
+        if deploy_account_transaction.is_query {
+            return Err(StarknetApiError::UnsupportedTransactionVersion.into());
+        }
+
         let chain_id = FieldElement::from_hex_be(&self.sequencer.chain_id().await.as_hex())
             .map_err(|_| StarknetApiError::UnexpectedError)?;
 
@@ -400,6 +404,13 @@ where
         &self,
         declare_transaction: BroadcastedDeclareTransaction,
     ) -> Result<DeclareTransactionResult, Error> {
+        if match &declare_transaction {
+            BroadcastedDeclareTransaction::V1(tx) => tx.is_query,
+            BroadcastedDeclareTransaction::V2(tx) => tx.is_query,
+        } {
+            return Err(StarknetApiError::UnsupportedTransactionVersion.into());
+        }
+
         let chain_id = FieldElement::from_hex_be(&self.sequencer.chain_id().await.as_hex())
             .map_err(|_| StarknetApiError::UnexpectedError)?;
 
@@ -427,6 +438,10 @@ where
         &self,
         invoke_transaction: BroadcastedInvokeTransaction,
     ) -> Result<InvokeTransactionResult, Error> {
+        if invoke_transaction.is_query {
+            return Err(StarknetApiError::UnsupportedTransactionVersion.into());
+        }
+
         let chain_id = FieldElement::from_hex_be(&self.sequencer.chain_id().await.as_hex())
             .map_err(|_| StarknetApiError::UnexpectedError)?;
 
