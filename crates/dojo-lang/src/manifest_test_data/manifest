@@ -8,7 +8,7 @@ test_manifest_file
   "world": {
     "name": "world",
     "address": null,
-    "class_hash": "0x2f857fd574c566f9bea8587569d016036377e028f0d47f6e31b4518ee605cd1",
+    "class_hash": "0x214e6e912f68ebe1a82cea0b7a5ded07ba4efa640dd977f1af974c02924e1ff",
     "abi": [
       {
         "type": "impl",
@@ -92,7 +92,7 @@ test_manifest_file
             ],
             "outputs": [
               {
-                "type": "core::starknet::class_hash::ClassHash"
+                "type": "core::starknet::contract_address::ContractAddress"
               }
             ],
             "state_mutability": "view"
@@ -104,6 +104,22 @@ test_manifest_file
               {
                 "name": "class_hash",
                 "type": "core::starknet::class_hash::ClassHash"
+              }
+            ],
+            "outputs": [],
+            "state_mutability": "external"
+          },
+          {
+            "type": "function",
+            "name": "register_system_contract",
+            "inputs": [
+              {
+                "name": "name",
+                "type": "core::felt252"
+              },
+              {
+                "name": "contract_address",
+                "type": "core::starknet::contract_address::ContractAddress"
               }
             ],
             "outputs": [],
@@ -273,28 +289,6 @@ test_manifest_file
           },
           {
             "type": "function",
-            "name": "origin",
-            "inputs": [],
-            "outputs": [
-              {
-                "type": "core::starknet::contract_address::ContractAddress"
-              }
-            ],
-            "state_mutability": "view"
-          },
-          {
-            "type": "function",
-            "name": "caller_system",
-            "inputs": [],
-            "outputs": [
-              {
-                "type": "core::felt252"
-              }
-            ],
-            "state_mutability": "view"
-          },
-          {
-            "type": "function",
             "name": "is_owner",
             "inputs": [
               {
@@ -454,8 +448,8 @@ test_manifest_file
             "kind": "data"
           },
           {
-            "name": "class_hash",
-            "type": "core::starknet::class_hash::ClassHash",
+            "name": "contract_address",
+            "type": "core::starknet::contract_address::ContractAddress",
             "kind": "data"
           }
         ]
@@ -541,7 +535,7 @@ test_manifest_file
   "executor": {
     "name": "executor",
     "address": null,
-    "class_hash": "0x24caf320f4df7648b6f150df66c16c62f51bcba009daecfec1f7622007ad04c",
+    "class_hash": "0x2b35dd4816731188ed1ad16caa73bde76075c9d9cb8cbfa3e447d3ab9b1ab33",
     "abi": [
       {
         "type": "impl",
@@ -562,26 +556,6 @@ test_manifest_file
         "type": "interface",
         "name": "dojo::executor::IExecutor",
         "items": [
-          {
-            "type": "function",
-            "name": "execute",
-            "inputs": [
-              {
-                "name": "class_hash",
-                "type": "core::starknet::class_hash::ClassHash"
-              },
-              {
-                "name": "calldata",
-                "type": "core::array::Span::<core::felt252>"
-              }
-            ],
-            "outputs": [
-              {
-                "type": "core::array::Span::<core::felt252>"
-              }
-            ],
-            "state_mutability": "view"
-          },
           {
             "type": "function",
             "name": "call",
@@ -626,7 +600,7 @@ test_manifest_file
         }
       ],
       "outputs": [],
-      "class_hash": "0x205287b11aa6c42e3cef3539607aa250c2b9ffe27f847af8e88f005e1b3525d",
+      "class_hash": "0x5c79f783745daae9270d44c95b8fcf7804585bf8a76ce7cf3c5eab47a832312",
       "dependencies": [],
       "abi": [
         {
@@ -665,10 +639,6 @@ test_manifest_file
             {
               "name": "system",
               "type": "core::felt252"
-            },
-            {
-              "name": "system_class_hash",
-              "type": "core::starknet::class_hash::ClassHash"
             }
           ]
         },
@@ -705,7 +675,7 @@ test_manifest_file
         }
       ],
       "outputs": [],
-      "class_hash": "0x501dbe28cf4e7f3a47c9abeee23c85992b97fdaa324c1fcb1e2a638882fc470",
+      "class_hash": "0x49b5a41498b6c0b7ada58c93d19feb007649d0d2fb24df1a20760db48abdd76",
       "dependencies": [],
       "abi": [
         {
@@ -770,10 +740,6 @@ test_manifest_file
             {
               "name": "system",
               "type": "core::felt252"
-            },
-            {
-              "name": "system_class_hash",
-              "type": "core::starknet::class_hash::ClassHash"
             }
           ]
         },
@@ -849,7 +815,7 @@ test_manifest_file
           "type": "core::array::Span::<core::felt252>"
         }
       ],
-      "class_hash": "0x3687cba423875df72318e609c4a5584b222862e01f624e80011c67b18661ae1",
+      "class_hash": "0x64ea0cc316108938bf86bbf01d52b6992bc413a1ff67700ff09290c821cae50",
       "dependencies": [],
       "abi": [
         {
@@ -898,10 +864,6 @@ test_manifest_file
             {
               "name": "system",
               "type": "core::felt252"
-            },
-            {
-              "name": "system_class_hash",
-              "type": "core::starknet::class_hash::ClassHash"
             }
           ]
         },
