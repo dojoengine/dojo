@@ -220,14 +220,6 @@ pub fn handle_component_struct(
                     "members".to_string(),
                     RewriteNode::Copied(struct_ast.members(db).as_syntax_node()),
                 ),
-                (
-                    "key_names".to_string(),
-                    RewriteNode::Text(keys.iter().map(|m| m.name.to_string()).join(", ")),
-                ),
-                (
-                    "key_types".to_string(),
-                    RewriteNode::Text(keys.iter().map(|m| m.ty.to_string()).join(", ")),
-                ),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
                 ("layout".to_string(), RewriteNode::new_modified(layout)),

@@ -69,7 +69,7 @@ impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
         self.class_hash
     }
 
-    pub async fn schema(&self, block_id: BlockId) -> Result<Vec<Member>, ComponentError<P::Error>> {
+    pub async fn schema(&self, block_id: BlockId) -> Result<MemberType, ComponentError<P::Error>> {
         let entrypoint = get_selector_from_name("schema").unwrap();
 
         let res = self
@@ -83,10 +83,10 @@ impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
             .map_err(ComponentError::ContractReaderError)?;
 
         println!("{:?}", res);
-        let members = parse_members::<P>(res)?;
-        println!("{:?}", members);
+        let member = parse_member::<P>(&res, 3)?;
+        println!("{:?}", member);
 
-        Ok(members)
+        Ok(member)
     }
 
     pub async fn size(&self, block_id: BlockId) -> Result<FieldElement, ComponentError<P::Error>> {
@@ -200,33 +200,38 @@ pub fn unpack<P: Provider>(
     Ok(unpacked)
 }
 
-fn parse_members<P: Provider>(
-    res: Vec<FieldElement>,
-) -> Result<Vec<Member>, ComponentError<P::Error>> {
-    let mut members = vec![];
+fn parse_member<P: Provider>(
+    data: &[FieldElement],
+    start: usize,
+    mut result: &Vec<Member>,
+) -> Result<(), ComponentError<P::Error>> {
+    let member_type: u8 = data[start].try_into().unwrap();
+    let parsed = match member_type {
+        0 => MemberType::Simple(
+            parse_cairo_short_string(&data[start + 1])
+                .map_err(ComponentError::ParseCairoShortStringError)?,
+        ),
+        1 => {
+            let name = parse_cairo_short_string(&data[start + 3])
+                .map_err(ComponentError::ParseCairoShortStringError)?;
+            parse_member::<P>(data, start + 4, result)?;
+            let attrs_len: u32 = data[start + 3].try_into().unwrap();
 
-    let mut i = 3;
-    while i < res.len() {
-        let name = parse_cairo_short_string(&res[i])
-            .map_err(ComponentError::ParseCairoShortStringError)?;
-        let ty = parse_cairo_short_string(&res[i + 1])
-            .map_err(ComponentError::ParseCairoShortStringError)?;
-        let attrs_len: u32 = res[i + 2].try_into().unwrap();
+            let attrs = if attrs_len > 0 {
+                let attrs_start = start + 4;
+                let attrs_end = attrs_start + attrs_len as usize;
+                data[attrs_start..attrs_end].to_vec()
+            } else {
+                vec![]
+            };
 
-        let attrs = if attrs_len > 0 {
-            let attrs_start = i + 3;
-            let attrs_end = attrs_start + attrs_len as usize;
-            res[attrs_start..attrs_end].to_vec()
-        } else {
-            vec![]
-        };
+            let key = attrs.contains(&cairo_short_string_to_felt("key").unwrap());
 
-        let key = attrs.contains(&cairo_short_string_to_felt("key").unwrap());
+            MemberType::Complex(vec![Member { name, ty, key }])
+        }
+        2 => MemberType::Enum(vec!["ok".to_string()]),
+        _ => return Err(ComponentError::InvalidSchema),
+    };
 
-        members.push(Member { name, ty, key });
-
-        i += 3 + attrs_len as usize;
-    }
-
-    Ok(members)
+    Ok(parsed)
 }

@@ -133,60 +133,22 @@ impl Vec2Impl of Vec2Trait {
     }
 }
 
-#[starknet::contract]
-mod reproduce {
-    #[storage]
-    struct Storage {}
+#[cfg(test)]
+mod tests {
+    use debug::PrintTrait;
+    use super::{Position, Vec2, Vec2Trait};
 
-    #[derive(Copy, Drop, Serde)]
-    struct Member {
-        name: felt252,
-        ty: MemberType,
+    #[test]
+    #[available_gas(100000)]
+    fn test_vec_is_zero() {
+        assert(Vec2Trait::is_zero(Vec2 { x: 0, y: 0 }), 'not zero');
     }
 
-    #[derive(Copy, Drop, Serde)]
-    enum MemberType {
-        Simple: felt252,
-        Complex: Member,
-    }
-
-    trait SchemaIntrospection<T> {
-        fn ty() -> MemberType;
-    }
-
-    struct Position {
-        x: felt252,
-    }
-
-    impl PositionSchemaIntrospection of SchemaIntrospection<Position> {
-        #[inline(always)]
-        fn ty() -> MemberType {
-            MemberType::Simple('ty')
-        }
-    }
-
-    #[external(v0)]
-    fn schema(self: @ContractState) -> MemberType {
-        SchemaIntrospection::<Position>::ty()
+    #[test]
+    #[available_gas(100000)]
+    fn test_vec_is_equal() {
+        let position = Vec2 { x: 420, y: 0 };
+        position.print();
+        assert(position.is_equal(Vec2 { x: 420, y: 0 }), 'not equal');
     }
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use debug::PrintTrait;
-//     use super::{Position, Vec2, Vec2Trait};
-
-//     #[test]
-//     #[available_gas(100000)]
-//     fn test_vec_is_zero() {
-//         assert(Vec2Trait::is_zero(Vec2 { x: 0, y: 0 }), 'not zero');
-//     }
-
-//     #[test]
-//     #[available_gas(100000)]
-//     fn test_vec_is_equal() {
-//         let position = Vec2 { x: 420, y: 0 };
-//         position.print();
-//         assert(position.is_equal(Vec2 { x: 420, y: 0 }), 'not equal');
-//     }
-// }
