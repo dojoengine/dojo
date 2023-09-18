@@ -58,14 +58,14 @@ impl Account {
     }
 
     // TODO: separate fund logic from this struct - implement FeeToken type
-    pub fn deploy_and_fund<S: Database>(&self, state: &mut S) -> StateResult<()> {
+    pub fn deploy_and_fund(&self, state: &mut dyn Database) -> StateResult<()> {
         self.declare(state)?;
         self.deploy(state)?;
         self.fund(state);
         Ok(())
     }
 
-    fn deploy<S: Database>(&self, state: &mut S) -> StateResult<()> {
+    fn deploy(&self, state: &mut dyn Database) -> StateResult<()> {
         let address = ContractAddress(patricia_key!(self.address));
         // set the class hash at the account address
         state.set_class_hash_at(address, ClassHash(self.class_hash.into()))?;
@@ -80,7 +80,7 @@ impl Account {
         Ok(())
     }
 
-    fn fund<S: Database>(&self, state: &mut S) {
+    fn fund(&self, state: &mut dyn Database) {
         state.set_storage_at(
             ContractAddress(patricia_key!(*FEE_TOKEN_ADDRESS)),
             get_storage_var_address("ERC20_balances", &[self.address.into()]).unwrap(),
@@ -88,7 +88,7 @@ impl Account {
         );
     }
 
-    fn declare<S: Database>(&self, state: &mut S) -> StateResult<()> {
+    fn declare(&self, state: &mut dyn Database) -> StateResult<()> {
         let class_hash = ClassHash(self.class_hash.into());
 
         if state.get_compiled_contract_class(&class_hash).is_ok() {

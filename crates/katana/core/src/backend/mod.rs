@@ -106,7 +106,7 @@ impl Backend {
                 block_context.chain_id =
                     ChainId(parse_cairo_short_string(&forked_chain_id).unwrap());
 
-                let mut state = ForkedDb::new(Arc::clone(&provider), forked_block_id);
+                let state = ForkedDb::new(Arc::clone(&provider), forked_block_id);
 
                 trace!(
                     target: "backend",
@@ -116,11 +116,6 @@ impl Backend {
                     forked_url
                 );
 
-                for acc in &accounts {
-                    acc.deploy_and_fund(&mut state)
-                        .expect("should be able to deploy and fund dev account");
-                }
-
                 (
                     Arc::new(AsyncRwLock::new(state)),
                     Arc::new(RwLock::new(Storage::new_forked(
@@ -129,18 +124,16 @@ impl Backend {
                     ))),
                 )
             } else {
-                let mut state = MemDb::default();
-
-                for acc in &accounts {
-                    acc.deploy_and_fund(&mut state)
-                        .expect("should be able to deploy and fund dev account");
-                }
-
                 (
-                    Arc::new(AsyncRwLock::new(state)),
+                    Arc::new(AsyncRwLock::new(MemDb::default())),
                     Arc::new(RwLock::new(Storage::new(&block_context))),
                 )
             };
+
+        for acc in &accounts {
+            acc.deploy_and_fund(&mut *state.write().await)
+                .expect("should be able to deploy and fund dev account");
+        }
 
         if let Some(ref init_state) = config.init_state {
             state
