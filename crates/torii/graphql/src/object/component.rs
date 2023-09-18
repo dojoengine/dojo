@@ -1,5 +1,5 @@
 use async_graphql::dynamic::{
-    Field, FieldFuture, FieldValue, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
+    Field, FieldFuture, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
 };
 use async_graphql::{Name, Value};
 use indexmap::IndexMap;
@@ -97,18 +97,32 @@ impl ObjectTrait for ComponentObject {
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
         let name = format!("{}Registered", self.name());
-        Some(vec![SubscriptionField::new(name, TypeRef::named_nn(self.type_name()), |_| {
-            {
-                SubscriptionFieldFuture::new(async {
-                    Result::Ok(SimpleBroker::<Component>::subscribe().map(
-                        |component: Component| {
-                            Result::Ok(FieldValue::owned_any(ComponentObject::value_mapping(
-                                component,
-                            )))
-                        },
-                    ))
-                })
-            }
-        })])
+        Some(vec![
+            SubscriptionField::new(name, TypeRef::named_nn(self.type_name()), |ctx| {
+                {
+                    SubscriptionFieldFuture::new(async move {
+                        let id = match ctx.args.get("id") {
+                            Some(id) => Some(id.string()?.to_string()),
+                            None => None,
+                        };
+                        // if id is None, then subscribe to all components
+                        // if id is Some, then subscribe to only the component with that id
+                        Ok(SimpleBroker::<Component>::subscribe().filter_map(
+                            move |component: Component| {
+                                if id.is_none() || id == Some(component.id.clone()) {
+                                    Some(Ok(Value::Object(ComponentObject::value_mapping(
+                                        component,
+                                    ))))
+                                } else {
+                                    // id != component.id, so don't send anything, still listening
+                                    None
+                                }
+                            },
+                        ))
+                    })
+                }
+            })
+            .argument(InputValue::new("id", TypeRef::named(TypeRef::ID))),
+        ])
     }
 }
