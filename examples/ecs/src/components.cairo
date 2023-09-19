@@ -1,7 +1,7 @@
 use array::ArrayTrait;
 use core::debug::PrintTrait;
 use starknet::ContractAddress;
-use dojo::database::schema::{Member, MemberType, SchemaIntrospection, serialize_member};
+use dojo::database::schema::{EnumMember, Member, Ty, Struct, SchemaIntrospection, serialize_member, serialize_member_type};
 
 #[derive(Serde, Copy, Drop)]
 enum Direction {
@@ -24,14 +24,17 @@ impl DirectionSchemaIntrospectionImpl of SchemaIntrospection<Direction> {
     }
 
     #[inline(always)]
-    fn ty() -> MemberType {
-        MemberType::Complex(array![
-            serialize_member(@Member {
-                name: 'Direction',
-                ty: MemberType::Enum(array![].span()),
-                attrs: array![].span(),
-            })
-        ].span())
+    fn ty() -> Ty {
+        Ty::Enum(EnumMember{
+            name: 'Direction',
+            values: array![
+                serialize_member_type(@Ty::Simple('None')),
+                serialize_member_type(@Ty::Simple('Left')),
+                serialize_member_type(@Ty::Simple('Right')),
+                serialize_member_type(@Ty::Simple('Up')),
+                serialize_member_type(@Ty::Simple('Down'))
+            ].span()
+        })
     }
 }
 
@@ -92,19 +95,22 @@ impl Vec2SchemaIntrospectionImpl of SchemaIntrospection<Vec2> {
     }
 
     #[inline(always)]
-    fn ty() -> MemberType {
-        MemberType::Complex(array![
-            serialize_member(@Member {
-                name: 'x',
-                ty: SchemaIntrospection::<u32>::ty(),
-                attrs: array![].span(),
-            }),
-            serialize_member(@Member {
-                name: 'y',
-                ty: SchemaIntrospection::<u32>::ty(),
-                attrs: array![].span(),
-            })
-        ].span())
+    fn ty() -> Ty {
+        Ty::Struct(Struct {
+            name: 'Vec2',
+            children: array![
+                serialize_member(@Member {
+                    name: 'x',
+                    ty: SchemaIntrospection::<u32>::ty(),
+                    attrs: array![].span(),
+                }),
+                serialize_member(@Member {
+                    name: 'y',
+                    ty: SchemaIntrospection::<u32>::ty(),
+                    attrs: array![].span(),
+                })
+            ].span()
+        })
     }
 }
 

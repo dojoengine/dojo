@@ -5972,6 +5972,7 @@ dependencies = [
  "console",
  "dojo-lang",
  "dojo-test-utils",
+ "dojo-types",
  "dojo-world",
  "scarb",
  "scarb-ui",

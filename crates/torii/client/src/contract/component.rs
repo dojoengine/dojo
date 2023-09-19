@@ -1,7 +1,7 @@
 use std::vec;
 
 use crypto_bigint::U256;
-use dojo_types::component::Member;
+use dojo_types::component::{Enum, Member, Struct, Ty};
 use starknet::core::types::{BlockId, FieldElement, FunctionCall};
 use starknet::core::utils::{
     cairo_short_string_to_felt, get_selector_from_name, parse_cairo_short_string,
@@ -69,7 +69,7 @@ impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
         self.class_hash
     }
 
-    pub async fn schema(&self, block_id: BlockId) -> Result<MemberType, ComponentError<P::Error>> {
+    pub async fn schema(&self, block_id: BlockId) -> Result<Ty, ComponentError<P::Error>> {
         let entrypoint = get_selector_from_name("schema").unwrap();
 
         let res = self
@@ -82,11 +82,7 @@ impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
             .await
             .map_err(ComponentError::ContractReaderError)?;
 
-        println!("{:?}", res);
-        let member = parse_member::<P>(&res, 3)?;
-        println!("{:?}", member);
-
-        Ok(member)
+        parse_ty::<P>(&res[2..])
     }
 
     pub async fn size(&self, block_id: BlockId) -> Result<FieldElement, ComponentError<P::Error>> {
@@ -200,38 +196,83 @@ pub fn unpack<P: Provider>(
     Ok(unpacked)
 }
 
-fn parse_member<P: Provider>(
-    data: &[FieldElement],
-    start: usize,
-    mut result: &Vec<Member>,
-) -> Result<(), ComponentError<P::Error>> {
-    let member_type: u8 = data[start].try_into().unwrap();
-    let parsed = match member_type {
-        0 => MemberType::Simple(
-            parse_cairo_short_string(&data[start + 1])
-                .map_err(ComponentError::ParseCairoShortStringError)?,
-        ),
-        1 => {
-            let name = parse_cairo_short_string(&data[start + 3])
-                .map_err(ComponentError::ParseCairoShortStringError)?;
-            parse_member::<P>(data, start + 4, result)?;
-            let attrs_len: u32 = data[start + 3].try_into().unwrap();
-
-            let attrs = if attrs_len > 0 {
-                let attrs_start = start + 4;
-                let attrs_end = attrs_start + attrs_len as usize;
-                data[attrs_start..attrs_end].to_vec()
-            } else {
-                vec![]
-            };
-
-            let key = attrs.contains(&cairo_short_string_to_felt("key").unwrap());
-
-            MemberType::Complex(vec![Member { name, ty, key }])
-        }
-        2 => MemberType::Enum(vec!["ok".to_string()]),
+fn parse_ty<P: Provider>(data: &[FieldElement]) -> Result<Ty, ComponentError<P::Error>> {
+    let member_type: u8 = data[0].try_into().unwrap();
+    match member_type {
+        0 => parse_simple::<P>(&data[1..]),
+        1 => parse_struct::<P>(&data[1..]),
+        2 => parse_enum::<P>(&data[1..]),
         _ => return Err(ComponentError::InvalidSchema),
-    };
+    }
+}
 
-    Ok(parsed)
+fn parse_simple<P: Provider>(data: &[FieldElement]) -> Result<Ty, ComponentError<P::Error>> {
+    let ty =
+        parse_cairo_short_string(&data[0]).map_err(ComponentError::ParseCairoShortStringError)?;
+    Ok(Ty::Simple(ty))
+}
+
+fn parse_struct<P: Provider>(data: &[FieldElement]) -> Result<Ty, ComponentError<P::Error>> {
+    let name =
+        parse_cairo_short_string(&data[0]).map_err(ComponentError::ParseCairoShortStringError)?;
+
+    let children_len: u32 = data[1].try_into().unwrap();
+    let children_len = children_len as usize;
+
+    let mut children = vec![];
+    let mut offset = 2;
+
+    for i in 0..children_len {
+        let start = i + offset;
+        let len: u32 = data[start].try_into().unwrap();
+        let slice_start = start + 1;
+        let slice_end = slice_start + len as usize;
+        children.push(parse_member::<P>(&data[slice_start..slice_end])?);
+        offset += len as usize;
+    }
+
+    let attrs = vec![];
+
+    let key = attrs.contains(&cairo_short_string_to_felt("key").unwrap());
+
+    Ok(Ty::Struct(Struct { name, children }))
+}
+
+fn parse_member<P: Provider>(data: &[FieldElement]) -> Result<Member, ComponentError<P::Error>> {
+    let name =
+        parse_cairo_short_string(&data[0]).map_err(ComponentError::ParseCairoShortStringError)?;
+
+    let attributes_len: u32 = data[1].try_into().unwrap();
+
+    let slice_start = 2;
+    let slice_end = slice_start + attributes_len as usize;
+    let attributes = &data[slice_start..slice_end];
+
+    let key = attributes.contains(&cairo_short_string_to_felt("key").unwrap());
+
+    let ty = parse_ty::<P>(&data[slice_end..])?;
+
+    Ok(Member { name, ty, key })
+}
+
+fn parse_enum<P: Provider>(data: &[FieldElement]) -> Result<Ty, ComponentError<P::Error>> {
+    let name =
+        parse_cairo_short_string(&data[0]).map_err(ComponentError::ParseCairoShortStringError)?;
+
+    let values_len: u32 = data[1].try_into().unwrap();
+    let values_len = values_len as usize;
+
+    let mut values = vec![];
+    let mut offset = 2;
+
+    for i in 0..values_len {
+        let start = i + offset;
+        let len: u32 = data[start].try_into().unwrap();
+        let slice_start = start + 1;
+        let slice_end = slice_start + len as usize;
+        values.push(parse_ty::<P>(&data[slice_start..slice_end])?);
+        offset += len as usize;
+    }
+
+    Ok(Ty::Enum(Enum { name, values }))
 }

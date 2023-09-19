@@ -103,32 +103,35 @@ impl PositionSchemaIntrospection of dojo::database::schema::SchemaIntrospection<
     }
 
     #[inline(always)]
-    fn ty() -> dojo::database::schema::MemberType {
-        dojo::database::schema::MemberType::Complex(
-            array![
-                dojo::database::schema::serialize_member(
-                    @dojo::database::schema::Member {
-                        name: 'id',
-                        ty: dojo::database::schema::SchemaIntrospection::<felt252>::ty(),
-                        attrs: array!['key'].span()
-                    }
-                ),
-                dojo::database::schema::serialize_member(
-                    @dojo::database::schema::Member {
-                        name: 'x',
-                        ty: dojo::database::schema::SchemaIntrospection::<felt252>::ty(),
-                        attrs: array![].span()
-                    }
-                ),
-                dojo::database::schema::serialize_member(
-                    @dojo::database::schema::Member {
-                        name: 'y',
-                        ty: dojo::database::schema::SchemaIntrospection::<felt252>::ty(),
-                        attrs: array![].span()
-                    }
-                )
-            ]
-                .span()
+    fn ty() -> dojo::database::schema::Ty {
+        dojo::database::schema::Ty::Struct(
+            dojo::database::schema::Struct {
+                name: 'Position',
+                children: array![
+                    dojo::database::schema::serialize_member(
+                        @dojo::database::schema::Member {
+                            name: 'id',
+                            ty: dojo::database::schema::SchemaIntrospection::<felt252>::ty(),
+                            attrs: array!['key'].span()
+                        }
+                    ),
+                    dojo::database::schema::serialize_member(
+                        @dojo::database::schema::Member {
+                            name: 'x',
+                            ty: dojo::database::schema::SchemaIntrospection::<felt252>::ty(),
+                            attrs: array![].span()
+                        }
+                    ),
+                    dojo::database::schema::serialize_member(
+                        @dojo::database::schema::Member {
+                            name: 'y',
+                            ty: dojo::database::schema::SchemaIntrospection::<felt252>::ty(),
+                            attrs: array![].span()
+                        }
+                    )
+                ]
+                    .span()
+            }
         )
     }
 }
@@ -175,7 +178,7 @@ mod position {
     }
 
     #[external(v0)]
-    fn schema(self: @ContractState) -> dojo::database::schema::MemberType {
+    fn schema(self: @ContractState) -> dojo::database::schema::Ty {
         dojo::database::schema::SchemaIntrospection::<Position>::ty()
     }
 }
@@ -245,18 +248,21 @@ impl RolesSchemaIntrospection of dojo::database::schema::SchemaIntrospection<Rol
     }
 
     #[inline(always)]
-    fn ty() -> dojo::database::schema::MemberType {
-        dojo::database::schema::MemberType::Complex(
-            array![
-                dojo::database::schema::serialize_member(
-                    @dojo::database::schema::Member {
-                        name: 'role_ids',
-                        ty: dojo::database::schema::SchemaIntrospection::<Array<u8>>::ty(),
-                        attrs: array![].span()
-                    }
-                )
-            ]
-                .span()
+    fn ty() -> dojo::database::schema::Ty {
+        dojo::database::schema::Ty::Struct(
+            dojo::database::schema::Struct {
+                name: 'Roles',
+                children: array![
+                    dojo::database::schema::serialize_member(
+                        @dojo::database::schema::Member {
+                            name: 'role_ids',
+                            ty: dojo::database::schema::SchemaIntrospection::<Array<u8>>::ty(),
+                            attrs: array![].span()
+                        }
+                    )
+                ]
+                    .span()
+            }
         )
     }
 }
@@ -299,7 +305,7 @@ mod roles {
     }
 
     #[external(v0)]
-    fn schema(self: @ContractState) -> dojo::database::schema::MemberType {
+    fn schema(self: @ContractState) -> dojo::database::schema::Ty {
         dojo::database::schema::SchemaIntrospection::<Roles>::ty()
     }
 }
@@ -357,32 +363,35 @@ impl PlayerSchemaIntrospection of dojo::database::schema::SchemaIntrospection<Pl
     }
 
     #[inline(always)]
-    fn ty() -> dojo::database::schema::MemberType {
-        dojo::database::schema::MemberType::Complex(
-            array![
-                dojo::database::schema::serialize_member(
-                    @dojo::database::schema::Member {
-                        name: 'game',
-                        ty: dojo::database::schema::SchemaIntrospection::<felt252>::ty(),
-                        attrs: array!['key'].span()
-                    }
-                ),
-                dojo::database::schema::serialize_member(
-                    @dojo::database::schema::Member {
-                        name: 'player',
-                        ty: dojo::database::schema::SchemaIntrospection::<ContractAddress>::ty(),
-                        attrs: array!['key'].span()
-                    }
-                ),
-                dojo::database::schema::serialize_member(
-                    @dojo::database::schema::Member {
-                        name: 'name',
-                        ty: dojo::database::schema::SchemaIntrospection::<felt252>::ty(),
-                        attrs: array![].span()
-                    }
-                )
-            ]
-                .span()
+    fn ty() -> dojo::database::schema::Ty {
+        dojo::database::schema::Ty::Struct(
+            dojo::database::schema::Struct {
+                name: 'Player',
+                children: array![
+                    dojo::database::schema::serialize_member(
+                        @dojo::database::schema::Member {
+                            name: 'game',
+                            ty: dojo::database::schema::SchemaIntrospection::<felt252>::ty(),
+                            attrs: array!['key'].span()
+                        }
+                    ),
+                    dojo::database::schema::serialize_member(
+                        @dojo::database::schema::Member {
+                            name: 'player',
+                            ty: dojo::database::schema::SchemaIntrospection::<ContractAddress>::ty(),
+                            attrs: array!['key'].span()
+                        }
+                    ),
+                    dojo::database::schema::serialize_member(
+                        @dojo::database::schema::Member {
+                            name: 'name',
+                            ty: dojo::database::schema::SchemaIntrospection::<felt252>::ty(),
+                            attrs: array![].span()
+                        }
+                    )
+                ]
+                    .span()
+            }
         )
     }
 }
@@ -429,7 +438,7 @@ mod player {
     }
 
     #[external(v0)]
-    fn schema(self: @ContractState) -> dojo::database::schema::MemberType {
+    fn schema(self: @ContractState) -> dojo::database::schema::Ty {
         dojo::database::schema::SchemaIntrospection::<Player>::ty()
     }
 }

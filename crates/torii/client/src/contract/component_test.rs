@@ -2,7 +2,7 @@ use camino::Utf8PathBuf;
 use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, TestSequencer,
 };
-use dojo_types::component::Member;
+use dojo_types::component::{Enum, Member, Struct, Ty};
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag, FieldElement};
 
@@ -23,24 +23,83 @@ async fn test_component() {
 
     let block_id = BlockId::Tag(BlockTag::Latest);
     let world = WorldContractReader::new(world_address, provider);
-    let component = world.component("Position", block_id).await.unwrap();
+    let position = world.component("Position", block_id).await.unwrap();
+    let schema = position.schema(block_id).await.unwrap();
 
     assert_eq!(
-        component.class_hash(),
+        schema,
+        Ty::Struct(Struct {
+            name: "Position".to_string(),
+            children: vec![
+                Member {
+                    name: "player".to_string(),
+                    ty: Ty::Simple("ContractAddress".to_string()),
+                    key: true
+                },
+                Member {
+                    name: "vec".to_string(),
+                    ty: Ty::Struct(Struct {
+                        name: "Vec2".to_string(),
+                        children: vec![
+                            Member {
+                                name: "x".to_string(),
+                                ty: Ty::Simple("u32".to_string()),
+                                key: false
+                            },
+                            Member {
+                                name: "y".to_string(),
+                                ty: Ty::Simple("u32".to_string()),
+                                key: false
+                            }
+                        ]
+                    }),
+                    key: false
+                }
+            ]
+        })
+    );
+
+    assert_eq!(
+        position.class_hash(),
         FieldElement::from_hex_be(
-            "0x0797f07980d2e8f081fe74c8c4f10ed80320ef029a2c8e90b0ab2a8c58732e8d"
+            "0x072ea0547b5e34b168041ce56349a29b4768924444ac462823ad3c62a1522a5d"
         )
         .unwrap()
     );
 
-    let members = component.schema(block_id).await.unwrap();
+    let moves = world.component("Moves", block_id).await.unwrap();
+    let schema = moves.schema(block_id).await.unwrap();
 
     assert_eq!(
-        members,
-        vec![
-            Member { name: "player".into(), ty: "ContractAddress".into(), key: true },
-            Member { name: "x".into(), ty: "u32".into(), key: false },
-            Member { name: "y".into(), ty: "u32".into(), key: false }
-        ]
-    )
+        schema,
+        Ty::Struct(Struct {
+            name: "Moves".to_string(),
+            children: vec![
+                Member {
+                    name: "player".to_string(),
+                    ty: Ty::Simple("ContractAddress".to_string()),
+                    key: true
+                },
+                Member {
+                    name: "remaining".to_string(),
+                    ty: Ty::Simple("u8".to_string()),
+                    key: false
+                },
+                Member {
+                    name: "last_direction".to_string(),
+                    ty: Ty::Enum(Enum {
+                        name: "Direction".to_string(),
+                        values: vec![
+                            Ty::Simple("None".to_string()),
+                            Ty::Simple("Left".to_string()),
+                            Ty::Simple("Right".to_string()),
+                            Ty::Simple("Up".to_string()),
+                            Ty::Simple("Down".to_string())
+                        ]
+                    }),
+                    key: false
+                }
+            ]
+        })
+    );
 }

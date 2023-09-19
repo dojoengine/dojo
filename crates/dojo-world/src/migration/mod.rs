@@ -250,11 +250,3 @@ fn get_compiled_class_hash(artifact_path: &PathBuf) -> Result<FieldElement> {
     let compiled_class: CompiledClass = serde_json::from_str(&res)?;
     Ok(compiled_class.class_hash()?)
 }
-
-#[test]
-fn compile_moves() {
-    let file = File::open(&PathBuf::from("../../examples/ecs/target/dev/dojo_examples-reproduce.json"))
-        .unwrap();
-    let casm_contract_class: ContractClass = serde_json::from_reader(file).unwrap();
-    let _ = CasmContractClass::from_contract_class(casm_contract_class, true).unwrap();
-}

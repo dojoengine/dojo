@@ -6,7 +6,7 @@ use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use convert_case::{Case, Casing};
-use dojo_types::component::Member;
+use dojo_world::manifest::Member;
 use itertools::Itertools;
 
 use crate::plugin::{Component, DojoAuxData};
@@ -163,8 +163,11 @@ pub fn handle_component_struct(
                 }
 
                 #[inline(always)]
-                fn ty() -> dojo::database::schema::MemberType {
-                    dojo::database::schema::MemberType::Complex(array![$member_types$].span())
+                fn ty() -> dojo::database::schema::Ty {
+                    dojo::database::schema::Ty::Struct(dojo::database::schema::Struct {
+                        name: '$type_name$',
+                        children: array![$member_types$].span()
+                    })
                 }
             }
 
@@ -205,7 +208,7 @@ pub fn handle_component_struct(
                 }
 
                 #[external(v0)]
-                fn schema(self: @ContractState) -> dojo::database::schema::MemberType {
+                fn schema(self: @ContractState) -> dojo::database::schema::Ty {
                     dojo::database::schema::SchemaIntrospection::<$type_name$>::ty()
                 }
             }

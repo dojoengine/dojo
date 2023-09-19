@@ -3,37 +3,48 @@ use serde::{Deserialize, Serialize};
 /// Represents a component member.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Member {
-    /// Name of the member.
     pub name: String,
-    /// Type of the member.
-    #[serde(rename = "type")]
-    pub ty: String,
+    pub ty: Ty,
     pub key: bool,
 }
 
 impl std::fmt::Display for Member {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Member {{ name: {}, type: {}, key: {} }}", self.name, self.ty, self.key)
     }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub enum MemberType {
+pub enum Ty {
     Simple(String),
-    Complex(Vec<Member>),
-    Enum(Vec<String>),
+    Struct(Struct),
+    Enum(Enum),
 }
 
-impl std::fmt::Display for MemberType {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct Struct {
+    pub name: String,
+    pub children: Vec<Member>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct Enum {
+    pub name: String,
+    pub values: Vec<Ty>,
+}
+
+impl std::fmt::Display for Ty {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            MemberType::Simple(s) => write!(f, "{}", s),
-            MemberType::Complex(members) => {
-                let members = members.iter().map(|m| m.to_string()).collect::<Vec<_>>().join(", ");
+            Ty::Simple(s) => write!(f, "{}", s),
+            Ty::Struct(members) => {
+                let members =
+                    members.children.iter().map(|m| m.to_string()).collect::<Vec<_>>().join(", ");
                 write!(f, "[{}]", members)
             }
-            MemberType::Enum(values) => {
-                let values = values.join(", ");
+            Ty::Enum(e) => {
+                // let values = e.values.join(", ");
+                let values = "";
                 write!(f, "Enum({})", values)
             }
         }

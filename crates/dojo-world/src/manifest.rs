@@ -4,7 +4,6 @@ use std::path::Path;
 use ::serde::{Deserialize, Serialize};
 use anyhow::{anyhow, Result};
 use cairo_lang_starknet::abi;
-use dojo_types::component::Member;
 use dojo_types::system::Dependency;
 use serde_with::serde_as;
 use smol_str::SmolStr;
@@ -37,6 +36,17 @@ pub enum ManifestError<E> {
     InvalidNameError(CairoShortStringToFeltError),
     #[error(transparent)]
     Provider(ProviderError<E>),
+}
+
+/// Represents a component member.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct Member {
+    /// Name of the member.
+    pub name: String,
+    /// Type of the member.
+    #[serde(rename = "type")]
+    pub ty: String,
+    pub key: bool,
 }
 
 /// Represents a declaration of a component.
@@ -159,10 +169,8 @@ impl Manifest {
                     .call(
                         FunctionCall {
                             contract_address: world_address,
-                            calldata: vec![
-                                cairo_short_string_to_felt(&component.name)
-                                    .map_err(ManifestError::InvalidNameError)?,
-                            ],
+                            calldata: vec![cairo_short_string_to_felt(&component.name)
+                                .map_err(ManifestError::InvalidNameError)?],
                             entry_point_selector: get_selector_from_name("component").unwrap(),
                         },
                         BlockId::Tag(BlockTag::Pending),
@@ -182,14 +190,12 @@ impl Manifest {
                     .call(
                         FunctionCall {
                             contract_address: world_address,
-                            calldata: vec![
-                                cairo_short_string_to_felt(
-                                    // because the name returns by the `name` method of
-                                    // a system contract is without the 'System' suffix
-                                    system.name.strip_suffix("System").unwrap_or(&system.name),
-                                )
-                                .map_err(ManifestError::InvalidNameError)?,
-                            ],
+                            calldata: vec![cairo_short_string_to_felt(
+                                // because the name returns by the `name` method of
+                                // a system contract is without the 'System' suffix
+                                system.name.strip_suffix("System").unwrap_or(&system.name),
+                            )
+                            .map_err(ManifestError::InvalidNameError)?],
                             entry_point_selector: get_selector_from_name("system").unwrap(),
                         },
                         BlockId::Tag(BlockTag::Pending),
