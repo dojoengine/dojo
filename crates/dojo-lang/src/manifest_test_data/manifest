@@ -985,7 +985,7 @@ test_manifest_file
           "key": false
         }
       ],
-      "class_hash": "0x3b9351ee7af2238ea0b154383b5d07c6052af18ca9776e8d8d6ff0bd535afb4",
+      "class_hash": "0x3682ef3ef44d8db8c8bfe72533e2e3b17e7b80efd6550b365deed7b4b3f8597",
       "abi": [
         {
           "type": "function",
@@ -1059,6 +1059,10 @@ test_manifest_file
               "type": "core::felt252"
             },
             {
+              "name": "attrs",
+              "type": "core::array::Span::<core::felt252>"
+            },
+            {
               "name": "children",
               "type": "core::array::Span::<core::array::Span::<core::felt252>>"
             }
@@ -1071,6 +1075,10 @@ test_manifest_file
             {
               "name": "name",
               "type": "core::felt252"
+            },
+            {
+              "name": "attrs",
+              "type": "core::array::Span::<core::felt252>"
             },
             {
               "name": "values",
@@ -1129,7 +1137,7 @@ test_manifest_file
           "key": false
         }
       ],
-      "class_hash": "0x24e7831b9ebd7622e87f41d7663a85661085590221cb42a76514ad0931f52d1",
+      "class_hash": "0x71a5cb83c2d96f4b97a015d36f936de6f93166a1434bbacd29147933c4ac314",
       "abi": [
         {
           "type": "function",
@@ -1203,6 +1211,10 @@ test_manifest_file
               "type": "core::felt252"
             },
             {
+              "name": "attrs",
+              "type": "core::array::Span::<core::felt252>"
+            },
+            {
               "name": "children",
               "type": "core::array::Span::<core::array::Span::<core::felt252>>"
             }
@@ -1215,6 +1227,10 @@ test_manifest_file
             {
               "name": "name",
               "type": "core::felt252"
+            },
+            {
+              "name": "attrs",
+              "type": "core::array::Span::<core::felt252>"
             },
             {
               "name": "values",

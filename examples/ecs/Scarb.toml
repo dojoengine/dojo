@@ -3,32 +3,26 @@ cairo-version = "2.2.0"
 name = "dojo_examples"
 version = "0.2.1"
 
-# [cairo]
-# sierra-replace-ids = true
+[cairo]
+sierra-replace-ids = true
 
 [dependencies]
 dojo = { path = "../../crates/dojo-core" }
 dojo_erc = { path = "../../crates/dojo-erc" }
 
 [[target.dojo]]
-# build-external-contracts = [
-#     "dojo_erc::erc721::components::Balance",
-#     "dojo_erc::erc721::components::OperatorApproval",
-#     "dojo_erc::erc721::components::Owner",
-#     "dojo_erc::erc721::components::TokenApproval",
-#     "dojo_erc::erc721::erc721::ERC721",
-#     "dojo_erc::erc721::systems::erc721_approve",
-#     "dojo_erc::erc721::systems::erc721_burn",
-#     "dojo_erc::erc721::systems::erc721_mint",
-#     "dojo_erc::erc721::systems::erc721_set_approval_for_all",
-#     "dojo_erc::erc721::systems::erc721_transfer_from",
-# ]
-
-# Enable Sierra codegen.
-sierra = true
-
-# Enable CASM codegen.
-casm = true
+build-external-contracts = [
+    "dojo_erc::erc721::components::Balance",
+    "dojo_erc::erc721::components::OperatorApproval",
+    "dojo_erc::erc721::components::Owner",
+    "dojo_erc::erc721::components::TokenApproval",
+    "dojo_erc::erc721::erc721::ERC721",
+    "dojo_erc::erc721::systems::erc721_approve",
+    "dojo_erc::erc721::systems::erc721_burn",
+    "dojo_erc::erc721::systems::erc721_mint",
+    "dojo_erc::erc721::systems::erc721_set_approval_for_all",
+    "dojo_erc::erc721::systems::erc721_transfer_from",
+]
 
 [tool.dojo]
 initializer_class_hash = "0xbeef"

@@ -8,13 +8,14 @@ enum Ty {
 #[derive(Copy, Drop, Serde)]
 struct Struct {
     name: felt252,
-    // attrs: Span<felt252>,
+    attrs: Span<felt252>,
     children: Span<Span<felt252>>
 }
 
 #[derive(Copy, Drop, Serde)]
 struct EnumMember {
     name: felt252,
+    attrs: Span<felt252>,
     values: Span<Span<felt252>>
 }
 

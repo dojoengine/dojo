@@ -166,6 +166,7 @@ pub fn handle_component_struct(
                 fn ty() -> dojo::database::schema::Ty {
                     dojo::database::schema::Ty::Struct(dojo::database::schema::Struct {
                         name: '$type_name$',
+                        attrs: array![].span(),
                         children: array![$member_types$].span()
                     })
                 }

@@ -107,6 +107,7 @@ impl PositionSchemaIntrospection of dojo::database::schema::SchemaIntrospection<
         dojo::database::schema::Ty::Struct(
             dojo::database::schema::Struct {
                 name: 'Position',
+                attrs: array![].span(),
                 children: array![
                     dojo::database::schema::serialize_member(
                         @dojo::database::schema::Member {
@@ -252,6 +253,7 @@ impl RolesSchemaIntrospection of dojo::database::schema::SchemaIntrospection<Rol
         dojo::database::schema::Ty::Struct(
             dojo::database::schema::Struct {
                 name: 'Roles',
+                attrs: array![].span(),
                 children: array![
                     dojo::database::schema::serialize_member(
                         @dojo::database::schema::Member {
@@ -367,6 +369,7 @@ impl PlayerSchemaIntrospection of dojo::database::schema::SchemaIntrospection<Pl
         dojo::database::schema::Ty::Struct(
             dojo::database::schema::Struct {
                 name: 'Player',
+                attrs: array![].span(),
                 children: array![
                     dojo::database::schema::serialize_member(
                         @dojo::database::schema::Member {

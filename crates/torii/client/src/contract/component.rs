@@ -144,7 +144,7 @@ impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
         }
 
         let unpacked = unpack::<P>(packed, layout)?;
-        println!("{:?}", unpacked);
+
         Ok(unpacked)
     }
 }
@@ -182,8 +182,11 @@ pub fn unpack<P: Provider>(
             offset = 0;
         }
 
-        // Calculate the result and push it to the unpacked values.
-        let mask = U256::from(((1 << size) - 1) as u8);
+        let mut mask = U256::from(0_u8);
+        for _ in 0..size {
+            mask = (mask << 1) | U256::from(1_u8);
+        }
+
         let result = mask & (unpacking >> offset);
         let result_fe = FieldElement::from_hex_be(&result.to_string())
             .map_err(|_| ComponentError::ConvertingFelt)?;
@@ -202,7 +205,7 @@ fn parse_ty<P: Provider>(data: &[FieldElement]) -> Result<Ty, ComponentError<P::
         0 => parse_simple::<P>(&data[1..]),
         1 => parse_struct::<P>(&data[1..]),
         2 => parse_enum::<P>(&data[1..]),
-        _ => return Err(ComponentError::InvalidSchema),
+        _ => Err(ComponentError::InvalidSchema),
     }
 }
 
@@ -216,11 +219,16 @@ fn parse_struct<P: Provider>(data: &[FieldElement]) -> Result<Ty, ComponentError
     let name =
         parse_cairo_short_string(&data[0]).map_err(ComponentError::ParseCairoShortStringError)?;
 
-    let children_len: u32 = data[1].try_into().unwrap();
+    let attrs_len: u32 = data[1].try_into().unwrap();
+    let attrs_slice_start = 2;
+    let attrs_slice_end = attrs_slice_start + attrs_len as usize;
+    let _attrs = &data[attrs_slice_start..attrs_slice_end];
+
+    let children_len: u32 = data[attrs_slice_end].try_into().unwrap();
     let children_len = children_len as usize;
 
     let mut children = vec![];
-    let mut offset = 2;
+    let mut offset = attrs_slice_end + 1;
 
     for i in 0..children_len {
         let start = i + offset;
@@ -231,10 +239,6 @@ fn parse_struct<P: Provider>(data: &[FieldElement]) -> Result<Ty, ComponentError
         offset += len as usize;
     }
 
-    let attrs = vec![];
-
-    let key = attrs.contains(&cairo_short_string_to_felt("key").unwrap());
-
     Ok(Ty::Struct(Struct { name, children }))
 }
 
@@ -243,7 +247,6 @@ fn parse_member<P: Provider>(data: &[FieldElement]) -> Result<Member, ComponentE
         parse_cairo_short_string(&data[0]).map_err(ComponentError::ParseCairoShortStringError)?;
 
     let attributes_len: u32 = data[1].try_into().unwrap();
-
     let slice_start = 2;
     let slice_end = slice_start + attributes_len as usize;
     let attributes = &data[slice_start..slice_end];
@@ -259,11 +262,16 @@ fn parse_enum<P: Provider>(data: &[FieldElement]) -> Result<Ty, ComponentError<P
     let name =
         parse_cairo_short_string(&data[0]).map_err(ComponentError::ParseCairoShortStringError)?;
 
-    let values_len: u32 = data[1].try_into().unwrap();
+    let attrs_len: u32 = data[1].try_into().unwrap();
+    let attrs_slice_start = 2;
+    let attrs_slice_end = attrs_slice_start + attrs_len as usize;
+    let _attrs = &data[attrs_slice_start..attrs_slice_end];
+
+    let values_len: u32 = data[attrs_slice_end].try_into().unwrap();
     let values_len = values_len as usize;
 
     let mut values = vec![];
-    let mut offset = 2;
+    let mut offset = attrs_slice_end + 1;
 
     for i in 0..values_len {
         let start = i + offset;

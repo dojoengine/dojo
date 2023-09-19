@@ -27,6 +27,7 @@ impl DirectionSchemaIntrospectionImpl of SchemaIntrospection<Direction> {
     fn ty() -> Ty {
         Ty::Enum(EnumMember{
             name: 'Direction',
+            attrs: array![].span(),
             values: array![
                 serialize_member_type(@Ty::Simple('None')),
                 serialize_member_type(@Ty::Simple('Left')),
@@ -98,6 +99,7 @@ impl Vec2SchemaIntrospectionImpl of SchemaIntrospection<Vec2> {
     fn ty() -> Ty {
         Ty::Struct(Struct {
             name: 'Vec2',
+            attrs: array![].span(),
             children: array![
                 serialize_member(@Member {
                     name: 'x',
