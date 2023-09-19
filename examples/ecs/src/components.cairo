@@ -1,6 +1,7 @@
 use array::ArrayTrait;
 use core::debug::PrintTrait;
 use starknet::ContractAddress;
+use dojo::database::schema::{EnumMember, Member, Ty, Struct, SchemaIntrospection, serialize_member, serialize_member_type};
 
 #[derive(Serde, Copy, Drop)]
 enum Direction {
@@ -11,15 +12,30 @@ enum Direction {
     Down: (),
 }
 
-impl DirectionStorageSizeImpl of dojo::StorageSize<Direction> {
+impl DirectionSchemaIntrospectionImpl of SchemaIntrospection<Direction> {
     #[inline(always)]
-    fn unpacked_size() -> usize {
+    fn size() -> usize {
         1
     }
 
     #[inline(always)]
-    fn packed_size() -> usize {
-        2
+    fn layout(ref layout: Array<u8>) {
+        layout.append(8);
+    }
+
+    #[inline(always)]
+    fn ty() -> Ty {
+        Ty::Enum(EnumMember{
+            name: 'Direction',
+            attrs: array![].span(),
+            values: array![
+                serialize_member_type(@Ty::Simple('None')),
+                serialize_member_type(@Ty::Simple('Left')),
+                serialize_member_type(@Ty::Simple('Right')),
+                serialize_member_type(@Ty::Simple('Up')),
+                serialize_member_type(@Ty::Simple('Down'))
+            ].span()
+        })
     }
 }
 
@@ -55,28 +71,72 @@ struct Moves {
     last_direction: Direction
 }
 
-#[derive(Component, Copy, Drop, Serde)]
-struct Position {
-    #[key]
-    player: ContractAddress,
+#[derive(Copy, Drop, Serde)]
+struct Vec2 {
     x: u32,
     y: u32
 }
 
-trait PositionTrait {
-    fn is_zero(self: Position) -> bool;
-    fn is_equal(self: Position, b: Position) -> bool;
+impl Vec2PrintImpl of PrintTrait<Vec2> {
+    fn print(self: Vec2) {
+        self.x.print();
+    }
 }
 
-impl PositionImpl of PositionTrait {
-    fn is_zero(self: Position) -> bool {
+impl Vec2SchemaIntrospectionImpl of SchemaIntrospection<Vec2> {
+    #[inline(always)]
+    fn size() -> usize {
+        2
+    }
+
+    #[inline(always)]
+    fn layout(ref layout: Array<u8>) {
+        layout.append(32);
+        layout.append(32);
+    }
+
+    #[inline(always)]
+    fn ty() -> Ty {
+        Ty::Struct(Struct {
+            name: 'Vec2',
+            attrs: array![].span(),
+            children: array![
+                serialize_member(@Member {
+                    name: 'x',
+                    ty: SchemaIntrospection::<u32>::ty(),
+                    attrs: array![].span(),
+                }),
+                serialize_member(@Member {
+                    name: 'y',
+                    ty: SchemaIntrospection::<u32>::ty(),
+                    attrs: array![].span(),
+                })
+            ].span()
+        })
+    }
+}
+
+#[derive(Component, Copy, Drop, Serde)]
+struct Position {
+    #[key]
+    player: ContractAddress,
+    vec: Vec2,
+}
+
+trait Vec2Trait {
+    fn is_zero(self: Vec2) -> bool;
+    fn is_equal(self: Vec2, b: Vec2) -> bool;
+}
+
+impl Vec2Impl of Vec2Trait {
+    fn is_zero(self: Vec2) -> bool {
         if self.x - self.y == 0 {
             return true;
         }
         false
     }
 
-    fn is_equal(self: Position, b: Position) -> bool {
+    fn is_equal(self: Vec2, b: Vec2) -> bool {
         self.x == b.x && self.y == b.y
     }
 }
@@ -84,21 +144,19 @@ impl PositionImpl of PositionTrait {
 #[cfg(test)]
 mod tests {
     use debug::PrintTrait;
-    use super::{Position, PositionTrait};
+    use super::{Position, Vec2, Vec2Trait};
 
     #[test]
     #[available_gas(100000)]
-    fn test_position_is_zero() {
-        let player = starknet::contract_address_const::<0x0>();
-        assert(PositionTrait::is_zero(Position { player, x: 0, y: 0 }), 'not zero');
+    fn test_vec_is_zero() {
+        assert(Vec2Trait::is_zero(Vec2 { x: 0, y: 0 }), 'not zero');
     }
 
     #[test]
     #[available_gas(100000)]
-    fn test_position_is_equal() {
-        let player = starknet::contract_address_const::<0x0>();
-        let position = Position { player, x: 420, y: 0 };
+    fn test_vec_is_equal() {
+        let position = Vec2 { x: 420, y: 0 };
         position.print();
-        assert(PositionTrait::is_equal(position, Position { player, x: 420, y: 0 }), 'not equal');
+        assert(position.is_equal(Vec2 { x: 420, y: 0 }), 'not equal');
     }
 }

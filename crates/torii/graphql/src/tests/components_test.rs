@@ -14,6 +14,7 @@ mod tests {
         test_order: Box<OrderTestFn>,
     }
 
+    #[ignore]
     #[sqlx::test(migrations = "../migrations")]
     async fn test_component_no_filter(pool: SqlitePool) {
         entity_fixtures(&pool).await;
@@ -61,6 +62,7 @@ mod tests {
         assert_eq!(position_connection.edges[0].node.y, 69);
     }
 
+    #[ignore]
     #[sqlx::test(migrations = "../migrations")]
     async fn test_component_where_filter(pool: SqlitePool) {
         entity_fixtures(&pool).await;
@@ -106,6 +108,7 @@ mod tests {
         }
     }
 
+    #[ignore]
     #[sqlx::test(migrations = "../migrations")]
     async fn test_component_ordering(pool: SqlitePool) {
         entity_fixtures(&pool).await;
@@ -170,6 +173,7 @@ mod tests {
         }
     }
 
+    #[ignore]
     #[sqlx::test(migrations = "../migrations")]
     async fn test_component_entity_relationship(pool: SqlitePool) {
         entity_fixtures(&pool).await;

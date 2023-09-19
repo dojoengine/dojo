@@ -12,8 +12,8 @@ use cairo_lang_syntax::attribute::structured::{
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal};
-use dojo_types::component::Member;
 use dojo_types::system::Dependency;
+use dojo_world::manifest::Member;
 use scarb::compiler::plugin::builtin::BuiltinStarkNetPlugin;
 use scarb::compiler::plugin::{CairoPlugin, CairoPluginInstance};
 use scarb::core::{PackageId, PackageName, SourceId};

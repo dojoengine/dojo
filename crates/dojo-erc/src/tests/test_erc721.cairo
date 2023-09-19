@@ -71,7 +71,7 @@ fn test_should_support_interfaces() {
 use debug::PrintTrait;
 
 #[test]
-#[available_gas(50000000)]
+#[available_gas(100000000)]
 fn test_balance_of_with_tokens() {
     // returns the amount of tokens owned by the given address
 
@@ -81,7 +81,7 @@ fn test_balance_of_with_tokens() {
 }
 
 #[test]
-#[available_gas(50000000)]
+#[available_gas(100000000)]
 fn test_balance_of_with_no_tokens() {
     // when the given address does not own any tokens
 

@@ -71,6 +71,7 @@ mod erc20_mint {
 
         // increase balance of recipient
         let mut balance = get!(ctx.world, (token, recipient), Balance);
+
         balance.amount += amount;
         set!(ctx.world, (balance));
     }

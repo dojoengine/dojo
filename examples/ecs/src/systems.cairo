@@ -6,6 +6,7 @@ mod spawn {
     use dojo::world::Context;
 
     use dojo_examples::components::Position;
+    use dojo_examples::components::Vec2;
     use dojo_examples::components::Moves;
     use dojo_examples::components::Direction;
 
@@ -17,7 +18,7 @@ mod spawn {
                 Moves {
                     player: ctx.origin, remaining: 10, last_direction: Direction::None(())
                     }, Position {
-                    player: ctx.origin, x: position.x + 10, y: position.y + 10
+                    player: ctx.origin, vec: Vec2 { x: position.vec.x + 10, y: position.vec.y + 10 }
                 },
             )
         );
@@ -50,12 +51,12 @@ mod move {
     }
 
     fn execute(ctx: Context, direction: Direction) {
-        let (mut position, mut moves) = get !(ctx.world, ctx.origin, (Position, Moves));
+        let (mut position, mut moves) = get!(ctx.world, ctx.origin, (Position, Moves));
         moves.remaining -= 1;
         moves.last_direction = direction;
         let next = next_position(position, direction);
-        set !(ctx.world, (moves, next));
-        emit !(ctx.world, Moved { address: ctx.origin, direction });
+        set!(ctx.world, (moves, next));
+        emit!(ctx.world, Moved { address: ctx.origin, direction });
         return ();
     }
 
@@ -65,16 +66,16 @@ mod move {
                 return position;
             },
             Direction::Left(()) => {
-                position.x -= 1;
+                position.vec.x -= 1;
             },
             Direction::Right(()) => {
-                position.x += 1;
+                position.vec.x += 1;
             },
             Direction::Up(()) => {
-                position.y -= 1;
+                position.vec.y -= 1;
             },
             Direction::Down(()) => {
-                position.y += 1;
+                position.vec.y += 1;
             },
         };
 
@@ -86,8 +87,10 @@ mod move {
 mod tests {
     use core::traits::Into;
     use array::ArrayTrait;
+    use debug::PrintTrait;
 
     use dojo::world::IWorldDispatcherTrait;
+    use dojo::database::schema::SchemaIntrospection;
 
     use dojo::test_utils::spawn_test_world;
 
@@ -97,6 +100,7 @@ mod tests {
     use dojo_examples::components::Moves;
     use dojo_examples::systems::spawn;
     use dojo_examples::systems::move;
+
 
     #[test]
     #[available_gas(30000000)]
@@ -125,11 +129,11 @@ mod tests {
         let mut keys = array::ArrayTrait::new();
         keys.append(caller.into());
 
-        let moves = world.entity('Moves', keys.span(), 0, dojo::StorageSize::<Moves>::unpacked_size());
-        assert(*moves[0] == 9, 'moves is wrong');
-        assert(*moves[1] == move::Direction::Right(()).into(), 'last direction is wrong');
+        let moves = world.entity('Moves', keys.span(), 0, SchemaIntrospection::<Moves>::size(), array![8, 8].span());
+        assert(*moves[0] == 9, 'updated packed value is wrong');
+        assert(*moves[1] == 2, 'updated packed value is wrong');
         let new_position = world
-            .entity('Position', keys.span(), 0, dojo::StorageSize::<Position>::unpacked_size());
+            .entity('Position', keys.span(), 0, SchemaIntrospection::<Position>::size(), array![32, 32].span());
         assert(*new_position[0] == 11, 'position x is wrong');
         assert(*new_position[1] == 10, 'position y is wrong');
     }
