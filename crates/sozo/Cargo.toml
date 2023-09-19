@@ -9,6 +9,7 @@ version = "0.2.1"
 anyhow.workspace = true
 async-trait.workspace = true
 cairo-lang-compiler.workspace = true
+cairo-lang-defs.workspace = true
 cairo-lang-filesystem.workspace = true
 cairo-lang-plugins.workspace = true
 cairo-lang-project.workspace = true
@@ -24,6 +25,8 @@ console.workspace = true
 dojo-lang = { path = "../dojo-lang" }
 dojo-types = { path = "../dojo-types" }
 dojo-world = { path = "../dojo-world" }
+notify = "6.0.1"
+notify-debouncer-mini = "0.3.0"
 scarb-ui.workspace = true
 scarb.workspace = true
 semver.workspace = true
