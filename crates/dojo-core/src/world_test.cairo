@@ -8,13 +8,9 @@ use starknet::{contract_address_const, ContractAddress, ClassHash, get_caller_ad
 use starknet::syscalls::deploy_syscall;
 
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, world};
-use dojo::test_utils::{spawn_test_world, deploy_system};
+use dojo::test_utils::{spawn_test_world, deploy_with_world_address};
 
 // Components and Systems
-
-fn deploy_with_world(class_hash: felt252, world: IWorldDispatcher) -> ContractAddress {
-    deploy_system(class_hash, array![world.contract_address.into()].span())
-}
 
 #[derive(Component, Copy, Drop, Serde)]
 struct Foo {
@@ -78,7 +74,7 @@ fn test_system() {
 
     // System contract
     let bar_contract = IbarDispatcher {
-        contract_address: deploy_with_world(bar::TEST_CLASS_HASH, world)
+        contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world)
     };
 
     bar_contract.set_foo(1337, 1337);
@@ -119,7 +115,7 @@ fn test_set_entity_admin() {
     world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
 
     let bar_contract = IbarDispatcher {
-        contract_address: deploy_with_world(bar::TEST_CLASS_HASH, world)
+        contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world)
     };
 
     let alice = starknet::contract_address_const::<0x1337>();
@@ -141,7 +137,7 @@ fn test_set_entity_unauthorized() {
     let world = deploy_world();
 
     let bar_contract = IbarDispatcher {
-        contract_address: deploy_with_world(bar::TEST_CLASS_HASH, world)
+        contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world)
     };
 
     world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
@@ -165,7 +161,7 @@ fn test_set_entity_unauthorized() {
 //     world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
 
 //     let bar_contract = IbarDispatcher {
-//         contract_address: deploy_with_world(bar::TEST_CLASS_HASH, world)
+//         contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world)
 //     };
 
 //     set!(world, Foo { caller: starknet::contract_address_const::<0x1337>(), a: 420, b: 1337 });
@@ -236,7 +232,7 @@ fn test_writer() {
 fn test_system_not_writer_fail() {
     let world = spawn_test_world(array![foo::TEST_CLASS_HASH],);
 
-    let bar_address = deploy_with_world(bar::TEST_CLASS_HASH, world);
+    let bar_address = deploy_with_world_address(bar::TEST_CLASS_HASH, world);
     let bar_contract = IbarDispatcher { contract_address: bar_address };
 
     // Caller is not owner now
@@ -252,7 +248,7 @@ fn test_system_not_writer_fail() {
 fn test_system_writer_access() {
     let world = spawn_test_world(array![foo::TEST_CLASS_HASH],);
 
-    let bar_address = deploy_with_world(bar::TEST_CLASS_HASH, world);
+    let bar_address = deploy_with_world_address(bar::TEST_CLASS_HASH, world);
     let bar_contract = IbarDispatcher { contract_address: bar_address };
 
     world.grant_writer('Foo', bar_address);
@@ -317,14 +313,14 @@ fn test_execute_multiple_worlds() {
     let world1 = spawn_test_world(array![foo::TEST_CLASS_HASH],);
 
     let bar1_contract = IbarDispatcher {
-        contract_address: deploy_with_world(bar::TEST_CLASS_HASH, world1)
+        contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world1)
     };
 
     // Deploy another world contract
     let world2 = spawn_test_world(array![foo::TEST_CLASS_HASH],);
 
     let bar2_contract = IbarDispatcher {
-        contract_address: deploy_with_world(bar::TEST_CLASS_HASH, world2)
+        contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world2)
     };
 
     bar1_contract.set_foo(1337, 1337);

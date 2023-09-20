@@ -11,12 +11,34 @@ use core::{result::ResultTrait, traits::Into};
 use dojo::executor::executor;
 use dojo::world::{world, IWorldDispatcher, IWorldDispatcherTrait};
 
-fn deploy_system(class_hash: felt252, calldata: Span<felt252>) -> ContractAddress {
+/// Deploy classhash with calldata for constructor
+///
+/// # Arguments
+///
+/// * `class_hash` - Class to deploy
+/// * `calldata` - calldata for constructor
+///
+/// # Returns
+/// * address of contract deployed
+fn deploy_contract(class_hash: felt252, calldata: Span<felt252>) -> ContractAddress {
     let (system_contract, _) = starknet::deploy_syscall(
         class_hash.try_into().unwrap(), 0, calldata, false
     )
         .unwrap();
     system_contract
+}
+
+/// Deploy classhash and passes in world address to constructor
+///
+/// # Arguments
+///
+/// * `class_hash` - Class to deploy
+/// * `world` - World dispatcher to pass as world address
+///
+/// # Returns
+/// * address of contract deployed
+fn deploy_with_world_address(class_hash: felt252, world: IWorldDispatcher) -> ContractAddress {
+    deploy_contract(class_hash, array![world.contract_address.into()].span())
 }
 
 fn spawn_test_world(components: Array<felt252>) -> IWorldDispatcher {
