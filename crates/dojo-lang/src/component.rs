@@ -105,16 +105,6 @@ pub fn handle_component_struct(
     let name = struct_ast.name(db).text(db);
     aux_data.components.push(Component { name: name.to_string(), members: members.to_vec() });
 
-    let prints: Vec<_> = members
-        .iter()
-        .map(|m| {
-            format!(
-                "debug::PrintTrait::print('{}'); debug::PrintTrait::print(self.{});",
-                m.name, m.name
-            )
-        })
-        .collect();
-
     (
         RewriteNode::interpolate_patched(
             "
@@ -172,13 +162,6 @@ pub fn handle_component_struct(
                 }
             }
 
-            #[cfg(test)]
-            impl $type_name$PrintImpl of debug::PrintTrait<$type_name$> {
-                fn print(self: $type_name$) {
-                    $print$
-                }
-            }
-
             #[starknet::interface]
             trait I$type_name$<T> {
                 fn name(self: @T) -> felt252;
@@ -228,7 +211,6 @@ pub fn handle_component_struct(
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
                 ("layout".to_string(), RewriteNode::new_modified(layout)),
                 ("member_types".to_string(), RewriteNode::Text(member_types.join(","))),
-                ("print".to_string(), RewriteNode::Text(prints.join("\n"))),
                 (
                     "size".to_string(),
                     RewriteNode::Text(
