@@ -1,38 +1,28 @@
-#[system]
-mod spawn {
-    use array::ArrayTrait;
-    use box::BoxTrait;
-    use traits::Into;
-    use dojo::world::Context;
+use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
+use dojo_examples::components::{Position, Moves, Direction};
+use starknet::{ContractAddress, ClassHash};
 
-    use dojo_examples::components::Position;
-    use dojo_examples::components::Moves;
-    use dojo_examples::components::Direction;
-
-    fn execute(ctx: Context) {
-        let position = get!(ctx.world, ctx.origin, (Position));
-        set!(
-            ctx.world,
-            (
-                Moves { player: ctx.origin, remaining: 10, last_direction: Direction::None(()) },
-                Position { player: ctx.origin, x: position.x + 10, y: position.y + 10 },
-            )
-        );
-        return ();
-    }
+#[starknet::interface]
+trait IPlayerActions<TContractState> {
+    fn spawn(self: @TContractState);
+    fn move(self: @TContractState, direction: Direction);
 }
 
-#[system]
-mod move {
-    use starknet::ContractAddress;
-    use array::ArrayTrait;
-    use box::BoxTrait;
-    use traits::Into;
-    use dojo::world::Context;
+#[starknet::contract]
+mod player_actions {
+    use starknet::{ContractAddress, get_caller_address};
+    use super::{IPlayerActions, IWorldDispatcher, IWorldDispatcherTrait};
+    use dojo_examples::components::{Position, Moves, Direction};
 
-    use dojo_examples::components::Position;
-    use dojo_examples::components::Moves;
-    use dojo_examples::components::Direction;
+    #[storage]
+    struct Storage {
+        world: IWorldDispatcher
+    }
+
+    #[constructor]
+    fn constructor(ref self: ContractState, world_address: ContractAddress) {
+        self.world.write(IWorldDispatcher { contract_address: world_address });
+    }
 
     #[event]
     #[derive(Drop, starknet::Event)]
@@ -42,18 +32,35 @@ mod move {
 
     #[derive(Drop, starknet::Event)]
     struct Moved {
-        address: ContractAddress,
+        player: ContractAddress,
         direction: Direction
     }
 
-    fn execute(ctx: Context, direction: Direction) {
-        let (mut position, mut moves) = get!(ctx.world, ctx.origin, (Position, Moves));
-        moves.remaining -= 1;
-        moves.last_direction = direction;
-        let next = next_position(position, direction);
-        set!(ctx.world, (moves, next));
-        emit!(ctx.world, Moved { address: ctx.origin, direction });
-        return ();
+
+    #[external(v0)]
+    impl PlayerActionsImpl of super::IPlayerActions<ContractState> {
+        fn spawn(self: @ContractState) {
+            let player = get_caller_address();
+            let position = get!(self.world.read(), player, (Position));
+            set!(
+                self.world.read(),
+                (
+                    Moves { player, remaining: 10, last_direction: Direction::None(()) },
+                    Position { player, x: position.x + 10, y: position.y + 10 },
+                )
+            );
+        }
+
+        fn move(self: @ContractState, direction: Direction) {
+            let player = get_caller_address();
+            let (mut position, mut moves) = get!(self.world.read(), player, (Position, Moves));
+            moves.remaining -= 1;
+            moves.last_direction = direction;
+            let next = next_position(position, direction);
+            set!(self.world.read(), (moves, next));
+            emit!(self.world.read(), Moved { player, direction });
+            return ();
+        }
     }
 
     fn next_position(mut position: Position, direction: Direction) -> Position {
@@ -86,14 +93,13 @@ mod tests {
 
     use dojo::world::IWorldDispatcherTrait;
 
-    use dojo::test_utils::spawn_test_world;
+    use dojo::test_utils::{spawn_test_world, deploy_with_world_address};
 
     use dojo_examples::components::position;
     use dojo_examples::components::Position;
     use dojo_examples::components::moves;
     use dojo_examples::components::Moves;
-    use dojo_examples::systems::spawn;
-    use dojo_examples::systems::move;
+    use super::{player_actions, IPlayerActionsDispatcher, IPlayerActionsDispatcherTrait, Direction};
 
     #[test]
     #[available_gas(30000000)]
@@ -101,31 +107,24 @@ mod tests {
         let caller = starknet::contract_address_const::<0x0>();
 
         // components
-        let mut components = array::ArrayTrait::new();
-        components.append(position::TEST_CLASS_HASH);
-        components.append(moves::TEST_CLASS_HASH);
-        // components.append(dojo_erc::erc20::components::balance::TEST_CLASS_HASH);
-        // systems
-        let mut systems = array::ArrayTrait::new();
-        systems.append(spawn::TEST_CLASS_HASH);
-        systems.append(move::TEST_CLASS_HASH);
+        let mut components = array![position::TEST_CLASS_HASH, moves::TEST_CLASS_HASH,];
+        // deploy world with components
+        let world = spawn_test_world(components);
 
-        // deploy world and register components/systems
-        let world = spawn_test_world(components, systems);
+        // deploy systems contract
+        let contract_address = deploy_with_world_address(player_actions::TEST_CLASS_HASH, world);
+        let player_actions_system = IPlayerActionsDispatcher { contract_address };
 
-        let spawn_call_data = array::ArrayTrait::new();
-        world.execute('spawn', spawn_call_data);
+        // System calls
+        player_actions_system.spawn();
+        player_actions_system.move(Direction::Right(()).into());
 
-        let mut move_calldata = array::ArrayTrait::new();
-        move_calldata.append(move::Direction::Right(()).into());
-        world.execute('move', move_calldata);
-        let mut keys = array::ArrayTrait::new();
-        keys.append(caller.into());
+        let mut keys = array![caller.into()];
 
         let moves = world
             .entity('Moves', keys.span(), 0, dojo::StorageSize::<Moves>::unpacked_size());
         assert(*moves[0] == 9, 'moves is wrong');
-        assert(*moves[1] == move::Direction::Right(()).into(), 'last direction is wrong');
+        assert(*moves[1] == Direction::Right(()).into(), 'last direction is wrong');
         let new_position = world
             .entity('Position', keys.span(), 0, dojo::StorageSize::<Position>::unpacked_size());
         assert(*new_position[0] == 11, 'position x is wrong');
