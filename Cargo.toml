@@ -87,7 +87,7 @@ tracing-subscriber = { version = "0.3.16", features = [ "env-filter" ] }
 url = "2.4.0"
 
 [patch."https://github.com/starkware-libs/blockifier"]
-blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "c794d1b" }
+blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "f7df9ba" }
 
 [patch.crates-io]
 cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "262b7eb4b11ab165a2a936a5f914e78aa732d4a2" }
