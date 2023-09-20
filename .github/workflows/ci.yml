@@ -15,11 +15,9 @@ jobs:
     runs-on: ubuntu-latest-4-cores
     steps:
       - uses: actions/checkout@v3
-
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_VERSION }}
-
       - uses: Swatinem/rust-cache@v2
       - uses: arduino/setup-protoc@v1
         with:
@@ -31,12 +29,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_VERSION }}
           targets: wasm32-unknown-unknown
-
       - uses: Swatinem/rust-cache@v2
       - name: "Ensure `torii-client` crate is wasmable"
         run: |
@@ -57,29 +53,45 @@ jobs:
   #     - run: cargo install cairo-lang-formatter
   #     - run: scripts/cairo_fmt.sh --check
 
-  cairotest:
+  dojo-core-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      
+      - uses: actions/checkout@v3 
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_VERSION }}
-
       - uses: Swatinem/rust-cache@v2
-      - run: scripts/cairo_test.sh
+      - run: cargo run --bin sozo -- --manifest-path crates/dojo-core/Scarb.toml test
+  
+  dojo-erc-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3 
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo run --bin sozo -- --manifest-path crates/dojo-erc/Scarb.toml test
+  
+  dojo-ecs-example-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo run --bin sozo -- --manifest-path examples/ecs/Scarb.toml test
 
   clippy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_VERSION }}
           targets: wasm32-unknown-unknown
           components: clippy
-      
       - uses: Swatinem/rust-cache@v2
       - uses: arduino/setup-protoc@v1
         with:
@@ -90,12 +102,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly
           components: rustfmt
-      
       - uses: Swatinem/rust-cache@v2
       - uses: arduino/setup-protoc@v1
         with:
@@ -136,11 +146,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_VERSION }}
-
       - uses: Swatinem/rust-cache@v2
       - uses: arduino/setup-protoc@v1
         with:
@@ -156,11 +164,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_VERSION }}
-      
       - uses: Swatinem/rust-cache@v2
       - name: Install Hurl
         run: |
