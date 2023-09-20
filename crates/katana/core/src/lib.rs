@@ -5,6 +5,7 @@ pub mod db;
 pub mod env;
 pub mod execution;
 pub mod fork;
+pub mod messaging;
 pub mod pool;
 pub mod sequencer;
 pub mod service;

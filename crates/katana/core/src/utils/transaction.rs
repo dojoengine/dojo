@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use blockifier::execution::contract_class::ContractClass;
+use blockifier::execution::errors::EntryPointExecutionError;
 use blockifier::transaction::account_transaction::AccountTransaction;
+use blockifier::transaction::errors::TransactionExecutionError;
 use blockifier::transaction::transaction_execution::Transaction as ExecutionTransaction;
 use starknet::core::crypto::compute_hash_on_elements;
 use starknet::core::types::{
@@ -10,7 +12,7 @@ use starknet::core::types::{
     DeployAccountTransaction, DeployTransaction, FieldElement, InvokeTransaction,
     InvokeTransactionV0, InvokeTransactionV1, L1HandlerTransaction, Transaction as RpcTransaction,
 };
-use starknet::core::utils::get_contract_address;
+use starknet::core::utils::{get_contract_address, parse_cairo_short_string};
 use starknet_api::core::{ClassHash, CompiledClassHash, ContractAddress, Nonce, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};
 use starknet_api::transaction::{
@@ -510,5 +512,28 @@ mod tests {
             )
             .unwrap()
         );
+    }
+}
+
+pub fn warn_message_transaction_error_exec_error(err: &TransactionExecutionError) {
+    match err {
+        TransactionExecutionError::EntryPointExecutionError(ref eperr)
+        | TransactionExecutionError::ExecutionError(ref eperr) => match eperr {
+            EntryPointExecutionError::ExecutionFailed { error_data } => {
+                let mut reasons: Vec<String> = vec![];
+                error_data.iter().for_each(|felt| {
+                    if let Ok(s) = parse_cairo_short_string(&FieldElement::from(*felt)) {
+                        reasons.push(s);
+                    }
+                });
+
+                tracing::warn!(target: "executor",
+                               "Transaction validation error: {}", reasons.join(" "));
+            }
+            _ => tracing::warn!(target: "executor",
+                                "Transaction validation error: {:?}", err),
+        },
+        _ => tracing::warn!(target: "executor",
+                            "Transaction validation error: {:?}", err),
     }
 }

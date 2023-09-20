@@ -53,6 +53,14 @@ pub struct KatanaArgs {
     #[arg(help = "Initialize the chain from a previously saved state snapshot.")]
     pub load_state: Option<SerializableState>,
 
+    #[arg(long)]
+    #[arg(value_name = "PATH")]
+    #[arg(help = "Configure the messaging with an other chain.")]
+    #[arg(long_help = "Configure the messaging to allow Katana listening/sending messages on a \
+                       settlement chain that can be Ethereum or an other Starknet sequencer. \
+                       The configuration file details and examples can be found here: TODO.")]
+    pub messaging: Option<PathBuf>,
+
     #[command(flatten)]
     #[command(next_help_heading = "Server options")]
     pub server: ServerOptions,
@@ -127,7 +135,11 @@ pub struct EnvironmentOptions {
 
 impl KatanaArgs {
     pub fn sequencer_config(&self) -> SequencerConfig {
-        SequencerConfig { block_time: self.block_time, no_mining: self.no_mining }
+        SequencerConfig {
+            block_time: self.block_time,
+            no_mining: self.no_mining,
+            messaging: self.messaging.clone(),
+        }
     }
 
     pub fn server_config(&self) -> ServerConfig {

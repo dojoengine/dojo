@@ -22,7 +22,7 @@ async fn main() {
         fmt::Subscriber::builder()
             .with_env_filter(
                 "info,executor=trace,server=debug,katana_core=trace,blockifier=off,\
-                 jsonrpsee_server=off,hyper=off",
+                 jsonrpsee_server=off,hyper=off,messaging=debug",
             )
             .finish(),
     )
