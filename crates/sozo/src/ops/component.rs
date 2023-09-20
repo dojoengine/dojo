@@ -29,23 +29,7 @@ pub async fn execute(command: ComponentCommands, env_metadata: Option<Environmen
             if to_json {
                 println!("{}", serde_json::to_string_pretty(&schema)?)
             } else {
-                //                 let output = format!(
-                //                     r"struct {name} {{
-                // {}
-                // }}",
-                //                     schema
-                //                         .iter()
-                //                         .map(|s| match s {
-                //                             Ty::Struct(_s) => "".to_string(),
-                //                                 // format!(r"   {}: {}", s.children[0].key,
-                // s.children[0].ty),                             Ty::Simple(s) =>
-                // s.to_string(),                             Ty::Enum(_e) =>
-                // "".to_string(),                         })
-                //                         .collect::<Vec<String>>()
-                //                         .join("\n")
-                //                 );
-
-                //                 println!("{output}")
+                println!("{schema}");
             }
         }
 
