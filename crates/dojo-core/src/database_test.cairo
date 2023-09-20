@@ -7,7 +7,7 @@ use traits::{Into, TryInto};
 
 use starknet::syscalls::deploy_syscall;
 use starknet::class_hash::{Felt252TryIntoClassHash, ClassHash};
-use dojo::world::{Context, IWorldDispatcher};
+use dojo::world::{IWorldDispatcher};
 use dojo::database::{get, set, del, all};
 
 #[test]

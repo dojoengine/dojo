@@ -50,14 +50,8 @@ mod spawn {
     use dojo::world::Context;
 
     #[external(v0)]
-    fn execute(self: @ContractState, name: felt252, ctx: Context) {
-        assert(
-            ctx.world.contract_address == starknet::get_caller_address(),
-            'must be called thru world'
-        );
-        {
-            return ();
-        }
+    fn execute(self: @ContractState, ctx: Context, name: felt252) {
+        return ();
     }
 }
 
@@ -78,14 +72,8 @@ mod proxy {
 
 
     #[external(v0)]
-    fn execute(self: @ContractState, value: felt252, _ctx: dojo::world::Context) -> felt252 {
-        assert(
-            _ctx.world.contract_address == starknet::get_caller_address(),
-            'must be called thru world'
-        );
-        {
-            value
-        }
+    fn execute(self: @ContractState, value: felt252) -> felt252 {
+        value
     }
 }
 
@@ -108,14 +96,8 @@ mod ctxnamed {
     use dojo::world::Context;
 
     #[external(v0)]
-    fn execute(self: @ContractState, name: felt252, ctx2: Context) {
-        assert(
-            ctx2.world.contract_address == starknet::get_caller_address(),
-            'must be called thru world'
-        );
-        {
-            return ();
-        }
+    fn execute(self: @ContractState, ctx2: Context, name: felt252) {
+        return ();
     }
 }
 

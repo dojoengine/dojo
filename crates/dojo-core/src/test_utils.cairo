@@ -11,7 +11,15 @@ use core::{result::ResultTrait, traits::Into};
 use dojo::executor::executor;
 use dojo::world::{world, IWorldDispatcher, IWorldDispatcherTrait};
 
-fn spawn_test_world(components: Array<felt252>, systems: Array<felt252>) -> IWorldDispatcher {
+fn deploy_system(class_hash: felt252, calldata: Span<felt252>) -> ContractAddress {
+    let (system_contract, _) = starknet::deploy_syscall(
+        class_hash.try_into().unwrap(), 0, calldata, false
+    )
+        .unwrap();
+    system_contract
+}
+
+fn spawn_test_world(components: Array<felt252>) -> IWorldDispatcher {
     // deploy executor
     let constructor_calldata = array::ArrayTrait::new();
     let (executor_address, _) = deploy_syscall(
@@ -34,16 +42,6 @@ fn spawn_test_world(components: Array<felt252>, systems: Array<felt252>) -> IWor
             break ();
         }
         world.register_component((*components[index]).try_into().unwrap());
-        index += 1;
-    };
-
-    // register systems
-    let mut index = 0;
-    loop {
-        if index == systems.len() {
-            break ();
-        }
-        world.register_system((*systems[index]).try_into().unwrap());
         index += 1;
     };
 

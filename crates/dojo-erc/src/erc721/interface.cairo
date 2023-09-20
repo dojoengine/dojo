@@ -77,3 +77,18 @@ trait IERC721Metadata<TState> {
     fn symbol(self: @TState) -> felt252;
     fn token_uri(self: @TState, token_id: u256) -> felt252;
 }
+
+#[starknet::interface]
+trait IERC721Custom<TState> {
+    fn init_world(ref self: TState, world: ContractAddress, uri: felt252);
+
+    fn exists(self: @TState, token_id: u256) -> bool;
+
+    fn owner(self: @TState) -> ContractAddress;
+
+    fn transfer(ref self: TState, to: ContractAddress, token_id: u256);
+
+    fn mint(ref self: TState, to: ContractAddress, token_id: u256);
+
+    fn burn(ref self: TState, token_id: u256);
+}

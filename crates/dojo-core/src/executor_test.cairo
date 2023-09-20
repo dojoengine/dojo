@@ -8,7 +8,7 @@ use traits::TryInto;
 use starknet::syscalls::deploy_syscall;
 use starknet::class_hash::Felt252TryIntoClassHash;
 use dojo::executor::{executor, IExecutorDispatcher, IExecutorDispatcherTrait};
-use dojo::world::{Context, IWorldDispatcher};
+use dojo::world::{IWorldDispatcher};
 
 #[derive(Component, Copy, Drop, Serde)]
 struct Foo {
@@ -18,11 +18,20 @@ struct Foo {
     b: u128,
 }
 
-#[system]
-mod Bar {
-    use super::{Foo, Context};
+#[starknet::contract]
+mod bar {
+    use super::{Foo};
 
-    fn execute(foo: Foo) -> Foo {
+    #[storage]
+    struct Storage {}
+
+    #[external(v0)]
+    fn name(self: @ContractState) -> felt252 {
+        'bar'
+    }
+
+    #[external(v0)]
+    fn execute(self: @ContractState, foo: Foo) -> Foo {
         foo
     }
 }
@@ -43,7 +52,7 @@ fn test_executor() {
     starknet::testing::set_contract_address(starknet::contract_address_const::<0x1337>());
 
     let res = *executor
-        .call(Bar::TEST_CLASS_HASH.try_into().unwrap(), NAME_ENTRYPOINT, array![].span())[0];
+        .call(bar::TEST_CLASS_HASH.try_into().unwrap(), NAME_ENTRYPOINT, array![].span())[0];
 
-    assert(res == 'Bar', 'executor call incorrect')
+    assert(res == 'bar', 'executor call incorrect')
 }

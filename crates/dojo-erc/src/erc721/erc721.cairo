@@ -19,7 +19,9 @@ mod ERC721 {
     };
 
     use dojo_erc::erc165::interface::{IERC165, IERC165_ID};
-    use dojo_erc::erc721::interface::{IERC721, IERC721Metadata, IERC721_ID, IERC721_METADATA_ID};
+    use dojo_erc::erc721::interface::{
+        IERC721, IERC721Metadata, IERC721Custom, IERC721_ID, IERC721_METADATA_ID
+    };
 
     use dojo_erc::erc_common::utils::{to_calldata, ToCallDataTrait, system_calldata};
 
@@ -74,21 +76,12 @@ mod ERC721 {
 
     #[constructor]
     fn constructor(
-        ref self: ContractState,
-        world: IWorldDispatcher,
-        owner: ContractAddress,
-        name: felt252,
-        symbol: felt252,
-        uri: felt252,
+        ref self: ContractState, owner: ContractAddress, name: felt252, symbol: felt252,
     ) {
-        self.world.write(world);
         self.owner_.write(owner);
         self.name_.write(name);
         self.symbol_.write(symbol);
-
-        world.execute('ERC721SetBaseUri', to_calldata(get_contract_address()).plus(uri).data);
     }
-
 
     #[external(v0)]
     impl ERC165 of IERC165<ContractState> {
@@ -124,20 +117,26 @@ mod ERC721 {
         }
 
         fn approve(ref self: ContractState, to: ContractAddress, token_id: u256) {
-            self
-                .world
-                .read()
-                .execute(
-                    'ERC721Approve',
-                    system_calldata(
-                        ERC721ApproveParams {
-                            token: get_contract_address(),
-                            caller: get_caller_address(),
-                            token_id: token_id.try_into().unwrap(),
-                            to
-                        }
-                    )
-                );
+            let token = get_contract_address();
+            let caller = get_caller_address();
+            let token_id: felt252 = token_id.try_into().unwrap();
+            let world = self.world.read();
+            assert(caller != to, 'ERC721: invalid self approval');
+
+            let owner = ERC721OwnerTrait::owner_of(world, token, token_id);
+            assert(owner.is_non_zero(), 'ERC721: invalid token_id');
+
+            let is_approved_for_all = OperatorApprovalTrait::is_approved_for_all(
+                world, token, owner, caller
+            );
+            // // ERC721: approve caller is not token owner or approved for all 
+            assert(caller == owner || is_approved_for_all, 'ERC721: unauthorized caller');
+            ERC721TokenApprovalTrait::unchecked_approve(world, token, token_id, to,);
+
+            // emit events
+            let event = Approval { owner, to, token_id: token_id.into() };
+            IERC721EventsDispatcher { contract_address: token }.on_approval(event.clone());
+            emit!(world, event);
         }
 
         fn is_approved_for_all(
@@ -145,7 +144,11 @@ mod ERC721 {
         ) -> bool {
             OperatorApprovalTrait::is_approved_for_all(
                 self.world.read(), get_contract_address(), owner, operator
-            )
+            );
+            let approval = get!(
+                self.world.read(), (get_contract_address(), owner, operator), OperatorApproval
+            );
+            approval.approved
         }
 
         fn set_approval_for_all(
@@ -218,8 +221,18 @@ mod ERC721 {
 
 
     #[external(v0)]
-    #[generate_trait]
-    impl ERC721Custom of ERC721CustomTrait {
+    impl ERC721Custom of IERC721Custom<ContractState> {
+        /// Should be called after the contract is added as the system
+        /// and has write access to ERC components on the world
+        fn init_world(ref self: ContractState, world: ContractAddress, uri: felt252) {
+            if 0.try_into().unwrap() == self.world.read().contract_address {
+                self.world.write(IWorldDispatcher { contract_address: world });
+                BaseUriTrait::unchecked_set_base_uri(
+                    self.world.read(), get_contract_address(), uri
+                );
+            }
+        }
+
         fn exists(self: @ContractState, token_id: u256) -> bool {
             self.owner_of(token_id).is_non_zero()
         }

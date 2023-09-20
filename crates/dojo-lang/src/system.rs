@@ -4,8 +4,9 @@ use cairo_lang_defs::patcher::{PatchBuilder, RewriteNode};
 use cairo_lang_defs::plugin::{
     DynGeneratedFileAuxData, PluginDiagnostic, PluginGeneratedFile, PluginResult,
 };
+// use cairo_lang_syntax::node::ast::{MaybeModuleBody, Param};
+use cairo_lang_syntax::node::ast::MaybeModuleBody;
 use cairo_lang_syntax::node::ast::OptionReturnTypeClause::ReturnTypeClause;
-use cairo_lang_syntax::node::ast::{MaybeModuleBody, Param};
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
@@ -96,31 +97,25 @@ impl System {
         let signature = function_ast.declaration(db).signature(db);
 
         let parameters = signature.parameters(db);
-        let mut elements = parameters.elements(db);
+        let elements = parameters.elements(db);
 
-        let mut context = "_ctx: dojo::world::Context".to_string();
-        if let Some(first) = elements.first() {
-            // If context is first, move it to last.
-            if is_context(db, first) {
-                let ctx = elements.remove(0);
-                context = ctx.as_syntax_node().get_text(db);
-            }
-        } else if let Some(param) = elements.iter().find(|p| is_context(db, p)) {
-            // Context not the first element, but exists.
-            self.diagnostics.push(PluginDiagnostic {
-                message: "Context must be first parameter when provided".into(),
-                stable_ptr: param.stable_ptr().untyped(),
-            });
-        }
-        let ctx_var = context.clone();
-        let ctx_var = match ctx_var.split_once(':') {
-            Some((ctx, _)) => ctx,
-            _ => "_ctx",
-        };
+        // let mut context = "_ctx: dojo::world::Context".to_string();
+        // if let Some(first) = elements.first() {
+        //     // If context is first, move it to last.
+        //     if is_context(db, first) {
+        //         let ctx = elements.remove(0);
+        //         context = ctx.as_syntax_node().get_text(db);
+        //     }
+        // } else if let Some(param) = elements.iter().find(|p| is_context(db, p)) {
+        //     // Context not the first element, but exists.
+        //     self.diagnostics.push(PluginDiagnostic {
+        //         message: "Context must be first parameter when provided".into(),
+        //         stable_ptr: param.stable_ptr().untyped(),
+        //     });
+        // }
 
-        let mut params =
-            elements.iter().map(|e| e.as_syntax_node().get_text(db)).collect::<Vec<_>>();
-        params.push(context);
+        let params = elements.iter().map(|e| e.as_syntax_node().get_text(db)).collect::<Vec<_>>();
+        // params.push(context);
         let params = params.join(", ");
 
         let ret_clause = if let ReturnTypeClause(clause) = signature.ret_ty(db) {
@@ -132,11 +127,7 @@ impl System {
         rewrite_nodes.push(RewriteNode::interpolate_patched(
             "
                 #[external(v0)]
-                fn execute(self: @ContractState, $params$) $ret_clause$ {
-                    assert( $ctx$.world.contract_address == starknet::get_caller_address(), 'must \
-             be called thru world' );
-                    $body$
-                }
+                fn execute(self: @ContractState, $params$) $ret_clause$ $body$
             ",
             UnorderedHashMap::from([
                 ("params".to_string(), RewriteNode::Text(params)),
@@ -145,7 +136,6 @@ impl System {
                     RewriteNode::new_trimmed(function_ast.body(db).as_syntax_node()),
                 ),
                 ("ret_clause".to_string(), ret_clause),
-                ("ctx".to_string(), RewriteNode::Text(ctx_var.to_string())),
             ]),
         ));
 
@@ -153,6 +143,6 @@ impl System {
     }
 }
 
-fn is_context(db: &dyn SyntaxGroup, param: &Param) -> bool {
-    param.type_clause(db).ty(db).as_syntax_node().get_text(db) == "Context"
-}
+// fn is_context(db: &dyn SyntaxGroup, param: &Param) -> bool {
+//     param.type_clause(db).ty(db).as_syntax_node().get_text(db) == "Context"
+// }

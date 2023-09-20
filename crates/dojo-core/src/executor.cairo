@@ -1,7 +1,5 @@
 use starknet::ClassHash;
 
-use dojo::world::Context;
-
 #[starknet::interface]
 trait IExecutor<T> {
     fn call(

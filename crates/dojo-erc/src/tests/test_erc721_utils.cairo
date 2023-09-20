@@ -3,7 +3,7 @@ use option::{Option, OptionTrait};
 use result::ResultTrait;
 use array::ArrayTrait;
 
-use starknet::ContractAddress;
+use starknet::{ContractAddress, SyscallResultTrait};
 use starknet::syscalls::deploy_syscall;
 use starknet::testing::set_contract_address;
 
@@ -12,14 +12,13 @@ use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 use dojo_erc::tests::test_utils::impersonate;
 
 use dojo_erc::erc721::erc721::ERC721;
-use dojo_erc::erc721::interface::{IERC721, IERC721ADispatcher, IERC721ADispatcherTrait};
+use dojo_erc::erc721::interface::{
+    IERC721, IERC721ADispatcher, IERC721ADispatcherTrait, IERC721CustomDispatcher,
+    IERC721CustomDispatcherTrait
+};
 
 use dojo_erc::erc721::components::{
     erc_721_balance, erc_721_owner, erc_721_token_approval, operator_approval, base_uri
-};
-use dojo_erc::erc721::systems::{
-    ERC721Approve, ERC721SetApprovalForAll, ERC721TransferFrom, ERC721Mint, ERC721Burn,
-    ERC721SetBaseUri
 };
 
 fn DEPLOYER() -> ContractAddress {
@@ -58,41 +57,10 @@ fn spawn_world(world_admin: ContractAddress) -> IWorldDispatcher {
         base_uri::TEST_CLASS_HASH,
     ];
 
-    // systems
-    let mut systems = array![
-        ERC721Approve::TEST_CLASS_HASH,
-        ERC721SetApprovalForAll::TEST_CLASS_HASH,
-        ERC721TransferFrom::TEST_CLASS_HASH,
-        ERC721Mint::TEST_CLASS_HASH,
-        ERC721Burn::TEST_CLASS_HASH,
-        ERC721SetBaseUri::TEST_CLASS_HASH,
-    ];
+    // systems - ERC721 system is registered later
+    let mut systems = array![];
 
-    let world = spawn_test_world(components, systems);
-
-    // Grants writer rights for Component / System
-
-    //  erc_721_balance
-    world.grant_writer('ERC721Balance', 'ERC721TransferFrom');
-    world.grant_writer('ERC721Balance', 'ERC721Mint');
-    world.grant_writer('ERC721Balance', 'ERC721Burn');
-
-    // erc_721_owner
-    world.grant_writer('ERC721Owner', 'ERC721TransferFrom');
-    world.grant_writer('ERC721Owner', 'ERC721Mint');
-    world.grant_writer('ERC721Owner', 'ERC721Burn');
-
-    // erc_721_token_approval
-    world.grant_writer('ERC721TokenApproval', 'ERC721Approve');
-    world.grant_writer('ERC721TokenApproval', 'ERC721TransferFrom');
-
-    // operator_approval
-    world.grant_writer('OperatorApproval', 'ERC721SetApprovalForAll');
-
-    // base_uri
-    world.grant_writer('BaseUri', 'ERC721SetBaseUri');
-
-    world
+    spawn_test_world(components, systems)
 }
 
 
@@ -104,15 +72,29 @@ fn deploy_erc721(
     uri: felt252,
     seed: felt252
 ) -> ContractAddress {
-    let constructor_calldata = array![
-        world.contract_address.into(), deployer.into(), name, symbol, uri
-    ];
-    let (deployed_address, _) = deploy_syscall(
+    let constructor_calldata = array![deployer.into(), name, symbol,];
+    let (contract_address, _) = deploy_syscall(
         ERC721::TEST_CLASS_HASH.try_into().unwrap(), seed, constructor_calldata.span(), false
     )
-        .expect('error deploying ERC721');
+        .unwrap_syscall();
+    let erc721_custom = IERC721CustomDispatcher { contract_address };
 
-    deployed_address
+    // Add ERC721 system and grant writer rights
+    world.register_system_contract('ERC721', contract_address);
+    //  erc_721_balance
+    world.grant_writer('ERC721Balance', 'ERC721');
+    // erc_721_owner
+    world.grant_writer('ERC721Owner', 'ERC721');
+    // erc_721_token_approval
+    world.grant_writer('ERC721TokenApproval', 'ERC721');
+    // operator_approval
+    world.grant_writer('OperatorApproval', 'ERC721');
+    // base_uri
+    world.grant_writer('BaseUri', 'ERC721');
+
+    erc721_custom.init_world(world.contract_address, uri);
+
+    contract_address
 }
 
 
