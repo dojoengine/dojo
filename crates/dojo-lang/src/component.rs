@@ -6,7 +6,7 @@ use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use convert_case::{Case, Casing};
-use dojo_types::component::Member;
+use dojo_world::manifest::Member;
 use itertools::Itertools;
 
 use crate::plugin::{Component, DojoAuxData};
@@ -50,7 +50,7 @@ pub fn handle_component_struct(
 
         if m.ty == "felt252" {
             return Some(RewriteNode::Text(format!(
-                "array::ArrayTrait::append(ref serialized, *self.{});\n",
+                "array::ArrayTrait::append(ref serialized, *self.{});",
                 m.name
             )));
         }
@@ -67,32 +67,43 @@ pub fn handle_component_struct(
     let serialized_values: Vec<_> =
         members.iter().filter_map(|m| serialize_member(m, false)).collect::<_>();
 
-    let schema = members
+    let layout: Vec<_> = members
+        .iter()
+        .filter_map(|m| {
+            if m.key {
+                return None;
+            }
+
+            Some(RewriteNode::Text(format!(
+                "dojo::database::schema::SchemaIntrospection::<{}>::layout(ref layout);\n",
+                m.ty
+            )))
+        })
+        .collect::<_>();
+
+    let member_types: Vec<_> = members
         .iter()
         .map(|m| {
-            RewriteNode::interpolate_patched(
-                "array::ArrayTrait::append(ref arr, ('$name$', '$typ$', $is_key$));",
-                UnorderedHashMap::from([
-                    ("name".to_string(), RewriteNode::Text(m.name.to_string())),
-                    ("typ".to_string(), RewriteNode::Text(m.ty.to_string())),
-                    ("is_key".to_string(), RewriteNode::Text(m.key.to_string())),
-                ]),
+            let mut attrs = vec![];
+            if m.key {
+                attrs.push("'key'")
+            }
+
+            format!(
+                "dojo::database::schema::serialize_member(@dojo::database::schema::Member {{
+                    name: '{}',
+                    ty: dojo::database::schema::SchemaIntrospection::<{}>::ty(),
+                    attrs: array![{}].span()
+                }})",
+                m.name,
+                m.ty,
+                attrs.join(","),
             )
         })
         .collect::<_>();
 
     let name = struct_ast.name(db).text(db);
     aux_data.components.push(Component { name: name.to_string(), members: members.to_vec() });
-
-    let prints: Vec<_> = members
-        .iter()
-        .map(|m| {
-            format!(
-                "debug::PrintTrait::print('{}'); debug::PrintTrait::print(self.{});",
-                m.name, m.name
-            )
-        })
-        .collect();
 
     (
         RewriteNode::interpolate_patched(
@@ -120,24 +131,34 @@ pub fn handle_component_struct(
                     $serialized_values$
                     array::ArrayTrait::span(@serialized)
                 }
-            }
-
-            impl $type_name$StorageSize of dojo::StorageSize<$type_name$> {
-                #[inline(always)]
-                fn unpacked_size() -> usize {
-                    $unpacked_size$
-                }
 
                 #[inline(always)]
-                fn packed_size() -> usize {
-                    $packed_size$
+                fn layout(self: @$type_name$) -> Span<u8> {
+                    let mut layout = ArrayTrait::new();
+                    dojo::database::schema::SchemaIntrospection::<$type_name$>::layout(ref layout);
+                    array::ArrayTrait::span(@layout)
                 }
             }
 
-            #[cfg(test)]
-            impl $type_name$PrintImpl of debug::PrintTrait<$type_name$> {
-                fn print(self: $type_name$) {
-                    $print$
+            impl $type_name$SchemaIntrospection of \
+             dojo::database::schema::SchemaIntrospection<$type_name$> {
+                #[inline(always)]
+                fn size() -> usize {
+                    $size$
+                }
+
+                #[inline(always)]
+                fn layout(ref layout: Array<u8>) {
+                    $layout$
+                }
+
+                #[inline(always)]
+                fn ty() -> dojo::database::schema::Ty {
+                    dojo::database::schema::Ty::Struct(dojo::database::schema::Struct {
+                        name: '$type_name$',
+                        attrs: array![].span(),
+                        children: array![$member_types$].span()
+                    })
                 }
             }
 
@@ -160,14 +181,19 @@ pub fn handle_component_struct(
 
                 #[external(v0)]
                 fn size(self: @ContractState) -> usize {
-                    dojo::StorageSize::<$type_name$>::unpacked_size()
+                    dojo::database::schema::SchemaIntrospection::<$type_name$>::size()
                 }
 
                 #[external(v0)]
-                fn schema(self: @ContractState) -> Array<(felt252, felt252, bool)> {
-                    let mut arr = array::ArrayTrait::new();
-                    $schema$
-                    arr
+                fn layout(self: @ContractState) -> Span<u8> {
+                    let mut layout = ArrayTrait::new();
+                    dojo::database::schema::SchemaIntrospection::<$type_name$>::layout(ref layout);
+                    array::ArrayTrait::span(@layout)
+                }
+
+                #[external(v0)]
+                fn schema(self: @ContractState) -> dojo::database::schema::Ty {
+                    dojo::database::schema::SchemaIntrospection::<$type_name$>::ty()
                 }
             }
         ",
@@ -181,20 +207,12 @@ pub fn handle_component_struct(
                     "members".to_string(),
                     RewriteNode::Copied(struct_ast.members(db).as_syntax_node()),
                 ),
-                (
-                    "key_names".to_string(),
-                    RewriteNode::Text(keys.iter().map(|m| m.name.to_string()).join(", ")),
-                ),
-                (
-                    "key_types".to_string(),
-                    RewriteNode::Text(keys.iter().map(|m| m.ty.to_string()).join(", ")),
-                ),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
-                ("schema".to_string(), RewriteNode::new_modified(schema)),
-                ("print".to_string(), RewriteNode::Text(prints.join("\n"))),
+                ("layout".to_string(), RewriteNode::new_modified(layout)),
+                ("member_types".to_string(), RewriteNode::Text(member_types.join(","))),
                 (
-                    "unpacked_size".to_string(),
+                    "size".to_string(),
                     RewriteNode::Text(
                         struct_ast
                             .members(db)
@@ -206,27 +224,7 @@ pub fn handle_component_struct(
                                 }
 
                                 Some(format!(
-                                    "dojo::StorageSize::<{}>::unpacked_size()",
-                                    member.type_clause(db).ty(db).as_syntax_node().get_text(db),
-                                ))
-                            })
-                            .join(" + "),
-                    ),
-                ),
-                (
-                    "packed_size".to_string(),
-                    RewriteNode::Text(
-                        struct_ast
-                            .members(db)
-                            .elements(db)
-                            .iter()
-                            .filter_map(|member| {
-                                if member.has_attr(db, "key") {
-                                    return None;
-                                }
-
-                                Some(format!(
-                                    "dojo::StorageSize::<{}>::packed_size()",
+                                    "dojo::database::schema::SchemaIntrospection::<{}>::size()",
                                     member.type_clause(db).ty(db).as_syntax_node().get_text(db),
                                 ))
                             })

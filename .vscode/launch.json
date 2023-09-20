@@ -7,21 +7,21 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in 'dojo-lang'",
+            "name": "Debug unit tests in 'dojo-world'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--package=dojo-lang",
+                    "--package=dojo-world",
                     "--lib"
                 ],
                 "filter": {
-                    "name": "dojo-lang",
+                    "name": "dojo-world",
                     "kind": "lib"
                 }
             },
-            "args": ["inline_macros::test::expr_semantics"],
-            "cwd": "${workspaceFolder}/crates/dojo-lang"
+            "args": ["migration::compile_moves"],
+            "cwd": "${workspaceFolder}/crates/dojo-world"
         },
     ]
 }

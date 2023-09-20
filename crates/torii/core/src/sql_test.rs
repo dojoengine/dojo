@@ -1,8 +1,7 @@
 use std::str::FromStr;
 
 use camino::Utf8PathBuf;
-use dojo_types::component::Member;
-use dojo_world::manifest::{Component, System};
+use dojo_world::manifest::{Component, Member, System};
 use sqlx::sqlite::SqlitePool;
 use starknet::core::types::FieldElement;
 

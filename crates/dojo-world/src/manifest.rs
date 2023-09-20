@@ -4,7 +4,6 @@ use std::path::Path;
 use ::serde::{Deserialize, Serialize};
 use anyhow::{anyhow, Result};
 use cairo_lang_starknet::abi;
-use dojo_types::component::Member;
 use dojo_types::system::Dependency;
 use serde_with::serde_as;
 use smol_str::SmolStr;
@@ -37,6 +36,17 @@ pub enum ManifestError<E> {
     InvalidNameError(CairoShortStringToFeltError),
     #[error(transparent)]
     Provider(ProviderError<E>),
+}
+
+/// Represents a component member.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct Member {
+    /// Name of the member.
+    pub name: String,
+    /// Type of the member.
+    #[serde(rename = "type")]
+    pub ty: String,
+    pub key: bool,
 }
 
 /// Represents a declaration of a component.

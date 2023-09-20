@@ -8,6 +8,7 @@ version = "0.2.1"
 [dependencies]
 async-std = { version = "1.12.0", default-features = false, features = [ "std" ] }
 async-trait.workspace = true
+crypto-bigint = "0.5.3"
 dojo-types = { path = "../../dojo-types" }
 parking_lot = "0.12.1"
 starknet-crypto.workspace = true

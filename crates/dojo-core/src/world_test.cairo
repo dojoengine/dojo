@@ -13,6 +13,7 @@ use starknet::syscalls::deploy_syscall;
 
 use dojo::executor::executor;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, library_call, world};
+use dojo::database::schema::SchemaIntrospection;
 
 // Components and Systems
 
@@ -48,7 +49,6 @@ mod bar {
 #[test]
 #[available_gas(2000000)]
 fn test_component() {
-    let name = 'Foo';
     let world = deploy_world();
 
     world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
@@ -71,7 +71,7 @@ fn test_system() {
     let mut keys = ArrayTrait::new();
     keys.append(0);
 
-    let stored = world.entity('Foo', keys.span(), 0, dojo::StorageSize::<Foo>::unpacked_size());
+    let stored = world.entity('Foo', keys.span(), 0, SchemaIntrospection::<Foo>::size());
     assert(*stored.snapshot.at(0) == 1337, 'data not stored');
 }
 
@@ -121,7 +121,7 @@ fn test_set_entity_admin() {
     data.append(420);
     data.append(1337);
     world.execute('bar', data);
-    let foo = world.entity('Foo', keys.span(), 0, dojo::StorageSize::<Foo>::unpacked_size());
+    let foo = world.entity('Foo', keys.span(), 0, SchemaIntrospection::<Foo>::size());
     assert(*foo[0] == 420, 'data not stored');
     assert(*foo[1] == 1337, 'data not stored');
 }
@@ -363,7 +363,7 @@ fn test_execute_origin_failing() {
 }
 
 #[test]
-#[available_gas(6000000)]
+#[available_gas(60000000)]
 fn test_execute_multiple_worlds() {
     // Deploy executor contract
     let executor_constructor_calldata = array::ArrayTrait::new();
@@ -407,8 +407,8 @@ fn test_execute_multiple_worlds() {
     world.execute('bar', data);
     another_world.execute('bar', another_data);
 
-    let stored = world.entity('Foo', keys.span(), 0, dojo::StorageSize::<Foo>::unpacked_size());
-    let another_stored = another_world.entity('Foo', keys.span(), 0, dojo::StorageSize::<Foo>::unpacked_size());
+    let stored = world.entity('Foo', keys.span(), 0, SchemaIntrospection::<Foo>::size());
+    let another_stored = another_world.entity('Foo', keys.span(), 0, SchemaIntrospection::<Foo>::size());
     assert(*stored.snapshot.at(0) == 1337, 'data not stored');
     assert(*another_stored.snapshot.at(0) == 7331, 'data not stored');
 }
