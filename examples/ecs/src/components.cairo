@@ -116,7 +116,7 @@ impl Vec2SchemaIntrospectionImpl of SchemaIntrospection<Vec2> {
     }
 }
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Component, Copy, Drop, Print, Serde)]
 struct Position {
     #[key]
     player: ContractAddress,

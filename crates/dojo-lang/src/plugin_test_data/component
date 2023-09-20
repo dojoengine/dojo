@@ -137,18 +137,6 @@ impl PositionSchemaIntrospection of dojo::database::schema::SchemaIntrospection<
     }
 }
 
-#[cfg(test)]
-impl PositionPrintImpl of debug::PrintTrait<Position> {
-    fn print(self: Position) {
-        debug::PrintTrait::print('id');
-        debug::PrintTrait::print(self.id);
-        debug::PrintTrait::print('x');
-        debug::PrintTrait::print(self.x);
-        debug::PrintTrait::print('y');
-        debug::PrintTrait::print(self.y);
-    }
-}
-
 #[starknet::interface]
 trait IPosition<T> {
     fn name(self: @T) -> felt252;
@@ -266,14 +254,6 @@ impl RolesSchemaIntrospection of dojo::database::schema::SchemaIntrospection<Rol
                     .span()
             }
         )
-    }
-}
-
-#[cfg(test)]
-impl RolesPrintImpl of debug::PrintTrait<Roles> {
-    fn print(self: Roles) {
-        debug::PrintTrait::print('role_ids');
-        debug::PrintTrait::print(self.role_ids);
     }
 }
 
@@ -396,18 +376,6 @@ impl PlayerSchemaIntrospection of dojo::database::schema::SchemaIntrospection<Pl
                     .span()
             }
         )
-    }
-}
-
-#[cfg(test)]
-impl PlayerPrintImpl of debug::PrintTrait<Player> {
-    fn print(self: Player) {
-        debug::PrintTrait::print('game');
-        debug::PrintTrait::print(self.game);
-        debug::PrintTrait::print('player');
-        debug::PrintTrait::print(self.player);
-        debug::PrintTrait::print('name');
-        debug::PrintTrait::print(self.name);
     }
 }
 

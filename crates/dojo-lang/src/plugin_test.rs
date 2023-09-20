@@ -17,6 +17,7 @@ cairo_lang_test_utils::test_file_test!(
     "src/plugin_test_data",
     {
         component: "component",
+        print: "print",
         system: "system",
     },
     test_expand_plugin
