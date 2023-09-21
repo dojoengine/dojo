@@ -426,19 +426,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-graphql-poem"
-version = "5.0.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68f818938d4e47dcc40bc383e9ddec373e9aab1db29e5ad9706b29621afe3b3f"
-dependencies = [
- "async-graphql",
- "futures-util",
- "poem",
- "serde_json",
- "tokio-util",
-]
-
-[[package]]
 name = "async-graphql-value"
 version = "5.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -448,6 +435,18 @@ dependencies = [
  "indexmap 1.9.3",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "async-graphql-warp"
+version = "5.0.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce971f92675defe1adf14f9e70b8798d797db9f454463b611a552bffd5532188"
+dependencies = [
+ "async-graphql",
+ "futures-util",
+ "serde_json",
+ "warp",
 ]
 
 [[package]]
@@ -4922,7 +4921,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ebc7ae19f3e791ae8108b08801abb3708d64d3a16490c720e0b81040cae87b5d"
 dependencies = [
  "async-trait",
- "base64 0.21.4",
  "bytes",
  "futures-util",
  "headers",
@@ -4941,7 +4939,6 @@ dependencies = [
  "smallvec",
  "thiserror",
  "tokio",
- "tokio-tungstenite",
  "tokio-util",
  "tracing",
 ]
@@ -5699,6 +5696,12 @@ dependencies = [
  "serde_derive_internals",
  "syn 1.0.109",
 ]
+
+[[package]]
+name = "scoped-tls"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e1cf6437eb19a8f4a6cc0f7dca544973b0b78843adbfeb3683d1a94a0024a294"
 
 [[package]]
 name = "scopeguard"
@@ -6738,9 +6741,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-tungstenite"
-version = "0.20.0"
+version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b2dbec703c26b00d74844519606ef15d09a7d6857860f84ad223dec002ddea2"
+checksum = "54319c93411147bced34cb5609a80e0a8e44c5999c93903a81cd866630ec0bfd"
 dependencies = [
  "futures-util",
  "log",
@@ -6894,7 +6897,7 @@ version = "0.2.1"
 dependencies = [
  "anyhow",
  "async-graphql",
- "async-graphql-poem",
+ "async-graphql-warp",
  "async-trait",
  "base64 0.21.4",
  "camino",
@@ -6902,7 +6905,6 @@ dependencies = [
  "dojo-types",
  "dojo-world",
  "indexmap 1.9.3",
- "poem",
  "serde",
  "serde_json",
  "sqlx",
@@ -6914,16 +6916,19 @@ dependencies = [
  "torii-core",
  "tracing",
  "url",
+ "warp",
 ]
 
 [[package]]
 name = "torii-grpc"
 version = "0.2.1"
 dependencies = [
+ "bytes",
  "prost",
  "sqlx",
  "tonic",
  "tonic-build",
+ "warp",
 ]
 
 [[package]]
@@ -6932,7 +6937,6 @@ version = "0.2.1"
 dependencies = [
  "anyhow",
  "async-graphql",
- "async-graphql-poem",
  "async-trait",
  "base64 0.21.4",
  "camino",
@@ -6958,6 +6962,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "url",
+ "warp",
 ]
 
 [[package]]
@@ -7128,13 +7133,13 @@ checksum = "3528ecfd12c466c6f163363caf2d02a71161dd5e1cc6ae7b34207ea2d42d81ed"
 
 [[package]]
 name = "tungstenite"
-version = "0.20.0"
+version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e862a1c4128df0112ab625f55cd5c934bcb4312ba80b39ae4b4835a3fd58e649"
+checksum = "30ee6ab729cd4cf0fd55218530c4522ed30b7b6081752839b68fcec8d0960788"
 dependencies = [
+ "base64 0.13.1",
  "byteorder",
  "bytes",
- "data-encoding",
  "http",
  "httparse",
  "log",
@@ -7360,6 +7365,37 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bfa7760aed19e106de2c7c0b581b509f2f25d3dacaf737cb82ac61bc6d760b0e"
 dependencies = [
  "try-lock",
+]
+
+[[package]]
+name = "warp"
+version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba431ef570df1287f7f8b07e376491ad54f84d26ac473489427231e1718e1f69"
+dependencies = [
+ "bytes",
+ "futures-channel",
+ "futures-util",
+ "headers",
+ "http",
+ "hyper",
+ "log",
+ "mime",
+ "mime_guess",
+ "multer",
+ "percent-encoding",
+ "pin-project",
+ "rustls-pemfile",
+ "scoped-tls",
+ "serde",
+ "serde_json",
+ "serde_urlencoded",
+ "tokio",
+ "tokio-stream",
+ "tokio-tungstenite",
+ "tokio-util",
+ "tower-service",
+ "tracing",
 ]
 
 [[package]]

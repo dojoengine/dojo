@@ -21,6 +21,7 @@ use torii_core::State;
 use tracing::error;
 use tracing_subscriber::fmt;
 use url::Url;
+use warp::Filter;
 
 use crate::engine::Processors;
 use crate::indexer::Indexer;
@@ -105,8 +106,16 @@ async fn main() -> anyhow::Result<()> {
 
     let indexer =
         Indexer::new(&state, &provider, processors, manifest, world_address, args.start_block);
-    let graphql = torii_graphql::server::start(&args.host, args.graphql_port, &pool);
-    let grpc = torii_grpc::server::start(&args.host, args.grpc_port, &pool);
+
+    let base_route = warp::path::end()
+        .and(warp::get())
+        .map(|| warp::reply::json(&serde_json::json!({ "success": true })));
+    let routes = torii_graphql::route::filter(&pool)
+        .await
+        .or(torii_grpc::route::filter(&pool))
+        .or(base_route);
+    let server = warp::serve(routes);
+    let server = server.run((args.host.parse::<std::net::IpAddr>()?, args.graphql_port));
 
     tokio::select! {
         res = indexer.start() => {
@@ -114,16 +123,7 @@ async fn main() -> anyhow::Result<()> {
                 error!("Indexer failed with error: {:?}", e);
             }
         }
-        res = graphql => {
-            if let Err(e) = res {
-                error!("GraphQL server failed with error: {:?}", e);
-            }
-        }
-        rs = grpc => {
-            if let Err(e) = rs {
-                error!("GRPC server failed with error: {:?}", e);
-            }
-        }
+        _ = server => {}
         _ = tokio::signal::ctrl_c() => {
             println!("Received Ctrl+C, shutting down");
         }

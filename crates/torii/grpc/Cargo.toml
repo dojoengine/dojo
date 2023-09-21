@@ -6,9 +6,11 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
+bytes = "1.0"
 prost = "0.11"
 sqlx = { version = "0.6.2", features = [ "chrono", "macros", "offline", "runtime-actix-rustls", "sqlite", "uuid" ] }
 tonic = "0.9"
+warp.workspace = true
 
 [build-dependencies]
 tonic-build = "0.9"

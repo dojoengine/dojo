@@ -7,8 +7,7 @@ version = "0.2.1"
 
 [dependencies]
 anyhow.workspace = true
-async-graphql = { version = "5.0.8", features = [ "chrono", "dynamic-schema" ] }
-async-graphql-poem = "5.0.8"
+async-graphql = { version = "5.0.8", features = [ "chrono", "dynamic-schema", "playground" ] }
 async-trait.workspace = true
 base64 = "0.21.2"
 camino.workspace = true
@@ -34,6 +33,7 @@ torii-grpc = { path = "../grpc" }
 tracing-subscriber.workspace = true
 tracing.workspace = true
 url.workspace = true
+warp.workspace = true
 
 [dev-dependencies]
 camino.workspace = true

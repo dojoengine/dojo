@@ -1,14 +1,16 @@
+use bytes::{Bytes, BytesMut};
+use prost::Message;
 use sqlx::{Pool, Sqlite};
-use tonic::transport::Server;
 use tonic::{Request, Response, Status};
-use world::world_server::{World, WorldServer};
+use warp::Filter;
+use world::world_server::World;
 use world::{MetaReply, MetaRequest};
 
 pub mod world {
     tonic::include_proto!("world");
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct DojoWorld {
     pool: Pool<Sqlite>,
 }
@@ -55,14 +57,34 @@ impl World for DojoWorld {
     }
 }
 
-pub async fn start(
-    host: &String,
-    port: u16,
+#[derive(Debug)]
+struct InvalidProtobufError;
+
+impl warp::reject::Reject for InvalidProtobufError {}
+
+pub fn filter(
     pool: &Pool<Sqlite>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let addr = format!("{}:{}", host, port).parse()?;
+) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     let world = DojoWorld::new(pool.clone());
 
-    Server::builder().add_service(WorldServer::new(world)).serve(addr).await?;
-    Ok(())
+    warp::path("grpc").and(warp::post()).and(warp::body::bytes()).and_then(move |body: Bytes| {
+        let world = world.clone();
+        async move {
+            let request = match MetaRequest::decode(body) {
+                Ok(req) => req,
+                Err(_) => return Err(warp::reject::custom(InvalidProtobufError)),
+            };
+            let response = world.meta(tonic::Request::new(request)).await.unwrap();
+            let meta_reply = response.into_inner();
+
+            let mut bytes = BytesMut::new();
+            meta_reply.encode(&mut bytes).unwrap();
+
+            Ok::<_, warp::reject::Rejection>(warp::reply::with_header(
+                bytes.to_vec(),
+                "content-type",
+                "application/octet-stream",
+            ))
+        }
+    })
 }
