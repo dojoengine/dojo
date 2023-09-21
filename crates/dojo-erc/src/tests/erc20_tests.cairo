@@ -16,18 +16,35 @@ use starknet::contract_address_const;
 use starknet::testing;
 use traits::Into;
 use zeroable::Zeroable;
+use dojo::test_utils::spawn_test_world;
+use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
+
+use dojo_erc::token::erc20_components::{
+    ERC20Allowance, erc_20_allowance, ERC20Balance, erc_20_balance, ERC20Meta, erc_20_meta
+};
+use dojo_erc::token::erc20::ERC20::_worldContractMemberStateTrait;
+use debug::PrintTrait;
 
 //
 // Setup
 //
 
-fn STATE() -> ERC20::ContractState {
-    ERC20::contract_state_for_testing()
+fn STATE() -> (IWorldDispatcher, ERC20::ContractState) {
+    let world = spawn_test_world(
+        array![
+            erc_20_allowance::TEST_CLASS_HASH,
+            erc_20_balance::TEST_CLASS_HASH,
+            erc_20_meta::TEST_CLASS_HASH,
+        ]
+    );
+    let mut state = ERC20::contract_state_for_testing();
+    state._world.write(world.contract_address);
+    (world, state)
 }
 
 fn setup() -> ERC20::ContractState {
-    let mut state = STATE();
-    ERC20::constructor(ref state, NAME, SYMBOL, SUPPLY, OWNER());
+    let (world, mut state) = STATE();
+    ERC20::constructor(ref state, world.contract_address, NAME, SYMBOL, SUPPLY, OWNER());
     utils::drop_event(ZERO());
     state
 }
@@ -37,9 +54,9 @@ fn setup() -> ERC20::ContractState {
 //
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 fn test_initializer() {
-    let mut state = STATE();
+    let (world, mut state) = STATE();
     InternalImpl::initializer(ref state, NAME, SYMBOL);
 
     assert(ERC20Impl::name(@state) == NAME, 'Name should be NAME');
@@ -50,10 +67,10 @@ fn test_initializer() {
 
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 fn test_constructor() {
-    let mut state = STATE();
-    ERC20::constructor(ref state, NAME, SYMBOL, SUPPLY, OWNER());
+    let (world, mut state) = STATE();
+    ERC20::constructor(ref state, world.contract_address, NAME, SYMBOL, SUPPLY, OWNER());
 
     assert_only_event_transfer(ZERO(), OWNER(), SUPPLY);
 
@@ -69,24 +86,24 @@ fn test_constructor() {
 //
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 fn test_total_supply() {
-    let mut state = STATE();
+    let (world, mut state) = STATE();
     InternalImpl::_mint(ref state, OWNER(), SUPPLY);
     assert(ERC20Impl::total_supply(@state) == SUPPLY, 'Should eq SUPPLY');
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 fn test_balance_of() {
-    let mut state = STATE();
+    let (world, mut state) = STATE();
     InternalImpl::_mint(ref state, OWNER(), SUPPLY);
     assert(ERC20Impl::balance_of(@state, OWNER()) == SUPPLY, 'Should eq SUPPLY');
 }
 
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 fn test_allowance() {
     let mut state = setup();
     testing::set_caller_address(OWNER());
@@ -100,7 +117,7 @@ fn test_allowance() {
 //
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 fn test_approve() {
     let mut state = setup();
     testing::set_caller_address(OWNER());
@@ -113,7 +130,7 @@ fn test_approve() {
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 #[should_panic(expected: ('ERC20: approve from 0',))]
 fn test_approve_from_zero() {
     let mut state = setup();
@@ -121,7 +138,7 @@ fn test_approve_from_zero() {
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 #[should_panic(expected: ('ERC20: approve to 0',))]
 fn test_approve_to_zero() {
     let mut state = setup();
@@ -130,7 +147,7 @@ fn test_approve_to_zero() {
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 fn test__approve() {
     let mut state = setup();
     testing::set_caller_address(OWNER());
@@ -143,7 +160,7 @@ fn test__approve() {
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 #[should_panic(expected: ('ERC20: approve from 0',))]
 fn test__approve_from_zero() {
     let mut state = setup();
@@ -151,7 +168,7 @@ fn test__approve_from_zero() {
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 #[should_panic(expected: ('ERC20: approve to 0',))]
 fn test__approve_to_zero() {
     let mut state = setup();
@@ -164,7 +181,7 @@ fn test__approve_to_zero() {
 //
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 fn test_transfer() {
     let mut state = setup();
     testing::set_caller_address(OWNER());
@@ -177,7 +194,7 @@ fn test_transfer() {
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 fn test__transfer() {
     let mut state = setup();
 
@@ -190,7 +207,7 @@ fn test__transfer() {
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 #[should_panic(expected: ('u256_sub Overflow',))]
 fn test__transfer_not_enough_balance() {
     let mut state = setup();
@@ -201,7 +218,7 @@ fn test__transfer_not_enough_balance() {
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 #[should_panic(expected: ('ERC20: transfer from 0',))]
 fn test__transfer_from_zero() {
     let mut state = setup();
@@ -209,7 +226,7 @@ fn test__transfer_from_zero() {
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 #[should_panic(expected: ('ERC20: transfer to 0',))]
 fn test__transfer_to_zero() {
     let mut state = setup();
@@ -221,7 +238,7 @@ fn test__transfer_to_zero() {
 //
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(12000000)]
 fn test_transfer_from() {
     let mut state = setup();
     testing::set_caller_address(OWNER());
@@ -241,7 +258,7 @@ fn test_transfer_from() {
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 fn test_transfer_from_doesnt_consume_infinite_allowance() {
     let mut state = setup();
     testing::set_caller_address(OWNER());
@@ -257,7 +274,7 @@ fn test_transfer_from_doesnt_consume_infinite_allowance() {
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 #[should_panic(expected: ('u256_sub Overflow',))]
 fn test_transfer_from_greater_than_allowance() {
     let mut state = setup();
@@ -270,7 +287,7 @@ fn test_transfer_from_greater_than_allowance() {
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 #[should_panic(expected: ('ERC20: transfer to 0',))]
 fn test_transfer_from_to_zero_address() {
     let mut state = setup();
@@ -282,7 +299,7 @@ fn test_transfer_from_to_zero_address() {
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 #[should_panic(expected: ('u256_sub Overflow',))]
 fn test_transfer_from_from_zero_address() {
     let mut state = setup();
@@ -294,7 +311,7 @@ fn test_transfer_from_from_zero_address() {
 //
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 fn test_increase_allowance() {
     let mut state = setup();
     testing::set_caller_address(OWNER());
@@ -308,7 +325,7 @@ fn test_increase_allowance() {
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 #[should_panic(expected: ('ERC20: approve to 0',))]
 fn test_increase_allowance_to_zero_address() {
     let mut state = setup();
@@ -317,7 +334,7 @@ fn test_increase_allowance_to_zero_address() {
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 #[should_panic(expected: ('ERC20: approve from 0',))]
 fn test_increase_allowance_from_zero_address() {
     let mut state = setup();
@@ -325,7 +342,7 @@ fn test_increase_allowance_from_zero_address() {
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 fn test_increaseAllowance() {
     let mut state = setup();
     testing::set_caller_address(OWNER());
@@ -339,7 +356,7 @@ fn test_increaseAllowance() {
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 #[should_panic(expected: ('ERC20: approve to 0',))]
 fn test_increaseAllowance_to_zero_address() {
     let mut state = setup();
@@ -348,7 +365,7 @@ fn test_increaseAllowance_to_zero_address() {
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 #[should_panic(expected: ('ERC20: approve from 0',))]
 fn test_increaseAllowance_from_zero_address() {
     let mut state = setup();
@@ -360,7 +377,7 @@ fn test_increaseAllowance_from_zero_address() {
 //
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 fn test_decrease_allowance() {
     let mut state = setup();
     testing::set_caller_address(OWNER());
@@ -374,7 +391,7 @@ fn test_decrease_allowance() {
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 #[should_panic(expected: ('u256_sub Overflow',))]
 fn test_decrease_allowance_to_zero_address() {
     let mut state = setup();
@@ -383,7 +400,7 @@ fn test_decrease_allowance_to_zero_address() {
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 #[should_panic(expected: ('u256_sub Overflow',))]
 fn test_decrease_allowance_from_zero_address() {
     let mut state = setup();
@@ -391,7 +408,7 @@ fn test_decrease_allowance_from_zero_address() {
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 fn test_decreaseAllowance() {
     let mut state = setup();
     testing::set_caller_address(OWNER());
@@ -405,7 +422,7 @@ fn test_decreaseAllowance() {
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 #[should_panic(expected: ('u256_sub Overflow',))]
 fn test_decreaseAllowance_to_zero_address() {
     let mut state = setup();
@@ -414,7 +431,7 @@ fn test_decreaseAllowance_to_zero_address() {
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 #[should_panic(expected: ('u256_sub Overflow',))]
 fn test_decreaseAllowance_from_zero_address() {
     let mut state = setup();
@@ -426,7 +443,7 @@ fn test_decreaseAllowance_from_zero_address() {
 //
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 fn test__spend_allowance_not_unlimited() {
     let mut state = setup();
 
@@ -443,7 +460,7 @@ fn test__spend_allowance_not_unlimited() {
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 fn test__spend_allowance_unlimited() {
     let mut state = setup();
     InternalImpl::_approve(ref state, OWNER(), SPENDER(), BoundedInt::max());
@@ -462,21 +479,20 @@ fn test__spend_allowance_unlimited() {
 //
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 fn test__mint() {
-    let mut state = STATE();
+    let (world, mut state) = STATE();
     InternalImpl::_mint(ref state, OWNER(), VALUE);
-
     assert_only_event_transfer(ZERO(), OWNER(), VALUE);
     assert(ERC20Impl::balance_of(@state, OWNER()) == VALUE, 'Should eq amount');
     assert(ERC20Impl::total_supply(@state) == VALUE, 'Should eq total supply');
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 #[should_panic(expected: ('ERC20: mint to 0',))]
 fn test__mint_to_zero() {
-    let mut state = STATE();
+    let (world, mut state) = STATE();
     InternalImpl::_mint(ref state, Zeroable::zero(), VALUE);
 }
 
@@ -485,7 +501,7 @@ fn test__mint_to_zero() {
 //
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 fn test__burn() {
     let mut state = setup();
     InternalImpl::_burn(ref state, OWNER(), VALUE);
@@ -496,7 +512,7 @@ fn test__burn() {
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(10000000)]
 #[should_panic(expected: ('ERC20: burn from 0',))]
 fn test__burn_from_zero() {
     let mut state = setup();
