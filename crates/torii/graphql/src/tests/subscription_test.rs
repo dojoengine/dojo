@@ -67,7 +67,7 @@ mod tests {
         let expected_value: async_graphql::Value = value!({
                                                 "entityUpdated": { "id": entity_id.clone(), "keys":vec![keys_str.clone()], "componentNames": "Moves" }
         });
-        let (tx, mut rx) = mpsc::channel(10);
+        let (tx, mut rx) = mpsc::channel(1);
 
         tokio::spawn(async move {
             // 1. Open process and sleep.Go to execute subscription
@@ -158,7 +158,7 @@ mod tests {
         let expected_value: async_graphql::Value = value!({
          "componentRegistered": { "id": component_id.clone(), "name":name, "classHash": hex_class_hash }
         });
-        let (tx, mut rx) = mpsc::channel(7);
+        let (tx, mut rx) = mpsc::channel(17);
 
         tokio::spawn(async move {
             // 1. Open process and sleep.Go to execute subscription
