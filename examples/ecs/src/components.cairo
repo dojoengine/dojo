@@ -98,7 +98,6 @@ mod tests {
     fn test_position_is_equal() {
         let player = starknet::contract_address_const::<0x0>();
         let position = Position { player, x: 420, y: 0 };
-        position.print();
         assert(PositionTrait::is_equal(position, Position { player, x: 420, y: 0 }), 'not equal');
     }
 }
