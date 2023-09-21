@@ -150,7 +150,7 @@ impl<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> Engine<'a, S,
             };
 
             if let TransactionReceipt::Invoke(invoke_receipt) = receipt.clone() {
-                for event in &invoke_receipt.events {
+                for (event_idx, event) in invoke_receipt.events.iter().enumerate() {
                     if event.from_address != self.config.world_address {
                         continue;
                     }
@@ -162,6 +162,7 @@ impl<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> Engine<'a, S,
                         &block,
                         &invoke_receipt,
                         event,
+                        event_idx,
                     )
                     .await?;
                 }
@@ -216,8 +217,9 @@ async fn process_event<S: State, T: starknet::providers::jsonrpc::JsonRpcTranspo
     block: &BlockWithTxs,
     invoke_receipt: &InvokeTransactionReceipt,
     event: &Event,
+    event_idx: usize,
 ) -> Result<(), Box<dyn Error>> {
-    storage.store_event(event, invoke_receipt.transaction_hash).await?;
+    storage.store_event(event, event_idx, invoke_receipt.transaction_hash).await?;
 
     for processor in processors {
         if get_selector_from_name(&processor.event_key())? == event.keys[0] {

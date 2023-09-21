@@ -361,14 +361,20 @@ impl State for Sql {
         Ok(())
     }
 
-    async fn store_event(&self, event: &Event, transaction_hash: FieldElement) -> Result<()> {
+    async fn store_event(
+        &self,
+        event: &Event,
+        event_idx: usize,
+        transaction_hash: FieldElement,
+    ) -> Result<()> {
         let keys_str = felts_sql_string(&event.keys);
         let data_str = felts_sql_string(&event.data);
 
+        let id = format!("{:#x}:{}", transaction_hash, event_idx);
         let query = format!(
-            "INSERT OR IGNORE INTO events (keys, data, transaction_hash) VALUES ('{}', '{}', \
-             '{:#x}')",
-            keys_str, data_str, transaction_hash
+            "INSERT OR IGNORE INTO events (id, keys, data, transaction_hash) VALUES ('{}', '{}', \
+             '{}', '{:#x}')",
+            id, keys_str, data_str, transaction_hash
         );
 
         self.queue(vec![query]).await;

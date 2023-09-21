@@ -70,7 +70,7 @@ CREATE INDEX idx_entities_keys ON entities (keys);
 CREATE INDEX idx_entities_keys_create_on ON entities (keys, created_at);
 
 CREATE TABLE events (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT NOT NULL PRIMARY KEY,
     keys TEXT NOT NULL,
     data TEXT NOT NULL,
     transaction_hash TEXT,

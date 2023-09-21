@@ -49,5 +49,10 @@ pub trait State {
         tx_hash: FieldElement,
         calldata: &[FieldElement],
     ) -> Result<()>;
-    async fn store_event(&self, event: &Event, tx_hash: FieldElement) -> Result<()>;
+    async fn store_event(
+        &self,
+        event: &Event,
+        event_idx: usize,
+        tx_hash: FieldElement,
+    ) -> Result<()>;
 }

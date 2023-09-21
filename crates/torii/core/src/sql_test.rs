@@ -130,6 +130,7 @@ async fn test_load_from_manifest(pool: SqlitePool) {
                 keys: Vec::from([FieldElement::TWO]),
                 data: Vec::from([FieldElement::TWO, FieldElement::THREE]),
             },
+            0,
             FieldElement::THREE,
         )
         .await
