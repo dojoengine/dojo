@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use serial_test::serial;
     use sqlx::SqlitePool;
     use starknet_crypto::{poseidon_hash_many, FieldElement};
 
@@ -8,6 +9,7 @@ mod tests {
     };
 
     #[sqlx::test(migrations = "../migrations")]
+    #[serial]
     async fn test_entity(pool: SqlitePool) {
         entity_fixtures(&pool).await;
         let entity_id = poseidon_hash_many(&[FieldElement::ONE]);
@@ -30,6 +32,7 @@ mod tests {
 
     #[ignore]
     #[sqlx::test(migrations = "../migrations")]
+    #[serial]
     async fn test_entity_components(pool: SqlitePool) {
         entity_fixtures(&pool).await;
 
@@ -69,6 +72,7 @@ mod tests {
     }
 
     #[sqlx::test(migrations = "../migrations")]
+    #[serial]
     async fn test_entities_pagination(pool: SqlitePool) {
         entity_fixtures(&pool).await;
 
