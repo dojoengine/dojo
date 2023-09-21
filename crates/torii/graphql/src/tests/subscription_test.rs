@@ -8,7 +8,6 @@ mod tests {
     use starknet_crypto::{poseidon_hash_many, FieldElement};
     use tokio::sync::mpsc;
     use torii_core::sql::Sql;
-    use torii_core::State;
 
     use crate::tests::common::{init, run_graphql_subscription};
 

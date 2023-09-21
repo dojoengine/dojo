@@ -11,7 +11,7 @@ use starknet::core::types::{Event, FieldElement};
 use starknet_crypto::poseidon_hash_many;
 use tokio::sync::Mutex;
 
-use super::{State, World};
+use super::World;
 use crate::simple_broker::SimpleBroker;
 use crate::types::{Component as ComponentType, Entity};
 
@@ -77,38 +77,8 @@ impl Sql {
             sql_types: Mutex::new(sql_types),
         })
     }
-}
 
-#[async_trait]
-impl Executable for Sql {
-    async fn queue(&self, queries: Vec<String>) {
-        let mut query_queue = self.query_queue.lock().await;
-        query_queue.extend(queries);
-    }
-
-    async fn execute(&self) -> Result<()> {
-        let queries;
-        {
-            let mut query_queue = self.query_queue.lock().await;
-            queries = query_queue.clone();
-            query_queue.clear();
-        }
-
-        let mut tx = self.pool.begin().await?;
-
-        for query in queries {
-            tx.execute(sqlx::query(&query)).await?;
-        }
-
-        tx.commit().await?;
-
-        Ok(())
-    }
-}
-
-#[async_trait]
-impl State for Sql {
-    async fn load_from_manifest(&self, manifest: Manifest) -> Result<()> {
+    pub async fn load_from_manifest(&self, manifest: Manifest) -> Result<()> {
         let mut updates = vec![
             format!("world_address = '{:#x}'", self.world_address),
             format!("world_class_hash = '{:#x}'", manifest.world.class_hash),
@@ -137,7 +107,7 @@ impl State for Sql {
         self.execute().await
     }
 
-    async fn head(&self) -> Result<u64> {
+    pub async fn head(&self) -> Result<u64> {
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
         let indexer: (i64,) = sqlx::query_as(&format!(
             "SELECT head FROM indexers WHERE id = '{:#x}'",
@@ -148,7 +118,7 @@ impl State for Sql {
         Ok(indexer.0.try_into().expect("doesnt fit in u64"))
     }
 
-    async fn set_head(&self, head: u64) -> Result<()> {
+    pub async fn set_head(&self, head: u64) -> Result<()> {
         self.queue(vec![format!(
             "UPDATE indexers SET head = {head} WHERE id = '{:#x}'",
             self.world_address
@@ -157,7 +127,7 @@ impl State for Sql {
         Ok(())
     }
 
-    async fn world(&self) -> Result<World> {
+    pub async fn world(&self) -> Result<World> {
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
         let meta: World =
             sqlx::query_as(&format!("SELECT * FROM worlds WHERE id = '{:#x}'", self.world_address))
@@ -167,7 +137,7 @@ impl State for Sql {
         Ok(meta)
     }
 
-    async fn set_world(&self, world: World) -> Result<()> {
+    pub async fn set_world(&self, world: World) -> Result<()> {
         self.queue(vec![format!(
             "UPDATE worlds SET world_address='{:#x}', world_class_hash='{:#x}', \
              executor_address='{:#x}', executor_class_hash='{:#x}' WHERE id = '{:#x}'",
@@ -181,7 +151,7 @@ impl State for Sql {
         Ok(())
     }
 
-    async fn register_component(&self, component: Component) -> Result<()> {
+    pub async fn register_component(&self, component: Component) -> Result<()> {
         let mut sql_types = self.sql_types.lock().await;
 
         let component_id = component.name.to_lowercase();
@@ -245,7 +215,7 @@ impl State for Sql {
         Ok(())
     }
 
-    async fn register_system(&self, system: System) -> Result<()> {
+    pub async fn register_system(&self, system: System) -> Result<()> {
         let query = format!(
             "INSERT INTO systems (id, name, class_hash) VALUES ('{}', '{}', '{:#x}') ON \
              CONFLICT(id) DO UPDATE SET class_hash='{:#x}'",
@@ -258,7 +228,7 @@ impl State for Sql {
         Ok(())
     }
 
-    async fn set_entity(
+    pub async fn set_entity(
         &self,
         component: String,
         keys: Vec<FieldElement>,
@@ -323,20 +293,20 @@ impl State for Sql {
         Ok(())
     }
 
-    async fn delete_entity(&self, component: String, key: FieldElement) -> Result<()> {
+    pub async fn delete_entity(&self, component: String, key: FieldElement) -> Result<()> {
         let query = format!("DELETE FROM {component} WHERE id = {key}");
         self.queue(vec![query]).await;
         Ok(())
     }
 
-    async fn entity(&self, component: String, key: FieldElement) -> Result<Vec<FieldElement>> {
+    pub async fn entity(&self, component: String, key: FieldElement) -> Result<Vec<FieldElement>> {
         let query = format!("SELECT * FROM {component} WHERE id = {key}");
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
         let row: (i32, String, String) = sqlx::query_as(&query).fetch_one(&mut conn).await?;
         Ok(serde_json::from_str(&row.2).unwrap())
     }
 
-    async fn entities(&self, component: String) -> Result<Vec<Vec<FieldElement>>> {
+    pub async fn entities(&self, component: String) -> Result<Vec<Vec<FieldElement>>> {
         let query = format!("SELECT * FROM {component}");
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
         let mut rows =
@@ -344,7 +314,7 @@ impl State for Sql {
         Ok(rows.drain(..).map(|row| serde_json::from_str(&row.2).unwrap()).collect())
     }
 
-    async fn store_system_call(
+    pub async fn store_system_call(
         &self,
         system: String,
         transaction_hash: FieldElement,
@@ -361,7 +331,7 @@ impl State for Sql {
         Ok(())
     }
 
-    async fn store_event(
+    pub async fn store_event(
         &self,
         event: &Event,
         event_idx: usize,
@@ -378,6 +348,33 @@ impl State for Sql {
         );
 
         self.queue(vec![query]).await;
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl Executable for Sql {
+    async fn queue(&self, queries: Vec<String>) {
+        let mut query_queue = self.query_queue.lock().await;
+        query_queue.extend(queries);
+    }
+
+    async fn execute(&self) -> Result<()> {
+        let queries;
+        {
+            let mut query_queue = self.query_queue.lock().await;
+            queries = query_queue.clone();
+            query_queue.clear();
+        }
+
+        let mut tx = self.pool.begin().await?;
+
+        for query in queries {
+            tx.execute(sqlx::query(&query)).await?;
+        }
+
+        tx.commit().await?;
+
         Ok(())
     }
 }

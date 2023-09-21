@@ -3,25 +3,27 @@ use async_trait::async_trait;
 use dojo_world::manifest::Component;
 use starknet::core::types::{BlockWithTxs, Event, InvokeTransactionReceipt};
 use starknet::core::utils::parse_cairo_short_string;
-use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
+use starknet::providers::Provider;
+use torii_client::contract::world::WorldContractReader;
 use tracing::info;
 
 use super::EventProcessor;
-use crate::State;
+use crate::sql::Sql;
 
 #[derive(Default)]
 pub struct RegisterComponentProcessor;
 
 #[async_trait]
-impl<S: State + Sync, T: JsonRpcTransport> EventProcessor<S, T> for RegisterComponentProcessor {
+impl<P: Provider + Sync> EventProcessor<P> for RegisterComponentProcessor {
     fn event_key(&self) -> String {
         "ComponentRegistered".to_string()
     }
 
     async fn process(
         &self,
-        storage: &S,
-        _provider: &JsonRpcClient<T>,
+        _world: &WorldContractReader<'_, P>,
+        db: &Sql,
+        _provider: &P,
         _block: &BlockWithTxs,
         _invoke_receipt: &InvokeTransactionReceipt,
         event: &Event,
@@ -30,8 +32,7 @@ impl<S: State + Sync, T: JsonRpcTransport> EventProcessor<S, T> for RegisterComp
 
         info!("registered component: {}", name);
 
-        storage
-            .register_component(Component { name, class_hash: event.data[1], ..Default::default() })
+        db.register_component(Component { name, class_hash: event.data[1], ..Default::default() })
             .await?;
         Ok(())
     }

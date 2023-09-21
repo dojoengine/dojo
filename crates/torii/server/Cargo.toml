@@ -27,6 +27,7 @@ starknet.workspace = true
 tokio-stream = "0.1.11"
 tokio-util = "0.7.7"
 tokio.workspace = true
+torii-client = { path = "../client" }
 torii-core = { path = "../core" }
 torii-graphql = { path = "../graphql" }
 torii-grpc = { path = "../grpc" }

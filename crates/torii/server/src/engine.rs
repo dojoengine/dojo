@@ -6,22 +6,21 @@ use starknet::core::types::{
     MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, Transaction, TransactionReceipt,
 };
 use starknet::core::utils::get_selector_from_name;
-use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
 use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
 use tokio::time::sleep;
+use torii_client::contract::world::WorldContractReader;
 use torii_core::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
-use torii_core::sql::Executable;
-use torii_core::State;
+use torii_core::sql::{Executable, Sql};
 use tracing::{error, info, warn};
 
-pub struct Processors<S: State, T: JsonRpcTransport + Sync + Send> {
-    pub block: Vec<Box<dyn BlockProcessor<S, T>>>,
-    pub transaction: Vec<Box<dyn TransactionProcessor<S, T>>>,
-    pub event: Vec<Box<dyn EventProcessor<S, T>>>,
+pub struct Processors<P: Provider + Sync + Send> {
+    pub block: Vec<Box<dyn BlockProcessor<P>>>,
+    pub transaction: Vec<Box<dyn TransactionProcessor<P>>>,
+    pub event: Vec<Box<dyn EventProcessor<P>>>,
 }
 
-impl<S: State, T: JsonRpcTransport + Sync + Send> Default for Processors<S, T> {
+impl<P: Provider + Sync + Send> Default for Processors<P> {
     fn default() -> Self {
         Self { block: vec![], transaction: vec![], event: vec![] }
     }
@@ -44,33 +43,35 @@ impl Default for EngineConfig {
     }
 }
 
-pub struct Engine<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> {
-    storage: &'a S,
-    provider: &'a JsonRpcClient<T>,
-    processors: Processors<S, T>,
+pub struct Engine<'a, P: Provider + Sync + Send> {
+    world: &'a WorldContractReader<'a, P>,
+    db: &'a Sql,
+    provider: &'a P,
+    processors: Processors<P>,
     config: EngineConfig,
 }
 
-impl<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> Engine<'a, S, T> {
+impl<'a, P: Provider + Sync + Send> Engine<'a, P> {
     pub fn new(
-        storage: &'a S,
-        provider: &'a JsonRpcClient<T>,
-        processors: Processors<S, T>,
+        world: &'a WorldContractReader<'a, P>,
+        db: &'a Sql,
+        provider: &'a P,
+        processors: Processors<P>,
         config: EngineConfig,
     ) -> Self {
-        Self { storage, provider, processors, config }
+        Self { world, db, provider, processors, config }
     }
 
     pub async fn start(&self) -> Result<(), Box<dyn Error>> {
-        let storage_head = self.storage.head().await?;
+        let db_head = self.db.head().await?;
 
-        let mut current_block_number = match storage_head {
+        let mut current_block_number = match db_head {
             0 => self.config.start_block,
             _ => {
                 if self.config.start_block != 0 {
                     warn!("start block ignored, stored head exists and will be used instead");
                 }
-                storage_head
+                db_head
             }
         };
 
@@ -109,8 +110,8 @@ impl<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> Engine<'a, S,
 
                 self.process(block_with_txs).await?;
 
-                self.storage.set_head(current_block_number).await?;
-                self.storage.execute().await?;
+                self.db.set_head(current_block_number).await?;
+                self.db.execute().await?;
                 current_block_number += 1;
             }
         }
@@ -122,7 +123,7 @@ impl<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> Engine<'a, S,
             _ => return Ok(()),
         };
 
-        process_block(self.storage, self.provider, &self.processors.block, &block).await?;
+        process_block(self.db, self.provider, &self.processors.block, &block).await?;
 
         for transaction in block.clone().transactions {
             let invoke_transaction = match &transaction {
@@ -156,7 +157,8 @@ impl<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> Engine<'a, S,
                     }
 
                     process_event(
-                        self.storage,
+                        self.world,
+                        self.db,
                         self.provider,
                         &self.processors.event,
                         &block,
@@ -169,7 +171,7 @@ impl<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> Engine<'a, S,
             }
 
             process_transaction(
-                self.storage,
+                self.db,
                 self.provider,
                 &self.processors.transaction,
                 &block,
@@ -184,46 +186,48 @@ impl<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> Engine<'a, S,
     }
 }
 
-async fn process_block<S: State, T: starknet::providers::jsonrpc::JsonRpcTransport>(
-    storage: &S,
-    provider: &JsonRpcClient<T>,
-    processors: &[Box<dyn BlockProcessor<S, T>>],
+async fn process_block<P: Provider + Sync>(
+    db: &Sql,
+    provider: &P,
+    processors: &[Box<dyn BlockProcessor<P>>],
     block: &BlockWithTxs,
 ) -> Result<(), Box<dyn Error>> {
     for processor in processors {
-        processor.process(storage, provider, block).await?;
+        processor.process(db, provider, block).await?;
     }
     Ok(())
 }
 
-async fn process_transaction<S: State, T: starknet::providers::jsonrpc::JsonRpcTransport>(
-    storage: &S,
-    provider: &JsonRpcClient<T>,
-    processors: &[Box<dyn TransactionProcessor<S, T>>],
+async fn process_transaction<P: Provider + Sync>(
+    db: &Sql,
+    provider: &P,
+    processors: &[Box<dyn TransactionProcessor<P>>],
     block: &BlockWithTxs,
     receipt: &TransactionReceipt,
 ) -> Result<(), Box<dyn Error>> {
     for processor in processors {
-        processor.process(storage, provider, block, receipt).await?
+        processor.process(db, provider, block, receipt).await?
     }
 
     Ok(())
 }
 
-async fn process_event<S: State, T: starknet::providers::jsonrpc::JsonRpcTransport>(
-    storage: &S,
-    provider: &JsonRpcClient<T>,
-    processors: &[Box<dyn EventProcessor<S, T>>],
+#[allow(clippy::too_many_arguments)]
+async fn process_event<P: Provider + Sync>(
+    world: &WorldContractReader<'_, P>,
+    db: &Sql,
+    provider: &P,
+    processors: &[Box<dyn EventProcessor<P>>],
     block: &BlockWithTxs,
     invoke_receipt: &InvokeTransactionReceipt,
     event: &Event,
     event_idx: usize,
 ) -> Result<(), Box<dyn Error>> {
-    storage.store_event(event, event_idx, invoke_receipt.transaction_hash).await?;
+    db.store_event(event, event_idx, invoke_receipt.transaction_hash).await?;
 
     for processor in processors {
         if get_selector_from_name(&processor.event_key())? == event.keys[0] {
-            processor.process(storage, provider, block, invoke_receipt, event).await?;
+            processor.process(world, db, provider, block, invoke_receipt, event).await?;
         }
     }
 
