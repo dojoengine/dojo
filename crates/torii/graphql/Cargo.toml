@@ -31,5 +31,6 @@ url.workspace = true
 camino.workspace = true
 dojo-types = { path = "../../dojo-types" }
 dojo-world = { path = "../../dojo-world" }
+serial_test = "2"
 starknet-crypto.workspace = true
 starknet.workspace = true

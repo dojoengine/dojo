@@ -4,6 +4,7 @@ mod tests {
 
     use async_graphql::value;
     use dojo_world::manifest::{Component, Member};
+    use serial_test::serial;
     use sqlx::SqlitePool;
     use starknet_crypto::{poseidon_hash_many, FieldElement};
     use tokio::sync::mpsc;
@@ -13,9 +14,8 @@ mod tests {
     use crate::tests::common::{init, run_graphql_subscription};
 
     #[sqlx::test(migrations = "../migrations")]
+    #[serial]
     async fn test_entity_subscription(pool: SqlitePool) {
-        // Sleep in order to run this test in a single thread
-        tokio::time::sleep(Duration::from_secs(1)).await;
         let state = init(&pool).await;
         // 0. Preprocess expected entity value
         let key = vec![FieldElement::ONE];
@@ -57,9 +57,8 @@ mod tests {
     }
 
     #[sqlx::test(migrations = "../migrations")]
+    #[serial]
     async fn test_entity_subscription_with_id(pool: SqlitePool) {
-        // Sleep in order to run this test in a single thread
-        tokio::time::sleep(Duration::from_secs(1)).await;
         let state = init(&pool).await;
         // 0. Preprocess expected entity value
         let key = vec![FieldElement::ONE];
@@ -101,10 +100,8 @@ mod tests {
     }
 
     #[sqlx::test(migrations = "../migrations")]
+    #[serial]
     async fn test_component_subscription(pool: SqlitePool) {
-        // Sleep in order to run this test at the end in a single thread
-        tokio::time::sleep(Duration::from_secs(2)).await;
-
         let state = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
         // 0. Preprocess component value
         let name = "Test".to_string();
@@ -150,10 +147,8 @@ mod tests {
     }
 
     #[sqlx::test(migrations = "../migrations")]
+    #[serial]
     async fn test_component_subscription_with_id(pool: SqlitePool) {
-        // Sleep in order to run this test at the end in a single thread
-        tokio::time::sleep(Duration::from_secs(2)).await;
-
         let state = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
         // 0. Preprocess component value
         let name = "Test".to_string();
