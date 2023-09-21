@@ -2,8 +2,8 @@ use std::error::Error;
 use std::time::Duration;
 
 use starknet::core::types::{
-    BlockId, BlockTag, BlockWithTxs, Event, InvokeTransaction, MaybePendingBlockWithTxs,
-    MaybePendingTransactionReceipt, Transaction, TransactionReceipt,
+    BlockId, BlockTag, BlockWithTxs, Event, InvokeTransaction, InvokeTransactionReceipt,
+    MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, Transaction, TransactionReceipt,
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
@@ -150,7 +150,7 @@ impl<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> Engine<'a, S,
             };
 
             if let TransactionReceipt::Invoke(invoke_receipt) = receipt.clone() {
-                for event in &invoke_receipt.events {
+                for (event_idx, event) in invoke_receipt.events.iter().enumerate() {
                     if event.from_address != self.config.world_address {
                         continue;
                     }
@@ -160,8 +160,9 @@ impl<'a, S: State + Executable, T: JsonRpcTransport + Sync + Send> Engine<'a, S,
                         self.provider,
                         &self.processors.event,
                         &block,
-                        &receipt,
+                        &invoke_receipt,
                         event,
+                        event_idx,
                     )
                     .await?;
                 }
@@ -214,12 +215,15 @@ async fn process_event<S: State, T: starknet::providers::jsonrpc::JsonRpcTranspo
     provider: &JsonRpcClient<T>,
     processors: &[Box<dyn EventProcessor<S, T>>],
     block: &BlockWithTxs,
-    receipt: &TransactionReceipt,
+    invoke_receipt: &InvokeTransactionReceipt,
     event: &Event,
+    event_idx: usize,
 ) -> Result<(), Box<dyn Error>> {
+    storage.store_event(event, event_idx, invoke_receipt.transaction_hash).await?;
+
     for processor in processors {
         if get_selector_from_name(&processor.event_key())? == event.keys[0] {
-            processor.process(storage, provider, block, receipt, event).await?;
+            processor.process(storage, provider, block, invoke_receipt, event).await?;
         }
     }
 

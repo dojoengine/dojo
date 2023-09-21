@@ -7,7 +7,7 @@ use dojo_world::manifest::{Component, Manifest, System};
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Executor, Pool, Row, Sqlite};
-use starknet::core::types::FieldElement;
+use starknet::core::types::{Event, FieldElement};
 use starknet_crypto::poseidon_hash_many;
 use tokio::sync::Mutex;
 
@@ -270,10 +270,10 @@ impl State for Sql {
             .fetch_optional(&self.pool)
             .await?;
 
-        let keys_str = keys.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join("/");
-        let component_names = component_names(entity_result, &component)?;
+        let keys_str = felts_sql_string(&keys);
+        let component_names = component_names_sql_string(entity_result, &component)?;
         let insert_entities = format!(
-            "INSERT INTO entities (id, keys, component_names) VALUES ('{}', '{}/', '{}') ON \
+            "INSERT INTO entities (id, keys, component_names) VALUES ('{}', '{}', '{}') ON \
              CONFLICT(id) DO UPDATE SET
              component_names=excluded.component_names, 
              updated_at=CURRENT_TIMESTAMP",
@@ -292,8 +292,9 @@ impl State for Sql {
         member_values.extend(values);
 
         let sql_types = self.sql_types.lock().await;
-        let (names_str, values_str) =
-            format_values(member_names_result, member_values, &sql_types)?;
+        let names_str = members_sql_string(&member_names_result)?;
+        let values_str = values_sql_string(&member_names_result, &member_values, &sql_types)?;
+
         let insert_components = format!(
             "INSERT OR REPLACE INTO external_{} (entity_id {}) VALUES ('{}' {})",
             component.to_lowercase(),
@@ -359,9 +360,32 @@ impl State for Sql {
         self.queue(vec![query]).await;
         Ok(())
     }
+
+    async fn store_event(
+        &self,
+        event: &Event,
+        event_idx: usize,
+        transaction_hash: FieldElement,
+    ) -> Result<()> {
+        let keys_str = felts_sql_string(&event.keys);
+        let data_str = felts_sql_string(&event.data);
+
+        let id = format!("{:#x}:{}", transaction_hash, event_idx);
+        let query = format!(
+            "INSERT OR IGNORE INTO events (id, keys, data, transaction_hash) VALUES ('{}', '{}', \
+             '{}', '{:#x}')",
+            id, keys_str, data_str, transaction_hash
+        );
+
+        self.queue(vec![query]).await;
+        Ok(())
+    }
 }
 
-fn component_names(entity_result: Option<SqliteRow>, new_component: &str) -> Result<String> {
+fn component_names_sql_string(
+    entity_result: Option<SqliteRow>,
+    new_component: &str,
+) -> Result<String> {
     let component_names = match entity_result {
         Some(entity) => {
             let existing = entity.try_get::<String, &str>("component_names")?;
@@ -377,19 +401,11 @@ fn component_names(entity_result: Option<SqliteRow>, new_component: &str) -> Res
     Ok(component_names)
 }
 
-fn format_values(
-    member_results: Vec<SqliteRow>,
-    values: Vec<FieldElement>,
+fn values_sql_string(
+    member_results: &[SqliteRow],
+    values: &[FieldElement],
     sql_types: &HashMap<String, &str>,
-) -> Result<(String, String)> {
-    let names: Result<Vec<String>> = member_results
-        .iter()
-        .map(|row| {
-            let name = row.try_get::<String, &str>("name")?;
-            Ok(format!(",external_{}", name))
-        })
-        .collect();
-
+) -> Result<String> {
     let types: Result<Vec<String>> =
         member_results.iter().map(|row| Ok(row.try_get::<String, &str>("type")?)).collect();
 
@@ -404,5 +420,21 @@ fn format_values(
         })
         .collect();
 
-    Ok((names?.join(""), values?.join("")))
+    Ok(values?.join(""))
+}
+
+fn members_sql_string(member_results: &[SqliteRow]) -> Result<String> {
+    let names: Result<Vec<String>> = member_results
+        .iter()
+        .map(|row| {
+            let name = row.try_get::<String, &str>("name")?;
+            Ok(format!(",external_{}", name))
+        })
+        .collect();
+
+    Ok(names?.join(""))
+}
+
+fn felts_sql_string(felts: &[FieldElement]) -> String {
+    felts.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join("/") + "/"
 }

@@ -1,6 +1,6 @@
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
-use starknet::core::types::{BlockWithTxs, Event, TransactionReceipt};
+use starknet::core::types::{BlockWithTxs, Event, InvokeTransactionReceipt};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
 use starknet_crypto::FieldElement;
@@ -26,7 +26,7 @@ impl<S: State + Sync, T: JsonRpcTransport> EventProcessor<S, T> for StoreSetReco
         storage: &S,
         _provider: &JsonRpcClient<T>,
         _block: &BlockWithTxs,
-        _transaction_receipt: &TransactionReceipt,
+        _transaction_receipt: &InvokeTransactionReceipt,
         event: &Event,
     ) -> Result<(), Error> {
         let name = parse_cairo_short_string(&event.data[COMPONENT_INDEX])?;

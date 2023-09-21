@@ -20,7 +20,7 @@ pub struct Event {
     pub keys: String,
     pub data: String,
     pub created_at: DateTime<Utc>,
-    pub system_call_id: i64,
+    pub transaction_hash: String,
 }
 
 pub struct EventObject {
@@ -34,8 +34,8 @@ impl Default for EventObject {
                 (Name::new("id"), TypeRef::named(TypeRef::ID)),
                 (Name::new("keys"), TypeRef::named(TypeRef::STRING)),
                 (Name::new("data"), TypeRef::named(TypeRef::STRING)),
-                (Name::new("systemCallId"), TypeRef::named(TypeRef::INT)),
                 (Name::new("createdAt"), TypeRef::named(ScalarType::DateTime.to_string())),
+                (Name::new("transactionHash"), TypeRef::named(TypeRef::STRING)),
             ]),
         }
     }
@@ -46,11 +46,11 @@ impl EventObject {
             (Name::new("id"), Value::from(event.id)),
             (Name::new("keys"), Value::from(event.keys)),
             (Name::new("data"), Value::from(event.data)),
-            (Name::new("systemCallId"), Value::from(event.system_call_id)),
             (
                 Name::new("createdAt"),
                 Value::from(event.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
             ),
+            (Name::new("transactionHash"), Value::from(event.transaction_hash)),
         ])
     }
 }

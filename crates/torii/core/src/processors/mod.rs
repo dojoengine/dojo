@@ -1,6 +1,6 @@
 use anyhow::{Error, Result};
 use async_trait::async_trait;
-use starknet::core::types::{BlockWithTxs, Event, TransactionReceipt};
+use starknet::core::types::{BlockWithTxs, Event, InvokeTransactionReceipt, TransactionReceipt};
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
 
 use crate::State;
@@ -18,7 +18,7 @@ pub trait EventProcessor<S: State, T: JsonRpcTransport> {
         storage: &S,
         provider: &JsonRpcClient<T>,
         block: &BlockWithTxs,
-        transaction_receipt: &TransactionReceipt,
+        invoke_receipt: &InvokeTransactionReceipt,
         event: &Event,
     ) -> Result<(), Error>;
 }
