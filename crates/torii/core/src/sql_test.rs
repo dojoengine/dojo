@@ -6,7 +6,6 @@ use sqlx::sqlite::SqlitePool;
 use starknet::core::types::{Event, FieldElement};
 
 use crate::sql::{Executable, Sql};
-use crate::State;
 
 #[sqlx::test(migrations = "../migrations")]
 async fn test_load_from_manifest(pool: SqlitePool) {

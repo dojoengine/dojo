@@ -3,25 +3,27 @@ use async_trait::async_trait;
 use dojo_world::manifest::System;
 use starknet::core::types::{BlockWithTxs, Event, InvokeTransactionReceipt};
 use starknet::core::utils::parse_cairo_short_string;
-use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
+use starknet::providers::Provider;
+use torii_client::contract::world::WorldContractReader;
 use tracing::info;
 
 use super::EventProcessor;
-use crate::State;
+use crate::sql::Sql;
 
 #[derive(Default)]
 pub struct RegisterSystemProcessor;
 
 #[async_trait]
-impl<S: State + Sync, T: JsonRpcTransport> EventProcessor<S, T> for RegisterSystemProcessor {
+impl<P: Provider + Sync> EventProcessor<P> for RegisterSystemProcessor {
     fn event_key(&self) -> String {
         "SystemRegistered".to_string()
     }
 
     async fn process(
         &self,
-        storage: &S,
-        _provider: &JsonRpcClient<T>,
+        _world: &WorldContractReader<'_, P>,
+        db: &Sql,
+        _provider: &P,
         _block: &BlockWithTxs,
         _invoke_receipt: &InvokeTransactionReceipt,
         event: &Event,
@@ -30,13 +32,12 @@ impl<S: State + Sync, T: JsonRpcTransport> EventProcessor<S, T> for RegisterSyst
 
         info!("registered system: {}", name);
 
-        storage
-            .register_system(System {
-                name: name.into(),
-                class_hash: event.data[1],
-                ..System::default()
-            })
-            .await?;
+        db.register_system(System {
+            name: name.into(),
+            class_hash: event.data[1],
+            ..System::default()
+        })
+        .await?;
 
         Ok(())
     }

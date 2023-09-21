@@ -12,12 +12,12 @@ use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use tokio_util::sync::CancellationToken;
+use torii_client::contract::world::WorldContractReader;
 use torii_core::processors::register_component::RegisterComponentProcessor;
 use torii_core::processors::register_system::RegisterSystemProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::processors::store_system_call::StoreSystemCallProcessor;
 use torii_core::sql::Sql;
-use torii_core::State;
 use tracing::error;
 use tracing_subscriber::fmt;
 use url::Url;
@@ -91,9 +91,10 @@ async fn main() -> anyhow::Result<()> {
 
     // Get world address
     let world_address = get_world_address(&args, &manifest, env.as_ref())?;
+    let world = WorldContractReader::new(world_address, &provider);
 
-    let state = Sql::new(pool.clone(), world_address).await?;
-    state.load_from_manifest(manifest.clone()).await?;
+    let db = Sql::new(pool.clone(), world_address).await?;
+    db.load_from_manifest(manifest.clone()).await?;
     let processors = Processors {
         event: vec![
             Box::new(RegisterComponentProcessor),
@@ -105,7 +106,7 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let indexer =
-        Indexer::new(&state, &provider, processors, manifest, world_address, args.start_block);
+        Indexer::new(&world, &db, &provider, processors, manifest, world_address, args.start_block);
 
     let base_route = warp::path::end()
         .and(warp::get())
