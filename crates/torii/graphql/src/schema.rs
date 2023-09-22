@@ -13,7 +13,6 @@ use super::object::system::SystemObject;
 use super::object::system_call::SystemCallObject;
 use super::object::ObjectTrait;
 use super::types::ScalarType;
-use super::utils::format_name;
 use crate::object::component::ComponentObject;
 
 // The graphql schema is built dynamically at runtime, this is because we won't know the schema of
@@ -57,7 +56,9 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     }
 
     // register custom scalars
-    for scalar_type in ScalarType::types().iter() {
+    let mut scalar_types = ScalarType::types();
+    scalar_types.insert(ScalarType::Custom("Vec".to_string()));
+    for scalar_type in scalar_types.iter() {
         schema_builder = schema_builder.register(Scalar::new(scalar_type.to_string()));
     }
 
@@ -125,15 +126,16 @@ async fn component_objects(pool: &SqlitePool) -> Result<(Vec<Box<dyn ObjectTrait
     for component_metadata in components {
         let field_type_mapping = type_mapping_query(&mut conn, &component_metadata.id).await?;
         if !field_type_mapping.is_empty() {
-            let (name, type_name) = format_name(&component_metadata.name);
-            let state_object = Box::new(ComponentStateObject::new(
-                name.clone(),
-                type_name.clone(),
-                field_type_mapping,
-            ));
+            let field_name = component_metadata.name.to_lowercase();
+            let type_name = component_metadata.name;
 
             component_union = component_union.possible_type(&type_name);
-            objects.push(state_object);
+
+            objects.push(Box::new(ComponentStateObject::new(
+                field_name,
+                type_name,
+                field_type_mapping,
+            )));
         }
     }
 

@@ -192,14 +192,14 @@ impl State for Sql {
         )];
 
         let mut component_table_query = format!(
-            "CREATE TABLE IF NOT EXISTS external_{} (entity_id TEXT NOT NULL PRIMARY KEY, ",
+            "CREATE TABLE IF NOT EXISTS external__{} (entity_id TEXT NOT NULL PRIMARY KEY, ",
             component.name.to_lowercase()
         );
 
         for member in &component.members {
             // FIXME: defaults all unknown component types to Enum for now until we support nested
             // components
-            let (sql_type, member_type) = match sql_types.get(&member.ty) {
+            let (sql_type, _) = match sql_types.get(&member.ty) {
                 Some(sql_type) => (*sql_type, member.ty.as_str()),
                 None => {
                     sql_types.insert(member.ty.clone(), "INTEGER");
@@ -210,7 +210,7 @@ impl State for Sql {
             queries.push(format!(
                 "INSERT OR IGNORE INTO component_members (component_id, name, type, key) VALUES \
                  ('{}', '{}', '{}', {})",
-                component_id, member.name, member_type, member.key,
+                component_id, member.name, member.ty, member.key,
             ));
 
             component_table_query.push_str(&format!("external_{} {}, ", member.name, sql_type));
@@ -296,7 +296,7 @@ impl State for Sql {
         let values_str = values_sql_string(&member_names_result, &member_values, &sql_types)?;
 
         let insert_components = format!(
-            "INSERT OR REPLACE INTO external_{} (entity_id {}) VALUES ('{}' {})",
+            "INSERT OR REPLACE INTO external__{} (entity_id {}) VALUES ('{}' {})",
             component.to_lowercase(),
             names_str,
             entity_id,

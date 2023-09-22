@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use async_graphql::Result;
 
 use super::value_accessor::{ObjectAccessor, ValueAccessor};
-use crate::object::ValueMapping;
+use crate::types::ValueMapping;
 
 pub trait ExtractValue: Sized {
     fn extract(value_accessor: ValueAccessor<'_>) -> Result<Self>;

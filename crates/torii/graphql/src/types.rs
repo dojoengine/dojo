@@ -2,9 +2,21 @@ use std::collections::HashSet;
 use std::fmt;
 use std::str::FromStr;
 
+use async_graphql::dynamic::TypeRef;
+use async_graphql::{Name, Value};
+use indexmap::IndexMap;
+
+pub enum Types {
+    PrimitiveType(String),
+    CustomType(Box<TypeMapping>),
+}
+
+pub type TypeMapping = IndexMap<Name, TypeRef>;
+pub type ValueMapping = IndexMap<Name, Value>;
+
 // NOTE: If adding/removing types, corresponding change needs to be made to torii-core `src/sql.rs`
 // in method sql_type()
-#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub enum ScalarType {
     U8,
     U16,
@@ -20,6 +32,7 @@ pub enum ScalarType {
     DateTime,
     Felt252,
     Enum,
+    Custom(String),
 }
 
 impl fmt::Display for ScalarType {
@@ -39,6 +52,7 @@ impl fmt::Display for ScalarType {
             ScalarType::DateTime => write!(f, "DateTime"),
             ScalarType::Felt252 => write!(f, "felt252"),
             ScalarType::Enum => write!(f, "Enum"),
+            ScalarType::Custom(ref type_name) => write!(f, "{}", type_name),
         }
     }
 }
@@ -119,7 +133,7 @@ impl FromStr for ScalarType {
             "DateTime" => Ok(ScalarType::DateTime),
             "felt252" => Ok(ScalarType::Felt252),
             "Enum" => Ok(ScalarType::Enum),
-            _ => Err(anyhow::anyhow!("Unknown type {}", s.to_string())),
+            _ => Ok(ScalarType::Custom(s.to_string())),
         }
     }
 }

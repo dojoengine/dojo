@@ -118,11 +118,11 @@ async fn main() -> anyhow::Result<()> {
     let server = server.run((args.host.parse::<std::net::IpAddr>()?, args.graphql_port));
 
     tokio::select! {
-        res = indexer.start() => {
-            if let Err(e) = res {
-                error!("Indexer failed with error: {:?}", e);
-            }
-        }
+        // res = indexer.start() => {
+        //     if let Err(e) = res {
+        //         error!("Indexer failed with error: {:?}", e);
+        //     }
+        // }
         _ = server => {}
         _ = tokio::signal::ctrl_c() => {
             println!("Received Ctrl+C, shutting down");

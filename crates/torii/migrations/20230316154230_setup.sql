@@ -26,6 +26,7 @@ CREATE INDEX idx_components_created_at ON components (created_at);
 CREATE TABLE component_members(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     component_id TEXT NOT NULL,
+    parent_id TEXT,
     name TEXT NOT NULL,
     type TEXT NOT NULL,
     key BOOLEAN NOT NULL,

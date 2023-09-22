@@ -7,18 +7,12 @@ pub mod inputs;
 pub mod system;
 pub mod system_call;
 
-use async_graphql::dynamic::{
-    Enum, Field, FieldFuture, InputObject, Object, SubscriptionField, TypeRef,
-};
-use async_graphql::{Error, Name, Value};
-use indexmap::IndexMap;
+use async_graphql::dynamic::{Enum, Field, FieldFuture, InputObject, Object, SubscriptionField};
+use async_graphql::{Error, Value};
 
 use self::connection::edge::EdgeObject;
 use self::connection::ConnectionObject;
-
-// Type aliases for GraphQL fields
-pub type TypeMapping = IndexMap<Name, TypeRef>;
-pub type ValueMapping = IndexMap<Name, Value>;
+use crate::types::{TypeMapping, ValueMapping};
 
 pub trait ObjectTrait {
     // Name of the graphql object (eg "player")
