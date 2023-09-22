@@ -92,16 +92,22 @@ impl EthereumMessenger {
 
         let mut logs: HashMap<u64, Vec<Log>> = HashMap::new();
 
+        let log_msg_to_l2_topic = H256::from_str(
+            "0xdb80dd488acf86d17c747445b0eabb5d57c541d3bd7b6b87af987858e5066b2b")
+            .unwrap();
+
         let filters = Filter {
             block_option: FilterBlockOption::Range {
                 from_block: Some(BlockNumber::Number(from_block.into())),
                 to_block: Some(BlockNumber::Number(to_block.into())),
             },
             address: Some(ValueOrArray::Value(self.messaging_contract_address)),
-
-            // TODO: the topic is needed! To only gather message logs.
-            // This might come from the configuration actually.
-            topics: Default::default(),
+            topics: [
+                Some(ValueOrArray::Value(Some(log_msg_to_l2_topic))),
+                None,
+                None,
+                None,
+            ]
         };
 
         self.provider
@@ -191,7 +197,6 @@ impl Messenger for EthereumMessenger {
         }
 
         debug!("Sending transaction on L1 to register messages...");
-        // TODO: add more info about the error.
         match starknet_messaging
             .add_message_hashes_from_l2(hashes.clone())
             .send()
