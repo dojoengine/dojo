@@ -14,7 +14,7 @@ mod tests;
 pub struct WorldDiff {
     pub world: ContractDiff,
     pub executor: ContractDiff,
-    pub contracts: Vec<ClassDiff>,
+    pub contracts: Vec<ContractDiff>,
     pub components: Vec<ClassDiff>,
     pub systems: Vec<ClassDiff>,
 }
@@ -52,7 +52,7 @@ impl WorldDiff {
         let contracts = local
             .contracts
             .iter()
-            .map(|contract| ClassDiff {
+            .map(|contract| ContractDiff {
                 name: contract.name.to_string(),
                 local: contract.class_hash,
                 remote: None,

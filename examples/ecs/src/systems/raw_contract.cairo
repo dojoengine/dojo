@@ -11,7 +11,7 @@ trait IPlayerActions<TContractState> {
 // exact same functionality as examples/ecs/src/systems/with_decorator.cairo
 // requires some additional code without using system decorator
 #[starknet::contract]
-mod player_actions {
+mod player_actions_external {
     use starknet::{ContractAddress, get_caller_address};
     use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
     use dojo_examples::components::{Position, Moves, Direction};
@@ -72,7 +72,10 @@ mod tests {
     use dojo_examples::components::{position, moves};
     use dojo_examples::components::{Position, Moves, Direction};
 
-    use super::{IPlayerActionsDispatcher, IPlayerActionsDispatcherTrait, player_actions};
+    use super::{
+        IPlayerActionsDispatcher, IPlayerActionsDispatcherTrait,
+        player_actions_external as player_actions
+    };
 
     #[test]
     #[available_gas(30000000)]

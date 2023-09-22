@@ -10,8 +10,7 @@ use starknet::accounts::{Account, AccountError, Call, ConnectedAccount, SingleOw
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
     BlockId, BlockTag, DeclareTransactionResult, FieldElement, FlattenedSierraClass,
-    InvokeTransactionResult, MaybePendingTransactionReceipt, StarknetError,
-    TransactionFinalityStatus,
+    InvokeTransactionResult, StarknetError,
 };
 use starknet::core::utils::{get_contract_address, CairoShortStringToFeltError};
 use starknet::macros::{felt, selector};
@@ -21,7 +20,7 @@ use starknet::providers::{
 use starknet::signers::Signer;
 use thiserror::Error;
 
-use crate::utils::{block_number_from_receipt, TransactionWaiter, TransactionWaitingError};
+use crate::utils::{TransactionWaiter, TransactionWaitingError};
 
 pub mod class;
 pub mod contract;
@@ -35,7 +34,6 @@ pub struct DeployOutput {
     pub transaction_hash: FieldElement,
     pub contract_address: FieldElement,
     pub declare: Option<DeclareOutput>,
-    pub block_number: u64,
 }
 
 #[derive(Debug)]
@@ -49,7 +47,7 @@ pub enum MigrationError<S, P> {
     #[error("Class already declared.")]
     ClassAlreadyDeclared,
     #[error("Contract already deployed.")]
-    ContractAlreadyDeployed,
+    ContractAlreadyDeployed(FieldElement),
     #[error(transparent)]
     Migrator(#[from] AccountError<S, P>),
     #[error(transparent)]
@@ -187,7 +185,7 @@ pub trait Deployable: Declarable + Sync {
                 ..
             })) => {}
 
-            Ok(_) => return Err(MigrationError::ContractAlreadyDeployed),
+            Ok(_) => return Err(MigrationError::ContractAlreadyDeployed(contract_address)),
             Err(e) => return Err(MigrationError::Provider(e)),
         }
 
@@ -205,19 +203,19 @@ pub trait Deployable: Declarable + Sync {
         let InvokeTransactionResult { transaction_hash } =
             txn.send().await.map_err(MigrationError::Migrator)?;
 
-        // TODO: remove finality check once we can remove displaying the block number in the
-        // migration logs
-        let receipt = TransactionWaiter::new(transaction_hash, account.provider())
-            .with_finality(TransactionFinalityStatus::AcceptedOnL2)
-            .await
-            .map_err(MigrationError::WaitingError)?;
+        // // TODO: remove finality check once we can remove displaying the block number in the
+        // // migration logs
+        // let receipt = TransactionWaiter::new(transaction_hash, account.provider())
+        //     .with_finality(TransactionFinalityStatus::AcceptedOnL2)
+        //     .await
+        //     .map_err(MigrationError::WaitingError)?;
 
-        let block_number = match receipt {
-            MaybePendingTransactionReceipt::Receipt(receipt) => block_number_from_receipt(&receipt),
-            _ => panic!("Transaction was not accepted on L2"),
-        };
+        // let block_number = match receipt {
+        //     MaybePendingTransactionReceipt::Receipt(receipt) =>
+        // block_number_from_receipt(&receipt),     _ => panic!("Transaction was not
+        // accepted on L2"), };
 
-        Ok(DeployOutput { transaction_hash, contract_address, declare, block_number })
+        Ok(DeployOutput { transaction_hash, contract_address, declare })
     }
 
     fn salt(&self) -> FieldElement;
