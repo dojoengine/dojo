@@ -267,18 +267,18 @@ fn trace_msg_to_l1_sent(messages: &Vec<MsgToL1>, hashes: &Vec<String>) {
             let payload_str = &payload_str[2..];
 
             info!(target: MSGING_TARGET,
-                              r"Message executed on settlement layer:
+                                          r"Message executed on settlement layer:
 | from_address | {:#x}
 |  to_address  | {}
 |   selector   | {}
 |   payload    | [{}]
 
 ",
-                              m.from_address,
-                              to_address,
-                              selector,
-                              payload_str.join(", ")
-                        );
+                                          m.from_address,
+                                          to_address,
+                                          selector,
+                                          payload_str.join(", ")
+                                    );
         } else {
             // We check for magic value 'MSG' used only when we are doing L3-L2 messaging.
             let (to_address, payload_str) = if format!("{:#x}", m.to_address) == "0x4d5347" {
@@ -288,18 +288,18 @@ fn trace_msg_to_l1_sent(messages: &Vec<MsgToL1>, hashes: &Vec<String>) {
             };
 
             info!(target: MSGING_TARGET,
-                              r"Message sent to settlement layer:
+                                          r"Message sent to settlement layer:
 |     hash     | {}
 | from_address | {:#x}
 |  to_address  | {}
 |   payload    | [{}]
 
 ",
-                              hash.as_str(),
-                              m.from_address,
-                              to_address,
-                              payload_str.join(", ")
-                        );
+                                          hash.as_str(),
+                                          m.from_address,
+                                          to_address,
+                                          payload_str.join(", ")
+                                    );
         }
     }
 }
@@ -309,17 +309,17 @@ fn trace_l1_handler_tx_exec(tx: &L1HandlerTransaction) {
         tx.inner.calldata.0.iter().map(|f| format!("{:#x}", FieldElement::from(*f))).collect();
 
     info!(
-                    target: MSGING_TARGET,
-                    r"L1Handler transaction added to the pool:
+                        target: MSGING_TARGET,
+                        r"L1Handler transaction added to the pool:
 |      tx_hash     | {:#x}
 | contract_address | {:#x}
 |     selector     | {:#x}
 |     calldata     | [{}]
 
 ",
-                    FieldElement::from(tx.inner.transaction_hash.0),
-                    FieldElement::from(*tx.inner.contract_address.0.key()),
-                    FieldElement::from(tx.inner.entry_point_selector.0),
-                    calldata_str.join(", ")
-                );
+                        FieldElement::from(tx.inner.transaction_hash.0),
+                        FieldElement::from(*tx.inner.contract_address.0.key()),
+                        FieldElement::from(tx.inner.entry_point_selector.0),
+                        calldata_str.join(", ")
+                    );
 }

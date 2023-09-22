@@ -92,9 +92,9 @@ impl EthereumMessenger {
 
         let mut logs: HashMap<u64, Vec<Log>> = HashMap::new();
 
-        let log_msg_to_l2_topic = H256::from_str(
-            "0xdb80dd488acf86d17c747445b0eabb5d57c541d3bd7b6b87af987858e5066b2b")
-            .unwrap();
+        let log_msg_to_l2_topic =
+            H256::from_str("0xdb80dd488acf86d17c747445b0eabb5d57c541d3bd7b6b87af987858e5066b2b")
+                .unwrap();
 
         let filters = Filter {
             block_option: FilterBlockOption::Range {
@@ -102,12 +102,7 @@ impl EthereumMessenger {
                 to_block: Some(BlockNumber::Number(to_block.into())),
             },
             address: Some(ValueOrArray::Value(self.messaging_contract_address)),
-            topics: [
-                Some(ValueOrArray::Value(Some(log_msg_to_l2_topic))),
-                None,
-                None,
-                None,
-            ]
+            topics: [Some(ValueOrArray::Value(Some(log_msg_to_l2_topic))), None, None, None],
         };
 
         self.provider
