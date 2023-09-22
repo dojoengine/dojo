@@ -10,16 +10,99 @@ pub struct Member {
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum Ty {
-    Simple(String),
+    Name(String),
     Struct(Struct),
     Enum(Enum),
 }
 
+impl Ty {
+    pub fn name(&self) -> String {
+        match self {
+            Ty::Name(s) => s.clone(),
+            Ty::Struct(s) => s.name.clone(),
+            Ty::Enum(e) => e.name.clone(),
+        }
+    }
+
+    pub fn flatten(&self) -> Vec<Ty> {
+        Ty::flatten_ty(self.clone())
+    }
+
+    fn flatten_ty(ty: Ty) -> Vec<Ty> {
+        let mut items = vec![];
+        match ty {
+            Ty::Name(_) => {
+                items.push(ty.clone());
+            }
+            Ty::Struct(mut s) => {
+                for (i, member) in s.children.clone().iter().enumerate() {
+                    match member.ty {
+                        Ty::Struct(_) => {
+                            items.extend(Ty::flatten_ty(member.ty.clone()));
+                        }
+                        Ty::Enum(_) => {
+                            items.extend(Ty::flatten_ty(member.ty.clone()));
+                        }
+                        _ => {}
+                    }
+
+                    s.children[i].ty = Ty::Name(member.ty.name());
+                }
+
+                items.push(Ty::Struct(s))
+            }
+            Ty::Enum(mut e) => {
+                for (i, ty) in e.values.clone().iter().enumerate() {
+                    match ty {
+                        Ty::Struct(_) => {
+                            items.extend(Ty::flatten_ty(ty.clone()));
+                        }
+                        Ty::Enum(_) => {
+                            items.extend(Ty::flatten_ty(ty.clone()));
+                        }
+                        _ => {}
+                    }
+
+                    e.values[i] = Ty::Name(ty.name());
+                }
+
+                items.push(Ty::Enum(e))
+            }
+        };
+
+        items
+    }
+}
+
 impl std::fmt::Display for Ty {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut items = print_ty(self);
+        let mut items = self.flatten();
         items.reverse();
-        write!(f, "{}", items.join("\n\n"))
+        let str = items
+            .iter()
+            .map(|ty| match ty {
+                Ty::Name(s) => s.to_string(),
+                Ty::Struct(s) => {
+                    let mut struct_str = format!("struct {} {{\n", s.name);
+                    for member in &s.children {
+                        struct_str.push_str(&format!("{},\n", format_member(member)));
+                    }
+                    struct_str.push('}');
+                    struct_str
+                }
+                Ty::Enum(e) => {
+                    let mut enum_str = format!("enum {} {{\n", e.name);
+                    for ty in &e.values {
+                        enum_str.push_str(&format!("  {}\n", ty.name()));
+                    }
+                    enum_str.push('}');
+                    enum_str
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n\n");
+
+        write!(f, "{}", str)
     }
 }
 
@@ -35,63 +118,10 @@ pub struct Enum {
     pub values: Vec<Ty>,
 }
 
-fn format_name(ty: &Ty) -> String {
-    match ty {
-        Ty::Simple(s) => s.clone(),
-        Ty::Struct(s) => s.name.clone(),
-        Ty::Enum(e) => e.name.clone(),
-    }
-}
-
 fn format_member(m: &Member) -> String {
     if m.key {
-        format!("  #[key]\n  {}: {}", m.name, format_name(&m.ty))
+        format!("  #[key]\n  {}: {}", m.name, m.ty.name())
     } else {
-        format!("  {}: {}", m.name, format_name(&m.ty))
+        format!("  {}: {}", m.name, m.ty.name())
     }
-}
-
-fn print_ty(ty: &Ty) -> Vec<String> {
-    let mut items = vec![];
-    match ty {
-        Ty::Simple(s) => println!("{}", s),
-        Ty::Struct(s) => {
-            let mut struct_str = format!("struct {} {{\n", s.name);
-            for member in &s.children {
-                match member.ty {
-                    Ty::Struct(_) => {
-                        items.extend(print_ty(&member.ty));
-                    }
-                    Ty::Enum(_) => {
-                        items.extend(print_ty(&member.ty));
-                    }
-                    _ => {}
-                }
-
-                struct_str.push_str(&format!("{},\n", format_member(member)));
-            }
-            struct_str.push('}');
-            items.push(struct_str);
-        }
-        Ty::Enum(e) => {
-            let mut enum_str = format!("enum {} {{\n", e.name);
-            for ty in &e.values {
-                match ty {
-                    Ty::Struct(_) => {
-                        items.extend(print_ty(ty));
-                    }
-                    Ty::Enum(_) => {
-                        items.extend(print_ty(ty));
-                    }
-                    _ => {}
-                }
-
-                enum_str.push_str(&format!("  {}\n", format_name(ty)));
-            }
-            enum_str.push('}');
-            items.push(enum_str);
-        }
-    };
-
-    items
 }

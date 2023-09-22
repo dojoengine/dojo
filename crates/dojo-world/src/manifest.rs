@@ -49,6 +49,12 @@ pub struct Member {
     pub key: bool,
 }
 
+impl From<dojo_types::component::Member> for Member {
+    fn from(m: dojo_types::component::Member) -> Self {
+        Self { name: m.name, ty: m.ty.name(), key: m.key }
+    }
+}
+
 /// Represents a declaration of a component.
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]

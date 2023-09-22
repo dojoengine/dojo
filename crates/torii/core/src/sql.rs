@@ -3,7 +3,9 @@ use std::collections::HashMap;
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use dojo_world::manifest::{Manifest, Model, System};
+use dojo_types::component::Ty;
+use dojo_world::manifest::{Manifest, System};
+use lazy_static::lazy_static;
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Executor, Pool, Row, Sqlite};
@@ -19,6 +21,26 @@ use crate::types::{Entity, Model as ModelType};
 #[path = "sql_test.rs"]
 mod test;
 
+lazy_static! {
+    static ref SQL_TYPES: HashMap<String, String> = {
+        let mut m = HashMap::new();
+        m.insert("u8".to_string(), "INTEGER".to_string());
+        m.insert("u16".to_string(), "INTEGER".to_string());
+        m.insert("u32".to_string(), "INTEGER".to_string());
+        m.insert("u64".to_string(), "INTEGER".to_string());
+        m.insert("u128".to_string(), "TEXT".to_string());
+        m.insert("u256".to_string(), "TEXT".to_string());
+        m.insert("usize".to_string(), "INTEGER".to_string());
+        m.insert("bool".to_string(), "INTEGER".to_string());
+        m.insert("Cursor".to_string(), "TEXT".to_string());
+        m.insert("ContractAddress".to_string(), "TEXT".to_string());
+        m.insert("ClassHash".to_string(), "TEXT".to_string());
+        m.insert("DateTime".to_string(), "TEXT".to_string());
+        m.insert("felt252".to_string(), "TEXT".to_string());
+        m
+    };
+}
+
 #[async_trait]
 pub trait Executable {
     async fn execute(&self) -> Result<()>;
@@ -29,7 +51,6 @@ pub struct Sql {
     world_address: FieldElement,
     pool: Pool<Sqlite>,
     query_queue: Mutex<Vec<String>>,
-    sql_types: Mutex<HashMap<String, &'static str>>,
 }
 
 impl Sql {
@@ -53,29 +74,7 @@ impl Sql {
 
         tx.commit().await?;
 
-        let sql_types = HashMap::from([
-            ("u8".to_string(), "INTEGER"),
-            ("u16".to_string(), "INTEGER"),
-            ("u32".to_string(), "INTEGER"),
-            ("u64".to_string(), "INTEGER"),
-            ("u128".to_string(), "TEXT"),
-            ("u256".to_string(), "TEXT"),
-            ("usize".to_string(), "INTEGER"),
-            ("bool".to_string(), "INTEGER"),
-            ("Cursor".to_string(), "TEXT"),
-            ("ContractAddress".to_string(), "TEXT"),
-            ("ClassHash".to_string(), "TEXT"),
-            ("DateTime".to_string(), "TEXT"),
-            ("felt252".to_string(), "TEXT"),
-            ("Enum".to_string(), "INTEGER"),
-        ]);
-
-        Ok(Self {
-            pool,
-            world_address,
-            query_queue: Mutex::new(vec![]),
-            sql_types: Mutex::new(sql_types),
-        })
+        Ok(Self { pool, world_address, query_queue: Mutex::new(vec![]) })
     }
 
     pub async fn load_from_manifest(&self, manifest: Manifest) -> Result<()> {
@@ -95,10 +94,6 @@ impl Sql {
             self.world_address
         )])
         .await;
-
-        for model in manifest.components {
-            self.register_model(model).await?;
-        }
 
         for system in manifest.systems {
             self.register_system(system).await?;
@@ -151,53 +146,38 @@ impl Sql {
         Ok(())
     }
 
-    pub async fn register_model(&self, model: Model) -> Result<()> {
-        let mut sql_types = self.sql_types.lock().await;
+    pub async fn register_model(
+        &self,
+        schema: Ty,
+        layout: Vec<FieldElement>,
+        class_hash: FieldElement,
+    ) -> Result<()> {
+        let types = schema.flatten();
 
-        let model_id = model.name.to_lowercase();
+        let root = types.first().unwrap();
+        let root_name = root.name();
+        let layout_blob = layout.iter().map(|x| (*x).try_into().unwrap()).collect::<Vec<u8>>();
         let mut queries = vec![format!(
-            "INSERT INTO models (id, name, class_hash) VALUES ('{}', '{}', '{:#x}') ON \
-             CONFLICT(id) DO UPDATE SET class_hash='{:#x}'",
-            model_id, model.name, model.class_hash, model.class_hash
+            "INSERT INTO models (id, name, class_hash, layout) VALUES ('{}', '{}', '{:#x}', '{}') \
+             ON CONFLICT(id) DO UPDATE SET class_hash='{:#x}'",
+            root_name,
+            root_name,
+            class_hash,
+            hex::encode(&layout_blob),
+            class_hash
         )];
+        queries.extend(build_model_query(root, None));
 
-        let mut model_table_query = format!(
-            "CREATE TABLE IF NOT EXISTS external_{} (entity_id TEXT NOT NULL PRIMARY KEY, ",
-            model.name.to_lowercase()
-        );
-
-        for member in &model.members {
-            // FIXME: defaults all unknown model types to Enum for now until we support nested
-            // models
-            let (sql_type, member_type) = match sql_types.get(&member.ty) {
-                Some(sql_type) => (*sql_type, member.ty.as_str()),
-                None => {
-                    sql_types.insert(member.ty.clone(), "INTEGER");
-                    ("INTEGER", "Enum")
-                }
-            };
-
-            queries.push(format!(
-                "INSERT OR IGNORE INTO model_members (model_id, name, type, key) VALUES ('{}', \
-                 '{}', '{}', {})",
-                model_id, member.name, member_type, member.key,
-            ));
-
-            model_table_query.push_str(&format!("external_{} {}, ", member.name, sql_type));
+        for ty in &types[1..] {
+            queries.extend(build_model_query(ty, Some(root_name.clone())));
         }
-
-        model_table_query.push_str(
-            "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (entity_id) REFERENCES entities(id));",
-        );
-        queries.push(model_table_query);
 
         self.queue(queries).await;
 
         // Since previous query has not been executed, we have to make sure created_at exists
         let created_at: DateTime<Utc> =
             match sqlx::query("SELECT created_at FROM models WHERE id = ?")
-                .bind(model_id.clone())
+                .bind(root_name.clone())
                 .fetch_one(&self.pool)
                 .await
             {
@@ -206,9 +186,9 @@ impl Sql {
             };
 
         SimpleBroker::publish(ModelType {
-            id: model_id,
-            name: model.name,
-            class_hash: format!("{:#x}", model.class_hash),
+            id: root_name.clone(),
+            name: root_name,
+            class_hash: format!("{:#x}", class_hash),
             transaction_hash: "0x0".to_string(),
             created_at,
         });
@@ -219,10 +199,7 @@ impl Sql {
         let query = format!(
             "INSERT INTO systems (id, name, class_hash) VALUES ('{}', '{}', '{:#x}') ON \
              CONFLICT(id) DO UPDATE SET class_hash='{:#x}'",
-            system.name.to_lowercase(),
-            system.name,
-            system.class_hash,
-            system.class_hash
+            system.name, system.name, system.class_hash, system.class_hash
         );
         self.queue(vec![query]).await;
         Ok(())
@@ -252,7 +229,7 @@ impl Sql {
 
         let member_names_result =
             sqlx::query("SELECT * FROM model_members WHERE model_id = ? ORDER BY id ASC")
-                .bind(model.to_lowercase())
+                .bind(model.clone())
                 .fetch_all(&self.pool)
                 .await?;
 
@@ -261,16 +238,12 @@ impl Sql {
         member_values.extend(keys);
         member_values.extend(values);
 
-        let sql_types = self.sql_types.lock().await;
         let names_str = members_sql_string(&member_names_result)?;
-        let values_str = values_sql_string(&member_names_result, &member_values, &sql_types)?;
+        let values_str = values_sql_string(&member_names_result, &member_values)?;
 
         let insert_models = format!(
             "INSERT OR REPLACE INTO external_{} (entity_id {}) VALUES ('{}' {})",
-            model.to_lowercase(),
-            names_str,
-            entity_id,
-            values_str
+            model, names_str, entity_id, values_str
         );
 
         // tx commit required
@@ -325,7 +298,7 @@ impl Sql {
              '{:#x}', '{}')",
             calldata.iter().map(|c| format!("{:#x}", c)).collect::<Vec<String>>().join(","),
             transaction_hash,
-            system.to_lowercase()
+            system
         );
         self.queue(vec![query]).await;
         Ok(())
@@ -395,11 +368,7 @@ fn model_names_sql_string(entity_result: Option<SqliteRow>, new_model: &str) -> 
     Ok(model_names)
 }
 
-fn values_sql_string(
-    member_results: &[SqliteRow],
-    values: &[FieldElement],
-    sql_types: &HashMap<String, &str>,
-) -> Result<String> {
+fn values_sql_string(member_results: &[SqliteRow], values: &[FieldElement]) -> Result<String> {
     let types: Result<Vec<String>> =
         member_results.iter().map(|row| Ok(row.try_get::<String, &str>("type")?)).collect();
 
@@ -407,7 +376,7 @@ fn values_sql_string(
     let values: Result<Vec<String>> = values
         .iter()
         .zip(types?.iter())
-        .map(|(value, ty)| match sql_types.get(ty).copied() {
+        .map(|(value, ty)| match SQL_TYPES.get(ty).map(String::as_str) {
             Some("INTEGER") => Ok(format!(",'{}'", value)),
             Some("TEXT") => Ok(format!(",'{:#x}'", value)),
             _ => Err(anyhow::anyhow!("Unsupported type {}", ty)),
@@ -431,4 +400,50 @@ fn members_sql_string(member_results: &[SqliteRow]) -> Result<String> {
 
 fn felts_sql_string(felts: &[FieldElement]) -> String {
     felts.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join("/") + "/"
+}
+
+fn build_model_query(model: &Ty, parent_id: Option<String>) -> Vec<String> {
+    let model_id = if let Some(parent_id) = parent_id.clone() {
+        format!("{parent_id}:{}", model.name())
+    } else {
+        model.name()
+    };
+
+    let mut queries = vec![];
+    let mut query = format!(
+        "CREATE TABLE IF NOT EXISTS external_{} (entity_id TEXT NOT NULL PRIMARY KEY, ",
+        model_id
+    );
+
+    match model {
+        Ty::Struct(s) => {
+            for (i, member) in s.children.iter().enumerate() {
+                if let Some(sql_type) = SQL_TYPES.get(&member.ty.name()) {
+                    queries.push(format!(
+                        "INSERT OR IGNORE INTO model_members (id, model_id, idx, name, type, key) \
+                         VALUES ('{model_id}', '{model_id}', '{i}', '{}', '{sql_type}', {})",
+                        member.name, member.key,
+                    ));
+
+                    query.push_str(&format!("external_{} {}, ", member.name, sql_type));
+                };
+            }
+        }
+        Ty::Enum(_) => {}
+        _ => {}
+    }
+
+    if let Some(id) = parent_id {
+        query.push_str(&format!(
+            "parent_id TEXT NOT NULL DEFAULT {id}, FOREIGN KEY (parent_id) REFERENCES \
+             external_{id} (id)), "
+        ));
+    };
+
+    query.push_str(
+        "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (entity_id) REFERENCES entities(id));",
+    );
+    queries.push(query);
+    queries
 }

@@ -18,13 +18,15 @@ CREATE TABLE models (
     name TEXT NOT NULL,
     class_hash TEXT NOT NULL,
     transaction_hash TEXT,
+    layout BLOB NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_models_created_at ON models (created_at);
 
 CREATE TABLE model_members(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY,
+    idx INTEGER NOT NULL,
     model_id TEXT NOT NULL,
     name TEXT NOT NULL,
     type TEXT NOT NULL,

@@ -6896,6 +6896,8 @@ dependencies = [
  "dojo-world",
  "futures-channel",
  "futures-util",
+ "hex",
+ "lazy_static",
  "log",
  "once_cell",
  "serde",

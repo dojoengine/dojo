@@ -3,7 +3,7 @@ mod tests {
     use std::time::Duration;
 
     use async_graphql::value;
-    use dojo_world::manifest::{Member, Model};
+    use dojo_types::component::{Member, Struct, Ty};
     use sqlx::SqlitePool;
     use starknet_crypto::{poseidon_hash_many, FieldElement};
     use tokio::sync::mpsc;
@@ -119,13 +119,16 @@ mod tests {
             // 1. Open process and sleep.Go to execute subscription
             tokio::time::sleep(Duration::from_secs(1)).await;
 
-            let model = Model {
+            let model = Ty::Struct(Struct {
                 name,
-                members: vec![Member { name: "test".into(), ty: "u32".into(), key: false }],
-                class_hash,
-                ..Default::default()
-            };
-            state.register_model(model).await.unwrap();
+                children: vec![Member {
+                    name: "test".into(),
+                    ty: Ty::Name("u32".to_string()),
+                    key: false,
+                }],
+            });
+            state.register_model(model, vec![], class_hash).await.unwrap();
+
             // 3. fn publish() is called from state.set_entity()
 
             tx.send(()).await.unwrap();
@@ -168,13 +171,15 @@ mod tests {
             // 1. Open process and sleep.Go to execute subscription
             tokio::time::sleep(Duration::from_secs(1)).await;
 
-            let model = Model {
+            let model = Ty::Struct(Struct {
                 name,
-                members: vec![Member { name: "test".into(), ty: "u32".into(), key: false }],
-                class_hash,
-                ..Default::default()
-            };
-            state.register_model(model).await.unwrap();
+                children: vec![Member {
+                    name: "test".into(),
+                    ty: Ty::Name("u32".to_string()),
+                    key: false,
+                }],
+            });
+            state.register_model(model, vec![], class_hash).await.unwrap();
             // 3. fn publish() is called from state.set_entity()
 
             tx.send(()).await.unwrap();
