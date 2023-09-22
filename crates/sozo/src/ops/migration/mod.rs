@@ -65,41 +65,60 @@ where
     if total_diffs == 0 {
         config.ui().print("\n✨ No changes to be made. Remote World is already up to date!")
     } else {
-        // Prepare migration strategy based on the diff.
-
-        let strategy = prepare_migration(target_dir, diff, name, world_address, config)?;
-
-        println!("  ");
-
-        let block_height = execute_strategy(&strategy, &account, config, Some(args.transaction))
-            .await
-            .map_err(|e| anyhow!(e))
-            .with_context(|| "Problem trying to migrate.")?;
-
-        if let Some(block_height) = block_height {
-            config.ui().print(format!(
-                "\n🎉 Successfully migrated World on block #{} at address {}",
-                block_height,
-                bold_message(format!(
-                    "{:#x}",
-                    strategy.world_address().expect("world address must exist")
-                ))
-            ));
-        } else {
-            config.ui().print(format!(
-                "\n🎉 Successfully migrated World at address {}",
-                bold_message(format!(
-                    "{:#x}",
-                    strategy.world_address().expect("world address must exist")
-                ))
-            ));
-        }
+        // Mirate according to the diff.
+        apply_diff(target_dir, diff, name, world_address, &account, config, Some(args.transaction))
+            .await?;
     }
 
     Ok(())
 }
 
-async fn setup_env(
+pub(crate) async fn apply_diff<U, P, S>(
+    target_dir: U,
+    diff: WorldDiff,
+    name: Option<String>,
+    world_address: Option<FieldElement>,
+    account: &SingleOwnerAccount<P, S>,
+    config: &Config,
+    txn_config: Option<TransactionOptions>,
+) -> Result<FieldElement>
+where
+    U: AsRef<Path>,
+    P: Provider + Sync + Send + 'static,
+    S: Signer + Sync + Send + 'static,
+{
+    let strategy = prepare_migration(target_dir, diff, name, world_address, config)?;
+
+    println!("  ");
+
+    let block_height = execute_strategy(&strategy, account, config, txn_config)
+        .await
+        .map_err(|e| anyhow!(e))
+        .with_context(|| "Problem trying to migrate.")?;
+
+    if let Some(block_height) = block_height {
+        config.ui().print(format!(
+            "\n🎉 Successfully migrated World on block #{} at address {}",
+            block_height,
+            bold_message(format!(
+                "{:#x}",
+                strategy.world_address().expect("world address must exist")
+            ))
+        ));
+    } else {
+        config.ui().print(format!(
+            "\n🎉 Successfully migrated World at address {}",
+            bold_message(format!(
+                "{:#x}",
+                strategy.world_address().expect("world address must exist")
+            ))
+        ));
+    }
+
+    strategy.world_address()
+}
+
+pub(crate) async fn setup_env(
     account: AccountOptions,
     starknet: StarknetOptions,
     world: WorldOptions,

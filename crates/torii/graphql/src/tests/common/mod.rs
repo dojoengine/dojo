@@ -5,7 +5,6 @@ use sqlx::SqlitePool;
 use starknet::core::types::FieldElement;
 use tokio_stream::StreamExt;
 use torii_core::sql::{Executable, Sql};
-use torii_core::State;
 
 use crate::schema::build_schema;
 

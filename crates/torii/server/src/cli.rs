@@ -12,15 +12,16 @@ use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use tokio_util::sync::CancellationToken;
+use torii_client::contract::world::WorldContractReader;
 use torii_core::processors::register_component::RegisterComponentProcessor;
 use torii_core::processors::register_system::RegisterSystemProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::processors::store_system_call::StoreSystemCallProcessor;
 use torii_core::sql::Sql;
-use torii_core::State;
 use tracing::error;
 use tracing_subscriber::fmt;
 use url::Url;
+use warp::Filter;
 
 use crate::engine::Processors;
 use crate::indexer::Indexer;
@@ -90,9 +91,10 @@ async fn main() -> anyhow::Result<()> {
 
     // Get world address
     let world_address = get_world_address(&args, &manifest, env.as_ref())?;
+    let world = WorldContractReader::new(world_address, &provider);
 
-    let state = Sql::new(pool.clone(), world_address).await?;
-    state.load_from_manifest(manifest.clone()).await?;
+    let db = Sql::new(pool.clone(), world_address).await?;
+    db.load_from_manifest(manifest.clone()).await?;
     let processors = Processors {
         event: vec![
             Box::new(RegisterComponentProcessor),
@@ -104,9 +106,17 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let indexer =
-        Indexer::new(&state, &provider, processors, manifest, world_address, args.start_block);
-    let graphql = torii_graphql::server::start(&args.host, args.graphql_port, &pool);
-    let grpc = torii_grpc::server::start(&args.host, args.grpc_port, &pool);
+        Indexer::new(&world, &db, &provider, processors, manifest, world_address, args.start_block);
+
+    let base_route = warp::path::end()
+        .and(warp::get())
+        .map(|| warp::reply::json(&serde_json::json!({ "success": true })));
+    let routes = torii_graphql::route::filter(&pool)
+        .await
+        .or(torii_grpc::route::filter(&pool))
+        .or(base_route);
+    let server = warp::serve(routes);
+    let server = server.run((args.host.parse::<std::net::IpAddr>()?, args.graphql_port));
 
     tokio::select! {
         res = indexer.start() => {
@@ -114,16 +124,7 @@ async fn main() -> anyhow::Result<()> {
                 error!("Indexer failed with error: {:?}", e);
             }
         }
-        res = graphql => {
-            if let Err(e) = res {
-                error!("GraphQL server failed with error: {:?}", e);
-            }
-        }
-        rs = grpc => {
-            if let Err(e) = rs {
-                error!("GRPC server failed with error: {:?}", e);
-            }
-        }
+        _ = server => {}
         _ = tokio::signal::ctrl_c() => {
             println!("Received Ctrl+C, shutting down");
         }

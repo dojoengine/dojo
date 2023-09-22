@@ -12,8 +12,8 @@ use cairo_lang_syntax::attribute::structured::{
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal};
-use dojo_types::component::Member;
 use dojo_types::system::Dependency;
+use dojo_world::manifest::Member;
 use scarb::compiler::plugin::builtin::BuiltinStarkNetPlugin;
 use scarb::compiler::plugin::{CairoPlugin, CairoPluginInstance};
 use scarb::core::{PackageId, PackageName, SourceId};
@@ -25,6 +25,7 @@ use crate::component::handle_component_struct;
 use crate::inline_macros::emit::EmitMacro;
 use crate::inline_macros::get::GetMacro;
 use crate::inline_macros::set::SetMacro;
+use crate::print::derive_print;
 use crate::system::System;
 
 const SYSTEM_ATTR: &str = "system";
@@ -157,6 +158,9 @@ impl MacroPlugin for DojoPlugin {
                                     handle_component_struct(db, &mut aux_data, struct_ast.clone());
                                 rewrite_nodes.push(component_rewrite_nodes);
                                 diagnostics.extend(component_diagnostics);
+                            }
+                            "Print" => {
+                                rewrite_nodes.push(derive_print(db, struct_ast.clone()));
                             }
                             _ => continue,
                         }

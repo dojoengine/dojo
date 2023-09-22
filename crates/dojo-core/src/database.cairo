@@ -7,6 +7,7 @@ use poseidon::poseidon_hash_span;
 mod index;
 #[cfg(test)]
 mod index_test;
+mod schema;
 mod storage;
 #[cfg(test)]
 mod storage_test;
@@ -15,23 +16,23 @@ mod utils;
 mod utils_test;
 
 fn get(
-    class_hash: starknet::ClassHash, table: felt252, key: felt252, offset: u8, length: usize
+    class_hash: starknet::ClassHash, table: felt252, key: felt252, offset: u8, length: usize, layout: Span<u8>
 ) -> Span<felt252> {
     let mut keys = ArrayTrait::new();
     keys.append('dojo_storage');
     keys.append(table);
     keys.append(key);
-    storage::get_many(0, keys.span(), offset, length)
+    storage::get_many(0, keys.span(), offset, length, layout)
 }
 
 fn set(
-    class_hash: starknet::ClassHash, table: felt252, key: felt252, offset: u8, value: Span<felt252>
+    class_hash: starknet::ClassHash, table: felt252, key: felt252, offset: u8, value: Span<felt252>, layout: Span<u8>
 ) {
     let mut keys = ArrayTrait::new();
     keys.append('dojo_storage');
     keys.append(table);
     keys.append(key);
-    storage::set_many(0, keys.span(), offset, value);
+    storage::set_many(0, keys.span(), offset, value, layout);
 }
 
 fn del(class_hash: starknet::ClassHash, table: felt252, key: felt252) {
@@ -41,7 +42,7 @@ fn del(class_hash: starknet::ClassHash, table: felt252, key: felt252) {
 // returns a tuple of spans, first contains the entity IDs,
 // second the deserialized entities themselves
 fn all(
-    class_hash: starknet::ClassHash, component: felt252, partition: felt252, length: usize
+    class_hash: starknet::ClassHash, component: felt252, partition: felt252, length: usize, layout: Span<u8>
 ) -> (Span<felt252>, Span<Span<felt252>>) {
     let table = {
         if partition == 0.into() {
@@ -65,7 +66,7 @@ fn all(
                 keys.append('dojo_storage');
                 keys.append(table);
                 keys.append(*id);
-                let value: Span<felt252> = storage::get_many(0, keys.span(), 0_u8, length);
+                let value: Span<felt252> = storage::get_many(0, keys.span(), 0_u8, length, layout);
                 entities.append(value);
             },
             Option::None(_) => {

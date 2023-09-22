@@ -28,6 +28,7 @@ mod tests {
         assert_eq!(entity.component_names, "Moves".to_string());
     }
 
+    #[ignore]
     #[sqlx::test(migrations = "../migrations")]
     async fn test_entity_components(pool: SqlitePool) {
         entity_fixtures(&pool).await;

@@ -29,18 +29,7 @@ pub async fn execute(command: ComponentCommands, env_metadata: Option<Environmen
             if to_json {
                 println!("{}", serde_json::to_string_pretty(&schema)?)
             } else {
-                let output = format!(
-                    r"struct {name} {{
-{}
-}}",
-                    schema
-                        .iter()
-                        .map(|s| format!(r"   {}: {}", s.name, s.ty))
-                        .collect::<Vec<String>>()
-                        .join("\n")
-                );
-
-                println!("{output}")
+                println!("{schema}");
             }
         }
 

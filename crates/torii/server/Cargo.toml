@@ -7,8 +7,7 @@ version = "0.2.1"
 
 [dependencies]
 anyhow.workspace = true
-async-graphql = { version = "5.0.8", features = [ "chrono", "dynamic-schema" ] }
-async-graphql-poem = "5.0.8"
+async-graphql = { version = "5.0.8", features = [ "chrono", "dynamic-schema", "playground" ] }
 async-trait.workspace = true
 base64 = "0.21.2"
 camino.workspace = true
@@ -28,12 +27,14 @@ starknet.workspace = true
 tokio-stream = "0.1.11"
 tokio-util = "0.7.7"
 tokio.workspace = true
+torii-client = { path = "../client" }
 torii-core = { path = "../core" }
 torii-graphql = { path = "../graphql" }
 torii-grpc = { path = "../grpc" }
 tracing-subscriber.workspace = true
 tracing.workspace = true
 url.workspace = true
+warp.workspace = true
 
 [dev-dependencies]
 camino.workspace = true

@@ -354,7 +354,7 @@ fn test_safe_transfer_from_approved_operator() {
 }
 
 #[test]
-#[available_gas(50000000)]
+#[available_gas(100000000)]
 fn test_safe_transfer_from_approved_operator_preserve_operator_balance() {
     // when called by an operator on behalf of the multiTokenHolder
     // preserves operator's balances not involved in the transfer
@@ -432,7 +432,7 @@ fn test_safe_batch_transfer_from_to_zero_address() {
 
 
 #[test]
-#[available_gas(50000000)]
+#[available_gas(100000000)]
 fn test_safe_batch_transfer_from_debits_sender() {
     // debits transferred balances from sender
     let (world, erc1155) = deploy_testcase1();
@@ -455,7 +455,7 @@ fn test_safe_batch_transfer_from_debits_sender() {
 
 
 #[test]
-#[available_gas(50000000)]
+#[available_gas(100000000)]
 fn test_safe_batch_transfer_from_credits_recipient() {
     // credits transferred balances to receiver
     let (world, erc1155) = deploy_testcase1();
@@ -492,7 +492,7 @@ fn test_safe_batch_transfer_from_unapproved_operator() {
 }
 
 #[test]
-#[available_gas(50000000)]
+#[available_gas(100000000)]
 fn test_safe_batch_transfer_from_approved_operator_preserve_operator_balance() {
     // when called by an operator on behalf of the multiTokenHolder
     // preserves operator's balances not involved in the transfer

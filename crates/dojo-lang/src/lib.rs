@@ -8,5 +8,6 @@ pub mod component;
 pub mod inline_macros;
 mod manifest;
 pub mod plugin;
+pub mod print;
 pub mod system;
 pub(crate) mod version;

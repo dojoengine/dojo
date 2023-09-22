@@ -6,10 +6,10 @@ use starknet::core::types::{
     BlockWithTxs, FieldElement, InvokeTransaction, Transaction, TransactionReceipt,
 };
 use starknet::core::utils::parse_cairo_short_string;
-use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
+use starknet::providers::Provider;
 
 use super::TransactionProcessor;
-use crate::State;
+use crate::sql::Sql;
 
 #[derive(Default)]
 pub struct StoreSystemCallProcessor;
@@ -20,11 +20,11 @@ const EXECUTE_ENTRYPOINT: &str =
     "0x240060cdb34fcc260f41eac7474ee1d7c80b7e3607daff9ac67c7ea2ebb1c44";
 
 #[async_trait]
-impl<S: State + Sync, T: JsonRpcTransport> TransactionProcessor<S, T> for StoreSystemCallProcessor {
+impl<P: Provider + Sync> TransactionProcessor<P> for StoreSystemCallProcessor {
     async fn process(
         &self,
-        storage: &S,
-        _provider: &JsonRpcClient<T>,
+        db: &Sql,
+        _provider: &P,
         block: &BlockWithTxs,
         transaction_receipt: &TransactionReceipt,
     ) -> Result<(), Error> {
@@ -33,7 +33,7 @@ impl<S: State + Sync, T: JsonRpcTransport> TransactionProcessor<S, T> for StoreS
                 if let Some((tx_hash, system_name, calldata)) = parse_transaction(tx) {
                     let system_name = parse_cairo_short_string(&system_name)?;
 
-                    storage.store_system_call(system_name, tx_hash, calldata).await?;
+                    db.store_system_call(system_name, tx_hash, calldata).await?;
                 }
             }
         }

@@ -8,7 +8,7 @@ use url::Url;
 #[derive(Debug, Args)]
 #[command(next_help_heading = "Starknet options")]
 pub struct StarknetOptions {
-    #[arg(long)]
+    #[arg(long, env = "STARKNET_RPC_URL", default_value = "http://localhost:5050")]
     #[arg(value_name = "URL")]
     #[arg(help = "The Starknet RPC endpoint.")]
     pub rpc_url: Option<Url>,

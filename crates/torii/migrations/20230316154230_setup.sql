@@ -71,11 +71,10 @@ CREATE INDEX idx_entities_keys_create_on ON entities (keys, created_at);
 
 CREATE TABLE events (
     id TEXT NOT NULL PRIMARY KEY,
-    system_call_id INTEGER NOT NULL,
     keys TEXT NOT NULL,
     data TEXT NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (system_call_id) REFERENCES system_calls(id)
+    transaction_hash TEXT,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_events_keys ON events (keys);

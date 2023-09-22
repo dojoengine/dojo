@@ -7,11 +7,11 @@ use dojo_world::manifest::{Component, Manifest, System};
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Executor, Pool, Row, Sqlite};
-use starknet::core::types::FieldElement;
+use starknet::core::types::{Event, FieldElement};
 use starknet_crypto::poseidon_hash_many;
 use tokio::sync::Mutex;
 
-use super::{State, World};
+use super::World;
 use crate::simple_broker::SimpleBroker;
 use crate::types::{Component as ComponentType, Entity};
 
@@ -77,38 +77,8 @@ impl Sql {
             sql_types: Mutex::new(sql_types),
         })
     }
-}
 
-#[async_trait]
-impl Executable for Sql {
-    async fn queue(&self, queries: Vec<String>) {
-        let mut query_queue = self.query_queue.lock().await;
-        query_queue.extend(queries);
-    }
-
-    async fn execute(&self) -> Result<()> {
-        let queries;
-        {
-            let mut query_queue = self.query_queue.lock().await;
-            queries = query_queue.clone();
-            query_queue.clear();
-        }
-
-        let mut tx = self.pool.begin().await?;
-
-        for query in queries {
-            tx.execute(sqlx::query(&query)).await?;
-        }
-
-        tx.commit().await?;
-
-        Ok(())
-    }
-}
-
-#[async_trait]
-impl State for Sql {
-    async fn load_from_manifest(&self, manifest: Manifest) -> Result<()> {
+    pub async fn load_from_manifest(&self, manifest: Manifest) -> Result<()> {
         let mut updates = vec![
             format!("world_address = '{:#x}'", self.world_address),
             format!("world_class_hash = '{:#x}'", manifest.world.class_hash),
@@ -137,7 +107,7 @@ impl State for Sql {
         self.execute().await
     }
 
-    async fn head(&self) -> Result<u64> {
+    pub async fn head(&self) -> Result<u64> {
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
         let indexer: (i64,) = sqlx::query_as(&format!(
             "SELECT head FROM indexers WHERE id = '{:#x}'",
@@ -148,7 +118,7 @@ impl State for Sql {
         Ok(indexer.0.try_into().expect("doesnt fit in u64"))
     }
 
-    async fn set_head(&self, head: u64) -> Result<()> {
+    pub async fn set_head(&self, head: u64) -> Result<()> {
         self.queue(vec![format!(
             "UPDATE indexers SET head = {head} WHERE id = '{:#x}'",
             self.world_address
@@ -157,7 +127,7 @@ impl State for Sql {
         Ok(())
     }
 
-    async fn world(&self) -> Result<World> {
+    pub async fn world(&self) -> Result<World> {
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
         let meta: World =
             sqlx::query_as(&format!("SELECT * FROM worlds WHERE id = '{:#x}'", self.world_address))
@@ -167,7 +137,7 @@ impl State for Sql {
         Ok(meta)
     }
 
-    async fn set_world(&self, world: World) -> Result<()> {
+    pub async fn set_world(&self, world: World) -> Result<()> {
         self.queue(vec![format!(
             "UPDATE worlds SET world_address='{:#x}', world_class_hash='{:#x}', \
              executor_address='{:#x}', executor_class_hash='{:#x}' WHERE id = '{:#x}'",
@@ -181,7 +151,7 @@ impl State for Sql {
         Ok(())
     }
 
-    async fn register_component(&self, component: Component) -> Result<()> {
+    pub async fn register_component(&self, component: Component) -> Result<()> {
         let mut sql_types = self.sql_types.lock().await;
 
         let component_id = component.name.to_lowercase();
@@ -245,7 +215,7 @@ impl State for Sql {
         Ok(())
     }
 
-    async fn register_system(&self, system: System) -> Result<()> {
+    pub async fn register_system(&self, system: System) -> Result<()> {
         let query = format!(
             "INSERT INTO systems (id, name, class_hash) VALUES ('{}', '{}', '{:#x}') ON \
              CONFLICT(id) DO UPDATE SET class_hash='{:#x}'",
@@ -258,7 +228,7 @@ impl State for Sql {
         Ok(())
     }
 
-    async fn set_entity(
+    pub async fn set_entity(
         &self,
         component: String,
         keys: Vec<FieldElement>,
@@ -270,10 +240,10 @@ impl State for Sql {
             .fetch_optional(&self.pool)
             .await?;
 
-        let keys_str = keys.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join("/");
-        let component_names = component_names(entity_result, &component)?;
+        let keys_str = felts_sql_string(&keys);
+        let component_names = component_names_sql_string(entity_result, &component)?;
         let insert_entities = format!(
-            "INSERT INTO entities (id, keys, component_names) VALUES ('{}', '{}/', '{}') ON \
+            "INSERT INTO entities (id, keys, component_names) VALUES ('{}', '{}', '{}') ON \
              CONFLICT(id) DO UPDATE SET
              component_names=excluded.component_names, 
              updated_at=CURRENT_TIMESTAMP",
@@ -292,8 +262,9 @@ impl State for Sql {
         member_values.extend(values);
 
         let sql_types = self.sql_types.lock().await;
-        let (names_str, values_str) =
-            format_values(member_names_result, member_values, &sql_types)?;
+        let names_str = members_sql_string(&member_names_result)?;
+        let values_str = values_sql_string(&member_names_result, &member_values, &sql_types)?;
+
         let insert_components = format!(
             "INSERT OR REPLACE INTO external_{} (entity_id {}) VALUES ('{}' {})",
             component.to_lowercase(),
@@ -322,20 +293,20 @@ impl State for Sql {
         Ok(())
     }
 
-    async fn delete_entity(&self, component: String, key: FieldElement) -> Result<()> {
+    pub async fn delete_entity(&self, component: String, key: FieldElement) -> Result<()> {
         let query = format!("DELETE FROM {component} WHERE id = {key}");
         self.queue(vec![query]).await;
         Ok(())
     }
 
-    async fn entity(&self, component: String, key: FieldElement) -> Result<Vec<FieldElement>> {
+    pub async fn entity(&self, component: String, key: FieldElement) -> Result<Vec<FieldElement>> {
         let query = format!("SELECT * FROM {component} WHERE id = {key}");
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
         let row: (i32, String, String) = sqlx::query_as(&query).fetch_one(&mut conn).await?;
         Ok(serde_json::from_str(&row.2).unwrap())
     }
 
-    async fn entities(&self, component: String) -> Result<Vec<Vec<FieldElement>>> {
+    pub async fn entities(&self, component: String) -> Result<Vec<Vec<FieldElement>>> {
         let query = format!("SELECT * FROM {component}");
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
         let mut rows =
@@ -343,7 +314,7 @@ impl State for Sql {
         Ok(rows.drain(..).map(|row| serde_json::from_str(&row.2).unwrap()).collect())
     }
 
-    async fn store_system_call(
+    pub async fn store_system_call(
         &self,
         system: String,
         transaction_hash: FieldElement,
@@ -359,9 +330,59 @@ impl State for Sql {
         self.queue(vec![query]).await;
         Ok(())
     }
+
+    pub async fn store_event(
+        &self,
+        event: &Event,
+        event_idx: usize,
+        transaction_hash: FieldElement,
+    ) -> Result<()> {
+        let keys_str = felts_sql_string(&event.keys);
+        let data_str = felts_sql_string(&event.data);
+
+        let id = format!("{:#x}:{}", transaction_hash, event_idx);
+        let query = format!(
+            "INSERT OR IGNORE INTO events (id, keys, data, transaction_hash) VALUES ('{}', '{}', \
+             '{}', '{:#x}')",
+            id, keys_str, data_str, transaction_hash
+        );
+
+        self.queue(vec![query]).await;
+        Ok(())
+    }
 }
 
-fn component_names(entity_result: Option<SqliteRow>, new_component: &str) -> Result<String> {
+#[async_trait]
+impl Executable for Sql {
+    async fn queue(&self, queries: Vec<String>) {
+        let mut query_queue = self.query_queue.lock().await;
+        query_queue.extend(queries);
+    }
+
+    async fn execute(&self) -> Result<()> {
+        let queries;
+        {
+            let mut query_queue = self.query_queue.lock().await;
+            queries = query_queue.clone();
+            query_queue.clear();
+        }
+
+        let mut tx = self.pool.begin().await?;
+
+        for query in queries {
+            tx.execute(sqlx::query(&query)).await?;
+        }
+
+        tx.commit().await?;
+
+        Ok(())
+    }
+}
+
+fn component_names_sql_string(
+    entity_result: Option<SqliteRow>,
+    new_component: &str,
+) -> Result<String> {
     let component_names = match entity_result {
         Some(entity) => {
             let existing = entity.try_get::<String, &str>("component_names")?;
@@ -377,19 +398,11 @@ fn component_names(entity_result: Option<SqliteRow>, new_component: &str) -> Res
     Ok(component_names)
 }
 
-fn format_values(
-    member_results: Vec<SqliteRow>,
-    values: Vec<FieldElement>,
+fn values_sql_string(
+    member_results: &[SqliteRow],
+    values: &[FieldElement],
     sql_types: &HashMap<String, &str>,
-) -> Result<(String, String)> {
-    let names: Result<Vec<String>> = member_results
-        .iter()
-        .map(|row| {
-            let name = row.try_get::<String, &str>("name")?;
-            Ok(format!(",external_{}", name))
-        })
-        .collect();
-
+) -> Result<String> {
     let types: Result<Vec<String>> =
         member_results.iter().map(|row| Ok(row.try_get::<String, &str>("type")?)).collect();
 
@@ -404,5 +417,21 @@ fn format_values(
         })
         .collect();
 
-    Ok((names?.join(""), values?.join("")))
+    Ok(values?.join(""))
+}
+
+fn members_sql_string(member_results: &[SqliteRow]) -> Result<String> {
+    let names: Result<Vec<String>> = member_results
+        .iter()
+        .map(|row| {
+            let name = row.try_get::<String, &str>("name")?;
+            Ok(format!(",external_{}", name))
+        })
+        .collect();
+
+    Ok(names?.join(""))
+}
+
+fn felts_sql_string(felts: &[FieldElement]) -> String {
+    felts.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join("/") + "/"
 }
