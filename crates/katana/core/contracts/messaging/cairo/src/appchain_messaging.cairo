@@ -44,9 +44,7 @@ trait IAppchainMessaging<T> {
     /// This is the traditional consuming as done on ethereum.
     /// Returnes the message hash on success.
     fn consume_message_from_appchain(
-        ref self: T,
-        from_address: starknet::ContractAddress,
-        payload: Span<felt252>,
+        ref self: T, from_address: starknet::ContractAddress, payload: Span<felt252>,
     ) -> felt252;
 
     /// Executes a message sent from the appchain. A message to execute
@@ -146,9 +144,7 @@ mod appchain_messaging {
 
     #[constructor]
     fn constructor(
-        ref self: ContractState,
-        owner: ContractAddress,
-        appchain_account: ContractAddress,
+        ref self: ContractState, owner: ContractAddress, appchain_account: ContractAddress,
     ) {
         self.owner.write(owner);
         self.appchain_account.write(appchain_account);
@@ -178,14 +174,10 @@ mod appchain_messaging {
     /// Computes message hash to consume messages from appchain.
     /// starknet_keccak(from_address, to_address, payload_len, payload).
     fn compute_hash_appc_to_sn(
-        from_address: ContractAddress,
-        to_address: ContractAddress,
-        payload: Span<felt252>
+        from_address: ContractAddress, to_address: ContractAddress, payload: Span<felt252>
     ) -> felt252 {
         let mut hash_data: Array<felt252> = array![
-            from_address.into(),
-            to_address.into(),
-            payload.len().into(),
+            from_address.into(), to_address.into(), payload.len().into(),
         ];
 
         let mut i = 0_usize;
@@ -203,16 +195,9 @@ mod appchain_messaging {
     /// Computes message hash to send messages to appchain.
     /// starknet_keccak(nonce, to_address, selector, payload).
     fn compute_hash_sn_to_appc(
-        nonce: felt252,
-        to_address: ContractAddress,
-        selector: felt252,
-        payload: Span<felt252>
+        nonce: felt252, to_address: ContractAddress, selector: felt252, payload: Span<felt252>
     ) -> felt252 {
-        let mut hash_data = array![
-            nonce,
-            to_address.into(),
-            selector,
-        ];
+        let mut hash_data = array![nonce, to_address.into(), selector,];
 
         let mut i = 0_usize;
         loop {
@@ -230,8 +215,7 @@ mod appchain_messaging {
     impl AppchainMessagingUpgradeImpl of IUpgradeable<ContractState> {
         fn upgrade(ref self: ContractState, class_hash: ClassHash) {
             assert(
-                starknet::get_caller_address() == self.owner.read(),
-                'Unauthorized replace class'
+                starknet::get_caller_address() == self.owner.read(), 'Unauthorized replace class'
             );
 
             match starknet::replace_class_syscall(class_hash) {
@@ -243,11 +227,10 @@ mod appchain_messaging {
 
     #[external(v0)]
     impl AppchainMessagingImpl of IAppchainMessaging<ContractState> {
-        fn update_appchain_account_address(ref self: ContractState, appchain_address: ContractAddress) {
-            assert(
-                starknet::get_caller_address() == self.owner.read(),
-                'Unauthorized update'
-            );
+        fn update_appchain_account_address(
+            ref self: ContractState, appchain_address: ContractAddress
+        ) {
+            assert(starknet::get_caller_address() == self.owner.read(), 'Unauthorized update');
 
             self.appchain_account.write(appchain_address);
         }
@@ -263,20 +246,25 @@ mod appchain_messaging {
 
             let msg_hash = compute_hash_sn_to_appc(nonce, to_address, selector, payload);
 
-            self.emit(MessageSentToAppchain {
-                message_hash: msg_hash,
-                from: starknet::get_caller_address(),
-                to: to_address,
-                selector,
-                nonce,
-                payload,
-            });
+            self
+                .emit(
+                    MessageSentToAppchain {
+                        message_hash: msg_hash,
+                        from: starknet::get_caller_address(),
+                        to: to_address,
+                        selector,
+                        nonce,
+                        payload,
+                    }
+                );
 
             self.sn_to_appc_messages.write(msg_hash, nonce);
             (msg_hash, nonce)
         }
 
-        fn add_messages_hashes_from_appchain(ref self: ContractState, messages_hashes: Span<felt252>) {
+        fn add_messages_hashes_from_appchain(
+            ref self: ContractState, messages_hashes: Span<felt252>
+        ) {
             assert(
                 self.appchain_account.read() == starknet::get_caller_address(),
                 'Unauthorized hashes registrar',
@@ -300,9 +288,7 @@ mod appchain_messaging {
         }
 
         fn consume_message_from_appchain(
-            ref self: ContractState,
-            from_address: ContractAddress,
-            payload: Span<felt252>
+            ref self: ContractState, from_address: ContractAddress, payload: Span<felt252>
         ) -> felt252 {
             let to_address = starknet::get_caller_address();
 
@@ -311,12 +297,12 @@ mod appchain_messaging {
             let count = self.appc_to_sn_messages.read(msg_hash);
             assert(count.is_non_zero(), 'INVALID_MESSAGE_TO_CONSUME');
 
-            self.emit(MessageConsumed {
-                message_hash: msg_hash,
-                from: from_address,
-                to: to_address,
-                payload,
-            });
+            self
+                .emit(
+                    MessageConsumed {
+                        message_hash: msg_hash, from: from_address, to: to_address, payload,
+                    }
+                );
 
             self.appc_to_sn_messages.write(msg_hash, count - 1);
 
@@ -336,17 +322,12 @@ mod appchain_messaging {
             );
 
             match starknet::call_contract_syscall(to_address, selector, payload) {
-                Result::Ok(span) => self.emit(MessageExecuted {
-                    from_address,
-                    to_address,
-                    selector,
-                    payload,
-                }),
+                Result::Ok(span) => self
+                    .emit(MessageExecuted { from_address, to_address, selector, payload, }),
                 Result::Err(e) => {
                     panic(e)
                 }
             }
         }
-
     }
 }

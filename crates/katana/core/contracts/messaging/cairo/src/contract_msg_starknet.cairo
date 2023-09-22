@@ -34,11 +34,7 @@ trait IContractAppchain<T> {
     /// * `to_address` - Contract address on Starknet.
     /// * `selector` - Selector.
     /// * `value` - Value to be sent as argument to the contract being executed on starknet.
-    fn execute_message(
-        ref self: T,
-        to_address: ContractAddress,
-        selector: felt252,
-        value: felt252);
+    fn execute_message(ref self: T, to_address: ContractAddress, selector: felt252, value: felt252);
 }
 
 #[starknet::contract]
@@ -67,24 +63,16 @@ mod contract_msg_starknet {
 
     #[external(v0)]
     impl ContractAppChainImpl of IContractAppchain<ContractState> {
-        fn send_message(
-            ref self: ContractState,
-            to_address: ContractAddress,
-            value: felt252
-        ) {
+        fn send_message(ref self: ContractState, to_address: ContractAddress, value: felt252) {
             let buf: Array<felt252> = array![to_address.into(), value];
             starknet::send_message_to_l1_syscall('MSG', buf.span()).unwrap_syscall();
         }
 
         fn execute_message(
-            ref self: ContractState,
-            to_address: ContractAddress,
-            selector: felt252,
-            value: felt252,
+            ref self: ContractState, to_address: ContractAddress, selector: felt252, value: felt252,
         ) {
             let buf: Array<felt252> = array![to_address.into(), selector, value];
             starknet::send_message_to_l1_syscall('EXE', buf.span()).unwrap_syscall();
         }
-
     }
 }

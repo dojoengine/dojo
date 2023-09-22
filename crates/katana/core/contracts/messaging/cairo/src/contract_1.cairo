@@ -4,8 +4,7 @@
 mod contract_1 {
     use starknet::ContractAddress;
     use katana_messaging::appchain_messaging::{
-        IAppchainMessagingDispatcher,
-        IAppchainMessagingDispatcherTrait,
+        IAppchainMessagingDispatcher, IAppchainMessagingDispatcherTrait,
     };
 
     #[storage]
@@ -15,38 +14,26 @@ mod contract_1 {
     }
 
     #[constructor]
-    fn constructor(
-        ref self: ContractState,
-        messaging_contract: ContractAddress,
-    ) {
+    fn constructor(ref self: ContractState, messaging_contract: ContractAddress,) {
         self.messaging_contract.write(messaging_contract);
     }
 
     /// Sends a message with the given value.
     #[external(v0)]
     fn send_message(
-        ref self: ContractState,
-        to_address: ContractAddress,
-        selector: felt252,
-        value: felt252,
+        ref self: ContractState, to_address: ContractAddress, selector: felt252, value: felt252,
     ) {
         let messaging = IAppchainMessagingDispatcher {
             contract_address: self.messaging_contract.read()
         };
 
-        messaging.send_message_to_appchain(
-            to_address,
-            selector,
-            array![value].span(),
-        );
+        messaging.send_message_to_appchain(to_address, selector, array![value].span(),);
     }
 
     /// Consume a message registered by the appchain.
     #[external(v0)]
     fn consume_message(
-        ref self: ContractState,
-        from_address: ContractAddress,
-        payload: Span<felt252>,
+        ref self: ContractState, from_address: ContractAddress, payload: Span<felt252>,
     ) {
         let messaging = IAppchainMessagingDispatcher {
             contract_address: self.messaging_contract.read()
@@ -54,13 +41,9 @@ mod contract_1 {
 
         // Will revert in case of failure if the message is not registered
         // as consumable.
-        let msg_hash = messaging.consume_message_from_appchain(
-            from_address,
-            payload,
-        );
-
-        // msg successfully consumed, we can proceed and process the data
-        // in the payload.
+        let msg_hash = messaging.consume_message_from_appchain(from_address, payload,);
+    // msg successfully consumed, we can proceed and process the data
+    // in the payload.
     }
 
     /// An example function to test how appchain contract can trigger
