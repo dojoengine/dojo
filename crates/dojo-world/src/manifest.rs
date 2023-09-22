@@ -52,7 +52,7 @@ pub struct Member {
 /// Represents a declaration of a component.
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
-pub struct Component {
+pub struct Model {
     pub name: String,
     pub members: Vec<Member>,
     #[serde_as(as = "UfeHex")]
@@ -106,7 +106,7 @@ pub struct Manifest {
     pub executor: Contract,
     pub systems: Vec<System>,
     pub contracts: Vec<Contract>,
-    pub components: Vec<Component>,
+    pub components: Vec<Model>,
 }
 
 impl Manifest {
@@ -180,7 +180,7 @@ impl Manifest {
                     .await
                     .map_err(ManifestError::Provider)?;
 
-                components.push(Component {
+                components.push(Model {
                     name: component.name.clone(),
                     class_hash: result[0],
                     ..Default::default()

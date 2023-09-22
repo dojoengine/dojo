@@ -28,8 +28,8 @@ use crate::utils::extract_value::extract;
 const BOOLEAN_TRUE: i64 = 1;
 
 #[derive(FromRow, Deserialize)]
-pub struct ComponentMembers {
-    pub component_id: String,
+pub struct ModelMembers {
+    pub model_id: String,
     pub name: String,
     #[serde(rename = "type")]
     pub ty: String,
@@ -37,7 +37,7 @@ pub struct ComponentMembers {
     pub created_at: DateTime<Utc>,
 }
 
-pub struct ComponentStateObject {
+pub struct ModelStateObject {
     pub name: String,
     pub type_name: String,
     pub type_mapping: TypeMapping,
@@ -45,7 +45,7 @@ pub struct ComponentStateObject {
     pub order_input: OrderInputObject,
 }
 
-impl ComponentStateObject {
+impl ModelStateObject {
     pub fn new(name: String, type_name: String, type_mapping: TypeMapping) -> Self {
         let where_input = WhereInputObject::new(type_name.as_str(), &type_mapping);
         let order_input = OrderInputObject::new(type_name.as_str(), &type_mapping);
@@ -53,7 +53,7 @@ impl ComponentStateObject {
     }
 }
 
-impl ObjectTrait for ComponentStateObject {
+impl ObjectTrait for ModelStateObject {
     fn name(&self) -> &str {
         &self.name
     }
@@ -62,12 +62,12 @@ impl ObjectTrait for ComponentStateObject {
         &self.type_name
     }
 
-    // Type mapping contains all component members and their corresponding type
+    // Type mapping contains all model members and their corresponding type
     fn type_mapping(&self) -> &TypeMapping {
         &self.type_mapping
     }
 
-    // Associate component to its parent entity
+    // Associate model to its parent entity
     fn nested_fields(&self) -> Option<Vec<Field>> {
         Some(vec![entity_field()])
     }
@@ -84,7 +84,7 @@ impl ObjectTrait for ComponentStateObject {
         let name = self.name.clone();
         let type_mapping = self.type_mapping.clone();
         let where_mapping = self.where_input.type_mapping.clone();
-        let field_name = format!("{}Components", self.name());
+        let field_name = format!("{}Models", self.name());
         let field_type = format!("{}Connection", self.type_name());
 
         let mut field = Field::new(field_name, TypeRef::named(field_type), move |ctx| {
@@ -99,10 +99,10 @@ impl ObjectTrait for ComponentStateObject {
                 let filters = parse_where_argument(&ctx, &where_mapping)?;
                 let connection = parse_connection_arguments(&ctx)?;
                 let data =
-                    component_states_query(&mut conn, &table_name, &order, &filters, &connection)
+                    model_states_query(&mut conn, &table_name, &order, &filters, &connection)
                         .await?;
                 let total_count = query_total_count(&mut conn, &table_name, &filters).await?;
-                let connection = component_connection(&data, &type_mapping, total_count)?;
+                let connection = model_connection(&data, &type_mapping, total_count)?;
 
                 Ok(Some(Value::Object(connection)))
             })
@@ -135,7 +135,7 @@ fn entity_field() -> Field {
     })
 }
 
-pub async fn component_state_by_id_query(
+pub async fn model_state_by_id_query(
     conn: &mut PoolConnection<Sqlite>,
     name: &str,
     id: &str,
@@ -148,7 +148,7 @@ pub async fn component_state_by_id_query(
     value_mapping_from_row(&row, fields)
 }
 
-pub async fn component_states_query(
+pub async fn model_states_query(
     conn: &mut PoolConnection<Sqlite>,
     table_name: &str,
     order: &Option<Order>,
@@ -216,14 +216,14 @@ pub async fn component_states_query(
     sqlx::query(&query).fetch_all(conn).await
 }
 
-// TODO: make `connection_output()` more generic. Currently, `component_connection()` method
+// TODO: make `connection_output()` more generic. Currently, `model_connection()` method
 // required as we need to explicity add `entity_id` to each edge.
-pub fn component_connection(
+pub fn model_connection(
     data: &[SqliteRow],
     types: &TypeMapping,
     total_count: i64,
 ) -> sqlx::Result<ValueMapping> {
-    let component_edges = data
+    let model_edges = data
         .iter()
         .map(|row| {
             // entity_id and created_at used to create cursor
@@ -245,7 +245,7 @@ pub fn component_connection(
 
     Ok(ValueMapping::from([
         (Name::new("totalCount"), Value::from(total_count)),
-        (Name::new("edges"), Value::List(component_edges?)),
+        (Name::new("edges"), Value::List(model_edges?)),
         // TODO: add pageInfo
     ]))
 }
@@ -282,25 +282,25 @@ fn fetch_boolean(row: &SqliteRow, column_name: &str) -> sqlx::Result<Value> {
 
 pub async fn type_mapping_query(
     conn: &mut PoolConnection<Sqlite>,
-    component_id: &str,
+    model_id: &str,
 ) -> sqlx::Result<TypeMapping> {
-    let component_members: Vec<ComponentMembers> = sqlx::query_as(
+    let model_members: Vec<ModelMembers> = sqlx::query_as(
         r#"
                 SELECT 
-                    component_id,
+                    model_id,
                     name,
                     type AS ty,
                     key,
                     created_at
-                FROM component_members WHERE component_id = ?
+                FROM model_members WHERE model_id = ?
             "#,
     )
-    .bind(component_id)
+    .bind(model_id)
     .fetch_all(conn)
     .await?;
 
     let mut type_mapping = TypeMapping::new();
-    for member in component_members {
+    for member in model_members {
         type_mapping.insert(Name::new(member.name), TypeRef::named(member.ty));
     }
 

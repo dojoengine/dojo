@@ -3,7 +3,7 @@ mod tests {
     use std::time::Duration;
 
     use async_graphql::value;
-    use dojo_world::manifest::{Component, Member};
+    use dojo_world::manifest::{Member, Model};
     use sqlx::SqlitePool;
     use starknet_crypto::{poseidon_hash_many, FieldElement};
     use tokio::sync::mpsc;
@@ -21,7 +21,7 @@ mod tests {
         let entity_id = format!("{:#x}", poseidon_hash_many(&key));
         let keys_str = key.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join(",");
         let expected_value: async_graphql::Value = value!({
-                            "entityUpdated": { "id": entity_id.clone(), "keys":vec![keys_str.clone()], "componentNames": "Moves" }
+                            "entityUpdated": { "id": entity_id.clone(), "keys":vec![keys_str.clone()], "modelNames": "Moves" }
         });
         let (tx, mut rx) = mpsc::channel(10);
 
@@ -29,7 +29,7 @@ mod tests {
             // 1. Open process and sleep.Go to execute subscription
             tokio::time::sleep(Duration::from_secs(1)).await;
 
-            // Set entity with one moves component
+            // Set entity with one moves model
             // remaining: 10, last_direction: 0
             let moves_values = vec![FieldElement::from_hex_be("0xa").unwrap(), FieldElement::ZERO];
             state.set_entity("Moves".to_string(), key, moves_values).await.unwrap();
@@ -44,7 +44,7 @@ mod tests {
             r#"
           subscription {
               entityUpdated {
-                  id, keys, componentNames
+                  id, keys, modelNames
               }
           }"#,
         )
@@ -65,7 +65,7 @@ mod tests {
         let entity_id = format!("{:#x}", poseidon_hash_many(&key));
         let keys_str = key.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join(",");
         let expected_value: async_graphql::Value = value!({
-                                                "entityUpdated": { "id": entity_id.clone(), "keys":vec![keys_str.clone()], "componentNames": "Moves" }
+                                                "entityUpdated": { "id": entity_id.clone(), "keys":vec![keys_str.clone()], "modelNames": "Moves" }
         });
         let (tx, mut rx) = mpsc::channel(10);
 
@@ -73,7 +73,7 @@ mod tests {
             // 1. Open process and sleep.Go to execute subscription
             tokio::time::sleep(Duration::from_secs(1)).await;
 
-            // Set entity with one moves component
+            // Set entity with one moves model
             // remaining: 10, last_direction: 0
             let moves_values = vec![FieldElement::from_hex_be("0xa").unwrap(), FieldElement::ZERO];
             state.set_entity("Moves".to_string(), key, moves_values).await.unwrap();
@@ -88,7 +88,7 @@ mod tests {
             r#"
 				subscription {
 						entityUpdated(id: "0x579e8877c7755365d5ec1ec7d3a94a457eff5d1f40482bbe9729c064cdead2") {
-								id, keys, componentNames
+								id, keys, modelNames
 						}
 				}"#,
         )
@@ -100,18 +100,18 @@ mod tests {
     }
 
     #[sqlx::test(migrations = "../migrations")]
-    async fn test_component_subscription(pool: SqlitePool) {
+    async fn test_model_subscription(pool: SqlitePool) {
         // Sleep in order to run this test at the end in a single thread
         tokio::time::sleep(Duration::from_secs(2)).await;
 
         let state = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
-        // 0. Preprocess component value
+        // 0. Preprocess model value
         let name = "Test".to_string();
-        let component_id = name.to_lowercase();
+        let model_id = name.to_lowercase();
         let class_hash = FieldElement::TWO;
         let hex_class_hash = format!("{:#x}", class_hash);
         let expected_value: async_graphql::Value = value!({
-         "componentRegistered": { "id": component_id.clone(), "name":name, "classHash": hex_class_hash }
+         "modelRegistered": { "id": model_id.clone(), "name":name, "classHash": hex_class_hash }
         });
         let (tx, mut rx) = mpsc::channel(7);
 
@@ -119,13 +119,13 @@ mod tests {
             // 1. Open process and sleep.Go to execute subscription
             tokio::time::sleep(Duration::from_secs(1)).await;
 
-            let component = Component {
+            let model = Model {
                 name,
                 members: vec![Member { name: "test".into(), ty: "u32".into(), key: false }],
                 class_hash,
                 ..Default::default()
             };
-            state.register_component(component).await.unwrap();
+            state.register_model(model).await.unwrap();
             // 3. fn publish() is called from state.set_entity()
 
             tx.send(()).await.unwrap();
@@ -136,7 +136,7 @@ mod tests {
             &pool,
             r#"
             subscription {
-                componentRegistered {
+                modelRegistered {
                         id, name, classHash
                     }
             }"#,
@@ -149,18 +149,18 @@ mod tests {
     }
 
     #[sqlx::test(migrations = "../migrations")]
-    async fn test_component_subscription_with_id(pool: SqlitePool) {
+    async fn test_model_subscription_with_id(pool: SqlitePool) {
         // Sleep in order to run this test at the end in a single thread
         tokio::time::sleep(Duration::from_secs(2)).await;
 
         let state = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
-        // 0. Preprocess component value
+        // 0. Preprocess model value
         let name = "Test".to_string();
-        let component_id = name.to_lowercase();
+        let model_id = name.to_lowercase();
         let class_hash = FieldElement::TWO;
         let hex_class_hash = format!("{:#x}", class_hash);
         let expected_value: async_graphql::Value = value!({
-         "componentRegistered": { "id": component_id.clone(), "name":name, "classHash": hex_class_hash }
+         "modelRegistered": { "id": model_id.clone(), "name":name, "classHash": hex_class_hash }
         });
         let (tx, mut rx) = mpsc::channel(7);
 
@@ -168,13 +168,13 @@ mod tests {
             // 1. Open process and sleep.Go to execute subscription
             tokio::time::sleep(Duration::from_secs(1)).await;
 
-            let component = Component {
+            let model = Model {
                 name,
                 members: vec![Member { name: "test".into(), ty: "u32".into(), key: false }],
                 class_hash,
                 ..Default::default()
             };
-            state.register_component(component).await.unwrap();
+            state.register_model(model).await.unwrap();
             // 3. fn publish() is called from state.set_entity()
 
             tx.send(()).await.unwrap();
@@ -185,7 +185,7 @@ mod tests {
             &pool,
             r#"
             subscription {
-                componentRegistered(id: "test") {
+                modelRegistered(id: "test") {
                         id, name, classHash
                     }
             }"#,

@@ -6,7 +6,7 @@ use indexmap::IndexMap;
 use sqlx::{Pool, Sqlite};
 use tokio_stream::StreamExt;
 use torii_core::simple_broker::SimpleBroker;
-use torii_core::types::Component;
+use torii_core::types::Model;
 
 use super::connection::connection_output;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
@@ -14,12 +14,12 @@ use crate::constants::DEFAULT_LIMIT;
 use crate::query::{query_all, query_by_id, query_total_count, ID};
 use crate::types::ScalarType;
 
-pub struct ComponentObject {
+pub struct ModelObject {
     pub type_mapping: TypeMapping,
 }
 
-impl Default for ComponentObject {
-    // Eventually used for component metadata
+impl Default for ModelObject {
+    // Eventually used for model metadata
     fn default() -> Self {
         Self {
             type_mapping: IndexMap::from([
@@ -32,28 +32,28 @@ impl Default for ComponentObject {
         }
     }
 }
-impl ComponentObject {
-    pub fn value_mapping(component: Component) -> ValueMapping {
+impl ModelObject {
+    pub fn value_mapping(model: Model) -> ValueMapping {
         IndexMap::from([
-            (Name::new("id"), Value::from(component.id)),
-            (Name::new("name"), Value::from(component.name)),
-            (Name::new("classHash"), Value::from(component.class_hash)),
-            (Name::new("transactionHash"), Value::from(component.transaction_hash)),
+            (Name::new("id"), Value::from(model.id)),
+            (Name::new("name"), Value::from(model.name)),
+            (Name::new("classHash"), Value::from(model.class_hash)),
+            (Name::new("transactionHash"), Value::from(model.transaction_hash)),
             (
                 Name::new("createdAt"),
-                Value::from(component.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
+                Value::from(model.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
             ),
         ])
     }
 }
 
-impl ObjectTrait for ComponentObject {
+impl ObjectTrait for ModelObject {
     fn name(&self) -> &str {
-        "component"
+        "model"
     }
 
     fn type_name(&self) -> &str {
-        "Component"
+        "Model"
     }
 
     fn type_mapping(&self) -> &TypeMapping {
@@ -66,8 +66,8 @@ impl ObjectTrait for ComponentObject {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                     let id = ctx.args.try_get("id")?.string()?.to_string();
-                    let component = query_by_id(&mut conn, "components", ID::Str(id)).await?;
-                    let result = ComponentObject::value_mapping(component);
+                    let model = query_by_id(&mut conn, "models", ID::Str(id)).await?;
+                    let result = ModelObject::value_mapping(model);
                     Ok(Some(Value::Object(result)))
                 })
             })
@@ -77,19 +77,17 @@ impl ObjectTrait for ComponentObject {
 
     fn resolve_many(&self) -> Option<Field> {
         Some(Field::new(
-            "components",
+            "models",
             TypeRef::named(format!("{}Connection", self.type_name())),
             |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let total_count =
-                        query_total_count(&mut conn, "components", &Vec::new()).await?;
-                    let data: Vec<Component> =
-                        query_all(&mut conn, "components", DEFAULT_LIMIT).await?;
-                    let components: Vec<ValueMapping> =
-                        data.into_iter().map(ComponentObject::value_mapping).collect();
+                    let total_count = query_total_count(&mut conn, "models", &Vec::new()).await?;
+                    let data: Vec<Model> = query_all(&mut conn, "models", DEFAULT_LIMIT).await?;
+                    let models: Vec<ValueMapping> =
+                        data.into_iter().map(ModelObject::value_mapping).collect();
 
-                    Ok(Some(Value::Object(connection_output(components, total_count))))
+                    Ok(Some(Value::Object(connection_output(models, total_count))))
                 })
             },
         ))
@@ -105,20 +103,16 @@ impl ObjectTrait for ComponentObject {
                             Some(id) => Some(id.string()?.to_string()),
                             None => None,
                         };
-                        // if id is None, then subscribe to all components
-                        // if id is Some, then subscribe to only the component with that id
-                        Ok(SimpleBroker::<Component>::subscribe().filter_map(
-                            move |component: Component| {
-                                if id.is_none() || id == Some(component.id.clone()) {
-                                    Some(Ok(Value::Object(ComponentObject::value_mapping(
-                                        component,
-                                    ))))
-                                } else {
-                                    // id != component.id, so don't send anything, still listening
-                                    None
-                                }
-                            },
-                        ))
+                        // if id is None, then subscribe to all models
+                        // if id is Some, then subscribe to only the model with that id
+                        Ok(SimpleBroker::<Model>::subscribe().filter_map(move |model: Model| {
+                            if id.is_none() || id == Some(model.id.clone()) {
+                                Some(Ok(Value::Object(ModelObject::value_mapping(model))))
+                            } else {
+                                // id != model.id, so don't send anything, still listening
+                                None
+                            }
+                        }))
                     })
                 }
             })

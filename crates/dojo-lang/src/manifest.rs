@@ -87,7 +87,7 @@ impl Manifest {
     }
 
     /// Finds the inline modules annotated as components in the given crate_ids and
-    /// returns the corresponding Components.
+    /// returns the corresponding Models.
     fn find_components(
         &mut self,
         db: &dyn SemanticGroup,
@@ -108,7 +108,7 @@ impl Manifest {
                     .with_context(|| format!("Component {name} not found in target."))
                     .unwrap();
 
-                self.0.components.push(dojo_world::manifest::Component {
+                self.0.components.push(dojo_world::manifest::Model {
                     name: component.name,
                     members: component.members,
                     class_hash: *class_hash,

@@ -6,7 +6,7 @@ use torii_client::contract::world::WorldContractReader;
 
 use crate::sql::Sql;
 
-pub mod register_component;
+pub mod register_model;
 pub mod register_system;
 pub mod store_set_record;
 pub mod store_system_call;

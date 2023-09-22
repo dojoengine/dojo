@@ -1,9 +1,9 @@
-pub mod component;
-pub mod component_state;
 pub mod connection;
 pub mod entity;
 pub mod event;
 pub mod inputs;
+pub mod model;
+pub mod model_state;
 pub mod system;
 pub mod system_call;
 
