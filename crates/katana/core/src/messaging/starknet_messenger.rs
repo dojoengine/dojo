@@ -306,7 +306,7 @@ impl Messenger for StarknetMessenger {
 }
 
 fn l1_handler_tx_from_event(event: &EmittedEvent) -> Result<L1HandlerTransaction> {
-    // TODO: replace by the topic in the filter instead of having hard coded here.
+    // TODO: replace by the keys directly in the configuration.
     if event.keys[0] != selector!("MessageSentToAppchain") {
         debug!(
             target: MSGING_TARGET,
@@ -353,7 +353,7 @@ fn l1_handler_tx_from_event(event: &EmittedEvent) -> Result<L1HandlerTransaction
             calldata,
         },
         // TODO: fee is missing in the event, is this default value ok as it's the minimum one
-        // expected on L1 usually.
+        // expected on L1 usually, or should we put max value here?
         paid_l1_fee: 30000_u128,
     };
 

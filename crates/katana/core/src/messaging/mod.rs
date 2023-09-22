@@ -17,7 +17,7 @@ use serde::Deserialize;
 use starknet::core::types::MsgToL1;
 use starknet_messenger::StarknetMessenger;
 use tokio::sync::RwLock as AsyncRwLock;
-use tracing::{error, info, trace};
+use tracing::{error, info};
 
 use crate::backend::storage::transaction::L1HandlerTransaction;
 
@@ -102,8 +102,6 @@ pub enum AnyMessenger {
 
 impl AnyMessenger {
     pub async fn from_file(file_path: &PathBuf) -> MessengerResult<Self> {
-        // TODO: Is that ok to panic here, as we don't want to continue with an invalid
-        // configuration?
         let mut file = File::open(file_path).expect("Messaging config file error");
         let mut json_string = String::new();
         file.read_to_string(&mut json_string).expect("Messaging config file read error");
@@ -115,27 +113,27 @@ impl AnyMessenger {
     }
 
     pub async fn from_config(config: MessagingConfig) -> MessengerResult<Self> {
-        // TODO: instead of trying the init of both, how can we easily
-        // determine the chain from the config? Messaging contract address size?
-        match EthereumMessenger::new(config.clone()).await {
-            Ok(m_eth) => {
-                info!(MSGING_TARGET, "Messaging enabled [Ethereum]");
-                Ok(AnyMessenger::Ethereum(m_eth))
+        if config.contract_address.len() < 50 {
+            match EthereumMessenger::new(config.clone()).await {
+                Ok(m_eth) => {
+                    info!(MSGING_TARGET, "Messaging enabled [Ethereum]");
+                    Ok(AnyMessenger::Ethereum(m_eth))
+                }
+                Err(e_eth) => {
+                    error!("Ethereum messenger init failed: {:?}", e_eth);
+                    Err(MessengerError::InitError)
+                }
             }
-            Err(e_eth) => {
-                trace!(target: MSGING_TARGET,
-                       "Ethereum messenger init failed: {:?}", e_eth);
-                match StarknetMessenger::new(config.clone()).await {
-                    Ok(m_sn) => {
-                        info!(target: MSGING_TARGET,
-                              "Messaging enabled [Starknet]");
-                        Ok(AnyMessenger::Starknet(m_sn))
-                    }
-                    Err(e_sn) => {
-                        trace!(target: MSGING_TARGET,
-                               "Starknet messenger init failed: {:?}", e_sn);
-                        Err(MessengerError::InitError)
-                    }
+        } else {
+            match StarknetMessenger::new(config.clone()).await {
+                Ok(m_sn) => {
+                    info!(target: MSGING_TARGET, "Messaging enabled [Starknet]");
+                    Ok(AnyMessenger::Starknet(m_sn))
+                }
+                Err(e_sn) => {
+                    error!(target: MSGING_TARGET,
+                           "Starknet messenger init failed: {:?}", e_sn);
+                    Err(MessengerError::InitError)
                 }
             }
         }

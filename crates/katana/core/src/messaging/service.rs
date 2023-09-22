@@ -60,7 +60,8 @@ impl Future for MessageService {
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let pin = self.get_mut();
 
-        // TODO: is that ok or there are side effects?
+        // TODO: I'm a not sure if it's the right approach to have the two polled
+        // continuously.
         while let Poll::Ready(Some(_)) = pin.settler.poll_next_unpin(cx) {}
         while let Poll::Ready(Some(_)) = pin.gatherer.poll_next_unpin(cx) {}
 
@@ -103,7 +104,8 @@ impl MessageGatherer {
         transaction_pool: Arc<TransactionPool>,
         from_block: u64,
     ) -> u64 {
-        // TODO: 200 avoids any possible rejectiono from RPC. May this be configurable?
+        // 200 avoids any possible rejection from RPC with possibly lot's of messages.
+        // TODO: May this be configurable?
         let max_block = 200;
 
         match messenger.read().await.gather_messages(from_block, max_block).await {
@@ -116,8 +118,7 @@ impl MessageGatherer {
             }
             Err(e) => {
                 error!("Error gathering messages: {:?}", e);
-                // TODO: we don't advance the block to retry at the next tick.
-                //       Should we we skip this block range to continue?
+                // We stay at the same block to retry at next tick.
                 from_block
             }
         }
@@ -133,10 +134,6 @@ impl Stream for MessageGatherer {
         let interval = &mut pin.interval;
 
         if interval.poll_tick(cx).is_ready() && pin.gathering.is_none() {
-            // TODO: kariy, I didn't manage to directly poll the future
-            // of pin.messenger.read().gather_messages, due to
-            // lifecycle error. The code would be simpler as we will avoid the function
-            // above. But I'm not sure how to do it (perhaps not possible due to how RwLock works).
             pin.gathering = Some(Box::pin(Self::gather_messages(
                 pin.messenger.clone(),
                 pin.transaction_pool.clone(),
@@ -183,7 +180,7 @@ impl MessageSettler {
             settling: None,
             // We always start settling messages from the block 0 of Katana
             // in the current implementation.
-            // TODO: Think about state loading, may this be configurable then?
+            // TODO: Think about katana state loading, may this be configurable then?
             local_from_block: 0,
         }
     }
@@ -220,12 +217,6 @@ impl Stream for MessageSettler {
             }
 
             if !messages.is_empty() {
-                // TODO: same thing here, calling the line below causes a drop of
-                // the reference returned by RwLock.read(). Or should I keep
-                // a reference of this value inside the `pin`?
-                // pin.settling =
-                //     Some(Box::pin(Box::new(pin.messenger.read().settle_messages(&messages))));
-
                 pin.settling =
                     Some(Box::pin(Self::settle_messages(pin.messenger.clone(), messages.clone())));
             } else {
@@ -310,7 +301,6 @@ fn trace_msg_to_l1_sent(messages: &Vec<MsgToL1>, hashes: &Vec<String>) {
 }
 
 fn trace_l1_handler_tx_exec(tx: &L1HandlerTransaction) {
-    // TODO: am I missing a simple way to print StarkFelt is hex..?
     let calldata_str: Vec<String> =
         tx.inner.calldata.0.iter().map(|f| format!("{:#x}", FieldElement::from(*f))).collect();
 
