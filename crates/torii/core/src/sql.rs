@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use dojo_world::manifest::{Component, Manifest, System};
+use dojo_world::manifest::{Manifest, Model, System};
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Executor, Pool, Row, Sqlite};
@@ -13,7 +13,7 @@ use tokio::sync::Mutex;
 
 use super::World;
 use crate::simple_broker::SimpleBroker;
-use crate::types::{Component as ComponentType, Entity};
+use crate::types::{Entity, Model as ModelType};
 
 #[cfg(test)]
 #[path = "sql_test.rs"]
@@ -96,8 +96,8 @@ impl Sql {
         )])
         .await;
 
-        for component in manifest.components {
-            self.register_component(component).await?;
+        for model in manifest.components {
+            self.register_model(model).await?;
         }
 
         for system in manifest.systems {
@@ -151,24 +151,24 @@ impl Sql {
         Ok(())
     }
 
-    pub async fn register_component(&self, component: Component) -> Result<()> {
+    pub async fn register_model(&self, model: Model) -> Result<()> {
         let mut sql_types = self.sql_types.lock().await;
 
-        let component_id = component.name.to_lowercase();
+        let model_id = model.name.to_lowercase();
         let mut queries = vec![format!(
-            "INSERT INTO components (id, name, class_hash) VALUES ('{}', '{}', '{:#x}') ON \
+            "INSERT INTO models (id, name, class_hash) VALUES ('{}', '{}', '{:#x}') ON \
              CONFLICT(id) DO UPDATE SET class_hash='{:#x}'",
-            component_id, component.name, component.class_hash, component.class_hash
+            model_id, model.name, model.class_hash, model.class_hash
         )];
 
-        let mut component_table_query = format!(
+        let mut model_table_query = format!(
             "CREATE TABLE IF NOT EXISTS external_{} (entity_id TEXT NOT NULL PRIMARY KEY, ",
-            component.name.to_lowercase()
+            model.name.to_lowercase()
         );
 
-        for member in &component.members {
-            // FIXME: defaults all unknown component types to Enum for now until we support nested
-            // components
+        for member in &model.members {
+            // FIXME: defaults all unknown model types to Enum for now until we support nested
+            // models
             let (sql_type, member_type) = match sql_types.get(&member.ty) {
                 Some(sql_type) => (*sql_type, member.ty.as_str()),
                 None => {
@@ -178,26 +178,26 @@ impl Sql {
             };
 
             queries.push(format!(
-                "INSERT OR IGNORE INTO component_members (component_id, name, type, key) VALUES \
-                 ('{}', '{}', '{}', {})",
-                component_id, member.name, member_type, member.key,
+                "INSERT OR IGNORE INTO model_members (model_id, name, type, key) VALUES ('{}', \
+                 '{}', '{}', {})",
+                model_id, member.name, member_type, member.key,
             ));
 
-            component_table_query.push_str(&format!("external_{} {}, ", member.name, sql_type));
+            model_table_query.push_str(&format!("external_{} {}, ", member.name, sql_type));
         }
 
-        component_table_query.push_str(
+        model_table_query.push_str(
             "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (entity_id) REFERENCES entities(id));",
         );
-        queries.push(component_table_query);
+        queries.push(model_table_query);
 
         self.queue(queries).await;
 
         // Since previous query has not been executed, we have to make sure created_at exists
         let created_at: DateTime<Utc> =
-            match sqlx::query("SELECT created_at FROM components WHERE id = ?")
-                .bind(component_id.clone())
+            match sqlx::query("SELECT created_at FROM models WHERE id = ?")
+                .bind(model_id.clone())
                 .fetch_one(&self.pool)
                 .await
             {
@@ -205,10 +205,10 @@ impl Sql {
                 Err(_) => Utc::now(),
             };
 
-        SimpleBroker::publish(ComponentType {
-            id: component_id,
-            name: component.name,
-            class_hash: format!("{:#x}", component.class_hash),
+        SimpleBroker::publish(ModelType {
+            id: model_id,
+            name: model.name,
+            class_hash: format!("{:#x}", model.class_hash),
             transaction_hash: "0x0".to_string(),
             created_at,
         });
@@ -230,7 +230,7 @@ impl Sql {
 
     pub async fn set_entity(
         &self,
-        component: String,
+        model: String,
         keys: Vec<FieldElement>,
         values: Vec<FieldElement>,
     ) -> Result<()> {
@@ -241,22 +241,22 @@ impl Sql {
             .await?;
 
         let keys_str = felts_sql_string(&keys);
-        let component_names = component_names_sql_string(entity_result, &component)?;
+        let model_names = model_names_sql_string(entity_result, &model)?;
         let insert_entities = format!(
-            "INSERT INTO entities (id, keys, component_names) VALUES ('{}', '{}', '{}') ON \
+            "INSERT INTO entities (id, keys, model_names) VALUES ('{}', '{}', '{}') ON \
              CONFLICT(id) DO UPDATE SET
-             component_names=excluded.component_names, 
+             model_names=excluded.model_names, 
              updated_at=CURRENT_TIMESTAMP",
-            entity_id, keys_str, component_names
+            entity_id, keys_str, model_names
         );
 
         let member_names_result =
-            sqlx::query("SELECT * FROM component_members WHERE component_id = ? ORDER BY id ASC")
-                .bind(component.to_lowercase())
+            sqlx::query("SELECT * FROM model_members WHERE model_id = ? ORDER BY id ASC")
+                .bind(model.to_lowercase())
                 .fetch_all(&self.pool)
                 .await?;
 
-        // keys are part of component members, so combine keys and component values array
+        // keys are part of model members, so combine keys and model values array
         let mut member_values: Vec<FieldElement> = Vec::new();
         member_values.extend(keys);
         member_values.extend(values);
@@ -265,16 +265,16 @@ impl Sql {
         let names_str = members_sql_string(&member_names_result)?;
         let values_str = values_sql_string(&member_names_result, &member_values, &sql_types)?;
 
-        let insert_components = format!(
+        let insert_models = format!(
             "INSERT OR REPLACE INTO external_{} (entity_id {}) VALUES ('{}' {})",
-            component.to_lowercase(),
+            model.to_lowercase(),
             names_str,
             entity_id,
             values_str
         );
 
         // tx commit required
-        self.queue(vec![insert_entities, insert_components]).await;
+        self.queue(vec![insert_entities, insert_models]).await;
         self.execute().await?;
 
         let query_result = sqlx::query("SELECT created_at FROM entities WHERE id = ?")
@@ -286,28 +286,28 @@ impl Sql {
         SimpleBroker::publish(Entity {
             id: entity_id.clone(),
             keys: keys_str,
-            component_names,
+            model_names,
             created_at,
             updated_at: Utc::now(),
         });
         Ok(())
     }
 
-    pub async fn delete_entity(&self, component: String, key: FieldElement) -> Result<()> {
-        let query = format!("DELETE FROM {component} WHERE id = {key}");
+    pub async fn delete_entity(&self, model: String, key: FieldElement) -> Result<()> {
+        let query = format!("DELETE FROM {model} WHERE id = {key}");
         self.queue(vec![query]).await;
         Ok(())
     }
 
-    pub async fn entity(&self, component: String, key: FieldElement) -> Result<Vec<FieldElement>> {
-        let query = format!("SELECT * FROM {component} WHERE id = {key}");
+    pub async fn entity(&self, model: String, key: FieldElement) -> Result<Vec<FieldElement>> {
+        let query = format!("SELECT * FROM {model} WHERE id = {key}");
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
         let row: (i32, String, String) = sqlx::query_as(&query).fetch_one(&mut conn).await?;
         Ok(serde_json::from_str(&row.2).unwrap())
     }
 
-    pub async fn entities(&self, component: String) -> Result<Vec<Vec<FieldElement>>> {
-        let query = format!("SELECT * FROM {component}");
+    pub async fn entities(&self, model: String) -> Result<Vec<Vec<FieldElement>>> {
+        let query = format!("SELECT * FROM {model}");
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
         let mut rows =
             sqlx::query_as::<_, (i32, String, String)>(&query).fetch_all(&mut conn).await?;
@@ -379,23 +379,20 @@ impl Executable for Sql {
     }
 }
 
-fn component_names_sql_string(
-    entity_result: Option<SqliteRow>,
-    new_component: &str,
-) -> Result<String> {
-    let component_names = match entity_result {
+fn model_names_sql_string(entity_result: Option<SqliteRow>, new_model: &str) -> Result<String> {
+    let model_names = match entity_result {
         Some(entity) => {
-            let existing = entity.try_get::<String, &str>("component_names")?;
-            if existing.contains(new_component) {
+            let existing = entity.try_get::<String, &str>("model_names")?;
+            if existing.contains(new_model) {
                 existing
             } else {
-                format!("{},{}", existing, new_component)
+                format!("{},{}", existing, new_model)
             }
         }
-        None => new_component.to_string(),
+        None => new_model.to_string(),
     };
 
-    Ok(component_names)
+    Ok(model_names)
 }
 
 fn values_sql_string(

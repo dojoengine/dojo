@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use camino::Utf8PathBuf;
-use dojo_world::manifest::{Component, Member, System};
+use dojo_world::manifest::{Member, Model, System};
 use sqlx::sqlite::SqlitePool;
 use starknet::core::types::{Event, FieldElement};
 
@@ -18,12 +18,11 @@ async fn test_load_from_manifest(pool: SqlitePool) {
     let state = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
     state.load_from_manifest(manifest.clone()).await.unwrap();
 
-    let components = sqlx::query("SELECT * FROM components").fetch_all(&pool).await.unwrap();
-    assert_eq!(components.len(), 2);
+    let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
+    assert_eq!(models.len(), 2);
 
-    let moves_components =
-        sqlx::query("SELECT * FROM external_moves").fetch_all(&pool).await.unwrap();
-    assert_eq!(moves_components.len(), 0);
+    let moves_models = sqlx::query("SELECT * FROM external_moves").fetch_all(&pool).await.unwrap();
+    assert_eq!(moves_models.len(), 0);
 
     let systems = sqlx::query("SELECT * FROM systems").fetch_all(&pool).await.unwrap();
     assert_eq!(systems.len(), 3);
@@ -52,7 +51,7 @@ async fn test_load_from_manifest(pool: SqlitePool) {
     assert_eq!(head, 1);
 
     state
-        .register_component(Component {
+        .register_model(Model {
             name: "Test".into(),
             members: vec![Member { name: "test".into(), ty: "u32".into(), key: false }],
             class_hash: FieldElement::TWO,
@@ -63,7 +62,7 @@ async fn test_load_from_manifest(pool: SqlitePool) {
     state.execute().await.unwrap();
 
     let (id, name, class_hash): (String, String, String) =
-        sqlx::query_as("SELECT id, name, class_hash FROM components WHERE id = 'test'")
+        sqlx::query_as("SELECT id, name, class_hash FROM models WHERE id = 'test'")
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -72,9 +71,8 @@ async fn test_load_from_manifest(pool: SqlitePool) {
     assert_eq!(name, "Test");
     assert_eq!(class_hash, format!("{:#x}", FieldElement::TWO));
 
-    let test_components =
-        sqlx::query("SELECT * FROM external_test").fetch_all(&pool).await.unwrap();
-    assert_eq!(test_components.len(), 0);
+    let test_models = sqlx::query("SELECT * FROM external_test").fetch_all(&pool).await.unwrap();
+    assert_eq!(test_models.len(), 0);
 
     state
         .register_system(System {

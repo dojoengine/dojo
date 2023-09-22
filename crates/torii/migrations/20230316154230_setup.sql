@@ -13,7 +13,7 @@ CREATE TABLE worlds (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE components (
+CREATE TABLE models (
     id TEXT NOT NULL PRIMARY KEY,
     name TEXT NOT NULL,
     class_hash TEXT NOT NULL,
@@ -21,20 +21,20 @@ CREATE TABLE components (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_components_created_at ON components (created_at);
+CREATE INDEX idx_models_created_at ON models (created_at);
 
-CREATE TABLE component_members(
+CREATE TABLE model_members(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    component_id TEXT NOT NULL,
+    model_id TEXT NOT NULL,
     name TEXT NOT NULL,
     type TEXT NOT NULL,
     key BOOLEAN NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (component_id) REFERENCES components(id)
-    UNIQUE (component_id, name)
+    FOREIGN KEY (model_id) REFERENCES models(id)
+    UNIQUE (model_id, name)
 );
 
-CREATE INDEX idx_component_members_component_id ON component_members (component_id);
+CREATE INDEX idx_model_members_model_id ON model_members (model_id);
 
 CREATE TABLE system_calls (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -61,7 +61,7 @@ CREATE INDEX idx_systems_created_at ON systems (created_at);
 CREATE TABLE entities (
     id TEXT NOT NULL PRIMARY KEY,
     keys TEXT,
-    component_names TEXT,
+    model_names TEXT,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

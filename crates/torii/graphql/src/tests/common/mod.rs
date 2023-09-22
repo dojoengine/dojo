@@ -25,7 +25,7 @@ pub struct Edge<T> {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Entity {
-    pub component_names: String,
+    pub model_names: String,
     pub keys: Option<Vec<String>>,
     pub created_at: Option<String>,
 }
@@ -73,13 +73,13 @@ pub async fn run_graphql_subscription(
 pub async fn entity_fixtures(pool: &SqlitePool) {
     let state = init(pool).await;
 
-    // Set entity with one moves component
+    // Set entity with one moves model
     // remaining: 10, last_direction: 0
     let key = vec![FieldElement::ONE];
     let moves_values = vec![FieldElement::from_hex_be("0xa").unwrap(), FieldElement::ZERO];
     state.set_entity("Moves".to_string(), key, moves_values.clone()).await.unwrap();
 
-    // Set entity with one position component
+    // Set entity with one position model
     // x: 42
     // y: 69
     let key = vec![FieldElement::TWO];
@@ -89,7 +89,7 @@ pub async fn entity_fixtures(pool: &SqlitePool) {
     ];
     state.set_entity("Position".to_string(), key, position_values.clone()).await.unwrap();
 
-    // Set an entity with both moves and position components
+    // Set an entity with both moves and position models
     // remaining: 1, last_direction: 0
     // x: 69
     // y: 42
@@ -138,7 +138,7 @@ pub async fn paginate(
                 edges {{
                     cursor
                     node {{
-                        componentNames
+                        modelNames
                     }}
                 }}
             }}

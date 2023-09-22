@@ -13,7 +13,7 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use tokio_util::sync::CancellationToken;
 use torii_client::contract::world::WorldContractReader;
-use torii_core::processors::register_component::RegisterComponentProcessor;
+use torii_core::processors::register_model::RegisterModelProcessor;
 use torii_core::processors::register_system::RegisterSystemProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::processors::store_system_call::StoreSystemCallProcessor;
@@ -97,7 +97,7 @@ async fn main() -> anyhow::Result<()> {
     db.load_from_manifest(manifest.clone()).await?;
     let processors = Processors {
         event: vec![
-            Box::new(RegisterComponentProcessor),
+            Box::new(RegisterModelProcessor),
             Box::new(RegisterSystemProcessor),
             Box::new(StoreSetRecordProcessor),
         ],

@@ -3,21 +3,21 @@ use async_graphql::dynamic::{
     Field, Object, Scalar, Schema, Subscription, SubscriptionField, Union,
 };
 use sqlx::SqlitePool;
-use torii_core::types::Component;
+use torii_core::types::Model;
 
-use super::object::component_state::{type_mapping_query, ComponentStateObject};
 use super::object::connection::page_info::PageInfoObject;
 use super::object::entity::EntityObject;
 use super::object::event::EventObject;
+use super::object::model_state::{type_mapping_query, ModelStateObject};
 use super::object::system::SystemObject;
 use super::object::system_call::SystemCallObject;
 use super::object::ObjectTrait;
 use super::types::ScalarType;
 use super::utils::format_name;
-use crate::object::component::ComponentObject;
+use crate::object::model::ModelObject;
 
 // The graphql schema is built dynamically at runtime, this is because we won't know the schema of
-// the components until runtime. There are however, predefined objects such as entities and
+// the models until runtime. There are however, predefined objects such as entities and
 // system_calls, their schema is known but we generate them dynamically as well since async-graphql
 // does not allow mixing of static and dynamic schemas.
 pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
@@ -26,18 +26,18 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     // predefined objects
     let mut objects: Vec<Box<dyn ObjectTrait>> = vec![
         Box::<EntityObject>::default(),
-        Box::<ComponentObject>::default(),
+        Box::<ModelObject>::default(),
         Box::<SystemObject>::default(),
         Box::<EventObject>::default(),
         Box::<SystemCallObject>::default(),
         Box::<PageInfoObject>::default(),
     ];
 
-    // register dynamic component objects
-    let (component_objects, component_union) = component_objects(pool).await?;
-    objects.extend(component_objects);
+    // register dynamic model objects
+    let (model_objects, model_union) = model_objects(pool).await?;
+    objects.extend(model_objects);
 
-    schema_builder = schema_builder.register(component_union);
+    schema_builder = schema_builder.register(model_union);
 
     // collect resolvers for single and plural queries
     let mut fields: Vec<Field> = Vec::new();
@@ -111,31 +111,30 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
         .map_err(|e| e.into())
 }
 
-async fn component_objects(pool: &SqlitePool) -> Result<(Vec<Box<dyn ObjectTrait>>, Union)> {
+async fn model_objects(pool: &SqlitePool) -> Result<(Vec<Box<dyn ObjectTrait>>, Union)> {
     let mut conn = pool.acquire().await?;
     let mut objects: Vec<Box<dyn ObjectTrait>> = Vec::new();
 
-    let components: Vec<Component> =
-        sqlx::query_as("SELECT * FROM components").fetch_all(&mut conn).await?;
+    let models: Vec<Model> = sqlx::query_as("SELECT * FROM models").fetch_all(&mut conn).await?;
 
-    // component union object
-    let mut component_union = Union::new("ComponentUnion");
+    // model union object
+    let mut model_union = Union::new("ModelUnion");
 
-    // component state objects
-    for component_metadata in components {
-        let field_type_mapping = type_mapping_query(&mut conn, &component_metadata.id).await?;
+    // model state objects
+    for model_metadata in models {
+        let field_type_mapping = type_mapping_query(&mut conn, &model_metadata.id).await?;
         if !field_type_mapping.is_empty() {
-            let (name, type_name) = format_name(&component_metadata.name);
-            let state_object = Box::new(ComponentStateObject::new(
+            let (name, type_name) = format_name(&model_metadata.name);
+            let state_object = Box::new(ModelStateObject::new(
                 name.clone(),
                 type_name.clone(),
                 field_type_mapping,
             ));
 
-            component_union = component_union.possible_type(&type_name);
+            model_union = model_union.possible_type(&type_name);
             objects.push(state_object);
         }
     }
 
-    Ok((objects, component_union))
+    Ok((objects, model_union))
 }

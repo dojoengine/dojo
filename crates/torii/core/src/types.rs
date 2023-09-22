@@ -33,14 +33,14 @@ impl fmt::LowerHex for SQLFieldElement {
 pub struct Entity {
     pub id: String,
     pub keys: String,
-    pub component_names: String,
+    pub model_names: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
 
 #[derive(FromRow, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct Component {
+pub struct Model {
     pub id: String,
     pub name: String,
     pub class_hash: String,

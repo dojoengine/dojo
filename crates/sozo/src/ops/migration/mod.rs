@@ -366,7 +366,7 @@ where
         return Ok(None);
     }
 
-    ws_config.ui().print_header(format!("# Components ({})", components.len()));
+    ws_config.ui().print_header(format!("# Models ({})", components.len()));
 
     let mut declare_output = vec![];
 
