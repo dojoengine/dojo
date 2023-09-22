@@ -233,7 +233,7 @@ where
     match &strategy.executor {
         Some(executor) => {
             ws_config.ui().print_header("# Executor");
-            deploy_helper(executor, "executor", vec![], migrator, ws_config, &txn_config).await?;
+            deploy_contract(executor, "executor", vec![], migrator, ws_config, &txn_config).await?;
 
             if strategy.world.is_none() {
                 let addr = strategy.world_address()?;
@@ -262,7 +262,7 @@ where
         Some(world) => {
             ws_config.ui().print_header("# World");
             let calldata = vec![strategy.executor.as_ref().unwrap().contract_address];
-            deploy_helper(world, "world", calldata, migrator, ws_config, &txn_config).await?;
+            deploy_contract(world, "world", calldata, migrator, ws_config, &txn_config).await?;
 
             ws_config.ui().print_sub(format!("Contract address: {:#x}", world.contract_address));
         }
@@ -270,7 +270,7 @@ where
     };
 
     register_components(strategy, migrator, ws_config, txn_config.clone()).await?;
-    register_contracts(strategy, migrator, ws_config, txn_config).await?;
+    deploy_contracts(strategy, migrator, ws_config, txn_config).await?;
 
     // This gets current block numder if helpful
     // let block_height = migrator.provider().block_number().await.ok();
@@ -283,7 +283,7 @@ enum ContractDeploymentOutput {
     Output(DeployOutput),
 }
 
-async fn deploy_helper<P, S>(
+async fn deploy_contract<P, S>(
     contract: &ContractMigration,
     contract_id: &str,
     constructor_calldata: Vec<FieldElement>,
@@ -390,7 +390,7 @@ where
     Ok(Some(RegisterOutput { transaction_hash, declare_output }))
 }
 
-async fn register_contracts<P, S>(
+async fn deploy_contracts<P, S>(
     strategy: &MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
     ws_config: &Config,
@@ -413,7 +413,7 @@ where
     for contract in strategy.contracts.iter() {
         let name = &contract.diff.name;
         ws_config.ui().print(italic_message(name).to_string());
-        match deploy_helper(contract, name, vec![], migrator, ws_config, &txn_config).await? {
+        match deploy_contract(contract, name, vec![], migrator, ws_config, &txn_config).await? {
             ContractDeploymentOutput::Output(output) => {
                 ws_config.ui().print_hidden_sub(format!(
                     "declare transaction: {:#x}",

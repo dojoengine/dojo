@@ -18,7 +18,6 @@ pub struct MigrationOutput {
     pub world: Option<DeployOutput>,
     pub executor: Option<DeployOutput>,
     pub contracts: Vec<DeployOutput>,
-    // pub systems: Option<RegisterOutput>,
     pub components: Option<RegisterOutput>,
 }
 
@@ -28,7 +27,6 @@ pub struct MigrationStrategy {
     pub world: Option<ContractMigration>,
     pub executor: Option<ContractMigration>,
     pub contracts: Vec<ContractMigration>,
-    // pub systems: Vec<ClassMigration>,
     pub components: Vec<ClassMigration>,
 }
 

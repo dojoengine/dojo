@@ -70,18 +70,12 @@ impl Manifest {
                     let Some(aux_data) = &generated_file_info.aux_data else {
                         continue;
                     };
-                    let Some(aux_data) = aux_data.0.as_any().downcast_ref() else {
-                        if let Some(contracts_data) =
-                            aux_data.0.as_any().downcast_ref::<StarkNetContractAuxData>()
-                        {
-                            manifest.find_contracts(contracts_data, &compiled_classes);
-                        } else {
-                        }
-
-                        continue;
-                    };
-
-                    manifest.find_components(db, aux_data, *module_id, &compiled_classes);
+                    let aux_data = aux_data.0.as_any();
+                    if let Some(contracts) = aux_data.downcast_ref::<StarkNetContractAuxData>() {
+                        manifest.find_contracts(contracts, &compiled_classes);
+                    } else if let Some(dojo_aux_data) = aux_data.downcast_ref() {
+                        manifest.find_components(db, dojo_aux_data, *module_id, &compiled_classes);
+                    }
                 }
             }
             manifest.filter_contracts();

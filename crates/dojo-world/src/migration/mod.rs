@@ -203,18 +203,6 @@ pub trait Deployable: Declarable + Sync {
         let InvokeTransactionResult { transaction_hash } =
             txn.send().await.map_err(MigrationError::Migrator)?;
 
-        // // TODO: remove finality check once we can remove displaying the block number in the
-        // // migration logs
-        // let receipt = TransactionWaiter::new(transaction_hash, account.provider())
-        //     .with_finality(TransactionFinalityStatus::AcceptedOnL2)
-        //     .await
-        //     .map_err(MigrationError::WaitingError)?;
-
-        // let block_number = match receipt {
-        //     MaybePendingTransactionReceipt::Receipt(receipt) =>
-        // block_number_from_receipt(&receipt),     _ => panic!("Transaction was not
-        // accepted on L2"), };
-
         Ok(DeployOutput { transaction_hash, contract_address, declare })
     }
 
