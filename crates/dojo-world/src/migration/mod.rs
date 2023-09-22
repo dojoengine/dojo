@@ -10,7 +10,7 @@ use starknet::accounts::{Account, AccountError, Call, ConnectedAccount, SingleOw
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
     BlockId, BlockTag, DeclareTransactionResult, FieldElement, FlattenedSierraClass,
-    InvokeTransactionResult, StarknetError,
+    InvokeTransactionResult, StarknetError, TransactionFinalityStatus,
 };
 use starknet::core::utils::{get_contract_address, CairoShortStringToFeltError};
 use starknet::macros::{felt, selector};
@@ -202,6 +202,8 @@ pub trait Deployable: Declarable + Sync {
 
         let InvokeTransactionResult { transaction_hash } =
             txn.send().await.map_err(MigrationError::Migrator)?;
+
+        TransactionWaiter::new(transaction_hash, account.provider()).await?;
 
         Ok(DeployOutput { transaction_hash, contract_address, declare })
     }

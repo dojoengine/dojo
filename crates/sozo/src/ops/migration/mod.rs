@@ -242,13 +242,7 @@ where
                         .set_executor(executor.contract_address)
                         .await?;
 
-                let _ =
-                    TransactionWaiter::new(transaction_hash, migrator.provider()).await.map_err(
-                        MigrationError::<
-                            <SingleOwnerAccount<P, S> as Account>::SignError,
-                            <P as Provider>::Error,
-                        >::WaitingError,
-                    )?;
+                TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
 
                 ws_config.ui().print_hidden_sub(format!("Updated at: {transaction_hash:#x}"));
             }
@@ -352,10 +346,9 @@ where
             c.declare(migrator, txn_config.clone().map(|c| c.into()).unwrap_or_default()).await;
         match res {
             Ok(output) => {
-                ws_config.ui().print_hidden_sub(format!(
-                    "declare transaction: {:#x}",
-                    output.transaction_hash
-                ));
+                ws_config
+                    .ui()
+                    .print_hidden_sub(format!("transaction_hash: {:#x}", output.transaction_hash));
 
                 declare_output.push(output);
             }
@@ -368,7 +361,7 @@ where
             Err(e) => bail!("Failed to declare component {}: {e}", c.diff.name),
         }
 
-        ws_config.ui().print_sub(format!("class hash: {:#x}", c.diff.local));
+        ws_config.ui().print_sub(format!("Class hash: {:#x}", c.diff.local));
     }
 
     let world_address = strategy.world_address()?;
@@ -378,12 +371,7 @@ where
         .await
         .map_err(|e| anyhow!("Failed to register components to World: {e}"))?;
 
-    TransactionWaiter::new(transaction_hash, migrator.provider()).await.map_err(
-            MigrationError::<
-                <SingleOwnerAccount<P, S> as Account>::SignError,
-                <P as Provider>::Error,
-            >::WaitingError,
-        )?;
+    TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
 
     ws_config.ui().print_hidden_sub(format!("registered at: {transaction_hash:#x}"));
 
@@ -415,8 +403,11 @@ where
         ws_config.ui().print(italic_message(name).to_string());
         match deploy_contract(contract, name, vec![], migrator, ws_config, &txn_config).await? {
             ContractDeploymentOutput::Output(output) => {
+                ws_config
+                    .ui()
+                    .print_sub(format!("Contract address: {:#x}", output.contract_address));
                 ws_config.ui().print_hidden_sub(format!(
-                    "declare transaction: {:#x}",
+                    "deploy transaction: {:#x}",
                     output.transaction_hash
                 ));
                 deploy_output.push(Some(output));
