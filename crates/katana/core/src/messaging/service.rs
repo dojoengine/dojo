@@ -280,8 +280,12 @@ fn trace_msg_to_l1_sent(messages: &Vec<MsgToL1>, hashes: &Vec<String>) {
                               payload_str.join(", ")
                         );
         } else {
-            let to_address = &payload_str[0];
-            let payload_str = &payload_str[1..];
+            // We check for magic value 'MSG' used only when we are doing L3-L2 messaging.
+            let (to_address, payload_str) = if format!("{:#x}", m.to_address) == "0x4d5347" {
+                (payload_str[0].clone(), &payload_str[1..])
+            } else {
+                (format!("{:#x}", m.to_address), &payload_str[..])
+            };
 
             info!(target: MSGING_TARGET,
                               r"Message sent to settlement layer:
