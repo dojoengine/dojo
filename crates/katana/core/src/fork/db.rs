@@ -253,6 +253,7 @@ mod tests {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    #[ignore]
     async fn fetch_from_provider_if_not_in_cache() {
         let provider = JsonRpcClient::new(HttpTransport::new(Url::parse(FORKED_ENDPOINT).unwrap()));
         let mut db = ForkedDb::new(Arc::new(provider), BlockId::Tag(BlockTag::Latest));

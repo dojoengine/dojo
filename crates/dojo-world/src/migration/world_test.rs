@@ -1,5 +1,5 @@
 use super::*;
-use crate::manifest::{Component, Contract, Manifest, System};
+use crate::manifest::{Contract, Manifest, Model, System};
 
 #[test]
 fn no_diff_when_local_and_remote_are_equal() {
@@ -17,7 +17,7 @@ fn no_diff_when_local_and_remote_are_equal() {
         ..Default::default()
     };
 
-    let components = vec![Component {
+    let components = vec![Model {
         members: vec![],
         name: "Component".into(),
         class_hash: 11_u32.into(),
@@ -55,7 +55,7 @@ fn diff_when_local_and_remote_are_different() {
         ..Default::default()
     };
 
-    let components = vec![Component {
+    let components = vec![Model {
         members: vec![],
         name: "Component".into(),
         class_hash: 11_u32.into(),

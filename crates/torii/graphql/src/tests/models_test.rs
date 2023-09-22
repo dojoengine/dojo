@@ -16,12 +16,12 @@ mod tests {
 
     #[ignore]
     #[sqlx::test(migrations = "../migrations")]
-    async fn test_component_no_filter(pool: SqlitePool) {
+    async fn test_model_no_filter(pool: SqlitePool) {
         entity_fixtures(&pool).await;
 
         let query = r#"
                 {
-                    movesComponents {
+                    movesModels {
                         totalCount
                         edges {
                             node {
@@ -32,7 +32,7 @@ mod tests {
                             cursor
                         }
                     }
-                    positionComponents {
+                    positionModels {
                         totalCount
                         edges {
                             node {
@@ -48,14 +48,13 @@ mod tests {
 
         let value = run_graphql_query(&pool, query).await;
 
-        let moves_components = value.get("movesComponents").ok_or("no moves found").unwrap();
+        let moves_mdoels = value.get("movesModels").ok_or("no moves found").unwrap();
         let moves_connection: Connection<Moves> =
-            serde_json::from_value(moves_components.clone()).unwrap();
+            serde_json::from_value(moves_mdoels.clone()).unwrap();
 
-        let position_components =
-            value.get("positionComponents").ok_or("no position found").unwrap();
+        let position_mdoels = value.get("positionModels").ok_or("no position found").unwrap();
         let position_connection: Connection<Position> =
-            serde_json::from_value(position_components.clone()).unwrap();
+            serde_json::from_value(position_mdoels.clone()).unwrap();
 
         assert_eq!(moves_connection.edges[0].node.remaining, 10);
         assert_eq!(position_connection.edges[0].node.x, 42);
@@ -64,10 +63,10 @@ mod tests {
 
     #[ignore]
     #[sqlx::test(migrations = "../migrations")]
-    async fn test_component_where_filter(pool: SqlitePool) {
+    async fn test_model_where_filter(pool: SqlitePool) {
         entity_fixtures(&pool).await;
 
-        // fixtures inserts two position components with members (x: 42, y: 69) and (x: 69, y: 42)
+        // fixtures inserts two position mdoels with members (x: 42, y: 69) and (x: 69, y: 42)
         // the following filters and expected total results can be simply calculated
         let where_filters = Vec::from([
             ("where: { x: 42 }", 1),
@@ -84,7 +83,7 @@ mod tests {
             let query = format!(
                 r#"
                     {{
-                        positionComponents ({}) {{
+                        positionModels ({}) {{
                             totalCount 
                             edges {{
                                 node {{
@@ -101,7 +100,7 @@ mod tests {
             );
 
             let value = run_graphql_query(&pool, &query).await;
-            let positions = value.get("positionComponents").ok_or("no positions found").unwrap();
+            let positions = value.get("positionModels").ok_or("no positions found").unwrap();
             let connection: Connection<Position> =
                 serde_json::from_value(positions.clone()).unwrap();
             assert_eq!(connection.total_count, expected_total);
@@ -110,7 +109,7 @@ mod tests {
 
     #[ignore]
     #[sqlx::test(migrations = "../migrations")]
-    async fn test_component_ordering(pool: SqlitePool) {
+    async fn test_model_ordering(pool: SqlitePool) {
         entity_fixtures(&pool).await;
 
         let orders: Vec<OrderTest> = vec![
@@ -148,7 +147,7 @@ mod tests {
             let query = format!(
                 r#"
                 {{
-                    positionComponents (order: {{ direction: {}, field: {} }}) {{
+                    positionModels (order: {{ direction: {}, field: {} }}) {{
                         totalCount
                         edges {{
                             node {{
@@ -165,7 +164,7 @@ mod tests {
             );
 
             let value = run_graphql_query(&pool, &query).await;
-            let positions = value.get("positionComponents").ok_or("no positions found").unwrap();
+            let positions = value.get("positionModels").ok_or("no positions found").unwrap();
             let connection: Connection<Position> =
                 serde_json::from_value(positions.clone()).unwrap();
             assert_eq!(connection.total_count, 2);
@@ -175,12 +174,12 @@ mod tests {
 
     #[ignore]
     #[sqlx::test(migrations = "../migrations")]
-    async fn test_component_entity_relationship(pool: SqlitePool) {
+    async fn test_model_entity_relationship(pool: SqlitePool) {
         entity_fixtures(&pool).await;
 
         let query = r#"
                 {
-                    positionComponents {
+                    positionModels {
                         totalCount 
                         edges {
                             node {
@@ -189,7 +188,7 @@ mod tests {
                                 y
                                 entity {
                                     keys
-                                    componentNames
+                                    modelNames
                                 }
                             }
                             cursor
@@ -199,9 +198,9 @@ mod tests {
             "#;
         let value = run_graphql_query(&pool, query).await;
 
-        let positions = value.get("positionComponents").ok_or("no positions found").unwrap();
+        let positions = value.get("positionModels").ok_or("no positions found").unwrap();
         let connection: Connection<Position> = serde_json::from_value(positions.clone()).unwrap();
         let entity = connection.edges[0].node.entity.as_ref().unwrap();
-        assert_eq!(entity.component_names, "Position".to_string());
+        assert_eq!(entity.model_names, "Position".to_string());
     }
 }
