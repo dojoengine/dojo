@@ -1,6 +1,9 @@
+use std::collections::HashSet;
+use std::str::FromStr;
+
 use anyhow::Result;
 use async_graphql::dynamic::{
-    Field, Object, Scalar, Schema, Subscription, SubscriptionField, Union,
+    Field, Object, Scalar, Schema, SchemaBuilder, Subscription, SubscriptionField, Union,
 };
 use sqlx::SqlitePool;
 use torii_core::types::Model;
@@ -17,7 +20,7 @@ use crate::object::model::ModelObject;
 
 // The graphql schema is built dynamically at runtime, this is because we won't know the schema of
 // the models until runtime. There are however, predefined objects such as entities and
-// system_calls, their schema is known but we generate them dynamically as well since async-graphql
+// events, their schema is known but we generate them dynamically as well because async-graphql
 // does not allow mixing of static and dynamic schemas.
 pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     let mut schema_builder = Schema::build("Query", None, Some("Subscription"));
@@ -32,34 +35,29 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
         Box::<PageInfoObject>::default(),
     ];
 
-    // register dynamic model objects
-    let (model_objects, model_union) = model_objects(pool).await?;
+    // build model gql objects
+    let (model_objects, model_union) = build_model_objects(pool).await?;
     objects.extend(model_objects);
 
+    // register model unions
     schema_builder = schema_builder.register(model_union);
 
-    // collect resolvers for single and plural queries
-    let mut fields: Vec<Field> = Vec::new();
-    for object in &objects {
-        if let Some(resolve_one) = object.resolve_one() {
-            fields.push(resolve_one);
-        }
-        if let Some(resolve_many) = object.resolve_many() {
-            fields.push(resolve_many);
-        }
+    // register default scalars and model custom types
+    let scalar_types = ScalarType::default_types();
+    for scalar_type in scalar_types.iter() {
+        schema_builder = schema_builder.register(Scalar::new(scalar_type.to_string()));
     }
+
+    // collect resolvers for single and plural queries
+    let fields: Vec<Field> = objects
+        .iter()
+        .flat_map(|object| vec![object.resolve_one(), object.resolve_many()].into_iter().flatten())
+        .collect();
 
     // add field resolvers to query root
     let mut query_root = Object::new("Query");
     for field in fields {
         query_root = query_root.field(field);
-    }
-
-    // register custom scalars
-    let mut scalar_types = ScalarType::types();
-    scalar_types.insert(ScalarType::Custom("Vec".to_string()));
-    for scalar_type in scalar_types.iter() {
-        schema_builder = schema_builder.register(Scalar::new(scalar_type.to_string()));
     }
 
     for object in &objects {
@@ -80,6 +78,13 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
         // register connection types, relay
         if let Some(conn_objects) = object.connection() {
             for object in conn_objects {
+                schema_builder = schema_builder.register(object);
+            }
+        }
+
+        // register nested objects (custom types / nested structs)
+        if let Some(nested_objects) = object.nested_objects() {
+            for object in nested_objects {
                 schema_builder = schema_builder.register(object);
             }
         }
@@ -112,31 +117,28 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
         .map_err(|e| e.into())
 }
 
-async fn model_objects(pool: &SqlitePool) -> Result<(Vec<Box<dyn ObjectTrait>>, Union)> {
+async fn build_model_objects(pool: &SqlitePool) -> Result<(Vec<Box<dyn ObjectTrait>>, Union)> {
     let mut conn = pool.acquire().await?;
     let mut objects: Vec<Box<dyn ObjectTrait>> = Vec::new();
 
     let models: Vec<Model> = sqlx::query_as("SELECT * FROM models").fetch_all(&mut conn).await?;
 
     // model union object
-    let mut model_union = Union::new("ModelUnion");
+    let mut union = Union::new("ModelUnion");
 
     // model state objects
-    for model_metadata in models {
-        let field_type_mapping = type_mapping_query(&mut conn, &model_metadata.id).await?;
-        if !field_type_mapping.is_empty() {
-            let field_name = model_metadata.name.to_lowercase();
-            let type_name = model_metadata.name;
+    for model in models {
+        let type_mapping = type_mapping_query(&mut conn, &model.id).await?;
 
-            model_union = model_union.possible_type(&type_name);
+        if !type_mapping.is_empty() {
+            let field_name = model.name.to_lowercase();
+            let type_name = model.name;
 
-            objects.push(Box::new(ModelStateObject::new(
-                field_name,
-                type_name,
-                field_type_mapping,
-            )));
+            union = union.possible_type(&type_name);
+
+            objects.push(Box::new(ModelStateObject::new(field_name, type_name, type_mapping)));
         }
     }
 
-    Ok((objects, model_union))
+    Ok((objects, union))
 }

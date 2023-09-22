@@ -20,30 +20,31 @@ impl WhereInputObject {
     // Due to sqlite column constraints, u8 thru u64 are treated as numerics and the rest of the
     // types are treated as strings.
     pub fn new(type_name: &str, object_types: &TypeMapping) -> Self {
-        let where_mapping = object_types
-            .iter()
-            .filter_map(|(ty_name, ty)| {
-                ScalarType::from_str(ty.to_string().as_str()).ok().map(|scalar_type| {
-                    let ty =
-                        if scalar_type.is_numeric_type() { TypeRef::INT } else { TypeRef::STRING };
+        // let where_mapping = object_types
+        //     .iter()
+        //     .filter_map(|(ty_name, ty)| {
+        //         ScalarType::from_str(ty.to_string().as_str()).ok().map(|scalar_type| {
+        //             let ty =
+        //                 if scalar_type.is_numeric_type() { TypeRef::INT } else { TypeRef::STRING
+        // };
 
-                    let mut comparators = ["GT", "GTE", "LT", "LTE", "NEQ"]
-                        .iter()
-                        .map(|comparator| {
-                            let name = format!("{}{}", ty_name, comparator);
-                            (Name::new(name), TypeRef::named(ty))
-                        })
-                        .collect::<Vec<_>>();
+        //             let mut comparators = ["GT", "GTE", "LT", "LTE", "NEQ"]
+        //                 .iter()
+        //                 .map(|comparator| {
+        //                     let name = format!("{}{}", ty_name, comparator);
+        //                     (Name::new(name), TypeRef::named(ty))
+        //                 })
+        //                 .collect::<Vec<_>>();
 
-                    comparators.push((Name::new(ty_name), TypeRef::named(ty)));
+        //             comparators.push((Name::new(ty_name), TypeRef::named(ty)));
 
-                    comparators
-                })
-            })
-            .flatten()
-            .collect();
+        //             comparators
+        //         })
+        //     })
+        //     .flatten()
+        //     .collect();
 
-        Self { type_name: format!("{}WhereInput", type_name), type_mapping: where_mapping }
+        Self { type_name: format!("{}WhereInput", type_name), type_mapping: TypeMapping::new() }
     }
 }
 
@@ -57,9 +58,10 @@ impl InputObjectTrait for WhereInputObject {
     }
 
     fn input_object(&self) -> InputObject {
-        self.type_mapping.iter().fold(InputObject::new(self.type_name()), |acc, (ty_name, ty)| {
-            acc.field(InputValue::new(ty_name.to_string(), TypeRef::named(ty.to_string())))
-        })
+        // self.type_mapping.iter().fold(InputObject::new(self.type_name()), |acc, (ty_name, ty)| {
+        //     acc.field(InputValue::new(ty_name.to_string(), TypeRef::named(ty.to_string())))
+        // })
+        InputObject::new(self.type_name())
     }
 }
 
@@ -78,20 +80,20 @@ pub fn parse_where_argument(
 
     let input_object = where_input.object()?;
 
-    let filters = where_mapping
-        .iter()
-        .filter_map(|(ty_name, ty)| {
-            input_object.get(ty_name).map(|input_filter| {
-                let data_type = match ty.to_string().as_str() {
-                    TypeRef::STRING => FilterValue::String(input_filter.string()?.to_string()),
-                    TypeRef::INT => FilterValue::Int(input_filter.i64()?),
-                    _ => return Err(Error::from("Unsupported `where` argument type")),
-                };
+    // let filters = where_mapping
+    //     .iter()
+    //     .filter_map(|(ty_name, ty)| {
+    //         input_object.get(ty_name).map(|input_filter| {
+    //             let data_type = match ty.to_string().as_str() {
+    //                 TypeRef::STRING => FilterValue::String(input_filter.string()?.to_string()),
+    //                 TypeRef::INT => FilterValue::Int(input_filter.i64()?),
+    //                 _ => return Err(Error::from("Unsupported `where` argument type")),
+    //             };
 
-                Ok(parse_filter(ty_name, data_type))
-            })
-        })
-        .collect::<Result<Vec<_>, _>>()?;
+    //             Ok(parse_filter(ty_name, data_type))
+    //         })
+    //     })
+    //     .collect::<Result<Vec<_>, _>>()?;
 
-    Ok(filters)
+    Ok(vec![])
 }

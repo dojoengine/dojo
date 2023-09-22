@@ -1,9 +1,8 @@
 use async_graphql::dynamic::TypeRef;
 use async_graphql::Name;
-use indexmap::IndexMap;
 
-use crate::object::{ObjectTrait, TypeMapping};
-use crate::types::ScalarType;
+use crate::object::ObjectTrait;
+use crate::types::{ScalarType, TypeDefinition, TypeMapping};
 
 pub struct EdgeObject {
     pub name: String,
@@ -13,9 +12,12 @@ pub struct EdgeObject {
 
 impl EdgeObject {
     pub fn new(name: String, type_name: String) -> Self {
-        let type_mapping = IndexMap::from([
-            (Name::new("node"), TypeRef::named(type_name.clone())),
-            (Name::new("cursor"), TypeRef::named_nn(ScalarType::Cursor.to_string())),
+        let type_mapping = TypeMapping::from([
+            (Name::new("node"), TypeDefinition::Simple(TypeRef::named(type_name.clone()))),
+            (
+                Name::new("cursor"),
+                TypeDefinition::Simple(TypeRef::named(ScalarType::Cursor.to_string())),
+            ),
         ]);
 
         Self {

@@ -17,7 +17,7 @@ use super::model_state::{model_state_by_id_query, type_mapping_query};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
 use crate::query::{query_by_id, ID};
-use crate::types::ScalarType;
+use crate::types::{ScalarType, TypeDefinition};
 use crate::utils::csv_to_vec;
 use crate::utils::extract_value::extract;
 
@@ -29,11 +29,17 @@ impl Default for EntityObject {
     fn default() -> Self {
         Self {
             type_mapping: IndexMap::from([
-                (Name::new("id"), TypeRef::named(TypeRef::ID)),
-                (Name::new("keys"), TypeRef::named_list(TypeRef::STRING)),
-                (Name::new("modelNames"), TypeRef::named(TypeRef::STRING)),
-                (Name::new("createdAt"), TypeRef::named(ScalarType::DateTime.to_string())),
-                (Name::new("updatedAt"), TypeRef::named(ScalarType::DateTime.to_string())),
+                (Name::new("id"), TypeDefinition::Simple(TypeRef::named(TypeRef::ID))),
+                (Name::new("keys"), TypeDefinition::Simple(TypeRef::named_list(TypeRef::STRING))),
+                (Name::new("modelNames"), TypeDefinition::Simple(TypeRef::named(TypeRef::STRING))),
+                (
+                    Name::new("createdAt"),
+                    TypeDefinition::Simple(TypeRef::named(ScalarType::DateTime.to_string())),
+                ),
+                (
+                    Name::new("updatedAt"),
+                    TypeDefinition::Simple(TypeRef::named(ScalarType::DateTime.to_string())),
+                ),
             ]),
         }
     }
@@ -71,7 +77,7 @@ impl ObjectTrait for EntityObject {
         &self.type_mapping
     }
 
-    fn nested_fields(&self) -> Option<Vec<Field>> {
+    fn related_fields(&self) -> Option<Vec<Field>> {
         Some(vec![Field::new("models", TypeRef::named_list("ModelUnion"), move |ctx| {
             FieldFuture::new(async move {
                 match ctx.parent_value.try_to_value()? {

@@ -95,18 +95,19 @@ async fn main() -> anyhow::Result<()> {
 
     let db = Sql::new(pool.clone(), world_address).await?;
     db.load_from_manifest(manifest.clone()).await?;
-    let processors = Processors {
-        event: vec![
-            Box::new(RegisterModelProcessor),
-            Box::new(RegisterSystemProcessor),
-            Box::new(StoreSetRecordProcessor),
-        ],
-        transaction: vec![Box::new(StoreSystemCallProcessor)],
-        ..Processors::default()
-    };
+    // let processors = Processors {
+    //     event: vec![
+    //         Box::new(RegisterModelProcessor),
+    //         Box::new(RegisterSystemProcessor),
+    //         Box::new(StoreSetRecordProcessor),
+    //     ],
+    //     transaction: vec![Box::new(StoreSystemCallProcessor)],
+    //     ..Processors::default()
+    // };
 
-    let indexer =
-        Indexer::new(&world, &db, &provider, processors, manifest, world_address, args.start_block);
+    // let indexer =
+    //     Indexer::new(&world, &db, &provider, processors, manifest, world_address,
+    // args.start_block);
 
     let base_route = warp::path::end()
         .and(warp::get())

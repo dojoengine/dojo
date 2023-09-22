@@ -6,16 +6,51 @@ use async_graphql::dynamic::TypeRef;
 use async_graphql::{Name, Value};
 use indexmap::IndexMap;
 
-pub enum Types {
-    PrimitiveType(String),
-    CustomType(Box<TypeMapping>),
+// ValueMapping is used to map the values of the fields of a model. TypeMapping is used to map
+// the types of the fields of a model. Both are used at runtime to dynamically build / resolve the
+// graphql queries and schema. Value from async-graphql can already support nesting, but TypeRef
+// does not. TypeDefintion is used to support nesting.
+pub type ValueMapping = IndexMap<Name, Value>;
+pub type TypeMapping = IndexMap<Name, TypeDefinition>;
+
+// Note: similar dojo_types Ty enum, however, TypeRef is needed to support async-graphql.
+#[derive(Debug, Clone)]
+pub enum TypeDefinition {
+    Simple(TypeRef),
+    Nested((TypeRef, IndexMap<Name, TypeDefinition>)),
+    // TODO: Enum
 }
 
-pub type TypeMapping = IndexMap<Name, TypeRef>;
-pub type ValueMapping = IndexMap<Name, Value>;
+impl TypeDefinition {
+    pub fn flatten(&self) -> Vec<TypeRef> {
+        match self {
+            TypeDefinition::Simple(ty) => vec![ty.clone()],
+            TypeDefinition::Nested((ty, type_mapping)) => {
+                let mut types = vec![ty.clone()];
+                for (_, type_def) in type_mapping {
+                    types.append(&mut TypeDefinition::flatten(type_def));
+                }
 
-// NOTE: If adding/removing types, corresponding change needs to be made to torii-core `src/sql.rs`
-// in method sql_type()
+                types
+            }
+        }
+    }
+
+    pub fn type_ref(&self) -> TypeRef {
+        match self {
+            TypeDefinition::Simple(ty) | TypeDefinition::Nested((ty, _)) => ty.clone(),
+        }
+    }
+
+    pub fn is_simple(&self) -> bool {
+        matches!(self, TypeDefinition::Simple(_))
+    }
+
+    pub fn is_nested(&self) -> bool {
+        matches!(self, TypeDefinition::Nested(_))
+    }
+}
+
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub enum ScalarType {
     U8,
@@ -58,7 +93,7 @@ impl fmt::Display for ScalarType {
 }
 
 impl ScalarType {
-    pub fn types() -> HashSet<ScalarType> {
+    pub fn default_types() -> HashSet<ScalarType> {
         vec![
             ScalarType::U8,
             ScalarType::U16,

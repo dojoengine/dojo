@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use async_graphql::dynamic::{Enum, Field, FieldFuture, InputObject, TypeRef};
+use async_graphql::dynamic::{Enum, Field, FieldFuture, InputObject, Object, TypeRef};
 use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
@@ -22,14 +22,15 @@ use crate::object::entity::EntityObject;
 use crate::query::filter::{Filter, FilterValue};
 use crate::query::order::{Direction, Order};
 use crate::query::{query_by_id, query_total_count, ID};
-use crate::types::ScalarType;
+use crate::types::{ScalarType, TypeDefinition};
 use crate::utils::extract_value::extract;
 
 const BOOLEAN_TRUE: i64 = 1;
 
-#[derive(FromRow, Deserialize)]
-pub struct ModelMembers {
+#[derive(FromRow, Deserialize, PartialEq, Eq)]
+pub struct ModelMember {
     pub model_id: String,
+    pub parent_id: Option<String>,
     pub name: String,
     #[serde(rename = "type")]
     pub ty: String,
@@ -68,8 +69,8 @@ impl ObjectTrait for ModelStateObject {
     }
 
     // Associate model to its parent entity
-    fn nested_fields(&self) -> Option<Vec<Field>> {
-        Some(vec![entity_field()])
+    fn related_fields(&self) -> Option<Vec<Field>> {
+        Some(vec![entity_field(), sub_fields()])
     }
 
     fn input_objects(&self) -> Option<Vec<InputObject>> {
@@ -78,6 +79,37 @@ impl ObjectTrait for ModelStateObject {
 
     fn enum_objects(&self) -> Option<Vec<Enum>> {
         self.order_input.enum_objects()
+    }
+
+    // Recursively traverse TypeMapping and create a new object for every nested type def.
+    fn nested_objects(&self) -> Option<Vec<Object>> {
+        let mut objects = Vec::new();
+        for (_, type_def) in self.type_mapping() {
+            if let TypeDefinition::Nested(nested) = type_def {
+                let mut object = Object::new(nested.0.to_string());
+
+                let x = Field::new("x", TypeRef::named("u32"), |_| {
+                    FieldFuture::new(async move { 
+                        
+                        println!("got here x");
+                        Ok(Some(Value::from(1))) })
+                });
+
+                let y = Field::new("y", TypeRef::named("u32"), |_| {
+                    FieldFuture::new(async move { 
+
+                        println!("got here y");
+                        Ok(Some(Value::from(1))) })
+                });
+
+                object = object.field(x);
+                object = object.field(y);
+
+                objects.push(object);
+            }
+        }
+
+        Some(objects)
     }
 
     fn resolve_many(&self) -> Option<Field> {
@@ -94,13 +126,15 @@ impl ObjectTrait for ModelStateObject {
 
             FieldFuture::new(async move {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                let table_name = format!("external_{}", name);
+                let table_name = format!("external__{}", name);
                 let order = parse_order_argument(&ctx);
                 let filters = parse_where_argument(&ctx, &where_mapping)?;
                 let connection = parse_connection_arguments(&ctx)?;
+
                 let data =
                     model_states_query(&mut conn, &table_name, &order, &filters, &connection)
                         .await?;
+   
                 let total_count = query_total_count(&mut conn, &table_name, &filters).await?;
                 let connection = model_connection(&data, &type_mapping, total_count)?;
 
@@ -110,8 +144,8 @@ impl ObjectTrait for ModelStateObject {
 
         // Add relay connection fields (first, last, before, after, where)
         field = connection_arguments(field);
-        field = where_argument(field, self.type_name());
-        field = order_argument(field, self.type_name());
+        // field = where_argument(field, self.type_name());
+        // field = order_argument(field, self.type_name());
 
         Some(field)
     }
@@ -135,13 +169,22 @@ fn entity_field() -> Field {
     })
 }
 
+fn sub_fields() -> Field {
+    Field::new("vec", TypeRef::named("Vec2"), |ctx| {
+        FieldFuture::new( async move {
+            println!("{:#?}", ctx.parent_value.as_value());
+            Ok(Some(Value::Null))
+        })
+    })
+}
+
 pub async fn model_state_by_id_query(
     conn: &mut PoolConnection<Sqlite>,
     name: &str,
     id: &str,
     fields: &TypeMapping,
 ) -> sqlx::Result<ValueMapping> {
-    let table_name = format!("external_{}", name);
+    let table_name = format!("external__{}", name);
     let mut builder: QueryBuilder<'_, Sqlite> = QueryBuilder::new("SELECT * FROM ");
     builder.push(table_name).push(" WHERE entity_id = ").push_bind(id);
     let row = builder.build().fetch_one(conn).await?;
@@ -253,7 +296,10 @@ pub fn model_connection(
 fn value_mapping_from_row(row: &SqliteRow, types: &TypeMapping) -> sqlx::Result<ValueMapping> {
     types
         .iter()
-        .map(|(name, ty)| Ok((Name::new(name), fetch_value(row, name, &ty.to_string())?)))
+        .filter(|(_, type_def)| type_def.is_simple())
+        .map(|(name, ty)| {
+            Ok((Name::new(name), fetch_value(row, name, &ty.type_ref().to_string())?))
+        })
         .collect::<sqlx::Result<ValueMapping>>()
 }
 
@@ -284,25 +330,57 @@ pub async fn type_mapping_query(
     conn: &mut PoolConnection<Sqlite>,
     model_id: &str,
 ) -> sqlx::Result<TypeMapping> {
-    let model_members: Vec<ModelMembers> = sqlx::query_as(
+    let model_members: Vec<ModelMember> = sqlx::query_as(
         r#"
-                SELECT 
-                    model_id,
-                    name,
-                    type AS ty,
-                    key,
-                    created_at
-                FROM model_members WHERE model_id = ?
-            "#,
+        SELECT
+            model_id,
+            parent_id,
+            name,
+            type AS ty,
+            key,
+            created_at
+        from model_members WHERE model_id = ?
+        "#,
     )
     .bind(model_id)
     .fetch_all(conn)
     .await?;
 
     let mut type_mapping = TypeMapping::new();
-    for member in model_members {
-        type_mapping.insert(Name::new(member.name), TypeRef::named(member.ty));
+    for member in &model_members {
+        if member.parent_id.is_some() {
+            continue;
+        }
+
+        let type_def = match ScalarType::from_str(&member.ty) {
+            Ok(ScalarType::Custom(_)) => {
+                parse_type(member.name.as_str(), member.ty.as_str(), &model_members)
+            }
+            _ => TypeDefinition::Simple(TypeRef::named(member.ty.clone())),
+        };
+
+        type_mapping.insert(Name::new(&member.name), type_def);
     }
 
     Ok(type_mapping)
+}
+
+fn parse_type(target_id: &str, target_type: &str, model_members: &[ModelMember]) -> TypeDefinition {
+    let mut nested_mapping = TypeMapping::new();
+    for member in model_members {
+        if let Some(id) = &member.parent_id {
+            if target_id == id {
+                let type_def = match ScalarType::from_str(&member.ty) {
+                    Ok(ScalarType::Custom(_)) => {
+                        parse_type(&member.name, &member.ty, model_members)
+                    }
+                    _ => TypeDefinition::Simple(TypeRef::named(member.ty.clone())),
+                };
+
+                nested_mapping.insert(Name::new(&member.name), type_def);
+            }
+        }
+    }
+
+    TypeDefinition::Nested((TypeRef::named(target_type), nested_mapping))
 }

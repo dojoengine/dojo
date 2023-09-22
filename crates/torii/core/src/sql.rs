@@ -162,7 +162,7 @@ impl Sql {
         )];
 
         let mut model_table_query = format!(
-            "CREATE TABLE IF NOT EXISTS external_{} (entity_id TEXT NOT NULL PRIMARY KEY, ",
+            "CREATE TABLE IF NOT EXISTS external__{} (entity_id TEXT NOT NULL PRIMARY KEY, ",
             model.name.to_lowercase()
         );
 
@@ -266,7 +266,7 @@ impl Sql {
         let values_str = values_sql_string(&member_names_result, &member_values, &sql_types)?;
 
         let insert_models = format!(
-            "INSERT OR REPLACE INTO external_{} (entity_id {}) VALUES ('{}' {})",
+            "INSERT OR REPLACE INTO external__{} (entity_id {}) VALUES ('{}' {})",
             model.to_lowercase(),
             names_str,
             entity_id,

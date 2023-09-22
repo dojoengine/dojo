@@ -2,11 +2,10 @@ use async_graphql::dynamic::{Field, InputValue, ResolverContext, TypeRef};
 use async_graphql::{Error, Name, Value};
 use base64::engine::general_purpose;
 use base64::Engine as _;
-use indexmap::IndexMap;
 use serde_json::Number;
 
-use super::{ObjectTrait, TypeMapping, ValueMapping};
-use crate::types::ScalarType;
+use super::ObjectTrait;
+use crate::types::{ScalarType, TypeDefinition, TypeMapping, ValueMapping};
 use crate::utils::extract_value::extract;
 
 pub mod edge;
@@ -28,9 +27,12 @@ pub struct ConnectionObject {
 
 impl ConnectionObject {
     pub fn new(name: String, type_name: String) -> Self {
-        let type_mapping = IndexMap::from([
-            (Name::new("edges"), TypeRef::named_list(format!("{}Edge", type_name))),
-            (Name::new("totalCount"), TypeRef::named_nn(TypeRef::INT)),
+        let type_mapping = TypeMapping::from([
+            (
+                Name::new("edges"),
+                TypeDefinition::Simple(TypeRef::named_list(format!("{}Edge", type_name))),
+            ),
+            (Name::new("totalCount"), TypeDefinition::Simple(TypeRef::named_nn(TypeRef::INT))),
         ]);
 
         Self {

@@ -1,9 +1,8 @@
 use async_graphql::dynamic::TypeRef;
 use async_graphql::Name;
-use indexmap::IndexMap;
 
 use crate::object::{ObjectTrait, TypeMapping};
-use crate::types::ScalarType;
+use crate::types::{ScalarType, TypeDefinition};
 
 pub struct PageInfoObject {
     pub type_mapping: TypeMapping,
@@ -12,11 +11,23 @@ pub struct PageInfoObject {
 impl Default for PageInfoObject {
     fn default() -> Self {
         Self {
-            type_mapping: IndexMap::from([
-                (Name::new("hasPreviousPage"), TypeRef::named(TypeRef::BOOLEAN)),
-                (Name::new("hasNextPage"), TypeRef::named(TypeRef::BOOLEAN)),
-                (Name::new("startCursor"), TypeRef::named(ScalarType::Cursor.to_string())),
-                (Name::new("endCursor"), TypeRef::named(ScalarType::Cursor.to_string())),
+            type_mapping: TypeMapping::from([
+                (
+                    Name::new("hasPreviousPage"),
+                    TypeDefinition::Simple(TypeRef::named(TypeRef::BOOLEAN)),
+                ),
+                (
+                    Name::new("hasNextPage"),
+                    TypeDefinition::Simple(TypeRef::named(TypeRef::BOOLEAN)),
+                ),
+                (
+                    Name::new("startCursor"),
+                    TypeDefinition::Simple(TypeRef::named(ScalarType::Cursor.to_string())),
+                ),
+                (
+                    Name::new("endCursor"),
+                    TypeDefinition::Simple(TypeRef::named(ScalarType::Cursor.to_string())),
+                ),
             ]),
         }
     }

@@ -12,7 +12,7 @@ use async_graphql::{Error, Value};
 
 use self::connection::edge::EdgeObject;
 use self::connection::ConnectionObject;
-use crate::types::{TypeMapping, ValueMapping};
+use crate::types::{TypeDefinition, TypeMapping, ValueMapping};
 
 pub trait ObjectTrait {
     // Name of the graphql object (eg "player")
@@ -24,8 +24,9 @@ pub trait ObjectTrait {
     // Type mapping defines the fields of the graphql object and their corresponding type
     fn type_mapping(&self) -> &TypeMapping;
 
-    // Related graphql objects
-    fn nested_fields(&self) -> Option<Vec<Field>> {
+    // Related fields are fields that are not part of the graphql object but are related to it
+    // and can be queried
+    fn related_fields(&self) -> Option<Vec<Field>> {
         None
     }
 
@@ -34,12 +35,13 @@ pub trait ObjectTrait {
         None
     }
 
-    // Resolves subscriptions, returns current object (eg "PlayerAdded")
-    fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
-        None
-    }
     // Resolves plural object queries, returns type of {type_name}Connection (eg "PlayerConnection")
     fn resolve_many(&self) -> Option<Field> {
+        None
+    }
+
+    // Resolves subscriptions, returns current object (eg "PlayerAdded")
+    fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
         None
     }
 
@@ -51,6 +53,11 @@ pub trait ObjectTrait {
 
     // Enum objects
     fn enum_objects(&self) -> Option<Vec<Enum>> {
+        None
+    }
+
+    // Nested objects represents custom types or nested structs
+    fn nested_objects(&self) -> Option<Vec<Object>> {
         None
     }
 
@@ -70,14 +77,19 @@ pub trait ObjectTrait {
     fn create(&self) -> Object {
         let mut object = Object::new(self.type_name());
 
-        for (field_name, field_type) in self.type_mapping() {
-            let field_name = field_name.clone();
-            let field_type = field_type.clone();
+        for (field_name, type_def) in self.type_mapping() {
+            if type_def.is_nested() {
+                continue;
+            }
 
-            let field = Field::new(field_name.to_string(), field_type, move |ctx| {
+            let field_name = field_name.clone();
+            let field_type = type_def.type_ref();
+
+            let field = Field::new(field_name.to_string(), field_type.clone(), move |ctx| {
                 let field_name = field_name.clone();
 
                 FieldFuture::new(async move {
+                    println!("{field_name} here");
                     // All direct queries, single and plural, passes down results as Value of type
                     // Object, and Object is an indexmap that contains fields
                     // and their corresponding result. The result can also be
@@ -105,8 +117,8 @@ pub trait ObjectTrait {
         }
 
         // Add related graphql objects (eg event, system)
-        if let Some(nested_fields) = self.nested_fields() {
-            for field in nested_fields {
+        if let Some(fields) = self.related_fields() {
+            for field in fields {
                 object = object.field(field);
             }
         }
