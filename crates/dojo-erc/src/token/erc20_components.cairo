@@ -1,28 +1,30 @@
 use starknet::ContractAddress;
 
 #[derive(Component, Copy, Drop, Serde)]
-struct Allowance {
+struct ERC20Balance {
+    #[key]
+    token: ContractAddress,
+    #[key]
+    account: ContractAddress,
+    amount: u256,
+}
+
+#[derive(Component, Copy, Drop, Serde)]
+struct ERC20Allowance {
     #[key]
     token: ContractAddress,
     #[key]
     owner: ContractAddress,
     #[key]
     spender: ContractAddress,
-    amount: felt252,
+    amount: u256,
 }
 
 #[derive(Component, Copy, Drop, Serde)]
-struct Balance {
+struct ERC20Meta {
     #[key]
     token: ContractAddress,
-    #[key]
-    sender: ContractAddress,
-    amount: felt252,
-}
-
-#[derive(Component, Copy, Drop, Serde)]
-struct Supply {
-    #[key]
-    token: ContractAddress,
-    amount: felt252
+    name: felt252,
+    symbol: felt252,
+    total_supply: u256,
 }

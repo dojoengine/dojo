@@ -20,21 +20,6 @@ pub async fn execute(command: RegisterCommand, env_metadata: Option<Environment>
 
             println!("Components registered at transaction: {:#x}", res.transaction_hash)
         }
-
-        RegisterCommand::System { systems, world, starknet, account } => {
-            let world_address = world.address(env_metadata.as_ref())?;
-            let provider = starknet.provider(env_metadata.as_ref())?;
-
-            let account = account.account(provider, env_metadata.as_ref()).await?;
-            let world = WorldContract::new(world_address, &account);
-
-            let res = world
-                .register_systems(&systems)
-                .await
-                .with_context(|| "Failed to send transaction")?;
-
-            println!("Systems registered at transaction: {:#x}", res.transaction_hash)
-        }
     }
     Ok(())
 }

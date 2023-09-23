@@ -34,24 +34,6 @@ pub enum RegisterCommand {
         #[command(flatten)]
         account: AccountOptions,
     },
-
-    #[command(about = "Register a system to a world.")]
-    System {
-        #[arg(num_args = 1..)]
-        #[arg(required = true)]
-        #[arg(value_name = "CLASS_HASH")]
-        #[arg(help = "The class hash of the systems to register.")]
-        systems: Vec<FieldElement>,
-
-        #[command(flatten)]
-        world: WorldOptions,
-
-        #[command(flatten)]
-        starknet: StarknetOptions,
-
-        #[command(flatten)]
-        account: AccountOptions,
-    },
 }
 
 impl RegisterArgs {
