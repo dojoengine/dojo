@@ -8,7 +8,7 @@ test_manifest_file
   "world": {
     "name": "world",
     "address": null,
-    "class_hash": "0x8bcb0174637beb7feaba9f546c22d0600992499235c83e51051a9661523e94",
+    "class_hash": "0x370195d9fa250c4844f750f68ca77adf86c7f3293cc1cbac5c65d3404e2b2af",
     "abi": [
       {
         "type": "impl",
@@ -22,6 +22,16 @@ test_manifest_file
           {
             "name": "snapshot",
             "type": "@core::array::Array::<core::felt252>"
+          }
+        ]
+      },
+      {
+        "type": "struct",
+        "name": "core::array::Span::<core::integer::u8>",
+        "members": [
+          {
+            "name": "snapshot",
+            "type": "@core::array::Array::<core::integer::u8>"
           }
         ]
       },
@@ -127,6 +137,10 @@ test_manifest_file
               {
                 "name": "length",
                 "type": "core::integer::u32"
+              },
+              {
+                "name": "layout",
+                "type": "core::array::Span::<core::integer::u8>"
               }
             ],
             "outputs": [
@@ -153,8 +167,12 @@ test_manifest_file
                 "type": "core::integer::u8"
               },
               {
-                "name": "value",
+                "name": "values",
                 "type": "core::array::Span::<core::felt252>"
+              },
+              {
+                "name": "layout",
+                "type": "core::array::Span::<core::integer::u8>"
               }
             ],
             "outputs": [],
@@ -175,6 +193,10 @@ test_manifest_file
               {
                 "name": "length",
                 "type": "core::integer::u32"
+              },
+              {
+                "name": "layout",
+                "type": "core::array::Span::<core::integer::u8>"
               }
             ],
             "outputs": [
@@ -411,7 +433,7 @@ test_manifest_file
             "kind": "data"
           },
           {
-            "name": "value",
+            "name": "values",
             "type": "core::array::Span::<core::felt252>",
             "kind": "data"
           }
@@ -531,7 +553,7 @@ test_manifest_file
     {
       "name": "player_actions",
       "address": null,
-      "class_hash": "0x78f29c7c17ff86f0436b6d69f25090f3b31076c9e3765d27f18b6744b4217c6",
+      "class_hash": "0x3b55d1b5540a961f4b668fc2b8378b488b4c5f99e46542bfa3585ccd1a13f9c",
       "abi": [
         {
           "type": "impl",
@@ -653,7 +675,7 @@ test_manifest_file
     {
       "name": "player_actions_external",
       "address": null,
-      "class_hash": "0x6aae7401941815d53929e862b319d35b44eb54a659555c15d9767c258081f98",
+      "class_hash": "0x713256dd40b9cb5ad2dedb4e638cb13ec94c7140ac92ebf6ec6feb8c088af79",
       "abi": [
         {
           "type": "impl",
@@ -782,7 +804,7 @@ test_manifest_file
           "key": false
         }
       ],
-      "class_hash": "0x451a367ced4c22bfc661e6a342391faa6087d3162ea53cf4c6cc86c8630de49",
+      "class_hash": "0x3682ef3ef44d8db8c8bfe72533e2e3b17e7b80efd6550b365deed7b4b3f8597",
       "abi": [
         {
           "type": "function",
@@ -807,16 +829,97 @@ test_manifest_file
           "state_mutability": "view"
         },
         {
-          "type": "enum",
-          "name": "core::bool",
-          "variants": [
+          "type": "struct",
+          "name": "core::array::Span::<core::integer::u8>",
+          "members": [
             {
-              "name": "False",
-              "type": "()"
+              "name": "snapshot",
+              "type": "@core::array::Array::<core::integer::u8>"
+            }
+          ]
+        },
+        {
+          "type": "function",
+          "name": "layout",
+          "inputs": [],
+          "outputs": [
+            {
+              "type": "core::array::Span::<core::integer::u8>"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<core::felt252>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<core::felt252>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<core::array::Span::<core::felt252>>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<core::array::Span::<core::felt252>>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "dojo::database::schema::Struct",
+          "members": [
+            {
+              "name": "name",
+              "type": "core::felt252"
             },
             {
-              "name": "True",
-              "type": "()"
+              "name": "attrs",
+              "type": "core::array::Span::<core::felt252>"
+            },
+            {
+              "name": "children",
+              "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "dojo::database::schema::EnumMember",
+          "members": [
+            {
+              "name": "name",
+              "type": "core::felt252"
+            },
+            {
+              "name": "attrs",
+              "type": "core::array::Span::<core::felt252>"
+            },
+            {
+              "name": "values",
+              "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+            }
+          ]
+        },
+        {
+          "type": "enum",
+          "name": "dojo::database::schema::Ty",
+          "variants": [
+            {
+              "name": "Simple",
+              "type": "core::felt252"
+            },
+            {
+              "name": "Struct",
+              "type": "dojo::database::schema::Struct"
+            },
+            {
+              "name": "Enum",
+              "type": "dojo::database::schema::EnumMember"
             }
           ]
         },
@@ -826,7 +929,7 @@ test_manifest_file
           "inputs": [],
           "outputs": [
             {
-              "type": "core::array::Array::<(core::felt252, core::felt252, core::bool)>"
+              "type": "dojo::database::schema::Ty"
             }
           ],
           "state_mutability": "view"
@@ -848,17 +951,12 @@ test_manifest_file
           "key": true
         },
         {
-          "name": "x",
-          "type": "u32",
-          "key": false
-        },
-        {
-          "name": "y",
-          "type": "u32",
+          "name": "vec",
+          "type": "Vec2",
           "key": false
         }
       ],
-      "class_hash": "0x6a8ab7eb5689bed6f0e9fb63d2565411830e1725aca7299f5f512d375d9a28c",
+      "class_hash": "0x71a5cb83c2d96f4b97a015d36f936de6f93166a1434bbacd29147933c4ac314",
       "abi": [
         {
           "type": "function",
@@ -883,16 +981,97 @@ test_manifest_file
           "state_mutability": "view"
         },
         {
-          "type": "enum",
-          "name": "core::bool",
-          "variants": [
+          "type": "struct",
+          "name": "core::array::Span::<core::integer::u8>",
+          "members": [
             {
-              "name": "False",
-              "type": "()"
+              "name": "snapshot",
+              "type": "@core::array::Array::<core::integer::u8>"
+            }
+          ]
+        },
+        {
+          "type": "function",
+          "name": "layout",
+          "inputs": [],
+          "outputs": [
+            {
+              "type": "core::array::Span::<core::integer::u8>"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<core::felt252>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<core::felt252>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<core::array::Span::<core::felt252>>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<core::array::Span::<core::felt252>>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "dojo::database::schema::Struct",
+          "members": [
+            {
+              "name": "name",
+              "type": "core::felt252"
             },
             {
-              "name": "True",
-              "type": "()"
+              "name": "attrs",
+              "type": "core::array::Span::<core::felt252>"
+            },
+            {
+              "name": "children",
+              "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "dojo::database::schema::EnumMember",
+          "members": [
+            {
+              "name": "name",
+              "type": "core::felt252"
+            },
+            {
+              "name": "attrs",
+              "type": "core::array::Span::<core::felt252>"
+            },
+            {
+              "name": "values",
+              "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+            }
+          ]
+        },
+        {
+          "type": "enum",
+          "name": "dojo::database::schema::Ty",
+          "variants": [
+            {
+              "name": "Simple",
+              "type": "core::felt252"
+            },
+            {
+              "name": "Struct",
+              "type": "dojo::database::schema::Struct"
+            },
+            {
+              "name": "Enum",
+              "type": "dojo::database::schema::EnumMember"
             }
           ]
         },
@@ -902,7 +1081,7 @@ test_manifest_file
           "inputs": [],
           "outputs": [
             {
-              "type": "core::array::Array::<(core::felt252, core::felt252, core::bool)>"
+              "type": "dojo::database::schema::Ty"
             }
           ],
           "state_mutability": "view"
