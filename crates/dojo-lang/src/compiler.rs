@@ -163,7 +163,6 @@ pub fn collect_core_crate_ids(db: &RootDatabase) -> Vec<CrateId> {
     [
         ContractSelector("dojo::executor::executor".to_string()),
         ContractSelector("dojo::world::world".to_string()),
-        ContractSelector("dojo::world_factory::world_factory".to_string()),
     ]
     .iter()
     .map(|selector| selector.package().into())
