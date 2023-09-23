@@ -248,6 +248,27 @@ impl<'a, P: Provider + Sync> WorldContractReader<'a, P> {
         Ok(res[0])
     }
 
+    pub async fn executor_call(
+        &self,
+        class_hash: FieldElement,
+        mut calldata: Vec<FieldElement>,
+        block_id: BlockId,
+    ) -> Result<Vec<FieldElement>, ContractReaderError<P::Error>> {
+        calldata.insert(0, class_hash);
+
+        self.provider
+            .call(
+                FunctionCall {
+                    contract_address: self.executor(block_id).await.unwrap(),
+                    calldata,
+                    entry_point_selector: get_selector_from_name("call").unwrap(),
+                },
+                block_id,
+            )
+            .await
+            .map_err(ContractReaderError::ProviderError)
+    }
+
     pub async fn call(
         &self,
         system: &str,
