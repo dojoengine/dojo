@@ -8,7 +8,7 @@ test_manifest_file
   "world": {
     "name": "world",
     "address": null,
-    "class_hash": "0x214e6e912f68ebe1a82cea0b7a5ded07ba4efa640dd977f1af974c02924e1ff",
+    "class_hash": "0x8bcb0174637beb7feaba9f546c22d0600992499235c83e51051a9661523e94",
     "abi": [
       {
         "type": "impl",
@@ -83,50 +83,6 @@ test_manifest_file
           },
           {
             "type": "function",
-            "name": "system",
-            "inputs": [
-              {
-                "name": "name",
-                "type": "core::felt252"
-              }
-            ],
-            "outputs": [
-              {
-                "type": "core::starknet::contract_address::ContractAddress"
-              }
-            ],
-            "state_mutability": "view"
-          },
-          {
-            "type": "function",
-            "name": "register_system",
-            "inputs": [
-              {
-                "name": "class_hash",
-                "type": "core::starknet::class_hash::ClassHash"
-              }
-            ],
-            "outputs": [],
-            "state_mutability": "external"
-          },
-          {
-            "type": "function",
-            "name": "register_system_contract",
-            "inputs": [
-              {
-                "name": "name",
-                "type": "core::felt252"
-              },
-              {
-                "name": "contract_address",
-                "type": "core::starknet::contract_address::ContractAddress"
-              }
-            ],
-            "outputs": [],
-            "state_mutability": "external"
-          },
-          {
-            "type": "function",
             "name": "uuid",
             "inputs": [],
             "outputs": [
@@ -151,26 +107,6 @@ test_manifest_file
             ],
             "outputs": [],
             "state_mutability": "view"
-          },
-          {
-            "type": "function",
-            "name": "execute",
-            "inputs": [
-              {
-                "name": "system",
-                "type": "core::felt252"
-              },
-              {
-                "name": "calldata",
-                "type": "core::array::Array::<core::felt252>"
-              }
-            ],
-            "outputs": [
-              {
-                "type": "core::array::Span::<core::felt252>"
-              }
-            ],
-            "state_mutability": "external"
           },
           {
             "type": "function",
@@ -349,7 +285,7 @@ test_manifest_file
               },
               {
                 "name": "system",
-                "type": "core::felt252"
+                "type": "core::starknet::contract_address::ContractAddress"
               }
             ],
             "outputs": [
@@ -369,7 +305,7 @@ test_manifest_file
               },
               {
                 "name": "system",
-                "type": "core::felt252"
+                "type": "core::starknet::contract_address::ContractAddress"
               }
             ],
             "outputs": [],
@@ -385,7 +321,7 @@ test_manifest_file
               },
               {
                 "name": "system",
-                "type": "core::felt252"
+                "type": "core::starknet::contract_address::ContractAddress"
               }
             ],
             "outputs": [],
@@ -590,29 +526,17 @@ test_manifest_file
       }
     ]
   },
-  "systems": [
+  "systems": [],
+  "contracts": [
     {
-      "name": "spawn",
-      "inputs": [
-        {
-          "name": "self",
-          "type": "@dojo_examples::systems::spawn::ContractState"
-        }
-      ],
-      "outputs": [],
-      "class_hash": "0x5c79f783745daae9270d44c95b8fcf7804585bf8a76ce7cf3c5eab47a832312",
-      "dependencies": [],
+      "name": "player_actions",
+      "address": null,
+      "class_hash": "0x78f29c7c17ff86f0436b6d69f25090f3b31076c9e3765d27f18b6744b4217c6",
       "abi": [
         {
-          "type": "function",
-          "name": "name",
-          "inputs": [],
-          "outputs": [
-            {
-              "type": "core::felt252"
-            }
-          ],
-          "state_mutability": "view"
+          "type": "impl",
+          "name": "PlayerActionsImpl",
+          "interface_name": "dojo_examples::systems::with_decorator::IPlayerActions"
         },
         {
           "type": "struct",
@@ -623,71 +547,6 @@ test_manifest_file
               "type": "core::starknet::contract_address::ContractAddress"
             }
           ]
-        },
-        {
-          "type": "struct",
-          "name": "dojo::world::Context",
-          "members": [
-            {
-              "name": "world",
-              "type": "dojo::world::IWorldDispatcher"
-            },
-            {
-              "name": "origin",
-              "type": "core::starknet::contract_address::ContractAddress"
-            },
-            {
-              "name": "system",
-              "type": "core::felt252"
-            }
-          ]
-        },
-        {
-          "type": "function",
-          "name": "execute",
-          "inputs": [
-            {
-              "name": "ctx",
-              "type": "dojo::world::Context"
-            }
-          ],
-          "outputs": [],
-          "state_mutability": "view"
-        },
-        {
-          "type": "event",
-          "name": "dojo_examples::systems::spawn::Event",
-          "kind": "enum",
-          "variants": []
-        }
-      ]
-    },
-    {
-      "name": "move",
-      "inputs": [
-        {
-          "name": "self",
-          "type": "@dojo_examples::systems::move::ContractState"
-        },
-        {
-          "name": "direction",
-          "type": "dojo_examples::components::Direction"
-        }
-      ],
-      "outputs": [],
-      "class_hash": "0x49b5a41498b6c0b7ada58c93d19feb007649d0d2fb24df1a20760db48abdd76",
-      "dependencies": [],
-      "abi": [
-        {
-          "type": "function",
-          "name": "name",
-          "inputs": [],
-          "outputs": [
-            {
-              "type": "core::felt252"
-            }
-          ],
-          "state_mutability": "view"
         },
         {
           "type": "enum",
@@ -716,108 +575,39 @@ test_manifest_file
           ]
         },
         {
-          "type": "struct",
-          "name": "dojo::world::IWorldDispatcher",
-          "members": [
+          "type": "interface",
+          "name": "dojo_examples::systems::with_decorator::IPlayerActions",
+          "items": [
             {
-              "name": "contract_address",
-              "type": "core::starknet::contract_address::ContractAddress"
+              "type": "function",
+              "name": "spawn",
+              "inputs": [
+                {
+                  "name": "world",
+                  "type": "dojo::world::IWorldDispatcher"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "move",
+              "inputs": [
+                {
+                  "name": "world",
+                  "type": "dojo::world::IWorldDispatcher"
+                },
+                {
+                  "name": "direction",
+                  "type": "dojo_examples::components::Direction"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "view"
             }
           ]
         },
-        {
-          "type": "struct",
-          "name": "dojo::world::Context",
-          "members": [
-            {
-              "name": "world",
-              "type": "dojo::world::IWorldDispatcher"
-            },
-            {
-              "name": "origin",
-              "type": "core::starknet::contract_address::ContractAddress"
-            },
-            {
-              "name": "system",
-              "type": "core::felt252"
-            }
-          ]
-        },
-        {
-          "type": "function",
-          "name": "execute",
-          "inputs": [
-            {
-              "name": "direction",
-              "type": "dojo_examples::components::Direction"
-            },
-            {
-              "name": "ctx",
-              "type": "dojo::world::Context"
-            }
-          ],
-          "outputs": [],
-          "state_mutability": "view"
-        },
-        {
-          "type": "event",
-          "name": "dojo_examples::systems::move::Moved",
-          "kind": "struct",
-          "members": [
-            {
-              "name": "address",
-              "type": "core::starknet::contract_address::ContractAddress",
-              "kind": "data"
-            },
-            {
-              "name": "direction",
-              "type": "dojo_examples::components::Direction",
-              "kind": "data"
-            }
-          ]
-        },
-        {
-          "type": "event",
-          "name": "dojo_examples::systems::move::Event",
-          "kind": "enum",
-          "variants": [
-            {
-              "name": "Moved",
-              "type": "dojo_examples::systems::move::Moved",
-              "kind": "nested"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "library_call",
-      "inputs": [
-        {
-          "name": "self",
-          "type": "@dojo::world::library_call::ContractState"
-        },
-        {
-          "name": "class_hash",
-          "type": "core::starknet::class_hash::ClassHash"
-        },
-        {
-          "name": "entrypoint",
-          "type": "core::felt252"
-        },
-        {
-          "name": "calladata",
-          "type": "core::array::Span::<core::felt252>"
-        }
-      ],
-      "outputs": [
-        {
-          "type": "core::array::Span::<core::felt252>"
-        }
-      ],
-      "class_hash": "0x64ea0cc316108938bf86bbf01d52b6992bc413a1ff67700ff09290c821cae50",
-      "dependencies": [],
-      "abi": [
         {
           "type": "function",
           "name": "name",
@@ -830,14 +620,45 @@ test_manifest_file
           "state_mutability": "view"
         },
         {
-          "type": "struct",
-          "name": "core::array::Span::<core::felt252>",
+          "type": "event",
+          "name": "dojo_examples::systems::with_decorator::player_actions::Moved",
+          "kind": "struct",
           "members": [
             {
-              "name": "snapshot",
-              "type": "@core::array::Array::<core::felt252>"
+              "name": "player",
+              "type": "core::starknet::contract_address::ContractAddress",
+              "kind": "data"
+            },
+            {
+              "name": "direction",
+              "type": "dojo_examples::components::Direction",
+              "kind": "data"
             }
           ]
+        },
+        {
+          "type": "event",
+          "name": "dojo_examples::systems::with_decorator::player_actions::Event",
+          "kind": "enum",
+          "variants": [
+            {
+              "name": "Moved",
+              "type": "dojo_examples::systems::with_decorator::player_actions::Moved",
+              "kind": "nested"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "player_actions_external",
+      "address": null,
+      "class_hash": "0x6aae7401941815d53929e862b319d35b44eb54a659555c15d9767c258081f98",
+      "abi": [
+        {
+          "type": "impl",
+          "name": "PlayerActionsImpl",
+          "interface_name": "dojo_examples::systems::raw_contract::IPlayerActions"
         },
         {
           "type": "struct",
@@ -850,61 +671,97 @@ test_manifest_file
           ]
         },
         {
-          "type": "struct",
-          "name": "dojo::world::Context",
-          "members": [
+          "type": "enum",
+          "name": "dojo_examples::components::Direction",
+          "variants": [
             {
-              "name": "world",
-              "type": "dojo::world::IWorldDispatcher"
+              "name": "None",
+              "type": "()"
             },
             {
-              "name": "origin",
-              "type": "core::starknet::contract_address::ContractAddress"
+              "name": "Left",
+              "type": "()"
             },
             {
-              "name": "system",
-              "type": "core::felt252"
+              "name": "Right",
+              "type": "()"
+            },
+            {
+              "name": "Up",
+              "type": "()"
+            },
+            {
+              "name": "Down",
+              "type": "()"
             }
           ]
         },
         {
-          "type": "function",
-          "name": "execute",
-          "inputs": [
+          "type": "interface",
+          "name": "dojo_examples::systems::raw_contract::IPlayerActions",
+          "items": [
             {
-              "name": "class_hash",
-              "type": "core::starknet::class_hash::ClassHash"
+              "type": "function",
+              "name": "spawn",
+              "inputs": [
+                {
+                  "name": "world",
+                  "type": "dojo::world::IWorldDispatcher"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "view"
             },
             {
-              "name": "entrypoint",
-              "type": "core::felt252"
-            },
-            {
-              "name": "calladata",
-              "type": "core::array::Span::<core::felt252>"
-            },
-            {
-              "name": "_ctx",
-              "type": "dojo::world::Context"
+              "type": "function",
+              "name": "move",
+              "inputs": [
+                {
+                  "name": "world",
+                  "type": "dojo::world::IWorldDispatcher"
+                },
+                {
+                  "name": "direction",
+                  "type": "dojo_examples::components::Direction"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "view"
             }
-          ],
-          "outputs": [
-            {
-              "type": "core::array::Span::<core::felt252>"
-            }
-          ],
-          "state_mutability": "view"
+          ]
         },
         {
           "type": "event",
-          "name": "dojo::world::library_call::Event",
+          "name": "dojo_examples::systems::raw_contract::player_actions_external::Moved",
+          "kind": "struct",
+          "members": [
+            {
+              "name": "player",
+              "type": "core::starknet::contract_address::ContractAddress",
+              "kind": "data"
+            },
+            {
+              "name": "direction",
+              "type": "dojo_examples::components::Direction",
+              "kind": "data"
+            }
+          ]
+        },
+        {
+          "type": "event",
+          "name": "dojo_examples::systems::raw_contract::player_actions_external::Event",
           "kind": "enum",
-          "variants": []
+          "variants": [
+            {
+              "name": "Moved",
+              "type": "dojo_examples::systems::raw_contract::player_actions_external::Moved",
+              "kind": "nested"
+            }
+          ]
         }
       ]
     }
   ],
-  "contracts": [],
   "components": [
     {
       "name": "Moves",

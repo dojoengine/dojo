@@ -100,29 +100,6 @@ impl<'a, A: ConnectedAccount + Sync> WorldContract<'a, A> {
         self.account.execute(calls).send().await
     }
 
-    pub async fn register_systems(
-        &self,
-        systems: &[FieldElement],
-    ) -> Result<InvokeTransactionResult, AccountError<A::SignError, <A::Provider as Provider>::Error>>
-    {
-        let calls = systems
-            .iter()
-            .map(|s| Call {
-                to: self.address,
-                // function selector: "register_system"
-                selector: FieldElement::from_mont([
-                    6581716859078500959,
-                    16871126355047595269,
-                    14219012428168968926,
-                    473332093618875024,
-                ]),
-                calldata: vec![*s],
-            })
-            .collect::<Vec<_>>();
-
-        self.account.execute(calls).send().await
-    }
-
     pub async fn execute(
         &self,
         name: &str,

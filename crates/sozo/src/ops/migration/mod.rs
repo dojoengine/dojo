@@ -3,9 +3,12 @@ use std::path::Path;
 use anyhow::{anyhow, bail, Context, Result};
 use dojo_world::manifest::{Manifest, ManifestError};
 use dojo_world::metadata::Environment;
+use dojo_world::migration::contract::ContractMigration;
 use dojo_world::migration::strategy::{prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
-use dojo_world::migration::{Declarable, Deployable, MigrationError, RegisterOutput, StateDiff};
+use dojo_world::migration::{
+    Declarable, DeployOutput, Deployable, MigrationError, RegisterOutput, StateDiff,
+};
 use dojo_world::utils::TransactionWaiter;
 use scarb::core::Config;
 use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
@@ -227,38 +230,10 @@ where
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
 {
-    let mut block_height = None;
     match &strategy.executor {
         Some(executor) => {
             ws_config.ui().print_header("# Executor");
-
-            match executor
-                .deploy(
-                    executor.diff.local,
-                    vec![],
-                    migrator,
-                    txn_config.clone().map(|c| c.into()).unwrap_or_default(),
-                )
-                .await
-            {
-                Ok(val) => {
-                    if let Some(declare) = val.clone().declare {
-                        ws_config.ui().print_hidden_sub(format!(
-                            "Declare transaction: {:#x}",
-                            declare.transaction_hash
-                        ));
-                    }
-
-                    ws_config.ui().print_hidden_sub(format!(
-                        "Deploy transaction: {:#x}",
-                        val.transaction_hash
-                    ));
-
-                    Ok(())
-                }
-                Err(MigrationError::ContractAlreadyDeployed) => Ok(()),
-                Err(e) => Err(anyhow!("Failed to migrate executor: {:?}", e)),
-            }?;
+            deploy_contract(executor, "executor", vec![], migrator, ws_config, &txn_config).await?;
 
             if strategy.world.is_none() {
                 let addr = strategy.world_address()?;
@@ -267,13 +242,7 @@ where
                         .set_executor(executor.contract_address)
                         .await?;
 
-                let _ =
-                    TransactionWaiter::new(transaction_hash, migrator.provider()).await.map_err(
-                        MigrationError::<
-                            <SingleOwnerAccount<P, S> as Account>::SignError,
-                            <P as Provider>::Error,
-                        >::WaitingError,
-                    )?;
+                TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
 
                 ws_config.ui().print_hidden_sub(format!("Updated at: {transaction_hash:#x}"));
             }
@@ -286,39 +255,8 @@ where
     match &strategy.world {
         Some(world) => {
             ws_config.ui().print_header("# World");
-
-            match world
-                .deploy(
-                    world.diff.local,
-                    vec![strategy.executor.as_ref().unwrap().contract_address],
-                    migrator,
-                    txn_config.clone().map(|c| c.into()).unwrap_or_default(),
-                )
-                .await
-            {
-                Ok(val) => {
-                    if let Some(declare) = val.clone().declare {
-                        ws_config.ui().print_hidden_sub(format!(
-                            "Declare transaction: {:#x}",
-                            declare.transaction_hash
-                        ));
-                    }
-
-                    ws_config.ui().print_hidden_sub(format!(
-                        "Deploy transaction: {:#x}",
-                        val.transaction_hash
-                    ));
-
-                    block_height = Some(val.block_number);
-
-                    Ok(())
-                }
-                Err(MigrationError::ContractAlreadyDeployed) => {
-                    ws_config.ui().print_sub("World already exists, updating...");
-                    Ok(())
-                }
-                Err(e) => Err(anyhow!("Failed to migrate world: {:?}", e)),
-            }?;
+            let calldata = vec![strategy.executor.as_ref().unwrap().contract_address];
+            deploy_contract(world, "world", calldata, migrator, ws_config, &txn_config).await?;
 
             ws_config.ui().print_sub(format!("Contract address: {:#x}", world.contract_address));
         }
@@ -326,9 +264,59 @@ where
     };
 
     register_components(strategy, migrator, ws_config, txn_config.clone()).await?;
-    register_systems(strategy, migrator, ws_config, txn_config).await?;
+    deploy_contracts(strategy, migrator, ws_config, txn_config).await?;
 
-    Ok(block_height)
+    // This gets current block numder if helpful
+    // let block_height = migrator.provider().block_number().await.ok();
+
+    Ok(None)
+}
+
+enum ContractDeploymentOutput {
+    AlreadyDeployed(FieldElement),
+    Output(DeployOutput),
+}
+
+async fn deploy_contract<P, S>(
+    contract: &ContractMigration,
+    contract_id: &str,
+    constructor_calldata: Vec<FieldElement>,
+    migrator: &SingleOwnerAccount<P, S>,
+    ws_config: &Config,
+    txn_config: &Option<TransactionOptions>,
+) -> Result<ContractDeploymentOutput>
+where
+    P: Provider + Sync + Send + 'static,
+    S: Signer + Sync + Send + 'static,
+{
+    match contract
+        .deploy(
+            contract.diff.local,
+            constructor_calldata,
+            migrator,
+            txn_config.clone().map(|c| c.into()).unwrap_or_default(),
+        )
+        .await
+    {
+        Ok(val) => {
+            if let Some(declare) = val.clone().declare {
+                ws_config.ui().print_hidden_sub(format!(
+                    "Declare transaction: {:#x}",
+                    declare.transaction_hash
+                ));
+            }
+
+            ws_config
+                .ui()
+                .print_hidden_sub(format!("Deploy transaction: {:#x}", val.transaction_hash));
+
+            Ok(ContractDeploymentOutput::Output(val))
+        }
+        Err(MigrationError::ContractAlreadyDeployed(contract_address)) => {
+            Ok(ContractDeploymentOutput::AlreadyDeployed(contract_address))
+        }
+        Err(e) => Err(anyhow!("Failed to migrate {}: {:?}", contract_id, e)),
+    }
 }
 
 async fn register_components<P, S>(
@@ -358,10 +346,9 @@ where
             c.declare(migrator, txn_config.clone().map(|c| c.into()).unwrap_or_default()).await;
         match res {
             Ok(output) => {
-                ws_config.ui().print_hidden_sub(format!(
-                    "declare transaction: {:#x}",
-                    output.transaction_hash
-                ));
+                ws_config
+                    .ui()
+                    .print_hidden_sub(format!("transaction_hash: {:#x}", output.transaction_hash));
 
                 declare_output.push(output);
             }
@@ -374,7 +361,7 @@ where
             Err(e) => bail!("Failed to declare component {}: {e}", c.diff.name),
         }
 
-        ws_config.ui().print_sub(format!("class hash: {:#x}", c.diff.local));
+        ws_config.ui().print_sub(format!("Class hash: {:#x}", c.diff.local));
     }
 
     let world_address = strategy.world_address()?;
@@ -384,79 +371,53 @@ where
         .await
         .map_err(|e| anyhow!("Failed to register components to World: {e}"))?;
 
-    TransactionWaiter::new(transaction_hash, migrator.provider()).await.map_err(
-            MigrationError::<
-                <SingleOwnerAccount<P, S> as Account>::SignError,
-                <P as Provider>::Error,
-            >::WaitingError,
-        )?;
+    TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
 
     ws_config.ui().print_hidden_sub(format!("registered at: {transaction_hash:#x}"));
 
     Ok(Some(RegisterOutput { transaction_hash, declare_output }))
 }
 
-async fn register_systems<P, S>(
+async fn deploy_contracts<P, S>(
     strategy: &MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
     ws_config: &Config,
     txn_config: Option<TransactionOptions>,
-) -> Result<Option<RegisterOutput>>
+) -> Result<Vec<Option<DeployOutput>>>
 where
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
 {
-    let systems = &strategy.systems;
+    let contracts = &strategy.contracts;
 
-    if systems.is_empty() {
-        return Ok(None);
+    if contracts.is_empty() {
+        return Ok(vec![]);
     }
 
-    ws_config.ui().print_header(format!("# Systems ({})", systems.len()));
+    ws_config.ui().print_header(format!("# Contracts ({})", contracts.len()));
 
-    let mut declare_output = vec![];
+    let mut deploy_output = vec![];
 
-    for s in strategy.systems.iter() {
-        ws_config.ui().print(italic_message(&s.diff.name).to_string());
-
-        let res =
-            s.declare(migrator, txn_config.clone().map(|c| c.into()).unwrap_or_default()).await;
-        match res {
-            Ok(output) => {
+    for contract in strategy.contracts.iter() {
+        let name = &contract.diff.name;
+        ws_config.ui().print(italic_message(name).to_string());
+        match deploy_contract(contract, name, vec![], migrator, ws_config, &txn_config).await? {
+            ContractDeploymentOutput::Output(output) => {
+                ws_config
+                    .ui()
+                    .print_sub(format!("Contract address: {:#x}", output.contract_address));
                 ws_config.ui().print_hidden_sub(format!(
-                    "Declare transaction: {:#x}",
+                    "deploy transaction: {:#x}",
                     output.transaction_hash
                 ));
-
-                declare_output.push(output);
+                deploy_output.push(Some(output));
             }
-
-            // Continue if system is already declared
-            Err(MigrationError::ClassAlreadyDeclared) => {
-                ws_config.ui().print_sub("Already declared");
-                continue;
+            ContractDeploymentOutput::AlreadyDeployed(contract_address) => {
+                ws_config.ui().print_sub(format!("Already deployed: {:#x}", contract_address));
+                deploy_output.push(None);
             }
-            Err(e) => bail!("Failed to declare system {}: {e}", s.diff.name),
         }
-
-        ws_config.ui().print_sub(format!("class hash: {:#x}", s.diff.local));
     }
 
-    let world_address = strategy.world_address()?;
-
-    let InvokeTransactionResult { transaction_hash } = WorldContract::new(world_address, migrator)
-        .register_systems(&systems.iter().map(|s| s.diff.local).collect::<Vec<_>>())
-        .await
-        .map_err(|e| anyhow!("Failed to register systems to World: {e}"))?;
-
-    TransactionWaiter::new(transaction_hash, migrator.provider()).await.map_err(
-            MigrationError::<
-                <SingleOwnerAccount<P, S> as Account>::SignError,
-                <P as Provider>::Error,
-            >::WaitingError,
-        )?;
-
-    ws_config.ui().print_hidden_sub(format!("registered at: {transaction_hash:#x}"));
-
-    Ok(Some(RegisterOutput { transaction_hash, declare_output }))
+    Ok(deploy_output)
 }
