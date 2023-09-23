@@ -78,9 +78,11 @@ fn test_system() {
         contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world)
     };
 
-    let stored = world.entity('Foo', keys.span(), 0, SchemaIntrospection::<Foo>::size());
     bar_contract.set_foo(1337, 1337);
-    assert(*stored.snapshot.at(0) == 1337, 'data not stored');
+
+    let stored: Foo = get!(world, get_caller_address(), Foo);
+    assert(stored.a == 1337, 'data not stored');
+    assert(stored.b == 1337, 'data not stored');
 }
 
 #[test]
@@ -122,9 +124,9 @@ fn test_set_entity_admin() {
 
     bar_contract.set_foo(420, 1337);
 
-    let foo = get!(world, alice.into(), Foo);
-    assert(*foo[0] == 420, 'data not stored');
-    assert(*foo[1] == 1337, 'data not stored');
+    let foo: Foo = get!(world, alice, Foo);
+    assert(foo.a == 420, 'data not stored');
+    assert(foo.b == 1337, 'data not stored');
 }
 
 #[test]
@@ -201,7 +203,6 @@ fn test_set_owner_fails_for_non_owner() {
     let world = deploy_world();
 
     let alice = starknet::contract_address_const::<0x1337>();
-
     starknet::testing::set_contract_address(alice);
 
     world.revoke_owner(alice, 0);
@@ -268,6 +269,7 @@ fn test_set_writer_fails_for_non_owner() {
 
     let alice = starknet::contract_address_const::<0x1337>();
     starknet::testing::set_contract_address(alice);
+
     assert(!world.is_owner(alice, 0), 'should not be owner');
 
     world.grant_writer(42, 69.try_into().unwrap());
@@ -321,16 +323,17 @@ fn test_execute_multiple_worlds() {
         contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world2)
     };
 
+    let alice = starknet::contract_address_const::<0x1337>();
+    starknet::testing::set_contract_address(alice);
+
     bar1_contract.set_foo(1337, 1337);
     bar2_contract.set_foo(7331, 7331);
 
     let mut keys = ArrayTrait::new();
     keys.append(0);
 
-    let foo = get!(world, alice.into(), Foo);
-
-    let data1 = get!(world1, alice.into(), Foo);
-    let data2 = get!(world2, alice.into(), Foo);
-    assert(*data1.snapshot.at(0) == 1337, 'data1 not stored');
-    assert(*data2.snapshot.at(0) == 7331, 'data2 not stored');
+    let data1 = get!(world1, alice, Foo);
+    let data2 = get!(world2, alice, Foo);
+    assert(data1.a == 1337, 'data1 not stored');
+    assert(data2.a == 7331, 'data2 not stored');
 }

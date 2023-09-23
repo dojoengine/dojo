@@ -6,16 +6,16 @@ fn next_position(mut position: Position, direction: Direction) -> Position {
             return position;
         },
         Direction::Left(()) => {
-            position.x -= 1;
+            position.vec.x -= 1;
         },
         Direction::Right(()) => {
-            position.x += 1;
+            position.vec.x += 1;
         },
         Direction::Up(()) => {
-            position.y -= 1;
+            position.vec.y -= 1;
         },
         Direction::Down(()) => {
-            position.y += 1;
+            position.vec.y += 1;
         },
     };
 

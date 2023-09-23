@@ -12,7 +12,7 @@ trait IPlayerActions<TContractState> {
 #[system]
 mod player_actions {
     use starknet::{ContractAddress, get_caller_address};
-    use dojo_examples::components::{Position, Moves, Direction};
+    use dojo_examples::components::{Position, Moves, Direction, Vec2};
     use dojo_examples::utils::next_position;
     use super::IPlayerActions;
 
@@ -39,7 +39,7 @@ mod player_actions {
                 world,
                 (
                     Moves { player, remaining: 10, last_direction: Direction::None(()) },
-                    Position { player, x: position.x + 10, y: position.y + 10 },
+                    Position { player, vec: Vec2 { x: 10, y: 10 } },
                 )
             );
         }
@@ -66,11 +66,9 @@ mod tests {
 
     use dojo::test_utils::{spawn_test_world, deploy_contract};
 
-    use dojo_examples::components::position;
-    use dojo_examples::components::Position;
-    use dojo_examples::components::moves;
-    use dojo_examples::components::Moves;
-    use super::{player_actions, IPlayerActionsDispatcher, IPlayerActionsDispatcherTrait, Direction};
+    use dojo_examples::components::{position, moves};
+    use dojo_examples::components::{Position, Moves, Direction, Vec2};
+    use super::{player_actions, IPlayerActionsDispatcher, IPlayerActionsDispatcherTrait};
 
     #[test]
     #[available_gas(30000000)]
@@ -90,15 +88,14 @@ mod tests {
         player_actions_system.spawn(world);
         player_actions_system.move(world, Direction::Right(()));
 
-        let mut keys = array![caller.into()];
+        let moves = get!(world, caller, Moves);
+        let right_dir_felt: felt252 = Direction::Right(()).into();
 
-        let moves = world
-            .entity('Moves', keys.span(), 0, dojo::StorageSize::<Moves>::unpacked_size());
-        assert(*moves[0] == 9, 'moves is wrong');
-        assert(*moves[1] == Direction::Right(()).into(), 'last direction is wrong');
-        let new_position = world
-            .entity('Position', keys.span(), 0, dojo::StorageSize::<Position>::unpacked_size());
-        assert(*new_position[0] == 11, 'position x is wrong');
-        assert(*new_position[1] == 10, 'position y is wrong');
+        assert(moves.remaining == 9, 'moves is wrong');
+        assert(moves.last_direction.into() == right_dir_felt, 'last direction is wrong');
+
+        let new_position = get!(world, caller, Position);
+        assert(new_position.vec.x == 11, 'position x is wrong');
+        assert(new_position.vec.y == 10, 'position y is wrong');
     }
 }

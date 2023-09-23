@@ -164,7 +164,6 @@ mod tests {
     #[available_gas(100000)]
     fn test_vec_is_equal() {
         let position = Vec2 { x: 420, y: 0 };
-        position.print();
         assert(position.is_equal(Vec2 { x: 420, y: 0 }), 'not equal');
     }
 }
