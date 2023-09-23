@@ -1,8 +1,12 @@
-mod erc20;
-mod erc165;
-mod erc721;
-mod erc1155;
-mod erc_common;
+mod token {
+    mod erc20;
+    mod erc20_components;
+}
 
 #[cfg(test)]
-mod tests;
+mod tests {
+    mod constants;
+    mod utils;
+
+    mod erc20_tests;
+}
