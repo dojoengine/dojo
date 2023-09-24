@@ -26,6 +26,7 @@ use crate::inline_macros::emit::EmitMacro;
 use crate::inline_macros::get::GetMacro;
 use crate::inline_macros::set::SetMacro;
 use crate::print::derive_print;
+use crate::schema::handle_schema_struct;
 use crate::system::System;
 
 const SYSTEM_ATTR: &str = "system";
@@ -161,6 +162,9 @@ impl MacroPlugin for DojoPlugin {
                             }
                             "Print" => {
                                 rewrite_nodes.push(derive_print(db, struct_ast.clone()));
+                            }
+                            "Schema" => {
+                                rewrite_nodes.push(handle_schema_struct(db, struct_ast.clone()));
                             }
                             _ => continue,
                         }

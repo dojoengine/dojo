@@ -7,9 +7,9 @@ use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use convert_case::{Case, Casing};
 use dojo_world::manifest::Member;
-use itertools::Itertools;
 
 use crate::plugin::{Component, DojoAuxData};
+use crate::schema::handle_schema_struct;
 
 /// A handler for Dojo code that modifies a component struct.
 /// Parameters:
@@ -67,41 +67,6 @@ pub fn handle_component_struct(
     let serialized_values: Vec<_> =
         members.iter().filter_map(|m| serialize_member(m, false)).collect::<_>();
 
-    let layout: Vec<_> = members
-        .iter()
-        .filter_map(|m| {
-            if m.key {
-                return None;
-            }
-
-            Some(RewriteNode::Text(format!(
-                "dojo::database::schema::SchemaIntrospection::<{}>::layout(ref layout);\n",
-                m.ty
-            )))
-        })
-        .collect::<_>();
-
-    let member_types: Vec<_> = members
-        .iter()
-        .map(|m| {
-            let mut attrs = vec![];
-            if m.key {
-                attrs.push("'key'")
-            }
-
-            format!(
-                "dojo::database::schema::serialize_member(@dojo::database::schema::Member {{
-                    name: '{}',
-                    ty: dojo::database::schema::SchemaIntrospection::<{}>::ty(),
-                    attrs: array![{}].span()
-                }})",
-                m.name,
-                m.ty,
-                attrs.join(","),
-            )
-        })
-        .collect::<_>();
-
     let name = struct_ast.name(db).text(db);
     aux_data.components.push(Component { name: name.to_string(), members: members.to_vec() });
 
@@ -135,29 +100,7 @@ pub fn handle_component_struct(
                     array::ArrayTrait::span(@layout)
                 }
             }
-
-            impl $type_name$SchemaIntrospection of \
-             dojo::database::schema::SchemaIntrospection<$type_name$> {
-                #[inline(always)]
-                fn size() -> usize {
-                    $size$
-                }
-
-                #[inline(always)]
-                fn layout(ref layout: Array<u8>) {
-                    $layout$
-                }
-
-                #[inline(always)]
-                fn ty() -> dojo::database::schema::Ty {
-                    dojo::database::schema::Ty::Struct(dojo::database::schema::Struct {
-                        name: '$type_name$',
-                        attrs: array![].span(),
-                        children: array![$member_types$].span()
-                    })
-                }
-            }
-
+            $schema_introspection$
             #[starknet::interface]
             trait I$type_name$<T> {
                 fn name(self: @T) -> felt252;
@@ -199,30 +142,9 @@ pub fn handle_component_struct(
                     "type_name".to_string(),
                     RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
                 ),
+                ("schema_introspection".to_string(), handle_schema_struct(db, struct_ast.clone())),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
-                ("layout".to_string(), RewriteNode::new_modified(layout)),
-                ("member_types".to_string(), RewriteNode::Text(member_types.join(","))),
-                (
-                    "size".to_string(),
-                    RewriteNode::Text(
-                        struct_ast
-                            .members(db)
-                            .elements(db)
-                            .iter()
-                            .filter_map(|member| {
-                                if member.has_attr(db, "key") {
-                                    return None;
-                                }
-
-                                Some(format!(
-                                    "dojo::database::schema::SchemaIntrospection::<{}>::size()",
-                                    member.type_clause(db).ty(db).as_syntax_node().get_text(db),
-                                ))
-                            })
-                            .join(" + "),
-                    ),
-                ),
             ]),
         ),
         diagnostics,
