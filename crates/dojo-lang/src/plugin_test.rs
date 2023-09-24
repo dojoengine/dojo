@@ -18,6 +18,7 @@ cairo_lang_test_utils::test_file_test!(
     {
         component: "component",
         print: "print",
+        schema: "schema",
         system: "system",
     },
     test_expand_plugin
