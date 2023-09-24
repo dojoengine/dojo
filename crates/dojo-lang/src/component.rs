@@ -8,8 +8,8 @@ use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use convert_case::{Case, Casing};
 use dojo_world::manifest::Member;
 
+use crate::introspect::handle_introspect_struct;
 use crate::plugin::{Component, DojoAuxData};
-use crate::schema::handle_schema_struct;
 
 /// A handler for Dojo code that modifies a component struct.
 /// Parameters:
@@ -142,7 +142,7 @@ pub fn handle_component_struct(
                     "type_name".to_string(),
                     RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
                 ),
-                ("schema_introspection".to_string(), handle_schema_struct(db, struct_ast)),
+                ("schema_introspection".to_string(), handle_introspect_struct(db, struct_ast)),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
             ]),

@@ -6,9 +6,9 @@
 pub mod compiler;
 pub mod component;
 pub mod inline_macros;
+pub mod introspect;
 mod manifest;
 pub mod plugin;
 pub mod print;
-pub mod schema;
 pub mod system;
 pub(crate) mod version;

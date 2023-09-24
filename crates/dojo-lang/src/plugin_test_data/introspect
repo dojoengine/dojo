@@ -6,13 +6,13 @@ test_expand_plugin
 //! > cairo_code
 use serde::Serde;
 
-#[derive(Copy, Drop, Serde, Print, Schema)]
+#[derive(Copy, Drop, Serde, Print, Introspect)]
 struct Vec2 {
     x: u32,
     y: u32
 }
 
-#[derive(Component, Copy, Drop, Print, Serde)]
+#[derive(Component, Copy, Drop, Print, Introspect)]
 struct Position {
     #[key]
     player: ContractAddress,
@@ -23,7 +23,7 @@ struct Position {
 use serde::Serde;
 
 
-#[derive(Copy, Drop, Serde, Print, Schema)]
+#[derive(Copy, Drop, Serde, Print, Introspect)]
 struct Vec2 {
     x: u32,
     y: u32
@@ -81,7 +81,7 @@ impl Vec2SchemaIntrospection of dojo::database::schema::SchemaIntrospection<Vec2
 
 
 
-#[derive(Component, Copy, Drop, Print, Serde)]
+#[derive(Component, Copy, Drop, Print, Introspect)]
 struct Position {
     #[key]
     player: ContractAddress,
@@ -195,6 +195,44 @@ impl PositionPrintImpl of debug::PrintTrait<Position> {
         debug::PrintTrait::print(self.player);
         debug::PrintTrait::print('vec');
         debug::PrintTrait::print(self.vec);
+    }
+}
+impl PositionSchemaIntrospection of dojo::database::schema::SchemaIntrospection<Position> {
+    #[inline(always)]
+    fn size() -> usize {
+        dojo::database::schema::SchemaIntrospection::<Vec2>::size()
+    }
+
+    #[inline(always)]
+    fn layout(ref layout: Array<u8>) {
+        dojo::database::schema::SchemaIntrospection::<Vec2>::layout(ref layout);
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::schema::Ty {
+        dojo::database::schema::Ty::Struct(
+            dojo::database::schema::Struct {
+                name: 'Position',
+                attrs: array![].span(),
+                children: array![
+                    dojo::database::schema::serialize_member(
+                        @dojo::database::schema::Member {
+                            name: 'player',
+                            ty: dojo::database::schema::SchemaIntrospection::<ContractAddress>::ty(),
+                            attrs: array!['key'].span()
+                        }
+                    ),
+                    dojo::database::schema::serialize_member(
+                        @dojo::database::schema::Member {
+                            name: 'vec',
+                            ty: dojo::database::schema::SchemaIntrospection::<Vec2>::ty(),
+                            attrs: array![].span()
+                        }
+                    )
+                ]
+                    .span()
+            }
+        )
     }
 }
 

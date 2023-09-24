@@ -7,13 +7,13 @@ use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_world::manifest::Member;
 use itertools::Itertools;
 
-/// A handler for Dojo code derives Schema for a struct
+/// A handler for Dojo code derives Introspect for a struct
 /// Parameters:
 /// * db: The semantic database.
 /// * struct_ast: The AST of the struct.
 /// Returns:
 /// * A RewriteNode containing the generated code.
-pub fn handle_schema_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> RewriteNode {
+pub fn handle_introspect_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> RewriteNode {
     let members: Vec<_> = struct_ast
         .members(db)
         .elements(db)
