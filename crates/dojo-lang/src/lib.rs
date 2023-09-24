@@ -5,10 +5,10 @@
 //! Learn more at [dojoengine.gg](http://dojoengine.gg).
 pub mod compiler;
 pub mod component;
-pub mod schema;
 pub mod inline_macros;
 mod manifest;
 pub mod plugin;
 pub mod print;
+pub mod schema;
 pub mod system;
 pub(crate) mod version;

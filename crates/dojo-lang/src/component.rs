@@ -142,7 +142,7 @@ pub fn handle_component_struct(
                     "type_name".to_string(),
                     RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
                 ),
-                ("schema_introspection".to_string(), handle_schema_struct(db, struct_ast.clone())),
+                ("schema_introspection".to_string(), handle_schema_struct(db, struct_ast)),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
             ]),
