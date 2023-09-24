@@ -76,52 +76,10 @@ struct Moves {
     last_direction: Direction
 }
 
-#[derive(Copy, Drop, Serde)]
+#[derive(Copy, Drop, Serde, Print, Introspect)]
 struct Vec2 {
     x: u32,
     y: u32
-}
-
-impl Vec2PrintImpl of PrintTrait<Vec2> {
-    fn print(self: Vec2) {
-        self.x.print();
-    }
-}
-
-impl Vec2SchemaIntrospectionImpl of SchemaIntrospection<Vec2> {
-    #[inline(always)]
-    fn size() -> usize {
-        2
-    }
-
-    #[inline(always)]
-    fn layout(ref layout: Array<u8>) {
-        layout.append(32);
-        layout.append(32);
-    }
-
-    #[inline(always)]
-    fn ty() -> Ty {
-        Ty::Struct(
-            Struct {
-                name: 'Vec2',
-                attrs: array![].span(),
-                children: array![
-                    serialize_member(
-                        @Member {
-                            name: 'x', ty: SchemaIntrospection::<u32>::ty(), attrs: array![].span(),
-                        }
-                    ),
-                    serialize_member(
-                        @Member {
-                            name: 'y', ty: SchemaIntrospection::<u32>::ty(), attrs: array![].span(),
-                        }
-                    )
-                ]
-                    .span()
-            }
-        )
-    }
 }
 
 #[derive(Component, Copy, Drop, Print, Serde)]

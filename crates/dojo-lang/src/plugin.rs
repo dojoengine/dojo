@@ -25,6 +25,7 @@ use crate::component::handle_component_struct;
 use crate::inline_macros::emit::EmitMacro;
 use crate::inline_macros::get::GetMacro;
 use crate::inline_macros::set::SetMacro;
+use crate::introspect::handle_introspect_struct;
 use crate::print::derive_print;
 use crate::system::System;
 
@@ -161,6 +162,10 @@ impl MacroPlugin for DojoPlugin {
                             }
                             "Print" => {
                                 rewrite_nodes.push(derive_print(db, struct_ast.clone()));
+                            }
+                            "Introspect" => {
+                                rewrite_nodes
+                                    .push(handle_introspect_struct(db, struct_ast.clone()));
                             }
                             _ => continue,
                         }
