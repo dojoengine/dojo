@@ -108,10 +108,6 @@ pub fn handle_component_struct(
     (
         RewriteNode::interpolate_patched(
             "
-            struct $type_name$ {
-                $members$
-            }
-
             impl $type_name$Component of dojo::component::Component<$type_name$> {
                 #[inline(always)]
                 fn name(self: @$type_name$) -> felt252 {
@@ -202,10 +198,6 @@ pub fn handle_component_struct(
                 (
                     "type_name".to_string(),
                     RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
-                ),
-                (
-                    "members".to_string(),
-                    RewriteNode::Copied(struct_ast.members(db).as_syntax_node()),
                 ),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
