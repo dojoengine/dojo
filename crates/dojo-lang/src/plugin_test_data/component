@@ -10,7 +10,6 @@ use serde::Serde;
 struct Position {
     #[key]
     id: felt252,
-
     x: felt252,
     y: felt252
 }
@@ -53,6 +52,8 @@ struct Player {
 //! > generated_cairo_code
 use serde::Serde;
 
+
+#[derive(Component, Copy, Drop, Serde)]
 struct Position {
     #[key]
     id: felt252,
@@ -193,6 +194,8 @@ impl PositionImpl of PositionTrait {
     }
 }
 
+
+#[derive(Component, Serde)]
 struct Roles {
     role_ids: Array<u8>
 }
@@ -296,14 +299,16 @@ mod roles {
 
 use starknet::ContractAddress;
 
+
+#[derive(Component, Copy, Drop, Serde)]
 struct Player {
     #[key]
     game: felt252,
     #[key]
     player: ContractAddress,
-    name: felt252,
-}
 
+    name: felt252, 
+}
 impl PlayerComponent of dojo::component::Component<Player> {
     #[inline(always)]
     fn name(self: @Player) -> felt252 {
@@ -416,6 +421,6 @@ mod player {
 
 //! > expected_diagnostics
 error: Component must define atleast one #[key] attribute
- --> dummy_file.cairo:31:8
+ --> dummy_file.cairo:30:8
 struct Roles {
        ^***^

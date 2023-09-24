@@ -35,6 +35,16 @@ struct Player {
 //! > generated_cairo_code
 use serde::Serde;
 
+
+#[derive(Print, Copy, Drop, Serde)]
+struct Position {
+    #[key]
+    id: felt252,
+
+    x: felt252,
+    y: felt252
+}
+
 #[cfg(test)]
 impl PositionPrintImpl of debug::PrintTrait<Position> {
     fn print(self: Position) {
@@ -45,6 +55,12 @@ impl PositionPrintImpl of debug::PrintTrait<Position> {
         debug::PrintTrait::print('y');
         debug::PrintTrait::print(self.y);
     }
+}
+
+
+#[derive(Print, Serde)]
+struct Roles {
+    role_ids: Array<u8>
 }
 
 #[cfg(test)]
@@ -58,6 +74,16 @@ impl RolesPrintImpl of debug::PrintTrait<Roles> {
 
 use starknet::ContractAddress;
 
+
+#[derive(Print, Copy, Drop, Serde)]
+struct Player {
+    #[key]
+    game: felt252,
+    #[key]
+    player: ContractAddress,
+
+    name: felt252, 
+}
 #[cfg(test)]
 impl PlayerPrintImpl of debug::PrintTrait<Player> {
     fn print(self: Player) {

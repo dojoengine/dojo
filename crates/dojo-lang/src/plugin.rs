@@ -185,7 +185,7 @@ impl MacroPlugin for DojoPlugin {
                         diagnostics_mappings: builder.diagnostics_mappings,
                     }),
                     diagnostics,
-                    remove_original_item: true,
+                    remove_original_item: false,
                 }
             }
             _ => PluginResult::default(),
