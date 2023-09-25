@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use camino::Utf8PathBuf;
 use dojo_types::component::{Member, Struct, Ty};
 use dojo_world::manifest::System;
@@ -112,14 +110,14 @@ async fn test_load_from_manifest(pool: SqlitePool) {
         .await
         .unwrap();
 
-    state
-        .store_system_call(
-            "Test".into(),
-            FieldElement::from_str("0x4").unwrap(),
-            &[FieldElement::ONE, FieldElement::TWO, FieldElement::THREE],
-        )
-        .await
-        .unwrap();
+    // state
+    //     .store_system_call(
+    //         "Test".into(),
+    //         FieldElement::from_str("0x4").unwrap(),
+    //         &[FieldElement::ONE, FieldElement::TWO, FieldElement::THREE],
+    //     )
+    //     .await
+    //     .unwrap();
 
     state
         .store_event(

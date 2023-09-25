@@ -242,9 +242,11 @@ impl Sql {
         let values_str = values_sql_string(&member_names_result, &member_values)?;
 
         let insert_models = format!(
-            "INSERT OR REPLACE INTO external_{} (entity_id {}) VALUES ('{}' {})",
+            "INSERT OR REPLACE INTO external_{} (entity_id{}) VALUES ('{}' {})",
             model, names_str, entity_id, values_str
         );
+
+        println!("{insert_models}");
 
         // tx commit required
         self.queue(vec![insert_entities, insert_models]).await;
@@ -340,6 +342,8 @@ impl Executable for Sql {
             query_queue.clear();
         }
 
+        println!("{:?}", queries);
+
         let mut tx = self.pool.begin().await?;
 
         for query in queries {
@@ -371,15 +375,20 @@ fn model_names_sql_string(entity_result: Option<SqliteRow>, new_model: &str) -> 
 fn values_sql_string(member_results: &[SqliteRow], values: &[FieldElement]) -> Result<String> {
     let types: Result<Vec<String>> =
         member_results.iter().map(|row| Ok(row.try_get::<String, &str>("type")?)).collect();
-
     // format according to type
     let values: Result<Vec<String>> = values
         .iter()
         .zip(types?.iter())
-        .map(|(value, ty)| match SQL_TYPES.get(ty).map(String::as_str) {
-            Some("INTEGER") => Ok(format!(",'{}'", value)),
-            Some("TEXT") => Ok(format!(",'{:#x}'", value)),
-            _ => Err(anyhow::anyhow!("Unsupported type {}", ty)),
+        .map(|(value, ty)| {
+            let sql_type = SQL_TYPES
+                .get(ty)
+                .ok_or_else(|| anyhow::anyhow!("SQL type not found for: {}", ty))?;
+
+            match sql_type.as_str() {
+                "INTEGER" => Ok(format!(",'{}'", value)),
+                "TEXT" => Ok(format!(",'{:#x}'", value)),
+                _ => Err(anyhow::anyhow!("Format not supported for type: {}", ty)),
+            }
         })
         .collect();
 
@@ -391,7 +400,7 @@ fn members_sql_string(member_results: &[SqliteRow]) -> Result<String> {
         .iter()
         .map(|row| {
             let name = row.try_get::<String, &str>("name")?;
-            Ok(format!(",external_{}", name))
+            Ok(format!(", external_{}", name))
         })
         .collect();
 
@@ -421,8 +430,10 @@ fn build_model_query(model: &Ty, parent_id: Option<String>) -> Vec<String> {
                 if let Some(sql_type) = SQL_TYPES.get(&member.ty.name()) {
                     queries.push(format!(
                         "INSERT OR IGNORE INTO model_members (id, model_id, idx, name, type, key) \
-                         VALUES ('{model_id}', '{model_id}', '{i}', '{}', '{sql_type}', {})",
-                        member.name, member.key,
+                         VALUES ('{model_id}', '{model_id}', '{i}', '{}', '{}', {})",
+                        member.name,
+                        member.ty.name(),
+                        member.key,
                     ));
 
                     query.push_str(&format!("external_{} {}, ", member.name, sql_type));

@@ -1,4 +1,5 @@
 use camino::Utf8PathBuf;
+use dojo_types::component::{Member, Struct, Ty};
 use serde::Deserialize;
 use serde_json::Value;
 use sqlx::SqlitePool;
@@ -114,6 +115,7 @@ pub async fn init(pool: &SqlitePool) -> Sql {
 
     let state = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
     state.load_from_manifest(manifest).await.unwrap();
+
     state
 }
 

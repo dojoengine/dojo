@@ -10,9 +10,11 @@ use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
 use tokio::time::sleep;
 use torii_client::contract::world::WorldContractReader;
-use torii_core::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
-use torii_core::sql::{Executable, Sql};
+
 use tracing::{error, info, warn};
+
+use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
+use crate::sql::{Executable, Sql};
 
 pub struct Processors<P: Provider + Sync + Send> {
     pub block: Vec<Box<dyn BlockProcessor<P>>>,
@@ -22,7 +24,7 @@ pub struct Processors<P: Provider + Sync + Send> {
 
 impl<P: Provider + Sync + Send> Default for Processors<P> {
     fn default() -> Self {
-        Self { block: vec![], transaction: vec![], event: vec![] }
+        Self { block: vec![], event: vec![], transaction: vec![] }
     }
 }
 
