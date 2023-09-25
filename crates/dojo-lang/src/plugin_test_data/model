@@ -137,6 +137,13 @@ impl PositionModel of dojo::model::Model<Position> {
     }
 
     #[inline(always)]
+    fn keys_layout(self: @Position) -> Span<u8> {
+        let mut layout = ArrayTrait::new();
+        dojo::database::schema::SchemaIntrospection::<felt252>::layout(ref layout);
+        array::ArrayTrait::span(@layout)
+    }
+
+    #[inline(always)]
     fn values(self: @Position) -> Span<felt252> {
         let mut serialized = ArrayTrait::new();
         serde::Serde::serialize(self.v, ref serialized);
@@ -282,6 +289,13 @@ impl RolesModel of dojo::model::Model<Roles> {
     }
 
     #[inline(always)]
+    fn keys_layout(self: @Roles) -> Span<u8> {
+        let mut layout = ArrayTrait::new();
+
+        array::ArrayTrait::span(@layout)
+    }
+
+    #[inline(always)]
     fn values(self: @Roles) -> Span<felt252> {
         let mut serialized = ArrayTrait::new();
         serde::Serde::serialize(self.role_ids, ref serialized);
@@ -405,6 +419,14 @@ impl PlayerModel of dojo::model::Model<Player> {
         array::ArrayTrait::append(ref serialized, *self.game);
         serde::Serde::serialize(self.player, ref serialized);
         array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn keys_layout(self: @Player) -> Span<u8> {
+        let mut layout = ArrayTrait::new();
+        dojo::database::schema::SchemaIntrospection::<felt252>::layout(ref layout);
+        dojo::database::schema::SchemaIntrospection::<ContractAddress>::layout(ref layout);
+        array::ArrayTrait::span(@layout)
     }
 
     #[inline(always)]
