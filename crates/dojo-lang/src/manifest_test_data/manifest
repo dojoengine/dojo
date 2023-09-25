@@ -8,7 +8,7 @@ test_manifest_file
   "world": {
     "name": "world",
     "address": null,
-    "class_hash": "0x2186005947e9d2e2f145f8459224c04b00705cef9a8c9e5c1830750fdd0a569",
+    "class_hash": "0x5fa0c167c64ab468840d07ce2730fbcd0b2f0f372bfee35f70f92fbd218e161",
     "abi": [
       {
         "type": "impl",
@@ -163,6 +163,10 @@ test_manifest_file
                 "type": "core::array::Span::<core::felt252>"
               },
               {
+                "name": "keys_layout",
+                "type": "core::array::Span::<core::integer::u8>"
+              },
+              {
                 "name": "offset",
                 "type": "core::integer::u8"
               },
@@ -199,7 +203,7 @@ test_manifest_file
                 "type": "core::integer::u32"
               },
               {
-                "name": "layout",
+                "name": "keys_layout",
                 "type": "core::array::Span::<core::integer::u8>"
               }
             ],
@@ -244,6 +248,10 @@ test_manifest_file
               {
                 "name": "keys",
                 "type": "core::array::Span::<core::felt252>"
+              },
+              {
+                "name": "keys_layout",
+                "type": "core::array::Span::<core::integer::u8>"
               }
             ],
             "outputs": [],
@@ -557,7 +565,7 @@ test_manifest_file
     {
       "name": "player_actions",
       "address": null,
-      "class_hash": "0x76e85c6abaa082687466201db4edc0427ca814c6a89d962b4c884ba365bee17",
+      "class_hash": "0x4349239d77c4d8212b45f412d7e3de969c26a5760f61c3bb6129cf20162e585",
       "abi": [
         {
           "type": "impl",
@@ -679,7 +687,7 @@ test_manifest_file
     {
       "name": "player_actions_external",
       "address": null,
-      "class_hash": "0x66af9023e04e381743a83314fbe1bb7dc63c9aeebee6bbeb96578423fe53a9d",
+      "class_hash": "0x755b625b4eaa27a247808ee87cf05455e1a2bad50d29f8cbbb128b7a9f7b80b",
       "abi": [
         {
           "type": "impl",
