@@ -70,7 +70,7 @@ pub fn handle_model_struct(
     let keys_layout: Vec<_> = keys
         .iter()
         .filter_map(|m| {
-            if m.key == false {
+            if !m.key {
                 return None;
             }
             Some(RewriteNode::Text(format!(
