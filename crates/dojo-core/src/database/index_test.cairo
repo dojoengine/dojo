@@ -67,7 +67,7 @@ fn test_entity_delete_basic() {
 
     assert(index::exists(0, 69, 420), 'entity should exist');
 
-    index::delete(0, 69, 420);
+    index::delete(0, 69, 420, array![].span());
 
     assert(!index::exists(0, 69, 420), 'entity should not exist');
     let no_get = index::get(0, 69, 1);
@@ -118,18 +118,14 @@ fn test_entity_delete_right_value() {
 #[test]
 #[available_gas(20000000)]
 fn test_with_keys_deletion() {
-    let mut keys = ArrayTrait::new();
-    keys.append('animal');
-    keys.append('barks');
+    let keys = array!['animal', 'barks'].span();
+    let other_keys = array!['animal', 'meows'].span();
+    let keys_layout = array![251, 251].span();
 
-    let mut other_keys = ArrayTrait::new();
-    other_keys.append('animal');
-    other_keys.append('meows');
+    index::create_with_keys(0, 69, 420, keys, keys_layout);
+    index::create_with_keys(0, 69, 421, other_keys, keys_layout);
 
-    index::create_with_keys(0, 69, 420, keys.span());
-    index::create_with_keys(0, 69, 421, other_keys.span());
-
-    let (ids, keys) = index::get_with_keys(0, 69, keys.len());
+    let (ids, keys) = index::get_with_keys(0, 69, keys_layout);
     assert(ids.len() == 2, 'Not enough entities indexed');
     assert(keys.len() == 2, 'Lengths of keys inconsistent');
     assert(*ids.at(0) == 420, 'Identity value incorrect');
@@ -151,16 +147,12 @@ fn test_with_keys_deletion() {
 #[test]
 #[available_gas(20000000)]
 fn test_get_by_keys() {
-    let mut keys = ArrayTrait::new();
-    keys.append('animal');
-    keys.append('barks');
+    let keys = array!['animal', 'barks'].span();
+    let other_keys = array!['animal', 'meows'].span();
+    let keys_layout = array![251, 251].span();
 
-    let mut other_keys = ArrayTrait::new();
-    other_keys.append('animal');
-    other_keys.append('meows');
-
-    index::create_with_keys(0, 69, 420, keys.span());
-    index::create_with_keys(0, 69, 421, other_keys.span());
+    index::create_with_keys(0, 69, 420, keys, keys_layout);
+    index::create_with_keys(0, 69, 421, other_keys, keys_layout);
 
     let ids = index::get_by_key(0, 69, 'animal');
     assert(ids.len() == 2, 'Incorrect number of entities');

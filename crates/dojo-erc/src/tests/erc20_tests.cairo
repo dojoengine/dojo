@@ -179,7 +179,7 @@ fn test__approve_to_zero() {
 //
 
 #[test]
-#[available_gas(25000000)]
+#[available_gas(30000000)]
 fn test_transfer() {
     let mut state = setup();
     testing::set_caller_address(OWNER());
@@ -192,7 +192,7 @@ fn test_transfer() {
 }
 
 #[test]
-#[available_gas(25000000)]
+#[available_gas(30000000)]
 fn test__transfer() {
     let mut state = setup();
 
@@ -256,7 +256,7 @@ fn test_transfer_from() {
 }
 
 #[test]
-#[available_gas(25000000)]
+#[available_gas(30000000)]
 fn test_transfer_from_doesnt_consume_infinite_allowance() {
     let mut state = setup();
     testing::set_caller_address(OWNER());
