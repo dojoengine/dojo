@@ -111,7 +111,7 @@ fn test_database_del() {
     let before = get(class_hash, 'table', 'key', 0, values.len(), array![251].span());
     assert(*before.at(0) == *values.at(0), 'Values different at index 0!');
 
-    del(class_hash, 'table', 'key');
+    del(class_hash, 'table', 'key', array![251].span());
     let after = get(class_hash, 'table', 'key', 0, 0, array![].span());
     assert(after.len() == 0, 'Non empty after deletion!');
 }
@@ -119,18 +119,14 @@ fn test_database_del() {
 #[test]
 #[available_gas(10000000)]
 fn test_database_all() {
-    let mut even = ArrayTrait::new();
-    even.append(0x2);
-    even.append(0x4);
-
-    let mut odd = ArrayTrait::new();
-    even.append(0x1);
-    even.append(0x3);
+    let even = array![2, 4].span();
+    let odd = array![1, 3].span();
+    let layout = array![251, 251].span();
 
     let class_hash: starknet::ClassHash = executor::TEST_CLASS_HASH.try_into().unwrap();
-    set(class_hash, 'table', 'even', 0, even.span(), array![251, 251].span());
-    set(class_hash, 'table', 'odd', 0, odd.span(), array![251, 251].span());
+    set(class_hash, 'table', 'even', 0, even, layout);
+    set(class_hash, 'table', 'odd', 0, odd, layout);
 
     let base = starknet::storage_base_address_from_felt252('table');
-    let (keys, values) = all(class_hash, 'table', 0, 2);
+    let (keys, values) = all(class_hash, 'table', 0, 2, layout);
 }
