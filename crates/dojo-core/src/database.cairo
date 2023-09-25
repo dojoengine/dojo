@@ -32,11 +32,11 @@ fn set(
     keys.append('dojo_storage');
     keys.append(table);
     keys.append(key);
-    storage::set_many(0, keys.span(), offset, value);
+    storage::set_many(0, keys.span(), offset, value, layout);
 }
 
-fn del(class_hash: starknet::ClassHash, table: felt252, key: felt252) {
-    index::delete(0, table, key);
+fn del(class_hash: starknet::ClassHash, table: felt252, key: felt252, keys_layout: Span<u8>) {
+    index::delete(0, table, key, keys_layout);
 }
 
 // returns a tuple of spans, first contains the entity IDs,
@@ -59,7 +59,7 @@ fn all(
     let all_ids = index::get(0, table);
     let mut ids = all_ids.span();
   
-    (all_ids.span(), get_by_ids(class_hash, table, all_ids.span(), length))
+    (all_ids.span(), get_by_ids(class_hash, table, all_ids.span(), length, layout))
 }
 
 /// Returns entries on the given ids.
@@ -68,7 +68,7 @@ fn all(
 /// * `table` - The table to get the entries from.
 /// * `all_ids` - The ids of the entries to get.
 /// * `length` - The length of the entries.
-fn get_by_ids(class_hash: starknet::ClassHash, table: felt252, all_ids: Span<felt252>, length: u32) -> Span<Span<felt252>> {
+fn get_by_ids(class_hash: starknet::ClassHash, table: felt252, all_ids: Span<felt252>, length: u32, layout: Span<u8>) -> Span<Span<felt252>> {
     let mut entities: Array<Span<felt252>> = ArrayTrait::new();
     let mut ids = all_ids;
     loop {
@@ -96,7 +96,7 @@ fn get_by_ids(class_hash: starknet::ClassHash, table: felt252, all_ids: Span<fel
 /// * `key` - The key of the entries to get.
 /// * `length` - The length of the entries.
 fn get_by_key(
-    class_hash: starknet::ClassHash, component: felt252, partition: felt252, key: felt252, length: usize
+    class_hash: starknet::ClassHash, component: felt252, partition: felt252, key: felt252, length: usize, layout: Span<u8>
 ) -> (Span<felt252>, Span<Span<felt252>>) {
         let table = {
         if partition == 0.into() {
@@ -111,7 +111,7 @@ fn get_by_key(
     };
 
     let all_ids = index::get_by_key(0, table, key);
-    (all_ids.span(), get_by_ids(class_hash, table, all_ids.span(), length))
+    (all_ids.span(), get_by_ids(class_hash, table, all_ids.span(), length, layout))
 }
 
 /// Set, but with writing keys to the appropriate indexes
@@ -123,9 +123,9 @@ fn get_by_key(
 /// * `value` - The value of the entry to set.
 /// * `keys` - The keys of the entry to set in the index.
 fn set_with_keys(
-    class_hash: starknet::ClassHash, table: felt252, id: felt252, offset: u8, value: Span<felt252>, keys: Span<felt252>
+    class_hash: starknet::ClassHash, table: felt252, id: felt252, offset: u8, value: Span<felt252>, layout: Span<u8>, keys: Span<felt252>, keys_layout: Span<u8>
 
 ) {
-    set(class_hash, table, id, offset, value);
-    index::create_with_keys(0, table, id, keys);
+    set(class_hash, table, id, offset, value, layout);
+    index::create_with_keys(0, table, id, keys, keys_layout);
 }

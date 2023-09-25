@@ -20,16 +20,17 @@ trait IWorld<T> {
         ref self: T,
         component: felt252,
         keys: Span<felt252>,
+        keys_layout: Span<u8>,
         offset: u8,
         values: Span<felt252>,
         layout: Span<u8>
     );
     fn entities(
-        self: @T, component: felt252, index: felt252, keys: Span<felt252>, length: usize
+        self: @T, component: felt252, index: felt252, keys: Span<felt252>, length: usize, keys_layout: Span<u8>
     ) -> (Span<felt252>, Span<Span<felt252>>);
     fn set_executor(ref self: T, contract_address: ContractAddress);
     fn executor(self: @T) -> ContractAddress;
-    fn delete_entity(ref self: T, component: felt252, keys: Span<felt252>);
+    fn delete_entity(ref self: T, component: felt252, keys: Span<felt252>, keys_layout: Span<u8>);
     fn is_owner(self: @T, address: ContractAddress, target: felt252) -> bool;
     fn grant_owner(ref self: T, address: ContractAddress, target: felt252);
     fn revoke_owner(ref self: T, address: ContractAddress, target: felt252);
@@ -313,6 +314,7 @@ mod world {
             ref self: ContractState,
             component: felt252,
             keys: Span<felt252>,
+            keys_layout: Span<u8>,
             offset: u8,
             values: Span<felt252>,
             layout: Span<u8>
@@ -321,7 +323,7 @@ mod world {
 
             let key = poseidon::poseidon_hash_span(keys);
             let component_class_hash = self.components.read(component);
-            database::set_with_keys(component_class_hash, component, key, offset, value, keys);
+            database::set_with_keys(component_class_hash, component, key, offset, values, layout, keys, keys_layout);
 
             EventEmitter::emit(ref self, StoreSetRecord { table: component, keys, offset, values });
         }
@@ -332,14 +334,14 @@ mod world {
         ///
         /// * `component` - The name of the component to be deleted.
         /// * `query` - The query to be used to find the entity.
-        fn delete_entity(ref self: ContractState, component: felt252, keys: Span<felt252>) {
+        fn delete_entity(ref self: ContractState, component: felt252, keys: Span<felt252>, keys_layout: Span<u8>) {
             let system = get_caller_address();
             assert(system.is_non_zero(), 'must be called thru system');
             assert_can_write(@self, component, system);
 
             let key = poseidon::poseidon_hash_span(keys);
             let component_class_hash = self.components.read(component);
-            database::del(component_class_hash, component, key);
+            database::del(component_class_hash, component, key, keys_layout);
 
             EventEmitter::emit(ref self, StoreDelRecord { table: component, keys });
         }
@@ -384,14 +386,14 @@ mod world {
         /// * `Span<felt252>` - The entity IDs.
         /// * `Span<Span<felt252>>` - The entities.
         fn entities(
-            self: @ContractState, component: felt252, index: felt252, keys: Span<felt252>, length: usize
+            self: @ContractState, component: felt252, index: felt252, keys: Span<felt252>, length: usize, keys_layout: Span<u8>
         ) -> (Span<felt252>, Span<Span<felt252>>) {
             let class_hash = self.components.read(component);
             assert(keys.len() <= 1, 'Multiple keys not implemented');
             if (keys.len() == 0) {
-                database::all(class_hash, component, index, length)
+                database::all(class_hash, component, index, length, keys_layout)
             } else {
-                database::get_by_key(class_hash, component.into(), index, *keys.at(0), length)
+                database::get_by_key(class_hash, component.into(), index, *keys.at(0), length, keys_layout)
             } 
         }
 

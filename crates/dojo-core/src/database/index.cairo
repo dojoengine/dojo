@@ -24,13 +24,15 @@ fn create(address_domain: u32, index: felt252, id: felt252) {
 /// * index - The index to write to.
 /// * id - The id of the entry.
 /// * keys - The keys to write.the entry to. 
-fn create_with_keys(address_domain: u32, index: felt252, id: felt252, keys: Span<felt252>) {
+fn create_with_keys(address_domain: u32, index: felt252, id: felt252, keys: Span<felt252>, layout: Span<u8>) {
     // TODO: handle reapeated
     assert(keys.len() < 255, 'Too many keys');
     create(address_domain, index, id);
 
     let mut positions = ArrayTrait::<felt252>::new();
+    let mut positions_layout = ArrayTrait::<u8>::new();
     positions.append(keys.len().into());
+    positions_layout.append(8);
 
     let mut idx = 0;
     loop {
@@ -39,14 +41,15 @@ fn create_with_keys(address_domain: u32, index: felt252, id: felt252, keys: Span
         }
         let pos = add_key(address_domain, index, id, *keys.at(idx), idx); // key -> id
         positions.append(pos);
+        positions_layout.append(251);
         idx += 1;
     };
 
     let index_len_key = build_index_len_key(index);
 
     let keys_len: u8 = keys.len().try_into().unwrap();
-    storage::set_many(address_domain, build_index_item_keys(index, id), 0, positions.span());  // len of keys and positions
-    storage::set_many(address_domain, build_index_item_keys(index, id), keys_len + 1, keys);   // keys
+    storage::set_many(address_domain, build_index_item_keys(index, id), 0, positions.span(), positions_layout.span());  // len of keys and positions
+    storage::set_many(address_domain, build_index_item_keys(index, id), keys_len + 1, keys, layout);   // keys
 }
 
 /// Adds a single key for a given id.
@@ -55,7 +58,7 @@ fn create_with_keys(address_domain: u32, index: felt252, id: felt252, keys: Span
 /// * index - The index to write to.
 /// * id - The id of the entry.
 /// * key - The key to write.
-/// * idx - The index of the key.in the keys array.
+/// * idx - The index of the key in the keys array.
 /// # Returns
 /// The position of the key in the the index.
 fn add_key(address_domain: u32, index: felt252, id: felt252, key: felt252, idx: u32) -> felt252 {
@@ -64,10 +67,9 @@ fn add_key(address_domain: u32, index: felt252, id: felt252, key: felt252, idx: 
     let specific_key = build_index_specific_key(index, key, specific_len);
 
     storage::set(address_domain, specific_len_key, specific_len + 1);
-    let mut val = ArrayTrait::new();
-    val.append(id);
-    val.append(idx.into());
-    storage::set_many(address_domain, specific_key, 0, val.span());
+    let val = array![id, idx.into()].span();
+    let layout = array![251, 8].span();
+    storage::set_many(address_domain, specific_key, 0, val, layout);
     specific_len
 }
 
@@ -88,7 +90,7 @@ fn delete_key(address_domain: u32, index: felt252, id: felt252, key: felt252, po
 /// * index - The index to write to.
 /// * id - The id of the entry.
 /// # Returns
-fn delete(address_domain: u32, index: felt252, id: felt252) {
+fn delete(address_domain: u32, index: felt252, id: felt252, keys_layout: Span<u8>) {
     if !exists(address_domain, index, id) {
         return ();
     }
@@ -109,9 +111,24 @@ fn delete(address_domain: u32, index: felt252, id: felt252) {
 
 
     let keys_key = build_index_item_keys(index, id);
-    let len = (*storage::get_many(address_domain, keys_key, 0, 1).at(0)).try_into().unwrap();
+    let len = (*storage::get_many(address_domain, keys_key, 0, 1, array![8].span()).at(0)).try_into().unwrap();
     let end_keys: u32 = len + len + 1;
-    let pos_and_keys = storage::get_many(address_domain, keys_key, 1, end_keys);
+
+    let mut idx: u32 = 0;
+    let mut layout = array![8];
+        loop {
+        if idx == len * 2 {
+            break ();
+        }
+        else if idx < len {
+            layout.append(251);
+        } else {
+            layout.append(*keys_layout.at(idx - len));
+        }
+        idx += 1;
+    };
+
+    let len_pos_and_keys = storage::get_many(address_domain, keys_key, 0, end_keys, layout.span());
 
 
     let mut idx: u32 = 0;
@@ -119,7 +136,7 @@ fn delete(address_domain: u32, index: felt252, id: felt252) {
         if idx == len {
             break ();
         }
-        delete_key(address_domain, index, id, *pos_and_keys.at(idx + 1), *pos_and_keys.at(idx + len + 1));
+        delete_key(address_domain, index, id, *len_pos_and_keys.at(idx + 1), *len_pos_and_keys.at(idx + len + 1));
         idx += 1;
     };
 }
@@ -153,7 +170,7 @@ fn get(address_domain: u32, index: felt252) -> Array<felt252> {
 /// * index - The index to write to.
 /// # Returns
 /// * ids - The ids for the index.
-fn get_with_keys(address_domain: u32, index: felt252, key_length: usize) -> (Array<felt252>, Array<Span<felt252>>) {
+fn get_with_keys(address_domain: u32, index: felt252, keys_layout: Span<u8>) -> (Array<felt252>, Array<Span<felt252>>) {
     let mut ids = ArrayTrait::new();
     let mut all_keys = ArrayTrait::new();
 
@@ -169,10 +186,33 @@ fn get_with_keys(address_domain: u32, index: felt252, key_length: usize) -> (Arr
         let id = storage::get(address_domain, build_index_key(index, idx));
         let keys_key = build_index_item_keys(index, id);
 
-        let len = *storage::get_many(address_domain, keys_key, 0, 1).at(0);
+        let len_felt = (*storage::get_many(address_domain, keys_key, 0, 1, array![8].span()).at(0));
+        let len = len_felt.try_into().unwrap();
+        let mut end_keys: u64 = 8 + 251 * len.into();
+
+        let mut layout = array![8];
+        let mut layout_idx = 0;
+        loop {
+            if layout_idx == len * 2 {
+                break ();
+            }
+            else if layout_idx < len {
+                layout.append(251);
+            } else {
+                layout.append(*keys_layout.at(layout_idx - len));
+                end_keys += (*keys_layout.at(layout_idx - len)).into();
+            }
+            layout_idx += 1;
+        };
+
+        let end: u32 = ((end_keys + 250) / 251).try_into().unwrap();
+
+        let len_pos_and_keys = storage::get_many(address_domain, keys_key, 0, end, layout.span());
+
+        let len = *storage::get_many(address_domain, keys_key, 0, 1, array![8].span()).at(0);
         let offset: u8 = (len + 1).try_into().unwrap();
         let len: u32 = (len + len + 1).try_into().unwrap();
-        let keys = storage::get_many(address_domain, keys_key, offset, len);
+        let keys = storage::get_many(address_domain, keys_key, offset, len, keys_layout);
         ids.append(id);
         all_keys.append(keys);
         idx += 1;
