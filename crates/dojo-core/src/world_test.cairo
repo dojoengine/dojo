@@ -241,11 +241,42 @@ fn test_set_entity_unauthorized() {
 //     set!(world, Foo { caller: starknet::contract_address_const::<0x1337>(), a: 420, b: 1337 });
 // }
 
-
 // Utils
 fn deploy_world() -> IWorldDispatcher {
     spawn_test_world(array![])
 }
+
+// #[test]
+// #[available_gas(9000000)]
+// fn test_entities() {
+//     // Spawn empty world
+//     let world = deploy_world();
+
+//     world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
+//     world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
+
+//     let alice = starknet::contract_address_const::<0x1337>();
+//     starknet::testing::set_contract_address(alice);
+
+//     let mut data = ArrayTrait::new();
+//     data.append(420);
+//     data.append(1337);
+//     world.execute('bar', data);
+
+//     let mut query_keys = ArrayTrait::new();
+
+//     let (keys, values) = world.entities('Foo', 0, query_keys.span(), 2);
+//     assert(keys.len() == 1, 'No keys found for any!');
+    
+//     query_keys.append(0x1337);
+//     let (keys, values) = world.entities('Foo', 0, query_keys.span(), 2);
+//     assert(keys.len() == 1, 'No keys found!');
+
+//     let mut query_keys = ArrayTrait::new();
+//     query_keys.append(0x1338);
+//     let (keys, values) = world.entities('Foo', 0, query_keys.span(), 2);
+//     assert(keys.len() == 0, 'Keys found!');
+// }
 
 #[test]
 #[available_gas(60000000)]
@@ -464,54 +495,6 @@ fn test_execute_multiple_worlds() {
     bar1_contract.set_foo(1337, 1337);
     bar2_contract.set_foo(7331, 7331);
 
-    world.register_system(origin::TEST_CLASS_HASH.try_into().unwrap());
-    world.register_system(origin_wrapper::TEST_CLASS_HASH.try_into().unwrap());
-    world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
-    let data = ArrayTrait::new();
-
-    let eve = starknet::contract_address_const::<0x1338>();
-    world.execute('origin_wrapper', data);
-}
-
-#[test]
-#[available_gas(8000000)]
-fn test_execute_multiple_worlds() {
-    // Deploy executor contract
-    let executor_constructor_calldata = array::ArrayTrait::new();
-    let (executor_address, _) = deploy_syscall(
-        executor::TEST_CLASS_HASH.try_into().unwrap(),
-        0,
-        executor_constructor_calldata.span(),
-        false
-    )
-        .unwrap();
-
-    // Deploy world contract
-    let mut constructor_calldata = array::ArrayTrait::new();
-    constructor_calldata.append(executor_address.into());
-    let (world_address, _) = deploy_syscall(
-        world::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
-    ).unwrap();
-    let world = IWorldDispatcher { contract_address: world_address };
-
-    // Deploy another world contract
-    let (world_address, _) = deploy_syscall(
-        world::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
-    ).unwrap();
-    let another_world = IWorldDispatcher { contract_address: world_address };
-
-    world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
-    world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
-    another_world.register_system(bar::TEST_CLASS_HASH.try_into().unwrap());
-    another_world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
-
-
-    let mut data = ArrayTrait::new();
-    data.append(1337);
-    data.append(1337);
-    let mut another_data = ArrayTrait::new();
-    another_data.append(7331);
-    another_data.append(7331);
     let mut keys = ArrayTrait::new();
     keys.append(0);
 
