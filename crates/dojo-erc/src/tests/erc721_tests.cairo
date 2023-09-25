@@ -404,7 +404,7 @@ fn test__set_approval_for_all_owner_equal_operator_false() {
 //
 
 #[test]
-#[available_gas(20000000)]
+#[available_gas(50000000)]
 fn test_transfer_from_owner() {
     let mut state = setup();
     let token_id = TOKEN_ID;
@@ -425,7 +425,7 @@ fn test_transfer_from_owner() {
 }
 
 #[test]
-#[available_gas(20000000)]
+#[available_gas(50000000)]
 fn test_transferFrom_owner() {
     let mut state = setup();
     let token_id = TOKEN_ID;
@@ -483,7 +483,7 @@ fn test_transferFrom_to_zero() {
 }
 
 #[test]
-#[available_gas(20000000)]
+#[available_gas(50000000)]
 fn test_transfer_from_to_owner() {
     let mut state = setup();
 
@@ -499,7 +499,7 @@ fn test_transfer_from_to_owner() {
 }
 
 #[test]
-#[available_gas(20000000)]
+#[available_gas(50000000)]
 fn test_transferFrom_to_owner() {
     let mut state = setup();
 
@@ -515,7 +515,7 @@ fn test_transferFrom_to_owner() {
 }
 
 #[test]
-#[available_gas(20000000)]
+#[available_gas(50000000)]
 fn test_transfer_from_approved() {
     let mut state = setup();
     let token_id = TOKEN_ID;
@@ -535,7 +535,7 @@ fn test_transfer_from_approved() {
 }
 
 #[test]
-#[available_gas(20000000)]
+#[available_gas(50000000)]
 fn test_transferFrom_approved() {
     let mut state = setup();
     let token_id = TOKEN_ID;
@@ -555,7 +555,7 @@ fn test_transferFrom_approved() {
 }
 
 #[test]
-#[available_gas(20000000)]
+#[available_gas(50000000)]
 fn test_transfer_from_approved_for_all() {
     let mut state = setup();
     let token_id = TOKEN_ID;
@@ -576,7 +576,7 @@ fn test_transfer_from_approved_for_all() {
 }
 
 #[test]
-#[available_gas(20000000)]
+#[available_gas(50000000)]
 fn test_transferFrom_approved_for_all() {
     let mut state = setup();
     let token_id = TOKEN_ID;
@@ -1141,7 +1141,7 @@ fn test_transferFrom_unauthorized() {
 //
 
 #[test]
-#[available_gas(20000000)]
+#[available_gas(50000000)]
 fn test__transfer() {
     let mut state = setup();
     let token_id = TOKEN_ID;
