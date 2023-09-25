@@ -1,4 +1,3 @@
-use integer::BoundedInt;
 use integer::u256;
 use integer::u256_from_felt252;
 use dojo_erc::tests::utils;

@@ -13,4 +13,5 @@ mod tests {
 
     mod erc20_tests;
     mod erc721_tests;
+    mod erc1155_tests;
 }

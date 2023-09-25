@@ -374,14 +374,37 @@ mod ERC1155 {
 
         fn _mint(ref self: ContractState, to: ContractAddress, id: u256, amount: u256) {
             assert(to.is_non_zero(), Errors::INVALID_RECEIVER);
-            self._safe_transfer_from(Zeroable::zero(), to, id, amount, array![]);
+
+            self.set_balance(to, id, self.get_balance(to, id).amount + amount);
+
+            self
+                .emit_event(
+                    TransferSingle {
+                        operator: get_caller_address(),
+                        from: Zeroable::zero(),
+                        to,
+                        id,
+                        value: amount
+                    }
+                );
         }
 
         fn _burn(ref self: ContractState, id: u256, amount: u256) {
             let caller = get_caller_address();
             assert(self.get_balance(caller, id).amount >= amount, Errors::INSUFFICIENT_BALANCE);
 
-            self._safe_transfer_from(caller, Zeroable::zero(), id, amount, array![]);
+            self.set_balance(caller, id, self.get_balance(caller, id).amount - amount);
+
+            self
+                .emit_event(
+                    TransferSingle {
+                        operator: get_caller_address(),
+                        from: caller,
+                        to: Zeroable::zero(),
+                        id,
+                        value: amount
+                    }
+                );
         }
 
         fn _safe_mint(
