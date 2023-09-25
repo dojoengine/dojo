@@ -70,8 +70,7 @@ async fn test_load_from_manifest(pool: SqlitePool) {
     assert_eq!(name, "Position");
     assert_eq!(class_hash, format!("{:#x}", FieldElement::TWO));
 
-    let position_models =
-        sqlx::query("SELECT * FROM external_Position").fetch_all(&pool).await.unwrap();
+    let position_models = sqlx::query("SELECT * FROM [Position]").fetch_all(&pool).await.unwrap();
     assert_eq!(position_models.len(), 0);
 
     state

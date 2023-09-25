@@ -22,7 +22,7 @@ use crate::types::{Entity, Model as ModelType};
 mod test;
 
 lazy_static! {
-    static ref SQL_TYPES: HashMap<String, String> = {
+    static ref CAIRO_TO_SQL_TYPE: HashMap<String, String> = {
         let mut m = HashMap::new();
         m.insert("u8".to_string(), "INTEGER".to_string());
         m.insert("u16".to_string(), "INTEGER".to_string());
@@ -32,10 +32,10 @@ lazy_static! {
         m.insert("u256".to_string(), "TEXT".to_string());
         m.insert("usize".to_string(), "INTEGER".to_string());
         m.insert("bool".to_string(), "INTEGER".to_string());
-        m.insert("Cursor".to_string(), "TEXT".to_string());
+        // m.insert("Cursor".to_string(), "TEXT".to_string());
         m.insert("ContractAddress".to_string(), "TEXT".to_string());
         m.insert("ClassHash".to_string(), "TEXT".to_string());
-        m.insert("DateTime".to_string(), "TEXT".to_string());
+        // m.insert("DateTime".to_string(), "TEXT".to_string());
         m.insert("felt252".to_string(), "TEXT".to_string());
         m
     };
@@ -156,6 +156,7 @@ impl Sql {
 
         let root = types.first().unwrap();
         let root_name = root.name();
+
         let layout_blob = layout.iter().map(|x| (*x).try_into().unwrap()).collect::<Vec<u8>>();
         let mut queries = vec![format!(
             "INSERT INTO models (id, name, class_hash, layout) VALUES ('{}', '{}', '{:#x}', '{}') \
@@ -166,10 +167,10 @@ impl Sql {
             hex::encode(&layout_blob),
             class_hash
         )];
-        queries.extend(build_model_query(root, None));
+        queries.extend(build_model_query(root, 0, None));
 
-        for ty in &types[1..] {
-            queries.extend(build_model_query(ty, Some(root_name.clone())));
+        for (model_idx, ty) in types[1..].iter().enumerate() {
+            queries.extend(build_model_query(ty, model_idx + 1, Some(root_name.clone())));
         }
 
         self.queue(queries).await;
@@ -219,37 +220,45 @@ impl Sql {
 
         let keys_str = felts_sql_string(&keys);
         let model_names = model_names_sql_string(entity_result, &model)?;
-        let insert_entities = format!(
+        let mut queries = vec![format!(
             "INSERT INTO entities (id, keys, model_names) VALUES ('{}', '{}', '{}') ON \
-             CONFLICT(id) DO UPDATE SET
-             model_names=excluded.model_names, 
+             CONFLICT(id) DO UPDATE SET model_names=excluded.model_names, \
              updated_at=CURRENT_TIMESTAMP",
             entity_id, keys_str, model_names
-        );
+        )];
 
-        let member_names_result =
-            sqlx::query("SELECT * FROM model_members WHERE model_id = ? ORDER BY id ASC")
-                .bind(model.clone())
-                .fetch_all(&self.pool)
-                .await?;
+        let members: Vec<(String, String, String)> = sqlx::query_as(
+            "SELECT id, name, type FROM model_members WHERE model_id = ? ORDER BY model_idx, \
+             member_idx ASC",
+        )
+        .bind(model.clone())
+        .fetch_all(&self.pool)
+        .await?;
+
+        let (primitive_members, _): (Vec<_>, Vec<_>) =
+            members.into_iter().partition(|member| CAIRO_TO_SQL_TYPE.contains_key(&member.2));
 
         // keys are part of model members, so combine keys and model values array
         let mut member_values: Vec<FieldElement> = Vec::new();
         member_values.extend(keys);
         member_values.extend(values);
 
-        let names_str = members_sql_string(&member_names_result)?;
-        let values_str = values_sql_string(&member_names_result, &member_values)?;
+        let insert_models: Vec<_> = primitive_members
+            .into_iter()
+            .zip(member_values.into_iter())
+            .map(|((id, name, ty), value)| {
+                format!(
+                    "INSERT OR REPLACE INTO [{id}] (entity_id, external_{name}) VALUES \
+                     ('{entity_id}' {})",
+                    format_value(&ty, &value).unwrap()
+                )
+            })
+            .collect();
 
-        let insert_models = format!(
-            "INSERT OR REPLACE INTO external_{} (entity_id{}) VALUES ('{}' {})",
-            model, names_str, entity_id, values_str
-        );
-
-        println!("{insert_models}");
+        queries.extend(insert_models);
 
         // tx commit required
-        self.queue(vec![insert_entities, insert_models]).await;
+        self.queue(queries).await;
         self.execute().await?;
 
         let query_result = sqlx::query("SELECT created_at FROM entities WHERE id = ?")
@@ -342,10 +351,7 @@ impl Executable for Sql {
             query_queue.clear();
         }
 
-        println!("{:?}", queries);
-
         let mut tx = self.pool.begin().await?;
-
         for query in queries {
             tx.execute(sqlx::query(&query)).await?;
         }
@@ -372,89 +378,61 @@ fn model_names_sql_string(entity_result: Option<SqliteRow>, new_model: &str) -> 
     Ok(model_names)
 }
 
-fn values_sql_string(member_results: &[SqliteRow], values: &[FieldElement]) -> Result<String> {
-    let types: Result<Vec<String>> =
-        member_results.iter().map(|row| Ok(row.try_get::<String, &str>("type")?)).collect();
-    // format according to type
-    let values: Result<Vec<String>> = values
-        .iter()
-        .zip(types?.iter())
-        .map(|(value, ty)| {
-            let sql_type = SQL_TYPES
-                .get(ty)
-                .ok_or_else(|| anyhow::anyhow!("SQL type not found for: {}", ty))?;
-
-            match sql_type.as_str() {
-                "INTEGER" => Ok(format!(",'{}'", value)),
-                "TEXT" => Ok(format!(",'{:#x}'", value)),
-                _ => Err(anyhow::anyhow!("Format not supported for type: {}", ty)),
-            }
-        })
-        .collect();
-
-    Ok(values?.join(""))
-}
-
-fn members_sql_string(member_results: &[SqliteRow]) -> Result<String> {
-    let names: Result<Vec<String>> = member_results
-        .iter()
-        .map(|row| {
-            let name = row.try_get::<String, &str>("name")?;
-            Ok(format!(", external_{}", name))
-        })
-        .collect();
-
-    Ok(names?.join(""))
+fn format_value(ty: &str, value: &FieldElement) -> Result<String> {
+    match CAIRO_TO_SQL_TYPE.get(ty) {
+        Some(sql_type) => match sql_type.as_str() {
+            "INTEGER" => Ok(format!(", '{}'", value)),
+            "TEXT" => Ok(format!(", '{:#x}'", value)),
+            _ => Err(anyhow::anyhow!("Format not supported for type: {}", ty)),
+        },
+        _ => Err(anyhow::anyhow!("Format not supported for type: {}", ty)),
+    }
 }
 
 fn felts_sql_string(felts: &[FieldElement]) -> String {
     felts.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join("/") + "/"
 }
 
-fn build_model_query(model: &Ty, parent_id: Option<String>) -> Vec<String> {
-    let model_id = if let Some(parent_id) = parent_id.clone() {
-        format!("{parent_id}:{}", model.name())
+fn build_model_query(model: &Ty, model_idx: usize, parent_id: Option<String>) -> Vec<String> {
+    let name = if let Some(parent_id) = parent_id.clone() {
+        format!("{parent_id}${}", model.name())
     } else {
         model.name()
     };
+    let model_id = if let Some(parent_id) = parent_id.clone() { parent_id } else { model.name() };
 
     let mut queries = vec![];
-    let mut query = format!(
-        "CREATE TABLE IF NOT EXISTS external_{} (entity_id TEXT NOT NULL PRIMARY KEY, ",
-        model_id
-    );
+    let mut query =
+        format!("CREATE TABLE IF NOT EXISTS [{}] (entity_id TEXT NOT NULL PRIMARY KEY, ", name);
 
     match model {
         Ty::Struct(s) => {
-            for (i, member) in s.children.iter().enumerate() {
-                if let Some(sql_type) = SQL_TYPES.get(&member.ty.name()) {
-                    queries.push(format!(
-                        "INSERT OR IGNORE INTO model_members (id, model_id, idx, name, type, key) \
-                         VALUES ('{model_id}', '{model_id}', '{i}', '{}', '{}', {})",
-                        member.name,
-                        member.ty.name(),
-                        member.key,
-                    ));
-
+            for (member_idx, member) in s.children.iter().enumerate() {
+                if let Some(sql_type) = CAIRO_TO_SQL_TYPE.get(&member.ty.name()) {
                     query.push_str(&format!("external_{} {}, ", member.name, sql_type));
                 };
+
+                queries.push(format!(
+                    "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, member_idx, \
+                     name, type, key) VALUES ('{name}', '{model_id}', '{model_idx}', \
+                     '{member_idx}', '{}', '{}', {})",
+                    member.name,
+                    member.ty.name(),
+                    member.key,
+                ));
             }
         }
         Ty::Enum(_) => {}
         _ => {}
     }
 
+    query.push_str("created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ");
+
     if let Some(id) = parent_id {
-        query.push_str(&format!(
-            "parent_id TEXT NOT NULL DEFAULT {id}, FOREIGN KEY (parent_id) REFERENCES \
-             external_{id} (id)), "
-        ));
+        query.push_str(&format!("FOREIGN KEY (entity_id) REFERENCES {id} (entity_id), "));
     };
 
-    query.push_str(
-        "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (entity_id) REFERENCES entities(id));",
-    );
+    query.push_str("FOREIGN KEY (entity_id) REFERENCES entities(id));");
     queries.push(query);
     queries
 }

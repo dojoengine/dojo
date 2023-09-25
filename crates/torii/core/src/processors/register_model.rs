@@ -31,7 +31,7 @@ impl<P: Provider + Sync + 'static> EventProcessor<P> for RegisterModelProcessor 
         let model = world.component(&name, BlockId::Tag(BlockTag::Latest)).await?;
         let schema = model.schema(BlockId::Tag(BlockTag::Latest)).await?;
         let layout = model.layout(BlockId::Tag(BlockTag::Latest)).await?;
-        info!("registered model: {}", name);
+        info!("Registered model: {}", name);
 
         db.register_model(schema, layout, event.data[1]).await?;
 

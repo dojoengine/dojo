@@ -1,10 +1,10 @@
-use anyhow::Result;
 use camino::Utf8PathBuf;
+use dojo_test_utils::migration::prepare_migration;
 use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, StarknetConfig, TestSequencer,
 };
 use dojo_world::manifest::Manifest;
-use dojo_world::migration::strategy::{prepare_for_migration, MigrationStrategy};
+use dojo_world::migration::strategy::prepare_for_migration;
 use dojo_world::migration::world::WorldDiff;
 use scarb_ui::{OutputFormat, Ui, Verbosity};
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
@@ -18,17 +18,10 @@ use starknet::signers::{LocalWallet, SigningKey};
 use crate::commands::options::transaction::TransactionOptions;
 use crate::ops::migration::execute_strategy;
 
-pub fn prepare_example_ecs_migration() -> Result<MigrationStrategy> {
-    let target_dir = Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap();
-    let manifest = Manifest::load_from_path(target_dir.join("manifest.json")).unwrap();
-    let world = WorldDiff::compute(manifest, None);
-    prepare_for_migration(None, Some(felt!("0x12345")), target_dir, world)
-}
-
 #[tokio::test(flavor = "multi_thread")]
 async fn migrate_with_auto_mine() {
     let ui = Ui::new(Verbosity::Verbose, OutputFormat::Text);
-    let migration = prepare_example_ecs_migration().unwrap();
+    let migration = prepare_migration("../../examples/ecs/target/dev".into()).unwrap();
 
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
@@ -37,13 +30,14 @@ async fn migrate_with_auto_mine() {
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
     execute_strategy(&migration, &account, &ui, None).await.unwrap();
+
     sequencer.stop().unwrap();
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn migrate_with_block_time() {
     let ui = Ui::new(Verbosity::Verbose, OutputFormat::Text);
-    let migration = prepare_example_ecs_migration().unwrap();
+    let migration = prepare_migration("../../examples/ecs/target/dev".into()).unwrap();
 
     let sequencer = TestSequencer::start(
         SequencerConfig { block_time: Some(1000), ..Default::default() },
@@ -61,7 +55,7 @@ async fn migrate_with_block_time() {
 #[tokio::test(flavor = "multi_thread")]
 async fn migrate_with_small_fee_multiplier_will_fail() {
     let ui = Ui::new(Verbosity::Verbose, OutputFormat::Text);
-    let migration = prepare_example_ecs_migration().unwrap();
+    let migration = prepare_migration("../../examples/ecs/target/dev".into()).unwrap();
 
     let sequencer = TestSequencer::start(
         Default::default(),
@@ -79,14 +73,16 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
         ExecutionEncoding::Legacy,
     );
 
-    assert!(execute_strategy(
-        &migration,
-        &account,
-        &ui,
-        Some(TransactionOptions { fee_estimate_multiplier: Some(0.2f64) }),
-    )
-    .await
-    .is_err());
+    assert!(
+        execute_strategy(
+            &migration,
+            &account,
+            &ui,
+            Some(TransactionOptions { fee_estimate_multiplier: Some(0.2f64) }),
+        )
+        .await
+        .is_err()
+    );
     sequencer.stop().unwrap();
 }
 

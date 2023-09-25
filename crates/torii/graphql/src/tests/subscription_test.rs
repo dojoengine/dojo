@@ -7,15 +7,17 @@ mod tests {
     use sqlx::SqlitePool;
     use starknet_crypto::{poseidon_hash_many, FieldElement};
     use tokio::sync::mpsc;
+    use tokio_util::sync::CancellationToken;
     use torii_core::sql::Sql;
 
-    use crate::tests::common::{init, run_graphql_subscription};
+    use crate::tests::{init, run_graphql_subscription};
 
     #[sqlx::test(migrations = "../migrations")]
     async fn test_entity_subscription(pool: SqlitePool) {
         // Sleep in order to run this test in a single thread
         tokio::time::sleep(Duration::from_secs(1)).await;
-        let state = init(&pool).await;
+        let cts = CancellationToken::new();
+        let state = init(cts, &pool).await;
         // 0. Preprocess expected entity value
         let key = vec![FieldElement::ONE];
         let entity_id = format!("{:#x}", poseidon_hash_many(&key));
@@ -59,7 +61,8 @@ mod tests {
     async fn test_entity_subscription_with_id(pool: SqlitePool) {
         // Sleep in order to run this test in a single thread
         tokio::time::sleep(Duration::from_secs(1)).await;
-        let state = init(&pool).await;
+        let cts = CancellationToken::new();
+        let state = init(cts, &pool).await;
         // 0. Preprocess expected entity value
         let key = vec![FieldElement::ONE];
         let entity_id = format!("{:#x}", poseidon_hash_many(&key));

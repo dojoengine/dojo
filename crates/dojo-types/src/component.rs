@@ -25,7 +25,9 @@ impl Ty {
     }
 
     pub fn flatten(&self) -> Vec<Ty> {
-        Ty::flatten_ty(self.clone())
+        let mut flattened = Ty::flatten_ty(self.clone());
+        flattened.reverse();
+        flattened
     }
 
     fn flatten_ty(ty: Ty) -> Vec<Ty> {

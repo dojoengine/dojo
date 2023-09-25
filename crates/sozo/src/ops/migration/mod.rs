@@ -240,7 +240,7 @@ where
 
 // returns the Some(block number) at which migration world is deployed, returns none if world was
 // not redeployed
-async fn execute_strategy<P, S>(
+pub async fn execute_strategy<P, S>(
     strategy: &MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
     ui: &Ui,

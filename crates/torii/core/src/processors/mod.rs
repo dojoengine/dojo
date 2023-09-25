@@ -9,7 +9,7 @@ use crate::sql::Sql;
 pub mod register_model;
 pub mod register_system;
 pub mod store_set_record;
-pub mod store_system_call;
+// pub mod store_system_call;
 
 #[async_trait]
 pub trait EventProcessor<P: Provider + Sync> {

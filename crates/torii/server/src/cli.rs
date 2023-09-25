@@ -23,6 +23,8 @@ use tracing::error;
 use tracing_subscriber::fmt;
 use url::Url;
 
+mod server;
+
 /// Dojo World Indexer
 #[derive(Parser, Debug)]
 #[command(name = "torii", author, version, about, long_about = None)]
@@ -101,7 +103,7 @@ async fn main() -> anyhow::Result<()> {
         &db,
         &provider,
         processors,
-        EngineConfig { world_address, start_block: args.start_block, ..Default::default() },
+        EngineConfig { start_block: args.start_block, ..Default::default() },
     );
 
     let addr = format!("{}:{}", args.host, args.port)
@@ -109,7 +111,7 @@ async fn main() -> anyhow::Result<()> {
         .expect("able to parse address");
 
     tokio::select! {
-        res = engine.start() => {
+        res = engine.start(cts) => {
             if let Err(e) = res {
                 error!("Indexer failed with error: {e}");
             }
