@@ -3,42 +3,54 @@
 // available which we need to initialize our Wasm code.
 importScripts("./pkg/torii_client_wasm.js");
 
-console.log("Initializing worker");
+console.log("Initializing client worker...");
 
 // In the worker, we have a different struct that we want to use as in
 // `index.js`.
-const { WasmClient } = wasm_bindgen;
+const { spawn_client } = wasm_bindgen;
 
 async function setup() {
 	// Load the wasm file by awaiting the Promise returned by `wasm_bindgen`.
 	await wasm_bindgen("./pkg/torii_client_wasm_bg.wasm");
 
-	const client = new WasmClient(
-		"http://localhost:5050",
-		"0x398c6b4f479e2a6181ae895ad34333b44e419e48098d2a9622f976216d044dd"
-	);
+	try {
+		const client = await spawn_client(
+			"http://localhost:50051",
+			"0x103dd611b410c2aafc47f435e3141950b9d18e801e518209b7d28f6ff993f54",
+			[
+				{
+					component: "Position",
+					keys: [
+						"0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973",
+					],
+				},
+			]
+		);
 
-	client.start();
+		client.startSync();
 
-	// setup the message handler for the worker
-	self.onmessage = function (e) {
-		const event = e.data.type;
-		const data = e.data.data;
+		// setup the message handler for the worker
+		self.onmessage = function (e) {
+			const event = e.data.type;
+			const data = e.data.data;
 
-		if (event === "getComponentValue") {
-			getComponentValueHandler(client, data);
-		} else if (event === "addEntityToSync") {
-			addEntityToSyncHandler(client, data);
-		} else {
-			console.log("Sync Worker: Unknown event type", event);
-		}
-	};
+			if (event === "getComponentValue") {
+				getComponentValueHandler(client, data);
+			} else if (event === "addEntityToSync") {
+				addEntityToSyncHandler(client, data);
+			} else {
+				console.log("Sync Worker: Unknown event type", event);
+			}
+		};
+	} catch (e) {
+		console.error("error spawning client: ", e);
+	}
 }
 
-function addEntityToSyncHandler(client, data) {
-	console.log("Sync Worker | Adding new entity to sync | data: ", data);
-	client.addEntityToSync(data);
-}
+// function addEntityToSyncHandler(client, data) {
+// 	console.log("Sync Worker | Adding new entity to sync | data: ", data);
+// 	client.addEntityToSync(data);
+// }
 
 /// Handler for the `get_entity` event from the main thread.
 /// Returns back the entity data to the main thread via `postMessage`.
@@ -47,9 +59,8 @@ async function getComponentValueHandler(client, data) {
 
 	const component = data.component;
 	const keys = data.keys;
-	const length = data.length;
 
-	const values = await client.getComponentValue(component, keys, length);
+	const values = await client.getComponentValue(component, keys);
 
 	self.postMessage({
 		type: "getComponentValue",

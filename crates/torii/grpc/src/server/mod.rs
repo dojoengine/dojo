@@ -1,0 +1,297 @@
+pub mod logger;
+pub mod subscription;
+
+use std::pin::Pin;
+use std::str::FromStr;
+use std::sync::Arc;
+
+use futures::Stream;
+use protos::world::world_server::{World, WorldServer};
+use protos::world::{
+    MetadataRequest, MetadataResponse, SubscribeEntitiesRequest, SubscribeEntitiesResponse,
+};
+use sqlx::{Executor, Pool, Row, Sqlite};
+use starknet::core::types::FromStrError;
+use starknet::core::utils::cairo_short_string_to_felt;
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::{JsonRpcClient, Provider};
+use starknet_crypto::{poseidon_hash_many, FieldElement};
+use tokio::sync::mpsc::{Receiver, Sender};
+use tokio_stream::wrappers::ReceiverStream;
+use tonic::transport::Server;
+use tonic::{Request, Response, Status};
+use url::Url;
+
+use self::logger::Logger;
+use self::subscription::{EntityComponentRequest, EntitySubscriptionService};
+use crate::protos::types::EntityComponent;
+use crate::protos::world::{GetEntityRequest, GetEntityResponse};
+use crate::protos::{self};
+
+#[derive(Debug)]
+pub struct DojoWorld<P> {
+    provider: P,
+    pool: Pool<Sqlite>,
+    /// Sender<(subscription requests, oneshot sender to send back the response)>
+    subscription_req_sender:
+        Sender<(EntityComponentRequest, Sender<Result<SubscribeEntitiesResponse, Status>>)>,
+}
+
+impl<P> DojoWorld<P>
+where
+    P: Provider + Clone + Send + Sync + Unpin + 'static,
+{
+    pub fn new(pool: Pool<Sqlite>, provider: P, block_rx: Receiver<u64>) -> Self {
+        let (subscription_req_sender, rx) = tokio::sync::mpsc::channel(1);
+        // spawn thread for state update service
+        tokio::task::spawn(EntitySubscriptionService::new(provider.clone(), rx, block_rx));
+        Self { pool, subscription_req_sender, provider }
+    }
+}
+
+impl<P> DojoWorld<P>
+where
+    P: Provider,
+{
+    async fn metadata(
+        &self,
+        world_address: FieldElement,
+    ) -> Result<protos::types::WorldMetadata, sqlx::Error> {
+        let (world_address, world_class_hash, executor_address, executor_class_hash): (
+            String,
+            String,
+            String,
+            String,
+        ) = sqlx::query_as(&format!(
+            "SELECT world_address, world_class_hash, executor_address, executor_class_hash FROM \
+             worlds WHERE id = '{world_address:#x}'"
+        ))
+        .fetch_one(&self.pool)
+        .await?;
+
+        let components = sqlx::query_as(
+            "SELECT c.name, c.class_hash, COUNT(cm.id) FROM components c LEFT JOIN \
+             component_members cm ON c.id = cm.component_id GROUP BY c.id",
+        )
+        .fetch_all(&self.pool)
+        .await?
+        .into_iter()
+        .map(|(name, class_hash, size)| protos::types::ComponentMetadata { name, class_hash, size })
+        .collect::<Vec<_>>();
+
+        let systems = sqlx::query_as("SELECT name, class_hash FROM systems")
+            .fetch_all(&self.pool)
+            .await?
+            .into_iter()
+            .map(|(name, class_hash)| protos::types::SystemMetadata { name, class_hash })
+            .collect::<Vec<_>>();
+
+        Ok(protos::types::WorldMetadata {
+            systems,
+            components,
+            world_address,
+            world_class_hash,
+            executor_address,
+            executor_class_hash,
+        })
+    }
+
+    #[allow(unused)]
+    async fn component_metadata(
+        &self,
+        component: String,
+    ) -> Result<protos::types::ComponentMetadata, sqlx::Error> {
+        sqlx::query_as(
+            "SELECT c.name, c.class_hash, COUNT(cm.id) FROM components c LEFT JOIN \
+             component_members cm ON c.id = cm.component_id WHERE c.id = ? GROUP BY c.id",
+        )
+        .bind(component.to_lowercase())
+        .fetch_one(&self.pool)
+        .await
+        .map(|(name, class_hash, size)| protos::types::ComponentMetadata {
+            name,
+            size,
+            class_hash,
+        })
+    }
+
+    #[allow(unused)]
+    async fn system_metadata(
+        &self,
+        system: String,
+    ) -> Result<protos::types::SystemMetadata, sqlx::Error> {
+        sqlx::query_as("SELECT name, class_hash FROM systems WHERE id = ?")
+            .bind(system.to_lowercase())
+            .fetch_one(&self.pool)
+            .await
+            .map(|(name, class_hash)| protos::types::SystemMetadata { name, class_hash })
+    }
+
+    async fn entity(
+        &self,
+        component: String,
+        entity_keys: Vec<FieldElement>,
+    ) -> Result<Vec<String>, sqlx::Error> {
+        let entity_id = format!("{:#x}", poseidon_hash_many(&entity_keys));
+        // TODO: there's definitely a better way for doing this
+        self.pool
+            .fetch_one(
+                format!(
+                    "SELECT * FROM external_{} WHERE entity_id = '{entity_id}'",
+                    component.to_lowercase()
+                )
+                .as_ref(),
+            )
+            .await
+            .map(|row| {
+                let size = row.columns().len() - 2;
+                let mut values = Vec::with_capacity(size);
+                for (i, _) in row.columns().iter().enumerate().skip(1).take(size) {
+                    let value = match row.try_get::<String, _>(i) {
+                        Ok(value) => value,
+                        Err(sqlx::Error::ColumnDecode { .. }) => {
+                            row.try_get::<u32, _>(i).expect("decode failed").to_string()
+                        }
+                        Err(e) => panic!("{e}"),
+                    };
+                    values.push(value);
+                }
+                values
+            })
+    }
+}
+
+type ServiceResult<T> = Result<Response<T>, Status>;
+type SubscribeEntitiesResponseStream =
+    Pin<Box<dyn Stream<Item = Result<SubscribeEntitiesResponse, Status>> + Send>>;
+
+#[tonic::async_trait]
+impl<P> World for DojoWorld<P>
+where
+    P: Provider + Send + Sync + 'static,
+{
+    async fn world_metadata(
+        &self,
+        request: Request<MetadataRequest>,
+    ) -> Result<Response<MetadataResponse>, Status> {
+        let world_address = request.into_inner().id;
+        let world_address = FieldElement::from_str(&world_address).map_err(|e| {
+            Status::invalid_argument(format!("invalid World id {world_address}: {e}"))
+        })?;
+
+        let metadata = self.metadata(world_address).await.map_err(|e| match e {
+            sqlx::Error::RowNotFound => Status::not_found("World not found"),
+            e => Status::internal(e.to_string()),
+        })?;
+
+        Ok(Response::new(MetadataResponse { metadata: Some(metadata) }))
+    }
+
+    async fn get_entity(
+        &self,
+        request: Request<GetEntityRequest>,
+    ) -> Result<Response<GetEntityResponse>, Status> {
+        let GetEntityRequest { entity } = request.into_inner();
+
+        let Some(EntityComponent { component, keys }) = entity else {
+            return Err(Status::invalid_argument("Entity not specified"));
+        };
+
+        let entity_keys = keys
+            .iter()
+            .map(|k| FieldElement::from_str(k))
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| Status::invalid_argument(format!("Invalid key: {e}")))?;
+
+        let values = self.entity(component, entity_keys).await.map_err(|e| match e {
+            sqlx::Error::RowNotFound => Status::not_found("Entity not found"),
+            e => Status::internal(e.to_string()),
+        })?;
+
+        Ok(Response::new(GetEntityResponse { values }))
+    }
+
+    type SubscribeEntitiesStream = SubscribeEntitiesResponseStream;
+
+    async fn subscribe_entities(
+        &self,
+        request: Request<SubscribeEntitiesRequest>,
+    ) -> ServiceResult<Self::SubscribeEntitiesStream> {
+        println!("SubscribeEntities");
+
+        let SubscribeEntitiesRequest { entities: raw_entities, world } = request.into_inner();
+        let (sender, rx) = tokio::sync::mpsc::channel(128);
+
+        let world = FieldElement::from_str(&world)
+            .map_err(|e| Status::internal(format!("Invalid world address: {e}")))?;
+
+        // in order to be able to compute all the storage address for all the requested entities, we
+        // need to know the size of the entity component. we can get this information from the
+        // sql database by querying the component metadata.
+
+        let mut entities = Vec::with_capacity(raw_entities.len());
+        for entity in raw_entities {
+            let keys = entity
+                .keys
+                .into_iter()
+                .map(|v| FieldElement::from_str(&v))
+                .collect::<Result<Vec<FieldElement>, FromStrError>>()
+                .map_err(|e| Status::internal(format!("parsing error: {e}")))?;
+
+            let component = cairo_short_string_to_felt(&entity.component)
+                .map_err(|e| Status::internal(format!("parsing error: {e}")))?;
+
+            let (component_len,): (i64,) =
+                sqlx::query_as("SELECT COUNT(*) FROM component_members WHERE component_id = ?")
+                    .bind(entity.component.to_lowercase())
+                    .fetch_one(&self.pool)
+                    .await
+                    .map_err(|e| match e {
+                        sqlx::Error::RowNotFound => Status::not_found("Component not found"),
+                        e => Status::internal(e.to_string()),
+                    })?;
+
+            entities.push(self::subscription::Entity {
+                component: self::subscription::ComponentMetadata {
+                    name: component,
+                    len: component_len as usize,
+                },
+                keys,
+            })
+        }
+
+        self.subscription_req_sender
+            .send((EntityComponentRequest { world, entities }, sender))
+            .await
+            .expect("should send subscriber request");
+
+        Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeEntitiesStream))
+    }
+}
+
+/// When starting the gRPC server, in order to sync with the indexer engine, it should receive a
+/// channel to communicate with the indexer, in order to receive the block number that the indexer
+/// engine is processing at any moment. This way, we can sync with the indexer and request the state
+/// update of the current block that the indexer is currently processing.
+pub async fn spawn(
+    host: &String,
+    port: u16,
+    pool: &Pool<Sqlite>,
+    block_receiver: Receiver<u64>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(
+        Url::parse("http://localhost:5050").unwrap(),
+    )));
+
+    let addr = format!("{}:{}", host, port).parse()?;
+    let world = DojoWorld::new(pool.clone(), provider, block_receiver);
+
+    Server::builder()
+        .accept_http1(true)
+        .layer(Logger::default())
+        .add_service(tonic_web::enable(WorldServer::new(world)))
+        .serve(addr)
+        .await?;
+
+    Ok(())
+}

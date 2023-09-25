@@ -10,11 +10,13 @@ use hyper::Uri;
 use sqlx::{Pool, Sqlite};
 use warp::Filter;
 
+use torii_grpc::protos;
+
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 
 // TODO: check if there's a nicer way to implement this
 pub async fn spawn_server(addr: &SocketAddr, pool: &Pool<Sqlite>) -> anyhow::Result<()> {
-    let world_server = torii_grpc::DojoWorld::new(pool.clone());
+    let world_server = torii_grpc::server::DojoWorld::new(pool.clone());
 
     let base_route = warp::path::end()
         .and(warp::get())
@@ -22,7 +24,7 @@ pub async fn spawn_server(addr: &SocketAddr, pool: &Pool<Sqlite>) -> anyhow::Res
     let routes = torii_graphql::route::filter(pool).await.or(base_route);
 
     let warp = warp::service(routes);
-    let tonic = tonic_web::enable(torii_grpc::world::world_server::WorldServer::new(world_server));
+    let tonic = tonic_web::enable(protos::world::world_server::WorldServer::new(world_server));
 
     hyper::Server::bind(addr)
         .serve(make_service_fn(move |_| {

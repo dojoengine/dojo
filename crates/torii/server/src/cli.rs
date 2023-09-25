@@ -98,6 +98,8 @@ async fn main() -> anyhow::Result<()> {
         ..Processors::default()
     };
 
+    let (block_sender, block_receiver) = tokio::sync::mpsc::channel(10);
+
     let engine = Engine::new(
         &world,
         &db,
@@ -111,7 +113,7 @@ async fn main() -> anyhow::Result<()> {
         .expect("able to parse address");
 
     tokio::select! {
-        res = engine.start(cts) => {
+        res = engine.start(cts, block_sender) => {
             if let Err(e) = res {
                 error!("Indexer failed with error: {e}");
             }
