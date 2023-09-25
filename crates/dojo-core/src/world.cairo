@@ -20,6 +20,7 @@ trait IWorld<T> {
         ref self: T,
         model: felt252,
         keys: Span<felt252>,
+        keys_layout: Span<u8>,
         offset: u8,
         values: Span<felt252>,
         layout: Span<u8>
@@ -486,6 +487,7 @@ mod world {
             ref self: ContractState,
             model: felt252,
             keys: Span<felt252>,
+            keys_layout: Span<u8>,
             offset: u8,
             values: Span<felt252>,
             layout: Span<u8>

@@ -180,7 +180,7 @@ fn get_by_keys(
 /// * `key` - The key of the entries to get.
 /// * `length` - The length of the entries.
 fn get_by_key(
-    class_hash: starknet::ClassHash, component: felt252, partition: felt252, key: felt252, length: usize
+    class_hash: starknet::ClassHash, component: felt252, partition: felt252, key: felt252, length: usize, layout: Span<u8>
 ) -> (Span<felt252>, Span<Span<felt252>>) {
         let table = {
         if partition == 0.into() {
@@ -195,7 +195,7 @@ fn get_by_key(
     };
 
     let all_ids = index::get_by_key(0, table, key);
-    (all_ids.span(), get_by_ids(class_hash, table, all_ids.span(), length))
+    (all_ids.span(), get_by_ids(class_hash, table, all_ids.span(), length, layout))
 }
 
 /// Set, but with writing keys to the appropriate indexes
@@ -207,9 +207,9 @@ fn get_by_key(
 /// * `value` - The value of the entry to set.
 /// * `keys` - The keys of the entry to set in the index.
 fn set_with_keys(
-    class_hash: starknet::ClassHash, table: felt252, id: felt252, offset: u8, value: Span<felt252>, keys: Span<felt252>
+    class_hash: starknet::ClassHash, table: felt252, id: felt252, offset: u8, value: Span<felt252>, layout: Span<u8>, keys: Span<felt252>, keys_layout: Span<u8>
 
 ) {
-    set(class_hash, table, id, offset, value);
-    index::create_with_keys(0, table, id, keys);
+    set(class_hash, table, id, offset, value, layout);
+    index::create_with_keys(0, table, id, keys, keys_layout);
 }
