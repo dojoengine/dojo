@@ -1,4 +1,5 @@
 pub mod logger;
+pub mod route;
 pub mod subscription;
 
 use std::pin::Pin;
@@ -28,7 +29,7 @@ use crate::protos::types::EntityComponent;
 use crate::protos::world::{GetEntityRequest, GetEntityResponse};
 use crate::protos::{self};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DojoWorld<P> {
     provider: P,
     pool: Pool<Sqlite>,
@@ -53,7 +54,7 @@ impl<P> DojoWorld<P>
 where
     P: Provider,
 {
-    async fn metadata(
+    pub async fn metadata(
         &self,
         world_address: FieldElement,
     ) -> Result<protos::types::WorldMetadata, sqlx::Error> {
@@ -97,7 +98,7 @@ where
     }
 
     #[allow(unused)]
-    async fn component_metadata(
+    pub async fn component_metadata(
         &self,
         component: String,
     ) -> Result<protos::types::ComponentMetadata, sqlx::Error> {
@@ -116,7 +117,7 @@ where
     }
 
     #[allow(unused)]
-    async fn system_metadata(
+    pub async fn system_metadata(
         &self,
         system: String,
     ) -> Result<protos::types::SystemMetadata, sqlx::Error> {
@@ -127,7 +128,7 @@ where
             .map(|(name, class_hash)| protos::types::SystemMetadata { name, class_hash })
     }
 
-    async fn entity(
+    pub async fn entity(
         &self,
         component: String,
         entity_keys: Vec<FieldElement>,
@@ -166,7 +167,7 @@ type SubscribeEntitiesResponseStream =
     Pin<Box<dyn Stream<Item = Result<SubscribeEntitiesResponse, Status>> + Send>>;
 
 #[tonic::async_trait]
-impl<P> World for DojoWorld<P>
+impl<P> protos::world::world_server::World for DojoWorld<P>
 where
     P: Provider + Send + Sync + 'static,
 {
@@ -294,4 +295,14 @@ pub async fn spawn(
         .await?;
 
     Ok(())
+}
+
+pub fn filter(pool: &Pool<Sqlite>, block_receiver: Receiver<u64>) {
+    let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(
+        Url::parse("http://localhost:5050").unwrap(),
+    )));
+
+    let world = DojoWorld::new(pool.clone(), provider, block_receiver);
+
+    tonic_web::enable(your_module::greeter_server::GreeterServer::new(greeter))
 }

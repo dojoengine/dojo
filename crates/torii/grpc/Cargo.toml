@@ -21,6 +21,7 @@ hyper = "0.14.27"
 tonic-web = "0.10.0"
 tower = "0.4.13"
 tracing.workspace = true
+http = "0.2.9"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 tonic-web-wasm-client.workspace = true
@@ -42,5 +43,5 @@ tonic-build.workspace = true
 wasm-tonic-build.workspace = true
 
 [features]
-client = [  ]
-server = [  ] # this feature can't be build on wasm32
+client = []
+server = [] # this feature can't be build on wasm32
