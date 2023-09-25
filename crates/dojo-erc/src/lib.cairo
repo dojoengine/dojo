@@ -2,6 +2,7 @@ mod token {
     mod erc20;
     mod erc20_models;
     mod erc721;
+    mod erc1155;
 
 }
 
