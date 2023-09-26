@@ -155,16 +155,18 @@ impl Sql {
         let mut sql_types = self.sql_types.lock().await;
 
         let model_id = model.name.to_lowercase();
-        let mut queries = vec![format!(
+        let insert_models = format!(
             "INSERT INTO models (id, name, class_hash) VALUES ('{}', '{}', '{:#x}') ON \
-             CONFLICT(id) DO UPDATE SET class_hash='{:#x}'",
+             CONFLICT(id) DO UPDATE SET class_hash='{:#x}' RETURNING created_at",
             model_id, model.name, model.class_hash, model.class_hash
-        )];
+        );
+        let query_result: SqliteRow = sqlx::query(&insert_models).fetch_one(&self.pool).await?;
 
         let mut model_table_query = format!(
             "CREATE TABLE IF NOT EXISTS external_{} (entity_id TEXT NOT NULL PRIMARY KEY, ",
             model.name.to_lowercase()
         );
+        let mut queries = vec![];
 
         for member in &model.members {
             // FIXME: defaults all unknown model types to Enum for now until we support nested
@@ -194,16 +196,7 @@ impl Sql {
 
         self.queue(queries).await;
 
-        // Since previous query has not been executed, we have to make sure created_at exists
-        let created_at: DateTime<Utc> =
-            match sqlx::query("SELECT created_at FROM models WHERE id = ?")
-                .bind(model_id.clone())
-                .fetch_one(&self.pool)
-                .await
-            {
-                Ok(query_result) => query_result.try_get("created_at")?,
-                Err(_) => Utc::now(),
-            };
+        let created_at: DateTime<Utc> = query_result.try_get("created_at")?;
 
         SimpleBroker::publish(ModelType {
             id: model_id,
@@ -246,9 +239,10 @@ impl Sql {
             "INSERT INTO entities (id, keys, model_names) VALUES ('{}', '{}', '{}') ON \
              CONFLICT(id) DO UPDATE SET
              model_names=excluded.model_names, 
-             updated_at=CURRENT_TIMESTAMP",
+             updated_at=CURRENT_TIMESTAMP RETURNING created_at",
             entity_id, keys_str, model_names
         );
+        let query_result: SqliteRow = sqlx::query(&insert_entities).fetch_one(&self.pool).await?;
 
         let member_names_result =
             sqlx::query("SELECT * FROM model_members WHERE model_id = ? ORDER BY id ASC")
@@ -274,15 +268,10 @@ impl Sql {
         );
 
         // tx commit required
-        self.queue(vec![insert_entities, insert_models]).await;
+        self.queue(vec![insert_models]).await;
         self.execute().await?;
 
-        let query_result = sqlx::query("SELECT created_at FROM entities WHERE id = ?")
-            .bind(entity_id.clone())
-            .fetch_one(&self.pool)
-            .await?;
         let created_at: DateTime<Utc> = query_result.try_get("created_at")?;
-
         SimpleBroker::publish(Entity {
             id: entity_id.clone(),
             keys: keys_str,
