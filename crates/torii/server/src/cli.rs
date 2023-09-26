@@ -1,4 +1,5 @@
 use std::env;
+use std::net::SocketAddr;
 use std::str::FromStr;
 
 use anyhow::{anyhow, Context};
@@ -21,13 +22,13 @@ use torii_core::sql::Sql;
 use tracing::error;
 use tracing_subscriber::fmt;
 use url::Url;
-use warp::Filter;
 
 use crate::engine::Processors;
 use crate::indexer::Indexer;
 
 mod engine;
 mod indexer;
+mod server;
 
 /// Dojo World Indexer
 #[derive(Parser, Debug)]
@@ -51,12 +52,9 @@ struct Args {
     /// Host address for GraphQL/gRPC endpoints
     #[arg(long, default_value = "0.0.0.0")]
     host: String,
-    /// Port number for GraphQL endpoint
+    /// Port number for GraphQL/gRPC endpoints
     #[arg(long, default_value = "8080")]
-    graphql_port: u16,
-    /// Port number for gRPC endpoint
-    #[arg(long, default_value = "50051")]
-    grpc_port: u16,
+    port: u16,
 }
 
 #[tokio::main]
@@ -108,23 +106,23 @@ async fn main() -> anyhow::Result<()> {
     let indexer =
         Indexer::new(&world, &db, &provider, processors, manifest, world_address, args.start_block);
 
-    let base_route = warp::path::end()
-        .and(warp::get())
-        .map(|| warp::reply::json(&serde_json::json!({ "success": true })));
-    let routes = torii_graphql::route::filter(&pool)
-        .await
-        .or(torii_grpc::route::filter(&pool))
-        .or(base_route);
-    let server = warp::serve(routes);
-    let server = server.run((args.host.parse::<std::net::IpAddr>()?, args.graphql_port));
+    let addr = format!("{}:{}", args.host, args.port)
+        .parse::<SocketAddr>()
+        .expect("able to parse address");
 
     tokio::select! {
         res = indexer.start() => {
             if let Err(e) = res {
-                error!("Indexer failed with error: {:?}", e);
+                error!("Indexer failed with error: {e}");
             }
         }
-        _ = server => {}
+
+        res = server::spawn_server(&addr, &pool) => {
+            if let Err(e) = res {
+                error!("Server failed with error: {e}");
+            }
+        }
+
         _ = tokio::signal::ctrl_c() => {
             println!("Received Ctrl+C, shutting down");
         }
