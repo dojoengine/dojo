@@ -188,7 +188,6 @@ pub fn unpack<P: Provider>(
 }
 
 fn parse_ty<P: Provider>(data: &[FieldElement]) -> Result<Ty, ComponentError<P::Error>> {
-    println!("{:#?}", data);
     let member_type: u8 = data[0].try_into().unwrap();
     match member_type {
         0 => parse_simple::<P>(&data[1..]),
