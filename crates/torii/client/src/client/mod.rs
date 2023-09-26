@@ -151,7 +151,7 @@ mod tests {
                     "0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973"
                 )],
             }])
-            .build("http://localhost:50051".to_string(), world)
+            .build("http://localhost:8080/grpc/".to_string(), world)
             .await
             .unwrap();
 

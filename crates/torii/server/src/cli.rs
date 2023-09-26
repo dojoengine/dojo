@@ -1,17 +1,29 @@
+use std::convert::Infallible;
 use std::env;
+use std::future::Future;
 use std::net::SocketAddr;
+use std::pin::Pin;
 use std::str::FromStr;
+use std::sync::Arc;
+use std::task::Poll;
 
 use anyhow::{anyhow, Context};
 use camino::Utf8PathBuf;
 use clap::Parser;
 use dojo_world::manifest::Manifest;
 use dojo_world::metadata::{dojo_metadata_from_workspace, Environment};
+use either::Either;
+use http::Uri;
+use hyper::server::conn::AddrStream;
+use hyper::service::{make_service_fn, service_fn, Service};
+use hyper::Body;
 use scarb::core::Config;
 use sqlx::sqlite::SqlitePoolOptions;
+use sqlx::{Pool, Sqlite};
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
+use tokio::sync::mpsc::Receiver;
 use tokio_util::sync::CancellationToken;
 use torii_client::contract::world::WorldContractReader;
 use torii_core::engine::{Engine, EngineConfig, Processors};
@@ -51,6 +63,8 @@ struct Args {
     #[arg(long, default_value = "8080")]
     port: u16,
 }
+
+type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -98,7 +112,7 @@ async fn main() -> anyhow::Result<()> {
         ..Processors::default()
     };
 
-    let (block_sender, block_receiver) = tokio::sync::mpsc::channel(10);
+    let (block_sender, block_receiver) = tokio::sync::mpsc::channel::<u64>(10);
 
     let engine = Engine::new(
         &world,
@@ -131,6 +145,114 @@ async fn main() -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+// TODO: check if there's a nicer way to implement this
+async fn spawn_server(
+    addr: &SocketAddr,
+    pool: Pool<Sqlite>,
+    block_receiver: Receiver<u64>,
+) -> anyhow::Result<()> {
+    let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(
+        Url::parse("http://localhost:5050").unwrap(),
+    )));
+
+    let world_server = torii_grpc::server::DojoWorld::new(pool.clone(), provider, block_receiver);
+    let mut tonic = tonic_web::enable(torii_grpc::protos::world::world_server::WorldServer::new(
+        world_server.clone(),
+    ));
+
+    let base_route = warp::path::end()
+        .and(warp::get())
+        .map(|| warp::reply::json(&serde_json::json!({ "success": true })));
+    let routes = torii_graphql::route::filter(pool).await.or(base_route);
+
+    let warp = warp::service(routes);
+
+    hyper::Server::bind(&addr)
+        .serve(make_service_fn(move |_| {
+            let mut tonic = tonic.clone();
+            let mut warp = warp.clone();
+
+            std::future::ready(Ok::<_, Infallible>(tower::service_fn(
+                move |mut req: hyper::Request<hyper::Body>| {
+                    let mut uri = req.uri().path().split("/").skip(1);
+                    match uri.next() {
+                        Some("grpc") => {
+                            let grpc_method = uri.collect::<Vec<&str>>().join("/");
+                            *req.uri_mut() =
+                                Uri::from_str(&format!("/{grpc_method}")).expect("valid uri");
+
+                            Either::Right({
+                                let res = tonic.call(req);
+                                Box::pin(async move {
+                                    let res = res.await.map(|res| res.map(EitherBody::Right))?;
+                                    Ok::<_, Error>(res)
+                                })
+                            })
+                        }
+
+                        _ => Either::Left({
+                            let res = warp.call(req);
+                            Box::pin(async move {
+                                let res = res.await.map(|res| res.map(EitherBody::Left))?;
+                                Ok::<_, Error>(res)
+                            })
+                        }),
+                    }
+                },
+            )))
+        }))
+        .await?;
+
+    Ok(())
+}
+
+enum EitherBody<A, B> {
+    Left(A),
+    Right(B),
+}
+
+impl<A, B> http_body::Body for EitherBody<A, B>
+where
+    A: http_body::Body + Send + Unpin,
+    B: http_body::Body<Data = A::Data> + Send + Unpin,
+    A::Error: Into<Error>,
+    B::Error: Into<Error>,
+{
+    type Data = A::Data;
+    type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
+
+    fn is_end_stream(&self) -> bool {
+        match self {
+            EitherBody::Left(b) => b.is_end_stream(),
+            EitherBody::Right(b) => b.is_end_stream(),
+        }
+    }
+
+    fn poll_data(
+        self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
+        match self.get_mut() {
+            EitherBody::Left(b) => Pin::new(b).poll_data(cx).map(map_option_err),
+            EitherBody::Right(b) => Pin::new(b).poll_data(cx).map(map_option_err),
+        }
+    }
+
+    fn poll_trailers(
+        self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<Result<Option<http::HeaderMap>, Self::Error>> {
+        match self.get_mut() {
+            EitherBody::Left(b) => Pin::new(b).poll_trailers(cx).map_err(Into::into),
+            EitherBody::Right(b) => Pin::new(b).poll_trailers(cx).map_err(Into::into),
+        }
+    }
+}
+
+fn map_option_err<T, U: Into<Error>>(err: Option<Result<T, U>>) -> Option<Result<T, Error>> {
+    err.map(|e| e.map_err(Into::into))
 }
 
 // Tries to find scarb manifest first for env variables

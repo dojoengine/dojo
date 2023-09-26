@@ -8,9 +8,9 @@ use warp::Filter;
 use super::schema::build_schema;
 
 pub async fn filter(
-    pool: &Pool<Sqlite>,
+    pool: Pool<Sqlite>,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
-    let schema = build_schema(pool).await.unwrap();
+    let schema = build_schema(&pool).await.unwrap();
     let graphql_filter = warp::path("graphql")
         .and(warp::post())
         .and(async_graphql_warp::graphql(schema))

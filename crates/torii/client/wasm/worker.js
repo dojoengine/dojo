@@ -15,7 +15,7 @@ async function setup() {
 
 	try {
 		const client = await spawn_client(
-			"http://localhost:50051",
+			"http://localhost:8080/grpc",
 			"0x103dd611b410c2aafc47f435e3141950b9d18e801e518209b7d28f6ff993f54",
 			[
 				{
@@ -27,7 +27,7 @@ async function setup() {
 			]
 		);
 
-		client.startSync();
+		// client.startSync();
 
 		// setup the message handler for the worker
 		self.onmessage = function (e) {

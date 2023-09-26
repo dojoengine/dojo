@@ -1,5 +1,4 @@
 pub mod logger;
-pub mod route;
 pub mod subscription;
 
 use std::pin::Pin;
@@ -7,7 +6,6 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use futures::Stream;
-use protos::world::world_server::{World, WorldServer};
 use protos::world::{
     MetadataRequest, MetadataResponse, SubscribeEntitiesRequest, SubscribeEntitiesResponse,
 };
@@ -19,30 +17,28 @@ use starknet::providers::{JsonRpcClient, Provider};
 use starknet_crypto::{poseidon_hash_many, FieldElement};
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio_stream::wrappers::ReceiverStream;
-use tonic::transport::Server;
 use tonic::{Request, Response, Status};
-use url::Url;
 
-use self::logger::Logger;
 use self::subscription::{EntityComponentRequest, EntitySubscriptionService};
 use crate::protos::types::EntityComponent;
 use crate::protos::world::{GetEntityRequest, GetEntityResponse};
 use crate::protos::{self};
 
 #[derive(Debug, Clone)]
-pub struct DojoWorld<P> {
-    provider: P,
+pub struct DojoWorld {
+    provider: Arc<JsonRpcClient<HttpTransport>>,
     pool: Pool<Sqlite>,
     /// Sender<(subscription requests, oneshot sender to send back the response)>
     subscription_req_sender:
         Sender<(EntityComponentRequest, Sender<Result<SubscribeEntitiesResponse, Status>>)>,
 }
 
-impl<P> DojoWorld<P>
-where
-    P: Provider + Clone + Send + Sync + Unpin + 'static,
-{
-    pub fn new(pool: Pool<Sqlite>, provider: P, block_rx: Receiver<u64>) -> Self {
+impl DojoWorld {
+    pub fn new(
+        pool: Pool<Sqlite>,
+        block_rx: Receiver<u64>,
+        provider: Arc<JsonRpcClient<HttpTransport>>,
+    ) -> Self {
         let (subscription_req_sender, rx) = tokio::sync::mpsc::channel(1);
         // spawn thread for state update service
         tokio::task::spawn(EntitySubscriptionService::new(provider.clone(), rx, block_rx));
@@ -50,10 +46,7 @@ where
     }
 }
 
-impl<P> DojoWorld<P>
-where
-    P: Provider,
-{
+impl DojoWorld {
     pub async fn metadata(
         &self,
         world_address: FieldElement,
@@ -167,10 +160,7 @@ type SubscribeEntitiesResponseStream =
     Pin<Box<dyn Stream<Item = Result<SubscribeEntitiesResponse, Status>> + Send>>;
 
 #[tonic::async_trait]
-impl<P> protos::world::world_server::World for DojoWorld<P>
-where
-    P: Provider + Send + Sync + 'static,
-{
+impl protos::world::world_server::World for DojoWorld {
     async fn world_metadata(
         &self,
         request: Request<MetadataRequest>,
@@ -268,41 +258,4 @@ where
 
         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeEntitiesStream))
     }
-}
-
-/// When starting the gRPC server, in order to sync with the indexer engine, it should receive a
-/// channel to communicate with the indexer, in order to receive the block number that the indexer
-/// engine is processing at any moment. This way, we can sync with the indexer and request the state
-/// update of the current block that the indexer is currently processing.
-pub async fn spawn(
-    host: &String,
-    port: u16,
-    pool: &Pool<Sqlite>,
-    block_receiver: Receiver<u64>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(
-        Url::parse("http://localhost:5050").unwrap(),
-    )));
-
-    let addr = format!("{}:{}", host, port).parse()?;
-    let world = DojoWorld::new(pool.clone(), provider, block_receiver);
-
-    Server::builder()
-        .accept_http1(true)
-        .layer(Logger::default())
-        .add_service(tonic_web::enable(WorldServer::new(world)))
-        .serve(addr)
-        .await?;
-
-    Ok(())
-}
-
-pub fn filter(pool: &Pool<Sqlite>, block_receiver: Receiver<u64>) {
-    let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(
-        Url::parse("http://localhost:5050").unwrap(),
-    )));
-
-    let world = DojoWorld::new(pool.clone(), provider, block_receiver);
-
-    tonic_web::enable(your_module::greeter_server::GreeterServer::new(greeter))
 }

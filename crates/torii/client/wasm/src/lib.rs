@@ -19,16 +19,16 @@ pub struct Client(torii_client::client::Client);
 
 #[wasm_bindgen]
 impl Client {
-    #[wasm_bindgen(js_name = startSync)]
-    pub async fn start_sync(&self) {
-        console_error_panic_hook::set_once();
-        let sync_client = self.0.start_sync().await.expect("failed to build sync client");
-        futures::select! {
-            _ = sync_client.fuse() => {
-                log("sync client finished");
-            }
-        }
-    }
+    // #[wasm_bindgen(js_name = startSync)]
+    // pub async fn start_sync(&self) {
+    //     console_error_panic_hook::set_once();
+    //     let sync_client = self.0.start_sync().await.expect("failed to build sync client");
+    //     futures::select! {
+    //         _ = sync_client.fuse() => {
+    //             log("sync client finished");
+    //         }
+    //     }
+    // }
 
     /// Returns the component values of the requested entity.
     #[wasm_bindgen(js_name = getComponentValue)]
