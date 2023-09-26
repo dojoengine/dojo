@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use camino::Utf8PathBuf;
 use dojo_world::manifest::{Component, Member, System};
+use serial_test::serial;
 use sqlx::sqlite::SqlitePool;
 use starknet::core::types::{Event, FieldElement};
 
@@ -9,6 +10,7 @@ use crate::sql::{Executable, Sql};
 use crate::State;
 
 #[sqlx::test(migrations = "../migrations")]
+#[serial]
 async fn test_load_from_manifest(pool: SqlitePool) {
     let manifest = dojo_world::manifest::Manifest::load_from_path(
         Utf8PathBuf::from_path_buf("../../../examples/ecs/target/dev/manifest.json".into())

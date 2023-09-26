@@ -1,11 +1,12 @@
 #[cfg(test)]
+
 mod tests {
-    use std::time::Duration;
     use std::sync::Arc;
+    use std::time::Duration;
 
     use async_graphql::value;
-    use lazy_static::lazy_static;
     use dojo_world::manifest::{Component, Member};
+    use lazy_static::lazy_static;
     use serial_test::serial;
     use sqlx::SqlitePool;
     use starknet_crypto::{poseidon_hash_many, FieldElement};
@@ -18,7 +19,6 @@ mod tests {
     lazy_static! {
         static ref SEMAPHORE: Arc<Semaphore> = Arc::new(Semaphore::new(1));
     }
-
     #[sqlx::test(migrations = "../migrations")]
     #[serial]
     async fn test_entity_subscription(pool: SqlitePool) {
@@ -109,7 +109,6 @@ mod tests {
         rx.recv().await.unwrap();
     }
 
-
     #[sqlx::test(migrations = "../migrations")]
     #[serial]
     async fn test_component_subscription_with_id(pool: SqlitePool) {
@@ -152,7 +151,7 @@ mod tests {
                     }
             }"#,
         )
-            .await;
+        .await;
         // 4. The subcription has received the message from publish()
         // 5. Compare values
         assert_eq!(expected_value, response_value);

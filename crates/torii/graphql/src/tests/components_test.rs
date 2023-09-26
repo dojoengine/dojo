@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use serial_test::serial;
     use sqlx::SqlitePool;
 
     use crate::tests::common::{
@@ -16,6 +17,7 @@ mod tests {
 
     #[ignore]
     #[sqlx::test(migrations = "../migrations")]
+    #[serial]
     async fn test_component_no_filter(pool: SqlitePool) {
         entity_fixtures(&pool).await;
 
@@ -64,6 +66,7 @@ mod tests {
 
     #[ignore]
     #[sqlx::test(migrations = "../migrations")]
+    #[serial]
     async fn test_component_where_filter(pool: SqlitePool) {
         entity_fixtures(&pool).await;
 
@@ -110,6 +113,7 @@ mod tests {
 
     #[ignore]
     #[sqlx::test(migrations = "../migrations")]
+    #[serial]
     async fn test_component_ordering(pool: SqlitePool) {
         entity_fixtures(&pool).await;
 
@@ -175,6 +179,7 @@ mod tests {
 
     #[ignore]
     #[sqlx::test(migrations = "../migrations")]
+    #[serial]
     async fn test_component_entity_relationship(pool: SqlitePool) {
         entity_fixtures(&pool).await;
 

@@ -32,3 +32,4 @@ tracing.workspace = true
 
 [dev-dependencies]
 camino.workspace = true
+serial_test = "2"
