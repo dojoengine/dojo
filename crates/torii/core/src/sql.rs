@@ -161,7 +161,6 @@ impl Sql {
         self.execute().await?;
 
         let created_at: DateTime<Utc> = query_result.try_get("created_at")?;
-
         SimpleBroker::publish(Entity {
             id: entity_id.clone(),
             keys: keys_str,
