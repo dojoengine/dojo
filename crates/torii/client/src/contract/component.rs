@@ -90,7 +90,7 @@ impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
             .await
             .map_err(ComponentError::ContractReaderError)?;
 
-        Ok(res[2])
+        Ok(res[1])
     }
 
     pub async fn layout(
