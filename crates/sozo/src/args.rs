@@ -17,7 +17,6 @@ use crate::commands::execute::ExecuteArgs;
 use crate::commands::init::InitArgs;
 use crate::commands::migrate::MigrateArgs;
 use crate::commands::register::RegisterArgs;
-use crate::commands::system::SystemArgs;
 use crate::commands::test::TestArgs;
 
 #[derive(Parser)]
@@ -66,8 +65,6 @@ pub enum Commands {
     Execute(ExecuteArgs),
     #[command(about = "Interact with a worlds components")]
     Component(ComponentArgs),
-    #[command(about = "Interact with a worlds systems")]
-    System(SystemArgs),
     #[command(about = "Register new systems and components")]
     Register(RegisterArgs),
     #[command(about = "Queries world events")]

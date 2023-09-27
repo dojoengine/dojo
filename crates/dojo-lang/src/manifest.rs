@@ -1,20 +1,18 @@
 use std::collections::HashMap;
 
-use anyhow::{Context, Result};
+use anyhow::Context;
 use cairo_lang_defs::ids::{ModuleId, ModuleItemId};
 use cairo_lang_filesystem::ids::CrateId;
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_starknet::abi;
+use cairo_lang_starknet::plugin::aux_data::StarkNetContractAuxData;
 use convert_case::{Case, Casing};
-use dojo_world::manifest::{
-    Contract, Input, Output, System, EXECUTOR_CONTRACT_NAME, WORLD_CONTRACT_NAME,
-};
-use itertools::Itertools;
+use dojo_world::manifest::{Contract, EXECUTOR_CONTRACT_NAME, WORLD_CONTRACT_NAME};
 use serde::Serialize;
 use smol_str::SmolStr;
 use starknet::core::types::FieldElement;
 
-use crate::plugin::{DojoAuxData, SystemAuxData};
+use crate::plugin::DojoAuxData;
 
 #[derive(Default, Debug, Serialize)]
 pub(crate) struct Manifest(dojo_world::manifest::Manifest);
@@ -26,7 +24,6 @@ impl Manifest {
         compiled_classes: HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
     ) -> Self {
         let mut manifest = Manifest(dojo_world::manifest::Manifest::default());
-
         let (world, world_abi) = compiled_classes.get(WORLD_CONTRACT_NAME).unwrap_or_else(|| {
             panic!(
                 "{}",
@@ -73,14 +70,15 @@ impl Manifest {
                     let Some(aux_data) = &generated_file_info.aux_data else {
                         continue;
                     };
-                    let Some(aux_data) = aux_data.0.as_any().downcast_ref() else {
-                        continue;
-                    };
-
-                    manifest.find_components(db, aux_data, *module_id, &compiled_classes);
-                    manifest.find_systems(db, aux_data, *module_id, &compiled_classes).unwrap();
+                    let aux_data = aux_data.0.as_any();
+                    if let Some(contracts) = aux_data.downcast_ref::<StarkNetContractAuxData>() {
+                        manifest.find_contracts(contracts, &compiled_classes);
+                    } else if let Some(dojo_aux_data) = aux_data.downcast_ref() {
+                        manifest.find_components(db, dojo_aux_data, *module_id, &compiled_classes);
+                    }
                 }
             }
+            manifest.filter_contracts();
         }
 
         manifest
@@ -95,7 +93,7 @@ impl Manifest {
         module_id: ModuleId,
         compiled_classes: &HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
     ) {
-        for component in &aux_data.components {
+        for component in &aux_data.models {
             let component = component.clone();
             let name: SmolStr = component.name.clone().into();
             if let Ok(Some(ModuleItemId::Struct(_))) =
@@ -118,70 +116,35 @@ impl Manifest {
         }
     }
 
-    fn find_systems(
-        &mut self,
-        db: &dyn SemanticGroup,
-        aux_data: &DojoAuxData,
-        module_id: ModuleId,
-        compiled_classes: &HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
-    ) -> Result<()> {
-        for SystemAuxData { name, dependencies } in &aux_data.systems {
-            if let Ok(Some(ModuleItemId::Submodule(submodule_id))) =
-                db.module_item_by_name(module_id, name.clone())
-            {
-                let defs_db = db.upcast();
-                let fns = db.module_free_functions_ids(ModuleId::Submodule(submodule_id)).unwrap();
-                for fn_id in fns.iter() {
-                    if fn_id.name(defs_db) != "execute" {
-                        continue;
-                    }
-                    let signature = db.free_function_signature(*fn_id).unwrap();
+    // removes contracts with DojoAuxType
+    fn filter_contracts(&mut self) {
+        let mut components = HashMap::new();
 
-                    let mut inputs = vec![];
-                    let mut params = signature.params;
-
-                    // Last arg is always the `world_address` which is provided by the executor.
-                    params.pop();
-                    for param in params.into_iter() {
-                        let ty = param.ty.format(db);
-                        // Context is injected by the executor contract.
-                        if ty == "dojo::world::Context" {
-                            continue;
-                        }
-
-                        inputs.push(Input { name: param.id.name(db.upcast()).into(), ty });
-                    }
-
-                    let outputs = if signature.return_type.is_unit(db) {
-                        vec![]
-                    } else {
-                        vec![Output { ty: signature.return_type.format(db) }]
-                    };
-
-                    let (class_hash, class_abi) = compiled_classes
-                        .get(name.as_str())
-                        .with_context(|| format!("System {name} not found in target."))
-                        .unwrap();
-
-                    self.0.systems.push(System {
-                        name: name.clone(),
-                        inputs,
-                        outputs,
-                        class_hash: *class_hash,
-                        dependencies: dependencies
-                            .iter()
-                            .sorted_by(|a, b| a.name.cmp(&b.name))
-                            .cloned()
-                            .collect::<Vec<_>>(),
-                        abi: class_abi.clone(),
-                    });
-                }
-            } else {
-                panic!("System `{name}` was not found.");
-            }
+        for component in &self.0.components {
+            components.insert(component.class_hash, true);
         }
 
-        Ok(())
+        for i in (0..self.0.contracts.len()).rev() {
+            if components.get(&self.0.contracts[i].class_hash).is_some() {
+                self.0.contracts.remove(i);
+            }
+        }
+    }
+
+    fn find_contracts(
+        &mut self,
+        aux_data: &StarkNetContractAuxData,
+        compiled_classes: &HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
+    ) {
+        for name in &aux_data.contracts {
+            if "world" == name.as_str() || "executor" == name.as_str() {
+                return;
+            }
+
+            let (class_hash, abi) = compiled_classes.get(name).unwrap().clone();
+
+            self.0.contracts.push(Contract { name: name.clone(), address: None, class_hash, abi });
+        }
     }
 }
 

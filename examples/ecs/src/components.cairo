@@ -1,7 +1,9 @@
 use array::ArrayTrait;
 use core::debug::PrintTrait;
 use starknet::ContractAddress;
-use dojo::database::schema::{EnumMember, Member, Ty, Struct, SchemaIntrospection, serialize_member, serialize_member_type};
+use dojo::database::schema::{
+    EnumMember, Member, Ty, Struct, SchemaIntrospection, serialize_member, serialize_member_type
+};
 
 #[derive(Serde, Copy, Drop)]
 enum Direction {
@@ -25,17 +27,20 @@ impl DirectionSchemaIntrospectionImpl of SchemaIntrospection<Direction> {
 
     #[inline(always)]
     fn ty() -> Ty {
-        Ty::Enum(EnumMember{
-            name: 'Direction',
-            attrs: array![].span(),
-            values: array![
-                serialize_member_type(@Ty::Simple('None')),
-                serialize_member_type(@Ty::Simple('Left')),
-                serialize_member_type(@Ty::Simple('Right')),
-                serialize_member_type(@Ty::Simple('Up')),
-                serialize_member_type(@Ty::Simple('Down'))
-            ].span()
-        })
+        Ty::Enum(
+            EnumMember {
+                name: 'Direction',
+                attrs: array![].span(),
+                values: array![
+                    serialize_member_type(@Ty::Simple('None')),
+                    serialize_member_type(@Ty::Simple('Left')),
+                    serialize_member_type(@Ty::Simple('Right')),
+                    serialize_member_type(@Ty::Simple('Up')),
+                    serialize_member_type(@Ty::Simple('Down'))
+                ]
+                    .span()
+            }
+        )
     }
 }
 
@@ -63,7 +68,7 @@ impl DirectionIntoFelt252 of Into<Direction, felt252> {
     }
 }
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Model, Copy, Drop, Serde)]
 struct Moves {
     #[key]
     player: ContractAddress,
@@ -71,52 +76,13 @@ struct Moves {
     last_direction: Direction
 }
 
-#[derive(Copy, Drop, Serde)]
+#[derive(Copy, Drop, Serde, Print, Introspect)]
 struct Vec2 {
     x: u32,
     y: u32
 }
 
-impl Vec2PrintImpl of PrintTrait<Vec2> {
-    fn print(self: Vec2) {
-        self.x.print();
-    }
-}
-
-impl Vec2SchemaIntrospectionImpl of SchemaIntrospection<Vec2> {
-    #[inline(always)]
-    fn size() -> usize {
-        2
-    }
-
-    #[inline(always)]
-    fn layout(ref layout: Array<u8>) {
-        layout.append(32);
-        layout.append(32);
-    }
-
-    #[inline(always)]
-    fn ty() -> Ty {
-        Ty::Struct(Struct {
-            name: 'Vec2',
-            attrs: array![].span(),
-            children: array![
-                serialize_member(@Member {
-                    name: 'x',
-                    ty: SchemaIntrospection::<u32>::ty(),
-                    attrs: array![].span(),
-                }),
-                serialize_member(@Member {
-                    name: 'y',
-                    ty: SchemaIntrospection::<u32>::ty(),
-                    attrs: array![].span(),
-                })
-            ].span()
-        })
-    }
-}
-
-#[derive(Component, Copy, Drop, Print, Serde)]
+#[derive(Model, Copy, Drop, Print, Serde)]
 struct Position {
     #[key]
     player: ContractAddress,
@@ -156,7 +122,6 @@ mod tests {
     #[available_gas(100000)]
     fn test_vec_is_equal() {
         let position = Vec2 { x: 420, y: 0 };
-        position.print();
         assert(position.is_equal(Vec2 { x: 420, y: 0 }), 'not equal');
     }
 }

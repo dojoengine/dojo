@@ -33,7 +33,7 @@ async fn test_component() {
             children: vec![
                 Member {
                     name: "player".to_string(),
-                    ty: Ty::Simple("ContractAddress".to_string()),
+                    ty: Ty::Name("ContractAddress".to_string()),
                     key: true
                 },
                 Member {
@@ -43,12 +43,12 @@ async fn test_component() {
                         children: vec![
                             Member {
                                 name: "x".to_string(),
-                                ty: Ty::Simple("u32".to_string()),
+                                ty: Ty::Name("u32".to_string()),
                                 key: false
                             },
                             Member {
                                 name: "y".to_string(),
-                                ty: Ty::Simple("u32".to_string()),
+                                ty: Ty::Name("u32".to_string()),
                                 key: false
                             }
                         ]
@@ -62,7 +62,7 @@ async fn test_component() {
     assert_eq!(
         position.class_hash(),
         FieldElement::from_hex_be(
-            "0x071a5cb83c2d96f4b97a015d36f936de6f93166a1434bbacd29147933c4ac314"
+            "0x069889772f44397619cd8965660e1c8e80ba5f0c917ba40df29b2ffa5b440745"
         )
         .unwrap()
     );
@@ -77,12 +77,12 @@ async fn test_component() {
             children: vec![
                 Member {
                     name: "player".to_string(),
-                    ty: Ty::Simple("ContractAddress".to_string()),
+                    ty: Ty::Name("ContractAddress".to_string()),
                     key: true
                 },
                 Member {
                     name: "remaining".to_string(),
-                    ty: Ty::Simple("u8".to_string()),
+                    ty: Ty::Name("u8".to_string()),
                     key: false
                 },
                 Member {
@@ -90,11 +90,11 @@ async fn test_component() {
                     ty: Ty::Enum(Enum {
                         name: "Direction".to_string(),
                         values: vec![
-                            Ty::Simple("None".to_string()),
-                            Ty::Simple("Left".to_string()),
-                            Ty::Simple("Right".to_string()),
-                            Ty::Simple("Up".to_string()),
-                            Ty::Simple("Down".to_string())
+                            Ty::Name("None".to_string()),
+                            Ty::Name("Left".to_string()),
+                            Ty::Name("Right".to_string()),
+                            Ty::Name("Up".to_string()),
+                            Ty::Name("Down".to_string())
                         ]
                     }),
                     key: false

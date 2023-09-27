@@ -74,15 +74,11 @@ impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
 
         let res = self
             .world
-            .call(
-                "library_call",
-                vec![FieldElement::THREE, self.class_hash, entrypoint, FieldElement::ZERO],
-                block_id,
-            )
+            .executor_call(self.class_hash, vec![entrypoint, FieldElement::ZERO], block_id)
             .await
             .map_err(ComponentError::ContractReaderError)?;
 
-        parse_ty::<P>(&res[2..])
+        parse_ty::<P>(&res[1..])
     }
 
     pub async fn size(&self, block_id: BlockId) -> Result<FieldElement, ComponentError<P::Error>> {
@@ -90,15 +86,11 @@ impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
 
         let res = self
             .world
-            .call(
-                "library_call",
-                vec![FieldElement::THREE, self.class_hash, entrypoint, FieldElement::ZERO],
-                block_id,
-            )
+            .executor_call(self.class_hash, vec![entrypoint, FieldElement::ZERO], block_id)
             .await
             .map_err(ComponentError::ContractReaderError)?;
 
-        Ok(res[2])
+        Ok(res[1])
     }
 
     pub async fn layout(
@@ -109,11 +101,7 @@ impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
 
         let res = self
             .world
-            .call(
-                "library_call",
-                vec![FieldElement::THREE, self.class_hash, entrypoint, FieldElement::ZERO],
-                block_id,
-            )
+            .executor_call(self.class_hash, vec![entrypoint, FieldElement::ZERO], block_id)
             .await
             .map_err(ComponentError::ContractReaderError)?;
 
@@ -212,7 +200,7 @@ fn parse_ty<P: Provider>(data: &[FieldElement]) -> Result<Ty, ComponentError<P::
 fn parse_simple<P: Provider>(data: &[FieldElement]) -> Result<Ty, ComponentError<P::Error>> {
     let ty =
         parse_cairo_short_string(&data[0]).map_err(ComponentError::ParseCairoShortStringError)?;
-    Ok(Ty::Simple(ty))
+    Ok(Ty::Name(ty))
 }
 
 fn parse_struct<P: Provider>(data: &[FieldElement]) -> Result<Ty, ComponentError<P::Error>> {

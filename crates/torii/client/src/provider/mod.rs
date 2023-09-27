@@ -13,9 +13,6 @@ pub trait Provider {
     /// Get the class hash of a component.
     async fn component(&self, name: &str) -> Result<FieldElement, Self::Error>;
 
-    /// Get the class hash of a system.
-    async fn system(&self, name: &str) -> Result<FieldElement, Self::Error>;
-
     /// Get the component values of an entity.
     async fn entity(
         &self,

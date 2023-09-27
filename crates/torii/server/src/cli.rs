@@ -1,4 +1,5 @@
 use std::env;
+use std::net::SocketAddr;
 use std::str::FromStr;
 
 use anyhow::{anyhow, Context};
@@ -13,21 +14,16 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use tokio_util::sync::CancellationToken;
 use torii_client::contract::world::WorldContractReader;
+use torii_core::engine::{Engine, EngineConfig, Processors};
 use torii_core::processors::register_model::RegisterModelProcessor;
 use torii_core::processors::register_system::RegisterSystemProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
-use torii_core::processors::store_system_call::StoreSystemCallProcessor;
 use torii_core::sql::Sql;
 use tracing::error;
 use tracing_subscriber::fmt;
 use url::Url;
-use warp::Filter;
 
-use crate::engine::Processors;
-use crate::indexer::Indexer;
-
-mod engine;
-mod indexer;
+mod server;
 
 /// Dojo World Indexer
 #[derive(Parser, Debug)]
@@ -51,12 +47,9 @@ struct Args {
     /// Host address for GraphQL/gRPC endpoints
     #[arg(long, default_value = "0.0.0.0")]
     host: String,
-    /// Port number for GraphQL endpoint
+    /// Port number for GraphQL/gRPC endpoints
     #[arg(long, default_value = "8080")]
-    graphql_port: u16,
-    /// Port number for gRPC endpoint
-    #[arg(long, default_value = "50051")]
-    grpc_port: u16,
+    port: u16,
 }
 
 #[tokio::main]
@@ -95,37 +88,41 @@ async fn main() -> anyhow::Result<()> {
 
     let db = Sql::new(pool.clone(), world_address).await?;
     db.load_from_manifest(manifest.clone()).await?;
-    // let processors = Processors {
-    //     event: vec![
-    //         Box::new(RegisterModelProcessor),
-    //         Box::new(RegisterSystemProcessor),
-    //         Box::new(StoreSetRecordProcessor),
-    //     ],
-    //     transaction: vec![Box::new(StoreSystemCallProcessor)],
-    //     ..Processors::default()
-    // };
+    let processors = Processors {
+        event: vec![
+            Box::new(RegisterModelProcessor),
+            Box::new(RegisterSystemProcessor),
+            Box::new(StoreSetRecordProcessor),
+        ],
+        // transaction: vec![Box::new(StoreSystemCallProcessor)],
+        ..Processors::default()
+    };
 
-    // let indexer =
-    //     Indexer::new(&world, &db, &provider, processors, manifest, world_address,
-    // args.start_block);
+    let engine = Engine::new(
+        &world,
+        &db,
+        &provider,
+        processors,
+        EngineConfig { start_block: args.start_block, ..Default::default() },
+    );
 
-    let base_route = warp::path::end()
-        .and(warp::get())
-        .map(|| warp::reply::json(&serde_json::json!({ "success": true })));
-    let routes = torii_graphql::route::filter(&pool)
-        .await
-        .or(torii_grpc::route::filter(&pool))
-        .or(base_route);
-    let server = warp::serve(routes);
-    let server = server.run((args.host.parse::<std::net::IpAddr>()?, args.graphql_port));
+    let addr = format!("{}:{}", args.host, args.port)
+        .parse::<SocketAddr>()
+        .expect("able to parse address");
 
     tokio::select! {
-        // res = indexer.start() => {
-        //     if let Err(e) = res {
-        //         error!("Indexer failed with error: {:?}", e);
-        //     }
-        // }
-        _ = server => {}
+        res = engine.start(cts) => {
+            if let Err(e) = res {
+                error!("Indexer failed with error: {e}");
+            }
+        }
+
+        res = server::spawn_server(&addr, &pool) => {
+            if let Err(e) = res {
+                error!("Server failed with error: {e}");
+            }
+        }
+
         _ = tokio::signal::ctrl_c() => {
             println!("Received Ctrl+C, shutting down");
         }

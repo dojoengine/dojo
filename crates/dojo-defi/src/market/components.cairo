@@ -1,5 +1,5 @@
 use starknet::ContractAddress;
-use dojo::component::StorageIntrospection;
+use dojo::model::StorageIntrospection;
 
 // Cubit fixed point math library
 use cubit::f128::types::fixed::Fixed;
@@ -24,14 +24,14 @@ impl SchemaIntrospectionFixed of SchemaIntrospection<Fixed> {
     }
 }
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Model, Copy, Drop, Serde)]
 struct Cash {
     #[key]
     player: ContractAddress,
     amount: u128,
 }
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Model, Copy, Drop, Serde)]
 struct Item {
     #[key]
     player: ContractAddress,
@@ -40,7 +40,7 @@ struct Item {
     quantity: u128,
 }
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Model, Copy, Drop, Serde)]
 struct Liquidity {
     #[key]
     player: ContractAddress,
@@ -49,7 +49,7 @@ struct Liquidity {
     shares: Fixed,
 }
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Model, Copy, Drop, Serde)]
 struct Market {
     #[key]
     item_id: u32,

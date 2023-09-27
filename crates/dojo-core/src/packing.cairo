@@ -3,7 +3,6 @@ use array::{ArrayTrait, SpanTrait};
 use traits::{Into, TryInto};
 use integer::{U256BitAnd, U256BitOr, U256BitXor, upcast, downcast, BoundedInt};
 use option::OptionTrait;
-use debug::PrintTrait;
 
 fn pack(ref packed: Array<felt252>, ref unpacked: Span<felt252>, ref layout: Span<u8>) {
     assert(unpacked.len() == layout.len(), 'mismatched input lens');
@@ -20,6 +19,29 @@ fn pack(ref packed: Array<felt252>, ref unpacked: Span<felt252>, ref layout: Spa
         };
     };
     packed.append(packing);
+}
+
+fn calculate_packed_size(ref layout: Span<u8>) -> usize {
+    let mut size = 1;
+    let mut partial = 0_usize;
+
+    loop {
+        match layout.pop_front() {
+            Option::Some(item) => {
+                let item_size: usize = (*item).into();
+                partial += item_size;
+                if (partial > 251) {
+                    size += 1;
+                    partial = item_size;
+                }
+            },
+            Option::None(_) => {
+                break;
+            }
+        };
+    };
+
+    size
 }
 
 fn unpack(ref unpacked: Array<felt252>, ref packed: Span<felt252>, ref layout: Span<u8>) {

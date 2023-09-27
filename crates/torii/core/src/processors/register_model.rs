@@ -1,6 +1,5 @@
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
-use dojo_world::manifest::Model;
 use starknet::core::types::{BlockId, BlockTag, BlockWithTxs, Event, InvokeTransactionReceipt};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
@@ -30,10 +29,12 @@ impl<P: Provider + Sync + 'static> EventProcessor<P> for RegisterModelProcessor 
     ) -> Result<(), Error> {
         let name = parse_cairo_short_string(&event.data[0])?;
         let model = world.component(&name, BlockId::Tag(BlockTag::Latest)).await?;
-        let _schema = model.schema(BlockId::Tag(BlockTag::Latest)).await?;
-        info!("registered model: {}", name);
+        let schema = model.schema(BlockId::Tag(BlockTag::Latest)).await?;
+        let layout = model.layout(BlockId::Tag(BlockTag::Latest)).await?;
+        info!("Registered model: {}", name);
 
-        db.register_model(Model { name, class_hash: event.data[1], ..Default::default() }).await?;
+        db.register_model(schema, layout, event.data[1]).await?;
+
         Ok(())
     }
 }
