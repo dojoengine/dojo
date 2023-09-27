@@ -6,19 +6,19 @@ use starknet::core::types::FieldElement;
 
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
-use crate::ops::component;
+use crate::ops::model;
 
 #[derive(Debug, Args)]
-pub struct ComponentArgs {
+pub struct ModelArgs {
     #[command(subcommand)]
-    command: ComponentCommands,
+    command: ModelCommands,
 }
 
 #[derive(Debug, Subcommand)]
-pub enum ComponentCommands {
-    #[command(about = "Get the class hash of a component")]
-    Get {
-        #[arg(help = "The name of the component")]
+pub enum ModelCommands {
+    #[command(about = "Retrieve the class hash of a model")]
+    ClassHash {
+        #[arg(help = "The name of the model")]
         name: String,
 
         #[command(flatten)]
@@ -28,9 +28,9 @@ pub enum ComponentCommands {
         starknet: StarknetOptions,
     },
 
-    #[command(about = "Retrieve the schema for a component")]
+    #[command(about = "Retrieve the schema for a model")]
     Schema {
-        #[arg(help = "The name of the component")]
+        #[arg(help = "The name of the model")]
         name: String,
 
         #[command(flatten)]
@@ -44,9 +44,9 @@ pub enum ComponentCommands {
         to_json: bool,
     },
 
-    #[command(about = "Get the component value for an entity")]
+    #[command(about = "Retrieve the model value for an entity")]
     Entity {
-        #[arg(help = "The name of the component")]
+        #[arg(help = "The name of the model")]
         name: String,
 
         #[arg(value_name = "KEYS")]
@@ -62,7 +62,7 @@ pub enum ComponentCommands {
     },
 }
 
-impl ComponentArgs {
+impl ModelArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         let env_metadata = if config.manifest_path().exists() {
             let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
@@ -73,6 +73,6 @@ impl ComponentArgs {
             None
         };
 
-        config.tokio_handle().block_on(component::execute(self.command, env_metadata))
+        config.tokio_handle().block_on(model::execute(self.command, env_metadata))
     }
 }

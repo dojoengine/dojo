@@ -127,8 +127,16 @@ pub fn handle_model_struct(
                 }
 
                 #[external(v0)]
-                fn size(self: @ContractState) -> usize {
+                fn unpacked_size(self: @ContractState) -> usize {
                     dojo::database::schema::SchemaIntrospection::<$type_name$>::size()
+                }
+
+                #[external(v0)]
+                fn packed_size(self: @ContractState) -> usize {
+                    let mut layout = ArrayTrait::new();
+                    dojo::database::schema::SchemaIntrospection::<$type_name$>::layout(ref layout);
+                    let mut layout_span = layout.span();
+                    dojo::packing::calculate_packed_size(ref layout_span)
                 }
 
                 #[external(v0)]

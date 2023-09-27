@@ -469,8 +469,10 @@ dependencies = [
 name = "dojo-types"
 version = "0.2.1"
 dependencies = [
+ "hex",
  "serde",
  "starknet",
+ "thiserror",
 ]
 
 [[package]]

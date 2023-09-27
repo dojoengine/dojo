@@ -7,7 +7,7 @@ use starknet::core::utils::{
 };
 use starknet::providers::{Provider, ProviderError};
 
-use crate::contract::component::{ComponentError, ComponentReader};
+use crate::contract::model::{ModelError, ModelReader};
 
 #[cfg(test)]
 #[path = "world_test.rs"]
@@ -54,13 +54,13 @@ impl<'a, A: ConnectedAccount + Sync> WorldContract<'a, A> {
 
     pub async fn grant_writer(
         &self,
-        component: &str,
+        model: &str,
         system: &str,
     ) -> Result<
         InvokeTransactionResult,
         WorldContractError<A::SignError, <A::Provider as Provider>::Error>,
     > {
-        let component = cairo_short_string_to_felt(component)
+        let component = cairo_short_string_to_felt(model)
             .map_err(WorldContractError::CairoShortStringToFeltError)?;
         let system = cairo_short_string_to_felt(system)
             .map_err(WorldContractError::CairoShortStringToFeltError)?;
@@ -119,9 +119,8 @@ impl<'a, A: ConnectedAccount + Sync> WorldContract<'a, A> {
         &'a self,
         name: &str,
         block_id: BlockId,
-    ) -> Result<ComponentReader<'a, A::Provider>, ComponentError<<A::Provider as Provider>::Error>>
-    {
-        self.reader.component(name, block_id).await
+    ) -> Result<ModelReader<'a, A::Provider>, ModelError<<A::Provider as Provider>::Error>> {
+        self.reader.model(name, block_id).await
     }
 }
 
@@ -259,11 +258,11 @@ impl<'a, P: Provider + Sync> WorldContractReader<'a, P> {
             .map_err(ContractReaderError::ProviderError)
     }
 
-    pub async fn component(
+    pub async fn model(
         &'a self,
         name: &str,
         block_id: BlockId,
-    ) -> Result<ComponentReader<'a, P>, ComponentError<P::Error>> {
-        ComponentReader::new(self, name.to_string(), block_id).await
+    ) -> Result<ModelReader<'a, P>, ModelError<P::Error>> {
+        ModelReader::new(self, name.to_string(), block_id).await
     }
 }

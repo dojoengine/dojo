@@ -3,26 +3,26 @@ use dojo_world::metadata::Environment;
 use starknet::core::types::{BlockId, BlockTag};
 use torii_client::contract::world::WorldContractReader;
 
-use crate::commands::component::ComponentCommands;
+use crate::commands::model::ModelCommands;
 
-pub async fn execute(command: ComponentCommands, env_metadata: Option<Environment>) -> Result<()> {
+pub async fn execute(command: ModelCommands, env_metadata: Option<Environment>) -> Result<()> {
     match command {
-        ComponentCommands::Get { name, world, starknet } => {
+        ModelCommands::ClassHash { name, world, starknet } => {
             let world_address = world.address(env_metadata.as_ref())?;
             let provider = starknet.provider(env_metadata.as_ref())?;
 
             let world = WorldContractReader::new(world_address, &provider);
-            let component = world.component(&name, BlockId::Tag(BlockTag::Pending)).await?;
+            let component = world.model(&name, BlockId::Tag(BlockTag::Pending)).await?;
 
             println!("{:#x}", component.class_hash());
         }
 
-        ComponentCommands::Schema { name, world, starknet, to_json } => {
+        ModelCommands::Schema { name, world, starknet, to_json } => {
             let world_address = world.address(env_metadata.as_ref())?;
             let provider = starknet.provider(env_metadata.as_ref())?;
 
             let world = WorldContractReader::new(world_address, &provider);
-            let component = world.component(&name, BlockId::Tag(BlockTag::Pending)).await?;
+            let component = world.model(&name, BlockId::Tag(BlockTag::Pending)).await?;
 
             let schema = component.schema(BlockId::Tag(BlockTag::Pending)).await?;
 
@@ -33,12 +33,12 @@ pub async fn execute(command: ComponentCommands, env_metadata: Option<Environmen
             }
         }
 
-        ComponentCommands::Entity { name, keys, starknet, world, .. } => {
+        ModelCommands::Entity { name, keys, starknet, world, .. } => {
             let world_address = world.address(env_metadata.as_ref())?;
             let provider = starknet.provider(env_metadata.as_ref())?;
 
             let world = WorldContractReader::new(world_address, &provider);
-            let component = world.component(&name, BlockId::Tag(BlockTag::Pending)).await?;
+            let component = world.model(&name, BlockId::Tag(BlockTag::Pending)).await?;
 
             let entity = component.entity(keys, BlockId::Tag(BlockTag::Pending)).await?;
 

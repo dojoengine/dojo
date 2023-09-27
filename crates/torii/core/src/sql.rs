@@ -1,11 +1,11 @@
-use std::collections::HashMap;
+use std::str::FromStr;
 
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use dojo_types::component::Ty;
+use dojo_types::core::CairoType;
 use dojo_world::manifest::{Manifest, System};
-use lazy_static::lazy_static;
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Executor, Pool, Row, Sqlite};
@@ -20,26 +20,6 @@ use crate::types::{Entity, Model as ModelType};
 #[cfg(test)]
 #[path = "sql_test.rs"]
 mod test;
-
-lazy_static! {
-    static ref CAIRO_TO_SQL_TYPE: HashMap<String, String> = {
-        let mut m = HashMap::new();
-        m.insert("u8".to_string(), "INTEGER".to_string());
-        m.insert("u16".to_string(), "INTEGER".to_string());
-        m.insert("u32".to_string(), "INTEGER".to_string());
-        m.insert("u64".to_string(), "INTEGER".to_string());
-        m.insert("u128".to_string(), "TEXT".to_string());
-        m.insert("u256".to_string(), "TEXT".to_string());
-        m.insert("usize".to_string(), "INTEGER".to_string());
-        m.insert("bool".to_string(), "INTEGER".to_string());
-        // m.insert("Cursor".to_string(), "TEXT".to_string());
-        m.insert("ContractAddress".to_string(), "TEXT".to_string());
-        m.insert("ClassHash".to_string(), "TEXT".to_string());
-        // m.insert("DateTime".to_string(), "TEXT".to_string());
-        m.insert("felt252".to_string(), "TEXT".to_string());
-        m
-    };
-}
 
 #[async_trait]
 pub trait Executable {
@@ -236,7 +216,7 @@ impl Sql {
         .await?;
 
         let (primitive_members, _): (Vec<_>, Vec<_>) =
-            members.into_iter().partition(|member| CAIRO_TO_SQL_TYPE.contains_key(&member.2));
+            members.into_iter().partition(|member| CairoType::from_str(&member.2).is_ok());
 
         // keys are part of model members, so combine keys and model values array
         let mut member_values: Vec<FieldElement> = Vec::new();
@@ -250,7 +230,7 @@ impl Sql {
                 format!(
                     "INSERT OR REPLACE INTO [{id}] (entity_id, external_{name}) VALUES \
                      ('{entity_id}' {})",
-                    format_value(&ty, &value).unwrap()
+                    CairoType::from_str(&ty).unwrap().format_for_sql(vec![&value]).unwrap()
                 )
             })
             .collect();
@@ -378,17 +358,6 @@ fn model_names_sql_string(entity_result: Option<SqliteRow>, new_model: &str) -> 
     Ok(model_names)
 }
 
-fn format_value(ty: &str, value: &FieldElement) -> Result<String> {
-    match CAIRO_TO_SQL_TYPE.get(ty) {
-        Some(sql_type) => match sql_type.as_str() {
-            "INTEGER" => Ok(format!(", '{}'", value)),
-            "TEXT" => Ok(format!(", '{:#x}'", value)),
-            _ => Err(anyhow::anyhow!("Format not supported for type: {}", ty)),
-        },
-        _ => Err(anyhow::anyhow!("Format not supported for type: {}", ty)),
-    }
-}
-
 fn felts_sql_string(felts: &[FieldElement]) -> String {
     felts.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join("/") + "/"
 }
@@ -408,8 +377,12 @@ fn build_model_query(model: &Ty, model_idx: usize, parent_id: Option<String>) ->
     match model {
         Ty::Struct(s) => {
             for (member_idx, member) in s.children.iter().enumerate() {
-                if let Some(sql_type) = CAIRO_TO_SQL_TYPE.get(&member.ty.name()) {
-                    query.push_str(&format!("external_{} {}, ", member.name, sql_type));
+                if let Ok(cairo_type) = CairoType::from_str(&member.ty.name()) {
+                    query.push_str(&format!(
+                        "external_{} {}, ",
+                        member.name,
+                        cairo_type.to_sql_type()
+                    ));
                 };
 
                 queries.push(format!(
