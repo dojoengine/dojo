@@ -1,6 +1,6 @@
 use array::{ArrayTrait, SpanTrait};
 use starknet::{ClassHash, ContractAddress, Felt252TryIntoContractAddress, Felt252TryIntoClassHash};
-use dojo::packing::{shl, shr, fpow, pack, unpack, pack_inner, unpack_inner};
+use dojo::packing::{shl, shr, fpow, pack, unpack, pack_inner, unpack_inner, calculate_packed_size};
 use integer::U256BitAnd;
 use option::OptionTrait;
 use debug::PrintTrait;
@@ -311,4 +311,32 @@ fn test_pack_unpack_felt252_single() {
     let mut unpacked_span = unpacked.span();
     let output = serde::Serde::<felt252>::deserialize(ref unpacked_span).unwrap();
     assert(input == output, 'invalid output');
+}
+
+#[test]
+#[available_gas(9000000)]
+fn test_calculate_packed_size() {
+    let mut layout = array![128, 32].span();
+    let got = calculate_packed_size(ref layout);
+    assert(got == 1, 'invalid length for [128, 32]');
+
+    let mut layout = array![128, 128].span();
+    let got = calculate_packed_size(ref layout);
+    assert(got == 2, 'invalid length for [128, 128]');
+
+    let mut layout = array![251, 251].span();
+    let got = calculate_packed_size(ref layout);
+    assert(got == 2, 'invalid length for [251, 251]');
+
+    let mut layout = array![251].span();
+    let got = calculate_packed_size(ref layout);
+    assert(got == 1, 'invalid length for [251]');
+
+    let mut layout = array![32, 64, 128, 27].span();
+    let got = calculate_packed_size(ref layout);
+    assert(got == 1, 'invalid length');
+
+    let mut layout = array![32, 64, 128, 28].span();
+    let got = calculate_packed_size(ref layout);
+    assert(got == 2, 'invalid length');
 }

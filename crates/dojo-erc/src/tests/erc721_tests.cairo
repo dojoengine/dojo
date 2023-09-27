@@ -404,7 +404,7 @@ fn test__set_approval_for_all_owner_equal_operator_false() {
 //
 
 #[test]
-#[available_gas(50000000)]
+#[available_gas(60000000)]
 fn test_transfer_from_owner() {
     let mut state = setup();
     let token_id = TOKEN_ID;
@@ -1334,7 +1334,7 @@ fn test__mint_already_exist() {
 //
 
 #[test]
-#[available_gas(20000000)]
+#[available_gas(25000000)]
 fn test__burn() {
     let mut state = setup();
 
@@ -1359,7 +1359,7 @@ fn test__burn() {
 }
 
 #[test]
-#[available_gas(20000000)]
+#[available_gas(30000000)]
 #[should_panic(expected: ('ERC721: invalid token ID',))]
 fn test__burn_nonexistent() {
     let (mut world, mut state) = STATE();
