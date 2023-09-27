@@ -8,7 +8,6 @@ use starknet::core::utils::{
 use starknet::providers::{Provider, ProviderError};
 
 use crate::contract::component::{ComponentError, ComponentReader};
-use crate::contract::system::{System, SystemError, SystemReader, SystemReaderError};
 
 #[cfg(test)]
 #[path = "world_test.rs"]
@@ -100,31 +99,6 @@ impl<'a, A: ConnectedAccount + Sync> WorldContract<'a, A> {
         self.account.execute(calls).send().await
     }
 
-    pub async fn execute(
-        &self,
-        name: &str,
-        mut calldata: Vec<FieldElement>,
-    ) -> Result<
-        InvokeTransactionResult,
-        WorldContractError<A::SignError, <A::Provider as Provider>::Error>,
-    > {
-        calldata.insert(0, (calldata.len() as u64).into());
-        calldata.insert(
-            0,
-            cairo_short_string_to_felt(name)
-                .map_err(WorldContractError::CairoShortStringToFeltError)?,
-        );
-        self.account
-            .execute(vec![Call {
-                calldata,
-                to: self.address,
-                selector: get_selector_from_name("execute").unwrap(),
-            }])
-            .send()
-            .await
-            .map_err(WorldContractError::AccountError)
-    }
-
     pub async fn executor(
         &self,
         block_id: BlockId,
@@ -148,14 +122,6 @@ impl<'a, A: ConnectedAccount + Sync> WorldContract<'a, A> {
     ) -> Result<ComponentReader<'a, A::Provider>, ComponentError<<A::Provider as Provider>::Error>>
     {
         self.reader.component(name, block_id).await
-    }
-
-    pub async fn system(
-        &'a self,
-        name: &str,
-        block_id: BlockId,
-    ) -> Result<System<'a, A>, SystemError<A::SignError, <A::Provider as Provider>::Error>> {
-        System::new(self, name.to_string(), block_id).await
     }
 }
 
@@ -299,13 +265,5 @@ impl<'a, P: Provider + Sync> WorldContractReader<'a, P> {
         block_id: BlockId,
     ) -> Result<ComponentReader<'a, P>, ComponentError<P::Error>> {
         ComponentReader::new(self, name.to_string(), block_id).await
-    }
-
-    pub async fn system(
-        &'a self,
-        name: &str,
-        block_id: BlockId,
-    ) -> Result<SystemReader<'a, P>, SystemReaderError<P::Error>> {
-        SystemReader::new(self, name.to_string(), block_id).await
     }
 }

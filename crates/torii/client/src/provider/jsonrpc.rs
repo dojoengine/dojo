@@ -6,13 +6,10 @@ use starknet_crypto::FieldElement;
 
 use super::Provider;
 use crate::contract::component::ComponentError;
-use crate::contract::system::SystemReaderError;
 use crate::contract::world::WorldContractReader;
 
 #[derive(Debug, thiserror::Error)]
 pub enum JsonRpcProviderError<P> {
-    #[error(transparent)]
-    SystemReader(SystemReaderError<P>),
     #[error(transparent)]
     ComponetReader(ComponentError<P>),
 }
@@ -47,16 +44,6 @@ where
     T: JsonRpcTransport + Sync + Send,
 {
     type Error = JsonRpcProviderError<JsonRpcClientError<T::Error>>;
-
-    async fn system(&self, name: &str) -> Result<FieldElement, Self::Error> {
-        let world = self.world();
-        let class_hash = world
-            .system(name, self.block_id)
-            .await
-            .map_err(JsonRpcProviderError::SystemReader)?
-            .class_hash();
-        Ok(class_hash)
-    }
 
     async fn component(&self, name: &str) -> Result<FieldElement, Self::Error> {
         let world = self.world();
