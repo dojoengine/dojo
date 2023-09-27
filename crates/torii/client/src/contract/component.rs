@@ -200,7 +200,7 @@ fn parse_ty<P: Provider>(data: &[FieldElement]) -> Result<Ty, ComponentError<P::
 fn parse_simple<P: Provider>(data: &[FieldElement]) -> Result<Ty, ComponentError<P::Error>> {
     let ty =
         parse_cairo_short_string(&data[0]).map_err(ComponentError::ParseCairoShortStringError)?;
-    Ok(Ty::Simple(ty))
+    Ok(Ty::Name(ty))
 }
 
 fn parse_struct<P: Provider>(data: &[FieldElement]) -> Result<Ty, ComponentError<P::Error>> {

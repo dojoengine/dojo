@@ -3,7 +3,7 @@ use sqlx::FromRow;
 
 use crate::types::SQLFieldElement;
 
-// pub mod memory;
+pub mod engine;
 pub mod processors;
 pub mod simple_broker;
 pub mod sql;

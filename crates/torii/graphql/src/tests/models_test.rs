@@ -2,9 +2,7 @@
 mod tests {
     use sqlx::SqlitePool;
 
-    use crate::tests::common::{
-        entity_fixtures, run_graphql_query, Connection, Edge, Moves, Position,
-    };
+    use crate::tests::{entity_fixtures, run_graphql_query, Connection, Edge, Moves, Position};
 
     type OrderTestFn = dyn Fn(&Vec<Edge<Position>>) -> bool;
 

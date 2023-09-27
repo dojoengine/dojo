@@ -1,7 +1,6 @@
-use std::str::FromStr;
-
 use camino::Utf8PathBuf;
-use dojo_world::manifest::{Member, Model, System};
+use dojo_types::component::{Member, Struct, Ty};
+use dojo_world::manifest::System;
 use sqlx::sqlite::SqlitePool;
 use starknet::core::types::{Event, FieldElement};
 
@@ -19,10 +18,7 @@ async fn test_load_from_manifest(pool: SqlitePool) {
     state.load_from_manifest(manifest.clone()).await.unwrap();
 
     let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
-    assert_eq!(models.len(), 2);
-
-    let moves_models = sqlx::query("SELECT * FROM external_moves").fetch_all(&pool).await.unwrap();
-    assert_eq!(moves_models.len(), 0);
+    assert_eq!(models.len(), 0);
 
     let mut world = state.world().await.unwrap();
 
@@ -48,32 +44,38 @@ async fn test_load_from_manifest(pool: SqlitePool) {
     assert_eq!(head, 1);
 
     state
-        .register_model(Model {
-            name: "Test".into(),
-            members: vec![Member { name: "test".into(), ty: "u32".into(), key: false }],
-            class_hash: FieldElement::TWO,
-            ..Default::default()
-        })
+        .register_model(
+            Ty::Struct(Struct {
+                name: "Position".into(),
+                children: vec![Member {
+                    name: "test".into(),
+                    ty: Ty::Name("u32".to_string()),
+                    key: false,
+                }],
+            }),
+            vec![],
+            FieldElement::TWO,
+        )
         .await
         .unwrap();
     state.execute().await.unwrap();
 
     let (id, name, class_hash): (String, String, String) =
-        sqlx::query_as("SELECT id, name, class_hash FROM models WHERE id = 'test'")
+        sqlx::query_as("SELECT id, name, class_hash FROM models WHERE id = 'Position'")
             .fetch_one(&pool)
             .await
             .unwrap();
 
-    assert_eq!(id, "test");
-    assert_eq!(name, "Test");
+    assert_eq!(id, "Position");
+    assert_eq!(name, "Position");
     assert_eq!(class_hash, format!("{:#x}", FieldElement::TWO));
 
-    let test_models = sqlx::query("SELECT * FROM external_test").fetch_all(&pool).await.unwrap();
-    assert_eq!(test_models.len(), 0);
+    let position_models = sqlx::query("SELECT * FROM [Position]").fetch_all(&pool).await.unwrap();
+    assert_eq!(position_models.len(), 0);
 
     state
         .register_system(System {
-            name: "Test".into(),
+            name: "Position".into(),
             inputs: vec![],
             outputs: vec![],
             class_hash: FieldElement::THREE,
@@ -85,13 +87,13 @@ async fn test_load_from_manifest(pool: SqlitePool) {
     state.execute().await.unwrap();
 
     let (id, name, class_hash): (String, String, String) =
-        sqlx::query_as("SELECT id, name, class_hash FROM systems WHERE id = 'test'")
+        sqlx::query_as("SELECT id, name, class_hash FROM systems WHERE id = 'Position'")
             .fetch_one(&pool)
             .await
             .unwrap();
 
-    assert_eq!(id, "test");
-    assert_eq!(name, "Test");
+    assert_eq!(id, "Position");
+    assert_eq!(name, "Position");
     assert_eq!(class_hash, format!("{:#x}", FieldElement::THREE));
 
     state
@@ -107,14 +109,14 @@ async fn test_load_from_manifest(pool: SqlitePool) {
         .await
         .unwrap();
 
-    state
-        .store_system_call(
-            "Test".into(),
-            FieldElement::from_str("0x4").unwrap(),
-            &[FieldElement::ONE, FieldElement::TWO, FieldElement::THREE],
-        )
-        .await
-        .unwrap();
+    // state
+    //     .store_system_call(
+    //         "Test".into(),
+    //         FieldElement::from_str("0x4").unwrap(),
+    //         &[FieldElement::ONE, FieldElement::TWO, FieldElement::THREE],
+    //     )
+    //     .await
+    //     .unwrap();
 
     state
         .store_event(

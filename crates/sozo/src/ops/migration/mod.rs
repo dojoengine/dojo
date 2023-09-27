@@ -11,6 +11,7 @@ use dojo_world::migration::{
 };
 use dojo_world::utils::TransactionWaiter;
 use scarb::core::Config;
+use scarb_ui::Ui;
 use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::{
     BlockId, BlockTag, FieldElement, InvokeTransactionResult, StarknetError,
@@ -94,7 +95,7 @@ where
 
     println!("  ");
 
-    let block_height = execute_strategy(&strategy, account, config, txn_config)
+    let block_height = execute_strategy(&strategy, account, config.ui(), txn_config)
         .await
         .map_err(|e| anyhow!(e))
         .with_context(|| "Problem trying to migrate.")?;
@@ -239,10 +240,10 @@ where
 
 // returns the Some(block number) at which migration world is deployed, returns none if world was
 // not redeployed
-async fn execute_strategy<P, S>(
+pub async fn execute_strategy<P, S>(
     strategy: &MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
-    ws_config: &Config,
+    ui: &Ui,
     txn_config: Option<TransactionOptions>,
 ) -> Result<Option<u64>>
 where
@@ -251,8 +252,8 @@ where
 {
     match &strategy.executor {
         Some(executor) => {
-            ws_config.ui().print_header("# Executor");
-            deploy_contract(executor, "executor", vec![], migrator, ws_config, &txn_config).await?;
+            ui.print_header("# Executor");
+            deploy_contract(executor, "executor", vec![], migrator, ui, &txn_config).await?;
 
             if strategy.world.is_none() {
                 let addr = strategy.world_address()?;
@@ -263,27 +264,27 @@ where
 
                 TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
 
-                ws_config.ui().print_hidden_sub(format!("Updated at: {transaction_hash:#x}"));
+                ui.print_hidden_sub(format!("Updated at: {transaction_hash:#x}"));
             }
 
-            ws_config.ui().print_sub(format!("Contract address: {:#x}", executor.contract_address));
+            ui.print_sub(format!("Contract address: {:#x}", executor.contract_address));
         }
         None => {}
     };
 
     match &strategy.world {
         Some(world) => {
-            ws_config.ui().print_header("# World");
+            ui.print_header("# World");
             let calldata = vec![strategy.executor.as_ref().unwrap().contract_address];
-            deploy_contract(world, "world", calldata, migrator, ws_config, &txn_config).await?;
+            deploy_contract(world, "world", calldata, migrator, ui, &txn_config).await?;
 
-            ws_config.ui().print_sub(format!("Contract address: {:#x}", world.contract_address));
+            ui.print_sub(format!("Contract address: {:#x}", world.contract_address));
         }
         None => {}
     };
 
-    register_components(strategy, migrator, ws_config, txn_config.clone()).await?;
-    deploy_contracts(strategy, migrator, ws_config, txn_config).await?;
+    register_components(strategy, migrator, ui, txn_config.clone()).await?;
+    deploy_contracts(strategy, migrator, ui, txn_config).await?;
 
     // This gets current block numder if helpful
     // let block_height = migrator.provider().block_number().await.ok();
@@ -301,7 +302,7 @@ async fn deploy_contract<P, S>(
     contract_id: &str,
     constructor_calldata: Vec<FieldElement>,
     migrator: &SingleOwnerAccount<P, S>,
-    ws_config: &Config,
+    ui: &Ui,
     txn_config: &Option<TransactionOptions>,
 ) -> Result<ContractDeploymentOutput>
 where
@@ -319,15 +320,13 @@ where
     {
         Ok(val) => {
             if let Some(declare) = val.clone().declare {
-                ws_config.ui().print_hidden_sub(format!(
+                ui.print_hidden_sub(format!(
                     "Declare transaction: {:#x}",
                     declare.transaction_hash
                 ));
             }
 
-            ws_config
-                .ui()
-                .print_hidden_sub(format!("Deploy transaction: {:#x}", val.transaction_hash));
+            ui.print_hidden_sub(format!("Deploy transaction: {:#x}", val.transaction_hash));
 
             Ok(ContractDeploymentOutput::Output(val))
         }
@@ -341,7 +340,7 @@ where
 async fn register_components<P, S>(
     strategy: &MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
-    ws_config: &Config,
+    ui: &Ui,
     txn_config: Option<TransactionOptions>,
 ) -> Result<Option<RegisterOutput>>
 where
@@ -354,33 +353,31 @@ where
         return Ok(None);
     }
 
-    ws_config.ui().print_header(format!("# Models ({})", components.len()));
+    ui.print_header(format!("# Models ({})", components.len()));
 
     let mut declare_output = vec![];
 
     for c in components.iter() {
-        ws_config.ui().print(italic_message(&c.diff.name).to_string());
+        ui.print(italic_message(&c.diff.name).to_string());
 
         let res =
             c.declare(migrator, txn_config.clone().map(|c| c.into()).unwrap_or_default()).await;
         match res {
             Ok(output) => {
-                ws_config
-                    .ui()
-                    .print_hidden_sub(format!("transaction_hash: {:#x}", output.transaction_hash));
+                ui.print_hidden_sub(format!("transaction_hash: {:#x}", output.transaction_hash));
 
                 declare_output.push(output);
             }
 
             // Continue if component is already declared
             Err(MigrationError::ClassAlreadyDeclared) => {
-                ws_config.ui().print_sub("Already declared");
+                ui.print_sub("Already declared");
                 continue;
             }
             Err(e) => bail!("Failed to declare component {}: {e}", c.diff.name),
         }
 
-        ws_config.ui().print_sub(format!("Class hash: {:#x}", c.diff.local));
+        ui.print_sub(format!("Class hash: {:#x}", c.diff.local));
     }
 
     let world_address = strategy.world_address()?;
@@ -392,7 +389,7 @@ where
 
     TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
 
-    ws_config.ui().print_hidden_sub(format!("registered at: {transaction_hash:#x}"));
+    ui.print_hidden_sub(format!("registered at: {transaction_hash:#x}"));
 
     Ok(Some(RegisterOutput { transaction_hash, declare_output }))
 }
@@ -400,7 +397,7 @@ where
 async fn deploy_contracts<P, S>(
     strategy: &MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
-    ws_config: &Config,
+    ui: &Ui,
     txn_config: Option<TransactionOptions>,
 ) -> Result<Vec<Option<DeployOutput>>>
 where
@@ -413,26 +410,21 @@ where
         return Ok(vec![]);
     }
 
-    ws_config.ui().print_header(format!("# Contracts ({})", contracts.len()));
+    ui.print_header(format!("# Contracts ({})", contracts.len()));
 
     let mut deploy_output = vec![];
 
     for contract in strategy.contracts.iter() {
         let name = &contract.diff.name;
-        ws_config.ui().print(italic_message(name).to_string());
-        match deploy_contract(contract, name, vec![], migrator, ws_config, &txn_config).await? {
+        ui.print(italic_message(name).to_string());
+        match deploy_contract(contract, name, vec![], migrator, ui, &txn_config).await? {
             ContractDeploymentOutput::Output(output) => {
-                ws_config
-                    .ui()
-                    .print_sub(format!("Contract address: {:#x}", output.contract_address));
-                ws_config.ui().print_hidden_sub(format!(
-                    "deploy transaction: {:#x}",
-                    output.transaction_hash
-                ));
+                ui.print_sub(format!("Contract address: {:#x}", output.contract_address));
+                ui.print_hidden_sub(format!("deploy transaction: {:#x}", output.transaction_hash));
                 deploy_output.push(Some(output));
             }
             ContractDeploymentOutput::AlreadyDeployed(contract_address) => {
-                ws_config.ui().print_sub(format!("Already deployed: {:#x}", contract_address));
+                ui.print_sub(format!("Already deployed: {:#x}", contract_address));
                 deploy_output.push(None);
             }
         }

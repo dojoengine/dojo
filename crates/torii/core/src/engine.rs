@@ -7,43 +7,42 @@ use starknet::core::types::{
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
-use starknet_crypto::FieldElement;
 use tokio::time::sleep;
+use tokio_util::sync::CancellationToken;
 use torii_client::contract::world::WorldContractReader;
-use torii_core::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
-use torii_core::sql::{Executable, Sql};
 use tracing::{error, info, warn};
 
-pub struct Processors<P: Provider + Sync + Send> {
+use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
+use crate::sql::{Executable, Sql};
+
+pub struct Processors<P: Provider + Sync> {
     pub block: Vec<Box<dyn BlockProcessor<P>>>,
     pub transaction: Vec<Box<dyn TransactionProcessor<P>>>,
     pub event: Vec<Box<dyn EventProcessor<P>>>,
 }
 
-impl<P: Provider + Sync + Send> Default for Processors<P> {
+impl<P: Provider + Sync> Default for Processors<P> {
     fn default() -> Self {
-        Self { block: vec![], transaction: vec![], event: vec![] }
+        Self { block: vec![], event: vec![], transaction: vec![] }
     }
 }
 
 #[derive(Debug)]
 pub struct EngineConfig {
     pub block_time: Duration,
-    pub world_address: FieldElement,
     pub start_block: u64,
 }
 
 impl Default for EngineConfig {
     fn default() -> Self {
-        Self {
-            block_time: Duration::from_secs(1),
-            world_address: FieldElement::ZERO,
-            start_block: 0,
-        }
+        Self { block_time: Duration::from_secs(1), start_block: 0 }
     }
 }
 
-pub struct Engine<'a, P: Provider + Sync + Send> {
+pub struct Engine<'a, P: Provider + Sync>
+where
+    P::Error: 'static,
+{
     world: &'a WorldContractReader<'a, P>,
     db: &'a Sql,
     provider: &'a P,
@@ -51,7 +50,10 @@ pub struct Engine<'a, P: Provider + Sync + Send> {
     config: EngineConfig,
 }
 
-impl<'a, P: Provider + Sync + Send> Engine<'a, P> {
+impl<'a, P: Provider + Sync> Engine<'a, P>
+where
+    P::Error: 'static,
+{
     pub fn new(
         world: &'a WorldContractReader<'a, P>,
         db: &'a Sql,
@@ -62,10 +64,10 @@ impl<'a, P: Provider + Sync + Send> Engine<'a, P> {
         Self { world, db, provider, processors, config }
     }
 
-    pub async fn start(&self) -> Result<(), Box<dyn Error>> {
+    pub async fn start(&self, cts: CancellationToken) -> Result<(), Box<dyn Error>> {
         let db_head = self.db.head().await?;
 
-        let mut current_block_number = match db_head {
+        let current_block_number = match db_head {
             0 => self.config.start_block,
             _ => {
                 if self.config.start_block != 0 {
@@ -76,45 +78,57 @@ impl<'a, P: Provider + Sync + Send> Engine<'a, P> {
         };
 
         loop {
+            if cts.is_cancelled() {
+                break Ok(());
+            }
+
             sleep(self.config.block_time).await;
-
-            let latest_block_with_txs =
-                match self.provider.get_block_with_txs(BlockId::Tag(BlockTag::Latest)).await {
-                    Ok(block_with_txs) => block_with_txs,
-                    Err(e) => {
-                        error!("getting  block: {}", e);
-                        continue;
-                    }
-                };
-
-            let latest_block_number = match latest_block_with_txs {
-                MaybePendingBlockWithTxs::Block(latest_block_with_txs) => {
-                    latest_block_with_txs.block_number
+            match self.sync_to_head(current_block_number).await {
+                Ok(block_with_txs) => block_with_txs,
+                Err(e) => {
+                    error!("getting  block: {}", e);
+                    continue;
                 }
-                _ => continue,
+            };
+        }
+    }
+
+    pub async fn sync_to_head(&self, from: u64) -> Result<u64, Box<dyn Error>> {
+        let latest_block_with_txs =
+            self.provider.get_block_with_txs(BlockId::Tag(BlockTag::Latest)).await?;
+
+        let latest_block_number = match latest_block_with_txs {
+            MaybePendingBlockWithTxs::Block(latest_block_with_txs) => {
+                latest_block_with_txs.block_number
+            }
+            _ => return Err(anyhow::anyhow!("Getting latest block number").into()),
+        };
+
+        self.sync_range(from, latest_block_number).await?;
+
+        Ok(latest_block_number)
+    }
+
+    pub async fn sync_range(&self, mut from: u64, to: u64) -> Result<(), Box<dyn Error>> {
+        // Process all blocks from current to latest.
+        while from <= to {
+            let block_with_txs = match self.provider.get_block_with_txs(BlockId::Number(from)).await
+            {
+                Ok(block_with_txs) => block_with_txs,
+                Err(e) => {
+                    error!("getting block: {}", e);
+                    continue;
+                }
             };
 
-            // Process all blocks from current to latest.
-            while current_block_number <= latest_block_number {
-                let block_with_txs = match self
-                    .provider
-                    .get_block_with_txs(BlockId::Number(current_block_number))
-                    .await
-                {
-                    Ok(block_with_txs) => block_with_txs,
-                    Err(e) => {
-                        error!("getting block: {}", e);
-                        continue;
-                    }
-                };
+            self.process(block_with_txs).await?;
 
-                self.process(block_with_txs).await?;
-
-                self.db.set_head(current_block_number).await?;
-                self.db.execute().await?;
-                current_block_number += 1;
-            }
+            self.db.set_head(from).await?;
+            self.db.execute().await?;
+            from += 1;
         }
+
+        Ok(())
     }
 
     async fn process(&self, block: MaybePendingBlockWithTxs) -> Result<(), Box<dyn Error>> {
@@ -152,7 +166,7 @@ impl<'a, P: Provider + Sync + Send> Engine<'a, P> {
 
             if let TransactionReceipt::Invoke(invoke_receipt) = receipt.clone() {
                 for (event_idx, event) in invoke_receipt.events.iter().enumerate() {
-                    if event.from_address != self.config.world_address {
+                    if event.from_address != self.world.address {
                         continue;
                     }
 

@@ -14,20 +14,15 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use tokio_util::sync::CancellationToken;
 use torii_client::contract::world::WorldContractReader;
+use torii_core::engine::{Engine, EngineConfig, Processors};
 use torii_core::processors::register_model::RegisterModelProcessor;
 use torii_core::processors::register_system::RegisterSystemProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
-use torii_core::processors::store_system_call::StoreSystemCallProcessor;
 use torii_core::sql::Sql;
 use tracing::error;
 use tracing_subscriber::fmt;
 use url::Url;
 
-use crate::engine::Processors;
-use crate::indexer::Indexer;
-
-mod engine;
-mod indexer;
 mod server;
 
 /// Dojo World Indexer
@@ -99,19 +94,24 @@ async fn main() -> anyhow::Result<()> {
             Box::new(RegisterSystemProcessor),
             Box::new(StoreSetRecordProcessor),
         ],
-        transaction: vec![Box::new(StoreSystemCallProcessor)],
+        // transaction: vec![Box::new(StoreSystemCallProcessor)],
         ..Processors::default()
     };
 
-    let indexer =
-        Indexer::new(&world, &db, &provider, processors, manifest, world_address, args.start_block);
+    let engine = Engine::new(
+        &world,
+        &db,
+        &provider,
+        processors,
+        EngineConfig { start_block: args.start_block, ..Default::default() },
+    );
 
     let addr = format!("{}:{}", args.host, args.port)
         .parse::<SocketAddr>()
         .expect("able to parse address");
 
     tokio::select! {
-        res = indexer.start() => {
+        res = engine.start(cts) => {
             if let Err(e) = res {
                 error!("Indexer failed with error: {e}");
             }

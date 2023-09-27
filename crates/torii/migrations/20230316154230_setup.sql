@@ -18,20 +18,22 @@ CREATE TABLE models (
     name TEXT NOT NULL,
     class_hash TEXT NOT NULL,
     transaction_hash TEXT,
+    layout BLOB NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_models_created_at ON models (created_at);
 
 CREATE TABLE model_members(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT NOT NULL,
+    model_idx INTEGER NOT NULL,
+    member_idx INTEGER NOT NULL,
     model_id TEXT NOT NULL,
     name TEXT NOT NULL,
     type TEXT NOT NULL,
     key BOOLEAN NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (model_id) REFERENCES models(id)
-    UNIQUE (model_id, name)
+    PRIMARY KEY (id, model_idx) FOREIGN KEY (model_id) REFERENCES models(id) UNIQUE (id, member_idx)
 );
 
 CREATE INDEX idx_model_members_model_id ON model_members (model_id);
@@ -44,7 +46,7 @@ CREATE TABLE system_calls (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (system_id) REFERENCES systems(id),
     UNIQUE (transaction_hash)
-);  
+);
 
 CREATE INDEX idx_system_calls_created_at ON system_calls (created_at);
 
@@ -67,6 +69,7 @@ CREATE TABLE entities (
 );
 
 CREATE INDEX idx_entities_keys ON entities (keys);
+
 CREATE INDEX idx_entities_keys_create_on ON entities (keys, created_at);
 
 CREATE TABLE events (
@@ -78,4 +81,5 @@ CREATE TABLE events (
 );
 
 CREATE INDEX idx_events_keys ON events (keys);
+
 CREATE INDEX idx_events_created_at ON events (created_at);
