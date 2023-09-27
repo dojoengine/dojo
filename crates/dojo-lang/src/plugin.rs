@@ -21,18 +21,18 @@ use semver::Version;
 use smol_str::SmolStr;
 use url::Url;
 
-use crate::component::handle_component_struct;
 use crate::inline_macros::emit::EmitMacro;
 use crate::inline_macros::get::GetMacro;
 use crate::inline_macros::set::SetMacro;
 use crate::introspect::handle_introspect_struct;
+use crate::model::handle_model_struct;
 use crate::print::derive_print;
 use crate::system::System;
 
 const SYSTEM_ATTR: &str = "system";
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Component {
+pub struct Model {
     pub name: String,
     pub members: Vec<Member>,
 }
@@ -46,8 +46,8 @@ pub struct SystemAuxData {
 /// Dojo related auxiliary data of the Dojo plugin.
 #[derive(Debug, Default, PartialEq)]
 pub struct DojoAuxData {
-    /// A list of components that were processed by the plugin.
-    pub components: Vec<Component>,
+    /// A list of models that were processed by the plugin.
+    pub models: Vec<Model>,
     /// A list of systems that were processed by the plugin and their component dependencies.
     pub systems: Vec<SystemAuxData>,
 }
@@ -150,13 +150,13 @@ impl MacroPlugin for DojoPlugin {
                             continue;
                         };
 
-                        // Get the text of the segment and check if it is "Component"
+                        // Get the text of the segment and check if it is "Model"
                         let derived = segment.ident(db).text(db);
 
                         match derived.as_str() {
-                            "Component" => {
+                            "Model" => {
                                 let (component_rewrite_nodes, component_diagnostics) =
-                                    handle_component_struct(db, &mut aux_data, struct_ast.clone());
+                                    handle_model_struct(db, &mut aux_data, struct_ast.clone());
                                 rewrite_nodes.push(component_rewrite_nodes);
                                 diagnostics.extend(component_diagnostics);
                             }

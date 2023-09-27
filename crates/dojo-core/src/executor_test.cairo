@@ -10,7 +10,7 @@ use starknet::class_hash::Felt252TryIntoClassHash;
 use dojo::executor::{executor, IExecutorDispatcher, IExecutorDispatcherTrait};
 use dojo::world::{IWorldDispatcher};
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Model, Copy, Drop, Serde)]
 struct Foo {
     #[key]
     id: felt252,

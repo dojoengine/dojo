@@ -71,7 +71,7 @@ impl System {
                     name: name.clone(),
                     content: builder.code,
                     aux_data: Some(DynGeneratedFileAuxData::new(DojoAuxData {
-                        components: vec![],
+                        models: vec![],
                         systems: vec![SystemAuxData {
                             name,
                             dependencies: system.dependencies.values().cloned().collect(),

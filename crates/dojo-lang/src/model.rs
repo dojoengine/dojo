@@ -9,15 +9,15 @@ use convert_case::{Case, Casing};
 use dojo_world::manifest::Member;
 
 use crate::introspect::handle_introspect_struct;
-use crate::plugin::{Component, DojoAuxData};
+use crate::plugin::{DojoAuxData, Model};
 
-/// A handler for Dojo code that modifies a component struct.
+/// A handler for Dojo code that modifies a model struct.
 /// Parameters:
 /// * db: The semantic database.
-/// * struct_ast: The AST of the component struct.
+/// * struct_ast: The AST of the model struct.
 /// Returns:
 /// * A RewriteNode containing the generated code.
-pub fn handle_component_struct(
+pub fn handle_model_struct(
     db: &dyn SyntaxGroup,
     aux_data: &mut DojoAuxData,
     struct_ast: ItemStruct,
@@ -38,7 +38,7 @@ pub fn handle_component_struct(
 
     if keys.is_empty() {
         diagnostics.push(PluginDiagnostic {
-            message: "Component must define atleast one #[key] attribute".into(),
+            message: "Model must define atleast one #[key] attribute".into(),
             stable_ptr: struct_ast.name(db).stable_ptr().untyped(),
         });
     }
@@ -68,12 +68,12 @@ pub fn handle_component_struct(
         members.iter().filter_map(|m| serialize_member(m, false)).collect::<_>();
 
     let name = struct_ast.name(db).text(db);
-    aux_data.components.push(Component { name: name.to_string(), members: members.to_vec() });
+    aux_data.models.push(Model { name: name.to_string(), members: members.to_vec() });
 
     (
         RewriteNode::interpolate_patched(
             "
-            impl $type_name$Component of dojo::component::Component<$type_name$> {
+            impl $type_name$Model of dojo::model::Model<$type_name$> {
                 #[inline(always)]
                 fn name(self: @$type_name$) -> felt252 {
                     '$type_name$'
