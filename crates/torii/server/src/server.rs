@@ -2,21 +2,32 @@ use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::pin::Pin;
 use std::str::FromStr;
+use std::sync::Arc;
 use std::task::Poll;
 
 use either::Either;
 use hyper::service::{make_service_fn, Service};
 use hyper::Uri;
 use sqlx::{Pool, Sqlite};
-use warp::Filter;
-
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::JsonRpcClient;
+use starknet_crypto::FieldElement;
+use tokio::sync::mpsc::Receiver as BoundedReceiver;
 use torii_grpc::protos;
+use warp::Filter;
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 
 // TODO: check if there's a nicer way to implement this
-pub async fn spawn_server(addr: &SocketAddr, pool: &Pool<Sqlite>) -> anyhow::Result<()> {
-    let world_server = torii_grpc::server::DojoWorld::new(pool.clone());
+pub async fn spawn_server(
+    addr: &SocketAddr,
+    pool: &Pool<Sqlite>,
+    world_address: FieldElement,
+    block_receiver: BoundedReceiver<u64>,
+    provider: Arc<JsonRpcClient<HttpTransport>>,
+) -> anyhow::Result<()> {
+    let world_server =
+        torii_grpc::server::DojoWorld::new(pool.clone(), block_receiver, world_address, provider);
 
     let base_route = warp::path::end()
         .and(warp::get())

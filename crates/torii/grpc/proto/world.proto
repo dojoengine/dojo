@@ -24,8 +24,7 @@ service World {
 
 // A request to retrieve metadata for a specific world ID.
 message MetadataRequest {
-    // The address of the world.
-    string id = 1;
+   
 }
 
 // The metadata response contains addresses and class hashes for the world.

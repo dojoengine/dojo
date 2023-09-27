@@ -57,7 +57,7 @@ impl WorldClient {
     /// Retrieve the metadata of the World.
     pub async fn metadata(&mut self) -> Result<dojo_types::WorldMetadata, Error> {
         self.inner
-            .world_metadata(MetadataRequest { id: format!("{:#x}", self.world_address) })
+            .world_metadata(MetadataRequest {})
             .await
             .map_err(Error::Grpc)
             .and_then(|res| res.into_inner().metadata.ok_or(Error::MissingExpectedData))

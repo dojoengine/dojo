@@ -10,10 +10,7 @@ use futures_util::FutureExt;
 use protos::types::maybe_pending_entity_update::Update;
 use protos::world::SubscribeEntitiesResponse;
 use rayon::prelude::*;
-use starknet::core::types::{
-    BlockId, ContractStorageDiffItem, FromStrError, MaybePendingStateUpdate,
-};
-use starknet::core::utils::CairoShortStringToFeltError;
+use starknet::core::types::{BlockId, ContractStorageDiffItem, MaybePendingStateUpdate};
 use starknet::macros::short_string;
 use starknet::providers::{Provider, ProviderError};
 use starknet_crypto::{poseidon_hash_many, FieldElement};
@@ -49,20 +46,6 @@ pub struct Subscriber {
     storage_addresses: HashSet<FieldElement>,
     /// The channel to send the response back to the subscriber.
     sender: Sender<Result<SubscribeEntitiesResponse, Status>>,
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum ParseError {
-    #[error(transparent)]
-    FromStr(FromStrError),
-    #[error(transparent)]
-    CairoShortStringToFelt(CairoShortStringToFeltError),
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum SubscriptionError {
-    #[error(transparent)]
-    Parse(ParseError),
 }
 
 pub struct SubscriberManager {

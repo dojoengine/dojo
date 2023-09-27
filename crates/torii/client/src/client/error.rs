@@ -1,30 +1,20 @@
 use starknet::core::types::FromStrError;
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::{JsonRpcClient, Provider};
+
+use crate::contract::component::ComponentError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// Error originated from the gRPC client.
     #[error(transparent)]
-    GrpcClient(torii_grpc::client::Error),
+    GrpcClient(#[from] torii_grpc::client::Error),
     #[error(transparent)]
-    Parsing(FromStrError),
+    FromStr(#[from] FromStrError),
     #[error(transparent)]
-    Other(anyhow::Error),
-}
-
-impl From<torii_grpc::client::Error> for Error {
-    fn from(value: torii_grpc::client::Error) -> Self {
-        Self::GrpcClient(value)
-    }
-}
-
-impl From<FromStrError> for Error {
-    fn from(value: FromStrError) -> Self {
-        Self::Parsing(value)
-    }
-}
-
-impl From<anyhow::Error> for Error {
-    fn from(value: anyhow::Error) -> Self {
-        Self::Other(value)
-    }
+    Other(#[from] anyhow::Error),
+    #[error(transparent)]
+    UrlParse(#[from] url::ParseError),
+    #[error(transparent)]
+    Component(#[from] ComponentError<<JsonRpcClient<HttpTransport> as Provider>::Error>),
 }

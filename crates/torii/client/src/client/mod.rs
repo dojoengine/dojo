@@ -8,12 +8,17 @@ use dojo_types::component::EntityComponent;
 use dojo_types::WorldMetadata;
 use futures::channel::mpsc;
 use parking_lot::{Mutex, RwLock};
+use starknet::core::types::{BlockId, BlockTag};
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::JsonRpcClient;
 use starknet_crypto::FieldElement;
+use url::Url;
 
 use self::error::Error;
 use self::storage::ComponentStorage;
 use self::subscription::{SubscribedEntities, SubscriptionClientHandle};
 use crate::client::subscription::SubscriptionClient;
+use crate::contract::world::WorldContractReader;
 
 // TODO: expose the World interface from the `Client`
 #[allow(unused)]
@@ -70,8 +75,14 @@ impl ClientBuilder {
         Self { initial_entities_to_sync: None }
     }
 
-    pub async fn build(self, endpoint: String, world: FieldElement) -> Result<Client, Error> {
-        let mut grpc_client = torii_grpc::client::WorldClient::new(endpoint, world).await?;
+    pub async fn build(
+        self,
+        torii_endpoint: String,
+        // TODO: remove RPC
+        rpc_url: String,
+        world: FieldElement,
+    ) -> Result<Client, Error> {
+        let mut grpc_client = torii_grpc::client::WorldClient::new(torii_endpoint, world).await?;
 
         let metadata = grpc_client.metadata().await?;
 
@@ -83,11 +94,16 @@ impl ClientBuilder {
             subbed_entities.add_entities(entities_to_sync)?;
 
             // initialize the entities to be synced with the latest values
-            let entities = subbed_entities.entities.read().clone();
-            for EntityComponent { component, keys } in entities {
-                let values = grpc_client.get_entity(component.clone(), keys.clone()).await?;
-                println!("initial values: {:?}", values);
-                client_storage.set_entity((component, keys), values)?;
+            let provider = JsonRpcClient::new(HttpTransport::new(Url::parse(&rpc_url)?));
+            let world_reader = WorldContractReader::new(world, &provider);
+
+            for EntityComponent { component, keys } in subbed_entities.entities.read().iter() {
+                let component_reader =
+                    world_reader.component(component, BlockId::Tag(BlockTag::Pending)).await?;
+                let values = component_reader
+                    .entity(keys.to_owned(), BlockId::Tag(BlockTag::Pending))
+                    .await?;
+                client_storage.set_entity((component.to_owned(), keys.to_owned()), values)?;
             }
         }
 
@@ -151,7 +167,7 @@ mod tests {
                     "0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973"
                 )],
             }])
-            .build("http://localhost:8080/grpc/".to_string(), world)
+            .build("http://localhost:8080/grpc/".into(), "http://localhost:5050/".into(), world)
             .await
             .unwrap();
 

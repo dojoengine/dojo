@@ -14,6 +14,7 @@ pub type StorageKey = FieldElement;
 pub type StorageValue = FieldElement;
 
 /// An in-memory storage for storing the component values of entities.
+/// TODO: check if we can use sql db instead.
 pub(crate) struct ComponentStorage {
     metadata: Arc<RwLock<WorldMetadata>>,
     // TODO: change entity id to entity keys

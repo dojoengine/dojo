@@ -20,6 +20,7 @@ starknet.workspace = true
 thiserror.workspace = true
 tokio = { version = "1.32.0", default-features = false, features = [ "rt" ] }
 torii-grpc = { path = "../grpc", features = [ "client" ] }
+url.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 prost.workspace = true

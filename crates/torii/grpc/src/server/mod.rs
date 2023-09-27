@@ -1,3 +1,4 @@
+pub mod error;
 pub mod logger;
 pub mod subscription;
 
@@ -13,12 +14,13 @@ use sqlx::{Executor, Pool, Row, Sqlite};
 use starknet::core::types::FromStrError;
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, Provider};
+use starknet::providers::JsonRpcClient;
 use starknet_crypto::{poseidon_hash_many, FieldElement};
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::{Request, Response, Status};
 
+use self::error::Error;
 use self::subscription::{EntityComponentRequest, EntitySubscriptionService};
 use crate::protos::types::EntityComponent;
 use crate::protos::world::{GetEntityRequest, GetEntityResponse};
@@ -26,7 +28,7 @@ use crate::protos::{self};
 
 #[derive(Debug, Clone)]
 pub struct DojoWorld {
-    provider: Arc<JsonRpcClient<HttpTransport>>,
+    world_address: FieldElement,
     pool: Pool<Sqlite>,
     /// Sender<(subscription requests, oneshot sender to send back the response)>
     subscription_req_sender:
@@ -37,20 +39,18 @@ impl DojoWorld {
     pub fn new(
         pool: Pool<Sqlite>,
         block_rx: Receiver<u64>,
+        world_address: FieldElement,
         provider: Arc<JsonRpcClient<HttpTransport>>,
     ) -> Self {
         let (subscription_req_sender, rx) = tokio::sync::mpsc::channel(1);
         // spawn thread for state update service
-        tokio::task::spawn(EntitySubscriptionService::new(provider.clone(), rx, block_rx));
-        Self { pool, subscription_req_sender, provider }
+        tokio::task::spawn(EntitySubscriptionService::new(provider, rx, block_rx));
+        Self { pool, subscription_req_sender, world_address }
     }
 }
 
 impl DojoWorld {
-    pub async fn metadata(
-        &self,
-        world_address: FieldElement,
-    ) -> Result<protos::types::WorldMetadata, sqlx::Error> {
+    pub async fn metadata(&self) -> Result<protos::types::WorldMetadata, Error> {
         let (world_address, world_class_hash, executor_address, executor_class_hash): (
             String,
             String,
@@ -58,7 +58,8 @@ impl DojoWorld {
             String,
         ) = sqlx::query_as(&format!(
             "SELECT world_address, world_class_hash, executor_address, executor_class_hash FROM \
-             worlds WHERE id = '{world_address:#x}'"
+             worlds WHERE id = '{:#x}'",
+            self.world_address
         ))
         .fetch_one(&self.pool)
         .await?;
@@ -94,7 +95,7 @@ impl DojoWorld {
     pub async fn component_metadata(
         &self,
         component: String,
-    ) -> Result<protos::types::ComponentMetadata, sqlx::Error> {
+    ) -> Result<protos::types::ComponentMetadata, Error> {
         sqlx::query_as(
             "SELECT c.name, c.class_hash, COUNT(cm.id) FROM components c LEFT JOIN \
              component_members cm ON c.id = cm.component_id WHERE c.id = ? GROUP BY c.id",
@@ -102,30 +103,29 @@ impl DojoWorld {
         .bind(component.to_lowercase())
         .fetch_one(&self.pool)
         .await
-        .map(|(name, class_hash, size)| protos::types::ComponentMetadata {
-            name,
-            size,
-            class_hash,
-        })
+        .map(|(name, class_hash, size)| protos::types::ComponentMetadata { name, size, class_hash })
+        .map_err(Error::from)
     }
 
     #[allow(unused)]
     pub async fn system_metadata(
         &self,
         system: String,
-    ) -> Result<protos::types::SystemMetadata, sqlx::Error> {
+    ) -> Result<protos::types::SystemMetadata, Error> {
         sqlx::query_as("SELECT name, class_hash FROM systems WHERE id = ?")
             .bind(system.to_lowercase())
             .fetch_one(&self.pool)
             .await
             .map(|(name, class_hash)| protos::types::SystemMetadata { name, class_hash })
+            .map_err(Error::from)
     }
 
-    pub async fn entity(
+    #[allow(unused)]
+    async fn entity(
         &self,
         component: String,
         entity_keys: Vec<FieldElement>,
-    ) -> Result<Vec<String>, sqlx::Error> {
+    ) -> Result<Vec<String>, Error> {
         let entity_id = format!("{:#x}", poseidon_hash_many(&entity_keys));
         // TODO: there's definitely a better way for doing this
         self.pool
@@ -137,6 +137,7 @@ impl DojoWorld {
                 .as_ref(),
             )
             .await
+            .map_err(Error::from)
             .map(|row| {
                 let size = row.columns().len() - 2;
                 let mut values = Vec::with_capacity(size);
@@ -163,15 +164,10 @@ type SubscribeEntitiesResponseStream =
 impl protos::world::world_server::World for DojoWorld {
     async fn world_metadata(
         &self,
-        request: Request<MetadataRequest>,
+        _request: Request<MetadataRequest>,
     ) -> Result<Response<MetadataResponse>, Status> {
-        let world_address = request.into_inner().id;
-        let world_address = FieldElement::from_str(&world_address).map_err(|e| {
-            Status::invalid_argument(format!("invalid World id {world_address}: {e}"))
-        })?;
-
-        let metadata = self.metadata(world_address).await.map_err(|e| match e {
-            sqlx::Error::RowNotFound => Status::not_found("World not found"),
+        let metadata = self.metadata().await.map_err(|e| match e {
+            Error::Sql(sqlx::Error::RowNotFound) => Status::not_found("World not found"),
             e => Status::internal(e.to_string()),
         })?;
 
@@ -195,7 +191,7 @@ impl protos::world::world_server::World for DojoWorld {
             .map_err(|e| Status::invalid_argument(format!("Invalid key: {e}")))?;
 
         let values = self.entity(component, entity_keys).await.map_err(|e| match e {
-            sqlx::Error::RowNotFound => Status::not_found("Entity not found"),
+            Error::Sql(sqlx::Error::RowNotFound) => Status::not_found("Entity not found"),
             e => Status::internal(e.to_string()),
         })?;
 
