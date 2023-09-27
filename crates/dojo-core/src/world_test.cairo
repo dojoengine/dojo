@@ -14,7 +14,7 @@ use dojo::test_utils::{spawn_test_world, deploy_with_world_address};
 
 // Components and Systems
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Model, Copy, Drop, Serde)]
 struct Foo {
     #[key]
     caller: ContractAddress,
@@ -22,7 +22,7 @@ struct Foo {
     b: u128,
 }
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Model, Copy, Drop, Serde)]
 struct Fizz {
     #[key]
     caller: ContractAddress,

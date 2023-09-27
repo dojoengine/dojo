@@ -6,7 +6,7 @@ test_expand_plugin
 //! > cairo_code
 use serde::Serde;
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Model, Copy, Drop, Serde)]
 struct Position {
     #[key]
     id: felt252,
@@ -32,14 +32,14 @@ impl PositionImpl of PositionTrait {
     }
 }
 
-#[derive(Component, Serde)]
+#[derive(Model, Serde)]
 struct Roles {
     role_ids: Array<u8>
 }
 
 use starknet::ContractAddress;
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Model, Copy, Drop, Serde)]
 struct Player {
     #[key]
     game: felt252,
@@ -53,7 +53,7 @@ struct Player {
 use serde::Serde;
 
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Model, Copy, Drop, Serde)]
 struct Position {
     #[key]
     id: felt252,
@@ -61,7 +61,7 @@ struct Position {
     y: felt252
 }
 
-impl PositionComponent of dojo::component::Component<Position> {
+impl PositionModel of dojo::model::Model<Position> {
     #[inline(always)]
     fn name(self: @Position) -> felt252 {
         'Position'
@@ -195,12 +195,12 @@ impl PositionImpl of PositionTrait {
 }
 
 
-#[derive(Component, Serde)]
+#[derive(Model, Serde)]
 struct Roles {
     role_ids: Array<u8>
 }
 
-impl RolesComponent of dojo::component::Component<Roles> {
+impl RolesModel of dojo::model::Model<Roles> {
     #[inline(always)]
     fn name(self: @Roles) -> felt252 {
         'Roles'
@@ -300,7 +300,7 @@ mod roles {
 use starknet::ContractAddress;
 
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Model, Copy, Drop, Serde)]
 struct Player {
     #[key]
     game: felt252,
@@ -309,7 +309,7 @@ struct Player {
 
     name: felt252, 
 }
-impl PlayerComponent of dojo::component::Component<Player> {
+impl PlayerModel of dojo::model::Model<Player> {
     #[inline(always)]
     fn name(self: @Player) -> felt252 {
         'Player'
@@ -420,7 +420,7 @@ mod player {
 }
 
 //! > expected_diagnostics
-error: Component must define atleast one #[key] attribute
+error: Model must define atleast one #[key] attribute
  --> dummy_file.cairo:30:8
 struct Roles {
        ^***^

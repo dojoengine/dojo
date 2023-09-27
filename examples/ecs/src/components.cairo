@@ -68,7 +68,7 @@ impl DirectionIntoFelt252 of Into<Direction, felt252> {
     }
 }
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Model, Copy, Drop, Serde)]
 struct Moves {
     #[key]
     player: ContractAddress,
@@ -82,7 +82,7 @@ struct Vec2 {
     y: u32
 }
 
-#[derive(Component, Copy, Drop, Print, Serde)]
+#[derive(Model, Copy, Drop, Print, Serde)]
 struct Position {
     #[key]
     player: ContractAddress,

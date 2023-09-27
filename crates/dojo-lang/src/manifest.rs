@@ -93,7 +93,7 @@ impl Manifest {
         module_id: ModuleId,
         compiled_classes: &HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
     ) {
-        for component in &aux_data.components {
+        for component in &aux_data.models {
             let component = component.clone();
             let name: SmolStr = component.name.clone().into();
             if let Ok(Some(ModuleItemId::Struct(_))) =

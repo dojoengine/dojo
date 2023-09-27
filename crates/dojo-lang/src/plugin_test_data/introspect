@@ -12,7 +12,7 @@ struct Vec2 {
     y: u32
 }
 
-#[derive(Component, Copy, Drop, Print, Introspect)]
+#[derive(Model, Copy, Drop, Print, Introspect)]
 struct Position {
     #[key]
     player: ContractAddress,
@@ -81,13 +81,13 @@ impl Vec2SchemaIntrospection of dojo::database::schema::SchemaIntrospection<Vec2
 
 
 
-#[derive(Component, Copy, Drop, Print, Introspect)]
+#[derive(Model, Copy, Drop, Print, Introspect)]
 struct Position {
     #[key]
     player: ContractAddress,
     vec: Vec2,
 }
-impl PositionComponent of dojo::component::Component<Position> {
+impl PositionModel of dojo::model::Model<Position> {
     #[inline(always)]
     fn name(self: @Position) -> felt252 {
         'Position'

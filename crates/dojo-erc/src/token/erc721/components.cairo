@@ -1,6 +1,6 @@
 use starknet::ContractAddress;
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Model, Copy, Drop, Serde)]
 struct ERC721Meta {
     #[key]
     token: ContractAddress,
@@ -9,7 +9,7 @@ struct ERC721Meta {
     base_uri: felt252,
 }
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Model, Copy, Drop, Serde)]
 struct ERC721OperatorApproval {
     #[key]
     token: ContractAddress,
@@ -20,7 +20,7 @@ struct ERC721OperatorApproval {
     approved: bool
 }
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Model, Copy, Drop, Serde)]
 struct ERC721Owner {
     #[key]
     token: ContractAddress,
@@ -29,7 +29,7 @@ struct ERC721Owner {
     address: ContractAddress
 }
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Model, Copy, Drop, Serde)]
 struct ERC721Balance {
     #[key]
     token: ContractAddress,
@@ -38,7 +38,7 @@ struct ERC721Balance {
     amount: u256,
 }
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Model, Copy, Drop, Serde)]
 struct ERC721TokenApproval {
     #[key]
     token: ContractAddress,
