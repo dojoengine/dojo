@@ -1,6 +1,3 @@
-use std::collections::HashSet;
-use std::str::FromStr;
-
 use anyhow::Result;
 use async_graphql::dynamic::{
     Field, Object, Scalar, Schema, SchemaBuilder, Subscription, SubscriptionField, Union,
@@ -11,7 +8,7 @@ use torii_core::types::Model;
 use super::object::connection::page_info::PageInfoObject;
 use super::object::entity::EntityObject;
 use super::object::event::EventObject;
-use super::object::model_state::{type_mapping_query, ModelStateObject};
+use super::object::model_data::{type_mapping_query, ModelDataObject};
 use super::object::system::SystemObject;
 use super::object::system_call::SystemCallObject;
 use super::object::ObjectTrait;
@@ -136,7 +133,7 @@ async fn build_model_objects(pool: &SqlitePool) -> Result<(Vec<Box<dyn ObjectTra
 
             union = union.possible_type(&type_name);
 
-            objects.push(Box::new(ModelStateObject::new(field_name, type_name, type_mapping)));
+            objects.push(Box::new(ModelDataObject::new(field_name, type_name, type_mapping)));
         }
     }
 

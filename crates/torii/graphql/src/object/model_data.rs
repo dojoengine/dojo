@@ -39,7 +39,7 @@ pub struct ModelMember {
     pub created_at: DateTime<Utc>,
 }
 
-pub struct ModelStateObject {
+pub struct ModelDataObject {
     pub name: String,
     pub type_name: String,
     pub type_mapping: TypeMapping,
@@ -47,7 +47,7 @@ pub struct ModelStateObject {
     pub order_input: OrderInputObject,
 }
 
-impl ModelStateObject {
+impl ModelDataObject {
     pub fn new(name: String, type_name: String, type_mapping: TypeMapping) -> Self {
         let where_input = WhereInputObject::new(type_name.as_str(), &type_mapping);
         let order_input = OrderInputObject::new(type_name.as_str(), &type_mapping);
@@ -55,7 +55,7 @@ impl ModelStateObject {
     }
 }
 
-impl ObjectTrait for ModelStateObject {
+impl ObjectTrait for ModelDataObject {
     fn name(&self) -> &str {
         &self.name
     }
@@ -133,7 +133,7 @@ impl ObjectTrait for ModelStateObject {
                 let connection = parse_connection_arguments(&ctx)?;
 
                 let data =
-                    model_states_query(&mut conn, &table_name, &order, &filters, &connection)
+                    models_data_query(&mut conn, &table_name, &order, &filters, &connection)
                         .await?;
    
                 let total_count = query_total_count(&mut conn, &table_name, &filters).await?;
@@ -179,7 +179,7 @@ fn sub_fields() -> Field {
     })
 }
 
-pub async fn model_state_by_id_query(
+pub async fn model_data_by_id_query(
     conn: &mut PoolConnection<Sqlite>,
     name: &str,
     id: &str,
@@ -192,7 +192,7 @@ pub async fn model_state_by_id_query(
     value_mapping_from_row(&row, fields)
 }
 
-pub async fn model_states_query(
+pub async fn models_data_query(
     conn: &mut PoolConnection<Sqlite>,
     table_name: &str,
     order: &Option<Order>,

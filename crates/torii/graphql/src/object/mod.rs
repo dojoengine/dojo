@@ -3,7 +3,7 @@ pub mod entity;
 pub mod event;
 pub mod inputs;
 pub mod model;
-pub mod model_state;
+pub mod model_data;
 pub mod system;
 pub mod system_call;
 

@@ -13,7 +13,7 @@ use super::connection::{
     connection_arguments, connection_output, decode_cursor, parse_connection_arguments,
     ConnectionArguments,
 };
-use super::model_state::{model_state_by_id_query, type_mapping_query};
+use super::model_data::{model_data_by_id_query, type_mapping_query};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
 use crate::query::{query_by_id, ID};
@@ -91,7 +91,7 @@ impl ObjectTrait for EntityObject {
                             let table_name = model_name.to_lowercase();
                             let type_mapping = type_mapping_query(&mut conn, &table_name).await?;
                             let state =
-                                model_state_by_id_query(&mut conn, &table_name, &id, &type_mapping)
+                                model_data_by_id_query(&mut conn, &table_name, &id, &type_mapping)
                                     .await?;
                             results.push(FieldValue::with_type(
                                 FieldValue::owned_any(state),
