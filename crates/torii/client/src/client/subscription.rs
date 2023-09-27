@@ -98,7 +98,6 @@ impl SubscribedEntities {
 
 #[allow(unused)]
 pub(crate) struct SubscriptionClientHandle {
-    // pub(super) handle: tokio::task::JoinHandle<()>,
     pub(super) event_handler: Sender<SubscriptionEvent>,
 }
 

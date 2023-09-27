@@ -204,8 +204,6 @@ impl protos::world::world_server::World for DojoWorld {
         &self,
         request: Request<SubscribeEntitiesRequest>,
     ) -> ServiceResult<Self::SubscribeEntitiesStream> {
-        println!("SubscribeEntities");
-
         let SubscribeEntitiesRequest { entities: raw_entities, world } = request.into_inner();
         let (sender, rx) = tokio::sync::mpsc::channel(128);
 
@@ -229,12 +227,12 @@ impl protos::world::world_server::World for DojoWorld {
                 .map_err(|e| Status::internal(format!("parsing error: {e}")))?;
 
             let (component_len,): (i64,) =
-                sqlx::query_as("SELECT COUNT(*) FROM component_members WHERE component_id = ?")
+                sqlx::query_as("SELECT COUNT(*) FROM model_members WHERE model_id = ?")
                     .bind(entity.component.to_lowercase())
                     .fetch_one(&self.pool)
                     .await
                     .map_err(|e| match e {
-                        sqlx::Error::RowNotFound => Status::not_found("Component not found"),
+                        sqlx::Error::RowNotFound => Status::not_found("Model not found"),
                         e => Status::internal(e.to_string()),
                     })?;
 

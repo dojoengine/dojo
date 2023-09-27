@@ -236,7 +236,6 @@ where
             // we still need to drain the stream, even if there are no subscribers. But dont have to
             // queue for the block number
             if !pin.subscriber_manager.subscribers.is_empty() {
-                println!("received block number: {block_num}");
                 pin.block_num_queue.push(block_num);
             }
         }

@@ -103,7 +103,7 @@ impl WorldClient {
                         keys: e.keys.into_iter().map(|felt| format!("{felt:#x}")).collect(),
                     })
                     .collect(),
-                world: format!("{:#}", self.world_address),
+                world: format!("{:#x}", self.world_address),
             })
             .await
             .map_err(Error::Grpc)

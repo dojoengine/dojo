@@ -1,7 +1,10 @@
 use std::str::FromStr;
 
+use futures::FutureExt;
 use starknet::core::types::FieldElement;
 use wasm_bindgen::prelude::*;
+
+mod utils;
 
 type JsFieldElement = JsValue;
 type JsEntityComponent = JsValue;
@@ -17,16 +20,14 @@ pub struct Client(torii_client::client::Client);
 
 #[wasm_bindgen]
 impl Client {
-    #[wasm_bindgen(js_name = startSync)]
-    pub async fn start_sync(&self) {
-        console_error_panic_hook::set_once();
-        let sync_client = self.0.start_sync().await.expect("failed to build sync client");
-        let rt = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .expect("failed to create tokio runtime");
-        rt.block_on(sync_client);
-    }
+    // #[wasm_bindgen(js_name = startSync)]
+    // pub async fn start_sync(&self) -> Result<(), JsValue> {
+    //     console_error_panic_hook::set_once();
+    //     let sync_client =
+    //         self.0.start_sync().await.map_err(|e| JsValue::from_str(&e.to_string()))?;
+    //     wasm_bindgen_futures::spawn_local(sync_client);
+    //     Ok(())
+    // }
 
     /// Returns the component values of the requested entity.
     #[wasm_bindgen(js_name = getComponentValue)]

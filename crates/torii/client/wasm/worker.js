@@ -28,8 +28,6 @@ async function setup() {
 			]
 		);
 
-		// client.startSync();
-
 		// setup the message handler for the worker
 		self.onmessage = function (e) {
 			const event = e.data.type;

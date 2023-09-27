@@ -39,7 +39,9 @@ mod player_actions {
                 world,
                 (
                     Moves { player, remaining: 10, last_direction: Direction::None(()) },
-                    Position { player, vec: Vec2 { x: 10, y: 10 } },
+                    Position {
+                        player, vec: Vec2 { x: position.vec.x + 10, y: position.vec.y + 10 }
+                    },
                 )
             );
         }
