@@ -10,7 +10,7 @@ use crate::contract::world::test::deploy_world;
 use crate::contract::world::WorldContractReader;
 
 #[tokio::test(flavor = "multi_thread")]
-async fn test_component() {
+async fn test_model() {
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
     let account = sequencer.account();
@@ -23,7 +23,7 @@ async fn test_component() {
 
     let block_id = BlockId::Tag(BlockTag::Latest);
     let world = WorldContractReader::new(world_address, provider);
-    let position = world.component("Position", block_id).await.unwrap();
+    let position = world.model("Position", block_id).await.unwrap();
     let schema = position.schema(block_id).await.unwrap();
 
     assert_eq!(
@@ -33,7 +33,7 @@ async fn test_component() {
             children: vec![
                 Member {
                     name: "player".to_string(),
-                    ty: Ty::Name("ContractAddress".to_string()),
+                    ty: Ty::Terminal("ContractAddress".to_string()),
                     key: true
                 },
                 Member {
@@ -43,12 +43,12 @@ async fn test_component() {
                         children: vec![
                             Member {
                                 name: "x".to_string(),
-                                ty: Ty::Name("u32".to_string()),
+                                ty: Ty::Terminal("u32".to_string()),
                                 key: false
                             },
                             Member {
                                 name: "y".to_string(),
-                                ty: Ty::Name("u32".to_string()),
+                                ty: Ty::Terminal("u32".to_string()),
                                 key: false
                             }
                         ]
@@ -62,12 +62,12 @@ async fn test_component() {
     assert_eq!(
         position.class_hash(),
         FieldElement::from_hex_be(
-            "0x069889772f44397619cd8965660e1c8e80ba5f0c917ba40df29b2ffa5b440745"
+            "0x01b5f19668b9299cea232978c59856b16da649e6aa4dfc3f2a42aa8435e06bc7"
         )
         .unwrap()
     );
 
-    let moves = world.component("Moves", block_id).await.unwrap();
+    let moves = world.model("Moves", block_id).await.unwrap();
     let schema = moves.schema(block_id).await.unwrap();
 
     assert_eq!(
@@ -77,12 +77,12 @@ async fn test_component() {
             children: vec![
                 Member {
                     name: "player".to_string(),
-                    ty: Ty::Name("ContractAddress".to_string()),
+                    ty: Ty::Terminal("ContractAddress".to_string()),
                     key: true
                 },
                 Member {
                     name: "remaining".to_string(),
-                    ty: Ty::Name("u8".to_string()),
+                    ty: Ty::Terminal("u8".to_string()),
                     key: false
                 },
                 Member {
@@ -90,11 +90,11 @@ async fn test_component() {
                     ty: Ty::Enum(Enum {
                         name: "Direction".to_string(),
                         values: vec![
-                            Ty::Name("None".to_string()),
-                            Ty::Name("Left".to_string()),
-                            Ty::Name("Right".to_string()),
-                            Ty::Name("Up".to_string()),
-                            Ty::Name("Down".to_string())
+                            Ty::Terminal("None".to_string()),
+                            Ty::Terminal("Left".to_string()),
+                            Ty::Terminal("Right".to_string()),
+                            Ty::Terminal("Up".to_string()),
+                            Ty::Terminal("Down".to_string())
                         ]
                     }),
                     key: false

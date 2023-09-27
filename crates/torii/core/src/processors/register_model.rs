@@ -28,7 +28,7 @@ impl<P: Provider + Sync + 'static> EventProcessor<P> for RegisterModelProcessor 
         event: &Event,
     ) -> Result<(), Error> {
         let name = parse_cairo_short_string(&event.data[0])?;
-        let model = world.component(&name, BlockId::Tag(BlockTag::Latest)).await?;
+        let model = world.model(&name, BlockId::Tag(BlockTag::Latest)).await?;
         let schema = model.schema(BlockId::Tag(BlockTag::Latest)).await?;
         let layout = model.layout(BlockId::Tag(BlockTag::Latest)).await?;
         info!("Registered model: {}", name);
