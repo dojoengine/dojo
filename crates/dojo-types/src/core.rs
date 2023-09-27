@@ -4,7 +4,6 @@ use std::str::FromStr;
 
 use starknet::core::types::FieldElement;
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum CairoType {
     U8,
     U16,
