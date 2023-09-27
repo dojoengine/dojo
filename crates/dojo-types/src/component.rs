@@ -10,7 +10,7 @@ pub struct Member {
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum Ty {
-    Name(String),
+    Terminal(String),
     Struct(Struct),
     Enum(Enum),
 }
@@ -18,7 +18,7 @@ pub enum Ty {
 impl Ty {
     pub fn name(&self) -> String {
         match self {
-            Ty::Name(s) => s.clone(),
+            Ty::Terminal(s) => s.clone(),
             Ty::Struct(s) => s.name.clone(),
             Ty::Enum(e) => e.name.clone(),
         }
@@ -33,7 +33,7 @@ impl Ty {
     fn flatten_ty(ty: Ty) -> Vec<Ty> {
         let mut items = vec![];
         match ty {
-            Ty::Name(_) => {
+            Ty::Terminal(_) => {
                 items.push(ty.clone());
             }
             Ty::Struct(mut s) => {
@@ -48,7 +48,7 @@ impl Ty {
                         _ => {}
                     }
 
-                    s.children[i].ty = Ty::Name(member.ty.name());
+                    s.children[i].ty = Ty::Terminal(member.ty.name());
                 }
 
                 items.push(Ty::Struct(s))
@@ -65,7 +65,7 @@ impl Ty {
                         _ => {}
                     }
 
-                    e.values[i] = Ty::Name(ty.name());
+                    e.values[i] = Ty::Terminal(ty.name());
                 }
 
                 items.push(Ty::Enum(e))
@@ -83,7 +83,7 @@ impl std::fmt::Display for Ty {
         let str = items
             .iter()
             .map(|ty| match ty {
-                Ty::Name(s) => s.to_string(),
+                Ty::Terminal(s) => s.to_string(),
                 Ty::Struct(s) => {
                     let mut struct_str = format!("struct {} {{\n", s.name);
                     for member in &s.children {

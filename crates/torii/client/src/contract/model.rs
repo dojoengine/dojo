@@ -14,11 +14,11 @@ use starknet_crypto::poseidon_hash_many;
 use crate::contract::world::{ContractReaderError, WorldContractReader};
 
 #[cfg(test)]
-#[path = "component_test.rs"]
-mod test;
+#[path = "model_test.rs"]
+mod model_test;
 
 #[derive(Debug, thiserror::Error)]
-pub enum ComponentError<P> {
+pub enum ModelError<P> {
     #[error(transparent)]
     ProviderError(ProviderError<P>),
     #[error("Invalid schema")]
@@ -35,20 +35,20 @@ pub enum ComponentError<P> {
     ContractReaderError(ContractReaderError<P>),
 }
 
-pub struct ComponentReader<'a, P: Provider + Sync> {
+pub struct ModelReader<'a, P: Provider + Sync> {
     world: &'a WorldContractReader<'a, P>,
     class_hash: FieldElement,
     name: FieldElement,
 }
 
-impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
+impl<'a, P: Provider + Sync> ModelReader<'a, P> {
     pub async fn new(
         world: &'a WorldContractReader<'a, P>,
         name: String,
         block_id: BlockId,
-    ) -> Result<ComponentReader<'a, P>, ComponentError<P::Error>> {
-        let name = cairo_short_string_to_felt(&name)
-            .map_err(ComponentError::CairoShortStringToFeltError)?;
+    ) -> Result<ModelReader<'a, P>, ModelError<P::Error>> {
+        let name =
+            cairo_short_string_to_felt(&name).map_err(ModelError::CairoShortStringToFeltError)?;
         let res = world
             .provider
             .call(
@@ -60,7 +60,7 @@ impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
                 block_id,
             )
             .await
-            .map_err(ComponentError::ProviderError)?;
+            .map_err(ModelError::ProviderError)?;
 
         Ok(Self { world, class_hash: res[0], name })
     }
@@ -69,26 +69,41 @@ impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
         self.class_hash
     }
 
-    pub async fn schema(&self, block_id: BlockId) -> Result<Ty, ComponentError<P::Error>> {
+    pub async fn schema(&self, block_id: BlockId) -> Result<Ty, ModelError<P::Error>> {
         let entrypoint = get_selector_from_name("schema").unwrap();
 
         let res = self
             .world
             .executor_call(self.class_hash, vec![entrypoint, FieldElement::ZERO], block_id)
             .await
-            .map_err(ComponentError::ContractReaderError)?;
+            .map_err(ModelError::ContractReaderError)?;
 
         parse_ty::<P>(&res[1..])
     }
 
-    pub async fn size(&self, block_id: BlockId) -> Result<FieldElement, ComponentError<P::Error>> {
+    pub async fn packed_size(
+        &self,
+        block_id: BlockId,
+    ) -> Result<FieldElement, ModelError<P::Error>> {
+        let entrypoint = get_selector_from_name("packed_size").unwrap();
+
+        let res = self
+            .world
+            .executor_call(self.class_hash, vec![entrypoint, FieldElement::ZERO], block_id)
+            .await
+            .map_err(ModelError::ContractReaderError)?;
+
+        Ok(res[1])
+    }
+
+    pub async fn size(&self, block_id: BlockId) -> Result<FieldElement, ModelError<P::Error>> {
         let entrypoint = get_selector_from_name("size").unwrap();
 
         let res = self
             .world
             .executor_call(self.class_hash, vec![entrypoint, FieldElement::ZERO], block_id)
             .await
-            .map_err(ComponentError::ContractReaderError)?;
+            .map_err(ModelError::ContractReaderError)?;
 
         Ok(res[1])
     }
@@ -96,42 +111,42 @@ impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
     pub async fn layout(
         &self,
         block_id: BlockId,
-    ) -> Result<Vec<FieldElement>, ComponentError<P::Error>> {
+    ) -> Result<Vec<FieldElement>, ModelError<P::Error>> {
         let entrypoint = get_selector_from_name("layout").unwrap();
 
         let res = self
             .world
             .executor_call(self.class_hash, vec![entrypoint, FieldElement::ZERO], block_id)
             .await
-            .map_err(ComponentError::ContractReaderError)?;
+            .map_err(ModelError::ContractReaderError)?;
 
-        Ok(res[3..].into())
+        Ok(res[2..].into())
     }
 
     pub async fn entity(
         &self,
         keys: Vec<FieldElement>,
         block_id: BlockId,
-    ) -> Result<Vec<FieldElement>, ComponentError<P::Error>> {
-        let size: u8 = self.size(block_id).await?.try_into().unwrap();
+    ) -> Result<Vec<FieldElement>, ModelError<P::Error>> {
+        let packed_size: u8 = self.packed_size(block_id).await?.try_into().unwrap();
         let layout = self.layout(block_id).await?;
 
         let key = poseidon_hash_many(&keys);
         let key = poseidon_hash_many(&[short_string!("dojo_storage"), self.name, key]);
 
         let mut packed = vec![];
-        for slot in 0..size {
+        for slot in 0..packed_size {
             let value = self
                 .world
                 .provider
                 .get_storage_at(self.world.address, key + slot.into(), block_id)
                 .await
-                .map_err(ComponentError::ProviderError)?;
+                .map_err(ModelError::ProviderError)?;
 
             packed.push(value);
         }
 
-        let unpacked = unpack::<P>(packed, layout)?;
+        let unpacked = unpack::<P>(packed, layout.clone())?;
 
         Ok(unpacked)
     }
@@ -151,22 +166,22 @@ impl<'a, P: Provider + Sync> ComponentReader<'a, P> {
 pub fn unpack<P: Provider>(
     mut packed: Vec<FieldElement>,
     layout: Vec<FieldElement>,
-) -> Result<Vec<FieldElement>, ComponentError<P::Error>> {
+) -> Result<Vec<FieldElement>, ModelError<P::Error>> {
     packed.reverse();
     let mut unpacked = vec![];
 
-    let mut unpacking: U256 = packed.pop().ok_or(ComponentError::UnpackingEntity)?.as_ref().into();
+    let mut unpacking: U256 = packed.pop().ok_or(ModelError::UnpackingEntity)?.as_ref().into();
     let mut offset = 0;
 
     // Iterate over the layout.
     for size in layout {
-        let size: u8 = size.try_into().map_err(|_| ComponentError::ConvertingFelt)?;
+        let size: u8 = size.try_into().map_err(|_| ModelError::ConvertingFelt)?;
         let size: usize = size.into();
         let remaining_bits = 251 - offset;
 
         // If there are less remaining bits than the size, move to the next felt for unpacking.
         if remaining_bits < size {
-            unpacking = packed.pop().ok_or(ComponentError::UnpackingEntity)?.as_ref().into();
+            unpacking = packed.pop().ok_or(ModelError::UnpackingEntity)?.as_ref().into();
             offset = 0;
         }
 
@@ -177,7 +192,7 @@ pub fn unpack<P: Provider>(
 
         let result = mask & (unpacking >> offset);
         let result_fe = FieldElement::from_hex_be(&result.to_string())
-            .map_err(|_| ComponentError::ConvertingFelt)?;
+            .map_err(|_| ModelError::ConvertingFelt)?;
         unpacked.push(result_fe);
 
         // Update unpacking to be the shifted value after extracting the result.
@@ -187,25 +202,24 @@ pub fn unpack<P: Provider>(
     Ok(unpacked)
 }
 
-fn parse_ty<P: Provider>(data: &[FieldElement]) -> Result<Ty, ComponentError<P::Error>> {
+fn parse_ty<P: Provider>(data: &[FieldElement]) -> Result<Ty, ModelError<P::Error>> {
     let member_type: u8 = data[0].try_into().unwrap();
     match member_type {
         0 => parse_simple::<P>(&data[1..]),
         1 => parse_struct::<P>(&data[1..]),
         2 => parse_enum::<P>(&data[1..]),
-        _ => Err(ComponentError::InvalidSchema),
+        _ => Err(ModelError::InvalidSchema),
     }
 }
 
-fn parse_simple<P: Provider>(data: &[FieldElement]) -> Result<Ty, ComponentError<P::Error>> {
-    let ty =
-        parse_cairo_short_string(&data[0]).map_err(ComponentError::ParseCairoShortStringError)?;
-    Ok(Ty::Name(ty))
+fn parse_simple<P: Provider>(data: &[FieldElement]) -> Result<Ty, ModelError<P::Error>> {
+    let ty = parse_cairo_short_string(&data[0]).map_err(ModelError::ParseCairoShortStringError)?;
+    Ok(Ty::Terminal(ty))
 }
 
-fn parse_struct<P: Provider>(data: &[FieldElement]) -> Result<Ty, ComponentError<P::Error>> {
+fn parse_struct<P: Provider>(data: &[FieldElement]) -> Result<Ty, ModelError<P::Error>> {
     let name =
-        parse_cairo_short_string(&data[0]).map_err(ComponentError::ParseCairoShortStringError)?;
+        parse_cairo_short_string(&data[0]).map_err(ModelError::ParseCairoShortStringError)?;
 
     let attrs_len: u32 = data[1].try_into().unwrap();
     let attrs_slice_start = 2;
@@ -230,9 +244,9 @@ fn parse_struct<P: Provider>(data: &[FieldElement]) -> Result<Ty, ComponentError
     Ok(Ty::Struct(Struct { name, children }))
 }
 
-fn parse_member<P: Provider>(data: &[FieldElement]) -> Result<Member, ComponentError<P::Error>> {
+fn parse_member<P: Provider>(data: &[FieldElement]) -> Result<Member, ModelError<P::Error>> {
     let name =
-        parse_cairo_short_string(&data[0]).map_err(ComponentError::ParseCairoShortStringError)?;
+        parse_cairo_short_string(&data[0]).map_err(ModelError::ParseCairoShortStringError)?;
 
     let attributes_len: u32 = data[1].try_into().unwrap();
     let slice_start = 2;
@@ -246,9 +260,9 @@ fn parse_member<P: Provider>(data: &[FieldElement]) -> Result<Member, ComponentE
     Ok(Member { name, ty, key })
 }
 
-fn parse_enum<P: Provider>(data: &[FieldElement]) -> Result<Ty, ComponentError<P::Error>> {
+fn parse_enum<P: Provider>(data: &[FieldElement]) -> Result<Ty, ModelError<P::Error>> {
     let name =
-        parse_cairo_short_string(&data[0]).map_err(ComponentError::ParseCairoShortStringError)?;
+        parse_cairo_short_string(&data[0]).map_err(ModelError::ParseCairoShortStringError)?;
 
     let attrs_len: u32 = data[1].try_into().unwrap();
     let attrs_slice_start = 2;

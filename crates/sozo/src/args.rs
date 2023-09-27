@@ -10,12 +10,12 @@ use tracing_log::AsTrace;
 use crate::commands::auth::AuthArgs;
 use crate::commands::build::BuildArgs;
 use crate::commands::completions::CompletionsArgs;
-use crate::commands::component::ComponentArgs;
 use crate::commands::dev::DevArgs;
 use crate::commands::events::EventsArgs;
 use crate::commands::execute::ExecuteArgs;
 use crate::commands::init::InitArgs;
 use crate::commands::migrate::MigrateArgs;
+use crate::commands::model::ModelArgs;
 use crate::commands::register::RegisterArgs;
 use crate::commands::test::TestArgs;
 
@@ -64,7 +64,7 @@ pub enum Commands {
     #[command(about = "Execute a world's system")]
     Execute(ExecuteArgs),
     #[command(about = "Interact with a worlds components")]
-    Component(ComponentArgs),
+    Model(ModelArgs),
     #[command(about = "Register new systems and components")]
     Register(RegisterArgs),
     #[command(about = "Queries world events")]

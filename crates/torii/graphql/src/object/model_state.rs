@@ -29,8 +29,9 @@ const BOOLEAN_TRUE: i64 = 1;
 
 #[derive(FromRow, Deserialize, PartialEq, Eq)]
 pub struct ModelMember {
+    pub id: String,
     pub model_id: String,
-    pub parent_id: Option<String>,
+    pub model_idx: i64,
     pub name: String,
     #[serde(rename = "type")]
     pub ty: String,
@@ -333,8 +334,9 @@ pub async fn type_mapping_query(
     let model_members: Vec<ModelMember> = sqlx::query_as(
         r#"
         SELECT
+            id,
             model_id,
-            parent_id,
+            model_idx,
             name,
             type AS ty,
             key,
@@ -348,13 +350,15 @@ pub async fn type_mapping_query(
 
     let mut type_mapping = TypeMapping::new();
     for member in &model_members {
-        if member.parent_id.is_some() {
+
+        // root member only
+        if member.model_idx != 0 {
             continue;
         }
 
         let type_def = match ScalarType::from_str(&member.ty) {
             Ok(ScalarType::Custom(_)) => {
-                parse_type(member.name.as_str(), member.ty.as_str(), &model_members)
+                parse_type(&member.model_id, &member.ty, &model_members)
             }
             _ => TypeDefinition::Simple(TypeRef::named(member.ty.clone())),
         };
@@ -368,17 +372,19 @@ pub async fn type_mapping_query(
 fn parse_type(target_id: &str, target_type: &str, model_members: &[ModelMember]) -> TypeDefinition {
     let mut nested_mapping = TypeMapping::new();
     for member in model_members {
-        if let Some(id) = &member.parent_id {
-            if target_id == id {
-                let type_def = match ScalarType::from_str(&member.ty) {
-                    Ok(ScalarType::Custom(_)) => {
-                        parse_type(&member.name, &member.ty, model_members)
-                    }
-                    _ => TypeDefinition::Simple(TypeRef::named(member.ty.clone())),
-                };
+        if member.model_idx == 0 {
+            continue;
+        }
 
-                nested_mapping.insert(Name::new(&member.name), type_def);
-            }
+        if target_id == member.model_id && member.id.ends_with(target_type) {
+            let type_def = match ScalarType::from_str(&member.ty) {
+                Ok(ScalarType::Custom(_)) => {
+                    parse_type(&member.name, &member.ty, model_members)
+                }
+                _ => TypeDefinition::Simple(TypeRef::named(member.ty.clone())),
+            };
+
+            nested_mapping.insert(Name::new(&member.name), type_def);
         }
     }
 

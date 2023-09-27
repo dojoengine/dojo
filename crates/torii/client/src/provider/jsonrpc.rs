@@ -5,13 +5,13 @@ use starknet::providers::JsonRpcClient;
 use starknet_crypto::FieldElement;
 
 use super::Provider;
-use crate::contract::component::ComponentError;
+use crate::contract::model::ModelError;
 use crate::contract::world::WorldContractReader;
 
 #[derive(Debug, thiserror::Error)]
 pub enum JsonRpcProviderError<P> {
     #[error(transparent)]
-    ComponetReader(ComponentError<P>),
+    ComponetReader(ModelError<P>),
 }
 
 /// An implementation of [Provider] which uses a Starknet [JsonRpcClient] to query the World.
@@ -48,7 +48,7 @@ where
     async fn component(&self, name: &str) -> Result<FieldElement, Self::Error> {
         let world = self.world();
         let class_hash = world
-            .component(name, self.block_id)
+            .model(name, self.block_id)
             .await
             .map_err(JsonRpcProviderError::ComponetReader)?
             .class_hash();
@@ -62,7 +62,7 @@ where
     ) -> Result<Vec<FieldElement>, Self::Error> {
         let world = self.world();
         let component = world
-            .component(component, self.block_id)
+            .model(component, self.block_id)
             .await
             .map_err(JsonRpcProviderError::ComponetReader)?;
         component.entity(keys, self.block_id).await.map_err(JsonRpcProviderError::ComponetReader)

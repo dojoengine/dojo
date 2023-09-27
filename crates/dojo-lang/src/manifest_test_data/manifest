@@ -804,7 +804,7 @@ test_manifest_file
           "key": false
         }
       ],
-      "class_hash": "0x3682ef3ef44d8db8c8bfe72533e2e3b17e7b80efd6550b365deed7b4b3f8597",
+      "class_hash": "0x3dedf3d747db10aee693c0d034fcde1064ec66c84d285e60630f860dc9df566",
       "abi": [
         {
           "type": "function",
@@ -819,7 +819,18 @@ test_manifest_file
         },
         {
           "type": "function",
-          "name": "size",
+          "name": "unpacked_size",
+          "inputs": [],
+          "outputs": [
+            {
+              "type": "core::integer::u32"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "type": "function",
+          "name": "packed_size",
           "inputs": [],
           "outputs": [
             {
@@ -956,7 +967,7 @@ test_manifest_file
           "key": false
         }
       ],
-      "class_hash": "0x69889772f44397619cd8965660e1c8e80ba5f0c917ba40df29b2ffa5b440745",
+      "class_hash": "0x1b5f19668b9299cea232978c59856b16da649e6aa4dfc3f2a42aa8435e06bc7",
       "abi": [
         {
           "type": "function",
@@ -971,7 +982,18 @@ test_manifest_file
         },
         {
           "type": "function",
-          "name": "size",
+          "name": "unpacked_size",
+          "inputs": [],
+          "outputs": [
+            {
+              "type": "core::integer::u32"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "type": "function",
+          "name": "packed_size",
           "inputs": [],
           "outputs": [
             {
