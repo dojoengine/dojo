@@ -64,9 +64,9 @@ impl DojoWorld {
         .fetch_one(&self.pool)
         .await?;
 
-        let components = sqlx::query_as(
-            "SELECT c.name, c.class_hash, COUNT(cm.id) FROM components c LEFT JOIN \
-             component_members cm ON c.id = cm.component_id GROUP BY c.id",
+        let models = sqlx::query_as(
+            "SELECT c.name, c.class_hash, COUNT(cm.id) FROM models c LEFT JOIN model_members cm \
+             ON c.id = cm.model_id GROUP BY c.id",
         )
         .fetch_all(&self.pool)
         .await?
@@ -83,7 +83,7 @@ impl DojoWorld {
 
         Ok(protos::types::WorldMetadata {
             systems,
-            components,
+            components: models,
             world_address,
             world_class_hash,
             executor_address,
@@ -92,13 +92,13 @@ impl DojoWorld {
     }
 
     #[allow(unused)]
-    pub async fn component_metadata(
+    pub async fn model_metadata(
         &self,
         component: String,
     ) -> Result<protos::types::ComponentMetadata, Error> {
         sqlx::query_as(
-            "SELECT c.name, c.class_hash, COUNT(cm.id) FROM components c LEFT JOIN \
-             component_members cm ON c.id = cm.component_id WHERE c.id = ? GROUP BY c.id",
+            "SELECT c.name, c.class_hash, COUNT(cm.id) FROM models c LEFT JOIN model_members cm \
+             ON c.id = cm.model_id WHERE c.id = ? GROUP BY c.id",
         )
         .bind(component.to_lowercase())
         .fetch_one(&self.pool)

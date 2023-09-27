@@ -1,7 +1,5 @@
 use std::str::FromStr;
 
-use futures::FutureExt;
-use parking_lot::{Mutex, RwLock};
 use starknet::core::types::FieldElement;
 use wasm_bindgen::prelude::*;
 
@@ -19,16 +17,16 @@ pub struct Client(torii_client::client::Client);
 
 #[wasm_bindgen]
 impl Client {
-    // #[wasm_bindgen(js_name = startSync)]
-    // pub async fn start_sync(&self) {
-    //     console_error_panic_hook::set_once();
-    //     let sync_client = self.0.start_sync().await.expect("failed to build sync client");
-    //     futures::select! {
-    //         _ = sync_client.fuse() => {
-    //             log("sync client finished");
-    //         }
-    //     }
-    // }
+    #[wasm_bindgen(js_name = startSync)]
+    pub async fn start_sync(&self) {
+        console_error_panic_hook::set_once();
+        let sync_client = self.0.start_sync().await.expect("failed to build sync client");
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("failed to create tokio runtime");
+        rt.block_on(sync_client);
+    }
 
     /// Returns the component values of the requested entity.
     #[wasm_bindgen(js_name = getComponentValue)]
@@ -77,7 +75,8 @@ impl Client {
 
 #[wasm_bindgen]
 pub async fn spawn_client(
-    url: &str,
+    torii_url: &str,
+    rpc_url: &str,
     world_address: &str,
     initial_entities_to_sync: Vec<JsEntityComponent>,
 ) -> Result<Client, JsValue> {
@@ -94,7 +93,7 @@ pub async fn spawn_client(
 
     let client = torii_client::client::ClientBuilder::new()
         .set_entities_to_sync(entities)
-        .build(url.into(), world_address)
+        .build(torii_url.into(), rpc_url.into(), world_address)
         .await
         .map_err(|err| JsValue::from_str(format!("failed to build client: {err}").as_str()))?;
 

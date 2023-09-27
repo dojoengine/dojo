@@ -30,9 +30,9 @@ pub struct Client {
     /// Entity storage
     storage: Arc<ComponentStorage>,
     /// Entities the client are subscribed to.
-    synced_entities: Arc<SubscribedEntities>,
+    entity_subscription: Arc<SubscribedEntities>,
     /// The subscription client handle
-    subscription_client_handle: SubscriptionClientHandle,
+    subscription_client_handle: Mutex<Option<SubscriptionClientHandle>>,
 }
 
 impl Client {
@@ -48,19 +48,41 @@ impl Client {
 
     /// Returns the list of entities that the client is subscribed to.
     pub fn synced_entities(&self) -> Vec<EntityComponent> {
-        self.synced_entities.entities.read().clone().into_iter().collect()
+        self.entity_subscription.entities.read().clone().into_iter().collect()
     }
 
-    // pub async fn start_sync(&self) -> Result<SubscriptionClient, Error> {
-    //     // initiate the stream any way, even if we don't have any initial entities to sync
-    //     let sub_res_stream = self.inner.lock().subscribe_entities(self.synced_entities()).await?;
-    //     // setup the subscription client
-    //     let (sub_req_tx, sub_req_rcv) = mpsc::channel(128);
-    //     let handle = SubscriptionClientHandle { event_handler: sub_req_tx };
-    //     *self.subscription_client_handle.lock() = Some(handle);
+    pub async fn start_sync(&self) -> Result<SubscriptionClient, Error> {
+        // initiate the stream any way, even if we don't have any initial entities to sync
+        let sub_res_stream = self.inner.lock().subscribe_entities(self.synced_entities()).await?;
+        // setup the subscription client
+        let (sub_req_tx, sub_req_rcv) = mpsc::channel(128);
+        let subscription_client_handle = {
+            //     let handle = tokio::task::spawn(
+            //         SubscriptionClient {
+            //         sub_res_stream,
+            //         err_callback: None,
+            //         req_rcv: sub_req_rcv,
+            //         storage: self.storage.clone(),
+            //         world_metadata: self.metadata.clone(),
+            //         subscribed_entities: self.entity_subscription.clone(),
+            //     }
+            // );
+            SubscriptionClientHandle {
+                event_handler: sub_req_tx,
+                // handle
+            }
+        };
+        *self.subscription_client_handle.lock() = Some(subscription_client_handle);
 
-    //     futures::sele
-    // }
+        Ok(SubscriptionClient {
+            sub_res_stream,
+            err_callback: None,
+            req_rcv: sub_req_rcv,
+            storage: self.storage.clone(),
+            world_metadata: self.metadata.clone(),
+            subscribed_entities: self.entity_subscription.clone(),
+        })
+    }
 }
 
 // TODO: able to handle entities that has not been set yet, currently `build` will panic if the
@@ -107,31 +129,31 @@ impl ClientBuilder {
             }
         }
 
-        // initiate the stream any way, even if we don't have any initial entities to sync
-        let sub_res_stream = grpc_client
-            .subscribe_entities(self.initial_entities_to_sync.unwrap_or_default())
-            .await?;
-        // setup the subscription client
-        let subscription_client_handle = {
-            let (sub_req_tx, sub_req_rcv) = mpsc::channel(128);
+        // // initiate the stream any way, even if we don't have any initial entities to sync
+        // let sub_res_stream = grpc_client
+        //     .subscribe_entities(self.initial_entities_to_sync.unwrap_or_default())
+        //     .await?;
+        // // setup the subscription client
+        // let subscription_client_handle = {
+        //     let (sub_req_tx, sub_req_rcv) = mpsc::channel(128);
 
-            let handle = tokio::task::spawn(SubscriptionClient {
-                sub_res_stream,
-                err_callback: None,
-                req_rcv: sub_req_rcv,
-                storage: client_storage.clone(),
-                world_metadata: shared_metadata.clone(),
-                subscribed_entities: subbed_entities.clone(),
-            });
-            SubscriptionClientHandle { event_handler: sub_req_tx, handle }
-        };
+        //     let handle = tokio::task::spawn(SubscriptionClient {
+        //         sub_res_stream,
+        //         err_callback: None,
+        //         req_rcv: sub_req_rcv,
+        //         storage: client_storage.clone(),
+        //         world_metadata: shared_metadata.clone(),
+        //         subscribed_entities: subbed_entities.clone(),
+        //     });
+        //     SubscriptionClientHandle { event_handler: sub_req_tx, handle }
+        // };
 
         Ok(Client {
             storage: client_storage,
             metadata: shared_metadata,
-            subscription_client_handle,
             inner: Mutex::new(grpc_client),
-            synced_entities: subbed_entities,
+            entity_subscription: subbed_entities,
+            subscription_client_handle: Mutex::new(None),
         })
     }
 
