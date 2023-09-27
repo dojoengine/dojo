@@ -38,8 +38,8 @@ fn build_project_config(unit: &CompilationUnit) -> Result<ProjectConfig> {
     let crate_roots = unit
         .components
         .iter()
-        .filter(|component| !component.package.id.is_core())
-        .map(|component| (component.cairo_package_name(), component.target.source_root().into()))
+        .filter(|model| !model.package.id.is_core())
+        .map(|model| (model.cairo_package_name(), model.target.source_root().into()))
         .collect();
 
     let corelib = Some(Directory::Real(unit.core_package_component().target.source_root().into()));

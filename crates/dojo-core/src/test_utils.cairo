@@ -41,7 +41,7 @@ fn deploy_with_world_address(class_hash: felt252, world: IWorldDispatcher) -> Co
     deploy_contract(class_hash, array![world.contract_address.into()].span())
 }
 
-fn spawn_test_world(components: Array<felt252>) -> IWorldDispatcher {
+fn spawn_test_world(models: Array<felt252>) -> IWorldDispatcher {
     // deploy executor
     let constructor_calldata = array::ArrayTrait::new();
     let (executor_address, _) = deploy_syscall(
@@ -57,13 +57,13 @@ fn spawn_test_world(components: Array<felt252>) -> IWorldDispatcher {
         .unwrap();
     let world = IWorldDispatcher { contract_address: world_address };
 
-    // register components
+    // register models
     let mut index = 0;
     loop {
-        if index == components.len() {
+        if index == models.len() {
             break ();
         }
-        world.register_component((*components[index]).try_into().unwrap());
+        world.register_model((*models[index]).try_into().unwrap());
         index += 1;
     };
 

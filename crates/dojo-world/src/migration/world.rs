@@ -15,7 +15,7 @@ pub struct WorldDiff {
     pub world: ContractDiff,
     pub executor: ContractDiff,
     pub contracts: Vec<ContractDiff>,
-    pub components: Vec<ClassDiff>,
+    pub models: Vec<ClassDiff>,
     pub systems: Vec<ClassDiff>,
 }
 
@@ -37,14 +37,14 @@ impl WorldDiff {
             })
             .collect::<Vec<_>>();
 
-        let components = local
-            .components
+        let models = local
+            .models
             .iter()
-            .map(|component| ClassDiff {
-                name: component.name.to_string(),
-                local: component.class_hash,
+            .map(|model| ClassDiff {
+                name: model.name.to_string(),
+                local: model.class_hash,
                 remote: remote.as_ref().and_then(|m| {
-                    m.components.iter().find(|e| e.name == component.name).map(|s| s.class_hash)
+                    m.models.iter().find(|e| e.name == model.name).map(|s| s.class_hash)
                 }),
             })
             .collect::<Vec<_>>();
@@ -71,7 +71,7 @@ impl WorldDiff {
             remote: remote.map(|m| m.world.class_hash),
         };
 
-        WorldDiff { world, executor, systems, contracts, components }
+        WorldDiff { world, executor, systems, contracts, models }
     }
 
     pub fn count_diffs(&self) -> usize {
@@ -86,7 +86,7 @@ impl WorldDiff {
         }
 
         count += self.systems.iter().filter(|s| !s.is_same()).count();
-        count += self.components.iter().filter(|s| !s.is_same()).count();
+        count += self.models.iter().filter(|s| !s.is_same()).count();
         count += self.contracts.iter().filter(|s| !s.is_same()).count();
         count
     }
@@ -97,8 +97,8 @@ impl Display for WorldDiff {
         writeln!(f, "{}", self.world)?;
         writeln!(f, "{}", self.executor)?;
 
-        for component in &self.components {
-            writeln!(f, "{component}")?;
+        for model in &self.models {
+            writeln!(f, "{model}")?;
         }
 
         for system in &self.systems {

@@ -14,7 +14,7 @@ pub trait EntityStorage {
     /// This function mimic `world::set_entity` of `dojo-core`
     async fn set(
         &mut self,
-        component: FieldElement,
+        model: FieldElement,
         keys: Vec<FieldElement>,
         values: Vec<FieldElement>,
     ) -> Result<(), Self::Error>;
@@ -22,16 +22,13 @@ pub trait EntityStorage {
     /// This function mimic `world::entity` of `dojo-core`
     async fn get(
         &self,
-        component: FieldElement,
+        model: FieldElement,
         keys: Vec<FieldElement>,
         length: usize,
     ) -> Result<Vec<FieldElement>, Self::Error>;
 }
 
-pub fn component_storage_base_address(
-    component: FieldElement,
-    keys: &[FieldElement],
-) -> FieldElement {
+pub fn model_storage_base_address(model: FieldElement, keys: &[FieldElement]) -> FieldElement {
     let id = poseidon_hash_many(keys);
-    poseidon_hash_many(&[short_string!("dojo_storage"), component, id])
+    poseidon_hash_many(&[short_string!("dojo_storage"), model, id])
 }

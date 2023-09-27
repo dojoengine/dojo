@@ -7,7 +7,7 @@ use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 /// Derives PrintTrait for a struct.
 /// Parameters:
 /// * db: The semantic database.
-/// * struct_ast: The AST of the component struct.
+/// * struct_ast: The AST of the model struct.
 /// Returns:
 /// * A RewriteNode containing the generated code.
 pub fn derive_print(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> RewriteNode {

@@ -1,4 +1,4 @@
-mod components;
+mod models;
 
 mod systems {
     // example with #[system] decorator

@@ -10,13 +10,13 @@ pub mod jsonrpc;
 pub trait Provider {
     type Error: Error + Send + Sync;
 
-    /// Get the class hash of a component.
-    async fn component(&self, name: &str) -> Result<FieldElement, Self::Error>;
+    /// Get the class hash of a model.
+    async fn model(&self, name: &str) -> Result<FieldElement, Self::Error>;
 
-    /// Get the component values of an entity.
+    /// Get the model values of an entity.
     async fn entity(
         &self,
-        component: &str,
+        model: &str,
         keys: Vec<FieldElement>,
     ) -> Result<Vec<FieldElement>, Self::Error>;
 }

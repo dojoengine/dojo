@@ -42,14 +42,14 @@ fn del(class_hash: starknet::ClassHash, table: felt252, key: felt252) {
 // returns a tuple of spans, first contains the entity IDs,
 // second the deserialized entities themselves
 fn all(
-    class_hash: starknet::ClassHash, component: felt252, partition: felt252, length: usize, layout: Span<u8>
+    class_hash: starknet::ClassHash, model: felt252, partition: felt252, length: usize, layout: Span<u8>
 ) -> (Span<felt252>, Span<Span<felt252>>) {
     let table = {
         if partition == 0.into() {
-            component
+            model
         } else {
             let mut serialized = ArrayTrait::new();
-            component.serialize(ref serialized);
+            model.serialize(ref serialized);
             partition.serialize(ref serialized);
             let hash = poseidon_hash_span(serialized.span());
             hash.into()

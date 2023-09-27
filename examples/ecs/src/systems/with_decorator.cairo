@@ -1,5 +1,5 @@
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
-use dojo_examples::components::{Position, Moves, Direction};
+use dojo_examples::models::{Position, Moves, Direction};
 use starknet::{ContractAddress, ClassHash};
 
 // trait: specify functions to implement
@@ -12,7 +12,7 @@ trait IPlayerActions<TContractState> {
 #[system]
 mod player_actions {
     use starknet::{ContractAddress, get_caller_address};
-    use dojo_examples::components::{Position, Moves, Direction, Vec2};
+    use dojo_examples::models::{Position, Moves, Direction, Vec2};
     use dojo_examples::utils::next_position;
     use super::IPlayerActions;
 
@@ -66,8 +66,8 @@ mod tests {
 
     use dojo::test_utils::{spawn_test_world, deploy_contract};
 
-    use dojo_examples::components::{position, moves};
-    use dojo_examples::components::{Position, Moves, Direction, Vec2};
+    use dojo_examples::models::{position, moves};
+    use dojo_examples::models::{Position, Moves, Direction, Vec2};
     use super::{player_actions, IPlayerActionsDispatcher, IPlayerActionsDispatcherTrait};
 
     #[test]
@@ -75,10 +75,10 @@ mod tests {
     fn test_move() {
         let caller = starknet::contract_address_const::<0x0>();
 
-        // components
-        let mut components = array![position::TEST_CLASS_HASH, moves::TEST_CLASS_HASH,];
-        // deploy world with components
-        let world = spawn_test_world(components);
+        // models
+        let mut models = array![position::TEST_CLASS_HASH, moves::TEST_CLASS_HASH,];
+        // deploy world with models
+        let world = spawn_test_world(models);
 
         // deploy systems contract
         let contract_address = deploy_contract(player_actions::TEST_CLASS_HASH, array![].span());
