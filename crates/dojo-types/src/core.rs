@@ -1,7 +1,10 @@
+use core::fmt;
+use std::slice::Iter;
 use std::str::FromStr;
 
 use starknet::core::types::FieldElement;
 
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum CairoType {
     U8,
     U16,
@@ -47,7 +50,42 @@ impl FromStr for CairoType {
     }
 }
 
+impl fmt::Display for CairoType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            CairoType::U8 => write!(f, "u8"),
+            CairoType::U16 => write!(f, "u16"),
+            CairoType::U32 => write!(f, "u32"),
+            CairoType::U64 => write!(f, "u64"),
+            CairoType::U128 => write!(f, "u128"),
+            CairoType::U256 => write!(f, "u256"),
+            CairoType::USize => write!(f, "usize"),
+            CairoType::Bool => write!(f, "bool"),
+            CairoType::ContractAddress => write!(f, "ContractAddress"),
+            CairoType::ClassHash => write!(f, "ClassHash"),
+            CairoType::Felt252 => write!(f, "felt252"),
+        }
+    }
+}
+
 impl CairoType {
+    pub fn iter() -> Iter<'static, CairoType> {
+        static VARIANTS: [CairoType; 11] = [
+            CairoType::U8,
+            CairoType::U16,
+            CairoType::U32,
+            CairoType::U64,
+            CairoType::U128,
+            CairoType::U256,
+            CairoType::USize,
+            CairoType::Bool,
+            CairoType::ContractAddress,
+            CairoType::ClassHash,
+            CairoType::Felt252,
+        ];
+        VARIANTS.iter()
+    }
+
     pub fn to_sql_type(&self) -> String {
         match self {
             CairoType::U8
