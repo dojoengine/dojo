@@ -63,9 +63,9 @@ dependencies = [
 
 [[package]]
 name = "aho-corasick"
-version = "1.1.0"
+version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f2135563fb5c609d2b2b87c1e8ce7bc41b0b45430fa9661f457981503dd5bf0"
+checksum = "ea5d730647d4fadd988536d06fecce94b7b4f2a7efdae548f1cf4b63205518ab"
 dependencies = [
  "memchr",
 ]
@@ -938,7 +938,7 @@ dependencies = [
  "log",
  "lsp-types",
  "salsa",
- "scarb-metadata 1.7.1",
+ "scarb-metadata 1.8.0",
  "serde",
  "serde_json",
  "smol_str",
@@ -1308,7 +1308,7 @@ dependencies = [
  "itertools 0.11.0",
  "num-bigint",
  "num-traits 0.2.16",
- "rayon 1.7.0",
+ "rayon 1.8.0",
  "salsa",
  "thiserror",
 ]
@@ -1448,9 +1448,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.4.4"
+version = "4.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1d7b8d5ec32af0fadc644bf1fd509a688c2103b185644bb1e29d164e0703136"
+checksum = "824956d0dca8334758a5b7f7e50518d66ea319330cbceedcf76905c2f6ab30e3"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -1468,9 +1468,9 @@ dependencies = [
 
 [[package]]
 name = "clap_builder"
-version = "4.4.4"
+version = "4.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5179bb514e4d7c2051749d8fcefa2ed6d06a9f4e6d69faf3805f5d80b8cf8d56"
+checksum = "122ec64120a49b4563ccaedcbea7818d069ed8e9aa6d829b82d8a4128936b2ab"
 dependencies = [
  "anstream",
  "anstyle",
@@ -3943,7 +3943,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2735847566356cd2179a2a38264839308f7079fa96e6bd5a42d740460e003c56"
 dependencies = [
  "crossbeam",
- "rayon 1.7.0",
+ "rayon 1.8.0",
 ]
 
 [[package]]
@@ -5231,16 +5231,6 @@ dependencies = [
 
 [[package]]
 name = "rayon"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed02d09394c94ffbdfdc755ad62a132e94c3224a8354e78a1200ced34df12edf"
-dependencies = [
- "either",
- "rayon-core",
-]
-
-[[package]]
-name = "rayon"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9c27db03db7734835b3f53954b534c91069375ce6ccaa2e065441e07d9b6cdb1"
@@ -5681,9 +5671,9 @@ dependencies = [
 
 [[package]]
 name = "scarb-metadata"
-version = "1.7.1"
+version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d52342da3ff2ecc09a4a26c3f5917314d5bab5a0d225793da3832f44f2de0c14"
+checksum = "3a1939d4a36ba77bc4a23024f42e16e307b74fe451d8efa23aff8916fdde6a83"
 dependencies = [
  "camino",
  "semver",
@@ -6864,9 +6854,9 @@ dependencies = [
 
 [[package]]
 name = "tonic"
-version = "0.10.0"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5469afaf78a11265c343a88969045c1568aa8ecc6c787dbf756e92e70f199861"
+checksum = "14c00bc15e49625f3d2f20b17082601e5e17cf27ead69e805174026c194b6664"
 dependencies = [
  "async-stream",
  "async-trait",
@@ -6904,9 +6894,9 @@ dependencies = [
 
 [[package]]
 name = "tonic-build"
-version = "0.10.0"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b477abbe1d18c0b08f56cd01d1bc288668c5b5cfd19b2ae1886bbf599c546f1"
+checksum = "c9d37bb15da06ae9bb945963066baca6561b505af93a52e949a85d28558459a2"
 dependencies = [
  "prettyplease 0.2.15",
  "proc-macro2",
@@ -6928,7 +6918,7 @@ dependencies = [
  "hyper",
  "pin-project",
  "tokio-stream",
- "tonic 0.10.0",
+ "tonic 0.10.1",
  "tower-http",
  "tower-layer",
  "tower-service",
@@ -6982,7 +6972,7 @@ dependencies = [
  "starknet-crypto 0.6.0",
  "thiserror",
  "tokio",
- "tonic 0.10.0",
+ "tonic 0.10.1",
  "tonic 0.9.2",
  "torii-grpc",
  "url",
@@ -7073,9 +7063,9 @@ dependencies = [
  "thiserror",
  "tokio",
  "tokio-stream",
- "tonic 0.10.0",
+ "tonic 0.10.1",
  "tonic 0.9.2",
- "tonic-build 0.10.0",
+ "tonic-build 0.10.1",
  "tonic-build 0.9.2",
  "tonic-web",
  "tonic-web-wasm-client",
@@ -7114,7 +7104,7 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tokio-util",
- "tonic 0.10.0",
+ "tonic 0.10.1",
  "tonic-web",
  "torii-client",
  "torii-core",
