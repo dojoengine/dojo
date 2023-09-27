@@ -88,7 +88,14 @@ impl PositionModel of dojo::model::Model<Position> {
         dojo::database::schema::SchemaIntrospection::<Position>::layout(ref layout);
         array::ArrayTrait::span(@layout)
     }
+
+    #[inline(always)]
+    fn packed_size(self: @Position) -> usize {
+        let mut layout = self.layout();
+        dojo::packing::calculate_packed_size(ref layout)
+    }
 }
+
 
 impl PositionSchemaIntrospection of dojo::database::schema::SchemaIntrospection<Position> {
     #[inline(always)]
@@ -137,6 +144,7 @@ impl PositionSchemaIntrospection of dojo::database::schema::SchemaIntrospection<
         )
     }
 }
+
 
 #[starknet::interface]
 trait IPosition<T> {
@@ -226,7 +234,14 @@ impl RolesModel of dojo::model::Model<Roles> {
         dojo::database::schema::SchemaIntrospection::<Roles>::layout(ref layout);
         array::ArrayTrait::span(@layout)
     }
+
+    #[inline(always)]
+    fn packed_size(self: @Roles) -> usize {
+        let mut layout = self.layout();
+        dojo::packing::calculate_packed_size(ref layout)
+    }
 }
+
 
 impl RolesSchemaIntrospection of dojo::database::schema::SchemaIntrospection<Roles> {
     #[inline(always)]
@@ -259,6 +274,7 @@ impl RolesSchemaIntrospection of dojo::database::schema::SchemaIntrospection<Rol
         )
     }
 }
+
 
 #[starknet::interface]
 trait IRoles<T> {
@@ -336,7 +352,14 @@ impl PlayerModel of dojo::model::Model<Player> {
         dojo::database::schema::SchemaIntrospection::<Player>::layout(ref layout);
         array::ArrayTrait::span(@layout)
     }
+
+    #[inline(always)]
+    fn packed_size(self: @Player) -> usize {
+        let mut layout = self.layout();
+        dojo::packing::calculate_packed_size(ref layout)
+    }
 }
+
 
 impl PlayerSchemaIntrospection of dojo::database::schema::SchemaIntrospection<Player> {
     #[inline(always)]
@@ -383,6 +406,7 @@ impl PlayerSchemaIntrospection of dojo::database::schema::SchemaIntrospection<Pl
         )
     }
 }
+
 
 #[starknet::interface]
 trait IPlayer<T> {

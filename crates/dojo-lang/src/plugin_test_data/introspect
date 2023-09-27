@@ -113,7 +113,14 @@ impl PositionModel of dojo::model::Model<Position> {
         dojo::database::schema::SchemaIntrospection::<Position>::layout(ref layout);
         array::ArrayTrait::span(@layout)
     }
+
+    #[inline(always)]
+    fn packed_size(self: @Position) -> usize {
+        let mut layout = self.layout();
+        dojo::packing::calculate_packed_size(ref layout)
+    }
 }
+
 
 impl PositionSchemaIntrospection of dojo::database::schema::SchemaIntrospection<Position> {
     #[inline(always)]
@@ -153,6 +160,7 @@ impl PositionSchemaIntrospection of dojo::database::schema::SchemaIntrospection<
         )
     }
 }
+
 
 #[starknet::interface]
 trait IPosition<T> {

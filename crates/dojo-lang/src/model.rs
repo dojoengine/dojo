@@ -99,8 +99,16 @@ pub fn handle_model_struct(
                     dojo::database::schema::SchemaIntrospection::<$type_name$>::layout(ref layout);
                     array::ArrayTrait::span(@layout)
                 }
+
+                #[inline(always)]
+                fn packed_size(self: @$type_name$) -> usize {
+                    let mut layout = self.layout();
+                    dojo::packing::calculate_packed_size(ref layout)
+                }
             }
+
             $schema_introspection$
+
             #[starknet::interface]
             trait I$type_name$<T> {
                 fn name(self: @T) -> felt252;

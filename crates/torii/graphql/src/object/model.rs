@@ -32,6 +32,7 @@ impl Default for ModelObject {
         }
     }
 }
+
 impl ModelObject {
     pub fn value_mapping(model: Model) -> ValueMapping {
         IndexMap::from([
