@@ -12,7 +12,7 @@ use slab::Slab;
 
 static SUBSCRIBERS: Lazy<Mutex<HashMap<TypeId, Box<dyn Any + Send>>>> = Lazy::new(Default::default);
 
-struct Senders<T>(Slab<UnboundedSender<T>>);
+pub struct Senders<T>(pub Slab<UnboundedSender<T>>);
 
 struct BrokerStream<T: Sync + Send + Clone + 'static>(usize, UnboundedReceiver<T>);
 
@@ -62,5 +62,14 @@ impl<T: Sync + Send + Clone + 'static> SimpleBroker<T> {
             let id = senders.0.insert(tx);
             BrokerStream(id, rx)
         })
+    }
+
+    /// Execute the given function with the _subscribers_ of the specified subscription type.
+    pub fn with_subscribers<F, R>(f: F) -> R
+    where
+        T: Sync + Send + Clone + 'static,
+        F: FnOnce(&mut Senders<T>) -> R,
+    {
+        with_senders(f)
     }
 }

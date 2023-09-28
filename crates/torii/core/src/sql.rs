@@ -220,7 +220,7 @@ impl Sql {
 
         // keys are part of model members, so combine keys and model values array
         let mut member_values: Vec<FieldElement> = Vec::new();
-        member_values.extend(keys);
+        member_values.extend(keys.clone());
         member_values.extend(values);
 
         let insert_models: Vec<_> = primitive_members

@@ -1,0 +1,76 @@
+syntax = "proto3";
+package types;
+
+message WorldMetadata {
+    // The hex-encoded address of the world.
+    string world_address = 1;
+    // The hex-encoded class hash of the world.
+    string world_class_hash = 2;
+    // The hex-encoded address of the executor.
+    string executor_address = 3;
+    // The hex-encoded class hash of the executor.
+    string executor_class_hash = 4;
+    // A list of metadata for all registered components in the world. 
+    repeated ModelMetadata models = 5;
+    // A list of metadata for all registered systems in the world.
+    repeated SystemMetadata systems = 6;
+}
+
+message SystemMetadata {
+    // System name
+    string name = 1;
+    // hex-encoded class hash of the system
+    string class_hash = 2;
+}
+
+message ModelMetadata {
+    // Model name
+    string name = 1;
+    // Model size
+    uint32 size = 2;
+    // hex-encoded class hash of the component
+    string class_hash = 3;
+}
+
+/// Represents a component for a given entity.
+message EntityModel {
+    /// Model name
+    string model = 1;
+    /// Entity keys
+    repeated string keys = 2;   
+}
+
+message StorageEntry {
+    // The key of the changed value
+    string key = 1;
+    // The new value applied to the given address
+    string value = 2;
+}
+
+message StorageDiff {
+    // The contract address for which the storage changed
+    string address = 1;
+    // The changes in the storage of the contract
+    repeated StorageEntry storage_entries = 2;
+}
+
+message EntityDiff {
+    // Storage diffs
+    repeated StorageDiff storage_diffs = 1;
+}
+
+message EntityUpdate {
+    string block_hash = 1;
+    EntityDiff entity_diff = 2;
+}
+
+message PendingEntityUpdate {
+    EntityDiff entity_diff = 1;
+}
+
+message MaybePendingEntityUpdate {
+    oneof update {
+        EntityUpdate entity_update = 1;
+        PendingEntityUpdate pending_entity_update = 2;
+    }
+}
