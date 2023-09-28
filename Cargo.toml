@@ -78,6 +78,8 @@ smol_str = { version = "0.2.0", features = [ "serde" ] }
 starknet = "0.6.0"
 starknet-crypto = "0.6.0"
 starknet_api = { git = "https://github.com/starkware-libs/starknet-api", rev = "ecc9b6946ef13003da202838e4124a9ad2efabb0" }
+strum = "0.25"
+strum_macros = "0.25"
 test-log = "0.2.11"
 thiserror = "1.0.32"
 tokio = { version = "1.32.0", features = [ "full" ] }
