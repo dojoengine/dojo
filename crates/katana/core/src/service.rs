@@ -26,6 +26,7 @@ use crate::execution::{
     create_execution_outcome, ExecutedTransaction, ExecutionOutcome,
     MaybeInvalidExecutedTransaction, PendingState, TransactionExecutor,
 };
+use crate::messaging::MessagingService;
 use crate::pool::TransactionPool;
 
 /// The type that drives the blockchain's state
@@ -35,21 +36,13 @@ use crate::pool::TransactionPool;
 /// to construct a new block.
 pub struct NodeService {
     /// the pool that holds all transactions
-    pool: Arc<TransactionPool>,
+    pub(crate) pool: Arc<TransactionPool>,
     /// creates new blocks
-    block_producer: BlockProducer,
+    pub(crate) block_producer: BlockProducer,
     /// the miner responsible to select transactions from the `pool´
-    miner: TransactionMiner,
-}
-
-impl NodeService {
-    pub fn new(
-        pool: Arc<TransactionPool>,
-        miner: TransactionMiner,
-        block_producer: BlockProducer,
-    ) -> Self {
-        Self { pool, block_producer, miner }
-    }
+    pub(crate) miner: TransactionMiner,
+    /// The messaging service.
+    pub(crate) messaging: Option<MessagingService>,
 }
 
 impl Future for NodeService {
@@ -61,6 +54,11 @@ impl Future for NodeService {
         // this drives block production and feeds new sets of ready transactions to the block
         // producer
         loop {
+            if let Some(messaging) = &mut pin.messaging {
+                while let Poll::Ready(Some(_)) = messaging.settler.poll_next_unpin(cx) {}
+                while let Poll::Ready(Some(_)) = messaging.gatherer.poll_next_unpin(cx) {}
+            }
+
             while let Poll::Ready(Some(outcome)) = pin.block_producer.poll_next_unpin(cx) {
                 trace!(target: "node", "mined block {}", outcome.block_number);
             }

@@ -26,7 +26,7 @@ use crate::backend::storage::transaction::{
 use crate::backend::{Backend, ExternalFunctionCall};
 use crate::db::{AsStateRefDb, StateExtRef, StateRefDb};
 use crate::execution::{MaybeInvalidExecutedTransaction, PendingState};
-use crate::messaging::{MessageService, MessagingConfig};
+use crate::messaging::{MessagingConfig, MessagingService};
 use crate::pool::TransactionPool;
 use crate::sequencer_error::SequencerError;
 use crate::service::{BlockProducer, BlockProducerMode, NodeService, TransactionMiner};
@@ -163,13 +163,21 @@ impl KatanaSequencer {
             BlockProducer::instant(Arc::clone(&backend))
         };
 
-        tokio::spawn(NodeService::new(Arc::clone(&pool), miner, block_producer.clone()));
+        let messaging = if let Some(config) = config.messaging.clone() {
+            Some(
+                MessagingService::new(config.clone(), Arc::clone(&backend), Arc::clone(&pool))
+                    .await,
+            )
+        } else {
+            None
+        };
 
-        if let Some(config) = config.messaging.clone() {
-            tokio::spawn(
-                MessageService::new(config.clone(), Arc::clone(&backend), Arc::clone(&pool)).await,
-            );
-        }
+        tokio::spawn(NodeService {
+            miner,
+            messaging,
+            pool: Arc::clone(&pool),
+            block_producer: block_producer.clone(),
+        });
 
         Self { pool, config, backend, block_producer }
     }

@@ -126,6 +126,8 @@ impl EthereumMessenger {
 
 #[async_trait]
 impl Messenger for EthereumMessenger {
+    type MessageHash = U256;
+
     async fn gather_messages(
         &self,
         from_block: u64,
@@ -166,7 +168,10 @@ impl Messenger for EthereumMessenger {
         Ok((to_block, l1_handler_txs))
     }
 
-    async fn settle_messages(&self, messages: &[MsgToL1]) -> MessengerResult<Vec<String>> {
+    async fn settle_messages(
+        &self,
+        messages: &[MsgToL1],
+    ) -> MessengerResult<Vec<Self::MessageHash>> {
         if messages.is_empty() {
             return Ok(vec![]);
         }
@@ -206,7 +211,7 @@ impl Messenger for EthereumMessenger {
                     receipt.transaction_hash,
                 );
 
-                Ok(hashes.iter().map(|h| format!("{:#x}", h)).collect())
+                Ok(hashes)
             }
             None => {
                 warn!("No receipt for L1 transaction.");

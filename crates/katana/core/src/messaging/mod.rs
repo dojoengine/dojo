@@ -1,5 +1,5 @@
-mod service;
-pub use service::MessageService;
+pub mod service;
+pub use service::MessagingService;
 
 mod ethereum_messenger;
 use ethereum_messenger::EthereumMessenger;
@@ -63,6 +63,9 @@ impl MessagingConfig {
 
 #[async_trait]
 pub trait Messenger {
+    /// The type of the message hash.
+    type MessageHash;
+
     /// Gathers messages emitted on the settlement chain and returns the
     /// list of transaction (L1HanlderTx) to be executed and the last fetched block.
     ///
@@ -85,7 +88,10 @@ pub trait Messenger {
     /// # Arguments
     ///
     /// * `messages` - Messages to settle.
-    async fn settle_messages(&self, messages: &[MsgToL1]) -> MessengerResult<Vec<String>>;
+    async fn settle_messages(
+        &self,
+        messages: &[MsgToL1],
+    ) -> MessengerResult<Vec<Self::MessageHash>>;
 }
 
 pub enum AnyMessenger {
@@ -124,6 +130,8 @@ impl AnyMessenger {
 
 #[async_trait]
 impl Messenger for AnyMessenger {
+    type MessageHash = String;
+
     async fn gather_messages(
         &self,
         from_block: u64,
@@ -135,10 +143,20 @@ impl Messenger for AnyMessenger {
         }
     }
 
-    async fn settle_messages(&self, messages: &[MsgToL1]) -> MessengerResult<Vec<String>> {
+    async fn settle_messages(
+        &self,
+        messages: &[MsgToL1],
+    ) -> MessengerResult<Vec<Self::MessageHash>> {
         match self {
-            Self::Ethereum(inner) => inner.settle_messages(messages).await,
-            Self::Starknet(inner) => inner.settle_messages(messages).await,
+            Self::Ethereum(inner) => inner
+                .settle_messages(messages)
+                .await
+                .map(|hashes| hashes.into_iter().map(|hash| format!("{hash:#x}")).collect()),
+
+            Self::Starknet(inner) => inner
+                .settle_messages(messages)
+                .await
+                .map(|hashes| hashes.into_iter().map(|hash| format!("{hash:#x}")).collect()),
         }
     }
 }

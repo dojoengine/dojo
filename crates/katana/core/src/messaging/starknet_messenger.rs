@@ -169,6 +169,8 @@ impl StarknetMessenger {
 
 #[async_trait]
 impl Messenger for StarknetMessenger {
+    type MessageHash = FieldElement;
+
     async fn gather_messages(
         &self,
         from_block: u64,
@@ -222,7 +224,10 @@ impl Messenger for StarknetMessenger {
         Ok((to_block, l1_handler_txs))
     }
 
-    async fn settle_messages(&self, messages: &[MsgToL1]) -> MessengerResult<Vec<String>> {
+    async fn settle_messages(
+        &self,
+        messages: &[MsgToL1],
+    ) -> MessengerResult<Vec<Self::MessageHash>> {
         if messages.is_empty() {
             return Ok(vec![]);
         }
@@ -299,7 +304,7 @@ impl Messenger for StarknetMessenger {
 
         self.settle_hashes(&hashes).await?;
 
-        Ok(hashes.iter().map(|h| format!("{:#064x}", h)).collect())
+        Ok(hashes)
     }
 }
 
