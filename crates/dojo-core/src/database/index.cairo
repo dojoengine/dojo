@@ -221,7 +221,7 @@ fn get_with_keys(address_domain: u32, index: felt252, keys_layout: Span<u8>) -> 
     (ids, all_keys)
 }
 
-/// Returns all the entries that hold a giben key
+/// Returns all the entries that hold a given key
 /// # Arguments
 /// * address_domain - The address domain to write to.
 /// * index - The index to read from.
@@ -244,36 +244,20 @@ fn get_by_key(address_domain: u32, index: felt252, key: felt252) -> Array<felt25
 
         idx += 1;
     };
+
     res
 }
 
-fn index_key_prefix() -> Array<felt252> {
-    let mut prefix = ArrayTrait::new();
-    prefix.append('dojo_index');
-    prefix
-}
-
 fn build_index_len_key(index: felt252) -> Span<felt252> {
-    let mut index_len_key = index_key_prefix();
-    index_len_key.append('index_lens');
-    index_len_key.append(index);
-    index_len_key.span()
+    array!['dojo_index_lens', index].span()
 }
 
 fn build_index_key(index: felt252, idx: felt252) -> Span<felt252> {
-    let mut key = index_key_prefix();
-    key.append('indexes');
-    key.append(index);
-    key.append(idx);
-    key.span()
+    array!['dojo_indexes', index, idx].span()
 }
 
 fn build_index_item_key(index: felt252, id: felt252) -> Span<felt252> {
-    let mut index_len_key = index_key_prefix();
-    index_len_key.append('index_ids');
-    index_len_key.append(index);
-    index_len_key.append(id);
-    index_len_key.span()
+    array!['dojo_index_ids', index, id].span()
 }
 
 /// Key data about keys of a given entry.
@@ -281,11 +265,7 @@ fn build_index_item_key(index: felt252, id: felt252) -> Span<felt252> {
 /// * index - The index to write to.
 /// * id - The id of the entry.
 fn build_index_item_keys(index: felt252, id: felt252) -> Span<felt252> {
-    let mut index_len_key = index_key_prefix();
-    index_len_key.append('index_keys');
-    index_len_key.append(index);
-    index_len_key.append(id);
-    index_len_key.span()
+    array!['dojo_index_keys', index, id].span()
 }
 
 /// Key for a length of index for a given key.
@@ -293,11 +273,7 @@ fn build_index_item_keys(index: felt252, id: felt252) -> Span<felt252> {
 /// * index - The index to write to.
 /// * key - The key to write.
 fn build_index_specific_key_len(index: felt252, key: felt252) -> Span<felt252> {
-    let mut index_len_key = index_key_prefix();
-    index_len_key.append('index_key_len');
-    index_len_key.append(index);
-    index_len_key.append(key);
-    index_len_key.span()
+    array!['dojo_index_key_len', index, key].span()
 }
 
 /// Key for an index of a given key.
@@ -306,10 +282,5 @@ fn build_index_specific_key_len(index: felt252, key: felt252) -> Span<felt252> {
 /// * key - The key to write.
 /// * idx - The position in the index.
 fn build_index_specific_key(index: felt252, key: felt252, idx: felt252) -> Span<felt252> {
-    let mut index_len_key = index_key_prefix();
-    index_len_key.append('index_key');
-    index_len_key.append(index);
-    index_len_key.append(key);
-    index_len_key.append(idx);
-    index_len_key.span()
+    array!['dojo_index_key', index, key, idx].span()
 }

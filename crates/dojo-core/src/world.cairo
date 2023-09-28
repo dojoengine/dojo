@@ -368,7 +368,7 @@ mod world {
         /// * `model` - The name of the model to be retrieved.
         /// * `index` - The index to be retrieved.
         /// * `keys` - The query to be used to find the entity.
-        /// * `length` - The length of the component values.
+        /// * `length` - The length of the model values.
         ///
         /// # Returns
         ///
