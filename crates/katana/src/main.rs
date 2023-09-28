@@ -5,7 +5,7 @@ use std::{fs, io};
 use clap::{CommandFactory, Parser};
 use clap_complete::{generate, Shell};
 use console::Style;
-use katana_core::sequencer::{KatanaSequencer, Sequencer};
+use katana_core::sequencer::KatanaSequencer;
 use katana_rpc::{spawn, KatanaApi, NodeHandle, StarknetApi};
 use tokio::signal::ctrl_c;
 use tracing::{error, info};
@@ -122,7 +122,7 @@ ACCOUNTS SEED
     println!("\n{address}\n\n");
 }
 
-pub async fn shutdown_handler(sequencer: Arc<impl Sequencer>, config: KatanaArgs) {
+pub async fn shutdown_handler(sequencer: Arc<KatanaSequencer>, config: KatanaArgs) {
     if let Some(path) = config.dump_state {
         info!("Dumping state on shutdown");
         let state = (*sequencer).backend().dump_state().await;

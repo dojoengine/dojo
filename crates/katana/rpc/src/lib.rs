@@ -15,7 +15,6 @@ use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
 use jsonrpsee::tracing::debug;
 use jsonrpsee::types::Params;
 use jsonrpsee::RpcModule;
-use katana_core::sequencer::Sequencer;
 use tower_http::cors::{Any, CorsLayer};
 
 use crate::api::katana::KatanaApiServer;
@@ -23,14 +22,11 @@ use crate::api::starknet::StarknetApiServer;
 pub use crate::katana::KatanaApi;
 pub use crate::starknet::StarknetApi;
 
-pub async fn spawn<S>(
-    katana_api: KatanaApi<S>,
-    starknet_api: StarknetApi<S>,
+pub async fn spawn(
+    katana_api: KatanaApi,
+    starknet_api: StarknetApi,
     config: ServerConfig,
-) -> Result<NodeHandle>
-where
-    S: Sequencer + Send + Sync + 'static,
-{
+) -> Result<NodeHandle> {
     let mut methods = RpcModule::new(());
     methods.merge(starknet_api.into_rpc())?;
     methods.merge(katana_api.into_rpc())?;
