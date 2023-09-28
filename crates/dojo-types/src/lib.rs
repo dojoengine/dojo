@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use component::ModelMetadata;
+use model::ModelMetadata;
 use serde::Serialize;
 use starknet::core::types::FieldElement;
 use system::SystemMetadata;
