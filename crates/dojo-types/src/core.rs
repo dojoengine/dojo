@@ -1,7 +1,8 @@
-use std::str::FromStr;
-
 use starknet::core::types::FieldElement;
+use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 
+#[derive(AsRefStr, Display, EnumIter, EnumString, Debug)]
+#[strum(serialize_all = "lowercase")]
 pub enum CairoType {
     U8,
     U16,
@@ -11,9 +12,11 @@ pub enum CairoType {
     U256,
     USize,
     Bool,
-    ContractAddress,
-    ClassHash,
     Felt252,
+    #[strum(serialize = "ClassHash")]
+    ClassHash,
+    #[strum(serialize = "ContractAddress")]
+    ContractAddress,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -24,27 +27,6 @@ pub enum CairoTypeError {
     NotEnoughFieldElements,
     #[error("Unsupported CairoType for SQL formatting")]
     UnsupportedType,
-}
-
-impl FromStr for CairoType {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "u8" => Ok(CairoType::U8),
-            "u16" => Ok(CairoType::U16),
-            "u32" => Ok(CairoType::U32),
-            "u64" => Ok(CairoType::U64),
-            "u128" => Ok(CairoType::U128),
-            "u256" => Ok(CairoType::U256),
-            "usize" => Ok(CairoType::USize),
-            "bool" => Ok(CairoType::Bool),
-            "ContractAddress" => Ok(CairoType::ContractAddress),
-            "ClassHash" => Ok(CairoType::ClassHash),
-            "felt252" => Ok(CairoType::Felt252),
-            _ => Err(()),
-        }
-    }
 }
 
 impl CairoType {
