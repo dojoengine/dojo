@@ -4,7 +4,7 @@ use dojo_world::manifest::System;
 use sqlx::sqlite::SqlitePool;
 use starknet::core::types::{Event, FieldElement};
 
-use crate::sql::{Executable, Sql};
+use crate::sql::Sql;
 
 #[sqlx::test(migrations = "../migrations")]
 async fn test_load_from_manifest(pool: SqlitePool) {
@@ -14,7 +14,7 @@ async fn test_load_from_manifest(pool: SqlitePool) {
     )
     .unwrap();
 
-    let state = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
+    let mut state = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
     state.load_from_manifest(manifest.clone()).await.unwrap();
 
     let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();

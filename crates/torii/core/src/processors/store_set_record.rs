@@ -25,7 +25,7 @@ impl<P: Provider + Sync> EventProcessor<P> for StoreSetRecordProcessor {
     async fn process(
         &self,
         _world: &WorldContractReader<'_, P>,
-        db: &Sql,
+        db: &mut Sql,
         _provider: &P,
         _block: &BlockWithTxs,
         _transaction_receipt: &InvokeTransactionReceipt,

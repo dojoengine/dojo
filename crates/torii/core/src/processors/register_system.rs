@@ -22,7 +22,7 @@ impl<P: Provider + Sync> EventProcessor<P> for RegisterSystemProcessor {
     async fn process(
         &self,
         _world: &WorldContractReader<'_, P>,
-        db: &Sql,
+        db: &mut Sql,
         _provider: &P,
         _block: &BlockWithTxs,
         _invoke_receipt: &InvokeTransactionReceipt,

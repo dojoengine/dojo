@@ -21,7 +21,7 @@ impl<P: Provider + Sync + 'static> EventProcessor<P> for RegisterModelProcessor 
     async fn process(
         &self,
         world: &WorldContractReader<'_, P>,
-        db: &Sql,
+        db: &mut Sql,
         _provider: &P,
         _block: &BlockWithTxs,
         _invoke_receipt: &InvokeTransactionReceipt,

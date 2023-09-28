@@ -17,7 +17,7 @@ pub trait EventProcessor<P: Provider + Sync> {
     async fn process(
         &self,
         world: &WorldContractReader<'_, P>,
-        storage: &Sql,
+        db: &mut Sql,
         provider: &P,
         block: &BlockWithTxs,
         invoke_receipt: &InvokeTransactionReceipt,
@@ -28,15 +28,14 @@ pub trait EventProcessor<P: Provider + Sync> {
 #[async_trait]
 pub trait BlockProcessor<P: Provider + Sync> {
     fn get_block_number(&self) -> String;
-    async fn process(&self, storage: &Sql, provider: &P, block: &BlockWithTxs)
-    -> Result<(), Error>;
+    async fn process(&self, db: &mut Sql, provider: &P, block: &BlockWithTxs) -> Result<(), Error>;
 }
 
 #[async_trait]
 pub trait TransactionProcessor<P: Provider + Sync> {
     async fn process(
         &self,
-        storage: &Sql,
+        db: &mut Sql,
         provider: &P,
         block: &BlockWithTxs,
         transaction_receipt: &TransactionReceipt,

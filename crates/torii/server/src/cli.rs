@@ -87,7 +87,7 @@ async fn main() -> anyhow::Result<()> {
     let world_address = get_world_address(&args, &manifest, env.as_ref())?;
     let world = WorldContractReader::new(world_address, &provider);
 
-    let db = Sql::new(pool.clone(), world_address).await?;
+    let mut db = Sql::new(pool.clone(), world_address).await?;
     db.load_from_manifest(manifest.clone()).await?;
     let processors = Processors {
         event: vec![
@@ -101,9 +101,9 @@ async fn main() -> anyhow::Result<()> {
 
     let (block_sender, block_receiver) = tokio::sync::mpsc::channel(100);
 
-    let engine = Engine::new(
+    let mut engine = Engine::new(
         &world,
-        &db,
+        &mut db,
         &provider,
         processors,
         EngineConfig { start_block: args.start_block, ..Default::default() },

@@ -284,5 +284,5 @@ fn parse_enum<P: Provider>(data: &[FieldElement]) -> Result<Ty, ModelError<P::Er
         offset += len as usize;
     }
 
-    Ok(Ty::Enum(Enum { name, values }))
+    Ok(Ty::Enum(Enum { name, children: values }))
 }
