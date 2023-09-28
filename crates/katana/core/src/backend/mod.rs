@@ -48,7 +48,7 @@ use crate::env::{BlockContextGenerator, Env};
 use crate::execution::{ExecutionOutcome, MaybeInvalidExecutedTransaction, TransactionExecutor};
 use crate::fork::db::ForkedDb;
 use crate::sequencer_error::SequencerError;
-use crate::service::MinedBlockOutcome;
+use crate::service::block_producer::MinedBlockOutcome;
 use crate::utils::{convert_state_diff_to_rpc_state_diff, get_current_timestamp};
 
 pub struct ExternalFunctionCall {
@@ -218,8 +218,8 @@ impl Backend {
 
     /// Mines a new block based on the provided execution outcome.
     /// This method should only be called by the
-    /// [IntervalBlockProducer](crate::service::IntervalBlockProducer) when the node is running in
-    /// `interval` mining mode.
+    /// [IntervalBlockProducer](crate::service::block_producer::IntervalBlockProducer) when the node
+    /// is running in `interval` mining mode.
     pub async fn mine_pending_block(
         &self,
         execution_outcome: ExecutionOutcome,

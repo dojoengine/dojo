@@ -28,7 +28,8 @@ use crate::db::{AsStateRefDb, StateExtRef, StateRefDb};
 use crate::execution::{MaybeInvalidExecutedTransaction, PendingState};
 use crate::pool::TransactionPool;
 use crate::sequencer_error::SequencerError;
-use crate::service::{BlockProducer, BlockProducerMode, NodeService, TransactionMiner};
+use crate::service::block_producer::{BlockProducer, BlockProducerMode};
+use crate::service::{NodeService, TransactionMiner};
 use crate::utils::event::{ContinuationToken, ContinuationTokenError};
 
 type SequencerResult<T> = Result<T, SequencerError>;
