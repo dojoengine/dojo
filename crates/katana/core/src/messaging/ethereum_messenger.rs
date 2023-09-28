@@ -16,7 +16,6 @@ use starknet_api::stark_felt;
 use starknet_api::transaction::{
     Calldata, L1HandlerTransaction as ApiL1HandlerTransaction, TransactionHash, TransactionVersion,
 };
-use tokio::sync::RwLock as AsyncRwLock;
 use tracing::{debug, trace, warn};
 
 use crate::backend::storage::transaction::L1HandlerTransaction;
@@ -52,7 +51,7 @@ pub struct EthereumMessenger {
 }
 
 impl EthereumMessenger {
-    pub async fn new(config: MessagingConfig) -> Result<Arc<AsyncRwLock<EthereumMessenger>>> {
+    pub async fn new(config: MessagingConfig) -> Result<EthereumMessenger> {
         let provider = Provider::<Http>::try_from(&config.rpc_url)?;
 
         let chain_id = provider.get_chainid().await?;
@@ -63,11 +62,11 @@ impl EthereumMessenger {
         let provider_signer = SignerMiddleware::new(provider.clone(), wallet);
         let messaging_contract_address = Address::from_str(&config.contract_address)?;
 
-        Ok(Arc::new(AsyncRwLock::new(EthereumMessenger {
+        Ok(EthereumMessenger {
             provider: Arc::new(provider),
             provider_signer: Arc::new(provider_signer),
             messaging_contract_address,
-        })))
+        })
     }
 
     /// Fetches logs in given block range and returns

@@ -1,6 +1,5 @@
 use std::cmp::Ordering;
 use std::iter::Skip;
-use std::path::PathBuf;
 use std::slice::Iter;
 use std::sync::Arc;
 
@@ -27,7 +26,7 @@ use crate::backend::storage::transaction::{
 use crate::backend::{Backend, ExternalFunctionCall};
 use crate::db::{AsStateRefDb, StateExtRef, StateRefDb};
 use crate::execution::{MaybeInvalidExecutedTransaction, PendingState};
-use crate::messaging::MessageService;
+use crate::messaging::{MessageService, MessagingConfig};
 use crate::pool::TransactionPool;
 use crate::sequencer_error::SequencerError;
 use crate::service::{BlockProducer, BlockProducerMode, NodeService, TransactionMiner};
@@ -39,7 +38,7 @@ type SequencerResult<T> = Result<T, SequencerError>;
 pub struct SequencerConfig {
     pub block_time: Option<u64>,
     pub no_mining: bool,
-    pub messaging: Option<PathBuf>,
+    pub messaging: Option<MessagingConfig>,
 }
 
 #[async_trait]
@@ -166,10 +165,9 @@ impl KatanaSequencer {
 
         tokio::spawn(NodeService::new(Arc::clone(&pool), miner, block_producer.clone()));
 
-        if let Some(config_path) = &config.messaging {
+        if let Some(config) = config.messaging.clone() {
             tokio::spawn(
-                MessageService::new(config_path.clone(), Arc::clone(&backend), Arc::clone(&pool))
-                    .await,
+                MessageService::new(config.clone(), Arc::clone(&backend), Arc::clone(&pool)).await,
             );
         }
 

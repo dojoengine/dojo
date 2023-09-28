@@ -5,10 +5,7 @@ mod ethereum_messenger;
 use ethereum_messenger::EthereumMessenger;
 
 mod starknet_messenger;
-use std::fs::File;
-use std::io::Read;
-use std::path::PathBuf;
-use std::sync::Arc;
+use std::path::Path;
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -16,7 +13,6 @@ use ethers::providers::ProviderError;
 use serde::Deserialize;
 use starknet::core::types::MsgToL1;
 use starknet_messenger::StarknetMessenger;
-use tokio::sync::RwLock as AsyncRwLock;
 use tracing::{error, info};
 
 use crate::backend::storage::transaction::L1HandlerTransaction;
@@ -54,17 +50,14 @@ pub struct MessagingConfig {
 }
 
 impl MessagingConfig {
-    pub async fn from_file(file_path: &PathBuf) -> Self {
-        // TODO: Is that ok to panic here, as we don't want to continue with an invalid
-        // configuration?
-        let mut file = File::open(file_path).expect("Messaging config file error");
-        let mut json_string = String::new();
-        file.read_to_string(&mut json_string).expect("Messaging config file read error");
+    pub fn load(path: impl AsRef<Path>) -> Result<Self, std::io::Error> {
+        let buf = std::fs::read(path)?;
+        serde_json::from_slice(&buf).map_err(|e| e.into())
+    }
 
-        let config: MessagingConfig =
-            serde_json::from_str(&json_string).expect("Messaging config file parsing error");
-
-        config
+    /// This is used as the clap `value_parser` implementation
+    pub fn parse(path: &str) -> Result<Self, String> {
+        Self::load(path).map_err(|e| e.to_string())
     }
 }
 
@@ -96,22 +89,11 @@ pub trait Messenger {
 }
 
 pub enum AnyMessenger {
-    Ethereum(Arc<AsyncRwLock<EthereumMessenger>>),
-    Starknet(Arc<AsyncRwLock<StarknetMessenger>>),
+    Ethereum(EthereumMessenger),
+    Starknet(StarknetMessenger),
 }
 
 impl AnyMessenger {
-    pub async fn from_file(file_path: &PathBuf) -> MessengerResult<Self> {
-        let mut file = File::open(file_path).expect("Messaging config file error");
-        let mut json_string = String::new();
-        file.read_to_string(&mut json_string).expect("Messaging config file read error");
-
-        let config: MessagingConfig =
-            serde_json::from_str(&json_string).expect("Messaging config file parsing error");
-
-        Self::from_config(config).await
-    }
-
     pub async fn from_config(config: MessagingConfig) -> MessengerResult<Self> {
         if config.contract_address.len() < 50 {
             match EthereumMessenger::new(config.clone()).await {
@@ -148,19 +130,15 @@ impl Messenger for AnyMessenger {
         max_blocks: u64,
     ) -> MessengerResult<(u64, Vec<L1HandlerTransaction>)> {
         match self {
-            Self::Ethereum(inner) => {
-                inner.read().await.gather_messages(from_block, max_blocks).await
-            }
-            Self::Starknet(inner) => {
-                inner.read().await.gather_messages(from_block, max_blocks).await
-            }
+            Self::Ethereum(inner) => inner.gather_messages(from_block, max_blocks).await,
+            Self::Starknet(inner) => inner.gather_messages(from_block, max_blocks).await,
         }
     }
 
     async fn settle_messages(&self, messages: &[MsgToL1]) -> MessengerResult<Vec<String>> {
         match self {
-            Self::Ethereum(inner) => inner.read().await.settle_messages(messages).await,
-            Self::Starknet(inner) => inner.read().await.settle_messages(messages).await,
+            Self::Ethereum(inner) => inner.settle_messages(messages).await,
+            Self::Starknet(inner) => inner.settle_messages(messages).await,
         }
     }
 }

@@ -7,6 +7,7 @@ use katana_core::constants::{
     DEFAULT_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_VALIDATE_MAX_STEPS,
 };
 use katana_core::db::serde::state::SerializableState;
+use katana_core::messaging::MessagingConfig;
 use katana_core::sequencer::SequencerConfig;
 use katana_rpc::config::ServerConfig;
 use url::Url;
@@ -55,11 +56,12 @@ pub struct KatanaArgs {
 
     #[arg(long)]
     #[arg(value_name = "PATH")]
+    #[arg(value_parser = MessagingConfig::parse)]
     #[arg(help = "Configure the messaging with an other chain.")]
     #[arg(long_help = "Configure the messaging to allow Katana listening/sending messages on a \
                        settlement chain that can be Ethereum or an other Starknet sequencer. \
                        The configuration file details and examples can be found here: TODO.")]
-    pub messaging: Option<PathBuf>,
+    pub messaging: Option<MessagingConfig>,
 
     #[command(flatten)]
     #[command(next_help_heading = "Server options")]

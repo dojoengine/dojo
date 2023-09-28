@@ -16,7 +16,6 @@ use starknet_api::stark_felt;
 use starknet_api::transaction::{
     Calldata, L1HandlerTransaction as ApiL1HandlerTransaction, TransactionHash, TransactionVersion,
 };
-use tokio::sync::RwLock as AsyncRwLock;
 use tracing::{debug, error, trace, warn};
 use url::Url;
 
@@ -35,7 +34,6 @@ const EXE_MAGIC: FieldElement = felt!("0x455845");
 
 pub const HASH_EXEC: FieldElement = felt!("0xee");
 
-///
 pub struct StarknetMessenger {
     chain_id: FieldElement,
     provider: AnyProvider,
@@ -45,7 +43,7 @@ pub struct StarknetMessenger {
 }
 
 impl StarknetMessenger {
-    pub async fn new(config: MessagingConfig) -> Result<Arc<AsyncRwLock<StarknetMessenger>>> {
+    pub async fn new(config: MessagingConfig) -> Result<StarknetMessenger> {
         let provider = AnyProvider::JsonRpcHttp(JsonRpcClient::new(HttpTransport::new(
             Url::parse(&config.rpc_url)?,
         )));
@@ -60,13 +58,13 @@ impl StarknetMessenger {
 
         let messaging_contract_address = FieldElement::from_hex_be(&config.contract_address)?;
 
-        Ok(Arc::new(AsyncRwLock::new(StarknetMessenger {
+        Ok(StarknetMessenger {
             chain_id,
             provider,
             wallet,
             sender_account_address,
             messaging_contract_address,
-        })))
+        })
     }
 
     /// Fetches events for the given blocks range.

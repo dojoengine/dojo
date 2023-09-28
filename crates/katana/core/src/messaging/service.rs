@@ -8,7 +8,6 @@ use std::time::Duration;
 
 use futures::{Future, FutureExt, Stream, StreamExt};
 use starknet::core::types::{FieldElement, MsgToL1};
-use tokio::sync::RwLock as AsyncRwLock;
 use tokio::time::{interval_at, Instant, Interval};
 use tracing::{error, info, trace};
 
@@ -27,14 +26,12 @@ impl MessageService {
     /// Initializes a new instance from a configuration file's path.
     /// Will panic on failure to avoid continuing with invalid configuration.
     pub async fn new(
-        config_path: std::path::PathBuf,
+        config: MessagingConfig,
         backend: Arc<Backend>,
         transaction_pool: Arc<TransactionPool>,
     ) -> Self {
-        let config = MessagingConfig::from_file(&config_path).await;
-
         let messenger = match AnyMessenger::from_config(config.clone()).await {
-            Ok(m) => Arc::new(AsyncRwLock::new(m)),
+            Ok(m) => Arc::new(m),
             Err(e) => panic!(
                 "Messaging could not be initialized: {:?}.\nVerify that the messaging target node \
                  (anvil or other katana) is running.\n",
@@ -77,7 +74,7 @@ type ServiceFuture<T> = Pin<Box<dyn Future<Output = T> + Send>>;
 pub struct MessageGatherer {
     interval: Interval,
     transaction_pool: Arc<TransactionPool>,
-    messenger: Arc<AsyncRwLock<AnyMessenger>>,
+    messenger: Arc<AnyMessenger>,
     gathering: Option<ServiceFuture<u64>>,
     settle_from_block: u64,
 }
@@ -86,7 +83,7 @@ impl MessageGatherer {
     pub fn new(
         config: MessagingConfig,
         transaction_pool: Arc<TransactionPool>,
-        messenger: Arc<AsyncRwLock<AnyMessenger>>,
+        messenger: Arc<AnyMessenger>,
     ) -> Self {
         let interval = interval_from_seconds(config.fetch_interval);
 
@@ -100,7 +97,7 @@ impl MessageGatherer {
     }
 
     async fn gather_messages(
-        messenger: Arc<AsyncRwLock<AnyMessenger>>,
+        messenger: Arc<AnyMessenger>,
         transaction_pool: Arc<TransactionPool>,
         from_block: u64,
     ) -> u64 {
@@ -108,7 +105,7 @@ impl MessageGatherer {
         // TODO: May this be configurable?
         let max_block = 200;
 
-        match messenger.read().await.gather_messages(from_block, max_block).await {
+        match messenger.gather_messages(from_block, max_block).await {
             Ok((last_block, l1_handler_txs)) => {
                 for tx in &l1_handler_txs {
                     trace_l1_handler_tx_exec(tx);
@@ -160,7 +157,7 @@ impl Stream for MessageGatherer {
 pub struct MessageSettler {
     interval: Interval,
     backend: Arc<Backend>,
-    messenger: Arc<AsyncRwLock<AnyMessenger>>,
+    messenger: Arc<AnyMessenger>,
     settling: Option<ServiceFuture<()>>,
     local_from_block: u64,
 }
@@ -169,7 +166,7 @@ impl MessageSettler {
     pub fn new(
         config: MessagingConfig,
         backend: Arc<Backend>,
-        messenger: Arc<AsyncRwLock<AnyMessenger>>,
+        messenger: Arc<AnyMessenger>,
     ) -> Self {
         let interval = interval_from_seconds(config.fetch_interval);
 
@@ -185,8 +182,8 @@ impl MessageSettler {
         }
     }
 
-    async fn settle_messages(messenger: Arc<AsyncRwLock<AnyMessenger>>, messages: Vec<MsgToL1>) {
-        if let Ok(hashes) = messenger.read().await.settle_messages(&messages).await {
+    async fn settle_messages(messenger: Arc<AnyMessenger>, messages: Vec<MsgToL1>) {
+        if let Ok(hashes) = messenger.settle_messages(&messages).await {
             trace_msg_to_l1_sent(&messages, &hashes);
         }
     }
