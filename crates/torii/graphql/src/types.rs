@@ -6,9 +6,10 @@ use async_graphql::dynamic::TypeRef;
 use async_graphql::{Name, Value};
 use indexmap::IndexMap;
 
-// ValueMapping is used to map the values of the fields of a model and TypeMapping their correpsonding types.
-// Both are used at runtime to dynamically build/resolve graphql queries/schema. `Value` from async-graphql 
-// supports nesting, but TypeRef does not. TypeData is used to support nesting.
+// ValueMapping is used to map the values of the fields of a model and TypeMapping their
+// correpsonding types. Both are used at runtime to dynamically build/resolve graphql
+// queries/schema. `Value` from async-graphql supports nesting, but TypeRef does not. TypeData is
+// used to support nesting.
 pub type ValueMapping = IndexMap<Name, Value>;
 pub type TypeMapping = IndexMap<Name, TypeData>;
 

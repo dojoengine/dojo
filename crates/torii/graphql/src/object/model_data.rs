@@ -23,7 +23,7 @@ use crate::object::entity::EntityObject;
 use crate::query::filter::{Filter, FilterValue};
 use crate::query::order::{Direction, Order};
 use crate::query::{query_by_id, query_total_count, ID};
-use crate::types::TypeData;
+use crate::types::{ScalarType, TypeData};
 use crate::utils::extract_value::extract;
 
 const BOOLEAN_TRUE: i64 = 1;
@@ -86,45 +86,41 @@ impl ObjectTrait for ModelDataObject {
     }
 
     fn child_objects(&self) -> Option<Vec<Object>> {
-        let mut objects = Vec::new();
-        for (_, type_data) in self.type_mapping() {
-            if let TypeData::Nested(nested) = type_data {
-                let mut object = Object::new(nested.0.to_string());
+        let child_objects: Vec<Object> = self
+            .type_mapping
+            .iter()
+            .filter_map(|(_, type_data)| {
+                if let TypeData::Nested((type_ref, nested_mapping)) = type_data {
+                    let mut object = Object::new(type_ref.to_string());
 
-                let x = Field::new("x", TypeRef::named("u32"), |ctx| {
-                    FieldFuture::new(async move {
-                        match ctx.parent_value.try_to_value()? {
-                            Value::Object(indexmap) => {
-                                let x = extract::<i64>(indexmap, "x")?;
-            
-                                Ok(Some(Value::Number(x.into())))
-                            }
-                            _ => Err("incorrect value, requires Value::Object".into()),
-                        }
-                    })
-                });
+                    for (name, type_data) in nested_mapping {
+                        let name = name.clone();
 
-                let y = Field::new("y", TypeRef::named("u32"), |ctx| {
-                    FieldFuture::new(async move {
-                        match ctx.parent_value.try_to_value()? {
-                            Value::Object(indexmap) => {
-                                let y = extract::<i64>(indexmap, "y")?;
-            
-                                Ok(Some(Value::Number(y.into())))
-                            }
-                            _ => Err("incorrect value, requires Value::Object".into()),
-                        }
-                    })
-                });
+                        let field =
+                            Field::new(name.to_string(), type_data.type_ref(), move |ctx| {
+                                let name = name.clone();
 
-                object = object.field(x);
-                object = object.field(y);
+                                FieldFuture::new(async move {
+                                    match ctx.parent_value.try_to_value()? {
+                                        Value::Object(values) => {
+                                            Ok(Some(values.get(&name).unwrap().clone())) // safe unwrap
+                                        }
+                                        _ => Err("incorrect value, requires Value::Object".into()),
+                                    }
+                                })
+                            });
 
-                objects.push(object);
-            }
-        }
+                        object = object.field(field);
+                    }
 
-        Some(objects)
+                    Some(object)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        Some(child_objects)
     }
 
     fn resolve_many(&self) -> Option<Field> {
@@ -171,7 +167,8 @@ fn entity_field() -> Field {
                 Value::Object(indexmap) => {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                     let entity_id = extract::<String>(indexmap, "entity_id")?;
-                    let entity: Entity = query_by_id(&mut conn, "entities", ID::Str(entity_id)).await?;
+                    let entity: Entity =
+                        query_by_id(&mut conn, "entities", ID::Str(entity_id)).await?;
                     let result = EntityObject::value_mapping(entity);
 
                     Ok(Some(Value::Object(result)))
@@ -210,7 +207,7 @@ fn nested_type_fields(root_type: &str, type_mapping: &TypeMapping) -> Vec<Field>
                                     &type_data.type_mapping().unwrap(),
                                 )
                                 .await?;
-      
+
                                 Ok(Some(Value::Object(result)))
                             }
                             _ => Err("incorrect value, requires Value::Object".into()),
