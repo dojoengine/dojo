@@ -1,6 +1,6 @@
 #[starknet::contract]
 mod ERC1155 {
-    use dojo_erc::token::erc1155::components::{
+    use dojo_erc::token::erc1155::models::{
         ERC1155Meta, ERC1155OperatorApproval, ERC1155Balance
     };
     use dojo_erc::token::erc1155::interface;

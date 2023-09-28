@@ -18,7 +18,7 @@ use zeroable::Zeroable;
 use dojo::test_utils::spawn_test_world;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
-use dojo_erc::token::erc1155::components::{
+use dojo_erc::token::erc1155::models::{
     ERC1155Meta, erc_1155_meta, ERC1155OperatorApproval, erc_1155_operator_approval, ERC1155Balance,
     erc_1155_balance
 };
