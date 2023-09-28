@@ -13,27 +13,30 @@ CREATE TABLE worlds (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE components (
+CREATE TABLE models (
     id TEXT NOT NULL PRIMARY KEY,
     name TEXT NOT NULL,
     class_hash TEXT NOT NULL,
     transaction_hash TEXT,
+    layout BLOB NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_components_created_at ON components (created_at);
+CREATE INDEX idx_models_created_at ON models (created_at);
 
-CREATE TABLE component_members(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    component_id TEXT NOT NULL,
+CREATE TABLE model_members(
+    id TEXT NOT NULL,
+    model_idx INTEGER NOT NULL,
+    member_idx INTEGER NOT NULL,
+    model_id TEXT NOT NULL,
     name TEXT NOT NULL,
     type TEXT NOT NULL,
     key BOOLEAN NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (component_id) REFERENCES components(id)
+    PRIMARY KEY (id, model_idx) FOREIGN KEY (model_id) REFERENCES models(id) UNIQUE (id, member_idx)
 );
 
-CREATE INDEX idx_component_members_component_id ON component_members (component_id);
+CREATE INDEX idx_model_members_model_id ON model_members (model_id);
 
 CREATE TABLE system_calls (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,8 +44,9 @@ CREATE TABLE system_calls (
     transaction_hash TEXT NOT NULL,
     system_id TEXT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (system_id) REFERENCES systems(id)
-);  
+    FOREIGN KEY (system_id) REFERENCES systems(id),
+    UNIQUE (transaction_hash)
+);
 
 CREATE INDEX idx_system_calls_created_at ON system_calls (created_at);
 
@@ -59,22 +63,23 @@ CREATE INDEX idx_systems_created_at ON systems (created_at);
 CREATE TABLE entities (
     id TEXT NOT NULL PRIMARY KEY,
     keys TEXT,
-    component_names TEXT,
+    model_names TEXT,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_entities_keys ON entities (keys);
+
 CREATE INDEX idx_entities_keys_create_on ON entities (keys, created_at);
 
 CREATE TABLE events (
     id TEXT NOT NULL PRIMARY KEY,
-    system_call_id INTEGER NOT NULL,
     keys TEXT NOT NULL,
     data TEXT NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (system_call_id) REFERENCES system_calls(id)
+    transaction_hash TEXT,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_events_keys ON events (keys);
+
 CREATE INDEX idx_events_created_at ON events (created_at);

@@ -1,6 +1,8 @@
+use std::sync::Arc;
+
 use jsonrpsee::core::{async_trait, Error};
 use katana_core::accounts::Account;
-use katana_core::sequencer::Sequencer;
+use katana_core::sequencer::KatanaSequencer;
 use starknet::core::types::FieldElement;
 use starknet_api::core::{ContractAddress, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};
@@ -9,27 +11,20 @@ use starknet_api::{patricia_key, stark_felt};
 
 use crate::api::katana::{KatanaApiError, KatanaApiServer};
 
-pub struct KatanaApi<S> {
-    sequencer: S,
+pub struct KatanaApi {
+    sequencer: Arc<KatanaSequencer>,
 }
 
-impl<S> KatanaApi<S>
-where
-    S: Sequencer + Send + 'static,
-{
-    pub fn new(sequencer: S) -> Self {
+impl KatanaApi {
+    pub fn new(sequencer: Arc<KatanaSequencer>) -> Self {
         Self { sequencer }
     }
 }
 
 #[async_trait]
-impl<S> KatanaApiServer for KatanaApi<S>
-where
-    S: Sequencer + Send + Sync + 'static,
-{
+impl KatanaApiServer for KatanaApi {
     async fn generate_block(&self) -> Result<(), Error> {
-        self.sequencer.backend().mine_block().await;
-        self.sequencer.backend().open_pending_block().await;
+        self.sequencer.block_producer().force_mine();
         Ok(())
     }
 
@@ -39,7 +34,6 @@ where
 
     async fn set_next_block_timestamp(&self, timestamp: u64) -> Result<(), Error> {
         self.sequencer
-            .backend()
             .set_next_block_timestamp(timestamp)
             .await
             .map_err(|_| Error::from(KatanaApiError::FailedToChangeNextBlockTimestamp))
@@ -47,7 +41,6 @@ where
 
     async fn increase_next_block_timestamp(&self, timestamp: u64) -> Result<(), Error> {
         self.sequencer
-            .backend()
             .increase_next_block_timestamp(timestamp)
             .await
             .map_err(|_| Error::from(KatanaApiError::FailedToChangeNextBlockTimestamp))
@@ -64,7 +57,6 @@ where
         value: FieldElement,
     ) -> Result<(), Error> {
         self.sequencer
-            .backend()
             .set_storage_at(
                 ContractAddress(patricia_key!(contract_address)),
                 StorageKey(patricia_key!(key)),

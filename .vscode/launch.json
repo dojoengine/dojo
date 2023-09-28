@@ -7,61 +7,21 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in library 'dojo-world'",
+            "name": "Debug unit tests in 'dojo-world'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--lib",
-                    "--package=dojo-world"
+                    "--package=dojo-world",
+                    "--lib"
                 ],
                 "filter": {
                     "name": "dojo-world",
                     "kind": "lib"
                 }
             },
-            "args": [],
-            "env": {
-                "CARGO_MANIFEST_DIR": "${workspaceFolder}/crates/dojo-world"
-            },
+            "args": ["migration::compile_moves"],
             "cwd": "${workspaceFolder}/crates/dojo-world"
         },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug executable 'dojo-compile'",
-            "cargo": {
-                "args": [
-                    "build",
-                    "--bin=dojo-compile",
-                    "--package=dojo-lang"
-                ],
-                "filter": {
-                    "name": "dojo-compile",
-                    "kind": "bin"
-                }
-            },
-            "args": ["${workspaceFolder}/crates/dojo-lang/src/cairo_level_tests/component.cairo"],
-            "cwd": "${workspaceFolder}/crates/dojo-lang"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in executable 'dojo-compile'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--bin=dojo-compile",
-                    "--package=dojo-lang"
-                ],
-                "filter": {
-                    "name": "dojo-compile",
-                    "kind": "bin"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}/crates/dojo-lang"
-        }
     ]
 }

@@ -38,7 +38,7 @@ impl InputObjectTrait for OrderInputObject {
         // Direction enum has only two members ASC and DESC
         let direction = Enum::new("Direction").item("ASC").item("DESC");
 
-        // Field Order enum consist of all members of a component
+        // Field Order enum consist of all members of a model
         let field_order = self
             .type_mapping
             .iter()

@@ -6,7 +6,7 @@ use katana_core::sequencer::KatanaSequencer;
 pub use katana_core::sequencer::SequencerConfig;
 use katana_rpc::config::ServerConfig;
 use katana_rpc::{spawn, KatanaApi, NodeHandle, StarknetApi};
-use starknet::accounts::SingleOwnerAccount;
+use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::chain_id;
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -29,9 +29,7 @@ pub struct TestSequencer {
 
 impl TestSequencer {
     pub async fn start(config: SequencerConfig, starknet_config: StarknetConfig) -> Self {
-        let sequencer = Arc::new(KatanaSequencer::new(config, starknet_config));
-
-        sequencer.start().await;
+        let sequencer = Arc::new(KatanaSequencer::new(config, starknet_config).await);
 
         let starknet_api = StarknetApi::new(sequencer.clone());
         let katana_api = KatanaApi::new(sequencer.clone());
@@ -56,6 +54,7 @@ impl TestSequencer {
             LocalWallet::from_signing_key(SigningKey::from_secret_scalar(self.account.private_key)),
             self.account.account_address,
             chain_id::TESTNET,
+            ExecutionEncoding::Legacy,
         )
     }
 

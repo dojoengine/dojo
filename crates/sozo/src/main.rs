@@ -7,13 +7,8 @@ use dojo_lang::compiler::DojoCompiler;
 use dojo_lang::plugin::CairoPluginRepository;
 use scarb::compiler::CompilerRepository;
 use scarb::core::Config;
-use scarb::ui::{OutputFormat, Ui};
-
-mod args;
-mod commands;
-mod ops;
-
-use args::{Commands, SozoArgs};
+use scarb_ui::{OutputFormat, Ui};
+use sozo::args::{Commands, SozoArgs};
 
 fn main() {
     let args = SozoArgs::parse();
@@ -30,8 +25,9 @@ fn cli_main(args: SozoArgs) -> Result<()> {
     let mut compilers = CompilerRepository::std();
     let cairo_plugins = CairoPluginRepository::new();
 
-    if let Commands::Build(_) = &args.command {
-        compilers.add(Box::new(DojoCompiler)).unwrap();
+    match &args.command {
+        Commands::Build(_) | Commands::Dev(_) => compilers.add(Box::new(DojoCompiler)).unwrap(),
+        _ => {}
     }
 
     let manifest_path = scarb::ops::find_manifest_path(args.manifest_path.as_deref())?;
@@ -45,5 +41,5 @@ fn cli_main(args: SozoArgs) -> Result<()> {
         .compilers(compilers)
         .build()?;
 
-    commands::run(args.command, &config)
+    sozo::commands::run(args.command, &config)
 }

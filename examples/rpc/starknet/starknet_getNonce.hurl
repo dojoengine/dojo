@@ -5,7 +5,7 @@ Content-Type: application/json
     "method": "starknet_getNonce",
     "params": [
         "latest",
-        "0x3ee9e18edc71a6df30ac3aca2e0b02a198fbce19b7480a63a0d71cbd76652e0"
+        "0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973"
     ],
     "id":1
 }

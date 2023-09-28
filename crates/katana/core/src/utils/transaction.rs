@@ -11,9 +11,7 @@ use starknet::core::types::{
     InvokeTransactionV0, InvokeTransactionV1, L1HandlerTransaction, Transaction as RpcTransaction,
 };
 use starknet::core::utils::get_contract_address;
-use starknet_api::core::{
-    ClassHash, CompiledClassHash, ContractAddress, EntryPointSelector, Nonce, PatriciaKey,
-};
+use starknet_api::core::{ClassHash, CompiledClassHash, ContractAddress, Nonce, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};
 use starknet_api::transaction::{
     Calldata, ContractAddressSalt, DeclareTransaction as DeclareApiTransaction,
@@ -21,15 +19,22 @@ use starknet_api::transaction::{
     DeclareTransactionV2 as DeclareApiTransactionV2,
     DeployAccountTransaction as DeployAccountApiTransaction,
     DeployTransaction as DeployApiTransaction, Fee, InvokeTransaction as InvokeApiTransaction,
-    InvokeTransactionV0 as InvokeApiTransactionV0, InvokeTransactionV1 as InvokeApiTransactionV1,
-    L1HandlerTransaction as L1HandlerApiTransaction, Transaction as ApiTransaction,
-    TransactionHash, TransactionSignature, TransactionVersion,
+    InvokeTransactionV1 as InvokeApiTransactionV1, L1HandlerTransaction as L1HandlerApiTransaction,
+    Transaction as ApiTransaction, TransactionHash, TransactionSignature, TransactionVersion,
 };
 use starknet_api::{patricia_key, stark_felt};
 
 use super::contract::rpc_to_inner_class;
 use crate::utils::contract::legacy_rpc_to_inner_class;
 use crate::utils::starkfelt_to_u128;
+
+/// 2^ 128
+const QUERY_VERSION_OFFSET: FieldElement = FieldElement::from_mont([
+    18446744073700081665,
+    17407,
+    18446744073709551584,
+    576460752142434320,
+]);
 
 /// Cairo string for "invoke"
 const PREFIX_INVOKE: FieldElement = FieldElement::from_mont([
@@ -56,6 +61,7 @@ const PREFIX_DEPLOY_ACCOUNT: FieldElement = FieldElement::from_mont([
 ]);
 
 /// Compute the hash of a V1 DeployAccount transaction.
+#[allow(clippy::too_many_arguments)]
 pub fn compute_deploy_account_v1_transaction_hash(
     contract_address: FieldElement,
     constructor_calldata: &[FieldElement],
@@ -64,12 +70,13 @@ pub fn compute_deploy_account_v1_transaction_hash(
     max_fee: FieldElement,
     chain_id: FieldElement,
     nonce: FieldElement,
+    is_query: bool,
 ) -> FieldElement {
     let calldata_to_hash = [&[class_hash, salt], constructor_calldata].concat();
 
     compute_hash_on_elements(&[
         PREFIX_DEPLOY_ACCOUNT,
-        FieldElement::ONE, // version
+        if is_query { QUERY_VERSION_OFFSET + FieldElement::ONE } else { FieldElement::ONE }, /* version */
         contract_address,
         FieldElement::ZERO, // entry_point_selector
         compute_hash_on_elements(&calldata_to_hash),
@@ -86,10 +93,11 @@ pub fn compute_declare_v1_transaction_hash(
     max_fee: FieldElement,
     chain_id: FieldElement,
     nonce: FieldElement,
+    is_query: bool,
 ) -> FieldElement {
     compute_hash_on_elements(&[
         PREFIX_DECLARE,
-        FieldElement::ONE, // version
+        if is_query { QUERY_VERSION_OFFSET + FieldElement::ONE } else { FieldElement::ONE }, /* version */
         sender_address,
         FieldElement::ZERO, // entry_point_selector
         compute_hash_on_elements(&[class_hash]),
@@ -107,10 +115,11 @@ pub fn compute_declare_v2_transaction_hash(
     chain_id: FieldElement,
     nonce: FieldElement,
     compiled_class_hash: FieldElement,
+    is_query: bool,
 ) -> FieldElement {
     compute_hash_on_elements(&[
         PREFIX_DECLARE,
-        FieldElement::TWO, // version
+        if is_query { QUERY_VERSION_OFFSET + FieldElement::TWO } else { FieldElement::TWO }, /* version */
         sender_address,
         FieldElement::ZERO, // entry_point_selector
         compute_hash_on_elements(&[class_hash]),
@@ -128,10 +137,11 @@ pub fn compute_invoke_v0_transaction_hash(
     calldata: &[FieldElement],
     max_fee: FieldElement,
     chain_id: FieldElement,
+    is_query: bool,
 ) -> FieldElement {
     compute_hash_on_elements(&[
         PREFIX_INVOKE,
-        FieldElement::ZERO, // version
+        if is_query { QUERY_VERSION_OFFSET + FieldElement::ZERO } else { FieldElement::ZERO }, /* version */
         contract_address,
         entry_point_selector, // entry_point_selector
         compute_hash_on_elements(calldata),
@@ -147,10 +157,11 @@ pub fn compute_invoke_v1_transaction_hash(
     max_fee: FieldElement,
     chain_id: FieldElement,
     nonce: FieldElement,
+    is_query: bool,
 ) -> FieldElement {
     compute_hash_on_elements(&[
         PREFIX_INVOKE,
-        FieldElement::ONE, // version
+        if is_query { QUERY_VERSION_OFFSET + FieldElement::ONE } else { FieldElement::ONE }, /* version */
         sender_address,
         FieldElement::ZERO, // entry_point_selector
         compute_hash_on_elements(calldata),
@@ -237,7 +248,6 @@ fn api_deploy_account_to_rpc_transaction(
 fn api_invoke_to_rpc_transaction(transaction: InvokeApiTransaction) -> InvokeTransaction {
     match transaction {
         InvokeApiTransaction::V0(tx) => InvokeTransaction::V0(InvokeTransactionV0 {
-            nonce: FieldElement::ZERO,
             max_fee: tx.max_fee.0.into(),
             transaction_hash: tx.transaction_hash.0.into(),
             contract_address: (*tx.contract_address.0.key()).into(),
@@ -298,55 +308,29 @@ pub fn broadcasted_invoke_rpc_to_api_transaction(
     transaction: BroadcastedInvokeTransaction,
     chain_id: FieldElement,
 ) -> InvokeApiTransaction {
-    match transaction {
-        BroadcastedInvokeTransaction::V0(tx) => {
-            let transaction_hash = compute_invoke_v0_transaction_hash(
-                tx.contract_address,
-                tx.entry_point_selector,
-                &tx.calldata,
-                tx.max_fee,
-                chain_id,
-            );
+    let BroadcastedInvokeTransaction {
+        calldata, max_fee, nonce, sender_address, signature, ..
+    } = transaction;
 
-            let transaction = InvokeApiTransactionV0 {
-                transaction_hash: TransactionHash(transaction_hash.into()),
-                contract_address: ContractAddress(patricia_key!(tx.contract_address)),
-                entry_point_selector: EntryPointSelector(tx.entry_point_selector.into()),
-                calldata: Calldata(Arc::new(tx.calldata.into_iter().map(|c| c.into()).collect())),
-                max_fee: Fee(starkfelt_to_u128(tx.max_fee.into())
-                    .expect("convert max fee StarkFelt to u128")),
-                signature: TransactionSignature(
-                    tx.signature.into_iter().map(|e| e.into()).collect(),
-                ),
-            };
+    let hash = compute_invoke_v1_transaction_hash(
+        sender_address,
+        &calldata,
+        max_fee,
+        chain_id,
+        nonce,
+        transaction.is_query,
+    );
 
-            InvokeApiTransaction::V0(transaction)
-        }
+    let transaction = InvokeApiTransactionV1 {
+        nonce: Nonce(nonce.into()),
+        transaction_hash: TransactionHash(hash.into()),
+        sender_address: ContractAddress(patricia_key!(sender_address)),
+        signature: TransactionSignature(signature.into_iter().map(|e| e.into()).collect()),
+        calldata: Calldata(Arc::new(calldata.into_iter().map(|c| c.into()).collect())),
+        max_fee: Fee(starkfelt_to_u128(max_fee.into()).expect("convert max fee StarkFelt to u128")),
+    };
 
-        BroadcastedInvokeTransaction::V1(tx) => {
-            let transaction_hash = compute_invoke_v1_transaction_hash(
-                tx.sender_address,
-                &tx.calldata,
-                tx.max_fee,
-                chain_id,
-                tx.nonce,
-            );
-
-            let transaction = InvokeApiTransactionV1 {
-                transaction_hash: TransactionHash(transaction_hash.into()),
-                sender_address: ContractAddress(patricia_key!(tx.sender_address)),
-                nonce: Nonce(StarkFelt::from(tx.nonce)),
-                calldata: Calldata(Arc::new(tx.calldata.into_iter().map(|c| c.into()).collect())),
-                max_fee: Fee(starkfelt_to_u128(tx.max_fee.into())
-                    .expect("convert max fee StarkFelt to u128")),
-                signature: TransactionSignature(
-                    tx.signature.into_iter().map(|e| e.into()).collect(),
-                ),
-            };
-
-            InvokeApiTransaction::V1(transaction)
-        }
-    }
+    InvokeApiTransaction::V1(transaction)
 }
 
 /// Convert broadcasted Declare transaction type from `starknet-rs` to `starknet_api`'s
@@ -367,6 +351,7 @@ pub fn broadcasted_declare_rpc_to_api_transaction(
                 tx.max_fee,
                 chain_id,
                 tx.nonce,
+                tx.is_query,
             );
 
             let transaction = DeclareApiTransactionV0V1 {
@@ -394,6 +379,7 @@ pub fn broadcasted_declare_rpc_to_api_transaction(
                 chain_id,
                 tx.nonce,
                 tx.compiled_class_hash,
+                tx.is_query,
             );
 
             let transaction = DeclareApiTransactionV2 {
@@ -447,6 +433,7 @@ pub fn broadcasted_deploy_account_rpc_to_api_transaction(
         max_fee,
         chain_id,
         nonce,
+        transaction.is_query,
     );
 
     let api_transaction = DeployAccountApiTransaction {
@@ -513,6 +500,7 @@ mod tests {
             max_fee,
             chain_id,
             nonce,
+            false,
         );
 
         assert_eq!(

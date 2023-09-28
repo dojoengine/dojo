@@ -1,13 +1,15 @@
-pub mod component;
-pub mod component_state;
 pub mod connection;
 pub mod entity;
 pub mod event;
 pub mod inputs;
+pub mod model;
+pub mod model_state;
 pub mod system;
 pub mod system_call;
 
-use async_graphql::dynamic::{Enum, Field, FieldFuture, InputObject, Object, TypeRef};
+use async_graphql::dynamic::{
+    Enum, Field, FieldFuture, InputObject, Object, SubscriptionField, TypeRef,
+};
 use async_graphql::{Error, Name, Value};
 use indexmap::IndexMap;
 
@@ -38,6 +40,10 @@ pub trait ObjectTrait {
         None
     }
 
+    // Resolves subscriptions, returns current object (eg "PlayerAdded")
+    fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
+        None
+    }
     // Resolves plural object queries, returns type of {type_name}Connection (eg "PlayerConnection")
     fn resolve_many(&self) -> Option<Field> {
         None
@@ -90,7 +96,7 @@ pub trait ObjectTrait {
                         };
                     }
 
-                    // Component union queries is a special case, it instead passes down a
+                    // Model union queries is a special case, it instead passes down a
                     // IndexMap<Name, Value>. This could be avoided if
                     // async-graphql allowed union resolver to be passed down as Value.
                     if let Some(indexmap) = ctx.parent_value.downcast_ref::<ValueMapping>() {

@@ -1,16 +1,19 @@
-use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
+use async_graphql::dynamic::{
+    Field, FieldFuture, FieldValue, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
+};
 use async_graphql::{Name, Value};
-use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
-use serde::Deserialize;
 use sqlx::pool::PoolConnection;
-use sqlx::{FromRow, Pool, Result, Sqlite};
+use sqlx::{Pool, Result, Sqlite};
+use tokio_stream::StreamExt;
+use torii_core::simple_broker::SimpleBroker;
+use torii_core::types::Entity;
 
-use super::component_state::{component_state_by_id_query, type_mapping_query};
 use super::connection::{
     connection_arguments, connection_output, decode_cursor, parse_connection_arguments,
     ConnectionArguments,
 };
+use super::model_state::{model_state_by_id_query, type_mapping_query};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
 use crate::query::{query_by_id, ID};
@@ -18,39 +21,31 @@ use crate::types::ScalarType;
 use crate::utils::csv_to_vec;
 use crate::utils::extract_value::extract;
 
-#[derive(FromRow, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct Entity {
-    pub id: String,
-    pub keys: String,
-    pub component_names: String,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-}
-
 pub struct EntityObject {
     pub type_mapping: TypeMapping,
 }
 
-impl EntityObject {
-    pub fn new() -> Self {
+impl Default for EntityObject {
+    fn default() -> Self {
         Self {
             type_mapping: IndexMap::from([
                 (Name::new("id"), TypeRef::named(TypeRef::ID)),
                 (Name::new("keys"), TypeRef::named_list(TypeRef::STRING)),
-                (Name::new("componentNames"), TypeRef::named(TypeRef::STRING)),
+                (Name::new("modelNames"), TypeRef::named(TypeRef::STRING)),
                 (Name::new("createdAt"), TypeRef::named(ScalarType::DateTime.to_string())),
                 (Name::new("updatedAt"), TypeRef::named(ScalarType::DateTime.to_string())),
             ]),
         }
     }
+}
 
+impl EntityObject {
     pub fn value_mapping(entity: Entity) -> ValueMapping {
-        let keys: Vec<&str> = entity.keys.split(',').map(|s| s.trim()).collect();
+        let keys: Vec<&str> = entity.keys.split('/').filter(|&k| !k.is_empty()).collect();
         IndexMap::from([
             (Name::new("id"), Value::from(entity.id)),
             (Name::new("keys"), Value::from(keys)),
-            (Name::new("componentNames"), Value::from(entity.component_names)),
+            (Name::new("modelNames"), Value::from(entity.model_names)),
             (
                 Name::new("createdAt"),
                 Value::from(entity.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
@@ -77,29 +72,24 @@ impl ObjectTrait for EntityObject {
     }
 
     fn nested_fields(&self) -> Option<Vec<Field>> {
-        Some(vec![Field::new("components", TypeRef::named_list("ComponentUnion"), move |ctx| {
+        Some(vec![Field::new("models", TypeRef::named_list("ModelUnion"), move |ctx| {
             FieldFuture::new(async move {
                 match ctx.parent_value.try_to_value()? {
                     Value::Object(indexmap) => {
                         let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                        let components =
-                            csv_to_vec(&extract::<String>(indexmap, "componentNames")?);
+                        let models = csv_to_vec(&extract::<String>(indexmap, "modelNames")?);
                         let id = extract::<String>(indexmap, "id")?;
 
                         let mut results: Vec<FieldValue<'_>> = Vec::new();
-                        for component_name in components {
-                            let table_name = component_name.to_lowercase();
+                        for model_name in models {
+                            let table_name = model_name.to_lowercase();
                             let type_mapping = type_mapping_query(&mut conn, &table_name).await?;
-                            let state = component_state_by_id_query(
-                                &mut conn,
-                                &table_name,
-                                &id,
-                                &type_mapping,
-                            )
-                            .await?;
+                            let state =
+                                model_state_by_id_query(&mut conn, &table_name, &id, &type_mapping)
+                                    .await?;
                             results.push(FieldValue::with_type(
                                 FieldValue::owned_any(state),
-                                component_name,
+                                model_name,
                             ));
                         }
 
@@ -155,6 +145,31 @@ impl ObjectTrait for EntityObject {
 
         Some(field)
     }
+
+    fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
+        let name = format!("{}Updated", self.name());
+        Some(vec![
+            SubscriptionField::new(name, TypeRef::named_nn(self.type_name()), |ctx| {
+                SubscriptionFieldFuture::new(async move {
+                    let id = match ctx.args.get("id") {
+                        Some(id) => Some(id.string()?.to_string()),
+                        None => None,
+                    };
+                    // if id is None, then subscribe to all entities
+                    // if id is Some, then subscribe to only the entity with that id
+                    Ok(SimpleBroker::<Entity>::subscribe().filter_map(move |entity: Entity| {
+                        if id.is_none() || id == Some(entity.id.clone()) {
+                            Some(Ok(Value::Object(EntityObject::value_mapping(entity))))
+                        } else {
+                            // id != entity.id , then don't send anything, still listening
+                            None
+                        }
+                    }))
+                })
+            })
+            .argument(InputValue::new("id", TypeRef::named(TypeRef::ID))),
+        ])
+    }
 }
 
 async fn entities_by_sk(
@@ -167,8 +182,9 @@ async fn entities_by_sk(
     let mut conditions = Vec::new();
 
     if let Some(keys) = &keys {
-        conditions.push(format!("keys LIKE '{}%'", keys.join(",")));
-        count_query.push_str(&format!(" WHERE keys LIKE '{}%'", keys.join(",")));
+        let keys_str = keys.join("/");
+        conditions.push(format!("keys LIKE '{}/%'", keys_str));
+        count_query.push_str(&format!(" WHERE keys LIKE '{}/%'", keys_str));
     }
 
     if let Some(after_cursor) = &args.after {

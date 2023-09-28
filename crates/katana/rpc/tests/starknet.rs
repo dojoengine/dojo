@@ -1,6 +1,7 @@
 use std::fs::{self, File};
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::{anyhow, Result};
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
@@ -12,12 +13,12 @@ use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
     BlockId, BlockTag, DeclareTransactionReceipt, FieldElement, FlattenedSierraClass,
-    MaybePendingTransactionReceipt, TransactionReceipt, TransactionStatus,
+    MaybePendingTransactionReceipt, TransactionFinalityStatus, TransactionReceipt,
 };
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::providers::Provider;
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_send_declare_and_deploy_contract() {
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
@@ -28,13 +29,17 @@ async fn test_send_declare_and_deploy_contract() {
 
     let class_hash = contract.class_hash();
     let res = account.declare(Arc::new(contract), compiled_class_hash).send().await.unwrap();
+
+    // wait for the tx to be mined
+    tokio::time::sleep(Duration::from_millis(250)).await;
+
     let receipt = account.provider().get_transaction_receipt(res.transaction_hash).await.unwrap();
 
     match receipt {
         MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Declare(
-            DeclareTransactionReceipt { status, .. },
+            DeclareTransactionReceipt { finality_status, .. },
         )) => {
-            assert_eq!(status, TransactionStatus::AcceptedOnL2);
+            assert_eq!(finality_status, TransactionFinalityStatus::AcceptedOnL2);
         }
         _ => panic!("invalid tx receipt"),
     }
@@ -75,6 +80,9 @@ async fn test_send_declare_and_deploy_contract() {
         .await
         .unwrap();
 
+    // wait for the tx to be mined
+    tokio::time::sleep(Duration::from_millis(250)).await;
+
     assert_eq!(
         account
             .provider()
@@ -87,8 +95,8 @@ async fn test_send_declare_and_deploy_contract() {
     sequencer.stop().expect("failed to stop sequencer");
 }
 
-#[tokio::test]
-async fn test_send_declare_and_deploy_legcay_contract() {
+#[tokio::test(flavor = "multi_thread")]
+async fn test_send_declare_and_deploy_legacy_contract() {
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
     let account = sequencer.account();
@@ -101,13 +109,16 @@ async fn test_send_declare_and_deploy_legcay_contract() {
 
     let class_hash = contract_class.class_hash().unwrap();
     let res = account.declare_legacy(contract_class).send().await.unwrap();
+    // wait for the tx to be mined
+    tokio::time::sleep(Duration::from_millis(250)).await;
+
     let receipt = account.provider().get_transaction_receipt(res.transaction_hash).await.unwrap();
 
     match receipt {
         MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Declare(
-            DeclareTransactionReceipt { status, .. },
+            DeclareTransactionReceipt { finality_status, .. },
         )) => {
-            assert_eq!(status, TransactionStatus::AcceptedOnL2);
+            assert_eq!(finality_status, TransactionFinalityStatus::AcceptedOnL2);
         }
         _ => panic!("invalid tx receipt"),
     }
@@ -147,6 +158,9 @@ async fn test_send_declare_and_deploy_legcay_contract() {
         .send()
         .await
         .unwrap();
+
+    // wait for the tx to be mined
+    tokio::time::sleep(Duration::from_millis(250)).await;
 
     assert_eq!(
         account

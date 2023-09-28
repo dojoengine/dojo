@@ -1,10 +1,7 @@
 use starknet::ClassHash;
 
-use dojo::world::Context;
-
 #[starknet::interface]
 trait IExecutor<T> {
-    fn execute(self: @T, class_hash: ClassHash, calldata: Span<felt252>) -> Span<felt252>;
     fn call(
         self: @T, class_hash: ClassHash, entrypoint: felt252, calldata: Span<felt252>
     ) -> Span<felt252>;
@@ -14,7 +11,7 @@ trait IExecutor<T> {
 mod executor {
     use array::{ArrayTrait, SpanTrait};
     use option::OptionTrait;
-    use starknet::ClassHash;
+    use starknet::{ClassHash, SyscallResultTrait, SyscallResultTraitImpl};
 
     use super::IExecutor;
 
@@ -26,23 +23,6 @@ mod executor {
 
     #[external(v0)]
     impl Executor of IExecutor<ContractState> {
-        /// Executes a System by calling its execute entrypoint.
-        ///
-        /// # Arguments
-        ///
-        /// * `class_hash` - Class Hash of the System.
-        /// * `calldata` - Calldata to pass to the System.
-        ///
-        /// # Returns
-        ///
-        /// The return value of the System's execute entrypoint.
-        fn execute(
-            self: @ContractState, class_hash: ClassHash, calldata: Span<felt252>
-        ) -> Span<felt252> {
-            starknet::syscalls::library_call_syscall(class_hash, EXECUTE_ENTRYPOINT, calldata)
-                .unwrap_syscall()
-        }
-
         /// Call the provided `entrypoint` method on the given `class_hash`.
         ///
         /// # Arguments

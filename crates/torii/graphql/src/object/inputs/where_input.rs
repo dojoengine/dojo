@@ -15,7 +15,7 @@ pub struct WhereInputObject {
 
 impl WhereInputObject {
     // Iterate through an object's type mapping and create a new mapping for whereInput. For each of
-    // the object type (component member), we add 6 additional types for comparators (great than,
+    // the object type (model member), we add 6 additional types for comparators (great than,
     // not equal, etc). Only filter on our custom scalar types and ignore async-graphql's types.
     // Due to sqlite column constraints, u8 thru u64 are treated as numerics and the rest of the
     // types are treated as strings.

@@ -2,7 +2,7 @@ use anyhow::Result;
 use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand};
 use scarb::compiler::Profile;
-use scarb::ui;
+use scarb_ui::Verbosity;
 use smol_str::SmolStr;
 use tracing::level_filters::LevelFilter;
 use tracing_log::AsTrace;
@@ -10,13 +10,13 @@ use tracing_log::AsTrace;
 use crate::commands::auth::AuthArgs;
 use crate::commands::build::BuildArgs;
 use crate::commands::completions::CompletionsArgs;
-use crate::commands::component::ComponentArgs;
+use crate::commands::dev::DevArgs;
 use crate::commands::events::EventsArgs;
 use crate::commands::execute::ExecuteArgs;
 use crate::commands::init::InitArgs;
 use crate::commands::migrate::MigrateArgs;
+use crate::commands::model::ModelArgs;
 use crate::commands::register::RegisterArgs;
-use crate::commands::system::SystemArgs;
 use crate::commands::test::TestArgs;
 
 #[derive(Parser)]
@@ -57,15 +57,15 @@ pub enum Commands {
     #[command(about = "Run a migration, declaring and deploying contracts as necessary to \
                        update the world")]
     Migrate(Box<MigrateArgs>),
+    #[command(about = "Developer mode: watcher for building and migration")]
+    Dev(DevArgs),
     #[command(about = "Test the project's smart contracts")]
     Test(TestArgs),
     #[command(about = "Execute a world's system")]
     Execute(ExecuteArgs),
-    #[command(about = "Interact with a worlds components")]
-    Component(ComponentArgs),
-    #[command(about = "Interact with a worlds systems")]
-    System(SystemArgs),
-    #[command(about = "Register new systems and components")]
+    #[command(about = "Interact with a worlds models")]
+    Model(ModelArgs),
+    #[command(about = "Register new models")]
     Register(RegisterArgs),
     #[command(about = "Queries world events")]
     Events(EventsArgs),
@@ -76,14 +76,14 @@ pub enum Commands {
 }
 
 impl SozoArgs {
-    pub fn ui_verbosity(&self) -> ui::Verbosity {
+    pub fn ui_verbosity(&self) -> Verbosity {
         let filter = self.verbose.log_level_filter().as_trace();
         if filter >= LevelFilter::WARN {
-            ui::Verbosity::Verbose
+            Verbosity::Verbose
         } else if filter > LevelFilter::OFF {
-            ui::Verbosity::Normal
+            Verbosity::Normal
         } else {
-            ui::Verbosity::Quiet
+            Verbosity::Quiet
         }
     }
 }

@@ -9,6 +9,7 @@ version = "0.2.1"
 anyhow.workspace = true
 async-trait.workspace = true
 cairo-lang-compiler.workspace = true
+cairo-lang-defs.workspace = true
 cairo-lang-filesystem.workspace = true
 cairo-lang-plugins.workspace = true
 cairo-lang-project.workspace = true
@@ -22,8 +23,11 @@ clap.workspace = true
 clap_complete.workspace = true
 console.workspace = true
 dojo-lang = { path = "../dojo-lang" }
+dojo-types = { path = "../dojo-types" }
 dojo-world = { path = "../dojo-world" }
-log.workspace = true
+notify = "6.0.1"
+notify-debouncer-mini = "0.3.0"
+scarb-ui.workspace = true
 scarb.workspace = true
 semver.workspace = true
 serde.workspace = true
@@ -31,18 +35,13 @@ serde_json.workspace = true
 smol_str.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
-tokio = { version = "1.15.0", features = [ "full" ] }
+tokio.workspace = true
 torii-client = { path = "../torii/client" }
 tracing-log = "0.1.3"
 tracing.workspace = true
-url = "2.2.2"
+url.workspace = true
 
 [dev-dependencies]
 assert_fs = "1.0.10"
 dojo-test-utils = { path = "../dojo-test-utils", features = [ "build-examples" ] }
 snapbox = "0.4.6"
-tokio = { version = "1.28.0", features = [ "full" ] }
-
-[[bin]]
-name = "sozo"
-path = "src/main.rs"

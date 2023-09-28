@@ -1,5 +1,7 @@
 use std::env;
+use std::net::SocketAddr;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use anyhow::{anyhow, Context};
 use camino::Utf8PathBuf;
@@ -12,20 +14,17 @@ use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use tokio_util::sync::CancellationToken;
-use torii_core::processors::register_component::RegisterComponentProcessor;
+use torii_client::contract::world::WorldContractReader;
+use torii_core::engine::{Engine, EngineConfig, Processors};
+use torii_core::processors::register_model::RegisterModelProcessor;
 use torii_core::processors::register_system::RegisterSystemProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::sql::Sql;
-use torii_core::State;
 use tracing::error;
 use tracing_subscriber::fmt;
 use url::Url;
 
-use crate::engine::Processors;
-use crate::indexer::Indexer;
-
-mod engine;
-mod indexer;
+mod server;
 
 /// Dojo World Indexer
 #[derive(Parser, Debug)]
@@ -46,6 +45,12 @@ struct Args {
     /// Specify a block to start indexing from, ignored if stored head exists
     #[arg(short, long, default_value = "0")]
     start_block: u64,
+    /// Host address for GraphQL/gRPC endpoints
+    #[arg(long, default_value = "0.0.0.0")]
+    host: String,
+    /// Port number for GraphQL/gRPC endpoints
+    #[arg(long, default_value = "8080")]
+    port: u16,
 }
 
 #[tokio::main]
@@ -73,46 +78,53 @@ async fn main() -> anyhow::Result<()> {
     let pool = SqlitePoolOptions::new().max_connections(5).connect(database_url).await?;
     sqlx::migrate!("../migrations").run(&pool).await?;
 
-    let provider = JsonRpcClient::new(HttpTransport::new(Url::parse(&args.rpc).unwrap()));
+    let provider: Arc<_> = JsonRpcClient::new(HttpTransport::new(Url::parse(&args.rpc)?)).into();
 
     let (manifest, env) = get_manifest_and_env(args.manifest.as_ref())
         .with_context(|| "Failed to get manifest file".to_string())?;
 
     // Get world address
     let world_address = get_world_address(&args, &manifest, env.as_ref())?;
+    let world = WorldContractReader::new(world_address, &provider);
 
-    let state = Sql::new(pool.clone(), world_address).await?;
-    state.load_from_manifest(manifest.clone()).await?;
+    let db = Sql::new(pool.clone(), world_address).await?;
+    db.load_from_manifest(manifest.clone()).await?;
     let processors = Processors {
         event: vec![
-            Box::new(RegisterComponentProcessor),
+            Box::new(RegisterModelProcessor),
             Box::new(RegisterSystemProcessor),
             Box::new(StoreSetRecordProcessor),
         ],
+        // transaction: vec![Box::new(StoreSystemCallProcessor)],
         ..Processors::default()
     };
 
-    let indexer =
-        Indexer::new(&state, &provider, processors, manifest, world_address, args.start_block);
-    let graphql = torii_graphql::server::start(pool.clone());
-    let grpc = torii_grpc::server::start(pool);
+    let (block_sender, block_receiver) = tokio::sync::mpsc::channel(100);
+
+    let engine = Engine::new(
+        &world,
+        &db,
+        &provider,
+        processors,
+        EngineConfig { start_block: args.start_block, ..Default::default() },
+        Some(block_sender),
+    );
+
+    let addr: SocketAddr = format!("{}:{}", args.host, args.port).parse()?;
 
     tokio::select! {
-        res = indexer.start() => {
+        res = engine.start(cts) => {
             if let Err(e) = res {
-                error!("Indexer failed with error: {:?}", e);
+                error!("Indexer failed with error: {e}");
             }
         }
-        res = graphql => {
+
+        res = server::spawn_server(&addr, &pool, world_address, block_receiver,  Arc::clone(&provider)) => {
             if let Err(e) = res {
-                error!("GraphQL server failed with error: {:?}", e);
+                error!("Server failed with error: {e}");
             }
         }
-        rs = grpc => {
-            if let Err(e) = rs {
-                error!("GRPC server failed with error: {:?}", e);
-            }
-        }
+
         _ = tokio::signal::ctrl_c() => {
             println!("Received Ctrl+C, shutting down");
         }

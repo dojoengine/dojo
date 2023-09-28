@@ -4,12 +4,11 @@
 //!
 //! Learn more at [dojoengine.gg](http://dojoengine.gg).
 pub mod compiler;
-pub mod component;
-pub mod db;
-pub mod inline_macro_plugin;
-mod inline_macros;
+pub mod inline_macros;
+pub mod introspect;
 mod manifest;
+pub mod model;
 pub mod plugin;
-mod serde;
+pub mod print;
 pub mod system;
 pub(crate) mod version;

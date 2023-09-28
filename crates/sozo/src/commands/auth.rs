@@ -18,8 +18,8 @@ pub struct AuthArgs {
 pub enum AuthCommand {
     #[command(about = "Auth a system with the given calldata.")]
     Writer {
-        #[arg(help = "Name of the component to grant write access to.")]
-        component: String,
+        #[arg(help = "Name of the model to grant write access to.")]
+        model: String,
 
         #[arg(help = "Name of the system to grant writer access to.")]
         system: String,

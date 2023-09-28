@@ -5,6 +5,7 @@ use scarb::core::Config;
 
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
+use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
 use crate::ops::migration;
 
@@ -28,6 +29,9 @@ pub struct MigrateArgs {
 
     #[command(flatten)]
     pub account: AccountOptions,
+
+    #[command(flatten)]
+    pub transaction: TransactionOptions,
 }
 
 impl MigrateArgs {

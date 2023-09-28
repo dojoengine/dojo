@@ -6,5 +6,9 @@ version = "0.2.1"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+hex = "0.4.3"
+strum.workspace = true
+strum_macros.workspace = true
 serde.workspace = true
 starknet.workspace = true
+thiserror.workspace = true

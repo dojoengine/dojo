@@ -17,8 +17,8 @@ use super::{DeployOutput, MigrationType, RegisterOutput};
 pub struct MigrationOutput {
     pub world: Option<DeployOutput>,
     pub executor: Option<DeployOutput>,
-    pub systems: Option<RegisterOutput>,
-    pub components: Option<RegisterOutput>,
+    pub contracts: Vec<DeployOutput>,
+    pub models: Option<RegisterOutput>,
 }
 
 #[derive(Debug)]
@@ -26,8 +26,8 @@ pub struct MigrationStrategy {
     pub world_address: Option<FieldElement>,
     pub world: Option<ContractMigration>,
     pub executor: Option<ContractMigration>,
-    pub systems: Vec<ClassMigration>,
-    pub components: Vec<ClassMigration>,
+    pub contracts: Vec<ContractMigration>,
+    pub models: Vec<ClassMigration>,
 }
 
 #[derive(Debug)]
@@ -62,12 +62,12 @@ impl MigrationStrategy {
             }
         }
 
-        self.systems.iter().for_each(|item| match item.migration_type() {
+        self.contracts.iter().for_each(|item| match item.migration_type() {
             MigrationType::New => new += 1,
             MigrationType::Update => update += 1,
         });
 
-        self.components.iter().for_each(|item| match item.migration_type() {
+        self.models.iter().for_each(|item| match item.migration_type() {
             MigrationType::New => new += 1,
             MigrationType::Update => update += 1,
         });
@@ -111,9 +111,9 @@ where
     let mut world = evaluate_contract_to_migrate(&diff.world, &artifact_paths, false)?;
     let mut executor =
         evaluate_contract_to_migrate(&diff.executor, &artifact_paths, world.is_some())?;
-    let components =
-        evaluate_components_to_migrate(&diff.components, &artifact_paths, world.is_some())?;
-    let systems = evaluate_systems_to_migrate(&diff.systems, &artifact_paths, world.is_some())?;
+    let contracts =
+        evaluate_contracts_to_migrate(&diff.contracts, &artifact_paths, world.is_some())?;
+    let models = evaluate_models_to_migrate(&diff.models, &artifact_paths, world.is_some())?;
 
     if let Some(executor) = &mut executor {
         executor.contract_address =
@@ -134,38 +134,17 @@ where
         );
     }
 
-    Ok(MigrationStrategy { world_address, world, executor, systems, components })
+    Ok(MigrationStrategy { world_address, world, executor, contracts, models })
 }
 
-fn evaluate_systems_to_migrate(
-    systems: &[ClassDiff],
-    artifact_paths: &HashMap<String, PathBuf>,
-    world_contract_will_migrate: bool,
-) -> Result<Vec<ClassMigration>> {
-    let mut syst_to_migrate = vec![];
-
-    for s in systems {
-        match s.remote {
-            Some(remote) if remote == s.local && !world_contract_will_migrate => continue,
-            _ => {
-                let path = find_artifact_path(&s.name, artifact_paths)?;
-                syst_to_migrate
-                    .push(ClassMigration { diff: s.clone(), artifact_path: path.clone() });
-            }
-        }
-    }
-
-    Ok(syst_to_migrate)
-}
-
-fn evaluate_components_to_migrate(
-    components: &[ClassDiff],
+fn evaluate_models_to_migrate(
+    models: &[ClassDiff],
     artifact_paths: &HashMap<String, PathBuf>,
     world_contract_will_migrate: bool,
 ) -> Result<Vec<ClassMigration>> {
     let mut comps_to_migrate = vec![];
 
-    for c in components {
+    for c in models {
         match c.remote {
             Some(remote) if remote == c.local && !world_contract_will_migrate => continue,
             _ => {
@@ -173,6 +152,31 @@ fn evaluate_components_to_migrate(
                     find_artifact_path(c.name.to_case(Case::Snake).as_str(), artifact_paths)?;
                 comps_to_migrate
                     .push(ClassMigration { diff: c.clone(), artifact_path: path.clone() });
+            }
+        }
+    }
+
+    Ok(comps_to_migrate)
+}
+
+fn evaluate_contracts_to_migrate(
+    contracts: &[ContractDiff],
+    artifact_paths: &HashMap<String, PathBuf>,
+    world_contract_will_migrate: bool,
+) -> Result<Vec<ContractMigration>> {
+    let mut comps_to_migrate = vec![];
+
+    for c in contracts {
+        match c.remote {
+            Some(remote) if remote == c.local && !world_contract_will_migrate => continue,
+            _ => {
+                let path =
+                    find_artifact_path(c.name.to_case(Case::Snake).as_str(), artifact_paths)?;
+                comps_to_migrate.push(ContractMigration {
+                    diff: c.clone(),
+                    artifact_path: path.clone(),
+                    ..Default::default()
+                });
             }
         }
     }

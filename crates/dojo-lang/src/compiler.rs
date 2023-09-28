@@ -138,7 +138,9 @@ fn find_project_contracts(
             .iter()
             .map(|selector| selector.package().into())
             .unique()
-            .map(|package_name: SmolStr| db.upcast_mut().intern_crate(CrateLongId(package_name)))
+            .map(|package_name: SmolStr| {
+                db.upcast_mut().intern_crate(CrateLongId::Real(package_name))
+            })
             .collect::<Vec<_>>();
         find_contracts(db, crate_ids.as_ref())
             .into_iter()
@@ -161,13 +163,11 @@ pub fn collect_core_crate_ids(db: &RootDatabase) -> Vec<CrateId> {
     [
         ContractSelector("dojo::executor::executor".to_string()),
         ContractSelector("dojo::world::world".to_string()),
-        ContractSelector("dojo::world::library_call".to_string()),
-        ContractSelector("dojo::world_factory::world_factory".to_string()),
     ]
     .iter()
     .map(|selector| selector.package().into())
     .unique()
-    .map(|package_name: SmolStr| db.intern_crate(CrateLongId(package_name)))
+    .map(|package_name: SmolStr| db.intern_crate(CrateLongId::Real(package_name)))
     .collect::<Vec<_>>()
 }
 
@@ -179,7 +179,7 @@ pub fn collect_external_crate_ids(
         .iter()
         .map(|selector| selector.package().into())
         .unique()
-        .map(|package_name: SmolStr| db.intern_crate(CrateLongId(package_name)))
+        .map(|package_name: SmolStr| db.intern_crate(CrateLongId::Real(package_name)))
         .collect::<Vec<_>>()
 }
 

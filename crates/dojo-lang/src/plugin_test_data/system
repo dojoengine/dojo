@@ -1,4 +1,4 @@
-//! > Test expansion of the component contract.
+//! > Test expansion of the #[system].
 
 //! > test_runner_name
 test_expand_plugin
@@ -50,7 +50,7 @@ mod spawn {
     use dojo::world::Context;
 
     #[external(v0)]
-    fn execute(self: @ContractState, name: felt252, ctx: Context) {
+    fn execute(self: @ContractState, ctx: Context, name: felt252) {
         return ();
     }
 }
@@ -72,7 +72,7 @@ mod proxy {
 
 
     #[external(v0)]
-    fn execute(self: @ContractState, value: felt252, _ctx: dojo::world::Context) -> felt252 {
+    fn execute(self: @ContractState, value: felt252) -> felt252 {
         value
     }
 }
@@ -96,7 +96,7 @@ mod ctxnamed {
     use dojo::world::Context;
 
     #[external(v0)]
-    fn execute(self: @ContractState, name: felt252, ctx2: Context) {
+    fn execute(self: @ContractState, ctx2: Context, name: felt252) {
         return ();
     }
 }

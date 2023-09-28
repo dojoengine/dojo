@@ -19,7 +19,7 @@ use starknet_api::patricia_key;
 use crate::constants::{
     DEFAULT_ACCOUNT_CONTRACT, DEFAULT_ACCOUNT_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS,
 };
-use crate::db::Db;
+use crate::db::Database;
 
 #[serde_as]
 #[derive(Debug, Clone, Serialize)]
@@ -58,14 +58,14 @@ impl Account {
     }
 
     // TODO: separate fund logic from this struct - implement FeeToken type
-    pub fn deploy_and_fund<S: Db>(&self, state: &mut S) -> StateResult<()> {
+    pub fn deploy_and_fund(&self, state: &mut dyn Database) -> StateResult<()> {
         self.declare(state)?;
         self.deploy(state)?;
         self.fund(state);
         Ok(())
     }
 
-    fn deploy<S: Db>(&self, state: &mut S) -> StateResult<()> {
+    fn deploy(&self, state: &mut dyn Database) -> StateResult<()> {
         let address = ContractAddress(patricia_key!(self.address));
         // set the class hash at the account address
         state.set_class_hash_at(address, ClassHash(self.class_hash.into()))?;
@@ -80,7 +80,7 @@ impl Account {
         Ok(())
     }
 
-    fn fund<S: Db>(&self, state: &mut S) {
+    fn fund(&self, state: &mut dyn Database) {
         state.set_storage_at(
             ContractAddress(patricia_key!(*FEE_TOKEN_ADDRESS)),
             get_storage_var_address("ERC20_balances", &[self.address.into()]).unwrap(),
@@ -88,7 +88,7 @@ impl Account {
         );
     }
 
-    fn declare<S: Db>(&self, state: &mut S) -> StateResult<()> {
+    fn declare(&self, state: &mut dyn Database) -> StateResult<()> {
         let class_hash = ClassHash(self.class_hash.into());
 
         if state.get_compiled_contract_class(&class_hash).is_ok() {
@@ -155,7 +155,7 @@ impl DevAccountGenerator {
                 let mut private_key_bytes = [0u8; 32];
 
                 rng.fill_bytes(&mut private_key_bytes);
-                private_key_bytes[0] %= 0x9;
+                private_key_bytes[0] %= 0x8;
                 seed = private_key_bytes;
 
                 let private_key = FieldElement::from_bytes_be(&private_key_bytes)
