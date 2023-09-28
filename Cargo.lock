@@ -7052,6 +7052,8 @@ dependencies = [
  "sqlx",
  "starknet",
  "starknet-crypto 0.6.0",
+ "strum 0.25.0",
+ "strum_macros 0.25.2",
  "tokio",
  "tokio-stream",
  "tokio-util",

@@ -5,7 +5,7 @@ use base64::Engine as _;
 use serde_json::Number;
 
 use super::ObjectTrait;
-use crate::types::{ScalarType, TypeData, TypeMapping, ValueMapping};
+use crate::types::{GraphqlType, TypeData, TypeMapping, ValueMapping};
 use crate::utils::extract_value::extract;
 
 pub mod edge;
@@ -95,8 +95,8 @@ pub fn connection_arguments(field: Field) -> Field {
     field
         .argument(InputValue::new("first", TypeRef::named(TypeRef::INT)))
         .argument(InputValue::new("last", TypeRef::named(TypeRef::INT)))
-        .argument(InputValue::new("before", TypeRef::named(ScalarType::Cursor.to_string())))
-        .argument(InputValue::new("after", TypeRef::named(ScalarType::Cursor.to_string())))
+        .argument(InputValue::new("before", TypeRef::named(GraphqlType::Cursor.to_string())))
+        .argument(InputValue::new("after", TypeRef::named(GraphqlType::Cursor.to_string())))
 }
 
 pub fn connection_output(data: Vec<ValueMapping>, total_count: i64) -> ValueMapping {

@@ -40,9 +40,9 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     schema_builder = schema_builder.register(model_union);
 
     // register default scalars and model custom types
-    let scalar_types = ScalarType::default_types();
+    let scalar_types = ScalarType::all();
     for scalar_type in scalar_types.iter() {
-        schema_builder = schema_builder.register(Scalar::new(scalar_type.to_string()));
+        schema_builder = schema_builder.register(Scalar::new(scalar_type));
     }
 
     // collect resolvers for single and plural queries

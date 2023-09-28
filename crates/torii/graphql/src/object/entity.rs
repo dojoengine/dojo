@@ -17,7 +17,7 @@ use super::model_data::{model_data_by_id_query, type_mapping_query};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
 use crate::query::{query_by_id, ID};
-use crate::types::{ScalarType, TypeData};
+use crate::types::{GraphqlType, ScalarType, TypeData};
 use crate::utils::csv_to_vec;
 use crate::utils::extract_value::extract;
 
@@ -34,11 +34,11 @@ impl Default for EntityObject {
                 (Name::new("modelNames"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
                 (
                     Name::new("createdAt"),
-                    TypeData::Simple(TypeRef::named(ScalarType::DateTime.to_string())),
+                    TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
                 ),
                 (
                     Name::new("updatedAt"),
-                    TypeData::Simple(TypeRef::named(ScalarType::DateTime.to_string())),
+                    TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
                 ),
             ]),
         }

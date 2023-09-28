@@ -93,17 +93,17 @@ impl ObjectTrait for ModelDataObject {
                 if let TypeData::Nested((type_ref, nested_mapping)) = type_data {
                     let mut object = Object::new(type_ref.to_string());
 
-                    for (name, type_data) in nested_mapping {
-                        let name = name.clone();
+                    for (field_name, type_data) in nested_mapping {
+                        let field_name = field_name.clone();
 
                         let field =
-                            Field::new(name.to_string(), type_data.type_ref(), move |ctx| {
-                                let name = name.clone();
+                            Field::new(field_name.to_string(), type_data.type_ref(), move |ctx| {
+                                let field_name = field_name.clone();
 
                                 FieldFuture::new(async move {
                                     match ctx.parent_value.try_to_value()? {
                                         Value::Object(values) => {
-                                            Ok(Some(values.get(&name).unwrap().clone())) // safe unwrap
+                                            Ok(Some(values.get(&field_name).unwrap().clone())) // safe unwrap
                                         }
                                         _ => Err("incorrect value, requires Value::Object".into()),
                                     }
@@ -183,12 +183,12 @@ fn entity_field() -> Field {
 fn nested_type_fields(root_type: &str, type_mapping: &TypeMapping) -> Vec<Field> {
     type_mapping
         .iter()
-        .filter_map(|(name, type_data)| {
+        .filter_map(|(field_name, type_data)| {
             if type_data.is_nested() {
                 let root_type = root_type.to_string();
                 let type_data = type_data.clone();
 
-                Some(Field::new(name.to_string(), type_data.type_ref(), move |ctx| {
+                Some(Field::new(field_name.to_string(), type_data.type_ref(), move |ctx| {
                     let root_type = root_type.clone();
                     let type_data = type_data.clone();
 
@@ -338,8 +338,8 @@ fn value_mapping_from_row(row: &SqliteRow, types: &TypeMapping) -> sqlx::Result<
     types
         .iter()
         .filter(|(_, type_data)| type_data.is_simple())
-        .map(|(name, ty)| {
-            Ok((Name::new(name), fetch_value(row, name, &ty.type_ref().to_string())?))
+        .map(|(field_name, type_data)| {
+            Ok((Name::new(field_name), fetch_value(row, field_name, &type_data.type_ref().to_string())?))
         })
         .collect::<sqlx::Result<ValueMapping>>()
 }

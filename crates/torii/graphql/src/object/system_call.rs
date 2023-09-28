@@ -11,7 +11,7 @@ use super::system::SystemObject;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
 use crate::query::{query_all, query_by_id, query_total_count, ID};
-use crate::types::{ScalarType, TypeData};
+use crate::types::{GraphqlType, TypeData};
 use crate::utils::extract_value::extract;
 
 #[derive(FromRow, Deserialize)]
@@ -37,7 +37,7 @@ impl Default for SystemCallObject {
                 (Name::new("systemId"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
                 (
                     Name::new("createdAt"),
-                    TypeData::Simple(TypeRef::named(ScalarType::DateTime.to_string())),
+                    TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
                 ),
             ]),
         }

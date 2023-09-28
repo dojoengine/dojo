@@ -10,7 +10,7 @@ use super::system_call::{SystemCall, SystemCallObject};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
 use crate::query::{query_all, query_by_id, query_total_count, ID};
-use crate::types::{ScalarType, TypeData};
+use crate::types::{GraphqlType, TypeData};
 use crate::utils::extract_value::extract;
 
 #[derive(FromRow, Deserialize)]
@@ -36,7 +36,7 @@ impl Default for EventObject {
                 (Name::new("data"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
                 (
                     Name::new("createdAt"),
-                    TypeData::Simple(TypeRef::named(ScalarType::DateTime.to_string())),
+                    TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
                 ),
                 (Name::new("transactionHash"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
             ]),

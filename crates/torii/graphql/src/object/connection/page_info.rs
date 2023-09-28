@@ -2,7 +2,7 @@ use async_graphql::dynamic::TypeRef;
 use async_graphql::Name;
 
 use crate::object::{ObjectTrait, TypeMapping};
-use crate::types::{ScalarType, TypeData};
+use crate::types::{GraphqlType, TypeData};
 
 pub struct PageInfoObject {
     pub type_mapping: TypeMapping,
@@ -16,11 +16,11 @@ impl Default for PageInfoObject {
                 (Name::new("hasNextPage"), TypeData::Simple(TypeRef::named(TypeRef::BOOLEAN))),
                 (
                     Name::new("startCursor"),
-                    TypeData::Simple(TypeRef::named(ScalarType::Cursor.to_string())),
+                    TypeData::Simple(TypeRef::named(GraphqlType::Cursor.to_string())),
                 ),
                 (
                     Name::new("endCursor"),
-                    TypeData::Simple(TypeRef::named(ScalarType::Cursor.to_string())),
+                    TypeData::Simple(TypeRef::named(GraphqlType::Cursor.to_string())),
                 ),
             ]),
         }

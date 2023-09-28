@@ -20,6 +20,8 @@ scarb-ui.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sozo = { path = "../../sozo" }
+strum.workspace = true
+strum_macros.workspace = true
 sqlx = { version = "0.6.2", features = [ "chrono", "macros", "offline", "runtime-actix-rustls", "sqlite", "uuid" ] }
 tokio-stream = "0.1.11"
 tokio-util = "0.7.7"

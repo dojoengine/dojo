@@ -1,6 +1,7 @@
 use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
 use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
+use dojo_types::core::CairoType;
 use indexmap::IndexMap;
 use serde::Deserialize;
 use sqlx::{FromRow, Pool, Sqlite};
@@ -10,7 +11,7 @@ use super::system_call::system_calls_by_system_id;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
 use crate::query::{query_all, query_by_id, query_total_count, ID};
-use crate::types::{ScalarType, TypeData};
+use crate::types::{GraphqlType, TypeData};
 use crate::utils::extract_value::extract;
 
 #[derive(FromRow, Deserialize)]
@@ -35,15 +36,15 @@ impl Default for SystemObject {
                 (Name::new("name"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
                 (
                     Name::new("classHash"),
-                    TypeData::Simple(TypeRef::named(ScalarType::Felt252.to_string())),
+                    TypeData::Simple(TypeRef::named(CairoType::Felt252.to_string())),
                 ),
                 (
                     Name::new("transactionHash"),
-                    TypeData::Simple(TypeRef::named(ScalarType::Felt252.to_string())),
+                    TypeData::Simple(TypeRef::named(CairoType::Felt252.to_string())),
                 ),
                 (
                     Name::new("createdAt"),
-                    TypeData::Simple(TypeRef::named(ScalarType::DateTime.to_string())),
+                    TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
                 ),
             ]),
         }
