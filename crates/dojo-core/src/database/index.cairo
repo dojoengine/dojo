@@ -6,6 +6,12 @@ use serde::Serde;
 
 use dojo::database::storage;
 
+#[derive(Copy, Drop)]
+struct WhereCondition {
+    key: felt252,
+    value: felt252,
+}
+
 fn create(address_domain: u32, index: felt252, id: felt252) {
     if exists(address_domain, index, id) {
         return ();
@@ -145,21 +151,44 @@ fn exists(address_domain: u32, index: felt252, id: felt252) -> bool {
     storage::get(address_domain, build_index_item_key(index, id)) != 0
 }
 
-fn get(address_domain: u32, index: felt252) -> Array<felt252> {
+fn query(address_domain: u32, table: felt252, where: Option<WhereCondition>) -> Array<felt252> {
     let mut res = ArrayTrait::new();
 
-    let index_len_key = build_index_len_key(index);
-    let index_len = storage::get(address_domain, index_len_key);
-    let mut idx = 0;
+    match where {
+        // 
+        Option::Some(clause) => {
+            let mut serialized = ArrayTrait::new();
+            model.serialize(ref serialized);
+            clause.key.serialize(ref serialized);
+            let index = poseidon_hash_span(serialized.span());
 
-    loop {
-        if idx == index_len {
-            break ();
+            let index_len_key = build_index_len_key(index);
+            let index_len = storage::get(address_domain, index_len_key);
+            let mut idx = 0;
+
+            // TODO: Query on key value.
+
+            (all_ids.span(), get_by_ids(class_hash, index, all_ids.span(), length, layout))
+        },
+
+        // If no `where` clause is defined, we return all values.
+        Option::None(_) => {
+            
+
+            let index_len_key = build_index_len_key(index);
+            let index_len = storage::get(address_domain, index_len_key);
+            let mut idx = 0;
+
+            loop {
+                if idx == index_len {
+                    break ();
+                }
+
+                res.append(storage::get(address_domain, build_index_key(index, idx)));
+                idx += 1;
+            };
         }
-
-        res.append(storage::get(address_domain, build_index_key(index, idx)));
-        idx += 1;
-    };
+    }
 
     res
 }

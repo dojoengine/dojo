@@ -367,7 +367,7 @@ mod world {
         ///
         /// * `model` - The name of the model to be retrieved.
         /// * `index` - The index to be retrieved.
-        /// * `keys` - The query to be used to find the entity.
+        /// * `values` - The query to be used to find the entity.
         /// * `length` - The length of the model values.
         ///
         /// # Returns
@@ -375,14 +375,9 @@ mod world {
         /// * `Span<felt252>` - The entity IDs.
         /// * `Span<Span<felt252>>` - The entities.
         fn entities(
-            self: @ContractState,
-            model: felt252,
-            index: felt252,
-            length: usize,
-            layout: Span<u8>
+            self: @ContractState, model: felt252, index: Option<felt252>, values: Span<felt252>, values_length: usize, values_layout: Span<u8>
         ) -> (Span<felt252>, Span<Span<felt252>>) {
-            let class_hash = self.models.read(model);
-            database::all(class_hash, model.into(), index, length, layout)
+            database::all(class_hash, model, index, values, values_length, values_layout)
         }
 
         /// Sets the executor contract address.

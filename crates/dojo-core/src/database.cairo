@@ -37,29 +37,33 @@ fn set(
 
 fn del(class_hash: starknet::ClassHash, table: felt252, key: felt252, keys_layout: Span<u8>) {
     // index::delete(0, table, key, keys_layout);
-}
+} 
 
-// returns a tuple of spans, first contains the entity IDs,
-// second the deserialized entities themselves
-fn all(
-    class_hash: starknet::ClassHash, model: felt252, index: felt252, length: usize, layout: Span<u8>
+// Query all entities that meet a criteria. If no index is defined,
+// Returns a tuple of spans, first contains the entity IDs,
+// second the deserialized entities themselves.
+fn scan(
+    class_hash: starknet::ClassHash, model: felt252, where: Option<WhereCondition>, values_length: usize, values_layout: Span<u8>
 ) -> (Span<felt252>, Span<Span<felt252>>) {
-    let table = {
-        if index == 0.into() {
-            model
-        } else {
+    match where {
+        // 
+        Option::Some(clause) => {
             let mut serialized = ArrayTrait::new();
             model.serialize(ref serialized);
-            index.serialize(ref serialized);
-            let hash = poseidon_hash_span(serialized.span());
-            hash.into()
-        }
-    };
+            clause.key.serialize(ref serialized);
+            let index = poseidon_hash_span(serialized.span());
 
-    let all_ids = index::get(0, table);
-    let mut ids = all_ids.span();
-  
-    (all_ids.span(), get_by_ids(class_hash, table, all_ids.span(), length, layout))
+            let all_ids = index::get_by_key(0, index, clause.value);
+            (all_ids.span(), get_by_ids(class_hash, index, all_ids.span(), length, layout))
+        },
+
+        // If no `where` clause is defined, we return all values.
+        Option::None(_) => {
+            let all_ids = index::get(0, table);
+            let mut ids = all_ids.span();
+            (all_ids.span(), get_by_ids(class_hash, table, all_ids.span(), values_size, values_layout))
+        }
+    }
 }
 
 /// Returns entries on the given ids.
@@ -86,20 +90,6 @@ fn get_by_ids(class_hash: starknet::ClassHash, table: felt252, all_ids: Span<fel
             }
         };
     }
-}
-
-/// Returns entries on the given keys.
-/// # Arguments
-/// * `class_hash` - The class hash of the contract.
-/// * `model` - The model to get the entries from.
-/// * `index` - The index of the model to get the entries from.
-/// * `key` - The key of the entries to get.
-/// * `length` - The length of the entries.
-fn get_by_key(
-    class_hash: starknet::ClassHash, model: felt252, index: felt252, key: felt252, length: usize, layout: Span<u8>
-) -> (Span<felt252>, Span<Span<felt252>>) {
-    let all_ids = index::get_by_key(0, index, key);
-    (all_ids.span(), get_by_ids(class_hash, index, all_ids.span(), length, layout))
 }
 
 /// Set, but with writing keys to the appropriate indexes
