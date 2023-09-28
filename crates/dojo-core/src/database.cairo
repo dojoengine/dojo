@@ -102,20 +102,6 @@ fn get_by_ids(
     }
 }
 
-/// Returns entries on the given keys.
-/// # Arguments
-/// * `class_hash` - The class hash of the contract.
-/// * `model` - The model to get the entries from.
-/// * `index` - The index of the model to get the entries from.
-/// * `key` - The key of the entries to get.
-/// * `length` - The length of the entries.
-fn get_by_key(
-    class_hash: starknet::ClassHash, model: felt252, index: felt252, key: felt252, length: usize, layout: Span<u8>
-) -> (Span<felt252>, Span<Span<felt252>>) {
-    let all_ids = index::get_by_key(0, index, key);
-    (all_ids.span(), get_by_ids(class_hash, index, all_ids.span(), length, layout))
-}
-
 /// Set, but with writing keys to the appropriate indexes
 /// # Arguments
 /// * `class_hash` - The class hash of the contract.
