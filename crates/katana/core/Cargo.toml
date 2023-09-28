@@ -8,8 +8,6 @@ version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-async-trait.workspace = true
-auto_impl = "1.1.0"
 blockifier.workspace = true
 cairo-lang-casm = "2.2.0"
 cairo-lang-starknet = "2.2.0"
