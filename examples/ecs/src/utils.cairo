@@ -1,4 +1,4 @@
-use dojo_examples::components::{Position, Direction};
+use dojo_examples::models::{Position, Direction};
 
 fn next_position(mut position: Position, direction: Direction) -> Position {
     match direction {

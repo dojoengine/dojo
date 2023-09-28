@@ -2,7 +2,7 @@ use camino::Utf8PathBuf;
 use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, TestSequencer,
 };
-use dojo_types::component::{Enum, Member, Struct, Ty};
+use dojo_types::model::{Enum, Member, Struct, Ty};
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag, FieldElement};
 
@@ -62,7 +62,7 @@ async fn test_model() {
     assert_eq!(
         position.class_hash(),
         FieldElement::from_hex_be(
-            "0x01b5f19668b9299cea232978c59856b16da649e6aa4dfc3f2a42aa8435e06bc7"
+            "0x07a812f2cfb414d5aa04bb9a3c91cdcaf1d30e193bd6cb7faf9b7c294722fab4"
         )
         .unwrap()
     );

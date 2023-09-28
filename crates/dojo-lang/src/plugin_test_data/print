@@ -1,4 +1,4 @@
-//! > Test expansion of the component contract.
+//! > Test expansion of the derive(Print).
 
 //! > test_runner_name
 test_expand_plugin

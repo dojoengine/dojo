@@ -15,7 +15,7 @@ const OFFSET: felt252 = 0x10000000000000000000000000000000000;
 // * `entities` is a list of lists of deserialized entities; each list of entities
 //   is of the same entity type in the order of IDs from `ids
 //
-// to illustrate, consider we have two entity types (components), Place and Owner
+// to illustrate, consider we have two entity types (models), Place and Owner
 // `ids` are [[4, 2, 3], [3, 4, 5]]
 // `entities` are [[P4, P2, P3], [O3, O4, O5]]
 // where P4 is a deserialized (i.e. a Span<felt252>) Place entity with ID 4,

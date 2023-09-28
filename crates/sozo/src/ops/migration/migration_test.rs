@@ -135,6 +135,6 @@ async fn migration_from_remote() {
 
     assert_eq!(local_manifest.world.class_hash, remote_manifest.world.class_hash);
     assert_eq!(local_manifest.executor.class_hash, remote_manifest.executor.class_hash);
-    assert_eq!(local_manifest.components.len(), remote_manifest.components.len());
+    assert_eq!(local_manifest.models.len(), remote_manifest.models.len());
     assert_eq!(local_manifest.systems.len(), remote_manifest.systems.len());
 }

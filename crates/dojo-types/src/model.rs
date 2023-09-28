@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
 
-/// Represents a component member.
+/// Represents a model member.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Member {
     pub name: String,

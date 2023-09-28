@@ -100,8 +100,8 @@ fn extract_events(manifest: &Manifest) -> HashMap<String, Vec<Event>> {
         inner_helper(&mut events_map, &contract.abi);
     }
 
-    for component in &manifest.components {
-        inner_helper(&mut events_map, &component.abi);
+    for model in &manifest.models {
+        inner_helper(&mut events_map, &model.abi);
     }
 
     events_map

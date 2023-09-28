@@ -1,6 +1,6 @@
 use traits::Into;
 
-use dojo_defi::market::components::Market;
+use dojo_defi::market::models::Market;
 use dojo_defi::market::constant_product_market::{MarketTrait, SCALING_FACTOR};
 use dojo_defi::tests::utils::{TOLERANCE, assert_approx_equal};
 

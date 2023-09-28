@@ -5,9 +5,9 @@ use serde::Serialize;
 use starknet::core::types::FieldElement;
 use system::SystemMetadata;
 
-pub mod component;
 pub mod core;
 pub mod event;
+pub mod model;
 pub mod storage;
 pub mod system;
 

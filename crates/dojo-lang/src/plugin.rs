@@ -48,7 +48,7 @@ pub struct SystemAuxData {
 pub struct DojoAuxData {
     /// A list of models that were processed by the plugin.
     pub models: Vec<Model>,
-    /// A list of systems that were processed by the plugin and their component dependencies.
+    /// A list of systems that were processed by the plugin and their model dependencies.
     pub systems: Vec<SystemAuxData>,
 }
 impl GeneratedFileAuxData for DojoAuxData {
@@ -155,10 +155,10 @@ impl MacroPlugin for DojoPlugin {
 
                         match derived.as_str() {
                             "Model" => {
-                                let (component_rewrite_nodes, component_diagnostics) =
+                                let (model_rewrite_nodes, model_diagnostics) =
                                     handle_model_struct(db, &mut aux_data, struct_ast.clone());
-                                rewrite_nodes.push(component_rewrite_nodes);
-                                diagnostics.extend(component_diagnostics);
+                                rewrite_nodes.push(model_rewrite_nodes);
+                                diagnostics.extend(model_diagnostics);
                             }
                             "Print" => {
                                 rewrite_nodes.push(derive_print(db, struct_ast.clone()));
