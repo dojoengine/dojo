@@ -42,15 +42,15 @@ fn del(class_hash: starknet::ClassHash, table: felt252, key: felt252, keys_layou
 // returns a tuple of spans, first contains the entity IDs,
 // second the deserialized entities themselves
 fn all(
-    class_hash: starknet::ClassHash, model: felt252, partition: felt252, length: usize, layout: Span<u8>
+    class_hash: starknet::ClassHash, model: felt252, index: felt252, length: usize, layout: Span<u8>
 ) -> (Span<felt252>, Span<Span<felt252>>) {
     let table = {
-        if partition == 0.into() {
+        if index == 0.into() {
             model
         } else {
             let mut serialized = ArrayTrait::new();
             model.serialize(ref serialized);
-            partition.serialize(ref serialized);
+            index.serialize(ref serialized);
             let hash = poseidon_hash_span(serialized.span());
             hash.into()
         }
@@ -91,27 +91,15 @@ fn get_by_ids(class_hash: starknet::ClassHash, table: felt252, all_ids: Span<fel
 /// Returns entries on the given keys.
 /// # Arguments
 /// * `class_hash` - The class hash of the contract.
-/// * `component` - The component to get the entries from.
-/// * `partition` - The partition of the component to get the entries from.
+/// * `model` - The model to get the entries from.
+/// * `index` - The index of the model to get the entries from.
 /// * `key` - The key of the entries to get.
 /// * `length` - The length of the entries.
 fn get_by_key(
-    class_hash: starknet::ClassHash, component: felt252, partition: felt252, key: felt252, length: usize, layout: Span<u8>
+    class_hash: starknet::ClassHash, model: felt252, index: felt252, key: felt252, length: usize, layout: Span<u8>
 ) -> (Span<felt252>, Span<Span<felt252>>) {
-        let table = {
-        if partition == 0.into() {
-            component
-        } else {
-            let mut serialized = ArrayTrait::new();
-            component.serialize(ref serialized);
-            partition.serialize(ref serialized);
-            let hash = poseidon_hash_span(serialized.span());
-            hash.into()
-        }
-    };
-
-    let all_ids = index::get_by_key(0, table, key);
-    (all_ids.span(), get_by_ids(class_hash, table, all_ids.span(), length, layout))
+    let all_ids = index::get_by_key(0, index, key);
+    (all_ids.span(), get_by_ids(class_hash, index, all_ids.span(), length, layout))
 }
 
 /// Set, but with writing keys to the appropriate indexes
@@ -124,7 +112,6 @@ fn get_by_key(
 /// * `keys` - The keys of the entry to set in the index.
 fn set_with_keys(
     class_hash: starknet::ClassHash, table: felt252, id: felt252, offset: u8, value: Span<felt252>, layout: Span<u8>, keys: Span<felt252>, keys_layout: Span<u8>
-
 ) {
     set(class_hash, table, id, offset, value, layout);
     index::create_with_keys(0, table, id, keys, keys_layout);
