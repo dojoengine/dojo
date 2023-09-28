@@ -90,13 +90,14 @@ impl ClientBuilder {
             let provider = JsonRpcClient::new(HttpTransport::new(Url::parse(&rpc_url)?));
             let world_reader = WorldContractReader::new(world, &provider);
 
-            for EntityComponent { component, keys } in subbed_entities.entities.read().iter() {
+            // TODO: change this to querying the gRPC endpoint instead
+            let subbed_entities = subbed_entities.entities.read().clone();
+            for EntityComponent { component, keys } in subbed_entities {
                 let component_reader =
-                    world_reader.component(component, BlockId::Tag(BlockTag::Pending)).await?;
-                let values = component_reader
-                    .entity(keys.to_owned(), BlockId::Tag(BlockTag::Pending))
-                    .await?;
-                client_storage.set_entity((component.to_owned(), keys.to_owned()), values)?;
+                    world_reader.component(&component, BlockId::Tag(BlockTag::Pending)).await?;
+                let values =
+                    component_reader.entity(keys.clone(), BlockId::Tag(BlockTag::Pending)).await?;
+                client_storage.set_entity((component, keys), values)?;
             }
         }
 

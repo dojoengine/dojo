@@ -269,6 +269,6 @@ mod tests {
             subscribed_entities.subscribed_storage_addresses.read().len();
 
         assert_eq!(actual_storage_addresses_count_after, 0);
-        assert!(subscribed_entities.entities.read().contains(&entity) == false);
+        assert!(!subscribed_entities.entities.read().contains(&entity));
     }
 }
