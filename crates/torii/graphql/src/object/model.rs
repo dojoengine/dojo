@@ -12,7 +12,7 @@ use super::connection::connection_output;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
 use crate::query::{query_all, query_by_id, query_total_count, ID};
-use crate::types::{ScalarType, TypeDefinition};
+use crate::types::{ScalarType, TypeData};
 
 pub struct ModelObject {
     pub type_mapping: TypeMapping,
@@ -23,19 +23,19 @@ impl Default for ModelObject {
     fn default() -> Self {
         Self {
             type_mapping: IndexMap::from([
-                (Name::new("id"), TypeDefinition::Simple(TypeRef::named(TypeRef::ID))),
-                (Name::new("name"), TypeDefinition::Simple(TypeRef::named(TypeRef::STRING))),
+                (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
+                (Name::new("name"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
                 (
                     Name::new("classHash"),
-                    TypeDefinition::Simple(TypeRef::named(ScalarType::Felt252.to_string())),
+                    TypeData::Simple(TypeRef::named(ScalarType::Felt252.to_string())),
                 ),
                 (
                     Name::new("transactionHash"),
-                    TypeDefinition::Simple(TypeRef::named(ScalarType::Felt252.to_string())),
+                    TypeData::Simple(TypeRef::named(ScalarType::Felt252.to_string())),
                 ),
                 (
                     Name::new("createdAt"),
-                    TypeDefinition::Simple(TypeRef::named(ScalarType::DateTime.to_string())),
+                    TypeData::Simple(TypeRef::named(ScalarType::DateTime.to_string())),
                 ),
             ]),
         }

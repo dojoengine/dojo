@@ -5,7 +5,7 @@ use base64::Engine as _;
 use serde_json::Number;
 
 use super::ObjectTrait;
-use crate::types::{ScalarType, TypeDefinition, TypeMapping, ValueMapping};
+use crate::types::{ScalarType, TypeData, TypeMapping, ValueMapping};
 use crate::utils::extract_value::extract;
 
 pub mod edge;
@@ -30,9 +30,9 @@ impl ConnectionObject {
         let type_mapping = TypeMapping::from([
             (
                 Name::new("edges"),
-                TypeDefinition::Simple(TypeRef::named_list(format!("{}Edge", type_name))),
+                TypeData::Simple(TypeRef::named_list(format!("{}Edge", type_name))),
             ),
-            (Name::new("totalCount"), TypeDefinition::Simple(TypeRef::named_nn(TypeRef::INT))),
+            (Name::new("totalCount"), TypeData::Simple(TypeRef::named_nn(TypeRef::INT))),
         ]);
 
         Self {

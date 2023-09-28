@@ -10,7 +10,7 @@ use super::system_call::system_calls_by_system_id;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
 use crate::query::{query_all, query_by_id, query_total_count, ID};
-use crate::types::{ScalarType, TypeDefinition};
+use crate::types::{ScalarType, TypeData};
 use crate::utils::extract_value::extract;
 
 #[derive(FromRow, Deserialize)]
@@ -31,19 +31,19 @@ impl Default for SystemObject {
     fn default() -> Self {
         Self {
             type_mapping: IndexMap::from([
-                (Name::new("id"), TypeDefinition::Simple(TypeRef::named(TypeRef::ID))),
-                (Name::new("name"), TypeDefinition::Simple(TypeRef::named(TypeRef::STRING))),
+                (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
+                (Name::new("name"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
                 (
                     Name::new("classHash"),
-                    TypeDefinition::Simple(TypeRef::named(ScalarType::Felt252.to_string())),
+                    TypeData::Simple(TypeRef::named(ScalarType::Felt252.to_string())),
                 ),
                 (
                     Name::new("transactionHash"),
-                    TypeDefinition::Simple(TypeRef::named(ScalarType::Felt252.to_string())),
+                    TypeData::Simple(TypeRef::named(ScalarType::Felt252.to_string())),
                 ),
                 (
                     Name::new("createdAt"),
-                    TypeDefinition::Simple(TypeRef::named(ScalarType::DateTime.to_string())),
+                    TypeData::Simple(TypeRef::named(ScalarType::DateTime.to_string())),
                 ),
             ]),
         }
@@ -110,7 +110,7 @@ impl ObjectTrait for SystemObject {
         ))
     }
 
-    fn related_fields(&self) -> Option<Vec<Field>> {
+    fn sub_fields(&self) -> Option<Vec<Field>> {
         Some(vec![Field::new("systemCalls", TypeRef::named_nn_list_nn("SystemCall"), |ctx| {
             FieldFuture::new(async move {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;

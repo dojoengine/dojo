@@ -79,8 +79,8 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
             }
         }
 
-        // register nested objects (custom types / nested structs)
-        if let Some(nested_objects) = object.nested_objects() {
+        // register child objects (custom types / nested structs)
+        if let Some(nested_objects) = object.child_objects() {
             for object in nested_objects {
                 schema_builder = schema_builder.register(object);
             }

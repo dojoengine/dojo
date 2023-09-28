@@ -6,48 +6,39 @@ use async_graphql::dynamic::TypeRef;
 use async_graphql::{Name, Value};
 use indexmap::IndexMap;
 
-// ValueMapping is used to map the values of the fields of a model. TypeMapping is used to map
-// the types of the fields of a model. Both are used at runtime to dynamically build / resolve the
-// graphql queries and schema. Value from async-graphql can already support nesting, but TypeRef
-// does not. TypeDefintion is used to support nesting.
+// ValueMapping is used to map the values of the fields of a model, TypeMapping their associated types
+// Both are used at runtime to dynamically build/resolve graphql queries/schema. `Value` from async-graphql 
+// supports nesting, but TypeRef does not. TypeData is used to support nesting.
 pub type ValueMapping = IndexMap<Name, Value>;
-pub type TypeMapping = IndexMap<Name, TypeDefinition>;
+pub type TypeMapping = IndexMap<Name, TypeData>;
 
-// Note: similar dojo_types Ty enum, however, TypeRef is needed to support async-graphql.
-#[derive(Debug, Clone)]
-pub enum TypeDefinition {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TypeData {
     Simple(TypeRef),
-    Nested((TypeRef, IndexMap<Name, TypeDefinition>)),
-    // TODO: Enum
+    Nested((TypeRef, IndexMap<Name, TypeData>)),
+    // TODO: Enum, could be combined with Simple
 }
 
-impl TypeDefinition {
-    pub fn flatten(&self) -> Vec<TypeRef> {
-        match self {
-            TypeDefinition::Simple(ty) => vec![ty.clone()],
-            TypeDefinition::Nested((ty, type_mapping)) => {
-                let mut types = vec![ty.clone()];
-                for (_, type_def) in type_mapping {
-                    types.append(&mut TypeDefinition::flatten(type_def));
-                }
-
-                types
-            }
-        }
-    }
-
+impl TypeData {
     pub fn type_ref(&self) -> TypeRef {
         match self {
-            TypeDefinition::Simple(ty) | TypeDefinition::Nested((ty, _)) => ty.clone(),
+            TypeData::Simple(ty) | TypeData::Nested((ty, _)) => ty.clone(),
         }
     }
 
     pub fn is_simple(&self) -> bool {
-        matches!(self, TypeDefinition::Simple(_))
+        matches!(self, TypeData::Simple(_))
     }
 
     pub fn is_nested(&self) -> bool {
-        matches!(self, TypeDefinition::Nested(_))
+        matches!(self, TypeData::Nested(_))
+    }
+
+    pub fn type_mapping(&self) -> Option<&IndexMap<Name, TypeData>> {
+        match self {
+            TypeData::Simple(_) => None,
+            TypeData::Nested((_, type_mapping)) => Some(type_mapping),
+        }
     }
 }
 

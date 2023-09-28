@@ -10,7 +10,7 @@ use super::system_call::{SystemCall, SystemCallObject};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
 use crate::query::{query_all, query_by_id, query_total_count, ID};
-use crate::types::{ScalarType, TypeDefinition};
+use crate::types::{ScalarType, TypeData};
 use crate::utils::extract_value::extract;
 
 #[derive(FromRow, Deserialize)]
@@ -31,17 +31,14 @@ impl Default for EventObject {
     fn default() -> Self {
         Self {
             type_mapping: IndexMap::from([
-                (Name::new("id"), TypeDefinition::Simple(TypeRef::named(TypeRef::ID))),
-                (Name::new("keys"), TypeDefinition::Simple(TypeRef::named(TypeRef::STRING))),
-                (Name::new("data"), TypeDefinition::Simple(TypeRef::named(TypeRef::STRING))),
+                (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
+                (Name::new("keys"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+                (Name::new("data"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
                 (
                     Name::new("createdAt"),
-                    TypeDefinition::Simple(TypeRef::named(ScalarType::DateTime.to_string())),
+                    TypeData::Simple(TypeRef::named(ScalarType::DateTime.to_string())),
                 ),
-                (
-                    Name::new("transactionHash"),
-                    TypeDefinition::Simple(TypeRef::named(TypeRef::STRING)),
-                ),
+                (Name::new("transactionHash"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
             ]),
         }
     }
@@ -107,7 +104,7 @@ impl ObjectTrait for EventObject {
         ))
     }
 
-    fn related_fields(&self) -> Option<Vec<Field>> {
+    fn sub_fields(&self) -> Option<Vec<Field>> {
         Some(vec![Field::new("systemCall", TypeRef::named_nn("SystemCall"), |ctx| {
             FieldFuture::new(async move {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
