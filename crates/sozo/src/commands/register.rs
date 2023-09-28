@@ -17,13 +17,13 @@ pub struct RegisterArgs {
 
 #[derive(Debug, Subcommand)]
 pub enum RegisterCommand {
-    #[command(about = "Register a component to a world.")]
-    Component {
+    #[command(about = "Register a model to a world.")]
+    Model {
         #[arg(num_args = 1..)]
         #[arg(required = true)]
         #[arg(value_name = "CLASS_HASH")]
-        #[arg(help = "The class hash of the components to register.")]
-        components: Vec<FieldElement>,
+        #[arg(help = "The class hash of the models to register.")]
+        models: Vec<FieldElement>,
 
         #[command(flatten)]
         world: WorldOptions,

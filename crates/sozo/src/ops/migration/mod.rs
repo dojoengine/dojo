@@ -283,7 +283,7 @@ where
         None => {}
     };
 
-    register_components(strategy, migrator, ui, txn_config.clone()).await?;
+    register_models(strategy, migrator, ui, txn_config.clone()).await?;
     deploy_contracts(strategy, migrator, ui, txn_config).await?;
 
     // This gets current block numder if helpful
@@ -337,7 +337,7 @@ where
     }
 }
 
-async fn register_components<P, S>(
+async fn register_models<P, S>(
     strategy: &MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
     ui: &Ui,
@@ -347,17 +347,17 @@ where
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
 {
-    let components = &strategy.components;
+    let models = &strategy.models;
 
-    if components.is_empty() {
+    if models.is_empty() {
         return Ok(None);
     }
 
-    ui.print_header(format!("# Models ({})", components.len()));
+    ui.print_header(format!("# Models ({})", models.len()));
 
     let mut declare_output = vec![];
 
-    for c in components.iter() {
+    for c in models.iter() {
         ui.print(italic_message(&c.diff.name).to_string());
 
         let res =
@@ -369,12 +369,12 @@ where
                 declare_output.push(output);
             }
 
-            // Continue if component is already declared
+            // Continue if model is already declared
             Err(MigrationError::ClassAlreadyDeclared) => {
                 ui.print_sub("Already declared");
                 continue;
             }
-            Err(e) => bail!("Failed to declare component {}: {e}", c.diff.name),
+            Err(e) => bail!("Failed to declare model {}: {e}", c.diff.name),
         }
 
         ui.print_sub(format!("Class hash: {:#x}", c.diff.local));
@@ -383,9 +383,9 @@ where
     let world_address = strategy.world_address()?;
 
     let InvokeTransactionResult { transaction_hash } = WorldContract::new(world_address, migrator)
-        .register_components(&components.iter().map(|c| c.diff.local).collect::<Vec<_>>())
+        .register_models(&models.iter().map(|c| c.diff.local).collect::<Vec<_>>())
         .await
-        .map_err(|e| anyhow!("Failed to register components to World: {e}"))?;
+        .map_err(|e| anyhow!("Failed to register models to World: {e}"))?;
 
     TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
 

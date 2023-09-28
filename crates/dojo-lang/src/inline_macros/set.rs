@@ -31,20 +31,20 @@ impl InlineMacroExprPlugin for SetMacro {
                 code: None,
                 diagnostics: vec![PluginDiagnostic {
                     stable_ptr: arg_list.args(db).stable_ptr().untyped(),
-                    message: "Invalid arguments. Expected \"(world, (components,))\"".to_string(),
+                    message: "Invalid arguments. Expected \"(world, (models,))\"".to_string(),
                 }],
             };
         }
 
         let world = &args[0];
 
-        let ast::ArgClause::Unnamed(components) = args[1].arg_clause(db) else {
+        let ast::ArgClause::Unnamed(models) = args[1].arg_clause(db) else {
             return unsupported_arg_diagnostic(db, syntax);
         };
 
         let mut bundle = vec![];
 
-        match components.value(db) {
+        match models.value(db) {
             ast::Expr::Parenthesized(parens) => {
                 bundle.push(parens.expr(db).as_syntax_node().get_text(db))
             }
@@ -56,8 +56,7 @@ impl InlineMacroExprPlugin for SetMacro {
                 return InlinePluginResult {
                     code: None,
                     diagnostics: vec![PluginDiagnostic {
-                        message: "Invalid arguments. Expected \"(world, (components,))\""
-                            .to_string(),
+                        message: "Invalid arguments. Expected \"(world, (models,))\"".to_string(),
                         stable_ptr: arg_list.args(db).stable_ptr().untyped(),
                     }],
                 };

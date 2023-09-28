@@ -1,7 +1,7 @@
 use std::vec;
 
 use crypto_bigint::U256;
-use dojo_types::component::{Enum, Member, Struct, Ty};
+use dojo_types::model::{Enum, Member, Struct, Ty};
 use starknet::core::types::{BlockId, FieldElement, FunctionCall};
 use starknet::core::utils::{
     cairo_short_string_to_felt, get_selector_from_name, parse_cairo_short_string,
@@ -55,7 +55,7 @@ impl<'a, P: Provider + Sync> ModelReader<'a, P> {
                 FunctionCall {
                     contract_address: world.address,
                     calldata: vec![name],
-                    entry_point_selector: get_selector_from_name("component").unwrap(),
+                    entry_point_selector: get_selector_from_name("model").unwrap(),
                 },
                 block_id,
             )
@@ -161,8 +161,8 @@ impl<'a, P: Provider + Sync> ModelReader<'a, P> {
 ///
 /// # Returns
 ///
-/// * `Result<Vec<FieldElement>, ComponentError<P::Error>>` - A Result containing a vector of
-///   unpacked FieldElement values if successful, or an error if unsuccessful.
+/// * `Result<Vec<FieldElement>, ModelError<P::Error>>` - A Result containing a vector of unpacked
+///   FieldElement values if successful, or an error if unsuccessful.
 pub fn unpack<P: Provider>(
     mut packed: Vec<FieldElement>,
     layout: Vec<FieldElement>,

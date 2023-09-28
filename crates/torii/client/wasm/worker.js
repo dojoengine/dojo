@@ -25,8 +25,8 @@ async function setup() {
 		const event = e.data.type;
 		const data = e.data.data;
 
-		if (event === "getComponentValue") {
-			getComponentValueHandler(client, data);
+		if (event === "getModelValue") {
+			getModelValueHandler(client, data);
 		} else if (event === "addEntityToSync") {
 			addEntityToSyncHandler(client, data);
 		} else {
@@ -42,19 +42,19 @@ function addEntityToSyncHandler(client, data) {
 
 /// Handler for the `get_entity` event from the main thread.
 /// Returns back the entity data to the main thread via `postMessage`.
-async function getComponentValueHandler(client, data) {
-	console.log("Sync Worker | Getting component value | data: ", data);
+async function getModelValueHandler(client, data) {
+	console.log("Sync Worker | Getting model value | data: ", data);
 
-	const component = data.component;
+	const model = data.model;
 	const keys = data.keys;
 	const length = data.length;
 
-	const values = await client.getComponentValue(component, keys, length);
+	const values = await client.getModelValue(model, keys, length);
 
 	self.postMessage({
-		type: "getComponentValue",
+		type: "getModelValue",
 		data: {
-			component: "Position",
+			model: "Position",
 			keys,
 			values,
 		},

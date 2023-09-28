@@ -11,20 +11,20 @@ sozo build
 # Migrate the world
 sozo migrate
 
-# Get the class hash of the Moves component by name
-sozo component get --world 0x26065106fa319c3981618e7567480a50132f23932226a51c219ffb8e47daa84 Moves
+# Get the class hash of the Moves model by name
+sozo model get --world 0x26065106fa319c3981618e7567480a50132f23932226a51c219ffb8e47daa84 Moves
 > 0x2b97f0b24be59ecf4504a27ac2301179be7df44c4c7d9482cd7b36137bc0fa4
 
-# Get the schema of the Moves component
-sozo component schema --world 0x26065106fa319c3981618e7567480a50132f23932226a51c219ffb8e47daa84 Moves
+# Get the schema of the Moves model
+sozo model schema --world 0x26065106fa319c3981618e7567480a50132f23932226a51c219ffb8e47daa84 Moves
 > struct Moves {
 >    remaining: u8
 > }
 
-# Get the value of the Moves component for an entity. (in this example,
+# Get the value of the Moves model for an entity. (in this example,
 # 0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973 is
 # the calling account.
-sozo component entity --world 0x26065106fa319c3981618e7567480a50132f23932226a51c219ffb8e47daa84 Moves 0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973
+sozo model entity --world 0x26065106fa319c3981618e7567480a50132f23932226a51c219ffb8e47daa84 Moves 0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973
 > 0x0
 
 # The returned value is 0 since we haven't spawned yet. Let's spawn
@@ -32,6 +32,6 @@ sozo component entity --world 0x26065106fa319c3981618e7567480a50132f23932226a51c
 sozo execute --world 0x26065106fa319c3981618e7567480a50132f23932226a51c219ffb8e47daa84 spawn
 
 # Fetch the updated entity
-sozo component entity --world 0x26065106fa319c3981618e7567480a50132f23932226a51c219ffb8e47daa84 Moves 0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973
+sozo model entity --world 0x26065106fa319c3981618e7567480a50132f23932226a51c219ffb8e47daa84 Moves 0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973
 > 0xa
 ```

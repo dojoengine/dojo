@@ -3,12 +3,12 @@ use std::collections::HashMap;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
-use torii_client::storage::{component_storage_base_address, EntityStorage};
+use torii_client::storage::{model_storage_base_address, EntityStorage};
 
 /// Simple in memory implementation of [EntityStorage]
 #[derive(Serialize, Deserialize)]
 pub struct InMemoryStorage {
-    /// storage key -> Component value
+    /// storage key -> Model value
     pub inner: HashMap<FieldElement, FieldElement>,
 }
 
@@ -29,11 +29,11 @@ impl EntityStorage for InMemoryStorage {
 
     async fn set(
         &mut self,
-        component: FieldElement,
+        model: FieldElement,
         keys: Vec<FieldElement>,
         values: Vec<FieldElement>,
     ) -> Result<(), Self::Error> {
-        let base_address = component_storage_base_address(component, &keys);
+        let base_address = model_storage_base_address(model, &keys);
         for (offset, value) in values.into_iter().enumerate() {
             self.inner.insert(base_address + offset.into(), value);
         }
@@ -42,11 +42,11 @@ impl EntityStorage for InMemoryStorage {
 
     async fn get(
         &self,
-        component: FieldElement,
+        model: FieldElement,
         keys: Vec<FieldElement>,
         length: usize,
     ) -> Result<Vec<FieldElement>, Self::Error> {
-        let base_address = component_storage_base_address(component, &keys);
+        let base_address = model_storage_base_address(model, &keys);
         let mut values = Vec::with_capacity(length);
         for i in 0..length {
             let address = base_address + i.into();

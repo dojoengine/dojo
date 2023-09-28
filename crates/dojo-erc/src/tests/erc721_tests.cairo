@@ -20,7 +20,7 @@ use zeroable::Zeroable;
 use dojo::test_utils::spawn_test_world;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
-use dojo_erc::token::erc721::components::{
+use dojo_erc::token::erc721::models::{
     ERC721Meta, erc_721_meta, ERC721OperatorApproval, erc_721_operator_approval, ERC721Owner,
     erc_721_owner, ERC721Balance, erc_721_balance, ERC721TokenApproval, erc_721_token_approval
 };

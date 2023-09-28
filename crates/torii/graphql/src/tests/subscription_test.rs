@@ -3,7 +3,7 @@ mod tests {
     use std::time::Duration;
 
     use async_graphql::value;
-    use dojo_types::component::{Member, Struct, Ty};
+    use dojo_types::model::{Member, Struct, Ty};
     use sqlx::SqlitePool;
     use starknet_crypto::{poseidon_hash_many, FieldElement};
     use tokio::sync::mpsc;

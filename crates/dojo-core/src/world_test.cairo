@@ -12,8 +12,6 @@ use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, world};
 use dojo::database::schema::SchemaIntrospection;
 use dojo::test_utils::{spawn_test_world, deploy_with_world_address};
 
-// Components and Systems
-
 #[derive(Model, Copy, Drop, Serde)]
 struct Foo {
     #[key]
@@ -61,9 +59,9 @@ mod bar {
 
 #[test]
 #[available_gas(2000000)]
-fn test_component() {
+fn test_model() {
     let world = deploy_world();
-    world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
 }
 
 #[test]
@@ -71,7 +69,7 @@ fn test_component() {
 fn test_system() {
     // Spawn empty world
     let world = deploy_world();
-    world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
 
     // System contract
     let bar_contract = IbarDispatcher {
@@ -87,11 +85,11 @@ fn test_system() {
 
 #[test]
 #[available_gas(6000000)]
-fn test_component_class_hash_getter() {
+fn test_model_class_hash_getter() {
     let world = deploy_world();
-    world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
 
-    let foo = world.component('Foo');
+    let foo = world.model('Foo');
     assert(foo == foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo does not exists');
 }
 
@@ -113,7 +111,7 @@ fn test_emit() {
 fn test_set_entity_admin() {
     // Spawn empty world
     let world = deploy_world();
-    world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
 
     let bar_contract = IbarDispatcher {
         contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world)
@@ -140,7 +138,7 @@ fn test_set_entity_unauthorized() {
         contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world)
     };
 
-    world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
 
     let caller = starknet::contract_address_const::<0x1337>();
     starknet::testing::set_account_contract_address(caller);
@@ -158,7 +156,7 @@ fn test_set_entity_unauthorized() {
 // fn test_set_entity_directly() {
 //     // Spawn world
 //     let world = deploy_world();
-//     world.register_component(foo::TEST_CLASS_HASH.try_into().unwrap());
+//     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
 
 //     let bar_contract = IbarDispatcher {
 //         contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world)

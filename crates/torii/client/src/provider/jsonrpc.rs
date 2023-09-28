@@ -45,7 +45,7 @@ where
 {
     type Error = JsonRpcProviderError<JsonRpcClientError<T::Error>>;
 
-    async fn component(&self, name: &str) -> Result<FieldElement, Self::Error> {
+    async fn model(&self, name: &str) -> Result<FieldElement, Self::Error> {
         let world = self.world();
         let class_hash = world
             .model(name, self.block_id)
@@ -57,14 +57,14 @@ where
 
     async fn entity(
         &self,
-        component: &str,
+        model: &str,
         keys: Vec<FieldElement>,
     ) -> Result<Vec<FieldElement>, Self::Error> {
         let world = self.world();
-        let component = world
-            .model(component, self.block_id)
+        let model = world
+            .model(model, self.block_id)
             .await
             .map_err(JsonRpcProviderError::ComponetReader)?;
-        component.entity(keys, self.block_id).await.map_err(JsonRpcProviderError::ComponetReader)
+        model.entity(keys, self.block_id).await.map_err(JsonRpcProviderError::ComponetReader)
     }
 }
