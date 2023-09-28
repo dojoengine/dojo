@@ -71,8 +71,8 @@ pub async fn deploy_world(
         .contract_address;
 
     let mut declare_output = vec![];
-    for component in strategy.components {
-        let res = component.declare(&account, Default::default()).await.unwrap();
+    for model in strategy.models {
+        let res = model.declare(&account, Default::default()).await.unwrap();
         declare_output.push(res);
     }
 
@@ -80,7 +80,7 @@ pub async fn deploy_world(
     tokio::time::sleep(Duration::from_millis(250)).await;
 
     let _ = WorldContract::new(world_address, &account)
-        .register_components(&declare_output.iter().map(|o| o.class_hash).collect::<Vec<_>>())
+        .register_models(&declare_output.iter().map(|o| o.class_hash).collect::<Vec<_>>())
         .await
         .unwrap();
 

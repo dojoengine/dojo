@@ -1,6 +1,6 @@
 #[system]
 mod Buy {
-    use dojo_defi::market::components::{Item, Cash, Market};
+    use dojo_defi::market::models::{Item, Cash, Market};
     use dojo_defi::market::constant_product_market::MarketTrait;
     use dojo::world::Context;
 
@@ -38,7 +38,7 @@ mod Buy {
 
 #[system]
 mod Sell {
-    use dojo_defi::market::components::{Item, Cash, Market};
+    use dojo_defi::market::models::{Item, Cash, Market};
     use dojo_defi::market::constant_product_market::MarketTrait;
     use dojo::world::Context;
 
@@ -77,7 +77,7 @@ mod Sell {
 
 #[system]
 mod AddLiquidity {
-    use dojo_defi::market::components::{Item, Cash, Market, Liquidity};
+    use dojo_defi::market::models::{Item, Cash, Market, Liquidity};
     use dojo_defi::market::constant_product_market::MarketTrait;
     use dojo::world::Context;
 
@@ -126,7 +126,7 @@ mod AddLiquidity {
 
 #[system]
 mod RemoveLiquidity {
-    use dojo_defi::market::components::{Item, Cash, Market, Liquidity};
+    use dojo_defi::market::models::{Item, Cash, Market, Liquidity};
     use dojo_defi::market::constant_product_market::MarketTrait;
     use dojo::world::Context;
 

@@ -13,7 +13,7 @@ use crate::sql::Sql;
 #[derive(Default)]
 pub struct StoreSetRecordProcessor;
 
-const COMPONENT_INDEX: usize = 0;
+const MODEL_INDEX: usize = 0;
 const NUM_KEYS_INDEX: usize = 1;
 
 #[async_trait]
@@ -31,7 +31,7 @@ impl<P: Provider + Sync> EventProcessor<P> for StoreSetRecordProcessor {
         _transaction_receipt: &InvokeTransactionReceipt,
         event: &Event,
     ) -> Result<(), Error> {
-        let name = parse_cairo_short_string(&event.data[COMPONENT_INDEX])?;
+        let name = parse_cairo_short_string(&event.data[MODEL_INDEX])?;
         info!("store set record: {}", name);
 
         let keys = values_at(&event.data, NUM_KEYS_INDEX)?;

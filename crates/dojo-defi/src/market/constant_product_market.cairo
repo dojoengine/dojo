@@ -1,5 +1,5 @@
 use starknet::ContractAddress;
-use dojo_defi::market::components::Market;
+use dojo_defi::market::models::Market;
 use cubit::f128::types::fixed::{Fixed, FixedTrait};
 
 const SCALING_FACTOR: u128 = 10000;

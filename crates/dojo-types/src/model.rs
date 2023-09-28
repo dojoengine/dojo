@@ -1,11 +1,26 @@
 use serde::{Deserialize, Serialize};
+use starknet::core::types::FieldElement;
 
-/// Represents a component member.
+/// Represents a model member.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Member {
     pub name: String,
     pub ty: Ty,
     pub key: bool,
+}
+
+/// Represents a component of an entity
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EntityModel {
+    pub model: String,
+    pub keys: Vec<FieldElement>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModelMetadata {
+    pub name: String,
+    pub size: u32,
+    pub class_hash: FieldElement,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]

@@ -12,9 +12,9 @@ pub async fn execute(command: ModelCommands, env_metadata: Option<Environment>) 
             let provider = starknet.provider(env_metadata.as_ref())?;
 
             let world = WorldContractReader::new(world_address, &provider);
-            let component = world.model(&name, BlockId::Tag(BlockTag::Pending)).await?;
+            let model = world.model(&name, BlockId::Tag(BlockTag::Pending)).await?;
 
-            println!("{:#x}", component.class_hash());
+            println!("{:#x}", model.class_hash());
         }
 
         ModelCommands::Schema { name, world, starknet, to_json } => {
@@ -22,9 +22,9 @@ pub async fn execute(command: ModelCommands, env_metadata: Option<Environment>) 
             let provider = starknet.provider(env_metadata.as_ref())?;
 
             let world = WorldContractReader::new(world_address, &provider);
-            let component = world.model(&name, BlockId::Tag(BlockTag::Pending)).await?;
+            let model = world.model(&name, BlockId::Tag(BlockTag::Pending)).await?;
 
-            let schema = component.schema(BlockId::Tag(BlockTag::Pending)).await?;
+            let schema = model.schema(BlockId::Tag(BlockTag::Pending)).await?;
 
             if to_json {
                 println!("{}", serde_json::to_string_pretty(&schema)?)
@@ -38,9 +38,9 @@ pub async fn execute(command: ModelCommands, env_metadata: Option<Environment>) 
             let provider = starknet.provider(env_metadata.as_ref())?;
 
             let world = WorldContractReader::new(world_address, &provider);
-            let component = world.model(&name, BlockId::Tag(BlockTag::Pending)).await?;
+            let model = world.model(&name, BlockId::Tag(BlockTag::Pending)).await?;
 
-            let entity = component.entity(keys, BlockId::Tag(BlockTag::Pending)).await?;
+            let entity = model.entity(keys, BlockId::Tag(BlockTag::Pending)).await?;
 
             println!(
                 "{}",

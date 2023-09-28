@@ -1,6 +1,6 @@
 #[starknet::contract]
 mod ERC721 {
-    use dojo_erc::token::erc721::components::{
+    use dojo_erc::token::erc721::models::{
         ERC721Meta, ERC721OperatorApproval, ERC721Owner, ERC721Balance, ERC721TokenApproval
     };
     use dojo_erc::token::erc721::interface;

@@ -2,11 +2,12 @@ use std::error::Error;
 use std::time::Duration;
 
 use starknet::core::types::{
-    BlockId, BlockTag, BlockWithTxs, Event, InvokeTransaction, InvokeTransactionReceipt,
+    BlockId, BlockWithTxs, Event, InvokeTransaction, InvokeTransactionReceipt,
     MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, Transaction, TransactionReceipt,
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
+use tokio::sync::mpsc::Sender as BoundedSender;
 use tokio::time::sleep;
 use tokio_util::sync::CancellationToken;
 use torii_client::contract::world::WorldContractReader;
@@ -48,6 +49,7 @@ where
     provider: &'a P,
     processors: Processors<P>,
     config: EngineConfig,
+    block_sender: Option<BoundedSender<u64>>,
 }
 
 impl<'a, P: Provider + Sync> Engine<'a, P>
@@ -60,51 +62,44 @@ where
         provider: &'a P,
         processors: Processors<P>,
         config: EngineConfig,
+        block_sender: Option<BoundedSender<u64>>,
     ) -> Self {
-        Self { world, db, provider, processors, config }
+        Self { world, db, provider, processors, config, block_sender }
     }
 
     pub async fn start(&self, cts: CancellationToken) -> Result<(), Box<dyn Error>> {
-        let db_head = self.db.head().await?;
-
-        let current_block_number = match db_head {
-            0 => self.config.start_block,
-            _ => {
-                if self.config.start_block != 0 {
-                    warn!("start block ignored, stored head exists and will be used instead");
-                }
-                db_head
-            }
-        };
+        if self.db.head().await? == 0 {
+            self.db.set_head(self.config.start_block).await?;
+        } else if self.config.start_block != 0 {
+            warn!("start block ignored, stored head exists and will be used instead");
+        }
 
         loop {
             if cts.is_cancelled() {
                 break Ok(());
             }
 
-            sleep(self.config.block_time).await;
-            match self.sync_to_head(current_block_number).await {
+            let head = self.db.head().await?;
+            match self.sync_to_head(head).await {
                 Ok(block_with_txs) => block_with_txs,
                 Err(e) => {
                     error!("getting  block: {}", e);
                     continue;
                 }
             };
+
+            sleep(self.config.block_time).await;
         }
     }
 
     pub async fn sync_to_head(&self, from: u64) -> Result<u64, Box<dyn Error>> {
-        let latest_block_with_txs =
-            self.provider.get_block_with_txs(BlockId::Tag(BlockTag::Latest)).await?;
+        let latest_block_number = self.provider.block_hash_and_number().await?.block_number;
 
-        let latest_block_number = match latest_block_with_txs {
-            MaybePendingBlockWithTxs::Block(latest_block_with_txs) => {
-                latest_block_with_txs.block_number
-            }
-            _ => return Err(anyhow::anyhow!("Getting latest block number").into()),
+        if from < latest_block_number {
+            // if `from` == 0, then the block may or may not be processed yet.
+            let from = if from == 0 { from } else { from + 1 };
+            self.sync_range(from, latest_block_number).await?;
         };
-
-        self.sync_range(from, latest_block_number).await?;
 
         Ok(latest_block_number)
     }
@@ -120,6 +115,11 @@ where
                     continue;
                 }
             };
+
+            // send the current block number
+            if let Some(ref block_sender) = self.block_sender {
+                block_sender.send(from).await.expect("failed to send block number to gRPC server");
+            }
 
             self.process(block_with_txs).await?;
 

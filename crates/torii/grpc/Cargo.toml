@@ -6,10 +6,41 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
+anyhow.workspace = true
+bytes = "1.0"
+dojo-types = { path = "../../dojo-types" }
+futures.workspace = true
+parking_lot.workspace = true
+rayon.workspace = true
+starknet-crypto.workspace = true
+starknet.workspace = true
+thiserror.workspace = true
+
+# server
+hyper = "0.14.27"
+tonic-web.workspace = true
+tower = "0.4.13"
+tracing.workspace = true
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+tonic-web-wasm-client.workspace = true
+wasm-prost.workspace = true
+wasm-tonic.workspace = true
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+futures-util = "0.3.28"
 prost.workspace = true
 sqlx = { version = "0.6.2", features = [ "chrono", "macros", "offline", "runtime-actix-rustls", "sqlite", "uuid" ] }
+tokio-stream = "0.1.14"
+tokio.workspace = true
 tonic.workspace = true
+url.workspace = true
 warp.workspace = true
 
 [build-dependencies]
 tonic-build.workspace = true
+wasm-tonic-build.workspace = true
+
+[features]
+client = [  ]
+server = [  ] # this feature can't be build on wasm32

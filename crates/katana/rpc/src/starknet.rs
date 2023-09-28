@@ -8,7 +8,7 @@ use katana_core::backend::storage::transaction::{
     L1HandlerTransaction, PendingTransaction, Transaction,
 };
 use katana_core::backend::ExternalFunctionCall;
-use katana_core::sequencer::Sequencer;
+use katana_core::sequencer::KatanaSequencer;
 use katana_core::sequencer_error::SequencerError;
 use katana_core::utils::contract::legacy_inner_to_rpc_class;
 use katana_core::utils::transaction::{
@@ -31,23 +31,17 @@ use starknet_api::transaction::Calldata;
 
 use crate::api::starknet::{Felt, StarknetApiError, StarknetApiServer};
 
-pub struct StarknetApi<S> {
-    sequencer: S,
+pub struct StarknetApi {
+    sequencer: Arc<KatanaSequencer>,
 }
 
-impl<S> StarknetApi<S>
-where
-    S: Sequencer + Send + Sync + 'static,
-{
-    pub fn new(sequencer: S) -> Self {
+impl StarknetApi {
+    pub fn new(sequencer: Arc<KatanaSequencer>) -> Self {
         Self { sequencer }
     }
 }
 #[async_trait]
-impl<S> StarknetApiServer for StarknetApi<S>
-where
-    S: Sequencer + Send + Sync + 'static,
-{
+impl StarknetApiServer for StarknetApi {
     async fn chain_id(&self) -> Result<String, Error> {
         Ok(self.sequencer.chain_id().await.as_hex())
     }

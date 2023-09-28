@@ -1,6 +1,7 @@
 use std::env;
 use std::net::SocketAddr;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use anyhow::{anyhow, Context};
 use camino::Utf8PathBuf;
@@ -77,7 +78,7 @@ async fn main() -> anyhow::Result<()> {
     let pool = SqlitePoolOptions::new().max_connections(5).connect(database_url).await?;
     sqlx::migrate!("../migrations").run(&pool).await?;
 
-    let provider = JsonRpcClient::new(HttpTransport::new(Url::parse(&args.rpc).unwrap()));
+    let provider: Arc<_> = JsonRpcClient::new(HttpTransport::new(Url::parse(&args.rpc)?)).into();
 
     let (manifest, env) = get_manifest_and_env(args.manifest.as_ref())
         .with_context(|| "Failed to get manifest file".to_string())?;
@@ -98,17 +99,18 @@ async fn main() -> anyhow::Result<()> {
         ..Processors::default()
     };
 
+    let (block_sender, block_receiver) = tokio::sync::mpsc::channel(100);
+
     let engine = Engine::new(
         &world,
         &db,
         &provider,
         processors,
         EngineConfig { start_block: args.start_block, ..Default::default() },
+        Some(block_sender),
     );
 
-    let addr = format!("{}:{}", args.host, args.port)
-        .parse::<SocketAddr>()
-        .expect("able to parse address");
+    let addr: SocketAddr = format!("{}:{}", args.host, args.port).parse()?;
 
     tokio::select! {
         res = engine.start(cts) => {
@@ -117,7 +119,7 @@ async fn main() -> anyhow::Result<()> {
             }
         }
 
-        res = server::spawn_server(&addr, &pool) => {
+        res = server::spawn_server(&addr, &pool, world_address, block_receiver,  Arc::clone(&provider)) => {
             if let Err(e) = res {
                 error!("Server failed with error: {e}");
             }

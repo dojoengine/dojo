@@ -9,25 +9,23 @@ pub mod set;
 
 const CAIRO_ERR_MSG_LEN: usize = 31;
 
-pub fn extract_components(
+pub fn extract_models(
     db: &dyn SyntaxGroup,
     expression: &ast::Expr,
 ) -> Result<Vec<SmolStr>, PluginDiagnostic> {
-    let mut components = vec![];
+    let mut models = vec![];
     match expression {
         ast::Expr::Tuple(tuple) => {
             for element in tuple.expressions(db).elements(db) {
-                match extract_components(db, &element) {
-                    Ok(mut element_components) => components.append(&mut element_components),
+                match extract_models(db, &element) {
+                    Ok(mut element_models) => models.append(&mut element_models),
                     Err(diagnostic) => return Err(diagnostic),
                 }
             }
         }
         ast::Expr::Parenthesized(parenthesized) => {
-            match extract_components(db, &parenthesized.expr(db)) {
-                Ok(mut parenthesized_components) => {
-                    components.append(&mut parenthesized_components)
-                }
+            match extract_models(db, &parenthesized.expr(db)) {
+                Ok(mut parenthesized_models) => models.append(&mut parenthesized_models),
                 Err(diagnostic) => return Err(diagnostic),
             }
         }
@@ -50,14 +48,14 @@ pub fn extract_components(
                         });
                     };
 
-                    match extract_components(db, &expr.expr(db)) {
-                        Ok(mut expr_components) => components.append(&mut expr_components),
+                    match extract_models(db, &expr.expr(db)) {
+                        Ok(mut expr_models) => models.append(&mut expr_models),
                         Err(diagnostic) => return Err(diagnostic),
                     }
                 }
             }
             ast::PathSegment::Simple(segment) => {
-                components.push(segment.ident(db).text(db));
+                models.push(segment.ident(db).text(db));
             }
         },
         _ => {
@@ -71,7 +69,7 @@ pub fn extract_components(
         }
     }
 
-    Ok(components)
+    Ok(models)
 }
 pub fn unsupported_arg_diagnostic(
     db: &dyn SyntaxGroup,

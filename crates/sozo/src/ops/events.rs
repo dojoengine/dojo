@@ -78,7 +78,7 @@ fn parse_event(
         // Length is two only when its custom event
         if keys.len() == 2 {
             let name = parse_cairo_short_string(&keys[1]).ok()?;
-            ret.push_str(&format!("Component name: {}\n", name));
+            ret.push_str(&format!("Model name: {}\n", name));
         }
 
         match &e.kind {

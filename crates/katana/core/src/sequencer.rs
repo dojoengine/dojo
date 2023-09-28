@@ -4,8 +4,6 @@ use std::slice::Iter;
 use std::sync::Arc;
 
 use anyhow::Result;
-use async_trait::async_trait;
-use auto_impl::auto_impl;
 use blockifier::execution::contract_class::ContractClass;
 use blockifier::state::state_api::{State, StateReader};
 use starknet::core::types::{
@@ -28,7 +26,8 @@ use crate::db::{AsStateRefDb, StateExtRef, StateRefDb};
 use crate::execution::{MaybeInvalidExecutedTransaction, PendingState};
 use crate::pool::TransactionPool;
 use crate::sequencer_error::SequencerError;
-use crate::service::{BlockProducer, BlockProducerMode, NodeService, TransactionMiner};
+use crate::service::block_producer::{BlockProducer, BlockProducerMode};
+use crate::service::{NodeService, TransactionMiner};
 use crate::utils::event::{ContinuationToken, ContinuationTokenError};
 
 type SequencerResult<T> = Result<T, SequencerError>;
@@ -37,102 +36,6 @@ type SequencerResult<T> = Result<T, SequencerError>;
 pub struct SequencerConfig {
     pub block_time: Option<u64>,
     pub no_mining: bool,
-}
-
-#[async_trait]
-#[auto_impl(Arc)]
-pub trait Sequencer {
-    fn block_producer(&self) -> &BlockProducer;
-
-    fn backend(&self) -> &Backend;
-
-    async fn state(&self, block_id: &BlockId) -> SequencerResult<StateRefDb>;
-
-    async fn chain_id(&self) -> ChainId;
-
-    async fn transaction_receipt(
-        &self,
-        hash: &FieldElement,
-    ) -> Option<MaybePendingTransactionReceipt>;
-
-    async fn nonce_at(
-        &self,
-        block_id: BlockId,
-        contract_address: ContractAddress,
-    ) -> SequencerResult<Nonce>;
-
-    async fn block_number(&self) -> u64;
-
-    async fn block(&self, block_id: BlockId) -> Option<ExecutedBlock>;
-
-    async fn transaction(&self, hash: &FieldElement) -> Option<KnownTransaction>;
-
-    async fn class_hash_at(
-        &self,
-        block_id: BlockId,
-        contract_address: ContractAddress,
-    ) -> SequencerResult<ClassHash>;
-
-    async fn class(
-        &self,
-        block_id: BlockId,
-        class_hash: ClassHash,
-    ) -> SequencerResult<StarknetContract>;
-
-    async fn block_hash_and_number(&self) -> (FieldElement, u64);
-
-    async fn call(
-        &self,
-        block_id: BlockId,
-        function_call: ExternalFunctionCall,
-    ) -> SequencerResult<Vec<StarkFelt>>;
-
-    async fn storage_at(
-        &self,
-        contract_address: ContractAddress,
-        storage_key: StorageKey,
-        block_id: BlockId,
-    ) -> SequencerResult<StarkFelt>;
-
-    async fn add_deploy_account_transaction(
-        &self,
-        transaction: DeployAccountTransaction,
-    ) -> (FieldElement, FieldElement);
-
-    fn add_declare_transaction(&self, transaction: DeclareTransaction);
-
-    fn add_invoke_transaction(&self, transaction: InvokeTransaction);
-
-    async fn estimate_fee(
-        &self,
-        transactions: Vec<Transaction>,
-        block_id: BlockId,
-    ) -> SequencerResult<Vec<FeeEstimate>>;
-
-    async fn events(
-        &self,
-        from_block: BlockId,
-        to_block: BlockId,
-        address: Option<FieldElement>,
-        keys: Option<Vec<Vec<FieldElement>>>,
-        continuation_token: Option<String>,
-        chunk_size: u64,
-    ) -> SequencerResult<EventsPage>;
-
-    async fn state_update(&self, block_id: BlockId) -> SequencerResult<StateUpdate>;
-
-    async fn set_next_block_timestamp(&self, timestamp: u64) -> Result<(), SequencerError>;
-
-    async fn increase_next_block_timestamp(&self, timestamp: u64) -> Result<(), SequencerError>;
-
-    async fn has_pending_transactions(&self) -> bool;
-
-    async fn set_storage_at(
-        &self,
-        contract_address: ContractAddress,
-        storage_key: StorageKey,
-        value: StarkFelt,
-    ) -> Result<(), SequencerError>;
 }
 
 pub struct KatanaSequencer {
@@ -182,19 +85,16 @@ impl KatanaSequencer {
             .get_class_hash_at(*contract_address)
             .is_ok_and(|c| c != ClassHash::default())
     }
-}
 
-#[async_trait]
-impl Sequencer for KatanaSequencer {
-    fn block_producer(&self) -> &BlockProducer {
+    pub fn block_producer(&self) -> &BlockProducer {
         &self.block_producer
     }
 
-    fn backend(&self) -> &Backend {
+    pub fn backend(&self) -> &Backend {
         &self.backend
     }
 
-    async fn state(&self, block_id: &BlockId) -> SequencerResult<StateRefDb> {
+    pub async fn state(&self, block_id: &BlockId) -> SequencerResult<StateRefDb> {
         match block_id {
             BlockId::Tag(BlockTag::Latest) => Ok(self.backend.state.read().await.as_ref_db()),
 
@@ -222,7 +122,7 @@ impl Sequencer for KatanaSequencer {
         }
     }
 
-    async fn add_deploy_account_transaction(
+    pub async fn add_deploy_account_transaction(
         &self,
         transaction: DeployAccountTransaction,
     ) -> (FieldElement, FieldElement) {
@@ -234,15 +134,15 @@ impl Sequencer for KatanaSequencer {
         (transaction_hash, contract_address)
     }
 
-    fn add_declare_transaction(&self, transaction: DeclareTransaction) {
+    pub fn add_declare_transaction(&self, transaction: DeclareTransaction) {
         self.pool.add_transaction(Transaction::Declare(transaction))
     }
 
-    fn add_invoke_transaction(&self, transaction: InvokeTransaction) {
+    pub fn add_invoke_transaction(&self, transaction: InvokeTransaction) {
         self.pool.add_transaction(Transaction::Invoke(transaction))
     }
 
-    async fn estimate_fee(
+    pub async fn estimate_fee(
         &self,
         transactions: Vec<Transaction>,
         block_id: BlockId,
@@ -251,13 +151,13 @@ impl Sequencer for KatanaSequencer {
         self.backend.estimate_fee(transactions, state).map_err(SequencerError::TransactionExecution)
     }
 
-    async fn block_hash_and_number(&self) -> (FieldElement, u64) {
+    pub async fn block_hash_and_number(&self) -> (FieldElement, u64) {
         let hash = self.backend.blockchain.storage.read().latest_hash;
         let number = self.backend.blockchain.storage.read().latest_number;
         (hash, number)
     }
 
-    async fn class_hash_at(
+    pub async fn class_hash_at(
         &self,
         block_id: BlockId,
         contract_address: ContractAddress,
@@ -270,7 +170,7 @@ impl Sequencer for KatanaSequencer {
         state.get_class_hash_at(contract_address).map_err(SequencerError::State)
     }
 
-    async fn class(
+    pub async fn class(
         &self,
         block_id: BlockId,
         class_hash: ClassHash,
@@ -289,7 +189,7 @@ impl Sequencer for KatanaSequencer {
         }
     }
 
-    async fn storage_at(
+    pub async fn storage_at(
         &self,
         contract_address: ContractAddress,
         storage_key: StorageKey,
@@ -303,15 +203,15 @@ impl Sequencer for KatanaSequencer {
         state.get_storage_at(contract_address, storage_key).map_err(SequencerError::State)
     }
 
-    async fn chain_id(&self) -> ChainId {
+    pub async fn chain_id(&self) -> ChainId {
         self.backend.env.read().block.chain_id.clone()
     }
 
-    async fn block_number(&self) -> u64 {
+    pub async fn block_number(&self) -> u64 {
         self.backend.blockchain.storage.read().latest_number
     }
 
-    async fn block(&self, block_id: BlockId) -> Option<ExecutedBlock> {
+    pub async fn block(&self, block_id: BlockId) -> Option<ExecutedBlock> {
         let block_id = match block_id {
             BlockId::Tag(BlockTag::Pending) if self.block_producer.is_instant_mining() => {
                 BlockId::Tag(BlockTag::Latest)
@@ -358,7 +258,7 @@ impl Sequencer for KatanaSequencer {
         }
     }
 
-    async fn nonce_at(
+    pub async fn nonce_at(
         &self,
         block_id: BlockId,
         contract_address: ContractAddress,
@@ -371,7 +271,7 @@ impl Sequencer for KatanaSequencer {
         state.get_nonce_at(contract_address).map_err(SequencerError::State)
     }
 
-    async fn call(
+    pub async fn call(
         &self,
         block_id: BlockId,
         function_call: ExternalFunctionCall,
@@ -388,7 +288,7 @@ impl Sequencer for KatanaSequencer {
             .map(|execution_info| execution_info.execution.retdata.0)
     }
 
-    async fn transaction_receipt(
+    pub async fn transaction_receipt(
         &self,
         hash: &FieldElement,
     ) -> Option<MaybePendingTransactionReceipt> {
@@ -405,7 +305,7 @@ impl Sequencer for KatanaSequencer {
         }
     }
 
-    async fn transaction(&self, hash: &FieldElement) -> Option<KnownTransaction> {
+    pub async fn transaction(&self, hash: &FieldElement) -> Option<KnownTransaction> {
         let tx = self.backend.blockchain.storage.read().transactions.get(hash).cloned();
         match tx {
             Some(tx) => Some(tx),
@@ -425,7 +325,7 @@ impl Sequencer for KatanaSequencer {
         }
     }
 
-    async fn events(
+    pub async fn events(
         &self,
         from_block: BlockId,
         to_block: BlockId,
@@ -556,7 +456,7 @@ impl Sequencer for KatanaSequencer {
         Ok(EventsPage { events: filtered_events, continuation_token: None })
     }
 
-    async fn state_update(&self, block_id: BlockId) -> SequencerResult<StateUpdate> {
+    pub async fn state_update(&self, block_id: BlockId) -> SequencerResult<StateUpdate> {
         let block_number = self
             .backend
             .blockchain
@@ -573,7 +473,7 @@ impl Sequencer for KatanaSequencer {
             .ok_or(SequencerError::StateUpdateNotFound(block_id))
     }
 
-    async fn set_next_block_timestamp(&self, timestamp: u64) -> Result<(), SequencerError> {
+    pub async fn set_next_block_timestamp(&self, timestamp: u64) -> Result<(), SequencerError> {
         if self.has_pending_transactions().await {
             return Err(SequencerError::PendingTransactions);
         }
@@ -581,7 +481,10 @@ impl Sequencer for KatanaSequencer {
         Ok(())
     }
 
-    async fn increase_next_block_timestamp(&self, timestamp: u64) -> Result<(), SequencerError> {
+    pub async fn increase_next_block_timestamp(
+        &self,
+        timestamp: u64,
+    ) -> Result<(), SequencerError> {
         if self.has_pending_transactions().await {
             return Err(SequencerError::PendingTransactions);
         }
@@ -589,7 +492,7 @@ impl Sequencer for KatanaSequencer {
         Ok(())
     }
 
-    async fn has_pending_transactions(&self) -> bool {
+    pub async fn has_pending_transactions(&self) -> bool {
         if let Some(ref pending) = self.pending_state() {
             !pending.executed_transactions.read().is_empty()
         } else {
@@ -597,7 +500,7 @@ impl Sequencer for KatanaSequencer {
         }
     }
 
-    async fn set_storage_at(
+    pub async fn set_storage_at(
         &self,
         contract_address: ContractAddress,
         storage_key: StorageKey,

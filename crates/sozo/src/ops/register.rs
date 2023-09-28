@@ -6,7 +6,7 @@ use crate::commands::register::RegisterCommand;
 
 pub async fn execute(command: RegisterCommand, env_metadata: Option<Environment>) -> Result<()> {
     match command {
-        RegisterCommand::Component { components, world, starknet, account } => {
+        RegisterCommand::Model { models, world, starknet, account } => {
             let world_address = world.address(env_metadata.as_ref())?;
             let provider = starknet.provider(env_metadata.as_ref())?;
 
@@ -14,11 +14,11 @@ pub async fn execute(command: RegisterCommand, env_metadata: Option<Environment>
             let world = WorldContract::new(world_address, &account);
 
             let res = world
-                .register_components(&components)
+                .register_models(&models)
                 .await
                 .with_context(|| "Failed to send transaction")?;
 
-            println!("Components registered at transaction: {:#x}", res.transaction_hash)
+            println!("Models registered at transaction: {:#x}", res.transaction_hash)
         }
     }
     Ok(())

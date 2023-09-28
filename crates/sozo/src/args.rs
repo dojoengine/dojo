@@ -63,9 +63,9 @@ pub enum Commands {
     Test(TestArgs),
     #[command(about = "Execute a world's system")]
     Execute(ExecuteArgs),
-    #[command(about = "Interact with a worlds components")]
+    #[command(about = "Interact with a worlds models")]
     Model(ModelArgs),
-    #[command(about = "Register new systems and components")]
+    #[command(about = "Register new models")]
     Register(RegisterArgs),
     #[command(about = "Queries world events")]
     Events(EventsArgs),

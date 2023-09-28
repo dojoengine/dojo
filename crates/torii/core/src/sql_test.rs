@@ -1,5 +1,5 @@
 use camino::Utf8PathBuf;
-use dojo_types::component::{Member, Struct, Ty};
+use dojo_types::model::{Member, Struct, Ty};
 use dojo_world::manifest::System;
 use sqlx::sqlite::SqlitePool;
 use starknet::core::types::{Event, FieldElement};

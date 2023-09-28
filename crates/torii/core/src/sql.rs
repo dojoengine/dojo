@@ -3,8 +3,8 @@ use std::str::FromStr;
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use dojo_types::component::Ty;
 use dojo_types::core::CairoType;
+use dojo_types::model::Ty;
 use dojo_world::manifest::{Manifest, System};
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
@@ -220,7 +220,7 @@ impl Sql {
 
         // keys are part of model members, so combine keys and model values array
         let mut member_values: Vec<FieldElement> = Vec::new();
-        member_values.extend(keys);
+        member_values.extend(keys.clone());
         member_values.extend(values);
 
         let insert_models: Vec<_> = primitive_members

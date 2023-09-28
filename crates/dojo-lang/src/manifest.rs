@@ -74,7 +74,7 @@ impl Manifest {
                     if let Some(contracts) = aux_data.downcast_ref::<StarkNetContractAuxData>() {
                         manifest.find_contracts(contracts, &compiled_classes);
                     } else if let Some(dojo_aux_data) = aux_data.downcast_ref() {
-                        manifest.find_components(db, dojo_aux_data, *module_id, &compiled_classes);
+                        manifest.find_models(db, dojo_aux_data, *module_id, &compiled_classes);
                     }
                 }
             }
@@ -84,31 +84,31 @@ impl Manifest {
         manifest
     }
 
-    /// Finds the inline modules annotated as components in the given crate_ids and
+    /// Finds the inline modules annotated as models in the given crate_ids and
     /// returns the corresponding Models.
-    fn find_components(
+    fn find_models(
         &mut self,
         db: &dyn SemanticGroup,
         aux_data: &DojoAuxData,
         module_id: ModuleId,
         compiled_classes: &HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
     ) {
-        for component in &aux_data.models {
-            let component = component.clone();
-            let name: SmolStr = component.name.clone().into();
+        for model in &aux_data.models {
+            let model = model.clone();
+            let name: SmolStr = model.name.clone().into();
             if let Ok(Some(ModuleItemId::Struct(_))) =
                 db.module_item_by_name(module_id, name.clone())
             {
-                // It needs the `Component` suffix because we are
+                // It needs the `Model` suffix because we are
                 // searching from the compiled contracts.
                 let (class_hash, class_abi) = compiled_classes
                     .get(name.to_case(Case::Snake).as_str())
-                    .with_context(|| format!("Component {name} not found in target."))
+                    .with_context(|| format!("Model {name} not found in target."))
                     .unwrap();
 
-                self.0.components.push(dojo_world::manifest::Model {
-                    name: component.name,
-                    members: component.members,
+                self.0.models.push(dojo_world::manifest::Model {
+                    name: model.name,
+                    members: model.members,
                     class_hash: *class_hash,
                     abi: class_abi.clone(),
                 });
@@ -118,14 +118,14 @@ impl Manifest {
 
     // removes contracts with DojoAuxType
     fn filter_contracts(&mut self) {
-        let mut components = HashMap::new();
+        let mut models = HashMap::new();
 
-        for component in &self.0.components {
-            components.insert(component.class_hash, true);
+        for model in &self.0.models {
+            models.insert(model.class_hash, true);
         }
 
         for i in (0..self.0.contracts.len()).rev() {
-            if components.get(&self.0.contracts[i].class_hash).is_some() {
+            if models.get(&self.0.contracts[i].class_hash).is_some() {
                 self.0.contracts.remove(i);
             }
         }
