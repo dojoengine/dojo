@@ -8,7 +8,7 @@ test_manifest_file
   "world": {
     "name": "world",
     "address": null,
-    "class_hash": "0x5fa0c167c64ab468840d07ce2730fbcd0b2f0f372bfee35f70f92fbd218e161",
+    "class_hash": "0x2e14789ff47a76a3202a3088055472c068e123be0c1c31d4cf854f9b9d65035",
     "abi": [
       {
         "type": "impl",
@@ -565,7 +565,7 @@ test_manifest_file
     {
       "name": "player_actions",
       "address": null,
-      "class_hash": "0x4349239d77c4d8212b45f412d7e3de969c26a5760f61c3bb6129cf20162e585",
+      "class_hash": "0x1904b4b8b7fc2598479cef4b164e69ccbe0da46707976d54516e665898ab92a",
       "abi": [
         {
           "type": "impl",
@@ -687,7 +687,7 @@ test_manifest_file
     {
       "name": "player_actions_external",
       "address": null,
-      "class_hash": "0x755b625b4eaa27a247808ee87cf05455e1a2bad50d29f8cbbb128b7a9f7b80b",
+      "class_hash": "0x85c967c7f644f1aa78cf2de8c94568f53cfb1a9b1ebccd7c8d4682f92a1b6f",
       "abi": [
         {
           "type": "impl",

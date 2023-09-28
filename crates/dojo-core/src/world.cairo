@@ -323,7 +323,7 @@ mod world {
 
             let key = poseidon::poseidon_hash_span(keys);
             let component_class_hash = self.components.read(component);
-            database::set_with_keys(component_class_hash, component, key, offset, values, layout, keys, keys_layout);
+            database::set(component_class_hash, component, key, offset, values, layout);
 
             EventEmitter::emit(ref self, StoreSetRecord { table: component, keys, offset, values });
         }
