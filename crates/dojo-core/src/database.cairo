@@ -36,7 +36,7 @@ fn set(
 }
 
 fn del(class_hash: starknet::ClassHash, table: felt252, key: felt252, keys_layout: Span<u8>) {
-    index::delete(0, table, key, keys_layout);
+    // index::delete(0, table, key, keys_layout);
 }
 
 // returns a tuple of spans, first contains the entity IDs,
