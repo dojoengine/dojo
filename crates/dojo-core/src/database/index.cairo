@@ -229,7 +229,6 @@ fn get_with_keys(address_domain: u32, index: felt252, keys_layout: Span<u8>) -> 
 fn get_by_key(address_domain: u32, index: felt252, key: felt252) -> Array<felt252> {
     let mut res = ArrayTrait::new();
     let specific_len_key = build_index_specific_key_len(index, key);
-    let specific_len = storage::get(address_domain, specific_len_key);
     let index_len = storage::get(address_domain, specific_len_key);
 
     let mut idx = 0;
