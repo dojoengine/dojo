@@ -4,7 +4,7 @@ pub mod subscription;
 
 use std::sync::Arc;
 
-use dojo_types::component::EntityComponent;
+use dojo_types::component::EntityModel;
 use dojo_types::WorldMetadata;
 use futures::channel::mpsc;
 use parking_lot::{Mutex, RwLock};
@@ -51,7 +51,7 @@ impl Client {
     }
 
     /// Returns the list of entities that the client is subscribed to.
-    pub fn synced_entities(&self) -> Vec<EntityComponent> {
+    pub fn synced_entities(&self) -> Vec<EntityModel> {
         self.entity_subscription.entities.read().clone().into_iter().collect()
     }
 }
@@ -59,7 +59,7 @@ impl Client {
 // TODO: able to handle entities that has not been set yet, currently `build` will panic if the
 // `entities_to_sync` has never been set (the sql table isnt exist)
 pub struct ClientBuilder {
-    initial_entities_to_sync: Option<Vec<EntityComponent>>,
+    initial_entities_to_sync: Option<Vec<EntityModel>>,
 }
 
 impl ClientBuilder {
@@ -92,9 +92,9 @@ impl ClientBuilder {
 
             // TODO: change this to querying the gRPC endpoint instead
             let subbed_entities = subbed_entities.entities.read().clone();
-            for EntityComponent { component, keys } in subbed_entities {
+            for EntityModel { model: component, keys } in subbed_entities {
                 let component_reader =
-                    world_reader.component(&component, BlockId::Tag(BlockTag::Pending)).await?;
+                    world_reader.model(&component, BlockId::Tag(BlockTag::Pending)).await?;
                 let values =
                     component_reader.entity(keys.clone(), BlockId::Tag(BlockTag::Pending)).await?;
                 client_storage.set_entity((component, keys), values)?;
@@ -131,7 +131,7 @@ impl ClientBuilder {
     }
 
     #[must_use]
-    pub fn set_entities_to_sync(mut self, entities: Vec<EntityComponent>) -> Self {
+    pub fn set_entities_to_sync(mut self, entities: Vec<EntityModel>) -> Self {
         self.initial_entities_to_sync = Some(entities);
         self
     }
@@ -140,57 +140,5 @@ impl ClientBuilder {
 impl Default for ClientBuilder {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::thread;
-    use std::time::Duration;
-
-    use dojo_types::component::EntityComponent;
-    use starknet::macros::felt;
-
-    #[tokio::test(flavor = "multi_thread")]
-    async fn main() {
-        let world = felt!("0x103dd611b410c2aafc47f435e3141950b9d18e801e518209b7d28f6ff993f54");
-
-        let client = super::ClientBuilder::new()
-            .set_entities_to_sync(vec![EntityComponent {
-                component: "Position".into(),
-                keys: vec![felt!(
-                    "0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973"
-                )],
-            }])
-            .build("http://localhost:8080/grpc/".into(), "http://localhost:5050/".into(), world)
-            .await
-            .unwrap();
-
-        let values = client
-            .entity(
-                "Position".into(),
-                vec![felt!("0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973")],
-            )
-            .unwrap();
-        println!(
-            "values: {}",
-            values.iter().map(|v| format!("{v:#x}")).collect::<Vec<String>>().join(",")
-        );
-
-        loop {
-            thread::sleep(Duration::from_secs(3));
-            let values = client
-                .entity(
-                    "Position".into(),
-                    vec![felt!(
-                        "0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973"
-                    )],
-                )
-                .unwrap();
-            println!(
-                "values: {}",
-                values.iter().map(|v| format!("{v:#x}")).collect::<Vec<String>>().join(",")
-            );
-        }
     }
 }

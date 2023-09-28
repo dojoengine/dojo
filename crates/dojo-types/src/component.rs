@@ -11,13 +11,13 @@ pub struct Member {
 
 /// Represents a component of an entity
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EntityComponent {
-    pub component: String,
+pub struct EntityModel {
+    pub model: String,
     pub keys: Vec<FieldElement>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ComponentMetadata {
+pub struct ModelMetadata {
     pub name: String,
     pub size: u32,
     pub class_hash: FieldElement,

@@ -64,17 +64,17 @@ impl WorldClient {
             .and_then(|metadata| metadata.try_into().map_err(Error::Parsing))
     }
 
-    /// Retrieves the latest component value of the requested entity keys
+    /// Retrieves the latest model value of the requested entity keys
     pub async fn get_entity(
         &mut self,
-        component: String,
+        model: String,
         keys: Vec<FieldElement>,
     ) -> Result<Vec<FieldElement>, Error> {
         let values = self
             .inner
             .get_entity(GetEntityRequest {
-                entity: Some(types::EntityComponent {
-                    component,
+                entity: Some(types::EntityModel {
+                    model,
                     keys: keys.into_iter().map(|k| format!("{k:#x}")).collect(),
                 }),
             })
@@ -92,14 +92,14 @@ impl WorldClient {
     /// Subscribe to the state diff for a set of entities of a World.
     pub async fn subscribe_entities(
         &mut self,
-        entities: Vec<dojo_types::component::EntityComponent>,
+        entities: Vec<dojo_types::component::EntityModel>,
     ) -> Result<tonic::Streaming<SubscribeEntitiesResponse>, Error> {
         self.inner
             .subscribe_entities(SubscribeEntitiesRequest {
                 entities: entities
                     .into_iter()
-                    .map(|e| protos::types::EntityComponent {
-                        component: e.component,
+                    .map(|e| protos::types::EntityModel {
+                        model: e.model,
                         keys: e.keys.into_iter().map(|felt| format!("{felt:#x}")).collect(),
                     })
                     .collect(),

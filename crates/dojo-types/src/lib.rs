@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use component::ComponentMetadata;
+use component::ModelMetadata;
 use serde::Serialize;
 use starknet::core::types::FieldElement;
 use system::SystemMetadata;
@@ -19,5 +19,5 @@ pub struct WorldMetadata {
     pub executor_address: FieldElement,
     pub executor_class_hash: FieldElement,
     pub systems: HashMap<String, SystemMetadata>,
-    pub components: HashMap<String, ComponentMetadata>,
+    pub components: HashMap<String, ModelMetadata>,
 }

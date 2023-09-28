@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::task::Poll;
 
 use anyhow::{anyhow, bail, Result};
-use dojo_types::component::EntityComponent;
+use dojo_types::component::EntityModel;
 use dojo_types::WorldMetadata;
 use futures::channel::mpsc::{Receiver, Sender};
 use futures_util::StreamExt;
@@ -21,12 +21,12 @@ use super::ComponentStorage;
 
 #[derive(Debug, Clone)]
 pub enum SubscriptionEvent {
-    SubscribeEntity(EntityComponent),
-    UnsubscribeEntity(EntityComponent),
+    SubscribeEntity(EntityModel),
+    UnsubscribeEntity(EntityModel),
 }
 
 pub struct SubscribedEntities {
-    pub(super) entities: RwLock<HashSet<EntityComponent>>,
+    pub(super) entities: RwLock<HashSet<EntityModel>>,
     /// All the relevant storage addresses derived from the subscribed entities
     pub(super) subscribed_storage_addresses: RwLock<HashSet<FieldElement>>,
     metadata: Arc<RwLock<WorldMetadata>>,
@@ -41,7 +41,7 @@ impl SubscribedEntities {
         }
     }
 
-    pub fn add_entities(&self, entities: Vec<EntityComponent>) -> anyhow::Result<()> {
+    pub fn add_entities(&self, entities: Vec<EntityModel>) -> anyhow::Result<()> {
         for entity in entities {
             if !self.entities.write().insert(entity.clone()) {
                 continue;
@@ -50,14 +50,14 @@ impl SubscribedEntities {
             let hashed_key = poseidon_hash_many(&entity.keys);
             let base_address = poseidon_hash_many(&[
                 short_string!("dojo_storage"),
-                cairo_short_string_to_felt(&entity.component).map_err(|e| anyhow!(e))?,
+                cairo_short_string_to_felt(&entity.model).map_err(|e| anyhow!(e))?,
                 hashed_key,
             ]);
 
             let Some(component_size) =
-                self.metadata.read().components.get(&entity.component).map(|c| c.size)
+                self.metadata.read().components.get(&entity.model).map(|c| c.size)
             else {
-                bail!("unknown component {}", entity.component)
+                bail!("unknown component {}", entity.model)
             };
 
             (0..component_size).for_each(|i| {
@@ -68,7 +68,7 @@ impl SubscribedEntities {
         Ok(())
     }
 
-    pub fn remove_entities(&self, entities: Vec<EntityComponent>) -> anyhow::Result<()> {
+    pub fn remove_entities(&self, entities: Vec<EntityModel>) -> anyhow::Result<()> {
         for entity in entities {
             if !self.entities.write().remove(&entity) {
                 continue;
@@ -77,14 +77,14 @@ impl SubscribedEntities {
             let hashed_key = poseidon_hash_many(&entity.keys);
             let base_address = poseidon_hash_many(&[
                 short_string!("dojo_storage"),
-                cairo_short_string_to_felt(&entity.component).map_err(|e| anyhow!(e))?,
+                cairo_short_string_to_felt(&entity.model).map_err(|e| anyhow!(e))?,
                 hashed_key,
             ]);
 
             let Some(component_size) =
-                self.metadata.read().components.get(&entity.component).map(|c| c.size)
+                self.metadata.read().components.get(&entity.model).map(|c| c.size)
             else {
-                bail!("unknown component {}", entity.component)
+                bail!("unknown component {}", entity.model)
             };
 
             (0..component_size).for_each(|i| {
@@ -211,7 +211,7 @@ mod tests {
     use std::collections::HashMap;
     use std::sync::Arc;
 
-    use dojo_types::component::EntityComponent;
+    use dojo_types::component::EntityModel;
     use dojo_types::WorldMetadata;
     use parking_lot::RwLock;
     use starknet::core::utils::cairo_short_string_to_felt;
@@ -221,7 +221,7 @@ mod tests {
     fn create_dummy_metadata() -> WorldMetadata {
         let components = HashMap::from([(
             "Position".into(),
-            dojo_types::component::ComponentMetadata {
+            dojo_types::component::ModelMetadata {
                 name: "Position".into(),
                 class_hash: felt!("1"),
                 size: 3,
@@ -249,7 +249,7 @@ mod tests {
         .into_iter();
 
         let metadata = self::create_dummy_metadata();
-        let entity = EntityComponent { component: component_name, keys };
+        let entity = EntityModel { model: component_name, keys };
 
         let subscribed_entities = super::SubscribedEntities::new(Arc::new(RwLock::new(metadata)));
         subscribed_entities.add_entities(vec![entity.clone()]).expect("able to add entity");

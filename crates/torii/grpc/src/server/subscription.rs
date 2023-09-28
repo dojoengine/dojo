@@ -24,17 +24,17 @@ type GetStateUpdateResult<P> =
 type StateUpdateFuture<P> = Pin<Box<dyn Future<Output = GetStateUpdateResult<P>> + Send>>;
 type PublishStateUpdateFuture = Pin<Box<dyn Future<Output = ()> + Send>>;
 
-pub struct ComponentMetadata {
+pub struct ModelMetadata {
     pub name: FieldElement,
     pub len: usize,
 }
 
 pub struct Entity {
-    pub component: ComponentMetadata,
+    pub model: ModelMetadata,
     pub keys: Vec<FieldElement>,
 }
 
-pub struct EntityComponentRequest {
+pub struct EntityModelRequest {
     pub world: FieldElement,
     pub entities: Vec<Entity>,
 }
@@ -60,9 +60,9 @@ impl SubscriberManager {
 
     fn add_subscriber(
         &mut self,
-        request: (EntityComponentRequest, Sender<Result<SubscribeEntitiesResponse, Status>>),
+        request: (EntityModelRequest, Sender<Result<SubscribeEntitiesResponse, Status>>),
     ) {
-        let (EntityComponentRequest { world, entities }, sender) = request;
+        let (EntityModelRequest { world, entities }, sender) = request;
 
         // convert the list of entites into a list storage addresses
         let storage_addresses = entities
@@ -70,11 +70,11 @@ impl SubscriberManager {
             .map(|entity| {
                 let base = poseidon_hash_many(&[
                     short_string!("dojo_storage"),
-                    entity.component.name,
+                    entity.model.name,
                     poseidon_hash_many(&entity.keys),
                 ]);
 
-                (0..entity.component.len)
+                (0..entity.model.len)
                     .into_par_iter()
                     .map(|i| base + i.into())
                     .collect::<Vec<FieldElement>>()
@@ -111,7 +111,7 @@ pub struct EntitySubscriptionService<P: Provider> {
     /// Receive subscribers from gRPC server.
     /// This receives streams of (sender channel, list of entities to subscribe) tuple
     subscriber_recv:
-        Receiver<(EntityComponentRequest, Sender<Result<SubscribeEntitiesResponse, Status>>)>,
+        Receiver<(EntityModelRequest, Sender<Result<SubscribeEntitiesResponse, Status>>)>,
 
     subscriber_manager: SubscriberManager,
 }
@@ -123,7 +123,7 @@ where
     pub fn new(
         provider: P,
         subscriber_recv: Receiver<(
-            EntityComponentRequest,
+            EntityModelRequest,
             Sender<Result<SubscribeEntitiesResponse, Status>>,
         )>,
         block_rx: Receiver<u64>,

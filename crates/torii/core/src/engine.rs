@@ -7,6 +7,7 @@ use starknet::core::types::{
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
+use tokio::sync::mpsc::Sender as BoundedSender;
 use tokio::time::sleep;
 use tokio_util::sync::CancellationToken;
 use torii_client::contract::world::WorldContractReader;
@@ -48,6 +49,7 @@ where
     provider: &'a P,
     processors: Processors<P>,
     config: EngineConfig,
+    block_sender: Option<BoundedSender<u64>>,
 }
 
 impl<'a, P: Provider + Sync> Engine<'a, P>
@@ -60,8 +62,9 @@ where
         provider: &'a P,
         processors: Processors<P>,
         config: EngineConfig,
+        block_sender: Option<BoundedSender<u64>>,
     ) -> Self {
-        Self { world, db, provider, processors, config }
+        Self { world, db, provider, processors, config, block_sender }
     }
 
     pub async fn start(&self, cts: CancellationToken) -> Result<(), Box<dyn Error>> {
@@ -112,6 +115,11 @@ where
                     continue;
                 }
             };
+
+            // send the current block number
+            if let Some(ref block_sender) = self.block_sender {
+                block_sender.send(from).await.expect("failed to send block number to gRPC server");
+            }
 
             self.process(block_with_txs).await?;
 

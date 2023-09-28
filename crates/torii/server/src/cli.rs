@@ -107,12 +107,13 @@ async fn main() -> anyhow::Result<()> {
         &provider,
         processors,
         EngineConfig { start_block: args.start_block, ..Default::default() },
+        Some(block_sender),
     );
 
     let addr: SocketAddr = format!("{}:{}", args.host, args.port).parse()?;
 
     tokio::select! {
-        res = engine.start(cts, block_sender) => {
+        res = engine.start(cts) => {
             if let Err(e) = res {
                 error!("Indexer failed with error: {e}");
             }

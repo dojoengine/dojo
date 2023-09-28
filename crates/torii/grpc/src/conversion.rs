@@ -6,9 +6,9 @@ use starknet_crypto::FieldElement;
 
 use crate::protos;
 
-impl TryFrom<protos::types::ComponentMetadata> for dojo_types::component::ComponentMetadata {
+impl TryFrom<protos::types::ModelMetadata> for dojo_types::component::ModelMetadata {
     type Error = FromStrError;
-    fn try_from(value: protos::types::ComponentMetadata) -> Result<Self, Self::Error> {
+    fn try_from(value: protos::types::ModelMetadata) -> Result<Self, Self::Error> {
         Ok(Self {
             name: value.name,
             size: value.size,
@@ -28,10 +28,10 @@ impl TryFrom<protos::types::WorldMetadata> for dojo_types::WorldMetadata {
     type Error = FromStrError;
     fn try_from(value: protos::types::WorldMetadata) -> Result<Self, Self::Error> {
         let components = value
-            .components
+            .models
             .into_iter()
             .map(|component| Ok((component.name.clone(), component.try_into()?)))
-            .collect::<Result<HashMap<_, dojo_types::component::ComponentMetadata>, _>>()?;
+            .collect::<Result<HashMap<_, dojo_types::component::ModelMetadata>, _>>()?;
 
         let systems = value
             .systems
@@ -50,10 +50,10 @@ impl TryFrom<protos::types::WorldMetadata> for dojo_types::WorldMetadata {
     }
 }
 
-impl From<dojo_types::component::EntityComponent> for protos::types::EntityComponent {
-    fn from(value: dojo_types::component::EntityComponent) -> Self {
+impl From<dojo_types::component::EntityModel> for protos::types::EntityModel {
+    fn from(value: dojo_types::component::EntityModel) -> Self {
         Self {
-            component: value.component,
+            model: value.model,
             keys: value.keys.into_iter().map(|key| format!("{key:#}")).collect(),
         }
     }

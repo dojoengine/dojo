@@ -34,7 +34,7 @@ message MetadataResponse {
 
 // A request to retrieve a component value of an entity.
 message GetEntityRequest {
-    types.EntityComponent entity = 1;
+    types.EntityModel entity = 1;
 }
 
 // The entity response contains the component values for the requested entities.
@@ -46,7 +46,7 @@ message SubscribeEntitiesRequest {
     // The address of the World whose entities to subscribe to.
     string world = 1;
     // The list of entities to subscribe to.
-    repeated types.EntityComponent entities = 2;
+    repeated types.EntityModel entities = 2;
 }
 
 message SubscribeEntitiesResponse {

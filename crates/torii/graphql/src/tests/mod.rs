@@ -117,6 +117,7 @@ pub async fn bootstrap_engine<'a>(
             ..Processors::default()
         },
         EngineConfig::default(),
+        None,
     );
 
     let _ = engine.sync_to_head(0).await?;

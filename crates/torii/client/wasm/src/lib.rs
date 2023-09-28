@@ -17,20 +17,11 @@ pub struct Client(torii_client::client::Client);
 
 #[wasm_bindgen]
 impl Client {
-    // #[wasm_bindgen(js_name = startSync)]
-    // pub async fn start_sync(&self) -> Result<(), JsValue> {
-    //     console_error_panic_hook::set_once();
-    //     let sync_client =
-    //         self.0.start_sync().await.map_err(|e| JsValue::from_str(&e.to_string()))?;
-    //     wasm_bindgen_futures::spawn_local(sync_client);
-    //     Ok(())
-    // }
-
-    /// Returns the component values of the requested entity.
-    #[wasm_bindgen(js_name = getComponentValue)]
-    pub async fn get_component_value(
+    /// Returns the model values of the requested entity.
+    #[wasm_bindgen(js_name = getModelValue)]
+    pub async fn get_model_value(
         &self,
-        component: &str,
+        model: &str,
         keys: Vec<JsFieldElement>,
     ) -> Result<Option<JsValue>, JsValue> {
         console_error_panic_hook::set_once();
@@ -43,7 +34,7 @@ impl Client {
                 JsValue::from_str(format!("failed to parse entity keys: {err}").as_str())
             })?;
 
-        match self.0.entity(component.to_string(), keys) {
+        match self.0.entity(model.to_string(), keys) {
             Some(values) => Ok(Some(serde_wasm_bindgen::to_value(&values)?)),
             None => Ok(None),
         }
@@ -56,7 +47,7 @@ impl Client {
         let _entities = entities
             .into_iter()
             .map(|entity| {
-                serde_wasm_bindgen::from_value::<dojo_types::component::EntityComponent>(entity)
+                serde_wasm_bindgen::from_value::<dojo_types::component::EntityModel>(entity)
             })
             .collect::<Result<Vec<_>, _>>()?;
         unimplemented!("add_entity_to_sync");
@@ -82,7 +73,7 @@ pub async fn spawn_client(
 
     let entities = initial_entities_to_sync
         .into_iter()
-        .map(serde_wasm_bindgen::from_value::<dojo_types::component::EntityComponent>)
+        .map(serde_wasm_bindgen::from_value::<dojo_types::component::EntityModel>)
         .collect::<Result<Vec<_>, _>>()?;
 
     let world_address = FieldElement::from_str(world_address).map_err(|err| {

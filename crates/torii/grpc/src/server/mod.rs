@@ -21,8 +21,8 @@ use tokio_stream::wrappers::ReceiverStream;
 use tonic::{Request, Response, Status};
 
 use self::error::Error;
-use self::subscription::{EntityComponentRequest, EntitySubscriptionService};
-use crate::protos::types::EntityComponent;
+use self::subscription::{EntityModelRequest, EntitySubscriptionService};
+use crate::protos::types::EntityModel;
 use crate::protos::world::{GetEntityRequest, GetEntityResponse};
 use crate::protos::{self};
 
@@ -32,7 +32,7 @@ pub struct DojoWorld {
     pool: Pool<Sqlite>,
     /// Sender<(subscription requests, oneshot sender to send back the response)>
     subscription_req_sender:
-        Sender<(EntityComponentRequest, Sender<Result<SubscribeEntitiesResponse, Status>>)>,
+        Sender<(EntityModelRequest, Sender<Result<SubscribeEntitiesResponse, Status>>)>,
 }
 
 impl DojoWorld {
@@ -71,7 +71,7 @@ impl DojoWorld {
         .fetch_all(&self.pool)
         .await?
         .into_iter()
-        .map(|(name, class_hash, size)| protos::types::ComponentMetadata { name, class_hash, size })
+        .map(|(name, class_hash, size)| protos::types::ModelMetadata { name, class_hash, size })
         .collect::<Vec<_>>();
 
         let systems = sqlx::query_as("SELECT name, class_hash FROM systems")
@@ -83,7 +83,7 @@ impl DojoWorld {
 
         Ok(protos::types::WorldMetadata {
             systems,
-            components: models,
+            models,
             world_address,
             world_class_hash,
             executor_address,
@@ -95,7 +95,7 @@ impl DojoWorld {
     pub async fn model_metadata(
         &self,
         component: String,
-    ) -> Result<protos::types::ComponentMetadata, Error> {
+    ) -> Result<protos::types::ModelMetadata, Error> {
         sqlx::query_as(
             "SELECT c.name, c.class_hash, COUNT(cm.id) FROM models c LEFT JOIN model_members cm \
              ON c.id = cm.model_id WHERE c.id = ? GROUP BY c.id",
@@ -103,7 +103,7 @@ impl DojoWorld {
         .bind(component.to_lowercase())
         .fetch_one(&self.pool)
         .await
-        .map(|(name, class_hash, size)| protos::types::ComponentMetadata { name, size, class_hash })
+        .map(|(name, class_hash, size)| protos::types::ModelMetadata { name, size, class_hash })
         .map_err(Error::from)
     }
 
@@ -180,7 +180,7 @@ impl protos::world::world_server::World for DojoWorld {
     ) -> Result<Response<GetEntityResponse>, Status> {
         let GetEntityRequest { entity } = request.into_inner();
 
-        let Some(EntityComponent { component, keys }) = entity else {
+        let Some(EntityModel { model, keys }) = entity else {
             return Err(Status::invalid_argument("Entity not specified"));
         };
 
@@ -190,7 +190,7 @@ impl protos::world::world_server::World for DojoWorld {
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| Status::invalid_argument(format!("Invalid key: {e}")))?;
 
-        let values = self.entity(component, entity_keys).await.map_err(|e| match e {
+        let values = self.entity(model, entity_keys).await.map_err(|e| match e {
             Error::Sql(sqlx::Error::RowNotFound) => Status::not_found("Entity not found"),
             e => Status::internal(e.to_string()),
         })?;
@@ -223,12 +223,12 @@ impl protos::world::world_server::World for DojoWorld {
                 .collect::<Result<Vec<FieldElement>, FromStrError>>()
                 .map_err(|e| Status::internal(format!("parsing error: {e}")))?;
 
-            let component = cairo_short_string_to_felt(&entity.component)
+            let model = cairo_short_string_to_felt(&entity.model)
                 .map_err(|e| Status::internal(format!("parsing error: {e}")))?;
 
             let (component_len,): (i64,) =
                 sqlx::query_as("SELECT COUNT(*) FROM model_members WHERE model_id = ?")
-                    .bind(entity.component.to_lowercase())
+                    .bind(entity.model.to_lowercase())
                     .fetch_one(&self.pool)
                     .await
                     .map_err(|e| match e {
@@ -237,8 +237,8 @@ impl protos::world::world_server::World for DojoWorld {
                     })?;
 
             entities.push(self::subscription::Entity {
-                component: self::subscription::ComponentMetadata {
-                    name: component,
+                model: self::subscription::ModelMetadata {
+                    name: model,
                     len: component_len as usize,
                 },
                 keys,
@@ -246,7 +246,7 @@ impl protos::world::world_server::World for DojoWorld {
         }
 
         self.subscription_req_sender
-            .send((EntityComponentRequest { world, entities }, sender))
+            .send((EntityModelRequest { world, entities }, sender))
             .await
             .expect("should send subscriber request");
 

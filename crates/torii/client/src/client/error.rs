@@ -2,7 +2,7 @@ use starknet::core::types::FromStrError;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 
-use crate::contract::component::ComponentError;
+use crate::contract::model::ModelError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -16,5 +16,5 @@ pub enum Error {
     #[error(transparent)]
     UrlParse(#[from] url::ParseError),
     #[error(transparent)]
-    Component(#[from] ComponentError<<JsonRpcClient<HttpTransport> as Provider>::Error>),
+    Model(#[from] ModelError<<JsonRpcClient<HttpTransport> as Provider>::Error>),
 }

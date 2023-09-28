@@ -102,7 +102,7 @@ mod tests {
     fn create_dummy_metadata() -> WorldMetadata {
         let components = HashMap::from([(
             "Position".into(),
-            dojo_types::component::ComponentMetadata {
+            dojo_types::component::ModelMetadata {
                 name: "Position".into(),
                 class_hash: felt!("1"),
                 size: 3,
@@ -120,13 +120,13 @@ mod tests {
     #[test]
     fn err_if_set_values_too_many() {
         let storage = create_dummy_storage();
-        let entity = dojo_types::component::EntityComponent {
-            component: "Position".into(),
+        let entity = dojo_types::component::EntityModel {
+            model: "Position".into(),
             keys: vec![felt!("0x12345")],
         };
 
         let values = vec![felt!("1"), felt!("2"), felt!("3"), felt!("4")];
-        let result = storage.set_entity((entity.component, entity.keys), values);
+        let result = storage.set_entity((entity.model, entity.keys), values);
 
         assert!(result.is_err());
         assert!(storage.storage.read().is_empty());
@@ -135,13 +135,13 @@ mod tests {
     #[test]
     fn err_if_set_values_too_few() {
         let storage = create_dummy_storage();
-        let entity = dojo_types::component::EntityComponent {
-            component: "Position".into(),
+        let entity = dojo_types::component::EntityModel {
+            model: "Position".into(),
             keys: vec![felt!("0x12345")],
         };
 
         let values = vec![felt!("1"), felt!("2")];
-        let result = storage.set_entity((entity.component, entity.keys), values);
+        let result = storage.set_entity((entity.model, entity.keys), values);
 
         assert!(result.is_err());
         assert!(storage.storage.read().is_empty());
@@ -150,8 +150,8 @@ mod tests {
     #[test]
     fn set_and_get_entity_value() {
         let storage = create_dummy_storage();
-        let entity = dojo_types::component::EntityComponent {
-            component: "Position".into(),
+        let entity = dojo_types::component::EntityModel {
+            model: "Position".into(),
             keys: vec![felt!("0x12345")],
         };
 
@@ -162,7 +162,7 @@ mod tests {
         let expected_storage_addresses = {
             let base = poseidon_hash_many(&[
                 short_string!("dojo_storage"),
-                cairo_short_string_to_felt(&entity.component).unwrap(),
+                cairo_short_string_to_felt(&entity.model).unwrap(),
                 poseidon_hash_many(&entity.keys),
             ]);
 
@@ -172,12 +172,11 @@ mod tests {
         let expected_values = vec![felt!("1"), felt!("2"), felt!("3")];
 
         storage
-            .set_entity((entity.component.clone(), entity.keys.clone()), expected_values.clone())
+            .set_entity((entity.model.clone(), entity.keys.clone()), expected_values.clone())
             .expect("set storage values");
 
-        let actual_values = storage
-            .get_entity((entity.component, entity.keys.clone()))
-            .expect("get storage values");
+        let actual_values =
+            storage.get_entity((entity.model, entity.keys.clone())).expect("get storage values");
 
         let actual_storage_addresses =
             storage.storage.read().clone().into_keys().collect::<Vec<_>>();

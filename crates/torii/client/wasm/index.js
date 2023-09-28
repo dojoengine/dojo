@@ -11,10 +11,10 @@ async function run_wasm() {
 		const event = e.data.type;
 		const data = e.data.data;
 
-		if (event === "getComponentValue") {
+		if (event === "getModelValue") {
 			console.log(
-				"Main thread | component: ",
-				data.component,
+				"Main thread | model: ",
+				data.model,
 				"keys: ",
 				data.keys,
 				"values: ",
@@ -29,9 +29,9 @@ async function run_wasm() {
 		setInterval(() => {
 			// Get the entity values from the sync worker
 			clientWorker.postMessage({
-				type: "getComponentValue",
+				type: "getModelValue",
 				data: {
-					component: "Position",
+					model: "Position",
 					keys: [
 						"0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973",
 					],
