@@ -15,7 +15,7 @@ pub struct RegisterModelProcessor;
 #[async_trait]
 impl<P: Provider + Sync + 'static> EventProcessor<P> for RegisterModelProcessor {
     fn event_key(&self) -> String {
-        "ComponentRegistered".to_string()
+        "ModelRegistered".to_string()
     }
 
     async fn process(

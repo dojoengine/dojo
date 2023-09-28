@@ -18,7 +18,7 @@ pub struct MigrationOutput {
     pub world: Option<DeployOutput>,
     pub executor: Option<DeployOutput>,
     pub contracts: Vec<DeployOutput>,
-    pub components: Option<RegisterOutput>,
+    pub models: Option<RegisterOutput>,
 }
 
 #[derive(Debug)]
@@ -27,7 +27,7 @@ pub struct MigrationStrategy {
     pub world: Option<ContractMigration>,
     pub executor: Option<ContractMigration>,
     pub contracts: Vec<ContractMigration>,
-    pub components: Vec<ClassMigration>,
+    pub models: Vec<ClassMigration>,
 }
 
 #[derive(Debug)]
@@ -67,7 +67,7 @@ impl MigrationStrategy {
             MigrationType::Update => update += 1,
         });
 
-        self.components.iter().for_each(|item| match item.migration_type() {
+        self.models.iter().for_each(|item| match item.migration_type() {
             MigrationType::New => new += 1,
             MigrationType::Update => update += 1,
         });
@@ -113,8 +113,7 @@ where
         evaluate_contract_to_migrate(&diff.executor, &artifact_paths, world.is_some())?;
     let contracts =
         evaluate_contracts_to_migrate(&diff.contracts, &artifact_paths, world.is_some())?;
-    let components =
-        evaluate_components_to_migrate(&diff.components, &artifact_paths, world.is_some())?;
+    let models = evaluate_models_to_migrate(&diff.models, &artifact_paths, world.is_some())?;
 
     if let Some(executor) = &mut executor {
         executor.contract_address =
@@ -135,17 +134,17 @@ where
         );
     }
 
-    Ok(MigrationStrategy { world_address, world, executor, contracts, components })
+    Ok(MigrationStrategy { world_address, world, executor, contracts, models })
 }
 
-fn evaluate_components_to_migrate(
-    components: &[ClassDiff],
+fn evaluate_models_to_migrate(
+    models: &[ClassDiff],
     artifact_paths: &HashMap<String, PathBuf>,
     world_contract_will_migrate: bool,
 ) -> Result<Vec<ClassMigration>> {
     let mut comps_to_migrate = vec![];
 
-    for c in components {
+    for c in models {
         match c.remote {
             Some(remote) if remote == c.local && !world_contract_will_migrate => continue,
             _ => {

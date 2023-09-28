@@ -23,24 +23,24 @@ pub enum ClientError<S, P> {
     Storage(S),
 }
 
-/// Request to sync a component of an entity.
+/// Request to sync a model of an entity.
 #[cfg_attr(target_arch = "wasm32", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct Entity {
-    /// Component name
-    pub component: String,
+    /// Model name
+    pub model: String,
     /// The entity keys
     pub keys: Vec<FieldElement>,
 }
 
-/// A client to sync entity components from the World.
+/// A client to sync entity models from the World.
 pub struct Client<S, P> {
     // We wrap it in an Arc<RwLock> to allow sharing the storage between threads.
-    /// Storage to store the synced entity component values.
+    /// Storage to store the synced entity model values.
     storage: Arc<AsyncRwLock<S>>,
-    /// A provider implementation to query the World for entity components.
+    /// A provider implementation to query the World for entity models.
     provider: P,
-    /// The entity components to sync.
+    /// The entity models to sync.
     pub sync_entities: RwLock<HashSet<Entity>>,
 
     /// The interval to run the syncing loop.
@@ -117,7 +117,7 @@ where
             for entity in entities {
                 let values = self
                     .provider
-                    .entity(&entity.component, entity.keys.clone())
+                    .entity(&entity.model, entity.keys.clone())
                     .await
                     .map_err(ClientError::Provider)?;
 
@@ -125,11 +125,7 @@ where
                 self.storage
                     .write()
                     .await
-                    .set(
-                        cairo_short_string_to_felt(&entity.component).unwrap(),
-                        entity.keys,
-                        values,
-                    )
+                    .set(cairo_short_string_to_felt(&entity.model).unwrap(), entity.keys, values)
                     .await
                     .map_err(ClientError::Storage)?;
 
@@ -137,11 +133,7 @@ where
                 self.storage
                     .write()
                     .await
-                    .set(
-                        cairo_short_string_to_felt(&entity.component).unwrap(),
-                        entity.keys,
-                        values,
-                    )
+                    .set(cairo_short_string_to_felt(&entity.model).unwrap(), entity.keys, values)
                     .await
                     .map_err(ClientError::Storage)?;
             }

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-/// Represents a component member.
+/// Represents a model member.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Member {
     pub name: String,

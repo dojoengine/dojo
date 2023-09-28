@@ -17,7 +17,7 @@ use zeroable::Zeroable;
 use dojo::test_utils::spawn_test_world;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
-use dojo_erc::token::erc20_components::{
+use dojo_erc::token::erc20_models::{
     ERC20Allowance, erc_20_allowance, ERC20Balance, erc_20_balance, ERC20Meta, erc_20_meta
 };
 use dojo_erc::token::erc20::ERC20::_worldContractMemberStateTrait;

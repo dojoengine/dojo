@@ -22,7 +22,7 @@ pub struct WasmClient(Client<InMemoryStorage, JsonRpcProvider<HttpTransport>>);
 #[wasm_bindgen]
 impl WasmClient {
     /// Create an instance of the client. This will create an instance of the client
-    /// without any entity components to sync.
+    /// without any entity models to sync.
     ///
     /// # Arguments
     /// * `url` - The url of the Starknet JSON-RPC provider.
@@ -46,11 +46,11 @@ impl WasmClient {
         self.0.start().await.map_err(|e| JsValue::from_str(&e.to_string()))
     }
 
-    /// Returns the component values of the requested entity keys.
-    #[wasm_bindgen(js_name = getComponentValue)]
-    pub async fn get_component_value(
+    /// Returns the model values of the requested entity keys.
+    #[wasm_bindgen(js_name = getModelValue)]
+    pub async fn get_model_value(
         &self,
-        component: &str,
+        model: &str,
         keys: JsValue,
         length: usize,
     ) -> Result<JsValue, JsValue> {
@@ -63,7 +63,7 @@ impl WasmClient {
             .read()
             .await
             .get(
-                cairo_short_string_to_felt(component)
+                cairo_short_string_to_felt(model)
                     .map_err(|e| JsValue::from_str(&e.to_string()))?,
                 keys,
                 length,

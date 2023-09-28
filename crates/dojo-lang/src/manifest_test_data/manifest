@@ -8,7 +8,7 @@ test_manifest_file
   "world": {
     "name": "world",
     "address": null,
-    "class_hash": "0x47badd2a6398933f530fdc129aa1ade6bc72308407c8695ab701bb4dd409c72",
+    "class_hash": "0x30be21af6458283c904e9dd7d942f3ab9382bb4386ee79087e166d8f577742c",
     "abi": [
       {
         "type": "impl",
@@ -65,7 +65,7 @@ test_manifest_file
         "items": [
           {
             "type": "function",
-            "name": "component",
+            "name": "model",
             "inputs": [
               {
                 "name": "name",
@@ -81,7 +81,7 @@ test_manifest_file
           },
           {
             "type": "function",
-            "name": "register_component",
+            "name": "register_model",
             "inputs": [
               {
                 "name": "class_hash",
@@ -123,7 +123,7 @@ test_manifest_file
             "name": "entity",
             "inputs": [
               {
-                "name": "component",
+                "name": "model",
                 "type": "core::felt252"
               },
               {
@@ -155,7 +155,7 @@ test_manifest_file
             "name": "set_entity",
             "inputs": [
               {
-                "name": "component",
+                "name": "model",
                 "type": "core::felt252"
               },
               {
@@ -187,7 +187,7 @@ test_manifest_file
             "name": "entities",
             "inputs": [
               {
-                "name": "component",
+                "name": "model",
                 "type": "core::felt252"
               },
               {
@@ -242,7 +242,7 @@ test_manifest_file
             "name": "delete_entity",
             "inputs": [
               {
-                "name": "component",
+                "name": "model",
                 "type": "core::felt252"
               },
               {
@@ -314,7 +314,7 @@ test_manifest_file
             "name": "is_writer",
             "inputs": [
               {
-                "name": "component",
+                "name": "model",
                 "type": "core::felt252"
               },
               {
@@ -334,7 +334,7 @@ test_manifest_file
             "name": "grant_writer",
             "inputs": [
               {
-                "name": "component",
+                "name": "model",
                 "type": "core::felt252"
               },
               {
@@ -350,7 +350,7 @@ test_manifest_file
             "name": "revoke_writer",
             "inputs": [
               {
-                "name": "component",
+                "name": "model",
                 "type": "core::felt252"
               },
               {
@@ -392,7 +392,7 @@ test_manifest_file
       },
       {
         "type": "event",
-        "name": "dojo::world::world::ComponentRegistered",
+        "name": "dojo::world::world::ModelRegistered",
         "kind": "struct",
         "members": [
           {
@@ -403,23 +403,6 @@ test_manifest_file
           {
             "name": "class_hash",
             "type": "core::starknet::class_hash::ClassHash",
-            "kind": "data"
-          }
-        ]
-      },
-      {
-        "type": "event",
-        "name": "dojo::world::world::SystemRegistered",
-        "kind": "struct",
-        "members": [
-          {
-            "name": "name",
-            "type": "core::felt252",
-            "kind": "data"
-          },
-          {
-            "name": "contract_address",
-            "type": "core::starknet::contract_address::ContractAddress",
             "kind": "data"
           }
         ]
@@ -479,13 +462,8 @@ test_manifest_file
             "kind": "nested"
           },
           {
-            "name": "ComponentRegistered",
-            "type": "dojo::world::world::ComponentRegistered",
-            "kind": "nested"
-          },
-          {
-            "name": "SystemRegistered",
-            "type": "dojo::world::world::SystemRegistered",
+            "name": "ModelRegistered",
+            "type": "dojo::world::world::ModelRegistered",
             "kind": "nested"
           },
           {
@@ -565,7 +543,7 @@ test_manifest_file
     {
       "name": "player_actions",
       "address": null,
-      "class_hash": "0x1904b4b8b7fc2598479cef4b164e69ccbe0da46707976d54516e665898ab92a",
+      "class_hash": "0x20de31eba784d8969d064453bee9917acf34a4451db8046d67db9020bd6c403",
       "abi": [
         {
           "type": "impl",
@@ -584,7 +562,7 @@ test_manifest_file
         },
         {
           "type": "enum",
-          "name": "dojo_examples::components::Direction",
+          "name": "dojo_examples::models::Direction",
           "variants": [
             {
               "name": "None",
@@ -634,7 +612,7 @@ test_manifest_file
                 },
                 {
                   "name": "direction",
-                  "type": "dojo_examples::components::Direction"
+                  "type": "dojo_examples::models::Direction"
                 }
               ],
               "outputs": [],
@@ -665,7 +643,7 @@ test_manifest_file
             },
             {
               "name": "direction",
-              "type": "dojo_examples::components::Direction",
+              "type": "dojo_examples::models::Direction",
               "kind": "data"
             }
           ]
@@ -687,7 +665,7 @@ test_manifest_file
     {
       "name": "player_actions_external",
       "address": null,
-      "class_hash": "0x85c967c7f644f1aa78cf2de8c94568f53cfb1a9b1ebccd7c8d4682f92a1b6f",
+      "class_hash": "0x187cc57ddc6961480c00dfb42acc2f387041edf520f378fc4e4ae5804fb8afb",
       "abi": [
         {
           "type": "impl",
@@ -706,7 +684,7 @@ test_manifest_file
         },
         {
           "type": "enum",
-          "name": "dojo_examples::components::Direction",
+          "name": "dojo_examples::models::Direction",
           "variants": [
             {
               "name": "None",
@@ -756,7 +734,7 @@ test_manifest_file
                 },
                 {
                   "name": "direction",
-                  "type": "dojo_examples::components::Direction"
+                  "type": "dojo_examples::models::Direction"
                 }
               ],
               "outputs": [],
@@ -776,7 +754,7 @@ test_manifest_file
             },
             {
               "name": "direction",
-              "type": "dojo_examples::components::Direction",
+              "type": "dojo_examples::models::Direction",
               "kind": "data"
             }
           ]
@@ -796,7 +774,7 @@ test_manifest_file
       ]
     }
   ],
-  "components": [
+  "models": [
     {
       "name": "Moves",
       "members": [
@@ -816,7 +794,7 @@ test_manifest_file
           "key": false
         }
       ],
-      "class_hash": "0x3dedf3d747db10aee693c0d034fcde1064ec66c84d285e60630f860dc9df566",
+      "class_hash": "0x3fc154aaf236e0478a5ea100b3d1971b30c70c14fa0e1a25606973ec75247a4",
       "abi": [
         {
           "type": "function",
@@ -959,7 +937,7 @@ test_manifest_file
         },
         {
           "type": "event",
-          "name": "dojo_examples::components::moves::Event",
+          "name": "dojo_examples::models::moves::Event",
           "kind": "enum",
           "variants": []
         }
@@ -979,7 +957,7 @@ test_manifest_file
           "key": false
         }
       ],
-      "class_hash": "0x1b5f19668b9299cea232978c59856b16da649e6aa4dfc3f2a42aa8435e06bc7",
+      "class_hash": "0x7a812f2cfb414d5aa04bb9a3c91cdcaf1d30e193bd6cb7faf9b7c294722fab4",
       "abi": [
         {
           "type": "function",
@@ -1122,7 +1100,7 @@ test_manifest_file
         },
         {
           "type": "event",
-          "name": "dojo_examples::components::position::Event",
+          "name": "dojo_examples::models::position::Event",
           "kind": "enum",
           "variants": []
         }

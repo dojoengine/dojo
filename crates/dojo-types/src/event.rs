@@ -7,21 +7,14 @@ pub struct WorldSpawned {
     pub caller: FieldElement,
 }
 
-/// The event emitted when a system is registered to a World.
+/// The event emitted when a model is registered to a World.
 #[derive(Clone, Debug)]
-pub struct SystemRegistered {
+pub struct ModelRegistered {
     pub name: String,
     pub class_hash: FieldElement,
 }
 
-/// The event emitted when a component is registered to a World.
-#[derive(Clone, Debug)]
-pub struct ComponentRegistered {
-    pub name: String,
-    pub class_hash: FieldElement,
-}
-
-/// The event emmitted when a component value of an entity is set.
+/// The event emmitted when a model value of an entity is set.
 #[derive(Clone, Debug)]
 pub struct StoreSetRecord {
     pub table_id: FieldElement,
@@ -30,7 +23,7 @@ pub struct StoreSetRecord {
     pub value: Vec<FieldElement>,
 }
 
-/// The event emmitted when a component is deleted from an entity.
+/// The event emmitted when a model is deleted from an entity.
 #[derive(Clone, Debug)]
 pub struct StoreDelRecord {
     pub table_id: FieldElement,

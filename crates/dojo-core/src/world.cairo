@@ -4,13 +4,13 @@ use option::OptionTrait;
 
 #[starknet::interface]
 trait IWorld<T> {
-    fn component(self: @T, name: felt252) -> ClassHash;
-    fn register_component(ref self: T, class_hash: ClassHash);
+    fn model(self: @T, name: felt252) -> ClassHash;
+    fn register_model(ref self: T, class_hash: ClassHash);
     fn uuid(ref self: T) -> usize;
     fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
     fn entity(
         self: @T,
-        component: felt252,
+        model: felt252,
         keys: Span<felt252>,
         offset: u8,
         length: usize,
@@ -18,7 +18,7 @@ trait IWorld<T> {
     ) -> Span<felt252>;
     fn set_entity(
         ref self: T,
-        component: felt252,
+        model: felt252,
         keys: Span<felt252>,
         keys_layout: Span<u8>,
         offset: u8,
@@ -26,18 +26,18 @@ trait IWorld<T> {
         layout: Span<u8>
     );
     fn entities(
-        self: @T, component: felt252, index: felt252, keys: Span<felt252>, length: usize, keys_layout: Span<u8>
+        self: @T, model: felt252, index: felt252, keys: Span<felt252>, length: usize, keys_layout: Span<u8>
     ) -> (Span<felt252>, Span<Span<felt252>>);
     fn set_executor(ref self: T, contract_address: ContractAddress);
     fn executor(self: @T) -> ContractAddress;
-    fn delete_entity(ref self: T, component: felt252, keys: Span<felt252>, keys_layout: Span<u8>);
+    fn delete_entity(ref self: T, model: felt252, keys: Span<felt252>, keys_layout: Span<u8>);
     fn is_owner(self: @T, address: ContractAddress, target: felt252) -> bool;
     fn grant_owner(ref self: T, address: ContractAddress, target: felt252);
     fn revoke_owner(ref self: T, address: ContractAddress, target: felt252);
 
-    fn is_writer(self: @T, component: felt252, system: ContractAddress) -> bool;
-    fn grant_writer(ref self: T, component: felt252, system: ContractAddress);
-    fn revoke_writer(ref self: T, component: felt252, system: ContractAddress);
+    fn is_writer(self: @T, model: felt252, system: ContractAddress) -> bool;
+    fn grant_writer(ref self: T, model: felt252, system: ContractAddress);
+    fn revoke_writer(ref self: T, model: felt252, system: ContractAddress);
 }
 
 #[starknet::contract]
@@ -66,8 +66,7 @@ mod world {
     #[derive(Drop, starknet::Event)]
     enum Event {
         WorldSpawned: WorldSpawned,
-        ComponentRegistered: ComponentRegistered,
-        SystemRegistered: SystemRegistered,
+        ModelRegistered: ModelRegistered,
         StoreSetRecord: StoreSetRecord,
         StoreDelRecord: StoreDelRecord
     }
@@ -79,15 +78,9 @@ mod world {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct ComponentRegistered {
+    struct ModelRegistered {
         name: felt252,
         class_hash: ClassHash
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct SystemRegistered {
-        name: felt252,
-        contract_address: ContractAddress
     }
 
     #[derive(Drop, starknet::Event)]
@@ -107,7 +100,7 @@ mod world {
     #[storage]
     struct Storage {
         executor_dispatcher: IExecutorDispatcher,
-        components: LegacyMap::<felt252, ClassHash>,
+        models: LegacyMap::<felt252, ClassHash>,
         nonce: usize,
         owners: LegacyMap::<(felt252, ContractAddress), bool>,
         writers: LegacyMap::<(felt252, ContractAddress), bool>,
@@ -181,7 +174,7 @@ mod world {
             self.owners.write((target, address), bool::True(()));
         }
 
-        /// Revokes owner permission to the system for the component.
+        /// Revokes owner permission to the system for the model.
         /// Can only be called by an existing owner or the world admin.
         ///
         /// # Arguments
@@ -194,89 +187,89 @@ mod world {
             self.owners.write((target, address), bool::False(()));
         }
 
-        /// Checks if the provided system is a writer of the component.
+        /// Checks if the provided system is a writer of the model.
         ///
         /// # Arguments
         ///
-        /// * `component` - The name of the component.
+        /// * `model` - The name of the model.
         /// * `system` - The name of the system.
         ///
         /// # Returns
         ///
-        /// * `bool` - True if the system is a writer of the component, false otherwise
-        fn is_writer(self: @ContractState, component: felt252, system: ContractAddress) -> bool {
-            self.writers.read((component, system))
+        /// * `bool` - True if the system is a writer of the model, false otherwise
+        fn is_writer(self: @ContractState, model: felt252, system: ContractAddress) -> bool {
+            self.writers.read((model, system))
         }
 
-        /// Grants writer permission to the system for the component.
-        /// Can only be called by an existing component owner or the world admin.
+        /// Grants writer permission to the system for the model.
+        /// Can only be called by an existing model owner or the world admin.
         ///
         /// # Arguments
         ///
-        /// * `component` - The name of the component.
+        /// * `model` - The name of the model.
         /// * `system` - The name of the system.
-        fn grant_writer(ref self: ContractState, component: felt252, system: ContractAddress) {
+        fn grant_writer(ref self: ContractState, model: felt252, system: ContractAddress) {
             let caller = get_caller_address();
 
             assert(
-                self.is_owner(caller, component) || self.is_owner(caller, WORLD),
+                self.is_owner(caller, model) || self.is_owner(caller, WORLD),
                 'not owner or writer'
             );
-            self.writers.write((component, system), bool::True(()));
+            self.writers.write((model, system), bool::True(()));
         }
 
-        /// Revokes writer permission to the system for the component.
-        /// Can only be called by an existing component writer, owner or the world admin.
+        /// Revokes writer permission to the system for the model.
+        /// Can only be called by an existing model writer, owner or the world admin.
         ///
         /// # Arguments
         ///
-        /// * `component` - The name of the component.
+        /// * `model` - The name of the model.
         /// * `system` - The name of the system.
-        fn revoke_writer(ref self: ContractState, component: felt252, system: ContractAddress) {
+        fn revoke_writer(ref self: ContractState, model: felt252, system: ContractAddress) {
             let caller = get_caller_address();
 
             assert(
-                self.is_writer(component, caller)
-                    || self.is_owner(caller, component)
+                self.is_writer(model, caller)
+                    || self.is_owner(caller, model)
                     || self.is_owner(caller, WORLD),
                 'not owner or writer'
             );
-            self.writers.write((component, system), bool::False(()));
+            self.writers.write((model, system), bool::False(()));
         }
 
-        /// Registers a component in the world. If the component is already registered,
+        /// Registers a model in the world. If the model is already registered,
         /// the implementation will be updated.
         ///
         /// # Arguments
         ///
-        /// * `class_hash` - The class hash of the component to be registered.
-        fn register_component(ref self: ContractState, class_hash: ClassHash) {
+        /// * `class_hash` - The class hash of the model to be registered.
+        fn register_model(ref self: ContractState, class_hash: ClassHash) {
             let caller = get_caller_address();
             let calldata = ArrayTrait::new();
             let name = *class_call(@self, class_hash, NAME_ENTRYPOINT, calldata.span())[0];
 
-            // If component is already registered, validate permission to update.
-            if self.components.read(name).is_non_zero() {
+            // If model is already registered, validate permission to update.
+            if self.models.read(name).is_non_zero() {
                 assert(self.is_owner(caller, name), 'only owner can update');
             } else {
                 self.owners.write((name, caller), bool::True(()));
             };
 
-            self.components.write(name, class_hash);
-            EventEmitter::emit(ref self, ComponentRegistered { name, class_hash });
+            self.models.write(name, class_hash);
+            EventEmitter::emit(ref self, ModelRegistered { name, class_hash });
         }
 
-        /// Gets the class hash of a registered component.
+        /// Gets the class hash of a registered model.
         ///
         /// # Arguments
         ///
-        /// * `name` - The name of the component.
+        /// * `name` - The name of the model.
         ///
         /// # Returns
         ///
-        /// * `ClassHash` - The class hash of the component.
-        fn component(self: @ContractState, name: felt252) -> ClassHash {
-            self.components.read(name)
+        /// * `ClassHash` - The class hash of the model.
+        fn model(self: @ContractState, name: felt252) -> ClassHash {
+            self.models.read(name)
         }
 
         /// Issues an autoincremented id to the caller.
@@ -302,81 +295,81 @@ mod world {
             emit_event_syscall(keys.span(), values).unwrap_syscall();
         }
 
-        /// Sets the component value for an entity.
+        /// Sets the model value for an entity.
         ///
         /// # Arguments
         ///
-        /// * `component` - The name of the component to be set.
+        /// * `model` - The name of the model to be set.
         /// * `key` - The key to be used to find the entity.
-        /// * `offset` - The offset of the component in the entity.
+        /// * `offset` - The offset of the model in the entity.
         /// * `value` - The value to be set.
         fn set_entity(
             ref self: ContractState,
-            component: felt252,
+            model: felt252,
             keys: Span<felt252>,
             keys_layout: Span<u8>,
             offset: u8,
             values: Span<felt252>,
             layout: Span<u8>
         ) {
-            assert_can_write(@self, component, get_caller_address());
+            assert_can_write(@self, model, get_caller_address());
 
             let key = poseidon::poseidon_hash_span(keys);
-            let component_class_hash = self.components.read(component);
-            database::set(component_class_hash, component, key, offset, values, layout);
+            let model_class_hash = self.models.read(model);
+            database::set(model_class_hash, model, key, offset, values, layout);
 
-            EventEmitter::emit(ref self, StoreSetRecord { table: component, keys, offset, values });
+            EventEmitter::emit(ref self, StoreSetRecord { table: model, keys, offset, values });
         }
 
-        /// Deletes a component from an entity.
+        /// Deletes a model from an entity.
         ///
         /// # Arguments
         ///
-        /// * `component` - The name of the component to be deleted.
+        /// * `model` - The name of the model to be deleted.
         /// * `query` - The query to be used to find the entity.
-        fn delete_entity(ref self: ContractState, component: felt252, keys: Span<felt252>, keys_layout: Span<u8>) {
+        fn delete_entity(ref self: ContractState, model: felt252, keys: Span<felt252>, keys_layout: Span<u8>) {
             let system = get_caller_address();
             assert(system.is_non_zero(), 'must be called thru system');
-            assert_can_write(@self, component, system);
+            assert_can_write(@self, model, system);
 
             let key = poseidon::poseidon_hash_span(keys);
-            let component_class_hash = self.components.read(component);
-            database::del(component_class_hash, component, key, keys_layout);
+            let model_class_hash = self.models.read(model);
+            database::del(model_class_hash, model, key, keys_layout);
 
-            EventEmitter::emit(ref self, StoreDelRecord { table: component, keys });
+            EventEmitter::emit(ref self, StoreDelRecord { table: model, keys });
         }
 
-        /// Gets the component value for an entity. Returns a zero initialized
-        /// component value if the entity has not been set.
+        /// Gets the model value for an entity. Returns a zero initialized
+        /// model value if the entity has not been set.
         ///
         /// # Arguments
         ///
-        /// * `component` - The name of the component to be retrieved.
+        /// * `model` - The name of the model to be retrieved.
         /// * `query` - The query to be used to find the entity.
-        /// * `offset` - The offset of the component values.
-        /// * `length` - The length of the component values.
+        /// * `offset` - The offset of the model values.
+        /// * `length` - The length of the model values.
         ///
         /// # Returns
         ///
-        /// * `Span<felt252>` - The value of the component, zero initialized if not set.
+        /// * `Span<felt252>` - The value of the model, zero initialized if not set.
         fn entity(
             self: @ContractState,
-            component: felt252,
+            model: felt252,
             keys: Span<felt252>,
             offset: u8,
             length: usize,
             layout: Span<u8>
         ) -> Span<felt252> {
-            let class_hash = self.components.read(component);
+            let class_hash = self.models.read(model);
             let key = poseidon::poseidon_hash_span(keys);
-            database::get(class_hash, component, key, offset, length, layout)
+            database::get(class_hash, model, key, offset, length, layout)
         }
 
-        /// Returns entity IDs and entities that contain the component state.
+        /// Returns entity IDs and entities that contain the model state.
         ///
         /// # Arguments
         ///
-        /// * `component` - The name of the component to be retrieved.
+        /// * `model` - The name of the model to be retrieved.
         /// * `index` - The index to be retrieved.
         /// * `keys` - The query to be used to find the entity.
         /// * `length` - The length of the component values.
@@ -386,14 +379,14 @@ mod world {
         /// * `Span<felt252>` - The entity IDs.
         /// * `Span<Span<felt252>>` - The entities.
         fn entities(
-            self: @ContractState, component: felt252, index: felt252, keys: Span<felt252>, length: usize, keys_layout: Span<u8>
+            self: @ContractState, model: felt252, index: felt252, keys: Span<felt252>, length: usize, keys_layout: Span<u8>
         ) -> (Span<felt252>, Span<Span<felt252>>) {
-            let class_hash = self.components.read(component);
+            let class_hash = self.models.read(model);
             assert(keys.len() <= 1, 'Multiple keys not implemented');
             if (keys.len() == 0) {
-                database::all(class_hash, component, index, length, keys_layout)
+                database::all(class_hash, model, index, length, keys_layout)
             } else {
-                database::get_by_key(class_hash, component.into(), index, *keys.at(0), length, keys_layout)
+                database::get_by_key(class_hash, model.into(), index, *keys.at(0), length, keys_layout)
             } 
         }
 
@@ -420,16 +413,16 @@ mod world {
         }
     }
 
-    /// Asserts that the current caller can write to the component.
+    /// Asserts that the current caller can write to the model.
     ///
     /// # Arguments
     ///
-    /// * `component` - The name of the component being written to.
+    /// * `model` - The name of the model being written to.
     /// * `caller` - The name of the caller writing.
-    fn assert_can_write(self: @ContractState, component: felt252, caller: ContractAddress) {
+    fn assert_can_write(self: @ContractState, model: felt252, caller: ContractAddress) {
         assert(
-            IWorld::is_writer(self, component, caller)
-                || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, component)
+            IWorld::is_writer(self, model, caller)
+                || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, model)
                 || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, WORLD),
             'not writer'
         );

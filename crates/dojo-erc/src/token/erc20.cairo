@@ -25,7 +25,7 @@ trait IERC20CamelOnly<TState> {
 
 #[starknet::contract]
 mod ERC20 {
-    use dojo_erc::token::erc20_components::{ERC20Allowance, ERC20Balance, ERC20Meta};
+    use dojo_erc::token::erc20_models::{ERC20Allowance, ERC20Balance, ERC20Meta};
     use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
     use integer::BoundedInt;
     use super::IERC20;
@@ -209,7 +209,7 @@ mod ERC20 {
             get!(self.world(), get_contract_address(), ERC20Meta)
         }
 
-        // Helper function to update total_supply component
+        // Helper function to update total_supply model
         fn update_total_supply(ref self: ContractState, subtract: u256, add: u256) {
             let mut meta = self.get_meta();
             // adding and subtracting is fewer steps than if
@@ -218,7 +218,7 @@ mod ERC20 {
             set!(self.world(), (meta));
         }
 
-        // Helper function for balance component
+        // Helper function for balance model
         fn get_balance(self: @ContractState, account: ContractAddress) -> ERC20Balance {
             get!(self.world(), (get_contract_address(), account), ERC20Balance)
         }
@@ -233,7 +233,7 @@ mod ERC20 {
             set!(self.world(), (balance));
         }
 
-        // Helper function for allowance component
+        // Helper function for allowance model
         fn get_allowance(
             self: @ContractState, owner: ContractAddress, spender: ContractAddress,
         ) -> ERC20Allowance {

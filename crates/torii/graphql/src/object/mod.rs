@@ -96,7 +96,7 @@ pub trait ObjectTrait {
                         };
                     }
 
-                    // Component union queries is a special case, it instead passes down a
+                    // Model union queries is a special case, it instead passes down a
                     // IndexMap<Name, Value>. This could be avoided if
                     // async-graphql allowed union resolver to be passed down as Value.
                     if let Some(indexmap) = ctx.parent_value.downcast_ref::<ValueMapping>() {
