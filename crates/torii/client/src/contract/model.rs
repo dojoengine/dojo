@@ -2,7 +2,7 @@ use std::str::FromStr;
 use std::vec;
 
 use crypto_bigint::U256;
-use dojo_types::core::CairoType;
+use dojo_types::core::{CairoType, CairoTypeError};
 use dojo_types::schema::{Enum, Member, Struct, Ty};
 use starknet::core::types::{BlockId, FieldElement, FunctionCall};
 use starknet::core::utils::{
@@ -35,6 +35,8 @@ pub enum ModelError<P> {
     UnpackingEntity,
     #[error(transparent)]
     ContractReaderError(ContractReaderError<P>),
+    #[error(transparent)]
+    CairoTypeError(CairoTypeError),
 }
 
 pub struct ModelReader<'a, P: Provider + Sync> {
@@ -125,7 +127,7 @@ impl<'a, P: Provider + Sync> ModelReader<'a, P> {
         Ok(res[2..].into())
     }
 
-    pub async fn entity(
+    pub async fn entity_storage(
         &self,
         keys: Vec<FieldElement>,
         block_id: BlockId,
@@ -151,6 +153,22 @@ impl<'a, P: Provider + Sync> ModelReader<'a, P> {
         let unpacked = unpack::<P>(packed, layout.clone())?;
 
         Ok(unpacked)
+    }
+
+    pub async fn entity(
+        &self,
+        keys: Vec<FieldElement>,
+        block_id: BlockId,
+    ) -> Result<Ty, ModelError<P::Error>> {
+        let mut schema = self.schema(block_id).await?;
+        let unpacked = self.entity_storage(keys.clone(), block_id).await?;
+
+        let mut keys_and_unpacked = keys;
+        keys_and_unpacked.extend(unpacked);
+
+        let _ = schema.deserialize(&mut keys_and_unpacked).map_err(ModelError::CairoTypeError::<P>);
+
+        Ok(schema)
     }
 }
 

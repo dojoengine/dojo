@@ -50,7 +50,7 @@ async fn test_load_from_manifest(pool: SqlitePool) {
                 name: "Position".into(),
                 children: vec![Member {
                     name: "test".into(),
-                    ty: Ty::Primitive(CairoType::U32),
+                    ty: Ty::Primitive(CairoType::U32(None)),
                     key: false,
                 }],
             }),
