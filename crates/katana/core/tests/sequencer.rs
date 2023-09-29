@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::backend::storage::transaction::{DeclareTransaction, KnownTransaction};
-use katana_core::sequencer::{KatanaSequencer, Sequencer, SequencerConfig};
+use katana_core::sequencer::{KatanaSequencer, SequencerConfig};
 use katana_core::utils::contract::get_contract_class;
 use starknet::core::types::FieldElement;
 use starknet_api::core::{ClassHash, ContractAddress, Nonce, PatriciaKey};
