@@ -14,39 +14,43 @@ mod records {
     #[external(v0)]
     impl RecordsImpl of IRecords<ContractState> {
         fn create(self: @ContractState, world: IWorldDispatcher, num_records: u8) {
-            let mut curr_record = 0;
+            let mut record_idx = 0;
             loop {
-                if curr_record == num_records {
+                if record_idx == num_records {
                     break ();
                 }
-                curr_record = curr_record + 1;
-                let curr_felt: felt252 = curr_record.into();
 
-                let record_id = world.uuid();
+                let type_felt: felt252 = record_idx.into();
+
                 set!(
                     world,
                     (Record {
-                        record_id,
-                        type_u8: curr_record.into(),
-                        type_u16: curr_record.into(),
-                        type_u32: curr_record.into(),
-                        type_u64: curr_record.into(),
-                        type_u128: curr_record.into(),
+                        record_id: world.uuid(),
+                        type_u8: record_idx.into(),
+                        type_u16: record_idx.into(),
+                        type_u32: record_idx.into(),
+                        type_u64: record_idx.into(),
+                        type_u128: record_idx.into(),
                         //type_u256: curr_record.into(),
-                        type_bool: if curr_record % 2 == 0 {
+                        type_bool: if record_idx % 2 == 0 {
                             true
                         } else {
                             false
                         },
-                        type_felt: curr_felt,
-                        type_class_hash: curr_felt.try_into().unwrap(),
-                        type_contract_address: curr_felt.try_into().unwrap(),
+                        type_felt: record_idx.into(),
+                        type_class_hash: type_felt.try_into().unwrap(),
+                        type_contract_address: type_felt.try_into().unwrap(),
                         type_nested: Nested {
-                            record_id,
-                            type_more_nested: MoreNested { record_id }
+                            type_number: record_idx.into(),
+                            type_string: type_felt,
+                            type_more_nested: MoreNested {
+                                type_number: record_idx.into(), type_string: type_felt,
+                            }
                         }
                     })
                 );
+
+                record_idx += 1;
             };
             return ();
         }

@@ -20,11 +20,13 @@ struct Record {
 
 #[derive(Copy, Drop, Serde, Introspect)]
 struct Nested {
-    record_id: u32,
+    type_number: u8,
+    type_string: felt252,
     type_more_nested: MoreNested,
 }
 
 #[derive(Copy, Drop, Serde, Introspect)]
 struct MoreNested {
-    record_id: u32,
+    type_number: u8,
+    type_string: felt252,
 }

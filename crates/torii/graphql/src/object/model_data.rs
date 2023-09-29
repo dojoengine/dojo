@@ -86,41 +86,42 @@ impl ObjectTrait for ModelDataObject {
     }
 
     fn child_objects(&self) -> Option<Vec<Object>> {
-        let child_objects: Vec<Object> = self
-            .type_mapping
-            .iter()
-            .filter_map(|(_, type_data)| {
-                if let TypeData::Nested((type_ref, nested_mapping)) = type_data {
-                    let mut object = Object::new(type_ref.to_string());
+        Some(nested_objects(&self.type_mapping))
+        // let child_objects: Vec<Object> = self
+        //     .type_mapping
+        //     .iter()
+        //     .filter_map(|(_, type_data)| {
+        //         if let TypeData::Nested((type_ref, nested_mapping)) = type_data {
+        //             let mut object = Object::new(type_ref.to_string());
 
-                    for (field_name, type_data) in nested_mapping {
-                        let field_name = field_name.clone();
+        //             for (field_name, type_data) in nested_mapping {
+        //                 let field_name = field_name.clone();
 
-                        let field =
-                            Field::new(field_name.to_string(), type_data.type_ref(), move |ctx| {
-                                let field_name = field_name.clone();
+        //                 let field =
+        //                     Field::new(field_name.to_string(), type_data.type_ref(), move |ctx| {
+        //                         let field_name = field_name.clone();
 
-                                FieldFuture::new(async move {
-                                    match ctx.parent_value.try_to_value()? {
-                                        Value::Object(values) => {
-                                            Ok(Some(values.get(&field_name).unwrap().clone())) // safe unwrap
-                                        }
-                                        _ => Err("incorrect value, requires Value::Object".into()),
-                                    }
-                                })
-                            });
+        //                         FieldFuture::new(async move {
+        //                             match ctx.parent_value.try_to_value()? {
+        //                                 Value::Object(values) => {
+        //                                     Ok(Some(values.get(&field_name).unwrap().clone())) // safe unwrap
+        //                                 }
+        //                                 _ => Err("incorrect value, requires Value::Object".into()),
+        //                             }
+        //                         })
+        //                     });
 
-                        object = object.field(field);
-                    }
+        //                 object = object.field(field);
+        //             }
 
-                    Some(object)
-                } else {
-                    None
-                }
-            })
-            .collect();
+        //             Some(object)
+        //         } else {
+        //             None
+        //         }
+        //     })
+        //     .collect();
 
-        Some(child_objects)
+        // Some(child_objects)
     }
 
     fn resolve_many(&self) -> Option<Field> {
@@ -179,46 +180,107 @@ fn entity_field() -> Field {
     })
 }
 
-// FIXME: recursively handle deeply nested types, rn just handling one level deep
-fn nested_fields(root_type: &str, type_mapping: &TypeMapping) -> Vec<Field> {
-    type_mapping
-        .iter()
-        .filter_map(|(field_name, type_data)| {
-            if type_data.is_nested() {
-                let root_type = root_type.to_string();
-                let type_data = type_data.clone();
+fn build_object(type_ref: &TypeRef, type_mapping: &TypeMapping) -> Object {
+    let mut object = Object::new(type_ref.to_string());
 
-                Some(Field::new(field_name.to_string(), type_data.type_ref(), move |ctx| {
-                    let root_type = root_type.clone();
-                    let type_data = type_data.clone();
+    for (field_name, type_data) in type_mapping {
+        let field_name = field_name.clone();
 
-                    FieldFuture::new(async move {
-                        match ctx.parent_value.try_to_value()? {
-                            Value::Object(indexmap) => {
-                                let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                                let type_ref = type_data.type_ref();
-                                let table_name = format!("{}${}", root_type, type_ref); // FIXME: this assumes one level nesting
-                                let entity_id = extract::<String>(indexmap, "entity_id")?;
+        let field = if type_data.is_nested() {
+            Field::new(field_name.to_string(), type_data.type_ref(), move |ctx| {
+                let field_name = field_name.clone();
 
-                                let result = model_data_by_id_query(
-                                    &mut conn,
-                                    &table_name,
-                                    &entity_id,
-                                    &type_data.type_mapping().unwrap(),
-                                )
-                                .await?;
-
-                                Ok(Some(Value::Object(result)))
-                            }
-                            _ => Err("incorrect value, requires Value::Object".into()),
+                FieldFuture::new(async move {
+                    match ctx.parent_value.try_to_value()? {
+                        Value::Object(values) => {
+                            Ok(Some(values.get(&field_name).unwrap().clone())) // safe unwrap
                         }
-                    })
-                }))
-            } else {
-                None
+                        _ => Err("incorrect value, requires Value::Object".into()),
+                    }
+                })
+            })
+        } else {
+            Field::new(field_name.to_string(), type_data.type_ref(), move |ctx| {
+                let field_name = field_name.clone();
+
+                FieldFuture::new(async move {
+                    match ctx.parent_value.try_to_value()? {
+                        Value::Object(values) => {
+                            Ok(Some(values.get(&field_name).unwrap().clone())) // safe unwrap
+                        }
+                        _ => Err("incorrect value, requires Value::Object".into()),
+                    }
+                })
+            })
+        };
+
+
+
+
+        object = object.field(field);
+    }
+
+    object
+}
+
+fn nested_objects(type_mapping: &TypeMapping) -> Vec<Object> {
+    let mut objects = Vec::<Object>::new();
+
+    for (_, type_data) in type_mapping {
+        if let TypeData::Nested((type_ref, nested_mapping)) = type_data {
+            objects.push(build_object(type_ref, nested_mapping));
+
+            // recursively build nested objects
+            let nested_objects = nested_objects(nested_mapping); 
+            objects.extend(nested_objects);
+        }
+    }
+
+    objects
+}
+
+fn build_field(path: &str, field_name: &str, type_data: &TypeData) -> Field {
+    let path = path.to_string();
+    let type_data = type_data.clone();
+
+    Field::new(field_name.clone(), type_data.type_ref(), move |ctx| {
+        let path = path.clone();
+        let type_data = type_data.clone();
+
+        FieldFuture::new(async move {
+            match ctx.parent_value.try_to_value()? {
+                Value::Object(indexmap) => {
+                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                    let table_name = format!("{}${}", path, type_data.type_ref());
+                    let entity_id = extract::<String>(indexmap, "entity_id")?;
+
+
+                    let result = model_data_by_id_query(
+                        &mut conn,
+                        &table_name,
+                        &entity_id,
+                        &type_data.type_mapping().unwrap(), // safe unwrap
+                    )
+                    .await?;
+
+                    Ok(Some(Value::Object(result)))
+                }
+                _ => Err("incorrect value, requires Value::Object".into()),
             }
         })
-        .collect()
+    })
+}
+
+fn nested_fields(path: &str, type_mapping: &TypeMapping) -> Vec<Field> {
+    let mut fields = Vec::<Field>::new();
+
+    for (name, type_data) in type_mapping {
+        if type_data.is_nested() {
+            fields.push(build_field(path, name, type_data));
+        }
+    }
+
+    fields
 }
 
 pub async fn model_data_by_id_query(
@@ -339,7 +401,10 @@ fn value_mapping_from_row(row: &SqliteRow, types: &TypeMapping) -> sqlx::Result<
         .iter()
         .filter(|(_, type_data)| type_data.is_simple())
         .map(|(field_name, type_data)| {
-            Ok((Name::new(field_name), fetch_value(row, field_name, &type_data.type_ref().to_string())?))
+            Ok((
+                Name::new(field_name),
+                fetch_value(row, field_name, &type_data.type_ref().to_string())?,
+            ))
         })
         .collect::<sqlx::Result<ValueMapping>>()
 }
