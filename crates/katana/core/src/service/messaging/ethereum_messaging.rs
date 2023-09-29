@@ -148,6 +148,7 @@ impl Messenger for EthereumMessaging {
         self.fetch_logs(from_block, to_block).await?.iter().for_each(
             |(block_number, block_logs)| {
                 debug!(
+                    target: LOG_TARGET,
                     "Converting logs of block {} into L1HandlerTx ({} logs)",
                     block_number,
                     block_logs.len(),
@@ -191,12 +192,13 @@ impl Messenger for EthereumMessaging {
             hashes.push(compute_message_hash(&buf));
         }
 
-        debug!("Sending transaction on L1 to register messages...");
+        trace!(target: LOG_TARGET, "Sending transaction on L1 to register messages...");
         match starknet_messaging
             .add_message_hashes_from_l2(hashes.clone())
             .send()
             .await
             .map_err(|_| Error::SendError)?
+            // wait for the tx to be mined
             .await?
         {
             Some(receipt) => {
@@ -210,7 +212,7 @@ impl Messenger for EthereumMessaging {
                 Ok(hashes)
             }
             None => {
-                warn!("No receipt for L1 transaction.");
+                warn!(target: LOG_TARGET, "No receipt for L1 transaction.");
                 Err(Error::SendError)
             }
         }

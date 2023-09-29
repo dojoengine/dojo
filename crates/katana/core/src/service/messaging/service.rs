@@ -19,7 +19,7 @@ use crate::backend::Backend;
 // Sync is not required, only readonly methods are called.
 type MessagingFuture<T> = Pin<Box<dyn Future<Output = T> + Send>>;
 type MessageGatheringFuture = MessagingFuture<MessengerResult<(u64, Vec<L1HandlerTransaction>)>>;
-type MessageSettlingFuture = MessagingFuture<MessengerResult<Vec<String>>>;
+type MessageSettlingFuture = MessagingFuture<Option<MessengerResult<Vec<String>>>>;
 
 pub struct MessagingService {
     /// The interval at which the service will perform the messaging operations.
@@ -82,27 +82,26 @@ impl MessagingService {
         block_num: u64,
         backend: Arc<Backend>,
         messenger: Arc<AnyMessenger>,
-    ) -> MessengerResult<Vec<String>> {
+    ) -> Option<MessengerResult<Vec<String>>> {
         let messages: Vec<MsgToL1> = backend
             .blockchain
             .storage
             .read()
             .block_by_number(block_num)
             .map(|block| &block.outputs)
-            .map(|outputs| outputs.iter().flat_map(|o| o.messages_sent.clone()).collect())
-            .unwrap_or_default();
+            .map(|outputs| outputs.iter().flat_map(|o| o.messages_sent.clone()).collect())?;
 
         if messages.is_empty() {
-            Ok(Vec::new())
+            Some(Ok(Vec::new()))
         } else {
             match messenger.settle_messages(&messages).await {
                 Ok(res) => {
                     trace_msg_to_l1_sent(&messages, &res);
-                    Ok(res)
+                    Some(Ok(res))
                 }
                 Err(e) => {
                     error!(target: LOG_TARGET, "error settling messages for block {block_num}: {e}");
-                    Err(e)
+                    Some(Err(e))
                 }
             }
         }
@@ -130,7 +129,6 @@ impl Stream for MessagingService {
 
             if pin.msg_settle_fut.is_none() {
                 let local_latest_block_num = pin.backend.blockchain.storage.read().latest_number;
-
                 if pin.settle_from_block <= local_latest_block_num {
                     pin.msg_settle_fut = Some(Box::pin(Self::settle_messages(
                         pin.settle_from_block,
@@ -156,13 +154,13 @@ impl Stream for MessagingService {
         // Poll the settling future.
         if let Some(mut settle_fut) = pin.msg_settle_fut.take() {
             match settle_fut.poll_unpin(cx) {
-                Poll::Ready(Ok(hashes)) => {
+                Poll::Ready(Some(Ok(hashes))) => {
                     // +1 to move to the next local block to check messages to be
                     // sent on the settlement chain.
                     pin.settle_from_block += 1;
                     return Poll::Ready(Some(MessagingOutcome::SettledMessages(hashes)));
                 }
-                Poll::Ready(Err(_)) => return Poll::Pending,
+                Poll::Ready(_) => return Poll::Pending,
                 Poll::Pending => pin.msg_settle_fut = Some(settle_fut),
             }
         }
