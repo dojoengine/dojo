@@ -89,7 +89,7 @@ async fn test_model() {
                     name: "last_direction".to_string(),
                     ty: Ty::Enum(Enum {
                         name: "Direction".to_string(),
-                        values: vec![
+                        children: vec![
                             Ty::Terminal("None".to_string()),
                             Ty::Terminal("Left".to_string()),
                             Ty::Terminal("Right".to_string()),

@@ -14,7 +14,7 @@ use torii_client::contract::world::WorldContractReader;
 use tracing::{error, info, warn};
 
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
-use crate::sql::{Executable, Sql};
+use crate::sql::Sql;
 
 pub struct Processors<P: Provider + Sync> {
     pub block: Vec<Box<dyn BlockProcessor<P>>>,
@@ -45,7 +45,7 @@ where
     P::Error: 'static,
 {
     world: &'a WorldContractReader<'a, P>,
-    db: &'a Sql,
+    db: &'a mut Sql,
     provider: &'a P,
     processors: Processors<P>,
     config: EngineConfig,
@@ -58,7 +58,7 @@ where
 {
     pub fn new(
         world: &'a WorldContractReader<'a, P>,
-        db: &'a Sql,
+        db: &'a mut Sql,
         provider: &'a P,
         processors: Processors<P>,
         config: EngineConfig,
@@ -67,7 +67,7 @@ where
         Self { world, db, provider, processors, config, block_sender }
     }
 
-    pub async fn start(&self, cts: CancellationToken) -> Result<(), Box<dyn Error>> {
+    pub async fn start(&mut self, cts: CancellationToken) -> Result<(), Box<dyn Error>> {
         if self.db.head().await? == 0 {
             self.db.set_head(self.config.start_block).await?;
         } else if self.config.start_block != 0 {
@@ -92,7 +92,7 @@ where
         }
     }
 
-    pub async fn sync_to_head(&self, from: u64) -> Result<u64, Box<dyn Error>> {
+    pub async fn sync_to_head(&mut self, from: u64) -> Result<u64, Box<dyn Error>> {
         let latest_block_number = self.provider.block_hash_and_number().await?.block_number;
 
         if from < latest_block_number {
@@ -104,7 +104,7 @@ where
         Ok(latest_block_number)
     }
 
-    pub async fn sync_range(&self, mut from: u64, to: u64) -> Result<(), Box<dyn Error>> {
+    pub async fn sync_range(&mut self, mut from: u64, to: u64) -> Result<(), Box<dyn Error>> {
         // Process all blocks from current to latest.
         while from <= to {
             let block_with_txs = match self.provider.get_block_with_txs(BlockId::Number(from)).await
@@ -131,7 +131,7 @@ where
         Ok(())
     }
 
-    async fn process(&self, block: MaybePendingBlockWithTxs) -> Result<(), Box<dyn Error>> {
+    async fn process(&mut self, block: MaybePendingBlockWithTxs) -> Result<(), Box<dyn Error>> {
         let block: BlockWithTxs = match block {
             MaybePendingBlockWithTxs::Block(block) => block,
             _ => return Ok(()),
@@ -201,7 +201,7 @@ where
 }
 
 async fn process_block<P: Provider + Sync>(
-    db: &Sql,
+    db: &mut Sql,
     provider: &P,
     processors: &[Box<dyn BlockProcessor<P>>],
     block: &BlockWithTxs,
@@ -213,7 +213,7 @@ async fn process_block<P: Provider + Sync>(
 }
 
 async fn process_transaction<P: Provider + Sync>(
-    db: &Sql,
+    db: &mut Sql,
     provider: &P,
     processors: &[Box<dyn TransactionProcessor<P>>],
     block: &BlockWithTxs,
@@ -229,7 +229,7 @@ async fn process_transaction<P: Provider + Sync>(
 #[allow(clippy::too_many_arguments)]
 async fn process_event<P: Provider + Sync>(
     world: &WorldContractReader<'_, P>,
-    db: &Sql,
+    db: &mut Sql,
     provider: &P,
     processors: &[Box<dyn EventProcessor<P>>],
     block: &BlockWithTxs,

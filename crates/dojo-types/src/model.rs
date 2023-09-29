@@ -9,7 +9,7 @@ pub struct Member {
     pub key: bool,
 }
 
-/// Represents a component of an entity
+/// Represents a model of an entity
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EntityModel {
     pub model: String,
@@ -47,6 +47,7 @@ impl Ty {
 
     fn flatten_ty(ty: Ty) -> Vec<Ty> {
         let mut items = vec![];
+
         match ty {
             Ty::Terminal(_) => {
                 items.push(ty.clone());
@@ -69,7 +70,7 @@ impl Ty {
                 items.push(Ty::Struct(s))
             }
             Ty::Enum(mut e) => {
-                for (i, ty) in e.values.clone().iter().enumerate() {
+                for (i, ty) in e.children.clone().iter().enumerate() {
                     match ty {
                         Ty::Struct(_) => {
                             items.extend(Ty::flatten_ty(ty.clone()));
@@ -80,7 +81,7 @@ impl Ty {
                         _ => {}
                     }
 
-                    e.values[i] = Ty::Terminal(ty.name());
+                    e.children[i] = Ty::Terminal(ty.name());
                 }
 
                 items.push(Ty::Enum(e))
@@ -109,7 +110,7 @@ impl std::fmt::Display for Ty {
                 }
                 Ty::Enum(e) => {
                     let mut enum_str = format!("enum {} {{\n", e.name);
-                    for ty in &e.values {
+                    for ty in &e.children {
                         enum_str.push_str(&format!("  {}\n", ty.name()));
                     }
                     enum_str.push('}');
@@ -132,7 +133,7 @@ pub struct Struct {
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Enum {
     pub name: String,
-    pub values: Vec<Ty>,
+    pub children: Vec<Ty>,
 }
 
 fn format_member(m: &Member) -> String {
