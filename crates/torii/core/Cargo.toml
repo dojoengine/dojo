@@ -21,6 +21,7 @@ hex = "0.4.3"
 lazy_static = "1.4.0"
 log = "0.4.17"
 once_cell.workspace = true
+scarb-ui.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 slab = "0.4.2"
@@ -35,3 +36,5 @@ tracing.workspace = true
 
 [dev-dependencies]
 camino.workspace = true
+dojo-test-utils = { path = "../../dojo-test-utils" }
+sozo = { path = "../../sozo" }
