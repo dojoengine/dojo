@@ -1,5 +1,8 @@
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
+
+use crate::core::CairoType;
 
 /// Represents a model member.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -25,96 +28,81 @@ pub struct ModelMetadata {
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum Ty {
-    Terminal(String),
+    Primitive(CairoType),
     Struct(Struct),
     Enum(Enum),
+    Tuple(Vec<Ty>),
 }
 
 impl Ty {
     pub fn name(&self) -> String {
         match self {
-            Ty::Terminal(s) => s.clone(),
+            Ty::Primitive(c) => c.to_string(),
             Ty::Struct(s) => s.name.clone(),
             Ty::Enum(e) => e.name.clone(),
+            Ty::Tuple(tys) => format!("({})", tys.iter().map(|ty| ty.name()).join(", ")),
         }
     }
 
-    pub fn flatten(&self) -> Vec<Ty> {
-        let mut flattened = Ty::flatten_ty(self.clone());
-        flattened.reverse();
-        flattened
+    pub fn iter(&self) -> TyIter<'_> {
+        TyIter { stack: vec![self] }
     }
+}
 
-    fn flatten_ty(ty: Ty) -> Vec<Ty> {
-        let mut items = vec![];
+pub struct TyIter<'a> {
+    stack: Vec<&'a Ty>,
+}
 
+impl<'a> Iterator for TyIter<'a> {
+    type Item = &'a Ty;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let ty = self.stack.pop()?;
         match ty {
-            Ty::Terminal(_) => {
-                items.push(ty.clone());
-            }
-            Ty::Struct(mut s) => {
-                for (i, member) in s.children.clone().iter().enumerate() {
-                    match member.ty {
-                        Ty::Struct(_) => {
-                            items.extend(Ty::flatten_ty(member.ty.clone()));
-                        }
-                        Ty::Enum(_) => {
-                            items.extend(Ty::flatten_ty(member.ty.clone()));
-                        }
-                        _ => {}
-                    }
-
-                    s.children[i].ty = Ty::Terminal(member.ty.name());
+            Ty::Struct(s) => {
+                for child in &s.children {
+                    self.stack.push(&child.ty);
                 }
-
-                items.push(Ty::Struct(s))
             }
-            Ty::Enum(mut e) => {
-                for (i, ty) in e.children.clone().iter().enumerate() {
-                    match ty {
-                        Ty::Struct(_) => {
-                            items.extend(Ty::flatten_ty(ty.clone()));
-                        }
-                        Ty::Enum(_) => {
-                            items.extend(Ty::flatten_ty(ty.clone()));
-                        }
-                        _ => {}
-                    }
-
-                    e.children[i] = Ty::Terminal(ty.name());
+            Ty::Enum(e) => {
+                for child in &e.children {
+                    self.stack.push(&child.1);
                 }
-
-                items.push(Ty::Enum(e))
             }
-        };
-
-        items
+            _ => {}
+        }
+        Some(ty)
     }
 }
 
 impl std::fmt::Display for Ty {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut items = self.flatten();
-        items.reverse();
-        let str = items
+        let str = self
             .iter()
-            .map(|ty| match ty {
-                Ty::Terminal(s) => s.to_string(),
+            .filter_map(|ty| match ty {
+                Ty::Primitive(_) => None,
                 Ty::Struct(s) => {
                     let mut struct_str = format!("struct {} {{\n", s.name);
                     for member in &s.children {
                         struct_str.push_str(&format!("{},\n", format_member(member)));
                     }
                     struct_str.push('}');
-                    struct_str
+                    Some(struct_str)
                 }
                 Ty::Enum(e) => {
                     let mut enum_str = format!("enum {} {{\n", e.name);
-                    for ty in &e.children {
-                        enum_str.push_str(&format!("  {}\n", ty.name()));
+                    for child in &e.children {
+                        enum_str.push_str(&format!("  {}\n", child.0));
                     }
                     enum_str.push('}');
-                    enum_str
+                    Some(enum_str)
+                }
+                Ty::Tuple(tuple) => {
+                    if tuple.is_empty() {
+                        None
+                    } else {
+                        Some(ty.name())
+                    }
                 }
             })
             .collect::<Vec<_>>()
@@ -133,7 +121,7 @@ pub struct Struct {
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Enum {
     pub name: String,
-    pub children: Vec<Ty>,
+    pub children: Vec<(String, Ty)>,
 }
 
 fn format_member(m: &Member) -> String {

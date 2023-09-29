@@ -6,7 +6,7 @@ use starknet_crypto::FieldElement;
 
 use crate::protos;
 
-impl TryFrom<protos::types::ModelMetadata> for dojo_types::model::ModelMetadata {
+impl TryFrom<protos::types::ModelMetadata> for dojo_types::schema::ModelMetadata {
     type Error = FromStrError;
     fn try_from(value: protos::types::ModelMetadata) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -31,7 +31,7 @@ impl TryFrom<protos::types::WorldMetadata> for dojo_types::WorldMetadata {
             .models
             .into_iter()
             .map(|component| Ok((component.name.clone(), component.try_into()?)))
-            .collect::<Result<HashMap<_, dojo_types::model::ModelMetadata>, _>>()?;
+            .collect::<Result<HashMap<_, dojo_types::schema::ModelMetadata>, _>>()?;
 
         let systems = value
             .systems
@@ -50,8 +50,8 @@ impl TryFrom<protos::types::WorldMetadata> for dojo_types::WorldMetadata {
     }
 }
 
-impl From<dojo_types::model::EntityModel> for protos::types::EntityModel {
-    fn from(value: dojo_types::model::EntityModel) -> Self {
+impl From<dojo_types::schema::EntityModel> for protos::types::EntityModel {
+    fn from(value: dojo_types::schema::EntityModel) -> Self {
         Self {
             model: value.model,
             keys: value.keys.into_iter().map(|key| format!("{key:#}")).collect(),

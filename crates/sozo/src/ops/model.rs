@@ -33,7 +33,7 @@ pub async fn execute(command: ModelCommands, env_metadata: Option<Environment>) 
             }
         }
 
-        ModelCommands::Entity { name, keys, starknet, world, .. } => {
+        ModelCommands::Get { name, keys, starknet, world, .. } => {
             let world_address = world.address(env_metadata.as_ref())?;
             let provider = starknet.provider(env_metadata.as_ref())?;
 

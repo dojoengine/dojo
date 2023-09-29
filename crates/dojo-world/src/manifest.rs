@@ -49,8 +49,8 @@ pub struct Member {
     pub key: bool,
 }
 
-impl From<dojo_types::model::Member> for Member {
-    fn from(m: dojo_types::model::Member) -> Self {
+impl From<dojo_types::schema::Member> for Member {
+    fn from(m: dojo_types::schema::Member) -> Self {
         Self { name: m.name, ty: m.ty.name(), key: m.key }
     }
 }

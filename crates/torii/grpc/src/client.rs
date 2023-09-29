@@ -92,7 +92,7 @@ impl WorldClient {
     /// Subscribe to the state diff for a set of entities of a World.
     pub async fn subscribe_entities(
         &mut self,
-        entities: Vec<dojo_types::model::EntityModel>,
+        entities: Vec<dojo_types::schema::EntityModel>,
     ) -> Result<tonic::Streaming<SubscribeEntitiesResponse>, Error> {
         self.inner
             .subscribe_entities(SubscribeEntitiesRequest {
