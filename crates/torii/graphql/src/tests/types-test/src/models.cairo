@@ -21,10 +21,10 @@ struct Record {
 #[derive(Copy, Drop, Serde, Introspect)]
 struct Nested {
     record_id: u32,
-    //type_more_nested: Option<NestedMore>,
+    type_more_nested: MoreNested,
 }
 
 #[derive(Copy, Drop, Serde, Introspect)]
-struct NestedMore {
+struct MoreNested {
     record_id: u32,
 }

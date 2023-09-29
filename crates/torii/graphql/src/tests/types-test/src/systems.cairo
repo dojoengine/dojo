@@ -1,6 +1,5 @@
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 use starknet::{ContractAddress, ClassHash};
-use types_test::models::{Record, Nested, NestedMore};
 
 #[starknet::interface]
 trait IRecords<TContractState> {
@@ -9,7 +8,7 @@ trait IRecords<TContractState> {
 
 #[system]
 mod records {
-    use types_test::models::{Record, Nested, NestedMore};
+    use types_test::models::{Record, Nested, MoreNested};
     use super::IRecords;
 
     #[external(v0)]
@@ -21,9 +20,9 @@ mod records {
                     break ();
                 }
                 curr_record = curr_record + 1;
+                let curr_felt: felt252 = curr_record.into();
 
                 let record_id = world.uuid();
-                let curr_felt: felt252 = curr_record.into();
                 set!(
                     world,
                     (Record {
@@ -43,8 +42,8 @@ mod records {
                         type_class_hash: curr_felt.try_into().unwrap(),
                         type_contract_address: curr_felt.try_into().unwrap(),
                         type_nested: Nested {
-                            record_id
-                            //type_more_nested: NestedMore { record_id }
+                            record_id,
+                            type_more_nested: MoreNested { record_id }
                         }
                     })
                 );

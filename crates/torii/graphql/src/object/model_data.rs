@@ -72,7 +72,7 @@ impl ObjectTrait for ModelDataObject {
     fn sub_fields(&self) -> Option<Vec<Field>> {
         let mut fields = Vec::new();
         fields.push(entity_field());
-        fields.extend(nested_type_fields(self.type_name.as_str(), &self.type_mapping));
+        fields.extend(nested_fields(self.type_name.as_str(), &self.type_mapping));
 
         Some(fields)
     }
@@ -180,7 +180,7 @@ fn entity_field() -> Field {
 }
 
 // FIXME: recursively handle deeply nested types, rn just handling one level deep
-fn nested_type_fields(root_type: &str, type_mapping: &TypeMapping) -> Vec<Field> {
+fn nested_fields(root_type: &str, type_mapping: &TypeMapping) -> Vec<Field> {
     type_mapping
         .iter()
         .filter_map(|(field_name, type_data)| {
