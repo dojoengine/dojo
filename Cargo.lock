@@ -2116,6 +2116,7 @@ name = "dojo-types"
 version = "0.2.1"
 dependencies = [
  "hex",
+ "itertools 0.10.5",
  "serde",
  "starknet",
  "strum 0.25.0",

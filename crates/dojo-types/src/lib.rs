@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
-use model::ModelMetadata;
+use schema::ModelMetadata;
 use serde::Serialize;
 use starknet::core::types::FieldElement;
 use system::SystemMetadata;
 
 pub mod core;
 pub mod event;
-pub mod model;
+pub mod schema;
 pub mod storage;
 pub mod system;
 

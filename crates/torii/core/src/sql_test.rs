@@ -1,5 +1,6 @@
 use camino::Utf8PathBuf;
-use dojo_types::model::{Member, Struct, Ty};
+use dojo_types::core::CairoType;
+use dojo_types::schema::{Member, Struct, Ty};
 use dojo_world::manifest::System;
 use sqlx::sqlite::SqlitePool;
 use starknet::core::types::{Event, FieldElement};
@@ -49,7 +50,7 @@ async fn test_load_from_manifest(pool: SqlitePool) {
                 name: "Position".into(),
                 children: vec![Member {
                     name: "test".into(),
-                    ty: Ty::Terminal("u32".to_string()),
+                    ty: Ty::Primitive(CairoType::U32),
                     key: false,
                 }],
             }),

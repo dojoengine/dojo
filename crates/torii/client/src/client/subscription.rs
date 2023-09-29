@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::task::Poll;
 
 use anyhow::{anyhow, bail, Result};
-use dojo_types::model::EntityModel;
+use dojo_types::schema::EntityModel;
 use dojo_types::WorldMetadata;
 use futures::channel::mpsc::{Receiver, Sender};
 use futures_util::StreamExt;
@@ -211,7 +211,7 @@ mod tests {
     use std::collections::HashMap;
     use std::sync::Arc;
 
-    use dojo_types::model::EntityModel;
+    use dojo_types::schema::EntityModel;
     use dojo_types::WorldMetadata;
     use parking_lot::RwLock;
     use starknet::core::utils::cairo_short_string_to_felt;
@@ -221,7 +221,7 @@ mod tests {
     fn create_dummy_metadata() -> WorldMetadata {
         let components = HashMap::from([(
             "Position".into(),
-            dojo_types::model::ModelMetadata {
+            dojo_types::schema::ModelMetadata {
                 name: "Position".into(),
                 class_hash: felt!("1"),
                 size: 3,

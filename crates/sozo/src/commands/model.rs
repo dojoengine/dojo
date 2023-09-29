@@ -44,8 +44,8 @@ pub enum ModelCommands {
         to_json: bool,
     },
 
-    #[command(about = "Retrieve the model value for an entity")]
-    Entity {
+    #[command(about = "Get a models value for the provided key")]
+    Get {
         #[arg(help = "The name of the model")]
         name: String,
 

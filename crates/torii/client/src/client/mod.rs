@@ -4,7 +4,7 @@ pub mod subscription;
 
 use std::sync::Arc;
 
-use dojo_types::model::EntityModel;
+use dojo_types::schema::EntityModel;
 use dojo_types::WorldMetadata;
 use futures::channel::mpsc;
 use parking_lot::{Mutex, RwLock};

@@ -1,7 +1,10 @@
+use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 
-#[derive(AsRefStr, Display, EnumIter, EnumString, Debug)]
+#[derive(
+    AsRefStr, Display, EnumIter, EnumString, Clone, Debug, Serialize, Deserialize, PartialEq,
+)]
 #[strum(serialize_all = "lowercase")]
 pub enum CairoType {
     U8,

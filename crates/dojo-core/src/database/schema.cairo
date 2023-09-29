@@ -1,8 +1,9 @@
 #[derive(Copy, Drop, Serde)]
 enum Ty {
-    Simple: felt252,
+    Primitive: felt252,
     Struct: Struct,
-    Enum: EnumMember
+    Enum: Enum,
+    Tuple: Span<Span<felt252>>,
 }
 
 #[derive(Copy, Drop, Serde)]
@@ -13,10 +14,10 @@ struct Struct {
 }
 
 #[derive(Copy, Drop, Serde)]
-struct EnumMember {
+struct Enum {
     name: felt252,
     attrs: Span<felt252>,
-    values: Span<Span<felt252>>
+    children: Span<(felt252, Span<felt252>)>
 }
 
 #[derive(Copy, Drop, Serde)]
@@ -60,7 +61,7 @@ impl SchemaIntrospectionFelt252 of SchemaIntrospection<felt252> {
 
     #[inline(always)]
     fn ty() -> Ty {
-        Ty::Simple('felt252')
+        Ty::Primitive('felt252')
     }
 }
 
@@ -77,7 +78,7 @@ impl SchemaIntrospectionBool of SchemaIntrospection<bool> {
 
     #[inline(always)]
     fn ty() -> Ty {
-        Ty::Simple('bool')
+        Ty::Primitive('bool')
     }
 }
 
@@ -94,7 +95,7 @@ impl SchemaIntrospectionU8 of SchemaIntrospection<u8> {
 
     #[inline(always)]
     fn ty() -> Ty {
-        Ty::Simple('u8')
+        Ty::Primitive('u8')
     }
 }
 
@@ -111,7 +112,7 @@ impl SchemaIntrospectionU16 of SchemaIntrospection<u16> {
 
     #[inline(always)]
     fn ty() -> Ty {
-        Ty::Simple('u16')
+        Ty::Primitive('u16')
     }
 }
 
@@ -128,7 +129,7 @@ impl SchemaIntrospectionU32 of SchemaIntrospection<u32> {
 
     #[inline(always)]
     fn ty() -> Ty {
-        Ty::Simple('u32')
+        Ty::Primitive('u32')
     }
 }
 
@@ -145,7 +146,7 @@ impl SchemaIntrospectionU64 of SchemaIntrospection<u64> {
 
     #[inline(always)]
     fn ty() -> Ty {
-        Ty::Simple('u64')
+        Ty::Primitive('u64')
     }
 }
 
@@ -162,7 +163,7 @@ impl SchemaIntrospectionU128 of SchemaIntrospection<u128> {
 
     #[inline(always)]
     fn ty() -> Ty {
-        Ty::Simple('u128')
+        Ty::Primitive('u128')
     }
 }
 
@@ -180,7 +181,7 @@ impl SchemaIntrospectionU256 of SchemaIntrospection<u256> {
 
     #[inline(always)]
     fn ty() -> Ty {
-        Ty::Simple('u256')
+        Ty::Primitive('u256')
     }
 }
 
@@ -197,7 +198,7 @@ impl SchemaIntrospectionContractAddress of SchemaIntrospection<starknet::Contrac
 
     #[inline(always)]
     fn ty() -> Ty {
-        Ty::Simple('ContractAddress')
+        Ty::Primitive('ContractAddress')
     }
 }
 
@@ -214,6 +215,6 @@ impl SchemaIntrospectionClassHash of SchemaIntrospection<starknet::ClassHash> {
 
     #[inline(always)]
     fn ty() -> Ty {
-        Ty::Simple('ClassHash')
+        Ty::Primitive('ClassHash')
     }
 }

@@ -2,7 +2,8 @@ use camino::Utf8PathBuf;
 use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, TestSequencer,
 };
-use dojo_types::model::{Enum, Member, Struct, Ty};
+use dojo_types::core::CairoType;
+use dojo_types::schema::{Enum, Member, Struct, Ty};
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag, FieldElement};
 
@@ -33,7 +34,7 @@ async fn test_model() {
             children: vec![
                 Member {
                     name: "player".to_string(),
-                    ty: Ty::Terminal("ContractAddress".to_string()),
+                    ty: Ty::Primitive(CairoType::ContractAddress),
                     key: true
                 },
                 Member {
@@ -43,12 +44,12 @@ async fn test_model() {
                         children: vec![
                             Member {
                                 name: "x".to_string(),
-                                ty: Ty::Terminal("u32".to_string()),
+                                ty: Ty::Primitive(CairoType::U32),
                                 key: false
                             },
                             Member {
                                 name: "y".to_string(),
-                                ty: Ty::Terminal("u32".to_string()),
+                                ty: Ty::Primitive(CairoType::U32),
                                 key: false
                             }
                         ]
@@ -62,7 +63,7 @@ async fn test_model() {
     assert_eq!(
         position.class_hash(),
         FieldElement::from_hex_be(
-            "0x07a812f2cfb414d5aa04bb9a3c91cdcaf1d30e193bd6cb7faf9b7c294722fab4"
+            "0x003598b0816df38211a0ebd6edcd922d19738778de2240caf6b04c6a0cab6df5"
         )
         .unwrap()
     );
@@ -77,12 +78,12 @@ async fn test_model() {
             children: vec![
                 Member {
                     name: "player".to_string(),
-                    ty: Ty::Terminal("ContractAddress".to_string()),
+                    ty: Ty::Primitive(CairoType::ContractAddress),
                     key: true
                 },
                 Member {
                     name: "remaining".to_string(),
-                    ty: Ty::Terminal("u8".to_string()),
+                    ty: Ty::Primitive(CairoType::U8),
                     key: false
                 },
                 Member {
@@ -90,11 +91,11 @@ async fn test_model() {
                     ty: Ty::Enum(Enum {
                         name: "Direction".to_string(),
                         children: vec![
-                            Ty::Terminal("None".to_string()),
-                            Ty::Terminal("Left".to_string()),
-                            Ty::Terminal("Right".to_string()),
-                            Ty::Terminal("Up".to_string()),
-                            Ty::Terminal("Down".to_string())
+                            ("None".to_string(), Ty::Tuple(vec![])),
+                            ("Left".to_string(), Ty::Tuple(vec![])),
+                            ("Right".to_string(), Ty::Tuple(vec![])),
+                            ("Up".to_string(), Ty::Tuple(vec![])),
+                            ("Down".to_string(), Ty::Tuple(vec![]))
                         ]
                     }),
                     key: false

@@ -102,7 +102,7 @@ mod tests {
     fn create_dummy_metadata() -> WorldMetadata {
         let components = HashMap::from([(
             "Position".into(),
-            dojo_types::model::ModelMetadata {
+            dojo_types::schema::ModelMetadata {
                 name: "Position".into(),
                 class_hash: felt!("1"),
                 size: 3,
@@ -120,7 +120,7 @@ mod tests {
     #[test]
     fn err_if_set_values_too_many() {
         let storage = create_dummy_storage();
-        let entity = dojo_types::model::EntityModel {
+        let entity = dojo_types::schema::EntityModel {
             model: "Position".into(),
             keys: vec![felt!("0x12345")],
         };
@@ -135,7 +135,7 @@ mod tests {
     #[test]
     fn err_if_set_values_too_few() {
         let storage = create_dummy_storage();
-        let entity = dojo_types::model::EntityModel {
+        let entity = dojo_types::schema::EntityModel {
             model: "Position".into(),
             keys: vec![felt!("0x12345")],
         };
@@ -150,7 +150,7 @@ mod tests {
     #[test]
     fn set_and_get_entity_value() {
         let storage = create_dummy_storage();
-        let entity = dojo_types::model::EntityModel {
+        let entity = dojo_types::schema::EntityModel {
             model: "Position".into(),
             keys: vec![felt!("0x12345")],
         };

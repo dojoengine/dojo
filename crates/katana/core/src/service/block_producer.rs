@@ -387,7 +387,6 @@ impl Stream for InstantBlockProducer {
 
         // poll the mining future
         if let Some(mut mining) = pin.block_mining.take() {
-            println!("ohayo");
             if let Poll::Ready(outcome) = mining.poll_unpin(cx) {
                 return Poll::Ready(Some(outcome));
             } else {
