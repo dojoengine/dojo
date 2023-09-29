@@ -42,10 +42,7 @@ pub async fn execute(command: ModelCommands, env_metadata: Option<Environment>) 
 
             let entity = model.entity(keys, BlockId::Tag(BlockTag::Pending)).await?;
 
-            println!(
-                "{}",
-                entity.iter().map(|f| format!("{f:#x}")).collect::<Vec<String>>().join("\n")
-            )
+            println!("{entity}")
         }
     }
 

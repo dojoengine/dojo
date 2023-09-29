@@ -34,7 +34,7 @@ async fn test_model() {
             children: vec![
                 Member {
                     name: "player".to_string(),
-                    ty: Ty::Primitive(CairoType::ContractAddress),
+                    ty: Ty::Primitive(CairoType::ContractAddress(None)),
                     key: true
                 },
                 Member {
@@ -44,12 +44,12 @@ async fn test_model() {
                         children: vec![
                             Member {
                                 name: "x".to_string(),
-                                ty: Ty::Primitive(CairoType::U32),
+                                ty: Ty::Primitive(CairoType::U32(None)),
                                 key: false
                             },
                             Member {
                                 name: "y".to_string(),
-                                ty: Ty::Primitive(CairoType::U32),
+                                ty: Ty::Primitive(CairoType::U32(None)),
                                 key: false
                             }
                         ]
@@ -78,12 +78,12 @@ async fn test_model() {
             children: vec![
                 Member {
                     name: "player".to_string(),
-                    ty: Ty::Primitive(CairoType::ContractAddress),
+                    ty: Ty::Primitive(CairoType::ContractAddress(None)),
                     key: true
                 },
                 Member {
                     name: "remaining".to_string(),
-                    ty: Ty::Primitive(CairoType::U8),
+                    ty: Ty::Primitive(CairoType::U8(None)),
                     key: false
                 },
                 Member {

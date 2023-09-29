@@ -643,6 +643,7 @@ dependencies = [
 name = "dojo-types"
 version = "0.2.1"
 dependencies = [
+ "ethabi",
  "hex",
  "itertools 0.10.5",
  "serde",
@@ -723,6 +724,20 @@ dependencies = [
  "sha3",
  "thiserror",
  "uuid 0.8.2",
+]
+
+[[package]]
+name = "ethabi"
+version = "18.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7413c5f74cc903ea37386a8965a936cbeb334bd270862fdece542c1b2dcbc898"
+dependencies = [
+ "ethereum-types",
+ "hex",
+ "serde",
+ "sha3",
+ "thiserror",
+ "uint",
 ]
 
 [[package]]

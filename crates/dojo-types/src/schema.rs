@@ -2,7 +2,7 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
 
-use crate::core::CairoType;
+use crate::core::{CairoType, CairoTypeError};
 
 /// Represents a model member.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -46,6 +46,30 @@ impl Ty {
 
     pub fn iter(&self) -> TyIter<'_> {
         TyIter { stack: vec![self] }
+    }
+
+    pub fn deserialize(&mut self, felts: &mut Vec<FieldElement>) -> Result<(), CairoTypeError> {
+        match self {
+            Ty::Primitive(c) => {
+                c.set_value_from_felts(felts)?;
+            }
+            Ty::Struct(s) => {
+                for child in &mut s.children {
+                    child.ty.deserialize(felts)?;
+                }
+            }
+            Ty::Enum(e) => {
+                for (_, child) in &mut e.children {
+                    child.deserialize(felts)?;
+                }
+            }
+            Ty::Tuple(tys) => {
+                for ty in tys {
+                    ty.deserialize(felts)?;
+                }
+            }
+        }
+        Ok(())
     }
 }
 
@@ -125,9 +149,71 @@ pub struct Enum {
 }
 
 fn format_member(m: &Member) -> String {
-    if m.key {
+    let mut str = if m.key {
         format!("  #[key]\n  {}: {}", m.name, m.ty.name())
     } else {
         format!("  {}: {}", m.name, m.ty.name())
+    };
+
+    if let Ty::Primitive(ty) = &m.ty {
+        match ty {
+            CairoType::U8(value) => {
+                if let Some(value) = value {
+                    str.push_str(&format!(" = {}", value));
+                }
+            }
+            CairoType::U16(value) => {
+                if let Some(value) = value {
+                    str.push_str(&format!(" = {}", value));
+                }
+            }
+            CairoType::U32(value) => {
+                if let Some(value) = value {
+                    str.push_str(&format!(" = {}", value));
+                }
+            }
+            CairoType::U64(value) => {
+                if let Some(value) = value {
+                    str.push_str(&format!(" = {}", value));
+                }
+            }
+            CairoType::U128(value) => {
+                if let Some(value) = value {
+                    str.push_str(&format!(" = {}", value));
+                }
+            }
+            CairoType::U256(value) => {
+                if let Some(value) = value {
+                    str.push_str(&format!(" = {}", value));
+                }
+            }
+            CairoType::USize(value) => {
+                if let Some(value) = value {
+                    str.push_str(&format!(" = {}", value));
+                }
+            }
+            CairoType::Bool(value) => {
+                if let Some(value) = value {
+                    str.push_str(&format!(" = {}", value));
+                }
+            }
+            CairoType::Felt252(value) => {
+                if let Some(value) = value {
+                    str.push_str(&format!(" = {:#x}", value));
+                }
+            }
+            CairoType::ClassHash(value) => {
+                if let Some(value) = value {
+                    str.push_str(&format!(" = {:#x}", value));
+                }
+            }
+            CairoType::ContractAddress(value) => {
+                if let Some(value) = value {
+                    str.push_str(&format!(" = {:#x}", value));
+                }
+            }
+        }
     }
+
+    str
 }

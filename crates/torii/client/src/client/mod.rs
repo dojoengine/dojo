@@ -95,8 +95,9 @@ impl ClientBuilder {
             for EntityModel { model: component, keys } in subbed_entities {
                 let component_reader =
                     world_reader.model(&component, BlockId::Tag(BlockTag::Pending)).await?;
-                let values =
-                    component_reader.entity(keys.clone(), BlockId::Tag(BlockTag::Pending)).await?;
+                let values = component_reader
+                    .entity_storage(keys.clone(), BlockId::Tag(BlockTag::Pending))
+                    .await?;
                 client_storage.set_entity((component, keys), values)?;
             }
         }
