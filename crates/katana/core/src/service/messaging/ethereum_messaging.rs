@@ -178,19 +178,17 @@ impl Messenger for EthereumMessaging {
             self.provider_signer.clone(),
         );
 
-        let mut hashes: Vec<U256> = vec![];
-
-        for m in messages {
-            let mut buf: Vec<u8> = vec![];
-            buf.extend(m.from_address.to_bytes_be());
-            buf.extend(m.to_address.to_bytes_be());
-            buf.extend(FieldElement::from(m.payload.len()).to_bytes_be());
-            for p in &m.payload {
-                buf.extend(p.to_bytes_be());
-            }
-
-            hashes.push(compute_message_hash(&buf));
-        }
+        let hashes: Vec<U256> = messages
+            .into_iter()
+            .map(|msg| {
+                let mut buf: Vec<u8> = vec![];
+                buf.extend(msg.from_address.to_bytes_be());
+                buf.extend(msg.to_address.to_bytes_be());
+                buf.extend(FieldElement::from(msg.payload.len()).to_bytes_be());
+                msg.payload.iter().for_each(|p| buf.extend(p.to_bytes_be()));
+                compute_message_hash(&buf)
+            })
+            .collect();
 
         trace!(target: LOG_TARGET, "Sending transaction on L1 to register messages...");
         match starknet_messaging
