@@ -5,7 +5,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 use ethers::prelude::*;
-use ethers::providers::{Http, Provider, ProviderError};
+use ethers::providers::{Http, Provider};
 use ethers::types::{Address, BlockNumber, Log};
 use k256::ecdsa::SigningKey;
 use sha3::{Digest, Keccak256};
@@ -18,18 +18,15 @@ use starknet_api::transaction::{
 };
 use tracing::{debug, trace, warn};
 
+use super::{Error, MessagingConfig, Messenger, MessengerResult, LOG_TARGET};
 use crate::backend::storage::transaction::L1HandlerTransaction;
-use crate::messaging::{
-    MessagingConfig, Messenger, MessengerError, MessengerResult, MSGING_TARGET,
-};
 
 abigen!(
     StarknetMessagingLocal,
     "contracts/messaging/solidity/IStarknetMessagingLocal_ABI.json",
-    event_derives(serde::Deserialize, serde::Serialize)
+    event_derives(serde::Serialize, serde::Deserialize)
 );
 
-///
 #[derive(Debug, PartialEq, Eq, EthEvent)]
 pub struct LogMessageToL2 {
     #[ethevent(indexed)]
@@ -43,15 +40,14 @@ pub struct LogMessageToL2 {
     fee: U256,
 }
 
-///
-pub struct EthereumMessenger {
+pub struct EthereumMessaging {
     provider: Arc<Provider<Http>>,
     provider_signer: Arc<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
     messaging_contract_address: Address,
 }
 
-impl EthereumMessenger {
-    pub async fn new(config: MessagingConfig) -> Result<EthereumMessenger> {
+impl EthereumMessaging {
+    pub async fn new(config: MessagingConfig) -> Result<EthereumMessaging> {
         let provider = Provider::<Http>::try_from(&config.rpc_url)?;
 
         let chain_id = provider.get_chainid().await?;
@@ -62,7 +58,7 @@ impl EthereumMessenger {
         let provider_signer = SignerMiddleware::new(provider.clone(), wallet);
         let messaging_contract_address = Address::from_str(&config.contract_address)?;
 
-        Ok(EthereumMessenger {
+        Ok(EthereumMessaging {
             provider: Arc::new(provider),
             provider_signer: Arc::new(provider_signer),
             messaging_contract_address,
@@ -86,7 +82,7 @@ impl EthereumMessenger {
         to_block: u64,
     ) -> MessengerResult<HashMap<u64, Vec<Log>>> {
         trace!(
-            target: MSGING_TARGET,
+            target: LOG_TARGET,
             "Fetching logs for blocks {} - {}.", from_block, to_block);
 
         let mut logs: HashMap<u64, Vec<Log>> = HashMap::new();
@@ -125,7 +121,7 @@ impl EthereumMessenger {
 }
 
 #[async_trait]
-impl Messenger for EthereumMessenger {
+impl Messenger for EthereumMessaging {
     type MessageHash = U256;
 
     async fn gather_messages(
@@ -200,12 +196,12 @@ impl Messenger for EthereumMessenger {
             .add_message_hashes_from_l2(hashes.clone())
             .send()
             .await
-            .map_err(|_| MessengerError::SendError)?
+            .map_err(|_| Error::SendError)?
             .await?
         {
             Some(receipt) => {
                 trace!(
-                    target: MSGING_TARGET,
+                    target: LOG_TARGET,
                     "Transaction sent on L1 to settle {} messages: {:#x}",
                     hashes.len(),
                     receipt.transaction_hash,
@@ -215,7 +211,7 @@ impl Messenger for EthereumMessenger {
             }
             None => {
                 warn!("No receipt for L1 transaction.");
-                Err(MessengerError::SendError)
+                Err(Error::SendError)
             }
         }
     }
@@ -273,10 +269,4 @@ fn stark_felt_from_u256(v: U256) -> StarkFelt {
 
 fn stark_felt_from_address(v: Address) -> StarkFelt {
     stark_felt!(format!("{:#064x}", v).as_str())
-}
-
-impl From<ProviderError> for MessengerError {
-    fn from(e: ProviderError) -> MessengerError {
-        MessengerError::EthereumProviderError(e)
-    }
 }

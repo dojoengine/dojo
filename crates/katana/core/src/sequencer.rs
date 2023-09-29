@@ -24,10 +24,11 @@ use crate::backend::storage::transaction::{
 use crate::backend::{Backend, ExternalFunctionCall};
 use crate::db::{AsStateRefDb, StateExtRef, StateRefDb};
 use crate::execution::{MaybeInvalidExecutedTransaction, PendingState};
-use crate::messaging::{MessagingConfig, MessagingService};
 use crate::pool::TransactionPool;
 use crate::sequencer_error::SequencerError;
 use crate::service::block_producer::{BlockProducer, BlockProducerMode};
+use crate::service::messaging::service::MessagingService;
+use crate::service::messaging::MessagingConfig;
 use crate::service::{NodeService, TransactionMiner};
 use crate::utils::event::{ContinuationToken, ContinuationTokenError};
 
@@ -67,10 +68,7 @@ impl KatanaSequencer {
         };
 
         let messaging = if let Some(config) = config.messaging.clone() {
-            Some(
-                MessagingService::new(config.clone(), Arc::clone(&backend), Arc::clone(&pool))
-                    .await,
-            )
+            MessagingService::new(config, Arc::clone(&backend)).await.ok()
         } else {
             None
         };

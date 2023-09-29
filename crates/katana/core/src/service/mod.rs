@@ -13,11 +13,12 @@ use starknet::core::types::FieldElement;
 use tracing::trace;
 
 use self::block_producer::BlockProducer;
+use self::messaging::service::{MessagingOutcome, MessagingService};
 use crate::backend::storage::transaction::Transaction;
-use crate::messaging::MessagingService;
 use crate::pool::TransactionPool;
 
 pub mod block_producer;
+pub mod messaging;
 
 /// The type that drives the blockchain's state
 ///
@@ -42,8 +43,18 @@ impl Future for NodeService {
         let pin = self.get_mut();
 
         if let Some(messaging) = pin.messaging.as_mut() {
-            while let Poll::Ready(Some(_)) = messaging.settler.poll_next_unpin(cx) {}
-            while let Poll::Ready(Some(_)) = messaging.gatherer.poll_next_unpin(cx) {}
+            while let Poll::Ready(Some(outcome)) = messaging.poll_next_unpin(cx) {
+                match outcome {
+                    MessagingOutcome::GatheredMessages(txs) => {
+                        trace!(target: "node", "collected {} messages from settlement chain", txs.len());
+                        txs.into_iter()
+                            .for_each(|tx| pin.pool.add_transaction(Transaction::L1Handler(tx)))
+                    }
+                    MessagingOutcome::SettledMessages(hashes) => {
+                        trace!(target: "node", "settled {} messages on settlement chain", hashes.len());
+                    }
+                }
+            }
         }
 
         // this drives block production and feeds new sets of ready transactions to the block

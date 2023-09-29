@@ -1,36 +1,34 @@
+mod ethereum_messaging;
 pub mod service;
-pub use service::MessagingService;
+mod starknet_messaging;
 
-mod ethereum_messenger;
-use ethereum_messenger::EthereumMessenger;
-
-mod starknet_messenger;
 use std::path::Path;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use ethereum_messaging::EthereumMessaging;
 use ethers::providers::ProviderError;
 use serde::Deserialize;
 use starknet::core::types::MsgToL1;
-use starknet_messenger::StarknetMessenger;
 use tracing::{error, info};
 
+use self::starknet_messaging::StarknetMessaging;
 use crate::backend::storage::transaction::L1HandlerTransaction;
 
-pub(crate) const MSGING_TARGET: &str = "messaging";
+pub(crate) const LOG_TARGET: &str = "messaging";
 
-type MessengerResult<T> = Result<T, MessengerError>;
+type MessengerResult<T> = Result<T, Error>;
 
 #[derive(Debug, thiserror::Error)]
-pub enum MessengerError {
-    #[error("Error initializing messaging, please check messaging args")]
+pub enum Error {
+    #[error("Failed to initialize messaging")]
     InitError,
-    #[error("Error gathering messages")]
+    #[error("Failed to gather messages")]
     GatherError,
-    #[error("Error sending messages")]
+    #[error("Failed to send messages")]
     SendError,
-    #[error("Error ethereum provider")]
-    EthereumProviderError(ProviderError),
+    #[error(transparent)]
+    EthereumProvider(#[from] ProviderError),
 }
 
 #[derive(Debug, Default, Deserialize, Clone)]
@@ -95,33 +93,32 @@ pub trait Messenger {
 }
 
 pub enum AnyMessenger {
-    Ethereum(EthereumMessenger),
-    Starknet(StarknetMessenger),
+    Ethereum(EthereumMessaging),
+    Starknet(StarknetMessaging),
 }
 
 impl AnyMessenger {
     pub async fn from_config(config: MessagingConfig) -> MessengerResult<Self> {
         if config.contract_address.len() < 50 {
-            match EthereumMessenger::new(config.clone()).await {
+            match EthereumMessaging::new(config.clone()).await {
                 Ok(m_eth) => {
-                    info!(MSGING_TARGET, "Messaging enabled [Ethereum]");
+                    info!(target: LOG_TARGET, "Messaging enabled [Ethereum]");
                     Ok(AnyMessenger::Ethereum(m_eth))
                 }
-                Err(e_eth) => {
-                    error!("Ethereum messenger init failed: {:?}", e_eth);
-                    Err(MessengerError::InitError)
+                Err(e) => {
+                    error!(target: LOG_TARGET, "Ethereum messenger init failed: {e}");
+                    Err(Error::InitError)
                 }
             }
         } else {
-            match StarknetMessenger::new(config.clone()).await {
+            match StarknetMessaging::new(config.clone()).await {
                 Ok(m_sn) => {
-                    info!(target: MSGING_TARGET, "Messaging enabled [Starknet]");
+                    info!(target: LOG_TARGET, "Messaging enabled [Starknet]");
                     Ok(AnyMessenger::Starknet(m_sn))
                 }
-                Err(e_sn) => {
-                    error!(target: MSGING_TARGET,
-                           "Starknet messenger init failed: {:?}", e_sn);
-                    Err(MessengerError::InitError)
+                Err(e) => {
+                    error!(target: LOG_TARGET, "Starknet messenger init failed: {e}");
+                    Err(Error::InitError)
                 }
             }
         }

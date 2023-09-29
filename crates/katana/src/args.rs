@@ -7,8 +7,8 @@ use katana_core::constants::{
     DEFAULT_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_VALIDATE_MAX_STEPS,
 };
 use katana_core::db::serde::state::SerializableState;
-use katana_core::messaging::MessagingConfig;
 use katana_core::sequencer::SequencerConfig;
+use katana_core::service::messaging::MessagingConfig;
 use katana_rpc::config::ServerConfig;
 use url::Url;
 

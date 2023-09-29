@@ -19,10 +19,8 @@ use starknet_api::transaction::{
 use tracing::{debug, error, trace, warn};
 use url::Url;
 
+use super::{Error, MessagingConfig, Messenger, MessengerResult, LOG_TARGET};
 use crate::backend::storage::transaction::L1HandlerTransaction;
-use crate::messaging::{
-    MessagingConfig, Messenger, MessengerError, MessengerResult, MSGING_TARGET,
-};
 
 /// As messaging in starknet is only possible with EthAddress in the `to_address`
 /// field, we have to set magic value to understand what the user want to do.
@@ -34,7 +32,7 @@ const EXE_MAGIC: FieldElement = felt!("0x455845");
 
 pub const HASH_EXEC: FieldElement = felt!("0xee");
 
-pub struct StarknetMessenger {
+pub struct StarknetMessaging {
     chain_id: FieldElement,
     provider: AnyProvider,
     wallet: LocalWallet,
@@ -42,8 +40,8 @@ pub struct StarknetMessenger {
     messaging_contract_address: FieldElement,
 }
 
-impl StarknetMessenger {
-    pub async fn new(config: MessagingConfig) -> Result<StarknetMessenger> {
+impl StarknetMessaging {
+    pub async fn new(config: MessagingConfig) -> Result<StarknetMessaging> {
         let provider = AnyProvider::JsonRpcHttp(JsonRpcClient::new(HttpTransport::new(
             Url::parse(&config.rpc_url)?,
         )));
@@ -58,7 +56,7 @@ impl StarknetMessenger {
 
         let messaging_contract_address = FieldElement::from_hex_be(&config.contract_address)?;
 
-        Ok(StarknetMessenger {
+        Ok(StarknetMessaging {
             chain_id,
             provider,
             wallet,
@@ -74,7 +72,7 @@ impl StarknetMessenger {
         to_block: BlockId,
     ) -> Result<HashMap<u64, Vec<EmittedEvent>>> {
         trace!(
-            target: MSGING_TARGET,
+            target: LOG_TARGET,
             "Fetching blocks {:?} - {:?}.", from_block, to_block);
 
         let mut events: HashMap<u64, Vec<EmittedEvent>> = HashMap::new();
@@ -155,20 +153,20 @@ impl StarknetMessenger {
 
         match self.send_invoke_tx(calls).await {
             Ok(tx_hash) => {
-                trace!(target: MSGING_TARGET,
+                trace!(target: LOG_TARGET,
                        "Settlement hashes transaction {:#064x}", tx_hash);
                 Ok(tx_hash)
             }
             Err(e) => {
                 error!("Error settling hashes on Starknet: {:?}", e);
-                Err(MessengerError::SendError)
+                Err(Error::SendError)
             }
         }
     }
 }
 
 #[async_trait]
-impl Messenger for StarknetMessenger {
+impl Messenger for StarknetMessaging {
     type MessageHash = FieldElement;
 
     async fn gather_messages(
@@ -183,7 +181,7 @@ impl Messenger for StarknetMessenger {
                     "Couldn't fetch settlement chain last block number. \nSkipped, retry at the \
                      next tick."
                 );
-                return Err(MessengerError::SendError);
+                return Err(Error::SendError);
             }
         };
 
@@ -203,12 +201,12 @@ impl Messenger for StarknetMessenger {
 
         self.fetch_events(BlockId::Number(from_block), BlockId::Number(to_block))
             .await
-            .map_err(|_| MessengerError::SendError)
+            .map_err(|_| Error::SendError)
             .unwrap()
             .iter()
             .for_each(|(block_number, block_events)| {
                 debug!(
-                    target: MSGING_TARGET,
+                    target: LOG_TARGET,
                     "Converting events of block {} into L1HandlerTx ({} events)",
                     block_number,
                     block_events.len(),
@@ -244,7 +242,7 @@ impl Messenger for StarknetMessenger {
             if magic == EXE_MAGIC {
                 if m.payload.len() < 2 {
                     error!(
-                        target: MSGING_TARGET,
+                        target: LOG_TARGET,
                         "Message execution is expecting a payload of at least length \
                          2. With [0] being the contract address, and [1] the selector.",
                     );
@@ -292,12 +290,12 @@ impl Messenger for StarknetMessenger {
         if !calls.is_empty() {
             match self.send_invoke_tx(calls).await {
                 Ok(tx_hash) => {
-                    trace!(target: MSGING_TARGET,
+                    trace!(target: LOG_TARGET,
                            "Invoke transaction hash {:#064x}", tx_hash);
                 }
                 Err(e) => {
                     error!("Error sending invoke tx on Starknet: {:?}", e);
-                    return Err(MessengerError::SendError);
+                    return Err(Error::SendError);
                 }
             };
         }
@@ -312,16 +310,16 @@ fn l1_handler_tx_from_event(event: &EmittedEvent) -> Result<L1HandlerTransaction
     // TODO: replace by the keys directly in the configuration.
     if event.keys[0] != selector!("MessageSentToAppchain") {
         debug!(
-            target: MSGING_TARGET,
+            target: LOG_TARGET,
             "Event with key {:?} can't be converted into L1HandlerTransaction",
             event.keys[0],
         );
-        return Err(MessengerError::GatherError.into());
+        return Err(Error::GatherError.into());
     }
 
     if event.keys.len() != 4 || event.data.len() < 2 {
         error!(
-            target: MSGING_TARGET,
+            target: LOG_TARGET,
             "Event MessageSentToAppchain is not well formatted"
         );
     }
