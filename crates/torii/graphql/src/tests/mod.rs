@@ -16,7 +16,7 @@ use torii_core::engine::{Engine, EngineConfig, Processors};
 use torii_core::processors::register_model::RegisterModelProcessor;
 use torii_core::processors::register_system::RegisterSystemProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
-use torii_core::sql::{Executable, Sql};
+use torii_core::sql::Sql;
 
 mod entities_test;
 // mod models_test;
@@ -85,7 +85,7 @@ pub async fn create_pool() -> SqlitePool {
 
 pub async fn bootstrap_engine<'a>(
     world: &'a WorldContractReader<'a, JsonRpcClient<HttpTransport>>,
-    db: &'a Sql,
+    db: &'a mut Sql,
     provider: &'a JsonRpcClient<HttpTransport>,
     migration: &MigrationStrategy,
     sequencer: &TestSequencer,
@@ -104,7 +104,7 @@ pub async fn bootstrap_engine<'a>(
     let ui = Ui::new(Verbosity::Verbose, OutputFormat::Text);
     execute_strategy(migration, &account, &ui, None).await.unwrap();
 
-    let engine = Engine::new(
+    let mut engine = Engine::new(
         world,
         db,
         provider,
@@ -136,7 +136,7 @@ pub async fn run_graphql_subscription(
     // fn subscribe() is called from inside dynamic subscription
 }
 
-pub async fn entity_fixtures(db: &Sql) {
+pub async fn entity_fixtures(db: &mut Sql) {
     // Set entity with one moves model
     // remaining: 10, last_direction: 0
     let key = vec![FieldElement::ONE];

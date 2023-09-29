@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
 use anyhow::Result;
-use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use dojo_types::core::CairoType;
 use dojo_types::model::Ty;
@@ -11,7 +10,6 @@ use sqlx::sqlite::SqliteRow;
 use sqlx::{Executor, Pool, Row, Sqlite};
 use starknet::core::types::{Event, FieldElement};
 use starknet_crypto::poseidon_hash_many;
-use tokio::sync::Mutex;
 
 use super::World;
 use crate::simple_broker::SimpleBroker;
@@ -21,16 +19,10 @@ use crate::types::{Entity, Model as ModelType};
 #[path = "sql_test.rs"]
 mod test;
 
-#[async_trait]
-pub trait Executable {
-    async fn execute(&self) -> Result<()>;
-    async fn queue(&self, queries: Vec<String>);
-}
-
 pub struct Sql {
     world_address: FieldElement,
     pool: Pool<Sqlite>,
-    query_queue: Mutex<Vec<String>>,
+    query_queue: Vec<String>,
 }
 
 impl Sql {
@@ -54,10 +46,10 @@ impl Sql {
 
         tx.commit().await?;
 
-        Ok(Self { pool, world_address, query_queue: Mutex::new(vec![]) })
+        Ok(Self { pool, world_address, query_queue: vec![] })
     }
 
-    pub async fn load_from_manifest(&self, manifest: Manifest) -> Result<()> {
+    pub async fn load_from_manifest(&mut self, manifest: Manifest) -> Result<()> {
         let mut updates = vec![
             format!("world_address = '{:#x}'", self.world_address),
             format!("world_class_hash = '{:#x}'", manifest.world.class_hash),
@@ -68,12 +60,11 @@ impl Sql {
             updates.push(format!("executor_address = '{:#x}'", executor_address));
         }
 
-        self.queue(vec![format!(
+        self.query_queue.push(format!(
             "UPDATE worlds SET {} WHERE id = '{:#x}'",
             updates.join(","),
             self.world_address
-        )])
-        .await;
+        ));
 
         for system in manifest.systems {
             self.register_system(system).await?;
@@ -93,12 +84,11 @@ impl Sql {
         Ok(indexer.0.try_into().expect("doesnt fit in u64"))
     }
 
-    pub async fn set_head(&self, head: u64) -> Result<()> {
-        self.queue(vec![format!(
+    pub async fn set_head(&mut self, head: u64) -> Result<()> {
+        self.query_queue.push(format!(
             "UPDATE indexers SET head = {head} WHERE id = '{:#x}'",
             self.world_address
-        )])
-        .await;
+        ));
         Ok(())
     }
 
@@ -112,8 +102,8 @@ impl Sql {
         Ok(meta)
     }
 
-    pub async fn set_world(&self, world: World) -> Result<()> {
-        self.queue(vec![format!(
+    pub async fn set_world(&mut self, world: World) -> Result<()> {
+        self.query_queue.push(format!(
             "UPDATE worlds SET world_address='{:#x}', world_class_hash='{:#x}', \
              executor_address='{:#x}', executor_class_hash='{:#x}' WHERE id = '{:#x}'",
             world.world_address,
@@ -121,44 +111,34 @@ impl Sql {
             world.executor_address,
             world.executor_class_hash,
             world.world_address,
-        )])
-        .await;
+        ));
         Ok(())
     }
 
     pub async fn register_model(
-        &self,
-        schema: Ty,
+        &mut self,
+        model: Ty,
         layout: Vec<FieldElement>,
         class_hash: FieldElement,
     ) -> Result<()> {
-        let types = schema.flatten();
-
-        let root = types.first().unwrap();
-        let root_name = root.name();
-
         let layout_blob = layout.iter().map(|x| (*x).try_into().unwrap()).collect::<Vec<u8>>();
-        let mut queries = vec![format!(
+        self.query_queue.push(format!(
             "INSERT INTO models (id, name, class_hash, layout) VALUES ('{}', '{}', '{:#x}', '{}') \
              ON CONFLICT(id) DO UPDATE SET class_hash='{:#x}'",
-            root_name,
-            root_name,
+            model.name(),
+            model.name(),
             class_hash,
             hex::encode(&layout_blob),
             class_hash
-        )];
-        queries.extend(build_model_query(root, 0, None));
+        ));
 
-        for (model_idx, ty) in types[1..].iter().enumerate() {
-            queries.extend(build_model_query(ty, model_idx + 1, Some(root_name.clone())));
-        }
-
-        self.queue(queries).await;
+        let mut model_idx = 0_usize;
+        self.build_queries_recursive(&model, vec![model.name()], &mut model_idx);
 
         // Since previous query has not been executed, we have to make sure created_at exists
         let created_at: DateTime<Utc> =
             match sqlx::query("SELECT created_at FROM models WHERE id = ?")
-                .bind(root_name.clone())
+                .bind(model.name())
                 .fetch_one(&self.pool)
                 .await
             {
@@ -167,8 +147,8 @@ impl Sql {
             };
 
         SimpleBroker::publish(ModelType {
-            id: root_name.clone(),
-            name: root_name,
+            id: model.name(),
+            name: model.name(),
             class_hash: format!("{:#x}", class_hash),
             transaction_hash: "0x0".to_string(),
             created_at,
@@ -176,18 +156,18 @@ impl Sql {
         Ok(())
     }
 
-    pub async fn register_system(&self, system: System) -> Result<()> {
+    pub async fn register_system(&mut self, system: System) -> Result<()> {
         let query = format!(
             "INSERT INTO systems (id, name, class_hash) VALUES ('{}', '{}', '{:#x}') ON \
              CONFLICT(id) DO UPDATE SET class_hash='{:#x}'",
             system.name, system.name, system.class_hash, system.class_hash
         );
-        self.queue(vec![query]).await;
+        self.query_queue.push(query);
         Ok(())
     }
 
     pub async fn set_entity(
-        &self,
+        &mut self,
         model: String,
         keys: Vec<FieldElement>,
         values: Vec<FieldElement>,
@@ -200,12 +180,12 @@ impl Sql {
 
         let keys_str = felts_sql_string(&keys);
         let model_names = model_names_sql_string(entity_result, &model)?;
-        let mut queries = vec![format!(
+        self.query_queue.push(format!(
             "INSERT INTO entities (id, keys, model_names) VALUES ('{}', '{}', '{}') ON \
              CONFLICT(id) DO UPDATE SET model_names=excluded.model_names, \
              updated_at=CURRENT_TIMESTAMP",
             entity_id, keys_str, model_names
-        )];
+        ));
 
         let members: Vec<(String, String, String)> = sqlx::query_as(
             "SELECT id, name, type FROM model_members WHERE model_id = ? ORDER BY model_idx, \
@@ -235,10 +215,8 @@ impl Sql {
             })
             .collect();
 
-        queries.extend(insert_models);
-
         // tx commit required
-        self.queue(queries).await;
+        self.query_queue.extend(insert_models);
         self.execute().await?;
 
         let query_result = sqlx::query("SELECT created_at FROM entities WHERE id = ?")
@@ -257,9 +235,9 @@ impl Sql {
         Ok(())
     }
 
-    pub async fn delete_entity(&self, model: String, key: FieldElement) -> Result<()> {
+    pub async fn delete_entity(&mut self, model: String, key: FieldElement) -> Result<()> {
         let query = format!("DELETE FROM {model} WHERE id = {key}");
-        self.queue(vec![query]).await;
+        self.query_queue.push(query);
         Ok(())
     }
 
@@ -279,7 +257,7 @@ impl Sql {
     }
 
     pub async fn store_system_call(
-        &self,
+        &mut self,
         system: String,
         transaction_hash: FieldElement,
         calldata: &[FieldElement],
@@ -291,12 +269,12 @@ impl Sql {
             transaction_hash,
             system
         );
-        self.queue(vec![query]).await;
+        self.query_queue.push(query);
         Ok(())
     }
 
     pub async fn store_event(
-        &self,
+        &mut self,
         event: &Event,
         event_idx: usize,
         transaction_hash: FieldElement,
@@ -311,25 +289,101 @@ impl Sql {
             id, keys_str, data_str, transaction_hash
         );
 
-        self.queue(vec![query]).await;
+        self.query_queue.push(query);
         Ok(())
     }
-}
 
-#[async_trait]
-impl Executable for Sql {
-    async fn queue(&self, queries: Vec<String>) {
-        let mut query_queue = self.query_queue.lock().await;
-        query_queue.extend(queries);
+    fn build_queries_recursive(
+        &mut self,
+        model: &Ty,
+        table_path: Vec<String>,
+        model_idx: &mut usize,
+    ) {
+        self.build_model_query(table_path.clone(), model, *model_idx);
+
+        match model {
+            Ty::Struct(s) => {
+                for member in s.children.iter() {
+                    if let Ty::Terminal(_) = member.ty {
+                        continue;
+                    }
+
+                    let mut table_path_clone = table_path.clone();
+                    table_path_clone.push(member.ty.name());
+
+                    self.build_queries_recursive(
+                        &member.ty,
+                        table_path_clone,
+                        &mut (*model_idx + 1),
+                    );
+                }
+            }
+            Ty::Enum(e) => {
+                for ty in e.children.iter() {
+                    if let Ty::Terminal(_) = ty {
+                        continue;
+                    }
+
+                    let mut table_path_clone = table_path.clone();
+                    table_path_clone.push(ty.name());
+                    self.build_model_query(table_path_clone.clone(), ty, *model_idx);
+                    self.build_queries_recursive(ty, table_path_clone, &mut (*model_idx + 1));
+                }
+            }
+            _ => {}
+        }
     }
 
-    async fn execute(&self) -> Result<()> {
-        let queries;
-        {
-            let mut query_queue = self.query_queue.lock().await;
-            queries = query_queue.clone();
-            query_queue.clear();
+    fn build_model_query(&mut self, table_path: Vec<String>, model: &Ty, model_idx: usize) {
+        let table_id = table_path.join("$");
+
+        let mut query = format!(
+            "CREATE TABLE IF NOT EXISTS [{table_id}] (entity_id TEXT NOT NULL PRIMARY KEY, "
+        );
+
+        match model {
+            Ty::Struct(s) => {
+                for (member_idx, member) in s.children.iter().enumerate() {
+                    if let Ok(cairo_type) = CairoType::from_str(&member.ty.name()) {
+                        query.push_str(&format!(
+                            "external_{} {}, ",
+                            member.name,
+                            cairo_type.to_sql_type()
+                        ));
+                    };
+
+                    self.query_queue.push(format!(
+                        "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, \
+                         member_idx, name, type, key) VALUES ('{table_id}', '{}', '{model_idx}', \
+                         '{member_idx}', '{}', '{}', {})",
+                        table_path[0],
+                        member.name,
+                        member.ty.name(),
+                        member.key,
+                    ));
+                }
+            }
+            Ty::Enum(_) => {}
+            _ => {}
         }
+
+        query.push_str("created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ");
+
+        // If this is not the Model's root table, create a reference to the parent.
+        if table_path.len() > 1 {
+            let parent_table_id = table_path[..table_path.len() - 1].join("$");
+            query.push_str(&format!(
+                "FOREIGN KEY (entity_id) REFERENCES {parent_table_id} (entity_id), "
+            ));
+        };
+
+        query.push_str("FOREIGN KEY (entity_id) REFERENCES entities(id));");
+        self.query_queue.push(query);
+    }
+
+    pub async fn execute(&mut self) -> Result<()> {
+        let queries = self.query_queue.clone();
+        self.query_queue.clear();
 
         let mut tx = self.pool.begin().await?;
         for query in queries {
@@ -360,52 +414,4 @@ fn model_names_sql_string(entity_result: Option<SqliteRow>, new_model: &str) -> 
 
 fn felts_sql_string(felts: &[FieldElement]) -> String {
     felts.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join("/") + "/"
-}
-
-fn build_model_query(model: &Ty, model_idx: usize, parent_id: Option<String>) -> Vec<String> {
-    let name = if let Some(parent_id) = parent_id.clone() {
-        format!("{parent_id}${}", model.name())
-    } else {
-        model.name()
-    };
-    let model_id = if let Some(parent_id) = parent_id.clone() { parent_id } else { model.name() };
-
-    let mut queries = vec![];
-    let mut query =
-        format!("CREATE TABLE IF NOT EXISTS [{}] (entity_id TEXT NOT NULL PRIMARY KEY, ", name);
-
-    match model {
-        Ty::Struct(s) => {
-            for (member_idx, member) in s.children.iter().enumerate() {
-                if let Ok(cairo_type) = CairoType::from_str(&member.ty.name()) {
-                    query.push_str(&format!(
-                        "external_{} {}, ",
-                        member.name,
-                        cairo_type.to_sql_type()
-                    ));
-                };
-
-                queries.push(format!(
-                    "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, member_idx, \
-                     name, type, key) VALUES ('{name}', '{model_id}', '{model_idx}', \
-                     '{member_idx}', '{}', '{}', {})",
-                    member.name,
-                    member.ty.name(),
-                    member.key,
-                ));
-            }
-        }
-        Ty::Enum(_) => {}
-        _ => {}
-    }
-
-    query.push_str("created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ");
-
-    if let Some(id) = parent_id {
-        query.push_str(&format!("FOREIGN KEY (entity_id) REFERENCES {id} (entity_id), "));
-    };
-
-    query.push_str("FOREIGN KEY (entity_id) REFERENCES entities(id));");
-    queries.push(query);
-    queries
 }

@@ -19,7 +19,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_entity() {
         let pool = create_pool().await;
-        let db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
+        let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
         let migration = prepare_migration("../../../examples/ecs/target/dev".into()).unwrap();
         let sequencer =
             TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config())
@@ -27,9 +27,9 @@ mod tests {
         let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
         let world = WorldContractReader::new(migration.world_address().unwrap(), &provider);
 
-        let _ = bootstrap_engine(&world, &db, &provider, &migration, &sequencer).await;
+        let _ = bootstrap_engine(&world, &mut db, &provider, &migration, &sequencer).await;
 
-        entity_fixtures(&db).await;
+        entity_fixtures(&mut db).await;
 
         let entity_id = poseidon_hash_many(&[FieldElement::ONE]);
         let query = format!(
@@ -52,8 +52,8 @@ mod tests {
     #[ignore]
     #[sqlx::test(migrations = "../migrations")]
     async fn test_entity_models(pool: SqlitePool) {
-        let db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
-        entity_fixtures(&db).await;
+        let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
+        entity_fixtures(&mut db).await;
 
         let entity_id = poseidon_hash_many(&[FieldElement::THREE]);
         let query = format!(
@@ -92,8 +92,8 @@ mod tests {
 
     #[sqlx::test(migrations = "../migrations")]
     async fn test_entities_pagination(pool: SqlitePool) {
-        let db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
-        entity_fixtures(&db).await;
+        let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
+        entity_fixtures(&mut db).await;
 
         let page_size = 2;
 
