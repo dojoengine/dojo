@@ -81,9 +81,7 @@ impl EthereumMessaging {
         from_block: u64,
         to_block: u64,
     ) -> MessengerResult<HashMap<u64, Vec<Log>>> {
-        trace!(
-            target: LOG_TARGET,
-            "Fetching logs for blocks {} - {}.", from_block, to_block);
+        trace!(target: LOG_TARGET, "Fetching logs for blocks {} - {}.", from_block, to_block);
 
         let mut logs: HashMap<u64, Vec<Log>> = HashMap::new();
 
