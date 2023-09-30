@@ -21,7 +21,7 @@ pub mod block_producer;
 pub mod messaging;
 
 #[cfg(feature = "messaging")]
-use self::messaging::service::{MessagingOutcome, MessagingService};
+use self::messaging::{MessagingOutcome, MessagingService};
 
 /// The type that drives the blockchain's state
 ///

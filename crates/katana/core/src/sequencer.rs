@@ -27,13 +27,12 @@ use crate::execution::{MaybeInvalidExecutedTransaction, PendingState};
 use crate::pool::TransactionPool;
 use crate::sequencer_error::SequencerError;
 use crate::service::block_producer::{BlockProducer, BlockProducerMode};
-use crate::service::{NodeService, TransactionMiner};
-use crate::utils::event::{ContinuationToken, ContinuationTokenError};
-
-#[cfg(feature = "messaging")]
-use crate::service::messaging::service::MessagingService;
 #[cfg(feature = "messaging")]
 use crate::service::messaging::MessagingConfig;
+#[cfg(feature = "messaging")]
+use crate::service::messaging::MessagingService;
+use crate::service::{NodeService, TransactionMiner};
+use crate::utils::event::{ContinuationToken, ContinuationTokenError};
 
 type SequencerResult<T> = Result<T, SequencerError>;
 

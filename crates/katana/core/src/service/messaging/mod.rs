@@ -1,7 +1,7 @@
 //! TODO: Add module documentation.
 
 mod ethereum;
-pub mod service;
+mod service;
 mod starknet;
 
 use std::path::Path;
@@ -16,6 +16,7 @@ use ethers::providers::ProviderError as EthereumProviderError;
 use serde::Deserialize;
 use tracing::{error, info};
 
+pub use self::service::{MessagingOutcome, MessagingService};
 use self::starknet::StarknetMessaging;
 
 pub(crate) const LOG_TARGET: &str = "messaging";
