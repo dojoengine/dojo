@@ -1,3 +1,5 @@
+//! TODO: Add module documentation.
+
 mod ethereum;
 pub mod service;
 mod starknet;
@@ -49,21 +51,22 @@ impl From<EthereumProviderError> for Error {
 /// The config used to initialize the messaging service.
 #[derive(Debug, Default, Deserialize, Clone)]
 pub struct MessagingConfig {
-    // The RPC-URL of the settlement chain.
+    /// The RPC-URL of the settlement chain.
     pub rpc_url: String,
-    // The messaging-contract address on the settlement chain.
+    /// The messaging-contract address on the settlement chain.
     pub contract_address: String,
-    // The sender address associated to the private key.
+    /// The sender address associated to the private key.
     pub sender_address: String,
-    // The private key to send transaction on the settlement chain.
+    /// The private key to send transaction on the settlement chain.
     pub private_key: String,
-    // The interval at which Katana will fetch messages from settlement chain.
+    /// The interval at which Katana will fetch messages from settlement chain.
     pub fetch_interval: u64,
-    // The block on settlement chain from where Katana will start fetching messages.
+    /// The block on settlement chain from where Katana will start fetching messages.
     pub from_block: u64,
 }
 
 impl MessagingConfig {
+    /// Load the config from a JSON file.
     pub fn load(path: impl AsRef<Path>) -> Result<Self, std::io::Error> {
         let buf = std::fs::read(path)?;
         serde_json::from_slice(&buf).map_err(|e| e.into())
