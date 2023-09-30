@@ -26,7 +26,7 @@ impl InlineMacroExprPlugin for GetMacro {
         let mut builder = PatchBuilder::new(db);
         builder.add_str(
             "{
-                let mut __get_macro_keys__ = array::ArrayTrait::new();",
+                let mut __get_macro_keys__ = array::ArrayTrait::new();\n",
         );
 
         let args = arg_list.args(db).elements(db);
@@ -75,7 +75,7 @@ impl InlineMacroExprPlugin for GetMacro {
 
         builder.add_str(&format!(
             "serde::Serde::serialize(@{args}, ref __get_macro_keys__);
-            let __get_macro_keys__ = array::ArrayTrait::span(@__get_macro_keys__);"
+            let __get_macro_keys__ = array::ArrayTrait::span(@__get_macro_keys__);\n"
         ));
 
         for model in &models {
@@ -92,8 +92,8 @@ impl InlineMacroExprPlugin for GetMacro {
                  let mut __{model}_layout_span__ = array::ArrayTrait::span(@__{model}_layout__);
                  let mut __{model}_layout_clone_span__ = \
                  array::ArrayTrait::span(@__{model}_layout_clone__);
-                 let mut __{model}_values__ = {}.entity('{model}', __get_macro_keys__, 0_u8, \
-                 dojo::packing::calculate_packed_size(ref __{model}_layout_clone_span__), \
+                 let mut __{model}_values__ = {}.entity('{model}', __get_macro_keys__, 0_u8,
+                 dojo::packing::calculate_packed_size(ref __{model}_layout_clone_span__),
                  __{model}_layout_span__);
                  let mut __{model}_model__ = array::ArrayTrait::new();
                  array::serialize_array_helper(__get_macro_keys__, ref __{model}_model__);

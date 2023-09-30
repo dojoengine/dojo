@@ -1,0 +1,408 @@
+//! > Test no params
+
+//! > test_runner_name
+test_semantics
+
+//! > setup_code
+
+//! > expression
+get!()
+
+//! > expected
+Missing(
+    ExprMissing {
+        ty: <missing>,
+    },
+)
+
+//! > semantic_diagnostics
+error: Plugin diagnostic: Invalid arguments. Expected "get!(world, keys, (models,))"
+ --> lib.cairo:2:1
+get!()
+^****^
+
+error: Inline macro `get` failed.
+ --> lib.cairo:2:1
+get!()
+^****^
+
+//! > ==========================================================================
+
+//! > Test wrong params
+
+//! > test_runner_name
+test_semantics
+
+//! > setup_code
+
+//! > expression
+get!(world)
+
+//! > expected
+Missing(
+    ExprMissing {
+        ty: <missing>,
+    },
+)
+
+//! > semantic_diagnostics
+error: Plugin diagnostic: Invalid arguments. Expected "get!(world, keys, (models,))"
+ --> lib.cairo:2:1
+get!(world)
+^*********^
+
+error: Inline macro `get` failed.
+ --> lib.cairo:2:1
+get!(world)
+^*********^
+
+//! > ==========================================================================
+
+//! > Test world and keys
+
+//! > dojo_semantic
+get_success
+
+//! > test_runner_name
+test_semantics
+
+//! > setup_code
+
+//! > expression
+get!(world, key, (Health))
+
+//! > expected
+Block(
+    ExprBlock {
+        statements: [
+            Let(
+                StatementLet {
+                    pattern: Variable(
+                        __get_macro_keys__,
+                    ),
+                    expr: FunctionCall(
+                        ExprFunctionCall {
+                            function: ?0::new,
+                            args: [],
+                            ty: core::array::Array::<?0>,
+                        },
+                    ),
+                },
+            ),
+            Expr(
+                StatementExpr {
+                    expr: FunctionCall(
+                        ExprFunctionCall {
+                            function: ?1::serialize,
+                            args: [
+                                Value(
+                                    Snapshot(
+                                        ExprSnapshot {
+                                            inner: Missing(
+                                                ExprMissing {
+                                                    ty: <missing>,
+                                                },
+                                            ),
+                                            ty: @<missing>,
+                                        },
+                                    ),
+                                ),
+                                Reference(
+                                    LocalVarId(test::__get_macro_keys__),
+                                ),
+                            ],
+                            ty: (),
+                        },
+                    ),
+                },
+            ),
+            Let(
+                StatementLet {
+                    pattern: Variable(
+                        __get_macro_keys__,
+                    ),
+                    expr: FunctionCall(
+                        ExprFunctionCall {
+                            function: ?2::span,
+                            args: [
+                                Value(
+                                    Snapshot(
+                                        ExprSnapshot {
+                                            inner: Var(
+                                                LocalVarId(test::__get_macro_keys__),
+                                            ),
+                                            ty: @core::array::Array::<core::felt252>,
+                                        },
+                                    ),
+                                ),
+                            ],
+                            ty: core::array::Span::<?2>,
+                        },
+                    ),
+                },
+            ),
+            Let(
+                StatementLet {
+                    pattern: Variable(
+                        __Health_layout__,
+                    ),
+                    expr: FunctionCall(
+                        ExprFunctionCall {
+                            function: ?3::new,
+                            args: [],
+                            ty: core::array::Array::<?3>,
+                        },
+                    ),
+                },
+            ),
+            Expr(
+                StatementExpr {
+                    expr: Missing(
+                        ExprMissing {
+                            ty: <missing>,
+                        },
+                    ),
+                },
+            ),
+            Let(
+                StatementLet {
+                    pattern: Variable(
+                        __Health_layout_clone__,
+                    ),
+                    expr: FunctionCall(
+                        ExprFunctionCall {
+                            function: ?4::clone,
+                            args: [
+                                Value(
+                                    Snapshot(
+                                        ExprSnapshot {
+                                            inner: Var(
+                                                LocalVarId(test::__Health_layout__),
+                                            ),
+                                            ty: @core::array::Array::<?3>,
+                                        },
+                                    ),
+                                ),
+                            ],
+                            ty: core::array::Array::<?3>,
+                        },
+                    ),
+                },
+            ),
+            Let(
+                StatementLet {
+                    pattern: Variable(
+                        __Health_layout_span__,
+                    ),
+                    expr: FunctionCall(
+                        ExprFunctionCall {
+                            function: ?5::span,
+                            args: [
+                                Value(
+                                    Snapshot(
+                                        ExprSnapshot {
+                                            inner: Var(
+                                                LocalVarId(test::__Health_layout__),
+                                            ),
+                                            ty: @core::array::Array::<?3>,
+                                        },
+                                    ),
+                                ),
+                            ],
+                            ty: core::array::Span::<?5>,
+                        },
+                    ),
+                },
+            ),
+            Let(
+                StatementLet {
+                    pattern: Variable(
+                        __Health_layout_clone_span__,
+                    ),
+                    expr: FunctionCall(
+                        ExprFunctionCall {
+                            function: ?6::span,
+                            args: [
+                                Value(
+                                    Snapshot(
+                                        ExprSnapshot {
+                                            inner: Var(
+                                                LocalVarId(test::__Health_layout_clone__),
+                                            ),
+                                            ty: @core::array::Array::<?3>,
+                                        },
+                                    ),
+                                ),
+                            ],
+                            ty: core::array::Span::<?6>,
+                        },
+                    ),
+                },
+            ),
+            Let(
+                StatementLet {
+                    pattern: Variable(
+                        __Health_values__,
+                    ),
+                    expr: Missing(
+                        ExprMissing {
+                            ty: <missing>,
+                        },
+                    ),
+                },
+            ),
+            Let(
+                StatementLet {
+                    pattern: Variable(
+                        __Health_model__,
+                    ),
+                    expr: FunctionCall(
+                        ExprFunctionCall {
+                            function: ?7::new,
+                            args: [],
+                            ty: core::array::Array::<?7>,
+                        },
+                    ),
+                },
+            ),
+            Expr(
+                StatementExpr {
+                    expr: FunctionCall(
+                        ExprFunctionCall {
+                            function: core::array::serialize_array_helper::<?8, ?8, ?9>,
+                            args: [
+                                Value(
+                                    Var(
+                                        LocalVarId(test::__get_macro_keys__),
+                                    ),
+                                ),
+                                Reference(
+                                    LocalVarId(test::__Health_model__),
+                                ),
+                            ],
+                            ty: (),
+                        },
+                    ),
+                },
+            ),
+            Expr(
+                StatementExpr {
+                    expr: FunctionCall(
+                        ExprFunctionCall {
+                            function: core::array::serialize_array_helper::<?9, ?10, ?11>,
+                            args: [
+                                Value(
+                                    Var(
+                                        LocalVarId(test::__Health_values__),
+                                    ),
+                                ),
+                                Reference(
+                                    LocalVarId(test::__Health_model__),
+                                ),
+                            ],
+                            ty: (),
+                        },
+                    ),
+                },
+            ),
+            Let(
+                StatementLet {
+                    pattern: Variable(
+                        __Health_model_span__,
+                    ),
+                    expr: FunctionCall(
+                        ExprFunctionCall {
+                            function: ?12::span,
+                            args: [
+                                Value(
+                                    Snapshot(
+                                        ExprSnapshot {
+                                            inner: Var(
+                                                LocalVarId(test::__Health_model__),
+                                            ),
+                                            ty: @core::array::Array::<core::felt252>,
+                                        },
+                                    ),
+                                ),
+                            ],
+                            ty: core::array::Span::<?10>,
+                        },
+                    ),
+                },
+            ),
+            Let(
+                StatementLet {
+                    pattern: Variable(
+                        __Health,
+                    ),
+                    expr: FunctionCall(
+                        ExprFunctionCall {
+                            function: ?13::expect,
+                            args: [
+                                Value(
+                                    FunctionCall(
+                                        ExprFunctionCall {
+                                            function: ?14::deserialize,
+                                            args: [
+                                                Reference(
+                                                    LocalVarId(test::__Health_model_span__),
+                                                ),
+                                            ],
+                                            ty: core::option::Option::<<missing>>,
+                                        },
+                                    ),
+                                ),
+                                Value(
+                                    Literal(
+                                        ExprLiteral {
+                                            value: 7624190543980043505746182176517533098884860453715398488377751337573,
+                                            ty: ?12,
+                                        },
+                                    ),
+                                ),
+                            ],
+                            ty: ?11,
+                        },
+                    ),
+                },
+            ),
+        ],
+        tail: Some(
+            Var(
+                LocalVarId(test::__Health),
+            ),
+        ),
+        ty: <missing>,
+    },
+)
+
+//! > semantic_diagnostics
+error: Identifier not found.
+ --> get_inline_macro:3:26
+serde::Serde::serialize(@key, ref __get_macro_keys__);
+                         ^*^
+
+error: Identifier not found.
+ --> get_inline_macro:7:18
+                 dojo::database::schema::SchemaIntrospection::<Health>::layout(ref __Health_layout__);
+                 ^**^
+
+error: Identifier not found.
+ --> get_inline_macro:11:46
+                 let mut __Health_values__ = world.entity('Health', __get_macro_keys__, 0_u8,
+                                             ^***^
+
+error: Method `entity` not found on type "<missing>". Did you import the correct trait and impl?
+ --> get_inline_macro:11:52
+                 let mut __Health_values__ = world.entity('Health', __get_macro_keys__, 0_u8,
+                                                   ^****^
+
+error: Type not found.
+ --> get_inline_macro:18:76
+                 let __Health = option::OptionTrait::expect(serde::Serde::<Health>::deserialize(
+                                                                           ^****^
+
+error: Type annotations needed. Failed to infer ?3
+ --> get_inline_macro:6:48
+            let mut __Health_layout__ = array::ArrayTrait::new();
+                                               ^********^

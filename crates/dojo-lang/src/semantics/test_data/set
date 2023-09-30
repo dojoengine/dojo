@@ -1,0 +1,139 @@
+//! > no params
+
+//! > test_runner_name
+test_semantics
+
+//! > setup_code
+
+//! > expression
+set!()
+
+//! > expected
+Missing(
+    ExprMissing {
+        ty: <missing>,
+    },
+)
+
+//! > semantic_diagnostics
+error: Plugin diagnostic: Invalid arguments. Expected "(world, (models,))"
+ --> lib.cairo:2:1
+set!()
+^****^
+
+error: Inline macro `set` failed.
+ --> lib.cairo:2:1
+set!()
+^****^
+
+//! > ==========================================================================
+
+//! > incorrect args
+
+//! > test_runner_name
+test_semantics
+
+//! > setup_code
+
+//! > expression
+set!(world)
+
+//! > expected
+Missing(
+    ExprMissing {
+        ty: <missing>,
+    },
+)
+
+//! > semantic_diagnostics
+error: Plugin diagnostic: Invalid arguments. Expected "(world, (models,))"
+ --> lib.cairo:2:1
+set!(world)
+^*********^
+
+error: Inline macro `set` failed.
+ --> lib.cairo:2:1
+set!(world)
+^*********^
+
+//! > ==========================================================================
+
+//! > set successful expansion
+
+//! > dojo_semantic
+set_success
+
+//! > test_runner_name
+test_semantics
+
+//! > setup_code
+struct Health {
+	id: u128,
+	v: u16
+}
+
+//! > expression
+set!(world, (Health{id: 0xb0b, v: 79}))
+
+//! > expected
+Block(
+    ExprBlock {
+        statements: [
+            Let(
+                StatementLet {
+                    pattern: Variable(
+                        __set_macro_value__,
+                    ),
+                    expr: StructCtor(
+                        ExprStructCtor {
+                            concrete_struct_id: test::Health,
+                            members: [
+                                (
+                                    MemberId(test::id),
+                                    Literal(
+                                        ExprLiteral {
+                                            value: 2827,
+                                            ty: core::integer::u128,
+                                        },
+                                    ),
+                                ),
+                                (
+                                    MemberId(test::v),
+                                    Literal(
+                                        ExprLiteral {
+                                            value: 79,
+                                            ty: core::integer::u16,
+                                        },
+                                    ),
+                                ),
+                            ],
+                            ty: test::Health,
+                        },
+                    ),
+                },
+            ),
+            Expr(
+                StatementExpr {
+                    expr: Missing(
+                        ExprMissing {
+                            ty: <missing>,
+                        },
+                    ),
+                },
+            ),
+        ],
+        tail: None,
+        ty: (),
+    },
+)
+
+//! > semantic_diagnostics
+error: Identifier not found.
+ --> set_inline_macro:3:17
+                world.set_entity(dojo::model::Model::name(@__set_macro_value__),
+                ^***^
+
+error: Method `set_entity` not found on type "<missing>". Did you import the correct trait and impl?
+ --> set_inline_macro:3:23
+                world.set_entity(dojo::model::Model::name(@__set_macro_value__),
+                      ^********^

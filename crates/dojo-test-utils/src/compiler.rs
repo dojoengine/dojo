@@ -1,4 +1,5 @@
 use std::env;
+use std::path::PathBuf;
 
 use assert_fs::TempDir;
 use camino::{Utf8Path, Utf8PathBuf};
@@ -6,6 +7,7 @@ use dojo_lang::compiler::DojoCompiler;
 use dojo_lang::plugin::CairoPluginRepository;
 use scarb::compiler::CompilerRepository;
 use scarb::core::Config;
+use scarb::ops;
 use scarb_ui::Verbosity;
 
 pub fn build_test_config(path: &str) -> anyhow::Result<Config> {
@@ -26,4 +28,13 @@ pub fn build_test_config(path: &str) -> anyhow::Result<Config> {
         .compilers(compilers)
         .cairo_plugins(cairo_plugins.into())
         .build()
+}
+
+pub fn get_test_corelib() -> PathBuf {
+    let config =
+        build_test_config("./src/manifest_test_data/example_ecs_crate/Scarb.toml").unwrap();
+    let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
+    let resolve = ops::resolve_workspace(&ws).unwrap();
+    let compilation_units = ops::generate_compilation_units(&resolve, &ws).unwrap();
+    compilation_units[0].core_package_component().target.source_root().into()
 }
