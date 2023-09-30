@@ -35,5 +35,7 @@ lazy_static! {
 
     // Storage slots
 
+    pub static ref ERC20_NAME_STORAGE_SLOT: StorageKey = stark_felt!("0x0341c1bdfd89f69748aa00b5742b03adbffd79b8e80cab5c50d91cd8c2a79be1").try_into().unwrap();
+    pub static ref ERC20_SYMBOL_STORAGE_SLOT: StorageKey = stark_felt!("0x00b6ce5410fca59d078ee9b2a4371a9d684c530d697c64fbef0ae6d5e8f0ac72").try_into().unwrap();
     pub static ref ERC20_DECIMALS_STORAGE_SLOT: StorageKey = stark_felt!("0x01f0d4aa99431d246bac9b8e48c33e888245b15e9678f64f9bdfc8823dc8f979").try_into().unwrap();
 }
