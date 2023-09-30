@@ -4,6 +4,19 @@
 test_semantics
 
 //! > setup_code
+use array::ArrayTrait;
+use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
+
+#[derive(Copy, Drop, Serde, Introspect)]
+struct Health {
+	#[key]
+	id: u32,
+	health: u16,
+}
+
+//! > function_code
+let key: felt252 = 0xb0b;
+let world = IWorldDispatcher{contract_address: 0x0.try_into().unwrap()};
 
 //! > expression
 get!()
@@ -17,12 +30,12 @@ Missing(
 
 //! > semantic_diagnostics
 error: Plugin diagnostic: Invalid arguments. Expected "get!(world, keys, (models,))"
- --> lib.cairo:2:1
+ --> lib.cairo:12:1
 get!()
 ^****^
 
 error: Inline macro `get` failed.
- --> lib.cairo:2:1
+ --> lib.cairo:12:1
 get!()
 ^****^
 
@@ -34,6 +47,19 @@ get!()
 test_semantics
 
 //! > setup_code
+use array::ArrayTrait;
+use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
+
+#[derive(Copy, Drop, Serde, Introspect)]
+struct Health {
+	#[key]
+	id: u32,
+	health: u16,
+}
+
+//! > function_code
+let key: felt252 = 0xb0b;
+let world = IWorldDispatcher{contract_address: 0x0.try_into().unwrap()};
 
 //! > expression
 get!(world)
@@ -47,18 +73,21 @@ Missing(
 
 //! > semantic_diagnostics
 error: Plugin diagnostic: Invalid arguments. Expected "get!(world, keys, (models,))"
- --> lib.cairo:2:1
+ --> lib.cairo:12:1
 get!(world)
 ^*********^
 
 error: Inline macro `get` failed.
- --> lib.cairo:2:1
+ --> lib.cairo:12:1
 get!(world)
 ^*********^
 
 //! > ==========================================================================
 
 //! > Test world and keys
+
+//! > no_diagnostics
+true
 
 //! > dojo_semantic
 get_success
@@ -67,6 +96,19 @@ get_success
 test_semantics
 
 //! > setup_code
+use array::ArrayTrait;
+use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
+
+#[derive(Copy, Drop, Serde, Introspect)]
+struct Health {
+	#[key]
+	id: u32,
+	health: u16,
+}
+
+//! > function_code
+let key: felt252 = 0xb0b;
+let world = IWorldDispatcher{contract_address: 0x0.try_into().unwrap()};
 
 //! > expression
 get!(world, key, (Health))
@@ -82,9 +124,9 @@ Block(
                     ),
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: ?0::new,
+                            function: core::array::ArrayImpl::<core::felt252>::new,
                             args: [],
-                            ty: core::array::Array::<?0>,
+                            ty: core::array::Array::<core::felt252>,
                         },
                     ),
                 },
@@ -93,17 +135,15 @@ Block(
                 StatementExpr {
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: ?1::serialize,
+                            function: core::Felt252Serde::serialize,
                             args: [
                                 Value(
                                     Snapshot(
                                         ExprSnapshot {
-                                            inner: Missing(
-                                                ExprMissing {
-                                                    ty: <missing>,
-                                                },
+                                            inner: Var(
+                                                LocalVarId(test::key),
                                             ),
-                                            ty: @<missing>,
+                                            ty: @core::felt252,
                                         },
                                     ),
                                 ),
@@ -123,7 +163,7 @@ Block(
                     ),
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: ?2::span,
+                            function: core::array::ArrayImpl::<core::felt252>::span,
                             args: [
                                 Value(
                                     Snapshot(
@@ -136,7 +176,7 @@ Block(
                                     ),
                                 ),
                             ],
-                            ty: core::array::Span::<?2>,
+                            ty: core::array::Span::<core::felt252>,
                         },
                     ),
                 },
@@ -148,18 +188,24 @@ Block(
                     ),
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: ?3::new,
+                            function: core::array::ArrayImpl::<core::integer::u8>::new,
                             args: [],
-                            ty: core::array::Array::<?3>,
+                            ty: core::array::Array::<core::integer::u8>,
                         },
                     ),
                 },
             ),
             Expr(
                 StatementExpr {
-                    expr: Missing(
-                        ExprMissing {
-                            ty: <missing>,
+                    expr: FunctionCall(
+                        ExprFunctionCall {
+                            function: test::HealthSchemaIntrospection::layout,
+                            args: [
+                                Reference(
+                                    LocalVarId(test::__Health_layout__),
+                                ),
+                            ],
+                            ty: (),
                         },
                     ),
                 },
@@ -171,7 +217,7 @@ Block(
                     ),
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: ?4::clone,
+                            function: core::array::ArrayTCloneImpl::<core::integer::u8, core::clone::TCopyClone::<core::integer::u8, core::integer::u8Copy>, core::integer::u8Drop>::clone,
                             args: [
                                 Value(
                                     Snapshot(
@@ -179,12 +225,12 @@ Block(
                                             inner: Var(
                                                 LocalVarId(test::__Health_layout__),
                                             ),
-                                            ty: @core::array::Array::<?3>,
+                                            ty: @core::array::Array::<core::integer::u8>,
                                         },
                                     ),
                                 ),
                             ],
-                            ty: core::array::Array::<?3>,
+                            ty: core::array::Array::<core::integer::u8>,
                         },
                     ),
                 },
@@ -196,7 +242,7 @@ Block(
                     ),
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: ?5::span,
+                            function: core::array::ArrayImpl::<core::integer::u8>::span,
                             args: [
                                 Value(
                                     Snapshot(
@@ -204,12 +250,12 @@ Block(
                                             inner: Var(
                                                 LocalVarId(test::__Health_layout__),
                                             ),
-                                            ty: @core::array::Array::<?3>,
+                                            ty: @core::array::Array::<core::integer::u8>,
                                         },
                                     ),
                                 ),
                             ],
-                            ty: core::array::Span::<?5>,
+                            ty: core::array::Span::<core::integer::u8>,
                         },
                     ),
                 },
@@ -221,7 +267,7 @@ Block(
                     ),
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: ?6::span,
+                            function: core::array::ArrayImpl::<core::integer::u8>::span,
                             args: [
                                 Value(
                                     Snapshot(
@@ -229,12 +275,12 @@ Block(
                                             inner: Var(
                                                 LocalVarId(test::__Health_layout_clone__),
                                             ),
-                                            ty: @core::array::Array::<?3>,
+                                            ty: @core::array::Array::<core::integer::u8>,
                                         },
                                     ),
                                 ),
                             ],
-                            ty: core::array::Span::<?6>,
+                            ty: core::array::Span::<core::integer::u8>,
                         },
                     ),
                 },
@@ -244,9 +290,56 @@ Block(
                     pattern: Variable(
                         __Health_values__,
                     ),
-                    expr: Missing(
-                        ExprMissing {
-                            ty: <missing>,
+                    expr: FunctionCall(
+                        ExprFunctionCall {
+                            function: dojo::world::IWorldDispatcherImpl::entity,
+                            args: [
+                                Value(
+                                    Var(
+                                        LocalVarId(test::world),
+                                    ),
+                                ),
+                                Value(
+                                    Literal(
+                                        ExprLiteral {
+                                            value: 79600263394408,
+                                            ty: core::felt252,
+                                        },
+                                    ),
+                                ),
+                                Value(
+                                    Var(
+                                        LocalVarId(test::__get_macro_keys__),
+                                    ),
+                                ),
+                                Value(
+                                    Literal(
+                                        ExprLiteral {
+                                            value: 0,
+                                            ty: core::integer::u8,
+                                        },
+                                    ),
+                                ),
+                                Value(
+                                    FunctionCall(
+                                        ExprFunctionCall {
+                                            function: dojo::packing::calculate_packed_size,
+                                            args: [
+                                                Reference(
+                                                    LocalVarId(test::__Health_layout_clone_span__),
+                                                ),
+                                            ],
+                                            ty: core::integer::u32,
+                                        },
+                                    ),
+                                ),
+                                Value(
+                                    Var(
+                                        LocalVarId(test::__Health_layout_span__),
+                                    ),
+                                ),
+                            ],
+                            ty: core::array::Span::<core::felt252>,
                         },
                     ),
                 },
@@ -258,9 +351,9 @@ Block(
                     ),
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: ?7::new,
+                            function: core::array::ArrayImpl::<core::felt252>::new,
                             args: [],
-                            ty: core::array::Array::<?7>,
+                            ty: core::array::Array::<core::felt252>,
                         },
                     ),
                 },
@@ -269,7 +362,7 @@ Block(
                 StatementExpr {
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: core::array::serialize_array_helper::<?8, ?8, ?9>,
+                            function: core::array::serialize_array_helper::<core::felt252, core::Felt252Serde, core::felt252Drop>,
                             args: [
                                 Value(
                                     Var(
@@ -289,7 +382,7 @@ Block(
                 StatementExpr {
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: core::array::serialize_array_helper::<?9, ?10, ?11>,
+                            function: core::array::serialize_array_helper::<core::felt252, core::Felt252Serde, core::felt252Drop>,
                             args: [
                                 Value(
                                     Var(
@@ -312,7 +405,7 @@ Block(
                     ),
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: ?12::span,
+                            function: core::array::ArrayImpl::<core::felt252>::span,
                             args: [
                                 Value(
                                     Snapshot(
@@ -325,7 +418,7 @@ Block(
                                     ),
                                 ),
                             ],
-                            ty: core::array::Span::<?10>,
+                            ty: core::array::Span::<core::felt252>,
                         },
                     ),
                 },
@@ -337,18 +430,18 @@ Block(
                     ),
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: ?13::expect,
+                            function: core::option::OptionTraitImpl::<test::Health>::expect,
                             args: [
                                 Value(
                                     FunctionCall(
                                         ExprFunctionCall {
-                                            function: ?14::deserialize,
+                                            function: test::HealthSerde::deserialize,
                                             args: [
                                                 Reference(
                                                     LocalVarId(test::__Health_model_span__),
                                                 ),
                                             ],
-                                            ty: core::option::Option::<<missing>>,
+                                            ty: core::option::Option::<test::Health>,
                                         },
                                     ),
                                 ),
@@ -356,12 +449,12 @@ Block(
                                     Literal(
                                         ExprLiteral {
                                             value: 7624190543980043505746182176517533098884860453715398488377751337573,
-                                            ty: ?12,
+                                            ty: core::felt252,
                                         },
                                     ),
                                 ),
                             ],
-                            ty: ?11,
+                            ty: test::Health,
                         },
                     ),
                 },
@@ -372,37 +465,8 @@ Block(
                 LocalVarId(test::__Health),
             ),
         ),
-        ty: <missing>,
+        ty: test::Health,
     },
 )
 
 //! > semantic_diagnostics
-error: Identifier not found.
- --> get_inline_macro:3:26
-serde::Serde::serialize(@key, ref __get_macro_keys__);
-                         ^*^
-
-error: Identifier not found.
- --> get_inline_macro:7:18
-                 dojo::database::schema::SchemaIntrospection::<Health>::layout(ref __Health_layout__);
-                 ^**^
-
-error: Identifier not found.
- --> get_inline_macro:11:46
-                 let mut __Health_values__ = world.entity('Health', __get_macro_keys__, 0_u8,
-                                             ^***^
-
-error: Method `entity` not found on type "<missing>". Did you import the correct trait and impl?
- --> get_inline_macro:11:52
-                 let mut __Health_values__ = world.entity('Health', __get_macro_keys__, 0_u8,
-                                                   ^****^
-
-error: Type not found.
- --> get_inline_macro:18:76
-                 let __Health = option::OptionTrait::expect(serde::Serde::<Health>::deserialize(
-                                                                           ^****^
-
-error: Type annotations needed. Failed to infer ?3
- --> get_inline_macro:6:48
-            let mut __Health_layout__ = array::ArrayTrait::new();
-                                               ^********^

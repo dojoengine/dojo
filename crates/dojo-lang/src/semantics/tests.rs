@@ -26,6 +26,12 @@ pub fn test_semantics(
     let mut db = DojoSemanticDatabase::default();
     let (expr, diagnostics, expr_formatter) = semantics_test_setup(inputs, &mut db);
 
+    if inputs.get("no_diagnostics").is_some() {
+        if "" != diagnostics.as_str() {
+            return Err("Expanded get!() shouldn't have diagnostic issues.".into());
+        };
+    }
+
     if let Some(dojo_semantic) = inputs.get("dojo_semantic") {
         match dojo_semantic.as_str() {
             "get_success" => {
@@ -34,11 +40,6 @@ pub fn test_semantics(
                 } else {
                     return Err("Expression should be block".into());
                 }
-            }
-            "set_success" => {
-                diagnostics
-                    .find("Method `set_entity` not found")
-                    .expect("Expanded set!() should warn about missing world.set_entity");
             }
             _ => {}
         }
