@@ -12,8 +12,8 @@ use starknet_api::patricia_key;
 use starknet_api::state::StorageKey;
 
 use crate::constants::{
-    ERC20_CONTRACT, ERC20_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS, UDC_ADDRESS, UDC_CLASS_HASH,
-    UDC_CONTRACT,
+    ERC20_CONTRACT, ERC20_CONTRACT_CLASS_HASH, ERC20_DECIMALS_STORAGE_SLOT, FEE_TOKEN_ADDRESS,
+    UDC_ADDRESS, UDC_CLASS_HASH, UDC_CONTRACT,
 };
 use crate::db::cached::{AsCachedDb, CachedDb, ClassRecord, MaybeAsCachedDb, StorageRecord};
 use crate::db::serde::state::{
@@ -245,10 +245,13 @@ fn deploy_fee_contract(state: &mut MemDb) {
 
     state.db.classes.insert(hash, ClassRecord { class: (*ERC20_CONTRACT).clone(), compiled_hash });
     state.db.contracts.insert(address, hash);
-    state
-        .db
-        .storage
-        .insert(address, StorageRecord { nonce: Nonce(1_u128.into()), storage: HashMap::new() });
+    state.db.storage.insert(
+        address,
+        StorageRecord {
+            nonce: Nonce(1_u128.into()),
+            storage: [(*ERC20_DECIMALS_STORAGE_SLOT, 18_u128.into())].into_iter().collect(),
+        },
+    );
 }
 
 fn deploy_universal_deployer_contract(state: &mut MemDb) {
