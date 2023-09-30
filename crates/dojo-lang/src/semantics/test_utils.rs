@@ -48,7 +48,7 @@ impl DojoSemanticDatabase {
         init_files_group(&mut db);
         let mut plugins = get_default_plugins();
         plugins.push(Arc::new(StarkNetPlugin::default()));
-        plugins.push(Arc::new(DojoPlugin::default()));
+        plugins.push(Arc::new(DojoPlugin));
         db.set_macro_plugins(plugins);
 
         let mut inline_plugins = get_default_inline_macro_plugins();

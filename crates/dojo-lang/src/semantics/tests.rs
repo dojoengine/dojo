@@ -26,22 +26,17 @@ pub fn test_semantics(
     let mut db = DojoSemanticDatabase::default();
     let (expr, diagnostics, expr_formatter) = semantics_test_setup(inputs, &mut db);
 
-    if inputs.get("no_diagnostics").is_some() {
-        if "" != diagnostics.as_str() {
-            return Err("Expanded get!() shouldn't have diagnostic issues.".into());
-        };
+    if inputs.get("no_diagnostics").is_some() && "" != diagnostics.as_str() {
+        return Err("Expanded get!() shouldn't have diagnostic issues.".into());
     }
 
     if let Some(dojo_semantic) = inputs.get("dojo_semantic") {
-        match dojo_semantic.as_str() {
-            "get_success" => {
-                if let Expr::Block(blk) = &expr {
-                    blk.tail.expect("Expanded get!() should have a tail");
-                } else {
-                    return Err("Expression should be block".into());
-                }
+        if dojo_semantic.as_str() == "get_success" {
+            if let Expr::Block(blk) = &expr {
+                blk.tail.expect("Expanded get!() should have a tail");
+            } else {
+                return Err("Expression should be block".into());
             }
-            _ => {}
         }
     }
 
