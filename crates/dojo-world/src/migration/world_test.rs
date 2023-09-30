@@ -1,5 +1,5 @@
 use super::*;
-use crate::manifest::{Component, Contract, Manifest, System};
+use crate::manifest::{Contract, Manifest, Model, System};
 
 #[test]
 fn no_diff_when_local_and_remote_are_equal() {
@@ -17,9 +17,9 @@ fn no_diff_when_local_and_remote_are_equal() {
         ..Default::default()
     };
 
-    let components = vec![Component {
+    let models = vec![Model {
         members: vec![],
-        name: "Component".into(),
+        name: "Model".into(),
         class_hash: 11_u32.into(),
         ..Default::default()
     }];
@@ -28,7 +28,7 @@ fn no_diff_when_local_and_remote_are_equal() {
         vec![System { name: "System".into(), class_hash: 22_u32.into(), ..Default::default() }];
 
     let local = Manifest {
-        components,
+        models,
         world: world_contract,
         executor: executor_contract,
         systems,
@@ -55,9 +55,9 @@ fn diff_when_local_and_remote_are_different() {
         ..Default::default()
     };
 
-    let components = vec![Component {
+    let models = vec![Model {
         members: vec![],
-        name: "Component".into(),
+        name: "Model".into(),
         class_hash: 11_u32.into(),
         ..Default::default()
     }];
@@ -66,7 +66,7 @@ fn diff_when_local_and_remote_are_different() {
         vec![System { name: "System".into(), class_hash: 22_u32.into(), ..Default::default() }];
 
     let local = Manifest {
-        components,
+        models,
         world: world_contract,
         executor: executor_contract,
         systems,
@@ -76,7 +76,7 @@ fn diff_when_local_and_remote_are_different() {
     let mut remote = local.clone();
     remote.world.class_hash = 44_u32.into();
     remote.executor.class_hash = 55_u32.into();
-    remote.components[0].class_hash = 33_u32.into();
+    remote.models[0].class_hash = 33_u32.into();
 
     let diff = WorldDiff::compute(local, Some(remote));
 

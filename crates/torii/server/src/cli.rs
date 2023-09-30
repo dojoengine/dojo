@@ -1,5 +1,7 @@
 use std::env;
+use std::net::SocketAddr;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use anyhow::{anyhow, Context};
 use camino::Utf8PathBuf;
@@ -13,21 +15,16 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use tokio_util::sync::CancellationToken;
 use torii_client::contract::world::WorldContractReader;
-use torii_core::processors::register_component::RegisterComponentProcessor;
+use torii_core::engine::{Engine, EngineConfig, Processors};
+use torii_core::processors::register_model::RegisterModelProcessor;
 use torii_core::processors::register_system::RegisterSystemProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
-use torii_core::processors::store_system_call::StoreSystemCallProcessor;
 use torii_core::sql::Sql;
 use tracing::error;
 use tracing_subscriber::fmt;
 use url::Url;
-use warp::Filter;
 
-use crate::engine::Processors;
-use crate::indexer::Indexer;
-
-mod engine;
-mod indexer;
+mod server;
 
 /// Dojo World Indexer
 #[derive(Parser, Debug)]
@@ -51,12 +48,9 @@ struct Args {
     /// Host address for GraphQL/gRPC endpoints
     #[arg(long, default_value = "0.0.0.0")]
     host: String,
-    /// Port number for GraphQL endpoint
+    /// Port number for GraphQL/gRPC endpoints
     #[arg(long, default_value = "8080")]
-    graphql_port: u16,
-    /// Port number for gRPC endpoint
-    #[arg(long, default_value = "50051")]
-    grpc_port: u16,
+    port: u16,
 }
 
 #[tokio::main]
@@ -84,7 +78,7 @@ async fn main() -> anyhow::Result<()> {
     let pool = SqlitePoolOptions::new().max_connections(5).connect(database_url).await?;
     sqlx::migrate!("../migrations").run(&pool).await?;
 
-    let provider = JsonRpcClient::new(HttpTransport::new(Url::parse(&args.rpc).unwrap()));
+    let provider: Arc<_> = JsonRpcClient::new(HttpTransport::new(Url::parse(&args.rpc)?)).into();
 
     let (manifest, env) = get_manifest_and_env(args.manifest.as_ref())
         .with_context(|| "Failed to get manifest file".to_string())?;
@@ -93,38 +87,44 @@ async fn main() -> anyhow::Result<()> {
     let world_address = get_world_address(&args, &manifest, env.as_ref())?;
     let world = WorldContractReader::new(world_address, &provider);
 
-    let db = Sql::new(pool.clone(), world_address).await?;
+    let mut db = Sql::new(pool.clone(), world_address).await?;
     db.load_from_manifest(manifest.clone()).await?;
     let processors = Processors {
         event: vec![
-            Box::new(RegisterComponentProcessor),
+            Box::new(RegisterModelProcessor),
             Box::new(RegisterSystemProcessor),
             Box::new(StoreSetRecordProcessor),
         ],
-        transaction: vec![Box::new(StoreSystemCallProcessor)],
+        // transaction: vec![Box::new(StoreSystemCallProcessor)],
         ..Processors::default()
     };
 
-    let indexer =
-        Indexer::new(&world, &db, &provider, processors, manifest, world_address, args.start_block);
+    let (block_sender, block_receiver) = tokio::sync::mpsc::channel(100);
 
-    let base_route = warp::path::end()
-        .and(warp::get())
-        .map(|| warp::reply::json(&serde_json::json!({ "success": true })));
-    let routes = torii_graphql::route::filter(&pool)
-        .await
-        .or(torii_grpc::route::filter(&pool))
-        .or(base_route);
-    let server = warp::serve(routes);
-    let server = server.run((args.host.parse::<std::net::IpAddr>()?, args.graphql_port));
+    let mut engine = Engine::new(
+        &world,
+        &mut db,
+        &provider,
+        processors,
+        EngineConfig { start_block: args.start_block, ..Default::default() },
+        Some(block_sender),
+    );
+
+    let addr: SocketAddr = format!("{}:{}", args.host, args.port).parse()?;
 
     tokio::select! {
-        res = indexer.start() => {
+        res = engine.start(cts) => {
             if let Err(e) = res {
-                error!("Indexer failed with error: {:?}", e);
+                error!("Indexer failed with error: {e}");
             }
         }
-        _ = server => {}
+
+        res = server::spawn_server(&addr, &pool, world_address, block_receiver,  Arc::clone(&provider)) => {
+            if let Err(e) = res {
+                error!("Server failed with error: {e}");
+            }
+        }
+
         _ = tokio::signal::ctrl_c() => {
             println!("Received Ctrl+C, shutting down");
         }

@@ -8,9 +8,9 @@ use traits::TryInto;
 use starknet::syscalls::deploy_syscall;
 use starknet::class_hash::Felt252TryIntoClassHash;
 use dojo::executor::{executor, IExecutorDispatcher, IExecutorDispatcherTrait};
-use dojo::world::{Context, IWorldDispatcher};
+use dojo::world::{IWorldDispatcher};
 
-#[derive(Component, Copy, Drop, Serde)]
+#[derive(Model, Copy, Drop, Serde)]
 struct Foo {
     #[key]
     id: felt252,
@@ -18,14 +18,25 @@ struct Foo {
     b: u128,
 }
 
-#[system]
-mod Bar {
-    use super::Foo;
+#[starknet::contract]
+mod bar {
+    use super::{Foo};
 
-    fn execute(foo: Foo) -> Foo {
+    #[storage]
+    struct Storage {}
+
+    #[external(v0)]
+    fn name(self: @ContractState) -> felt252 {
+        'bar'
+    }
+
+    #[external(v0)]
+    fn execute(self: @ContractState, foo: Foo) -> Foo {
         foo
     }
 }
+
+const NAME_ENTRYPOINT: felt252 = 0x0361458367e696363fbcc70777d07ebbd2394e89fd0adcaf147faccd1d294d60;
 
 #[test]
 #[available_gas(40000000)]
@@ -38,92 +49,10 @@ fn test_executor() {
 
     let executor = IExecutorDispatcher { contract_address: executor_address };
 
-    let mut system_calldata = ArrayTrait::new();
-    system_calldata.append(1);
-    system_calldata.append(42);
-    system_calldata.append(53);
+    starknet::testing::set_contract_address(starknet::contract_address_const::<0x1337>());
 
-    let ctx = Context {
-        world: IWorldDispatcher {
-            contract_address: starknet::contract_address_const::<0x1337>()
-        },
-        origin: starknet::contract_address_const::<0x1337>(),
-        system: 'Bar',
-        system_class_hash: Bar::TEST_CLASS_HASH.try_into().unwrap(),
-    };
+    let res = *executor
+        .call(bar::TEST_CLASS_HASH.try_into().unwrap(), NAME_ENTRYPOINT, array![].span())[0];
 
-    ctx.serialize(ref system_calldata);
-
-    starknet::testing::set_contract_address(ctx.world.contract_address);
-
-    let res = executor.execute(ctx.system_class_hash, system_calldata.span());
-}
-
-
-#[test]
-#[available_gas(40000000)]
-#[should_panic]
-fn test_executor_bad_caller() {
-    let constructor_calldata = array::ArrayTrait::new();
-    let (executor_address, _) = deploy_syscall(
-        executor::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
-    )
-        .unwrap();
-
-    let executor = IExecutorDispatcher { contract_address: executor_address };
-
-    let mut system_calldata = ArrayTrait::new();
-    system_calldata.append(1);
-    system_calldata.append(42);
-    system_calldata.append(53);
-
-    let ctx = Context {
-        world: IWorldDispatcher {
-            contract_address: starknet::contract_address_const::<0x1337>()
-        },
-        origin: starknet::contract_address_const::<0x1337>(),
-        system: 'Bar',
-        system_class_hash: Bar::TEST_CLASS_HASH.try_into().unwrap(),
-    };
-
-    ctx.serialize(ref system_calldata);
-
-    let res = executor.execute(ctx.system_class_hash, system_calldata.span());
-}
-
-#[test]
-#[available_gas(40000000)]
-fn test_executor_with_struct() {
-    let constructor_calldata = array::ArrayTrait::new();
-    let (executor_address, _) = deploy_syscall(
-        executor::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
-    ).unwrap();
-
-    let foo = Foo {
-        id: 1,
-        a: 42,
-        b: 53,
-    };
-    let ctx = Context {
-        world: IWorldDispatcher {
-            contract_address: starknet::contract_address_const::<0x1337>()
-        },
-        origin: starknet::contract_address_const::<0x1337>(),
-        system: 'Bar',
-        system_class_hash: Bar::TEST_CLASS_HASH.try_into().unwrap(),
-    };
-
-    let mut system_calldata = ArrayTrait::new();
-    foo.serialize(ref system_calldata); 
-    ctx.serialize(ref system_calldata);
-
-    starknet::testing::set_contract_address(ctx.world.contract_address);
-    let executor = IExecutorDispatcher { contract_address: executor_address };
-    let mut res = executor.execute(ctx.system_class_hash, system_calldata.span());
-
-    let foo = Serde::<Foo>::deserialize(ref res).unwrap();
-    assert(foo.id == 1, 'Invalid deserialized data');
-    assert(foo.a == 42, 'Invalid deserialized data');
-    assert(foo.b == 53, 'Invalid deserialized data');
-    
+    assert(res == 'bar', 'executor call incorrect')
 }

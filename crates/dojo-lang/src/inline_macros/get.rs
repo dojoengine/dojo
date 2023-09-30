@@ -7,7 +7,7 @@ use cairo_lang_syntax::node::ast::Expr;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 use itertools::Itertools;
 
-use super::{extract_components, unsupported_arg_diagnostic, CAIRO_ERR_MSG_LEN};
+use super::{extract_models, unsupported_arg_diagnostic, CAIRO_ERR_MSG_LEN};
 
 #[derive(Debug)]
 pub struct GetMacro;
@@ -36,7 +36,7 @@ impl InlineMacroExprPlugin for GetMacro {
                 code: None,
                 diagnostics: vec![PluginDiagnostic {
                     stable_ptr: syntax.stable_ptr().untyped(),
-                    message: "Invalid arguments. Expected \"get!(world, keys, (components,))\""
+                    message: "Invalid arguments. Expected \"get!(world, keys, (models,))\""
                         .to_string(),
                 }],
             };
@@ -48,22 +48,22 @@ impl InlineMacroExprPlugin for GetMacro {
             return unsupported_arg_diagnostic(db, syntax);
         };
 
-        let ast::ArgClause::Unnamed(components) = args[2].arg_clause(db) else {
+        let ast::ArgClause::Unnamed(models) = args[2].arg_clause(db) else {
             return unsupported_arg_diagnostic(db, syntax);
         };
-        let components = match extract_components(db, &components.value(db)) {
-            Ok(components) => components,
+        let models = match extract_models(db, &models.value(db)) {
+            Ok(models) => models,
             Err(diagnostic) => {
                 return InlinePluginResult { code: None, diagnostics: vec![diagnostic] };
             }
         };
 
-        if components.is_empty() {
+        if models.is_empty() {
             return InlinePluginResult {
                 code: None,
                 diagnostics: vec![PluginDiagnostic {
                     stable_ptr: syntax.stable_ptr().untyped(),
-                    message: "Component types cannot be empty".to_string(),
+                    message: "Model types cannot be empty".to_string(),
                 }],
             };
         }
@@ -78,30 +78,29 @@ impl InlineMacroExprPlugin for GetMacro {
             let __get_macro_keys__ = array::ArrayTrait::span(@__get_macro_keys__);"
         ));
 
-        for component in &components {
-            let mut lookup_err_msg = format!("{} not found", component.to_string());
+        for model in &models {
+            let mut lookup_err_msg = format!("{} not found", model.to_string());
             lookup_err_msg.truncate(CAIRO_ERR_MSG_LEN);
-            let mut deser_err_msg = format!("{} failed to deserialize", component.to_string());
+            let mut deser_err_msg = format!("{} failed to deserialize", model.to_string());
             deser_err_msg.truncate(CAIRO_ERR_MSG_LEN);
 
             builder.add_str(&format!(
-                "\n            let mut __{component}_layout__ = array::ArrayTrait::new();
-                 dojo::database::schema::SchemaIntrospection::<{component}>::layout(ref \
-                 __{component}_layout__);
-                 let __{component}_layout_span__ = \
-                 array::ArrayTrait::span(@__{component}_layout__);
-                 let mut __{component}_values__ = {}.entity('{component}', __get_macro_keys__, \
-                 0_u8, dojo::database::schema::SchemaIntrospection::<{component}>::size(), \
-                 __{component}_layout_span__);
-                 let mut __{component}_component__ = array::ArrayTrait::new();
-                 array::serialize_array_helper(__get_macro_keys__, ref __{component}_component__);
-                 array::serialize_array_helper(__{component}_values__, ref \
-                 __{component}_component__);
-                 let mut __{component}_component_span__ = \
-                 array::ArrayTrait::span(@__{component}_component__);
-                 let __{component} = \
-                 option::OptionTrait::expect(serde::Serde::<{component}>::deserialize(
-                    ref __{component}_component_span__
+                "\n            let mut __{model}_layout__ = array::ArrayTrait::new();
+                 dojo::database::schema::SchemaIntrospection::<{model}>::layout(ref \
+                 __{model}_layout__);
+                 let mut __{model}_layout_clone__ = __{model}_layout__.clone();
+                 let mut __{model}_layout_span__ = array::ArrayTrait::span(@__{model}_layout__);
+                 let mut __{model}_layout_clone_span__ = \
+                 array::ArrayTrait::span(@__{model}_layout_clone__);
+                 let mut __{model}_values__ = {}.entity('{model}', __get_macro_keys__, 0_u8, \
+                 dojo::packing::calculate_packed_size(ref __{model}_layout_clone_span__), \
+                 __{model}_layout_span__);
+                 let mut __{model}_model__ = array::ArrayTrait::new();
+                 array::serialize_array_helper(__get_macro_keys__, ref __{model}_model__);
+                 array::serialize_array_helper(__{model}_values__, ref __{model}_model__);
+                 let mut __{model}_model_span__ = array::ArrayTrait::span(@__{model}_model__);
+                 let __{model} = option::OptionTrait::expect(serde::Serde::<{model}>::deserialize(
+                    ref __{model}_model_span__
                 ), '{deser_err_msg}');\n",
                 world.as_syntax_node().get_text(db),
             ));
@@ -109,7 +108,7 @@ impl InlineMacroExprPlugin for GetMacro {
         builder.add_str(&format!(
             "({})
         }}",
-            components.iter().map(|c| format!("__{c}")).join(",")
+            models.iter().map(|c| format!("__{c}")).join(",")
         ));
 
         InlinePluginResult {

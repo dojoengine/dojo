@@ -6,15 +6,14 @@ use crate::args::Commands;
 pub(crate) mod auth;
 pub(crate) mod build;
 pub(crate) mod completions;
-pub(crate) mod component;
 pub(crate) mod dev;
 pub(crate) mod events;
 pub(crate) mod execute;
 pub(crate) mod init;
 pub(crate) mod migrate;
+pub(crate) mod model;
 pub(crate) mod options;
 pub(crate) mod register;
-pub(crate) mod system;
 pub(crate) mod test;
 
 // copy of non pub functions from scarb
@@ -29,8 +28,7 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
         Commands::Dev(args) => args.run(config),
         Commands::Auth(args) => args.run(config),
         Commands::Execute(args) => args.run(config),
-        Commands::Component(args) => args.run(config),
-        Commands::System(args) => args.run(config),
+        Commands::Model(args) => args.run(config),
         Commands::Register(args) => args.run(config),
         Commands::Events(args) => args.run(config),
         Commands::Completions(args) => args.run(),

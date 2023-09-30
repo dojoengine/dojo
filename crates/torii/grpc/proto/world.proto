@@ -1,26 +1,55 @@
 syntax = "proto3";
 package world;
 
+import "types.proto";
+
 // The World service provides information about the world.
 service World {
-    // Retrieves metadata about the world.
-    rpc Meta (MetaRequest) returns (MetaReply);
+    // Retrieves metadata about the World including all the registered components and systems.
+    rpc WorldMetadata (MetadataRequest) returns (MetadataResponse);
+    
+    // rpc ComponentMetadata () returns ();
+    // rpc SystemMetadata () returns ();
+
+    // Retrieve the component values of the requested entity.
+    rpc GetEntity (GetEntityRequest) returns (GetEntityResponse);
+
+    /* 
+     * Subscribes to entity updates.
+     * Bidirectional streaming as we want to allow user to change the list of entities to subscribe to without closing the connection.
+     */
+    rpc SubscribeEntities (SubscribeEntitiesRequest) returns (stream SubscribeEntitiesResponse);
 }
 
+
 // A request to retrieve metadata for a specific world ID.
-message MetaRequest {
-    // The address of the world.
-    string id = 1;
+message MetadataRequest {
+   
 }
 
 // The metadata response contains addresses and class hashes for the world.
-message MetaReply {
-    // The hex-encoded address of the world.
-    string world_address = 1;
-    // The hex-encoded class hash of the world.
-    string world_class_hash = 2;
-    // The hex-encoded address of the executor.
-    string executor_address = 3;
-    // The hex-encoded class hash of the executor.
-    string executor_class_hash = 4;
+message MetadataResponse {
+   types.WorldMetadata metadata = 1;
+}
+
+// A request to retrieve a component value of an entity.
+message GetEntityRequest {
+    types.EntityModel entity = 1;
+}
+
+// The entity response contains the component values for the requested entities.
+message GetEntityResponse {
+    repeated string values = 1;
+}
+
+message SubscribeEntitiesRequest {
+    // The address of the World whose entities to subscribe to.
+    string world = 1;
+    // The list of entities to subscribe to.
+    repeated types.EntityModel entities = 2;
+}
+
+message SubscribeEntitiesResponse {
+    // List of entities that have been updated.
+    types.MaybePendingEntityUpdate entity_update = 1;
 }

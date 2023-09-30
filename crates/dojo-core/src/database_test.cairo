@@ -6,13 +6,10 @@ use array::SpanTrait;
 use traits::{Into, TryInto};
 
 use starknet::syscalls::deploy_syscall;
-use starknet::class_hash::Felt252TryIntoClassHash;
-use dojo::executor::{executor, IExecutorDispatcher, IExecutorDispatcherTrait};
-use dojo::world::{Context, IWorldDispatcher};
-
+use starknet::class_hash::{Felt252TryIntoClassHash, ClassHash};
+use dojo::world::{IWorldDispatcher};
+use dojo::executor::executor;
 use dojo::database::{get, set, del, all};
-
-
 
 #[test]
 #[available_gas(1000000)]
@@ -40,7 +37,7 @@ fn test_database_different_tables() {
     let mut other = ArrayTrait::new();
     other.append(0x3);
     other.append(0x4);
-    
+
     let class_hash: starknet::ClassHash = executor::TEST_CLASS_HASH.try_into().unwrap();
     set(class_hash, 'first', 'key', 0, values.span(), array![251, 251].span());
     set(class_hash, 'second', 'key', 0, other.span(), array![251, 251].span());
@@ -63,7 +60,7 @@ fn test_database_different_keys() {
     let mut other = ArrayTrait::new();
     other.append(0x3);
     other.append(0x4);
-    
+
     let class_hash: starknet::ClassHash = executor::TEST_CLASS_HASH.try_into().unwrap();
     set(class_hash, 'table', 'key', 0, values.span(), array![251, 251].span());
     set(class_hash, 'table', 'other', 0, other.span(), array![251, 251].span());
@@ -85,12 +82,14 @@ fn test_database_pagination() {
     values.append(0x3);
     values.append(0x4);
     values.append(0x5);
-    
+
     let class_hash: starknet::ClassHash = executor::TEST_CLASS_HASH.try_into().unwrap();
     set(class_hash, 'table', 'key', 1, values.span(), array![251, 251, 251, 251, 251].span());
     let first_res = get(class_hash, 'table', 'key', 1, 3, array![251, 251, 251].span());
     let second_res = get(class_hash, 'table', 'key', 3, 5, array![251, 251, 251, 251, 251].span());
-    let third_res = get(class_hash, 'table', 'key', 5, 7, array![251, 251, 251, 251, 251, 251, 251].span());
+    let third_res = get(
+        class_hash, 'table', 'key', 5, 7, array![251, 251, 251, 251, 251, 251, 251].span()
+    );
 
     assert(*first_res.at(0) == *values.at(0), 'Values different at index 0!');
     assert(*first_res.at(1) == *values.at(1), 'Values different at index 1!');
@@ -105,10 +104,10 @@ fn test_database_pagination() {
 fn test_database_del() {
     let mut values = ArrayTrait::new();
     values.append(0x42);
-    
+
     let class_hash: starknet::ClassHash = executor::TEST_CLASS_HASH.try_into().unwrap();
     set(class_hash, 'table', 'key', 0, values.span(), array![251].span());
-    
+
     let before = get(class_hash, 'table', 'key', 0, values.len(), array![251].span());
     assert(*before.at(0) == *values.at(0), 'Values different at index 0!');
 
@@ -123,7 +122,7 @@ fn test_database_all() {
     let mut even = ArrayTrait::new();
     even.append(0x2);
     even.append(0x4);
-    
+
     let mut odd = ArrayTrait::new();
     odd.append(0x1);
     odd.append(0x3);

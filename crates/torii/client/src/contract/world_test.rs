@@ -71,8 +71,8 @@ pub async fn deploy_world(
         .contract_address;
 
     let mut declare_output = vec![];
-    for component in strategy.components {
-        let res = component.declare(&account, Default::default()).await.unwrap();
+    for model in strategy.models {
+        let res = model.declare(&account, Default::default()).await.unwrap();
         declare_output.push(res);
     }
 
@@ -80,27 +80,20 @@ pub async fn deploy_world(
     tokio::time::sleep(Duration::from_millis(250)).await;
 
     let _ = WorldContract::new(world_address, &account)
-        .register_components(&declare_output.iter().map(|o| o.class_hash).collect::<Vec<_>>())
+        .register_models(&declare_output.iter().map(|o| o.class_hash).collect::<Vec<_>>())
         .await
         .unwrap();
 
     // wait for the tx to be mined
     tokio::time::sleep(Duration::from_millis(250)).await;
 
-    let mut declare_output = vec![];
-    for system in strategy.systems {
-        let res = system.declare(&account, Default::default()).await.unwrap();
-        declare_output.push(res);
+    for contract in strategy.contracts {
+        let declare_res = contract.declare(&account, Default::default()).await.unwrap();
+        contract
+            .deploy(declare_res.class_hash, vec![], &account, Default::default())
+            .await
+            .unwrap();
     }
-
-    // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(250)).await;
-
-    let world = WorldContract::new(world_address, &account);
-    let _ = world
-        .register_systems(&declare_output.iter().map(|o| o.class_hash).collect::<Vec<_>>())
-        .await
-        .unwrap();
 
     // wait for the tx to be mined
     tokio::time::sleep(Duration::from_millis(250)).await;

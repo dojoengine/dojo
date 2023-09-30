@@ -38,7 +38,7 @@ pub enum ManifestError<E> {
     Provider(ProviderError<E>),
 }
 
-/// Represents a component member.
+/// Represents a model member.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Member {
     /// Name of the member.
@@ -49,10 +49,16 @@ pub struct Member {
     pub key: bool,
 }
 
-/// Represents a declaration of a component.
+impl From<dojo_types::schema::Member> for Member {
+    fn from(m: dojo_types::schema::Member) -> Self {
+        Self { name: m.name, ty: m.ty.name(), key: m.key }
+    }
+}
+
+/// Represents a declaration of a model.
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
-pub struct Component {
+pub struct Model {
     pub name: String,
     pub members: Vec<Member>,
     #[serde_as(as = "UfeHex")]
@@ -106,7 +112,7 @@ pub struct Manifest {
     pub executor: Contract,
     pub systems: Vec<System>,
     pub contracts: Vec<Contract>,
-    pub components: Vec<Component>,
+    pub models: Vec<Model>,
 }
 
 impl Manifest {
@@ -161,27 +167,27 @@ impl Manifest {
             })?;
 
         let mut systems = vec![];
-        let mut components = vec![];
+        let mut models = vec![];
 
         if let Some(match_manifest) = match_manifest {
-            for component in match_manifest.components {
+            for model in match_manifest.models {
                 let result = provider
                     .call(
                         FunctionCall {
                             contract_address: world_address,
                             calldata: vec![
-                                cairo_short_string_to_felt(&component.name)
+                                cairo_short_string_to_felt(&model.name)
                                     .map_err(ManifestError::InvalidNameError)?,
                             ],
-                            entry_point_selector: get_selector_from_name("component").unwrap(),
+                            entry_point_selector: get_selector_from_name("model").unwrap(),
                         },
                         BlockId::Tag(BlockTag::Pending),
                     )
                     .await
                     .map_err(ManifestError::Provider)?;
 
-                components.push(Component {
-                    name: component.name.clone(),
+                models.push(Model {
+                    name: model.name.clone(),
                     class_hash: result[0],
                     ..Default::default()
                 });
@@ -217,7 +223,7 @@ impl Manifest {
 
         Ok(Manifest {
             systems,
-            components,
+            models,
             contracts: vec![],
             world: Contract {
                 name: WORLD_CONTRACT_NAME.into(),

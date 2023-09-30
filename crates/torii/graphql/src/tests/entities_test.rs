@@ -1,21 +1,42 @@
 #[cfg(test)]
 mod tests {
+    use dojo_test_utils::migration::prepare_migration;
+    use dojo_test_utils::sequencer::{
+        get_default_test_starknet_config, SequencerConfig, TestSequencer,
+    };
     use sqlx::SqlitePool;
+    use starknet::providers::jsonrpc::HttpTransport;
+    use starknet::providers::JsonRpcClient;
     use starknet_crypto::{poseidon_hash_many, FieldElement};
+    use torii_client::contract::world::WorldContractReader;
+    use torii_core::sql::Sql;
 
-    use crate::tests::common::{
-        entity_fixtures, paginate, run_graphql_query, Entity, Moves, Paginate, Position,
+    use crate::tests::{
+        bootstrap_engine, create_pool, entity_fixtures, paginate, run_graphql_query, Entity, Moves,
+        Paginate, Position,
     };
 
-    #[sqlx::test(migrations = "../migrations")]
-    async fn test_entity(pool: SqlitePool) {
-        entity_fixtures(&pool).await;
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_entity() {
+        let pool = create_pool().await;
+        let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
+        let migration = prepare_migration("../../../examples/ecs/target/dev".into()).unwrap();
+        let sequencer =
+            TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config())
+                .await;
+        let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
+        let world = WorldContractReader::new(migration.world_address().unwrap(), &provider);
+
+        let _ = bootstrap_engine(&world, &mut db, &provider, &migration, &sequencer).await;
+
+        entity_fixtures(&mut db).await;
+
         let entity_id = poseidon_hash_many(&[FieldElement::ONE]);
         let query = format!(
             r#"
             {{
                 entity(id: "{:#x}") {{
-                    componentNames
+                    modelNames
                 }}
             }}
         "#,
@@ -25,20 +46,21 @@ mod tests {
 
         let entity = value.get("entity").ok_or("no entity found").unwrap();
         let entity: Entity = serde_json::from_value(entity.clone()).unwrap();
-        assert_eq!(entity.component_names, "Moves".to_string());
+        assert_eq!(entity.model_names, "Moves".to_string());
     }
 
     #[ignore]
     #[sqlx::test(migrations = "../migrations")]
-    async fn test_entity_components(pool: SqlitePool) {
-        entity_fixtures(&pool).await;
+    async fn test_entity_models(pool: SqlitePool) {
+        let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
+        entity_fixtures(&mut db).await;
 
         let entity_id = poseidon_hash_many(&[FieldElement::THREE]);
         let query = format!(
             r#"
                 {{
                     entity (id: "{:#x}") {{
-                        components {{
+                        models {{
                             __typename
                             ... on Moves {{
                                 remaining
@@ -57,20 +79,21 @@ mod tests {
         let value = run_graphql_query(&pool, &query).await;
 
         let entity = value.get("entity").ok_or("no entity found").unwrap();
-        let components = entity.get("components").ok_or("no components found").unwrap();
-        let component_moves: Moves = serde_json::from_value(components[0].clone()).unwrap();
-        let component_position: Position = serde_json::from_value(components[1].clone()).unwrap();
+        let models = entity.get("models").ok_or("no models found").unwrap();
+        let model_moves: Moves = serde_json::from_value(models[0].clone()).unwrap();
+        let model_position: Position = serde_json::from_value(models[1].clone()).unwrap();
 
-        assert_eq!(component_moves.__typename, "Moves");
-        assert_eq!(component_moves.remaining, 1);
-        assert_eq!(component_position.__typename, "Position");
-        assert_eq!(component_position.x, 69);
-        assert_eq!(component_position.y, 42);
+        assert_eq!(model_moves.__typename, "Moves");
+        assert_eq!(model_moves.remaining, 1);
+        assert_eq!(model_position.__typename, "Position");
+        assert_eq!(model_position.x, 69);
+        assert_eq!(model_position.y, 42);
     }
 
     #[sqlx::test(migrations = "../migrations")]
     async fn test_entities_pagination(pool: SqlitePool) {
-        entity_fixtures(&pool).await;
+        let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
+        entity_fixtures(&mut db).await;
 
         let page_size = 2;
 

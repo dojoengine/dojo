@@ -6,23 +6,22 @@ use starknet::core::types::FieldElement;
 
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
-use super::options::world::WorldOptions;
 use crate::ops::execute;
 
 #[derive(Debug, Args)]
 #[command(about = "Execute a system with the given calldata.")]
 pub struct ExecuteArgs {
-    #[arg(help = "The name of the system to be executed.")]
-    pub system: String,
+    #[arg(help = "The address of the contract to be executed.")]
+    pub contract: FieldElement,
+
+    #[arg(help = "The name of the entrypoint to be executed.")]
+    pub entrypoint: String,
 
     #[arg(short, long)]
     #[arg(value_delimiter = ',')]
     #[arg(help = "The calldata to be passed to the system. Comma seperated values e.g., \
                   0x12345,0x69420.")]
     pub calldata: Vec<FieldElement>,
-
-    #[command(flatten)]
-    pub world: WorldOptions,
 
     #[command(flatten)]
     pub starknet: StarknetOptions,

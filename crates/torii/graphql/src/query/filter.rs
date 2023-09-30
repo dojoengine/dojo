@@ -49,7 +49,7 @@ pub fn parse_filter(input: &Name, value: FilterValue) -> Filter {
 
     for (suffix, comparator) in suffixes {
         if let Some(field) = input.strip_suffix(suffix) {
-            // Filtering only applies to component members which are stored in db with
+            // Filtering only applies to model members which are stored in db with
             // external_{name}
             return Filter {
                 field: format!("external_{}", field),

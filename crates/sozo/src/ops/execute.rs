@@ -1,20 +1,26 @@
 use anyhow::{Context, Result};
 use dojo_world::metadata::Environment;
-use torii_client::contract::world::WorldContract;
+use starknet::accounts::{Account, Call};
+use starknet::core::utils::get_selector_from_name;
 
 use crate::commands::execute::ExecuteArgs;
 
 pub async fn execute(args: ExecuteArgs, env_metadata: Option<Environment>) -> Result<()> {
-    let ExecuteArgs { system, calldata, world, starknet, account } = args;
+    let ExecuteArgs { contract, entrypoint, calldata, starknet, account } = args;
 
-    let world_address = world.address(env_metadata.as_ref())?;
     let provider = starknet.provider(env_metadata.as_ref())?;
 
     let account = account.account(provider, env_metadata.as_ref()).await?;
-    let world = WorldContract::new(world_address, &account);
 
-    let res =
-        world.execute(&system, calldata).await.with_context(|| "Failed to send transaction")?;
+    let res = account
+        .execute(vec![Call {
+            calldata,
+            to: contract,
+            selector: get_selector_from_name(&entrypoint).unwrap(),
+        }])
+        .send()
+        .await
+        .with_context(|| "Failed to send transaction")?;
 
     println!("Transaction: {:#x}", res.transaction_hash);
 

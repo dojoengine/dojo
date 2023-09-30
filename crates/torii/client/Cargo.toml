@@ -6,23 +6,32 @@ version = "0.2.1"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-async-std = { version = "1.12.0", default-features = false, features = [ "std" ] }
+anyhow.workspace = true
 async-trait.workspace = true
 crypto-bigint = "0.5.3"
 dojo-types = { path = "../../dojo-types" }
-parking_lot = "0.12.1"
+futures-util = "0.3.28"
+futures.workspace = true
+parking_lot.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 starknet-crypto.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
+tokio = { version = "1.32.0", default-features = false, features = [ "rt" ] }
+torii-grpc = { path = "../grpc", features = [ "client" ] }
+url.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-tokio = { version = "1.16", features = [ "time" ], default-features = false }
+prost.workspace = true
+tonic.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 js-sys = "0.3.64"
-serde.workspace = true
 wasm-bindgen = "0.2.87"
 wasm-bindgen-futures = "0.4.37"
+wasm-prost.workspace = true
+wasm-tonic.workspace = true
 web-sys = { version = "0.3.4", features = [ 'Window', 'WorkerGlobalScope' ] }
 
 [dev-dependencies]

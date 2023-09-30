@@ -8,12 +8,7 @@ use dojo_lang::plugin::CairoPluginRepository;
 use scarb::compiler::CompilerRepository;
 use scarb::core::Config;
 use scarb_ui::{OutputFormat, Ui};
-
-mod args;
-mod commands;
-mod ops;
-
-use args::{Commands, SozoArgs};
+use sozo::args::{Commands, SozoArgs};
 
 fn main() {
     let args = SozoArgs::parse();
@@ -46,5 +41,5 @@ fn cli_main(args: SozoArgs) -> Result<()> {
         .compilers(compilers)
         .build()?;
 
-    commands::run(args.command, &config)
+    sozo::commands::run(args.command, &config)
 }
