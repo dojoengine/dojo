@@ -84,8 +84,9 @@ pub trait Messenger {
     /// transaction pool.
     type MessageTransaction;
 
-    /// Gathers messages emitted on the settlement chain and returns the list of transaction
-    /// (L1HandlerTx) to be executed and the last fetched block.
+    /// Gathers messages emitted on the settlement chain and convert them to their
+    /// corresponding transaction type on Starknet, and the latest block on the settlement until
+    /// which the messages were collected.
     ///
     /// # Arguments
     ///

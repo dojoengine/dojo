@@ -144,17 +144,16 @@ impl Messenger for EthereumMessaging {
 
         let mut l1_handler_txs = vec![];
 
-        self.fetch_logs(from_block, to_block).await?.iter().for_each(
+        self.fetch_logs(from_block, to_block).await?.into_iter().for_each(
             |(block_number, block_logs)| {
                 debug!(
                     target: LOG_TARGET,
-                    "Converting logs of block {} into L1HandlerTx ({} logs)",
-                    block_number,
+                    "Converting logs of block {block_number} into L1HandlerTx ({} logs)",
                     block_logs.len(),
                 );
 
-                block_logs.iter().for_each(|l| {
-                    if let Ok(tx) = l1_handler_tx_from_log(l) {
+                block_logs.into_iter().for_each(|log| {
+                    if let Ok(tx) = log.try_into() {
                         l1_handler_txs.push(tx)
                     }
                 })
@@ -206,41 +205,40 @@ impl Messenger for EthereumMessaging {
     }
 }
 
-/// Converts a starknet core log into a L1 handler transaction.
-fn l1_handler_tx_from_log(log: &Log) -> Result<L1HandlerTransaction> {
-    let parsed_log = <LogMessageToL2 as EthLogDecode>::decode_log(&log.clone().into())?;
+impl TryFrom<Log> for L1HandlerTransaction {
+    type Error = ethers::abi::Error;
 
-    let from_address = stark_felt_from_address(parsed_log.from_address);
-    let contract_address = stark_felt_from_u256(parsed_log.to_address);
-    let selector = stark_felt_from_u256(parsed_log.selector);
-    let nonce = stark_felt_from_u256(parsed_log.nonce);
-    let fee: u128 = parsed_log.fee.try_into().expect("Fee does not fit into u128.");
+    fn try_from(log: Log) -> Result<Self, Self::Error> {
+        let parsed_log = <LogMessageToL2 as EthLogDecode>::decode_log(&log.into())?;
 
-    let mut calldata_vec = vec![from_address];
-    for p in parsed_log.payload {
-        calldata_vec.push(stark_felt_from_u256(p));
+        let from_address = stark_felt_from_address(parsed_log.from_address);
+        let contract_address = stark_felt_from_u256(parsed_log.to_address);
+        let selector = stark_felt_from_u256(parsed_log.selector);
+        let nonce = stark_felt_from_u256(parsed_log.nonce);
+        let paid_l1_fee: u128 = parsed_log.fee.try_into().expect("Fee does not fit into u128.");
+
+        let mut calldata_vec = vec![from_address];
+        calldata_vec.extend(parsed_log.payload.into_iter().map(stark_felt_from_u256));
+
+        // TODO: not sure about how this must be computed,
+        // at least with a nonce + address we should be
+        // ok for now? Or is it derived from something?
+        let tx_hash = hash::pedersen_hash(&nonce, &contract_address);
+
+        let tx = L1HandlerTransaction {
+            paid_l1_fee,
+            inner: ApiL1HandlerTransaction {
+                nonce: Nonce(nonce),
+                calldata: Calldata(calldata_vec.into()),
+                transaction_hash: TransactionHash(tx_hash),
+                version: TransactionVersion(stark_felt!(1_u32)),
+                entry_point_selector: EntryPointSelector(selector),
+                contract_address: ContractAddress::try_from(contract_address).unwrap(),
+            },
+        };
+
+        Ok(tx)
     }
-
-    let calldata = Calldata(calldata_vec.into());
-
-    // TODO: not sure about how this must be computed,
-    // at least with a nonce + address we should be
-    // ok for now? Or is it derived from something?
-    let tx_hash = hash::pedersen_hash(&nonce, &contract_address);
-
-    let tx = L1HandlerTransaction {
-        inner: ApiL1HandlerTransaction {
-            transaction_hash: TransactionHash(tx_hash),
-            version: TransactionVersion(stark_felt!(1_u32)),
-            nonce: Nonce(nonce),
-            contract_address: ContractAddress::try_from(contract_address).unwrap(),
-            entry_point_selector: EntryPointSelector(selector),
-            calldata,
-        },
-        paid_l1_fee: fee,
-    };
-
-    Ok(tx)
 }
 
 /// With Ethereum, the messages are following the conventional starknet messaging.
@@ -356,7 +354,7 @@ mod tests {
             paid_l1_fee: fee,
         };
 
-        let tx = l1_handler_tx_from_log(&log).expect("aa");
+        let tx: L1HandlerTransaction = log.try_into().expect("aa");
 
         assert_eq!(tx.inner, expected.inner);
     }
