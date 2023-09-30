@@ -1,7 +1,8 @@
 use async_graphql::dynamic::{
-    Field, FieldFuture, FieldValue, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
+    Field, FieldFuture, FieldValue, InputValue, Object, SubscriptionField, SubscriptionFieldFuture,
+    TypeRef,
 };
-use async_graphql::{Name, Value};
+use async_graphql::{Error, Name, Value};
 use indexmap::IndexMap;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Result, Sqlite};
@@ -13,11 +14,11 @@ use super::connection::{
     connection_arguments, connection_output, decode_cursor, parse_connection_arguments,
     ConnectionArguments,
 };
-use super::model_data::{model_data_by_id_query, type_mapping_query};
+use super::model_data::model_data_by_id_query;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
-use crate::query::{query_by_id, ID};
-use crate::types::{GraphqlType, ScalarType, TypeData};
+use crate::query::{query_by_id, type_mapping_query, ID};
+use crate::types::{GraphqlType, TypeData};
 use crate::utils::csv_to_vec;
 use crate::utils::extract_value::extract;
 
@@ -77,30 +78,8 @@ impl ObjectTrait for EntityObject {
         &self.type_mapping
     }
 
-    fn sub_fields(&self) -> Option<Vec<Field>> {
-        Some(vec![Field::new("models", TypeRef::named_list("ModelUnion"), move |ctx| {
-            FieldFuture::new(async move {
-                match ctx.parent_value.try_to_value()? {
-                    Value::Object(indexmap) => {
-                        let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                        let model_names = csv_to_vec(&extract::<String>(indexmap, "modelNames")?);
-                        let entity_id = extract::<String>(indexmap, "id")?;
-
-                        let mut results: Vec<FieldValue<'_>> = Vec::new();
-                        for name in model_names {
-                            let type_mapping = type_mapping_query(&mut conn, &name).await?;
-                            let state =
-                                model_data_by_id_query(&mut conn, &name, &entity_id, &type_mapping)
-                                    .await?;
-                            results.push(FieldValue::with_type(FieldValue::owned_any(state), name));
-                        }
-
-                        Ok(Some(FieldValue::list(results)))
-                    }
-                    _ => Err("incorrect value, requires Value::Object".into()),
-                }
-            })
-        })])
+    fn related_fields(&self) -> Option<Vec<Field>> {
+        Some(vec![model_union_field()])
     }
 
     fn resolve_one(&self) -> Option<Field> {
@@ -136,6 +115,7 @@ impl ObjectTrait for EntityObject {
                     });
 
                     let (entities, total_count) = entities_by_sk(&mut conn, keys, args).await?;
+
                     Ok(Some(Value::Object(connection_output(entities, total_count))))
                 })
             },
@@ -172,6 +152,32 @@ impl ObjectTrait for EntityObject {
             .argument(InputValue::new("id", TypeRef::named(TypeRef::ID))),
         ])
     }
+}
+
+fn model_union_field() -> Field {
+    Field::new("models", TypeRef::named_list("ModelUnion"), move |ctx| {
+        FieldFuture::new(async move {
+            match ctx.parent_value.try_to_value()? {
+                Value::Object(indexmap) => {
+                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                    let model_names = csv_to_vec(&extract::<String>(indexmap, "modelNames")?);
+                    let entity_id = extract::<String>(indexmap, "id")?;
+
+                    let mut results: Vec<FieldValue<'_>> = Vec::new();
+                    for name in model_names {
+                        let type_mapping = type_mapping_query(&mut conn, &name).await?;
+                        let state =
+                            model_data_by_id_query(&mut conn, &name, &entity_id, &type_mapping)
+                                .await?;
+                        results.push(FieldValue::with_type(FieldValue::owned_any(state), name));
+                    }
+
+                    Ok(Some(FieldValue::list(results)))
+                }
+                _ => Err("incorrect value, requires Value::Object".into()),
+            }
+        })
+    })
 }
 
 async fn entities_by_sk(

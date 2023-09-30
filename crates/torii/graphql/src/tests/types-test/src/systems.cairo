@@ -8,7 +8,7 @@ trait IRecords<TContractState> {
 
 #[system]
 mod records {
-    use types_test::models::{Record, Nested, MoreNested};
+    use types_test::models::{Record, Nested, NestedMore, NestedMoreMore};
     use super::IRecords;
 
     #[external(v0)]
@@ -41,10 +41,18 @@ mod records {
                         type_class_hash: type_felt.try_into().unwrap(),
                         type_contract_address: type_felt.try_into().unwrap(),
                         type_nested: Nested {
+                            depth: 1,
                             type_number: record_idx.into(),
                             type_string: type_felt,
-                            type_more_nested: MoreNested {
-                                type_number: record_idx.into(), type_string: type_felt,
+                            type_nested_more: NestedMore {
+                                depth: 2,
+                                type_number: record_idx.into(), 
+                                type_string: type_felt,
+                                type_nested_more_more: NestedMoreMore {
+                                    depth: 3,
+                                    type_number: record_idx.into(),
+                                    type_string: type_felt,
+                                }
                             }
                         }
                     })

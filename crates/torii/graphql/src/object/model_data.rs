@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use async_graphql::dynamic::{Enum, Field, FieldFuture, InputObject, Object, TypeRef};
-use async_graphql::{Name, Value};
+use async_graphql::{Error, Name, Value};
 use chrono::{DateTime, Utc};
 use dojo_types::core::CairoType;
 use serde::Deserialize;
@@ -23,7 +23,7 @@ use crate::object::entity::EntityObject;
 use crate::query::filter::{Filter, FilterValue};
 use crate::query::order::{Direction, Order};
 use crate::query::{query_by_id, query_total_count, ID};
-use crate::types::{ScalarType, TypeData};
+use crate::types::TypeData;
 use crate::utils::extract_value::extract;
 
 const BOOLEAN_TRUE: i64 = 1;
@@ -69,59 +69,12 @@ impl ObjectTrait for ModelDataObject {
         &self.type_mapping
     }
 
-    fn sub_fields(&self) -> Option<Vec<Field>> {
-        let mut fields = Vec::new();
-        fields.push(entity_field());
-        fields.extend(nested_fields(self.type_name.as_str(), &self.type_mapping));
-
-        Some(fields)
-    }
-
     fn input_objects(&self) -> Option<Vec<InputObject>> {
         Some(vec![self.where_input.input_object(), self.order_input.input_object()])
     }
 
     fn enum_objects(&self) -> Option<Vec<Enum>> {
         self.order_input.enum_objects()
-    }
-
-    fn child_objects(&self) -> Option<Vec<Object>> {
-        Some(nested_objects(&self.type_mapping))
-        // let child_objects: Vec<Object> = self
-        //     .type_mapping
-        //     .iter()
-        //     .filter_map(|(_, type_data)| {
-        //         if let TypeData::Nested((type_ref, nested_mapping)) = type_data {
-        //             let mut object = Object::new(type_ref.to_string());
-
-        //             for (field_name, type_data) in nested_mapping {
-        //                 let field_name = field_name.clone();
-
-        //                 let field =
-        //                     Field::new(field_name.to_string(), type_data.type_ref(), move |ctx| {
-        //                         let field_name = field_name.clone();
-
-        //                         FieldFuture::new(async move {
-        //                             match ctx.parent_value.try_to_value()? {
-        //                                 Value::Object(values) => {
-        //                                     Ok(Some(values.get(&field_name).unwrap().clone())) // safe unwrap
-        //                                 }
-        //                                 _ => Err("incorrect value, requires Value::Object".into()),
-        //                             }
-        //                         })
-        //                     });
-
-        //                 object = object.field(field);
-        //             }
-
-        //             Some(object)
-        //         } else {
-        //             None
-        //         }
-        //     })
-        //     .collect();
-
-        // Some(child_objects)
     }
 
     fn resolve_many(&self) -> Option<Field> {
@@ -159,6 +112,102 @@ impl ObjectTrait for ModelDataObject {
 
         Some(field)
     }
+
+    fn objects(&self) -> Vec<Object> {
+        let mut path_array = vec![self.type_name().to_string()];
+        let mut objects = data_objects(self.type_name(), &self.type_mapping(), &mut path_array);
+
+        // root object requires entity_field association
+        let mut root = objects.pop().unwrap();
+        root = root.field(entity_field());
+
+        objects.push(root);
+        objects
+    }
+}
+
+fn data_objects(
+    type_name: &str,
+    type_mapping: &TypeMapping,
+    path_array: &mut Vec<String>,
+) -> Vec<Object> {
+    let mut objects = Vec::<Object>::new();
+
+    for (_, type_data) in type_mapping {
+        if let TypeData::Nested((nested_type, nested_mapping)) = type_data {
+            path_array.push(nested_type.to_string());
+            objects.extend(data_objects(
+                &nested_type.to_string(),
+                nested_mapping,
+                &mut path_array.clone(),
+            ));
+        }
+    }
+
+    objects.push(object(type_name, type_mapping, path_array));
+    objects
+}
+
+pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: &Vec<String>) -> Object {
+    let mut object = Object::new(type_name);
+
+    for (field_name, type_data) in type_mapping.clone() {
+        let table_name = path_array.join("$");
+
+        let field = Field::new(field_name.to_string(), type_data.type_ref(), move |ctx| {
+            let field_name = field_name.clone();
+            let type_data = type_data.clone();
+            let table_name = table_name.clone();
+
+            // Field resolver for nested types
+            if let TypeData::Nested((_, nested_mapping)) = type_data {
+                return FieldFuture::new(async move {
+                    match ctx.parent_value.try_to_value()? {
+                        Value::Object(indexmap) => {
+                            let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                            let entity_id = extract::<String>(indexmap, "entity_id")?;
+
+                            // TODO: remove subqueries and use JOIN in parent query
+                            let result = model_data_by_id_query(
+                                &mut conn,
+                                &table_name,
+                                &entity_id,
+                                &nested_mapping,
+                            )
+                            .await?;
+
+                            Ok(Some(Value::Object(result)))
+                        }
+                        _ => Err("incorrect value, requires Value::Object".into()),
+                    }
+                });
+            }
+
+            // Field resolver for simple types and model union
+            FieldFuture::new(async move {
+                if let Some(value) = ctx.parent_value.as_value() {
+                    return match value {
+                        Value::Object(value_mapping) => {
+                            Ok(Some(value_mapping.get(&field_name).unwrap().clone()))
+                        }
+                        _ => Err("Incorrect value, requires Value::Object".into()),
+                    };
+                }
+
+                // Catch model union resolutions, async-graphql sends union types as IndexMap<Name,
+                // ConstValue>
+                if let Some(value_mapping) = ctx.parent_value.downcast_ref::<ValueMapping>() {
+                    return Ok(Some(value_mapping.get(&field_name).unwrap().clone()));
+                }
+
+                Err("Field resolver only accepts Value or IndexMap".into())
+            })
+        });
+
+        object = object.field(field);
+    }
+
+    object
 }
 
 fn entity_field() -> Field {
@@ -178,109 +227,6 @@ fn entity_field() -> Field {
             }
         })
     })
-}
-
-fn build_object(type_ref: &TypeRef, type_mapping: &TypeMapping) -> Object {
-    let mut object = Object::new(type_ref.to_string());
-
-    for (field_name, type_data) in type_mapping {
-        let field_name = field_name.clone();
-
-        let field = if type_data.is_nested() {
-            Field::new(field_name.to_string(), type_data.type_ref(), move |ctx| {
-                let field_name = field_name.clone();
-
-                FieldFuture::new(async move {
-                    match ctx.parent_value.try_to_value()? {
-                        Value::Object(values) => {
-                            Ok(Some(values.get(&field_name).unwrap().clone())) // safe unwrap
-                        }
-                        _ => Err("incorrect value, requires Value::Object".into()),
-                    }
-                })
-            })
-        } else {
-            Field::new(field_name.to_string(), type_data.type_ref(), move |ctx| {
-                let field_name = field_name.clone();
-
-                FieldFuture::new(async move {
-                    match ctx.parent_value.try_to_value()? {
-                        Value::Object(values) => {
-                            Ok(Some(values.get(&field_name).unwrap().clone())) // safe unwrap
-                        }
-                        _ => Err("incorrect value, requires Value::Object".into()),
-                    }
-                })
-            })
-        };
-
-
-
-
-        object = object.field(field);
-    }
-
-    object
-}
-
-fn nested_objects(type_mapping: &TypeMapping) -> Vec<Object> {
-    let mut objects = Vec::<Object>::new();
-
-    for (_, type_data) in type_mapping {
-        if let TypeData::Nested((type_ref, nested_mapping)) = type_data {
-            objects.push(build_object(type_ref, nested_mapping));
-
-            // recursively build nested objects
-            let nested_objects = nested_objects(nested_mapping); 
-            objects.extend(nested_objects);
-        }
-    }
-
-    objects
-}
-
-fn build_field(path: &str, field_name: &str, type_data: &TypeData) -> Field {
-    let path = path.to_string();
-    let type_data = type_data.clone();
-
-    Field::new(field_name.clone(), type_data.type_ref(), move |ctx| {
-        let path = path.clone();
-        let type_data = type_data.clone();
-
-        FieldFuture::new(async move {
-            match ctx.parent_value.try_to_value()? {
-                Value::Object(indexmap) => {
-                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let table_name = format!("{}${}", path, type_data.type_ref());
-                    let entity_id = extract::<String>(indexmap, "entity_id")?;
-
-
-                    let result = model_data_by_id_query(
-                        &mut conn,
-                        &table_name,
-                        &entity_id,
-                        &type_data.type_mapping().unwrap(), // safe unwrap
-                    )
-                    .await?;
-
-                    Ok(Some(Value::Object(result)))
-                }
-                _ => Err("incorrect value, requires Value::Object".into()),
-            }
-        })
-    })
-}
-
-fn nested_fields(path: &str, type_mapping: &TypeMapping) -> Vec<Field> {
-    let mut fields = Vec::<Field>::new();
-
-    for (name, type_data) in type_mapping {
-        if type_data.is_nested() {
-            fields.push(build_field(path, name, type_data));
-        }
-    }
-
-    fields
 }
 
 pub async fn model_data_by_id_query(
@@ -362,8 +308,7 @@ pub async fn models_data_query(
     sqlx::query(&query).fetch_all(conn).await
 }
 
-// TODO: make `connection_output()` more generic. Currently, `model_connection()` method
-// required as we need to explicity add `entity_id` to each edge.
+// TODO: make `connection_output()` more generic.
 pub fn model_connection(
     data: &[SqliteRow],
     types: &TypeMapping,
@@ -376,10 +321,7 @@ pub fn model_connection(
             let entity_id = row.try_get::<String, &str>("entity_id")?;
             let created_at = row.try_get::<String, &str>("created_at")?;
             let cursor = encode_cursor(&created_at, &entity_id);
-
-            // insert entity_id because it needs to be queriable
-            let mut value_mapping = value_mapping_from_row(row, types)?;
-            value_mapping.insert(Name::new("entity_id"), Value::String(entity_id));
+            let value_mapping = value_mapping_from_row(row, types)?;
 
             let mut edge = ValueMapping::new();
             edge.insert(Name::new("node"), Value::Object(value_mapping));
@@ -397,97 +339,36 @@ pub fn model_connection(
 }
 
 fn value_mapping_from_row(row: &SqliteRow, types: &TypeMapping) -> sqlx::Result<ValueMapping> {
-    types
+    let mut value_mapping = types
         .iter()
         .filter(|(_, type_data)| type_data.is_simple())
         .map(|(field_name, type_data)| {
+            let column_name = format!("external_{}", field_name);
             Ok((
                 Name::new(field_name),
-                fetch_value(row, field_name, &type_data.type_ref().to_string())?,
+                fetch_value(row, &column_name, &type_data.type_ref().to_string())?,
             ))
         })
-        .collect::<sqlx::Result<ValueMapping>>()
+        .collect::<sqlx::Result<ValueMapping>>()?;
+
+    // entity_id column is a foreign key associating back to original entity and is not prefixed
+    // with `external_`
+    value_mapping.insert(Name::new("entity_id"), fetch_value(row, "entity_id", TypeRef::STRING)?);
+
+    Ok(value_mapping)
 }
 
-fn fetch_value(row: &SqliteRow, field_name: &str, field_type: &str) -> sqlx::Result<Value> {
-    let column_name = format!("external_{}", field_name);
+fn fetch_value(row: &SqliteRow, column_name: &str, field_type: &str) -> sqlx::Result<Value> {
     match CairoType::from_str(field_type) {
-        Ok(CairoType::Bool) => fetch_boolean(row, &column_name),
-        Ok(ty) if ty.to_sql_type() == "INTEGER" => fetch_numeric(row, &column_name),
-        Ok(_) => fetch_string(row, &column_name),
-        _ => Err(sqlx::Error::TypeNotFound { type_name: field_type.to_string() }),
+        // fetch boolean
+        Ok(CairoType::Bool) => {
+            Ok(Value::from(matches!(row.try_get::<i64, &str>(column_name)?, BOOLEAN_TRUE)))
+        }
+        // fetch integer
+        Ok(ty) if ty.to_sql_type() == "INTEGER" => {
+            row.try_get::<i64, &str>(column_name).map(Value::from)
+        }
+        // fetch string
+        _ => row.try_get::<String, &str>(column_name).map(Value::from),
     }
-}
-
-fn fetch_string(row: &SqliteRow, column_name: &str) -> sqlx::Result<Value> {
-    row.try_get::<String, &str>(column_name).map(Value::from)
-}
-
-fn fetch_numeric(row: &SqliteRow, column_name: &str) -> sqlx::Result<Value> {
-    row.try_get::<i64, &str>(column_name).map(Value::from)
-}
-
-fn fetch_boolean(row: &SqliteRow, column_name: &str) -> sqlx::Result<Value> {
-    let result = row.try_get::<i64, &str>(column_name);
-    Ok(Value::from(matches!(result?, BOOLEAN_TRUE)))
-}
-
-pub async fn type_mapping_query(
-    conn: &mut PoolConnection<Sqlite>,
-    model_id: &str,
-) -> sqlx::Result<TypeMapping> {
-    let model_members: Vec<ModelMember> = sqlx::query_as(
-        r#"
-        SELECT
-            id,
-            model_id,
-            model_idx,
-            name,
-            type AS ty,
-            key,
-            created_at
-        from model_members WHERE model_id = ?
-        "#,
-    )
-    .bind(model_id)
-    .fetch_all(conn)
-    .await?;
-
-    let (root_members, nested_members): (Vec<&ModelMember>, Vec<&ModelMember>) =
-        model_members.iter().partition(|member| member.model_idx == 0);
-
-    let type_mapping: TypeMapping = root_members
-        .iter()
-        .map(|member| {
-            let type_data = match CairoType::from_str(&member.ty) {
-                Ok(_) => TypeData::Simple(TypeRef::named(member.ty.clone())),
-                _ => parse_type(&member.model_id, &member.ty, &nested_members),
-            };
-
-            (Name::new(&member.name), type_data)
-        })
-        .collect();
-
-    Ok(type_mapping)
-}
-
-fn parse_type(target_id: &str, target_type: &str, nested_members: &Vec<&ModelMember>) -> TypeData {
-    let nested_mapping: TypeMapping = nested_members
-        .iter()
-        .filter_map(|member| {
-            // search for target type in nested members
-            if target_id == member.model_id && member.id.ends_with(target_type) {
-                let type_data = match CairoType::from_str(&member.ty) {
-                    Ok(_) => TypeData::Simple(TypeRef::named(member.ty.clone())),
-                    _ => parse_type(&member.model_id, &member.ty, nested_members),
-                };
-
-                Some((Name::new(&member.name), type_data))
-            } else {
-                None
-            }
-        })
-        .collect();
-
-    TypeData::Nested((TypeRef::named(target_type), nested_mapping))
 }

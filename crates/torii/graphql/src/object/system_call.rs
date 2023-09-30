@@ -106,7 +106,7 @@ impl ObjectTrait for SystemCallObject {
         ))
     }
 
-    fn sub_fields(&self) -> Option<Vec<Field>> {
+    fn related_fields(&self) -> Option<Vec<Field>> {
         Some(vec![Field::new("system", TypeRef::named_nn("System"), |ctx| {
             FieldFuture::new(async move {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
