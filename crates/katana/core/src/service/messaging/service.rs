@@ -13,7 +13,6 @@ use crate::backend::storage::transaction::{L1HandlerTransaction, Transaction};
 use crate::backend::Backend;
 use crate::pool::TransactionPool;
 
-// Sync is not required, only readonly methods are called.
 type MessagingFuture<T> = Pin<Box<dyn Future<Output = T> + Send>>;
 type MessageGatheringFuture = MessagingFuture<MessengerResult<(u64, usize)>>;
 type MessageSettlingFuture = MessagingFuture<MessengerResult<Option<(u64, usize)>>>;
@@ -44,7 +43,7 @@ impl MessagingService {
         backend: Arc<Backend>,
     ) -> anyhow::Result<Self> {
         let gather_from_block = config.from_block;
-        let interval = interval_from_seconds(config.fetch_interval);
+        let interval = interval_from_seconds(config.interval);
         let messenger = match MessengerMode::from_config(config).await {
             Ok(m) => Arc::new(m),
             Err(_) => {
