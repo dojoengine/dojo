@@ -8,7 +8,6 @@ use katana_core::constants::{
 };
 use katana_core::db::serde::state::SerializableState;
 use katana_core::sequencer::SequencerConfig;
-use katana_core::service::messaging::MessagingConfig;
 use katana_rpc::config::ServerConfig;
 use url::Url;
 
@@ -54,14 +53,15 @@ pub struct KatanaArgs {
     #[arg(help = "Initialize the chain from a previously saved state snapshot.")]
     pub load_state: Option<SerializableState>,
 
+    #[cfg(feature = "messaging")]
     #[arg(long)]
     #[arg(value_name = "PATH")]
-    #[arg(value_parser = MessagingConfig::parse)]
+    #[arg(value_parser = katana_core::service::messaging::MessagingConfig::parse)]
     #[arg(help = "Configure the messaging with an other chain.")]
     #[arg(long_help = "Configure the messaging to allow Katana listening/sending messages on a \
                        settlement chain that can be Ethereum or an other Starknet sequencer. \
                        The configuration file details and examples can be found here: TODO.")]
-    pub messaging: Option<MessagingConfig>,
+    pub messaging: Option<katana_core::service::messaging::MessagingConfig>,
 
     #[command(flatten)]
     #[command(next_help_heading = "Server options")]
@@ -140,6 +140,7 @@ impl KatanaArgs {
         SequencerConfig {
             block_time: self.block_time,
             no_mining: self.no_mining,
+            #[cfg(feature = "messaging")]
             messaging: self.messaging.clone(),
         }
     }

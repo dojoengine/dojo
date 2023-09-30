@@ -13,12 +13,15 @@ use starknet::core::types::FieldElement;
 use tracing::trace;
 
 use self::block_producer::BlockProducer;
-use self::messaging::service::{MessagingOutcome, MessagingService};
 use crate::backend::storage::transaction::Transaction;
 use crate::pool::TransactionPool;
 
 pub mod block_producer;
+#[cfg(feature = "messaging")]
 pub mod messaging;
+
+#[cfg(feature = "messaging")]
+use self::messaging::service::{MessagingOutcome, MessagingService};
 
 /// The type that drives the blockchain's state
 ///
@@ -33,6 +36,7 @@ pub struct NodeService {
     /// the miner responsible to select transactions from the `pool´
     pub(crate) miner: TransactionMiner,
     /// The messaging service
+    #[cfg(feature = "messaging")]
     pub(crate) messaging: Option<MessagingService>,
 }
 
@@ -42,6 +46,7 @@ impl Future for NodeService {
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let pin = self.get_mut();
 
+        #[cfg(feature = "messaging")]
         if let Some(messaging) = pin.messaging.as_mut() {
             while let Poll::Ready(Some(outcome)) = messaging.poll_next_unpin(cx) {
                 match outcome {

@@ -27,10 +27,13 @@ use crate::execution::{MaybeInvalidExecutedTransaction, PendingState};
 use crate::pool::TransactionPool;
 use crate::sequencer_error::SequencerError;
 use crate::service::block_producer::{BlockProducer, BlockProducerMode};
-use crate::service::messaging::service::MessagingService;
-use crate::service::messaging::MessagingConfig;
 use crate::service::{NodeService, TransactionMiner};
 use crate::utils::event::{ContinuationToken, ContinuationTokenError};
+
+#[cfg(feature = "messaging")]
+use crate::service::messaging::service::MessagingService;
+#[cfg(feature = "messaging")]
+use crate::service::messaging::MessagingConfig;
 
 type SequencerResult<T> = Result<T, SequencerError>;
 
@@ -38,6 +41,7 @@ type SequencerResult<T> = Result<T, SequencerError>;
 pub struct SequencerConfig {
     pub block_time: Option<u64>,
     pub no_mining: bool,
+    #[cfg(feature = "messaging")]
     pub messaging: Option<MessagingConfig>,
 }
 
@@ -67,6 +71,7 @@ impl KatanaSequencer {
             BlockProducer::instant(Arc::clone(&backend))
         };
 
+        #[cfg(feature = "messaging")]
         let messaging = if let Some(config) = config.messaging.clone() {
             MessagingService::new(config, Arc::clone(&pool), Arc::clone(&backend)).await.ok()
         } else {
@@ -75,9 +80,10 @@ impl KatanaSequencer {
 
         tokio::spawn(NodeService {
             miner,
-            messaging,
             pool: Arc::clone(&pool),
             block_producer: block_producer.clone(),
+            #[cfg(feature = "messaging")]
+            messaging,
         });
 
         Self { pool, config, backend, block_producer }
