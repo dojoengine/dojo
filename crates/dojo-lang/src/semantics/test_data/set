@@ -1,0 +1,258 @@
+//! > no params
+
+//! > test_runner_name
+test_semantics
+
+//! > setup_code
+use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
+
+#[derive(Copy, Drop, Serde, Introspect)]
+struct Health {
+	#[key]
+	id: u32,
+	health: u16,
+}
+
+//! > function_code
+let key: felt252 = 0xb0b;
+let world = IWorldDispatcher{contract_address: 0x0.try_into().unwrap()};
+
+//! > expression
+set!()
+
+//! > expected
+Missing(
+    ExprMissing {
+        ty: <missing>,
+    },
+)
+
+//! > semantic_diagnostics
+error: Plugin diagnostic: Invalid arguments. Expected "(world, (models,))"
+ --> lib.cairo:11:1
+set!()
+^****^
+
+error: Inline macro `set` failed.
+ --> lib.cairo:11:1
+set!()
+^****^
+
+//! > ==========================================================================
+
+//! > incorrect args
+
+//! > test_runner_name
+test_semantics
+
+//! > setup_code
+use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
+
+#[derive(Copy, Drop, Serde, Introspect)]
+struct Health {
+	#[key]
+	id: u32,
+	health: u16,
+}
+
+//! > function_code
+let key: felt252 = 0xb0b;
+let world = IWorldDispatcher{contract_address: 0x0.try_into().unwrap()};
+
+//! > expression
+set!(world)
+
+//! > expected
+Missing(
+    ExprMissing {
+        ty: <missing>,
+    },
+)
+
+//! > semantic_diagnostics
+error: Plugin diagnostic: Invalid arguments. Expected "(world, (models,))"
+ --> lib.cairo:11:1
+set!(world)
+^*********^
+
+error: Inline macro `set` failed.
+ --> lib.cairo:11:1
+set!(world)
+^*********^
+
+//! > ==========================================================================
+
+//! > set successful expansion
+
+//! > no_diagnostics
+true
+
+//! > test_runner_name
+test_semantics
+
+//! > setup_code
+use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
+
+#[derive(Copy, Drop, Serde, Model)]
+struct Health {
+	#[key]
+	id: u32,
+	health: u16,
+}
+
+//! > function_code
+let key: felt252 = 0xb0b;
+let world = IWorldDispatcher{contract_address: 0x0.try_into().unwrap()};
+
+//! > expression
+set!(world, (Health{id: 0xb0b, health: 79}))
+
+//! > expected
+Block(
+    ExprBlock {
+        statements: [
+            Let(
+                StatementLet {
+                    pattern: Variable(
+                        __set_macro_value__,
+                    ),
+                    expr: StructCtor(
+                        ExprStructCtor {
+                            concrete_struct_id: test::Health,
+                            members: [
+                                (
+                                    MemberId(test::id),
+                                    Literal(
+                                        ExprLiteral {
+                                            value: 2827,
+                                            ty: core::integer::u32,
+                                        },
+                                    ),
+                                ),
+                                (
+                                    MemberId(test::health),
+                                    Literal(
+                                        ExprLiteral {
+                                            value: 79,
+                                            ty: core::integer::u16,
+                                        },
+                                    ),
+                                ),
+                            ],
+                            ty: test::Health,
+                        },
+                    ),
+                },
+            ),
+            Expr(
+                StatementExpr {
+                    expr: FunctionCall(
+                        ExprFunctionCall {
+                            function: dojo::world::IWorldDispatcherImpl::set_entity,
+                            args: [
+                                Value(
+                                    Var(
+                                        LocalVarId(test::world),
+                                    ),
+                                ),
+                                Value(
+                                    FunctionCall(
+                                        ExprFunctionCall {
+                                            function: test::HealthModel::name,
+                                            args: [
+                                                Value(
+                                                    Snapshot(
+                                                        ExprSnapshot {
+                                                            inner: Var(
+                                                                LocalVarId(test::__set_macro_value__),
+                                                            ),
+                                                            ty: @test::Health,
+                                                        },
+                                                    ),
+                                                ),
+                                            ],
+                                            ty: core::felt252,
+                                        },
+                                    ),
+                                ),
+                                Value(
+                                    FunctionCall(
+                                        ExprFunctionCall {
+                                            function: test::HealthModel::keys,
+                                            args: [
+                                                Value(
+                                                    Snapshot(
+                                                        ExprSnapshot {
+                                                            inner: Var(
+                                                                LocalVarId(test::__set_macro_value__),
+                                                            ),
+                                                            ty: @test::Health,
+                                                        },
+                                                    ),
+                                                ),
+                                            ],
+                                            ty: core::array::Span::<core::felt252>,
+                                        },
+                                    ),
+                                ),
+                                Value(
+                                    Literal(
+                                        ExprLiteral {
+                                            value: 0,
+                                            ty: core::integer::u8,
+                                        },
+                                    ),
+                                ),
+                                Value(
+                                    FunctionCall(
+                                        ExprFunctionCall {
+                                            function: test::HealthModel::values,
+                                            args: [
+                                                Value(
+                                                    Snapshot(
+                                                        ExprSnapshot {
+                                                            inner: Var(
+                                                                LocalVarId(test::__set_macro_value__),
+                                                            ),
+                                                            ty: @test::Health,
+                                                        },
+                                                    ),
+                                                ),
+                                            ],
+                                            ty: core::array::Span::<core::felt252>,
+                                        },
+                                    ),
+                                ),
+                                Value(
+                                    FunctionCall(
+                                        ExprFunctionCall {
+                                            function: test::HealthModel::layout,
+                                            args: [
+                                                Value(
+                                                    Snapshot(
+                                                        ExprSnapshot {
+                                                            inner: Var(
+                                                                LocalVarId(test::__set_macro_value__),
+                                                            ),
+                                                            ty: @test::Health,
+                                                        },
+                                                    ),
+                                                ),
+                                            ],
+                                            ty: core::array::Span::<core::integer::u8>,
+                                        },
+                                    ),
+                                ),
+                            ],
+                            ty: (),
+                        },
+                    ),
+                },
+            ),
+        ],
+        tail: None,
+        ty: (),
+    },
+)
+
+//! > semantic_diagnostics
