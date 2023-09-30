@@ -10,5 +10,6 @@ mod manifest;
 pub mod model;
 pub mod plugin;
 pub mod print;
+pub mod semantics;
 pub mod system;
 pub(crate) mod version;
