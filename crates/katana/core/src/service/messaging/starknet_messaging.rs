@@ -227,62 +227,7 @@ impl Messenger for StarknetMessaging {
             return Ok(vec![]);
         }
 
-        let mut hashes: Vec<FieldElement> = vec![];
-        let mut calls: Vec<Call> = vec![];
-
-        for m in messages {
-            // Field `to_address` is restricted to eth addresses space. So the
-            // `to_address` is set to 'EXE'/'MSG' to indicate that the message
-            // has to be executed or sent normally.
-            let magic = m.to_address;
-
-            if magic == EXE_MAGIC {
-                if m.payload.len() < 2 {
-                    error!(
-                        target: LOG_TARGET,
-                        "Message execution is expecting a payload of at least length \
-                         2. With [0] being the contract address, and [1] the selector.",
-                    );
-                }
-
-                let to = m.payload[0];
-                let selector = m.payload[1];
-
-                let mut calldata = vec![];
-                // We must exclude the `to_address` and `selector` from the actual payload.
-                if m.payload.len() >= 3 {
-                    calldata.extend(m.payload[2..].to_vec());
-                }
-
-                calls.push(Call { to, selector, calldata });
-                hashes.push(HASH_EXEC);
-            } else if magic == MSG_MAGIC {
-                // In the case or regular message, we compute the message's hash
-                // which will then be sent in a transaction to be registered.
-
-                // As to_address is used by the magic, the `to_address` we want
-                // is the first element of the payload.
-                let to_address = m.payload[0];
-
-                // Then, the payload must be changed to only keep the rest of the
-                // data, without the first element that was the `to_address`.
-                let payload = &m.payload[1..];
-
-                let mut buf: Vec<u8> = vec![];
-                buf.extend(m.from_address.to_bytes_be());
-                buf.extend(to_address.to_bytes_be());
-                buf.extend(FieldElement::from(payload.len()).to_bytes_be());
-                for p in payload {
-                    buf.extend(p.to_bytes_be());
-                }
-
-                hashes.push(starknet_keccak(&buf));
-            } else {
-                // Skip the message if no valid magic number found.
-                warn!("Invalid message to_address magic value: {:?}", magic);
-                continue;
-            }
-        }
+        let (hashes, calls) = parse_messages(messages)?;
 
         if !calls.is_empty() {
             match self.send_invoke_tx(calls).await {
@@ -302,8 +247,75 @@ impl Messenger for StarknetMessaging {
     }
 }
 
+/// Parses messages sent by cairo contracts
+/// to compute their hashes.
+///
+/// Messages can also be labelled as EXE,
+/// which in this case generate a `Call`
+/// additionally to the hash.
+fn parse_messages(messages: &[MsgToL1]) -> MessengerResult<(Vec<FieldElement>, Vec<Call>)> {
+    let mut hashes: Vec<FieldElement> = vec![];
+    let mut calls: Vec<Call> = vec![];
+
+    for m in messages {
+        // Field `to_address` is restricted to eth addresses space. So the
+        // `to_address` is set to 'EXE'/'MSG' to indicate that the message
+        // has to be executed or sent normally.
+        let magic = m.to_address;
+
+        if magic == EXE_MAGIC {
+            if m.payload.len() < 2 {
+                error!(
+                    target: LOG_TARGET,
+                    "Message execution is expecting a payload of at least length \
+                     2. With [0] being the contract address, and [1] the selector.",
+                );
+            }
+
+            let to = m.payload[0];
+            let selector = m.payload[1];
+
+            let mut calldata = vec![];
+            // We must exclude the `to_address` and `selector` from the actual payload.
+            if m.payload.len() >= 3 {
+                calldata.extend(m.payload[2..].to_vec());
+            }
+
+            calls.push(Call { to, selector, calldata });
+            hashes.push(HASH_EXEC);
+        } else if magic == MSG_MAGIC {
+            // In the case or regular message, we compute the message's hash
+            // which will then be sent in a transaction to be registered.
+
+            // As to_address is used by the magic, the `to_address` we want
+            // is the first element of the payload.
+            let to_address = m.payload[0];
+
+            // Then, the payload must be changed to only keep the rest of the
+            // data, without the first element that was the `to_address`.
+            let payload = &m.payload[1..];
+
+            let mut buf: Vec<u8> = vec![];
+            buf.extend(m.from_address.to_bytes_be());
+            buf.extend(to_address.to_bytes_be());
+            buf.extend(FieldElement::from(payload.len()).to_bytes_be());
+            for p in payload {
+                buf.extend(p.to_bytes_be());
+            }
+
+            hashes.push(starknet_keccak(&buf));
+        } else {
+            // Skip the message if no valid magic number found.
+            warn!("Invalid message to_address magic value: {:?}", magic);
+            continue;
+        }
+    }
+
+    Ok((hashes, calls))
+}
+
 fn l1_handler_tx_from_event(event: &EmittedEvent) -> Result<L1HandlerTransaction> {
-    // TODO: replace by the keys directly in the configuration.
+    // TODO: replace by the keys directly in the configuration?
     if event.keys[0] != selector!("MessageSentToAppchain") {
         debug!(
             target: LOG_TARGET,
@@ -351,4 +363,178 @@ fn l1_handler_tx_from_event(event: &EmittedEvent) -> Result<L1HandlerTransaction
     };
 
     Ok(tx)
+}
+
+#[cfg(test)]
+mod tests {
+
+    use starknet::macros::felt;
+
+    use super::*;
+
+    #[test]
+    fn parse_messages_msg() {
+        let from_address = selector!("from_address");
+        let to_address = selector!("to_address");
+        let selector = selector!("selector");
+        let payload_msg = vec![to_address, FieldElement::ONE, FieldElement::TWO];
+        let payload_exe = vec![to_address, selector, FieldElement::ONE, FieldElement::TWO];
+
+        let messages = vec![
+            MsgToL1 { from_address, to_address: MSG_MAGIC, payload: payload_msg },
+            MsgToL1 { from_address, to_address: EXE_MAGIC, payload: payload_exe.clone() },
+        ];
+
+        let (hashes, calls) = parse_messages(&messages).unwrap();
+
+        assert_eq!(hashes.len(), 2);
+        assert_eq!(
+            hashes,
+            vec![
+                FieldElement::from_hex_be(
+                    "0x03a1d2e131360f15e26dd4f6ff10550685611cc25f75e7950b704adb04b36162"
+                )
+                .unwrap(),
+                HASH_EXEC,
+            ]
+        );
+
+        assert_eq!(calls.len(), 1);
+        assert_eq!(calls[0].to, to_address);
+        assert_eq!(calls[0].selector, selector);
+        assert_eq!(calls[0].calldata, payload_exe[2..].to_vec());
+    }
+
+    #[test]
+    #[should_panic]
+    fn parse_messages_msg_bad_payload() {
+        let from_address = selector!("from_address");
+        let payload_msg = vec![];
+
+        let messages = vec![MsgToL1 { from_address, to_address: MSG_MAGIC, payload: payload_msg }];
+
+        parse_messages(&messages).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn parse_messages_exe_bad_payload() {
+        let from_address = selector!("from_address");
+        let payload_exe = vec![FieldElement::ONE];
+
+        let messages = vec![MsgToL1 { from_address, to_address: EXE_MAGIC, payload: payload_exe }];
+
+        parse_messages(&messages).unwrap();
+    }
+
+    #[test]
+    fn l1_handler_tx_from_event_parse_ok() {
+        let from_address = selector!("from_address");
+        let to_address = selector!("to_address");
+        let selector = selector!("selector");
+        let nonce = FieldElement::ONE;
+        let calldata: Vec<StarkFelt> = vec![from_address.into(), FieldElement::THREE.into()];
+        let transaction_hash: FieldElement =
+            hash::pedersen_hash(&nonce.into(), &to_address.into()).into();
+
+        let event = EmittedEvent {
+            from_address: felt!(
+                "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
+            ),
+            keys: vec![
+                selector!("MessageSentToAppchain"),
+                selector!("random_hash"),
+                from_address,
+                to_address,
+            ],
+            data: vec![
+                selector,
+                nonce,
+                FieldElement::from(calldata.len() as u128),
+                FieldElement::THREE,
+            ],
+            block_hash: selector!("block_hash"),
+            block_number: 0,
+            transaction_hash,
+        };
+
+        let expected = L1HandlerTransaction {
+            inner: ApiL1HandlerTransaction {
+                transaction_hash: TransactionHash(transaction_hash.into()),
+                version: TransactionVersion(stark_felt!(1_u32)),
+                nonce: Nonce(nonce.into()),
+                contract_address: ContractAddress::try_from(
+                    <FieldElement as Into<StarkFelt>>::into(to_address),
+                )
+                .unwrap(),
+                entry_point_selector: EntryPointSelector(selector.into()),
+                calldata: Calldata(calldata.into()),
+            },
+            paid_l1_fee: 30000_u128,
+        };
+
+        let tx = l1_handler_tx_from_event(&event).unwrap();
+
+        assert_eq!(tx.inner, expected.inner);
+    }
+
+    #[test]
+    #[should_panic]
+    fn l1_handler_tx_from_event_parse_bad_selector() {
+        let from_address = selector!("from_address");
+        let to_address = selector!("to_address");
+        let selector = selector!("selector");
+        let nonce = FieldElement::ONE;
+        let calldata: Vec<StarkFelt> = vec![from_address.into(), FieldElement::THREE.into()];
+        let transaction_hash: FieldElement =
+            hash::pedersen_hash(&nonce.into(), &to_address.into()).into();
+
+        let event = EmittedEvent {
+            from_address: felt!(
+                "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
+            ),
+            keys: vec![
+                selector!("AnOtherUnexpectedEvent"),
+                selector!("random_hash"),
+                from_address,
+                to_address,
+            ],
+            data: vec![
+                selector,
+                nonce,
+                FieldElement::from(calldata.len() as u128),
+                FieldElement::THREE,
+            ],
+            block_hash: selector!("block_hash"),
+            block_number: 0,
+            transaction_hash,
+        };
+
+        let _tx = l1_handler_tx_from_event(&event).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn l1_handler_tx_from_event_parse_missing_key_data() {
+        let from_address = selector!("from_address");
+        let to_address = selector!("to_address");
+        let _selector = selector!("selector");
+        let nonce = FieldElement::ONE;
+        let _calldata: Vec<StarkFelt> = vec![from_address.into(), FieldElement::THREE.into()];
+        let transaction_hash: FieldElement =
+            hash::pedersen_hash(&nonce.into(), &to_address.into()).into();
+
+        let event = EmittedEvent {
+            from_address: felt!(
+                "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
+            ),
+            keys: vec![selector!("AnOtherUnexpectedEvent"), selector!("random_hash"), from_address],
+            data: vec![],
+            block_hash: selector!("block_hash"),
+            block_number: 0,
+            transaction_hash,
+        };
+
+        let _tx = l1_handler_tx_from_event(&event).unwrap();
+    }
 }

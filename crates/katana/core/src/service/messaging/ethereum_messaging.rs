@@ -176,19 +176,9 @@ impl Messenger for EthereumMessaging {
             self.provider_signer.clone(),
         );
 
-        let hashes: Vec<U256> = messages
-            .into_iter()
-            .map(|msg| {
-                let mut buf: Vec<u8> = vec![];
-                buf.extend(msg.from_address.to_bytes_be());
-                buf.extend(msg.to_address.to_bytes_be());
-                buf.extend(FieldElement::from(msg.payload.len()).to_bytes_be());
-                msg.payload.iter().for_each(|p| buf.extend(p.to_bytes_be()));
-                compute_message_hash(&buf)
-            })
-            .collect();
+        let hashes = parse_messages(messages);
 
-        trace!(target: LOG_TARGET, "Sending transaction on L1 to register messages...");
+        debug!("Sending transaction on L1 to register messages...");
         match starknet_messaging
             .add_message_hashes_from_l2(hashes.clone())
             .send()
@@ -213,15 +203,6 @@ impl Messenger for EthereumMessaging {
             }
         }
     }
-}
-
-/// Computes the message hash.
-fn compute_message_hash(data: &[u8]) -> U256 {
-    let mut hasher = Keccak256::new();
-    hasher.update(data);
-    let hash = hasher.finalize();
-    let hash_bytes = hash.as_slice();
-    U256::from_big_endian(hash_bytes)
 }
 
 /// Converts a starknet core log into a L1 handler transaction.
@@ -261,10 +242,121 @@ fn l1_handler_tx_from_log(log: &Log) -> Result<L1HandlerTransaction> {
     Ok(tx)
 }
 
+/// With Ethereum, the messages are following the conventional starknet messaging.
+/// There is no MSG/EXE MAGIC expected here.
+fn parse_messages(messages: &[MsgToL1]) -> Vec<U256> {
+    messages
+        .iter()
+        .map(|msg| {
+            let mut buf: Vec<u8> = vec![];
+            buf.extend(msg.from_address.to_bytes_be());
+            buf.extend(msg.to_address.to_bytes_be());
+            buf.extend(FieldElement::from(msg.payload.len()).to_bytes_be());
+            msg.payload.iter().for_each(|p| buf.extend(p.to_bytes_be()));
+
+            let mut hasher = Keccak256::new();
+            hasher.update(buf);
+            let hash = hasher.finalize();
+            let hash_bytes = hash.as_slice();
+            U256::from_big_endian(hash_bytes)
+        })
+        .collect()
+}
+
 fn stark_felt_from_u256(v: U256) -> StarkFelt {
     stark_felt!(format!("{:#064x}", v).as_str())
 }
 
 fn stark_felt_from_address(v: Address) -> StarkFelt {
     stark_felt!(format!("{:#064x}", v).as_str())
+}
+
+#[cfg(test)]
+mod tests {
+
+    use starknet::macros::selector;
+
+    use super::*;
+
+    #[test]
+    fn parse_messages_msg() {
+        let from_address = selector!("from_address");
+        let to_address = selector!("to_address");
+        let payload = vec![FieldElement::ONE, FieldElement::TWO];
+
+        let messages = vec![MsgToL1 { from_address, to_address, payload }];
+
+        let hashes = parse_messages(&messages);
+        assert_eq!(hashes.len(), 1);
+        assert_eq!(
+            hashes[0],
+            U256::from_str_radix(
+                "0x5ba1d2e131360f15e26dd4f6ff10550685611cc25f75e7950b704adb04b36162",
+                16
+            )
+            .unwrap()
+        );
+    }
+
+    #[test]
+    fn l1_handler_tx_from_event_parse_ok() {
+        let from_address = "0x000000000000000000000000be3C44c09bc1a3566F3e1CA12e5AbA0fA4Ca72Be";
+        let to_address = "0x039dc79e64f4bb3289240f88e0bae7d21735bef0d1a51b2bf3c4730cb16983e1";
+        let selector = "0x02f15cff7b0eed8b9beb162696cf4e3e0e35fa7032af69cd1b7d2ac67a13f40f";
+        let nonce = 783082_u128;
+        let fee = 30000_u128;
+
+        // Payload two values: [1, 2].
+        let payload_buf = hex::decode("000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000bf2ea0000000000000000000000000000000000000000000000000000000000007530000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002").unwrap();
+
+        let calldata: Vec<StarkFelt> = vec![
+            FieldElement::from_hex_be(from_address).unwrap().into(),
+            FieldElement::ONE.into(),
+            FieldElement::TWO.into(),
+        ];
+
+        let transaction_hash: FieldElement = hash::pedersen_hash(
+            &nonce.into(),
+            &FieldElement::from_hex_be(to_address).unwrap().into(),
+        )
+        .into();
+
+        let log = Log {
+            address: H160::from_str("0xde29d060D45901Fb19ED6C6e959EB22d8626708e").unwrap(),
+            topics: vec![
+                H256::from_str(
+                    "0xdb80dd488acf86d17c747445b0eabb5d57c541d3bd7b6b87af987858e5066b2b",
+                )
+                .unwrap(),
+                H256::from_str(from_address).unwrap(),
+                H256::from_str(to_address).unwrap(),
+                H256::from_str(selector).unwrap(),
+            ],
+            data: payload_buf.into(),
+            ..Default::default()
+        };
+
+        let expected = L1HandlerTransaction {
+            inner: ApiL1HandlerTransaction {
+                transaction_hash: TransactionHash(transaction_hash.into()),
+                version: TransactionVersion(stark_felt!(1_u32)),
+                nonce: Nonce(FieldElement::from(nonce).into()),
+                contract_address: ContractAddress::try_from(
+                    <FieldElement as Into<StarkFelt>>::into(
+                        FieldElement::from_hex_be(to_address).unwrap(),
+                    ),
+                )
+                .unwrap(),
+                entry_point_selector: EntryPointSelector(
+                    FieldElement::from_hex_be(selector).unwrap().into(),
+                ),
+                calldata: Calldata(calldata.into()),
+            },
+            paid_l1_fee: fee,
+        };
+
+        let tx = l1_handler_tx_from_log(&log).expect("aa");
+
+        assert_eq!(tx.inner, expected.inner);
+    }
 }

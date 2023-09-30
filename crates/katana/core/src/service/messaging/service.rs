@@ -104,7 +104,7 @@ impl MessagingService {
                         target: LOG_TARGET,
                         "error settling messages for block {block_num}: {e}"
                     );
-                    Err(e)
+                    Some(Err(e))
                 }
             }
         }

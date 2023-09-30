@@ -4626,6 +4626,7 @@ dependencies = [
  "ethers",
  "flate2",
  "futures",
+ "hex",
  "lazy_static",
  "parking_lot 0.12.1",
  "rand",
