@@ -45,13 +45,11 @@ impl Future for NodeService {
         if let Some(messaging) = pin.messaging.as_mut() {
             while let Poll::Ready(Some(outcome)) = messaging.poll_next_unpin(cx) {
                 match outcome {
-                    MessagingOutcome::GatheredMessages(txs) => {
-                        trace!(target: "node", "collected {} messages from settlement chain", txs.len());
-                        txs.into_iter()
-                            .for_each(|tx| pin.pool.add_transaction(Transaction::L1Handler(tx)))
+                    MessagingOutcome::Gather { msg_count, .. } => {
+                        trace!(target: "node", "collected {msg_count} messages from settlement chain");
                     }
-                    MessagingOutcome::SettledMessages(hashes) => {
-                        trace!(target: "node", "settled {} messages on settlement chain", hashes.len());
+                    MessagingOutcome::Settle { msg_count, .. } => {
+                        trace!(target: "node", "settled {msg_count} messages to the settlement chain");
                     }
                 }
             }

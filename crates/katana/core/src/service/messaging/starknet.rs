@@ -165,12 +165,13 @@ impl StarknetMessaging {
 #[async_trait]
 impl Messenger for StarknetMessaging {
     type MessageHash = FieldElement;
+    type MessageTransaction = L1HandlerTransaction;
 
     async fn gather_messages(
         &self,
         from_block: u64,
         max_blocks: u64,
-    ) -> MessengerResult<(u64, Vec<L1HandlerTransaction>)> {
+    ) -> MessengerResult<(u64, Vec<Self::MessageTransaction>)> {
         let chain_latest_block: u64 = match self.provider.block_number().await {
             Ok(n) => n,
             Err(_) => {

@@ -1,19 +1,20 @@
-mod ethereum_messaging;
+mod ethereum;
 pub mod service;
-mod starknet_messaging;
+mod starknet;
 
 use std::path::Path;
 
+use ::starknet::core::types::MsgToL1;
+use ::starknet::providers::jsonrpc::HttpTransport;
+use ::starknet::providers::{JsonRpcClient, Provider};
 use anyhow::Result;
 use async_trait::async_trait;
-use ethereum_messaging::EthereumMessaging;
-use ethers::providers::ProviderError;
+use ethereum::EthereumMessaging;
+use ethers::providers::ProviderError as EthereumProviderError;
 use serde::Deserialize;
-use starknet::core::types::MsgToL1;
 use tracing::{error, info};
 
-use self::starknet_messaging::StarknetMessaging;
-use crate::backend::storage::transaction::L1HandlerTransaction;
+use self::starknet::StarknetMessaging;
 
 pub(crate) const LOG_TARGET: &str = "messaging";
 
@@ -28,9 +29,24 @@ pub enum Error {
     #[error("Failed to send messages")]
     SendError,
     #[error(transparent)]
-    EthereumProvider(#[from] ProviderError),
+    Provider(ProviderError),
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum ProviderError {
+    #[error("Ethereum provider error: {0}")]
+    Ethereum(EthereumProviderError),
+    #[error("Starknet provider error: {0}")]
+    Starknet(<JsonRpcClient<HttpTransport> as Provider>::Error),
+}
+
+impl From<EthereumProviderError> for Error {
+    fn from(e: EthereumProviderError) -> Self {
+        Self::Provider(ProviderError::Ethereum(e))
+    }
+}
+
+/// The config used to initialize the messaging service.
 #[derive(Debug, Default, Deserialize, Clone)]
 pub struct MessagingConfig {
     // The RPC-URL of the settlement chain.
@@ -63,9 +79,13 @@ impl MessagingConfig {
 pub trait Messenger {
     /// The type of the message hash.
     type MessageHash;
+    /// The transaction type of the message after being collected from the settlement chain.
+    /// This is the transaction type that the message will be converted to before being added to the
+    /// transaction pool.
+    type MessageTransaction;
 
-    /// Gathers messages emitted on the settlement chain and returns the
-    /// list of transaction (L1HanlderTx) to be executed and the last fetched block.
+    /// Gathers messages emitted on the settlement chain and returns the list of transaction
+    /// (L1HandlerTx) to be executed and the last fetched block.
     ///
     /// # Arguments
     ///
@@ -76,7 +96,7 @@ pub trait Messenger {
         &self,
         from_block: u64,
         max_blocks: u64,
-    ) -> MessengerResult<(u64, Vec<L1HandlerTransaction>)>;
+    ) -> MessengerResult<(u64, Vec<Self::MessageTransaction>)>;
 
     /// Computes the hash of the given messages and sends them to the settlement chain.
     ///
@@ -92,18 +112,18 @@ pub trait Messenger {
     ) -> MessengerResult<Vec<Self::MessageHash>>;
 }
 
-pub enum AnyMessenger {
+pub enum MessengerMode {
     Ethereum(EthereumMessaging),
     Starknet(StarknetMessaging),
 }
 
-impl AnyMessenger {
+impl MessengerMode {
     pub async fn from_config(config: MessagingConfig) -> MessengerResult<Self> {
         if config.contract_address.len() < 50 {
-            match EthereumMessaging::new(config.clone()).await {
+            match EthereumMessaging::new(config).await {
                 Ok(m_eth) => {
                     info!(target: LOG_TARGET, "Messaging enabled [Ethereum]");
-                    Ok(AnyMessenger::Ethereum(m_eth))
+                    Ok(MessengerMode::Ethereum(m_eth))
                 }
                 Err(e) => {
                     error!(target: LOG_TARGET, "Ethereum messenger init failed: {e}");
@@ -111,49 +131,16 @@ impl AnyMessenger {
                 }
             }
         } else {
-            match StarknetMessaging::new(config.clone()).await {
+            match StarknetMessaging::new(config).await {
                 Ok(m_sn) => {
                     info!(target: LOG_TARGET, "Messaging enabled [Starknet]");
-                    Ok(AnyMessenger::Starknet(m_sn))
+                    Ok(MessengerMode::Starknet(m_sn))
                 }
                 Err(e) => {
                     error!(target: LOG_TARGET, "Starknet messenger init failed: {e}");
                     Err(Error::InitError)
                 }
             }
-        }
-    }
-}
-
-#[async_trait]
-impl Messenger for AnyMessenger {
-    type MessageHash = String;
-
-    async fn gather_messages(
-        &self,
-        from_block: u64,
-        max_blocks: u64,
-    ) -> MessengerResult<(u64, Vec<L1HandlerTransaction>)> {
-        match self {
-            Self::Ethereum(inner) => inner.gather_messages(from_block, max_blocks).await,
-            Self::Starknet(inner) => inner.gather_messages(from_block, max_blocks).await,
-        }
-    }
-
-    async fn settle_messages(
-        &self,
-        messages: &[MsgToL1],
-    ) -> MessengerResult<Vec<Self::MessageHash>> {
-        match self {
-            Self::Ethereum(inner) => inner
-                .settle_messages(messages)
-                .await
-                .map(|hashes| hashes.into_iter().map(|hash| format!("{hash:#x}")).collect()),
-
-            Self::Starknet(inner) => inner
-                .settle_messages(messages)
-                .await
-                .map(|hashes| hashes.into_iter().map(|hash| format!("{hash:#x}")).collect()),
         }
     }
 }

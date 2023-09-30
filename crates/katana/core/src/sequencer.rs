@@ -68,7 +68,7 @@ impl KatanaSequencer {
         };
 
         let messaging = if let Some(config) = config.messaging.clone() {
-            MessagingService::new(config, Arc::clone(&backend)).await.ok()
+            MessagingService::new(config, Arc::clone(&pool), Arc::clone(&backend)).await.ok()
         } else {
             None
         };
