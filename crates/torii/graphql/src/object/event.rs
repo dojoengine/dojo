@@ -9,7 +9,7 @@ use super::connection::connection_output;
 use super::system_call::{SystemCall, SystemCallObject};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
-use crate::query::{query_all, query_by_id, query_total_count, ID};
+use crate::query::{query_all, query_by_id, query_total_count};
 use crate::types::{GraphqlType, TypeData};
 use crate::utils::extract_value::extract;
 
@@ -77,7 +77,7 @@ impl ObjectTrait for EventObject {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                     let id = ctx.args.try_get("id")?.string()?.to_string();
-                    let event = query_by_id(&mut conn, "events", ID::Str(id)).await?;
+                    let event = query_by_id(&mut conn, "events", &id).await?;
                     let result = EventObject::value_mapping(event);
                     Ok(Some(Value::Object(result)))
                 })
@@ -111,7 +111,7 @@ impl ObjectTrait for EventObject {
                 let event_values = ctx.parent_value.try_downcast_ref::<ValueMapping>()?;
                 let syscall_id = extract::<i64>(event_values, "system_call_id")?;
                 let system_call: SystemCall =
-                    query_by_id(&mut conn, "system_calls", ID::I64(syscall_id)).await?;
+                    query_by_id(&mut conn, "system_calls", &syscall_id.to_string()).await?;
                 let result = SystemCallObject::value_mapping(system_call);
                 Ok(Some(Value::Object(result)))
             })

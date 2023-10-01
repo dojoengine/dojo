@@ -10,7 +10,7 @@ use super::connection::connection_output;
 use super::system_call::system_calls_by_system_id;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
-use crate::query::{query_all, query_by_id, query_total_count, ID};
+use crate::query::{query_all, query_by_id, query_total_count};
 use crate::types::{GraphqlType, TypeData};
 use crate::utils::extract_value::extract;
 
@@ -84,7 +84,7 @@ impl ObjectTrait for SystemObject {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                     let id = ctx.args.try_get("id")?.string()?.to_string();
-                    let system = query_by_id(&mut conn, "systems", ID::Str(id)).await?;
+                    let system = query_by_id(&mut conn, "systems", &id).await?;
                     let result = SystemObject::value_mapping(system);
                     Ok(Some(Value::Object(result)))
                 })

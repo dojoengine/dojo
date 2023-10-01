@@ -17,7 +17,7 @@ use super::connection::{
 use super::model_data::model_data_by_id_query;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
-use crate::query::{query_by_id, type_mapping_query, ID};
+use crate::query::{query_by_id, type_mapping_query};
 use crate::types::{GraphqlType, TypeData};
 use crate::utils::csv_to_vec;
 use crate::utils::extract_value::extract;
@@ -88,7 +88,7 @@ impl ObjectTrait for EntityObject {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                     let id = ctx.args.try_get("id")?.string()?.to_string();
-                    let entity = query_by_id(&mut conn, "entities", ID::Str(id)).await?;
+                    let entity = query_by_id(&mut conn, "entities", &id).await?;
                     let result = EntityObject::value_mapping(entity);
                     Ok(Some(Value::Object(result)))
                 })

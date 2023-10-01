@@ -14,24 +14,17 @@ use crate::types::{TypeData, TypeMapping};
 pub mod filter;
 pub mod order;
 
-pub enum ID {
-    Str(String),
-    I64(i64),
-}
-
 pub async fn query_by_id<T>(
     conn: &mut PoolConnection<Sqlite>,
     table_name: &str,
-    id: ID,
+    id: &str,
 ) -> Result<T>
 where
     T: Send + Unpin + for<'a> FromRow<'a, SqliteRow>,
 {
     let query = format!("SELECT * FROM {} WHERE id = ?", table_name);
-    let result = match id {
-        ID::Str(id) => sqlx::query_as::<_, T>(&query).bind(id).fetch_one(conn).await?,
-        ID::I64(id) => sqlx::query_as::<_, T>(&query).bind(id).fetch_one(conn).await?,
-    };
+    let result = sqlx::query_as::<_, T>(&query).bind(id).fetch_one(conn).await?;
+
     Ok(result)
 }
 

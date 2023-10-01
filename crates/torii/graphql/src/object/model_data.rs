@@ -22,7 +22,7 @@ use crate::constants::DEFAULT_LIMIT;
 use crate::object::entity::EntityObject;
 use crate::query::filter::{Filter, FilterValue};
 use crate::query::order::{Direction, Order};
-use crate::query::{query_by_id, query_total_count, ID};
+use crate::query::{query_by_id, query_total_count};
 use crate::types::TypeData;
 use crate::utils::extract_value::extract;
 
@@ -217,8 +217,7 @@ fn entity_field() -> Field {
                 Value::Object(indexmap) => {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                     let entity_id = extract::<String>(indexmap, "entity_id")?;
-                    let entity: Entity =
-                        query_by_id(&mut conn, "entities", ID::Str(entity_id)).await?;
+                    let entity: Entity = query_by_id(&mut conn, "entities", &entity_id).await?;
                     let result = EntityObject::value_mapping(entity);
 
                     Ok(Some(Value::Object(result)))

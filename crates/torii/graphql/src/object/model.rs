@@ -12,7 +12,7 @@ use torii_core::types::Model;
 use super::connection::connection_output;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
-use crate::query::{query_all, query_by_id, query_total_count, ID};
+use crate::query::{query_all, query_by_id, query_total_count};
 use crate::types::{GraphqlType, TypeData};
 
 pub struct ModelObject {
@@ -77,7 +77,7 @@ impl ObjectTrait for ModelObject {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                     let id = ctx.args.try_get("id")?.string()?.to_string();
-                    let model = query_by_id(&mut conn, "models", ID::Str(id)).await?;
+                    let model = query_by_id(&mut conn, "models", &id).await?;
                     let result = ModelObject::value_mapping(model);
                     Ok(Some(Value::Object(result)))
                 })
