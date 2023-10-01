@@ -8,7 +8,7 @@ use futures::{Future, FutureExt, Stream};
 use tokio::time::{interval_at, Instant, Interval};
 use tracing::{error, info};
 
-use super::{MessagingConfig, Messenger, MessengerMode, MessengerResult, LOG_TARGET};
+use super::{Error, MessagingConfig, Messenger, MessengerMode, MessengerResult, LOG_TARGET};
 use crate::backend::storage::transaction::{L1HandlerTransaction, Transaction};
 use crate::backend::Backend;
 use crate::pool::TransactionPool;
@@ -69,15 +69,21 @@ impl MessagingService {
     async fn gather_messages(
         messenger: Arc<MessengerMode>,
         pool: Arc<TransactionPool>,
+        backend: Arc<Backend>,
         from_block: u64,
     ) -> MessengerResult<(u64, usize)> {
+        let chain_id =
+            FieldElement::from_hex_be(backend.env.read().block.chain_id.clone().as_hex().as_str())
+                .map_err(|_| Error::GatherError)?;
+
         // 200 avoids any possible rejection from RPC with possibly lot's of messages.
         // TODO: May this be configurable?
         let max_block = 200;
 
         match messenger.as_ref() {
             MessengerMode::Ethereum(inner) => {
-                let (block_num, txs) = inner.gather_messages(from_block, max_block).await?;
+                let (block_num, txs) =
+                    inner.gather_messages(from_block, max_block, chain_id).await?;
                 let txs_count = txs.len();
 
                 txs.into_iter().for_each(|tx| {
@@ -89,7 +95,8 @@ impl MessagingService {
             }
 
             MessengerMode::Starknet(inner) => {
-                let (block_num, txs) = inner.gather_messages(from_block, max_block).await?;
+                let (block_num, txs) =
+                    inner.gather_messages(from_block, max_block, chain_id).await?;
                 let txs_count = txs.len();
 
                 txs.into_iter().for_each(|tx| {
@@ -172,6 +179,7 @@ impl Stream for MessagingService {
                 pin.msg_gather_fut = Some(Box::pin(Self::gather_messages(
                     pin.messenger.clone(),
                     pin.pool.clone(),
+                    pin.backend.clone(),
                     pin.gather_from_block,
                 )));
             }

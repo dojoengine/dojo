@@ -62,6 +62,14 @@ const PREFIX_DEPLOY_ACCOUNT: FieldElement = FieldElement::from_mont([
     461298303000467581,
 ]);
 
+/// Cairo string for "l1_handler"
+const PREFIX_L1_HANDLER: FieldElement = FieldElement::from_mont([
+    1365666230910873368,
+    18446744073708665300,
+    18446744073709551615,
+    157895833347907735,
+]);
+
 /// Compute the hash of a V1 DeployAccount transaction.
 #[allow(clippy::too_many_arguments)]
 pub fn compute_deploy_account_v1_transaction_hash(
@@ -168,6 +176,53 @@ pub fn compute_invoke_v1_transaction_hash(
         FieldElement::ZERO, // entry_point_selector
         compute_hash_on_elements(calldata),
         max_fee,
+        chain_id,
+        nonce,
+    ])
+}
+
+/// Computes the hash of a L1 handler transaction
+/// from `L1HandlerApiTransaction`.
+pub fn compute_l1_handler_transaction_hash(
+    tx: L1HandlerApiTransaction,
+    chain_id: FieldElement,
+) -> FieldElement {
+    let tx = api_l1_handler_to_rpc_transaction(tx);
+    let version: FieldElement = tx.version.into();
+
+    assert_eq!(version, FieldElement::ZERO, "L1 handler transaction only supports version 0");
+
+    compute_l1_handler_transaction_hash_felts(
+        version,
+        tx.contract_address,
+        tx.entry_point_selector,
+        &tx.calldata,
+        chain_id,
+        tx.nonce.into(),
+    )
+}
+
+/// Computes the hash of a L1 handler transaction
+/// from the fields involved in the computation,
+/// as felts values.
+pub fn compute_l1_handler_transaction_hash_felts(
+    version: FieldElement,
+    contract_address: FieldElement,
+    entry_point_selector: FieldElement,
+    calldata: &[FieldElement],
+    chain_id: FieldElement,
+    nonce: FieldElement,
+) -> FieldElement {
+    // No fee on L2 for L1 handler transaction.
+    let fee = FieldElement::ZERO;
+
+    compute_hash_on_elements(&[
+        PREFIX_L1_HANDLER,
+        version,
+        contract_address,
+        entry_point_selector,
+        compute_hash_on_elements(calldata),
+        fee,
         chain_id,
         nonce,
     ])

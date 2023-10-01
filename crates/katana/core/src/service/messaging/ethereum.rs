@@ -11,15 +11,16 @@ use k256::ecdsa::SigningKey;
 use sha3::{Digest, Keccak256};
 use starknet::core::types::{FieldElement, MsgToL1};
 use starknet_api::core::{ContractAddress, EntryPointSelector, Nonce};
-use starknet_api::hash::{self, StarkFelt};
+use starknet_api::hash::StarkFelt;
 use starknet_api::stark_felt;
 use starknet_api::transaction::{
     Calldata, L1HandlerTransaction as ApiL1HandlerTransaction, TransactionHash, TransactionVersion,
 };
-use tracing::{debug, trace, warn};
+use tracing::{debug, error, trace, warn};
 
 use super::{Error, MessagingConfig, Messenger, MessengerResult, LOG_TARGET};
 use crate::backend::storage::transaction::L1HandlerTransaction;
+use crate::utils::transaction::compute_l1_handler_transaction_hash;
 
 abigen!(
     StarknetMessagingLocal,
@@ -127,6 +128,7 @@ impl Messenger for EthereumMessaging {
         &self,
         from_block: u64,
         max_blocks: u64,
+        chain_id: FieldElement,
     ) -> MessengerResult<(u64, Vec<Self::MessageTransaction>)> {
         let chain_latest_block: u64 = self
             .provider
@@ -153,7 +155,7 @@ impl Messenger for EthereumMessaging {
                 );
 
                 block_logs.into_iter().for_each(|log| {
-                    if let Ok(tx) = log.try_into() {
+                    if let Ok(tx) = l1_handler_tx_from_log(log, chain_id) {
                         l1_handler_txs.push(tx)
                     }
                 })
@@ -202,40 +204,39 @@ impl Messenger for EthereumMessaging {
     }
 }
 
-impl TryFrom<Log> for L1HandlerTransaction {
-    type Error = ethers::abi::Error;
+fn l1_handler_tx_from_log(
+    log: Log,
+    chain_id: FieldElement,
+) -> MessengerResult<L1HandlerTransaction> {
+    let parsed_log = <LogMessageToL2 as EthLogDecode>::decode_log(&log.into()).map_err(|e| {
+        error!(target: LOG_TARGET, "Log parsing failed {e}");
+        Error::GatherError
+    })?;
 
-    fn try_from(log: Log) -> Result<Self, Self::Error> {
-        let parsed_log = <LogMessageToL2 as EthLogDecode>::decode_log(&log.into())?;
+    let from_address = stark_felt_from_address(parsed_log.from_address);
+    let contract_address = stark_felt_from_u256(parsed_log.to_address);
+    let selector = stark_felt_from_u256(parsed_log.selector);
+    let nonce = stark_felt_from_u256(parsed_log.nonce);
+    let paid_l1_fee: u128 = parsed_log.fee.try_into().expect("Fee does not fit into u128.");
 
-        let from_address = stark_felt_from_address(parsed_log.from_address);
-        let contract_address = stark_felt_from_u256(parsed_log.to_address);
-        let selector = stark_felt_from_u256(parsed_log.selector);
-        let nonce = stark_felt_from_u256(parsed_log.nonce);
-        let paid_l1_fee: u128 = parsed_log.fee.try_into().expect("Fee does not fit into u128.");
+    let mut calldata_vec = vec![from_address];
+    calldata_vec.extend(parsed_log.payload.into_iter().map(stark_felt_from_u256));
 
-        let mut calldata_vec = vec![from_address];
-        calldata_vec.extend(parsed_log.payload.into_iter().map(stark_felt_from_u256));
+    let mut inner = ApiL1HandlerTransaction {
+        nonce: Nonce(nonce),
+        calldata: Calldata(calldata_vec.into()),
+        transaction_hash: TransactionHash::default(),
+        version: TransactionVersion(stark_felt!(0_u32)),
+        entry_point_selector: EntryPointSelector(selector),
+        contract_address: ContractAddress::try_from(contract_address).unwrap(),
+    };
 
-        // TODO: not sure about how this must be computed,
-        // at least with a nonce + address we should be
-        // ok for now? Or is it derived from something?
-        let tx_hash = hash::pedersen_hash(&nonce, &contract_address);
+    inner.transaction_hash =
+        TransactionHash(compute_l1_handler_transaction_hash(inner.clone(), chain_id).into());
 
-        let tx = L1HandlerTransaction {
-            paid_l1_fee,
-            inner: ApiL1HandlerTransaction {
-                nonce: Nonce(nonce),
-                calldata: Calldata(calldata_vec.into()),
-                transaction_hash: TransactionHash(tx_hash),
-                version: TransactionVersion(stark_felt!(1_u32)),
-                entry_point_selector: EntryPointSelector(selector),
-                contract_address: ContractAddress::try_from(contract_address).unwrap(),
-            },
-        };
+    let tx = L1HandlerTransaction { paid_l1_fee, inner };
 
-        Ok(tx)
-    }
+    Ok(tx)
 }
 
 /// With Ethereum, the messages are following the conventional starknet messaging.
@@ -295,7 +296,7 @@ mod tests {
     }
 
     #[test]
-    fn l1_handler_tx_from_event_parse_ok() {
+    fn l1_handler_tx_from_log_parse_ok() {
         let from_address = "0x000000000000000000000000be3C44c09bc1a3566F3e1CA12e5AbA0fA4Ca72Be";
         let to_address = "0x039dc79e64f4bb3289240f88e0bae7d21735bef0d1a51b2bf3c4730cb16983e1";
         let selector = "0x02f15cff7b0eed8b9beb162696cf4e3e0e35fa7032af69cd1b7d2ac67a13f40f";
@@ -311,11 +312,10 @@ mod tests {
             FieldElement::TWO.into(),
         ];
 
-        let transaction_hash: FieldElement = hash::pedersen_hash(
-            &nonce.into(),
-            &FieldElement::from_hex_be(to_address).unwrap().into(),
+        let transaction_hash: FieldElement = FieldElement::from_hex_be(
+            "0x6182c63599a9638272f1ce5b5cadabece9c81c2d2b8f88ab7a294472b8fce8b",
         )
-        .into();
+        .unwrap();
 
         let log = Log {
             address: H160::from_str("0xde29d060D45901Fb19ED6C6e959EB22d8626708e").unwrap(),
@@ -335,7 +335,7 @@ mod tests {
         let expected = L1HandlerTransaction {
             inner: ApiL1HandlerTransaction {
                 transaction_hash: TransactionHash(transaction_hash.into()),
-                version: TransactionVersion(stark_felt!(1_u32)),
+                version: TransactionVersion(stark_felt!(0_u32)),
                 nonce: Nonce(FieldElement::from(nonce).into()),
                 contract_address: ContractAddress::try_from(
                     <FieldElement as Into<StarkFelt>>::into(
@@ -351,7 +351,10 @@ mod tests {
             paid_l1_fee: fee,
         };
 
-        let tx: L1HandlerTransaction = log.try_into().expect("aa");
+        // SN_GOERLI.
+        let chain_id = starknet::macros::felt!("0x534e5f474f45524c49");
+        let tx: L1HandlerTransaction =
+            l1_handler_tx_from_log(log, chain_id).expect("bad log format");
 
         assert_eq!(tx.inner, expected.inner);
     }

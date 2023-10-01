@@ -11,7 +11,7 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{AnyProvider, JsonRpcClient, Provider};
 use starknet::signers::{LocalWallet, SigningKey};
 use starknet_api::core::{ContractAddress, EntryPointSelector, Nonce};
-use starknet_api::hash::{self, StarkFelt};
+use starknet_api::hash::StarkFelt;
 use starknet_api::stark_felt;
 use starknet_api::transaction::{
     Calldata, L1HandlerTransaction as ApiL1HandlerTransaction, TransactionHash, TransactionVersion,
@@ -21,6 +21,7 @@ use url::Url;
 
 use super::{Error, MessagingConfig, Messenger, MessengerResult, LOG_TARGET};
 use crate::backend::storage::transaction::L1HandlerTransaction;
+use crate::utils::transaction::compute_l1_handler_transaction_hash_felts;
 
 /// As messaging in starknet is only possible with EthAddress in the `to_address`
 /// field, we have to set magic value to understand what the user want to do.
@@ -170,6 +171,7 @@ impl Messenger for StarknetMessaging {
         &self,
         from_block: u64,
         max_blocks: u64,
+        chain_id: FieldElement,
     ) -> MessengerResult<(u64, Vec<Self::MessageTransaction>)> {
         let chain_latest_block: u64 = match self.provider.block_number().await {
             Ok(n) => n,
@@ -210,7 +212,7 @@ impl Messenger for StarknetMessaging {
                 );
 
                 block_events.iter().for_each(|e| {
-                    if let Ok(tx) = l1_handler_tx_from_event(e) {
+                    if let Ok(tx) = l1_handler_tx_from_event(e, chain_id) {
                         l1_handler_txs.push(tx)
                     }
                 })
@@ -311,8 +313,10 @@ fn parse_messages(messages: &[MsgToL1]) -> MessengerResult<(Vec<FieldElement>, V
     Ok((hashes, calls))
 }
 
-fn l1_handler_tx_from_event(event: &EmittedEvent) -> Result<L1HandlerTransaction> {
-    // TODO: replace by the keys directly in the configuration?
+fn l1_handler_tx_from_event(
+    event: &EmittedEvent,
+    chain_id: FieldElement,
+) -> Result<L1HandlerTransaction> {
     if event.keys[0] != selector!("MessageSentToAppchain") {
         debug!(
             target: LOG_TARGET,
@@ -330,22 +334,29 @@ fn l1_handler_tx_from_event(event: &EmittedEvent) -> Result<L1HandlerTransaction
     let to_address = event.keys[3];
     let selector = event.data[0];
     let nonce = event.data[1];
+    let version = 0_u32;
 
     // Skip the length of the serialized array for the payload which is data[2].
     // Payload starts at data[3].
-    let mut calldata_vec: Vec<StarkFelt> = vec![from_address.into()];
-    for p in &event.data[3..] {
-        calldata_vec.push((*p).into());
-    }
+    let mut calldata = vec![from_address];
+    calldata.extend(&event.data[3..]);
 
-    let calldata = Calldata(calldata_vec.into());
+    let tx_hash = compute_l1_handler_transaction_hash_felts(
+        version.into(),
+        to_address,
+        selector,
+        &calldata,
+        chain_id,
+        nonce,
+    );
 
-    let tx_hash = hash::pedersen_hash(&nonce.into(), &to_address.into());
+    let calldata: Vec<StarkFelt> = calldata.iter().map(|f| StarkFelt::from(*f)).collect();
+    let calldata = Calldata(calldata.into());
 
     let tx = L1HandlerTransaction {
         inner: ApiL1HandlerTransaction {
-            transaction_hash: TransactionHash(tx_hash),
-            version: TransactionVersion(stark_felt!(1_u32)),
+            transaction_hash: TransactionHash(tx_hash.into()),
+            version: TransactionVersion(stark_felt!(version)),
             nonce: Nonce(nonce.into()),
             contract_address: ContractAddress::try_from(<FieldElement as Into<StarkFelt>>::into(
                 to_address,
@@ -354,8 +365,7 @@ fn l1_handler_tx_from_event(event: &EmittedEvent) -> Result<L1HandlerTransaction
             entry_point_selector: EntryPointSelector(selector.into()),
             calldata,
         },
-        // TODO: fee is missing in the event, is this default value ok as it's the minimum one
-        // expected on L1 usually, or should we put max value here?
+        // This is the min value paid on L1 for the message to be sent to L2.
         paid_l1_fee: 30000_u128,
     };
 
@@ -368,6 +378,7 @@ mod tests {
     use starknet::macros::felt;
 
     use super::*;
+    use crate::utils::transaction::stark_felt_to_field_element_array;
 
     #[test]
     fn parse_messages_msg() {
@@ -429,10 +440,17 @@ mod tests {
         let from_address = selector!("from_address");
         let to_address = selector!("to_address");
         let selector = selector!("selector");
+        let chain_id = selector!("KATANA");
         let nonce = FieldElement::ONE;
         let calldata: Vec<StarkFelt> = vec![from_address.into(), FieldElement::THREE.into()];
-        let transaction_hash: FieldElement =
-            hash::pedersen_hash(&nonce.into(), &to_address.into()).into();
+        let transaction_hash: FieldElement = compute_l1_handler_transaction_hash_felts(
+            FieldElement::ZERO,
+            to_address,
+            selector,
+            &stark_felt_to_field_element_array(&calldata),
+            chain_id,
+            nonce,
+        );
 
         let event = EmittedEvent {
             from_address: felt!(
@@ -458,7 +476,7 @@ mod tests {
         let expected = L1HandlerTransaction {
             inner: ApiL1HandlerTransaction {
                 transaction_hash: TransactionHash(transaction_hash.into()),
-                version: TransactionVersion(stark_felt!(1_u32)),
+                version: TransactionVersion(stark_felt!(0_u32)),
                 nonce: Nonce(nonce.into()),
                 contract_address: ContractAddress::try_from(
                     <FieldElement as Into<StarkFelt>>::into(to_address),
@@ -470,7 +488,7 @@ mod tests {
             paid_l1_fee: 30000_u128,
         };
 
-        let tx = l1_handler_tx_from_event(&event).unwrap();
+        let tx = l1_handler_tx_from_event(&event, chain_id).unwrap();
 
         assert_eq!(tx.inner, expected.inner);
     }
@@ -483,8 +501,7 @@ mod tests {
         let selector = selector!("selector");
         let nonce = FieldElement::ONE;
         let calldata: Vec<StarkFelt> = vec![from_address.into(), FieldElement::THREE.into()];
-        let transaction_hash: FieldElement =
-            hash::pedersen_hash(&nonce.into(), &to_address.into()).into();
+        let transaction_hash = FieldElement::ZERO;
 
         let event = EmittedEvent {
             from_address: felt!(
@@ -507,19 +524,18 @@ mod tests {
             transaction_hash,
         };
 
-        let _tx = l1_handler_tx_from_event(&event).unwrap();
+        let _tx = l1_handler_tx_from_event(&event, FieldElement::ZERO).unwrap();
     }
 
     #[test]
     #[should_panic]
     fn l1_handler_tx_from_event_parse_missing_key_data() {
         let from_address = selector!("from_address");
-        let to_address = selector!("to_address");
+        let _to_address = selector!("to_address");
         let _selector = selector!("selector");
-        let nonce = FieldElement::ONE;
+        let _nonce = FieldElement::ONE;
         let _calldata: Vec<StarkFelt> = vec![from_address.into(), FieldElement::THREE.into()];
-        let transaction_hash: FieldElement =
-            hash::pedersen_hash(&nonce.into(), &to_address.into()).into();
+        let transaction_hash = FieldElement::ZERO;
 
         let event = EmittedEvent {
             from_address: felt!(
@@ -532,6 +548,6 @@ mod tests {
             transaction_hash,
         };
 
-        let _tx = l1_handler_tx_from_event(&event).unwrap();
+        let _tx = l1_handler_tx_from_event(&event, FieldElement::ZERO).unwrap();
     }
 }
