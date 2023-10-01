@@ -1,4 +1,33 @@
-//! TODO: Add module documentation.
+//! Messaging module.
+//!
+//! Messaging is the capability of a sequencer to gather/send messages
+//! from/to a settlement chain.
+//! Katana supports two settlement chain configuration:
+//!   1. Ethereum chain, where logs are emitted from the Starknet Core Contract.
+//!   2. Starknet chain, where events are emitted by `appchain_messaging` contract.
+//!
+//! The gathering is done by fetching logs/events from the settlement
+//! chain to then self execute a `L1HandlerTransaction`. There is no account
+//! involved to execute this transaction, fees are charged on the settlement layer.
+//!
+//! The sending of the messages is realized by collecting all the `messages_sent`
+//! from local execution of smart contracts using the `send_message_to_l1_syscall`.
+//! Once messages are collected, their hash is computed and then registered
+//! on the settlement layer to be consumed on the latter (manually by sending
+//! a transaction on the settlement chain).
+//!
+//! Finally, Katana also has the capability to directly send `invoke`
+//! transactions to a settlement chain contract. This is usually used
+//! in the L2 -> L3 messaging configuration, to circumvent the manual
+//! consumption of the message.
+//!
+//! In this module, the messaging service clearly separates the two implementation
+//! for each settlement chain configuration in `starknet.rs` and `ethereum.rs`.
+//! The `service.rs` file aims at running the common logic.
+//!
+//! To start Katana with the messaging enabled, the option `--messaging` must
+//! be used with a configuration file following the `MessagingConfig` format.
+//! An example of this file can be found in the messaging contracts.
 
 mod ethereum;
 mod service;
