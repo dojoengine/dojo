@@ -130,9 +130,8 @@ impl StarknetMessaging {
         Ok(tx.transaction_hash)
     }
 
-    /// Settles messages hashes by sending a transaction to the settlement
-    /// layer.
-    async fn settle_hashes(&self, hashes: &[FieldElement]) -> MessengerResult<FieldElement> {
+    /// Sends messages hashes to settlement layer by sending a transaction.
+    async fn send_hashes(&self, hashes: &[FieldElement]) -> MessengerResult<FieldElement> {
         let mut hashes = hashes.to_vec();
         hashes.retain(|&x| x != HASH_EXEC);
 
@@ -151,7 +150,7 @@ impl StarknetMessaging {
 
         match self.send_invoke_tx(calls).await {
             Ok(tx_hash) => {
-                trace!(target: LOG_TARGET, "Settlement hashes transaction {:#064x}", tx_hash);
+                trace!(target: LOG_TARGET, "Hashes sending transaction {:#064x}", tx_hash);
                 Ok(tx_hash)
             }
             Err(e) => {
@@ -220,10 +219,7 @@ impl Messenger for StarknetMessaging {
         Ok((to_block, l1_handler_txs))
     }
 
-    async fn settle_messages(
-        &self,
-        messages: &[MsgToL1],
-    ) -> MessengerResult<Vec<Self::MessageHash>> {
+    async fn send_messages(&self, messages: &[MsgToL1]) -> MessengerResult<Vec<Self::MessageHash>> {
         if messages.is_empty() {
             return Ok(vec![]);
         }
@@ -242,7 +238,7 @@ impl Messenger for StarknetMessaging {
             };
         }
 
-        self.settle_hashes(&hashes).await?;
+        self.send_hashes(&hashes).await?;
 
         Ok(hashes)
     }

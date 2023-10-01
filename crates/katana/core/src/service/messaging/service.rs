@@ -28,10 +28,10 @@ pub struct MessagingService {
     gather_from_block: u64,
     /// The message gathering future.
     msg_gather_fut: Option<MessageGatheringFuture>,
-    /// The block number of the local blockchain from which messages will be settled.
-    settle_from_block: u64,
-    /// The message settling future.
-    msg_settle_fut: Option<MessageSettlingFuture>,
+    /// The block number of the local blockchain from which messages will be sent.
+    send_from_block: u64,
+    /// The message sending future.
+    msg_send_fut: Option<MessageSettlingFuture>,
 }
 
 impl MessagingService {
@@ -60,9 +60,9 @@ impl MessagingService {
             interval,
             messenger,
             gather_from_block,
-            settle_from_block: 0,
+            send_from_block: 0,
             msg_gather_fut: None,
-            msg_settle_fut: None,
+            msg_send_fut: None,
         })
     }
 
@@ -102,7 +102,7 @@ impl MessagingService {
         }
     }
 
-    async fn settle_messages(
+    async fn send_messages(
         block_num: u64,
         backend: Arc<Backend>,
         messenger: Arc<MessengerMode>,
@@ -126,7 +126,7 @@ impl MessagingService {
             match messenger.as_ref() {
                 MessengerMode::Ethereum(inner) => {
                     let hashes = inner
-                        .settle_messages(&messages)
+                        .send_messages(&messages)
                         .await
                         .map(|hashes| hashes.iter().map(|h| format!("{h:#x}")).collect())?;
                     trace_msg_to_l1_sent(&messages, &hashes);
@@ -135,7 +135,7 @@ impl MessagingService {
 
                 MessengerMode::Starknet(inner) => {
                     let hashes = inner
-                        .settle_messages(&messages)
+                        .send_messages(&messages)
                         .await
                         .map(|hashes| hashes.iter().map(|h| format!("{h:#x}")).collect())?;
                     trace_msg_to_l1_sent(&messages, &hashes);
@@ -153,10 +153,10 @@ pub enum MessagingOutcome {
         /// The number of settlement chain messages gathered up until `latest_block`.
         msg_count: usize,
     },
-    Settle {
-        /// The current local block number from which messages were settled.
+    Send {
+        /// The current local block number from which messages were sent.
         block_num: u64,
-        /// The number of messages settled on `block_num`.
+        /// The number of messages sent on `block_num`.
         msg_count: usize,
     },
 }
@@ -176,11 +176,11 @@ impl Stream for MessagingService {
                 )));
             }
 
-            if pin.msg_settle_fut.is_none() {
+            if pin.msg_send_fut.is_none() {
                 let local_latest_block_num = pin.backend.blockchain.storage.read().latest_number;
-                if pin.settle_from_block <= local_latest_block_num {
-                    pin.msg_settle_fut = Some(Box::pin(Self::settle_messages(
-                        pin.settle_from_block,
+                if pin.send_from_block <= local_latest_block_num {
+                    pin.msg_send_fut = Some(Box::pin(Self::send_messages(
+                        pin.send_from_block,
                         pin.backend.clone(),
                         pin.messenger.clone(),
                     )))
@@ -206,21 +206,21 @@ impl Stream for MessagingService {
             }
         }
 
-        // Poll the settling future.
-        if let Some(mut settle_fut) = pin.msg_settle_fut.take() {
-            match settle_fut.poll_unpin(cx) {
+        // Poll the message sending future.
+        if let Some(mut send_fut) = pin.msg_send_fut.take() {
+            match send_fut.poll_unpin(cx) {
                 Poll::Ready(Ok(Some((block_num, msg_count)))) => {
                     // +1 to move to the next local block to check messages to be
                     // sent on the settlement chain.
-                    pin.settle_from_block += 1;
-                    return Poll::Ready(Some(MessagingOutcome::Settle { block_num, msg_count }));
+                    pin.send_from_block += 1;
+                    return Poll::Ready(Some(MessagingOutcome::Send { block_num, msg_count }));
                 }
                 Poll::Ready(Err(e)) => {
-                    error!(target: LOG_TARGET, "error settling messages for block {}: {e}", pin.settle_from_block);
+                    error!(target: LOG_TARGET, "error settling messages for block {}: {e}", pin.send_from_block);
                     return Poll::Pending;
                 }
                 Poll::Ready(_) => return Poll::Pending,
-                Poll::Pending => pin.msg_settle_fut = Some(settle_fut),
+                Poll::Pending => pin.msg_send_fut = Some(send_fut),
             }
         }
 

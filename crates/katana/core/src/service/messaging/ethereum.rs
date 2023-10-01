@@ -163,10 +163,7 @@ impl Messenger for EthereumMessaging {
         Ok((to_block, l1_handler_txs))
     }
 
-    async fn settle_messages(
-        &self,
-        messages: &[MsgToL1],
-    ) -> MessengerResult<Vec<Self::MessageHash>> {
+    async fn send_messages(&self, messages: &[MsgToL1]) -> MessengerResult<Vec<Self::MessageHash>> {
         if messages.is_empty() {
             return Ok(vec![]);
         }
@@ -190,7 +187,7 @@ impl Messenger for EthereumMessaging {
             Some(receipt) => {
                 trace!(
                     target: LOG_TARGET,
-                    "Transaction sent on L1 to settle {} messages: {:#x}",
+                    "Transaction sent on L1 to register {} messages: {:#x}",
                     hashes.len(),
                     receipt.transaction_hash,
                 );

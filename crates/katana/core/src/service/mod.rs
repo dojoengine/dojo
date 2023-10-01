@@ -53,8 +53,8 @@ impl Future for NodeService {
                     MessagingOutcome::Gather { msg_count, .. } => {
                         trace!(target: "node", "collected {msg_count} messages from settlement chain");
                     }
-                    MessagingOutcome::Settle { msg_count, .. } => {
-                        trace!(target: "node", "settled {msg_count} messages to the settlement chain");
+                    MessagingOutcome::Send { msg_count, .. } => {
+                        trace!(target: "node", "sent {msg_count} messages to the settlement chain");
                     }
                 }
             }
