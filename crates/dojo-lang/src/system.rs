@@ -52,6 +52,13 @@ impl System {
                     #[storage]
                     struct Storage {}
 
+                    #[constructor]
+                    fn constructor(
+                        ref self: ContractState,
+                        world: ContractAddress
+                    ) {
+                    }
+
                     #[external(v0)]
                     fn name(self: @ContractState) -> felt252 {
                         '$name$'

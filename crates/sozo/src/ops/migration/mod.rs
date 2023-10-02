@@ -417,7 +417,8 @@ where
     for contract in strategy.contracts.iter() {
         let name = &contract.diff.name;
         ui.print(italic_message(name).to_string());
-        match deploy_contract(contract, name, vec![], migrator, ui, &txn_config).await? {
+        let world_address = strategy.world_address.unwrap_or_else(|| strategy.world.as_ref().unwrap().contract_address);
+        match deploy_contract(contract, name, vec![world_address], migrator, ui, &txn_config).await? {
             ContractDeploymentOutput::Output(output) => {
                 ui.print_sub(format!("Contract address: {:#x}", output.contract_address));
                 ui.print_hidden_sub(format!("deploy transaction: {:#x}", output.transaction_hash));

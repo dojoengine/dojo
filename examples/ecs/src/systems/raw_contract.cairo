@@ -33,6 +33,13 @@ mod player_actions_external {
         direction: Direction
     }
 
+    #[constructor]
+    fn constructor(
+        ref self: ContractState,
+        world: ContractAddress
+    ) {
+    }
+
     // impl: implement functions specified in trait
     #[external(v0)]
     impl PlayerActionsImpl of IPlayerActions<ContractState> {

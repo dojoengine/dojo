@@ -41,6 +41,9 @@ mod spawn {
     #[storage]
     struct Storage {}
 
+    #[constructor]
+    fn constructor(ref self: ContractState, world: ContractAddress) {}
+
     #[external(v0)]
     fn name(self: @ContractState) -> felt252 {
         'spawn'
@@ -65,6 +68,9 @@ mod proxy {
     #[storage]
     struct Storage {}
 
+    #[constructor]
+    fn constructor(ref self: ContractState, world: ContractAddress) {}
+
     #[external(v0)]
     fn name(self: @ContractState) -> felt252 {
         'proxy'
@@ -86,6 +92,9 @@ mod ctxnamed {
 
     #[storage]
     struct Storage {}
+
+    #[constructor]
+    fn constructor(ref self: ContractState, world: ContractAddress) {}
 
     #[external(v0)]
     fn name(self: @ContractState) -> felt252 {
