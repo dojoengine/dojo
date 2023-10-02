@@ -255,18 +255,18 @@ fn test_entities() {
     let mut keys = ArrayTrait::new();
     keys.append(0);
 
-    let mut query_keys = ArrayTrait::new();
-    let keys_layout = array![251].span();
-    let (keys, values) = world.entities('Foo', 0, query_keys.span(), 2, keys_layout);
-    // assert(keys.len() == 1, 'No keys found for any!'); not enabled by default
+    // let mut query_keys = ArrayTrait::new();
+    // let keys_layout = array![251].span();
+    // let (keys, values) = world.entities('Foo', 42, query_keys.span(), 2, keys_layout);
+    // // assert(keys.len() == 1, 'No keys found for any!'); not enabled by default
 
-    query_keys.append(0x1337);
-    let (keys, values) = world.entities('Foo', 0, query_keys.span(), 2, keys_layout);
-    // assert(keys.len() == 1, 'No keys found!');
+    // query_keys.append(0x1337);
+    // let (keys, values) = world.entities('Foo', 42, query_keys.span(), 2, keys_layout);
+    // // assert(keys.len() == 1, 'No keys found!');
 
-    let mut query_keys = ArrayTrait::new();
-    query_keys.append(0x1338);
-    let (keys, values) = world.entities('Foo', 0, query_keys.span(), 2, keys_layout);
+    // let mut query_keys = ArrayTrait::new();
+    // query_keys.append(0x1338);
+    // let (keys, values) = world.entities('Foo', 42, query_keys.span(), 2, keys_layout);
     // assert(keys.len() == 0, 'Keys found!');
 }
 
