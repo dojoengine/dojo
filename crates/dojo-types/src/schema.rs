@@ -210,7 +210,7 @@ pub struct Enum {
 }
 
 impl Enum {
-    pub fn to_sql_value(&self) -> Result<String, EnumError> {
+    pub fn option(&self) -> Result<String, EnumError> {
         let option: usize = if let Some(option) = self.option {
             option as usize
         } else {
@@ -221,7 +221,11 @@ impl Enum {
             return Err(EnumError::OptionInvalid);
         }
 
-        Ok(format!("'{}'", self.options[option].0))
+        Ok(self.options[option].0.clone())
+    }
+
+    pub fn to_sql_value(&self) -> Result<String, EnumError> {
+        Ok(format!("'{}'", self.option()?))
     }
 }
 
@@ -289,6 +293,11 @@ fn format_member(m: &Member) -> String {
                     str.push_str(&format!(" = {:#x}", value));
                 }
             }
+        }
+    } else if let Ty::Enum(e) = &m.ty {
+        match e.option() {
+            Ok(option) => str.push_str(&format!(" = {option}")),
+            Err(_) => str.push_str(" = Invalid Option"),
         }
     }
 
