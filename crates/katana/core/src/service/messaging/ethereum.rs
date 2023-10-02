@@ -66,8 +66,8 @@ impl EthereumMessaging {
         })
     }
 
-    /// Fetches logs in given block range and returns
-    /// a HashMap with logs vector for each block.
+    /// Fetches logs in given block range and returns a `HashMap` with the list of logs mapped to
+    /// their block number.
     ///
     /// There is not pagination in ethereum, and no hard limit on block range.
     /// Fetching too much block may result in RPC request error.
@@ -84,7 +84,7 @@ impl EthereumMessaging {
     ) -> MessengerResult<HashMap<u64, Vec<Log>>> {
         trace!(target: LOG_TARGET, "Fetching logs for blocks {} - {}.", from_block, to_block);
 
-        let mut logs: HashMap<u64, Vec<Log>> = HashMap::new();
+        let mut block_to_logs: HashMap<u64, Vec<Log>> = HashMap::new();
 
         let log_msg_to_l2_topic =
             H256::from_str("0xdb80dd488acf86d17c747445b0eabb5d57c541d3bd7b6b87af987858e5066b2b")
@@ -102,20 +102,25 @@ impl EthereumMessaging {
         self.provider
             .get_logs(&filters)
             .await?
-            .iter()
-            .filter(|&l| l.block_number.is_some())
-            .for_each(|l| {
-                logs.entry(
-                    l.block_number
-                           .unwrap() // safe as we filter on Some only.
-                           .try_into()
-                           .expect("Block number couldn't be converted to u64."),
+            .into_iter()
+            .filter(|log| log.block_number.is_some())
+            .map(|log| {
+                (
+                    log.block_number
+                        .unwrap()
+                        .try_into()
+                        .expect("Block number couldn't be converted to u64."),
+                    log,
                 )
-                .and_modify(|v| v.push(l.clone()))
-                .or_insert(vec![l.clone()]);
+            })
+            .for_each(|(block_num, log)| {
+                block_to_logs
+                    .entry(block_num)
+                    .and_modify(|v| v.push(log.clone()))
+                    .or_insert(vec![log]);
             });
 
-        Ok(logs)
+        Ok(block_to_logs)
     }
 }
 
@@ -240,7 +245,6 @@ fn l1_handler_tx_from_log(
 }
 
 /// With Ethereum, the messages are following the conventional starknet messaging.
-/// There is no MSG/EXE MAGIC expected here.
 fn parse_messages(messages: &[MsgToL1]) -> Vec<U256> {
     messages
         .iter()
@@ -274,26 +278,6 @@ mod tests {
     use starknet::macros::selector;
 
     use super::*;
-
-    #[test]
-    fn parse_messages_msg() {
-        let from_address = selector!("from_address");
-        let to_address = selector!("to_address");
-        let payload = vec![FieldElement::ONE, FieldElement::TWO];
-
-        let messages = vec![MsgToL1 { from_address, to_address, payload }];
-
-        let hashes = parse_messages(&messages);
-        assert_eq!(hashes.len(), 1);
-        assert_eq!(
-            hashes[0],
-            U256::from_str_radix(
-                "0x5ba1d2e131360f15e26dd4f6ff10550685611cc25f75e7950b704adb04b36162",
-                16
-            )
-            .unwrap()
-        );
-    }
 
     #[test]
     fn l1_handler_tx_from_log_parse_ok() {
@@ -357,5 +341,25 @@ mod tests {
             l1_handler_tx_from_log(log, chain_id).expect("bad log format");
 
         assert_eq!(tx.inner, expected.inner);
+    }
+
+    #[test]
+    fn parse_msg_to_l1() {
+        let from_address = selector!("from_address");
+        let to_address = selector!("to_address");
+        let payload = vec![FieldElement::ONE, FieldElement::TWO];
+
+        let messages = vec![MsgToL1 { from_address, to_address, payload }];
+
+        let hashes = parse_messages(&messages);
+        assert_eq!(hashes.len(), 1);
+        assert_eq!(
+            hashes[0],
+            U256::from_str_radix(
+                "0x5ba1d2e131360f15e26dd4f6ff10550685611cc25f75e7950b704adb04b36162",
+                16
+            )
+            .unwrap()
+        );
     }
 }

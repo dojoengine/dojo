@@ -23,7 +23,7 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: |
-          cargo test --features messaging
+          cargo test --all-features
 
   ensure-wasm:
     runs-on: ubuntu-latest

@@ -52,15 +52,13 @@ impl StarknetMessaging {
         let wallet = LocalWallet::from_signing_key(key);
 
         let chain_id = provider.chain_id().await?;
-
         let sender_account_address = FieldElement::from_hex_be(&config.sender_address)?;
-
         let messaging_contract_address = FieldElement::from_hex_be(&config.contract_address)?;
 
         Ok(StarknetMessaging {
-            chain_id,
-            provider,
             wallet,
+            provider,
+            chain_id,
             sender_account_address,
             messaging_contract_address,
         })
@@ -74,7 +72,7 @@ impl StarknetMessaging {
     ) -> Result<HashMap<u64, Vec<EmittedEvent>>> {
         trace!(target: LOG_TARGET, "Fetching blocks {:?} - {:?}.", from_block, to_block);
 
-        let mut events: HashMap<u64, Vec<EmittedEvent>> = HashMap::new();
+        let mut block_to_events: HashMap<u64, Vec<EmittedEvent>> = HashMap::new();
 
         let filter = EventFilter {
             from_block: Some(from_block),
@@ -92,11 +90,11 @@ impl StarknetMessaging {
             let event_page =
                 self.provider.get_events(filter.clone(), continuation_token, chunk_size).await?;
 
-            event_page.events.iter().for_each(|e| {
-                events
-                    .entry(e.block_number)
-                    .and_modify(|v| v.push(e.clone()))
-                    .or_insert(vec![e.clone()]);
+            event_page.events.into_iter().for_each(|event| {
+                block_to_events
+                    .entry(event.block_number)
+                    .and_modify(|v| v.push(event.clone()))
+                    .or_insert(vec![event]);
             });
 
             continuation_token = event_page.continuation_token;
@@ -106,7 +104,7 @@ impl StarknetMessaging {
             }
         }
 
-        Ok(events)
+        Ok(block_to_events)
     }
 
     /// Sends an invoke TX on starknet.
@@ -132,24 +130,23 @@ impl StarknetMessaging {
     }
 
     /// Sends messages hashes to settlement layer by sending a transaction.
-    async fn send_hashes(&self, hashes: &[FieldElement]) -> MessengerResult<FieldElement> {
-        let mut hashes = hashes.to_vec();
+    async fn send_hashes(&self, mut hashes: Vec<FieldElement>) -> MessengerResult<FieldElement> {
         hashes.retain(|&x| x != HASH_EXEC);
 
         if hashes.is_empty() {
             return Ok(FieldElement::ZERO);
         }
 
-        let selector = selector!("add_messages_hashes_from_appchain");
+        let mut calldata = hashes;
+        calldata.insert(0, calldata.len().into());
 
-        let mut calldata = vec![FieldElement::from(hashes.len() as u128)];
-        for h in hashes {
-            calldata.push(h);
-        }
+        let call = Call {
+            selector: selector!("add_messages_hashes_from_appchain"),
+            to: self.messaging_contract_address,
+            calldata,
+        };
 
-        let calls = vec![Call { to: self.messaging_contract_address, selector, calldata }];
-
-        match self.send_invoke_tx(calls).await {
+        match self.send_invoke_tx(vec![call]).await {
             Ok(tx_hash) => {
                 trace!(target: LOG_TARGET, "Hashes sending transaction {:#064x}", tx_hash);
                 Ok(tx_hash)
@@ -240,17 +237,15 @@ impl Messenger for StarknetMessaging {
             };
         }
 
-        self.send_hashes(&hashes).await?;
+        self.send_hashes(hashes.clone()).await?;
 
         Ok(hashes)
     }
 }
 
-/// Parses messages sent by cairo contracts
-/// to compute their hashes.
+/// Parses messages sent by cairo contracts to compute their hashes.
 ///
-/// Messages can also be labelled as EXE,
-/// which in this case generate a `Call`
+/// Messages can also be labelled as EXE, which in this case generate a `Call`
 /// additionally to the hash.
 fn parse_messages(messages: &[MsgToL1]) -> MessengerResult<(Vec<FieldElement>, Vec<Call>)> {
     let mut hashes: Vec<FieldElement> = vec![];

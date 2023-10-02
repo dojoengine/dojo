@@ -8,7 +8,7 @@ use futures::{Future, FutureExt, Stream};
 use tokio::time::{interval_at, Instant, Interval};
 use tracing::{error, info};
 
-use super::{Error, MessagingConfig, Messenger, MessengerMode, MessengerResult, LOG_TARGET};
+use super::{MessagingConfig, Messenger, MessengerMode, MessengerResult, LOG_TARGET};
 use crate::backend::storage::transaction::{L1HandlerTransaction, Transaction};
 use crate::backend::Backend;
 use crate::pool::TransactionPool;
@@ -72,9 +72,8 @@ impl MessagingService {
         backend: Arc<Backend>,
         from_block: u64,
     ) -> MessengerResult<(u64, usize)> {
-        let chain_id =
-            FieldElement::from_hex_be(backend.env.read().block.chain_id.clone().as_hex().as_str())
-                .map_err(|_| Error::GatherError)?;
+        let chain_id = FieldElement::from_hex_be(&backend.env.read().block.chain_id.as_hex())
+            .expect("failed to parse katana chain id");
 
         // 200 avoids any possible rejection from RPC with possibly lot's of messages.
         // TODO: May this be configurable?
