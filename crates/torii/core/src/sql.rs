@@ -4,7 +4,7 @@ use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::Ty;
-use dojo_world::manifest::{Manifest, System};
+use dojo_world::manifest::System;
 use sqlx::pool::PoolConnection;
 use sqlx::{Executor, Pool, Row, Sqlite};
 use starknet::core::types::{Event, FieldElement};
@@ -48,30 +48,6 @@ impl Sql {
         Ok(Self { pool, world_address, query_queue: vec![] })
     }
 
-    pub async fn load_from_manifest(&mut self, manifest: Manifest) -> Result<()> {
-        let mut updates = vec![
-            format!("world_address = '{:#x}'", self.world_address),
-            format!("world_class_hash = '{:#x}'", manifest.world.class_hash),
-            format!("executor_class_hash = '{:#x}'", manifest.executor.class_hash),
-        ];
-
-        if let Some(executor_address) = manifest.executor.address {
-            updates.push(format!("executor_address = '{:#x}'", executor_address));
-        }
-
-        self.query_queue.push(format!(
-            "UPDATE worlds SET {} WHERE id = '{:#x}'",
-            updates.join(","),
-            self.world_address
-        ));
-
-        for system in manifest.systems {
-            self.register_system(system).await?;
-        }
-
-        self.execute().await
-    }
-
     pub async fn head(&self) -> Result<u64> {
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
         let indexer: (i64,) = sqlx::query_as(&format!(
@@ -83,12 +59,11 @@ impl Sql {
         Ok(indexer.0.try_into().expect("doesnt fit in u64"))
     }
 
-    pub async fn set_head(&mut self, head: u64) -> Result<()> {
+    pub fn set_head(&mut self, head: u64) {
         self.query_queue.push(format!(
             "UPDATE indexers SET head = {head} WHERE id = '{:#x}'",
             self.world_address
         ));
-        Ok(())
     }
 
     pub async fn world(&self) -> Result<World> {
@@ -99,19 +74,6 @@ impl Sql {
                 .await?;
 
         Ok(meta)
-    }
-
-    pub async fn set_world(&mut self, world: World) -> Result<()> {
-        self.query_queue.push(format!(
-            "UPDATE worlds SET world_address='{:#x}', world_class_hash='{:#x}', \
-             executor_address='{:#x}', executor_class_hash='{:#x}' WHERE id = '{:#x}'",
-            world.world_address,
-            world.world_class_hash,
-            world.executor_address,
-            world.executor_class_hash,
-            world.world_address,
-        ));
-        Ok(())
     }
 
     pub async fn register_model(
@@ -218,10 +180,9 @@ impl Sql {
         Ok(())
     }
 
-    pub async fn delete_entity(&mut self, model: String, key: FieldElement) -> Result<()> {
+    pub fn delete_entity(&mut self, model: String, key: FieldElement) {
         let query = format!("DELETE FROM {model} WHERE id = {key}");
         self.query_queue.push(query);
-        Ok(())
     }
 
     pub async fn entity(&self, model: String, key: FieldElement) -> Result<Vec<FieldElement>> {
@@ -239,12 +200,12 @@ impl Sql {
         Ok(rows.drain(..).map(|row| serde_json::from_str(&row.2).unwrap()).collect())
     }
 
-    pub async fn store_system_call(
+    pub fn store_system_call(
         &mut self,
         system: String,
         transaction_hash: FieldElement,
         calldata: &[FieldElement],
-    ) -> Result<()> {
+    ) {
         let query = format!(
             "INSERT OR IGNORE INTO system_calls (data, transaction_hash, system_id) VALUES ('{}', \
              '{:#x}', '{}')",
@@ -253,15 +214,9 @@ impl Sql {
             system
         );
         self.query_queue.push(query);
-        Ok(())
     }
 
-    pub async fn store_event(
-        &mut self,
-        event: &Event,
-        event_idx: usize,
-        transaction_hash: FieldElement,
-    ) -> Result<()> {
+    pub fn store_event(&mut self, event: &Event, event_idx: usize, transaction_hash: FieldElement) {
         let keys_str = felts_sql_string(&event.keys);
         let data_str = felts_sql_string(&event.data);
 
@@ -273,7 +228,6 @@ impl Sql {
         );
 
         self.query_queue.push(query);
-        Ok(())
     }
 
     fn build_register_queries_recursive(

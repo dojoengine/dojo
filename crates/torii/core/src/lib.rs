@@ -9,6 +9,7 @@ pub mod simple_broker;
 pub mod sql;
 pub mod types;
 
+#[allow(dead_code)]
 #[derive(FromRow, Deserialize)]
 pub struct World {
     #[sqlx(try_from = "String")]
