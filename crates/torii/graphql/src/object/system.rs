@@ -1,7 +1,7 @@
 use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
 use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
-use dojo_types::core::CairoType;
+use dojo_types::primitive::Primitive;
 use indexmap::IndexMap;
 use serde::Deserialize;
 use sqlx::{FromRow, Pool, Sqlite};
@@ -36,11 +36,11 @@ impl Default for SystemObject {
                 (Name::new("name"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
                 (
                     Name::new("classHash"),
-                    TypeData::Simple(TypeRef::named(CairoType::Felt252.to_string())),
+                    TypeData::Simple(TypeRef::named(Primitive::Felt252(None).to_string())),
                 ),
                 (
                     Name::new("transactionHash"),
-                    TypeData::Simple(TypeRef::named(CairoType::Felt252.to_string())),
+                    TypeData::Simple(TypeRef::named(Primitive::Felt252(None).to_string())),
                 ),
                 (
                     Name::new("createdAt"),

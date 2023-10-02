@@ -1,6 +1,6 @@
 use async_graphql::dynamic::TypeRef;
 use async_graphql::{Name, Value};
-use dojo_types::core::CairoType;
+use dojo_types::primitive::Primitive;
 use indexmap::IndexMap;
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
@@ -44,7 +44,7 @@ impl TypeData {
 
 #[derive(Debug)]
 pub enum ScalarType {
-    Cairo(CairoType),
+    Cairo(Primitive),
     Torii(GraphqlType),
 }
 
@@ -57,7 +57,7 @@ pub enum GraphqlType {
 
 impl ScalarType {
     pub fn all() -> Vec<String> {
-        CairoType::iter()
+        Primitive::iter()
             .map(|ty| ty.to_string())
             .chain(GraphqlType::iter().map(|ty| ty.to_string()))
             .collect()

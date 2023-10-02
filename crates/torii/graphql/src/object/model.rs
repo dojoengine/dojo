@@ -2,8 +2,8 @@ use async_graphql::dynamic::{
     Field, FieldFuture, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
 };
 use async_graphql::{Name, Value};
-use dojo_types::core::CairoType;
 use indexmap::IndexMap;
+use dojo_types::primitive::Primitive;
 use sqlx::{Pool, Sqlite};
 use tokio_stream::StreamExt;
 use torii_core::simple_broker::SimpleBroker;
@@ -28,11 +28,11 @@ impl Default for ModelObject {
                 (Name::new("name"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
                 (
                     Name::new("classHash"),
-                    TypeData::Simple(TypeRef::named(CairoType::Felt252.to_string())),
+                    TypeData::Simple(TypeRef::named(Primitive::Felt252(None).to_string())),
                 ),
                 (
                     Name::new("transactionHash"),
-                    TypeData::Simple(TypeRef::named(CairoType::Felt252.to_string())),
+                    TypeData::Simple(TypeRef::named(Primitive::Felt252(None).to_string())),
                 ),
                 (
                     Name::new("createdAt"),

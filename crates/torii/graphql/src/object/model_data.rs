@@ -3,7 +3,7 @@ use std::str::FromStr;
 use async_graphql::dynamic::{Enum, Field, FieldFuture, InputObject, Object, TypeRef};
 use async_graphql::{Error, Name, Value};
 use chrono::{DateTime, Utc};
-use dojo_types::core::CairoType;
+use dojo_types::primitive::Primitive;
 use serde::Deserialize;
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
@@ -358,9 +358,9 @@ fn value_mapping_from_row(row: &SqliteRow, types: &TypeMapping) -> sqlx::Result<
 }
 
 fn fetch_value(row: &SqliteRow, column_name: &str, field_type: &str) -> sqlx::Result<Value> {
-    match CairoType::from_str(field_type) {
+    match Primitive::from_str(field_type) {
         // fetch boolean
-        Ok(CairoType::Bool) => {
+        Ok(Primitive::Bool(_)) => {
             Ok(Value::from(matches!(row.try_get::<i64, &str>(column_name)?, BOOLEAN_TRUE)))
         }
         // fetch integer

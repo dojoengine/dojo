@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use async_graphql::dynamic::TypeRef;
 use async_graphql::Name;
-use dojo_types::core::CairoType;
+use dojo_types::primitive::Primitive;
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{FromRow, QueryBuilder, Result, Sqlite};
@@ -94,7 +94,7 @@ pub async fn type_mapping_query(
     let type_mapping: TypeMapping = root_members
         .iter()
         .map(|member| {
-            let type_data = match CairoType::from_str(&member.ty) {
+            let type_data = match Primitive::from_str(&member.ty) {
                 Ok(_) => TypeData::Simple(TypeRef::named(member.ty.clone())),
                 _ => parse_nested_type(&member.model_id, &member.ty, &nested_members),
             };
@@ -116,7 +116,7 @@ fn parse_nested_type(
         .filter_map(|member| {
             // search for target type in nested members
             if target_id == member.model_id && member.id.ends_with(target_type) {
-                let type_data = match CairoType::from_str(&member.ty) {
+                let type_data = match Primitive::from_str(&member.ty) {
                     Ok(_) => TypeData::Simple(TypeRef::named(member.ty.clone())),
                     _ => parse_nested_type(&member.model_id, &member.ty, nested_members),
                 };
