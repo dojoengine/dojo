@@ -1,37 +1,22 @@
 #[cfg(test)]
 mod tests {
-    use dojo_test_utils::migration::prepare_migration;
-    use dojo_test_utils::sequencer::{
-        get_default_test_starknet_config, SequencerConfig, TestSequencer,
-    };
+
     use sqlx::SqlitePool;
-    use starknet::providers::jsonrpc::HttpTransport;
-    use starknet::providers::JsonRpcClient;
     use starknet_crypto::{poseidon_hash_many, FieldElement};
-    use torii_client::contract::world::WorldContractReader;
     use torii_core::sql::Sql;
 
     use crate::tests::{
-        bootstrap_engine, create_pool, entity_fixtures, paginate, run_graphql_query, Entity, Moves,
-        Paginate, Position,
+        entity_fixtures, paginate, run_graphql_query, Entity, Moves, Paginate, Position,
     };
 
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_entity() {
-        let pool = create_pool().await;
+    #[sqlx::test(migrations = "../migrations")]
+    async fn test_entity(pool: SqlitePool) {
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
-        let migration = prepare_migration("../../../examples/ecs/target/dev".into()).unwrap();
-        let sequencer =
-            TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config())
-                .await;
-        let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
-        let world = WorldContractReader::new(migration.world_address().unwrap(), &provider);
-
-        let _ = bootstrap_engine(&world, &mut db, &provider, &migration, &sequencer).await;
 
         entity_fixtures(&mut db).await;
 
         let entity_id = poseidon_hash_many(&[FieldElement::ONE]);
+        println!("{:#x}", entity_id);
         let query = format!(
             r#"
             {{

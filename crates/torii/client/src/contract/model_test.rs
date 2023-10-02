@@ -2,7 +2,7 @@ use camino::Utf8PathBuf;
 use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, TestSequencer,
 };
-use dojo_types::core::CairoType;
+use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, Member, Struct, Ty};
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag, FieldElement};
@@ -34,7 +34,7 @@ async fn test_model() {
             children: vec![
                 Member {
                     name: "player".to_string(),
-                    ty: Ty::Primitive(CairoType::ContractAddress(None)),
+                    ty: Ty::Primitive(Primitive::ContractAddress(None)),
                     key: true
                 },
                 Member {
@@ -44,12 +44,12 @@ async fn test_model() {
                         children: vec![
                             Member {
                                 name: "x".to_string(),
-                                ty: Ty::Primitive(CairoType::U32(None)),
+                                ty: Ty::Primitive(Primitive::U32(None)),
                                 key: false
                             },
                             Member {
                                 name: "y".to_string(),
-                                ty: Ty::Primitive(CairoType::U32(None)),
+                                ty: Ty::Primitive(Primitive::U32(None)),
                                 key: false
                             }
                         ]
@@ -78,19 +78,20 @@ async fn test_model() {
             children: vec![
                 Member {
                     name: "player".to_string(),
-                    ty: Ty::Primitive(CairoType::ContractAddress(None)),
+                    ty: Ty::Primitive(Primitive::ContractAddress(None)),
                     key: true
                 },
                 Member {
                     name: "remaining".to_string(),
-                    ty: Ty::Primitive(CairoType::U8(None)),
+                    ty: Ty::Primitive(Primitive::U8(None)),
                     key: false
                 },
                 Member {
                     name: "last_direction".to_string(),
                     ty: Ty::Enum(Enum {
                         name: "Direction".to_string(),
-                        children: vec![
+                        option: None,
+                        options: vec![
                             ("None".to_string(), Ty::Tuple(vec![])),
                             ("Left".to_string(), Ty::Tuple(vec![])),
                             ("Right".to_string(), Ty::Tuple(vec![])),

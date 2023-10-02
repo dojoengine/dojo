@@ -1,21 +1,10 @@
-use camino::Utf8PathBuf;
-use dojo_test_utils::sequencer::TestSequencer;
-use dojo_world::migration::strategy::MigrationStrategy;
-use scarb_ui::{OutputFormat, Ui, Verbosity};
+use dojo_types::primitive::Primitive;
+use dojo_types::schema::{Enum, Member, Struct, Ty};
 use serde::Deserialize;
 use serde_json::Value;
-use sozo::ops::migration::execute_strategy;
-use sqlx::sqlite::SqlitePoolOptions;
 use sqlx::SqlitePool;
-use starknet::core::types::{BlockId, BlockTag, FieldElement};
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::JsonRpcClient;
+use starknet::core::types::FieldElement;
 use tokio_stream::StreamExt;
-use torii_client::contract::world::WorldContractReader;
-use torii_core::engine::{Engine, EngineConfig, Processors};
-use torii_core::processors::register_model::RegisterModelProcessor;
-use torii_core::processors::register_system::RegisterSystemProcessor;
-use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::sql::Sql;
 
 mod entities_test;
@@ -67,62 +56,12 @@ pub enum Paginate {
     Backward,
 }
 
-#[allow(dead_code)]
 pub async fn run_graphql_query(pool: &SqlitePool, query: &str) -> Value {
     let schema = build_schema(pool).await.unwrap();
     let res = schema.execute(query).await;
 
     assert!(res.errors.is_empty(), "GraphQL query returned errors: {:?}", res.errors);
     serde_json::to_value(res.data).expect("Failed to serialize GraphQL response")
-}
-
-pub async fn create_pool() -> SqlitePool {
-    let pool =
-        SqlitePoolOptions::new().max_connections(5).connect("sqlite::memory:").await.unwrap();
-    sqlx::migrate!("../migrations").run(&pool).await.unwrap();
-    pool
-}
-
-pub async fn bootstrap_engine<'a>(
-    world: &'a WorldContractReader<'a, JsonRpcClient<HttpTransport>>,
-    db: &'a mut Sql,
-    provider: &'a JsonRpcClient<HttpTransport>,
-    migration: &MigrationStrategy,
-    sequencer: &TestSequencer,
-) -> Result<Engine<'a, JsonRpcClient<HttpTransport>>, Box<dyn std::error::Error>> {
-    let mut account = sequencer.account();
-    account.set_block_id(BlockId::Tag(BlockTag::Pending));
-
-    let manifest = dojo_world::manifest::Manifest::load_from_path(
-        Utf8PathBuf::from_path_buf("../../../examples/ecs/target/dev/manifest.json".into())
-            .unwrap(),
-    )
-    .unwrap();
-
-    db.load_from_manifest(manifest.clone()).await.unwrap();
-
-    let ui = Ui::new(Verbosity::Verbose, OutputFormat::Text);
-    execute_strategy(migration, &account, &ui, None).await.unwrap();
-
-    let mut engine = Engine::new(
-        world,
-        db,
-        provider,
-        Processors {
-            event: vec![
-                Box::new(RegisterModelProcessor),
-                Box::new(RegisterSystemProcessor),
-                Box::new(StoreSetRecordProcessor),
-            ],
-            ..Processors::default()
-        },
-        EngineConfig::default(),
-        None,
-    );
-
-    let _ = engine.sync_to_head(0).await?;
-
-    Ok(engine)
 }
 
 #[allow(dead_code)]
@@ -137,34 +76,209 @@ pub async fn run_graphql_subscription(
 }
 
 pub async fn entity_fixtures(db: &mut Sql) {
-    // Set entity with one moves model
-    // remaining: 10, last_direction: 0
-    let key = vec![FieldElement::ONE];
-    let moves_values = vec![FieldElement::from_hex_be("0xa").unwrap(), FieldElement::ZERO];
-    db.set_entity("Moves".to_string(), key, moves_values.clone()).await.unwrap();
+    db.register_model(
+        Ty::Struct(Struct {
+            name: "Moves".to_string(),
+            children: vec![
+                Member {
+                    name: "player".to_string(),
+                    key: true,
+                    ty: Ty::Primitive(Primitive::ContractAddress(None)),
+                },
+                Member {
+                    name: "remaining".to_string(),
+                    key: false,
+                    ty: Ty::Primitive(Primitive::U8(None)),
+                },
+                Member {
+                    name: "last_direction".to_string(),
+                    key: false,
+                    ty: Ty::Enum(Enum {
+                        name: "Direction".to_string(),
+                        option: None,
+                        options: vec![
+                            ("None".to_string(), Ty::Tuple(vec![])),
+                            ("Left".to_string(), Ty::Tuple(vec![])),
+                            ("Right".to_string(), Ty::Tuple(vec![])),
+                            ("Up".to_string(), Ty::Tuple(vec![])),
+                            ("Down".to_string(), Ty::Tuple(vec![])),
+                        ],
+                    }),
+                },
+            ],
+        }),
+        vec![],
+        FieldElement::ONE,
+    )
+    .await
+    .unwrap();
 
-    // Set entity with one position model
-    // x: 42
-    // y: 69
-    let key = vec![FieldElement::TWO];
-    let position_values = vec![
-        FieldElement::from_hex_be("0x2a").unwrap(),
-        FieldElement::from_hex_be("0x45").unwrap(),
-    ];
-    db.set_entity("Position".to_string(), key, position_values.clone()).await.unwrap();
+    db.register_model(
+        Ty::Struct(Struct {
+            name: "Position".to_string(),
+            children: vec![
+                Member {
+                    name: "player".to_string(),
+                    key: true,
+                    ty: Ty::Primitive(Primitive::ContractAddress(None)),
+                },
+                Member {
+                    name: "vec".to_string(),
+                    key: false,
+                    ty: Ty::Struct(Struct {
+                        name: "Vec2".to_string(),
+                        children: vec![
+                            Member {
+                                name: "x".to_string(),
+                                key: false,
+                                ty: Ty::Primitive(Primitive::U32(None)),
+                            },
+                            Member {
+                                name: "y".to_string(),
+                                key: false,
+                                ty: Ty::Primitive(Primitive::U32(None)),
+                            },
+                        ],
+                    }),
+                },
+            ],
+        }),
+        vec![],
+        FieldElement::TWO,
+    )
+    .await
+    .unwrap();
+
+    db.set_entity(Ty::Struct(Struct {
+        name: "Moves".to_string(),
+        children: vec![
+            Member {
+                name: "player".to_string(),
+                key: true,
+                ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::ONE))),
+            },
+            Member {
+                name: "remaining".to_string(),
+                key: false,
+                ty: Ty::Primitive(Primitive::U8(Some(10))),
+            },
+            Member {
+                name: "last_direction".to_string(),
+                key: false,
+                ty: Ty::Enum(Enum {
+                    name: "Direction".to_string(),
+                    option: Some(1),
+                    options: vec![
+                        ("None".to_string(), Ty::Tuple(vec![])),
+                        ("Left".to_string(), Ty::Tuple(vec![])),
+                        ("Right".to_string(), Ty::Tuple(vec![])),
+                        ("Up".to_string(), Ty::Tuple(vec![])),
+                        ("Down".to_string(), Ty::Tuple(vec![])),
+                    ],
+                }),
+            },
+        ],
+    }))
+    .await
+    .unwrap();
+
+    db.set_entity(Ty::Struct(Struct {
+        name: "Position".to_string(),
+        children: vec![
+            Member {
+                name: "player".to_string(),
+                key: true,
+                ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::TWO))),
+            },
+            Member {
+                name: "vec".to_string(),
+                key: false,
+                ty: Ty::Struct(Struct {
+                    name: "Vec2".to_string(),
+                    children: vec![
+                        Member {
+                            name: "x".to_string(),
+                            key: false,
+                            ty: Ty::Primitive(Primitive::U32(Some(42))),
+                        },
+                        Member {
+                            name: "y".to_string(),
+                            key: false,
+                            ty: Ty::Primitive(Primitive::U32(Some(69))),
+                        },
+                    ],
+                }),
+            },
+        ],
+    }))
+    .await
+    .unwrap();
 
     // Set an entity with both moves and position models
-    // remaining: 1, last_direction: 0
-    // x: 69
-    // y: 42
-    let key = vec![FieldElement::THREE];
-    let moves_values = vec![FieldElement::from_hex_be("0x1").unwrap(), FieldElement::ZERO];
-    let position_values = vec![
-        FieldElement::from_hex_be("0x45").unwrap(),
-        FieldElement::from_hex_be("0x2a").unwrap(),
-    ];
-    db.set_entity("Moves".to_string(), key.clone(), moves_values).await.unwrap();
-    db.set_entity("Position".to_string(), key, position_values).await.unwrap();
+    db.set_entity(Ty::Struct(Struct {
+        name: "Moves".to_string(),
+        children: vec![
+            Member {
+                name: "player".to_string(),
+                key: true,
+                ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::THREE))),
+            },
+            Member {
+                name: "remaining".to_string(),
+                key: false,
+                ty: Ty::Primitive(Primitive::U8(Some(10))),
+            },
+            Member {
+                name: "last_direction".to_string(),
+                key: false,
+                ty: Ty::Enum(Enum {
+                    name: "Direction".to_string(),
+                    option: Some(2),
+                    options: vec![
+                        ("None".to_string(), Ty::Tuple(vec![])),
+                        ("Left".to_string(), Ty::Tuple(vec![])),
+                        ("Right".to_string(), Ty::Tuple(vec![])),
+                        ("Up".to_string(), Ty::Tuple(vec![])),
+                        ("Down".to_string(), Ty::Tuple(vec![])),
+                    ],
+                }),
+            },
+        ],
+    }))
+    .await
+    .unwrap();
+
+    db.set_entity(Ty::Struct(Struct {
+        name: "Position".to_string(),
+        children: vec![
+            Member {
+                name: "player".to_string(),
+                key: true,
+                ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::THREE))),
+            },
+            Member {
+                name: "vec".to_string(),
+                key: false,
+                ty: Ty::Struct(Struct {
+                    name: "Vec2".to_string(),
+                    children: vec![
+                        Member {
+                            name: "x".to_string(),
+                            key: false,
+                            ty: Ty::Primitive(Primitive::U32(Some(42))),
+                        },
+                        Member {
+                            name: "y".to_string(),
+                            key: false,
+                            ty: Ty::Primitive(Primitive::U32(Some(69))),
+                        },
+                    ],
+                }),
+            },
+        ],
+    }))
+    .await
+    .unwrap();
 
     db.execute().await.unwrap();
 }
