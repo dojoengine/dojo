@@ -1,9 +1,9 @@
 {
-    "chain": "starknet",
-    "rpc_url": "http://127.0.0.1:5050",
-    "contract_address": "0x046c0ea3fb2ad27053e8af3c8cfab38a51afb9fe90fcab1f75446bd41f7d3796",
-    "sender_address": "0x5686a647a9cdd63ade617e0baf3b364856b813b508f03903eb58a7e622d5855",
-    "private_key": "0x33003003001800009900180300d206308b0070db00121318d17b5e6262150b",
-    "interval": 2,
-    "from_block": 0
+	"chain": "starknet",
+	"rpc_url": "http://127.0.0.1:5050",
+	"contract_address": "0x046c0ea3fb2ad27053e8af3c8cfab38a51afb9fe90fcab1f75446bd41f7d3796",
+	"sender_address": "0x5686a647a9cdd63ade617e0baf3b364856b813b508f03903eb58a7e622d5855",
+	"private_key": "0x33003003001800009900180300d206308b0070db00121318d17b5e6262150b",
+	"interval": 2,
+	"from_block": 0
 }
