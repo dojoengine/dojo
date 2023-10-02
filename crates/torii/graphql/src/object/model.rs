@@ -2,8 +2,8 @@ use async_graphql::dynamic::{
     Field, FieldFuture, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
 };
 use async_graphql::{Name, Value};
-use indexmap::IndexMap;
 use dojo_types::primitive::Primitive;
+use indexmap::IndexMap;
 use sqlx::{Pool, Sqlite};
 use tokio_stream::StreamExt;
 use torii_core::simple_broker::SimpleBroker;

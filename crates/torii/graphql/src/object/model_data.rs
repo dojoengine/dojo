@@ -1,13 +1,13 @@
 use std::str::FromStr;
 
 use async_graphql::dynamic::{Enum, Field, FieldFuture, InputObject, Object, TypeRef};
-use async_graphql::{ Name, Value};
+use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
 use dojo_types::primitive::Primitive;
 use serde::Deserialize;
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
-use sqlx::{FromRow, Pool,  Row, Sqlite};
+use sqlx::{FromRow, Pool, Row, Sqlite};
 use torii_core::types::Entity;
 
 use super::connection::{
@@ -108,14 +108,14 @@ impl ObjectTrait for ModelDataObject {
         // Add relay connection fields (first, last, before, after, where)
         field = connection_arguments(field);
         field = where_argument(field, self.type_name());
-        //field = order_argument(field, self.type_name());
+        // field = order_argument(field, self.type_name());
 
         Some(field)
     }
 
     fn objects(&self) -> Vec<Object> {
         let mut path_array = vec![self.type_name().to_string()];
-        let mut objects = data_objects(self.type_name(), &self.type_mapping(), &mut path_array);
+        let mut objects = data_objects(self.type_name(), self.type_mapping(), &mut path_array);
 
         // root object requires entity_field association
         let mut root = objects.pop().unwrap();
@@ -148,7 +148,7 @@ fn data_objects(
     objects
 }
 
-pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: &Vec<String>) -> Object {
+pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: &[String]) -> Object {
     let mut object = Object::new(type_name);
 
     for (field_name, type_data) in type_mapping.clone() {

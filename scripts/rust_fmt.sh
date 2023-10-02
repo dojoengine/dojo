@@ -1,3 +1,3 @@
 #!/bin/bash
 
-cargo +nightly fmt  --all -- "$@"
+cargo +nightly fmt --check --all -- "$@"

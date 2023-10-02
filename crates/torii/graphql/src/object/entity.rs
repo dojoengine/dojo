@@ -1,8 +1,7 @@
 use async_graphql::dynamic::{
-    Field, FieldFuture, FieldValue, InputValue, Object, SubscriptionField, SubscriptionFieldFuture,
-    TypeRef,
+    Field, FieldFuture, FieldValue, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
 };
-use async_graphql::{Error, Name, Value};
+use async_graphql::{Name, Value};
 use indexmap::IndexMap;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Result, Sqlite};

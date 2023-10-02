@@ -23,7 +23,6 @@ impl WhereInputObject {
         let where_mapping = object_types
             .iter()
             .filter_map(|(type_name, type_data)| {
-
                 // TODO: filter on nested objects
                 if type_data.is_nested() {
                     return None;
