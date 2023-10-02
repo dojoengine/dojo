@@ -116,36 +116,6 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: scripts/rust_fmt.sh --check
 
-  # Check for unnecessary dependencies.
-  # udeps:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v3
-
-  #     - uses: dtolnay/rust-toolchain@master
-  #       with:
-  #         toolchain: ${{ env.RUST_VERSION }}
-      
-  #     - uses: Swatinem/rust-cache@v2
-  #     - uses: arduino/setup-protoc@v1
-  #       with:
-  #         repo-token: ${{ secrets.GITHUB_TOKEN }}
-  #     - id: cache-cargo-udeps
-  #       uses: actions/cache@v2
-  #       with:
-  #         path: ~/.cargo-udeps-cache
-  #         key: cargo-udeps-v0.1.40-${{ runner.os }}
-  #     - name: "Download and run cargo-udeps"
-  #       run: |
-  #         if [ ! -f ~/.cargo-udeps-cache/cargo-udeps ]; then
-  #           wget -O - -c https://github.com/est31/cargo-udeps/releases/download/v0.1.40/cargo-udeps-v0.1.40-x86_64-unknown-linux-gnu.tar.gz | tar -xz
-  #           mkdir -p ~/.cargo-udeps-cache
-  #           mv cargo-udeps-*/cargo-udeps ~/.cargo-udeps-cache/cargo-udeps
-  #         fi
-  #         ~/.cargo-udeps-cache/cargo-udeps udeps --all-targets
-  #       env:
-  #         RUSTUP_TOOLCHAIN: ${{ env.RUST_VERSION }}
-
   docs:
     runs-on: ubuntu-latest
     steps:
