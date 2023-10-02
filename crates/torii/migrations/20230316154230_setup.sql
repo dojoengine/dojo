@@ -33,7 +33,7 @@ CREATE TABLE model_members(
     type TEXT NOT NULL,
     key BOOLEAN NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id, model_idx) FOREIGN KEY (model_id) REFERENCES models(id) UNIQUE (id, member_idx)
+    PRIMARY KEY (id, member_idx) FOREIGN KEY (model_id) REFERENCES models(id)
 );
 
 CREATE INDEX idx_model_members_model_id ON model_members (model_id);
