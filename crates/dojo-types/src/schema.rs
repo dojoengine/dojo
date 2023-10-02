@@ -68,6 +68,12 @@ impl Ty {
                     }
                 }
                 Ty::Enum(e) => {
+                    let option = e
+                        .option
+                        .map(|v| Ok(vec![FieldElement::from(v)]))
+                        .unwrap_or(Err(PrimitiveError::MissingFieldElement))?;
+                    felts.extend(option);
+
                     for (_, child) in &e.options {
                         serialize_inner(child, felts)?;
                     }
@@ -97,6 +103,8 @@ impl Ty {
                 }
             }
             Ty::Enum(e) => {
+                e.option =
+                    Some(felts.remove(0).try_into().map_err(PrimitiveError::ValueOutOfRange)?);
                 for (_, child) in &mut e.options {
                     child.deserialize(felts)?;
                 }
