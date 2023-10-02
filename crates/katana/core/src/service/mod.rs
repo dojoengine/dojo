@@ -17,6 +17,11 @@ use crate::backend::storage::transaction::Transaction;
 use crate::pool::TransactionPool;
 
 pub mod block_producer;
+#[cfg(feature = "messaging")]
+pub mod messaging;
+
+#[cfg(feature = "messaging")]
+use self::messaging::{MessagingOutcome, MessagingService};
 
 /// The type that drives the blockchain's state
 ///
@@ -25,21 +30,14 @@ pub mod block_producer;
 /// to construct a new block.
 pub struct NodeService {
     /// the pool that holds all transactions
-    pool: Arc<TransactionPool>,
+    pub(crate) pool: Arc<TransactionPool>,
     /// creates new blocks
-    block_producer: BlockProducer,
+    pub(crate) block_producer: BlockProducer,
     /// the miner responsible to select transactions from the `pool´
-    miner: TransactionMiner,
-}
-
-impl NodeService {
-    pub fn new(
-        pool: Arc<TransactionPool>,
-        miner: TransactionMiner,
-        block_producer: BlockProducer,
-    ) -> Self {
-        Self { pool, block_producer, miner }
-    }
+    pub(crate) miner: TransactionMiner,
+    /// The messaging service
+    #[cfg(feature = "messaging")]
+    pub(crate) messaging: Option<MessagingService>,
 }
 
 impl Future for NodeService {
@@ -47,6 +45,20 @@ impl Future for NodeService {
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let pin = self.get_mut();
+
+        #[cfg(feature = "messaging")]
+        if let Some(messaging) = pin.messaging.as_mut() {
+            while let Poll::Ready(Some(outcome)) = messaging.poll_next_unpin(cx) {
+                match outcome {
+                    MessagingOutcome::Gather { msg_count, .. } => {
+                        trace!(target: "node", "collected {msg_count} messages from settlement chain");
+                    }
+                    MessagingOutcome::Send { msg_count, .. } => {
+                        trace!(target: "node", "sent {msg_count} messages to the settlement chain");
+                    }
+                }
+            }
+        }
 
         // this drives block production and feeds new sets of ready transactions to the block
         // producer

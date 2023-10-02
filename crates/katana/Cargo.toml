@@ -20,3 +20,8 @@ url.workspace = true
 
 [dev-dependencies]
 assert_matches = "1.5.0"
+
+[features]
+default = [ "messaging" ]
+messaging = [ "katana-core/messaging" ]
+starknet-messaging = [ "katana-core/starknet-messaging", "messaging" ]
