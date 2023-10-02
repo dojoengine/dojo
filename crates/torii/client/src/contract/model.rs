@@ -2,7 +2,7 @@ use std::str::FromStr;
 use std::vec;
 
 use crypto_bigint::U256;
-use dojo_types::core::{CairoType, CairoTypeError};
+use dojo_types::primitive::{Primitive, PrimitiveError};
 use dojo_types::schema::{Enum, Member, Struct, Ty};
 use starknet::core::types::{BlockId, FieldElement, FunctionCall};
 use starknet::core::utils::{
@@ -36,7 +36,7 @@ pub enum ModelError<P> {
     #[error(transparent)]
     ContractReaderError(ContractReaderError<P>),
     #[error(transparent)]
-    CairoTypeError(CairoTypeError),
+    CairoTypeError(PrimitiveError),
 }
 
 pub struct ModelReader<'a, P: Provider + Sync> {
@@ -235,7 +235,7 @@ fn parse_ty<P: Provider>(data: &[FieldElement]) -> Result<Ty, ModelError<P::Erro
 
 fn parse_simple<P: Provider>(data: &[FieldElement]) -> Result<Ty, ModelError<P::Error>> {
     let ty = parse_cairo_short_string(&data[0]).map_err(ModelError::ParseCairoShortStringError)?;
-    Ok(Ty::Primitive(CairoType::from_str(&ty).unwrap()))
+    Ok(Ty::Primitive(Primitive::from_str(&ty).unwrap()))
 }
 
 fn parse_struct<P: Provider>(data: &[FieldElement]) -> Result<Ty, ModelError<P::Error>> {
@@ -309,7 +309,7 @@ fn parse_enum<P: Provider>(data: &[FieldElement]) -> Result<Ty, ModelError<P::Er
         offset += len as usize + 2;
     }
 
-    Ok(Ty::Enum(Enum { name, children: values }))
+    Ok(Ty::Enum(Enum { name, option: None, options: values }))
 }
 
 fn parse_tuple<P: Provider>(data: &[FieldElement]) -> Result<Ty, ModelError<P::Error>> {
