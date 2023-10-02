@@ -62,7 +62,7 @@ make -sC cairo/ send_msg_value_l1 value=2
 make -sC solidity/ consume_msg payload="[2]"
 ```
 
-## L2 (Starknet) - L3 (Appchain)
+## L2 (Starknet) - L3 (Appchain) [Experimental]
 
 The second messaging is when you may want your appchain (Katana based) to communicate
 with Starknet. In this case, the Katana sequencer (L3) will listen to the messages
