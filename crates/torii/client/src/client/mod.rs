@@ -4,7 +4,7 @@ pub mod subscription;
 
 use std::sync::Arc;
 
-use dojo_types::model::EntityModel;
+use dojo_types::schema::EntityModel;
 use dojo_types::WorldMetadata;
 use futures::channel::mpsc;
 use parking_lot::{Mutex, RwLock};
@@ -95,8 +95,9 @@ impl ClientBuilder {
             for EntityModel { model: component, keys } in subbed_entities {
                 let component_reader =
                     world_reader.model(&component, BlockId::Tag(BlockTag::Pending)).await?;
-                let values =
-                    component_reader.entity(keys.clone(), BlockId::Tag(BlockTag::Pending)).await?;
+                let values = component_reader
+                    .entity_storage(keys.clone(), BlockId::Tag(BlockTag::Pending))
+                    .await?;
                 client_storage.set_entity((component, keys), values)?;
             }
         }

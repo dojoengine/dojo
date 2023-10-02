@@ -1,7 +1,9 @@
+use std::str::FromStr;
 use std::vec;
 
 use crypto_bigint::U256;
-use dojo_types::model::{Enum, Member, Struct, Ty};
+use dojo_types::core::{CairoType, CairoTypeError};
+use dojo_types::schema::{Enum, Member, Struct, Ty};
 use starknet::core::types::{BlockId, FieldElement, FunctionCall};
 use starknet::core::utils::{
     cairo_short_string_to_felt, get_selector_from_name, parse_cairo_short_string,
@@ -33,6 +35,8 @@ pub enum ModelError<P> {
     UnpackingEntity,
     #[error(transparent)]
     ContractReaderError(ContractReaderError<P>),
+    #[error(transparent)]
+    CairoTypeError(CairoTypeError),
 }
 
 pub struct ModelReader<'a, P: Provider + Sync> {
@@ -123,7 +127,7 @@ impl<'a, P: Provider + Sync> ModelReader<'a, P> {
         Ok(res[2..].into())
     }
 
-    pub async fn entity(
+    pub async fn entity_storage(
         &self,
         keys: Vec<FieldElement>,
         block_id: BlockId,
@@ -149,6 +153,22 @@ impl<'a, P: Provider + Sync> ModelReader<'a, P> {
         let unpacked = unpack::<P>(packed, layout.clone())?;
 
         Ok(unpacked)
+    }
+
+    pub async fn entity(
+        &self,
+        keys: Vec<FieldElement>,
+        block_id: BlockId,
+    ) -> Result<Ty, ModelError<P::Error>> {
+        let mut schema = self.schema(block_id).await?;
+        let unpacked = self.entity_storage(keys.clone(), block_id).await?;
+
+        let mut keys_and_unpacked = keys;
+        keys_and_unpacked.extend(unpacked);
+
+        let _ = schema.deserialize(&mut keys_and_unpacked).map_err(ModelError::CairoTypeError::<P>);
+
+        Ok(schema)
     }
 }
 
@@ -208,13 +228,14 @@ fn parse_ty<P: Provider>(data: &[FieldElement]) -> Result<Ty, ModelError<P::Erro
         0 => parse_simple::<P>(&data[1..]),
         1 => parse_struct::<P>(&data[1..]),
         2 => parse_enum::<P>(&data[1..]),
+        3 => parse_tuple::<P>(&data[1..]),
         _ => Err(ModelError::InvalidSchema),
     }
 }
 
 fn parse_simple<P: Provider>(data: &[FieldElement]) -> Result<Ty, ModelError<P::Error>> {
     let ty = parse_cairo_short_string(&data[0]).map_err(ModelError::ParseCairoShortStringError)?;
-    Ok(Ty::Terminal(ty))
+    Ok(Ty::Primitive(CairoType::from_str(&ty).unwrap()))
 }
 
 fn parse_struct<P: Provider>(data: &[FieldElement]) -> Result<Ty, ModelError<P::Error>> {
@@ -277,12 +298,39 @@ fn parse_enum<P: Provider>(data: &[FieldElement]) -> Result<Ty, ModelError<P::Er
 
     for i in 0..values_len {
         let start = i + offset;
-        let len: u32 = data[start].try_into().unwrap();
-        let slice_start = start + 1;
+        let name = parse_cairo_short_string(&data[start])
+            .map_err(ModelError::ParseCairoShortStringError)?;
+        let slice_start = start + 2;
+        let len: u32 = data[start + 3].try_into().unwrap();
+        let len = len + 1; // Account for Ty enum index
+
         let slice_end = slice_start + len as usize;
-        values.push(parse_ty::<P>(&data[slice_start..slice_end])?);
-        offset += len as usize;
+        values.push((name, parse_ty::<P>(&data[slice_start..slice_end])?));
+        offset += len as usize + 2;
     }
 
     Ok(Ty::Enum(Enum { name, children: values }))
+}
+
+fn parse_tuple<P: Provider>(data: &[FieldElement]) -> Result<Ty, ModelError<P::Error>> {
+    if data.is_empty() {
+        return Ok(Ty::Tuple(vec![]));
+    }
+
+    let children_len: u32 = data[0].try_into().unwrap();
+    let children_len = children_len as usize;
+
+    let mut children = vec![];
+    let mut offset = 1;
+
+    for i in 0..children_len {
+        let start = i + offset;
+        let len: u32 = data[start].try_into().unwrap();
+        let slice_start = start + 1;
+        let slice_end = slice_start + len as usize;
+        children.push(parse_ty::<P>(&data[slice_start..slice_end])?);
+        offset += len as usize;
+    }
+
+    Ok(Ty::Tuple(children))
 }

@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use blockifier::execution::contract_class::ContractClass;
+use blockifier::execution::errors::EntryPointExecutionError;
 use blockifier::transaction::account_transaction::AccountTransaction;
+use blockifier::transaction::errors::TransactionExecutionError;
 use blockifier::transaction::transaction_execution::Transaction as ExecutionTransaction;
 use starknet::core::crypto::compute_hash_on_elements;
 use starknet::core::types::{
@@ -10,7 +12,7 @@ use starknet::core::types::{
     DeployAccountTransaction, DeployTransaction, FieldElement, InvokeTransaction,
     InvokeTransactionV0, InvokeTransactionV1, L1HandlerTransaction, Transaction as RpcTransaction,
 };
-use starknet::core::utils::get_contract_address;
+use starknet::core::utils::{get_contract_address, parse_cairo_short_string};
 use starknet_api::core::{ClassHash, CompiledClassHash, ContractAddress, Nonce, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};
 use starknet_api::transaction::{
@@ -58,6 +60,14 @@ const PREFIX_DEPLOY_ACCOUNT: FieldElement = FieldElement::from_mont([
     18443211694809419988,
     18446744073709551615,
     461298303000467581,
+]);
+
+/// Cairo string for "l1_handler"
+const PREFIX_L1_HANDLER: FieldElement = FieldElement::from_mont([
+    1365666230910873368,
+    18446744073708665300,
+    18446744073709551615,
+    157895833347907735,
 ]);
 
 /// Compute the hash of a V1 DeployAccount transaction.
@@ -166,6 +176,53 @@ pub fn compute_invoke_v1_transaction_hash(
         FieldElement::ZERO, // entry_point_selector
         compute_hash_on_elements(calldata),
         max_fee,
+        chain_id,
+        nonce,
+    ])
+}
+
+/// Computes the hash of a L1 handler transaction
+/// from `L1HandlerApiTransaction`.
+pub fn compute_l1_handler_transaction_hash(
+    tx: L1HandlerApiTransaction,
+    chain_id: FieldElement,
+) -> FieldElement {
+    let tx = api_l1_handler_to_rpc_transaction(tx);
+    let version: FieldElement = tx.version.into();
+
+    assert_eq!(version, FieldElement::ZERO, "L1 handler transaction only supports version 0");
+
+    compute_l1_handler_transaction_hash_felts(
+        version,
+        tx.contract_address,
+        tx.entry_point_selector,
+        &tx.calldata,
+        chain_id,
+        tx.nonce.into(),
+    )
+}
+
+/// Computes the hash of a L1 handler transaction
+/// from the fields involved in the computation,
+/// as felts values.
+pub fn compute_l1_handler_transaction_hash_felts(
+    version: FieldElement,
+    contract_address: FieldElement,
+    entry_point_selector: FieldElement,
+    calldata: &[FieldElement],
+    chain_id: FieldElement,
+    nonce: FieldElement,
+) -> FieldElement {
+    // No fee on L2 for L1 handler transaction.
+    let fee = FieldElement::ZERO;
+
+    compute_hash_on_elements(&[
+        PREFIX_L1_HANDLER,
+        version,
+        contract_address,
+        entry_point_selector,
+        compute_hash_on_elements(calldata),
+        fee,
         chain_id,
         nonce,
     ])
@@ -510,5 +567,28 @@ mod tests {
             )
             .unwrap()
         );
+    }
+}
+
+pub fn warn_message_transaction_error_exec_error(err: &TransactionExecutionError) {
+    match err {
+        TransactionExecutionError::EntryPointExecutionError(ref eperr)
+        | TransactionExecutionError::ExecutionError(ref eperr) => match eperr {
+            EntryPointExecutionError::ExecutionFailed { error_data } => {
+                let mut reasons: Vec<String> = vec![];
+                error_data.iter().for_each(|felt| {
+                    if let Ok(s) = parse_cairo_short_string(&FieldElement::from(*felt)) {
+                        reasons.push(s);
+                    }
+                });
+
+                tracing::warn!(target: "executor",
+                               "Transaction validation error: {}", reasons.join(" "));
+            }
+            _ => tracing::warn!(target: "executor",
+                                "Transaction validation error: {:?}", err),
+        },
+        _ => tracing::warn!(target: "executor",
+                            "Transaction validation error: {:?}", err),
     }
 }

@@ -46,7 +46,7 @@ impl Client {
         console_error_panic_hook::set_once();
         let _entities = entities
             .into_iter()
-            .map(serde_wasm_bindgen::from_value::<dojo_types::model::EntityModel>)
+            .map(serde_wasm_bindgen::from_value::<dojo_types::schema::EntityModel>)
             .collect::<Result<Vec<_>, _>>()?;
         unimplemented!("add_entity_to_sync");
     }
@@ -71,7 +71,7 @@ pub async fn spawn_client(
 
     let entities = initial_entities_to_sync
         .into_iter()
-        .map(serde_wasm_bindgen::from_value::<dojo_types::model::EntityModel>)
+        .map(serde_wasm_bindgen::from_value::<dojo_types::schema::EntityModel>)
         .collect::<Result<Vec<_>, _>>()?;
 
     let world_address = FieldElement::from_str(world_address).map_err(|err| {

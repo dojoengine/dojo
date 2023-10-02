@@ -782,7 +782,7 @@ test_manifest_file
           "key": false
         }
       ],
-      "class_hash": "0x3fc154aaf236e0478a5ea100b3d1971b30c70c14fa0e1a25606973ec75247a4",
+      "class_hash": "0xb37482a660983dfbf65968caa26eab260d3e1077986454b52ac06e58ae20c4",
       "abi": [
         {
           "type": "function",
@@ -878,7 +878,17 @@ test_manifest_file
         },
         {
           "type": "struct",
-          "name": "dojo::database::schema::EnumMember",
+          "name": "core::array::Span::<(core::felt252, core::array::Span::<core::felt252>)>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<(core::felt252, core::array::Span::<core::felt252>)>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "dojo::database::schema::Enum",
           "members": [
             {
               "name": "name",
@@ -889,8 +899,8 @@ test_manifest_file
               "type": "core::array::Span::<core::felt252>"
             },
             {
-              "name": "values",
-              "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+              "name": "children",
+              "type": "core::array::Span::<(core::felt252, core::array::Span::<core::felt252>)>"
             }
           ]
         },
@@ -899,7 +909,7 @@ test_manifest_file
           "name": "dojo::database::schema::Ty",
           "variants": [
             {
-              "name": "Simple",
+              "name": "Primitive",
               "type": "core::felt252"
             },
             {
@@ -908,7 +918,11 @@ test_manifest_file
             },
             {
               "name": "Enum",
-              "type": "dojo::database::schema::EnumMember"
+              "type": "dojo::database::schema::Enum"
+            },
+            {
+              "name": "Tuple",
+              "type": "core::array::Span::<core::array::Span::<core::felt252>>"
             }
           ]
         },
@@ -945,7 +959,7 @@ test_manifest_file
           "key": false
         }
       ],
-      "class_hash": "0x7a812f2cfb414d5aa04bb9a3c91cdcaf1d30e193bd6cb7faf9b7c294722fab4",
+      "class_hash": "0x3598b0816df38211a0ebd6edcd922d19738778de2240caf6b04c6a0cab6df5",
       "abi": [
         {
           "type": "function",
@@ -1041,7 +1055,17 @@ test_manifest_file
         },
         {
           "type": "struct",
-          "name": "dojo::database::schema::EnumMember",
+          "name": "core::array::Span::<(core::felt252, core::array::Span::<core::felt252>)>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<(core::felt252, core::array::Span::<core::felt252>)>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "dojo::database::schema::Enum",
           "members": [
             {
               "name": "name",
@@ -1052,8 +1076,8 @@ test_manifest_file
               "type": "core::array::Span::<core::felt252>"
             },
             {
-              "name": "values",
-              "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+              "name": "children",
+              "type": "core::array::Span::<(core::felt252, core::array::Span::<core::felt252>)>"
             }
           ]
         },
@@ -1062,7 +1086,7 @@ test_manifest_file
           "name": "dojo::database::schema::Ty",
           "variants": [
             {
-              "name": "Simple",
+              "name": "Primitive",
               "type": "core::felt252"
             },
             {
@@ -1071,7 +1095,11 @@ test_manifest_file
             },
             {
               "name": "Enum",
-              "type": "dojo::database::schema::EnumMember"
+              "type": "dojo::database::schema::Enum"
+            },
+            {
+              "name": "Tuple",
+              "type": "core::array::Span::<core::array::Span::<core::felt252>>"
             }
           ]
         },

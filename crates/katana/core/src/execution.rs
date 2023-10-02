@@ -21,6 +21,7 @@ use crate::backend::storage::transaction::{
 };
 use crate::db::cached::CachedStateWrapper;
 use crate::db::{Database, StateExt, StateRefDb};
+use crate::utils::transaction::warn_message_transaction_error_exec_error;
 
 /// The outcome that after executing a list of transactions.
 pub struct ExecutionOutcome {
@@ -198,7 +199,7 @@ impl<'a> TransactionExecutor<'a> {
 
             Err(err) => {
                 if self.error_log {
-                    warn!(target: "executor", "Transaction validation error: {err:?}");
+                    warn_message_transaction_error_exec_error(&err);
                 }
 
                 Err(err)

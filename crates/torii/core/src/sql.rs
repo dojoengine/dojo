@@ -3,7 +3,7 @@ use std::str::FromStr;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use dojo_types::core::CairoType;
-use dojo_types::model::Ty;
+use dojo_types::schema::Ty;
 use dojo_world::manifest::{Manifest, System};
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
@@ -304,7 +304,7 @@ impl Sql {
         match model {
             Ty::Struct(s) => {
                 for member in s.children.iter() {
-                    if let Ty::Terminal(_) = member.ty {
+                    if let Ty::Primitive(_) = member.ty {
                         continue;
                     }
 
@@ -319,15 +319,11 @@ impl Sql {
                 }
             }
             Ty::Enum(e) => {
-                for ty in e.children.iter() {
-                    if let Ty::Terminal(_) = ty {
-                        continue;
-                    }
-
+                for child in e.children.iter() {
                     let mut table_path_clone = table_path.clone();
-                    table_path_clone.push(ty.name());
-                    self.build_model_query(table_path_clone.clone(), ty, *model_idx);
-                    self.build_queries_recursive(ty, table_path_clone, &mut (*model_idx + 1));
+                    table_path_clone.push(child.1.name());
+                    self.build_model_query(table_path_clone.clone(), &child.1, *model_idx);
+                    self.build_queries_recursive(&child.1, table_path_clone, &mut (*model_idx + 1));
                 }
             }
             _ => {}

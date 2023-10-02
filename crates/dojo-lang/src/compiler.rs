@@ -156,7 +156,7 @@ fn find_project_contracts(
         Vec::new()
     };
 
-    Ok(internal_contracts.into_iter().chain(external_contracts.into_iter()).collect())
+    Ok(internal_contracts.into_iter().chain(external_contracts).collect())
 }
 
 pub fn collect_core_crate_ids(db: &RootDatabase) -> Vec<CrateId> {
