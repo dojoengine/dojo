@@ -151,29 +151,15 @@ fn exists(address_domain: u32, index: felt252, id: felt252) -> bool {
     storage::get(address_domain, build_index_item_key(index, id)) != 0
 }
 
-fn query(address_domain: u32, table: felt252, where: Option<WhereCondition>) -> Array<felt252> {
+fn query(address_domain: u32, table: felt252, where: Option<WhereCondition>) -> Span<felt252> {
     let mut res = ArrayTrait::new();
 
     match where {
-        // 
         Option::Some(clause) => {
             let mut serialized = ArrayTrait::new();
-            model.serialize(ref serialized);
+            table.serialize(ref serialized);
             clause.key.serialize(ref serialized);
             let index = poseidon_hash_span(serialized.span());
-
-            let index_len_key = build_index_len_key(index);
-            let index_len = storage::get(address_domain, index_len_key);
-            let mut idx = 0;
-
-            // TODO: Query on key value.
-
-            (all_ids.span(), get_by_ids(class_hash, index, all_ids.span(), length, layout))
-        },
-
-        // If no `where` clause is defined, we return all values.
-        Option::None(_) => {
-            
 
             let index_len_key = build_index_len_key(index);
             let index_len = storage::get(address_domain, index_len_key);
@@ -183,14 +169,29 @@ fn query(address_domain: u32, table: felt252, where: Option<WhereCondition>) -> 
                 if idx == index_len {
                     break ();
                 }
+                let id = storage::get(address_domain, build_index_key(index, idx));
+                res.append(id);
+            }
+        },
 
-                res.append(storage::get(address_domain, build_index_key(index, idx)));
+        // If no `where` clause is defined, we return all values.
+        Option::None(_) => {
+            let index_len_key = build_index_len_key(table);
+            let index_len = storage::get(address_domain, index_len_key);
+            let mut idx = 0;
+
+            loop {
+                if idx == index_len {
+                    break ();
+                }
+
+                res.append(storage::get(address_domain, build_index_key(table, idx)));
                 idx += 1;
             };
         }
     }
 
-    res
+    res.span()
 }
 
 /// Gets all ids for a given index, as well as all keys for each id.

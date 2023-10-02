@@ -15,6 +15,8 @@ mod utils;
 #[cfg(test)]
 mod utils_test;
 
+use index::WhereCondition;
+
 fn get(
     class_hash: starknet::ClassHash, table: felt252, key: felt252, offset: u8, length: usize, layout: Span<u8>
 ) -> Span<felt252> {
@@ -54,14 +56,13 @@ fn scan(
             let index = poseidon_hash_span(serialized.span());
 
             let all_ids = index::get_by_key(0, index, clause.value);
-            (all_ids.span(), get_by_ids(class_hash, index, all_ids.span(), length, layout))
+            (all_ids.span(), get_by_ids(class_hash, index, all_ids.span(), values_length, values_layout))
         },
 
         // If no `where` clause is defined, we return all values.
         Option::None(_) => {
-            let all_ids = index::get(0, table);
-            let mut ids = all_ids.span();
-            (all_ids.span(), get_by_ids(class_hash, table, all_ids.span(), values_size, values_layout))
+            let all_ids = index::query(0, model, Option::None);
+            (all_ids, get_by_ids(class_hash, model, all_ids, values_length, values_layout))
         }
     }
 }

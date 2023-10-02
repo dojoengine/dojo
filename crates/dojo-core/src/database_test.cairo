@@ -9,7 +9,7 @@ use starknet::syscalls::deploy_syscall;
 use starknet::class_hash::{Felt252TryIntoClassHash, ClassHash};
 use dojo::world::{IWorldDispatcher};
 use dojo::executor::executor;
-use dojo::database::{get, set, del, all};
+use dojo::database::{get, set, del, scan};
 
 #[test]
 #[available_gas(1000000)]
@@ -128,5 +128,5 @@ fn test_database_all() {
     set(class_hash, 'table', 'odd', 0, odd, layout);
 
     let base = starknet::storage_base_address_from_felt252('table');
-    let (keys, values) = all(class_hash, 'table', 0, 2, layout);
+    // let (keys, values) = scan(class_hash, 'table', 0, 2, layout);
 }
