@@ -7892,6 +7892,7 @@ dependencies = [
  "sqlx",
  "starknet",
  "starknet-crypto 0.6.0",
+ "thiserror",
  "tokio",
  "tokio-stream",
  "tokio-util",
