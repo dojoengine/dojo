@@ -1,20 +1,20 @@
 use std::str::FromStr;
 
 use async_graphql::dynamic::{Enum, Field, FieldFuture, InputObject, Object, TypeRef};
-use async_graphql::{Error, Name, Value};
+use async_graphql::{ Name, Value};
 use chrono::{DateTime, Utc};
 use dojo_types::primitive::Primitive;
 use serde::Deserialize;
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
-use sqlx::{FromRow, Pool, QueryBuilder, Row, Sqlite};
+use sqlx::{FromRow, Pool,  Row, Sqlite};
 use torii_core::types::Entity;
 
 use super::connection::{
     connection_arguments, decode_cursor, encode_cursor, parse_connection_arguments,
     ConnectionArguments,
 };
-use super::inputs::order_input::{order_argument, parse_order_argument, OrderInputObject};
+use super::inputs::order_input::{parse_order_argument, OrderInputObject};
 use super::inputs::where_input::{parse_where_argument, where_argument, WhereInputObject};
 use super::inputs::InputObjectTrait;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
@@ -107,8 +107,8 @@ impl ObjectTrait for ModelDataObject {
 
         // Add relay connection fields (first, last, before, after, where)
         field = connection_arguments(field);
-        // field = where_argument(field, self.type_name());
-        // field = order_argument(field, self.type_name());
+        field = where_argument(field, self.type_name());
+        //field = order_argument(field, self.type_name());
 
         Some(field)
     }
