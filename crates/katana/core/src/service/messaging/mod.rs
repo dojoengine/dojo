@@ -12,10 +12,10 @@
 //! The sending of the messages is realized by collecting all the `messages_sent` from local
 //! execution of smart contracts using the `send_message_to_l1_syscall`. Once messages are
 //! collected, the hash of each message is computed and then registered on the settlement layer to
-//! be consumed on the latter (by manually by sending a transaction on the settlement chain).
-//! The hashes are registered using a custom contract that mimics the verification of Starknet block
-//! on Ethereum, since this process of proving and verifying a block is not present with local dev
-//! nodes.
+//! be consumed on the latter (by manually sending a transaction on the settlement chain). The
+//! hashes are registered using a custom contract that mimics the verification of Starknet state
+//! updates on Ethereum, since the process of proving and verifying of state updates, and then
+//! posting in on the settlement layer are not yet present in Katana.
 //!
 //! Katana also has a `starknet-messaging` feature, where an opiniated implementation of L2 <-> L3
 //! messaging is implemented using Starknet as settlement chain.
