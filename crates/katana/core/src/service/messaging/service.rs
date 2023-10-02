@@ -93,6 +93,7 @@ impl MessagingService {
                 Ok((block_num, txs_count))
             }
 
+            #[cfg(feature = "starknet-messaging")]
             MessengerMode::Starknet(inner) => {
                 let (block_num, txs) =
                     inner.gather_messages(from_block, max_block, chain_id).await?;
@@ -139,6 +140,7 @@ impl MessagingService {
                     Ok(Some((block_num, hashes.len())))
                 }
 
+                #[cfg(feature = "starknet-messaging")]
                 MessengerMode::Starknet(inner) => {
                     let hashes = inner
                         .send_messages(&messages)
@@ -245,6 +247,8 @@ fn interval_from_seconds(secs: u64) -> Interval {
 
 fn trace_msg_to_l1_sent(messages: &Vec<MsgToL1>, hashes: &Vec<String>) {
     assert_eq!(messages.len(), hashes.len());
+
+    #[cfg(feature = "starknet-messaging")]
     let hash_exec_str = format!("{:#064x}", super::starknet::HASH_EXEC);
 
     for (i, m) in messages.iter().enumerate() {
@@ -252,6 +256,7 @@ fn trace_msg_to_l1_sent(messages: &Vec<MsgToL1>, hashes: &Vec<String>) {
 
         let hash = &hashes[i];
 
+        #[cfg(feature = "starknet-messaging")]
         if hash == &hash_exec_str {
             let to_address = &payload_str[0];
             let selector = &payload_str[1];
@@ -272,15 +277,18 @@ fn trace_msg_to_l1_sent(messages: &Vec<MsgToL1>, hashes: &Vec<String>) {
                 selector,
                 payload_str.join(", ")
             );
-        } else {
-            // We check for magic value 'MSG' used only when we are doing L3-L2 messaging.
-            let (to_address, payload_str) = if format!("{:#x}", m.to_address) == "0x4d5347" {
-                (payload_str[0].clone(), &payload_str[1..])
-            } else {
-                (format!("{:#x}", m.to_address), &payload_str[..])
-            };
 
-            #[rustfmt::skip]
+            continue;
+        }
+
+        // We check for magic value 'MSG' used only when we are doing L3-L2 messaging.
+        let (to_address, payload_str) = if format!("{:#x}", m.to_address) == "0x4d5347" {
+            (payload_str[0].clone(), &payload_str[1..])
+        } else {
+            (format!("{:#x}", m.to_address), &payload_str[..])
+        };
+
+        #[rustfmt::skip]
             info!(
                 target: LOG_TARGET,
                 r#"Message sent to settlement layer:
@@ -295,7 +303,6 @@ fn trace_msg_to_l1_sent(messages: &Vec<MsgToL1>, hashes: &Vec<String>) {
                 to_address,
                 payload_str.join(", ")
             );
-        }
     }
 }
 

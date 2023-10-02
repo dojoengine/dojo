@@ -37,3 +37,4 @@ hex = "0.4.3"
 
 [features]
 messaging = [ "ethers", "sha3" ]
+starknet-messaging = [  ]
