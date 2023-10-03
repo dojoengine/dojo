@@ -37,6 +37,13 @@ fn set(
     storage::set_many(0, keys.span(), offset, value, layout);
 }
 
+fn set_with_index( 
+    class_hash: starknet::ClassHash, table: felt252, key: felt252, offset: u8, value: Span<felt252>, layout: Span<u8>
+) {
+    set(class_hash, table, key, offset, value, layout);
+    index::create(0, table, key);
+}
+
 fn del(class_hash: starknet::ClassHash, table: felt252, key: felt252, keys_layout: Span<u8>) {
     // index::delete(0, table, key, keys_layout);
 } 
@@ -48,7 +55,6 @@ fn scan(
     class_hash: starknet::ClassHash, model: felt252, where: Option<WhereCondition>, values_length: usize, values_layout: Span<u8>
 ) -> (Span<felt252>, Span<Span<felt252>>) {
     match where {
-        // 
         Option::Some(clause) => {
             let mut serialized = ArrayTrait::new();
             model.serialize(ref serialized);

@@ -9,7 +9,8 @@ use starknet::syscalls::deploy_syscall;
 use starknet::class_hash::{Felt252TryIntoClassHash, ClassHash};
 use dojo::world::{IWorldDispatcher};
 use dojo::executor::executor;
-use dojo::database::{get, set, del, scan};
+use dojo::database::{get, set, set_with_index, del, scan};
+use dojo::database::index::WhereCondition;
 
 #[test]
 #[available_gas(1000000)]
@@ -118,15 +119,19 @@ fn test_database_del() {
 
 #[test]
 #[available_gas(10000000)]
-fn test_database_all() {
+fn test_database_scan() {
     let even = array![2, 4].span();
     let odd = array![1, 3].span();
     let layout = array![251, 251].span();
 
     let class_hash: starknet::ClassHash = executor::TEST_CLASS_HASH.try_into().unwrap();
-    set(class_hash, 'table', 'even', 0, even, layout);
-    set(class_hash, 'table', 'odd', 0, odd, layout);
+    set_with_index(class_hash, 'table', 'even', 0, even, layout);
+    set_with_index(class_hash, 'table', 'odd', 0, odd, layout);
 
-    let base = starknet::storage_base_address_from_felt252('table');
-    // let (keys, values) = scan(class_hash, 'table', 0, 2, layout);
+    let (keys, values) = scan(class_hash, 'table', Option::None(()), 2, layout);
+    assert(keys.len() == 2, 'Wrong number of keys!');
+    assert(values.len() == 2, 'Wrong number of values!');
+    assert(*keys.at(0) == 'even', 'Wrong key at index 0!');
+    assert(*(*values.at(0)).at(0) == 2, 'Wrong value at index 0!');
+    assert(*(*values.at(0)).at(1) == 4, 'Wrong value at index 1!');
 }
