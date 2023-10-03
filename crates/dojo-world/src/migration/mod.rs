@@ -9,10 +9,12 @@ use cairo_lang_starknet::contract_class::ContractClass;
 use starknet::accounts::{Account, AccountError, Call, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
-    BlockId, BlockTag, DeclareTransactionResult, FieldElement, FlattenedSierraClass,
+    BlockId, BlockTag, DeclareTransactionResult, FieldElement, FlattenedSierraClass, FunctionCall,
     InvokeTransactionResult, StarknetError,
 };
-use starknet::core::utils::{get_contract_address, CairoShortStringToFeltError};
+use starknet::core::utils::{
+    get_contract_address, get_selector_from_name, CairoShortStringToFeltError,
+};
 use starknet::macros::{felt, selector};
 use starknet::providers::{
     MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage,
@@ -138,6 +140,74 @@ pub trait Declarable {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait Deployable: Declarable + Sync {
+    async fn world_deploy<P, S>(
+        &self,
+        world_address: FieldElement,
+        class_hash: FieldElement,
+        account: &SingleOwnerAccount<P, S>,
+        txn_config: TxConfig,
+    ) -> Result<
+        DeployOutput,
+        MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError, <P as Provider>::Error>,
+    >
+    where
+        P: Provider + Sync + Send,
+        S: Signer + Sync + Send,
+    {
+        let declare = match self.declare(account, txn_config).await {
+            Ok(res) => Some(res),
+            Err(MigrationError::ClassAlreadyDeclared) => None,
+            Err(e) => return Err(e),
+        };
+
+        let base_class_hash = account
+            .provider()
+            .call(
+                FunctionCall {
+                    contract_address: world_address,
+                    calldata: vec![],
+                    entry_point_selector: get_selector_from_name("base").unwrap(),
+                },
+                BlockId::Tag(BlockTag::Latest),
+            )
+            .await
+            .map_err(MigrationError::Provider)?;
+
+        let contract_address =
+            get_contract_address(self.salt(), base_class_hash[0], &[], world_address);
+
+        match account
+            .provider()
+            .get_class_hash_at(BlockId::Tag(BlockTag::Pending), contract_address)
+            .await
+        {
+            Err(ProviderError::StarknetError(StarknetErrorWithMessage {
+                code: MaybeUnknownErrorCode::Known(StarknetError::ContractNotFound),
+                ..
+            })) => {}
+
+            Ok(_) => return Err(MigrationError::ContractAlreadyDeployed(contract_address)),
+            Err(e) => return Err(MigrationError::Provider(e)),
+        }
+
+        let mut txn = account.execute(vec![Call {
+            calldata: vec![self.salt(), class_hash],
+            selector: selector!("deploy_contract"),
+            to: world_address,
+        }]);
+
+        if let TxConfig { fee_estimate_multiplier: Some(multiplier) } = txn_config {
+            txn = txn.fee_estimate_multiplier(multiplier);
+        }
+
+        let InvokeTransactionResult { transaction_hash } =
+            txn.send().await.map_err(MigrationError::Migrator)?;
+
+        TransactionWaiter::new(transaction_hash, account.provider()).await?;
+
+        Ok(DeployOutput { transaction_hash, contract_address, declare })
+    }
+
     async fn deploy<P, S>(
         &self,
         class_hash: FieldElement,
@@ -154,7 +224,6 @@ pub trait Deployable: Declarable + Sync {
     {
         let declare = match self.declare(account, txn_config).await {
             Ok(res) => Some(res),
-
             Err(MigrationError::ClassAlreadyDeclared) => None,
             Err(e) => return Err(e),
         };

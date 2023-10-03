@@ -6,6 +6,7 @@ use option::OptionTrait;
 trait IWorld<T> {
     fn model(self: @T, name: felt252) -> ClassHash;
     fn register_model(ref self: T, class_hash: ClassHash);
+    fn deploy_contract(self: @T, salt: felt252, class_hash: ClassHash) -> ContractAddress;
     fn uuid(ref self: T) -> usize;
     fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
     fn entity(
@@ -29,6 +30,7 @@ trait IWorld<T> {
     ) -> (Span<felt252>, Span<Span<felt252>>);
     fn set_executor(ref self: T, contract_address: ContractAddress);
     fn executor(self: @T) -> ContractAddress;
+    fn base(self: @T) -> ClassHash;
     fn delete_entity(ref self: T, model: felt252, keys: Span<felt252>);
     fn is_owner(self: @T, address: ContractAddress, target: felt252) -> bool;
     fn grant_owner(ref self: T, address: ContractAddress, target: felt252);
@@ -49,12 +51,13 @@ mod world {
     use starknet::{
         get_caller_address, get_contract_address, get_tx_info,
         contract_address::ContractAddressIntoFelt252, ClassHash, Zeroable, ContractAddress,
-        syscalls::emit_event_syscall, SyscallResultTrait, SyscallResultTraitImpl
+        syscalls::{deploy_syscall, emit_event_syscall}, SyscallResult, SyscallResultTrait, SyscallResultTraitImpl
     };
 
     use dojo::database;
     use dojo::database::index::WhereCondition;
     use dojo::executor::{IExecutorDispatcher, IExecutorDispatcherTrait};
+    use dojo::upgradable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
     use dojo::world::{IWorldDispatcher, IWorld};
 
 
@@ -101,18 +104,18 @@ mod world {
     #[storage]
     struct Storage {
         executor_dispatcher: IExecutorDispatcher,
-        models: LegacyMap::<felt252, ClassHash>,
+        contract_base: ClassHash,
         nonce: usize,
+        models: LegacyMap::<felt252, ClassHash>,
         owners: LegacyMap::<(felt252, ContractAddress), bool>,
         writers: LegacyMap::<(felt252, ContractAddress), bool>,
-        // Tracks the calling systems name for auth purposes.
-        call_stack_len: felt252,
-        call_stack: LegacyMap::<felt252, felt252>,
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, executor: ContractAddress) {
+    fn constructor(ref self: ContractState, executor: ContractAddress, contract_base: ClassHash) {
         self.executor_dispatcher.write(IExecutorDispatcher { contract_address: executor });
+        self.contract_base.write(contract_base);
+
         self
             .owners
             .write(
@@ -273,6 +276,23 @@ mod world {
             self.models.read(name)
         }
 
+        /// Deploys a contract associated with the world.
+        ///
+        /// # Arguments
+        ///
+        /// * `name` - The name of the contract.
+        /// * `class_hash` - The class_hash of the contract.
+        ///
+        /// # Returns
+        ///
+        /// * `ClassHash` - The class hash of the model.
+        fn deploy_contract(self: @ContractState, salt: felt252, class_hash: ClassHash) -> ContractAddress {
+            let (contract_address, _) = deploy_syscall(self.contract_base.read(), salt, array![].span(), false).unwrap_syscall();
+            let upgradable_dispatcher = IUpgradeableDispatcher { contract_address };
+            upgradable_dispatcher.upgrade(class_hash);
+            contract_address
+        }
+
         /// Issues an autoincremented id to the caller.
         ///
         /// # Returns
@@ -407,6 +427,15 @@ mod world {
         /// * `ContractAddress` - The address of the executor contract.
         fn executor(self: @ContractState) -> ContractAddress {
             self.executor_dispatcher.read().contract_address
+        }
+
+        /// Gets the base contract class hash.
+        ///
+        /// # Returns
+        ///
+        /// * `ContractAddress` - The address of the contract_base contract.
+        fn base(self: @ContractState) -> ClassHash {
+            self.contract_base.read()
         }
     }
 

@@ -161,6 +161,7 @@ fn find_project_contracts(
 
 pub fn collect_core_crate_ids(db: &RootDatabase) -> Vec<CrateId> {
     [
+        ContractSelector("dojo::base::base".to_string()),
         ContractSelector("dojo::executor::executor".to_string()),
         ContractSelector("dojo::world::world".to_string()),
     ]

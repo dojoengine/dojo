@@ -5,8 +5,8 @@ use std::path::{Path, PathBuf};
 use anyhow::{anyhow, Context, Result};
 use convert_case::{Case, Casing};
 use starknet::core::types::FieldElement;
-use starknet::core::utils::get_contract_address;
-use starknet_crypto::poseidon_hash_single;
+use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
+use starknet_crypto::{poseidon_hash_many, poseidon_hash_single};
 
 use super::class::{ClassDiff, ClassMigration};
 use super::contract::{ContractDiff, ContractMigration};
@@ -26,6 +26,7 @@ pub struct MigrationStrategy {
     pub world_address: Option<FieldElement>,
     pub world: Option<ContractMigration>,
     pub executor: Option<ContractMigration>,
+    pub base: Option<ClassMigration>,
     pub contracts: Vec<ContractMigration>,
     pub models: Vec<ClassMigration>,
 }
@@ -111,6 +112,7 @@ where
     let mut world = evaluate_contract_to_migrate(&diff.world, &artifact_paths, false)?;
     let mut executor =
         evaluate_contract_to_migrate(&diff.executor, &artifact_paths, world.is_some())?;
+    let base = evaluate_class_to_migrate(&diff.base, &artifact_paths, world.is_some())?;
     let contracts =
         evaluate_contracts_to_migrate(&diff.contracts, &artifact_paths, world.is_some())?;
     let models = evaluate_models_to_migrate(&diff.models, &artifact_paths, world.is_some())?;
@@ -129,12 +131,12 @@ where
         world.contract_address = get_contract_address(
             salt,
             diff.world.local,
-            &[executor.as_ref().unwrap().contract_address],
+            &[executor.as_ref().unwrap().contract_address, base.as_ref().unwrap().diff.local],
             FieldElement::ZERO,
         );
     }
 
-    Ok(MigrationStrategy { world_address, world, executor, contracts, models })
+    Ok(MigrationStrategy { world_address, world, executor, base, contracts, models })
 }
 
 fn evaluate_models_to_migrate(
@@ -145,18 +147,29 @@ fn evaluate_models_to_migrate(
     let mut comps_to_migrate = vec![];
 
     for c in models {
-        match c.remote {
-            Some(remote) if remote == c.local && !world_contract_will_migrate => continue,
-            _ => {
-                let path =
-                    find_artifact_path(c.name.to_case(Case::Snake).as_str(), artifact_paths)?;
-                comps_to_migrate
-                    .push(ClassMigration { diff: c.clone(), artifact_path: path.clone() });
-            }
+        if let Ok(Some(c)) =
+            evaluate_class_to_migrate(c, artifact_paths, world_contract_will_migrate)
+        {
+            comps_to_migrate.push(c);
         }
     }
 
     Ok(comps_to_migrate)
+}
+
+fn evaluate_class_to_migrate(
+    class: &ClassDiff,
+    artifact_paths: &HashMap<String, PathBuf>,
+    world_contract_will_migrate: bool,
+) -> Result<Option<ClassMigration>> {
+    match class.remote {
+        Some(remote) if remote == class.local && !world_contract_will_migrate => Ok(None),
+        _ => {
+            let path =
+                find_artifact_path(class.name.to_case(Case::Snake).as_str(), artifact_paths)?;
+            Ok(Some(ClassMigration { diff: class.clone(), artifact_path: path.clone() }))
+        }
+    }
 }
 
 fn evaluate_contracts_to_migrate(
@@ -175,6 +188,17 @@ fn evaluate_contracts_to_migrate(
                 comps_to_migrate.push(ContractMigration {
                     diff: c.clone(),
                     artifact_path: path.clone(),
+                    salt: poseidon_hash_many(
+                        &c.name
+                            .chars()
+                            .collect::<Vec<_>>()
+                            .chunks(31)
+                            .map(|chunk| {
+                                let s: String = chunk.iter().collect();
+                                cairo_short_string_to_felt(&s).unwrap()
+                            })
+                            .collect::<Vec<_>>(),
+                    ),
                     ..Default::default()
                 });
             }
