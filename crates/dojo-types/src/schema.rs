@@ -51,6 +51,15 @@ impl Ty {
         }
     }
 
+    pub fn enum_string(&self) -> String {
+        match self {
+            Ty::Primitive(_) => "Primitive".to_string(),
+            Ty::Struct(_) => "Struct".to_string(),
+            Ty::Enum(_) => "Enum".to_string(),
+            Ty::Tuple(_) => "Tuple".to_string(),
+        }
+    }
+
     pub fn iter(&self) -> TyIter<'_> {
         TyIter { stack: vec![self] }
     }
