@@ -1,4 +1,4 @@
-use ethabi::ethereum_types::U256;
+use crypto_bigint::{Encoding, U256};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::{FieldElement, ValueOutOfRangeError};
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
@@ -66,10 +66,12 @@ impl Primitive {
             | Primitive::U64(_)
             | Primitive::USize(_)
             | Primitive::Bool(_) => Ok(format!("'{}'", value[0])),
+
             Primitive::U128(_)
             | Primitive::ContractAddress(_)
             | Primitive::ClassHash(_)
             | Primitive::Felt252(_) => Ok(format!("'{:0>64x}'", value[0])),
+
             Primitive::U256(_) => {
                 if value.len() < 2 {
                     Err(PrimitiveError::NotEnoughFieldElements)
@@ -131,7 +133,7 @@ impl Primitive {
                 let mut bytes = [0u8; 32];
                 bytes[..16].copy_from_slice(&value0_bytes);
                 bytes[16..].copy_from_slice(&value1_bytes);
-                *value = Some(U256::from(bytes));
+                *value = Some(U256::from_be_bytes(bytes));
                 Ok(())
             }
             Primitive::ContractAddress(ref mut value) => {
@@ -174,8 +176,7 @@ impl Primitive {
                 .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
             Primitive::U256(value) => value
                 .map(|v| {
-                    let mut bytes = [0u8; 32];
-                    v.to_big_endian(&mut bytes);
+                    let bytes: [u8; 32] = v.to_be_bytes();
                     let value0_slice = &bytes[..16];
                     let value1_slice = &bytes[16..];
                     let mut value0_array = [0u8; 32];

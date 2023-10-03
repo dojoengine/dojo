@@ -32,6 +32,7 @@ pub struct ModelMetadata {
     pub class_hash: FieldElement,
 }
 
+/// Represents all possible types in Cairo
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum Ty {
     Primitive(Primitive),

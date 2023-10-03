@@ -6,7 +6,7 @@ version = "0.2.1"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ethabi = { version = "18.0.0", default-features = false, features = [ "std" ] }
+crypto-bigint = { version = "0.5.3", features = [ "serde" ] }
 hex = "0.4.3"
 itertools.workspace = true
 serde.workspace = true
