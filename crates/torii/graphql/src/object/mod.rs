@@ -14,7 +14,7 @@ use self::connection::edge::EdgeObject;
 use self::connection::ConnectionObject;
 use crate::types::{TypeMapping, ValueMapping};
 
-pub trait ObjectTrait {
+pub trait ObjectTrait: Send + Sync {
     // Name of the graphql object (eg "player")
     fn name(&self) -> &str;
 
