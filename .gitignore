@@ -7,6 +7,6 @@ dojo.iml
 *.db-shm
 .DS_Store
 .env
-data
 crates/benches/gas_usage.txt
 **/.vscode
+data
