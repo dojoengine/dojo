@@ -6,6 +6,7 @@ use starknet::core::types::FieldElement;
 use system::SystemMetadata;
 
 pub mod event;
+pub mod packing;
 pub mod primitive;
 pub mod schema;
 pub mod storage;

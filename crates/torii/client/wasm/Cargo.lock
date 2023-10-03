@@ -317,6 +317,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "base16ct"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4c7f02d4ea65f2c1853089ffd8d2787bdbc63de2f0d29dedbcf8ccdfa0ccd4cf"
+
+[[package]]
 name = "base64"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -550,6 +556,7 @@ checksum = "740fe28e594155f10cfc383984cbefd529d7396050557148f79cb0f621204124"
 dependencies = [
  "generic-array",
  "rand_core",
+ "serdect",
  "subtle",
  "zeroize",
 ]
@@ -643,7 +650,7 @@ dependencies = [
 name = "dojo-types"
 version = "0.2.1"
 dependencies = [
- "ethabi",
+ "crypto-bigint",
  "hex",
  "itertools 0.10.5",
  "serde",
@@ -724,20 +731,6 @@ dependencies = [
  "sha3",
  "thiserror",
  "uuid 0.8.2",
-]
-
-[[package]]
-name = "ethabi"
-version = "18.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7413c5f74cc903ea37386a8965a936cbeb334bd270862fdece542c1b2dcbc898"
-dependencies = [
- "ethereum-types",
- "hex",
- "serde",
- "sha3",
- "thiserror",
- "uint",
 ]
 
 [[package]]
@@ -2281,6 +2274,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.37",
+]
+
+[[package]]
+name = "serdect"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a84f14a19e9a014bb9f4512488d9829a68e04ecabffb0f9904cd1ace94598177"
+dependencies = [
+ "base16ct",
+ "serde",
 ]
 
 [[package]]
