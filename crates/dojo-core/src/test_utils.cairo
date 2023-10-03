@@ -21,11 +21,11 @@ use dojo::world::{world, IWorldDispatcher, IWorldDispatcherTrait};
 /// # Returns
 /// * address of contract deployed
 fn deploy_contract(class_hash: felt252, calldata: Span<felt252>) -> ContractAddress {
-    let (system_contract, _) = starknet::deploy_syscall(
+    let (contract, _) = starknet::deploy_syscall(
         class_hash.try_into().unwrap(), 0, calldata, false
     )
         .unwrap();
-    system_contract
+    contract
 }
 
 /// Deploy classhash and passes in world address to constructor
@@ -49,10 +49,8 @@ fn spawn_test_world(models: Array<felt252>) -> IWorldDispatcher {
     )
         .unwrap();
     // deploy world
-    let mut world_constructor_calldata = array::ArrayTrait::new();
-    world_constructor_calldata.append(executor_address.into());
     let (world_address, _) = deploy_syscall(
-        world::TEST_CLASS_HASH.try_into().unwrap(), 0, world_constructor_calldata.span(), false
+        world::TEST_CLASS_HASH.try_into().unwrap(), 0, array![executor_address.into(), dojo::base::base::TEST_CLASS_HASH].span(), false
     )
         .unwrap();
     let world = IWorldDispatcher { contract_address: world_address };

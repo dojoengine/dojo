@@ -7,7 +7,9 @@ use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_starknet::abi;
 use cairo_lang_starknet::plugin::aux_data::StarkNetContractAuxData;
 use convert_case::{Case, Casing};
-use dojo_world::manifest::{Contract, EXECUTOR_CONTRACT_NAME, WORLD_CONTRACT_NAME};
+use dojo_world::manifest::{
+    Class, Contract, BASE_CONTRACT_NAME, EXECUTOR_CONTRACT_NAME, WORLD_CONTRACT_NAME,
+};
 use serde::Serialize;
 use smol_str::SmolStr;
 use starknet::core::types::FieldElement;
@@ -43,6 +45,15 @@ impl Manifest {
                     )
                 );
             });
+        let (base, base_abi) = compiled_classes.get(BASE_CONTRACT_NAME).unwrap_or_else(|| {
+            panic!(
+                "{}",
+                format!(
+                    "Contract `{}` not found. Did you include `dojo` as a dependency?",
+                    BASE_CONTRACT_NAME
+                )
+            );
+        });
 
         manifest.0.world = Contract {
             name: WORLD_CONTRACT_NAME.into(),
@@ -50,6 +61,8 @@ impl Manifest {
             class_hash: *world,
             abi: world_abi.clone(),
         };
+        manifest.0.base =
+            Class { name: BASE_CONTRACT_NAME.into(), class_hash: *base, abi: base_abi.clone() };
         manifest.0.executor = Contract {
             name: EXECUTOR_CONTRACT_NAME.into(),
             address: None,
@@ -137,7 +150,7 @@ impl Manifest {
         compiled_classes: &HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
     ) {
         for name in &aux_data.contracts {
-            if "world" == name.as_str() || "executor" == name.as_str() {
+            if "world" == name.as_str() || "executor" == name.as_str() || "base" == name.as_str() {
                 return;
             }
 

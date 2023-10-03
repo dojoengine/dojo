@@ -23,6 +23,7 @@ mod test;
 
 pub const WORLD_CONTRACT_NAME: &str = "world";
 pub const EXECUTOR_CONTRACT_NAME: &str = "executor";
+pub const BASE_CONTRACT_NAME: &str = "base";
 
 #[derive(Error, Debug)]
 pub enum ManifestError<E> {
@@ -107,9 +108,19 @@ pub struct Contract {
 
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
+pub struct Class {
+    pub name: SmolStr,
+    #[serde_as(as = "UfeHex")]
+    pub class_hash: FieldElement,
+    pub abi: Option<abi::Contract>,
+}
+
+#[serde_as]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Manifest {
     pub world: Contract,
     pub executor: Contract,
+    pub base: Class,
     pub systems: Vec<System>,
     pub contracts: Vec<Contract>,
     pub models: Vec<Model>,
@@ -165,6 +176,18 @@ impl Manifest {
                 }) => ManifestError::ExecutorNotFound,
                 _ => ManifestError::Provider(err),
             })?;
+
+        let base_class_hash = provider
+            .call(
+                FunctionCall {
+                    contract_address: world_address,
+                    calldata: vec![],
+                    entry_point_selector: get_selector_from_name("base").unwrap(),
+                },
+                BlockId::Tag(BlockTag::Pending),
+            )
+            .await
+            .map_err(ManifestError::Provider)?[0];
 
         let mut systems = vec![];
         let mut models = vec![];
@@ -235,6 +258,11 @@ impl Manifest {
                 name: EXECUTOR_CONTRACT_NAME.into(),
                 address: Some(executor_address),
                 class_hash: executor_class_hash,
+                ..Default::default()
+            },
+            base: Class {
+                name: BASE_CONTRACT_NAME.into(),
+                class_hash: base_class_hash,
                 ..Default::default()
             },
         })

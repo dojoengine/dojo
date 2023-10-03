@@ -3,7 +3,7 @@ use std::fmt::Display;
 use super::class::ClassDiff;
 use super::contract::ContractDiff;
 use super::StateDiff;
-use crate::manifest::{Manifest, EXECUTOR_CONTRACT_NAME, WORLD_CONTRACT_NAME};
+use crate::manifest::{Manifest, BASE_CONTRACT_NAME, EXECUTOR_CONTRACT_NAME, WORLD_CONTRACT_NAME};
 
 #[cfg(test)]
 #[path = "world_test.rs"]
@@ -14,6 +14,7 @@ mod tests;
 pub struct WorldDiff {
     pub world: ContractDiff,
     pub executor: ContractDiff,
+    pub base: ClassDiff,
     pub contracts: Vec<ContractDiff>,
     pub models: Vec<ClassDiff>,
     pub systems: Vec<ClassDiff>,
@@ -65,13 +66,19 @@ impl WorldDiff {
             remote: remote.as_ref().map(|m| m.executor.class_hash),
         };
 
+        let base = ClassDiff {
+            name: BASE_CONTRACT_NAME.into(),
+            local: local.base.class_hash,
+            remote: remote.as_ref().map(|m| m.base.class_hash),
+        };
+
         let world = ContractDiff {
             name: WORLD_CONTRACT_NAME.into(),
             local: local.world.class_hash,
             remote: remote.map(|m| m.world.class_hash),
         };
 
-        WorldDiff { world, executor, systems, contracts, models }
+        WorldDiff { world, executor, base, systems, contracts, models }
     }
 
     pub fn count_diffs(&self) -> usize {
