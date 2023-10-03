@@ -264,9 +264,9 @@ fn test_entities() {
     let mut keys = ArrayTrait::new();
     keys.append(0);
 
-    // let mut query_keys = ArrayTrait::new();
+    let mut query_keys = ArrayTrait::new().span();
     let keys_layout = array![251].span();
-    let (keys, values) = world.entities('Foo', 42, Option::None(()), 2, keys_layout);
+    let (keys, values) = world.entities('Foo', Option::None(()), query_keys, 2, keys_layout);
     assert(keys.len() == 1, 'No keys found for any!');
 
     // query_keys.append(0x1337);
