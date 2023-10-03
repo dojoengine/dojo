@@ -10,7 +10,7 @@ struct Record {
     type_u32: u32,
     type_u64: u64,
     type_u128: u128,
-    //type_u256: u256,
+    type_u256: u256,
     type_bool: bool,
     type_felt: felt252,
     type_class_hash: ClassHash,

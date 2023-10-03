@@ -31,7 +31,7 @@ mod records {
                         type_u32: record_idx.into(),
                         type_u64: record_idx.into(),
                         type_u128: record_idx.into(),
-                        //type_u256: curr_record.into(),
+                        type_u256: type_felt.into(),
                         type_bool: if record_idx % 2 == 0 {
                             true
                         } else {
