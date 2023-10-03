@@ -346,13 +346,6 @@ impl PositionModel of dojo::model::Model<Position> {
     }
 
     #[inline(always)]
-    fn keys_layout(self: @Position) -> Span<u8> {
-        let mut layout = ArrayTrait::new();
-        dojo::database::schema::SchemaIntrospection::<ContractAddress>::layout(ref layout);
-        array::ArrayTrait::span(@layout)
-    }
-
-    #[inline(always)]
     fn values(self: @Position) -> Span<felt252> {
         let mut serialized = ArrayTrait::new();
         serde::Serde::serialize(self.before, ref serialized);
