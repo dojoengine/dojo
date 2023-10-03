@@ -71,10 +71,13 @@ pub fn parse_where_argument(
     ctx: &ResolverContext<'_>,
     where_mapping: &TypeMapping,
 ) -> Result<Vec<Filter>, Error> {
-    let where_input = ctx.args.try_get("where")?;
-    let input_object = where_input.object()?;
+    let where_input = match ctx.args.try_get("where") {
+        Ok(input) => input,
+        Err(_) => return Ok(vec![]),
+    };
 
-    let filters = where_mapping
+    let input_object = where_input.object()?;
+    where_mapping
         .iter()
         .filter_map(|(type_name, type_data)| {
             input_object.get(type_name).map(|input_filter| {
@@ -88,7 +91,5 @@ pub fn parse_where_argument(
                 Ok(parse_filter(type_name, data))
             })
         })
-        .collect::<Result<Vec<_>, _>>()?;
-
-    Ok(filters)
+        .collect::<Result<Vec<_>, _>>()
 }

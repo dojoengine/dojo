@@ -14,7 +14,7 @@ use super::connection::{
     connection_arguments, decode_cursor, encode_cursor, parse_connection_arguments,
     ConnectionArguments,
 };
-use super::inputs::order_input::{parse_order_argument, OrderInputObject};
+use super::inputs::order_input::{order_argument, parse_order_argument, OrderInputObject};
 use super::inputs::where_input::{parse_where_argument, where_argument, WhereInputObject};
 use super::inputs::InputObjectTrait;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
@@ -108,7 +108,7 @@ impl ObjectTrait for ModelDataObject {
         // Add relay connection fields (first, last, before, after, where)
         field = connection_arguments(field);
         field = where_argument(field, self.type_name());
-        // field = order_argument(field, self.type_name());
+        field = order_argument(field, self.type_name());
 
         Some(field)
     }
