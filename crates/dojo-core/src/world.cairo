@@ -9,12 +9,7 @@ trait IWorld<T> {
     fn uuid(ref self: T) -> usize;
     fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
     fn entity(
-        self: @T,
-        model: felt252,
-        keys: Span<felt252>,
-        offset: u8,
-        length: usize,
-        layout: Span<u8>
+        self: @T, model: felt252, keys: Span<felt252>, offset: u8, length: usize, layout: Span<u8>
     ) -> Span<felt252>;
     fn set_entity(
         ref self: T,
@@ -25,7 +20,12 @@ trait IWorld<T> {
         layout: Span<u8>
     );
     fn entities(
-        self: @T, model: felt252, index: Option<felt252>, values: Span<felt252>, values_length: usize, values_layout: Span<u8>
+        self: @T,
+        model: felt252,
+        index: Option<felt252>,
+        values: Span<felt252>,
+        values_length: usize,
+        values_layout: Span<u8>
     ) -> (Span<felt252>, Span<Span<felt252>>);
     fn set_executor(ref self: T, contract_address: ContractAddress);
     fn executor(self: @T) -> ContractAddress;
@@ -213,8 +213,7 @@ mod world {
             let caller = get_caller_address();
 
             assert(
-                self.is_owner(caller, model) || self.is_owner(caller, WORLD),
-                'not owner or writer'
+                self.is_owner(caller, model) || self.is_owner(caller, WORLD), 'not owner or writer'
             );
             self.writers.write((model, system), bool::True(()));
         }
@@ -379,7 +378,12 @@ mod world {
         /// * `Span<felt252>` - The entity IDs.
         /// * `Span<Span<felt252>>` - The entities.
         fn entities(
-            self: @ContractState, model: felt252, index: Option<felt252>, values: Span<felt252>, values_length: usize, values_layout: Span<u8>
+            self: @ContractState,
+            model: felt252,
+            index: Option<felt252>,
+            values: Span<felt252>,
+            values_length: usize,
+            values_layout: Span<u8>
         ) -> (Span<felt252>, Span<Span<felt252>>) {
             let class_hash = self.models.read(model);
 
@@ -417,11 +421,10 @@ mod world {
     /// * `model` - The name of the model being written to.
     /// * `caller` - The name of the caller writing.
     fn assert_can_write(self: @ContractState, model: felt252, caller: ContractAddress) {
-        assert(
-            IWorld::is_writer(self, model, caller)
-                || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, model)
-                || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, WORLD),
-            'not writer'
-        );
+        if !(IWorld::is_writer(self, model, caller)
+            || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, model)
+            || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, WORLD)) {
+            panic(array!['not writer', model, caller.into()]);
+        }
     }
 }
