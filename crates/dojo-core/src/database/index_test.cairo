@@ -37,7 +37,7 @@ fn test_entity_delete_basic() {
 
     assert(index::exists(0, 69, 420), 'entity should exist');
 
-    index::delete(0, 69, 420, array![].span());
+    index::delete(0, 69, 420);
 
     assert(!index::exists(0, 69, 420), 'entity should not exist');
     let no_query = index::query(0, 69, Option::None(()));
