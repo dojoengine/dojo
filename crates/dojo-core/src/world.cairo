@@ -25,7 +25,7 @@ trait IWorld<T> {
         layout: Span<u8>
     );
     fn entities(
-        self: @T, model: felt252, index: felt252, length: usize, layout: Span<u8>
+        self: @T, model: felt252, index: Option<felt252>, values: Span<felt252>, values_length: usize, values_layout: Span<u8>
     ) -> (Span<felt252>, Span<Span<felt252>>);
     fn set_executor(ref self: T, contract_address: ContractAddress);
     fn executor(self: @T) -> ContractAddress;
@@ -53,8 +53,10 @@ mod world {
     };
 
     use dojo::database;
+    use dojo::database::index::WhereCondition;
     use dojo::executor::{IExecutorDispatcher, IExecutorDispatcherTrait};
     use dojo::world::{IWorldDispatcher, IWorld};
+
 
     const NAME_ENTRYPOINT: felt252 =
         0x0361458367e696363fbcc70777d07ebbd2394e89fd0adcaf147faccd1d294d60;
@@ -314,7 +316,7 @@ mod world {
 
             let key = poseidon::poseidon_hash_span(keys);
             let model_class_hash = self.models.read(model);
-            database::set(model_class_hash, model, key, offset, values, layout);
+            database::set_with_index(model_class_hash, model, key, offset, values, layout);
 
             EventEmitter::emit(ref self, StoreSetRecord { table: model, keys, offset, values });
         }
@@ -369,20 +371,20 @@ mod world {
         ///
         /// * `model` - The name of the model to be retrieved.
         /// * `index` - The index to be retrieved.
+        /// * `values` - The query to be used to find the entity.
+        /// * `length` - The length of the model values.
         ///
         /// # Returns
         ///
         /// * `Span<felt252>` - The entity IDs.
         /// * `Span<Span<felt252>>` - The entities.
         fn entities(
-            self: @ContractState,
-            model: felt252,
-            index: felt252,
-            length: usize,
-            layout: Span<u8>
+            self: @ContractState, model: felt252, index: Option<felt252>, values: Span<felt252>, values_length: usize, values_layout: Span<u8>
         ) -> (Span<felt252>, Span<Span<felt252>>) {
             let class_hash = self.models.read(model);
-            database::all(class_hash, model.into(), index, length, layout)
+
+            assert(values.len() == 0, 'Queries by values not impl');
+            database::scan(class_hash, model, Option::None(()), values_length, values_layout)
         }
 
         /// Sets the executor contract address.

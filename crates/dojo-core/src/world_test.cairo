@@ -171,6 +171,38 @@ fn deploy_world() -> IWorldDispatcher {
 }
 
 #[test]
+#[available_gas(60000000)]
+fn test_entities() {
+    // Deploy world contract
+    let world = spawn_test_world(array![foo::TEST_CLASS_HASH],);
+
+    let bar_contract = IbarDispatcher {
+        contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world)
+    };
+
+    let alice = starknet::contract_address_const::<0x1337>();
+    starknet::testing::set_contract_address(alice);
+    bar_contract.set_foo(1337, 1337);
+
+    let mut keys = ArrayTrait::new();
+    keys.append(0);
+
+    let mut query_keys = ArrayTrait::new().span();
+    let layout = array![251].span();
+    let (keys, values) = world.entities('Foo', Option::None(()), query_keys, 2, layout);
+    assert(keys.len() == 1, 'No keys found for any!');
+
+    // query_keys.append(0x1337);
+    // let (keys, values) = world.entities('Foo', 42, query_keys.span(), 2, layout);
+    // assert(keys.len() == 1, 'No keys found!');
+
+    // let mut query_keys = ArrayTrait::new();
+    // query_keys.append(0x1338);
+    // let (keys, values) = world.entities('Foo', 42, query_keys.span(), 2, layout);
+    // assert(keys.len() == 0, 'Keys found!');
+}
+
+#[test]
 #[available_gas(6000000)]
 fn test_owner() {
     let world = deploy_world();
@@ -335,3 +367,5 @@ fn test_execute_multiple_worlds() {
     assert(data1.a == 1337, 'data1 not stored');
     assert(data2.a == 7331, 'data2 not stored');
 }
+
+

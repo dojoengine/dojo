@@ -8,7 +8,7 @@ test_manifest_file
   "world": {
     "name": "world",
     "address": null,
-    "class_hash": "0x260bc39baaf87e4310e5213178b5f7bea7344b9806b9d08101ec066aa7bc18",
+    "class_hash": "0xad01919d2f7edc172b74b0e258afb7bb44252582e02d5e245b88fcb488fb78",
     "abi": [
       {
         "type": "impl",
@@ -32,6 +32,20 @@ test_manifest_file
           {
             "name": "snapshot",
             "type": "@core::array::Array::<core::integer::u8>"
+          }
+        ]
+      },
+      {
+        "type": "enum",
+        "name": "core::option::Option::<core::felt252>",
+        "variants": [
+          {
+            "name": "Some",
+            "type": "core::felt252"
+          },
+          {
+            "name": "None",
+            "type": "()"
           }
         ]
       },
@@ -188,14 +202,18 @@ test_manifest_file
               },
               {
                 "name": "index",
-                "type": "core::felt252"
+                "type": "core::option::Option::<core::felt252>"
               },
               {
-                "name": "length",
+                "name": "values",
+                "type": "core::array::Span::<core::felt252>"
+              },
+              {
+                "name": "values_length",
                 "type": "core::integer::u32"
               },
               {
-                "name": "layout",
+                "name": "values_layout",
                 "type": "core::array::Span::<core::integer::u8>"
               }
             ],
