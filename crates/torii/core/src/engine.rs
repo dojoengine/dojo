@@ -68,8 +68,9 @@ where
     }
 
     pub async fn start(&mut self, cts: CancellationToken) -> Result<(), Box<dyn Error>> {
-        if self.db.head().await? == 0 {
-            self.db.set_head(self.config.start_block).await?;
+        let mut head = self.db.head().await?;
+        if head == 0 {
+            head = self.config.start_block;
         } else if self.config.start_block != 0 {
             warn!("start block ignored, stored head exists and will be used instead");
         }
@@ -79,9 +80,8 @@ where
                 break Ok(());
             }
 
-            let head = self.db.head().await?;
             match self.sync_to_head(head).await {
-                Ok(block_with_txs) => block_with_txs,
+                Ok(latest_block_number) => head = latest_block_number,
                 Err(e) => {
                     error!("getting  block: {}", e);
                     continue;
@@ -123,7 +123,7 @@ where
 
             self.process(block_with_txs).await?;
 
-            self.db.set_head(from).await?;
+            self.db.set_head(from);
             self.db.execute().await?;
             from += 1;
         }
@@ -237,7 +237,7 @@ async fn process_event<P: Provider + Sync>(
     event: &Event,
     event_idx: usize,
 ) -> Result<(), Box<dyn Error>> {
-    db.store_event(event, event_idx, invoke_receipt.transaction_hash).await?;
+    db.store_event(event, event_idx, invoke_receipt.transaction_hash);
 
     for processor in processors {
         if get_selector_from_name(&processor.event_key())? == event.keys[0] {

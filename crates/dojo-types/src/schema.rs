@@ -2,7 +2,7 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
 
-use crate::core::{CairoType, CairoTypeError};
+use crate::primitive::{Primitive, PrimitiveError};
 
 /// Represents a model member.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -10,6 +10,12 @@ pub struct Member {
     pub name: String,
     pub ty: Ty,
     pub key: bool,
+}
+
+impl Member {
+    pub fn serialize(&self) -> Result<Vec<FieldElement>, PrimitiveError> {
+        self.ty.serialize()
+    }
 }
 
 /// Represents a model of an entity
@@ -26,9 +32,10 @@ pub struct ModelMetadata {
     pub class_hash: FieldElement,
 }
 
+/// Represents all possible types in Cairo
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum Ty {
-    Primitive(CairoType),
+    Primitive(Primitive),
     Struct(Struct),
     Enum(Enum),
     Tuple(Vec<Ty>),
@@ -48,10 +55,48 @@ impl Ty {
         TyIter { stack: vec![self] }
     }
 
-    pub fn deserialize(&mut self, felts: &mut Vec<FieldElement>) -> Result<(), CairoTypeError> {
+    pub fn serialize(&self) -> Result<Vec<FieldElement>, PrimitiveError> {
+        let mut felts = vec![];
+
+        fn serialize_inner(ty: &Ty, felts: &mut Vec<FieldElement>) -> Result<(), PrimitiveError> {
+            match ty {
+                Ty::Primitive(c) => {
+                    felts.extend(c.serialize()?);
+                }
+                Ty::Struct(s) => {
+                    for child in &s.children {
+                        serialize_inner(&child.ty, felts)?;
+                    }
+                }
+                Ty::Enum(e) => {
+                    let option = e
+                        .option
+                        .map(|v| Ok(vec![FieldElement::from(v)]))
+                        .unwrap_or(Err(PrimitiveError::MissingFieldElement))?;
+                    felts.extend(option);
+
+                    for (_, child) in &e.options {
+                        serialize_inner(child, felts)?;
+                    }
+                }
+                Ty::Tuple(tys) => {
+                    for ty in tys {
+                        serialize_inner(ty, felts)?;
+                    }
+                }
+            }
+            Ok(())
+        }
+
+        serialize_inner(self, &mut felts)?;
+
+        Ok(felts)
+    }
+
+    pub fn deserialize(&mut self, felts: &mut Vec<FieldElement>) -> Result<(), PrimitiveError> {
         match self {
             Ty::Primitive(c) => {
-                c.set_value_from_felts(felts)?;
+                c.deserialize(felts)?;
             }
             Ty::Struct(s) => {
                 for child in &mut s.children {
@@ -59,7 +104,9 @@ impl Ty {
                 }
             }
             Ty::Enum(e) => {
-                for (_, child) in &mut e.children {
+                e.option =
+                    Some(felts.remove(0).try_into().map_err(PrimitiveError::ValueOutOfRange)?);
+                for (_, child) in &mut e.options {
                     child.deserialize(felts)?;
                 }
             }
@@ -89,7 +136,7 @@ impl<'a> Iterator for TyIter<'a> {
                 }
             }
             Ty::Enum(e) => {
-                for child in &e.children {
+                for child in &e.options {
                     self.stack.push(&child.1);
                 }
             }
@@ -115,7 +162,7 @@ impl std::fmt::Display for Ty {
                 }
                 Ty::Enum(e) => {
                     let mut enum_str = format!("enum {} {{\n", e.name);
-                    for child in &e.children {
+                    for child in &e.options {
                         enum_str.push_str(&format!("  {}\n", child.0));
                     }
                     enum_str.push('}');
@@ -142,10 +189,45 @@ pub struct Struct {
     pub children: Vec<Member>,
 }
 
+impl Struct {
+    pub fn keys(&self) -> Vec<Member> {
+        self.children.iter().filter(|m| m.key).cloned().collect()
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum EnumError {
+    #[error("Enum option not set")]
+    OptionNotSet,
+    #[error("Enum option invalid")]
+    OptionInvalid,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Enum {
     pub name: String,
-    pub children: Vec<(String, Ty)>,
+    pub option: Option<u8>,
+    pub options: Vec<(String, Ty)>,
+}
+
+impl Enum {
+    pub fn option(&self) -> Result<String, EnumError> {
+        let option: usize = if let Some(option) = self.option {
+            option as usize
+        } else {
+            return Err(EnumError::OptionNotSet);
+        };
+
+        if option >= self.options.len() {
+            return Err(EnumError::OptionInvalid);
+        }
+
+        Ok(self.options[option].0.clone())
+    }
+
+    pub fn to_sql_value(&self) -> Result<String, EnumError> {
+        Ok(format!("'{}'", self.option()?))
+    }
 }
 
 fn format_member(m: &Member) -> String {
@@ -157,61 +239,66 @@ fn format_member(m: &Member) -> String {
 
     if let Ty::Primitive(ty) = &m.ty {
         match ty {
-            CairoType::U8(value) => {
+            Primitive::U8(value) => {
                 if let Some(value) = value {
                     str.push_str(&format!(" = {}", value));
                 }
             }
-            CairoType::U16(value) => {
+            Primitive::U16(value) => {
                 if let Some(value) = value {
                     str.push_str(&format!(" = {}", value));
                 }
             }
-            CairoType::U32(value) => {
+            Primitive::U32(value) => {
                 if let Some(value) = value {
                     str.push_str(&format!(" = {}", value));
                 }
             }
-            CairoType::U64(value) => {
+            Primitive::U64(value) => {
                 if let Some(value) = value {
                     str.push_str(&format!(" = {}", value));
                 }
             }
-            CairoType::U128(value) => {
+            Primitive::U128(value) => {
                 if let Some(value) = value {
                     str.push_str(&format!(" = {}", value));
                 }
             }
-            CairoType::U256(value) => {
+            Primitive::U256(value) => {
                 if let Some(value) = value {
                     str.push_str(&format!(" = {}", value));
                 }
             }
-            CairoType::USize(value) => {
+            Primitive::USize(value) => {
                 if let Some(value) = value {
                     str.push_str(&format!(" = {}", value));
                 }
             }
-            CairoType::Bool(value) => {
+            Primitive::Bool(value) => {
                 if let Some(value) = value {
                     str.push_str(&format!(" = {}", value));
                 }
             }
-            CairoType::Felt252(value) => {
+            Primitive::Felt252(value) => {
                 if let Some(value) = value {
                     str.push_str(&format!(" = {:#x}", value));
                 }
             }
-            CairoType::ClassHash(value) => {
+            Primitive::ClassHash(value) => {
                 if let Some(value) = value {
                     str.push_str(&format!(" = {:#x}", value));
                 }
             }
-            CairoType::ContractAddress(value) => {
+            Primitive::ContractAddress(value) => {
                 if let Some(value) = value {
                     str.push_str(&format!(" = {:#x}", value));
                 }
             }
+        }
+    } else if let Ty::Enum(e) = &m.ty {
+        match e.option() {
+            Ok(option) => str.push_str(&format!(" = {option}")),
+            Err(_) => str.push_str(" = Invalid Option"),
         }
     }
 
