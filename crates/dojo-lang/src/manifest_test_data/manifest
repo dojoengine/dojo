@@ -8,7 +8,7 @@ test_manifest_file
   "world": {
     "name": "world",
     "address": null,
-    "class_hash": "0x31c46921215521820397313c5130b8522a1f2b1e19e58c6025b57a86851539c",
+    "class_hash": "0x5f14aacb2bc68686eca3b024df6b79acfa8755976c9d99967af6fb99b650b8",
     "abi": [
       {
         "type": "impl",
@@ -155,7 +155,7 @@ test_manifest_file
                 "type": "core::starknet::contract_address::ContractAddress"
               }
             ],
-            "state_mutability": "view"
+            "state_mutability": "external"
           },
           {
             "type": "function",
@@ -465,6 +465,28 @@ test_manifest_file
       },
       {
         "type": "event",
+        "name": "dojo::world::world::ContractDeployed",
+        "kind": "struct",
+        "members": [
+          {
+            "name": "salt",
+            "type": "core::felt252",
+            "kind": "data"
+          },
+          {
+            "name": "class_hash",
+            "type": "core::starknet::class_hash::ClassHash",
+            "kind": "data"
+          },
+          {
+            "name": "address",
+            "type": "core::starknet::contract_address::ContractAddress",
+            "kind": "data"
+          }
+        ]
+      },
+      {
+        "type": "event",
         "name": "dojo::world::world::MetadataUpdate",
         "kind": "struct",
         "members": [
@@ -492,6 +514,11 @@ test_manifest_file
           },
           {
             "name": "class_hash",
+            "type": "core::starknet::class_hash::ClassHash",
+            "kind": "data"
+          },
+          {
+            "name": "prev_class_hash",
             "type": "core::starknet::class_hash::ClassHash",
             "kind": "data"
           }
@@ -543,12 +570,78 @@ test_manifest_file
       },
       {
         "type": "event",
+        "name": "dojo::world::world::WriterUpdated",
+        "kind": "struct",
+        "members": [
+          {
+            "name": "model",
+            "type": "core::felt252",
+            "kind": "data"
+          },
+          {
+            "name": "system",
+            "type": "core::starknet::contract_address::ContractAddress",
+            "kind": "data"
+          },
+          {
+            "name": "value",
+            "type": "core::bool",
+            "kind": "data"
+          }
+        ]
+      },
+      {
+        "type": "event",
+        "name": "dojo::world::world::OwnerUpdated",
+        "kind": "struct",
+        "members": [
+          {
+            "name": "address",
+            "type": "core::starknet::contract_address::ContractAddress",
+            "kind": "data"
+          },
+          {
+            "name": "resource",
+            "type": "core::felt252",
+            "kind": "data"
+          },
+          {
+            "name": "value",
+            "type": "core::bool",
+            "kind": "data"
+          }
+        ]
+      },
+      {
+        "type": "event",
+        "name": "dojo::world::world::ExecutorUpdated",
+        "kind": "struct",
+        "members": [
+          {
+            "name": "address",
+            "type": "core::starknet::contract_address::ContractAddress",
+            "kind": "data"
+          },
+          {
+            "name": "prev_address",
+            "type": "core::starknet::contract_address::ContractAddress",
+            "kind": "data"
+          }
+        ]
+      },
+      {
+        "type": "event",
         "name": "dojo::world::world::Event",
         "kind": "enum",
         "variants": [
           {
             "name": "WorldSpawned",
             "type": "dojo::world::world::WorldSpawned",
+            "kind": "nested"
+          },
+          {
+            "name": "ContractDeployed",
+            "type": "dojo::world::world::ContractDeployed",
             "kind": "nested"
           },
           {
@@ -569,6 +662,21 @@ test_manifest_file
           {
             "name": "StoreDelRecord",
             "type": "dojo::world::world::StoreDelRecord",
+            "kind": "nested"
+          },
+          {
+            "name": "WriterUpdated",
+            "type": "dojo::world::world::WriterUpdated",
+            "kind": "nested"
+          },
+          {
+            "name": "OwnerUpdated",
+            "type": "dojo::world::world::OwnerUpdated",
+            "kind": "nested"
+          },
+          {
+            "name": "ExecutorUpdated",
+            "type": "dojo::world::world::ExecutorUpdated",
             "kind": "nested"
           }
         ]
