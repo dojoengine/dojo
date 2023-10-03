@@ -20,7 +20,6 @@ trait IWorld<T> {
         ref self: T,
         model: felt252,
         keys: Span<felt252>,
-        keys_layout: Span<u8>,
         offset: u8,
         values: Span<felt252>,
         layout: Span<u8>
@@ -309,7 +308,6 @@ mod world {
             ref self: ContractState,
             model: felt252,
             keys: Span<felt252>,
-            keys_layout: Span<u8>,
             offset: u8,
             values: Span<felt252>,
             layout: Span<u8>
@@ -330,11 +328,15 @@ mod world {
         /// * `model` - The name of the model to be deleted.
         /// * `query` - The query to be used to find the entity.
         fn delete_entity(ref self: ContractState, model: felt252, keys: Span<felt252>) {
+            let system = get_caller_address();
             assert(system.is_non_zero(), 'must be called thru system');
+            assert_can_write(@self, model, system);
+
+            let key = poseidon::poseidon_hash_span(keys);
             let model_class_hash = self.models.read(model);
             database::del(model_class_hash, model, key);
 
-            EventEmitter::emit(ref self, StoreDelRecord { table: model, keys });
+            EventEmitter::emit(ref self, StoreDelRecord { table: model, keys });        
         }
 
         /// Gets the model value for an entity. Returns a zero initialized

@@ -37,7 +37,7 @@ fn test_entity_delete_basic() {
 
     assert(index::exists(0, 69, 420), 'entity should exist');
 
-    index::delete(0, 69, 420, array![].span());
+    index::delete(0, 69, 420);
 
     assert(!index::exists(0, 69, 420), 'entity should not exist');
     let no_query = index::query(0, 69, Option::None(()));
@@ -53,7 +53,7 @@ fn test_entity_query_delete_shuffle() {
     index::create(0, table, 30);
     assert(index::query(0, table, Option::None(())).len() == 3, 'wrong size');
 
-    index::delete(0, table, 10, array![].span());
+    index::delete(0, table, 10);
     let entities = index::query(0, table, Option::None(()));
     assert(entities.len() == 2, 'wrong size');
     assert(*entities.at(0) == 30, 'idx 0 not 30');
@@ -64,7 +64,7 @@ fn test_entity_query_delete_shuffle() {
 #[available_gas(20000000)]
 fn test_entity_query_delete_non_existing() {
     assert(index::query(0, 69, Option::None(())).len() == 0, 'table len != 0');
-    index::delete(0, 69, 999, array![].span()); // deleting non-existing should not panic
+    index::delete(0, 69, 999); // deleting non-existing should not panic
 }
 
 // #[test]

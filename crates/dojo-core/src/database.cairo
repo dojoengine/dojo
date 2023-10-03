@@ -44,9 +44,9 @@ fn set_with_index(
     index::create(0, table, key);
 }
 
-fn del(class_hash: starknet::ClassHash, table: felt252, key: felt252, keys_layout: Span<u8>) {
-    // index::delete(0, table, key, keys_layout);
-} 
+fn del(class_hash: starknet::ClassHash, table: felt252, key: felt252) {
+    index::delete(0, table, key);
+}
 
 // Query all entities that meet a criteria. If no index is defined,
 // Returns a tuple of spans, first contains the entity IDs,

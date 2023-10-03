@@ -112,7 +112,7 @@ fn test_database_del() {
     let before = get(class_hash, 'table', 'key', 0, values.len(), array![251].span());
     assert(*before.at(0) == *values.at(0), 'Values different at index 0!');
 
-    del(class_hash, 'table', 'key', array![251].span());
+    del(class_hash, 'table', 'key');
     let after = get(class_hash, 'table', 'key', 0, 0, array![].span());
     assert(after.len() == 0, 'Non empty after deletion!');
 }
