@@ -60,7 +60,7 @@ fn exists(address_domain: u32, table: felt252, id: felt252) -> bool {
     storage::get(address_domain, build_index_item_key(table, id)) != 0
 }
 
-fn query(address_domain: u32, table: felt252, value: felt252) -> Span<felt252> {
+fn get(address_domain: u32, table: felt252, value: felt252) -> Span<felt252> {
     let mut res = ArrayTrait::new();
     let index_len_key = build_index_len_key(table, value);
     let index_len = storage::get(address_domain, index_len_key);
