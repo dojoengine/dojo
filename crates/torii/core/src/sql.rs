@@ -341,7 +341,7 @@ impl Sql {
                      '{member_idx}', '{name}', '{}', '{}', {})",
                     path[0],
                     member.ty.name(),
-                    member.ty.enum_string(),
+                    member.ty.as_ref(),
                     member.key,
                 ));
             }

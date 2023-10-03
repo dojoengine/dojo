@@ -1,6 +1,7 @@
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
+use strum_macros::AsRefStr;
 
 use crate::primitive::{Primitive, PrimitiveError};
 
@@ -33,7 +34,7 @@ pub struct ModelMetadata {
 }
 
 /// Represents all possible types in Cairo
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(AsRefStr, Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum Ty {
     Primitive(Primitive),
     Struct(Struct),
