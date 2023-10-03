@@ -10,8 +10,8 @@ use super::connection::connection_output;
 use super::system::SystemObject;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
-use crate::query::{query_all, query_by_id, query_total_count, ID};
-use crate::types::ScalarType;
+use crate::query::{query_all, query_by_id, query_total_count};
+use crate::types::{GraphqlType, TypeData};
 use crate::utils::extract_value::extract;
 
 #[derive(FromRow, Deserialize)]
@@ -31,11 +31,14 @@ impl Default for SystemCallObject {
     fn default() -> Self {
         Self {
             type_mapping: IndexMap::from([
-                (Name::new("id"), TypeRef::named(TypeRef::ID)),
-                (Name::new("transactionHash"), TypeRef::named(TypeRef::STRING)),
-                (Name::new("data"), TypeRef::named(TypeRef::STRING)),
-                (Name::new("systemId"), TypeRef::named(TypeRef::ID)),
-                (Name::new("createdAt"), TypeRef::named(ScalarType::DateTime.to_string())),
+                (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
+                (Name::new("transactionHash"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+                (Name::new("data"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+                (Name::new("systemId"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
+                (
+                    Name::new("createdAt"),
+                    TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
+                ),
             ]),
         }
     }
@@ -74,7 +77,8 @@ impl ObjectTrait for SystemCallObject {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                     let id = ctx.args.try_get("id")?.i64()?;
-                    let system_call = query_by_id(&mut conn, "system_calls", ID::I64(id)).await?;
+                    let system_call =
+                        query_by_id(&mut conn, "system_calls", &id.to_string()).await?;
                     let result = SystemCallObject::value_mapping(system_call);
                     Ok(Some(Value::Object(result)))
                 })
@@ -103,13 +107,13 @@ impl ObjectTrait for SystemCallObject {
         ))
     }
 
-    fn nested_fields(&self) -> Option<Vec<Field>> {
+    fn related_fields(&self) -> Option<Vec<Field>> {
         Some(vec![Field::new("system", TypeRef::named_nn("System"), |ctx| {
             FieldFuture::new(async move {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                 let syscall_values = ctx.parent_value.try_downcast_ref::<ValueMapping>()?;
                 let system_id = extract::<String>(syscall_values, "systemId")?;
-                let system = query_by_id(&mut conn, "systems", ID::Str(system_id)).await?;
+                let system = query_by_id(&mut conn, "systems", &system_id).await?;
                 let result = SystemObject::value_mapping(system);
                 Ok(Some(Value::Object(result)))
             })

@@ -1,6 +1,7 @@
 use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
 use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
+use dojo_types::primitive::Primitive;
 use indexmap::IndexMap;
 use serde::Deserialize;
 use sqlx::{FromRow, Pool, Sqlite};
@@ -9,8 +10,8 @@ use super::connection::connection_output;
 use super::system_call::system_calls_by_system_id;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
-use crate::query::{query_all, query_by_id, query_total_count, ID};
-use crate::types::ScalarType;
+use crate::query::{query_all, query_by_id, query_total_count};
+use crate::types::{GraphqlType, TypeData};
 use crate::utils::extract_value::extract;
 
 #[derive(FromRow, Deserialize)]
@@ -31,11 +32,20 @@ impl Default for SystemObject {
     fn default() -> Self {
         Self {
             type_mapping: IndexMap::from([
-                (Name::new("id"), TypeRef::named(TypeRef::ID)),
-                (Name::new("name"), TypeRef::named(TypeRef::STRING)),
-                (Name::new("classHash"), TypeRef::named(ScalarType::Felt252.to_string())),
-                (Name::new("transactionHash"), TypeRef::named(ScalarType::Felt252.to_string())),
-                (Name::new("createdAt"), TypeRef::named(ScalarType::DateTime.to_string())),
+                (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
+                (Name::new("name"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+                (
+                    Name::new("classHash"),
+                    TypeData::Simple(TypeRef::named(Primitive::Felt252(None).to_string())),
+                ),
+                (
+                    Name::new("transactionHash"),
+                    TypeData::Simple(TypeRef::named(Primitive::Felt252(None).to_string())),
+                ),
+                (
+                    Name::new("createdAt"),
+                    TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
+                ),
             ]),
         }
     }
@@ -74,7 +84,7 @@ impl ObjectTrait for SystemObject {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                     let id = ctx.args.try_get("id")?.string()?.to_string();
-                    let system = query_by_id(&mut conn, "systems", ID::Str(id)).await?;
+                    let system = query_by_id(&mut conn, "systems", &id).await?;
                     let result = SystemObject::value_mapping(system);
                     Ok(Some(Value::Object(result)))
                 })
@@ -101,7 +111,7 @@ impl ObjectTrait for SystemObject {
         ))
     }
 
-    fn nested_fields(&self) -> Option<Vec<Field>> {
+    fn related_fields(&self) -> Option<Vec<Field>> {
         Some(vec![Field::new("systemCalls", TypeRef::named_nn_list_nn("SystemCall"), |ctx| {
             FieldFuture::new(async move {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;

@@ -13,11 +13,11 @@ use super::connection::{
     connection_arguments, connection_output, decode_cursor, parse_connection_arguments,
     ConnectionArguments,
 };
-use super::model_state::{model_state_by_id_query, type_mapping_query};
+use super::model_data::model_data_by_id_query;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
-use crate::query::{query_by_id, ID};
-use crate::types::ScalarType;
+use crate::query::{query_by_id, type_mapping_query};
+use crate::types::{GraphqlType, TypeData};
 use crate::utils::csv_to_vec;
 use crate::utils::extract_value::extract;
 
@@ -29,11 +29,17 @@ impl Default for EntityObject {
     fn default() -> Self {
         Self {
             type_mapping: IndexMap::from([
-                (Name::new("id"), TypeRef::named(TypeRef::ID)),
-                (Name::new("keys"), TypeRef::named_list(TypeRef::STRING)),
-                (Name::new("modelNames"), TypeRef::named(TypeRef::STRING)),
-                (Name::new("createdAt"), TypeRef::named(ScalarType::DateTime.to_string())),
-                (Name::new("updatedAt"), TypeRef::named(ScalarType::DateTime.to_string())),
+                (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
+                (Name::new("keys"), TypeData::Simple(TypeRef::named_list(TypeRef::STRING))),
+                (Name::new("modelNames"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+                (
+                    Name::new("createdAt"),
+                    TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
+                ),
+                (
+                    Name::new("updatedAt"),
+                    TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
+                ),
             ]),
         }
     }
@@ -71,34 +77,8 @@ impl ObjectTrait for EntityObject {
         &self.type_mapping
     }
 
-    fn nested_fields(&self) -> Option<Vec<Field>> {
-        Some(vec![Field::new("models", TypeRef::named_list("ModelUnion"), move |ctx| {
-            FieldFuture::new(async move {
-                match ctx.parent_value.try_to_value()? {
-                    Value::Object(indexmap) => {
-                        let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                        let models = csv_to_vec(&extract::<String>(indexmap, "modelNames")?);
-                        let id = extract::<String>(indexmap, "id")?;
-
-                        let mut results: Vec<FieldValue<'_>> = Vec::new();
-                        for model_name in models {
-                            let table_name = model_name.to_lowercase();
-                            let type_mapping = type_mapping_query(&mut conn, &table_name).await?;
-                            let state =
-                                model_state_by_id_query(&mut conn, &table_name, &id, &type_mapping)
-                                    .await?;
-                            results.push(FieldValue::with_type(
-                                FieldValue::owned_any(state),
-                                model_name,
-                            ));
-                        }
-
-                        Ok(Some(FieldValue::list(results)))
-                    }
-                    _ => Err("incorrect value, requires Value::Object".into()),
-                }
-            })
-        })])
+    fn related_fields(&self) -> Option<Vec<Field>> {
+        Some(vec![model_union_field()])
     }
 
     fn resolve_one(&self) -> Option<Field> {
@@ -107,7 +87,7 @@ impl ObjectTrait for EntityObject {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                     let id = ctx.args.try_get("id")?.string()?.to_string();
-                    let entity = query_by_id(&mut conn, "entities", ID::Str(id)).await?;
+                    let entity = query_by_id(&mut conn, "entities", &id).await?;
                     let result = EntityObject::value_mapping(entity);
                     Ok(Some(Value::Object(result)))
                 })
@@ -134,6 +114,7 @@ impl ObjectTrait for EntityObject {
                     });
 
                     let (entities, total_count) = entities_by_sk(&mut conn, keys, args).await?;
+
                     Ok(Some(Value::Object(connection_output(entities, total_count))))
                 })
             },
@@ -170,6 +151,32 @@ impl ObjectTrait for EntityObject {
             .argument(InputValue::new("id", TypeRef::named(TypeRef::ID))),
         ])
     }
+}
+
+fn model_union_field() -> Field {
+    Field::new("models", TypeRef::named_list("ModelUnion"), move |ctx| {
+        FieldFuture::new(async move {
+            match ctx.parent_value.try_to_value()? {
+                Value::Object(indexmap) => {
+                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                    let model_names = csv_to_vec(&extract::<String>(indexmap, "modelNames")?);
+                    let entity_id = extract::<String>(indexmap, "id")?;
+
+                    let mut results: Vec<FieldValue<'_>> = Vec::new();
+                    for name in model_names {
+                        let type_mapping = type_mapping_query(&mut conn, &name).await?;
+                        let state =
+                            model_data_by_id_query(&mut conn, &name, &entity_id, &type_mapping)
+                                .await?;
+                        results.push(FieldValue::with_type(FieldValue::owned_any(state), name));
+                    }
+
+                    Ok(Some(FieldValue::list(results)))
+                }
+                _ => Err("incorrect value, requires Value::Object".into()),
+            }
+        })
+    })
 }
 
 async fn entities_by_sk(

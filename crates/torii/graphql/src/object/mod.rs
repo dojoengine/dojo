@@ -3,22 +3,16 @@ pub mod entity;
 pub mod event;
 pub mod inputs;
 pub mod model;
-pub mod model_state;
+pub mod model_data;
 pub mod system;
 pub mod system_call;
 
-use async_graphql::dynamic::{
-    Enum, Field, FieldFuture, InputObject, Object, SubscriptionField, TypeRef,
-};
-use async_graphql::{Error, Name, Value};
-use indexmap::IndexMap;
+use async_graphql::dynamic::{Enum, Field, FieldFuture, InputObject, Object, SubscriptionField};
+use async_graphql::Value;
 
 use self::connection::edge::EdgeObject;
 use self::connection::ConnectionObject;
-
-// Type aliases for GraphQL fields
-pub type TypeMapping = IndexMap<Name, TypeRef>;
-pub type ValueMapping = IndexMap<Name, Value>;
+use crate::types::{TypeMapping, ValueMapping};
 
 pub trait ObjectTrait {
     // Name of the graphql object (eg "player")
@@ -30,8 +24,8 @@ pub trait ObjectTrait {
     // Type mapping defines the fields of the graphql object and their corresponding type
     fn type_mapping(&self) -> &TypeMapping;
 
-    // Related graphql objects
-    fn nested_fields(&self) -> Option<Vec<Field>> {
+    // Related field resolve to sibling graphql objects
+    fn related_fields(&self) -> Option<Vec<Field>> {
         None
     }
 
@@ -40,12 +34,13 @@ pub trait ObjectTrait {
         None
     }
 
-    // Resolves subscriptions, returns current object (eg "PlayerAdded")
-    fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
-        None
-    }
     // Resolves plural object queries, returns type of {type_name}Connection (eg "PlayerConnection")
     fn resolve_many(&self) -> Option<Field> {
+        None
+    }
+
+    // Resolves subscriptions, returns current object (eg "PlayerAdded")
+    fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
         None
     }
 
@@ -69,41 +64,31 @@ pub trait ObjectTrait {
         let connection =
             ConnectionObject::new(self.name().to_string(), self.type_name().to_string());
 
-        Some(vec![edge.create(), connection.create()])
+        let mut objects = Vec::new();
+        objects.extend(edge.objects());
+        objects.extend(connection.objects());
+
+        Some(objects)
     }
 
-    // Create a new graphql object and also define its fields from type mapping
-    fn create(&self) -> Object {
+    fn objects(&self) -> Vec<Object> {
         let mut object = Object::new(self.type_name());
 
-        for (field_name, field_type) in self.type_mapping() {
-            let field_name = field_name.clone();
-            let field_type = field_type.clone();
+        for (field_name, type_data) in self.type_mapping().clone() {
+            if type_data.is_nested() {
+                continue;
+            }
 
-            let field = Field::new(field_name.to_string(), field_type, move |ctx| {
+            let field = Field::new(field_name.to_string(), type_data.type_ref(), move |ctx| {
                 let field_name = field_name.clone();
 
                 FieldFuture::new(async move {
-                    // All direct queries, single and plural, passes down results as Value of type
-                    // Object, and Object is an indexmap that contains fields
-                    // and their corresponding result. The result can also be
-                    // another Object. This is evaluated repeatedly until Value is a string or
-                    // number.
-                    if let Some(value) = ctx.parent_value.as_value() {
-                        return match value {
-                            Value::Object(indexmap) => field_value(indexmap, field_name.as_str()),
-                            _ => Err("Incorrect value, requires Value::Object".into()),
-                        };
+                    match ctx.parent_value.try_to_value()? {
+                        Value::Object(values) => {
+                            Ok(Some(values.get(&field_name).unwrap().clone())) // safe unwrap
+                        }
+                        _ => Err("incorrect value, requires Value::Object".into()),
                     }
-
-                    // Model union queries is a special case, it instead passes down a
-                    // IndexMap<Name, Value>. This could be avoided if
-                    // async-graphql allowed union resolver to be passed down as Value.
-                    if let Some(indexmap) = ctx.parent_value.downcast_ref::<ValueMapping>() {
-                        return field_value(indexmap, field_name.as_str());
-                    }
-
-                    Err("Field resolver only accepts Value or IndexMap".into())
                 })
             });
 
@@ -111,19 +96,12 @@ pub trait ObjectTrait {
         }
 
         // Add related graphql objects (eg event, system)
-        if let Some(nested_fields) = self.nested_fields() {
-            for field in nested_fields {
+        if let Some(fields) = self.related_fields() {
+            for field in fields {
                 object = object.field(field);
             }
         }
 
-        object
-    }
-}
-
-fn field_value(value_mapping: &ValueMapping, field_name: &str) -> Result<Option<Value>, Error> {
-    match value_mapping.get(field_name) {
-        Some(value) => Ok(Some(value.clone())),
-        _ => Err(format!("{} field not found", field_name).into()),
+        vec![object]
     }
 }

@@ -2,11 +2,11 @@ use std::str::FromStr;
 
 use async_graphql::dynamic::{Field, InputObject, InputValue, ResolverContext, TypeRef};
 use async_graphql::{Error, Name};
+use dojo_types::primitive::Primitive;
 
 use super::InputObjectTrait;
 use crate::object::TypeMapping;
 use crate::query::filter::{parse_filter, Filter, FilterValue};
-use crate::types::ScalarType;
 
 pub struct WhereInputObject {
     pub type_name: String,
@@ -22,23 +22,23 @@ impl WhereInputObject {
     pub fn new(type_name: &str, object_types: &TypeMapping) -> Self {
         let where_mapping = object_types
             .iter()
-            .filter_map(|(ty_name, ty)| {
-                ScalarType::from_str(ty.to_string().as_str()).ok().map(|scalar_type| {
-                    let ty =
-                        if scalar_type.is_numeric_type() { TypeRef::INT } else { TypeRef::STRING };
+            .filter_map(|(type_name, type_data)| {
+                // TODO: filter on nested objects
+                if type_data.is_nested() {
+                    return None;
+                }
 
-                    let mut comparators = ["GT", "GTE", "LT", "LTE", "NEQ"]
-                        .iter()
-                        .map(|comparator| {
-                            let name = format!("{}{}", ty_name, comparator);
-                            (Name::new(name), TypeRef::named(ty))
-                        })
-                        .collect::<Vec<_>>();
+                let mut comparators = ["GT", "GTE", "LT", "LTE", "NEQ"]
+                    .iter()
+                    .map(|comparator| {
+                        let name = format!("{}{}", type_name, comparator);
+                        (Name::new(name), type_data.clone())
+                    })
+                    .collect::<Vec<_>>();
 
-                    comparators.push((Name::new(ty_name), TypeRef::named(ty)));
+                comparators.push((Name::new(type_name), type_data.clone()));
 
-                    comparators
-                })
+                Some(comparators)
             })
             .flatten()
             .collect();
@@ -58,7 +58,7 @@ impl InputObjectTrait for WhereInputObject {
 
     fn input_object(&self) -> InputObject {
         self.type_mapping.iter().fold(InputObject::new(self.type_name()), |acc, (ty_name, ty)| {
-            acc.field(InputValue::new(ty_name.to_string(), TypeRef::named(ty.to_string())))
+            acc.field(InputValue::new(ty_name.to_string(), ty.type_ref()))
         })
     }
 }
@@ -73,25 +73,23 @@ pub fn parse_where_argument(
 ) -> Result<Vec<Filter>, Error> {
     let where_input = match ctx.args.try_get("where") {
         Ok(input) => input,
-        Err(_) => return Ok(Vec::new()),
+        Err(_) => return Ok(vec![]),
     };
 
     let input_object = where_input.object()?;
-
-    let filters = where_mapping
+    where_mapping
         .iter()
-        .filter_map(|(ty_name, ty)| {
-            input_object.get(ty_name).map(|input_filter| {
-                let data_type = match ty.to_string().as_str() {
-                    TypeRef::STRING => FilterValue::String(input_filter.string()?.to_string()),
-                    TypeRef::INT => FilterValue::Int(input_filter.i64()?),
+        .filter_map(|(type_name, type_data)| {
+            input_object.get(type_name).map(|input_filter| {
+                let primitive = Primitive::from_str(&type_data.type_ref().to_string())?;
+                let data = match primitive.to_sql_type().as_str() {
+                    "TEXT" => FilterValue::String(input_filter.string()?.to_string()),
+                    "INTEGER" => FilterValue::Int(input_filter.i64()?),
                     _ => return Err(Error::from("Unsupported `where` argument type")),
                 };
 
-                Ok(parse_filter(ty_name, data_type))
+                Ok(parse_filter(type_name, data))
             })
         })
-        .collect::<Result<Vec<_>, _>>()?;
-
-    Ok(filters)
+        .collect::<Result<Vec<_>, _>>()
 }

@@ -1,12 +1,13 @@
 use std::str::FromStr;
 
-use async_graphql::dynamic::{Enum, Field, FieldFuture, InputObject, TypeRef};
+use async_graphql::dynamic::{Enum, Field, FieldFuture, InputObject, Object, TypeRef};
 use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
+use dojo_types::primitive::Primitive;
 use serde::Deserialize;
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
-use sqlx::{FromRow, Pool, QueryBuilder, Row, Sqlite};
+use sqlx::{FromRow, Pool, Row, Sqlite};
 use torii_core::types::Entity;
 
 use super::connection::{
@@ -21,15 +22,17 @@ use crate::constants::DEFAULT_LIMIT;
 use crate::object::entity::EntityObject;
 use crate::query::filter::{Filter, FilterValue};
 use crate::query::order::{Direction, Order};
-use crate::query::{query_by_id, query_total_count, ID};
-use crate::types::ScalarType;
+use crate::query::{query_by_id, query_total_count};
+use crate::types::TypeData;
 use crate::utils::extract_value::extract;
 
 const BOOLEAN_TRUE: i64 = 1;
 
-#[derive(FromRow, Deserialize)]
-pub struct ModelMembers {
+#[derive(FromRow, Deserialize, PartialEq, Eq)]
+pub struct ModelMember {
+    pub id: String,
     pub model_id: String,
+    pub model_idx: i64,
     pub name: String,
     #[serde(rename = "type")]
     pub ty: String,
@@ -37,7 +40,7 @@ pub struct ModelMembers {
     pub created_at: DateTime<Utc>,
 }
 
-pub struct ModelStateObject {
+pub struct ModelDataObject {
     pub name: String,
     pub type_name: String,
     pub type_mapping: TypeMapping,
@@ -45,7 +48,7 @@ pub struct ModelStateObject {
     pub order_input: OrderInputObject,
 }
 
-impl ModelStateObject {
+impl ModelDataObject {
     pub fn new(name: String, type_name: String, type_mapping: TypeMapping) -> Self {
         let where_input = WhereInputObject::new(type_name.as_str(), &type_mapping);
         let order_input = OrderInputObject::new(type_name.as_str(), &type_mapping);
@@ -53,7 +56,7 @@ impl ModelStateObject {
     }
 }
 
-impl ObjectTrait for ModelStateObject {
+impl ObjectTrait for ModelDataObject {
     fn name(&self) -> &str {
         &self.name
     }
@@ -62,14 +65,8 @@ impl ObjectTrait for ModelStateObject {
         &self.type_name
     }
 
-    // Type mapping contains all model members and their corresponding type
     fn type_mapping(&self) -> &TypeMapping {
         &self.type_mapping
-    }
-
-    // Associate model to its parent entity
-    fn nested_fields(&self) -> Option<Vec<Field>> {
-        Some(vec![entity_field()])
     }
 
     fn input_objects(&self) -> Option<Vec<InputObject>> {
@@ -81,7 +78,7 @@ impl ObjectTrait for ModelStateObject {
     }
 
     fn resolve_many(&self) -> Option<Field> {
-        let name = self.name.clone();
+        let type_name = self.type_name.clone();
         let type_mapping = self.type_mapping.clone();
         let where_mapping = self.where_input.type_mapping.clone();
         let field_name = format!("{}Models", self.name());
@@ -90,18 +87,18 @@ impl ObjectTrait for ModelStateObject {
         let mut field = Field::new(field_name, TypeRef::named(field_type), move |ctx| {
             let type_mapping = type_mapping.clone();
             let where_mapping = where_mapping.clone();
-            let name = name.clone();
+            let type_name = type_name.clone();
 
             FieldFuture::new(async move {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                let table_name = format!("external_{}", name);
                 let order = parse_order_argument(&ctx);
                 let filters = parse_where_argument(&ctx, &where_mapping)?;
                 let connection = parse_connection_arguments(&ctx)?;
+
                 let data =
-                    model_states_query(&mut conn, &table_name, &order, &filters, &connection)
-                        .await?;
-                let total_count = query_total_count(&mut conn, &table_name, &filters).await?;
+                    models_data_query(&mut conn, &type_name, &order, &filters, &connection).await?;
+
+                let total_count = query_total_count(&mut conn, &type_name, &filters).await?;
                 let connection = model_connection(&data, &type_mapping, total_count)?;
 
                 Ok(Some(Value::Object(connection)))
@@ -115,6 +112,102 @@ impl ObjectTrait for ModelStateObject {
 
         Some(field)
     }
+
+    fn objects(&self) -> Vec<Object> {
+        let mut path_array = vec![self.type_name().to_string()];
+        let mut objects = data_objects(self.type_name(), self.type_mapping(), &mut path_array);
+
+        // root object requires entity_field association
+        let mut root = objects.pop().unwrap();
+        root = root.field(entity_field());
+
+        objects.push(root);
+        objects
+    }
+}
+
+fn data_objects(
+    type_name: &str,
+    type_mapping: &TypeMapping,
+    path_array: &mut Vec<String>,
+) -> Vec<Object> {
+    let mut objects = Vec::<Object>::new();
+
+    for (_, type_data) in type_mapping {
+        if let TypeData::Nested((nested_type, nested_mapping)) = type_data {
+            path_array.push(nested_type.to_string());
+            objects.extend(data_objects(
+                &nested_type.to_string(),
+                nested_mapping,
+                &mut path_array.clone(),
+            ));
+        }
+    }
+
+    objects.push(object(type_name, type_mapping, path_array));
+    objects
+}
+
+pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: &[String]) -> Object {
+    let mut object = Object::new(type_name);
+
+    for (field_name, type_data) in type_mapping.clone() {
+        let table_name = path_array.join("$");
+
+        let field = Field::new(field_name.to_string(), type_data.type_ref(), move |ctx| {
+            let field_name = field_name.clone();
+            let type_data = type_data.clone();
+            let table_name = table_name.clone();
+
+            // Field resolver for nested types
+            if let TypeData::Nested((_, nested_mapping)) = type_data {
+                return FieldFuture::new(async move {
+                    match ctx.parent_value.try_to_value()? {
+                        Value::Object(indexmap) => {
+                            let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                            let entity_id = extract::<String>(indexmap, "entity_id")?;
+
+                            // TODO: remove subqueries and use JOIN in parent query
+                            let result = model_data_by_id_query(
+                                &mut conn,
+                                &table_name,
+                                &entity_id,
+                                &nested_mapping,
+                            )
+                            .await?;
+
+                            Ok(Some(Value::Object(result)))
+                        }
+                        _ => Err("incorrect value, requires Value::Object".into()),
+                    }
+                });
+            }
+
+            // Field resolver for simple types and model union
+            FieldFuture::new(async move {
+                if let Some(value) = ctx.parent_value.as_value() {
+                    return match value {
+                        Value::Object(value_mapping) => {
+                            Ok(Some(value_mapping.get(&field_name).unwrap().clone()))
+                        }
+                        _ => Err("Incorrect value, requires Value::Object".into()),
+                    };
+                }
+
+                // Catch model union resolutions, async-graphql sends union types as IndexMap<Name,
+                // ConstValue>
+                if let Some(value_mapping) = ctx.parent_value.downcast_ref::<ValueMapping>() {
+                    return Ok(Some(value_mapping.get(&field_name).unwrap().clone()));
+                }
+
+                Err("Field resolver only accepts Value or IndexMap".into())
+            })
+        });
+
+        object = object.field(field);
+    }
+
+    object
 }
 
 fn entity_field() -> Field {
@@ -123,8 +216,8 @@ fn entity_field() -> Field {
             match ctx.parent_value.try_to_value()? {
                 Value::Object(indexmap) => {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let id = extract::<String>(indexmap, "entity_id")?;
-                    let entity: Entity = query_by_id(&mut conn, "entities", ID::Str(id)).await?;
+                    let entity_id = extract::<String>(indexmap, "entity_id")?;
+                    let entity: Entity = query_by_id(&mut conn, "entities", &entity_id).await?;
                     let result = EntityObject::value_mapping(entity);
 
                     Ok(Some(Value::Object(result)))
@@ -135,20 +228,18 @@ fn entity_field() -> Field {
     })
 }
 
-pub async fn model_state_by_id_query(
+pub async fn model_data_by_id_query(
     conn: &mut PoolConnection<Sqlite>,
-    name: &str,
-    id: &str,
-    fields: &TypeMapping,
+    table_name: &str,
+    entity_id: &str,
+    type_mapping: &TypeMapping,
 ) -> sqlx::Result<ValueMapping> {
-    let table_name = format!("external_{}", name);
-    let mut builder: QueryBuilder<'_, Sqlite> = QueryBuilder::new("SELECT * FROM ");
-    builder.push(table_name).push(" WHERE entity_id = ").push_bind(id);
-    let row = builder.build().fetch_one(conn).await?;
-    value_mapping_from_row(&row, fields)
+    let query = format!("SELECT * FROM {} WHERE entity_id = '{}'", table_name, entity_id);
+    let row = sqlx::query(&query).fetch_one(conn).await?;
+    value_mapping_from_row(&row, type_mapping)
 }
 
-pub async fn model_states_query(
+pub async fn models_data_query(
     conn: &mut PoolConnection<Sqlite>,
     table_name: &str,
     order: &Option<Order>,
@@ -216,8 +307,7 @@ pub async fn model_states_query(
     sqlx::query(&query).fetch_all(conn).await
 }
 
-// TODO: make `connection_output()` more generic. Currently, `model_connection()` method
-// required as we need to explicity add `entity_id` to each edge.
+// TODO: make `connection_output()` more generic.
 pub fn model_connection(
     data: &[SqliteRow],
     types: &TypeMapping,
@@ -230,10 +320,7 @@ pub fn model_connection(
             let entity_id = row.try_get::<String, &str>("entity_id")?;
             let created_at = row.try_get::<String, &str>("created_at")?;
             let cursor = encode_cursor(&created_at, &entity_id);
-
-            // insert entity_id because it needs to be queriable
-            let mut value_mapping = value_mapping_from_row(row, types)?;
-            value_mapping.insert(Name::new("entity_id"), Value::String(entity_id));
+            let value_mapping = value_mapping_from_row(row, types)?;
 
             let mut edge = ValueMapping::new();
             edge.insert(Name::new("node"), Value::Object(value_mapping));
@@ -251,58 +338,36 @@ pub fn model_connection(
 }
 
 fn value_mapping_from_row(row: &SqliteRow, types: &TypeMapping) -> sqlx::Result<ValueMapping> {
-    types
+    let mut value_mapping = types
         .iter()
-        .map(|(name, ty)| Ok((Name::new(name), fetch_value(row, name, &ty.to_string())?)))
-        .collect::<sqlx::Result<ValueMapping>>()
+        .filter(|(_, type_data)| type_data.is_simple())
+        .map(|(field_name, type_data)| {
+            let column_name = format!("external_{}", field_name);
+            Ok((
+                Name::new(field_name),
+                fetch_value(row, &column_name, &type_data.type_ref().to_string())?,
+            ))
+        })
+        .collect::<sqlx::Result<ValueMapping>>()?;
+
+    // entity_id column is a foreign key associating back to original entity and is not prefixed
+    // with `external_`
+    value_mapping.insert(Name::new("entity_id"), fetch_value(row, "entity_id", TypeRef::STRING)?);
+
+    Ok(value_mapping)
 }
 
-fn fetch_value(row: &SqliteRow, field_name: &str, field_type: &str) -> sqlx::Result<Value> {
-    let column_name = format!("external_{}", field_name);
-    match ScalarType::from_str(field_type) {
-        Ok(ScalarType::Bool) => fetch_boolean(row, &column_name),
-        Ok(ty) if ty.is_numeric_type() => fetch_numeric(row, &column_name),
-        Ok(_) => fetch_string(row, &column_name),
-        _ => Err(sqlx::Error::TypeNotFound { type_name: field_type.to_string() }),
+fn fetch_value(row: &SqliteRow, column_name: &str, field_type: &str) -> sqlx::Result<Value> {
+    match Primitive::from_str(field_type) {
+        // fetch boolean
+        Ok(Primitive::Bool(_)) => {
+            Ok(Value::from(matches!(row.try_get::<i64, &str>(column_name)?, BOOLEAN_TRUE)))
+        }
+        // fetch integer
+        Ok(ty) if ty.to_sql_type() == "INTEGER" => {
+            row.try_get::<i64, &str>(column_name).map(Value::from)
+        }
+        // fetch string
+        _ => row.try_get::<String, &str>(column_name).map(Value::from),
     }
-}
-
-fn fetch_string(row: &SqliteRow, column_name: &str) -> sqlx::Result<Value> {
-    row.try_get::<String, &str>(column_name).map(Value::from)
-}
-
-fn fetch_numeric(row: &SqliteRow, column_name: &str) -> sqlx::Result<Value> {
-    row.try_get::<i64, &str>(column_name).map(Value::from)
-}
-
-fn fetch_boolean(row: &SqliteRow, column_name: &str) -> sqlx::Result<Value> {
-    let result = row.try_get::<i64, &str>(column_name);
-    Ok(Value::from(matches!(result?, BOOLEAN_TRUE)))
-}
-
-pub async fn type_mapping_query(
-    conn: &mut PoolConnection<Sqlite>,
-    model_id: &str,
-) -> sqlx::Result<TypeMapping> {
-    let model_members: Vec<ModelMembers> = sqlx::query_as(
-        r#"
-                SELECT 
-                    model_id,
-                    name,
-                    type AS ty,
-                    key,
-                    created_at
-                FROM model_members WHERE model_id = ?
-            "#,
-    )
-    .bind(model_id)
-    .fetch_all(conn)
-    .await?;
-
-    let mut type_mapping = TypeMapping::new();
-    for member in model_members {
-        type_mapping.insert(Name::new(member.name), TypeRef::named(member.ty));
-    }
-
-    Ok(type_mapping)
 }

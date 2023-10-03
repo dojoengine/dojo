@@ -19,11 +19,14 @@ indexmap = "1.9.3"
 scarb-ui.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+strum.workspace = true
+strum_macros.workspace = true
 sqlx = { version = "0.6.2", features = [ "chrono", "macros", "offline", "runtime-actix-rustls", "sqlite", "uuid" ] }
 tokio-stream = "0.1.11"
 tokio-util = "0.7.7"
 tokio.workspace = true
 torii-core = { path = "../core" }
+dojo-types = { path = "../../dojo-types" }
 tracing.workspace = true
 url.workspace = true
 warp.workspace = true
@@ -31,7 +34,6 @@ warp.workspace = true
 [dev-dependencies]
 camino.workspace = true
 dojo-test-utils = { path = "../../dojo-test-utils" }
-dojo-types = { path = "../../dojo-types" }
 dojo-world = { path = "../../dojo-world" }
 starknet-crypto.workspace = true
 starknet.workspace = true
