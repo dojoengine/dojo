@@ -499,7 +499,7 @@ mod world {
             let key = poseidon::poseidon_hash_span(keys);
             database::del(model, key);
 
-            EventEmitter::emit(ref self, StoreDelRecord { table: model, keys });        
+            EventEmitter::emit(ref self, StoreDelRecord { table: model, keys });
         }
 
         /// Gets the model value for an entity. Returns a zero initialized
