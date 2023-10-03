@@ -138,7 +138,7 @@ where
         name.clone(),
         world_address,
         account,
-        config,
+        config.ui(),
         None,
     )
     .await
@@ -213,7 +213,7 @@ impl DevArgs {
                 self.starknet,
                 self.world,
                 env_metadata.as_ref(),
-                config,
+                config.ui(),
                 name.as_ref(),
             ))
             .ok()

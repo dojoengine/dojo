@@ -60,7 +60,7 @@ impl MigrateArgs {
             self,
             env_metadata,
             target_dir,
-            ws.config(),
+            ws.config().ui(),
         ))?;
 
         Ok(())

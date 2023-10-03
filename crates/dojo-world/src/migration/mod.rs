@@ -216,7 +216,8 @@ pub trait Deployable: Declarable + Sync {
 fn prepare_contract_declaration_params(
     artifact_path: &PathBuf,
 ) -> Result<(FlattenedSierraClass, FieldElement)> {
-    let flattened_class = get_flattened_class(artifact_path)
+    let flattened_class = read_class(artifact_path)?
+        .flatten()
         .map_err(|e| anyhow!("error flattening the contract class: {e}"))?;
     let compiled_class_hash = get_compiled_class_hash(artifact_path).map_err(|e| {
         anyhow!("error computing compiled class hash: {} {e}", artifact_path.to_str().unwrap())
@@ -224,10 +225,10 @@ fn prepare_contract_declaration_params(
     Ok((flattened_class, compiled_class_hash))
 }
 
-fn get_flattened_class(artifact_path: &PathBuf) -> Result<FlattenedSierraClass> {
+pub fn read_class(artifact_path: &PathBuf) -> Result<SierraClass> {
     let file = File::open(artifact_path)?;
     let contract_artifact: SierraClass = serde_json::from_reader(&file)?;
-    Ok(contract_artifact.flatten()?)
+    Ok(contract_artifact)
 }
 
 fn get_compiled_class_hash(artifact_path: &PathBuf) -> Result<FieldElement> {
