@@ -21,7 +21,7 @@ fn create(address_domain: u32, table: felt252, id: felt252, value: felt252) {
     let index_len = storage::get(address_domain, index_len_key);
 
     let data = array![index_len + 1, value].span(); // index and value of the created  entry
-    storage::set_many(address_domain, build_index_item_key(table, id), 0, data, array![251,  252].span());
+    storage::set_many(address_domain, build_index_item_key(table, id), 0, data, array![250,  252].span());
     storage::set(address_domain, index_len_key, index_len + 1);
     storage::set(address_domain, build_index_key(table, value, index_len), id);
 }
@@ -37,19 +37,23 @@ fn delete(address_domain: u32, table: felt252, id: felt252) {
         return ();
     }
 
-    // let index_len_key = build_index_len_key(index);
-    // let replace_item_idx = storage::get(address_domain, index_len_key) - 1;
+    let index_item_key = build_index_item_key(table, id);
+    let index_item_layout = array![250,  252].span();
+    let delete_item = storage::get_many(address_domain, index_item_key, 0, 2, index_item_layout);
+    let delete_item_idx = *delete_item.at(0) - 1;
+    let value = *delete_item.at(1);
+    
 
-    // let index_item_key = build_index_item_key(index, id);
-    // let delete_item_idx = storage::get(address_domain, index_item_key) - 1;
+    let index_len_key = build_index_len_key(table, value);
+    let replace_item_idx = storage::get(address_domain, index_len_key) - 1;
 
-    // storage::set(address_domain, index_item_key, 0);
-    // storage::set(address_domain, index_len_key, replace_item_idx);
+    storage::set(address_domain, index_item_key, 0);
+    storage::set(address_domain, index_len_key, replace_item_idx);
 
-    // // Replace the deleted element with the last element.
-    // // NOTE: We leave the last element set as to not produce an unncessary state diff.
-    // let replace_item_value = storage::get(address_domain, build_index_key(index, replace_item_idx));
-    // storage::set(address_domain, build_index_key(index, delete_item_idx), replace_item_value);
+    // Replace the deleted element with the last element.
+    // NOTE: We leave the last element set as to not produce an unncessary state diff.
+    let replace_item_value = storage::get(address_domain, build_index_key(table, value, replace_item_idx));
+    storage::set(address_domain, build_index_key(table, value, delete_item_idx), replace_item_value);
 }
 
 fn exists(address_domain: u32, table: felt252, id: felt252) -> bool {
