@@ -19,7 +19,6 @@ trait IWorld<T> {
         ref self: T,
         model: felt252,
         keys: Span<felt252>,
-        keys_layout: Span<u8>,
         offset: u8,
         values: Span<felt252>,
         layout: Span<u8>
@@ -489,7 +488,6 @@ mod world {
             ref self: ContractState,
             model: felt252,
             keys: Span<felt252>,
-            keys_layout: Span<u8>,
             offset: u8,
             values: Span<felt252>,
             layout: Span<u8>
@@ -531,7 +529,7 @@ mod world {
             // this deletes the index
             database::del(model, key);
 
-            EventEmitter::emit(ref self, StoreDelRecord { table: model, keys });
+            EventEmitter::emit(ref self, StoreDelRecord { table: model, keys });        
         }
 
         /// Gets the model value for an entity. Returns a zero initialized
