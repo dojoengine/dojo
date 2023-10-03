@@ -109,6 +109,8 @@ pub async fn entity_fixtures(db: &mut Sql) {
         }),
         vec![],
         FieldElement::ONE,
+        0,
+        0,
     )
     .await
     .unwrap();
@@ -145,6 +147,8 @@ pub async fn entity_fixtures(db: &mut Sql) {
         }),
         vec![],
         FieldElement::TWO,
+        0,
+        0,
     )
     .await
     .unwrap();

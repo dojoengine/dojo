@@ -28,12 +28,20 @@ impl<P: Provider + Sync + 'static> EventProcessor<P> for RegisterModelProcessor 
         event: &Event,
     ) -> Result<(), Error> {
         let name = parse_cairo_short_string(&event.data[0])?;
+
+        // TODO: remove BlockId as argument
         let model = world.model(&name, BlockId::Tag(BlockTag::Latest)).await?;
         let schema = model.schema(BlockId::Tag(BlockTag::Latest)).await?;
         let layout = model.layout(BlockId::Tag(BlockTag::Latest)).await?;
+
+        let unpacked_size: u8 =
+            model.unpacked_size(BlockId::Tag(BlockTag::Latest)).await?.try_into()?;
+        let packed_size: u8 =
+            model.packed_size(BlockId::Tag(BlockTag::Latest)).await?.try_into()?;
+
         info!("Registered model: {}", name);
 
-        db.register_model(schema, layout, event.data[1]).await?;
+        db.register_model(schema, layout, event.data[1], packed_size, unpacked_size).await?;
 
         Ok(())
     }
