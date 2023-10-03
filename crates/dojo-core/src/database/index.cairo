@@ -33,12 +33,6 @@ fn create(address_domain: u32, index: felt252, key: felt252, value: felt252) {
     storage::set(address_domain, build_index_key(index, value, index_len), key);
 }
 
-/// Deletes an entry from the main index, as well as from each of the keys.
-/// # Arguments
-/// * address_domain - The address domain to write to.
-/// * index - The index to write to.
-/// * id - The id of the entry.
-/// # Returns
 fn delete(address_domain: u32, index: felt252, id: felt252) {
     if !exists(address_domain, index, id) {
         return ();
