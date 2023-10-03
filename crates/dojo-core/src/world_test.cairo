@@ -265,13 +265,13 @@ fn test_entities() {
     keys.append(0);
 
     // let mut query_keys = ArrayTrait::new();
-    // let keys_layout = array![251].span();
-    // let (keys, values) = world.entities('Foo', 42, query_keys.span(), 2, keys_layout);
-    // // assert(keys.len() == 1, 'No keys found for any!'); not enabled by default
+    let keys_layout = array![251].span();
+    let (keys, values) = world.entities('Foo', 42, Option::None(()), 2, keys_layout);
+    assert(keys.len() == 1, 'No keys found for any!');
 
     // query_keys.append(0x1337);
     // let (keys, values) = world.entities('Foo', 42, query_keys.span(), 2, keys_layout);
-    // // assert(keys.len() == 1, 'No keys found!');
+    // assert(keys.len() == 1, 'No keys found!');
 
     // let mut query_keys = ArrayTrait::new();
     // query_keys.append(0x1338);

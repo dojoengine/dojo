@@ -171,18 +171,3 @@ fn get_by_keys(
         };
     }
 }
-
-/// Set, but with writing keys to the appropriate indexes
-/// # Arguments
-/// * `class_hash` - The class hash of the contract.
-/// * `table` - The table to set the entries to.
-/// * `id` - The id of the entry to set.
-/// * `offset` - The offset of the entry to set.
-/// * `value` - The value of the entry to set.
-/// * `keys` - The keys of the entry to set in the index.
-fn set_with_keys(
-    class_hash: starknet::ClassHash, table: felt252, id: felt252, offset: u8, value: Span<felt252>, layout: Span<u8>, keys: Span<felt252>, keys_layout: Span<u8>
-) {
-    set(class_hash, table, id, offset, value, layout);
-    index::create_with_keys(0, table, id, keys, keys_layout);
-}
