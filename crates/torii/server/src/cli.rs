@@ -41,8 +41,8 @@ struct Args {
     /// Port number for api endpoints
     #[arg(long, default_value = "8080")]
     port: u16,
-    /// Specify allowed origins for api endpoints (comma-separated list of allowed origins, or "*" for
-    /// all)
+    /// Specify allowed origins for api endpoints (comma-separated list of allowed origins, or "*"
+    /// for all)
     #[arg(long, default_value = "*")]
     #[arg(value_delimiter = ',')]
     allowed_origins: Vec<String>,
