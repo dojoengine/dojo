@@ -5,7 +5,7 @@ use indexmap::IndexMap;
 use serde::Deserialize;
 use sqlx::{FromRow, Pool, Sqlite};
 
-use super::connection::connection_output;
+use super::results::results_output;
 use super::system_call::{SystemCall, SystemCallObject};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
@@ -89,7 +89,7 @@ impl ObjectTrait for EventObject {
     fn resolve_many(&self) -> Option<Field> {
         Some(Field::new(
             "events",
-            TypeRef::named(format!("{}Connection", self.type_name())),
+            TypeRef::named(format!("{}Results", self.type_name())),
             |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
@@ -98,7 +98,7 @@ impl ObjectTrait for EventObject {
                     let events: Vec<ValueMapping> =
                         data.into_iter().map(EventObject::value_mapping).collect();
 
-                    Ok(Some(Value::Object(connection_output(events, total_count))))
+                    Ok(Some(Value::Object(results_output(&events, total_count))))
                 })
             },
         ))

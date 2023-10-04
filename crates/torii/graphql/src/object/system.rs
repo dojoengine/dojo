@@ -6,7 +6,7 @@ use indexmap::IndexMap;
 use serde::Deserialize;
 use sqlx::{FromRow, Pool, Sqlite};
 
-use super::connection::connection_output;
+use super::results::results_output;
 use super::system_call::system_calls_by_system_id;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
@@ -96,7 +96,7 @@ impl ObjectTrait for SystemObject {
     fn resolve_many(&self) -> Option<Field> {
         Some(Field::new(
             "systems",
-            TypeRef::named(format!("{}Connection", self.type_name())),
+            TypeRef::named(format!("{}Results", self.type_name())),
             |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
@@ -105,7 +105,7 @@ impl ObjectTrait for SystemObject {
                     let systems: Vec<ValueMapping> =
                         data.into_iter().map(SystemObject::value_mapping).collect();
 
-                    Ok(Some(Value::Object(connection_output(systems, total_count))))
+                    Ok(Some(Value::Object(results_output(&systems, total_count))))
                 })
             },
         ))

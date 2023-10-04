@@ -1,30 +1,10 @@
-use core::fmt;
+use strum_macros::{AsRefStr, EnumString};
 
-#[derive(Debug)]
+#[derive(AsRefStr, Debug, EnumString)]
+#[strum(serialize_all = "UPPERCASE")]
 pub enum Direction {
     Asc,
     Desc,
-}
-
-impl fmt::Display for Direction {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Direction::Asc => write!(f, "ASC"),
-            Direction::Desc => write!(f, "DESC"),
-        }
-    }
-}
-
-impl TryFrom<&str> for Direction {
-    type Error = String;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        match value {
-            "ASC" => Ok(Direction::Asc),
-            "DESC" => Ok(Direction::Desc),
-            _ => Err(format!("Invalid direction: {}", value)),
-        }
-    }
 }
 
 #[derive(Debug)]

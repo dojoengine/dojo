@@ -1,17 +1,16 @@
-pub mod connection;
 pub mod entity;
 pub mod event;
 pub mod inputs;
 pub mod model;
 pub mod model_data;
+pub mod results;
 pub mod system;
 pub mod system_call;
 
 use async_graphql::dynamic::{Enum, Field, FieldFuture, InputObject, Object, SubscriptionField};
 use async_graphql::Value;
 
-use self::connection::edge::EdgeObject;
-use self::connection::ConnectionObject;
+use self::results::ResultsObject;
 use crate::types::{TypeMapping, ValueMapping};
 
 pub trait ObjectTrait {
@@ -55,20 +54,11 @@ pub trait ObjectTrait {
         None
     }
 
-    // Connection type, if resolve_many is Some then register connection graphql obj, includes
-    // {type_name}Connection and {type_name}Edge according to relay spec https://relay.dev/graphql/connections.htm
-    fn connection(&self) -> Option<Vec<Object>> {
+    fn results_objects(&self) -> Option<Vec<Object>> {
         self.resolve_many()?;
+        let results = ResultsObject::new(self.name().to_string(), self.type_name().to_string());
 
-        let edge = EdgeObject::new(self.name().to_string(), self.type_name().to_string());
-        let connection =
-            ConnectionObject::new(self.name().to_string(), self.type_name().to_string());
-
-        let mut objects = Vec::new();
-        objects.extend(edge.objects());
-        objects.extend(connection.objects());
-
-        Some(objects)
+        Some(results.objects())
     }
 
     fn objects(&self) -> Vec<Object> {

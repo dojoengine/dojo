@@ -9,11 +9,9 @@ use tokio_stream::StreamExt;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::types::Entity;
 
-use super::connection::{
-    connection_arguments, connection_output, decode_cursor, parse_connection_arguments,
-    ConnectionArguments,
-};
+use super::inputs::limit_offset_argument;
 use super::model_data::model_data_by_id_query;
+use super::results::results_output;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
 use crate::query::{query_by_id, type_mapping_query};
@@ -99,11 +97,17 @@ impl ObjectTrait for EntityObject {
     fn resolve_many(&self) -> Option<Field> {
         let mut field = Field::new(
             "entities",
-            TypeRef::named(format!("{}Connection", self.type_name())),
+            TypeRef::named(format!("{}Results", self.type_name())),
             |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let args = parse_connection_arguments(&ctx)?;
+                    let limit = ctx
+                        .args
+                        .try_get("first")
+                        .and_then(|first| first.u64())
+                        .unwrap_or(DEFAULT_LIMIT);
+                    let offset =
+                        ctx.args.try_get("offset").and_then(|offset| offset.u64()).unwrap_or(0);
                     let keys = ctx.args.try_get("keys").ok().and_then(|keys| {
                         keys.list().ok().map(|key_list| {
                             key_list
@@ -113,16 +117,16 @@ impl ObjectTrait for EntityObject {
                         })
                     });
 
-                    let (entities, total_count) = entities_by_sk(&mut conn, keys, args).await?;
+                    let (entities, total_count) =
+                        entities_by_sk(&mut conn, keys, limit, offset).await?;
 
-                    Ok(Some(Value::Object(connection_output(entities, total_count))))
+                    Ok(Some(Value::Object(results_output(&entities, total_count))))
                 })
             },
         )
         .argument(InputValue::new("keys", TypeRef::named_list(TypeRef::STRING)));
 
-        // Add relay connection fields (first, last, before, after)
-        field = connection_arguments(field);
+        field = limit_offset_argument(field);
 
         Some(field)
     }
@@ -182,7 +186,8 @@ fn model_union_field() -> Field {
 async fn entities_by_sk(
     conn: &mut PoolConnection<Sqlite>,
     keys: Option<Vec<String>>,
-    args: ConnectionArguments,
+    limit: u64,
+    offset: u64,
 ) -> Result<(Vec<ValueMapping>, i64)> {
     let mut count_query = "SELECT COUNT(*) FROM entities".to_string();
     let mut entities_query = "SELECT * FROM entities".to_string();
@@ -194,34 +199,12 @@ async fn entities_by_sk(
         count_query.push_str(&format!(" WHERE keys LIKE '{}/%'", keys_str));
     }
 
-    if let Some(after_cursor) = &args.after {
-        match decode_cursor(after_cursor.clone()) {
-            Ok((created_at, id)) => {
-                conditions.push(format!("(created_at, id) < ('{}', '{}')", created_at, id));
-            }
-            Err(_) => return Err(sqlx::Error::Decode("Invalid after cursor format".into())),
-        }
-    }
-
-    if let Some(before_cursor) = &args.before {
-        match decode_cursor(before_cursor.clone()) {
-            Ok((created_at, id)) => {
-                conditions.push(format!("(created_at, id) > ('{}', '{}')", created_at, id));
-            }
-            Err(_) => return Err(sqlx::Error::Decode("Invalid before cursor format".into())),
-        }
-    }
-
     if !conditions.is_empty() {
         let condition_string = conditions.join(" AND ");
         entities_query.push_str(&format!(" WHERE {}", condition_string));
     }
 
-    let limit = args.first.or(args.last).unwrap_or(DEFAULT_LIMIT);
-    let order = if args.first.is_some() { "DESC" } else { "ASC" };
-
-    entities_query
-        .push_str(&format!(" ORDER BY created_at {}, id {} LIMIT {}", order, order, limit));
+    entities_query.push_str(&format!(" ORDER BY id DESC LIMIT {} OFFSET {}", limit, offset));
 
     let entities: Vec<Entity> = sqlx::query_as(&entities_query).fetch_all(conn.as_mut()).await?;
     let total_result: (i64,) = sqlx::query_as(&count_query).fetch_one(conn.as_mut()).await?;

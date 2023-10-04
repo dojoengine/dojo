@@ -10,18 +10,14 @@ use sqlx::sqlite::SqliteRow;
 use sqlx::{FromRow, Pool, Row, Sqlite};
 use torii_core::types::Entity;
 
-use super::connection::{
-    connection_arguments, decode_cursor, encode_cursor, parse_connection_arguments,
-    ConnectionArguments,
-};
 use super::inputs::order_input::{order_argument, parse_order_argument, OrderInputObject};
 use super::inputs::where_input::{parse_where_argument, where_argument, WhereInputObject};
-use super::inputs::InputObjectTrait;
+use super::inputs::{limit_offset_argument, InputObjectTrait};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
 use crate::object::entity::EntityObject;
 use crate::query::filter::{Filter, FilterValue};
-use crate::query::order::{Direction, Order};
+use crate::query::order::Order;
 use crate::query::{query_by_id, query_total_count};
 use crate::types::TypeData;
 use crate::utils::extract_value::extract;
@@ -82,7 +78,7 @@ impl ObjectTrait for ModelDataObject {
         let type_mapping = self.type_mapping.clone();
         let where_mapping = self.where_input.type_mapping.clone();
         let field_name = format!("{}Models", self.name());
-        let field_type = format!("{}Connection", self.type_name());
+        let field_type = format!("{}Results", self.type_name());
 
         let mut field = Field::new(field_name, TypeRef::named(field_type), move |ctx| {
             let type_mapping = type_mapping.clone();
@@ -93,22 +89,28 @@ impl ObjectTrait for ModelDataObject {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                 let order = parse_order_argument(&ctx);
                 let filters = parse_where_argument(&ctx, &where_mapping)?;
-                let connection = parse_connection_arguments(&ctx)?;
+                let limit = ctx
+                    .args
+                    .try_get("first")
+                    .and_then(|first| first.u64())
+                    .unwrap_or(DEFAULT_LIMIT);
+                let offset =
+                    ctx.args.try_get("offset").and_then(|offset| offset.u64()).unwrap_or(0);
 
                 let data =
-                    models_data_query(&mut conn, &type_name, &order, &filters, &connection).await?;
+                    models_data_query(&mut conn, &type_name, &order, &filters, limit, offset)
+                        .await?;
 
                 let total_count = query_total_count(&mut conn, &type_name, &filters).await?;
-                let connection = model_connection(&data, &type_mapping, total_count)?;
+                let results = model_results(&data, &type_mapping, total_count)?;
 
-                Ok(Some(Value::Object(connection)))
+                Ok(Some(Value::Object(results)))
             })
         });
 
-        // Add relay connection fields (first, last, before, after, where)
-        field = connection_arguments(field);
         field = where_argument(field, self.type_name());
         field = order_argument(field, self.type_name());
+        field = limit_offset_argument(field);
 
         Some(field)
     }
@@ -244,30 +246,11 @@ pub async fn models_data_query(
     table_name: &str,
     order: &Option<Order>,
     filters: &Vec<Filter>,
-    connection: &ConnectionArguments,
+    limit: u64,
+    offset: u64,
 ) -> sqlx::Result<Vec<SqliteRow>> {
     let mut query = format!("SELECT * FROM {}", table_name);
     let mut conditions = Vec::new();
-
-    // Handle after cursor if exists
-    if let Some(after_cursor) = &connection.after {
-        match decode_cursor(after_cursor.clone()) {
-            Ok((created_at, id)) => {
-                conditions.push(format!("(created_at, entity_id) < ('{}', '{}')", created_at, id));
-            }
-            Err(_) => return Err(sqlx::Error::Decode("Invalid after cursor format".into())),
-        }
-    }
-
-    // Handle before cursor if exists
-    if let Some(before_cursor) = &connection.before {
-        match decode_cursor(before_cursor.clone()) {
-            Ok((created_at, id)) => {
-                conditions.push(format!("(created_at, entity_id) > ('{}', '{}')", created_at, id));
-            }
-            Err(_) => return Err(sqlx::Error::Decode("Invalid before cursor format".into())),
-        }
-    }
 
     // Handle filters
     for filter in filters {
@@ -284,56 +267,32 @@ pub async fn models_data_query(
         query.push_str(&format!(" WHERE {}", conditions.join(" AND ")));
     }
 
-    // Handle order and limit
-    // NOTE: Order is determiined by the `order` param if provided, otherwise it's inferred from the
-    // `first` or `last` param. Explicity ordering take precedence
-    let limit = connection.first.or(connection.last).unwrap_or(DEFAULT_LIMIT);
+    // Handle order
     let (column, direction) = if let Some(order) = order {
         let column = format!("external_{}", order.field);
-        (
-            column,
-            match order.direction {
-                Direction::Asc => "ASC",
-                Direction::Desc => "DESC",
-            },
-        )
+        (column, order.direction.as_ref())
     } else {
-        // if no order specified default to created_at
-        ("created_at".to_string(), if connection.first.is_some() { "DESC" } else { "ASC" })
+        ("id".to_string(), "DESC")
     };
 
-    query.push_str(&format!(" ORDER BY {column} {direction} LIMIT {limit}"));
+    query.push_str(&format!(" ORDER BY {column} {direction} LIMIT {limit} OFFSET {offset}"));
 
     sqlx::query(&query).fetch_all(conn).await
 }
 
-// TODO: make `connection_output()` more generic.
-pub fn model_connection(
+pub fn model_results(
     data: &[SqliteRow],
     types: &TypeMapping,
     total_count: i64,
 ) -> sqlx::Result<ValueMapping> {
-    let model_edges = data
+    let model_items = data
         .iter()
-        .map(|row| {
-            // entity_id and created_at used to create cursor
-            let entity_id = row.try_get::<String, &str>("entity_id")?;
-            let created_at = row.try_get::<String, &str>("created_at")?;
-            let cursor = encode_cursor(&created_at, &entity_id);
-            let value_mapping = value_mapping_from_row(row, types)?;
-
-            let mut edge = ValueMapping::new();
-            edge.insert(Name::new("node"), Value::Object(value_mapping));
-            edge.insert(Name::new("cursor"), Value::String(cursor));
-
-            Ok(Value::Object(edge))
-        })
+        .map(|row| Ok(Value::Object(value_mapping_from_row(row, types)?)))
         .collect::<sqlx::Result<Vec<Value>>>();
 
     Ok(ValueMapping::from([
         (Name::new("totalCount"), Value::from(total_count)),
-        (Name::new("edges"), Value::List(model_edges?)),
-        // TODO: add pageInfo
+        (Name::new("items"), Value::List(model_items?)),
     ]))
 }
 

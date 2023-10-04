@@ -31,7 +31,7 @@ where
 pub async fn query_all<T>(
     conn: &mut PoolConnection<Sqlite>,
     table_name: &str,
-    limit: i64,
+    limit: u64,
 ) -> Result<Vec<T>>
 where
     T: Send + Unpin + for<'a> FromRow<'a, SqliteRow>,

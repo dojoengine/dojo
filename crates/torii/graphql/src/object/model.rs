@@ -9,7 +9,7 @@ use tokio_stream::StreamExt;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::types::Model;
 
-use super::connection::connection_output;
+use super::results::results_output;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
 use crate::query::{query_all, query_by_id, query_total_count};
@@ -89,7 +89,7 @@ impl ObjectTrait for ModelObject {
     fn resolve_many(&self) -> Option<Field> {
         Some(Field::new(
             "models",
-            TypeRef::named(format!("{}Connection", self.type_name())),
+            TypeRef::named(format!("{}Results", self.type_name())),
             |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
@@ -98,7 +98,7 @@ impl ObjectTrait for ModelObject {
                     let models: Vec<ValueMapping> =
                         data.into_iter().map(ModelObject::value_mapping).collect();
 
-                    Ok(Some(Value::Object(connection_output(models, total_count))))
+                    Ok(Some(Value::Object(results_output(&models, total_count))))
                 })
             },
         ))

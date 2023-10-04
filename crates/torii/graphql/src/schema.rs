@@ -5,7 +5,6 @@ use async_graphql::dynamic::{
 use sqlx::SqlitePool;
 use torii_core::types::Model;
 
-use super::object::connection::page_info::PageInfoObject;
 use super::object::entity::EntityObject;
 use super::object::event::EventObject;
 use super::object::model_data::ModelDataObject;
@@ -30,7 +29,6 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
         Box::<SystemObject>::default(),
         Box::<EventObject>::default(),
         Box::<SystemCallObject>::default(),
-        Box::<PageInfoObject>::default(),
     ];
 
     // build model data gql objects
@@ -72,10 +70,10 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
             }
         }
 
-        // register connection types, relay
-        if let Some(conn_objects) = object.connection() {
-            for object in conn_objects {
-                schema_builder = schema_builder.register(object);
+        // register results objects
+        if let Some(results_objects) = object.results_objects() {
+            for results in results_objects {
+                schema_builder = schema_builder.register(results);
             }
         }
 

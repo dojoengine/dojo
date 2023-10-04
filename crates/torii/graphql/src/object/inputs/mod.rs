@@ -1,4 +1,4 @@
-use async_graphql::dynamic::{Enum, InputObject};
+use async_graphql::dynamic::{Enum, Field, InputObject, InputValue, TypeRef};
 
 use super::TypeMapping;
 
@@ -20,4 +20,10 @@ pub trait InputObjectTrait {
     fn enum_objects(&self) -> Option<Vec<Enum>> {
         None
     }
+}
+
+pub fn limit_offset_argument(field: Field) -> Field {
+    field
+        .argument(InputValue::new("limit", TypeRef::named(TypeRef::INT)))
+        .argument(InputValue::new("offset", TypeRef::named(TypeRef::INT)))
 }
