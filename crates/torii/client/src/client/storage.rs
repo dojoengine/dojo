@@ -1,12 +1,14 @@
+use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use anyhow::bail;
 use dojo_types::WorldMetadata;
 use parking_lot::RwLock;
-use starknet::core::utils::cairo_short_string_to_felt;
-use starknet::macros::short_string;
-use starknet_crypto::{poseidon_hash_many, FieldElement};
+use starknet::core::utils::parse_cairo_short_string;
+use starknet_crypto::FieldElement;
+
+use super::error::Error;
+use crate::utils::compute_all_storage_addresses;
 
 pub type EntityKeys = Vec<FieldElement>;
 
@@ -14,77 +16,79 @@ pub type StorageKey = FieldElement;
 pub type StorageValue = FieldElement;
 
 /// An in-memory storage for storing the component values of entities.
-/// TODO: check if we can use sql db instead.
-pub(crate) struct ComponentStorage {
+// TODO: check if we can use sql db instead.
+pub(crate) struct ModelStorage {
     metadata: Arc<RwLock<WorldMetadata>>,
-    // TODO: change entity id to entity keys
-    component_index: RwLock<HashMap<String, HashSet<EntityKeys>>>, /* component -> list of
-                                                                    * entity ids */
     pub(crate) storage: RwLock<HashMap<StorageKey, StorageValue>>,
+    model_index: RwLock<HashMap<FieldElement, HashSet<EntityKeys>>>,
 }
 
-impl ComponentStorage {
-    pub(crate) fn new(metadata: Arc<RwLock<WorldMetadata>>) -> Self {
-        Self { metadata, storage: Default::default(), component_index: Default::default() }
+impl ModelStorage {
+    pub(super) fn new(metadata: Arc<RwLock<WorldMetadata>>) -> Self {
+        Self { metadata, storage: Default::default(), model_index: Default::default() }
     }
 
-    pub fn set_entity(
+    #[allow(unused)]
+    pub(super) fn set_entity(
         &self,
-        key: (String, Vec<FieldElement>),
-        values: Vec<FieldElement>,
-    ) -> anyhow::Result<()> {
-        let (component, entity_keys) = key;
+        model: FieldElement,
+        raw_keys: Vec<FieldElement>,
+        raw_values: Vec<FieldElement>,
+    ) -> Result<(), Error> {
+        let model_name = parse_cairo_short_string(&model).expect("valid cairo short string");
+        let model_packed_size = self
+            .metadata
+            .read()
+            .model(&model_name)
+            .map(|model| model.packed_size)
+            .ok_or(Error::UnknownModel(model_name.clone()))?;
 
-        let Some(component_size) = self.metadata.read().components.get(&component).map(|c| c.size)
-        else {
-            bail!("unknown component: {component}")
-        };
+        match raw_values.len().cmp(&(model_packed_size as usize)) {
+            Ordering::Greater | Ordering::Less => {
+                return Err(Error::InvalidModelValuesLen {
+                    model: model_name,
+                    actual_value_len: raw_values.len(),
+                    expected_value_len: model_packed_size as usize,
+                });
+            }
 
-        if values.len().cmp(&(component_size as usize)).is_gt() {
-            bail!("too many values for component: {component}")
-        } else if values.len().cmp(&(component_size as usize)).is_lt() {
-            bail!("not enough values for component: {component}")
+            Ordering::Equal => {}
         }
 
-        let hashed_key = poseidon_hash_many(&entity_keys);
-        let entity_id = poseidon_hash_many(&[
-            short_string!("dojo_storage"),
-            cairo_short_string_to_felt(&component).expect("valid cairo short string"),
-            hashed_key,
-        ]);
+        self.index_entity(model, raw_keys.clone());
 
-        self.component_index.write().entry(component).or_default().insert(entity_keys);
-
-        values.into_iter().enumerate().for_each(|(i, value)| {
-            self.storage.write().insert(entity_id + i.into(), value);
+        let storage_addresses = compute_all_storage_addresses(model, &raw_keys, model_packed_size);
+        storage_addresses.into_iter().zip(raw_values).for_each(|(storage_address, value)| {
+            self.storage.write().insert(storage_address, value);
         });
 
         Ok(())
     }
 
-    pub fn get_entity(&self, key: (String, Vec<FieldElement>)) -> Option<Vec<FieldElement>> {
-        let (component, entity_keys) = key;
+    pub(super) fn get_entity(
+        &self,
+        model: FieldElement,
+        raw_keys: &[FieldElement],
+    ) -> Result<Option<Vec<FieldElement>>, Error> {
+        let model_name = parse_cairo_short_string(&model).expect("valid cairo short string");
+        let model_packed_size = self
+            .metadata
+            .read()
+            .model(&parse_cairo_short_string(&model).expect("valid cairo short string"))
+            .map(|c| c.packed_size)
+            .ok_or(Error::UnknownModel(model_name))?;
 
-        let Some(component_size) = self.metadata.read().components.get(&component).map(|c| c.size)
-        else {
-            return None;
-        };
+        let storage_addresses = compute_all_storage_addresses(model, raw_keys, model_packed_size);
+        let values = storage_addresses
+            .into_iter()
+            .map(|storage_address| self.storage.read().get(&storage_address).copied())
+            .collect::<Option<Vec<_>>>();
 
-        let hashed_key = poseidon_hash_many(&entity_keys);
-        let entity_id = poseidon_hash_many(&[
-            short_string!("dojo_storage"),
-            cairo_short_string_to_felt(&component).expect("valid cairo short string"),
-            hashed_key,
-        ]);
+        Ok(values)
+    }
 
-        let mut values = Vec::with_capacity(component_size as usize);
-
-        for i in 0..component_size {
-            let value = self.storage.read().get(&(entity_id + i.into())).copied()?;
-            values.push(value);
-        }
-
-        Some(values)
+    fn index_entity(&self, model: FieldElement, raw_keys: Vec<FieldElement>) {
+        self.model_index.write().entry(model).or_insert_with(HashSet::new).insert(raw_keys);
     }
 }
 
@@ -96,25 +100,28 @@ mod tests {
     use dojo_types::WorldMetadata;
     use parking_lot::RwLock;
     use starknet::core::utils::cairo_short_string_to_felt;
-    use starknet::macros::{felt, short_string};
-    use starknet_crypto::poseidon_hash_many;
+    use starknet::macros::felt;
+
+    use crate::client::error::Error;
+    use crate::utils::compute_all_storage_addresses;
 
     fn create_dummy_metadata() -> WorldMetadata {
-        let components = HashMap::from([(
+        let models = HashMap::from([(
             "Position".into(),
             dojo_types::schema::ModelMetadata {
                 name: "Position".into(),
                 class_hash: felt!("1"),
-                size: 3,
+                packed_size: 4,
+                unpacked_size: 4,
             },
         )]);
 
-        WorldMetadata { components, ..Default::default() }
+        WorldMetadata { models, ..Default::default() }
     }
 
-    fn create_dummy_storage() -> super::ComponentStorage {
+    fn create_dummy_storage() -> super::ModelStorage {
         let metadata = Arc::new(RwLock::new(create_dummy_metadata()));
-        super::ComponentStorage::new(metadata)
+        super::ModelStorage::new(metadata)
     }
 
     #[test]
@@ -125,11 +132,15 @@ mod tests {
             keys: vec![felt!("0x12345")],
         };
 
-        let values = vec![felt!("1"), felt!("2"), felt!("3"), felt!("4")];
-        let result = storage.set_entity((entity.model, entity.keys), values);
+        let values = vec![felt!("1"), felt!("2"), felt!("3"), felt!("4"), felt!("5")];
+        let model = cairo_short_string_to_felt(&entity.model).unwrap();
+        let result = storage.set_entity(model, entity.keys, values);
 
-        assert!(result.is_err());
         assert!(storage.storage.read().is_empty());
+        matches!(
+            result,
+            Err(Error::InvalidModelValuesLen { actual_value_len: 5, expected_value_len: 4, .. })
+        );
     }
 
     #[test]
@@ -141,10 +152,14 @@ mod tests {
         };
 
         let values = vec![felt!("1"), felt!("2")];
-        let result = storage.set_entity((entity.model, entity.keys), values);
+        let model = cairo_short_string_to_felt(&entity.model).unwrap();
+        let result = storage.set_entity(model, entity.keys, values);
 
-        assert!(result.is_err());
         assert!(storage.storage.read().is_empty());
+        matches!(
+            result,
+            Err(Error::InvalidModelValuesLen { actual_value_len: 2, expected_value_len: 4, .. })
+        );
     }
 
     #[test]
@@ -155,42 +170,41 @@ mod tests {
             keys: vec![felt!("0x12345")],
         };
 
-        assert!(storage.storage.read().is_empty());
+        assert!(storage.storage.read().is_empty(), "storage must be empty initially");
 
-        let component = storage.metadata.read().components.get("Position").cloned().unwrap();
+        let model = storage.metadata.read().model(&entity.model).cloned().unwrap();
 
-        let expected_storage_addresses = {
-            let base = poseidon_hash_many(&[
-                short_string!("dojo_storage"),
-                cairo_short_string_to_felt(&entity.model).unwrap(),
-                poseidon_hash_many(&entity.keys),
-            ]);
+        let expected_storage_addresses = compute_all_storage_addresses(
+            cairo_short_string_to_felt(&model.name).unwrap(),
+            &entity.keys,
+            model.packed_size,
+        );
 
-            (0..component.size).map(|i| base + i.into()).collect::<Vec<_>>()
-        };
-
-        let expected_values = vec![felt!("1"), felt!("2"), felt!("3")];
+        let expected_values = vec![felt!("1"), felt!("2"), felt!("3"), felt!("4")];
+        let model_name_in_felt = cairo_short_string_to_felt(&entity.model).unwrap();
 
         storage
-            .set_entity((entity.model.clone(), entity.keys.clone()), expected_values.clone())
+            .set_entity(model_name_in_felt, entity.keys.clone(), expected_values.clone())
             .expect("set storage values");
 
-        let actual_values =
-            storage.get_entity((entity.model, entity.keys.clone())).expect("get storage values");
+        let actual_values = storage
+            .get_entity(model_name_in_felt, &entity.keys)
+            .expect("model exist")
+            .expect("values are set");
 
         let actual_storage_addresses =
             storage.storage.read().clone().into_keys().collect::<Vec<_>>();
 
         assert!(
             storage
-                .component_index
+                .model_index
                 .read()
-                .get("Position")
+                .get(&model_name_in_felt)
                 .is_some_and(|e| e.contains(&entity.keys)),
             "entity keys must be indexed"
         );
         assert!(actual_values == expected_values);
-        assert!(storage.storage.read().len() == component.size as usize);
+        assert!(storage.storage.read().len() == model.packed_size as usize);
         assert!(
             actual_storage_addresses
                 .into_iter()

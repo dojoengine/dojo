@@ -26,7 +26,7 @@ type PublishStateUpdateFuture = Pin<Box<dyn Future<Output = ()> + Send>>;
 
 pub struct ModelMetadata {
     pub name: FieldElement,
-    pub len: usize,
+    pub packed_size: usize,
 }
 
 pub struct Entity {
@@ -74,7 +74,7 @@ impl SubscriberManager {
                     poseidon_hash_many(&entity.keys),
                 ]);
 
-                (0..entity.model.len)
+                (0..entity.model.packed_size)
                     .into_par_iter()
                     .map(|i| base + i.into())
                     .collect::<Vec<FieldElement>>()
