@@ -7,12 +7,11 @@ use dojo_world::migration::contract::ContractMigration;
 use dojo_world::migration::strategy::{prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{
-    read_class, Declarable, DeployOutput, Deployable, MigrationError, RegisterOutput, StateDiff,
+    Declarable, DeployOutput, Deployable, MigrationError, RegisterOutput, StateDiff,
 };
 use dojo_world::utils::TransactionWaiter;
 use scarb_ui::Ui;
 use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
-use starknet::core::types::contract::AbiEntry;
 use starknet::core::types::{
     BlockId, BlockTag, FieldElement, InvokeTransactionResult, StarknetError,
 };
@@ -272,10 +271,34 @@ where
         None => {}
     };
 
+    match &strategy.base {
+        Some(base) => {
+            ui.print_header("# Base Contract");
+
+            match base
+                .declare(migrator, txn_config.clone().map(|c| c.into()).unwrap_or_default())
+                .await
+            {
+                Ok(res) => {
+                    ui.print_sub(format!("Class Hash: {:#x}", res.class_hash));
+                }
+                Err(MigrationError::ClassAlreadyDeclared) => {
+                    ui.print_sub(format!("Already declared: {:#x}", base.diff.local));
+                }
+                Err(e) => return Err(e.into()),
+            };
+        }
+        None => {}
+    };
+
     match &strategy.world {
         Some(world) => {
             ui.print_header("# World");
-            let calldata = vec![strategy.executor.as_ref().unwrap().contract_address];
+
+            let calldata = vec![
+                strategy.executor.as_ref().unwrap().contract_address,
+                strategy.base.as_ref().unwrap().diff.local,
+            ];
             deploy_contract(world, "world", calldata, migrator, ui, &txn_config).await?;
 
             ui.print_sub(format!("Contract address: {:#x}", world.contract_address));
@@ -371,7 +394,7 @@ where
 
             // Continue if model is already declared
             Err(MigrationError::ClassAlreadyDeclared) => {
-                ui.print_sub("Already declared");
+                ui.print_sub(format!("Already declared: {:#x}", c.diff.local));
                 continue;
             }
             Err(e) => bail!("Failed to declare model {}: {e}", c.diff.name),
@@ -414,35 +437,38 @@ where
 
     let mut deploy_output = vec![];
 
-    for contract in strategy.contracts.iter() {
-        let mut constructor_calldata = vec![];
-        let class = read_class(contract.artifact_path())?;
-        for entry in class.abi {
-            if let AbiEntry::Constructor(constructor) = entry {
-                if !constructor.inputs.is_empty()
-                    && constructor.inputs[0].r#type == "dojo::world::IWorldDispatcher"
-                {
-                    let world_address = strategy.world_address()?;
-                    constructor_calldata.push(world_address);
-                    break;
-                }
-            }
-        }
+    let world_address = strategy.world_address()?;
 
+    for contract in strategy.contracts.iter() {
         let name = &contract.diff.name;
         ui.print(italic_message(name).to_string());
-        match deploy_contract(contract, name, constructor_calldata, migrator, ui, &txn_config)
-            .await?
+        match contract
+            .world_deploy(
+                world_address,
+                contract.diff.local,
+                migrator,
+                txn_config.clone().map(|c| c.into()).unwrap_or_default(),
+            )
+            .await
         {
-            ContractDeploymentOutput::Output(output) => {
+            Ok(output) => {
+                if let Some(declare) = output.clone().declare {
+                    ui.print_hidden_sub(format!(
+                        "Declare transaction: {:#x}",
+                        declare.transaction_hash
+                    ));
+                }
+
+                ui.print_hidden_sub(format!("Deploy transaction: {:#x}", output.transaction_hash));
                 ui.print_sub(format!("Contract address: {:#x}", output.contract_address));
                 ui.print_hidden_sub(format!("deploy transaction: {:#x}", output.transaction_hash));
                 deploy_output.push(Some(output));
             }
-            ContractDeploymentOutput::AlreadyDeployed(contract_address) => {
+            Err(MigrationError::ContractAlreadyDeployed(contract_address)) => {
                 ui.print_sub(format!("Already deployed: {:#x}", contract_address));
                 deploy_output.push(None);
             }
+            Err(e) => return Err(anyhow!("Failed to migrate {}: {:?}", name, e)),
         }
     }
 

@@ -93,6 +93,22 @@ impl<'a, A: ConnectedAccount + Sync> WorldContract<'a, A> {
         self.account.execute(calls).send().await
     }
 
+    pub async fn deploy_contract(
+        &self,
+        salt: &FieldElement,
+        class_hash: &FieldElement,
+    ) -> Result<InvokeTransactionResult, AccountError<A::SignError, <A::Provider as Provider>::Error>>
+    {
+        self.account
+            .execute(vec![Call {
+                to: self.address,
+                selector: get_selector_from_name("deploy_contract").unwrap(),
+                calldata: vec![*salt, *class_hash],
+            }])
+            .send()
+            .await
+    }
+
     pub async fn executor(
         &self,
         block_id: BlockId,
@@ -100,13 +116,11 @@ impl<'a, A: ConnectedAccount + Sync> WorldContract<'a, A> {
         self.reader.executor(block_id).await
     }
 
-    pub async fn call(
+    pub async fn base(
         &self,
-        system: &str,
-        calldata: Vec<FieldElement>,
         block_id: BlockId,
-    ) -> Result<Vec<FieldElement>, ContractReaderError<<A::Provider as Provider>::Error>> {
-        self.reader.call(system, calldata, block_id).await
+    ) -> Result<FieldElement, ContractReaderError<<A::Provider as Provider>::Error>> {
+        self.reader.base(block_id).await
     }
 
     pub async fn model(
@@ -207,6 +221,26 @@ impl<'a, P: Provider + Sync> WorldContractReader<'a, P> {
         Ok(res[0])
     }
 
+    pub async fn base(
+        &self,
+        block_id: BlockId,
+    ) -> Result<FieldElement, ContractReaderError<P::Error>> {
+        let res = self
+            .provider
+            .call(
+                FunctionCall {
+                    contract_address: self.address,
+                    calldata: vec![],
+                    entry_point_selector: get_selector_from_name("base").unwrap(),
+                },
+                block_id,
+            )
+            .await
+            .map_err(ContractReaderError::ProviderError)?;
+
+        Ok(res[0])
+    }
+
     pub async fn executor_call(
         &self,
         class_hash: FieldElement,
@@ -221,30 +255,6 @@ impl<'a, P: Provider + Sync> WorldContractReader<'a, P> {
                     contract_address: self.executor(block_id).await.unwrap(),
                     calldata,
                     entry_point_selector: get_selector_from_name("call").unwrap(),
-                },
-                block_id,
-            )
-            .await
-            .map_err(ContractReaderError::ProviderError)
-    }
-
-    pub async fn call(
-        &self,
-        system: &str,
-        mut calldata: Vec<FieldElement>,
-        block_id: BlockId,
-    ) -> Result<Vec<FieldElement>, ContractReaderError<P::Error>> {
-        calldata.insert(
-            0,
-            cairo_short_string_to_felt(system)
-                .map_err(ContractReaderError::CairoShortStringToFeltError)?,
-        );
-        self.provider
-            .call(
-                FunctionCall {
-                    contract_address: self.address,
-                    calldata,
-                    entry_point_selector: get_selector_from_name("execute").unwrap(),
                 },
                 block_id,
             )

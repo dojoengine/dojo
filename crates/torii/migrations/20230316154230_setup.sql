@@ -16,9 +16,11 @@ CREATE TABLE worlds (
 CREATE TABLE models (
     id TEXT NOT NULL PRIMARY KEY,
     name TEXT NOT NULL,
-    class_hash TEXT NOT NULL,
-    transaction_hash TEXT,
     layout BLOB NOT NULL,
+    transaction_hash TEXT,
+    class_hash TEXT NOT NULL,
+    packed_size INTEGER NOT NULL,
+    unpacked_size INTEGER NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -31,6 +33,7 @@ CREATE TABLE model_members(
     model_id TEXT NOT NULL,
     name TEXT NOT NULL,
     type TEXT NOT NULL,
+    type_enum TEXT DEFAULT 'Primitive' CHECK(type_enum IN ('Primitive', 'Struct', 'Enum', 'Tuple')) NOT NULL,
     key BOOLEAN NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id, member_idx) FOREIGN KEY (model_id) REFERENCES models(id)

@@ -54,6 +54,9 @@ pub async fn deploy_world(
         .unwrap()
         .contract_address;
 
+    let base_class_hash =
+        strategy.base.unwrap().declare(&account, Default::default()).await.unwrap().class_hash;
+
     // wait for the tx to be mined
     tokio::time::sleep(Duration::from_millis(250)).await;
 
@@ -62,7 +65,7 @@ pub async fn deploy_world(
         .unwrap()
         .deploy(
             manifest.clone().world.class_hash,
-            vec![executor_address],
+            vec![executor_address, base_class_hash],
             &account,
             Default::default(),
         )

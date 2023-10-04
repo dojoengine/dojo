@@ -81,16 +81,18 @@ impl Sql {
         model: Ty,
         layout: Vec<FieldElement>,
         class_hash: FieldElement,
+        packed_size: u8,
+        unpacked_size: u8,
     ) -> Result<()> {
         let layout_blob = layout.iter().map(|x| (*x).try_into().unwrap()).collect::<Vec<u8>>();
         self.query_queue.push(format!(
-            "INSERT INTO models (id, name, class_hash, layout) VALUES ('{}', '{}', '{:#x}', '{}') \
-             ON CONFLICT(id) DO UPDATE SET class_hash='{:#x}'",
-            model.name(),
-            model.name(),
-            class_hash,
-            hex::encode(&layout_blob),
-            class_hash
+            "INSERT INTO models (id, name, class_hash, layout, packed_size, unpacked_size) VALUES \
+             ('{id}', '{name}', '{class_hash:#x}', '{layout}', '{packed_size}', \
+             '{unpacked_size}') ON CONFLICT(id) DO UPDATE SET class_hash='{class_hash:#x}', \
+             layout='{layout}', packed_size='{packed_size}', unpacked_size='{unpacked_size}'",
+            id = model.name(),
+            name = model.name(),
+            layout = hex::encode(&layout_blob)
         ));
 
         let mut model_idx = 0_usize;
@@ -337,10 +339,11 @@ impl Sql {
 
                 self.query_queue.push(format!(
                     "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, member_idx, \
-                     name, type, key) VALUES ('{table_id}', '{}', '{model_idx}', '{member_idx}', \
-                     '{name}', '{}', {})",
+                     name, type, type_enum, key) VALUES ('{table_id}', '{}', '{model_idx}', \
+                     '{member_idx}', '{name}', '{}', '{}', {})",
                     path[0],
                     member.ty.name(),
+                    member.ty.as_ref(),
                     member.key,
                 ));
             }

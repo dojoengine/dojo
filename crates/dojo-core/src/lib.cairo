@@ -1,3 +1,6 @@
+mod base;
+#[cfg(test)]
+mod base_test;
 mod database;
 #[cfg(test)]
 mod database_test;
@@ -11,6 +14,7 @@ mod packing_test;
 mod world;
 #[cfg(test)]
 mod world_test;
+mod upgradable;
 
 #[cfg(test)]
 mod test_utils;
