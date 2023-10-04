@@ -5,7 +5,6 @@ use hash::LegacyHash;
 use poseidon::poseidon_hash_span;
 
 mod index;
-mod values_index;
 #[cfg(test)]
 mod index_test;
 mod introspect;

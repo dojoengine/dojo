@@ -33,6 +33,12 @@ fn create(address_domain: u32, index: felt252, key: felt252, value: felt252) {
     storage::set(address_domain, build_index_key(index, value, index_len), key);
 }
 
+/// Deletes an entry from the main index, as well as from each of the keys.
+/// # Arguments
+/// * address_domain - The address domain to write to.
+/// * index - The index to write to.
+/// * id - The id of the entry.
+/// # Returns
 fn delete(address_domain: u32, index: felt252, id: felt252) {
     if !exists(address_domain, index, id) {
         return ();
@@ -60,8 +66,8 @@ fn delete(address_domain: u32, index: felt252, id: felt252) {
     );
 }
 
-fn exists(address_domain: u32, index: felt252, id: felt252) -> bool {
-    storage::get(address_domain, build_index_item_key(index, id)) != 0
+fn exists(address_domain: u32, table: felt252, id: felt252) -> bool {
+    storage::get(address_domain, build_index_item_key(table, id)) != 0
 }
 
 fn get(address_domain: u32, index: felt252, value: felt252) -> Span<felt252> {
@@ -71,7 +77,7 @@ fn get(address_domain: u32, index: felt252, value: felt252) -> Span<felt252> {
     let mut idx = 0;
     loop {
         if idx == index_len {
-            break res.span();
+          break res.span();
         }
 
         res.append(storage::get(address_domain, build_index_key(index, value, idx)));
@@ -87,6 +93,6 @@ fn build_index_key(index: felt252, value: felt252, idx: felt252) -> Span<felt252
     array!['dojo_indexes', index, value, idx].span()
 }
 
-fn build_index_item_key(index: felt252, id: felt252) -> Span<felt252> {
-    array!['dojo_index_ids', index, id].span()
+fn build_index_item_key(table: felt252, id: felt252) -> Span<felt252> {
+    array!['dojo_index_ids', table, id].span()
 }
