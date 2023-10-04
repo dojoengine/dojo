@@ -28,7 +28,7 @@ impl TryFrom<protos::types::WorldMetadata> for dojo_types::WorldMetadata {
             .collect::<Result<HashMap<_, dojo_types::schema::ModelMetadata>, _>>()?;
 
         Ok(dojo_types::WorldMetadata {
-            components,
+            models: components,
             world_address: FieldElement::from_str(&value.world_address)?,
             world_class_hash: FieldElement::from_str(&value.world_class_hash)?,
             executor_address: FieldElement::from_str(&value.executor_address)?,

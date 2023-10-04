@@ -83,7 +83,6 @@ impl DojoWorld {
         })
     }
 
-    #[allow(unused)]
     pub async fn model_metadata(
         &self,
         component: String,
@@ -91,7 +90,7 @@ impl DojoWorld {
         sqlx::query_as(
             "SELECT name, class_hash, packed_size, unpacked_size FROM models WHERE id = ?",
         )
-        .bind(component.to_lowercase())
+        .bind(component)
         .fetch_one(&self.pool)
         .await
         .map(|(name, class_hash, packed_size, unpacked_size)| protos::types::ModelMetadata {
@@ -209,22 +208,17 @@ impl protos::world::world_server::World for DojoWorld {
             let model = cairo_short_string_to_felt(&entity.model)
                 .map_err(|e| Status::internal(format!("parsing error: {e}")))?;
 
-            let (component_len,): (i64,) =
-                sqlx::query_as("SELECT COUNT(*) FROM model_members WHERE model_id = ?")
-                    .bind(entity.model.to_lowercase())
-                    .fetch_one(&self.pool)
-                    .await
-                    .map_err(|e| match e {
-                        sqlx::Error::RowNotFound => Status::not_found("Model not found"),
-                        e => Status::internal(e.to_string()),
-                    })?;
+            let protos::types::ModelMetadata { packed_size, .. } = self
+                .model_metadata(entity.model)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
 
             entities.push(self::subscription::Entity {
+                keys,
                 model: self::subscription::ModelMetadata {
                     name: model,
-                    len: component_len as usize,
+                    packed_size: packed_size as usize,
                 },
-                keys,
             })
         }
 
