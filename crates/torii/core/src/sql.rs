@@ -336,10 +336,11 @@ impl Sql {
 
                 self.query_queue.push(format!(
                     "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, member_idx, \
-                     name, type, key) VALUES ('{table_id}', '{}', '{model_idx}', '{member_idx}', \
-                     '{name}', '{}', {})",
+                     name, type, type_enum, key) VALUES ('{table_id}', '{}', '{model_idx}', \
+                     '{member_idx}', '{name}', '{}', '{}', {})",
                     path[0],
                     member.ty.name(),
+                    member.ty.as_ref(),
                     member.key,
                 ));
             }
