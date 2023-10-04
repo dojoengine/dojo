@@ -64,25 +64,17 @@ impl DojoWorld {
         .fetch_one(&self.pool)
         .await?;
 
-        let models = sqlx::query_as(
-            "SELECT c.name, c.class_hash, COUNT(cm.id) FROM models c LEFT JOIN model_members cm \
-             ON c.id = cm.model_id GROUP BY c.id",
-        )
-        .fetch_all(&self.pool)
-        .await?
-        .into_iter()
-        .map(|(name, class_hash, size)| protos::types::ModelMetadata { name, class_hash, size })
-        .collect::<Vec<_>>();
-
-        let systems = sqlx::query_as("SELECT name, class_hash FROM systems")
-            .fetch_all(&self.pool)
-            .await?
-            .into_iter()
-            .map(|(name, class_hash)| protos::types::SystemMetadata { name, class_hash })
-            .collect::<Vec<_>>();
+        let models =
+            sqlx::query_as("SELECT name, class_hash, packed_size, unpacked_size FROM models")
+                .fetch_all(&self.pool)
+                .await?
+                .into_iter()
+                .map(|(name, class_hash, packed_size, unpacked_size)| {
+                    protos::types::ModelMetadata { name, class_hash, packed_size, unpacked_size }
+                })
+                .collect::<Vec<_>>();
 
         Ok(protos::types::WorldMetadata {
-            systems,
             models,
             world_address,
             world_class_hash,
@@ -97,27 +89,18 @@ impl DojoWorld {
         component: String,
     ) -> Result<protos::types::ModelMetadata, Error> {
         sqlx::query_as(
-            "SELECT c.name, c.class_hash, COUNT(cm.id) FROM models c LEFT JOIN model_members cm \
-             ON c.id = cm.model_id WHERE c.id = ? GROUP BY c.id",
+            "SELECT name, class_hash, packed_size, unpacked_size FROM models WHERE id = ?",
         )
         .bind(component.to_lowercase())
         .fetch_one(&self.pool)
         .await
-        .map(|(name, class_hash, size)| protos::types::ModelMetadata { name, size, class_hash })
+        .map(|(name, class_hash, packed_size, unpacked_size)| protos::types::ModelMetadata {
+            name,
+            class_hash,
+            packed_size,
+            unpacked_size,
+        })
         .map_err(Error::from)
-    }
-
-    #[allow(unused)]
-    pub async fn system_metadata(
-        &self,
-        system: String,
-    ) -> Result<protos::types::SystemMetadata, Error> {
-        sqlx::query_as("SELECT name, class_hash FROM systems WHERE id = ?")
-            .bind(system.to_lowercase())
-            .fetch_one(&self.pool)
-            .await
-            .map(|(name, class_hash)| protos::types::SystemMetadata { name, class_hash })
-            .map_err(Error::from)
     }
 
     #[allow(unused)]

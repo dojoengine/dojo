@@ -12,24 +12,17 @@ message WorldMetadata {
     string executor_class_hash = 4;
     // A list of metadata for all registered components in the world. 
     repeated ModelMetadata models = 5;
-    // A list of metadata for all registered systems in the world.
-    repeated SystemMetadata systems = 6;
-}
-
-message SystemMetadata {
-    // System name
-    string name = 1;
-    // hex-encoded class hash of the system
-    string class_hash = 2;
 }
 
 message ModelMetadata {
     // Model name
     string name = 1;
-    // Model size
-    uint32 size = 2;
+    // Model size when it is packed for storage
+    uint32 packed_size = 2;
+    // Model size when it is unpacked
+    uint32 unpacked_size = 3;
     // hex-encoded class hash of the component
-    string class_hash = 3;
+    string class_hash = 4;
 }
 
 /// Represents a component for a given entity.
