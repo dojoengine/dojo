@@ -4,20 +4,21 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::task::Poll;
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, Result};
 use dojo_types::schema::EntityModel;
 use dojo_types::WorldMetadata;
 use futures::channel::mpsc::{Receiver, Sender};
 use futures_util::StreamExt;
 use parking_lot::RwLock;
 use starknet::core::utils::cairo_short_string_to_felt;
-use starknet::macros::short_string;
-use starknet_crypto::{poseidon_hash_many, FieldElement};
+use starknet_crypto::FieldElement;
 use torii_grpc::protos;
 use torii_grpc::protos::types::EntityDiff;
 use torii_grpc::protos::world::SubscribeEntitiesResponse;
 
-use super::ComponentStorage;
+use super::error::{Error, ParseError};
+use super::ModelStorage;
+use crate::utils::compute_all_storage_addresses;
 
 #[derive(Debug, Clone)]
 pub enum SubscriptionEvent {
@@ -26,10 +27,10 @@ pub enum SubscriptionEvent {
 }
 
 pub struct SubscribedEntities {
+    metadata: Arc<RwLock<WorldMetadata>>,
     pub(super) entities: RwLock<HashSet<EntityModel>>,
     /// All the relevant storage addresses derived from the subscribed entities
     pub(super) subscribed_storage_addresses: RwLock<HashSet<FieldElement>>,
-    metadata: Arc<RwLock<WorldMetadata>>,
 }
 
 impl SubscribedEntities {
@@ -41,54 +42,60 @@ impl SubscribedEntities {
         }
     }
 
-    pub fn add_entities(&self, entities: Vec<EntityModel>) -> anyhow::Result<()> {
+    pub fn add_entities(&self, entities: Vec<EntityModel>) -> Result<(), Error> {
         for entity in entities {
             if !self.entities.write().insert(entity.clone()) {
                 continue;
             }
 
-            let hashed_key = poseidon_hash_many(&entity.keys);
-            let base_address = poseidon_hash_many(&[
-                short_string!("dojo_storage"),
-                cairo_short_string_to_felt(&entity.model).map_err(|e| anyhow!(e))?,
-                hashed_key,
-            ]);
+            let model_packed_size = self
+                .metadata
+                .read()
+                .models
+                .get(&entity.model)
+                .map(|c| c.packed_size)
+                .ok_or(Error::UnknownModel(entity.model.clone()))?;
 
-            let Some(component_size) =
-                self.metadata.read().components.get(&entity.model).map(|c| c.size)
-            else {
-                bail!("unknown component {}", entity.model)
-            };
+            let storage_addresses = compute_all_storage_addresses(
+                cairo_short_string_to_felt(&entity.model)
+                    .map_err(ParseError::CairoShortStringToFelt)?,
+                &entity.keys,
+                model_packed_size,
+            );
 
-            (0..component_size).for_each(|i| {
-                self.subscribed_storage_addresses.write().insert(base_address + i.into());
+            let storage_lock = &mut self.subscribed_storage_addresses.write();
+            storage_addresses.into_iter().for_each(|address| {
+                storage_lock.insert(address);
             });
         }
 
         Ok(())
     }
 
-    pub fn remove_entities(&self, entities: Vec<EntityModel>) -> anyhow::Result<()> {
+    pub fn remove_entities(&self, entities: Vec<EntityModel>) -> Result<(), Error> {
         for entity in entities {
             if !self.entities.write().remove(&entity) {
                 continue;
             }
 
-            let hashed_key = poseidon_hash_many(&entity.keys);
-            let base_address = poseidon_hash_many(&[
-                short_string!("dojo_storage"),
-                cairo_short_string_to_felt(&entity.model).map_err(|e| anyhow!(e))?,
-                hashed_key,
-            ]);
+            let model_packed_size = self
+                .metadata
+                .read()
+                .models
+                .get(&entity.model)
+                .map(|c| c.packed_size)
+                .ok_or(anyhow!("unknown component {}", entity.model))?;
 
-            let Some(component_size) =
-                self.metadata.read().components.get(&entity.model).map(|c| c.size)
-            else {
-                bail!("unknown component {}", entity.model)
-            };
+            let storage_addresses = compute_all_storage_addresses(
+                cairo_short_string_to_felt(&entity.model)
+                    .map_err(ParseError::CairoShortStringToFelt)?,
+                &entity.keys,
+                model_packed_size,
+            );
 
-            (0..component_size).for_each(|i| {
-                self.subscribed_storage_addresses.write().remove(&(base_address + i.into()));
+            let storage_lock = &mut self.subscribed_storage_addresses.write();
+            storage_addresses.iter().for_each(|address| {
+                storage_lock.remove(address);
             });
         }
 
@@ -110,14 +117,14 @@ pub struct SubscriptionClient {
     pub(super) err_callback: Option<Box<dyn Fn(tonic::Status) + Send + Sync>>,
 
     // for processing the entity diff and updating the storage
-    pub(super) storage: Arc<ComponentStorage>,
+    pub(super) storage: Arc<ModelStorage>,
     pub(super) world_metadata: Arc<RwLock<WorldMetadata>>,
     pub(super) subscribed_entities: Arc<SubscribedEntities>,
 }
 
 impl SubscriptionClient {
     // TODO: handle the subscription events properly
-    fn handle_event(&self, event: SubscriptionEvent) -> Result<()> {
+    fn handle_event(&self, event: SubscriptionEvent) -> Result<(), Error> {
         match event {
             SubscriptionEvent::SubscribeEntity(entity) => {
                 self.subscribed_entities.add_entities(vec![entity])
@@ -215,8 +222,9 @@ mod tests {
     use dojo_types::WorldMetadata;
     use parking_lot::RwLock;
     use starknet::core::utils::cairo_short_string_to_felt;
-    use starknet::macros::{felt, short_string};
-    use starknet_crypto::poseidon_hash_many;
+    use starknet::macros::felt;
+
+    use crate::utils::compute_all_storage_addresses;
 
     fn create_dummy_metadata() -> WorldMetadata {
         let components = HashMap::from([(
@@ -224,32 +232,29 @@ mod tests {
             dojo_types::schema::ModelMetadata {
                 name: "Position".into(),
                 class_hash: felt!("1"),
-                size: 3,
+                packed_size: 1,
+                unpacked_size: 2,
             },
         )]);
 
-        WorldMetadata { components, ..Default::default() }
+        WorldMetadata { models: components, ..Default::default() }
     }
 
     #[test]
     fn add_and_remove_subscribed_entity() {
-        let component_name = String::from("Position");
-        let component_size: u32 = 3;
+        let model_name = String::from("Position");
         let keys = vec![felt!("0x12345")];
+        let packed_size: u32 = 1;
 
-        let mut expected_storage_addresses = {
-            let base = poseidon_hash_many(&[
-                short_string!("dojo_storage"),
-                cairo_short_string_to_felt(&component_name).unwrap(),
-                poseidon_hash_many(&keys),
-            ]);
-
-            (0..component_size).map(|i| base + i.into()).collect::<Vec<_>>()
-        }
+        let mut expected_storage_addresses = compute_all_storage_addresses(
+            cairo_short_string_to_felt(&model_name).unwrap(),
+            &keys,
+            packed_size,
+        )
         .into_iter();
 
         let metadata = self::create_dummy_metadata();
-        let entity = EntityModel { model: component_name, keys };
+        let entity = EntityModel { model: model_name, keys };
 
         let subscribed_entities = super::SubscribedEntities::new(Arc::new(RwLock::new(metadata)));
         subscribed_entities.add_entities(vec![entity.clone()]).expect("able to add entity");

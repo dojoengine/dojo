@@ -18,5 +18,12 @@ pub struct WorldMetadata {
     pub world_class_hash: FieldElement,
     pub executor_address: FieldElement,
     pub executor_class_hash: FieldElement,
-    pub components: HashMap<String, ModelMetadata>,
+    pub models: HashMap<String, ModelMetadata>,
+}
+
+impl WorldMetadata {
+    /// Retrieves the metadata of a model.
+    pub fn model(&self, name: impl AsRef<str>) -> Option<&ModelMetadata> {
+        self.models.get(name.as_ref())
+    }
 }

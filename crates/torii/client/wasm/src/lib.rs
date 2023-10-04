@@ -34,21 +34,10 @@ impl Client {
                 JsValue::from_str(format!("failed to parse entity keys: {err}").as_str())
             })?;
 
-        match self.0.entity(model.to_string(), keys) {
+        match self.0.entity(model, &keys) {
             Some(values) => Ok(Some(serde_wasm_bindgen::to_value(&values)?)),
             None => Ok(None),
         }
-    }
-
-    /// Add a new entity to be synced by the client.
-    #[wasm_bindgen(js_name = addEntityToSync)]
-    pub fn add_entities_to_sync(&self, entities: Vec<JsEntityComponent>) -> Result<(), JsValue> {
-        console_error_panic_hook::set_once();
-        let _entities = entities
-            .into_iter()
-            .map(serde_wasm_bindgen::from_value::<dojo_types::schema::EntityModel>)
-            .collect::<Result<Vec<_>, _>>()?;
-        unimplemented!("add_entity_to_sync");
     }
 
     /// Returns the list of entities that are currently being synced.

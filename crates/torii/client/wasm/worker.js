@@ -16,7 +16,7 @@ async function setup() {
 	try {
 		const client = await spawn_client(
 			"http://0.0.0.0:8080/grpc",
-			"http://localhost:5050",
+			"http://0.0.0.0:5050",
 			"0x6436c2c36dda5a9d49d519077b4513182779c21aa287d120621e235bd6535",
 			[
 				{

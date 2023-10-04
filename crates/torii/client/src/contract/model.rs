@@ -139,7 +139,6 @@ impl<'a, P: Provider + Sync> ModelReader<'a, P> {
         block_id: BlockId,
     ) -> Result<Vec<FieldElement>, ModelError<P::Error>> {
         let packed_size: u8 = self.packed_size(block_id).await?.try_into().unwrap();
-        let layout = self.layout(block_id).await?;
 
         let key = poseidon_hash_many(&keys);
         let key = poseidon_hash_many(&[short_string!("dojo_storage"), self.name, key]);
@@ -156,9 +155,7 @@ impl<'a, P: Provider + Sync> ModelReader<'a, P> {
             packed.push(value);
         }
 
-        let unpacked = unpack(packed, layout.clone())?;
-
-        Ok(unpacked)
+        Ok(packed)
     }
 
     pub async fn entity(
@@ -167,10 +164,12 @@ impl<'a, P: Provider + Sync> ModelReader<'a, P> {
         block_id: BlockId,
     ) -> Result<Ty, ModelError<P::Error>> {
         let mut schema = self.schema(block_id).await?;
-        let unpacked = self.entity_storage(keys.clone(), block_id).await?;
 
-        let mut keys_and_unpacked = keys;
-        keys_and_unpacked.extend(unpacked);
+        let layout = self.layout(block_id).await?;
+        let raw_values = self.entity_storage(keys.clone(), block_id).await?;
+
+        let unpacked = unpack(raw_values, layout.clone())?;
+        let mut keys_and_unpacked = [keys, unpacked].concat();
 
         let _ = schema.deserialize(&mut keys_and_unpacked).map_err(ModelError::CairoTypeError::<P>);
 

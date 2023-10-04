@@ -9,17 +9,18 @@ use dojo_types::WorldMetadata;
 use futures::channel::mpsc;
 use parking_lot::{Mutex, RwLock};
 use starknet::core::types::{BlockId, BlockTag};
+use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet_crypto::FieldElement;
 #[cfg(not(target_arch = "wasm32"))]
 use tokio::task::spawn as spawn_task;
-use url::Url;
+// use url::Url;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen_futures::spawn_local as spawn_task;
 
-use self::error::Error;
-use self::storage::ComponentStorage;
+use self::error::{Error, ParseError};
+use self::storage::ModelStorage;
 use self::subscription::{SubscribedEntities, SubscriptionClientHandle};
 use crate::client::subscription::SubscriptionClient;
 use crate::contract::world::WorldContractReader;
@@ -32,7 +33,7 @@ pub struct Client {
     /// The grpc client.
     inner: Mutex<torii_grpc::client::WorldClient>,
     /// Entity storage
-    storage: Arc<ComponentStorage>,
+    storage: Arc<ModelStorage>,
     /// Entities the client are subscribed to.
     entity_subscription: Arc<SubscribedEntities>,
     /// The subscription client handle
@@ -46,8 +47,12 @@ impl Client {
     }
 
     /// Returns the component value of an entity.
-    pub fn entity(&self, component: String, keys: Vec<FieldElement>) -> Option<Vec<FieldElement>> {
-        self.storage.get_entity((component, keys))
+    pub fn entity(&self, model: &str, keys: &[FieldElement]) -> Option<Vec<FieldElement>> {
+        let model = cairo_short_string_to_felt(model).ok()?;
+        match self.storage.get_entity(model, keys) {
+            Ok(res) => res,
+            Err(_) => None,
+        }
     }
 
     /// Returns the list of entities that the client is subscribed to.
@@ -71,7 +76,7 @@ impl ClientBuilder {
     pub async fn build(
         self,
         torii_endpoint: String,
-        // TODO: remove RPC
+        // TODO: remove RPC reliant
         rpc_url: String,
         world: FieldElement,
     ) -> Result<Client, Error> {
@@ -80,25 +85,31 @@ impl ClientBuilder {
         let metadata = grpc_client.metadata().await?;
 
         let shared_metadata: Arc<_> = RwLock::new(metadata).into();
-        let client_storage: Arc<_> = ComponentStorage::new(shared_metadata.clone()).into();
+        let client_storage: Arc<_> = ModelStorage::new(shared_metadata.clone()).into();
         let subbed_entities: Arc<_> = SubscribedEntities::new(shared_metadata.clone()).into();
 
         if let Some(entities_to_sync) = self.initial_entities_to_sync.clone() {
             subbed_entities.add_entities(entities_to_sync)?;
 
             // initialize the entities to be synced with the latest values
-            let provider = JsonRpcClient::new(HttpTransport::new(Url::parse(&rpc_url)?));
+            let rpc_url = url::Url::parse(&rpc_url).map_err(ParseError::Url)?;
+            let provider = JsonRpcClient::new(HttpTransport::new(rpc_url));
             let world_reader = WorldContractReader::new(world, &provider);
 
             // TODO: change this to querying the gRPC endpoint instead
             let subbed_entities = subbed_entities.entities.read().clone();
-            for EntityModel { model: component, keys } in subbed_entities {
-                let component_reader =
-                    world_reader.model(&component, BlockId::Tag(BlockTag::Pending)).await?;
-                let values = component_reader
+            for EntityModel { model, keys } in subbed_entities {
+                let model_reader =
+                    world_reader.model(&model, BlockId::Tag(BlockTag::Pending)).await?;
+                let values = model_reader
                     .entity_storage(keys.clone(), BlockId::Tag(BlockTag::Pending))
                     .await?;
-                client_storage.set_entity((component, keys), values)?;
+
+                client_storage.set_entity(
+                    cairo_short_string_to_felt(&model).unwrap(),
+                    keys,
+                    values,
+                )?;
             }
         }
 
