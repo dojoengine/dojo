@@ -27,6 +27,7 @@ impl<P: Provider + Sync> EventProcessor<P> for RegisterSystemProcessor {
         _block: &BlockWithTxs,
         _invoke_receipt: &InvokeTransactionReceipt,
         event: &Event,
+        _event_idx: usize,
     ) -> Result<(), Error> {
         let name = parse_cairo_short_string(&event.data[0])?;
 

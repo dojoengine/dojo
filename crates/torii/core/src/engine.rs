@@ -241,7 +241,7 @@ async fn process_event<P: Provider + Sync>(
 
     for processor in processors {
         if get_selector_from_name(&processor.event_key())? == event.keys[0] {
-            processor.process(world, db, provider, block, invoke_receipt, event).await?;
+            processor.process(world, db, provider, block, invoke_receipt, event, event_idx).await?;
         }
     }
 

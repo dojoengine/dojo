@@ -22,6 +22,7 @@ pub trait EventProcessor<P: Provider + Sync> {
         block: &BlockWithTxs,
         invoke_receipt: &InvokeTransactionReceipt,
         event: &Event,
+        event_idx: usize,
     ) -> Result<(), Error>;
 }
 
