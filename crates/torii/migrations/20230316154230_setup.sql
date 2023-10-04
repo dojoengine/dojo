@@ -16,9 +16,11 @@ CREATE TABLE worlds (
 CREATE TABLE models (
     id TEXT NOT NULL PRIMARY KEY,
     name TEXT NOT NULL,
-    class_hash TEXT NOT NULL,
-    transaction_hash TEXT,
     layout BLOB NOT NULL,
+    transaction_hash TEXT,
+    class_hash TEXT NOT NULL,
+    packed_size INTEGER NOT NULL,
+    unpacked_size INTEGER NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

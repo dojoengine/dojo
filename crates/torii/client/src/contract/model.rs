@@ -14,6 +14,12 @@ use starknet_crypto::poseidon_hash_many;
 
 use crate::contract::world::{ContractReaderError, WorldContractReader};
 
+const WORLD_MODEL_SELECTOR_STR: &str = "model";
+const SCHEMA_SELECTOR_STR: &str = "schema";
+const LAYOUT_SELECTOR_STR: &str = "layout";
+const PACKED_SIZE_SELECTOR_STR: &str = "packed_size";
+const UNPACKED_SIZE_SELECTOR_STR: &str = "unpacked_size";
+
 #[cfg(test)]
 #[path = "model_test.rs"]
 mod model_test;
@@ -56,7 +62,7 @@ impl<'a, P: Provider + Sync> ModelReader<'a, P> {
                 FunctionCall {
                     contract_address: world.address,
                     calldata: vec![name],
-                    entry_point_selector: get_selector_from_name("model").unwrap(),
+                    entry_point_selector: get_selector_from_name(WORLD_MODEL_SELECTOR_STR).unwrap(),
                 },
                 block_id,
             )
@@ -71,7 +77,7 @@ impl<'a, P: Provider + Sync> ModelReader<'a, P> {
     }
 
     pub async fn schema(&self, block_id: BlockId) -> Result<Ty, ModelError<P::Error>> {
-        let entrypoint = get_selector_from_name("schema").unwrap();
+        let entrypoint = get_selector_from_name(SCHEMA_SELECTOR_STR).unwrap();
 
         let res = self
             .world
@@ -86,7 +92,7 @@ impl<'a, P: Provider + Sync> ModelReader<'a, P> {
         &self,
         block_id: BlockId,
     ) -> Result<FieldElement, ModelError<P::Error>> {
-        let entrypoint = get_selector_from_name("packed_size").unwrap();
+        let entrypoint = get_selector_from_name(PACKED_SIZE_SELECTOR_STR).unwrap();
 
         let res = self
             .world
@@ -97,8 +103,11 @@ impl<'a, P: Provider + Sync> ModelReader<'a, P> {
         Ok(res[1])
     }
 
-    pub async fn size(&self, block_id: BlockId) -> Result<FieldElement, ModelError<P::Error>> {
-        let entrypoint = get_selector_from_name("size").unwrap();
+    pub async fn unpacked_size(
+        &self,
+        block_id: BlockId,
+    ) -> Result<FieldElement, ModelError<P::Error>> {
+        let entrypoint = get_selector_from_name(UNPACKED_SIZE_SELECTOR_STR).unwrap();
 
         let res = self
             .world
@@ -113,7 +122,7 @@ impl<'a, P: Provider + Sync> ModelReader<'a, P> {
         &self,
         block_id: BlockId,
     ) -> Result<Vec<FieldElement>, ModelError<P::Error>> {
-        let entrypoint = get_selector_from_name("layout").unwrap();
+        let entrypoint = get_selector_from_name(LAYOUT_SELECTOR_STR).unwrap();
 
         let res = self
             .world

@@ -68,23 +68,29 @@ async fn test_load_from_remote() {
     let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
     assert_eq!(models.len(), 2);
 
-    let (id, name): (String, String) =
-        sqlx::query_as("SELECT id, name FROM models WHERE id = 'Position'")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
+    let (id, name, packed_size, unpacked_size): (String, String, u8, u8) = sqlx::query_as(
+        "SELECT id, name, packed_size, unpacked_size FROM models WHERE id = 'Position'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
 
     assert_eq!(id, "Position");
     assert_eq!(name, "Position");
+    assert_eq!(packed_size, 1);
+    assert_eq!(unpacked_size, 2);
 
-    let (id, name): (String, String) =
-        sqlx::query_as("SELECT id, name FROM models WHERE id = 'Moves'")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
+    let (id, name, packed_size, unpacked_size): (String, String, u8, u8) = sqlx::query_as(
+        "SELECT id, name, packed_size, unpacked_size FROM models WHERE id = 'Moves'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
 
     assert_eq!(id, "Moves");
     assert_eq!(name, "Moves");
+    assert_eq!(packed_size, 1);
+    assert_eq!(unpacked_size, 2);
 
     db.store_event(
         &Event {
