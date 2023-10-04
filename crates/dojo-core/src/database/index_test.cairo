@@ -9,22 +9,22 @@ use dojo::database::index;
 #[test]
 #[available_gas(2000000)]
 fn test_index_same_values() {
-    // let no_get = index::get(0, 69, 0);
-    // assert(no_get.len() == 0, 'entity indexed');
+    let no_get = index::get(0, 69, 0);
+    assert(no_get.len() == 0, 'entity indexed');
 
     index::create(0, 69, 420, 0);
-    // let get = index::get(0, 69, 0);
-    // assert(get.len() == 1, 'entity not indexed');
-    // assert(*get.at(0) == 420, 'entity value incorrect');
+    let get = index::get(0, 69, 0);
+    assert(get.len() == 1, 'entity not indexed');
+    assert(*get.at(0) == 420, 'entity value incorrect');
 
-    // index::create(0, 69, 420, 0);
-    // let noop_get = index::get(0, 69, 0);
-    // assert(noop_get.len() == 1, 'index should be noop');
+    index::create(0, 69, 420, 0);
+    let noop_get = index::get(0, 69, 0);
+    assert(noop_get.len() == 1, 'index should be noop');
 
-    // index::create(0, 69, 1337, 0);
-    // let two_get = index::get(0, 69, 0);
-    // assert(two_get.len() == 2, 'index should have two get');
-    // assert(*two_get.at(1) == 1337, 'entity value incorrect');
+    index::create(0, 69, 1337, 0);
+    let two_get = index::get(0, 69, 0);
+    assert(two_get.len() == 2, 'index should have two get');
+    assert(*two_get.at(1) == 1337, 'entity value incorrect');
 }
 
 #[test]
