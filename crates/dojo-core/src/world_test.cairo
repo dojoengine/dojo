@@ -6,6 +6,7 @@ use option::OptionTrait;
 use starknet::class_hash::Felt252TryIntoClassHash;
 use starknet::{contract_address_const, ContractAddress, ClassHash, get_caller_address};
 use starknet::syscalls::deploy_syscall;
+use debug::PrintTrait;
 
 use dojo::benchmarks;
 use dojo::executor::executor;
@@ -251,15 +252,20 @@ fn test_entities() {
     let alice = starknet::contract_address_const::<0x1337>();
     starknet::testing::set_contract_address(alice);
     bar_contract.set_foo(1337, 1337);
+    bar_contract.set_foo(1338, 1338);
+    let bob = starknet::contract_address_const::<0x420>();
+    starknet::testing::set_contract_address(bob);
+    bar_contract.set_foo(420, 420);
 
-    let mut keys = ArrayTrait::new();
-    keys.append(0);
 
-    let query_key = Option::Some('caller');
-    let query_values = array![1337].span();
     let layout = array![252].span();
-    let (keys, values) = world.entities('Foo', Option::None(()), Option::None(()), query_values, 2, layout);
-    assert(keys.len() == 1, 'No keys found for any!');
+    
+
+    let (keys, values) = world.entities('Foo', Option::None(()), Option::None(()), array![].span(), 2, layout);
+    assert(keys.len() == 3, 'Not all found for any!');
+
+    let (keys, values) = world.entities('Foo', Option::None(()), Option::Some(0), array![0x1337].span(), 2, layout);
+    assert(keys.len() == 2, 'No keys found for any!');
 
     // query_keys.append(0x1337);
     // let (keys, values) = world.entities('Foo', 42, query_keys.span(), 2, layout);
