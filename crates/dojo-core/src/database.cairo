@@ -35,11 +35,31 @@ fn set(table: felt252, key: felt252, offset: u8, value: Span<felt252>, layout: S
     storage::set_many(0, keys.span(), offset, value, layout);
 }
 
-fn set_with_index(
-    table: felt252, key: felt252, offset: u8, value: Span<felt252>, layout: Span<u8>
+fn set_with_index( 
+    table: felt252,
+    key: felt252,
+    keys: Span<felt252>,
+    offset: u8,
+    value: Span<felt252>,
+    layout: Span<u8>
 ) {
     set(table, key, offset, value, layout);
-    index::create(0, table, key);
+    index::create(0, table, key, 0); // create a record in index of all records
+
+    let mut idx = 0;
+    loop {
+        if idx == keys.len() {
+            break;
+        }
+        let mut serialized = ArrayTrait::new();
+        table.serialize(ref serialized);
+        idx.serialize(ref serialized);
+        let index = poseidon_hash_span(serialized.span());
+
+        index::create(0, index, key, *keys.at(0)); // create a record for each of the keys
+        
+        idx += 1;
+    };
 }
 
 fn del(table: felt252, key: felt252) {
