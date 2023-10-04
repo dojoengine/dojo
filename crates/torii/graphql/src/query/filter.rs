@@ -1,8 +1,11 @@
 use core::fmt;
 
 use async_graphql::Name;
+use strum::IntoEnumIterator;
+use strum_macros::{AsRefStr, EnumIter};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(AsRefStr, Debug, Clone, PartialEq, EnumIter)]
+#[strum(serialize_all = "UPPERCASE")]
 pub enum Comparator {
     Gt,
     Gte,
@@ -39,16 +42,8 @@ pub struct Filter {
 }
 
 pub fn parse_filter(input: &Name, value: FilterValue) -> Filter {
-    let suffixes = &[
-        ("GT", Comparator::Gt),
-        ("GTE", Comparator::Gte),
-        ("LT", Comparator::Lt),
-        ("LTE", Comparator::Lte),
-        ("NEQ", Comparator::Neq),
-    ];
-
-    for (suffix, comparator) in suffixes {
-        if let Some(field) = input.strip_suffix(suffix) {
+    for comparator in Comparator::iter() {
+        if let Some(field) = input.strip_suffix(comparator.as_ref()) {
             // Filtering only applies to model members which are stored in db with
             // external_{name}
             return Filter {

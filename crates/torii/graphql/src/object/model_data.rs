@@ -36,6 +36,7 @@ pub struct ModelMember {
     pub name: String,
     #[serde(rename = "type")]
     pub ty: String,
+    pub type_enum: String,
     pub key: bool,
     pub created_at: DateTime<Utc>,
 }
