@@ -6,6 +6,8 @@ use std::sync::Arc;
 use std::task::Poll;
 
 use either::Either;
+use http::header::{ACCEPT, ACCESS_CONTROL_ALLOW_ORIGIN, CONTENT_TYPE, ORIGIN};
+use http::Method;
 use hyper::service::{make_service_fn, Service};
 use hyper::Uri;
 use sqlx::{Pool, Sqlite};
@@ -14,6 +16,7 @@ use starknet::providers::JsonRpcClient;
 use starknet_crypto::FieldElement;
 use tokio::sync::mpsc::Receiver as BoundedReceiver;
 use torii_grpc::protos;
+use warp::filters::cors::Builder;
 use warp::Filter;
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
@@ -25,16 +28,21 @@ pub async fn spawn_server(
     world_address: FieldElement,
     block_receiver: BoundedReceiver<u64>,
     provider: Arc<JsonRpcClient<HttpTransport>>,
+    allowed_origins: Vec<String>,
 ) -> anyhow::Result<()> {
     let world_server =
         torii_grpc::server::DojoWorld::new(pool.clone(), block_receiver, world_address, provider);
 
-    let base_route = warp::path::end()
-        .and(warp::get())
-        .map(|| warp::reply::json(&serde_json::json!({ "success": true })));
-    let routes = torii_graphql::route::filter(pool).await.or(base_route);
+    let base_route =
+        warp::path::end().map(|| warp::reply::json(&serde_json::json!({ "success": true })));
+    let routes = torii_graphql::route::filter(pool)
+        .await
+        .or(base_route)
+        .with(configure_cors(&allowed_origins));
 
     let warp = warp::service(routes);
+
+    // TODO: apply allowed_origins to tonic grpc
     let tonic = tonic_web::enable(protos::world::world_server::WorldServer::new(world_server));
 
     hyper::Server::bind(addr)
@@ -79,6 +87,17 @@ pub async fn spawn_server(
         .await?;
 
     Ok(())
+}
+
+fn configure_cors(origins: &Vec<String>) -> Builder {
+    if origins.len() == 1 && origins[0] == "*" {
+        warp::cors().allow_any_origin()
+    } else {
+        let origins_str: Vec<&str> = origins.iter().map(|origin| origin.as_str()).collect();
+        warp::cors().allow_origins(origins_str)
+    }
+    .allow_headers(vec![ACCEPT, ORIGIN, CONTENT_TYPE, ACCESS_CONTROL_ALLOW_ORIGIN])
+    .allow_methods(&[Method::POST, Method::GET, Method::OPTIONS])
 }
 
 enum EitherBody<A, B> {
