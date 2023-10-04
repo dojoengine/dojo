@@ -163,7 +163,7 @@ impl Sql {
 
         let path = vec![entity.name()];
         let id = format!("0x{:064x}:0x{:04x}", block_num, event_idx);
-        self.build_set_entity_queries_recursive(path, &id, &entity_id, &entity, );
+        self.build_set_entity_queries_recursive(path, &id, &entity_id, &entity);
 
         self.execute().await?;
 
@@ -264,7 +264,13 @@ impl Sql {
         }
     }
 
-    fn build_set_entity_queries_recursive(&mut self, path: Vec<String>, id: &str, entity_id: &str, entity: &Ty) {
+    fn build_set_entity_queries_recursive(
+        &mut self,
+        path: Vec<String>,
+        id: &str,
+        entity_id: &str,
+        entity: &Ty,
+    ) {
         match entity {
             Ty::Struct(s) => {
                 let table_id = path.join("$");
@@ -296,7 +302,9 @@ impl Sql {
                         let mut path_clone = path.clone();
                         path_clone.push(member.ty.name());
 
-                        self.build_set_entity_queries_recursive(path_clone, id, entity_id, &member.ty);
+                        self.build_set_entity_queries_recursive(
+                            path_clone, id, entity_id, &member.ty,
+                        );
                     }
                 }
             }
@@ -353,9 +361,7 @@ impl Sql {
         // If this is not the Model's root table, create a reference to the parent.
         if path.len() > 1 {
             let parent_table_id = path[..path.len() - 1].join("$");
-            query.push_str(&format!(
-                "FOREIGN KEY (id) REFERENCES {parent_table_id} (id), "
-            ));
+            query.push_str(&format!("FOREIGN KEY (id) REFERENCES {parent_table_id} (id), "));
         };
 
         query.push_str("FOREIGN KEY (entity_id) REFERENCES entities(id));");

@@ -1,6 +1,6 @@
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
-use starknet::core::types::{BlockId, BlockTag, BlockWithTxs, Event, InvokeTransactionReceipt};
+use starknet::core::types::{BlockId, BlockTag, Event, InvokeTransactionReceipt};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
 use torii_client::contract::world::WorldContractReader;
@@ -23,7 +23,6 @@ impl<P: Provider + Sync + 'static> EventProcessor<P> for RegisterModelProcessor 
         world: &WorldContractReader<'_, P>,
         db: &mut Sql,
         _provider: &P,
-        _block: &BlockWithTxs,
         _invoke_receipt: &InvokeTransactionReceipt,
         event: &Event,
         _event_idx: usize,
