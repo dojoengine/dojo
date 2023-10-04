@@ -481,7 +481,7 @@ mod world {
             assert_can_write(@self, model, get_caller_address());
 
             let key = poseidon::poseidon_hash_span(keys);
-            database::set(model, key, offset, values, layout);
+            database::set_with_index(model, key, keys, offset, values, layout);
 
             EventEmitter::emit(ref self, StoreSetRecord { table: model, keys, offset, values });
         }
@@ -533,6 +533,7 @@ mod world {
         /// # Arguments
         ///
         /// * `model` - The name of the model to be retrieved.
+        /// * `query_key` - The position of key in order of occurrence in struct declaration.
         /// * `index` - The index to be retrieved.
         /// * `values` - The query to be used to find the entity.
         /// * `length` - The length of the model values.
