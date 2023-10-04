@@ -70,7 +70,7 @@ impl Primitive {
             Primitive::U128(_)
             | Primitive::ContractAddress(_)
             | Primitive::ClassHash(_)
-            | Primitive::Felt252(_) => Ok(format!("'{:0>64x}'", value[0])),
+            | Primitive::Felt252(_) => Ok(format!("'0x{:064x}'", value[0])),
 
             Primitive::U256(_) => {
                 if value.len() < 2 {
