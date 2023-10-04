@@ -88,7 +88,8 @@ impl Sql {
         self.query_queue.push(format!(
             "INSERT INTO models (id, name, class_hash, layout, packed_size, unpacked_size) VALUES \
              ('{id}', '{name}', '{class_hash:#x}', '{layout}', '{packed_size}', \
-             '{unpacked_size}') ON CONFLICT(id) DO UPDATE SET class_hash='{class_hash:#x}'",
+             '{unpacked_size}') ON CONFLICT(id) DO UPDATE SET class_hash='{class_hash:#x}', \
+             layout='{layout}', packed_size='{packed_size}', unpacked_size='{unpacked_size}'",
             id = model.name(),
             name = model.name(),
             layout = hex::encode(&layout_blob)
