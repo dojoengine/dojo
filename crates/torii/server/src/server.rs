@@ -6,6 +6,8 @@ use std::sync::Arc;
 use std::task::Poll;
 
 use either::Either;
+use http::header::{ACCEPT, ACCESS_CONTROL_ALLOW_ORIGIN, CONTENT_TYPE, ORIGIN};
+use http::Method;
 use hyper::service::{make_service_fn, Service};
 use hyper::Uri;
 use sqlx::{Pool, Sqlite};
@@ -19,6 +21,7 @@ use torii_core::simple_broker::SimpleBroker;
 use torii_core::types::Model;
 use torii_grpc::protos;
 use torii_grpc::server::DojoWorld;
+use warp::filters::cors::Builder;
 use warp::Filter;
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
@@ -27,6 +30,7 @@ pub struct Server {
     addr: SocketAddr,
     pool: Pool<Sqlite>,
     world: DojoWorld,
+    allowed_origins: Vec<String>,
 }
 
 impl Server {
@@ -36,11 +40,12 @@ impl Server {
         block_rx: Receiver<u64>,
         world_address: FieldElement,
         provider: Arc<JsonRpcClient<HttpTransport>>,
+        allowed_origins: Vec<String>,
     ) -> Self {
         let world =
             torii_grpc::server::DojoWorld::new(pool.clone(), block_rx, world_address, provider);
 
-        Self { addr, pool, world }
+        Self { addr, pool, world, allowed_origins }
     }
 
     pub async fn start(&self) -> anyhow::Result<()> {
@@ -54,6 +59,7 @@ impl Server {
                 self.pool.clone(),
                 self.world.clone(),
                 notify_restart.clone(),
+                self.allowed_origins.clone(),
             ));
 
             match server_handle.await {
@@ -82,13 +88,19 @@ async fn spawn(
     pool: Pool<Sqlite>,
     dojo_world: DojoWorld,
     notify_restart: Arc<Notify>,
+    allowed_origins: Vec<String>,
 ) -> anyhow::Result<()> {
     let base_route = warp::path::end()
         .and(warp::get())
         .map(|| warp::reply::json(&serde_json::json!({ "success": true })));
-    let routes = torii_graphql::route::filter(&pool).await.or(base_route);
+    let routes = torii_graphql::route::filter(&pool)
+        .await
+        .or(base_route)
+        .with(configure_cors(&allowed_origins));
 
     let warp = warp::service(routes);
+
+    // TODO: apply allowed_origins to tonic grpc
     let tonic =
         tonic_web::enable(protos::world::world_server::WorldServer::new(dojo_world.clone()));
 
@@ -137,6 +149,17 @@ async fn spawn(
         .await?;
 
     Ok(())
+}
+
+fn configure_cors(origins: &Vec<String>) -> Builder {
+    if origins.len() == 1 && origins[0] == "*" {
+        warp::cors().allow_any_origin()
+    } else {
+        let origins_str: Vec<&str> = origins.iter().map(|origin| origin.as_str()).collect();
+        warp::cors().allow_origins(origins_str)
+    }
+    .allow_headers(vec![ACCEPT, ORIGIN, CONTENT_TYPE, ACCESS_CONTROL_ALLOW_ORIGIN])
+    .allow_methods(&[Method::POST, Method::GET, Method::OPTIONS])
 }
 
 enum EitherBody<A, B> {

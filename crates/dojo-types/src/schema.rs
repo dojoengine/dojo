@@ -29,7 +29,8 @@ pub struct EntityModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelMetadata {
     pub name: String,
-    pub size: u32,
+    pub packed_size: u32,
+    pub unpacked_size: u32,
     pub class_hash: FieldElement,
 }
 

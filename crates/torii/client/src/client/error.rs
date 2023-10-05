@@ -1,4 +1,4 @@
-use starknet::core::types::FromStrError;
+use starknet::core::utils::CairoShortStringToFeltError;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 
@@ -6,15 +6,29 @@ use crate::contract::model::ModelError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    /// Error originated from the gRPC client.
+    #[error("Unknown model: {0}")]
+    UnknownModel(String),
+    #[error(
+        "Invalid amount of values for model {model}. Expected {expected_value_len} values, got \
+         {actual_value_len}"
+    )]
+    InvalidModelValuesLen { model: String, expected_value_len: usize, actual_value_len: usize },
+    #[error("Parsing error: {0}")]
+    Parse(#[from] ParseError),
     #[error(transparent)]
     GrpcClient(#[from] torii_grpc::client::Error),
     #[error(transparent)]
-    FromStr(#[from] FromStrError),
-    #[error(transparent)]
     Other(#[from] anyhow::Error),
     #[error(transparent)]
-    UrlParse(#[from] url::ParseError),
-    #[error(transparent)]
     Model(#[from] ModelError<<JsonRpcClient<HttpTransport> as Provider>::Error>),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ParseError {
+    #[error(transparent)]
+    Url(#[from] url::ParseError),
+    #[error(transparent)]
+    FeltFromStr(#[from] starknet::core::types::FromStrError),
+    #[error(transparent)]
+    CairoShortStringToFelt(#[from] CairoShortStringToFeltError),
 }

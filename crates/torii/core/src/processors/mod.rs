@@ -19,9 +19,9 @@ pub trait EventProcessor<P: Provider + Sync> {
         world: &WorldContractReader<'_, P>,
         db: &mut Sql,
         provider: &P,
-        block: &BlockWithTxs,
         invoke_receipt: &InvokeTransactionReceipt,
         event: &Event,
+        event_idx: usize,
     ) -> Result<(), Error>;
 }
 

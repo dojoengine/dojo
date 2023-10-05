@@ -42,6 +42,11 @@ struct Args {
     /// Port number for api endpoints
     #[arg(long, default_value = "8080")]
     port: u16,
+    /// Specify allowed origins for api endpoints (comma-separated list of allowed origins, or "*"
+    /// for all)
+    #[arg(long, default_value = "*")]
+    #[arg(value_delimiter = ',')]
+    allowed_origins: Vec<String>,
 }
 
 #[tokio::main]
@@ -98,7 +103,14 @@ async fn main() -> anyhow::Result<()> {
 
     let addr: SocketAddr = format!("{}:{}", args.host, args.port).parse()?;
 
-    let server = Server::new(addr, pool, block_receiver, args.world_address, Arc::clone(&provider));
+    let server = Server::new(
+        addr,
+        pool,
+        block_receiver,
+        args.world_address,
+        Arc::clone(&provider),
+        args.allowed_origins,
+    );
 
     tokio::select! {
         res = engine.start(cts) => {

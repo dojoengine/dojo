@@ -15,9 +15,9 @@ async function setup() {
 
 	try {
 		const client = await spawn_client(
-			"http://localhost:8080/grpc",
-			"http://localhost:5050",
-			"0x2430f23de0cd9a957e1beb7aa8ef2db2af872cc7bb3058b9be833111d5518f5",
+			"http://0.0.0.0:8080/grpc",
+			"http://0.0.0.0:5050",
+			"0x6436c2c36dda5a9d49d519077b4513182779c21aa287d120621e235bd6535",
 			[
 				{
 					model: "Position",

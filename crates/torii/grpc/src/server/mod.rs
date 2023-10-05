@@ -64,25 +64,17 @@ impl DojoWorld {
         .fetch_one(&self.pool)
         .await?;
 
-        let models = sqlx::query_as(
-            "SELECT c.name, c.class_hash, COUNT(cm.id) FROM models c LEFT JOIN model_members cm \
-             ON c.id = cm.model_id GROUP BY c.id",
-        )
-        .fetch_all(&self.pool)
-        .await?
-        .into_iter()
-        .map(|(name, class_hash, size)| protos::types::ModelMetadata { name, class_hash, size })
-        .collect::<Vec<_>>();
-
-        let systems = sqlx::query_as("SELECT name, class_hash FROM systems")
-            .fetch_all(&self.pool)
-            .await?
-            .into_iter()
-            .map(|(name, class_hash)| protos::types::SystemMetadata { name, class_hash })
-            .collect::<Vec<_>>();
+        let models =
+            sqlx::query_as("SELECT name, class_hash, packed_size, unpacked_size FROM models")
+                .fetch_all(&self.pool)
+                .await?
+                .into_iter()
+                .map(|(name, class_hash, packed_size, unpacked_size)| {
+                    protos::types::ModelMetadata { name, class_hash, packed_size, unpacked_size }
+                })
+                .collect::<Vec<_>>();
 
         Ok(protos::types::WorldMetadata {
-            systems,
             models,
             world_address,
             world_class_hash,
@@ -91,33 +83,23 @@ impl DojoWorld {
         })
     }
 
-    #[allow(unused)]
     pub async fn model_metadata(
         &self,
         component: String,
     ) -> Result<protos::types::ModelMetadata, Error> {
         sqlx::query_as(
-            "SELECT c.name, c.class_hash, COUNT(cm.id) FROM models c LEFT JOIN model_members cm \
-             ON c.id = cm.model_id WHERE c.id = ? GROUP BY c.id",
+            "SELECT name, class_hash, packed_size, unpacked_size FROM models WHERE id = ?",
         )
-        .bind(component.to_lowercase())
+        .bind(component)
         .fetch_one(&self.pool)
         .await
-        .map(|(name, class_hash, size)| protos::types::ModelMetadata { name, size, class_hash })
+        .map(|(name, class_hash, packed_size, unpacked_size)| protos::types::ModelMetadata {
+            name,
+            class_hash,
+            packed_size,
+            unpacked_size,
+        })
         .map_err(Error::from)
-    }
-
-    #[allow(unused)]
-    pub async fn system_metadata(
-        &self,
-        system: String,
-    ) -> Result<protos::types::SystemMetadata, Error> {
-        sqlx::query_as("SELECT name, class_hash FROM systems WHERE id = ?")
-            .bind(system.to_lowercase())
-            .fetch_one(&self.pool)
-            .await
-            .map(|(name, class_hash)| protos::types::SystemMetadata { name, class_hash })
-            .map_err(Error::from)
     }
 
     #[allow(unused)]
@@ -226,22 +208,17 @@ impl protos::world::world_server::World for DojoWorld {
             let model = cairo_short_string_to_felt(&entity.model)
                 .map_err(|e| Status::internal(format!("parsing error: {e}")))?;
 
-            let (component_len,): (i64,) =
-                sqlx::query_as("SELECT COUNT(*) FROM model_members WHERE model_id = ?")
-                    .bind(entity.model.to_lowercase())
-                    .fetch_one(&self.pool)
-                    .await
-                    .map_err(|e| match e {
-                        sqlx::Error::RowNotFound => Status::not_found("Model not found"),
-                        e => Status::internal(e.to_string()),
-                    })?;
+            let protos::types::ModelMetadata { packed_size, .. } = self
+                .model_metadata(entity.model)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
 
             entities.push(self::subscription::Entity {
+                keys,
                 model: self::subscription::ModelMetadata {
                     name: model,
-                    len: component_len as usize,
+                    packed_size: packed_size as usize,
                 },
-                keys,
             })
         }
 

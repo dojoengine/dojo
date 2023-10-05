@@ -153,134 +153,150 @@ pub async fn entity_fixtures(db: &mut Sql) {
     .await
     .unwrap();
 
-    db.set_entity(Ty::Struct(Struct {
-        name: "Moves".to_string(),
-        children: vec![
-            Member {
-                name: "player".to_string(),
-                key: true,
-                ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::ONE))),
-            },
-            Member {
-                name: "remaining".to_string(),
-                key: false,
-                ty: Ty::Primitive(Primitive::U8(Some(10))),
-            },
-            Member {
-                name: "last_direction".to_string(),
-                key: false,
-                ty: Ty::Enum(Enum {
-                    name: "Direction".to_string(),
-                    option: Some(1),
-                    options: vec![
-                        ("None".to_string(), Ty::Tuple(vec![])),
-                        ("Left".to_string(), Ty::Tuple(vec![])),
-                        ("Right".to_string(), Ty::Tuple(vec![])),
-                        ("Up".to_string(), Ty::Tuple(vec![])),
-                        ("Down".to_string(), Ty::Tuple(vec![])),
-                    ],
-                }),
-            },
-        ],
-    }))
+    db.set_entity(
+        Ty::Struct(Struct {
+            name: "Moves".to_string(),
+            children: vec![
+                Member {
+                    name: "player".to_string(),
+                    key: true,
+                    ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::ONE))),
+                },
+                Member {
+                    name: "remaining".to_string(),
+                    key: false,
+                    ty: Ty::Primitive(Primitive::U8(Some(10))),
+                },
+                Member {
+                    name: "last_direction".to_string(),
+                    key: false,
+                    ty: Ty::Enum(Enum {
+                        name: "Direction".to_string(),
+                        option: Some(1),
+                        options: vec![
+                            ("None".to_string(), Ty::Tuple(vec![])),
+                            ("Left".to_string(), Ty::Tuple(vec![])),
+                            ("Right".to_string(), Ty::Tuple(vec![])),
+                            ("Up".to_string(), Ty::Tuple(vec![])),
+                            ("Down".to_string(), Ty::Tuple(vec![])),
+                        ],
+                    }),
+                },
+            ],
+        }),
+        0,
+        0,
+    )
     .await
     .unwrap();
 
-    db.set_entity(Ty::Struct(Struct {
-        name: "Position".to_string(),
-        children: vec![
-            Member {
-                name: "player".to_string(),
-                key: true,
-                ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::TWO))),
-            },
-            Member {
-                name: "vec".to_string(),
-                key: false,
-                ty: Ty::Struct(Struct {
-                    name: "Vec2".to_string(),
-                    children: vec![
-                        Member {
-                            name: "x".to_string(),
-                            key: false,
-                            ty: Ty::Primitive(Primitive::U32(Some(42))),
-                        },
-                        Member {
-                            name: "y".to_string(),
-                            key: false,
-                            ty: Ty::Primitive(Primitive::U32(Some(69))),
-                        },
-                    ],
-                }),
-            },
-        ],
-    }))
+    db.set_entity(
+        Ty::Struct(Struct {
+            name: "Position".to_string(),
+            children: vec![
+                Member {
+                    name: "player".to_string(),
+                    key: true,
+                    ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::TWO))),
+                },
+                Member {
+                    name: "vec".to_string(),
+                    key: false,
+                    ty: Ty::Struct(Struct {
+                        name: "Vec2".to_string(),
+                        children: vec![
+                            Member {
+                                name: "x".to_string(),
+                                key: false,
+                                ty: Ty::Primitive(Primitive::U32(Some(42))),
+                            },
+                            Member {
+                                name: "y".to_string(),
+                                key: false,
+                                ty: Ty::Primitive(Primitive::U32(Some(69))),
+                            },
+                        ],
+                    }),
+                },
+            ],
+        }),
+        0,
+        1,
+    )
     .await
     .unwrap();
 
     // Set an entity with both moves and position models
-    db.set_entity(Ty::Struct(Struct {
-        name: "Moves".to_string(),
-        children: vec![
-            Member {
-                name: "player".to_string(),
-                key: true,
-                ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::THREE))),
-            },
-            Member {
-                name: "remaining".to_string(),
-                key: false,
-                ty: Ty::Primitive(Primitive::U8(Some(10))),
-            },
-            Member {
-                name: "last_direction".to_string(),
-                key: false,
-                ty: Ty::Enum(Enum {
-                    name: "Direction".to_string(),
-                    option: Some(2),
-                    options: vec![
-                        ("None".to_string(), Ty::Tuple(vec![])),
-                        ("Left".to_string(), Ty::Tuple(vec![])),
-                        ("Right".to_string(), Ty::Tuple(vec![])),
-                        ("Up".to_string(), Ty::Tuple(vec![])),
-                        ("Down".to_string(), Ty::Tuple(vec![])),
-                    ],
-                }),
-            },
-        ],
-    }))
+    db.set_entity(
+        Ty::Struct(Struct {
+            name: "Moves".to_string(),
+            children: vec![
+                Member {
+                    name: "player".to_string(),
+                    key: true,
+                    ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::THREE))),
+                },
+                Member {
+                    name: "remaining".to_string(),
+                    key: false,
+                    ty: Ty::Primitive(Primitive::U8(Some(10))),
+                },
+                Member {
+                    name: "last_direction".to_string(),
+                    key: false,
+                    ty: Ty::Enum(Enum {
+                        name: "Direction".to_string(),
+                        option: Some(2),
+                        options: vec![
+                            ("None".to_string(), Ty::Tuple(vec![])),
+                            ("Left".to_string(), Ty::Tuple(vec![])),
+                            ("Right".to_string(), Ty::Tuple(vec![])),
+                            ("Up".to_string(), Ty::Tuple(vec![])),
+                            ("Down".to_string(), Ty::Tuple(vec![])),
+                        ],
+                    }),
+                },
+            ],
+        }),
+        0,
+        2,
+    )
     .await
     .unwrap();
 
-    db.set_entity(Ty::Struct(Struct {
-        name: "Position".to_string(),
-        children: vec![
-            Member {
-                name: "player".to_string(),
-                key: true,
-                ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::THREE))),
-            },
-            Member {
-                name: "vec".to_string(),
-                key: false,
-                ty: Ty::Struct(Struct {
-                    name: "Vec2".to_string(),
-                    children: vec![
-                        Member {
-                            name: "x".to_string(),
-                            key: false,
-                            ty: Ty::Primitive(Primitive::U32(Some(42))),
-                        },
-                        Member {
-                            name: "y".to_string(),
-                            key: false,
-                            ty: Ty::Primitive(Primitive::U32(Some(69))),
-                        },
-                    ],
-                }),
-            },
-        ],
-    }))
+    db.set_entity(
+        Ty::Struct(Struct {
+            name: "Position".to_string(),
+            children: vec![
+                Member {
+                    name: "player".to_string(),
+                    key: true,
+                    ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::THREE))),
+                },
+                Member {
+                    name: "vec".to_string(),
+                    key: false,
+                    ty: Ty::Struct(Struct {
+                        name: "Vec2".to_string(),
+                        children: vec![
+                            Member {
+                                name: "x".to_string(),
+                                key: false,
+                                ty: Ty::Primitive(Primitive::U32(Some(42))),
+                            },
+                            Member {
+                                name: "y".to_string(),
+                                key: false,
+                                ty: Ty::Primitive(Primitive::U32(Some(69))),
+                            },
+                        ],
+                    }),
+                },
+            ],
+        }),
+        0,
+        3,
+    )
     .await
     .unwrap();
 

@@ -1,5 +1,5 @@
 use starknet::ContractAddress;
-use dojo::model::StorageIntrospection;
+use dojo::database::schema::{Struct, Ty, SchemaIntrospection, Member, serialize_member};
 
 // Cubit fixed point math library
 use cubit::f128::types::fixed::Fixed;
@@ -8,19 +8,42 @@ const SCALING_FACTOR: u128 = 10000;
 
 impl SchemaIntrospectionFixed of SchemaIntrospection<Fixed> {
     #[inline(always)]
-    fn unpacked_size() -> usize {
-        1
-    }
-
-    #[inline(always)]
-    fn packed_size() -> usize {
-        129
+    fn size() -> usize {
+       SchemaIntrospection::<u128>::size()
+            + SchemaIntrospection::<bool>::size()
     }
 
     #[inline(always)]
     fn layout(ref layout: Array<u8>) {
-        layout.append(128);
-        layout.append(1);
+        SchemaIntrospection::<u128>::layout(ref layout);
+        SchemaIntrospection::<bool>::layout(ref layout);
+    }
+
+    #[inline(always)]
+    fn ty() -> Ty {
+        Ty::Struct(
+            Struct {
+                    name: 'Fixed',
+                    attrs: array![].span(),
+                    children: array![
+                        serialize_member(
+                            @Member {
+                                name: 'mag',
+                                ty: SchemaIntrospection::<u128>::ty(),
+                                attrs: array![].span()
+                            }
+                        ),
+                        serialize_member(
+                            @Member {
+                                name: 'sign',
+                                ty: SchemaIntrospection::<bool>::ty(),
+                                attrs: array![].span()
+                            }
+                        )
+                    ]
+                        .span()
+                }
+        )
     }
 }
 
