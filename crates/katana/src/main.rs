@@ -1,4 +1,3 @@
-use std::process::exit;
 use std::sync::Arc;
 use std::{fs, io};
 
@@ -9,7 +8,6 @@ use katana_core::sequencer::KatanaSequencer;
 use katana_rpc::{spawn, KatanaApi, NodeHandle, StarknetApi};
 use tokio::signal::ctrl_c;
 use tracing::{error, info};
-use tracing_subscriber::fmt;
 
 mod args;
 
@@ -17,23 +15,15 @@ use args::Commands::Completions;
 use args::KatanaArgs;
 
 #[tokio::main]
-async fn main() {
-    tracing::subscriber::set_global_default(
-        fmt::Subscriber::builder()
-            .with_env_filter(
-                "info,executor=trace,server=debug,katana_core=trace,blockifier=off,\
-                 jsonrpsee_server=off,hyper=off,messaging=debug",
-            )
-            .finish(),
-    )
-    .expect("Failed to set the global tracing subscriber");
-
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = KatanaArgs::parse();
+    config.init_logging()?;
+
     if let Some(command) = config.command {
         match command {
             Completions { shell } => {
                 print_completion(shell);
-                return;
+                return Ok(());
             }
         }
     }
@@ -46,37 +36,33 @@ async fn main() {
     let starknet_api = StarknetApi::new(sequencer.clone());
     let katana_api = KatanaApi::new(sequencer.clone());
 
-    match spawn(katana_api, starknet_api, server_config).await {
-        Ok(NodeHandle { addr, handle, .. }) => {
-            if !config.silent {
-                let accounts = sequencer
-                    .backend
-                    .accounts
-                    .iter()
-                    .map(|a| format!("{a}"))
-                    .collect::<Vec<_>>()
-                    .join("\n");
+    let NodeHandle { addr, handle, .. } = spawn(katana_api, starknet_api, server_config).await?;
 
-                print_intro(
-                    accounts,
-                    config.starknet.seed.clone(),
-                    format!(
-                        "🚀 JSON-RPC server started: {}",
-                        Style::new().red().apply_to(format!("http://{addr}"))
-                    ),
-                );
-            }
+    if !config.silent {
+        let accounts = sequencer
+            .backend
+            .accounts
+            .iter()
+            .map(|a| format!("{a}"))
+            .collect::<Vec<_>>()
+            .join("\n");
 
-            // Wait until Ctrl + C is pressed, then shutdown
-            ctrl_c().await.unwrap();
-            shutdown_handler(sequencer.clone(), config).await;
-            handle.stop().unwrap();
-        }
-        Err(err) => {
-            error! {"{err}"};
-            exit(1);
-        }
-    };
+        print_intro(
+            accounts,
+            config.starknet.seed.clone(),
+            format!(
+                "🚀 JSON-RPC server started: {}",
+                Style::new().red().apply_to(format!("http://{addr}"))
+            ),
+        );
+    }
+
+    // Wait until Ctrl + C is pressed, then shutdown
+    ctrl_c().await?;
+    shutdown_handler(sequencer, config).await;
+    handle.stop()?;
+
+    Ok(())
 }
 
 fn print_completion(shell: Shell) {

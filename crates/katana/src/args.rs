@@ -9,6 +9,8 @@ use katana_core::constants::{
 use katana_core::db::serde::state::SerializableState;
 use katana_core::sequencer::SequencerConfig;
 use katana_rpc::config::ServerConfig;
+use tracing::Subscriber;
+use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
 
 #[derive(Parser, Debug)]
@@ -40,6 +42,10 @@ pub struct KatanaArgs {
     #[arg(value_name = "URL")]
     #[arg(help = "The Starknet RPC provider to fork the network from.")]
     pub rpc_url: Option<Url>,
+
+    #[arg(long)]
+    #[arg(help = "Output logs in JSON format.")]
+    pub json_log: bool,
 
     #[arg(long)]
     #[arg(requires = "rpc_url")]
@@ -136,6 +142,24 @@ pub struct EnvironmentOptions {
 }
 
 impl KatanaArgs {
+    pub fn init_logging(&self) -> Result<(), Box<dyn std::error::Error>> {
+        const DEFAULT_LOG_FILTER: &str = "info,executor=trace,server=debug,katana_core=trace,\
+                                          blockifier=off,jsonrpsee_server=off,hyper=off,\
+                                          messaging=debug";
+
+        let builder = fmt::Subscriber::builder().with_env_filter(
+            EnvFilter::try_from_default_env().or(EnvFilter::try_new(DEFAULT_LOG_FILTER))?,
+        );
+
+        let subscriber: Box<dyn Subscriber + Send + Sync> = if self.json_log {
+            Box::new(builder.json().finish())
+        } else {
+            Box::new(builder.finish())
+        };
+
+        Ok(tracing::subscriber::set_global_default(subscriber)?)
+    }
+
     pub fn sequencer_config(&self) -> SequencerConfig {
         SequencerConfig {
             block_time: self.block_time,
