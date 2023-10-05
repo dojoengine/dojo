@@ -11,17 +11,16 @@ pub async fn filter(
     pool: &Pool<Sqlite>,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     let schema = build_schema(pool).await.unwrap();
-    let graphql_filter = warp::path("graphql")
-        .and(warp::post())
-        .and(async_graphql_warp::graphql(schema))
-        .and_then(|(schema, request): (Schema, async_graphql::Request)| async move {
+    let graphql_filter = warp::path("graphql").and(async_graphql_warp::graphql(schema)).and_then(
+        |(schema, request): (Schema, async_graphql::Request)| async move {
             // Execute query
             let response = schema.execute(request).await;
             // Return result
             Ok::<_, Infallible>(warp::reply::json(&response))
-        });
+        },
+    );
 
-    let graphiql_filter = warp::path("graphql").and(warp::get()).map(|| {
+    let graphiql_filter = warp::path("graphql").map(|| {
         warp::reply::html(playground_source(
             GraphQLPlaygroundConfig::new("/graphql").subscription_endpoint("/graphql/ws"),
         ))

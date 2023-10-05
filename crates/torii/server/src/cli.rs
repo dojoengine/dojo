@@ -41,6 +41,11 @@ struct Args {
     /// Port number for api endpoints
     #[arg(long, default_value = "8080")]
     port: u16,
+    /// Specify allowed origins for api endpoints (comma-separated list of allowed origins, or "*"
+    /// for all)
+    #[arg(long, default_value = "*")]
+    #[arg(value_delimiter = ',')]
+    allowed_origins: Vec<String>,
 }
 
 #[tokio::main]
@@ -104,7 +109,7 @@ async fn main() -> anyhow::Result<()> {
             }
         }
 
-        res = server::spawn_server(&addr, &pool, args.world_address, block_receiver,  Arc::clone(&provider)) => {
+        res = server::spawn_server(&addr, &pool, args.world_address, block_receiver,  Arc::clone(&provider), args.allowed_origins) => {
             if let Err(e) = res {
                 error!("Server failed with error: {e}");
             }
