@@ -139,7 +139,7 @@ where
 
         process_block(self.db, self.provider, &self.processors.block, &block).await?;
 
-        for transaction in block.clone().transactions {
+        for (tx_idx, transaction) in block.clone().transactions.iter().enumerate() {
             let invoke_transaction = match &transaction {
                 Transaction::Invoke(invoke_transaction) => invoke_transaction,
                 _ => continue,
@@ -170,6 +170,10 @@ where
                         continue;
                     }
 
+                    let event_id = format!(
+                        "0x{:064x}:0x{:04x}:0x{:04x}",
+                        block.block_number, tx_idx, event_idx
+                    );
                     process_event(
                         self.world,
                         self.db,
@@ -177,8 +181,8 @@ where
                         &self.processors.event,
                         &block,
                         &invoke_receipt,
+                        &event_id,
                         event,
-                        event_idx,
                     )
                     .await?;
                 }
@@ -232,16 +236,16 @@ async fn process_event<P: Provider + Sync>(
     db: &mut Sql,
     provider: &P,
     processors: &[Box<dyn EventProcessor<P>>],
-    _block: &BlockWithTxs,
+    block: &BlockWithTxs,
     invoke_receipt: &InvokeTransactionReceipt,
+    event_id: &str,
     event: &Event,
-    event_idx: usize,
 ) -> Result<(), Box<dyn Error>> {
-    db.store_event(event, event_idx, invoke_receipt.transaction_hash);
+    db.store_event(event_id, event, invoke_receipt.transaction_hash);
 
     for processor in processors {
         if get_selector_from_name(&processor.event_key())? == event.keys[0] {
-            processor.process(world, db, provider, invoke_receipt, event, event_idx).await?;
+            processor.process(world, db, provider, block, invoke_receipt, event_id, event).await?;
         }
     }
 

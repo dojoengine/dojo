@@ -32,6 +32,7 @@ impl Default for EntityObject {
                 (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
                 (Name::new("keys"), TypeData::Simple(TypeRef::named_list(TypeRef::STRING))),
                 (Name::new("modelNames"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+                (Name::new("eventId"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
                 (
                     Name::new("createdAt"),
                     TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
@@ -52,6 +53,7 @@ impl EntityObject {
             (Name::new("id"), Value::from(entity.id)),
             (Name::new("keys"), Value::from(keys)),
             (Name::new("modelNames"), Value::from(entity.model_names)),
+            (Name::new("eventId"), Value::from(entity.event_id)),
             (
                 Name::new("createdAt"),
                 Value::from(entity.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),

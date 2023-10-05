@@ -33,6 +33,7 @@ impl fmt::LowerHex for SQLFieldElement {
 pub struct Entity {
     pub id: String,
     pub keys: String,
+    pub event_id: String,
     pub model_names: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,

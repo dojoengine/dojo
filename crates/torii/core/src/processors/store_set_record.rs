@@ -1,6 +1,6 @@
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
-use starknet::core::types::{BlockId, BlockTag, Event, InvokeTransactionReceipt};
+use starknet::core::types::{BlockId, BlockTag, BlockWithTxs, Event, InvokeTransactionReceipt};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
@@ -27,9 +27,10 @@ impl<P: Provider + Sync + 'static> EventProcessor<P> for StoreSetRecordProcessor
         world: &WorldContractReader<'_, P>,
         db: &mut Sql,
         _provider: &P,
-        transaction_receipt: &InvokeTransactionReceipt,
+        _block: &BlockWithTxs,
+        _transaction_receipt: &InvokeTransactionReceipt,
+        event_id: &str,
         event: &Event,
-        event_idx: usize,
     ) -> Result<(), Error> {
         let name = parse_cairo_short_string(&event.data[MODEL_INDEX])?;
         info!("store set record: {}", name);
@@ -37,7 +38,7 @@ impl<P: Provider + Sync + 'static> EventProcessor<P> for StoreSetRecordProcessor
         let model = world.model(&name, BlockId::Tag(BlockTag::Pending)).await?;
         let keys = values_at(&event.data, NUM_KEYS_INDEX)?;
         let entity = model.entity(keys, BlockId::Tag(BlockTag::Pending)).await?;
-        db.set_entity(entity, transaction_receipt.block_number, event_idx).await?;
+        db.set_entity(entity, event_id).await?;
         Ok(())
     }
 }
