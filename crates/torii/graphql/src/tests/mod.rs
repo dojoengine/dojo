@@ -184,8 +184,7 @@ pub async fn entity_fixtures(db: &mut Sql) {
                 },
             ],
         }),
-        0,
-        0,
+        &format!("0x{:064x}:0x{:04x}:0x{:04x}", 0, 0, 0),
     )
     .await
     .unwrap();
@@ -220,8 +219,7 @@ pub async fn entity_fixtures(db: &mut Sql) {
                 },
             ],
         }),
-        0,
-        1,
+        &format!("0x{:064x}:0x{:04x}:0x{:04x}", 0, 0, 1),
     )
     .await
     .unwrap();
@@ -258,8 +256,7 @@ pub async fn entity_fixtures(db: &mut Sql) {
                 },
             ],
         }),
-        0,
-        2,
+        &format!("0x{:064x}:0x{:04x}:0x{:04x}", 0, 0, 2),
     )
     .await
     .unwrap();
@@ -294,8 +291,7 @@ pub async fn entity_fixtures(db: &mut Sql) {
                 },
             ],
         }),
-        0,
-        3,
+        &format!("0x{:064x}:0x{:04x}:0x{:04x}", 0, 0, 3),
     )
     .await
     .unwrap();

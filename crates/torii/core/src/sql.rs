@@ -129,7 +129,7 @@ impl Sql {
         Ok(())
     }
 
-    pub async fn set_entity(&mut self, entity: Ty, block_num: u64, event_idx: usize) -> Result<()> {
+    pub async fn set_entity(&mut self, entity: Ty, event_id: &str) -> Result<()> {
         let keys = if let Ty::Struct(s) = &entity {
             let mut keys = Vec::new();
             for m in s.keys() {
@@ -155,15 +155,14 @@ impl Sql {
 
         let keys_str = felts_sql_string(&keys);
         self.query_queue.push(format!(
-            "INSERT INTO entities (id, keys, model_names) VALUES ('{}', '{}', '{}') ON \
-             CONFLICT(id) DO UPDATE SET model_names=excluded.model_names, \
-             updated_at=CURRENT_TIMESTAMP",
-            entity_id, keys_str, model_names
+            "INSERT INTO entities (id, keys, model_names, event_id) VALUES ('{}', '{}', '{}', \
+             '{}') ON CONFLICT(id) DO UPDATE SET model_names=excluded.model_names, \
+             updated_at=CURRENT_TIMESTAMP, event_id=excluded.event_id",
+            entity_id, keys_str, model_names, event_id
         ));
 
         let path = vec![entity.name()];
-        let id = format!("0x{:064x}:0x{:04x}", block_num, event_idx);
-        self.build_set_entity_queries_recursive(path, &id, &entity_id, &entity);
+        self.build_set_entity_queries_recursive(path, event_id, &entity_id, &entity);
 
         self.execute().await?;
 
@@ -177,6 +176,7 @@ impl Sql {
             id: entity_id.clone(),
             keys: keys_str,
             model_names,
+            event_id: event_id.to_string(),
             created_at,
             updated_at: Utc::now(),
         });
@@ -219,15 +219,14 @@ impl Sql {
         self.query_queue.push(query);
     }
 
-    pub fn store_event(&mut self, event: &Event, event_idx: usize, transaction_hash: FieldElement) {
+    pub fn store_event(&mut self, event_id: &str, event: &Event, transaction_hash: FieldElement) {
         let keys_str = felts_sql_string(&event.keys);
         let data_str = felts_sql_string(&event.data);
 
-        let id = format!("0x{:064x}:0x{:04x}", transaction_hash, event_idx);
         let query = format!(
             "INSERT OR IGNORE INTO events (id, keys, data, transaction_hash) VALUES ('{}', '{}', \
              '{}', '{:#x}')",
-            id, keys_str, data_str, transaction_hash
+            event_id, keys_str, data_str, transaction_hash
         );
 
         self.query_queue.push(query);

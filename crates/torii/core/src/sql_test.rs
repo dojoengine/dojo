@@ -92,22 +92,25 @@ async fn test_load_from_remote() {
     assert_eq!(packed_size, 1);
     assert_eq!(unpacked_size, 2);
 
+    let event_id = format!("0x{:064x}:0x{:04x}:0x{:04x}", 0, 42, 69);
     db.store_event(
+        &event_id,
         &Event {
             from_address: FieldElement::ONE,
             keys: Vec::from([FieldElement::TWO]),
             data: Vec::from([FieldElement::TWO, FieldElement::THREE]),
         },
-        0,
         FieldElement::THREE,
     );
 
     db.execute().await.unwrap();
 
-    let keys = format!("{:#x}/", FieldElement::TWO);
-    let query = format!("SELECT data, transaction_hash FROM events WHERE keys = '{}'", keys);
-    let (data, tx_hash): (String, String) = sqlx::query_as(&query).fetch_one(&pool).await.unwrap();
+    let query =
+        format!("SELECT keys, data, transaction_hash FROM events WHERE id = '{}'", event_id);
+    let (keys, data, tx_hash): (String, String, String) =
+        sqlx::query_as(&query).fetch_one(&pool).await.unwrap();
 
+    assert_eq!(keys, format!("{:#x}/", FieldElement::TWO));
     assert_eq!(data, format!("{:#x}/{:#x}/", FieldElement::TWO, FieldElement::THREE));
     assert_eq!(tx_hash, format!("{:#x}", FieldElement::THREE))
 }

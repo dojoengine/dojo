@@ -14,14 +14,17 @@ pub mod store_set_record;
 #[async_trait]
 pub trait EventProcessor<P: Provider + Sync> {
     fn event_key(&self) -> String;
+
+    #[allow(clippy::too_many_arguments)]
     async fn process(
         &self,
         world: &WorldContractReader<'_, P>,
         db: &mut Sql,
         provider: &P,
+        block: &BlockWithTxs,
         invoke_receipt: &InvokeTransactionReceipt,
+        event_id: &str,
         event: &Event,
-        event_idx: usize,
     ) -> Result<(), Error>;
 }
 
