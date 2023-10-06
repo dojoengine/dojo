@@ -592,7 +592,7 @@ mod world {
                 Option::None => Option::None,
             };
 
-            database::scan(model, where_clause, values_length, values_layout)
+            database::scan(model, index, where_clause, values_length, values_layout)
         }
 
         /// Returns only the entity IDs that contain the model state.

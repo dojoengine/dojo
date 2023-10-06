@@ -79,6 +79,17 @@ fn get(address_domain: u32, table: felt252, value: felt252) -> Span<felt252> {
     }
 }
 
+fn get_at(address_domain: u32, table: felt252, value: felt252, index: felt252) -> Option<felt252> {
+    let len: u256 = storage::get(address_domain, build_index_len_key(table, value)).into();
+
+    if index.into() >= len {
+        return Option::None(());
+    }
+
+    let res = storage::get(address_domain, build_index_key(table, value, index));
+    Option::Some(res)
+}
+
 fn build_index_len_key(table: felt252, value: felt252) -> Span<felt252> {
     array!['dojo_index_lens', table, value].span()
 }

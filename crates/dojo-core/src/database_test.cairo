@@ -121,7 +121,7 @@ fn test_database_scan() {
     set_with_index('table', 'even', array!['x'].span(), 0, even, layout);
     set_with_index('table', 'odd', array!['x'].span(), 0, odd, layout);
 
-    let (keys, values) = scan('table', Option::None(()), 4, layout);
+    let (keys, values) = scan('table', Option::None(()), Option::None(()), 4, layout);
     assert(keys.len() == 2, 'Wrong number of keys!');
     assert(values.len() == 2, 'Wrong number of values!');
     assert(*keys.at(0) == 'even', 'Wrong key at index 0!');
