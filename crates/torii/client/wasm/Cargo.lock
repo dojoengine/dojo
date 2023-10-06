@@ -3056,6 +3056,7 @@ dependencies = [
  "dojo-types",
  "futures",
  "futures-util",
+ "http",
  "js-sys",
  "parking_lot 0.12.1",
  "prost 0.11.9",

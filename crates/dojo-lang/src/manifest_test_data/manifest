@@ -8,7 +8,7 @@ test_manifest_file
   "world": {
     "name": "world",
     "address": null,
-    "class_hash": "0x45539636cfa153f8ea0975102b04d35f455240c98c1dcf1eeb0013bef358d35",
+    "class_hash": "0x7cb53315435063879e8aa2487ead65eb1196ac71aa7f2888e9762ac430400d",
     "abi": [
       {
         "type": "impl",
@@ -77,6 +77,29 @@ test_manifest_file
         "type": "interface",
         "name": "dojo::world::IWorld",
         "items": [
+          {
+            "type": "function",
+            "name": "metadata_uri",
+            "inputs": [],
+            "outputs": [
+              {
+                "type": "core::array::Span::<core::felt252>"
+              }
+            ],
+            "state_mutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "set_metadata_uri",
+            "inputs": [
+              {
+                "name": "uri",
+                "type": "core::array::Span::<core::felt252>"
+              }
+            ],
+            "outputs": [],
+            "state_mutability": "external"
+          },
           {
             "type": "function",
             "name": "model",
@@ -411,6 +434,10 @@ test_manifest_file
           {
             "name": "contract_base",
             "type": "core::starknet::class_hash::ClassHash"
+          },
+          {
+            "name": "metadata_uri",
+            "type": "core::array::Span::<core::felt252>"
           }
         ]
       },
@@ -427,6 +454,11 @@ test_manifest_file
           {
             "name": "caller",
             "type": "core::starknet::contract_address::ContractAddress",
+            "kind": "data"
+          },
+          {
+            "name": "metadata_uri",
+            "type": "core::array::Span::<core::felt252>",
             "kind": "data"
           }
         ]

@@ -131,7 +131,11 @@ where
         world.contract_address = get_contract_address(
             salt,
             diff.world.local,
-            &[executor.as_ref().unwrap().contract_address, base.as_ref().unwrap().diff.local],
+            &[
+                executor.as_ref().unwrap().contract_address,
+                base.as_ref().unwrap().diff.local,
+                FieldElement::ZERO,
+            ],
             FieldElement::ZERO,
         );
     }
