@@ -56,7 +56,7 @@ fn set_with_index(
         idx.serialize(ref serialized);
         let index = poseidon_hash_span(serialized.span());
 
-        index::create(0, index, key, *keys.at(0)); // create a record for each of the keys
+        index::create(0, index, key, *keys.at(idx)); // create a record for each of the keys
         
         idx += 1;
     };
@@ -70,7 +70,7 @@ fn del(table: felt252, key: felt252) {
 // Returns a tuple of spans, first contains the entity IDs,
 // second the deserialized entities themselves.
 fn scan(
-    model: felt252, where: Option<WhereCondition>, values_length: usize, values_layout: Span<u8>
+    model: felt252, index: Option<felt252>, where: Option<WhereCondition>, values_length: usize, values_layout: Span<u8>
 ) -> (Span<felt252>, Span<Span<felt252>>) {
     let all_ids = scan_ids(model, where);
     (all_ids, get_by_ids(model, all_ids, values_length, values_layout))
@@ -83,10 +83,17 @@ fn scan_ids(model: felt252, where: Option<WhereCondition>) -> Span<felt252> {
             let mut serialized = ArrayTrait::new();
             model.serialize(ref serialized);
             clause.key.serialize(ref serialized);
-            let index = poseidon_hash_span(serialized.span());
+            let table = poseidon_hash_span(serialized.span());
 
-            let all_ids = index::get(0, index, clause.value);
-            (all_ids, get_by_ids(model, all_ids, values_length, values_layout))
+            let ids = match index {
+                Option::Some(index) => match index::get_at(0, table, clause.value, index) {
+                    Option::Some(id) => array![id],
+                    Option::None => array![],
+                }.span(),
+                Option::None => index::get(0, table, clause.value)
+            };
+
+            (ids, get_by_ids(model, ids, values_length, values_layout))
         },
         // If no `where` clause is defined, we return all values.
         Option::None(_) => {

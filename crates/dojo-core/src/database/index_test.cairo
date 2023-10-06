@@ -47,6 +47,17 @@ fn test_index_different_values() {
 }
 
 #[test]
+#[available_gas(2000000)]
+fn test_index_pagination() {
+    index::create(0, 69, 1337, 0);
+    index::create(0, 69, 1338, 0);
+    let second = index::get_at(0, 69, 0, 1);
+    let third = index::get_at(0, 69, 0, 2);
+    assert(second == Option::Some(1338), 'second get value incorrect');
+    assert(third == Option::None, 'third get value incorrect');
+}
+
+#[test]
 #[available_gas(100000000)]
 fn test_entity_delete_basic() {
     index::create(0, 69, 420, 1);
