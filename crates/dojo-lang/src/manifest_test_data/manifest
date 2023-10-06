@@ -277,7 +277,11 @@ test_manifest_file
                 "type": "core::option::Option::<core::felt252>"
               },
               {
-                "name": "values",
+                "name": "query_key",
+                "type": "core::option::Option::<core::felt252>"
+              },
+              {
+                "name": "query_values",
                 "type": "core::array::Span::<core::felt252>"
               },
               {
