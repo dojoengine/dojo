@@ -71,9 +71,10 @@ pub fn parse_where_argument(
     ctx: &ResolverContext<'_>,
     where_mapping: &TypeMapping,
 ) -> Result<Vec<Filter>, Error> {
-    let where_input = match ctx.args.try_get("where") {
-        Ok(input) => input,
-        Err(_) => return Ok(vec![]),
+    let where_input = if let Some(object) = ctx.args.get("where") {
+        object
+    } else {
+        return Ok(vec![]);
     };
 
     let input_object = where_input.object()?;
@@ -81,16 +82,16 @@ pub fn parse_where_argument(
         .iter()
         .filter_map(|(type_name, type_data)| {
             input_object.get(type_name).map(|input_filter| {
-                let filter_value =
-                    if let Ok(primitive) = Primitive::from_str(&type_data.type_ref().to_string()) {
-                        match primitive.to_sql_type().as_str() {
-                            "TEXT" => FilterValue::String(input_filter.string()?.to_string()),
-                            "INTEGER" => FilterValue::Int(input_filter.i64()?),
-                            _ => return Err(Error::from("Unsupported `where` argument type")),
+                let filter_value = match Primitive::from_str(&type_data.type_ref().to_string()) {
+                    Ok(primitive) => {
+                        if primitive.to_sql_type().as_str() == "INTEGER" {
+                            FilterValue::Int(input_filter.i64()?)
+                        } else {
+                            FilterValue::String(input_filter.string()?.to_string())
                         }
-                    } else {
-                        FilterValue::String(input_filter.string()?.to_string())
-                    };
+                    }
+                    _ => FilterValue::String(input_filter.string()?.to_string()),
+                };
 
                 Ok(parse_filter(type_name, filter_value))
             })
