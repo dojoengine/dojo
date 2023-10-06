@@ -115,7 +115,8 @@ impl ObjectTrait for ModelDataObject {
 
     fn objects(&self) -> Vec<Object> {
         let mut path_array = vec![self.type_name().to_string()];
-        let mut objects = data_objects_recursion(self.type_name(), self.type_mapping(), &mut path_array);
+        let mut objects =
+            data_objects_recursion(self.type_name(), self.type_mapping(), &mut path_array);
 
         // root object requires entity_field association
         let mut root = objects.pop().unwrap();

@@ -206,7 +206,7 @@ pub async fn model_data_recursive_query(
     for (field_name, type_data) in type_mapping {
         if let TypeData::Nested((nested_type_ref, nested_mapping)) = type_data {
             path_array.push(nested_type_ref.to_string());
-            
+
             let nested_values =
                 model_data_recursive_query(conn, path_array, entity_id, nested_mapping).await?;
 
