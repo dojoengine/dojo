@@ -116,7 +116,8 @@ impl ObjectTrait for ModelDataObject {
 
     fn objects(&self) -> Vec<Object> {
         let mut path_array = vec![self.type_name().to_string()];
-        let mut objects = data_objects(self.type_name(), self.type_mapping(), &mut path_array);
+        let mut objects =
+            data_objects_recursion(self.type_name(), self.type_mapping(), &mut path_array);
 
         // root object requires entity_field association
         let mut root = objects.pop().unwrap();
@@ -127,7 +128,7 @@ impl ObjectTrait for ModelDataObject {
     }
 }
 
-fn data_objects(
+fn data_objects_recursion(
     type_name: &str,
     type_mapping: &TypeMapping,
     path_array: &mut Vec<String>,
@@ -137,7 +138,7 @@ fn data_objects(
     for (_, type_data) in type_mapping {
         if let TypeData::Nested((nested_type, nested_mapping)) = type_data {
             path_array.push(nested_type.to_string());
-            objects.extend(data_objects(
+            objects.extend(data_objects_recursion(
                 &nested_type.to_string(),
                 nested_mapping,
                 &mut path_array.clone(),
@@ -160,33 +161,31 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: &[String]
             let type_data = type_data.clone();
             let table_name = table_name.clone();
 
-            // Field resolver for nested types
-            if let TypeData::Nested((_, nested_mapping)) = type_data {
-                return FieldFuture::new(async move {
-                    match ctx.parent_value.try_to_value()? {
-                        Value::Object(indexmap) => {
-                            let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                            let entity_id = extract::<String>(indexmap, "entity_id")?;
-
-                            // TODO: remove subqueries and use JOIN in parent query
-                            let result = model_data_by_id_query(
-                                &mut conn,
-                                &table_name,
-                                &entity_id,
-                                &nested_mapping,
-                            )
-                            .await?;
-
-                            Ok(Some(Value::Object(result)))
-                        }
-                        _ => Err("incorrect value, requires Value::Object".into()),
-                    }
-                });
-            }
-
-            // Field resolver for simple types and model union
-            FieldFuture::new(async move {
+            return FieldFuture::new(async move {
                 if let Some(value) = ctx.parent_value.as_value() {
+                    // Nested types resolution
+                    if let TypeData::Nested((_, nested_mapping)) = type_data {
+                        return match ctx.parent_value.try_to_value()? {
+                            Value::Object(indexmap) => {
+                                let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                                let entity_id = extract::<String>(indexmap, "entity_id")?;
+
+                                // TODO: remove subqueries and use JOIN in parent query
+                                let result = model_data_by_id_query(
+                                    &mut conn,
+                                    &table_name,
+                                    &entity_id,
+                                    &nested_mapping,
+                                )
+                                .await?;
+
+                                Ok(Some(Value::Object(result)))
+                            }
+                            _ => Err("incorrect value, requires Value::Object".into()),
+                        };
+                    }
+
+                    // Simple types resolution
                     return match value {
                         Value::Object(value_mapping) => {
                             Ok(Some(value_mapping.get(&field_name).unwrap().clone()))
@@ -202,7 +201,7 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: &[String]
                 }
 
                 Err("Field resolver only accepts Value or IndexMap".into())
-            })
+            });
         });
 
         object = object.field(field);
@@ -338,7 +337,7 @@ pub fn model_connection(
     ]))
 }
 
-fn value_mapping_from_row(row: &SqliteRow, types: &TypeMapping) -> sqlx::Result<ValueMapping> {
+pub fn value_mapping_from_row(row: &SqliteRow, types: &TypeMapping) -> sqlx::Result<ValueMapping> {
     let mut value_mapping = types
         .iter()
         .filter(|(_, type_data)| type_data.is_simple())

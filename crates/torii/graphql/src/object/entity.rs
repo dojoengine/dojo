@@ -2,6 +2,7 @@ use async_graphql::dynamic::{
     Field, FieldFuture, FieldValue, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
 };
 use async_graphql::{Name, Value};
+use async_recursion::async_recursion;
 use indexmap::IndexMap;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Result, Sqlite};
@@ -13,12 +14,11 @@ use super::connection::{
     connection_arguments, connection_output, decode_cursor, parse_connection_arguments,
     ConnectionArguments,
 };
-use super::model_data::model_data_by_id_query;
+use super::model_data::value_mapping_from_row;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::DEFAULT_LIMIT;
 use crate::query::{query_by_id, type_mapping_query};
 use crate::types::{GraphqlType, TypeData};
-use crate::utils::csv_to_vec;
 use crate::utils::extract_value::extract;
 
 pub struct EntityObject {
@@ -161,15 +161,24 @@ fn model_union_field() -> Field {
             match ctx.parent_value.try_to_value()? {
                 Value::Object(indexmap) => {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let model_names = csv_to_vec(&extract::<String>(indexmap, "modelNames")?);
-                    let entity_id = extract::<String>(indexmap, "id")?;
+                    let model_names: Vec<String> = extract::<String>(indexmap, "modelNames")?
+                        .split(',')
+                        .map(|s| s.to_string())
+                        .collect();
 
+                    let entity_id = extract::<String>(indexmap, "id")?;
                     let mut results: Vec<FieldValue<'_>> = Vec::new();
                     for name in model_names {
                         let type_mapping = type_mapping_query(&mut conn, &name).await?;
-                        let state =
-                            model_data_by_id_query(&mut conn, &name, &entity_id, &type_mapping)
-                                .await?;
+                        let mut path_array = vec![name.clone()];
+                        let state = model_data_recursive_query(
+                            &mut conn,
+                            &mut path_array,
+                            &entity_id,
+                            &type_mapping,
+                        )
+                        .await?;
+
                         results.push(FieldValue::with_type(FieldValue::owned_any(state), name));
                     }
 
@@ -179,6 +188,33 @@ fn model_union_field() -> Field {
             }
         })
     })
+}
+
+// TODO: flatten query
+#[async_recursion]
+pub async fn model_data_recursive_query(
+    conn: &mut PoolConnection<Sqlite>,
+    path_array: &mut Vec<String>,
+    entity_id: &str,
+    type_mapping: &TypeMapping,
+) -> sqlx::Result<ValueMapping> {
+    let table_name = path_array.join("$");
+    let query = format!("SELECT * FROM {} WHERE entity_id = '{}'", &table_name, entity_id);
+    let row = sqlx::query(&query).fetch_one(conn.as_mut()).await?;
+    let mut value_mapping = value_mapping_from_row(&row, type_mapping)?;
+
+    for (field_name, type_data) in type_mapping {
+        if let TypeData::Nested((nested_type_ref, nested_mapping)) = type_data {
+            path_array.push(nested_type_ref.to_string());
+
+            let nested_values =
+                model_data_recursive_query(conn, path_array, entity_id, nested_mapping).await?;
+
+            value_mapping.insert(Name::new(field_name), Value::Object(nested_values));
+        }
+    }
+
+    Ok(value_mapping)
 }
 
 async fn entities_by_sk(
