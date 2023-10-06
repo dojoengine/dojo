@@ -98,6 +98,8 @@ impl Sql {
         let mut model_idx = 0_usize;
         self.build_register_queries_recursive(&model, vec![model.name()], &mut model_idx);
 
+        self.execute().await?;
+
         // Since previous query has not been executed, we have to make sure created_at exists
         let created_at: DateTime<Utc> =
             match sqlx::query("SELECT created_at FROM models WHERE id = ?")

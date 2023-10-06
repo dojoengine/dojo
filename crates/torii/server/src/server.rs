@@ -14,28 +14,86 @@ use sqlx::{Pool, Sqlite};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet_crypto::FieldElement;
-use tokio::sync::mpsc::Receiver as BoundedReceiver;
+use tokio::sync::mpsc::Receiver;
+use tokio::sync::Notify;
+use tokio_stream::StreamExt;
+use torii_core::simple_broker::SimpleBroker;
+use torii_core::types::Model;
 use torii_grpc::protos;
+use torii_grpc::server::DojoWorld;
 use warp::filters::cors::Builder;
 use warp::Filter;
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 
+pub struct Server {
+    addr: SocketAddr,
+    pool: Pool<Sqlite>,
+    world: DojoWorld,
+    allowed_origins: Vec<String>,
+}
+
+impl Server {
+    pub fn new(
+        addr: SocketAddr,
+        pool: Pool<Sqlite>,
+        block_rx: Receiver<u64>,
+        world_address: FieldElement,
+        provider: Arc<JsonRpcClient<HttpTransport>>,
+        allowed_origins: Vec<String>,
+    ) -> Self {
+        let world =
+            torii_grpc::server::DojoWorld::new(pool.clone(), block_rx, world_address, provider);
+
+        Self { addr, pool, world, allowed_origins }
+    }
+
+    pub async fn start(&self) -> anyhow::Result<()> {
+        let notify_restart = Arc::new(Notify::new());
+
+        tokio::spawn(model_registered_listener(notify_restart.clone()));
+
+        loop {
+            let server_handle = tokio::spawn(spawn(
+                self.addr,
+                self.pool.clone(),
+                self.world.clone(),
+                notify_restart.clone(),
+                self.allowed_origins.clone(),
+            ));
+
+            match server_handle.await {
+                Ok(Ok(_)) => {
+                    // server graceful shutdown, restart
+                    continue;
+                }
+                Ok(Err(e)) => {
+                    return Err(e);
+                }
+                Err(e) => return Err(e.into()),
+            };
+        }
+    }
+}
+
+async fn model_registered_listener(notify_restart: Arc<Notify>) {
+    while (SimpleBroker::<Model>::subscribe().next().await).is_some() {
+        notify_restart.notify_one();
+    }
+}
+
 // TODO: check if there's a nicer way to implement this
-pub async fn spawn_server(
-    addr: &SocketAddr,
-    pool: &Pool<Sqlite>,
-    world_address: FieldElement,
-    block_receiver: BoundedReceiver<u64>,
-    provider: Arc<JsonRpcClient<HttpTransport>>,
+async fn spawn(
+    addr: SocketAddr,
+    pool: Pool<Sqlite>,
+    dojo_world: DojoWorld,
+    notify_restart: Arc<Notify>,
     allowed_origins: Vec<String>,
 ) -> anyhow::Result<()> {
-    let world_server =
-        torii_grpc::server::DojoWorld::new(pool.clone(), block_receiver, world_address, provider);
-
-    let base_route =
-        warp::path::end().map(|| warp::reply::json(&serde_json::json!({ "success": true })));
-    let routes = torii_graphql::route::filter(pool)
+    let base_route = warp::path::end()
+        .and(warp::get())
+        .map(|| warp::reply::json(&serde_json::json!({ "success": true })));
+    let routes = torii_graphql::route::filter(&pool)
         .await
         .or(base_route)
         .with(configure_cors(&allowed_origins));
@@ -43,9 +101,10 @@ pub async fn spawn_server(
     let warp = warp::service(routes);
 
     // TODO: apply allowed_origins to tonic grpc
-    let tonic = tonic_web::enable(protos::world::world_server::WorldServer::new(world_server));
+    let tonic =
+        tonic_web::enable(protos::world::world_server::WorldServer::new(dojo_world.clone()));
 
-    hyper::Server::bind(addr)
+    hyper::Server::bind(&addr)
         .serve(make_service_fn(move |_| {
             let mut tonic = tonic.clone();
             let mut warp = warp.clone();
@@ -84,6 +143,9 @@ pub async fn spawn_server(
                 },
             )))
         }))
+        .with_graceful_shutdown(async {
+            notify_restart.notified().await;
+        })
         .await?;
 
     Ok(())
