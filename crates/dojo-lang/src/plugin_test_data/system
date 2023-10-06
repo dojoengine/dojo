@@ -39,7 +39,9 @@ mod spawn {
     use dojo::world::IWorldDispatcherTrait;
 
     #[storage]
-    struct Storage {}
+    struct Storage {
+        world_dispatcher: ContractAddress,
+    }
 
     #[external(v0)]
     fn name(self: @ContractState) -> felt252 {
@@ -63,7 +65,9 @@ mod proxy {
     use dojo::world::IWorldDispatcherTrait;
 
     #[storage]
-    struct Storage {}
+    struct Storage {
+        world_dispatcher: ContractAddress,
+    }
 
     #[external(v0)]
     fn name(self: @ContractState) -> felt252 {
@@ -85,7 +89,9 @@ mod ctxnamed {
     use dojo::world::IWorldDispatcherTrait;
 
     #[storage]
-    struct Storage {}
+    struct Storage {
+        world_dispatcher: ContractAddress,
+    }
 
     #[external(v0)]
     fn name(self: @ContractState) -> felt252 {

@@ -5,8 +5,8 @@ use starknet::{ContractAddress, ClassHash};
 // trait: specify functions to implement
 #[starknet::interface]
 trait IPlayerActions<TContractState> {
-    fn spawn(self: @TContractState, world: IWorldDispatcher);
-    fn move(self: @TContractState, world: IWorldDispatcher, direction: Direction);
+    fn spawn(self: @TContractState);
+    fn move(self: @TContractState, direction: Direction);
 }
 
 #[system]
@@ -32,7 +32,8 @@ mod player_actions {
     #[external(v0)]
     impl PlayerActionsImpl of IPlayerActions<ContractState> {
         // ContractState is defined by system decorator expansion
-        fn spawn(self: @ContractState, world: IWorldDispatcher) {
+        fn spawn(self: @ContractState) {
+            let world = IWorldDispatcher { contract_address: self.world_dispatcher.read() };
             let player = get_caller_address();
             let position = get!(world, player, (Position));
             set!(
@@ -46,7 +47,8 @@ mod player_actions {
             );
         }
 
-        fn move(self: @ContractState, world: IWorldDispatcher, direction: Direction) {
+        fn move(self: @ContractState, direction: Direction) {
+            let world = IWorldDispatcher { contract_address: self.world_dispatcher.read() };
             let player = get_caller_address();
             let (mut position, mut moves) = get!(world, player, (Position, Moves));
             moves.remaining -= 1;
@@ -61,8 +63,7 @@ mod player_actions {
 
 #[cfg(test)]
 mod tests {
-    use core::traits::Into;
-    use array::{ArrayTrait};
+    use starknet::class_hash::Felt252TryIntoClassHash;
 
     use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
@@ -83,12 +84,13 @@ mod tests {
         let world = spawn_test_world(models);
 
         // deploy systems contract
-        let contract_address = deploy_contract(player_actions::TEST_CLASS_HASH, array![].span());
+        let contract_address = world
+            .deploy_contract('salt', player_actions::TEST_CLASS_HASH.try_into().unwrap());
         let player_actions_system = IPlayerActionsDispatcher { contract_address };
 
         // System calls
-        player_actions_system.spawn(world);
-        player_actions_system.move(world, Direction::Right(()));
+        player_actions_system.spawn();
+        player_actions_system.move(Direction::Right(()));
 
         let moves = get!(world, caller, Moves);
         let right_dir_felt: felt252 = Direction::Right(()).into();
