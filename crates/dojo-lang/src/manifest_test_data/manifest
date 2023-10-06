@@ -645,22 +645,12 @@ test_manifest_file
     {
       "name": "player_actions",
       "address": null,
-      "class_hash": "0x4b8aedc50c01814ad20b7e976f9d4fe76d13f56fa57aabd2a6399c7fbc1a187",
+      "class_hash": "0x502be43722c9e678d3c1f93e48f867c36e3852856571cde8925ec74cd0d6547",
       "abi": [
         {
           "type": "impl",
           "name": "PlayerActionsImpl",
           "interface_name": "dojo_examples::systems::with_decorator::IPlayerActions"
-        },
-        {
-          "type": "struct",
-          "name": "dojo::world::IWorldDispatcher",
-          "members": [
-            {
-              "name": "contract_address",
-              "type": "core::starknet::contract_address::ContractAddress"
-            }
-          ]
         },
         {
           "type": "enum",
@@ -695,12 +685,7 @@ test_manifest_file
             {
               "type": "function",
               "name": "spawn",
-              "inputs": [
-                {
-                  "name": "world",
-                  "type": "dojo::world::IWorldDispatcher"
-                }
-              ],
+              "inputs": [],
               "outputs": [],
               "state_mutability": "view"
             },
@@ -708,10 +693,6 @@ test_manifest_file
               "type": "function",
               "name": "move",
               "inputs": [
-                {
-                  "name": "world",
-                  "type": "dojo::world::IWorldDispatcher"
-                },
                 {
                   "name": "direction",
                   "type": "dojo_examples::models::Direction"
@@ -767,22 +748,12 @@ test_manifest_file
     {
       "name": "player_actions_external",
       "address": null,
-      "class_hash": "0x49a96abd2a2e1148a290a7e0aa101e17653d0990456c6a400614534e3696e49",
+      "class_hash": "0x49d4d81317dd7ca15f598715a8c79198512060d94885b701d42afde9fa30a27",
       "abi": [
         {
           "type": "impl",
           "name": "PlayerActionsImpl",
           "interface_name": "dojo_examples::systems::raw_contract::IPlayerActions"
-        },
-        {
-          "type": "struct",
-          "name": "dojo::world::IWorldDispatcher",
-          "members": [
-            {
-              "name": "contract_address",
-              "type": "core::starknet::contract_address::ContractAddress"
-            }
-          ]
         },
         {
           "type": "enum",
@@ -817,12 +788,7 @@ test_manifest_file
             {
               "type": "function",
               "name": "spawn",
-              "inputs": [
-                {
-                  "name": "world",
-                  "type": "dojo::world::IWorldDispatcher"
-                }
-              ],
+              "inputs": [],
               "outputs": [],
               "state_mutability": "view"
             },
@@ -830,10 +796,6 @@ test_manifest_file
               "type": "function",
               "name": "move",
               "inputs": [
-                {
-                  "name": "world",
-                  "type": "dojo::world::IWorldDispatcher"
-                },
                 {
                   "name": "direction",
                   "type": "dojo_examples::models::Direction"
