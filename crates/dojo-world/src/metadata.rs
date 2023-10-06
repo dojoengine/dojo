@@ -7,7 +7,15 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Option<DojoMetadata> 
 
 #[derive(Default, Deserialize, Debug, Clone)]
 pub struct DojoMetadata {
+    pub world: Option<World>,
     pub env: Option<Environment>,
+}
+
+#[derive(Default, Deserialize, Debug, Clone)]
+pub struct World {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub image: Option<String>,
 }
 
 #[derive(Default, Deserialize, Clone, Debug)]
@@ -47,9 +55,27 @@ impl Environment {
     }
 }
 
+impl World {
+    pub fn name(&self) -> Option<&str> {
+        self.name.as_deref()
+    }
+
+    pub fn description(&self) -> Option<&str> {
+        self.description.as_deref()
+    }
+
+    pub fn image(&self) -> Option<&str> {
+        self.image.as_deref()
+    }
+}
+
 impl DojoMetadata {
     pub fn env(&self) -> Option<&Environment> {
         self.env.as_ref()
+    }
+
+    pub fn world(&self) -> Option<&World> {
+        self.world.as_ref()
     }
 }
 trait MetadataExt {
@@ -82,6 +108,11 @@ private_key = "0x1800000000300000180000000000030000000000003006001800006600"
 keystore_path = "test/"
 keystore_password = "dojo"
 world_address = "0x0248cacaeac64c45be0c19ee8727e0bb86623ca7fa3f0d431a6c55e200697e5a"
+
+[world]
+name = "example"
+description = "example world"
+image = "example.png"
         "#,
         )
         .unwrap();
@@ -104,5 +135,12 @@ world_address = "0x0248cacaeac64c45be0c19ee8727e0bb86623ca7fa3f0d431a6c55e200697
             env.world_address(),
             Some("0x0248cacaeac64c45be0c19ee8727e0bb86623ca7fa3f0d431a6c55e200697e5a")
         );
+
+        assert!(metadata.world.is_some());
+        let world = metadata.world.unwrap();
+
+        assert_eq!(world.name(), Some("example"));
+        assert_eq!(world.description(), Some("example world"));
+        assert_eq!(world.image(), Some("example.png"));
     }
 }
