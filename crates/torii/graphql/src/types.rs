@@ -16,7 +16,6 @@ pub type TypeMapping = IndexMap<Name, TypeData>;
 pub enum TypeData {
     Simple(TypeRef),
     Nested((TypeRef, IndexMap<Name, TypeData>)),
-    // TODO: Enum, could be combined with Simple
 }
 
 impl TypeData {
@@ -51,6 +50,7 @@ pub enum ScalarType {
 // basic types like ID and Int are handled by async-graphql
 #[derive(AsRefStr, Display, EnumIter, EnumString, Debug)]
 pub enum GraphqlType {
+    Enum,
     Cursor,
     DateTime,
 }

@@ -50,7 +50,9 @@ impl System {
                     use dojo::world::IWorldDispatcherTrait;
 
                     #[storage]
-                    struct Storage {}
+                    struct Storage {
+                        world_dispatcher: ContractAddress,
+                    }
 
                     #[external(v0)]
                     fn name(self: @ContractState) -> felt252 {

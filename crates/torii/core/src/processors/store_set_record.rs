@@ -29,6 +29,7 @@ impl<P: Provider + Sync + 'static> EventProcessor<P> for StoreSetRecordProcessor
         _provider: &P,
         _block: &BlockWithTxs,
         _transaction_receipt: &InvokeTransactionReceipt,
+        event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
         let name = parse_cairo_short_string(&event.data[MODEL_INDEX])?;
@@ -37,7 +38,7 @@ impl<P: Provider + Sync + 'static> EventProcessor<P> for StoreSetRecordProcessor
         let model = world.model(&name, BlockId::Tag(BlockTag::Pending)).await?;
         let keys = values_at(&event.data, NUM_KEYS_INDEX)?;
         let entity = model.entity(keys, BlockId::Tag(BlockTag::Pending)).await?;
-        db.set_entity(entity).await?;
+        db.set_entity(entity, event_id).await?;
         Ok(())
     }
 }

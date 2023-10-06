@@ -25,6 +25,7 @@ impl<P: Provider + Sync + 'static> EventProcessor<P> for RegisterModelProcessor 
         _provider: &P,
         _block: &BlockWithTxs,
         _invoke_receipt: &InvokeTransactionReceipt,
+        _event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
         let name = parse_cairo_short_string(&event.data[0])?;

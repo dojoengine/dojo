@@ -13,7 +13,7 @@ use async_graphql::Value;
 use self::results::ResultsObject;
 use crate::types::{TypeMapping, ValueMapping};
 
-pub trait ObjectTrait {
+pub trait ObjectTrait: Send + Sync {
     // Name of the graphql object (eg "player")
     fn name(&self) -> &str;
 

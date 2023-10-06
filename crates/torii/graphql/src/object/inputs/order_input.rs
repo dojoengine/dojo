@@ -27,22 +27,22 @@ impl InputObjectTrait for OrderInputObject {
     fn input_object(&self) -> InputObject {
         // direction and field values are required (not null)
         InputObject::new(self.type_name())
-            .field(InputValue::new("direction", TypeRef::named_nn("Direction")))
+            .field(InputValue::new("direction", TypeRef::named_nn("OrderDirection")))
             .field(InputValue::new(
                 "field",
-                TypeRef::named_nn(format!("{}OrderField", self.type_name())),
+                TypeRef::named_nn(format!("{}Field", self.type_name())),
             ))
     }
 
     fn enum_objects(&self) -> Option<Vec<Enum>> {
         // Direction enum has only two members ASC and DESC
-        let direction = Enum::new("Direction").item("ASC").item("DESC");
+        let direction = Enum::new("OrderDirection").item("ASC").item("DESC");
 
         // Field Order enum consist of all members of a model
         let field_order = self
             .type_mapping
             .iter()
-            .fold(Enum::new(format!("{}OrderField", self.type_name())), |acc, (ty_name, _)| {
+            .fold(Enum::new(format!("{}Field", self.type_name())), |acc, (ty_name, _)| {
                 acc.item(ty_name.to_uppercase())
             });
 
