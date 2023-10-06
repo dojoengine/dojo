@@ -81,6 +81,8 @@ fn set_with_index(
     set(model, key, offset, values, layout);
     index::create(0, model, key, 0); // create a record in index of all records
 
+    let mut keys_layout = ArrayTrait::new();
+
     let mut idx = 0;
     loop {
         if idx == members.len() {
