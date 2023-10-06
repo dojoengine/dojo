@@ -113,15 +113,15 @@ fn test_database_del() {
 #[test]
 #[available_gas(10000000)]
 fn test_database_scan() {
-    let even = array![2, 4].span();
-    let odd = array![1, 3].span();
-    let layout = array![251, 251].span();
+    let even = array![2, 4, 6].span();
+    let odd = array![1, 3, 5].span();
+    let layout = array![251, 251, 251].span();
 
     let class_hash: starknet::ClassHash = executor::TEST_CLASS_HASH.try_into().unwrap();
     set_with_index('table', 'even', array!['x'].span(), 0, even, layout);
     set_with_index('table', 'odd', array!['x'].span(), 0, odd, layout);
 
-    let (keys, values) = scan('table', Option::None(()), 2, layout);
+    let (keys, values) = scan('table', Option::None(()), 4, layout);
     assert(keys.len() == 2, 'Wrong number of keys!');
     assert(values.len() == 2, 'Wrong number of values!');
     assert(*keys.at(0) == 'even', 'Wrong key at index 0!');

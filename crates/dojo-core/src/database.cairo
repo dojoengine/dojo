@@ -85,7 +85,8 @@ fn scan_ids(model: felt252, where: Option<WhereCondition>) -> Span<felt252> {
             clause.key.serialize(ref serialized);
             let index = poseidon_hash_span(serialized.span());
 
-            index::get_by_key(0, index, clause.value).span()
+            let all_ids = index::get(0, index, clause.value);
+            (all_ids, get_by_ids(model, all_ids, values_length, values_layout))
         },
         // If no `where` clause is defined, we return all values.
         Option::None(_) => {
