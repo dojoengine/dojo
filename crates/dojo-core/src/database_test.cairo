@@ -126,3 +126,92 @@ fn test_database_scan() {
     assert(*keys.at(0) == 'even', 'Wrong key at index 0!');
     assert(*(*values.at(0)).at(0) == 2, 'Wrong value at index 0!');
     assert(*(*values.at(0)).at(1) == 4, 'Wrong value at index 1!');
+    assert(*(*values.at(0)).at(2) == 6, 'Wrong value at index 1!');
+
+    let where = WhereCondition {
+        key: 0,
+        value: 'x',
+    };
+
+    let (keys, values) = scan(class_hash, 'table', Option::None, Option::Some(where), 2, layout);
+    assert(keys.len() == 2, 'Wrong number of keys!');
+}
+
+#[test]
+#[available_gas(10000000)]
+fn test_database_scan_where() {
+    let some = array![2, 4].span();
+    let same = array![1, 3].span();
+    let other = array![5, 5].span();
+    let layout = array![251, 251].span();
+
+    let class_hash: starknet::ClassHash = executor::TEST_CLASS_HASH.try_into().unwrap();
+    set_with_index(class_hash, 'table', 'some', array!['p'].span(), 0, some, layout);
+    set_with_index(class_hash, 'table', 'same', array!['p'].span(), 0, same, layout);
+    set_with_index(class_hash, 'table', 'other', array!['x'].span(), 0, other, layout);
+
+    let (keys, values) = scan(class_hash, 'table', Option::None, Option::None, 2, layout);
+    assert(keys.len() == 3, 'Wrong number of keys!');
+    assert(*(*values.at(0)).at(0) != 0, 'value is not set');
+
+    let mut where = WhereCondition {
+        key: 0,
+        value: 'x',
+    };
+
+    let (keys, values) = scan(class_hash, 'table', Option::None, Option::Some(where), 2, layout);
+    assert(keys.len() == 1, 'Wrong number of keys for x!');
+    assert(*(*values.at(0)).at(0) == 5, 'Wrong value 0 for x!!');
+    assert(*(*values.at(0)).at(1) == 5, 'Wrong value 1 for x!');
+
+    where.value = 'p';
+    let (keys, values) = scan(class_hash, 'table', Option::None, Option::Some(where), 2, layout);
+    assert(keys.len() == 2, 'Wrong number of keys for p!');
+
+    let (keys, values) = scan(class_hash, 'table', Option::Some(1), Option::Some(where), 2, layout);
+    assert(keys.len() == 1, 'Wrong len for second of p!');
+
+    where.value = 'q';
+    let (keys, values) = scan(class_hash, 'table', Option::None, Option::Some(where), 2, layout);
+    assert(keys.len() == 0, 'Wrong number of keys for q!');
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_database_scan_where_deletion() {
+    let some = array![2, 4].span();
+    let same = array![1, 3].span();
+    let other = array![5, 5].span();
+    let layout = array![251, 251].span();
+
+    let class_hash: starknet::ClassHash = executor::TEST_CLASS_HASH.try_into().unwrap();
+    set_with_index(class_hash, 'table', 'some', array!['a', 'x'].span(), 0, some, layout);
+    set_with_index(class_hash, 'table', 'same', array!['a', 'y'].span(), 0, same, layout);
+    set_with_index(class_hash, 'table', 'other', array!['b', 'x'].span(), 0, other, layout);
+
+    del(class_hash, 'table', 'same');
+
+    let mut where = WhereCondition {
+        key: 0,
+        value: 'a',
+    };
+
+    let (keys, values) = scan(class_hash, 'table', Option::None, Option::Some(where), 2, layout);
+    assert(keys.len() == 1, 'Wrong number of keys for a!');
+    assert(*(*values.at(0)).at(0) == 2, 'Wrong value 0 for a!');
+
+    where.key = 1;
+    where.value = 'y';
+    let (keys, values) = scan(class_hash, 'table', Option::None, Option::Some(where), 2, layout);
+    assert(keys.len() == 0, 'Wrong number of keys for y!');
+
+    where.value = 'x';
+    let (keys, values) = scan(class_hash, 'table', Option::None, Option::Some(where), 2, layout);
+    assert(keys.len() == 2, 'Wrong number of keys for x!');
+
+    del(class_hash, 'table', 'some');
+    del(class_hash, 'table', 'other');
+
+    let (keys, values) = scan(class_hash, 'table', Option::None, Option::None, 2, layout);
+    assert(keys.len() == 0, 'Wrong number of keys for c!');
+}
