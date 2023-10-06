@@ -30,6 +30,7 @@ dojo-types = { path = "../../dojo-types" }
 tracing.workspace = true
 url.workspace = true
 warp.workspace = true
+async-recursion = "1.0.5"
 
 [dev-dependencies]
 camino.workspace = true
