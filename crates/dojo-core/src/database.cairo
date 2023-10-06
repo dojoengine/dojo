@@ -44,6 +44,8 @@ fn set_with_index(
     set(table, key, offset, value, layout);
     index::create(0, table, key, 0); // create a record in index of all records
 
+    let mut keys_layout = ArrayTrait::new();
+
     let mut idx = 0;
     loop {
         if idx == keys.len() {
@@ -56,12 +58,45 @@ fn set_with_index(
 
         index::create(0, index, key, *keys.at(idx)); // create a record for each of the keys
         
+        keys_layout.append(251);
         idx += 1;
     };
+
+    let len_and_keys_keys = array!['dojo_storage_keys', table, key].span();
+    storage::set_many(0, len_and_keys_keys, 1, array![keys.len().into()].span(), array![251].span()); // save number of keys
+    storage::set_many(0, len_and_keys_keys, 1, keys, keys_layout.span()); // save the keys
 }
 
-fn del(table: felt252, key: felt252) {
-    index::delete(0, table, key);
+fn del(table: felt252, id: felt252) {
+    index::delete(0, table, id);
+
+    let single_felt_layout = array![251].span();
+    let mut len_and_keys_keys = array!['dojo_storage_keys', table, id].span();
+    let mut len = *storage::get_many(0, len_and_keys_keys, 0, 1, single_felt_layout).at(0);
+
+    let mut idx = 0;
+    loop {
+        if idx == len {
+            break;
+        }
+        // retrieve the key
+        let offset = (1 + idx).try_into().unwrap();
+        let end = (2 + idx).try_into().unwrap();
+        let key = storage::get_many(0, len_and_keys_keys, offset, end, single_felt_layout);
+
+        // find the coresponding index
+        let mut serialized = ArrayTrait::new();
+        table.serialize(ref serialized);
+        idx.serialize(ref serialized);
+        let index = poseidon_hash_span(serialized.span());
+
+        // delete the entry from the index
+        index::delete(0, index, id);
+        
+        idx += 1;
+    };
+
+    storage::set_many(0,  len_and_keys_keys, 1, array![0].span(), array![251].span()); // overwrite the number of keys
 }
 
 // Query all entities that meet a criteria. If no index is defined,
