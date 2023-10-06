@@ -241,6 +241,7 @@ fn test_entities() {
 
     let layout = array![251].span();
 
+    // Get all in the index
     let (keys, values) = world.entities('Fizz', Option::None(()), Option::None(()), array![].span(), 1, layout);
     assert(keys.len() == 3, 'Not all found for any!');
     assert(values.len() == 3, 'Number of values does not match');
@@ -248,10 +249,25 @@ fn test_entities() {
     assert(*(*values.at(1)).at(0) == 0x1337, 'Caller at 1 not valid');
     assert(*(*values.at(2)).at(0) == 0x420, 'Caller at 2 not valid');
 
+    // Get all with a == 1337
     let (keys, values) = world.entities('Fizz', Option::None(()), Option::Some(0), array![1337].span(), 1, layout);
     assert(keys.len() == 2, 'Not all keys found for 1337!');
     assert(*(*values.at(0)).at(0) == 0x1337, 'Caller at 0 not valid');
     assert(*(*values.at(1)).at(0) == 0x420, 'Caller at 1 not valid');
+
+    // Get all with b == 420
+    let (keys, values) = world.entities('Fizz', Option::None(()), Option::Some(1), array![420].span(), 1, layout);
+    assert(keys.len() == 1, 'Not all keys found for 420!');
+    assert(*(*values.at(0)).at(0) == 0x420, 'Caller at 1 not valid');
+
+    // Get only the second with a == 1337
+    let (keys, values) = world.entities('Fizz', Option::Some(1), Option::Some(0), array![1337].span(), 1, layout);
+    assert(keys.len() == 1, 'Second of 1337 not found!');
+    assert(*(*values.at(0)).at(0) == 0x420, 'Caller at 0 not valid');
+
+    // Get only the third with a == 1337
+    let (keys, values) = world.entities('Fizz', Option::Some(2), Option::Some(0), array![1337].span(), 1, layout);
+    assert(keys.len() == 0, 'Third of 1337 not found!');
 }
 
 #[test]
