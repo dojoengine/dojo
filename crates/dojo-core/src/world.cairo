@@ -4,18 +4,15 @@ use option::OptionTrait;
 
 #[starknet::interface]
 trait IWorld<T> {
+    fn metadata_uri(self: @T) -> Span<felt252>;
+    fn set_metadata_uri(ref self: T, uri: Span<felt252>);
     fn model(self: @T, name: felt252) -> ClassHash;
     fn register_model(ref self: T, class_hash: ClassHash);
     fn deploy_contract(self: @T, salt: felt252, class_hash: ClassHash) -> ContractAddress;
     fn uuid(ref self: T) -> usize;
     fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
     fn entity(
-        self: @T,
-        model: felt252,
-        keys: Span<felt252>,
-        offset: u8,
-        length: usize,
-        layout: Span<u8>
+        self: @T, model: felt252, keys: Span<felt252>, offset: u8, length: usize, layout: Span<u8>
     ) -> Span<felt252>;
     fn set_entity(
         ref self: T,
@@ -26,7 +23,12 @@ trait IWorld<T> {
         layout: Span<u8>
     );
     fn entities(
-        self: @T, model: felt252, index: Option<felt252>, values: Span<felt252>, values_length: usize, values_layout: Span<u8>
+        self: @T,
+        model: felt252,
+        index: Option<felt252>,
+        values: Span<felt252>,
+        values_length: usize,
+        values_layout: Span<u8>
     ) -> (Span<felt252>, Span<Span<felt252>>);
     fn set_executor(ref self: T, contract_address: ContractAddress);
     fn executor(self: @T) -> ContractAddress;
@@ -51,7 +53,8 @@ mod world {
     use starknet::{
         get_caller_address, get_contract_address, get_tx_info,
         contract_address::ContractAddressIntoFelt252, ClassHash, Zeroable, ContractAddress,
-        syscalls::{deploy_syscall, emit_event_syscall}, SyscallResult, SyscallResultTrait, SyscallResultTraitImpl
+        syscalls::{deploy_syscall, emit_event_syscall}, SyscallResult, SyscallResultTrait,
+        SyscallResultTraitImpl
     };
 
     use dojo::database;
@@ -78,7 +81,8 @@ mod world {
     #[derive(Drop, starknet::Event)]
     struct WorldSpawned {
         address: ContractAddress,
-        caller: ContractAddress
+        caller: ContractAddress,
+        metadata_uri: Span<felt252>
     }
 
     #[derive(Drop, starknet::Event)]
@@ -106,28 +110,27 @@ mod world {
         executor_dispatcher: IExecutorDispatcher,
         contract_base: ClassHash,
         nonce: usize,
+        metadata_uri: LegacyMap::<usize, felt252>,
         models: LegacyMap::<felt252, ClassHash>,
         owners: LegacyMap::<(felt252, ContractAddress), bool>,
         writers: LegacyMap::<(felt252, ContractAddress), bool>,
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, executor: ContractAddress, contract_base: ClassHash) {
+    fn constructor(
+        ref self: ContractState,
+        executor: ContractAddress,
+        contract_base: ClassHash,
+        metadata_uri: Span<felt252>
+    ) {
+        let caller = get_caller_address();
         self.executor_dispatcher.write(IExecutorDispatcher { contract_address: executor });
         self.contract_base.write(contract_base);
-
-        self
-            .owners
-            .write(
-                (WORLD, starknet::get_tx_info().unbox().account_contract_address), bool::True(())
-            );
+        self.owners.write((WORLD, caller), true);
+        self.set_metadata_uri(metadata_uri);
 
         EventEmitter::emit(
-            ref self,
-            WorldSpawned {
-                address: get_contract_address(),
-                caller: get_tx_info().unbox().account_contract_address
-            }
+            ref self, WorldSpawned { address: get_contract_address(), caller, metadata_uri }
         );
     }
 
@@ -151,6 +154,54 @@ mod world {
 
     #[external(v0)]
     impl World of IWorld<ContractState> {
+        /// Returns the metadata URI of the world.
+        ///
+        /// # Returns
+        ///
+        /// * `Span<felt252>` - The metadata URI of the world.
+        fn metadata_uri(self: @ContractState) -> Span<felt252> {
+            let mut uri = array![];
+
+            // We add one here since we start i at 1;
+            let len = self.metadata_uri.read(0) + 1;
+
+            let mut i: usize = 1;
+            loop {
+                if len == i.into() {
+                    break;
+                }
+
+                uri.append(self.metadata_uri.read(i));
+                i += 1;
+            };
+
+            uri.span()
+        }
+
+        /// Sets the metadata URI of the world.
+        ///
+        /// # Arguments
+        ///
+        /// * `uri` - The new metadata URI to be set.
+        fn set_metadata_uri(ref self: ContractState, mut uri: Span<felt252>) {
+            assert(self.is_owner(get_caller_address(), WORLD), 'not owner');
+
+            self.metadata_uri.write(0, uri.len().into());
+
+            let mut i: usize = 1;
+            loop {
+                match uri.pop_front() {
+                    Option::Some(item) => {
+                        self.metadata_uri.write(i, *item);
+                        i += 1;
+                    },
+                    Option::None(_) => {
+                        break;
+                    }
+                };
+            };
+        }
+
         /// Checks if the provided account is an owner of the target.
         ///
         /// # Arguments
@@ -216,8 +267,7 @@ mod world {
             let caller = get_caller_address();
 
             assert(
-                self.is_owner(caller, model) || self.is_owner(caller, WORLD),
-                'not owner or writer'
+                self.is_owner(caller, model) || self.is_owner(caller, WORLD), 'not owner or writer'
             );
             self.writers.write((model, system), bool::True(()));
         }
@@ -286,8 +336,13 @@ mod world {
         /// # Returns
         ///
         /// * `ClassHash` - The class hash of the model.
-        fn deploy_contract(self: @ContractState, salt: felt252, class_hash: ClassHash) -> ContractAddress {
-            let (contract_address, _) = deploy_syscall(self.contract_base.read(), salt, array![].span(), false).unwrap_syscall();
+        fn deploy_contract(
+            self: @ContractState, salt: felt252, class_hash: ClassHash
+        ) -> ContractAddress {
+            let (contract_address, _) = deploy_syscall(
+                self.contract_base.read(), salt, array![].span(), false
+            )
+                .unwrap_syscall();
             let upgradable_dispatcher = IUpgradeableDispatcher { contract_address };
             upgradable_dispatcher.upgrade(class_hash);
             contract_address
@@ -399,7 +454,12 @@ mod world {
         /// * `Span<felt252>` - The entity IDs.
         /// * `Span<Span<felt252>>` - The entities.
         fn entities(
-            self: @ContractState, model: felt252, index: Option<felt252>, values: Span<felt252>, values_length: usize, values_layout: Span<u8>
+            self: @ContractState,
+            model: felt252,
+            index: Option<felt252>,
+            values: Span<felt252>,
+            values_length: usize,
+            values_layout: Span<u8>
         ) -> (Span<felt252>, Span<Span<felt252>>) {
             let class_hash = self.models.read(model);
 

@@ -1,5 +1,6 @@
 use std::result::Result;
 
+use http::uri::{InvalidUri, Uri};
 use starknet::accounts::{AccountError, Call, ConnectedAccount};
 use starknet::core::types::{BlockId, FieldElement, FunctionCall, InvokeTransactionResult};
 use starknet::core::utils::{
@@ -23,6 +24,8 @@ pub enum WorldContractError<S, P> {
     CairoShortStringToFeltError(CairoShortStringToFeltError),
     #[error(transparent)]
     ContractReaderError(ContractReaderError<P>),
+    #[error("Invalid metadata uri")]
+    InvalidMetadataUri(InvalidUri),
 }
 
 #[derive(Debug)]
@@ -50,6 +53,38 @@ impl<'a, A: ConnectedAccount + Sync> WorldContract<'a, A> {
             }])
             .send()
             .await
+    }
+
+    pub async fn set_metadata_uri(
+        &self,
+        metadata_uri: String,
+    ) -> Result<
+        InvokeTransactionResult,
+        WorldContractError<A::SignError, <A::Provider as Provider>::Error>,
+    > {
+        let parsed: Uri =
+            metadata_uri.try_into().map_err(WorldContractError::InvalidMetadataUri)?;
+
+        let encoded = parsed
+            .to_string()
+            .chars()
+            .collect::<Vec<_>>()
+            .chunks(31)
+            .map(|chunk| {
+                let s: String = chunk.iter().collect();
+                cairo_short_string_to_felt(&s).unwrap()
+            })
+            .collect::<Vec<_>>();
+
+        self.account
+            .execute(vec![Call {
+                calldata: encoded,
+                to: self.address,
+                selector: get_selector_from_name("set_metadata_uri").unwrap(),
+            }])
+            .send()
+            .await
+            .map_err(WorldContractError::AccountError)
     }
 
     pub async fn grant_writer(
@@ -212,6 +247,26 @@ impl<'a, P: Provider + Sync> WorldContractReader<'a, P> {
                     contract_address: self.address,
                     calldata: vec![],
                     entry_point_selector: get_selector_from_name("executor").unwrap(),
+                },
+                block_id,
+            )
+            .await
+            .map_err(ContractReaderError::ProviderError)?;
+
+        Ok(res[0])
+    }
+
+    pub async fn metadata_uri(
+        &self,
+        block_id: BlockId,
+    ) -> Result<FieldElement, ContractReaderError<P::Error>> {
+        let res = self
+            .provider
+            .call(
+                FunctionCall {
+                    contract_address: self.address,
+                    calldata: vec![],
+                    entry_point_selector: get_selector_from_name("metadata_uri").unwrap(),
                 },
                 block_id,
             )

@@ -298,6 +298,7 @@ where
             let calldata = vec![
                 strategy.executor.as_ref().unwrap().contract_address,
                 strategy.base.as_ref().unwrap().diff.local,
+                FieldElement::ZERO,
             ];
             deploy_contract(world, "world", calldata, migrator, ui, &txn_config).await?;
 

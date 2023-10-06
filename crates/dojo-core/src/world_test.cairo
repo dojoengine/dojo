@@ -172,6 +172,35 @@ fn deploy_world() -> IWorldDispatcher {
 
 #[test]
 #[available_gas(60000000)]
+fn test_metadata_uri() {
+    // Deploy world contract
+    let world = deploy_world();
+    let uri = world.metadata_uri();
+
+    assert(uri.len() == 1, 'Incorrect metadata uri len');
+    assert(uri[0] == @'test_uri', 'Incorrect metadata uri');
+
+    world.set_metadata_uri(array!['new_uri', 'longer'].span());
+
+    let uri = world.metadata_uri();
+    assert(uri.len() == 2, 'Incorrect metadata uri len');
+    assert(uri[0] == @'new_uri', 'Incorrect metadata uri 1');
+    assert(uri[1] == @'longer', 'Incorrect metadata uri 2');
+}
+
+#[test]
+#[available_gas(60000000)]
+#[should_panic]
+fn test_set_metadata_uri_reverts_for_not_owner() {
+    // Deploy world contract
+    let world = deploy_world();
+
+    starknet::testing::set_contract_address(starknet::contract_address_const::<0x1337>());
+    world.set_metadata_uri(array!['new_uri', 'longer'].span());
+}
+
+#[test]
+#[available_gas(60000000)]
 fn test_entities() {
     // Deploy world contract
     let world = spawn_test_world(array![foo::TEST_CLASS_HASH],);
@@ -191,7 +220,6 @@ fn test_entities() {
     let layout = array![251].span();
     let (keys, values) = world.entities('Foo', Option::None(()), query_keys, 2, layout);
     assert(keys.len() == 1, 'No keys found for any!');
-
     // query_keys.append(0x1337);
     // let (keys, values) = world.entities('Foo', 42, query_keys.span(), 2, layout);
     // assert(keys.len() == 1, 'No keys found!');
@@ -367,5 +395,4 @@ fn test_execute_multiple_worlds() {
     assert(data1.a == 1337, 'data1 not stored');
     assert(data2.a == 7331, 'data2 not stored');
 }
-
 
