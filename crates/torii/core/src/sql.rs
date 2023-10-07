@@ -149,10 +149,12 @@ impl Sql {
                 .fetch_optional(&self.pool)
                 .await?;
 
-        let model_names = if let Some((model_names,)) = existing {
-            format!("{},{}", model_names, entity.name())
-        } else {
-            entity.name()
+        let model_names = match existing {
+            Some((existing_names,)) if existing_names.contains(&entity.name()) => {
+                existing_names.to_string()
+            }
+            Some((existing_names,)) => format!("{},{}", existing_names, entity.name()),
+            None => entity.name().to_string(),
         };
 
         let keys_str = felts_sql_string(&keys);
@@ -268,15 +270,15 @@ impl Sql {
     fn build_set_entity_queries_recursive(
         &mut self,
         path: Vec<String>,
-        id: &str,
+        event_id: &str,
         entity_id: &str,
         entity: &Ty,
     ) {
         match entity {
             Ty::Struct(s) => {
                 let table_id = path.join("$");
-                let mut columns = vec!["id".to_string(), "entity_id".to_string()];
-                let mut values = vec![format!("'{id}', '{entity_id}'")];
+                let mut columns = vec!["entity_id".to_string(), "event_id".to_string()];
+                let mut values = vec![format!("'{entity_id}', '{event_id}'")];
 
                 for member in s.children.iter() {
                     match &member.ty {
@@ -304,7 +306,7 @@ impl Sql {
                         path_clone.push(member.ty.name());
 
                         self.build_set_entity_queries_recursive(
-                            path_clone, id, entity_id, &member.ty,
+                            path_clone, event_id, entity_id, &member.ty,
                         );
                     }
                 }
@@ -314,7 +316,9 @@ impl Sql {
                     let mut path_clone = path.clone();
                     path_clone.push(child.1.name());
                     // self.build_entity_query(path_clone.clone(), id, &child.1);
-                    self.build_set_entity_queries_recursive(path_clone, id, entity_id, &child.1);
+                    self.build_set_entity_queries_recursive(
+                        path_clone, event_id, entity_id, &child.1,
+                    );
                 }
             }
             _ => {}
@@ -325,7 +329,8 @@ impl Sql {
         let table_id = path.join("$");
 
         let mut query = format!(
-            "CREATE TABLE IF NOT EXISTS [{table_id}] (id TEXT NOT NULL PRIMARY KEY, entity_id, "
+            "CREATE TABLE IF NOT EXISTS [{table_id}] (entity_id TEXT NOT NULL PRIMARY KEY, \
+             event_id, "
         );
 
         if let Ty::Struct(s) = model {
@@ -362,7 +367,9 @@ impl Sql {
         // If this is not the Model's root table, create a reference to the parent.
         if path.len() > 1 {
             let parent_table_id = path[..path.len() - 1].join("$");
-            query.push_str(&format!("FOREIGN KEY (id) REFERENCES {parent_table_id} (id), "));
+            query.push_str(&format!(
+                "FOREIGN KEY (entity_id) REFERENCES {parent_table_id} (entity_id), "
+            ));
         };
 
         query.push_str("FOREIGN KEY (entity_id) REFERENCES entities(id));");
