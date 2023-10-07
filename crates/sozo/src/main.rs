@@ -1,13 +1,16 @@
 use std::env;
 use std::process::exit;
+use std::str::FromStr;
 
 use anyhow::Result;
+use camino::Utf8PathBuf;
 use clap::Parser;
 use dojo_lang::compiler::DojoCompiler;
 use dojo_lang::plugin::CairoPluginRepository;
 use scarb::compiler::CompilerRepository;
-use scarb::core::Config;
+use scarb::core::{Config, TomlManifest};
 use scarb_ui::{OutputFormat, Ui};
+use semver::Version;
 use sozo::args::{Commands, SozoArgs};
 
 fn main() {
@@ -32,6 +35,8 @@ fn cli_main(args: SozoArgs) -> Result<()> {
 
     let manifest_path = scarb::ops::find_manifest_path(args.manifest_path.as_deref())?;
 
+    verify_cairo_version_compatibility(&manifest_path)?;
+
     let config = Config::builder(manifest_path)
         .log_filter_directive(env::var_os("SCARB_LOG"))
         .profile(args.profile_spec.determine()?)
@@ -42,4 +47,33 @@ fn cli_main(args: SozoArgs) -> Result<()> {
         .build()?;
 
     sozo::commands::run(args.command, &config)
+}
+
+fn verify_cairo_version_compatibility(manifest_path: &Utf8PathBuf) -> Result<()> {
+    let scarb_cairo_version = scarb::version::get().cairo;
+    // When manifest file doesn't exists ignore it. Would be the case during `sozo init`
+    let Ok(manifest) = TomlManifest::read_from_path(manifest_path) else {
+        return Ok(())
+    };
+
+    // For any kind of error, like package not specified, cairo version not specified return
+    // without an error
+    let Some(package) = manifest.package else {
+        return Ok(())
+    };
+
+    let Some(cairo_version ) = package.cairo_version else {
+        return Ok(())
+    };
+
+    // only when cairo version is found in manifest file confirm that it matches
+    let version_req = cairo_version.as_defined().unwrap();
+    let version = Version::from_str(scarb_cairo_version.version).unwrap();
+    if !version_req.matches(&version) {
+        anyhow::bail!(
+            "Specified cairo version not supported by dojo. Please verify and update dojo."
+        );
+    };
+
+    Ok(())
 }
