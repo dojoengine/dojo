@@ -52,19 +52,13 @@ fn cli_main(args: SozoArgs) -> Result<()> {
 fn verify_cairo_version_compatibility(manifest_path: &Utf8PathBuf) -> Result<()> {
     let scarb_cairo_version = scarb::version::get().cairo;
     // When manifest file doesn't exists ignore it. Would be the case during `sozo init`
-    let Ok(manifest) = TomlManifest::read_from_path(manifest_path) else {
-        return Ok(())
-    };
+    let Ok(manifest) = TomlManifest::read_from_path(manifest_path) else { return Ok(()) };
 
     // For any kind of error, like package not specified, cairo version not specified return
     // without an error
-    let Some(package) = manifest.package else {
-        return Ok(())
-    };
+    let Some(package) = manifest.package else { return Ok(()) };
 
-    let Some(cairo_version ) = package.cairo_version else {
-        return Ok(())
-    };
+    let Some(cairo_version) = package.cairo_version else { return Ok(()) };
 
     // only when cairo version is found in manifest file confirm that it matches
     let version_req = cairo_version.as_defined().unwrap();
