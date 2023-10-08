@@ -1,6 +1,7 @@
 pub mod error;
 pub mod logger;
 pub mod subscription;
+pub mod utils;
 
 use std::pin::Pin;
 use std::str::FromStr;
