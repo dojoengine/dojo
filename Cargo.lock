@@ -7143,9 +7143,9 @@ dependencies = [
 
 [[package]]
 name = "starknet-core"
-version = "0.6.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b796a32a7400f7d85e95d3900b5cee7a392b2adbf7ad16093ed45ec6f8d85de6"
+checksum = "14139b1c39bdc2f1e663c12090ff5108fe50ebe62c09e15e32988dfaf445a7e4"
 dependencies = [
  "base64 0.21.4",
  "flate2",
