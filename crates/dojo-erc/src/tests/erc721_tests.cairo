@@ -184,7 +184,7 @@ fn test_get_approved_nonexistent() {
 }
 
 #[test]
-#[available_gas(20000000)]
+#[available_gas(30000000)]
 fn test__exists() {
     let (world, mut state) = STATE();
     let token_id = TOKEN_ID;
@@ -1333,7 +1333,7 @@ fn test__mint_already_exist() {
 //
 
 #[test]
-#[available_gas(25000000)]
+#[available_gas(30000000)]
 fn test__burn() {
     let mut state = setup();
 

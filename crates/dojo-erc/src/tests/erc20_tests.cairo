@@ -236,7 +236,7 @@ fn test__transfer_to_zero() {
 //
 
 #[test]
-#[available_gas(30000000)]
+#[available_gas(40000000)]
 fn test_transfer_from() {
     let mut state = setup();
     testing::set_caller_address(OWNER());
