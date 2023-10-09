@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 
+use dojo_types::schema::Ty;
 use starknet::core::types::FromStrError;
 use starknet_crypto::FieldElement;
 
@@ -9,7 +10,11 @@ use crate::protos;
 impl TryFrom<protos::types::ModelMetadata> for dojo_types::schema::ModelMetadata {
     type Error = FromStrError;
     fn try_from(value: protos::types::ModelMetadata) -> Result<Self, Self::Error> {
+        let schema: Ty = serde_json::from_slice(&value.schema).unwrap();
+        let layout: Vec<FieldElement> = value.layout.into_iter().map(FieldElement::from).collect();
         Ok(Self {
+            schema,
+            layout,
             name: value.name,
             packed_size: value.packed_size,
             unpacked_size: value.unpacked_size,
@@ -21,14 +26,14 @@ impl TryFrom<protos::types::ModelMetadata> for dojo_types::schema::ModelMetadata
 impl TryFrom<protos::types::WorldMetadata> for dojo_types::WorldMetadata {
     type Error = FromStrError;
     fn try_from(value: protos::types::WorldMetadata) -> Result<Self, Self::Error> {
-        let components = value
+        let models = value
             .models
             .into_iter()
             .map(|component| Ok((component.name.clone(), component.try_into()?)))
             .collect::<Result<HashMap<_, dojo_types::schema::ModelMetadata>, _>>()?;
 
         Ok(dojo_types::WorldMetadata {
-            models: components,
+            models,
             world_address: FieldElement::from_str(&value.world_address)?,
             world_class_hash: FieldElement::from_str(&value.world_class_hash)?,
             executor_address: FieldElement::from_str(&value.executor_address)?,
