@@ -64,7 +64,7 @@ impl DojoWorld {
         .fetch_one(&self.pool)
         .await?;
 
-        let models: Vec<(String, String, u32, u32, Vec<u8>)> = sqlx::query_as(
+        let models: Vec<(String, String, u32, u32, String)> = sqlx::query_as(
             "SELECT name, class_hash, packed_size, unpacked_size, layout FROM models",
         )
         .fetch_all(&self.pool)
@@ -78,7 +78,7 @@ impl DojoWorld {
                 class_hash: model.1,
                 packed_size: model.2,
                 unpacked_size: model.3,
-                layout: model.4,
+                layout: hex::decode(&model.4).unwrap(),
                 schema: serde_json::to_vec(&schema).unwrap(),
             });
         }
@@ -109,7 +109,7 @@ impl DojoWorld {
             String,
             u32,
             u32,
-            Vec<u8>,
+            String,
         ) = sqlx::query_as(
             "SELECT name, class_hash, packed_size, unpacked_size, layout FROM models WHERE id = ?",
         )
@@ -118,6 +118,7 @@ impl DojoWorld {
         .await?;
 
         let schema = self.model_schema(model).await?;
+        let layout = hex::decode(&layout).unwrap();
 
         Ok(protos::types::ModelMetadata {
             name,

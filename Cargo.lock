@@ -7966,6 +7966,7 @@ dependencies = [
  "dojo-types",
  "futures",
  "futures-util",
+ "hex",
  "hyper",
  "parking_lot 0.12.1",
  "prost 0.11.9",

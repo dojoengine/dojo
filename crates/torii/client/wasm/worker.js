@@ -3,20 +3,20 @@
 // available which we need to initialize our Wasm code.
 importScripts("./pkg/torii_client_wasm.js");
 
-console.log("Initializing client worker...");
-
 // In the worker, we have a different struct that we want to use as in
 // `index.js`.
 const { spawn_client } = wasm_bindgen;
 
 async function setup() {
+	console.log("Initializing torii client worker 🚧");
+
 	// Load the wasm file by awaiting the Promise returned by `wasm_bindgen`.
 	await wasm_bindgen("./pkg/torii_client_wasm_bg.wasm");
 
 	try {
 		const client = await spawn_client(
-			"http://0.0.0.0:8080/grpc",
-			"http://0.0.0.0:5050",
+			"http://localhost:8080/grpc",
+			"http://localhost:5050",
 			"0x4cf3f4fa5ffd94a2af92946e13fe7faafb8045fb9446cec6ba97ca34e78bc05",
 			[
 				{
@@ -41,8 +41,10 @@ async function setup() {
 				console.log("Sync Worker: Unknown event type", event);
 			}
 		};
+
+		console.log("Torii client initialized 🔥");
 	} catch (e) {
-		console.error("error spawning client: ", e);
+		console.error("Error initiating torii client: ", e);
 	}
 }
 

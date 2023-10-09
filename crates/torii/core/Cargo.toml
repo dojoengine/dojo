@@ -17,7 +17,7 @@ dojo-types = { path = "../../dojo-types" }
 dojo-world = { path = "../../dojo-world" }
 futures-channel = "0.3.0"
 futures-util = "0.3.0"
-hex = "0.4.3"
+hex.workspace = true
 lazy_static = "1.4.0"
 log = "0.4.17"
 once_cell.workspace = true
