@@ -3,6 +3,8 @@ use std::str::FromStr;
 use starknet::core::types::FieldElement;
 use wasm_bindgen::prelude::*;
 
+mod utils;
+
 type JsFieldElement = JsValue;
 type JsEntityComponent = JsValue;
 

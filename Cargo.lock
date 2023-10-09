@@ -2287,6 +2287,7 @@ dependencies = [
  "hex",
  "itertools 0.10.5",
  "serde",
+ "serde_json",
  "starknet",
  "strum 0.25.0",
  "strum_macros 0.25.2",

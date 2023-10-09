@@ -56,21 +56,21 @@ async function setup() {
 /// Handler for the `get_entity` event from the main thread.
 /// Returns back the entity data to the main thread via `postMessage`.
 async function getModelValueHandler(client, data) {
-	console.log("Sync Worker | Getting model value | data: ", data);
-
 	const model = data.model;
 	const keys = data.keys;
 
 	const values = await client.getModelValue(model, keys);
 
-	self.postMessage({
-		type: "getModelValue",
-		data: {
-			model: "Position",
-			keys,
-			values,
-		},
-	});
+	console.log("Sync Worker | Got model value | values: ", values);
+
+	// self.postMessage({
+	// 	type: "getModelValue",
+	// 	data: {
+	// 		model: "Position",
+	// 		keys,
+	// 		values,
+	// 	},
+	// });
 }
 
 setup();
