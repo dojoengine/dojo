@@ -55,12 +55,11 @@ impl ModelStorage {
             Ordering::Equal => {}
         }
 
-        self.index_entity(model, raw_keys.clone());
-
         let storage_addresses = compute_all_storage_addresses(model, &raw_keys, model_packed_size);
-        storage_addresses.into_iter().zip(raw_values).for_each(|(storage_address, value)| {
-            self.storage.write().insert(storage_address, value);
+        storage_addresses.iter().zip(&raw_values).for_each(|(storage_address, value)| {
+            self.storage.write().insert(*storage_address, *value);
         });
+        self.index_entity(model, raw_keys);
 
         Ok(())
     }
@@ -97,6 +96,7 @@ mod tests {
     use std::collections::HashMap;
     use std::sync::Arc;
 
+    use dojo_types::schema::Ty;
     use dojo_types::WorldMetadata;
     use parking_lot::RwLock;
     use starknet::core::utils::cairo_short_string_to_felt;
@@ -113,6 +113,8 @@ mod tests {
                 class_hash: felt!("1"),
                 packed_size: 4,
                 unpacked_size: 4,
+                layout: vec![],
+                schema: Ty::Primitive(dojo_types::primitive::Primitive::Bool(None)),
             },
         )]);
 

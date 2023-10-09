@@ -218,7 +218,7 @@ mod tests {
     use std::collections::HashMap;
     use std::sync::Arc;
 
-    use dojo_types::schema::EntityModel;
+    use dojo_types::schema::{EntityModel, Ty};
     use dojo_types::WorldMetadata;
     use parking_lot::RwLock;
     use starknet::core::utils::cairo_short_string_to_felt;
@@ -234,6 +234,8 @@ mod tests {
                 class_hash: felt!("1"),
                 packed_size: 1,
                 unpacked_size: 2,
+                layout: vec![],
+                schema: Ty::Primitive(dojo_types::primitive::Primitive::Bool(None)),
             },
         )]);
 
