@@ -1,4 +1,4 @@
-use dojo_types::schema::{Member, Struct, Ty};
+use dojo_types::schema::{Enum, Member, Struct, Ty};
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct SqlModelMember {
@@ -29,10 +29,25 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
                 "Struct" => Member {
                     key: child.key,
                     name: child.name.to_owned(),
-                    ty: parse_sql_model_members(&child.id, model_members_all),
+                    ty: parse_sql_model_members_impl(
+                        &format!("{}${}", child.id, child.r#type),
+                        model_members_all,
+                    ),
                 },
 
-                _ => todo!(),
+                "Enum" => Member {
+                    key: child.key,
+                    name: child.name.to_owned(),
+                    ty: Ty::Enum(Enum {
+                        name: child.r#type.to_owned(),
+                        options: vec![],
+                        option: None,
+                    }),
+                },
+
+                ty => {
+                    unimplemented!("unimplemented type_enum: {ty}");
+                }
             })
             .collect::<Vec<Member>>();
 
