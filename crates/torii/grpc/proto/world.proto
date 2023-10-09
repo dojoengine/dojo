@@ -7,13 +7,7 @@ import "types.proto";
 service World {
     // Retrieves metadata about the World including all the registered components and systems.
     rpc WorldMetadata (MetadataRequest) returns (MetadataResponse);
-    
-    // rpc ComponentMetadata () returns ();
-    // rpc SystemMetadata () returns ();
-
-    // Retrieve the component values of the requested entity.
-    rpc GetEntity (GetEntityRequest) returns (GetEntityResponse);
-
+   
     /* 
      * Subscribes to entity updates.
      * Bidirectional streaming as we want to allow user to change the list of entities to subscribe to without closing the connection.
@@ -30,16 +24,6 @@ message MetadataRequest {
 // The metadata response contains addresses and class hashes for the world.
 message MetadataResponse {
    types.WorldMetadata metadata = 1;
-}
-
-// A request to retrieve a component value of an entity.
-message GetEntityRequest {
-    types.EntityModel entity = 1;
-}
-
-// The entity response contains the component values for the requested entities.
-message GetEntityResponse {
-    repeated string values = 1;
 }
 
 message SubscribeEntitiesRequest {

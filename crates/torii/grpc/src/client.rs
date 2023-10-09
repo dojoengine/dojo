@@ -1,13 +1,11 @@
 //! Client implementation for the gRPC service.
 
-use std::str::FromStr;
-
 use protos::world::{world_client, SubscribeEntitiesRequest};
 use starknet::core::types::FromStrError;
 use starknet_crypto::FieldElement;
 
-use crate::protos::world::{GetEntityRequest, MetadataRequest, SubscribeEntitiesResponse};
-use crate::protos::{self, types};
+use crate::protos::world::{MetadataRequest, SubscribeEntitiesResponse};
+use crate::protos::{self};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -62,31 +60,6 @@ impl WorldClient {
             .map_err(Error::Grpc)
             .and_then(|res| res.into_inner().metadata.ok_or(Error::MissingExpectedData))
             .and_then(|metadata| metadata.try_into().map_err(Error::Parsing))
-    }
-
-    /// Retrieves the latest model value of the requested entity keys
-    pub async fn get_entity(
-        &mut self,
-        model: String,
-        keys: Vec<FieldElement>,
-    ) -> Result<Vec<FieldElement>, Error> {
-        let values = self
-            .inner
-            .get_entity(GetEntityRequest {
-                entity: Some(types::EntityModel {
-                    model,
-                    keys: keys.into_iter().map(|k| format!("{k:#x}")).collect(),
-                }),
-            })
-            .await
-            .map(|res| res.into_inner().values)
-            .map_err(Error::Grpc)?;
-
-        values
-            .iter()
-            .map(|v| FieldElement::from_str(v))
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(Error::Parsing)
     }
 
     /// Subscribe to the state diff for a set of entities of a World.

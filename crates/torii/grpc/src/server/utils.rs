@@ -26,31 +26,35 @@ pub enum SqlTypeEnum {
 // assume that the model members are sorted by model_idx and member_idx
 // `id` is the type id of the model member
 /// A helper function to parse the model members from sql table to `Ty`
-pub fn parse_sql_model_members(path: &str, model_members_all: &[SqlModelMember]) -> Ty {
-    let children = model_members_all
-        .iter()
-        .filter(|member| &member.id == &path)
-        .map(|child| match child.type_enum {
-            SqlTypeEnum::Primitive => Member {
-                key: child.key,
-                name: child.name.to_owned(),
-                ty: Ty::Primitive(child.r#type.parse().unwrap()),
-            },
+pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]) -> Ty {
+    fn parse_sql_model_members_impl(path: &str, model_members_all: &[SqlModelMember]) -> Ty {
+        let children = model_members_all
+            .iter()
+            .filter(|member| &member.id == &path)
+            .map(|child| match child.type_enum {
+                SqlTypeEnum::Primitive => Member {
+                    key: child.key,
+                    name: child.name.to_owned(),
+                    ty: Ty::Primitive(child.r#type.parse().unwrap()),
+                },
 
-            SqlTypeEnum::Struct => Member {
-                key: child.key,
-                name: child.name.to_owned(),
-                ty: parse_sql_model_members(&child.id, model_members_all),
-            },
+                SqlTypeEnum::Struct => Member {
+                    key: child.key,
+                    name: child.name.to_owned(),
+                    ty: parse_sql_model_members(&child.id, model_members_all),
+                },
 
-            _ => todo!(),
-        })
-        .collect::<Vec<Member>>();
+                _ => todo!(),
+            })
+            .collect::<Vec<Member>>();
 
-    // refer to the sql table for `model_members`
-    let model_name = path.split("$").last().unwrap_or(path);
+        // refer to the sql table for `model_members`
+        let model_name = path.split("$").last().unwrap_or(path);
 
-    Ty::Struct(Struct { name: model_name.to_owned(), children })
+        Ty::Struct(Struct { name: model_name.to_owned(), children })
+    }
+
+    parse_sql_model_members_impl(model, model_members_all)
 }
 
 #[cfg(test)]

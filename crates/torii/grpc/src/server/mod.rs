@@ -11,20 +11,18 @@ use futures::Stream;
 use protos::world::{
     MetadataRequest, MetadataResponse, SubscribeEntitiesRequest, SubscribeEntitiesResponse,
 };
-use sqlx::{Executor, Pool, Row, Sqlite};
+use sqlx::{Pool, Sqlite};
 use starknet::core::types::FromStrError;
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use starknet_crypto::{poseidon_hash_many, FieldElement};
+use starknet_crypto::FieldElement;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::{Request, Response, Status};
 
 use self::error::Error;
 use self::subscription::{EntityModelRequest, EntitySubscriptionService};
-use crate::protos::types::EntityModel;
-use crate::protos::world::{GetEntityRequest, GetEntityResponse};
 use crate::protos::{self};
 
 #[derive(Debug, Clone)]
@@ -102,41 +100,6 @@ impl DojoWorld {
         })
         .map_err(Error::from)
     }
-
-    #[allow(unused)]
-    async fn entity(
-        &self,
-        component: String,
-        entity_keys: Vec<FieldElement>,
-    ) -> Result<Vec<String>, Error> {
-        let entity_id = format!("{:#x}", poseidon_hash_many(&entity_keys));
-        // TODO: there's definitely a better way for doing this
-        self.pool
-            .fetch_one(
-                format!(
-                    "SELECT * FROM external_{} WHERE entity_id = '{entity_id}'",
-                    component.to_lowercase()
-                )
-                .as_ref(),
-            )
-            .await
-            .map_err(Error::from)
-            .map(|row| {
-                let size = row.columns().len() - 2;
-                let mut values = Vec::with_capacity(size);
-                for (i, _) in row.columns().iter().enumerate().skip(1).take(size) {
-                    let value = match row.try_get::<String, _>(i) {
-                        Ok(value) => value,
-                        Err(sqlx::Error::ColumnDecode { .. }) => {
-                            row.try_get::<u32, _>(i).expect("decode failed").to_string()
-                        }
-                        Err(e) => panic!("{e}"),
-                    };
-                    values.push(value);
-                }
-                values
-            })
-    }
 }
 
 type ServiceResult<T> = Result<Response<T>, Status>;
@@ -155,30 +118,6 @@ impl protos::world::world_server::World for DojoWorld {
         })?;
 
         Ok(Response::new(MetadataResponse { metadata: Some(metadata) }))
-    }
-
-    async fn get_entity(
-        &self,
-        request: Request<GetEntityRequest>,
-    ) -> Result<Response<GetEntityResponse>, Status> {
-        let GetEntityRequest { entity } = request.into_inner();
-
-        let Some(EntityModel { model, keys }) = entity else {
-            return Err(Status::invalid_argument("Entity not specified"));
-        };
-
-        let entity_keys = keys
-            .iter()
-            .map(|k| FieldElement::from_str(k))
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|e| Status::invalid_argument(format!("Invalid key: {e}")))?;
-
-        let values = self.entity(model, entity_keys).await.map_err(|e| match e {
-            Error::Sql(sqlx::Error::RowNotFound) => Status::not_found("Entity not found"),
-            e => Status::internal(e.to_string()),
-        })?;
-
-        Ok(Response::new(GetEntityResponse { values }))
     }
 
     type SubscribeEntitiesStream = SubscribeEntitiesResponseStream;
