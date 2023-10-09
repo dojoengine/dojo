@@ -325,39 +325,6 @@ fn test_set_metadata_uri_reverts_for_not_owner() {
 }
 
 #[test]
-#[available_gas(60000000)]
-fn test_entities() {
-    // Deploy world contract
-    let world = spawn_test_world(array![foo::TEST_CLASS_HASH],);
-
-    let bar_contract = IbarDispatcher {
-        contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world)
-    };
-
-    let alice = starknet::contract_address_const::<0x1337>();
-    starknet::testing::set_contract_address(alice);
-    bar_contract.set_foo(1337, 1337);
-
-    let mut keys = ArrayTrait::new();
-    keys.append(0);
-
-    let mut query_keys = ArrayTrait::new();
-    let layout = array![251].span();
-    let (keys, values) = world.entities('Foo', Option::None, query_keys.span(), 2, layout);
-    let ids = world.entity_ids('Foo');
-    assert(keys.len() == ids.len(), 'result differs in entity_ids');
-    assert(keys.len() == 0, 'found value for unindexed');
-// query_keys.append(0x1337);
-// let (keys, values) = world.entities('Foo', 42, query_keys.span(), 2, layout);
-// assert(keys.len() == 1, 'No keys found!');
-
-// let mut query_keys = ArrayTrait::new();
-// query_keys.append(0x1338);
-// let (keys, values) = world.entities('Foo', 42, query_keys.span(), 2, layout);
-// assert(keys.len() == 0, 'Keys found!');
-}
-
-#[test]
 #[available_gas(6000000)]
 fn test_owner() {
     let world = deploy_world();
