@@ -23,6 +23,7 @@ use tonic::{Request, Response, Status};
 
 use self::error::Error;
 use self::subscription::{EntityModelRequest, EntitySubscriptionService};
+use self::utils::{parse_sql_model_members, SqlModelMember};
 use crate::protos::{self};
 
 #[derive(Debug, Clone)]
@@ -63,42 +64,69 @@ impl DojoWorld {
         .fetch_one(&self.pool)
         .await?;
 
-        let models =
-            sqlx::query_as("SELECT name, class_hash, packed_size, unpacked_size FROM models")
-                .fetch_all(&self.pool)
-                .await?
-                .into_iter()
-                .map(|(name, class_hash, packed_size, unpacked_size)| {
-                    protos::types::ModelMetadata { name, class_hash, packed_size, unpacked_size }
-                })
-                .collect::<Vec<_>>();
+        let models: Vec<(String, String, u32, u32, Vec<u8>)> = sqlx::query_as(
+            "SELECT name, class_hash, packed_size, unpacked_size, layout FROM models",
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut models_metadata = Vec::with_capacity(models.len());
+        for model in models {
+            let schema = self.model_schema(&model.0).await?;
+            models_metadata.push(protos::types::ModelMetadata {
+                name: model.0,
+                class_hash: model.1,
+                packed_size: model.2,
+                unpacked_size: model.3,
+                layout: model.4,
+                schema: serde_json::to_vec(&schema).unwrap(),
+            });
+        }
 
         Ok(protos::types::WorldMetadata {
-            models,
             world_address,
             world_class_hash,
             executor_address,
             executor_class_hash,
+            models: models_metadata,
         })
     }
 
-    pub async fn model_metadata(
-        &self,
-        component: String,
-    ) -> Result<protos::types::ModelMetadata, Error> {
-        sqlx::query_as(
-            "SELECT name, class_hash, packed_size, unpacked_size FROM models WHERE id = ?",
+    async fn model_schema(&self, model: &str) -> Result<dojo_types::schema::Ty, Error> {
+        let model_members: Vec<SqlModelMember> = sqlx::query_as(
+            "SELECT id, model_idx, member_idx, name, type, type_enum, key FROM model_members \
+             WHERE model_id = ? ORDER BY model_idx ASC, member_idx ASC",
         )
-        .bind(component)
+        .bind(model)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(parse_sql_model_members(model, &model_members))
+    }
+
+    pub async fn model_metadata(&self, model: &str) -> Result<protos::types::ModelMetadata, Error> {
+        let (name, class_hash, packed_size, unpacked_size, layout): (
+            String,
+            String,
+            u32,
+            u32,
+            Vec<u8>,
+        ) = sqlx::query_as(
+            "SELECT name, class_hash, packed_size, unpacked_size, layout FROM models WHERE id = ?",
+        )
+        .bind(model)
         .fetch_one(&self.pool)
-        .await
-        .map(|(name, class_hash, packed_size, unpacked_size)| protos::types::ModelMetadata {
+        .await?;
+
+        let schema = self.model_schema(model).await?;
+
+        Ok(protos::types::ModelMetadata {
             name,
+            layout,
             class_hash,
             packed_size,
             unpacked_size,
+            schema: serde_json::to_vec(&schema).unwrap(),
         })
-        .map_err(Error::from)
     }
 }
 
@@ -149,7 +177,7 @@ impl protos::world::world_server::World for DojoWorld {
                 .map_err(|e| Status::internal(format!("parsing error: {e}")))?;
 
             let protos::types::ModelMetadata { packed_size, .. } = self
-                .model_metadata(entity.model)
+                .model_metadata(&entity.model)
                 .await
                 .map_err(|e| Status::internal(e.to_string()))?;
 

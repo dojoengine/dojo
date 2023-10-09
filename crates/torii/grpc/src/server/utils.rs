@@ -1,6 +1,4 @@
 use dojo_types::schema::{Member, Struct, Ty};
-use serde::{Deserialize, Serialize};
-use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct SqlModelMember {
@@ -9,18 +7,8 @@ pub struct SqlModelMember {
     member_idx: u32,
     name: String,
     r#type: String,
-    type_enum: SqlTypeEnum,
+    type_enum: String,
     key: bool,
-}
-
-#[derive(
-    AsRefStr, Display, EnumIter, EnumString, Clone, Debug, Serialize, Deserialize, PartialEq,
-)]
-pub enum SqlTypeEnum {
-    Primitive,
-    Struct,
-    Enum,
-    Tuple,
 }
 
 // assume that the model members are sorted by model_idx and member_idx
@@ -31,14 +19,14 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
         let children = model_members_all
             .iter()
             .filter(|member| &member.id == &path)
-            .map(|child| match child.type_enum {
-                SqlTypeEnum::Primitive => Member {
+            .map(|child| match child.type_enum.as_ref() {
+                "Primitive" => Member {
                     key: child.key,
                     name: child.name.to_owned(),
                     ty: Ty::Primitive(child.r#type.parse().unwrap()),
                 },
 
-                SqlTypeEnum::Struct => Member {
+                "Struct" => Member {
                     key: child.key,
                     name: child.name.to_owned(),
                     ty: parse_sql_model_members(&child.id, model_members_all),
@@ -61,7 +49,7 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
 mod tests {
     use dojo_types::schema::{Member, Struct, Ty};
 
-    use super::{SqlModelMember, SqlTypeEnum};
+    use super::SqlModelMember;
     use crate::server::utils::parse_sql_model_members;
 
     #[test]
@@ -74,7 +62,7 @@ mod tests {
                 key: false,
                 model_idx: 0,
                 member_idx: 0,
-                type_enum: SqlTypeEnum::Primitive,
+                type_enum: "Primitive".into(),
             },
             SqlModelMember {
                 id: "Position".into(),
@@ -83,7 +71,7 @@ mod tests {
                 key: false,
                 model_idx: 0,
                 member_idx: 1,
-                type_enum: SqlTypeEnum::Primitive,
+                type_enum: "Primitive".into(),
             },
         ];
 
@@ -116,7 +104,7 @@ mod tests {
                 key: false,
                 model_idx: 0,
                 member_idx: 0,
-                type_enum: SqlTypeEnum::Primitive,
+                type_enum: "Primitive".into(),
             },
             SqlModelMember {
                 id: "Position".into(),
@@ -125,7 +113,7 @@ mod tests {
                 key: false,
                 model_idx: 0,
                 member_idx: 1,
-                type_enum: SqlTypeEnum::Primitive,
+                type_enum: "Primitive".into(),
             },
             SqlModelMember {
                 id: "Position".into(),
@@ -134,7 +122,7 @@ mod tests {
                 key: false,
                 model_idx: 0,
                 member_idx: 1,
-                type_enum: SqlTypeEnum::Struct,
+                type_enum: "Struct".into(),
             },
             SqlModelMember {
                 id: "Position$Vec2".into(),
@@ -143,7 +131,7 @@ mod tests {
                 key: false,
                 model_idx: 1,
                 member_idx: 0,
-                type_enum: SqlTypeEnum::Primitive,
+                type_enum: "Primitive".into(),
             },
             SqlModelMember {
                 id: "Position$Vec2".into(),
@@ -152,7 +140,7 @@ mod tests {
                 key: false,
                 model_idx: 1,
                 member_idx: 1,
-                type_enum: SqlTypeEnum::Primitive,
+                type_enum: "Primitive".into(),
             },
         ];
 

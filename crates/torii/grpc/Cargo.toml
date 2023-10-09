@@ -17,11 +17,11 @@ starknet.workspace = true
 thiserror.workspace = true
 
 serde.workspace = true
-strum.workspace = true
 strum_macros.workspace = true
 
 # server
 hyper = "0.14.27"
+serde_json.workspace = true
 tonic-web.workspace = true
 tower = "0.4.13"
 tracing.workspace = true
