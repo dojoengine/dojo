@@ -1,0 +1,7 @@
+namespace cryptatools {
+};
+
+interface Environment {
+    constructor();
+    string world_address();
+};

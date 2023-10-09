@@ -11,3 +11,15 @@ pub mod plugin;
 pub mod print;
 pub mod system;
 pub(crate) mod version;
+
+
+use crate::compiler::{*};
+use crate::component::{*};
+use crate::inline_macros::{*};
+use crate::manifest::{*};
+use crate::plugin::{*};
+use crate::print::{*};
+use crate::system::{*};
+use crate::version::{*};
+
+uniffi_macros::include_scaffolding!("dojo");

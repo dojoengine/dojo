@@ -92,3 +92,15 @@ blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "f7df9ba"
 [patch.crates-io]
 cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "262b7eb4b11ab165a2a936a5f914e78aa732d4a2" }
 cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "262b7eb4b11ab165a2a936a5f914e78aa732d4a2" }
+
+[build-dependencies]
+uniffi = {version = "*", features = [ "build", "cli" ]}
+
+[lib]
+name = "crates/dojo-lang"
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+# This can be whatever name makes sense for your project, but the rest of this tutorial assumes uniffi-bindgen.
+name = "uniffi-bindgen"
+path = "uniffi-bindgen.rs"
