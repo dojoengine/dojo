@@ -6,12 +6,18 @@ test_expand_plugin
 //! > cairo_code
 use serde::Serde;
 
+#[derive(Introspect, Copy, Drop, Serde)]
+struct Vec3 {
+    x: u32,
+    y: u32,
+    z: u8,
+}
+
 #[derive(Model, Copy, Drop, Serde)]
 struct Position {
     #[key]
     id: felt252,
-    x: felt252,
-    y: felt252
+    v: Vec3,
 }
 
 trait PositionTrait {
@@ -53,12 +59,68 @@ struct Player {
 use serde::Serde;
 
 
+#[derive(Introspect, Copy, Drop, Serde)]
+struct Vec3 {
+    x: u32,
+    y: u32,
+    z: u8,
+}
+
+impl Vec3SchemaIntrospection of dojo::database::schema::SchemaIntrospection<Vec3> {
+    #[inline(always)]
+    fn size() -> usize {
+        3
+    }
+
+    #[inline(always)]
+    fn layout(ref layout: Array<u8>) {
+        layout.append(32);
+        layout.append(32);
+        layout.append(8);
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::schema::Ty {
+        dojo::database::schema::Ty::Struct(
+            dojo::database::schema::Struct {
+                name: 'Vec3',
+                attrs: array![].span(),
+                children: array![
+                    dojo::database::schema::serialize_member(
+                        @dojo::database::schema::Member {
+                            name: 'x',
+                            ty: dojo::database::schema::SchemaIntrospection::<u32>::ty(),
+                            attrs: array![].span()
+                        }
+                    ),
+                    dojo::database::schema::serialize_member(
+                        @dojo::database::schema::Member {
+                            name: 'y',
+                            ty: dojo::database::schema::SchemaIntrospection::<u32>::ty(),
+                            attrs: array![].span()
+                        }
+                    ),
+                    dojo::database::schema::serialize_member(
+                        @dojo::database::schema::Member {
+                            name: 'z',
+                            ty: dojo::database::schema::SchemaIntrospection::<u8>::ty(),
+                            attrs: array![].span()
+                        }
+                    )
+                ]
+                    .span()
+            }
+        )
+    }
+}
+
+
+
 #[derive(Model, Copy, Drop, Serde)]
 struct Position {
     #[key]
     id: felt252,
-    x: felt252,
-    y: felt252
+    v: Vec3,
 }
 
 impl PositionModel of dojo::model::Model<Position> {
@@ -77,8 +139,7 @@ impl PositionModel of dojo::model::Model<Position> {
     #[inline(always)]
     fn values(self: @Position) -> Span<felt252> {
         let mut serialized = ArrayTrait::new();
-        array::ArrayTrait::append(ref serialized, *self.x);
-        array::ArrayTrait::append(ref serialized, *self.y);
+        serde::Serde::serialize(self.v, ref serialized);
         array::ArrayTrait::span(@serialized)
     }
 
@@ -100,14 +161,12 @@ impl PositionModel of dojo::model::Model<Position> {
 impl PositionSchemaIntrospection of dojo::database::schema::SchemaIntrospection<Position> {
     #[inline(always)]
     fn size() -> usize {
-        dojo::database::schema::SchemaIntrospection::<felt252>::size()
-            + dojo::database::schema::SchemaIntrospection::<felt252>::size()
+        dojo::database::schema::SchemaIntrospection::<Vec3>::size()
     }
 
     #[inline(always)]
     fn layout(ref layout: Array<u8>) {
-        dojo::database::schema::SchemaIntrospection::<felt252>::layout(ref layout);
-        dojo::database::schema::SchemaIntrospection::<felt252>::layout(ref layout);
+        dojo::database::schema::SchemaIntrospection::<Vec3>::layout(ref layout);
     }
 
     #[inline(always)]
@@ -126,15 +185,8 @@ impl PositionSchemaIntrospection of dojo::database::schema::SchemaIntrospection<
                     ),
                     dojo::database::schema::serialize_member(
                         @dojo::database::schema::Member {
-                            name: 'x',
-                            ty: dojo::database::schema::SchemaIntrospection::<felt252>::ty(),
-                            attrs: array![].span()
-                        }
-                    ),
-                    dojo::database::schema::serialize_member(
-                        @dojo::database::schema::Member {
-                            name: 'y',
-                            ty: dojo::database::schema::SchemaIntrospection::<felt252>::ty(),
+                            name: 'v',
+                            ty: dojo::database::schema::SchemaIntrospection::<Vec3>::ty(),
                             attrs: array![].span()
                         }
                     )
@@ -380,12 +432,12 @@ impl PlayerModel of dojo::model::Model<Player> {
 impl PlayerSchemaIntrospection of dojo::database::schema::SchemaIntrospection<Player> {
     #[inline(always)]
     fn size() -> usize {
-        dojo::database::schema::SchemaIntrospection::<felt252>::size()
+        1
     }
 
     #[inline(always)]
     fn layout(ref layout: Array<u8>) {
-        dojo::database::schema::SchemaIntrospection::<felt252>::layout(ref layout);
+        layout.append(251);
     }
 
     #[inline(always)]
@@ -469,6 +521,6 @@ mod player {
 
 //! > expected_diagnostics
 error: Model must define atleast one #[key] attribute
- --> dummy_file.cairo:30:8
+ --> dummy_file.cairo:36:8
 struct Roles {
        ^***^
