@@ -65,7 +65,7 @@ impl<'a, A: ConnectedAccount + Sync> WorldContract<'a, A> {
         let parsed: Uri =
             metadata_uri.try_into().map_err(WorldContractError::InvalidMetadataUri)?;
 
-        let encoded = parsed
+        let mut encoded = parsed
             .to_string()
             .chars()
             .collect::<Vec<_>>()
@@ -75,6 +75,8 @@ impl<'a, A: ConnectedAccount + Sync> WorldContract<'a, A> {
                 cairo_short_string_to_felt(&s).unwrap()
             })
             .collect::<Vec<_>>();
+
+        encoded.insert(0, encoded.len().into());
 
         self.account
             .execute(vec![Call {

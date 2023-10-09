@@ -175,6 +175,7 @@ fn deploy_world() -> IWorldDispatcher {
 fn test_metadata_uri() {
     // Deploy world contract
     let world = deploy_world();
+    world.set_metadata_uri(array!['test_uri'].span());
     let uri = world.metadata_uri();
 
     assert(uri.len() == 1, 'Incorrect metadata uri len');

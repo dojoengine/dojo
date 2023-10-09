@@ -2,7 +2,7 @@ use std::path::Path;
 
 use anyhow::{anyhow, bail, Context, Result};
 use dojo_world::manifest::{Manifest, ManifestError};
-use dojo_world::metadata::Environment;
+use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::contract::ContractMigration;
 use dojo_world::migration::strategy::{prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
@@ -10,6 +10,7 @@ use dojo_world::migration::{
     Declarable, DeployOutput, Deployable, MigrationError, RegisterOutput, StateDiff,
 };
 use dojo_world::utils::TransactionWaiter;
+use scarb::core::Workspace;
 use scarb_ui::Ui;
 use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::{
@@ -37,21 +38,16 @@ use crate::commands::options::starknet::StarknetOptions;
 use crate::commands::options::transaction::TransactionOptions;
 use crate::commands::options::world::WorldOptions;
 
-pub async fn execute<U>(
-    args: MigrateArgs,
-    env_metadata: Option<Environment>,
-    target_dir: U,
-    ui: &Ui,
-) -> Result<()>
+pub async fn execute<U>(ws: &Workspace<'_>, args: MigrateArgs, target_dir: U) -> Result<()>
 where
     U: AsRef<Path>,
 {
+    let ui = ws.config().ui();
     let MigrateArgs { account, starknet, world, name, .. } = args;
 
     // Setup account for migration and fetch world address if it exists.
 
-    let (world_address, account) =
-        setup_env(account, starknet, world, env_metadata.as_ref(), ui, name.as_ref()).await?;
+    let (world_address, account) = setup_env(ws, account, starknet, world, name.as_ref()).await?;
 
     // Load local and remote World manifests.
 
@@ -69,20 +65,21 @@ where
         ui.print("\n✨ No changes to be made. Remote World is already up to date!")
     } else {
         // Mirate according to the diff.
-        apply_diff(target_dir, diff, name, world_address, &account, ui, Some(args.transaction))
+        apply_diff(ws, target_dir, diff, name, world_address, &account, Some(args.transaction))
             .await?;
     }
 
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) async fn apply_diff<U, P, S>(
+    ws: &Workspace<'_>,
     target_dir: U,
     diff: WorldDiff,
     name: Option<String>,
     world_address: Option<FieldElement>,
     account: &SingleOwnerAccount<P, S>,
-    ui: &Ui,
     txn_config: Option<TransactionOptions>,
 ) -> Result<FieldElement>
 where
@@ -90,11 +87,12 @@ where
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
 {
+    let ui = ws.config().ui();
     let strategy = prepare_migration(target_dir, diff, name, world_address, ui)?;
 
     println!("  ");
 
-    let block_height = execute_strategy(&strategy, account, ui, txn_config)
+    let block_height = execute_strategy(ws, &strategy, account, txn_config)
         .await
         .map_err(|e| anyhow!(e))
         .with_context(|| "Problem trying to migrate.")?;
@@ -122,18 +120,21 @@ where
 }
 
 pub(crate) async fn setup_env(
+    ws: &Workspace<'_>,
     account: AccountOptions,
     starknet: StarknetOptions,
     world: WorldOptions,
-    env_metadata: Option<&Environment>,
-    ui: &Ui,
     name: Option<&String>,
 ) -> Result<(Option<FieldElement>, SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>)> {
-    let world_address = world.address(env_metadata).ok();
+    let ui = ws.config().ui();
+    let metadata = dojo_metadata_from_workspace(ws);
+    let env = metadata.as_ref().and_then(|inner| inner.env());
+
+    let world_address = world.address(env).ok();
 
     let account = {
-        let provider = starknet.provider(env_metadata)?;
-        let mut account = account.account(provider, env_metadata).await?;
+        let provider = starknet.provider(env)?;
+        let mut account = account.account(provider, env).await?;
         account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
         let address = account.address();
@@ -240,20 +241,23 @@ where
 // returns the Some(block number) at which migration world is deployed, returns none if world was
 // not redeployed
 pub async fn execute_strategy<P, S>(
+    ws: &Workspace<'_>,
     strategy: &MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
-    ui: &Ui,
     txn_config: Option<TransactionOptions>,
 ) -> Result<Option<u64>>
 where
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
 {
+    let ui = ws.config().ui();
+
     match &strategy.executor {
         Some(executor) => {
             ui.print_header("# Executor");
             deploy_contract(executor, "executor", vec![], migrator, ui, &txn_config).await?;
 
+            // There is no world migration, so it exists already.
             if strategy.world.is_none() {
                 let addr = strategy.world_address()?;
                 let InvokeTransactionResult { transaction_hash } =
@@ -298,11 +302,24 @@ where
             let calldata = vec![
                 strategy.executor.as_ref().unwrap().contract_address,
                 strategy.base.as_ref().unwrap().diff.local,
-                FieldElement::ZERO,
             ];
-            deploy_contract(world, "world", calldata, migrator, ui, &txn_config).await?;
+            deploy_contract(world, "world", calldata.clone(), migrator, ui, &txn_config).await?;
 
             ui.print_sub(format!("Contract address: {:#x}", world.contract_address));
+
+            let metadata = dojo_metadata_from_workspace(ws);
+            if let Some(meta) = metadata.as_ref().and_then(|inner| inner.world()) {
+                let hash = meta.upload().await?;
+
+                let InvokeTransactionResult { transaction_hash } =
+                    WorldContract::new(world.contract_address, migrator)
+                        .set_metadata_uri(format!("ipfs://{hash}"))
+                        .await
+                        .map_err(|e| anyhow!("Failed to set World metadata: {e}"))?;
+
+                ui.print_sub(format!("Set Metadata transaction: {:#x}", transaction_hash));
+                ui.print_sub(format!("Metadata uri: ipfs://{hash}"));
+            }
         }
         None => {}
     };
@@ -388,7 +405,7 @@ where
             c.declare(migrator, txn_config.clone().map(|c| c.into()).unwrap_or_default()).await;
         match res {
             Ok(output) => {
-                ui.print_hidden_sub(format!("transaction_hash: {:#x}", output.transaction_hash));
+                ui.print_hidden_sub(format!("Declare transaction: {:#x}", output.transaction_hash));
 
                 declare_output.push(output);
             }
@@ -413,7 +430,7 @@ where
 
     TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
 
-    ui.print_hidden_sub(format!("registered at: {transaction_hash:#x}"));
+    ui.print_sub(format!("Registered at: {transaction_hash:#x}"));
 
     Ok(Some(RegisterOutput { transaction_hash, declare_output }))
 }
@@ -462,7 +479,6 @@ where
 
                 ui.print_hidden_sub(format!("Deploy transaction: {:#x}", output.transaction_hash));
                 ui.print_sub(format!("Contract address: {:#x}", output.contract_address));
-                ui.print_hidden_sub(format!("deploy transaction: {:#x}", output.transaction_hash));
                 deploy_output.push(Some(output));
             }
             Err(MigrationError::ContractAlreadyDeployed(contract_address)) => {

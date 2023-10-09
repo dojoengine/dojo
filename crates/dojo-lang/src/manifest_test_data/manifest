@@ -8,7 +8,7 @@ test_manifest_file
   "world": {
     "name": "world",
     "address": null,
-    "class_hash": "0x7cb53315435063879e8aa2487ead65eb1196ac71aa7f2888e9762ac430400d",
+    "class_hash": "0x1d8c9130f4a8e59b0aac644a050734004002f7528eb9f27fdd50516eca276c9",
     "abi": [
       {
         "type": "impl",
@@ -434,10 +434,6 @@ test_manifest_file
           {
             "name": "contract_base",
             "type": "core::starknet::class_hash::ClassHash"
-          },
-          {
-            "name": "metadata_uri",
-            "type": "core::array::Span::<core::felt252>"
           }
         ]
       },
@@ -452,13 +448,8 @@ test_manifest_file
             "kind": "data"
           },
           {
-            "name": "caller",
+            "name": "creator",
             "type": "core::starknet::contract_address::ContractAddress",
-            "kind": "data"
-          },
-          {
-            "name": "metadata_uri",
-            "type": "core::array::Span::<core::felt252>",
             "kind": "data"
           }
         ]
