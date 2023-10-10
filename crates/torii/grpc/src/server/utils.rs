@@ -74,7 +74,7 @@ mod tests {
             SqlModelMember {
                 id: "Position".into(),
                 name: "x".into(),
-                r#type: "uint256".into(),
+                r#type: "u256".into(),
                 key: false,
                 model_idx: 0,
                 member_idx: 0,
@@ -83,7 +83,7 @@ mod tests {
             SqlModelMember {
                 id: "Position".into(),
                 name: "y".into(),
-                r#type: "uint256".into(),
+                r#type: "u256".into(),
                 key: false,
                 model_idx: 0,
                 member_idx: 1,
@@ -97,12 +97,12 @@ mod tests {
                 dojo_types::schema::Member {
                     name: "x".into(),
                     key: false,
-                    ty: Ty::Primitive("uint256".parse().unwrap()),
+                    ty: Ty::Primitive("u256".parse().unwrap()),
                 },
                 dojo_types::schema::Member {
                     name: "y".into(),
                     key: false,
-                    ty: Ty::Primitive("uint256".parse().unwrap()),
+                    ty: Ty::Primitive("u256".parse().unwrap()),
                 },
             ],
         });
@@ -143,7 +143,7 @@ mod tests {
             SqlModelMember {
                 id: "Position$Vec2".into(),
                 name: "x".into(),
-                r#type: "uint256".into(),
+                r#type: "u256".into(),
                 key: false,
                 model_idx: 1,
                 member_idx: 0,
@@ -152,7 +152,7 @@ mod tests {
             SqlModelMember {
                 id: "Position$Vec2".into(),
                 name: "y".into(),
-                r#type: "uint256".into(),
+                r#type: "u256".into(),
                 key: false,
                 model_idx: 1,
                 member_idx: 1,
@@ -182,12 +182,12 @@ mod tests {
                             Member {
                                 name: "x".into(),
                                 key: false,
-                                ty: Ty::Primitive("uint256".parse().unwrap()),
+                                ty: Ty::Primitive("u256".parse().unwrap()),
                             },
                             Member {
                                 name: "y".into(),
                                 key: false,
-                                ty: Ty::Primitive("uint256".parse().unwrap()),
+                                ty: Ty::Primitive("u256".parse().unwrap()),
                             },
                         ],
                     }),
