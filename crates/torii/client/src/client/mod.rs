@@ -57,10 +57,10 @@ impl Client {
         let mut schema = self.metadata.read().model(model).map(|m| m.schema.clone())?;
         let layout = self.metadata.read().model(model).map(|m| m.layout.clone())?;
 
-        let unpacked = unpack(raw_values, layout.clone()).unwrap();
+        let unpacked = unpack(raw_values, layout).unwrap();
         let mut keys_and_unpacked = [keys.to_vec(), unpacked].concat();
 
-        let _ = schema.deserialize(&mut keys_and_unpacked).unwrap();
+        schema.deserialize(&mut keys_and_unpacked).unwrap();
 
         Some(schema)
     }

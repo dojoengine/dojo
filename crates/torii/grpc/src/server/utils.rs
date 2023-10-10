@@ -19,7 +19,7 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
     fn parse_sql_model_members_impl(path: &str, model_members_all: &[SqlModelMember]) -> Ty {
         let children = model_members_all
             .iter()
-            .filter(|member| &member.id == &path)
+            .filter(|member| member.id == path)
             .map(|child| match child.type_enum.as_ref() {
                 "Primitive" => Member {
                     key: child.key,
@@ -53,7 +53,7 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
             .collect::<Vec<Member>>();
 
         // refer to the sql table for `model_members`
-        let model_name = path.split("$").last().unwrap_or(path);
+        let model_name = path.split('$').last().unwrap_or(path);
 
         Ty::Struct(Struct { name: model_name.to_owned(), children })
     }
