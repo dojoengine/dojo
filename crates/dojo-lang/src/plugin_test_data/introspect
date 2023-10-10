@@ -16,7 +16,9 @@ struct Vec2 {
 struct Position {
     #[key]
     player: ContractAddress,
+    before: u8,
     vec: Vec2,
+    after: u16,
 }
 
 //! > generated_cairo_code
@@ -41,14 +43,13 @@ impl Vec2PrintImpl of debug::PrintTrait<Vec2> {
 impl Vec2SchemaIntrospection of dojo::database::schema::SchemaIntrospection<Vec2> {
     #[inline(always)]
     fn size() -> usize {
-        dojo::database::schema::SchemaIntrospection::<u32>::size()
-            + dojo::database::schema::SchemaIntrospection::<u32>::size()
+        2
     }
 
     #[inline(always)]
     fn layout(ref layout: Array<u8>) {
-        dojo::database::schema::SchemaIntrospection::<u32>::layout(ref layout);
-        dojo::database::schema::SchemaIntrospection::<u32>::layout(ref layout);
+        layout.append(32);
+        layout.append(32);
     }
 
     #[inline(always)]
@@ -61,14 +62,14 @@ impl Vec2SchemaIntrospection of dojo::database::schema::SchemaIntrospection<Vec2
                     dojo::database::schema::serialize_member(
                         @dojo::database::schema::Member {
                             name: 'x',
-                            ty: dojo::database::schema::SchemaIntrospection::<u32>::ty(),
+                            ty: dojo::database::schema::Ty::Primitive('u32'),
                             attrs: array![].span()
                         }
                     ),
                     dojo::database::schema::serialize_member(
                         @dojo::database::schema::Member {
                             name: 'y',
-                            ty: dojo::database::schema::SchemaIntrospection::<u32>::ty(),
+                            ty: dojo::database::schema::Ty::Primitive('u32'),
                             attrs: array![].span()
                         }
                     )
@@ -85,7 +86,9 @@ impl Vec2SchemaIntrospection of dojo::database::schema::SchemaIntrospection<Vec2
 struct Position {
     #[key]
     player: ContractAddress,
+    before: u8,
     vec: Vec2,
+    after: u16,
 }
 impl PositionModel of dojo::model::Model<Position> {
     #[inline(always)]
@@ -103,7 +106,9 @@ impl PositionModel of dojo::model::Model<Position> {
     #[inline(always)]
     fn values(self: @Position) -> Span<felt252> {
         let mut serialized = ArrayTrait::new();
+        serde::Serde::serialize(self.before, ref serialized);
         serde::Serde::serialize(self.vec, ref serialized);
+        serde::Serde::serialize(self.after, ref serialized);
         array::ArrayTrait::span(@serialized)
     }
 
@@ -125,12 +130,14 @@ impl PositionModel of dojo::model::Model<Position> {
 impl PositionSchemaIntrospection of dojo::database::schema::SchemaIntrospection<Position> {
     #[inline(always)]
     fn size() -> usize {
-        dojo::database::schema::SchemaIntrospection::<Vec2>::size()
+        dojo::database::schema::SchemaIntrospection::<Vec2>::size() + 2
     }
 
     #[inline(always)]
     fn layout(ref layout: Array<u8>) {
+        layout.append(8);
         dojo::database::schema::SchemaIntrospection::<Vec2>::layout(ref layout);
+        layout.append(16);
     }
 
     #[inline(always)]
@@ -143,14 +150,28 @@ impl PositionSchemaIntrospection of dojo::database::schema::SchemaIntrospection<
                     dojo::database::schema::serialize_member(
                         @dojo::database::schema::Member {
                             name: 'player',
-                            ty: dojo::database::schema::SchemaIntrospection::<ContractAddress>::ty(),
+                            ty: dojo::database::schema::Ty::Primitive('ContractAddress'),
                             attrs: array!['key'].span()
+                        }
+                    ),
+                    dojo::database::schema::serialize_member(
+                        @dojo::database::schema::Member {
+                            name: 'before',
+                            ty: dojo::database::schema::Ty::Primitive('u8'),
+                            attrs: array![].span()
                         }
                     ),
                     dojo::database::schema::serialize_member(
                         @dojo::database::schema::Member {
                             name: 'vec',
                             ty: dojo::database::schema::SchemaIntrospection::<Vec2>::ty(),
+                            attrs: array![].span()
+                        }
+                    ),
+                    dojo::database::schema::serialize_member(
+                        @dojo::database::schema::Member {
+                            name: 'after',
+                            ty: dojo::database::schema::Ty::Primitive('u16'),
                             attrs: array![].span()
                         }
                     )
@@ -209,19 +230,25 @@ impl PositionPrintImpl of debug::PrintTrait<Position> {
     fn print(self: Position) {
         debug::PrintTrait::print('player');
         debug::PrintTrait::print(self.player);
+        debug::PrintTrait::print('before');
+        debug::PrintTrait::print(self.before);
         debug::PrintTrait::print('vec');
         debug::PrintTrait::print(self.vec);
+        debug::PrintTrait::print('after');
+        debug::PrintTrait::print(self.after);
     }
 }
 impl PositionSchemaIntrospection of dojo::database::schema::SchemaIntrospection<Position> {
     #[inline(always)]
     fn size() -> usize {
-        dojo::database::schema::SchemaIntrospection::<Vec2>::size()
+        dojo::database::schema::SchemaIntrospection::<Vec2>::size() + 2
     }
 
     #[inline(always)]
     fn layout(ref layout: Array<u8>) {
+        layout.append(8);
         dojo::database::schema::SchemaIntrospection::<Vec2>::layout(ref layout);
+        layout.append(16);
     }
 
     #[inline(always)]
@@ -234,14 +261,28 @@ impl PositionSchemaIntrospection of dojo::database::schema::SchemaIntrospection<
                     dojo::database::schema::serialize_member(
                         @dojo::database::schema::Member {
                             name: 'player',
-                            ty: dojo::database::schema::SchemaIntrospection::<ContractAddress>::ty(),
+                            ty: dojo::database::schema::Ty::Primitive('ContractAddress'),
                             attrs: array!['key'].span()
+                        }
+                    ),
+                    dojo::database::schema::serialize_member(
+                        @dojo::database::schema::Member {
+                            name: 'before',
+                            ty: dojo::database::schema::Ty::Primitive('u8'),
+                            attrs: array![].span()
                         }
                     ),
                     dojo::database::schema::serialize_member(
                         @dojo::database::schema::Member {
                             name: 'vec',
                             ty: dojo::database::schema::SchemaIntrospection::<Vec2>::ty(),
+                            attrs: array![].span()
+                        }
+                    ),
+                    dojo::database::schema::serialize_member(
+                        @dojo::database::schema::Member {
+                            name: 'after',
+                            ty: dojo::database::schema::Ty::Primitive('u16'),
                             attrs: array![].span()
                         }
                     )
