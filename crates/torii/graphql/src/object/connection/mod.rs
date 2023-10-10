@@ -104,7 +104,7 @@ pub fn connection_output(
     data: &[SqliteRow],
     types: &TypeMapping,
     order: &Option<Order>,
-    cursor_id: &str,
+    id_column: &str,
     total_count: i64,
     is_external: bool,
 ) -> sqlx::Result<ValueMapping> {
@@ -113,7 +113,7 @@ pub fn connection_output(
         .map(|row| {
             let field_name = match order {
                 Some(order) => format!("external_{}", order.field),
-                None => cursor_id.to_string(),
+                None => id_column.to_string(),
             };
 
             // FIXME
@@ -122,7 +122,7 @@ pub fn connection_output(
                 Err(_) => row.try_get::<String, &str>(&field_name)?,
             };
 
-            let id = row.try_get::<String, &str>(cursor_id)?;
+            let id = row.try_get::<String, &str>(id_column)?;
             let cursor = cursor::encode(&id, &field_value.to_string());
             let value_mapping = value_mapping_from_row(row, types, is_external)?;
 

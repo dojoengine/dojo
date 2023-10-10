@@ -1,19 +1,13 @@
-use async_graphql::dynamic::{
-    Field, FieldFuture, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
-};
+use async_graphql::dynamic::{InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef};
 use async_graphql::{Name, Value};
 use indexmap::IndexMap;
-use sqlx::{Pool, Sqlite};
 use tokio_stream::StreamExt;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::types::Model;
 
-use super::connection::{connection_arguments, connection_output, parse_connection_arguments};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::mapping::MODEL_TYPE_MAPPING;
 use crate::query::constants::MODEL_TABLE;
-use crate::query::data::{count_rows, fetch_multiple_rows, fetch_single_row};
-use crate::query::value_mapping_from_row;
 
 pub struct ModelObject;
 
@@ -46,59 +40,8 @@ impl ObjectTrait for ModelObject {
         &MODEL_TYPE_MAPPING
     }
 
-    fn resolve_one(&self) -> Option<Field> {
-        Some(
-            Field::new(self.name().0, TypeRef::named_nn(self.type_name()), |ctx| {
-                FieldFuture::new(async move {
-                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let id = ctx.args.try_get("id")?.string()?.to_string();
-                    let data = fetch_single_row(&mut conn, MODEL_TABLE, "id", &id).await?;
-                    let model = value_mapping_from_row(&data, &MODEL_TYPE_MAPPING, false)?;
-
-                    Ok(Some(Value::Object(model)))
-                })
-            })
-            .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID))),
-        )
-    }
-
-    fn resolve_many(&self) -> Option<Field> {
-        let mut field = Field::new(
-            self.name().1,
-            TypeRef::named(format!("{}Connection", self.type_name())),
-            |ctx| {
-                FieldFuture::new(async move {
-                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let connection = parse_connection_arguments(&ctx)?;
-                    let total_count =
-                        count_rows(&mut conn, MODEL_TABLE, &None, &Vec::new()).await?;
-                    let data = fetch_multiple_rows(
-                        &mut conn,
-                        MODEL_TABLE,
-                        "id",
-                        &None,
-                        &None,
-                        &Vec::new(),
-                        &connection,
-                    )
-                    .await?;
-                    let results = connection_output(
-                        &data,
-                        &MODEL_TYPE_MAPPING,
-                        &None,
-                        "id",
-                        total_count,
-                        false,
-                    )?;
-
-                    Ok(Some(Value::Object(results)))
-                })
-            },
-        );
-
-        field = connection_arguments(field);
-
-        Some(field)
+    fn table_name(&self) -> Option<&str> {
+        Some(MODEL_TABLE)
     }
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
