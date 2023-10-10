@@ -19,7 +19,6 @@ serde_json.workspace = true
 starknet-crypto.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
-tokio = { version = "1.32.0", default-features = false, features = [ "rt" ] }
 torii-grpc = { path = "../grpc", features = [ "client" ] }
 url.workspace = true
 
