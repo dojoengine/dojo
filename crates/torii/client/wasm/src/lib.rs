@@ -78,7 +78,7 @@ pub async fn spawn_client(
         .collect::<Result<Vec<_>, _>>()?;
 
     let world_address = FieldElement::from_str(world_address).map_err(|err| {
-        JsValue::from_str(format!("failed to parse World address: {err}").as_str())
+        JsValue::from_str(format!("failed to parse world address: {err}").as_str())
     })?;
 
     let client = torii_client::client::ClientBuilder::new()
