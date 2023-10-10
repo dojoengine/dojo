@@ -36,15 +36,20 @@ pub struct Entity {
 pub struct Moves {
     pub __typename: String,
     pub remaining: u32,
-    pub last_direction: u8,
+    pub last_direction: String,
     pub entity: Option<Entity>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Vec2 {
+    pub x: u32,
+    pub y: u32,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Position {
     pub __typename: String,
-    pub x: u32,
-    pub y: u32,
+    pub vec: Vec2,
     pub entity: Option<Entity>,
 }
 
