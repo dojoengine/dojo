@@ -14,7 +14,7 @@ use super::connection::{connection_arguments, connection_output, parse_connectio
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::query::constants::ENTITY_TABLE;
-use crate::query::data::{count_rows, fetch_multiple_rows, fetch_single_row};
+use crate::query::data::{count_rows, fetch_multiple_rows};
 use crate::query::{type_mapping_query, value_mapping_from_row};
 use crate::types::TypeData;
 use crate::utils::extract_value::extract;
@@ -55,24 +55,12 @@ impl ObjectTrait for EntityObject {
         &ENTITY_TYPE_MAPPING
     }
 
-    fn related_fields(&self) -> Option<Vec<Field>> {
-        Some(vec![model_union_field()])
+    fn table_name(&self) -> Option<&str> {
+        Some(ENTITY_TABLE)
     }
 
-    fn resolve_one(&self) -> Option<Field> {
-        Some(
-            Field::new(self.name().0, TypeRef::named_nn(self.type_name()), |ctx| {
-                FieldFuture::new(async move {
-                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let id = ctx.args.try_get("id")?.string()?.to_string();
-                    let data = fetch_single_row(&mut conn, ENTITY_TABLE, "id", &id).await?;
-                    let entity = value_mapping_from_row(&data, &ENTITY_TYPE_MAPPING, false)?;
-
-                    Ok(Some(Value::Object(entity)))
-                })
-            })
-            .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID))),
-        )
+    fn related_fields(&self) -> Option<Vec<Field>> {
+        Some(vec![model_union_field()])
     }
 
     fn resolve_many(&self) -> Option<Field> {
