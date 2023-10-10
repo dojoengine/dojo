@@ -90,7 +90,7 @@ impl<'a, A: ConnectedAccount + Sync> WorldContract<'a, A> {
     pub async fn grant_writer(
         &self,
         model: &str,
-        system: FieldElement,
+        contract: FieldElement,
     ) -> Result<
         InvokeTransactionResult,
         WorldContractError<A::SignError, <A::Provider as Provider>::Error>,
@@ -100,7 +100,7 @@ impl<'a, A: ConnectedAccount + Sync> WorldContract<'a, A> {
 
         self.account
             .execute(vec![Call {
-                calldata: vec![model, system],
+                calldata: vec![model, contract],
                 to: self.address,
                 selector: get_selector_from_name("grant_writer").unwrap(),
             }])

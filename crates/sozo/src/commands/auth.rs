@@ -22,8 +22,8 @@ pub enum AuthCommand {
         #[arg(help = "Name of the model to grant write access to.")]
         model: String,
 
-        #[arg(help = "Name of the system to grant writer access to.")]
-        system: FieldElement,
+        #[arg(help = "Contract address of the system to grant writer access to.")]
+        contract: FieldElement,
 
         #[command(flatten)]
         world: WorldOptions,
