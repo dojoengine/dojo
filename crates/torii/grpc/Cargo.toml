@@ -16,8 +16,13 @@ starknet-crypto.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
 
+serde.workspace = true
+strum_macros.workspace = true
+
 # server
+hex.workspace = true
 hyper = "0.14.27"
+serde_json.workspace = true
 tonic-web.workspace = true
 tower = "0.4.13"
 tracing.workspace = true

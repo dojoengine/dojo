@@ -28,10 +28,12 @@ pub struct EntityModel {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelMetadata {
+    pub schema: Ty,
     pub name: String,
     pub packed_size: u32,
     pub unpacked_size: u32,
     pub class_hash: FieldElement,
+    pub layout: Vec<FieldElement>,
 }
 
 /// Represents all possible types in Cairo

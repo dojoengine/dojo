@@ -23,6 +23,10 @@ message ModelMetadata {
     uint32 unpacked_size = 3;
     // hex-encoded class hash of the component
     string class_hash = 4;
+    // The layout of the component in bytes
+    bytes layout = 5;
+    // The schema of the component serialized in bytes (for simplicity sake)
+    bytes schema = 6;
 }
 
 /// Represents a component for a given entity.

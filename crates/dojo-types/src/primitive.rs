@@ -4,7 +4,7 @@ use starknet::core::types::{FieldElement, ValueOutOfRangeError};
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 
 #[derive(
-    AsRefStr, Display, EnumIter, EnumString, Clone, Debug, Serialize, Deserialize, PartialEq,
+    AsRefStr, Display, EnumIter, EnumString, Copy, Clone, Debug, Serialize, Deserialize, PartialEq,
 )]
 #[strum(serialize_all = "lowercase")]
 pub enum Primitive {

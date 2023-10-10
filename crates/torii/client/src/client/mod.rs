@@ -4,7 +4,8 @@ pub mod subscription;
 
 use std::sync::Arc;
 
-use dojo_types::schema::EntityModel;
+use dojo_types::packing::unpack;
+use dojo_types::schema::{EntityModel, Ty};
 use dojo_types::WorldMetadata;
 use futures::channel::mpsc;
 use parking_lot::{Mutex, RwLock};
@@ -15,7 +16,6 @@ use starknet::providers::JsonRpcClient;
 use starknet_crypto::FieldElement;
 #[cfg(not(target_arch = "wasm32"))]
 use tokio::task::spawn as spawn_task;
-// use url::Url;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen_futures::spawn_local as spawn_task;
 
@@ -47,12 +47,22 @@ impl Client {
     }
 
     /// Returns the component value of an entity.
-    pub fn entity(&self, model: &str, keys: &[FieldElement]) -> Option<Vec<FieldElement>> {
-        let model = cairo_short_string_to_felt(model).ok()?;
-        match self.storage.get_entity(model, keys) {
-            Ok(res) => res,
-            Err(_) => None,
-        }
+    pub fn entity(&self, model: &str, keys: &[FieldElement]) -> Option<Ty> {
+        let Ok(Some(raw_values)) =
+            self.storage.get_entity(cairo_short_string_to_felt(model).ok()?, keys)
+        else {
+            return None;
+        };
+
+        let mut schema = self.metadata.read().model(model).map(|m| m.schema.clone())?;
+        let layout = self.metadata.read().model(model).map(|m| m.layout.clone())?;
+
+        let unpacked = unpack(raw_values, layout).unwrap();
+        let mut keys_and_unpacked = [keys.to_vec(), unpacked].concat();
+
+        schema.deserialize(&mut keys_and_unpacked).unwrap();
+
+        Some(schema)
     }
 
     /// Returns the list of entities that the client is subscribed to.
