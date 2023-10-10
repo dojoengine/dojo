@@ -80,7 +80,7 @@ pub async fn spawn_client(
         JsValue::from_str(format!("failed to parse world address: {err}").as_str())
     })?;
 
-    let client = torii_client::client::ClientBuilder::new()
+    let mut client = torii_client::client::ClientBuilder::new()
         .set_entities_to_sync(entities)
         .build(torii_url.into(), rpc_url.into(), world_address)
         .await

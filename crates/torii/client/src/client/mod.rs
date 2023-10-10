@@ -2,7 +2,7 @@ pub mod error;
 pub mod storage;
 pub mod subscription;
 
-use std::cell::{OnceCell, RefCell};
+use std::cell::OnceCell;
 use std::sync::Arc;
 
 use dojo_types::packing::unpack;
@@ -27,7 +27,7 @@ pub struct Client {
     /// Metadata of the World that the client is connected to.
     metadata: Arc<RwLock<WorldMetadata>>,
     /// The grpc client.
-    inner: RefCell<torii_grpc::client::WorldClient>,
+    inner: torii_grpc::client::WorldClient,
     /// Entity storage
     storage: Arc<ModelStorage>,
     /// Entities the client are subscribed to.
@@ -73,9 +73,8 @@ impl Client {
 
     /// Initiate the entity subscriptions and returns a [SubscriptionService] which when await'ed
     /// will execute the subscription service and starts the syncing process.
-    pub async fn start_subscription(&self) -> Result<SubscriptionService, Error> {
-        let sub_res_stream =
-            self.inner.borrow_mut().subscribe_entities(self.synced_entities()).await?;
+    pub async fn start_subscription(&mut self) -> Result<SubscriptionService, Error> {
+        let sub_res_stream = self.inner.subscribe_entities(self.synced_entities()).await?;
 
         let (service, handle) = SubscriptionService::new(
             Arc::clone(&self.storage),
@@ -152,9 +151,9 @@ impl ClientBuilder {
         }
 
         Ok(Client {
+            inner: grpc_client,
             storage: client_storage,
             metadata: shared_metadata,
-            inner: RefCell::new(grpc_client),
             sub_client_handle: OnceCell::new(),
             subscribed_entities: subbed_entities,
         })
