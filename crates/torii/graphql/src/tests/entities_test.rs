@@ -21,7 +21,7 @@ mod tests {
             r#"
             {{
                 entity(id: "{:#x}") {{
-                    modelNames
+                    model_names
                 }}
             }}
         "#,
