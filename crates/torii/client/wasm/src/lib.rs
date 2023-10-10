@@ -1,3 +1,5 @@
+//! Minimal JS bindings for the torii client.
+
 use std::str::FromStr;
 
 use starknet::core::types::FieldElement;
@@ -28,6 +30,7 @@ impl Client {
         model: &str,
         keys: Vec<JsFieldElement>,
     ) -> Result<Option<JsValue>, JsValue> {
+        #[cfg(feature = "console-error-panic")]
         console_error_panic_hook::set_once();
 
         let keys = keys
@@ -50,12 +53,15 @@ impl Client {
     /// Returns the list of entities that are currently being synced.
     #[wasm_bindgen(getter, js_name = syncedEntities)]
     pub fn synced_entities(&self) -> Result<JsValue, JsValue> {
+        #[cfg(feature = "console-error-panic")]
         console_error_panic_hook::set_once();
+
         let entities = self.0.synced_entities();
         serde_wasm_bindgen::to_value(&entities).map_err(|e| e.into())
     }
 }
 
+/// Spawns the client along with the subscription service.
 #[wasm_bindgen]
 pub async fn spawn_client(
     torii_url: &str,
@@ -63,6 +69,7 @@ pub async fn spawn_client(
     world_address: &str,
     initial_entities_to_sync: Vec<JsEntityComponent>,
 ) -> Result<Client, JsValue> {
+    #[cfg(feature = "console-error-panic")]
     console_error_panic_hook::set_once();
 
     let entities = initial_entities_to_sync

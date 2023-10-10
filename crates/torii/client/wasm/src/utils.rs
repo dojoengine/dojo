@@ -1,7 +1,6 @@
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::Ty;
-use serde_json::{json, Value};
-use wasm_bindgen::prelude::*;
+use serde_json::Value;
 
 pub fn parse_ty_as_json_str(ty: &Ty) -> String {
     fn parse_ty_as_json_str_impl(ty: &Ty) -> Value {
@@ -52,8 +51,10 @@ fn primitive_value_json(primitive: Primitive) -> Value {
 #[cfg(test)]
 mod test {
 
+    use dojo_types::schema::{Enum, Member, Struct};
     use serde_json::json;
     use starknet::macros::felt;
+    use wasm_bindgen_test::*;
 
     use super::*;
 

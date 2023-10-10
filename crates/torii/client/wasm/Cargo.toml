@@ -34,8 +34,11 @@ web-sys = { version = "0.3.4", features = [ 'MessageEvent', 'Window', 'Worker', 
 # logging them with `console.error`. This is great for development, but requires
 # all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
 # code size when deploying.
-console_error_panic_hook = "0.1.7"
+console_error_panic_hook = { version = "0.1.7", optional = true }
 futures = "0.3.28"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.0"
+
+[features]
+console-error-panic = [ "dep:console_error_panic_hook" ]
