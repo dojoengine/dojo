@@ -51,7 +51,7 @@ impl System {
 
                     #[storage]
                     struct Storage {
-                        world_dispatcher: ContractAddress,
+                        world_dispatcher: IWorldDispatcher,
                     }
 
                     #[external(v0)]

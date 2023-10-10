@@ -20,7 +20,7 @@ mod player_actions_external {
 
     #[storage]
     struct Storage {
-        world_dispatcher: ContractAddress,
+        world_dispatcher: IWorldDispatcher,
     }
 
     #[event]
@@ -39,7 +39,7 @@ mod player_actions_external {
     #[external(v0)]
     impl PlayerActionsImpl of IPlayerActions<ContractState> {
         fn spawn(self: @ContractState) {
-            let world = IWorldDispatcher { contract_address: self.world_dispatcher.read() };
+            let world = self.world_dispatcher.read();
             let player = get_caller_address();
             let position = get!(world, player, (Position));
             set!(
@@ -52,7 +52,7 @@ mod player_actions_external {
         }
 
         fn move(self: @ContractState, direction: Direction) {
-            let world = IWorldDispatcher { contract_address: self.world_dispatcher.read() };
+            let world = self.world_dispatcher.read();
             let player = get_caller_address();
             let (mut position, mut moves) = get!(world, player, (Position, Moves));
             moves.remaining -= 1;
