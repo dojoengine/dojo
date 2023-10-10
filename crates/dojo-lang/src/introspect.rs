@@ -49,51 +49,64 @@ pub fn handle_introspect_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) ->
 
     let mut size = vec![];
     let mut layout = vec![];
-    members.iter().for_each(|m| {
-        if m.key {
-            return;
-        }
+    let mut member_types = vec![];
 
+    members.iter().for_each(|m| {
         let primitive_intro = primitive_sizes.get(&m.ty);
+        let mut attrs = vec![];
 
         if let Some(p_ty) = primitive_intro {
-            size_precompute += p_ty.0;
-            p_ty.1
-                .iter()
-                .for_each(|l| layout.push(RewriteNode::Text(format!("layout.append({});\n", l))));
+            // It's a primitive type
+            if m.key {
+                attrs.push("'key'");
+            } else {
+                size_precompute += p_ty.0;
+                p_ty.1.iter().for_each(|l| {
+                    layout.push(RewriteNode::Text(format!("layout.append({});\n", l)))
+                });
+            }
+            // Do this for both keys and non keys
+            member_types.push(format!(
+                "dojo::database::schema::serialize_member(@dojo::database::schema::Member {{
+                name: '{}',
+                ty: dojo::database::schema::Ty::Primitive('{}'),
+                attrs: array![{}].span()
+            }})",
+                m.name,
+                m.ty,
+                attrs.join(","),
+            ));
         } else {
-            size.push(format!("dojo::database::schema::SchemaIntrospection::<{}>::size()", m.ty,));
-            layout.push(RewriteNode::Text(format!(
-                "dojo::database::schema::SchemaIntrospection::<{}>::layout(ref layout);\n",
-                m.ty
-            )))
+            // It's a custom type
+            if m.key {
+                attrs.push("'key'");
+            } else {
+                size.push(format!(
+                    "dojo::database::schema::SchemaIntrospection::<{}>::size()",
+                    m.ty,
+                ));
+                layout.push(RewriteNode::Text(format!(
+                    "dojo::database::schema::SchemaIntrospection::<{}>::layout(ref layout);\n",
+                    m.ty
+                )));
+            }
+            // Do this for both keys and non keys
+            member_types.push(format!(
+                "dojo::database::schema::serialize_member(@dojo::database::schema::Member {{
+                name: '{}',
+                ty: dojo::database::schema::SchemaIntrospection::<{}>::ty(),
+                attrs: array![{}].span()
+            }})",
+                m.name,
+                m.ty,
+                attrs.join(","),
+            ));
         }
     });
 
     if size_precompute > 0 {
         size.push(format!("{}", size_precompute));
     }
-
-    let member_types: Vec<_> = members
-        .iter()
-        .map(|m| {
-            let mut attrs = vec![];
-            if m.key {
-                attrs.push("'key'")
-            }
-
-            format!(
-                "dojo::database::schema::serialize_member(@dojo::database::schema::Member {{
-				name: '{}',
-				ty: dojo::database::schema::SchemaIntrospection::<{}>::ty(),
-				attrs: array![{}].span()
-			}})",
-                m.name,
-                m.ty,
-                attrs.join(","),
-            )
-        })
-        .collect::<_>();
 
     RewriteNode::interpolate_patched(
         "

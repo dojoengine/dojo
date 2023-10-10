@@ -89,21 +89,21 @@ impl Vec3SchemaIntrospection of dojo::database::schema::SchemaIntrospection<Vec3
                     dojo::database::schema::serialize_member(
                         @dojo::database::schema::Member {
                             name: 'x',
-                            ty: dojo::database::schema::SchemaIntrospection::<u32>::ty(),
+                            ty: dojo::database::schema::Ty::Primitive('u32'),
                             attrs: array![].span()
                         }
                     ),
                     dojo::database::schema::serialize_member(
                         @dojo::database::schema::Member {
                             name: 'y',
-                            ty: dojo::database::schema::SchemaIntrospection::<u32>::ty(),
+                            ty: dojo::database::schema::Ty::Primitive('u32'),
                             attrs: array![].span()
                         }
                     ),
                     dojo::database::schema::serialize_member(
                         @dojo::database::schema::Member {
                             name: 'z',
-                            ty: dojo::database::schema::SchemaIntrospection::<u8>::ty(),
+                            ty: dojo::database::schema::Ty::Primitive('u8'),
                             attrs: array![].span()
                         }
                     )
@@ -179,7 +179,7 @@ impl PositionSchemaIntrospection of dojo::database::schema::SchemaIntrospection<
                     dojo::database::schema::serialize_member(
                         @dojo::database::schema::Member {
                             name: 'id',
-                            ty: dojo::database::schema::SchemaIntrospection::<felt252>::ty(),
+                            ty: dojo::database::schema::Ty::Primitive('felt252'),
                             attrs: array!['key'].span()
                         }
                     ),
@@ -450,21 +450,21 @@ impl PlayerSchemaIntrospection of dojo::database::schema::SchemaIntrospection<Pl
                     dojo::database::schema::serialize_member(
                         @dojo::database::schema::Member {
                             name: 'game',
-                            ty: dojo::database::schema::SchemaIntrospection::<felt252>::ty(),
+                            ty: dojo::database::schema::Ty::Primitive('felt252'),
                             attrs: array!['key'].span()
                         }
                     ),
                     dojo::database::schema::serialize_member(
                         @dojo::database::schema::Member {
                             name: 'player',
-                            ty: dojo::database::schema::SchemaIntrospection::<ContractAddress>::ty(),
+                            ty: dojo::database::schema::Ty::Primitive('ContractAddress'),
                             attrs: array!['key'].span()
                         }
                     ),
                     dojo::database::schema::serialize_member(
                         @dojo::database::schema::Member {
                             name: 'name',
-                            ty: dojo::database::schema::SchemaIntrospection::<felt252>::ty(),
+                            ty: dojo::database::schema::Ty::Primitive('felt252'),
                             attrs: array![].span()
                         }
                     )

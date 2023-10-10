@@ -10,7 +10,12 @@ use dojo::database::schema::SchemaIntrospection;
 #[test]
 #[available_gas(9000000)]
 fn test_bit_fpow() {
-    assert(fpow(2, 250) == 1809251394333065553493296640760748560207343510400633813116524750123642650624_u256, '')
+    assert(
+        fpow(
+            2, 250
+        ) == 1809251394333065553493296640760748560207343510400633813116524750123642650624_u256,
+        ''
+    )
 }
 
 #[test]
@@ -59,14 +64,11 @@ fn test_pack_unpack_felt252_u128() {
     let mut packed_span = packed.span();
 
     assert(
-        unpack_inner(128, ref packed_span, ref unpacking, ref un_offset).unwrap() 
-        == 1337, 
+        unpack_inner(128, ref packed_span, ref unpacking, ref un_offset).unwrap() == 1337,
         'Types u8'
     );
     assert(
-        unpack_inner(252, ref packed_span, ref unpacking, ref un_offset).unwrap() 
-        == 420, 
-        'Types u8'
+        unpack_inner(252, ref packed_span, ref unpacking, ref un_offset).unwrap() == 420, 'Types u8'
     );
 }
 
@@ -88,17 +90,12 @@ fn test_pack_multiple() {
     packed.append(packing);
 
     assert(
-        *packed.at(0) == 0x6000000050000000400000003000000020000000100000000, 
-        'Packed multiple 0'
+        *packed.at(0) == 0x6000000050000000400000003000000020000000100000000, 'Packed multiple 0'
     );
     assert(
-        *packed.at(1) == 0xd0000000c0000000b0000000a000000090000000800000007, 
-        'Packed multiple 1'
+        *packed.at(1) == 0xd0000000c0000000b0000000a000000090000000800000007, 'Packed multiple 1'
     );
-    assert(
-        *packed.at(2) == 0x130000001200000011000000100000000f0000000e, 
-        'Packed multiple 2'
-    );
+    assert(*packed.at(2) == 0x130000001200000011000000100000000f0000000e, 'Packed multiple 2');
 }
 
 #[test]
@@ -120,7 +117,7 @@ fn test_pack_unpack_multiple() {
         pack_inner(@j.into(), 32, ref packing, ref offset, ref packed);
 
         i += 1;
-    }; 
+    };
     packed.append(packing);
 
     let mut unpacking: felt252 = packed.pop_front().unwrap();
@@ -152,18 +149,18 @@ fn test_pack_unpack_types() {
     let mut offset = 0;
 
     let mut i: u8 = 0;
-    pack_inner(@3, 8, ref packing, ref offset, ref packed);   
-    pack_inner(@14, 16, ref packing, ref offset, ref packed);   
-    pack_inner(@59, 32, ref packing, ref offset, ref packed);   
-    pack_inner(@26, 64, ref packing, ref offset, ref packed);   
-    pack_inner(@53, 128, ref packing, ref offset, ref packed);   
-    pack_inner(@58, 251, ref packing, ref offset, ref packed); 
-    pack_inner(@false.into(), 1, ref packing, ref offset, ref packed);  
+    pack_inner(@3, 8, ref packing, ref offset, ref packed);
+    pack_inner(@14, 16, ref packing, ref offset, ref packed);
+    pack_inner(@59, 32, ref packing, ref offset, ref packed);
+    pack_inner(@26, 64, ref packing, ref offset, ref packed);
+    pack_inner(@53, 128, ref packing, ref offset, ref packed);
+    pack_inner(@58, 251, ref packing, ref offset, ref packed);
+    pack_inner(@false.into(), 1, ref packing, ref offset, ref packed);
 
     let contract_address = Felt252TryIntoContractAddress::try_into(3).unwrap();
-    pack_inner(@contract_address.into(), 251, ref packing, ref offset, ref packed);  
+    pack_inner(@contract_address.into(), 251, ref packing, ref offset, ref packed);
     let class_hash = Felt252TryIntoClassHash::try_into(1337).unwrap();
-    pack_inner(@class_hash.into(), 251, ref packing, ref offset, ref packed);  
+    pack_inner(@class_hash.into(), 251, ref packing, ref offset, ref packed);
 
     packed.append(packing);
 
@@ -172,48 +169,60 @@ fn test_pack_unpack_types() {
     let mut packed_span = packed.span();
 
     assert(
-        unpack_inner(8, ref packed_span, ref unpacking, ref un_offset).unwrap().try_into().unwrap()
-        == 3_u8, 
+        unpack_inner(8, ref packed_span, ref unpacking, ref un_offset)
+            .unwrap()
+            .try_into()
+            .unwrap() == 3_u8,
         'Types u8'
     );
     assert(
-        unpack_inner(16, ref packed_span, ref unpacking, ref un_offset).unwrap().try_into().unwrap()
-        == 14_u16, 
+        unpack_inner(16, ref packed_span, ref unpacking, ref un_offset)
+            .unwrap()
+            .try_into()
+            .unwrap() == 14_u16,
         'Types u16'
     );
     assert(
-        unpack_inner(32, ref packed_span, ref unpacking, ref un_offset).unwrap().try_into().unwrap()
-        == 59_u32, 
+        unpack_inner(32, ref packed_span, ref unpacking, ref un_offset)
+            .unwrap()
+            .try_into()
+            .unwrap() == 59_u32,
         'Types u32'
     );
     assert(
-        unpack_inner(64, ref packed_span, ref unpacking, ref un_offset).unwrap().try_into().unwrap()
-        == 26_u64, 
+        unpack_inner(64, ref packed_span, ref unpacking, ref un_offset)
+            .unwrap()
+            .try_into()
+            .unwrap() == 26_u64,
         'Types u64'
     );
     assert(
-        unpack_inner(128, ref packed_span, ref unpacking, ref un_offset).unwrap().try_into().unwrap()
-        == 53_u128, 
+        unpack_inner(128, ref packed_span, ref unpacking, ref un_offset)
+            .unwrap()
+            .try_into()
+            .unwrap() == 53_u128,
         'Types u128'
     );
     assert(
-        unpack_inner(251, ref packed_span, ref unpacking, ref un_offset).unwrap()
-        == 58_felt252, 
+        unpack_inner(251, ref packed_span, ref unpacking, ref un_offset).unwrap() == 58_felt252,
         'Types felt252'
     );
     assert(
-        unpack_inner(1, ref packed_span, ref unpacking, ref un_offset).unwrap()
-        == false.into(), 
+        unpack_inner(1, ref packed_span, ref unpacking, ref un_offset).unwrap() == false.into(),
         'Types bool'
     );
     assert(
-        unpack_inner(251, ref packed_span, ref unpacking, ref un_offset).unwrap().try_into().unwrap()
-        == contract_address, 
+        unpack_inner(251, ref packed_span, ref unpacking, ref un_offset)
+            .unwrap()
+            .try_into()
+            .unwrap() == contract_address,
         'Types ContractAddress'
     );
     assert(
-        unpack_inner(251, ref packed_span, ref unpacking, ref un_offset).unwrap().try_into().unwrap()
-        == class_hash, 
+        unpack_inner(251, ref packed_span, ref unpacking, ref un_offset)
+            .unwrap()
+            .try_into()
+            .unwrap() == class_hash,
         'Types ClassHash'
     );
 }
@@ -238,7 +247,10 @@ fn test_inner_pack_unpack_u256_single() {
 
     let low = unpack_inner(128, ref packed_span, ref unpacking, ref un_offset).unwrap();
     let high = unpack_inner(128, ref packed_span, ref unpacking, ref un_offset).unwrap();
-    assert(u256 { low: low.try_into().unwrap(), high: high.try_into().unwrap() } == input, 'Unpacked equals packed');
+    assert(
+        u256 { low: low.try_into().unwrap(), high: high.try_into().unwrap() } == input,
+        'Unpacked equals packed'
+    );
 }
 
 #[test]
@@ -248,7 +260,8 @@ fn test_pack_unpack_u256_single() {
     let mut unpacked = ArrayTrait::new();
     input.serialize(ref unpacked);
     let mut layout = ArrayTrait::new();
-    SchemaIntrospection::<u256>::layout(ref layout);
+    layout.append(128);
+    layout.append(128);
     let mut layout_span = layout.span();
 
     let mut unpacked_span = unpacked.span();
@@ -257,7 +270,8 @@ fn test_pack_unpack_u256_single() {
     pack(ref packed, ref unpacked_span, ref layout_span);
 
     let mut layout = ArrayTrait::new();
-    SchemaIntrospection::<u256>::layout(ref layout);
+    layout.append(128);
+    layout.append(128);
     let mut layout_span = layout.span();
 
     let mut unpacked = array::ArrayTrait::new();
@@ -293,7 +307,7 @@ fn test_pack_unpack_felt252_single() {
     let mut unpacked = ArrayTrait::new();
     input.serialize(ref unpacked);
     let mut layout = ArrayTrait::new();
-    SchemaIntrospection::<felt252>::layout(ref layout);
+    layout.append(251);
     let mut layout_span = layout.span();
 
     let mut unpacked_span = unpacked.span();
@@ -302,7 +316,7 @@ fn test_pack_unpack_felt252_single() {
     pack(ref packed, ref unpacked_span, ref layout_span);
 
     let mut layout = ArrayTrait::new();
-    SchemaIntrospection::<felt252>::layout(ref layout);
+    layout.append(251);
     let mut layout_span = layout.span();
 
     let mut unpacked = array::ArrayTrait::new();

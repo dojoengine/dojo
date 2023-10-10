@@ -62,14 +62,14 @@ impl Vec2SchemaIntrospection of dojo::database::schema::SchemaIntrospection<Vec2
                     dojo::database::schema::serialize_member(
                         @dojo::database::schema::Member {
                             name: 'x',
-                            ty: dojo::database::schema::SchemaIntrospection::<u32>::ty(),
+                            ty: dojo::database::schema::Ty::Primitive('u32'),
                             attrs: array![].span()
                         }
                     ),
                     dojo::database::schema::serialize_member(
                         @dojo::database::schema::Member {
                             name: 'y',
-                            ty: dojo::database::schema::SchemaIntrospection::<u32>::ty(),
+                            ty: dojo::database::schema::Ty::Primitive('u32'),
                             attrs: array![].span()
                         }
                     )
@@ -150,14 +150,14 @@ impl PositionSchemaIntrospection of dojo::database::schema::SchemaIntrospection<
                     dojo::database::schema::serialize_member(
                         @dojo::database::schema::Member {
                             name: 'player',
-                            ty: dojo::database::schema::SchemaIntrospection::<ContractAddress>::ty(),
+                            ty: dojo::database::schema::Ty::Primitive('ContractAddress'),
                             attrs: array!['key'].span()
                         }
                     ),
                     dojo::database::schema::serialize_member(
                         @dojo::database::schema::Member {
                             name: 'before',
-                            ty: dojo::database::schema::SchemaIntrospection::<u8>::ty(),
+                            ty: dojo::database::schema::Ty::Primitive('u8'),
                             attrs: array![].span()
                         }
                     ),
@@ -171,7 +171,7 @@ impl PositionSchemaIntrospection of dojo::database::schema::SchemaIntrospection<
                     dojo::database::schema::serialize_member(
                         @dojo::database::schema::Member {
                             name: 'after',
-                            ty: dojo::database::schema::SchemaIntrospection::<u16>::ty(),
+                            ty: dojo::database::schema::Ty::Primitive('u16'),
                             attrs: array![].span()
                         }
                     )
@@ -261,14 +261,14 @@ impl PositionSchemaIntrospection of dojo::database::schema::SchemaIntrospection<
                     dojo::database::schema::serialize_member(
                         @dojo::database::schema::Member {
                             name: 'player',
-                            ty: dojo::database::schema::SchemaIntrospection::<ContractAddress>::ty(),
+                            ty: dojo::database::schema::Ty::Primitive('ContractAddress'),
                             attrs: array!['key'].span()
                         }
                     ),
                     dojo::database::schema::serialize_member(
                         @dojo::database::schema::Member {
                             name: 'before',
-                            ty: dojo::database::schema::SchemaIntrospection::<u8>::ty(),
+                            ty: dojo::database::schema::Ty::Primitive('u8'),
                             attrs: array![].span()
                         }
                     ),
@@ -282,7 +282,7 @@ impl PositionSchemaIntrospection of dojo::database::schema::SchemaIntrospection<
                     dojo::database::schema::serialize_member(
                         @dojo::database::schema::Member {
                             name: 'after',
-                            ty: dojo::database::schema::SchemaIntrospection::<u16>::ty(),
+                            ty: dojo::database::schema::Ty::Primitive('u16'),
                             attrs: array![].span()
                         }
                     )

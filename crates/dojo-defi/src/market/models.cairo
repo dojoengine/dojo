@@ -9,40 +9,31 @@ const SCALING_FACTOR: u128 = 10000;
 impl SchemaIntrospectionFixed of SchemaIntrospection<Fixed> {
     #[inline(always)]
     fn size() -> usize {
-       SchemaIntrospection::<u128>::size()
-            + SchemaIntrospection::<bool>::size()
+        2
     }
 
     #[inline(always)]
     fn layout(ref layout: Array<u8>) {
-        SchemaIntrospection::<u128>::layout(ref layout);
-        SchemaIntrospection::<bool>::layout(ref layout);
+        layout.append(128);
+        layout.append(1);
     }
 
     #[inline(always)]
     fn ty() -> Ty {
         Ty::Struct(
             Struct {
-                    name: 'Fixed',
-                    attrs: array![].span(),
-                    children: array![
-                        serialize_member(
-                            @Member {
-                                name: 'mag',
-                                ty: SchemaIntrospection::<u128>::ty(),
-                                attrs: array![].span()
-                            }
-                        ),
-                        serialize_member(
-                            @Member {
-                                name: 'sign',
-                                ty: SchemaIntrospection::<bool>::ty(),
-                                attrs: array![].span()
-                            }
-                        )
-                    ]
-                        .span()
-                }
+                name: 'Fixed',
+                attrs: array![].span(),
+                children: array![
+                    serialize_member(
+                        @Member { name: 'mag', ty: Ty::Primitive('u128'), attrs: array![].span() }
+                    ),
+                    serialize_member(
+                        @Member { name: 'sign', ty: Ty::Primitive('bool'), attrs: array![].span() }
+                    )
+                ]
+                    .span()
+            }
         )
     }
 }
