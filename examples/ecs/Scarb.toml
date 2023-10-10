@@ -13,8 +13,9 @@ dojo = { path = "../../crates/dojo-core" }
 [[target.dojo]]
 build-external-contracts = []
 
-[tool.dojo]
-initializer_class_hash = "0xbeef"
+[tool.dojo.world]
+name = "example"
+description = "example world"
 
 [tool.dojo.env]
 rpc_url = "http://localhost:5050/"

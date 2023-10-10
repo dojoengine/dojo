@@ -50,7 +50,7 @@ fn spawn_test_world(models: Array<felt252>) -> IWorldDispatcher {
     let (world_address, _) = deploy_syscall(
         world::TEST_CLASS_HASH.try_into().unwrap(),
         0,
-        array![executor_address.into(), dojo::base::base::TEST_CLASS_HASH, 1, 'test_uri'].span(),
+        array![executor_address.into(), dojo::base::base::TEST_CLASS_HASH].span(),
         false
     )
         .unwrap();

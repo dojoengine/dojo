@@ -81,8 +81,7 @@ mod world {
     #[derive(Drop, starknet::Event)]
     struct WorldSpawned {
         address: ContractAddress,
-        caller: ContractAddress,
-        metadata_uri: Span<felt252>
+        creator: ContractAddress
     }
 
     #[derive(Drop, starknet::Event)]
@@ -117,21 +116,13 @@ mod world {
     }
 
     #[constructor]
-    fn constructor(
-        ref self: ContractState,
-        executor: ContractAddress,
-        contract_base: ClassHash,
-        metadata_uri: Span<felt252>
-    ) {
-        let caller = get_caller_address();
+    fn constructor(ref self: ContractState, executor: ContractAddress, contract_base: ClassHash) {
+        let creator = starknet::get_tx_info().unbox().account_contract_address;
         self.executor_dispatcher.write(IExecutorDispatcher { contract_address: executor });
         self.contract_base.write(contract_base);
-        self.owners.write((WORLD, caller), true);
-        self.set_metadata_uri(metadata_uri);
+        self.owners.write((WORLD, creator), true);
 
-        EventEmitter::emit(
-            ref self, WorldSpawned { address: get_contract_address(), caller, metadata_uri }
-        );
+        EventEmitter::emit(ref self, WorldSpawned { address: get_contract_address(), creator });
     }
 
     /// Call Helper,

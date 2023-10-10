@@ -65,7 +65,7 @@ pub async fn deploy_world(
         .unwrap()
         .deploy(
             manifest.clone().world.class_hash,
-            vec![executor_address, base_class_hash, FieldElement::ZERO],
+            vec![executor_address, base_class_hash],
             &account,
             Default::default(),
         )

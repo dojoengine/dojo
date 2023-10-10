@@ -1,13 +1,77 @@
-use scarb::core::{ManifestMetadata, Workspace};
-use serde::Deserialize;
+use std::io::Cursor;
+use std::path::PathBuf;
 
-pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Option<DojoMetadata> {
+use anyhow::Result;
+use ipfs_api_backend_hyper::{IpfsApi, IpfsClient, TryFromUri};
+use scarb::core::{ManifestMetadata, Workspace};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde_json::json;
+use url::Url;
+
+#[cfg(test)]
+#[path = "metadata_test.rs"]
+mod test;
+
+pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Option<Metadata> {
     Some(ws.current_package().ok()?.manifest.metadata.dojo())
 }
 
 #[derive(Default, Deserialize, Debug, Clone)]
-pub struct DojoMetadata {
+pub struct Metadata {
+    pub world: Option<WorldMetadata>,
     pub env: Option<Environment>,
+}
+
+#[derive(Debug)]
+pub enum UriParseError {
+    InvalidUri,
+    InvalidFileUri,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Uri {
+    Http(Url),
+    Ipfs(String),
+    File(PathBuf),
+}
+
+impl Serialize for Uri {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            Uri::Http(url) => serializer.serialize_str(url.as_ref()),
+            Uri::Ipfs(ipfs) => serializer.serialize_str(ipfs),
+            Uri::File(path) => serializer.serialize_str(&format!("file://{}", path.display())),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for Uri {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        if s.starts_with("ipfs://") {
+            Ok(Uri::Ipfs(s))
+        } else if let Some(path) = s.strip_prefix("file://") {
+            Ok(Uri::File(PathBuf::from(&path)))
+        } else if let Ok(url) = Url::parse(&s) {
+            Ok(Uri::Http(url))
+        } else {
+            Err(serde::de::Error::custom("Invalid Uri"))
+        }
+    }
+}
+
+#[derive(Default, Serialize, Deserialize, Debug, Clone)]
+pub struct WorldMetadata {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub cover_uri: Option<Uri>,
+    pub icon_uri: Option<Uri>,
 }
 
 #[derive(Default, Deserialize, Clone, Debug)]
@@ -47,62 +111,64 @@ impl Environment {
     }
 }
 
-impl DojoMetadata {
+impl WorldMetadata {
+    pub fn name(&self) -> Option<&str> {
+        self.name.as_deref()
+    }
+
+    pub fn description(&self) -> Option<&str> {
+        self.description.as_deref()
+    }
+}
+
+impl WorldMetadata {
+    pub async fn upload(&self) -> Result<String> {
+        let mut meta = self.clone();
+        let client = IpfsClient::from_str("https://ipfs.infura.io:5001")?
+            .with_credentials("2EBrzr7ZASQZKH32sl2xWauXPSA", "12290b883db9138a8ae3363b6739d220");
+
+        if let Some(Uri::File(icon)) = &self.icon_uri {
+            let icon_data = std::fs::read(icon)?;
+            let reader = Cursor::new(icon_data);
+            let response = client.add(reader).await?;
+            meta.icon_uri = Some(Uri::Ipfs(format!("ipfs://{}", response.hash)))
+        };
+
+        if let Some(Uri::File(cover)) = &self.cover_uri {
+            let cover_data = std::fs::read(cover)?;
+            let reader = Cursor::new(cover_data);
+            let response = client.add(reader).await?;
+            meta.cover_uri = Some(Uri::Ipfs(format!("ipfs://{}", response.hash)))
+        };
+
+        let serialized = json!(meta).to_string();
+        let reader = Cursor::new(serialized);
+        let response = client.add(reader).await?;
+
+        Ok(response.hash)
+    }
+}
+
+impl Metadata {
     pub fn env(&self) -> Option<&Environment> {
         self.env.as_ref()
     }
+
+    pub fn world(&self) -> Option<&WorldMetadata> {
+        self.world.as_ref()
+    }
 }
 trait MetadataExt {
-    fn dojo(&self) -> DojoMetadata;
+    fn dojo(&self) -> Metadata;
 }
 
 impl MetadataExt for ManifestMetadata {
-    fn dojo(&self) -> DojoMetadata {
+    fn dojo(&self) -> Metadata {
         self.tool_metadata
             .as_ref()
             .and_then(|e| e.get("dojo"))
             .cloned()
-            .map(|v| v.try_into::<DojoMetadata>().unwrap_or_default())
+            .map(|v| v.try_into::<Metadata>().unwrap_or_default())
             .unwrap_or_default()
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::DojoMetadata;
-
-    #[test]
-    fn check_deserialization() {
-        let metadata: DojoMetadata = toml::from_str(
-            r#"
-[env]
-rpc_url = "http://localhost:5050/"
-account_address = "0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973"
-private_key = "0x1800000000300000180000000000030000000000003006001800006600"
-keystore_path = "test/"
-keystore_password = "dojo"
-world_address = "0x0248cacaeac64c45be0c19ee8727e0bb86623ca7fa3f0d431a6c55e200697e5a"
-        "#,
-        )
-        .unwrap();
-
-        assert!(metadata.env.is_some());
-        let env = metadata.env.unwrap();
-
-        assert_eq!(env.rpc_url(), Some("http://localhost:5050/"));
-        assert_eq!(
-            env.account_address(),
-            Some("0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973")
-        );
-        assert_eq!(
-            env.private_key(),
-            Some("0x1800000000300000180000000000030000000000003006001800006600")
-        );
-        assert_eq!(env.keystore_path(), Some("test/"));
-        assert_eq!(env.keystore_password(), Some("dojo"));
-        assert_eq!(
-            env.world_address(),
-            Some("0x0248cacaeac64c45be0c19ee8727e0bb86623ca7fa3f0d431a6c55e200697e5a")
-        );
     }
 }

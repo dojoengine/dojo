@@ -9,7 +9,6 @@ use cairo_lang_filesystem::db::{AsFilesGroupMut, FilesGroupEx, PrivRawFileConten
 use cairo_lang_filesystem::ids::FileId;
 use clap::Args;
 use dojo_world::manifest::Manifest;
-use dojo_world::metadata::{dojo_metadata_from_workspace, DojoMetadata};
 use dojo_world::migration::world::WorldDiff;
 use notify_debouncer_mini::notify::RecursiveMode;
 use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
@@ -76,7 +75,6 @@ struct DevContext<'a> {
     pub db: RootDatabase,
     pub unit: CompilationUnit,
     pub ws: Workspace<'a>,
-    pub dojo_metadata: Option<DojoMetadata>,
 }
 
 fn load_context(config: &Config) -> Result<DevContext<'_>> {
@@ -90,8 +88,7 @@ fn load_context(config: &Config) -> Result<DevContext<'_>> {
     // we have only 1 unit in projects
     let unit = compilation_units.get(0).unwrap();
     let db = build_scarb_root_database(unit, &ws).unwrap();
-    let dojo_metadata = dojo_metadata_from_workspace(&ws);
-    Ok(DevContext { db, unit: unit.clone(), ws, dojo_metadata })
+    Ok(DevContext { db, unit: unit.clone(), ws })
 }
 
 fn build(context: &mut DevContext<'_>) -> Result<()> {
@@ -132,16 +129,9 @@ where
     if total_diffs == 0 {
         return Ok((new_manifest, world_address));
     }
-    match migration::apply_diff(
-        target_dir,
-        diff,
-        name.clone(),
-        world_address,
-        account,
-        config.ui(),
-        None,
-    )
-    .await
+
+    match migration::apply_diff(ws, target_dir, diff, name.clone(), world_address, account, None)
+        .await
     {
         Ok(address) => {
             config
@@ -202,18 +192,16 @@ impl DevArgs {
         let name = self.name.clone();
         let mut previous_manifest: Option<Manifest> = Option::None;
         let result = build(&mut context);
-        let env_metadata = context.dojo_metadata.as_ref().and_then(|e| e.env.clone());
 
         let Some((mut world_address, account)) = context
             .ws
             .config()
             .tokio_handle()
             .block_on(migration::setup_env(
+                &context.ws,
                 self.account,
                 self.starknet,
                 self.world,
-                env_metadata.as_ref(),
-                config.ui(),
                 name.as_ref(),
             ))
             .ok()

@@ -1,9 +1,10 @@
+use dojo_test_utils::compiler::build_test_config;
 use dojo_test_utils::migration::prepare_migration;
 use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, TestSequencer,
 };
 use dojo_world::migration::strategy::MigrationStrategy;
-use scarb_ui::{OutputFormat, Ui, Verbosity};
+use scarb::ops;
 use sozo::ops::migration::execute_strategy;
 use sqlx::sqlite::SqlitePoolOptions;
 use starknet::core::types::{BlockId, BlockTag, Event, FieldElement};
@@ -27,8 +28,10 @@ pub async fn bootstrap_engine<'a>(
     let mut account = sequencer.account();
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    let ui = Ui::new(Verbosity::Verbose, OutputFormat::Text);
-    execute_strategy(migration, &account, &ui, None).await.unwrap();
+    let config = build_test_config("../../../examples/ecs/Scarb.toml").unwrap();
+    let ws = ops::read_workspace(config.manifest_path(), &config)
+        .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
+    execute_strategy(&ws, migration, &account, None).await.unwrap();
 
     let mut engine = Engine::new(
         world,

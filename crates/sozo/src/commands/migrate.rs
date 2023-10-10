@@ -1,6 +1,5 @@
 use anyhow::Result;
 use clap::Args;
-use dojo_world::metadata::dojo_metadata_from_workspace;
 use scarb::core::Config;
 
 use super::options::account::AccountOptions;
@@ -53,15 +52,9 @@ impl MigrateArgs {
             scarb::ops::compile(packages, &ws)?;
         }
 
-        let env_metadata = dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned());
         // TODO: Check the updated scarb way to read profile specific values
 
-        ws.config().tokio_handle().block_on(migration::execute(
-            self,
-            env_metadata,
-            target_dir,
-            ws.config().ui(),
-        ))?;
+        ws.config().tokio_handle().block_on(migration::execute(&ws, self, target_dir))?;
 
         Ok(())
     }

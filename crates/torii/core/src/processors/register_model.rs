@@ -29,6 +29,7 @@ impl<P: Provider + Sync + 'static> EventProcessor<P> for RegisterModelProcessor 
         event: &Event,
     ) -> Result<(), Error> {
         let name = parse_cairo_short_string(&event.data[0])?;
+        println!("Register {name}");
 
         // TODO: remove BlockId as argument
         let model = world.model(&name, BlockId::Tag(BlockTag::Latest)).await?;
