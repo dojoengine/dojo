@@ -80,15 +80,14 @@ impl ObjectTrait for EntityObject {
                         })
                     });
 
-                    let total_count =
-                        count_rows(&mut conn, ENTITY_TABLE, &keys, &Vec::new()).await?;
+                    let total_count = count_rows(&mut conn, ENTITY_TABLE, &keys, &None).await?;
                     let data = fetch_multiple_rows(
                         &mut conn,
                         ENTITY_TABLE,
                         "event_id",
                         &keys,
                         &None,
-                        &Vec::new(),
+                        &None,
                         &connection,
                     )
                     .await?;

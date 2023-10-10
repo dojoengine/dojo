@@ -11,23 +11,27 @@ pub async fn count_rows(
     conn: &mut PoolConnection<Sqlite>,
     table_name: &str,
     keys: &Option<Vec<String>>,
-    filters: &Vec<Filter>,
+    filters: &Option<Vec<Filter>>,
 ) -> Result<i64> {
     let mut query = format!("SELECT COUNT(*) FROM {}", table_name);
     let mut conditions = Vec::new();
 
-    if let Some(keys) = &keys {
+    if let Some(keys) = keys {
         let keys_str = keys.join("/");
         conditions.push(format!("keys LIKE '{}/%'", keys_str));
     }
 
-    for filter in filters {
-        let condition = match filter.value {
-            FilterValue::Int(i) => format!("{} {} {}", filter.field, filter.comparator, i),
-            FilterValue::String(ref s) => format!("{} {} '{}'", filter.field, filter.comparator, s),
-        };
+    if let Some(filters) = filters {
+        for filter in filters {
+            let condition = match filter.value {
+                FilterValue::Int(i) => format!("{} {} {}", filter.field, filter.comparator, i),
+                FilterValue::String(ref s) => {
+                    format!("{} {} '{}'", filter.field, filter.comparator, s)
+                }
+            };
 
-        conditions.push(condition);
+            conditions.push(condition);
+        }
     }
 
     if !conditions.is_empty() {
@@ -54,7 +58,7 @@ pub async fn fetch_multiple_rows(
     id_column: &str,
     keys: &Option<Vec<String>>,
     order: &Option<Order>,
-    filters: &[Filter],
+    filters: &Option<Vec<Filter>>,
     connection: &ConnectionArguments,
 ) -> Result<Vec<SqliteRow>> {
     let mut conditions = Vec::new();
@@ -72,7 +76,9 @@ pub async fn fetch_multiple_rows(
         conditions.push(handle_cursor(before_cursor, order, CursorDirection::Before, id_column)?);
     }
 
-    conditions.extend(filters.iter().map(handle_filter));
+    if let Some(filters) = filters {
+        conditions.extend(filters.iter().map(handle_filter));
+    }
 
     let mut query = format!("SELECT * FROM {}", table_name);
     if !conditions.is_empty() {

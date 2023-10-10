@@ -111,19 +111,14 @@ pub fn connection_output(
     let model_edges = data
         .iter()
         .map(|row| {
-            let field_name = match order {
+            let order_field = match order {
                 Some(order) => format!("external_{}", order.field),
                 None => id_column.to_string(),
             };
 
-            // FIXME
-            let field_value = match row.try_get::<i64, &str>(&field_name) {
-                Ok(value) => value.to_string(),
-                Err(_) => row.try_get::<String, &str>(&field_name)?,
-            };
-
-            let id = row.try_get::<String, &str>(id_column)?;
-            let cursor = cursor::encode(&id, &field_value.to_string());
+            let primary_order = row.try_get::<String, &str>(id_column)?;
+            let secondary_order = row.try_get_unchecked::<String, &str>(&order_field)?;
+            let cursor = cursor::encode(&primary_order, &secondary_order);
             let value_mapping = value_mapping_from_row(row, types, is_external)?;
 
             let mut edge = ValueMapping::new();
@@ -137,6 +132,5 @@ pub fn connection_output(
     Ok(ValueMapping::from([
         (Name::new("total_count"), Value::from(total_count)),
         (Name::new("edges"), Value::List(model_edges?)),
-        // TODO: add pageInfo
     ]))
 }

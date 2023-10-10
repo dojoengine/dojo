@@ -6,3 +6,5 @@ pub const EVENT_TABLE: &str = "events";
 pub const MODEL_TABLE: &str = "models";
 pub const SYSTEM_CALL_TABLE: &str = "system_calls";
 pub const SYSTEM_TABLE: &str = "systems";
+
+pub const ID_COLUMN: &str = "id";

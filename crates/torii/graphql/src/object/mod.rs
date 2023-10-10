@@ -17,6 +17,7 @@ use self::connection::edge::EdgeObject;
 use self::connection::{
     connection_arguments, connection_output, parse_connection_arguments, ConnectionObject,
 };
+use crate::query::constants::ID_COLUMN;
 use crate::query::data::{count_rows, fetch_multiple_rows, fetch_single_row};
 use crate::query::value_mapping_from_row;
 use crate::types::{TypeMapping, ValueMapping};
@@ -68,14 +69,14 @@ pub trait ObjectTrait: Send + Sync {
 
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let id = ctx.args.try_get("id")?.string()?.to_string();
-                    let data = fetch_single_row(&mut conn, &table_name, "id", &id).await?;
+                    let id = ctx.args.try_get(ID_COLUMN)?.string()?.to_string();
+                    let data = fetch_single_row(&mut conn, &table_name, ID_COLUMN, &id).await?;
                     let model = value_mapping_from_row(&data, &type_mapping, false)?;
 
                     Ok(Some(Value::Object(model)))
                 })
             })
-            .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID))),
+            .argument(InputValue::new(ID_COLUMN, TypeRef::named_nn(TypeRef::ID))),
         )
     }
 
@@ -94,20 +95,25 @@ pub trait ObjectTrait: Send + Sync {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                     let connection = parse_connection_arguments(&ctx)?;
-                    let total_count =
-                        count_rows(&mut conn, &table_name, &None, &Vec::new()).await?;
+                    let total_count = count_rows(&mut conn, &table_name, &None, &None).await?;
                     let data = fetch_multiple_rows(
                         &mut conn,
                         &table_name,
-                        "id",
+                        ID_COLUMN,
                         &None,
                         &None,
-                        &Vec::new(),
+                        &None,
                         &connection,
                     )
                     .await?;
-                    let results =
-                        connection_output(&data, &type_mapping, &None, "id", total_count, false)?;
+                    let results = connection_output(
+                        &data,
+                        &type_mapping,
+                        &None,
+                        ID_COLUMN,
+                        total_count,
+                        false,
+                    )?;
 
                     Ok(Some(Value::Object(results)))
                 })
