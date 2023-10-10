@@ -2,6 +2,7 @@ use anyhow::Result;
 use clap::{Args, Subcommand};
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use scarb::core::Config;
+use starknet::core::types::FieldElement;
 
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
@@ -21,8 +22,8 @@ pub enum AuthCommand {
         #[arg(help = "Name of the model to grant write access to.")]
         model: String,
 
-        #[arg(help = "Name of the system to grant writer access to.")]
-        system: String,
+        #[arg(help = "Address of the contract to grant writer access to.")]
+        contract: FieldElement,
 
         #[command(flatten)]
         world: WorldOptions,
