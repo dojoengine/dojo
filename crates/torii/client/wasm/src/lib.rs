@@ -23,7 +23,6 @@ pub struct Client(torii_client::client::Client);
 
 #[wasm_bindgen]
 impl Client {
-    /// Returns the model values of the requested entity.
     #[wasm_bindgen(js_name = getModelValue)]
     pub async fn get_model_value(
         &self,
@@ -81,11 +80,17 @@ pub async fn spawn_client(
         JsValue::from_str(format!("failed to parse world address: {err}").as_str())
     })?;
 
-    let client = torii_client::client::ClientBuilder::new()
+    let mut client = torii_client::client::ClientBuilder::new()
         .set_entities_to_sync(entities)
         .build(torii_url.into(), rpc_url.into(), world_address)
         .await
         .map_err(|err| JsValue::from_str(format!("failed to build client: {err}").as_str()))?;
+
+    wasm_bindgen_futures::spawn_local(client.start_subscription().await.map_err(|err| {
+        JsValue::from_str(
+            format!("failed to start torii client subscription service: {err}").as_str(),
+        )
+    })?);
 
     Ok(Client(client))
 }

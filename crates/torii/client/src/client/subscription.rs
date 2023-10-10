@@ -7,7 +7,7 @@ use std::task::Poll;
 use anyhow::{anyhow, Result};
 use dojo_types::schema::EntityModel;
 use dojo_types::WorldMetadata;
-use futures::channel::mpsc::{Receiver, Sender};
+use futures::channel::mpsc::{self, Receiver, Sender};
 use futures_util::StreamExt;
 use parking_lot::RwLock;
 use starknet::core::utils::cairo_short_string_to_felt;
@@ -103,26 +103,45 @@ impl SubscribedEntities {
     }
 }
 
-#[allow(unused)]
-pub(crate) struct SubscriptionClientHandle {
-    pub(super) event_handler: Sender<SubscriptionEvent>,
-}
+#[derive(Debug)]
+pub(crate) struct SubscriptionClientHandle(Sender<SubscriptionEvent>);
 
 #[must_use = "SubscriptionClient does nothing unless polled"]
-pub struct SubscriptionClient {
-    pub(super) req_rcv: Receiver<SubscriptionEvent>,
+pub struct SubscriptionService {
+    req_rcv: Receiver<SubscriptionEvent>,
     /// The stream returned by the subscription server to receive the response
-    pub(super) sub_res_stream: tonic::Streaming<SubscribeEntitiesResponse>,
+    sub_res_stream: tonic::Streaming<SubscribeEntitiesResponse>,
     /// Callback to be called on error
-    pub(super) err_callback: Option<Box<dyn Fn(tonic::Status) + Send + Sync>>,
+    err_callback: Option<Box<dyn Fn(tonic::Status) + Send + Sync>>,
 
     // for processing the entity diff and updating the storage
-    pub(super) storage: Arc<ModelStorage>,
-    pub(super) world_metadata: Arc<RwLock<WorldMetadata>>,
-    pub(super) subscribed_entities: Arc<SubscribedEntities>,
+    storage: Arc<ModelStorage>,
+    world_metadata: Arc<RwLock<WorldMetadata>>,
+    subscribed_entities: Arc<SubscribedEntities>,
 }
 
-impl SubscriptionClient {
+impl SubscriptionService {
+    pub(super) fn new(
+        storage: Arc<ModelStorage>,
+        world_metadata: Arc<RwLock<WorldMetadata>>,
+        subscribed_entities: Arc<SubscribedEntities>,
+        sub_res_stream: tonic::Streaming<SubscribeEntitiesResponse>,
+    ) -> (Self, SubscriptionClientHandle) {
+        let (req_sender, req_rcv) = mpsc::channel(128);
+        let handle = SubscriptionClientHandle(req_sender);
+
+        let client = Self {
+            req_rcv,
+            storage,
+            world_metadata,
+            sub_res_stream,
+            err_callback: None,
+            subscribed_entities,
+        };
+
+        (client, handle)
+    }
+
     // TODO: handle the subscription events properly
     fn handle_event(&self, event: SubscriptionEvent) -> Result<(), Error> {
         match event {
@@ -189,7 +208,7 @@ impl SubscriptionClient {
     }
 }
 
-impl Future for SubscriptionClient {
+impl Future for SubscriptionService {
     type Output = ();
 
     fn poll(

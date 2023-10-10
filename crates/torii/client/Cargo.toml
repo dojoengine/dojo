@@ -19,7 +19,6 @@ serde_json.workspace = true
 starknet-crypto.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
-tokio = { version = "1.32.0", default-features = false, features = [ "rt" ] }
 torii-grpc = { path = "../grpc", features = [ "client" ] }
 url.workspace = true
 
@@ -28,12 +27,8 @@ prost.workspace = true
 tonic.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-js-sys = "0.3.64"
-wasm-bindgen = "0.2.87"
-wasm-bindgen-futures = "0.4.37"
 wasm-prost.workspace = true
 wasm-tonic.workspace = true
-web-sys = { version = "0.3.4", features = [ 'Window', 'WorkerGlobalScope' ] }
 
 [dev-dependencies]
 camino.workspace = true

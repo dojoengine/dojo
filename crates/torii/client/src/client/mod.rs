@@ -2,27 +2,23 @@ pub mod error;
 pub mod storage;
 pub mod subscription;
 
+use std::cell::OnceCell;
 use std::sync::Arc;
 
 use dojo_types::packing::unpack;
 use dojo_types::schema::{EntityModel, Ty};
 use dojo_types::WorldMetadata;
-use futures::channel::mpsc;
-use parking_lot::{Mutex, RwLock};
+use parking_lot::RwLock;
 use starknet::core::types::{BlockId, BlockTag};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet_crypto::FieldElement;
-#[cfg(not(target_arch = "wasm32"))]
-use tokio::task::spawn as spawn_task;
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen_futures::spawn_local as spawn_task;
 
 use self::error::{Error, ParseError};
 use self::storage::ModelStorage;
 use self::subscription::{SubscribedEntities, SubscriptionClientHandle};
-use crate::client::subscription::SubscriptionClient;
+use crate::client::subscription::SubscriptionService;
 use crate::contract::world::WorldContractReader;
 
 // TODO: expose the World interface from the `Client`
@@ -31,22 +27,27 @@ pub struct Client {
     /// Metadata of the World that the client is connected to.
     metadata: Arc<RwLock<WorldMetadata>>,
     /// The grpc client.
-    inner: Mutex<torii_grpc::client::WorldClient>,
+    inner: torii_grpc::client::WorldClient,
     /// Entity storage
     storage: Arc<ModelStorage>,
     /// Entities the client are subscribed to.
-    entity_subscription: Arc<SubscribedEntities>,
-    /// The subscription client handle
-    subscription_client_handle: SubscriptionClientHandle,
+    subscribed_entities: Arc<SubscribedEntities>,
+    /// The subscription client handle.
+    sub_client_handle: OnceCell<SubscriptionClientHandle>,
 }
 
 impl Client {
-    /// Returns the metadata of the world.
-    pub fn world_metadata(&self) -> WorldMetadata {
+    /// Returns a [ClientBuilder] for building a [Client].
+    pub fn build() -> ClientBuilder {
+        ClientBuilder::new()
+    }
+
+    /// Returns the metadata of the world that the client is connected to.
+    pub fn metadata(&self) -> WorldMetadata {
         self.metadata.read().clone()
     }
 
-    /// Returns the component value of an entity.
+    /// Returns the model value of an entity.
     pub fn entity(&self, model: &str, keys: &[FieldElement]) -> Option<Ty> {
         let Ok(Some(raw_values)) =
             self.storage.get_entity(cairo_short_string_to_felt(model).ok()?, keys)
@@ -67,7 +68,23 @@ impl Client {
 
     /// Returns the list of entities that the client is subscribed to.
     pub fn synced_entities(&self) -> Vec<EntityModel> {
-        self.entity_subscription.entities.read().clone().into_iter().collect()
+        self.subscribed_entities.entities.read().clone().into_iter().collect()
+    }
+
+    /// Initiate the entity subscriptions and returns a [SubscriptionService] which when await'ed
+    /// will execute the subscription service and starts the syncing process.
+    pub async fn start_subscription(&mut self) -> Result<SubscriptionService, Error> {
+        let sub_res_stream = self.inner.subscribe_entities(self.synced_entities()).await?;
+
+        let (service, handle) = SubscriptionService::new(
+            Arc::clone(&self.storage),
+            Arc::clone(&self.metadata),
+            Arc::clone(&self.subscribed_entities),
+            sub_res_stream,
+        );
+
+        self.sub_client_handle.set(handle).unwrap();
+        Ok(service)
     }
 }
 
@@ -83,6 +100,16 @@ impl ClientBuilder {
         Self { initial_entities_to_sync: None }
     }
 
+    #[must_use]
+    pub fn set_entities_to_sync(mut self, entities: Vec<EntityModel>) -> Self {
+        self.initial_entities_to_sync = Some(entities);
+        self
+    }
+
+    /// Returns an initialized [Client] with the provided configurations.
+    ///
+    /// The subscription service is not immediately started when calling this function, instead it
+    /// must be manually started using `Client::start_subscription`.
     pub async fn build(
         self,
         torii_endpoint: String,
@@ -123,39 +150,13 @@ impl ClientBuilder {
             }
         }
 
-        // initiate the stream any way, even if we don't have any initial entities to sync
-        let sub_res_stream = grpc_client
-            .subscribe_entities(self.initial_entities_to_sync.unwrap_or_default())
-            .await?;
-        // setup the subscription client
-        let subscription_client_handle = {
-            let (sub_req_tx, sub_req_rcv) = mpsc::channel(128);
-
-            spawn_task(SubscriptionClient {
-                sub_res_stream,
-                err_callback: None,
-                req_rcv: sub_req_rcv,
-                storage: client_storage.clone(),
-                world_metadata: shared_metadata.clone(),
-                subscribed_entities: subbed_entities.clone(),
-            });
-
-            SubscriptionClientHandle { event_handler: sub_req_tx }
-        };
-
         Ok(Client {
+            inner: grpc_client,
             storage: client_storage,
             metadata: shared_metadata,
-            subscription_client_handle,
-            inner: Mutex::new(grpc_client),
-            entity_subscription: subbed_entities,
+            sub_client_handle: OnceCell::new(),
+            subscribed_entities: subbed_entities,
         })
-    }
-
-    #[must_use]
-    pub fn set_entities_to_sync(mut self, entities: Vec<EntityModel>) -> Self {
-        self.initial_entities_to_sync = Some(entities);
-        self
     }
 }
 
