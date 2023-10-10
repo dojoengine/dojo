@@ -613,7 +613,7 @@ test_manifest_file
   },
   "base": {
     "name": "base",
-    "class_hash": "0x7aec2b7d7064c1294a339cd90060331ff704ab573e4ee9a1b699be2215c11c9",
+    "class_hash": "0x1db2927e2e9d4f45b66801ee0a4a04898eb369ccc6470771870e4fe2672d92b",
     "abi": [
       {
         "type": "impl",
@@ -677,7 +677,7 @@ test_manifest_file
     {
       "name": "player_actions",
       "address": null,
-      "class_hash": "0x502be43722c9e678d3c1f93e48f867c36e3852856571cde8925ec74cd0d6547",
+      "class_hash": "0xce73ce5a14e17dfc601a7cfc78f701f4eab0bb002e0e34522d7cfe55cfdc13",
       "abi": [
         {
           "type": "impl",
@@ -780,7 +780,7 @@ test_manifest_file
     {
       "name": "player_actions_external",
       "address": null,
-      "class_hash": "0x49d4d81317dd7ca15f598715a8c79198512060d94885b701d42afde9fa30a27",
+      "class_hash": "0x60d7692845904cf6697e1e1c2faa6e6789b5e2fac9c6ddc16c82e57a2b95a4e",
       "abi": [
         {
           "type": "impl",

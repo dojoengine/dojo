@@ -16,17 +16,17 @@ mod base {
 
     #[storage]
     struct Storage {
-        world_dispatcher: IWorldDispatcher,
+        world_address: IWorldDispatcher,
     }
 
     #[constructor]
     fn constructor(ref self: ContractState) {
-        self.world_dispatcher.write(IWorldDispatcher { contract_address: get_caller_address() });
+        self.world_address.write(IWorldDispatcher { contract_address: get_caller_address() });
     }
 
     #[external(v0)]
     fn world(self: @ContractState) -> IWorldDispatcher {
-        self.world_dispatcher.read()
+        self.world_address.read()
     }
 
     #[external(v0)]

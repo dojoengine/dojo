@@ -33,7 +33,7 @@ mod player_actions {
     impl PlayerActionsImpl of IPlayerActions<ContractState> {
         // ContractState is defined by system decorator expansion
         fn spawn(self: @ContractState) {
-            let world = IWorldDispatcher { contract_address: self.world_dispatcher.read() };
+            let world = IWorldDispatcher { contract_address: self.world_address.read() };
             let player = get_caller_address();
             let position = get!(world, player, (Position));
             set!(
@@ -48,7 +48,7 @@ mod player_actions {
         }
 
         fn move(self: @ContractState, direction: Direction) {
-            let world = IWorldDispatcher { contract_address: self.world_dispatcher.read() };
+            let world = IWorldDispatcher { contract_address: self.world_address.read() };
             let player = get_caller_address();
             let (mut position, mut moves) = get!(world, player, (Position, Moves));
             moves.remaining -= 1;

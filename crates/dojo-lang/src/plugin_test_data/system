@@ -40,7 +40,7 @@ mod spawn {
 
     #[storage]
     struct Storage {
-        world_dispatcher: starknet::ContractAddress,
+        world_address: starknet::ContractAddress,
     }
 
     #[external(v0)]
@@ -66,7 +66,7 @@ mod proxy {
 
     #[storage]
     struct Storage {
-        world_dispatcher: starknet::ContractAddress,
+        world_address: starknet::ContractAddress,
     }
 
     #[external(v0)]
@@ -90,7 +90,7 @@ mod ctxnamed {
 
     #[storage]
     struct Storage {
-        world_dispatcher: starknet::ContractAddress,
+        world_address: starknet::ContractAddress,
     }
 
     #[external(v0)]
