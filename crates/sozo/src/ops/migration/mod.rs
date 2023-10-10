@@ -313,7 +313,7 @@ where
 
                 let InvokeTransactionResult { transaction_hash } =
                     WorldContract::new(world.contract_address, migrator)
-                        .set_metadata_uri(format!("ipfs://{hash}"))
+                        .set_metadata_uri(FieldElement::ZERO, format!("ipfs://{hash}"))
                         .await
                         .map_err(|e| anyhow!("Failed to set World metadata: {e}"))?;
 

@@ -57,6 +57,7 @@ impl<'a, A: ConnectedAccount + Sync> WorldContract<'a, A> {
 
     pub async fn set_metadata_uri(
         &self,
+        resource: FieldElement,
         metadata_uri: String,
     ) -> Result<
         InvokeTransactionResult,
@@ -77,6 +78,7 @@ impl<'a, A: ConnectedAccount + Sync> WorldContract<'a, A> {
             .collect::<Vec<_>>();
 
         encoded.insert(0, encoded.len().into());
+        encoded.insert(0, resource);
 
         self.account
             .execute(vec![Call {
