@@ -15,8 +15,8 @@ use self::connection::ConnectionObject;
 use crate::types::{TypeMapping, ValueMapping};
 
 pub trait ObjectTrait: Send + Sync {
-    // Name of the graphql object (eg "player")
-    fn name(&self) -> &str;
+    // Name of the graphql object, singular and plural (eg "player" and "players")
+    fn name(&self) -> (&str, &str);
 
     // Type name of the graphql object (eg "Player")
     fn type_name(&self) -> &str;
@@ -60,9 +60,9 @@ pub trait ObjectTrait: Send + Sync {
     fn connection(&self) -> Option<Vec<Object>> {
         self.resolve_many()?;
 
-        let edge = EdgeObject::new(self.name().to_string(), self.type_name().to_string());
+        let edge = EdgeObject::new(self.name().0.to_string(), self.type_name().to_string());
         let connection =
-            ConnectionObject::new(self.name().to_string(), self.type_name().to_string());
+            ConnectionObject::new(self.name().0.to_string(), self.type_name().to_string());
 
         let mut objects = Vec::new();
         objects.extend(edge.objects());

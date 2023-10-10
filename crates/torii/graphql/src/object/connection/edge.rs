@@ -29,8 +29,8 @@ impl EdgeObject {
 }
 
 impl ObjectTrait for EdgeObject {
-    fn name(&self) -> &str {
-        &self.name
+    fn name(&self) -> (&str, &str) {
+        (&self.name, "")
     }
 
     fn type_name(&self) -> &str {

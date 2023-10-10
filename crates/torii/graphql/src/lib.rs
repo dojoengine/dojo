@@ -1,6 +1,6 @@
-mod constants;
 pub mod object;
 
+mod mapping;
 mod query;
 pub mod route;
 pub mod schema;

@@ -1,68 +1,20 @@
+use std::str::FromStr;
+
 use async_graphql::dynamic::TypeRef;
-use async_graphql::Name;
+use async_graphql::{Name, Value};
+use constants::BOOLEAN_TRUE;
+use dojo_types::primitive::Primitive;
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
-use sqlx::{FromRow, QueryBuilder, Result, Sqlite};
+use sqlx::{Row, Sqlite};
 
-use self::filter::{Filter, FilterValue};
 use crate::object::model_data::ModelMember;
-use crate::types::{TypeData, TypeMapping};
+use crate::types::{TypeData, TypeMapping, ValueMapping};
 
+pub mod constants;
+pub mod data;
 pub mod filter;
 pub mod order;
-
-pub async fn query_by_id<T>(
-    conn: &mut PoolConnection<Sqlite>,
-    table_name: &str,
-    id: &str,
-) -> Result<T>
-where
-    T: Send + Unpin + for<'a> FromRow<'a, SqliteRow>,
-{
-    let query = format!("SELECT * FROM {} WHERE id = ?", table_name);
-    let result = sqlx::query_as::<_, T>(&query).bind(id).fetch_one(conn).await?;
-
-    Ok(result)
-}
-
-pub async fn query_all<T>(
-    conn: &mut PoolConnection<Sqlite>,
-    table_name: &str,
-    limit: i64,
-) -> Result<Vec<T>>
-where
-    T: Send + Unpin + for<'a> FromRow<'a, SqliteRow>,
-{
-    let mut builder: QueryBuilder<'_, Sqlite> = QueryBuilder::new("SELECT * FROM ");
-    builder.push(table_name).push(" ORDER BY created_at DESC LIMIT ").push(limit);
-    let results: Vec<T> = builder.build_query_as().fetch_all(conn).await?;
-    Ok(results)
-}
-
-pub async fn query_total_count(
-    conn: &mut PoolConnection<Sqlite>,
-    table_name: &str,
-    filters: &Vec<Filter>,
-) -> Result<i64> {
-    let mut query = format!("SELECT COUNT(*) FROM {}", table_name);
-    let mut conditions = Vec::new();
-
-    for filter in filters {
-        let condition = match filter.value {
-            FilterValue::Int(i) => format!("{} {} {}", filter.field, filter.comparator, i),
-            FilterValue::String(ref s) => format!("{} {} '{}'", filter.field, filter.comparator, s),
-        };
-
-        conditions.push(condition);
-    }
-
-    if !conditions.is_empty() {
-        query.push_str(&format!(" WHERE {}", conditions.join(" AND ")));
-    }
-
-    let result: (i64,) = sqlx::query_as(&query).fetch_one(conn).await?;
-    Ok(result.0)
-}
 
 pub async fn type_mapping_query(
     conn: &mut PoolConnection<Sqlite>,
@@ -141,4 +93,48 @@ fn parse_nested_type(
         .collect();
 
     TypeData::Nested((TypeRef::named(target_type), nested_mapping))
+}
+
+pub fn value_mapping_from_row(
+    row: &SqliteRow,
+    types: &TypeMapping,
+    is_external: bool,
+) -> sqlx::Result<ValueMapping> {
+    let mut value_mapping = types
+        .iter()
+        .filter(|(_, type_data)| type_data.is_simple())
+        .map(|(field_name, type_data)| {
+            let column_name = if is_external {
+                format!("external_{}", field_name)
+            } else {
+                field_name.to_string()
+            };
+
+            Ok((
+                Name::new(field_name),
+                fetch_value(row, &column_name, &type_data.type_ref().to_string())?,
+            ))
+        })
+        .collect::<sqlx::Result<ValueMapping>>()?;
+
+    if let Ok(entity_id) = fetch_value(row, "entity_id", TypeRef::STRING) {
+        value_mapping.insert(Name::new("entity_id"), entity_id);
+    }
+
+    Ok(value_mapping)
+}
+
+fn fetch_value(row: &SqliteRow, column_name: &str, field_type: &str) -> sqlx::Result<Value> {
+    match Primitive::from_str(field_type) {
+        // fetch boolean
+        Ok(Primitive::Bool(_)) => {
+            Ok(Value::from(matches!(row.try_get::<i64, &str>(column_name)?, BOOLEAN_TRUE)))
+        }
+        // fetch integer
+        Ok(ty) if ty.to_sql_type() == "INTEGER" => {
+            row.try_get::<i64, &str>(column_name).map(Value::from)
+        }
+        // fetch string
+        _ => row.try_get::<String, &str>(column_name).map(Value::from),
+    }
 }
