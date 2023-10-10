@@ -71,8 +71,8 @@ impl Client {
         self.subscribed_entities.entities.read().clone().into_iter().collect()
     }
 
-    /// Initiate the subscription stream and returns a [SubscriptionService] which when await'ed
-    /// will starts the subscription service and starts syncing the entities.
+    /// Initiate the entity subscriptions and returns a [SubscriptionService] which when await'ed
+    /// will execute the subscription service and starts the syncing process.
     pub async fn start_subscription(&self) -> Result<SubscriptionService, Error> {
         let sub_res_stream =
             self.inner.borrow_mut().subscribe_entities(self.synced_entities()).await?;
@@ -109,8 +109,8 @@ impl ClientBuilder {
 
     /// Returns an initialized [Client] with the provided configurations.
     ///
-    /// The subscription service is not started when calling this function, instead it has to be
-    /// manually started from the `Client::start_subscription`.
+    /// The subscription service is not immediately started when calling this function, instead it
+    /// must be manually started using `Client::start_subscription`.
     pub async fn build(
         self,
         torii_endpoint: String,
