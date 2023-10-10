@@ -51,7 +51,7 @@ impl System {
 
                     #[storage]
                     struct Storage {
-                        world_address: starknet::ContractAddress,
+                        world_dispatcher: IWorldDispatcher,
                     }
 
                     #[external(v0)]
