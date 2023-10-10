@@ -14,7 +14,7 @@ pub async fn execute(command: AuthCommand, env_metadata: Option<Environment>) ->
             let world = WorldContract::new(world_address, &account);
 
             let res = world
-                .grant_writer(&model, &system)
+                .grant_writer(&model, system)
                 .await
                 .with_context(|| "Failed to send transaction")?;
 

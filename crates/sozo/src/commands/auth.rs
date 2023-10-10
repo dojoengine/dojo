@@ -2,6 +2,7 @@ use anyhow::Result;
 use clap::{Args, Subcommand};
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use scarb::core::Config;
+use starknet::core::types::FieldElement;
 
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
@@ -22,7 +23,7 @@ pub enum AuthCommand {
         model: String,
 
         #[arg(help = "Name of the system to grant writer access to.")]
-        system: String,
+        system: FieldElement,
 
         #[command(flatten)]
         world: WorldOptions,
