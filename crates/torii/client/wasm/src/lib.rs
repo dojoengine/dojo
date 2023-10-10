@@ -5,6 +5,8 @@ use wasm_bindgen::prelude::*;
 
 mod utils;
 
+use utils::parse_ty_as_json_str;
+
 type JsFieldElement = JsValue;
 type JsEntityComponent = JsValue;
 
@@ -37,7 +39,10 @@ impl Client {
             })?;
 
         match self.0.entity(model, &keys) {
-            Some(values) => Ok(Some(serde_wasm_bindgen::to_value(&values)?)),
+            Some(ty) => {
+                let json = parse_ty_as_json_str(&ty);
+                Ok(Some(serde_wasm_bindgen::to_value(&json)?))
+            }
             None => Ok(None),
         }
     }

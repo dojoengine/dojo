@@ -1,5 +1,6 @@
 use dojo_types::schema::{Enum, Member, Struct, Ty};
 
+#[allow(unused)]
 #[derive(Debug, sqlx::FromRow)]
 pub struct SqlModelMember {
     id: String,
