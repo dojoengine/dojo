@@ -42,3 +42,13 @@ struct NestedMoreMore {
     type_number: u8,
     type_string: felt252,
 }
+
+#[derive(Model, Copy, Drop, Serde)]
+struct Subrecord {
+    #[key]
+    record_id: u32,
+    #[key]
+    subrecord_id: u32,
+    type_u8: u8,
+    random_u8: u8,
+}

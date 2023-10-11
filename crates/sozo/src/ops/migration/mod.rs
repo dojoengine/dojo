@@ -4,7 +4,7 @@ use anyhow::{anyhow, bail, Context, Result};
 use dojo_world::manifest::{Manifest, ManifestError};
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::contract::ContractMigration;
-use dojo_world::migration::strategy::{prepare_for_migration, MigrationStrategy};
+use dojo_world::migration::strategy::{generate_salt, prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{
     Declarable, DeployOutput, Deployable, MigrationError, RegisterOutput, StateDiff,
@@ -16,7 +16,7 @@ use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::{
     BlockId, BlockTag, FieldElement, InvokeTransactionResult, StarknetError,
 };
-use starknet::core::utils::cairo_short_string_to_felt;
+use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
 use starknet::providers::jsonrpc::HttpTransport;
 use torii_client::contract::world::WorldContract;
 
@@ -57,7 +57,7 @@ where
     // Calculate diff between local and remote World manifests.
 
     ui.print_step(2, "🧰", "Evaluating Worlds diff...");
-    let diff = WorldDiff::compute(local_manifest, remote_manifest);
+    let diff = WorldDiff::compute(local_manifest.clone(), remote_manifest.clone());
     let total_diffs = diff.count_diffs();
     ui.print_sub(format!("Total diffs found: {total_diffs}"));
 
@@ -65,9 +65,50 @@ where
         ui.print("\n✨ No changes to be made. Remote World is already up to date!")
     } else {
         // Mirate according to the diff.
-        apply_diff(ws, target_dir, diff, name, world_address, &account, Some(args.transaction))
+        let world_address = apply_diff(
+            ws,
+            &target_dir,
+            diff,
+            name,
+            world_address,
+            &account,
+            Some(args.transaction),
+        )
+        .await?;
+
+        update_world_manifest(ws, local_manifest, remote_manifest, target_dir, world_address)
             .await?;
     }
+
+    Ok(())
+}
+
+async fn update_world_manifest<U>(
+    ws: &Workspace<'_>,
+    mut local_manifest: Manifest,
+    remote_manifest: Option<Manifest>,
+    target_dir: U,
+    world_address: FieldElement,
+) -> Result<()>
+where
+    U: AsRef<Path>,
+{
+    let ui = ws.config().ui();
+    ui.print("\n✨ Updating manifest.json...");
+    local_manifest.world.address = Some(world_address);
+
+    let base_class_hash = match remote_manifest {
+        Some(manifest) => manifest.base.class_hash,
+        None => local_manifest.base.class_hash,
+    };
+
+    local_manifest.contracts.iter_mut().for_each(|c| {
+        let salt = generate_salt(&c.name);
+        c.address = Some(get_contract_address(salt, base_class_hash, &[], world_address));
+    });
+
+    local_manifest.write_to_path(target_dir.as_ref().join("manifest.json"))?;
+    ui.print("\n✨ Done.");
 
     Ok(())
 }

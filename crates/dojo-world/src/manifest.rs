@@ -135,6 +135,14 @@ impl Manifest {
             .map_err(|e| anyhow!("Failed to load World manifest from path: {e}"))
     }
 
+    pub fn write_to_path<P>(self, manifest_path: P) -> Result<()>
+    where
+        P: AsRef<Path>,
+    {
+        serde_json::to_writer_pretty(fs::File::options().write(true).open(manifest_path)?, &self)
+            .map_err(|e| anyhow!("Failed to update World manifest at path: {e}"))
+    }
+
     pub async fn from_remote<P>(
         provider: P,
         world_address: FieldElement,
