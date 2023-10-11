@@ -95,6 +95,16 @@ fn parse_nested_type(
     TypeData::Nested((TypeRef::named(target_type), nested_mapping))
 }
 
+fn remove_trailing_zeros(value: Value) -> Value {
+    if let Value::String(str_val) = &value {
+        let hex_part = str_val.trim_start_matches("0x");
+        let trimmed_hex = hex_part.trim_start_matches('0');
+        Value::String(format!("0x{}", trimmed_hex))
+    } else {
+        value
+    }
+}
+
 pub fn value_mapping_from_row(
     row: &SqliteRow,
     types: &TypeMapping,
@@ -110,10 +120,15 @@ pub fn value_mapping_from_row(
                 field_name.to_string()
             };
 
-            Ok((
-                Name::new(field_name),
-                fetch_value(row, &column_name, &type_data.type_ref().to_string())?,
-            ))
+            let value = fetch_value(row, &column_name, &type_data.type_ref().to_string())?;
+            let value = match type_data.type_ref().to_string().as_str() {
+                "U128" | "ContractAddress" | "ClassHash" | "Felt252" => {
+                    remove_trailing_zeros(value)
+                }
+                _ => value,
+            };
+
+            Ok((Name::new(field_name.clone()), value))
         })
         .collect::<sqlx::Result<ValueMapping>>()?;
 
