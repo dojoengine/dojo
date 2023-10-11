@@ -56,21 +56,10 @@ CREATE TABLE system_calls (
     transaction_hash TEXT NOT NULL,
     system_id TEXT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (system_id) REFERENCES systems(id),
     UNIQUE (transaction_hash)
 );
 
 CREATE INDEX idx_system_calls_created_at ON system_calls (created_at);
-
-CREATE TABLE systems (
-    id TEXT NOT NULL PRIMARY KEY,
-    name TEXT NOT NULL,
-    class_hash TEXT NOT NULL,
-    transaction_hash TEXT,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_systems_created_at ON systems (created_at);
 
 CREATE TABLE entities (
     id TEXT NOT NULL PRIMARY KEY,

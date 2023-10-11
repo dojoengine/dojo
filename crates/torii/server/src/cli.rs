@@ -14,7 +14,6 @@ use torii_client::contract::world::WorldContractReader;
 use torii_core::engine::{Engine, EngineConfig, Processors};
 use torii_core::processors::metadata_update::MetadataUpdateProcessor;
 use torii_core::processors::register_model::RegisterModelProcessor;
-use torii_core::processors::register_system::RegisterSystemProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::sql::Sql;
 use tracing::error;
@@ -84,7 +83,6 @@ async fn main() -> anyhow::Result<()> {
     let processors = Processors {
         event: vec![
             Box::new(RegisterModelProcessor),
-            Box::new(RegisterSystemProcessor),
             Box::new(StoreSetRecordProcessor),
             Box::new(MetadataUpdateProcessor),
         ],

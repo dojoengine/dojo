@@ -14,7 +14,6 @@ use torii_client::contract::world::WorldContractReader;
 
 use crate::engine::{Engine, EngineConfig, Processors};
 use crate::processors::register_model::RegisterModelProcessor;
-use crate::processors::register_system::RegisterSystemProcessor;
 use crate::processors::store_set_record::StoreSetRecordProcessor;
 use crate::sql::Sql;
 
@@ -38,11 +37,7 @@ pub async fn bootstrap_engine<'a>(
         db,
         provider,
         Processors {
-            event: vec![
-                Box::new(RegisterModelProcessor),
-                Box::new(RegisterSystemProcessor),
-                Box::new(StoreSetRecordProcessor),
-            ],
+            event: vec![Box::new(RegisterModelProcessor), Box::new(StoreSetRecordProcessor)],
             ..Processors::default()
         },
         EngineConfig::default(),

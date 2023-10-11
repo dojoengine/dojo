@@ -1,5 +1,5 @@
 use super::*;
-use crate::manifest::{Contract, Manifest, Model, System};
+use crate::manifest::{Contract, Manifest, Model};
 
 #[test]
 fn no_diff_when_local_and_remote_are_equal() {
@@ -24,14 +24,10 @@ fn no_diff_when_local_and_remote_are_equal() {
         ..Default::default()
     }];
 
-    let systems =
-        vec![System { name: "System".into(), class_hash: 22_u32.into(), ..Default::default() }];
-
     let local = Manifest {
         models,
         world: world_contract,
         executor: executor_contract,
-        systems,
         ..Default::default()
     };
     let remote = local.clone();
@@ -62,14 +58,10 @@ fn diff_when_local_and_remote_are_different() {
         ..Default::default()
     }];
 
-    let systems =
-        vec![System { name: "System".into(), class_hash: 22_u32.into(), ..Default::default() }];
-
     let local = Manifest {
         models,
         world: world_contract,
         executor: executor_contract,
-        systems,
         ..Default::default()
     };
 

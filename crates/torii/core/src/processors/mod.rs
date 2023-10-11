@@ -8,7 +8,6 @@ use crate::sql::Sql;
 
 pub mod metadata_update;
 pub mod register_model;
-pub mod register_system;
 pub mod store_set_record;
 // pub mod store_system_call;
 
