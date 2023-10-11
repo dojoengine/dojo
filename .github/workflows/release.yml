@@ -41,6 +41,18 @@ jobs:
             echo "release_name=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
           fi
 
+      - name: Check version
+        run: |
+          if [[ $IS_NIGHTLY != "true" ]]; then
+            cargo install cargo-get
+            VERSION=$(cargo get workspace.package.version)
+            TAG=${{ steps.release_info.outputs.tag_name }}
+            if [[ "v$VERSION" != "$TAG" ]]; then
+              echo "Version in Cargo.toml ($VERSION) does not match release tag ($TAG)"
+              exit 1
+            fi
+          fi
+
       # Creates a `nightly-SHA` tag for this specific nightly
       # This tag is used for this specific nightly version's release
       # which allows users to roll back. It is also used to build
@@ -131,7 +143,7 @@ jobs:
 
       - name: Build binaries
         run: cargo build --release --bins --target ${{ matrix.job.target }}
-        
+
       - name: Archive binaries
         id: artifacts
         env:
@@ -213,17 +225,17 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-  
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
-  
+
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v1
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-  
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:

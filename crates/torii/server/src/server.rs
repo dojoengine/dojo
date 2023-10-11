@@ -21,6 +21,7 @@ use torii_core::simple_broker::SimpleBroker;
 use torii_core::types::Model;
 use torii_grpc::protos;
 use torii_grpc::server::DojoWorld;
+use tracing::info;
 use warp::filters::cors::Builder;
 use warp::Filter;
 
@@ -50,6 +51,9 @@ impl Server {
 
     pub async fn start(&self) -> anyhow::Result<()> {
         let notify_restart = Arc::new(Notify::new());
+
+        info!("🚀 Torii listening at {}", format!("http://{}", self.addr));
+        info!("Graphql playground: {}\n", format!("http://{}/graphql", self.addr));
 
         tokio::spawn(model_registered_listener(notify_restart.clone()));
 

@@ -1,5 +1,4 @@
 [workspace]
-
 resolver = "2"
 
 members = [
@@ -17,18 +16,18 @@ members = [
   "crates/torii/server",
 ]
 
-[profile.performance]
-codegen-units = 1
-incremental = false
-inherits = "release"
-lto = "fat"
-
 [workspace.package]
 edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "0.2.1"
+version = "0.3.0-rc6"
+
+[profile.performance]
+codegen-units = 1
+incremental = false
+inherits = "release"
+lto = "fat"
 
 [workspace.dependencies]
 anyhow = "1.0.75"

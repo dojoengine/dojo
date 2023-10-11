@@ -14,15 +14,15 @@ use dojo_types::system::Dependency;
 
 use crate::plugin::{DojoAuxData, SystemAuxData};
 
-pub struct System {
+pub struct DojoContract {
     diagnostics: Vec<PluginDiagnostic>,
     dependencies: HashMap<smol_str::SmolStr, Dependency>,
 }
 
-impl System {
+impl DojoContract {
     pub fn from_module(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult {
         let name = module_ast.name(db).text(db);
-        let mut system = System { diagnostics: vec![], dependencies: HashMap::new() };
+        let mut system = DojoContract { diagnostics: vec![], dependencies: HashMap::new() };
 
         if let MaybeModuleBody::Some(body) = module_ast.body(db) {
             let body_nodes = body
