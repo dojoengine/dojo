@@ -694,7 +694,6 @@ test_manifest_file
       }
     ]
   },
-  "systems": [],
   "contracts": [
     {
       "name": "player_actions",
