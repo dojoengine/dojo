@@ -21,15 +21,15 @@ use semver::Version;
 use smol_str::SmolStr;
 use url::Url;
 
+use crate::contract::DojoContract;
 use crate::inline_macros::emit::EmitMacro;
 use crate::inline_macros::get::GetMacro;
 use crate::inline_macros::set::SetMacro;
 use crate::introspect::handle_introspect_struct;
 use crate::model::handle_model_struct;
 use crate::print::derive_print;
-use crate::system::System;
 
-const SYSTEM_ATTR: &str = "system";
+const DOJO_CONTRACT_ATTR: &str = "dojo::contract";
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Model {
@@ -69,8 +69,8 @@ pub struct DojoPlugin;
 
 impl DojoPlugin {
     fn handle_mod(&self, db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult {
-        if module_ast.has_attr(db, SYSTEM_ATTR) {
-            return System::from_module(db, module_ast);
+        if module_ast.has_attr(db, DOJO_CONTRACT_ATTR) {
+            return DojoContract::from_module(db, module_ast);
         }
 
         PluginResult::default()
