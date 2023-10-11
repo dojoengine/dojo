@@ -3,7 +3,7 @@ enum Ty {
     Primitive: felt252,
     Struct: Struct,
     Enum: Enum,
-    Tuple: Span<Span<felt252>>,
+    Tuple: Span<Ty>,
 }
 
 #[derive(Copy, Drop, Serde)]

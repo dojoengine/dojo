@@ -175,13 +175,17 @@ impl EnumPrimitiveSchemaIntrospection of dojo::database::schema::SchemaIntrospec
                     (
                         'Left',
                         serialize_member_type(
-                            @dojo::database::schema::Ty::Tuple(array![array!['u16'].span()].span())
+                            @dojo::database::schema::Ty::Tuple(
+                                array![dojo::database::schema::Ty::Primitive('u16')].span()
+                            )
                         )
                     ),
                     (
                         'Right',
                         serialize_member_type(
-                            @dojo::database::schema::Ty::Tuple(array![array!['u16'].span()].span())
+                            @dojo::database::schema::Ty::Tuple(
+                                array![dojo::database::schema::Ty::Primitive('u16')].span()
+                            )
                         )
                     )
                 ]
@@ -223,7 +227,11 @@ impl EnumTupleSchemaIntrospection of dojo::database::schema::SchemaIntrospection
                         'Left',
                         serialize_member_type(
                             @dojo::database::schema::Ty::Tuple(
-                                array![array!['u8'].span(), array!['u8'].span()].span()
+                                array![
+                                    dojo::database::schema::Ty::Primitive('u8'),
+                                    dojo::database::schema::Ty::Primitive('u8')
+                                ]
+                                    .span()
                             )
                         )
                     ),
@@ -231,7 +239,11 @@ impl EnumTupleSchemaIntrospection of dojo::database::schema::SchemaIntrospection
                         'Right',
                         serialize_member_type(
                             @dojo::database::schema::Ty::Tuple(
-                                array![array!['u8'].span(), array!['u8'].span()].span()
+                                array![
+                                    dojo::database::schema::Ty::Primitive('u8'),
+                                    dojo::database::schema::Ty::Primitive('u8')
+                                ]
+                                    .span()
                             )
                         )
                     )
@@ -272,13 +284,19 @@ impl EnumCustomSchemaIntrospection of dojo::database::schema::SchemaIntrospectio
                     (
                         'Left',
                         serialize_member_type(
-                            @dojo::database::schema::Ty::Tuple(array![array!['Vec2'].span()].span())
+                            @dojo::database::schema::Ty::Tuple(
+                                array![dojo::database::schema::SchemaIntrospection::<Vec2>::ty()]
+                                    .span()
+                            )
                         )
                     ),
                     (
                         'Right',
                         serialize_member_type(
-                            @dojo::database::schema::Ty::Tuple(array![array!['Vec2'].span()].span())
+                            @dojo::database::schema::Ty::Tuple(
+                                array![dojo::database::schema::SchemaIntrospection::<Vec2>::ty()]
+                                    .span()
+                            )
                         )
                     )
                 ]
