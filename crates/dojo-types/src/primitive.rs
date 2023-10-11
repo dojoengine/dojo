@@ -70,7 +70,15 @@ impl Primitive {
             Primitive::U128(_)
             | Primitive::ContractAddress(_)
             | Primitive::ClassHash(_)
-            | Primitive::Felt252(_) => Ok(format!("'0x{:064x}'", value[0])),
+            | Primitive::Felt252(_) => {
+                let hex_string = format!("{:x}", value[0]);
+                let trimmed_hex = hex_string.trim_start_matches('0');
+                Ok(if trimmed_hex.is_empty() {
+                    "'0x0'".to_string()
+                } else {
+                    format!("'0x{}'", trimmed_hex)
+                })
+            }
 
             Primitive::U256(_) => {
                 if value.len() < 2 {
