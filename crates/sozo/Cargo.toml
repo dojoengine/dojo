@@ -33,7 +33,6 @@ semver.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 smol_str.workspace = true
-starknet-crypto.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
 tokio.workspace = true

@@ -4,7 +4,7 @@ use anyhow::{anyhow, bail, Context, Result};
 use dojo_world::manifest::{Manifest, ManifestError};
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::contract::ContractMigration;
-use dojo_world::migration::strategy::{prepare_for_migration, MigrationStrategy};
+use dojo_world::migration::strategy::{generate_salt, prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{
     Declarable, DeployOutput, Deployable, MigrationError, RegisterOutput, StateDiff,
@@ -18,7 +18,6 @@ use starknet::core::types::{
 };
 use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
 use starknet::providers::jsonrpc::HttpTransport;
-use starknet_crypto::poseidon_hash_many;
 use torii_client::contract::world::WorldContract;
 
 #[cfg(test)]
@@ -104,18 +103,7 @@ where
     };
 
     local_manifest.contracts.iter_mut().for_each(|c| {
-        let salt = poseidon_hash_many(
-            &c.name
-                .chars()
-                .collect::<Vec<_>>()
-                .chunks(31)
-                .map(|chunk| {
-                    let s: String = chunk.iter().collect();
-                    cairo_short_string_to_felt(&s).unwrap()
-                })
-                .collect::<Vec<_>>(),
-        );
-
+        let salt = generate_salt(&c.name);
         c.address = Some(get_contract_address(salt, base_class_hash, &[], world_address));
     });
 

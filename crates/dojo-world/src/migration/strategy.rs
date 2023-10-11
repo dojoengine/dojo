@@ -188,17 +188,7 @@ fn evaluate_contracts_to_migrate(
                 comps_to_migrate.push(ContractMigration {
                     diff: c.clone(),
                     artifact_path: path.clone(),
-                    salt: poseidon_hash_many(
-                        &c.name
-                            .chars()
-                            .collect::<Vec<_>>()
-                            .chunks(31)
-                            .map(|chunk| {
-                                let s: String = chunk.iter().collect();
-                                cairo_short_string_to_felt(&s).unwrap()
-                            })
-                            .collect::<Vec<_>>(),
-                    ),
+                    salt: generate_salt(&c.name),
                     ..Default::default()
                 });
             }
@@ -236,4 +226,18 @@ fn find_artifact_path<'a>(
     artifact_paths
         .get(contract_name)
         .with_context(|| anyhow!("missing contract artifact for `{}` contract", contract_name))
+}
+
+pub fn generate_salt(value: &str) -> FieldElement {
+    poseidon_hash_many(
+        &value
+            .chars()
+            .collect::<Vec<_>>()
+            .chunks(31)
+            .map(|chunk| {
+                let s: String = chunk.iter().collect();
+                cairo_short_string_to_felt(&s).unwrap()
+            })
+            .collect::<Vec<_>>(),
+    )
 }
