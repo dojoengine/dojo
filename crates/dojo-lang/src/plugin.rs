@@ -81,7 +81,7 @@ impl CairoPlugin for DojoPlugin {
         PackageId::new(
             PackageName::new("dojo_plugin"),
             Version::parse("0.2.1").unwrap(),
-            SourceId::for_git(&url, &scarb::core::GitReference::DefaultBranch).unwrap(),
+            SourceId::for_git(&url, &scarb::core::GitReference::Tag("v0.2.1".into())).unwrap(),
         )
     }
 

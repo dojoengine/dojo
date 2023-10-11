@@ -5,5 +5,5 @@ name = "dojo"
 version = "0.2.1"
 
 [dependencies]
-dojo_plugin = { git = "https://github.com/dojoengine/dojo" }
+dojo_plugin = { git = "https://github.com/dojoengine/dojo", tag = "v0.2.1" }
 starknet = "2.2.0"
