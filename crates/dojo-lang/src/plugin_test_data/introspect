@@ -244,7 +244,8 @@ impl EnumTupleSchemaIntrospection of dojo::database::schema::SchemaIntrospection
                                 array![
                                     dojo::database::schema::serialize_member_type(
                                         @dojo::database::schema::Ty::Primitive('u8')
-                                    ) ', ' dojo::database::schema::serialize_member_type(
+                                    ),
+                                    dojo::database::schema::serialize_member_type(
                                         @dojo::database::schema::Ty::Primitive('u8')
                                     )
                                 ]
@@ -259,7 +260,8 @@ impl EnumTupleSchemaIntrospection of dojo::database::schema::SchemaIntrospection
                                 array![
                                     dojo::database::schema::serialize_member_type(
                                         @dojo::database::schema::Ty::Primitive('u8')
-                                    ) ', ' dojo::database::schema::serialize_member_type(
+                                    ),
+                                    dojo::database::schema::serialize_member_type(
                                         @dojo::database::schema::Ty::Primitive('u8')
                                     )
                                 ]

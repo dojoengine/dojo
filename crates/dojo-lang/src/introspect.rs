@@ -181,7 +181,7 @@ pub fn handle_introspect_enum(
                 let ty_cairo: Vec<_> =
                     variant_type_arr.iter().map(|(ty_cairo, _)| ty_cairo.to_string()).collect();
                 // format!("'{}'", &ty_cairo.join("', '"))
-                ty_cairo.join("', '")
+                ty_cairo.join(",\n")
             } else {
                 "".to_string()
             }
