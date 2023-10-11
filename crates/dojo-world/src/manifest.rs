@@ -2,7 +2,6 @@ use std::fs;
 use std::path::Path;
 
 use ::serde::{Deserialize, Serialize};
-use anyhow::{anyhow, Result};
 use cairo_lang_starknet::abi;
 use serde_with::serde_as;
 use smol_str::SmolStr;
@@ -33,9 +32,9 @@ pub enum ManifestError<E> {
     #[error("Entry point name contains non-ASCII characters.")]
     InvalidEntryPointError,
     #[error(transparent)]
-    InvalidNameError(CairoShortStringToFeltError),
+    InvalidNameError(#[from] CairoShortStringToFeltError),
     #[error(transparent)]
-    Provider(ProviderError<E>),
+    Provider(#[from] ProviderError<E>),
 }
 
 /// Represents a model member.
@@ -101,40 +100,41 @@ pub struct Class {
     pub abi: Option<abi::Contract>,
 }
 
-#[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Manifest {
     pub world: Contract,
     pub executor: Contract,
     pub base: Class,
-    pub contracts: Vec<Contract>,
     pub models: Vec<Model>,
+    pub contracts: Vec<Contract>,
 }
 
 impl Manifest {
-    pub fn load_from_path<P>(manifest_path: P) -> Result<Self>
-    where
-        P: AsRef<Path>,
-    {
-        serde_json::from_reader(fs::File::open(manifest_path)?)
-            .map_err(|e| anyhow!("Failed to load World manifest from path: {e}"))
+    /// Load the manifest from a file at the given path.
+    pub fn load_from_path(path: impl AsRef<Path>) -> Result<Self, std::io::Error> {
+        let file = fs::File::open(path)?;
+        Ok(serde_json::from_reader(file)?)
     }
 
-    pub fn write_to_path<P>(self, manifest_path: P) -> Result<()>
-    where
-        P: AsRef<Path>,
-    {
-        serde_json::to_writer_pretty(fs::File::options().write(true).open(manifest_path)?, &self)
-            .map_err(|e| anyhow!("Failed to update World manifest at path: {e}"))
+    /// Writes the manifest into a file at the given path. Will return error if the file doesn't
+    /// exist.
+    pub fn write_to_path(self, path: impl AsRef<Path>) -> Result<(), std::io::Error> {
+        let fd = fs::File::options().write(true).open(path)?;
+        Ok(serde_json::to_writer_pretty(fd, &self)?)
     }
 
-    pub async fn from_remote<P>(
+    /// Construct a manifest of a remote World.
+    ///
+    /// # Arguments
+    /// * `provider` - A Starknet RPC provider.
+    /// * `world_address` - The address of the remote World contract.
+    pub async fn load_from_remote<P>(
         provider: P,
         world_address: FieldElement,
         match_manifest: Option<Manifest>,
     ) -> Result<Self, ManifestError<<P as Provider>::Error>>
     where
-        P: Provider + Send,
+        P: Provider + Send + Sync,
     {
         let world_class_hash = provider
             .get_class_hash_at(BlockId::Tag(BlockTag::Pending), world_address)

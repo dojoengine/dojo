@@ -1,6 +1,7 @@
 use std::error::Error;
 use std::time::Duration;
 
+use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{
     BlockId, BlockWithTxs, Event, InvokeTransaction, InvokeTransactionReceipt,
     MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, Transaction, TransactionReceipt,
@@ -10,7 +11,6 @@ use starknet::providers::Provider;
 use tokio::sync::mpsc::Sender as BoundedSender;
 use tokio::time::sleep;
 use tokio_util::sync::CancellationToken;
-use torii_client::contract::world::WorldContractReader;
 use tracing::{error, info, warn};
 
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};

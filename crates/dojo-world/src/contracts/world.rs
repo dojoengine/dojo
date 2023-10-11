@@ -8,7 +8,7 @@ use starknet::core::utils::{
 };
 use starknet::providers::{Provider, ProviderError};
 
-use crate::contract::model::{ModelError, ModelReader};
+use super::model::{ModelError, ModelReader};
 
 #[cfg(test)]
 #[path = "world_test.rs"]

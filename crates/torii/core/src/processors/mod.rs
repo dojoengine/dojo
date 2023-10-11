@@ -1,8 +1,8 @@
 use anyhow::{Error, Result};
 use async_trait::async_trait;
+use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{BlockWithTxs, Event, InvokeTransactionReceipt, TransactionReceipt};
 use starknet::providers::Provider;
-use torii_client::contract::world::WorldContractReader;
 
 use crate::sql::Sql;
 

@@ -1,10 +1,10 @@
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
+use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{BlockId, BlockTag, BlockWithTxs, Event, InvokeTransactionReceipt};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
-use torii_client::contract::world::WorldContractReader;
 use tracing::info;
 
 use super::EventProcessor;

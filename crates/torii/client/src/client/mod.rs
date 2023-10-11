@@ -8,6 +8,7 @@ use std::sync::Arc;
 use dojo_types::packing::unpack;
 use dojo_types::schema::{EntityModel, Ty};
 use dojo_types::WorldMetadata;
+use dojo_world::contracts::WorldContractReader;
 use parking_lot::RwLock;
 use starknet::core::types::{BlockId, BlockTag};
 use starknet::core::utils::cairo_short_string_to_felt;
@@ -19,7 +20,6 @@ use self::error::{Error, ParseError};
 use self::storage::ModelStorage;
 use self::subscription::{SubscribedEntities, SubscriptionClientHandle};
 use crate::client::subscription::SubscriptionService;
-use crate::contract::world::WorldContractReader;
 
 // TODO: expose the World interface from the `Client`
 #[allow(unused)]

@@ -12,7 +12,7 @@ use starknet::macros::short_string;
 use starknet::providers::{Provider, ProviderError};
 use starknet_crypto::poseidon_hash_many;
 
-use crate::contract::world::{ContractReaderError, WorldContractReader};
+use crate::contracts::world::{ContractReaderError, WorldContractReader};
 
 const WORLD_MODEL_SELECTOR_STR: &str = "model";
 const SCHEMA_SELECTOR_STR: &str = "schema";
