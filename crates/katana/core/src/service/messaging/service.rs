@@ -208,7 +208,10 @@ impl Stream for MessagingService {
                     }));
                 }
                 Poll::Ready(Err(e)) => {
-                    error!(target: LOG_TARGET, "error gathering messages for block {}: {e}", pin.gather_from_block);
+                    error!(
+                        target: LOG_TARGET,
+                        "error gathering messages for block {}: {e}", pin.gather_from_block
+                    );
                     return Poll::Pending;
                 }
                 Poll::Pending => pin.msg_gather_fut = Some(gather_fut),
@@ -225,7 +228,10 @@ impl Stream for MessagingService {
                     return Poll::Ready(Some(MessagingOutcome::Send { block_num, msg_count }));
                 }
                 Poll::Ready(Err(e)) => {
-                    error!(target: LOG_TARGET, "error settling messages for block {}: {e}", pin.send_from_block);
+                    error!(
+                        target: LOG_TARGET,
+                        "error settling messages for block {}: {e}", pin.send_from_block
+                    );
                     return Poll::Pending;
                 }
                 Poll::Ready(_) => return Poll::Pending,
