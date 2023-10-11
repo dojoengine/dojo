@@ -23,7 +23,7 @@ fn main() {
 
 fn cli_main(args: SozoArgs) -> Result<()> {
     let mut compilers = CompilerRepository::std();
-    let cairo_plugins = CairoPluginRepository::new();
+    let cairo_plugins = CairoPluginRepository::default();
 
     match &args.command {
         Commands::Build(_) | Commands::Dev(_) => compilers.add(Box::new(DojoCompiler)).unwrap(),

@@ -6,7 +6,7 @@ use cairo_lang_language_server::Backend;
 use cairo_lang_starknet::plugin::StarkNetPlugin;
 use cairo_lang_utils::logging::init_logging;
 use clap::Parser;
-use dojo_lang::plugin::DojoPlugin;
+use dojo_lang::plugin::BuiltinDojoPlugin;
 use tower_lsp::{LspService, Server};
 
 /// Dojo Language Server
@@ -29,7 +29,7 @@ async fn main() {
 
     let db = RootDatabase::builder()
         .with_cfg(CfgSet::from_iter([Cfg::name("test")]))
-        .with_macro_plugin(Arc::new(DojoPlugin))
+        .with_macro_plugin(Arc::new(BuiltinDojoPlugin))
         .with_macro_plugin(Arc::new(StarkNetPlugin::default()))
         .build()
         .unwrap_or_else(|error| {

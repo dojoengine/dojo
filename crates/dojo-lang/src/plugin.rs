@@ -65,9 +65,9 @@ impl GeneratedFileAuxData for DojoAuxData {
 mod test;
 
 #[derive(Debug, Default)]
-pub struct DojoPlugin;
+pub struct BuiltinDojoPlugin;
 
-impl DojoPlugin {
+impl BuiltinDojoPlugin {
     fn handle_mod(&self, db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult {
         if module_ast.has_attr(db, DOJO_CONTRACT_ATTR) {
             return DojoContract::from_module(db, module_ast);
@@ -77,25 +77,26 @@ impl DojoPlugin {
     }
 }
 
-impl CairoPlugin for DojoPlugin {
+impl CairoPlugin for BuiltinDojoPlugin {
     fn id(&self) -> PackageId {
         let url = Url::parse("https://github.com/dojoengine/dojo").unwrap();
+        let version = env!("CARGO_PKG_VERSION");
         PackageId::new(
             PackageName::new("dojo_plugin"),
-            Version::parse("0.2.1").unwrap(),
+            Version::parse(version).unwrap(),
             SourceId::for_git(&url, &scarb::core::GitReference::DefaultBranch).unwrap(),
         )
     }
 
     fn instantiate(&self) -> Result<Box<dyn CairoPluginInstance>> {
-        Ok(Box::new(DojoPluginInstance))
+        Ok(Box::new(BuiltinDojoPluginInstance))
     }
 }
 
-struct DojoPluginInstance;
-impl CairoPluginInstance for DojoPluginInstance {
+struct BuiltinDojoPluginInstance;
+impl CairoPluginInstance for BuiltinDojoPluginInstance {
     fn macro_plugins(&self) -> Vec<Arc<dyn MacroPlugin>> {
-        vec![Arc::new(DojoPlugin)]
+        vec![Arc::new(BuiltinDojoPlugin::default())]
     }
 
     fn inline_macro_plugins(&self) -> Vec<(String, Arc<dyn InlineMacroExprPlugin>)> {
@@ -107,7 +108,7 @@ impl CairoPluginInstance for DojoPluginInstance {
     }
 }
 
-impl MacroPlugin for DojoPlugin {
+impl MacroPlugin for BuiltinDojoPlugin {
     fn generate_code(&self, db: &dyn SyntaxGroup, item_ast: ast::Item) -> PluginResult {
         match item_ast {
             ast::Item::Module(module_ast) => self.handle_mod(db, module_ast),
@@ -200,18 +201,12 @@ impl MacroPlugin for DojoPlugin {
 
 pub struct CairoPluginRepository(scarb::compiler::plugin::CairoPluginRepository);
 
-impl CairoPluginRepository {
-    pub fn new() -> Self {
-        let mut repo = scarb::compiler::plugin::CairoPluginRepository::empty();
-        repo.add(Box::new(DojoPlugin)).unwrap();
-        repo.add(Box::new(BuiltinStarkNetPlugin)).unwrap();
-        Self(repo)
-    }
-}
-
 impl Default for CairoPluginRepository {
     fn default() -> Self {
-        Self::new()
+        let mut repo = scarb::compiler::plugin::CairoPluginRepository::empty();
+        repo.add(Box::new(BuiltinDojoPlugin)).unwrap();
+        repo.add(Box::new(BuiltinStarkNetPlugin)).unwrap();
+        Self(repo)
     }
 }
 

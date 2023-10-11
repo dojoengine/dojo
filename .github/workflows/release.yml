@@ -41,6 +41,18 @@ jobs:
             echo "release_name=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
           fi
 
+      - name: Check version
+        run: |
+          if [[ $IS_NIGHTLY != "true" ]]; then
+            cargo install cargo-get
+            VERSION=$(cargo get package.version)
+            TAG=${{ steps.release_info.outputs.tag_name }}
+            if [[ "$VERSION" != "$TAG" ]]; then
+              echo "Version in Cargo.toml ($VERSION) does not match release tag ($TAG)"
+              exit 1
+            fi
+          fi
+
       # Creates a `nightly-SHA` tag for this specific nightly
       # This tag is used for this specific nightly version's release
       # which allows users to roll back. It is also used to build
