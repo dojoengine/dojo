@@ -85,4 +85,8 @@ lazy_static! {
             TypeData::Simple(TypeRef::named(GraphqlType::Cursor.to_string())),
         ),
     ]);
+    pub static ref METADATA_TYPE_MAPPING: TypeMapping = IndexMap::from([
+        (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
+        (Name::new("uri"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+    ]);
 }
