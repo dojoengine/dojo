@@ -97,7 +97,7 @@ impl CairoPlugin for BuiltinDojoPlugin {
 struct BuiltinDojoPluginInstance;
 impl CairoPluginInstance for BuiltinDojoPluginInstance {
     fn macro_plugins(&self) -> Vec<Arc<dyn MacroPlugin>> {
-        vec![Arc::new(BuiltinDojoPlugin::default())]
+        vec![Arc::new(BuiltinDojoPlugin)]
     }
 
     fn inline_macro_plugins(&self) -> Vec<(String, Arc<dyn InlineMacroExprPlugin>)> {

@@ -120,7 +120,12 @@ pub fn handle_introspect_enum(
                 let ty_name = arg.as_syntax_node().get_text(db);
                 variant_type_arr.push((
                     // Not using Ty right now, but still keeping it for later.
-                    format!("dojo::database::schema::serialize_member_type(@dojo::database::schema::Ty::Primitive('{}'))", ty_name),
+                    format!(
+                        "dojo::database::schema::serialize_member_type(
+                            @dojo::database::schema::Ty::Primitive('{}')
+                        )",
+                        ty_name
+                    ),
                     ty_name,
                 ));
             });
@@ -128,7 +133,12 @@ pub fn handle_introspect_enum(
             let ty_name = type_path.as_syntax_node().get_text(db);
             variant_type_arr.push((
                 // Not using Ty right now, but still keeping it for later.
-                format!("dojo::database::schema::serialize_member_type(@dojo::database::schema::SchemaIntrospection::<{}>::ty())", ty_name),
+                format!(
+                    "dojo::database::schema::serialize_member_type(
+                        @dojo::database::schema::SchemaIntrospection::<{}>::ty()
+                    )",
+                    ty_name
+                ),
                 ty_name,
             ));
         } else {
@@ -163,13 +173,15 @@ pub fn handle_introspect_enum(
             "
             (
                 '{member_name}',
-                dojo::database::schema::serialize_member_type(@dojo::database::schema::Ty::Tuple(array![{}].span()))
+                \
+             dojo::database::schema::serialize_member_type(
+                @dojo::database::schema::Ty::Tuple(array![{}].span()))
             )",
             if !variant_type_arr.is_empty() {
                 let ty_cairo: Vec<_> =
                     variant_type_arr.iter().map(|(ty_cairo, _)| ty_cairo.to_string()).collect();
-                    // format!("'{}'", &ty_cairo.join("', '"))
-                    ty_cairo.join("', '")
+                // format!("'{}'", &ty_cairo.join("', '"))
+                ty_cairo.join("', '")
             } else {
                 "".to_string()
             }
